@@ -1,5 +1,7 @@
 #include <Application.hpp>
+
 #include <windows.h>
+#include <cassert>
 
 void
 Application::run(){
@@ -16,8 +18,9 @@ Application::run(){
         auto window = SDL_CreateWindow(
             "VULKAN_ENGINE", 0, 0,
             800, 600,
-            SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN | SDL_WINDOW_VULKAN
+            SDL_WINDOW_SHOWN /*| SDL_WINDOW_FULLSCREEN */| SDL_WINDOW_VULKAN
         );
+        assert(nullptr != window);
     }
     setupVulkan();
     mainLoop();
@@ -60,11 +63,45 @@ Application::cleanUp(bool action){
 
 void
 Application::createInstance(){
-    VkApplicationInfo appInfo = {};
-    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "VULKAN_ENGINE";
-    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.pEngineName = "VULKAN_ENGINE";
-    appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_0;
+
+    VkApplicationInfo applicationInfo;
+    VkInstanceCreateInfo instanceInfo;
+    
+    // Filling out application description:
+    // sType is mandatory
+    applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    // pNext is mandatory
+    applicationInfo.pNext = NULL;
+    // The name of our application
+    applicationInfo.pApplicationName = "Tutorial 1";
+    // The name of the engine (e.g: Game engine name)
+    applicationInfo.pEngineName = NULL;
+    // The version of the engine
+    applicationInfo.engineVersion = 1;
+    // The version of Vulkan we're using for this application
+    applicationInfo.apiVersion = VK_API_VERSION_1_0;
+
+    // Filling out instance description:
+    // sType is mandatory
+    instanceInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    // pNext is mandatory
+    instanceInfo.pNext = NULL;
+    // flags is mandatory
+    instanceInfo.flags = 0;
+    // The application info structure is then passed through the instance
+    instanceInfo.pApplicationInfo = &applicationInfo;
+    // Don't enable and layer
+    instanceInfo.enabledLayerCount = 0;
+    instanceInfo.ppEnabledLayerNames = NULL;
+    // Don't enable any extensions
+    instanceInfo.enabledExtensionCount = 0;
+    instanceInfo.ppEnabledExtensionNames = NULL;
+
+    // Now create the desired instance
+    checkVKResult(vkCreateInstance(&instanceInfo, NULL, &vkInstance));
+}
+
+void
+Application::checkVKResult(VkResult result) {
+    assert(result == VK_SUCCESS);
 }
