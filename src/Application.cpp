@@ -33,10 +33,10 @@ void
 Application::setupVulkan(){
     oldSwapChain = VK_NULL_HANDLE;
     createInstance();
-    // createDebugCallback();
-    // createWindowSurface();
-    // findPhysicalDevice();
-    // checkSwapChainSupport();
+    createDebugCallback();
+    createWindowSurface();
+    findPhysicalDevice();
+    checkSwapChainSupport();
     // findQueueFamilies();
     // createLogicalDevice();
     // createSemaphores();
@@ -138,4 +138,95 @@ Application::vkCheck(VkResult result) {
 void
 Application::sdlCheck(SDL_bool result){
     assert(result == SDL_TRUE);
+}
+
+VkBool32
+debugCallback(
+    VkDebugReportFlagsEXT flags,
+    VkDebugReportObjectTypeEXT objType,
+    uint64_t srcObject, size_t location,
+    int32_t msgCode,
+    const char* pLayerPrefix,
+    const char* pMsg,
+    void* pUserData
+) {
+    if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
+        std::cerr << "ERROR: [" << pLayerPrefix << "] Code " << msgCode << " : " << pMsg << std::endl;
+    }
+    else if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
+        std::cerr << "WARNING: [" << pLayerPrefix << "] Code " << msgCode << " : " << pMsg << std::endl;
+    }
+    return VK_FALSE;
+}
+
+void 
+Application::createDebugCallback() {
+#ifdef DEBUGGING_ENABLED
+    VkDebugReportCallbackCreateInfoEXT debugInfo = {};
+    debugInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+    debugInfo.pfnCallback = debugCallback;
+    debugInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+    
+    PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(
+        vkInstance, 
+        "vkCreateDebugReportCallbackEXT"
+    );
+
+    vkCheck(createDebugReportCallback(vkInstance, &debugInfo, nullptr, &debugReportCallbackExtension));
+#endif // DEBUGGING_ENABLED
+
+}
+
+void
+Application::createWindowSurface() {
+    // but instead of creating a renderer, we can draw directly to the screen
+    screen = SDL_GetWindowSurface(window);
+}
+
+void
+Application::findPhysicalDevice() {
+    uint32_t deviceCount = 0;
+    //Getting number of physical devices
+    vkCheck(vkEnumeratePhysicalDevices(vkInstance, &deviceCount, nullptr));
+    assert(deviceCount > 0);
+    deviceCount = 1;
+    
+    const auto phyDevResult = vkEnumeratePhysicalDevices(vkInstance, &deviceCount, &physicalDevice);
+    //TODO Search about incomplete
+    assert(phyDevResult == VK_SUCCESS || phyDevResult == VK_INCOMPLETE);
+    
+    VkPhysicalDeviceProperties deviceProperties;
+    VkPhysicalDeviceFeatures deviceFeatures;
+    vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
+    vkGetPhysicalDeviceFeatures(physicalDevice, &deviceFeatures);
+
+    uint32_t supportedVersion[] = {
+        VK_VERSION_MAJOR(deviceProperties.apiVersion),
+        VK_VERSION_MINOR(deviceProperties.apiVersion),
+        VK_VERSION_PATCH(deviceProperties.apiVersion)
+    };
+
+    std::cout << "physical device supports version " << 
+        supportedVersion[0] << "." << 
+        supportedVersion[1] << "." << 
+        supportedVersion[2] << std::endl;
+}
+
+void
+Application::checkSwapChainSupport() {
+    uint32_t extensionCount = 0;
+    vkCheck(vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr));
+
+    std::vector<VkExtensionProperties> deviceExtensions(extensionCount);
+    vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, deviceExtensions.data());
+
+    for (const auto& extension : deviceExtensions) {
+        if (strcmp(extension.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
+            std::cout << "physical device supports swap chains" << std::endl;
+            return;
+        }
+    }
+
+    std::cerr << "physical device doesn't support swap chains" << std::endl;
+    exit(1);
 }

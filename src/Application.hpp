@@ -19,11 +19,18 @@ private:
     void createInstance();
     void vkCheck(VkResult result);
     void sdlCheck(SDL_bool result);
+    void createDebugCallback();
+    void createWindowSurface();
+    void findPhysicalDevice();
+    void checkSwapChainSupport();
 private:
     VkSwapchainKHR oldSwapChain;
     VkSwapchainKHR swapChain;
-    SDL_Window * window;
+    SDL_Window* window;
+    SDL_Surface* screen;
     VkInstance vkInstance;
+    VkDebugReportCallbackEXT debugReportCallbackExtension;
+    VkPhysicalDevice physicalDevice;
 };
 
 #endif
