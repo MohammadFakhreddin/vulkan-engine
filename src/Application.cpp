@@ -2,6 +2,8 @@
 
 #include <windows.h>
 #include <cassert>
+#include <vector>
+#include <iostream>
 
 void
 Application::run(){
@@ -15,7 +17,7 @@ Application::run(){
         int windowWidth = 800;
         int windowHeight = 600;
 
-        auto window = SDL_CreateWindow(
+        window = SDL_CreateWindow(
             "VULKAN_ENGINE", 0, 0,
             800, 600,
             SDL_WINDOW_SHOWN /*| SDL_WINDOW_FULLSCREEN */| SDL_WINDOW_VULKAN
@@ -63,45 +65,77 @@ Application::cleanUp(bool action){
 
 void
 Application::createInstance(){
-
-    VkApplicationInfo applicationInfo;
-    VkInstanceCreateInfo instanceInfo;
     
     // Filling out application description:
-    // sType is mandatory
-    applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    // pNext is mandatory
-    applicationInfo.pNext = NULL;
-    // The name of our application
-    applicationInfo.pApplicationName = "Tutorial 1";
-    // The name of the engine (e.g: Game engine name)
-    applicationInfo.pEngineName = NULL;
-    // The version of the engine
-    applicationInfo.engineVersion = 1;
-    // The version of Vulkan we're using for this application
-    applicationInfo.apiVersion = VK_API_VERSION_1_0;
-
+    VkApplicationInfo applicationInfo = {};
+    {
+        // sType is mandatory
+        applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+        // pNext is mandatory
+        applicationInfo.pNext = NULL;
+        // The name of our application
+        applicationInfo.pApplicationName = "VULKAN_ENGINE";
+        // The name of the engine (e.g: Game engine name)
+        applicationInfo.pEngineName = NULL;
+        // The version of the engine
+        applicationInfo.engineVersion = 1;
+        // The version of Vulkan we're using for this application
+        applicationInfo.apiVersion = VK_API_VERSION_1_0;
+    }
+    std::vector<const char*> vkInstanceExtensions;
+    {// Filling sdl extentions
+        unsigned int sdlExtensionCount = 0;
+        sdlCheck(SDL_Vulkan_GetInstanceExtensions(window, &sdlExtensionCount, nullptr));
+        vkInstanceExtensions.resize(sdlExtensionCount);
+        SDL_Vulkan_GetInstanceExtensions(
+            window,
+            &sdlExtensionCount,
+            vkInstanceExtensions.data() + 0
+        );
+#ifdef DEBUGGING_ENABLED
+        vkInstanceExtensions.emplace_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+#endif // DEBUGGING_ENABLED
+    }
+    {// Checking for extension support
+        uint32_t vulkanSupportedExtensionCount = 0;
+        vkCheck(vkEnumerateInstanceExtensionProperties(
+            nullptr,
+            &vulkanSupportedExtensionCount,
+            nullptr
+        ));
+        if (vulkanSupportedExtensionCount == 0) {
+            std::cerr << "no extensions supported!" << std::endl;
+            exit(1);
+        }
+    }
     // Filling out instance description:
-    // sType is mandatory
-    instanceInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    // pNext is mandatory
-    instanceInfo.pNext = NULL;
-    // flags is mandatory
-    instanceInfo.flags = 0;
-    // The application info structure is then passed through the instance
-    instanceInfo.pApplicationInfo = &applicationInfo;
-    // Don't enable and layer
-    instanceInfo.enabledLayerCount = 0;
-    instanceInfo.ppEnabledLayerNames = NULL;
-    // Don't enable any extensions
-    instanceInfo.enabledExtensionCount = 0;
-    instanceInfo.ppEnabledExtensionNames = NULL;
-
+    VkInstanceCreateInfo instanceInfo = {};
+    {
+        // sType is mandatory
+        instanceInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        // pNext is mandatory
+        instanceInfo.pNext = NULL;
+        // flags is mandatory
+        instanceInfo.flags = 0;
+        // The application info structure is then passed through the instance
+        instanceInfo.pApplicationInfo = &applicationInfo;
+#ifdef DEBUGGING_ENABLED
+        instanceInfo.enabledLayerCount = 1;
+        instanceInfo.ppEnabledLayerNames = &DEBUG_LAYER;
+#endif // DEBUGGING_ENABLED
+        instanceInfo.enabledExtensionCount = (uint32_t)vkInstanceExtensions.size();
+        instanceInfo.ppEnabledExtensionNames = vkInstanceExtensions.data();
+    }
     // Now create the desired instance
-    checkVKResult(vkCreateInstance(&instanceInfo, NULL, &vkInstance));
+    vkCheck(vkCreateInstance(&instanceInfo, NULL, &vkInstance));
 }
 
 void
-Application::checkVKResult(VkResult result) {
+Application::vkCheck(VkResult result) {
     assert(result == VK_SUCCESS);
+}
+
+void
+Application::sdlCheck(SDL_bool result){
+    assert(result == SDL_TRUE);
 }

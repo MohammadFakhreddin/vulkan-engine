@@ -8,6 +8,8 @@
 #define DEBUGGING_ENABLED
 
 class Application{
+private:
+    static constexpr const char* DEBUG_LAYER = "VK_LAYER_LUNARG_standard_validation";
 public:
     void run();
 private:
@@ -15,7 +17,8 @@ private:
     void mainLoop();
     void cleanUp(bool);
     void createInstance();
-    void checkVKResult(VkResult result);
+    void vkCheck(VkResult result);
+    void sdlCheck(SDL_bool result);
 private:
     VkSwapchainKHR oldSwapChain;
     VkSwapchainKHR swapChain;
