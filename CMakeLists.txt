@@ -31,9 +31,9 @@ file(GLOB_RECURSE SRC_HEADER_H "src/*.h")
 file(GLOB_RECURSE SRC_HEADER_HPP "src/*.hpp")
 file(GLOB_RECURSE SRC_CPP "src/*.cpp")
 
-file(GLOB_RECURSE LIB_HEADER_H "libs/include/*.h")
-file(GLOB_RECURSE LIB_HEADER_HPP "libs/include/*.hpp")
-file(GLOB_RECURSE LIB_CPP "libs/include/*.cpp")
+# file(GLOB_RECURSE LIB_HEADER_H "libs/include/*.h")
+# file(GLOB_RECURSE LIB_HEADER_HPP "libs/include/*.hpp")
+# file(GLOB_RECURSE LIB_CPP "libs/include/*.cpp")
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
   file(GLOB VULKAN "libs/win/vulkan-1.lib")
