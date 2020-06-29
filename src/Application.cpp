@@ -37,7 +37,7 @@ Application::setupVulkan(){
     createWindowSurface();
     findPhysicalDevice();
     checkSwapChainSupport();
-    // findQueueFamilies();
+    findQueueFamilies();
     // createLogicalDevice();
     // createSemaphores();
     // createCommandPool();
@@ -90,7 +90,7 @@ Application::createInstance(){
         SDL_Vulkan_GetInstanceExtensions(
             window,
             &sdlExtensionCount,
-            vkInstanceExtensions.data() + 0
+            vkInstanceExtensions.data()
         );
 #ifdef DEBUGGING_ENABLED
         vkInstanceExtensions.emplace_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
@@ -180,7 +180,12 @@ Application::createDebugCallback() {
 void
 Application::createWindowSurface() {
     // but instead of creating a renderer, we can draw directly to the screen
-    screen = SDL_GetWindowSurface(window);
+    SDL_Vulkan_CreateSurface(
+        window,
+        vkInstance,
+        &windowSurface
+    );
+
 }
 
 void
@@ -229,4 +234,60 @@ Application::checkSwapChainSupport() {
 
     std::cerr << "physical device doesn't support swap chains" << std::endl;
     exit(1);
+}
+
+void
+Application::findQueueFamilies() {
+    uint32_t queueFamilyCount = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice,&queueFamilyCount,nullptr);
+    if (queueFamilyCount == 0) {
+        std::cout << "physical device has no queue families!" << std::endl;
+        exit(1);
+    }
+    // Find queue family with graphics support
+    // Note: is a transfer queue necessary to copy vertices to the gpu or can a graphics queue handle that?
+    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
+    
+    std::cout << "physical device has " << queueFamilyCount << " queue families" << std::endl;
+
+    bool foundGraphicsQueueFamily = false;
+    bool foundPresentQueueFamily = false;
+
+    for (uint32_t i = 0; i < queueFamilyCount; i++) {
+        VkBool32 presentSupport = false;
+        vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, windowSurface, &presentSupport);
+
+        if (queueFamilies[i].queueCount > 0 && queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+            graphicsQueueFamily = i;
+            foundGraphicsQueueFamily = true;
+
+            if (presentSupport) {
+                presentQueueFamily = i;
+                foundPresentQueueFamily = true;
+                break;
+            }
+        }
+
+        if (!foundPresentQueueFamily && presentSupport) {
+            presentQueueFamily = i;
+            foundPresentQueueFamily = true;
+        }
+    }
+
+    if (foundGraphicsQueueFamily) {
+        std::cout << "queue family #" << graphicsQueueFamily << " supports graphics" << std::endl;
+
+        if (foundPresentQueueFamily) {
+            std::cout << "queue family #" << presentQueueFamily << " supports presentation" << std::endl;
+        }
+        else {
+            std::cerr << "could not find a valid queue family with present support" << std::endl;
+            exit(1);
+        }
+    }
+    else {
+        std::cerr << "could not find a valid queue family with graphics support" << std::endl;
+        exit(1);
+    }
 }

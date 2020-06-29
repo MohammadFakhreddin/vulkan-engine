@@ -23,14 +23,17 @@ private:
     void createWindowSurface();
     void findPhysicalDevice();
     void checkSwapChainSupport();
+    void findQueueFamilies();
 private:
     VkSwapchainKHR oldSwapChain;
     VkSwapchainKHR swapChain;
     SDL_Window* window;
-    SDL_Surface* screen;
     VkInstance vkInstance;
     VkDebugReportCallbackEXT debugReportCallbackExtension;
     VkPhysicalDevice physicalDevice;
+    uint32_t graphicsQueueFamily;
+    uint32_t presentQueueFamily;
+    VkSurfaceKHR windowSurface;
 };
 
 #endif
