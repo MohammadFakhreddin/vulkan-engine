@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <cassert>
 #include <iostream>
+#include <filesystem>
 #include <fstream>
 
 Application::Application() {
@@ -867,8 +868,8 @@ Application::createFramebuffers() {
 
 void 
 Application::createGraphicsPipeline() {
-    VkShaderModule vertexShaderModule = createShaderModule("shaders/vert.spv");
-    VkShaderModule fragmentShaderModule = createShaderModule("shaders/frag.spv");
+    VkShaderModule vertexShaderModule = createShaderModule("./assets/shaders/vert.spv");
+    VkShaderModule fragmentShaderModule = createShaderModule("./assets/shaders/frag.spv");
 
     // Set up shader stage info
     VkPipelineShaderStageCreateInfo vertexShaderCreateInfo = {};
@@ -1037,7 +1038,9 @@ Application::createGraphicsPipeline() {
 }
 
 VkShaderModule 
-Application::createShaderModule(const std::string& filename) {
+Application::createShaderModule(const char * filename) {
+    assert(std::filesystem::exists(filename));
+
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
     std::vector<char> fileBytes(file.tellg());
     file.seekg(0, std::ios::beg);

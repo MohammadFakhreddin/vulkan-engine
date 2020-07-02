@@ -46,7 +46,7 @@ private:
     VkSurfaceFormatKHR Application::chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
     VkPresentModeKHR Application::choosePresentMode(const std::vector<VkPresentModeKHR> presentModes);
     VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& surfaceCapabilities);
-    VkShaderModule Application::createShaderModule(const std::string& filename);
+    VkShaderModule Application::createShaderModule(const char * filename);
 private:
     VkSwapchainKHR oldSwapChain;
     VkSwapchainKHR swapChain;
