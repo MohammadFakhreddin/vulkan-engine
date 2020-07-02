@@ -52,19 +52,9 @@ Application::setupVulkan(){
     createImageViews();
     createFramebuffers();
     createGraphicsPipeline();
-    // createDescriptorPool();
-    // createDescriptorSet();
-    // createCommandBuffers();
-}
-
-void
-Application::mainLoop(){
-
-}
-
-void
-Application::cleanUp(bool action){
-
+    createDescriptorPool();
+    createDescriptorSet();
+    createCommandBuffers();
 }
 
 void
@@ -1061,4 +1051,321 @@ Application::createShaderModule(const char * filename) {
     std::cout << "created shader module for " << filename << std::endl;
 
     return shaderModule;
+}
+
+void
+Application::createDescriptorPool() {
+    // This describes how many descriptor sets we'll create from this pool for each type
+    VkDescriptorPoolSize typeCount;
+    typeCount.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    typeCount.descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    createInfo.poolSizeCount = 1;
+    createInfo.pPoolSizes = &typeCount;
+    createInfo.maxSets = 1;
+
+    if (vkCreateDescriptorPool(device, &createInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
+        std::cerr << "failed to create descriptor pool" << std::endl;
+        exit(1);
+    }
+    else {
+        std::cout << "created descriptor pool" << std::endl;
+    }
+}
+
+void 
+Application::createDescriptorSet() {
+    // There needs to be one descriptor set per binding point in the shader
+    VkDescriptorSetAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = descriptorPool;
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = &descriptorSetLayout;
+
+    if (vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet) != VK_SUCCESS) {
+        std::cerr << "failed to create descriptor set" << std::endl;
+        exit(1);
+    }
+    else {
+        std::cout << "created descriptor set" << std::endl;
+    }
+
+    // Update descriptor set with uniform binding
+    VkDescriptorBufferInfo descriptorBufferInfo = {};
+    descriptorBufferInfo.buffer = uniformBuffer;
+    descriptorBufferInfo.offset = 0;
+    descriptorBufferInfo.range = sizeof(uniformBufferData);
+
+    VkWriteDescriptorSet writeDescriptorSet = {};
+    writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writeDescriptorSet.dstSet = descriptorSet;
+    writeDescriptorSet.descriptorCount = 1;
+    writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    writeDescriptorSet.pBufferInfo = &descriptorBufferInfo;
+    writeDescriptorSet.dstBinding = 0;
+
+    vkUpdateDescriptorSets(device, 1, &writeDescriptorSet, 0, nullptr);
+}
+
+void 
+Application::createCommandBuffers() {
+    // Allocate graphics command buffers
+    graphicsCommandBuffers.resize(swapChainImages.size());
+
+    VkCommandBufferAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool = commandPool;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = (uint32_t)swapChainImages.size();
+
+    if (vkAllocateCommandBuffers(device, &allocInfo, graphicsCommandBuffers.data()) != VK_SUCCESS) {
+        std::cerr << "failed to allocate graphics command buffers" << std::endl;
+        exit(1);
+    }
+    else {
+        std::cout << "allocated graphics command buffers" << std::endl;
+    }
+
+    // Prepare data for recording command buffers
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+    VkImageSubresourceRange subResourceRange = {};
+    subResourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    subResourceRange.baseMipLevel = 0;
+    subResourceRange.levelCount = 1;
+    subResourceRange.baseArrayLayer = 0;
+    subResourceRange.layerCount = 1;
+
+    VkClearValue clearColor = {
+        { 0.1f, 0.1f, 0.1f, 1.0f } // R, G, B, A
+    };
+
+    // Record command buffer for each swap image
+    for (size_t i = 0; i < swapChainImages.size(); i++) {
+        vkBeginCommandBuffer(graphicsCommandBuffers[i], &beginInfo);
+
+        // If present queue family and graphics queue family are different, then a barrier is necessary
+        // The barrier is also needed initially to transition the image to the present layout
+        VkImageMemoryBarrier presentToDrawBarrier = {};
+        presentToDrawBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        presentToDrawBarrier.srcAccessMask = 0;
+        presentToDrawBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        presentToDrawBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        presentToDrawBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+        if (presentQueueFamily != graphicsQueueFamily) {
+            presentToDrawBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            presentToDrawBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        }
+        else {
+            presentToDrawBarrier.srcQueueFamilyIndex = presentQueueFamily;
+            presentToDrawBarrier.dstQueueFamilyIndex = graphicsQueueFamily;
+        }
+
+        presentToDrawBarrier.image = swapChainImages[i];
+        presentToDrawBarrier.subresourceRange = subResourceRange;
+
+        vkCmdPipelineBarrier(graphicsCommandBuffers[i], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &presentToDrawBarrier);
+
+        VkRenderPassBeginInfo renderPassBeginInfo = {};
+        renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassBeginInfo.renderPass = renderPass;
+        renderPassBeginInfo.framebuffer = swapChainFramebuffers[i];
+        renderPassBeginInfo.renderArea.offset.x = 0;
+        renderPassBeginInfo.renderArea.offset.y = 0;
+        renderPassBeginInfo.renderArea.extent = swapChainExtent;
+        renderPassBeginInfo.clearValueCount = 1;
+        renderPassBeginInfo.pClearValues = &clearColor;
+
+        vkCmdBeginRenderPass(graphicsCommandBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        vkCmdBindDescriptorSets(graphicsCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+
+        vkCmdBindPipeline(graphicsCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+
+        VkDeviceSize offset = 0;
+        vkCmdBindVertexBuffers(graphicsCommandBuffers[i], 0, 1, &vertexBuffer, &offset);
+
+        vkCmdBindIndexBuffer(graphicsCommandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+        vkCmdDrawIndexed(graphicsCommandBuffers[i], 3, 1, 0, 0, 0);
+
+        vkCmdEndRenderPass(graphicsCommandBuffers[i]);
+
+        // If present and graphics queue families differ, then another barrier is required
+        if (presentQueueFamily != graphicsQueueFamily) {
+            VkImageMemoryBarrier drawToPresentBarrier = {};
+            drawToPresentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            drawToPresentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            drawToPresentBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+            drawToPresentBarrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            drawToPresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            drawToPresentBarrier.srcQueueFamilyIndex = graphicsQueueFamily;
+            drawToPresentBarrier.dstQueueFamilyIndex = presentQueueFamily;
+            drawToPresentBarrier.image = swapChainImages[i];
+            drawToPresentBarrier.subresourceRange = subResourceRange;
+
+            vkCmdPipelineBarrier(graphicsCommandBuffers[i], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &drawToPresentBarrier);
+        }
+
+        if (vkEndCommandBuffer(graphicsCommandBuffers[i]) != VK_SUCCESS) {
+            std::cerr << "failed to record command buffer" << std::endl;
+            exit(1);
+        }
+    }
+
+    std::cout << "recorded command buffers" << std::endl;
+
+    // No longer needed
+    vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+}
+
+void 
+Application::mainLoop() {
+    bool quit = false;
+    //Event handler
+    SDL_Event e;
+    //While application is running
+    while (!quit)
+    {
+        //Handle events on queue
+        while (SDL_PollEvent(&e) != 0)
+        {
+            updateUniformData();
+            draw();
+            //User requests quit
+            if (e.type == SDL_QUIT)
+            {
+                quit = true;
+            }
+        }
+    }
+}
+
+void 
+Application::draw() {
+    // Acquire image
+    uint32_t imageIndex;
+    VkResult res = vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+
+    // Unless surface is out of date right now, defer swap chain recreation until end of this frame
+    if (res == VK_ERROR_OUT_OF_DATE_KHR) {
+        onWindowSizeChanged();
+        return;
+    }
+    else if (res != VK_SUCCESS) {
+        std::cerr << "failed to acquire image" << std::endl;
+        exit(1);
+    }
+
+    // Wait for image to be available and draw
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = &imageAvailableSemaphore;
+
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = &renderingFinishedSemaphore;
+
+    // This is the stage where the queue should wait on the semaphore
+    VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    submitInfo.pWaitDstStageMask = &waitDstStageMask;
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &graphicsCommandBuffers[imageIndex];
+
+    if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
+        std::cerr << "failed to submit draw command buffer" << std::endl;
+        exit(1);
+    }
+
+    // Present drawn image
+    // Note: semaphore here is not strictly necessary, because commands are processed in submission order within a single queue
+    VkPresentInfoKHR presentInfo = {};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = &renderingFinishedSemaphore;
+
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = &swapChain;
+    presentInfo.pImageIndices = &imageIndex;
+
+    res = vkQueuePresentKHR(presentQueue, &presentInfo);
+
+    if (res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR || windowResized) {
+        onWindowSizeChanged();
+    }
+    else if (res != VK_SUCCESS) {
+        std::cerr << "failed to submit present command buffer" << std::endl;
+        exit(1);
+    }
+}
+
+void 
+Application::onWindowSizeChanged() {
+    windowResized = false;
+
+    // Only recreate objects that are affected by framebuffer size changes
+    cleanUp(false);
+
+    createSwapChain();
+    createRenderPass();
+    createImageViews();
+    createFramebuffers();
+    createGraphicsPipeline();
+    createCommandBuffers();
+}
+
+void 
+Application::cleanUp(bool fullClean) {
+    vkDeviceWaitIdle(device);
+
+    vkFreeCommandBuffers(device, commandPool, (uint32_t)graphicsCommandBuffers.size(), graphicsCommandBuffers.data());
+
+    vkDestroyPipeline(device, graphicsPipeline, nullptr);
+    vkDestroyRenderPass(device, renderPass, nullptr);
+
+    for (size_t i = 0; i < swapChainImages.size(); i++) {
+        vkDestroyFramebuffer(device, swapChainFramebuffers[i], nullptr);
+        vkDestroyImageView(device, swapChainImageViews[i], nullptr);
+    }
+
+    vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+
+    if (fullClean) {
+        vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
+        vkDestroySemaphore(device, renderingFinishedSemaphore, nullptr);
+
+        vkDestroyCommandPool(device, commandPool, nullptr);
+
+        // Clean up uniform buffer related objects
+        vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+        vkDestroyBuffer(device, uniformBuffer, nullptr);
+        vkFreeMemory(device, uniformBufferMemory, nullptr);
+
+        // Buffers must be destroyed after no command buffers are referring to them anymore
+        vkDestroyBuffer(device, vertexBuffer, nullptr);
+        vkFreeMemory(device, vertexBufferMemory, nullptr);
+        vkDestroyBuffer(device, indexBuffer, nullptr);
+        vkFreeMemory(device, indexBufferMemory, nullptr);
+
+        // Note: implicitly destroys images (in fact, we're not allowed to do that explicitly)
+        vkDestroySwapchainKHR(device, swapChain, nullptr);
+
+        vkDestroyDevice(device, nullptr);
+
+        vkDestroySurfaceKHR(vkInstance, windowSurface, nullptr);
+
+#ifdef DEBUGGING_ENABLED
+        PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallback = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(vkInstance, "vkDestroyDebugReportCallbackEXT");
+        DestroyDebugReportCallback(vkInstance, debugReportCallbackExtension, nullptr);
+#endif // DEBUGGING_ENABLED
+
+        vkDestroyInstance(vkInstance, nullptr);
+    }
 }

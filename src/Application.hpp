@@ -41,12 +41,17 @@ private:
     void createImageViews();
     void createFramebuffers();
     void createGraphicsPipeline();
+    void createDescriptorPool();
+    void createDescriptorSet();
+    void createCommandBuffers();
+    void draw();
+    void onWindowSizeChanged();
 private:
     VkBool32 getMemoryType(uint32_t typeBits, VkFlags properties, uint32_t* typeIndex);
-    VkSurfaceFormatKHR Application::chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-    VkPresentModeKHR Application::choosePresentMode(const std::vector<VkPresentModeKHR> presentModes);
+    VkSurfaceFormatKHR chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+    VkPresentModeKHR choosePresentMode(const std::vector<VkPresentModeKHR> presentModes);
     VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& surfaceCapabilities);
-    VkShaderModule Application::createShaderModule(const char * filename);
+    VkShaderModule createShaderModule(const char * filename);
 private:
     VkSwapchainKHR oldSwapChain;
     VkSwapchainKHR swapChain;
@@ -85,6 +90,10 @@ private:
     VkDescriptorSetLayout descriptorSetLayout;
     VkPipelineLayout pipelineLayout;
     VkPipeline graphicsPipeline;
+    VkDescriptorPool descriptorPool;
+    VkDescriptorSet descriptorSet;
+    std::vector<VkCommandBuffer> graphicsCommandBuffers;
+    bool windowResized = true;
 };
 
 #endif
