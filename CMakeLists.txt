@@ -75,13 +75,12 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
         ${LIBRARY_OUTPUT_PATH}
     )       
 endif()
-
-file(MAKE_DIRECTORY ${LIBRARY_OUTPUT_PATH}/assets/shaders)
+# file(MAKE_DIRECTORY ${LIBRARY_OUTPUT_PATH}/assets/shaders)
 # Copying assets to output directory
-file(GLOB_RECURSE SHADERS "assets/shaders/*")
-add_custom_command(
-    TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    ${SHADERS}
-    ${LIBRARY_OUTPUT_PATH}/assets/shaders
-)
+# file(GLOB_RECURSE SHADERS "assets/shaders/*")
+#add_custom_command(
+#    TARGET ${PROJECT_NAME} POST_BUILD
+#    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+#    ${SHADERS}
+#    ${LIBRARY_OUTPUT_PATH}/assets/shaders
+#)

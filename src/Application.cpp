@@ -523,7 +523,7 @@ Application::createVertexBuffer() {
     vertexBindingDescription.stride = sizeof(vertices[0]);
     vertexBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    // vec2 position
+    // vec3 position
     vertexAttributeDescriptions.resize(2);
     vertexAttributeDescriptions[0].binding = 0;
     vertexAttributeDescriptions[0].location = 0;
@@ -1169,7 +1169,13 @@ Application::createCommandBuffers() {
         presentToDrawBarrier.image = swapChainImages[i];
         presentToDrawBarrier.subresourceRange = subResourceRange;
 
-        vkCmdPipelineBarrier(graphicsCommandBuffers[i], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &presentToDrawBarrier);
+        vkCmdPipelineBarrier(
+            graphicsCommandBuffers[i], 
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 
+            0, 0, nullptr, 0, nullptr, 1, 
+            &presentToDrawBarrier
+        );
 
         VkRenderPassBeginInfo renderPassBeginInfo = {};
         renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -1209,7 +1215,12 @@ Application::createCommandBuffers() {
             drawToPresentBarrier.image = swapChainImages[i];
             drawToPresentBarrier.subresourceRange = subResourceRange;
 
-            vkCmdPipelineBarrier(graphicsCommandBuffers[i], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &drawToPresentBarrier);
+            vkCmdPipelineBarrier(
+                graphicsCommandBuffers[i], 
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 
+                VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 
+                0, 0, nullptr, 0, nullptr, 1, &drawToPresentBarrier
+            );
         }
 
         if (vkEndCommandBuffer(graphicsCommandBuffers[i]) != VK_SUCCESS) {
