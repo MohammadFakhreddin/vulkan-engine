@@ -7,6 +7,7 @@
 #include <vector>
 #include <glm/ext.hpp>
 #include <chrono>
+#include <string>
 
 #define DEBUGGING_ENABLED
 
@@ -35,7 +36,7 @@ private:
     void createCommandPool();
     void createVertexBuffer();
     void createUniformBuffer();
-    void updateUniformData();
+    void updateUniformBuffer(uint32_t currentImage);
     void createSwapChain();
     void createRenderPass();
     void createImageViews();
@@ -44,8 +45,15 @@ private:
     void createDescriptorPool();
     void createDescriptorSet();
     void createCommandBuffers();
-    void draw();
+    void drawFrame();
     void onWindowSizeChanged();
+    void throwErrorAndExit(std::string error);
+private:
+    struct UniformBufferObject {
+        glm::mat4 model;
+        glm::mat4 view;
+        glm::mat4 proj;
+    };
 private:
     VkBool32 getMemoryType(uint32_t typeBits, VkFlags properties, uint32_t* typeIndex);
     VkSurfaceFormatKHR chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
@@ -75,12 +83,9 @@ private:
     VkDeviceMemory vertexBufferMemory;
     VkBuffer vertexBuffer;
     std::vector<VkVertexInputAttributeDescription> vertexAttributeDescriptions;
-    struct {
-        glm::mat4 transformationMatrix;
-    } uniformBufferData;
-    VkBuffer uniformBuffer;
-    VkDeviceMemory uniformBufferMemory;
-    std::chrono::high_resolution_clock::time_point timeStart;
+    // Multiple buffers may be running so we need to have buffer for each image
+    std::vector<VkBuffer> uniformBuffers;
+    std::vector<VkDeviceMemory> uniformBuffersMemory;
     VkExtent2D swapChainExtent;
     std::vector<VkImage> swapChainImages;
     VkFormat swapChainFormat;
@@ -91,7 +96,7 @@ private:
     VkPipelineLayout pipelineLayout;
     VkPipeline graphicsPipeline;
     VkDescriptorPool descriptorPool;
-    VkDescriptorSet descriptorSet;
+    std::vector<VkDescriptorSet> descriptorSets;
     std::vector<VkCommandBuffer> graphicsCommandBuffers;
     bool windowResized = true;
 };

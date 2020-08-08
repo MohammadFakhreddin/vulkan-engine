@@ -36,11 +36,11 @@ file(GLOB_RECURSE SRC_CPP "src/*.cpp")
 # file(GLOB_RECURSE LIB_CPP "libs/include/*.cpp")
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-  file(GLOB VULKAN "libs/win/vulkan-1.lib")
+  file(GLOB VULKAN "${CMAKE_SOURCE_DIR}/libs/win/vulkan-1.lib")
   file(
     GLOB SDL 
-    "libs/win/SDL2.lib" 
-    "libs/win/SDL2main.lib"
+    "${CMAKE_SOURCE_DIR}/libs/win/SDL2.lib" 
+    "${CMAKE_SOURCE_DIR}/libs/win/SDL2main.lib"
   )
   list(
     APPEND COMPILED_LIBS 
@@ -61,13 +61,13 @@ list(
 )
 
 # Includes these 2 directory for importing
-include_directories ("src" "libs/include")
+include_directories ("src" "${CMAKE_SOURCE_DIR}/libs/include")
 link_directories(${LIBRARY_OUTPUT_PATH} ${LIB_ROOT})
 add_executable(${PROJECT_NAME} ${APP_HEADER} ${APP_SOURCE})
 target_link_libraries(${PROJECT_NAME} ${COMPILED_LIBS})
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-    file(GLOB DLLS "libs/win/SDL2.dll" )
+    file(GLOB DLLS "${CMAKE_SOURCE_DIR}/libs/win/SDL2.dll" )
     add_custom_command(
         TARGET ${PROJECT_NAME} POST_BUILD        # Adds a post-build event to MyTest
         COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
