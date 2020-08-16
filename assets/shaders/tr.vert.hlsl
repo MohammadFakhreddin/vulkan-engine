@@ -25,7 +25,11 @@ cbuffer myUniform : register (b0,space0) {
 
 VSOut main(VSIn input) {
     VSOut output;
-    output.position = mul(model * view * proj, float4(input.vertex_position,1.0f));
+    // float4x4 uniformMult = model;
+    float4x4 uniformMult = mul(model,view);
+    uniformMult = mul(uniformMult,proj);
+    output.position = mul(uniformMult, float4(input.vertex_position,1.0f));
+    // output.position = mul(model * view * proj, float4(input.vertex_position,1.0f));
     output.color = input.vertex_color;//float4(input.vertex_color, 1.0f);
     return output;
 }

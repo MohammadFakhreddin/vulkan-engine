@@ -586,21 +586,27 @@ Application::updateUniformBuffer(uint32_t currentImage) {
     //modelMatrix = glm::translate(modelMatrix, glm::vec3(0.5f / 3.0f, -0.5f / 3.0f, 0.0f));
 
     // Set up view
-    ubo.view = glm::lookAt(
+    glm::mat3 view = glm::lookAt(
         glm::vec3(2.0f, 2.0f, 2.0f), 
         glm::vec3(0.0f, 0.0f, 0.0f), 
         glm::vec3(0.0f, 0.0f, 1.0f)
     );
 
     // Set up projection
-    ubo.proj = glm::perspective(
+    glm::mat3 proj = glm::perspective(
         glm::radians(45.0f), 
-        swapChainExtent.width / (float)swapChainExtent.height, 
+        swapChainExtent.width / static_cast<float>(swapChainExtent.height), 
         0.1f, 
         10.0f
     );
-    // It reveses the object
-    ubo.proj[1][1] *= -1;
+    
+    ubo.view = glm::mat4(view);
+
+    ubo.proj = glm::mat4(proj);
+    // It reverses the object
+    //ubo.proj[1][1] *= -1;
+    /*ubo.model *= glm::mat4(view);
+    ubo.model *= glm::mat4(proj);*/
 
     //uniformBufferData.transformationMatrix = projMatrix * viewMatrix * modelMatrix;
     void* data;
@@ -1363,7 +1369,7 @@ void
 Application::onWindowSizeChanged() {
     windowResized = false;
 
-    // Only recreate objects that are affected by framebuffer size changes
+    // Only recreate objects that are affected by frame-buffer size changes
     cleanUp(false);
 
     createSwapChain();
