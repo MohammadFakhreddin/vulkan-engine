@@ -16,8 +16,9 @@ cbuffer myUniform : register (b0,space0) {
     // float a; If float exists world start from 16
     // float4x4 world;
     float4x4 model;
-    float4x4 view;
+    // float4x4 view;
     float4x4 proj;
+    float4x4 camera;
 }; // Read about alignment rules
 
 //ConstantBuffer <MyStruct> myUniform : register (b0,space0); 
@@ -26,9 +27,11 @@ cbuffer myUniform : register (b0,space0) {
 VSOut main(VSIn input) {
     VSOut output;
     // float4x4 uniformMult = model;
-    float4x4 uniformMult = mul(model,view);
-    uniformMult = mul(uniformMult,proj);
-    output.position = mul(uniformMult, float4(input.vertex_position,1.0f));
+    // float4x4 uniformMult = mul(model, view);
+    // uniformMult = mul(uniformMult, proj);
+    float4 mult_result = mul(model, float4(input.vertex_position, 1.0f));
+    mult_result = mul(camera,mult_result);
+    output.position = mul(proj,mult_result);
     // output.position = mul(model * view * proj, float4(input.vertex_position,1.0f));
     output.color = input.vertex_color;//float4(input.vertex_color, 1.0f);
     return output;
