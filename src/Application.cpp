@@ -569,73 +569,63 @@ Application::createUniformBuffer() {
     //updateUniformData();
 }
 
+float degree = 0;
+
 void 
 Application::updateUniformBuffer(uint32_t currentImage) {
     // Rotate based on time
-    static auto startTime = std::chrono::high_resolution_clock::now();
-    auto currentTime = std::chrono::high_resolution_clock::now(); 
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+    //static auto startTime = std::chrono::high_resolution_clock::now();
+    //auto currentTime = std::chrono::high_resolution_clock::now(); 
+    //double time = std::chrono::duration<double, std::chrono::seconds::period>(currentTime - startTime).count();
     
     UniformBufferObject ubo{};
     
-    //ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    //ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    //ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float) swapChainExtent.height, 0.1f, 10.0f);
-    //ubo.proj[1][1] *= -1;
-
-    /*ubo.model = glm::rotate(
-        glm::mat4(1.0f),
-        time * glm::radians(90.0f), 
-        glm::vec3(0.5f,0.5f,0.0f)
-    );*/
     Matrix4X4Float model;
+
+    degree++;
+    if(degree >= 360.0f)
+    {
+        degree = 0.0f;
+    }
+    //degree = 45;
+    Matrix4X4Float::assignRotationXYZ(model,Math::deg2Rad(degree),Math::deg2Rad(degree),Math::deg2Rad(0.0f));
     //Matrix4X4Float::identity(model);
-    Matrix4X4Float::assignRotationXYZ(model,time * 1.0f,time * 1.0f,time * 1.0f);
+    //{
+    //    float LEFT = -320;
+    //    float RIGHT = 320;
+    //    float TOP = 240;
+    //    float BOTTOM = -240;
+    //    float ZFAR = -240;
+    //    float ZNEAR = 240;
+    //}
+
     ::memcpy(ubo.model,model.cells,sizeof(ubo.model));
-    //ubo.model = glm::identity<glm::mat4>();
-    ////glm::mat4 modelMatrix;
-    ////modelMatrix = glm::rotate(modelMatrix, angle, glm::vec3(0, 0, 1));
-    ////modelMatrix = glm::translate(modelMatrix, glm::vec3(0.5f / 3.0f, -0.5f / 3.0f, 0.0f));
 
-    //// Set up view
-    //glm::mat3 const view = glm::lookAt(
-    //    glm::vec3(2.0f, 2.0f, 2.0f), 
-    //    glm::vec3(0.0f, 0.0f, 0.0f), 
-    //    glm::vec3(0.0f, 0.0f, 1.0f)
-    //);
-
-    // Set up projection
-    //glm::mat3 const proj = glm::perspective(
-    //    glm::radians(45.0f), 
-    //    swapChainExtent.width / static_cast<float>(swapChainExtent.height), 
-    //    0.1f, 
-    //    10.0f
-    //);
-    //Matrix4X4Float view;
-    //Matrix4X4Float::identity(view);
-    //::memcpy(ubo.view,view.cells,sizeof(ubo.view));
-    //ubo.view = glm::mat4(view);
-
-    //proj[1][1] *= -1;
-    Matrix4X4Float proj;
-    Matrix4X4Float::preparePerspectiveProjectionMatrix(
-        proj,
-        RATIO,
-        45,
-        Z_NEAR,Z_FAR
-    );
     //Matrix4X4Float::identity(proj);
-    ::memcpy(ubo.proj,proj.cells,sizeof(ubo.proj));
-    //ubo.proj = glm::mat4(proj);
-    // It reverses the object
-    //ubo.proj[1][1] *= -1;
-    Matrix4X4Float camera;
-    //Matrix4X4Float::assignRotationXYZ(camera,0.0f,0.0f,0.0f);
-    Matrix4X4Float::assignTransformation(camera,0.0f,0.0f,500.0f);
-    //Matrix4X4Float::identity(camera);
-    ::memcpy(ubo.camera,camera.cells,sizeof(ubo.camera));
-    
 
+    //Matrix4X4Float proj;
+
+    //Matrix4X4Float::assignProjection(
+    //    proj,
+    //    /*static_cast<float>(swapChainExtent.width)/static_cast<float>(swapChainExtent.height),
+    //    45,100.0f,0.0f*/
+    //    0,
+    //    float(swapChainExtent.width),
+    //    0,
+    //    float(swapChainExtent.height),
+    //    Z_NEAR,
+    //    Z_FAR
+    //);
+
+    //::memcpy(ubo.proj,proj.cells,sizeof(ubo.proj));
+
+    //Matrix4X4Float camera;
+
+    ////Matrix4X4Float::identity(camera);
+    //Matrix4X4Float::assignTransformation(camera,50,0 ,50.0f);
+
+    //::memcpy(ubo.camera,camera.cells,sizeof(ubo.camera));
+    
     void* data;
     {
         const auto result = vkMapMemory(
@@ -651,7 +641,9 @@ Application::updateUniformBuffer(uint32_t currentImage) {
             throwErrorAndExit("vkMapMemory for uniform buffer failed");
         }
     }
+
     memcpy(data, &ubo, sizeof(UniformBufferObject));
+
     vkUnmapMemory(device, uniformBuffersMemory[currentImage]);
 }
 

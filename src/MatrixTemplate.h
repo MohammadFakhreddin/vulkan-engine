@@ -336,7 +336,7 @@ public:
     matrix.set(2, 3, -(2 * far * near) / (far - near));
     assert(matrix.get(3, 0) == 0);
     assert(matrix.get(3, 1) == 0);
-    matrix.set(3, 2, -1);
+    //matrix.set(3, 2, -1);
     assert(matrix.get(3, 3) == 0);
   }
 
@@ -348,7 +348,8 @@ public:
     float near_plane,
     float far_plane 
   ) {
-    float f = 1.0f / tan( Math::deg2Rad( 0.5f * field_of_view ) );
+    auto radian = Math::deg2Rad( 0.5f * field_of_view );
+    float f = 1.0f / tan( radian );
 
     matrix.cells[0] = static_cast<T>(f / aspect_ratio);
     matrix.cells[1] = static_cast<T>(0.0f);

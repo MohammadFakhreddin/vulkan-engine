@@ -24,7 +24,7 @@ public:
     template<typename  A>
     static A deg2Rad(const A & value)
     {
-        return A(static_cast<double>(value) / piDouble);
+        return A((static_cast<double>(value) * piDouble) / 180);
     }
 
 };

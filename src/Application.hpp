@@ -20,12 +20,12 @@ private:
     static constexpr uint32_t SCREEN_WIDTH = 640;
     static constexpr uint32_t SCREEN_HEIGHT = 480;
     static constexpr float RATIO = static_cast<float>(SCREEN_WIDTH) / static_cast<float>(SCREEN_HEIGHT);
-    //static constexpr float LEFT = -1.0f * RATIO;
-    //static constexpr float RIGHT = 1.0f * RATIO;
-    //static constexpr float TOP = 1.0f;
-    //static constexpr float BOTTOM = -1.0f;
-    static constexpr float Z_NEAR = 1000.0f;
-    static constexpr float Z_FAR = 0.0f;
+    static constexpr float LEFT = -1.0f * RATIO;
+    static constexpr float RIGHT = 1.0f * RATIO;
+    static constexpr float TOP = 1.0f;
+    static constexpr float BOTTOM = -1.0f;
+    static constexpr float Z_NEAR = 100.0f;
+    static constexpr float Z_FAR = 1.0f;
 public:
     Application();
     void run();
@@ -95,9 +95,9 @@ private:
     std::vector<uint32_t> const indices = { 
         0, 1, 2, 2, 3, 0
     };*/
-    float const halfWidth = 0.5f;
-    float const cubeFrontZ = 0.5f;
-    float const cubeBackZ = -0.5f;
+    float const halfWidth = 50.0f;
+    float const cubeFrontZ = 50.0f;
+    float const cubeBackZ = -50.0f;
     std::vector<Vertex> const vertices = {
         //// front
         {{-halfWidth, -halfWidth, cubeFrontZ},{1.0f, 0.0f, 0.0f}},
@@ -105,10 +105,10 @@ private:
         {{halfWidth,  halfWidth,  cubeFrontZ},{0.0f, 0.0f, 1.0f}},
         {{-halfWidth,  halfWidth,  cubeFrontZ},{1.0f, 1.0f, 1.0f}},
         // back
-        {{-halfWidth, -halfWidth,  cubeBackZ},{1.0f, 0.0f, 1.0f}},
-        {{halfWidth, -halfWidth,  cubeBackZ},{0.0f, 1.0f, 1.0f}},
-        {{halfWidth,  halfWidth,  cubeBackZ},{0.0f, 1.0f, 1.0f}},
-        {{-halfWidth,  halfWidth,  cubeBackZ},{1.0f, 0.0f, 1.0f}}
+        {{-halfWidth, -halfWidth,  cubeBackZ},{0.5f, 0.0f, 0.5f}},
+        {{halfWidth, -halfWidth,  cubeBackZ},{0.0f, 0.5f, 0.5f}},
+        {{halfWidth,  halfWidth,  cubeBackZ},{0.0f, 0.5f, 0.5f}},
+        {{-halfWidth,  halfWidth,  cubeBackZ},{0.5f, 0.0f, 0.5f}}
     };
     std::vector<uint32_t> const indices = { 
         // front
