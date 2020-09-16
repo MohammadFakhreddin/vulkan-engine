@@ -9,6 +9,8 @@
 
 #include "MMath.h"
 
+// Note: This class is column major from now on
+
 //TODO Write unit tests for project
 //TODO For specific situation matrices use static methods
 template <typename T,unsigned int width,unsigned int height>
@@ -150,7 +152,15 @@ public:
   const T& get(const unsigned int& x, const unsigned int& y) const {
     assert(x < width);
     assert(y < height);
-    return cells[x * height + y];
+    //return cells[x * height + y];
+    return cells[y * width + x];
+  }
+
+void set(const unsigned int& x, const unsigned int& y, const T& value) {
+    assert(x < width);
+    assert(y < height);
+    //cells[x * height + y] = value;
+    cells[y * width + x] = value;
   }
 
   const T& getX() const {
@@ -247,12 +257,6 @@ public:
     assert(index < matrixSize);
     return cells[index];
   }
-  
-  void set(const unsigned int& x, const unsigned int& y, const T& value) {
-    assert(x < width);
-    assert(y < height);
-    cells[x * height + y] = value;
-  }
 
   void setDirect(const unsigned int& index, const T& value) {
     assert(index < matrixSize);
@@ -310,34 +314,34 @@ public:
   }
 
   //Based on http://www.songho.ca/opengl/gl_projectionmatrix.html
-  static void assignProjection(
-    _Matrix<T, 4, 4>& matrix,
-    const float & left,
-    const float & right,
-    const float & top,
-    const float & bottom,
-    const float & near,
-    const float & far
+  static void assignOrthographicProjection(
+    _Matrix<T, 4, 4> & matrix,
+    const float left,
+    const float right,
+    const float top,
+    const float bottom,
+    const float near,
+    const float far
   ) {
     assert(far != near);
     assert(right != left);
     assert(bottom != top);
-    matrix.set(0, 0, (2 * near) / (right - left));
-    assert(matrix.get(0, 1) == 0);
-    matrix.set(0, 2, (right + left) / (right - left));
-    assert(matrix.get(0, 3) == 0);
+    matrix.set(0, 0, 2 / (right - left));
+    assert(0 == matrix.get(0, 1));
+    assert(0 == matrix.get(0, 2));
+    matrix.set(0, 3, right/(left - right));
     assert(matrix.get(1, 0) == 0);
-    matrix.set(1, 1, (2 * near) / (top - bottom));
-    matrix.set(1, 2, (bottom + top) / (top - bottom));
-    assert(matrix.get(1, 3) == 0);
-    assert(matrix.get(2, 0) == 0);
-    assert(matrix.get(2, 1) == 0);
-    matrix.set(2, 2, -(far + near) / (far - near));
-    matrix.set(2, 3, -(2 * far * near) / (far - near));
-    assert(matrix.get(3, 0) == 0);
-    assert(matrix.get(3, 1) == 0);
-    //matrix.set(3, 2, -1);
-    assert(matrix.get(3, 3) == 0);
+    matrix.set(1, 1, 2 / (top - bottom));
+    assert(0 == matrix.get(1, 2));
+    matrix.set(1, 3, top/(bottom - top));
+    assert(0 == matrix.get(2, 0));
+    assert(0 == matrix.get(2, 1));
+    matrix.set(2, 2, 1 / (near - far));
+    matrix.set(2, 3, far/(far - near));
+    assert(0 == matrix.get(3,0));
+    assert(0 == matrix.get(3,1));
+    assert(0 == matrix.get(3,2));
+    matrix.set(3,3,1);
   }
 
   //https://github.com/PacktPublishing/Vulkan-Cookbook/blob/master/Library/Source%20Files/10%20Helper%20Recipes/04%20Preparing%20a%20perspective%20projection%20matrix.cpp

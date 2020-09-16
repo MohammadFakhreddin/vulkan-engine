@@ -580,27 +580,23 @@ Application::updateUniformBuffer(uint32_t currentImage) {
     
     UniformBufferObject ubo{};
     
-    Matrix4X4Float model;
-
+    
     degree++;
     if(degree >= 360.0f)
     {
         degree = 0.0f;
     }
-    //degree = 45;
-    Matrix4X4Float::assignRotationXYZ(model,Math::deg2Rad(degree),Math::deg2Rad(degree),Math::deg2Rad(0.0f));
-    //Matrix4X4Float::identity(model);
-    //{
-    //    float LEFT = -320;
-    //    float RIGHT = 320;
-    //    float TOP = 240;
-    //    float BOTTOM = -240;
-    //    float ZFAR = -240;
-    //    float ZNEAR = 240;
-    //}
 
-    ::memcpy(ubo.model,model.cells,sizeof(ubo.model));
-
+    {// Model
+        Matrix4X4Float model;
+        Matrix4X4Float::assignRotationXYZ(model,Math::deg2Rad(degree),Math::deg2Rad(degree),Math::deg2Rad(0.0f));
+        ::memcpy(ubo.model,model.cells,sizeof(ubo.model));
+    }
+    {// Projection
+        Matrix4X4Float proj;
+        Matrix4X4Float::assignOrthographicProjection(proj,LEFT,RIGHT,TOP,BOTTOM,Z_NEAR,Z_FAR);
+        ::memcpy(ubo.proj,proj.cells,sizeof(ubo.proj));
+    }
     //Matrix4X4Float::identity(proj);
 
     //Matrix4X4Float proj;

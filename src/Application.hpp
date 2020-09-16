@@ -4,9 +4,6 @@
 #include <vulkan/vulkan.h>
 #include <SDL2/SDL.h>
 #include <vector>
-//#define GLM_FORCE_RADIANS
-//#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-//#include <glm/ext.hpp>
 #include <chrono>
 #include <string>
 
@@ -20,12 +17,12 @@ private:
     static constexpr uint32_t SCREEN_WIDTH = 640;
     static constexpr uint32_t SCREEN_HEIGHT = 480;
     static constexpr float RATIO = static_cast<float>(SCREEN_WIDTH) / static_cast<float>(SCREEN_HEIGHT);
-    static constexpr float LEFT = -1.0f * RATIO;
-    static constexpr float RIGHT = 1.0f * RATIO;
-    static constexpr float TOP = 1.0f;
-    static constexpr float BOTTOM = -1.0f;
-    static constexpr float Z_NEAR = 100.0f;
-    static constexpr float Z_FAR = 1.0f;
+    static constexpr float LEFT = -320.0f;
+    static constexpr float RIGHT = 320.0f;
+    static constexpr float TOP = 240.0f;
+    static constexpr float BOTTOM = -240.0f;
+    static constexpr float Z_NEAR = 300.0f;
+    static constexpr float Z_FAR = -300.0f;
 public:
     Application();
     void run();
