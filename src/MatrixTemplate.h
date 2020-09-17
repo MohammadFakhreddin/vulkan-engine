@@ -345,32 +345,69 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
   }
 
   //https://github.com/PacktPublishing/Vulkan-Cookbook/blob/master/Library/Source%20Files/10%20Helper%20Recipes/04%20Preparing%20a%20perspective%20projection%20matrix.cpp
-  static void preparePerspectiveProjectionMatrix(
-    _Matrix<T, 4, 4>& matrix,
+  static void assignPerspectiveProjection(
+    _Matrix<T, 4, 4> & matrix,
+    const float left,
+    const float right,
+    const float top,
+    const float bottom,
+    const float near,
+    const float far
+  ) {
+    matrix.set(0,0,(2 * near)/(right - left));
+    assert(0 == matrix.get(0,1));
+    matrix.set(0,2,(right + left)/(right - left));
+    assert(0 == matrix.get(0,3));
+    assert(0 == matrix.get(1,0));
+    matrix.set(1,1,(2 * near)/(top - bottom));
+    matrix.set(1,2,(top + bottom)/(top - bottom));
+    assert(0 == matrix.get(1,3));
+    assert(0 == matrix.get(2,0));
+    assert(0 == matrix.get(2,1));
+    matrix.set(2,2,(far + near)/(near - far));
+    matrix.set(2,3,(2 * far * near)/(near - far));
+    assert(0 == matrix.get(3,0));
+    assert(0 == matrix.get(3,1));
+    matrix.set(3,2,-1);
+    assert(0 == matrix.get(3,3));
+  }
+
+  static void PreparePerspectiveProjectionMatrix(
+    _Matrix<T, 4, 4> & matrix,
     float aspect_ratio,
     float field_of_view,
     float near_plane,
     float far_plane 
   ) {
-    auto radian = Math::deg2Rad( 0.5f * field_of_view );
-    float f = 1.0f / tan( radian );
+    float const f = 1.0f / tan( Math::deg2Rad( 0.5f * field_of_view ) );
+    matrix.set(0,0,f / aspect_ratio);
+    matrix.set(1,1,-f);
+    matrix.set(2,2,far_plane / (near_plane - far_plane));
+    matrix.set(2,3,-1.0f);
+    matrix.set(3,2,(near_plane * far_plane) / (near_plane - far_plane));
+    //Matrix4x4 perspective_projection_matrix = {
+    //  f / aspect_ratio,
+    //  0.0f,
+    //  0.0f,
+    //  0.0f,
 
-    matrix.cells[0] = static_cast<T>(f / aspect_ratio);
-    matrix.cells[1] = static_cast<T>(0.0f);
-    matrix.cells[2] = static_cast<T>(0.0f);
-    matrix.cells[3] = static_cast<T>(0.0f);
-    matrix.cells[4] = static_cast<T>(0.0f);
-    matrix.cells[5] = static_cast<T>(-f);
-    matrix.cells[6] = static_cast<T>(0.0f);
-    matrix.cells[7] = static_cast<T>(0.0f);
-    matrix.cells[8] = static_cast<T>(0.0f);
-    matrix.cells[9] = static_cast<T>(0.0f);
-    matrix.cells[10] = static_cast<T>(far_plane / (near_plane - far_plane));
-    matrix.cells[11] = static_cast<T>(-1.0f);
-    matrix.cells[12] = static_cast<T>(0.0f);
-    matrix.cells[13] = static_cast<T>(0.0f);
-    matrix.cells[14] = static_cast<T>((near_plane * far_plane) / (near_plane - far_plane));
-    matrix.cells[15] = static_cast<T>(0.0f);
+    //  0.0f,
+    //  -f,
+    //  0.0f,
+    //  0.0f,
+
+    //  0.0f,
+    //  0.0f,
+    //  far_plane / (near_plane - far_plane),
+    //  -1.0f,
+    //  
+    //  0.0f,
+    //  0.0f,
+    //  (near_plane * far_plane) / (near_plane - far_plane),
+    //  0.0f
+    //};
+    
+    //return perspective_projection_matrix;
   }
 
   static void assignScale(

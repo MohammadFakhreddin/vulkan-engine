@@ -16,13 +16,16 @@ private:
     static constexpr const char* DEBUG_LAYER = "VK_LAYER_LUNARG_standard_validation";
     static constexpr uint32_t SCREEN_WIDTH = 640;
     static constexpr uint32_t SCREEN_HEIGHT = 480;
+    static constexpr float HALF_WIDTH = 320;
+    static constexpr float HALF_HEIGHT = 240;
     static constexpr float RATIO = static_cast<float>(SCREEN_WIDTH) / static_cast<float>(SCREEN_HEIGHT);
-    static constexpr float LEFT = -320.0f;
-    static constexpr float RIGHT = 320.0f;
-    static constexpr float TOP = 240.0f;
-    static constexpr float BOTTOM = -240.0f;
-    static constexpr float Z_NEAR = 300.0f;
-    static constexpr float Z_FAR = -300.0f;
+    static constexpr float LEFT = 0.0f;
+    static constexpr float RIGHT = 640.0f;
+    static constexpr float TOP = 480.0f;
+    static constexpr float BOTTOM = 0.0f;
+    static constexpr float Z_NEAR = 600.0f;
+    static constexpr float Z_FAR = 0.1f;
+    static constexpr float Z_MIDDLE = 400.0f;
 public:
     Application();
     void run();
@@ -72,29 +75,17 @@ private:
     void throwErrorAndExit(std::string error);
 private:
     struct UniformBufferObject {
-        float model[16];
-        //float view[16];
+        float rotation[16];
+        float transformation[16];
         float proj[16];
-        float camera[16];
     };
     struct Vertex {
         float pos[3];
         float color[3];
     };
-    // Triangle
-    // Setup vertices
-    /*std::vector<Vertex> vertices = {
-        { { -0.5f, -0.5f,  0.0f }, { 1.0f, 0.0f, 0.0f } },
-        { { -0.5f,  0.5f,  0.0f }, { 0.0f, 1.0f, 0.0f } },
-        { {  0.5f,  0.5f,  0.0f }, { 0.0f, 0.0f, 1.0f } },
-        {{ 0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
-    };
-    std::vector<uint32_t> const indices = { 
-        0, 1, 2, 2, 3, 0
-    };*/
-    float const halfWidth = 50.0f;
-    float const cubeFrontZ = 50.0f;
-    float const cubeBackZ = -50.0f;
+    float const halfWidth = 100.0f;
+    float const cubeFrontZ = 100.0f;
+    float const cubeBackZ = -100.0f;
     std::vector<Vertex> const vertices = {
         //// front
         {{-halfWidth, -halfWidth, cubeFrontZ},{1.0f, 0.0f, 0.0f}},

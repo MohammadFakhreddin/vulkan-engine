@@ -14,8 +14,8 @@ struct VSOut{
 
 cbuffer myUniform : register (b0,space0) {
     // float a; If float exists world start from 16
-    // float4x4 world;
-    float4x4 model;
+    float4x4 rotation;
+    float4x4 transformation;
     float4x4 proj;
 }; // Read about alignment rules
 
@@ -24,29 +24,21 @@ cbuffer myUniform : register (b0,space0) {
 
 VSOut main(VSIn input) {
 
-    // float1 LEFT = -320.0f;
-    // float1 RIGHT = 320.0f;
-    // float1 TOP = 240.0f;
-    // float1 BOTTOM = -240.0f;
-    // float1 ZFAR = -300.0f;
-    // float1 ZNEAR = 300.0f;
-
     VSOut output;
     
-    float4 mult_result = mul(model, float4(input.vertex_position, 1.0f));
+    float4 mult_result = mul(rotation, float4(input.vertex_position, 1.0f));
+
+    mult_result = mul(transformation, mult_result);
     
-    // float1 x = mult_result.x - LEFT;
-    // x *= 2.0f;
-    // x /= RIGHT - LEFT;
-    // x -= 1.0f;
-    // float1 y = mult_result.y - BOTTOM;
-    // y *= 2.0f;
-    // y /= TOP - BOTTOM;
-    // y -= 1.0f;
-    // float1 z = mult_result.z - ZFAR;
-    // z /= ZNEAR - ZFAR;
-    // output.position = float4(x,y,z,1.0f);
-    output.position = mul(proj, mult_result);
+    mult_result = mul(proj, mult_result);
+
+    float inverseZ = 1 - mult_result.z;
+
+    mult_result.x *= inverseZ;
+
+    mult_result.y *= inverseZ;
+
+    output.position = mult_result;
     
     output.color = input.vertex_color;
 

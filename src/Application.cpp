@@ -573,13 +573,8 @@ float degree = 0;
 
 void 
 Application::updateUniformBuffer(uint32_t currentImage) {
-    // Rotate based on time
-    //static auto startTime = std::chrono::high_resolution_clock::now();
-    //auto currentTime = std::chrono::high_resolution_clock::now(); 
-    //double time = std::chrono::duration<double, std::chrono::seconds::period>(currentTime - startTime).count();
-    
+
     UniformBufferObject ubo{};
-    
     
     degree++;
     if(degree >= 360.0f)
@@ -588,39 +583,22 @@ Application::updateUniformBuffer(uint32_t currentImage) {
     }
 
     {// Model
-        Matrix4X4Float model;
-        Matrix4X4Float::assignRotationXYZ(model,Math::deg2Rad(degree),Math::deg2Rad(degree),Math::deg2Rad(0.0f));
-        ::memcpy(ubo.model,model.cells,sizeof(ubo.model));
+        Matrix4X4Float rotation;
+        Matrix4X4Float::assignRotationXYZ(rotation,Math::deg2Rad(degree),Math::deg2Rad(degree),Math::deg2Rad(0.0f));
+        ::memcpy(ubo.rotation,rotation.cells,sizeof(ubo.rotation));
+    }
+    {// Transformation
+        Matrix4X4Float transformation;
+        //Matrix4X4Float::identity(transformation);
+        Matrix4X4Float::assignTransformation(transformation,HALF_WIDTH,HALF_HEIGHT,Z_MIDDLE/2);
+        ::memcpy(ubo.transformation,transformation.cells,sizeof(ubo.transformation));
     }
     {// Projection
         Matrix4X4Float proj;
         Matrix4X4Float::assignOrthographicProjection(proj,LEFT,RIGHT,TOP,BOTTOM,Z_NEAR,Z_FAR);
+        //Matrix4X4Float::PreparePerspectiveProjectionMatrix(proj,RATIO,45,Z_NEAR,Z_FAR);
         ::memcpy(ubo.proj,proj.cells,sizeof(ubo.proj));
     }
-    //Matrix4X4Float::identity(proj);
-
-    //Matrix4X4Float proj;
-
-    //Matrix4X4Float::assignProjection(
-    //    proj,
-    //    /*static_cast<float>(swapChainExtent.width)/static_cast<float>(swapChainExtent.height),
-    //    45,100.0f,0.0f*/
-    //    0,
-    //    float(swapChainExtent.width),
-    //    0,
-    //    float(swapChainExtent.height),
-    //    Z_NEAR,
-    //    Z_FAR
-    //);
-
-    //::memcpy(ubo.proj,proj.cells,sizeof(ubo.proj));
-
-    //Matrix4X4Float camera;
-
-    ////Matrix4X4Float::identity(camera);
-    //Matrix4X4Float::assignTransformation(camera,50,0 ,50.0f);
-
-    //::memcpy(ubo.camera,camera.cells,sizeof(ubo.camera));
     
     void* data;
     {
