@@ -313,7 +313,7 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     return sqrt(squareSize<A>());
   }
 
-  //Based on http://www.songho.ca/opengl/gl_projectionmatrix.html
+  // working correctly
   static void assignOrthographicProjection(
     _Matrix<T, 4, 4> & matrix,
     const float left,
@@ -343,71 +343,53 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     assert(0 == matrix.get(3,2));
     matrix.set(3,3,1);
   }
-
-  //https://github.com/PacktPublishing/Vulkan-Cookbook/blob/master/Library/Source%20Files/10%20Helper%20Recipes/04%20Preparing%20a%20perspective%20projection%20matrix.cpp
+  // Broken
   static void assignPerspectiveProjection(
     _Matrix<T, 4, 4> & matrix,
-    const float left,
-    const float right,
-    const float top,
-    const float bottom,
-    const float near,
-    const float far
+    float const left,
+    float const right,
+    float const top,
+    float const bottom,
+    float const near,
+    float const far
   ) {
-    matrix.set(0,0,(2 * near)/(right - left));
-    assert(0 == matrix.get(0,1));
-    matrix.set(0,2,(right + left)/(right - left));
-    assert(0 == matrix.get(0,3));
-    assert(0 == matrix.get(1,0));
-    matrix.set(1,1,(2 * near)/(top - bottom));
-    matrix.set(1,2,(top + bottom)/(top - bottom));
-    assert(0 == matrix.get(1,3));
-    assert(0 == matrix.get(2,0));
-    assert(0 == matrix.get(2,1));
-    matrix.set(2,2,(far + near)/(near - far));
-    matrix.set(2,3,(2 * far * near)/(near - far));
+    // TODO Fix this
+    assert(far != near);
+    assert(right != left);
+    assert(bottom != top);
+    matrix.set(0, 0, 2 / (right - left));
+    assert(0 == matrix.get(0, 1));
+    assert(0 == matrix.get(0, 2));
+    matrix.set(0, 3, right/(left - right));
+    assert(matrix.get(1, 0) == 0);
+    matrix.set(1, 1, 2 / (top - bottom));
+    assert(0 == matrix.get(1, 2));
+    matrix.set(1, 3, top/(bottom - top));
+    assert(0 == matrix.get(2, 0));
+    assert(0 == matrix.get(2, 1));
+    matrix.set(2, 2, 1 / (near - far));
+    matrix.set(2, 3, far/(far - near));
     assert(0 == matrix.get(3,0));
     assert(0 == matrix.get(3,1));
-    matrix.set(3,2,-1);
-    assert(0 == matrix.get(3,3));
+    assert(0 == matrix.get(3,2));
+    matrix.set(3,3,1);
   }
-
+  // Working correctly
   static void PreparePerspectiveProjectionMatrix(
     _Matrix<T, 4, 4> & matrix,
-    float aspect_ratio,
-    float field_of_view,
-    float near_plane,
-    float far_plane 
+    float const aspect_ratio,
+    float const field_of_view,
+    float const near_plane,
+    float const far_plane 
   ) {
-    float const f = 1.0f / tan( Math::deg2Rad( 0.5f * field_of_view ) );
-    matrix.set(0,0,f / aspect_ratio);
-    matrix.set(1,1,-f);
-    matrix.set(2,2,far_plane / (near_plane - far_plane));
-    matrix.set(2,3,-1.0f);
-    matrix.set(3,2,(near_plane * far_plane) / (near_plane - far_plane));
-    //Matrix4x4 perspective_projection_matrix = {
-    //  f / aspect_ratio,
-    //  0.0f,
-    //  0.0f,
-    //  0.0f,
+    float const inv_tan = 1.0f / tan(Math::deg2Rad( 0.5f * field_of_view ));
+    float const inv_depth_diff = 1.0f / (near_plane - far_plane);
 
-    //  0.0f,
-    //  -f,
-    //  0.0f,
-    //  0.0f,
-
-    //  0.0f,
-    //  0.0f,
-    //  far_plane / (near_plane - far_plane),
-    //  -1.0f,
-    //  
-    //  0.0f,
-    //  0.0f,
-    //  (near_plane * far_plane) / (near_plane - far_plane),
-    //  0.0f
-    //};
-    
-    //return perspective_projection_matrix;
+    matrix.set(0,0,inv_tan);
+    matrix.set(1,1,inv_tan * aspect_ratio);
+    matrix.set(2,2,1.0f * far_plane * inv_depth_diff);
+    matrix.set(2,3,1.0f * near_plane * far_plane * inv_depth_diff);
+    matrix.set(3,2,-1.0f);
   }
 
   static void assignScale(

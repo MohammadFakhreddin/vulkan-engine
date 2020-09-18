@@ -23,9 +23,8 @@ private:
     static constexpr float RIGHT = 640.0f;
     static constexpr float TOP = 480.0f;
     static constexpr float BOTTOM = 0.0f;
-    static constexpr float Z_NEAR = 600.0f;
-    static constexpr float Z_FAR = 0.1f;
-    static constexpr float Z_MIDDLE = 400.0f;
+    static constexpr float Z_NEAR = 0.1f;
+    static constexpr float Z_FAR = 1000.0f;
 public:
     Application();
     void run();
@@ -77,15 +76,17 @@ private:
     struct UniformBufferObject {
         float rotation[16];
         float transformation[16];
-        float proj[16];
+        //float proj[16];
+        float orthographic[16];
+        float perspective[16];
     };
     struct Vertex {
         float pos[3];
         float color[3];
     };
-    float const halfWidth = 100.0f;
-    float const cubeFrontZ = 100.0f;
-    float const cubeBackZ = -100.0f;
+    float const halfWidth = 50.0f;
+    float const cubeFrontZ = 50.0f;
+    float const cubeBackZ = -50.0f;
     std::vector<Vertex> const vertices = {
         //// front
         {{-halfWidth, -halfWidth, cubeFrontZ},{1.0f, 0.0f, 0.0f}},

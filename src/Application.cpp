@@ -538,7 +538,6 @@ Application::createVertexBuffer() {
 
 void
 Application::createUniformBuffer() {
-    //VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 
     uniformBuffers.resize(swapChainImages.size());
     uniformBuffersMemory.resize(swapChainImages.size());
@@ -566,7 +565,6 @@ Application::createUniformBuffer() {
         vkAllocateMemory(device, &allocInfo, nullptr, &uniformBuffersMemory[i]);
         vkBindBufferMemory(device, uniformBuffers[i], uniformBuffersMemory[i], 0);
     }
-    //updateUniformData();
 }
 
 float degree = 0;
@@ -589,15 +587,19 @@ Application::updateUniformBuffer(uint32_t currentImage) {
     }
     {// Transformation
         Matrix4X4Float transformation;
-        //Matrix4X4Float::identity(transformation);
-        Matrix4X4Float::assignTransformation(transformation,HALF_WIDTH,HALF_HEIGHT,Z_MIDDLE/2);
+        Matrix4X4Float::assignTransformation(transformation,0,0,-300);
         ::memcpy(ubo.transformation,transformation.cells,sizeof(ubo.transformation));
     }
-    {// Projection
-        Matrix4X4Float proj;
-        Matrix4X4Float::assignOrthographicProjection(proj,LEFT,RIGHT,TOP,BOTTOM,Z_NEAR,Z_FAR);
-        //Matrix4X4Float::PreparePerspectiveProjectionMatrix(proj,RATIO,45,Z_NEAR,Z_FAR);
-        ::memcpy(ubo.proj,proj.cells,sizeof(ubo.proj));
+    {// Perspective
+        Matrix4X4Float perspective;
+        Matrix4X4Float::PreparePerspectiveProjectionMatrix(
+            perspective,
+            RATIO,
+            40,
+            Z_NEAR,
+            Z_FAR
+        );
+        ::memcpy(ubo.perspective,perspective.cells,sizeof(ubo.perspective));
     }
     
     void* data;
