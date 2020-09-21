@@ -95,6 +95,8 @@ private:
     void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) const;
     void createSyncObjects();
     void legacyCreateVertexBuffer();
+    void createTextureImageView();
+    void createTextureSampler();
 private:
     struct UniformBufferObject {
         float rotation[16];
@@ -220,12 +222,14 @@ private:
     bool windowResized = false;
     VkImage textureImage;
     VkDeviceMemory textureImageMemory;
+    VkImageView textureImageView;
+    VkSampler textureSampler;
     std::vector<VkSemaphore> imageAvailableSemaphores;
     std::vector<VkSemaphore> renderFinishedSemaphores;
     std::vector<VkFence> inFlightFences;
     std::vector<VkFence> imagesInFlight;
     size_t currentFrame = 0;
-
+    VkPhysicalDeviceFeatures deviceFeatures;
     bool framebufferResized = false;
 };
 

@@ -1,11 +1,13 @@
 struct VSIn{
     float3 vertex_position:POSITION;
     float3 vertex_color:COLOR0;
+    float2 tex_coord:TEXCOORD0;
 };
 
 struct VSOut{
     float4 position:SV_POSITION;
     float3 color:COLOR0;
+    float2 tex_coord:TEXCOORD0;
 };
 
 // struct MyStruct{
@@ -34,6 +36,8 @@ VSOut main(VSIn input) {
     output.position = mult_result;
     
     output.color = input.vertex_color;
+
+    output.tex_coord = input.tex_coord;
 
     return output;
 }

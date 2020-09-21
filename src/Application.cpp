@@ -45,6 +45,8 @@ Application::setupVulkan(){
     createLogicalDevice();
     createCommandPool();
     createTextureImage();
+    createTextureImageView();
+    createTextureSampler();
     createVertexBuffer();
     createIndexBuffer();
     //legacyCreateVertexBuffer();
@@ -197,7 +199,9 @@ Application::findPhysicalDevice() {
     assert(phyDevResult == VK_SUCCESS || phyDevResult == VK_INCOMPLETE);
     
     VkPhysicalDeviceProperties deviceProperties;
-    VkPhysicalDeviceFeatures deviceFeatures;
+    deviceFeatures.samplerAnisotropy = VK_TRUE;
+    deviceFeatures.shaderClipDistance = VK_TRUE;
+    deviceFeatures.shaderCullDistance = VK_TRUE;
     vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
     vkGetPhysicalDeviceFeatures(physicalDevice, &deviceFeatures);
 
@@ -315,15 +319,11 @@ Application::createLogicalDevice() {
         deviceCreateInfo.queueCreateInfoCount = 2;
     }
 
-    // Necessary for shader (for some reason)
-    VkPhysicalDeviceFeatures enabledFeatures = {};
-    enabledFeatures.shaderClipDistance = VK_TRUE;
-    enabledFeatures.shaderCullDistance = VK_TRUE;
-
     const char* deviceExtensions = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
     deviceCreateInfo.enabledExtensionCount = 1;
     deviceCreateInfo.ppEnabledExtensionNames = &deviceExtensions;
-    deviceCreateInfo.pEnabledFeatures = &enabledFeatures;
+    // Necessary for shader (for some reason)
+    deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
 
 #ifdef DEBUGGING_ENABLED
     deviceCreateInfo.enabledLayerCount = 1;
@@ -1162,10 +1162,19 @@ Application::createGraphicsPipeline() {
     // For Image sampler, Currently we do not need this
     uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
 
+    VkDescriptorSetLayoutBinding samplerLayoutBinding{};
+    samplerLayoutBinding.binding = 1;
+    samplerLayoutBinding.descriptorCount = 1;
+    samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    samplerLayoutBinding.pImmutableSamplers = nullptr;
+    samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding, samplerLayoutBinding};
+
     VkDescriptorSetLayoutCreateInfo descriptorLayoutCreateInfo = {};
     descriptorLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    descriptorLayoutCreateInfo.bindingCount = 1;
-    descriptorLayoutCreateInfo.pBindings = &uboLayoutBinding;
+    descriptorLayoutCreateInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    descriptorLayoutCreateInfo.pBindings = bindings.data();
 
     if (vkCreateDescriptorSetLayout(device, &descriptorLayoutCreateInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
         throwErrorAndExit("Failed to create descriptor layout");
@@ -1713,11 +1722,6 @@ Application::createTextureImage()
         stagingBufferMemory
     );
 
-    //for(int i=0;i<image_size;i++){
-    //    auto a = cpu_texture.pixels[i];
-    //    printf("%d",a);
-    //}
-
     void * data = nullptr;
     vkMapMemory(device, stagingBufferMemory, 0, image_size, 0, &data);
     assert(nullptr != data);
@@ -1941,5 +1945,32 @@ Application::createSyncObjects() {
             vkCreateFence(device, &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
             throw std::runtime_error("failed to create synchronization objects for a frame!");
         }
+    }
+}
+
+void
+Application::createTextureImageView() {
+    createImageView(&textureImageView, textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+}
+
+void
+Application::createTextureSampler() {
+    VkSamplerCreateInfo samplerInfo{};
+    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter = VK_FILTER_LINEAR;
+    samplerInfo.minFilter = VK_FILTER_LINEAR;
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.anisotropyEnable = VK_TRUE;
+    samplerInfo.maxAnisotropy = 16.0f;
+    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+
+    if (vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS) {
+        throw std::runtime_error("createTextureSampler::vkCreateSampler Failed to create texture sampler!");
     }
 }
