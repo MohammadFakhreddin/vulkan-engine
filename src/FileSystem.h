@@ -40,7 +40,7 @@ public:
             &out.width, 
             &out.height, 
             &out.original_number_of_channels, 
-            STBI_rgb_alpha
+            STBI_rgb
         );
         if(out.original_number_of_channels != out.number_of_channels)
         {
@@ -51,8 +51,9 @@ public:
                 out.pixels[4 * i] = out.raw_pixels[3 * i];
                 out.pixels[4 * i + 1] = out.raw_pixels[3 * i + 1];
                 out.pixels[4 * i + 2] = out.raw_pixels[3 * i + 2];
-                out.pixels[4 * i + 3] = out.raw_pixels[3 * i + 3];
+                out.pixels[4 * i + 3] = 255;
             }
+            assert(255 == out.pixels[out.width * out.height * out.number_of_channels - 1]);
         } else
         {
             out.pixels = out.raw_pixels;

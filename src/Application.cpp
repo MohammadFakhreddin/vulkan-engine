@@ -198,10 +198,11 @@ Application::findPhysicalDevice() {
     //TODO Search about incomplete
     assert(phyDevResult == VK_SUCCESS || phyDevResult == VK_INCOMPLETE);
     
-    VkPhysicalDeviceProperties deviceProperties;
     deviceFeatures.samplerAnisotropy = VK_TRUE;
     deviceFeatures.shaderClipDistance = VK_TRUE;
     deviceFeatures.shaderCullDistance = VK_TRUE;
+
+    VkPhysicalDeviceProperties deviceProperties;
     vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
     vkGetPhysicalDeviceFeatures(physicalDevice, &deviceFeatures);
 
@@ -1175,7 +1176,7 @@ Application::createGraphicsPipeline() {
     descriptorLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptorLayoutCreateInfo.bindingCount = static_cast<uint32_t>(bindings.size());
     descriptorLayoutCreateInfo.pBindings = bindings.data();
-
+    
     if (vkCreateDescriptorSetLayout(device, &descriptorLayoutCreateInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
         throwErrorAndExit("Failed to create descriptor layout");
     }
@@ -1298,17 +1299,30 @@ Application::createDescriptorSet() {
         descriptorBufferInfo.offset = 0;
         descriptorBufferInfo.range = sizeof(UniformBufferObject);
 
-        VkWriteDescriptorSet writeDescriptorSet = {};
-        writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        writeDescriptorSet.dstSet = descriptorSets[i];
-        // How many array elements are we going to update at same time
-        writeDescriptorSet.descriptorCount = 1;
-        writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        writeDescriptorSet.pBufferInfo = &descriptorBufferInfo;
-        writeDescriptorSet.dstBinding = 0;
-        writeDescriptorSet.pImageInfo = nullptr; // Optional
-        writeDescriptorSet.pTexelBufferView = nullptr; // Optional
-        vkUpdateDescriptorSets(device, 1, &writeDescriptorSet, 0, nullptr);
+        VkDescriptorImageInfo imageInfo{};
+        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imageInfo.imageView = textureImageView;
+        imageInfo.sampler = textureSampler;
+
+        std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+
+        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[0].dstSet = descriptorSets[i];
+        descriptorWrites[0].dstBinding = 0;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pBufferInfo = &descriptorBufferInfo;
+
+        descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[1].dstSet = descriptorSets[i];
+        descriptorWrites[1].dstBinding = 1;
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[1].descriptorCount = 1;
+        descriptorWrites[1].pImageInfo = &imageInfo;
+
+        vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }
 
 }
@@ -1508,7 +1522,8 @@ Application::drawFrame() {
         );
         // Unless surface is out of date right now, defer swap chain recreation until end of this frame
         if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-            onWindowSizeChanged();
+            // TODO Fix it
+            //onWindowSizeChanged();
             return;
         }
         if (result != VK_SUCCESS) {
@@ -1706,7 +1721,7 @@ void
 Application::createTextureImage()
 {
     FileSystem::CpuTexture cpu_texture;
-    FileSystem::LoadTexture(cpu_texture,"./assets/images/dice_texture.png");
+    FileSystem::LoadTexture(cpu_texture,"./assets/images/texture.png");
     assert(cpu_texture.isValid());
 
     VkBuffer stagingBuffer;
@@ -1731,7 +1746,7 @@ Application::createTextureImage()
     createImage(
         cpu_texture.width, 
         cpu_texture.height, 
-        VK_FORMAT_R8G8B8A8_SRGB, 
+        VK_FORMAT_R8G8B8A8_UNORM, 
         VK_IMAGE_TILING_OPTIMAL, 
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
@@ -1741,7 +1756,7 @@ Application::createTextureImage()
 
     transitionImageLayout(
         textureImage, 
-        VK_FORMAT_R8G8B8A8_SRGB, 
+        VK_FORMAT_R8G8B8A8_UNORM, 
         VK_IMAGE_LAYOUT_UNDEFINED, 
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
     );
@@ -1753,7 +1768,7 @@ Application::createTextureImage()
     );
     transitionImageLayout(
         textureImage, 
-        VK_FORMAT_R8G8B8A8_SRGB, 
+        VK_FORMAT_R8G8B8A8_UNORM, 
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
     );
@@ -1950,7 +1965,7 @@ Application::createSyncObjects() {
 
 void
 Application::createTextureImageView() {
-    createImageView(&textureImageView, textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+    createImageView(&textureImageView, textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
 void

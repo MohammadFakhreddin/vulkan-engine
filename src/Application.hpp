@@ -142,15 +142,15 @@ private:
     float const cubeBackZ = -50.0f;
     std::vector<Vertex> const vertices = {
         //// front
-        {{-halfWidth, -halfWidth, cubeFrontZ},{1.0f, 0.0f, 0.0f},{1.0f, 0.0f}},
+        {{-halfWidth, -halfWidth, cubeFrontZ},{1.0f, 0.0f, 0.0f},{0.0f, 0.0f}},
         {{halfWidth, -halfWidth, cubeFrontZ},{0.0f, 1.0f, 0.0f},{1.0f, 0.0f}},
-        {{halfWidth,  halfWidth,  cubeFrontZ},{0.0f, 0.0f, 1.0f},{1.0f, 0.0f}},
-        {{-halfWidth,  halfWidth,  cubeFrontZ},{1.0f, 1.0f, 1.0f},{1.0f, 0.0f}},
-        // back
+        {{halfWidth,  halfWidth,  cubeFrontZ},{0.0f, 0.0f, 1.0f},{1.0f, 1.0f}},
+        {{-halfWidth,  halfWidth,  cubeFrontZ},{1.0f, 1.0f, 1.0f},{0.0f, 1.0f}},
+        //// back
         {{-halfWidth, -halfWidth,  cubeBackZ},{0.5f, 0.0f, 0.5f},{1.0f, 0.0f}},
-        {{halfWidth, -halfWidth,  cubeBackZ},{0.0f, 0.5f, 0.5f},{1.0f, 0.0f}},
-        {{halfWidth,  halfWidth,  cubeBackZ},{0.0f, 0.5f, 0.5f},{1.0f, 0.0f}},
-        {{-halfWidth,  halfWidth,  cubeBackZ},{0.5f, 0.0f, 0.5f},{1.0f, 0.0f}}
+        {{halfWidth, -halfWidth,  cubeBackZ},{0.0f, 0.5f, 0.5f},{0.0f, 0.0f}},
+        {{halfWidth,  halfWidth,  cubeBackZ},{0.0f, 0.5f, 0.5f},{0.0f, 1.0f}},
+        {{-halfWidth,  halfWidth,  cubeBackZ},{0.5f, 0.0f, 0.5f},{1.0f, 1.0f}}
     };
     std::vector<uint32_t> const indices = { 
         // front
