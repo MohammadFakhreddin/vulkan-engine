@@ -6,9 +6,9 @@
 
 class FileSystem{
 public:
-    struct CpuTexture
+    struct RawTexture
     {
-        ~CpuTexture()
+        ~RawTexture()
         {
             FreeTexture(*this);
             raw_pixels = nullptr;
@@ -34,7 +34,7 @@ public:
         }
     };
     static void
-    LoadTexture (CpuTexture & out, char const * texture_address){
+    LoadTexture (RawTexture & out, char const * texture_address){
         out.raw_pixels = stbi_load(
             texture_address, 
             &out.width, 
@@ -60,7 +60,7 @@ public:
         }
     }   
     static bool
-    FreeTexture (CpuTexture & texture)
+    FreeTexture (RawTexture & texture)
     {
         bool ret = false;
         if(texture.isValid()){
@@ -70,232 +70,420 @@ public:
         }
         return ret;
     }
-//  static void loadObject(
-//    std::string filename,
-//    bool requireCentralizing,
-//  ){
-//    
-//    Logger::log("Loading 3d object with name:" + filename);
-//
-//    std::ifstream* file; 
-//    //TODO We have two options
-//    //1- Copy all android files into a folder and then run everything using c++ which helps to avoid working with that
-//    //2- Write everything using that painful android buffer but it can be faster
-//    #if defined(__DESKTOP__)
-//      
-//      file = new std::ifstream(filename);
-//      
-//    #elif defined(__ANDROID__)
-//      
-//      auto data = AndroidEnvironment::getInstance()->loadText(filename);
-//      assert(data);
-//      std::string temporaryFileName = AndroidEnvironment::getInstance()->generateFileAbsolutePath("/cube-temp-file.obj");
-//      //We need to write it into a file to be accessible to ifstream
-//      //TODO Refactor this part
-//      FILE* temporaryFile = fopen(temporaryFileName.c_str(),"w");
-//      assert(temporaryFile);
-//      fputs(reinterpret_cast<const char *>(data), temporaryFile);
-//      fflush(temporaryFile);
-//      fclose(temporaryFile);
-//
-//      file = new std::ifstream(temporaryFileName);
-//      
-//    #elif defined(__IOS__)
-//      
-//      auto resourceAddress = IPhoneHelperAbstraction::getInstance()->callObjectiveCToGetPathNameForResource(filename, "obj");
-//      file = new std::ifstream(resourceAddress);
-//      
-//    #else
-//    #   error "loadObject failed Unhandled platform"
-//    #endif
-//    //Checking if file is filled
-//    assert(file);
-//
-//    bool isCounterClockWise = false;
-//    {//Check if normal vectors are reverse
-//      std::string firstLine;
-//      std::getline(*file,firstLine);
-//      Operators::toLowerCase( firstLine );
-//      if(firstLine.find("ccw") != std::string::npos){
-//        isCounterClockWise = true;
-//      }
-//    }
-//
-//    if(isCounterClockWise){
-//      Logger::log("3d object file is counter clock wise");
-//    }else{
-//      Logger::log("3d object file is clock wise");
-//    }
-//
-//    std::vector<Matrix3X1Float> vertices;
-//    std::vector<std::unique_ptr<Surface>> indices;
-//    std::vector<Matrix3X1Float> normals;
-//    std::vector<Matrix2X1Float> textureCoordinates;
-//    {//Parsing .obj file using tinyObj library
-//      tinyobj::attrib_t attributes;
-//      std::vector<tinyobj::shape_t> shapes;
-//      std::string error;
-//      auto isSuccess = tinyobj::LoadObj(&attributes, &shapes, nullptr, &error, file);
-//      // check for errors
-//      if (!error.empty() && error.substr(0, 4) != "WARN")
-//      {
-//        Logger::exception("LoadObj returned error:" + error + " File:" + filename);
-//        return nullptr;
-//      }
-//      if (!isSuccess)
-//      {
-//        Logger::exception("LoadObj returned false  File:" + filename);
-//        return nullptr;
-//      }
-//      if (shapes.size() == 0u)
-//      {
-//        Logger::exception("LoadObj object file had no shapes  File:" + filename);
-//        return nullptr;
-//      }
-//      {//Loading verticies
-//      // extract vertex data
-//      // attrib.vertices is a flat std::vector of floats corresponding
-//      // to vertex positions, laid out as xyzxyzxyz... etc.
-//        assert(attributes.vertices.size() % 3 == 0);
-//
-//        //Reserving space before allocating
-//        vertices.reserve(attributes.vertices.size() / 3u);
-//        for (unsigned int i = 0; i < attributes.vertices.size(); i += 3) {
-//          vertices.emplace_back(
-//            attributes.vertices[i + 0u],
-//            attributes.vertices[i + 1u],
-//            attributes.vertices[i + 2u]
-//          );
-//        }
-//
-//      }
-//      {//Normals
-//        //TODO Auto generate normals when size is zero instead of asking
-//        if (normalType == Shape3d::NormalType::fileDefault) {
-//          assert(attributes.normals.size() % 3 == 0);
-//          normals.reserve(attributes.normals.size() / 3u);
-//          for (unsigned int i = 0; i < attributes.normals.size(); i += 3) {
-//            normals.emplace_back(
-//              attributes.normals[i + 0u],
-//              attributes.normals[i + 1u],
-//              attributes.normals[i + 2u]
-//            );
-//          }
-//        }
-//      }
-//      {//Texture coordinates
-//        //TODO Test this part
-//        if (useFileTextureCoordinates) {
-//          assert(attributes.texcoords.size() % 2 == 0);
-//          textureCoordinates.reserve(attributes.texcoords.size() / 2u);
-//          for (unsigned int i = 0; i < attributes.texcoords.size(); i += 2) {
-//            textureCoordinates.emplace_back(
-//              attributes.texcoords[i + 0u],
-//              attributes.texcoords[i + 1u]
-//            );
-//          }
-//        }
-//      }
-//      {//Loading mesh
-//      // extract index data
-//      // obj file can contain multiple meshes, we assume just 1
-//        const auto& mesh = shapes[0].mesh;
-//
-//        unsigned short edge1Index = 2u;
-//        unsigned short edge2Index = 1u;
-//        unsigned short edge3Index = 0u;
-//        //My implementation is counter clock wise so I need to rotate before rendering
-//        if (isCounterClockWise == true) {
-//          edge1Index = 0u;
-//          edge2Index = 1u;
-//          edge3Index = 2u;
-//        }
-//
-//        float edge1TexturePointX = 0.0f;
-//        float edge1TexturePointY = 0.0f;
-//        float edge2TexturePointX = 0.0f;
-//        float edge2TexturePointY = 0.0f;
-//        float edge3TexturePointX = 0.0f;
-//        float edge3TexturePointY = 0.0f;
-//        // mesh contains a std::vector of num_face_vertices (uchar)
-//        // and a flat std::vector of indices. If all faces are triangles
-//        // then for any face f, the first index of that faces is [f * 3n]
-//        indices.reserve(mesh.indices.size() / 3u);
-//        for (unsigned int faceIndex = 0; faceIndex < mesh.num_face_vertices.size(); faceIndex++) {
-//          //Because we only support triangles currently we check if contains vertices or not
-//          if (mesh.num_face_vertices[faceIndex] != 3) {
-//            Logger::exception("Number of face vertices cannot be other than " + std::to_string(mesh.num_face_vertices[faceIndex]));
-//          }
-//          unsigned long edgeIndicies[3] = {
-//            (unsigned long)mesh.indices[faceIndex * 3u + edge1Index].vertex_index,
-//            (unsigned long)mesh.indices[faceIndex * 3u + edge2Index].vertex_index,
-//            (unsigned long)mesh.indices[faceIndex * 3u + edge3Index].vertex_index
-//          };
-//          //Loading mesh indices into indices vector
-//          indices.emplace_back(std::make_unique<Surface>(
-//            lightPercision,
-//            texture,
-//            edgeIndicies
-//          ));
-//          if (normalType == Shape3d::NormalType::fileDefault) {
-//            indices.back()->setNormalIndex(0, mesh.indices[faceIndex * 3u + edge1Index].normal_index);
-//            indices.back()->setNormalIndex(1, mesh.indices[faceIndex * 3u + edge2Index].normal_index);
-//            indices.back()->setNormalIndex(2, mesh.indices[faceIndex * 3u + edge3Index].normal_index);
-//          }
-//          if (useFileTextureCoordinates) {
-//            edge1TexturePointX = textureCoordinates.at(mesh.indices[faceIndex * 3u + edge1Index].texcoord_index).get(0, 0);
-//            edge1TexturePointY = textureCoordinates.at(mesh.indices[faceIndex * 3u + edge1Index].texcoord_index).get(1, 0);
-//            indices.back()->setTextureCoordinates(0, edge1TexturePointX, edge1TexturePointY);
-//
-//            edge2TexturePointX = textureCoordinates.at(mesh.indices[faceIndex * 3u + edge2Index].texcoord_index).get(0, 0);
-//            edge2TexturePointY = textureCoordinates.at(mesh.indices[faceIndex * 3u + edge2Index].texcoord_index).get(1, 0);
-//            indices.back()->setTextureCoordinates(1, edge2TexturePointX, edge2TexturePointY);
-//
-//            edge3TexturePointX = textureCoordinates.at(mesh.indices[faceIndex * 3u + edge3Index].texcoord_index).get(0, 0);
-//            edge3TexturePointY = textureCoordinates.at(mesh.indices[faceIndex * 3u + edge3Index].texcoord_index).get(1, 0);
-//            indices.back()->setTextureCoordinates(2, edge3TexturePointX, edge3TexturePointY);
-//          }
-//        }
-//      }
-//    }
-//    if (normalType != Shape3d::NormalType::fileDefault) {
-//      normals = Shape3d::generateNormals(indices, vertices, normalType);
-//    }
-//    Logger::log("Reading from object file is successful");    
-//    delete file;
-//    if(requireCentralizing){
-//      Logger::log("Going to normalize center point");
-//      {//Centralizing vertices to make them be more friendly for transformation and scale
-//        // used to enable miniball to access vertex pos info
-//        // solve the minimum bounding sphere
-//        Miniball::Miniball<VertexAccessor> mb( 3,vertices.cbegin(),vertices.cend() );
-//        // get center of min sphere
-//        // result is a pointer to float[3]
-//        const auto pc = mb.center();
-//        Matrix3X1Float center;
-//        center.setX(*pc);
-//        center.setY(*std::next(pc));
-//        center.setZ(*std::next(pc, 2));
-//        
-//        // adjust all vertices so that center of minimal sphere is at 0,0
-//        for( auto& vertex : vertices )
-//        {
-//          vertex.minus(center);
-//        }
-//      }
-//      Logger::log("Centralizing 3dShape was successful,Creating shape3d");
-//    }
-//
-//#ifdef __ANDROID__
-//    remove(temporaryFileName.c_str());
-//#endif // __ANDROID__
-//
-//    return std::make_unique<Shape3d>(
-//      vertices,
-//      indices,
-//      normals
-//    );
-//  }
+    /*
+     *  DDS source : 
+     *  https://docs.microsoft.com/en-us/windows/win32/direct3ddds/dds-header
+     *  https://docs.microsoft.com/en-us/windows/win32/direct3ddds/dds-pixelformat
+     *  https://github.com/microsoft/DirectXTex/blob/master/DirectXTex/DDS.h
+     *  Check for magic numbers as well for correctness
+     *  https://stackoverflow.com/questions/51974508/how-can-i-make-sure-that-a-directdraw-surface-has-a-correct-file-format
+     *  Formats are stored here
+     *  https://docs.microsoft.com/en-us/windows/win32/api/dxgiformat/ne-dxgiformat-dxgi_format
+     *  Resource for mipmap sizes
+     *  https://docs.microsoft.com/en-us/windows/win32/direct3ddds/dds-file-layout-for-textures
+     */
+    struct DDS_PixelFormat {
+        DWORD           dw_size;                             
+        DWORD           dw_flags;
+        union
+        {
+            DWORD       number;
+            char        character[sizeof(DWORD)];
+        } dw_four_cc;
+        DWORD           dw_rgb_bit_count;
+        DWORD           dw_r_bit_mask;
+        DWORD           dw_g_bit_mask;
+        DWORD           dw_b_bit_mask;
+        DWORD           dw_a_bit_mask;
+    };
+    static_assert(sizeof(DDS_PixelFormat) == 32);
+    union UnionOfUint32
+    {
+        uint32_t        number;
+        struct {
+            uint8_t     digit0;
+            uint8_t     digit1;
+            uint8_t     digit2;
+            uint8_t     digit3;
+        };    
+    };
+    struct DDS_Header {
+        UnionOfUint32   magic;
+        DWORD           dw_size;
+        DWORD           dw_flags;
+        DWORD           dw_height;
+        DWORD           dw_width;
+        DWORD           dw_pitch_or_linear_size;
+        DWORD           dw_depth;
+        DWORD           dw_mip_map_count;
+        DWORD           dw_reserved1[11];
+        DDS_PixelFormat dds_pixel_format;
+        DWORD           dw_caps;
+        DWORD           dw_caps2;
+        DWORD           dw_caps3;
+        DWORD           dw_caps4;
+        DWORD           dw_reserved2;
+    };
+    static_assert(sizeof(DDS_Header) == 128);
+    static_assert(sizeof(DWORD) == sizeof(uint32_t));
+    enum class DXGI_Format {
+        DXGI_FORMAT_UNKNOWN,
+        DXGI_FORMAT_R32G32B32A32_TYPELESS,
+        DXGI_FORMAT_R32G32B32A32_FLOAT,
+        DXGI_FORMAT_R32G32B32A32_UINT,
+        DXGI_FORMAT_R32G32B32A32_SINT,
+        DXGI_FORMAT_R32G32B32_TYPELESS,
+        DXGI_FORMAT_R32G32B32_FLOAT,
+        DXGI_FORMAT_R32G32B32_UINT,
+        DXGI_FORMAT_R32G32B32_SINT,
+        DXGI_FORMAT_R16G16B16A16_TYPELESS,
+        DXGI_FORMAT_R16G16B16A16_FLOAT,
+        DXGI_FORMAT_R16G16B16A16_UNORM,
+        DXGI_FORMAT_R16G16B16A16_UINT,
+        DXGI_FORMAT_R16G16B16A16_SNORM,
+        DXGI_FORMAT_R16G16B16A16_SINT,
+        DXGI_FORMAT_R32G32_TYPELESS,
+        DXGI_FORMAT_R32G32_FLOAT,
+        DXGI_FORMAT_R32G32_UINT,
+        DXGI_FORMAT_R32G32_SINT,
+        DXGI_FORMAT_R32G8X24_TYPELESS,
+        DXGI_FORMAT_D32_FLOAT_S8X24_UINT,
+        DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS,
+        DXGI_FORMAT_X32_TYPELESS_G8X24_UINT,
+        DXGI_FORMAT_R10G10B10A2_TYPELESS,
+        DXGI_FORMAT_R10G10B10A2_UNORM,
+        DXGI_FORMAT_R10G10B10A2_UINT,
+        DXGI_FORMAT_R11G11B10_FLOAT,
+        DXGI_FORMAT_R8G8B8A8_TYPELESS,
+        DXGI_FORMAT_R8G8B8A8_UNORM,
+        DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
+        DXGI_FORMAT_R8G8B8A8_UINT,
+        DXGI_FORMAT_R8G8B8A8_SNORM,
+        DXGI_FORMAT_R8G8B8A8_SINT,
+        DXGI_FORMAT_R16G16_TYPELESS,
+        DXGI_FORMAT_R16G16_FLOAT,
+        DXGI_FORMAT_R16G16_UNORM,
+        DXGI_FORMAT_R16G16_UINT,
+        DXGI_FORMAT_R16G16_SNORM,
+        DXGI_FORMAT_R16G16_SINT,
+        DXGI_FORMAT_R32_TYPELESS,
+        DXGI_FORMAT_D32_FLOAT,
+        DXGI_FORMAT_R32_FLOAT,
+        DXGI_FORMAT_R32_UINT,
+        DXGI_FORMAT_R32_SINT,
+        DXGI_FORMAT_R24G8_TYPELESS,
+        DXGI_FORMAT_D24_UNORM_S8_UINT,
+        DXGI_FORMAT_R24_UNORM_X8_TYPELESS,
+        DXGI_FORMAT_X24_TYPELESS_G8_UINT,
+        DXGI_FORMAT_R8G8_TYPELESS,
+        DXGI_FORMAT_R8G8_UNORM,
+        DXGI_FORMAT_R8G8_UINT,
+        DXGI_FORMAT_R8G8_SNORM,
+        DXGI_FORMAT_R8G8_SINT,
+        DXGI_FORMAT_R16_TYPELESS,
+        DXGI_FORMAT_R16_FLOAT,
+        DXGI_FORMAT_D16_UNORM,
+        DXGI_FORMAT_R16_UNORM,
+        DXGI_FORMAT_R16_UINT,
+        DXGI_FORMAT_R16_SNORM,
+        DXGI_FORMAT_R16_SINT,
+        DXGI_FORMAT_R8_TYPELESS,
+        DXGI_FORMAT_R8_UNORM,
+        DXGI_FORMAT_R8_UINT,
+        DXGI_FORMAT_R8_SNORM,
+        DXGI_FORMAT_R8_SINT,
+        DXGI_FORMAT_A8_UNORM,
+        DXGI_FORMAT_R1_UNORM,
+        DXGI_FORMAT_R9G9B9E5_SHAREDEXP,
+        DXGI_FORMAT_R8G8_B8G8_UNORM,
+        DXGI_FORMAT_G8R8_G8B8_UNORM,
+        DXGI_FORMAT_BC1_TYPELESS,
+        DXGI_FORMAT_BC1_UNORM,
+        DXGI_FORMAT_BC1_UNORM_SRGB,
+        DXGI_FORMAT_BC2_TYPELESS,
+        DXGI_FORMAT_BC2_UNORM,
+        DXGI_FORMAT_BC2_UNORM_SRGB,
+        DXGI_FORMAT_BC3_TYPELESS,
+        DXGI_FORMAT_BC3_UNORM,
+        DXGI_FORMAT_BC3_UNORM_SRGB,
+        DXGI_FORMAT_BC4_TYPELESS,
+        DXGI_FORMAT_BC4_UNORM,
+        DXGI_FORMAT_BC4_SNORM,
+        DXGI_FORMAT_BC5_TYPELESS,
+        DXGI_FORMAT_BC5_UNORM,
+        DXGI_FORMAT_BC5_SNORM,
+        DXGI_FORMAT_B5G6R5_UNORM,
+        DXGI_FORMAT_B5G5R5A1_UNORM,
+        DXGI_FORMAT_B8G8R8A8_UNORM,
+        DXGI_FORMAT_B8G8R8X8_UNORM,
+        DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM,
+        DXGI_FORMAT_B8G8R8A8_TYPELESS,
+        DXGI_FORMAT_B8G8R8A8_UNORM_SRGB,
+        DXGI_FORMAT_B8G8R8X8_TYPELESS,
+        DXGI_FORMAT_B8G8R8X8_UNORM_SRGB,
+        DXGI_FORMAT_BC6H_TYPELESS,
+        DXGI_FORMAT_BC6H_UF16,
+        DXGI_FORMAT_BC6H_SF16,
+        DXGI_FORMAT_BC7_TYPELESS,
+        DXGI_FORMAT_BC7_UNORM,
+        DXGI_FORMAT_BC7_UNORM_SRGB,
+        DXGI_FORMAT_AYUV,
+        DXGI_FORMAT_Y410,
+        DXGI_FORMAT_Y416,
+        DXGI_FORMAT_NV12,
+        DXGI_FORMAT_P010,
+        DXGI_FORMAT_P016,
+        DXGI_FORMAT_420_OPAQUE,
+        DXGI_FORMAT_YUY2,
+        DXGI_FORMAT_Y210,
+        DXGI_FORMAT_Y216,
+        DXGI_FORMAT_NV11,
+        DXGI_FORMAT_AI44,
+        DXGI_FORMAT_IA44,
+        DXGI_FORMAT_P8,
+        DXGI_FORMAT_A8P8,
+        DXGI_FORMAT_B4G4R4A4_UNORM,
+        DXGI_FORMAT_P208,
+        DXGI_FORMAT_V208,
+        DXGI_FORMAT_V408,
+        DXGI_FORMAT_SAMPLER_FEEDBACK_MIN_MIP_OPAQUE,
+        DXGI_FORMAT_SAMPLER_FEEDBACK_MIP_REGION_USED_OPAQUE,
+        DXGI_FORMAT_FORCE_UINT
+    };
+    enum D3D10_ResourceDimension {
+        D3D10_RESOURCE_DIMENSION_UNKNOWN,                       // Resource is of unknown type
+        D3D10_RESOURCE_DIMENSION_BUFFER,                        // Resource is a buffer
+        D3D10_RESOURCE_DIMENSION_TEXTURE1D,                     // Resource is a 1D texture
+        D3D10_RESOURCE_DIMENSION_TEXTURE2D,                     // Resource is a 2D texture
+        D3D10_RESOURCE_DIMENSION_TEXTURE3D                      // Resource is a 3D texture
+    };
+    struct DDS_Header_DXT10 {
+        DXGI_Format              dxgi_format;
+        D3D10_ResourceDimension  resource_dimension;
+        UINT                     misc_flag;
+        UINT                     array_size;
+        UINT                     misc_flags2;
+    };
+    static_assert(sizeof(DDS_Header_DXT10) == 20);
+    class DDSTexture
+    {
+    public:
+        struct Mipmap
+        {
+            byte * ptr;
+            uintmax_t len;
+            uint32_t width;         // Width in pixels
+            uint32_t height;        // Height in pixels
+        };
+        static uintmax_t ComputeBC7MipmapLen(uint32_t width, uint32_t height)
+        {
+            return std::max<uint32_t>(1, ( (width + 3) / 4 ) ) * std::max<uint32_t>(1, ( (height + 3) / 4 ) ) * 16;
+        }
+        DDSTexture(char const * path)
+        {
+            // Open the stream to 'lock' the file.
+            std::ifstream f(path, std::ios::in | std::ios::binary);
+
+            if(std::filesystem::exists(path)){
+
+                // Obtain the size of the file.
+                m_asset_len = std::filesystem::file_size(path);
+
+                // Create a buffer.
+                m_asset = new byte[m_asset_len];
+
+                // Read the whole file into the buffer.
+                f.read(reinterpret_cast<char*>(m_asset), m_asset_len);
+
+                f.close();
+
+                auto const * header = reinterpret_cast<DDS_Header *>(m_asset);
+                if(124 == header->dw_size && 32 == header->dds_pixel_format.dw_size){
+                    
+                    UnionOfUint32 reversed_magic {};
+                    reversed_magic.digit0 = header->magic.digit3;
+                    reversed_magic.digit1 = header->magic.digit2;
+                    reversed_magic.digit2 = header->magic.digit1;
+                    reversed_magic.digit3 = header->magic.digit0;
+
+                    if(0x44445320 == reversed_magic.number){
+                        auto const format = header->dds_pixel_format.dw_four_cc.character;
+                        // We only support DX10 format
+                        if('D' == format[0] && 'X' == format[1] && '1' == format[2] && '0' == format[3]){
+                            m_valid = true;
+
+                            DDS_Header_DXT10 * dx10_header = reinterpret_cast<DDS_Header_DXT10 *>(m_asset + sizeof(DDS_Header));
+
+                            /*
+                             *   Note:
+                             *   When you write .dds files, you should set the DDSD_CAPS and DDSD_PIXELFORMAT flags, and for mipmapped textures you should also set the DDSD_MIPMAPCOUNT flag.
+                             *   However, when you read a .dds file, you should not rely on the DDSD_CAPS, DDSD_PIXELFORMAT, and DDSD_MIPMAPCOUNT flags being set because some writers of such a file might not set these flags.
+                             */
+                            auto const has_caps = header->dw_flags & 0x1;
+                            auto const has_height = header->dw_flags & 0x2;
+                            assert(has_height);
+                            auto const has_width = header->dw_flags & 0x4;
+                            assert(has_width);
+                            auto const has_pitch = header->dw_flags & 0x8;
+                            auto const has_pixel_format = header->dw_flags & 0x1000;
+                            auto const has_mipmap_count = header->dw_flags & 0x20000;
+                            auto const has_linear_size = header->dw_flags & 0x80000;
+                            auto const has_depth = header->dw_flags & 0x800000;
+
+                            auto const has_alpha = header->dds_pixel_format.dw_flags & 0x1;                     // Texture contains alpha data; dwRGBAlphaBitMask contains valid data.
+                            auto const has_alpha_legacy = header->dds_pixel_format.dw_flags & 0x2;              // Used in some older DDS files for alpha channel only uncompressed data (dwRGBBitCount contains the alpha channel bitcount; dwABitMask contains valid data)
+                            auto const has_four_cc = header->dds_pixel_format.dw_flags & 0x4;                   // Texture contains compressed RGB data; dwFourCC contains valid data.
+                            auto const has_rgb = header->dds_pixel_format.dw_flags & 0x40;                      // Texture contains uncompressed RGB data; dwRGBBitCount and the RGB masks (dwRBitMask, dwGBitMask, dwBBitMask) contain valid data.           
+                            auto const has_yuv_legacy = header->dds_pixel_format.dw_flags & 0x200;              // Used in some older DDS files for YUV uncompressed data (dwRGBBitCount contains the YUV bit count; dwRBitMask contains the Y mask, dwGBitMask contains the U mask, dwBBitMask contains the V mask)
+                            auto const has_luminance_legacy = header->dds_pixel_format.dw_flags & 0x20000;      // Used in some older DDS files for single channel color uncompressed data (dwRGBBitCount contains the luminance channel bit count; dwRBitMask contains the channel mask). Can be combined with DDPF_ALPHAPIXELS for a two channel DDS file.
+
+                            m_mipmap_count = std::max<uint32_t>(header->dw_mip_map_count, 1);
+                            m_dimension = [dx10_header]()-> uint8_t
+                            {
+                                uint8_t ret = 0;
+                                switch (dx10_header->resource_dimension)
+                                {
+                                    case D3D10_RESOURCE_DIMENSION_TEXTURE1D:
+                                    ret = 1;
+                                    break;
+                                    case D3D10_RESOURCE_DIMENSION_TEXTURE2D:
+                                    ret = 2;
+                                    break;
+                                    case D3D10_RESOURCE_DIMENSION_TEXTURE3D:
+                                    ret = 3;
+                                    break;
+                                    case D3D10_RESOURCE_DIMENSION_BUFFER:
+                                    case D3D10_RESOURCE_DIMENSION_UNKNOWN:
+                                    std::cout << "Error: Unsupported format:" << dx10_header->resource_dimension;
+                                    ret = 0;
+                                };
+                                return ret;
+                            }();
+                            m_format = [dx10_header]() -> VkFormat
+                            {
+                                VkFormat ret;
+                                switch (dx10_header->dxgi_format)
+                                {
+                                    case DXGI_Format::DXGI_FORMAT_BC7_UNORM:
+                                    ret = VK_FORMAT_BC7_UNORM_BLOCK;
+                                    break;
+                                    case DXGI_Format::DXGI_FORMAT_BC7_UNORM_SRGB:
+                                    ret = VK_FORMAT_BC7_SRGB_BLOCK;
+                                    break;
+                                    case DXGI_Format::DXGI_FORMAT_R8G8B8A8_UNORM:
+                                    ret = VK_FORMAT_R8G8B8A8_UNORM;
+                                    break;
+                                    case DXGI_Format::DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+                                    ret = VK_FORMAT_R8G8B8A8_SRGB;
+                                    break;
+                                    default:
+                                    std::cout << "Unhandled format detected," << uint32_t(dx10_header->dxgi_format) << std::endl;
+                                };
+                                return ret;
+                            }();
+                            m_depth = std::max<uint32_t>(header->dw_depth, 1);
+                            assert(m_mipmap_count >= 1);
+                            m_mipmaps = new Mipmap[m_mipmap_count];
+                            {
+                                auto data_current_ptr = m_asset + sizeof(DDS_Header) + sizeof(DDS_Header_DXT10);
+                                auto current_width = header->dw_width;
+                                auto current_height = header->dw_height;
+                                for(int i=0;i<m_mipmap_count;i++)
+                                {
+                                    assert(current_width >= 1);
+                                    assert(current_height >= 1);
+                                    m_mipmaps[i].ptr = data_current_ptr;
+                                    m_mipmaps[i].len = ComputeBC7MipmapLen(current_width,current_height);
+                                    m_mipmaps[i].width = current_width;
+                                    m_mipmaps[i].height = current_height;
+                                    current_width /= 2;
+                                    current_height /= 2;
+                                    data_current_ptr += m_mipmaps[i].len;
+                                }
+                            }
+                            std::cout
+                                << "--------DDS Info-----Path:" << path                                         << std::endl
+                                << "magic:"                     << header->magic.number                         << std::endl
+                                << "dwSize:"                    << header->dw_size                              << std::endl
+                                << "dwFlags:"                   << header->dw_flags                             << std::endl
+                                << "dwHeight:"                  << header->dw_height                            << std::endl
+                                << "dwWidth:"                   << header->dw_height                            << std::endl
+                                << "dwPitchOrLinearSize:"       << header->dw_height                            << std::endl
+                                << "dwDepth:"                   << header->dw_height                            << std::endl
+                                << "dwMipMapCount:"             << header->dw_mip_map_count                     << std::endl
+                                << "dwReserved1:"               << header->dw_reserved1                         << std::endl
+                                << "ddspf.dwSize:"              << header->dds_pixel_format.dw_size             << std::endl
+                                << "ddspf.dwFlags:"             << header->dds_pixel_format.dw_flags            << std::endl
+                                << "ddspf.dwFourCC:"            << header->dds_pixel_format.dw_four_cc.number   << std::endl
+                                << "ddspf.dwRGBBitCount:"       << header->dds_pixel_format.dw_rgb_bit_count    << std::endl
+                                << "ddspf.dwRBitMask:"          << header->dds_pixel_format.dw_r_bit_mask       << std::endl
+                                << "ddspf.dwGBitMask:"          << header->dds_pixel_format.dw_g_bit_mask       << std::endl
+                                << "ddspf.dwBBitMask:"          << header->dds_pixel_format.dw_b_bit_mask       << std::endl
+                                << "ddspf.dwABitMask:"          << header->dds_pixel_format.dw_a_bit_mask       << std::endl
+                                << "dwCaps:"                    << header->dw_caps                              << std::endl
+                                << "dwCaps2:"                   << header->dw_caps2                             << std::endl
+                                << "dwCaps3:"                   << header->dw_caps3                             << std::endl
+                                << "dwCaps4:"                   << header->dw_caps4                             << std::endl
+                                << "dwReserved2:"               << header->dw_reserved2                         << std::endl
+                                << "has_caps:"                  << has_caps                                     << std::endl
+                                << "has_height:"                << has_height                                   << std::endl
+                                << "has_width:"                 << has_width                                    << std::endl
+                                << "has_pitch:"                 << has_pitch                                    << std::endl
+                                << "has_pixel_format:"          << has_pixel_format                             << std::endl
+                                << "has_mipmap_count:"          << has_mipmap_count                             << std::endl
+                                << "has_linear_size:"           << has_linear_size                              << std::endl
+                                << "has_depth:"                 << has_depth                                    << std::endl
+                                << "-------------------------End------------------------"                       << std::endl;
+                        } else
+                        {
+                            std::cout << "We only support DX10 format" << std::endl;
+                        }
+                    }
+                }
+            }
+        }
+        // TODO Delete or implement Move, Copy constructors
+        ~DDSTexture()
+        {
+            m_valid = false;
+            if(nullptr != m_asset)
+            {
+                delete[] m_asset;
+                m_asset = nullptr;
+            }
+            if(nullptr != m_mipmaps)
+            {
+                delete[] m_mipmaps;
+                m_mipmaps = nullptr;
+            }
+        }
+        bool valid() const
+        {
+            return m_valid;
+        }
+        Mipmap pixels(uint8_t const mip_level) const
+        {
+            assert(mip_level < m_mipmap_count);
+            return m_mipmaps[mip_level];
+        }
+        uint8_t mipmap_count() const
+        {
+            return m_mipmap_count;
+        }
+        VkFormat format() const
+        {
+            return m_format;
+        }
+    private:
+        uint8_t         m_mipmap_count = 0;     // Number of mipmaps
+        uint8_t         m_depth = 0;
+        uint8_t         m_dimension = 0;
+        VkFormat        m_format;
+        bool            m_valid = false;
+        byte *          m_asset = nullptr;
+        uintmax_t       m_asset_len = 0;
+        Mipmap *        m_mipmaps = nullptr;
+    };
 };
 
 #endif

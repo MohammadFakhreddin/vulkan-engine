@@ -45,7 +45,7 @@ Application::setupVulkan(){
     createLogicalDevice();
     createCommandPool();
     createTextureImage();
-    createTextureImageView();
+    //createTextureImageView();
     createTextureSampler();
     createVertexBuffer();
     createIndexBuffer();
@@ -1720,15 +1720,35 @@ Application::throwErrorAndExit(std::string const error){
 void
 Application::createTextureImage()
 {
-    FileSystem::CpuTexture cpu_texture;
-    FileSystem::LoadTexture(cpu_texture,"./assets/images/texture.png");
-    assert(cpu_texture.isValid());
+    //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/nvidia/02_-_Default_baseColor.dds");
+    //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/nvidia/02_-_Default_emissive.dds");
+    //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/nvidia/02_-_Default_metallicRoughness.dds");
+    //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/nvidia/02_-_Default_normal.dds");
+    FileSystem::DDSTexture cpu_texture("./assets/images/bc7/nvidia/04_-_Default_baseColor.dds");
+    //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/nvidia/04_-_Default_metallicRoughness.dds");
+    //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/nvidia/04_-_Default_normal.dds");
+    //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/amd/02_-_Default_baseColor_png_BC7.dds");
+    //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/amd/02_-_Default_emissive_png_BC7.dds");
+    //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/amd/02_-_Default_metallicRoughness_png_BC7.dds");
+    //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/amd/02_-_Default_normal_png_BC7.dds");
+    //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/amd/04_-_Default_baseColor_png_BC7.dds");
+    //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/amd/04_-_Default_metallicRoughness_png_BC7.dds");
+    //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/amd/04_-_Default_normal_png_BC7.dds");
+    //FileSystem::RawTexture cpu_texture;
+    //FileSystem::LoadTexture(cpu_texture,"./assets/images/texture.png");
+    assert(cpu_texture.valid());
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
 
-    auto const image_size = cpu_texture.image_size();
-    
+    auto const format = cpu_texture.format();
+    auto const mip_level = cpu_texture.mipmap_count() - 1;
+    auto const mipmap = cpu_texture.pixels(mip_level);
+    auto const image_size = mipmap.len;
+    auto const pixels = mipmap.ptr;
+    auto const width = mipmap.width;
+    auto const height = mipmap.height;
+
     createBuffer(
         image_size, 
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
@@ -1740,13 +1760,13 @@ Application::createTextureImage()
     void * data = nullptr;
     vkMapMemory(device, stagingBufferMemory, 0, image_size, 0, &data);
     assert(nullptr != data);
-    ::memcpy(data, cpu_texture.pixels, static_cast<size_t>(image_size));
+    ::memcpy(data, pixels, static_cast<size_t>(image_size));
     vkUnmapMemory(device, stagingBufferMemory);
 
     createImage(
-        cpu_texture.width, 
-        cpu_texture.height, 
-        VK_FORMAT_R8G8B8A8_UNORM, 
+        width, 
+        height, 
+        format,//VK_FORMAT_R8G8B8A8_UNORM, 
         VK_IMAGE_TILING_OPTIMAL, 
         VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
@@ -1756,25 +1776,27 @@ Application::createTextureImage()
 
     transitionImageLayout(
         textureImage, 
-        VK_FORMAT_R8G8B8A8_UNORM, 
+        format,//VK_FORMAT_R8G8B8A8_UNORM, 
         VK_IMAGE_LAYOUT_UNDEFINED, 
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
     );
     copyBufferToImage(
         stagingBuffer, 
         textureImage, 
-        static_cast<uint32_t>(cpu_texture.width), 
-        static_cast<uint32_t>(cpu_texture.height)
+        static_cast<uint32_t>(width), 
+        static_cast<uint32_t>(height)
     );
     transitionImageLayout(
-        textureImage, 
-        VK_FORMAT_R8G8B8A8_UNORM, 
+        textureImage,
+        format,//VK_FORMAT_R8G8B8A8_UNORM, 
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
     );
 
     vkDestroyBuffer(device, stagingBuffer, nullptr);
     vkFreeMemory(device, stagingBufferMemory, nullptr);
+
+    createImageView(&textureImageView, textureImage, format, VK_IMAGE_ASPECT_COLOR_BIT);
  
 }
 
@@ -1963,10 +1985,10 @@ Application::createSyncObjects() {
     }
 }
 
-void
-Application::createTextureImageView() {
-    createImageView(&textureImageView, textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
-}
+//void
+//Application::createTextureImageView() {
+//    createImageView(&textureImageView, textureImage, VK_FORMAT_BC7_UNORM_BLOCK, VK_IMAGE_ASPECT_COLOR_BIT);
+//}
 
 void
 Application::createTextureSampler() {

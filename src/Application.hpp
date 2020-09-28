@@ -18,8 +18,8 @@ private:
     static constexpr const char* DEBUG_LAYER = "VK_LAYER_LUNARG_standard_validation";
     static constexpr uint32_t SCREEN_WIDTH = 640;
     static constexpr uint32_t SCREEN_HEIGHT = 480;
-    static constexpr float HALF_WIDTH = 320;
-    static constexpr float HALF_HEIGHT = 240;
+    static constexpr float HALF_WIDTH = SCREEN_WIDTH / 2.0f;
+    static constexpr float HALF_HEIGHT = SCREEN_HEIGHT / 2.0f;
     static constexpr float RATIO = static_cast<float>(SCREEN_WIDTH) / static_cast<float>(SCREEN_HEIGHT);
     static constexpr float LEFT = 0.0f;
     static constexpr float RIGHT = 640.0f;
@@ -95,7 +95,7 @@ private:
     void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) const;
     void createSyncObjects();
     void legacyCreateVertexBuffer();
-    void createTextureImageView();
+    //void createTextureImageView();
     void createTextureSampler();
 private:
     struct UniformBufferObject {
