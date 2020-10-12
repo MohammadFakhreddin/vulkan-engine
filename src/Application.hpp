@@ -4,13 +4,10 @@
 #include <vulkan/vulkan.h>
 #include <SDL2/SDL.h>
 #include <vector>
-#include <chrono>
 #include <string>
-#include <array>
 
-#include "MatrixTemplate.h"
-#define STB_IMAGE_IMPLEMENTATION
-
+#include "Types.hpp"
+#include "FileSystem.h"
 #define DEBUGGING_ENABLED
 
 class Application{
@@ -103,75 +100,43 @@ private:
         float transformation[16];
         float perspective[16];
     };
-    struct Vertex {
-        float pos[3];
-        float color[3];
-        float tex_coord[2];
-        static VkVertexInputBindingDescription getBindingDescription()
-        {
-            VkVertexInputBindingDescription bindingDescription{};
-            bindingDescription.binding = 0;
-            bindingDescription.stride = sizeof(Vertex);
-            bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-            return bindingDescription;
-        }
-        static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
-            std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
-
-            attributeDescriptions[0].binding = 0;
-            attributeDescriptions[0].location = 0;
-            attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-            attributeDescriptions[0].offset = offsetof(Vertex, pos);
-
-            attributeDescriptions[1].binding = 0;
-            attributeDescriptions[1].location = 1;
-            attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-            attributeDescriptions[1].offset = offsetof(Vertex, color);
-
-            attributeDescriptions[2].binding = 0;
-            attributeDescriptions[2].location = 2;
-            attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-            attributeDescriptions[2].offset = offsetof(Vertex, tex_coord);
-
-            return attributeDescriptions;
-        }
-    };
-    float const halfWidth = 50.0f;
-    float const cubeFrontZ = 50.0f;
-    float const cubeBackZ = -50.0f;
-    std::vector<Vertex> const vertices = {
-        //// front
-        {{-halfWidth, -halfWidth, cubeFrontZ},{1.0f, 0.0f, 0.0f},{0.0f, 0.0f}},
-        {{halfWidth, -halfWidth, cubeFrontZ},{0.0f, 1.0f, 0.0f},{1.0f, 0.0f}},
-        {{halfWidth,  halfWidth,  cubeFrontZ},{0.0f, 0.0f, 1.0f},{1.0f, 1.0f}},
-        {{-halfWidth,  halfWidth,  cubeFrontZ},{1.0f, 1.0f, 1.0f},{0.0f, 1.0f}},
-        //// back
-        {{-halfWidth, -halfWidth,  cubeBackZ},{0.5f, 0.0f, 0.5f},{1.0f, 0.0f}},
-        {{halfWidth, -halfWidth,  cubeBackZ},{0.0f, 0.5f, 0.5f},{0.0f, 0.0f}},
-        {{halfWidth,  halfWidth,  cubeBackZ},{0.0f, 0.5f, 0.5f},{0.0f, 1.0f}},
-        {{-halfWidth,  halfWidth,  cubeBackZ},{0.5f, 0.0f, 0.5f},{1.0f, 1.0f}}
-    };
-    std::vector<uint32_t> const indices = { 
-        // front
-		0, 1, 2,
-		2, 3, 0,
-		// right
-		1, 5, 6,
-		6, 2, 1,
-		// back
-		7, 6, 5,
-		5, 4, 7,
-		// left
-		4, 0, 3,
-		3, 7, 4,
-		// bottom
-		4, 5, 1,
-		1, 0, 4,
-		// top
-		3, 2, 6,
-		6, 7, 3
-    };
+    MTypes::Mesh m_mesh;
+    //float const halfWidth = 50.0f;
+    //float const cubeFrontZ = 50.0f;
+    //float const cubeBackZ = -50.0f;
+  //  std::vector<MTypes::Vertex> const vertices = {
+  //      //// front
+  //      {{-halfWidth, -halfWidth, cubeFrontZ},{1.0f, 0.0f, 0.0f},{0.0f, 0.0f}},
+  //      {{halfWidth, -halfWidth, cubeFrontZ},{0.0f, 1.0f, 0.0f},{1.0f, 0.0f}},
+  //      {{halfWidth,  halfWidth,  cubeFrontZ},{0.0f, 0.0f, 1.0f},{1.0f, 1.0f}},
+  //      {{-halfWidth,  halfWidth,  cubeFrontZ},{1.0f, 1.0f, 1.0f},{0.0f, 1.0f}},
+  //      //// back
+  //      {{-halfWidth, -halfWidth,  cubeBackZ},{0.5f, 0.0f, 0.5f},{1.0f, 0.0f}},
+  //      {{halfWidth, -halfWidth,  cubeBackZ},{0.0f, 0.5f, 0.5f},{0.0f, 0.0f}},
+  //      {{halfWidth,  halfWidth,  cubeBackZ},{0.0f, 0.5f, 0.5f},{0.0f, 1.0f}},
+  //      {{-halfWidth,  halfWidth,  cubeBackZ},{0.5f, 0.0f, 0.5f},{1.0f, 1.0f}}
+  //  };
+  //  std::vector<uint32_t> const indices = { 
+  //      // front
+		//0, 1, 2,
+		//2, 3, 0,
+		//// right
+		//1, 5, 6,
+		//6, 2, 1,
+		//// back
+		//7, 6, 5,
+		//5, 4, 7,
+		//// left
+		//4, 0, 3,
+		//3, 7, 4,
+		//// bottom
+		//4, 5, 1,
+		//1, 0, 4,
+		//// top
+		//3, 2, 6,
+		//6, 7, 3
+  //  };
 private:
     VkBool32 getMemoryType(uint32_t typeBits, VkFlags properties, uint32_t* typeIndex);
     VkSurfaceFormatKHR chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);

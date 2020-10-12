@@ -8,6 +8,8 @@
 #include "FileSystem.h"
 #include <SDL2\SDL_vulkan.h>
 
+#include "MatrixTemplate.h"
+
 Application::Application(){}
 
 void
@@ -47,6 +49,8 @@ Application::setupVulkan(){
     createTextureImage();
     //createTextureImageView();
     createTextureSampler();
+    m_mesh = FileSystem::LoadObj("./assets/viking/viking.obj");
+    assert(m_mesh.valid);
     createVertexBuffer();
     createIndexBuffer();
     //legacyCreateVertexBuffer();
@@ -528,7 +532,7 @@ Application::getMemoryType(uint32_t typeBits, VkFlags properties, uint32_t* type
 
 void
 Application::createVertexBuffer() {
-    VkDeviceSize const bufferSize = sizeof(vertices[0]) * vertices.size();
+    VkDeviceSize const bufferSize = sizeof(m_mesh.vertices[0]) * m_mesh.vertices.size();
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -536,7 +540,7 @@ Application::createVertexBuffer() {
 
     void* data;
     vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    ::memcpy(data, vertices.data(), static_cast<size_t>(bufferSize));
+    ::memcpy(data, m_mesh.vertices.data(), static_cast<size_t>(bufferSize));
     vkUnmapMemory(device, stagingBufferMemory);
 
     createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
@@ -549,7 +553,7 @@ Application::createVertexBuffer() {
 
 void
 Application::createIndexBuffer() {
-    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+    VkDeviceSize bufferSize = sizeof(m_mesh.indices[0]) * m_mesh.indices.size();
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -557,7 +561,7 @@ Application::createIndexBuffer() {
 
     void* data;
     vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    ::memcpy(data, indices.data(), (size_t) bufferSize);
+    ::memcpy(data, m_mesh.indices.data(), (size_t) bufferSize);
     vkUnmapMemory(device, stagingBufferMemory);
 
     createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
@@ -614,12 +618,13 @@ Application::updateUniformBuffer(uint32_t currentImage) {
 
     {// Model
         Matrix4X4Float rotation;
-        Matrix4X4Float::assignRotationXYZ(rotation,Math::deg2Rad(degree),Math::deg2Rad(degree),Math::deg2Rad(0.0f));
+        Matrix4X4Float::assignRotationXYZ(rotation,Math::deg2Rad(45.0f ),0.0f,Math::deg2Rad(45.0f + degree));
+        //Matrix4X4Float::assignRotationXYZ(rotation, Math::deg2Rad(degree), Math::deg2Rad(degree),Math::deg2Rad(0.0f));
         ::memcpy(ubo.rotation,rotation.cells,sizeof(ubo.rotation));
     }
     {// Transformation
         Matrix4X4Float transformation;
-        Matrix4X4Float::assignTransformation(transformation,0,0,-300);
+        Matrix4X4Float::assignTransformation(transformation,0,0,-5);
         ::memcpy(ubo.transformation,transformation.cells,sizeof(ubo.transformation));
     }
     {// Perspective
@@ -1050,9 +1055,9 @@ Application::createGraphicsPipeline() {
 
     VkPipelineShaderStageCreateInfo shaderStages[] = { vertexShaderCreateInfo, fragmentShaderCreateInfo };
 
-    auto const vertexBindingDescription = Vertex::getBindingDescription();
+    auto const vertexBindingDescription = MTypes::Vertex::getBindingDescription();
 
-    auto const vertexAttributeDescriptions = Vertex::getAttributeDescriptions();
+    auto const vertexAttributeDescriptions = MTypes::Vertex::getAttributeDescriptions();
 
     // Describe vertex input
     VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo = {};
@@ -1425,7 +1430,7 @@ Application::createCommandBuffers() {
 
         vkCmdBindIndexBuffer(graphicsCommandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-        vkCmdDrawIndexed(graphicsCommandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+        vkCmdDrawIndexed(graphicsCommandBuffers[i], static_cast<uint32_t>(m_mesh.indices.size()), 1, 0, 0, 0);
         
         vkCmdEndRenderPass(graphicsCommandBuffers[i]);
 
@@ -1724,7 +1729,7 @@ Application::createTextureImage()
     //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/nvidia/02_-_Default_emissive.dds");
     //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/nvidia/02_-_Default_metallicRoughness.dds");
     //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/nvidia/02_-_Default_normal.dds");
-    FileSystem::DDSTexture cpu_texture("./assets/images/bc7/nvidia/04_-_Default_baseColor.dds");
+    //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/nvidia/04_-_Default_baseColor.dds");
     //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/nvidia/04_-_Default_metallicRoughness.dds");
     //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/nvidia/04_-_Default_normal.dds");
     //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/amd/02_-_Default_baseColor_png_BC7.dds");
@@ -1736,18 +1741,21 @@ Application::createTextureImage()
     //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/amd/04_-_Default_normal_png_BC7.dds");
     //FileSystem::RawTexture cpu_texture;
     //FileSystem::LoadTexture(cpu_texture,"./assets/images/texture.png");
-    assert(cpu_texture.valid());
+    FileSystem::RawTexture cpu_texture;
+    FileSystem::LoadTexture(cpu_texture, "./assets/viking/viking.png");
+    assert(cpu_texture.isValid());
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
 
-    auto const format = cpu_texture.format();
-    auto const mip_level = cpu_texture.mipmap_count() - 1;
-    auto const mipmap = cpu_texture.pixels(mip_level);
-    auto const image_size = mipmap.len;
-    auto const pixels = mipmap.ptr;
-    auto const width = mipmap.width;
-    auto const height = mipmap.height;
+    //auto const format = cpu_texture.format();
+    //auto const mip_level = cpu_texture.mipmap_count() - 1;
+    //auto const mipmap = cpu_texture.pixels(mip_level);
+    auto const format = VK_FORMAT_R8G8B8A8_UNORM;
+    auto const image_size = cpu_texture.image_size();
+    auto const pixels = cpu_texture.pixels;
+    auto const width = cpu_texture.width;
+    auto const height = cpu_texture.height;
 
     createBuffer(
         image_size, 
@@ -1788,7 +1796,7 @@ Application::createTextureImage()
     );
     transitionImageLayout(
         textureImage,
-        format,//VK_FORMAT_R8G8B8A8_UNORM, 
+        format, 
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
     );
