@@ -6,15 +6,14 @@
 #include <vector>
 #include <string>
 
-#include "Types.hpp"
+#include "RenderTypes.hpp"
 #include "FileSystem.h"
 #define DEBUGGING_ENABLED
 
 class Application{
 private:
-    static constexpr const char* DEBUG_LAYER = "VK_LAYER_LUNARG_standard_validation";
-    static constexpr uint32_t SCREEN_WIDTH = 1920;//640;
-    static constexpr uint32_t SCREEN_HEIGHT = 1080;//480;
+    static constexpr uint32_t SCREEN_WIDTH = 640;
+    static constexpr uint32_t SCREEN_HEIGHT = 480;
     static constexpr float HALF_WIDTH = SCREEN_WIDTH / 2.0f;
     static constexpr float HALF_HEIGHT = SCREEN_HEIGHT / 2.0f;
     static constexpr float RATIO = static_cast<float>(SCREEN_WIDTH) / static_cast<float>(SCREEN_HEIGHT);
@@ -99,7 +98,9 @@ private:
         float perspective[16];
     };
 
-    MTypes::Mesh m_mesh;
+    //MTypes::Mesh m_viking_house_mesh;
+    //MTypes::Mesh m_cube_mesh;
+    std::vector<RenderTypes::Mesh> m_mesh_list;
     //float const halfWidth = 50.0f;
     //float const cubeFrontZ = 50.0f;
     //float const cubeBackZ = -50.0f;

@@ -1,6 +1,5 @@
 #include <Application.hpp>
 
-#include <windows.h>
 #include <cassert>
 #include <iostream>
 #include <filesystem>
@@ -49,8 +48,8 @@ Application::setupVulkan(){
     createTextureImage();
     //createTextureImageView();
     createTextureSampler();
-    m_mesh = FileSystem::LoadObj("./assets/viking/viking.obj");
-    assert(m_mesh.valid);
+    m_viking_house_mesh = FileSystem::LoadObj("./assets/viking/viking.obj");
+    assert(m_viking_house_mesh.valid);
     createVertexBuffer();
     createIndexBuffer();
     //legacyCreateVertexBuffer();
@@ -130,64 +129,6 @@ Application::createInstance(){
     }
     // Now create the desired instance
     vkCheck(vkCreateInstance(&instanceInfo, NULL, &vkInstance));
-}
-
-void
-Application::vkCheck(VkResult result) {
-    assert(result == VK_SUCCESS);
-}
-
-void
-Application::sdlCheck(SDL_bool result){
-    assert(result == SDL_TRUE);
-}
-
-VkBool32
-debugCallback(
-    VkDebugReportFlagsEXT flags,
-    VkDebugReportObjectTypeEXT objType,
-    uint64_t srcObject, size_t location,
-    int32_t msgCode,
-    const char* pLayerPrefix,
-    const char* pMsg,
-    void* pUserData
-) {
-    if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
-        std::cerr << "ERROR: [" << pLayerPrefix << "] Code " << msgCode << " : " << pMsg << std::endl;
-    }
-    else if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
-        std::cerr << "WARNING: [" << pLayerPrefix << "] Code " << msgCode << " : " << pMsg << std::endl;
-    }
-    return VK_FALSE;
-}
-
-void 
-Application::createDebugCallback() {
-#ifdef DEBUGGING_ENABLED
-    VkDebugReportCallbackCreateInfoEXT debugInfo = {};
-    debugInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
-    debugInfo.pfnCallback = debugCallback;
-    debugInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
-    
-    PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(
-        vkInstance, 
-        "vkCreateDebugReportCallbackEXT"
-    );
-
-    vkCheck(createDebugReportCallback(vkInstance, &debugInfo, nullptr, &debugReportCallbackExtension));
-#endif // DEBUGGING_ENABLED
-
-}
-
-void
-Application::createWindowSurface() {
-    // but instead of creating a renderer, we can draw directly to the screen
-    SDL_Vulkan_CreateSurface(
-        window,
-        vkInstance,
-        &windowSurface
-    );
-
 }
 
 void
@@ -386,7 +327,7 @@ Application::getMemoryType(uint32_t typeBits, VkFlags properties, uint32_t* type
 
 void
 Application::createVertexBuffer() {
-    VkDeviceSize const bufferSize = sizeof(m_mesh.vertices[0]) * m_mesh.vertices.size();
+    VkDeviceSize const bufferSize = sizeof(m_viking_house_mesh.vertices[0]) * m_viking_house_mesh.vertices.size();
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -394,7 +335,7 @@ Application::createVertexBuffer() {
 
     void* data;
     vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    ::memcpy(data, m_mesh.vertices.data(), static_cast<size_t>(bufferSize));
+    ::memcpy(data, m_viking_house_mesh.vertices.data(), static_cast<size_t>(bufferSize));
     vkUnmapMemory(device, stagingBufferMemory);
 
     createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
@@ -407,7 +348,7 @@ Application::createVertexBuffer() {
 
 void
 Application::createIndexBuffer() {
-    VkDeviceSize bufferSize = sizeof(m_mesh.indices[0]) * m_mesh.indices.size();
+    VkDeviceSize bufferSize = sizeof(m_viking_house_mesh.indices[0]) * m_viking_house_mesh.indices.size();
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -415,7 +356,7 @@ Application::createIndexBuffer() {
 
     void* data;
     vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    ::memcpy(data, m_mesh.indices.data(), (size_t) bufferSize);
+    ::memcpy(data, m_viking_house_mesh.indices.data(), (size_t) bufferSize);
     vkUnmapMemory(device, stagingBufferMemory);
 
     createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
@@ -1362,7 +1303,7 @@ Application::drawFrame() {
 
 
         vkCmdBeginRenderPass(graphicsCommandBuffers[image_index], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
+        // We should bind specific descriptor set with different texture for each mesh
         vkCmdBindDescriptorSets(
             graphicsCommandBuffers[image_index], 
             VK_PIPELINE_BIND_POINT_GRAPHICS, 
@@ -1377,7 +1318,7 @@ Application::drawFrame() {
 
         vkCmdBindIndexBuffer(graphicsCommandBuffers[image_index], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-        vkCmdDrawIndexed(graphicsCommandBuffers[image_index], static_cast<uint32_t>(m_mesh.indices.size()), 1, 0, 0, 0);
+        vkCmdDrawIndexed(graphicsCommandBuffers[image_index], static_cast<uint32_t>(m_viking_house_mesh.indices.size()), 1, 0, 0, 0);
 
         vkCmdEndRenderPass(graphicsCommandBuffers[image_index]);
 

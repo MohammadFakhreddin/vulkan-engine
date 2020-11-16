@@ -492,13 +492,11 @@ public:
         uintmax_t       m_asset_len = 0;
         Mipmap *        m_mipmaps = nullptr;
     };
-    static MTypes::Mesh
-    LoadObj(char const * path)
+    static bool
+    LoadObj(MTypes::Mesh & out_mesh, char const * path)
     {
-        MTypes::Mesh ret {};
-
         using Byte = char;
-    
+        bool ret = false;
         if(std::filesystem::exists(path)){
 
             std::ifstream file {path};
@@ -518,7 +516,7 @@ public:
             auto load_obj_result = tinyobj::LoadObj(&attributes, &shapes, nullptr, &error, &file);
             if(load_obj_result)
             {
-                if(0u == shapes.size())
+                if(shapes.empty())
                 {
                     std::cerr << "Object has no shape" << std::endl;
                 } else if(0 != attributes.vertices.size() % 3)
@@ -533,7 +531,7 @@ public:
                     std::cerr << "Vertices and texture coordinates must have same size" << std::endl;
                 } else
                 {
-                    ret.valid = true;
+                    ret = true;
                     struct Position
                     {
                         MTypes::TypeOfPosition pos[3];
@@ -567,9 +565,9 @@ public:
                             coords[tex_index].uv[1] = attributes.texcoords[tex_index * 2 + 1];
                         }
                     }
-                    ret.vertices.resize(positions.size());
+                    out_mesh.vertices.resize(positions.size());
                     {// Indices
-                        ret.indices.resize(shapes[0].mesh.indices.size());
+                        out_mesh.indices.resize(shapes[0].mesh.indices.size());
                         for(
                             uintmax_t indices_index = 0;
                             indices_index < shapes[0].mesh.indices.size();
@@ -578,10 +576,10 @@ public:
                         {
                             auto const vertex_index = shapes[0].mesh.indices[indices_index].vertex_index;
                             auto const uv_index = shapes[0].mesh.indices[indices_index].texcoord_index;
-                            ret.indices[indices_index] = shapes[0].mesh.indices[indices_index].vertex_index;
-                            ::memcpy(ret.vertices[vertex_index].pos, positions[vertex_index].pos, sizeof(Position));
-                            ::memcpy(ret.vertices[vertex_index].tex_coord, coords[uv_index].uv, sizeof(TexCoord));
-                            ret.vertices[vertex_index].tex_coord[1] = 1.0f - ret.vertices[vertex_index].tex_coord[1];
+                            out_mesh.indices[indices_index] = shapes[0].mesh.indices[indices_index].vertex_index;
+                            ::memcpy(out_mesh.vertices[vertex_index].pos, positions[vertex_index].pos, sizeof(Position));
+                            ::memcpy(out_mesh.vertices[vertex_index].tex_coord, coords[uv_index].uv, sizeof(TexCoord));
+                            out_mesh.vertices[vertex_index].tex_coord[1] = 1.0f - out_mesh.vertices[vertex_index].tex_coord[1];
                         }
                     }
                 } 
