@@ -1507,8 +1507,7 @@ Application::findSupportedFormat(const std::vector<VkFormat>& candidates, VkImag
     }
 
     throwErrorAndExit("failed to find supported format!");
-    VkFormat result {};
-    return result;
+    return VkFormat {};
 }
 
 VkFormat

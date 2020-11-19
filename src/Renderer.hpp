@@ -20,20 +20,23 @@ private:
         }
     }
     static VkBool32 DebugCallback(
-        VkDebugReportFlagsEXT flags,
-        VkDebugReportObjectTypeEXT objType,
-        uint64_t srcObject, size_t location,
-        int32_t msgCode,
-        const char* pLayerPrefix,
-        const char* pMsg,
-        void* pUserData
+        VkDebugReportFlagsEXT const flags,
+        VkDebugReportObjectTypeEXT object_type,
+        uint64_t src_object, 
+        size_t location,
+        int32_t const message_code,
+        char const * player_prefix,
+        char const * message,
+        void * user_data
     ) {
+        // TODO Display other parameters as well
         if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
-            std::cerr << "ERROR: [" << pLayerPrefix << "] Code " << msgCode << " : " << pMsg << std::endl;
+            std::cerr << "ERROR: [" << player_prefix << "] Code " << message_code << " : " << message << std::endl;
         }
         else if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
-            std::cerr << "WARNING: [" << pLayerPrefix << "] Code " << msgCode << " : " << pMsg << std::endl;
+            std::cerr << "WARNING: [" << player_prefix << "] Code " << message_code << " : " << message << std::endl;
         }
+        assert(false);
         return VK_FALSE;
     }
 public:
@@ -66,6 +69,217 @@ public:
     }
     bool shutdown() {
         return true;
+    }
+    void create_buffer(
+        VkDeviceSize const size, 
+        VkBufferUsageFlags const usage, 
+        VkMemoryPropertyFlags const properties, 
+        VkBuffer & out_buffer, 
+        VkDeviceMemory & out_buffer_memory
+    ) const {
+        assert(nullptr != m_device);
+        assert(nullptr != m_physical_device);
+
+        VkBufferCreateInfo buffer_info{};
+        buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        buffer_info.size = size;
+        buffer_info.usage = usage;
+        buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        if (vkCreateBuffer(*m_device, &buffer_info, nullptr, &out_buffer) != VK_SUCCESS) {
+            throw std::runtime_error("Application::createBuffer::vkCreateBuffer failed to create buffer!");
+        }
+
+        VkMemoryRequirements memory_requirements;
+        vkGetBufferMemoryRequirements(*m_device, out_buffer, &memory_requirements);
+
+        VkMemoryAllocateInfo memory_allocation_info {};
+        memory_allocation_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        memory_allocation_info.allocationSize = memory_requirements.size;
+        memory_allocation_info.memoryTypeIndex = findMemoryType(memory_requirements.memoryTypeBits, properties);
+
+        if (vkAllocateMemory(*m_device, &memory_allocation_info, nullptr, &out_buffer_memory) != VK_SUCCESS) {
+            throw std::runtime_error("Application::createBuffer::vkAllocateMemory failed to allocate buffer memory!");
+        }
+
+        if(VK_SUCCESS != vkBindBufferMemory(*m_device, out_buffer, out_buffer_memory, 0)) {
+            throw std::runtime_error("Application::create_buffer::vkBindBufferMemory failed to bind buffer!");
+        }
+    }
+    bool create_texture_image(
+        VkImage & out_vk_texture,
+        VkDeviceMemory & out_vk_memory,
+        VkImageView & out_vk_image_view,
+        FileSystem::RawTexture const & cpu_texture
+    ) const {
+        bool success = false;
+        if(cpu_texture.isValid()) {
+
+            VkBuffer staging_buffer;
+            VkDeviceMemory staging_buffer_memory;
+
+            auto const format = VK_FORMAT_R8G8B8A8_UNORM;
+            auto const image_size = cpu_texture.image_size();
+            auto const pixels = cpu_texture.pixels;
+            auto const width = cpu_texture.width;
+            auto const height = cpu_texture.height;
+
+            create_buffer(
+                image_size, 
+                VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+                staging_buffer, 
+                staging_buffer_memory
+            );
+
+            void * data = nullptr;
+            vkMapMemory(*m_device, staging_buffer_memory, 0, image_size, 0, &data);
+            assert(nullptr != data);
+            ::memcpy(data, pixels, static_cast<size_t>(image_size));
+            vkUnmapMemory(*m_device, staging_buffer_memory);
+
+            create_image(
+                out_vk_texture, 
+                out_vk_memory,
+                width, 
+                height, 
+                format,//VK_FORMAT_R8G8B8A8_UNORM, 
+                VK_IMAGE_TILING_OPTIMAL, 
+                VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+            );
+
+            transition_image_layout(
+                out_vk_texture, 
+                format,//VK_FORMAT_R8G8B8A8_UNORM, 
+                VK_IMAGE_LAYOUT_UNDEFINED, 
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+            );
+
+            copy_buffer_to_image(
+                staging_buffer, 
+                out_vk_texture, 
+                static_cast<uint32_t>(width), 
+                static_cast<uint32_t>(height)
+            );
+
+            transition_image_layout(
+                out_vk_texture,
+                format, 
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+            );
+
+            vkDestroyBuffer(*m_device, staging_buffer, nullptr);
+
+            vkFreeMemory(*m_device, staging_buffer_memory, nullptr);
+
+            create_image_view(&out_vk_image_view, out_vk_texture, format, VK_IMAGE_ASPECT_COLOR_BIT);
+
+            success = true;
+        }
+        return success;
+    } 
+    void destroy_texture_image(
+        VkImage & texture_image, 
+        VkDeviceMemory & texture_memory
+    ) const {
+        vkDestroyImage(*m_device, texture_image, nullptr);
+        vkFreeMemory(*m_device, texture_memory, nullptr);
+    }
+        VkSampler create_texture_sampler() const {
+        VkSampler sampler = nullptr;
+
+        VkSamplerCreateInfo sampler_info{};
+        sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        sampler_info.magFilter = VK_FILTER_LINEAR;
+        sampler_info.minFilter = VK_FILTER_LINEAR;
+        sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler_info.anisotropyEnable = VK_TRUE;
+        sampler_info.maxAnisotropy = 16.0f;
+        sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        sampler_info.unnormalizedCoordinates = VK_FALSE;
+        sampler_info.compareEnable = VK_FALSE;
+        sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+        sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+
+        if (vkCreateSampler(*m_device, &sampler_info, nullptr, &sampler) != VK_SUCCESS) {
+            throw std::runtime_error("createTextureSampler::vkCreateSampler Failed to create texture sampler!");
+        }
+
+        return sampler;
+    }
+    template <typename T>
+    void createVertexBuffer(
+        VkBuffer & out_vertex_buffer,
+        VkDeviceMemory & out_vertex_buffer_memory, 
+        std::vector<T> vertices
+    ) {
+        VkDeviceSize const buffer_size = sizeof(vertices[0]) * vertices.size();
+
+        VkBuffer staging_buffer;
+        VkDeviceMemory staging_buffer_memory;
+        create_buffer(
+            buffer_size, 
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+            staging_buffer, staging_buffer_memory
+        );
+
+        void * data;
+        vkMapMemory(*m_device, staging_buffer_memory, 0, buffer_size, 0, &data);
+        ::memcpy(data, vertices.data(), static_cast<size_t>(buffer_size));
+        vkUnmapMemory(*m_device, staging_buffer_memory);
+
+        create_buffer(
+            buffer_size, 
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
+            out_vertex_buffer, 
+            out_vertex_buffer_memory
+        );
+
+        copy_buffer(staging_buffer, out_vertex_buffer, buffer_size);
+
+        vkDestroyBuffer(*m_device, staging_buffer, nullptr);
+        vkFreeMemory(*m_device, staging_buffer_memory, nullptr);
+    }
+    template <typename T>
+    void createIndexBuffer(
+        VkBuffer & out_index_buffer,
+        VkDeviceMemory & out_index_buffer_memory, 
+        std::vector<T> indices
+    ) {
+        VkDeviceSize const buffer_size = sizeof(indices[0]) * indices.size();
+
+        VkBuffer staging_buffer;
+        VkDeviceMemory staging_buffer_memory;
+        create_buffer(
+            buffer_size, 
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
+            staging_buffer, 
+            staging_buffer_memory
+        );
+
+        void* data;
+        vkMapMemory(*m_device, staging_buffer_memory, 0, buffer_size, 0, &data);
+        ::memcpy(data, indices.data(), (size_t) buffer_size);
+        vkUnmapMemory(*m_device, staging_buffer_memory);
+
+        create_buffer(
+            buffer_size,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            out_index_buffer, 
+            out_index_buffer_memory
+        );
+
+        copy_buffer(staging_buffer, out_index_buffer, buffer_size);
+
+        vkDestroyBuffer(*m_device, staging_buffer, nullptr);
+        vkFreeMemory(*m_device, staging_buffer_memory, nullptr);
     }
 private:
     void create_window() {
@@ -349,126 +563,12 @@ private:
 
         throw std::runtime_error("failed to find suitable memory type!");
     }
-    void createBuffer(
-        VkDeviceSize const size, 
-        VkBufferUsageFlags const usage, 
-        VkMemoryPropertyFlags const properties, 
-        VkBuffer & buffer, 
-        VkDeviceMemory & buffer_memory
-    ) const {
-        assert(nullptr != m_device);
-        assert(nullptr != m_physical_device);
-
-        VkBufferCreateInfo buffer_info{};
-        buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        buffer_info.size = size;
-        buffer_info.usage = usage;
-        buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-        if (vkCreateBuffer(*m_device, &buffer_info, nullptr, &buffer) != VK_SUCCESS) {
-            throw std::runtime_error("Application::createBuffer::vkCreateBuffer failed to create buffer!");
-        }
-
-        VkMemoryRequirements memory_requirements;
-        vkGetBufferMemoryRequirements(*m_device, buffer, &memory_requirements);
-
-        VkMemoryAllocateInfo memory_allocation_info {};
-        memory_allocation_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        memory_allocation_info.allocationSize = memory_requirements.size;
-        memory_allocation_info.memoryTypeIndex = findMemoryType(memory_requirements.memoryTypeBits, properties);
-
-        if (vkAllocateMemory(*m_device, &memory_allocation_info, nullptr, &buffer_memory) != VK_SUCCESS) {
-            throw std::runtime_error("Application::createBuffer::vkAllocateMemory failed to allocate buffer memory!");
-        }
-
-        vkBindBufferMemory(*m_device, buffer, buffer_memory, 0);
-    }
-    bool createTextureImage(FileSystem::RawTexture cpu_texture)
-    {
-        //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/nvidia/02_-_Default_baseColor.dds");
-        //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/nvidia/02_-_Default_emissive.dds");
-        //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/nvidia/02_-_Default_metallicRoughness.dds");
-        //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/nvidia/02_-_Default_normal.dds");
-        //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/nvidia/04_-_Default_baseColor.dds");
-        //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/nvidia/04_-_Default_metallicRoughness.dds");
-        //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/nvidia/04_-_Default_normal.dds");
-        //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/amd/02_-_Default_baseColor_png_BC7.dds");
-        //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/amd/02_-_Default_emissive_png_BC7.dds");
-        //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/amd/02_-_Default_metallicRoughness_png_BC7.dds");
-        //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/amd/02_-_Default_normal_png_BC7.dds");
-        //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/amd/04_-_Default_baseColor_png_BC7.dds");
-        //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/amd/04_-_Default_metallicRoughness_png_BC7.dds");
-        //FileSystem::DDSTexture cpu_texture("./assets/images/bc7/amd/04_-_Default_normal_png_BC7.dds");
-        //FileSystem::RawTexture cpu_texture;
-        //FileSystem::LoadTexture(cpu_texture,"./assets/images/texture.png");
-        FileSystem::RawTexture cpu_texture;
-        FileSystem::LoadTexture(cpu_texture, "./assets/viking/viking.png");
-        assert(cpu_texture.isValid());
-
-        VkBuffer stagingBuffer;
-        VkDeviceMemory stagingBufferMemory;
-
-        //auto const format = cpu_texture.format();
-        //auto const mip_level = cpu_texture.mipmap_count() - 1;
-        //auto const mipmap = cpu_texture.pixels(mip_level);
-        auto const format = VK_FORMAT_R8G8B8A8_UNORM;
-        auto const image_size = cpu_texture.image_size();
-        auto const pixels = cpu_texture.pixels;
-        auto const width = cpu_texture.width;
-        auto const height = cpu_texture.height;
-
-        createBuffer(
-            image_size, 
-            VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-            stagingBuffer, 
-            stagingBufferMemory
-        );
-
-        void * data = nullptr;
-        vkMapMemory(device, stagingBufferMemory, 0, image_size, 0, &data);
-        assert(nullptr != data);
-        ::memcpy(data, pixels, static_cast<size_t>(image_size));
-        vkUnmapMemory(device, stagingBufferMemory);
-
-        createImage(
-            width, 
-            height, 
-            format,//VK_FORMAT_R8G8B8A8_UNORM, 
-            VK_IMAGE_TILING_OPTIMAL, 
-            VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-            textureImage, 
-            textureImageMemory
-        );
-        transitionImageLayout(
-            textureImage, 
-            format,//VK_FORMAT_R8G8B8A8_UNORM, 
-            VK_IMAGE_LAYOUT_UNDEFINED, 
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-        );
-        copyBufferToImage(
-            stagingBuffer, 
-            textureImage, 
-            static_cast<uint32_t>(width), 
-            static_cast<uint32_t>(height)
-        );
-        transitionImageLayout(
-            textureImage,
-            format, 
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-        );
-        vkDestroyBuffer(device, stagingBuffer, nullptr);
-        vkFreeMemory(device, stagingBufferMemory, nullptr);
-        createImageView(&textureImageView, textureImage, format, VK_IMAGE_ASPECT_COLOR_BIT);
-    }
     bool create_image_view(
         VkImageView * out_image_view, 
-        VkImage const image, 
-        VkFormat format, 
-        VkImageAspectFlags aspect_flags
-    ) {
+        VkImage const & image, 
+        VkFormat const format, 
+        VkImageAspectFlags const aspect_flags
+    ) const {
         bool ret = true;
         VkImageViewCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -489,32 +589,339 @@ private:
         }
         return ret;
     }
-    void create_swap_chain_image_views() {
-        swapChainImageViews.resize(swapChainImages.size());
+    void transition_image_layout(
+        VkImage const & image, 
+        VkFormat format, 
+        VkImageLayout const old_layout, 
+        VkImageLayout const new_layout
+    ) const {
+        VkCommandBuffer const command_buffer = begin_single_time_commands();
 
-        // Create an image view for every image in the swap chain
-        for (size_t i = 0; i < swapChainImages.size(); i++) {
-            createImageView(&swapChainImageViews[i],swapChainImages[i],swapChainFormat,VK_IMAGE_ASPECT_COLOR_BIT);
+        VkImageMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.oldLayout = old_layout;
+        barrier.newLayout = new_layout;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.image = image;
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.baseMipLevel = 0;
+        barrier.subresourceRange.levelCount = 1;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount = 1;
+
+        VkPipelineStageFlags source_stage;
+        VkPipelineStageFlags destination_stage;
+
+        if (
+            old_layout == VK_IMAGE_LAYOUT_UNDEFINED && 
+            new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+        ) {
+            barrier.srcAccessMask = 0;
+            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+            source_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            destination_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        } else if (
+            old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && 
+            new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+        ) {
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+            source_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            destination_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        } else {
+            throw std::invalid_argument("unsupported layout transition!");
         }
 
-        VkFormat depthFormat = findDepthFormat();
+        vkCmdPipelineBarrier(
+            command_buffer,
+            source_stage, destination_stage,
+            0,
+            0, nullptr,
+            0, nullptr,
+            1, &barrier
+        );
 
-        createImage(
-            swapChainExtent.width, 
-            swapChainExtent.height, 
-            depthFormat, 
+        end_single_time_commands(command_buffer);
+    }
+    void copy_buffer_to_image(
+        VkBuffer const & buffer, 
+        VkImage const & image, 
+        uint32_t const width, 
+        uint32_t const height
+    ) const {
+        VkCommandBuffer const command_buffer = begin_single_time_commands();
+
+        VkBufferImageCopy region{};
+        region.bufferOffset = 0;
+        region.bufferRowLength = 0;
+        region.bufferImageHeight = 0;
+        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.imageSubresource.mipLevel = 0;
+        region.imageSubresource.baseArrayLayer = 0;
+        region.imageSubresource.layerCount = 1;
+        region.imageOffset = {0, 0, 0};
+        region.imageExtent = {
+            width,
+            height,
+            1
+        };
+
+        vkCmdCopyBufferToImage(command_buffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+        end_single_time_commands(command_buffer);
+    }
+    void create_swap_chain_image_views() {
+        m_swap_chain_image_views.resize(m_swap_chain_images.size());
+
+        // Create an image view for every image in the swap chain
+        for (size_t i = 0; i < m_swap_chain_images.size(); i++) {
+            create_image_view(
+                &m_swap_chain_image_views[i],
+                m_swap_chain_images[i], 
+                m_swap_chain_format,
+                VK_IMAGE_ASPECT_COLOR_BIT
+            );
+        }
+
+        VkFormat const depth_format = find_depth_format();
+
+        create_image(
+            m_depth_image, 
+            m_depth_image_memory,
+            m_swap_chain_extent.width, 
+            m_swap_chain_extent.height, 
+            depth_format, 
             VK_IMAGE_TILING_OPTIMAL, 
             VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-            depthImage, 
-            depthImageMemory
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
-        createImageView(&depthImageView, depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+        create_image_view(&m_depth_image_view, m_depth_image, depth_format, VK_IMAGE_ASPECT_DEPTH_BIT);
 
         //createImage(&textureImage);
         //createImageView(&textureImageView,textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
 
         std::cout << "created image views for swap chain images" << std::endl;
+    }
+    // TODO MipLevels and depth
+    void create_image(
+        VkImage & out_image, 
+        VkDeviceMemory & out_image_memory,
+        uint32_t const width, 
+        uint32_t const height, 
+        VkFormat const format, 
+        VkImageTiling const tiling, 
+        VkImageUsageFlags const usage, 
+        VkMemoryPropertyFlags const properties
+    ) const {
+        VkImageCreateInfo image_info{};
+        image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        image_info.imageType = VK_IMAGE_TYPE_2D;
+        image_info.extent.width = width;
+        image_info.extent.height = height;
+        image_info.extent.depth = 1;
+        image_info.mipLevels = 1;
+        image_info.arrayLayers = 1;
+        image_info.format = format;
+        image_info.tiling = tiling;
+        image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        image_info.usage = usage;
+        image_info.samples = VK_SAMPLE_COUNT_1_BIT;
+        image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        if (vkCreateImage(*m_device, &image_info, nullptr, &out_image) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create image!");
+        }
+
+        VkMemoryRequirements memory_requirements;
+        vkGetImageMemoryRequirements(*m_device, out_image, &memory_requirements);
+
+        VkMemoryAllocateInfo allocate_info{};
+        allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocate_info.allocationSize = memory_requirements.size;
+        allocate_info.memoryTypeIndex = findMemoryType(memory_requirements.memoryTypeBits, properties);
+
+        if (vkAllocateMemory(*m_device, &allocate_info, nullptr, &out_image_memory) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to allocate image memory!");
+        }
+
+        vkBindImageMemory(*m_device, out_image, out_image_memory, 0);
+    }
+    VkCommandBuffer begin_single_time_commands() const {
+        VkCommandBufferAllocateInfo allocate_info{};
+        allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocate_info.commandPool = m_command_pool;
+        allocate_info.commandBufferCount = 1;
+
+        VkCommandBuffer commandBuffer;
+        vkAllocateCommandBuffers(*m_device, &allocate_info, &commandBuffer);
+
+        VkCommandBufferBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        vkBeginCommandBuffer(commandBuffer, &begin_info);
+
+        return commandBuffer;
+    }
+    void end_single_time_commands(VkCommandBuffer command_buffer) const {
+        vkEndCommandBuffer(command_buffer);
+
+        VkSubmitInfo submit_info {};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &command_buffer;
+
+        vkQueueSubmit(m_graphic_queue, 1, &submit_info, VK_NULL_HANDLE);
+        vkQueueWaitIdle(m_graphic_queue);
+
+        vkFreeCommandBuffers(*m_device, m_command_pool, 1, &command_buffer);
+    }
+    VkFormat find_depth_format() const {
+        return find_supported_format (
+            {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+        );
+    }
+    VkFormat find_supported_format (
+        std::vector<VkFormat> const & candidates, 
+        VkImageTiling const tiling, 
+        VkFormatFeatureFlags const features
+    ) const {
+        for (VkFormat format : candidates) {
+            VkFormatProperties props;
+            vkGetPhysicalDeviceFormatProperties(m_physical_device, format, &props);
+
+            if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
+                return format;
+            }
+            if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+                return format;
+            }
+        }
+
+        throw std::runtime_error("failed to find supported format!");
+    }
+    void copy_buffer(VkBuffer const & source_buffer, VkBuffer const & destination_buffer, VkDeviceSize const size) const {
+        auto const command_buffer = begin_single_time_commands();
+
+        VkBufferCopy copy_region{};
+        copy_region.size = size;
+        vkCmdCopyBuffer(command_buffer, source_buffer, destination_buffer, 1, &copy_region);
+
+        end_single_time_commands(command_buffer);
+    }
+    void createSwapChain() {
+        // Find surface capabilities
+        VkSurfaceCapabilitiesKHR surface_capabilities;
+        if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_physical_device, m_window_surface, &surface_capabilities) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to acquire presentation surface capabilities");
+        }
+
+        // Find supported surface formats
+        uint32_t formatCount;
+        if (vkGetPhysicalDeviceSurfaceFormatsKHR(m_physical_device, m_window_surface, &formatCount, nullptr) != VK_SUCCESS || formatCount == 0) {
+            throw std::runtime_error("Failed to get number of supported surface formats");
+        }
+
+        std::vector<VkSurfaceFormatKHR> surface_formats(formatCount);
+        if (vkGetPhysicalDeviceSurfaceFormatsKHR(m_physical_device, m_window_surface, &formatCount, surface_formats.data()) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to get supported surface formats");
+        }
+
+        // Find supported present modes
+        uint32_t presentModeCount;
+        if (vkGetPhysicalDeviceSurfacePresentModesKHR(m_physical_device, m_window_surface, &presentModeCount, nullptr) != VK_SUCCESS || presentModeCount == 0) {
+            throw std::runtime_error("Failed to get number of supported presentation modes");
+        }
+
+        std::vector<VkPresentModeKHR> present_modes(presentModeCount);
+        if (vkGetPhysicalDeviceSurfacePresentModesKHR(m_physical_device, m_window_surface, &presentModeCount, present_modes.data()) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to get supported presentation modes");
+        }
+
+        // Determine number of images for swap chain
+        uint32_t imageCount = surface_capabilities.minImageCount + 1;
+        if (surface_capabilities.maxImageCount != 0 && imageCount > surface_capabilities.maxImageCount) {
+            imageCount = surface_capabilities.maxImageCount;
+        }
+
+        std::cout << "using " << imageCount << " images for swap chain" << std::endl;
+
+        // Select a surface format
+        VkSurfaceFormatKHR const surface_format = choose_surface_format(surface_formats);
+
+        // Select swap chain size
+        m_swap_chain_extent = choose_swap_extent(surface_capabilities);
+
+        // Determine transformation to use (preferring no transform)
+        VkSurfaceTransformFlagBitsKHR surfaceTransform;
+        if (surface_capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
+            surfaceTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+        }
+        else {
+            surfaceTransform = surface_capabilities.currentTransform;
+        }
+
+        // Choose presentation mode (preferring MAILBOX ~= triple buffering)
+        VkPresentModeKHR presentMode = choose_present_mode(present_modes);
+
+        // Finally, create the swap chain
+        VkSwapchainCreateInfoKHR createInfo = {};
+        createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        createInfo.surface = m_window_surface;
+        createInfo.minImageCount = imageCount;
+        createInfo.imageFormat = surface_format.format;
+        createInfo.imageColorSpace = surface_format.colorSpace;
+        createInfo.imageExtent = m_swap_chain_extent;
+        createInfo.imageArrayLayers = 1;
+        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        createInfo.queueFamilyIndexCount = 0;
+        createInfo.pQueueFamilyIndices = nullptr;
+        createInfo.preTransform = surfaceTransform;
+        createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        createInfo.presentMode = presentMode;
+        createInfo.clipped = VK_TRUE;
+        createInfo.oldSwapchain = m_old_swap_chain;
+
+        if (vkCreateSwapchainKHR(*m_device, &createInfo, nullptr, &m_swap_chain) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to create swap chain");
+        }
+        else {
+            std::cout << "created swap chain" << std::endl;
+        }
+
+        if (m_old_swap_chain != nullptr) {
+            vkDestroySwapchainKHR(*m_device, m_old_swap_chain, nullptr);
+        }
+        m_old_swap_chain = m_swap_chain;
+
+        m_swap_chain_format = surface_format.format;
+
+    // Store the images used by the swap chain
+        // Note: these are the images that swap chain image indices refer to
+        // Note: actual number of images may differ from requested number, since it's a lower bound
+        uint32_t actualImageCount = 0;
+        if (
+            vkGetSwapchainImagesKHR(*m_device, m_swap_chain, &actualImageCount, nullptr) != VK_SUCCESS || 
+            actualImageCount == 0
+        ) {
+            throw std::runtime_error("Failed to acquire number of swap chain images");
+        }
+
+        m_swap_chain_images.resize(actualImageCount);
+
+        if (vkGetSwapchainImagesKHR(*m_device, m_swap_chain, &actualImageCount, m_swap_chain_images.data()) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to acquire swap chain images");
+
+        }
+
+        std::cout << "acquired swap chain images" << std::endl;
     }
 private:
     //
@@ -534,9 +941,20 @@ private:
     uint32_t m_present_queue_family {};
     VkQueue m_graphic_queue = nullptr;
     VkQueue m_present_queue = nullptr;
+
     VkPhysicalDeviceMemoryProperties m_device_memory_properties {};
-    VkCommandPool m_command_pool;
-    
+
+    VkCommandPool m_command_pool = nullptr;
+
+    std::vector<VkImageView> m_swap_chain_image_views;
+    std::vector<VkImage> m_swap_chain_images;
+    VkExtent2D m_swap_chain_extent {};
+    VkFormat m_swap_chain_format {};
+
+    VkImage m_depth_image = nullptr;
+    VkDeviceMemory m_depth_image_memory = nullptr;
+    VkImageView m_depth_image_view = nullptr;
+
 };
 
 #endif

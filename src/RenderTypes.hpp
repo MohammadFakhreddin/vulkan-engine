@@ -37,12 +37,12 @@ namespace RenderTypes {
         TypeOfTexCoord tex_coord[2];
         static VkVertexInputBindingDescription getBindingDescription()
         {
-            VkVertexInputBindingDescription bindingDescription{};
-            bindingDescription.binding = 0;
-            bindingDescription.stride = sizeof(Vertex);
-            bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+            VkVertexInputBindingDescription binding_description{};
+            binding_description.binding = 0;
+            binding_description.stride = sizeof(Vertex);
+            binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-            return bindingDescription;
+            return binding_description;
         }
         static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
             std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
@@ -65,82 +65,63 @@ namespace RenderTypes {
             return attributeDescriptions;
         }
     };
-    struct Mesh
+    class Mesh
     {
-        Mesh(char const * obj_file_address, char const * texture_file_address) {
-            auto const vertex_and_indices_are_valid = FileSystem::LoadObj(*this, obj_file_address);
-            if(vertex_and_indices_are_valid){
+    public:
+        Mesh(char const * obj_file_address_, char const * texture_file_address_)
+            : m_obj_file_address(obj_file_address_)
+            , m_texture_file_address(texture_file_address_)
+        {}
+        bool init (Renderer * renderer) {
+            assert(nullptr != renderer);
+            auto const is_load_obj_successful = FileSystem::LoadObj(*this, m_obj_file_address.c_str());
+            if(is_load_obj_successful){
+                renderer->createVertexBuffer(m_vertex_buffer, m_vertex_memory, m_vertices);
+                renderer->createIndexBuffer(m_indices_buffer, m_indices_memory, m_indices);
+
                 FileSystem::RawTexture cpu_texture;
-                FileSystem::LoadTexture(cpu_texture, texture_file_address);
-                if(cpu_texture.isValid()) {
-                    VkBuffer stagingBuffer;
-                    VkDeviceMemory stagingBufferMemory;
+                FileSystem::LoadTexture(cpu_texture, m_texture_file_address.c_str());
 
-                    //auto const format = cpu_texture.format();
-                    //auto const mip_level = cpu_texture.mipmap_count() - 1;
-                    //auto const mipmap = cpu_texture.pixels(mip_level);
-                    auto const format = VK_FORMAT_R8G8B8A8_UNORM;
-                    auto const image_size = cpu_texture.image_size();
-                    auto const pixels = cpu_texture.pixels;
-                    auto const width = cpu_texture.width;
-                    auto const height = cpu_texture.height;
-
-                    Renderer::CreateBuffer(
-                        image_size, 
-                        VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
-                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 
-                        stagingBuffer, 
-                        stagingBufferMemory
-                    );
-
-                    void * data = nullptr;
-                    vkMapMemory(device, stagingBufferMemory, 0, image_size, 0, &data);
-                    assert(nullptr != data);
-                    ::memcpy(data, pixels, static_cast<size_t>(image_size));
-                    vkUnmapMemory(device, stagingBufferMemory);
-
-                    createImage(
-                        width, 
-                        height, 
-                        format,//VK_FORMAT_R8G8B8A8_UNORM, 
-                        VK_IMAGE_TILING_OPTIMAL, 
-                        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
-                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, 
-                        textureImage, 
-                        textureImageMemory
-                    );
-
-                    transitionImageLayout(
-                        textureImage, 
-                        format,//VK_FORMAT_R8G8B8A8_UNORM, 
-                        VK_IMAGE_LAYOUT_UNDEFINED, 
-                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-                    );
-                    copyBufferToImage(
-                        stagingBuffer, 
-                        textureImage, 
-                        static_cast<uint32_t>(width), 
-                        static_cast<uint32_t>(height)
-                    );
-                    transitionImageLayout(
-                        textureImage,
-                        format, 
-                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
-                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                    );
-
-                    vkDestroyBuffer(device, stagingBuffer, nullptr);
-                    vkFreeMemory(device, stagingBufferMemory, nullptr);
-
-                    createImageView(&textureImageView, textureImage, format, VK_IMAGE_ASPECT_COLOR_BIT);
-                    valid = true;
+                // Texture image
+                auto const is_create_texture_successful = renderer->create_texture_image(
+                    m_texture_image,
+                    m_texture_memory,
+                    m_texture_image_view,
+                    cpu_texture
+                );
+                if(true == is_create_texture_successful) {
+                    // Texture sampler
+                    m_sampler = renderer->create_texture_sampler();
                 }
             }
+            return m_valid;
         }
-        std::vector<Vertex> vertices {};
-        std::vector<TypeOfIndices> indices {};
-        VkDescriptorSet * texture_descriptor_set = nullptr;
-        bool valid = false;
+        void draw (Renderer * renderer) {
+            assert(nullptr != renderer);
+        }
+        bool shutdown(Renderer * renderer) {
+            assert(nullptr != renderer);
+            renderer->destroy_texture_image(m_texture_image, m_texture_memory);
+        }
+    private:
+        bool m_valid = false;
+        std::string m_obj_file_address;
+        std::string m_texture_file_address;
+
+        std::vector<Vertex> m_vertices {};
+        VkBuffer m_vertex_buffer;
+        VkDeviceMemory m_vertex_memory;
+
+        std::vector<TypeOfIndices> m_indices {};
+        VkBuffer m_indices_buffer;
+        VkDeviceMemory m_indices_memory;
+
+        VkImage m_texture_image = nullptr;
+        VkImageView m_texture_image_view = nullptr;
+        VkDeviceMemory m_texture_memory = nullptr;
+
+        VkSampler m_sampler = nullptr;
+        VkDescriptorSet * m_texture_descriptor_set = nullptr;
     };
 }
 
