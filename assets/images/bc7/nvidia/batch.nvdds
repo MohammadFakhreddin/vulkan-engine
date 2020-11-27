@@ -1,0 +1,7 @@
+../test_data/gltf/bristleback/textures/04_-_Default_normal.png --format bc7 --output ../test_data/compression/bc7/nvidia/04_-_Default_normal.dds
+../test_data/gltf/bristleback/textures/04_-_Default_metallicRoughness.png --format bc7 --output ../test_data/compression/bc7/nvidia/04_-_Default_metallicRoughness.dds
+../test_data/gltf/bristleback/textures/04_-_Default_baseColor.png --format bc7 --output ../test_data/compression/bc7/nvidia/04_-_Default_baseColor.dds
+../test_data/gltf/bristleback/textures/02_-_Default_normal.png --format bc7 --output ../test_data/compression/bc7/nvidia/02_-_Default_normal.dds
+../test_data/gltf/bristleback/textures/02_-_Default_metallicRoughness.png --format bc7 --output ../test_data/compression/bc7/nvidia/02_-_Default_metallicRoughness.dds
+../test_data/gltf/bristleback/textures/02_-_Default_emissive.png --format bc7 --output ../test_data/compression/bc7/nvidia/02_-_Default_emissive.dds
+../test_data/gltf/bristleback/textures/02_-_Default_baseColor.png --format bc7 --output ../test_data/compression/bc7/nvidia/02_-_Default_baseColor.dds

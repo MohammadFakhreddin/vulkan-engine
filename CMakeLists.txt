@@ -51,26 +51,20 @@ file(GLOB_RECURSE SRC_CPP "src/*.cpp")
 # file(GLOB_RECURSE LIB_HEADER_HPP "libs/include/*.hpp")
 # file(GLOB_RECURSE LIB_CPP "libs/include/*.cpp")
 
-# if (WINDOWS)
-#   file(GLOB VULKAN "{CMAKE_SOURCE_DIR}/libs/win/vulkan-1.lib")
+# if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+#   file(GLOB VULKAN "${CMAKE_SOURCE_DIR}/libs/win/vulkan-1.lib")
 #   file(
 #     GLOB SDL 
-#     "{CMAKE_SOURCE_DIR}/libs/win/SDL2.lib" 
-#     "{CMAKE_SOURCE_DIR}/libs/win/SDL2main.lib"
+#     "${CMAKE_SOURCE_DIR}/libs/win/SDL2.lib" 
+#     "${CMAKE_SOURCE_DIR}/libs/win/SDL2main.lib"
 #   )
 #   list(
 #     APPEND COMPILED_LIBS 
 #     ${VULKAN}
 #     ${SDL}
 #   )
-# elseif(MACOSX)
-#   file(GLOB VULKAN "libs/win/libvulkan-1.dylib")
-#   file(
-#     GLOB SDL 
-#     "libs/win/libSDL2.a" 
-#     "libs/win/libSDL2main.a"
-#   )
 # endif()
+
 list(
   APPEND APP_SOURCE
   ${SRC_CPP}
@@ -82,6 +76,9 @@ list(
   ${SRC_HEADER_HPP}
 )
 
+# Includes these 2 directory for importing
+include_directories ("src" "${CMAKE_SOURCE_DIR}/libs/include")
+link_directories(${LIBRARY_OUTPUT_PATH} ${LIB_ROOT})
 add_executable(${PROJECT_NAME} ${APP_HEADER} ${APP_SOURCE})
 
 if(WINDOWS)
@@ -127,6 +124,16 @@ elseif(LINUX)
   set(CMAKE_C_COMPILER gcc)
   set(CMAKE_CXX_COMPILER g++)
 
+# =======
+# if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+#     file(GLOB DLLS "${CMAKE_SOURCE_DIR}/libs/win/SDL2.dll" )
+#     add_custom_command(
+#         TARGET ${PROJECT_NAME} POST_BUILD        # Adds a post-build event to MyTest
+#         COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
+#         ${DLLS}      # <--this is in-file
+#         ${LIBRARY_OUTPUT_PATH}
+#     )       
+# >>>>>>> a26810962ec7b2b18f2e5ddc52f51cd4bd1a1694
 endif()
 
 enable_testing()

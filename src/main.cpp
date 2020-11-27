@@ -1,7 +1,8 @@
 #include <string>
-#include <vector>
 #include <chrono>
-#include <iostream>
+
+#define STB_IMAGE_IMPLEMENTATION
+#define TINYOBJLOADER_IMPLEMENTATION
 
 #include "Application.hpp"
 
