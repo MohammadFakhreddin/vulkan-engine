@@ -381,14 +381,14 @@ Application::createUniformBuffer() {
 
         vkCreateBuffer(device, &bufferInfo, nullptr, &uniformBuffers[i]);
 
-        VkMemoryRequirements memReqs;
-        vkGetBufferMemoryRequirements(device, uniformBuffers[i], &memReqs);
+        VkMemoryRequirements memory_requirements;
+        vkGetBufferMemoryRequirements(device, uniformBuffers[i], &memory_requirements);
 
         VkMemoryAllocateInfo allocInfo = {};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize = memReqs.size;
+        allocInfo.allocationSize = memory_requirements.size;
         getMemoryType(
-            memReqs.memoryTypeBits, 
+            memory_requirements.memoryTypeBits, 
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 
             &allocInfo.memoryTypeIndex
         );
@@ -413,7 +413,12 @@ Application::updateUniformBuffer(uint32_t currentImage) {
 
     {// Model
         Matrix4X4Float rotation;
-        Matrix4X4Float::assignRotationXYZ(rotation,Math::deg2Rad(45.0f),0.0f,Math::deg2Rad(45.0f + degree));
+        Matrix4X4Float::assignRotationXYZ(
+            rotation,
+            MathHelper::Deg2Rad(45.0f),
+            0.0f,
+            MathHelper::Deg2Rad(45.0f + degree)
+        );
         //Matrix4X4Float::assignRotationXYZ(rotation, Math::deg2Rad(degree), Math::deg2Rad(degree),Math::deg2Rad(0.0f));
         ::memcpy(ubo.rotation,rotation.cells,sizeof(ubo.rotation));
     }
@@ -851,9 +856,9 @@ Application::createGraphicsPipeline() {
 
     VkPipelineShaderStageCreateInfo shaderStages[] = { vertexShaderCreateInfo, fragmentShaderCreateInfo };
 
-    auto const vertexBindingDescription = MTypes::Vertex::getBindingDescription();
+    auto const vertexBindingDescription = RenderTypes::Vertex::getBindingDescription();
 
-    auto const vertexAttributeDescriptions = MTypes::Vertex::getAttributeDescriptions();
+    auto const vertexAttributeDescriptions = RenderTypes::Vertex::getAttributeDescriptions();
 
     // Describe vertex input
     VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo = {};
@@ -1318,7 +1323,11 @@ Application::drawFrame() {
 
         vkCmdBindIndexBuffer(graphicsCommandBuffers[image_index], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-        vkCmdDrawIndexed(graphicsCommandBuffers[image_index], static_cast<uint32_t>(m_viking_house_mesh.indices.size()), 1, 0, 0, 0);
+        vkCmdDrawIndexed(
+            graphicsCommandBuffers[image_index], 
+            static_cast<uint32_t>(m_viking_house_mesh.indices.size()), 
+            1, 0, 0, 0
+        );
 
         vkCmdEndRenderPass(graphicsCommandBuffers[image_index]);
 

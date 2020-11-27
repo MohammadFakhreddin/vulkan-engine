@@ -6,10 +6,10 @@
 #include <fstream>
 #include <iostream>
 #include <filesystem>
-
 #include <tiny_obj_loader/tiny_obj_loader.h>
-
 #include <stb_image/open_gl_stb_image.h>
+
+#include "RenderTypes.hpp"
 
 class FileSystem{
 public:
@@ -493,7 +493,7 @@ public:
         Mipmap *        m_mipmaps = nullptr;
     };
     static bool
-    LoadObj(MTypes::Mesh & out_mesh, char const * path)
+    LoadObj(RenderTypes::Mesh & out_mesh, char const * path)
     {
         using Byte = char;
         bool ret = false;
@@ -534,12 +534,12 @@ public:
                     ret = true;
                     struct Position
                     {
-                        MTypes::TypeOfPosition pos[3];
+                        RenderTypes::TypeOfPosition pos[3];
                     };
                     std::vector<Position> positions;
                     struct TexCoord
                     {
-                        MTypes::TypeOfTexCoord uv[2];
+                        RenderTypes::TypeOfTexCoord uv[2];
                     };
                     std::vector<TexCoord> coords;
                     {// Vertices
