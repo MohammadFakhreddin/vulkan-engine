@@ -1,11 +1,10 @@
 #ifndef APPLICATION_CLASS
 #define APPLICATION_CLASS
 
-#include <vulkan/vulkan.h>
 #include <SDL2/SDL.h>
-#include <SDL2\SDL_vulkan.h>
+#include <SDL2/SDL_vulkan.h>
+#include <vulkan>
 #include <vector>
-#include <glm/ext.hpp>
 #include <chrono>
 
 #define DEBUGGING_ENABLED
