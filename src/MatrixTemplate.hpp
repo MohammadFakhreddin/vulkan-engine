@@ -7,7 +7,7 @@
 #include <cstring>
 #include <iostream>
 
-#include "MMath.h"
+#include "MathHelper.hpp"
 
 // Note: This class is column major from now on
 

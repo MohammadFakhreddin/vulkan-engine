@@ -9,7 +9,7 @@
 #include <string>
 
 #include "RenderTypes.hpp"
-#include "FileSystem.h"
+#include "FileSystem.hpp"
 #define DEBUGGING_ENABLED
 
 class Application{

@@ -4,9 +4,8 @@
 #include <iostream>
 #include <filesystem>
 #include <fstream>
-#include "FileSystem.h"
-#include <SDL2\SDL_vulkan.h>
 
+#include "FileSystem.h"
 #include "MatrixTemplate.h"
 
 Application::Application(){}
