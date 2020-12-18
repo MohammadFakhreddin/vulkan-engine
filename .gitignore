@@ -98,3 +98,5 @@ npm-debug.log
 CMakeScripts/*
 
 CMakeScripts
+
+buid/*
