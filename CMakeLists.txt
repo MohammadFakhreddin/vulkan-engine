@@ -5,11 +5,11 @@ set(${PROJECT_NAME} "VULKAN_ENGINE")
 project ("VULKAN_ENGINE" CXX C)
 
 set_property (GLOBAL PROPERTY USE_FOLDERS ON)
-
+# TODO We need 2 solutions, 1 for Engine and 1 for test cases
 set (CMAKE_CXX_STANDARD 17)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
-set (CMAKE_CONFIGURATION_TYPES Debug;Release CACHE INTERNAL "" FORCE)
-set (CMAKE_INSTALL_PREFIX "${PROJECT_BINARY_DIR}/install" CACHE INTERNAL "" FORCE)
+# set (CMAKE_CONFIGURATION_TYPES Debug;Release CACHE INTERNAL "" FORCE)
+# set (CMAKE_INSTALL_PREFIX "${PROJECT_BINARY_DIR}/install" CACHE INTERNAL "" FORCE)
 
 if(WINDOWS)
   add_definitions (/WX)           # Warnings as errors
@@ -27,11 +27,11 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
   set(WINDOWS TRUE)
 endif()
 
-if (WINDOWS)
-  set (LIB_ROOT "${CMAKE_SOURCE_DIR}/libs/win")
-elseif(MACOSX)
-  set (LIB_ROOT "libs/mac")
-endif()
+# if (WINDOWS)
+#   set (LIB_ROOT "${CMAKE_SOURCE_DIR}/libs/win")
+# elseif(MACOSX)
+#   set (LIB_ROOT "libs/mac")
+# endif()
 
 set (EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/out)
 set (LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/out)
@@ -84,17 +84,27 @@ add_executable(${PROJECT_NAME} ${APP_HEADER} ${APP_SOURCE})
 if(WINDOWS)
   find_package(SDL2 REQUIRED)
   find_package(VULKAN REQUIRED)
+  find_package(IMGUI REQUIRED)
+
   include_directories(${SDL2_INCLUDE_DIRS})
   include_directories(${VULKAN_INCLUDE_DIRS})
+  include_directories(${IMGUI_INCLUDE_DIRS})
+  
   target_link_libraries(${PROJECT_NAME} ${VULKAN_LIBRARIES})
   target_link_libraries(${PROJECT_NAME} ${SDL2_LIBRARIES})
+  target_link_libraries(${PROJECT_NAME} ${IMGUI_LIBRARIES}})
 elseif(MACOSX)
   find_package(SDL2 REQUIRED)
   find_package(VULKAN REQUIRED)
+  find_package(IMGUI REQUIRED)
+
   include_directories(${SDL2_INCLUDE_DIRS})
   include_directories(${VULKAN_INCLUDE_DIRS})
+  include_directories(${IMGUI_INCLUDE_DIRS})
+  
   target_link_libraries(${PROJECT_NAME} ${VULKAN_LIBRARIES})
   target_link_libraries(${PROJECT_NAME} ${SDL2_LIBRARIES})
+  target_link_libraries(${PROJECT_NAME} ${IMGUI_LIBRARIES}})
 
   set(CMAKE_THREAD_LIBS_INIT "-lpthread")
   set(CMAKE_HAVE_THREADS_LIBRARY 1)
@@ -107,13 +117,17 @@ elseif(MACOSX)
      MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/mac/Info.plist
   )
 elseif(LINUX)
-
   find_package(SDL REQUIRED)
   find_package(VULKAN REQUIRED)
+  find_package(IMGUI REQUIRED)
+
   include_directories(${SDL_INCLUDE_DIRS})
   include_directories(${VULKAN_INCLUDE_DIRS})
+  include_directories(${IMGUI_INCLUDE_DIRS})
+  
   target_link_libraries(${PROJECT_NAME} ${VULKAN_LIBRARIES})
   target_link_libraries(${PROJECT_NAME} ${SDL_LIBRARIES})
+  target_link_libraries(${PROJECT_NAME} ${IMGUI_LIBRARIES}})
 
   set(CMAKE_THREAD_LIBS_INIT "-lpthread")
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
@@ -136,9 +150,9 @@ elseif(LINUX)
 # >>>>>>> a26810962ec7b2b18f2e5ddc52f51cd4bd1a1694
 endif()
 
-enable_testing()
-
-find_package(GTest CONFIG REQUIRED)
+# Probably I would use Yaser test platform
+# enable_testing()
+# find_package(GTest CONFIG REQUIRED)
 
 # Includes these 2 directory for importing
 # include_directories ("src" "libs/include")

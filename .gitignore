@@ -98,3 +98,6 @@ npm-debug.log
 CMakeScripts/*
 
 CMakeScripts
+
+build/*
+build64/*
