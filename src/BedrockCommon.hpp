@@ -1,6 +1,8 @@
 #ifndef BASE_INTERFACE
 #define BASE_INTERFACE
 
+#include <vulkan/vulkan.h>
+
 #define MFA_PTR_VALID(p_) ((p_) != nullptr)
 
 namespace MFA {
