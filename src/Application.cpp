@@ -1,12 +1,9 @@
 #include "Application.hpp"
 
+#include "BedrockPlatforms.hpp"
+
 #include <cassert>
 #include <iostream>
-#include <filesystem>
-#include <fstream>
-
-#include "FileSystem.h"
-#include "MatrixTemplate.h"
 
 Application::Application(){}
 
@@ -15,14 +12,11 @@ Application::run(){
     //Create window
     {
         SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
-        //Windows only
-        int realScreenWidth = (int)GetSystemMetrics(SM_CXSCREEN);
-        int realScreenHeight = (int)GetSystemMetrics(SM_CYSCREEN);
-
+        auto const screen_info = MFA::Platforms::ComputeScreenSize();
         window = SDL_CreateWindow(
             "VULKAN_ENGINE", 
-            uint32_t((realScreenWidth / 2.0f) - (SCREEN_WIDTH / 2.0f)), 
-            uint32_t((realScreenHeight / 2.0f) - (SCREEN_HEIGHT / 2.0f)),
+            uint32_t((screen_info.screen_width / 2.0f) - (SCREEN_WIDTH / 2.0f)), 
+            uint32_t((screen_info.screen_height / 2.0f) - (SCREEN_HEIGHT / 2.0f)),
             SCREEN_WIDTH, SCREEN_HEIGHT,
             SDL_WINDOW_SHOWN /*| SDL_WINDOW_FULLSCREEN */| SDL_WINDOW_VULKAN
         );
