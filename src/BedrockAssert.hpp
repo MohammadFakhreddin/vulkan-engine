@@ -15,6 +15,8 @@
     #define MFA_INTERNAL_ASSERT_MACRO(cond_, ...)     ::MFA::Assert::DoAssert((cond_), MFA_STRINGIZE(cond_), __func__, __FILE__, __LINE__, ## __VA_ARGS__)
 #endif
 
+#define YUGEN_NOT_IMPLEMENTED_YET(who_)     YUGEN_CRASH(who_ " should have implemented this!")
+
 #if MFA_OPT_ASSERT_LEVEL == 0
     #define MFA_ASSERT(cond_, ...)        /**/
     #define MFA_ASSERT_STRONG(cond_, ...) /**/

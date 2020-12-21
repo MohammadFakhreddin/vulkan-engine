@@ -1,5 +1,5 @@
-#ifndef ASSET_HEADER
-#define ASSET_HEADER
+#ifndef ASSET_NAMESPACE
+#define ASSET_NAMESPACE
 
 #include "BedrockAssert.hpp"
 #include "BedrockCommon.hpp"
@@ -23,8 +23,59 @@ enum class Format {
     UNCOMPRESSED_UNORM_R8G8_LINEAR      = 2,
     UNCOMPRESSED_UNORM_R8G8B8A8_LINEAR  = 3,
     UNCOMPRESSED_UNORM_R8_SRGB          = 4,
-    UNCOMPRESSED_UNORM_R8G8B8A8_SRGB    = 5
+    UNCOMPRESSED_UNORM_R8G8B8A8_SRGB    = 5,
+    
+    BC7_UNorm_Linear_RGB        = 6,
+    BC7_UNorm_Linear_RGBA       = 7,
+    BC7_UNorm_sRGB_RGB          = 8,
+    BC7_UNorm_sRGB_RGBA         = 9,
+
+    BC6H_UFloat_Linear_RGB      = 10,
+    BC6H_SFloat_Linear_RGB      = 11,
+
+    BC5_UNorm_Linear_RG         = 12,
+    BC5_SNorm_Linear_RG         = 13,
+
+    BC4_UNorm_Linear_R          = 14,
+    BC4_SNorm_Linear_R          = 15,
+
+    Count
 };
+
+inline constexpr struct {
+    Format texture_format;
+    uint8_t compression;                            // 0: uncompressed, 1: basis?, ...
+    uint8_t component_count;                        // 1..4
+    uint8_t component_format;                       // 0: UNorm, 1: SNorm, 2: UInt, 3: SInt, 4: UFloat, 5: SFloat
+    uint8_t color_space;                            // 0: Linear, 1: sRGB
+    uint8_t bits_r, bits_g, bits_b, bits_a;         // each 0..32
+    uint8_t bits_total;                             // 1..128
+} FormatTable [] = {
+    {Format::INVALID                                 , 0, 0, 0, 0, 0, 0, 0, 0,  0},
+
+    {Format::UNCOMPRESSED_UNORM_R8_LINEAR            , 0, 1, 0, 0, 8, 0, 0, 0,  8},
+    {Format::UNCOMPRESSED_UNORM_R8G8_LINEAR          , 0, 2, 0, 0, 8, 8, 0, 0, 16},
+    {Format::UNCOMPRESSED_UNORM_R8G8B8A8_LINEAR      , 0, 4, 0, 0, 8, 8, 8, 8, 32},
+    {Format::UNCOMPRESSED_UNORM_R8_SRGB              , 0, 1, 0, 1, 8, 0, 0, 0,  8},
+    {Format::UNCOMPRESSED_UNORM_R8G8B8A8_SRGB        , 0, 4, 0, 1, 8, 8, 8, 8, 32},
+
+    {Format::BC7_UNorm_Linear_RGB                    , 7, 3, 0, 0, 8, 8, 8, 0,  8},
+    {Format::BC7_UNorm_Linear_RGBA                   , 7, 4, 0, 0, 8, 8, 8, 8,  8},
+    {Format::BC7_UNorm_sRGB_RGB                      , 7, 3, 0, 1, 8, 8, 8, 0,  8},
+    {Format::BC7_UNorm_sRGB_RGBA                     , 7, 4, 0, 1, 8, 8, 8, 8,  8},
+
+    {Format::BC6H_UFloat_Linear_RGB                  , 6, 3, 4, 0, 16, 16, 16, 0, 8},
+    {Format::BC6H_SFloat_Linear_RGB                  , 6, 3, 5, 0, 16, 16, 16, 0, 8},
+
+    {Format::BC5_UNorm_Linear_RG                     , 5, 2, 0, 0, 8, 8, 0, 0, 8},
+    {Format::BC5_SNorm_Linear_RG                     , 5, 2, 0, 1, 8, 8, 0, 0, 8},
+
+    {Format::BC4_UNorm_Linear_R                      , 5, 2, 0, 0, 8, 8, 0, 0, 16},
+    {Format::BC4_SNorm_Linear_R                      , 5, 2, 0, 1, 8, 8, 0, 0, 16},
+
+};
+static_assert(ArrayCount(FormatTable) == static_cast<unsigned>(Format::Count));
+
 
 #pragma pack(push)
 struct Header {
@@ -60,8 +111,8 @@ struct Header {
 
 }
 
-using TextureHeader = Texture::Header;
 using TextureFormat = Texture::Format;
+using TextureHeader = Texture::Header;
 
 //---------------------------------MeshHeader-------------------------------------
 namespace Mesh {
@@ -135,7 +186,12 @@ public:
             m_asset.len - header_size
         };
     }
-protected:
+    [[nodiscard]]
+    virtual bool valid() const;
+    [[nodiscard]]
+    Blob asset() const {return m_asset;}
+    void set_asset(Blob const asset_) {m_asset = asset_;}
+private:
     Blob m_asset;
 };
 
@@ -146,13 +202,13 @@ public:
     explicit TextureAsset(Blob const asset_) : GenericAsset(asset_) {}
     [[nodiscard]]
     size_t compute_header_size() const override {
-        return Texture::Header::Size(m_asset.as<Texture::Header>()->mip_count);
+        return Texture::Header::Size(asset().as<Texture::Header>()->mip_count);
     }
     [[nodiscard]]
     CBlob mip_data (uint8_t const mip_level) const {
-        auto const * texture_header = m_asset.as<Texture::Header>();
+        auto const * texture_header = asset().as<Texture::Header>();
         return {
-            m_asset.ptr + texture_header->mipmap_infos[mip_level].offset,
+            asset().ptr + texture_header->mipmap_infos[mip_level].offset,
             texture_header->mipmap_infos[mip_level].size
         };
     }
@@ -169,6 +225,10 @@ public:
     [[nodiscard]]
     Texture::Header const * header_object() const {
         return header_blob().as<Texture::Header>();
+    }
+    [[nodiscard]]
+    bool valid() const override {
+        return MFA_PTR_VALID(asset().ptr) && header_object()->is_valid();
     }
 };
 
@@ -194,12 +254,16 @@ public:
     [[nodiscard]]
     MeshVertices const * vertices() const {
         auto const * header = header_object();
-        return reinterpret_cast<MeshVertices const *>(m_asset.ptr + header->vertices_offset);
+        return reinterpret_cast<MeshVertices const *>(asset().ptr + header->vertices_offset);
     }
     [[nodiscard]]
     MeshIndices const * indices() const {
         auto const * header = header_object();
-        return reinterpret_cast<MeshIndices const *>(m_asset.ptr + header->indices_offset);
+        return reinterpret_cast<MeshIndices const *>(asset().ptr + header->indices_offset);
+    }
+    [[nodiscard]]
+    bool valid() const override {
+        return MFA_PTR_VALID(asset().ptr) && header_object()->is_valid();
     }
 };
 

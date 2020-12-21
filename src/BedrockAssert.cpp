@@ -1,4 +1,4 @@
-#include "Assert.hpp"
+#include "BedrockAssert.hpp"
 
 #include <cstdarg>
 #include <cstdio>

@@ -5,6 +5,8 @@
 
 #define MFA_PTR_VALID(p_) ((p_) != nullptr)
 
+#define MFA_CONSUME_VAR(v_)       ((void)(v_))
+
 namespace MFA {
 
 /* Ubiquitous Types */
@@ -60,13 +62,22 @@ struct TCBlob {
 using CBlob = TCBlob<Byte>;
 
 template <typename T>
-inline CBlob CBlobAliasOf (T const & v) {
+CBlob CBlobAliasOf (T const & v) {
     return {&v, sizeof(v)};
 }
 template <typename T, size_t N>
-inline CBlob CBlobAliasOf (T const (&v) [N]) {
+CBlob CBlobAliasOf (T const (&v) [N]) {
     return {&v[0], sizeof(v)};
 }
+
+template <typename T, size_t N>
+constexpr size_t ArrayCount (T (&) [N]) {return N;}
+
+template <typename T, uint32_t N>
+constexpr uint32_t ArrayCount32(T(&)[N]) { return N; }
+
+template <typename T, int N>
+constexpr int ArrayCountInt(T(&)[N]) { return N; }
 
 }
 

@@ -3,8 +3,12 @@
 
 #include "BedrockCommon.hpp"
 #include "BedrockAssert.hpp"
+#include "FoundationAsset.hpp"
+#include "BedrockMath.hpp"
+#include "BedrockAssert.hpp"
 
 namespace MFA::Utils {
+using TextureFormat = Asset::TextureFormat;
     namespace UncompressedTexture {
 
 static constexpr const char * SystemName = "UncompressedImage";
@@ -14,7 +18,7 @@ struct Data {
     U32 height = 0;
     U32 stbi_components = 0;
     Blob stbi_pixels;
-    Asset::TextureFormat format = TextureFormat::Invalid;
+    Asset::TextureFormat format = TextureFormat::INVALID;
     Blob pixels;
     U32 components = 0;
     [[nodiscard]]
@@ -41,8 +45,6 @@ bool Unload(Data * image_data);
     } // UncompressedTexture
         namespace DDSTexture {
 static inline constexpr const char * SystemName = "Importer::DDSTexture";
-using Byte = std::byte;
-using TextureFormat = YUGA::TextureFormat;
 /*
     *  DDS source : 
     *  https://docs.microsoft.com/en-us/windows/win32/direct3ddds/dds-header
@@ -260,7 +262,7 @@ struct Data {
     uint8_t mipmap_count = 0;                       // Number of mipmaps
     uint8_t depth = 0;
     uint8_t dimension = 0;
-    TextureFormat format = TextureFormat::Invalid;
+    TextureFormat format = Asset::TextureFormat::INVALID;
     bool valid = false;
     Blob asset {};
     Blob data_offset_in_asset {};
@@ -302,13 +304,13 @@ ComputeMipmapLen(
             texture_type = TextureType::BC;
             bc_bytes_per_block = 8;
         break;
-        case TextureFormat::Raw_UNorm_R8G8B8A8_Linear:
-        case TextureFormat::Raw_UNorm_R8_sRGB:
-        case TextureFormat::Raw_UNorm_R8G8B8A8_sRGB:
-        case TextureFormat::Raw_UNorm_R8G8_Linear:
-        case TextureFormat::Raw_UNorm_R8_Linear:
+        case TextureFormat::UNCOMPRESSED_UNORM_R8G8B8A8_LINEAR:
+        case TextureFormat::UNCOMPRESSED_UNORM_R8G8B8A8_SRGB:
+        case TextureFormat::UNCOMPRESSED_UNORM_R8G8_LINEAR:
+        case TextureFormat::UNCOMPRESSED_UNORM_R8_LINEAR:
+        case TextureFormat::UNCOMPRESSED_UNORM_R8_SRGB:
             texture_type = TextureType::Raw;
-            raw_bytes_per_pixel = YUGA::TextureFormatTable[static_cast<uint8_t>(format)].bits_total / 8;
+            raw_bytes_per_pixel = Asset::Texture::FormatTable[static_cast<uint8_t>(format)].bits_total / 8;
         break;
         default:
             // Means that format is unsupported by engine
@@ -318,7 +320,7 @@ ComputeMipmapLen(
     {
         case TextureType::BC:
             MFA_ASSERT((8 == bc_bytes_per_block) || (16 == bc_bytes_per_block));
-            mipmap_len = std::max<uint32_t>(1, ( (width + 3) / 4 ) ) * std::max<uint32_t>(1, ( (height + 3) / 4 ) ) * bc_bytes_per_block;
+            mipmap_len = Math::Max<uint32_t>(1, ( (width + 3) / 4 ) ) * Math::Max<uint32_t>(1, ( (height + 3) / 4 ) ) * bc_bytes_per_block;
         break;
         case TextureType::Raw:
             MFA_ASSERT(raw_bytes_per_pixel > 0);
@@ -341,6 +343,7 @@ enum class LoadResult {
     NotSupported_DirectXVersion,
     NotSupported_Format
 };
+
 [[nodiscard]] LoadResult inline
 Load (Data & out_image_data, char const * path) {
     LoadResult ret = LoadResult::INVALID;
@@ -395,7 +398,7 @@ Load (Data & out_image_data, char const * path) {
                         DDS_Header_DXT10 * dx10_header = reinterpret_cast<DDS_Header_DXT10 *>(out_image_data.asset.ptr + sizeof(DDS_Header));
                         // TODO Check for array size as well
                         // We are downsizing dw_mip_map_count from u32_t to u8_t
-                        out_image_data.mipmap_count = std::max<uint8_t>(uint8_t(dds_header->dw_mip_map_count), 1);
+                        out_image_data.mipmap_count = Math::Max<uint8_t>(static_cast<uint8_t>(dds_header->dw_mip_map_count), 1);
                         out_image_data.dimension = [dx10_header]()-> uint8_t
                         {
                             uint8_t ret = 0;
@@ -471,7 +474,7 @@ Load (Data & out_image_data, char const * path) {
                                 out_image_data.asset.ptr + sizeof(DDS_Header) + sizeof(DDS_Header_DXT10),
                                 out_image_data.asset.len - sizeof(DDS_Header) - sizeof(DDS_Header_DXT10)
                             };
-                            out_image_data.depth = std::max<uint8_t>(uint8_t(dds_header->dw_depth), 1);
+                            out_image_data.depth = Math::Max<uint8_t>(uint8_t(dds_header->dw_depth), 1);
                             MFA_ASSERT(out_image_data.mipmap_count >= 1);
                             out_image_data.mipmaps = MFA_ALLOC_GP(
                                 SystemName,
