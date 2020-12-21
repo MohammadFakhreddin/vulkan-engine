@@ -14,9 +14,10 @@ enum class AssetType {
     Material    = 4
 };
 
-//----------------------------------TextureHeader------------------------------
+//----------------------------------Texture------------------------------
+namespace Texture {
 
-enum class TextureFormat {
+enum class Format {
     INVALID     = 0,
     UNCOMPRESSED_UNORM_R8_LINEAR        = 1,
     UNCOMPRESSED_UNORM_R8G8_LINEAR      = 2,
@@ -24,8 +25,9 @@ enum class TextureFormat {
     UNCOMPRESSED_UNORM_R8_SRGB          = 4,
     UNCOMPRESSED_UNORM_R8G8B8A8_SRGB    = 5
 };
+
 #pragma pack(push)
-struct TextureHeader {
+struct Header {
     struct Dimensions {
         U32 width = 0;
         U32 height = 0;
@@ -39,45 +41,72 @@ struct TextureHeader {
     };
     static_assert(18 == sizeof(MipmapInfo));
     // TODO Handle alignment (Size and reserved if needed) for write operation to .asset file
-    TextureFormat   format = TextureFormat::INVALID;
+    Format          format = Format::INVALID;
     U16             slices = 0;
     U8              mip_count = 0;
     MipmapInfo      mipmap_infos[];
 
+    [[nodiscard]]
+    static size_t Size(U8 const mip_count) {
+        return sizeof(Header) + (mip_count * sizeof(MipmapInfo));
+    }
+    [[nodiscard]]
+    bool is_valid() const {
+        // TODO
+        return true;
+    }
 };
 #pragma pack(pop)
 
-[[nodiscard]]
-inline size_t TextureHeaderSize(U8 const mip_count) {
-    return sizeof(TextureHeader) + (mip_count * sizeof(TextureHeader::MipmapInfo));
-};
-
-[[nodiscard]]
-inline bool IsTextureValue(TextureHeader const * texture_header) {
-    // TODO
-    return true;
 }
+
+using TextureHeader = Texture::Header;
+using TextureFormat = Texture::Format;
 
 //---------------------------------MeshHeader-------------------------------------
+namespace Mesh {
 
-struct MeshHeader {
-    // TODO Rename Node to something else
-    struct Node {
-        U32 position_index;
-        U32 normal_index;
-        U32 texture_coordinate_index;
+struct Header {
+    uint32_t vertex_count;
+    uint32_t index_count;
+    uint32_t vertices_offset;       // From start of asset
+    uint32_t indices_offset;        // From start of asset
+    [[nodiscard]]
+    static size_t Size() {
+        return sizeof(Header);
+    }
+    [[nodiscard]]
+    bool is_valid() const {
+        // TODO
+        return true;
+    }
+};
+
+namespace Data {
+
+struct Vertices {
+    using Position = float[3];
+    using Normal = float[3];
+    using UV = float[2];
+    using Color = U8[3];
+    struct Vertex {
+        Position position;
+        Normal normal;
+        UV uv;
+        Color color;
     };
-    U32 position_array_count;
-    U32 normal_array_count;
-    U32 texture_coordinate_array_count;
-    U16 nodes_count;
-    Node nodes[];
-}; // TODO
+    Vertex vertices[];
+};
 
-[[nodiscard]]
-inline size_t MeshHeaderSize(U16 const nodes_count) {
-    return sizeof(MeshHeader) + (nodes_count * sizeof(MeshHeader::Node));
-}
+struct Indices {
+    U32 indices[];
+};
+
+}}
+
+using MeshHeader = Mesh::Header;
+using MeshVertices = Mesh::Data::Vertices;
+using MeshIndices = Mesh::Data::Indices;
 
 //--------------------------------ShaderHeader--------------------------------------
 
@@ -114,13 +143,14 @@ protected:
 
 class TextureAsset : public GenericAsset {
 public:
+    explicit TextureAsset(Blob const asset_) : GenericAsset(asset_) {}
     [[nodiscard]]
     size_t compute_header_size() const override {
-        return TextureHeaderSize(m_asset.as<TextureHeader>()->mip_count);
+        return Texture::Header::Size(m_asset.as<Texture::Header>()->mip_count);
     }
     [[nodiscard]]
     CBlob mip_data (uint8_t const mip_level) const {
-        auto const * texture_header = m_asset.as<TextureHeader>();
+        auto const * texture_header = m_asset.as<Texture::Header>();
         return {
             m_asset.ptr + texture_header->mipmap_infos[mip_level].offset,
             texture_header->mipmap_infos[mip_level].size
@@ -137,8 +167,8 @@ public:
         };
     }
     [[nodiscard]]
-    TextureHeader const * header_object() const {
-        return header_blob().as<TextureHeader>();
+    Texture::Header const * header_object() const {
+        return header_blob().as<Texture::Header>();
     }
 };
 
@@ -151,7 +181,26 @@ class ShaderAsset : public GenericAsset {
 //-----------------------------------MeshAsset------------------------------------
 
 class MeshAsset : public GenericAsset {
-    // TODO
+public:
+    explicit MeshAsset(Blob const asset_) : GenericAsset(asset_) {}
+    [[nodiscard]]
+    size_t compute_header_size() const override {
+        return Mesh::Header::Size();
+    }
+    [[nodiscard]]
+    MeshHeader const * header_object() const {
+        return header_blob().as<Mesh::Header>();
+    }
+    [[nodiscard]]
+    MeshVertices const * vertices() const {
+        auto const * header = header_object();
+        return reinterpret_cast<MeshVertices const *>(m_asset.ptr + header->vertices_offset);
+    }
+    [[nodiscard]]
+    MeshIndices const * indices() const {
+        auto const * header = header_object();
+        return reinterpret_cast<MeshIndices const *>(m_asset.ptr + header->indices_offset);
+    }
 };
 
 //---------------------------------MaterialAsset----------------------------------
