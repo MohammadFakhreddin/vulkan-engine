@@ -64,6 +64,17 @@ bool seek_to_end() const {
     }
     return ret;
 }
+
+uint64_t File::read (Blob const & memory) const {
+    uint64_t ret = 0;
+    if (is_ok() && memory.len > 0) {
+        ret = ::fread(memory.ptr, 1, memory.len, m_file);
+    }
+    return ret;
+}
+
+// TODO: Write
+
 [[nodiscard]]
 uint64_t File::total_size () const {
     uint64_t ret = 0;
@@ -110,11 +121,10 @@ size_t FileSize(File * file) {
     return ret;
 }
 
-uint64_t ReadFromFile(File * file, Blob const memory) {
+uint64_t Read(File * file, Blob const & memory) {
     uint64_t ret = 0;
-    if(MFA_PTR_VALID(file) && file->is_ok()) {
-        file->m_file.read(reinterpret_cast<char *>(memory.ptr), memory.len);
-
+    if(MFA_PTR_VALID(file)) {
+        ret = file->read(memory);
     }
     return ret;
 }
