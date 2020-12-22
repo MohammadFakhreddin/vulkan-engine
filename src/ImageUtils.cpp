@@ -5,7 +5,8 @@
 #include "BedrockAssert.hpp"
 
 #include <stb_image/stb_image.h>
-#include <stb_image/stb_image_resize.h>
+
+#include "BedrockMemory.hpp"
 
 namespace MFA::Utils {
     namespace UncompressedTexture {
@@ -68,10 +69,11 @@ LoadResult Load(Data & out_image_data, const char * path, bool const use_srgb) {
                 out_image_data.height * 
                 out_image_data.components * 
                 sizeof(uint8_t);
-            out_image_data.pixels = Blob {::malloc(size), size};
+            // TODO We need allocation system (Leak checking)
+            out_image_data.pixels = Memory::Alloc(size);
             MFA_ASSERT(MFA_PTR_VALID(out_image_data.pixels.ptr));
-            auto const pixels_array = out_image_data.pixels.as<uint8_t>();
-            auto const stbi_pixels_array = out_image_data.stbi_pixels.as<uint8_t>();
+            auto * pixels_array = out_image_data.pixels.as<uint8_t>();
+            auto const * stbi_pixels_array = out_image_data.stbi_pixels.as<uint8_t>();
             for(int pixel_index = 0; pixel_index < out_image_data.width * out_image_data.height ; pixel_index ++ )
             {
                 for(int component_index = 0; component_index < out_image_data.components; component_index ++ )
@@ -95,9 +97,8 @@ bool Unload(Data * image_data) {
     MFA_ASSERT(MFA_PTR_VALID(image_data->stbi_pixels.ptr) == image_data->valid());
     if(MFA_PTR_VALID(image_data) && MFA_PTR_VALID(image_data->stbi_pixels.ptr)) {
         stbi_image_free(image_data->stbi_pixels.ptr);
-        if(image_data->components != image_data->stbi_components)
-        {
-            ::free(image_data->pixels.ptr);
+        if(image_data->components != image_data->stbi_components) {
+            Memory::Free(image_data->pixels);
         }
         image_data->pixels = {};
         image_data->stbi_pixels = {};
@@ -107,4 +108,7 @@ bool Unload(Data * image_data) {
 }
 
     } // UncompressedTexture
+
+// TODO DDS
+
 } // MFA::Utils

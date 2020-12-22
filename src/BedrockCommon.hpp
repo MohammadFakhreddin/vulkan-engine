@@ -1,11 +1,38 @@
 #ifndef BASE_INTERFACE
 #define BASE_INTERFACE
 
+// This class was originally part of Yugen engine by Y.Zhian
+
 #include <vulkan/vulkan.h>
 
 #define MFA_PTR_VALID(p_) ((p_) != nullptr)
 
-#define MFA_CONSUME_VAR(v_)       ((void)(v_))
+#define MFA_CONSUME_VAR(v_) ((void)(v_))
+
+#define MFA_UNIQUE_NAME(base_) MFA_CONCAT(base_, __COUNTER__)
+
+#define MFA_CONCAT__IMPL(x_, y_) x_ ## y_
+
+#define MFA_CONCAT(x_, y_) MFA_CONCAT__IMPL(x_, y_)
+
+#define MFA_DEFER auto MFA_UNIQUE_NAME(deferrinator_) = DeferHelper{} + [&]()
+
+// Do not use this, Use MFA_DEFFER instead
+template <typename F>
+struct Deferrer {
+    Deferrer (F && f) : m_f (std::move(f)) {}
+    ~Deferrer () noexcept {if (!m_canceled) m_f();}
+    void cancel () noexcept {m_canceled = true;}
+private:
+    bool m_canceled = false;
+    F m_f;
+};
+template <typename F>
+Deferrer<F> MakeDeferrer (F && f) {return Deferrer<F>(std::move(f));}
+struct DeferHelper {
+    template <typename F>
+    friend Deferrer<F> operator + (DeferHelper const &, F && f) {return MakeDeferrer(std::move(f));}
+};
 
 namespace MFA {
 

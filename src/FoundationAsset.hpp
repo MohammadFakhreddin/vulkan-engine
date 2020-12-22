@@ -171,6 +171,7 @@ struct MaterialHeader {}; // TODO
 
 class GenericAsset {
 public:
+    GenericAsset() : m_asset({}) {}
     explicit GenericAsset(Blob const asset_) : m_asset(asset_) {}
     [[nodiscard]]
     CBlob header_blob() const {
@@ -199,6 +200,7 @@ private:
 
 class TextureAsset : public GenericAsset {
 public:
+    TextureAsset() : GenericAsset({}) {}
     explicit TextureAsset(Blob const asset_) : GenericAsset(asset_) {}
     [[nodiscard]]
     size_t compute_header_size() const override {
@@ -242,6 +244,7 @@ class ShaderAsset : public GenericAsset {
 
 class MeshAsset : public GenericAsset {
 public:
+    MeshAsset() : GenericAsset({}) {}
     explicit MeshAsset(Blob const asset_) : GenericAsset(asset_) {}
     [[nodiscard]]
     size_t compute_header_size() const override {

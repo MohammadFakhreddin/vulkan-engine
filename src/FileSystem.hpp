@@ -17,7 +17,7 @@ class File;
 bool Exists(char const * path);
 
 [[nodiscard]]
-File Open(char const * path, Usage usage);
+File * OpenFile(char const * path, Usage usage);
 
 bool CloseFile(File * file);
 

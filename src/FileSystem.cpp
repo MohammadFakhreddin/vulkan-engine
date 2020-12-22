@@ -99,14 +99,17 @@ bool Exists(char const * path) {
 }
 
 [[nodiscard]]
-File CreateFile(char const * path, Usage const usage) {
-    return File {path, usage};
+File * OpenFile(char const * path, Usage const usage) {
+    // TODO Use allocator system
+    auto * file = new File {path, usage};
+    return file;
 }
 
 bool CloseFile(File * file) {
     bool ret = false;
     if(MFA_PTR_VALID(file)) {
         file->close();
+        delete file;
         ret = true;
     }
     return ret;

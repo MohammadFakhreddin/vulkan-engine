@@ -14,9 +14,9 @@ using TextureFormat = Asset::TextureFormat;
 static constexpr const char * SystemName = "UncompressedImage";
 
 struct Data {
-    U32 width = 0;
-    U32 height = 0;
-    U32 stbi_components = 0;
+    I32 width = 0;
+    I32 height = 0;
+    I32 stbi_components = 0;
     Blob stbi_pixels;
     Asset::TextureFormat format = TextureFormat::INVALID;
     Blob pixels;

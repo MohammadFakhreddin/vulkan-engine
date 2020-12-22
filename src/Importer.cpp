@@ -1,5 +1,7 @@
 #include "Importer.hpp"
 
+
+#include "BedrockMemory.hpp"
 #include "FileSystem.hpp"
 
 namespace MFA::Importer {
@@ -12,6 +14,7 @@ Asset::TextureAsset ImportDDSFile(char const * path) {
     // TODO
 }
 
+#if 0
 Asset::MeshAsset ImportObj(char const * path) {
     using Byte = char;
     LoadObjResult ret {};
@@ -88,16 +91,19 @@ Asset::MeshAsset ImportObj(char const * path) {
     }
     return ret;
 }
+#endif
 
 Asset::MeshAsset ImportGLTF(char const * path) {
     // TODO
+    return Asset::MeshAsset {};
 }
 
-// Temporary function for freeing imported assets
+// Temporary function for freeing imported assets // Resource system will be used instead
 bool FreeAsset(Asset::GenericAsset * asset) {
     bool ret = false;
     if(MFA_PTR_VALID(asset) && asset->valid()) {
-        delete asset->asset().ptr;
+        // TODO This is RCMGMT task
+        Memory::Free(asset->asset());
         asset->set_asset({});
         ret = true;
     }
@@ -106,14 +112,19 @@ bool FreeAsset(Asset::GenericAsset * asset) {
 
 RawFile ReadRawFile(char const * path) {
     RawFile ret {};
-    // TODO Use file
     if(MFA_PTR_VALID(path) && FileSystem::Exists(path)) {
-        std::ifstream file(path, std::ios::ate | std::ios::binary);
-        ret.bytes = RawFile(file.tellg());
-        file.seekg(0, std::ios::beg);
-        file.read(ret.bytes.data(), ret.bytes.size());
-        file.close();
-        ret.success = true;
+        auto * file = FileSystem::OpenFile(path, FileSystem::Usage::Read);
+        MFA_DEFER {FileSystem::CloseFile(file);};
+        auto const file_size = FileSystem::FileSize(file);
+        // TODO Allocate using a memory pool system
+        auto const memory_blob = Memory::Alloc(file_size);
+        auto const read_bytes = FileSystem::Read(file, ret.data);
+        // Means that reading is successful
+        if(read_bytes == file_size) {
+            ret.data = memory_blob;
+        } else {
+            Memory::Free(memory_blob);
+        }
     }
     return ret;
 }
@@ -121,7 +132,7 @@ RawFile ReadRawFile(char const * path) {
 bool FreeRawFile (RawFile * raw_file) {
     bool ret = false;
     if(MFA_PTR_VALID(raw_file) && raw_file->valid()) {
-        delete raw_file->data.ptr;
+        Memory::Free(raw_file->data);
         raw_file->data = {};
         ret = true; 
     }
