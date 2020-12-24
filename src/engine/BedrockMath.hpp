@@ -1,5 +1,4 @@
-#ifndef MATH_CLASS
-#define MATH_CLASS 
+#pragma once
 
 namespace MFA::Math {
 
@@ -36,5 +35,3 @@ NumberType Max(NumberType a, NumberType b) {
 }
 
 };
-
-#endif

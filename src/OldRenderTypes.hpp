@@ -1,3 +1,4 @@
+#if 0
 #ifndef RENDER_TYPES_CLASS
 #define RENDER_TYPES_CLASS
 
@@ -95,4 +96,5 @@ private:
 }
 }
 
+#endif
 #endif

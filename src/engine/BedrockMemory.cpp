@@ -6,7 +6,7 @@
 
 namespace MFA::Memory {
 
-Blob Alloc (size_t size) {
+Blob Alloc (size_t const size) {
     return {static_cast<Byte *>(::malloc(size)), size};
 }
 

@@ -1,3 +1,4 @@
+#if 0
 #include "Renderer.hpp"
 
 #include <vulkan/vulkan.h>
@@ -1461,3 +1462,4 @@ static VkShaderModule create_shader_module(char const * filename) {
 
 }
 }
+#endif

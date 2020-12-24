@@ -1,12 +1,11 @@
 #include "ImageUtils.hpp"
 
-#include "FoundationAsset.hpp"
-#include "BedrockLog.hpp"
-#include "BedrockAssert.hpp"
+#include "engine/FoundationAsset.hpp"
+#include "engine/BedrockLog.hpp"
+#include "engine/BedrockAssert.hpp"
+#include "engine/BedrockMemory.hpp"
 
 #include <stb_image/stb_image.h>
-
-#include "BedrockMemory.hpp"
 
 namespace MFA::Utils {
     namespace UncompressedTexture {

@@ -1,6 +1,3 @@
-#include <string>
-#include <chrono>
-
 #define STB_IMAGE_IMPLEMENTATION
 #define TINYOBJLOADER_IMPLEMENTATION
 #define STB_IMAGE_RESIZE_IMPLEMENTATION

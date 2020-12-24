@@ -1,12 +1,9 @@
 //
 // Created by mohammad.fakhreddin on 1/3/20.
 //
-#ifndef PLATFORMS_NAMESPACE
-#define PLATFORMS_NAMESPACE
+#pragma once
 
 #include <chrono>
-
-namespace MFA::Platforms {
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
     //define something for Windows (32-bit and 64-bit, this part is common)
@@ -58,7 +55,14 @@ namespace MFA::Platforms {
   using supportedClock = std::chrono::steady_clock;
 #endif
 
-inline static constexpr char * appName = "Vulkan engine";
+#ifndef __PLATFORM_WIN__
+#include <stdio.h>
+#include <stddef.h>
+#endif
+
+namespace MFA::Platforms {
+
+inline static constexpr char appName [100] = "Vulkan engine";
   
 enum class Platform {
     Windows,
@@ -79,7 +83,4 @@ struct ScreenInfo {
   bool valid = false;
 };
 ScreenInfo ComputeScreenSize();
-
 }; // namespace MFA::Platforms
-
-#endif //!PLATFORMS_NAMESPACE

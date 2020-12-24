@@ -1,9 +1,10 @@
-#ifndef BASE_INTERFACE
-#define BASE_INTERFACE
+#pragma once
 
 // This class was originally part of Yugen engine by Y.Zhian
 
-#include <vulkan/vulkan.h>
+#include "BedrockPlatforms.hpp"
+
+#include <cstdint>
 
 #define MFA_PTR_VALID(p_) ((p_) != nullptr)
 
@@ -12,8 +13,10 @@
 #define MFA_UNIQUE_NAME(base_) MFA_CONCAT(base_, __COUNTER__)
 
 #define MFA_CONCAT__IMPL(x_, y_) x_ ## y_
-
 #define MFA_CONCAT(x_, y_) MFA_CONCAT__IMPL(x_, y_)
+
+#define MFA_STRINGIFY__IMPL(x_)   #x_
+#define MFA_STRINGIFY(x_)         MFA_STRINGIFY__IMPL(x_)
 
 #define MFA_DEFER auto MFA_UNIQUE_NAME(deferrinator_) = DeferHelper{} + [&]()
 
@@ -107,5 +110,3 @@ template <typename T, int N>
 constexpr int ArrayCountInt(T(&)[N]) { return N; }
 
 }
-
-#endif
