@@ -1,11 +1,10 @@
-#include "FileSystem.hpp"
+#include "BedrockFileSystem.hpp"
 
 #include "BedrockCommon.hpp"
+#include "BedrockAssert.hpp"
 
 #include <filesystem>
 #include <fstream>
-
-#include "BedrockAssert.hpp"
 
 namespace MFA::FileSystem {
 
@@ -24,13 +23,17 @@ explicit File(char const * path, Usage const usage) {
         }
     }();
     // TODO Use FopenS
-    m_file = ::fopen(path, mode);
-    if (!MFA_PTR_VALID(m_file) && Usage::Append == usage) {
-        m_file = ::fopen(path, "w+b");
+    auto error_code = ::fopen_s(&m_file, path, mode);
+    if(error_code == 0) {
+        if (MFA_PTR_VALID(m_file) && Usage::Append == usage) {
+            auto const seek_result = seek_to_end();  MFA_ASSERT(seek_result); MFA_CONSUME_VAR(seek_result);    
+        }
     }
-    
-    if (MFA_PTR_VALID(m_file) && Usage::Append == usage) {
-        auto const seek_result = seek_to_end();  MFA_ASSERT(seek_result); MFA_CONSUME_VAR(seek_result);    
+    if (!MFA_PTR_VALID(m_file) && Usage::Append == usage) {
+        error_code = ::fopen_s(&m_file, path, "w+b");
+    }
+    if(error_code != 0) {
+        m_file = nullptr;
     }
 }
 
@@ -64,7 +67,7 @@ bool seek_to_end() const {
     }
     return ret;
 }
-
+[[nodiscard]]
 uint64_t File::read (Blob const & memory) const {
     uint64_t ret = 0;
     if (is_ok() && memory.len > 0) {
@@ -98,7 +101,6 @@ bool Exists(char const * path) {
     return std::filesystem::exists(path);
 }
 
-[[nodiscard]]
 File * OpenFile(char const * path, Usage const usage) {
     // TODO Use allocator system
     auto * file = new File {path, usage};
@@ -115,7 +117,6 @@ bool CloseFile(File * file) {
     return ret;
 }
 
-[[nodiscard]]
 size_t FileSize(File * file) {
     size_t ret = 0;
     if(MFA_PTR_VALID(file)) {
@@ -130,6 +131,10 @@ uint64_t Read(File * file, Blob const & memory) {
         ret = file->read(memory);
     }
     return ret;
+}
+
+bool IsUsable(File * file) {
+    return MFA_PTR_VALID(file) && file->is_ok();
 }
 
 }

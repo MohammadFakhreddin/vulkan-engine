@@ -101,3 +101,5 @@ CMakeScripts
 
 build/*
 build64/*
+build64
+build

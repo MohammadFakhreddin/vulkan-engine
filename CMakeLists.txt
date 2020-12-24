@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 3.0)
 
-set(${PROJECT_NAME} "VULKAN_ENGINE")
+set(${PROJECT_NAME} "VULAKN_ENGINE")
 
-project ("VULKAN_ENGINE" CXX C)
+project ("VULAKN_ENGINE" CXX C)
 
 set_property (GLOBAL PROPERTY USE_FOLDERS ON)
 # TODO We need 2 solutions, 1 for Engine and 1 for test cases
@@ -46,36 +46,52 @@ list(
   ${SRC_HEADER_HPP}
 )
 
-# Includes these 2 directory for importing
+# Includes these 2 directory for importing libraries like VULAKN and SDL that get installed without include path
 include_directories ("src" "${CMAKE_SOURCE_DIR}/libs/include")
 link_directories(${LIBRARY_OUTPUT_PATH} ${LIB_ROOT})
 add_executable(${PROJECT_NAME} ${APP_HEADER} ${APP_SOURCE})
 
 if(WINDOWS)
 
-  find_package(SDL2 REQUIRED)
-  find_package(VULKAN REQUIRED)
-  find_package(IMGUI REQUIRED)
-
-  include_directories(${SDL2_INCLUDE_DIRS})
-  include_directories(${VULKAN_INCLUDE_DIRS})
-  include_directories(${IMGUI_INCLUDE_DIRS})
-  
-  target_link_libraries(${PROJECT_NAME} ${VULKAN_LIBRARIES})
-  target_link_libraries(${PROJECT_NAME} ${SDL2_LIBRARIES})
-  target_link_libraries(${PROJECT_NAME} ${IMGUI_LIBRARIES}})
-
+  file(GLOB VULKAN "${CMAKE_SOURCE_DIR}/libs/win/vulkan-1.lib")
+  file(
+    GLOB SDL 
+    "${CMAKE_SOURCE_DIR}/libs/win/SDL2.lib" 
+    "${CMAKE_SOURCE_DIR}/libs/win/SDL2main.lib"
+  )
+  file(
+    GLOB IMGUI
+    "${CMAKE_SOURCE_DIR}/libs/win/imgui.lib"
+  )
+  list(
+    APPEND COMPILED_LIBS 
+    ${VULKAN}
+    ${SDL}
+  )
+  target_link_libraries(${PROJECT_NAME} ${COMPILED_LIBS})
+  file(
+    GLOB DLLS 
+    "${CMAKE_SOURCE_DIR}/libs/win/SDL2.dll" 
+  )
+  add_custom_command(
+      TARGET ${PROJECT_NAME} POST_BUILD        # Adds a post-build event to MyTest
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
+      ${DLLS}      # <--this is in-file
+      ${CMAKE_BINARY_DIR}
+  ) 
 elseif(MACOSX)
 
+  # TODO Libs
+
   find_package(SDL2 REQUIRED)
-  find_package(VULKAN REQUIRED)
+  find_package(VULAKN REQUIRED)
   find_package(IMGUI REQUIRED)
 
   include_directories(${SDL2_INCLUDE_DIRS})
-  include_directories(${VULKAN_INCLUDE_DIRS})
+  include_directories(${VULAKN_INCLUDE_DIRS})
   include_directories(${IMGUI_INCLUDE_DIRS})
   
-  target_link_libraries(${PROJECT_NAME} ${VULKAN_LIBRARIES})
+  target_link_libraries(${PROJECT_NAME} ${VULAKN_LIBRARIES})
   target_link_libraries(${PROJECT_NAME} ${SDL2_LIBRARIES})
   target_link_libraries(${PROJECT_NAME} ${IMGUI_LIBRARIES}})
 
@@ -92,15 +108,17 @@ elseif(MACOSX)
 
 elseif(LINUX)
 
+  #TODO Libs
+
   find_package(SDL REQUIRED)
-  find_package(VULKAN REQUIRED)
+  find_package(VULAKN REQUIRED)
   find_package(IMGUI REQUIRED)
 
   include_directories(${SDL_INCLUDE_DIRS})
-  include_directories(${VULKAN_INCLUDE_DIRS})
+  include_directories(${VULAKN_INCLUDE_DIRS})
   include_directories(${IMGUI_INCLUDE_DIRS})
   
-  target_link_libraries(${PROJECT_NAME} ${VULKAN_LIBRARIES})
+  target_link_libraries(${PROJECT_NAME} ${VULAKN_LIBRARIES})
   target_link_libraries(${PROJECT_NAME} ${SDL_LIBRARIES})
   target_link_libraries(${PROJECT_NAME} ${IMGUI_LIBRARIES}})
 

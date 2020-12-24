@@ -78,19 +78,21 @@ static_assert(ArrayCount(FormatTable) == static_cast<unsigned>(Format::Count));
 
 
 #pragma pack(push)
+#pragma warning (push)
+#pragma warning (disable: 4200)         // Non-standard extension used: zero-sized array in struct
 struct Header {
     struct Dimensions {
         U32 width = 0;
         U32 height = 0;
         U16 depth = 0;
     };
-    static_assert(10 == sizeof(Dimensions));
+    //static_assert(10 == sizeof(Dimensions));
     struct MipmapInfo {
         U32 offset {};
         U32 size {};
         Dimensions dims {};
     };
-    static_assert(18 == sizeof(MipmapInfo));
+    //static_assert(18 == sizeof(MipmapInfo));
     // TODO Handle alignment (Size and reserved if needed) for write operation to .asset file
     Format          format = Format::INVALID;
     U16             slices = 0;
@@ -107,6 +109,7 @@ struct Header {
         return true;
     }
 };
+#pragma warning(pop)
 #pragma pack(pop)
 
 }
@@ -134,7 +137,8 @@ struct Header {
 };
 
 namespace Data {
-
+#pragma warning (push)
+#pragma warning (disable: 4200)         // Non-standard extension used: zero-sized array in struct
 struct Vertices {
     using Position = float[3];
     using Normal = float[3];
@@ -152,7 +156,7 @@ struct Vertices {
 struct Indices {
     U32 indices[];
 };
-
+#pragma warning (pop)
 }}
 
 using MeshHeader = Mesh::Header;
@@ -178,7 +182,7 @@ public:
         return CBlob {m_asset.ptr, compute_header_size()};
     }
     [[nodiscard]]
-    virtual size_t compute_header_size() const;
+    virtual size_t compute_header_size() const = 0;
     [[nodiscard]]
     CBlob data() const {
         auto const header_size = compute_header_size();
@@ -188,7 +192,7 @@ public:
         };
     }
     [[nodiscard]]
-    virtual bool valid() const;
+    virtual bool valid() const = 0;
     [[nodiscard]]
     Blob asset() const {return m_asset;}
     void set_asset(Blob const asset_) {m_asset = asset_;}
@@ -200,7 +204,7 @@ private:
 
 class TextureAsset : public GenericAsset {
 public:
-    TextureAsset() : GenericAsset({}) {}
+    TextureAsset() = default;
     explicit TextureAsset(Blob const asset_) : GenericAsset(asset_) {}
     [[nodiscard]]
     size_t compute_header_size() const override {
@@ -216,8 +220,8 @@ public:
     }
     [[nodiscard]]
     CBlob slice_data (uint8_t const mip_level, uint16_t const slice) const {
-        MFA_ASSERT(slice < header().slices);
-        MFA_ASSERT(mip_level < header().mip_count);
+        MFA_ASSERT(slice < header_object()->slices);
+        MFA_ASSERT(mip_level < header_object()->mip_count);
         auto const blob = mip_data(mip_level);
         return {
             blob.ptr + slice * blob.len,
@@ -244,7 +248,7 @@ class ShaderAsset : public GenericAsset {
 
 class MeshAsset : public GenericAsset {
 public:
-    MeshAsset() : GenericAsset({}) {}
+    MeshAsset() = default;
     explicit MeshAsset(Blob const asset_) : GenericAsset(asset_) {}
     [[nodiscard]]
     size_t compute_header_size() const override {

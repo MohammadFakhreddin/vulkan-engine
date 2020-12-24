@@ -72,8 +72,22 @@ enum class Platform {
     Unknown
 };
 
-#if defined(_DEBUG) || defined(DEBUG)
-  #define MFA_DEBUG
+#if defined(_DEBUG) && !defined(NDEBUG)
+    #if !defined(MFA_DEBUG)
+        #define MFA_DEBUG
+    #endif
+    #if defined(MFA_RELEASE)
+        #undef MFA_RELEASE
+    #endif
+#elif !defined(_DEBUG) && defined(NDEBUG)
+    #if defined(MFA_DEBUG)
+        #undef MFA_DEBUG
+    #endif
+    #if !defined(MFA_RELEASE)
+        #define MFA_RELEASE
+    #endif
+#else
+    #error Define exactly one of _DEBUG and NDEBUG
 #endif
 
 using ScreenSizeType = uint32_t;

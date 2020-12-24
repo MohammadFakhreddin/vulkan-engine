@@ -1,5 +1,4 @@
-#ifndef FILE_SYSTEM_HEADER
-#define FILE_SYSTEM_HEADER
+#pragma once
 
 #include "BedrockCommon.hpp"
 
@@ -26,6 +25,7 @@ size_t FileSize(File * file);
 
 uint64_t Read(File * file, Blob const & memory);
 
-};
+[[nodiscard]]
+bool IsUsable(File * file);
 
-#endif
+}; // MFA::FileSystem

@@ -1,7 +1,7 @@
 #ifndef IMPORTER_NAMESPACE
 #define IMPORTER_NAMESPACE
 
-#include "FoundationAsset.hpp"
+#include "../engine/FoundationAsset.hpp"
 
 namespace MFA::Importer {
 //TODO:// After implementing Resource system return handle instead
