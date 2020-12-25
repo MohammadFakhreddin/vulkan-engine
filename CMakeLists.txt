@@ -69,6 +69,7 @@ if(WINDOWS)
     ${SDL}
   )
   target_link_libraries(${PROJECT_NAME} ${COMPILED_LIBS})
+
   file(
     GLOB DLLS 
     "${CMAKE_SOURCE_DIR}/libs/win/SDL2.dll" 

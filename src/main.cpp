@@ -13,6 +13,5 @@
 int main(int argc, char* argv[]){
     Application app;
     app.run();
-    MFA_LOG_INFO("Yay");
     return 0;
 }

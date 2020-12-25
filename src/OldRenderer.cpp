@@ -1,4 +1,4 @@
-#if 0
+#if 1
 #include "Renderer.hpp"
 
 #include <vulkan/vulkan.h>
