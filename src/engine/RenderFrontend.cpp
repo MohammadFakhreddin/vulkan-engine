@@ -1,8 +1,6 @@
 #include "RenderFrontend.hpp"
 
 #include <string>
-#include <SDL2/SDL_video.h>
-#include <vulkan/vulkan_core.h>
 
 #include "BedrockAssert.hpp"
 #include "BedrockLog.hpp"
@@ -10,10 +8,12 @@
 
 namespace MFA::RenderFrontend {
 
+using namespace RenderBackend;
+
 struct State {
     // CreateWindow
-    RenderBackend::ScreenWidth screen_width = 0;
-    RenderBackend::ScreenHeight screen_height = 0;
+    ScreenWidth screen_width = 0;
+    ScreenHeight screen_height = 0;
     // CreateInstance
     std::string application_name {};
     VkInstance vk_instance {};

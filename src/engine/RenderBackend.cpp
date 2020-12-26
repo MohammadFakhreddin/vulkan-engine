@@ -1,5 +1,7 @@
 #include "RenderBackend.hpp"
 
+#include <vector>
+
 #include "BedrockAssert.hpp"
 #include "BedrockLog.hpp"
 #include "BedrockPlatforms.hpp"
@@ -59,30 +61,32 @@ VkExtent2D ChooseSwapChainExtent(
 
 [[nodiscard]]
 VkPresentModeKHR ChoosePresentMode(
-  std::vector<VkPresentModeKHR> const & present_modes
+    uint8_t const present_modes_count, 
+    VkPresentModeKHR const * present_modes
 ) {
-  for (const auto& presentMode : present_modes) {
-      if (presentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
-          return presentMode;
-      }
-  }
-  // If mailbox is unavailable, fall back to FIFO (guaranteed to be available)
-  return VK_PRESENT_MODE_FIFO_KHR;
+    for(uint8_t index = 0; index < present_modes_count; index ++) {
+        if (present_modes[index] == VK_PRESENT_MODE_MAILBOX_KHR) {
+            return present_modes[index];
+        } 
+    }
+    // If mailbox is unavailable, fall back to FIFO (guaranteed to be available)
+    return VK_PRESENT_MODE_FIFO_KHR;
 }
 
 VkSurfaceFormatKHR ChooseSurfaceFormat(
-  std::vector<VkSurfaceFormatKHR> const & available_formats
+    uint8_t const available_formats_count,
+    VkSurfaceFormatKHR const * available_formats
 ) {
     // We can either choose any format
-    if (available_formats.size() == 1 && available_formats[0].format == VK_FORMAT_UNDEFINED) {
-      return{ VK_FORMAT_R8G8B8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR };
+    if (available_formats_count == 1 && available_formats[0].format == VK_FORMAT_UNDEFINED) {
+        return { VK_FORMAT_R8G8B8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR };
     }
 
     // Or go with the standard format - if available
-    for (const auto& availableSurfaceFormat : available_formats) {
-      if (availableSurfaceFormat.format == VK_FORMAT_R8G8B8A8_UNORM) {
-          return availableSurfaceFormat;
-      }
+    for(uint8_t index = 0; index < available_formats_count; index ++) {
+        if (available_formats[index].format == VK_FORMAT_R8G8B8A8_UNORM) {
+            return available_formats[index];
+        }
     }
 
     // Or fall back to the first available one
@@ -220,6 +224,85 @@ bool CreateImageView (
         ret = false;
     }
     return ret;
+}
+
+[[nodiscard]]
+VkCommandBuffer BeginSingleTimeCommands(VkDevice * device, VkCommandPool const & command_pool) {
+    MFA_PTR_ASSERT(device);
+    
+    VkCommandBufferAllocateInfo allocate_info{};
+    allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocate_info.commandPool = command_pool;
+    allocate_info.commandBufferCount = 1;
+
+    VkCommandBuffer commandBuffer;
+    vkAllocateCommandBuffers(*device, &allocate_info, &commandBuffer);
+
+    VkCommandBufferBeginInfo begin_info{};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    vkBeginCommandBuffer(commandBuffer, &begin_info);
+
+    return commandBuffer;
+}
+
+void EndAndSubmitSingleTimeCommand(
+    VkDevice * device, 
+    VkCommandPool const & command_pool, 
+    VkQueue const & graphic_queue, 
+    VkCommandBuffer const & command_buffer
+) {
+    VK_Check(vkEndCommandBuffer(command_buffer));
+
+    VkSubmitInfo submit_info {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &command_buffer;
+
+    VK_Check(vkQueueSubmit(graphic_queue, 1, &submit_info, nullptr));
+    VK_Check(vkQueueWaitIdle(graphic_queue));
+
+    vkFreeCommandBuffers(*device, command_pool, 1, &command_buffer);
+}
+
+[[nodiscard]]
+VkFormat FindDepthFormat(VkPhysicalDevice * physical_device) {
+    std::vector<VkFormat> candidate_formats {
+        VK_FORMAT_D32_SFLOAT,
+        VK_FORMAT_D32_SFLOAT_S8_UINT,
+        VK_FORMAT_D24_UNORM_S8_UINT
+    };
+    return FindSupportedFormat (
+        physical_device,
+        candidate_formats.size(),
+        candidate_formats.data(),
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+    );
+}
+
+[[nodiscard]]
+VkFormat FindSupportedFormat(
+    VkPhysicalDevice * physical_device,
+    uint8_t const candidates_count, 
+    VkFormat * candidates,
+    VkImageTiling const tiling, 
+    VkFormatFeatureFlags const features
+) {
+    for(uint8_t index = 0; index < candidates_count; index ++) {
+        VkFormatProperties props;
+        vkGetPhysicalDeviceFormatProperties(*physical_device, candidates[index], &props);
+
+        if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
+            return candidates[index];
+        }
+        if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+            return candidates[index];
+        }
+    }
+    MFA_CRASH("Failed to find supported format!");
 }
 
 }
