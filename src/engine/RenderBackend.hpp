@@ -217,4 +217,10 @@ CreateLogicalDeviceResult CreateLogicalDevice(
     VkPhysicalDeviceFeatures const & enabled_physical_device_features
 );
 
+// TODO This function should ask for options
+[[nodiscard]]
+VkSampler_T * CreateSampler(VkDevice_T * device);
+
+void DestroySampler(VkDevice_T * device, VkSampler_T * sampler);
+
 }
