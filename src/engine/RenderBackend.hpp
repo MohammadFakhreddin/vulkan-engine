@@ -20,6 +20,9 @@ using CpuTexture = Asset::TextureAsset;
 SDL_Window * CreateWindow(ScreenWidth screen_width, ScreenHeight screen_height);
 
 [[nodiscard]]
+VkSurfaceKHR_T * CreateWindowSurface(SDL_Window * window, VkInstance_T * instance);
+
+[[nodiscard]]
 VkExtent2D ChooseSwapChainExtent(
     VkSurfaceCapabilitiesKHR const & surface_capabilities, 
     ScreenWidth screen_width, 
@@ -192,6 +195,26 @@ void CopyBufferToImage(
     CpuTexture const & cpu_texture
 );
 
+struct CreateLogicalDeviceResult {
+    VkDevice_T * device;
+    VkPhysicalDeviceMemoryProperties physical_memory_properties;
+};
+[[nodiscard]]
+CreateLogicalDeviceResult CreateLogicalDevice(
+    VkPhysicalDevice_T * physical_device,
+    U32 graphics_queue_family,
+    VkQueue_T * graphic_queue,
+    U32 present_queue_family,
+    VkQueue_T * present_queue,
+    VkPhysicalDeviceFeatures const & enabled_physical_device_features
+);
+
+// TODO This function should ask for options
+[[nodiscard]]
+VkSampler_T * CreateSampler(VkDevice_T * device);
+
+void DestroySampler(VkDevice_T * device, VkSampler_T * sampler);
+
 using DebugCallback = std::function<VkBool32(
     VkDebugReportFlagsEXT flags,
     VkDebugReportObjectTypeEXT object_type,
@@ -202,25 +225,15 @@ using DebugCallback = std::function<VkBool32(
     char const * message,
     void * user_data
 )>;
+[[nodiscard]]
+VkDebugReportCallbackEXT_T * SetDebugCallback(VkInstance_T * instance, DebugCallback const & callback);
 
-struct CreateLogicalDeviceResult {
-    VkDevice_T * device;
-    VkPhysicalDeviceMemoryProperties physical_memory_properties;
+// TODO Might need to ask features from outside instead
+struct FindPhysicalDeviceResult {
+    VkPhysicalDevice_T * physical_device = nullptr;
+    VkPhysicalDeviceFeatures physical_device_features {};
 };
 [[nodiscard]]
-CreateLogicalDeviceResult CreateLogicalDevice(
-    VkPhysicalDevice_T * physical_device,
-    U32 const graphics_queue_family,
-    VkQueue_T * graphic_queue,
-    U32 const present_queue_family,
-    VkQueue_T * present_queue,
-    VkPhysicalDeviceFeatures const & enabled_physical_device_features
-);
-
-// TODO This function should ask for options
-[[nodiscard]]
-VkSampler_T * CreateSampler(VkDevice_T * device);
-
-void DestroySampler(VkDevice_T * device, VkSampler_T * sampler);
+FindPhysicalDeviceResult FindPhysicalDevice(uint8_t retry_count);
 
 }

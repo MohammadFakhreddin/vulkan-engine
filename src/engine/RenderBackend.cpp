@@ -38,6 +38,16 @@ SDL_Window * CreateWindow(ScreenWidth const screen_width, ScreenHeight const scr
     );
 }
 
+VkSurfaceKHR_T * CreateWindowSurface(SDL_Window * window, VkInstance_T * instance) {
+    VkSurfaceKHR_T * ret = nullptr;
+    SDL_Check(SDL_Vulkan_CreateSurface(
+        window,
+        instance,
+        &ret
+    ));
+    return ret;
+}
+
 [[nodiscard]]
 VkExtent2D ChooseSwapChainExtent(
     VkSurfaceCapabilitiesKHR const & surface_capabilities, 
@@ -753,6 +763,7 @@ CreateLogicalDeviceResult CreateLogicalDevice(
 
     return ret;
 }
+
 // TODO Consider oop and storing data
 VkSampler_T * CreateSampler(VkDevice_T * device) {
     MFA_PTR_ASSERT(device);
@@ -785,5 +796,74 @@ void DestroySampler(VkDevice_T * device, VkSampler_T * sampler) {
     vkDestroySampler(device, sampler, nullptr);
 }
 
+VkDebugReportCallbackEXT_T * SetDebugCallback(
+    VkInstance_T * instance, 
+    PFN_vkDebugReportCallbackEXT const & callback
+) {
+    VkDebugReportCallbackCreateInfoEXT debug_info = {};
+    debug_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+    debug_info.pfnCallback = callback;
+    debug_info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+    auto const debug_report_callback = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(vkGetInstanceProcAddr(
+        instance,
+        "vkCreateDebugReportCallbackEXT"
+    ));
+    VkDebugReportCallbackEXT_T * ret = nullptr;
+    VK_Check(debug_report_callback(
+        instance, 
+        &debug_info, 
+        nullptr, 
+        &ret
+    ));
+    return ret;
+}
+
+FindPhysicalDeviceResult FindPhysicalDevice(VkInstance_T * vk_instance, uint8_t const retry_count) {
+    FindPhysicalDeviceResult ret {};
+
+    uint32_t device_count = 0;
+    //Getting number of physical devices
+    VK_Check(vkEnumeratePhysicalDevices(
+        vk_instance, 
+        &device_count, 
+        nullptr
+    ));
+    MFA_ASSERT(device_count > 0);
+
+    std::vector<VkPhysicalDevice> devices (device_count);
+    const auto phyDevResult = vkEnumeratePhysicalDevices(
+        vk_instance, 
+        &device_count, 
+        devices.data()
+    );
+    //TODO Search about incomplete
+    MFA_ASSERT(phyDevResult == VK_SUCCESS || phyDevResult == VK_INCOMPLETE);
+    // TODO We need to choose physical device based on features that we need
+    if(retry_count >= devices.size()) {
+        MFA_CRASH("No suitable physical device exists");
+    }
+    ret.physical_device = devices[retry_count];
+    MFA_PTR_ASSERT(ret.physical_device);
+    ret.physical_device_features.samplerAnisotropy = VK_TRUE;
+    ret.physical_device_features.shaderClipDistance = VK_TRUE;
+    ret.physical_device_features.shaderCullDistance = VK_TRUE;
+    
+    VkPhysicalDeviceProperties deviceProperties;
+    vkGetPhysicalDeviceProperties(ret.physical_device, &deviceProperties);
+    vkGetPhysicalDeviceFeatures(ret.physical_device, &ret.physical_device_features);
+
+    uint32_t supportedVersion[] = {
+        VK_VERSION_MAJOR(deviceProperties.apiVersion),
+        VK_VERSION_MINOR(deviceProperties.apiVersion),
+        VK_VERSION_PATCH(deviceProperties.apiVersion)
+    };
+
+    MFA_LOG_INFO(
+        "Physical device supports version %d.%d.%d\n", 
+        supportedVersion[0], supportedVersion[1], supportedVersion[2]
+    );
+
+    return ret;
+}
 
 }
