@@ -1,3 +1,4 @@
+#include <SDL2/SDL_vulkan.h>
 #if 1
 
 #include <vector>
@@ -476,7 +477,7 @@ static void find_physical_device(uint8_t const retry_count) {
 static bool check_swap_chain_support() {
     bool ret = false;
     uint32_t extension_count = 0;
-    VK_Check(vkEnumerateDeviceExtensionProperties(m_state.physical_device, nullptr, &extension_count, nullptr));
+    VK_Check(vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &extension_count, nullptr));
     std::vector<VkExtensionProperties> device_extensions(extension_count);
     vkEnumerateDeviceExtensionProperties(m_state.physical_device, nullptr, &extension_count, device_extensions.data());
     for (const auto& extension : device_extensions) {

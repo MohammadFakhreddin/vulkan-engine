@@ -215,18 +215,21 @@ VkSampler_T * CreateSampler(VkDevice_T * device);
 
 void DestroySampler(VkDevice_T * device, VkSampler_T * sampler);
 
-using DebugCallback = std::function<VkBool32(
-    VkDebugReportFlagsEXT flags,
-    VkDebugReportObjectTypeEXT object_type,
-    uint64_t src_object, 
-    size_t location,
-    int32_t message_code,
-    char const * player_prefix,
-    char const * message,
-    void * user_data
-)>;
+//using DebugCallback = std::function<VkBool32(
+//    VkDebugReportFlagsEXT flags,
+//    VkDebugReportObjectTypeEXT object_type,
+//    U64 src_object, 
+//    size_t location,
+//    int32_t message_code,
+//    char const * player_prefix,
+//    char const * message,
+//    void * user_data
+//)>;
 [[nodiscard]]
-VkDebugReportCallbackEXT_T * SetDebugCallback(VkInstance_T * instance, DebugCallback const & callback);
+VkDebugReportCallbackEXT_T * SetDebugCallback(
+    VkInstance_T * instance,
+    PFN_vkDebugReportCallbackEXT const & callback
+);
 
 // TODO Might need to ask features from outside instead
 struct FindPhysicalDeviceResult {
@@ -234,6 +237,6 @@ struct FindPhysicalDeviceResult {
     VkPhysicalDeviceFeatures physical_device_features {};
 };
 [[nodiscard]]
-FindPhysicalDeviceResult FindPhysicalDevice(uint8_t retry_count);
+FindPhysicalDeviceResult FindPhysicalDevice(VkInstance_T * vk_instance, U8 retry_count);
 
 }

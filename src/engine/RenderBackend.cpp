@@ -31,8 +31,8 @@ SDL_Window * CreateWindow(ScreenWidth const screen_width, ScreenHeight const scr
     auto const screen_info = MFA::Platforms::ComputeScreenSize();
     return SDL_CreateWindow(
         "VULKAN_ENGINE", 
-        static_cast<uint32_t>((screen_info.screen_width / 2.0f) - (screen_width / 2.0f)), 
-        static_cast<uint32_t>((screen_info.screen_height / 2.0f) - (screen_height / 2.0f)),
+        static_cast<U32>((screen_info.screen_width / 2.0f) - (screen_width / 2.0f)), 
+        static_cast<U32>((screen_info.screen_height / 2.0f) - (screen_height / 2.0f)),
         screen_width, screen_height,
         SDL_WINDOW_SHOWN /*| SDL_WINDOW_FULLSCREEN */| SDL_WINDOW_VULKAN
     );
@@ -72,10 +72,10 @@ VkExtent2D ChooseSwapChainExtent(
 
 [[nodiscard]]
 VkPresentModeKHR ChoosePresentMode(
-    uint8_t const present_modes_count, 
+    U8 const present_modes_count, 
     VkPresentModeKHR const * present_modes
 ) {
-    for(uint8_t index = 0; index < present_modes_count; index ++) {
+    for(U8 index = 0; index < present_modes_count; index ++) {
         if (present_modes[index] == VK_PRESENT_MODE_MAILBOX_KHR) {
             return present_modes[index];
         } 
@@ -85,7 +85,7 @@ VkPresentModeKHR ChoosePresentMode(
 }
 
 VkSurfaceFormatKHR ChooseSurfaceFormat(
-    uint8_t const available_formats_count,
+    U8 const available_formats_count,
     VkSurfaceFormatKHR const * available_formats
 ) {
     // We can either choose any format
@@ -94,7 +94,7 @@ VkSurfaceFormatKHR ChooseSurfaceFormat(
     }
 
     // Or go with the standard format - if available
-    for(uint8_t index = 0; index < available_formats_count; index ++) {
+    for(U8 index = 0; index < available_formats_count; index ++) {
         if (available_formats[index].format == VK_FORMAT_R8G8B8A8_UNORM) {
             return available_formats[index];
         }
@@ -134,7 +134,7 @@ VkInstance_T * CreateInstance(char const * application_name, SDL_Window * window
         instance_extensions.emplace_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
     }
     {// Checking for extension support
-        uint32_t vk_supported_extension_count = 0;
+        U32 vk_supported_extension_count = 0;
         VK_Check(vkEnumerateInstanceExtensionProperties(
             nullptr,
             &vk_supported_extension_count,
@@ -157,9 +157,9 @@ VkInstance_T * CreateInstance(char const * application_name, SDL_Window * window
         instanceInfo.flags = 0;
         // The application info structure is then passed through the instance
         instanceInfo.pApplicationInfo = &application_info;
-        instanceInfo.enabledLayerCount = static_cast<uint32_t>(debug_layers.size());
+        instanceInfo.enabledLayerCount = static_cast<U32>(debug_layers.size());
         instanceInfo.ppEnabledLayerNames = debug_layers.data();
-        instanceInfo.enabledExtensionCount = static_cast<uint32_t>(instance_extensions.size());
+        instanceInfo.enabledExtensionCount = static_cast<U32>(instance_extensions.size());
         instanceInfo.ppEnabledExtensionNames = instance_extensions.data();
     }
     VkInstance vk_instance;
@@ -199,7 +199,7 @@ U32 FindMemoryType (
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(*physical_device, &memProperties);
 
-    for (uint32_t memory_type_index = 0; memory_type_index < memProperties.memoryTypeCount; memory_type_index++) {
+    for (U32 memory_type_index = 0; memory_type_index < memProperties.memoryTypeCount; memory_type_index++) {
         if ((type_filter & (1 << memory_type_index)) && (memProperties.memoryTypes[memory_type_index].propertyFlags & property_flags) == property_flags) {
             return memory_type_index;
         }
@@ -297,12 +297,12 @@ VkFormat FindDepthFormat(VkPhysicalDevice_T * physical_device) {
 [[nodiscard]]
 VkFormat FindSupportedFormat(
     VkPhysicalDevice_T * physical_device,
-    uint8_t const candidates_count, 
+    U8 const candidates_count, 
     VkFormat * candidates,
     VkImageTiling const tiling, 
     VkFormatFeatureFlags const features
 ) {
-    for(uint8_t index = 0; index < candidates_count; index ++) {
+    for(U8 index = 0; index < candidates_count; index ++) {
         VkFormatProperties props;
         vkGetPhysicalDeviceFormatProperties(physical_device, candidates[index], &props);
 
@@ -818,10 +818,10 @@ VkDebugReportCallbackEXT_T * SetDebugCallback(
     return ret;
 }
 
-FindPhysicalDeviceResult FindPhysicalDevice(VkInstance_T * vk_instance, uint8_t const retry_count) {
+FindPhysicalDeviceResult FindPhysicalDevice(VkInstance_T * vk_instance, U8 const retry_count) {
     FindPhysicalDeviceResult ret {};
 
-    uint32_t device_count = 0;
+    U32 device_count = 0;
     //Getting number of physical devices
     VK_Check(vkEnumeratePhysicalDevices(
         vk_instance, 
@@ -852,7 +852,7 @@ FindPhysicalDeviceResult FindPhysicalDevice(VkInstance_T * vk_instance, uint8_t 
     vkGetPhysicalDeviceProperties(ret.physical_device, &deviceProperties);
     vkGetPhysicalDeviceFeatures(ret.physical_device, &ret.physical_device_features);
 
-    uint32_t supportedVersion[] = {
+    U32 supportedVersion[] = {
         VK_VERSION_MAJOR(deviceProperties.apiVersion),
         VK_VERSION_MINOR(deviceProperties.apiVersion),
         VK_VERSION_PATCH(deviceProperties.apiVersion)
@@ -863,6 +863,27 @@ FindPhysicalDeviceResult FindPhysicalDevice(VkInstance_T * vk_instance, uint8_t 
         supportedVersion[0], supportedVersion[1], supportedVersion[2]
     );
 
+    return ret;
+}
+
+bool CheckSwapChainSupport(VkPhysicalDevice_T * physical_device) {
+    bool ret = false;
+    U32 extension_count = 0;
+    VK_Check(vkEnumerateDeviceExtensionProperties(
+        physical_device, 
+        nullptr, 
+        &extension_count, 
+        nullptr
+    ));
+    std::vector<VkExtensionProperties> device_extensions(extension_count);
+    vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &extension_count, device_extensions.data());
+    for (const auto& extension : device_extensions) {
+        if (strcmp(extension.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
+            MFA_LOG_INFO("Physical device supports swap chains");
+            ret = true;
+            break;
+        }
+    }
     return ret;
 }
 
