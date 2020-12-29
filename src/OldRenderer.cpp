@@ -1,3 +1,4 @@
+#include <vector>
 #if 1
 #include "Renderer.hpp"
 
@@ -793,7 +794,6 @@ static void create_image(
     if (vkCreateImage(*m_state.device, &image_info, nullptr, &out_image) != VK_SUCCESS) {
         throw std::runtime_error("failed to create image!");
     }
-
     VkMemoryRequirements memory_requirements;
     vkGetImageMemoryRequirements(*m_state.device, out_image, &memory_requirements);
 

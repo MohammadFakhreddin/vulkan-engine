@@ -104,6 +104,10 @@ struct Header {
         return sizeof(Header) + (mip_count * sizeof(MipmapInfo));
     }
     [[nodiscard]]
+    size_t size() {
+        return Size(mip_count);
+    }
+    [[nodiscard]]
     bool is_valid() const {
         // TODO
         return true;

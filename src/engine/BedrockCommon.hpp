@@ -4,8 +4,6 @@
 
 #include "BedrockPlatforms.hpp"
 
-#include <cstdint>
-
 #define MFA_PTR_VALID(p_) ((p_) != nullptr)
 
 #define MFA_CONSUME_VAR(v_) ((void)(v_))
@@ -19,6 +17,11 @@
 #define MFA_STRINGIFY(x_)         MFA_STRINGIFY__IMPL(x_)
 
 #define MFA_DEFER auto MFA_UNIQUE_NAME(deferrinator_) = DeferHelper{} + [&]()
+
+#ifndef __PLATFORM_WIN__
+#include <stdio.h>
+#include <stddef.h>
+#endif
 
 // Do not use this, Use MFA_DEFFER instead
 template <typename F>
@@ -39,16 +42,20 @@ struct DeferHelper {
 
 namespace MFA {
 
-/* Ubiquitous Types */
-using I8 = int8_t;
-using I16 = int16_t;
-using I32 = int32_t;
-using I64 = int64_t;
+namespace _CommonInternal {
+#include <cstdint>
+}
 
-using U8 = uint8_t;
-using U16 = uint16_t;
-using U32 = uint32_t;
-using U64 = uint64_t;
+/* Ubiquitous Types */
+using I8 = _CommonInternal::std::int8_t;
+using I16 = _CommonInternal::std::int16_t;
+using I32 = _CommonInternal::std::int32_t;
+using I64 = _CommonInternal::std::int64_t;
+
+using U8 = _CommonInternal::std::uint8_t;
+using U16 = _CommonInternal::std::uint16_t;
+using U32 = _CommonInternal::std::uint32_t;
+using U64 = _CommonInternal::std::uint64_t;
 
 using Byte = U8;
 

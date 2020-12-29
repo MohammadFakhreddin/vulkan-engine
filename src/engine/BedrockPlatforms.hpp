@@ -5,8 +5,6 @@
 
 #include <chrono>
 
-#include "BedrockCommon.hpp"
-
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
     //define something for Windows (32-bit and 64-bit, this part is common)
 #define __PLATFORM_WIN__
@@ -55,11 +53,6 @@
   using supportedClock = std::chrono::system_clock;
 #else
   using supportedClock = std::chrono::steady_clock;
-#endif
-
-#ifndef __PLATFORM_WIN__
-#include <stdio.h>
-#include <stddef.h>
 #endif
 
 namespace MFA::Platforms {
