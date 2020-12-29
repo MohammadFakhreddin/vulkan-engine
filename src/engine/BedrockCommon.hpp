@@ -4,6 +4,8 @@
 
 #include "BedrockPlatforms.hpp"
 
+#include <cstdint>
+
 #define MFA_PTR_VALID(p_) ((p_) != nullptr)
 
 #define MFA_CONSUME_VAR(v_) ((void)(v_))
@@ -42,20 +44,16 @@ struct DeferHelper {
 
 namespace MFA {
 
-namespace _CommonInternal {
-#include <cstdint>
-}
-
 /* Ubiquitous Types */
-using I8 = _CommonInternal::std::int8_t;
-using I16 = _CommonInternal::std::int16_t;
-using I32 = _CommonInternal::std::int32_t;
-using I64 = _CommonInternal::std::int64_t;
+using I8 = std::int8_t;
+using I16 = std::int16_t;
+using I32 = std::int32_t;
+using I64 = std::int64_t;
 
-using U8 = _CommonInternal::std::uint8_t;
-using U16 = _CommonInternal::std::uint16_t;
-using U32 = _CommonInternal::std::uint32_t;
-using U64 = _CommonInternal::std::uint64_t;
+using U8 = std::uint8_t;
+using U16 = std::uint16_t;
+using U32 = std::uint32_t;
+using U64 = std::uint64_t;
 
 using Byte = U8;
 

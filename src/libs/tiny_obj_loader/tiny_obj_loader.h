@@ -349,7 +349,6 @@ void LoadMtl(std::map<std::string, int> *material_map,
 
 #ifdef TINYOBJLOADER_IMPLEMENTATION
 #include <cassert>
-#include <cctype>
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>

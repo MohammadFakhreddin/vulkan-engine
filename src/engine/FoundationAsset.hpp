@@ -100,6 +100,15 @@ struct Header {
     MipmapInfo      mipmap_infos[];
 
     [[nodiscard]]
+    size_t mip_offset_bytes (uint8_t const mip_level, uint8_t const slice_index = 0) const {
+        size_t ret = 0;
+        if(mip_level < mip_count && slice_index < slices) {
+            ret = mipmap_infos[mip_level].offset + slice_index * mipmap_infos[mip_level].size;
+        }
+        return ret;
+    }
+
+    [[nodiscard]]
     static size_t Size(U8 const mip_count) {
         return sizeof(Header) + (mip_count * sizeof(MipmapInfo));
     }

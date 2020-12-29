@@ -401,8 +401,7 @@ Load (Data & out_image_data, char const * path) {
                             out_image_data.dimension = [dx10_header]()-> uint8_t
                             {
                                 uint8_t dimensions = 0;
-                                switch (dx10_header->resource_dimension)
-                                {
+                                switch (dx10_header->resource_dimension) {
                                     case D3D10_ResourceDimension::D3D10_RESOURCE_DIMENSION_TEXTURE1D:
                                     dimensions = 1;
                                     break;
@@ -414,8 +413,7 @@ Load (Data & out_image_data, char const * path) {
                                     break;
                                     case D3D10_ResourceDimension::D3D10_RESOURCE_DIMENSION_BUFFER:
                                     case D3D10_ResourceDimension::D3D10_RESOURCE_DIMENSION_UNKNOWN:
-                                    MFA_NOT_IMPLEMENTED_YET();
-                                    dimensions = 0;
+                                    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
                                 };
                                 return dimensions;
                             }();

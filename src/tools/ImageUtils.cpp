@@ -41,7 +41,7 @@ LoadResult Load(Data & out_image_data, const char * path, bool const use_srgb) {
                     out_image_data.format = TextureFormat::UNCOMPRESSED_UNORM_R8G8B8A8_SRGB;
                     out_image_data.components = 4;
                     break;
-                default: MFA_NOT_IMPLEMENTED_YET();
+                default: MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
             }
         } else {
             switch (out_image_data.stbi_components) {

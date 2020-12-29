@@ -6,6 +6,7 @@
 #include "BedrockLog.hpp"
 #include "BedrockPlatforms.hpp"
 #include "BedrockMath.hpp"
+#include "BedrockMemory.hpp"
 
 namespace MFA::RenderBackend {
 
@@ -110,7 +111,7 @@ VkInstance_T * CreateInstance(char const * application_name, SDL_Window * window
         // The version of Vulkan we're using for this application
         application_info.apiVersion = VK_API_VERSION_1_1;
     }
-    std::vector<const char *> instance_extensions {};
+    std::vector<char const *> instance_extensions {};
     {// Filling sdl extensions
         unsigned int sdl_extenstion_count = 0;
         SDL_Check(SDL_Vulkan_GetInstanceExtensions(window, &sdl_extenstion_count, nullptr));
@@ -227,8 +228,7 @@ VkImageView_T * CreateImageView (
     return image_view;
 }
 
-[[nodiscard]]
-VkCommandBuffer BeginSingleTimeCommands(VkDevice_T * device, VkCommandPool const & command_pool) {
+VkCommandBuffer BeginSingleTimeCommand(VkDevice_T * device, VkCommandPool const & command_pool) {
     MFA_PTR_ASSERT(device);
     
     VkCommandBufferAllocateInfo allocate_info{};
@@ -277,7 +277,7 @@ VkFormat FindDepthFormat(VkPhysicalDevice_T * physical_device) {
     };
     return FindSupportedFormat (
         physical_device,
-        candidate_formats.size(),
+        static_cast<U8>(candidate_formats.size()),
         candidate_formats.data(),
         VK_IMAGE_TILING_OPTIMAL,
         VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
@@ -315,7 +315,7 @@ void TransferImageLayout(
     VkImageLayout const new_layout
 ) {
     MFA_PTR_ASSERT(device);
-    VkCommandBuffer_T * command_buffer = BeginSingleTimeCommands(device, command_pool);
+    VkCommandBuffer_T * command_buffer = BeginSingleTimeCommand(device, command_pool);
 
     VkImageMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -435,7 +435,7 @@ void CreateImage(
     U32 const height,
     U32 const depth,
     U8 const mip_levels,
-    U8 const slice_count,
+    U16 const slice_count,
     VkFormat const format, 
     VkImageTiling const tiling, 
     VkImageUsageFlags const usage, 
@@ -487,9 +487,11 @@ GpuTexture CreateTexture(
     CpuTexture & cpu_texture,
     VkDevice_T * device,
     VkPhysicalDevice_T * physical_device,
+    VkQueue const & graphic_queue,
     VkCommandPool_T * command_pool
 ) {
     MFA_PTR_ASSERT(device);
+    MFA_PTR_ASSERT(physical_device);
     MFA_PTR_ASSERT(command_pool);
     GpuTexture gpu_texture {};
     if(cpu_texture.valid()) {
@@ -507,6 +509,7 @@ GpuTexture CreateTexture(
             upload_buffer,
             upload_buffer_memory,
             device,
+            physical_device,
             data_blob.len,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
@@ -514,6 +517,8 @@ GpuTexture CreateTexture(
         MFA_DEFER {DestroyBuffer(device, upload_buffer, upload_buffer_memory);};
         // Map texture data to buffer
         MapDataToBuffer(device, upload_buffer_memory, data_blob);
+
+        auto const vulkan_format = ConvertCpuTextureFormatToGpu(format);
 
         VkImage_T * image = nullptr;
         VkDeviceMemory_T * image_memory = nullptr;
@@ -527,21 +532,55 @@ GpuTexture CreateTexture(
             largest_mipmap_info.dims.depth,
             mip_count,
             slice_count,
-            ConvertCpuTextureFormatToGpu(format),
+            vulkan_format,
             VK_IMAGE_TILING_OPTIMAL, 
             VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
 
-        TransferImageLayout();
+        TransferImageLayout(
+            device,
+            graphic_queue,
+            command_pool,
+            image,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+        );
 
-        CopyBufferToImage();
+        CopyBufferToImage(
+            device,
+            command_pool,
+            upload_buffer,
+            image,
+            graphic_queue,
+            cpu_texture
+        );
 
-        TransferImageLayout();
+        TransferImageLayout(
+            device,
+            graphic_queue,
+            command_pool,
+            image,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+        );
 
-        CreateImageView();
+        VkImageView_T * image_view = CreateImageView(
+            device,
+            image,
+            vulkan_format,
+            VK_IMAGE_ASPECT_COLOR_BIT
+        );
 
-        // Assign to GpuTexture
+        MFA_PTR_ASSERT(image);
+        gpu_texture.m_image = image;
+        MFA_PTR_ASSERT(image_memory);
+        gpu_texture.m_image_memory = image_memory;
+        MFA_PTR_ASSERT(image_view);
+        gpu_texture.m_image_view = image_view;
+        gpu_texture.m_cpu_texture = cpu_texture;
+        gpu_texture.m_device = device;
+        gpu_texture.m_is_valid = true;
     }
     return gpu_texture;
 }
@@ -600,9 +639,59 @@ VkFormat ConvertCpuTextureFormatToGpu(Asset::TextureFormat cpu_format) {
         return VkFormat::VK_FORMAT_BC7_SRGB_BLOCK;
     default:
         MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
-        break;
     }
-    MFA_CRASH("Unhandled format detected"); 
+}
+
+void CopyBufferToImage(
+    VkDevice_T * device,
+    VkCommandPool_T * command_pool,
+    VkBuffer_T * buffer,
+    VkImage_T * image,
+    VkQueue_T * graphic_queue,
+    CpuTexture const & cpu_texture
+) {
+    MFA_PTR_ASSERT(device);
+    MFA_PTR_ASSERT(command_pool);
+    MFA_PTR_ASSERT(buffer);
+    MFA_PTR_ASSERT(image);
+    MFA_ASSERT(cpu_texture.valid());
+
+    VkCommandBuffer_T * command_buffer = BeginSingleTimeCommand(device, command_pool);
+
+    auto const * cpu_texture_header = cpu_texture.header_object();
+    auto const regions_count = cpu_texture_header->mip_count * cpu_texture_header->slices;
+    // TODO Maybe add a function allocate from heap
+    auto const regions_blob = Memory::Alloc(regions_count * sizeof(VkBufferImageCopy));
+    MFA_DEFER {Memory::Free(regions_blob);};
+    auto * regions_array = regions_blob.as<VkBufferImageCopy>();
+
+    for(U8 slice_index = 0; slice_index < cpu_texture_header->slices; slice_index++) {
+        for(U8 mip_level = 0; mip_level < cpu_texture_header->mip_count; mip_level++) {
+            auto const & mip_info = cpu_texture_header->mipmap_infos[mip_level];
+            auto & region = regions_array[mip_level];
+            region.imageExtent.width = mip_info.dims.width; 
+            region.imageExtent.height = mip_info.dims.height; 
+            region.imageExtent.depth = mip_info.dims.depth;
+            // TODO Make sure that importer does not add header to offset
+            region.bufferOffset = static_cast<U32>(cpu_texture_header->mip_offset_bytes(mip_level, slice_index)); 
+            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            region.imageSubresource.mipLevel = cpu_texture_header->mip_count - mip_level - 1;
+            region.imageSubresource.baseArrayLayer = slice_index;
+            region.imageSubresource.layerCount = 1;
+        }
+    }
+
+    vkCmdCopyBufferToImage(
+        command_buffer,
+        buffer,
+        image,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        regions_count,
+        regions_array
+    );
+
+    EndAndSubmitSingleTimeCommand(&device, command_pool, graphic_queue, command_buffer);
+
 }
 
 }

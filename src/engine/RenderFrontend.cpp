@@ -6,6 +6,8 @@
 #include "BedrockLog.hpp"
 #include "RenderBackend.hpp"
 
+#include <string>
+
 namespace MFA::RenderFrontend {
 
 using namespace RenderBackend;
@@ -15,7 +17,7 @@ struct State {
     ScreenWidth screen_width = 0;
     ScreenHeight screen_height = 0;
     // CreateInstance
-    std::string application_name {};
+    std::string application_name;
     VkInstance vk_instance {};
     // CreateWindow
     SDL_Window * window {};

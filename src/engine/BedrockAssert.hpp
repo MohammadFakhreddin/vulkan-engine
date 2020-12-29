@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <stdexcept>
+#include <cstring>
 
 #include "engine/BedrockPlatforms.hpp"
 

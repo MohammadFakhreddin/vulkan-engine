@@ -3,13 +3,13 @@
 #include "BedrockCommon.hpp"
 #include "FoundationAsset.hpp"
 
-// Note: Not all functions can be called from outside
-// TODO Remove functions that are not usable from outside
-namespace MFA::RenderBackend {
-
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
 #include <vulkan/vulkan.h>
+
+// Note: Not all functions can be called from outside
+// TODO Remove functions that are not usable from outside
+namespace MFA::RenderBackend {
 
 using ScreenWidth = Platforms::ScreenSizeType;
 using ScreenHeight = Platforms::ScreenSizeType;
@@ -89,9 +89,10 @@ void CreateBuffer(
     VkBuffer_T * & out_buffer, 
     VkDeviceMemory_T * & out_buffer_memory,
     VkDevice_T * device,
+    VkPhysicalDevice_T * physical_device,
     VkDeviceSize size, 
     VkBufferUsageFlags usage, 
-    VkMemoryPropertyFlags properties
+    VkMemoryPropertyFlags properties 
 );
 
 void MapDataToBuffer(
@@ -115,7 +116,7 @@ void CreateImage(
     U32 height,
     U32 depth,
     U8 mip_levels,
-    U8 slice_count,
+    U16 slice_count,
     VkFormat format, 
     VkImageTiling tiling, 
     VkImageUsageFlags usage, 
@@ -130,22 +131,39 @@ void DestroyImage(
 
 class GpuTexture;
 
-GpuTexture CreateTexture(CpuTexture & cpu_texture, VkDevice_T * device);
+[[nodiscard]]
+GpuTexture CreateTexture(
+    CpuTexture & cpu_texture,
+    VkDevice_T * device,
+    VkPhysicalDevice_T * physical_device,
+    VkQueue const & graphic_queue,
+    VkCommandPool_T * command_pool
+);
 
 bool DestroyTexture(GpuTexture & gpu_texture);
 
 // TODO It needs handle system // TODO Might be moved to a new class called render_types
 class GpuTexture {
-friend GpuTexture CreateTexture(CpuTexture & cpu_texture, VkDevice_T * device);
+friend GpuTexture CreateTexture(
+    CpuTexture & cpu_texture,
+    VkDevice_T * device,
+    VkPhysicalDevice_T * physical_device,
+    VkQueue const & graphic_queue,
+    VkCommandPool_T * command_pool
+);
 friend bool DestroyTexture(GpuTexture & gpu_texture);
 public:
     ~GpuTexture() {
         DestroyTexture(*this);
-    };
-    CpuTexture const * cpu_texture() const {return &m_cpu_texture;};
-    bool valid () const {return m_is_valid;};
-    VkImage_T * const image() const {return m_image;};
-    VkImageView_T * image_view() const {return m_image_view;};
+    }
+    [[nodiscard]]
+    CpuTexture const * cpu_texture() const {return &m_cpu_texture;}
+    [[nodiscard]]
+    bool valid () const {return m_is_valid;}
+    [[nodiscard]]
+    VkImage_T const * image() const {return m_image;}
+    [[nodiscard]]
+    VkImageView_T * image_view() const {return m_image_view;}
 private:
     VkDevice_T * m_device = nullptr;
     VkImage_T * m_image = nullptr;
@@ -157,5 +175,14 @@ private:
 
 [[nodiscard]]
 VkFormat ConvertCpuTextureFormatToGpu(Asset::TextureFormat cpu_format);
+
+void CopyBufferToImage(
+    VkDevice_T * device,
+    VkCommandPool_T * command_pool,
+    VkBuffer_T * buffer,
+    VkImage_T * image,
+    VkQueue_T * graphic_queue,
+    CpuTexture const & cpu_texture
+);
 
 }
