@@ -1,14 +1,15 @@
-#if 0
+#if 1
 
-#include "Renderer.hpp"
 #include <vector>
 #include <vulkan/vulkan.h>
 #include <cassert>
 #include <iostream>
 #include <array>
+#include <SDL2/SDL_video.h>
 
 #include "Platforms.hpp"
 #include "FileSystem.hpp"
+#include "Renderer.hpp"
 
 namespace MFA {
 namespace Renderer {
@@ -550,10 +551,10 @@ static void create_logical_device() {
     queue_create_info[0].queueCount = 1;
     queue_create_info[0].pQueuePriorities = &queue_priority;
 
-    queue_create_info[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queue_create_info[0].queueFamilyIndex = m_state.present_queue_family;
-    queue_create_info[0].queueCount = 1;
-    queue_create_info[0].pQueuePriorities = &queue_priority;
+    queue_create_info[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queue_create_info[1].queueFamilyIndex = m_state.present_queue_family;
+    queue_create_info[1].queueCount = 1;
+    queue_create_info[1].pQueuePriorities = &queue_priority;
 
     // Create logical device from physical device
     // Note: there are separate instance and device extensions!

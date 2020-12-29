@@ -6,6 +6,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
 #include <vulkan/vulkan.h>
+#include <functional>
 
 // Note: Not all functions can be called from outside
 // TODO Remove functions that are not usable from outside
@@ -85,9 +86,12 @@ void TransferImageLayout(
     VkImageLayout new_layout
 );
 
-void CreateBuffer(
-    VkBuffer_T * & out_buffer, 
-    VkDeviceMemory_T * & out_buffer_memory,
+struct CreateBufferResult {
+    VkBuffer_T * buffer = nullptr;
+    VkDeviceMemory_T * buffer_memory = nullptr;
+};
+[[nodiscard]]
+CreateBufferResult CreateBuffer(
     VkDevice_T * device,
     VkPhysicalDevice_T * physical_device,
     VkDeviceSize size, 
@@ -107,9 +111,12 @@ void DestroyBuffer(
     VkDeviceMemory_T * memory
 );
 
-void CreateImage(
-    VkImage_T * & out_image, 
-    VkDeviceMemory_T * & out_image_memory,
+struct CreateImageResult {
+    VkImage_T * image = nullptr;
+    VkDeviceMemory_T * image_memory = nullptr;
+};
+[[nodiscard]]
+CreateImageResult CreateImage(
     VkDevice_T * device,
     VkPhysicalDevice_T * physical_device,
     U32 width, 
@@ -183,6 +190,31 @@ void CopyBufferToImage(
     VkImage_T * image,
     VkQueue_T * graphic_queue,
     CpuTexture const & cpu_texture
+);
+
+using DebugCallback = std::function<VkBool32(
+    VkDebugReportFlagsEXT flags,
+    VkDebugReportObjectTypeEXT object_type,
+    uint64_t src_object, 
+    size_t location,
+    int32_t message_code,
+    char const * player_prefix,
+    char const * message,
+    void * user_data
+)>;
+
+struct CreateLogicalDeviceResult {
+    VkDevice_T * device;
+    VkPhysicalDeviceMemoryProperties physical_memory_properties;
+};
+[[nodiscard]]
+CreateLogicalDeviceResult CreateLogicalDevice(
+    VkPhysicalDevice_T * physical_device,
+    U32 const graphics_queue_family,
+    VkQueue_T * graphic_queue,
+    U32 const present_queue_family,
+    VkQueue_T * present_queue,
+    VkPhysicalDeviceFeatures const & enabled_physical_device_features
 );
 
 }

@@ -367,9 +367,7 @@ void TransferImageLayout(
     EndAndSubmitSingleTimeCommand(&device, command_pool, graphic_queue, command_buffer);
 }
 
-void CreateBuffer(
-    VkBuffer_T * & out_buffer, 
-    VkDeviceMemory_T * & out_buffer_memory,
+CreateBufferResult CreateBuffer(
     VkDevice_T * device,
     VkPhysicalDevice_T * physical_device,
     VkDeviceSize const size, 
@@ -378,8 +376,8 @@ void CreateBuffer(
 ) {
     MFA_PTR_ASSERT(device);
     MFA_PTR_ASSERT(physical_device);
-    MFA_PTR_VALID(out_buffer);
-    MFA_PTR_VALID(out_buffer_memory);
+
+    CreateBufferResult ret {};
 
     VkBufferCreateInfo buffer_info {};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -387,10 +385,10 @@ void CreateBuffer(
     buffer_info.usage = usage;
     buffer_info.sharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;
 
-    VK_Check(vkCreateBuffer(device, &buffer_info, nullptr, &out_buffer));
-
+    VK_Check(vkCreateBuffer(device, &buffer_info, nullptr, &ret.buffer));
+    MFA_PTR_ASSERT(ret.buffer);
     VkMemoryRequirements memory_requirements {};
-    vkGetBufferMemoryRequirements(device, out_buffer, &memory_requirements);
+    vkGetBufferMemoryRequirements(device, ret.buffer, &memory_requirements);
 
     VkMemoryAllocateInfo memory_allocation_info {};
     memory_allocation_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -401,8 +399,9 @@ void CreateBuffer(
         properties
     );
 
-    VK_Check(vkAllocateMemory(device, &memory_allocation_info, nullptr, &out_buffer_memory));
-    VK_Check(vkBindBufferMemory(device, out_buffer, out_buffer_memory, 0));
+    VK_Check(vkAllocateMemory(device, &memory_allocation_info, nullptr, &ret.buffer_memory));
+    VK_Check(vkBindBufferMemory(device, ret.buffer, ret.buffer_memory, 0));
+    return ret;
 }
 
 void MapDataToBuffer(
@@ -426,9 +425,7 @@ void DestroyBuffer(
     vkFreeMemory(device, memory, nullptr);
 }
 
-void CreateImage(
-    VkImage_T * & out_image, 
-    VkDeviceMemory_T * & out_image_memory,
+CreateImageResult CreateImage(
     VkDevice_T * device,
     VkPhysicalDevice_T * physical_device,
     U32 const width, 
@@ -441,6 +438,8 @@ void CreateImage(
     VkImageUsageFlags const usage, 
     VkMemoryPropertyFlags const properties
 ) {
+    CreateImageResult ret {};
+
     VkImageCreateInfo image_info{};
     image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     image_info.imageType = VK_IMAGE_TYPE_2D;
@@ -456,10 +455,10 @@ void CreateImage(
     image_info.samples = VK_SAMPLE_COUNT_1_BIT;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    VK_Check(vkCreateImage(device, &image_info, nullptr, &out_image));
+    VK_Check(vkCreateImage(device, &image_info, nullptr, &ret.image));
 
     VkMemoryRequirements memory_requirements;
-    vkGetImageMemoryRequirements(device, out_image, &memory_requirements);
+    vkGetImageMemoryRequirements(device, ret.image, &memory_requirements);
 
     VkMemoryAllocateInfo allocate_info{};
     allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -470,8 +469,8 @@ void CreateImage(
         properties
     );
 
-    VK_Check(vkAllocateMemory(device, &allocate_info, nullptr, &out_image_memory));
-    VK_Check(vkBindImageMemory(device, out_image, out_image_memory, 0)); 
+    VK_Check(vkAllocateMemory(device, &allocate_info, nullptr, &ret.image_memory));
+    VK_Check(vkBindImageMemory(device, ret.image, ret.image_memory, 0)); 
 }
 
 void DestroyImage(
@@ -495,7 +494,7 @@ GpuTexture CreateTexture(
     MFA_PTR_ASSERT(command_pool);
     GpuTexture gpu_texture {};
     if(cpu_texture.valid()) {
-        auto cpu_texture_header = cpu_texture.header_object();
+        auto const * cpu_texture_header = cpu_texture.header_object();
         auto const format = cpu_texture_header->format;
         auto const mip_count = cpu_texture_header->mip_count;
         auto const slice_count = cpu_texture_header->slices;
@@ -503,28 +502,22 @@ GpuTexture CreateTexture(
         auto const data_blob = cpu_texture.data();
         MFA_BLOB_ASSERT(data_blob);
         // Create upload buffer
-        VkBuffer_T * upload_buffer = nullptr;
-        VkDeviceMemory_T * upload_buffer_memory = nullptr;
-        CreateBuffer(
-            upload_buffer,
-            upload_buffer_memory,
+        auto const create_buffer_result = CreateBuffer(
             device,
             physical_device,
             data_blob.len,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
+        VkBuffer_T * upload_buffer = create_buffer_result.buffer;
+        VkDeviceMemory_T * upload_buffer_memory = create_buffer_result.buffer_memory;
         MFA_DEFER {DestroyBuffer(device, upload_buffer, upload_buffer_memory);};
         // Map texture data to buffer
         MapDataToBuffer(device, upload_buffer_memory, data_blob);
 
         auto const vulkan_format = ConvertCpuTextureFormatToGpu(format);
 
-        VkImage_T * image = nullptr;
-        VkDeviceMemory_T * image_memory = nullptr;
-        CreateImage(
-            image, 
-            image_memory, 
+        auto const create_image_result = CreateImage(
             device, 
             physical_device, 
             largest_mipmap_info.dims.width,
@@ -537,7 +530,9 @@ GpuTexture CreateTexture(
             VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
-
+        VkImage_T * image = create_image_result.image;
+        VkDeviceMemory_T * image_memory = create_image_result.image_memory;
+        
         TransferImageLayout(
             device,
             graphic_queue,
@@ -605,7 +600,7 @@ bool DestroyTexture(GpuTexture & gpu_texture) {
     return success;
 }
 
-VkFormat ConvertCpuTextureFormatToGpu(Asset::TextureFormat cpu_format) {
+VkFormat ConvertCpuTextureFormatToGpu(Asset::TextureFormat const cpu_format) {
     using namespace Asset;
     switch (cpu_format)
     {
@@ -692,6 +687,71 @@ void CopyBufferToImage(
 
     EndAndSubmitSingleTimeCommand(&device, command_pool, graphic_queue, command_buffer);
 
+}
+
+CreateLogicalDeviceResult CreateLogicalDevice(
+    VkPhysicalDevice_T * physical_device,
+    U32 const graphics_queue_family,
+    VkQueue_T * graphic_queue,
+    U32 const present_queue_family,
+    VkQueue_T * present_queue,
+    VkPhysicalDeviceFeatures const & enabled_physical_device_features
+) {
+    CreateLogicalDeviceResult ret {};
+
+    MFA_PTR_ASSERT(physical_device);
+    MFA_PTR_ASSERT(graphic_queue);
+    MFA_PTR_ASSERT(present_queue);
+
+    // Create one graphics queue and optionally a separate presentation queue
+    float queue_priority = 1.0f;
+
+    VkDeviceQueueCreateInfo queue_create_info[2] = {};
+
+    queue_create_info[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queue_create_info[0].queueFamilyIndex = graphics_queue_family;
+    queue_create_info[0].queueCount = 1;
+    queue_create_info[0].pQueuePriorities = &queue_priority;
+
+    queue_create_info[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queue_create_info[1].queueFamilyIndex = present_queue_family;
+    queue_create_info[1].queueCount = 1;
+    queue_create_info[1].pQueuePriorities = &queue_priority;
+
+    // Create logical device from physical device
+    // Note: there are separate instance and device extensions!
+    VkDeviceCreateInfo deviceCreateInfo = {};
+    deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    deviceCreateInfo.pQueueCreateInfos = queue_create_info;
+
+    if (graphics_queue_family == present_queue_family) {
+        deviceCreateInfo.queueCreateInfoCount = 1;
+    } else {
+        deviceCreateInfo.queueCreateInfoCount = 2;
+    }
+
+    const char* device_extensions = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+    deviceCreateInfo.enabledExtensionCount = 1;
+    deviceCreateInfo.ppEnabledExtensionNames = &device_extensions;
+    // Necessary for shader (for some reason)
+    deviceCreateInfo.pEnabledFeatures = &enabled_physical_device_features;
+
+    std::vector<char const *> debug_layers {};
+    debug_layers.emplace_back(DebugLayer);
+    deviceCreateInfo.enabledLayerCount = static_cast<U32>(debug_layers.size());
+    deviceCreateInfo.ppEnabledLayerNames = debug_layers.data();
+
+    VK_Check(vkCreateDevice(physical_device, &deviceCreateInfo, nullptr, &ret.device));
+    MFA_PTR_ASSERT(ret.device);
+    MFA_LOG_INFO("Logical device create was successful");
+    // Get graphics and presentation queues (which may be the same)
+    vkGetDeviceQueue(ret.device, graphics_queue_family, 0, &graphic_queue);
+    vkGetDeviceQueue(ret.device, present_queue_family, 0, &present_queue);
+
+    MFA_LOG_INFO("Acquired graphics and presentation queues");
+    vkGetPhysicalDeviceMemoryProperties(physical_device, &ret.physical_memory_properties);
+
+    return ret;
 }
 
 }
