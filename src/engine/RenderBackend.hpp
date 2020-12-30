@@ -239,4 +239,22 @@ struct FindPhysicalDeviceResult {
 [[nodiscard]]
 FindPhysicalDeviceResult FindPhysicalDevice(VkInstance_T * vk_instance, U8 retry_count);
 
+[[nodiscard]]
+bool CheckSwapChainSupport(VkPhysicalDevice_T * physical_device);
+
+struct FindPresentAndGraphicQueueFamilyResult {
+    U32 present_queue_family;
+    U32 graphic_queue_family;
+};
+[[nodiscard]]
+FindPresentAndGraphicQueueFamilyResult FindPresentAndGraphicQueueFamily(
+    VkPhysicalDevice_T * physical_device, 
+    VkSurfaceKHR_T * window_surface
+);
+
+[[nodiscard]]
+VkCommandPool_T * CreateCommandPool(VkDevice_T * device, U32 queue_family_index);
+
+void DestroyCommandPool(VkDevice_T * device, VkCommandPool_T * command_pool);
+
 }

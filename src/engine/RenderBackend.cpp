@@ -887,4 +887,79 @@ bool CheckSwapChainSupport(VkPhysicalDevice_T * physical_device) {
     return ret;
 }
 
+FindPresentAndGraphicQueueFamilyResult FindPresentAndGraphicQueueFamily(
+    VkPhysicalDevice_T * physical_device, 
+    VkSurfaceKHR_T * window_surface
+) {
+    FindPresentAndGraphicQueueFamilyResult ret {};
+
+    U32 queue_family_count = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, nullptr);
+    if (queue_family_count == 0) {
+        MFA_CRASH("physical device has no queue families!");
+    }
+    // Find queue family with graphics support
+    // Note: is a transfer queue necessary to copy vertices to the gpu or can a graphics queue handle that?
+    std::vector<VkQueueFamilyProperties> queueFamilies(queue_family_count);
+    vkGetPhysicalDeviceQueueFamilyProperties(
+        physical_device, 
+        &queue_family_count, 
+        queueFamilies.data()
+    );
+    
+    MFA_LOG_INFO("physical device has %d queue families.", queue_family_count);
+
+    bool found_graphic_queue_family = false;
+    bool found_present_queue_family = false;
+    for (U32 i = 0; i < queue_family_count; i++) {
+        VkBool32 present_is_supported = false;
+        vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, window_surface, &present_is_supported);
+        if (queueFamilies[i].queueCount > 0 && queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+            ret.graphic_queue_family = i;
+            found_graphic_queue_family = true;
+            if (present_is_supported) {
+                ret.present_queue_family = i;
+                found_present_queue_family = true;
+                break;
+            }
+        }
+        if (!found_present_queue_family && present_is_supported) {
+            ret.present_queue_family = i;
+            found_present_queue_family = true;
+        }
+    }
+    if (found_graphic_queue_family) {
+        MFA_LOG_INFO("Queue family # %d supports graphics", ret.graphic_queue_family);
+        if (found_present_queue_family) {
+            MFA_LOG_INFO("Queue family # %d supports presentation", ret.present_queue_family);
+        } else {
+            MFA_CRASH("Could not find a valid queue family with present support");
+        }
+    } else {
+        MFA_CRASH("Could not find a valid queue family with graphics support");
+    }
+
+    return ret; 
+}
+
+VkCommandPool_T * CreateCommandPool(VkDevice_T * device, U32 const queue_family_index) {
+    MFA_PTR_ASSERT(device);
+    // Create graphics command pool
+    VkCommandPoolCreateInfo pool_create_info = {};
+    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_create_info.queueFamilyIndex = queue_family_index;
+
+    VkCommandPool_T * command_pool = nullptr;
+    VK_Check(vkCreateCommandPool(device, &pool_create_info, nullptr, &command_pool));
+
+    return command_pool;
+}
+
+void DestroyCommandPool(VkDevice_T * device, VkCommandPool_T * command_pool) {
+    MFA_ASSERT(device);
+    vkDestroyCommandPool(device, command_pool, nullptr);
+}
+
+// TODO CreateSwapChainImageView
+
 }
