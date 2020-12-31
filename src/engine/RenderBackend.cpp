@@ -960,6 +960,243 @@ void DestroyCommandPool(VkDevice_T * device, VkCommandPool_T * command_pool) {
     vkDestroyCommandPool(device, command_pool, nullptr);
 }
 
+CreateSwapChainResult CreateSwapChain(
+    VkDevice_T * device,
+    VkPhysicalDevice_T * physical_device, 
+    VkSurfaceKHR_T * window_surface,
+    ScreenWidth const width,
+    ScreenHeight const height,
+    VkSwapchainKHR_T * old_swap_chain
+) {
+    // Find surface capabilities
+    VkSurfaceCapabilitiesKHR surface_capabilities;
+    VK_Check (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, window_surface, &surface_capabilities));
+
+    // Find supported surface formats
+    uint32_t formatCount;
+    if (
+        vkGetPhysicalDeviceSurfaceFormatsKHR(
+            physical_device, 
+            window_surface, 
+            &formatCount, 
+            nullptr
+        ) != VK_SUCCESS || 
+        formatCount == 0
+    ) {
+        MFA_CRASH("Failed to get number of supported surface formats");
+    }
+    
+    std::vector<VkSurfaceFormatKHR> surface_formats(formatCount);
+    VK_Check (vkGetPhysicalDeviceSurfaceFormatsKHR(
+        physical_device, 
+        window_surface, 
+        &formatCount, 
+        surface_formats.data()
+    ));
+
+    // Find supported present modes
+    uint32_t presentModeCount;
+    if (vkGetPhysicalDeviceSurfacePresentModesKHR(
+        physical_device, 
+        window_surface, 
+        &presentModeCount, 
+        nullptr
+    ) != VK_SUCCESS || presentModeCount == 0) {
+        MFA_CRASH("Failed to get number of supported presentation modes");
+    }
+
+    std::vector<VkPresentModeKHR> present_modes(presentModeCount);
+    VK_Check (vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, window_surface, &presentModeCount, present_modes.data()));
+
+    // Determine number of images for swap chain
+    uint32_t imageCount = surface_capabilities.minImageCount + 1;
+    if (surface_capabilities.maxImageCount != 0 && imageCount > surface_capabilities.maxImageCount) {
+        imageCount = surface_capabilities.maxImageCount;
+    }
+
+    MFA_LOG_INFO("Using %d images for swap chain.", imageCount);
+    MFA_ASSERT(surface_formats.size() <= 255);
+    // Select a surface format
+    auto const selected_surface_format = ChooseSurfaceFormat(static_cast<uint8_t>(surface_formats.size()) ,surface_formats.data());
+
+    // Select swap chain size
+    auto const selected_swap_chain_extent = ChooseSwapChainExtent(surface_capabilities, width, height);
+
+    // Determine transformation to use (preferring no transform)
+    VkSurfaceTransformFlagBitsKHR surfaceTransform {};
+    if (surface_capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
+        surfaceTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+    }
+    else {
+        surfaceTransform = surface_capabilities.currentTransform;
+    }
+
+    MFA_ASSERT(present_modes.size() <= 255);
+    // Choose presentation mode (preferring MAILBOX ~= triple buffering)
+    auto const selected_present_mode = ChoosePresentMode(static_cast<uint8_t>(present_modes.size()), present_modes.data());
+
+    // Finally, create the swap chain
+    VkSwapchainCreateInfoKHR createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    createInfo.surface = window_surface;
+    createInfo.minImageCount = imageCount;
+    createInfo.imageFormat = selected_surface_format.format;
+    createInfo.imageColorSpace = selected_surface_format.colorSpace;
+    createInfo.imageExtent = selected_swap_chain_extent;
+    createInfo.imageArrayLayers = 1;
+    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    createInfo.queueFamilyIndexCount = 0;
+    createInfo.pQueueFamilyIndices = nullptr;
+    createInfo.preTransform = surfaceTransform;
+    createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    createInfo.presentMode = selected_present_mode;
+    createInfo.clipped = VK_TRUE;
+    createInfo.oldSwapchain = old_swap_chain;
+
+    CreateSwapChainResult ret {};
+
+    VK_Check (vkCreateSwapchainKHR(device, &createInfo, nullptr, &ret.swap_chain));
+
+    MFA_LOG_INFO("Created swap chain");
+    
+    if (MFA_PTR_VALID(old_swap_chain)) {
+        vkDestroySwapchainKHR(device, old_swap_chain, nullptr);
+    }
+    // TODO This should be inside Frontend layer
+    //m_state.old_swap_chain = m_state.swap_chain;
+    ret.swap_chain_format = selected_surface_format.format;
+    
+    // Store the images used by the swap chain
+    // Note: these are the images that swap chain image indices refer to
+    // Note: actual number of images may differ from requested number, since it's a lower bound
+    uint32_t actual_image_count = 0;
+    if (
+        vkGetSwapchainImagesKHR(device, ret.swap_chain, &actual_image_count, nullptr) != VK_SUCCESS || 
+        actual_image_count == 0
+    ) {
+        MFA_CRASH("Failed to acquire number of swap chain images");
+    }
+
+    ret.swap_chain_images.resize(actual_image_count);
+
+    VK_Check (vkGetSwapchainImagesKHR(
+        device,
+        ret.swap_chain,
+        &actual_image_count,
+        ret.swap_chain_images.data()
+    ));
+
+    MFA_LOG_INFO("Acquired swap chain images");
+    return ret;
+}
+
 // TODO CreateSwapChainImageView
+
+VkRenderPass_T * CreateRenderPass(
+    VkPhysicalDevice_T * physical_device, 
+    VkDevice_T * device, 
+    VkFormat const swap_chain_format
+) {
+    VkAttachmentDescription color_attachment = {};
+    color_attachment.format = swap_chain_format;
+    color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    color_attachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    VkAttachmentDescription depth_attachment{};
+    depth_attachment.format = FindDepthFormat(physical_device);
+    depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    
+    // Note: hardware will automatically transition attachment to the specified layout
+    // Note: index refers to attachment descriptions array
+    VkAttachmentReference colorAttachmentReference = {};
+    colorAttachmentReference.attachment = 0;
+    colorAttachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference depthAttachmentRef{};
+    depthAttachmentRef.attachment = 1;
+    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    // Note: this is a description of how the attachments of the render pass will be used in this sub pass
+    // e.g. if they will be read in shaders and/or drawn to
+    VkSubpassDescription subPassDescription = {};
+    subPassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subPassDescription.colorAttachmentCount = 1;
+    subPassDescription.pColorAttachments = &colorAttachmentReference;
+    subPassDescription.pDepthStencilAttachment = &depthAttachmentRef;
+
+    VkSubpassDependency dependency{};
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass = 0;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+    std::vector<VkAttachmentDescription> attachments = {color_attachment, depth_attachment};
+    // Create the render pass
+    VkRenderPassCreateInfo createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());;
+    createInfo.pAttachments = attachments.data();
+    createInfo.subpassCount = 1;
+    createInfo.pSubpasses = &subPassDescription;
+    createInfo.dependencyCount = 1;
+    createInfo.pDependencies = &dependency;
+
+    VkRenderPass_T * render_pass = nullptr;
+    VK_Check (vkCreateRenderPass(device, &createInfo, nullptr, &render_pass));
+
+    MFA_LOG_INFO("Created render pass.");
+
+    return render_pass;
+}
+
+std::vector<VkFramebuffer_T *> CreateFrameBuffers(
+    VkDevice_T * device,
+    VkRenderPass_T * render_pass,
+    U32 const swap_chain_image_views_count, 
+    VkImageView_T ** swap_chain_image_views,
+    VkImageView_T * depth_image_view,
+    VkExtent2D const swap_chain_extent
+) {
+    MFA_ASSERT(swap_chain_image_views_count > 0);
+    MFA_PTR_ASSERT(swap_chain_image_views);
+    std::vector<VkFramebuffer_T *> swap_chain_frame_buffers {swap_chain_image_views_count};
+
+    // Note: FrameBuffer is basically a specific choice of attachments for a render pass
+    // That means all attachments must have the same dimensions, interesting restriction
+    for (size_t i = 0; i < swap_chain_image_views_count; i++) {
+
+        std::vector<VkImageView> attachments = {
+            swap_chain_image_views[i],
+            depth_image_view
+        };
+
+        VkFramebufferCreateInfo create_info = {};
+        create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        create_info.renderPass = render_pass;
+        create_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+        create_info.pAttachments = attachments.data();
+        create_info.width = swap_chain_extent.width;
+        create_info.height = swap_chain_extent.height;
+        create_info.layers = 1;
+
+        VK_Check(vkCreateFramebuffer(device, &create_info, nullptr, &swap_chain_frame_buffers[i]));
+    }
+
+    MFA_LOG_INFO("Created frame-buffers for swap chain image views");
+}
 
 }

@@ -257,4 +257,50 @@ VkCommandPool_T * CreateCommandPool(VkDevice_T * device, U32 queue_family_index)
 
 void DestroyCommandPool(VkDevice_T * device, VkCommandPool_T * command_pool);
 
+struct CreateSwapChainResult {
+    VkSwapchainKHR_T * swap_chain = nullptr;
+    VkFormat swap_chain_format {};
+    std::vector<VkImage_T *> swap_chain_images {};
+    // SwapChainImageViews
+};
+[[nodiscard]]
+CreateSwapChainResult CreateSwapChain(
+    VkDevice_T * device,
+    VkPhysicalDevice_T * physical_device, 
+    VkSurfaceKHR_T * window_surface,
+    ScreenWidth width,
+    ScreenHeight height,
+    VkSwapchainKHR_T * old_swap_chain = nullptr
+);
+
+// DestroySwapChain
+
+// CreateSwapChainImageView
+
+// CreateDepth
+
+// DestroyDepth
+
+// TODO Ask for options
+[[nodiscard]]
+VkRenderPass_T * CreateRenderPass(
+    VkPhysicalDevice_T * physical_device, 
+    VkDevice_T * device, 
+    VkFormat swap_chain_format
+);
+
+// Destroy renderPass
+
+[[nodiscard]]
+std::vector<VkFramebuffer_T *> CreateFrameBuffers(
+    VkDevice_T * device,
+    VkRenderPass_T * render_pass,
+    U32 swap_chain_image_views_count, 
+    VkImageView_T ** swap_chain_image_views,
+    VkImageView_T * depth_image_view,
+    VkExtent2D swap_chain_extent
+);
+
+// DestroyFrameBuffers
+
 }
