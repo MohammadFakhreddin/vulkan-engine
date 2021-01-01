@@ -435,7 +435,7 @@ void DestroyBuffer(
     vkFreeMemory(device, memory, nullptr);
 }
 
-CreateImageResult CreateImage(
+ImageGroup CreateImage(
     VkDevice_T * device,
     VkPhysicalDevice_T * physical_device,
     U32 const width, 
@@ -448,7 +448,7 @@ CreateImageResult CreateImage(
     VkImageUsageFlags const usage, 
     VkMemoryPropertyFlags const properties
 ) {
-    CreateImageResult ret {};
+    ImageGroup ret {};
 
     VkImageCreateInfo image_info{};
     image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -479,17 +479,16 @@ CreateImageResult CreateImage(
         properties
     );
 
-    VK_Check(vkAllocateMemory(device, &allocate_info, nullptr, &ret.image_memory));
-    VK_Check(vkBindImageMemory(device, ret.image, ret.image_memory, 0)); 
+    VK_Check(vkAllocateMemory(device, &allocate_info, nullptr, &ret.memory));
+    VK_Check(vkBindImageMemory(device, ret.image, ret.memory, 0)); 
 }
 
 void DestroyImage(
-    VkImage_T * image,
-    VkDeviceMemory_T * memory,
+    ImageGroup const & image,
     VkDevice_T * device
 ) {
-    vkDestroyImage(device, image, nullptr);
-    vkFreeMemory(device, memory, nullptr);
+    vkDestroyImage(device, image.image, nullptr);
+    vkFreeMemory(device, image.memory, nullptr);
 }
 
 GpuTexture CreateTexture(
@@ -527,7 +526,7 @@ GpuTexture CreateTexture(
 
         auto const vulkan_format = ConvertCpuTextureFormatToGpu(format);
 
-        auto const create_image_result = CreateImage(
+        auto const image_group = CreateImage(
             device, 
             physical_device, 
             largest_mipmap_info.dims.width,
@@ -540,14 +539,12 @@ GpuTexture CreateTexture(
             VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
-        VkImage_T * image = create_image_result.image;
-        VkDeviceMemory_T * image_memory = create_image_result.image_memory;
         
         TransferImageLayout(
             device,
             graphic_queue,
             command_pool,
-            image,
+            image_group.image,
             VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
         );
@@ -556,7 +553,7 @@ GpuTexture CreateTexture(
             device,
             command_pool,
             upload_buffer,
-            image,
+            image_group.image,
             graphic_queue,
             cpu_texture
         );
@@ -565,22 +562,21 @@ GpuTexture CreateTexture(
             device,
             graphic_queue,
             command_pool,
-            image,
+            image_group.image,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         );
 
         VkImageView_T * image_view = CreateImageView(
             device,
-            image,
+            image_group.image,
             vulkan_format,
             VK_IMAGE_ASPECT_COLOR_BIT
         );
 
-        MFA_PTR_ASSERT(image);
-        gpu_texture.m_image = image;
-        MFA_PTR_ASSERT(image_memory);
-        gpu_texture.m_image_memory = image_memory;
+        MFA_PTR_ASSERT(image_group.image);
+        MFA_PTR_ASSERT(image_group.memory);
+        gpu_texture.m_image_group = image_group;
         MFA_PTR_ASSERT(image_view);
         gpu_texture.m_image_view = image_view;
         gpu_texture.m_cpu_texture = cpu_texture;
@@ -594,18 +590,17 @@ bool DestroyTexture(GpuTexture & gpu_texture) {
     bool success = false;
     if(gpu_texture.valid()) {
         MFA_PTR_ASSERT(gpu_texture.m_device);
-        MFA_PTR_ASSERT(gpu_texture.m_image);
-        MFA_PTR_ASSERT(gpu_texture.m_image_memory);
+        MFA_PTR_ASSERT(gpu_texture.m_image_group.image);
+        MFA_PTR_ASSERT(gpu_texture.m_image_group.memory);
         MFA_PTR_ASSERT(gpu_texture.m_image_view);
         DestroyImage(
-            gpu_texture.m_image,
-            gpu_texture.m_image_memory,
+            gpu_texture.m_image_group,
             gpu_texture.m_device
         );
         success = true;
-        gpu_texture.m_image = nullptr;
+        gpu_texture.m_image_group.image = nullptr;
+        gpu_texture.m_image_group.memory = nullptr;
         gpu_texture.m_image_view = nullptr;
-        gpu_texture.m_image_memory = nullptr;
     }
     return success;
 }
@@ -699,7 +694,7 @@ void CopyBufferToImage(
 
 }
 
-CreateLogicalDeviceResult CreateLogicalDevice(
+LogicalDevice CreateLogicalDevice(
     VkPhysicalDevice_T * physical_device,
     U32 const graphics_queue_family,
     VkQueue_T * graphic_queue,
@@ -707,7 +702,7 @@ CreateLogicalDeviceResult CreateLogicalDevice(
     VkQueue_T * present_queue,
     VkPhysicalDeviceFeatures const & enabled_physical_device_features
 ) {
-    CreateLogicalDeviceResult ret {};
+    LogicalDevice ret {};
 
     MFA_PTR_ASSERT(physical_device);
     MFA_PTR_ASSERT(graphic_queue);
@@ -960,12 +955,11 @@ void DestroyCommandPool(VkDevice_T * device, VkCommandPool_T * command_pool) {
     vkDestroyCommandPool(device, command_pool, nullptr);
 }
 
-CreateSwapChainResult CreateSwapChain(
+SwapChainGroup CreateSwapChain(
     VkDevice_T * device,
     VkPhysicalDevice_T * physical_device, 
     VkSurfaceKHR_T * window_surface,
-    ScreenWidth const width,
-    ScreenHeight const height,
+    VkExtent2D swap_chain_extend,
     VkSwapchainKHR_T * old_swap_chain
 ) {
     // Find surface capabilities
@@ -1006,7 +1000,12 @@ CreateSwapChainResult CreateSwapChain(
     }
 
     std::vector<VkPresentModeKHR> present_modes(presentModeCount);
-    VK_Check (vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, window_surface, &presentModeCount, present_modes.data()));
+    VK_Check (vkGetPhysicalDeviceSurfacePresentModesKHR(
+        physical_device, 
+        window_surface, 
+        &presentModeCount, 
+        present_modes.data())
+    );
 
     // Determine number of images for swap chain
     uint32_t imageCount = surface_capabilities.minImageCount + 1;
@@ -1017,10 +1016,17 @@ CreateSwapChainResult CreateSwapChain(
     MFA_LOG_INFO("Using %d images for swap chain.", imageCount);
     MFA_ASSERT(surface_formats.size() <= 255);
     // Select a surface format
-    auto const selected_surface_format = ChooseSurfaceFormat(static_cast<uint8_t>(surface_formats.size()) ,surface_formats.data());
+    auto const selected_surface_format = ChooseSurfaceFormat(
+        static_cast<uint8_t>(surface_formats.size()),
+        surface_formats.data()
+    );
 
     // Select swap chain size
-    auto const selected_swap_chain_extent = ChooseSwapChainExtent(surface_capabilities, width, height);
+    auto const selected_swap_chain_extent = ChooseSwapChainExtent(
+        surface_capabilities, 
+        swap_chain_extend.width, 
+        swap_chain_extend.height
+    );
 
     // Determine transformation to use (preferring no transform)
     VkSurfaceTransformFlagBitsKHR surfaceTransform {};
@@ -1054,7 +1060,7 @@ CreateSwapChainResult CreateSwapChain(
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = old_swap_chain;
 
-    CreateSwapChainResult ret {};
+    SwapChainGroup ret {};
 
     VK_Check (vkCreateSwapchainKHR(device, &createInfo, nullptr, &ret.swap_chain));
 
@@ -1079,7 +1085,6 @@ CreateSwapChainResult CreateSwapChain(
     }
 
     ret.swap_chain_images.resize(actual_image_count);
-
     VK_Check (vkGetSwapchainImagesKHR(
         device,
         ret.swap_chain,
@@ -1087,11 +1092,63 @@ CreateSwapChainResult CreateSwapChain(
         ret.swap_chain_images.data()
     ));
 
+    ret.swap_chain_image_views.resize(actual_image_count);
+    for(uint32_t image_index = 0; image_index < actual_image_count; image_index++) {
+        ret.swap_chain_image_views[image_index] = CreateImageView(
+            device,
+            ret.swap_chain_images[image_index],
+            ret.swap_chain_format,
+            VK_IMAGE_ASPECT_COLOR_BIT
+        );
+    }
+
     MFA_LOG_INFO("Acquired swap chain images");
     return ret;
 }
 
-// TODO CreateSwapChainImageView
+void DestroySwapChain(VkDevice_T * device, VkSwapchainKHR_T * swap_chain) {
+    MFA_PTR_ASSERT(device);
+    MFA_PTR_ASSERT(swap_chain);
+    vkDestroySwapchainKHR(device, swap_chain, nullptr);
+}
+
+DepthImageGroup CreateDepth(VkPhysicalDevice_T * physical_device, VkDevice_T * device, VkExtent2D swap_chain_extend) {
+    DepthImageGroup ret {};
+    auto const depth_format = FindDepthFormat(physical_device);
+    ret.image_group = CreateImage(
+        device,
+        physical_device,
+        swap_chain_extend.width,
+        swap_chain_extend.height,
+        1,
+        1,
+        1,
+        depth_format,
+        VK_IMAGE_TILING_OPTIMAL, 
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+    );
+    MFA_PTR_ASSERT(ret.image_group.image);
+    MFA_PTR_ASSERT(ret.image_group.memory);
+    ret.image_view = CreateImageView(
+        device,
+        ret.image_group.image,
+        depth_format,
+        VK_IMAGE_ASPECT_DEPTH_BIT
+    );
+    MFA_PTR_ASSERT(ret.image_view);
+    return ret;
+}
+
+void DestroyDepth(VkDevice_T * device, DepthImageGroup * depth_group) {
+    MFA_PTR_ASSERT(device);
+    MFA_PTR_ASSERT(depth_group);
+    vkDestroyImage(
+        device,
+        depth_group->image_group.image,
+        nullptr
+    );
+}
 
 VkRenderPass_T * CreateRenderPass(
     VkPhysicalDevice_T * physical_device, 
@@ -1163,6 +1220,12 @@ VkRenderPass_T * CreateRenderPass(
     return render_pass;
 }
 
+void DestroyRenderPass(VkDevice_T * device, VkRenderPass_T * render_pass) {
+    MFA_PTR_ASSERT(device);
+    MFA_PTR_ASSERT(render_pass);
+    vkDestroyRenderPass(device, render_pass, nullptr);
+}
+
 std::vector<VkFramebuffer_T *> CreateFrameBuffers(
     VkDevice_T * device,
     VkRenderPass_T * render_pass,
@@ -1197,6 +1260,18 @@ std::vector<VkFramebuffer_T *> CreateFrameBuffers(
     }
 
     MFA_LOG_INFO("Created frame-buffers for swap chain image views");
+
+    return swap_chain_frame_buffers;
+}
+
+void DestroyFrameBuffers(
+    VkDevice_T * device,
+    U32 const frame_buffers_count,
+    VkFramebuffer_T ** frame_buffers
+) {
+    for(U32 index = 0; index < frame_buffers_count; index++) {
+        vkDestroyFramebuffer(device, frame_buffers[index], nullptr);
+    }
 }
 
 }

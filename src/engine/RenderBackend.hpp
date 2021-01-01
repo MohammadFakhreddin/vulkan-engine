@@ -7,7 +7,7 @@
 #include <SDL2/SDL_vulkan.h>
 #include <vulkan/vulkan.h>
 #include <functional>
-
+// TODO Write description for all functions for learning purpose
 // Note: Not all functions can be called from outside
 // TODO Remove functions that are not usable from outside
 namespace MFA::RenderBackend {
@@ -53,9 +53,10 @@ U32 FindMemoryType (
 
 [[nodiscard]]
 VkImageView_T * CreateImageView (
+    VkDevice_T * device,
     VkImage_T const & image, 
     VkFormat format, 
-    VkImageAspectFlags const aspect_flags
+    VkImageAspectFlags aspect_flags
 );
 
 [[nodiscard]]
@@ -114,12 +115,13 @@ void DestroyBuffer(
     VkDeviceMemory_T * memory
 );
 
-struct CreateImageResult {
+struct ImageGroup {
     VkImage_T * image = nullptr;
-    VkDeviceMemory_T * image_memory = nullptr;
+    VkDeviceMemory_T * memory = nullptr;
 };
+
 [[nodiscard]]
-CreateImageResult CreateImage(
+ImageGroup CreateImage(
     VkDevice_T * device,
     VkPhysicalDevice_T * physical_device,
     U32 width, 
@@ -134,8 +136,7 @@ CreateImageResult CreateImage(
 );
 
 void DestroyImage(
-    VkImage_T * image,
-    VkDeviceMemory_T * memory,
+    ImageGroup const & image,
     VkDevice_T * device
 );
 
@@ -171,13 +172,12 @@ public:
     [[nodiscard]]
     bool valid () const {return m_is_valid;}
     [[nodiscard]]
-    VkImage_T const * image() const {return m_image;}
+    VkImage_T const * image() const {return m_image_group.image;}
     [[nodiscard]]
     VkImageView_T * image_view() const {return m_image_view;}
 private:
     VkDevice_T * m_device = nullptr;
-    VkImage_T * m_image = nullptr;
-    VkDeviceMemory_T * m_image_memory = nullptr;
+    ImageGroup m_image_group {};
     VkImageView_T * m_image_view = nullptr;
     CpuTexture m_cpu_texture {};
     bool m_is_valid = false;
@@ -195,12 +195,12 @@ void CopyBufferToImage(
     CpuTexture const & cpu_texture
 );
 
-struct CreateLogicalDeviceResult {
+struct LogicalDevice {
     VkDevice_T * device;
     VkPhysicalDeviceMemoryProperties physical_memory_properties;
 };
 [[nodiscard]]
-CreateLogicalDeviceResult CreateLogicalDevice(
+LogicalDevice CreateLogicalDevice(
     VkPhysicalDevice_T * physical_device,
     U32 graphics_queue_family,
     VkQueue_T * graphic_queue,
@@ -257,29 +257,37 @@ VkCommandPool_T * CreateCommandPool(VkDevice_T * device, U32 queue_family_index)
 
 void DestroyCommandPool(VkDevice_T * device, VkCommandPool_T * command_pool);
 
-struct CreateSwapChainResult {
+struct SwapChainGroup {
     VkSwapchainKHR_T * swap_chain = nullptr;
     VkFormat swap_chain_format {};
     std::vector<VkImage_T *> swap_chain_images {};
-    // SwapChainImageViews
+    std::vector<VkImageView_T *> swap_chain_image_views {};
 };
+
 [[nodiscard]]
-CreateSwapChainResult CreateSwapChain(
+SwapChainGroup CreateSwapChain(
     VkDevice_T * device,
     VkPhysicalDevice_T * physical_device, 
     VkSurfaceKHR_T * window_surface,
-    ScreenWidth width,
-    ScreenHeight height,
+    VkExtent2D swap_chain_extend,
     VkSwapchainKHR_T * old_swap_chain = nullptr
 );
 
-// DestroySwapChain
+void DestroySwapChain(VkDevice_T * device, VkSwapchainKHR_T * swap_chain);
 
-// CreateSwapChainImageView
+struct DepthImageGroup {
+    ImageGroup image_group {};
+    VkImageView_T * image_view = nullptr;
+};
 
-// CreateDepth
+[[nodiscard]]
+DepthImageGroup CreateDepth(
+    VkPhysicalDevice_T * physical_device,
+    VkDevice_T * device,
+    VkExtent2D swap_chain_extend
+);
 
-// DestroyDepth
+void DestroyDepth(VkDevice_T * device, DepthImageGroup * depth_group);
 
 // TODO Ask for options
 [[nodiscard]]
@@ -289,7 +297,7 @@ VkRenderPass_T * CreateRenderPass(
     VkFormat swap_chain_format
 );
 
-// Destroy renderPass
+void DestroyRenderPass(VkDevice_T * device, VkRenderPass_T * render_pass);
 
 [[nodiscard]]
 std::vector<VkFramebuffer_T *> CreateFrameBuffers(
@@ -301,6 +309,10 @@ std::vector<VkFramebuffer_T *> CreateFrameBuffers(
     VkExtent2D swap_chain_extent
 );
 
-// DestroyFrameBuffers
+void DestroyFrameBuffers(
+    VkDevice_T * device,
+    U32 frame_buffers_count,
+    VkFramebuffer_T ** frame_buffers
+);
 
 }
