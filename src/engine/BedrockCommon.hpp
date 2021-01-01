@@ -5,7 +5,7 @@
 #include "BedrockPlatforms.hpp"
 
 #include <cstdint>
-
+// TODO I wish we could add no-discard
 #define MFA_PTR_VALID(p_) ((p_) != nullptr)
 
 #define MFA_CONSUME_VAR(v_) ((void)(v_))

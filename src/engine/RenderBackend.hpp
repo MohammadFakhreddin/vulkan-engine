@@ -15,6 +15,7 @@ namespace MFA::RenderBackend {
 using ScreenWidth = Platforms::ScreenSizeType;
 using ScreenHeight = Platforms::ScreenSizeType;
 using CpuTexture = Asset::TextureAsset;
+using CpuShader = Asset::ShaderAsset;
 
 [[nodiscard]]
 SDL_Window * CreateWindow(ScreenWidth screen_width, ScreenHeight screen_height);
@@ -164,13 +165,10 @@ friend GpuTexture CreateTexture(
 );
 friend bool DestroyTexture(GpuTexture & gpu_texture);
 public:
-    ~GpuTexture() {
-        DestroyTexture(*this);
-    }
     [[nodiscard]]
     CpuTexture const * cpu_texture() const {return &m_cpu_texture;}
     [[nodiscard]]
-    bool valid () const {return m_is_valid;}
+    bool valid () const {return MFA_PTR_VALID(m_device) && MFA_PTR_VALID(m_image_view);}
     [[nodiscard]]
     VkImage_T const * image() const {return m_image_group.image;}
     [[nodiscard]]
@@ -180,7 +178,6 @@ private:
     ImageGroup m_image_group {};
     VkImageView_T * m_image_view = nullptr;
     CpuTexture m_cpu_texture {};
-    bool m_is_valid = false;
 };
 
 [[nodiscard]]
@@ -314,5 +311,47 @@ void DestroyFrameBuffers(
     U32 frame_buffers_count,
     VkFramebuffer_T ** frame_buffers
 );
+
+class GpuShader;
+
+[[nodiscard]]
+GpuShader CreateShader(VkDevice_T * device, CpuShader const & cpu_shader);
+
+bool DestroyShader(GpuShader & gpu_shader);
+
+class GpuShader {
+friend GpuShader CreateShader(VkDevice_T * device, CpuShader const & cpu_shader);
+friend bool DestroyShader(GpuShader & gpu_shader);
+public:
+    [[nodiscard]]
+    CpuShader const * cpu_shader() const {return &m_cpu_shader;}
+    [[nodiscard]]
+    bool valid () const {return MFA_PTR_VALID(m_device) && MFA_PTR_VALID(m_shader_module);}
+    [[nodiscard]]
+    VkShaderModule_T const * shader_module() const {return m_shader_module;}
+private:
+    // TODO I think we can remove device ref and ask for it instead
+    VkDevice_T * m_device = nullptr;
+    VkShaderModule_T * m_shader_module = nullptr;
+    CpuShader m_cpu_shader {};
+};
+
+struct GraphicPipelineGroup {
+    VkDescriptorSetLayout_T * descriptor_set_layout = nullptr;
+    VkPipelineLayout_T * pipeline_layout = nullptr;
+    VkPipeline_T * graphic_pipeline = nullptr;
+};
+// Note Shaders can be removed after creating graphic pipeline
+[[nodiscard]]
+GraphicPipelineGroup CreateGraphicPipeline(
+    VkDevice_T * device, 
+    U8 shader_stages_count, 
+    GpuShader const * shader_stages,
+    VkVertexInputBindingDescription vertex_binding_description,
+    U32 attribute_description_count,
+    VkVertexInputAttributeDescription * attribute_description_data
+);
+
+void DestroyGraphicPipeline(GraphicPipelineGroup & graphic_pipeline_group);
 
 }

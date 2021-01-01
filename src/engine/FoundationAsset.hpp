@@ -278,6 +278,7 @@ public:
 
 class ShaderAsset : public GenericAsset {
 public:
+    ShaderAsset() = default;
     explicit  ShaderAsset(Blob const asset_) : GenericAsset(asset_) {};
     [[nodiscard]]
     size_t compute_header_size() const override {return sizeof(ShaderHeader);}

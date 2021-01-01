@@ -581,7 +581,6 @@ GpuTexture CreateTexture(
         gpu_texture.m_image_view = image_view;
         gpu_texture.m_cpu_texture = cpu_texture;
         gpu_texture.m_device = device;
-        gpu_texture.m_is_valid = true;
     }
     return gpu_texture;
 }
@@ -1272,6 +1271,58 @@ void DestroyFrameBuffers(
     for(U32 index = 0; index < frame_buffers_count; index++) {
         vkDestroyFramebuffer(device, frame_buffers[index], nullptr);
     }
+}
+
+GpuShader CreateShader(VkDevice_T * device, CpuShader const & cpu_shader) {
+    MFA_PTR_VALID(device);
+    GpuShader gpu_shader {};
+    if(cpu_shader.valid()) {
+        gpu_shader.m_cpu_shader = cpu_shader;
+        auto const shader_code = cpu_shader.data();
+        VkShaderModuleCreateInfo create_info = {};
+        create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        create_info.codeSize = shader_code.len;
+        create_info.pCode = reinterpret_cast<uint32_t const *>(shader_code.ptr);
+        VK_Check(vkCreateShaderModule(device, &create_info, nullptr, &gpu_shader.m_shader_module));
+        MFA_LOG_INFO("Creating shader module was successful");
+        MFA_ASSERT(gpu_shader.valid());
+    }
+    return gpu_shader;
+}
+
+bool DestroyShader(GpuShader & gpu_shader) {
+    bool ret = false;
+    if(gpu_shader.valid()) {
+        vkDestroyShaderModule(gpu_shader.m_device, gpu_shader.m_shader_module, nullptr);
+        gpu_shader.m_device = nullptr;
+        gpu_shader.m_shader_module = nullptr;
+        ret = true;
+    }
+    return ret;
+}
+
+GraphicPipelineGroup CreateGraphicPipeline(
+    VkDevice_T * device, 
+    U8 shader_stages_count, 
+    GpuShader const * shader_stages,
+    VkVertexInputBindingDescription vertex_binding_description,
+    U32 attribute_description_count,
+    VkVertexInputAttributeDescription * attribute_description_data
+) {
+    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+}
+
+void DestroyGraphicPipeline(VkDevice_T * device, GraphicPipelineGroup & graphic_pipeline_group) {
+    MFA_PTR_ASSERT(device);
+    MFA_PTR_ASSERT(graphic_pipeline_group.graphic_pipeline);
+    MFA_PTR_ASSERT(graphic_pipeline_group.descriptor_set_layout);
+    MFA_PTR_ASSERT(graphic_pipeline_group.pipeline_layout);
+    vkDestroyPipeline(device, graphic_pipeline_group.graphic_pipeline, nullptr);
+    vkDestroyPipelineLayout(device, graphic_pipeline_group.pipeline_layout, nullptr);
+    vkDestroyDescriptorSetLayout(device, graphic_pipeline_group.descriptor_set_layout, nullptr);
+    graphic_pipeline_group.graphic_pipeline = nullptr;
+    graphic_pipeline_group.descriptor_set_layout = nullptr;
+    graphic_pipeline_group.pipeline_layout = nullptr;
 }
 
 }
