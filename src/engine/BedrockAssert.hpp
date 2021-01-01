@@ -12,7 +12,7 @@
 #define MFA_BLOB_ASSERT(blob)           MFA_PTR_ASSERT(blob.ptr); MFA_ASSERT(blob.len > 0)
 #define MFA_NOT_IMPLEMENTED_YET(who)    throw std::runtime_error("Method not impelemented by " + std::string(who))
 #else
-#define MFA_ASSERT(condition)       
+#define MFA_ASSERT(condition)
 #define MFA_NOT_IMPLEMENTED_YET(who)   
 #endif
 

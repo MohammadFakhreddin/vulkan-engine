@@ -7,12 +7,43 @@ namespace MFA::Importer {
 
 Asset::TextureAsset ImportUncompressedImage(char const * path) {
     // TODO
-    return {};   
+    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
 }
 
 Asset::TextureAsset ImportDDSFile(char const * path) {
     // TODO
-    return {};
+    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+}
+
+Asset::ShaderAsset ImportShaderFromHLSL(char const * path) {
+    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+}
+
+Asset::ShaderAsset ImportShaderFromSPV(
+    char const * path,
+    Asset::ShaderStage const stage,
+    char const * entry_point
+) {
+    if(MFA_PTR_VALID(path)) {
+        auto * file = FileSystem::OpenFile(path,  FileSystem::Usage::Read);
+        MFA_DEFER{FileSystem::CloseFile(file);};
+        if(FileSystem::IsUsable(file)) {
+            auto const file_size = FileSystem::FileSize(file);
+            MFA_ASSERT(file_size > 0);
+            auto const asset_memory = Memory::Alloc(file_size + Asset::ShaderHeader::Size());
+            MFA_ASSERT(MFA_PTR_VALID(asset_memory.ptr) && asset_memory.len == file_size + Asset::ShaderHeader::Size());
+            auto * shader_header = asset_memory.as<Asset::ShaderHeader>();
+            shader_header->stage = stage;
+            shader_header->entry_point = entry_point;
+            Blob const data_memory = Blob {asset_memory.ptr + Asset::ShaderHeader::Size(), file_size};
+            auto const read_bytes = FileSystem::Read(file, data_memory);
+            if(read_bytes == asset_memory.len) {
+                return Asset::ShaderAsset {asset_memory};
+            }
+            Memory::Free(asset_memory);
+        }
+    }
+    return Asset::ShaderAsset {{}};
 }
 
 #if 0
@@ -113,18 +144,20 @@ bool FreeAsset(Asset::GenericAsset * asset) {
 
 RawFile ReadRawFile(char const * path) {
     RawFile ret {};
-    if(MFA_PTR_VALID(path) && FileSystem::Exists(path)) {
+    if(MFA_PTR_VALID(path)) {
         auto * file = FileSystem::OpenFile(path, FileSystem::Usage::Read);
         MFA_DEFER {FileSystem::CloseFile(file);};
-        auto const file_size = FileSystem::FileSize(file);
-        // TODO Allocate using a memory pool system
-        auto const memory_blob = Memory::Alloc(file_size);
-        auto const read_bytes = FileSystem::Read(file, ret.data);
-        // Means that reading is successful
-        if(read_bytes == file_size) {
-            ret.data = memory_blob;
-        } else {
-            Memory::Free(memory_blob);
+        if(FileSystem::IsUsable(file)) {
+            auto const file_size = FileSystem::FileSize(file);
+            // TODO Allocate using a memory pool system
+            auto const memory_blob = Memory::Alloc(file_size);
+            auto const read_bytes = FileSystem::Read(file, ret.data);
+            // Means that reading is successful
+            if(read_bytes == file_size) {
+                ret.data = memory_blob;
+            } else {
+                Memory::Free(memory_blob);
+            }
         }
     }
     return ret;

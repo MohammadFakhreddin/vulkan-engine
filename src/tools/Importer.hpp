@@ -21,6 +21,16 @@ Asset::MeshAsset ImportObj(char const * path);
 [[nodiscard]]
 Asset::MeshAsset ImportGLTF(char const * path);
 
+[[nodiscard]]
+Asset::ShaderAsset ImportShaderFromHLSL(char const * path);
+
+[[nodiscard]]
+Asset::ShaderAsset ImportShaderFromSPV(
+    char const * path,
+    Asset::ShaderStage stage,
+    char const * entry_point
+);
+
 // Temporary function for freeing imported assets
 bool FreeAsset(Asset::GenericAsset * asset);
 

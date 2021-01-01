@@ -177,8 +177,31 @@ using MeshVertices = Mesh::Data::Vertices;
 using MeshIndices = Mesh::Data::Indices;
 
 //--------------------------------ShaderHeader--------------------------------------
+namespace Shader {
 
-struct ShaderHeader {};  // TODO
+enum class Stage {
+    Invalid,
+    Vertex,
+    Fragment
+};
+
+struct Header {
+    std::string entry_point {};     // Ex: main
+    Stage stage = Stage::Invalid;
+    [[nodiscard]]
+    static size_t Size() {
+        return sizeof(Header);
+    }
+    [[nodiscard]]
+    bool is_valid() const {
+        return false == entry_point.empty() && Stage::Invalid != stage;
+    }
+};  
+
+}
+
+using ShaderHeader = Shader::Header;
+using ShaderStage = Shader::Stage;
 
 //--------------------------------MaterialHeader-------------------------------------
 
@@ -242,8 +265,8 @@ public:
         };
     }
     [[nodiscard]]
-    Texture::Header const * header_object() const {
-        return header_blob().as<Texture::Header>();
+    TextureHeader const * header_object() const {
+        return header_blob().as<TextureHeader>();
     }
     [[nodiscard]]
     bool valid() const override {
@@ -254,7 +277,18 @@ public:
 //----------------------------------ShaderAsset------------------------------------
 
 class ShaderAsset : public GenericAsset {
-    // TODO
+public:
+    explicit  ShaderAsset(Blob const asset_) : GenericAsset(asset_) {};
+    [[nodiscard]]
+    size_t compute_header_size() const override {return sizeof(ShaderHeader);}
+    [[nodiscard]]
+    ShaderHeader const * header_object() const {
+        return header_blob().as<ShaderHeader>();
+    }
+    [[nodiscard]]
+    bool valid() const override {
+        return MFA_PTR_VALID(asset().ptr) && header_object()->is_valid();
+    }
 };
 
 //-----------------------------------MeshAsset------------------------------------

@@ -196,11 +196,11 @@ U32 FindMemoryType (
     VkMemoryPropertyFlags const property_flags
 ) {
     MFA_PTR_ASSERT(physical_device);
-    VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(*physical_device, &memProperties);
+    VkPhysicalDeviceMemoryProperties memory_properties;
+    vkGetPhysicalDeviceMemoryProperties(*physical_device, &memory_properties);
 
-    for (U32 memory_type_index = 0; memory_type_index < memProperties.memoryTypeCount; memory_type_index++) {
-        if ((type_filter & (1 << memory_type_index)) && (memProperties.memoryTypes[memory_type_index].propertyFlags & property_flags) == property_flags) {
+    for (U32 memory_type_index = 0; memory_type_index < memory_properties.memoryTypeCount; memory_type_index++) {
+        if ((type_filter & (1 << memory_type_index)) && (memory_properties.memoryTypes[memory_type_index].propertyFlags & property_flags) == property_flags) {
             return memory_type_index;
         }
     }
