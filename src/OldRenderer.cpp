@@ -1208,7 +1208,7 @@ static CreateGraphicPipelineResult create_graphic_pipeline(CreateGraphicPipeline
     //rasterization_create_info.depthBiasSlopeFactor = 0.0f;
     rasterization_create_info.lineWidth = 1.0f;
     
-    // Describe multisampling
+    // Describe multi-sampling
     // Note: using multisampling also requires turning on device features
     VkPipelineMultisampleStateCreateInfo mulit_sample_create_info = {};
     mulit_sample_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -1294,7 +1294,6 @@ static CreateGraphicPipelineResult create_graphic_pipeline(CreateGraphicPipeline
     layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     layout_create_info.setLayoutCount = 1;
     layout_create_info.pSetLayouts = &result.descriptor_set_layout; // Array of descriptor set layout, Order matter when more than 1
-
 
     if (vkCreatePipelineLayout(*m_state.device, &layout_create_info, nullptr, &result.pipeline_layout) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create pipeline layout");

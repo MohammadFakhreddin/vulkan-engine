@@ -328,13 +328,25 @@ public:
     [[nodiscard]]
     bool valid () const {return MFA_PTR_VALID(m_device) && MFA_PTR_VALID(m_shader_module);}
     [[nodiscard]]
-    VkShaderModule_T const * shader_module() const {return m_shader_module;}
+    VkShaderModule_T * shader_module() const {return m_shader_module;}
 private:
     // TODO I think we can remove device ref and ask for it instead
     VkDevice_T * m_device = nullptr;
     VkShaderModule_T * m_shader_module = nullptr;
     CpuShader m_cpu_shader {};
 };
+
+// TODO CreateDescriptorSetLayout (Do we ?)
+
+// TODO DestroyDescriptorSetLayout (Do we ?)
+
+// TODO CreateDescriptorPoolLayout
+
+// TODO DestroyDescriptorPoolLayout
+
+// TODO CreateDescriptorSet
+
+// TODO DestroyDescriptorSet
 
 struct GraphicPipelineGroup {
     VkDescriptorSetLayout_T * descriptor_set_layout = nullptr;
@@ -349,9 +361,25 @@ GraphicPipelineGroup CreateGraphicPipeline(
     GpuShader const * shader_stages,
     VkVertexInputBindingDescription vertex_binding_description,
     U32 attribute_description_count,
-    VkVertexInputAttributeDescription * attribute_description_data
+    VkVertexInputAttributeDescription * attribute_description_data,
+    VkExtent2D swap_chain_extent
 );
 
 void DestroyGraphicPipeline(GraphicPipelineGroup & graphic_pipeline_group);
+
+[[nodiscard]]
+VkDescriptorSetLayout_T * CreateDescriptorSetLayout(
+    VkDevice_T * device,
+    U8 bindings_count,
+    VkDescriptorSetLayoutBinding * bindings
+);
+
+void DestroyDescriptorSetLayout(
+    VkDevice_T * device,
+    VkDescriptorSetLayout_T * descriptor_set_layout
+);
+
+[[nodiscard]]
+VkShaderStageFlagBits ConvertAssetShaderStageToGpu(Asset::ShaderStage stage);
 
 }

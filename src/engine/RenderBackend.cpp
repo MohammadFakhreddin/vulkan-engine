@@ -1303,13 +1303,198 @@ bool DestroyShader(GpuShader & gpu_shader) {
 
 GraphicPipelineGroup CreateGraphicPipeline(
     VkDevice_T * device, 
-    U8 shader_stages_count, 
+    U8 const shader_stages_count, 
     GpuShader const * shader_stages,
     VkVertexInputBindingDescription vertex_binding_description,
-    U32 attribute_description_count,
-    VkVertexInputAttributeDescription * attribute_description_data
+    U32 const attribute_description_count,
+    VkVertexInputAttributeDescription * attribute_description_data,
+    VkExtent2D const swap_chain_extent,
+    VkRenderPass_T * render_pass
 ) {
-    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+    // Set up shader stage info
+    std::vector<VkPipelineShaderStageCreateInfo> shader_stages_create_infos {shader_stages_count};
+    for(U8 i = 0; i < shader_stages_count; i++) {
+        VkPipelineShaderStageCreateInfo create_info = {};
+        create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        create_info.stage = ConvertAssetShaderStageToGpu(shader_stages[i].cpu_shader()->header_object()->stage);
+        create_info.module = shader_stages[i].shader_module();
+        create_info.pName = shader_stages[i].cpu_shader()->header_object()->entry_point.c_str();
+        shader_stages_create_infos[i] = create_info;
+    }
+
+    // Describe vertex input
+    VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {};
+    vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertex_input_state_create_info.vertexBindingDescriptionCount = 1;
+    vertex_input_state_create_info.pVertexBindingDescriptions = &vertex_binding_description;
+    vertex_input_state_create_info.vertexAttributeDescriptionCount = attribute_description_count;
+    vertex_input_state_create_info.pVertexAttributeDescriptions = attribute_description_data;
+
+    // Describe input assembly
+    VkPipelineInputAssemblyStateCreateInfo input_assembly_create_info = {};
+    input_assembly_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    input_assembly_create_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;  // TODO We might need to ask this from outside
+    input_assembly_create_info.primitiveRestartEnable = VK_FALSE;
+
+    // Describe viewport and scissor
+    VkViewport viewport = {};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = static_cast<float>(swap_chain_extent.width);
+    viewport.height = static_cast<float>(swap_chain_extent.height);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+
+    VkRect2D scissor = {};
+    scissor.offset.x = 0;
+    scissor.offset.y = 0;
+    scissor.extent.width = swap_chain_extent.width;
+    scissor.extent.height = swap_chain_extent.height;
+
+    // Note: scissor test is always enabled (although dynamic scissor is possible)
+    // Number of viewports must match number of scissors
+    VkPipelineViewportStateCreateInfo viewport_create_info = {};
+    viewport_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewport_create_info.viewportCount = 1;
+    viewport_create_info.pViewports = &viewport;
+    viewport_create_info.scissorCount = 1;
+    viewport_create_info.pScissors = &scissor;
+
+    // Describe rasterization
+    // Note: depth bias and using polygon modes other than fill require changes to logical device creation (device features)
+    VkPipelineRasterizationStateCreateInfo rasterization_create_info = {};
+    rasterization_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterization_create_info.depthClampEnable = VK_FALSE;
+    rasterization_create_info.rasterizerDiscardEnable = VK_FALSE;
+    // TODO Might need to ask some of them from outside
+    rasterization_create_info.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterization_create_info.cullMode = VK_CULL_MODE_NONE;
+    rasterization_create_info.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterization_create_info.depthBiasEnable = VK_FALSE;
+    //rasterization_create_info.depthBiasConstantFactor = 0.0f;
+    //rasterization_create_info.depthBiasClamp = 0.0f;
+    //rasterization_create_info.depthBiasSlopeFactor = 0.0f;
+    rasterization_create_info.lineWidth = 1.0f;
+
+    // Describe multi-sampling
+    // Note: using multisampling also requires turning on device features
+    VkPipelineMultisampleStateCreateInfo mulit_sample_create_info = {};
+    mulit_sample_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    mulit_sample_create_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    mulit_sample_create_info.sampleShadingEnable = VK_FALSE;
+    mulit_sample_create_info.minSampleShading = 1.0f;
+    mulit_sample_create_info.alphaToCoverageEnable = VK_FALSE;
+    mulit_sample_create_info.alphaToOneEnable = VK_FALSE;
+
+    VkPipelineDepthStencilStateCreateInfo depthStencil{};
+    depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depthStencil.depthTestEnable = VK_TRUE;
+    depthStencil.depthWriteEnable = VK_TRUE;
+    depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+    depthStencil.depthBoundsTestEnable = VK_FALSE;
+    depthStencil.stencilTestEnable = VK_FALSE;
+
+    // Describing color blending
+    // Note: all paramaters except blendEnable and colorWriteMask are irrelevant here
+    VkPipelineColorBlendAttachmentState colorBlendAttachmentState = {};
+    colorBlendAttachmentState.blendEnable = VK_FALSE;
+    colorBlendAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+    colorBlendAttachmentState.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+    colorBlendAttachmentState.colorBlendOp = VK_BLEND_OP_ADD;
+    colorBlendAttachmentState.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    colorBlendAttachmentState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    colorBlendAttachmentState.alphaBlendOp = VK_BLEND_OP_ADD;
+    colorBlendAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+    // Note: all attachments must have the same values unless a device feature is enabled
+    VkPipelineColorBlendStateCreateInfo color_blend_create_info = {};
+    color_blend_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    color_blend_create_info.logicOpEnable = VK_FALSE;
+    color_blend_create_info.logicOp = VK_LOGIC_OP_COPY;
+    color_blend_create_info.attachmentCount = 1;
+    color_blend_create_info.pAttachments = &colorBlendAttachmentState;
+    color_blend_create_info.blendConstants[0] = 0.0f;
+    color_blend_create_info.blendConstants[1] = 0.0f;
+    color_blend_create_info.blendConstants[2] = 0.0f;
+    color_blend_create_info.blendConstants[3] = 0.0f;
+
+    // Describe pipeline layout
+    // Note: this describes the mapping between memory and shader resources (descriptor sets)
+    // This is for uniform buffers and samplers
+    VkDescriptorSetLayoutBinding uboLayoutBinding {};
+    uboLayoutBinding.binding = 0;
+    // Our object type is uniformBuffer
+    uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    // Number of values in buffer
+    uboLayoutBinding.descriptorCount = 1;
+    // Which shader stage we are going to reffer to // In our case we only need vertex shader to access to it
+    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    // For Image sampler, Currently we do not need this
+    uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
+
+    VkDescriptorSetLayoutBinding sampler_layout_binding{};
+    sampler_layout_binding.binding = 1;
+    sampler_layout_binding.descriptorCount = 1;
+    sampler_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    sampler_layout_binding.pImmutableSamplers = nullptr;
+    sampler_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    std::vector<VkDescriptorSetLayoutBinding> bindings = {uboLayoutBinding, sampler_layout_binding};
+    auto * descriptor_set_layout = CreateDescriptorSetLayout(
+        device, 
+        static_cast<U8>(bindings.size()), 
+        bindings.data()
+    );
+
+    MFA_LOG_INFO("Created descriptor layout");
+
+    VkPipelineLayoutCreateInfo layout_create_info = {};
+    layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    layout_create_info.setLayoutCount = 1;
+    layout_create_info.pSetLayouts = &descriptor_set_layout; // Array of descriptor set layout, Order matter when more than 1
+
+    VkPipelineLayout_T * pipeline_layout = nullptr;
+    VK_Check(vkCreatePipelineLayout(device, &layout_create_info, nullptr, &pipeline_layout));
+
+    // Create the graphics pipeline
+    VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
+    pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineCreateInfo.stageCount = static_cast<Uint32>(shader_stages_create_infos.size());
+    pipelineCreateInfo.pStages = shader_stages_create_infos.data();
+    pipelineCreateInfo.pVertexInputState = &vertex_input_state_create_info;
+    pipelineCreateInfo.pInputAssemblyState = &input_assembly_create_info;
+    pipelineCreateInfo.pViewportState = &viewport_create_info;
+    pipelineCreateInfo.pRasterizationState = &rasterization_create_info;
+    pipelineCreateInfo.pMultisampleState = &mulit_sample_create_info;
+    pipelineCreateInfo.pColorBlendState = &color_blend_create_info;
+    pipelineCreateInfo.layout = pipeline_layout;
+    pipelineCreateInfo.renderPass = render_pass;
+    pipelineCreateInfo.subpass = 0;
+    pipelineCreateInfo.basePipelineHandle = nullptr;
+    pipelineCreateInfo.basePipelineIndex = -1;
+    pipelineCreateInfo.pDepthStencilState = &depthStencil;
+
+    VkPipeline_T * pipeline = nullptr;
+    VK_Check(vkCreateGraphicsPipelines(
+        device, 
+        nullptr, 
+        1, 
+        &pipelineCreateInfo, 
+        nullptr, 
+        &pipeline
+    ));
+
+    MFA_LOG_INFO("Created graphics pipeline");
+
+    GraphicPipelineGroup group {};
+    MFA_PTR_ASSERT(descriptor_set_layout);
+    group.descriptor_set_layout = descriptor_set_layout;
+    MFA_PTR_ASSERT(pipeline);
+    group.graphic_pipeline = pipeline;
+    MFA_PTR_ASSERT(pipeline_layout);
+    group.pipeline_layout = pipeline_layout;
+
+    return group;
 }
 
 void DestroyGraphicPipeline(VkDevice_T * device, GraphicPipelineGroup & graphic_pipeline_group) {
@@ -1319,10 +1504,53 @@ void DestroyGraphicPipeline(VkDevice_T * device, GraphicPipelineGroup & graphic_
     MFA_PTR_ASSERT(graphic_pipeline_group.pipeline_layout);
     vkDestroyPipeline(device, graphic_pipeline_group.graphic_pipeline, nullptr);
     vkDestroyPipelineLayout(device, graphic_pipeline_group.pipeline_layout, nullptr);
-    vkDestroyDescriptorSetLayout(device, graphic_pipeline_group.descriptor_set_layout, nullptr);
+    DestroyDescriptorSetLayout(device, graphic_pipeline_group.descriptor_set_layout);
     graphic_pipeline_group.graphic_pipeline = nullptr;
     graphic_pipeline_group.descriptor_set_layout = nullptr;
     graphic_pipeline_group.pipeline_layout = nullptr;
+}
+
+[[nodiscard]]
+VkDescriptorSetLayout_T * CreateDescriptorSetLayout(
+    VkDevice_T * device,
+    U8 const bindings_count,
+    VkDescriptorSetLayoutBinding * bindings
+) {
+    VkDescriptorSetLayoutCreateInfo descriptor_layout_create_info = {};
+    descriptor_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descriptor_layout_create_info.bindingCount = static_cast<uint32_t>(bindings_count);
+    descriptor_layout_create_info.pBindings = bindings;
+    VkDescriptorSetLayout_T * descriptor_set_layout = nullptr;
+    VK_Check (vkCreateDescriptorSetLayout(
+        device,
+        &descriptor_layout_create_info,
+        nullptr,
+        &descriptor_set_layout
+    ));
+    return descriptor_set_layout;
+}
+
+void DestroyDescriptorSetLayout(
+    VkDevice_T * device,
+    VkDescriptorSetLayout_T * descriptor_set_layout
+) {
+    vkDestroyDescriptorSetLayout(
+        device,
+        descriptor_set_layout,
+        nullptr
+    );
+}
+
+VkShaderStageFlagBits ConvertAssetShaderStageToGpu(Asset::ShaderStage const stage) {
+    switch(stage) {
+        case Asset::Shader::Stage::Vertex:
+        return VK_SHADER_STAGE_VERTEX_BIT;
+        case Asset::Shader::Stage::Fragment:
+        return VK_SHADER_STAGE_FRAGMENT_BIT;
+        case Asset::Shader::Stage::Invalid:
+        default:
+        MFA_CRASH("Unhandled shader stage");
+    }
 }
 
 }
