@@ -10,7 +10,7 @@
 namespace MFA::Utils {
     namespace UncompressedTexture {
 
-LoadResult Load(Data & out_image_data, const char * path, bool const use_srgb) {
+LoadResult Load(Data & out_image_data, const char * path, bool const prefer_srgb) {
     using namespace Asset;
     LoadResult ret = LoadResult::Invalid;
     auto * read_data = stbi_load(
@@ -30,7 +30,7 @@ LoadResult Load(Data & out_image_data, const char * path, bool const use_srgb) {
             out_image_data.stbi_components * 
             sizeof(uint8_t);
         out_image_data.components = out_image_data.stbi_components;
-        if (use_srgb) {
+        if (prefer_srgb) {
             switch (out_image_data.stbi_components) {
                 case 1:
                     out_image_data.format = TextureFormat::UNCOMPRESSED_UNORM_R8_SRGB;

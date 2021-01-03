@@ -3,6 +3,7 @@
 
 #include "BedrockAssert.hpp"
 #include "BedrockCommon.hpp"
+#include "BedrockMath.hpp"
 
 namespace MFA::Asset {
 // TODO We need hash functionality as well
@@ -97,6 +98,7 @@ struct Header {
     Format          format = Format::INVALID;
     U16             slices = 0;
     U8              mip_count = 0;
+    U16             depth = 0;
     MipmapInfo      mipmap_infos[];
 
     [[nodiscard]]
@@ -104,6 +106,80 @@ struct Header {
         size_t ret = 0;
         if(mip_level < mip_count && slice_index < slices) {
             ret = mipmap_infos[mip_level].offset + slice_index * mipmap_infos[mip_level].size;
+        }
+        return ret;
+    }
+
+    static U8 ComputeMipCount(Dimensions const dimensions) {
+        U32 const max_dimension = Math::Max(
+            dimensions.width, 
+            Math::Max(
+                dimensions.height, 
+                static_cast<uint32_t>(dimensions.depth)
+            )
+        );
+        for (U8 i = 0; i < 32; ++i)
+            if ((1ULL << i) >= max_dimension)
+                return 1 + i;
+        return 33;
+    }
+
+    /*
+     * This function result is only correct for uncompressed data
+     */
+    [[nodiscard]]
+    static size_t MipSizeBytes (
+        Format format,
+        uint16_t const slices,
+        Dimensions const mip_level_dims
+    )
+    {
+        auto const & d = mip_level_dims;
+        size_t const p = FormatTable[static_cast<unsigned>(format)].bits_total / 8;
+        return p * slices * d.width * d.height * d.depth;
+    }
+
+    // TODO Consider moving this function to util_image
+    /*
+     * This function result is only correct for uncompressed data
+     */
+    // NOTE: 0 is the *smallest* mipmap level, and "mip_count - 1" is the *largest*.
+    [[nodiscard]]
+    static Dimensions MipDimensions (
+        uint8_t const mip_level,
+        uint8_t const mip_count,
+        Dimensions const original_image_dims
+    )
+    {
+        Dimensions ret = {};
+        if (mip_level < mip_count) {
+            uint32_t const pow = mip_count - 1 - mip_level;
+            uint32_t const add = (1 << pow) - 1;
+            ret.width = (original_image_dims.width + add) >> pow;
+            ret.height = (original_image_dims.height + add) >> pow;
+            ret.depth = static_cast<uint16_t>((original_image_dims.depth + add) >> pow);
+        }
+        return ret;
+    }
+
+    /*
+    * This function result is only correct for uncompressed data
+    * Returns space required for both mipmaps and TextureHeader
+    */
+    [[nodiscard]]
+    static size_t CalcUncompressedTextureRequiredDataSize(
+        Format const format,
+        uint16_t const slices,
+        Dimensions const & dims,
+        uint8_t const mip_count
+    ) {
+        size_t ret = 0;
+        for (uint8_t mip_level = 0; mip_level < mip_count; mip_level++) {
+            ret += MipSizeBytes(
+                format, 
+                slices, 
+                MipDimensions(mip_level, mip_count, dims)
+            );
         }
         return ret;
     }

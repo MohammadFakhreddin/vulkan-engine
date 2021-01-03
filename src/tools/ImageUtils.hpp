@@ -38,7 +38,7 @@ enum class LoadResult {
     // Format not supported
 };
 
-LoadResult Load(Data & out_image_data, const char * path, bool const use_srgb);
+LoadResult Load(Data & out_image_data, const char * path, bool prefer_srgb);
 
 bool Unload(Data * image_data);
 
