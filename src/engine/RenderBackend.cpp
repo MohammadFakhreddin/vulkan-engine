@@ -260,7 +260,7 @@ VkCommandBuffer BeginSingleTimeCommand(VkDevice_T * device, VkCommandPool const 
 }
 
 void EndAndSubmitSingleTimeCommand(
-    VkDevice * device, 
+    VkDevice_T * device, 
     VkCommandPool const & command_pool, 
     VkQueue const & graphic_queue, 
     VkCommandBuffer const & command_buffer
@@ -275,7 +275,7 @@ void EndAndSubmitSingleTimeCommand(
     VK_Check(vkQueueSubmit(graphic_queue, 1, &submit_info, nullptr));
     VK_Check(vkQueueWaitIdle(graphic_queue));
 
-    vkFreeCommandBuffers(*device, command_pool, 1, &command_buffer);
+    vkFreeCommandBuffers(device, command_pool, 1, &command_buffer);
 }
 
 [[nodiscard]]
@@ -374,10 +374,10 @@ void TransferImageLayout(
         1, &barrier
     );
 
-    EndAndSubmitSingleTimeCommand(&device, command_pool, graphic_queue, command_buffer);
+    EndAndSubmitSingleTimeCommand(device, command_pool, graphic_queue, command_buffer);
 }
 
-CreateBufferResult CreateBuffer(
+BufferGroup CreateBuffer(
     VkDevice_T * device,
     VkPhysicalDevice_T * physical_device,
     VkDeviceSize const size, 
@@ -387,7 +387,7 @@ CreateBufferResult CreateBuffer(
     MFA_PTR_ASSERT(device);
     MFA_PTR_ASSERT(physical_device);
 
-    CreateBufferResult ret {};
+    BufferGroup ret {};
 
     VkBufferCreateInfo buffer_info {};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -409,15 +409,15 @@ CreateBufferResult CreateBuffer(
         properties
     );
 
-    VK_Check(vkAllocateMemory(device, &memory_allocation_info, nullptr, &ret.buffer_memory));
-    VK_Check(vkBindBufferMemory(device, ret.buffer, ret.buffer_memory, 0));
+    VK_Check(vkAllocateMemory(device, &memory_allocation_info, nullptr, &ret.memory));
+    VK_Check(vkBindBufferMemory(device, ret.buffer, ret.memory, 0));
     return ret;
 }
 
 void MapDataToBuffer(
     VkDevice_T * device,
     VkDeviceMemory_T * buffer_memory,
-    CBlob data_blob
+    CBlob const data_blob
 ) {
     void * temp_buffer_data = nullptr;
     vkMapMemory(device, buffer_memory, 0, data_blob.len, 0, &temp_buffer_data);
@@ -426,13 +426,35 @@ void MapDataToBuffer(
     vkUnmapMemory(device, buffer_memory);
 }
 
+void CopyBuffer(
+    VkDevice_T * device,
+    VkCommandPool_T * command_pool,
+    VkQueue_T * graphic_queue,
+    VkBuffer_T * source_buffer,
+    VkBuffer_T * destination_buffer,
+    VkDeviceSize const size
+) {
+    auto * command_buffer = BeginSingleTimeCommand(device, command_pool);
+
+    VkBufferCopy copyRegion{};
+    copyRegion.size = size;
+    vkCmdCopyBuffer(
+        command_buffer,
+        source_buffer,
+        destination_buffer,
+        1, 
+        &copyRegion
+    );
+
+    EndAndSubmitSingleTimeCommand(device, command_pool, graphic_queue, command_buffer); 
+}
+
 void DestroyBuffer(
     VkDevice_T * device,
-    VkBuffer_T * buffer,
-    VkDeviceMemory_T * memory
+    BufferGroup const & buffer_group
 ) {
-    vkDestroyBuffer(device, buffer, nullptr);
-    vkFreeMemory(device, memory, nullptr);
+    vkDestroyBuffer(device, buffer_group.buffer, nullptr);
+    vkFreeMemory(device, buffer_group.memory, nullptr);
 }
 
 ImageGroup CreateImage(
@@ -511,18 +533,16 @@ GpuTexture CreateTexture(
         auto const data_blob = cpu_texture.data();
         MFA_BLOB_ASSERT(data_blob);
         // Create upload buffer
-        auto const create_buffer_result = CreateBuffer(
+        auto const upload_buffer_group = CreateBuffer(
             device,
             physical_device,
             data_blob.len,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
-        VkBuffer_T * upload_buffer = create_buffer_result.buffer;
-        VkDeviceMemory_T * upload_buffer_memory = create_buffer_result.buffer_memory;
-        MFA_DEFER {DestroyBuffer(device, upload_buffer, upload_buffer_memory);};
+        MFA_DEFER {DestroyBuffer(device, upload_buffer_group);};
         // Map texture data to buffer
-        MapDataToBuffer(device, upload_buffer_memory, data_blob);
+        MapDataToBuffer(device, upload_buffer_group.memory, data_blob);
 
         auto const vulkan_format = ConvertCpuTextureFormatToGpu(format);
 
@@ -552,7 +572,7 @@ GpuTexture CreateTexture(
         CopyBufferToImage(
             device,
             command_pool,
-            upload_buffer,
+            upload_buffer_group.buffer,
             image_group.image,
             graphic_queue,
             cpu_texture
@@ -689,7 +709,7 @@ void CopyBufferToImage(
         regions_array
     );
 
-    EndAndSubmitSingleTimeCommand(&device, command_pool, graphic_queue, command_buffer);
+    EndAndSubmitSingleTimeCommand(device, command_pool, graphic_queue, command_buffer);
 
 }
 
@@ -776,6 +796,8 @@ VkSampler_T * CreateSampler(VkDevice_T * device) {
     sampler_info.unnormalizedCoordinates = VK_FALSE;
     sampler_info.compareEnable = VK_FALSE;
     sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+    sampler_info.minLod = 0;
+    sampler_info.maxLod = 1;
     sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 
     VK_Check(vkCreateSampler(device, &sampler_info, nullptr, &sampler));
@@ -1551,6 +1573,128 @@ VkShaderStageFlagBits ConvertAssetShaderStageToGpu(Asset::ShaderStage const stag
         default:
         MFA_CRASH("Unhandled shader stage");
     }
+}
+
+BufferGroup CreateVertexBuffer(
+    VkDevice_T * device,
+    VkPhysicalDevice_T * physical_device,
+    Blob const vertices_blob
+) {
+    VkDeviceSize const bufferSize = vertices_blob.len;
+
+    auto const staging_buffer_group = CreateBuffer(
+        device, 
+        physical_device, 
+        bufferSize, 
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+    );
+
+    MapDataToBuffer(device, staging_buffer_group.memory, vertices_blob);
+    
+    auto const vertex_buffer_group = CreateBuffer(
+        device, physical_device, 
+        bufferSize, 
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+    );
+
+    CopyBuffer(staging_buffer_group.buffer, vertex_buffer_group.buffer, bufferSize);
+
+    DestroyBuffer(device, staging_buffer_group);
+
+    MFA_PTR_ASSERT(vertex_buffer_group.memory);
+    MFA_PTR_ASSERT(vertex_buffer_group.buffer);
+
+    return vertex_buffer_group;
+}
+
+void DestroyVertexBuffer(
+    VkDevice_T * device,
+    BufferGroup const & vertex_buffer_group
+) {
+    vkDestroyBuffer(device, vertex_buffer_group.buffer, nullptr);
+}
+
+BufferGroup CreateIndexBuffer (
+    VkDevice_T * device,
+    VkPhysicalDevice_T * physical_device,
+    Blob const indices_blob
+) {
+    auto const bufferSize = indices_blob.len;
+
+    auto const staging_buffer_group = CreateBuffer(
+        device,
+        physical_device,
+        bufferSize, 
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+    );
+
+    MapDataToBuffer(device, staging_buffer_group.memory, indices_blob);
+    
+    auto const indices_buffer_group = CreateBuffer(
+        device,
+        physical_device,
+        bufferSize, 
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT 
+    );
+
+    CopyBuffer(
+        staging_buffer_group.buffer, 
+        indices_buffer_group.buffer, 
+        bufferSize
+    );
+
+    DestroyBuffer(device, staging_buffer_group);
+
+    MFA_PTR_ASSERT(staging_buffer_group.memory);
+    MFA_PTR_ASSERT(staging_buffer_group.buffer);
+
+    return staging_buffer_group;
+
+}
+
+void DestroyIndexBuffer(
+    VkDevice_T * device,
+    BufferGroup const & index_buffer_group
+) {
+    vkDestroyBuffer(device, index_buffer_group.buffer, nullptr);
+}
+
+std::vector<BufferGroup> CreateUniformBuffer(
+    VkDevice_T * device,
+    VkPhysicalDevice_T * physical_device,
+    U8 const swap_chain_images_count,
+    VkDeviceSize const size 
+) {
+    std::vector<BufferGroup> uniform_buffers_group {swap_chain_images_count};
+    for(U8 index = 0; index < swap_chain_images_count; index++) {
+        uniform_buffers_group[index] = CreateBuffer(
+            device,
+            physical_device,
+            size,
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+        );
+    }
+    return uniform_buffers_group;
+}
+
+void UpdateUniformBuffer(
+    VkDevice_T * device,
+    BufferGroup const & uniform_buffer_group,
+    Blob const data
+) {
+    MapDataToBuffer(device, uniform_buffer_group.memory, data);
+}
+
+void DestroyUniformBuffer(
+    VkDevice_T * device,
+    BufferGroup & buffer_group
+) {
+    DestroyBuffer(device, buffer_group);
 }
 
 }

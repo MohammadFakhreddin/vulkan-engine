@@ -64,7 +64,7 @@ VkImageView_T * CreateImageView (
 VkCommandBuffer BeginSingleTimeCommand(VkDevice_T * device, VkCommandPool const & command_pool);
 
 void EndAndSubmitSingleTimeCommand(
-    VkDevice * device, 
+    VkDevice_T * device, 
     VkCommandPool const & command_pool, 
     VkQueue const & graphic_queue, 
     VkCommandBuffer const & command_buffer
@@ -91,12 +91,12 @@ void TransferImageLayout(
     VkImageLayout new_layout
 );
 
-struct CreateBufferResult {
+struct BufferGroup {
     VkBuffer_T * buffer = nullptr;
-    VkDeviceMemory_T * buffer_memory = nullptr;
+    VkDeviceMemory_T * memory = nullptr;
 };
 [[nodiscard]]
-CreateBufferResult CreateBuffer(
+BufferGroup CreateBuffer(
     VkDevice_T * device,
     VkPhysicalDevice_T * physical_device,
     VkDeviceSize size, 
@@ -110,10 +110,15 @@ void MapDataToBuffer(
     CBlob data_blob
 );
 
+void CopyBuffer(
+    VkBuffer_T * source_buffer,
+    VkBuffer_T * destination_buffer,
+    VkDeviceSize size
+);
+
 void DestroyBuffer(
     VkDevice_T * device,
-    VkBuffer_T * buffer,
-    VkDeviceMemory_T * memory
+    BufferGroup const & buffer_group
 );
 
 struct ImageGroup {
@@ -336,18 +341,6 @@ private:
     CpuShader m_cpu_shader {};
 };
 
-// TODO CreateDescriptorSetLayout (Do we ?)
-
-// TODO DestroyDescriptorSetLayout (Do we ?)
-
-// TODO CreateDescriptorPoolLayout
-
-// TODO DestroyDescriptorPoolLayout
-
-// TODO CreateDescriptorSet
-
-// TODO DestroyDescriptorSet
-
 struct GraphicPipelineGroup {
     VkDescriptorSetLayout_T * descriptor_set_layout = nullptr;
     VkPipelineLayout_T * pipeline_layout = nullptr;
@@ -381,5 +374,66 @@ void DestroyDescriptorSetLayout(
 
 [[nodiscard]]
 VkShaderStageFlagBits ConvertAssetShaderStageToGpu(Asset::ShaderStage stage);
+
+[[nodiscard]]
+BufferGroup CreateVertexBuffer(
+    VkDevice_T * device,
+    VkPhysicalDevice_T * physical_device,
+    VkDeviceSize vertices_size,
+    Blob vertices_blob
+);
+
+void DestroyVertexBuffer(
+    VkDevice_T * device,
+    BufferGroup const & vertex_buffer_group
+);
+
+[[nodiscard]]
+BufferGroup CreateIndexBuffer (
+    VkDevice_T * device,
+    VkPhysicalDevice_T * physical_device,
+    VkDeviceSize indices_size,
+    Blob indices_blob
+);
+
+void DestroyIndexBuffer(
+    VkDevice_T * device,
+    BufferGroup const & index_buffer_group
+);
+
+[[nodiscard]]
+std::vector<BufferGroup> CreateUniformBuffer(
+    VkDevice_T * device,
+    VkPhysicalDevice_T * physical_device,
+    U8 swap_chain_images_count,
+    VkDeviceSize size 
+);
+
+void UpdateUniformBuffer(
+    VkDevice_T * device,
+    BufferGroup const & uniform_buffer_group,
+    Blob const data
+);
+
+void DestroyUniformBuffer(
+    VkDevice_T * device,
+    BufferGroup & buffer_group
+);
+
+// CreateDescriptorPool
+
+// DestroyDescriptorPool
+
+// CreateDescriptorSet
+
+// DestroyDescriptorSet
+
+// CreateCommandBuffer (For pipeline I guess)
+
+// DestroyCommandBuffer
+
+// CreateSyncObjects (Fence, Semaphore, ...)
+
+// DestroySyncObjects 
 
 }

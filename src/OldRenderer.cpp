@@ -1,6 +1,6 @@
-#include <SDL2/SDL_vulkan.h>
-#if 1
+#if 0
 
+#include <SDL2/SDL_vulkan.h>
 #include <vector>
 #include <vulkan/vulkan.h>
 #include <cassert>

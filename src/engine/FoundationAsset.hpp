@@ -167,7 +167,7 @@ struct Header {
     * Returns space required for both mipmaps and TextureHeader
     */
     [[nodiscard]]
-    static size_t CalcUncompressedTextureRequiredDataSize(
+    static size_t CalculateUncompressedTextureRequiredDataSize(
         Format const format,
         uint16_t const slices,
         Dimensions const & dims,

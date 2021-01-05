@@ -1,4 +1,5 @@
-#if 0
+#include <vulkan/vulkan_core.h>
+#if 1
 #include "Application.hpp"
 
 #include "BedrockPlatforms.hpp"
