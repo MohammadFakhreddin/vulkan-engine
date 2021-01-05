@@ -1331,8 +1331,12 @@ GraphicPipelineGroup CreateGraphicPipeline(
     U32 const attribute_description_count,
     VkVertexInputAttributeDescription * attribute_description_data,
     VkExtent2D const swap_chain_extent,
-    VkRenderPass_T * render_pass
+    VkRenderPass_T * render_pass,
+    VkDescriptorSetLayout_T * descriptor_set_layout
 ) {
+    MFA_PTR_ASSERT(shader_stages);
+    MFA_PTR_ASSERT(render_pass);
+    MFA_PTR_ASSERT(descriptor_set_layout);
     // Set up shader stage info
     std::vector<VkPipelineShaderStageCreateInfo> shader_stages_create_infos {shader_stages_count};
     for(U8 i = 0; i < shader_stages_count; i++) {
@@ -1440,33 +1444,34 @@ GraphicPipelineGroup CreateGraphicPipeline(
     color_blend_create_info.blendConstants[2] = 0.0f;
     color_blend_create_info.blendConstants[3] = 0.0f;
 
-    // Describe pipeline layout
-    // Note: this describes the mapping between memory and shader resources (descriptor sets)
-    // This is for uniform buffers and samplers
-    VkDescriptorSetLayoutBinding uboLayoutBinding {};
-    uboLayoutBinding.binding = 0;
-    // Our object type is uniformBuffer
-    uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    // Number of values in buffer
-    uboLayoutBinding.descriptorCount = 1;
-    // Which shader stage we are going to reffer to // In our case we only need vertex shader to access to it
-    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    // For Image sampler, Currently we do not need this
-    uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
+    // TODO Move this to renderFrontEnd
+    //// Describe pipeline layout
+    //// Note: this describes the mapping between memory and shader resources (descriptor sets)
+    //// This is for uniform buffers and samplers
+    //VkDescriptorSetLayoutBinding uboLayoutBinding {};
+    //uboLayoutBinding.binding = 0;
+    //// Our object type is uniformBuffer
+    //uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    //// Number of values in buffer
+    //uboLayoutBinding.descriptorCount = 1;
+    //// Which shader stage we are going to reffer to // In our case we only need vertex shader to access to it
+    //uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    //// For Image sampler, Currently we do not need this
+    //uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
 
-    VkDescriptorSetLayoutBinding sampler_layout_binding{};
-    sampler_layout_binding.binding = 1;
-    sampler_layout_binding.descriptorCount = 1;
-    sampler_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    sampler_layout_binding.pImmutableSamplers = nullptr;
-    sampler_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    //VkDescriptorSetLayoutBinding sampler_layout_binding{};
+    //sampler_layout_binding.binding = 1;
+    //sampler_layout_binding.descriptorCount = 1;
+    //sampler_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    //sampler_layout_binding.pImmutableSamplers = nullptr;
+    //sampler_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-    std::vector<VkDescriptorSetLayoutBinding> bindings = {uboLayoutBinding, sampler_layout_binding};
-    auto * descriptor_set_layout = CreateDescriptorSetLayout(
-        device, 
-        static_cast<U8>(bindings.size()), 
-        bindings.data()
-    );
+    //std::vector<VkDescriptorSetLayoutBinding> bindings = {uboLayoutBinding, sampler_layout_binding};
+    //auto * descriptor_set_layout = CreateDescriptorSetLayout(
+    //    device, 
+    //    static_cast<U8>(bindings.size()), 
+    //    bindings.data()
+    //);
 
     MFA_LOG_INFO("Created descriptor layout");
 
@@ -1509,8 +1514,6 @@ GraphicPipelineGroup CreateGraphicPipeline(
     MFA_LOG_INFO("Created graphics pipeline");
 
     GraphicPipelineGroup group {};
-    MFA_PTR_ASSERT(descriptor_set_layout);
-    group.descriptor_set_layout = descriptor_set_layout;
     MFA_PTR_ASSERT(pipeline);
     group.graphic_pipeline = pipeline;
     MFA_PTR_ASSERT(pipeline_layout);
@@ -1522,13 +1525,10 @@ GraphicPipelineGroup CreateGraphicPipeline(
 void DestroyGraphicPipeline(VkDevice_T * device, GraphicPipelineGroup & graphic_pipeline_group) {
     MFA_PTR_ASSERT(device);
     MFA_PTR_ASSERT(graphic_pipeline_group.graphic_pipeline);
-    MFA_PTR_ASSERT(graphic_pipeline_group.descriptor_set_layout);
     MFA_PTR_ASSERT(graphic_pipeline_group.pipeline_layout);
     vkDestroyPipeline(device, graphic_pipeline_group.graphic_pipeline, nullptr);
     vkDestroyPipelineLayout(device, graphic_pipeline_group.pipeline_layout, nullptr);
-    DestroyDescriptorSetLayout(device, graphic_pipeline_group.descriptor_set_layout);
     graphic_pipeline_group.graphic_pipeline = nullptr;
-    graphic_pipeline_group.descriptor_set_layout = nullptr;
     graphic_pipeline_group.pipeline_layout = nullptr;
 }
 
@@ -1695,6 +1695,128 @@ void DestroyUniformBuffer(
     BufferGroup & buffer_group
 ) {
     DestroyBuffer(device, buffer_group);
+}
+
+VkDescriptorPool_T * CreateDescriptorPool(
+    VkDevice_T * device,
+    U8 const swap_chain_images_count
+) {
+    // TODO Check if both of these variables must have same value as swap_chain_images_count
+    VkDescriptorPoolSize poolSize {};
+    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSize.descriptorCount = swap_chain_images_count;
+
+    VkDescriptorPoolCreateInfo poolInfo = {};
+    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.poolSizeCount = 1;
+    poolInfo.pPoolSizes = &poolSize;
+    poolInfo.maxSets = swap_chain_images_count;
+
+    VkDescriptorPool_T * descriptor_pool = nullptr;
+
+    VK_Check(vkCreateDescriptorPool(
+        device, 
+        &poolInfo, 
+        nullptr, 
+        &descriptor_pool
+    ));
+
+    return descriptor_pool;
+}
+
+void DestroyDescriptorPool(
+    VkDevice_T * device, 
+    VkDescriptorPool_T * pool
+) {
+    MFA_PTR_ASSERT(device);
+    MFA_PTR_ASSERT(pool);
+    vkDestroyDescriptorPool(device, pool, nullptr);
+}
+
+std::vector<VkDescriptorSet_T *> CreateDescriptorSet(
+    VkDevice_T * device,
+    VkDescriptorPool_T * descriptor_pool,
+    VkDescriptorSetLayout_T * descriptor_set_layout,
+    U8 const swap_chain_images_count,
+    U8 const schemas_count,
+    VkWriteDescriptorSet * schemas
+) {
+    MFA_PTR_ASSERT(device);
+    MFA_PTR_ASSERT(descriptor_pool);
+    MFA_PTR_ASSERT(descriptor_set_layout);
+    // There needs to be one descriptor set per binding point in the shader
+    VkDescriptorSetAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = descriptor_pool;
+    allocInfo.descriptorSetCount = swap_chain_images_count;
+    allocInfo.pSetLayouts = &descriptor_set_layout;
+
+    std::vector<VkDescriptorSet_T *> descriptor_sets {allocInfo.descriptorSetCount};
+    // Descriptor sets gets destroyed automatically when descriptor pool is destroyed
+    VK_Check(vkAllocateDescriptorSets (
+        device, 
+        &allocInfo, 
+        descriptor_sets.data()
+    ));
+    MFA_LOG_INFO("Create descriptor set is successful");
+
+    if(schemas_count > 0 && MFA_PTR_VALID(schemas)) {
+        UpdateDescriptorSet(
+            device,
+            descriptor_sets.size(),
+            descriptor_sets.data(),
+            schemas_count,
+            schemas
+        );
+    }
+}
+
+void UpdateDescriptorSet(
+    VkDevice_T * device,
+    U8 const descriptor_set_count,
+    VkDescriptorSet_T ** descriptor_sets,
+    U8 const schemas_count,
+    VkWriteDescriptorSet * schemas
+) {
+    for(auto i = 0; i < descriptor_set_count; i++){
+        // Update descriptor set with uniform binding
+        // TODO: Define in render frontend
+        //VkDescriptorBufferInfo descriptorBufferInfo = {};
+        //descriptorBufferInfo.buffer = uniformBuffers[i];
+        //descriptorBufferInfo.offset = 0;
+        //descriptorBufferInfo.range = sizeof(UniformBufferObject);
+
+        //VkDescriptorImageInfo imageInfo{};
+        //imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        //imageInfo.imageView = textureImageView;
+        //imageInfo.sampler = textureSampler;
+
+        //std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+
+        //descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        //descriptorWrites[0].dstSet = descriptorSets[i];
+        //descriptorWrites[0].dstBinding = 0;
+        //descriptorWrites[0].dstArrayElement = 0;
+        //descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        //descriptorWrites[0].descriptorCount = 1;
+        //descriptorWrites[0].pBufferInfo = &descriptorBufferInfo;
+
+        //descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        //descriptorWrites[1].dstSet = descriptorSets[i];
+        //descriptorWrites[1].dstBinding = 1;
+        //descriptorWrites[1].dstArrayElement = 0;
+        //descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        //descriptorWrites[1].descriptorCount = 1;
+        //descriptorWrites[1].pImageInfo = &imageInfo;
+
+        vkUpdateDescriptorSets(
+            device, 
+            schemas_count, 
+            schemas, 
+            0, 
+            nullptr
+        );
+    }
 }
 
 }

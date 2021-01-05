@@ -342,7 +342,6 @@ private:
 };
 
 struct GraphicPipelineGroup {
-    VkDescriptorSetLayout_T * descriptor_set_layout = nullptr;
     VkPipelineLayout_T * pipeline_layout = nullptr;
     VkPipeline_T * graphic_pipeline = nullptr;
 };
@@ -355,7 +354,10 @@ GraphicPipelineGroup CreateGraphicPipeline(
     VkVertexInputBindingDescription vertex_binding_description,
     U32 attribute_description_count,
     VkVertexInputAttributeDescription * attribute_description_data,
-    VkExtent2D swap_chain_extent
+    VkExtent2D swap_chain_extent,
+    VkRenderPass_T * render_pass,
+    VkDescriptorSetLayout_T * descriptor_set_layout
+
 );
 
 void DestroyGraphicPipeline(GraphicPipelineGroup & graphic_pipeline_group);
@@ -412,7 +414,7 @@ std::vector<BufferGroup> CreateUniformBuffer(
 void UpdateUniformBuffer(
     VkDevice_T * device,
     BufferGroup const & uniform_buffer_group,
-    Blob const data
+    Blob data
 );
 
 void DestroyUniformBuffer(
@@ -420,15 +422,59 @@ void DestroyUniformBuffer(
     BufferGroup & buffer_group
 );
 
-// CreateDescriptorPool
+[[nodiscard]]
+VkDescriptorPool_T * CreateDescriptorPool(
+    VkDevice_T * device,
+    U8 swap_chain_images_count
+);
 
-// DestroyDescriptorPool
+void DestroyDescriptorPool(
+    VkDevice_T * device, 
+    VkDescriptorPool_T * pool
+);
 
-// CreateDescriptorSet
+// Descriptor sets gets destroyed automatically when descriptor pool is destroyed
+[[nodiscard]]
+std::vector<VkDescriptorSet_T *> CreateDescriptorSet(
+    VkDevice_T * device,
+    VkDescriptorPool_T * descriptor_pool,
+    U8 swap_chain_images_count,
+    U8 schemas_count = 0,
+    VkWriteDescriptorSet * schemas = nullptr
+);
 
-// DestroyDescriptorSet
+// TODO Consider creating an easier interface
+void UpdateDescriptorSet(
+    VkDevice_T * device,
+    U8 descriptor_set_count,
+    VkDescriptorSet_T ** descriptor_sets,
+    U8 schemas_count,
+    VkWriteDescriptorSet * schemas
+);
 
 // CreateCommandBuffer (For pipeline I guess)
+void CreateCommandBuffers(
+    U8 swap_chain_images_count,
+    VkCommandPool_T * command_pool
+) {
+    // Allocate graphics command buffers
+    graphicsCommandBuffers.resize(swapChainImages.size());
+
+    VkCommandBufferAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool = commandPool;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = static_cast<uint32_t>(swapChainImages.size());
+
+    if (vkAllocateCommandBuffers(device, &allocInfo, graphicsCommandBuffers.data()) != VK_SUCCESS) {
+        throwErrorAndExit("Failed to allocate graphics command buffers");
+    }
+    else {
+        std::cout << "allocated graphics command buffers" << std::endl;
+    }
+
+    // Command buffer data gets recorded each time 
+}
 
 // DestroyCommandBuffer
 
