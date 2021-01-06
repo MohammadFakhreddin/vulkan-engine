@@ -13,8 +13,11 @@ struct InitParams {
     char const * application_name;
 };
 // TODO Implement this function
+[[nodiscard]]
 bool Init(InitParams const & params);
 // TODO Implement this function
 bool Shutdown();
+
+// TODO Resize function
 
 }

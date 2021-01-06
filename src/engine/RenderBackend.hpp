@@ -199,17 +199,19 @@ void CopyBufferToImage(
 
 struct LogicalDevice {
     VkDevice_T * device;
+    VkQueue_T * graphic_queue;
+    VkQueue_T * present_queue;
     VkPhysicalDeviceMemoryProperties physical_memory_properties;
 };
 [[nodiscard]]
 LogicalDevice CreateLogicalDevice(
     VkPhysicalDevice_T * physical_device,
     U32 graphics_queue_family,
-    VkQueue_T * graphic_queue,
     U32 present_queue_family,
-    VkQueue_T * present_queue,
     VkPhysicalDeviceFeatures const & enabled_physical_device_features
 );
+
+void DestroyLogicalDevice(LogicalDevice const & logical_device);
 
 // TODO This function should ask for options
 [[nodiscard]]

@@ -716,16 +716,14 @@ void CopyBufferToImage(
 LogicalDevice CreateLogicalDevice(
     VkPhysicalDevice_T * physical_device,
     U32 const graphics_queue_family,
-    VkQueue_T * graphic_queue,
     U32 const present_queue_family,
-    VkQueue_T * present_queue,
     VkPhysicalDeviceFeatures const & enabled_physical_device_features
 ) {
     LogicalDevice ret {};
 
     MFA_PTR_ASSERT(physical_device);
-    MFA_PTR_ASSERT(graphic_queue);
-    MFA_PTR_ASSERT(present_queue);
+    MFA_ASSERT(graphics_queue_family > 0);
+    MFA_ASSERT(present_queue_family > 0);
 
     // Create one graphics queue and optionally a separate presentation queue
     float queue_priority = 1.0f;
@@ -769,13 +767,17 @@ LogicalDevice CreateLogicalDevice(
     MFA_PTR_ASSERT(ret.device);
     MFA_LOG_INFO("Logical device create was successful");
     // Get graphics and presentation queues (which may be the same)
-    vkGetDeviceQueue(ret.device, graphics_queue_family, 0, &graphic_queue);
-    vkGetDeviceQueue(ret.device, present_queue_family, 0, &present_queue);
+    vkGetDeviceQueue(ret.device, graphics_queue_family, 0, &ret.graphic_queue);
+    vkGetDeviceQueue(ret.device, present_queue_family, 0, &ret.present_queue);
 
     MFA_LOG_INFO("Acquired graphics and presentation queues");
     vkGetPhysicalDeviceMemoryProperties(physical_device, &ret.physical_memory_properties);
 
     return ret;
+}
+
+void DestroyLogicalDevice(LogicalDevice const & logical_device) {
+    vkDestroyDevice(logical_device.device, nullptr);
 }
 
 // TODO Consider oop and storing data
@@ -954,7 +956,6 @@ FindPresentAndGraphicQueueFamilyResult FindPresentAndGraphicQueueFamily(
     } else {
         MFA_CRASH("Could not find a valid queue family with graphics support");
     }
-
     return ret; 
 }
 
