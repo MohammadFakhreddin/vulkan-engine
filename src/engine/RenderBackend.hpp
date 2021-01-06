@@ -452,34 +452,31 @@ void UpdateDescriptorSet(
     VkWriteDescriptorSet * schemas
 );
 
-// CreateCommandBuffer (For pipeline I guess)
-void CreateCommandBuffers(
+/***
+ *  CreateCommandBuffer (For pipeline I guess)
+ *  Allocate graphics command buffers
+ *  There is no need for destroying it
+ ***/
+std::vector<VkCommandBuffer_T *> CreateCommandBuffers(
+    VkDevice_T * device,
     U8 swap_chain_images_count,
     VkCommandPool_T * command_pool
-) {
-    // Allocate graphics command buffers
-    graphicsCommandBuffers.resize(swapChainImages.size());
-
-    VkCommandBufferAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = commandPool;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = static_cast<uint32_t>(swapChainImages.size());
-
-    if (vkAllocateCommandBuffers(device, &allocInfo, graphicsCommandBuffers.data()) != VK_SUCCESS) {
-        throwErrorAndExit("Failed to allocate graphics command buffers");
-    }
-    else {
-        std::cout << "allocated graphics command buffers" << std::endl;
-    }
-
-    // Command buffer data gets recorded each time 
-}
-
-// DestroyCommandBuffer
+);
 
 // CreateSyncObjects (Fence, Semaphore, ...)
+struct SyncObjects {
+    std::vector<VkSemaphore_T *> image_availability_semaphores;
+    std::vector<VkSemaphore_T *> render_finish_indicator_semaphores;
+    std::vector<VkFence_T *> fences_in_flight;
+    std::vector<VkFence_T *> images_in_flight;
+};
+[[nodiscard]]
+SyncObjects CreateSyncObjects(
+    VkDevice_T * device,
+    U8 max_frames_in_flight,
+    U8 swap_chain_images_count
+);
 
-// DestroySyncObjects 
+void DestroySyncObjects(VkDevice_T * device, SyncObjects const & sync_objects);
 
 }

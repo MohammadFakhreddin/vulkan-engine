@@ -1819,4 +1819,79 @@ void UpdateDescriptorSet(
     }
 }
 
+std::vector<VkCommandBuffer_T *> CreateCommandBuffers(
+    VkDevice_T * device,
+    U8 const swap_chain_images_count,
+    VkCommandPool_T * command_pool
+) {
+    std::vector<VkCommandBuffer_T *> command_buffers {swap_chain_images_count};
+    
+    VkCommandBufferAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool = command_pool;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = swap_chain_images_count;
+
+    VK_Check(vkAllocateCommandBuffers(
+        device, 
+        &allocInfo, 
+        command_buffers.data()
+    ));
+    
+    MFA_LOG_INFO("Allocated graphics command buffers.");
+
+    // Command buffer data gets recorded each time 
+}
+
+SyncObjects CreateSyncObjects(
+    VkDevice_T * device,
+    U8 const max_frames_in_flight,
+    U8 const swap_chain_images_count
+) {
+    SyncObjects sync_objects {};
+    sync_objects.image_availability_semaphores.resize(max_frames_in_flight);
+    sync_objects.render_finish_indicator_semaphores.resize(max_frames_in_flight);
+    sync_objects.fences_in_flight.resize(max_frames_in_flight);
+    sync_objects.images_in_flight.resize(swap_chain_images_count, nullptr);
+
+    VkSemaphoreCreateInfo semaphoreInfo{};
+    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkFenceCreateInfo fenceInfo{};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    for (U8 i = 0; i < max_frames_in_flight; i++) {
+        VK_Check(vkCreateSemaphore(
+            device, 
+            &semaphoreInfo, 
+            nullptr, 
+            &sync_objects.image_availability_semaphores[i]
+        ));
+        VK_Check(vkCreateSemaphore(
+            device, 
+            &semaphoreInfo,
+            nullptr,
+            &sync_objects.render_finish_indicator_semaphores[i]
+        ));
+        VK_Check(vkCreateFence(
+            device, 
+            &fenceInfo, 
+            nullptr, 
+            &sync_objects.fences_in_flight[i]
+        ));
+    }
+    return sync_objects;
+}
+
+void DestroySyncObjects(VkDevice_T * device, SyncObjects const & sync_objects) {
+    MFA_ASSERT(sync_objects.fences_in_flight.size() == sync_objects.image_availability_semaphores.size());
+    MFA_ASSERT(sync_objects.fences_in_flight.size() == sync_objects.render_finish_indicator_semaphores.size());
+    for(U8 i = 0; i < sync_objects.fences_in_flight.size(); i++) {
+        vkDestroySemaphore(device, sync_objects.render_finish_indicator_semaphores[i], nullptr);
+        vkDestroySemaphore(device, sync_objects.image_availability_semaphores[i], nullptr);
+        vkDestroyFence(device, sync_objects.fences_in_flight[i], nullptr);
+    }
+}
+
 }
