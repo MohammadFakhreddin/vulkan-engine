@@ -1,4 +1,4 @@
-#if 1
+#if 0
 #ifndef APPLICATION_CLASS
 #define APPLICATION_CLASS
 

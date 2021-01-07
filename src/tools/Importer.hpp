@@ -1,5 +1,4 @@
-#ifndef IMPORTER_NAMESPACE
-#define IMPORTER_NAMESPACE
+#pragma once
 
 #include "../engine/FoundationAsset.hpp"
 
@@ -61,6 +60,3 @@ RawFile ReadRawFile(char const * path);
 bool FreeRawFile (RawFile * raw_file);
 
 }
-
-
-#endif

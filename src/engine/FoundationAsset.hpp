@@ -1,5 +1,4 @@
-#ifndef ASSET_NAMESPACE
-#define ASSET_NAMESPACE
+#pragma once
 
 #include "BedrockAssert.hpp"
 #include "BedrockCommon.hpp"
@@ -43,7 +42,7 @@ enum class Format {
     Count
 };
 
-inline constexpr struct {
+struct InternalFormatTableType {
     Format texture_format;
     uint8_t compression;                            // 0: uncompressed, 1: basis?, ...
     uint8_t component_count;                        // 1..4
@@ -51,7 +50,8 @@ inline constexpr struct {
     uint8_t color_space;                            // 0: Linear, 1: sRGB
     uint8_t bits_r, bits_g, bits_b, bits_a;         // each 0..32
     uint8_t bits_total;                             // 1..128
-} FormatTable [] = {
+};
+inline constexpr InternalFormatTableType FormatTable [] = {
     {Format::INVALID                                 , 0, 0, 0, 0, 0, 0, 0, 0,  0},
 
     {Format::UNCOMPRESSED_UNORM_R8_LINEAR            , 0, 1, 0, 0, 8, 0, 0, 0,  8},
@@ -76,7 +76,6 @@ inline constexpr struct {
 
 };
 static_assert(ArrayCount(FormatTable) == static_cast<unsigned>(Format::Count));
-
 
 #pragma pack(push)
 #pragma warning (push)
@@ -405,5 +404,3 @@ class MaterialAsset : public GenericAsset {
 };
 
 };  // MFA::Asset
-
-#endif

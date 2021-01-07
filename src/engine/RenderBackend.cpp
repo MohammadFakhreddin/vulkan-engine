@@ -502,7 +502,9 @@ ImageGroup CreateImage(
     );
 
     VK_Check(vkAllocateMemory(device, &allocate_info, nullptr, &ret.memory));
-    VK_Check(vkBindImageMemory(device, ret.image, ret.memory, 0)); 
+    VK_Check(vkBindImageMemory(device, ret.image, ret.memory, 0));
+
+    return ret;
 }
 
 void DestroyImage(
@@ -1581,6 +1583,8 @@ VkShaderStageFlagBits ConvertAssetShaderStageToGpu(Asset::ShaderStage const stag
 BufferGroup CreateVertexBuffer(
     VkDevice_T * device,
     VkPhysicalDevice_T * physical_device,
+    VkCommandPool_T * command_pool,
+    VkQueue_T * graphic_queue,
     Blob const vertices_blob
 ) {
     VkDeviceSize const bufferSize = vertices_blob.len;
@@ -1596,13 +1600,21 @@ BufferGroup CreateVertexBuffer(
     MapDataToBuffer(device, staging_buffer_group.memory, vertices_blob);
     
     auto const vertex_buffer_group = CreateBuffer(
-        device, physical_device, 
+        device, 
+        physical_device, 
         bufferSize, 
         VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
     );
 
-    CopyBuffer(staging_buffer_group.buffer, vertex_buffer_group.buffer, bufferSize);
+    CopyBuffer(
+        device,
+        command_pool,
+        graphic_queue,
+        staging_buffer_group.buffer, 
+        vertex_buffer_group.buffer, 
+        bufferSize
+    );
 
     DestroyBuffer(device, staging_buffer_group);
 
@@ -1622,6 +1634,8 @@ void DestroyVertexBuffer(
 BufferGroup CreateIndexBuffer (
     VkDevice_T * device,
     VkPhysicalDevice_T * physical_device,
+    VkCommandPool_T * command_pool,
+    VkQueue_T * graphic_queue,
     Blob const indices_blob
 ) {
     auto const bufferSize = indices_blob.len;
@@ -1645,6 +1659,9 @@ BufferGroup CreateIndexBuffer (
     );
 
     CopyBuffer(
+        device,
+        command_pool,
+        graphic_queue,
         staging_buffer_group.buffer, 
         indices_buffer_group.buffer, 
         bufferSize
@@ -1764,14 +1781,17 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSet(
     MFA_LOG_INFO("Create descriptor set is successful");
 
     if(schemas_count > 0 && MFA_PTR_VALID(schemas)) {
+        MFA_ASSERT(descriptor_sets.size() < 256);
         UpdateDescriptorSet(
             device,
-            descriptor_sets.size(),
+            static_cast<U8>(descriptor_sets.size()),
             descriptor_sets.data(),
             schemas_count,
             schemas
         );
     }
+
+    return descriptor_sets;
 }
 
 void UpdateDescriptorSet(
@@ -1843,7 +1863,8 @@ std::vector<VkCommandBuffer_T *> CreateCommandBuffers(
     
     MFA_LOG_INFO("Allocated graphics command buffers.");
 
-    // Command buffer data gets recorded each time 
+    // Command buffer data gets recorded each time
+    return command_buffers;
 }
 
 SyncObjects CreateSyncObjects(

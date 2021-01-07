@@ -3,8 +3,8 @@
 #include <string>
 
 #include "BedrockAssert.hpp"
-#include "BedrockLog.hpp"
 #include "RenderBackend.hpp"
+#include "BedrockLog.hpp"
 
 #include <string>
 
@@ -37,7 +37,6 @@ struct State {
     DepthImageGroup depth_image_group {};
     std::vector<VkFramebuffer_T *> frame_buffers {};
     VkDescriptorPool_T * descriptor_pool {};
-    std::vector<VkDescriptorSet_T *> descriptor_sets {};    // TODO: Might be moved to application level
     std::vector<VkCommandBuffer_T *> graphic_command_buffers {};
     SyncObjects sync_objects {};
 };
@@ -136,12 +135,6 @@ bool Init(InitParams const & params) {
         state.logical_device.device, 
         static_cast<U8>(state.swap_chain_group.swap_chain_images.size())
     );
-    // TODO: Might be moved to application level
-    state.descriptor_sets = CreateDescriptorSet(
-        state.logical_device.device,
-        state.descriptor_pool,
-        static_cast<U8>(state.swap_chain_group.swap_chain_images.size())
-    );
     state.graphic_command_buffers = CreateCommandBuffers(
         state.logical_device.device,
         static_cast<U8>(state.swap_chain_group.swap_chain_images.size()),
@@ -152,6 +145,7 @@ bool Init(InitParams const & params) {
         MAX_FRAMES_IN_FLIGHT,
         static_cast<U8>(state.swap_chain_group.swap_chain_images.size())
     );
+    return true;
 }
 
 }

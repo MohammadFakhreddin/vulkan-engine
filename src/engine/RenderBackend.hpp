@@ -111,6 +111,9 @@ void MapDataToBuffer(
 );
 
 void CopyBuffer(
+    VkDevice_T * device,
+    VkCommandPool_T * command_pool,
+    VkQueue_T * graphic_queue,
     VkBuffer_T * source_buffer,
     VkBuffer_T * destination_buffer,
     VkDeviceSize size
@@ -383,7 +386,8 @@ VkShaderStageFlagBits ConvertAssetShaderStageToGpu(Asset::ShaderStage stage);
 BufferGroup CreateVertexBuffer(
     VkDevice_T * device,
     VkPhysicalDevice_T * physical_device,
-    VkDeviceSize vertices_size,
+    VkCommandPool_T * command_pool,
+    VkQueue_T * graphic_queue,
     Blob vertices_blob
 );
 
@@ -396,7 +400,8 @@ void DestroyVertexBuffer(
 BufferGroup CreateIndexBuffer (
     VkDevice_T * device,
     VkPhysicalDevice_T * physical_device,
-    VkDeviceSize indices_size,
+    VkCommandPool_T * command_pool,
+    VkQueue_T * graphic_queue,
     Blob indices_blob
 );
 
@@ -440,6 +445,7 @@ void DestroyDescriptorPool(
 std::vector<VkDescriptorSet_T *> CreateDescriptorSet(
     VkDevice_T * device,
     VkDescriptorPool_T * descriptor_pool,
+    VkDescriptorSetLayout_T * descriptor_set_layout,
     U8 swap_chain_images_count,
     U8 schemas_count = 0,
     VkWriteDescriptorSet * schemas = nullptr

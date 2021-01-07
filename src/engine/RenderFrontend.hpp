@@ -12,15 +12,14 @@ struct InitParams {
     ScreenHeight screen_height;
     char const * application_name;
 };
-// TODO Implement this function
-[[nodiscard]]
+
 bool Init(InitParams const & params);
 // TODO Implement this function
 bool Shutdown();
 
 // TODO OnResize
 
-// TODO CreateDrawPipeline
+// TODO CreateDrawPipeline + asking for descriptor set layout required bindings
 
 // TODO DestroyDrawPipeline
 
