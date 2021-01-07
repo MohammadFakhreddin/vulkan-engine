@@ -18,6 +18,18 @@ bool Init(InitParams const & params);
 // TODO Implement this function
 bool Shutdown();
 
-// TODO Resize function
+// TODO OnResize
+
+// TODO CreateDrawPipeline
+
+// TODO DestroyDrawPipeline
+
+// TODO CreateUniformBuffer
+
+// TODO UpdateUniformBuffer
+
+// TODO DestroyUniformBuffer
+
+// TODO UpdateDescriptorSet
 
 }

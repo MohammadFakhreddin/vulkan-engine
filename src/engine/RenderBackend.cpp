@@ -1256,6 +1256,8 @@ std::vector<VkFramebuffer_T *> CreateFrameBuffers(
     VkImageView_T * depth_image_view,
     VkExtent2D const swap_chain_extent
 ) {
+    MFA_PTR_ASSERT(device);
+    MFA_PTR_ASSERT(render_pass);
     MFA_ASSERT(swap_chain_image_views_count > 0);
     MFA_PTR_ASSERT(swap_chain_image_views);
     std::vector<VkFramebuffer_T *> swap_chain_frame_buffers {swap_chain_image_views_count};

@@ -12,6 +12,8 @@ namespace MFA::RenderFrontend {
 
 using namespace RenderBackend;
 
+static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+
 struct State {
     // CreateWindow
     ScreenWidth screen_width = 0;
@@ -32,6 +34,12 @@ struct State {
     VkCommandPool_T * graphic_command_pool = nullptr;
     SwapChainGroup swap_chain_group {};
     VkRenderPass_T * render_pass = nullptr;
+    DepthImageGroup depth_image_group {};
+    std::vector<VkFramebuffer_T *> frame_buffers {};
+    VkDescriptorPool_T * descriptor_pool {};
+    std::vector<VkDescriptorSet_T *> descriptor_sets {};    // TODO: Might be moved to application level
+    std::vector<VkCommandBuffer_T *> graphic_command_buffers {};
+    SyncObjects sync_objects {};
 };
 
 State state {};
@@ -96,12 +104,13 @@ bool Init(InitParams const & params) {
         state.physical_device_features
     );
     state.graphic_command_pool = CreateCommandPool(state.logical_device.device, state.graphic_queue_family);
-    // Creating sampler/TextureImage/VertexBuffer and IndexBuffer is on application level
+    VkExtent2D const swap_chain_extent = {state.screen_width, state.screen_height};
+    // Creating sampler/TextureImage/VertexBuffer and IndexBuffer + graphic_pipeline is on application level
     state.swap_chain_group = CreateSwapChain(
         state.logical_device.device,
         state.physical_device,
         state.surface,
-        {state.screen_width, state.screen_height}
+        swap_chain_extent
     );
     // TODO We might need special render pass
     state.render_pass = CreateRenderPass(
@@ -109,14 +118,40 @@ bool Init(InitParams const & params) {
         state.logical_device.device,
         state.swap_chain_group.swap_chain_format
     );
-    /*createImageViews();
-    createFramebuffers();
-    createGraphicsPipeline();
-    createUniformBuffer();
-    createDescriptorPool();
-    createDescriptorSet();
-    createCommandBuffers();
-    createSyncObjects();*/
+    state.depth_image_group = CreateDepth(
+        state.physical_device,
+        state.logical_device.device,
+        swap_chain_extent
+    );
+    // TODO Q1: Where do we need frame-buffers ? Q2: Maybe we can create it same time as render pass
+    state.frame_buffers = CreateFrameBuffers(
+        state.logical_device.device,
+        state.render_pass,
+        static_cast<U8>(state.swap_chain_group.swap_chain_image_views.size()),
+        state.swap_chain_group.swap_chain_image_views.data(),
+        state.depth_image_group.image_view,
+        swap_chain_extent
+    );
+    state.descriptor_pool = CreateDescriptorPool(
+        state.logical_device.device, 
+        static_cast<U8>(state.swap_chain_group.swap_chain_images.size())
+    );
+    // TODO: Might be moved to application level
+    state.descriptor_sets = CreateDescriptorSet(
+        state.logical_device.device,
+        state.descriptor_pool,
+        static_cast<U8>(state.swap_chain_group.swap_chain_images.size())
+    );
+    state.graphic_command_buffers = CreateCommandBuffers(
+        state.logical_device.device,
+        static_cast<U8>(state.swap_chain_group.swap_chain_images.size()),
+        state.graphic_command_pool
+    );
+    state.sync_objects = CreateSyncObjects(
+        state.logical_device.device,
+        MAX_FRAMES_IN_FLIGHT,
+        static_cast<U8>(state.swap_chain_group.swap_chain_images.size())
+    );
 }
 
 }
