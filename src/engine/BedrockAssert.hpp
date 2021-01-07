@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "engine/BedrockPlatforms.hpp"
+#include "engine/BedrockLog.hpp"
 
 #ifdef MFA_DEBUG
 #define MFA_ASSERT(condition)           assert(condition)
@@ -16,9 +17,9 @@
 #define MFA_NOT_IMPLEMENTED_YET(who)   
 #endif
 
-#define MFA_CRASH(message)              throw std::runtime_error(message)
+#define MFA_CRASH(message)              MFA_LOG_ERROR(message); throw std::runtime_error(message)
 #ifdef MFA_DEBUG
-#define MFA_DEBUG_CRASH(message)        throw std::runtime_error(message)
+#define MFA_DEBUG_CRASH(message)        MFA_LOG_ERROR(message); throw std::runtime_error(message)
 #else
 #define MFA_DEBUG_CRASH(message)
 #endif

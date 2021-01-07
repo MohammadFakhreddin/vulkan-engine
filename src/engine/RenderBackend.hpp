@@ -244,7 +244,7 @@ struct FindPhysicalDeviceResult {
     VkPhysicalDeviceFeatures physical_device_features {};
 };
 [[nodiscard]]
-FindPhysicalDeviceResult FindPhysicalDevice(VkInstance_T * vk_instance, U8 retry_count);
+FindPhysicalDeviceResult FindPhysicalDevice(VkInstance_T * vk_instance);
 
 [[nodiscard]]
 bool CheckSwapChainSupport(VkPhysicalDevice_T * physical_device);
@@ -486,5 +486,7 @@ SyncObjects CreateSyncObjects(
 );
 
 void DestroySyncObjects(VkDevice_T * device, SyncObjects const & sync_objects);
+
+void DeviceWaitIdle(VkDevice_T * device);
 
 }

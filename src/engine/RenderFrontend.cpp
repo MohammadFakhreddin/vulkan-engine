@@ -83,7 +83,7 @@ bool Init(InitParams const & params) {
     );
     state.surface = CreateWindowSurface(state.window, state.vk_instance);
     {
-        auto const find_physical_device_result = FindPhysicalDevice(state.vk_instance, 10); // TODO Check again for retry count number
+        auto const find_physical_device_result = FindPhysicalDevice(state.vk_instance); // TODO Check again for retry count number
         state.physical_device = find_physical_device_result.physical_device;
         state.physical_device_features = find_physical_device_result.physical_device_features;
     }
@@ -147,5 +147,17 @@ bool Init(InitParams const & params) {
     );
     return true;
 }
+
+bool Shutdown() {
+    DeviceWaitIdle(state.logical_device.device);
+    // TODO
+    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+}
+
+bool Resize(ScreenWidth screen_width, ScreenHeight screen_height) {
+    // TODO
+    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+}
+
 
 }

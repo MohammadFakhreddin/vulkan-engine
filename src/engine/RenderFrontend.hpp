@@ -17,7 +17,7 @@ bool Init(InitParams const & params);
 // TODO Implement this function
 bool Shutdown();
 
-// TODO OnResize
+bool Resize(ScreenWidth screen_width, ScreenHeight screen_height);
 
 // TODO CreateDrawPipeline + asking for descriptor set layout required bindings
 

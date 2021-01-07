@@ -1,6 +1,7 @@
 #include "RenderBackend.hpp"
 
 #include <vector>
+#include <cstring>
 
 #include "BedrockAssert.hpp"
 #include "BedrockLog.hpp"
@@ -12,16 +13,19 @@ namespace MFA::RenderBackend {
 
 inline static constexpr char EngineName[256] = "MFA";
 inline static constexpr int EngineVersion = 1;
-inline static constexpr char DebugLayer[256] = "VK_LAYER_LUNARG_standard_validation";
+std::string ValidationLayer = "VK_LAYER_KHRONOS_validation";
+std::vector<char const *> DebugLayers = {
+    ValidationLayer.c_str()
+};
 
 static void VK_Check(VkResult const result) {
-  if(result != VK_SUCCESS) {
-      MFA_CRASH("Vulkan command failed");
+  if(result != VK_SUCCESS) {\
+      MFA_CRASH("Vulkan command failed with code:" + std::to_string(result));
   }
 }
 
-static void SDL_Check(SDL_bool const result){
-  if(result != SDL_TRUE) {
+static void SDL_Check(SDL_bool const result) {
+  if(result != SDL_TRUE) {\
       MFA_CRASH("SDL command failed");
   }
 }
@@ -114,6 +118,7 @@ VkInstance_T * CreateInstance(char const * application_name, SDL_Window * window
         application_info.pNext = nullptr;
         // The name of our application
         application_info.pApplicationName = application_name;
+        application_info.applicationVersion = 1;    // TODO Ask this as parameter
         // The name of the engine (e.g: Game engine name)
         application_info.pEngineName = EngineName;
         // The version of the engine
@@ -126,11 +131,11 @@ VkInstance_T * CreateInstance(char const * application_name, SDL_Window * window
         unsigned int sdl_extenstion_count = 0;
         SDL_Check(SDL_Vulkan_GetInstanceExtensions(window, &sdl_extenstion_count, nullptr));
         instance_extensions.resize(sdl_extenstion_count);
-        SDL_Vulkan_GetInstanceExtensions(
+        SDL_Check(SDL_Vulkan_GetInstanceExtensions(
             window,
             &sdl_extenstion_count,
             instance_extensions.data()
-        );
+        ));
         instance_extensions.emplace_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
     }
     {// Checking for extension support
@@ -144,11 +149,10 @@ VkInstance_T * CreateInstance(char const * application_name, SDL_Window * window
             MFA_CRASH("no extensions supported!");
         }
     }
+    // TODO We should enumarateLayers before using them
     // Filling out instance description:
     VkInstanceCreateInfo instanceInfo = {};
     {
-        std::vector<char const *> debug_layers {};
-        debug_layers.emplace_back(DebugLayer);
         // sType is mandatory
         instanceInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         // pNext is mandatory
@@ -157,8 +161,13 @@ VkInstance_T * CreateInstance(char const * application_name, SDL_Window * window
         instanceInfo.flags = 0;
         // The application info structure is then passed through the instance
         instanceInfo.pApplicationInfo = &application_info;
-        instanceInfo.enabledLayerCount = static_cast<U32>(debug_layers.size());
-        instanceInfo.ppEnabledLayerNames = debug_layers.data();
+#ifdef MFA_DEBUG
+        instanceInfo.enabledLayerCount = static_cast<U32>(DebugLayers.size());
+        instanceInfo.ppEnabledLayerNames = DebugLayers.data();
+#else
+        instanceInfo.enabledLayerCount = 0;
+        instanceInfo.ppEnabledLayerNames = nullptr;
+#endif
         instanceInfo.enabledExtensionCount = static_cast<U32>(instance_extensions.size());
         instanceInfo.ppEnabledExtensionNames = instance_extensions.data();
     }
@@ -724,9 +733,7 @@ LogicalDevice CreateLogicalDevice(
     LogicalDevice ret {};
 
     MFA_PTR_ASSERT(physical_device);
-    MFA_ASSERT(graphics_queue_family > 0);
-    MFA_ASSERT(present_queue_family > 0);
-
+    
     // Create one graphics queue and optionally a separate presentation queue
     float queue_priority = 1.0f;
 
@@ -759,12 +766,13 @@ LogicalDevice CreateLogicalDevice(
     deviceCreateInfo.ppEnabledExtensionNames = &device_extensions;
     // Necessary for shader (for some reason)
     deviceCreateInfo.pEnabledFeatures = &enabled_physical_device_features;
-
-    std::vector<char const *> debug_layers {};
-    debug_layers.emplace_back(DebugLayer);
-    deviceCreateInfo.enabledLayerCount = static_cast<U32>(debug_layers.size());
-    deviceCreateInfo.ppEnabledLayerNames = debug_layers.data();
-
+#ifdef MFA_DEBUG
+    deviceCreateInfo.enabledLayerCount = static_cast<U32>(DebugLayers.size());
+    deviceCreateInfo.ppEnabledLayerNames = DebugLayers.data();
+#else
+    deviceCreateInfo.enabledLayerCount = 0;
+    deviceCreateInfo.ppEnabledLayerNames = nullptr;
+#endif
     VK_Check(vkCreateDevice(physical_device, &deviceCreateInfo, nullptr, &ret.device));
     MFA_PTR_ASSERT(ret.device);
     MFA_LOG_INFO("Logical device create was successful");
@@ -838,7 +846,7 @@ VkDebugReportCallbackEXT_T * SetDebugCallback(
     return ret;
 }
 
-FindPhysicalDeviceResult FindPhysicalDevice(VkInstance_T * vk_instance, U8 const retry_count) {
+static FindPhysicalDeviceResult FindPhysicalDevice(VkInstance_T * vk_instance, U8 const retry_count) {
     FindPhysicalDeviceResult ret {};
 
     U32 device_count = 0;
@@ -884,6 +892,10 @@ FindPhysicalDeviceResult FindPhysicalDevice(VkInstance_T * vk_instance, U8 const
     );
 
     return ret;
+}
+
+FindPhysicalDeviceResult FindPhysicalDevice(VkInstance_T * vk_instance) {
+    return FindPhysicalDevice(vk_instance, 0);
 }
 
 bool CheckSwapChainSupport(VkPhysicalDevice_T * physical_device) {
@@ -1909,6 +1921,7 @@ SyncObjects CreateSyncObjects(
 }
 
 void DestroySyncObjects(VkDevice_T * device, SyncObjects const & sync_objects) {
+    MFA_PTR_VALID(device);
     MFA_ASSERT(sync_objects.fences_in_flight.size() == sync_objects.image_availability_semaphores.size());
     MFA_ASSERT(sync_objects.fences_in_flight.size() == sync_objects.render_finish_indicator_semaphores.size());
     for(U8 i = 0; i < sync_objects.fences_in_flight.size(); i++) {
@@ -1916,6 +1929,11 @@ void DestroySyncObjects(VkDevice_T * device, SyncObjects const & sync_objects) {
         vkDestroySemaphore(device, sync_objects.image_availability_semaphores[i], nullptr);
         vkDestroyFence(device, sync_objects.fences_in_flight[i], nullptr);
     }
+}
+
+void DeviceWaitIdle(VkDevice_T * device) {
+    MFA_PTR_VALID(device);
+    VK_Check(vkDeviceWaitIdle(device));
 }
 
 }
