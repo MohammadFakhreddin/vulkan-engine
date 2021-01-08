@@ -28,6 +28,8 @@ struct State {
     VkPhysicalDeviceFeatures physical_device_features {};
     U32 graphic_queue_family;
     U32 present_queue_family;
+    VkQueue_T * graphic_queue = nullptr;
+    VkQueue_T * present_queue = nullptr;
     RB::LogicalDevice logical_device {};
     VkCommandPool_T * graphic_command_pool = nullptr;
     RB::SwapChainGroup swap_chain_group {};
@@ -94,6 +96,16 @@ bool Init(InitParams const & params) {
         state.graphic_queue_family = find_queue_family_result.graphic_queue_family;
         state.present_queue_family = find_queue_family_result.present_queue_family;
     }
+    // Get graphics and presentation queues (which may be the same)
+    state.graphic_queue = RB::GetQueueByFamilyIndex(
+        state.logical_device.device, 
+        state.graphic_queue_family
+    );
+    state.present_queue = RB::GetQueueByFamilyIndex(
+        state.logical_device.device, 
+        state.present_queue_family
+    );
+    MFA_LOG_INFO("Acquired graphics and presentation queues");
     state.logical_device = RB::CreateLogicalDevice(
         state.physical_device,
         state.graphic_queue_family,
@@ -352,5 +364,97 @@ UniformBuffer CreateUniformBuffer(size_t const buffer_size) {
     };
 }
 
+void BindDataToUniformBuffer(
+    UniformBuffer const & uniform_buffer, 
+    Blob const data,
+    U8 const current_image_index
+) {
+    RB::UpdateUniformBuffer(
+        state.logical_device.device, 
+        uniform_buffer.buffers[current_image_index], 
+        data
+    );
+}
+
+void DestroyUniformBuffer(UniformBuffer & uniform_buffer) {
+    for(auto & buffer_group : uniform_buffer.buffers) {
+        RB::DestroyUniformBuffer(
+            state.logical_device.device,
+            buffer_group
+        );
+    }
+}
+
+MeshBuffers CreateMeshBuffers(Asset::MeshAsset const & mesh_asset) {
+    auto vertices_buffer = RB::CreateVertexBuffer(
+        state.logical_device.device,
+        state.physical_device,
+        state.graphic_command_pool,
+        state.graphic_queue,
+        mesh_asset.vertices_blob()
+    );
+    auto indices_buffer = RB::CreateIndexBuffer(
+        state.logical_device.device,
+        state.physical_device,
+        state.graphic_command_pool,
+        state.graphic_queue,
+        mesh_asset.indices_blob()
+    );
+    return MeshBuffers {
+        .vertices_buffer = vertices_buffer,
+        .indices_buffer = indices_buffer
+    };
+}
+
+void DestroyMeshBuffers(MeshBuffers const & mesh_buffers) {
+    RB::DestroyVertexBuffer(
+        state.logical_device.device,
+        mesh_buffers.vertices_buffer
+    );
+    RB::DestroyIndexBuffer(
+        state.logical_device.device,
+        mesh_buffers.indices_buffer
+    );
+}
+
+TextureGroup CreateTexture(Asset::TextureAsset & texture_asset) {
+    auto const gpu_texture = RB::CreateTexture(
+        texture_asset,
+        state.logical_device.device,
+        state.physical_device,
+        state.graphic_queue,
+        state.graphic_command_pool
+    );
+    MFA_ASSERT(gpu_texture.valid());
+    return {
+        .gpu_texture = gpu_texture
+    };
+}
+
+void DestroyTexture(TextureGroup & texture_group) {
+    RB::DestroyTexture(texture_group.gpu_texture);
+}
+
+// TODO Ask for options
+SamplerGroup CreateSampler() {
+    auto * sampler = RB::CreateSampler(state.logical_device.device);
+    return {
+        .sampler = sampler
+    };
+}
+
+void DestroySampler(SamplerGroup const & sampler_group) {
+    RB::DestroySampler(state.logical_device.device, sampler_group.sampler);
+}
+
+void Draw(
+    DrawPipeline & draw_pipeline,
+    UniformBuffer const & uniform_buffer,
+    Asset::MeshAsset const & mesh,
+    Asset::TextureAsset const & texture,
+    U8 current_image_index
+) {
+    
+}
 
 }

@@ -811,12 +811,7 @@ LogicalDevice CreateLogicalDevice(
 #endif
     VK_Check(vkCreateDevice(physical_device, &deviceCreateInfo, nullptr, &ret.device));
     MFA_PTR_ASSERT(ret.device);
-    MFA_LOG_INFO("Logical device create was successful");
-    // Get graphics and presentation queues (which may be the same)
-    vkGetDeviceQueue(ret.device, graphics_queue_family, 0, &ret.graphic_queue);
-    vkGetDeviceQueue(ret.device, present_queue_family, 0, &ret.present_queue);
-
-    MFA_LOG_INFO("Acquired graphics and presentation queues");
+    MFA_LOG_INFO("Logical device create was successful");    
     vkGetPhysicalDeviceMemoryProperties(physical_device, &ret.physical_memory_properties);
 
     return ret;
@@ -824,6 +819,20 @@ LogicalDevice CreateLogicalDevice(
 
 void DestroyLogicalDevice(LogicalDevice const & logical_device) {
     vkDestroyDevice(logical_device.device, nullptr);
+}
+
+VkQueue_T * GetQueueByFamilyIndex(
+    VkDevice_T * device,
+    U32 const queue_family_index
+) {
+    VkQueue_T * graphic_queue = nullptr;
+    vkGetDeviceQueue(
+        device, 
+        queue_family_index, 
+        0, 
+        &graphic_queue
+    );
+    return graphic_queue;
 }
 
 // TODO Consider oop and storing data

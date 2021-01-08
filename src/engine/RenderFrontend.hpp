@@ -52,10 +52,47 @@ struct UniformBuffer {
 };
 UniformBuffer CreateUniformBuffer(size_t buffer_size);
 
-// TODO UpdateUniformBuffer
+void BindDataToUniformBuffer(
+    UniformBuffer const & uniform_buffer, 
+    Blob data,
+    U8 current_image_index
+);
 
-// TODO DestroyUniformBuffer
+void DestroyUniformBuffer(UniformBuffer & uniform_buffer);
 
-// TODO UpdateDescriptorSet
+struct MeshBuffers {
+    RB::BufferGroup vertices_buffer;
+    RB::BufferGroup indices_buffer;
+};
+[[nodiscard]]
+MeshBuffers CreateMeshBuffers(Asset::MeshAsset const & mesh_asset);
+
+void DestroyMeshBuffers(MeshBuffers const & mesh_buffers);
+
+struct TextureGroup {
+    RB::GpuTexture gpu_texture;
+};
+[[nodiscard]]
+TextureGroup CreateTexture(Asset::TextureAsset & texture_asset);
+
+void DestroyTexture(TextureGroup & texture);
+
+struct SamplerGroup {
+    VkSampler_T * samplers;
+};
+// TODO We should ask for options here
+[[nodiscard]]
+SamplerGroup CreateSampler();
+
+void DestroySampler(SamplerGroup const & sampler);
+
+void Draw(
+    DrawPipeline & draw_pipeline,
+    UniformBuffer const & uniform_buffer,
+    MeshBuffers const & mesh_buffers,
+    TextureGroup const & texture,
+    SamplerGroup const & sampler,
+    U8 current_image_index
+);
 
 }

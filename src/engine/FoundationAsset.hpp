@@ -242,7 +242,8 @@ struct Vertices {
 };
 
 struct Indices {
-    U32 indices[];
+    using IndexType = U32;
+    IndexType indices[];
 };
 #pragma warning (pop)
 }}
@@ -387,9 +388,25 @@ public:
         return reinterpret_cast<MeshVertices const *>(asset().ptr + header->vertices_offset);
     }
     [[nodiscard]]
+    Blob vertices_blob() const {
+        auto const * header = header_object();
+        return Blob {
+            asset().ptr + header->vertices_offset,
+            header_object()->vertex_count * sizeof(Mesh::Data::Vertices::Vertex)
+        };
+    }
+    [[nodiscard]]
     MeshIndices const * indices() const {
         auto const * header = header_object();
         return reinterpret_cast<MeshIndices const *>(asset().ptr + header->indices_offset);
+    }
+    [[nodiscard]]
+    Blob indices_blob() const {
+        auto const * header = header_object();
+        return Blob {
+            asset().ptr + header->indices_offset,
+            header_object()->index_count * sizeof(Mesh::Data::Indices::IndexType)
+        };
     }
     [[nodiscard]]
     bool valid() const override {

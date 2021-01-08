@@ -218,8 +218,6 @@ void CopyBufferToImage(
 
 struct LogicalDevice {
     VkDevice_T * device;
-    VkQueue_T * graphic_queue;
-    VkQueue_T * present_queue;
     VkPhysicalDeviceMemoryProperties physical_memory_properties;
 };
 [[nodiscard]]
@@ -232,22 +230,18 @@ LogicalDevice CreateLogicalDevice(
 
 void DestroyLogicalDevice(LogicalDevice const & logical_device);
 
+[[nodiscard]]
+VkQueue_T * GetQueueByFamilyIndex(
+    VkDevice_T * device,
+    U32 queue_family_index
+);
+
 // TODO This function should ask for options
 [[nodiscard]]
 VkSampler_T * CreateSampler(VkDevice_T * device);
 
 void DestroySampler(VkDevice_T * device, VkSampler_T * sampler);
 
-//using DebugCallback = std::function<VkBool32(
-//    VkDebugReportFlagsEXT flags,
-//    VkDebugReportObjectTypeEXT object_type,
-//    U64 src_object, 
-//    size_t location,
-//    int32_t message_code,
-//    char const * player_prefix,
-//    char const * message,
-//    void * user_data
-//)>;
 [[nodiscard]]
 VkDebugReportCallbackEXT_T * SetDebugCallback(
     VkInstance_T * instance,
