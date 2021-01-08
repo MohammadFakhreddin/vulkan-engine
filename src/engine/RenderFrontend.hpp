@@ -49,6 +49,7 @@ void BindBasicDescriptorSetWriteInfo(
 
 struct UniformBuffer {
     std::vector<RB::BufferGroup> buffers;
+    size_t buffer_size;
 };
 UniformBuffer CreateUniformBuffer(size_t buffer_size);
 
@@ -63,36 +64,57 @@ void DestroyUniformBuffer(UniformBuffer & uniform_buffer);
 struct MeshBuffers {
     RB::BufferGroup vertices_buffer;
     RB::BufferGroup indices_buffer;
+    U32 indices_count;
 };
 [[nodiscard]]
 MeshBuffers CreateMeshBuffers(Asset::MeshAsset const & mesh_asset);
 
 void DestroyMeshBuffers(MeshBuffers const & mesh_buffers);
 
-struct TextureGroup {
-    RB::GpuTexture gpu_texture;
-};
 [[nodiscard]]
-TextureGroup CreateTexture(Asset::TextureAsset & texture_asset);
+RB::GpuTexture CreateTexture(Asset::TextureAsset & texture_asset);
 
-void DestroyTexture(TextureGroup & texture);
+void DestroyTexture(RB::GpuTexture & gpu_texture);
 
 struct SamplerGroup {
-    VkSampler_T * samplers;
+    VkSampler_T * sampler;
 };
 // TODO We should ask for options here
 [[nodiscard]]
 SamplerGroup CreateSampler();
 
-void DestroySampler(SamplerGroup const & sampler);
+void DestroySampler(SamplerGroup const & sampler_group);
 
-void Draw(
+struct DrawPass {
+    U8 image_index;
+    bool is_valid = false;
+};
+[[nodiscard]]
+DrawPass BeginPass();
+
+//: loop through each mesh instance in the mesh instances list to render
+//
+//  - get the mesh from the asset manager
+//  - populate the push constants with the transformation matrix of the mesh
+//  - bind the pipeline to the command buffer
+//  - bind the vertex buffer for the mesh to the command buffer
+//  - bind the index buffer for the mesh to the command buffer
+//  - get the texture instance to apply to the mesh from the asset manager
+//  - get the descriptor set for the texture that defines how it maps to the pipeline's descriptor set layout
+//  - bind the descriptor set for the texture into the pipeline's descriptor set layout
+//  - tell the command buffer to draw the mesh
+//
+//: end loop
+void DrawTexturedMesh(
+    DrawPass const & draw_pass,
     DrawPipeline & draw_pipeline,
     UniformBuffer const & uniform_buffer,
     MeshBuffers const & mesh_buffers,
-    TextureGroup const & texture,
+    RB::GpuTexture const & texture,
     SamplerGroup const & sampler,
     U8 current_image_index
 );
+
+void EndPass(DrawPass & draw_pass);
 
 }

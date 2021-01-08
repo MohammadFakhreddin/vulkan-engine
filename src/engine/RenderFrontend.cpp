@@ -39,6 +39,7 @@ struct State {
     VkDescriptorPool_T * descriptor_pool {};
     std::vector<VkCommandBuffer_T *> graphic_command_buffers {};
     RB::SyncObjects sync_objects {};
+    U8 current_frame = 0;
 };
 
 State state {};
@@ -96,6 +97,12 @@ bool Init(InitParams const & params) {
         state.graphic_queue_family = find_queue_family_result.graphic_queue_family;
         state.present_queue_family = find_queue_family_result.present_queue_family;
     }
+    state.logical_device = RB::CreateLogicalDevice(
+        state.physical_device,
+        state.graphic_queue_family,
+        state.present_queue_family,
+        state.physical_device_features
+    );
     // Get graphics and presentation queues (which may be the same)
     state.graphic_queue = RB::GetQueueByFamilyIndex(
         state.logical_device.device, 
@@ -106,12 +113,6 @@ bool Init(InitParams const & params) {
         state.present_queue_family
     );
     MFA_LOG_INFO("Acquired graphics and presentation queues");
-    state.logical_device = RB::CreateLogicalDevice(
-        state.physical_device,
-        state.graphic_queue_family,
-        state.present_queue_family,
-        state.physical_device_features
-    );
     state.graphic_command_pool = RB::CreateCommandPool(state.logical_device.device, state.graphic_queue_family);
     VkExtent2D const swap_chain_extent = {
         .width = state.screen_width,
@@ -360,7 +361,8 @@ UniformBuffer CreateUniformBuffer(size_t const buffer_size) {
         buffer_size
     );
     return {
-        .buffers = buffers
+        .buffers = buffers,
+        .buffer_size = buffer_size
     };
 }
 
@@ -402,7 +404,8 @@ MeshBuffers CreateMeshBuffers(Asset::MeshAsset const & mesh_asset) {
     );
     return MeshBuffers {
         .vertices_buffer = vertices_buffer,
-        .indices_buffer = indices_buffer
+        .indices_buffer = indices_buffer,
+        .indices_count = mesh_asset.header_object()->index_count
     };
 }
 
@@ -417,7 +420,7 @@ void DestroyMeshBuffers(MeshBuffers const & mesh_buffers) {
     );
 }
 
-TextureGroup CreateTexture(Asset::TextureAsset & texture_asset) {
+RB::GpuTexture CreateTexture(Asset::TextureAsset & texture_asset) {
     auto const gpu_texture = RB::CreateTexture(
         texture_asset,
         state.logical_device.device,
@@ -426,13 +429,11 @@ TextureGroup CreateTexture(Asset::TextureAsset & texture_asset) {
         state.graphic_command_pool
     );
     MFA_ASSERT(gpu_texture.valid());
-    return {
-        .gpu_texture = gpu_texture
-    };
+    return gpu_texture;
 }
 
-void DestroyTexture(TextureGroup & texture_group) {
-    RB::DestroyTexture(texture_group.gpu_texture);
+void DestroyTexture(RB::GpuTexture & gpu_texture) {
+    RB::DestroyTexture(gpu_texture);
 }
 
 // TODO Ask for options
@@ -447,14 +448,203 @@ void DestroySampler(SamplerGroup const & sampler_group) {
     RB::DestroySampler(state.logical_device.device, sampler_group.sampler);
 }
 
-void Draw(
+[[nodiscard]]
+DrawPass BeginPass() {
+    MFA_ASSERT(MAX_FRAMES_IN_FLIGHT > state.current_frame);
+    DrawPass draw_pass {};
+    RB::WaitForFence(
+        state.logical_device.device, 
+        state.sync_objects.fences_in_flight[state.current_frame]
+    );
+    draw_pass.image_index = RB::AcquireNextImage(
+        state.logical_device.device,
+        state.sync_objects.image_availability_semaphores[state.current_frame],
+        state.swap_chain_group
+    );
+    draw_pass.is_valid = true;
+    state.current_frame ++;
+    if(state.current_frame > MAX_FRAMES_IN_FLIGHT) {
+        state.current_frame = 0;
+    }
+    // Recording command buffer data at each render frame
+    // We need 1 renderPass and multiple command buffer recording
+    // Each pipeline has its own set of shader, But we can reuse a pipeline for multiple shaders.
+    // For each model we need to record command buffer with our desired pipeline (For example light and objects have different fragment shader)
+    // Prepare data for recording command buffers
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+
+    VkImageSubresourceRange subResourceRange = {};
+    subResourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    subResourceRange.baseMipLevel = 0;
+    subResourceRange.levelCount = 1;
+    subResourceRange.baseArrayLayer = 0;
+    subResourceRange.layerCount = 1;
+
+    vkBeginCommandBuffer(state.graphic_command_buffers[draw_pass.image_index], &beginInfo);
+
+    // If present queue family and graphics queue family are different, then a barrier is necessary
+    // The barrier is also needed initially to transition the image to the present layout
+    VkImageMemoryBarrier presentToDrawBarrier = {};
+    presentToDrawBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    presentToDrawBarrier.srcAccessMask = 0;
+    presentToDrawBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    presentToDrawBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    presentToDrawBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    if (state.present_queue_family != state.graphic_queue_family) {
+        presentToDrawBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        presentToDrawBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    }
+    else {
+        presentToDrawBarrier.srcQueueFamilyIndex = state.present_queue_family;
+        presentToDrawBarrier.dstQueueFamilyIndex = state.graphic_queue_family;
+    }
+
+    presentToDrawBarrier.image = state.swap_chain_group.swap_chain_images[draw_pass.image_index];
+    presentToDrawBarrier.subresourceRange = subResourceRange;
+
+    vkCmdPipelineBarrier(
+        state.graphic_command_buffers[draw_pass.image_index], 
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 
+        0, 0, nullptr, 0, nullptr, 1, 
+        &presentToDrawBarrier
+    );
+
+    std::vector<VkClearValue> clearValues{};
+    clearValues.resize(2);
+    clearValues[0].color = { 0.1f, 0.1f, 0.1f, 1.0f };
+    clearValues[1].depthStencil = {1.0f, 0};
+
+    VkRenderPassBeginInfo renderPassBeginInfo = {};
+    renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassBeginInfo.renderPass = state.render_pass;
+    renderPassBeginInfo.framebuffer = state.frame_buffers[draw_pass.image_index];
+    renderPassBeginInfo.renderArea.offset.x = 0;
+    renderPassBeginInfo.renderArea.offset.y = 0;
+    renderPassBeginInfo.renderArea.extent = VkExtent2D {.width = state.screen_width, .height = state.screen_height};
+    renderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    renderPassBeginInfo.pClearValues = clearValues.data();
+
+    vkCmdBeginRenderPass(state.graphic_command_buffers[draw_pass.image_index], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    return draw_pass;
+}
+
+void DrawBasicTexturedMesh(
+    DrawPass const & draw_pass,
     DrawPipeline & draw_pipeline,
+    VkDescriptorSet_T ** descriptor_sets,
     UniformBuffer const & uniform_buffer,
-    Asset::MeshAsset const & mesh,
-    Asset::TextureAsset const & texture,
-    U8 current_image_index
+    MeshBuffers const & mesh_buffers,
+    RB::GpuTexture const & gpu_texture,
+    SamplerGroup const & sampler_group
 ) {
+    MFA_ASSERT(draw_pass.is_valid);
+    {
+        VkDescriptorBufferInfo buffer_info {};
+        buffer_info.buffer = uniform_buffer.buffers[draw_pass.image_index].buffer;
+        buffer_info.offset = 0;
+        buffer_info.range = uniform_buffer.buffer_size;
+
+        VkDescriptorImageInfo image_info {};
+        image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        image_info.imageView = gpu_texture.image_view();
+        image_info.sampler = sampler_group.sampler;
+        RenderFrontend::BindBasicDescriptorSetWriteInfo(
+            1,
+            &descriptor_sets[draw_pass.image_index],
+            buffer_info,
+            image_info
+        );
+    }
+
+    // We should bind specific descriptor set with different texture for each mesh
+    vkCmdBindDescriptorSets(
+        state.graphic_command_buffers[draw_pass.image_index], 
+        VK_PIPELINE_BIND_POINT_GRAPHICS, 
+        draw_pipeline.graphic_pipeline_group.pipeline_layout, 
+        0, 
+        1, 
+        &descriptor_sets[draw_pass.image_index], 
+        0, 
+        nullptr
+    );
+    
+    // We can bind command buffer to multiple pipeline
+    vkCmdBindPipeline(
+        state.graphic_command_buffers[draw_pass.image_index], 
+        VK_PIPELINE_BIND_POINT_GRAPHICS, 
+        draw_pipeline.graphic_pipeline_group.graphic_pipeline
+    );
+
+    VkDeviceSize offset = 0;
+    // TODO Check again for numbers
+    vkCmdBindVertexBuffers(
+        state.graphic_command_buffers[draw_pass.image_index], 
+        0, 
+        1, 
+        &mesh_buffers.vertices_buffer.buffer, 
+        &offset
+    );
+
+    vkCmdBindIndexBuffer(
+        state.graphic_command_buffers[draw_pass.image_index], 
+        mesh_buffers.indices_buffer.buffer, 
+        0, 
+        VK_INDEX_TYPE_UINT32
+    );
+
+    vkCmdDrawIndexed(
+        state.graphic_command_buffers[draw_pass.image_index], 
+        mesh_buffers.indices_count, 
+        1, 0, 0, 0
+    );
     
 }
+
+void EndPass(DrawPass & draw_pass) {
+    MFA_ASSERT(draw_pass.is_valid);
+    draw_pass.is_valid = false;
+    vkCmdEndRenderPass(state.graphic_command_buffers[draw_pass.image_index]);
+
+    // If present and graphics queue families differ, then another barrier is required
+    if (state.present_queue_family != state.graphic_queue_family) {
+        // TODO Check that WTF is this ?
+        VkImageSubresourceRange subResourceRange = {};
+        subResourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        subResourceRange.baseMipLevel = 0;
+        subResourceRange.levelCount = 1;
+        subResourceRange.baseArrayLayer = 0;
+        subResourceRange.layerCount = 1;
+
+        VkImageMemoryBarrier drawToPresentBarrier = {};
+        drawToPresentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        drawToPresentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        drawToPresentBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+        drawToPresentBarrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        drawToPresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        drawToPresentBarrier.srcQueueFamilyIndex = state.graphic_queue_family;
+        drawToPresentBarrier.dstQueueFamilyIndex = state.present_queue_family;
+        drawToPresentBarrier.image = state.swap_chain_group.swap_chain_images[draw_pass.image_index];
+        drawToPresentBarrier.subresourceRange = subResourceRange;
+
+        vkCmdPipelineBarrier(
+            state.graphic_command_buffers[draw_pass.image_index], 
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 
+            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 
+            0, 0, nullptr, 
+            0, nullptr, 1, 
+            &drawToPresentBarrier
+        );
+    }
+
+    if (vkEndCommandBuffer(state.graphic_command_buffers[draw_pass.image_index]) != VK_SUCCESS) {
+        MFA_CRASH("Failed to record command buffer");
+    }
+}
+
 
 }

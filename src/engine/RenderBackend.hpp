@@ -483,7 +483,7 @@ std::vector<VkCommandBuffer_T *> CreateCommandBuffers(
 void DestroyCommandBuffers(
     VkDevice_T * device,
     VkCommandPool_T * command_pool,
-    U8 const command_buffers_count,
+    U8 command_buffers_count,
     VkCommandBuffer_T ** command_buffers
 );
 
@@ -504,5 +504,14 @@ SyncObjects CreateSyncObjects(
 void DestroySyncObjects(VkDevice_T * device, SyncObjects const & sync_objects);
 
 void DeviceWaitIdle(VkDevice_T * device);
+
+void WaitForFence(VkDevice_T * device, VkFence_T * in_flight_fence);
+
+[[nodiscard]]
+U8 AcquireNextImage(
+    VkDevice_T * device, 
+    VkSemaphore_T * image_availability_semaphore, 
+    SwapChainGroup const & swap_chain_group
+);
 
 }

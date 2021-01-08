@@ -2015,4 +2015,37 @@ void DeviceWaitIdle(VkDevice_T * device) {
     VK_Check(vkDeviceWaitIdle(device));
 }
 
+void WaitForFence(VkDevice_T * device, VkFence_T * in_flight_fence) {
+    MFA_PTR_ASSERT(device);
+    MFA_PTR_ASSERT(in_flight_fence);
+    VK_Check(vkWaitForFences(
+        device, 
+        1, 
+        &in_flight_fence, 
+        VK_TRUE, 
+        UINT64_MAX
+    ));
+}
+
+[[nodiscard]]
+U8 AcquireNextImage(
+    VkDevice_T * device, 
+    VkSemaphore_T * image_availability_semaphore, 
+    SwapChainGroup const & swap_chain_group
+) {
+    MFA_PTR_ASSERT(device);
+    MFA_PTR_ASSERT(image_availability_semaphore);
+    U32 image_index;
+    // TODO What if acquiring failes ?
+    VK_Check(vkAcquireNextImageKHR(
+        device,
+        swap_chain_group.swap_chain,
+        UINT64_MAX,
+        image_availability_semaphore,
+        nullptr,
+        &image_index
+    ));
+    return static_cast<U8>(image_index);
+}
+
 }
