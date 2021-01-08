@@ -930,7 +930,7 @@ Application::createGraphicsPipeline() {
     depthStencil.stencilTestEnable = VK_FALSE;
 
     // Describing color blending
-    // Note: all paramaters except blendEnable and colorWriteMask are irrelevant here
+    // Note: all parameters except blendEnable and colorWriteMask are irrelevant here
     VkPipelineColorBlendAttachmentState colorBlendAttachmentState = {};
     colorBlendAttachmentState.blendEnable = VK_FALSE;
     colorBlendAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;

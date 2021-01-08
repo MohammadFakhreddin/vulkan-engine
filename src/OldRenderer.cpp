@@ -1209,7 +1209,7 @@ static CreateGraphicPipelineResult create_graphic_pipeline(CreateGraphicPipeline
     rasterization_create_info.lineWidth = 1.0f;
     
     // Describe multi-sampling
-    // Note: using multisampling also requires turning on device features
+    // Note: using multi-sampling also requires turning on device features
     VkPipelineMultisampleStateCreateInfo mulit_sample_create_info = {};
     mulit_sample_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     mulit_sample_create_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
@@ -1227,7 +1227,7 @@ static CreateGraphicPipelineResult create_graphic_pipeline(CreateGraphicPipeline
     depthStencil.stencilTestEnable = VK_FALSE;
 
     // Describing color blending
-    // Note: all paramaters except blendEnable and colorWriteMask are irrelevant here
+    // Note: all parameters except blendEnable and colorWriteMask are irrelevant here
     VkPipelineColorBlendAttachmentState colorBlendAttachmentState = {};
     colorBlendAttachmentState.blendEnable = VK_FALSE;
     colorBlendAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;

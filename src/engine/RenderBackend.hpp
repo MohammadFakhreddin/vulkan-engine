@@ -378,10 +378,9 @@ GraphicPipelineGroup CreateGraphicPipeline(
     VkExtent2D swap_chain_extent,
     VkRenderPass_T * render_pass,
     VkDescriptorSetLayout_T * descriptor_set_layout
-
 );
 
-void DestroyGraphicPipeline(GraphicPipelineGroup & graphic_pipeline_group);
+void DestroyGraphicPipeline(VkDevice_T * device, GraphicPipelineGroup & graphic_pipeline_group);
 
 [[nodiscard]]
 VkDescriptorSetLayout_T * CreateDescriptorSetLayout(

@@ -1860,7 +1860,7 @@ void UpdateDescriptorSet(
     U8 const schemas_count,
     VkWriteDescriptorSet * schemas
 ) {
-    for(auto i = 0; i < descriptor_set_count; i++){
+    for(auto descriptor_set_index = 0; descriptor_set_index < descriptor_set_count; descriptor_set_index++){
         // Update descriptor set with uniform binding
         // TODO: Define in render frontend
         //VkDescriptorBufferInfo descriptorBufferInfo = {};
@@ -1890,11 +1890,16 @@ void UpdateDescriptorSet(
         //descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         //descriptorWrites[1].descriptorCount = 1;
         //descriptorWrites[1].pImageInfo = &imageInfo;
+        std::vector<VkWriteDescriptorSet> descriptor_writes {schemas_count};
+        for(U8 schema_index = 0; schema_index < schemas_count; schema_index++) {
+            descriptor_writes[schema_index] = schemas[schema_index];
+            descriptor_writes[schema_index].dstSet = descriptor_sets[descriptor_set_index];
+        }
 
         vkUpdateDescriptorSets(
-            device, 
-            schemas_count, 
-            schemas, 
+            device,
+            static_cast<U32>(descriptor_writes.size()), 
+            descriptor_writes.data(), 
             0, 
             nullptr
         );

@@ -198,5 +198,159 @@ bool Resize(ScreenWidth screen_width, ScreenHeight screen_height) {
     MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
 }
 
+DrawPipeline CreateBasicDrawPipeline(
+    U8 const gpu_shaders_count, 
+    RB::GpuShader * gpu_shaders
+) {
+    VkVertexInputBindingDescription const vertex_binding_description {
+        .binding = 0,
+        .stride = sizeof(Asset::MeshVertices::Vertex),
+        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+    };
+    std::vector<VkVertexInputAttributeDescription> input_attribute_descriptions {4};
+    input_attribute_descriptions[0] = VkVertexInputAttributeDescription {
+        .location = 0,
+        .binding = 0,
+        .format = VK_FORMAT_R32G32B32_SFLOAT,
+        .offset = offsetof(Asset::MeshVertices::Vertex, position),
+    };
+    input_attribute_descriptions[1] = VkVertexInputAttributeDescription {
+        .location = 1,
+        .binding = 0,
+        .format = VK_FORMAT_R32G32B32_SFLOAT,
+        .offset = offsetof(Asset::MeshVertices::Vertex, normal)
+    };
+    input_attribute_descriptions[2] = VkVertexInputAttributeDescription {
+        .location = 2,
+        .binding = 0,
+        .format = VK_FORMAT_R32G32_SFLOAT,
+        .offset = offsetof(Asset::MeshVertices::Vertex, uv)
+    };
+    input_attribute_descriptions[3] = VkVertexInputAttributeDescription {
+        .location = 3,
+        .binding = 0,
+        .format = VK_FORMAT_R32G32_SFLOAT,
+        .offset = offsetof(Asset::MeshVertices::Vertex, color)
+    };
+    // Describe pipeline layout
+    // Note: this describes the mapping between memory and shader resources (descriptor sets)
+    // This is for uniform buffers and samplers
+    VkDescriptorSetLayoutBinding uboLayoutBinding {};
+    uboLayoutBinding.binding = 0;
+    // Our object type is uniformBuffer
+    uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    // Number of values in buffer
+    uboLayoutBinding.descriptorCount = 1;
+    // Which shader stage we are going to reffer to // In our case we only need vertex shader to access to it
+    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    // For Image sampler, Currently we do not need this
+    uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
+
+    VkDescriptorSetLayoutBinding sampler_layout_binding{};
+    sampler_layout_binding.binding = 1;
+    sampler_layout_binding.descriptorCount = 1;
+    sampler_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    sampler_layout_binding.pImmutableSamplers = nullptr;
+    sampler_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    std::vector<VkDescriptorSetLayoutBinding> descriptor_set_layout_bindings {
+        uboLayoutBinding,
+        sampler_layout_binding
+    };
+
+    auto * descriptor_set_layout = RB::CreateDescriptorSetLayout(
+        state.logical_device.device,
+        static_cast<U8>(descriptor_set_layout_bindings.size()),
+        descriptor_set_layout_bindings.data()
+    );
+
+    auto const graphic_pipeline_group = RB::CreateGraphicPipeline(
+        state.logical_device.device,
+        gpu_shaders_count,
+        gpu_shaders,
+        vertex_binding_description,
+        static_cast<U32>(input_attribute_descriptions.size()),
+        input_attribute_descriptions.data(),
+        VkExtent2D {.width = state.screen_width, .height = state.screen_height},
+        state.render_pass,
+        descriptor_set_layout
+    );
+
+    return DrawPipeline {
+        .graphic_pipeline_group = graphic_pipeline_group,
+        .descriptor_set_layout = descriptor_set_layout,
+    };
+}
+
+void DestroyDrawPipeline(DrawPipeline & draw_pipeline) {
+    RB::DestroyGraphicPipeline(
+        state.logical_device.device, 
+        draw_pipeline.graphic_pipeline_group
+    );
+    RB::DestroyDescriptorSetLayout(
+        state.logical_device.device, 
+        draw_pipeline.descriptor_set_layout
+    );
+}
+
+std::vector<VkDescriptorSet_T *> CreateDescriptorSetsForDrawPipeline(DrawPipeline & draw_pipeline) {
+    return RB::CreateDescriptorSet(
+        state.logical_device.device,
+        state.descriptor_pool,
+        draw_pipeline.descriptor_set_layout,
+        static_cast<U8>(state.swap_chain_group.swap_chain_images.size())
+    );
+}
+
+// TODO I think we should keep these information for each mesh individually
+void BindBasicDescriptorSetWriteInfo(
+    U8 const descriptor_sets_count,
+    VkDescriptorSet_T ** descriptor_sets,
+    VkDescriptorBufferInfo const & buffer_info,
+    VkDescriptorImageInfo const & image_info
+) {
+    MFA_ASSERT(descriptor_sets_count > 0);
+    MFA_PTR_ASSERT(descriptor_sets);
+    for(U8 i = 0; i < descriptor_sets_count; i++) {
+        std::vector<VkWriteDescriptorSet> descriptorWrites{};
+        
+        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[0].dstSet = descriptor_sets[i];
+        descriptorWrites[0].dstBinding = 0;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pBufferInfo = &buffer_info;
+
+        descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[1].dstSet = descriptor_sets[i];
+        descriptorWrites[1].dstBinding = 1;
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[1].descriptorCount = 1;
+        descriptorWrites[1].pImageInfo = &image_info;
+
+        vkUpdateDescriptorSets(
+            state.logical_device.device, 
+            static_cast<uint32_t>(descriptorWrites.size()), 
+            descriptorWrites.data(), 
+            0, 
+            nullptr
+        );
+    }
+}
+
+UniformBuffer CreateUniformBuffer(size_t const buffer_size) {
+    auto const buffers = RB::CreateUniformBuffer(
+        state.logical_device.device,
+        state.physical_device,
+        static_cast<U8>(state.swap_chain_group.swap_chain_images.size()),
+        buffer_size
+    );
+    return {
+        .buffers = buffers
+    };
+}
+
 
 }
