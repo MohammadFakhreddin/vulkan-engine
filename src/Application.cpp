@@ -2,12 +2,9 @@
 
 #include "engine/RenderFrontend.hpp"
 
-Application::Application() {
+void Application::run() {
     using namespace MFA;
     RenderFrontend::Init({800, 600, "Cool app"});
-}
-
-void Application::run() {
-    
+    RenderFrontend::Shutdown();
 }
 

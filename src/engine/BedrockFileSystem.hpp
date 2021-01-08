@@ -10,22 +10,22 @@ enum class Usage {
     Append,
 };
 
-class File;
+class FileHandle;
 
 [[nodiscard]]
 bool Exists(char const * path);
 
 [[nodiscard]]
-File * OpenFile(char const * path, Usage usage);
+FileHandle * OpenFile(char const * path, Usage usage);
 
-bool CloseFile(File * file);
-
-[[nodiscard]]
-size_t FileSize(File * file);
-
-uint64_t Read(File * file, Blob const & memory);
+bool CloseFile(FileHandle * file);
 
 [[nodiscard]]
-bool IsUsable(File * file);
+size_t FileSize(FileHandle * file);
+
+uint64_t Read(FileHandle * file, Blob const & memory);
+
+[[nodiscard]]
+bool IsUsable(FileHandle * file);
 
 }; // MFA::FileSystem

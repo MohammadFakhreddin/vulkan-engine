@@ -8,10 +8,10 @@
 
 namespace MFA::FileSystem {
 
-class File {
+class FileHandle {
 public:
 
-explicit File(char const * path, Usage const usage) {
+explicit FileHandle(char const * path, Usage const usage) {
     close();
     auto const * const mode = [=]{
         switch (usage)
@@ -37,7 +37,7 @@ explicit File(char const * path, Usage const usage) {
     }
 }
 
-~File() {close();}
+~FileHandle() {close();}
 
 [[nodiscard]]
 bool is_ok() const {
@@ -68,7 +68,7 @@ bool seek_to_end() const {
     return ret;
 }
 [[nodiscard]]
-uint64_t File::read (Blob const & memory) const {
+uint64_t read (Blob const & memory) const {
     uint64_t ret = 0;
     if (is_ok() && memory.len > 0) {
         ret = ::fread(memory.ptr, 1, memory.len, m_file);
@@ -79,7 +79,7 @@ uint64_t File::read (Blob const & memory) const {
 // TODO: Write
 
 [[nodiscard]]
-uint64_t File::total_size () const {
+uint64_t total_size () const {
     uint64_t ret = 0;
     if (is_ok()) {
         fpos_t pos, end_pos;
@@ -101,13 +101,13 @@ bool Exists(char const * path) {
     return std::filesystem::exists(path);
 }
 
-File * OpenFile(char const * path, Usage const usage) {
+FileHandle * OpenFile(char const * path, Usage const usage) {
     // TODO Use allocator system
-    auto * file = new File {path, usage};
+    auto * file = new FileHandle {path, usage};
     return file;
 }
 
-bool CloseFile(File * file) {
+bool CloseFile(FileHandle * file) {
     bool ret = false;
     if(MFA_PTR_VALID(file)) {
         file->close();
@@ -117,7 +117,7 @@ bool CloseFile(File * file) {
     return ret;
 }
 
-size_t FileSize(File * file) {
+size_t FileSize(FileHandle * file) {
     size_t ret = 0;
     if(MFA_PTR_VALID(file)) {
         ret = file->total_size();
@@ -125,7 +125,7 @@ size_t FileSize(File * file) {
     return ret;
 }
 
-uint64_t Read(File * file, Blob const & memory) {
+uint64_t Read(FileHandle * file, Blob const & memory) {
     uint64_t ret = 0;
     if(MFA_PTR_VALID(file)) {
         ret = file->read(memory);
@@ -133,7 +133,7 @@ uint64_t Read(File * file, Blob const & memory) {
     return ret;
 }
 
-bool IsUsable(File * file) {
+bool IsUsable(FileHandle * file) {
     return MFA_PTR_VALID(file) && file->is_ok();
 }
 

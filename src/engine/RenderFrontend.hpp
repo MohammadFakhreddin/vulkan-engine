@@ -4,8 +4,9 @@
 
 namespace MFA::RenderFrontend {
 
-using ScreenWidth = RenderBackend::ScreenWidth;
-using ScreenHeight = RenderBackend::ScreenHeight;
+namespace RB = RenderBackend;
+using ScreenWidth = RB::ScreenWidth;
+using ScreenHeight = RB::ScreenHeight;
 
 struct InitParams {
     ScreenWidth screen_width;

@@ -20,8 +20,12 @@ using CpuShader = Asset::ShaderAsset;
 [[nodiscard]]
 SDL_Window * CreateWindow(ScreenWidth screen_width, ScreenHeight screen_height);
 
+void DestroyWindow(SDL_Window * window);
+
 [[nodiscard]]
 VkSurfaceKHR_T * CreateWindowSurface(SDL_Window * window, VkInstance_T * instance);
+
+void DestroyWindowSurface(VkInstance_T * instance, VkSurfaceKHR_T * surface);
 
 [[nodiscard]]
 VkExtent2D ChooseSwapChainExtent(
@@ -39,10 +43,17 @@ VkSurfaceFormatKHR ChooseSurfaceFormat(uint8_t available_formats_count, VkSurfac
 [[nodiscard]]
 VkInstance_T * CreateInstance(char const * application_name, SDL_Window * window);
 
+void DestroyInstance(VkInstance_T * instance);
+
 [[nodiscard]]
 VkDebugReportCallbackEXT CreateDebugCallback(
     VkInstance_T * vk_instance,
     PFN_vkDebugReportCallbackEXT const & debug_callback
+);
+
+void DestroyDebugReportCallback(
+    VkInstance_T * instance,
+    VkDebugReportCallbackEXT const & report_callback_ext
 );
 
 [[nodiscard]]
@@ -58,6 +69,11 @@ VkImageView_T * CreateImageView (
     VkImage_T const & image, 
     VkFormat format, 
     VkImageAspectFlags aspect_flags
+);
+
+void DestroyImageView(
+    VkDevice_T * device,
+    VkImageView_T * image_view
 );
 
 [[nodiscard]]
@@ -145,8 +161,8 @@ ImageGroup CreateImage(
 );
 
 void DestroyImage(
-    ImageGroup const & image,
-    VkDevice_T * device
+    VkDevice_T * device,
+    ImageGroup const & image_group
 );
 
 class GpuTexture;
@@ -280,7 +296,7 @@ SwapChainGroup CreateSwapChain(
     VkSwapchainKHR_T * old_swap_chain = nullptr
 );
 
-void DestroySwapChain(VkDevice_T * device, VkSwapchainKHR_T * swap_chain);
+void DestroySwapChain(VkDevice_T * device, SwapChainGroup const & swap_chain_group);
 
 struct DepthImageGroup {
     ImageGroup image_group {};
@@ -294,7 +310,7 @@ DepthImageGroup CreateDepth(
     VkExtent2D swap_chain_extend
 );
 
-void DestroyDepth(VkDevice_T * device, DepthImageGroup * depth_group);
+void DestroyDepth(VkDevice_T * device, DepthImageGroup const & depth_group);
 
 // TODO Ask for options
 [[nodiscard]]
@@ -469,6 +485,13 @@ std::vector<VkCommandBuffer_T *> CreateCommandBuffers(
     VkDevice_T * device,
     U8 swap_chain_images_count,
     VkCommandPool_T * command_pool
+);
+
+void DestroyCommandBuffers(
+    VkDevice_T * device,
+    VkCommandPool_T * command_pool,
+    U8 const command_buffers_count,
+    VkCommandBuffer_T ** command_buffers
 );
 
 // CreateSyncObjects (Fence, Semaphore, ...)

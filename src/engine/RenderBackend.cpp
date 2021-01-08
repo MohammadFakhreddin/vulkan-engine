@@ -42,6 +42,11 @@ SDL_Window * CreateWindow(ScreenWidth const screen_width, ScreenHeight const scr
     );
 }
 
+void DestroyWindow(SDL_Window * window) {
+    MFA_PTR_ASSERT(window);
+    SDL_DestroyWindow(window);
+}
+
 VkSurfaceKHR_T * CreateWindowSurface(SDL_Window * window, VkInstance_T * instance) {
     VkSurfaceKHR_T * ret = nullptr;
     SDL_Check(SDL_Vulkan_CreateSurface(
@@ -50,6 +55,12 @@ VkSurfaceKHR_T * CreateWindowSurface(SDL_Window * window, VkInstance_T * instanc
         &ret
     ));
     return ret;
+}
+
+void DestroyWindowSurface(VkInstance_T * instance, VkSurfaceKHR_T * surface) {
+    MFA_PTR_ASSERT(instance);
+    MFA_PTR_ASSERT(surface);
+    vkDestroySurfaceKHR(instance, surface, nullptr);
 }
 
 [[nodiscard]]
@@ -176,6 +187,11 @@ VkInstance_T * CreateInstance(char const * application_name, SDL_Window * window
     return vk_instance;
 }
 
+void DestroyInstance(VkInstance_T * instance) {
+    MFA_PTR_ASSERT(instance);
+    vkDestroyInstance(instance, nullptr);
+}
+
 VkDebugReportCallbackEXT CreateDebugCallback(
     VkInstance_T * vk_instance,
     PFN_vkDebugReportCallbackEXT const & debug_callback
@@ -197,6 +213,18 @@ VkDebugReportCallbackEXT CreateDebugCallback(
         &debug_report_callback_ext
     ));
     return debug_report_callback_ext;
+}
+
+void DestroyDebugReportCallback(
+    VkInstance_T * instance,
+    VkDebugReportCallbackEXT const & report_callback_ext
+) {
+    MFA_PTR_ASSERT(instance);
+    auto const DestroyDebugReportCallback = reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>(vkGetInstanceProcAddr(
+        instance, 
+        "vkDestroyDebugReportCallbackEXT"
+    ));
+    DestroyDebugReportCallback(instance, report_callback_ext, nullptr);
 }
 
 U32 FindMemoryType (
@@ -237,6 +265,7 @@ VkImageView_T * CreateImageView (
     createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
     createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
     createInfo.subresourceRange.aspectMask = aspect_flags;
+    // TODO Might need to ask these values from image for mipmaps (Check again later)
     createInfo.subresourceRange.baseMipLevel = 0;
     createInfo.subresourceRange.levelCount = 1;
     createInfo.subresourceRange.baseArrayLayer = 0;
@@ -245,6 +274,13 @@ VkImageView_T * CreateImageView (
     VK_Check(vkCreateImageView(device, &createInfo, nullptr, &image_view));
 
     return image_view;
+}
+
+void DestroyImageView(
+    VkDevice_T * device,
+    VkImageView_T * image_view
+) {
+    vkDestroyImageView(device, image_view, nullptr);
 }
 
 VkCommandBuffer BeginSingleTimeCommand(VkDevice_T * device, VkCommandPool const & command_pool) {
@@ -517,11 +553,11 @@ ImageGroup CreateImage(
 }
 
 void DestroyImage(
-    ImageGroup const & image,
-    VkDevice_T * device
+    VkDevice_T * device,
+    ImageGroup const & image_group
 ) {
-    vkDestroyImage(device, image.image, nullptr);
-    vkFreeMemory(device, image.memory, nullptr);
+    vkDestroyImage(device, image_group.image, nullptr);
+    vkFreeMemory(device, image_group.memory, nullptr);
 }
 
 GpuTexture CreateTexture(
@@ -624,8 +660,8 @@ bool DestroyTexture(GpuTexture & gpu_texture) {
         MFA_PTR_ASSERT(gpu_texture.m_image_group.memory);
         MFA_PTR_ASSERT(gpu_texture.m_image_view);
         DestroyImage(
-            gpu_texture.m_image_group,
-            gpu_texture.m_device
+            gpu_texture.m_device,
+            gpu_texture.m_image_group
         );
         success = true;
         gpu_texture.m_image_group.image = nullptr;
@@ -761,7 +797,7 @@ LogicalDevice CreateLogicalDevice(
         deviceCreateInfo.queueCreateInfoCount = 2;
     }
 
-    const char* device_extensions = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
+    const char * device_extensions = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
     deviceCreateInfo.enabledExtensionCount = 1;
     deviceCreateInfo.ppEnabledExtensionNames = &device_extensions;
     // Necessary for shader (for some reason)
@@ -1130,25 +1166,40 @@ SwapChainGroup CreateSwapChain(
 
     ret.swap_chain_image_views.resize(actual_image_count);
     for(uint32_t image_index = 0; image_index < actual_image_count; image_index++) {
+        MFA_PTR_VALID(ret.swap_chain_images[image_index]);
         ret.swap_chain_image_views[image_index] = CreateImageView(
             device,
             ret.swap_chain_images[image_index],
             ret.swap_chain_format,
             VK_IMAGE_ASPECT_COLOR_BIT
         );
+        MFA_PTR_VALID(ret.swap_chain_image_views[image_index]);
     }
 
     MFA_LOG_INFO("Acquired swap chain images");
     return ret;
 }
 
-void DestroySwapChain(VkDevice_T * device, VkSwapchainKHR_T * swap_chain) {
+void DestroySwapChain(VkDevice_T * device, SwapChainGroup const & swap_chain_group) {
     MFA_PTR_ASSERT(device);
-    MFA_PTR_ASSERT(swap_chain);
-    vkDestroySwapchainKHR(device, swap_chain, nullptr);
+    MFA_PTR_ASSERT(swap_chain_group.swap_chain);
+    MFA_ASSERT(swap_chain_group.swap_chain_image_views.size() > 0);
+    MFA_ASSERT(swap_chain_group.swap_chain_images.size() > 0);
+    MFA_ASSERT(swap_chain_group.swap_chain_images.size() == swap_chain_group.swap_chain_image_views.size());
+    vkDestroySwapchainKHR(device, swap_chain_group.swap_chain, nullptr);
+    for(auto const & swap_chain_image_view : swap_chain_group.swap_chain_image_views) {
+        vkDestroyImageView(device, swap_chain_image_view, nullptr);
+    }
+    //for(auto const & swap_chain_image : swap_chain_group.swap_chain_images) {
+    //    vkDestroyImage(device, swap_chain_image, nullptr);
+    //}
 }
 
-DepthImageGroup CreateDepth(VkPhysicalDevice_T * physical_device, VkDevice_T * device, VkExtent2D swap_chain_extend) {
+DepthImageGroup CreateDepth(
+    VkPhysicalDevice_T * physical_device,
+    VkDevice_T * device,
+    VkExtent2D const swap_chain_extend
+) {
     DepthImageGroup ret {};
     auto const depth_format = FindDepthFormat(physical_device);
     ret.image_group = CreateImage(
@@ -1176,15 +1227,11 @@ DepthImageGroup CreateDepth(VkPhysicalDevice_T * physical_device, VkDevice_T * d
     return ret;
 }
 
-void DestroyDepth(VkDevice_T * device, DepthImageGroup * depth_group) {
+void DestroyDepth(VkDevice_T * device, DepthImageGroup const & depth_group) {
     MFA_PTR_ASSERT(device);
-    MFA_PTR_ASSERT(depth_group);
-    vkDestroyImage(
-        device,
-        depth_group->image_group.image,
-        nullptr
-    );
-}
+    DestroyImageView(device, depth_group.image_view);
+    DestroyImage(device, depth_group.image_group);
+ }
 
 VkRenderPass_T * CreateRenderPass(
     VkPhysicalDevice_T * physical_device, 
@@ -1877,6 +1924,24 @@ std::vector<VkCommandBuffer_T *> CreateCommandBuffers(
 
     // Command buffer data gets recorded each time
     return command_buffers;
+}
+
+void DestroyCommandBuffers(
+    VkDevice_T * device,
+    VkCommandPool_T * command_pool,
+    U8 const command_buffers_count,
+    VkCommandBuffer_T ** command_buffers
+) {
+    MFA_PTR_ASSERT(device);
+    MFA_PTR_ASSERT(command_pool);
+    MFA_ASSERT(command_buffers_count > 0);
+    MFA_PTR_ASSERT(command_buffers);
+    vkFreeCommandBuffers(
+        device,
+        command_pool,
+        command_buffers_count,
+        command_buffers
+    );
 }
 
 SyncObjects CreateSyncObjects(
