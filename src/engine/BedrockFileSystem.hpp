@@ -28,4 +28,7 @@ uint64_t Read(FileHandle * file, Blob const & memory);
 [[nodiscard]]
 bool IsUsable(FileHandle * file);
 
+[[nodiscard]]
+FILE * GetCHandle(FileHandle * file);
+
 }; // MFA::FileSystem

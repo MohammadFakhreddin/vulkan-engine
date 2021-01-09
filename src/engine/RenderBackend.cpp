@@ -1870,35 +1870,6 @@ void UpdateDescriptorSet(
     VkWriteDescriptorSet * schemas
 ) {
     for(auto descriptor_set_index = 0; descriptor_set_index < descriptor_set_count; descriptor_set_index++){
-        // Update descriptor set with uniform binding
-        // TODO: Define in render frontend
-        //VkDescriptorBufferInfo descriptorBufferInfo = {};
-        //descriptorBufferInfo.buffer = uniformBuffers[i];
-        //descriptorBufferInfo.offset = 0;
-        //descriptorBufferInfo.range = sizeof(UniformBufferObject);
-
-        //VkDescriptorImageInfo imageInfo{};
-        //imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        //imageInfo.imageView = textureImageView;
-        //imageInfo.sampler = textureSampler;
-
-        //std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
-
-        //descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        //descriptorWrites[0].dstSet = descriptorSets[i];
-        //descriptorWrites[0].dstBinding = 0;
-        //descriptorWrites[0].dstArrayElement = 0;
-        //descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        //descriptorWrites[0].descriptorCount = 1;
-        //descriptorWrites[0].pBufferInfo = &descriptorBufferInfo;
-
-        //descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        //descriptorWrites[1].dstSet = descriptorSets[i];
-        //descriptorWrites[1].dstBinding = 1;
-        //descriptorWrites[1].dstArrayElement = 0;
-        //descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        //descriptorWrites[1].descriptorCount = 1;
-        //descriptorWrites[1].pImageInfo = &imageInfo;
         std::vector<VkWriteDescriptorSet> descriptor_writes {schemas_count};
         for(U8 schema_index = 0; schema_index < schemas_count; schema_index++) {
             descriptor_writes[schema_index] = schemas[schema_index];

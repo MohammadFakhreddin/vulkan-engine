@@ -42,7 +42,7 @@ struct State {
     U8 current_frame = 0;
 };
 
-State state {};
+static State state {};
 
 static VkBool32 DebugCallback(
   VkDebugReportFlagsEXT const flags,

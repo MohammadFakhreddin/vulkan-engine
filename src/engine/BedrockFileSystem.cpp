@@ -67,6 +67,7 @@ bool seek_to_end() const {
     }
     return ret;
 }
+
 [[nodiscard]]
 uint64_t read (Blob const & memory) const {
     uint64_t ret = 0;
@@ -135,6 +136,14 @@ uint64_t Read(FileHandle * file, Blob const & memory) {
 
 bool IsUsable(FileHandle * file) {
     return MFA_PTR_VALID(file) && file->is_ok();
+}
+
+FILE * GetCHandle(FileHandle * file) {
+    FILE * ret {};
+    if(MFA_PTR_VALID(file)) {
+        ret = file->m_file;
+    }
+    return ret;
 }
 
 }

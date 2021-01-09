@@ -208,25 +208,10 @@ using TextureHeader = Texture::Header;
 //---------------------------------MeshHeader-------------------------------------
 namespace Mesh {
 
-struct Header {
-    uint32_t vertex_count;
-    uint32_t index_count;
-    uint32_t vertices_offset;       // From start of asset
-    uint32_t indices_offset;        // From start of asset
-    [[nodiscard]]
-    static size_t Size() {
-        return sizeof(Header);
-    }
-    [[nodiscard]]
-    bool is_valid() const {
-        // TODO
-        return true;
-    }
-};
-
 namespace Data {
 #pragma warning (push)
 #pragma warning (disable: 4200)         // Non-standard extension used: zero-sized array in struct
+#pragma pack(push)
 struct Vertices {
     using Position = float[3];
     using Normal = float[3];
@@ -240,17 +225,45 @@ struct Vertices {
     };
     Vertex vertices[];
 };
-
+#pragma pack(pop)
+#pragma pack(push)
 struct Indices {
     using IndexType = U32;
     IndexType indices[];
 };
+#pragma pack(pop)
 #pragma warning (pop)
-}}
+}
 
-using MeshHeader = Mesh::Header;
+struct Header {
+    uint32_t vertex_count;
+    uint32_t index_count;
+    uint32_t vertices_offset;       // From start of asset
+    uint32_t indices_offset;        // From start of asset
+    [[nodiscard]]
+    static size_t Size() {
+        return sizeof(Header);
+    }
+    [[nodiscard]]
+    static size_t ComputeAssetSize(
+        U32 const vertex_count, 
+        U32 const index_count
+    ) {
+        return Size()
+            + vertex_count * sizeof(Data::Vertices::Vertex)
+            + index_count * sizeof(Data::Indices::IndexType);    
+    }
+    [[nodiscard]]
+    bool is_valid() const {
+        // TODO
+        return true;
+    }
+};
+}
+
 using MeshVertices = Mesh::Data::Vertices;
 using MeshIndices = Mesh::Data::Indices;
+using MeshHeader = Mesh::Header;
 
 //--------------------------------ShaderHeader--------------------------------------
 namespace Shader {

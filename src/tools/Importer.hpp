@@ -16,7 +16,7 @@ struct ImportUncompressedImageOptions {
 [[nodiscard]]
 Asset::TextureAsset ImportUncompressedImage(
     char const * path, 
-    ImportUncompressedImageOptions options
+    ImportUncompressedImageOptions const & options
 );
 
 // TODO ImageArray
