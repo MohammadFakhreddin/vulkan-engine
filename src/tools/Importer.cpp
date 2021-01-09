@@ -152,10 +152,10 @@ Asset::ShaderAsset ImportShaderFromSPV(
             MFA_ASSERT(MFA_PTR_VALID(asset_memory.ptr) && asset_memory.len == file_size + Asset::ShaderHeader::Size());
             auto * shader_header = asset_memory.as<Asset::ShaderHeader>();
             shader_header->stage = stage;
-            shader_header->entry_point = entry_point;
+            ::strncpy_s(shader_header->entry_point, entry_point, Asset::ShaderHeader::EntryPointLength);
             Blob const data_memory = Blob {asset_memory.ptr + Asset::ShaderHeader::Size(), file_size};
             auto const read_bytes = FileSystem::Read(file, data_memory);
-            if(read_bytes == asset_memory.len) {
+            if(read_bytes == data_memory.len) {
                 return Asset::ShaderAsset {asset_memory};
             }
             Memory::Free(asset_memory);

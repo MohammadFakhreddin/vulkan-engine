@@ -275,7 +275,8 @@ enum class Stage {
 };
 
 struct Header {
-    std::string entry_point {};     // Ex: main
+    static constexpr U8 EntryPointLength = 30;
+    char entry_point [EntryPointLength];     // Ex: main
     Stage stage = Stage::Invalid;
     [[nodiscard]]
     static size_t Size() {
@@ -283,7 +284,7 @@ struct Header {
     }
     [[nodiscard]]
     bool is_valid() const {
-        return false == entry_point.empty() && Stage::Invalid != stage;
+        return strlen(entry_point) > 0 && Stage::Invalid != stage;
     }
 };  
 

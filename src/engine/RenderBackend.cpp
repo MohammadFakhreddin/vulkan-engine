@@ -1417,7 +1417,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
         create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         create_info.stage = ConvertAssetShaderStageToGpu(shader_stages[i].cpu_shader()->header_object()->stage);
         create_info.module = shader_stages[i].shader_module();
-        create_info.pName = shader_stages[i].cpu_shader()->header_object()->entry_point.c_str();
+        create_info.pName = shader_stages[i].cpu_shader()->header_object()->entry_point;
         shader_stages_create_infos[i] = create_info;
     }
 

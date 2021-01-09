@@ -463,7 +463,7 @@ DrawPass BeginPass() {
     );
     draw_pass.is_valid = true;
     state.current_frame ++;
-    if(state.current_frame > MAX_FRAMES_IN_FLIGHT) {
+    if(state.current_frame >= MAX_FRAMES_IN_FLIGHT) {
         state.current_frame = 0;
     }
     // Recording command buffer data at each render frame
