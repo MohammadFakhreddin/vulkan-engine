@@ -9,11 +9,9 @@ void Application::run() {
     namespace Importer = MFA::Importer;
     RF::Init({800, 600, "Cool app"});
     // Importing assets
-    auto viking_mesh = Importer::ImportObj("../assets/viking/viking.obj");
-    MFA_DEFER {
-        Importer::FreeAsset(&viking_mesh);
-    };
-    MFA_ASSERT(viking_mesh.valid());
+    auto cpu_viking_mesh = Importer::ImportObj("../assets/viking/viking.obj");
+    MFA_ASSERT(cpu_viking_mesh.valid());
+    auto gpu_viking_mesh_buffers = RF::CreateMeshBuffers(cpu_viking_mesh);
     auto cpu_viking_texture = Importer::ImportUncompressedImage(
         "../assets/viking/viking.png", 
         Importer::ImportUncompressedImageOptions {
@@ -24,10 +22,6 @@ void Application::run() {
     MFA_ASSERT(cpu_viking_texture.valid());
     auto gpu_viking_texture = RF::CreateTexture(cpu_viking_texture);
     MFA_ASSERT(gpu_viking_texture.valid());
-    MFA_DEFER {
-        RF::DestroyTexture(gpu_viking_texture);
-        Importer::FreeAsset(&cpu_viking_texture);
-    };
     auto cpu_vertex_shader = Importer::ImportShaderFromSPV(
         "../assets/shaders/vert.spv", 
         MFA::Asset::Shader::Stage::Vertex, 
@@ -36,10 +30,6 @@ void Application::run() {
     MFA_ASSERT(cpu_vertex_shader.valid());
     auto gpu_vertex_shader = RF::CreateShader(cpu_vertex_shader);
     MFA_ASSERT(gpu_vertex_shader.valid());
-    MFA_DEFER {
-        RF::DestroyShader(gpu_vertex_shader);
-        Importer::FreeAsset(&cpu_vertex_shader);
-    };
     auto fragment_shader = Importer::ImportShaderFromSPV(
         "../assets/shaders/frag.spv",
         MFA::Asset::Shader::Stage::Fragment,
@@ -47,13 +37,12 @@ void Application::run() {
     );
     auto gpu_fragment_shader = RF::CreateShader(fragment_shader);
     MFA_ASSERT(gpu_fragment_shader.valid());
-    MFA_DEFER {
-        RF::DestroyShader(gpu_fragment_shader);
-        Importer::FreeAsset(&fragment_shader);
-    };
     MFA_ASSERT(fragment_shader.valid());
-    std::vector<RB::GpuShader> shaders {};
-    auto draw_pipeline = RF::CreateBasicDrawPipeline(2, {});
+    std::vector<RB::GpuShader> shaders {gpu_vertex_shader, gpu_fragment_shader};
+    auto draw_pipeline = RF::CreateBasicDrawPipeline(
+        static_cast<MFA::U8>(shaders.size()), 
+        shaders.data()
+    );
     {// Main loop
         bool quit = false;
         //Event handler
@@ -64,6 +53,7 @@ void Application::run() {
         {
             MFA::U32 const start_time = SDL_GetTicks();
             {// DrawFrame
+
                /* auto draw_pass = RF::BeginPass();
                 MFA_ASSERT(draw_pass.is_valid);
 
@@ -84,6 +74,15 @@ void Application::run() {
             }
         }
     }
+    RF::DestroyDrawPipeline(draw_pipeline);
+    RF::DestroyShader(gpu_fragment_shader);
+    Importer::FreeAsset(&fragment_shader);
+    RF::DestroyShader(gpu_vertex_shader);
+    Importer::FreeAsset(&cpu_vertex_shader);
+    RF::DestroyTexture(gpu_viking_texture);
+    Importer::FreeAsset(&cpu_viking_texture);
+    RF::DestroyMeshBuffers(gpu_viking_mesh_buffers);
+    Importer::FreeAsset(&cpu_viking_mesh);
     RF::Shutdown();
 }
 

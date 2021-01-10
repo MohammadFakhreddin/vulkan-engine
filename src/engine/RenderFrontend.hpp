@@ -69,7 +69,7 @@ struct MeshBuffers {
 [[nodiscard]]
 MeshBuffers CreateMeshBuffers(Asset::MeshAsset const & mesh_asset);
 
-void DestroyMeshBuffers(MeshBuffers const & mesh_buffers);
+void DestroyMeshBuffers(MeshBuffers & mesh_buffers);
 
 [[nodiscard]]
 RB::GpuTexture CreateTexture(Asset::TextureAsset & texture_asset);

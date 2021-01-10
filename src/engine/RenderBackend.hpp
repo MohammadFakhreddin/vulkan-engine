@@ -137,7 +137,7 @@ void CopyBuffer(
 
 void DestroyBuffer(
     VkDevice_T * device,
-    BufferGroup const & buffer_group
+    BufferGroup & buffer_group
 );
 
 struct ImageGroup {
@@ -399,7 +399,7 @@ BufferGroup CreateVertexBuffer(
 
 void DestroyVertexBuffer(
     VkDevice_T * device,
-    BufferGroup const & vertex_buffer_group
+    BufferGroup & vertex_buffer_group
 );
 
 [[nodiscard]]
@@ -413,7 +413,7 @@ BufferGroup CreateIndexBuffer (
 
 void DestroyIndexBuffer(
     VkDevice_T * device,
-    BufferGroup const & index_buffer_group
+    BufferGroup & index_buffer_group
 );
 
 [[nodiscard]]

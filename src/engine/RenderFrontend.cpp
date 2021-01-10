@@ -409,14 +409,14 @@ MeshBuffers CreateMeshBuffers(Asset::MeshAsset const & mesh_asset) {
     };
 }
 
-void DestroyMeshBuffers(MeshBuffers const & mesh_buffers) {
-    RB::DestroyVertexBuffer(
-        state.logical_device.device,
-        mesh_buffers.vertices_buffer
-    );
+void DestroyMeshBuffers(MeshBuffers & mesh_buffers) {
     RB::DestroyIndexBuffer(
         state.logical_device.device,
         mesh_buffers.indices_buffer
+    );
+    RB::DestroyVertexBuffer(
+        state.logical_device.device,
+        mesh_buffers.vertices_buffer
     );
 }
 

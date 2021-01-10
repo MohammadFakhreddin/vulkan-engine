@@ -496,10 +496,14 @@ void CopyBuffer(
 
 void DestroyBuffer(
     VkDevice_T * device,
-    BufferGroup const & buffer_group
+    BufferGroup & buffer_group
 ) {
-    vkDestroyBuffer(device, buffer_group.buffer, nullptr);
+    MFA_PTR_ASSERT(buffer_group.memory);
+    MFA_PTR_ASSERT(buffer_group.buffer);
     vkFreeMemory(device, buffer_group.memory, nullptr);
+    vkDestroyBuffer(device, buffer_group.buffer, nullptr);
+    buffer_group.memory = nullptr;
+    buffer_group.buffer = nullptr;
 }
 
 ImageGroup CreateImage(
@@ -580,7 +584,7 @@ GpuTexture CreateTexture(
         auto const data_blob = cpu_texture.data();
         MFA_BLOB_ASSERT(data_blob);
         // Create upload buffer
-        auto const upload_buffer_group = CreateBuffer(
+        auto upload_buffer_group = CreateBuffer(
             device,
             physical_device,
             data_blob.len,
@@ -662,6 +666,10 @@ bool DestroyTexture(VkDevice_T * device, GpuTexture & gpu_texture) {
         DestroyImage(
             device,
             gpu_texture.m_image_group
+        );
+        DestroyImageView(
+            device,
+            gpu_texture.m_image_view
         );
         success = true;
         gpu_texture.m_image_group.image = nullptr;
@@ -1660,7 +1668,7 @@ BufferGroup CreateVertexBuffer(
 ) {
     VkDeviceSize const bufferSize = vertices_blob.len;
 
-    auto const staging_buffer_group = CreateBuffer(
+    auto staging_buffer_group = CreateBuffer(
         device, 
         physical_device, 
         bufferSize, 
@@ -1697,9 +1705,9 @@ BufferGroup CreateVertexBuffer(
 
 void DestroyVertexBuffer(
     VkDevice_T * device,
-    BufferGroup const & vertex_buffer_group
+    BufferGroup & vertex_buffer_group
 ) {
-    vkDestroyBuffer(device, vertex_buffer_group.buffer, nullptr);
+    DestroyBuffer(device, vertex_buffer_group);
 }
 
 BufferGroup CreateIndexBuffer (
@@ -1711,7 +1719,7 @@ BufferGroup CreateIndexBuffer (
 ) {
     auto const bufferSize = indices_blob.len;
 
-    auto const staging_buffer_group = CreateBuffer(
+    auto staging_buffer_group = CreateBuffer(
         device,
         physical_device,
         bufferSize, 
@@ -1740,18 +1748,18 @@ BufferGroup CreateIndexBuffer (
 
     DestroyBuffer(device, staging_buffer_group);
 
-    MFA_PTR_ASSERT(staging_buffer_group.memory);
-    MFA_PTR_ASSERT(staging_buffer_group.buffer);
+    MFA_PTR_ASSERT(indices_buffer_group.memory);
+    MFA_PTR_ASSERT(indices_buffer_group.buffer);
 
-    return staging_buffer_group;
+    return indices_buffer_group;
 
 }
 
 void DestroyIndexBuffer(
     VkDevice_T * device,
-    BufferGroup const & index_buffer_group
+    BufferGroup & index_buffer_group
 ) {
-    vkDestroyBuffer(device, index_buffer_group.buffer, nullptr);
+    DestroyBuffer(device, index_buffer_group);
 }
 
 std::vector<BufferGroup> CreateUniformBuffer(
