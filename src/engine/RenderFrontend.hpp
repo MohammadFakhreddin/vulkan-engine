@@ -47,20 +47,6 @@ void BindBasicDescriptorSetWriteInfo(
 
 // TODO AdvanceBindingDescriptorSetWriteInfo
 
-struct UniformBufferGroup {
-    std::vector<RB::BufferGroup> buffers;
-    size_t buffer_size;
-};
-UniformBufferGroup CreateUniformBuffer(size_t buffer_size);
-
-void BindDataToUniformBuffer(
-    UniformBufferGroup const & uniform_buffer, 
-    Blob data,
-    U8 current_image_index
-);
-
-void DestroyUniformBuffer(UniformBufferGroup & uniform_buffer);
-
 struct MeshBuffers {
     RB::BufferGroup vertices_buffer;
     RB::BufferGroup indices_buffer;
@@ -83,7 +69,9 @@ struct SamplerGroup {
 [[nodiscard]]
 SamplerGroup CreateSampler();
 
-void DestroySampler(SamplerGroup const & sampler_group);
+void DestroySampler(SamplerGroup & sampler_group);
+
+void DeviceWaitIdle();
 
 [[nodiscard]]
 RB::GpuShader CreateShader(Asset::ShaderAsset const & shader_asset);
@@ -92,10 +80,45 @@ void DestroyShader(RB::GpuShader & gpu_shader);
 
 struct DrawPass {
     U8 image_index;
+    U8 frame_index;
     bool is_valid = false;
+    DrawPipeline * draw_pipeline = nullptr;
 };
+
+struct UniformBufferGroup {
+    std::vector<RB::BufferGroup> buffers;
+    size_t buffer_size;
+};
+UniformBufferGroup CreateUniformBuffer(size_t buffer_size);
+
+void BindDataToUniformBuffer(
+    DrawPass const & draw_pass,
+    UniformBufferGroup const & uniform_buffer, 
+    CBlob data
+);
+
+void DestroyUniformBuffer(UniformBufferGroup & uniform_buffer);
+
 [[nodiscard]]
 DrawPass BeginPass();
+
+void BindDrawPipeline(
+    DrawPass & draw_pass,
+    DrawPipeline & draw_pipeline   
+);
+
+void UpdateDescriptorSetsBasic(
+    DrawPass const & draw_pass,
+    VkDescriptorSet_T ** descriptor_sets,
+    UniformBufferGroup const & uniform_buffer,
+    RB::GpuTexture const & gpu_texture,
+    SamplerGroup const & sampler_group
+);
+
+void BindDescriptorSetsBasic(
+    DrawPass const & draw_pass,
+    VkDescriptorSet_T ** descriptor_sets
+);
 
 //: loop through each mesh instance in the mesh instances list to render
 //
@@ -110,14 +133,10 @@ DrawPass BeginPass();
 //  - tell the command buffer to draw the mesh
 //
 //: end loop
-void DrawTexturedMesh(
+void DrawBasicTexturedMesh(
     DrawPass const & draw_pass,
-    DrawPipeline & draw_pipeline,
-    UniformBufferGroup const & uniform_buffer,
-    MeshBuffers const & mesh_buffers,
-    RB::GpuTexture const & texture,
-    SamplerGroup const & sampler,
-    U8 current_image_index
+    DrawPipeline const & draw_pipeline,
+    MeshBuffers const & mesh_buffers
 );
 
 void EndPass(DrawPass & draw_pass);

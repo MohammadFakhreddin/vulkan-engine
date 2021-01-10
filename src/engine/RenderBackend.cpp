@@ -876,7 +876,6 @@ VkSampler_T * CreateSampler(VkDevice_T * device) {
 void DestroySampler(VkDevice_T * device, VkSampler_T * sampler) {
     MFA_PTR_ASSERT(device);
     MFA_PTR_ASSERT(sampler);
-
     vkDestroySampler(device, sampler, nullptr);
 }
 
@@ -1035,6 +1034,7 @@ VkCommandPool_T * CreateCommandPool(VkDevice_T * device, U32 const queue_family_
     VkCommandPoolCreateInfo pool_create_info = {};
     pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     pool_create_info.queueFamilyIndex = queue_family_index;
+    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
     VkCommandPool_T * command_pool = nullptr;
     VK_Check(vkCreateCommandPool(device, &pool_create_info, nullptr, &command_pool));
@@ -1784,7 +1784,7 @@ std::vector<BufferGroup> CreateUniformBuffer(
 void UpdateUniformBuffer(
     VkDevice_T * device,
     BufferGroup const & uniform_buffer_group,
-    Blob const data
+    CBlob const data
 ) {
     MapDataToBuffer(device, uniform_buffer_group.memory, data);
 }
@@ -1798,7 +1798,7 @@ void DestroyUniformBuffer(
 
 VkDescriptorPool_T * CreateDescriptorPool(
     VkDevice_T * device,
-    U8 const swap_chain_images_count
+    U32 const swap_chain_images_count
 ) {
     // TODO Check if both of these variables must have same value as swap_chain_images_count
     VkDescriptorPoolSize poolSize {};

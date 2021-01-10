@@ -147,7 +147,7 @@ bool Init(InitParams const & params) {
     );
     state.descriptor_pool = RB::CreateDescriptorPool(
         state.logical_device.device, 
-        static_cast<U8>(state.swap_chain_group.swap_chain_images.size())
+        1000//static_cast<U8>(state.swap_chain_group.swap_chain_images.size())  // TODO We might need to ask this from user
     );
     state.graphic_command_buffers = RB::CreateCommandBuffers(
         state.logical_device.device,
@@ -325,7 +325,7 @@ void BindBasicDescriptorSetWriteInfo(
     MFA_ASSERT(descriptor_sets_count > 0);
     MFA_PTR_ASSERT(descriptor_sets);
     for(U8 i = 0; i < descriptor_sets_count; i++) {
-        std::vector<VkWriteDescriptorSet> descriptorWrites{};
+        std::vector<VkWriteDescriptorSet> descriptorWrites {2};
         
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[0].dstSet = descriptor_sets[i];
@@ -367,13 +367,13 @@ UniformBufferGroup CreateUniformBuffer(size_t const buffer_size) {
 }
 
 void BindDataToUniformBuffer(
+    DrawPass const & draw_pass,
     UniformBufferGroup const & uniform_buffer, 
-    Blob const data,
-    U8 const current_image_index
+    CBlob const data
 ) {
     RB::UpdateUniformBuffer(
         state.logical_device.device, 
-        uniform_buffer.buffers[current_image_index], 
+        uniform_buffer.buffers[draw_pass.image_index], 
         data
     );
 }
@@ -444,8 +444,13 @@ SamplerGroup CreateSampler() {
     };
 }
 
-void DestroySampler(SamplerGroup const & sampler_group) {
+void DestroySampler(SamplerGroup & sampler_group) {
     RB::DestroySampler(state.logical_device.device, sampler_group.sampler);
+    sampler_group.sampler = nullptr;
+}
+
+void DeviceWaitIdle() {
+    RB::DeviceWaitIdle(state.logical_device.device);
 }
 
 [[nodiscard]]
@@ -461,6 +466,7 @@ DrawPass BeginPass() {
         state.sync_objects.image_availability_semaphores[state.current_frame],
         state.swap_chain_group
     );
+    draw_pass.frame_index = state.current_frame;
     draw_pass.is_valid = true;
     state.current_frame ++;
     if(state.current_frame >= MAX_FRAMES_IN_FLIGHT) {
@@ -474,16 +480,12 @@ DrawPass BeginPass() {
     VkCommandBufferBeginInfo beginInfo = {};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-
-    VkImageSubresourceRange subResourceRange = {};
-    subResourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    subResourceRange.baseMipLevel = 0;
-    subResourceRange.levelCount = 1;
-    subResourceRange.baseArrayLayer = 0;
-    subResourceRange.layerCount = 1;
-
-    vkBeginCommandBuffer(state.graphic_command_buffers[draw_pass.image_index], &beginInfo);
-
+    {
+        auto result = vkBeginCommandBuffer(state.graphic_command_buffers[draw_pass.image_index], &beginInfo);
+        if(VK_SUCCESS != result) {
+            MFA_CRASH("vkBeginCommandBuffer failed with error code %d,", result);
+        }
+    }
     // If present queue family and graphics queue family are different, then a barrier is necessary
     // The barrier is also needed initially to transition the image to the present layout
     VkImageMemoryBarrier presentToDrawBarrier = {};
@@ -503,6 +505,12 @@ DrawPass BeginPass() {
     }
 
     presentToDrawBarrier.image = state.swap_chain_group.swap_chain_images[draw_pass.image_index];
+    VkImageSubresourceRange subResourceRange = {};
+    subResourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    subResourceRange.baseMipLevel = 0;
+    subResourceRange.levelCount = 1;
+    subResourceRange.baseArrayLayer = 0;
+    subResourceRange.layerCount = 1;
     presentToDrawBarrier.subresourceRange = subResourceRange;
 
     vkCmdPipelineBarrier(
@@ -533,52 +541,72 @@ DrawPass BeginPass() {
     return draw_pass;
 }
 
-void DrawBasicTexturedMesh(
-    DrawPass const & draw_pass,
-    DrawPipeline & draw_pipeline,
-    VkDescriptorSet_T ** descriptor_sets,
-    UniformBufferGroup const & uniform_buffer,
-    MeshBuffers const & mesh_buffers,
-    RB::GpuTexture const & gpu_texture,
-    SamplerGroup const & sampler_group
+void BindDrawPipeline(
+    DrawPass & draw_pass,
+    DrawPipeline & draw_pipeline   
 ) {
     MFA_ASSERT(draw_pass.is_valid);
-    {
-        VkDescriptorBufferInfo buffer_info {};
-        buffer_info.buffer = uniform_buffer.buffers[draw_pass.image_index].buffer;
-        buffer_info.offset = 0;
-        buffer_info.range = uniform_buffer.buffer_size;
-
-        VkDescriptorImageInfo image_info {};
-        image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        image_info.imageView = gpu_texture.image_view();
-        image_info.sampler = sampler_group.sampler;
-        RenderFrontend::BindBasicDescriptorSetWriteInfo(
-            1,
-            &descriptor_sets[draw_pass.image_index],
-            buffer_info,
-            image_info
-        );
-    }
-
-    // We should bind specific descriptor set with different texture for each mesh
-    vkCmdBindDescriptorSets(
-        state.graphic_command_buffers[draw_pass.image_index], 
-        VK_PIPELINE_BIND_POINT_GRAPHICS, 
-        draw_pipeline.graphic_pipeline_group.pipeline_layout, 
-        0, 
-        1, 
-        &descriptor_sets[draw_pass.image_index], 
-        0, 
-        nullptr
-    );
-    
+    draw_pass.draw_pipeline = &draw_pipeline;
     // We can bind command buffer to multiple pipeline
     vkCmdBindPipeline(
         state.graphic_command_buffers[draw_pass.image_index], 
         VK_PIPELINE_BIND_POINT_GRAPHICS, 
         draw_pipeline.graphic_pipeline_group.graphic_pipeline
     );
+}
+
+void UpdateDescriptorSetsBasic(
+    DrawPass const & draw_pass,
+    VkDescriptorSet_T ** descriptor_sets,
+    UniformBufferGroup const & uniform_buffer,
+    RB::GpuTexture const & gpu_texture,
+    SamplerGroup const & sampler_group
+) {
+    VkDescriptorBufferInfo buffer_info {};
+    buffer_info.buffer = uniform_buffer.buffers[draw_pass.image_index].buffer;
+    buffer_info.offset = 0;
+    buffer_info.range = uniform_buffer.buffer_size;
+
+    VkDescriptorImageInfo image_info {};
+    image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    image_info.imageView = gpu_texture.image_view();
+    image_info.sampler = sampler_group.sampler;
+
+    BindBasicDescriptorSetWriteInfo(
+        1,
+        &descriptor_sets[draw_pass.image_index],
+        buffer_info,
+        image_info
+    );
+}
+
+void BindDescriptorSetsBasic(
+    DrawPass const & draw_pass,
+    VkDescriptorSet_T ** descriptor_sets
+) {
+    MFA_ASSERT(draw_pass.is_valid);
+    MFA_PTR_ASSERT(draw_pass.draw_pipeline);
+
+    // We should bind specific descriptor set with different texture for each mesh
+    vkCmdBindDescriptorSets(
+        state.graphic_command_buffers[draw_pass.image_index], 
+        VK_PIPELINE_BIND_POINT_GRAPHICS, 
+        draw_pass.draw_pipeline->graphic_pipeline_group.pipeline_layout, 
+        0, 
+        1, 
+        &descriptor_sets[draw_pass.image_index], 
+        0, 
+        nullptr
+    );
+}
+
+void DrawBasicTexturedMesh(
+    DrawPass const & draw_pass,
+    DrawPipeline const & draw_pipeline,
+    MeshBuffers const & mesh_buffers
+) {
+    // TODO Move these functions to renderBackend, RenderFrontend should not know about backend
+    MFA_ASSERT(draw_pass.is_valid);
 
     VkDeviceSize offset = 0;
     // TODO Check again for numbers
@@ -606,6 +634,7 @@ void DrawBasicTexturedMesh(
 }
 
 void EndPass(DrawPass & draw_pass) {
+    // TODO Move these functions to renderBackend, RenderFrontend should not know about backend
     MFA_ASSERT(draw_pass.is_valid);
     draw_pass.is_valid = false;
     vkCmdEndRenderPass(state.graphic_command_buffers[draw_pass.image_index]);
@@ -643,6 +672,57 @@ void EndPass(DrawPass & draw_pass) {
 
     if (vkEndCommandBuffer(state.graphic_command_buffers[draw_pass.image_index]) != VK_SUCCESS) {
         MFA_CRASH("Failed to record command buffer");
+    }
+
+        // Wait for image to be available and draw
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkSemaphore wait_semaphores[] = {state.sync_objects.image_availability_semaphores[draw_pass.frame_index]};
+    VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = wait_semaphores;
+    submitInfo.pWaitDstStageMask = wait_stages;
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &state.graphic_command_buffers[draw_pass.image_index];
+
+    VkSemaphore signal_semaphores[] = {state.sync_objects.render_finish_indicator_semaphores[draw_pass.frame_index]};
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signal_semaphores;
+
+    vkResetFences(state.logical_device.device, 1, &state.sync_objects.fences_in_flight[draw_pass.frame_index]);
+
+    {
+        auto const result = vkQueueSubmit(
+            state.graphic_queue, 
+            1, &submitInfo, 
+            state.sync_objects.fences_in_flight[draw_pass.frame_index]
+        );
+        if (result != VK_SUCCESS) {
+            MFA_CRASH("Failed to submit draw command buffer");
+        }
+    }
+    // Present drawn image
+    // Note: semaphore here is not strictly necessary, because commands are processed in submission order within a single queue
+    VkPresentInfoKHR presentInfo = {};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = signal_semaphores;
+    VkSwapchainKHR swapChains[] = {state.swap_chain_group.swap_chain};
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapChains;
+    U32 imageIndices = draw_pass.image_index;
+    presentInfo.pImageIndices = &imageIndices;
+
+    {
+        auto const res = vkQueuePresentKHR(state.present_queue, &presentInfo);
+        // TODO Handle resize event
+        if (res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR){// || windowResized) {
+            //onWindowSizeChanged();
+        } else if (res != VK_SUCCESS) {
+            MFA_CRASH("Failed to submit present command buffer");
+        }
     }
 }
 

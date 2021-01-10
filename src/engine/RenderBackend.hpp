@@ -427,7 +427,7 @@ std::vector<BufferGroup> CreateUniformBuffer(
 void UpdateUniformBuffer(
     VkDevice_T * device,
     BufferGroup const & uniform_buffer_group,
-    Blob data
+    CBlob data
 );
 
 void DestroyUniformBuffer(
@@ -438,7 +438,7 @@ void DestroyUniformBuffer(
 [[nodiscard]]
 VkDescriptorPool_T * CreateDescriptorPool(
     VkDevice_T * device,
-    U8 swap_chain_images_count
+    U32 swap_chain_images_count
 );
 
 void DestroyDescriptorPool(

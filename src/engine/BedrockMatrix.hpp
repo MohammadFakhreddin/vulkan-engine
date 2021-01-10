@@ -1,16 +1,14 @@
 #ifndef MATRIX_TEMPLATE_CLASS
 #define MATRIX_TEMPLATE_CLASS
 
-#include <cassert>
-#include <memory>
 #include <cmath>
 #include <cstring>
 #include <iostream>
 
-#include "MathHelper.hpp"
-
+#include "BedrockAssert.hpp"
+#include "BedrockMath.hpp"
 // Note: This class is column major from now on
-
+namespace MFA {
 //TODO Write unit tests for project
 //TODO For specific situation matrices use static methods
 template <typename T,unsigned int width,unsigned int height>
@@ -382,7 +380,7 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     float const near_plane,
     float const far_plane 
   ) {
-    float const inv_tan = 1.0f / tan(Math::deg2Rad( 0.5f * field_of_view ));
+    float const inv_tan = 1.0f / tan(Math::Deg2Rad( 0.5f * field_of_view ));
     float const inv_depth_diff = 1.0f / (near_plane - far_plane);
 
     matrix.set(0,0,inv_tan);
@@ -778,5 +776,6 @@ using Matrix3X3Double = _Matrix<double, 3, 3>;
 using Matrix2X1Int = _Matrix<int, 2, 1>;
 using Matrix2X1Float = _Matrix<float, 2, 1>;
 using Matrix2X1Double = _Matrix<double, 2, 1>;
+}
 
 #endif

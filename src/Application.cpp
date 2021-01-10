@@ -1,5 +1,7 @@
 #include "Application.hpp"
 
+
+#include "engine/BedrockMatrix.hpp"
 #include "engine/RenderFrontend.hpp"
 #include "tools/Importer.hpp"
 
@@ -7,7 +9,12 @@ void Application::run() {
     namespace RF = MFA::RenderFrontend;
     namespace RB = MFA::RenderBackend;
     namespace Importer = MFA::Importer;
-    RF::Init({800, 600, "Cool app"});
+    static constexpr MFA::U16 SCREEN_WIDTH = 800;
+    static constexpr MFA::U16 SCREEN_HEIGHT = 600;
+    static constexpr float RATIO = static_cast<float>(SCREEN_WIDTH) / static_cast<float>(SCREEN_HEIGHT);
+    static constexpr float Z_NEAR = 0.1f;
+    static constexpr float Z_FAR = 1000.0f;
+    RF::Init({SCREEN_WIDTH, SCREEN_HEIGHT, "Cool app"});
     // Importing assets
     auto cpu_viking_mesh = Importer::ImportObj("../assets/viking/viking.obj");
     MFA_ASSERT(cpu_viking_mesh.valid());
@@ -44,12 +51,16 @@ void Application::run() {
         float transformation[16];
         float perspective[16];
     };
-    auto uniform_buffer_group = RF::CreateUniformBuffer(sizeof(UniformBufferObject));
+    auto viking1_uniform_buffer_group = RF::CreateUniformBuffer(sizeof(UniformBufferObject));
+    auto viking2_uniform_buffer_group = RF::CreateUniformBuffer(sizeof(UniformBufferObject));
+    auto sampler_group = RF::CreateSampler();
     auto draw_pipeline = RF::CreateBasicDrawPipeline(
         static_cast<MFA::U8>(shaders.size()), 
         shaders.data()
     );
-    auto descriptor_sets = RF::CreateDescriptorSetsForDrawPipeline(draw_pipeline);
+    auto viking1_descriptor_sets = RF::CreateDescriptorSetsForDrawPipeline(draw_pipeline);
+    auto viking2_descriptor_sets = RF::CreateDescriptorSetsForDrawPipeline(draw_pipeline);
+    float degree = 0;
     {// Main loop
         bool quit = false;
         //Event handler
@@ -59,13 +70,138 @@ void Application::run() {
         while (!quit)
         {
             MFA::U32 const start_time = SDL_GetTicks();
-            //{// DrawFrame
-
-            //   auto draw_pass = RF::BeginPass();
-            //   MFA_ASSERT(draw_pass.is_valid);
-            //   RF::BindBasicDescriptorSetWriteInfo()
-            //   RF::EndPass(draw_pass);
-            //}
+            {// DrawFrame
+                auto draw_pass = RF::BeginPass();
+                MFA_ASSERT(draw_pass.is_valid);
+                {// Updating uniform buffer
+                    degree++;
+                    if(degree >= 360.0f)
+                    {
+                        degree = 0.0f;
+                    }
+                    UniformBufferObject ubo{};
+                    {// Model
+                        MFA::Matrix4X4Float rotation;
+                        MFA::Matrix4X4Float::assignRotationXYZ(
+                            rotation,
+                            MFA::Math::Deg2Rad(45.0f),
+                            0.0f,
+                            MFA::Math::Deg2Rad(45.0f + degree)
+                        );
+                        //Matrix4X4Float::assignRotationXYZ(rotation, Math::deg2Rad(degree), Math::deg2Rad(degree),Math::deg2Rad(0.0f));
+                        ::memcpy(ubo.rotation,rotation.cells,sizeof(ubo.rotation));
+                    }
+                    {// Transformation
+                        MFA::Matrix4X4Float transformation;
+                        MFA::Matrix4X4Float::assignTransformation(transformation,0,0,-6);
+                        ::memcpy(ubo.transformation,transformation.cells,sizeof(ubo.transformation));
+                    }
+                    {// Perspective
+                        MFA::Matrix4X4Float perspective;
+                        MFA::Matrix4X4Float::PreparePerspectiveProjectionMatrix(
+                            perspective,
+                            RATIO,
+                            40,
+                            Z_NEAR,
+                            Z_FAR
+                        );
+                        ::memcpy(ubo.perspective,perspective.cells,sizeof(ubo.perspective));
+                    }
+                    RF::BindDataToUniformBuffer(
+                        draw_pass,
+                        viking1_uniform_buffer_group, 
+                        MFA::CBlobAliasOf(ubo)
+                    );
+                }
+                RF::BindDrawPipeline(draw_pass, draw_pipeline);
+                RF::BindDescriptorSetsBasic(
+                    draw_pass,
+                    viking1_descriptor_sets.data()
+                );
+                RF::UpdateDescriptorSetsBasic(
+                    draw_pass,
+                    viking1_descriptor_sets.data(),
+                    viking1_uniform_buffer_group,
+                    gpu_viking_texture,
+                    sampler_group
+                );
+                /*RF::DrawBasicTexturedMesh(
+                    draw_pass,
+                    draw_pipeline,
+                    descriptor_sets.data(),
+                    uniform_buffer_group,
+                    gpu_viking_mesh_buffers,
+                    gpu_viking_texture,
+                    sampler_group
+                );*/
+                RF::DrawBasicTexturedMesh(
+                    draw_pass,
+                    draw_pipeline,
+                    gpu_viking_mesh_buffers
+                );
+                {// Updating uniform buffer
+                    UniformBufferObject ubo{};
+                    {// Model
+                        MFA::Matrix4X4Float rotation;
+                        MFA::Matrix4X4Float::assignRotationXYZ(
+                            rotation,
+                            0.0f,
+                            0.0f,
+                            0.0f
+                        );
+                        //Matrix4X4Float::assignRotationXYZ(rotation, Math::deg2Rad(degree), Math::deg2Rad(degree),Math::deg2Rad(0.0f));
+                        ::memcpy(ubo.rotation,rotation.cells,sizeof(ubo.rotation));
+                    }
+                    {// Transformation
+                        MFA::Matrix4X4Float transformation;
+                        MFA::Matrix4X4Float::assignTransformation(transformation,1,0,-7);
+                        ::memcpy(ubo.transformation,transformation.cells,sizeof(ubo.transformation));
+                    }
+                    {// Perspective
+                        MFA::Matrix4X4Float perspective;
+                        MFA::Matrix4X4Float::PreparePerspectiveProjectionMatrix(
+                            perspective,
+                            RATIO,
+                            40,
+                            Z_NEAR,
+                            Z_FAR
+                        );
+                        ::memcpy(ubo.perspective,perspective.cells,sizeof(ubo.perspective));
+                    }
+                    RF::BindDataToUniformBuffer(
+                        draw_pass,
+                        viking2_uniform_buffer_group, 
+                        MFA::CBlobAliasOf(ubo)
+                    );
+                }
+                RF::BindDescriptorSetsBasic(
+                    draw_pass,
+                    viking2_descriptor_sets.data()
+                );
+                RF::UpdateDescriptorSetsBasic(
+                    draw_pass,
+                    viking2_descriptor_sets.data(),
+                    viking2_uniform_buffer_group,
+                    gpu_viking_texture,
+                    sampler_group
+                );
+                //{// Transformation
+                //    MFA::Matrix4X4Float transformation;
+                //    MFA::Matrix4X4Float::assignTransformation(transformation,100,0,-5);
+                //    ::memcpy(ubo.transformation,transformation.cells,sizeof(ubo.transformation));
+                //    RF::BindDataToUniformBuffer(
+                //        draw_pass,
+                //        uniform_buffer_group, 
+                //        MFA::CBlobAliasOf(ubo)
+                //    );
+                //}
+                RF::DrawBasicTexturedMesh(
+                    draw_pass,
+                    draw_pipeline,
+                    gpu_viking_mesh_buffers
+                );
+                RF::EndPass(draw_pass);
+            }
             //Handle events on queue
             if (SDL_PollEvent(&e) != 0)
             {
@@ -81,8 +217,11 @@ void Application::run() {
             }
         }
     }
-    RF::DestroyUniformBuffer(uniform_buffer_group);
+    RF::DeviceWaitIdle();
     RF::DestroyDrawPipeline(draw_pipeline);
+    RF::DestroySampler(sampler_group);
+    RF::DestroyUniformBuffer(viking1_uniform_buffer_group);
+    RF::DestroyUniformBuffer(viking2_uniform_buffer_group);
     RF::DestroyShader(gpu_fragment_shader);
     Importer::FreeAsset(&fragment_shader);
     RF::DestroyShader(gpu_vertex_shader);

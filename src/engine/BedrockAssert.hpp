@@ -9,7 +9,7 @@
 
 #ifdef MFA_DEBUG
 #define MFA_ASSERT(condition)           assert(condition)
-#define MFA_PTR_ASSERT(ptr)             MFA_ASSERT(MFA_PTR_VALID(ptr))
+#define MFA_PTR_ASSERT(ptr)             MFA_ASSERT(MFA_PTR_VALID(ptr)); _assume(ptr != nullptr)
 #define MFA_BLOB_ASSERT(blob)           MFA_PTR_ASSERT(blob.ptr); MFA_ASSERT(blob.len > 0)
 #define MFA_NOT_IMPLEMENTED_YET(who)    throw std::runtime_error("Method not impelemented by " + std::string(who))
 #else
