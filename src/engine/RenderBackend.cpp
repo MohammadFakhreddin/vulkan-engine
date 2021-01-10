@@ -363,9 +363,9 @@ VkFormat FindSupportedFormat(
 
 void TransferImageLayout(
     VkDevice_T * device,
-    VkQueue const & graphic_queue,
-    VkCommandPool const & command_pool,
-    VkImage const & image, 
+    VkQueue_T * graphic_queue,
+    VkCommandPool_T * command_pool,
+    VkImage_T * image, 
     VkImageLayout const old_layout, 
     VkImageLayout const new_layout
 ) {
@@ -564,7 +564,7 @@ GpuTexture CreateTexture(
     CpuTexture & cpu_texture,
     VkDevice_T * device,
     VkPhysicalDevice_T * physical_device,
-    VkQueue const & graphic_queue,
+    VkQueue_T * graphic_queue,
     VkCommandPool_T * command_pool
 ) {
     MFA_PTR_ASSERT(device);
@@ -647,20 +647,20 @@ GpuTexture CreateTexture(
         MFA_PTR_ASSERT(image_view);
         gpu_texture.m_image_view = image_view;
         gpu_texture.m_cpu_texture = cpu_texture;
-        gpu_texture.m_device = device;
     }
     return gpu_texture;
 }
 
-bool DestroyTexture(GpuTexture & gpu_texture) {
+bool DestroyTexture(VkDevice_T * device, GpuTexture & gpu_texture) {
+    MFA_PTR_ASSERT(device);
     bool success = false;
     if(gpu_texture.valid()) {
-        MFA_PTR_ASSERT(gpu_texture.m_device);
+        MFA_PTR_ASSERT(device);
         MFA_PTR_ASSERT(gpu_texture.m_image_group.image);
         MFA_PTR_ASSERT(gpu_texture.m_image_group.memory);
         MFA_PTR_ASSERT(gpu_texture.m_image_view);
         DestroyImage(
-            gpu_texture.m_device,
+            device,
             gpu_texture.m_image_group
         );
         success = true;
@@ -730,7 +730,6 @@ void CopyBufferToImage(
     auto const regions_blob = Memory::Alloc(regions_count * sizeof(VkBufferImageCopy));
     MFA_DEFER {Memory::Free(regions_blob);};
     auto * regions_array = regions_blob.as<VkBufferImageCopy>();
-
     for(U8 slice_index = 0; slice_index < cpu_texture_header->slices; slice_index++) {
         for(U8 mip_level = 0; mip_level < cpu_texture_header->mip_count; mip_level++) {
             auto const & mip_info = cpu_texture_header->mipmap_infos[mip_level];
@@ -738,12 +737,16 @@ void CopyBufferToImage(
             region.imageExtent.width = mip_info.dims.width; 
             region.imageExtent.height = mip_info.dims.height; 
             region.imageExtent.depth = mip_info.dims.depth;
-            // TODO Make sure that importer does not add header to offset
+            region.imageOffset.x = 0;
+            region.imageOffset.y = 0;
+            region.imageOffset.z = 0;
             region.bufferOffset = static_cast<U32>(cpu_texture_header->mip_offset_bytes(mip_level, slice_index)); 
             region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             region.imageSubresource.mipLevel = cpu_texture_header->mip_count - mip_level - 1;
             region.imageSubresource.baseArrayLayer = slice_index;
             region.imageSubresource.layerCount = 1;
+            region.bufferRowLength = 0;
+            region.bufferImageHeight = 0;
         }
     }
 
@@ -1385,11 +1388,11 @@ GpuShader CreateShader(VkDevice_T * device, CpuShader const & cpu_shader) {
     return gpu_shader;
 }
 
-bool DestroyShader(GpuShader & gpu_shader) {
+bool DestroyShader(VkDevice_T * device, GpuShader & gpu_shader) {
+    MFA_PTR_ASSERT(device);
     bool ret = false;
     if(gpu_shader.valid()) {
-        vkDestroyShaderModule(gpu_shader.m_device, gpu_shader.m_shader_module, nullptr);
-        gpu_shader.m_device = nullptr;
+        vkDestroyShaderModule(device, gpu_shader.m_shader_module, nullptr);
         gpu_shader.m_shader_module = nullptr;
         ret = true;
     }

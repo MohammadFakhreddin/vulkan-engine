@@ -65,7 +65,7 @@ Asset::TextureAsset ImportUncompressedImage(
         texture_descriptor->slices = slices;
         //texture_descriptor->usage_flags = options.usage_flags;        // TODO
         {
-            auto current_mip_map_location = texture_descriptor_size;
+            size_t current_mip_map_location = 0;//texture_descriptor_size;
             bool resize_result {}; MFA_CONSUME_VAR(resize_result);
             for (U8 mip_level = 0; mip_level < mip_count - 1; mip_level++) {
                 Byte * current_mipmap_ptr = resource_blob.ptr + current_mip_map_location;
@@ -115,7 +115,7 @@ Asset::TextureAsset ImportUncompressedImage(
                 static_cast<U32>(pixels.len),
                 original_image_dims
             };
-            ::memcpy(resource_blob.ptr + current_mip_map_location, pixels.ptr, pixels.len);
+            ::memcpy(resource_blob.ptr + current_mip_map_location + texture_descriptor_size, pixels.ptr, pixels.len);
         }
 
         texture = Asset::TextureAsset(resource_blob);

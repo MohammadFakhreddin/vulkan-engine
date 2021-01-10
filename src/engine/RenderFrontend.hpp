@@ -85,6 +85,11 @@ SamplerGroup CreateSampler();
 
 void DestroySampler(SamplerGroup const & sampler_group);
 
+[[nodiscard]]
+RB::GpuShader CreateShader(Asset::ShaderAsset const & shader_asset);
+
+void DestroyShader(RB::GpuShader & gpu_shader);
+
 struct DrawPass {
     U8 image_index;
     bool is_valid = false;

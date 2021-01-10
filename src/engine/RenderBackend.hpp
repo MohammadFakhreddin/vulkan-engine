@@ -100,11 +100,11 @@ VkFormat FindSupportedFormat(
 
 void TransferImageLayout(
     VkDevice_T * device,
-    VkQueue const & graphic_queue,
-    VkCommandPool const & command_pool,
-    VkImage const & image, 
-    VkImageLayout old_layout, 
-    VkImageLayout new_layout
+    VkQueue_T * graphic_queue,
+    VkCommandPool_T * command_pool,
+    VkImage_T * image, 
+    VkImageLayout const old_layout, 
+    VkImageLayout const new_layout
 );
 
 struct BufferGroup {
@@ -172,11 +172,11 @@ GpuTexture CreateTexture(
     CpuTexture & cpu_texture,
     VkDevice_T * device,
     VkPhysicalDevice_T * physical_device,
-    VkQueue const & graphic_queue,
+    VkQueue_T * graphic_queue,
     VkCommandPool_T * command_pool
 );
 
-bool DestroyTexture(GpuTexture & gpu_texture);
+bool DestroyTexture(VkDevice_T * device, GpuTexture & gpu_texture);
 
 // TODO It needs handle system // TODO Might be moved to a new class called render_types
 class GpuTexture {
@@ -184,21 +184,20 @@ friend GpuTexture CreateTexture(
     CpuTexture & cpu_texture,
     VkDevice_T * device,
     VkPhysicalDevice_T * physical_device,
-    VkQueue const & graphic_queue,
+    VkQueue_T * graphic_queue,
     VkCommandPool_T * command_pool
 );
-friend bool DestroyTexture(GpuTexture & gpu_texture);
+friend bool DestroyTexture(VkDevice_T * device, GpuTexture & gpu_texture);
 public:
     [[nodiscard]]
     CpuTexture const * cpu_texture() const {return &m_cpu_texture;}
     [[nodiscard]]
-    bool valid () const {return MFA_PTR_VALID(m_device) && MFA_PTR_VALID(m_image_view);}
+    bool valid () const {return MFA_PTR_VALID(m_image_view);}
     [[nodiscard]]
     VkImage_T const * image() const {return m_image_group.image;}
     [[nodiscard]]
     VkImageView_T * image_view() const {return m_image_view;}
 private:
-    VkDevice_T * m_device = nullptr;
     ImageGroup m_image_group {};
     VkImageView_T * m_image_view = nullptr;
     CpuTexture m_cpu_texture {};
@@ -337,21 +336,19 @@ class GpuShader;
 [[nodiscard]]
 GpuShader CreateShader(VkDevice_T * device, CpuShader const & cpu_shader);
 
-bool DestroyShader(GpuShader & gpu_shader);
+bool DestroyShader(VkDevice_T * device, GpuShader & gpu_shader);
 
 class GpuShader {
 friend GpuShader CreateShader(VkDevice_T * device, CpuShader const & cpu_shader);
-friend bool DestroyShader(GpuShader & gpu_shader);
+friend bool DestroyShader(VkDevice_T * device, GpuShader & gpu_shader);
 public:
     [[nodiscard]]
     CpuShader const * cpu_shader() const {return &m_cpu_shader;}
     [[nodiscard]]
-    bool valid () const {return MFA_PTR_VALID(m_device) && MFA_PTR_VALID(m_shader_module);}
+    bool valid () const {return MFA_PTR_VALID(m_shader_module);}
     [[nodiscard]]
     VkShaderModule_T * shader_module() const {return m_shader_module;}
 private:
-    // TODO I think we can remove device ref and ask for it instead
-    VkDevice_T * m_device = nullptr;
     VkShaderModule_T * m_shader_module = nullptr;
     CpuShader m_cpu_shader {};
 };

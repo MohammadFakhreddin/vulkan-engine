@@ -14,46 +14,55 @@ void Application::run() {
         Importer::FreeAsset(&viking_mesh);
     };
     MFA_ASSERT(viking_mesh.valid());
-    auto viking_texture = Importer::ImportUncompressedImage(
+    auto cpu_viking_texture = Importer::ImportUncompressedImage(
         "../assets/viking/viking.png", 
         Importer::ImportUncompressedImageOptions {
             .generate_mipmaps = false,
             .prefer_srgb = false
         }
     );
+    MFA_ASSERT(cpu_viking_texture.valid());
+    auto gpu_viking_texture = RF::CreateTexture(cpu_viking_texture);
+    MFA_ASSERT(gpu_viking_texture.valid());
     MFA_DEFER {
-        Importer::FreeAsset(&viking_texture);
+        RF::DestroyTexture(gpu_viking_texture);
+        Importer::FreeAsset(&cpu_viking_texture);
     };
-    MFA_ASSERT(viking_texture.valid());
-    auto vertex_shader = Importer::ImportShaderFromSPV(
+    auto cpu_vertex_shader = Importer::ImportShaderFromSPV(
         "../assets/shaders/vert.spv", 
         MFA::Asset::Shader::Stage::Vertex, 
         "main"
     );
+    MFA_ASSERT(cpu_vertex_shader.valid());
+    auto gpu_vertex_shader = RF::CreateShader(cpu_vertex_shader);
+    MFA_ASSERT(gpu_vertex_shader.valid());
     MFA_DEFER {
-        Importer::FreeAsset(&vertex_shader);
+        RF::DestroyShader(gpu_vertex_shader);
+        Importer::FreeAsset(&cpu_vertex_shader);
     };
-    MFA_ASSERT(vertex_shader.valid());
     auto fragment_shader = Importer::ImportShaderFromSPV(
         "../assets/shaders/frag.spv",
         MFA::Asset::Shader::Stage::Fragment,
         "main"
     );
+    auto gpu_fragment_shader = RF::CreateShader(fragment_shader);
+    MFA_ASSERT(gpu_fragment_shader.valid());
     MFA_DEFER {
+        RF::DestroyShader(gpu_fragment_shader);
         Importer::FreeAsset(&fragment_shader);
     };
     MFA_ASSERT(fragment_shader.valid());
+    std::vector<RB::GpuShader> shaders {};
+    auto draw_pipeline = RF::CreateBasicDrawPipeline(2, {});
     {// Main loop
         bool quit = false;
         //Event handler
         SDL_Event e;
         //While application is running
-        MFA::U32 targetFps = 1000 / 60;
-        MFA::U32 startTime;
-        MFA::U32 deltaTime;
+        MFA::U32 const target_fps = 1000 / 60;
         while (!quit)
         {
-            startTime = SDL_GetTicks();
+            MFA::U32 const start_time = SDL_GetTicks();
             {// DrawFrame
                /* auto draw_pass = RF::BeginPass();
                 MFA_ASSERT(draw_pass.is_valid);
@@ -69,9 +78,9 @@ void Application::run() {
                     quit = true;
                 }
             }
-            deltaTime = SDL_GetTicks() - startTime;
-            if(targetFps > deltaTime){
-                SDL_Delay( targetFps - deltaTime );
+            MFA::U32 const delta_time = SDL_GetTicks() - start_time;
+            if(target_fps > delta_time){
+                SDL_Delay( target_fps - delta_time );
             }
         }
     }

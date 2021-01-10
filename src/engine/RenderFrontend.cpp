@@ -433,7 +433,7 @@ RB::GpuTexture CreateTexture(Asset::TextureAsset & texture_asset) {
 }
 
 void DestroyTexture(RB::GpuTexture & gpu_texture) {
-    RB::DestroyTexture(gpu_texture);
+    RB::DestroyTexture(state.logical_device.device, gpu_texture);
 }
 
 // TODO Ask for options
@@ -646,5 +646,16 @@ void EndPass(DrawPass & draw_pass) {
     }
 }
 
+[[nodiscard]]
+RB::GpuShader CreateShader(Asset::ShaderAsset const & shader_asset) {
+    return RB::CreateShader(
+        state.logical_device.device,
+        shader_asset
+    );
+}
+
+void DestroyShader(RB::GpuShader & gpu_shader) {
+    RB::DestroyShader(state.logical_device.device, gpu_shader);
+}
 
 }
