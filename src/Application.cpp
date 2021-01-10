@@ -39,10 +39,17 @@ void Application::run() {
     MFA_ASSERT(gpu_fragment_shader.valid());
     MFA_ASSERT(fragment_shader.valid());
     std::vector<RB::GpuShader> shaders {gpu_vertex_shader, gpu_fragment_shader};
+    struct UniformBufferObject {
+        float rotation[16];
+        float transformation[16];
+        float perspective[16];
+    };
+    auto uniform_buffer_group = RF::CreateUniformBuffer(sizeof(UniformBufferObject));
     auto draw_pipeline = RF::CreateBasicDrawPipeline(
         static_cast<MFA::U8>(shaders.size()), 
         shaders.data()
     );
+    auto descriptor_sets = RF::CreateDescriptorSetsForDrawPipeline(draw_pipeline);
     {// Main loop
         bool quit = false;
         //Event handler
@@ -52,13 +59,13 @@ void Application::run() {
         while (!quit)
         {
             MFA::U32 const start_time = SDL_GetTicks();
-            {// DrawFrame
+            //{// DrawFrame
 
-               /* auto draw_pass = RF::BeginPass();
-                MFA_ASSERT(draw_pass.is_valid);
-
-                RF::EndPass(draw_pass);*/
-            }
+            //   auto draw_pass = RF::BeginPass();
+            //   MFA_ASSERT(draw_pass.is_valid);
+            //   RF::BindBasicDescriptorSetWriteInfo()
+            //   RF::EndPass(draw_pass);
+            //}
             //Handle events on queue
             if (SDL_PollEvent(&e) != 0)
             {
@@ -74,6 +81,7 @@ void Application::run() {
             }
         }
     }
+    RF::DestroyUniformBuffer(uniform_buffer_group);
     RF::DestroyDrawPipeline(draw_pipeline);
     RF::DestroyShader(gpu_fragment_shader);
     Importer::FreeAsset(&fragment_shader);

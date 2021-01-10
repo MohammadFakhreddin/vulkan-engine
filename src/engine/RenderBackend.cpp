@@ -1843,12 +1843,13 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSet(
     MFA_PTR_ASSERT(device);
     MFA_PTR_ASSERT(descriptor_pool);
     MFA_PTR_ASSERT(descriptor_set_layout);
+    std::vector<VkDescriptorSetLayout> layouts(swap_chain_images_count, descriptor_set_layout);
     // There needs to be one descriptor set per binding point in the shader
     VkDescriptorSetAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = descriptor_pool;
     allocInfo.descriptorSetCount = swap_chain_images_count;
-    allocInfo.pSetLayouts = &descriptor_set_layout;
+    allocInfo.pSetLayouts = layouts.data();
 
     std::vector<VkDescriptorSet_T *> descriptor_sets {allocInfo.descriptorSetCount};
     // Descriptor sets gets destroyed automatically when descriptor pool is destroyed

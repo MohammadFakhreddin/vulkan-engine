@@ -353,7 +353,7 @@ void BindBasicDescriptorSetWriteInfo(
     }
 }
 
-UniformBuffer CreateUniformBuffer(size_t const buffer_size) {
+UniformBufferGroup CreateUniformBuffer(size_t const buffer_size) {
     auto const buffers = RB::CreateUniformBuffer(
         state.logical_device.device,
         state.physical_device,
@@ -367,7 +367,7 @@ UniformBuffer CreateUniformBuffer(size_t const buffer_size) {
 }
 
 void BindDataToUniformBuffer(
-    UniformBuffer const & uniform_buffer, 
+    UniformBufferGroup const & uniform_buffer, 
     Blob const data,
     U8 const current_image_index
 ) {
@@ -378,7 +378,7 @@ void BindDataToUniformBuffer(
     );
 }
 
-void DestroyUniformBuffer(UniformBuffer & uniform_buffer) {
+void DestroyUniformBuffer(UniformBufferGroup & uniform_buffer) {
     for(auto & buffer_group : uniform_buffer.buffers) {
         RB::DestroyUniformBuffer(
             state.logical_device.device,
@@ -537,7 +537,7 @@ void DrawBasicTexturedMesh(
     DrawPass const & draw_pass,
     DrawPipeline & draw_pipeline,
     VkDescriptorSet_T ** descriptor_sets,
-    UniformBuffer const & uniform_buffer,
+    UniformBufferGroup const & uniform_buffer,
     MeshBuffers const & mesh_buffers,
     RB::GpuTexture const & gpu_texture,
     SamplerGroup const & sampler_group

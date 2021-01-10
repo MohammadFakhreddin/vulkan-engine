@@ -47,19 +47,19 @@ void BindBasicDescriptorSetWriteInfo(
 
 // TODO AdvanceBindingDescriptorSetWriteInfo
 
-struct UniformBuffer {
+struct UniformBufferGroup {
     std::vector<RB::BufferGroup> buffers;
     size_t buffer_size;
 };
-UniformBuffer CreateUniformBuffer(size_t buffer_size);
+UniformBufferGroup CreateUniformBuffer(size_t buffer_size);
 
 void BindDataToUniformBuffer(
-    UniformBuffer const & uniform_buffer, 
+    UniformBufferGroup const & uniform_buffer, 
     Blob data,
     U8 current_image_index
 );
 
-void DestroyUniformBuffer(UniformBuffer & uniform_buffer);
+void DestroyUniformBuffer(UniformBufferGroup & uniform_buffer);
 
 struct MeshBuffers {
     RB::BufferGroup vertices_buffer;
@@ -113,7 +113,7 @@ DrawPass BeginPass();
 void DrawTexturedMesh(
     DrawPass const & draw_pass,
     DrawPipeline & draw_pipeline,
-    UniformBuffer const & uniform_buffer,
+    UniformBufferGroup const & uniform_buffer,
     MeshBuffers const & mesh_buffers,
     RB::GpuTexture const & texture,
     SamplerGroup const & sampler,
