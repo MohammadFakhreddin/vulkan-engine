@@ -2,6 +2,7 @@
 
 
 #include "engine/BedrockMatrix.hpp"
+#include "engine/DrawableObject.hpp"
 #include "engine/RenderFrontend.hpp"
 #include "tools/Importer.hpp"
 
@@ -51,15 +52,18 @@ void Application::run() {
         float transformation[16];
         float perspective[16];
     };
-    auto viking1_uniform_buffer_group = RF::CreateUniformBuffer(sizeof(UniformBufferObject));
-    auto viking2_uniform_buffer_group = RF::CreateUniformBuffer(sizeof(UniformBufferObject));
     auto sampler_group = RF::CreateSampler();
     auto draw_pipeline = RF::CreateBasicDrawPipeline(
         static_cast<MFA::U8>(shaders.size()), 
         shaders.data()
     );
-    auto viking1_descriptor_sets = RF::CreateDescriptorSetsForDrawPipeline(draw_pipeline);
-    auto viking2_descriptor_sets = RF::CreateDescriptorSetsForDrawPipeline(draw_pipeline);
+    auto viking_house1 = MFA::DrawableObject(
+        gpu_viking_mesh_buffers,
+        gpu_viking_texture,
+        sampler_group,
+        sizeof(UniformBufferObject),
+        draw_pipeline
+    );
     float degree = 0;
     {// Main loop
         bool quit = false;
@@ -73,6 +77,7 @@ void Application::run() {
             {// DrawFrame
                 auto draw_pass = RF::BeginPass();
                 MFA_ASSERT(draw_pass.is_valid);
+                RF::BindDrawPipeline(draw_pass, draw_pipeline);
                 {// Updating uniform buffer
                     degree++;
                     if(degree >= 360.0f)
@@ -107,99 +112,9 @@ void Application::run() {
                         );
                         ::memcpy(ubo.perspective,perspective.cells,sizeof(ubo.perspective));
                     }
-                    RF::BindDataToUniformBuffer(
-                        draw_pass,
-                        viking1_uniform_buffer_group, 
-                        MFA::CBlobAliasOf(ubo)
-                    );
+                    viking_house1.update_uniform_buffer(draw_pass, ubo);
                 }
-                RF::BindDrawPipeline(draw_pass, draw_pipeline);
-                RF::BindDescriptorSetsBasic(
-                    draw_pass,
-                    viking1_descriptor_sets.data()
-                );
-                RF::UpdateDescriptorSetsBasic(
-                    draw_pass,
-                    viking1_descriptor_sets.data(),
-                    viking1_uniform_buffer_group,
-                    gpu_viking_texture,
-                    sampler_group
-                );
-                /*RF::DrawBasicTexturedMesh(
-                    draw_pass,
-                    draw_pipeline,
-                    descriptor_sets.data(),
-                    uniform_buffer_group,
-                    gpu_viking_mesh_buffers,
-                    gpu_viking_texture,
-                    sampler_group
-                );*/
-                RF::DrawBasicTexturedMesh(
-                    draw_pass,
-                    draw_pipeline,
-                    gpu_viking_mesh_buffers
-                );
-                {// Updating uniform buffer
-                    UniformBufferObject ubo{};
-                    {// Model
-                        MFA::Matrix4X4Float rotation;
-                        MFA::Matrix4X4Float::assignRotationXYZ(
-                            rotation,
-                            0.0f,
-                            0.0f,
-                            0.0f
-                        );
-                        //Matrix4X4Float::assignRotationXYZ(rotation, Math::deg2Rad(degree), Math::deg2Rad(degree),Math::deg2Rad(0.0f));
-                        ::memcpy(ubo.rotation,rotation.cells,sizeof(ubo.rotation));
-                    }
-                    {// Transformation
-                        MFA::Matrix4X4Float transformation;
-                        MFA::Matrix4X4Float::assignTransformation(transformation,1,0,-7);
-                        ::memcpy(ubo.transformation,transformation.cells,sizeof(ubo.transformation));
-                    }
-                    {// Perspective
-                        MFA::Matrix4X4Float perspective;
-                        MFA::Matrix4X4Float::PreparePerspectiveProjectionMatrix(
-                            perspective,
-                            RATIO,
-                            40,
-                            Z_NEAR,
-                            Z_FAR
-                        );
-                        ::memcpy(ubo.perspective,perspective.cells,sizeof(ubo.perspective));
-                    }
-                    RF::BindDataToUniformBuffer(
-                        draw_pass,
-                        viking2_uniform_buffer_group, 
-                        MFA::CBlobAliasOf(ubo)
-                    );
-                }
-                RF::BindDescriptorSetsBasic(
-                    draw_pass,
-                    viking2_descriptor_sets.data()
-                );
-                RF::UpdateDescriptorSetsBasic(
-                    draw_pass,
-                    viking2_descriptor_sets.data(),
-                    viking2_uniform_buffer_group,
-                    gpu_viking_texture,
-                    sampler_group
-                );
-                //{// Transformation
-                //    MFA::Matrix4X4Float transformation;
-                //    MFA::Matrix4X4Float::assignTransformation(transformation,100,0,-5);
-                //    ::memcpy(ubo.transformation,transformation.cells,sizeof(ubo.transformation));
-                //    RF::BindDataToUniformBuffer(
-                //        draw_pass,
-                //        uniform_buffer_group, 
-                //        MFA::CBlobAliasOf(ubo)
-                //    );
-                //}
-                RF::DrawBasicTexturedMesh(
-                    draw_pass,
-                    draw_pipeline,
-                    gpu_viking_mesh_buffers
-                );
+                viking_house1.draw(draw_pass);
                 RF::EndPass(draw_pass);
             }
             //Handle events on queue
@@ -219,9 +134,8 @@ void Application::run() {
     }
     RF::DeviceWaitIdle();
     RF::DestroyDrawPipeline(draw_pipeline);
+    viking_house1.shutdown();
     RF::DestroySampler(sampler_group);
-    RF::DestroyUniformBuffer(viking1_uniform_buffer_group);
-    RF::DestroyUniformBuffer(viking2_uniform_buffer_group);
     RF::DestroyShader(gpu_fragment_shader);
     Importer::FreeAsset(&fragment_shader);
     RF::DestroyShader(gpu_vertex_shader);

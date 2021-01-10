@@ -51,6 +51,7 @@ struct MeshBuffers {
     RB::BufferGroup vertices_buffer;
     RB::BufferGroup indices_buffer;
     U32 indices_count;
+    Asset::MeshAsset mesh_asset {};
 };
 [[nodiscard]]
 MeshBuffers CreateMeshBuffers(Asset::MeshAsset const & mesh_asset);
@@ -91,7 +92,7 @@ struct UniformBufferGroup {
 };
 UniformBufferGroup CreateUniformBuffer(size_t buffer_size);
 
-void BindDataToUniformBuffer(
+void UpdateUniformBuffer(
     DrawPass const & draw_pass,
     UniformBufferGroup const & uniform_buffer, 
     CBlob data
@@ -135,7 +136,6 @@ void BindDescriptorSetsBasic(
 //: end loop
 void DrawBasicTexturedMesh(
     DrawPass const & draw_pass,
-    DrawPipeline const & draw_pipeline,
     MeshBuffers const & mesh_buffers
 );
 

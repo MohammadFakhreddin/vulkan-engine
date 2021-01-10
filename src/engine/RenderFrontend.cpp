@@ -62,6 +62,7 @@ static VkBool32 DebugCallback(
         MFA_LOG_INFO("Message code: %d\nMessage: %s\n", message_code, message);
     }
     MFA_DEBUG_CRASH("Vulkan debug event");
+    return true;
 }
 
 bool Init(InitParams const & params) {
@@ -366,7 +367,7 @@ UniformBufferGroup CreateUniformBuffer(size_t const buffer_size) {
     };
 }
 
-void BindDataToUniformBuffer(
+void UpdateUniformBuffer(
     DrawPass const & draw_pass,
     UniformBufferGroup const & uniform_buffer, 
     CBlob const data
@@ -405,7 +406,8 @@ MeshBuffers CreateMeshBuffers(Asset::MeshAsset const & mesh_asset) {
     return MeshBuffers {
         .vertices_buffer = vertices_buffer,
         .indices_buffer = indices_buffer,
-        .indices_count = mesh_asset.header_object()->index_count
+        .indices_count = mesh_asset.header_object()->index_count,
+        .mesh_asset = mesh_asset
     };
 }
 
@@ -602,10 +604,9 @@ void BindDescriptorSetsBasic(
 
 void DrawBasicTexturedMesh(
     DrawPass const & draw_pass,
-    DrawPipeline const & draw_pipeline,
     MeshBuffers const & mesh_buffers
 ) {
-    // TODO Move these functions to renderBackend, RenderFrontend should not know about backend
+    // TODO Move these functions to RenderBackend, RenderFrontend should not know about backend
     MFA_ASSERT(draw_pass.is_valid);
 
     VkDeviceSize offset = 0;
