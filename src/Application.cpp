@@ -6,6 +6,8 @@
 #include "engine/RenderFrontend.hpp"
 #include "tools/Importer.hpp"
 
+#include "imgui/imgui.h"
+
 void Application::run() {
     namespace RF = MFA::RenderFrontend;
     namespace RB = MFA::RenderBackend;
@@ -53,16 +55,18 @@ void Application::run() {
         float perspective[16];
     };
     auto sampler_group = RF::CreateSampler();
-    auto draw_pipeline = RF::CreateBasicDrawPipeline(
+    auto * descriptor_set_layout = RF::CreateBasicDescriptorSetLayout();
+    auto draw_pipeline = RF::CreateDrawPipeline(
         static_cast<MFA::U8>(shaders.size()), 
-        shaders.data()
+        shaders.data(),
+        descriptor_set_layout
     );
     auto viking_house1 = MFA::DrawableObject(
         gpu_viking_mesh_buffers,
         gpu_viking_texture,
         sampler_group,
         sizeof(UniformBufferObject),
-        draw_pipeline
+        descriptor_set_layout
     );
     float degree = 0;
     {// Main loop
@@ -71,6 +75,7 @@ void Application::run() {
         SDL_Event e;
         //While application is running
         MFA::U32 const target_fps = 1000 / 60;
+        MFA::U32 delta_time = 0;
         while (!quit)
         {
             MFA::U32 const start_time = SDL_GetTicks();
@@ -79,7 +84,7 @@ void Application::run() {
                 MFA_ASSERT(draw_pass.is_valid);
                 RF::BindDrawPipeline(draw_pass, draw_pipeline);
                 {// Updating uniform buffer
-                    degree++;
+                    degree += delta_time * 0.05f;
                     if(degree >= 360.0f)
                     {
                         degree = 0.0f;
@@ -126,15 +131,17 @@ void Application::run() {
                     quit = true;
                 }
             }
-            MFA::U32 const delta_time = SDL_GetTicks() - start_time;
+            delta_time = SDL_GetTicks() - start_time;
             if(target_fps > delta_time){
                 SDL_Delay( target_fps - delta_time );
             }
+            delta_time = SDL_GetTicks() - start_time;
         }
     }
     RF::DeviceWaitIdle();
     RF::DestroyDrawPipeline(draw_pipeline);
     viking_house1.shutdown();
+    RF::DestroyDescriptorSetLayout(descriptor_set_layout);
     RF::DestroySampler(sampler_group);
     RF::DestroyShader(gpu_fragment_shader);
     Importer::FreeAsset(&fragment_shader);

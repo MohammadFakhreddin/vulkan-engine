@@ -212,40 +212,7 @@ bool Resize(ScreenWidth screen_width, ScreenHeight screen_height) {
     MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
 }
 
-DrawPipeline CreateBasicDrawPipeline(
-    U8 const gpu_shaders_count, 
-    RB::GpuShader * gpu_shaders
-) {
-    VkVertexInputBindingDescription const vertex_binding_description {
-        .binding = 0,
-        .stride = sizeof(Asset::MeshVertices::Vertex),
-        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-    };
-    std::vector<VkVertexInputAttributeDescription> input_attribute_descriptions {4};
-    input_attribute_descriptions[0] = VkVertexInputAttributeDescription {
-        .location = 0,
-        .binding = 0,
-        .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertices::Vertex, position),
-    };
-    input_attribute_descriptions[1] = VkVertexInputAttributeDescription {
-        .location = 1,
-        .binding = 0,
-        .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertices::Vertex, normal)
-    };
-    input_attribute_descriptions[2] = VkVertexInputAttributeDescription {
-        .location = 2,
-        .binding = 0,
-        .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertices::Vertex, uv)
-    };
-    input_attribute_descriptions[3] = VkVertexInputAttributeDescription {
-        .location = 3,
-        .binding = 0,
-        .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertices::Vertex, color)
-    };
+VkDescriptorSetLayout_T * CreateBasicDescriptorSetLayout() {
     // Describe pipeline layout
     // Note: this describes the mapping between memory and shader resources (descriptor sets)
     // This is for uniform buffers and samplers
@@ -277,6 +244,54 @@ DrawPipeline CreateBasicDrawPipeline(
         static_cast<U8>(descriptor_set_layout_bindings.size()),
         descriptor_set_layout_bindings.data()
     );
+    MFA_PTR_ASSERT(descriptor_set_layout);
+
+    return descriptor_set_layout;
+}
+
+void DestroyDescriptorSetLayout(VkDescriptorSetLayout_T * descriptor_set_layout) {
+    MFA_PTR_ASSERT(descriptor_set_layout);
+    RB::DestroyDescriptorSetLayout(state.logical_device.device, descriptor_set_layout);
+}
+
+DrawPipeline CreateDrawPipeline(
+    U8 const gpu_shaders_count, 
+    RB::GpuShader * gpu_shaders,
+    VkDescriptorSetLayout_T * descriptor_set_layout
+) {
+    MFA_ASSERT(gpu_shaders_count > 0);
+    MFA_PTR_VALID(gpu_shaders);
+    MFA_PTR_VALID(descriptor_set_layout);
+    VkVertexInputBindingDescription const vertex_binding_description {
+        .binding = 0,
+        .stride = sizeof(Asset::MeshVertices::Vertex),
+        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+    };
+    std::vector<VkVertexInputAttributeDescription> input_attribute_descriptions {4};
+    input_attribute_descriptions[0] = VkVertexInputAttributeDescription {
+        .location = 0,
+        .binding = 0,
+        .format = VK_FORMAT_R32G32B32_SFLOAT,
+        .offset = offsetof(Asset::MeshVertices::Vertex, position),
+    };
+    input_attribute_descriptions[1] = VkVertexInputAttributeDescription {
+        .location = 1,
+        .binding = 0,
+        .format = VK_FORMAT_R32G32B32_SFLOAT,
+        .offset = offsetof(Asset::MeshVertices::Vertex, normal)
+    };
+    input_attribute_descriptions[2] = VkVertexInputAttributeDescription {
+        .location = 2,
+        .binding = 0,
+        .format = VK_FORMAT_R32G32_SFLOAT,
+        .offset = offsetof(Asset::MeshVertices::Vertex, uv)
+    };
+    input_attribute_descriptions[3] = VkVertexInputAttributeDescription {
+        .location = 3,
+        .binding = 0,
+        .format = VK_FORMAT_R32G32_SFLOAT,
+        .offset = offsetof(Asset::MeshVertices::Vertex, color)
+    };
 
     auto const graphic_pipeline_group = RB::CreateGraphicPipeline(
         state.logical_device.device,
@@ -292,7 +307,6 @@ DrawPipeline CreateBasicDrawPipeline(
 
     return DrawPipeline {
         .graphic_pipeline_group = graphic_pipeline_group,
-        .descriptor_set_layout = descriptor_set_layout,
     };
 }
 
@@ -301,17 +315,15 @@ void DestroyDrawPipeline(DrawPipeline & draw_pipeline) {
         state.logical_device.device, 
         draw_pipeline.graphic_pipeline_group
     );
-    RB::DestroyDescriptorSetLayout(
-        state.logical_device.device, 
-        draw_pipeline.descriptor_set_layout
-    );
 }
 
-std::vector<VkDescriptorSet_T *> CreateDescriptorSetsForDrawPipeline(DrawPipeline & draw_pipeline) {
+std::vector<VkDescriptorSet_T *> CreateDescriptorSets(
+    VkDescriptorSetLayout_T * descriptor_set_layout
+) {
     return RB::CreateDescriptorSet(
         state.logical_device.device,
         state.descriptor_pool,
-        draw_pipeline.descriptor_set_layout,
+        descriptor_set_layout,
         static_cast<U8>(state.swap_chain_group.swap_chain_images.size())
     );
 }

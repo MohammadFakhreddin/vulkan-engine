@@ -13,7 +13,7 @@
 #define MFA_BLOB_ASSERT(blob)           MFA_PTR_ASSERT(blob.ptr); MFA_ASSERT(blob.len > 0)
 #else
 #define MFA_ASSERT(condition)
-#define MFA_PTR_ASSERT(ptr)
+#define MFA_PTR_ASSERT(ptr)             assume(ptr != nullptr)
 #define MFA_BLOB_ASSERT(blob)
 #endif
 

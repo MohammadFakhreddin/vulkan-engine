@@ -13,8 +13,8 @@ public:
         RF::MeshBuffers & mesh_buffers_,
         RB::GpuTexture & gpu_texture_,
         RF::SamplerGroup & sampler_group_,
-        size_t uniform_buffer_size,
-        RF::DrawPipeline & draw_pipeline
+        size_t const uniform_buffer_size,
+        VkDescriptorSetLayout_T * descriptor_set_layout
     );
     ~DrawableObject();
     void draw(RF::DrawPass & draw_pass);

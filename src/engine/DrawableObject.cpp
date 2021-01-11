@@ -1,7 +1,6 @@
 #include "DrawableObject.hpp"
 
 namespace MFA {
-// TODO Drawable object are independent of drawPipeline, Maybe we can generate layout ourselves instead(Along side) of requesting it
 // TODO We need RCMGMT very bad
 // We need other overrides for easier use as well
 DrawableObject::DrawableObject(
@@ -9,18 +8,18 @@ DrawableObject::DrawableObject(
     RB::GpuTexture & gpu_texture_,
     RF::SamplerGroup & sampler_group_,
     size_t const uniform_buffer_size,
-    RF::DrawPipeline & draw_pipeline
+    VkDescriptorSetLayout_T * descriptor_set_layout
 )
     : m_mesh_buffers(mesh_buffers_)
     , m_gpu_texture(gpu_texture_)
     , m_sampler_group(sampler_group_)
-    , m_descriptor_sets(RF::CreateDescriptorSetsForDrawPipeline(draw_pipeline))
+    , m_descriptor_sets(RF::CreateDescriptorSets(descriptor_set_layout))
     , m_uniform_buffer_group(RF::CreateUniformBuffer(uniform_buffer_size))
     , m_is_valid(true)
 {}
 
 // TODO Constructor that asks for layout,
-// TODO constructor that uses paths
+// TODO constructor that uses paths (Factory)
 
 DrawableObject::~DrawableObject() {
     shutdown();

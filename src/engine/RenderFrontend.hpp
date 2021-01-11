@@ -23,20 +23,28 @@ bool Resize(ScreenWidth screen_width, ScreenHeight screen_height);
 // TODO CreateDrawPipeline + asking for descriptor set layout required bindings
 struct DrawPipeline {
     RB::GraphicPipelineGroup graphic_pipeline_group {};
-    VkDescriptorSetLayout_T * descriptor_set_layout = nullptr;
 };
-[[nodiscard]]
-DrawPipeline CreateBasicDrawPipeline(
-    U8 gpu_shaders_count, 
-    RB::GpuShader * gpu_shaders
-);
 
-// TODO AdvancedDrawPipeline support in future
+[[nodiscard]]
+VkDescriptorSetLayout_T * CreateBasicDescriptorSetLayout();
+
+// TODO AdvancedDescriptorSetLayout support in future
+
+void DestroyDescriptorSetLayout(VkDescriptorSetLayout_T * descriptor_set_layout);
+
+[[nodiscard]]
+DrawPipeline CreateDrawPipeline(
+    U8 gpu_shaders_count, 
+    RB::GpuShader * gpu_shaders,
+    VkDescriptorSetLayout_T * descriptor_set_layout
+);
 
 void DestroyDrawPipeline(DrawPipeline & draw_pipeline);
 
 [[nodiscard]]
-std::vector<VkDescriptorSet_T *> CreateDescriptorSetsForDrawPipeline(DrawPipeline & draw_pipeline);
+std::vector<VkDescriptorSet_T *> CreateDescriptorSets(
+    VkDescriptorSetLayout_T * descriptor_set_layout
+);
 
 void BindBasicDescriptorSetWriteInfo(
     U8 descriptor_sets_count,
