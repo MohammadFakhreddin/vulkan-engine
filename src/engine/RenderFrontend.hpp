@@ -28,15 +28,33 @@ struct DrawPipeline {
 [[nodiscard]]
 VkDescriptorSetLayout_T * CreateBasicDescriptorSetLayout();
 
-// TODO AdvancedDescriptorSetLayout support in future
+[[nodiscard]]
+VkDescriptorSetLayout_T * CreateDescriptorSetLayout(
+    U8 bindings_count,
+    VkDescriptorSetLayoutBinding * bindings
+);
 
 void DestroyDescriptorSetLayout(VkDescriptorSetLayout_T * descriptor_set_layout);
+
+[[nodiscard]]
+DrawPipeline CreateBasicDrawPipeline(
+    U8 gpu_shaders_count, 
+    RB::GpuShader * gpu_shaders,
+    VkDescriptorSetLayout_T * descriptor_set_layout
+
+);
 
 [[nodiscard]]
 DrawPipeline CreateDrawPipeline(
     U8 gpu_shaders_count, 
     RB::GpuShader * gpu_shaders,
-    VkDescriptorSetLayout_T * descriptor_set_layout
+    VkDescriptorSetLayout_T * descriptor_set_layout,
+    VkVertexInputBindingDescription vertex_binding_description,
+    U32 input_attribute_description_count,
+    VkVertexInputAttributeDescription * input_attribute_description_data,
+    U8 push_constants_range_count = 0,
+    VkPushConstantRange * push_constant_ranges = nullptr,
+    RB::CreateGraphicPipelineOptions const & options = {}
 );
 
 void DestroyDrawPipeline(DrawPipeline & draw_pipeline);
@@ -76,7 +94,7 @@ struct SamplerGroup {
 };
 // TODO We should ask for options here
 [[nodiscard]]
-SamplerGroup CreateSampler();
+SamplerGroup CreateSampler(RB::CreateSamplerParams const & sampler_params = {});
 
 void DestroySampler(SamplerGroup & sampler_group);
 

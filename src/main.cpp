@@ -5,8 +5,6 @@
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "./libs/stb_image/stb_image_resize.h"
 
-#include <imgui/imgui.h>
-
 #include "Application.hpp"
 #include "engine/BedrockLog.hpp"
 

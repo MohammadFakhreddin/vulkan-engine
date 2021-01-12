@@ -164,6 +164,21 @@ Asset::ShaderAsset ImportShaderFromSPV(
     return Asset::ShaderAsset {{}};
 }
 
+Asset::ShaderAsset ImportShaderFromSPV(
+    CBlob data_memory,
+    Asset::ShaderStage const stage,
+    char const * entry_point
+) {
+    MFA_BLOB_ASSERT(data_memory);
+    auto const shader_header_size = Asset::ShaderHeader::Size();
+    auto const asset_memory = Memory::Alloc(data_memory.len + shader_header_size);
+    ::memcpy(asset_memory.ptr + shader_header_size, data_memory.ptr, data_memory.len);
+    auto * shader_header = asset_memory.as<Asset::ShaderHeader>();
+    shader_header->stage = stage;
+    ::strncpy_s(shader_header->entry_point, entry_point, Asset::ShaderHeader::EntryPointLength);
+    return Asset::ShaderAsset {asset_memory};
+}
+
 Asset::MeshAsset ImportObj(char const * path) {
     Asset::MeshAsset mesh_asset {};
     if(FileSystem::Exists(path)){

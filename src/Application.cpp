@@ -5,19 +5,20 @@
 #include "engine/DrawableObject.hpp"
 #include "engine/RenderFrontend.hpp"
 #include "tools/Importer.hpp"
-
-#include "imgui/imgui.h"
+#include "engine/UISystem.hpp"
 
 void Application::run() {
     namespace RF = MFA::RenderFrontend;
     namespace RB = MFA::RenderBackend;
     namespace Importer = MFA::Importer;
+    namespace UI = MFA::UISystem;
     static constexpr MFA::U16 SCREEN_WIDTH = 800;
     static constexpr MFA::U16 SCREEN_HEIGHT = 600;
     static constexpr float RATIO = static_cast<float>(SCREEN_WIDTH) / static_cast<float>(SCREEN_HEIGHT);
     static constexpr float Z_NEAR = 0.1f;
     static constexpr float Z_FAR = 1000.0f;
     RF::Init({SCREEN_WIDTH, SCREEN_HEIGHT, "Cool app"});
+    UI::Init();
     // Importing assets
     auto cpu_viking_mesh = Importer::ImportObj("../assets/viking/viking.obj");
     MFA_ASSERT(cpu_viking_mesh.valid());
@@ -56,7 +57,7 @@ void Application::run() {
     };
     auto sampler_group = RF::CreateSampler();
     auto * descriptor_set_layout = RF::CreateBasicDescriptorSetLayout();
-    auto draw_pipeline = RF::CreateDrawPipeline(
+    auto draw_pipeline = RF::CreateBasicDrawPipeline(
         static_cast<MFA::U8>(shaders.size()), 
         shaders.data(),
         descriptor_set_layout
@@ -151,6 +152,7 @@ void Application::run() {
     Importer::FreeAsset(&cpu_viking_texture);
     RF::DestroyMeshBuffers(gpu_viking_mesh_buffers);
     Importer::FreeAsset(&cpu_viking_mesh);
+    UI::Shutdown();
     RF::Shutdown();
 }
 

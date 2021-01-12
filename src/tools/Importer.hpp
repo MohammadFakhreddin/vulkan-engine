@@ -41,6 +41,13 @@ Asset::ShaderAsset ImportShaderFromSPV(
     char const * entry_point
 );
 
+[[nodiscard]]
+Asset::ShaderAsset ImportShaderFromSPV(
+    CBlob data_memory,
+    Asset::ShaderStage const stage,
+    char const * entry_point
+);
+
 // Temporary function for freeing imported assets
 bool FreeAsset(Asset::GenericAsset * asset);
 

@@ -5,6 +5,7 @@
 #include "BedrockAssert.hpp"
 #include "RenderBackend.hpp"
 #include "BedrockLog.hpp"
+#include "../libs/imgui/imgui.h"
 
 #include <string>
 
@@ -40,9 +41,7 @@ struct State {
     std::vector<VkCommandBuffer_T *> graphic_command_buffers {};
     RB::SyncObjects sync_objects {};
     U8 current_frame = 0;
-};
-
-static State state {};
+} static state {};
 
 static VkBool32 DebugCallback(
   VkDebugReportFlagsEXT const flags,
@@ -239,22 +238,33 @@ VkDescriptorSetLayout_T * CreateBasicDescriptorSetLayout() {
         sampler_layout_binding
     };
 
-    auto * descriptor_set_layout = RB::CreateDescriptorSetLayout(
-        state.logical_device.device,
+    return CreateDescriptorSetLayout(
         static_cast<U8>(descriptor_set_layout_bindings.size()),
         descriptor_set_layout_bindings.data()
+    );
+}
+
+VkDescriptorSetLayout_T * CreateDescriptorSetLayout(
+    U8 const bindings_count, 
+    VkDescriptorSetLayoutBinding * bindings
+) {
+    auto * descriptor_set_layout = RB::CreateDescriptorSetLayout(
+        state.logical_device.device,
+        bindings_count,
+        bindings
     );
     MFA_PTR_ASSERT(descriptor_set_layout);
 
     return descriptor_set_layout;
 }
 
+
 void DestroyDescriptorSetLayout(VkDescriptorSetLayout_T * descriptor_set_layout) {
     MFA_PTR_ASSERT(descriptor_set_layout);
     RB::DestroyDescriptorSetLayout(state.logical_device.device, descriptor_set_layout);
 }
 
-DrawPipeline CreateDrawPipeline(
+DrawPipeline CreateBasicDrawPipeline(
     U8 const gpu_shaders_count, 
     RB::GpuShader * gpu_shaders,
     VkDescriptorSetLayout_T * descriptor_set_layout
@@ -293,16 +303,41 @@ DrawPipeline CreateDrawPipeline(
         .offset = offsetof(Asset::MeshVertices::Vertex, color)
     };
 
+    return CreateDrawPipeline(
+        gpu_shaders_count,
+        gpu_shaders,
+        descriptor_set_layout,
+        vertex_binding_description,
+        static_cast<U32>(input_attribute_descriptions.size()),
+        input_attribute_descriptions.data()
+    );
+}
+
+[[nodiscard]]
+DrawPipeline CreateDrawPipeline(
+    U8 gpu_shaders_count, 
+    RB::GpuShader * gpu_shaders,
+    VkDescriptorSetLayout_T * descriptor_set_layout,
+    VkVertexInputBindingDescription const vertex_binding_description,
+    U32 const input_attribute_description_count,
+    VkVertexInputAttributeDescription * input_attribute_description_data,
+    U8 const push_constants_range_count,
+    VkPushConstantRange * push_constant_ranges,
+    RB::CreateGraphicPipelineOptions const & options
+) {
     auto const graphic_pipeline_group = RB::CreateGraphicPipeline(
         state.logical_device.device,
         gpu_shaders_count,
         gpu_shaders,
         vertex_binding_description,
-        static_cast<U32>(input_attribute_descriptions.size()),
-        input_attribute_descriptions.data(),
+        static_cast<U32>(input_attribute_description_count),
+        input_attribute_description_data,
         VkExtent2D {.width = state.screen_width, .height = state.screen_height},
         state.render_pass,
-        descriptor_set_layout
+        descriptor_set_layout,
+        push_constants_range_count,
+        push_constant_ranges,
+        options
     );
 
     return DrawPipeline {
@@ -451,8 +486,9 @@ void DestroyTexture(RB::GpuTexture & gpu_texture) {
 }
 
 // TODO Ask for options
-SamplerGroup CreateSampler() {
-    auto * sampler = RB::CreateSampler(state.logical_device.device);
+SamplerGroup CreateSampler(RB::CreateSamplerParams const & sampler_params) {
+    auto * sampler = RB::CreateSampler(state.logical_device.device, sampler_params);
+    MFA_PTR_ASSERT(sampler);
     return {
         .sampler = sampler
     };

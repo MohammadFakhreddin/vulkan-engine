@@ -235,9 +235,16 @@ VkQueue_T * GetQueueByFamilyIndex(
     U32 queue_family_index
 );
 
-// TODO This function should ask for options
+struct CreateSamplerParams {
+    float min_lod = 0;  // Level of detail
+    float max_lod = 1;
+    float max_anisotropy = 16.0f;
+};
 [[nodiscard]]
-VkSampler_T * CreateSampler(VkDevice_T * device);
+VkSampler_T * CreateSampler(
+    VkDevice_T * device, 
+    CreateSamplerParams const & params = {}
+);
 
 void DestroySampler(VkDevice_T * device, VkSampler_T * sampler);
 
@@ -343,6 +350,8 @@ friend GpuShader CreateShader(VkDevice_T * device, CpuShader const & cpu_shader)
 friend bool DestroyShader(VkDevice_T * device, GpuShader & gpu_shader);
 public:
     [[nodiscard]]
+    CpuShader * cpu_shader() {return &m_cpu_shader;}
+    [[nodiscard]]
     CpuShader const * cpu_shader() const {return &m_cpu_shader;}
     [[nodiscard]]
     bool valid () const {return MFA_PTR_VALID(m_shader_module);}
@@ -357,6 +366,9 @@ struct GraphicPipelineGroup {
     VkPipelineLayout_T * pipeline_layout = nullptr;
     VkPipeline_T * graphic_pipeline = nullptr;
 };
+struct CreateGraphicPipelineOptions {
+    VkFrontFace font_face = VK_FRONT_FACE_CLOCKWISE;
+};
 // Note Shaders can be removed after creating graphic pipeline
 [[nodiscard]]
 GraphicPipelineGroup CreateGraphicPipeline(
@@ -368,7 +380,10 @@ GraphicPipelineGroup CreateGraphicPipeline(
     VkVertexInputAttributeDescription * attribute_description_data,
     VkExtent2D swap_chain_extent,
     VkRenderPass_T * render_pass,
-    VkDescriptorSetLayout_T * descriptor_set_layout
+    VkDescriptorSetLayout_T * descriptor_set_layout,
+    U8 push_constants_range_count = 0,
+    VkPushConstantRange * push_constant_ranges = nullptr,
+    CreateGraphicPipelineOptions const & options = {}
 );
 
 void DestroyGraphicPipeline(VkDevice_T * device, GraphicPipelineGroup & graphic_pipeline_group);

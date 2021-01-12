@@ -847,7 +847,10 @@ VkQueue_T * GetQueueByFamilyIndex(
 }
 
 // TODO Consider oop and storing data
-VkSampler_T * CreateSampler(VkDevice_T * device) {
+VkSampler_T * CreateSampler(
+    VkDevice_T * device, 
+    CreateSamplerParams const & params
+) {
     MFA_PTR_ASSERT(device);
     VkSampler sampler = nullptr;
 
@@ -859,13 +862,13 @@ VkSampler_T * CreateSampler(VkDevice_T * device) {
     sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     sampler_info.anisotropyEnable = VK_TRUE;
-    sampler_info.maxAnisotropy = 16.0f;
+    sampler_info.maxAnisotropy = params.max_anisotropy;
     sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     sampler_info.unnormalizedCoordinates = VK_FALSE;
     sampler_info.compareEnable = VK_FALSE;
     sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
-    sampler_info.minLod = 0;
-    sampler_info.maxLod = 1;
+    sampler_info.minLod = params.min_lod;
+    sampler_info.maxLod = params.max_lod;
     sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 
     VK_Check(vkCreateSampler(device, &sampler_info, nullptr, &sampler));
@@ -1416,7 +1419,10 @@ GraphicPipelineGroup CreateGraphicPipeline(
     VkVertexInputAttributeDescription * attribute_description_data,
     VkExtent2D const swap_chain_extent,
     VkRenderPass_T * render_pass,
-    VkDescriptorSetLayout_T * descriptor_set_layout
+    VkDescriptorSetLayout_T * descriptor_set_layout,
+    U8 const push_constants_range_count,
+    VkPushConstantRange * push_constant_ranges,
+    CreateGraphicPipelineOptions const & options
 ) {
     MFA_PTR_ASSERT(shader_stages);
     MFA_PTR_ASSERT(render_pass);
@@ -1479,22 +1485,19 @@ GraphicPipelineGroup CreateGraphicPipeline(
     // TODO Might need to ask some of them from outside
     rasterization_create_info.polygonMode = VK_POLYGON_MODE_FILL;
     rasterization_create_info.cullMode = VK_CULL_MODE_NONE;
-    rasterization_create_info.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterization_create_info.frontFace = options.font_face;
     rasterization_create_info.depthBiasEnable = VK_FALSE;
-    //rasterization_create_info.depthBiasConstantFactor = 0.0f;
-    //rasterization_create_info.depthBiasClamp = 0.0f;
-    //rasterization_create_info.depthBiasSlopeFactor = 0.0f;
     rasterization_create_info.lineWidth = 1.0f;
 
     // Describe multi-sampling
     // Note: using multisampling also requires turning on device features
-    VkPipelineMultisampleStateCreateInfo mulit_sample_create_info = {};
-    mulit_sample_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    mulit_sample_create_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-    mulit_sample_create_info.sampleShadingEnable = VK_FALSE;
-    mulit_sample_create_info.minSampleShading = 1.0f;
-    mulit_sample_create_info.alphaToCoverageEnable = VK_FALSE;
-    mulit_sample_create_info.alphaToOneEnable = VK_FALSE;
+    VkPipelineMultisampleStateCreateInfo multi_sample_state_create_info = {};
+    multi_sample_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multi_sample_state_create_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    multi_sample_state_create_info.sampleShadingEnable = VK_FALSE;
+    multi_sample_state_create_info.minSampleShading = 1.0f;
+    multi_sample_state_create_info.alphaToCoverageEnable = VK_FALSE;
+    multi_sample_state_create_info.alphaToOneEnable = VK_FALSE;
 
     VkPipelineDepthStencilStateCreateInfo depthStencil{};
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -1505,7 +1508,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
     depthStencil.stencilTestEnable = VK_FALSE;
 
     // Describing color blending
-    // Note: all paramaters except blendEnable and colorWriteMask are irrelevant here
+    // Note: all parameters except blendEnable and colorWriteMask are irrelevant here
     VkPipelineColorBlendAttachmentState colorBlendAttachmentState = {};
     colorBlendAttachmentState.blendEnable = VK_FALSE;
     colorBlendAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
@@ -1528,41 +1531,14 @@ GraphicPipelineGroup CreateGraphicPipeline(
     color_blend_create_info.blendConstants[2] = 0.0f;
     color_blend_create_info.blendConstants[3] = 0.0f;
 
-    // TODO Move this to renderFrontEnd
-    //// Describe pipeline layout
-    //// Note: this describes the mapping between memory and shader resources (descriptor sets)
-    //// This is for uniform buffers and samplers
-    //VkDescriptorSetLayoutBinding uboLayoutBinding {};
-    //uboLayoutBinding.binding = 0;
-    //// Our object type is uniformBuffer
-    //uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    //// Number of values in buffer
-    //uboLayoutBinding.descriptorCount = 1;
-    //// Which shader stage we are going to reffer to // In our case we only need vertex shader to access to it
-    //uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    //// For Image sampler, Currently we do not need this
-    //uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
-
-    //VkDescriptorSetLayoutBinding sampler_layout_binding{};
-    //sampler_layout_binding.binding = 1;
-    //sampler_layout_binding.descriptorCount = 1;
-    //sampler_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    //sampler_layout_binding.pImmutableSamplers = nullptr;
-    //sampler_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-    //std::vector<VkDescriptorSetLayoutBinding> bindings = {uboLayoutBinding, sampler_layout_binding};
-    //auto * descriptor_set_layout = CreateDescriptorSetLayout(
-    //    device, 
-    //    static_cast<U8>(bindings.size()), 
-    //    bindings.data()
-    //);
-
     MFA_LOG_INFO("Created descriptor layout");
 
     VkPipelineLayoutCreateInfo layout_create_info = {};
     layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     layout_create_info.setLayoutCount = 1;
     layout_create_info.pSetLayouts = &descriptor_set_layout; // Array of descriptor set layout, Order matter when more than 1
+    layout_create_info.pushConstantRangeCount = push_constants_range_count;
+    layout_create_info.pPushConstantRanges = push_constant_ranges;
 
     VkPipelineLayout_T * pipeline_layout = nullptr;
     VK_Check(vkCreatePipelineLayout(device, &layout_create_info, nullptr, &pipeline_layout));
@@ -1576,7 +1552,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
     pipelineCreateInfo.pInputAssemblyState = &input_assembly_create_info;
     pipelineCreateInfo.pViewportState = &viewport_create_info;
     pipelineCreateInfo.pRasterizationState = &rasterization_create_info;
-    pipelineCreateInfo.pMultisampleState = &mulit_sample_create_info;
+    pipelineCreateInfo.pMultisampleState = &multi_sample_state_create_info;
     pipelineCreateInfo.pColorBlendState = &color_blend_create_info;
     pipelineCreateInfo.layout = pipeline_layout;
     pipelineCreateInfo.renderPass = render_pass;
@@ -1584,7 +1560,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
     pipelineCreateInfo.basePipelineHandle = nullptr;
     pipelineCreateInfo.basePipelineIndex = -1;
     pipelineCreateInfo.pDepthStencilState = &depthStencil;
-
+    
     VkPipeline_T * pipeline = nullptr;
     VK_Check(vkCreateGraphicsPipelines(
         device, 
@@ -1647,7 +1623,7 @@ void DestroyDescriptorSetLayout(
     );
 }
 
-VkShaderStageFlagBits ConvertAssetShaderStageToGpu(Asset::ShaderStage const stage) {
+VkShaderStageFlagBits ConvertAssetShaderStageToGpu(Asset::ShaderStage stage) {
     switch(stage) {
         case Asset::Shader::Stage::Vertex:
         return VK_SHADER_STAGE_VERTEX_BIT;
