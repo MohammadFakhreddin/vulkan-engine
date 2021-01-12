@@ -25,7 +25,7 @@ void Application::run() {
     auto gpu_viking_mesh_buffers = RF::CreateMeshBuffers(cpu_viking_mesh);
     auto cpu_viking_texture = Importer::ImportUncompressedImage(
         "../assets/viking/viking.png", 
-        Importer::ImportUncompressedImageOptions {
+        Importer::ImportTextureOptions {
             .generate_mipmaps = false,
             .prefer_srgb = false
         }

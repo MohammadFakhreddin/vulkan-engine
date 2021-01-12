@@ -126,6 +126,7 @@ struct {
     RB::GpuShader fragment_shader {};
     std::vector<VkDescriptorSet_T *> descriptor_sets {};
     RF::DrawPipeline draw_pipeline {};
+    RB::GpuTexture font_texture {};
 } static state {};
 
 void Init() {
@@ -215,9 +216,54 @@ void Init() {
             }
         );
     }
+
+    {// Creating fonts textures
+        // Load Fonts
+        // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
+        // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
+        // - If the file cannot be loaded, the function will return NULL. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
+        // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
+        // - Read 'docs/FONTS.md' for more instructions and details.
+        // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
+        //io.Fonts->AddFontDefault();
+        //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
+        //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
+        //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
+        //io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 10.0f);
+        //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
+        //IM_ASSERT(font != NULL);
+        
+        ImGuiIO& io = ImGui::GetIO();
+
+        Byte * pixels = nullptr;
+        I32 width, height;
+        io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+        MFA_PTR_ASSERT(pixels);
+        MFA_ASSERT(width > 0);
+        MFA_ASSERT(height > 0);
+        U8 const components_count = 4;
+        U8 const depth = 1;
+        U8 const slices = 1;
+        size_t const image_size = width * height * components_count * sizeof(Byte);
+        auto texture_asset = Importer::ImportInMemoryTexture(
+            CBlob {pixels, image_size},
+            width,
+            height,
+            Asset::TextureFormat::UNCOMPRESSED_UNORM_R8G8B8A8_LINEAR,
+            components_count,
+            depth,
+            slices,
+            Importer::ImportTextureOptions {.generate_mipmaps = false, .prefer_srgb = false}
+        );
+        // TODO Support from in memory import of images inside importer
+        state.font_texture = RF::CreateTexture(texture_asset);
+    }
+
 }
 
 void Shutdown() {
+    RF::DestroyTexture(state.font_texture);
+    Importer::FreeAsset(state.font_texture.cpu_texture());
     RF::DestroyDrawPipeline(state.draw_pipeline);
     RF::DestroyShader(state.fragment_shader);
     Importer::FreeAsset(state.fragment_shader.cpu_shader());

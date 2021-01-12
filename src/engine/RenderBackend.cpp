@@ -1623,7 +1623,7 @@ void DestroyDescriptorSetLayout(
     );
 }
 
-VkShaderStageFlagBits ConvertAssetShaderStageToGpu(Asset::ShaderStage stage) {
+VkShaderStageFlagBits ConvertAssetShaderStageToGpu(Asset::ShaderStage const stage) {
     switch(stage) {
         case Asset::Shader::Stage::Vertex:
         return VK_SHADER_STAGE_VERTEX_BIT;

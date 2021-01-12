@@ -10,7 +10,7 @@ namespace MFA::Importer {
 
 Asset::TextureAsset ImportUncompressedImage(
     char const * path,
-    ImportUncompressedImageOptions const & options
+    ImportTextureOptions const & options
 ) {
     Asset::TextureAsset texture {};
     Utils::UncompressedTexture::Data image_data {};
@@ -29,102 +29,126 @@ Asset::TextureAsset ImportUncompressedImage(
         auto const format = image_data.format;
         auto const depth = 1; // TODO We need to support depth
         auto const slices = 1;
-        Asset::TextureHeader::Dimensions const original_image_dims {
-            static_cast<U32>(image_width),
-            static_cast<U32>(image_height),
-            depth
-        };
-        U8 const mip_count = options.generate_mipmaps
-            ? Asset::TextureHeader::ComputeMipCount(original_image_dims)
-            : 1;
-        //if (static_cast<unsigned>(options.usage_flags) &
-        //    static_cast<unsigned>(YUGA::TextureUsageFlags::Normal | 
-        //        YUGA::TextureUsageFlags::Metalness |
-        //        YUGA::TextureUsageFlags::Roughness)) {
-        //    use_srgb = false;
-        //}
-        auto const texture_descriptor_size = Asset::TextureHeader::Size(mip_count);
-        // TODO Maybe we should add a check to make sure asset has uncompressed type
-        auto const texture_data_size = Asset::TextureHeader::CalculateUncompressedTextureRequiredDataSize(
+        texture = ImportInMemoryTexture(
+            pixels,
+            image_width,
+            image_height,
             format,
+            components,
+            depth,
             slices,
-            original_image_dims,
-            mip_count
+            options
         );
-        auto const texture_asset_size = texture_descriptor_size + texture_data_size;
-        auto resource_blob = Memory::Alloc(texture_asset_size);
-        MFA_DEFER {
-            if(MFA_PTR_VALID(resource_blob.ptr)) {// Pointer being valid means that process has failed
-                Memory::Free(resource_blob);
-            }
-        };
-        // TODO We need to a function for generating metadata that uses functionality implemented inside fileWriter
-        auto * texture_descriptor = resource_blob.as<Asset::TextureHeader>();
-        texture_descriptor->mip_count = mip_count;
-        texture_descriptor->format = format;
-        texture_descriptor->slices = slices;
-        //texture_descriptor->usage_flags = options.usage_flags;        // TODO
-        {
-            size_t current_mip_map_location = 0;//texture_descriptor_size;
-            bool resize_result {}; MFA_CONSUME_VAR(resize_result);
-            for (U8 mip_level = 0; mip_level < mip_count - 1; mip_level++) {
-                Byte * current_mipmap_ptr = resource_blob.ptr + current_mip_map_location;
-                auto const current_mip_dims = Asset::TextureHeader::MipDimensions(
-                    mip_level,
-                    mip_count,
-                    original_image_dims
-                );
-                auto const current_mip_size_bytes = Asset::TextureHeader::MipSizeBytes(
-                    format,
-                    slices,
-                    current_mip_dims
-                );
-                // TODO What should we do for 3d assets ?
-                resize_result = use_srgb ? stbir_resize_uint8_srgb(
-                    pixels.ptr,
-                    image_width,
-                    image_height,
-                    0,
-                    current_mipmap_ptr,
-                    current_mip_dims.width,
-                    current_mip_dims.height,
-                    0,
-                    components,
-                    components > 3 ? 3 : STBIR_ALPHA_CHANNEL_NONE,
-                    0
-                ) : stbir_resize_uint8(
-                    pixels.ptr,
-                    image_width,
-                    image_height,
-                    0,
-                    current_mipmap_ptr,
-                    current_mip_dims.width,
-                    current_mip_dims.height, 0,
-                    components
-                );
-                MFA_ASSERT(true == resize_result);
-                current_mip_map_location += current_mip_size_bytes;
-                texture_descriptor->mipmap_infos[mip_level] = {
-                    static_cast<U32>(current_mip_map_location),
-                    static_cast<U32>(current_mip_size_bytes),
-                    current_mip_dims
-                };
-            }
-            texture_descriptor->mipmap_infos[mip_count - 1] = {
-                static_cast<U32>(current_mip_map_location),
-                static_cast<U32>(pixels.len),
-                original_image_dims
-            };
-            ::memcpy(resource_blob.ptr + current_mip_map_location + texture_descriptor_size, pixels.ptr, pixels.len);
-        }
-
-        texture = Asset::TextureAsset(resource_blob);
-        MFA_ASSERT(texture.valid());
-        if(true == texture.valid()) {
-            resource_blob = {};
-        }
     }
     // TODO: Handle errors
+    return texture;
+}
+
+Asset::TextureAsset ImportInMemoryTexture(
+    CBlob const pixels,
+    I32 const width,
+    I32 const height,
+    Asset::TextureFormat const format,
+    U32 const components,
+    U16 const depth,
+    I32 const slices,
+    ImportTextureOptions const & options
+) {
+    auto const use_srgb = options.prefer_srgb;
+    Asset::TextureHeader::Dimensions const original_image_dims {
+        static_cast<U32>(width),
+        static_cast<U32>(height),
+        depth
+    };
+    U8 const mip_count = options.generate_mipmaps
+        ? Asset::TextureHeader::ComputeMipCount(original_image_dims)
+        : 1;
+    //if (static_cast<unsigned>(options.usage_flags) &
+    //    static_cast<unsigned>(YUGA::TextureUsageFlags::Normal | 
+    //        YUGA::TextureUsageFlags::Metalness |
+    //        YUGA::TextureUsageFlags::Roughness)) {
+    //    use_srgb = false;
+    //}
+    auto const texture_descriptor_size = Asset::TextureHeader::Size(mip_count);
+    // TODO Maybe we should add a check to make sure asset has uncompressed type
+    auto const texture_data_size = Asset::TextureHeader::CalculateUncompressedTextureRequiredDataSize(
+        format,
+        slices,
+        original_image_dims,
+        mip_count
+    );
+    auto const texture_asset_size = texture_descriptor_size + texture_data_size;
+    auto resource_blob = Memory::Alloc(texture_asset_size);
+    MFA_DEFER {
+        if(MFA_PTR_VALID(resource_blob.ptr)) {// Pointer being valid means that process has failed
+            Memory::Free(resource_blob);
+        }
+    };
+    // TODO We need to a function for generating metadata that uses functionality implemented inside fileWriter
+    auto * texture_descriptor = resource_blob.as<Asset::TextureHeader>();
+    texture_descriptor->mip_count = mip_count;
+    texture_descriptor->format = format;
+    texture_descriptor->slices = slices;
+    //texture_descriptor->usage_flags = options.usage_flags;        // TODO
+    {
+        size_t current_mip_map_location = 0;//texture_descriptor_size;
+        bool resize_result {}; MFA_CONSUME_VAR(resize_result);
+        for (U8 mip_level = 0; mip_level < mip_count - 1; mip_level++) {
+            Byte * current_mipmap_ptr = resource_blob.ptr + current_mip_map_location;
+            auto const current_mip_dims = Asset::TextureHeader::MipDimensions(
+                mip_level,
+                mip_count,
+                original_image_dims
+            );
+            auto const current_mip_size_bytes = Asset::TextureHeader::MipSizeBytes(
+                format,
+                slices,
+                current_mip_dims
+            );
+            // TODO What should we do for 3d assets ?
+            resize_result = use_srgb ? stbir_resize_uint8_srgb(
+                pixels.ptr,
+                width,
+                height,
+                0,
+                current_mipmap_ptr,
+                current_mip_dims.width,
+                current_mip_dims.height,
+                0,
+                components,
+                components > 3 ? 3 : STBIR_ALPHA_CHANNEL_NONE,
+                0
+            ) : stbir_resize_uint8(
+                pixels.ptr,
+                width,
+                height,
+                0,
+                current_mipmap_ptr,
+                current_mip_dims.width,
+                current_mip_dims.height, 0,
+                components
+            );
+            MFA_ASSERT(true == resize_result);
+            current_mip_map_location += current_mip_size_bytes;
+            texture_descriptor->mipmap_infos[mip_level] = {
+                static_cast<U32>(current_mip_map_location),
+                static_cast<U32>(current_mip_size_bytes),
+                current_mip_dims
+            };
+        }
+        texture_descriptor->mipmap_infos[mip_count - 1] = {
+            static_cast<U32>(current_mip_map_location),
+            static_cast<U32>(pixels.len),
+            original_image_dims
+        };
+        ::memcpy(resource_blob.ptr + current_mip_map_location + texture_descriptor_size, pixels.ptr, pixels.len);
+    }
+
+    auto texture = Asset::TextureAsset(resource_blob);
+    MFA_ASSERT(texture.valid());
+    if(true == texture.valid()) {
+        resource_blob = {};
+    }
     return texture;
 }
 

@@ -7,7 +7,7 @@ namespace MFA::Importer {
 
 //------------------------------Assets-------------------------------------
 
-struct ImportUncompressedImageOptions {
+struct ImportTextureOptions {
     bool generate_mipmaps = true;
     bool prefer_srgb = false;       // Not tested and not recommended
     // TODO Usage flags
@@ -16,7 +16,19 @@ struct ImportUncompressedImageOptions {
 [[nodiscard]]
 Asset::TextureAsset ImportUncompressedImage(
     char const * path, 
-    ImportUncompressedImageOptions const & options
+    ImportTextureOptions const & options = {}
+);
+
+[[nodiscard]]
+Asset::TextureAsset ImportInMemoryTexture(
+    CBlob pixels,
+    I32 width,
+    I32 height,
+    Asset::TextureFormat format,
+    U32 components,
+    U16 depth = 1,
+    I32 slices = 1,
+    ImportTextureOptions const & options = {}
 );
 
 // TODO ImageArray

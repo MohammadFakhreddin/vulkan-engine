@@ -192,6 +192,8 @@ public:
     [[nodiscard]]
     CpuTexture const * cpu_texture() const {return &m_cpu_texture;}
     [[nodiscard]]
+    CpuTexture * cpu_texture() {return &m_cpu_texture;}
+    [[nodiscard]]
     bool valid () const {return MFA_PTR_VALID(m_image_view);}
     [[nodiscard]]
     VkImage_T const * image() const {return m_image_group.image;}
