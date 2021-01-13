@@ -64,11 +64,18 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSets(
     VkDescriptorSetLayout_T * descriptor_set_layout
 );
 
-void BindBasicDescriptorSetWriteInfo(
+void UpdateDescriptorSetsBasic(
     U8 descriptor_sets_count,
     VkDescriptorSet_T ** descriptor_sets,
     VkDescriptorBufferInfo const & buffer_info,
     VkDescriptorImageInfo const & image_info
+);
+
+void UpdateDescriptorSets(
+    U8 descriptor_sets_count,
+    VkDescriptorSet_T ** descriptor_sets,
+    U8 write_info_count,
+    VkWriteDescriptorSet * write_info
 );
 
 // TODO AdvanceBindingDescriptorSetWriteInfo
@@ -176,11 +183,27 @@ void BindVertexBuffer(DrawPass draw_pass, RB::BufferGroup vertex_buffer);
 
 void BindIndexBuffer(DrawPass draw_pass, RB::BufferGroup index_buffer);
 
-void DrawIndexed(DrawPass draw_pass, U32 indices_count);
+void DrawIndexed(
+    DrawPass draw_pass, 
+    U32 indices_count,
+    U32 instance_count = 1,
+    U32 first_index = 0,
+    U32 vertex_offset = 0,
+    U32 first_instance = 0
+);
 
 void EndPass(DrawPass & draw_pass);
 
-void SetScissor(DrawPass draw_pass, VkRect2D scissor);
+void SetScissor(DrawPass const & draw_pass, VkRect2D const & scissor);
+
+void SetViewport(DrawPass const & draw_pass, VkViewport const & viewport);
+
+void PushConstants(
+    DrawPass const & draw_pass, 
+    Asset::ShaderStage shader_stage, 
+    U32 offset, 
+    CBlob data
+);
 
 // SDL Functions
 

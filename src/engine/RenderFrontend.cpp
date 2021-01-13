@@ -364,7 +364,7 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSets(
 }
 
 // TODO I think we should keep these information for each mesh individually
-void BindBasicDescriptorSetWriteInfo(
+void UpdateDescriptorSetsBasic(
     U8 const descriptor_sets_count,
     VkDescriptorSet_T ** descriptor_sets,
     VkDescriptorBufferInfo const & buffer_info,
@@ -395,6 +395,28 @@ void BindBasicDescriptorSetWriteInfo(
             state.logical_device.device, 
             static_cast<uint32_t>(descriptorWrites.size()), 
             descriptorWrites.data(), 
+            0, 
+            nullptr
+        );
+    }
+}
+
+void UpdateDescriptorSets(
+    U8 const descriptor_sets_count,
+    VkDescriptorSet_T ** descriptor_sets,
+    U8 const write_info_count,
+    VkWriteDescriptorSet * write_info
+) {
+    MFA_ASSERT(descriptor_sets_count > 0);
+    MFA_ASSERT(write_info_count > 0);
+    for(U8 desc_index = 0; desc_index < descriptor_sets_count; desc_index++) {
+        for(U8 write_index = 0; write_index < write_info_count; write_index++) {
+            write_info[write_index].dstSet = descriptor_sets[desc_index];
+        }
+        vkUpdateDescriptorSets(
+            state.logical_device.device, 
+            write_info_count, 
+            write_info, 
             0, 
             nullptr
         );
@@ -628,7 +650,7 @@ void UpdateDescriptorSetsBasic(
     image_info.imageView = gpu_texture.image_view();
     image_info.sampler = sampler_group.sampler;
 
-    BindBasicDescriptorSetWriteInfo(
+    UpdateDescriptorSetsBasic(
         1,
         &descriptor_sets[draw_pass.image_index],
         buffer_info,
@@ -691,10 +713,21 @@ void BindIndexBuffer(DrawPass const draw_pass, RB::BufferGroup const index_buffe
     );
 }
 
-void DrawIndexed(DrawPass const draw_pass, U32 const indices_count) {
+void DrawIndexed(
+    DrawPass const draw_pass, 
+    U32 const indices_count,
+    U32 const instance_count,
+    U32 const first_index,
+    U32 const vertex_offset,
+    U32 const first_instance
+) {
     RB::DrawIndexed(
         state.graphic_command_buffers[draw_pass.image_index], 
-        indices_count
+        indices_count,
+        instance_count,
+        first_index,
+        vertex_offset,
+        first_instance
     );
 }
 
@@ -803,8 +836,27 @@ void DestroyShader(RB::GpuShader & gpu_shader) {
     RB::DestroyShader(state.logical_device.device, gpu_shader);
 }
 
-void SetScissor(DrawPass const draw_pass, VkRect2D const scissor) {
+void SetScissor(DrawPass const & draw_pass, VkRect2D const & scissor) {
     RB::SetScissor(state.graphic_command_buffers[draw_pass.image_index], scissor);
+}
+
+void SetViewport(DrawPass const & draw_pass, VkViewport const & viewport) {
+    RB::SetViewport(state.graphic_command_buffers[draw_pass.image_index], viewport);
+}
+
+void PushConstants(
+    DrawPass const & draw_pass, 
+    Asset::ShaderStage const shader_stage, 
+    U32 const offset, 
+    CBlob const data
+) {
+    RB::PushConstants(
+        state.graphic_command_buffers[draw_pass.image_index],
+        draw_pass.draw_pipeline->graphic_pipeline_group.pipeline_layout,
+        shader_stage,
+        offset,
+        data
+    );
 }
 
 // SDL functions

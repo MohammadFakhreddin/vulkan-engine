@@ -372,6 +372,7 @@ struct GraphicPipelineGroup {
 };
 struct CreateGraphicPipelineOptions {
     VkFrontFace font_face = VK_FRONT_FACE_CLOCKWISE;
+    VkPipelineDynamicStateCreateInfo * dynamic_state_create_info = nullptr;
 };
 // Note Shaders can be removed after creating graphic pipeline
 [[nodiscard]]
@@ -477,7 +478,7 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSet(
 );
 
 // TODO Consider creating an easier interface
-void UpdateDescriptorSet(
+void UpdateDescriptorSets(
     VkDevice_T * device,
     U8 descriptor_set_count,
     VkDescriptorSet_T ** descriptor_sets,
@@ -534,8 +535,25 @@ void BindVertexBuffer(VkCommandBuffer_T * command_buffer, BufferGroup vertex_buf
 
 void BindIndexBuffer(VkCommandBuffer_T * command_buffer, BufferGroup index_buffer);
 
-void DrawIndexed(VkCommandBuffer_T * command_buffer, U32 indices_count);
+void DrawIndexed(
+    VkCommandBuffer_T * command_buffer,
+    U32 indices_count,
+    U32 instance_count = 1,
+    U32 first_index = 0,
+    U32 vertex_offset = 0,
+    U32 first_instance = 0
+);
 
-void SetScissor(VkCommandBuffer_T * command_buffer, VkRect2D scissor);
+void SetScissor(VkCommandBuffer_T * command_buffer, VkRect2D const & scissor);
+
+void SetViewport(VkCommandBuffer_T * command_buffer, VkViewport const & viewport);
+
+void PushConstants(
+    VkCommandBuffer_T * command_buffer,
+    VkPipelineLayout_T * pipeline_layout, 
+    Asset::ShaderStage shader_stage, 
+    U32 offset, 
+    CBlob data
+);
 
 }

@@ -1539,7 +1539,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
     layout_create_info.pSetLayouts = &descriptor_set_layout; // Array of descriptor set layout, Order matter when more than 1
     layout_create_info.pushConstantRangeCount = push_constants_range_count;
     layout_create_info.pPushConstantRanges = push_constant_ranges;
-
+    
     VkPipelineLayout_T * pipeline_layout = nullptr;
     VK_Check(vkCreatePipelineLayout(device, &layout_create_info, nullptr, &pipeline_layout));
 
@@ -1560,6 +1560,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
     pipelineCreateInfo.basePipelineHandle = nullptr;
     pipelineCreateInfo.basePipelineIndex = -1;
     pipelineCreateInfo.pDepthStencilState = &depthStencil;
+    pipelineCreateInfo.pDynamicState = options.dynamic_state_create_info;
     
     VkPipeline_T * pipeline = nullptr;
     VK_Check(vkCreateGraphicsPipelines(
@@ -1838,7 +1839,7 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSet(
 
     if(schemas_count > 0 && MFA_PTR_VALID(schemas)) {
         MFA_ASSERT(descriptor_sets.size() < 256);
-        UpdateDescriptorSet(
+        UpdateDescriptorSets(
             device,
             static_cast<U8>(descriptor_sets.size()),
             descriptor_sets.data(),
@@ -1850,7 +1851,7 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSet(
     return descriptor_sets;
 }
 
-void UpdateDescriptorSet(
+void UpdateDescriptorSets(
     VkDevice_T * device,
     U8 const descriptor_set_count,
     VkDescriptorSet_T ** descriptor_sets,
@@ -2027,20 +2028,53 @@ void BindIndexBuffer(VkCommandBuffer_T * command_buffer, BufferGroup const index
     );
 }
 
-void DrawIndexed(VkCommandBuffer_T * command_buffer, U32 const indices_count) {
+void DrawIndexed(
+    VkCommandBuffer_T * command_buffer,
+    U32 const indices_count,
+    U32 const instance_count,
+    U32 const first_index,
+    U32 const vertex_offset,
+    U32 const first_instance
+) {
     vkCmdDrawIndexed(
         command_buffer, 
         indices_count, 
-        1, 0, 0, 0
+        instance_count, 
+        first_index, 
+        vertex_offset, 
+        first_instance
     );
 }
 
-void SetScissor(VkCommandBuffer_T * command_buffer, VkRect2D scissor) {
+void SetScissor(VkCommandBuffer_T * command_buffer, VkRect2D const & scissor) {
+    MFA_PTR_ASSERT(command_buffer);
     vkCmdSetScissor(
         command_buffer, 
         0, 
         1, 
         &scissor
+    );
+}
+
+void SetViewport(VkCommandBuffer_T * command_buffer, VkViewport const & viewport) {
+    MFA_PTR_ASSERT(command_buffer);
+    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+}
+
+void PushConstants(
+    VkCommandBuffer_T * command_buffer,
+    VkPipelineLayout_T * pipeline_layout, 
+    Asset::ShaderStage const shader_stage, 
+    U32 const offset, 
+    CBlob const data
+) {
+    vkCmdPushConstants(
+        command_buffer,
+        pipeline_layout,
+        ConvertAssetShaderStageToGpu(shader_stage),
+        offset,
+        static_cast<U32>(data.len), 
+        data.ptr
     );
 }
 

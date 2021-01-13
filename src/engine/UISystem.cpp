@@ -1,13 +1,11 @@
 #include "UISystem.hpp"
 
-#include "RenderFrontend.hpp"
 #include "BedrockMemory.hpp"
 #include "../tools/Importer.hpp"
 #include "libs/imgui/imgui.h"
 
 namespace MFA::UISystem {
 
-namespace RF = MFA::RenderFrontend;
 namespace RB = MFA::RenderBackend;
 namespace Importer = MFA::Importer;
 
@@ -132,6 +130,11 @@ struct {
     SDL_Cursor *  mouse_cursors[ImGuiMouseCursor_COUNT] {};
 } static state {};
 
+struct PushConstants {
+    float scale[2];
+    float translate[2];
+};
+
 void Init() {
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -184,8 +187,8 @@ void Init() {
         std::vector<VkPushConstantRange> push_constants {
             VkPushConstantRange {
                 .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-                .offset = sizeof(float) * 0,
-                .size = sizeof(float) * 4
+                .offset = 0,
+                .size = sizeof(push_constants)
             }
         };
         
@@ -199,15 +202,22 @@ void Init() {
         input_attribute_description[0].location = 0;
         input_attribute_description[0].binding = vertex_binding_description.binding;
         input_attribute_description[0].format = VK_FORMAT_R32G32_SFLOAT;
-        input_attribute_description[0].offset = IM_OFFSETOF(ImDrawVert, pos);
+        input_attribute_description[0].offset = offsetof(ImDrawVert, pos);
         input_attribute_description[1].location = 1;
         input_attribute_description[1].binding = vertex_binding_description.binding;
         input_attribute_description[1].format = VK_FORMAT_R32G32_SFLOAT;
-        input_attribute_description[1].offset = IM_OFFSETOF(ImDrawVert, uv);
+        input_attribute_description[1].offset = offsetof(ImDrawVert, uv);
         input_attribute_description[2].location = 2;
         input_attribute_description[2].binding = vertex_binding_description.binding;
         input_attribute_description[2].format = VK_FORMAT_R8G8B8A8_UNORM;
-        input_attribute_description[2].offset = IM_OFFSETOF(ImDrawVert, col);
+        input_attribute_description[2].offset = offsetof(ImDrawVert, col);
+
+        std::vector<VkDynamicState> dynamic_states = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+        auto dynamic_state_create_info = VkPipelineDynamicStateCreateInfo {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+            .dynamicStateCount = static_cast<U32>(dynamic_states.size()),
+            .pDynamicStates = dynamic_states.data(),
+        };
 
         state.draw_pipeline = RF::CreateDrawPipeline(
             static_cast<U8>(shader_stages.size()),
@@ -219,7 +229,8 @@ void Init() {
             static_cast<U8>(push_constants.size()),
             push_constants.data(),
             RB::CreateGraphicPipelineOptions {
-                .font_face = VK_FRONT_FACE_COUNTER_CLOCKWISE
+                .font_face = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+                .dynamic_state_create_info = &dynamic_state_create_info
             }
         );
     }
@@ -354,8 +365,8 @@ void OnNewFrame(U32 const delta_time, RF::DrawPass & draw_pass) {
     ImGui::Render();
     auto * draw_data = ImGui::GetDrawData();
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-    I32 frame_buffer_width = static_cast<I32>(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
-    I32 frame_buffer_height = static_cast<I32>(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
+    auto const frame_buffer_width = static_cast<float>(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
+    auto const frame_buffer_height = static_cast<float>(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
     if (frame_buffer_width > 0 && frame_buffer_height > 0) {
         RF::MeshBuffers mesh_buffers {};
         if (draw_data->TotalVtxCount > 0) {
@@ -384,6 +395,9 @@ void OnNewFrame(U32 const delta_time, RF::DrawPass & draw_pass) {
                 .indices_count = static_cast<U32>(draw_data->TotalIdxCount),
                 .mesh_asset {}
             };
+            MFA_DEFER {
+                RF::DestroyMeshBuffers(mesh_buffers);
+            };
         
             // Setup desired Vulkan state
             // Bind pipeline and descriptor sets:
@@ -392,43 +406,56 @@ void OnNewFrame(U32 const delta_time, RF::DrawPass & draw_pass) {
                 RF::BindDescriptorSets(draw_pass, state.descriptor_sets.data());
             }
 
-            //// Bind Vertex And Index Buffer:
-            //if (draw_data->TotalVtxCount > 0)
-            //{
-            //    vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffers, vertex_offset);
-            //    vkCmdBindIndexBuffer(command_buffer, rb->IndexBuffer, 0, sizeof(ImDrawIdx) == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
-            //}
-            RF::Draw
-            // TODO Start from here, Implement setViewPort and PushConstants
+            // Update the Descriptor Set:
+            {
+                VkDescriptorImageInfo desc_image[1] = {};
+                desc_image[0].sampler = state.font_sampler.sampler;
+                desc_image[0].imageView = state.font_texture.image_view();
+                desc_image[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                std::vector<VkWriteDescriptorSet> write_desc {1};
+                write_desc[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                write_desc[0].descriptorCount = 1;
+                write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                write_desc[0].pImageInfo = desc_image;
+                RF::UpdateDescriptorSets(
+                    static_cast<U8>(state.descriptor_sets.size()),
+                    state.descriptor_sets.data(),
+                    static_cast<U8>(write_desc.size()),
+                    write_desc.data()
+                );
+            }
+
             // Setup viewport:
             {
                 VkViewport viewport;
                 viewport.x = 0;
                 viewport.y = 0;
-                viewport.width = (float)fb_width;
-                viewport.height = (float)fb_height;
+                viewport.width = frame_buffer_width;
+                viewport.height = frame_buffer_height;
                 viewport.minDepth = 0.0f;
                 viewport.maxDepth = 1.0f;
-                vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+                RF::SetViewport(draw_pass, viewport);
             }
 
             // Setup scale and translation:
             // Our visible imgui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
             {
-                float scale[2];
-                scale[0] = 2.0f / draw_data->DisplaySize.x;
-                scale[1] = 2.0f / draw_data->DisplaySize.y;
-                float translate[2];
-                translate[0] = -1.0f - draw_data->DisplayPos.x * scale[0];
-                translate[1] = -1.0f - draw_data->DisplayPos.y * scale[1];
-                vkCmdPushConstants(command_buffer, g_PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 0, sizeof(float) * 2, scale);
-                vkCmdPushConstants(command_buffer, g_PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 2, sizeof(float) * 2, translate);
-
+                PushConstants constants {};
+                constants.scale[0] = 2.0f / draw_data->DisplaySize.x;
+                constants.scale[1] = 2.0f / draw_data->DisplaySize.y;
+                constants.translate[0] = -1.0f - draw_data->DisplayPos.x * constants.scale[0];
+                constants.translate[1] = -1.0f - draw_data->DisplayPos.y * constants.scale[1];
+                RF::PushConstants(
+                    draw_pass,
+                    Asset::Shader::Stage::Vertex,
+                    0,
+                    CBlobAliasOf(constants)
+                );
             }
 
-            // Will project scissor/clipping rectangles into framebuffer space
-            ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
-            ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+            // Will project scissor/clipping rectangles into frame-buffer space
+            ImVec2 const clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
+            ImVec2 const clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
             // Render command lists
             // (Because we merged all buffers into a single one, we maintain our own offset into them)
@@ -441,7 +468,7 @@ void OnNewFrame(U32 const delta_time, RF::DrawPass & draw_pass) {
                 {
                     const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
                     
-                    // Project scissor/clipping rectangles into framebuffer space
+                    // Project scissor/clipping rectangles into frame-buffer space
                     ImVec4 clip_rect;
                     clip_rect.x = (pcmd->ClipRect.x - clip_off.x) * clip_scale.x;
                     clip_rect.y = (pcmd->ClipRect.y - clip_off.y) * clip_scale.y;
@@ -457,15 +484,26 @@ void OnNewFrame(U32 const delta_time, RF::DrawPass & draw_pass) {
                             clip_rect.y = 0.0f;
 
                         // Apply scissor/clipping rectangle
-                        VkRect2D scissor;
-                        scissor.offset.x = (int32_t)(clip_rect.x);
-                        scissor.offset.y = (int32_t)(clip_rect.y);
-                        scissor.extent.width = (uint32_t)(clip_rect.z - clip_rect.x);
-                        scissor.extent.height = (uint32_t)(clip_rect.w - clip_rect.y);
-                        vkCmdSetScissor(state.command_buffer, 0, 1, &scissor);
-
+                        VkRect2D scissor {
+                            .offset {
+                                .x = static_cast<int32_t>(clip_rect.x),
+                                .y = static_cast<int32_t>(clip_rect.y)
+                            },
+                            .extent {
+                                .width = static_cast<uint32_t>(clip_rect.z - clip_rect.x),
+                                .height = static_cast<uint32_t>(clip_rect.w - clip_rect.y)
+                            }
+                        };
+                        RF::SetScissor(draw_pass, scissor);
+                        
                         // Draw
-                        vkCmdDrawIndexed(command_buffer, pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
+                        RF::DrawIndexed(
+                            draw_pass,
+                            pcmd->ElemCount,
+                            pcmd->IdxOffset + global_idx_offset, 
+                            pcmd->VtxOffset + global_vtx_offset, 
+                            0
+                        );
                     }
                 }
                 global_idx_offset += cmd_list->IdxBuffer.Size;

@@ -121,9 +121,9 @@ void Application::run() {
                     viking_house1.update_uniform_buffer(draw_pass, ubo);
                 }
                 viking_house1.draw(draw_pass);
+                UI::OnNewFrame(delta_time, draw_pass);
                 RF::EndPass(draw_pass);
             }
-            UI::OnNewFrame(delta_time);
             //Handle events on queue
             if (SDL_PollEvent(&e) != 0)
             {
