@@ -128,6 +128,8 @@ struct {
     RB::GpuTexture font_texture {};
     bool mouse_pressed[3] {false};
     SDL_Cursor *  mouse_cursors[ImGuiMouseCursor_COUNT] {};
+    std::vector<RF::MeshBuffers> mesh_buffers {};
+    std::vector<bool> mesh_buffers_validation_status {};
 } static state {};
 
 struct PushConstants {
@@ -136,6 +138,9 @@ struct PushConstants {
 };
 
 void Init() {
+    auto const swap_chain_images_count = RF::SwapChainImagesCount();
+    state.mesh_buffers.resize(swap_chain_images_count);
+    state.mesh_buffers_validation_status.resize(swap_chain_images_count);
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -368,7 +373,6 @@ void OnNewFrame(U32 const delta_time, RF::DrawPass & draw_pass) {
     auto const frame_buffer_width = static_cast<float>(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
     auto const frame_buffer_height = static_cast<float>(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
     if (frame_buffer_width > 0 && frame_buffer_height > 0) {
-        RF::MeshBuffers mesh_buffers {};
         if (draw_data->TotalVtxCount > 0) {
             // Create or resize the vertex/index buffers
             size_t const vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
@@ -389,22 +393,30 @@ void OnNewFrame(U32 const delta_time, RF::DrawPass & draw_pass) {
                     index_ptr += cmd_list->IdxBuffer.Size;
                 }
             }
-            RF::MeshBuffers mesh_buffers = {
-                .vertices_buffer = RF::CreateVertexBuffer(CBlob {vertex_data.ptr, vertex_data.len}),
-                .indices_buffer = RF::CreateIndexBuffer(CBlob {index_data.ptr, index_data.len}),
-                .indices_count = static_cast<U32>(draw_data->TotalIdxCount),
-                .mesh_asset {}
-            };
-            MFA_DEFER {
-                RF::DestroyMeshBuffers(mesh_buffers);
-            };
-        
+            if(state.mesh_buffers_validation_status[draw_pass.image_index]) {
+                RF::DestroyMeshBuffers(state.mesh_buffers[draw_pass.image_index]);
+                state.mesh_buffers_validation_status[draw_pass.image_index] = false;
+            }
+            state.mesh_buffers[draw_pass.image_index].vertices_buffer = RF::CreateVertexBuffer(CBlob {vertex_data.ptr, vertex_data.len});
+            state.mesh_buffers[draw_pass.image_index].indices_buffer = RF::CreateIndexBuffer(CBlob {index_data.ptr, index_data.len});
+            state.mesh_buffers[draw_pass.image_index].indices_count = static_cast<U32>(draw_data->TotalIdxCount);
+            state.mesh_buffers_validation_status[draw_pass.image_index] = true;
             // Setup desired Vulkan state
             // Bind pipeline and descriptor sets:
             {
                 RF::BindDrawPipeline(draw_pass, state.draw_pipeline);
                 RF::BindDescriptorSets(draw_pass, state.descriptor_sets.data());
             }
+
+            RF::BindIndexBuffer(
+                draw_pass,
+                state.mesh_buffers[draw_pass.image_index].indices_buffer,
+                0,
+                sizeof(ImDrawIdx) == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
+            RF::BindVertexBuffer(
+                draw_pass,
+                state.mesh_buffers[draw_pass.image_index].vertices_buffer
+            );
 
             // Update the Descriptor Set:
             {
@@ -514,6 +526,11 @@ void OnNewFrame(U32 const delta_time, RF::DrawPass & draw_pass) {
 }
 
 void Shutdown() {
+    MFA_ASSERT(state.mesh_buffers.size() == state.mesh_buffers_validation_status.size());
+    for(auto i = 0; i < state.mesh_buffers_validation_status.size(); i++) {
+        RF::DestroyMeshBuffers(state.mesh_buffers[i]);
+        state.mesh_buffers_validation_status[i] = false;
+    }
     RF::DestroyTexture(state.font_texture);
     Importer::FreeAsset(state.font_texture.cpu_texture());
     RF::DestroyDrawPipeline(state.draw_pipeline);

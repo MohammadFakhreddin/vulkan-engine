@@ -697,19 +697,31 @@ void DrawBasicTexturedMesh(
     
 }
 
-void BindVertexBuffer(DrawPass const draw_pass, RB::BufferGroup const vertex_buffer) {
+void BindVertexBuffer(
+    DrawPass const draw_pass, 
+    RB::BufferGroup const vertex_buffer,
+    VkDeviceSize const offset
+) {
     MFA_ASSERT(draw_pass.is_valid);
     RB::BindVertexBuffer(
         state.graphic_command_buffers[draw_pass.image_index], 
-        vertex_buffer
+        vertex_buffer,
+        offset
     );
 }
 
-void BindIndexBuffer(DrawPass const draw_pass, RB::BufferGroup const index_buffer) {
+void BindIndexBuffer(
+    DrawPass const draw_pass,
+    RB::BufferGroup const index_buffer,
+    VkDeviceSize const offset,
+    VkIndexType const index_type
+) {
     MFA_ASSERT(draw_pass.is_valid);
     RB::BindIndexBuffer(
         state.graphic_command_buffers[draw_pass.image_index], 
-        index_buffer
+        index_buffer,
+        offset,
+        index_type
     );
 }
 
@@ -857,6 +869,10 @@ void PushConstants(
         offset,
         data
     );
+}
+
+U8 SwapChainImagesCount() {
+    return static_cast<U8>(state.swap_chain_group.swap_chain_images.size());
 }
 
 // SDL functions

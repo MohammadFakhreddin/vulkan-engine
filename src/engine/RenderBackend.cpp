@@ -2008,8 +2008,11 @@ U8 AcquireNextImage(
     return static_cast<U8>(image_index);
 }
 
-void BindVertexBuffer(VkCommandBuffer_T * command_buffer, BufferGroup vertex_buffer) {
-    VkDeviceSize offset = 0;
+void BindVertexBuffer(
+    VkCommandBuffer_T * command_buffer,
+    BufferGroup vertex_buffer,
+    VkDeviceSize offset
+) {
     vkCmdBindVertexBuffers(
         command_buffer, 
         0, 
@@ -2019,12 +2022,17 @@ void BindVertexBuffer(VkCommandBuffer_T * command_buffer, BufferGroup vertex_buf
     );
 }
 
-void BindIndexBuffer(VkCommandBuffer_T * command_buffer, BufferGroup const index_buffer) {
+void BindIndexBuffer(
+    VkCommandBuffer_T * command_buffer,
+    BufferGroup const index_buffer,
+    VkDeviceSize const offset,
+    VkIndexType const index_type
+) {
     vkCmdBindIndexBuffer(
         command_buffer,
         index_buffer.buffer,
-        0, 
-        VK_INDEX_TYPE_UINT32
+        offset, 
+        index_type
     );
 }
 

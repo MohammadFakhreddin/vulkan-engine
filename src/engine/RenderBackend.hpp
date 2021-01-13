@@ -531,9 +531,18 @@ U8 AcquireNextImage(
     SwapChainGroup const & swap_chain_group
 );
 
-void BindVertexBuffer(VkCommandBuffer_T * command_buffer, BufferGroup vertex_buffer);
+void BindVertexBuffer(
+    VkCommandBuffer_T * command_buffer,
+    BufferGroup vertex_buffer,
+    VkDeviceSize offset = 0
+);
 
-void BindIndexBuffer(VkCommandBuffer_T * command_buffer, BufferGroup index_buffer);
+void BindIndexBuffer(
+    VkCommandBuffer_T * command_buffer,
+    BufferGroup index_buffer,
+    VkDeviceSize offset = 0,
+    VkIndexType index_type = VK_INDEX_TYPE_UINT32
+);
 
 void DrawIndexed(
     VkCommandBuffer_T * command_buffer,

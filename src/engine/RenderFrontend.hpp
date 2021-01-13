@@ -179,9 +179,18 @@ void DrawBasicTexturedMesh(
     MeshBuffers const & mesh_buffers
 );
 
-void BindVertexBuffer(DrawPass draw_pass, RB::BufferGroup vertex_buffer);
+void BindVertexBuffer(
+    DrawPass draw_pass, 
+    RB::BufferGroup vertex_buffer,
+    VkDeviceSize offset = 0
+);
 
-void BindIndexBuffer(DrawPass draw_pass, RB::BufferGroup index_buffer);
+void BindIndexBuffer(
+    DrawPass draw_pass, 
+    RB::BufferGroup index_buffer,
+    VkDeviceSize offset = 0,
+    VkIndexType index_type = VK_INDEX_TYPE_UINT32
+);
 
 void DrawIndexed(
     DrawPass draw_pass, 
@@ -204,6 +213,8 @@ void PushConstants(
     U32 offset, 
     CBlob data
 );
+
+U8 SwapChainImagesCount();
 
 // SDL Functions
 
