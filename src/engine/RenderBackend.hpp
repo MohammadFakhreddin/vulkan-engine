@@ -17,6 +17,8 @@ using ScreenHeight = Platforms::ScreenSizeType;
 using CpuTexture = Asset::TextureAsset;
 using CpuShader = Asset::ShaderAsset;
 
+// Vulkan functions
+
 [[nodiscard]]
 SDL_Window * CreateWindow(ScreenWidth screen_width, ScreenHeight screen_height);
 
@@ -411,7 +413,7 @@ BufferGroup CreateVertexBuffer(
     VkPhysicalDevice_T * physical_device,
     VkCommandPool_T * command_pool,
     VkQueue_T * graphic_queue,
-    Blob vertices_blob
+    CBlob vertices_blob
 );
 
 void DestroyVertexBuffer(
@@ -425,7 +427,7 @@ BufferGroup CreateIndexBuffer (
     VkPhysicalDevice_T * physical_device,
     VkCommandPool_T * command_pool,
     VkQueue_T * graphic_queue,
-    Blob indices_blob
+    CBlob indices_blob
 );
 
 void DestroyIndexBuffer(
@@ -527,5 +529,13 @@ U8 AcquireNextImage(
     VkSemaphore_T * image_availability_semaphore, 
     SwapChainGroup const & swap_chain_group
 );
+
+void BindVertexBuffer(VkCommandBuffer_T * command_buffer, BufferGroup vertex_buffer);
+
+void BindIndexBuffer(VkCommandBuffer_T * command_buffer, BufferGroup index_buffer);
+
+void DrawIndexed(VkCommandBuffer_T * command_buffer, U32 indices_count);
+
+void SetScissor(VkCommandBuffer_T * command_buffer, VkRect2D scissor);
 
 }

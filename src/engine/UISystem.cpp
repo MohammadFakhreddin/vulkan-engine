@@ -1,6 +1,7 @@
 #include "UISystem.hpp"
 
 #include "RenderFrontend.hpp"
+#include "BedrockMemory.hpp"
 #include "../tools/Importer.hpp"
 #include "libs/imgui/imgui.h"
 
@@ -127,9 +128,15 @@ struct {
     std::vector<VkDescriptorSet_T *> descriptor_sets {};
     RF::DrawPipeline draw_pipeline {};
     RB::GpuTexture font_texture {};
+    bool mouse_pressed[3] {false};
+    SDL_Cursor *  mouse_cursors[ImGuiMouseCursor_COUNT] {};
 } static state {};
 
 void Init() {
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+
     state.font_sampler = RF::CreateSampler(
         RB::CreateSamplerParams {
             .min_lod = -1000,
@@ -233,8 +240,11 @@ void Init() {
         //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
         //IM_ASSERT(font != NULL);
         
-        ImGuiIO& io = ImGui::GetIO();
+        ImGuiIO & io = ImGui::GetIO();
 
+        // Setup Dear ImGui style
+        ImGui::StyleColorsDark();
+    
         Byte * pixels = nullptr;
         I32 width, height;
         io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
@@ -258,7 +268,211 @@ void Init() {
         // TODO Support from in memory import of images inside importer
         state.font_texture = RF::CreateTexture(texture_asset);
     }
+}
 
+static void UpdateMousePositionAndButtons() {
+    auto & io = ImGui::GetIO();
+
+    // Set OS mouse position if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
+    if (io.WantSetMousePos) {
+        RF::WarpMouseInWindow(static_cast<I32>(io.MousePos.x), static_cast<I32>(io.MousePos.y));
+    } else {
+        io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+    }
+    int mx, my;
+    Uint32 const mouse_buttons = SDL_GetMouseState(&mx, &my);
+    io.MouseDown[0] = state.mouse_pressed[0] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_LEFT)) != 0;  // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
+    io.MouseDown[1] = state.mouse_pressed[1] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0;
+    io.MouseDown[2] = state.mouse_pressed[2] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0;
+    state.mouse_pressed[0] = state.mouse_pressed[1] = state.mouse_pressed[2] = false;
+    if (RF::GetWindowFlags() & SDL_WINDOW_INPUT_FOCUS) {
+        io.MousePos = ImVec2(static_cast<float>(mx), static_cast<float>(my));
+    }
+}
+
+static void UpdateMouseCursor() {
+    auto & io = ImGui::GetIO();
+
+    if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) {
+        return;
+    }
+    ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
+    if (io.MouseDrawCursor || imgui_cursor == ImGuiMouseCursor_None) {
+        // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
+        SDL_ShowCursor(SDL_FALSE);
+    } else {
+        // Show OS mouse cursor
+        SDL_SetCursor(state.mouse_cursors[imgui_cursor] ? state.mouse_cursors[imgui_cursor] : state.mouse_cursors[ImGuiMouseCursor_Arrow]);
+        SDL_ShowCursor(SDL_TRUE);
+    }
+}
+
+void OnNewFrame(U32 const delta_time, RF::DrawPass & draw_pass) {
+    ImGuiIO& io = ImGui::GetIO();
+    IM_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! It is generally built by the renderer backend. Missing call to renderer _NewFrame() function? e.g. ImGui_ImplOpenGL3_NewFrame().");
+
+    // Setup display size (every frame to accommodate for window resizing)
+    I32 window_width, window_height;
+    I32 drawable_width, drawable_height;
+    RF::GetWindowSize(window_width, window_height);
+    if (RF::GetWindowFlags() & SDL_WINDOW_MINIMIZED) {
+        window_width = window_height = 0;
+    }
+    RF::GetDrawableSize(drawable_width, drawable_height);
+    io.DisplaySize = ImVec2(static_cast<float>(window_width), static_cast<float>(window_height));
+    if (window_width > 0 && window_height > 0) {
+        io.DisplayFramebufferScale = ImVec2(
+            static_cast<float>(drawable_width) / static_cast<float>(window_width), 
+            static_cast<float>(drawable_height) / static_cast<float>(window_height)
+        );
+    }
+    io.DeltaTime = delta_time / 1000.0f;
+    UpdateMousePositionAndButtons();
+    UpdateMouseCursor();
+    // Start the Dear ImGui frame
+    ImGui::NewFrame();
+
+    {
+        static float f = 0.0f;
+        static int counter = 0;
+
+        ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+
+        ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+        
+        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+        
+        if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+            counter++;
+        ImGui::SameLine();
+        ImGui::Text("counter = %d", counter);
+
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+        ImGui::End();
+    }
+
+    ImGui::Render();
+    auto * draw_data = ImGui::GetDrawData();
+    // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
+    I32 frame_buffer_width = static_cast<I32>(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
+    I32 frame_buffer_height = static_cast<I32>(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
+    if (frame_buffer_width > 0 && frame_buffer_height > 0) {
+        RF::MeshBuffers mesh_buffers {};
+        if (draw_data->TotalVtxCount > 0) {
+            // Create or resize the vertex/index buffers
+            size_t const vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
+            size_t const index_size = draw_data->TotalIdxCount * sizeof(ImDrawIdx);
+            auto vertex_data = MFA::Memory::Alloc(vertex_size);
+            MFA_DEFER {MFA::Memory::Free(vertex_data);};
+            auto index_data = MFA::Memory::Alloc(index_size);
+            MFA_DEFER {MFA::Memory::Free(index_data);};
+            {
+                Byte * vertex_ptr = vertex_data.ptr;
+                Byte * index_ptr = index_data.ptr;
+                for (int n = 0; n < draw_data->CmdListsCount; n++)
+                {
+                    const ImDrawList* cmd_list = draw_data->CmdLists[n];
+                    memcpy(vertex_ptr, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
+                    memcpy(index_ptr, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
+                    vertex_ptr += cmd_list->VtxBuffer.Size;
+                    index_ptr += cmd_list->IdxBuffer.Size;
+                }
+            }
+            RF::MeshBuffers mesh_buffers = {
+                .vertices_buffer = RF::CreateVertexBuffer(CBlob {vertex_data.ptr, vertex_data.len}),
+                .indices_buffer = RF::CreateIndexBuffer(CBlob {index_data.ptr, index_data.len}),
+                .indices_count = static_cast<U32>(draw_data->TotalIdxCount),
+                .mesh_asset {}
+            };
+        
+            // Setup desired Vulkan state
+            // Bind pipeline and descriptor sets:
+            {
+                RF::BindDrawPipeline(draw_pass, state.draw_pipeline);
+                RF::BindDescriptorSets(draw_pass, state.descriptor_sets.data());
+            }
+
+            //// Bind Vertex And Index Buffer:
+            //if (draw_data->TotalVtxCount > 0)
+            //{
+            //    vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffers, vertex_offset);
+            //    vkCmdBindIndexBuffer(command_buffer, rb->IndexBuffer, 0, sizeof(ImDrawIdx) == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
+            //}
+            RF::Draw
+            // TODO Start from here, Implement setViewPort and PushConstants
+            // Setup viewport:
+            {
+                VkViewport viewport;
+                viewport.x = 0;
+                viewport.y = 0;
+                viewport.width = (float)fb_width;
+                viewport.height = (float)fb_height;
+                viewport.minDepth = 0.0f;
+                viewport.maxDepth = 1.0f;
+                vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+            }
+
+            // Setup scale and translation:
+            // Our visible imgui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
+            {
+                float scale[2];
+                scale[0] = 2.0f / draw_data->DisplaySize.x;
+                scale[1] = 2.0f / draw_data->DisplaySize.y;
+                float translate[2];
+                translate[0] = -1.0f - draw_data->DisplayPos.x * scale[0];
+                translate[1] = -1.0f - draw_data->DisplayPos.y * scale[1];
+                vkCmdPushConstants(command_buffer, g_PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 0, sizeof(float) * 2, scale);
+                vkCmdPushConstants(command_buffer, g_PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 2, sizeof(float) * 2, translate);
+
+            }
+
+            // Will project scissor/clipping rectangles into framebuffer space
+            ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
+            ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+
+            // Render command lists
+            // (Because we merged all buffers into a single one, we maintain our own offset into them)
+            int global_vtx_offset = 0;
+            int global_idx_offset = 0;
+            for (int n = 0; n < draw_data->CmdListsCount; n++)
+            {
+                const ImDrawList* cmd_list = draw_data->CmdLists[n];
+                for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
+                {
+                    const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+                    
+                    // Project scissor/clipping rectangles into framebuffer space
+                    ImVec4 clip_rect;
+                    clip_rect.x = (pcmd->ClipRect.x - clip_off.x) * clip_scale.x;
+                    clip_rect.y = (pcmd->ClipRect.y - clip_off.y) * clip_scale.y;
+                    clip_rect.z = (pcmd->ClipRect.z - clip_off.x) * clip_scale.x;
+                    clip_rect.w = (pcmd->ClipRect.w - clip_off.y) * clip_scale.y;
+
+                    if (clip_rect.x < frame_buffer_width && clip_rect.y < frame_buffer_height && clip_rect.z >= 0.0f && clip_rect.w >= 0.0f)
+                    {
+                        // Negative offsets are illegal for vkCmdSetScissor
+                        if (clip_rect.x < 0.0f)
+                            clip_rect.x = 0.0f;
+                        if (clip_rect.y < 0.0f)
+                            clip_rect.y = 0.0f;
+
+                        // Apply scissor/clipping rectangle
+                        VkRect2D scissor;
+                        scissor.offset.x = (int32_t)(clip_rect.x);
+                        scissor.offset.y = (int32_t)(clip_rect.y);
+                        scissor.extent.width = (uint32_t)(clip_rect.z - clip_rect.x);
+                        scissor.extent.height = (uint32_t)(clip_rect.w - clip_rect.y);
+                        vkCmdSetScissor(state.command_buffer, 0, 1, &scissor);
+
+                        // Draw
+                        vkCmdDrawIndexed(command_buffer, pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
+                    }
+                }
+                global_idx_offset += cmd_list->IdxBuffer.Size;
+                global_vtx_offset += cmd_list->VtxBuffer.Size;
+            }
+        }
+    }
 }
 
 void Shutdown() {

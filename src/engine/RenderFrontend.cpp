@@ -436,26 +436,32 @@ void DestroyUniformBuffer(UniformBufferGroup & uniform_buffer) {
 }
 
 MeshBuffers CreateMeshBuffers(Asset::MeshAsset const & mesh_asset) {
-    auto vertices_buffer = RB::CreateVertexBuffer(
-        state.logical_device.device,
-        state.physical_device,
-        state.graphic_command_pool,
-        state.graphic_queue,
-        mesh_asset.vertices_blob()
-    );
-    auto indices_buffer = RB::CreateIndexBuffer(
-        state.logical_device.device,
-        state.physical_device,
-        state.graphic_command_pool,
-        state.graphic_queue,
-        mesh_asset.indices_blob()
-    );
     return MeshBuffers {
-        .vertices_buffer = vertices_buffer,
-        .indices_buffer = indices_buffer,
+        .vertices_buffer = CreateVertexBuffer(mesh_asset.vertices_cblob()),
+        .indices_buffer = CreateIndexBuffer(mesh_asset.indices_cblob()),
         .indices_count = mesh_asset.header_object()->index_count,
         .mesh_asset = mesh_asset
     };
+}
+
+RB::BufferGroup CreateVertexBuffer(CBlob const vertices_blob) {
+    return RB::CreateVertexBuffer(
+        state.logical_device.device,
+        state.physical_device,
+        state.graphic_command_pool,
+        state.graphic_queue,
+        vertices_blob
+    );
+}
+
+RB::BufferGroup CreateIndexBuffer(CBlob const indices_blob) {
+    return RB::CreateIndexBuffer(
+        state.logical_device.device,
+        state.physical_device,
+        state.graphic_command_pool,
+        state.graphic_queue,
+        indices_blob
+    );
 }
 
 void DestroyMeshBuffers(MeshBuffers & mesh_buffers) {
@@ -630,7 +636,7 @@ void UpdateDescriptorSetsBasic(
     );
 }
 
-void BindDescriptorSetsBasic(
+void BindDescriptorSets(
     DrawPass const & draw_pass,
     VkDescriptorSet_T ** descriptor_sets
 ) {
@@ -654,32 +660,42 @@ void DrawBasicTexturedMesh(
     DrawPass const & draw_pass,
     MeshBuffers const & mesh_buffers
 ) {
-    // TODO Move these functions to RenderBackend, RenderFrontend should not know about backend
     MFA_ASSERT(draw_pass.is_valid);
-
-    VkDeviceSize offset = 0;
-    // TODO Check again for numbers
-    vkCmdBindVertexBuffers(
-        state.graphic_command_buffers[draw_pass.image_index], 
-        0, 
-        1, 
-        &mesh_buffers.vertices_buffer.buffer, 
-        &offset
-    );
-
-    vkCmdBindIndexBuffer(
-        state.graphic_command_buffers[draw_pass.image_index], 
-        mesh_buffers.indices_buffer.buffer, 
-        0, 
-        VK_INDEX_TYPE_UINT32
-    );
-
-    vkCmdDrawIndexed(
-        state.graphic_command_buffers[draw_pass.image_index], 
-        mesh_buffers.indices_count, 
-        1, 0, 0, 0
-    );
+    MFA_ASSERT(mesh_buffers.indices_count > 0);
+    MFA_PTR_ASSERT(mesh_buffers.vertices_buffer.buffer);
+    MFA_PTR_ASSERT(mesh_buffers.vertices_buffer.memory);
+    MFA_PTR_ASSERT(mesh_buffers.indices_buffer.buffer);
+    MFA_PTR_ASSERT(mesh_buffers.indices_buffer.memory);
     
+    BindVertexBuffer(draw_pass, mesh_buffers.vertices_buffer);
+
+    BindIndexBuffer(draw_pass, mesh_buffers.indices_buffer);
+
+    DrawIndexed(draw_pass, mesh_buffers.indices_count);
+    
+}
+
+void BindVertexBuffer(DrawPass const draw_pass, RB::BufferGroup const vertex_buffer) {
+    MFA_ASSERT(draw_pass.is_valid);
+    RB::BindVertexBuffer(
+        state.graphic_command_buffers[draw_pass.image_index], 
+        vertex_buffer
+    );
+}
+
+void BindIndexBuffer(DrawPass const draw_pass, RB::BufferGroup const index_buffer) {
+    MFA_ASSERT(draw_pass.is_valid);
+    RB::BindIndexBuffer(
+        state.graphic_command_buffers[draw_pass.image_index], 
+        index_buffer
+    );
+}
+
+void DrawIndexed(DrawPass const draw_pass, U32 const indices_count) {
+    RB::DrawIndexed(
+        state.graphic_command_buffers[draw_pass.image_index], 
+        indices_count
+    );
 }
 
 void EndPass(DrawPass & draw_pass) {
@@ -708,7 +724,7 @@ void EndPass(DrawPass & draw_pass) {
         drawToPresentBarrier.dstQueueFamilyIndex = state.present_queue_family;
         drawToPresentBarrier.image = state.swap_chain_group.swap_chain_images[draw_pass.image_index];
         drawToPresentBarrier.subresourceRange = subResourceRange;
-
+        // TODO Move to RB
         vkCmdPipelineBarrier(
             state.graphic_command_buffers[draw_pass.image_index], 
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 
@@ -785,6 +801,28 @@ RB::GpuShader CreateShader(Asset::ShaderAsset const & shader_asset) {
 
 void DestroyShader(RB::GpuShader & gpu_shader) {
     RB::DestroyShader(state.logical_device.device, gpu_shader);
+}
+
+void SetScissor(DrawPass const draw_pass, VkRect2D const scissor) {
+    RB::SetScissor(state.graphic_command_buffers[draw_pass.image_index], scissor);
+}
+
+// SDL functions
+
+void WarpMouseInWindow(I32 const x, I32 const y) {
+    SDL_WarpMouseInWindow(state.window, x, y);
+}
+
+U32 GetWindowFlags() {
+    return SDL_GetWindowFlags(state.window); 
+}
+
+void GetWindowSize(I32 & out_width, I32 & out_height) {
+    SDL_GetWindowSize(state.window, &out_width, &out_height);
+}
+
+void GetDrawableSize(I32 & out_width, I32 & out_height) {
+    SDL_GL_GetDrawableSize(state.window, &out_width, &out_height);
 }
 
 }

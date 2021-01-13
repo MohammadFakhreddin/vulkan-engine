@@ -402,6 +402,14 @@ public:
         return reinterpret_cast<MeshVertices const *>(asset().ptr + header->vertices_offset);
     }
     [[nodiscard]]
+    CBlob vertices_cblob() const {
+        auto const * header = header_object();
+        return CBlob {
+            asset().ptr + header->vertices_offset,
+            header_object()->vertex_count * sizeof(Mesh::Data::Vertices::Vertex)
+        };
+    }
+    [[nodiscard]]
     Blob vertices_blob() const {
         auto const * header = header_object();
         return Blob {
@@ -413,6 +421,14 @@ public:
     MeshIndices const * indices() const {
         auto const * header = header_object();
         return reinterpret_cast<MeshIndices const *>(asset().ptr + header->indices_offset);
+    }
+    [[nodiscard]]
+    CBlob indices_cblob() const {
+        auto const * header = header_object();
+        return CBlob {
+            asset().ptr + header->indices_offset,
+            header_object()->index_count * sizeof(Mesh::Data::Indices::IndexType)
+        };
     }
     [[nodiscard]]
     Blob indices_blob() const {

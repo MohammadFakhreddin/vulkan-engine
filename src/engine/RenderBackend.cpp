@@ -1640,7 +1640,7 @@ BufferGroup CreateVertexBuffer(
     VkPhysicalDevice_T * physical_device,
     VkCommandPool_T * command_pool,
     VkQueue_T * graphic_queue,
-    Blob const vertices_blob
+    CBlob const vertices_blob
 ) {
     VkDeviceSize const bufferSize = vertices_blob.len;
 
@@ -1691,7 +1691,7 @@ BufferGroup CreateIndexBuffer (
     VkPhysicalDevice_T * physical_device,
     VkCommandPool_T * command_pool,
     VkQueue_T * graphic_queue,
-    Blob const indices_blob
+    CBlob const indices_blob
 ) {
     auto const bufferSize = indices_blob.len;
 
@@ -1995,7 +1995,7 @@ U8 AcquireNextImage(
     MFA_PTR_ASSERT(device);
     MFA_PTR_ASSERT(image_availability_semaphore);
     U32 image_index;
-    // TODO What if acquiring failes ?
+    // TODO What if acquiring fail ?
     VK_Check(vkAcquireNextImageKHR(
         device,
         swap_chain_group.swap_chain,
@@ -2005,6 +2005,43 @@ U8 AcquireNextImage(
         &image_index
     ));
     return static_cast<U8>(image_index);
+}
+
+void BindVertexBuffer(VkCommandBuffer_T * command_buffer, BufferGroup vertex_buffer) {
+    VkDeviceSize offset = 0;
+    vkCmdBindVertexBuffers(
+        command_buffer, 
+        0, 
+        1, 
+        &vertex_buffer.buffer, 
+        &offset
+    );
+}
+
+void BindIndexBuffer(VkCommandBuffer_T * command_buffer, BufferGroup const index_buffer) {
+    vkCmdBindIndexBuffer(
+        command_buffer,
+        index_buffer.buffer,
+        0, 
+        VK_INDEX_TYPE_UINT32
+    );
+}
+
+void DrawIndexed(VkCommandBuffer_T * command_buffer, U32 const indices_count) {
+    vkCmdDrawIndexed(
+        command_buffer, 
+        indices_count, 
+        1, 0, 0, 0
+    );
+}
+
+void SetScissor(VkCommandBuffer_T * command_buffer, VkRect2D scissor) {
+    vkCmdSetScissor(
+        command_buffer, 
+        0, 
+        1, 
+        &scissor
+    );
 }
 
 }

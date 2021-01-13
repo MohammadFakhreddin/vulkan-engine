@@ -26,7 +26,7 @@ DrawableObject::~DrawableObject() {
 }
 
 void DrawableObject::draw(RF::DrawPass & draw_pass) {
-    RF::BindDescriptorSetsBasic(
+    RF::BindDescriptorSets(
         draw_pass,
         m_descriptor_sets.data()
     );

@@ -79,10 +79,17 @@ struct MeshBuffers {
     U32 indices_count;
     Asset::MeshAsset mesh_asset {};
 };
+
 [[nodiscard]]
 MeshBuffers CreateMeshBuffers(Asset::MeshAsset const & mesh_asset);
 
 void DestroyMeshBuffers(MeshBuffers & mesh_buffers);
+
+[[nodiscard]]
+RB::BufferGroup CreateVertexBuffer(CBlob vertices_blob);
+
+[[nodiscard]]
+RB::BufferGroup CreateIndexBuffer(CBlob indices_blob);
 
 [[nodiscard]]
 RB::GpuTexture CreateTexture(Asset::TextureAsset & texture_asset);
@@ -142,7 +149,7 @@ void UpdateDescriptorSetsBasic(
     SamplerGroup const & sampler_group
 );
 
-void BindDescriptorSetsBasic(
+void BindDescriptorSets(
     DrawPass const & draw_pass,
     VkDescriptorSet_T ** descriptor_sets
 );
@@ -165,6 +172,25 @@ void DrawBasicTexturedMesh(
     MeshBuffers const & mesh_buffers
 );
 
+void BindVertexBuffer(DrawPass draw_pass, RB::BufferGroup vertex_buffer);
+
+void BindIndexBuffer(DrawPass draw_pass, RB::BufferGroup index_buffer);
+
+void DrawIndexed(DrawPass draw_pass, U32 indices_count);
+
 void EndPass(DrawPass & draw_pass);
+
+void SetScissor(DrawPass draw_pass, VkRect2D scissor);
+
+// SDL Functions
+
+void WarpMouseInWindow(I32 x, I32 y);
+
+[[nodiscard]]
+U32 GetWindowFlags();
+
+void GetWindowSize(I32 & out_width, I32 & out_height);
+
+void GetDrawableSize(I32 & out_width, I32 & out_height);
 
 }
