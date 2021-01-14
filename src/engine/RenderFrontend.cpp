@@ -309,7 +309,27 @@ DrawPipeline CreateBasicDrawPipeline(
         descriptor_set_layout,
         vertex_binding_description,
         static_cast<U32>(input_attribute_descriptions.size()),
-        input_attribute_descriptions.data()
+        input_attribute_descriptions.data(),
+        RB::CreateGraphicPipelineOptions {
+            .depth_stencil {
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+                .depthTestEnable = VK_TRUE,
+                .depthWriteEnable = VK_TRUE,
+                .depthCompareOp = VK_COMPARE_OP_LESS,
+                .depthBoundsTestEnable = VK_FALSE,
+                .stencilTestEnable = VK_FALSE
+            },
+            .color_blend_attachments {
+                .blendEnable = VK_TRUE,
+                .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+                .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+                .colorBlendOp = VK_BLEND_OP_ADD,
+                .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+                .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+                .alphaBlendOp = VK_BLEND_OP_ADD,
+                .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
+            }
+        }
     );
 }
 
@@ -321,8 +341,6 @@ DrawPipeline CreateDrawPipeline(
     VkVertexInputBindingDescription const vertex_binding_description,
     U32 const input_attribute_description_count,
     VkVertexInputAttributeDescription * input_attribute_description_data,
-    U8 const push_constants_range_count,
-    VkPushConstantRange * push_constant_ranges,
     RB::CreateGraphicPipelineOptions const & options
 ) {
     auto const graphic_pipeline_group = RB::CreateGraphicPipeline(
@@ -335,8 +353,6 @@ DrawPipeline CreateDrawPipeline(
         VkExtent2D {.width = state.screen_width, .height = state.screen_height},
         state.render_pass,
         descriptor_set_layout,
-        push_constants_range_count,
-        push_constant_ranges,
         options
     );
 
@@ -676,25 +692,6 @@ void BindDescriptorSets(
         0, 
         nullptr
     );
-}
-
-void DrawBasicTexturedMesh(
-    DrawPass const & draw_pass,
-    MeshBuffers const & mesh_buffers
-) {
-    MFA_ASSERT(draw_pass.is_valid);
-    MFA_ASSERT(mesh_buffers.indices_count > 0);
-    MFA_PTR_ASSERT(mesh_buffers.vertices_buffer.buffer);
-    MFA_PTR_ASSERT(mesh_buffers.vertices_buffer.memory);
-    MFA_PTR_ASSERT(mesh_buffers.indices_buffer.buffer);
-    MFA_PTR_ASSERT(mesh_buffers.indices_buffer.memory);
-    
-    BindVertexBuffer(draw_pass, mesh_buffers.vertices_buffer);
-
-    BindIndexBuffer(draw_pass, mesh_buffers.indices_buffer);
-
-    DrawIndexed(draw_pass, mesh_buffers.indices_count);
-    
 }
 
 void BindVertexBuffer(

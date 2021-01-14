@@ -52,8 +52,6 @@ DrawPipeline CreateDrawPipeline(
     VkVertexInputBindingDescription vertex_binding_description,
     U32 input_attribute_description_count,
     VkVertexInputAttributeDescription * input_attribute_description_data,
-    U8 push_constants_range_count = 0,
-    VkPushConstantRange * push_constant_ranges = nullptr,
     RB::CreateGraphicPipelineOptions const & options = {}
 );
 
@@ -174,10 +172,6 @@ void BindDescriptorSets(
 //  - tell the command buffer to draw the mesh
 //
 //: end loop
-void DrawBasicTexturedMesh(
-    DrawPass const & draw_pass,
-    MeshBuffers const & mesh_buffers
-);
 
 void BindVertexBuffer(
     DrawPass draw_pass, 

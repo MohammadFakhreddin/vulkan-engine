@@ -1412,16 +1412,14 @@ bool DestroyShader(VkDevice_T * device, GpuShader & gpu_shader) {
 
 GraphicPipelineGroup CreateGraphicPipeline(
     VkDevice_T * device, 
-    U8 const shader_stages_count, 
+    U8 shader_stages_count, 
     GpuShader const * shader_stages,
     VkVertexInputBindingDescription vertex_binding_description,
-    U32 const attribute_description_count,
+    U32 attribute_description_count,
     VkVertexInputAttributeDescription * attribute_description_data,
-    VkExtent2D const swap_chain_extent,
+    VkExtent2D swap_chain_extent,
     VkRenderPass_T * render_pass,
     VkDescriptorSetLayout_T * descriptor_set_layout,
-    U8 const push_constants_range_count,
-    VkPushConstantRange * push_constant_ranges,
     CreateGraphicPipelineOptions const & options
 ) {
     MFA_PTR_ASSERT(shader_stages);
@@ -1480,8 +1478,6 @@ GraphicPipelineGroup CreateGraphicPipeline(
     // Note: depth bias and using polygon modes other than fill require changes to logical device creation (device features)
     VkPipelineRasterizationStateCreateInfo rasterization_create_info = {};
     rasterization_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rasterization_create_info.depthClampEnable = VK_FALSE;
-    rasterization_create_info.rasterizerDiscardEnable = VK_FALSE;
     // TODO Might need to ask some of them from outside
     rasterization_create_info.polygonMode = VK_POLYGON_MODE_FILL;
     rasterization_create_info.cullMode = VK_CULL_MODE_NONE;
@@ -1499,16 +1495,17 @@ GraphicPipelineGroup CreateGraphicPipeline(
     multi_sample_state_create_info.alphaToCoverageEnable = VK_FALSE;
     multi_sample_state_create_info.alphaToOneEnable = VK_FALSE;
 
-    VkPipelineDepthStencilStateCreateInfo depthStencil{};
+    /*VkPipelineDepthStencilStateCreateInfo depthStencil{};
     depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     depthStencil.depthTestEnable = VK_TRUE;
     depthStencil.depthWriteEnable = VK_TRUE;
     depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
     depthStencil.depthBoundsTestEnable = VK_FALSE;
-    depthStencil.stencilTestEnable = VK_FALSE;
+    depthStencil.stencilTestEnable = VK_FALSE;*/
 
     // Describing color blending
     // Note: all parameters except blendEnable and colorWriteMask are irrelevant here
+    /*
     VkPipelineColorBlendAttachmentState colorBlendAttachmentState = {};
     colorBlendAttachmentState.blendEnable = VK_FALSE;
     colorBlendAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
@@ -1517,15 +1514,24 @@ GraphicPipelineGroup CreateGraphicPipeline(
     colorBlendAttachmentState.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
     colorBlendAttachmentState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
     colorBlendAttachmentState.alphaBlendOp = VK_BLEND_OP_ADD;
-    colorBlendAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-
+    colorBlendAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;*/
+    // TODO ASk for colorBlendAttachmentState
+    //VkPipelineColorBlendAttachmentState colorBlendAttachmentState = {};
+    //colorBlendAttachmentState.blendEnable = VK_TRUE;
+    //colorBlendAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    //colorBlendAttachmentState.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    //colorBlendAttachmentState.colorBlendOp = VK_BLEND_OP_ADD;
+    //colorBlendAttachmentState.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    //colorBlendAttachmentState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    //colorBlendAttachmentState.alphaBlendOp = VK_BLEND_OP_ADD;
+    //colorBlendAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
     // Note: all attachments must have the same values unless a device feature is enabled
     VkPipelineColorBlendStateCreateInfo color_blend_create_info = {};
     color_blend_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     color_blend_create_info.logicOpEnable = VK_FALSE;
     color_blend_create_info.logicOp = VK_LOGIC_OP_COPY;
     color_blend_create_info.attachmentCount = 1;
-    color_blend_create_info.pAttachments = &colorBlendAttachmentState;
+    color_blend_create_info.pAttachments = &options.color_blend_attachments;
     color_blend_create_info.blendConstants[0] = 0.0f;
     color_blend_create_info.blendConstants[1] = 0.0f;
     color_blend_create_info.blendConstants[2] = 0.0f;
@@ -1537,8 +1543,8 @@ GraphicPipelineGroup CreateGraphicPipeline(
     layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     layout_create_info.setLayoutCount = 1;
     layout_create_info.pSetLayouts = &descriptor_set_layout; // Array of descriptor set layout, Order matter when more than 1
-    layout_create_info.pushConstantRangeCount = push_constants_range_count;
-    layout_create_info.pPushConstantRanges = push_constant_ranges;
+    layout_create_info.pushConstantRangeCount = options.push_constants_range_count;
+    layout_create_info.pPushConstantRanges = options.push_constant_ranges;
     
     VkPipelineLayout_T * pipeline_layout = nullptr;
     VK_Check(vkCreatePipelineLayout(device, &layout_create_info, nullptr, &pipeline_layout));
@@ -1559,7 +1565,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
     pipelineCreateInfo.subpass = 0;
     pipelineCreateInfo.basePipelineHandle = nullptr;
     pipelineCreateInfo.basePipelineIndex = -1;
-    pipelineCreateInfo.pDepthStencilState = &depthStencil;
+    pipelineCreateInfo.pDepthStencilState = &options.depth_stencil;
     pipelineCreateInfo.pDynamicState = options.dynamic_state_create_info;
     
     VkPipeline_T * pipeline = nullptr;

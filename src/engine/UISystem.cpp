@@ -231,11 +231,27 @@ void Init() {
             vertex_binding_description,
             static_cast<U8>(input_attribute_description.size()),
             input_attribute_description.data(),
-            static_cast<U8>(push_constants.size()),
-            push_constants.data(),
             RB::CreateGraphicPipelineOptions {
                 .font_face = VK_FRONT_FACE_COUNTER_CLOCKWISE,
-                .dynamic_state_create_info = &dynamic_state_create_info
+                .dynamic_state_create_info = &dynamic_state_create_info,
+                .depth_stencil {
+                    .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+                    .depthTestEnable = false,
+                    .depthBoundsTestEnable = false,
+                    .stencilTestEnable = false
+                },
+                .color_blend_attachments {
+                    .blendEnable = VK_TRUE,
+                    .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+                    .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+                    .colorBlendOp = VK_BLEND_OP_ADD,
+                    .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+                    .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+                    .alphaBlendOp = VK_BLEND_OP_ADD,
+                    .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
+                },
+                .push_constants_range_count = static_cast<U8>(push_constants.size()),
+                .push_constant_ranges = push_constants.data(),
             }
         );
     }
@@ -342,7 +358,7 @@ void OnNewFrame(U32 const delta_time, RF::DrawPass & draw_pass) {
             static_cast<float>(drawable_height) / static_cast<float>(window_height)
         );
     }
-    io.DeltaTime = delta_time / 1000.0f;
+    io.DeltaTime = static_cast<float>(delta_time) / 1000.0f;
     UpdateMousePositionAndButtons();
     UpdateMouseCursor();
     // Start the Dear ImGui frame
@@ -351,7 +367,7 @@ void OnNewFrame(U32 const delta_time, RF::DrawPass & draw_pass) {
     {
         static float f = 0.0f;
         static int counter = 0;
-
+        //ImGui::ShowDemoWindow();
         ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
 
         ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
@@ -361,9 +377,9 @@ void OnNewFrame(U32 const delta_time, RF::DrawPass & draw_pass) {
         if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
             counter++;
         ImGui::SameLine();
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         ImGui::Text("counter = %d", counter);
 
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         ImGui::End();
     }
 
@@ -512,6 +528,7 @@ void OnNewFrame(U32 const delta_time, RF::DrawPass & draw_pass) {
                         RF::DrawIndexed(
                             draw_pass,
                             pcmd->ElemCount,
+                            1,
                             pcmd->IdxOffset + global_idx_offset, 
                             pcmd->VtxOffset + global_vtx_offset, 
                             0
@@ -528,8 +545,10 @@ void OnNewFrame(U32 const delta_time, RF::DrawPass & draw_pass) {
 void Shutdown() {
     MFA_ASSERT(state.mesh_buffers.size() == state.mesh_buffers_validation_status.size());
     for(auto i = 0; i < state.mesh_buffers_validation_status.size(); i++) {
-        RF::DestroyMeshBuffers(state.mesh_buffers[i]);
-        state.mesh_buffers_validation_status[i] = false;
+        if(true == state.mesh_buffers_validation_status[i]) {
+            RF::DestroyMeshBuffers(state.mesh_buffers[i]);
+            state.mesh_buffers_validation_status[i] = false;
+        }
     }
     RF::DestroyTexture(state.font_texture);
     Importer::FreeAsset(state.font_texture.cpu_texture());
