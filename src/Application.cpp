@@ -120,7 +120,7 @@ void Application::run() {
                 UI::OnNewFrame(delta_time, draw_pass, []()->void{
                     ImGui::Begin("Object viewer");
                     ImGui::SetNextItemWidth(200.0f);
-                    ImGui::SliderFloat("float", &degree, 0.0f, 360.0f);
+                    ImGui::SliderFloat("float", &degree, -360.0f, 360.0f);
                     ImGui::End();
                 });
                 RF::EndPass(draw_pass);
