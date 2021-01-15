@@ -339,7 +339,11 @@ static void UpdateMouseCursor() {
     }
 }
 
-void OnNewFrame(U32 const delta_time, RF::DrawPass & draw_pass) {
+void OnNewFrame(
+    U32 const delta_time,
+    RF::DrawPass & draw_pass,
+    RecordUICallback const & record_ui_callback
+) {
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! It is generally built by the renderer backend. Missing call to renderer _NewFrame() function? e.g. ImGui_ImplOpenGL3_NewFrame().");
 
@@ -363,26 +367,24 @@ void OnNewFrame(U32 const delta_time, RF::DrawPass & draw_pass) {
     UpdateMouseCursor();
     // Start the Dear ImGui frame
     ImGui::NewFrame();
+    //{
+    //    static float f = 0.0f;
+    //    static int counter = 0;
+    //    ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
 
-    {
-        static float f = 0.0f;
-        static int counter = 0;
-        //ImGui::ShowDemoWindow();
-        ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+    //    ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+    //    
+    //    ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+    //    
+    //    if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+    //        counter++;
+    //    ImGui::SameLine();
+    //    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    //    ImGui::Text("counter = %d", counter);
 
-        ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-        
-        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-        
-        if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-            counter++;
-        ImGui::SameLine();
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-        ImGui::Text("counter = %d", counter);
-
-        ImGui::End();
-    }
-
+    //    ImGui::End();
+    //}
+    record_ui_callback();
     ImGui::Render();
     auto * draw_data = ImGui::GetDrawData();
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)

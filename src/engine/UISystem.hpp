@@ -9,8 +9,13 @@ namespace RF = MFA::RenderFrontend;
 // TODO Support for custom font
 void Init();
 
+using RecordUICallback = std::function<void()>;
 // TODO It might need to ask for window params
-void OnNewFrame(U32 delta_time, RF::DrawPass & draw_pass);
+void OnNewFrame(
+    U32 delta_time, 
+    RF::DrawPass & draw_pass,
+    RecordUICallback const & record_ui_callback
+);
 
 void Shutdown();
 

@@ -6,6 +6,7 @@
 #include "engine/RenderFrontend.hpp"
 #include "tools/Importer.hpp"
 #include "engine/UISystem.hpp"
+#include "libs/imgui/imgui.h"
 
 void Application::run() {
     namespace RF = MFA::RenderFrontend;
@@ -69,7 +70,7 @@ void Application::run() {
         sizeof(UniformBufferObject),
         descriptor_set_layout
     );
-    float degree = 0;
+    static float degree = 0;
     {// Main loop
         bool quit = false;
         //Event handler
@@ -85,11 +86,6 @@ void Application::run() {
                 MFA_ASSERT(draw_pass.is_valid);
                 RF::BindDrawPipeline(draw_pass, draw_pipeline);
                 {// Updating uniform buffer
-                    degree += delta_time * 0.05f;
-                    if(degree >= 360.0f)
-                    {
-                        degree = 0.0f;
-                    }
                     UniformBufferObject ubo{};
                     {// Model
                         MFA::Matrix4X4Float rotation;
@@ -121,7 +117,12 @@ void Application::run() {
                     viking_house1.update_uniform_buffer(draw_pass, ubo);
                 }
                 viking_house1.draw(draw_pass);
-                UI::OnNewFrame(delta_time, draw_pass);
+                UI::OnNewFrame(delta_time, draw_pass, []()->void{
+                    ImGui::Begin("Object viewer");
+                    ImGui::SetNextItemWidth(200.0f);
+                    ImGui::SliderFloat("float", &degree, 0.0f, 360.0f);
+                    ImGui::End();
+                });
                 RF::EndPass(draw_pass);
             }
             //Handle events on queue
