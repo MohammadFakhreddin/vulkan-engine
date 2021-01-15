@@ -71,7 +71,7 @@ public:
             descriptor_set_layout
         );
     }
-    void OnNewFrame(MFA::U32 const delta_time, RF::DrawPass & draw_pass) override {
+    void OnDraw(MFA::U32 const delta_time, RF::DrawPass & draw_pass) override {
         RF::BindDrawPipeline(draw_pass, draw_pipeline);
         {// Updating uniform buffer
             UniformBufferObject ubo{};
@@ -93,7 +93,7 @@ public:
             {// Perspective
                 MFA::I32 width; MFA::I32 height;
                 RF::GetWindowSize(width, height);
-                float ratio = static_cast<float>(width) / static_cast<float>(height);
+                float const ratio = static_cast<float>(width) / static_cast<float>(height);
                 MFA::Matrix4X4Float perspective;
                 MFA::Matrix4X4Float::PreparePerspectiveProjectionMatrix(
                     perspective,
@@ -107,12 +107,12 @@ public:
             viking_house1.update_uniform_buffer(draw_pass, ubo);
         }
         viking_house1.draw(draw_pass);
-        UI::OnNewFrame(delta_time, draw_pass, [this]()->void{
-            ImGui::Begin("Object viewer");
-            ImGui::SetNextItemWidth(200.0f);
-            ImGui::SliderFloat("float", &degree, -360.0f, 360.0f);
-            ImGui::End();
-        });
+    }
+    void OnUI(MFA::U32 const delta_time, RF::DrawPass & draw_pass) override {
+        ImGui::Begin("Object viewer");
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("float", &degree, -360.0f, 360.0f);
+        ImGui::End();
     }
     void Shutdown() override {
         RF::DestroyDrawPipeline(draw_pipeline);

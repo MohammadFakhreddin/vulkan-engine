@@ -58,23 +58,29 @@ void OnNewFrame(U32 const delta_time) {
     MFA_ASSERT(draw_pass.is_valid);
         
     if(active_scene >= 0) {
-        registered_scenes[active_scene].scene->OnNewFrame(
+        registered_scenes[active_scene].scene->OnDraw(
             delta_time,
             draw_pass
         );
     }
 
-    //UI::OnNewFrame(delta_time, draw_pass, []()->void{
-    //    ImGui::Begin("Scene Subsystem");
-    //    ImGui::SetNextItemWidth(200.0f);
-    //    ImGui::ListBox(
-    //        "Select active scene", 
-    //        &active_scene,
-    //        registered_scenes_names.data(), 
-    //        static_cast<I32>(registered_scenes_names.size())
-    //    );
-    //    ImGui::End();
-    //});
+    UI::OnNewFrame(delta_time, draw_pass, [&delta_time, &draw_pass]()->void{
+        ImGui::Begin("Scene Subsystem");
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::Combo(
+            "Active scene", 
+            &active_scene,
+            registered_scenes_names.data(), 
+            static_cast<I32>(registered_scenes_names.size())
+        );
+        ImGui::End();
+        if(active_scene >= 0) {
+            registered_scenes[active_scene].scene->OnUI(
+                delta_time,
+                draw_pass
+            );
+        } 
+    });
 
     RF::EndPass(draw_pass);
     

@@ -118,6 +118,8 @@ static uint32_t fragment_shader_spv[] =
     0x00010038
 };
 
+static VkDeviceSize g_BufferMemoryAlignment = 256;
+
 struct {
     RF::SamplerGroup font_sampler {};
     VkDescriptorSetLayout_T * descriptor_set_layout = nullptr;
@@ -252,6 +254,7 @@ void Init() {
                 },
                 .push_constants_range_count = static_cast<U8>(push_constants.size()),
                 .push_constant_ranges = push_constants.data(),
+                .use_static_viewport_and_scissor = false
             }
         );
     }
@@ -367,24 +370,9 @@ void OnNewFrame(
     UpdateMouseCursor();
     // Start the Dear ImGui frame
     ImGui::NewFrame();
-    //{
-    //    static float f = 0.0f;
-    //    static int counter = 0;
-    //    ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-    //    ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-    //    
-    //    ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-    //    
-    //    if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-    //        counter++;
-    //    ImGui::SameLine();
-    //    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-    //    ImGui::Text("counter = %d", counter);
-
-    //    ImGui::End();
-    //}
-    record_ui_callback();
+    if(MFA_PTR_VALID(record_ui_callback)) {
+        record_ui_callback();
+    }
     ImGui::Render();
     auto * draw_data = ImGui::GetDrawData();
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
@@ -395,18 +383,21 @@ void OnNewFrame(
             // Create or resize the vertex/index buffers
             size_t const vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
             size_t const index_size = draw_data->TotalIdxCount * sizeof(ImDrawIdx);
+            // Not necessary needed
+            //vertex_size = ((vertex_size - 1) / g_BufferMemoryAlignment + 1) * g_BufferMemoryAlignment;
+            //index_size = ((index_size - 1) / g_BufferMemoryAlignment + 1) * g_BufferMemoryAlignment;
             auto vertex_data = MFA::Memory::Alloc(vertex_size);
             MFA_DEFER {MFA::Memory::Free(vertex_data);};
             auto index_data = MFA::Memory::Alloc(index_size);
             MFA_DEFER {MFA::Memory::Free(index_data);};
             {
-                Byte * vertex_ptr = vertex_data.ptr;
-                Byte * index_ptr = index_data.ptr;
+                ImDrawVert * vertex_ptr = reinterpret_cast<ImDrawVert *>(vertex_data.ptr);
+                ImDrawIdx * index_ptr = reinterpret_cast<ImDrawIdx *>(index_data.ptr);
                 for (int n = 0; n < draw_data->CmdListsCount; n++)
                 {
-                    const ImDrawList* cmd_list = draw_data->CmdLists[n];
-                    memcpy(vertex_ptr, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
-                    memcpy(index_ptr, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
+                    const ImDrawList * cmd_list = draw_data->CmdLists[n];
+                    ::memcpy(vertex_ptr, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
+                    ::memcpy(index_ptr, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
                     vertex_ptr += cmd_list->VtxBuffer.Size;
                     index_ptr += cmd_list->IdxBuffer.Size;
                 }
@@ -496,7 +487,7 @@ void OnNewFrame(
                 const ImDrawList* cmd_list = draw_data->CmdLists[n];
                 for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
                 {
-                    const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+                    const ImDrawCmd * pcmd = &cmd_list->CmdBuffer[cmd_i];
                     
                     // Project scissor/clipping rectangles into frame-buffer space
                     ImVec4 clip_rect;
@@ -516,12 +507,12 @@ void OnNewFrame(
                         // Apply scissor/clipping rectangle
                         VkRect2D scissor {
                             .offset {
-                                .x = static_cast<int32_t>(clip_rect.x),
-                                .y = static_cast<int32_t>(clip_rect.y)
+                                .x = static_cast<I32>(clip_rect.x),
+                                .y = static_cast<I32>(clip_rect.y)
                             },
                             .extent {
-                                .width = static_cast<uint32_t>(clip_rect.z - clip_rect.x),
-                                .height = static_cast<uint32_t>(clip_rect.w - clip_rect.y)
+                                .width = static_cast<U32>(clip_rect.z - clip_rect.x),
+                                .height = static_cast<U32>(clip_rect.w - clip_rect.y)
                             }
                         };
                         RF::SetScissor(draw_pass, scissor);

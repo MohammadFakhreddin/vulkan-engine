@@ -393,6 +393,7 @@ struct CreateGraphicPipelineOptions {
     };
     U8 push_constants_range_count = 0;
     VkPushConstantRange * push_constant_ranges = nullptr;
+    bool use_static_viewport_and_scissor = true;
 };
 // Note Shaders can be removed after creating graphic pipeline
 [[nodiscard]]
