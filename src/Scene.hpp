@@ -1,3 +1,0 @@
-namespace MFA::Scene {
-    // TODO
-}

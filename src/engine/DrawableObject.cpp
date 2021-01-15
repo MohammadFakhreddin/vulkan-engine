@@ -10,9 +10,9 @@ DrawableObject::DrawableObject(
     size_t const uniform_buffer_size,
     VkDescriptorSetLayout_T * descriptor_set_layout
 )
-    : m_mesh_buffers(mesh_buffers_)
-    , m_gpu_texture(gpu_texture_)
-    , m_sampler_group(sampler_group_)
+    : m_mesh_buffers(&mesh_buffers_)
+    , m_gpu_texture(&gpu_texture_)
+    , m_sampler_group(&sampler_group_)
     , m_descriptor_sets(RF::CreateDescriptorSets(descriptor_set_layout))
     , m_uniform_buffer_group(RF::CreateUniformBuffer(uniform_buffer_size))
     , m_is_valid(true)
@@ -35,15 +35,15 @@ void DrawableObject::draw(RF::DrawPass & draw_pass) {
         draw_pass,
         m_descriptor_sets.data(),
         m_uniform_buffer_group,
-        m_gpu_texture,
-        m_sampler_group
+        *m_gpu_texture,
+        *m_sampler_group
     );
     
-    BindVertexBuffer(draw_pass, m_mesh_buffers.vertices_buffer);
+    BindVertexBuffer(draw_pass, m_mesh_buffers->vertices_buffer);
 
-    BindIndexBuffer(draw_pass, m_mesh_buffers.indices_buffer);
+    BindIndexBuffer(draw_pass, m_mesh_buffers->indices_buffer);
 
-    DrawIndexed(draw_pass, m_mesh_buffers.indices_count);
+    DrawIndexed(draw_pass, m_mesh_buffers->indices_count);
 }
 
 void DrawableObject::update_uniform_buffer(RF::DrawPass const & draw_pass, CBlob const ubo) const {
