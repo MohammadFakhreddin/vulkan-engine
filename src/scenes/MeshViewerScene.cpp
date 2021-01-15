@@ -9,7 +9,6 @@ namespace RF = MFA::RenderFrontend;
 namespace RB = MFA::RenderBackend;
 namespace Importer = MFA::Importer;
 namespace Asset = MFA::Asset;
-namespace UI = MFA::UISystem;
 
 class MeshViewer final : public MFA::Scene {
     struct UniformBufferObject {

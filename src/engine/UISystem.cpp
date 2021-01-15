@@ -383,9 +383,6 @@ void OnNewFrame(
             // Create or resize the vertex/index buffers
             size_t const vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
             size_t const index_size = draw_data->TotalIdxCount * sizeof(ImDrawIdx);
-            // Not necessary needed
-            //vertex_size = ((vertex_size - 1) / g_BufferMemoryAlignment + 1) * g_BufferMemoryAlignment;
-            //index_size = ((index_size - 1) / g_BufferMemoryAlignment + 1) * g_BufferMemoryAlignment;
             auto vertex_data = MFA::Memory::Alloc(vertex_size);
             MFA_DEFER {MFA::Memory::Free(vertex_data);};
             auto index_data = MFA::Memory::Alloc(index_size);
