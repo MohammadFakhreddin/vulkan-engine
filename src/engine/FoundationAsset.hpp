@@ -234,31 +234,56 @@ struct Indices {
 #pragma pack(pop)
 #pragma warning (pop)
 }
-
+#pragma warning (push)
+#pragma warning (disable: 4200)         // Non-standard extension used: zero-sized array in struct
+#pragma pack(push)
 struct Header {
-    uint32_t vertex_count;
-    uint32_t index_count;
-    uint32_t vertices_offset;       // From start of asset
-    uint32_t indices_offset;        // From start of asset
+    using SubMeshIndexType = U32;
+    struct SubMesh {
+        U32 vertex_count;
+        U32 index_count;
+        U64 vertices_offset;       // From start of asset
+        U64 indices_offset;        // From start of asset 
+    };
+    SubMeshIndexType sub_mesh_count = 0;
+    SubMesh sub_meshes [];
     [[nodiscard]]
-    static size_t Size() {
-        return sizeof(Header);
+    static size_t ComputeHeaderSize(U32 const sub_mesh_count) {
+        return sizeof(Header) + sizeof(SubMesh) * sub_mesh_count;
     }
     [[nodiscard]]
     static size_t ComputeAssetSize(
-        U32 const vertex_count, 
-        U32 const index_count
+        size_t const header_size,
+        U32 const total_vertices_count,
+        U32 const total_indices_count
     ) {
-        return Size()
-            + vertex_count * sizeof(Data::Vertices::Vertex)
-            + index_count * sizeof(Data::Indices::IndexType);    
+        MFA_ASSERT(header_size > 0);
+        MFA_ASSERT(total_vertices_count > 0);
+        MFA_ASSERT(total_indices_count > 0);
+        size_t const total_size = header_size + total_vertices_count * sizeof(Data::Vertices::Vertex)
+            + total_indices_count * sizeof(Data::Indices::IndexType);
+        return total_size;
+    }
+    [[nodiscard]]
+    static size_t ComputeAssetSizeWithoutHeaderSize(
+        SubMeshIndexType const sub_mesh_count,
+        U32 const total_vertices_count,
+        U32 const total_indices_count
+    ) {
+        MFA_ASSERT(sub_mesh_count > 0);
+        MFA_ASSERT(total_vertices_count > 0);
+        MFA_ASSERT(total_indices_count > 0);
+        auto const header_size = ComputeHeaderSize(sub_mesh_count);
+        return ComputeAssetSize(header_size, total_vertices_count, total_indices_count);
     }
     [[nodiscard]]
     bool is_valid() const {
         // TODO
-        return true;
+        return sub_mesh_count > 0;
     }
 };
+#pragma pack(pop)
+#pragma warning (pop)
 }
 
 using MeshVertices = Mesh::Data::Vertices;
@@ -310,9 +335,17 @@ public:
     [[nodiscard]]
     virtual size_t compute_header_size() const = 0;
     [[nodiscard]]
-    CBlob data() const {
-        auto const header_size = compute_header_size();
+    CBlob data_cblob() const {
+        auto const & blob = data_blob();
         return CBlob {
+            blob.ptr,
+            blob.len
+        };
+    }
+    [[nodiscard]]
+    Blob data_blob() const {
+        auto const header_size = compute_header_size();
+        return Blob {
             m_asset.ptr + header_size,
             m_asset.len - header_size
         };
@@ -390,52 +423,47 @@ public:
     explicit MeshAsset(Blob const asset_) : GenericAsset(asset_) {}
     [[nodiscard]]
     size_t compute_header_size() const override {
-        return Mesh::Header::Size();
+        auto const * header = header_object();
+        return MeshHeader::ComputeHeaderSize(header->sub_mesh_count);
     }
     [[nodiscard]]
     MeshHeader const * header_object() const {
-        return header_blob().as<Mesh::Header>();
+        return reinterpret_cast<MeshHeader const *>(asset().ptr);
     }
     [[nodiscard]]
-    MeshVertices const * vertices() const {
-        auto const * header = header_object();
-        return reinterpret_cast<MeshVertices const *>(asset().ptr + header->vertices_offset);
+    MeshVertices const * vertices(MeshHeader::SubMeshIndexType const sub_mesh_index) const {
+        return vertices_cblob(sub_mesh_index).as<MeshVertices>();
     }
     [[nodiscard]]
-    CBlob vertices_cblob() const {
-        auto const * header = header_object();
-        return CBlob {
-            asset().ptr + header->vertices_offset,
-            header_object()->vertex_count * sizeof(Mesh::Data::Vertices::Vertex)
-        };
+    CBlob vertices_cblob(MeshHeader::SubMeshIndexType const sub_mesh_index) const {
+        auto const blob = vertices_blob(sub_mesh_index);
+        return CBlob {blob.ptr, blob.len};
     }
     [[nodiscard]]
-    Blob vertices_blob() const {
+    Blob vertices_blob(MeshHeader::SubMeshIndexType const sub_mesh_index) const {
         auto const * header = header_object();
+        auto const & sub_mesh = header->sub_meshes[sub_mesh_index];
         return Blob {
-            asset().ptr + header->vertices_offset,
-            header_object()->vertex_count * sizeof(Mesh::Data::Vertices::Vertex)
+            asset().ptr + sub_mesh.vertices_offset,
+            sub_mesh.vertex_count * sizeof(Mesh::Data::Vertices::Vertex)
         };
     }
     [[nodiscard]]
-    MeshIndices const * indices() const {
-        auto const * header = header_object();
-        return reinterpret_cast<MeshIndices const *>(asset().ptr + header->indices_offset);
+    MeshIndices const * indices(MeshHeader::SubMeshIndexType const sub_mesh_index) const {
+        return indices_cblob(sub_mesh_index).as<MeshIndices>();
     }
     [[nodiscard]]
-    CBlob indices_cblob() const {
-        auto const * header = header_object();
-        return CBlob {
-            asset().ptr + header->indices_offset,
-            header_object()->index_count * sizeof(Mesh::Data::Indices::IndexType)
-        };
+    CBlob indices_cblob(MeshHeader::SubMeshIndexType const sub_mesh_index) const {
+        auto const blob = indices_blob(sub_mesh_index);
+        return CBlob {blob.ptr, blob.len};
     }
     [[nodiscard]]
-    Blob indices_blob() const {
+    Blob indices_blob(MeshHeader::SubMeshIndexType const sub_mesh_index) const {
         auto const * header = header_object();
+        auto const & sub_mesh = header->sub_meshes[sub_mesh_index];
         return Blob {
-            asset().ptr + header->indices_offset,
-            header_object()->index_count * sizeof(Mesh::Data::Indices::IndexType)
+            asset().ptr + sub_mesh.indices_offset,
+            sub_mesh.index_count * sizeof(Mesh::Data::Indices::IndexType)
         };
     }
     [[nodiscard]]

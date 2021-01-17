@@ -79,9 +79,9 @@ void UpdateDescriptorSets(
 // TODO AdvanceBindingDescriptorSetWriteInfo
 
 struct MeshBuffers {
-    RB::BufferGroup vertices_buffer;
-    RB::BufferGroup indices_buffer;
-    U32 indices_count;
+    std::vector<RB::BufferGroup> vertices_buffers;   // Organized by sub-mesh index
+    std::vector<RB::BufferGroup> indices_buffers;    // Organized by sub-mesh index
+    std::vector<Asset::Mesh::Header::SubMeshIndexType> indices_count;
     Asset::MeshAsset mesh_asset {};
 };
 

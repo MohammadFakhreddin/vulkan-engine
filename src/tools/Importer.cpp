@@ -5,6 +5,7 @@
 #include "../tools/ImageUtils.hpp"
 #include "libs/stb_image/stb_image_resize.h"
 #include "libs/tiny_obj_loader/tiny_obj_loader.h"
+#include "libs/tiny_gltf_loader/tiny_gltf_loader.h"
 
 namespace MFA::Importer {
 
@@ -222,14 +223,16 @@ Asset::MeshAsset ImportObj(char const * path) {
 
             tinyobj::attrib_t attributes;
             std::vector<tinyobj::shape_t> shapes;
+            std::vector<tinyobj::material_t> materials;
             std::string error;
             auto const load_obj_result = tinyobj::LoadObj(
                 &attributes,
                 &shapes,
-                nullptr,
+                &materials,
                 &error, 
                 path
             );
+            // TODO Handle materials
             if(load_obj_result) {
                 if(shapes.empty()) {
                     MFA_CRASH( "Object has no shape");
@@ -243,16 +246,22 @@ Asset::MeshAsset ImportObj(char const * path) {
                 if (0 != shapes[0].mesh.indices.size() % 3) {
                     MFA_CRASH("Indices must be dividable by 3");
                 }
-                if (attributes.vertices.size() / 3 != attributes.texcoords.size() / 2) {
+                auto positions_count = attributes.vertices.size() / 3;
+                auto coords_count = attributes.texcoords.size() / 2;
+                auto normals_count = attributes.normals.size() / 3;
+                if (positions_count != coords_count) {
                     MFA_CRASH("Vertices and texture coordinates must have same size");
                 }
+                // TODO I think normals have issues
                 struct Position {
                     float value[3];
                 };
-                std::vector<Position> positions {attributes.vertices.size() / 2};
+                auto positions_blob = Memory::Alloc(sizeof(Position) * positions_count);
+                MFA_DEFER {Memory::Free(positions_blob);};
+                auto * positions = positions_blob.as<Position>();
                 for(
                     uintmax_t vertex_index = 0; 
-                    vertex_index < attributes.vertices.size() / 3; 
+                    vertex_index < positions_count; 
                     vertex_index ++
                 ) {
                     positions[vertex_index].value[0] = attributes.vertices[vertex_index * 3 + 0];
@@ -262,18 +271,37 @@ Asset::MeshAsset ImportObj(char const * path) {
                 struct TextureCoordinates {
                     float value[2];
                 };
-                std::vector<TextureCoordinates> coords {attributes.texcoords.size() / 2};
+                auto coords_blob = Memory::Alloc(sizeof(TextureCoordinates) * coords_count);
+                MFA_DEFER {Memory::Free(coords_blob);};
+                auto * coords = coords_blob.as<TextureCoordinates>();
                 for(
                     uintmax_t tex_index = 0; 
-                    tex_index < attributes.texcoords.size() / 2; 
+                    tex_index < coords_count; 
                     tex_index ++
                 ) {
                     coords[tex_index].value[0] = attributes.texcoords[tex_index * 2 + 0];
                     coords[tex_index].value[1] = attributes.texcoords[tex_index * 2 + 1];
                 }
-                auto const vertices_count = static_cast<U32>(shapes[0].mesh.indices.size());
+                struct Normals {
+                    float value[3];
+                };
+                auto normals_blob = Memory::Alloc(sizeof(Normals) * normals_count);
+                MFA_DEFER {Memory::Free(normals_blob);};
+                auto * normals = normals_blob.as<Normals>();
+                for(
+                    uintmax_t normal_index = 0; 
+                    normal_index < normals_count; 
+                    normal_index ++
+                ) {
+                    normals[normal_index].value[0] = attributes.normals[normal_index * 3 + 0];
+                    normals[normal_index].value[1] = attributes.normals[normal_index * 3 + 1];
+                    normals[normal_index].value[2] = attributes.normals[normal_index * 3 + 2];
+                }
+                auto const vertices_count = static_cast<U32>(positions_count);
                 auto const indices_count = static_cast<U32>(shapes[0].mesh.indices.size());
+                auto const header_size = Asset::MeshHeader::ComputeHeaderSize(1);
                 auto mesh_asset_blob = Memory::Alloc(Asset::MeshHeader::ComputeAssetSize(
+                    header_size,
                     vertices_count,      // For Vertices // TODO Recheck this part again
                     indices_count
                 ));
@@ -282,14 +310,17 @@ Asset::MeshAsset ImportObj(char const * path) {
                         Memory::Free(mesh_asset_blob);
                     }
                 };
+                // TODO Multiple mesh support
                 mesh_asset = Asset::MeshAsset(mesh_asset_blob);
                 auto * mesh_header = mesh_asset_blob.as<Asset::MeshHeader>();
-                mesh_header->vertex_count = vertices_count;
-                mesh_header->vertices_offset = sizeof(Asset::MeshHeader);
-                mesh_header->index_count = indices_count;
-                mesh_header->indices_offset = sizeof(Asset::MeshHeader) + vertices_count * sizeof(Asset::MeshVertices::Vertex);
-                auto * mesh_vertices = mesh_asset.vertices_blob().as<Asset::MeshVertices>()->vertices;
-                auto * mesh_indices = mesh_asset.indices_blob().as<Asset::MeshIndices>()->indices;
+                mesh_header->sub_mesh_count = 1;
+                mesh_header->sub_meshes[0].vertex_count = vertices_count;
+                mesh_header->sub_meshes[0].vertices_offset = header_size;
+                mesh_header->sub_meshes[0].index_count = indices_count;
+                mesh_header->sub_meshes[0].indices_offset = header_size + vertices_count * sizeof(Asset::MeshVertices::Vertex);
+                auto * mesh_vertices = mesh_asset.vertices_blob(0).as<Asset::MeshVertices>()->vertices;
+                auto * mesh_indices = mesh_asset.indices_blob(0).as<Asset::MeshIndices>()->indices;
+                MFA_ASSERT(mesh_asset.indices_blob(0).ptr + mesh_asset.indices_blob(0).len == mesh_asset_blob.ptr + mesh_asset_blob.len);
                 for(
                     uintmax_t indices_index = 0;
                     indices_index < shapes[0].mesh.indices.size();
@@ -301,7 +332,9 @@ Asset::MeshAsset ImportObj(char const * path) {
                     ::memcpy(mesh_vertices[vertex_index].position, positions[vertex_index].value, sizeof(positions[vertex_index].value));
                     ::memcpy(mesh_vertices[vertex_index].uv, coords[uv_index].value, sizeof(coords[uv_index].value));
                     mesh_vertices[vertex_index].uv[1] = 1.0f - mesh_vertices[vertex_index].uv[1];
+                    ::memcpy(mesh_vertices[vertex_index].normal, normals[vertex_index].value, sizeof(normals[vertex_index].value));
                 }
+                
                 MFA_ASSERT(mesh_asset.valid());
                 if(true == mesh_asset.valid()) {
                     mesh_asset_blob = {};
@@ -315,10 +348,108 @@ Asset::MeshAsset ImportObj(char const * path) {
     }
     return mesh_asset;
 }
-
-Asset::MeshAsset ImportGLTF(char const * path) {
-    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+/*
+ *
+const tinygltf::Model& model;
+// Assuming you loaded the gltf model.
+ ...
+for each primitive in a mesh...
+const tinygltf::Accessor& accessor = model.accessors[primitive.attributes["POSITION"]];
+const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
+ *
+// cast to float type read only. Use accessor and bufview byte offsets to determine where position data 
+// is located in the buffer.
+const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
+// bufferView byteoffset + accessor byteoffset tells you where the actual position data is within the buffer. From there
+// you should already know how the data needs to be interpreted.
+const float* positions = reinterpret_cast<const float*>(&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
+// From here, you choose what you wish to do with this position data. In this case, we  will display it out.
+for (size_t i = 0; i < accessor.count; ++i) {
+          // Positions are Vec3 components, so for each vec3 stride, offset for x, y, and z.
+           std::cout << "(" << positions[i * 3 + 0] << ", "// x
+                            << positions[i * 3 + 1] << ", " // y
+                            << positions[i * 3 + 2] << ")" // z
+                            << "\n";
 }
+proceed to next primitive...
+ */
+//Asset::MeshAsset ImportMeshGLTF(char const * path) {
+//    Asset::MeshAsset mesh_asset {};
+//    using namespace tinygltf;
+//    TinyGLTF loader {};
+//    Model model;
+//    std::string error;
+//    std::string warning;
+//    auto const success = loader.LoadASCIIFromFile(&model, &error, &warning,  std::string(path));
+//    if(success) {
+//        struct FileContent {
+//            RawFile file;
+//            std::string uri;
+//        };
+//        std::vector<FileContent> file_contents {};
+//        auto search_for_uri = [&file_contents](std::string const & uri)->FileContent const * {
+//            FileContent const * result = nullptr;
+//            if(false == file_contents.empty()) {
+//                for(auto const & file_content : file_contents) {
+//                    if(file_content.uri == uri) {
+//                        result = &file_content;
+//                        break;
+//                    }
+//                }
+//            }
+//            if(false == MFA_PTR_VALID(result)) {
+//                // TODO I think it will crash, uri must be relative to path address
+//                auto const & raw_file = ReadRawFile(uri.c_str());
+//                MFA_REQUIRE(raw_file.valid());
+//                file_contents.emplace_back(FileContent {.file = raw_file, .uri = uri});
+//            }
+//            return result;
+//        };
+//        MFA_DEFER {
+//            if(false == file_contents.empty()) {
+//                for(auto & file_content : file_contents) {
+//                    FreeRawFile(&file_content.file);
+//                }
+//            }
+//        };
+//        if(model.meshes.empty()) {
+//            // Step1: Iterate over all meshes and gather required information for asset buffer
+//            // Step2: Fill asset buffer from model buffers
+//            for(auto & mesh : model.meshes) {
+//                if(false == mesh.primitives.empty()) {
+//                    for(auto & primitive : mesh.primitives) {
+//                        MFA_REQUIRE(primitive.indices < model.accessors.size());
+//                        auto const & accessor = model.accessors[primitive.indices];
+//                        MFA_REQUIRE(accessor.type == TINYGLTF_TYPE_SCALAR);
+//                        MFA_REQUIRE(accessor.bufferView < model.bufferViews.size());
+//                        auto const & buffer_view = model.bufferViews[accessor.bufferView];
+//                        MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
+//                        auto const & buffer = model.buffers[buffer_view.buffer];
+//                        if(false == buffer.data.empty()) {
+//                            MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+//                        } else if(false == buffer.uri.empty()) {
+//                            auto const * file_content = search_for_uri(buffer.uri);
+//                            MFA_PTR_ASSERT(file_content);
+//                            Blob indices_blob {
+//                                file_contents.data() + buffer_view.byteOffset,
+//                                accessor.count * buffer_view.byteStride
+//                            };
+//
+//                        }
+//                        // TODO Support material
+//                    }
+//                }
+//                //if(false == model.meshes[0].primitives[0].attributes.empty()) {
+//                    //for(auto & attribute : model.meshes[0].primitives[0].attributes) {
+//                        //attribute.second
+//                    //}
+//                //}
+//                //model.meshes[0].primitives[0].attributes.
+//            }
+//        }
+//    }
+//    return mesh_asset;
+//}
 
 // Temporary function for freeing imported assets // Resource system will be used instead
 bool FreeAsset(Asset::GenericAsset * asset) {

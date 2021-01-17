@@ -30,7 +30,7 @@ void DrawableObject::draw(RF::DrawPass & draw_pass) {
         draw_pass,
         m_descriptor_sets.data()
     );
-
+    // TODO Each mesh may have it's own texture Fuck! (Basically we need material support for that)
     RF::UpdateDescriptorSetsBasic(
         draw_pass,
         m_descriptor_sets.data(),
@@ -38,12 +38,13 @@ void DrawableObject::draw(RF::DrawPass & draw_pass) {
         *m_gpu_texture,
         *m_sampler_group
     );
-    
-    BindVertexBuffer(draw_pass, m_mesh_buffers->vertices_buffer);
 
-    BindIndexBuffer(draw_pass, m_mesh_buffers->indices_buffer);
+    for (U32 i = 0; i < m_mesh_buffers->indices_count.size(); i++) {
+        BindVertexBuffer(draw_pass, m_mesh_buffers->vertices_buffers[i]);
+        BindIndexBuffer(draw_pass, m_mesh_buffers->indices_buffers[i]);
+        DrawIndexed(draw_pass, m_mesh_buffers->indices_count[i]);
+    }
 
-    DrawIndexed(draw_pass, m_mesh_buffers->indices_count);
 }
 
 void DrawableObject::update_uniform_buffer(RF::DrawPass const & draw_pass, CBlob const ubo) const {

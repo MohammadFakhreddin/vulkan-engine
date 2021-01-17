@@ -403,9 +403,9 @@ void OnNewFrame(
                 RF::DestroyMeshBuffers(state.mesh_buffers[draw_pass.image_index]);
                 state.mesh_buffers_validation_status[draw_pass.image_index] = false;
             }
-            state.mesh_buffers[draw_pass.image_index].vertices_buffer = RF::CreateVertexBuffer(CBlob {vertex_data.ptr, vertex_data.len});
-            state.mesh_buffers[draw_pass.image_index].indices_buffer = RF::CreateIndexBuffer(CBlob {index_data.ptr, index_data.len});
-            state.mesh_buffers[draw_pass.image_index].indices_count = static_cast<U32>(draw_data->TotalIdxCount);
+            state.mesh_buffers[draw_pass.image_index].vertices_buffers.emplace_back(RF::CreateVertexBuffer(CBlob {vertex_data.ptr, vertex_data.len}));
+            state.mesh_buffers[draw_pass.image_index].indices_buffers.emplace_back(RF::CreateIndexBuffer(CBlob {index_data.ptr, index_data.len}));
+            state.mesh_buffers[draw_pass.image_index].indices_count.emplace_back(static_cast<U32>(draw_data->TotalIdxCount));
             state.mesh_buffers_validation_status[draw_pass.image_index] = true;
             // Setup desired Vulkan state
             // Bind pipeline and descriptor sets:
@@ -416,12 +416,12 @@ void OnNewFrame(
 
             RF::BindIndexBuffer(
                 draw_pass,
-                state.mesh_buffers[draw_pass.image_index].indices_buffer,
+                state.mesh_buffers[draw_pass.image_index].indices_buffers[0],
                 0,
                 sizeof(ImDrawIdx) == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
             RF::BindVertexBuffer(
                 draw_pass,
-                state.mesh_buffers[draw_pass.image_index].vertices_buffer
+                state.mesh_buffers[draw_pass.image_index].vertices_buffers[0]
             );
 
             // Update the Descriptor Set:

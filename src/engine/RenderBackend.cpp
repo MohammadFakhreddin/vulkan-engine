@@ -581,7 +581,7 @@ GpuTexture CreateTexture(
         auto const mip_count = cpu_texture_header->mip_count;
         auto const slice_count = cpu_texture_header->slices;
         auto const largest_mipmap_info = cpu_texture_header->mipmap_infos[0];
-        auto const data_blob = cpu_texture.data();
+        auto const data_blob = cpu_texture.data_cblob();
         MFA_BLOB_ASSERT(data_blob);
         // Create upload buffer
         auto upload_buffer_group = CreateBuffer(
@@ -1391,7 +1391,7 @@ GpuShader CreateShader(VkDevice_T * device, CpuShader const & cpu_shader) {
     GpuShader gpu_shader {};
     if(cpu_shader.valid()) {
         gpu_shader.m_cpu_shader = cpu_shader;
-        auto const shader_code = cpu_shader.data();
+        auto const shader_code = cpu_shader.data_cblob();
         VkShaderModuleCreateInfo create_info = {};
         create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         create_info.codeSize = shader_code.len;

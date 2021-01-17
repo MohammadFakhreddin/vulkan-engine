@@ -475,12 +475,15 @@ void DestroyUniformBuffer(UniformBufferGroup & uniform_buffer) {
 }
 
 MeshBuffers CreateMeshBuffers(Asset::MeshAsset const & mesh_asset) {
-    return MeshBuffers {
-        .vertices_buffer = CreateVertexBuffer(mesh_asset.vertices_cblob()),
-        .indices_buffer = CreateIndexBuffer(mesh_asset.indices_cblob()),
-        .indices_count = mesh_asset.header_object()->index_count,
-        .mesh_asset = mesh_asset
-    };
+    MFA_ASSERT(mesh_asset.valid());
+    MeshBuffers buffers {.mesh_asset = mesh_asset};
+    auto const * header_object = mesh_asset.header_object();
+    for (U32 i = 0; i < header_object->sub_mesh_count; i++) {
+        buffers.vertices_buffers.emplace_back(CreateVertexBuffer(mesh_asset.vertices_cblob(i)));
+        buffers.indices_buffers.emplace_back(CreateIndexBuffer(mesh_asset.indices_cblob(i)));
+        buffers.indices_count.emplace_back(header_object->sub_meshes[i].index_count);
+    }
+    return buffers;
 }
 
 RB::BufferGroup CreateVertexBuffer(CBlob const vertices_blob) {
@@ -504,14 +507,20 @@ RB::BufferGroup CreateIndexBuffer(CBlob const indices_blob) {
 }
 
 void DestroyMeshBuffers(MeshBuffers & mesh_buffers) {
-    RB::DestroyIndexBuffer(
-        state.logical_device.device,
-        mesh_buffers.indices_buffer
-    );
-    RB::DestroyVertexBuffer(
-        state.logical_device.device,
-        mesh_buffers.vertices_buffer
-    );
+    MFA_ASSERT(mesh_buffers.vertices_buffers.size() == mesh_buffers.indices_buffers.size());
+    for (U32 i = 0; i < mesh_buffers.vertices_buffers.size(); i++) {
+        RB::DestroyBuffer(
+            state.logical_device.device,
+            mesh_buffers.vertices_buffers[i]
+        );
+        RB::DestroyBuffer(
+            state.logical_device.device,
+            mesh_buffers.indices_buffers[i]
+        );
+    }
+    mesh_buffers.vertices_buffers.resize(0);
+    mesh_buffers.indices_buffers.resize(0);
+    mesh_buffers.indices_count.resize(0);
 }
 
 RB::GpuTexture CreateTexture(Asset::TextureAsset & texture_asset) {

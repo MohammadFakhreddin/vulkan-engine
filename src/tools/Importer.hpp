@@ -36,12 +36,14 @@ Asset::TextureAsset ImportInMemoryTexture(
 // TODO
 [[nodiscard]]
 Asset::TextureAsset ImportDDSFile(char const * path);
-
+/*
+ * Due to lack of material support, OBJ files are not very useful
+ */
 [[nodiscard]]
 Asset::MeshAsset ImportObj(char const * path);
 
 [[nodiscard]]
-Asset::MeshAsset ImportGLTF(char const * path);
+Asset::MeshAsset ImportMeshGLTF(char const * path);
 
 [[nodiscard]]
 Asset::ShaderAsset ImportShaderFromHLSL(char const * path);
