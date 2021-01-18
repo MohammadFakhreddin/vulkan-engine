@@ -8,7 +8,7 @@
 #include "../engine/BedrockFileSystem.hpp"
 
 namespace MFA::Utils {
-using TextureFormat = Asset::TextureFormat;
+using TextureFormat = AssetSystem::TextureFormat;
     namespace UncompressedTexture {
 
 static constexpr const char * SystemName = "UncompressedImage";
@@ -18,7 +18,7 @@ struct Data {
     I32 height = 0;
     I32 stbi_components = 0;
     Blob stbi_pixels;
-    Asset::TextureFormat format = TextureFormat::INVALID;
+    AssetSystem::TextureFormat format = TextureFormat::INVALID;
     Blob pixels;
     U32 components = 0;
     [[nodiscard]]
@@ -262,7 +262,7 @@ struct Data {
     uint8_t mipmap_count = 0;                       // Number of mipmaps
     uint8_t depth = 0;
     uint8_t dimension = 0;
-    TextureFormat format = Asset::TextureFormat::INVALID;
+    TextureFormat format = AssetSystem::TextureFormat::INVALID;
     bool valid = false;
     Blob asset {};
     Blob data_offset_in_asset {};
@@ -310,7 +310,7 @@ ComputeMipmapLen(
         case TextureFormat::UNCOMPRESSED_UNORM_R8_LINEAR:
         case TextureFormat::UNCOMPRESSED_UNORM_R8_SRGB:
             texture_type = TextureType::Raw;
-            raw_bytes_per_pixel = Asset::Texture::FormatTable[static_cast<uint8_t>(format)].bits_total / 8;
+            raw_bytes_per_pixel = AssetSystem::Texture::FormatTable[static_cast<uint8_t>(format)].bits_total / 8;
         break;
         default:
             // Means that format is unsupported by engine

@@ -8,7 +8,7 @@
 namespace RF = MFA::RenderFrontend;
 namespace RB = MFA::RenderBackend;
 namespace Importer = MFA::Importer;
-namespace Asset = MFA::Asset;
+namespace Asset = MFA::AssetSystem;
 
 class MeshViewer final : public MFA::Scene {
     struct UniformBufferObject {
@@ -40,7 +40,7 @@ public:
         MFA_ASSERT(gpu_viking_texture.valid());
         cpu_vertex_shader = Importer::ImportShaderFromSPV(
             "../assets/shaders/vert.spv", 
-            MFA::Asset::Shader::Stage::Vertex, 
+            MFA::AssetSystem::Shader::Stage::Vertex, 
             "main"
         );
         MFA_ASSERT(cpu_vertex_shader.valid());
@@ -48,7 +48,7 @@ public:
         MFA_ASSERT(gpu_vertex_shader.valid());
         fragment_shader = Importer::ImportShaderFromSPV(
             "../assets/shaders/frag.spv",
-            MFA::Asset::Shader::Stage::Fragment,
+            MFA::AssetSystem::Shader::Stage::Fragment,
             "main"
         );
         gpu_fragment_shader = RF::CreateShader(fragment_shader);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "../engine/FoundationAsset.hpp"
 
 namespace MFA::Importer {
@@ -14,17 +16,17 @@ struct ImportTextureOptions {
 };
 
 [[nodiscard]]
-Asset::TextureAsset ImportUncompressedImage(
+AssetSystem::TextureAsset ImportUncompressedImage(
     char const * path, 
     ImportTextureOptions const & options = {}
 );
 
 [[nodiscard]]
-Asset::TextureAsset ImportInMemoryTexture(
+AssetSystem::TextureAsset ImportInMemoryTexture(
     CBlob pixels,
     I32 width,
     I32 height,
-    Asset::TextureFormat format,
+    AssetSystem::TextureFormat format,
     U32 components,
     U16 depth = 1,
     I32 slices = 1,
@@ -35,35 +37,39 @@ Asset::TextureAsset ImportInMemoryTexture(
 
 // TODO
 [[nodiscard]]
-Asset::TextureAsset ImportDDSFile(char const * path);
+AssetSystem::TextureAsset ImportDDSFile(char const * path);
 /*
- * Due to lack of material support, OBJ files are not very useful
+ * Due to lack of material support, OBJ files are not very useful (Deprecated)
  */
 [[nodiscard]]
-Asset::MeshAsset ImportObj(char const * path);
+AssetSystem::MeshAsset ImportObj(char const * path);
+
+struct ImportMeshResult {
+    AssetSystem::MeshAsset mesh_asset;
+    std::vector<AssetSystem::TextureAsset> textures;
+};
+[[nodiscard]]
+ImportMeshResult ImportMeshGLTF(char const * path);
 
 [[nodiscard]]
-Asset::MeshAsset ImportMeshGLTF(char const * path);
+AssetSystem::ShaderAsset ImportShaderFromHLSL(char const * path);
 
 [[nodiscard]]
-Asset::ShaderAsset ImportShaderFromHLSL(char const * path);
-
-[[nodiscard]]
-Asset::ShaderAsset ImportShaderFromSPV(
+AssetSystem::ShaderAsset ImportShaderFromSPV(
     char const * path,
-    Asset::ShaderStage stage,
+    AssetSystem::ShaderStage stage,
     char const * entry_point
 );
 
 [[nodiscard]]
-Asset::ShaderAsset ImportShaderFromSPV(
+AssetSystem::ShaderAsset ImportShaderFromSPV(
     CBlob data_memory,
-    Asset::ShaderStage const stage,
+    AssetSystem::ShaderStage const stage,
     char const * entry_point
 );
 
 // Temporary function for freeing imported assets
-bool FreeAsset(Asset::GenericAsset * asset);
+bool FreeAsset(AssetSystem::GenericAsset * asset);
 
 //------------------------------RawFile------------------------------------
 

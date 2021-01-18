@@ -274,7 +274,7 @@ DrawPipeline CreateBasicDrawPipeline(
     MFA_PTR_VALID(descriptor_set_layout);
     VkVertexInputBindingDescription const vertex_binding_description {
         .binding = 0,
-        .stride = sizeof(Asset::MeshVertices::Vertex),
+        .stride = sizeof(AssetSystem::MeshVertices::Vertex),
         .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
     };
     std::vector<VkVertexInputAttributeDescription> input_attribute_descriptions {4};
@@ -282,25 +282,25 @@ DrawPipeline CreateBasicDrawPipeline(
         .location = 0,
         .binding = 0,
         .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertices::Vertex, position),
+        .offset = offsetof(AssetSystem::MeshVertices::Vertex, position),
     };
     input_attribute_descriptions[1] = VkVertexInputAttributeDescription {
         .location = 1,
         .binding = 0,
         .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertices::Vertex, normal)
+        .offset = offsetof(AssetSystem::MeshVertices::Vertex, normal)
     };
     input_attribute_descriptions[2] = VkVertexInputAttributeDescription {
         .location = 2,
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertices::Vertex, uv)
+        .offset = offsetof(AssetSystem::MeshVertices::Vertex, uv)
     };
     input_attribute_descriptions[3] = VkVertexInputAttributeDescription {
         .location = 3,
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertices::Vertex, color)
+        .offset = offsetof(AssetSystem::MeshVertices::Vertex, color)
     };
 
     return CreateDrawPipeline(
@@ -474,7 +474,7 @@ void DestroyUniformBuffer(UniformBufferGroup & uniform_buffer) {
     }
 }
 
-MeshBuffers CreateMeshBuffers(Asset::MeshAsset const & mesh_asset) {
+MeshBuffers CreateMeshBuffers(AssetSystem::MeshAsset const & mesh_asset) {
     MFA_ASSERT(mesh_asset.valid());
     MeshBuffers buffers {.mesh_asset = mesh_asset};
     auto const * header_object = mesh_asset.header_object();
@@ -523,7 +523,7 @@ void DestroyMeshBuffers(MeshBuffers & mesh_buffers) {
     mesh_buffers.indices_count.resize(0);
 }
 
-RB::GpuTexture CreateTexture(Asset::TextureAsset & texture_asset) {
+RB::GpuTexture CreateTexture(AssetSystem::TextureAsset & texture_asset) {
     auto const gpu_texture = RB::CreateTexture(
         texture_asset,
         state.logical_device.device,
@@ -844,7 +844,7 @@ void EndPass(DrawPass & draw_pass) {
 }
 
 [[nodiscard]]
-RB::GpuShader CreateShader(Asset::ShaderAsset const & shader_asset) {
+RB::GpuShader CreateShader(AssetSystem::ShaderAsset const & shader_asset) {
     return RB::CreateShader(
         state.logical_device.device,
         shader_asset
@@ -865,7 +865,7 @@ void SetViewport(DrawPass const & draw_pass, VkViewport const & viewport) {
 
 void PushConstants(
     DrawPass const & draw_pass, 
-    Asset::ShaderStage const shader_stage, 
+    AssetSystem::ShaderStage const shader_stage, 
     U32 const offset, 
     CBlob const data
 ) {

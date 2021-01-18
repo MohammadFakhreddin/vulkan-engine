@@ -1,5 +1,5 @@
 #include "FoundationAsset.hpp"
 
-namespace MFA::Asset {
+namespace MFA::AssetSystem {
     
 }

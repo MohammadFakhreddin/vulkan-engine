@@ -4,8 +4,9 @@
 #include "BedrockCommon.hpp"
 #include "BedrockMath.hpp"
 
-namespace MFA::Asset {
-// TODO We need hash functionality as well
+namespace MFA::AssetSystem {
+    class TextureAsset;
+    // TODO We need hash functionality as well
 enum class AssetType {
     INVALID     = 0,
     Texture     = 1,
@@ -213,6 +214,7 @@ namespace Data {
 #pragma warning (disable: 4200)         // Non-standard extension used: zero-sized array in struct
 #pragma pack(push)
 struct Vertices {
+    // TODO We might need to store these params separately
     using Position = float[3];
     using Normal = float[3];
     using UV = float[2];
@@ -243,7 +245,9 @@ struct Header {
         U32 vertex_count;
         U32 index_count;
         U64 vertices_offset;       // From start of asset
-        U64 indices_offset;        // From start of asset 
+        U64 indices_offset;        // From start of asset
+        TextureAsset * base_color_texture;
+        // TODO add other options (From material)
     };
     SubMeshIndexType sub_mesh_count = 0;
     SubMesh sub_meshes [];

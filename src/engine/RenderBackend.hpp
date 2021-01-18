@@ -14,8 +14,8 @@ namespace MFA::RenderBackend {
 
 using ScreenWidth = Platforms::ScreenSizeType;
 using ScreenHeight = Platforms::ScreenSizeType;
-using CpuTexture = Asset::TextureAsset;
-using CpuShader = Asset::ShaderAsset;
+using CpuTexture = AssetSystem::TextureAsset;
+using CpuShader = AssetSystem::ShaderAsset;
 
 // Vulkan functions
 
@@ -208,7 +208,7 @@ private:
 };
 
 [[nodiscard]]
-VkFormat ConvertCpuTextureFormatToGpu(Asset::TextureFormat cpu_format);
+VkFormat ConvertCpuTextureFormatToGpu(AssetSystem::TextureFormat cpu_format);
 
 void CopyBufferToImage(
     VkDevice_T * device,
@@ -425,7 +425,7 @@ void DestroyDescriptorSetLayout(
 );
 
 [[nodiscard]]
-VkShaderStageFlagBits ConvertAssetShaderStageToGpu(Asset::ShaderStage stage);
+VkShaderStageFlagBits ConvertAssetShaderStageToGpu(AssetSystem::ShaderStage stage);
 
 [[nodiscard]]
 BufferGroup CreateVertexBuffer(
@@ -579,7 +579,7 @@ void SetViewport(VkCommandBuffer_T * command_buffer, VkViewport const & viewport
 void PushConstants(
     VkCommandBuffer_T * command_buffer,
     VkPipelineLayout_T * pipeline_layout, 
-    Asset::ShaderStage shader_stage, 
+    AssetSystem::ShaderStage shader_stage, 
     U32 offset, 
     CBlob data
 );

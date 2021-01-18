@@ -17,7 +17,7 @@
 #define MFA_BLOB_ASSERT(blob)
 #endif
 
-#define MFA_REQUIRE(condition)          if(!condition) {MFA_CRASH("Condition failed");}; _assume(condition)
+#define MFA_REQUIRE(condition)          if(!(condition)) {MFA_CRASH("Condition failed");}; _assume(condition)
 #define MFA_NOT_IMPLEMENTED_YET(who)    throw std::runtime_error("Method not impelemented by " + std::string(who))
 
 #define MFA_CRASH(message, ...)         MFA_LOG_ERROR(message, __VA_ARGS__); throw std::runtime_error(message)

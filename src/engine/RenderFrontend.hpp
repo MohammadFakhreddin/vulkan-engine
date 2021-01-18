@@ -81,12 +81,12 @@ void UpdateDescriptorSets(
 struct MeshBuffers {
     std::vector<RB::BufferGroup> vertices_buffers;   // Organized by sub-mesh index
     std::vector<RB::BufferGroup> indices_buffers;    // Organized by sub-mesh index
-    std::vector<Asset::Mesh::Header::SubMeshIndexType> indices_count;
-    Asset::MeshAsset mesh_asset {};
+    std::vector<AssetSystem::Mesh::Header::SubMeshIndexType> indices_count;
+    AssetSystem::MeshAsset mesh_asset {};
 };
 
 [[nodiscard]]
-MeshBuffers CreateMeshBuffers(Asset::MeshAsset const & mesh_asset);
+MeshBuffers CreateMeshBuffers(AssetSystem::MeshAsset const & mesh_asset);
 
 void DestroyMeshBuffers(MeshBuffers & mesh_buffers);
 
@@ -97,7 +97,7 @@ RB::BufferGroup CreateVertexBuffer(CBlob vertices_blob);
 RB::BufferGroup CreateIndexBuffer(CBlob indices_blob);
 
 [[nodiscard]]
-RB::GpuTexture CreateTexture(Asset::TextureAsset & texture_asset);
+RB::GpuTexture CreateTexture(AssetSystem::TextureAsset & texture_asset);
 
 void DestroyTexture(RB::GpuTexture & gpu_texture);
 
@@ -113,7 +113,7 @@ void DestroySampler(SamplerGroup & sampler_group);
 void DeviceWaitIdle();
 
 [[nodiscard]]
-RB::GpuShader CreateShader(Asset::ShaderAsset const & shader_asset);
+RB::GpuShader CreateShader(AssetSystem::ShaderAsset const & shader_asset);
 
 void DestroyShader(RB::GpuShader & gpu_shader);
 
@@ -203,7 +203,7 @@ void SetViewport(DrawPass const & draw_pass, VkViewport const & viewport);
 
 void PushConstants(
     DrawPass const & draw_pass, 
-    Asset::ShaderStage shader_stage, 
+    AssetSystem::ShaderStage shader_stage, 
     U32 offset, 
     CBlob data
 );

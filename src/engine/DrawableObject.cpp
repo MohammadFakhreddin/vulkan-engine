@@ -3,6 +3,7 @@
 namespace MFA {
 // TODO We need RCMGMT very bad
 // We need other overrides for easier use as well
+// TODO Each submesh may have it's own textures, We need a data structure called GPUMesh to store all information
 DrawableObject::DrawableObject(
     RF::MeshBuffers & mesh_buffers_,
     RB::GpuTexture & gpu_texture_,

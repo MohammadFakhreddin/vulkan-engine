@@ -11,7 +11,7 @@ namespace MFA::Utils {
     namespace UncompressedTexture {
 
 LoadResult Load(Data & out_image_data, const char * path, bool const prefer_srgb) {
-    using namespace Asset;
+    using namespace AssetSystem;
     LoadResult ret = LoadResult::Invalid;
     auto * read_data = stbi_load(
         path,

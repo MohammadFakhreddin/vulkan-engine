@@ -173,7 +173,7 @@ void Init() {
     {// Vertex shader
         auto const shader_asset = Importer::ImportShaderFromSPV(
             CBlobAliasOf(vertex_shader_spv),
-            Asset::Shader::Stage::Vertex,
+            AssetSystem::Shader::Stage::Vertex,
             "main"
         );
         state.vertex_shader = RF::CreateShader(shader_asset);
@@ -183,7 +183,7 @@ void Init() {
     {// Fragment shader
         auto const shader_asset = Importer::ImportShaderFromSPV(
             CBlobAliasOf(fragment_shader_spv),
-            Asset::Shader::Stage::Fragment,
+            AssetSystem::Shader::Stage::Fragment,
             "main"
         );
         state.fragment_shader = RF::CreateShader(shader_asset);
@@ -294,7 +294,7 @@ void Init() {
             CBlob {pixels, image_size},
             width,
             height,
-            Asset::TextureFormat::UNCOMPRESSED_UNORM_R8G8B8A8_LINEAR,
+            AssetSystem::TextureFormat::UNCOMPRESSED_UNORM_R8G8B8A8_LINEAR,
             components_count,
             depth,
             slices,
@@ -465,7 +465,7 @@ void OnNewFrame(
                 constants.translate[1] = -1.0f - draw_data->DisplayPos.y * constants.scale[1];
                 RF::PushConstants(
                     draw_pass,
-                    Asset::Shader::Stage::Vertex,
+                    AssetSystem::Shader::Stage::Vertex,
                     0,
                     CBlobAliasOf(constants)
                 );

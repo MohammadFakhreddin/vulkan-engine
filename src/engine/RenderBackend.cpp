@@ -679,8 +679,8 @@ bool DestroyTexture(VkDevice_T * device, GpuTexture & gpu_texture) {
     return success;
 }
 
-VkFormat ConvertCpuTextureFormatToGpu(Asset::TextureFormat const cpu_format) {
-    using namespace Asset;
+VkFormat ConvertCpuTextureFormatToGpu(AssetSystem::TextureFormat const cpu_format) {
+    using namespace AssetSystem;
     switch (cpu_format)
     {
     case TextureFormat::UNCOMPRESSED_UNORM_R8_SRGB:
@@ -1605,13 +1605,13 @@ void DestroyDescriptorSetLayout(
     );
 }
 
-VkShaderStageFlagBits ConvertAssetShaderStageToGpu(Asset::ShaderStage const stage) {
+VkShaderStageFlagBits ConvertAssetShaderStageToGpu(AssetSystem::ShaderStage const stage) {
     switch(stage) {
-        case Asset::Shader::Stage::Vertex:
+        case AssetSystem::Shader::Stage::Vertex:
         return VK_SHADER_STAGE_VERTEX_BIT;
-        case Asset::Shader::Stage::Fragment:
+        case AssetSystem::Shader::Stage::Fragment:
         return VK_SHADER_STAGE_FRAGMENT_BIT;
-        case Asset::Shader::Stage::Invalid:
+        case AssetSystem::Shader::Stage::Invalid:
         default:
         MFA_CRASH("Unhandled shader stage");
     }
@@ -2053,7 +2053,7 @@ void SetViewport(VkCommandBuffer_T * command_buffer, VkViewport const & viewport
 void PushConstants(
     VkCommandBuffer_T * command_buffer,
     VkPipelineLayout_T * pipeline_layout, 
-    Asset::ShaderStage const shader_stage, 
+    AssetSystem::ShaderStage const shader_stage, 
     U32 const offset, 
     CBlob const data
 ) {
