@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "BedrockCommon.hpp"
 
 namespace MFA::FileSystem {
@@ -30,5 +32,7 @@ bool IsUsable(FileHandle * file);
 
 [[nodiscard]]
 FILE * GetCHandle(FileHandle * file);
+
+std::string ExtractDirectoryFromPath(char const * path);
 
 }; // MFA::FileSystem

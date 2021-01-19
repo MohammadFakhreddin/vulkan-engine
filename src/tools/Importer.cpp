@@ -382,43 +382,16 @@ ImportMeshResult ImportMeshGLTF(char const * path) {
     std::string warning;
     auto const success = loader.LoadASCIIFromFile(&model, &error, &warning,  std::string(path));
     if(success) {
-        //struct FileContent {
-        //    RawFile file;
-        //    std::string uri;
-        //};
-        //std::vector<FileContent> file_contents {};
-        //auto search_for_uri = [&file_contents](std::string const & uri)->FileContent const * {
-        //    FileContent const * result = nullptr;
-        //    if(false == file_contents.empty()) {
-        //        for(auto const & file_content : file_contents) {
-        //            if(file_content.uri == uri) {
-        //                result = &file_content;
-        //                break;
-        //            }
-        //        }
-        //    }
-        //    if(false == MFA_PTR_VALID(result)) {
-        //        // TODO I think it will crash, uri must be relative to path address
-        //        auto const & raw_file = ReadRawFile(uri.c_str());
-        //        MFA_REQUIRE(raw_file.valid());
-        //        file_contents.emplace_back(FileContent {.file = raw_file, .uri = uri});
-        //    }
-        //    return result;
-        //};
-        //MFA_DEFER {
-        //    if(false == file_contents.empty()) {
-        //        for(auto & file_content : file_contents) {
-        //            FreeRawFile(&file_content.file);
-        //        }
-        //    }
-        //};
-        if(model.meshes.empty()) {
+        if(false == model.meshes.empty()) {
+            std::string base_path = FileSystem::ExtractDirectoryFromPath(path);
+            U32 sub_mesh_count = 0;
             // Step1: Iterate over all meshes and gather required information for asset buffer
             U32 total_indices_count = 0;
             U32 total_vertices_count = 0;
             for(auto & mesh : model.meshes) {
                 if(false == mesh.primitives.empty()) {
                     for(auto & primitive : mesh.primitives) {
+                        ++sub_mesh_count;
                         {// Indices
                             MFA_REQUIRE((primitive.indices < model.accessors.size()));
                             auto const & accessor = model.accessors[primitive.indices];
@@ -429,22 +402,10 @@ ImportMeshResult ImportMeshGLTF(char const * path) {
                             auto const & accessor = model.accessors[primitive.attributes["POSITION"]];
                             total_vertices_count += static_cast<U32>(accessor.count);
                         }
-                        /*MFA_REQUIRE(accessor.type == TINYGLTF_TYPE_SCALAR);
-                        MFA_REQUIRE(accessor.bufferView < model.bufferViews.size());
-                        auto const & buffer_view = model.bufferViews[accessor.bufferView];
-                        MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
-                        auto const & buffer = model.buffers[buffer_view.buffer];
-                        reinterpret_cast<const U32 *>(&buffer.data[buffer_view.byteOffset + accessor.byteOffset]);*/
                     }
                 }
-                //if(false == model.meshes[0].primitives[0].attributes.empty()) {
-                    //for(auto & attribute : model.meshes[0].primitives[0].attributes) {
-                        //attribute.second
-                    //}
-                //}
-                //model.meshes[0].primitives[0].attributes.
             }
-            auto const header_size = AssetSystem::MeshHeader::ComputeHeaderSize(static_cast<U32>(model.meshes.size()));
+            auto const header_size = AssetSystem::MeshHeader::ComputeHeaderSize(static_cast<U32>(sub_mesh_count));
             auto const asset_size = AssetSystem::MeshHeader::ComputeAssetSize(
                 header_size,
                 total_vertices_count,
@@ -461,15 +422,34 @@ ImportMeshResult ImportMeshGLTF(char const * path) {
             for(auto & mesh : model.meshes) {
                 if(false == mesh.primitives.empty()) {
                     for(auto & primitive : mesh.primitives) {
+                        U32 const * indices = nullptr;
+                        float const * positions = nullptr;
+                        float const * tex_coords = nullptr;
+                        float const * normals = nullptr;
+
+                        {// Material
+                            auto const & material = model.materials[primitive.material];
+                            auto const & base_color_gltf_texture = model.textures[material.pbrMetallicRoughness.baseColorTexture.index];
+                            // TODO: GLTF has support for sampler, Use sampler
+                            auto const & image = model.images[base_color_gltf_texture.source];
+                            std::string image_path = base_path + "/" + image.uri;
+                            auto base_color_texture = ImportUncompressedImage(image_path.c_str(), ImportTextureOptions {.generate_mipmaps = false});
+                            // TODO We should filter based on usage
+                        }
                         {// Indices
                             MFA_REQUIRE(primitive.indices < model.accessors.size());
                             auto const & accessor = model.accessors[primitive.indices];
                             auto const & buffer_view = model.bufferViews[accessor.bufferView];
                             MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
                             auto const & buffer = model.buffers[buffer_view.buffer];
-                            auto const * indices = reinterpret_cast<const U32 *>(
+                            indices = reinterpret_cast<const U32 *>(
                                 &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
                             );
+                            std::string message = "Indices count: " + std::to_string(accessor.count) + "\nData:\n";
+                            for (U32 i = 0; i < accessor.count; i++) {
+                                message += std::to_string(indices[i]) + " ";
+                            }
+                            MFA_LOG_INFO("%s", message.c_str());
                         }
                         {// Positions
                             MFA_REQUIRE(primitive.attributes["POSITION"] < model.accessors.size());
@@ -477,21 +457,40 @@ ImportMeshResult ImportMeshGLTF(char const * path) {
                             auto const & buffer_view = model.bufferViews[accessor.bufferView];
                             MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
                             auto const & buffer = model.buffers[buffer_view.buffer];
-                            auto const * positions = reinterpret_cast<const float *>(
+                            positions = reinterpret_cast<const float *>(
                                 &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
                             );
+                            std::string message = "Positions count: " + std::to_string(accessor.count) + "\nData:\n";
+                            for (U32 i = 0; i < accessor.count; i++) {
+                                message += std::to_string(positions[i]) + " ";
+                            }
+                            MFA_LOG_INFO("%s", message.c_str());
                         }
-                        if(primitive.attributes["TEXCOORD"] > 0) {//
-                            MFA_REQUIRE(primitive.attributes["TEXCOORD"] < model.accessors.size());
+                        if(primitive.attributes["TEXCOORD_0"] >= 0) {
+                            MFA_REQUIRE(primitive.attributes["TEXCOORD_0"] < model.accessors.size());
                             auto const & accessor = model.accessors[primitive.attributes["POSITION"]];
                             auto const & buffer_view = model.bufferViews[accessor.bufferView];
                             MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
                             auto const & buffer = model.buffers[buffer_view.buffer];
-                            auto const * tex_coords = reinterpret_cast<const float *>(
+                            tex_coords = reinterpret_cast<const float *>(
+                                &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
+                            );
+                            std::string message = "Coords count: " + std::to_string(accessor.count) + "\nData:\n";
+                            for (U32 i = 0; i < accessor.count; i++) {
+                                message += std::to_string(tex_coords[i]) + " ";
+                            }
+                            MFA_LOG_INFO("%s", message.c_str());
+                        }
+                        if(primitive.attributes["NORMAL"] >= 0) {
+                            MFA_REQUIRE(primitive.attributes["NORMAL"] < model.accessors.size());
+                            auto const & accessor = model.accessors[primitive.attributes["POSITION"]];
+                            auto const & buffer_view = model.bufferViews[accessor.bufferView];
+                            MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
+                            auto const & buffer = model.buffers[buffer_view.buffer];
+                            normals = reinterpret_cast<const float *>(
                                 &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
                             );
                         }
-                        // TODO Normal
                         // TODO Color
                         // TODO Start from here copy these values to mesh vertices
                     }

@@ -25,6 +25,7 @@ public:
     }
     void Init() override {
         // Importing assets
+        MFA_CONSUME_VAR(Importer::ImportMeshGLTF("../assets/bristleback/scene.gltf"));
         cpu_viking_mesh = Importer::ImportObj("../assets/viking/viking.obj");
         MFA_ASSERT(cpu_viking_mesh.valid());
         gpu_viking_mesh_buffers = RF::CreateMeshBuffers(cpu_viking_mesh);

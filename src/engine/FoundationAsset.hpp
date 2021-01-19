@@ -99,8 +99,20 @@ struct Header {
     U16             slices = 0;
     U8              mip_count = 0;
     U16             depth = 0;
+    struct Sampler {
+        bool is_valid = false;
+        enum class SampleMode {
+            Linear,
+            Nearest
+        };
+        SampleMode sample_mode = SampleMode::Linear;
+        U32 mag_filter = 0;
+        U32 min_filter = 0;
+        U32 wrap_s = 0;
+        U32 wrap_t = 0;
+    };
+    Sampler sampler {};
     MipmapInfo      mipmap_infos[];
-
     [[nodiscard]]
     size_t mip_offset_bytes (uint8_t const mip_level, uint8_t const slice_index = 0) const {
         size_t ret = 0;
