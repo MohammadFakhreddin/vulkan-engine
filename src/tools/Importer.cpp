@@ -146,6 +146,10 @@ AssetSystem::TextureAsset ImportInMemoryTexture(
     }
 
     auto texture = AssetSystem::TextureAsset(resource_blob);
+    if(MFA_PTR_VALID(options.sampler)) {
+        MFA_ASSERT(options.sampler->is_valid);
+        ::memcpy(&texture_descriptor->sampler, options.sampler, sizeof(&options.sampler));
+    }
     MFA_ASSERT(texture.valid());
     if(true == texture.valid()) {
         resource_blob = {};
@@ -383,7 +387,52 @@ ImportMeshResult ImportMeshGLTF(char const * path) {
     auto const success = loader.LoadASCIIFromFile(&model, &error, &warning,  std::string(path));
     if(success) {
         if(false == model.meshes.empty()) {
-            std::string base_path = FileSystem::ExtractDirectoryFromPath(path);
+            struct TextureRef {
+                std::string gltf_name;
+                AssetSystem::TextureAsset * ref;
+            };
+            std::vector<TextureRef> texture_refs {};
+            auto const find_texture_by_name = [&texture_refs](char const * gltf_name)-> AssetSystem::TextureAsset * {
+                MFA_PTR_ASSERT(gltf_name);
+                AssetSystem::TextureAsset * result = nullptr;
+                if(false == texture_refs.empty()) {
+                    for (auto const & texture_ref : texture_refs) {
+                        result = texture_ref.ref;
+                    }
+                }
+                return result;
+            };
+            std::string directory_path = FileSystem::ExtractDirectoryFromPath(path);
+            {// Extracting textures
+                if(false == model.textures.empty()) {
+                    for (auto const & texture : model.textures) {
+                        AssetSystem::TextureSampler sampler {.is_valid = false};
+                        {// Sampler
+                            auto const & gltf_sampler = model.samplers[texture.sampler];
+                            sampler.mag_filter = gltf_sampler.magFilter;
+                            sampler.min_filter = gltf_sampler.minFilter;
+                            sampler.wrap_s = gltf_sampler.wrapS;
+                            sampler.wrap_t = gltf_sampler.wrapT;
+                            //sampler.sample_mode = gltf_sampler. // TODO
+                            sampler.is_valid = true;
+                        }
+                        AssetSystem::TextureAsset texture_asset {};
+                        {// Texture
+                            auto const & image = model.images[texture.source];
+                            std::string image_path = directory_path + "/" + image.uri;
+                            texture_asset = ImportUncompressedImage(
+                                image_path.c_str(),
+                                // TODO generate_mipmaps = true;
+                                ImportTextureOptions {.generate_mipmaps = false, .sampler = &sampler}
+                            );
+                        }
+                        texture_refs.emplace_back(TextureRef {
+                            .gltf_name = texture.name,
+                            .ref = &texture_asset
+                        });
+                    }
+                }
+            }
             U32 sub_mesh_count = 0;
             // Step1: Iterate over all meshes and gather required information for asset buffer
             U32 total_indices_count = 0;
@@ -419,23 +468,78 @@ ImportMeshResult ImportMeshGLTF(char const * path) {
             };
             import_result.mesh_asset = AssetSystem::MeshAsset {asset_blob};
             // Step2: Fill asset buffer from model buffers
+            U32 sub_mesh_index = 0;
+            U64 vertices_offset = header_size;
+            U64 indices_offset = vertices_offset + total_vertices_count * sizeof(AssetSystem::MeshVertices::Vertex);
             for(auto & mesh : model.meshes) {
                 if(false == mesh.primitives.empty()) {
                     for(auto & primitive : mesh.primitives) {
+                        auto current_sub_mesh = import_result.mesh_asset.header_object()->sub_meshes[sub_mesh_index];
+                        ++ sub_mesh_index;
                         U32 const * indices = nullptr;
                         float const * positions = nullptr;
                         float const * tex_coords = nullptr;
                         float const * normals = nullptr;
-
+                        AssetSystem::TextureAsset * base_color_texture_ref = nullptr;
+                        /*
+                        // Append data to model's vertex buffer
+                        for (size_t v = 0; v < vertexCount; v++) {
+                            Vertex vert{};
+                            vert.pos = glm::vec4(glm::make_vec3(&positionBuffer[v * 3]), 1.0f);
+                            vert.normal = glm::normalize(glm::vec3(normalsBuffer ? glm::make_vec3(&normalsBuffer[v * 3]) : glm::vec3(0.0f)));
+                            vert.uv = texCoordsBuffer ? glm::make_vec2(&texCoordsBuffer[v * 2]) : glm::vec3(0.0f);
+                            vert.color = glm::vec3(1.0f);
+                            vertexBuffer.push_back(vert);
+                        }
+                        */
                         {// Material
                             auto const & material = model.materials[primitive.material];
-                            auto const & base_color_gltf_texture = model.textures[material.pbrMetallicRoughness.baseColorTexture.index];
-                            // TODO: GLTF has support for sampler, Use sampler
-                            auto const & image = model.images[base_color_gltf_texture.source];
-                            std::string image_path = base_path + "/" + image.uri;
-                            auto base_color_texture = ImportUncompressedImage(image_path.c_str(), ImportTextureOptions {.generate_mipmaps = false});
-                            // TODO We should filter based on usage
+                            {// Base color texture
+                                auto const & base_color_gltf_texture = model.textures[material.pbrMetallicRoughness.baseColorTexture.index];
+                                auto const & image = model.images[base_color_gltf_texture.source];
+                                base_color_texture_ref = find_texture_by_name(image.name.c_str());
+                            }
+                            // TODO Support other texture types as well
                         }
+                        // Indices: Sasha willems examples
+                        // {
+                        // 	const tinygltf::Accessor& accessor = input.accessors[glTFPrimitive.indices];
+                        // 	const tinygltf::BufferView& bufferView = input.bufferViews[accessor.bufferView];
+                        // 	const tinygltf::Buffer& buffer = input.buffers[bufferView.buffer];
+
+                        // 	indexCount += static_cast<uint32_t>(accessor.count);
+
+                        // 	// glTF supports different component types of indices
+                        // 	switch (accessor.componentType) {
+                        // 	case TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT: {
+                        // 		uint32_t* buf = new uint32_t[accessor.count];
+                        // 		memcpy(buf, &buffer.data[accessor.byteOffset + bufferView.byteOffset], accessor.count * sizeof(uint32_t));
+                        // 		for (size_t index = 0; index < accessor.count; index++) {
+                        // 			indexBuffer.push_back(buf[index] + vertexStart);
+                        // 		}
+                        // 		break;
+                        // 	}
+                        // 	case TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT: {
+                        // 		uint16_t* buf = new uint16_t[accessor.count];
+                        // 		memcpy(buf, &buffer.data[accessor.byteOffset + bufferView.byteOffset], accessor.count * sizeof(uint16_t));
+                        // 		for (size_t index = 0; index < accessor.count; index++) {
+                        // 			indexBuffer.push_back(buf[index] + vertexStart);
+                        // 		}
+                        // 		break;
+                        // 	}
+                        // 	case TINYGLTF_PARAMETER_TYPE_UNSIGNED_BYTE: {
+                        // 		uint8_t* buf = new uint8_t[accessor.count];
+                        // 		memcpy(buf, &buffer.data[accessor.byteOffset + bufferView.byteOffset], accessor.count * sizeof(uint8_t));
+                        // 		for (size_t index = 0; index < accessor.count; index++) {
+                        // 			indexBuffer.push_back(buf[index] + vertexStart);
+                        // 		}
+                        // 		break;
+                        // 	}
+                        // 	default:
+                        // 		std::cerr << "Index component type " << accessor.componentType << " not supported!" << std::endl;
+                        // 		return;
+                        // 	}
+                        // }
                         {// Indices
                             MFA_REQUIRE(primitive.indices < model.accessors.size());
                             auto const & accessor = model.accessors[primitive.indices];
@@ -445,11 +549,11 @@ ImportMeshResult ImportMeshGLTF(char const * path) {
                             indices = reinterpret_cast<const U32 *>(
                                 &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
                             );
-                            std::string message = "Indices count: " + std::to_string(accessor.count) + "\nData:\n";
-                            for (U32 i = 0; i < accessor.count; i++) {
-                                message += std::to_string(indices[i]) + " ";
-                            }
-                            MFA_LOG_INFO("%s", message.c_str());
+                            //std::string message = "Indices count: " + std::to_string(accessor.count) + "\nData:\n";
+                            //for (U32 i = 0; i < accessor.count; i++) {
+                            //    message += std::to_string(indices[i]) + " ";
+                            //}
+                            //MFA_LOG_INFO("%s", message.c_str());
                         }
                         {// Positions
                             MFA_REQUIRE(primitive.attributes["POSITION"] < model.accessors.size());
@@ -460,11 +564,11 @@ ImportMeshResult ImportMeshGLTF(char const * path) {
                             positions = reinterpret_cast<const float *>(
                                 &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
                             );
-                            std::string message = "Positions count: " + std::to_string(accessor.count) + "\nData:\n";
-                            for (U32 i = 0; i < accessor.count; i++) {
-                                message += std::to_string(positions[i]) + " ";
-                            }
-                            MFA_LOG_INFO("%s", message.c_str());
+                            //std::string message = "Positions count: " + std::to_string(accessor.count) + "\nData:\n";
+                            //for (U32 i = 0; i < accessor.count; i++) {
+                            //    message += std::to_string(positions[i]) + " ";
+                            //}
+                            //MFA_LOG_INFO("%s", message.c_str());
                         }
                         if(primitive.attributes["TEXCOORD_0"] >= 0) {
                             MFA_REQUIRE(primitive.attributes["TEXCOORD_0"] < model.accessors.size());
@@ -475,11 +579,11 @@ ImportMeshResult ImportMeshGLTF(char const * path) {
                             tex_coords = reinterpret_cast<const float *>(
                                 &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
                             );
-                            std::string message = "Coords count: " + std::to_string(accessor.count) + "\nData:\n";
-                            for (U32 i = 0; i < accessor.count; i++) {
-                                message += std::to_string(tex_coords[i]) + " ";
-                            }
-                            MFA_LOG_INFO("%s", message.c_str());
+                            //std::string message = "Coords count: " + std::to_string(accessor.count) + "\nData:\n";
+                            //for (U32 i = 0; i < accessor.count; i++) {
+                            //    message += std::to_string(tex_coords[i]) + " ";
+                            //}
+                            //MFA_LOG_INFO("%s", message.c_str());
                         }
                         if(primitive.attributes["NORMAL"] >= 0) {
                             MFA_REQUIRE(primitive.attributes["NORMAL"] < model.accessors.size());

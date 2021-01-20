@@ -12,6 +12,7 @@ namespace MFA::Importer {
 struct ImportTextureOptions {
     bool generate_mipmaps = true;
     bool prefer_srgb = false;       // Not tested and not recommended
+    AssetSystem::TextureHeader::Sampler * sampler = nullptr;
     // TODO Usage flags
 };
 
