@@ -235,7 +235,7 @@ struct Vertices {
     struct Vertex {
         Position position;
         Normal normal;
-        UV uv;
+        UV base_color_uv;
         Color color;
     };
     Vertex vertices[];
@@ -444,8 +444,16 @@ public:
         return MeshHeader::ComputeHeaderSize(header->sub_mesh_count);
     }
     [[nodiscard]]
+    MeshHeader * header_object() {
+        return reinterpret_cast<MeshHeader *>(asset().ptr);
+    }
+    [[nodiscard]]
     MeshHeader const * header_object() const {
         return reinterpret_cast<MeshHeader const *>(asset().ptr);
+    }
+    [[nodiscard]]
+    MeshVertices * vertices(MeshHeader::SubMeshIndexType const sub_mesh_index) {
+        return vertices_blob(sub_mesh_index).as<MeshVertices>();
     }
     [[nodiscard]]
     MeshVertices const * vertices(MeshHeader::SubMeshIndexType const sub_mesh_index) const {
@@ -464,6 +472,10 @@ public:
             asset().ptr + sub_mesh.vertices_offset,
             sub_mesh.vertex_count * sizeof(Mesh::Data::Vertices::Vertex)
         };
+    }
+    [[nodiscard]]
+    MeshIndices * indices(MeshHeader::SubMeshIndexType const sub_mesh_index) {
+        return indices_blob(sub_mesh_index).as<MeshIndices>();
     }
     [[nodiscard]]
     MeshIndices const * indices(MeshHeader::SubMeshIndexType const sub_mesh_index) const {

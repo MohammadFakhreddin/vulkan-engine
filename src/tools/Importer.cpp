@@ -334,8 +334,8 @@ AssetSystem::MeshAsset ImportObj(char const * path) {
                     auto const uv_index = shapes[0].mesh.indices[indices_index].texcoord_index;
                     mesh_indices[indices_index] = shapes[0].mesh.indices[indices_index].vertex_index;
                     ::memcpy(mesh_vertices[vertex_index].position, positions[vertex_index].value, sizeof(positions[vertex_index].value));
-                    ::memcpy(mesh_vertices[vertex_index].uv, coords[uv_index].value, sizeof(coords[uv_index].value));
-                    mesh_vertices[vertex_index].uv[1] = 1.0f - mesh_vertices[vertex_index].uv[1];
+                    ::memcpy(mesh_vertices[vertex_index].base_color_uv, coords[uv_index].value, sizeof(coords[uv_index].value));
+                    mesh_vertices[vertex_index].base_color_uv[1] = 1.0f - mesh_vertices[vertex_index].base_color_uv[1];
                     ::memcpy(mesh_vertices[vertex_index].normal, normals[vertex_index].value, sizeof(normals[vertex_index].value));
                 }
                 
@@ -352,31 +352,7 @@ AssetSystem::MeshAsset ImportObj(char const * path) {
     }
     return mesh_asset;
 }
-/*
- *
-const tinygltf::Model& model;
-// Assuming you loaded the gltf model.
- ...
-for each primitive in a mesh...
-const tinygltf::Accessor& accessor = model.accessors[primitive.attributes["POSITION"]];
-const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
- *
-// cast to float type read only. Use accessor and bufview byte offsets to determine where position data 
-// is located in the buffer.
-const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
-// bufferView byteoffset + accessor byteoffset tells you where the actual position data is within the buffer. From there
-// you should already know how the data needs to be interpreted.
-const float* positions = reinterpret_cast<const float*>(&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
-// From here, you choose what you wish to do with this position data. In this case, we  will display it out.
-for (size_t i = 0; i < accessor.count; ++i) {
-          // Positions are Vec3 components, so for each vec3 stride, offset for x, y, and z.
-           std::cout << "(" << positions[i * 3 + 0] << ", "// x
-                            << positions[i * 3 + 1] << ", " // y
-                            << positions[i * 3 + 2] << ")" // z
-                            << "\n";
-}
-proceed to next primitive...
- */
+// Based on sasha willems and a comment in github
 ImportMeshResult ImportMeshGLTF(char const * path) {
     ImportMeshResult import_result {};
     using namespace tinygltf;
@@ -430,6 +406,7 @@ ImportMeshResult ImportMeshGLTF(char const * path) {
                             .gltf_name = texture.name,
                             .ref = &texture_asset
                         });
+                        import_result.textures.emplace_back(texture_asset);
                     }
                 }
             }
@@ -461,6 +438,7 @@ ImportMeshResult ImportMeshGLTF(char const * path) {
                 total_indices_count
             );
             auto asset_blob = Memory::Alloc(asset_size);
+            auto * header_object = asset_blob.as<AssetSystem::MeshHeader>();
             MFA_DEFER {
                 if(MFA_PTR_VALID(asset_blob.ptr)) {
                     Memory::Free(asset_blob);
@@ -474,13 +452,116 @@ ImportMeshResult ImportMeshGLTF(char const * path) {
             for(auto & mesh : model.meshes) {
                 if(false == mesh.primitives.empty()) {
                     for(auto & primitive : mesh.primitives) {
-                        auto current_sub_mesh = import_result.mesh_asset.header_object()->sub_meshes[sub_mesh_index];
-                        ++ sub_mesh_index;
-                        U32 const * indices = nullptr;
-                        float const * positions = nullptr;
-                        float const * tex_coords = nullptr;
-                        float const * normals = nullptr;
                         AssetSystem::TextureAsset * base_color_texture_ref = nullptr;
+                        {// Material
+                            auto const & material = model.materials[primitive.material];
+                            {// Base color texture
+                                auto const & base_color_gltf_texture = model.textures[material.pbrMetallicRoughness.baseColorTexture.index];
+                                auto const & image = model.images[base_color_gltf_texture.source];
+                                base_color_texture_ref = find_texture_by_name(image.name.c_str());
+                            }
+                            // TODO Support other texture types as well
+                        }
+                        Blob temp_indices_blob {};
+                        U32 * temp_indices = nullptr;
+                        MFA_DEFER {
+                            if(MFA_BLOB_VALID(temp_indices_blob)) {
+                                Memory::Free(temp_indices_blob);
+                            }
+                        };
+                        U32 primitive_indices_count = 0;
+                        {// Indices
+                            MFA_REQUIRE(primitive.indices < model.accessors.size());
+                            auto const & accessor = model.accessors[primitive.indices];
+                            auto const & buffer_view = model.bufferViews[accessor.bufferView];
+                            MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
+                            auto const & buffer = model.buffers[buffer_view.buffer];
+                            temp_indices_blob = Memory::Alloc(accessor.count * sizeof(AssetSystem::Mesh::Data::Indices::IndexType));
+                            temp_indices = temp_indices_blob.as<U32>();
+                            primitive_indices_count = static_cast<U32>(accessor.count);
+                            switch(accessor.componentType) {
+                                case TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT:
+                                {
+                                    auto const * gltf_indices = reinterpret_cast<U32 const *>(
+                                        &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
+                                    );
+                                    for (U32 i = 0; i < accessor.count; i++) {
+                                        temp_indices[i] = gltf_indices[i];
+                                    }
+                                }
+                                break;
+                                case TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT:
+                                {
+                                    auto const * gltf_indices = reinterpret_cast<const U16 *>(
+                                        &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
+                                    );
+                                    for (U32 i = 0; i < accessor.count; i++) {
+                                        temp_indices[i] = gltf_indices[i];
+                                    }
+                                }
+                                break;
+                                case TINYGLTF_PARAMETER_TYPE_UNSIGNED_BYTE:
+                                {
+                                    auto const * gltf_indices = reinterpret_cast<const U16 *>(
+                                        &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
+                                    );
+                                    for (U32 i = 0; i < accessor.count; i++) {
+                                        temp_indices[i] = gltf_indices[i];
+                                    }
+                                }
+                                break;
+                                default:
+                                    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+                            }
+                        }
+                        float const * positions = nullptr;
+                        U32 primitive_vertex_count = 0;
+                        {// Positions
+                            MFA_REQUIRE(primitive.attributes["POSITION"] < model.accessors.size());
+                            auto const & accessor = model.accessors[primitive.attributes["POSITION"]];
+                            auto const & buffer_view = model.bufferViews[accessor.bufferView];
+                            MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
+                            auto const & buffer = model.buffers[buffer_view.buffer];
+                            positions = reinterpret_cast<const float *>(
+                                &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
+                            );
+                            primitive_vertex_count = static_cast<U32>(accessor.count);
+                        }
+                        float const * base_color_texture_coordinates = nullptr;
+                        // TODO TEXCOORD_0 does not have to be hard coded, We need to support other textures as well
+                        if(primitive.attributes["TEXCOORD_0"] >= 0) {
+                            MFA_REQUIRE(primitive.attributes["TEXCOORD_0"] < model.accessors.size());
+                            auto const & accessor = model.accessors[primitive.attributes["TEXCOORD_0"]];
+                            auto const & buffer_view = model.bufferViews[accessor.bufferView];
+                            MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
+                            auto const & buffer = model.buffers[buffer_view.buffer];
+                            base_color_texture_coordinates = reinterpret_cast<const float *>(
+                                &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
+                            );
+                        }
+                        float const * normals = nullptr;
+                        if(primitive.attributes["NORMAL"] >= 0) {
+                            MFA_REQUIRE(primitive.attributes["NORMAL"] < model.accessors.size());
+                            auto const & accessor = model.accessors[primitive.attributes["NORMAL"]];
+                            auto const & buffer_view = model.bufferViews[accessor.bufferView];
+                            MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
+                            auto const & buffer = model.buffers[buffer_view.buffer];
+                            normals = reinterpret_cast<const float *>(
+                                &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
+                            );
+                        }
+                        // TODO GLTF color is float (Not sure), Out stored color is U8
+                        //float const * colors = nullptr;
+                        //if(primitive.attributes["COLOR"] >= 0) {
+                        //    MFA_REQUIRE(primitive.attributes["COLOR"] < model.accessors.size());
+                        //    auto const & accessor = model.accessors[primitive.attributes["COLOR"]];
+                        //    auto const & buffer_view = model.bufferViews[accessor.bufferView];
+                        //    MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
+                        //    auto const & buffer = model.buffers[buffer_view.buffer];
+                        //    colors = reinterpret_cast<const float *>(
+                        //        &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
+                        //    );
+                        //}
                         /*
                         // Append data to model's vertex buffer
                         for (size_t v = 0; v < vertexCount; v++) {
@@ -492,111 +573,35 @@ ImportMeshResult ImportMeshGLTF(char const * path) {
                             vertexBuffer.push_back(vert);
                         }
                         */
-                        {// Material
-                            auto const & material = model.materials[primitive.material];
-                            {// Base color texture
-                                auto const & base_color_gltf_texture = model.textures[material.pbrMetallicRoughness.baseColorTexture.index];
-                                auto const & image = model.images[base_color_gltf_texture.source];
-                                base_color_texture_ref = find_texture_by_name(image.name.c_str());
-                            }
-                            // TODO Support other texture types as well
-                        }
-                        // Indices: Sasha willems examples
-                        // {
-                        // 	const tinygltf::Accessor& accessor = input.accessors[glTFPrimitive.indices];
-                        // 	const tinygltf::BufferView& bufferView = input.bufferViews[accessor.bufferView];
-                        // 	const tinygltf::Buffer& buffer = input.buffers[bufferView.buffer];
+                        auto & current_sub_mesh = header_object->sub_meshes[sub_mesh_index];
+                        current_sub_mesh.indices_offset = indices_offset;
+                        current_sub_mesh.vertices_offset = vertices_offset;
+                        current_sub_mesh.index_count = primitive_indices_count;
+                        current_sub_mesh.vertex_count = primitive_vertex_count;
+                        current_sub_mesh.base_color_texture = base_color_texture_ref;
+                        vertices_offset += primitive_vertex_count * sizeof(AssetSystem::MeshVertices::Vertex);
+                        indices_offset += primitive_indices_count * sizeof(AssetSystem::MeshIndices::IndexType);
+                        auto * vertices = import_result.mesh_asset.vertices(sub_mesh_index);
+                        auto * indices = import_result.mesh_asset.indices(sub_mesh_index);
+                        ::memcpy(indices, temp_indices_blob.ptr, temp_indices_blob.len);
+                        ++ sub_mesh_index;
+                        for (U32 i = 0; i < primitive_vertex_count; i++) {
 
-                        // 	indexCount += static_cast<uint32_t>(accessor.count);
+                            vertices[i].vertices->position[0] = positions[i * 3 + 0];
+                            vertices[i].vertices->position[1] = positions[i * 3 + 1];
+                            vertices[i].vertices->position[2] = positions[i * 3 + 2];
 
-                        // 	// glTF supports different component types of indices
-                        // 	switch (accessor.componentType) {
-                        // 	case TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT: {
-                        // 		uint32_t* buf = new uint32_t[accessor.count];
-                        // 		memcpy(buf, &buffer.data[accessor.byteOffset + bufferView.byteOffset], accessor.count * sizeof(uint32_t));
-                        // 		for (size_t index = 0; index < accessor.count; index++) {
-                        // 			indexBuffer.push_back(buf[index] + vertexStart);
-                        // 		}
-                        // 		break;
-                        // 	}
-                        // 	case TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT: {
-                        // 		uint16_t* buf = new uint16_t[accessor.count];
-                        // 		memcpy(buf, &buffer.data[accessor.byteOffset + bufferView.byteOffset], accessor.count * sizeof(uint16_t));
-                        // 		for (size_t index = 0; index < accessor.count; index++) {
-                        // 			indexBuffer.push_back(buf[index] + vertexStart);
-                        // 		}
-                        // 		break;
-                        // 	}
-                        // 	case TINYGLTF_PARAMETER_TYPE_UNSIGNED_BYTE: {
-                        // 		uint8_t* buf = new uint8_t[accessor.count];
-                        // 		memcpy(buf, &buffer.data[accessor.byteOffset + bufferView.byteOffset], accessor.count * sizeof(uint8_t));
-                        // 		for (size_t index = 0; index < accessor.count; index++) {
-                        // 			indexBuffer.push_back(buf[index] + vertexStart);
-                        // 		}
-                        // 		break;
-                        // 	}
-                        // 	default:
-                        // 		std::cerr << "Index component type " << accessor.componentType << " not supported!" << std::endl;
-                        // 		return;
-                        // 	}
-                        // }
-                        {// Indices
-                            MFA_REQUIRE(primitive.indices < model.accessors.size());
-                            auto const & accessor = model.accessors[primitive.indices];
-                            auto const & buffer_view = model.bufferViews[accessor.bufferView];
-                            MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
-                            auto const & buffer = model.buffers[buffer_view.buffer];
-                            indices = reinterpret_cast<const U32 *>(
-                                &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
-                            );
-                            //std::string message = "Indices count: " + std::to_string(accessor.count) + "\nData:\n";
-                            //for (U32 i = 0; i < accessor.count; i++) {
-                            //    message += std::to_string(indices[i]) + " ";
-                            //}
-                            //MFA_LOG_INFO("%s", message.c_str());
+                            vertices[i].vertices->normal[0] = normals[i * 3 + 0];
+                            vertices[i].vertices->normal[1] = normals[i * 3 + 1];
+                            vertices[i].vertices->normal[2] = normals[i * 3 + 2];
+
+                            vertices[i].vertices->base_color_uv[0] = base_color_texture_coordinates[i * 2 + 0];
+                            vertices[i].vertices->base_color_uv[1] = base_color_texture_coordinates[i * 2 + 1];
+
+                           /* vertices[i].vertices->color[0] = colors[i * 3 + 0];
+                            vertices[i].vertices->color[1] = colors[i * 3 + 1];
+                            vertices[i].vertices->color[2] = colors[i * 3 + 2];*/
                         }
-                        {// Positions
-                            MFA_REQUIRE(primitive.attributes["POSITION"] < model.accessors.size());
-                            auto const & accessor = model.accessors[primitive.attributes["POSITION"]];
-                            auto const & buffer_view = model.bufferViews[accessor.bufferView];
-                            MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
-                            auto const & buffer = model.buffers[buffer_view.buffer];
-                            positions = reinterpret_cast<const float *>(
-                                &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
-                            );
-                            //std::string message = "Positions count: " + std::to_string(accessor.count) + "\nData:\n";
-                            //for (U32 i = 0; i < accessor.count; i++) {
-                            //    message += std::to_string(positions[i]) + " ";
-                            //}
-                            //MFA_LOG_INFO("%s", message.c_str());
-                        }
-                        if(primitive.attributes["TEXCOORD_0"] >= 0) {
-                            MFA_REQUIRE(primitive.attributes["TEXCOORD_0"] < model.accessors.size());
-                            auto const & accessor = model.accessors[primitive.attributes["POSITION"]];
-                            auto const & buffer_view = model.bufferViews[accessor.bufferView];
-                            MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
-                            auto const & buffer = model.buffers[buffer_view.buffer];
-                            tex_coords = reinterpret_cast<const float *>(
-                                &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
-                            );
-                            //std::string message = "Coords count: " + std::to_string(accessor.count) + "\nData:\n";
-                            //for (U32 i = 0; i < accessor.count; i++) {
-                            //    message += std::to_string(tex_coords[i]) + " ";
-                            //}
-                            //MFA_LOG_INFO("%s", message.c_str());
-                        }
-                        if(primitive.attributes["NORMAL"] >= 0) {
-                            MFA_REQUIRE(primitive.attributes["NORMAL"] < model.accessors.size());
-                            auto const & accessor = model.accessors[primitive.attributes["POSITION"]];
-                            auto const & buffer_view = model.bufferViews[accessor.bufferView];
-                            MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
-                            auto const & buffer = model.buffers[buffer_view.buffer];
-                            normals = reinterpret_cast<const float *>(
-                                &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
-                            );
-                        }
-                        // TODO Color
-                        // TODO Start from here copy these values to mesh vertices
                     }
                 }
             }

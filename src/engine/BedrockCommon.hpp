@@ -7,7 +7,7 @@
 #include <cstdint>
 // TODO I wish we could add no-discard
 #define MFA_PTR_VALID(p_) ((p_) != nullptr)
-
+#define MFA_BLOB_VALID(blob) (MFA_PTR_VALID(blob.ptr) && blob.len > 0)
 #define MFA_CONSUME_VAR(v_) ((void)(v_))
 
 #define MFA_UNIQUE_NAME(base_) MFA_CONCAT(base_, __COUNTER__)
