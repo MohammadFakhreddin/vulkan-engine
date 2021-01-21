@@ -77,16 +77,17 @@ void UpdateDescriptorSets(
 );
 
 // TODO AdvanceBindingDescriptorSetWriteInfo
-
 struct MeshBuffers {
-    std::vector<RB::BufferGroup> vertices_buffers;   // Organized by sub-mesh index
-    std::vector<RB::BufferGroup> indices_buffers;    // Organized by sub-mesh index
-    std::vector<AssetSystem::Mesh::Header::SubMeshIndexType> indices_count;
-    AssetSystem::MeshAsset mesh_asset {};
+    struct SubMeshBuffer {
+        RB::BufferGroup vertices_buffers;
+        RB::BufferGroup indices_buffers;
+        AssetSystem::Mesh::Header::SubMeshIndexType indices_count;
+    };
+    std::vector<SubMeshBuffer> sub_mesh_buffers;    // Organized by sub-mesh index
 };
 
 [[nodiscard]]
-MeshBuffers CreateMeshBuffers(AssetSystem::MeshAsset const & mesh_asset);
+MeshBuffers CreateSubMeshBuffers(AssetSystem::MeshAsset const & mesh_asset);
 
 void DestroyMeshBuffers(MeshBuffers & mesh_buffers);
 
@@ -109,6 +110,18 @@ struct SamplerGroup {
 SamplerGroup CreateSampler(RB::CreateSamplerParams const & sampler_params = {});
 
 void DestroySampler(SamplerGroup & sampler_group);
+
+struct GpuModel {
+    bool valid = false;
+    MeshBuffers mesh_buffers {};
+    std::vector<RB::GpuTexture> textures {};
+    AssetSystem::ModelAsset model_asset {};
+    // TODO Samplers
+};
+[[nodiscard]]
+GpuModel CreateGpuModel(AssetSystem::ModelAsset & model_asset);
+
+void DestroyGpuModel(GpuModel & gpu_model);
 
 void DeviceWaitIdle();
 

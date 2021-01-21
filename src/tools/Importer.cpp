@@ -352,28 +352,35 @@ AssetSystem::MeshAsset ImportObj(char const * path) {
     }
     return mesh_asset;
 }
+// TODO We need data-types called model and model-assets
 // Based on sasha willems and a comment in github
-ImportMeshResult ImportMeshGLTF(char const * path) {
-    ImportMeshResult import_result {};
+AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
+    MFA_PTR_VALID(path);
+    AssetSystem::ModelAsset model_asset {};
     using namespace tinygltf;
     TinyGLTF loader {};
     Model model;
     std::string error;
     std::string warning;
-    auto const success = loader.LoadASCIIFromFile(&model, &error, &warning,  std::string(path));
+    auto const success = loader.LoadASCIIFromFile(
+        &model, 
+        &error,
+        &warning,  
+        std::string(path)
+    );
     if(success) {
         if(false == model.meshes.empty()) {
             struct TextureRef {
                 std::string gltf_name;
-                AssetSystem::TextureAsset * ref;
+                U8 index;
             };
             std::vector<TextureRef> texture_refs {};
-            auto const find_texture_by_name = [&texture_refs](char const * gltf_name)-> AssetSystem::TextureAsset * {
+            auto const find_texture_by_name = [&texture_refs](char const * gltf_name)-> U8 {
                 MFA_PTR_ASSERT(gltf_name);
-                AssetSystem::TextureAsset * result = nullptr;
+                U8 result = 0;
                 if(false == texture_refs.empty()) {
                     for (auto const & texture_ref : texture_refs) {
-                        result = texture_ref.ref;
+                        result = texture_ref.index;
                     }
                 }
                 return result;
@@ -402,11 +409,12 @@ ImportMeshResult ImportMeshGLTF(char const * path) {
                                 ImportTextureOptions {.generate_mipmaps = false, .sampler = &sampler}
                             );
                         }
+                        MFA_ASSERT(texture_asset.valid());
                         texture_refs.emplace_back(TextureRef {
                             .gltf_name = texture.name,
-                            .ref = &texture_asset
+                            .index = static_cast<U8>(model_asset.textures.size())
                         });
-                        import_result.textures.emplace_back(texture_asset);
+                        model_asset.textures.emplace_back(texture_asset);
                     }
                 }
             }
@@ -439,12 +447,13 @@ ImportMeshResult ImportMeshGLTF(char const * path) {
             );
             auto asset_blob = Memory::Alloc(asset_size);
             auto * header_object = asset_blob.as<AssetSystem::MeshHeader>();
+            header_object->sub_mesh_count = sub_mesh_count;
             MFA_DEFER {
                 if(MFA_PTR_VALID(asset_blob.ptr)) {
                     Memory::Free(asset_blob);
                 }
             };
-            import_result.mesh_asset = AssetSystem::MeshAsset {asset_blob};
+            model_asset.mesh = AssetSystem::MeshAsset {asset_blob};
             // Step2: Fill asset buffer from model buffers
             U32 sub_mesh_index = 0;
             U64 vertices_offset = header_size;
@@ -452,13 +461,13 @@ ImportMeshResult ImportMeshGLTF(char const * path) {
             for(auto & mesh : model.meshes) {
                 if(false == mesh.primitives.empty()) {
                     for(auto & primitive : mesh.primitives) {
-                        AssetSystem::TextureAsset * base_color_texture_ref = nullptr;
+                        U8 base_color_texture_index = 0;
                         {// Material
                             auto const & material = model.materials[primitive.material];
                             {// Base color texture
                                 auto const & base_color_gltf_texture = model.textures[material.pbrMetallicRoughness.baseColorTexture.index];
                                 auto const & image = model.images[base_color_gltf_texture.source];
-                                base_color_texture_ref = find_texture_by_name(image.name.c_str());
+                                base_color_texture_index = find_texture_by_name(image.name.c_str());
                             }
                             // TODO Support other texture types as well
                         }
@@ -578,14 +587,14 @@ ImportMeshResult ImportMeshGLTF(char const * path) {
                         current_sub_mesh.vertices_offset = vertices_offset;
                         current_sub_mesh.index_count = primitive_indices_count;
                         current_sub_mesh.vertex_count = primitive_vertex_count;
-                        current_sub_mesh.base_color_texture = base_color_texture_ref;
+                        current_sub_mesh.base_color_texture_index = base_color_texture_index;
                         vertices_offset += primitive_vertex_count * sizeof(AssetSystem::MeshVertices::Vertex);
                         indices_offset += primitive_indices_count * sizeof(AssetSystem::MeshIndices::IndexType);
-                        auto * vertices = import_result.mesh_asset.vertices(sub_mesh_index);
-                        auto * indices = import_result.mesh_asset.indices(sub_mesh_index);
+                        auto * vertices = model_asset.mesh.vertices(sub_mesh_index);
+                        auto * indices = model_asset.mesh.indices(sub_mesh_index);
                         ::memcpy(indices, temp_indices_blob.ptr, temp_indices_blob.len);
                         ++ sub_mesh_index;
-                        for (U32 i = 0; i < primitive_vertex_count; i++) {
+                        for (U32 i = 0; i < primitive_vertex_count; ++i) {
 
                             vertices[i].vertices->position[0] = positions[i * 3 + 0];
                             vertices[i].vertices->position[1] = positions[i * 3 + 1];
@@ -605,9 +614,32 @@ ImportMeshResult ImportMeshGLTF(char const * path) {
                     }
                 }
             }
+            if(model_asset.mesh.valid()) {
+                asset_blob = {};
+            }
         }
     }
-    return import_result;
+    return model_asset;
+}
+
+bool FreeModel(AssetSystem::ModelAsset * model) {
+    bool ret = false;
+    if(MFA_PTR_VALID(model)) {
+        {// Mesh
+            auto const result = FreeAsset(&model->mesh);
+            MFA_ASSERT(result); MFA_CONSUME_VAR(result);
+        }
+        {// Textures
+            if(false == model->textures.empty()) {
+                for (auto & texture : model->textures) {
+                    auto const result = FreeAsset(&texture);
+                    MFA_ASSERT(result); MFA_CONSUME_VAR(result);
+                }
+            }
+        }
+        ret = true;
+    }
+    return ret;
 }
 
 // Temporary function for freeing imported assets // Resource system will be used instead

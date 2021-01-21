@@ -11,8 +11,7 @@ class DrawableObject {
 public:
     explicit DrawableObject() = default;
     DrawableObject(
-        RF::MeshBuffers & mesh_buffers_,
-        RB::GpuTexture & gpu_texture_,
+        RF::GpuModel & model_,
         RF::SamplerGroup & sampler_group_,
         size_t uniform_buffer_size,
         VkDescriptorSetLayout_T * descriptor_set_layout
@@ -20,8 +19,7 @@ public:
     ~DrawableObject();
     DrawableObject & operator= (DrawableObject && rhs) noexcept {
         this->m_is_valid = rhs.m_is_valid;
-        this->m_mesh_buffers = rhs.m_mesh_buffers;
-        this->m_gpu_texture = rhs.m_gpu_texture;
+        this->m_model = rhs.m_model;
         this->m_sampler_group = rhs.m_sampler_group;
         this->m_descriptor_sets = std::move(rhs.m_descriptor_sets);
         this->m_uniform_buffer_group = std::move(rhs.m_uniform_buffer_group);
@@ -37,8 +35,7 @@ public:
     [[nodiscard]]
     bool is_valid() const {return m_is_valid;}
 private:
-    RF::MeshBuffers * m_mesh_buffers = nullptr;
-    RB::GpuTexture * m_gpu_texture = nullptr;
+    RF::GpuModel * m_model = nullptr;
     RF::SamplerGroup * m_sampler_group = nullptr;
     std::vector<VkDescriptorSet_T *> m_descriptor_sets {};
     RF::UniformBufferGroup m_uniform_buffer_group {};

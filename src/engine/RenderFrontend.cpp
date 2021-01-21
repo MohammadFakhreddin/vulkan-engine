@@ -474,18 +474,6 @@ void DestroyUniformBuffer(UniformBufferGroup & uniform_buffer) {
     }
 }
 
-MeshBuffers CreateMeshBuffers(AssetSystem::MeshAsset const & mesh_asset) {
-    MFA_ASSERT(mesh_asset.valid());
-    MeshBuffers buffers {.mesh_asset = mesh_asset};
-    auto const * header_object = mesh_asset.header_object();
-    for (U32 i = 0; i < header_object->sub_mesh_count; i++) {
-        buffers.vertices_buffers.emplace_back(CreateVertexBuffer(mesh_asset.vertices_cblob(i)));
-        buffers.indices_buffers.emplace_back(CreateIndexBuffer(mesh_asset.indices_cblob(i)));
-        buffers.indices_count.emplace_back(header_object->sub_meshes[i].index_count);
-    }
-    return buffers;
-}
-
 RB::BufferGroup CreateVertexBuffer(CBlob const vertices_blob) {
     return RB::CreateVertexBuffer(
         state.logical_device.device,
@@ -506,21 +494,28 @@ RB::BufferGroup CreateIndexBuffer(CBlob const indices_blob) {
     );
 }
 
-void DestroyMeshBuffers(MeshBuffers & mesh_buffers) {
-    MFA_ASSERT(mesh_buffers.vertices_buffers.size() == mesh_buffers.indices_buffers.size());
-    for (U32 i = 0; i < mesh_buffers.vertices_buffers.size(); i++) {
-        RB::DestroyBuffer(
-            state.logical_device.device,
-            mesh_buffers.vertices_buffers[i]
-        );
-        RB::DestroyBuffer(
-            state.logical_device.device,
-            mesh_buffers.indices_buffers[i]
-        );
+MeshBuffers CreateMeshBuffers(AssetSystem::MeshAsset const & mesh_asset) {
+    MFA_ASSERT(mesh_asset.valid());
+    MeshBuffers buffers {.sub_mesh_buffers {}};
+    auto const * header_object = mesh_asset.header_object();
+    for (U32 i = 0; i < header_object->sub_mesh_count; i++) {
+        buffers.sub_mesh_buffers.emplace_back(MeshBuffers::SubMeshBuffer {
+            .vertices_buffers = CreateVertexBuffer(mesh_asset.vertices_cblob(i)),
+            .indices_buffers = CreateIndexBuffer(mesh_asset.indices_cblob(i)),
+            .indices_count = header_object->sub_meshes[i].index_count,
+        });
     }
-    mesh_buffers.vertices_buffers.resize(0);
-    mesh_buffers.indices_buffers.resize(0);
-    mesh_buffers.indices_count.resize(0);
+    return buffers;
+}
+
+void DestroyMeshBuffers(MeshBuffers & mesh_buffers) {
+    if (false == mesh_buffers.sub_mesh_buffers.empty()) {
+        for (auto & sub_mesh_buffers : mesh_buffers.sub_mesh_buffers) {
+            RB::DestroyVertexBuffer(state.logical_device.device, sub_mesh_buffers.vertices_buffers);
+            RB::DestroyIndexBuffer(state.logical_device.device, sub_mesh_buffers.indices_buffers);
+        }
+        mesh_buffers.sub_mesh_buffers.resize(0);
+    }
 }
 
 RB::GpuTexture CreateTexture(AssetSystem::TextureAsset & texture_asset) {
@@ -551,6 +546,33 @@ SamplerGroup CreateSampler(RB::CreateSamplerParams const & sampler_params) {
 void DestroySampler(SamplerGroup & sampler_group) {
     RB::DestroySampler(state.logical_device.device, sampler_group.sampler);
     sampler_group.sampler = nullptr;
+}
+
+GpuModel CreateGpuModel(AssetSystem::ModelAsset & model_asset) {
+    GpuModel gpu_model {
+        .valid = true,
+        .mesh_buffers = CreateMeshBuffers(model_asset.mesh),
+        .textures {},
+        .model_asset = model_asset
+    };
+    if(false == model_asset.textures.empty()) {
+        for (auto & texture_asset : model_asset.textures) {
+            gpu_model.textures.emplace_back(CreateTexture(texture_asset));
+            MFA_ASSERT(gpu_model.textures.back().valid());
+        }
+    }
+    return gpu_model;
+}
+
+void DestroyGpuModel(GpuModel & gpu_model) {
+    MFA_ASSERT(gpu_model.valid);
+    gpu_model.valid = false;
+    DestroyMeshBuffers(gpu_model.mesh_buffers);
+    if(false == gpu_model.textures.empty()) {
+        for (auto & gpu_texture : gpu_model.textures) {
+            DestroyTexture(gpu_texture);
+        }
+    }
 }
 
 void DeviceWaitIdle() {

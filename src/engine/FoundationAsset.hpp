@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "BedrockAssert.hpp"
 #include "BedrockCommon.hpp"
 #include "BedrockMath.hpp"
@@ -259,7 +261,7 @@ struct Header {
         U32 index_count;
         U64 vertices_offset;       // From start of asset
         U64 indices_offset;        // From start of asset
-        TextureAsset * base_color_texture;
+        U8 base_color_texture_index;
         // TODO add other options (From material)
     };
     SubMeshIndexType sub_mesh_count = 0;
@@ -502,9 +504,14 @@ public:
 };
 
 //---------------------------------MaterialAsset----------------------------------
-
+// TODO Currently Material is mixed with mesh Not sure if separate material is needed or not
 class MaterialAsset : public GenericAsset {
     // TODO
+};
+
+struct ModelAsset {
+    std::vector<TextureAsset> textures;
+    AssetSystem::MeshAsset mesh;
 };
 
 };  // MFA::Asset

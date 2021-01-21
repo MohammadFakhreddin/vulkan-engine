@@ -45,12 +45,8 @@ AssetSystem::TextureAsset ImportDDSFile(char const * path);
 [[nodiscard]]
 AssetSystem::MeshAsset ImportObj(char const * path);
 
-struct ImportMeshResult {
-    AssetSystem::MeshAsset mesh_asset;
-    std::vector<AssetSystem::TextureAsset> textures;
-};
 [[nodiscard]]
-ImportMeshResult ImportMeshGLTF(char const * path);
+AssetSystem::ModelAsset ImportMeshGLTF(char const * path);
 
 [[nodiscard]]
 AssetSystem::ShaderAsset ImportShaderFromHLSL(char const * path);
@@ -69,7 +65,10 @@ AssetSystem::ShaderAsset ImportShaderFromSPV(
     char const * entry_point
 );
 
-// Temporary function for freeing imported assets
+// Temporary function for freeing imported assets, Will be replaced with RCMGMT system in future
+bool FreeModel(AssetSystem::ModelAsset * model);
+
+// Temporary function for freeing imported assets, Will be replaced with RCMGMT system in future
 bool FreeAsset(AssetSystem::GenericAsset * asset);
 
 //------------------------------RawFile------------------------------------

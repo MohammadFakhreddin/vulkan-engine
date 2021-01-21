@@ -148,14 +148,15 @@ FILE * GetCHandle(FileHandle * file) {
 
 std::string ExtractDirectoryFromPath(char const * path)  {
     MFA_PTR_ASSERT(path);
-    auto const path_string = std::string(path);
-    const size_t last_slash_idx = path_string.rfind('\\');
-    std::string directory;
-    if (std::string::npos != last_slash_idx)
-    {
-        directory = path_string.substr(0, last_slash_idx);
-    }
-    return directory;
+    return std::filesystem::path(path).parent_path().string();
+    //auto const path_string = std::string(path);
+    //const size_t last_slash_idx = path_string.rfind('\\');
+    //std::string directory;
+    //if (std::string::npos != last_slash_idx)
+    //{
+    //    directory = path_string.substr(0, last_slash_idx);
+    //}
+    //return directory;
 }
 
 }
