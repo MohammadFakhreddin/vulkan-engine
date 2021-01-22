@@ -491,7 +491,7 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSet(
     VkDevice_T * device,
     VkDescriptorPool_T * descriptor_pool,
     VkDescriptorSetLayout_T * descriptor_set_layout,
-    U8 descriptor_set_count,
+    U32 descriptor_set_count,
     U8 schemas_count = 0,
     VkWriteDescriptorSet * schemas = nullptr
 );

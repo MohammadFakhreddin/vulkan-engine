@@ -18,6 +18,7 @@ public:
     );
     ~DrawableObject();
     DrawableObject & operator= (DrawableObject && rhs) noexcept {
+        this->m_required_draw_calls = rhs.m_required_draw_calls;
         this->m_is_valid = rhs.m_is_valid;
         this->m_model = rhs.m_model;
         this->m_sampler_group = rhs.m_sampler_group;
@@ -35,6 +36,8 @@ public:
     [[nodiscard]]
     bool is_valid() const {return m_is_valid;}
 private:
+    // Note: Order is important
+    U32 m_required_draw_calls;
     RF::GpuModel * m_model = nullptr;
     RF::SamplerGroup * m_sampler_group = nullptr;
     std::vector<VkDescriptorSet_T *> m_descriptor_sets {};

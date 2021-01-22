@@ -241,13 +241,13 @@ struct Vertices {
         UV base_color_uv;
         Color color;
     };
-    Vertex vertices[];
+    Vertex value[];
 };
 #pragma pack(pop)
 #pragma pack(push)
 struct Indices {
     using IndexType = U32;
-    IndexType indices[];
+    IndexType value[];
 };
 #pragma pack(pop)
 #pragma warning (pop)

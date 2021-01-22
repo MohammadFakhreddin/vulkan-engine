@@ -324,8 +324,8 @@ AssetSystem::MeshAsset ImportObj(char const * path) {
                 mesh_header->sub_meshes[0].vertices_offset = header_size;
                 mesh_header->sub_meshes[0].index_count = indices_count;
                 mesh_header->sub_meshes[0].indices_offset = header_size + vertices_count * sizeof(AssetSystem::MeshVertices::Vertex);
-                auto * mesh_vertices = mesh_asset.vertices_blob(0).as<AssetSystem::MeshVertices>()->vertices;
-                auto * mesh_indices = mesh_asset.indices_blob(0).as<AssetSystem::MeshIndices>()->indices;
+                auto * mesh_vertices = mesh_asset.vertices_blob(0).as<AssetSystem::MeshVertices>()->value;
+                auto * mesh_indices = mesh_asset.indices_blob(0).as<AssetSystem::MeshIndices>()->value;
                 MFA_ASSERT(mesh_asset.indices_blob(0).ptr + mesh_asset.indices_blob(0).len == mesh_asset_blob.ptr + mesh_asset_blob.len);
                 for(
                     uintmax_t indices_index = 0;
@@ -357,7 +357,7 @@ AssetSystem::MeshAsset ImportObj(char const * path) {
 // TODO We need data-types called model and model-assets
 // Based on sasha willems and a comment in github
 AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
-    MFA_PTR_VALID(path);
+    MFA_PTR_ASSERT(path);
     AssetSystem::ModelAsset model_asset {};
     using namespace tinygltf;
     TinyGLTF loader {};
@@ -379,13 +379,14 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
             std::vector<TextureRef> texture_refs {};
             auto const find_texture_by_name = [&texture_refs](char const * gltf_name)-> U8 {
                 MFA_PTR_ASSERT(gltf_name);
-                U8 result = 0;
                 if(false == texture_refs.empty()) {
                     for (auto const & texture_ref : texture_refs) {
-                        result = texture_ref.index;
+                        if(texture_ref.gltf_name == gltf_name) {
+                            return texture_ref.index;
+                        }
                     }
                 }
-                return result;
+                MFA_CRASH("Image not found: %s", gltf_name);
             };
             std::string directory_path = FileSystem::ExtractDirectoryFromPath(path);
             {// Extracting textures
@@ -576,17 +577,6 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                         //        &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
                         //    );
                         //}
-                        /*
-                        // Append data to model's vertex buffer
-                        for (size_t v = 0; v < vertexCount; v++) {
-                            Vertex vert{};
-                            vert.pos = glm::vec4(glm::make_vec3(&positionBuffer[v * 3]), 1.0f);
-                            vert.normal = glm::normalize(glm::vec3(normalsBuffer ? glm::make_vec3(&normalsBuffer[v * 3]) : glm::vec3(0.0f)));
-                            vert.uv = texCoordsBuffer ? glm::make_vec2(&texCoordsBuffer[v * 2]) : glm::vec3(0.0f);
-                            vert.color = glm::vec3(1.0f);
-                            vertexBuffer.push_back(vert);
-                        }
-                        */
                         auto & current_sub_mesh = header_object->sub_meshes[sub_mesh_index];
                         current_sub_mesh.indices_offset = indices_offset;
                         current_sub_mesh.indices_starting_index = indices_starting_index;
@@ -603,16 +593,16 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                         ++ sub_mesh_index;
                         for (U32 i = 0; i < primitive_vertex_count; ++i) {
 
-                            vertices[i].vertices->position[0] = positions[i * 3 + 0];
-                            vertices[i].vertices->position[1] = positions[i * 3 + 1];
-                            vertices[i].vertices->position[2] = positions[i * 3 + 2];
+                            vertices[i].value->position[0] = positions[i * 3 + 0];
+                            vertices[i].value->position[1] = positions[i * 3 + 1];
+                            vertices[i].value->position[2] = positions[i * 3 + 2];
 
-                            vertices[i].vertices->normal[0] = normals[i * 3 + 0];
-                            vertices[i].vertices->normal[1] = normals[i * 3 + 1];
-                            vertices[i].vertices->normal[2] = normals[i * 3 + 2];
+                            vertices[i].value->normal[0] = normals[i * 3 + 0];
+                            vertices[i].value->normal[1] = normals[i * 3 + 1];
+                            vertices[i].value->normal[2] = normals[i * 3 + 2];
 
-                            vertices[i].vertices->base_color_uv[0] = base_color_texture_coordinates[i * 2 + 0];
-                            vertices[i].vertices->base_color_uv[1] = base_color_texture_coordinates[i * 2 + 1];
+                            vertices[i].value->base_color_uv[0] = base_color_texture_coordinates[i * 2 + 0];
+                            vertices[i].value->base_color_uv[1] = base_color_texture_coordinates[i * 2 + 1];
 
                            /* vertices[i].vertices->color[0] = colors[i * 3 + 0];
                             vertices[i].vertices->color[1] = colors[i * 3 + 1];

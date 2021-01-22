@@ -24,7 +24,7 @@ public:
         );  
     }
     void Init() override {
-        auto cpu_model = Importer::ImportMeshGLTF("../assets/bristleback/scene.gltf");
+        auto cpu_model = Importer::ImportMeshGLTF("../assets/gunship/scene.gltf");
         m_gpu_model = RF::CreateGpuModel(cpu_model);
         m_cpu_vertex_shader = Importer::ImportShaderFromSPV(
             "../assets/shaders/vert.spv", 
@@ -65,15 +65,15 @@ public:
                 MFA::Matrix4X4Float rotation;
                 MFA::Matrix4X4Float::assignRotationXYZ(
                     rotation,
-                    MFA::Math::Deg2Rad(45.0f),
-                    0.0f,
-                    MFA::Math::Deg2Rad(45.0f + degree)
+                    MFA::Math::Deg2Rad(45.0f + XDegree),
+                    0.0f + YDegree,
+                    MFA::Math::Deg2Rad(45.0f + zDegree)
                 );
                 ::memcpy(ubo.rotation,rotation.cells,sizeof(ubo.rotation));
             }
             {// Transformation
                 MFA::Matrix4X4Float transformation;
-                MFA::Matrix4X4Float::assignTransformation(transformation,0,0,-6);
+                MFA::Matrix4X4Float::assignTransformation(transformation,xDistance,yDistance,-6 + zDistance);
                 ::memcpy(ubo.transformation,transformation.cells,sizeof(ubo.transformation));
             }
             {// Perspective
@@ -97,7 +97,12 @@ public:
     void OnUI(MFA::U32 const delta_time, RF::DrawPass & draw_pass) override {
         ImGui::Begin("Object viewer");
         ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("float", &degree, -360.0f, 360.0f);
+        ImGui::SliderFloat("XDegree", &XDegree, -360.0f, 360.0f);
+        ImGui::SliderFloat("YDegree", &YDegree, -360.0f, 360.0f);
+        ImGui::SliderFloat("ZDegree", &zDegree, -360.0f, 360.0f);
+        ImGui::SliderFloat("XDistance", &xDistance, -100.0f, 100.0f);
+        ImGui::SliderFloat("YDistance", &yDistance, -100.0f, 100.0f);
+        ImGui::SliderFloat("ZDistance", &zDistance, -100.0f, 100.0f);
         ImGui::End();
     }
     void Shutdown() override {
@@ -124,7 +129,12 @@ private:
     VkDescriptorSetLayout_T * m_descriptor_set_layout;
     RF::DrawPipeline m_draw_pipeline;
     MFA::DrawableObject m_drawable_object;
-    float degree = 0;
+    float XDegree = 0;
+    float YDegree = 0;
+    float zDegree = 0;
+    float xDistance = 0;
+    float yDistance = 0;
+    float zDistance = 0;
 };
 
 MeshViewer mesh_viewer {};
