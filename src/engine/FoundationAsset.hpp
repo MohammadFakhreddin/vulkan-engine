@@ -113,6 +113,7 @@ struct Header {
         U32 wrap_s = 0;
         U32 wrap_t = 0;
     };
+    // TODO Use sampler
     Sampler         sampler {};
     MipmapInfo      mipmap_infos[];
     [[nodiscard]]
@@ -259,12 +260,15 @@ struct Header {
     struct SubMesh {
         U32 vertex_count;
         U32 index_count;
-        U64 vertices_offset;       // From start of asset
-        U64 indices_offset;        // From start of asset
+        U64 vertices_offset;                // From start of asset
+        U64 indices_offset;
+        U32 indices_starting_index;         // From start of asset
         U8 base_color_texture_index;
         // TODO add other options (From material)
     };
     SubMeshIndexType sub_mesh_count = 0;
+    U32 total_vertex_count = 0;
+    U32 total_index_count = 0;
     SubMesh sub_meshes [];
     [[nodiscard]]
     static size_t ComputeHeaderSize(U32 const sub_mesh_count) {
@@ -467,6 +471,16 @@ public:
         return CBlob {blob.ptr, blob.len};
     }
     [[nodiscard]]
+    CBlob vertices_cblob() const {
+        auto const * header = header_object();
+        MFA_PTR_ASSERT(header);
+        MFA_ASSERT(header->sub_mesh_count > 0);
+        return CBlob {
+            asset().ptr + header->sub_meshes[0].vertices_offset,
+            header->total_vertex_count * sizeof(Mesh::Data::Vertices::Vertex)
+        };
+    }
+    [[nodiscard]]
     Blob vertices_blob(MeshHeader::SubMeshIndexType const sub_mesh_index) const {
         auto const * header = header_object();
         auto const & sub_mesh = header->sub_meshes[sub_mesh_index];
@@ -487,6 +501,16 @@ public:
     CBlob indices_cblob(MeshHeader::SubMeshIndexType const sub_mesh_index) const {
         auto const blob = indices_blob(sub_mesh_index);
         return CBlob {blob.ptr, blob.len};
+    }
+    [[nodiscard]]
+    CBlob indices_cblob() const {
+        auto const * header = header_object();
+        MFA_PTR_ASSERT(header);
+        MFA_ASSERT(header->sub_mesh_count > 0);
+        return CBlob {
+            asset().ptr + header->sub_meshes[0].indices_offset,
+            header->total_index_count * sizeof(Mesh::Data::Indices::IndexType)
+        };
     }
     [[nodiscard]]
     Blob indices_blob(MeshHeader::SubMeshIndexType const sub_mesh_index) const {

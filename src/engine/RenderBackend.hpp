@@ -491,7 +491,7 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSet(
     VkDevice_T * device,
     VkDescriptorPool_T * descriptor_pool,
     VkDescriptorSetLayout_T * descriptor_set_layout,
-    U8 swap_chain_images_count,
+    U8 descriptor_set_count,
     U8 schemas_count = 0,
     VkWriteDescriptorSet * schemas = nullptr
 );
@@ -582,6 +582,15 @@ void PushConstants(
     AssetSystem::ShaderStage shader_stage, 
     U32 offset, 
     CBlob data
+);
+
+void UpdateDescriptorSetsBasic(
+    VkDevice_T * device,
+    U8 descriptor_sets_count,
+    VkDescriptorSet_T ** descriptor_sets,
+    VkDescriptorBufferInfo const & buffer_info,
+    U32 image_info_count,
+    VkDescriptorImageInfo const * image_infos
 );
 
 }

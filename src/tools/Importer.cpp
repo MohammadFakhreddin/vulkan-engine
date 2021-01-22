@@ -318,6 +318,8 @@ AssetSystem::MeshAsset ImportObj(char const * path) {
                 mesh_asset = AssetSystem::MeshAsset(mesh_asset_blob);
                 auto * mesh_header = mesh_asset_blob.as<AssetSystem::MeshHeader>();
                 mesh_header->sub_mesh_count = 1;
+                mesh_header->total_vertex_count = vertices_count;
+                mesh_header->total_index_count = indices_count;
                 mesh_header->sub_meshes[0].vertex_count = vertices_count;
                 mesh_header->sub_meshes[0].vertices_offset = header_size;
                 mesh_header->sub_meshes[0].index_count = indices_count;
@@ -448,6 +450,8 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
             auto asset_blob = Memory::Alloc(asset_size);
             auto * header_object = asset_blob.as<AssetSystem::MeshHeader>();
             header_object->sub_mesh_count = sub_mesh_count;
+            header_object->total_index_count = total_indices_count;
+            header_object->total_vertex_count = total_vertices_count;
             MFA_DEFER {
                 if(MFA_PTR_VALID(asset_blob.ptr)) {
                     Memory::Free(asset_blob);
@@ -458,6 +462,7 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
             U32 sub_mesh_index = 0;
             U64 vertices_offset = header_size;
             U64 indices_offset = vertices_offset + total_vertices_count * sizeof(AssetSystem::MeshVertices::Vertex);
+            U32 indices_starting_index = 0;
             for(auto & mesh : model.meshes) {
                 if(false == mesh.primitives.empty()) {
                     for(auto & primitive : mesh.primitives) {
@@ -584,12 +589,14 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                         */
                         auto & current_sub_mesh = header_object->sub_meshes[sub_mesh_index];
                         current_sub_mesh.indices_offset = indices_offset;
+                        current_sub_mesh.indices_starting_index = indices_starting_index;
                         current_sub_mesh.vertices_offset = vertices_offset;
                         current_sub_mesh.index_count = primitive_indices_count;
                         current_sub_mesh.vertex_count = primitive_vertex_count;
                         current_sub_mesh.base_color_texture_index = base_color_texture_index;
                         vertices_offset += primitive_vertex_count * sizeof(AssetSystem::MeshVertices::Vertex);
                         indices_offset += primitive_indices_count * sizeof(AssetSystem::MeshIndices::IndexType);
+                        indices_starting_index += primitive_indices_count;
                         auto * vertices = model_asset.mesh.vertices(sub_mesh_index);
                         auto * indices = model_asset.mesh.indices(sub_mesh_index);
                         ::memcpy(indices, temp_indices_blob.ptr, temp_indices_blob.len);

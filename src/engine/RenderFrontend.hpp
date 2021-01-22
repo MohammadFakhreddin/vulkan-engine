@@ -62,28 +62,22 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSets(
     VkDescriptorSetLayout_T * descriptor_set_layout
 );
 
-void UpdateDescriptorSetsBasic(
-    U8 descriptor_sets_count,
-    VkDescriptorSet_T ** descriptor_sets,
-    VkDescriptorBufferInfo const & buffer_info,
-    VkDescriptorImageInfo const & image_info
-);
-
-void UpdateDescriptorSets(
-    U8 descriptor_sets_count,
-    VkDescriptorSet_T ** descriptor_sets,
-    U8 write_info_count,
-    VkWriteDescriptorSet * write_info
+[[nodiscard]]
+std::vector<VkDescriptorSet_T *> CreateDescriptorSets(
+    U32 descriptor_set_count,
+    VkDescriptorSetLayout_T * descriptor_set_layout
 );
 
 // TODO AdvanceBindingDescriptorSetWriteInfo
 struct MeshBuffers {
-    struct SubMeshBuffer {
-        RB::BufferGroup vertices_buffers;
-        RB::BufferGroup indices_buffers;
-        AssetSystem::Mesh::Header::SubMeshIndexType indices_count;
+    struct DrawCallData {
+        U64 vertex_offset = 0;
+        U64 index_offset = 0;
+        U32 index_count = 0;
     };
-    std::vector<SubMeshBuffer> sub_mesh_buffers;    // Organized by sub-mesh index
+    RB::BufferGroup vertices_buffer {};
+    RB::BufferGroup indices_buffer {};
+    std::vector<DrawCallData> sub_mesh_buffers;    // Organized by sub-mesh index
 };
 
 [[nodiscard]]
@@ -159,17 +153,32 @@ void BindDrawPipeline(
     DrawPipeline & draw_pipeline   
 );
 
-void UpdateDescriptorSetsBasic(
+void UpdateDescriptorSetBasic(
     DrawPass const & draw_pass,
-    VkDescriptorSet_T ** descriptor_sets,
+    VkDescriptorSet_T * descriptor_set,
     UniformBufferGroup const & uniform_buffer,
     RB::GpuTexture const & gpu_texture,
     SamplerGroup const & sampler_group
 );
 
-void BindDescriptorSets(
+void UpdateDescriptorSetBasic(
     DrawPass const & draw_pass,
-    VkDescriptorSet_T ** descriptor_sets
+    VkDescriptorSet_T * descriptor_set,
+    UniformBufferGroup const & uniform_buffer,
+    U32 image_info_count,
+    VkDescriptorImageInfo const * image_infos
+);
+
+void UpdateDescriptorSets(
+    U8 descriptor_sets_count,
+    VkDescriptorSet_T ** descriptor_sets,
+    U8 write_info_count,
+    VkWriteDescriptorSet * write_info
+);
+
+void BindDescriptorSet(
+    DrawPass const & draw_pass,
+    VkDescriptorSet_T * descriptor_set
 );
 
 //: loop through each mesh instance in the mesh instances list to render

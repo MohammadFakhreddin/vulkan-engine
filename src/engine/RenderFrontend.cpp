@@ -380,64 +380,17 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSets(
     );
 }
 
-// TODO I think we should keep these information for each mesh individually
-void UpdateDescriptorSetsBasic(
-    U8 const descriptor_sets_count,
-    VkDescriptorSet_T ** descriptor_sets,
-    VkDescriptorBufferInfo const & buffer_info,
-    VkDescriptorImageInfo const & image_info
+std::vector<VkDescriptorSet_T *> CreateDescriptorSets(
+    U32 const descriptor_set_count,
+    VkDescriptorSetLayout_T * descriptor_set_layout
 ) {
-    MFA_ASSERT(descriptor_sets_count > 0);
-    MFA_PTR_ASSERT(descriptor_sets);
-    for(U8 i = 0; i < descriptor_sets_count; i++) {
-        std::vector<VkWriteDescriptorSet> descriptorWrites {2};
-        
-        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[0].dstSet = descriptor_sets[i];
-        descriptorWrites[0].dstBinding = 0;
-        descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pBufferInfo = &buffer_info;
-
-        descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[1].dstSet = descriptor_sets[i];
-        descriptorWrites[1].dstBinding = 1;
-        descriptorWrites[1].dstArrayElement = 0;
-        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptorWrites[1].descriptorCount = 1;
-        descriptorWrites[1].pImageInfo = &image_info;
-
-        vkUpdateDescriptorSets(
-            state.logical_device.device, 
-            static_cast<uint32_t>(descriptorWrites.size()), 
-            descriptorWrites.data(), 
-            0, 
-            nullptr
-        );
-    }
-}
-
-void UpdateDescriptorSets(
-    U8 const descriptor_sets_count,
-    VkDescriptorSet_T ** descriptor_sets,
-    U8 const write_info_count,
-    VkWriteDescriptorSet * write_info
-) {
-    MFA_ASSERT(descriptor_sets_count > 0);
-    MFA_ASSERT(write_info_count > 0);
-    for(U8 desc_index = 0; desc_index < descriptor_sets_count; desc_index++) {
-        for(U8 write_index = 0; write_index < write_info_count; write_index++) {
-            write_info[write_index].dstSet = descriptor_sets[desc_index];
-        }
-        vkUpdateDescriptorSets(
-            state.logical_device.device, 
-            write_info_count, 
-            write_info, 
-            0, 
-            nullptr
-        );
-    }
+    MFA_PTR_ASSERT(descriptor_set_layout);
+    return RB::CreateDescriptorSet(
+        state.logical_device.device,
+        state.descriptor_pool,
+        descriptor_set_layout,
+        descriptor_set_count
+    );
 }
 
 UniformBufferGroup CreateUniformBuffer(size_t const buffer_size) {
@@ -497,25 +450,26 @@ RB::BufferGroup CreateIndexBuffer(CBlob const indices_blob) {
 MeshBuffers CreateMeshBuffers(AssetSystem::MeshAsset const & mesh_asset) {
     MFA_ASSERT(mesh_asset.valid());
     MeshBuffers buffers {.sub_mesh_buffers {}};
-    auto const * header_object = mesh_asset.header_object();
+    auto const header_blob = mesh_asset.header_blob();
+    auto const * header_object = header_blob.as<AssetSystem::MeshHeader>();
+    auto const header_size = mesh_asset.compute_header_size();
+    buffers.indices_buffer = CreateIndexBuffer(mesh_asset.indices_cblob());
+    buffers.vertices_buffer = CreateVertexBuffer(mesh_asset.vertices_cblob());
     for (U32 i = 0; i < header_object->sub_mesh_count; i++) {
-        buffers.sub_mesh_buffers.emplace_back(MeshBuffers::SubMeshBuffer {
-            .vertices_buffers = CreateVertexBuffer(mesh_asset.vertices_cblob(i)),
-            .indices_buffers = CreateIndexBuffer(mesh_asset.indices_cblob(i)),
-            .indices_count = header_object->sub_meshes[i].index_count,
+        auto const & current_sub_mesh = header_object->sub_meshes[i];
+        buffers.sub_mesh_buffers.emplace_back(MeshBuffers::DrawCallData {
+            .vertex_offset = static_cast<U64>(current_sub_mesh.vertices_offset - header_size),
+            .index_offset = static_cast<U64>(current_sub_mesh.indices_offset - header_size),
+            .index_count = header_object->sub_meshes[i].index_count,
         });
     }
     return buffers;
 }
 
 void DestroyMeshBuffers(MeshBuffers & mesh_buffers) {
-    if (false == mesh_buffers.sub_mesh_buffers.empty()) {
-        for (auto & sub_mesh_buffers : mesh_buffers.sub_mesh_buffers) {
-            RB::DestroyVertexBuffer(state.logical_device.device, sub_mesh_buffers.vertices_buffers);
-            RB::DestroyIndexBuffer(state.logical_device.device, sub_mesh_buffers.indices_buffers);
-        }
-        mesh_buffers.sub_mesh_buffers.resize(0);
-    }
+    RB::DestroyVertexBuffer(state.logical_device.device, mesh_buffers.vertices_buffer);
+    RB::DestroyIndexBuffer(state.logical_device.device, mesh_buffers.indices_buffer);
+    mesh_buffers.sub_mesh_buffers.resize(0);
 }
 
 RB::GpuTexture CreateTexture(AssetSystem::TextureAsset & texture_asset) {
@@ -681,38 +635,71 @@ void BindDrawPipeline(
     );
 }
 
-void UpdateDescriptorSetsBasic(
+void UpdateDescriptorSetBasic(
     DrawPass const & draw_pass,
-    VkDescriptorSet_T ** descriptor_sets,
+    VkDescriptorSet_T * descriptor_set,
     UniformBufferGroup const & uniform_buffer,
     RB::GpuTexture const & gpu_texture,
     SamplerGroup const & sampler_group
+) {
+    VkDescriptorImageInfo image_info {};
+    image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    image_info.imageView = gpu_texture.image_view();
+    image_info.sampler = sampler_group.sampler;
+
+    UpdateDescriptorSetBasic(
+        draw_pass,
+        descriptor_set,
+        uniform_buffer,
+        1,
+        &image_info
+    );
+}
+
+void UpdateDescriptorSetBasic(
+    DrawPass const & draw_pass,
+    VkDescriptorSet_T * descriptor_set,
+    UniformBufferGroup const & uniform_buffer,
+    U32 const image_info_count,
+    VkDescriptorImageInfo const * image_infos
 ) {
     VkDescriptorBufferInfo buffer_info {};
     buffer_info.buffer = uniform_buffer.buffers[draw_pass.image_index].buffer;
     buffer_info.offset = 0;
     buffer_info.range = uniform_buffer.buffer_size;
 
-    VkDescriptorImageInfo image_info {};
-    image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    image_info.imageView = gpu_texture.image_view();
-    image_info.sampler = sampler_group.sampler;
-
-    UpdateDescriptorSetsBasic(
+    RB::UpdateDescriptorSetsBasic(
+        state.logical_device.device,
         1,
-        &descriptor_sets[draw_pass.image_index],
+        &descriptor_set,
         buffer_info,
-        image_info
+        image_info_count,
+        image_infos
     );
 }
 
-void BindDescriptorSets(
+void UpdateDescriptorSets(
+    U8 descriptor_sets_count,
+    VkDescriptorSet_T ** descriptor_sets,
+    U8 write_info_count,
+    VkWriteDescriptorSet * write_info
+) {
+    RB::UpdateDescriptorSets(
+        state.logical_device.device,
+        descriptor_sets_count,
+        descriptor_sets,
+        write_info_count,
+        write_info
+    );
+}
+
+void BindDescriptorSet(
     DrawPass const & draw_pass,
-    VkDescriptorSet_T ** descriptor_sets
+    VkDescriptorSet_T * descriptor_set
 ) {
     MFA_ASSERT(draw_pass.is_valid);
     MFA_PTR_ASSERT(draw_pass.draw_pipeline);
-
+    MFA_PTR_ASSERT(descriptor_set);
     // We should bind specific descriptor set with different texture for each mesh
     vkCmdBindDescriptorSets(
         state.graphic_command_buffers[draw_pass.image_index], 
@@ -720,7 +707,7 @@ void BindDescriptorSets(
         draw_pass.draw_pipeline->graphic_pipeline_group.pipeline_layout, 
         0, 
         1, 
-        &descriptor_sets[draw_pass.image_index], 
+        &descriptor_set, 
         0, 
         nullptr
     );

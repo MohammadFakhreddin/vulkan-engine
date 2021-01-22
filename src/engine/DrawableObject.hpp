@@ -29,7 +29,7 @@ public:
     template<typename T>
     void update_uniform_buffer(RF::DrawPass const & draw_pass, T ubo) const {
         update_uniform_buffer(draw_pass, CBlobAliasOf(ubo));
-    };
+    }
     void update_uniform_buffer(RF::DrawPass const & draw_pass, CBlob ubo) const;
     void shutdown();
     [[nodiscard]]

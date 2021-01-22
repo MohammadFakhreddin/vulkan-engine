@@ -1794,19 +1794,19 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSet(
     VkDevice_T * device,
     VkDescriptorPool_T * descriptor_pool,
     VkDescriptorSetLayout_T * descriptor_set_layout,
-    U8 const swap_chain_images_count,
+    U8 const descriptor_set_count,
     U8 const schemas_count,
     VkWriteDescriptorSet * schemas
 ) {
     MFA_PTR_ASSERT(device);
     MFA_PTR_ASSERT(descriptor_pool);
     MFA_PTR_ASSERT(descriptor_set_layout);
-    std::vector<VkDescriptorSetLayout> layouts(swap_chain_images_count, descriptor_set_layout);
+    std::vector<VkDescriptorSetLayout> layouts(descriptor_set_count, descriptor_set_layout);
     // There needs to be one descriptor set per binding point in the shader
     VkDescriptorSetAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = descriptor_pool;
-    allocInfo.descriptorSetCount = swap_chain_images_count;
+    allocInfo.descriptorSetCount = descriptor_set_count;
     allocInfo.pSetLayouts = layouts.data();
 
     std::vector<VkDescriptorSet_T *> descriptor_sets {allocInfo.descriptorSetCount};
@@ -2066,5 +2066,44 @@ void PushConstants(
         data.ptr
     );
 }
+
+void UpdateDescriptorSetsBasic(
+    VkDevice_T * device,
+    U8 const descriptor_sets_count,
+    VkDescriptorSet_T ** descriptor_sets,
+    VkDescriptorBufferInfo const & buffer_info,
+    U32 const image_info_count,
+    VkDescriptorImageInfo const * image_infos
+) {
+    MFA_ASSERT(descriptor_sets_count > 0);
+    MFA_PTR_ASSERT(descriptor_sets);
+    for(U8 i = 0; i < descriptor_sets_count; i++) {
+        std::vector<VkWriteDescriptorSet> descriptorWrites {2};
+        
+        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[0].dstSet = descriptor_sets[i];
+        descriptorWrites[0].dstBinding = 0;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pBufferInfo = &buffer_info;
+
+        descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[1].dstSet = descriptor_sets[i];
+        descriptorWrites[1].dstBinding = 1;
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[1].descriptorCount = image_info_count;
+        descriptorWrites[1].pImageInfo = image_infos;
+
+        vkUpdateDescriptorSets(
+            device, 
+            static_cast<uint32_t>(descriptorWrites.size()), 
+            descriptorWrites.data(), 
+            0, 
+            nullptr
+        );
+    }
+};
 
 }
