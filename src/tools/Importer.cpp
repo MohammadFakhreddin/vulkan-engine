@@ -323,9 +323,9 @@ AssetSystem::MeshAsset ImportObj(char const * path) {
                 mesh_header->sub_meshes[0].vertex_count = vertices_count;
                 mesh_header->sub_meshes[0].vertices_offset = header_size;
                 mesh_header->sub_meshes[0].index_count = indices_count;
-                mesh_header->sub_meshes[0].indices_offset = header_size + vertices_count * sizeof(AssetSystem::MeshVertices::Vertex);
-                auto * mesh_vertices = mesh_asset.vertices_blob(0).as<AssetSystem::MeshVertices>()->value;
-                auto * mesh_indices = mesh_asset.indices_blob(0).as<AssetSystem::MeshIndices>()->value;
+                mesh_header->sub_meshes[0].indices_offset = header_size + vertices_count * sizeof(AssetSystem::MeshVertex);
+                auto * mesh_vertices = mesh_asset.vertices_blob(0).as<AssetSystem::MeshVertex>();
+                auto * mesh_indices = mesh_asset.indices_blob(0).as<AssetSystem::MeshIndex>();
                 MFA_ASSERT(mesh_asset.indices_blob(0).ptr + mesh_asset.indices_blob(0).len == mesh_asset_blob.ptr + mesh_asset_blob.len);
                 for(
                     uintmax_t indices_index = 0;
@@ -462,8 +462,9 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
             // Step2: Fill asset buffer from model buffers
             U32 sub_mesh_index = 0;
             U64 vertices_offset = header_size;
-            U64 indices_offset = vertices_offset + total_vertices_count * sizeof(AssetSystem::MeshVertices::Vertex);
+            U64 indices_offset = vertices_offset + total_vertices_count * sizeof(AssetSystem::MeshVertex);
             U32 indices_starting_index = 0;
+            U32 vertices_starting_index = 0;
             for(auto & mesh : model.meshes) {
                 if(false == mesh.primitives.empty()) {
                     for(auto & primitive : mesh.primitives) {
@@ -478,7 +479,7 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                             // TODO Support other texture types as well
                         }
                         Blob temp_indices_blob {};
-                        U32 * temp_indices = nullptr;
+                        AssetSystem::MeshIndex * temp_indices = nullptr;
                         MFA_DEFER {
                             if(MFA_BLOB_VALID(temp_indices_blob)) {
                                 Memory::Free(temp_indices_blob);
@@ -491,8 +492,8 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                             auto const & buffer_view = model.bufferViews[accessor.bufferView];
                             MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
                             auto const & buffer = model.buffers[buffer_view.buffer];
-                            temp_indices_blob = Memory::Alloc(accessor.count * sizeof(AssetSystem::Mesh::Data::Indices::IndexType));
-                            temp_indices = temp_indices_blob.as<U32>();
+                            temp_indices_blob = Memory::Alloc(accessor.count * sizeof(AssetSystem::MeshIndex));
+                            temp_indices = temp_indices_blob.as<AssetSystem::MeshIndex>();
                             primitive_indices_count = static_cast<U32>(accessor.count);
                             switch(accessor.componentType) {
                                 case TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT:
@@ -500,28 +501,28 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                                     auto const * gltf_indices = reinterpret_cast<U32 const *>(
                                         &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
                                     );
-                                    for (U32 i = 0; i < accessor.count; i++) {
-                                        temp_indices[i] = gltf_indices[i];
+                                    for (U32 i = 0; i < primitive_indices_count; i++) {
+                                        temp_indices[i] = gltf_indices[i] + vertices_starting_index;
                                     }
                                 }
                                 break;
                                 case TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT:
                                 {
-                                    auto const * gltf_indices = reinterpret_cast<const U16 *>(
+                                    auto const * gltf_indices = reinterpret_cast<U16 const *>(
                                         &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
                                     );
-                                    for (U32 i = 0; i < accessor.count; i++) {
-                                        temp_indices[i] = gltf_indices[i];
+                                    for (U32 i = 0; i < primitive_indices_count; i++) {
+                                        temp_indices[i] = gltf_indices[i] + vertices_starting_index;
                                     }
                                 }
                                 break;
                                 case TINYGLTF_PARAMETER_TYPE_UNSIGNED_BYTE:
                                 {
-                                    auto const * gltf_indices = reinterpret_cast<const U16 *>(
+                                    auto const * gltf_indices = reinterpret_cast<U8 const *>(
                                         &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
                                     );
-                                    for (U32 i = 0; i < accessor.count; i++) {
-                                        temp_indices[i] = gltf_indices[i];
+                                    for (U32 i = 0; i < primitive_indices_count; i++) {
+                                        temp_indices[i] = gltf_indices[i] + vertices_starting_index;
                                     }
                                 }
                                 break;
@@ -531,9 +532,18 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                         }
                         float const * positions = nullptr;
                         U32 primitive_vertex_count = 0;
+                        float positions_min_value [3];
+                        float positions_max_value [3];
                         {// Positions
                             MFA_REQUIRE(primitive.attributes["POSITION"] < model.accessors.size());
                             auto const & accessor = model.accessors[primitive.attributes["POSITION"]];
+                            MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+                            positions_min_value[0] = static_cast<float>(accessor.minValues[0]);
+                            positions_min_value[1] = static_cast<float>(accessor.minValues[1]);
+                            positions_min_value[2] = static_cast<float>(accessor.minValues[2]);
+                            positions_max_value[0] = static_cast<float>(accessor.maxValues[0]);
+                            positions_max_value[1] = static_cast<float>(accessor.maxValues[1]);
+                            positions_max_value[2] = static_cast<float>(accessor.maxValues[2]);
                             auto const & buffer_view = model.bufferViews[accessor.bufferView];
                             MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
                             auto const & buffer = model.buffers[buffer_view.buffer];
@@ -543,10 +553,17 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                             primitive_vertex_count = static_cast<U32>(accessor.count);
                         }
                         float const * base_color_texture_coordinates = nullptr;
+                        float base_color_texture_min [2];
+                        float base_color_texture_max [2];
                         // TODO TEXCOORD_0 does not have to be hard coded, We need to support other textures as well
                         if(primitive.attributes["TEXCOORD_0"] >= 0) {
                             MFA_REQUIRE(primitive.attributes["TEXCOORD_0"] < model.accessors.size());
                             auto const & accessor = model.accessors[primitive.attributes["TEXCOORD_0"]];
+                            MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+                            base_color_texture_min[0] = static_cast<float>(accessor.minValues[0]);
+                            base_color_texture_min[1] = static_cast<float>(accessor.minValues[1]);
+                            base_color_texture_max[0] = static_cast<float>(accessor.maxValues[0]);
+                            base_color_texture_max[1] = static_cast<float>(accessor.maxValues[1]);
                             auto const & buffer_view = model.bufferViews[accessor.bufferView];
                             MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
                             auto const & buffer = model.buffers[buffer_view.buffer];
@@ -555,9 +572,18 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                             );
                         }
                         float const * normals = nullptr;
+                        float normals_min_value [3];
+                        float normals_max_value [3];
                         if(primitive.attributes["NORMAL"] >= 0) {
                             MFA_REQUIRE(primitive.attributes["NORMAL"] < model.accessors.size());
                             auto const & accessor = model.accessors[primitive.attributes["NORMAL"]];
+                            MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+                            normals_min_value[0] = static_cast<float>(accessor.minValues[0]);
+                            normals_min_value[1] = static_cast<float>(accessor.minValues[1]);
+                            normals_min_value[2] = static_cast<float>(accessor.minValues[2]);
+                            normals_max_value[0] = static_cast<float>(accessor.maxValues[0]);
+                            normals_max_value[1] = static_cast<float>(accessor.maxValues[1]);
+                            normals_max_value[2] = static_cast<float>(accessor.maxValues[2]);
                             auto const & buffer_view = model.bufferViews[accessor.bufferView];
                             MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
                             auto const & buffer = model.buffers[buffer_view.buffer];
@@ -584,29 +610,46 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                         current_sub_mesh.index_count = primitive_indices_count;
                         current_sub_mesh.vertex_count = primitive_vertex_count;
                         current_sub_mesh.base_color_texture_index = base_color_texture_index;
-                        vertices_offset += primitive_vertex_count * sizeof(AssetSystem::MeshVertices::Vertex);
-                        indices_offset += primitive_indices_count * sizeof(AssetSystem::MeshIndices::IndexType);
+                        vertices_offset += primitive_vertex_count * sizeof(AssetSystem::MeshVertex);
+                        indices_offset += primitive_indices_count * sizeof(AssetSystem::MeshIndex);
                         indices_starting_index += primitive_indices_count;
+                        vertices_starting_index += primitive_vertex_count;
                         auto * vertices = model_asset.mesh.vertices(sub_mesh_index);
                         auto * indices = model_asset.mesh.indices(sub_mesh_index);
                         ::memcpy(indices, temp_indices_blob.ptr, temp_indices_blob.len);
                         ++ sub_mesh_index;
+                        MFA_PTR_ASSERT(normals);
+                        MFA_PTR_ASSERT(positions);
+                        MFA_PTR_ASSERT(base_color_texture_coordinates);
                         for (U32 i = 0; i < primitive_vertex_count; ++i) {
 
-                            vertices[i].value->position[0] = positions[i * 3 + 0];
-                            vertices[i].value->position[1] = positions[i * 3 + 1];
-                            vertices[i].value->position[2] = positions[i * 3 + 2];
-
-                            vertices[i].value->normal[0] = normals[i * 3 + 0];
-                            vertices[i].value->normal[1] = normals[i * 3 + 1];
-                            vertices[i].value->normal[2] = normals[i * 3 + 2];
-
-                            vertices[i].value->base_color_uv[0] = base_color_texture_coordinates[i * 2 + 0];
-                            vertices[i].value->base_color_uv[1] = base_color_texture_coordinates[i * 2 + 1];
-
-                           /* vertices[i].vertices->color[0] = colors[i * 3 + 0];
-                            vertices[i].vertices->color[1] = colors[i * 3 + 1];
-                            vertices[i].vertices->color[2] = colors[i * 3 + 2];*/
+                            vertices[i].position[0] = positions[i * 3 + 0];
+                            MFA_ASSERT(vertices[i].position[0] >= positions_min_value[0]);
+                            MFA_ASSERT(vertices[i].position[0] <= positions_max_value[0]);
+                            vertices[i].position[1] = positions[i * 3 + 1];
+                            MFA_ASSERT(vertices[i].position[1] >= positions_min_value[1]);
+                            MFA_ASSERT(vertices[i].position[1] <= positions_max_value[1]);
+                            vertices[i].position[2] = positions[i * 3 + 2];
+                            MFA_ASSERT(vertices[i].position[2] >= positions_min_value[2]);
+                            MFA_ASSERT(vertices[i].position[2] <= positions_max_value[2]);
+                            vertices[i].normal[0] = normals[i * 3 + 0];
+                            MFA_ASSERT(vertices[i].normal[0] >= normals_min_value[0]);
+                            MFA_ASSERT(vertices[i].normal[0] <= normals_max_value[0]);
+                            vertices[i].normal[1] = normals[i * 3 + 1];
+                            MFA_ASSERT(vertices[i].normal[1] >= normals_min_value[1]);
+                            MFA_ASSERT(vertices[i].normal[1] <= normals_max_value[1]);
+                            vertices[i].normal[2] = normals[i * 3 + 2];
+                            MFA_ASSERT(vertices[i].normal[2] >= normals_min_value[2]);
+                            MFA_ASSERT(vertices[i].normal[2] <= normals_max_value[2]);
+                            vertices[i].base_color_uv[0] = base_color_texture_coordinates[i * 2 + 0];
+                            MFA_ASSERT(vertices[i].base_color_uv[0] >= base_color_texture_min[0]);
+                            MFA_ASSERT(vertices[i].base_color_uv[0] <= base_color_texture_max[0]);
+                            vertices[i].base_color_uv[1] = base_color_texture_coordinates[i * 2 + 1];
+                            MFA_ASSERT(vertices[i].base_color_uv[1] >= base_color_texture_min[1]);
+                            MFA_ASSERT(vertices[i].base_color_uv[1] <= base_color_texture_max[1]);
+                            vertices[i].color[0] = 0;// TODO
+                            vertices[i].color[1] = 0;
+                            vertices[i].color[2] = 0;
                         }
                     }
                 }
@@ -616,6 +659,15 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
             }
         }
     }
+#ifdef MFA_DEBUG
+    auto header_object = model_asset.mesh.header_object();
+    auto vertices = model_asset.mesh.vertices_cblob().as<AssetSystem::MeshVertex>();
+    for (U32 i = 0; i < header_object->total_vertex_count; i++) {
+        MFA_REQUIRE(vertices[i].color[0] == 0);
+        MFA_REQUIRE(vertices[i].color[1] == 0);
+        MFA_REQUIRE(vertices[i].color[2] == 0);
+    }
+#endif
     return model_asset;
 }
 

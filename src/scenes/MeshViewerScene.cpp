@@ -24,7 +24,9 @@ public:
         );  
     }
     void Init() override {
-        auto cpu_model = Importer::ImportMeshGLTF("../assets/gunship/scene.gltf");
+        auto cpu_model = Importer::ImportMeshGLTF("../assets/free_zuk_3d_model/scene.gltf");
+        //auto cpu_model = Importer::ImportMeshGLTF("../assets/kirpi_mrap__lowpoly__free_3d_model/scene.gltf");
+        //auto cpu_model = Importer::ImportMeshGLTF("../assets/gunship/scene.gltf");
         m_gpu_model = RF::CreateGpuModel(cpu_model);
         m_cpu_vertex_shader = Importer::ImportShaderFromSPV(
             "../assets/shaders/vert.spv", 
@@ -98,7 +100,7 @@ public:
         ImGui::Begin("Object viewer");
         ImGui::SetNextItemWidth(300.0f);
         ImGui::SliderFloat("XDegree", &XDegree, -360.0f, 360.0f);
-        ImGui::SliderFloat("YDegree", &YDegree, -360.0f, 360.0f);
+        ImGui::SliderFloat("YDegree", &YDegree, -100.0f, 100.0f);
         ImGui::SliderFloat("ZDegree", &zDegree, -360.0f, 360.0f);
         ImGui::SliderFloat("XDistance", &xDistance, -100.0f, 100.0f);
         ImGui::SliderFloat("YDistance", &yDistance, -100.0f, 100.0f);

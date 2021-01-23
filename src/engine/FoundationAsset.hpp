@@ -309,9 +309,11 @@ struct Header {
 #pragma warning (pop)
 }
 
-using MeshVertices = Mesh::Data::Vertices;
-using MeshIndices = Mesh::Data::Indices;
+//using MeshVertices = Mesh::Data::Vertices;
+//using MeshIndices = Mesh::Data::Indices;
 using MeshHeader = Mesh::Header;
+using MeshIndex = Mesh::Data::Indices::IndexType;
+using MeshVertex = Mesh::Data::Vertices::Vertex;
 
 //--------------------------------ShaderHeader--------------------------------------
 namespace Shader {
@@ -458,12 +460,12 @@ public:
         return reinterpret_cast<MeshHeader const *>(asset().ptr);
     }
     [[nodiscard]]
-    MeshVertices * vertices(MeshHeader::SubMeshIndexType const sub_mesh_index) {
-        return vertices_blob(sub_mesh_index).as<MeshVertices>();
+    MeshVertex * vertices(MeshHeader::SubMeshIndexType const sub_mesh_index) {
+        return vertices_blob(sub_mesh_index).as<MeshVertex>();
     }
     [[nodiscard]]
-    MeshVertices const * vertices(MeshHeader::SubMeshIndexType const sub_mesh_index) const {
-        return vertices_cblob(sub_mesh_index).as<MeshVertices>();
+    MeshVertex const * vertices(MeshHeader::SubMeshIndexType const sub_mesh_index) const {
+        return vertices_cblob(sub_mesh_index).as<MeshVertex>();
     }
     [[nodiscard]]
     CBlob vertices_cblob(MeshHeader::SubMeshIndexType const sub_mesh_index) const {
@@ -475,6 +477,11 @@ public:
         auto const * header = header_object();
         MFA_PTR_ASSERT(header);
         MFA_ASSERT(header->sub_mesh_count > 0);
+        MFA_ASSERT(
+            header->sub_meshes[0].vertices_offset + 
+            header->total_vertex_count * 
+            sizeof(Mesh::Data::Vertices::Vertex) == header->sub_meshes[0].indices_offset
+        );
         return CBlob {
             asset().ptr + header->sub_meshes[0].vertices_offset,
             header->total_vertex_count * sizeof(Mesh::Data::Vertices::Vertex)
@@ -490,12 +497,12 @@ public:
         };
     }
     [[nodiscard]]
-    MeshIndices * indices(MeshHeader::SubMeshIndexType const sub_mesh_index) {
-        return indices_blob(sub_mesh_index).as<MeshIndices>();
+    MeshIndex * indices(MeshHeader::SubMeshIndexType const sub_mesh_index) {
+        return indices_blob(sub_mesh_index).as<MeshIndex>();
     }
     [[nodiscard]]
-    MeshIndices const * indices(MeshHeader::SubMeshIndexType const sub_mesh_index) const {
-        return indices_cblob(sub_mesh_index).as<MeshIndices>();
+    MeshIndex const * indices(MeshHeader::SubMeshIndexType const sub_mesh_index) const {
+        return indices_cblob(sub_mesh_index).as<MeshIndex>();
     }
     [[nodiscard]]
     CBlob indices_cblob(MeshHeader::SubMeshIndexType const sub_mesh_index) const {

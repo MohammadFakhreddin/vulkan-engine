@@ -51,8 +51,8 @@ void DrawableObject::draw(RF::DrawPass & draw_pass) {
             draw_pass,
             sub_mesh_buffers.index_count,
             1,
-            current_sub_mesh.indices_starting_index,
-            static_cast<U32>(current_sub_mesh.vertices_offset)
+            current_sub_mesh.indices_starting_index
+            //static_cast<U32>(current_sub_mesh.vertices_offset - header_size)              // TODO Start from here , find display issue
         );
     }
 }
