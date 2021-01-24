@@ -1460,7 +1460,8 @@ GraphicPipelineGroup CreateGraphicPipeline(
     viewport_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewport_create_info.viewportCount = 1;
     viewport_create_info.scissorCount = 1;
-
+    // Do not move these objects into if conditions otherwise it will be removed for release mode
+    // thus you may face strange validation error about min depth is not set
     VkViewport viewport = {};
     VkRect2D scissor = {};
 
