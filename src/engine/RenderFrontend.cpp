@@ -78,10 +78,12 @@ bool Init(InitParams const & params) {
         state.application_name.c_str(), 
         state.window
     );
+#ifdef MFA_DEBUG
     state.vk_debug_report_callback_ext = RB::CreateDebugCallback(
         state.vk_instance,
         DebugCallback
     );
+#endif
     state.surface = RB::CreateWindowSurface(state.window, state.vk_instance);
     {
         auto const find_physical_device_result = RB::FindPhysicalDevice(state.vk_instance); // TODO Check again for retry count number

@@ -24,9 +24,9 @@ public:
         );  
     }
     void Init() override {
-        auto cpu_model = Importer::ImportMeshGLTF("../assets/free_zuk_3d_model/scene.gltf");
+        //auto cpu_model = Importer::ImportMeshGLTF("../assets/free_zuk_3d_model/scene.gltf");
         //auto cpu_model = Importer::ImportMeshGLTF("../assets/kirpi_mrap__lowpoly__free_3d_model/scene.gltf");
-        //auto cpu_model = Importer::ImportMeshGLTF("../assets/gunship/scene.gltf");
+        auto cpu_model = Importer::ImportMeshGLTF("../assets/gunship/scene.gltf");
         m_gpu_model = RF::CreateGpuModel(cpu_model);
         m_cpu_vertex_shader = Importer::ImportShaderFromSPV(
             "../assets/shaders/vert.spv", 

@@ -407,7 +407,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
     VkExtent2D swap_chain_extent,
     VkRenderPass_T * render_pass,
     VkDescriptorSetLayout_T * descriptor_set_layout,
-    CreateGraphicPipelineOptions const & options = {}
+    CreateGraphicPipelineOptions const & options
 );
 
 void DestroyGraphicPipeline(VkDevice_T * device, GraphicPipelineGroup & graphic_pipeline_group);

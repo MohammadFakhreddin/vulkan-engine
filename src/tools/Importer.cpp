@@ -194,7 +194,7 @@ AssetSystem::ShaderAsset ImportShaderFromSPV(
 }
 
 AssetSystem::ShaderAsset ImportShaderFromSPV(
-    CBlob data_memory,
+    CBlob const data_memory,
     AssetSystem::ShaderStage const stage,
     char const * entry_point
 ) {

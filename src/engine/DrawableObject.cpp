@@ -34,7 +34,7 @@ void DrawableObject::draw(RF::DrawPass & draw_pass) {
     MFA_PTR_ASSERT(header_object);
     BindVertexBuffer(draw_pass, m_model->mesh_buffers.vertices_buffer);
     BindIndexBuffer(draw_pass, m_model->mesh_buffers.indices_buffer);
-    // TODO: I think each textures needs its own sampler
+    // TODO: I think each textures needs its own sampler and descriptor set or does it ?
     for (U32 i = 0; i < m_required_draw_calls; ++i) {
         auto * current_descriptor_set = m_descriptor_sets[draw_pass.image_index * m_required_draw_calls + i];
         RF::BindDescriptorSet(draw_pass, current_descriptor_set);

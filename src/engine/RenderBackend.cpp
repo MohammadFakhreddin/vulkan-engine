@@ -160,7 +160,7 @@ VkInstance_T * CreateInstance(char const * application_name, SDL_Window * window
             MFA_CRASH("no extensions supported!");
         }
     }
-    // TODO We should enumarateLayers before using them
+    // TODO We should enumarate layers before using them
     // Filling out instance description:
     VkInstanceCreateInfo instanceInfo = {};
     {
@@ -1460,9 +1460,12 @@ GraphicPipelineGroup CreateGraphicPipeline(
     viewport_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewport_create_info.viewportCount = 1;
     viewport_create_info.scissorCount = 1;
-    if(options.use_static_viewport_and_scissor) {
+
+    VkViewport viewport = {};
+    VkRect2D scissor = {};
+
+    if(true == options.use_static_viewport_and_scissor) {
         // Describe viewport and scissor
-        VkViewport viewport = {};
         viewport.x = 0.0f;
         viewport.y = 0.0f;
         viewport.width = static_cast<float>(swap_chain_extent.width);
@@ -1470,7 +1473,6 @@ GraphicPipelineGroup CreateGraphicPipeline(
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
 
-        VkRect2D scissor = {};
         scissor.offset.x = 0;
         scissor.offset.y = 0;
         scissor.extent.width = swap_chain_extent.width;
