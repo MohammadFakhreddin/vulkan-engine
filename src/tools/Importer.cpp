@@ -338,7 +338,7 @@ AssetSystem::MeshAsset ImportObj(char const * path) {
                     ::memcpy(mesh_vertices[vertex_index].position, positions[vertex_index].value, sizeof(positions[vertex_index].value));
                     ::memcpy(mesh_vertices[vertex_index].base_color_uv, coords[uv_index].value, sizeof(coords[uv_index].value));
                     mesh_vertices[vertex_index].base_color_uv[1] = 1.0f - mesh_vertices[vertex_index].base_color_uv[1];
-                    ::memcpy(mesh_vertices[vertex_index].normal, normals[vertex_index].value, sizeof(normals[vertex_index].value));
+                    ::memcpy(mesh_vertices[vertex_index].normal_uv, normals[vertex_index].value, sizeof(normals[vertex_index].value));
                 }
                 
                 MFA_ASSERT(mesh_asset.valid());
@@ -388,6 +388,9 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                 }
                 MFA_CRASH("Image not found: %s", gltf_name);
             };
+            auto const generate_uv_keyword = [](uint16_t const uv_index) -> std::string{
+                return "TEXCOORD_" + uv_index;
+            };
             std::string directory_path = FileSystem::ExtractDirectoryFromPath(path);
             {// Extracting textures
                 if(false == model.textures.empty()) {
@@ -420,6 +423,10 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                         model_asset.textures.emplace_back(texture_asset);
                     }
                 }
+            }
+            {// Reading samplers values from materials
+                //auto const & sampler = model.samplers[base_color_gltf_texture.sampler];
+                //model_asset.textures[base_color_texture_index]  
             }
             U32 sub_mesh_count = 0;
             // Step1: Iterate over all meshes and gather required information for asset buffer
@@ -469,14 +476,56 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                 if(false == mesh.primitives.empty()) {
                     for(auto & primitive : mesh.primitives) {
                         U8 base_color_texture_index = 0;
+                        uint16_t base_color_uv_index = 0;
+                        U8 metallic_roughness_texture_index = 0;
+                        uint16_t metallic_roughness_uv_index = 0;
+                        U8 normal_texture_index = 0;
+                        uint16_t normal_uv_index = 0; // TODO Start from here , It seems we can have both normal and normal map
+                        U8 emissive_texture_index = 0;
+                        uint16_t emissive_uv_index = 0;
+                        float base_color_factor[4] {};
+                        float metallic_factor = 0;
+                        float roughness_factor = 0;
+                        float emissive_factor [3] {};
                         {// Material
                             auto const & material = model.materials[primitive.material];
                             {// Base color texture
                                 auto const & base_color_gltf_texture = model.textures[material.pbrMetallicRoughness.baseColorTexture.index];
+                                base_color_uv_index = static_cast<uint16_t>(material.pbrMetallicRoughness.baseColorTexture.texCoord);
                                 auto const & image = model.images[base_color_gltf_texture.source];
                                 base_color_texture_index = find_texture_by_name(image.name.c_str());
                             }
-                            // TODO Support other texture types as well
+                            {// Metallic-roughness texture
+                                auto const & metallic_roughness_texture = model.textures[material.pbrMetallicRoughness.metallicRoughnessTexture.index];
+                                metallic_roughness_uv_index = static_cast<uint16_t>(material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord);
+                                auto const & image = model.images[metallic_roughness_texture.source];
+                                metallic_roughness_texture_index = find_texture_by_name(image.name.c_str());
+                            }
+                            {// Normal texture
+                                auto const & normal_texture = model.textures[material.normalTexture.index];
+                                normal_uv_index = static_cast<uint16_t>(material.normalTexture.texCoord);
+                                auto const & image = model.images[normal_texture.source];
+                                normal_texture_index = find_texture_by_name(image.name.c_str());
+                            }
+                            {// Emissive texture
+                                auto const & emissive_texture = model.textures[material.emissiveTexture.index];
+                                emissive_uv_index = static_cast<uint16_t>(material.emissiveTexture.texCoord);
+                                auto const & image = model.images[emissive_texture.source];
+                                emissive_texture_index = find_texture_by_name(image.name.c_str());
+                            }
+                            {// BaseColorFactor
+                                base_color_factor[0] = static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[0]);
+                                base_color_factor[1] = static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[1]);
+                                base_color_factor[2] = static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[2]);
+                                base_color_factor[3] = static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[3]);
+                            }
+                            metallic_factor = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
+                            roughness_factor = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
+                            {// EmissiveFactor
+                                emissive_factor[0] = static_cast<float>(material.emissiveFactor[0]);
+                                emissive_factor[1] = static_cast<float>(material.emissiveFactor[1]);
+                                emissive_factor[2] = static_cast<float>(material.emissiveFactor[2]);
+                            }
                         }
                         Blob temp_indices_blob {};
                         AssetSystem::MeshIndex * temp_indices = nullptr;
@@ -552,26 +601,68 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                             );
                             primitive_vertex_count = static_cast<U32>(accessor.count);
                         }
-                        float const * base_color_texture_coordinates = nullptr;
-                        float base_color_texture_min [2];
-                        float base_color_texture_max [2];
-                        // TODO TEXCOORD_0 does not have to be hard coded, We need to support other textures as well
-                        if(primitive.attributes["TEXCOORD_0"] >= 0) {
-                            MFA_REQUIRE(primitive.attributes["TEXCOORD_0"] < model.accessors.size());
-                            auto const & accessor = model.accessors[primitive.attributes["TEXCOORD_0"]];
+                        float const * base_color_uvs = nullptr;
+                        float base_color_uv_min [2];
+                        float base_color_uv_max [2];
+                        {// BaseColor
+                            auto texture_coordinate_key_name = generate_uv_keyword(base_color_uv_index);
+                            MFA_ASSERT(primitive.attributes[texture_coordinate_key_name] >= 0);
+                            MFA_REQUIRE(primitive.attributes[texture_coordinate_key_name] < model.accessors.size());
+                            auto const & accessor = model.accessors[primitive.attributes[texture_coordinate_key_name]];
                             MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-                            base_color_texture_min[0] = static_cast<float>(accessor.minValues[0]);
-                            base_color_texture_min[1] = static_cast<float>(accessor.minValues[1]);
-                            base_color_texture_max[0] = static_cast<float>(accessor.maxValues[0]);
-                            base_color_texture_max[1] = static_cast<float>(accessor.maxValues[1]);
+                            base_color_uv_min[0] = static_cast<float>(accessor.minValues[0]);
+                            base_color_uv_min[1] = static_cast<float>(accessor.minValues[1]);
+                            base_color_uv_max[0] = static_cast<float>(accessor.maxValues[0]);
+                            base_color_uv_max[1] = static_cast<float>(accessor.maxValues[1]);
                             auto const & buffer_view = model.bufferViews[accessor.bufferView];
                             MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
                             auto const & buffer = model.buffers[buffer_view.buffer];
-                            base_color_texture_coordinates = reinterpret_cast<const float *>(
+                            base_color_uvs = reinterpret_cast<const float *>(
                                 &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
                             );
                         }
-                        float const * normals = nullptr;
+                        float const * metallic_roughness_uvs = nullptr;
+                        float metallic_roughness_uv_min [2];
+                        float metallic_roughness_uv_max [2];
+                        {// MetallicRoughness uvs
+                            std::string texture_coordinate_key_name = generate_uv_keyword(metallic_roughness_uv_index);
+                            MFA_ASSERT(primitive.attributes[texture_coordinate_key_name] >= 0);
+                            MFA_REQUIRE(primitive.attributes[texture_coordinate_key_name] < model.accessors.size());
+                            auto const & accessor = model.accessors[primitive.attributes[texture_coordinate_key_name]];
+                            MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+                            metallic_roughness_uv_min[0] = static_cast<float>(accessor.minValues[0]);
+                            metallic_roughness_uv_min[1] = static_cast<float>(accessor.minValues[1]);
+                            metallic_roughness_uv_max[0] = static_cast<float>(accessor.maxValues[0]);
+                            metallic_roughness_uv_max[1] = static_cast<float>(accessor.maxValues[1]);
+                            auto const & buffer_view = model.bufferViews[accessor.bufferView];
+                            MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
+                            auto const & buffer = model.buffers[buffer_view.buffer];
+                            metallic_roughness_uvs = reinterpret_cast<const float *>(
+                                &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
+                            );
+                        }
+                        // TODO Occlusion texture
+                        float const * emission_uvs = nullptr;
+                        float emission_uv_min [2];
+                        float emission_uv_max [2];
+                        {// Emission uvs
+                            std::string texture_coordinate_key_name = generate_uv_keyword(metallic_roughness_uv_index);
+                            MFA_ASSERT(primitive.attributes[texture_coordinate_key_name] >= 0);
+                            MFA_REQUIRE(primitive.attributes[texture_coordinate_key_name] < model.accessors.size());
+                            auto const & accessor = model.accessors[primitive.attributes[texture_coordinate_key_name]];
+                            MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+                            emission_uv_min[0] = static_cast<float>(accessor.minValues[0]);
+                            emission_uv_min[1] = static_cast<float>(accessor.minValues[1]);
+                            emission_uv_max[0] = static_cast<float>(accessor.maxValues[0]);
+                            emission_uv_max[1] = static_cast<float>(accessor.maxValues[1]);
+                            auto const & buffer_view = model.bufferViews[accessor.bufferView];
+                            MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
+                            auto const & buffer = model.buffers[buffer_view.buffer];
+                            emission_uvs = reinterpret_cast<const float *>(
+                                &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
+                            );
+                        }
+                        float const * normals_uvs = nullptr;
                         float normals_min_value [3];
                         float normals_max_value [3];
                         if(primitive.attributes["NORMAL"] >= 0) {
@@ -587,29 +678,53 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                             auto const & buffer_view = model.bufferViews[accessor.bufferView];
                             MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
                             auto const & buffer = model.buffers[buffer_view.buffer];
-                            normals = reinterpret_cast<const float *>(
+                            normals_uvs = reinterpret_cast<const float *>(
                                 &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
                             );
                         }
-                        // TODO GLTF color is float (Not sure), Out stored color is U8
-                        //float const * colors = nullptr;
-                        //if(primitive.attributes["COLOR"] >= 0) {
-                        //    MFA_REQUIRE(primitive.attributes["COLOR"] < model.accessors.size());
-                        //    auto const & accessor = model.accessors[primitive.attributes["COLOR"]];
-                        //    auto const & buffer_view = model.bufferViews[accessor.bufferView];
-                        //    MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
-                        //    auto const & buffer = model.buffers[buffer_view.buffer];
-                        //    colors = reinterpret_cast<const float *>(
-                        //        &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
-                        //    );
-                        //}
+                        float const * colors = nullptr;
+                        float colors_min_value [3] {0};
+                        float colors_max_value [3] {1};
+                        float colors_min_max_dif [3] {1};
+                        if(primitive.attributes["COLOR"] >= 0) {
+                            MFA_REQUIRE(primitive.attributes["COLOR"] < model.accessors.size());
+                            auto const & accessor = model.accessors[primitive.attributes["COLOR"]];
+                            MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+                            colors_min_value[0] = static_cast<float>(accessor.minValues[0]);
+                            colors_min_value[1] = static_cast<float>(accessor.minValues[1]);
+                            colors_min_value[2] = static_cast<float>(accessor.minValues[2]);
+                            colors_max_value[0] = static_cast<float>(accessor.maxValues[0]);
+                            colors_max_value[1] = static_cast<float>(accessor.maxValues[1]);
+                            colors_max_value[2] = static_cast<float>(accessor.maxValues[2]);
+                            colors_min_max_dif[0] = colors_max_value[0] - colors_min_value[0];
+                            colors_min_max_dif[1] = colors_max_value[1] - colors_min_value[1];
+                            colors_min_max_dif[2] = colors_max_value[2] - colors_min_value[2];
+                            auto const & buffer_view = model.bufferViews[accessor.bufferView];
+                            MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
+                            auto const & buffer = model.buffers[buffer_view.buffer];
+                            colors = reinterpret_cast<const float *>(
+                                &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
+                            );
+                        }
                         auto & current_sub_mesh = header_object->sub_meshes[sub_mesh_index];
-                        current_sub_mesh.indices_offset = indices_offset;
-                        current_sub_mesh.indices_starting_index = indices_starting_index;
-                        current_sub_mesh.vertices_offset = vertices_offset;
-                        current_sub_mesh.index_count = primitive_indices_count;
-                        current_sub_mesh.vertex_count = primitive_vertex_count;
-                        current_sub_mesh.base_color_texture_index = base_color_texture_index;
+                        {
+                            current_sub_mesh.indices_offset = indices_offset;
+                            current_sub_mesh.indices_starting_index = indices_starting_index;
+                            current_sub_mesh.vertices_offset = vertices_offset;
+                            current_sub_mesh.index_count = primitive_indices_count;
+                            current_sub_mesh.vertex_count = primitive_vertex_count;
+                            current_sub_mesh.base_color_texture_index = base_color_texture_index;
+                            current_sub_mesh.metallic_roughness_texture_index = metallic_roughness_texture_index;
+                            current_sub_mesh.normal_texture_index = normal_texture_index;
+                            current_sub_mesh.emissive_texture_index = emissive_texture_index;
+                            current_sub_mesh.base_color_texture_index = base_color_texture_index;
+                            static_assert(sizeof(current_sub_mesh.base_color_factor) == sizeof(base_color_factor));
+                            ::memcpy(current_sub_mesh.base_color_factor, base_color_factor, sizeof(current_sub_mesh.base_color_factor));
+                            current_sub_mesh.metallic_factor = metallic_factor;
+                            current_sub_mesh.roughness_factor = roughness_factor;
+                            static_assert(sizeof(current_sub_mesh.emissive_factor) == sizeof(emissive_factor));
+                            ::memcpy(current_sub_mesh.emissive_factor, emissive_factor, sizeof(emissive_factor));
+                        }
                         vertices_offset += primitive_vertex_count * sizeof(AssetSystem::MeshVertex);
                         indices_offset += primitive_indices_count * sizeof(AssetSystem::MeshIndex);
                         indices_starting_index += primitive_indices_count;
@@ -618,38 +733,53 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                         auto * indices = model_asset.mesh.indices(sub_mesh_index);
                         ::memcpy(indices, temp_indices_blob.ptr, temp_indices_blob.len);
                         ++ sub_mesh_index;
-                        MFA_PTR_ASSERT(normals);
                         MFA_PTR_ASSERT(positions);
-                        MFA_PTR_ASSERT(base_color_texture_coordinates);
+                        MFA_PTR_ASSERT(base_color_uvs);
+                        MFA_PTR_ASSERT(normals_uvs);
+                        MFA_PTR_ASSERT(emission_uvs);
+                        MFA_PTR_ASSERT(metallic_roughness_uvs);
                         for (U32 i = 0; i < primitive_vertex_count; ++i) {
-
-                            vertices[i].position[0] = positions[i * 3 + 0];
-                            MFA_ASSERT(vertices[i].position[0] >= positions_min_value[0]);
-                            MFA_ASSERT(vertices[i].position[0] <= positions_max_value[0]);
-                            vertices[i].position[1] = positions[i * 3 + 1];
-                            MFA_ASSERT(vertices[i].position[1] >= positions_min_value[1]);
-                            MFA_ASSERT(vertices[i].position[1] <= positions_max_value[1]);
-                            vertices[i].position[2] = positions[i * 3 + 2];
-                            MFA_ASSERT(vertices[i].position[2] >= positions_min_value[2]);
-                            MFA_ASSERT(vertices[i].position[2] <= positions_max_value[2]);
-                            vertices[i].normal[0] = normals[i * 3 + 0];
-                            MFA_ASSERT(vertices[i].normal[0] >= normals_min_value[0]);
-                            MFA_ASSERT(vertices[i].normal[0] <= normals_max_value[0]);
-                            vertices[i].normal[1] = normals[i * 3 + 1];
-                            MFA_ASSERT(vertices[i].normal[1] >= normals_min_value[1]);
-                            MFA_ASSERT(vertices[i].normal[1] <= normals_max_value[1]);
-                            vertices[i].normal[2] = normals[i * 3 + 2];
-                            MFA_ASSERT(vertices[i].normal[2] >= normals_min_value[2]);
-                            MFA_ASSERT(vertices[i].normal[2] <= normals_max_value[2]);
-                            vertices[i].base_color_uv[0] = base_color_texture_coordinates[i * 2 + 0];
-                            MFA_ASSERT(vertices[i].base_color_uv[0] >= base_color_texture_min[0]);
-                            MFA_ASSERT(vertices[i].base_color_uv[0] <= base_color_texture_max[0]);
-                            vertices[i].base_color_uv[1] = base_color_texture_coordinates[i * 2 + 1];
-                            MFA_ASSERT(vertices[i].base_color_uv[1] >= base_color_texture_min[1]);
-                            MFA_ASSERT(vertices[i].base_color_uv[1] <= base_color_texture_max[1]);
-                            vertices[i].color[0] = 0;// TODO
-                            vertices[i].color[1] = 0;
-                            vertices[i].color[2] = 0;
+                            {// Vertices
+                                vertices[i].position[0] = positions[i * 3 + 0];
+                                MFA_ASSERT(vertices[i].position[0] >= positions_min_value[0]);
+                                MFA_ASSERT(vertices[i].position[0] <= positions_max_value[0]);
+                                vertices[i].position[1] = positions[i * 3 + 1];
+                                MFA_ASSERT(vertices[i].position[1] >= positions_min_value[1]);
+                                MFA_ASSERT(vertices[i].position[1] <= positions_max_value[1]);
+                                vertices[i].position[2] = positions[i * 3 + 2];
+                                MFA_ASSERT(vertices[i].position[2] >= positions_min_value[2]);
+                                MFA_ASSERT(vertices[i].position[2] <= positions_max_value[2]);
+                            }
+                            {// Normals
+                                vertices[i].normal_uv[0] = normals_uvs[i * 3 + 0];
+                                MFA_ASSERT(vertices[i].normal_uv[0] >= normals_min_value[0]);
+                                MFA_ASSERT(vertices[i].normal_uv[0] <= normals_max_value[0]);
+                                vertices[i].normal_uv[1] = normals_uvs[i * 3 + 1];
+                                MFA_ASSERT(vertices[i].normal_uv[1] >= normals_min_value[1]);
+                                MFA_ASSERT(vertices[i].normal_uv[1] <= normals_max_value[1]);
+                                vertices[i].normal_uv[2] = normals_uvs[i * 3 + 2];
+                                MFA_ASSERT(vertices[i].normal_uv[2] >= normals_min_value[2]);
+                                MFA_ASSERT(vertices[i].normal_uv[2] <= normals_max_value[2]);
+                            }
+                            {// BaseColor
+                                vertices[i].base_color_uv[0] = base_color_uvs[i * 2 + 0];
+                                MFA_ASSERT(vertices[i].base_color_uv[0] >= base_color_uv_min[0]);
+                                MFA_ASSERT(vertices[i].base_color_uv[0] <= base_color_uv_max[0]);
+                                vertices[i].base_color_uv[1] = base_color_uvs[i * 2 + 1];
+                                MFA_ASSERT(vertices[i].base_color_uv[1] >= base_color_uv_min[1]);
+                                MFA_ASSERT(vertices[i].base_color_uv[1] <= base_color_uv_max[1]);
+                            }
+                            {// MetallicRoughness
+                                vertices[i].metallic_roughness_uv[0] = metallic_roughness_uvs[i * 2 + 0];
+                                MFA_ASSERT(vertices[i].metallic_roughness_uv[0] >= metallic_roughness_uv_min[0]);
+                                MFA_ASSERT(vertices[i].metallic_roughness_uv[0] <= metallic_roughness_uv_max[0]);
+                                vertices[i].metallic_roughness_uv[1] = metallic_roughness_uvs[i * 2 + 1];
+                                MFA_ASSERT(vertices[i].metallic_roughness_uv[1] >= metallic_roughness_uv_min[1]);
+                                MFA_ASSERT(vertices[i].metallic_roughness_uv[1] <= metallic_roughness_uv_max[1]);
+                            }
+                            vertices[i].color[0] = static_cast<U8>((256/(colors_min_max_dif[0])) * colors[i * 3 + 0]);
+                            vertices[i].color[1] = static_cast<U8>((256/(colors_min_max_dif[1])) * colors[i * 3 + 1]);
+                            vertices[i].color[2] = static_cast<U8>((256/(colors_min_max_dif[2])) * colors[i * 3 + 2]);
                         }
                     }
                 }
@@ -659,15 +789,6 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
             }
         }
     }
-#ifdef MFA_DEBUG
-    auto header_object = model_asset.mesh.header_object();
-    auto vertices = model_asset.mesh.vertices_cblob().as<AssetSystem::MeshVertex>();
-    for (U32 i = 0; i < header_object->total_vertex_count; i++) {
-        MFA_REQUIRE(vertices[i].color[0] == 0);
-        MFA_REQUIRE(vertices[i].color[1] == 0);
-        MFA_REQUIRE(vertices[i].color[2] == 0);
-    }
-#endif
     return model_asset;
 }
 

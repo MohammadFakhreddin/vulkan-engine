@@ -290,7 +290,7 @@ DrawPipeline CreateBasicDrawPipeline(
         .location = 1,
         .binding = 0,
         .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = offsetof(AssetSystem::MeshVertex, normal)
+        .offset = offsetof(AssetSystem::MeshVertex, normal_uv)
     };
     input_attribute_descriptions[2] = VkVertexInputAttributeDescription {
         .location = 2,

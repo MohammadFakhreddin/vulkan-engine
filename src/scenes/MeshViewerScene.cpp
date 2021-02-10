@@ -26,10 +26,10 @@ public:
     void Init() override {
         //auto cpu_model = Importer::ImportMeshGLTF("../assets/free_zuk_3d_model/scene.gltf");
         //auto cpu_model = Importer::ImportMeshGLTF("../assets/kirpi_mrap__lowpoly__free_3d_model/scene.gltf");
-        auto cpu_model = Importer::ImportMeshGLTF("../assets/gunship/scene.gltf");
+        auto cpu_model = Importer::ImportMeshGLTF("../assets/models/gunship/scene.gltf");
         m_gpu_model = RF::CreateGpuModel(cpu_model);
         m_cpu_vertex_shader = Importer::ImportShaderFromSPV(
-            "../assets/shaders/vert.spv", 
+            "../assets/shaders/mesh_viewer/MeshViewer.vert.spv", 
             MFA::AssetSystem::Shader::Stage::Vertex, 
             "main"
         );
@@ -37,7 +37,7 @@ public:
         m_gpu_vertex_shader = RF::CreateShader(m_cpu_vertex_shader);
         MFA_ASSERT(m_gpu_vertex_shader.valid());
         m_cpu_fragment_shader = Importer::ImportShaderFromSPV(
-            "../assets/shaders/frag.spv",
+            "../assets/shaders/mesh_viewer/MeshViewer.frag.spv",
             MFA::AssetSystem::Shader::Stage::Fragment,
             "main"
         );

@@ -239,7 +239,11 @@ struct Vertices {
         Position position;
         Normal normal;
         UV base_color_uv;
+        UV normal_map_uv;
+        UV metallic_roughness_uv;
+        UV emission_uv;
         Color color;
+        // TODO Start from here implement metalness roughness
     };
     Vertex value[];
 };
@@ -253,7 +257,7 @@ struct Indices {
 #pragma warning (pop)
 }
 #pragma warning (push)
-#pragma warning (disable: 4200)         // Non-standard extension used: zero-sized array in struct
+#pragma warning (disable: 4200)             // Non-standard extension used: zero-sized array in struct
 #pragma pack(push)
 struct Header {
     using SubMeshIndexType = U32;
@@ -264,7 +268,13 @@ struct Header {
         U64 indices_offset;
         U32 indices_starting_index;         // From start of asset
         U8 base_color_texture_index;
-        // TODO add other options (From material)
+        U8 metallic_roughness_texture_index;
+        U8 normal_texture_index;
+        U8 emissive_texture_index;
+        float base_color_factor[4];
+        float metallic_factor;              // Metallic color is stored inside blue
+        float roughness_factor;             // Roughness color is stored inside green
+        float emissive_factor[3];
     };
     SubMeshIndexType sub_mesh_count = 0;
     U32 total_vertex_count = 0;
