@@ -237,13 +237,13 @@ struct Vertices {
     using Color = U8[3];
     struct Vertex {
         Position position;
-        Normal normal;
+        Normal normal_value;
         UV base_color_uv;
         UV normal_map_uv;
         UV metallic_roughness_uv;
         UV emission_uv;
         Color color;
-        // TODO Start from here implement metalness roughness
+        // TODO Start from here implement metalicc roughness
     };
     Vertex value[];
 };
@@ -262,19 +262,23 @@ struct Indices {
 struct Header {
     using SubMeshIndexType = U32;
     struct SubMesh {
-        U32 vertex_count;
-        U32 index_count;
-        U64 vertices_offset;                // From start of asset
-        U64 indices_offset;
-        U32 indices_starting_index;         // From start of asset
-        U8 base_color_texture_index;
-        U8 metallic_roughness_texture_index;
-        U8 normal_texture_index;
-        U8 emissive_texture_index;
-        float base_color_factor[4];
-        float metallic_factor;              // Metallic color is stored inside blue
-        float roughness_factor;             // Roughness color is stored inside green
-        float emissive_factor[3];
+        U32 vertex_count = 0;
+        U32 index_count = 0;
+        U64 vertices_offset = 0;                // From start of asset
+        U64 indices_offset = 0;
+        U32 indices_starting_index = 0;         // From start of asset
+        U8 base_color_texture_index = 0;
+        U8 metallic_roughness_texture_index = 0;
+        U8 normal_texture_index = 0;
+        U8 emissive_texture_index = 0;
+        float base_color_factor[4] {};
+        float metallic_factor = 0;              // Metallic color is stored inside blue
+        float roughness_factor = 0;             // Roughness color is stored inside green
+        float emissive_factor[3] {};
+        bool has_normal_buffer = false;
+        bool has_normal_texture = false;
+        bool has_emissive_texture = false;
+        bool has_metallic_roughness = false;
     };
     SubMeshIndexType sub_mesh_count = 0;
     U32 total_vertex_count = 0;
