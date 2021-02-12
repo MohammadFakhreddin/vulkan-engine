@@ -230,7 +230,6 @@ namespace Data {
 #pragma warning (disable: 4200)         // Non-standard extension used: zero-sized array in struct
 #pragma pack(push)
 struct Vertices {
-    // TODO We might need to store these params separately
     using Position = float[3];
     using Normal = float[3];
     using UV = float[2];
@@ -243,7 +242,6 @@ struct Vertices {
         UV metallic_roughness_uv;
         UV emission_uv;
         Color color;
-        // TODO Start from here implement metalicc roughness
     };
     Vertex value[];
 };
@@ -267,10 +265,11 @@ struct Header {
         U64 vertices_offset = 0;                // From start of asset
         U64 indices_offset = 0;
         U32 indices_starting_index = 0;         // From start of asset
-        U8 base_color_texture_index = 0;
-        U8 metallic_roughness_texture_index = 0;
-        U8 normal_texture_index = 0;
-        U8 emissive_texture_index = 0;
+        I16 base_color_texture_index = 0;
+        I16 metallic_roughness_texture_index = 0;
+        I16 normal_texture_index = 0;
+        I16 emissive_texture_index = 0;
+        // TODO We need to send these values as push constants
         float base_color_factor[4] {};
         float metallic_factor = 0;              // Metallic color is stored inside blue
         float roughness_factor = 0;             // Roughness color is stored inside green
@@ -323,8 +322,6 @@ struct Header {
 #pragma warning (pop)
 }
 
-//using MeshVertices = Mesh::Data::Vertices;
-//using MeshIndices = Mesh::Data::Indices;
 using MeshHeader = Mesh::Header;
 using MeshIndex = Mesh::Data::Indices::IndexType;
 using MeshVertex = Mesh::Data::Vertices::Vertex;
@@ -356,10 +353,6 @@ struct Header {
 
 using ShaderHeader = Shader::Header;
 using ShaderStage = Shader::Stage;
-
-//--------------------------------MaterialHeader-------------------------------------
-
-struct MaterialHeader {}; // TODO
 
 //---------------------------------GenericAsset----------------------------------
 
@@ -548,15 +541,11 @@ public:
     }
 };
 
-//---------------------------------MaterialAsset----------------------------------
-// TODO Currently Material is mixed with mesh Not sure if separate material is needed or not
-class MaterialAsset : public GenericAsset {
-    // TODO
-};
+//----------------------------------ModelAsset------------------------------------
 
 struct ModelAsset {
     std::vector<TextureAsset> textures;
-    AssetSystem::MeshAsset mesh;
+    MeshAsset mesh;
 };
 
 };  // MFA::Asset

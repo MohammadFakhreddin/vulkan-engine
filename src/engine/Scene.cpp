@@ -44,6 +44,15 @@ void RegisterNew(Scene * scene, char const * name) {
     registered_scenes.emplace_back(RegisteredScene {scene, name});
 }
 
+void SetActiveScene(char const * name) {
+    MFA_PTR_ASSERT(name);
+    for (I32 i = 0; i < static_cast<I32>(registered_scenes.size()); ++i) {
+        if (0 == strcmp(registered_scenes[i].name.c_str(), name)) {
+            active_scene = i;
+        }
+    }
+}
+
 void OnNewFrame(U32 const delta_time) {
     if(active_scene != last_active_scene) {
         RF::DeviceWaitIdle();

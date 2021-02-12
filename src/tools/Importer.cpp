@@ -379,7 +379,7 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                 U8 index;
             };
             std::vector<TextureRef> texture_refs {};
-            auto const find_texture_by_name = [&texture_refs](char const * gltf_name)-> U8 {
+            auto const find_texture_by_name = [&texture_refs](char const * gltf_name)-> I16 {
                 MFA_PTR_ASSERT(gltf_name);
                 if(false == texture_refs.empty()) {
                     for (auto const & texture_ref : texture_refs) {
@@ -388,10 +388,11 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                         }
                     }
                 }
-                MFA_CRASH("Image not found: %s", gltf_name);
+                return -1;
+                //MFA_CRASH("Image not found: %s", gltf_name);
             };
             auto const generate_uv_keyword = [](int32_t const uv_index) -> std::string{
-                return "TEXCOORD_" + uv_index;
+                return "TEXCOORD_" + std::to_string(uv_index);
             };
             std::string directory_path = FileSystem::ExtractDirectoryFromPath(path);
             {// Extracting textures
@@ -408,8 +409,8 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                             sampler.is_valid = true;
                         }
                         AssetSystem::TextureAsset texture_asset {};
+                        auto const & image = model.images[texture.source];
                         {// Texture
-                            auto const & image = model.images[texture.source];
                             std::string image_path = directory_path + "/" + image.uri;
                             texture_asset = ImportUncompressedImage(
                                 image_path.c_str(),
@@ -419,7 +420,7 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                         }
                         MFA_ASSERT(texture_asset.valid());
                         texture_refs.emplace_back(TextureRef {
-                            .gltf_name = texture.name,
+                            .gltf_name = image.uri,
                             .index = static_cast<U8>(model_asset.textures.size())
                         });
                         model_asset.textures.emplace_back(texture_asset);
@@ -477,43 +478,51 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
             for(auto & mesh : model.meshes) {
                 if(false == mesh.primitives.empty()) {
                     for(auto & primitive : mesh.primitives) {
-                        U8 base_color_texture_index = 0;
-                        int32_t base_color_uv_index = 0;
-                        U8 metallic_roughness_texture_index = 0;
-                        int32_t metallic_roughness_uv_index = 0;
-                        U8 normal_texture_index = 0;
-                        int32_t normal_uv_index = 0; // TODO Start from here , It seems we can have both normal and normal map
-                        U8 emissive_texture_index = 0;
-                        int32_t emissive_uv_index = 0;
+                        I16 base_color_texture_index = -1;
+                        int32_t base_color_uv_index = -1;
+                        I16 metallic_roughness_texture_index = -1;
+                        int32_t metallic_roughness_uv_index = -1;
+                        I16 normal_texture_index = -1;
+                        int32_t normal_uv_index = -1;
+                        I16 emissive_texture_index = -1;
+                        int32_t emissive_uv_index = -1;
                         float base_color_factor[4] {};
                         float metallic_factor = 0;
                         float roughness_factor = 0;
                         float emissive_factor [3] {};
-                        {// Material
+                        if(primitive.material >= 0) {// Material
                             auto const & material = model.materials[primitive.material];
                             {// Base color texture
                                 auto const & base_color_gltf_texture = model.textures[material.pbrMetallicRoughness.baseColorTexture.index];
-                                base_color_uv_index = static_cast<uint16_t>(material.pbrMetallicRoughness.baseColorTexture.texCoord);
                                 auto const & image = model.images[base_color_gltf_texture.source];
-                                base_color_texture_index = find_texture_by_name(image.name.c_str());
+                                base_color_texture_index = find_texture_by_name(image.uri.c_str());
+                                if (base_color_texture_index >= 0) {
+                                    base_color_uv_index = static_cast<uint16_t>(material.pbrMetallicRoughness.baseColorTexture.texCoord);
+                                }
                             }
                             {// Metallic-roughness texture
                                 auto const & metallic_roughness_texture = model.textures[material.pbrMetallicRoughness.metallicRoughnessTexture.index];
-                                metallic_roughness_uv_index = static_cast<uint16_t>(material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord);
                                 auto const & image = model.images[metallic_roughness_texture.source];
-                                metallic_roughness_texture_index = find_texture_by_name(image.name.c_str());
+                                metallic_roughness_texture_index = find_texture_by_name(image.uri.c_str());
+                                if(metallic_roughness_texture_index >= 0) {
+                                    metallic_roughness_uv_index = static_cast<uint16_t>(material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord);
+                                }
                             }
                             {// Normal texture
                                 auto const & normal_texture = model.textures[material.normalTexture.index];
-                                normal_uv_index = static_cast<uint16_t>(material.normalTexture.texCoord);
                                 auto const & image = model.images[normal_texture.source];
-                                normal_texture_index = find_texture_by_name(image.name.c_str());
+                                normal_texture_index = find_texture_by_name(image.uri.c_str());
+                                if(normal_texture_index >= 0) {
+                                    normal_uv_index = static_cast<uint16_t>(material.normalTexture.texCoord);
+                                }
                             }
                             {// Emissive texture
                                 auto const & emissive_texture = model.textures[material.emissiveTexture.index];
-                                emissive_uv_index = static_cast<uint16_t>(material.emissiveTexture.texCoord);
                                 auto const & image = model.images[emissive_texture.source];
-                                emissive_texture_index = find_texture_by_name(image.name.c_str());
+                                emissive_texture_index = find_texture_by_name(image.uri.c_str());
+                                if (emissive_texture_index >= 0) {
+                                    emissive_uv_index = static_cast<uint16_t>(material.emissiveTexture.texCoord);
+                                }
                             }
                             {// BaseColorFactor
                                 base_color_factor[0] = static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[0]);
@@ -585,7 +594,7 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                         U32 primitive_vertex_count = 0;
                         float positions_min_value [3];
                         float positions_max_value [3];
-                        {// Positions
+                        if(primitive.attributes.find("POSITION") != primitive.attributes.end()){// Positions
                             MFA_REQUIRE(primitive.attributes["POSITION"] < model.accessors.size());
                             auto const & accessor = model.accessors[primitive.attributes["POSITION"]];
                             MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
@@ -606,7 +615,7 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                         float const * base_color_uvs = nullptr;
                         float base_color_uv_min [2];
                         float base_color_uv_max [2];
-                        {// BaseColor
+                        if(base_color_uv_index >= 0) {// BaseColor
                             auto texture_coordinate_key_name = generate_uv_keyword(base_color_uv_index);
                             MFA_ASSERT(primitive.attributes[texture_coordinate_key_name] >= 0);
                             MFA_REQUIRE(primitive.attributes[texture_coordinate_key_name] < model.accessors.size());
@@ -647,7 +656,7 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                         float const * emission_uvs = nullptr;
                         float emission_uv_min [2] {};
                         float emission_uv_max [2] {};
-                        {// Emission uvs
+                        if(emissive_uv_index >= 0) {// Emission uvs
                             std::string texture_coordinate_key_name = generate_uv_keyword(emissive_uv_index);
                             MFA_ASSERT(primitive.attributes[texture_coordinate_key_name] >= 0);
                             MFA_REQUIRE(primitive.attributes[texture_coordinate_key_name] < model.accessors.size());
@@ -665,8 +674,8 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                             );
                         }
                         float const * normals_uvs = nullptr;
-                        float normals_uv_min [3] {};
-                        float normals_uv_max [3] {};
+                        float normals_uv_min [2] {};
+                        float normals_uv_max [2] {};
                         if(normal_uv_index >= 0) {
                             std::string texture_coordinate_key_name = generate_uv_keyword(normal_uv_index);
                             MFA_ASSERT(primitive.attributes[texture_coordinate_key_name] >= 0);
@@ -687,7 +696,7 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                         float const * normal_values = nullptr;
                         float normals_values_min [3] {};
                         float normals_values_max [3] {};
-                        if(primitive.attributes["NORMAL"] >= 0) {
+                        if(primitive.attributes.find("NORMAL") != primitive.attributes.end()) {
                             MFA_REQUIRE(primitive.attributes["NORMAL"] < model.accessors.size());
                             auto const & accessor = model.accessors[primitive.attributes["NORMAL"]];
                             MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
@@ -777,15 +786,15 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                                 MFA_ASSERT(vertices[i].position[2] <= positions_max_value[2]);
                             }
                             if(current_sub_mesh.has_normal_buffer) {// Normal values
-                                vertices[i].normal_map_uv[0] = normals_uvs[i * 3 + 0];
-                                MFA_ASSERT(vertices[i].normal_map_uv[0] >= normals_values_min[0]);
-                                MFA_ASSERT(vertices[i].normal_map_uv[0] <= normals_values_max[0]);
-                                vertices[i].normal_map_uv[1] = normals_uvs[i * 3 + 1];
-                                MFA_ASSERT(vertices[i].normal_map_uv[1] >= normals_values_min[1]);
-                                MFA_ASSERT(vertices[i].normal_map_uv[1] <= normals_values_max[1]);
-                                vertices[i].normal_map_uv[2] = normals_uvs[i * 3 + 2];
-                                MFA_ASSERT(vertices[i].normal_map_uv[2] >= normals_values_min[2]);
-                                MFA_ASSERT(vertices[i].normal_map_uv[2] <= normals_values_max[2]);
+                                vertices[i].normal_value[0] = normal_values[i * 3 + 0];
+                                MFA_ASSERT(vertices[i].normal_value[0] >= normals_values_min[0]);
+                                MFA_ASSERT(vertices[i].normal_value[0] <= normals_values_max[0]);
+                                vertices[i].normal_value[1] = normal_values[i * 3 + 1];
+                                MFA_ASSERT(vertices[i].normal_value[1] >= normals_values_min[1]);
+                                MFA_ASSERT(vertices[i].normal_value[1] <= normals_values_max[1]);
+                                vertices[i].normal_value[2] = normal_values[i * 3 + 2];
+                                MFA_ASSERT(vertices[i].normal_value[2] >= normals_values_min[2]);
+                                MFA_ASSERT(vertices[i].normal_value[2] <= normals_values_max[2]);
                             }
                             if(current_sub_mesh.has_normal_texture) {// Normal uvs
                                 vertices[i].normal_map_uv[0] = normals_uvs[i * 2 + 0];

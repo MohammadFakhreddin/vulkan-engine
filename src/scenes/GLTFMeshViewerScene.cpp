@@ -10,17 +10,17 @@ namespace RB = MFA::RenderBackend;
 namespace Importer = MFA::Importer;
 namespace Asset = MFA::AssetSystem;
 
-class MeshViewer final : public MFA::Scene {
+class GLTFMeshViewer final : public MFA::Scene {
     struct UniformBufferObject {
         float rotation[16];
         float transformation[16];
         float perspective[16];
     };
 public:
-    MeshViewer() {
+    explicit GLTFMeshViewer() {
         MFA::SceneSubSystem::RegisterNew(
             this,
-            "MeshViewer"
+            "GLTFMeshViewer"
         );  
     }
     void Init() override {
@@ -29,7 +29,7 @@ public:
         auto cpu_model = Importer::ImportMeshGLTF("../assets/models/gunship/scene.gltf");
         m_gpu_model = RF::CreateGpuModel(cpu_model);
         m_cpu_vertex_shader = Importer::ImportShaderFromSPV(
-            "../assets/shaders/mesh_viewer/MeshViewer.vert.spv", 
+            "../assets/shaders/gltf_mesh_viewer/GLTFMeshViewer.vert.spv", 
             MFA::AssetSystem::Shader::Stage::Vertex, 
             "main"
         );
@@ -37,7 +37,7 @@ public:
         m_gpu_vertex_shader = RF::CreateShader(m_cpu_vertex_shader);
         MFA_ASSERT(m_gpu_vertex_shader.valid());
         m_cpu_fragment_shader = Importer::ImportShaderFromSPV(
-            "../assets/shaders/mesh_viewer/MeshViewer.frag.spv",
+            "../assets/shaders/gltf_mesh_viewer/GLTFMeshViewer.frag.spv",
             MFA::AssetSystem::Shader::Stage::Fragment,
             "main"
         );
@@ -68,7 +68,7 @@ public:
                 MFA::Matrix4X4Float::assignRotationXYZ(
                     rotation,
                     MFA::Math::Deg2Rad(45.0f + XDegree),
-                    0.0f + YDegree,
+                    MFA::Math::Deg2Rad(0.0f + YDegree),
                     MFA::Math::Deg2Rad(45.0f + zDegree)
                 );
                 ::memcpy(ubo.rotation,rotation.cells,sizeof(ubo.rotation));
@@ -100,7 +100,7 @@ public:
         ImGui::Begin("Object viewer");
         ImGui::SetNextItemWidth(300.0f);
         ImGui::SliderFloat("XDegree", &XDegree, -360.0f, 360.0f);
-        ImGui::SliderFloat("YDegree", &YDegree, -100.0f, 100.0f);
+        ImGui::SliderFloat("YDegree", &YDegree, -360.0f, 360.0f);
         ImGui::SliderFloat("ZDegree", &zDegree, -360.0f, 360.0f);
         ImGui::SliderFloat("XDistance", &xDistance, -100.0f, 100.0f);
         ImGui::SliderFloat("YDistance", &yDistance, -100.0f, 100.0f);
@@ -122,15 +122,15 @@ public:
 private:
     static constexpr float Z_NEAR = 0.1f;
     static constexpr float Z_FAR = 1000.0f;
-    RF::GpuModel m_gpu_model;
-    Asset::ShaderAsset m_cpu_vertex_shader;
-    RB::GpuShader m_gpu_vertex_shader;
-    Asset::ShaderAsset m_cpu_fragment_shader;
-    RB::GpuShader m_gpu_fragment_shader;
-    RF::SamplerGroup m_sampler_group;
-    VkDescriptorSetLayout_T * m_descriptor_set_layout;
-    RF::DrawPipeline m_draw_pipeline;
-    MFA::DrawableObject m_drawable_object;
+    RF::GpuModel m_gpu_model {};
+    Asset::ShaderAsset m_cpu_vertex_shader {};
+    RB::GpuShader m_gpu_vertex_shader {};
+    Asset::ShaderAsset m_cpu_fragment_shader {};
+    RB::GpuShader m_gpu_fragment_shader {};
+    RF::SamplerGroup m_sampler_group {};
+    VkDescriptorSetLayout_T * m_descriptor_set_layout = nullptr;
+    RF::DrawPipeline m_draw_pipeline {};
+    MFA::DrawableObject m_drawable_object {};
     float XDegree = 0;
     float YDegree = 0;
     float zDegree = 0;
@@ -139,4 +139,4 @@ private:
     float zDistance = 0;
 };
 
-MeshViewer mesh_viewer {};
+GLTFMeshViewer mesh_viewer {};

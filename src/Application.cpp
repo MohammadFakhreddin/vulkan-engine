@@ -12,6 +12,7 @@ void Application::run() {
     static constexpr MFA::U16 SCREEN_HEIGHT = 600;
     RF::Init({SCREEN_WIDTH, SCREEN_HEIGHT, "Cool app"});
     UI::Init();
+    SceneSubSystem::SetActiveScene("SpecularHighlight");
     SceneSubSystem::Init();
     {// Main loop
         bool quit = false;

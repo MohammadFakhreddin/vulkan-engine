@@ -18,6 +18,7 @@ namespace SceneSubSystem {
 void Init();
 void Shutdown();
 void RegisterNew(Scene * scene, char const * name);
+void SetActiveScene(char const * name);
 void OnNewFrame(U32 delta_time);
 }
 
