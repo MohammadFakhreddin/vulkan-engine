@@ -776,6 +776,20 @@ using Matrix3X3Double = _Matrix<double, 3, 3>;
 using Matrix2X1Int = _Matrix<int, 2, 1>;
 using Matrix2X1Float = _Matrix<float, 2, 1>;
 using Matrix2X1Double = _Matrix<double, 2, 1>;
+
+using Vector2Int = _Matrix<int, 2, 1>;
+using Vector2Float = _Matrix<float, 2, 1>;
+using Vector2Double = _Matrix<double, 2, 1>;
+
+using Vector3Int = _Matrix<int, 3, 1>;
+using Vector3Float = _Matrix<float, 3, 1>;
+using Vector3Double = _Matrix<double, 3, 1>;
+
+using Vector4Int = _Matrix<int, 4, 1>;
+using Vector4Float = _Matrix<float, 4, 1>;
+using Vector4Double = _Matrix<double, 4, 1>;
+
+
 }
 
 #endif

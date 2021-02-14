@@ -16,7 +16,7 @@ void Application::run() {
     SceneSubSystem::Init();
     {// Main loop
         bool quit = false;
-        //Event handlerpbt
+        //Event handler
         SDL_Event e;
         //While application is running
         MFA::U32 const target_fps = 1000 / 60;

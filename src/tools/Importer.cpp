@@ -339,6 +339,7 @@ AssetSystem::MeshAsset ImportObj(char const * path) {
                     mesh_indices[indices_index] = shapes[0].mesh.indices[indices_index].vertex_index;
                     ::memcpy(mesh_vertices[vertex_index].position, positions[vertex_index].value, sizeof(positions[vertex_index].value));
                     ::memcpy(mesh_vertices[vertex_index].base_color_uv, coords[uv_index].value, sizeof(coords[uv_index].value));
+                    // TODO fill other uvs as well (If we used obj in anything serious enough)
                     mesh_vertices[vertex_index].base_color_uv[1] = 1.0f - mesh_vertices[vertex_index].base_color_uv[1];
                     ::memcpy(mesh_vertices[vertex_index].normal_value, normals[vertex_index].value, sizeof(normals[vertex_index].value));
                 }
