@@ -1,7 +1,9 @@
+// Based on https://learnopengl.com/PBR/Lighting
+
 struct PSIn {
-    float2 TexCoords: TEXCOORD0;
-    float3 WorldPos: SV_POSITION;
-    float3 Normal: NORMAL0;
+    float3 WorldPos: POSITION;
+    float3 WorldNormal: NORMAL0;
+    float4 Position: SV_POSITION;
 };
 
 struct PSOut {
@@ -15,7 +17,7 @@ struct MaterialBuffer {
     float ao;               // Emission  
 };
 
-ConstantBuffer <MaterialBuffer> matBuff : register (b0, space0);
+ConstantBuffer <MaterialBuffer> matBuff : register (b1, space0);
 
 struct LightViewBuffer {
     float3 camPos;
@@ -24,7 +26,7 @@ struct LightViewBuffer {
     float3 lightColors[8];
 };
 
-ConstantBuffer <LightViewBuffer> lvBuff : register (b1, space0);
+ConstantBuffer <LightViewBuffer> lvBuff : register (b2, space0);
 
 const float PI = 3.14159265359;
 
@@ -78,7 +80,7 @@ float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
 };
 
 PSOut main(PSIn input) {
-    float3 N = normalize(input.Normal);
+    float3 N = normalize(input.WorldNormal);
     float3 V = normalize(lvBuff.camPos - input.WorldPos);
     
     // TODO We can also ask for F0 value from uniform buffer

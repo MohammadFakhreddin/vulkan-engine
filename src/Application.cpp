@@ -12,7 +12,7 @@ void Application::run() {
     static constexpr MFA::U16 SCREEN_HEIGHT = 600;
     RF::Init({SCREEN_WIDTH, SCREEN_HEIGHT, "Cool app"});
     UI::Init();
-    SceneSubSystem::SetActiveScene("SpecularHighlight");
+    SceneSubSystem::SetActiveScene("PBR");
     SceneSubSystem::Init();
     {// Main loop
         bool quit = false;
@@ -26,7 +26,7 @@ void Application::run() {
             MFA::U32 const start_time = SDL_GetTicks();
             // DrawFrame
             SceneSubSystem::OnNewFrame(delta_time);
-            //Handle events on queue
+            //Handle events on queueope
             if (SDL_PollEvent(&e) != 0)
             {
                 //User requests quit
