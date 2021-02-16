@@ -65,8 +65,8 @@ public:
         RF::BindDrawPipeline(draw_pass, m_draw_pipeline);
         {// Updating uniform buffer
             UniformBufferObject ubo{};
-            {// Model
-                MFA::Matrix4X4Float rotation;
+            {// Rotation
+                MFA::Matrix4X4Float rotation {};
                 MFA::Matrix4X4Float::assignRotationXYZ(
                     rotation,
                     MFA::Math::Deg2Rad(45.0f + XDegree),
@@ -76,7 +76,7 @@ public:
                 ::memcpy(ubo.rotation,rotation.cells,sizeof(ubo.rotation));
             }
             {// Transformation
-                MFA::Matrix4X4Float transformation;
+                MFA::Matrix4X4Float transformation {};
                 MFA::Matrix4X4Float::assignTransformation(transformation,xDistance,yDistance,-6 + zDistance);
                 ::memcpy(ubo.transformation,transformation.cells,sizeof(ubo.transformation));
             }

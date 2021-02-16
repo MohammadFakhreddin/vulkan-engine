@@ -846,6 +846,7 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
 
 bool FreeModel(AssetSystem::ModelAsset * model) {
     bool ret = false;
+    MFA_PTR_ASSERT(model);
     if(MFA_PTR_VALID(model)) {
         {// Mesh
             auto const result = FreeAsset(&model->mesh);

@@ -45,7 +45,7 @@ void DrawableObject::draw(RF::DrawPass & draw_pass) {
             draw_pass,
             current_descriptor_set,
             m_uniform_buffer_group,
-            m_model->textures[current_sub_mesh.base_color_texture_index],   // TODO Store this somewhere
+            m_model->textures[current_sub_mesh.base_color_texture_index],
             *m_sampler_group
         ); 
         auto const & sub_mesh_buffers = m_model->mesh_buffers.sub_mesh_buffers[i];
@@ -54,7 +54,6 @@ void DrawableObject::draw(RF::DrawPass & draw_pass) {
             sub_mesh_buffers.index_count,
             1,
             current_sub_mesh.indices_starting_index
-            //static_cast<U32>(current_sub_mesh.vertices_offset - header_size)              // TODO Start from here , find display issue
         );
     }
 }

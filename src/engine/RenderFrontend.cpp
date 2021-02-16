@@ -587,6 +587,7 @@ DrawPass BeginPass() {
     }
 
     presentToDrawBarrier.image = state.swap_chain_group.swap_chain_images[draw_pass.image_index];
+
     VkImageSubresourceRange subResourceRange = {};
     subResourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     subResourceRange.baseMipLevel = 0;
@@ -681,9 +682,9 @@ void UpdateDescriptorSetBasic(
 }
 
 void UpdateDescriptorSets(
-    U8 descriptor_sets_count,
+    U8 const descriptor_sets_count,
     VkDescriptorSet_T ** descriptor_sets,
-    U8 write_info_count,
+    U8 const write_info_count,
     VkWriteDescriptorSet * write_info
 ) {
     RB::UpdateDescriptorSets(
