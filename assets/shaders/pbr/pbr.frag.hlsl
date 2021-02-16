@@ -22,8 +22,8 @@ ConstantBuffer <MaterialBuffer> matBuff : register (b1, space0);
 struct LightViewBuffer {
     float3 camPos;
     int lightCount;
-    float3 lightPositions[8];
-    float3 lightColors[8];
+    float3 lightPositions[1];
+    float3 lightColors[1];
 };
 
 ConstantBuffer <LightViewBuffer> lvBuff : register (b2, space0);

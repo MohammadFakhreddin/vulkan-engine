@@ -277,7 +277,7 @@ public:
     }
 
     void OnUI(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override {
-        ImGui::Begin("Object viewer");
+        ImGui::Begin("Sphere");
         ImGui::SetNextItemWidth(300.0f);
         ImGui::SliderFloat("XDegree", &m_sphere_rotation[0], -360.0f, 360.0f);
         ImGui::SetNextItemWidth(300.0f);
@@ -290,6 +290,38 @@ public:
         ImGui::SliderFloat("YDistance", &m_sphere_position[1], -100.0f, 100.0f);
         ImGui::SetNextItemWidth(300.0f);
         ImGui::SliderFloat("ZDistance", &m_sphere_position[2], -100.0f, 100.0f);
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("RColor", &m_sphere_color[0], 0.0f, 255.0f);
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("GColor", &m_sphere_color[1], 0.0f, 255.0f);
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("BColor", &m_sphere_color[2], 0.0f, 255.0f);
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("Metallic", &m_sphere_metallic, 0.0f, 1.0f);
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("Roughness", &m_sphere_roughness, 0.0f, 1.0f);
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("Emission", &m_sphere_emission, 0.0f, 1.0f);
+        ImGui::End();
+        ImGui::Begin("Camera and light");
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("LightX", &m_light_positions[0], -100.0f, 100.0f);
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("LightY", &m_light_positions[1], -100.0f, 100.0f);
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("LightZ", &m_light_positions[2], -100.0f, 100.0f);
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("LightR", &m_light_colors[0], 0.0f, 255.0f);
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("LightG", &m_light_colors[1], 0.0f, 255.0f);
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("LightB", &m_light_colors[2], 0.0f, 255.0f);
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("CameraX", &m_camera_position[0], -100.0f, 100.0f);
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("CameraY", &m_camera_position[1], -100.0f, 100.0f);
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("CameraZ", &m_camera_position[2], -1000.0f, 1000.0f);
         ImGui::End();
     }
 
@@ -367,24 +399,24 @@ private:
     RF::UniformBufferGroup m_material_buffer_group;
     struct MaterialBuffer {
         float albedo[3];        // BaseColor
-        float metallic;
-        float roughness;
-        float ao;               // Emission  
+        alignas(4) float metallic;
+        alignas(4) float roughness;
+        alignas(4) float ao;               // Emission  
     } m_material_data {};
 
     RF::UniformBufferGroup m_light_view_buffer_group;
     struct LightViewBuffer {
-        float camPos[3];
-        MFA::I32 lightCount;
-        float lightPositions[8][3];
-        float lightColors[8][3];
+        alignas(16) float camPos[3];
+        alignas(4) MFA::I32 lightCount;
+        alignas(16) float lightPositions[3];
+        alignas(16) float lightColors[3];
     } m_light_view_data {};
 
     RF::UniformBufferGroup m_transformation_buffer_group;
     struct TransformationBuffer {
-        float rotation[16];
-        float transform[16];
-        float perspective[16];
+        alignas(16 * 4) float rotation[16];
+        alignas(16 * 4) float transform[16];
+        alignas(16 * 4) float perspective[16];
     } m_translate_data {};
 
     RF::GpuModel m_sphere {};
@@ -395,7 +427,7 @@ private:
 
     float m_sphere_rotation [3] {0, 0, 0};
     float m_sphere_position[3] {0, 0, -6};
-    float m_sphere_color[3] {1, 0, 0};
+    float m_sphere_color[3] {0, 255, 0};
 
     float m_sphere_metallic = 0.5f;
     float m_sphere_roughness = 0.5f;
@@ -404,8 +436,8 @@ private:
     float m_camera_position[3];   // For now, it's a constant value
  
     MFA::I32 m_light_count = 1; // For now, it's a constant value
-    float m_light_positions[8][3] {};
-    float m_light_colors[8][3] {};
+    float m_light_positions[3] {10.0f, 20.0f, -9.0f};
+    float m_light_colors[3] {255.0f, 255.0f, 255.0f};
 
     std::vector<VkDescriptorSet_T *> m_sphere_descriptor_sets {};
 };
