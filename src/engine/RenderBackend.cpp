@@ -1451,7 +1451,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
     // Describe input assembly
     VkPipelineInputAssemblyStateCreateInfo input_assembly_create_info = {};
     input_assembly_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    input_assembly_create_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;  // TODO We might need to ask this from outside
+    input_assembly_create_info.topology = options.primitive_topology;
     input_assembly_create_info.primitiveRestartEnable = VK_FALSE;
 
     // Note: scissor test is always enabled (although dynamic scissor is possible)
