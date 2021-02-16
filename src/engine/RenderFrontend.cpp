@@ -338,7 +338,7 @@ DrawPipeline CreateBasicDrawPipeline(
 
 [[nodiscard]]
 DrawPipeline CreateDrawPipeline(
-    U8 gpu_shaders_count, 
+    U8 const gpu_shaders_count, 
     RB::GpuShader * gpu_shaders,
     VkDescriptorSetLayout_T * descriptor_set_layout,
     VkVertexInputBindingDescription const vertex_binding_description,

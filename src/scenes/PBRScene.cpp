@@ -5,6 +5,7 @@
 #include "tools/Importer.hpp"
 #include "tools/ShapeGenerator.hpp"
 #include "engine/RenderFrontend.hpp"
+#include "libs/imgui/imgui.h"
 
 namespace RF = MFA::RenderFrontend;
 namespace RB = MFA::RenderBackend;
@@ -94,12 +95,56 @@ public:
             );
         }
 
-        // Pipeline
-        m_draw_pipeline = RF::CreateBasicDrawPipeline(
-            static_cast<MFA::U8>(shaders.size()), 
-            shaders.data(),
-            m_descriptor_set_layout
-        );
+        {// Pipeline
+            VkVertexInputBindingDescription const vertex_binding_description {
+                .binding = 0,
+                .stride = sizeof(MFA::AssetSystem::MeshVertex),
+                .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+            };
+            std::vector<VkVertexInputAttributeDescription> input_attribute_descriptions {2};
+            input_attribute_descriptions[0] = VkVertexInputAttributeDescription {
+                .location = 0,
+                .binding = 0,
+                .format = VK_FORMAT_R32G32B32_SFLOAT,
+                .offset = offsetof(MFA::AssetSystem::MeshVertex, position),
+            };
+            input_attribute_descriptions[1] = VkVertexInputAttributeDescription {
+                .location = 1,
+                .binding = 0,
+                .format = VK_FORMAT_R32G32B32_SFLOAT,
+                .offset = offsetof(MFA::AssetSystem::MeshVertex, normal_value)
+            };
+
+            m_draw_pipeline = RF::CreateDrawPipeline(
+                static_cast<MFA::U8>(shaders.size()), 
+                shaders.data(),
+                m_descriptor_set_layout,
+                vertex_binding_description,
+                static_cast<MFA::U32>(input_attribute_descriptions.size()),
+                input_attribute_descriptions.data(),
+                RB::CreateGraphicPipelineOptions {
+                    .depth_stencil {
+                        .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+                        .depthTestEnable = VK_TRUE,
+                        .depthWriteEnable = VK_TRUE,
+                        .depthCompareOp = VK_COMPARE_OP_LESS,
+                        .depthBoundsTestEnable = VK_FALSE,
+                        .stencilTestEnable = VK_FALSE
+                    },
+                    .color_blend_attachments {
+                        .blendEnable = VK_TRUE,
+                        .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+                        .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+                        .colorBlendOp = VK_BLEND_OP_ADD,
+                        .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+                        .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+                        .alphaBlendOp = VK_BLEND_OP_ADD,
+                        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
+                    },
+                    .use_static_viewport_and_scissor = true
+                }
+            );
+        }
 
         // Descriptor set
         m_sphere_descriptor_sets = RF::CreateDescriptorSets(
@@ -118,6 +163,9 @@ public:
     }
 
     void Shutdown() override {
+        RF::DestroyUniformBuffer(m_material_buffer_group);
+        RF::DestroyUniformBuffer(m_light_view_buffer_group);
+        RF::DestroyUniformBuffer(m_transformation_buffer_group);
         RF::DestroyDrawPipeline(m_draw_pipeline);
         RF::DestroyDescriptorSetLayout(m_descriptor_set_layout);
         RF::DestroyGpuModel(m_sphere);
@@ -128,37 +176,51 @@ public:
         RF::BindDrawPipeline(draw_pass, m_draw_pipeline);
         {// Updating uniform buffers
             {// Material
-                m_material_data.roughness = sphereRoughness;
-                m_material_data.metallic = sphereMetallic;
-                m_material_data.ao = sphereEmission;
+                m_material_data.roughness = m_sphere_roughness;
+                m_material_data.metallic = m_sphere_metallic;
+                m_material_data.ao = m_sphere_emission;
 
-                static_assert(sizeof(m_material_data.albedo) == sizeof(sphereColor));
-                ::memcpy(m_material_data.albedo, sphereColor, sizeof(sphereColor));
+                static_assert(sizeof(m_material_data.albedo) == sizeof(m_sphere_color));
+                ::memcpy(m_material_data.albedo, m_sphere_color, sizeof(m_sphere_color));
 
                 RF::UpdateUniformBuffer(draw_pass, m_material_buffer_group, MFA::CBlobAliasOf(m_material_data));
             }
             {// LightView
-                static_assert(sizeof(m_light_view_data.camPos) == sizeof(cameraPosition));
-                ::memcpy(m_light_view_data.camPos, cameraPosition, sizeof(cameraPosition));
+                static_assert(sizeof(m_light_view_data.camPos) == sizeof(m_camera_position));
+                ::memcpy(m_light_view_data.camPos, m_camera_position, sizeof(m_camera_position));
 
-                m_light_view_data.lightCount = lightCount;
+                m_light_view_data.lightCount = m_light_count;
 
-                static_assert(sizeof(m_light_view_data.lightColors) == sizeof(lightColors));
-                ::memcpy(m_light_view_data.lightColors, lightColors, sizeof(lightColors));
+                static_assert(sizeof(m_light_view_data.lightColors) == sizeof(m_light_colors));
+                ::memcpy(m_light_view_data.lightColors, m_light_colors, sizeof(m_light_colors));
 
-                static_assert(sizeof(m_light_view_data.lightPositions) == sizeof(lightPositions));
-                ::memcpy(m_light_view_data.lightPositions, lightPositions, sizeof(lightPositions));
+                static_assert(sizeof(m_light_view_data.lightPositions) == sizeof(m_light_positions));
+                ::memcpy(m_light_view_data.lightPositions, m_light_positions, sizeof(m_light_positions));
 
                 RF::UpdateUniformBuffer(draw_pass, m_light_view_buffer_group, MFA::CBlobAliasOf(m_light_view_data));
             }
             {// Transform
                 // Rotation
-                static_assert(sizeof(m_transformation_data.rotation) == sizeof(sphereRotation.cells));
-                ::memcpy(m_transformation_data.rotation, sphereRotation.cells, sizeof(sphereRotation.cells));
+                MFA::Matrix4X4Float rotation;
+                MFA::Matrix4X4Float::assignRotationXYZ(
+                    rotation,
+                    m_sphere_rotation[0],
+                    m_sphere_rotation[1],
+                    m_sphere_rotation[2]
+                );
+                static_assert(sizeof(m_translate_data.rotation) == sizeof(rotation.cells));
+                ::memcpy(m_translate_data.rotation, rotation.cells, sizeof(rotation.cells));
 
-                // Position
-                static_assert(sizeof(spherePosition->cells) == sizeof(m_transformation_data.position));
-                ::memcpy(m_transformation_data.position, spherePosition->cells, sizeof(spherePosition->cells));
+                // Transformation
+                MFA::Matrix4X4Float transform;
+                MFA::Matrix4X4Float::assignTransformation(
+                    transform, 
+                    m_sphere_position[0], 
+                    m_sphere_position[1], 
+                    m_sphere_position[2]
+                );
+                static_assert(sizeof(transform.cells) == sizeof(m_translate_data.transform));
+                ::memcpy(m_translate_data.transform, transform.cells, sizeof(transform.cells));
                 
                 // Perspective
                 MFA::I32 width; MFA::I32 height;
@@ -174,17 +236,18 @@ public:
                     Z_NEAR,
                     Z_FAR
                 );
-                static_assert(sizeof(m_transformation_data.perspective) == sizeof(perspective.cells));
+
+                static_assert(sizeof(m_translate_data.perspective) == sizeof(perspective.cells));
                 ::memcpy(
-                    m_transformation_data.perspective, 
+                    m_translate_data.perspective, 
                     perspective.cells,
-                    sizeof(m_transformation_data.perspective)
+                    sizeof(m_translate_data.perspective)
                 );
 
                 RF::UpdateUniformBuffer(
                     draw_pass, 
                     m_transformation_buffer_group, 
-                    MFA::CBlobAliasOf(m_transformation_data)
+                    MFA::CBlobAliasOf(m_translate_data)
                 );
             }
         }
@@ -212,7 +275,22 @@ public:
         }
     }
 
-    void OnUI(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override {}
+    void OnUI(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override {
+        ImGui::Begin("Object viewer");
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("XDegree", &m_sphere_rotation[0], -360.0f, 360.0f);
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("YDegree", &m_sphere_rotation[1], -360.0f, 360.0f);
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("ZDegree", &m_sphere_rotation[2], -360.0f, 360.0f);
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("XDistance", &m_sphere_position[0], -100.0f, 100.0f);
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("YDistance", &m_sphere_position[1], -100.0f, 100.0f);
+        ImGui::SetNextItemWidth(300.0f);
+        ImGui::SliderFloat("ZDistance", &m_sphere_position[2], -100.0f, 100.0f);
+        ImGui::End();
+    }
 
 private:
 
@@ -304,9 +382,9 @@ private:
     RF::UniformBufferGroup m_transformation_buffer_group;
     struct TransformationBuffer {
         float rotation[16];
-        float position[16];
+        float transform[16];
         float perspective[16];
-    } m_transformation_data {};
+    } m_translate_data {};
 
     RF::GpuModel m_sphere {};
 
@@ -314,19 +392,19 @@ private:
     RF::DrawPipeline m_draw_pipeline {};
     MFA::DrawableObject m_drawable_object {};
 
-    MFA::Matrix4X4Float sphereRotation {};
-    MFA::Matrix4X4Float spherePosition[3] {};
-    float sphereColor[3] {};
+    float m_sphere_rotation [3] {0, 0, 0};
+    float m_sphere_position[3] {0, 0, -6};
+    float m_sphere_color[3] {1, 0, 0};
 
-    float sphereMetallic = 0.5f;
-    float sphereRoughness = 0.5f;
-    float sphereEmission = 0.0f; // For now, it's a constant value
+    float m_sphere_metallic = 0.5f;
+    float m_sphere_roughness = 0.5f;
+    float m_sphere_emission = 0.0f; // For now, it's a constant value
 
-    float cameraPosition[3];   // For now, it's a constant value
+    float m_camera_position[3];   // For now, it's a constant value
  
-    MFA::I32 lightCount = 1; // For now, it's a constant value
-    float lightPositions[8][3] {};
-    float lightColors[8][3] {};
+    MFA::I32 m_light_count = 1; // For now, it's a constant value
+    float m_light_positions[8][3] {};
+    float m_light_colors[8][3] {};
 
     std::vector<VkDescriptorSet_T *> m_sphere_descriptor_sets {};
 };

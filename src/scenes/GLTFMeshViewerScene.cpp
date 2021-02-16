@@ -102,10 +102,15 @@ public:
         ImGui::Begin("Object viewer");
         ImGui::SetNextItemWidth(300.0f);
         ImGui::SliderFloat("XDegree", &XDegree, -360.0f, 360.0f);
+        ImGui::SetNextItemWidth(300.0f);
         ImGui::SliderFloat("YDegree", &YDegree, -360.0f, 360.0f);
+        ImGui::SetNextItemWidth(300.0f);
         ImGui::SliderFloat("ZDegree", &zDegree, -360.0f, 360.0f);
+        ImGui::SetNextItemWidth(300.0f);
         ImGui::SliderFloat("XDistance", &xDistance, -100.0f, 100.0f);
+        ImGui::SetNextItemWidth(300.0f);
         ImGui::SliderFloat("YDistance", &yDistance, -100.0f, 100.0f);
+        ImGui::SetNextItemWidth(300.0f);
         ImGui::SliderFloat("ZDistance", &zDistance, -100.0f, 100.0f);
         ImGui::End();
     }

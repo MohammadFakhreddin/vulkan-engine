@@ -80,52 +80,55 @@ float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
 };
 
 PSOut main(PSIn input) {
-    float3 N = normalize(input.WorldNormal);
-    float3 V = normalize(lvBuff.camPos - input.WorldPos);
+    PSOut tempOutput;
+    tempOutput.FragColor = float4(1, 0, 0, 1.0);
+    return tempOutput;
+    // float3 N = normalize(input.WorldNormal);
+    // float3 V = normalize(lvBuff.camPos - input.WorldPos);
     
-    // TODO We can also ask for F0 value from uniform buffer
-    float3 F0 = float3(0.04); 
-    // TODO Check if parameters have correct order
-    F0 = lerp(F0, matBuff.albedo, matBuff.metallic);
+    // // TODO We can also ask for F0 value from uniform buffer
+    // float3 F0 = float3(0.04); 
+    // // TODO Check if parameters have correct order
+    // F0 = lerp(F0, matBuff.albedo, matBuff.metallic);
 
-    // Direct lighting
-    float3 Lo = float3(0.0);
-    for (int i = 0; i < lvBuff.lightCount; ++i) {
-        float3 L = normalize(lvBuff.lightPositions[i] - input.WorldPos);
-        float H = normalize(V + L);
+    // // Direct lighting
+    // float3 Lo = float3(0.0);
+    // for (int i = 0; i < lvBuff.lightCount; ++i) {
+    //     float3 L = normalize(lvBuff.lightPositions[i] - input.WorldPos);
+    //     float H = normalize(V + L);
 
-        float3 distance = length(lvBuff.lightPositions[i] - input.WorldPos);
-        float attenuation = 1.0 / (distance * distance);
-        // Radiance is amount of diffuse light contribution to final result
-        float3 radiance = lvBuff.lightColors[i] * attenuation;
+    //     float3 distance = length(lvBuff.lightPositions[i] - input.WorldPos);
+    //     float attenuation = 1.0 / (distance * distance);
+    //     // Radiance is amount of diffuse light contribution to final result
+    //     float3 radiance = lvBuff.lightColors[i] * attenuation;
 
-        // cook-torrance brdf
-        float NDF = DistributionGGX(N, H, matBuff.roughness);        
-        float G   = GeometrySmith(N, V, L, matBuff.roughness);      
-        float3 F    = fresnelSchlick(max(dot(H, V), 0.0), F0);       
+    //     // cook-torrance brdf
+    //     float NDF = DistributionGGX(N, H, matBuff.roughness);        
+    //     float G   = GeometrySmith(N, V, L, matBuff.roughness);      
+    //     float3 F    = fresnelSchlick(max(dot(H, V), 0.0), F0);       
         
-        float3 kS = F;
-        float3 kD = float3(1.0) - kS;
-        kD *= 1.0 - matBuff.metallic;	  
+    //     float3 kS = F;
+    //     float3 kD = float3(1.0) - kS;
+    //     kD *= 1.0 - matBuff.metallic;	  
         
-        float3 numerator    = NDF * G * F;
-        float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
-        float3 specular     = numerator / max(denominator, 0.001);  
+    //     float3 numerator    = NDF * G * F;
+    //     float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
+    //     float3 specular     = numerator / max(denominator, 0.001);  
             
-        // add to outgoing radiance Lo
-        float NdotL = max(dot(N, L), 0.0);                
-        Lo += (kD * matBuff.albedo / PI + specular) * radiance * NdotL; 
-    }
+    //     // add to outgoing radiance Lo
+    //     float NdotL = max(dot(N, L), 0.0);                
+    //     Lo += (kD * matBuff.albedo / PI + specular) * radiance * NdotL; 
+    // }
 
-    float3 ambient = float3(0.03) * matBuff.albedo * matBuff.ao;
-    float3 color = ambient + Lo;
+    // float3 ambient = float3(0.03) * matBuff.albedo * matBuff.ao;
+    // float3 color = ambient + Lo;
 	
-    color = color / (color + float3(1.0));
-    color = pow(color, float3(1.0/2.2));  
+    // color = color / (color + float3(1.0));
+    // color = pow(color, float3(1.0/2.2));  
    
-    PSOut output;
+    // PSOut output;
 
-    output.FragColor = float4(color, 1.0);
+    // output.FragColor = float4(color, 1.0);
 
-    return output;
+    // return output;
 };
