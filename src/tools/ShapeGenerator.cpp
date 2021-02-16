@@ -101,12 +101,23 @@ namespace MFA::ShapeGenerator {
                 ::memcpy(mesh_vertices[index].position, positions[index].cells, sizeof(positions[index].cells));
             }
             {// UVs We assign uvs for all materials in case a texture get assigned to shape
+                // Base color
                 static_assert(sizeof(mesh_vertices[index].base_color_uv) == sizeof(uvs[index].cells));
-                ::memcpy(mesh_vertices[index].base_color_uv, uvs[index].cells, sizeof(uvs[index]));
+                ::memcpy(mesh_vertices[index].base_color_uv, uvs[index].cells, sizeof(uvs[index].cells));
+                // Metallic/Roughness       // TODO We might need to separate metallic_roughness
+                static_assert(sizeof(mesh_vertices[index].metallic_roughness_uv) == sizeof(uvs[index].cells));
+                ::memcpy(mesh_vertices[index].metallic_roughness_uv, uvs[index].cells, sizeof(uvs[index].cells));
+                // Emission
+                static_assert(sizeof(mesh_vertices[index].emission_uv) == sizeof(uvs[index].cells));
+                ::memcpy(mesh_vertices[index].emission_uv, uvs[index].cells, sizeof(uvs[index].cells));
             }
-            // TODO fill other uvs as well (If we used obj in anything serious enough)
-            mesh_vertices[vertex_index].base_color_uv[1] = 1.0f - mesh_vertices[vertex_index].base_color_uv[1];
-            ::memcpy(mesh_vertices[vertex_index].normal_value, normals[vertex_index].value, sizeof(normals[vertex_index].value));
+            {// Normals
+                ::memcpy(
+                    mesh_vertices[index].normal_value, 
+                    normals[index].cells, 
+                    sizeof(normals[index].cells)
+                );
+            }
         }
 
         MFA_ASSERT(model_asset.mesh.valid());

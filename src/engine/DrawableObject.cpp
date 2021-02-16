@@ -3,7 +3,6 @@
 namespace MFA {
 // TODO We need RCMGMT very bad
 // We need other overrides for easier use as well
-// TODO Each submesh may have it's own textures, We need a data structure called GPUMesh to store all information
 DrawableObject::DrawableObject(
     RF::GpuModel & model_,
     RF::SamplerGroup & sampler_group_,
@@ -13,7 +12,10 @@ DrawableObject::DrawableObject(
     : m_required_draw_calls(static_cast<U32>(model_.mesh_buffers.sub_mesh_buffers.size()))
     , m_model(&model_)
     , m_sampler_group(&sampler_group_)
-    , m_descriptor_sets(RF::CreateDescriptorSets(static_cast<U32>(model_.mesh_buffers.sub_mesh_buffers.size() * RF::SwapChainImagesCount()), descriptor_set_layout))
+    , m_descriptor_sets(RF::CreateDescriptorSets(
+        static_cast<U32>(model_.mesh_buffers.sub_mesh_buffers.size() * RF::SwapChainImagesCount()), 
+        descriptor_set_layout
+    ))
     , m_uniform_buffer_group(RF::CreateUniformBuffer(uniform_buffer_size))
     , m_is_valid(true)
 {

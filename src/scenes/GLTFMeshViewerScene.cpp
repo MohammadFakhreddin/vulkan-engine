@@ -45,6 +45,7 @@ public:
         MFA_ASSERT(m_cpu_fragment_shader.valid());
         MFA_ASSERT(m_gpu_fragment_shader.valid());
         std::vector<RB::GpuShader> shaders {m_gpu_vertex_shader, m_gpu_fragment_shader};
+        // TODO We should use gltf sampler info here
         m_sampler_group = RF::CreateSampler();
         m_descriptor_set_layout = RF::CreateBasicDescriptorSetLayout();
         m_draw_pipeline = RF::CreateBasicDrawPipeline(
@@ -58,6 +59,7 @@ public:
             sizeof(UniformBufferObject),
             m_descriptor_set_layout
         );
+        // TODO We can remove cpu shaders here
     }
     void OnDraw(MFA::U32 const delta_time, RF::DrawPass & draw_pass) override {
         RF::BindDrawPipeline(draw_pass, m_draw_pipeline);

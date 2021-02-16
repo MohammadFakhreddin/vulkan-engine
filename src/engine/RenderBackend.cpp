@@ -2078,6 +2078,7 @@ void UpdateDescriptorSetsBasic(
     U32 const image_info_count,
     VkDescriptorImageInfo const * image_infos
 ) {
+    MFA_PTR_ASSERT(device);
     MFA_ASSERT(descriptor_sets_count > 0);
     MFA_PTR_ASSERT(descriptor_sets);
     for(U8 i = 0; i < descriptor_sets_count; i++) {
@@ -2108,5 +2109,23 @@ void UpdateDescriptorSetsBasic(
         );
     }
 };
+
+void UpdateDescriptorSets(
+    VkDevice_T * device,
+    U8 descriptor_writes_count,
+    VkWriteDescriptorSet * descriptor_writes
+) {
+    MFA_PTR_VALID(device);
+    MFA_ASSERT(descriptor_writes_count > 0);
+    MFA_ASSERT(nullptr != descriptor_writes);
+
+    vkUpdateDescriptorSets(
+        device, 
+        static_cast<uint32_t>(descriptor_writes_count), 
+        descriptor_writes, 
+        0, 
+        nullptr
+    );
+}
 
 }

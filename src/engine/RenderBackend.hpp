@@ -593,4 +593,10 @@ void UpdateDescriptorSetsBasic(
     VkDescriptorImageInfo const * image_infos
 );
 
+void UpdateDescriptorSets(
+    VkDevice_T * device,
+    U8 descriptor_writes_count,
+    VkWriteDescriptorSet * descriptor_writes
+);
+
 }
