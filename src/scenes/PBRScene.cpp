@@ -106,13 +106,15 @@ public:
             RF::SwapChainImagesCount(), 
             m_descriptor_set_layout
         );
-        updateAllDescriptorSets();
 
         {// Uniform buffer
             m_material_buffer_group = RF::CreateUniformBuffer(sizeof(MaterialBuffer));
             m_light_view_buffer_group = RF::CreateUniformBuffer(sizeof(LightViewBuffer));
             m_transformation_buffer_group = RF::CreateUniformBuffer(sizeof(TransformationBuffer));
         }
+
+        updateAllDescriptorSets();
+
     }
 
     void Shutdown() override {
@@ -123,6 +125,7 @@ public:
     }
 
     void OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override {
+        RF::BindDrawPipeline(draw_pass, m_draw_pipeline);
         {// Updating uniform buffers
             {// Material
                 m_material_data.roughness = sphereRoughness;

@@ -739,13 +739,12 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                             );
                         }
                         auto & current_sub_mesh = header_object->sub_meshes[sub_mesh_index];
-                        {
+                        {// Assigning constant values
                             current_sub_mesh.indices_offset = indices_offset;
                             current_sub_mesh.indices_starting_index = indices_starting_index;
                             current_sub_mesh.vertices_offset = vertices_offset;
                             current_sub_mesh.index_count = primitive_indices_count;
                             current_sub_mesh.vertex_count = primitive_vertex_count;
-                            current_sub_mesh.base_color_texture_index = base_color_texture_index;
                             current_sub_mesh.metallic_roughness_texture_index = metallic_roughness_texture_index;
                             current_sub_mesh.normal_texture_index = normal_texture_index;
                             current_sub_mesh.emissive_texture_index = emissive_texture_index;

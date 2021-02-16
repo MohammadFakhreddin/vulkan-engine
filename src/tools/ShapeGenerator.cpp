@@ -55,7 +55,7 @@ namespace MFA::ShapeGenerator {
         }
 
         U16 const indices_count = static_cast<U16>(indices.size());
-        MFA_ASSERT(positions.size() == normals.size() && positions.size() == indices.size() && positions.size() == uvs.size());
+        
         U16 const vertices_count = static_cast<U16>(positions.size());
 
         auto const header_size = AssetSystem::MeshHeader::ComputeHeaderSize(1);
@@ -85,7 +85,8 @@ namespace MFA::ShapeGenerator {
         sub_mesh.has_normal_buffer = true;
         sub_mesh.has_normal_texture = false;
         sub_mesh.has_emissive_texture = false;
-
+        sub_mesh.indices_starting_index = 0;
+        
         auto * mesh_vertices = model_asset.mesh.vertices_blob(0).as<AssetSystem::MeshVertex>();
         auto * mesh_indices = model_asset.mesh.indices_blob(0).as<AssetSystem::MeshIndex>();
         MFA_ASSERT(model_asset.mesh.indices_blob(0).ptr + model_asset.mesh.indices_blob(0).len == mesh_asset_blob.ptr + mesh_asset_blob.len);
@@ -96,6 +97,12 @@ namespace MFA::ShapeGenerator {
             ++index
         ) {
             mesh_indices[index] = indices[index];
+        }
+        for (
+            uintmax_t index = 0;
+            index < sub_mesh.vertex_count;
+            ++index
+        ) {
             {// Positions
                 static_assert(sizeof(mesh_vertices[index].position) == sizeof(positions[index].cells));
                 ::memcpy(mesh_vertices[index].position, positions[index].cells, sizeof(positions[index].cells));
