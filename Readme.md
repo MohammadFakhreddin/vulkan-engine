@@ -5,3 +5,7 @@
 
 ## .gltf file:
 <img src="examples/car.gif">
+
+## Basic PRB
+<img src="examples/pbr.gif">
+
