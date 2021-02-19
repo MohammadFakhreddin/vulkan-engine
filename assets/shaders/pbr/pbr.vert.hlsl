@@ -1,10 +1,10 @@
 struct VSIn {
-    float3 LocalPosition: POSITION;
+    float3 LocalPosition: POSITION0;
     float3 LocalNormal: NORMAL0;
 };
 
 struct VSOut {
-    float3 WorldPos: POSITION;
+    float3 WorldPos: POSITION0;
     float3 WorldNormal: NORMAL0;
     float4 Position: SV_POSITION;
 };

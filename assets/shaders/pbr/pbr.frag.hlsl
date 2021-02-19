@@ -1,7 +1,7 @@
 // Based on https://learnopengl.com/PBR/Lighting
 
 struct PSIn {
-    float3 WorldPos: POSITION;
+    float3 WorldPos: POSITION0;
     float3 WorldNormal: NORMAL0;
     float4 Position: SV_POSITION;
 };
@@ -14,7 +14,7 @@ struct MaterialBuffer {
     float3 albedo;          // BaseColor
     float metallic;
     float roughness;
-    float ao;               // Emission  
+    // float ao;               // Emission  
 };
 
 ConstantBuffer <MaterialBuffer> matBuff : register (b1, space0);
@@ -23,7 +23,7 @@ struct LightViewBuffer {
     float3 camPos;
     int lightCount;
     float3 lightPositions[1];
-    float3 lightColors[1];
+    // float3 lightColors[1];
 };
 
 ConstantBuffer <LightViewBuffer> lvBuff : register (b2, space0);
@@ -39,96 +39,88 @@ const float PI = 3.14159265359;
     look visually correct with a constant F0 of 0.04, while we do specify F0 for metallic surfaces as then given by the albedo value. 
     This translates to code as follows:
 */
-float3 fresnelSchlick(float cosTheta, float3 F0)
+// Fresnel function ----------------------------------------------------
+float3 F_Schlick(float cosTheta, float metallic)
 {
-    return F0 + (1.0 - F0) * pow(max(1.0 - cosTheta, 0.0), 5.0);
-};
+	float3 F0 = lerp(float3(0.04, 0.04, 0.04), matBuff.albedo, metallic); // * material.specular
+	float3 F = F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+	return F;
+}
 
-float DistributionGGX(float3 N, float3 H, float roughness)
+// Normal Distribution function --------------------------------------
+float D_GGX(float dotNH, float roughness)
 {
-    float a      = roughness*roughness;
-    float a2     = a*a;
-    float NdotH  = max(dot(N, H), 0.0);
-    float NdotH2 = NdotH*NdotH;
-	
-    float num   = a2;
-    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
-    denom = PI * denom * denom;
-	
-    return num / denom;
-};
+	float alpha = roughness * roughness;
+	float alpha2 = alpha * alpha;
+	float denom = dotNH * dotNH * (alpha2 - 1.0) + 1.0;
+	return (alpha2)/(PI * denom*denom);
+}
 
-float GeometrySchlickGGX(float NdotV, float roughness)
+// Geometric Shadowing function --------------------------------------
+float G_SchlicksmithGGX(float dotNL, float dotNV, float roughness)
 {
-    float r = (roughness + 1.0);
-    float k = (r*r) / 8.0;
+	float r = (roughness + 1.0);
+	float k = (r*r) / 8.0;
+	float GL = dotNL / (dotNL * (1.0 - k) + k);
+	float GV = dotNV / (dotNV * (1.0 - k) + k);
+	return GL * GV;
+}
 
-    float num   = NdotV;
-    float denom = NdotV * (1.0 - k) + k;
-	
-    return num / denom;
-};
+// Specular BRDF composition --------------------------------------------
 
-float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
+float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness)
 {
-    float NdotV = max(dot(N, V), 0.0);
-    float NdotL = max(dot(N, L), 0.0);
-    float ggx2  = GeometrySchlickGGX(NdotV, roughness);
-    float ggx1  = GeometrySchlickGGX(NdotL, roughness);
-	
-    return ggx1 * ggx2;
-};
+	// Precalculate vectors and dot products
+	float3 H = normalize (V + L);
+	float dotNV = clamp(dot(N, V), 0.0, 1.0);
+	float dotNL = clamp(dot(N, L), 0.0, 1.0);
+	float dotLH = clamp(dot(L, H), 0.0, 1.0);
+	float dotNH = clamp(dot(N, H), 0.0, 1.0);
+
+	// Light color fixed
+	float3 lightColor = float3(1.0, 1.0, 1.0);
+
+	float3 color = float3(0.0, 0.0, 0.0);
+
+	if (dotNL > 0.0)
+	{
+		// float rroughness = max(0.05, roughness);
+		// D = Normal distribution (Distribution of the microfacets)
+		float D = D_GGX(dotNH, roughness);
+		// G = Geometric shadowing term (Microfacets shadowing)
+		float G = G_SchlicksmithGGX(dotNL, dotNV, roughness);
+		// F = Fresnel factor (Reflectance depending on angle of incidence)
+		float3 F = F_Schlick(dotNV, metallic);
+
+		float3 spec = D * F * G / (4.0 * dotNL * dotNV);
+
+		color += spec * dotNL * lightColor;
+	}
+
+	return color;
+}
 
 PSOut main(PSIn input) {
-    // PSOut tempOutput;
-    // tempOutput.FragColor = float4(1, 0, 0, 1.0);
-    // return tempOutput;
-    float3 N = normalize(input.WorldNormal);
-    float3 V = normalize(lvBuff.camPos - input.WorldPos);
-    
-    // TODO We can also ask for F0 value from uniform buffer
-    float3 F0 = float3(0.04); 
-    // TODO Check if parameters have correct order
-    F0 = lerp(F0, matBuff.albedo, matBuff.metallic);
+	float3 N = normalize(input.WorldNormal);
+	float3 V = normalize(lvBuff.camPos - input.WorldPos);
 
-    // Direct lighting
-    float3 Lo = float3(0.0);
-    for (int i = 0; i < lvBuff.lightCount; ++i) {
-        float3 L = normalize(lvBuff.lightPositions[i] - input.WorldPos);
-        float H = normalize(V + L);
+	float roughness = matBuff.roughness;
 
-        float3 distance = length(lvBuff.lightPositions[i] - input.WorldPos);
-        float attenuation = 1.0 / (distance * distance);
-        // Radiance is amount of diffuse light contribution to final result
-        float3 radiance = lvBuff.lightColors[i] * attenuation;
+	// Specular contribution
+	float3 Lo = float3(0.0, 0.0, 0.0);
+	for (int i = 0; i < lvBuff.lightCount; i++) {
+		float3 L = normalize(lvBuff.lightPositions[i].xyz - input.WorldPos);
+		Lo += BRDF(L, V, N, matBuff.metallic, roughness);
+	};
 
-        // cook-torrance brdf
-        float NDF = DistributionGGX(N, H, matBuff.roughness);        
-        float G   = GeometrySmith(N, V, L, matBuff.roughness);      
-        float3 F    = fresnelSchlick(max(dot(H, V), 0.0), F0);       
-        
-        float3 kS = F;
-        float3 kD = float3(1.0) - kS;
-        kD *= 1.0 - matBuff.metallic;	  
-        
-        float3 numerator    = NDF * G * F;
-        float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
-        float3 specular     = numerator / max(denominator, 0.001);  
-            
-        // add to outgoing radiance Lo
-        float NdotL = max(dot(N, L), 0.0);                
-        Lo += (kD * matBuff.albedo / PI + specular) * radiance * NdotL; 
-    }
+	// Combine with ambient
+	float3 color = matBuff.albedo * 0.02;
+	color += Lo;
 
-    float3 ambient = float3(0.03) * matBuff.albedo * matBuff.ao;
-    float3 color = ambient + Lo;
-	
-    color = color / (color + float3(1.0));
-    color = pow(color, float3(1.0/2.2));  
-   
+	// Gamma correct
+	color = pow(color, float3(0.4545, 0.4545, 0.4545));
+
     PSOut output;
-
     output.FragColor = float4(color, 1.0);
-
-    return output;
+	return output;
 };

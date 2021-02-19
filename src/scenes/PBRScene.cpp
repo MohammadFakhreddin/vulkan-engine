@@ -23,6 +23,13 @@ public:
     }
 
     void Init() override {
+
+        MFA::I32 width; MFA::I32 height;
+        RF::GetWindowSize(width, height);
+        m_camera_position[0] = 0;//width / 2.0f;
+        m_camera_position[1] = 0;//height / 2.0f;
+        m_camera_position[2] = 0;//Z_NEAR;
+
         // Gpu model
         auto cpu_model = SG::Sphere();
         m_sphere = RF::CreateGpuModel(cpu_model);
@@ -177,12 +184,12 @@ public:
         RF::BindDrawPipeline(draw_pass, m_draw_pipeline);
         {// Updating uniform buffers
             {// Material
-                m_material_data.roughness = m_sphere_roughness;
-                m_material_data.metallic = m_sphere_metallic;
-                m_material_data.ao = m_sphere_emission;
-
-                static_assert(sizeof(m_material_data.albedo) == sizeof(m_sphere_color));
-                ::memcpy(m_material_data.albedo, m_sphere_color, sizeof(m_sphere_color));
+                auto const & selected_material = MaterialInformation[m_selected_material_index];
+                m_material_data.roughness = selected_material.roughness;
+                m_material_data.metallic = selected_material.metallic;
+                
+                static_assert(sizeof(m_material_data.albedo) == sizeof(selected_material.color));
+                ::memcpy(m_material_data.albedo, selected_material.color, sizeof(m_material_data.albedo));
 
                 RF::UpdateUniformBuffer(draw_pass, m_material_buffer_group, MFA::CBlobAliasOf(m_material_data));
             }
@@ -192,11 +199,11 @@ public:
 
                 m_light_view_data.lightCount = m_light_count;
 
-                static_assert(sizeof(m_light_view_data.lightColors) == sizeof(m_light_colors));
-                ::memcpy(m_light_view_data.lightColors, m_light_colors, sizeof(m_light_colors));
+               /* static_assert(sizeof(m_light_view_data.lightColors) == sizeof(m_light_colors));
+                ::memcpy(m_light_view_data.lightColors, m_light_colors, sizeof(m_light_colors));*/
 
-                static_assert(sizeof(m_light_view_data.lightPositions) == sizeof(m_light_positions));
-                ::memcpy(m_light_view_data.lightPositions, m_light_positions, sizeof(m_light_positions));
+                static_assert(sizeof(m_light_view_data.lightPositions) == sizeof(m_light_position));
+                ::memcpy(m_light_view_data.lightPositions, m_light_position, sizeof(m_light_position));
 
                 RF::UpdateUniformBuffer(draw_pass, m_light_view_buffer_group, MFA::CBlobAliasOf(m_light_view_data));
             }
@@ -205,9 +212,9 @@ public:
                 MFA::Matrix4X4Float rotation;
                 MFA::Matrix4X4Float::assignRotationXYZ(
                     rotation,
-                    m_sphere_rotation[0],
-                    m_sphere_rotation[1],
-                    m_sphere_rotation[2]
+                    MFA::Math::Deg2Rad(m_sphere_rotation[0]),
+                    MFA::Math::Deg2Rad(m_sphere_rotation[1]),
+                    MFA::Math::Deg2Rad(m_sphere_rotation[2])
                 );
                 static_assert(sizeof(m_translate_data.rotation) == sizeof(rotation.cells));
                 ::memcpy(m_translate_data.rotation, rotation.cells, sizeof(rotation.cells));
@@ -285,43 +292,56 @@ public:
         ImGui::SetNextItemWidth(300.0f);
         ImGui::SliderFloat("ZDegree", &m_sphere_rotation[2], -360.0f, 360.0f);
         ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("XDistance", &m_sphere_position[0], -100.0f, 100.0f);
+        ImGui::SliderFloat("XDistance", &m_sphere_position[0], -40.0f, 40.0f);
         ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("YDistance", &m_sphere_position[1], -100.0f, 100.0f);
+        ImGui::SliderFloat("YDistance", &m_sphere_position[1], -40.0f, 40.0f);
         ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("ZDistance", &m_sphere_position[2], -100.0f, 100.0f);
-        ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("RColor", &m_sphere_color[0], 0.0f, 255.0f);
-        ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("GColor", &m_sphere_color[1], 0.0f, 255.0f);
-        ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("BColor", &m_sphere_color[2], 0.0f, 255.0f);
-        ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("Metallic", &m_sphere_metallic, 0.0f, 1.0f);
-        ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("Roughness", &m_sphere_roughness, 0.0f, 1.0f);
-        ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("Emission", &m_sphere_emission, 0.0f, 1.0f);
+        ImGui::SliderFloat("ZDistance", &m_sphere_position[2], -40.0f, 40.0f);
+        //ImGui::SetNextItemWidth(300.0f);
+        //ImGui::SliderFloat("RColor", &m_sphere_color[0], 0.0f, 1.0f);
+        //ImGui::SetNextItemWidth(300.0f);
+        //ImGui::SliderFloat("GColor", &m_sphere_color[1], 0.0f, 1.0f);
+        //ImGui::SetNextItemWidth(300.0f);
+        //ImGui::SliderFloat("BColor", &m_sphere_color[2], 0.0f, 1.0f);
+        //ImGui::SetNextItemWidth(300.0f);
+        //ImGui::SliderFloat("Metallic", &m_sphere_metallic, 0.0f, 1.0f);
+        //ImGui::SetNextItemWidth(300.0f);
+        //ImGui::SliderFloat("Roughness", &m_sphere_roughness, 0.0f, 1.0f);
+        //ImGui::SetNextItemWidth(300.0f);
+        //ImGui::SliderFloat("Emission", &m_sphere_emission, 0.0f, 1.0f);
         ImGui::End();
         ImGui::Begin("Camera and light");
         ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("LightX", &m_light_positions[0], -100.0f, 100.0f);
+        ImGui::SliderFloat("LightX", &m_light_position[0], -20.0f, 20.0f);
         ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("LightY", &m_light_positions[1], -100.0f, 100.0f);
+        ImGui::SliderFloat("LightY", &m_light_position[1], -20.0f, 20.0f);
         ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("LightZ", &m_light_positions[2], -100.0f, 100.0f);
-        ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("LightR", &m_light_colors[0], 0.0f, 255.0f);
-        ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("LightG", &m_light_colors[1], 0.0f, 255.0f);
-        ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("LightB", &m_light_colors[2], 0.0f, 255.0f);
-        ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("CameraX", &m_camera_position[0], -100.0f, 100.0f);
-        ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("CameraY", &m_camera_position[1], -100.0f, 100.0f);
-        ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("CameraZ", &m_camera_position[2], -1000.0f, 1000.0f);
+        ImGui::SliderFloat("LightZ", &m_light_position[2], -20.0f, 20.0f);
+
+        {// Materials
+            std::vector<char const *> items {};
+            for (auto const & material: MaterialInformation) {
+                items.emplace_back(material.name);
+            }
+            ImGui::Combo(
+                "Material", 
+                &m_selected_material_index, 
+                items.data(), 
+                static_cast<MFA::I32>(items.size())
+            );
+        }
+        //ImGui::SetNextItemWidth(300.0f);
+        //ImGui::SliderFloat("LightR", &m_light_colors[0], 0.0f, 1.0f);
+        //ImGui::SetNextItemWidth(300.0f);
+        //ImGui::SliderFloat("LightG", &m_light_colors[1], 0.0f, 1.0f);
+        //ImGui::SetNextItemWidth(300.0f);
+        //ImGui::SliderFloat("LightB", &m_light_colors[2], 0.0f, 1.0f);
+        //ImGui::SetNextItemWidth(300.0f);
+        //ImGui::SliderFloat("CameraX", &m_camera_position[0], -100.0f, 100.0f);
+        //ImGui::SetNextItemWidth(300.0f);
+        //ImGui::SliderFloat("CameraY", &m_camera_position[1], -100.0f, 100.0f);
+        //ImGui::SetNextItemWidth(300.0f);
+        //ImGui::SliderFloat("CameraZ", &m_camera_position[2], -1000.0f, 1000.0f);
         ImGui::End();
     }
 
@@ -396,12 +416,34 @@ private:
     static constexpr float Z_NEAR = 0.1f;
     static constexpr float Z_FAR = 1000.0f;
 
+    struct _MaterialInformation {
+        char const * name;
+        float color[3];
+        float roughness;
+        float metallic;
+    };
+
+    static constexpr _MaterialInformation MaterialInformation [11] = {
+        { .name = "Gold", .color = {1.0f, 0.765557f, 0.336057f}, .roughness = 0.1f, .metallic = 1.0f },
+		{ .name = "Copper", .color = {0.955008f, 0.637427f, 0.538163f}, .roughness = 0.1f, .metallic = 1.0f },
+		{ .name = "Chromium", .color = {0.549585f, 0.556114f, 0.554256f}, .roughness = 0.1f, .metallic = 1.0f },
+		{ .name = "Nickel", .color = {0.659777f, 0.608679f, 0.525649f}, .roughness = 0.1f, .metallic = 1.0f },
+		{ .name = "Titanium", .color = {0.541931f, 0.496791f, 0.449419f}, .roughness = 0.1f, .metallic = 1.0f },
+		{ .name = "Cobalt", .color = {0.662124f, 0.654864f, 0.633732f}, .roughness = 0.1f, .metallic = 1.0f },
+		{ .name = "Platinum", .color = {0.672411f, 0.637331f, 0.585456f}, .roughness = 0.1f, .metallic = 1.0f },
+		// Testing materials
+		{ .name = "White", .color = {1.0f, 1.0f, 1.0f}, .roughness = 0.1f, .metallic = 1.0f },
+		{ .name = "Red", .color = {1.0f, 0.0f, 0.0f}, .roughness = 0.1f, .metallic = 1.0f },
+		{ .name = "Blue", .color = {0.0f, 0.0f, 1.0f}, .roughness = 0.1f, .metallic = 1.0f },
+		{ .name = "Black", .color = {0.0f, 0.0f, 0.0f}, .roughness = 0.1f, .metallic = 1.0f },
+    };
+
     RF::UniformBufferGroup m_material_buffer_group;
     struct MaterialBuffer {
         float albedo[3];        // BaseColor
         alignas(4) float metallic;
         alignas(4) float roughness;
-        alignas(4) float ao;               // Emission  
+        //alignas(4) float ao;               // Emission  
     } m_material_data {};
 
     RF::UniformBufferGroup m_light_view_buffer_group;
@@ -409,7 +451,7 @@ private:
         alignas(16) float camPos[3];
         alignas(4) MFA::I32 lightCount;
         alignas(16) float lightPositions[3];
-        alignas(16) float lightColors[3];
+        //alignas(16) float lightColors[3];
     } m_light_view_data {};
 
     RF::UniformBufferGroup m_transformation_buffer_group;
@@ -424,20 +466,21 @@ private:
     VkDescriptorSetLayout_T * m_descriptor_set_layout = nullptr;
     RF::DrawPipeline m_draw_pipeline {};
     MFA::DrawableObject m_drawable_object {};
-
+   // https://seblagarde.wordpress.com/2011/08/17/feeding-a-physical-based-lighting-mode/
     float m_sphere_rotation [3] {0, 0, 0};
     float m_sphere_position[3] {0, 0, -6};
-    float m_sphere_color[3] {0, 255, 0};
+    int m_selected_material_index = 0;
+    //float m_sphere_color[3] {1.0f, 0.765557f, 0.336057f};
 
-    float m_sphere_metallic = 0.5f;
-    float m_sphere_roughness = 0.5f;
-    float m_sphere_emission = 0.0f; // For now, it's a constant value
+    //float m_sphere_metallic = 1.0f;
+    //float m_sphere_roughness = 0.1f;
+    //float m_sphere_emission = 0.0f; // For now, it's a constant value
 
-    float m_camera_position[3];   // For now, it's a constant value
+    float m_camera_position[3] {};   // For now, it's a constant value
  
     MFA::I32 m_light_count = 1; // For now, it's a constant value
-    float m_light_positions[3] {10.0f, 20.0f, -9.0f};
-    float m_light_colors[3] {255.0f, 255.0f, 255.0f};
+    float m_light_position[3] {0.0f, 0.0f, -2.0f};
+    //float m_light_colors[3] {1.0f, 1.0f, 1.0f};
 
     std::vector<VkDescriptorSet_T *> m_sphere_descriptor_sets {};
 };
