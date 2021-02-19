@@ -28,6 +28,7 @@ public:
         //auto cpu_model = Importer::ImportMeshGLTF("../assets/kirpi_mrap__lowpoly__free_3d_model/scene.gltf");
         auto cpu_model = Importer::ImportMeshGLTF("../assets/models/gunship/scene.gltf");
         m_gpu_model = RF::CreateGpuModel(cpu_model);
+
         m_cpu_vertex_shader = Importer::ImportShaderFromSPV(
             "../assets/shaders/gltf_mesh_viewer/GLTFMeshViewer.vert.spv", 
             MFA::AssetSystem::Shader::Stage::Vertex, 
@@ -36,6 +37,7 @@ public:
         MFA_ASSERT(m_cpu_vertex_shader.valid());
         m_gpu_vertex_shader = RF::CreateShader(m_cpu_vertex_shader);
         MFA_ASSERT(m_gpu_vertex_shader.valid());
+
         m_cpu_fragment_shader = Importer::ImportShaderFromSPV(
             "../assets/shaders/gltf_mesh_viewer/GLTFMeshViewer.frag.spv",
             MFA::AssetSystem::Shader::Stage::Fragment,
@@ -44,19 +46,22 @@ public:
         m_gpu_fragment_shader = RF::CreateShader(m_cpu_fragment_shader);
         MFA_ASSERT(m_cpu_fragment_shader.valid());
         MFA_ASSERT(m_gpu_fragment_shader.valid());
+
         std::vector<RB::GpuShader> shaders {m_gpu_vertex_shader, m_gpu_fragment_shader};
+
         // TODO We should use gltf sampler info here
         m_sampler_group = RF::CreateSampler();
+
         m_descriptor_set_layout = RF::CreateBasicDescriptorSetLayout();
+
         m_draw_pipeline = RF::CreateBasicDrawPipeline(
             static_cast<MFA::U8>(shaders.size()), 
             shaders.data(),
             m_descriptor_set_layout
         );
+
         m_drawable_object = MFA::DrawableObject(
             m_gpu_model,
-            m_sampler_group,
-            sizeof(UniformBufferObject),
             m_descriptor_set_layout
         );
         // TODO We can remove cpu shaders here

@@ -156,7 +156,7 @@ public:
 
         // Descriptor set
         m_sphere_descriptor_sets = RF::CreateDescriptorSets(
-            RF::SwapChainImagesCount(), 
+            1,//RF::SwapChainImagesCount(), 
             m_descriptor_set_layout
         );
 
@@ -268,7 +268,7 @@ public:
             }
         }
         {// Binding and updating descriptor set
-            auto * current_descriptor_set = m_sphere_descriptor_sets[draw_pass.image_index];
+            auto * current_descriptor_set = m_sphere_descriptor_sets[0];
             // Bind
             RF::BindDescriptorSet(draw_pass, current_descriptor_set);
         }       

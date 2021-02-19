@@ -1,7 +1,9 @@
-struct VSOut{
-    float4 position:SV_POSITION;
-    float3 color:COLOR0;
-    float2 tex_coord:TEXCOORD0;
+struct PSIn {
+    float4 position : SV_POSITION;
+    float2 baseColorTexCood : TEXCOORD0;
+    float2 metallicRoughnessTexCood : TEXCOORD1;
+    float3 worldPos: POSITION0;
+    float3 worldNormal: NORMAL0;
 };
 
 struct PSOut{
@@ -9,12 +11,116 @@ struct PSOut{
 };
 
 
-sampler sampler_default : register(s1,space0);
-Texture2D g_MeshTexture : register(t1,space0);
+sampler baseColorSampler : register(s1, space0);
+Texture2D baseColorTexture : register(t1, space0);
 
-PSOut main(VSOut input) {
-    PSOut output;
+sampler metallicRoughnessSampler : register(t2, space0);
+Texture2D metallicRoughnessTexture : register(t2, space0);
+
+struct LightViewBuffer {
+    float3 camPos;
+    float3 lightPosition;
+};
+
+ConstantBuffer <LightViewBuffer> lvBuff : register (b2, space0);
+
+const float PI = 3.14159265359;
+
+// This function computes ratio between amount of light that reflect and refracts
+// Reflection contrbutes to specular while refraction contributes to diffuse light
+/*
+    F0 parameter which is known as the surface reflection at zero incidence or how much the surface reflects 
+    if looking directly at the surface. The F0 varies per material and is tinted on metals as we find in 
+    large material databases. In the PBR metallic workflow we make the simplifying assumption that most dielectric surfaces 
+    look visually correct with a constant F0 of 0.04, while we do specify F0 for metallic surfaces as then given by the albedo value. 
+    This translates to code as follows:
+*/
+// Fresnel function ----------------------------------------------------
+float3 F_Schlick(float cosTheta, float metallic, float4 baseColor)
+{
+	float3 F0 = lerp(float3(0.04, 0.04, 0.04), baseColor.rgb, metallic); // * material.specular
+	float3 F = F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+	return F;
+}
+
+// Normal Distribution function --------------------------------------
+float D_GGX(float dotNH, float roughness)
+{
+	float alpha = roughness * roughness;
+	float alpha2 = alpha * alpha;
+	float denom = dotNH * dotNH * (alpha2 - 1.0) + 1.0;
+	return (alpha2)/(PI * denom*denom);
+}
+
+// Geometric Shadowing function --------------------------------------
+float G_SchlicksmithGGX(float dotNL, float dotNV, float roughness)
+{
+	float r = (roughness + 1.0);
+	float k = (r*r) / 8.0;
+	float GL = dotNL / (dotNL * (1.0 - k) + k);
+	float GV = dotNV / (dotNV * (1.0 - k) + k);
+	return GL * GV;
+}
+
+// Specular BRDF composition --------------------------------------------
+
+float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness, float4 baseColor)
+{
+	// Precalculate vectors and dot products
+	float3 H = normalize (V + L);
+	float dotNV = clamp(dot(N, V), 0.0, 1.0);
+	float dotNL = clamp(dot(N, L), 0.0, 1.0);
+	float dotLH = clamp(dot(L, H), 0.0, 1.0);
+	float dotNH = clamp(dot(N, H), 0.0, 1.0);
+
+	// Light color fixed
+	float3 lightColor = float3(1.0, 1.0, 1.0);
+
+	float3 color = float3(0.0, 0.0, 0.0);
+
+	if (dotNL > 0.0)
+	{
+		// float rroughness = max(0.05, roughness);
+		// D = Normal distribution (Distribution of the microfacets)
+		float D = D_GGX(dotNH, roughness);
+		// G = Geometric shadowing term (Microfacets shadowing)
+		float G = G_SchlicksmithGGX(dotNL, dotNV, roughness);
+		// F = Fresnel factor (Reflectance depending on angle of incidence)
+		float3 F = F_Schlick(dotNV, metallic, baseColor);
+
+		float3 spec = D * F * G / (4.0 * dotNL * dotNV);
+
+		color += spec * dotNL * lightColor;
+	}
+
+	return color;
+}
+
+PSOut main(PSIn  input) {
     // output.color = float4(input.color, 1.0);
-    output.color = g_MeshTexture.Sample(sampler_default, input.tex_coord);
-    return output;
+    float4 baseColor = baseColorTexture.Sample(baseColorSampler, input.baseColorTexCood);
+    float4 metallicRoughness = metallicRoughnessTexture.Sample(metallicRoughnessSampler, input.metallicRoughnessTexCood);
+    float metallic = metallicRoughness.b;
+    float roughness = metallicRoughness.g;
+
+	float3 N = normalize(input.worldNormal);
+	float3 V = normalize(lvBuff.camPos - input.worldPos);
+    
+    // Specular contribution
+	float3 Lo = float3(0.0, 0.0, 0.0);
+	for (int i = 0; i < 1; i++) {   // Light count
+		float3 L = normalize(lvBuff.lightPosition.xyz - input.worldPos);
+		Lo += BRDF(L, V, N, metallic, roughness, baseColor);
+	};
+
+	// Combine with ambient
+	float3 color = baseColor * 0.02;    // TODO Add emissive color here
+	color += Lo;
+
+	// Gamma correct
+	color = pow(color, float3(0.4545, 0.4545, 0.4545));
+
+    PSOut output;
+    output.color = float4(color, 1.0);
+	return output;
 }

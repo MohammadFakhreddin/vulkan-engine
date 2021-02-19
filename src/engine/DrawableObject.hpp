@@ -6,62 +6,65 @@ namespace MFA {
 
 namespace RF = RenderFrontend;
 namespace RB = RenderBackend;
+// TODO Start from here, Drawable object currently can be a struct that holds data, Also we can update all descriptor sets once at start
 // TODO Handle system could be useful
 class DrawableObject {
 public:
-    explicit DrawableObject() = default;
+
     DrawableObject(
         RF::GpuModel & model_,
-        RF::SamplerGroup & sampler_group_,
-        size_t uniform_buffer_size,
         VkDescriptorSetLayout_T * descriptor_set_layout
     );
-    ~DrawableObject();
+
     DrawableObject & operator= (DrawableObject && rhs) noexcept {
         this->m_required_draw_calls = rhs.m_required_draw_calls;
-        this->m_is_valid = rhs.m_is_valid;
         this->m_model = rhs.m_model;
-        this->m_sampler_group = rhs.m_sampler_group;
         this->m_descriptor_sets = std::move(rhs.m_descriptor_sets);
-        this->m_uniform_buffer_group = std::move(rhs.m_uniform_buffer_group);
         return *this;
     }
-    void draw(RF::DrawPass & draw_pass);
-    template<typename T>
-    void update_uniform_buffer(RF::DrawPass const & draw_pass, T ubo) const {
-        update_uniform_buffer(draw_pass, CBlobAliasOf(ubo));
-    }
-    void update_uniform_buffer(RF::DrawPass const & draw_pass, CBlob ubo) const;
-    void shutdown();
+
+    DrawableObject (DrawableObject const &) noexcept = delete;
+
+    DrawableObject (DrawableObject &&) noexcept = delete;
+
+    DrawableObject & operator = (DrawableObject const &) noexcept = delete;
+
     [[nodiscard]]
-    bool is_valid() const {return m_is_valid;}
+    U32 get_required_draw_calls() const {
+        return m_required_draw_calls;
+    }
+
+    [[nodiscard]]
+    RF::GpuModel * get_model() const {
+        return m_model;
+    }
+
+    [[nodiscard]]
+    U32 get_descriptor_set_count() const {
+        return static_cast<U32>(m_descriptor_sets.size());
+    }
+
+    [[nodiscard]]
+    VkDescriptorSet_T * get_descriptor_set(U32 const index) {
+        MFA_ASSERT(index < m_descriptor_sets.size());
+        return m_descriptor_sets[index];
+    }
+
+    //void draw(RF::DrawPass & draw_pass);
+    //template<typename T>
+    //void update_uniform_buffer(RF::DrawPass const & draw_pass, T ubo) const {
+        //update_uniform_buffer(draw_pass, CBlobAliasOf(ubo));
+    //}
+    //void update_uniform_buffer(RF::DrawPass const & draw_pass, CBlob ubo) const;
+    //void shutdown();
+    //[[nodiscard]]
+    //bool is_valid() const {return m_is_valid;}
+
 private:
     // Note: Order is important
-    U32 m_required_draw_calls;
+    U32 m_required_draw_calls = 0;
     RF::GpuModel * m_model = nullptr;
-    RF::SamplerGroup * m_sampler_group = nullptr;
     std::vector<VkDescriptorSet_T *> m_descriptor_sets {};
-    RF::UniformBufferGroup m_uniform_buffer_group {};
-    bool m_is_valid = false;
 };
-
-// TODO Future plan
-//class DrawableObjectFactory {
-//public:
-//    // DrawableObjectFactory will take care of destruction and construction(If path provided)
-//    void init(
-//       RF::SamplerGroup && sampler_group,
-//       RF::MeshBuffers && mesh_buffers,
-//       RB::GpuTexture m_gpu_texture
-//    );
-//    // TODO void init(char const * mesh_path, char const * texture_path, SamplerGroup && sampler)
-//private:
-//    RF::SamplerGroup m_sampler_group {};
-//    RF::MeshBuffers m_mesh_buffers {};
-//    RB::GpuTexture m_gpu_texture {};
-//    std::vector<DrawableObject> objects;
-//};
-
-//DrawableObjectFactory CreateDrawableObjectFactory
 
 }
