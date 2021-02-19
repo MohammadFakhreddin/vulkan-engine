@@ -184,13 +184,21 @@ public:
         RF::BindDrawPipeline(draw_pass, m_draw_pipeline);
         {// Updating uniform buffers
             {// Material
-                auto const & selected_material = MaterialInformation[m_selected_material_index];
-                m_material_data.roughness = selected_material.roughness;
-                m_material_data.metallic = selected_material.metallic;
-                
-                static_assert(sizeof(m_material_data.albedo) == sizeof(selected_material.color));
-                ::memcpy(m_material_data.albedo, selected_material.color, sizeof(m_material_data.albedo));
+                if (m_selected_material_index != CustomMaterialIndex) {
+                    auto const & selected_material = MaterialInformation[m_selected_material_index];
+                    m_material_data.roughness = selected_material.roughness;
+                    m_material_data.metallic = selected_material.metallic;
+                    
+                    static_assert(sizeof(m_material_data.albedo) == sizeof(selected_material.color));
+                    ::memcpy(m_material_data.albedo, selected_material.color, sizeof(m_material_data.albedo));
 
+                } else {
+                    m_material_data.roughness = m_sphere_roughness;
+                    m_material_data.metallic = m_sphere_metallic;
+                    
+                    static_assert(sizeof(m_material_data.albedo) == sizeof(m_sphere_color));
+                    ::memcpy(m_material_data.albedo, m_sphere_color, sizeof(m_material_data.albedo));
+                }
                 RF::UpdateUniformBuffer(draw_pass, m_material_buffer_group, MFA::CBlobAliasOf(m_material_data));
             }
             {// LightView
@@ -297,16 +305,18 @@ public:
         ImGui::SliderFloat("YDistance", &m_sphere_position[1], -40.0f, 40.0f);
         ImGui::SetNextItemWidth(300.0f);
         ImGui::SliderFloat("ZDistance", &m_sphere_position[2], -40.0f, 40.0f);
-        //ImGui::SetNextItemWidth(300.0f);
-        //ImGui::SliderFloat("RColor", &m_sphere_color[0], 0.0f, 1.0f);
-        //ImGui::SetNextItemWidth(300.0f);
-        //ImGui::SliderFloat("GColor", &m_sphere_color[1], 0.0f, 1.0f);
-        //ImGui::SetNextItemWidth(300.0f);
-        //ImGui::SliderFloat("BColor", &m_sphere_color[2], 0.0f, 1.0f);
-        //ImGui::SetNextItemWidth(300.0f);
-        //ImGui::SliderFloat("Metallic", &m_sphere_metallic, 0.0f, 1.0f);
-        //ImGui::SetNextItemWidth(300.0f);
-        //ImGui::SliderFloat("Roughness", &m_sphere_roughness, 0.0f, 1.0f);
+        if(m_selected_material_index == CustomMaterialIndex) {
+            ImGui::SetNextItemWidth(300.0f);
+            ImGui::SliderFloat("RColor", &m_sphere_color[0], 0.0f, 1.0f);
+            ImGui::SetNextItemWidth(300.0f);
+            ImGui::SliderFloat("GColor", &m_sphere_color[1], 0.0f, 1.0f);
+            ImGui::SetNextItemWidth(300.0f);
+            ImGui::SliderFloat("BColor", &m_sphere_color[2], 0.0f, 1.0f);
+            ImGui::SetNextItemWidth(300.0f);
+            ImGui::SliderFloat("Metallic", &m_sphere_metallic, 0.0f, 1.0f);
+            ImGui::SetNextItemWidth(300.0f);
+            ImGui::SliderFloat("Roughness", &m_sphere_roughness, 0.0f, 1.0f);
+        }
         //ImGui::SetNextItemWidth(300.0f);
         //ImGui::SliderFloat("Emission", &m_sphere_emission, 0.0f, 1.0f);
         ImGui::End();
@@ -423,7 +433,8 @@ private:
         float metallic;
     };
 
-    static constexpr _MaterialInformation MaterialInformation [11] = {
+    static constexpr int CustomMaterialIndex = 7;
+    static constexpr _MaterialInformation MaterialInformation [8] = {
         { .name = "Gold", .color = {1.0f, 0.765557f, 0.336057f}, .roughness = 0.1f, .metallic = 1.0f },
 		{ .name = "Copper", .color = {0.955008f, 0.637427f, 0.538163f}, .roughness = 0.1f, .metallic = 1.0f },
 		{ .name = "Chromium", .color = {0.549585f, 0.556114f, 0.554256f}, .roughness = 0.1f, .metallic = 1.0f },
@@ -432,10 +443,10 @@ private:
 		{ .name = "Cobalt", .color = {0.662124f, 0.654864f, 0.633732f}, .roughness = 0.1f, .metallic = 1.0f },
 		{ .name = "Platinum", .color = {0.672411f, 0.637331f, 0.585456f}, .roughness = 0.1f, .metallic = 1.0f },
 		// Testing materials
-		{ .name = "White", .color = {1.0f, 1.0f, 1.0f}, .roughness = 0.1f, .metallic = 1.0f },
-		{ .name = "Red", .color = {1.0f, 0.0f, 0.0f}, .roughness = 0.1f, .metallic = 1.0f },
-		{ .name = "Blue", .color = {0.0f, 0.0f, 1.0f}, .roughness = 0.1f, .metallic = 1.0f },
-		{ .name = "Black", .color = {0.0f, 0.0f, 0.0f}, .roughness = 0.1f, .metallic = 1.0f },
+		//{ .name = "White", .color = {1.0f, 1.0f, 1.0f}, .roughness = 0.1f, .metallic = 1.0f },
+		{ .name = "Custom", .color = {1.0f, 0.0f, 0.0f}, .roughness = 0.5f, .metallic = 0.1f },
+		//{ .name = "Blue", .color = {0.0f, 0.0f, 1.0f}, .roughness = 0.1f, .metallic = 1.0f },
+		//{ .name = "Black", .color = {0.0f, 0.0f, 0.0f}, .roughness = 0.1f, .metallic = 1.0f },
     };
 
     RF::UniformBufferGroup m_material_buffer_group;
@@ -470,10 +481,10 @@ private:
     float m_sphere_rotation [3] {0, 0, 0};
     float m_sphere_position[3] {0, 0, -6};
     int m_selected_material_index = 0;
-    //float m_sphere_color[3] {1.0f, 0.765557f, 0.336057f};
+    float m_sphere_color[3] {0.0f, 0.0f, 0.0f};
 
-    //float m_sphere_metallic = 1.0f;
-    //float m_sphere_roughness = 0.1f;
+    float m_sphere_metallic = 1.0f;
+    float m_sphere_roughness = 0.1f;
     //float m_sphere_emission = 0.0f; // For now, it's a constant value
 
     float m_camera_position[3] {};   // For now, it's a constant value
