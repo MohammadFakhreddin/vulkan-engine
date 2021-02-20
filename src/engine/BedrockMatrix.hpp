@@ -495,6 +495,13 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
   }
 
   static void assignRotationXYZ(
+    float & cells[16],
+    const T& xDegree,
+    const T& yDegree,
+    const T& zDegree
+  )
+
+  static void assignRotationXYZ(
     _Matrix<T, 4, 4>& matrix,
     const T& xDegree,
     const T& yDegree,
@@ -759,6 +766,7 @@ private:
 
 using Matrix4X4Int = _Matrix<int, 4, 4>;
 using Matrix4X4Float = _Matrix<float, 4, 4>;
+static_assert(sizeof(Matrix4X4Float) == sizeof(float[16]));
 using Matrix4X4Double = _Matrix<double, 4, 4>;
 
 using Matrix4X1Int = _Matrix<int, 4, 1>;

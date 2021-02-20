@@ -50,6 +50,27 @@ public:
         return m_descriptor_sets[index];
     }
 
+    // Only for model local buffers
+    void create_uniform_buffer(char const * name, U32 size) {
+        m_uniforma_buffers[name] = RF::CreateUniformBuffer(size);
+    }
+
+    // Only for model local buffers
+    void delete_uniform_buffers() {
+        if (m_uniforma_buffers.empty() == false) {
+            for (auto & pair : m_uniforma_buffers) {
+                RF::DestroyUniformBuffer(pair.second);
+            }
+            m_uniforma_buffers.clear();
+        }
+    }
+
+    void update_uniform_buffer(RF::DrawPass const & pass, char const * name, CBlob const ubo) {
+        auto const find_result = m_uniforma_buffers.find(name);
+        if (find_result != m_uniforma_buffers.end()) {
+            RF::UpdateUniformBuffer(pass, find_result->second, CBlobAliasOf(ubo));
+        }
+    }
     //void draw(RF::DrawPass & draw_pass);
     //template<typename T>
     //void update_uniform_buffer(RF::DrawPass const & draw_pass, T ubo) const {
@@ -65,6 +86,7 @@ private:
     U32 m_required_draw_calls = 0;
     RF::GpuModel * m_model = nullptr;
     std::vector<VkDescriptorSet_T *> m_descriptor_sets {};
+    std::unordered_map<std::string, RF::UniformBufferGroup> m_uniforma_buffers;
 };
 
 }
