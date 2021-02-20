@@ -1,9 +1,9 @@
 struct PSIn {
     float4 position : SV_POSITION;
-    float2 baseColorTexCood : TEXCOORD0;
-    float2 metallicRoughnessTexCood : TEXCOORD1;
+    float2 baseColorTexCoord : TEXCOORD0;
+    float2 metallicRoughnessTexCoord : TEXCOORD1;
     float3 worldPos: POSITION0;
-    float3 worldNormal: NORMAL0;
+    float2 normalTexCoord: NORMAL0;
 };
 
 struct PSOut{
@@ -17,12 +17,21 @@ Texture2D baseColorTexture : register(t1, space0);
 sampler metallicRoughnessSampler : register(t2, space0);
 Texture2D metallicRoughnessTexture : register(t2, space0);
 
+sampler normalSampler : register(t3, space0);
+Texture2D normalTexture : register(t3, space0);
+
 struct LightViewBuffer {
     float3 camPos;
     float3 lightPosition;
 };
 
 ConstantBuffer <LightViewBuffer> lvBuff : register (b2, space0);
+
+struct Rotation {
+    float4x4 rotation;
+};
+
+ConstantBuffer <Rotation> rBuffer: register(b3, space0);
 
 const float PI = 3.14159265359;
 
@@ -96,14 +105,14 @@ float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness, float
 	return color;
 }
 
-PSOut main(PSIn  input) {
-    // output.color = float4(input.color, 1.0);
-    float4 baseColor = baseColorTexture.Sample(baseColorSampler, input.baseColorTexCood);
-    float4 metallicRoughness = metallicRoughnessTexture.Sample(metallicRoughnessSampler, input.metallicRoughnessTexCood);
+PSOut main(PSIn input) {
+    float4 baseColor = baseColorTexture.Sample(baseColorSampler, input.baseColorTexCoord);
+    float4 metallicRoughness = metallicRoughnessTexture.Sample(metallicRoughnessSampler, input.metallicRoughnessTexCoord);
     float metallic = metallicRoughness.b;
     float roughness = metallicRoughness.g;
-
-	float3 N = normalize(input.worldNormal);
+	float4 normal = normalTexture.Sample(normalSampler, input.normalTexCoord);
+	float4 worldNormal = mul(rBuffer.rotation, normal);
+	float3 N = normalize(worldNormal.xyz);
 	float3 V = normalize(lvBuff.camPos - input.worldPos);
     
     // Specular contribution
