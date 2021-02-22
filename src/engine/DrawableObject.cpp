@@ -19,6 +19,50 @@ DrawableObject::DrawableObject(
     MFA_ASSERT(m_required_draw_calls > 0);
 }
 
+
+[[nodiscard]]
+U32 DrawableObject::get_required_draw_calls() const {
+    return m_required_draw_calls;
+}
+
+[[nodiscard]]
+RF::GpuModel * DrawableObject::get_model() const {
+    return m_model;
+}
+
+[[nodiscard]]
+U32 DrawableObject::get_descriptor_set_count() const {
+    return static_cast<U32>(m_descriptor_sets.size());
+}
+
+[[nodiscard]]
+VkDescriptorSet_T * DrawableObject::get_descriptor_set(U32 const index) {
+    MFA_ASSERT(index < m_descriptor_sets.size());
+    return m_descriptor_sets[index];
+}
+
+// Only for model local buffers
+void DrawableObject::create_uniform_buffer(char const * name, U32 size) {
+    m_uniforma_buffers[name] = RF::CreateUniformBuffer(size);
+}
+
+// Only for model local buffers
+void DrawableObject::delete_uniform_buffers() {
+    if (m_uniforma_buffers.empty() == false) {
+        for (auto & pair : m_uniforma_buffers) {
+            RF::DestroyUniformBuffer(pair.second);
+        }
+        m_uniforma_buffers.clear();
+    }
+}
+
+void DrawableObject::update_uniform_buffer(RF::DrawPass const & pass, char const * name, CBlob const ubo) {
+    auto const find_result = m_uniforma_buffers.find(name);
+    if (find_result != m_uniforma_buffers.end()) {
+        RF::UpdateUniformBuffer(pass, find_result->second, CBlobAliasOf(ubo));
+    }
+}
+
 // TODo Remove this comments
 //DrawableObject::~DrawableObject() {
 //    shutdown();

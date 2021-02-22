@@ -24,12 +24,6 @@ public:
 
     void Init() override {
 
-        MFA::I32 width; MFA::I32 height;
-        RF::GetWindowSize(width, height);
-        m_camera_position[0] = 0;//width / 2.0f;
-        m_camera_position[1] = 0;//height / 2.0f;
-        m_camera_position[2] = 0;//Z_NEAR;
-
         // Gpu model
         auto cpu_model = SG::Sphere();
         m_sphere = RF::CreateGpuModel(cpu_model);
@@ -476,7 +470,6 @@ private:
 
     VkDescriptorSetLayout_T * m_descriptor_set_layout = nullptr;
     RF::DrawPipeline m_draw_pipeline {};
-    MFA::DrawableObject m_drawable_object {};
    // https://seblagarde.wordpress.com/2011/08/17/feeding-a-physical-based-lighting-mode/
     float m_sphere_rotation [3] {0, 0, 0};
     float m_sphere_position[3] {0, 0, -6};
@@ -487,7 +480,7 @@ private:
     float m_sphere_roughness = 0.1f;
     //float m_sphere_emission = 0.0f; // For now, it's a constant value
 
-    float m_camera_position[3] {};   // For now, it's a constant value
+    float const m_camera_position[3] {0.0f, 0.0f, 0.0f};   // For now, it's a constant value
  
     MFA::I32 m_light_count = 1; // For now, it's a constant value
     float m_light_position[3] {0.0f, 0.0f, -2.0f};

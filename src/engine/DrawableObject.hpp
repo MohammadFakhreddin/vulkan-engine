@@ -11,6 +11,10 @@ namespace RB = RenderBackend;
 class DrawableObject {
 public:
 
+    DrawableObject() = default;
+
+    ~DrawableObject() = default;
+
     DrawableObject(
         RF::GpuModel & model_,
         VkDescriptorSetLayout_T * descriptor_set_layout
@@ -30,47 +34,24 @@ public:
     DrawableObject & operator = (DrawableObject const &) noexcept = delete;
 
     [[nodiscard]]
-    U32 get_required_draw_calls() const {
-        return m_required_draw_calls;
-    }
+    U32 get_required_draw_calls() const;
 
     [[nodiscard]]
-    RF::GpuModel * get_model() const {
-        return m_model;
-    }
+    RF::GpuModel * get_model() const;
 
     [[nodiscard]]
-    U32 get_descriptor_set_count() const {
-        return static_cast<U32>(m_descriptor_sets.size());
-    }
+    U32 get_descriptor_set_count() const;
 
     [[nodiscard]]
-    VkDescriptorSet_T * get_descriptor_set(U32 const index) {
-        MFA_ASSERT(index < m_descriptor_sets.size());
-        return m_descriptor_sets[index];
-    }
+    VkDescriptorSet_T * get_descriptor_set(U32 index);
 
     // Only for model local buffers
-    void create_uniform_buffer(char const * name, U32 size) {
-        m_uniforma_buffers[name] = RF::CreateUniformBuffer(size);
-    }
+    void create_uniform_buffer(char const * name, U32 size);
 
     // Only for model local buffers
-    void delete_uniform_buffers() {
-        if (m_uniforma_buffers.empty() == false) {
-            for (auto & pair : m_uniforma_buffers) {
-                RF::DestroyUniformBuffer(pair.second);
-            }
-            m_uniforma_buffers.clear();
-        }
-    }
+    void delete_uniform_buffers();
 
-    void update_uniform_buffer(RF::DrawPass const & pass, char const * name, CBlob const ubo) {
-        auto const find_result = m_uniforma_buffers.find(name);
-        if (find_result != m_uniforma_buffers.end()) {
-            RF::UpdateUniformBuffer(pass, find_result->second, CBlobAliasOf(ubo));
-        }
-    }
+    void update_uniform_buffer(RF::DrawPass const & pass, char const * name, CBlob ubo);
     //void draw(RF::DrawPass & draw_pass);
     //template<typename T>
     //void update_uniform_buffer(RF::DrawPass const & draw_pass, T ubo) const {

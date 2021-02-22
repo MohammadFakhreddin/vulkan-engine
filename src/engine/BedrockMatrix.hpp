@@ -7,6 +7,9 @@
 
 #include "BedrockAssert.hpp"
 #include "BedrockMath.hpp"
+
+// Like GLM we can have union to access both linear and 2d or eve
+
 // Note: This class is column major from now on
 namespace MFA {
 //TODO Write unit tests for project
@@ -493,13 +496,6 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     assert(matrix.get(2, 3) == 0.0f);
     matrix.set(3, 3, 1.0f);
   }
-
-  static void assignRotationXYZ(
-    float & cells[16],
-    const T& xDegree,
-    const T& yDegree,
-    const T& zDegree
-  )
 
   static void assignRotationXYZ(
     _Matrix<T, 4, 4>& matrix,
