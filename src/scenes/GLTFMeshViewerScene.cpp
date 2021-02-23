@@ -144,6 +144,7 @@ public:
     }
 
     void Shutdown() override {
+        destroyDrawableObject();
         RF::DestroyDrawPipeline(m_draw_pipeline);
         RF::DestroyDescriptorSetLayout(m_descriptor_set_layout);
         RF::DestroySampler(m_sampler_group);
@@ -158,9 +159,73 @@ private:
             m_gpu_model,
             m_descriptor_set_layout
         );
-        m_drawable_object.create_uniform_buffer("transform", sizeof(ModelTransformBuffer));
-        m_drawable_object.create_uniform_buffer("rotation", sizeof(ModelRotationBuffer));
-        // TODO UpdateDescriptor sets here
+        const auto * transform_buffer  = m_drawable_object.create_uniform_buffer("transform", sizeof(ModelTransformBuffer));
+        const auto * rotation_buffer = m_drawable_object.create_uniform_buffer("rotation", sizeof(ModelRotationBuffer));
+
+        for (MFA::U8 i = 0; i < m_drawable_object.get_descriptor_set_count(); ++i){// Updating descriptor sets
+            auto * descriptor_set = m_drawable_object.get_descriptor_set(i);
+            
+            std::vector<VkWriteDescriptorSet> writeInfo {};
+            // Transform
+            VkDescriptorBufferInfo transformBufferInfo {
+                .buffer = transform_buffer->buffers[i].buffer,
+                .offset = 0,
+                .range = transform_buffer->buffer_size
+            };
+            writeInfo.emplace_back(VkWriteDescriptorSet {
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = descriptor_set,
+                .dstBinding = 0,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .pBufferInfo = &transformBufferInfo,
+            });
+            // BaseColorTexture // TODO
+            // MetallicTexture  // TODO
+            // NormalTexture    // TODO
+            // LightViewBuffer
+            VkDescriptorBufferInfo light_view_buffer_info {
+                .buffer = m_lv_buffer.buffers[i].buffer,
+                .offset = 0,
+                .range = m_lv_buffer.buffer_size
+            };
+        
+            writeInfo.emplace_back(VkWriteDescriptorSet {
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = descriptor_set,
+                .dstBinding = 4,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .pBufferInfo = &light_view_buffer_info,
+            });
+            // Rotation
+            VkDescriptorBufferInfo rotation_buffer_info {
+                .buffer = m_lv_buffer.buffers[i].buffer,
+                .offset = 0,
+                .range = m_lv_buffer.buffer_size
+            };
+        
+            writeInfo.emplace_back(VkWriteDescriptorSet {
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = descriptor_set,
+                .dstBinding = 5,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .pBufferInfo = &rotation_buffer_info,
+            });
+
+            RF::UpdateDescriptorSets(
+                static_cast<MFA::U8>(writeInfo.size()),
+                writeInfo.data()
+            );
+        }
+    }
+
+    void destroyDrawableObject() {
+        m_drawable_object.delete_uniform_buffers();
     }
 
     void createDrawPipeline(MFA::U8 const gpu_shader_count, RB::GpuShader * gpu_shaders) {

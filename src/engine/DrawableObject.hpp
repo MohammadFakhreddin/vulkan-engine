@@ -42,16 +42,19 @@ public:
     [[nodiscard]]
     U32 get_descriptor_set_count() const;
 
-    [[nodiscard]]
-    VkDescriptorSet_T * get_descriptor_set(U32 index);
+    [[nodiscard]] VkDescriptorSet_T * get_descriptor_set(U32 index);
+
+    [[nodiscard]] VkDescriptorSet_T ** get_descriptor_sets();
 
     // Only for model local buffers
-    void create_uniform_buffer(char const * name, U32 size);
+    RF::UniformBufferGroup * create_uniform_buffer(char const * name, U32 size);
 
     // Only for model local buffers
     void delete_uniform_buffers();
 
     void update_uniform_buffer(RF::DrawPass const & pass, char const * name, CBlob ubo);
+
+    [[nodiscard]] RF::UniformBufferGroup * get_uniform_buffer(char const * name);
     //void draw(RF::DrawPass & draw_pass);
     //template<typename T>
     //void update_uniform_buffer(RF::DrawPass const & draw_pass, T ubo) const {

@@ -25,13 +25,13 @@ struct LightViewBuffer {
     float3 lightPosition;
 };
 
-ConstantBuffer <LightViewBuffer> lvBuff : register (b2, space0);
+ConstantBuffer <LightViewBuffer> lvBuff : register (b4, space0);
 
 struct Rotation {
     float4x4 rotation;
 };
 
-ConstantBuffer <Rotation> rBuffer: register(b3, space0);
+ConstantBuffer <Rotation> rBuffer: register(b5, space0);
 
 const float PI = 3.14159265359;
 

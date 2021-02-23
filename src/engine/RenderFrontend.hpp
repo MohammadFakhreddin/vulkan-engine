@@ -170,6 +170,11 @@ void UpdateDescriptorSetBasic(
 );
 
 void UpdateDescriptorSets(
+    U8 write_info_count,
+    VkWriteDescriptorSet * write_info
+);
+
+void UpdateDescriptorSets(
     U8 descriptor_sets_count,
     VkDescriptorSet_T ** descriptor_sets,
     U8 write_info_count,

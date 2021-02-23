@@ -682,6 +682,17 @@ void UpdateDescriptorSetBasic(
 }
 
 void UpdateDescriptorSets(
+    U8 const write_info_count,
+    VkWriteDescriptorSet * write_info
+) {
+    RB::UpdateDescriptorSets(
+        state.logical_device.device,
+        write_info_count,
+        write_info
+    );
+}
+
+void UpdateDescriptorSets(
     U8 const descriptor_sets_count,
     VkDescriptorSet_T ** descriptor_sets,
     U8 const write_info_count,

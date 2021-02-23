@@ -90,11 +90,11 @@ elseif(MACOSX)
 
   include_directories(${SDL2_INCLUDE_DIRS})
   include_directories(${VULAKN_INCLUDE_DIRS})
-  include_directories(${IMGUI_INCLUDE_DIRS})
+  # include_directories(${IMGUI_INCLUDE_DIRS})
   
   target_link_libraries(${PROJECT_NAME} ${VULAKN_LIBRARIES})
   target_link_libraries(${PROJECT_NAME} ${SDL2_LIBRARIES})
-  target_link_libraries(${PROJECT_NAME} ${IMGUI_LIBRARIES}})
+  # target_link_libraries(${PROJECT_NAME} ${IMGUI_LIBRARIES}})
 
   set(CMAKE_THREAD_LIBS_INIT "-lpthread")
   set(CMAKE_HAVE_THREADS_LIBRARY 1)
@@ -117,11 +117,11 @@ elseif(LINUX)
 
   include_directories(${SDL_INCLUDE_DIRS})
   include_directories(${VULAKN_INCLUDE_DIRS})
-  include_directories(${IMGUI_INCLUDE_DIRS})
+  # include_directories(${IMGUI_INCLUDE_DIRS})
   
   target_link_libraries(${PROJECT_NAME} ${VULAKN_LIBRARIES})
   target_link_libraries(${PROJECT_NAME} ${SDL_LIBRARIES})
-  target_link_libraries(${PROJECT_NAME} ${IMGUI_LIBRARIES}})
+  # target_link_libraries(${PROJECT_NAME} ${IMGUI_LIBRARIES}})
 
   set(CMAKE_THREAD_LIBS_INIT "-lpthread")
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
