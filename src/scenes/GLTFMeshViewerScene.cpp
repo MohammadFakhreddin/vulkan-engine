@@ -262,7 +262,6 @@ private:
                 .offset = 0,
                 .range = rotation_buffer->buffer_size
             };
-        
             writeInfo.emplace_back(VkWriteDescriptorSet {
                 .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                 .dstSet = descriptor_set,
@@ -293,7 +292,59 @@ private:
     }
 
     void createDescriptorSetLayout() {
-        m_descriptor_set_layout = RF::CreateBasicDescriptorSetLayout();
+        std::vector<VkDescriptorSetLayoutBinding> bindings {};
+        // Transformation 
+        bindings.emplace_back(VkDescriptorSetLayoutBinding {
+            .binding = 0,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+            .pImmutableSamplers = nullptr, // Optional
+        });
+        // BaseColor
+        bindings.emplace_back(VkDescriptorSetLayoutBinding {
+            .binding = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+            .pImmutableSamplers = nullptr,
+        });
+        // Metallic/Roughness
+        bindings.emplace_back(VkDescriptorSetLayoutBinding {
+            .binding = 2,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+            .pImmutableSamplers = nullptr,
+        });
+        // Normal
+        bindings.emplace_back(VkDescriptorSetLayoutBinding {
+            .binding = 2,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+            .pImmutableSamplers = nullptr,
+        });
+        // Light/View
+        bindings.emplace_back(VkDescriptorSetLayoutBinding {
+            .binding = 0,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+            .pImmutableSamplers = nullptr, // Optional
+        });
+        // Rotation
+        bindings.emplace_back(VkDescriptorSetLayoutBinding {
+            .binding = 0,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+            .pImmutableSamplers = nullptr, // Optional
+        });
+        m_descriptor_set_layout = RF::CreateDescriptorSetLayout(
+            static_cast<MFA::U8>(bindings.size()),
+            bindings.data()
+        );
     }
 
     static constexpr float Z_NEAR = 0.1f;
