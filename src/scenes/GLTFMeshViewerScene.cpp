@@ -159,13 +159,23 @@ private:
             m_gpu_model,
             m_descriptor_set_layout
         );
+
         const auto * transform_buffer  = m_drawable_object.create_uniform_buffer("transform", sizeof(ModelTransformBuffer));
+        MFA_PTR_ASSERT(transform_buffer);
         const auto * rotation_buffer = m_drawable_object.create_uniform_buffer("rotation", sizeof(ModelRotationBuffer));
+        MFA_PTR_ASSERT(rotation_buffer);
+
+        auto * model_header = m_drawable_object.get_model()->model_asset.mesh.header_object();
+        MFA_ASSERT(model_header->sub_mesh_count == m_drawable_object.get_descriptor_set_count());
+
+        auto const & textures = m_drawable_object.get_model()->textures;
 
         for (MFA::U8 i = 0; i < m_drawable_object.get_descriptor_set_count(); ++i){// Updating descriptor sets
             auto * descriptor_set = m_drawable_object.get_descriptor_set(i);
+            auto const & sub_mesh = model_header->sub_meshes[i];
             
             std::vector<VkWriteDescriptorSet> writeInfo {};
+
             // Transform
             VkDescriptorBufferInfo transformBufferInfo {
                 .buffer = transform_buffer->buffers[i].buffer,
@@ -181,16 +191,61 @@ private:
                 .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                 .pBufferInfo = &transformBufferInfo,
             });
-            // BaseColorTexture // TODO
-            // MetallicTexture  // TODO
-            // NormalTexture    // TODO
+
+            // BaseColorTexture
+            VkDescriptorImageInfo baseColorImageInfo {
+                .sampler = m_sampler_group.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
+                .imageView = textures[sub_mesh.base_color_texture_index].image_view(),
+                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            };
+            writeInfo.emplace_back(VkWriteDescriptorSet {
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = descriptor_set,
+                .dstBinding = 1,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .pImageInfo = &baseColorImageInfo,
+            });
+
+            // MetallicTexture
+            VkDescriptorImageInfo metallicImageInfo {
+                .sampler = m_sampler_group.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
+                .imageView = textures[sub_mesh.base_color_texture_index].image_view(),
+                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+            };
+            writeInfo.emplace_back(VkWriteDescriptorSet {
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = descriptor_set,
+                .dstBinding = 2,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .pImageInfo = &metallicImageInfo,
+            });
+
+            // NormalTexture  
+            VkDescriptorImageInfo normalImageInfo {
+                .sampler = m_sampler_group.sampler,
+                .imageView = textures[sub_mesh.normal_texture_index].image_view(),
+                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+            };
+            writeInfo.emplace_back(VkWriteDescriptorSet {
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = descriptor_set,
+                .dstBinding = 3,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .pImageInfo = &normalImageInfo,
+            });
+
             // LightViewBuffer
             VkDescriptorBufferInfo light_view_buffer_info {
                 .buffer = m_lv_buffer.buffers[i].buffer,
                 .offset = 0,
                 .range = m_lv_buffer.buffer_size
             };
-        
             writeInfo.emplace_back(VkWriteDescriptorSet {
                 .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                 .dstSet = descriptor_set,
@@ -200,11 +255,12 @@ private:
                 .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                 .pBufferInfo = &light_view_buffer_info,
             });
+
             // Rotation
             VkDescriptorBufferInfo rotation_buffer_info {
-                .buffer = m_lv_buffer.buffers[i].buffer,
+                .buffer = rotation_buffer->buffers[i].buffer,
                 .offset = 0,
-                .range = m_lv_buffer.buffer_size
+                .range = rotation_buffer->buffer_size
             };
         
             writeInfo.emplace_back(VkWriteDescriptorSet {

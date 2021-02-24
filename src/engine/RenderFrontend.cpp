@@ -637,7 +637,7 @@ void BindDrawPipeline(
         draw_pipeline.graphic_pipeline_group.graphic_pipeline
     );
 }
-
+// TODO Remove all basic functions
 void UpdateDescriptorSetBasic(
     DrawPass const & draw_pass,
     VkDescriptorSet_T * descriptor_set,
