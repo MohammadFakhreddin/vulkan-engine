@@ -155,9 +155,9 @@ public:
         );
 
         {// Uniform buffer
-            m_material_buffer_group = RF::CreateUniformBuffer(sizeof(MaterialBuffer));
-            m_light_view_buffer_group = RF::CreateUniformBuffer(sizeof(LightViewBuffer));
-            m_transformation_buffer_group = RF::CreateUniformBuffer(sizeof(TransformationBuffer));
+            m_material_buffer_group = RF::CreateUniformBuffer(sizeof(MaterialBuffer), 1);
+            m_light_view_buffer_group = RF::CreateUniformBuffer(sizeof(LightViewBuffer), 1);
+            m_transformation_buffer_group = RF::CreateUniformBuffer(sizeof(TransformationBuffer), 1);
         }
 
         updateAllDescriptorSets();
@@ -193,7 +193,7 @@ public:
                     static_assert(sizeof(m_material_data.albedo) == sizeof(m_sphere_color));
                     ::memcpy(m_material_data.albedo, m_sphere_color, sizeof(m_material_data.albedo));
                 }
-                RF::UpdateUniformBuffer(draw_pass, m_material_buffer_group, MFA::CBlobAliasOf(m_material_data));
+                RF::UpdateUniformBuffer(m_material_buffer_group.buffers[0], MFA::CBlobAliasOf(m_material_data));
             }
             {// LightView
                 static_assert(sizeof(m_light_view_data.camPos) == sizeof(m_camera_position));
@@ -207,7 +207,7 @@ public:
                 static_assert(sizeof(m_light_view_data.lightPositions) == sizeof(m_light_position));
                 ::memcpy(m_light_view_data.lightPositions, m_light_position, sizeof(m_light_position));
 
-                RF::UpdateUniformBuffer(draw_pass, m_light_view_buffer_group, MFA::CBlobAliasOf(m_light_view_data));
+                RF::UpdateUniformBuffer(m_light_view_buffer_group.buffers[0], MFA::CBlobAliasOf(m_light_view_data));
             }
             {// Transform
                 // Rotation
@@ -255,8 +255,7 @@ public:
                 );
 
                 RF::UpdateUniformBuffer(
-                    draw_pass, 
-                    m_transformation_buffer_group, 
+                    m_transformation_buffer_group.buffers[0], 
                     MFA::CBlobAliasOf(m_translate_data)
                 );
             }

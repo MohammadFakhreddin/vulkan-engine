@@ -493,7 +493,7 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                         float emissive_factor [3] {};
                         if(primitive.material >= 0) {// Material
                             auto const & material = model.materials[primitive.material];
-                            {// Base color texture
+                            if (material.pbrMetallicRoughness.baseColorTexture.index >= 0) {// Base color texture
                                 auto const & base_color_gltf_texture = model.textures[material.pbrMetallicRoughness.baseColorTexture.index];
                                 auto const & image = model.images[base_color_gltf_texture.source];
                                 base_color_texture_index = find_texture_by_name(image.uri.c_str());
@@ -501,7 +501,7 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                                     base_color_uv_index = static_cast<uint16_t>(material.pbrMetallicRoughness.baseColorTexture.texCoord);
                                 }
                             }
-                            {// Metallic-roughness texture
+                            if (material.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0){// Metallic-roughness texture
                                 auto const & metallic_roughness_texture = model.textures[material.pbrMetallicRoughness.metallicRoughnessTexture.index];
                                 auto const & image = model.images[metallic_roughness_texture.source];
                                 metallic_roughness_texture_index = find_texture_by_name(image.uri.c_str());
@@ -509,7 +509,7 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                                     metallic_roughness_uv_index = static_cast<uint16_t>(material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord);
                                 }
                             }
-                            {// Normal texture
+                            if (material.normalTexture.index >= 0) {// Normal texture
                                 auto const & normal_texture = model.textures[material.normalTexture.index];
                                 auto const & image = model.images[normal_texture.source];
                                 normal_texture_index = find_texture_by_name(image.uri.c_str());
@@ -517,7 +517,7 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                                     normal_uv_index = static_cast<uint16_t>(material.normalTexture.texCoord);
                                 }
                             }
-                            {// Emissive texture
+                            if (material.emissiveTexture.index >= 0) {// Emissive texture
                                 auto const & emissive_texture = model.textures[material.emissiveTexture.index];
                                 auto const & image = model.images[emissive_texture.source];
                                 emissive_texture_index = find_texture_by_name(image.uri.c_str());

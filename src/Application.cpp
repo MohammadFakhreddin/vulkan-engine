@@ -8,11 +8,11 @@ void Application::run() {
     namespace RF = MFA::RenderFrontend;
     namespace UI = MFA::UISystem;
     namespace SceneSubSystem = MFA::SceneSubSystem;
-    static constexpr MFA::U16 SCREEN_WIDTH = 800;
-    static constexpr MFA::U16 SCREEN_HEIGHT = 600;
+    static constexpr MFA::U16 SCREEN_WIDTH = 1920;
+    static constexpr MFA::U16 SCREEN_HEIGHT = 1080;
     RF::Init({SCREEN_WIDTH, SCREEN_HEIGHT, "Cool app"});
     UI::Init();
-    SceneSubSystem::SetActiveScene("PBR");
+    SceneSubSystem::SetActiveScene("GLTFMeshViewer");
     SceneSubSystem::Init();
     {// Main loop
         bool quit = false;

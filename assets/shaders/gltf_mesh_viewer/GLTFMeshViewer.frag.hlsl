@@ -2,8 +2,8 @@ struct PSIn {
     float4 position : SV_POSITION;
     float2 baseColorTexCoord : TEXCOORD0;
     float2 metallicRoughnessTexCoord : TEXCOORD1;
+    float2 normalTexCoord: TEXCOORD2;
     float3 worldPos: POSITION0;
-    float2 normalTexCoord: NORMAL0;
 };
 
 struct PSOut{
@@ -14,10 +14,10 @@ struct PSOut{
 sampler baseColorSampler : register(s1, space0);
 Texture2D baseColorTexture : register(t1, space0);
 
-sampler metallicRoughnessSampler : register(t2, space0);
+sampler metallicRoughnessSampler : register(s2, space0);
 Texture2D metallicRoughnessTexture : register(t2, space0);
 
-sampler normalSampler : register(t3, space0);
+sampler normalSampler : register(s3, space0);
 Texture2D normalTexture : register(t3, space0);
 
 struct LightViewBuffer {
@@ -83,7 +83,7 @@ float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness, float
 	float dotNH = clamp(dot(N, H), 0.0, 1.0);
 
 	// Light color fixed
-	float3 lightColor = float3(1.0, 1.0, 1.0);
+	float3 lightColor = float3(252/256, 212/256, 64/256);
 
 	float3 color = float3(0.0, 0.0, 0.0);
 
@@ -106,12 +106,13 @@ float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness, float
 }
 
 PSOut main(PSIn input) {
-    float4 baseColor = baseColorTexture.Sample(baseColorSampler, input.baseColorTexCoord);
+	float4 baseColor = baseColorTexture.Sample(baseColorSampler, input.baseColorTexCoord);
     float4 metallicRoughness = metallicRoughnessTexture.Sample(metallicRoughnessSampler, input.metallicRoughnessTexCoord);
     float metallic = metallicRoughness.b;
     float roughness = metallicRoughness.g;
 	float4 normal = normalTexture.Sample(normalSampler, input.normalTexCoord);
 	float4 worldNormal = mul(rBuffer.rotation, normal);
+	// float4 worldNormal = normal;
 	float3 N = normalize(worldNormal.xyz);
 	float3 V = normalize(lvBuff.camPos - input.worldPos);
     
@@ -123,7 +124,7 @@ PSOut main(PSIn input) {
 	};
 
 	// Combine with ambient
-	float3 color = baseColor * 0.02;    // TODO Add emissive color here
+	float3 color = baseColor * 0.02;//0.02;    // TODO Add emissive color here
 	color += Lo;
 
 	// Gamma correct

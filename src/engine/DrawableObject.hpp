@@ -52,10 +52,12 @@ public:
     // Only for model local buffers
     void delete_uniform_buffers();
 
-    void update_uniform_buffer(RF::DrawPass const & pass, char const * name, CBlob ubo);
+    void update_uniform_buffer(char const * name, CBlob ubo);
 
     [[nodiscard]] RF::UniformBufferGroup * get_uniform_buffer(char const * name);
-    //void draw(RF::DrawPass & draw_pass);
+
+    void draw(RF::DrawPass & draw_pass);
+
     //template<typename T>
     //void update_uniform_buffer(RF::DrawPass const & draw_pass, T ubo) const {
         //update_uniform_buffer(draw_pass, CBlobAliasOf(ubo));

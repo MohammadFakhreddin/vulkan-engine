@@ -236,12 +236,12 @@ struct Vertices {
     using Color = U8[3];
     struct Vertex {
         Position position;
-        Normal normal_value;
         UV base_color_uv;
         UV normal_map_uv;
         UV metallic_roughness_uv;
         UV emission_uv;
         Color color;
+        Normal normal_value;
     };
     Vertex value[];
 };

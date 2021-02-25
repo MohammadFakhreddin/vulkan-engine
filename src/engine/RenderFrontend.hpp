@@ -40,8 +40,10 @@ void DestroyDescriptorSetLayout(VkDescriptorSetLayout_T * descriptor_set_layout)
 DrawPipeline CreateBasicDrawPipeline(
     U8 gpu_shaders_count, 
     RB::GpuShader * gpu_shaders,
-    VkDescriptorSetLayout_T * descriptor_set_layout
-
+    VkDescriptorSetLayout_T * descriptor_set_layout,
+    VkVertexInputBindingDescription const & vertex_input_binding_description,
+    U8 vertex_input_attribute_description_count,
+    VkVertexInputAttributeDescription * vertex_input_attribute_descriptions
 );
 
 [[nodiscard]]
@@ -135,11 +137,16 @@ struct UniformBufferGroup {
     std::vector<RB::BufferGroup> buffers;
     size_t buffer_size;
 };
-UniformBufferGroup CreateUniformBuffer(size_t buffer_size);
+UniformBufferGroup CreateUniformBuffer(size_t buffer_size, U8 count);
 
 void UpdateUniformBuffer(
     DrawPass const & draw_pass,
     UniformBufferGroup const & uniform_buffer, 
+    CBlob data
+);
+
+void UpdateUniformBuffer(
+    RB::BufferGroup const & uniform_buffer, 
     CBlob data
 );
 

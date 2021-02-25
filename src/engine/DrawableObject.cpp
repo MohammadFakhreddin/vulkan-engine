@@ -43,8 +43,8 @@ VkDescriptorSet_T ** DrawableObject::get_descriptor_sets() {
 
 
 // Only for model local buffers
-RF::UniformBufferGroup * DrawableObject::create_uniform_buffer(char const * name, U32 size) {
-    m_uniforma_buffers[name] = RF::CreateUniformBuffer(size);
+RF::UniformBufferGroup * DrawableObject::create_uniform_buffer(char const * name, U32 const size) {
+    m_uniforma_buffers[name] = RF::CreateUniformBuffer(size, 1);
     return &m_uniforma_buffers[name];
 }
 
@@ -58,10 +58,12 @@ void DrawableObject::delete_uniform_buffers() {
     }
 }
 
-void DrawableObject::update_uniform_buffer(RF::DrawPass const & pass, char const * name, CBlob const ubo) {
+void DrawableObject::update_uniform_buffer(char const * name, CBlob const ubo) {
     auto const find_result = m_uniforma_buffers.find(name);
     if (find_result != m_uniforma_buffers.end()) {
-        RF::UpdateUniformBuffer(pass, find_result->second, CBlobAliasOf(ubo));
+        RF::UpdateUniformBuffer(find_result->second.buffers[0], ubo);
+    } else {
+        MFA_CRASH("Buffer not found");
     }
 }
 
@@ -73,44 +75,23 @@ RF::UniformBufferGroup * DrawableObject::get_uniform_buffer(char const * name) {
     return nullptr;
 }
 
-// TODo Remove this comments
-//DrawableObject::~DrawableObject() {
-//    shutdown();
-//}
-//
-//void DrawableObject::draw(RF::DrawPass & draw_pass) {
-//    auto const * header_object = m_model->model_asset.mesh.header_object();
-//    MFA_PTR_ASSERT(header_object);
-//    BindVertexBuffer(draw_pass, m_model->mesh_buffers.vertices_buffer);
-//    BindIndexBuffer(draw_pass, m_model->mesh_buffers.indices_buffer);
-//    for (U32 i = 0; i < m_required_draw_calls; ++i) {
-//        auto * current_descriptor_set = m_descriptor_sets[draw_pass.image_index * m_required_draw_calls + i];
-//        RF::BindDescriptorSet(draw_pass, current_descriptor_set);
-//        auto const & current_sub_mesh = header_object->sub_meshes[i];
-//        RF::UpdateDescriptorSetBasic(
-//            draw_pass,
-//            current_descriptor_set,
-//            m_uniform_buffer_group,
-//            m_model->textures[current_sub_mesh.base_color_texture_index],
-//            *m_sampler_group
-//        ); 
-//        auto const & sub_mesh_buffers = m_model->mesh_buffers.sub_mesh_buffers[i];
-//        DrawIndexed(
-//            draw_pass,
-//            sub_mesh_buffers.index_count,
-//            1,
-//            current_sub_mesh.indices_starting_index
-//        );
-//    }
-//}
-//
-//void DrawableObject::update_uniform_buffer(RF::DrawPass const & draw_pass, CBlob const ubo) const {
-//    RF::UpdateUniformBuffer(
-//        draw_pass,
-//        m_uniform_buffer_group, 
-//        ubo
-//    );
-//}
-
+void DrawableObject::draw(RF::DrawPass & draw_pass) {
+    auto const * header_object = m_model->model_asset.mesh.header_object();
+    MFA_PTR_ASSERT(header_object);
+    BindVertexBuffer(draw_pass, m_model->mesh_buffers.vertices_buffer);
+    BindIndexBuffer(draw_pass, m_model->mesh_buffers.indices_buffer);
+    for (U32 i = 0; i < m_required_draw_calls; ++i) {
+        auto * current_descriptor_set = m_descriptor_sets[i];
+        RF::BindDescriptorSet(draw_pass, current_descriptor_set);
+        auto const & current_sub_mesh = header_object->sub_meshes[i];
+        auto const & sub_mesh_buffers = m_model->mesh_buffers.sub_mesh_buffers[i];
+        DrawIndexed(
+            draw_pass,
+            sub_mesh_buffers.index_count,
+            1,
+            current_sub_mesh.indices_starting_index
+        );
+    }
+}
 
 };

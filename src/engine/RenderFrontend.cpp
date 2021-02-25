@@ -269,49 +269,52 @@ void DestroyDescriptorSetLayout(VkDescriptorSetLayout_T * descriptor_set_layout)
 DrawPipeline CreateBasicDrawPipeline(
     U8 const gpu_shaders_count, 
     RB::GpuShader * gpu_shaders,
-    VkDescriptorSetLayout_T * descriptor_set_layout
+    VkDescriptorSetLayout_T * descriptor_set_layout,
+    VkVertexInputBindingDescription const & vertex_input_binding_description,
+    U8 vertex_input_attribute_description_count,
+    VkVertexInputAttributeDescription * vertex_input_attribute_descriptions
 ) {
     MFA_ASSERT(gpu_shaders_count > 0);
     MFA_PTR_VALID(gpu_shaders);
     MFA_PTR_VALID(descriptor_set_layout);
-    VkVertexInputBindingDescription const vertex_binding_description {
-        .binding = 0,
-        .stride = sizeof(AssetSystem::MeshVertex),
-        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-    };
-    std::vector<VkVertexInputAttributeDescription> input_attribute_descriptions {4};
-    input_attribute_descriptions[0] = VkVertexInputAttributeDescription {
-        .location = 0,
-        .binding = 0,
-        .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = offsetof(AssetSystem::MeshVertex, position),
-    };
-    input_attribute_descriptions[1] = VkVertexInputAttributeDescription {
-        .location = 1,
-        .binding = 0,
-        .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = offsetof(AssetSystem::MeshVertex, normal_map_uv)
-    };
-    input_attribute_descriptions[2] = VkVertexInputAttributeDescription {
-        .location = 2,
-        .binding = 0,
-        .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(AssetSystem::MeshVertex, base_color_uv)
-    };
-    input_attribute_descriptions[3] = VkVertexInputAttributeDescription {
-        .location = 3,
-        .binding = 0,
-        .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(AssetSystem::MeshVertex, color)
-    };
+    //VkVertexInputBindingDescription const vertex_binding_description {
+    //    .binding = 0,
+    //    .stride = sizeof(AssetSystem::MeshVertex),
+    //    .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+    //};
+    //std::vector<VkVertexInputAttributeDescription> input_attribute_descriptions {4};
+    //input_attribute_descriptions[0] = VkVertexInputAttributeDescription {
+    //    .location = 0,
+    //    .binding = 0,
+    //    .format = VK_FORMAT_R32G32B32_SFLOAT,
+    //    .offset = offsetof(AssetSystem::MeshVertex, position),
+    //};
+    //input_attribute_descriptions[1] = VkVertexInputAttributeDescription {
+    //    .location = 1,
+    //    .binding = 0,
+    //    .format = VK_FORMAT_R32G32B32_SFLOAT,
+    //    .offset = offsetof(AssetSystem::MeshVertex, normal_map_uv)
+    //};
+    //input_attribute_descriptions[2] = VkVertexInputAttributeDescription {
+    //    .location = 2,
+    //    .binding = 0,
+    //    .format = VK_FORMAT_R32G32_SFLOAT,
+    //    .offset = offsetof(AssetSystem::MeshVertex, base_color_uv)
+    //};
+    //input_attribute_descriptions[3] = VkVertexInputAttributeDescription {
+    //    .location = 3,
+    //    .binding = 0,
+    //    .format = VK_FORMAT_R32G32_SFLOAT,
+    //    .offset = offsetof(AssetSystem::MeshVertex, color)
+    //};
 
     return CreateDrawPipeline(
         gpu_shaders_count,
         gpu_shaders,
         descriptor_set_layout,
-        vertex_binding_description,
-        static_cast<U32>(input_attribute_descriptions.size()),
-        input_attribute_descriptions.data(),
+        vertex_input_binding_description,
+        vertex_input_attribute_description_count,
+        vertex_input_attribute_descriptions,
         RB::CreateGraphicPipelineOptions {
             .depth_stencil {
                 .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
@@ -395,11 +398,11 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSets(
     );
 }
 
-UniformBufferGroup CreateUniformBuffer(size_t const buffer_size) {
+UniformBufferGroup CreateUniformBuffer(size_t const buffer_size, U8 const count) {
     auto const buffers = RB::CreateUniformBuffer(
         state.logical_device.device,
         state.physical_device,
-        static_cast<U8>(state.swap_chain_group.swap_chain_images.size()),
+        count,
         buffer_size
     );
     return {
@@ -416,6 +419,17 @@ void UpdateUniformBuffer(
     RB::UpdateUniformBuffer(
         state.logical_device.device, 
         uniform_buffer.buffers[draw_pass.image_index], 
+        data
+    );
+}
+
+void UpdateUniformBuffer(
+    RB::BufferGroup const & uniform_buffer, 
+    CBlob const data
+) {
+    RB::UpdateUniformBuffer(
+        state.logical_device.device, 
+        uniform_buffer, 
         data
     );
 }
