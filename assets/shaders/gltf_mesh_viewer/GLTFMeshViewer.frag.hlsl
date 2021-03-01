@@ -1,9 +1,10 @@
 struct PSIn {
     float4 position : SV_POSITION;
-    float2 baseColorTexCoord : TEXCOORD0;
+	float2 baseColorTexCoord : TEXCOORD0;
     float2 metallicRoughnessTexCoord : TEXCOORD1;
     float2 normalTexCoord: TEXCOORD2;
     float3 worldPos: POSITION0;
+	float4 worldNormal : NORMAL0;
 };
 
 struct PSOut{
@@ -26,12 +27,6 @@ struct LightViewBuffer {
 };
 
 ConstantBuffer <LightViewBuffer> lvBuff : register (b4, space0);
-
-struct Rotation {
-    float4x4 rotation;
-};
-
-ConstantBuffer <Rotation> rBuffer: register(b5, space0);
 
 const float PI = 3.14159265359;
 
@@ -73,7 +68,7 @@ float G_SchlicksmithGGX(float dotNL, float dotNV, float roughness)
 
 // Specular BRDF composition --------------------------------------------
 
-float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness, float4 baseColor)
+float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness, float4 baseColor, float3 worldPos)
 {
 	// Precalculate vectors and dot products
 	float3 H = normalize (V + L);
@@ -83,7 +78,8 @@ float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness, float
 	float dotNH = clamp(dot(N, H), 0.0, 1.0);
 
 	// Light color fixed
-	float3 lightColor = float3(252/256, 212/256, 64/256);
+	float3 lightColor = float3(252.0f/256.0f, 212.0f/256.0f, 64.0f/256.0f);
+	// float3 lightColor = float3(1, 1, 1);
 
 	float3 color = float3(0.0, 0.0, 0.0);
 
@@ -99,10 +95,27 @@ float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness, float
 
 		float3 spec = D * F * G / (4.0 * dotNL * dotNV);
 
+		float distance = length(lvBuff.lightPosition - worldPos);
+		float attenuation = 4.0 / (distance * distance);
+        float3 radiance = lightColor * attenuation;        
+
 		color += spec * dotNL * lightColor;
 	}
 
 	return color;
+}
+
+// TODO Use this to compute normal correctly
+float3 calculateNormal(PSIn input)
+{
+	float3 tangentNormal = normalTexture.Sample(normalSampler, input.normalTexCoord).xyz * 2.0 - 1.0;
+
+	float3 N = normalize(input.worldNormal);
+	float3 T = normalize(input.Tangent);
+	float3 B = normalize(cross(N, T));
+	float3x3 TBN = transpose(float3x3(T, B, N));
+
+	return normalize(mul(TBN, tangentNormal));
 }
 
 PSOut main(PSIn input) {
@@ -110,21 +123,20 @@ PSOut main(PSIn input) {
     float4 metallicRoughness = metallicRoughnessTexture.Sample(metallicRoughnessSampler, input.metallicRoughnessTexCoord);
     float metallic = metallicRoughness.b;
     float roughness = metallicRoughness.g;
-	float4 normal = normalTexture.Sample(normalSampler, input.normalTexCoord);
-	float4 worldNormal = mul(rBuffer.rotation, normal);
+	float4 normal = calculateNormal(input);
 	// float4 worldNormal = normal;
-	float3 N = normalize(worldNormal.xyz);
+	float3 N = normalize(normal.xyz);
 	float3 V = normalize(lvBuff.camPos - input.worldPos);
     
     // Specular contribution
 	float3 Lo = float3(0.0, 0.0, 0.0);
 	for (int i = 0; i < 1; i++) {   // Light count
 		float3 L = normalize(lvBuff.lightPosition.xyz - input.worldPos);
-		Lo += BRDF(L, V, N, metallic, roughness, baseColor);
+		Lo += BRDF(L, V, N, metallic, roughness, baseColor, input.worldPos);
 	};
 
 	// Combine with ambient
-	float3 color = baseColor * 0.02;//0.02;    // TODO Add emissive color here
+	float3 color = baseColor * 0.03;//0.02;    // TODO Add emissive color here
 	color += Lo;
 
 	// Gamma correct

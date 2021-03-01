@@ -1,5 +1,6 @@
 struct VSIn{
     float3 position : POSITION0;
+    float3 normal: NORMAL0;
     float2 baseColorTexCoord : TEXCOORD0;
     float2 metallicRoughnessTexCoord : TEXCOORD1;
     float2 normalTexCoord: TEXCOORD2;
@@ -11,6 +12,7 @@ struct VSOut{
     float2 metallicRoughnessTexCoord : TEXCOORD1;
     float2 normalTexCoord: TEXCOORD2;
     float3 worldPos: POSITION0;
+    float4 worldNormal : NORMAL0;
 };
 
 struct Transformation {
@@ -25,13 +27,14 @@ VSOut main(VSIn input) {
     VSOut output;
 
     float4 rotationResult = mul(tBuffer.rotation, float4(input.position, 1.0f));
-    float4 WorldPos = mul(tBuffer.transformation, rotationResult);
+    float4 worldPos = mul(tBuffer.transformation, rotationResult);
 
-    output.position = mul(tBuffer.projection, WorldPos);
+    output.position = mul(tBuffer.projection, worldPos);
     output.baseColorTexCoord = input.baseColorTexCoord;
     output.metallicRoughnessTexCoord = input.metallicRoughnessTexCoord;
     output.normalTexCoord = input.normalTexCoord;
-    output.worldPos = WorldPos.xyz;
-    
+    output.worldPos = worldPos.xyz;
+    output.worldNormal = mul(tBuffer.rotation, float4(input.normal, 1.0f));
+
     return output;
 }

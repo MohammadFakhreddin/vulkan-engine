@@ -714,6 +714,26 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                                 &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
                             );
                         }
+                        float const * tangent_values = nullptr;
+                        float tangents_values_min [3] {};
+                        float tangents_values_max [3] {};
+                        if(primitive.attributes.find("TANGENT") != primitive.attributes.end()) {
+                            MFA_REQUIRE(primitive.attributes["TANGENT"] < model.accessors.size());
+                            auto const & accessor = model.accessors[primitive.attributes["TANGENT"]];
+                            MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+                            tangents_values_min[0] = static_cast<float>(accessor.minValues[0]);
+                            tangents_values_min[1] = static_cast<float>(accessor.minValues[1]);
+                            tangents_values_min[2] = static_cast<float>(accessor.minValues[2]);
+                            tangents_values_max[0] = static_cast<float>(accessor.maxValues[0]);
+                            tangents_values_max[1] = static_cast<float>(accessor.maxValues[1]);
+                            tangents_values_max[2] = static_cast<float>(accessor.maxValues[2]);
+                            auto const & buffer_view = model.bufferViews[accessor.bufferView];
+                            MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
+                            auto const & buffer = model.buffers[buffer_view.buffer];
+                            tangent_values = reinterpret_cast<const float *>(
+                                &buffer.data[buffer_view.byteOffset + accessor.byteOffset]
+                            );
+                        }
                         float const * colors = nullptr;
                         float colors_min_value [3] {0};
                         float colors_max_value [3] {1};
@@ -757,8 +777,11 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                             ::memcpy(current_sub_mesh.emissive_factor, emissive_factor, sizeof(emissive_factor));
                             current_sub_mesh.has_normal_texture = nullptr != normals_uvs;
                             current_sub_mesh.has_normal_buffer = nullptr != normal_values;
+                            current_sub_mesh.has_tangent_buffer = nullptr != tangent_values;
                             current_sub_mesh.has_emissive_texture = nullptr != emission_uvs;
                             current_sub_mesh.has_metallic_roughness = nullptr != metallic_roughness_uvs;
+                            MFA_ASSERT(current_sub_mesh.has_normal_buffer == current_sub_mesh.has_normal_texture);
+                            MFA_ASSERT(current_sub_mesh.has_tangent_buffer == current_sub_mesh.has_normal_buffer);
                         }
                         vertices_offset += primitive_vertex_count * sizeof(AssetSystem::MeshVertex);
                         indices_offset += primitive_indices_count * sizeof(AssetSystem::MeshIndex);
@@ -803,6 +826,17 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                                 vertices[i].normal_map_uv[1] = normals_uvs[i * 2 + 1];
                                 MFA_ASSERT(vertices[i].normal_map_uv[1] >= normals_uv_min[1]);
                                 MFA_ASSERT(vertices[i].normal_map_uv[1] <= normals_uv_max[1]);
+                            }
+                            if(current_sub_mesh.has_tangent_buffer) {// Tangent
+                                vertices[i].tangent_value[0] = tangent_values[i * 3 + 0];
+                                MFA_ASSERT(vertices[i].tangent_value[0] >= tangents_values_min[0]);
+                                MFA_ASSERT(vertices[i].tangent_value[0] <= tangents_values_max[0]);
+                                vertices[i].tangent_value[1] = tangent_values[i * 3 + 1];
+                                MFA_ASSERT(vertices[i].tangent_value[1] >= tangents_values_min[1]);
+                                MFA_ASSERT(vertices[i].tangent_value[1] <= tangents_values_max[1]);
+                                vertices[i].tangent_value[2] = tangent_values[i * 3 + 2];
+                                MFA_ASSERT(vertices[i].tangent_value[2] >= tangents_values_min[2]);
+                                MFA_ASSERT(vertices[i].tangent_value[2] <= tangents_values_max[2]);  
                             }
                             if(current_sub_mesh.has_emissive_texture) {// Emissive
                                 vertices[i].emission_uv[0] = emission_uvs[i * 2 + 0];

@@ -234,6 +234,7 @@ struct Vertices {
     using Normal = float[3];
     using UV = float[2];
     using Color = U8[3];
+    using Tangent = float[3];
     struct Vertex {
         Position position;
         UV base_color_uv;
@@ -242,6 +243,7 @@ struct Vertices {
         UV emission_uv;
         Color color;
         Normal normal_value;
+        Tangent tangent_value;
     };
     Vertex value[];
 };
@@ -276,6 +278,7 @@ struct Header {
         float emissive_factor[3] {};
         bool has_normal_buffer = false;
         bool has_normal_texture = false;
+        bool has_tangent_buffer = false;
         bool has_emissive_texture = false;
         bool has_metallic_roughness = false;
     };
