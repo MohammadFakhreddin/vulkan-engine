@@ -1,9 +1,10 @@
 struct VSIn{
     float3 position : POSITION0;
-    float3 normal: NORMAL0;
     float2 baseColorTexCoord : TEXCOORD0;
     float2 metallicRoughnessTexCoord : TEXCOORD1;
     float2 normalTexCoord: TEXCOORD2;
+    float4 tangent: TEXCOORD3;
+    float3 normal: NORMAL0;
 };
 
 struct VSOut{
@@ -12,7 +13,8 @@ struct VSOut{
     float2 metallicRoughnessTexCoord : TEXCOORD1;
     float2 normalTexCoord: TEXCOORD2;
     float3 worldPos: POSITION0;
-    float4 worldNormal : NORMAL0;
+    float3 normal : NORMAL0;
+    float4 tangent: TEXCOORD3;
 };
 
 struct Transformation {
@@ -34,7 +36,9 @@ VSOut main(VSIn input) {
     output.metallicRoughnessTexCoord = input.metallicRoughnessTexCoord;
     output.normalTexCoord = input.normalTexCoord;
     output.worldPos = worldPos.xyz;
-    output.worldNormal = mul(tBuffer.rotation, float4(input.normal, 1.0f));
+
+    output.normal = input.normal;
+    output.tangent = input.tangent;
 
     return output;
 }

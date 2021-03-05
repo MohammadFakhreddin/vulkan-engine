@@ -4,7 +4,8 @@ struct PSIn {
     float2 metallicRoughnessTexCoord : TEXCOORD1;
     float2 normalTexCoord: TEXCOORD2;
     float3 worldPos: POSITION0;
-	float4 worldNormal : NORMAL0;
+	float3 normal : NORMAL0;
+	float4 tangent: TEXCOORD3;
 };
 
 struct PSOut{
@@ -22,13 +23,20 @@ sampler normalSampler : register(s3, space0);
 Texture2D normalTexture : register(t3, space0);
 
 struct LightViewBuffer {
-    float3 camPos;
     float3 lightPosition;
+    float3 camPos;
 };
 
 ConstantBuffer <LightViewBuffer> lvBuff : register (b4, space0);
 
+struct RotationBuffer {
+	float4x4 rotation;
+};
+
+ConstantBuffer <RotationBuffer> rBuffer : register (b5, space0);
+
 const float PI = 3.14159265359;
+
 
 // This function computes ratio between amount of light that reflect and refracts
 // Reflection contrbutes to specular while refraction contributes to diffuse light
@@ -96,7 +104,7 @@ float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness, float
 		float3 spec = D * F * G / (4.0 * dotNL * dotNV);
 
 		float distance = length(lvBuff.lightPosition - worldPos);
-		float attenuation = 4.0 / (distance * distance);
+		float attenuation = 1.0 / (distance * distance);
         float3 radiance = lightColor * attenuation;        
 
 		color += spec * dotNL * lightColor;
@@ -108,14 +116,16 @@ float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness, float
 // TODO Use this to compute normal correctly
 float3 calculateNormal(PSIn input)
 {
-	float3 tangentNormal = normalTexture.Sample(normalSampler, input.normalTexCoord).xyz * 2.0 - 1.0;
+	float3 tangentNormal = normalTexture.Sample(normalSampler, input.normalTexCoord).rgb * 2.0 - 1.0;
 
-	float3 N = normalize(input.worldNormal);
-	float3 T = normalize(input.Tangent);
+	float3 N = normalize(input.normal);
+	float3 T = normalize(input.tangent);
 	float3 B = normalize(cross(N, T));
 	float3x3 TBN = transpose(float3x3(T, B, N));
 
-	return normalize(mul(TBN, tangentNormal));
+	float3 modelNormal = mul(TBN, tangentNormal);
+	float4 worldNormal = mul(rBuffer.rotation, float4(modelNormal, 0.0f));
+	return normalize(worldNormal.xyz);
 }
 
 PSOut main(PSIn input) {
@@ -123,7 +133,7 @@ PSOut main(PSIn input) {
     float4 metallicRoughness = metallicRoughnessTexture.Sample(metallicRoughnessSampler, input.metallicRoughnessTexCoord);
     float metallic = metallicRoughness.b;
     float roughness = metallicRoughness.g;
-	float4 normal = calculateNormal(input);
+	float3 normal = calculateNormal(input);
 	// float4 worldNormal = normal;
 	float3 N = normalize(normal.xyz);
 	float3 V = normalize(lvBuff.camPos - input.worldPos);
@@ -136,7 +146,7 @@ PSOut main(PSIn input) {
 	};
 
 	// Combine with ambient
-	float3 color = baseColor * 0.03;//0.02;    // TODO Add emissive color here
+	float3 color = baseColor * 0.02;    // TODO Add emissive color here
 	color += Lo;
 
 	// Gamma correct

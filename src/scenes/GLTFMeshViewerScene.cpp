@@ -21,9 +21,9 @@ public:
     }
 
     void Init() override {
-        auto cpu_model = Importer::ImportMeshGLTF("../assets/models/free_zuk_3d_model/scene.gltf");
+        //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/free_zuk_3d_model/scene.gltf");
         //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/kirpi_mrap__lowpoly__free_3d_model/scene.gltf");
-        //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/gunship/scene.gltf");
+        auto cpu_model = Importer::ImportMeshGLTF("../assets/models/gunship/scene.gltf");
         MFA_ASSERT(cpu_model.mesh.valid());
         m_gpu_model = RF::CreateGpuModel(cpu_model);
         
@@ -72,9 +72,10 @@ public:
     void OnDraw(MFA::U32 const delta_time, RF::DrawPass & draw_pass) override {
         RF::BindDrawPipeline(draw_pass, m_draw_pipeline);
 
-        MFA::Matrix4X4Float rotationMat {};
         {// Updating Transform buffer
             // Rotation
+            // TODO Try sending Matrices directly
+            MFA::Matrix4X4Float rotationMat {};
             MFA::Matrix4X4Float::assignRotationXYZ(
                 rotationMat,
                 MFA::Math::Deg2Rad(m_model_rotation[0]),
@@ -112,18 +113,21 @@ public:
                 "transform", 
                 MFA::CBlobAliasOf(m_translate_data)
             );
-        }
-        // LightViewBuffer
-        RF::UpdateUniformBuffer(m_lv_buffer.buffers[0], MFA::CBlobAliasOf(m_lv_data));
-        {// RotationBuffer
-            static_assert(sizeof(rotationMat.cells) == sizeof(m_rotation_data.rotation));
-            ::memcpy(m_rotation_data.rotation, rotationMat.cells, sizeof(m_translate_data.rotation));
+
+            // Rotation buffer
+            static_assert(sizeof(m_rotation_buffer.rotation) == sizeof(rotationMat.cells));
+            ::memcpy(m_rotation_buffer.rotation, rotationMat.cells, sizeof(rotationMat.cells));
+
             m_drawable_object.update_uniform_buffer(
                 "rotation",
-                MFA::CBlobAliasOf(m_rotation_data)
+                MFA::CBlobAliasOf(m_rotation_buffer)
             );
         }
-        
+        {// LightViewBuffer
+            ::memcpy(m_lv_data.light_position, m_light_position, sizeof(m_light_position));
+            static_assert(sizeof(m_light_position) == sizeof(m_lv_data.light_position));
+            RF::UpdateUniformBuffer(m_lv_buffer.buffers[0], MFA::CBlobAliasOf(m_lv_data));
+        }
         m_drawable_object.draw(draw_pass);
     }
 
@@ -145,11 +149,11 @@ public:
 
         ImGui::Begin("Light");
         ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("LightX", &m_lv_data.light_position[0], -1000.0f, 1000.0f);
+        ImGui::SliderFloat("LightX", &m_light_position[0], -1000.0f, 1000.0f);
         ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("LightY", &m_lv_data.light_position[1], -1000.0f, 1000.0f);
+        ImGui::SliderFloat("LightY", &m_light_position[1], -1000.0f, 1000.0f);
         ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("LightZ", &m_lv_data.light_position[2], -1000.0f, 1000.0f);
+        ImGui::SliderFloat("LightZ", &m_light_position[2], -1000.0f, 1000.0f);
         ImGui::End();
     }
 
@@ -173,9 +177,9 @@ private:
 
         const auto * transform_buffer = m_drawable_object.create_uniform_buffer("transform", sizeof(ModelTransformBuffer));
         MFA_PTR_ASSERT(transform_buffer);
-        const auto * rotation_buffer = m_drawable_object.create_uniform_buffer("rotation", sizeof(ModelRotationBuffer));
-        MFA_PTR_ASSERT(rotation_buffer);
 
+        const auto * rotation_buffer = m_drawable_object.create_uniform_buffer("rotation", sizeof(RotationBuffer));
+        
         auto * model_header = m_drawable_object.get_model()->model_asset.mesh.header_object();
         MFA_ASSERT(model_header->sub_mesh_count == m_drawable_object.get_descriptor_set_count());
 
@@ -268,7 +272,7 @@ private:
             });
 
             // Rotation
-            VkDescriptorBufferInfo rotation_buffer_info {
+            VkDescriptorBufferInfo rotationBufferInfo {
                 .buffer = rotation_buffer->buffers[0].buffer,
                 .offset = 0,
                 .range = rotation_buffer->buffer_size
@@ -280,7 +284,7 @@ private:
                 .dstArrayElement = 0,
                 .descriptorCount = 1,
                 .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                .pBufferInfo = &rotation_buffer_info,
+                .pBufferInfo = &rotationBufferInfo,
             });
 
             RF::UpdateDescriptorSets(
@@ -327,6 +331,18 @@ private:
             .binding = 0,
             .format = VK_FORMAT_R32G32_SFLOAT,
             .offset = offsetof(Asset::MeshVertex, normal_map_uv),   
+        });
+        input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = 4,
+            .binding = 0,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = offsetof(Asset::MeshVertex, normal_value),   
+        });
+        input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = 5,
+            .binding = 0,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = offsetof(Asset::MeshVertex, tangent_value),   
         });
 
         m_draw_pipeline = RF::CreateBasicDrawPipeline(
@@ -405,17 +421,19 @@ private:
         float perspective[16];
     } m_translate_data {};
 
-    struct ModelRotationBuffer {    // For normals in Fragment shader
-        float rotation[16];
-    } m_rotation_data {};
-
     struct LightViewBuffer {
-        float camera_position[3];
         float light_position[3];
+        float camera_position[3];
     } m_lv_data {
+        .light_position = {},
         .camera_position = {0.0f, 0.0f, 0.0f},
-        .light_position = {0.0f, 0.0f, -2.0f}
     };
+
+    float m_light_position[3] {0.0f, 0.0f, -2.0f};
+
+    struct RotationBuffer {
+        float rotation[16];
+    } m_rotation_buffer {};
 
     float m_model_rotation[3] {45.0f, 45.0f, 45.0f};
     float m_model_position[3] {0.0f, 0.0f, -6.0f};

@@ -234,7 +234,7 @@ struct Vertices {
     using Normal = float[3];
     using UV = float[2];
     using Color = U8[3];
-    using Tangent = float[3];
+    using Tangent = float[4]; // XYZW vertex tangents where the w component is a sign value (-1 or +1) indicating handedness of the tangent basis. I need to change XYZ order if handness is different from mine
     struct Vertex {
         Position position;
         UV base_color_uv;
@@ -271,7 +271,6 @@ struct Header {
         I16 metallic_roughness_texture_index = 0;
         I16 normal_texture_index = 0;
         I16 emissive_texture_index = 0;
-        // TODO We need to send these values as push constants
         float base_color_factor[4] {};
         float metallic_factor = 0;              // Metallic color is stored inside blue
         float roughness_factor = 0;             // Roughness color is stored inside green
