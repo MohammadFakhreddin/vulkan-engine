@@ -22,8 +22,10 @@ public:
 
     void Init() override {
         //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/free_zuk_3d_model/scene.gltf");
+        /*auto cpu_model = Importer::ImportMeshGLTF("../assets/models/free_1975_porsche_911_930_turbo/scene.gltf");*/
         //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/kirpi_mrap__lowpoly__free_3d_model/scene.gltf");
         auto cpu_model = Importer::ImportMeshGLTF("../assets/models/gunship/scene.gltf");
+        //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/kar98k_free_model/scene.gltf");
         MFA_ASSERT(cpu_model.mesh.valid());
         m_gpu_model = RF::CreateGpuModel(cpu_model);
         
@@ -43,7 +45,7 @@ public:
         
         // Fragment shader
         auto cpu_fragment_shader = Importer::ImportShaderFromSPV(
-            "../assets/shaders/gltf_mesh_viewer/GLTFMeshViewer.frag.spv",
+            "../assets/shaders/gltf_mesh_viewer/GLTFMeshViewer2.frag.spv",
             MFA::AssetSystem::Shader::Stage::Fragment,
             "main"
         );

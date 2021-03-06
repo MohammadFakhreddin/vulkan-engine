@@ -3,6 +3,7 @@
         "pbr-frag" : "glslc -fshader-stage=frag ./assets/shaders/pbr/pbr.frag.hlsl -o ./assets/shaders/pbr/pbr.frag.spv ",
         "pbr-vert" : "glslc -fshader-stage=vert ./assets/shaders/pbr/pbr.vert.hlsl -o ./assets/shaders/pbr/pbr.vert.spv ",
         "gltf-frag": "glslc -fshader-stage=frag ./assets/shaders/gltf_mesh_viewer/GLTFMeshViewer.frag.hlsl -o ./assets/shaders/gltf_mesh_viewer/GLTFMeshViewer.frag.spv ",
+        "gltf-frag2": "glslc -fshader-stage=frag ./assets/shaders/gltf_mesh_viewer/GLTFMeshViewer2.frag.hlsl -o ./assets/shaders/gltf_mesh_viewer/GLTFMeshViewer2.frag.spv ",
         "gltf-vert": "glslc -fshader-stage=vert ./assets/shaders/gltf_mesh_viewer/GLTFMeshViewer.vert.hlsl -o ./assets/shaders/gltf_mesh_viewer/GLTFMeshViewer.vert.spv "
     }
 }

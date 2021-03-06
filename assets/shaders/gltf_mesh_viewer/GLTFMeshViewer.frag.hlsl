@@ -104,10 +104,10 @@ float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness, float
 		float3 spec = D * F * G / (4.0 * dotNL * dotNV);
 
 		float distance = length(lvBuff.lightPosition - worldPos);
-		float attenuation = 1.0 / (distance * distance);
+		float attenuation = 100.0 / (distance * distance);	// Originally it was 1
         float3 radiance = lightColor * attenuation;        
 
-		color += spec * dotNL * lightColor;
+		color += spec * dotNL * radiance;
 	}
 
 	return color;
