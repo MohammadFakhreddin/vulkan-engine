@@ -9,3 +9,5 @@
 ## Basic PRB
 <img src="examples/pbr.gif">
 
+## GLTF PBR (Incomplete)
+<img src="examples/gltf-pbr.gif">

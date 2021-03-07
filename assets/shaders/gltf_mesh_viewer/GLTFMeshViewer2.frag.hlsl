@@ -52,7 +52,7 @@ const float3 lightColor = float3(252.0f/256.0f, 212.0f/256.0f, 64.0f/256.0f);
     This translates to code as follows:
 */
 // Fresnel function ----------------------------------------------------
-float3 F_Schlick(float cosTheta, float metallic, float4 baseColor)
+float3 F_Schlick(float cosTheta, float metallic, float3 baseColor)
 {
 	float3 F0 = lerp(float3(0.04, 0.04, 0.04), baseColor.rgb, metallic); // * material.specular
 	float3 F = F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
@@ -80,7 +80,7 @@ float G_SchlicksmithGGX(float dotNL, float dotNV, float roughness)
 
 // Specular BRDF composition --------------------------------------------
 
-float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness, float4 baseColor, float3 worldPos)
+float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness, float3 baseColor, float3 worldPos)
 {
     // Precalculate vectors and dot products
 	float3 H = normalize (V + L);
@@ -131,10 +131,10 @@ float3 calculateNormal(PSIn input)
 }
 
 PSOut main(PSIn input) {
-	float4 baseColor = baseColorTexture.Sample(baseColorSampler, input.baseColorTexCoord);
+	float3 baseColor = pow(baseColorTexture.Sample(baseColorSampler, input.baseColorTexCoord).rgb, 2.2f);
     float4 metallicRoughness = metallicRoughnessTexture.Sample(metallicRoughnessSampler, input.metallicRoughnessTexCoord);
     float metallic = metallicRoughness.b;
-    float roughness = metallicRoughness.g;
+    float roughness = max(metallicRoughness.g, 0.5);
 	float3 normal = calculateNormal(input);
 	// float4 worldNormal = normal;
 	float3 N = normalize(normal.xyz);
