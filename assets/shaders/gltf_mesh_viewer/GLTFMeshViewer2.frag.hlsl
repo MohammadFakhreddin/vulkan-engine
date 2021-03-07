@@ -120,7 +120,7 @@ float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness, float
 float3 calculateNormal(PSIn input)
 {
 	float3 tangentNormal = normalTexture.Sample(normalSampler, input.normalTexCoord).rgb * 2.0 - 1.0;
-
+    
 	float3x3 TBN = float3x3(input.worldTangent, input.worldBiTangent, input.worldNormal);
 	float3 pixelNormal = mul(TBN, tangentNormal);
 	
@@ -133,7 +133,7 @@ PSOut main(PSIn input) {
     float metallic = metallicRoughness.b;
     float roughness = max(metallicRoughness.g, 0.5);
 	float3 normal = calculateNormal(input);
-	// float4 worldNormal = normal;
+
 	float3 N = normalize(normal.xyz);
 	float3 V = normalize(lvBuff.camPos - input.worldPos);
     

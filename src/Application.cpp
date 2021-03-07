@@ -26,7 +26,7 @@ void Application::run() {
             MFA::U32 const start_time = SDL_GetTicks();
             // DrawFrame
             SceneSubSystem::OnNewFrame(delta_time);
-            //Handle events on queueope
+            //Handle events
             if (SDL_PollEvent(&e) != 0)
             {
                 //User requests quit

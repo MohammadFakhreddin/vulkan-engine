@@ -5,6 +5,7 @@
 #include "BedrockAssert.hpp"
 #include "BedrockCommon.hpp"
 #include "BedrockMath.hpp"
+#include "BedrockMatrix.hpp"
 
 namespace MFA::AssetSystem {
     class TextureAsset;
@@ -280,6 +281,11 @@ struct Header {
         bool has_tangent_buffer = false;
         bool has_emissive_texture = false;
         bool has_metallic_roughness = false;
+        // TODO We need to have matrix here
+        bool hasMatrix = false;
+        Matrix4X4Float matrix {};
+        bool hasRotation = false;
+        float rotation[4];  // Quaternion
     };
     SubMeshIndexType sub_mesh_count = 0;
     U32 total_vertex_count = 0;
