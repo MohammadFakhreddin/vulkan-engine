@@ -21,10 +21,10 @@ public:
     }
 
     void Init() override {
-        //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/free_zuk_3d_model/scene.gltf");
+        auto cpu_model = Importer::ImportMeshGLTF("../assets/models/free_zuk_3d_model/scene.gltf");
         /*auto cpu_model = Importer::ImportMeshGLTF("../assets/models/free_1975_porsche_911_930_turbo/scene.gltf");*/
         //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/kirpi_mrap__lowpoly__free_3d_model/scene.gltf");
-        auto cpu_model = Importer::ImportMeshGLTF("../assets/models/gunship/scene.gltf");
+        //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/gunship/scene.gltf");
         //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/kar98k_free_model/scene.gltf");
         MFA_ASSERT(cpu_model.mesh.valid());
         m_gpu_model = RF::CreateGpuModel(cpu_model);
@@ -151,11 +151,11 @@ public:
 
         ImGui::Begin("Light");
         ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("LightX", &m_light_position[0], -1000.0f, 1000.0f);
+        ImGui::SliderFloat("LightX", &m_light_position[0], -200.0f, 200.0f);
         ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("LightY", &m_light_position[1], -1000.0f, 1000.0f);
+        ImGui::SliderFloat("LightY", &m_light_position[1], -200.0f, 200.0f);
         ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("LightZ", &m_light_position[2], -1000.0f, 1000.0f);
+        ImGui::SliderFloat("LightZ", &m_light_position[2], -200.0f, 200.0f);
         ImGui::End();
     }
 

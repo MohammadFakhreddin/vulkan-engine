@@ -1,21 +1,23 @@
 struct VSIn{
     float3 position : POSITION0;
-    float2 baseColorTexCoord : TEXCOORD0;
-    float2 metallicRoughnessTexCoord : TEXCOORD1;
-    float2 normalTexCoord: TEXCOORD2;
-    float4 tangent: TEXCOORD3;
+    float2 baseColorUV : TEXCOORD0;
+    float2 metallicUV : TEXCOORD1;
+    float2 roughnessUV : TEXCOORD2;
+    float2 normalUV : TEXCOORD3;
+    float4 tangent: TEXCOORD4;
     float3 normal: NORMAL0;
 };
 
 struct VSOut{
     float4 position : SV_POSITION;
-    float2 baseColorTexCoord : TEXCOORD0;
-    float2 metallicRoughnessTexCoord : TEXCOORD1;
-    float2 normalTexCoord: TEXCOORD2;
-    float3 worldPos: POSITION0;
-    float3 worldNormal : NORMAL0;
+    float2 baseColorUV : TEXCOORD0;
+    float2 metallicUV : TEXCOORD1;
+    float2 roughnessUV : TEXCOORD2;
+    float2 normalUV : TEXCOORD2;
+	float3 worldNormal : NORMAL0;
     float3 worldTangent: TEXCOORD3;
     float3 worldBiTangent : TEXCOORD4;
+    float3 worldPos: POSITION0;
 };
 
 struct Transformation {
@@ -33,9 +35,10 @@ VSOut main(VSIn input) {
     float4 worldPos = mul(tBuffer.transformation, rotationResult);
 
     output.position = mul(tBuffer.projection, worldPos);
-    output.baseColorTexCoord = input.baseColorTexCoord;
-    output.metallicRoughnessTexCoord = input.metallicRoughnessTexCoord;
-    output.normalTexCoord = input.normalTexCoord;
+    output.baseColorUV = input.baseColorUV;
+    output.metallicUV = input.metallicUV;
+    output.roughnessUV = input.roughnessUV;
+    output.normalUV = input.normalUV;
     output.worldPos = worldPos.xyz;
 
 	float3 worldTangent = normalize(mul(tBuffer.rotation, input.tangent).xyz);

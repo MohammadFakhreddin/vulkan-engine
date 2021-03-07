@@ -1,27 +1,30 @@
 struct PSIn {
     float4 position : SV_POSITION;
-	float2 baseColorTexCoord : TEXCOORD0;
-    float2 metallicRoughnessTexCoord : TEXCOORD1;
-    float2 normalTexCoord: TEXCOORD2;
-    float3 worldPos: POSITION0;
-	float3 worldNormal : NORMAL0;
+    float2 baseColorUV : TEXCOORD0;
+    float2 metallicUV : TEXCOORD1;
+    float2 roughnessUV : TEXCOORD2;
+    float2 normalUV : TEXCOORD2;
+    float3 worldNormal : NORMAL0;
     float3 worldTangent: TEXCOORD3;
     float3 worldBiTangent : TEXCOORD4;
+    float3 worldPos: POSITION0;
 };
 
 struct PSOut{
     float4 color:SV_Target0;
 };
 
-
 sampler baseColorSampler : register(s1, space0);
 Texture2D baseColorTexture : register(t1, space0);
 
-sampler metallicRoughnessSampler : register(s2, space0);
-Texture2D metallicRoughnessTexture : register(t2, space0);
+sampler metallicSampler : register(s2, space0);
+Texture2D metallicTexture : register(t2, space0);
 
-sampler normalSampler : register(s3, space0);
-Texture2D normalTexture : register(t3, space0);
+sampler roughnessSampler : register(s3, space0);
+Texture2D roughnessTexture : register(t3, space0);
+
+sampler normalSampler : register(s4, space0);
+Texture2D normalTexture : register(t4, space0);
 
 struct LightViewBuffer {
     float3 lightPosition;
@@ -119,7 +122,7 @@ float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness, float
 // TODO Use this to compute normal correctly
 float3 calculateNormal(PSIn input)
 {
-	float3 tangentNormal = normalTexture.Sample(normalSampler, input.normalTexCoord).rgb * 2.0 - 1.0;
+	float3 tangentNormal = normalTexture.Sample(normalSampler, input.normalUV).rgb * 2.0 - 1.0;
 
 	float3x3 TBN = float3x3(input.worldTangent, input.worldBiTangent, input.worldNormal);
 	float3 pixelNormal = mul(TBN, tangentNormal);
@@ -128,13 +131,12 @@ float3 calculateNormal(PSIn input)
 }
 
 PSOut main(PSIn input) {
-	float3 baseColor = pow(baseColorTexture.Sample(baseColorSampler, input.baseColorTexCoord).rgb, 2.2f);
-    float4 metallicRoughness = metallicRoughnessTexture.Sample(metallicRoughnessSampler, input.metallicRoughnessTexCoord);
-    float metallic = metallicRoughness.b;
-    float roughness = max(metallicRoughness.g, 0.5);
+	float3 baseColor = pow(baseColorTexture.Sample(baseColorSampler, input.baseColorUV).rgb, 2.2f);
+    float metallic = metallicTexture.Sample(metallicSampler, input.metallicUV).r;
+    float roughness = roughnessTexture.Sample(roughnessSampler, input.roughnessUV).r;
 	float3 normal = calculateNormal(input);
-	// float4 worldNormal = normal;
-	float3 N = normalize(normal.xyz);
+	
+    float3 N = normalize(normal.xyz);
 	float3 V = normalize(lvBuff.camPos - input.worldPos);
     
     // Specular contribution
