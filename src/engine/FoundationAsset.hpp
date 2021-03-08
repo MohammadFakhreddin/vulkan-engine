@@ -258,7 +258,7 @@ struct Indices {
 #pragma warning (pop)
 }
 #pragma warning (push)
-#pragma warning (disable: 4200)             // Non-standard extension used: zero-sized array in struct
+#pragma warning (disable: 4200)                 // Non-standard extension used: zero-sized array in struct
 #pragma pack(push)
 struct Header {
     using SubMeshIndexType = U32;

@@ -15,12 +15,7 @@ namespace SG = MFA::ShapeGenerator;
 class PBR final : public MFA::Scene {
 public:
 
-    PBR() {
-        MFA::SceneSubSystem::RegisterNew(
-            this,
-            "PBR"
-        );
-    }
+    explicit PBR() : Scene("PBR") {}
 
     void Init() override {
 

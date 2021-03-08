@@ -13,12 +13,7 @@ namespace Asset = MFA::AssetSystem;
 class GLTFMeshViewer final : public MFA::Scene {
 public:
 
-    explicit GLTFMeshViewer() {
-        MFA::SceneSubSystem::RegisterNew(
-            this,
-            "GLTFMeshViewer"
-        );  
-    }
+    explicit GLTFMeshViewer() : Scene("GLTFMeshViewer") {}
 
     void Init() override {
         //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/free_zuk_3d_model/scene.gltf");

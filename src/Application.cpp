@@ -12,7 +12,7 @@ void Application::run() {
     static constexpr MFA::U16 SCREEN_HEIGHT = 1080;
     RF::Init({SCREEN_WIDTH, SCREEN_HEIGHT, "Cool app"});
     UI::Init();
-    SceneSubSystem::SetActiveScene("GLTFMeshViewer");
+    SceneSubSystem::SetActiveScene("TexturedSphere");
     SceneSubSystem::Init();
     {// Main loop
         bool quit = false;

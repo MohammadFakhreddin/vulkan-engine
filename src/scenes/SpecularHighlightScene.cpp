@@ -2,12 +2,7 @@
 
 class SpecularHighlightScene final : public MFA::Scene {
 public:
-    SpecularHighlightScene() {
-        MFA::SceneSubSystem::RegisterNew(
-            this,
-            "SpecularHighlight"
-        );
-    }
+    SpecularHighlightScene() : Scene("SpecularHighlight") {}
     void Init() override {}
     void Shutdown() override {}
     void OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override {}

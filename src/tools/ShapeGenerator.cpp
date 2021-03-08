@@ -11,8 +11,10 @@ namespace MFA::ShapeGenerator {
         std::vector<Vector3Float> positions {};
         std::vector<Vector2Float> uvs {};
         std::vector<Vector3Float> normals {};
-        std::vector<U16> indices;
+        std::vector<Vector4Float> tangents {};
 
+        std::vector<U16> indices;
+        
         const unsigned int X_SEGMENTS = 64;
         const unsigned int Y_SEGMENTS = 64;
 
@@ -25,13 +27,27 @@ namespace MFA::ShapeGenerator {
                 float xPos = std::cos(xSegment * 2.0f * Math::PiFloat) * std::sin(ySegment * Math::PiFloat);
                 float yPos = std::cos(ySegment * Math::PiFloat);
                 float zPos = std::sin(xSegment * 2.0f * Math::PiFloat) * std::sin(ySegment * Math::PiFloat);
+                //https://computergraphics.stackexchange.com/questions/5498/compute-sphere-tangent-for-normal-mapping?newreg=93cd3b167a714b24ba01001a16545482
 
                 positions.emplace_back(xPos, yPos, zPos);
                 uvs.emplace_back(xSegment, ySegment);
                 normals.emplace_back(xPos, yPos, zPos);
+
+                // As solution to compute tangent I decided to rotate normal by 90 degree (In any direction :)))
+                Matrix4X4Float rotationMatrix {};
+                rotationMatrix.setX(xPos);
+                rotationMatrix.setY(yPos);
+                rotationMatrix.setZ(zPos);
+                Matrix4X4Float::assignRotationXYZ(rotationMatrix, 0.0f, 0.0f, 90.0f);
+                tangents.emplace_back(Vector4Float {rotationMatrix.getX(), rotationMatrix.getY(), rotationMatrix.getZ()});
             }
         }
 
+        MFA_ASSERT(positions.empty() == false);
+        MFA_ASSERT(uvs.empty() == false);
+        MFA_ASSERT(normals.empty() == false);
+        MFA_ASSERT(tangents.empty() == false);
+        
         bool oddRow = false;
         for (unsigned int y = 0; y < Y_SEGMENTS; ++y)
         {
@@ -55,7 +71,6 @@ namespace MFA::ShapeGenerator {
         }
 
         U16 const indices_count = static_cast<U16>(indices.size());
-        
         U16 const vertices_count = static_cast<U16>(positions.size());
 
         auto const header_size = AssetSystem::MeshHeader::ComputeHeaderSize(1);
@@ -103,11 +118,10 @@ namespace MFA::ShapeGenerator {
             index < sub_mesh.vertex_count;
             ++index
         ) {
-            {// Positions
+            // Positions
                 static_assert(sizeof(mesh_vertices[index].position) == sizeof(positions[index].cells));
                 ::memcpy(mesh_vertices[index].position, positions[index].cells, sizeof(positions[index].cells));
-            }
-            {// UVs We assign uvs for all materials in case a texture get assigned to shape
+            // UVs We assign uvs for all materials in case a texture get assigned to shape
                 // Base color
                 static_assert(sizeof(mesh_vertices[index].base_color_uv) == sizeof(uvs[index].cells));
                 ::memcpy(mesh_vertices[index].base_color_uv, uvs[index].cells, sizeof(uvs[index].cells));
@@ -117,14 +131,15 @@ namespace MFA::ShapeGenerator {
                 // Emission
                 static_assert(sizeof(mesh_vertices[index].emission_uv) == sizeof(uvs[index].cells));
                 ::memcpy(mesh_vertices[index].emission_uv, uvs[index].cells, sizeof(uvs[index].cells));
-            }
-            {// Normals
+                // Normals
+                static_assert(sizeof(mesh_vertices[index].normal_map_uv) == sizeof(uvs[index].cells));
+                ::memcpy(mesh_vertices[index].normal_map_uv, uvs[index].cells, sizeof(uvs[index].cells));
+            // Normal buffer
                 ::memcpy(
                     mesh_vertices[index].normal_value, 
                     normals[index].cells, 
                     sizeof(normals[index].cells)
                 );
-            }
         }
 
         MFA_ASSERT(model_asset.mesh.valid());
