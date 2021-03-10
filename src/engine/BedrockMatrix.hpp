@@ -1,12 +1,19 @@
-#ifndef MATRIX_TEMPLATE_CLASS
-#define MATRIX_TEMPLATE_CLASS
+#pragma once
+
+#include "BedrockAssert.hpp"
+#include "BedrockMath.hpp"
 
 #include <cmath>
 #include <cstring>
 #include <iostream>
 
-#include "BedrockAssert.hpp"
-#include "BedrockMath.hpp"
+#ifdef far
+#undef far
+#endif
+
+#ifdef near
+#undef near
+#endif
 
 // Like GLM we can have union to access both linear and 2d or eve
 
@@ -37,16 +44,16 @@ public:
   //Use static generator methods instead
   _Matrix(const T& x, const T& y)
   {
-    assert(width == 2);
-    assert(height == 1);
+    MFA_ASSERT(width == 2);
+    MFA_ASSERT(height == 1);
     cells[0] = x;
     cells[1] = y;
   }
 
   _Matrix(const T& x, const T& y, const T& z)
   {
-    assert(width == 3);
-    assert(height == 1);
+    MFA_ASSERT(width == 3);
+    MFA_ASSERT(height == 1);
     cells[0] = x;
     cells[1] = y;
     cells[2] = z;
@@ -54,8 +61,8 @@ public:
 
   _Matrix(const T x, const T y, const T z, const T w)
   {
-    assert(width == 4);
-    assert(height == 1);
+    MFA_ASSERT(width == 4);
+    MFA_ASSERT(height == 1);
     cells[0] = x;
     cells[1] = y;
     cells[2] = z;
@@ -151,153 +158,153 @@ public:
   }
   
   const T& get(const unsigned int& x, const unsigned int& y) const {
-    assert(x < width);
-    assert(y < height);
+    MFA_ASSERT(x < width);
+    MFA_ASSERT(y < height);
     //return cells[x * height + y];
     return cells[y * width + x];
   }
 
 void set(const unsigned int& x, const unsigned int& y, const T& value) {
-    assert(x < width);
-    assert(y < height);
+    MFA_ASSERT(x < width);
+    MFA_ASSERT(y < height);
     //cells[x * height + y] = value;
     cells[y * width + x] = value;
   }
 
   const T& getX() const {
-    assert(width == 2 || width == 3 || width == 4);
-    assert(height == 1);
+    MFA_ASSERT(width == 2 || width == 3 || width == 4);
+    MFA_ASSERT(height == 1);
     return cells[0];
   }
 
   const T& getY() const {
-    assert(width == 2 || width == 3 || width == 4);
-    assert(height == 1);
+    MFA_ASSERT(width == 2 || width == 3 || width == 4);
+    MFA_ASSERT(height == 1);
     return cells[1];
   }
 
   const T& getZ() const {
-    assert(width == 3 || width == 4);
-    assert(height == 1);
+    MFA_ASSERT(width == 3 || width == 4);
+    MFA_ASSERT(height == 1);
     return cells[2];
   }
 
   const T& getW() const {
-    assert(width == 4);
-    assert(height == 1);
+    MFA_ASSERT(width == 4);
+    MFA_ASSERT(height == 1);
     return cells[3];
   }
 
   //TODO Define separate classes for each matrix
   const T& getR() const {
-    assert(width == 3 || width == 4);
-    assert(height == 1);
+    MFA_ASSERT(width == 3 || width == 4);
+    MFA_ASSERT(height == 1);
     return cells[0];
   }
 
   const T& getG() const {
-    assert(width == 3 || width == 4);
-    assert(height == 1);
+    MFA_ASSERT(width == 3 || width == 4);
+    MFA_ASSERT(height == 1);
     return cells[1];
   }
 
   const T& getB() const {
-    assert(width == 3 || width == 4);
-    assert(height == 1);
+    MFA_ASSERT(width == 3 || width == 4);
+    MFA_ASSERT(height == 1);
     return cells[2];
   }
 
   void setX(const T& value) {
-    assert(width == 2 || width == 3 || width == 4);
-    assert(height == 1);
+    MFA_ASSERT(width == 2 || width == 3 || width == 4);
+    MFA_ASSERT(height == 1);
     cells[0] = value;
   }
 
   void setY(const T& value) {
-    assert(width == 2 || width == 3 || width == 4);
-    assert(height == 1);
+    MFA_ASSERT(width == 2 || width == 3 || width == 4);
+    MFA_ASSERT(height == 1);
     cells[1] = value;
   }
 
   void setZ(const T& value) {
-    assert(width == 3 || width == 4);
-    assert(height == 1);
+    MFA_ASSERT(width == 3 || width == 4);
+    MFA_ASSERT(height == 1);
     cells[2] = value;
-    assert(std::isnan(cells[2])==false);
+    MFA_ASSERT(std::isnan(cells[2])==false);
   }
 
   void setW(const T& value) {
-    assert(width == 4);
-    assert(height == 1);
+    MFA_ASSERT(width == 4);
+    MFA_ASSERT(height == 1);
     cells[3] = value;
-    assert(std::isnan(cells[3])==false);
+    MFA_ASSERT(std::isnan(cells[3])==false);
   }
 
   void setR(const T& value) {
-    assert(width == 3 || width == 4);
-    assert(height == 1);
+    MFA_ASSERT(width == 3 || width == 4);
+    MFA_ASSERT(height == 1);
     cells[0] = value;
-    assert(std::isnan(cells[0])==false);
+    MFA_ASSERT(std::isnan(cells[0])==false);
   }
 
   void setG(const T& value) {
-    assert(width == 3 || width == 4);
-    assert(height == 1);
+    MFA_ASSERT(width == 3 || width == 4);
+    MFA_ASSERT(height == 1);
     cells[1] = value;
-    assert(std::isnan(cells[1])==false);
+    MFA_ASSERT(std::isnan(cells[1])==false);
   }
 
   void setB(const T& value) {
-    assert(width == 3 || width == 4);
-    assert(height == 1);
+    MFA_ASSERT(width == 3 || width == 4);
+    MFA_ASSERT(height == 1);
     cells[2] = value;
-    assert(std::isnan(cells[2])==false);
+    MFA_ASSERT(std::isnan(cells[2])==false);
   }
 
   const T& getDirect(const unsigned int& index) const {
-    assert(index < matrixSize);
+    MFA_ASSERT(index < matrixSize);
     return cells[index];
   }
 
   void setDirect(const unsigned int& index, const T& value) {
-    assert(index < matrixSize);
+    MFA_ASSERT(index < matrixSize);
     cells[index] = value;
   }
 
   template<typename A, typename B>
   void setXY(const A& x, const B& y) {
-    assert(width >= 2);
-    assert(height == 1);
+    MFA_ASSERT(width >= 2);
+    MFA_ASSERT(height == 1);
     cells[0] = T(x);
     cells[1] = T(y);
-    assert(std::isnan(cells[0])==false);
-    assert(std::isnan(cells[1])==false);
+    MFA_ASSERT(std::isnan(cells[0])==false);
+    MFA_ASSERT(std::isnan(cells[1])==false);
   }
 
   template<typename A, typename B,typename C>
   void setXYZ(const A& x, const B& y,const C& z) {
-    assert(width >= 3);
-    assert(height == 1);
+    MFA_ASSERT(width >= 3);
+    MFA_ASSERT(height == 1);
     cells[0] = T(x);
     cells[1] = T(y);
     cells[2] = T(z);
-    assert(std::isnan(cells[0])==false);
-    assert(std::isnan(cells[1])==false);
-    assert(std::isnan(cells[2])==false);
+    MFA_ASSERT(std::isnan(cells[0])==false);
+    MFA_ASSERT(std::isnan(cells[1])==false);
+    MFA_ASSERT(std::isnan(cells[2])==false);
   }
 
   template<typename A, typename B, typename C,typename D>
   void setXYZW(const A& x, const B& y, const C& z,const D& w) {
-    assert(width == 4);
-    assert(height == 1);
+    MFA_ASSERT(width == 4);
+    MFA_ASSERT(height == 1);
     cells[0] = T(x);
     cells[1] = T(y);
     cells[2] = T(z);
     cells[3] = T(w);
-    assert(std::isnan(cells[0])==false);
-    assert(std::isnan(cells[1])==false);
-    assert(std::isnan(cells[2])==false);
-    assert(std::isnan(cells[3])==false);
+    MFA_ASSERT(std::isnan(cells[0])==false);
+    MFA_ASSERT(std::isnan(cells[1])==false);
+    MFA_ASSERT(std::isnan(cells[2])==false);
+    MFA_ASSERT(std::isnan(cells[3])==false);
   }
 
   template<typename A>
@@ -324,24 +331,24 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     const float near,
     const float far
   ) {
-    assert(far != near);
-    assert(right != left);
-    assert(bottom != top);
+    MFA_ASSERT(far != near);
+    MFA_ASSERT(right != left);
+    MFA_ASSERT(bottom != top);
     matrix.set(0, 0, 2 / (right - left));
-    assert(0 == matrix.get(0, 1));
-    assert(0 == matrix.get(0, 2));
+    MFA_ASSERT(0 == matrix.get(0, 1));
+    MFA_ASSERT(0 == matrix.get(0, 2));
     matrix.set(0, 3, right/(left - right));
-    assert(matrix.get(1, 0) == 0);
+    MFA_ASSERT(matrix.get(1, 0) == 0);
     matrix.set(1, 1, 2 / (top - bottom));
-    assert(0 == matrix.get(1, 2));
+    MFA_ASSERT(0 == matrix.get(1, 2));
     matrix.set(1, 3, top/(bottom - top));
-    assert(0 == matrix.get(2, 0));
-    assert(0 == matrix.get(2, 1));
+    MFA_ASSERT(0 == matrix.get(2, 0));
+    MFA_ASSERT(0 == matrix.get(2, 1));
     matrix.set(2, 2, 1 / (near - far));
     matrix.set(2, 3, far/(far - near));
-    assert(0 == matrix.get(3,0));
-    assert(0 == matrix.get(3,1));
-    assert(0 == matrix.get(3,2));
+    MFA_ASSERT(0 == matrix.get(3,0));
+    MFA_ASSERT(0 == matrix.get(3,1));
+    MFA_ASSERT(0 == matrix.get(3,2));
     matrix.set(3,3,1);
   }
   // Broken
@@ -354,25 +361,24 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     float const near,
     float const far
   ) {
-    // TODO Fix this
-    assert(far != near);
-    assert(right != left);
-    assert(bottom != top);
+    MFA_ASSERT(far != near);
+    MFA_ASSERT(right != left);
+    MFA_ASSERT(bottom != top);
     matrix.set(0, 0, 2 / (right - left));
-    assert(0 == matrix.get(0, 1));
-    assert(0 == matrix.get(0, 2));
+    MFA_ASSERT(0 == matrix.get(0, 1));
+    MFA_ASSERT(0 == matrix.get(0, 2));
     matrix.set(0, 3, right/(left - right));
-    assert(matrix.get(1, 0) == 0);
+    MFA_ASSERT(matrix.get(1, 0) == 0);
     matrix.set(1, 1, 2 / (top - bottom));
-    assert(0 == matrix.get(1, 2));
+    MFA_ASSERT(0 == matrix.get(1, 2));
     matrix.set(1, 3, top/(bottom - top));
-    assert(0 == matrix.get(2, 0));
-    assert(0 == matrix.get(2, 1));
+    MFA_ASSERT(0 == matrix.get(2, 0));
+    MFA_ASSERT(0 == matrix.get(2, 1));
     matrix.set(2, 2, 1 / (near - far));
     matrix.set(2, 3, far/(far - near));
-    assert(0 == matrix.get(3,0));
-    assert(0 == matrix.get(3,1));
-    assert(0 == matrix.get(3,2));
+    MFA_ASSERT(0 == matrix.get(3,0));
+    MFA_ASSERT(0 == matrix.get(3,1));
+    MFA_ASSERT(0 == matrix.get(3,2));
     matrix.set(3,3,1);
   }
   // Working correctly
@@ -398,21 +404,21 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     const float& value
   ) {
     matrix.set(0, 0, matrix.get(0, 0) + value);
-    assert(matrix.get(0, 1) == 0);
-    assert(matrix.get(0, 2) == 0);
-    assert(matrix.get(1, 0) == 0);
+    MFA_ASSERT(matrix.get(0, 1) == 0);
+    MFA_ASSERT(matrix.get(0, 2) == 0);
+    MFA_ASSERT(matrix.get(1, 0) == 0);
     matrix.set(1, 1, matrix.get(1, 1) + value);
-    assert(matrix.get(1, 2) + value);
-    assert(matrix.get(2, 0) + value);
-    assert(matrix.get(2, 1) + value);
+    MFA_ASSERT(matrix.get(1, 2) + value);
+    MFA_ASSERT(matrix.get(2, 0) + value);
+    MFA_ASSERT(matrix.get(2, 1) + value);
     matrix.set(2, 2, matrix.get(2, 2) + value);
-    assert(matrix.get(0, 3) == 0);
-    assert(matrix.get(1, 3) == 0);
-    assert(matrix.get(2, 3) == 0);
+    MFA_ASSERT(matrix.get(0, 3) == 0);
+    MFA_ASSERT(matrix.get(1, 3) == 0);
+    MFA_ASSERT(matrix.get(2, 3) == 0);
     matrix.set(3, 3, 1);
-    assert(matrix.get(3, 0) == 0);
-    assert(matrix.get(3, 1) == 0);
-    assert(matrix.get(3, 2) == 0);
+    MFA_ASSERT(matrix.get(3, 0) == 0);
+    MFA_ASSERT(matrix.get(3, 1) == 0);
+    MFA_ASSERT(matrix.get(3, 2) == 0);
   }
 
   static void assignTransformation(
@@ -422,78 +428,78 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     const T& z
   ) {
     matrix.set(0, 0, T(1));
-    assert(matrix.get(0, 1) == 0);
-    assert(matrix.get(0, 2) == 0);
+    MFA_ASSERT(matrix.get(0, 1) == 0);
+    MFA_ASSERT(matrix.get(0, 2) == 0);
     matrix.set(0, 3, x);
-    assert(matrix.get(1, 0) == 0);
+    MFA_ASSERT(matrix.get(1, 0) == 0);
     matrix.set(1, 1, 1);
-    assert(matrix.get(1, 2) == 0);
+    MFA_ASSERT(matrix.get(1, 2) == 0);
     matrix.set(1, 3, y);
-    assert(matrix.get(2, 0) == 0);
-    assert(matrix.get(2, 1) == 0);
+    MFA_ASSERT(matrix.get(2, 0) == 0);
+    MFA_ASSERT(matrix.get(2, 1) == 0);
     matrix.set(2, 2, 1);
     matrix.set(2, 3, z);
-    assert(matrix.get(3, 0) == 0);
-    assert(matrix.get(3, 1) == 0);
-    assert(matrix.get(3, 2) == 0);
+    MFA_ASSERT(matrix.get(3, 0) == 0);
+    MFA_ASSERT(matrix.get(3, 1) == 0);
+    MFA_ASSERT(matrix.get(3, 2) == 0);
     matrix.set(3, 3, T(1));
   }
 
   // https://www.brainvoyager.com/bv/doc/UsersGuide/CoordsAndTransforms/SpatialTransformationMatrices.html
   static void assignRotationX(_Matrix<T, 4, 4>& matrix, const T& degree) {
     matrix.set(0, 0, 1);
-    assert(matrix.get(0, 1) == 0);
-    assert(matrix.get(0, 2) == 0);
-    assert(matrix.get(1, 0) == 0);
+    MFA_ASSERT(matrix.get(0, 1) == 0);
+    MFA_ASSERT(matrix.get(0, 2) == 0);
+    MFA_ASSERT(matrix.get(1, 0) == 0);
     matrix.set(1, 1, cosf(degree));
     matrix.set(1, 2, sinf(degree));
-    assert(matrix.get(2, 0) == 0);
+    MFA_ASSERT(matrix.get(2, 0) == 0);
     matrix.set(2, 1, -sinf(degree));
     matrix.set(2, 2, cosf(degree));
-    assert(matrix.get(3, 0) == 0.0f);
-    assert(matrix.get(3, 1) == 0.0f);
-    assert(matrix.get(3, 2) == 0.0f);
-    assert(matrix.get(0, 3) == 0.0f);
-    assert(matrix.get(1, 3) == 0.0f);
-    assert(matrix.get(2, 3) == 0.0f);
+    MFA_ASSERT(matrix.get(3, 0) == 0.0f);
+    MFA_ASSERT(matrix.get(3, 1) == 0.0f);
+    MFA_ASSERT(matrix.get(3, 2) == 0.0f);
+    MFA_ASSERT(matrix.get(0, 3) == 0.0f);
+    MFA_ASSERT(matrix.get(1, 3) == 0.0f);
+    MFA_ASSERT(matrix.get(2, 3) == 0.0f);
     matrix.set(3, 3, 1.0f);
   }
 
   static void assignRotationY(_Matrix<T, 4, 4>& matrix, const T& degree) {
     matrix.set(0, 0, cosf(degree));
-    assert(matrix.get(0, 1) == 0);
+    MFA_ASSERT(matrix.get(0, 1) == 0);
     matrix.set(0, 2, sinf(degree));
-    assert(matrix.get(1, 0) == 0);
+    MFA_ASSERT(matrix.get(1, 0) == 0);
     matrix.set(1, 1, 1);
-    assert(matrix.get(1, 2) == 0);
+    MFA_ASSERT(matrix.get(1, 2) == 0);
     matrix.set(2, 0, -sinf(degree));
-    assert(matrix.get(2, 1) == 0);
+    MFA_ASSERT(matrix.get(2, 1) == 0);
     matrix.set(2, 2, cosf(degree));
-    assert(matrix.get(3, 0) == 0.0f);
-    assert(matrix.get(3, 1) == 0.0f);
-    assert(matrix.get(3, 2) == 0.0f);
-    assert(matrix.get(0, 3) == 0.0f);
-    assert(matrix.get(1, 3) == 0.0f);
-    assert(matrix.get(2, 3) == 0.0f);
+    MFA_ASSERT(matrix.get(3, 0) == 0.0f);
+    MFA_ASSERT(matrix.get(3, 1) == 0.0f);
+    MFA_ASSERT(matrix.get(3, 2) == 0.0f);
+    MFA_ASSERT(matrix.get(0, 3) == 0.0f);
+    MFA_ASSERT(matrix.get(1, 3) == 0.0f);
+    MFA_ASSERT(matrix.get(2, 3) == 0.0f);
     matrix.set(3, 3, 1.0f);
   }
 
   static void assignRotationZ(_Matrix<T, 4, 4>& matrix, const T& degree) {
     matrix.set(0, 0, cosf(degree));
     matrix.set(0, 1, -sinf(degree));
-    assert(matrix.get(0, 2) == 0);
+    MFA_ASSERT(matrix.get(0, 2) == 0);
     matrix.set(1, 0, sinf(degree));
     matrix.set(1, 1, cosf(degree));
-    assert(matrix.get(1, 2) == 0);
-    assert(matrix.get(2, 0) == 0);
-    assert(matrix.get(2, 1) == 0);
+    MFA_ASSERT(matrix.get(1, 2) == 0);
+    MFA_ASSERT(matrix.get(2, 0) == 0);
+    MFA_ASSERT(matrix.get(2, 1) == 0);
     matrix.set(2, 2, 1);
-    assert(matrix.get(3, 0) == 0.0f);
-    assert(matrix.get(3, 1) == 0.0f);
-    assert(matrix.get(3, 2) == 0.0f);
-    assert(matrix.get(0, 3) == 0.0f);
-    assert(matrix.get(1, 3) == 0.0f);
-    assert(matrix.get(2, 3) == 0.0f);
+    MFA_ASSERT(matrix.get(3, 0) == 0.0f);
+    MFA_ASSERT(matrix.get(3, 1) == 0.0f);
+    MFA_ASSERT(matrix.get(3, 2) == 0.0f);
+    MFA_ASSERT(matrix.get(0, 3) == 0.0f);
+    MFA_ASSERT(matrix.get(1, 3) == 0.0f);
+    MFA_ASSERT(matrix.get(2, 3) == 0.0f);
     matrix.set(3, 3, 1.0f);
   }
 
@@ -512,49 +518,49 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     matrix.set(2, 0, (cosf(xDegree) * sinf(yDegree) * cosf(zDegree)) + (sinf(xDegree) * sinf(zDegree)));
     matrix.set(2, 1, (cosf(xDegree) * sinf(yDegree) * (-1 * sinf(zDegree))) + (sinf(xDegree) * cosf(zDegree)));
     matrix.set(2, 2, cosf(xDegree) * cosf(yDegree));
-    assert(matrix.get(3, 0) == 0.0f);
-    assert(matrix.get(3, 1) == 0.0f);
-    assert(matrix.get(3, 2) == 0.0f);
-    assert(matrix.get(0, 3) == 0.0f);
-    assert(matrix.get(1, 3) == 0.0f);
-    assert(matrix.get(2, 3) == 0.0f);
+    MFA_ASSERT(matrix.get(3, 0) == 0.0f);
+    MFA_ASSERT(matrix.get(3, 1) == 0.0f);
+    MFA_ASSERT(matrix.get(3, 2) == 0.0f);
+    MFA_ASSERT(matrix.get(0, 3) == 0.0f);
+    MFA_ASSERT(matrix.get(1, 3) == 0.0f);
+    MFA_ASSERT(matrix.get(2, 3) == 0.0f);
     matrix.set(3, 3, 1.0f);
   }
 
   // https://www.brainvoyager.com/bv/doc/UsersGuide/CoordsAndTransforms/SpatialTransformationMatrices.html
   static void assignRotationX(_Matrix<T, 3, 3>& matrix, const T& degree) {
     matrix.set(0, 0, 1);
-    assert(matrix.get(0, 1) == 0);
-    assert(matrix.get(0, 2) == 0);
-    assert(matrix.get(1, 0) == 0);
+    MFA_ASSERT(matrix.get(0, 1) == 0);
+    MFA_ASSERT(matrix.get(0, 2) == 0);
+    MFA_ASSERT(matrix.get(1, 0) == 0);
     matrix.set(1, 1, cosf(degree));
     matrix.set(1, 2, sinf(degree));
-    assert(matrix.get(2, 0) == 0);
+    MFA_ASSERT(matrix.get(2, 0) == 0);
     matrix.set(2, 1, -sinf(degree));
     matrix.set(2, 2, cosf(degree));
   }
 
   static void assignRotationY(_Matrix<T, 3, 3>& matrix, const T& degree) {
     matrix.set(0, 0, cosf(degree));
-    assert(matrix.get(0, 1) == 0);
+    MFA_ASSERT(matrix.get(0, 1) == 0);
     matrix.set(0, 2, sinf(degree));
-    assert(matrix.get(1, 0) == 0);
+    MFA_ASSERT(matrix.get(1, 0) == 0);
     matrix.set(1, 1, 1);
-    assert(matrix.get(1, 2) == 0);
+    MFA_ASSERT(matrix.get(1, 2) == 0);
     matrix.set(2, 0, -sinf(degree));
-    assert(matrix.get(2, 1) == 0);
+    MFA_ASSERT(matrix.get(2, 1) == 0);
     matrix.set(2, 2, cosf(degree));
   }
 
   static void assignRotationZ(_Matrix<T,3,3>& matrix, const T& degree) {
     matrix.set(0, 0, cosf(degree));
     matrix.set(0, 1, -sinf(degree));
-    assert(matrix.get(0, 2) == 0);
+    MFA_ASSERT(matrix.get(0, 2) == 0);
     matrix.set(1, 0, sinf(degree));
     matrix.set(1, 1, cosf(degree));
-    assert(matrix.get(1, 2) == 0);
-    assert(matrix.get(2, 0) == 0);
-    assert(matrix.get(2, 1) == 0);
+    MFA_ASSERT(matrix.get(1, 2) == 0);
+    MFA_ASSERT(matrix.get(2, 0) == 0);
+    MFA_ASSERT(matrix.get(2, 1) == 0);
     matrix.set(2, 2, 1);
   }
 
@@ -580,13 +586,13 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     const float& value
   ) {
     matrix.set(0, 0, matrix.get(0, 0) + value);
-    assert(matrix.get(0, 1) == 0);
-    assert(matrix.get(0, 2) == 0);
-    assert(matrix.get(1, 0) == 0);
+    MFA_ASSERT(matrix.get(0, 1) == 0);
+    MFA_ASSERT(matrix.get(0, 2) == 0);
+    MFA_ASSERT(matrix.get(1, 0) == 0);
     matrix.set(1, 1, matrix.get(1, 1) + value);
-    assert(matrix.get(1, 2) + value);
-    assert(matrix.get(2, 0) + value);
-    assert(matrix.get(2, 1) + value);
+    MFA_ASSERT(matrix.get(1, 2) + value);
+    MFA_ASSERT(matrix.get(2, 0) + value);
+    MFA_ASSERT(matrix.get(2, 1) + value);
     matrix.set(2, 2, matrix.get(2, 2) + value);
   }
 
@@ -700,10 +706,10 @@ private:
     const unsigned int& rhsWidth,
     const unsigned int& rhsHeight
   ) const {
-    assert(rhsWidth == 3 || rhsWidth == 4);
-    assert(rhsHeight == 1);
-    assert(width == 3 || width == 4);
-    assert(height == 1);
+    MFA_ASSERT(rhsWidth == 3 || rhsWidth == 4);
+    MFA_ASSERT(rhsHeight == 1);
+    MFA_ASSERT(width == 3 || width == 4);
+    MFA_ASSERT(height == 1);
     return
       T((double(cells[0]) * double(rhsCells[0])) +
         (double(cells[1]) * double(rhsCells[1])) +
@@ -716,12 +722,12 @@ private:
     const A* mat1Cells, const unsigned int& mat1Width, const unsigned int& mat1Height,
     const B* mat2Cells, const unsigned int& mat2Width, const unsigned int& mat2Height
   ) {
-    assert(mat1Width == 3 || mat1Width == 4);
-    assert(mat1Height == 1);
-    assert(mat2Width == 3 || mat2Width == 4);
-    assert(mat2Height == 1);
-    assert(width == 3 || width == 4);
-    assert(height == 1);
+    MFA_ASSERT(mat1Width == 3 || mat1Width == 4);
+    MFA_ASSERT(mat1Height == 1);
+    MFA_ASSERT(mat2Width == 3 || mat2Width == 4);
+    MFA_ASSERT(mat2Height == 1);
+    MFA_ASSERT(width == 3 || width == 4);
+    MFA_ASSERT(height == 1);
     this->set(0, 0,
       (T(mat1Cells[1]) * T(mat2Cells[2]))
       - (T(mat1Cells[2]) * T(mat2Cells[1]))
@@ -738,10 +744,10 @@ private:
 
   template<typename A>
   void _hat(A* rhsCells, const unsigned int& rhsWidth, const unsigned int& rhsHeight) const {
-    assert(rhsWidth == 3 || rhsWidth == 4);
-    assert(rhsHeight == 1);
-    assert(width == 3 || width == 4);
-    assert(height == 1);
+    MFA_ASSERT(rhsWidth == 3 || rhsWidth == 4);
+    MFA_ASSERT(rhsHeight == 1);
+    MFA_ASSERT(width == 3 || width == 4);
+    MFA_ASSERT(height == 1);
     const A vectorSize = size<A>();
     for (unsigned short i = 0; i < 3; i++) {
       rhsCells[i] = A(cells[i]) / vectorSize;
@@ -795,5 +801,3 @@ using Vector4Double = _Matrix<double, 4, 1>;
 
 
 }
-
-#endif

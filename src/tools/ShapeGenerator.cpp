@@ -35,11 +35,19 @@ namespace MFA::ShapeGenerator {
 
                 // As solution to compute tangent I decided to rotate normal by 90 degree (In any direction :)))
                 Matrix4X4Float rotationMatrix {};
-                rotationMatrix.setX(xPos);
-                rotationMatrix.setY(yPos);
-                rotationMatrix.setZ(zPos);
                 Matrix4X4Float::assignRotationXYZ(rotationMatrix, 0.0f, 0.0f, 90.0f);
-                tangents.emplace_back(Vector4Float {rotationMatrix.getX(), rotationMatrix.getY(), rotationMatrix.getZ()});
+
+                Matrix4X1Float tangentMatrix {};
+                tangentMatrix.setX(xPos);
+                tangentMatrix.setY(yPos);
+                tangentMatrix.setZ(zPos);
+
+                tangentMatrix.multiply(rotationMatrix);
+
+                tangents.emplace_back(Vector4Float {});
+                tangents.back().setX(tangentMatrix.getX());
+                tangents.back().setY(tangentMatrix.getY());
+                tangents.back().setZ(tangentMatrix.getZ());
             }
         }
 
@@ -119,8 +127,8 @@ namespace MFA::ShapeGenerator {
             ++index
         ) {
             // Positions
-                static_assert(sizeof(mesh_vertices[index].position) == sizeof(positions[index].cells));
-                ::memcpy(mesh_vertices[index].position, positions[index].cells, sizeof(positions[index].cells));
+            static_assert(sizeof(mesh_vertices[index].position) == sizeof(positions[index].cells));
+            ::memcpy(mesh_vertices[index].position, positions[index].cells, sizeof(positions[index].cells));
             // UVs We assign uvs for all materials in case a texture get assigned to shape
                 // Base color
                 static_assert(sizeof(mesh_vertices[index].base_color_uv) == sizeof(uvs[index].cells));
@@ -135,11 +143,14 @@ namespace MFA::ShapeGenerator {
                 static_assert(sizeof(mesh_vertices[index].normal_map_uv) == sizeof(uvs[index].cells));
                 ::memcpy(mesh_vertices[index].normal_map_uv, uvs[index].cells, sizeof(uvs[index].cells));
             // Normal buffer
-                ::memcpy(
-                    mesh_vertices[index].normal_value, 
-                    normals[index].cells, 
-                    sizeof(normals[index].cells)
-                );
+            ::memcpy(
+                mesh_vertices[index].normal_value, 
+                normals[index].cells, 
+                sizeof(normals[index].cells)
+            );
+            // Tangent buffer
+            static_assert(sizeof(mesh_vertices[index].tangent_value) == sizeof(tangents[index].cells));
+            ::memcpy(mesh_vertices[index].tangent_value, tangents[index].cells, sizeof(tangents[index].cells));
         }
 
         MFA_ASSERT(model_asset.mesh.valid());

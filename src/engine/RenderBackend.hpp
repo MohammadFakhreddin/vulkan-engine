@@ -3,17 +3,23 @@
 #include "BedrockCommon.hpp"
 #include "FoundationAsset.hpp"
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_vulkan.h>
-#include <vulkan/vulkan.h>
 #include <functional>
+
+#include <vulkan/vulkan.h>
+
+#ifdef CreateWindow
+#undef CreateWindow
+#endif
+
+struct SDL_Window;
+
 // TODO Write description for all functions for learning purpose
 // Note: Not all functions can be called from outside
 // TODO Remove functions that are not usable from outside
 namespace MFA::RenderBackend {
 
-using ScreenWidth = Platforms::ScreenSizeType;
-using ScreenHeight = Platforms::ScreenSizeType;
+using ScreenWidth = Platforms::ScreenSize;
+using ScreenHeight = Platforms::ScreenSize;
 using CpuTexture = AssetSystem::TextureAsset;
 using CpuShader = AssetSystem::ShaderAsset;
 

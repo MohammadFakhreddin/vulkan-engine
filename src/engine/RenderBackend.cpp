@@ -1,13 +1,16 @@
 #include "RenderBackend.hpp"
 
-#include <vector>
-#include <cstring>
-
 #include "BedrockAssert.hpp"
 #include "BedrockLog.hpp"
 #include "BedrockPlatforms.hpp"
 #include "BedrockMath.hpp"
 #include "BedrockMemory.hpp"
+
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_vulkan.h>
+
+#include <vector>
+#include <cstring>
 
 namespace MFA::RenderBackend {
 

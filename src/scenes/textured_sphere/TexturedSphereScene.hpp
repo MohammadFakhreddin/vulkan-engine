@@ -1,21 +1,14 @@
-#include "engine/BedrockMatrix.hpp"
+#pragma once
+
 #include "engine/Scene.hpp"
 #include "engine/RenderFrontend.hpp"
-#include "libs/imgui/imgui.h"
-#include "engine/DrawableObject.hpp"
-#include "tools/Importer.hpp"
 
 namespace RF = MFA::RenderFrontend;
 namespace RB = MFA::RenderBackend;
-namespace Importer = MFA::Importer;
 namespace Asset = MFA::AssetSystem;
 
 class TexturedSphereScene final : public MFA::Scene {
 public:
-
-    explicit TexturedSphereScene()
-        : Scene("TexturedSphere")
-    {}
 
     void Init() override {
         
@@ -35,5 +28,3 @@ public:
 
 private:
 };
-
-TexturedSphereScene instance {};

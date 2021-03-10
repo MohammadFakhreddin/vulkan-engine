@@ -4,10 +4,12 @@
 #include "../tools/Importer.hpp"
 #include "libs/imgui/imgui.h"
 
+#include <SDL2/SDL.h>
+
 namespace MFA::UISystem {
 
-namespace RB = MFA::RenderBackend;
-namespace Importer = MFA::Importer;
+namespace RB = RenderBackend;
+namespace Importer = Importer;
 
 //-----------------------------------------------------------------------------
 // SHADERS

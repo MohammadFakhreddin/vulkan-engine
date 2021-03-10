@@ -1,11 +1,11 @@
 #pragma once
 
+#include "engine/BedrockPlatforms.hpp"
+#include "engine/BedrockLog.hpp"
+
 #include <cassert>
 #include <stdexcept>
 #include <cstring>
-
-#include "engine/BedrockPlatforms.hpp"
-#include "engine/BedrockLog.hpp"
 
 #ifdef MFA_DEBUG
 #define MFA_ASSERT(condition)           assert(condition); _assume(condition)

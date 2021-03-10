@@ -7,13 +7,24 @@ namespace MFA {
 
 class Scene;
 
-namespace SceneSubSystem {
-void Init();
-void Shutdown();
-void RegisterNew(Scene * scene, char const * name);
-void SetActiveScene(char const * name);
-void OnNewFrame(U32 delta_time);
-}
+class SceneSubSystem {
+public:
+    void Init();
+    void Shutdown();
+    void RegisterNew(Scene * scene, char const * name);
+    void SetActiveScene(char const * name);
+    void OnNewFrame(U32 deltaTime);
+private:
+
+    struct RegisteredScene {
+        Scene * scene = nullptr;
+        std::string name;        
+    };
+    
+    std::vector<RegisteredScene> mRegisteredScenes;
+    I32 mActiveScene = -1;
+    I32 mLastActiveScene = -1;
+};
 
 class Scene {
 public:
@@ -22,13 +33,6 @@ public:
     virtual void OnUI(U32 delta_time, RenderFrontend::DrawPass & draw_pass) = 0;
     virtual void Init() = 0;
     virtual void Shutdown() = 0;
-protected:
-    explicit Scene(char const * sceneName) {
-        SceneSubSystem::RegisterNew(
-            this,
-            sceneName
-        );
-    }
 };
 
 

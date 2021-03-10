@@ -85,10 +85,10 @@ enum class Platform {
     #error Define exactly one of _DEBUG and NDEBUG
 #endif
 
-using ScreenSizeType = uint32_t;
+using ScreenSize = uint32_t;
 struct ScreenInfo {
-  ScreenSizeType screen_width = 0;
-  ScreenSizeType screen_height = 0;
+  ScreenSize screen_width = 0;
+  ScreenSize screen_height = 0;
   bool valid = false;
 };
 ScreenInfo ComputeScreenSize();

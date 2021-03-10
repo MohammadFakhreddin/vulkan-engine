@@ -7,6 +7,8 @@
 #include "BedrockLog.hpp"
 #include "../libs/imgui/imgui.h"
 
+#include <SDL2/SDL.h>
+
 #include <string>
 
 namespace MFA::RenderFrontend {

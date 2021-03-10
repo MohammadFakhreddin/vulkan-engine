@@ -1,19 +1,46 @@
 #include "Application.hpp"
 
+#include "scenes/gltf_mesh_viewer/GLTFMeshViewerScene.hpp"
+#include "scenes/pbr_scene/PBRScene.hpp"
+#include "scenes/SpecularHighlightScene.hpp"
+#include "scenes/textured_sphere/TexturedSphereScene.hpp"
+#include "scenes/TextureViewerScene.hpp"
 #include "engine/RenderFrontend.hpp"
 #include "engine/UISystem.hpp"
 #include "engine/Scene.hpp"
 
+#include <SDL2/SDL.h>
+
+Application::Application()
+    : mGltfMeshViewerScene(std::make_unique<GLTFMeshViewerScene>())
+    , mSpecularHighlightScene(std::make_unique<SpecularHighlightScene>())
+    , mPbrScene(std::make_unique<PBRScene>())
+    , mTexturedSphereScene(std::make_unique<TexturedSphereScene>())
+    , mTextureViewerScene(std::make_unique<TextureViewerScene>())
+{}
+
+Application::~Application() {}
+
+
 void Application::run() {
     namespace RF = MFA::RenderFrontend;
     namespace UI = MFA::UISystem;
-    namespace SceneSubSystem = MFA::SceneSubSystem;
+    
     static constexpr MFA::U16 SCREEN_WIDTH = 1920;
     static constexpr MFA::U16 SCREEN_HEIGHT = 1080;
+
     RF::Init({SCREEN_WIDTH, SCREEN_HEIGHT, "Cool app"});
     UI::Init();
-    SceneSubSystem::SetActiveScene("TexturedSphere");
-    SceneSubSystem::Init();
+
+    mSceneSubSystem.Init();
+
+    mSceneSubSystem.RegisterNew(mGltfMeshViewerScene.get(), "GLTFMeshViewerScene");
+    mSceneSubSystem.RegisterNew(mSpecularHighlightScene.get(), "SpecularHighlightScene");
+    mSceneSubSystem.RegisterNew(mPbrScene.get(), "PBRScene");
+    mSceneSubSystem.RegisterNew(mTextureViewerScene.get(), "TextureViewerScene");
+    mSceneSubSystem.RegisterNew(mTexturedSphereScene.get(), "TextureSphereScene");
+
+    mSceneSubSystem.SetActiveScene("TextureSphereScene");
     {// Main loop
         bool quit = false;
         //Event handler
@@ -25,7 +52,7 @@ void Application::run() {
         {
             MFA::U32 const start_time = SDL_GetTicks();
             // DrawFrame
-            SceneSubSystem::OnNewFrame(delta_time);
+            mSceneSubSystem.OnNewFrame(delta_time);
             //Handle events
             if (SDL_PollEvent(&e) != 0)
             {
@@ -44,7 +71,7 @@ void Application::run() {
         }
     }
     RF::DeviceWaitIdle();
-    SceneSubSystem::Shutdown();
+    mSceneSubSystem.Shutdown();
     UI::Shutdown();
     RF::Shutdown();
 }
