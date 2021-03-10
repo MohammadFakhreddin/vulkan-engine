@@ -285,6 +285,10 @@ void GLTFMeshViewerScene::createDrawableObject() {
     }
 }
 
+void GLTFMeshViewerScene::destroyDrawableObject() {
+    m_drawable_object.delete_uniform_buffers();
+}
+
 void GLTFMeshViewerScene::createDrawPipeline(MFA::U8 const gpu_shader_count, MFA::RenderBackend::GpuShader * gpu_shaders) {
 
     VkVertexInputBindingDescription const vertex_binding_description {

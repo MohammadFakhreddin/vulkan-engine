@@ -23,9 +23,7 @@ private:
 
     void createDrawableObject();
 
-    void destroyDrawableObject() {
-        m_drawable_object.delete_uniform_buffers();
-    }
+    void destroyDrawableObject();
 
     void createDrawPipeline(MFA::U8 gpu_shader_count, MFA::RenderBackend::GpuShader * gpu_shaders);
 
