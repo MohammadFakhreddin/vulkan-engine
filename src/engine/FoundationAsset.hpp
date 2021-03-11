@@ -240,7 +240,8 @@ struct Vertices {
         Position position;
         UV base_color_uv;
         UV normal_map_uv;
-        UV metallic_roughness_uv;
+        UV metallic_uv;
+        UV roughness_uv;
         UV emission_uv;
         Color color;
         Normal normal_value;
@@ -270,6 +271,8 @@ struct Header {
         U32 indices_starting_index = 0;         // From start of asset
         I16 base_color_texture_index = 0;
         I16 metallic_roughness_texture_index = 0;
+        I16 metallic_texture_index = 0;
+        I16 roughness_texture_index = 0;
         I16 normal_texture_index = 0;
         I16 emissive_texture_index = 0;
         float base_color_factor[4] {};
@@ -279,8 +282,11 @@ struct Header {
         bool has_normal_buffer = false;
         bool has_normal_texture = false;
         bool has_tangent_buffer = false;
+        bool has_base_color_texture = false;
         bool has_emissive_texture = false;
-        bool has_metallic_roughness = false;
+        bool has_combined_metallic_roughness_texture = false;
+        bool has_metallic_texture = false;
+        bool has_roughness_texture = false;
         // TODO We need to have matrix here
         //bool hasMatrix = false;
         //Matrix4X4Float matrix {};
@@ -333,6 +339,7 @@ struct Header {
 using MeshHeader = Mesh::Header;
 using MeshIndex = Mesh::Data::Indices::IndexType;
 using MeshVertex = Mesh::Data::Vertices::Vertex;
+using SubMeshIndexType = Mesh::Header::SubMeshIndexType;
 
 //--------------------------------ShaderHeader--------------------------------------
 namespace Shader {

@@ -101,6 +101,11 @@ float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness)
 }
 
 PSOut main(PSIn input) {
+
+	// PSOut output2;
+    // output2.FragColor = float4(input.WorldNormal.xyz, 1.0f);
+    // return output2;
+
 	float3 N = normalize(input.WorldNormal);
 	float3 V = normalize(lvBuff.camPos - input.WorldPos);
 

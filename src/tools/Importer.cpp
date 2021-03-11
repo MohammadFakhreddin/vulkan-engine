@@ -777,11 +777,13 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                             current_sub_mesh.roughness_factor = roughness_factor;
                             static_assert(sizeof(current_sub_mesh.emissive_factor) == sizeof(emissive_factor));
                             ::memcpy(current_sub_mesh.emissive_factor, emissive_factor, sizeof(emissive_factor));
+
+                            current_sub_mesh.has_base_color_texture = nullptr != base_color_uvs;
                             current_sub_mesh.has_normal_texture = nullptr != normals_uvs;
                             current_sub_mesh.has_normal_buffer = nullptr != normal_values;
                             current_sub_mesh.has_tangent_buffer = nullptr != tangent_values;
                             current_sub_mesh.has_emissive_texture = nullptr != emission_uvs;
-                            current_sub_mesh.has_metallic_roughness = nullptr != metallic_roughness_uvs;
+                            current_sub_mesh.has_combined_metallic_roughness_texture = nullptr != metallic_roughness_uvs;
                             MFA_ASSERT(current_sub_mesh.has_normal_buffer == current_sub_mesh.has_normal_texture);
                             MFA_ASSERT(current_sub_mesh.has_tangent_buffer == current_sub_mesh.has_normal_buffer);
                         }
@@ -859,13 +861,17 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                                 MFA_ASSERT(vertices[i].base_color_uv[1] >= base_color_uv_min[1]);
                                 MFA_ASSERT(vertices[i].base_color_uv[1] <= base_color_uv_max[1]);
                             }
-                            if (current_sub_mesh.has_metallic_roughness) {// MetallicRoughness
-                                vertices[i].metallic_roughness_uv[0] = metallic_roughness_uvs[i * 2 + 0];
-                                MFA_ASSERT(vertices[i].metallic_roughness_uv[0] >= metallic_roughness_uv_min[0]);
-                                MFA_ASSERT(vertices[i].metallic_roughness_uv[0] <= metallic_roughness_uv_max[0]);
-                                vertices[i].metallic_roughness_uv[1] = metallic_roughness_uvs[i * 2 + 1];
-                                MFA_ASSERT(vertices[i].metallic_roughness_uv[1] >= metallic_roughness_uv_min[1]);
-                                MFA_ASSERT(vertices[i].metallic_roughness_uv[1] <= metallic_roughness_uv_max[1]);
+                            if (current_sub_mesh.has_combined_metallic_roughness_texture) {// MetallicRoughness
+                                vertices[i].roughness_uv[0] = metallic_roughness_uvs[i * 2 + 0];
+                                MFA_ASSERT(vertices[i].roughness_uv[0] >= metallic_roughness_uv_min[0]);
+                                MFA_ASSERT(vertices[i].roughness_uv[0] <= metallic_roughness_uv_max[0]);
+                                vertices[i].roughness_uv[1] = metallic_roughness_uvs[i * 2 + 1];
+                                MFA_ASSERT(vertices[i].roughness_uv[1] >= metallic_roughness_uv_min[1]);
+                                MFA_ASSERT(vertices[i].roughness_uv[1] <= metallic_roughness_uv_max[1]);
+
+                                ::memcpy(vertices[i].metallic_uv, vertices[i].roughness_uv, sizeof(vertices[i].roughness_uv));
+                                static_assert(sizeof(vertices[i].roughness_uv) == sizeof(vertices[i].metallic_uv));
+                                    
                             }
                             vertices[i].color[0] = static_cast<U8>((256/(colors_min_max_dif[0])) * colors[i * 3 + 0]);
                             vertices[i].color[1] = static_cast<U8>((256/(colors_min_max_dif[1])) * colors[i * 3 + 1]);

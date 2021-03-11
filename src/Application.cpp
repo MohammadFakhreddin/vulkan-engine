@@ -32,15 +32,16 @@ void Application::run() {
     RF::Init({SCREEN_WIDTH, SCREEN_HEIGHT, "Cool app"});
     UI::Init();
 
-    mSceneSubSystem.Init();
-
+    
+    mSceneSubSystem.RegisterNew(mTexturedSphereScene.get(), "TextureSphereScene");
     mSceneSubSystem.RegisterNew(mGltfMeshViewerScene.get(), "GLTFMeshViewerScene");
     mSceneSubSystem.RegisterNew(mSpecularHighlightScene.get(), "SpecularHighlightScene");
     mSceneSubSystem.RegisterNew(mPbrScene.get(), "PBRScene");
     mSceneSubSystem.RegisterNew(mTextureViewerScene.get(), "TextureViewerScene");
-    mSceneSubSystem.RegisterNew(mTexturedSphereScene.get(), "TextureSphereScene");
-
+    
     mSceneSubSystem.SetActiveScene("TextureSphereScene");
+    mSceneSubSystem.Init();
+
     {// Main loop
         bool quit = false;
         //Event handler

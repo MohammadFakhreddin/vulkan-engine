@@ -12,10 +12,10 @@ namespace Asset = MFA::AssetSystem;
 namespace Importer = MFA::Importer;
 
 void GLTFMeshViewerScene::Init() {
-    //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/free_zuk_3d_model/scene.gltf");
+    auto cpu_model = Importer::ImportMeshGLTF("../assets/models/free_zuk_3d_model/scene.gltf");
     /*auto cpu_model = Importer::ImportMeshGLTF("../assets/models/free_1975_porsche_911_930_turbo/scene.gltf");*/
     //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/kirpi_mrap__lowpoly__free_3d_model/scene.gltf");
-    auto cpu_model = Importer::ImportMeshGLTF("../assets/models/gunship/scene.gltf");
+    //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/gunship/scene.gltf");
     //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/kar98k_free_model/scene.gltf");
     MFA_ASSERT(cpu_model.mesh.valid());
     m_gpu_model = RF::CreateGpuModel(cpu_model);
@@ -315,7 +315,7 @@ void GLTFMeshViewerScene::createDrawPipeline(MFA::U8 const gpu_shader_count, MFA
         .location = 2,
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, metallic_roughness_uv),   
+        .offset = offsetof(Asset::MeshVertex, metallic_uv), // Metallic and roughness has same uv for gltf files  
     });
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = 3,
@@ -326,16 +326,17 @@ void GLTFMeshViewerScene::createDrawPipeline(MFA::U8 const gpu_shader_count, MFA
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = 4,
         .binding = 0,
-        .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, normal_value),   
-    });
-    input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = 5,
-        .binding = 0,
-        .format = VK_FORMAT_R32G32_SFLOAT,
+        .format = VK_FORMAT_R32G32B32A32_SFLOAT,
         .offset = offsetof(Asset::MeshVertex, tangent_value),   
     });
 
+    input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
+        .location = 5,
+        .binding = 0,
+        .format = VK_FORMAT_R32G32B32_SFLOAT,
+        .offset = offsetof(Asset::MeshVertex, normal_value),   
+    });
+    
     m_draw_pipeline = RF::CreateBasicDrawPipeline(
         gpu_shader_count, 
         gpu_shaders,

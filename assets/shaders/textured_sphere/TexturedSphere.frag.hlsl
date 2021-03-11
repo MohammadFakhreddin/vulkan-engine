@@ -32,13 +32,7 @@ struct LightViewBuffer {
     float3 lightColor;
 };
 
-ConstantBuffer <LightViewBuffer> lvBuff : register (b4, space0);
-
-struct RotationBuffer {
-	float4x4 rotation;
-};
-
-ConstantBuffer <RotationBuffer> rBuffer : register (b5, space0);
+ConstantBuffer <LightViewBuffer> lvBuff : register (b5, space0);
 
 const float PI = 3.14159265359;
 
@@ -135,7 +129,10 @@ PSOut main(PSIn input) {
 	float3 baseColor = pow(baseColorTexture.Sample(baseColorSampler, input.baseColorUV).rgb, 2.2f);
     float metallic = metallicTexture.Sample(metallicSampler, input.metallicUV).r;
     float roughness = roughnessTexture.Sample(roughnessSampler, input.roughnessUV).r;
-	float3 normal = calculateNormal(input);
+	float3 normal = input.worldNormal;//calculateNormal(input);
+    // PSOut output2;
+    // output2.color = float4(normal.xyz, 1.0f);
+    // return output2;
 	
     float3 N = normalize(normal.xyz);
 	float3 V = normalize(lvBuff.camPos - input.worldPos);

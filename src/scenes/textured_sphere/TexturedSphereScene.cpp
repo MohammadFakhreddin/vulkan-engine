@@ -7,11 +7,8 @@
 
 void TexturedSphereScene::Init() {
     // Gpu model
-    auto cpu_model = MFA::ShapeGenerator::Sphere();
-    m_gpu_model = RF::CreateGpuModel(cpu_model);
+    createGpuModel();
 
-    // TODO Load and assign textures to cpu_model
-    
     // Cpu shader
     auto cpu_vertex_shader = MFA::Importer::ImportShaderFromSPV(
         "../assets/shaders/textured_sphere/TexturedSphere.vert.spv", 
@@ -135,11 +132,11 @@ void TexturedSphereScene::OnUI(MFA::U32 delta_time, MFA::RenderFrontend::DrawPas
     ImGui::SetNextItemWidth(300.0f);
     ImGui::SliderFloat("PositionZ", &m_light_position[2], -200.0f, 200.0f);
     ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("ColorR", &m_light_position[0], -200.0f, 200.0f);
+    ImGui::SliderFloat("ColorR", &m_light_color[0], 0.0f, 1.0f);
     ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("ColorG", &m_light_position[1], -200.0f, 200.0f);
+    ImGui::SliderFloat("ColorG", &m_light_color[1], 0.0f, 1.0f);
     ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("ColorB", &m_light_position[2], -200.0f, 200.0f);
+    ImGui::SliderFloat("ColorB", &m_light_color[2], 0.0f, 1.0f);
     ImGui::End();
 }
 
@@ -208,7 +205,7 @@ void TexturedSphereScene::createDrawableObject(){
         // MetallicTexture
         VkDescriptorImageInfo metallicImageInfo {
             .sampler = m_sampler_group.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
-            .imageView = textures[sub_mesh.metallic_roughness_texture_index].image_view(),
+            .imageView = textures[sub_mesh.metallic_texture_index].image_view(),
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         };
         writeInfo.emplace_back(VkWriteDescriptorSet {
@@ -221,6 +218,22 @@ void TexturedSphereScene::createDrawableObject(){
             .pImageInfo = &metallicImageInfo,
         });
 
+        // RoughnessTexture
+        VkDescriptorImageInfo roughnessImageInfo {
+            .sampler = m_sampler_group.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
+            .imageView = textures[sub_mesh.roughness_texture_index].image_view(),
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+        };
+        writeInfo.emplace_back(VkWriteDescriptorSet {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = descriptor_set,
+            .dstBinding = 3,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .pImageInfo = &roughnessImageInfo,
+        });
+
         // NormalTexture  
         VkDescriptorImageInfo normalImageInfo {
             .sampler = m_sampler_group.sampler,
@@ -230,7 +243,7 @@ void TexturedSphereScene::createDrawableObject(){
         writeInfo.emplace_back(VkWriteDescriptorSet {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .dstSet = descriptor_set,
-            .dstBinding = 3,
+            .dstBinding = 4,
             .dstArrayElement = 0,
             .descriptorCount = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -246,7 +259,7 @@ void TexturedSphereScene::createDrawableObject(){
         writeInfo.emplace_back(VkWriteDescriptorSet {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .dstSet = descriptor_set,
-            .dstBinding = 4,
+            .dstBinding = 5,
             .dstArrayElement = 0,
             .descriptorCount = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -289,39 +302,67 @@ void TexturedSphereScene::createDrawPipeline(MFA::U8 gpu_shader_count, MFA::Rend
         .location = 2,
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, metallic_roughness_uv),   
+        .offset = offsetof(Asset::MeshVertex, metallic_uv),   
     });
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = 3,
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, normal_map_uv),   
+        .offset = offsetof(Asset::MeshVertex, roughness_uv),   
     });
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = 4,
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, normal_value),   
+        .offset = offsetof(Asset::MeshVertex, normal_map_uv),   
     });
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = 5,
         .binding = 0,
-        .format = VK_FORMAT_R32G32_SFLOAT,
+        .format = VK_FORMAT_R32G32B32_SFLOAT,
+        .offset = offsetof(Asset::MeshVertex, normal_value),   
+    });
+    input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
+        .location = 6,
+        .binding = 0,
+        .format = VK_FORMAT_R32G32B32A32_SFLOAT,
         .offset = offsetof(Asset::MeshVertex, tangent_value),   
     });
 
-    m_draw_pipeline = RF::CreateBasicDrawPipeline(
+    m_draw_pipeline = RF::CreateDrawPipeline(
         gpu_shader_count, 
         gpu_shaders,
         m_descriptor_set_layout,
         vertex_binding_description,
         static_cast<MFA::U8>(input_attribute_descriptions.size()),
-        input_attribute_descriptions.data()
+        input_attribute_descriptions.data(),
+        RB::CreateGraphicPipelineOptions {
+            .depth_stencil {
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+                .depthTestEnable = VK_TRUE,
+                .depthWriteEnable = VK_TRUE,
+                .depthCompareOp = VK_COMPARE_OP_LESS,
+                .depthBoundsTestEnable = VK_FALSE,
+                .stencilTestEnable = VK_FALSE
+            },
+            .color_blend_attachments {
+                .blendEnable = VK_TRUE,
+                .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+                .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+                .colorBlendOp = VK_BLEND_OP_ADD,
+                .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+                .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+                .alphaBlendOp = VK_BLEND_OP_ADD,
+                .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
+            },
+            .use_static_viewport_and_scissor = true,
+            .primitive_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP
+        }
     );
 }
 
 void TexturedSphereScene::createDescriptorSetLayout(){
-        std::vector<VkDescriptorSetLayoutBinding> bindings {};
+    std::vector<VkDescriptorSetLayoutBinding> bindings {};
     // Transformation 
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
         .binding = 0,
@@ -338,7 +379,7 @@ void TexturedSphereScene::createDescriptorSetLayout(){
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         .pImmutableSamplers = nullptr,
     });
-    // Metallic/Roughness
+    // Metallic
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
         .binding = 2,
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -346,7 +387,7 @@ void TexturedSphereScene::createDescriptorSetLayout(){
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         .pImmutableSamplers = nullptr,
     });
-    // Normal
+    // Roughness
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
         .binding = 3,
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -354,9 +395,17 @@ void TexturedSphereScene::createDescriptorSetLayout(){
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         .pImmutableSamplers = nullptr,
     });
-    // Light/View
+    // Normal
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
         .binding = 4,
+        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        .descriptorCount = 1,
+        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+        .pImmutableSamplers = nullptr,
+    });
+    // Light/View
+    bindings.emplace_back(VkDescriptorSetLayoutBinding {
+        .binding = 5,
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -366,4 +415,46 @@ void TexturedSphereScene::createDescriptorSetLayout(){
         static_cast<MFA::U8>(bindings.size()),
         bindings.data()
     );
+}
+
+void TexturedSphereScene::createGpuModel() {
+    auto cpuModel = MFA::ShapeGenerator::Sphere();
+
+    auto const importTextureForModel = [&cpuModel](char const * address) -> MFA::I16 {
+        auto const texture = MFA::Importer::ImportUncompressedImage(
+            address, 
+            MFA::Importer::ImportTextureOptions {.generate_mipmaps = false}
+        );
+        MFA_ASSERT(texture.valid());
+        cpuModel.textures.emplace_back(texture);
+        return static_cast<MFA::I16>(cpuModel.textures.size() - 1);
+    };
+
+    // BaseColor
+    auto const baseColorIndex = importTextureForModel("../assets/models/rusted_sphere_texture/rustediron2_basecolor.png");
+    // Metallic
+    auto const metallicIndex = importTextureForModel("../assets/models/rusted_sphere_texture/rustediron2_metallic.png");
+    // Normal
+    auto const normalIndex = importTextureForModel("../assets/models/rusted_sphere_texture/rustediron2_normal.png");
+    // Roughness
+    auto const roughnessIndex = importTextureForModel("../assets/models/rusted_sphere_texture/rustediron2_roughness.png");
+    
+    auto * meshHeader = cpuModel.mesh.header_object();
+    MFA_PTR_ASSERT(meshHeader);
+    MFA_ASSERT(meshHeader->is_valid());
+    for (MFA::U32 i = 0; i < meshHeader->sub_mesh_count; ++i) {
+        auto & currentSubMesh = meshHeader->sub_meshes[i];
+        // Texture index
+        currentSubMesh.base_color_texture_index = baseColorIndex;
+        currentSubMesh.normal_texture_index = normalIndex;
+        currentSubMesh.metallic_texture_index = metallicIndex;
+        currentSubMesh.roughness_texture_index = roughnessIndex;
+        // SubMesh features
+        currentSubMesh.has_base_color_texture = true;
+        currentSubMesh.has_normal_texture = true;
+        currentSubMesh.has_metallic_texture = true;
+        currentSubMesh.has_roughness_texture = true;
+    }
+
+    m_gpu_model = RF::CreateGpuModel(cpuModel);
 }

@@ -4,8 +4,8 @@ struct VSIn{
     float2 metallicUV : TEXCOORD1;
     float2 roughnessUV : TEXCOORD2;
     float2 normalUV : TEXCOORD3;
-    float4 tangent: TEXCOORD4;
     float3 normal: NORMAL0;
+    float4 tangent: TEXCOORD4;
 };
 
 struct VSOut{
@@ -43,7 +43,8 @@ VSOut main(VSIn input) {
 
 	float3 worldTangent = normalize(mul(tBuffer.rotation, input.tangent).xyz);
 	float3 worldNormal = normalize(mul(tBuffer.rotation, float4(input.normal, 0.0)).xyz);
-	float3 worldBiTangent = normalize(cross(worldNormal.xyz, worldTangent.xyz));
+	// float3 worldNormal = input.normal;
+    float3 worldBiTangent = normalize(mul(tBuffer.rotation, float4((input.normal.xyz, input.tangent.xyz), 0.0)).xyz);
     
     output.worldTangent = worldTangent;
     output.worldNormal = worldNormal;

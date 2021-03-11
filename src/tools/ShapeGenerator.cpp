@@ -104,7 +104,7 @@ namespace MFA::ShapeGenerator {
         sub_mesh.index_count = indices_count;
         sub_mesh.vertices_offset = header_size;
         sub_mesh.indices_offset = header_size + vertices_count * sizeof(AssetSystem::MeshVertex);
-        sub_mesh.has_metallic_roughness = false;
+        sub_mesh.has_combined_metallic_roughness_texture = false;
         sub_mesh.has_normal_buffer = true;
         sub_mesh.has_normal_texture = false;
         sub_mesh.has_emissive_texture = false;
@@ -133,9 +133,12 @@ namespace MFA::ShapeGenerator {
                 // Base color
                 static_assert(sizeof(mesh_vertices[index].base_color_uv) == sizeof(uvs[index].cells));
                 ::memcpy(mesh_vertices[index].base_color_uv, uvs[index].cells, sizeof(uvs[index].cells));
-                // Metallic/Roughness       // TODO We might need to separate metallic_roughness
-                static_assert(sizeof(mesh_vertices[index].metallic_roughness_uv) == sizeof(uvs[index].cells));
-                ::memcpy(mesh_vertices[index].metallic_roughness_uv, uvs[index].cells, sizeof(uvs[index].cells));
+                // Metallic
+                static_assert(sizeof(mesh_vertices[index].metallic_uv) == sizeof(uvs[index].cells));
+                ::memcpy(mesh_vertices[index].metallic_uv, uvs[index].cells, sizeof(uvs[index].cells));
+                // Roughness
+                static_assert(sizeof(mesh_vertices[index].roughness_uv) == sizeof(uvs[index].cells));
+                ::memcpy(mesh_vertices[index].roughness_uv, uvs[index].cells, sizeof(uvs[index].cells));
                 // Emission
                 static_assert(sizeof(mesh_vertices[index].emission_uv) == sizeof(uvs[index].cells));
                 ::memcpy(mesh_vertices[index].emission_uv, uvs[index].cells, sizeof(uvs[index].cells));

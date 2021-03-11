@@ -29,6 +29,8 @@ private:
 
     void createDescriptorSetLayout();
 
+    void createGpuModel();
+
     static constexpr float Z_NEAR = 0.1f;
     static constexpr float Z_FAR = 1000.0f;
     
@@ -39,12 +41,13 @@ private:
     } m_translate_data {};
 
     struct LightViewBuffer {
-        float light_position[3];
-        float camera_position[3];
-        float light_color[3];
+        alignas(16) float light_position[3];
+        alignas(16) float camera_position[3];
+        alignas(16) float light_color[3];
     } m_lv_data {
         .light_position = {},
         .camera_position = {0.0f, 0.0f, 0.0f},
+        .light_color = {}
     };
 
     float m_light_position[3] {0.0f, 0.0f, -2.0f};
