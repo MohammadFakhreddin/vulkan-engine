@@ -129,7 +129,7 @@ PSOut main(PSIn input) {
 	float3 baseColor = pow(baseColorTexture.Sample(baseColorSampler, input.baseColorUV).rgb, 2.2f);
     float metallic = metallicTexture.Sample(metallicSampler, input.metallicUV).r;
     float roughness = roughnessTexture.Sample(roughnessSampler, input.roughnessUV).r;
-	float3 normal = input.worldNormal;//calculateNormal(input);
+	float3 normal = calculateNormal(input);
     // PSOut output2;
     // output2.color = float4(normal.xyz, 1.0f);
     // return output2;
