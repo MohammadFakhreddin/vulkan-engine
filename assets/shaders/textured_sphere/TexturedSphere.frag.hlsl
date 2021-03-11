@@ -119,7 +119,7 @@ float3 calculateNormal(PSIn input)
 {
 	float3 tangentNormal = normalTexture.Sample(normalSampler, input.normalUV).rgb * 2.0 - 1.0;
 
-	float3x3 TBN = float3x3(input.worldTangent, input.worldBiTangent, input.worldNormal);
+	float3x3 TBN = transpose(float3x3(input.worldTangent, input.worldBiTangent, input.worldNormal));
 	float3 pixelNormal = mul(TBN, tangentNormal);
 	
 	return normalize(pixelNormal.xyz);

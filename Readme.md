@@ -9,5 +9,9 @@
 ## Basic PRB
 <img src="examples/pbr.gif">
 
-## GLTF PBR (Incomplete)
-<img src="examples/gltf-pbr.gif">
+## PBR on textured sphere
+<img src="examples/pbr-sphere.gif">
+
+## PBR on GLTF models
+<img src="examples/pbr-car.gif"/>
+<img src="examples/pbr-chopper.gif"/>
