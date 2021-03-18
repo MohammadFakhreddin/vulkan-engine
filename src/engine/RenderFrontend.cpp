@@ -414,18 +414,6 @@ UniformBufferGroup CreateUniformBuffer(size_t const buffer_size, U8 const count)
 }
 
 void UpdateUniformBuffer(
-    DrawPass const & draw_pass,
-    UniformBufferGroup const & uniform_buffer, 
-    CBlob const data
-) {
-    RB::UpdateUniformBuffer(
-        state.logical_device.device, 
-        uniform_buffer.buffers[draw_pass.image_index], 
-        data
-    );
-}
-
-void UpdateUniformBuffer(
     RB::BufferGroup const & uniform_buffer, 
     CBlob const data
 ) {

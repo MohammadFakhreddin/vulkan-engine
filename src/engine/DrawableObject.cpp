@@ -48,6 +48,15 @@ RF::UniformBufferGroup * DrawableObject::create_uniform_buffer(char const * name
     return &m_uniforma_buffers[name];
 }
 
+RF::UniformBufferGroup * DrawableObject::create_multiple_uniform_buffer(
+    char const * name, 
+    const U32 size, 
+    const U8 count
+) {
+    m_uniforma_buffers[name] = RF::CreateUniformBuffer(size, count);
+    return &m_uniforma_buffers[name];
+}
+
 // Only for model local buffers
 void DrawableObject::delete_uniform_buffers() {
     if (m_uniforma_buffers.empty() == false) {

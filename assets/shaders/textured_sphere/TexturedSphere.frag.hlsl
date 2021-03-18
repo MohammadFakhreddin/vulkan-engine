@@ -120,6 +120,7 @@ float3 calculateNormal(PSIn input)
 	float3 tangentNormal = normalTexture.Sample(normalSampler, input.normalUV).rgb * 2.0 - 1.0;
 
 	float3x3 TBN = transpose(float3x3(input.worldTangent, input.worldBiTangent, input.worldNormal));
+    // float3x3 TBN = float3x3(input.worldTangent, input.worldBiTangent, input.worldNormal);
 	float3 pixelNormal = mul(TBN, tangentNormal);
 	
 	return normalize(pixelNormal.xyz);
@@ -134,7 +135,8 @@ PSOut main(PSIn input) {
     // output2.color = float4(normal.xyz, 1.0f);
     // return output2;
 	
-    float3 N = normalize(normal.xyz);
+    // float3 N = normalize(normal.xyz);
+    float3 N = normal;
 	float3 V = normalize(lvBuff.camPos - input.worldPos);
     
     // Specular contribution

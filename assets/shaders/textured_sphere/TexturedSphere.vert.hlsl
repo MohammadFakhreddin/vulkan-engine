@@ -41,10 +41,14 @@ VSOut main(VSIn input) {
     output.normalUV = input.normalUV;
     output.worldPos = worldPos.xyz;
 
-	float3 worldTangent = normalize(mul(tBuffer.rotation, input.tangent).xyz);
-	float3 worldNormal = normalize(mul(tBuffer.rotation, float4(input.normal, 0.0)).xyz);
-	// float3 worldNormal = input.normal;
-    float3 worldBiTangent = normalize(mul(tBuffer.rotation, float4((input.normal.xyz, input.tangent.xyz), 0.0)).xyz);
+	float4 rotationTangent = mul(tBuffer.rotation, input.tangent);
+    float3 worldTangent = normalize(mul(tBuffer.transformation, rotationTangent).xyz);
+
+	float4 rotationNormal = mul(tBuffer.rotation, float4(input.normal, 0.0));
+    float3 worldNormal = normalize(mul(tBuffer.transformation, rotationNormal).xyz);
+	// float3 worldBiTangent = normalize(mul(tBuffer.rotation, float4((input.normal.xyz, input.tangent.xyz), 0.0)).xyz);
+    // float3 worldBiTangent = normalize(cross(worldNormal.xyz, worldTangent.xyz));
+    float3 worldBiTangent = normalize(cross(worldNormal.xyz, worldTangent.xyz));
     
     output.worldTangent = worldTangent;
     output.worldNormal = worldNormal;

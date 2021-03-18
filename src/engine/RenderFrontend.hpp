@@ -140,12 +140,6 @@ struct UniformBufferGroup {
 UniformBufferGroup CreateUniformBuffer(size_t buffer_size, U8 count);
 
 void UpdateUniformBuffer(
-    DrawPass const & draw_pass,
-    UniformBufferGroup const & uniform_buffer, 
-    CBlob data
-);
-
-void UpdateUniformBuffer(
     RB::BufferGroup const & uniform_buffer, 
     CBlob data
 );

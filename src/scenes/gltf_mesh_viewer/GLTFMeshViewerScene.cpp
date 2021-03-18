@@ -13,11 +13,28 @@ namespace Importer = MFA::Importer;
 
 void GLTFMeshViewerScene::Init() {
     //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/free_zuk_3d_model/scene.gltf");
-    /*auto cpu_model = Importer::ImportMeshGLTF("../assets/models/free_1975_porsche_911_930_turbo/scene.gltf");*/
-    //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/kirpi_mrap__lowpoly__free_3d_model/scene.gltf");
-    auto cpu_model = Importer::ImportMeshGLTF("../assets/models/gunship/scene.gltf");
-    //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/kar98k_free_model/scene.gltf");
+    //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/gunship/scene.gltf");
+    auto cpu_model = Importer::ImportMeshGLTF("../assets/models/warcraft_3_alliance_footmanfanmade/scene.gltf");
+    //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/female_full-body_cyberpunk_themed_avatar/scene.gltf");
+    //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/fortnite_the_mandalorianbaby_yoda/scene.gltf");
+    //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/mandalorian__the_fortnite_season_6_skin_updated/scene.gltf");
     MFA_ASSERT(cpu_model.mesh.valid());
+
+    //auto * headerObject = cpu_model.mesh.header_object();
+    //for (MFA::U32 i = 0; i < headerObject->sub_mesh_count; ++i) {
+    //    if (
+    //        headerObject->sub_meshes[i].has_normal_texture == false ||
+    //        headerObject->sub_meshes[i].has_tangent_buffer == false ||
+    //        headerObject->sub_meshes[i].has_base_color_texture == false ||
+    //        headerObject->sub_meshes[i].has_combined_metallic_roughness_texture == false
+    //    ) {
+    //        for (MFA::U32 j = i; j < headerObject->sub_mesh_count - 1; ++j) {
+    //            headerObject->sub_meshes[j] = headerObject->sub_meshes[j + 1];
+    //        }
+    //        --headerObject->sub_mesh_count;
+    //    }
+    //}
+    
     m_gpu_model = RF::CreateGpuModel(cpu_model);
     
     // Cpu shader
@@ -106,15 +123,6 @@ void GLTFMeshViewerScene::OnDraw(MFA::U32 const delta_time, RF::DrawPass & draw_
             "transform", 
             MFA::CBlobAliasOf(m_translate_data)
         );
-
-        // Rotation buffer
-        static_assert(sizeof(m_rotation_buffer.rotation) == sizeof(rotationMat.cells));
-        ::memcpy(m_rotation_buffer.rotation, rotationMat.cells, sizeof(rotationMat.cells));
-
-        m_drawable_object.update_uniform_buffer(
-            "rotation",
-            MFA::CBlobAliasOf(m_rotation_buffer)
-        );
     }
     {// LightViewBuffer
         ::memcpy(m_lv_data.light_position, m_light_position, sizeof(m_light_position));
@@ -166,11 +174,16 @@ void GLTFMeshViewerScene::createDrawableObject() {
         m_descriptor_set_layout
     );
 
+    const auto * subMeshInfoBuffer = m_drawable_object.create_multiple_uniform_buffer(
+        "subMeshInfo", 
+        sizeof(SubMeshInfo), 
+        m_drawable_object.get_descriptor_set_count()
+    );
+    MFA_PTR_ASSERT(subMeshInfoBuffer);
+
     const auto * transform_buffer = m_drawable_object.create_uniform_buffer("transform", sizeof(ModelTransformBuffer));
     MFA_PTR_ASSERT(transform_buffer);
 
-    const auto * rotation_buffer = m_drawable_object.create_uniform_buffer("rotation", sizeof(RotationBuffer));
-    
     auto * model_header = m_drawable_object.get_model()->model_asset.mesh.header_object();
     MFA_ASSERT(model_header->sub_mesh_count == m_drawable_object.get_descriptor_set_count());
 
@@ -182,6 +195,37 @@ void GLTFMeshViewerScene::createDrawableObject() {
 
         std::vector<VkWriteDescriptorSet> writeInfo {};
 
+        // SubMeshInfo
+        VkDescriptorBufferInfo subMeshBufferInfo {
+            .buffer = subMeshInfoBuffer->buffers[i].buffer,
+            .offset = 0,
+            .range = subMeshInfoBuffer->buffer_size
+        };
+        writeInfo.emplace_back(VkWriteDescriptorSet {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = descriptor_set,
+            .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .pBufferInfo = &subMeshBufferInfo,
+        });
+        SubMeshInfo info {
+            .baseColorFactor {},
+            .hasBaseColorTexture = sub_mesh.has_base_color_texture ? 1 : 0,
+            .metallicFactor = sub_mesh.metallic_factor,
+            .roughnessFactor = sub_mesh.roughness_factor,
+            .hasMetallicRoughnessTexture = sub_mesh.has_combined_metallic_roughness_texture ? 1 : 0,
+            .hasNormalTexture = sub_mesh.has_normal_texture ? 1 : 0,
+        };
+        ::memcpy(info.baseColorFactor, sub_mesh.base_color_factor, sizeof(info.baseColorFactor));
+        static_assert(sizeof(info.baseColorFactor) == sizeof(sub_mesh.base_color_factor));
+
+        RF::UpdateUniformBuffer(
+            subMeshInfoBuffer->buffers[i], 
+            MFA::CBlobAliasOf(info)
+        );
+
         // Transform
         VkDescriptorBufferInfo transformBufferInfo {
             .buffer = transform_buffer->buffers[0].buffer,
@@ -191,7 +235,7 @@ void GLTFMeshViewerScene::createDrawableObject() {
         writeInfo.emplace_back(VkWriteDescriptorSet {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .dstSet = descriptor_set,
-            .dstBinding = 0,
+            .dstBinding = static_cast<uint32_t>(writeInfo.size()),
             .dstArrayElement = 0,
             .descriptorCount = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -207,14 +251,14 @@ void GLTFMeshViewerScene::createDrawableObject() {
         writeInfo.emplace_back(VkWriteDescriptorSet {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .dstSet = descriptor_set,
-            .dstBinding = 1,
+            .dstBinding = static_cast<uint32_t>(writeInfo.size()),
             .dstArrayElement = 0,
             .descriptorCount = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             .pImageInfo = &baseColorImageInfo,
         });
 
-        // MetallicTexture
+        // Metallic/RoughnessTexture
         VkDescriptorImageInfo metallicImageInfo {
             .sampler = m_sampler_group.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
             .imageView = textures[sub_mesh.metallic_roughness_texture_index].image_view(),
@@ -223,7 +267,7 @@ void GLTFMeshViewerScene::createDrawableObject() {
         writeInfo.emplace_back(VkWriteDescriptorSet {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .dstSet = descriptor_set,
-            .dstBinding = 2,
+            .dstBinding = static_cast<uint32_t>(writeInfo.size()),
             .dstArrayElement = 0,
             .descriptorCount = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -239,7 +283,7 @@ void GLTFMeshViewerScene::createDrawableObject() {
         writeInfo.emplace_back(VkWriteDescriptorSet {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .dstSet = descriptor_set,
-            .dstBinding = 3,
+            .dstBinding = static_cast<uint32_t>(writeInfo.size()),
             .dstArrayElement = 0,
             .descriptorCount = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -255,33 +299,20 @@ void GLTFMeshViewerScene::createDrawableObject() {
         writeInfo.emplace_back(VkWriteDescriptorSet {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .dstSet = descriptor_set,
-            .dstBinding = 4,
+            .dstBinding = static_cast<uint32_t>(writeInfo.size()),
             .dstArrayElement = 0,
             .descriptorCount = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             .pBufferInfo = &light_view_buffer_info,
         });
 
-        // Rotation
-        VkDescriptorBufferInfo rotationBufferInfo {
-            .buffer = rotation_buffer->buffers[0].buffer,
-            .offset = 0,
-            .range = rotation_buffer->buffer_size
-        };
-        writeInfo.emplace_back(VkWriteDescriptorSet {
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = descriptor_set,
-            .dstBinding = 5,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .pBufferInfo = &rotationBufferInfo,
-        });
-
         RF::UpdateDescriptorSets(
             static_cast<MFA::U8>(writeInfo.size()),
             writeInfo.data()
         );
+
+        // SubMeshInfoBuffer
+        // TODO Start from here
     }
 }
 
@@ -298,40 +329,42 @@ void GLTFMeshViewerScene::createDrawPipeline(MFA::U8 const gpu_shader_count, MFA
     };
 
     std::vector<VkVertexInputAttributeDescription> input_attribute_descriptions {};
-
+    // Position
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = 0,
+        .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32B32_SFLOAT,
         .offset = offsetof(Asset::MeshVertex, position),   
     });
+    // BaseColor
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = 1,
+        .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
         .offset = offsetof(Asset::MeshVertex, base_color_uv),   
     });
+    // Metallic/Roughness
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = 2,
+        .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, metallic_uv), // Metallic and roughness has same uv for gltf files  
+        .offset = offsetof(Asset::MeshVertex, metallic_uv), // Metallic and roughness have same uv for gltf files  
     });
+    // Normal
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = 3,
+        .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
         .offset = offsetof(Asset::MeshVertex, normal_map_uv),   
     });
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = 4,
+        .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32B32A32_SFLOAT,
         .offset = offsetof(Asset::MeshVertex, tangent_value),   
     });
-
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = 5,
+        .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32B32_SFLOAT,
         .offset = offsetof(Asset::MeshVertex, normal_value),   
@@ -352,15 +385,23 @@ void GLTFMeshViewerScene::createDescriptorSetLayout() {
     std::vector<VkDescriptorSetLayoutBinding> bindings {};
     // Transformation 
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = 0,
+        .binding = static_cast<MFA::U32>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
         .pImmutableSamplers = nullptr, // Optional
     });
+    // SubMeshInfo
+    bindings.emplace_back(VkDescriptorSetLayoutBinding {
+        .binding = static_cast<MFA::U32>(bindings.size()),
+        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .descriptorCount = 1,
+        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+        .pImmutableSamplers = nullptr, // Optional
+    });
     // BaseColor
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = 1,
+        .binding = static_cast<MFA::U32>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -368,7 +409,7 @@ void GLTFMeshViewerScene::createDescriptorSetLayout() {
     });
     // Metallic/Roughness
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = 2,
+        .binding = static_cast<MFA::U32>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -376,7 +417,7 @@ void GLTFMeshViewerScene::createDescriptorSetLayout() {
     });
     // Normal
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = 3,
+        .binding = static_cast<MFA::U32>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -384,15 +425,7 @@ void GLTFMeshViewerScene::createDescriptorSetLayout() {
     });
     // Light/View
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = 4,
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 1,
-        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-        .pImmutableSamplers = nullptr, // Optional
-    });
-    // Rotation
-    bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = 5,
+        .binding = static_cast<MFA::U32>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,

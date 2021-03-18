@@ -32,11 +32,23 @@ private:
     static constexpr float Z_NEAR = 0.1f;
     static constexpr float Z_FAR = 1000.0f;
 
+    struct SubMeshInfo {
+        float baseColorFactor[4];
+        int hasBaseColorTexture;
+        float metallicFactor;
+        float roughnessFactor;
+        int hasMetallicRoughnessTexture;
+        int hasNormalTexture;  
+    }; 
+
     struct ModelTransformBuffer {   // For vertices in Vertex shader
         float rotation[16];
         float transformation[16];
         float perspective[16];
     } m_translate_data {};
+
+    float m_model_rotation[3] {45.0f, 45.0f, 45.0f};
+    float m_model_position[3] {0.0f, 0.0f, -6.0f};
 
     struct LightViewBuffer {
         float light_position[3];
@@ -47,13 +59,6 @@ private:
     };
 
     float m_light_position[3] {0.0f, 0.0f, -2.0f};
-
-    struct RotationBuffer {
-        float rotation[16];
-    } m_rotation_buffer {};
-
-    float m_model_rotation[3] {45.0f, 45.0f, 45.0f};
-    float m_model_position[3] {0.0f, 0.0f, -6.0f};
 
     MFA::RenderFrontend::GpuModel m_gpu_model {};
 

@@ -784,8 +784,7 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                             current_sub_mesh.has_tangent_buffer = nullptr != tangent_values;
                             current_sub_mesh.has_emissive_texture = nullptr != emission_uvs;
                             current_sub_mesh.has_combined_metallic_roughness_texture = nullptr != metallic_roughness_uvs;
-                            MFA_ASSERT(current_sub_mesh.has_normal_buffer == current_sub_mesh.has_normal_texture);
-                            MFA_ASSERT(current_sub_mesh.has_tangent_buffer == current_sub_mesh.has_normal_buffer);
+                            MFA_ASSERT(current_sub_mesh.has_tangent_buffer == current_sub_mesh.has_normal_texture);
                         }
                         vertices_offset += primitive_vertex_count * sizeof(AssetSystem::MeshVertex);
                         indices_offset += primitive_indices_count * sizeof(AssetSystem::MeshIndex);
@@ -796,10 +795,10 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                         ::memcpy(indices, temp_indices_blob.ptr, temp_indices_blob.len);
                         ++ sub_mesh_index;
                         MFA_PTR_ASSERT(positions);
-                        MFA_PTR_ASSERT(base_color_uvs);
-                        MFA_PTR_ASSERT(normals_uvs);
-                        MFA_PTR_ASSERT(emission_uvs);
-                        MFA_PTR_ASSERT(metallic_roughness_uvs);
+                        MFA_ASSERT(current_sub_mesh.has_base_color_texture == false || base_color_uvs != nullptr);
+                        MFA_ASSERT(current_sub_mesh.has_normal_texture == false || normals_uvs != nullptr);
+                        MFA_ASSERT(current_sub_mesh.has_combined_metallic_roughness_texture == false || metallic_roughness_uvs != nullptr);
+                        MFA_ASSERT(current_sub_mesh.has_emissive_texture == false || emission_uvs != nullptr);
                         for (U32 i = 0; i < primitive_vertex_count; ++i) {
                             {// Vertices
                                 vertices[i].position[0] = positions[i * 3 + 0];
@@ -853,7 +852,7 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                                 MFA_ASSERT(vertices[i].emission_uv[1] >= emission_uv_min[1]);
                                 MFA_ASSERT(vertices[i].emission_uv[1] <= emission_uv_max[1]);
                             }
-                            {// BaseColor
+                            if (current_sub_mesh.has_base_color_texture) {// BaseColor
                                 vertices[i].base_color_uv[0] = base_color_uvs[i * 2 + 0];
                                 MFA_ASSERT(vertices[i].base_color_uv[0] >= base_color_uv_min[0]);
                                 MFA_ASSERT(vertices[i].base_color_uv[0] <= base_color_uv_max[0]);

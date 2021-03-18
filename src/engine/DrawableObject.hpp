@@ -49,6 +49,8 @@ public:
     // Only for model local buffers
     RF::UniformBufferGroup * create_uniform_buffer(char const * name, U32 size);
 
+    RF::UniformBufferGroup * create_multiple_uniform_buffer(char const * name, U32 size, U8 count);
+
     // Only for model local buffers
     void delete_uniform_buffers();
 
