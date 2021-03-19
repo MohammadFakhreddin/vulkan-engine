@@ -12,6 +12,12 @@ class Application {
 public:
     Application();
     ~Application();
+
+    Application & operator= (Application && rhs) noexcept;
+    Application (Application const &) noexcept = delete;
+    Application (Application && rhs) noexcept;
+    Application & operator = (Application const &) noexcept = delete;
+
     void run();
 private:
 

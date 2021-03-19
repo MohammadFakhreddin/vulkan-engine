@@ -42,6 +42,7 @@ Texture2D normalTexture : register(t4, space0);
 struct LightViewBuffer {
     float3 lightPosition;
     float3 camPos;
+    float3 lightColor;
 };
 
 ConstantBuffer <LightViewBuffer> lvBuff : register (b5, space0);
@@ -50,7 +51,7 @@ const float PI = 3.14159265359;
 
 const float attenuationFactor = 200.0f;
 
-const float3 lightColor = float3(252.0f/256.0f, 212.0f/256.0f, 64.0f/256.0f);
+// const float3 lightColor = float3(252.0f/256.0f, 212.0f/256.0f, 64.0f/256.0f);
 // float3 lightColor = float3(1.0, 1.0, 1.0);
 	
 // This function computes ratio between amount of light that reflect and refracts
@@ -91,7 +92,15 @@ float G_SchlicksmithGGX(float dotNL, float dotNV, float roughness)
 
 // Specular BRDF composition --------------------------------------------
 
-float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness, float3 baseColor, float3 worldPos)
+float3 BRDF(
+    float3 L,
+    float3 V,
+    float3 N,
+    float metallic,
+    float roughness,
+    float3 baseColor,
+    float3 worldPos
+)
 {
     // Precalculate vectors and dot products
 	float3 H = normalize (V + L);
@@ -104,7 +113,7 @@ float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness, float
 
     float distance    = length(lvBuff.lightPosition - worldPos);
     float attenuation = attenuationFactor / (distance * distance);
-    float3 radiance     = lightColor * attenuation;        
+    float3 radiance   = lvBuff.lightColor * attenuation;        
     
     // cook-torrance brdf
     float NDF = D_GGX(dotNH, roughness);        

@@ -29,7 +29,11 @@ public:
 
     DrawableObject (DrawableObject const &) noexcept = delete;
 
-    DrawableObject (DrawableObject &&) noexcept = delete;
+    DrawableObject (DrawableObject && rhs) noexcept {
+        this->m_required_draw_calls = rhs.m_required_draw_calls;
+        this->m_model = rhs.m_model;
+        this->m_descriptor_sets = std::move(rhs.m_descriptor_sets);
+    };
 
     DrawableObject & operator = (DrawableObject const &) noexcept = delete;
 

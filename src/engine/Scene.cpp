@@ -61,7 +61,7 @@ void SceneSubSystem::OnNewFrame(U32 const deltaTime) {
             draw_pass
         );
     }
-
+    // TODO Refactor and use interface and register instead
     UI::OnNewFrame(deltaTime, draw_pass, [&deltaTime, &draw_pass, this]()->void{
         ImGui::Begin("Scene Subsystem");
         ImGui::SetNextItemWidth(300.0f);

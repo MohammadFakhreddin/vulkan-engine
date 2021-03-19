@@ -23,6 +23,9 @@ AssetSystem::TextureAsset ImportUncompressedImage(
 );
 
 [[nodiscard]]
+AssetSystem::TextureAsset CreateErrorTexture();
+
+[[nodiscard]]
 AssetSystem::TextureAsset ImportInMemoryTexture(
     CBlob pixels,
     I32 width,

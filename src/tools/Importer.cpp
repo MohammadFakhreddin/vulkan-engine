@@ -44,6 +44,24 @@ AssetSystem::TextureAsset ImportUncompressedImage(
     // TODO: Handle errors
     return texture;
 }
+AssetSystem::TextureAsset CreateErrorTexture() {
+    auto const data = Memory::Alloc(4);
+    auto * pixel = data.as<uint8_t>();
+    pixel[0] = 1;
+    pixel[1] = 1;
+    pixel[2] = 1;
+    pixel[3] = 1;
+
+    return ImportInMemoryTexture(
+        data,
+        1,
+        1,
+        AssetSystem::TextureFormat::UNCOMPRESSED_UNORM_R8G8B8A8_LINEAR,
+        4,
+        1,
+        1
+    );
+}
 
 AssetSystem::TextureAsset ImportInMemoryTexture(
     CBlob const pixels,

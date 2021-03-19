@@ -12,30 +12,62 @@ namespace Asset = MFA::AssetSystem;
 namespace Importer = MFA::Importer;
 
 void GLTFMeshViewerScene::Init() {
-    //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/free_zuk_3d_model/scene.gltf");
-    //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/gunship/scene.gltf");
-    auto cpu_model = Importer::ImportMeshGLTF("../assets/models/warcraft_3_alliance_footmanfanmade/scene.gltf");
+    {// Error texture
+        auto cpu_texture = Importer::CreateErrorTexture();
+        m_error_texture = RF::CreateTexture(cpu_texture);
+    }
+    {// Models
+        mModelsRenderData.emplace_back(ModelRenderRequiredData {
+            .isLoaded = false,
+            .gpuModel {},
+            .displayName {"Car"},
+            .address {"../assets/models/free_zuk_3d_model/scene.gltf"},
+            .drawableObject {},
+        });
+        mModelsRenderData.emplace_back(ModelRenderRequiredData {
+            .isLoaded = false,
+            .gpuModel {},
+            .displayName {"Gunship"},
+            .address {"../assets/models/gunship/scene.gltf"},
+            .drawableObject {},
+        });
+        mModelsRenderData.emplace_back(ModelRenderRequiredData {
+            .isLoaded = false,
+            .gpuModel {},
+            .displayName {"War-craft soldier"},
+            .address {"../assets/models/warcraft_3_alliance_footmanfanmade/scene.gltf"},
+            .drawableObject {},
+        });
+        mModelsRenderData.emplace_back(ModelRenderRequiredData {
+            .isLoaded = false,
+            .gpuModel {},
+            .displayName {"Cyberpunk lady"},
+            .address {"../assets/models/female_full-body_cyberpunk_themed_avatar/scene.gltf"},
+            .drawableObject {},
+        });
+        mModelsRenderData.emplace_back(ModelRenderRequiredData {
+            .isLoaded = false,
+            .gpuModel {},
+            .displayName {"Mandalorian"},
+            .address {"../assets/models/fortnite_the_mandalorianbaby_yoda/scene.gltf"},
+            .drawableObject {},
+        });
+        mModelsRenderData.emplace_back(ModelRenderRequiredData {
+            .isLoaded = false,
+            .gpuModel {},
+            .displayName {"Mandalorian2"},
+            .address {"../assets/models/mandalorian__the_fortnite_season_6_skin_updated/scene.gltf"},
+            .drawableObject {},
+        });
+    }
+    ////auto cpu_model = Importer::ImportMeshGLTF("../assets/models/free_zuk_3d_model/scene.gltf");
+    ////auto cpu_model = Importer::ImportMeshGLTF("../assets/models/gunship/scene.gltf");
+    ////auto cpu_model = Importer::ImportMeshGLTF("../assets/models/warcraft_3_alliance_footmanfanmade/scene.gltf");
     //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/female_full-body_cyberpunk_themed_avatar/scene.gltf");
-    //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/fortnite_the_mandalorianbaby_yoda/scene.gltf");
-    //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/mandalorian__the_fortnite_season_6_skin_updated/scene.gltf");
-    MFA_ASSERT(cpu_model.mesh.valid());
-
-    //auto * headerObject = cpu_model.mesh.header_object();
-    //for (MFA::U32 i = 0; i < headerObject->sub_mesh_count; ++i) {
-    //    if (
-    //        headerObject->sub_meshes[i].has_normal_texture == false ||
-    //        headerObject->sub_meshes[i].has_tangent_buffer == false ||
-    //        headerObject->sub_meshes[i].has_base_color_texture == false ||
-    //        headerObject->sub_meshes[i].has_combined_metallic_roughness_texture == false
-    //    ) {
-    //        for (MFA::U32 j = i; j < headerObject->sub_mesh_count - 1; ++j) {
-    //            headerObject->sub_meshes[j] = headerObject->sub_meshes[j + 1];
-    //        }
-    //        --headerObject->sub_mesh_count;
-    //    }
-    //}
-    
-    m_gpu_model = RF::CreateGpuModel(cpu_model);
+    ////auto cpu_model = Importer::ImportMeshGLTF("../assets/models/fortnite_the_mandalorianbaby_yoda/scene.gltf");
+    ////auto cpu_model = Importer::ImportMeshGLTF("../assets/models/mandalorian__the_fortnite_season_6_skin_updated/scene.gltf");
+    //MFA_ASSERT(cpu_model.mesh.valid());    
+    //m_gpu_model = RF::CreateGpuModel(cpu_model);
     
     // Cpu shader
     auto cpu_vertex_shader = Importer::ImportShaderFromSPV(
@@ -76,10 +108,15 @@ void GLTFMeshViewerScene::Init() {
 
     createDrawPipeline(static_cast<MFA::U8>(shaders.size()), shaders.data());
     
-    createDrawableObject();
 }
 
 void GLTFMeshViewerScene::OnDraw(MFA::U32 const delta_time, RF::DrawPass & draw_pass) {
+    MFA_ASSERT(mSelectedModelIndex >=0 && mSelectedModelIndex < mModelsRenderData.size());
+    auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
+    if (selectedModel.isLoaded == false) {
+        createModel(selectedModel);
+    }
+
     RF::BindDrawPipeline(draw_pass, m_draw_pipeline);
 
     {// Updating Transform buffer
@@ -119,7 +156,7 @@ void GLTFMeshViewerScene::OnDraw(MFA::U32 const delta_time, RF::DrawPass & draw_
         static_assert(sizeof(m_translate_data.perspective) == sizeof(perspectiveMat.cells));
         ::memcpy(m_translate_data.perspective, perspectiveMat.cells, sizeof(perspectiveMat.cells));
 
-        m_drawable_object.update_uniform_buffer(
+        selectedModel.drawableObject.update_uniform_buffer(
             "transform", 
             MFA::CBlobAliasOf(m_translate_data)
         );
@@ -127,73 +164,120 @@ void GLTFMeshViewerScene::OnDraw(MFA::U32 const delta_time, RF::DrawPass & draw_
     {// LightViewBuffer
         ::memcpy(m_lv_data.light_position, m_light_position, sizeof(m_light_position));
         static_assert(sizeof(m_light_position) == sizeof(m_lv_data.light_position));
+
+        ::memcpy(m_lv_data.light_color, m_light_color, sizeof(m_light_color));
+        static_assert(sizeof(m_light_color) == sizeof(m_lv_data.light_color));
+
         RF::UpdateUniformBuffer(m_lv_buffer.buffers[0], MFA::CBlobAliasOf(m_lv_data));
     }
-    m_drawable_object.draw(draw_pass);
+    selectedModel.drawableObject.draw(draw_pass);
 }
 
 void GLTFMeshViewerScene::OnUI(MFA::U32 const delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
+    static constexpr float ItemWidth = 500;
     ImGui::Begin("Object viewer");
-    ImGui::SetNextItemWidth(300.0f);
+    ImGui::SetNextItemWidth(ItemWidth);
+    // TODO Bad for performance, Find a better name
+    std::vector<char const *> modelNames {};
+    if(false == mModelsRenderData.empty()) {
+        for(auto const & renderData : mModelsRenderData) {
+            modelNames.emplace_back(renderData.displayName.c_str());
+        }
+    }
+    ImGui::Combo(
+        "Object selector",
+        &mSelectedModelIndex,
+        modelNames.data(), 
+        static_cast<MFA::I32>(modelNames.size())
+    );
+    ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("XDegree", &m_model_rotation[0], -360.0f, 360.0f);
-    ImGui::SetNextItemWidth(300.0f);
+    ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("YDegree", &m_model_rotation[1], -360.0f, 360.0f);
-    ImGui::SetNextItemWidth(300.0f);
+    ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("ZDegree", &m_model_rotation[2], -360.0f, 360.0f);
-    ImGui::SetNextItemWidth(300.0f);
+    ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("XDistance", &m_model_position[0], -100.0f, 100.0f);
-    ImGui::SetNextItemWidth(300.0f);
+    ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("YDistance", &m_model_position[1], -100.0f, 100.0f);
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("ZDistance", &m_model_position[2], -100.0f, 100.0f);
+    ImGui::SetNextItemWidth(ItemWidth);
+    ImGui::SliderFloat("ZDistance", &m_model_position[2], -1000.0f, 100.0f);
     ImGui::End();
 
     ImGui::Begin("Light");
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("LightX", &m_light_position[0], -200.0f, 200.0f);
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("LightY", &m_light_position[1], -200.0f, 200.0f);
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("LightZ", &m_light_position[2], -200.0f, 200.0f);
+    ImGui::SetNextItemWidth(ItemWidth);
+    ImGui::SliderFloat("PositionX", &m_light_position[0], -200.0f, 200.0f);
+    ImGui::SetNextItemWidth(ItemWidth);
+    ImGui::SliderFloat("PositionY", &m_light_position[1], -200.0f, 200.0f);
+    ImGui::SetNextItemWidth(ItemWidth);
+    ImGui::SliderFloat("PositionZ", &m_light_position[2], -1000.0f, 200.0f);
+    ImGui::SetNextItemWidth(ItemWidth);
+    ImGui::SliderFloat("ColorR", &m_light_color[0], 0.0f, 1.0f);
+    ImGui::SetNextItemWidth(ItemWidth);
+    ImGui::SliderFloat("ColorG", &m_light_color[1], 0.0f, 1.0f);
+    ImGui::SetNextItemWidth(ItemWidth);
+    ImGui::SliderFloat("ColorB", &m_light_color[2], 0.0f, 1.0f);
     ImGui::End();
 }
 
 void GLTFMeshViewerScene::Shutdown() {
-    destroyDrawableObject();
     RF::DestroyUniformBuffer(m_lv_buffer);
     RF::DestroyDrawPipeline(m_draw_pipeline);
     RF::DestroyDescriptorSetLayout(m_descriptor_set_layout);
     RF::DestroySampler(m_sampler_group);
-    RF::DestroyGpuModel(m_gpu_model);
-    Importer::FreeModel(&m_gpu_model.model_asset);
+    destroyModels();
+    RF::DestroyTexture(m_error_texture);
+    Importer::FreeAsset(m_error_texture.cpu_texture());
 }
 
-void GLTFMeshViewerScene::createDrawableObject() {
-    m_drawable_object = MFA::DrawableObject(
-        m_gpu_model,
+void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredData) {
+    auto cpuModel = Importer::ImportMeshGLTF(renderRequiredData.address.c_str());
+
+    renderRequiredData.gpuModel = RF::CreateGpuModel(cpuModel);
+
+    renderRequiredData.drawableObject = MFA::DrawableObject(
+        renderRequiredData.gpuModel,
         m_descriptor_set_layout
     );
 
-    const auto * subMeshInfoBuffer = m_drawable_object.create_multiple_uniform_buffer(
+    auto & drawableObject = renderRequiredData.drawableObject;
+
+    const auto * subMeshInfoBuffer = drawableObject.create_multiple_uniform_buffer(
         "subMeshInfo", 
         sizeof(SubMeshInfo), 
-        m_drawable_object.get_descriptor_set_count()
+        drawableObject.get_descriptor_set_count()
     );
     MFA_PTR_ASSERT(subMeshInfoBuffer);
 
-    const auto * transform_buffer = m_drawable_object.create_uniform_buffer("transform", sizeof(ModelTransformBuffer));
+    const auto * transform_buffer = drawableObject.create_uniform_buffer("transform", sizeof(ModelTransformBuffer));
     MFA_PTR_ASSERT(transform_buffer);
 
-    auto * model_header = m_drawable_object.get_model()->model_asset.mesh.header_object();
-    MFA_ASSERT(model_header->sub_mesh_count == m_drawable_object.get_descriptor_set_count());
+    auto * model_header = drawableObject.get_model()->model_asset.mesh.header_object();
+    MFA_ASSERT(model_header->sub_mesh_count == drawableObject.get_descriptor_set_count());
 
-    auto const & textures = m_drawable_object.get_model()->textures;
+    auto const & textures = drawableObject.get_model()->textures;
 
-    for(MFA::U8 i = 0; i < m_drawable_object.get_descriptor_set_count(); ++i) {// Updating descriptor sets
-        auto * descriptor_set = m_drawable_object.get_descriptor_set(i);
+    for(MFA::U8 i = 0; i < drawableObject.get_descriptor_set_count(); ++i) {// Updating descriptor sets
+        auto * descriptor_set = drawableObject.get_descriptor_set(i);
         auto const & sub_mesh = model_header->sub_meshes[i];
 
         std::vector<VkWriteDescriptorSet> writeInfo {};
+
+        // Transform
+        VkDescriptorBufferInfo transformBufferInfo {
+            .buffer = transform_buffer->buffers[0].buffer,
+            .offset = 0,
+            .range = transform_buffer->buffer_size
+        };
+        writeInfo.emplace_back(VkWriteDescriptorSet {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = descriptor_set,
+            .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .pBufferInfo = &transformBufferInfo,
+        });
 
         // SubMeshInfo
         VkDescriptorBufferInfo subMeshBufferInfo {
@@ -226,26 +310,12 @@ void GLTFMeshViewerScene::createDrawableObject() {
             MFA::CBlobAliasOf(info)
         );
 
-        // Transform
-        VkDescriptorBufferInfo transformBufferInfo {
-            .buffer = transform_buffer->buffers[0].buffer,
-            .offset = 0,
-            .range = transform_buffer->buffer_size
-        };
-        writeInfo.emplace_back(VkWriteDescriptorSet {
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = descriptor_set,
-            .dstBinding = static_cast<uint32_t>(writeInfo.size()),
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .pBufferInfo = &transformBufferInfo,
-        });
-
         // BaseColorTexture
         VkDescriptorImageInfo baseColorImageInfo {
             .sampler = m_sampler_group.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
-            .imageView = textures[sub_mesh.base_color_texture_index].image_view(),
+            .imageView = sub_mesh.has_base_color_texture
+                ? textures[sub_mesh.base_color_texture_index].image_view()
+                : m_error_texture.image_view(),
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         };
         writeInfo.emplace_back(VkWriteDescriptorSet {
@@ -261,7 +331,9 @@ void GLTFMeshViewerScene::createDrawableObject() {
         // Metallic/RoughnessTexture
         VkDescriptorImageInfo metallicImageInfo {
             .sampler = m_sampler_group.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
-            .imageView = textures[sub_mesh.metallic_roughness_texture_index].image_view(),
+            .imageView = sub_mesh.has_combined_metallic_roughness_texture
+                ? textures[sub_mesh.metallic_roughness_texture_index].image_view()
+                : m_error_texture.image_view(),
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         };
         writeInfo.emplace_back(VkWriteDescriptorSet {
@@ -277,7 +349,9 @@ void GLTFMeshViewerScene::createDrawableObject() {
         // NormalTexture  
         VkDescriptorImageInfo normalImageInfo {
             .sampler = m_sampler_group.sampler,
-            .imageView = textures[sub_mesh.normal_texture_index].image_view(),
+            .imageView = sub_mesh.has_normal_texture
+                ? textures[sub_mesh.normal_texture_index].image_view()
+                : m_error_texture.image_view(),
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         };
         writeInfo.emplace_back(VkWriteDescriptorSet {
@@ -311,13 +385,22 @@ void GLTFMeshViewerScene::createDrawableObject() {
             writeInfo.data()
         );
 
-        // SubMeshInfoBuffer
-        // TODO Start from here
     }
+
+    renderRequiredData.isLoaded = true;
 }
 
-void GLTFMeshViewerScene::destroyDrawableObject() {
-    m_drawable_object.delete_uniform_buffers();
+void GLTFMeshViewerScene::destroyModels() {
+    if (mModelsRenderData.empty() == false) {
+        for (auto & group : mModelsRenderData) {
+            if (group.isLoaded) {
+                RF::DestroyGpuModel(group.gpuModel);
+                Importer::FreeModel(&group.gpuModel.model_asset);
+                group.drawableObject.delete_uniform_buffers();
+            }
+        }
+    }
+ 
 }
 
 void GLTFMeshViewerScene::createDrawPipeline(MFA::U8 const gpu_shader_count, MFA::RenderBackend::GpuShader * gpu_shaders) {

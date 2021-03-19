@@ -21,9 +21,17 @@ public:
 
 private:
 
-    void createDrawableObject();
+    struct ModelRenderRequiredData {
+        bool isLoaded = false;
+        MFA::RenderFrontend::GpuModel gpuModel {};
+        std::string displayName {};
+        std::string address {};
+        MFA::DrawableObject drawableObject {};
+    };
 
-    void destroyDrawableObject();
+    void createModel(ModelRenderRequiredData & renderRequiredData);
+
+    void destroyModels();
 
     void createDrawPipeline(MFA::U8 gpu_shader_count, MFA::RenderBackend::GpuShader * gpu_shaders);
 
@@ -51,16 +59,19 @@ private:
     float m_model_position[3] {0.0f, 0.0f, -6.0f};
 
     struct LightViewBuffer {
-        float light_position[3];
-        float camera_position[3];
+        alignas(16) float light_position[3];
+        alignas(16) float camera_position[3];
+        alignas(16) float light_color[3];
     } m_lv_data {
         .light_position = {},
         .camera_position = {0.0f, 0.0f, 0.0f},
     };
 
     float m_light_position[3] {0.0f, 0.0f, -2.0f};
+    float m_light_color[3] {252.0f/256.0f, 212.0f/256.0f, 64.0f/256.0f};
 
-    MFA::RenderFrontend::GpuModel m_gpu_model {};
+    std::vector<ModelRenderRequiredData> mModelsRenderData {};
+    MFA::I32 mSelectedModelIndex = 0;
 
     MFA::RenderFrontend::SamplerGroup m_sampler_group {};
 
@@ -70,6 +81,6 @@ private:
 
     MFA::RenderFrontend::UniformBufferGroup m_lv_buffer {};
 
-    MFA::DrawableObject m_drawable_object {};
+    MFA::RenderBackend::GpuTexture m_error_texture {};
 
 };
