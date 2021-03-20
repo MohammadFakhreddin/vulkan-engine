@@ -3,14 +3,14 @@ struct PSIn {
     float3 worldPos: POSITION0;
     
     float2 baseColorTexCoord : TEXCOORD0;
-
     float2 metallicRoughnessTexCoord : TEXCOORD1;
     
     float2 normalTexCoord: TEXCOORD2;
-    
     float3 worldNormal : NORMAL0;
     float3 worldTangent: TEXCOORD3;
     float3 worldBiTangent : TEXCOORD4;
+
+    float2 emissiveTexCoord: TEXCOORD5;
 };
 
 struct PSOut {
@@ -19,6 +19,8 @@ struct PSOut {
 
 struct SubMeshInfo {
     float4 baseColorFactor: COLOR0;
+    float3 emissiveFactor: COLOR3;
+    float placeholder0;
     int hasBaseColorTexture;
     
     float metallicFactor: COLOR1;
@@ -26,6 +28,8 @@ struct SubMeshInfo {
     int hasMetallicRoughnessTexture;
 
     int hasNormalTexture;  
+
+    int hasEmissiveTexture;
 };
 
 ConstantBuffer <SubMeshInfo> smBuff : register (b1, space0);
@@ -39,13 +43,16 @@ Texture2D metallicRoughnessTexture : register(t3, space0);
 sampler normalSampler : register(s4, space0);
 Texture2D normalTexture : register(t4, space0);
 
+sampler emissiveSampler : register(s5, space0);
+Texture2D emissiveTexture : register(s5, space0);
+
 struct LightViewBuffer {
     float3 lightPosition;
     float3 camPos;
     float3 lightColor;
 };
 
-ConstantBuffer <LightViewBuffer> lvBuff : register (b5, space0);
+ConstantBuffer <LightViewBuffer> lvBuff : register (b6, space0);
 
 const float PI = 3.14159265359;
 
@@ -156,14 +163,14 @@ float3 calculateNormal(PSIn input)
 PSOut main(PSIn input) {
     float3 baseColor = smBuff.hasBaseColorTexture == 1
         ? pow(baseColorTexture.Sample(baseColorSampler, input.baseColorTexCoord).rgb, 2.2f)
-        : smBuff.baseColorFactor.xyz;
+        : smBuff.baseColorFactor.rgb;
     
     float metallic = 0.0f;
     float roughness = 0.0f;
     if (smBuff.hasMetallicRoughnessTexture == 1) {
         float4 metallicRoughness = metallicRoughnessTexture.Sample(metallicRoughnessSampler, input.metallicRoughnessTexCoord);
         metallic = metallicRoughness.b;
-        roughness = metallicRoughness.g;//max(metallicRoughness.g, 0.5);
+        roughness = metallicRoughness.g;
     } else {
         metallic = smBuff.metallicFactor;
         roughness = smBuff.roughnessFactor;
@@ -181,9 +188,22 @@ PSOut main(PSIn input) {
 		Lo += BRDF(L, V, N, metallic, roughness, baseColor, input.worldPos);
 	};
 
-	// Combine with ambient
-	float3 color = baseColor * 0.01; // TODO Add emissive color here
-	color += Lo;
+    // TODO Occlusion texture
+    // Combine with ambient
+    float3 color = float3(0.0, 0.0, 0.0);
+    // Actual correct code
+    // float3 ao = smBuff.hasEmissiveTexture == 1
+    //     ? emissiveTexture.Sample(emissiveSampler, input.emissiveTexCoord)
+    //     : smBuff.emissiveFactor;
+    // color += float3(baseColor.r * ao.r, baseColor.g * ao.g, baseColor.b * ao.b) * 0.3;
+    // Workaround
+    if (smBuff.hasEmissiveTexture == 1) {
+        float3 ao = emissiveTexture.Sample(emissiveSampler, input.emissiveTexCoord);
+        color += float3(baseColor.r * ao.r, baseColor.g * ao.g, baseColor.b * ao.b) * 0.3;
+    } else {
+        color += baseColor * 0.3 * smBuff.emissiveFactor;
+    }
+    color += Lo;
 
 	// Gamma correct
     color = color / (color + float3(1.0f));

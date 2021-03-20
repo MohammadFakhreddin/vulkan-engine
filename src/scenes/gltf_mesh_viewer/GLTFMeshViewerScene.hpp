@@ -41,12 +41,15 @@ private:
     static constexpr float Z_FAR = 1000.0f;
 
     struct SubMeshInfo {
-        float baseColorFactor[4];
-        int hasBaseColorTexture;
-        float metallicFactor;
-        float roughnessFactor;
-        int hasMetallicRoughnessTexture;
-        int hasNormalTexture;  
+        alignas(16) float baseColorFactor[4];
+        float emissiveFactor[3];
+        int placeholder0;
+        alignas(4) int hasBaseColorTexture;
+        alignas(4) float metallicFactor;
+        alignas(4) float roughnessFactor;
+        alignas(4) int hasMetallicRoughnessTexture;
+        alignas(4) int hasNormalTexture;
+        alignas(4) int hasEmissiveFactor;
     }; 
 
     struct ModelTransformBuffer {   // For vertices in Vertex shader

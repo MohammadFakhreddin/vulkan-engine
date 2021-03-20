@@ -1,13 +1,14 @@
 struct VSIn {
     float3 position : POSITION0;
     
-    float2 baseColorTexCoord : TEXCOORD0;
-    
+    float2 baseColorTexCoord : TEXCOORD0;  
     float2 metallicRoughnessTexCoord : TEXCOORD1;
     
     float2 normalTexCoord: TEXCOORD2;
     float4 tangent: TEXCOORD3;
     float3 normal: NORMAL0;
+
+    float2 emissiveTexCoord: TEXCOORD4;
 };
 
 struct VSOut {
@@ -15,13 +16,14 @@ struct VSOut {
     float3 worldPos: POSITION0;
     
     float2 baseColorTexCoord : TEXCOORD0;
-
     float2 metallicRoughnessTexCoord : TEXCOORD1;
     
     float2 normalTexCoord: TEXCOORD2;
     float3 worldNormal : NORMAL0;
     float3 worldTangent: TEXCOORD3;
     float3 worldBiTangent : TEXCOORD4;
+
+    float2 emissiveTexCoord: TEXCOORD4;
 };
 
 struct Transformation {
@@ -60,6 +62,8 @@ VSOut main(VSIn input) {
     output.worldTangent = worldTangent;
     output.worldNormal = worldNormal;
     output.worldBiTangent = worldBiTangent;
+
+    output.emissiveTexCoord = input.emissiveTexCoord;
 
     return output;
 }

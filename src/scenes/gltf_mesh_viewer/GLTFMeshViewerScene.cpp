@@ -296,14 +296,19 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
         });
         SubMeshInfo info {
             .baseColorFactor {},
+            .emissiveFactor {},
+            .placeholder0 {},
             .hasBaseColorTexture = sub_mesh.has_base_color_texture ? 1 : 0,
             .metallicFactor = sub_mesh.metallic_factor,
             .roughnessFactor = sub_mesh.roughness_factor,
             .hasMetallicRoughnessTexture = sub_mesh.has_combined_metallic_roughness_texture ? 1 : 0,
             .hasNormalTexture = sub_mesh.has_normal_texture ? 1 : 0,
+            .hasEmissiveFactor = sub_mesh.has_emissive_texture ? 1 : 0,
         };
         ::memcpy(info.baseColorFactor, sub_mesh.base_color_factor, sizeof(info.baseColorFactor));
         static_assert(sizeof(info.baseColorFactor) == sizeof(sub_mesh.base_color_factor));
+        ::memcpy(info.emissiveFactor, sub_mesh.emissive_factor, sizeof(info.emissiveFactor));
+        static_assert(sizeof(info.emissiveFactor) == sizeof(sub_mesh.emissive_factor));
 
         RF::UpdateUniformBuffer(
             subMeshInfoBuffer->buffers[i], 
@@ -362,6 +367,24 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
             .descriptorCount = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             .pImageInfo = &normalImageInfo,
+        });
+
+        // EmissiveTexture
+        VkDescriptorImageInfo emissiveImageInfo {
+            .sampler = m_sampler_group.sampler,
+            .imageView = sub_mesh.has_emissive_texture
+                ? textures[sub_mesh.emissive_texture_index].image_view()
+                : m_error_texture.image_view(),
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+        };
+        writeInfo.emplace_back(VkWriteDescriptorSet {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = descriptor_set,
+            .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .pImageInfo = &emissiveImageInfo,
         });
 
         // LightViewBuffer
@@ -452,7 +475,13 @@ void GLTFMeshViewerScene::createDrawPipeline(MFA::U8 const gpu_shader_count, MFA
         .format = VK_FORMAT_R32G32B32_SFLOAT,
         .offset = offsetof(Asset::MeshVertex, normal_value),   
     });
-    
+    // Emissive
+    input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
+        .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
+        .binding = 0,
+        .format = VK_FORMAT_R32G32_SFLOAT,
+        .offset = offsetof(Asset::MeshVertex, emission_uv)
+    });
     m_draw_pipeline = RF::CreateBasicDrawPipeline(
         gpu_shader_count, 
         gpu_shaders,
@@ -505,6 +534,14 @@ void GLTFMeshViewerScene::createDescriptorSetLayout() {
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         .pImmutableSamplers = nullptr,
+    });
+    // Emissive
+    bindings.emplace_back(VkDescriptorSetLayoutBinding {
+        .binding = static_cast<MFA::U32>(bindings.size()),
+        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        .descriptorCount = 1,
+        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+        .pImmutableSamplers = nullptr
     });
     // Light/View
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
