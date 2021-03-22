@@ -596,6 +596,13 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     matrix.set(2, 2, matrix.get(2, 2) + value);
   }
 
+  static _Matrix<T,width,height> Identity()
+  {
+    _Matrix<T,width,height> matrix {};
+    _Matrix<T,width,height>::identity(matrix);
+    return matrix;
+  }
+
   static void identity(_Matrix<T,width,height> & matrix)
   {
     int i = 0;

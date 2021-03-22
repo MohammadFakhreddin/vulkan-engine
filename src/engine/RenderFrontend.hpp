@@ -111,11 +111,11 @@ struct GpuModel {
     bool valid = false;
     MeshBuffers mesh_buffers {};
     std::vector<RB::GpuTexture> textures {};
-    AssetSystem::ModelAsset model_asset {};
+    AssetSystem::Model model_asset {};
     // TODO Samplers
 };
 [[nodiscard]]
-GpuModel CreateGpuModel(AssetSystem::ModelAsset & model_asset);
+GpuModel CreateGpuModel(AssetSystem::Model & model_asset);
 
 void DestroyGpuModel(GpuModel & gpu_model);
 

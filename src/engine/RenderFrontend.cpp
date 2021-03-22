@@ -508,7 +508,7 @@ void DestroySampler(SamplerGroup & sampler_group) {
     sampler_group.sampler = nullptr;
 }
 
-GpuModel CreateGpuModel(AssetSystem::ModelAsset & model_asset) {
+GpuModel CreateGpuModel(AssetSystem::Model & model_asset) {
     GpuModel gpu_model {
         .valid = true,
         .mesh_buffers = CreateMeshBuffers(model_asset.mesh),

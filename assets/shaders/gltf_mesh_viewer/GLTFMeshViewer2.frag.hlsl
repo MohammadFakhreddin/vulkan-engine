@@ -21,6 +21,7 @@ struct SubMeshInfo {
     float4 baseColorFactor: COLOR0;
     float3 emissiveFactor: COLOR3;
     float placeholder0;
+    
     int hasBaseColorTexture;
     
     float metallicFactor: COLOR1;
@@ -119,6 +120,15 @@ float3 BRDF(
     float3 color = float3(0, 0, 0);
 
     float distance    = length(lvBuff.lightPosition - worldPos);
+    // TODO Consider using more advanced attenuation https://github.com/lettier/3d-game-shaders-for-beginners/blob/master/sections/lighting.md
+    // float attenuation =
+    //     1
+    //   / ( p3d_LightSource[i].constantAttenuation
+    //     + p3d_LightSource[i].linearAttenuation
+    //     * lightDistance
+    //     + p3d_LightSource[i].quadraticAttenuation
+    //     * (lightDistance * lightDistance)
+    //     );
     float attenuation = attenuationFactor / (distance * distance);
     float3 radiance   = lvBuff.lightColor * attenuation;        
     
@@ -167,13 +177,16 @@ PSOut main(PSIn input) {
     
     float metallic = 0.0f;
     float roughness = 0.0f;
+    float ambientOcclusion = 0.3f;
     if (smBuff.hasMetallicRoughnessTexture == 1) {
         float4 metallicRoughness = metallicRoughnessTexture.Sample(metallicRoughnessSampler, input.metallicRoughnessTexCoord);
         metallic = metallicRoughness.b;
         roughness = metallicRoughness.g;
+        ambientOcclusion = metallicRoughness.r;
     } else {
         metallic = smBuff.metallicFactor;
         roughness = smBuff.roughnessFactor;
+        // TODO
     }
 
 	float3 normal = calculateNormal(input);
@@ -191,17 +204,12 @@ PSOut main(PSIn input) {
     // TODO Occlusion texture
     // Combine with ambient
     float3 color = float3(0.0, 0.0, 0.0);
-    // Actual correct code
-    // float3 ao = smBuff.hasEmissiveTexture == 1
-    //     ? emissiveTexture.Sample(emissiveSampler, input.emissiveTexCoord)
-    //     : smBuff.emissiveFactor;
-    // color += float3(baseColor.r * ao.r, baseColor.g * ao.g, baseColor.b * ao.b) * 0.3;
-    // Workaround
+    
     if (smBuff.hasEmissiveTexture == 1) {
         float3 ao = emissiveTexture.Sample(emissiveSampler, input.emissiveTexCoord);
-        color += float3(baseColor.r * ao.r, baseColor.g * ao.g, baseColor.b * ao.b) * 0.3;
+        color += float3(baseColor.r * ao.r, baseColor.g * ao.g, baseColor.b * ao.b) * ambientOcclusion;//* 0.3;
     } else {
-        color += baseColor * 0.3 * smBuff.emissiveFactor;
+        color += baseColor * smBuff.emissiveFactor * ambientOcclusion; // * 0.3
     }
     color += Lo;
 

@@ -344,6 +344,12 @@ AssetSystem::MeshAsset ImportObj(char const * path) {
                 mesh_header->sub_meshes[0].indices_offset = header_size + vertices_count * sizeof(AssetSystem::MeshVertex);
                 mesh_header->sub_meshes[0].has_normal_texture = true;
                 mesh_header->sub_meshes[0].has_normal_buffer = true;
+                // copying identity into subMesh
+                Matrix4X4Float identityMatrix {};
+                Matrix4X4Float::identity(identityMatrix);
+                static_assert(sizeof(identityMatrix.cells) == sizeof(mesh_header->parent.matrix));
+                ::memcpy(mesh_header->parent.matrix, identityMatrix.cells, sizeof(identityMatrix.cells));
+
                 auto * mesh_vertices = mesh_asset.vertices_blob(0).as<AssetSystem::MeshVertex>();
                 auto * mesh_indices = mesh_asset.indices_blob(0).as<AssetSystem::MeshIndex>();
                 MFA_ASSERT(mesh_asset.indices_blob(0).ptr + mesh_asset.indices_blob(0).len == mesh_asset_blob.ptr + mesh_asset_blob.len);

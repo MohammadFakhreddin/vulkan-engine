@@ -1,15 +1,13 @@
 #pragma once
 
 #include "BedrockMatrix.hpp"
-#include "BedrockAssert.hpp"
 #include "BedrockCommon.hpp"
 #include "BedrockMath.hpp"
 
 #include <vector>
 
 namespace MFA::AssetSystem {
-    class TextureAsset;
-    // TODO We need hash functionality as well
+
 enum class AssetType {
     INVALID     = 0,
     Texture     = 1,
@@ -19,112 +17,94 @@ enum class AssetType {
 };
 
 //----------------------------------Texture------------------------------
-namespace Texture {
+class Texture {
+public:
+    enum class Format {
+        INVALID     = 0,
+        UNCOMPRESSED_UNORM_R8_LINEAR        = 1,
+        UNCOMPRESSED_UNORM_R8G8_LINEAR      = 2,
+        UNCOMPRESSED_UNORM_R8G8B8A8_LINEAR  = 3,
+        UNCOMPRESSED_UNORM_R8_SRGB          = 4,
+        UNCOMPRESSED_UNORM_R8G8B8A8_SRGB    = 5,
+        
+        BC7_UNorm_Linear_RGB        = 6,
+        BC7_UNorm_Linear_RGBA       = 7,
+        BC7_UNorm_sRGB_RGB          = 8,
+        BC7_UNorm_sRGB_RGBA         = 9,
 
-enum class Format {
-    INVALID     = 0,
-    UNCOMPRESSED_UNORM_R8_LINEAR        = 1,
-    UNCOMPRESSED_UNORM_R8G8_LINEAR      = 2,
-    UNCOMPRESSED_UNORM_R8G8B8A8_LINEAR  = 3,
-    UNCOMPRESSED_UNORM_R8_SRGB          = 4,
-    UNCOMPRESSED_UNORM_R8G8B8A8_SRGB    = 5,
-    
-    BC7_UNorm_Linear_RGB        = 6,
-    BC7_UNorm_Linear_RGBA       = 7,
-    BC7_UNorm_sRGB_RGB          = 8,
-    BC7_UNorm_sRGB_RGBA         = 9,
+        BC6H_UFloat_Linear_RGB      = 10,
+        BC6H_SFloat_Linear_RGB      = 11,
 
-    BC6H_UFloat_Linear_RGB      = 10,
-    BC6H_SFloat_Linear_RGB      = 11,
+        BC5_UNorm_Linear_RG         = 12,
+        BC5_SNorm_Linear_RG         = 13,
 
-    BC5_UNorm_Linear_RG         = 12,
-    BC5_SNorm_Linear_RG         = 13,
+        BC4_UNorm_Linear_R          = 14,
+        BC4_SNorm_Linear_R          = 15,
 
-    BC4_UNorm_Linear_R          = 14,
-    BC4_SNorm_Linear_R          = 15,
+        Count
+    };
 
-    Count
-};
-
-struct InternalFormatTableType {
-    Format texture_format;
-    uint8_t compression;                            // 0: uncompressed, 1: basis?, ...
-    uint8_t component_count;                        // 1..4
-    uint8_t component_format;                       // 0: UNorm, 1: SNorm, 2: UInt, 3: SInt, 4: UFloat, 5: SFloat
-    uint8_t color_space;                            // 0: Linear, 1: sRGB
-    uint8_t bits_r, bits_g, bits_b, bits_a;         // each 0..32
-    uint8_t bits_total;                             // 1..128
-};
-inline constexpr InternalFormatTableType FormatTable [] = {
-    {Format::INVALID                                 , 0, 0, 0, 0, 0, 0, 0, 0,  0},
-
-    {Format::UNCOMPRESSED_UNORM_R8_LINEAR            , 0, 1, 0, 0, 8, 0, 0, 0,  8},
-    {Format::UNCOMPRESSED_UNORM_R8G8_LINEAR          , 0, 2, 0, 0, 8, 8, 0, 0, 16},
-    {Format::UNCOMPRESSED_UNORM_R8G8B8A8_LINEAR      , 0, 4, 0, 0, 8, 8, 8, 8, 32},
-    {Format::UNCOMPRESSED_UNORM_R8_SRGB              , 0, 1, 0, 1, 8, 0, 0, 0,  8},
-    {Format::UNCOMPRESSED_UNORM_R8G8B8A8_SRGB        , 0, 4, 0, 1, 8, 8, 8, 8, 32},
-
-    {Format::BC7_UNorm_Linear_RGB                    , 7, 3, 0, 0, 8, 8, 8, 0,  8},
-    {Format::BC7_UNorm_Linear_RGBA                   , 7, 4, 0, 0, 8, 8, 8, 8,  8},
-    {Format::BC7_UNorm_sRGB_RGB                      , 7, 3, 0, 1, 8, 8, 8, 0,  8},
-    {Format::BC7_UNorm_sRGB_RGBA                     , 7, 4, 0, 1, 8, 8, 8, 8,  8},
-
-    {Format::BC6H_UFloat_Linear_RGB                  , 6, 3, 4, 0, 16, 16, 16, 0, 8},
-    {Format::BC6H_SFloat_Linear_RGB                  , 6, 3, 5, 0, 16, 16, 16, 0, 8},
-
-    {Format::BC5_UNorm_Linear_RG                     , 5, 2, 0, 0, 8, 8, 0, 0, 8},
-    {Format::BC5_SNorm_Linear_RG                     , 5, 2, 0, 1, 8, 8, 0, 0, 8},
-
-    {Format::BC4_UNorm_Linear_R                      , 5, 2, 0, 0, 8, 8, 0, 0, 16},
-    {Format::BC4_SNorm_Linear_R                      , 5, 2, 0, 1, 8, 8, 0, 0, 16},
-
-};
-static_assert(ArrayCount(FormatTable) == static_cast<unsigned>(Format::Count));
-
-#pragma pack(push)
-#pragma warning (push)
-#pragma warning (disable: 4200)         // Non-standard extension used: zero-sized array in struct
-struct Header {
     struct Dimensions {
         U32 width = 0;
         U32 height = 0;
         U16 depth = 0;
     };
-    //static_assert(10 == sizeof(Dimensions));
+
     struct MipmapInfo {
         U32 offset {};
         U32 size {};
         Dimensions dims {};
     };
-    //static_assert(18 == sizeof(MipmapInfo));
-    // TODO Handle alignment (Size and reserved if needed) for write operation to .asset file
-    Format          format = Format::INVALID;
-    U16             slices = 0;
-    U8              mip_count = 0;
-    U16             depth = 0;
+
     struct Sampler {
-        bool is_valid = false;
+        bool isValid = false;
         enum class SampleMode {
             Linear,
             Nearest
         };
-        SampleMode sample_mode = SampleMode::Linear;
-        U32 mag_filter = 0;
-        U32 min_filter = 0;
-        U32 wrap_s = 0;
-        U32 wrap_t = 0;
+        SampleMode sampleMode = SampleMode::Linear;
+        U32 magFilter = 0;
+        U32 minFilter = 0;
+        U32 wrapS = 0;
+        U32 wrapT = 0;
     };
-    // TODO Use sampler
-    Sampler         sampler {};
-    MipmapInfo      mipmap_infos[];
-    [[nodiscard]]
-    size_t mip_offset_bytes (uint8_t const mip_level, uint8_t const slice_index = 0) const {
-        size_t ret = 0;
-        if(mip_level < mip_count && slice_index < slices) {
-            ret = mipmap_infos[mip_level].offset + slice_index * mipmap_infos[mip_level].size;
-        }
-        return ret;
-    }
+
+private:
+    struct InternalFormatTableType {
+        Format texture_format;
+        uint8_t compression;                            // 0: uncompressed, 1: basis?, ...
+        uint8_t component_count;                        // 1..4
+        uint8_t component_format;                       // 0: UNorm, 1: SNorm, 2: UInt, 3: SInt, 4: UFloat, 5: SFloat
+        uint8_t color_space;                            // 0: Linear, 1: sRGB
+        uint8_t bits_r, bits_g, bits_b, bits_a;         // each 0..32
+        uint8_t bits_total;                             // 1..128
+    };
+    static constexpr InternalFormatTableType FormatTable [] = {
+        {Format::INVALID                                 , 0, 0, 0, 0, 0, 0, 0, 0,  0},
+
+        {Format::UNCOMPRESSED_UNORM_R8_LINEAR            , 0, 1, 0, 0, 8, 0, 0, 0,  8},
+        {Format::UNCOMPRESSED_UNORM_R8G8_LINEAR          , 0, 2, 0, 0, 8, 8, 0, 0, 16},
+        {Format::UNCOMPRESSED_UNORM_R8G8B8A8_LINEAR      , 0, 4, 0, 0, 8, 8, 8, 8, 32},
+        {Format::UNCOMPRESSED_UNORM_R8_SRGB              , 0, 1, 0, 1, 8, 0, 0, 0,  8},
+        {Format::UNCOMPRESSED_UNORM_R8G8B8A8_SRGB        , 0, 4, 0, 1, 8, 8, 8, 8, 32},
+
+        {Format::BC7_UNorm_Linear_RGB                    , 7, 3, 0, 0, 8, 8, 8, 0,  8},
+        {Format::BC7_UNorm_Linear_RGBA                   , 7, 4, 0, 0, 8, 8, 8, 8,  8},
+        {Format::BC7_UNorm_sRGB_RGB                      , 7, 3, 0, 1, 8, 8, 8, 0,  8},
+        {Format::BC7_UNorm_sRGB_RGBA                     , 7, 4, 0, 1, 8, 8, 8, 8,  8},
+
+        {Format::BC6H_UFloat_Linear_RGB                  , 6, 3, 4, 0, 16, 16, 16, 0, 8},
+        {Format::BC6H_SFloat_Linear_RGB                  , 6, 3, 5, 0, 16, 16, 16, 0, 8},
+
+        {Format::BC5_UNorm_Linear_RG                     , 5, 2, 0, 0, 8, 8, 0, 0, 8},
+        {Format::BC5_SNorm_Linear_RG                     , 5, 2, 0, 1, 8, 8, 0, 0, 8},
+
+        {Format::BC4_UNorm_Linear_R                      , 5, 2, 0, 0, 8, 8, 0, 0, 16},
+        {Format::BC4_SNorm_Linear_R                      , 5, 2, 0, 1, 8, 8, 0, 0, 16},
+
+    };
+    static_assert(ArrayCount(FormatTable) == static_cast<unsigned>(Format::Count));
+public:
 
     static U8 ComputeMipCount(Dimensions const dimensions) {
         U32 const max_dimension = Math::Max(
@@ -200,42 +180,73 @@ struct Header {
         return ret;
     }
 
-    [[nodiscard]]
-    static size_t Size(U8 const mip_count) {
-        return sizeof(Header) + (mip_count * sizeof(MipmapInfo));
+    explicit Texture(
+        const Format format,
+        const U16 slices,
+        const U8 mipCount,
+        const U16 depth,
+        Sampler const & sampler,
+        Blob const & data
+    ) {
+        MFA_ASSERT(format != Format::INVALID);
+        mFormat = format;
+        MFA_ASSERT(slices > 0);
+        mSlices = slices;
+        MFA_ASSERT(mipCount > 0);
+        mMipCount = mipCount;
+        MFA_ASSERT(depth > 0);
+        mDepth = depth;
+        MFA_ASSERT(sampler.isValid);
+        mSampler = sampler;
+        mData = data;
     }
-    [[nodiscard]]
-    size_t size() {
-        return Size(mip_count);
-    }
-    [[nodiscard]]
-    bool is_valid() const {
-        // TODO
-        return true;
-    }
-};
-#pragma warning(pop)
-#pragma pack(pop)
 
-}
+    [[nodiscard]]
+    size_t mipOffsetInBytes (uint8_t const mip_level, uint8_t const slice_index = 0) const {
+        size_t ret = 0;
+        if(mip_level < mMipCount && slice_index < mSlices) {
+            ret = mMipmapInfos[mip_level].offset + slice_index * mMipmapInfos[mip_level].size;
+        }
+        return ret;
+    }
+
+    [[nodiscard]]
+    bool isValid() const {
+        return
+            mFormat != Format::INVALID && 
+            mSlices > 0 && 
+            mMipCount > 0 && 
+            mMipmapInfos.empty() == false && 
+            mData.ptr != nullptr && 
+            mData.len > 0;
+    }
+
+private:
+    Format mFormat = Format::INVALID;
+    U16 mSlices = 0;
+    U8 mMipCount = 0;
+    U16 mDepth = 0;
+    Sampler mSampler {};
+    std::vector<MipmapInfo> mMipmapInfos {};
+    Blob mData {};
+};
 
 using TextureFormat = Texture::Format;
-using TextureHeader = Texture::Header;
-using TextureSampler = TextureHeader::Sampler;
+using TextureSampler = Texture::Sampler;
 
-//---------------------------------MeshHeader-------------------------------------
-namespace Mesh {
+//---------------------------------MeshAsset-------------------------------------
+class Mesh {
+// TODO Implement serialize and deserialize
+    using SubMeshIndexType = U32;
 
-namespace Data {
-#pragma warning (push)
-#pragma warning (disable: 4200)         // Non-standard extension used: zero-sized array in struct
-#pragma pack(push)
-struct Vertices {
     using Position = float[3];
     using Normal = float[3];
     using UV = float[2];
     using Color = U8[3];
     using Tangent = float[4]; // XYZW vertex tangents where the w component is a sign value (-1 or +1) indicating handedness of the tangent basis. I need to change XYZ order if handness is different from mine
+
+    using IndexType = U32;
+public:
     struct Vertex {
         Position position;
         UV base_color_uv;
@@ -247,22 +258,7 @@ struct Vertices {
         Normal normal_value;
         Tangent tangent_value;
     };
-    Vertex value[];
-};
-#pragma pack(pop)
-#pragma pack(push)
-struct Indices {
-    using IndexType = U32;
-    IndexType value[];
-};
-#pragma pack(pop)
-#pragma warning (pop)
-}
-#pragma warning (push)
-#pragma warning (disable: 4200)                 // Non-standard extension used: zero-sized array in struct
-#pragma pack(push)
-struct Header {
-    using SubMeshIndexType = U32;
+    
     struct SubMesh {
         U32 vertex_count = 0;
         U32 index_count = 0;
@@ -287,89 +283,109 @@ struct Header {
         bool has_combined_metallic_roughness_texture = false;
         bool has_metallic_texture = false;
         bool has_roughness_texture = false;
-        // TODO We need to have matrix here
-        //bool hasMatrix = false;
-        //Matrix4X4Float matrix {};
-        //bool hasRotation = false;
-        //float rotation[4];  // Quaternion
     };
-    SubMeshIndexType sub_mesh_count = 0;
-    U32 total_vertex_count = 0;
-    U32 total_index_count = 0;
-    SubMesh sub_meshes [];
-    [[nodiscard]]
-    static size_t ComputeHeaderSize(U32 const sub_mesh_count) {
-        return sizeof(Header) + sizeof(SubMesh) * sub_mesh_count;
+    
+    struct Node {
+        Node * parent {};
+        std::vector<Node> children {};
+        Matrix4X4Float transformMatrix {};
+        SubMeshIndexType subMeshIndex;
+    };
+
+    void insertVertex(Vertex const & vertex) {
+        mVertices.emplace_back(vertex);
     }
-    [[nodiscard]]
-    static size_t ComputeAssetSize(
-        size_t const header_size,
-        U32 const total_vertices_count,
-        U32 const total_indices_count
-    ) {
-        MFA_ASSERT(header_size > 0);
-        MFA_ASSERT(total_vertices_count > 0);
-        MFA_ASSERT(total_indices_count > 0);
-        size_t const total_size = header_size + total_vertices_count * sizeof(Data::Vertices::Vertex)
-            + total_indices_count * sizeof(Data::Indices::IndexType);
-        return total_size;
+
+    void insertIndex(IndexType const & index) {
+        mIndices.emplace_back(index);
     }
-    [[nodiscard]]
-    static size_t ComputeAssetSizeWithoutHeaderSize(
-        SubMeshIndexType const sub_mesh_count,
-        U32 const total_vertices_count,
-        U32 const total_indices_count
-    ) {
-        MFA_ASSERT(sub_mesh_count > 0);
-        MFA_ASSERT(total_vertices_count > 0);
-        MFA_ASSERT(total_indices_count > 0);
-        auto const header_size = ComputeHeaderSize(sub_mesh_count);
-        return ComputeAssetSize(header_size, total_vertices_count, total_indices_count);
+
+    void insertMesh(SubMesh const & subMesh) {
+        mSubMeshes.emplace_back(subMesh);
     }
+
+    void insertNode(Node const & node) {
+        mNodes.emplace_back(node);
+    }
+
     [[nodiscard]]
-    bool is_valid() const {
+    bool isValid() const {
         // TODO
-        return sub_mesh_count > 0;
+        return mVertices.empty() == false && 
+            mIndices.empty() == false && 
+            mSubMeshes.empty() == false && 
+            mNodes.empty() == false;
     }
-};
-#pragma pack(pop)
-#pragma warning (pop)
-}
 
-using MeshHeader = Mesh::Header;
-using MeshIndex = Mesh::Data::Indices::IndexType;
-using MeshVertex = Mesh::Data::Vertices::Vertex;
-using SubMeshIndexType = Mesh::Header::SubMeshIndexType;
-
-//--------------------------------ShaderHeader--------------------------------------
-namespace Shader {
-
-enum class Stage {
-    Invalid,
-    Vertex,
-    Fragment
-};
-
-struct Header {
-    static constexpr U8 EntryPointLength = 30;
-    char entry_point [EntryPointLength];     // Ex: main
-    Stage stage = Stage::Invalid;
     [[nodiscard]]
-    static size_t Size() {
-        return sizeof(Header);
+    Vertex const * GetVerticesData() const noexcept {
+        return mVertices.data();
     }
+
+    [[nodiscard]]
+    U32 GetVerticesCount() const noexcept {
+        return static_cast<U32>(mVertices.size());
+    }
+
+    [[nodiscard]]
+    IndexType const * GetIndicesData() const noexcept {
+        return mIndices.data();
+    }
+
+    [[nodiscard]]
+    U32 GetIndicesCount() const noexcept {
+        return static_cast<U32>(mIndices.size());
+    }
+
+    [[nodiscard]]
+    SubMesh const * GetSubMeshData() const noexcept {
+        return mSubMeshes.data();
+    }
+
+    [[nodiscard]]
+    U32 GetSubMeshSize() const noexcept {
+        return static_cast<U32>(mSubMeshes.size());
+    }
+
+    [[nodiscard]]
+    Node const * GetNodeData() const noexcept {
+        return mNodes.data();
+    }
+
+    [[nodiscard]]
+    U32 GetNodeSize() const noexcept {
+        return static_cast<U32>(mNodes.size());
+    }
+
+private:
+    std::vector<Vertex> mVertices {};
+    std::vector<IndexType> mIndices {};
+    std::vector<SubMesh> mSubMeshes {};
+    std::vector<Node> mNodes {};
+
+};
+
+//--------------------------------ShaderAsset--------------------------------------
+class Shader {
+public:
+    enum class Stage {
+        Invalid,
+        Vertex,
+        Fragment
+    };
     [[nodiscard]]
     bool is_valid() const {
         return strlen(entry_point) > 0 && Stage::Invalid != stage;
     }
-};  
+private:
+    static constexpr U8 EntryPointLength = 30;
+    char entry_point [EntryPointLength] {};     // Ex: main
+    Stage stage = Stage::Invalid;
+};
 
-}
-
-using ShaderHeader = Shader::Header;
 using ShaderStage = Shader::Stage;
 
-//---------------------------------GenericAsset----------------------------------
+/*//---------------------------------GenericAsset----------------------------------
 
 class GenericAsset {
 public:
@@ -554,13 +570,13 @@ public:
     bool valid() const override {
         return MFA_PTR_VALID(asset().ptr) && header_object()->is_valid();
     }
-};
+};*/
 
 //----------------------------------ModelAsset------------------------------------
 
-struct ModelAsset {
-    std::vector<TextureAsset> textures;
-    MeshAsset mesh;
+struct Model {
+    std::vector<Texture> textures;
+    Mesh mesh;
 };
 
 };  // MFA::Asset

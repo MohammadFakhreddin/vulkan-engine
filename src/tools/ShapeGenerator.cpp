@@ -5,8 +5,8 @@
 
 namespace MFA::ShapeGenerator {
 
-    AssetSystem::ModelAsset Sphere() {
-        AssetSystem::ModelAsset model_asset {};
+    AssetSystem::Model Sphere() {
+        AssetSystem::Model model_asset {};
 
         std::vector<Vector3Float> positions {};
         std::vector<Vector2Float> uvs {};
