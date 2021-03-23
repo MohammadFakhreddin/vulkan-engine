@@ -6,34 +6,34 @@
 
 namespace MFA::Importer {
 //TODO:// After implementing Resource system return handle instead
-
+namespace AS = AssetSystem;
 //------------------------------Assets-------------------------------------
 
 struct ImportTextureOptions {
     bool generate_mipmaps = true;
     bool prefer_srgb = false;       // Not tested and not recommended
-    AssetSystem::TextureHeader::Sampler * sampler = nullptr;
+    AS::TextureSampler * sampler = nullptr;
     // TODO Usage flags
 };
 
 [[nodiscard]]
-AssetSystem::TextureAsset ImportUncompressedImage(
+AS::Texture ImportUncompressedImage(
     char const * path, 
     ImportTextureOptions const & options = {}
 );
 
 [[nodiscard]]
-AssetSystem::TextureAsset CreateErrorTexture();
+AS::Texture CreateErrorTexture();
 
 [[nodiscard]]
-AssetSystem::TextureAsset ImportInMemoryTexture(
-    CBlob pixels,
+AS::Texture ImportInMemoryTexture(
+    CBlob originalImagePixels,
     I32 width,
     I32 height,
-    AssetSystem::TextureFormat format,
+    AS::TextureFormat format,
     U32 components,
     U16 depth = 1,
-    I32 slices = 1,
+    U16 slices = 1,
     ImportTextureOptions const & options = {}
 );
 
@@ -41,38 +41,43 @@ AssetSystem::TextureAsset ImportInMemoryTexture(
 
 // TODO
 [[nodiscard]]
-AssetSystem::TextureAsset ImportDDSFile(char const * path);
+AS::Texture ImportDDSFile(char const * path);
 /*
  * Due to lack of material support, OBJ files are not very useful (Deprecated)
  */
 [[nodiscard]]
-AssetSystem::MeshAsset ImportObj(char const * path);
+AS::Mesh ImportObj(char const * path);
 
 [[nodiscard]]
-AssetSystem::Model ImportMeshGLTF(char const * path);
+AS::Model ImportMeshGLTF(char const * path);
 
 [[nodiscard]]
-AssetSystem::ShaderAsset ImportShaderFromHLSL(char const * path);
+AS::Shader ImportShaderFromHLSL(char const * path);
 
 [[nodiscard]]
-AssetSystem::ShaderAsset ImportShaderFromSPV(
+AS::Shader ImportShaderFromSPV(
     char const * path,
-    AssetSystem::ShaderStage stage,
-    char const * entry_point
+    AS::ShaderStage stage,
+    char const * entryPoint
 );
 
 [[nodiscard]]
-AssetSystem::ShaderAsset ImportShaderFromSPV(
-    CBlob data_memory,
-    AssetSystem::ShaderStage const stage,
-    char const * entry_point
+AS::Shader ImportShaderFromSPV(
+    CBlob dataMemory,
+    AS::ShaderStage const stage,
+    char const * entryPoint
 );
 
 // Temporary function for freeing imported assets, Will be replaced with RCMGMT system in future
-bool FreeModel(AssetSystem::Model * model);
+bool FreeModel(AS::Model * model);
 
 // Temporary function for freeing imported assets, Will be replaced with RCMGMT system in future
-bool FreeAsset(AssetSystem::GenericAsset * asset);
+bool FreeTexture(AS::Texture * texture);
+
+bool FreeShader(AS::Shader * shader);
+
+// Calling this function is not required because meshed does not allocate dynamic memory
+bool FreeMesh(AS::Mesh * mesh);
 
 //------------------------------RawFile------------------------------------
 
@@ -80,7 +85,7 @@ struct RawFile {
     Blob data;
     [[nodiscard]]
     bool valid() const {
-        return MFA_PTR_VALID(data.ptr);
+        return data.ptr != nullptr;
     }
 };
 

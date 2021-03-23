@@ -9,11 +9,11 @@
 
 namespace MFA::Importer {
 
-AssetSystem::TextureAsset ImportUncompressedImage(
+AS::Texture ImportUncompressedImage(
     char const * path,
     ImportTextureOptions const & options
 ) {
-    AssetSystem::TextureAsset texture {};
+    AS::Texture texture {};
     Utils::UncompressedTexture::Data image_data {};
     auto const use_srgb = options.prefer_srgb;
     auto const load_image_result = Utils::UncompressedTexture::Load(
@@ -44,7 +44,7 @@ AssetSystem::TextureAsset ImportUncompressedImage(
     // TODO: Handle errors
     return texture;
 }
-AssetSystem::TextureAsset CreateErrorTexture() {
+AS::Texture CreateErrorTexture() {
     auto const data = Memory::Alloc(4);
     auto * pixel = data.as<uint8_t>();
     pixel[0] = 1;
@@ -56,31 +56,31 @@ AssetSystem::TextureAsset CreateErrorTexture() {
         data,
         1,
         1,
-        AssetSystem::TextureFormat::UNCOMPRESSED_UNORM_R8G8B8A8_LINEAR,
+        AS::TextureFormat::UNCOMPRESSED_UNORM_R8G8B8A8_LINEAR,
         4,
         1,
         1
     );
 }
 
-AssetSystem::TextureAsset ImportInMemoryTexture(
-    CBlob const pixels,
+AS::Texture ImportInMemoryTexture(
+    CBlob const originalImagePixels,
     I32 const width,
     I32 const height,
-    AssetSystem::TextureFormat const format,
+    AS::TextureFormat const format,
     U32 const components,
     U16 const depth,
-    I32 const slices,
+    U16 const slices,
     ImportTextureOptions const & options
 ) {
-    auto const use_srgb = options.prefer_srgb;
-    AssetSystem::TextureHeader::Dimensions const original_image_dims {
+    auto const useSrgb = options.prefer_srgb;
+    AS::Texture::Dimensions const originalImageDimension {
         static_cast<U32>(width),
         static_cast<U32>(height),
         depth
     };
-    U8 const mip_count = options.generate_mipmaps
-        ? AssetSystem::TextureHeader::ComputeMipCount(original_image_dims)
+    U8 const mipCount = options.generate_mipmaps
+        ? AS::Texture::ComputeMipCount(originalImageDimension)
         : 1;
     //if (static_cast<unsigned>(options.usage_flags) &
     //    static_cast<unsigned>(YUGA::TextureUsageFlags::Normal | 
@@ -88,146 +88,139 @@ AssetSystem::TextureAsset ImportInMemoryTexture(
     //        YUGA::TextureUsageFlags::Roughness)) {
     //    use_srgb = false;
     //}
-    auto const texture_descriptor_size = AssetSystem::TextureHeader::Size(mip_count);
     // TODO Maybe we should add a check to make sure asset has uncompressed type
-    auto const texture_data_size = AssetSystem::TextureHeader::CalculateUncompressedTextureRequiredDataSize(
+    auto const bufferSize = AS::Texture::CalculateUncompressedTextureRequiredDataSize(
         format,
         slices,
-        original_image_dims,
-        mip_count
+        originalImageDimension,
+        mipCount
     );
-    auto const texture_asset_size = texture_descriptor_size + texture_data_size;
-    auto resource_blob = Memory::Alloc(texture_asset_size);
+    AS::Texture texture {};
+    texture.initForWrite(
+        format,
+        slices,
+        mipCount,
+        depth,
+        options.sampler,
+        Memory::Alloc(bufferSize)
+    );
     MFA_DEFER {
-        if(MFA_PTR_VALID(resource_blob.ptr)) {// Pointer being valid means that process has failed
-            Memory::Free(resource_blob);
+        if(texture.isValid() == false) {// Pointer being valid means that process has failed
+            Memory::Free(texture.revokeBuffer());
         }
     };
-    // TODO We need to a function for generating metadata that uses functionality implemented inside fileWriter
-    auto * texture_descriptor = resource_blob.as<AssetSystem::TextureHeader>();
-    texture_descriptor->mip_count = mip_count;
-    texture_descriptor->format = format;
-    texture_descriptor->slices = slices;
-    //texture_descriptor->usage_flags = options.usage_flags;        // TODO
-    {
-        size_t current_mip_map_location = 0;//texture_descriptor_size;
-        bool resize_result {}; MFA_CONSUME_VAR(resize_result);
-        for (U8 mip_level = 0; mip_level < mip_count - 1; mip_level++) {
-            Byte * current_mipmap_ptr = resource_blob.ptr + current_mip_map_location;
-            auto const current_mip_dims = AssetSystem::TextureHeader::MipDimensions(
-                mip_level,
-                mip_count,
-                original_image_dims
-            );
-            auto const current_mip_size_bytes = AssetSystem::TextureHeader::MipSizeBytes(
-                format,
-                slices,
-                current_mip_dims
-            );
-            // TODO What should we do for 3d assets ?
-            resize_result = use_srgb ? stbir_resize_uint8_srgb(
-                pixels.ptr,
-                width,
-                height,
-                0,
-                current_mipmap_ptr,
-                current_mip_dims.width,
-                current_mip_dims.height,
-                0,
-                components,
-                components > 3 ? 3 : STBIR_ALPHA_CHANNEL_NONE,
-                0
-            ) : stbir_resize_uint8(
-                pixels.ptr,
-                width,
-                height,
-                0,
-                current_mipmap_ptr,
-                current_mip_dims.width,
-                current_mip_dims.height, 0,
-                components
-            );
-            MFA_ASSERT(true == resize_result);
-            current_mip_map_location += current_mip_size_bytes;
-            texture_descriptor->mipmap_infos[mip_level] = {
-                static_cast<U32>(current_mip_map_location),
-                static_cast<U32>(current_mip_size_bytes),
-                current_mip_dims
-            };
-        }
-        texture_descriptor->mipmap_infos[mip_count - 1] = {
-            static_cast<U32>(current_mip_map_location),
-            static_cast<U32>(pixels.len),
-            original_image_dims
-        };
-        ::memcpy(resource_blob.ptr + current_mip_map_location + texture_descriptor_size, pixels.ptr, pixels.len);
-    }
 
-    auto texture = AssetSystem::TextureAsset(resource_blob);
-    if(MFA_PTR_VALID(options.sampler)) {
-        MFA_ASSERT(options.sampler->is_valid);
-        ::memcpy(&texture_descriptor->sampler, options.sampler, sizeof(&options.sampler));
+    // Generating mipmaps (TODO : Code needs debugging)
+    for (U8 mipLevel = 0; mipLevel < mipCount - 1; mipLevel++) {
+        auto const currentMipDims = AS::Texture::MipDimensions(
+            mipLevel,
+            mipCount,
+            originalImageDimension
+        );
+        auto const currentMipSizeBytes = AS::Texture::MipSizeBytes(
+            format,
+            slices,
+            currentMipDims
+        );
+        auto const mipMapPixels = Memory::Alloc(currentMipSizeBytes);
+        MFA_DEFER {
+            Memory::Free(mipMapPixels);
+        };
+        
+        // TODO What should we do for 3d assets ?
+        auto const resizeResult = useSrgb ? stbir_resize_uint8_srgb(
+            originalImagePixels.ptr,
+            width,
+            height,
+            0,
+            mipMapPixels.ptr,
+            currentMipDims.width,
+            currentMipDims.height,
+            0,
+            components,
+            components > 3 ? 3 : STBIR_ALPHA_CHANNEL_NONE,
+            0
+        ) : stbir_resize_uint8(
+            originalImagePixels.ptr,
+            width,
+            height,
+            0,
+            mipMapPixels.ptr,
+            currentMipDims.width,
+            currentMipDims.height, 
+            0,
+            components
+        );
+        MFA_ASSERT(true == resizeResult);
+        texture.addMipmap(
+            currentMipDims,
+            mipMapPixels
+        );
     }
-    MFA_ASSERT(texture.valid());
-    if(true == texture.valid()) {
-        resource_blob = {};
-    }
+    texture.addMipmap(originalImageDimension, originalImagePixels);
+    
+
+    MFA_ASSERT(texture.isValid());
+
     return texture;
 }
 
-AssetSystem::TextureAsset ImportDDSFile(char const * path) {
+AS::Texture ImportDDSFile(char const * path) {
     // TODO
     MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
 }
 
-AssetSystem::ShaderAsset ImportShaderFromHLSL(char const * path) {
+AS::Shader ImportShaderFromHLSL(char const * path) {
     MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
 }
 
-AssetSystem::ShaderAsset ImportShaderFromSPV(
+AS::Shader ImportShaderFromSPV(
     char const * path,
-    AssetSystem::ShaderStage const stage,
-    char const * entry_point
+    AS::ShaderStage const stage,
+    char const * entryPoint
 ) {
-    if(MFA_PTR_VALID(path)) {
+    MFA_ASSERT(path != nullptr);
+    AS::Shader shader {};
+    if (path != nullptr) {
         auto * file = FileSystem::OpenFile(path,  FileSystem::Usage::Read);
         MFA_DEFER{FileSystem::CloseFile(file);};
         if(FileSystem::IsUsable(file)) {
-            auto const file_size = FileSystem::FileSize(file);
-            MFA_ASSERT(file_size > 0);
-            auto const asset_memory = Memory::Alloc(file_size + AssetSystem::ShaderHeader::Size());
-            MFA_ASSERT(MFA_PTR_VALID(asset_memory.ptr) && asset_memory.len == file_size + AssetSystem::ShaderHeader::Size());
-            auto * shader_header = asset_memory.as<AssetSystem::ShaderHeader>();
-            shader_header->stage = stage;
-            ::strncpy_s(shader_header->entry_point, entry_point, AssetSystem::ShaderHeader::EntryPointLength);
-            Blob const data_memory = Blob {asset_memory.ptr + AssetSystem::ShaderHeader::Size(), file_size};
-            auto const read_bytes = FileSystem::Read(file, data_memory);
-            if(read_bytes == data_memory.len) {
-                return AssetSystem::ShaderAsset {asset_memory};
+            auto const fileSize = FileSystem::FileSize(file);
+            MFA_ASSERT(fileSize > 0);
+
+            auto const buffer = Memory::Alloc(fileSize);
+
+            shader.init(entryPoint, stage, buffer);
+
+            auto const readBytes = FileSystem::Read(file, buffer);
+
+            if(readBytes != buffer.len) {
+                shader.revokeData();
+                Memory::Free(buffer);
             }
-            Memory::Free(asset_memory);
         }
     }
-    return AssetSystem::ShaderAsset {{}};
+    return shader;
 }
 
-AssetSystem::ShaderAsset ImportShaderFromSPV(
-    CBlob const data_memory,
-    AssetSystem::ShaderStage const stage,
-    char const * entry_point
+AS::Shader ImportShaderFromSPV(
+    CBlob const dataMemory,
+    AS::ShaderStage const stage,
+    char const * entryPoint
 ) {
-    MFA_BLOB_ASSERT(data_memory);
-    auto const shader_header_size = AssetSystem::ShaderHeader::Size();
-    auto const asset_memory = Memory::Alloc(data_memory.len + shader_header_size);
-    ::memcpy(asset_memory.ptr + shader_header_size, data_memory.ptr, data_memory.len);
-    auto * shader_header = asset_memory.as<AssetSystem::ShaderHeader>();
-    shader_header->stage = stage;
-    ::strncpy_s(shader_header->entry_point, entry_point, AssetSystem::ShaderHeader::EntryPointLength);
-    return AssetSystem::ShaderAsset {asset_memory};
+    MFA_ASSERT(dataMemory.ptr != nullptr);
+    MFA_ASSERT(dataMemory.len > 0);
+    AS::Shader shader {};
+    if (dataMemory.ptr != nullptr && dataMemory.len > 0) {
+        auto const buffer = Memory::Alloc(dataMemory.len);
+        ::memcpy(buffer.ptr, dataMemory.ptr, buffer.len);
+        shader.init(entryPoint, stage, buffer);
+    }
+    return shader;
 }
 
-AssetSystem::MeshAsset ImportObj(char const * path) {
-    AssetSystem::MeshAsset mesh_asset {};
+AS::Mesh ImportObj(char const * path) {
+    AS::Mesh mesh_asset {};
     if(FileSystem::Exists(path)){
         auto * file = FileSystem::OpenFile(path, FileSystem::Usage::Read);
         MFA_DEFER {FileSystem::CloseFile(file);};
@@ -321,8 +314,8 @@ AssetSystem::MeshAsset ImportObj(char const * path) {
                 }
                 auto const vertices_count = static_cast<U32>(positions_count);
                 auto const indices_count = static_cast<U32>(shapes[0].mesh.indices.size());
-                auto const header_size = AssetSystem::MeshHeader::ComputeHeaderSize(1);
-                auto mesh_asset_blob = Memory::Alloc(AssetSystem::MeshHeader::ComputeAssetSize(
+                auto const header_size = AS::MeshHeader::ComputeHeaderSize(1);
+                auto mesh_asset_blob = Memory::Alloc(AS::MeshHeader::ComputeAssetSize(
                     header_size,
                     vertices_count,      // For Vertices // TODO Recheck this part again
                     indices_count
@@ -333,15 +326,15 @@ AssetSystem::MeshAsset ImportObj(char const * path) {
                     }
                 };
                 // TODO Multiple mesh support
-                mesh_asset = AssetSystem::MeshAsset(mesh_asset_blob);
-                auto * mesh_header = mesh_asset_blob.as<AssetSystem::MeshHeader>();
+                mesh_asset = AS::MeshAsset(mesh_asset_blob);
+                auto * mesh_header = mesh_asset_blob.as<AS::MeshHeader>();
                 mesh_header->sub_mesh_count = 1;
                 mesh_header->total_vertex_count = vertices_count;
                 mesh_header->total_index_count = indices_count;
                 mesh_header->sub_meshes[0].vertex_count = vertices_count;
                 mesh_header->sub_meshes[0].vertices_offset = header_size;
                 mesh_header->sub_meshes[0].index_count = indices_count;
-                mesh_header->sub_meshes[0].indices_offset = header_size + vertices_count * sizeof(AssetSystem::MeshVertex);
+                mesh_header->sub_meshes[0].indices_offset = header_size + vertices_count * sizeof(AS::MeshVertex);
                 mesh_header->sub_meshes[0].has_normal_texture = true;
                 mesh_header->sub_meshes[0].has_normal_buffer = true;
                 // copying identity into subMesh
@@ -350,8 +343,8 @@ AssetSystem::MeshAsset ImportObj(char const * path) {
                 static_assert(sizeof(identityMatrix.cells) == sizeof(mesh_header->parent.matrix));
                 ::memcpy(mesh_header->parent.matrix, identityMatrix.cells, sizeof(identityMatrix.cells));
 
-                auto * mesh_vertices = mesh_asset.vertices_blob(0).as<AssetSystem::MeshVertex>();
-                auto * mesh_indices = mesh_asset.indices_blob(0).as<AssetSystem::MeshIndex>();
+                auto * mesh_vertices = mesh_asset.vertices_blob(0).as<AS::MeshVertex>();
+                auto * mesh_indices = mesh_asset.indices_blob(0).as<AS::MeshIndex>();
                 MFA_ASSERT(mesh_asset.indices_blob(0).ptr + mesh_asset.indices_blob(0).len == mesh_asset_blob.ptr + mesh_asset_blob.len);
                 for(
                     uintmax_t indices_index = 0;
@@ -383,9 +376,9 @@ AssetSystem::MeshAsset ImportObj(char const * path) {
 }
 // TODO We need data-types called model and model-assets
 // Based on sasha willems and a comment in github
-AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
+AS::Mesh ImportMeshGLTF(char const * path) {
     MFA_PTR_ASSERT(path);
-    AssetSystem::ModelAsset model_asset {};
+    AS::ModelAsset model_asset {};
     using namespace tinygltf;
     TinyGLTF loader {};
     Model model;
@@ -423,7 +416,7 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
             {// Extracting textures
                 if(false == model.textures.empty()) {
                     for (auto const & texture : model.textures) {
-                        AssetSystem::TextureSampler sampler {.is_valid = false};
+                        AS::TextureSampler sampler {.is_valid = false};
                         {// Sampler
                             auto const & gltf_sampler = model.samplers[texture.sampler];
                             sampler.mag_filter = gltf_sampler.magFilter;
@@ -433,7 +426,7 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                             //sampler.sample_mode = gltf_sampler. // TODO
                             sampler.is_valid = true;
                         }
-                        AssetSystem::TextureAsset texture_asset {};
+                        AS::Texture texture_asset {};
                         auto const & image = model.images[texture.source];
                         {// Texture
                             std::string image_path = directory_path + "/" + image.uri;
@@ -477,14 +470,14 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                     }
                 }
             }
-            auto const header_size = AssetSystem::MeshHeader::ComputeHeaderSize(static_cast<U32>(sub_mesh_count));
-            auto const asset_size = AssetSystem::MeshHeader::ComputeAssetSize(
+            auto const header_size = AS::MeshHeader::ComputeHeaderSize(static_cast<U32>(sub_mesh_count));
+            auto const asset_size = AS::MeshHeader::ComputeAssetSize(
                 header_size,
                 total_vertices_count,
                 total_indices_count
             );
             auto asset_blob = Memory::Alloc(asset_size);
-            auto * header_object = asset_blob.as<AssetSystem::MeshHeader>();
+            auto * header_object = asset_blob.as<AS::MeshHeader>();
             header_object->sub_mesh_count = sub_mesh_count;
             header_object->total_index_count = total_indices_count;
             header_object->total_vertex_count = total_vertices_count;
@@ -493,11 +486,11 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                     Memory::Free(asset_blob);
                 }
             };
-            model_asset.mesh = AssetSystem::MeshAsset {asset_blob};
+            model_asset.mesh = AS::MeshAsset {asset_blob};
             // Step2: Fill asset buffer from model buffers
             U32 sub_mesh_index = 0;
             U64 vertices_offset = header_size;
-            U64 indices_offset = vertices_offset + total_vertices_count * sizeof(AssetSystem::MeshVertex);
+            U64 indices_offset = vertices_offset + total_vertices_count * sizeof(AS::MeshVertex);
             U32 indices_starting_index = 0;
             U32 vertices_starting_index = 0;
             for(auto & mesh : model.meshes) {
@@ -564,7 +557,7 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                             }
                         }
                         Blob temp_indices_blob {};
-                        AssetSystem::MeshIndex * temp_indices = nullptr;
+                        AS::MeshIndex * temp_indices = nullptr;
                         MFA_DEFER {
                             if(MFA_BLOB_VALID(temp_indices_blob)) {
                                 Memory::Free(temp_indices_blob);
@@ -577,8 +570,8 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                             auto const & buffer_view = model.bufferViews[accessor.bufferView];
                             MFA_REQUIRE(buffer_view.buffer < model.buffers.size());
                             auto const & buffer = model.buffers[buffer_view.buffer];
-                            temp_indices_blob = Memory::Alloc(accessor.count * sizeof(AssetSystem::MeshIndex));
-                            temp_indices = temp_indices_blob.as<AssetSystem::MeshIndex>();
+                            temp_indices_blob = Memory::Alloc(accessor.count * sizeof(AS::MeshIndex));
+                            temp_indices = temp_indices_blob.as<AS::MeshIndex>();
                             primitive_indices_count = static_cast<U32>(accessor.count);
                             switch(accessor.componentType) {
                                 case TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT:
@@ -810,8 +803,8 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
                             current_sub_mesh.has_combined_metallic_roughness_texture = nullptr != metallic_roughness_uvs;
                             MFA_ASSERT(current_sub_mesh.has_tangent_buffer == current_sub_mesh.has_normal_texture);
                         }
-                        vertices_offset += primitive_vertex_count * sizeof(AssetSystem::MeshVertex);
-                        indices_offset += primitive_indices_count * sizeof(AssetSystem::MeshIndex);
+                        vertices_offset += primitive_vertex_count * sizeof(AS::Mesh::Vertex);
+                        indices_offset += primitive_indices_count * sizeof(AS::MeshIndex);
                         indices_starting_index += primitive_indices_count;
                         vertices_starting_index += primitive_vertex_count;
                         auto * vertices = model_asset.mesh.vertices(sub_mesh_index);
@@ -911,37 +904,58 @@ AssetSystem::ModelAsset ImportMeshGLTF(char const * path) {
     return model_asset;
 }
 
-bool FreeModel(AssetSystem::ModelAsset * model) {
-    bool ret = false;
+bool FreeModel(AS::Model * model) {
+    bool success = false;
     MFA_PTR_ASSERT(model);
     if(MFA_PTR_VALID(model)) {
-        {// Mesh
-            auto const result = FreeAsset(&model->mesh);
-            MFA_ASSERT(result); MFA_CONSUME_VAR(result);
-        }
-        {// Textures
-            if(false == model->textures.empty()) {
-                for (auto & texture : model->textures) {
-                    auto const result = FreeAsset(&texture);
-                    MFA_ASSERT(result); MFA_CONSUME_VAR(result);
-                }
+        // Mesh
+        auto const result = FreeMesh(&model->mesh);
+        MFA_ASSERT(result); MFA_CONSUME_VAR(result);
+        // Textures
+        if(false == model->textures.empty()) {
+            for (auto & texture : model->textures) {
+                auto const result = FreeTexture(&texture);
+                MFA_ASSERT(result); MFA_CONSUME_VAR(result);
             }
         }
-        ret = true;
+        success = true;
     }
-    return ret;
+    return success;
 }
 
 // Temporary function for freeing imported assets // Resource system will be used instead
-bool FreeAsset(AssetSystem::GenericAsset * asset) {
-    bool ret = false;
-    if(MFA_PTR_VALID(asset) && asset->valid()) {
+bool FreeTexture(AS::Texture * texture) {
+    bool success = false;
+    MFA_ASSERT(texture != nullptr);
+    MFA_ASSERT(texture->isValid());
+    if(texture != nullptr && texture->isValid()) {
         // TODO This is RCMGMT task
-        Memory::Free(asset->asset());
-        asset->set_asset({});
-        ret = true;
+        Memory::Free(texture->revokeBuffer());
+        success = true;
     }
-    return ret;
+    return success;
+}
+
+bool FreeShader(AS::Shader * shader) {
+    bool success = false;
+    MFA_ASSERT(shader != nullptr);
+    MFA_ASSERT(shader->isValid());
+    if (shader != nullptr && shader->isValid()) {
+        Memory::Free(shader->revokeData());
+        success = true;
+    }
+    return success;
+}
+
+bool FreeMesh(AS::Mesh * mesh) {
+    bool success = false;
+    MFA_ASSERT(mesh != nullptr);
+    MFA_ASSERT(mesh->isValid());
+    if (mesh != nullptr && mesh->isValid()) {
+        mesh->revokeData();
+        success = true;
+    }
+    return success;
 }
 
 RawFile ReadRawFile(char const * path) {

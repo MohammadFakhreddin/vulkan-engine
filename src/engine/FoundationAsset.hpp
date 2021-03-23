@@ -2,7 +2,6 @@
 
 #include "BedrockMatrix.hpp"
 #include "BedrockCommon.hpp"
-#include "BedrockMath.hpp"
 
 #include <vector>
 
@@ -16,8 +15,20 @@ enum class AssetType {
     Material    = 4
 };
 
+//-----------------------------------Asset-------------------------------
+class Base {
+public:
+    [[nodiscard]]
+    virtual int serialize(CBlob const & writeBuffer) {
+        MFA_CRASH("Not implemented");
+    }   // Maybe import BitStream from NSO project
+    virtual void deserialize(CBlob const & readBuffer) {
+        MFA_CRASH("Not implemented");
+    }
+};
+
 //----------------------------------Texture------------------------------
-class Texture {
+class Texture final : public Base {
 public:
     enum class Format {
         INVALID     = 0,
@@ -53,7 +64,7 @@ public:
     struct MipmapInfo {
         U32 offset {};
         U32 size {};
-        Dimensions dims {};
+        Dimensions dimension {};
     };
 
     struct Sampler {
@@ -106,19 +117,7 @@ private:
     static_assert(ArrayCount(FormatTable) == static_cast<unsigned>(Format::Count));
 public:
 
-    static U8 ComputeMipCount(Dimensions const dimensions) {
-        U32 const max_dimension = Math::Max(
-            dimensions.width, 
-            Math::Max(
-                dimensions.height, 
-                static_cast<uint32_t>(dimensions.depth)
-            )
-        );
-        for (U8 i = 0; i < 32; ++i)
-            if ((1ULL << i) >= max_dimension)
-                return 1 + i;
-        return 33;
-    }
+    static U8 ComputeMipCount(Dimensions const & dimensions);
 
     /*
      * This function result is only correct for uncompressed data
@@ -126,14 +125,9 @@ public:
     [[nodiscard]]
     static size_t MipSizeBytes (
         Format format,
-        uint16_t const slices,
-        Dimensions const mip_level_dims
-    )
-    {
-        auto const & d = mip_level_dims;
-        size_t const p = FormatTable[static_cast<unsigned>(format)].bits_total / 8;
-        return p * slices * d.width * d.height * d.depth;
-    }
+        U16 slices,
+        Dimensions const & mipLevelDimension
+    );
 
     // TODO Consider moving this function to util_image
     /*
@@ -142,21 +136,10 @@ public:
     // NOTE: 0 is the *smallest* mipmap level, and "mip_count - 1" is the *largest*.
     [[nodiscard]]
     static Dimensions MipDimensions (
-        uint8_t const mip_level,
-        uint8_t const mip_count,
-        Dimensions const original_image_dims
-    )
-    {
-        Dimensions ret = {};
-        if (mip_level < mip_count) {
-            uint32_t const pow = mip_count - 1 - mip_level;
-            uint32_t const add = (1 << pow) - 1;
-            ret.width = (original_image_dims.width + add) >> pow;
-            ret.height = (original_image_dims.height + add) >> pow;
-            ret.depth = static_cast<uint16_t>((original_image_dims.depth + add) >> pow);
-        }
-        return ret;
-    }
+        U8 mip_level,
+        U8 mip_count,
+        Dimensions original_image_dims
+    );
 
     /*
     * This function result is only correct for uncompressed data
@@ -164,61 +147,42 @@ public:
     */
     [[nodiscard]]
     static size_t CalculateUncompressedTextureRequiredDataSize(
-        Format const format,
-        uint16_t const slices,
+        Format format,
+        U16 slices,
         Dimensions const & dims,
-        uint8_t const mip_count
-    ) {
-        size_t ret = 0;
-        for (uint8_t mip_level = 0; mip_level < mip_count; mip_level++) {
-            ret += MipSizeBytes(
-                format, 
-                slices, 
-                MipDimensions(mip_level, mip_count, dims)
-            );
-        }
-        return ret;
-    }
+        U8 mipCount
+    );
 
-    explicit Texture(
-        const Format format,
-        const U16 slices,
-        const U8 mipCount,
-        const U16 depth,
-        Sampler const & sampler,
-        Blob const & data
-    ) {
-        MFA_ASSERT(format != Format::INVALID);
-        mFormat = format;
-        MFA_ASSERT(slices > 0);
-        mSlices = slices;
-        MFA_ASSERT(mipCount > 0);
-        mMipCount = mipCount;
-        MFA_ASSERT(depth > 0);
-        mDepth = depth;
-        MFA_ASSERT(sampler.isValid);
-        mSampler = sampler;
-        mData = data;
+    void initForWrite(
+        Format format,
+        U16 slices,
+        U8 mipCount,
+        U16 depth,
+        Sampler const * sampler,
+        Blob const & buffer
+    );
+
+    void addMipmap(
+        Dimensions const & dimension,
+        CBlob const & data
+    );
+
+    [[nodiscard]]
+    size_t mipOffsetInBytes(uint8_t mip_level, uint8_t slice_index = 0) const;
+
+    [[nodiscard]]
+    bool isValid() const;
+
+    [[nodiscard]]
+    Blob revokeBuffer() {
+        auto const buffer = mBuffer;
+        mBuffer = {};
+        return buffer;
     }
 
     [[nodiscard]]
-    size_t mipOffsetInBytes (uint8_t const mip_level, uint8_t const slice_index = 0) const {
-        size_t ret = 0;
-        if(mip_level < mMipCount && slice_index < mSlices) {
-            ret = mMipmapInfos[mip_level].offset + slice_index * mMipmapInfos[mip_level].size;
-        }
-        return ret;
-    }
-
-    [[nodiscard]]
-    bool isValid() const {
-        return
-            mFormat != Format::INVALID && 
-            mSlices > 0 && 
-            mMipCount > 0 && 
-            mMipmapInfos.empty() == false && 
-            mData.ptr != nullptr && 
-            mData.len > 0;
+    CBlob GetBuffer() const noexcept {
+        return mBuffer;
     }
 
 private:
@@ -228,15 +192,16 @@ private:
     U16 mDepth = 0;
     Sampler mSampler {};
     std::vector<MipmapInfo> mMipmapInfos {};
-    Blob mData {};
+    Blob mBuffer {};
+    U32 mCurrentOffset = 0;
 };
 
 using TextureFormat = Texture::Format;
 using TextureSampler = Texture::Sampler;
 
 //---------------------------------MeshAsset-------------------------------------
-class Mesh {
-// TODO Implement serialize and deserialize
+class Mesh final : public Base {
+    // TODO Implement serialize and deserialize
     using SubMeshIndexType = U32;
 
     using Position = float[3];
@@ -292,70 +257,58 @@ public:
         SubMeshIndexType subMeshIndex;
     };
 
-    void insertVertex(Vertex const & vertex) {
-        mVertices.emplace_back(vertex);
-    }
+    void insertVertex(Vertex const & vertex);
 
-    void insertIndex(IndexType const & index) {
-        mIndices.emplace_back(index);
-    }
+    void insertIndex(IndexType const & index);
 
-    void insertMesh(SubMesh const & subMesh) {
-        mSubMeshes.emplace_back(subMesh);
-    }
+    void insertMesh(SubMesh const & subMesh);
 
-    void insertNode(Node const & node) {
-        mNodes.emplace_back(node);
-    }
+    void insertNode(Node const & node);
 
     [[nodiscard]]
-    bool isValid() const {
-        // TODO
-        return mVertices.empty() == false && 
-            mIndices.empty() == false && 
-            mSubMeshes.empty() == false && 
-            mNodes.empty() == false;
-    }
+    bool isValid() const;
 
     [[nodiscard]]
-    Vertex const * GetVerticesData() const noexcept {
+    Vertex const * getVerticesData() const noexcept {
         return mVertices.data();
     }
 
     [[nodiscard]]
-    U32 GetVerticesCount() const noexcept {
+    U32 getVerticesCount() const noexcept {
         return static_cast<U32>(mVertices.size());
     }
 
     [[nodiscard]]
-    IndexType const * GetIndicesData() const noexcept {
+    IndexType const * getIndicesData() const noexcept {
         return mIndices.data();
     }
 
     [[nodiscard]]
-    U32 GetIndicesCount() const noexcept {
+    U32 getIndicesCount() const noexcept {
         return static_cast<U32>(mIndices.size());
     }
 
     [[nodiscard]]
-    SubMesh const * GetSubMeshData() const noexcept {
+    SubMesh const * getSubMeshData() const noexcept {
         return mSubMeshes.data();
     }
 
     [[nodiscard]]
-    U32 GetSubMeshSize() const noexcept {
+    U32 getSubMeshSize() const noexcept {
         return static_cast<U32>(mSubMeshes.size());
     }
 
     [[nodiscard]]
-    Node const * GetNodeData() const noexcept {
+    Node const * getNodeData() const noexcept {
         return mNodes.data();
     }
 
     [[nodiscard]]
-    U32 GetNodeSize() const noexcept {
+    U32 getNodeSize() const noexcept {
         return static_cast<U32>(mNodes.size());
     }
+
+    void revokeData();
 
 private:
     std::vector<Vertex> mVertices {};
@@ -366,21 +319,48 @@ private:
 };
 
 //--------------------------------ShaderAsset--------------------------------------
-class Shader {
+class Shader final : public Base {
 public:
     enum class Stage {
         Invalid,
         Vertex,
         Fragment
     };
+
     [[nodiscard]]
-    bool is_valid() const {
-        return strlen(entry_point) > 0 && Stage::Invalid != stage;
+    bool isValid() const {
+        return mEntryPoint.empty() == false && 
+            Stage::Invalid != mStage && 
+            mData.ptr != nullptr && 
+            mData.len > 0;
     }
+
+    void init(
+        char const * entryPoint,
+        Stage const stage,
+        Blob const & data
+    ) {
+        mEntryPoint = entryPoint;
+        mStage = stage;
+        mData = data;
+    }
+
+    Blob revokeData() {
+        auto const buffer = mData;
+        mData = {};
+        return buffer;
+    }
+
+    [[nodiscard]]
+    CBlob GetData() const noexcept {
+        return mData;
+    }
+
+
 private:
-    static constexpr U8 EntryPointLength = 30;
-    char entry_point [EntryPointLength] {};     // Ex: main
-    Stage stage = Stage::Invalid;
+    std::string mEntryPoint {};     // Ex: main
+    Stage mStage = Stage::Invalid;
+    Blob mData;
 };
 
 using ShaderStage = Shader::Stage;

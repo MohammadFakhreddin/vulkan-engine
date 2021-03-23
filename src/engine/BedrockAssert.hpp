@@ -9,12 +9,8 @@
 
 #ifdef MFA_DEBUG
 #define MFA_ASSERT(condition)           assert(condition); _assume(condition)
-#define MFA_PTR_ASSERT(ptr)             MFA_ASSERT(MFA_PTR_VALID(ptr)); _assume(ptr != nullptr)
-#define MFA_BLOB_ASSERT(blob)           MFA_ASSERT(MFA_BLOB_VALID(blob))
 #else
 #define MFA_ASSERT(condition)           _assume(condition)
-#define MFA_PTR_ASSERT(ptr)             _assume(ptr != nullptr)
-#define MFA_BLOB_ASSERT(blob)
 #endif
 
 #define MFA_REQUIRE(condition)          if(!(condition)) {MFA_CRASH("Condition failed");}; _assume(condition)
