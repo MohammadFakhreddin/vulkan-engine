@@ -49,7 +49,7 @@ AS::Texture ImportDDSFile(char const * path);
 AS::Mesh ImportObj(char const * path);
 
 [[nodiscard]]
-AS::Model ImportMeshGLTF(char const * path);
+AS::Model ImportGLTF(char const * path);
 
 [[nodiscard]]
 AS::Shader ImportShaderFromHLSL(char const * path);

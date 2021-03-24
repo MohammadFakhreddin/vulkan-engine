@@ -220,7 +220,7 @@ AS::Shader ImportShaderFromSPV(
 }
 
 AS::Mesh ImportObj(char const * path) {
-    AS::Mesh mesh_asset {};
+    AS::Mesh mesh {};
     if(FileSystem::Exists(path)){
         auto * file = FileSystem::OpenFile(path, FileSystem::Usage::Read);
         MFA_DEFER {FileSystem::CloseFile(file);};
@@ -263,7 +263,7 @@ AS::Mesh ImportObj(char const * path) {
                 }
                 auto positions_count = attributes.vertices.size() / 3;
                 auto coords_count = attributes.texcoords.size() / 2;
-                auto normals_count = attributes.normals.size() / 3;
+                auto normalsCount = attributes.normals.size() / 3;
                 if (positions_count != coords_count) {
                     MFA_CRASH("Vertices and texture coordinates must have same size");
                 }
@@ -275,13 +275,13 @@ AS::Mesh ImportObj(char const * path) {
                 MFA_DEFER {Memory::Free(positions_blob);};
                 auto * positions = positions_blob.as<Position>();
                 for(
-                    uintmax_t vertex_index = 0; 
-                    vertex_index < positions_count; 
-                    vertex_index ++
+                    uintmax_t vertexIndex = 0; 
+                    vertexIndex < positions_count; 
+                    vertexIndex ++
                 ) {
-                    positions[vertex_index].value[0] = attributes.vertices[vertex_index * 3 + 0];
-                    positions[vertex_index].value[1] = attributes.vertices[vertex_index * 3 + 1];
-                    positions[vertex_index].value[2] = attributes.vertices[vertex_index * 3 + 2];
+                    positions[vertexIndex].value[0] = attributes.vertices[vertexIndex * 3 + 0];
+                    positions[vertexIndex].value[1] = attributes.vertices[vertexIndex * 3 + 1];
+                    positions[vertexIndex].value[2] = attributes.vertices[vertexIndex * 3 + 2];
                 }
                 struct TextureCoordinates {
                     float value[2];
@@ -290,81 +290,86 @@ AS::Mesh ImportObj(char const * path) {
                 MFA_DEFER {Memory::Free(coords_blob);};
                 auto * coords = coords_blob.as<TextureCoordinates>();
                 for(
-                    uintmax_t tex_index = 0; 
-                    tex_index < coords_count; 
-                    tex_index ++
+                    uintmax_t texIndex = 0; 
+                    texIndex < coords_count; 
+                    texIndex ++
                 ) {
-                    coords[tex_index].value[0] = attributes.texcoords[tex_index * 2 + 0];
-                    coords[tex_index].value[1] = attributes.texcoords[tex_index * 2 + 1];
+                    coords[texIndex].value[0] = attributes.texcoords[texIndex * 2 + 0];
+                    coords[texIndex].value[1] = attributes.texcoords[texIndex * 2 + 1];
                 }
                 struct Normals {
                     float value[3];
                 };
-                auto normals_blob = Memory::Alloc(sizeof(Normals) * normals_count);
-                MFA_DEFER {Memory::Free(normals_blob);};
-                auto * normals = normals_blob.as<Normals>();
+                auto normalsBlob = Memory::Alloc(sizeof(Normals) * normalsCount);
+                MFA_DEFER {Memory::Free(normalsBlob);};
+                auto * normals = normalsBlob.as<Normals>();
                 for(
-                    uintmax_t normal_index = 0; 
-                    normal_index < normals_count; 
-                    normal_index ++
+                    uintmax_t normalIndex = 0; 
+                    normalIndex < normalsCount; 
+                    normalIndex ++
                 ) {
-                    normals[normal_index].value[0] = attributes.normals[normal_index * 3 + 0];
-                    normals[normal_index].value[1] = attributes.normals[normal_index * 3 + 1];
-                    normals[normal_index].value[2] = attributes.normals[normal_index * 3 + 2];
+                    normals[normalIndex].value[0] = attributes.normals[normalIndex * 3 + 0];
+                    normals[normalIndex].value[1] = attributes.normals[normalIndex * 3 + 1];
+                    normals[normalIndex].value[2] = attributes.normals[normalIndex * 3 + 2];
                 }
-                auto const vertices_count = static_cast<U32>(positions_count);
-                auto const indices_count = static_cast<U32>(shapes[0].mesh.indices.size());
-                auto const header_size = AS::MeshHeader::ComputeHeaderSize(1);
-                auto mesh_asset_blob = Memory::Alloc(AS::MeshHeader::ComputeAssetSize(
-                    header_size,
-                    vertices_count,      // For Vertices // TODO Recheck this part again
-                    indices_count
-                ));
+                auto const vertexCount = static_cast<U32>(positions_count);
+                auto const indexCount = static_cast<U32>(shapes[0].mesh.indices.size());
+                mesh.initForWrite(
+                    vertexCount, 
+                    indexCount, 
+                    Memory::Alloc(sizeof(AS::Mesh::Vertex) * vertexCount),
+                    Memory::Alloc(sizeof(AS::Mesh::Index) * indexCount)
+                );
+                
                 MFA_DEFER {
-                    if(MFA_PTR_VALID(mesh_asset_blob.ptr)) {
-                        Memory::Free(mesh_asset_blob);
+                    if (mesh.isValid() == false) {
+                        Blob vertexBuffer {};
+                        Blob indexBuffer {};
+                        mesh.revokeBuffers(vertexBuffer, indexBuffer);
+                        Memory::Free(vertexBuffer);
+                        Memory::Free(indexBuffer);
                     }
                 };
-                // TODO Multiple mesh support
-                mesh_asset = AS::MeshAsset(mesh_asset_blob);
-                auto * mesh_header = mesh_asset_blob.as<AS::MeshHeader>();
-                mesh_header->sub_mesh_count = 1;
-                mesh_header->total_vertex_count = vertices_count;
-                mesh_header->total_index_count = indices_count;
-                mesh_header->sub_meshes[0].vertex_count = vertices_count;
-                mesh_header->sub_meshes[0].vertices_offset = header_size;
-                mesh_header->sub_meshes[0].index_count = indices_count;
-                mesh_header->sub_meshes[0].indices_offset = header_size + vertices_count * sizeof(AS::MeshVertex);
-                mesh_header->sub_meshes[0].has_normal_texture = true;
-                mesh_header->sub_meshes[0].has_normal_buffer = true;
-                // copying identity into subMesh
-                Matrix4X4Float identityMatrix {};
-                Matrix4X4Float::identity(identityMatrix);
-                static_assert(sizeof(identityMatrix.cells) == sizeof(mesh_header->parent.matrix));
-                ::memcpy(mesh_header->parent.matrix, identityMatrix.cells, sizeof(identityMatrix.cells));
-
-                auto * mesh_vertices = mesh_asset.vertices_blob(0).as<AS::MeshVertex>();
-                auto * mesh_indices = mesh_asset.indices_blob(0).as<AS::MeshIndex>();
-                MFA_ASSERT(mesh_asset.indices_blob(0).ptr + mesh_asset.indices_blob(0).len == mesh_asset_blob.ptr + mesh_asset_blob.len);
-                for(
-                    uintmax_t indices_index = 0;
-                    indices_index < shapes[0].mesh.indices.size();
-                    indices_index ++
-                ) {
-                    auto const vertex_index = shapes[0].mesh.indices[indices_index].vertex_index;
-                    auto const uv_index = shapes[0].mesh.indices[indices_index].texcoord_index;
-                    mesh_indices[indices_index] = shapes[0].mesh.indices[indices_index].vertex_index;
-                    ::memcpy(mesh_vertices[vertex_index].position, positions[vertex_index].value, sizeof(positions[vertex_index].value));
-                    ::memcpy(mesh_vertices[vertex_index].base_color_uv, coords[uv_index].value, sizeof(coords[uv_index].value));
-                    // TODO fill other uvs as well (If we used obj in anything serious enough)
-                    mesh_vertices[vertex_index].base_color_uv[1] = 1.0f - mesh_vertices[vertex_index].base_color_uv[1];
-                    ::memcpy(mesh_vertices[vertex_index].normal_value, normals[vertex_index].value, sizeof(normals[vertex_index].value));
-                }
                 
-                MFA_ASSERT(mesh_asset.valid());
-                if(true == mesh_asset.valid()) {
-                    mesh_asset_blob = {};
+                std::vector<AS::Mesh::Vertex> vertices {vertexCount};
+                std::vector<AS::Mesh::Index> indices {indexCount};
+                for(
+                    uintmax_t indicesIndex = 0;
+                    indicesIndex < shapes[0].mesh.indices.size();
+                    indicesIndex ++
+                ) {
+                    auto const vertexIndex = shapes[0].mesh.indices[indicesIndex].vertex_index;
+                    auto const uvIndex = shapes[0].mesh.indices[indicesIndex].texcoord_index;
+                    indices[indicesIndex] = shapes[0].mesh.indices[indicesIndex].vertex_index;
+                    ::memcpy(vertices[vertexIndex].position, positions[vertexIndex].value, sizeof(positions[vertexIndex].value));
+                    ::memcpy(vertices[vertexIndex].base_color_uv, coords[uvIndex].value, sizeof(coords[uvIndex].value));
+                    // TODO fill other uvs as well (If we used obj in anything serious enough)
+                    vertices[vertexIndex].base_color_uv[1] = 1.0f - vertices[vertexIndex].base_color_uv[1];
+                    ::memcpy(vertices[vertexIndex].normal_value, normals[vertexIndex].value, sizeof(normals[vertexIndex].value));
                 }
+
+                mesh.insertSubMesh(
+                    AS::Mesh::SubMesh {
+                        .vertexCount = vertexCount,
+                        .indexCount = indexCount,
+                        .baseColorTextureIndex = 0,
+                        .hasNormalBuffer = true
+                    },
+                    static_cast<U32>(vertices.size()),
+                    vertices.data(),
+                    static_cast<U32>(indices.size()),
+                    indices.data()
+                );
+
+                mesh.insertNode(AS::MeshNode {
+                    .parent {},
+                    .children {},
+                    .transformMatrix = Matrix4X4Float::Identity(),
+                    .subMeshIndex = 0
+                });
+
+                MFA_ASSERT(mesh.isValid());
+
             } else if (!error.empty() && error.substr(0, 4) != "WARN") {
                 MFA_CRASH("LoadObj returned error: %s, File: %s", error.c_str(), path);
             } else {
@@ -372,11 +377,11 @@ AS::Mesh ImportObj(char const * path) {
             }
         }
     }
-    return mesh_asset;
+    return mesh;
 }
 // TODO We need data-types called model and model-assets
 // Based on sasha willems and a comment in github
-AS::Mesh ImportMeshGLTF(char const * path) {
+AS::Model ImportGLTF(char const * path) {
     MFA_PTR_ASSERT(path);
     AS::ModelAsset model_asset {};
     using namespace tinygltf;
@@ -803,7 +808,7 @@ AS::Mesh ImportMeshGLTF(char const * path) {
                             current_sub_mesh.has_combined_metallic_roughness_texture = nullptr != metallic_roughness_uvs;
                             MFA_ASSERT(current_sub_mesh.has_tangent_buffer == current_sub_mesh.has_normal_texture);
                         }
-                        vertices_offset += primitive_vertex_count * sizeof(AS::Mesh::Vertex);
+                        vertices_offset += primitive_vertex_count * sizeof(AS::MeshVertex);
                         indices_offset += primitive_indices_count * sizeof(AS::MeshIndex);
                         indices_starting_index += primitive_indices_count;
                         vertices_starting_index += primitive_vertex_count;
@@ -811,7 +816,7 @@ AS::Mesh ImportMeshGLTF(char const * path) {
                         auto * indices = model_asset.mesh.indices(sub_mesh_index);
                         ::memcpy(indices, temp_indices_blob.ptr, temp_indices_blob.len);
                         ++ sub_mesh_index;
-                        MFA_PTR_ASSERT(positions);
+                        MFA_ASSERT(positions != nullptr);
                         MFA_ASSERT(current_sub_mesh.has_base_color_texture == false || base_color_uvs != nullptr);
                         MFA_ASSERT(current_sub_mesh.has_normal_texture == false || normals_uvs != nullptr);
                         MFA_ASSERT(current_sub_mesh.has_combined_metallic_roughness_texture == false || metallic_roughness_uvs != nullptr);
@@ -906,16 +911,17 @@ AS::Mesh ImportMeshGLTF(char const * path) {
 
 bool FreeModel(AS::Model * model) {
     bool success = false;
-    MFA_PTR_ASSERT(model);
-    if(MFA_PTR_VALID(model)) {
+    MFA_ASSERT(model != nullptr);
+    bool freeResult = false;
+    if(model != nullptr) {
         // Mesh
-        auto const result = FreeMesh(&model->mesh);
-        MFA_ASSERT(result); MFA_CONSUME_VAR(result);
+        freeResult = FreeMesh(&model->mesh);
+        MFA_ASSERT(freeResult);
         // Textures
         if(false == model->textures.empty()) {
             for (auto & texture : model->textures) {
-                auto const result = FreeTexture(&texture);
-                MFA_ASSERT(result); MFA_CONSUME_VAR(result);
+                freeResult = FreeTexture(&texture);
+                MFA_ASSERT(freeResult);
             }
         }
         success = true;
@@ -952,7 +958,11 @@ bool FreeMesh(AS::Mesh * mesh) {
     MFA_ASSERT(mesh != nullptr);
     MFA_ASSERT(mesh->isValid());
     if (mesh != nullptr && mesh->isValid()) {
-        mesh->revokeData();
+        Blob vertexBuffer {};
+        Blob indexBuffer {};
+        mesh->revokeBuffers(vertexBuffer, indexBuffer);
+        Memory::Free(vertexBuffer);
+        Memory::Free(indexBuffer);
         success = true;
     }
     return success;
@@ -960,7 +970,8 @@ bool FreeMesh(AS::Mesh * mesh) {
 
 RawFile ReadRawFile(char const * path) {
     RawFile ret {};
-    if(MFA_PTR_VALID(path)) {
+    MFA_ASSERT(path != nullptr);
+    if(path != nullptr) {
         auto * file = FileSystem::OpenFile(path, FileSystem::Usage::Read);
         MFA_DEFER {FileSystem::CloseFile(file);};
         if(FileSystem::IsUsable(file)) {
@@ -979,11 +990,13 @@ RawFile ReadRawFile(char const * path) {
     return ret;
 }
 
-bool FreeRawFile (RawFile * raw_file) {
+bool FreeRawFile (RawFile * rawFile) {
     bool ret = false;
-    if(MFA_PTR_VALID(raw_file) && raw_file->valid()) {
-        Memory::Free(raw_file->data);
-        raw_file->data = {};
+    MFA_ASSERT(rawFile != nullptr);
+    MFA_ASSERT(rawFile->valid());
+    if(rawFile != nullptr && rawFile->valid()) {
+        Memory::Free(rawFile->data);
+        rawFile->data = {};
         ret = true; 
     }
     return ret;

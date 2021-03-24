@@ -119,16 +119,43 @@ bool Texture::isValid() const {
         mBuffer.len > 0;
 }
 
-void Mesh::insertVertex(Vertex const & vertex) {
-    mVertices.emplace_back(vertex);
+void Mesh::initForWrite(
+    const U32 vertexCount,
+    const U32 indexCount,
+    const Blob & vertexBuffer,
+    const Blob & indexBuffer
+) {
+    MFA_ASSERT(mVertexBuffer.ptr == nullptr);
+    MFA_ASSERT(mIndexBuffer.ptr == nullptr);
+    mVertexCount = vertexCount;
+    mCurrentVertexOffset = 0;
+    mIndexCount = indexCount;
+    mCurrentIndexOffset = 0;
+    mVertexBuffer = vertexBuffer;
+    mIndexBuffer = indexBuffer;
 }
 
-void Mesh::insertIndex(IndexType const & index) {
-    mIndices.emplace_back(index);
-}
-
-void Mesh::insertMesh(SubMesh const & subMesh) {
+void Mesh::insertSubMesh(
+    SubMesh && subMesh, 
+    const U32 vertexCount, 
+    Vertex * vertices, 
+    const U32 indicesCount, 
+    IndexType * indices
+) {
+    subMesh.vertexCount = vertexCount;
+    subMesh.indexCount = indicesCount;
+    subMesh.verticesOffset = mCurrentVertexOffset;
+    subMesh.indicesStartingIndex = mCurrentStartingIndex;
+    U32 const verticesSize = sizeof(Vertex) * vertexCount;
+    U32 const indicesSize = sizeof(IndexType) * indicesCount;
+    MFA_ASSERT(mCurrentVertexOffset + verticesSize < mVertexBuffer.len);
+    MFA_ASSERT(mCurrentIndexOffset + indicesSize < mIndexBuffer.len);
+    ::memcpy(mVertexBuffer.ptr, vertices, verticesSize);
+    ::memcpy(mIndexBuffer.ptr, indices, indicesSize);
     mSubMeshes.emplace_back(subMesh);
+    mCurrentVertexOffset += verticesSize;
+    mCurrentIndexOffset += indicesSize;
+    mCurrentStartingIndex += indicesCount;
 }
 
 void Mesh::insertNode(Node const & node) {
@@ -136,17 +163,22 @@ void Mesh::insertNode(Node const & node) {
 }
 
 bool Mesh::isValid() const {
-    return mVertices.empty() == false && 
-        mIndices.empty() == false && 
+    return
         mSubMeshes.empty() == false && 
-        mNodes.empty() == false;
+        mNodes.empty() == false &&
+        mVertexCount > 0 &&
+        mVertexBuffer.ptr != nullptr &&
+        mVertexBuffer.len > 0 &&
+        mIndexCount > 0 &&
+        mIndexBuffer.ptr != nullptr &&
+        mIndexBuffer.len > 0;
 }
 
-void Mesh::revokeData() {
-    mVertices.resize(0);
-    mIndices.resize(0);
-    mSubMeshes.resize(0);
-    mNodes.resize(0);
+void Mesh::revokeBuffers(Blob & outVertexBuffer, Blob & outIndexBuffer) {
+    outVertexBuffer = mVertexBuffer;
+    outIndexBuffer = mIndexBuffer;
+    mVertexBuffer = {};
+    mIndexBuffer = {};
 }
 
 

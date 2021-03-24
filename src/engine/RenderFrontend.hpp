@@ -82,9 +82,6 @@ struct MeshBuffers {
     std::vector<DrawCallData> sub_mesh_buffers;    // Organized by sub-mesh index
 };
 
-[[nodiscard]]
-MeshBuffers CreateSubMeshBuffers(AssetSystem::MeshAsset const & mesh_asset);
-
 void DestroyMeshBuffers(MeshBuffers & mesh_buffers);
 
 [[nodiscard]]

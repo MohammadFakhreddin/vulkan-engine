@@ -201,8 +201,9 @@ using TextureSampler = Texture::Sampler;
 
 //---------------------------------MeshAsset-------------------------------------
 class Mesh final : public Base {
+public:
     // TODO Implement serialize and deserialize
-    using SubMeshIndexType = U32;
+    using SubMeshIndex = U32;
 
     using Position = float[3];
     using Normal = float[3];
@@ -210,8 +211,7 @@ class Mesh final : public Base {
     using Color = U8[3];
     using Tangent = float[4]; // XYZW vertex tangents where the w component is a sign value (-1 or +1) indicating handedness of the tangent basis. I need to change XYZ order if handness is different from mine
 
-    using IndexType = U32;
-public:
+    using Index = U32;
     struct Vertex {
         Position position;
         UV base_color_uv;
@@ -225,43 +225,53 @@ public:
     };
     
     struct SubMesh {
-        U32 vertex_count = 0;
-        U32 index_count = 0;
-        U64 vertices_offset = 0;                // From start of asset
-        U64 indices_offset = 0;
-        U32 indices_starting_index = 0;         // From start of asset
-        I16 base_color_texture_index = 0;
-        I16 metallic_roughness_texture_index = 0;
-        I16 metallic_texture_index = 0;
-        I16 roughness_texture_index = 0;
-        I16 normal_texture_index = 0;
-        I16 emissive_texture_index = 0;
-        float base_color_factor[4] {};
-        float metallic_factor = 0;              // Metallic color is stored inside blue
-        float roughness_factor = 0;             // Roughness color is stored inside green
-        float emissive_factor[3] {};
-        bool has_normal_buffer = false;
-        bool has_normal_texture = false;
-        bool has_tangent_buffer = false;
-        bool has_base_color_texture = false;
-        bool has_emissive_texture = false;
-        bool has_combined_metallic_roughness_texture = false;
-        bool has_metallic_texture = false;
-        bool has_roughness_texture = false;
+        U32 vertexCount = 0;
+        U32 indexCount = 0;
+        U64 verticesOffset = 0;                // From start of buffer
+        U64 indicesOffset = 0;
+        U32 indicesStartingIndex = 0;          // From start of buffer
+        I16 baseColorTextureIndex = 0;
+        I16 metallicRoughnessTextureIndex = 0;
+        I16 metallicTextureIndex = 0;
+        I16 roughnessTextureIndex = 0;
+        I16 normalTextureIndex = 0;
+        I16 emissiveTextureIndex = 0;
+        float baseColorFactor[4] {};
+        float metallicFactor = 0;              // Metallic color is stored inside blue
+        float roughnessFactor = 0;             // Roughness color is stored inside green
+        float emissiveFactor[3] {};
+        bool hasBaseColorTexture = false;
+        bool hasMetallicTexture = false;
+        bool hasRoughnessTexture = false;
+        bool hasEmissiveTexture = false;
+        bool hasOcclusionTexture = false;
+        bool hasMixedMetallicRoughnessOcclusionTexture = false;
+        bool hasNormalBuffer = false;
+        bool hasNormalTexture = false;
+        bool hasTangentBuffer = false;
     };
     
     struct Node {
         Node * parent {};
         std::vector<Node> children {};
         Matrix4X4Float transformMatrix {};
-        SubMeshIndexType subMeshIndex;
+        SubMeshIndex subMeshIndex;
     };
 
-    void insertVertex(Vertex const & vertex);
+    void initForWrite(
+        U32 vertexCount,
+        U32 indexCount,
+        const Blob & vertexBuffer,
+        const Blob & indexBuffer
+    );
 
-    void insertIndex(IndexType const & index);
-
-    void insertMesh(SubMesh const & subMesh);
+    void insertSubMesh(
+        SubMesh && subMesh, 
+        U32 vertexCount, 
+        Vertex * vertices, 
+        U32 indicesCount, 
+        Index * indices
+    );
 
     void insertNode(Node const & node);
 
@@ -269,28 +279,13 @@ public:
     bool isValid() const;
 
     [[nodiscard]]
-    Vertex const * getVerticesData() const noexcept {
-        return mVertices.data();
+    CBlob getVerticesBuffer() const noexcept {
+        return mVertexBuffer;
     }
 
     [[nodiscard]]
-    U32 getVerticesCount() const noexcept {
-        return static_cast<U32>(mVertices.size());
-    }
-
-    [[nodiscard]]
-    IndexType const * getIndicesData() const noexcept {
-        return mIndices.data();
-    }
-
-    [[nodiscard]]
-    U32 getIndicesCount() const noexcept {
-        return static_cast<U32>(mIndices.size());
-    }
-
-    [[nodiscard]]
-    SubMesh const * getSubMeshData() const noexcept {
-        return mSubMeshes.data();
+    CBlob getIndicesBuffer() const noexcept {
+        return mIndexBuffer;
     }
 
     [[nodiscard]]
@@ -299,8 +294,8 @@ public:
     }
 
     [[nodiscard]]
-    Node const * getNodeData() const noexcept {
-        return mNodes.data();
+    SubMesh const * getSubMeshData() const noexcept {
+        return mSubMeshes.data();
     }
 
     [[nodiscard]]
@@ -308,15 +303,32 @@ public:
         return static_cast<U32>(mNodes.size());
     }
 
-    void revokeData();
+    [[nodiscard]]
+    Node const * getNodeData() const noexcept {
+        return mNodes.data();
+    }
+
+    void revokeBuffers(Blob & outVertexBuffer, Blob & outIndexBuffer);
 
 private:
-    std::vector<Vertex> mVertices {};
-    std::vector<IndexType> mIndices {};
     std::vector<SubMesh> mSubMeshes {};
     std::vector<Node> mNodes {};
 
+    U32 mVertexCount {};
+    Blob mVertexBuffer {};
+
+    U32 mIndexCount {};
+    Blob mIndexBuffer {};
+
+    U32 mCurrentVertexOffset {};
+    U32 mCurrentIndexOffset {};
+    U32 mCurrentStartingIndex {};
 };
+
+using SubMesh = Mesh::SubMesh;
+using MeshNode = Mesh::Node;
+using MeshVertex = Mesh::Vertex;
+using MeshIndex = Mesh::Index;
 
 //--------------------------------ShaderAsset--------------------------------------
 class Shader final : public Base {

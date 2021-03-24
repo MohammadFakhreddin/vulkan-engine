@@ -231,7 +231,7 @@ void GLTFMeshViewerScene::Shutdown() {
 }
 
 void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredData) {
-    auto cpuModel = Importer::ImportMeshGLTF(renderRequiredData.address.c_str());
+    auto cpuModel = Importer::ImportGLTF(renderRequiredData.address.c_str());
 
     renderRequiredData.gpuModel = RF::CreateGpuModel(cpuModel);
 
