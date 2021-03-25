@@ -214,17 +214,19 @@ public:
     using Index = U32;
     struct Vertex {
         Position position;
-        UV base_color_uv;
-        UV normal_map_uv;
-        UV metallic_uv;
-        UV roughness_uv;
-        UV emission_uv;
+        UV baseColorUV;
+        UV normalMapUV;
+        UV metallicUV;
+        UV roughnessUV;
+        UV emissionUV;
         Color color;
-        Normal normal_value;
-        Tangent tangent_value;
+        Normal normalValue;
+        Tangent tangentValue;
     };
+
+    // TODO Camera
     
-    struct SubMesh {
+    struct Primitive {
         U32 vertexCount = 0;
         U32 indexCount = 0;
         U64 verticesOffset = 0;                // From start of buffer
@@ -251,11 +253,14 @@ public:
         bool hasTangentBuffer = false;
     };
     
+    struct SubMesh {
+        std::vector<Primitive> primitives {};
+    };
+    
     struct Node {
-        Node * parent {};
-        std::vector<Node> children {};
-        Matrix4X4Float transformMatrix {};
         SubMeshIndex subMeshIndex;
+        std::vector<int> children {};
+        Matrix4X4Float transformMatrix {};
     };
 
     void initForWrite(
@@ -265,8 +270,13 @@ public:
         const Blob & indexBuffer
     );
 
-    void insertSubMesh(
-        SubMesh && subMesh, 
+    // Returns mesh index
+    [[nodiscard]]
+    U32 insertSubMesh();
+
+    void insertPrimitive(
+        U32 subMeshIndex,
+        Primitive && primitive, 
         U32 vertexCount, 
         Vertex * vertices, 
         U32 indicesCount, 
@@ -325,6 +335,7 @@ private:
     U32 mCurrentStartingIndex {};
 };
 
+using MeshPrimitive = Mesh::Primitive;
 using SubMesh = Mesh::SubMesh;
 using MeshNode = Mesh::Node;
 using MeshVertex = Mesh::Vertex;

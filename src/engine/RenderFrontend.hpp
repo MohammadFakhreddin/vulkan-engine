@@ -91,7 +91,7 @@ RB::BufferGroup CreateVertexBuffer(CBlob vertices_blob);
 RB::BufferGroup CreateIndexBuffer(CBlob indices_blob);
 
 [[nodiscard]]
-RB::GpuTexture CreateTexture(AssetSystem::TextureAsset & texture_asset);
+RB::GpuTexture CreateTexture(AssetSystem::Texture & texture_asset);
 
 void DestroyTexture(RB::GpuTexture & gpu_texture);
 
@@ -119,7 +119,7 @@ void DestroyGpuModel(GpuModel & gpu_model);
 void DeviceWaitIdle();
 
 [[nodiscard]]
-RB::GpuShader CreateShader(AssetSystem::ShaderAsset const & shader_asset);
+RB::GpuShader CreateShader(AssetSystem::Shader const & shader_asset);
 
 void DestroyShader(RB::GpuShader & gpu_shader);
 

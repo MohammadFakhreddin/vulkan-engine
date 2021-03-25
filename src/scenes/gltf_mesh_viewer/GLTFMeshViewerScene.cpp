@@ -447,40 +447,40 @@ void GLTFMeshViewerScene::createDrawPipeline(MFA::U8 const gpu_shader_count, MFA
         .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, base_color_uv),   
+        .offset = offsetof(Asset::MeshVertex, baseColorUV),   
     });
     // Metallic/Roughness
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, metallic_uv), // Metallic and roughness have same uv for gltf files  
+        .offset = offsetof(Asset::MeshVertex, metallicUV), // Metallic and roughness have same uv for gltf files  
     });
     // Normal
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, normal_map_uv),   
+        .offset = offsetof(Asset::MeshVertex, normalMapUV),   
     });
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, tangent_value),   
+        .offset = offsetof(Asset::MeshVertex, tangentValue),   
     });
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, normal_value),   
+        .offset = offsetof(Asset::MeshVertex, normalValue),   
     });
     // Emissive
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, emission_uv)
+        .offset = offsetof(Asset::MeshVertex, emissionUV)
     });
     m_draw_pipeline = RF::CreateBasicDrawPipeline(
         gpu_shader_count, 

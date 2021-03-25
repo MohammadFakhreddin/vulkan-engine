@@ -296,37 +296,37 @@ void TexturedSphereScene::createDrawPipeline(MFA::U8 gpu_shader_count, MFA::Rend
         .location = 1,
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, base_color_uv),   
+        .offset = offsetof(Asset::MeshVertex, baseColorUV),   
     });
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = 2,
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, metallic_uv),   
+        .offset = offsetof(Asset::MeshVertex, metallicUV),   
     });
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = 3,
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, roughness_uv),   
+        .offset = offsetof(Asset::MeshVertex, roughnessUV),   
     });
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = 4,
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, normal_map_uv),   
+        .offset = offsetof(Asset::MeshVertex, normalMapUV),   
     });
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = 5,
         .binding = 0,
         .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, normal_value),   
+        .offset = offsetof(Asset::MeshVertex, normalValue),   
     });
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = 6,
         .binding = 0,
         .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, tangent_value),   
+        .offset = offsetof(Asset::MeshVertex, tangentValue),   
     });
 
     m_draw_pipeline = RF::CreateDrawPipeline(

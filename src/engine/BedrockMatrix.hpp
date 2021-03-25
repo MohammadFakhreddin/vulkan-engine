@@ -70,6 +70,14 @@ public:
   }
 
   template <typename A>
+  _Matrix(const uint32_t itemCount, A const * items) {
+      MFA_ASSERT(itemCount == width * height);
+      for (uint32_t i = 0; i < itemCount; ++i) {
+          cells[i] = static_cast<T>(items[i]);
+      }
+  }
+
+  template <typename A>
   _Matrix<A, width, height>& operator=(const _Matrix<A, width, height>& rhs) = delete;
 
   template <typename A>

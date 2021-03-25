@@ -135,24 +135,31 @@ void Mesh::initForWrite(
     mIndexBuffer = indexBuffer;
 }
 
-void Mesh::insertSubMesh(
-    SubMesh && subMesh, 
-    const U32 vertexCount, 
+U32 Mesh::insertSubMesh() {
+    mSubMeshes.emplace_back();
+    return static_cast<U32>(mSubMeshes.size() - 1);
+}
+
+void Mesh::insertPrimitive(
+    U32 subMeshIndex,
+    Primitive && primitive, 
+    U32 const vertexCount, 
     Vertex * vertices, 
-    const U32 indicesCount, 
-    IndexType * indices
+    U32 const indicesCount, 
+    Index * indices
 ) {
-    subMesh.vertexCount = vertexCount;
-    subMesh.indexCount = indicesCount;
-    subMesh.verticesOffset = mCurrentVertexOffset;
-    subMesh.indicesStartingIndex = mCurrentStartingIndex;
+    primitive.vertexCount = vertexCount;
+    primitive.indexCount = indicesCount;
+    primitive.verticesOffset = mCurrentVertexOffset;
+    primitive.indicesStartingIndex = mCurrentStartingIndex;
     U32 const verticesSize = sizeof(Vertex) * vertexCount;
-    U32 const indicesSize = sizeof(IndexType) * indicesCount;
+    U32 const indicesSize = sizeof(Index) * indicesCount;
     MFA_ASSERT(mCurrentVertexOffset + verticesSize < mVertexBuffer.len);
     MFA_ASSERT(mCurrentIndexOffset + indicesSize < mIndexBuffer.len);
     ::memcpy(mVertexBuffer.ptr, vertices, verticesSize);
     ::memcpy(mIndexBuffer.ptr, indices, indicesSize);
-    mSubMeshes.emplace_back(subMesh);
+    MFA_ASSERT(subMeshIndex < mSubMeshes.size());
+    mSubMeshes[subMeshIndex].primitives.emplace_back(primitive);
     mCurrentVertexOffset += verticesSize;
     mCurrentIndexOffset += indicesSize;
     mCurrentStartingIndex += indicesCount;

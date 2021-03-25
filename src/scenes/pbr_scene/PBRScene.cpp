@@ -102,7 +102,7 @@ void PBRScene::Init() {
             .location = 1,
             .binding = 0,
             .format = VK_FORMAT_R32G32B32_SFLOAT,
-            .offset = offsetof(MFA::AssetSystem::MeshVertex, normal_value)
+            .offset = offsetof(MFA::AssetSystem::MeshVertex, normalValue)
         };
 
         m_draw_pipeline = RF::CreateDrawPipeline(
