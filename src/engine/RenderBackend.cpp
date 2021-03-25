@@ -46,7 +46,7 @@ SDL_Window * CreateWindow(ScreenWidth const screen_width, ScreenHeight const scr
 }
 
 void DestroyWindow(SDL_Window * window) {
-    MFA_PTR_ASSERT(window);
+    MFA_ASSERT(window != nullptr);
     SDL_DestroyWindow(window);
 }
 
@@ -61,8 +61,8 @@ VkSurfaceKHR_T * CreateWindowSurface(SDL_Window * window, VkInstance_T * instanc
 }
 
 void DestroyWindowSurface(VkInstance_T * instance, VkSurfaceKHR_T * surface) {
-    MFA_PTR_ASSERT(instance);
-    MFA_PTR_ASSERT(surface);
+    MFA_ASSERT(instance != nullptr);
+    MFA_ASSERT(surface != nullptr);
     vkDestroySurfaceKHR(instance, surface, nullptr);
 }
 
@@ -191,26 +191,26 @@ VkInstance_T * CreateInstance(char const * application_name, SDL_Window * window
 }
 
 void DestroyInstance(VkInstance_T * instance) {
-    MFA_PTR_ASSERT(instance);
+    MFA_ASSERT(instance != nullptr);
     vkDestroyInstance(instance, nullptr);
 }
 
 VkDebugReportCallbackEXT CreateDebugCallback(
-    VkInstance_T * vk_instance,
+    VkInstance_T * vkInstance,
     PFN_vkDebugReportCallbackEXT const & debug_callback
 ) {
-    MFA_PTR_ASSERT(vk_instance);
+    MFA_ASSERT(vkInstance != nullptr);
     VkDebugReportCallbackCreateInfoEXT debug_info = {};
     debug_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
     debug_info.pfnCallback = debug_callback;
     debug_info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
     auto const debug_report_callback = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(vkGetInstanceProcAddr(
-        vk_instance,
+        vkInstance,
         "vkCreateDebugReportCallbackEXT"
     ));
     VkDebugReportCallbackEXT debug_report_callback_ext;
     VK_Check(debug_report_callback(
-        vk_instance, 
+        vkInstance, 
         &debug_info, 
         nullptr, 
         &debug_report_callback_ext
@@ -222,7 +222,7 @@ void DestroyDebugReportCallback(
     VkInstance_T * instance,
     VkDebugReportCallbackEXT const & report_callback_ext
 ) {
-    MFA_PTR_ASSERT(instance);
+    MFA_ASSERT(instance != nullptr);
     auto const DestroyDebugReportCallback = reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>(vkGetInstanceProcAddr(
         instance, 
         "vkDestroyDebugReportCallbackEXT"
@@ -231,16 +231,16 @@ void DestroyDebugReportCallback(
 }
 
 U32 FindMemoryType (
-    VkPhysicalDevice * physical_device,
-    U32 const type_filter, 
-    VkMemoryPropertyFlags const property_flags
+    VkPhysicalDevice * physicalDevice,
+    U32 const typeFilter, 
+    VkMemoryPropertyFlags const propertyFlags
 ) {
-    MFA_PTR_ASSERT(physical_device);
+    MFA_ASSERT(physicalDevice != nullptr);
     VkPhysicalDeviceMemoryProperties memory_properties;
-    vkGetPhysicalDeviceMemoryProperties(*physical_device, &memory_properties);
+    vkGetPhysicalDeviceMemoryProperties(*physicalDevice, &memory_properties);
 
     for (U32 memory_type_index = 0; memory_type_index < memory_properties.memoryTypeCount; memory_type_index++) {
-        if ((type_filter & (1 << memory_type_index)) && (memory_properties.memoryTypes[memory_type_index].propertyFlags & property_flags) == property_flags) {
+        if ((typeFilter & (1 << memory_type_index)) && (memory_properties.memoryTypes[memory_type_index].propertyFlags & propertyFlags) == propertyFlags) {
             return memory_type_index;
         }
     }
@@ -254,7 +254,7 @@ VkImageView_T * CreateImageView (
     VkFormat const format, 
     VkImageAspectFlags const aspect_flags
 ) {
-    MFA_PTR_ASSERT(device);
+    MFA_ASSERT(device != nullptr);
 
     VkImageView_T * image_view = nullptr;
 
@@ -287,7 +287,7 @@ void DestroyImageView(
 }
 
 VkCommandBuffer BeginSingleTimeCommand(VkDevice_T * device, VkCommandPool const & command_pool) {
-    MFA_PTR_ASSERT(device);
+    MFA_ASSERT(device != nullptr);
     
     VkCommandBufferAllocateInfo allocate_info{};
     allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -309,21 +309,21 @@ VkCommandBuffer BeginSingleTimeCommand(VkDevice_T * device, VkCommandPool const 
 
 void EndAndSubmitSingleTimeCommand(
     VkDevice_T * device, 
-    VkCommandPool const & command_pool, 
-    VkQueue const & graphic_queue, 
-    VkCommandBuffer const & command_buffer
+    VkCommandPool const & commandPool, 
+    VkQueue const & graphicQueue, 
+    VkCommandBuffer const & commandBuffer
 ) {
-    VK_Check(vkEndCommandBuffer(command_buffer));
+    VK_Check(vkEndCommandBuffer(commandBuffer));
 
     VkSubmitInfo submit_info {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &command_buffer;
+    submit_info.pCommandBuffers = &commandBuffer;
 
-    VK_Check(vkQueueSubmit(graphic_queue, 1, &submit_info, nullptr));
-    VK_Check(vkQueueWaitIdle(graphic_queue));
+    VK_Check(vkQueueSubmit(graphicQueue, 1, &submit_info, nullptr));
+    VK_Check(vkQueueWaitIdle(graphicQueue));
 
-    vkFreeCommandBuffers(device, command_pool, 1, &command_buffer);
+    vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
 }
 
 [[nodiscard]]
@@ -366,19 +366,23 @@ VkFormat FindSupportedFormat(
 
 void TransferImageLayout(
     VkDevice_T * device,
-    VkQueue_T * graphic_queue,
-    VkCommandPool_T * command_pool,
+    VkQueue_T * graphicQueue,
+    VkCommandPool_T * commandPool,
     VkImage_T * image, 
-    VkImageLayout const old_layout, 
-    VkImageLayout const new_layout
+    VkImageLayout const oldLayout, 
+    VkImageLayout const newLayout
 ) {
-    MFA_PTR_ASSERT(device);
-    VkCommandBuffer_T * command_buffer = BeginSingleTimeCommand(device, command_pool);
+    MFA_ASSERT(device != nullptr);
+    MFA_ASSERT(graphicQueue != nullptr);
+    MFA_ASSERT(commandPool != nullptr);
+    MFA_ASSERT(image != nullptr);
+    
+    VkCommandBuffer_T * command_buffer = BeginSingleTimeCommand(device, commandPool);
 
     VkImageMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = old_layout;
-    barrier.newLayout = new_layout;
+    barrier.oldLayout = oldLayout;
+    barrier.newLayout = newLayout;
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.image = image;
@@ -392,8 +396,8 @@ void TransferImageLayout(
     VkPipelineStageFlags destination_stage;
 
     if (
-        old_layout == VK_IMAGE_LAYOUT_UNDEFINED && 
-        new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+        oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && 
+        newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
     ) {
         barrier.srcAccessMask = 0;
         barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -401,8 +405,8 @@ void TransferImageLayout(
         source_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         destination_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     } else if (
-        old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && 
-        new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+        oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && 
+        newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
     ) {
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -422,7 +426,7 @@ void TransferImageLayout(
         1, &barrier
     );
 
-    EndAndSubmitSingleTimeCommand(device, command_pool, graphic_queue, command_buffer);
+    EndAndSubmitSingleTimeCommand(device, commandPool, graphicQueue, command_buffer);
 }
 
 BufferGroup CreateBuffer(
@@ -432,8 +436,8 @@ BufferGroup CreateBuffer(
     VkBufferUsageFlags const usage, 
     VkMemoryPropertyFlags const properties 
 ) {
-    MFA_PTR_ASSERT(device);
-    MFA_PTR_ASSERT(physical_device);
+    MFA_ASSERT(device != nullptr);
+    MFA_ASSERT(physical_device != nullptr);
 
     BufferGroup ret {};
 
@@ -444,7 +448,7 @@ BufferGroup CreateBuffer(
     buffer_info.sharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;
 
     VK_Check(vkCreateBuffer(device, &buffer_info, nullptr, &ret.buffer));
-    MFA_PTR_ASSERT(ret.buffer);
+    MFA_ASSERT(ret.buffer != nullptr);
     VkMemoryRequirements memory_requirements {};
     vkGetBufferMemoryRequirements(device, ret.buffer, &memory_requirements);
 
@@ -464,45 +468,46 @@ BufferGroup CreateBuffer(
 
 void MapDataToBuffer(
     VkDevice_T * device,
-    VkDeviceMemory_T * buffer_memory,
-    CBlob const data_blob
+    VkDeviceMemory_T * bufferMemory,
+    CBlob const dataBlob
 ) {
-    void * temp_buffer_data = nullptr;
-    vkMapMemory(device, buffer_memory, 0, data_blob.len, 0, &temp_buffer_data);
-    MFA_PTR_ASSERT(temp_buffer_data);
-    ::memcpy(temp_buffer_data, data_blob.ptr, static_cast<size_t>(data_blob.len));
-    vkUnmapMemory(device, buffer_memory);
+    void * tempBufferData = nullptr;
+    vkMapMemory(device, bufferMemory, 0, dataBlob.len, 0, &tempBufferData);
+    MFA_ASSERT(tempBufferData != nullptr);
+    ::memcpy(tempBufferData, dataBlob.ptr, static_cast<size_t>(dataBlob.len));
+    vkUnmapMemory(device, bufferMemory);
 }
 
 void CopyBuffer(
     VkDevice_T * device,
-    VkCommandPool_T * command_pool,
-    VkQueue_T * graphic_queue,
-    VkBuffer_T * source_buffer,
-    VkBuffer_T * destination_buffer,
+    VkCommandPool_T * commandPool,
+    VkQueue_T * graphicQueue,
+    VkBuffer_T * sourceBuffer,
+    VkBuffer_T * destinationBuffer,
     VkDeviceSize const size
 ) {
-    auto * command_buffer = BeginSingleTimeCommand(device, command_pool);
+    auto * command_buffer = BeginSingleTimeCommand(device, commandPool);
 
     VkBufferCopy copyRegion{};
     copyRegion.size = size;
     vkCmdCopyBuffer(
         command_buffer,
-        source_buffer,
-        destination_buffer,
+        sourceBuffer,
+        destinationBuffer,
         1, 
         &copyRegion
     );
 
-    EndAndSubmitSingleTimeCommand(device, command_pool, graphic_queue, command_buffer); 
+    EndAndSubmitSingleTimeCommand(device, commandPool, graphicQueue, command_buffer); 
 }
 
 void DestroyBuffer(
     VkDevice_T * device,
     BufferGroup & buffer_group
 ) {
-    MFA_PTR_ASSERT(buffer_group.memory);
-    MFA_PTR_ASSERT(buffer_group.buffer);
+    MFA_ASSERT(device != nullptr);
+    MFA_ASSERT(buffer_group.memory != nullptr);
+    MFA_ASSERT(buffer_group.buffer != nullptr);
     vkFreeMemory(device, buffer_group.memory, nullptr);
     vkDestroyBuffer(device, buffer_group.buffer, nullptr);
     buffer_group.memory = nullptr;
@@ -568,28 +573,28 @@ void DestroyImage(
 }
 
 GpuTexture CreateTexture(
-    CpuTexture & cpu_texture,
+    CpuTexture & cpuTexture,
     VkDevice_T * device,
-    VkPhysicalDevice_T * physical_device,
-    VkQueue_T * graphic_queue,
-    VkCommandPool_T * command_pool
+    VkPhysicalDevice_T * physicalDevice,
+    VkQueue_T * graphicQueue,
+    VkCommandPool_T * commandPool
 ) {
-    MFA_PTR_ASSERT(device);
-    MFA_PTR_ASSERT(physical_device);
-    MFA_PTR_ASSERT(command_pool);
+    MFA_ASSERT(device != nullptr);
+    MFA_ASSERT(physicalDevice != nullptr);
+    MFA_ASSERT(graphicQueue != nullptr);
+    MFA_ASSERT(commandPool != nullptr);
     GpuTexture gpu_texture {};
-    if(cpu_texture.valid()) {
-        auto const * cpu_texture_header = cpu_texture.header_object();
-        auto const format = cpu_texture_header->format;
+    if(cpuTexture.valid()) {
+        auto const format = cpuTexture->format;
         auto const mip_count = cpu_texture_header->mip_count;
         auto const slice_count = cpu_texture_header->slices;
         auto const largest_mipmap_info = cpu_texture_header->mipmap_infos[0];
-        auto const data_blob = cpu_texture.data_cblob();
-        MFA_BLOB_ASSERT(data_blob);
+        auto const data_blob = cpuTexture.data_cblob();
+        MFA_ASSERT(data_blob.ptr != nullptr && data_blob.len > 0);
         // Create upload buffer
         auto upload_buffer_group = CreateBuffer(
             device,
-            physical_device,
+            physicalDevice,
             data_blob.len,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
@@ -602,7 +607,7 @@ GpuTexture CreateTexture(
 
         auto const image_group = CreateImage(
             device, 
-            physical_device, 
+            physicalDevice, 
             largest_mipmap_info.dims.width,
             largest_mipmap_info.dims.height,
             largest_mipmap_info.dims.depth,
@@ -616,8 +621,8 @@ GpuTexture CreateTexture(
         
         TransferImageLayout(
             device,
-            graphic_queue,
-            command_pool,
+            graphicQueue,
+            commandPool,
             image_group.image,
             VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
@@ -625,17 +630,17 @@ GpuTexture CreateTexture(
 
         CopyBufferToImage(
             device,
-            command_pool,
+            commandPool,
             upload_buffer_group.buffer,
             image_group.image,
-            graphic_queue,
-            cpu_texture
+            graphicQueue,
+            cpuTexture
         );
 
         TransferImageLayout(
             device,
-            graphic_queue,
-            command_pool,
+            graphicQueue,
+            commandPool,
             image_group.image,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
@@ -653,38 +658,38 @@ GpuTexture CreateTexture(
         gpu_texture.m_image_group = image_group;
         MFA_PTR_ASSERT(image_view);
         gpu_texture.m_image_view = image_view;
-        gpu_texture.m_cpu_texture = cpu_texture;
+        gpu_texture.m_cpu_texture = cpuTexture;
     }
     return gpu_texture;
 }
 
-bool DestroyTexture(VkDevice_T * device, GpuTexture & gpu_texture) {
+bool DestroyTexture(VkDevice_T * device, GpuTexture & gpuTexture) {
     MFA_PTR_ASSERT(device);
     bool success = false;
-    if(gpu_texture.valid()) {
+    if(gpuTexture.valid()) {
         MFA_PTR_ASSERT(device);
-        MFA_PTR_ASSERT(gpu_texture.m_image_group.image);
-        MFA_PTR_ASSERT(gpu_texture.m_image_group.memory);
-        MFA_PTR_ASSERT(gpu_texture.m_image_view);
+        MFA_PTR_ASSERT(gpuTexture.m_image_group.image);
+        MFA_PTR_ASSERT(gpuTexture.m_image_group.memory);
+        MFA_PTR_ASSERT(gpuTexture.m_image_view);
         DestroyImage(
             device,
-            gpu_texture.m_image_group
+            gpuTexture.m_image_group
         );
         DestroyImageView(
             device,
-            gpu_texture.m_image_view
+            gpuTexture.m_image_view
         );
         success = true;
-        gpu_texture.m_image_group.image = nullptr;
-        gpu_texture.m_image_group.memory = nullptr;
-        gpu_texture.m_image_view = nullptr;
+        gpuTexture.m_image_group.image = nullptr;
+        gpuTexture.m_image_group.memory = nullptr;
+        gpuTexture.m_image_view = nullptr;
     }
     return success;
 }
 
-VkFormat ConvertCpuTextureFormatToGpu(AssetSystem::TextureFormat const cpu_format) {
+VkFormat ConvertCpuTextureFormatToGpu(AssetSystem::TextureFormat const cpuFormat) {
     using namespace AssetSystem;
-    switch (cpu_format)
+    switch (cpuFormat)
     {
     case TextureFormat::UNCOMPRESSED_UNORM_R8_SRGB:
         return VkFormat::VK_FORMAT_R8_SRGB;
@@ -721,40 +726,41 @@ VkFormat ConvertCpuTextureFormatToGpu(AssetSystem::TextureFormat const cpu_forma
 
 void CopyBufferToImage(
     VkDevice_T * device,
-    VkCommandPool_T * command_pool,
+    VkCommandPool_T * commandPool,
     VkBuffer_T * buffer,
     VkImage_T * image,
-    VkQueue_T * graphic_queue,
-    CpuTexture const & cpu_texture
+    VkQueue_T * graphicQueue,
+    CpuTexture const & cpuTexture
 ) {
-    MFA_PTR_ASSERT(device);
-    MFA_PTR_ASSERT(command_pool);
-    MFA_PTR_ASSERT(buffer);
-    MFA_PTR_ASSERT(image);
-    MFA_ASSERT(cpu_texture.valid());
+    MFA_ASSERT(device != nullptr);
+    MFA_ASSERT(commandPool != nullptr);
+    MFA_ASSERT(buffer != nullptr);
+    MFA_ASSERT(image != nullptr);
+    MFA_ASSERT(cpuTexture.isValid());
 
-    VkCommandBuffer_T * command_buffer = BeginSingleTimeCommand(device, command_pool);
+    VkCommandBuffer_T * commandBuffer = BeginSingleTimeCommand(device, commandPool);
 
-    auto const * cpu_texture_header = cpu_texture.header_object();
-    auto const regions_count = cpu_texture_header->mip_count * cpu_texture_header->slices;
+    auto const mipCount = cpuTexture.GetMipCount();
+    auto const slices = cpuTexture.GetSlices();
+    auto const regionCount = mipCount * slices;
     // TODO Maybe add a function allocate from heap
-    auto const regions_blob = Memory::Alloc(regions_count * sizeof(VkBufferImageCopy));
-    MFA_DEFER {Memory::Free(regions_blob);};
-    auto * regions_array = regions_blob.as<VkBufferImageCopy>();
-    for(U8 slice_index = 0; slice_index < cpu_texture_header->slices; slice_index++) {
-        for(U8 mip_level = 0; mip_level < cpu_texture_header->mip_count; mip_level++) {
-            auto const & mip_info = cpu_texture_header->mipmap_infos[mip_level];
-            auto & region = regions_array[mip_level];
-            region.imageExtent.width = mip_info.dims.width; 
-            region.imageExtent.height = mip_info.dims.height; 
-            region.imageExtent.depth = mip_info.dims.depth;
+    auto const regionsBlob = Memory::Alloc(regionCount * sizeof(VkBufferImageCopy));
+    MFA_DEFER {Memory::Free(regionsBlob);};
+    auto * regionsArray = regionsBlob.as<VkBufferImageCopy>();
+    for(U8 sliceIndex = 0; sliceIndex < slices; sliceIndex++) {
+        for(U8 mipLevel = 0; mipLevel < mipCount; mipLevel++) {
+            auto const & mipInfo = cpuTexture.GetMipmap(mipLevel);
+            auto & region = regionsArray[mipLevel];
+            region.imageExtent.width = mipInfo.dimension.width; 
+            region.imageExtent.height = mipInfo.dimension.height; 
+            region.imageExtent.depth = mipInfo.dimension.depth;
             region.imageOffset.x = 0;
             region.imageOffset.y = 0;
             region.imageOffset.z = 0;
-            region.bufferOffset = static_cast<U32>(cpu_texture_header->mip_offset_bytes(mip_level, slice_index)); 
+            region.bufferOffset = static_cast<U32>(cpuTexture.mipOffsetInBytes(mipLevel, sliceIndex)); 
             region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            region.imageSubresource.mipLevel = cpu_texture_header->mip_count - mip_level - 1;
-            region.imageSubresource.baseArrayLayer = slice_index;
+            region.imageSubresource.mipLevel = mipCount - mipLevel - 1;
+            region.imageSubresource.baseArrayLayer = sliceIndex;
             region.imageSubresource.layerCount = 1;
             region.bufferRowLength = 0;
             region.bufferImageHeight = 0;
@@ -762,15 +768,15 @@ void CopyBufferToImage(
     }
 
     vkCmdCopyBufferToImage(
-        command_buffer,
+        commandBuffer,
         buffer,
         image,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        regions_count,
-        regions_array
+        regionCount,
+        regionsArray
     );
 
-    EndAndSubmitSingleTimeCommand(device, command_pool, graphic_queue, command_buffer);
+    EndAndSubmitSingleTimeCommand(device, commandPool, graphicQueue, commandBuffer);
 
 }
 

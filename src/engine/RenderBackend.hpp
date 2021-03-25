@@ -20,8 +20,8 @@ namespace MFA::RenderBackend {
 
 using ScreenWidth = Platforms::ScreenSize;
 using ScreenHeight = Platforms::ScreenSize;
-using CpuTexture = AssetSystem::TextureAsset;
-using CpuShader = AssetSystem::ShaderAsset;
+using CpuTexture = AssetSystem::Texture;
+using CpuShader = AssetSystem::Shader;
 
 // Vulkan functions
 
@@ -55,7 +55,7 @@ void DestroyInstance(VkInstance_T * instance);
 
 [[nodiscard]]
 VkDebugReportCallbackEXT CreateDebugCallback(
-    VkInstance_T * vk_instance,
+    VkInstance_T * vkInstance,
     PFN_vkDebugReportCallbackEXT const & debug_callback
 );
 
@@ -66,9 +66,9 @@ void DestroyDebugReportCallback(
 
 [[nodiscard]]
 U32 FindMemoryType (
-    VkPhysicalDevice * physical_device,
-    U32 type_filter, 
-    VkMemoryPropertyFlags property_flags
+    VkPhysicalDevice * physicalDevice,
+    U32 typeFilter, 
+    VkMemoryPropertyFlags propertyFlags
 );
 
 [[nodiscard]]
@@ -89,9 +89,9 @@ VkCommandBuffer BeginSingleTimeCommand(VkDevice_T * device, VkCommandPool const 
 
 void EndAndSubmitSingleTimeCommand(
     VkDevice_T * device, 
-    VkCommandPool const & command_pool, 
-    VkQueue const & graphic_queue, 
-    VkCommandBuffer const & command_buffer
+    VkCommandPool const & commandPool, 
+    VkQueue const & graphicQueue, 
+    VkCommandBuffer const & commandBuffer
 );
 
 [[nodiscard]]
@@ -108,11 +108,11 @@ VkFormat FindSupportedFormat(
 
 void TransferImageLayout(
     VkDevice_T * device,
-    VkQueue_T * graphic_queue,
-    VkCommandPool_T * command_pool,
+    VkQueue_T * graphicQueue,
+    VkCommandPool_T * commandPool,
     VkImage_T * image, 
-    VkImageLayout const old_layout, 
-    VkImageLayout const new_layout
+    VkImageLayout const oldLayout, 
+    VkImageLayout const newLayout
 );
 
 struct BufferGroup {
@@ -130,16 +130,16 @@ BufferGroup CreateBuffer(
 
 void MapDataToBuffer(
     VkDevice_T * device,
-    VkDeviceMemory_T * buffer_memory,
-    CBlob data_blob
+    VkDeviceMemory_T * bufferMemory,
+    CBlob dataBlob
 );
 
 void CopyBuffer(
     VkDevice_T * device,
-    VkCommandPool_T * command_pool,
-    VkQueue_T * graphic_queue,
-    VkBuffer_T * source_buffer,
-    VkBuffer_T * destination_buffer,
+    VkCommandPool_T * commandPool,
+    VkQueue_T * graphicQueue,
+    VkBuffer_T * sourceBuffer,
+    VkBuffer_T * destinationBuffer,
     VkDeviceSize size
 );
 
@@ -177,32 +177,32 @@ class GpuTexture;
 
 [[nodiscard]]
 GpuTexture CreateTexture(
-    CpuTexture & cpu_texture,
+    CpuTexture & cpuTexture,
     VkDevice_T * device,
-    VkPhysicalDevice_T * physical_device,
-    VkQueue_T * graphic_queue,
-    VkCommandPool_T * command_pool
+    VkPhysicalDevice_T * physicalDevice,
+    VkQueue_T * graphicQueue,
+    VkCommandPool_T * commandPool
 );
 
-bool DestroyTexture(VkDevice_T * device, GpuTexture & gpu_texture);
+bool DestroyTexture(VkDevice_T * device, GpuTexture & gpuTexture);
 
 // TODO It needs handle system // TODO Might be moved to a new class called render_types
 class GpuTexture {
 friend GpuTexture CreateTexture(
-    CpuTexture & cpu_texture,
+    CpuTexture & cpuTexture,
     VkDevice_T * device,
-    VkPhysicalDevice_T * physical_device,
-    VkQueue_T * graphic_queue,
-    VkCommandPool_T * command_pool
+    VkPhysicalDevice_T * physicalDevice,
+    VkQueue_T * graphicQueue,
+    VkCommandPool_T * commandPool
 );
-friend bool DestroyTexture(VkDevice_T * device, GpuTexture & gpu_texture);
+friend bool DestroyTexture(VkDevice_T * device, GpuTexture & gpuTexture);
 public:
     [[nodiscard]]
     CpuTexture const * cpu_texture() const {return &m_cpu_texture;}
     [[nodiscard]]
     CpuTexture * cpu_texture() {return &m_cpu_texture;}
     [[nodiscard]]
-    bool valid () const {return MFA_PTR_VALID(m_image_view);}
+    bool valid () const {return m_image_view != nullptr;}
     [[nodiscard]]
     VkImage_T const * image() const {return m_image_group.image;}
     [[nodiscard]]
@@ -214,15 +214,15 @@ private:
 };
 
 [[nodiscard]]
-VkFormat ConvertCpuTextureFormatToGpu(AssetSystem::TextureFormat cpu_format);
+VkFormat ConvertCpuTextureFormatToGpu(AssetSystem::TextureFormat cpuFormat);
 
 void CopyBufferToImage(
     VkDevice_T * device,
-    VkCommandPool_T * command_pool,
+    VkCommandPool_T * commandPool,
     VkBuffer_T * buffer,
     VkImage_T * image,
-    VkQueue_T * graphic_queue,
-    CpuTexture const & cpu_texture
+    VkQueue_T * graphicQueue,
+    CpuTexture const & cpuTexture
 );
 
 struct LogicalDevice {

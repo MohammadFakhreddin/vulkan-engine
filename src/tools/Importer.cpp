@@ -457,8 +457,8 @@ AS::Model ImportGLTF(char const * path) {
                     //auto const & sampler = model.samplers[base_color_gltf_texture.sampler];
                     //model_asset.textures[base_color_texture_index]  
                 }
-                U32 sub_mesh_count = 0;
                 // Step1: Iterate over all meshes and gather required information for asset buffer
+                U32 sub_mesh_count = 0;
                 U32 totalIndicesCount = 0;
                 U32 totalVerticesCount = 0;
                 U32 indicesStartingIndex = 0;

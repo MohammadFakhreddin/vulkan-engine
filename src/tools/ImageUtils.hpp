@@ -527,17 +527,17 @@ Load (Data & out_image_data, char const * path) {
 }
 
 bool inline
-Unload(Data * image_data) {
+Unload(Data * imageData) {
     bool ret = false;
-    if(MFA_PTR_VALID(image_data) && image_data->valid) {
-        image_data->valid = false;
-        if(MFA_PTR_VALID(image_data->asset.ptr)) {
-            Memory::Free(image_data->asset);
-            image_data->asset = {};
+    if(imageData != nullptr && imageData->valid) {
+        imageData->valid = false;
+        if(imageData->asset.ptr != nullptr) {
+            Memory::Free(imageData->asset);
+            imageData->asset = {};
         }
-        if(true == MFA_PTR_VALID(image_data->mipmaps.ptr)) {
-            Memory::Free(image_data->mipmaps);
-            image_data->mipmaps = {};
+        if(imageData->mipmaps.ptr != nullptr) {
+            Memory::Free(imageData->mipmaps);
+            imageData->mipmaps = {};
         }
         ret = true;
     }

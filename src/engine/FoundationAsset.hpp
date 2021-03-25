@@ -185,6 +185,40 @@ public:
         return mBuffer;
     }
 
+    [[nodiscard]]
+    Format GetFormat() const noexcept {
+        return mFormat;
+    }
+
+    [[nodiscard]]
+    U16 GetSlices() const noexcept {
+        return mSlices;
+    }
+
+    [[nodiscard]]
+    U8 GetMipCount() const noexcept {
+        return mMipCount;
+    }
+
+    MipmapInfo const & GetMipmap(U8 const mipLevel) const noexcept {
+        return mMipmapInfos[mipLevel];
+    }
+
+    [[nodiscard]]
+    MipmapInfo const * GetMipmaps() const noexcept {
+        return mMipmapInfos.data();
+    }
+
+    [[nodiscard]]
+    U16 GetDepth() const noexcept {
+        return mDepth;
+    }
+
+    [[nodiscard]]
+    Sampler GetSampler() const noexcept {
+        return mSampler;
+    }
+
 private:
     Format mFormat = Format::INVALID;
     U16 mSlices = 0;
@@ -301,6 +335,12 @@ public:
     [[nodiscard]]
     U32 getSubMeshSize() const noexcept {
         return static_cast<U32>(mSubMeshes.size());
+    }
+
+    [[nodiscard]]
+    SubMesh const & getSubMeshByIndex(U32 const index) const noexcept {
+        MFA_ASSERT(index < mSubMeshes.size());
+        return mSubMeshes[index];
     }
 
     [[nodiscard]]
