@@ -30,20 +30,20 @@ VkDescriptorSetLayout_T * CreateBasicDescriptorSetLayout();
 
 [[nodiscard]]
 VkDescriptorSetLayout_T * CreateDescriptorSetLayout(
-    U8 bindings_count,
+    U8 bindingsCount,
     VkDescriptorSetLayoutBinding * bindings
 );
 
-void DestroyDescriptorSetLayout(VkDescriptorSetLayout_T * descriptor_set_layout);
+void DestroyDescriptorSetLayout(VkDescriptorSetLayout_T * descriptorSetLayout);
 
 [[nodiscard]]
 DrawPipeline CreateBasicDrawPipeline(
-    U8 gpu_shaders_count, 
-    RB::GpuShader * gpu_shaders,
-    VkDescriptorSetLayout_T * descriptor_set_layout,
-    VkVertexInputBindingDescription const & vertex_input_binding_description,
-    U8 vertex_input_attribute_description_count,
-    VkVertexInputAttributeDescription * vertex_input_attribute_descriptions
+    U8 gpuShadersCount, 
+    RB::GpuShader * gpuShaders,
+    VkDescriptorSetLayout_T * descriptorSetLayout,
+    VkVertexInputBindingDescription const & vertexInputBindingDescription,
+    U8 vertexInputAttributeDescriptionCount,
+    VkVertexInputAttributeDescription * vertexInputAttributeDescriptions
 );
 
 [[nodiscard]]
@@ -66,8 +66,8 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSets(
 
 [[nodiscard]]
 std::vector<VkDescriptorSet_T *> CreateDescriptorSets(
-    U32 descriptor_set_count,
-    VkDescriptorSetLayout_T * descriptor_set_layout
+    U32 descriptorSetCount,
+    VkDescriptorSetLayout_T * descriptorSetLayout
 );
 
 // TODO AdvanceBindingDescriptorSetWriteInfo
@@ -77,8 +77,8 @@ struct MeshBuffers {
         U64 index_offset = 0;
         U32 index_count = 0;
     };
-    RB::BufferGroup vertices_buffer {};
-    RB::BufferGroup indices_buffer {};
+    RB::BufferGroup verticesBuffer {};
+    RB::BufferGroup indicesBuffer {};
     std::vector<DrawCallData> sub_mesh_buffers;    // Organized by sub-mesh index
 };
 

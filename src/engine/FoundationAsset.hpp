@@ -237,8 +237,7 @@ using TextureSampler = Texture::Sampler;
 class Mesh final : public Base {
 public:
     // TODO Implement serialize and deserialize
-    using SubMeshIndex = U32;
-
+    
     using Position = float[3];
     using Normal = float[3];
     using UV = float[2];
@@ -292,7 +291,7 @@ public:
     };
     
     struct Node {
-        SubMeshIndex subMeshIndex;
+        int subMeshIndex;
         std::vector<int> children {};
         Matrix4X4Float transformMatrix {};
     };
@@ -333,7 +332,7 @@ public:
     }
 
     [[nodiscard]]
-    U32 getSubMeshSize() const noexcept {
+    U32 getSubMeshCount() const noexcept {
         return static_cast<U32>(mSubMeshes.size());
     }
 
@@ -394,36 +393,45 @@ public:
     bool isValid() const {
         return mEntryPoint.empty() == false && 
             Stage::Invalid != mStage && 
-            mData.ptr != nullptr && 
-            mData.len > 0;
+            mCompiledShaderCode.ptr != nullptr && 
+            mCompiledShaderCode.len > 0;
     }
 
     void init(
         char const * entryPoint,
         Stage const stage,
-        Blob const & data
+        Blob const & compiledShaderCode
     ) {
         mEntryPoint = entryPoint;
         mStage = stage;
-        mData = data;
+        mCompiledShaderCode = compiledShaderCode;
     }
 
     Blob revokeData() {
-        auto const buffer = mData;
-        mData = {};
+        auto const buffer = mCompiledShaderCode;
+        mCompiledShaderCode = {};
         return buffer;
     }
 
     [[nodiscard]]
-    CBlob GetData() const noexcept {
-        return mData;
+    CBlob getCompiledShaderCode() const noexcept {
+        return mCompiledShaderCode;
     }
 
+    [[nodiscard]]
+    char const * getEntryPoint() const noexcept {
+        return mEntryPoint.c_str();
+    }
+
+    [[nodiscard]]
+    Stage getStage() const noexcept {
+        return mStage;
+    }
 
 private:
     std::string mEntryPoint {};     // Ex: main
     Stage mStage = Stage::Invalid;
-    Blob mData;
+    Blob mCompiledShaderCode;
 };
 
 using ShaderStage = Shader::Stage;

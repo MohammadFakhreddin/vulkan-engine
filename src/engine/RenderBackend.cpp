@@ -583,36 +583,36 @@ GpuTexture CreateTexture(
     MFA_ASSERT(physicalDevice != nullptr);
     MFA_ASSERT(graphicQueue != nullptr);
     MFA_ASSERT(commandPool != nullptr);
-    GpuTexture gpu_texture {};
-    if(cpuTexture.valid()) {
-        auto const format = cpuTexture->format;
-        auto const mip_count = cpu_texture_header->mip_count;
-        auto const slice_count = cpu_texture_header->slices;
-        auto const largest_mipmap_info = cpu_texture_header->mipmap_infos[0];
-        auto const data_blob = cpuTexture.data_cblob();
-        MFA_ASSERT(data_blob.ptr != nullptr && data_blob.len > 0);
+    GpuTexture gpuTexture {};
+    if(cpuTexture.isValid()) {
+        auto const format = cpuTexture.GetFormat();
+        auto const mipCount = cpuTexture.GetMipCount();
+        auto const sliceCount = cpuTexture.GetSlices();
+        auto const largestMipmapInfo = cpuTexture.GetMipmap(mipCount - 1);
+        auto const buffer = cpuTexture.GetBuffer();
+        MFA_ASSERT(buffer.ptr != nullptr && buffer.len > 0);
         // Create upload buffer
         auto upload_buffer_group = CreateBuffer(
             device,
             physicalDevice,
-            data_blob.len,
+            buffer.len,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
         MFA_DEFER {DestroyBuffer(device, upload_buffer_group);};
         // Map texture data to buffer
-        MapDataToBuffer(device, upload_buffer_group.memory, data_blob);
+        MapDataToBuffer(device, upload_buffer_group.memory, buffer);
 
         auto const vulkan_format = ConvertCpuTextureFormatToGpu(format);
 
-        auto const image_group = CreateImage(
+        auto const imageGroup = CreateImage(
             device, 
             physicalDevice, 
-            largest_mipmap_info.dims.width,
-            largest_mipmap_info.dims.height,
-            largest_mipmap_info.dims.depth,
-            mip_count,
-            slice_count,
+            largestMipmapInfo.dimension.width,
+            largestMipmapInfo.dimension.height,
+            largestMipmapInfo.dimension.depth,
+            mipCount,
+            sliceCount,
             vulkan_format,
             VK_IMAGE_TILING_OPTIMAL, 
             VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
@@ -623,7 +623,7 @@ GpuTexture CreateTexture(
             device,
             graphicQueue,
             commandPool,
-            image_group.image,
+            imageGroup.image,
             VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
         );
@@ -632,7 +632,7 @@ GpuTexture CreateTexture(
             device,
             commandPool,
             upload_buffer_group.buffer,
-            image_group.image,
+            imageGroup.image,
             graphicQueue,
             cpuTexture
         );
@@ -641,48 +641,48 @@ GpuTexture CreateTexture(
             device,
             graphicQueue,
             commandPool,
-            image_group.image,
+            imageGroup.image,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         );
 
         VkImageView_T * image_view = CreateImageView(
             device,
-            image_group.image,
+            imageGroup.image,
             vulkan_format,
             VK_IMAGE_ASPECT_COLOR_BIT
         );
 
-        MFA_PTR_ASSERT(image_group.image);
-        MFA_PTR_ASSERT(image_group.memory);
-        gpu_texture.m_image_group = image_group;
-        MFA_PTR_ASSERT(image_view);
-        gpu_texture.m_image_view = image_view;
-        gpu_texture.m_cpu_texture = cpuTexture;
+        MFA_ASSERT(imageGroup.image != nullptr);
+        MFA_ASSERT(imageGroup.memory != nullptr);
+        gpuTexture.mImageGroup = imageGroup;
+        MFA_ASSERT(image_view != nullptr);
+        gpuTexture.mImageView = image_view;
+        gpuTexture.mCpuTexture = cpuTexture;
     }
-    return gpu_texture;
+    return gpuTexture;
 }
 
 bool DestroyTexture(VkDevice_T * device, GpuTexture & gpuTexture) {
-    MFA_PTR_ASSERT(device);
+    MFA_ASSERT(device != nullptr);
     bool success = false;
     if(gpuTexture.valid()) {
-        MFA_PTR_ASSERT(device);
-        MFA_PTR_ASSERT(gpuTexture.m_image_group.image);
-        MFA_PTR_ASSERT(gpuTexture.m_image_group.memory);
-        MFA_PTR_ASSERT(gpuTexture.m_image_view);
+        MFA_ASSERT(device != nullptr);
+        MFA_ASSERT(gpuTexture.mImageGroup.image != nullptr);
+        MFA_ASSERT(gpuTexture.mImageGroup.memory != nullptr);
+        MFA_ASSERT(gpuTexture.mImageView != nullptr);
         DestroyImage(
             device,
-            gpuTexture.m_image_group
+            gpuTexture.mImageGroup
         );
         DestroyImageView(
             device,
-            gpuTexture.m_image_view
+            gpuTexture.mImageView
         );
         success = true;
-        gpuTexture.m_image_group.image = nullptr;
-        gpuTexture.m_image_group.memory = nullptr;
-        gpuTexture.m_image_view = nullptr;
+        gpuTexture.mImageGroup.image = nullptr;
+        gpuTexture.mImageGroup.memory = nullptr;
+        gpuTexture.mImageView = nullptr;
     }
     return success;
 }
@@ -781,14 +781,14 @@ void CopyBufferToImage(
 }
 
 LogicalDevice CreateLogicalDevice(
-    VkPhysicalDevice_T * physical_device,
-    U32 const graphics_queue_family,
-    U32 const present_queue_family,
-    VkPhysicalDeviceFeatures const & enabled_physical_device_features
+    VkPhysicalDevice_T * physicalDevice,
+    U32 const graphicsQueueFamily,
+    U32 const presentQueueFamily,
+    VkPhysicalDeviceFeatures const & enabledPhysicalDeviceFeatures
 ) {
     LogicalDevice ret {};
 
-    MFA_PTR_ASSERT(physical_device);
+    MFA_ASSERT(physicalDevice != nullptr);
     
     // Create one graphics queue and optionally a separate presentation queue
     float queue_priority = 1.0f;
@@ -796,12 +796,12 @@ LogicalDevice CreateLogicalDevice(
     VkDeviceQueueCreateInfo queue_create_info[2] = {};
 
     queue_create_info[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queue_create_info[0].queueFamilyIndex = graphics_queue_family;
+    queue_create_info[0].queueFamilyIndex = graphicsQueueFamily;
     queue_create_info[0].queueCount = 1;
     queue_create_info[0].pQueuePriorities = &queue_priority;
 
     queue_create_info[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queue_create_info[1].queueFamilyIndex = present_queue_family;
+    queue_create_info[1].queueFamilyIndex = presentQueueFamily;
     queue_create_info[1].queueCount = 1;
     queue_create_info[1].pQueuePriorities = &queue_priority;
 
@@ -811,7 +811,7 @@ LogicalDevice CreateLogicalDevice(
     deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     deviceCreateInfo.pQueueCreateInfos = queue_create_info;
 
-    if (graphics_queue_family == present_queue_family) {
+    if (graphicsQueueFamily == presentQueueFamily) {
         deviceCreateInfo.queueCreateInfoCount = 1;
     } else {
         deviceCreateInfo.queueCreateInfoCount = 2;
@@ -821,7 +821,7 @@ LogicalDevice CreateLogicalDevice(
     deviceCreateInfo.enabledExtensionCount = 1;
     deviceCreateInfo.ppEnabledExtensionNames = &device_extensions;
     // Necessary for shader (for some reason)
-    deviceCreateInfo.pEnabledFeatures = &enabled_physical_device_features;
+    deviceCreateInfo.pEnabledFeatures = &enabledPhysicalDeviceFeatures;
 #ifdef MFA_DEBUG
     deviceCreateInfo.enabledLayerCount = static_cast<U32>(DebugLayers.size());
     deviceCreateInfo.ppEnabledLayerNames = DebugLayers.data();
@@ -829,10 +829,10 @@ LogicalDevice CreateLogicalDevice(
     deviceCreateInfo.enabledLayerCount = 0;
     deviceCreateInfo.ppEnabledLayerNames = nullptr;
 #endif
-    VK_Check(vkCreateDevice(physical_device, &deviceCreateInfo, nullptr, &ret.device));
-    MFA_PTR_ASSERT(ret.device);
+    VK_Check(vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &ret.device));
+    MFA_ASSERT(ret.device != nullptr);
     MFA_LOG_INFO("Logical device create was successful");    
-    vkGetPhysicalDeviceMemoryProperties(physical_device, &ret.physical_memory_properties);
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &ret.physical_memory_properties);
 
     return ret;
 }
@@ -860,7 +860,7 @@ VkSampler_T * CreateSampler(
     VkDevice_T * device, 
     CreateSamplerParams const & params
 ) {
-    MFA_PTR_ASSERT(device);
+    MFA_ASSERT(device != nullptr);
     VkSampler sampler = nullptr;
 
     VkSamplerCreateInfo sampler_info{};
@@ -886,8 +886,8 @@ VkSampler_T * CreateSampler(
 }
 
 void DestroySampler(VkDevice_T * device, VkSampler_T * sampler) {
-    MFA_PTR_ASSERT(device);
-    MFA_PTR_ASSERT(sampler);
+    MFA_ASSERT(device != nullptr);
+    MFA_ASSERT(sampler != nullptr);
     vkDestroySampler(device, sampler, nullptr);
 }
 
@@ -916,19 +916,19 @@ VkDebugReportCallbackEXT_T * SetDebugCallback(
 static FindPhysicalDeviceResult FindPhysicalDevice(VkInstance_T * vk_instance, U8 const retry_count) {
     FindPhysicalDeviceResult ret {};
 
-    U32 device_count = 0;
+    U32 deviceCount = 0;
     //Getting number of physical devices
     VK_Check(vkEnumeratePhysicalDevices(
         vk_instance, 
-        &device_count, 
+        &deviceCount, 
         nullptr
     ));
-    MFA_ASSERT(device_count > 0);
+    MFA_ASSERT(deviceCount > 0);
 
-    std::vector<VkPhysicalDevice> devices (device_count);
+    std::vector<VkPhysicalDevice> devices (deviceCount);
     const auto phyDevResult = vkEnumeratePhysicalDevices(
         vk_instance, 
-        &device_count, 
+        &deviceCount, 
         devices.data()
     );
     //TODO Search about incomplete
@@ -937,15 +937,15 @@ static FindPhysicalDeviceResult FindPhysicalDevice(VkInstance_T * vk_instance, U
     if(retry_count >= devices.size()) {
         MFA_CRASH("No suitable physical device exists");
     }
-    ret.physical_device = devices[retry_count];
-    MFA_PTR_ASSERT(ret.physical_device);
-    ret.physical_device_features.samplerAnisotropy = VK_TRUE;
-    ret.physical_device_features.shaderClipDistance = VK_TRUE;
-    ret.physical_device_features.shaderCullDistance = VK_TRUE;
+    ret.physicalDevice = devices[retry_count];
+    MFA_ASSERT(ret.physicalDevice != nullptr);
+    ret.physicalDeviceFeatures.samplerAnisotropy = VK_TRUE;
+    ret.physicalDeviceFeatures.shaderClipDistance = VK_TRUE;
+    ret.physicalDeviceFeatures.shaderCullDistance = VK_TRUE;
     
     VkPhysicalDeviceProperties deviceProperties;
-    vkGetPhysicalDeviceProperties(ret.physical_device, &deviceProperties);
-    vkGetPhysicalDeviceFeatures(ret.physical_device, &ret.physical_device_features);
+    vkGetPhysicalDeviceProperties(ret.physicalDevice, &deviceProperties);
+    vkGetPhysicalDeviceFeatures(ret.physicalDevice, &ret.physicalDeviceFeatures);
 
     U32 supportedVersion[] = {
         VK_VERSION_MAJOR(deviceProperties.apiVersion),
@@ -1041,15 +1041,15 @@ FindPresentAndGraphicQueueFamilyResult FindPresentAndGraphicQueueFamily(
 }
 
 VkCommandPool_T * CreateCommandPool(VkDevice_T * device, U32 const queue_family_index) {
-    MFA_PTR_ASSERT(device);
+    MFA_ASSERT(device);
     // Create graphics command pool
-    VkCommandPoolCreateInfo pool_create_info = {};
-    pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    pool_create_info.queueFamilyIndex = queue_family_index;
-    pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    VkCommandPoolCreateInfo poolCreateInfo = {};
+    poolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolCreateInfo.queueFamilyIndex = queue_family_index;
+    poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
     VkCommandPool_T * command_pool = nullptr;
-    VK_Check(vkCreateCommandPool(device, &pool_create_info, nullptr, &command_pool));
+    VK_Check(vkCreateCommandPool(device, &poolCreateInfo, nullptr, &command_pool));
 
     return command_pool;
 }
@@ -1064,7 +1064,7 @@ SwapChainGroup CreateSwapChain(
     VkPhysicalDevice_T * physical_device, 
     VkSurfaceKHR_T * window_surface,
     VkExtent2D swap_chain_extend,
-    VkSwapchainKHR_T * old_swap_chain
+    VkSwapchainKHR_T * oldSwapChain
 ) {
     // Find surface capabilities
     VkSurfaceCapabilitiesKHR surface_capabilities;
@@ -1162,69 +1162,67 @@ SwapChainGroup CreateSwapChain(
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     createInfo.presentMode = selected_present_mode;
     createInfo.clipped = VK_TRUE;
-    createInfo.oldSwapchain = old_swap_chain;
+    createInfo.oldSwapchain = oldSwapChain;
 
     SwapChainGroup ret {};
 
-    VK_Check (vkCreateSwapchainKHR(device, &createInfo, nullptr, &ret.swap_chain));
+    VK_Check (vkCreateSwapchainKHR(device, &createInfo, nullptr, &ret.swapChain));
 
     MFA_LOG_INFO("Created swap chain");
     
-    if (MFA_PTR_VALID(old_swap_chain)) {
-        vkDestroySwapchainKHR(device, old_swap_chain, nullptr);
+    if (oldSwapChain != nullptr) {
+        vkDestroySwapchainKHR(device, oldSwapChain, nullptr);
+        oldSwapChain = nullptr;
     }
     // TODO This should be inside Frontend layer
     //m_state.old_swap_chain = m_state.swap_chain;
-    ret.swap_chain_format = selected_surface_format.format;
+    ret.swapChainFormat = selected_surface_format.format;
     
     // Store the images used by the swap chain
     // Note: these are the images that swap chain image indices refer to
     // Note: actual number of images may differ from requested number, since it's a lower bound
-    uint32_t actual_image_count = 0;
+    uint32_t actualImageCount = 0;
     if (
-        vkGetSwapchainImagesKHR(device, ret.swap_chain, &actual_image_count, nullptr) != VK_SUCCESS || 
-        actual_image_count == 0
+        vkGetSwapchainImagesKHR(device, ret.swapChain, &actualImageCount, nullptr) != VK_SUCCESS || 
+        actualImageCount == 0
     ) {
         MFA_CRASH("Failed to acquire number of swap chain images");
     }
 
-    ret.swap_chain_images.resize(actual_image_count);
+    ret.swapChainImages.resize(actualImageCount);
     VK_Check (vkGetSwapchainImagesKHR(
         device,
-        ret.swap_chain,
-        &actual_image_count,
-        ret.swap_chain_images.data()
+        ret.swapChain,
+        &actualImageCount,
+        ret.swapChainImages.data()
     ));
 
-    ret.swap_chain_image_views.resize(actual_image_count);
-    for(uint32_t image_index = 0; image_index < actual_image_count; image_index++) {
-        MFA_PTR_VALID(ret.swap_chain_images[image_index]);
-        ret.swap_chain_image_views[image_index] = CreateImageView(
+    ret.swapChainImageViews.resize(actualImageCount);
+    for(uint32_t image_index = 0; image_index < actualImageCount; image_index++) {
+        MFA_ASSERT(ret.swapChainImages[image_index] != nullptr);
+        ret.swapChainImageViews[image_index] = CreateImageView(
             device,
-            ret.swap_chain_images[image_index],
-            ret.swap_chain_format,
+            ret.swapChainImages[image_index],
+            ret.swapChainFormat,
             VK_IMAGE_ASPECT_COLOR_BIT
         );
-        MFA_PTR_VALID(ret.swap_chain_image_views[image_index]);
+        MFA_ASSERT(ret.swapChainImageViews[image_index] != nullptr);
     }
 
     MFA_LOG_INFO("Acquired swap chain images");
     return ret;
 }
 
-void DestroySwapChain(VkDevice_T * device, SwapChainGroup const & swap_chain_group) {
-    MFA_PTR_ASSERT(device);
-    MFA_PTR_ASSERT(swap_chain_group.swap_chain);
-    MFA_ASSERT(swap_chain_group.swap_chain_image_views.size() > 0);
-    MFA_ASSERT(swap_chain_group.swap_chain_images.size() > 0);
-    MFA_ASSERT(swap_chain_group.swap_chain_images.size() == swap_chain_group.swap_chain_image_views.size());
-    vkDestroySwapchainKHR(device, swap_chain_group.swap_chain, nullptr);
-    for(auto const & swap_chain_image_view : swap_chain_group.swap_chain_image_views) {
+void DestroySwapChain(VkDevice_T * device, SwapChainGroup const & swapChainGroup) {
+    MFA_ASSERT(device);
+    MFA_ASSERT(swapChainGroup.swapChain);
+    MFA_ASSERT(swapChainGroup.swapChainImageViews.empty() == false);
+    MFA_ASSERT(swapChainGroup.swapChainImages.empty() == false);
+    MFA_ASSERT(swapChainGroup.swapChainImages.size() == swapChainGroup.swapChainImageViews.size());
+    vkDestroySwapchainKHR(device, swapChainGroup.swapChain, nullptr);
+    for(auto const & swap_chain_image_view : swapChainGroup.swapChainImageViews) {
         vkDestroyImageView(device, swap_chain_image_view, nullptr);
     }
-    //for(auto const & swap_chain_image : swap_chain_group.swap_chain_images) {
-    //    vkDestroyImage(device, swap_chain_image, nullptr);
-    //}
 }
 
 DepthImageGroup CreateDepth(
@@ -1233,8 +1231,8 @@ DepthImageGroup CreateDepth(
     VkExtent2D const swap_chain_extend
 ) {
     DepthImageGroup ret {};
-    auto const depth_format = FindDepthFormat(physical_device);
-    ret.image_group = CreateImage(
+    auto const depthFormat = FindDepthFormat(physical_device);
+    ret.imageGroup = CreateImage(
         device,
         physical_device,
         swap_chain_extend.width,
@@ -1242,36 +1240,36 @@ DepthImageGroup CreateDepth(
         1,
         1,
         1,
-        depth_format,
+        depthFormat,
         VK_IMAGE_TILING_OPTIMAL, 
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
     );
-    MFA_PTR_ASSERT(ret.image_group.image);
-    MFA_PTR_ASSERT(ret.image_group.memory);
-    ret.image_view = CreateImageView(
+    MFA_ASSERT(ret.imageGroup.image);
+    MFA_ASSERT(ret.imageGroup.memory);
+    ret.imageView = CreateImageView(
         device,
-        ret.image_group.image,
-        depth_format,
+        ret.imageGroup.image,
+        depthFormat,
         VK_IMAGE_ASPECT_DEPTH_BIT
     );
-    MFA_PTR_ASSERT(ret.image_view);
+    MFA_ASSERT(ret.imageView);
     return ret;
 }
 
-void DestroyDepth(VkDevice_T * device, DepthImageGroup const & depth_group) {
-    MFA_PTR_ASSERT(device);
-    DestroyImageView(device, depth_group.image_view);
-    DestroyImage(device, depth_group.image_group);
+void DestroyDepth(VkDevice_T * device, DepthImageGroup const & depthGroup) {
+    MFA_ASSERT(device != nullptr);
+    DestroyImageView(device, depthGroup.imageView);
+    DestroyImage(device, depthGroup.imageGroup);
  }
 
 VkRenderPass_T * CreateRenderPass(
-    VkPhysicalDevice_T * physical_device, 
+    VkPhysicalDevice_T * physicalDevice, 
     VkDevice_T * device, 
-    VkFormat const swap_chain_format
+    VkFormat const swapChainFormat
 ) {
     VkAttachmentDescription const color_attachment = {
-        .format = swap_chain_format,
+        .format = swapChainFormat,
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -1282,7 +1280,7 @@ VkRenderPass_T * CreateRenderPass(
     };
 
     VkAttachmentDescription const depth_attachment {
-        .format = FindDepthFormat(physical_device),
+        .format = FindDepthFormat(physicalDevice),
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -1339,42 +1337,42 @@ VkRenderPass_T * CreateRenderPass(
     return render_pass;
 }
 
-void DestroyRenderPass(VkDevice_T * device, VkRenderPass_T * render_pass) {
-    MFA_PTR_ASSERT(device);
-    MFA_PTR_ASSERT(render_pass);
-    vkDestroyRenderPass(device, render_pass, nullptr);
+void DestroyRenderPass(VkDevice_T * device, VkRenderPass_T * renderPass) {
+    MFA_ASSERT(device != nullptr);
+    MFA_ASSERT(renderPass != nullptr);
+    vkDestroyRenderPass(device, renderPass, nullptr);
 }
 
 std::vector<VkFramebuffer_T *> CreateFrameBuffers(
     VkDevice_T * device,
-    VkRenderPass_T * render_pass,
-    U32 const swap_chain_image_views_count, 
-    VkImageView_T ** swap_chain_image_views,
-    VkImageView_T * depth_image_view,
-    VkExtent2D const swap_chain_extent
+    VkRenderPass_T * renderPass,
+    U32 const swapChainImageViewsCount, 
+    VkImageView_T ** swapChainImageViews,
+    VkImageView_T * depthImageView,
+    VkExtent2D const swapChainExtent
 ) {
-    MFA_PTR_ASSERT(device);
-    MFA_PTR_ASSERT(render_pass);
-    MFA_ASSERT(swap_chain_image_views_count > 0);
-    MFA_PTR_ASSERT(swap_chain_image_views);
-    std::vector<VkFramebuffer_T *> swap_chain_frame_buffers {swap_chain_image_views_count};
+    MFA_ASSERT(device != nullptr);
+    MFA_ASSERT(renderPass != nullptr);
+    MFA_ASSERT(swapChainImageViewsCount > 0);
+    MFA_ASSERT(swapChainImageViews != nullptr);
+    std::vector<VkFramebuffer_T *> swap_chain_frame_buffers {swapChainImageViewsCount};
 
     // Note: FrameBuffer is basically a specific choice of attachments for a render pass
     // That means all attachments must have the same dimensions, interesting restriction
-    for (size_t i = 0; i < swap_chain_image_views_count; i++) {
+    for (size_t i = 0; i < swapChainImageViewsCount; i++) {
 
         std::vector<VkImageView> attachments = {
-            swap_chain_image_views[i],
-            depth_image_view
+            swapChainImageViews[i],
+            depthImageView
         };
 
         VkFramebufferCreateInfo create_info = {};
         create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        create_info.renderPass = render_pass;
+        create_info.renderPass = renderPass;
         create_info.attachmentCount = static_cast<uint32_t>(attachments.size());
         create_info.pAttachments = attachments.data();
-        create_info.width = swap_chain_extent.width;
-        create_info.height = swap_chain_extent.height;
+        create_info.width = swapChainExtent.width;
+        create_info.height = swapChainExtent.height;
         create_info.layers = 1;
 
         VK_Check(vkCreateFramebuffer(device, &create_info, nullptr, &swap_chain_frame_buffers[i]));
@@ -1395,25 +1393,25 @@ void DestroyFrameBuffers(
     }
 }
 
-GpuShader CreateShader(VkDevice_T * device, CpuShader const & cpu_shader) {
-    MFA_PTR_VALID(device);
-    GpuShader gpu_shader {};
-    if(cpu_shader.valid()) {
-        gpu_shader.m_cpu_shader = cpu_shader;
-        auto const shader_code = cpu_shader.data_cblob();
-        VkShaderModuleCreateInfo create_info = {};
-        create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        create_info.codeSize = shader_code.len;
-        create_info.pCode = reinterpret_cast<uint32_t const *>(shader_code.ptr);
-        VK_Check(vkCreateShaderModule(device, &create_info, nullptr, &gpu_shader.m_shader_module));
+GpuShader CreateShader(VkDevice_T * device, CpuShader const & cpuShader) {
+    MFA_ASSERT(device != nullptr);
+    GpuShader gpuShader {};
+    if(cpuShader.isValid()) {
+        gpuShader.m_cpu_shader = cpuShader;
+        auto const shaderCode = cpuShader.getCompiledShaderCode();
+        VkShaderModuleCreateInfo createInfo = {};
+        createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        createInfo.codeSize = shaderCode.len;
+        createInfo.pCode = reinterpret_cast<uint32_t const *>(shaderCode.ptr);
+        VK_Check(vkCreateShaderModule(device, &createInfo, nullptr, &gpuShader.m_shader_module));
         MFA_LOG_INFO("Creating shader module was successful");
-        MFA_ASSERT(gpu_shader.valid());
+        MFA_ASSERT(gpuShader.valid());
     }
-    return gpu_shader;
+    return gpuShader;
 }
 
 bool DestroyShader(VkDevice_T * device, GpuShader & gpu_shader) {
-    MFA_PTR_ASSERT(device);
+    MFA_ASSERT(device != nullptr);
     bool ret = false;
     if(gpu_shader.valid()) {
         vkDestroyShaderModule(device, gpu_shader.m_shader_module, nullptr);
@@ -1435,17 +1433,17 @@ GraphicPipelineGroup CreateGraphicPipeline(
     VkDescriptorSetLayout_T * descriptor_set_layout,
     CreateGraphicPipelineOptions const & options
 ) {
-    MFA_PTR_ASSERT(shader_stages);
-    MFA_PTR_ASSERT(render_pass);
-    MFA_PTR_ASSERT(descriptor_set_layout);
+    MFA_ASSERT(shader_stages);
+    MFA_ASSERT(render_pass);
+    MFA_ASSERT(descriptor_set_layout);
     // Set up shader stage info
     std::vector<VkPipelineShaderStageCreateInfo> shader_stages_create_infos {shader_stages_count};
     for(U8 i = 0; i < shader_stages_count; i++) {
         VkPipelineShaderStageCreateInfo create_info = {};
         create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        create_info.stage = ConvertAssetShaderStageToGpu(shader_stages[i].cpu_shader()->header_object()->stage);
-        create_info.module = shader_stages[i].shader_module();
-        create_info.pName = shader_stages[i].cpu_shader()->header_object()->entry_point;
+        create_info.stage = ConvertAssetShaderStageToGpu(shader_stages[i].cpuShader()->getStage());
+        create_info.module = shader_stages[i].shaderModule();
+        create_info.pName = shader_stages[i].cpuShader()->getEntryPoint();
         shader_stages_create_infos[i] = create_info;
     }
 
@@ -1533,8 +1531,8 @@ GraphicPipelineGroup CreateGraphicPipeline(
     layout_create_info.pushConstantRangeCount = options.push_constants_range_count;
     layout_create_info.pPushConstantRanges = options.push_constant_ranges;
     
-    VkPipelineLayout_T * pipeline_layout = nullptr;
-    VK_Check(vkCreatePipelineLayout(device, &layout_create_info, nullptr, &pipeline_layout));
+    VkPipelineLayout_T * pipelineLayout = nullptr;
+    VK_Check(vkCreatePipelineLayout(device, &layout_create_info, nullptr, &pipelineLayout));
 
     // Create the graphics pipeline
     VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
@@ -1547,7 +1545,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
     pipelineCreateInfo.pRasterizationState = &rasterization_create_info;
     pipelineCreateInfo.pMultisampleState = &multi_sample_state_create_info;
     pipelineCreateInfo.pColorBlendState = &color_blend_create_info;
-    pipelineCreateInfo.layout = pipeline_layout;
+    pipelineCreateInfo.layout = pipelineLayout;
     pipelineCreateInfo.renderPass = render_pass;
     pipelineCreateInfo.subpass = 0;
     pipelineCreateInfo.basePipelineHandle = nullptr;
@@ -1568,22 +1566,22 @@ GraphicPipelineGroup CreateGraphicPipeline(
     MFA_LOG_INFO("Created graphics pipeline");
 
     GraphicPipelineGroup group {};
-    MFA_PTR_ASSERT(pipeline);
-    group.graphic_pipeline = pipeline;
-    MFA_PTR_ASSERT(pipeline_layout);
-    group.pipeline_layout = pipeline_layout;
+    MFA_ASSERT(pipeline != nullptr);
+    group.graphicPipeline = pipeline;
+    MFA_ASSERT(pipelineLayout != nullptr);
+    group.pipelineLayout = pipelineLayout;
 
     return group;
 }
 
-void DestroyGraphicPipeline(VkDevice_T * device, GraphicPipelineGroup & graphic_pipeline_group) {
-    MFA_PTR_ASSERT(device);
-    MFA_PTR_ASSERT(graphic_pipeline_group.graphic_pipeline);
-    MFA_PTR_ASSERT(graphic_pipeline_group.pipeline_layout);
-    vkDestroyPipeline(device, graphic_pipeline_group.graphic_pipeline, nullptr);
-    vkDestroyPipelineLayout(device, graphic_pipeline_group.pipeline_layout, nullptr);
-    graphic_pipeline_group.graphic_pipeline = nullptr;
-    graphic_pipeline_group.pipeline_layout = nullptr;
+void DestroyGraphicPipeline(VkDevice_T * device, GraphicPipelineGroup & graphicPipelineGroup) {
+    MFA_ASSERT(device != nullptr);
+    MFA_ASSERT(graphicPipelineGroup.graphicPipeline != nullptr);
+    MFA_ASSERT(graphicPipelineGroup.pipelineLayout != nullptr);
+    vkDestroyPipeline(device, graphicPipelineGroup.graphicPipeline, nullptr);
+    vkDestroyPipelineLayout(device, graphicPipelineGroup.pipelineLayout, nullptr);
+    graphicPipelineGroup.graphicPipeline = nullptr;
+    graphicPipelineGroup.pipelineLayout = nullptr;
 }
 
 [[nodiscard]]
@@ -1667,8 +1665,8 @@ BufferGroup CreateVertexBuffer(
 
     DestroyBuffer(device, staging_buffer_group);
 
-    MFA_PTR_ASSERT(vertex_buffer_group.memory);
-    MFA_PTR_ASSERT(vertex_buffer_group.buffer);
+    MFA_ASSERT(vertex_buffer_group.memory);
+    MFA_ASSERT(vertex_buffer_group.buffer);
 
     return vertex_buffer_group;
 }
@@ -1718,8 +1716,8 @@ BufferGroup CreateIndexBuffer (
 
     DestroyBuffer(device, staging_buffer_group);
 
-    MFA_PTR_ASSERT(indices_buffer_group.memory);
-    MFA_PTR_ASSERT(indices_buffer_group.buffer);
+    MFA_ASSERT(indices_buffer_group.memory != nullptr);
+    MFA_ASSERT(indices_buffer_group.buffer != nullptr);
 
     return indices_buffer_group;
 
@@ -1797,8 +1795,8 @@ void DestroyDescriptorPool(
     VkDevice_T * device, 
     VkDescriptorPool_T * pool
 ) {
-    MFA_PTR_ASSERT(device);
-    MFA_PTR_ASSERT(pool);
+    MFA_ASSERT(device != nullptr);
+    MFA_ASSERT(pool != nullptr);
     vkDestroyDescriptorPool(device, pool, nullptr);
 }
 
@@ -1810,9 +1808,9 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSet(
     U8 const schemas_count,
     VkWriteDescriptorSet * schemas
 ) {
-    MFA_PTR_ASSERT(device);
-    MFA_PTR_ASSERT(descriptor_pool);
-    MFA_PTR_ASSERT(descriptor_set_layout);
+    MFA_ASSERT(device != nullptr);
+    MFA_ASSERT(descriptor_pool != nullptr);
+    MFA_ASSERT(descriptor_set_layout != nullptr);
     std::vector<VkDescriptorSetLayout> layouts(descriptor_set_count, descriptor_set_layout);
     // There needs to be one descriptor set per binding point in the shader
     VkDescriptorSetAllocateInfo allocInfo = {};
@@ -1830,7 +1828,7 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSet(
     ));
     MFA_LOG_INFO("Create descriptor set is successful");
 
-    if(schemas_count > 0 && MFA_PTR_VALID(schemas)) {
+    if(schemas_count > 0 && schemas != nullptr) {
         MFA_ASSERT(descriptor_sets.size() < 256);
         UpdateDescriptorSets(
             device,
@@ -1895,32 +1893,32 @@ std::vector<VkCommandBuffer_T *> CreateCommandBuffers(
 
 void DestroyCommandBuffers(
     VkDevice_T * device,
-    VkCommandPool_T * command_pool,
-    U8 const command_buffers_count,
-    VkCommandBuffer_T ** command_buffers
+    VkCommandPool_T * commandPool,
+    U8 const commandBuffersCount,
+    VkCommandBuffer_T ** commandBuffers
 ) {
-    MFA_PTR_ASSERT(device);
-    MFA_PTR_ASSERT(command_pool);
-    MFA_ASSERT(command_buffers_count > 0);
-    MFA_PTR_ASSERT(command_buffers);
+    MFA_ASSERT(device != nullptr);
+    MFA_ASSERT(commandPool != nullptr);
+    MFA_ASSERT(commandBuffersCount > 0);
+    MFA_ASSERT(commandBuffers != nullptr);
     vkFreeCommandBuffers(
         device,
-        command_pool,
-        command_buffers_count,
-        command_buffers
+        commandPool,
+        commandBuffersCount,
+        commandBuffers
     );
 }
 
 SyncObjects CreateSyncObjects(
     VkDevice_T * device,
-    U8 const max_frames_in_flight,
-    U8 const swap_chain_images_count
+    U8 const maxFramesInFlight,
+    U8 const swapChainImagesCount
 ) {
-    SyncObjects sync_objects {};
-    sync_objects.image_availability_semaphores.resize(max_frames_in_flight);
-    sync_objects.render_finish_indicator_semaphores.resize(max_frames_in_flight);
-    sync_objects.fences_in_flight.resize(max_frames_in_flight);
-    sync_objects.images_in_flight.resize(swap_chain_images_count, nullptr);
+    SyncObjects syncObjects {};
+    syncObjects.image_availability_semaphores.resize(maxFramesInFlight);
+    syncObjects.render_finish_indicator_semaphores.resize(maxFramesInFlight);
+    syncObjects.fences_in_flight.resize(maxFramesInFlight);
+    syncObjects.images_in_flight.resize(swapChainImagesCount, nullptr);
 
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -1929,52 +1927,52 @@ SyncObjects CreateSyncObjects(
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    for (U8 i = 0; i < max_frames_in_flight; i++) {
+    for (U8 i = 0; i < maxFramesInFlight; i++) {
         VK_Check(vkCreateSemaphore(
             device, 
             &semaphoreInfo, 
             nullptr, 
-            &sync_objects.image_availability_semaphores[i]
+            &syncObjects.image_availability_semaphores[i]
         ));
         VK_Check(vkCreateSemaphore(
             device, 
             &semaphoreInfo,
             nullptr,
-            &sync_objects.render_finish_indicator_semaphores[i]
+            &syncObjects.render_finish_indicator_semaphores[i]
         ));
         VK_Check(vkCreateFence(
             device, 
             &fenceInfo, 
             nullptr, 
-            &sync_objects.fences_in_flight[i]
+            &syncObjects.fences_in_flight[i]
         ));
     }
-    return sync_objects;
+    return syncObjects;
 }
 
-void DestroySyncObjects(VkDevice_T * device, SyncObjects const & sync_objects) {
-    MFA_PTR_VALID(device);
-    MFA_ASSERT(sync_objects.fences_in_flight.size() == sync_objects.image_availability_semaphores.size());
-    MFA_ASSERT(sync_objects.fences_in_flight.size() == sync_objects.render_finish_indicator_semaphores.size());
-    for(U8 i = 0; i < sync_objects.fences_in_flight.size(); i++) {
-        vkDestroySemaphore(device, sync_objects.render_finish_indicator_semaphores[i], nullptr);
-        vkDestroySemaphore(device, sync_objects.image_availability_semaphores[i], nullptr);
-        vkDestroyFence(device, sync_objects.fences_in_flight[i], nullptr);
+void DestroySyncObjects(VkDevice_T * device, SyncObjects const & syncObjects) {
+    MFA_ASSERT(device != nullptr);
+    MFA_ASSERT(syncObjects.fences_in_flight.size() == syncObjects.image_availability_semaphores.size());
+    MFA_ASSERT(syncObjects.fences_in_flight.size() == syncObjects.render_finish_indicator_semaphores.size());
+    for(U8 i = 0; i < syncObjects.fences_in_flight.size(); i++) {
+        vkDestroySemaphore(device, syncObjects.render_finish_indicator_semaphores[i], nullptr);
+        vkDestroySemaphore(device, syncObjects.image_availability_semaphores[i], nullptr);
+        vkDestroyFence(device, syncObjects.fences_in_flight[i], nullptr);
     }
 }
 
 void DeviceWaitIdle(VkDevice_T * device) {
-    MFA_PTR_VALID(device);
+    MFA_ASSERT(device != nullptr);
     VK_Check(vkDeviceWaitIdle(device));
 }
 
-void WaitForFence(VkDevice_T * device, VkFence_T * in_flight_fence) {
-    MFA_PTR_ASSERT(device);
-    MFA_PTR_ASSERT(in_flight_fence);
+void WaitForFence(VkDevice_T * device, VkFence_T * inFlightFence) {
+    MFA_ASSERT(device != nullptr);
+    MFA_ASSERT(inFlightFence != nullptr);
     VK_Check(vkWaitForFences(
         device, 
         1, 
-        &in_flight_fence, 
+        &inFlightFence, 
         VK_TRUE, 
         UINT64_MAX
     ));
@@ -1983,18 +1981,18 @@ void WaitForFence(VkDevice_T * device, VkFence_T * in_flight_fence) {
 [[nodiscard]]
 U8 AcquireNextImage(
     VkDevice_T * device, 
-    VkSemaphore_T * image_availability_semaphore, 
-    SwapChainGroup const & swap_chain_group
+    VkSemaphore_T * imageAvailabilitySemaphore, 
+    SwapChainGroup const & swapChainGroup
 ) {
-    MFA_PTR_ASSERT(device);
-    MFA_PTR_ASSERT(image_availability_semaphore);
+    MFA_ASSERT(device != nullptr);
+    MFA_ASSERT(imageAvailabilitySemaphore != nullptr);
     U32 image_index;
     // TODO What if acquiring fail ?
     VK_Check(vkAcquireNextImageKHR(
         device,
-        swap_chain_group.swap_chain,
+        swapChainGroup.swapChain,
         UINT64_MAX,
-        image_availability_semaphore,
+        imageAvailabilitySemaphore,
         nullptr,
         &image_index
     ));
@@ -2016,16 +2014,16 @@ void BindVertexBuffer(
 }
 
 void BindIndexBuffer(
-    VkCommandBuffer_T * command_buffer,
-    BufferGroup const index_buffer,
+    VkCommandBuffer_T * commandBuffer,
+    BufferGroup const indexBuffer,
     VkDeviceSize const offset,
-    VkIndexType const index_type
+    VkIndexType const indexType
 ) {
     vkCmdBindIndexBuffer(
-        command_buffer,
-        index_buffer.buffer,
+        commandBuffer,
+        indexBuffer.buffer,
         offset, 
-        index_type
+        indexType
     );
 }
 
@@ -2047,19 +2045,19 @@ void DrawIndexed(
     );
 }
 
-void SetScissor(VkCommandBuffer_T * command_buffer, VkRect2D const & scissor) {
-    MFA_PTR_ASSERT(command_buffer);
+void SetScissor(VkCommandBuffer_T * commandBuffer, VkRect2D const & scissor) {
+    MFA_ASSERT(commandBuffer != nullptr);
     vkCmdSetScissor(
-        command_buffer, 
+        commandBuffer, 
         0, 
         1, 
         &scissor
     );
 }
 
-void SetViewport(VkCommandBuffer_T * command_buffer, VkViewport const & viewport) {
-    MFA_PTR_ASSERT(command_buffer);
-    vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+void SetViewport(VkCommandBuffer_T * commandBuffer, VkViewport const & viewport) {
+    MFA_ASSERT(commandBuffer != nullptr);
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 }
 
 void PushConstants(
@@ -2087,9 +2085,9 @@ void UpdateDescriptorSetsBasic(
     U32 const image_info_count,
     VkDescriptorImageInfo const * image_infos
 ) {
-    MFA_PTR_ASSERT(device);
+    MFA_ASSERT(device != nullptr);
     MFA_ASSERT(descriptor_sets_count > 0);
-    MFA_PTR_ASSERT(descriptor_sets);
+    MFA_ASSERT(descriptor_sets != nullptr);
     for(U8 i = 0; i < descriptor_sets_count; i++) {
         std::vector<VkWriteDescriptorSet> descriptorWrites {2};
         
@@ -2121,17 +2119,17 @@ void UpdateDescriptorSetsBasic(
 
 void UpdateDescriptorSets(
     VkDevice_T * device,
-    U8 descriptor_writes_count,
-    VkWriteDescriptorSet * descriptor_writes
+    U8 descriptorWritesCount,
+    VkWriteDescriptorSet * descriptorWrites
 ) {
-    MFA_PTR_VALID(device);
-    MFA_ASSERT(descriptor_writes_count > 0);
-    MFA_ASSERT(nullptr != descriptor_writes);
+    MFA_ASSERT(device != nullptr);
+    MFA_ASSERT(descriptorWritesCount > 0);
+    MFA_ASSERT(descriptorWrites != nullptr);
 
     vkUpdateDescriptorSets(
         device, 
-        static_cast<uint32_t>(descriptor_writes_count), 
-        descriptor_writes, 
+        static_cast<uint32_t>(descriptorWritesCount), 
+        descriptorWrites, 
         0, 
         nullptr
     );

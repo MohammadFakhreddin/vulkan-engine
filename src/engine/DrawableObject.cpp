@@ -87,8 +87,8 @@ RF::UniformBufferGroup * DrawableObject::get_uniform_buffer(char const * name) {
 void DrawableObject::draw(RF::DrawPass & draw_pass) {
     auto const * header_object = m_model->model_asset.mesh.header_object();
     MFA_PTR_ASSERT(header_object);
-    BindVertexBuffer(draw_pass, m_model->mesh_buffers.vertices_buffer);
-    BindIndexBuffer(draw_pass, m_model->mesh_buffers.indices_buffer);
+    BindVertexBuffer(draw_pass, m_model->mesh_buffers.verticesBuffer);
+    BindIndexBuffer(draw_pass, m_model->mesh_buffers.indicesBuffer);
     for (U32 i = 0; i < m_required_draw_calls; ++i) {
         auto * current_descriptor_set = m_descriptor_sets[i];
         RF::BindDescriptorSet(draw_pass, current_descriptor_set);

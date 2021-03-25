@@ -405,8 +405,8 @@ void OnNewFrame(
                 RF::DestroyMeshBuffers(state.mesh_buffers[draw_pass.image_index]);
                 state.mesh_buffers_validation_status[draw_pass.image_index] = false;
             }
-            state.mesh_buffers[draw_pass.image_index].vertices_buffer = RF::CreateVertexBuffer(CBlob {vertex_data.ptr, vertex_data.len});
-            state.mesh_buffers[draw_pass.image_index].indices_buffer = RF::CreateIndexBuffer(CBlob {index_data.ptr, index_data.len});
+            state.mesh_buffers[draw_pass.image_index].verticesBuffer = RF::CreateVertexBuffer(CBlob {vertex_data.ptr, vertex_data.len});
+            state.mesh_buffers[draw_pass.image_index].indicesBuffer = RF::CreateIndexBuffer(CBlob {index_data.ptr, index_data.len});
             state.mesh_buffers_validation_status[draw_pass.image_index] = true;
             // Setup desired Vulkan state
             // Bind pipeline and descriptor sets:
@@ -417,13 +417,13 @@ void OnNewFrame(
 
             RF::BindIndexBuffer(
                 draw_pass,
-                state.mesh_buffers[draw_pass.image_index].indices_buffer,
+                state.mesh_buffers[draw_pass.image_index].indicesBuffer,
                 0,
                 sizeof(ImDrawIdx) == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32
             );
             RF::BindVertexBuffer(
                 draw_pass,
-                state.mesh_buffers[draw_pass.image_index].vertices_buffer
+                state.mesh_buffers[draw_pass.image_index].verticesBuffer
             );
 
             // Update the Descriptor Set:
@@ -546,9 +546,9 @@ void Shutdown() {
     Importer::FreeAsset(state.font_texture.cpu_texture());
     RF::DestroyDrawPipeline(state.draw_pipeline);
     RF::DestroyShader(state.fragment_shader);
-    Importer::FreeAsset(state.fragment_shader.cpu_shader());
+    Importer::FreeAsset(state.fragment_shader.cpuShader());
     RF::DestroyShader(state.vertex_shader);
-    Importer::FreeAsset(state.vertex_shader.cpu_shader());
+    Importer::FreeAsset(state.vertex_shader.cpuShader());
     RF::DestroyDescriptorSetLayout(state.descriptor_set_layout);
     RF::DestroySampler(state.font_sampler);
 }

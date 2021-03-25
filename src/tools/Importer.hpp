@@ -1,7 +1,5 @@
 #pragma once
 
-#include <vector>
-
 #include "../engine/FoundationAsset.hpp"
 
 namespace MFA::Importer {

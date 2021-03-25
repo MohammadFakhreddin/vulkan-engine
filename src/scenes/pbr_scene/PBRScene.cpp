@@ -257,8 +257,8 @@ void PBRScene::OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_
     {// Drawing spheres
         auto const * header_object = m_sphere.model_asset.mesh.header_object();
         MFA_PTR_ASSERT(header_object);
-        BindVertexBuffer(draw_pass, m_sphere.mesh_buffers.vertices_buffer);
-        BindIndexBuffer(draw_pass, m_sphere.mesh_buffers.indices_buffer);
+        BindVertexBuffer(draw_pass, m_sphere.mesh_buffers.verticesBuffer);
+        BindIndexBuffer(draw_pass, m_sphere.mesh_buffers.indicesBuffer);
         auto const required_draw_calls = m_sphere.mesh_buffers.sub_mesh_buffers.size();
         for (MFA::U32 i = 0; i < required_draw_calls; ++i) {
             auto const & current_sub_mesh = header_object->sub_meshes[i];

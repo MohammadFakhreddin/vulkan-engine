@@ -5,8 +5,9 @@
 
 namespace MFA::ShapeGenerator {
 
+    namespace AS = AssetSystem;
     AssetSystem::Model Sphere() {
-        AssetSystem::Model model_asset {};
+        AssetSystem::Model model {};
 
         std::vector<Vector3Float> positions {};
         std::vector<Vector2Float> uvs {};
@@ -78,89 +79,83 @@ namespace MFA::ShapeGenerator {
             oddRow = !oddRow;
         }
 
-        U16 const indices_count = static_cast<U16>(indices.size());
-        U16 const vertices_count = static_cast<U16>(positions.size());
+        U16 const indicesCount = static_cast<U16>(indices.size());
+        U16 const verticesCount = static_cast<U16>(positions.size());
 
-        auto const header_size = AssetSystem::MeshHeader::ComputeHeaderSize(1);
-        auto mesh_asset_blob = Memory::Alloc(AssetSystem::MeshHeader::ComputeAssetSize(
-            header_size,
-            vertices_count,      // For Vertices // TODO Recheck this part again
-            indices_count
-        ));
+        model.mesh.initForWrite(
+            verticesCount, 
+            indicesCount, 
+            Memory::Alloc(sizeof(AS::MeshVertex) * verticesCount), 
+            Memory::Alloc(sizeof(AS::MeshIndex) * indicesCount)
+        );
+
         MFA_DEFER {
-            if(MFA_PTR_VALID(mesh_asset_blob.ptr)) {
-                Memory::Free(mesh_asset_blob);
+            if(model.mesh.isValid() == false) {
+                Blob verticesBuffer {};
+                Blob indicesBuffer {};
+                model.mesh.revokeBuffers(verticesBuffer, indicesBuffer);
+                Memory::Free(verticesBuffer);
+                Memory::Free(indicesBuffer);
             }
         };
 
-        model_asset.mesh = AssetSystem::MeshAsset(mesh_asset_blob);
-        auto * mesh_header = mesh_asset_blob.as<AssetSystem::MeshHeader>();
-        mesh_header->sub_mesh_count = 1;
-        mesh_header->total_vertex_count = vertices_count;
-        mesh_header->total_index_count = indices_count;
-        // We only have 1 sub_mesh for sphere
-        auto & sub_mesh = mesh_header->sub_meshes[0];
-        sub_mesh.vertex_count = vertices_count;
-        sub_mesh.index_count = indices_count;
-        sub_mesh.vertices_offset = header_size;
-        sub_mesh.indices_offset = header_size + vertices_count * sizeof(AssetSystem::MeshVertex);
-        sub_mesh.has_combined_metallic_roughness_texture = false;
-        sub_mesh.has_normal_buffer = true;
-        sub_mesh.has_normal_texture = false;
-        sub_mesh.has_emissive_texture = false;
-        sub_mesh.indices_starting_index = 0;
         
-        auto * mesh_vertices = model_asset.mesh.vertices_blob(0).as<AssetSystem::MeshVertex>();
-        auto * mesh_indices = model_asset.mesh.indices_blob(0).as<AssetSystem::MeshIndex>();
-        MFA_ASSERT(model_asset.mesh.indices_blob(0).ptr + model_asset.mesh.indices_blob(0).len == mesh_asset_blob.ptr + mesh_asset_blob.len);
-
-        for(
-            uintmax_t index = 0;
-            index < sub_mesh.index_count;
-            ++index
-        ) {
-            mesh_indices[index] = indices[index];
+        std::vector<AS::MeshVertex> meshVertices {verticesCount};
+        std::vector<AS::MeshIndex> meshIndices {indicesCount};
+        
+        for(uintmax_t index = 0; index < indicesCount; ++index) {
+            meshIndices[index] = indices[index];
         }
-        for (
-            uintmax_t index = 0;
-            index < sub_mesh.vertex_count;
-            ++index
-        ) {
+
+        for (uintmax_t index = 0; index < verticesCount; ++index) {
             // Positions
-            static_assert(sizeof(mesh_vertices[index].position) == sizeof(positions[index].cells));
-            ::memcpy(mesh_vertices[index].position, positions[index].cells, sizeof(positions[index].cells));
+            static_assert(sizeof(meshVertices[index].position) == sizeof(positions[index].cells));
+            ::memcpy(meshVertices[index].position, positions[index].cells, sizeof(positions[index].cells));
             // UVs We assign uvs for all materials in case a texture get assigned to shape
                 // Base color
-                static_assert(sizeof(mesh_vertices[index].base_color_uv) == sizeof(uvs[index].cells));
-                ::memcpy(mesh_vertices[index].base_color_uv, uvs[index].cells, sizeof(uvs[index].cells));
+                static_assert(sizeof(meshVertices[index].baseColorUV) == sizeof(uvs[index].cells));
+                ::memcpy(meshVertices[index].baseColorUV, uvs[index].cells, sizeof(uvs[index].cells));
                 // Metallic
-                static_assert(sizeof(mesh_vertices[index].metallic_uv) == sizeof(uvs[index].cells));
-                ::memcpy(mesh_vertices[index].metallic_uv, uvs[index].cells, sizeof(uvs[index].cells));
+                static_assert(sizeof(meshVertices[index].metallicUV) == sizeof(uvs[index].cells));
+                ::memcpy(meshVertices[index].metallicUV, uvs[index].cells, sizeof(uvs[index].cells));
                 // Roughness
-                static_assert(sizeof(mesh_vertices[index].roughness_uv) == sizeof(uvs[index].cells));
-                ::memcpy(mesh_vertices[index].roughness_uv, uvs[index].cells, sizeof(uvs[index].cells));
+                static_assert(sizeof(meshVertices[index].roughnessUV) == sizeof(uvs[index].cells));
+                ::memcpy(meshVertices[index].roughnessUV, uvs[index].cells, sizeof(uvs[index].cells));
                 // Emission
-                static_assert(sizeof(mesh_vertices[index].emission_uv) == sizeof(uvs[index].cells));
-                ::memcpy(mesh_vertices[index].emission_uv, uvs[index].cells, sizeof(uvs[index].cells));
+                static_assert(sizeof(meshVertices[index].emissionUV) == sizeof(uvs[index].cells));
+                ::memcpy(meshVertices[index].emissionUV, uvs[index].cells, sizeof(uvs[index].cells));
                 // Normals
-                static_assert(sizeof(mesh_vertices[index].normal_map_uv) == sizeof(uvs[index].cells));
-                ::memcpy(mesh_vertices[index].normal_map_uv, uvs[index].cells, sizeof(uvs[index].cells));
+                static_assert(sizeof(meshVertices[index].normalMapUV) == sizeof(uvs[index].cells));
+                ::memcpy(meshVertices[index].normalMapUV, uvs[index].cells, sizeof(uvs[index].cells));
             // Normal buffer
             ::memcpy(
-                mesh_vertices[index].normal_value, 
+                meshVertices[index].normalValue, 
                 normals[index].cells, 
                 sizeof(normals[index].cells)
             );
             // Tangent buffer
-            static_assert(sizeof(mesh_vertices[index].tangent_value) == sizeof(tangents[index].cells));
-            ::memcpy(mesh_vertices[index].tangent_value, tangents[index].cells, sizeof(tangents[index].cells));
+            static_assert(sizeof(meshVertices[index].tangentValue) == sizeof(tangents[index].cells));
+            ::memcpy(meshVertices[index].tangentValue, tangents[index].cells, sizeof(tangents[index].cells));
         }
 
-        MFA_ASSERT(model_asset.mesh.valid());
-        if(true == model_asset.mesh.valid()) {
-            mesh_asset_blob = {};
-        }
+        auto const subMeshIndex = model.mesh.insertSubMesh();
+        model.mesh.insertPrimitive(
+            subMeshIndex,
+            AS::Mesh::Primitive {
+                .hasNormalBuffer = true
+            },
+            verticesCount,
+            meshVertices.data(),
+            indicesCount,
+            meshIndices.data()
+        );
 
-        return model_asset;
+        model.mesh.insertNode(AS::MeshNode {
+            .subMeshIndex = 0,
+            .children {},
+            .transformMatrix = Matrix4X4Float::Identity(),
+        });
+
+        return model;
     }
 }

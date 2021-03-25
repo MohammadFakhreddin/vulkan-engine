@@ -198,19 +198,19 @@ friend GpuTexture CreateTexture(
 friend bool DestroyTexture(VkDevice_T * device, GpuTexture & gpuTexture);
 public:
     [[nodiscard]]
-    CpuTexture const * cpu_texture() const {return &m_cpu_texture;}
+    CpuTexture const * cpu_texture() const {return &mCpuTexture;}
     [[nodiscard]]
-    CpuTexture * cpu_texture() {return &m_cpu_texture;}
+    CpuTexture * cpu_texture() {return &mCpuTexture;}
     [[nodiscard]]
-    bool valid () const {return m_image_view != nullptr;}
+    bool valid () const {return mImageView != nullptr;}
     [[nodiscard]]
-    VkImage_T const * image() const {return m_image_group.image;}
+    VkImage_T const * image() const {return mImageGroup.image;}
     [[nodiscard]]
-    VkImageView_T * image_view() const {return m_image_view;}
+    VkImageView_T * image_view() const {return mImageView;}
 private:
-    ImageGroup m_image_group {};
-    VkImageView_T * m_image_view = nullptr;
-    CpuTexture m_cpu_texture {};
+    ImageGroup mImageGroup {};
+    VkImageView_T * mImageView = nullptr;
+    CpuTexture mCpuTexture {};
 };
 
 [[nodiscard]]
@@ -231,10 +231,10 @@ struct LogicalDevice {
 };
 [[nodiscard]]
 LogicalDevice CreateLogicalDevice(
-    VkPhysicalDevice_T * physical_device,
-    U32 graphics_queue_family,
-    U32 present_queue_family,
-    VkPhysicalDeviceFeatures const & enabled_physical_device_features
+    VkPhysicalDevice_T * physicalDevice,
+    U32 graphicsQueueFamily,
+    U32 presentQueueFamily,
+    VkPhysicalDeviceFeatures const & enabledPhysicalDeviceFeatures
 );
 
 void DestroyLogicalDevice(LogicalDevice const & logical_device);
@@ -266,8 +266,8 @@ VkDebugReportCallbackEXT_T * SetDebugCallback(
 
 // TODO Might need to ask features from outside instead
 struct FindPhysicalDeviceResult {
-    VkPhysicalDevice_T * physical_device = nullptr;
-    VkPhysicalDeviceFeatures physical_device_features {};
+    VkPhysicalDevice_T * physicalDevice = nullptr;
+    VkPhysicalDeviceFeatures physicalDeviceFeatures {};
 };
 [[nodiscard]]
 FindPhysicalDeviceResult FindPhysicalDevice(VkInstance_T * vk_instance);
@@ -291,10 +291,10 @@ VkCommandPool_T * CreateCommandPool(VkDevice_T * device, U32 queue_family_index)
 void DestroyCommandPool(VkDevice_T * device, VkCommandPool_T * command_pool);
 
 struct SwapChainGroup {
-    VkSwapchainKHR_T * swap_chain = nullptr;
-    VkFormat swap_chain_format {};
-    std::vector<VkImage_T *> swap_chain_images {};
-    std::vector<VkImageView_T *> swap_chain_image_views {};
+    VkSwapchainKHR_T * swapChain = nullptr;
+    VkFormat swapChainFormat {};
+    std::vector<VkImage_T *> swapChainImages {};
+    std::vector<VkImageView_T *> swapChainImageViews {};
 };
 
 [[nodiscard]]
@@ -303,14 +303,14 @@ SwapChainGroup CreateSwapChain(
     VkPhysicalDevice_T * physical_device, 
     VkSurfaceKHR_T * window_surface,
     VkExtent2D swap_chain_extend,
-    VkSwapchainKHR_T * old_swap_chain = nullptr
+    VkSwapchainKHR_T * oldSwapChain = nullptr
 );
 
-void DestroySwapChain(VkDevice_T * device, SwapChainGroup const & swap_chain_group);
+void DestroySwapChain(VkDevice_T * device, SwapChainGroup const & swapChainGroup);
 
 struct DepthImageGroup {
-    ImageGroup image_group {};
-    VkImageView_T * image_view = nullptr;
+    ImageGroup imageGroup {};
+    VkImageView_T * imageView = nullptr;
 };
 
 [[nodiscard]]
@@ -320,26 +320,26 @@ DepthImageGroup CreateDepth(
     VkExtent2D swap_chain_extend
 );
 
-void DestroyDepth(VkDevice_T * device, DepthImageGroup const & depth_group);
+void DestroyDepth(VkDevice_T * device, DepthImageGroup const & depthGroup);
 
 // TODO Ask for options
 [[nodiscard]]
 VkRenderPass_T * CreateRenderPass(
-    VkPhysicalDevice_T * physical_device, 
+    VkPhysicalDevice_T * physicalDevice, 
     VkDevice_T * device, 
-    VkFormat swap_chain_format
+    VkFormat swapChainFormat
 );
 
-void DestroyRenderPass(VkDevice_T * device, VkRenderPass_T * render_pass);
+void DestroyRenderPass(VkDevice_T * device, VkRenderPass_T * renderPass);
 
 [[nodiscard]]
 std::vector<VkFramebuffer_T *> CreateFrameBuffers(
     VkDevice_T * device,
-    VkRenderPass_T * render_pass,
-    U32 swap_chain_image_views_count, 
-    VkImageView_T ** swap_chain_image_views,
-    VkImageView_T * depth_image_view,
-    VkExtent2D swap_chain_extent
+    VkRenderPass_T * renderPass,
+    U32 swapChainImageViewsCount, 
+    VkImageView_T ** swapChainImageViews,
+    VkImageView_T * depthImageView,
+    VkExtent2D swapChainExtent
 );
 
 void DestroyFrameBuffers(
@@ -351,30 +351,30 @@ void DestroyFrameBuffers(
 class GpuShader;
 
 [[nodiscard]]
-GpuShader CreateShader(VkDevice_T * device, CpuShader const & cpu_shader);
+GpuShader CreateShader(VkDevice_T * device, CpuShader const & cpuShader);
 
 bool DestroyShader(VkDevice_T * device, GpuShader & gpu_shader);
 
 class GpuShader {
-friend GpuShader CreateShader(VkDevice_T * device, CpuShader const & cpu_shader);
+friend GpuShader CreateShader(VkDevice_T * device, CpuShader const & cpuShader);
 friend bool DestroyShader(VkDevice_T * device, GpuShader & gpu_shader);
 public:
     [[nodiscard]]
-    CpuShader * cpu_shader() {return &m_cpu_shader;}
+    CpuShader * cpuShader() {return &m_cpu_shader;}
     [[nodiscard]]
-    CpuShader const * cpu_shader() const {return &m_cpu_shader;}
+    CpuShader const * cpuShader() const {return &m_cpu_shader;}
     [[nodiscard]]
     bool valid () const {return MFA_PTR_VALID(m_shader_module);}
     [[nodiscard]]
-    VkShaderModule_T * shader_module() const {return m_shader_module;}
+    VkShaderModule_T * shaderModule() const {return m_shader_module;}
 private:
     VkShaderModule_T * m_shader_module = nullptr;
     CpuShader m_cpu_shader {};
 };
 
 struct GraphicPipelineGroup {
-    VkPipelineLayout_T * pipeline_layout = nullptr;
-    VkPipeline_T * graphic_pipeline = nullptr;
+    VkPipelineLayout_T * pipelineLayout = nullptr;
+    VkPipeline_T * graphicPipeline = nullptr;
 };
 struct CreateGraphicPipelineOptions {
     VkFrontFace font_face = VK_FRONT_FACE_CLOCKWISE;
@@ -417,7 +417,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
     CreateGraphicPipelineOptions const & options
 );
 
-void DestroyGraphicPipeline(VkDevice_T * device, GraphicPipelineGroup & graphic_pipeline_group);
+void DestroyGraphicPipeline(VkDevice_T * device, GraphicPipelineGroup & graphicPipelineGroup);
 
 [[nodiscard]]
 VkDescriptorSetLayout_T * CreateDescriptorSetLayout(
@@ -525,9 +525,9 @@ std::vector<VkCommandBuffer_T *> CreateCommandBuffers(
 
 void DestroyCommandBuffers(
     VkDevice_T * device,
-    VkCommandPool_T * command_pool,
-    U8 command_buffers_count,
-    VkCommandBuffer_T ** command_buffers
+    VkCommandPool_T * commandPool,
+    U8 commandBuffersCount,
+    VkCommandBuffer_T ** commandBuffers
 );
 
 // CreateSyncObjects (Fence, Semaphore, ...)
@@ -540,21 +540,21 @@ struct SyncObjects {
 [[nodiscard]]
 SyncObjects CreateSyncObjects(
     VkDevice_T * device,
-    U8 max_frames_in_flight,
-    U8 swap_chain_images_count
+    U8 maxFramesInFlight,
+    U8 swapChainImagesCount
 );
 
-void DestroySyncObjects(VkDevice_T * device, SyncObjects const & sync_objects);
+void DestroySyncObjects(VkDevice_T * device, SyncObjects const & syncObjects);
 
 void DeviceWaitIdle(VkDevice_T * device);
 
-void WaitForFence(VkDevice_T * device, VkFence_T * in_flight_fence);
+void WaitForFence(VkDevice_T * device, VkFence_T * inFlightFence);
 
 [[nodiscard]]
 U8 AcquireNextImage(
     VkDevice_T * device, 
-    VkSemaphore_T * image_availability_semaphore, 
-    SwapChainGroup const & swap_chain_group
+    VkSemaphore_T * imageAvailabilitySemaphore, 
+    SwapChainGroup const & swapChainGroup
 );
 
 void BindVertexBuffer(
@@ -564,10 +564,10 @@ void BindVertexBuffer(
 );
 
 void BindIndexBuffer(
-    VkCommandBuffer_T * command_buffer,
-    BufferGroup index_buffer,
+    VkCommandBuffer_T * commandBuffer,
+    BufferGroup indexBuffer,
     VkDeviceSize offset = 0,
-    VkIndexType index_type = VK_INDEX_TYPE_UINT32
+    VkIndexType indexType = VK_INDEX_TYPE_UINT32
 );
 
 void DrawIndexed(
@@ -579,9 +579,9 @@ void DrawIndexed(
     U32 first_instance = 0
 );
 
-void SetScissor(VkCommandBuffer_T * command_buffer, VkRect2D const & scissor);
+void SetScissor(VkCommandBuffer_T * commandBuffer, VkRect2D const & scissor);
 
-void SetViewport(VkCommandBuffer_T * command_buffer, VkViewport const & viewport);
+void SetViewport(VkCommandBuffer_T * commandBuffer, VkViewport const & viewport);
 
 void PushConstants(
     VkCommandBuffer_T * command_buffer,
@@ -602,8 +602,8 @@ void UpdateDescriptorSetsBasic(
 
 void UpdateDescriptorSets(
     VkDevice_T * device,
-    U8 descriptor_writes_count,
-    VkWriteDescriptorSet * descriptor_writes
+    U8 descriptorWritesCount,
+    VkWriteDescriptorSet * descriptorWrites
 );
 
 }
