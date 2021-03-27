@@ -9,12 +9,18 @@ DrawableObject::DrawableObject(
 )
     : mGpuModel(&model_)
 {
+    U32 descriptorSetCount = 0;
+    for (U32 i = 0; i < mGpuModel->model.mesh.getNodesCount(); ++i) {
+        auto const & node = mGpuModel->model.mesh.getNodeByIndex(i);
+        auto const & subMesh = mGpuModel->model.mesh.getSubMeshByIndex(node.subMeshIndex);
+        descriptorSetCount += static_cast<U32>(subMesh.primitives.size());
+    }
     mNodeTransformBuffers = RF::CreateUniformBuffer(
         sizeof(NodeTransformBuffer), 
-        mGpuModel->model.mesh.getNodesCount()
+        descriptorSetCount
     );
     mDescriptorSets = RF::CreateDescriptorSets(
-        static_cast<U32>(model_.meshBuffers.subMeshBuffers.size()), 
+        descriptorSetCount, 
         descriptorSetLayout
     );
 
@@ -30,7 +36,7 @@ U32 DrawableObject::getDescriptorSetCount() const {
     return static_cast<U32>(mDescriptorSets.size());
 }
 
-VkDescriptorSet_T * DrawableObject::getDescriptorSet(U32 const index) {
+VkDescriptorSet_T * DrawableObject::getDescriptorSetByPrimitiveUniqueId(U32 const index) {
     MFA_ASSERT(index < mDescriptorSets.size());
     return mDescriptorSets[index];
 }
@@ -49,7 +55,7 @@ RF::UniformBufferGroup * DrawableObject::createUniformBuffer(char const * name, 
 RF::UniformBufferGroup * DrawableObject::createMultipleUniformBuffer(
     char const * name, 
     const U32 size, 
-    const U8 count
+    const U32 count
 ) {
     mUniformBuffers[name] = RF::CreateUniformBuffer(size, count);
     return &mUniformBuffers[name];
@@ -90,8 +96,11 @@ RF::UniformBufferGroup const & DrawableObject::getNodeTransformBuffer() const no
 void DrawableObject::draw(RF::DrawPass & drawPass) {
     BindVertexBuffer(drawPass, mGpuModel->meshBuffers.verticesBuffer);
     BindIndexBuffer(drawPass, mGpuModel->meshBuffers.indicesBuffer);
-    auto const nodesCount = mGpuModel->model.mesh.getNodesCount();
-    auto const * nodes = mGpuModel->model.mesh.getNodeData();
+
+    auto const & mesh = mGpuModel->model.mesh;
+
+    auto const nodesCount = mesh.getNodesCount();
+    auto const * nodes = mesh.getNodeData();
     MFA_ASSERT(nodes != nullptr);
     if (nodesCount <= 0) {
         return;
@@ -101,11 +110,13 @@ void DrawableObject::draw(RF::DrawPass & drawPass) {
 }
 
 void DrawableObject::drawNode(RF::DrawPass & drawPass, int nodeIndex, Matrix4X4Float const & parentTransform) {
+    auto const & mesh = mGpuModel->model.mesh;
+
     MFA_ASSERT(nodeIndex >= 0);
-    MFA_ASSERT(nodeIndex < mGpuModel->model.mesh.getNodesCount());
+    MFA_ASSERT(static_cast<U32>(nodeIndex) < mGpuModel->model.mesh.getNodesCount());
     auto const & node = mGpuModel->model.mesh.getNodeByIndex(nodeIndex);
     MFA_ASSERT(node.subMeshIndex >= 0);
-    MFA_ASSERT(mGpuModel->meshBuffers.subMeshBuffers.size() > node.subMeshIndex);
+    MFA_ASSERT(static_cast<int>(mesh.getSubMeshCount()) > node.subMeshIndex);
 
     Matrix4X4Float nodeTransform {};
     nodeTransform.assign(node.transformMatrix);
@@ -113,8 +124,7 @@ void DrawableObject::drawNode(RF::DrawPass & drawPass, int nodeIndex, Matrix4X4F
     ::memcpy(mNodeTransformData.transform, nodeTransform.cells, sizeof(nodeTransform.cells));
     MFA_ASSERT(sizeof(nodeTransform.cells) == sizeof(mNodeTransformData.transform));
     RF::UpdateUniformBuffer(mNodeTransformBuffers.buffers[nodeIndex], CBlobAliasOf(mNodeTransformData));
-    RF::BindDescriptorSet(drawPass, mDescriptorSets[nodeIndex]);
-    drawSubMesh(drawPass, mGpuModel->meshBuffers.subMeshBuffers[node.subMeshIndex]);
+    drawSubMesh(drawPass, mesh.getSubMeshByIndex(node.subMeshIndex));
 
     if (node.children.empty() == false) {
         for (auto const & child : node.children) {
@@ -123,17 +133,19 @@ void DrawableObject::drawNode(RF::DrawPass & drawPass, int nodeIndex, Matrix4X4F
     }
 }
 
-void DrawableObject::drawSubMesh(RF::DrawPass & drawPass, RF::MeshBuffers::SubMesh & subMeshBuffers) {
+void DrawableObject::drawSubMesh(RF::DrawPass & drawPass, AssetSystem::Mesh::SubMesh const & subMesh) {
     // We should update transform for each one before update, Fuck!
     // TODO Start from here, Draw node tree
-    if (subMeshBuffers.primitives.empty() == false) {
-        for (auto const & primitive : subMeshBuffers.primitives) {
+    if (subMesh.primitives.empty() == false) {
+        for (auto const & primitive : subMesh.primitives) {
+            MFA_ASSERT(primitive.uniqueId >= 0);
+            MFA_ASSERT(primitive.uniqueId < mDescriptorSets.size());
+            RF::BindDescriptorSet(drawPass, mDescriptorSets[primitive.uniqueId]);
             RF::DrawIndexed(
                 drawPass,
                 primitive.indicesCount,
                 1,
-                primitive.indicesStartingIndex,
-                primitive.verticesOffset
+                primitive.indicesStartingIndex
             );
         }
     }

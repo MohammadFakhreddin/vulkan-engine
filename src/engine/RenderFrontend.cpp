@@ -400,16 +400,16 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSets(
     );
 }
 
-UniformBufferGroup CreateUniformBuffer(size_t const buffer_size, U8 const count) {
+UniformBufferGroup CreateUniformBuffer(size_t const bufferSize, U32 const count) {
     auto const buffers = RB::CreateUniformBuffer(
         state.logicalDevice.device,
         state.physical_device,
         count,
-        buffer_size
+        bufferSize
     );
     return {
         .buffers = buffers,
-        .buffer_size = buffer_size
+        .buffer_size = bufferSize
     };
 }
 
@@ -455,29 +455,16 @@ RB::BufferGroup CreateIndexBuffer(CBlob const indices_blob) {
 
 MeshBuffers CreateMeshBuffers(AssetSystem::Mesh const & mesh) {
     MFA_ASSERT(mesh.isValid());
-    MeshBuffers buffers {.subMeshBuffers {}};
-    auto const subMeshCount = mesh.getSubMeshCount();
-    buffers.indicesBuffer = CreateIndexBuffer(mesh.getIndicesBuffer());
-    buffers.verticesBuffer = CreateVertexBuffer(mesh.getVerticesBuffer());
-    for (U32 i = 0; i < subMeshCount; ++i) {
-        auto const & subMesh = mesh.getSubMeshByIndex(i);
-        buffers.subMeshBuffers.emplace_back(MeshBuffers::SubMesh {});
-        auto & subMeshBuffer = buffers.subMeshBuffers.back();
-        for(const auto & primitive : subMesh.primitives) {
-            subMeshBuffer.primitives.emplace_back(MeshBuffers::Primitive {
-                .verticesOffset = primitive.verticesOffset,
-                .indicesStartingIndex = primitive.indicesStartingIndex,
-                .indicesCount = primitive.indicesCount,
-            });
-        }
-    }
+    MeshBuffers const buffers {
+        .verticesBuffer = CreateVertexBuffer(mesh.getVerticesBuffer()),
+        .indicesBuffer = CreateIndexBuffer(mesh.getIndicesBuffer())
+    };
     return buffers;
 }
 
-void DestroyMeshBuffers(MeshBuffers & mesh_buffers) {
-    RB::DestroyVertexBuffer(state.logicalDevice.device, mesh_buffers.verticesBuffer);
-    RB::DestroyIndexBuffer(state.logicalDevice.device, mesh_buffers.indicesBuffer);
-    mesh_buffers.subMeshBuffers.resize(0);
+void DestroyMeshBuffers(MeshBuffers & meshBuffers) {
+    RB::DestroyVertexBuffer(state.logicalDevice.device, meshBuffers.verticesBuffer);
+    RB::DestroyIndexBuffer(state.logicalDevice.device, meshBuffers.indicesBuffer);
 }
 
 RB::GpuTexture CreateTexture(AssetSystem::Texture & texture) {

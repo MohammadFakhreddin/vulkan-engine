@@ -70,22 +70,12 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSets(
     VkDescriptorSetLayout_T * descriptorSetLayout
 );
 
-// TODO AdvanceBindingDescriptorSetWriteInfo
 struct MeshBuffers {
-    struct Primitive {
-        U32 verticesOffset = 0;
-        U32 indicesStartingIndex = 0;
-        U32 indicesCount = 0;
-    };
-    struct SubMesh {
-        std::vector<Primitive> primitives {};
-    };
     RB::BufferGroup verticesBuffer {};
     RB::BufferGroup indicesBuffer {};
-    std::vector<SubMesh> subMeshBuffers {};    // Organized by sub-mesh index
 };
 
-void DestroyMeshBuffers(MeshBuffers & mesh_buffers);
+void DestroyMeshBuffers(MeshBuffers & meshBuffers);
 
 [[nodiscard]]
 RB::BufferGroup CreateVertexBuffer(CBlob vertices_blob);
@@ -137,7 +127,7 @@ struct UniformBufferGroup {
     std::vector<RB::BufferGroup> buffers;
     size_t buffer_size;
 };
-UniformBufferGroup CreateUniformBuffer(size_t buffer_size, U8 count);
+UniformBufferGroup CreateUniformBuffer(size_t bufferSize, U32 count);
 
 void UpdateUniformBuffer(
     RB::BufferGroup const & uniform_buffer, 

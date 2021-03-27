@@ -285,7 +285,7 @@ void Init() {
         Byte * pixels = nullptr;
         I32 width, height;
         io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-        MFA_PTR_ASSERT(pixels);
+        MFA_ASSERT(pixels != nullptr);
         MFA_ASSERT(width > 0);
         MFA_ASSERT(height > 0);
         U8 const components_count = 4;
@@ -372,7 +372,7 @@ void OnNewFrame(
     UpdateMouseCursor();
     // Start the Dear ImGui frame
     ImGui::NewFrame();
-    if(MFA_PTR_VALID(record_ui_callback)) {
+    if(record_ui_callback != nullptr) {
         record_ui_callback();
     }
     ImGui::Render();
@@ -543,12 +543,15 @@ void Shutdown() {
         }
     }
     RF::DestroyTexture(state.font_texture);
-    Importer::FreeAsset(state.font_texture.cpu_texture());
+    Importer::FreeTexture(state.font_texture.cpu_texture());
+
     RF::DestroyDrawPipeline(state.draw_pipeline);
+    // TODO We can remove shader after creating pipeline
     RF::DestroyShader(state.fragment_shader);
-    Importer::FreeAsset(state.fragment_shader.cpuShader());
+    Importer::FreeShader(state.fragment_shader.cpuShader());
     RF::DestroyShader(state.vertex_shader);
-    Importer::FreeAsset(state.vertex_shader.cpuShader());
+    Importer::FreeShader(state.vertex_shader.cpuShader());
+
     RF::DestroyDescriptorSetLayout(state.descriptor_set_layout);
     RF::DestroySampler(state.font_sampler);
 }

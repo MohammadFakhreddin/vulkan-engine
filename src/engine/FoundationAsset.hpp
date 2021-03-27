@@ -90,6 +90,7 @@ private:
         uint8_t bits_r, bits_g, bits_b, bits_a;         // each 0..32
         uint8_t bits_total;                             // 1..128
     };
+public:
     static constexpr InternalFormatTableType FormatTable [] = {
         {Format::INVALID                                 , 0, 0, 0, 0, 0, 0, 0, 0,  0},
 
@@ -260,13 +261,14 @@ public:
     // TODO Camera
     
     struct Primitive {
+        U32 uniqueId = 0;                      // Unique id in entire model
         U32 vertexCount = 0;
         U32 indicesCount = 0;
         U32 verticesOffset = 0;                // From start of buffer
         U32 indicesOffset = 0;
         U32 indicesStartingIndex = 0;          // From start of buffer
         I16 baseColorTextureIndex = 0;
-        I16 metallicRoughnessTextureIndex = 0;
+        I16 mixedMetallicRoughnessOcclusionTextureIndex = 0;
         I16 metallicTextureIndex = 0;
         I16 roughnessTextureIndex = 0;
         I16 normalTextureIndex = 0;

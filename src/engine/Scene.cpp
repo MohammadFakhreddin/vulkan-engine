@@ -29,13 +29,13 @@ void SceneSubSystem::Shutdown() {
 }
 
 void SceneSubSystem::RegisterNew(Scene * scene, char const * name) {
-    MFA_PTR_ASSERT(scene);
-    MFA_PTR_ASSERT(name);
+    MFA_ASSERT(scene != nullptr);
+    MFA_ASSERT(name != nullptr);
     mRegisteredScenes.emplace_back(RegisteredScene {scene, name});
 }
 
 void SceneSubSystem::SetActiveScene(char const * name) {
-    MFA_PTR_ASSERT(name);
+    MFA_ASSERT(name != nullptr);
     for (I32 i = 0; i < static_cast<I32>(mRegisteredScenes.size()); ++i) {
         if (0 == strcmp(mRegisteredScenes[i].name.c_str(), name)) {
             mActiveScene = i;
@@ -53,7 +53,7 @@ void SceneSubSystem::OnNewFrame(U32 const deltaTime) {
         mLastActiveScene = mActiveScene;
     }
     auto draw_pass = RF::BeginPass();
-    MFA_ASSERT(draw_pass.is_valid);
+    MFA_ASSERT(draw_pass.isValid);
         
     if(mActiveScene >= 0) {
         mRegisteredScenes[mActiveScene].scene->OnDraw(

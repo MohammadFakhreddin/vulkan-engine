@@ -160,7 +160,7 @@ void TexturedSphereScene::createDrawableObject(){
     auto const & textures = mDrawableObject.getModel()->textures;
 
     for(MFA::U8 i = 0; i < mDrawableObject.getDescriptorSetCount(); ++i) {// Updating descriptor sets
-        auto * descriptor_set = mDrawableObject.getDescriptorSet(i);
+        auto * descriptor_set = mDrawableObject.getDescriptorSetByPrimitiveUniqueId(i);
         auto const & sub_mesh = model_header->sub_meshes[i];
 
         std::vector<VkWriteDescriptorSet> writeInfo {};

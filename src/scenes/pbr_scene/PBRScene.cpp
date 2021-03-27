@@ -23,12 +23,12 @@ void PBRScene::Init() {
         MFA::AssetSystem::Shader::Stage::Vertex, 
         "main"
     );
-    MFA_ASSERT(cpu_vertex_shader.valid());
+    MFA_ASSERT(cpu_vertex_shader.isValid());
     auto gpu_vertex_shader = RF::CreateShader(cpu_vertex_shader);
     MFA_ASSERT(gpu_vertex_shader.valid());
     MFA_DEFER {
         RF::DestroyShader(gpu_vertex_shader);
-        Importer::FreeAsset(&cpu_vertex_shader);
+        Importer::FreeShader(&cpu_vertex_shader);
     };
 
     // Fragment shader
@@ -37,12 +37,12 @@ void PBRScene::Init() {
         MFA::AssetSystem::Shader::Stage::Fragment, 
         "main"
     );
-    MFA_ASSERT(cpu_frag_shader.valid());
+    MFA_ASSERT(cpu_frag_shader.isValid());
     auto gpu_fragment_shader = RF::CreateShader(cpu_frag_shader);
     MFA_ASSERT(gpu_fragment_shader.valid());
     MFA_DEFER {
         RF::DestroyShader(gpu_fragment_shader);
-        Importer::FreeAsset(&cpu_frag_shader);
+        Importer::FreeShader(&cpu_frag_shader);
     };
 
     // Shader
@@ -255,20 +255,20 @@ void PBRScene::OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_
         RF::BindDescriptorSet(draw_pass, current_descriptor_set);
     }       
     {// Drawing spheres
-        auto const * header_object = m_sphere.model.mesh.header_object();
-        MFA_PTR_ASSERT(header_object);
         BindVertexBuffer(draw_pass, m_sphere.meshBuffers.verticesBuffer);
         BindIndexBuffer(draw_pass, m_sphere.meshBuffers.indicesBuffer);
-        auto const required_draw_calls = m_sphere.meshBuffers.subMeshBuffers.size();
-        for (MFA::U32 i = 0; i < required_draw_calls; ++i) {
-            auto const & current_sub_mesh = header_object->sub_meshes[i];
-            auto const & sub_mesh_buffers = m_sphere.meshBuffers.subMeshBuffers[i];
-            DrawIndexed(
-                draw_pass,
-                sub_mesh_buffers.indicesCount,
-                1,
-                current_sub_mesh.indices_starting_index
-            );
+        for (MFA::U32 i = 0; i < m_sphere.model.mesh.getSubMeshCount(); ++i) {
+            auto const & subMesh = m_sphere.model.mesh.getSubMeshByIndex(i);
+            if (subMesh.primitives.empty() == false) {
+                for (auto const & primitive : subMesh.primitives) {
+                    DrawIndexed(
+                        draw_pass,
+                        primitive.indicesCount,
+                        1,
+                        primitive.indicesStartingIndex
+                    );
+                }
+            }
         }
     }
 }

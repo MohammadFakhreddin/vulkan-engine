@@ -45,14 +45,14 @@ public:
     [[nodiscard]]
     U32 getDescriptorSetCount() const;
 
-    [[nodiscard]] VkDescriptorSet_T * getDescriptorSet(U32 index);
+    [[nodiscard]] VkDescriptorSet_T * getDescriptorSetByPrimitiveUniqueId(U32 index);
 
     [[nodiscard]] VkDescriptorSet_T ** getDescriptorSets();
 
     // Only for model local buffers
     RF::UniformBufferGroup * createUniformBuffer(char const * name, U32 size);
 
-    RF::UniformBufferGroup * createMultipleUniformBuffer(char const * name, U32 size, U8 count);
+    RF::UniformBufferGroup * createMultipleUniformBuffer(char const * name, U32 size, U32 count);
 
     // Only for model local buffers
     void deleteUniformBuffers();
@@ -76,7 +76,7 @@ private:
 
     void drawNode(RF::DrawPass & drawPass, int nodeIndex, Matrix4X4Float const & parentTransform);
 
-    void drawSubMesh(RF::DrawPass & drawPass, RF::MeshBuffers::SubMesh & subMeshBuffers);
+    void drawSubMesh(RF::DrawPass & drawPass, AssetSystem::Mesh::SubMesh const & subMesh);
 
     // Note: Order is important
     RF::UniformBufferGroup mNodeTransformBuffers {};

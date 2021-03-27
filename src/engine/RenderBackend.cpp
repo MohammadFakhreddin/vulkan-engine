@@ -1732,16 +1732,16 @@ void DestroyIndexBuffer(
 
 std::vector<BufferGroup> CreateUniformBuffer(
     VkDevice_T * device,
-    VkPhysicalDevice_T * physical_device,
-    U8 const swap_chain_images_count,
-    VkDeviceSize const size 
+    VkPhysicalDevice_T * physicalDevice,
+    U32 const buffersCount,
+    VkDeviceSize const buffersSize 
 ) {
-    std::vector<BufferGroup> uniform_buffers_group {swap_chain_images_count};
-    for(U8 index = 0; index < swap_chain_images_count; index++) {
+    std::vector<BufferGroup> uniform_buffers_group {buffersCount};
+    for(U8 index = 0; index < buffersCount; index++) {
         uniform_buffers_group[index] = CreateBuffer(
             device,
-            physical_device,
-            size,
+            physicalDevice,
+            buffersSize,
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
         );

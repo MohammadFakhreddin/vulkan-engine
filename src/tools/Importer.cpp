@@ -353,6 +353,7 @@ AS::Mesh ImportObj(char const * path) {
                 mesh.insertPrimitive(
                     subMeshIndex,
                     AS::Mesh::Primitive {
+                        .uniqueId = 0,
                         .vertexCount = vertexCount,
                         .indicesCount = indexCount,
                         .baseColorTextureIndex = 0,
@@ -498,7 +499,9 @@ AS::Model ImportGLTF(char const * path) {
                 U32 subMeshIndex = 0;
                 std::vector<AS::Mesh::Vertex> subMeshVertices {};
                 std::vector<AS::MeshIndex> subMeshIndices {};
-                                   
+
+                U32 primitiveUniqueId = 0;
+
                 for(auto & mesh : gltfModel.meshes) {
                     if(false == mesh.primitives.empty()) {
                         auto const meshIndex = resultModel.mesh.insertSubMesh();
@@ -517,6 +520,8 @@ AS::Model ImportGLTF(char const * path) {
                             float metallicFactor = 0;
                             float roughnessFactor = 0;
                             float emissiveFactor [3] {};
+                            U32 uniqueId = primitiveUniqueId;
+                            primitiveUniqueId++;
                             if(primitive.material >= 0) {// Material
                                 auto const & material = gltfModel.materials[primitive.material];
                                 if (material.pbrMetallicRoughness.baseColorTexture.index >= 0) {// Base color texture
@@ -879,10 +884,11 @@ AS::Model ImportGLTF(char const * path) {
                             resultModel.mesh.insertPrimitive(
                                 meshIndex,
                                 AS::MeshPrimitive {
+                                    .uniqueId = uniqueId,
                                     .vertexCount = static_cast<U32>(subMeshVertices.size()),
                                     .indicesCount = static_cast<U32>(subMeshIndices.size()),
                                     .baseColorTextureIndex = baseColorTextureIndex,
-                                    .metallicRoughnessTextureIndex = metallicRoughnessTextureIndex,
+                                    .mixedMetallicRoughnessOcclusionTextureIndex = metallicRoughnessTextureIndex,
                                     .normalTextureIndex = normalTextureIndex,
                                     .emissiveTextureIndex = emissiveTextureIndex,
                                     .baseColorFactor = {baseColorFactor[0], baseColorFactor[1], baseColorFactor[2], baseColorFactor[3]},

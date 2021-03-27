@@ -23,7 +23,7 @@ struct Data {
     U32 components = 0;
     [[nodiscard]]
     bool valid() const {
-        return MFA_PTR_VALID(stbi_pixels.ptr) && 
+        return stbi_pixels.ptr != nullptr && 
             stbi_pixels.len > 0 && 
             width > 0 && 
             height > 0 && 

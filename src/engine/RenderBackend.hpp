@@ -118,6 +118,10 @@ void TransferImageLayout(
 struct BufferGroup {
     VkBuffer_T * buffer = nullptr;
     VkDeviceMemory_T * memory = nullptr;
+    [[nodiscard]]
+    bool isValid() const noexcept {
+        return buffer != nullptr && memory != nullptr;
+    }
 };
 [[nodiscard]]
 BufferGroup CreateBuffer(
@@ -466,7 +470,7 @@ void DestroyIndexBuffer(
 std::vector<BufferGroup> CreateUniformBuffer(
     VkDevice_T * device,
     VkPhysicalDevice_T * physical_device,
-    U8 swap_chain_images_count,
+    U32 buffersCount,
     VkDeviceSize size 
 );
 
