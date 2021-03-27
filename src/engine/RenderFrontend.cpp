@@ -455,17 +455,19 @@ RB::BufferGroup CreateIndexBuffer(CBlob const indices_blob) {
 
 MeshBuffers CreateMeshBuffers(AssetSystem::Mesh const & mesh) {
     MFA_ASSERT(mesh.isValid());
-    MeshBuffers buffers {.sub_mesh_buffers {}};
+    MeshBuffers buffers {.subMeshBuffers {}};
     auto const subMeshCount = mesh.getSubMeshCount();
     buffers.indicesBuffer = CreateIndexBuffer(mesh.getIndicesBuffer());
     buffers.verticesBuffer = CreateVertexBuffer(mesh.getVerticesBuffer());
     for (U32 i = 0; i < subMeshCount; ++i) {
         auto const & subMesh = mesh.getSubMeshByIndex(i);
+        buffers.subMeshBuffers.emplace_back(MeshBuffers::SubMesh {});
+        auto & subMeshBuffer = buffers.subMeshBuffers.back();
         for(const auto & primitive : subMesh.primitives) {
-            buffers.sub_mesh_buffers.emplace_back(MeshBuffers::DrawCallData {
-                .vertex_offset = primitive.verticesOffset,
-                .index_offset = primitive.indicesOffset,
-                .index_count = primitive.indexCount,
+            subMeshBuffer.primitives.emplace_back(MeshBuffers::Primitive {
+                .verticesOffset = primitive.verticesOffset,
+                .indicesStartingIndex = primitive.indicesStartingIndex,
+                .indicesCount = primitive.indicesCount,
             });
         }
     }
@@ -475,19 +477,19 @@ MeshBuffers CreateMeshBuffers(AssetSystem::Mesh const & mesh) {
 void DestroyMeshBuffers(MeshBuffers & mesh_buffers) {
     RB::DestroyVertexBuffer(state.logicalDevice.device, mesh_buffers.verticesBuffer);
     RB::DestroyIndexBuffer(state.logicalDevice.device, mesh_buffers.indicesBuffer);
-    mesh_buffers.sub_mesh_buffers.resize(0);
+    mesh_buffers.subMeshBuffers.resize(0);
 }
 
-RB::GpuTexture CreateTexture(AssetSystem::TextureAsset & texture_asset) {
-    auto const gpu_texture = RB::CreateTexture(
-        texture_asset,
+RB::GpuTexture CreateTexture(AssetSystem::Texture & texture) {
+    auto gpuTexture = RB::CreateTexture(
+        texture,
         state.logicalDevice.device,
         state.physical_device,
         state.graphic_queue,
         state.graphic_command_pool
     );
-    MFA_ASSERT(gpu_texture.valid());
-    return gpu_texture;
+    MFA_ASSERT(gpuTexture.valid());
+    return gpuTexture;
 }
 
 void DestroyTexture(RB::GpuTexture & gpu_texture) {
@@ -495,9 +497,9 @@ void DestroyTexture(RB::GpuTexture & gpu_texture) {
 }
 
 // TODO Ask for options
-SamplerGroup CreateSampler(RB::CreateSamplerParams const & sampler_params) {
-    auto * sampler = RB::CreateSampler(state.logicalDevice.device, sampler_params);
-    MFA_PTR_ASSERT(sampler);
+SamplerGroup CreateSampler(RB::CreateSamplerParams const & samplerParams) {
+    auto * sampler = RB::CreateSampler(state.logicalDevice.device, samplerParams);
+    MFA_ASSERT(sampler != nullptr);
     return {
         .sampler = sampler
     };
@@ -511,9 +513,9 @@ void DestroySampler(SamplerGroup & sampler_group) {
 GpuModel CreateGpuModel(AssetSystem::Model & model_asset) {
     GpuModel gpu_model {
         .valid = true,
-        .mesh_buffers = CreateMeshBuffers(model_asset.mesh),
+        .meshBuffers = CreateMeshBuffers(model_asset.mesh),
         .textures {},
-        .model_asset = model_asset
+        .model = model_asset
     };
     if(false == model_asset.textures.empty()) {
         for (auto & texture_asset : model_asset.textures) {
@@ -527,7 +529,7 @@ GpuModel CreateGpuModel(AssetSystem::Model & model_asset) {
 void DestroyGpuModel(GpuModel & gpu_model) {
     MFA_ASSERT(gpu_model.valid);
     gpu_model.valid = false;
-    DestroyMeshBuffers(gpu_model.mesh_buffers);
+    DestroyMeshBuffers(gpu_model.meshBuffers);
     if(false == gpu_model.textures.empty()) {
         for (auto & gpu_texture : gpu_model.textures) {
             DestroyTexture(gpu_texture);
@@ -547,13 +549,13 @@ DrawPass BeginPass() {
         state.logicalDevice.device, 
         state.sync_objects.fences_in_flight[state.current_frame]
     );
-    draw_pass.image_index = RB::AcquireNextImage(
+    draw_pass.imageIndex = RB::AcquireNextImage(
         state.logicalDevice.device,
         state.sync_objects.image_availability_semaphores[state.current_frame],
         state.swap_chain_group
     );
     draw_pass.frame_index = state.current_frame;
-    draw_pass.is_valid = true;
+    draw_pass.isValid = true;
     state.current_frame ++;
     if(state.current_frame >= MAX_FRAMES_IN_FLIGHT) {
         state.current_frame = 0;
@@ -567,7 +569,7 @@ DrawPass BeginPass() {
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
     {
-        auto result = vkBeginCommandBuffer(state.graphic_command_buffers[draw_pass.image_index], &beginInfo);
+        auto result = vkBeginCommandBuffer(state.graphic_command_buffers[draw_pass.imageIndex], &beginInfo);
         if(VK_SUCCESS != result) {
             MFA_CRASH("vkBeginCommandBuffer failed with error code %d,", result);
         }
@@ -590,7 +592,7 @@ DrawPass BeginPass() {
         presentToDrawBarrier.dstQueueFamilyIndex = state.graphic_queue_family;
     }
 
-    presentToDrawBarrier.image = state.swap_chain_group.swapChainImages[draw_pass.image_index];
+    presentToDrawBarrier.image = state.swap_chain_group.swapChainImages[draw_pass.imageIndex];
 
     VkImageSubresourceRange subResourceRange = {};
     subResourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -601,7 +603,7 @@ DrawPass BeginPass() {
     presentToDrawBarrier.subresourceRange = subResourceRange;
 
     vkCmdPipelineBarrier(
-        state.graphic_command_buffers[draw_pass.image_index], 
+        state.graphic_command_buffers[draw_pass.imageIndex], 
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 
         0, 0, nullptr, 0, nullptr, 1, 
@@ -616,172 +618,172 @@ DrawPass BeginPass() {
     VkRenderPassBeginInfo renderPassBeginInfo = {};
     renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassBeginInfo.renderPass = state.render_pass;
-    renderPassBeginInfo.framebuffer = state.frame_buffers[draw_pass.image_index];
+    renderPassBeginInfo.framebuffer = state.frame_buffers[draw_pass.imageIndex];
     renderPassBeginInfo.renderArea.offset.x = 0;
     renderPassBeginInfo.renderArea.offset.y = 0;
     renderPassBeginInfo.renderArea.extent = VkExtent2D {.width = state.screen_width, .height = state.screen_height};
     renderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     renderPassBeginInfo.pClearValues = clearValues.data();
 
-    vkCmdBeginRenderPass(state.graphic_command_buffers[draw_pass.image_index], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(state.graphic_command_buffers[draw_pass.imageIndex], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     return draw_pass;
 }
 
 void BindDrawPipeline(
-    DrawPass & draw_pass,
-    DrawPipeline & draw_pipeline   
+    DrawPass & drawPass,
+    DrawPipeline & drawPipeline   
 ) {
-    MFA_ASSERT(draw_pass.is_valid);
-    draw_pass.draw_pipeline = &draw_pipeline;
+    MFA_ASSERT(drawPass.isValid);
+    drawPass.drawPipeline = &drawPipeline;
     // We can bind command buffer to multiple pipeline
     vkCmdBindPipeline(
-        state.graphic_command_buffers[draw_pass.image_index], 
+        state.graphic_command_buffers[drawPass.imageIndex], 
         VK_PIPELINE_BIND_POINT_GRAPHICS, 
-        draw_pipeline.graphic_pipeline_group.graphicPipeline
+        drawPipeline.graphic_pipeline_group.graphicPipeline
     );
 }
 // TODO Remove all basic functions
 void UpdateDescriptorSetBasic(
-    DrawPass const & draw_pass,
-    VkDescriptorSet_T * descriptor_set,
-    UniformBufferGroup const & uniform_buffer,
-    RB::GpuTexture const & gpu_texture,
-    SamplerGroup const & sampler_group
+    DrawPass const & drawPass,
+    VkDescriptorSet_T * descriptorSet,
+    UniformBufferGroup const & uniformBuffer,
+    RB::GpuTexture const & gpuTexture,
+    SamplerGroup const & samplerGroup
 ) {
-    VkDescriptorImageInfo image_info {};
-    image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    image_info.imageView = gpu_texture.image_view();
-    image_info.sampler = sampler_group.sampler;
+    VkDescriptorImageInfo imageInfo {};
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    imageInfo.imageView = gpuTexture.image_view();
+    imageInfo.sampler = samplerGroup.sampler;
 
     UpdateDescriptorSetBasic(
-        draw_pass,
-        descriptor_set,
-        uniform_buffer,
+        drawPass,
+        descriptorSet,
+        uniformBuffer,
         1,
-        &image_info
+        &imageInfo
     );
 }
 
 void UpdateDescriptorSetBasic(
-    DrawPass const & draw_pass,
-    VkDescriptorSet_T * descriptor_set,
-    UniformBufferGroup const & uniform_buffer,
-    U32 const image_info_count,
-    VkDescriptorImageInfo const * image_infos
+    DrawPass const & drawPass,
+    VkDescriptorSet_T * descriptorSet,
+    UniformBufferGroup const & uniformBuffer,
+    U32 const imageInfoCount,
+    VkDescriptorImageInfo const * imageInfos
 ) {
-    VkDescriptorBufferInfo buffer_info {};
-    buffer_info.buffer = uniform_buffer.buffers[draw_pass.image_index].buffer;
-    buffer_info.offset = 0;
-    buffer_info.range = uniform_buffer.buffer_size;
+    VkDescriptorBufferInfo bufferInfo {};
+    bufferInfo.buffer = uniformBuffer.buffers[drawPass.imageIndex].buffer;
+    bufferInfo.offset = 0;
+    bufferInfo.range = uniformBuffer.buffer_size;
 
     RB::UpdateDescriptorSetsBasic(
         state.logicalDevice.device,
         1,
-        &descriptor_set,
-        buffer_info,
-        image_info_count,
-        image_infos
+        &descriptorSet,
+        bufferInfo,
+        imageInfoCount,
+        imageInfos
     );
 }
 
 void UpdateDescriptorSets(
-    U8 const write_info_count,
-    VkWriteDescriptorSet * write_info
+    U8 const writeInfoCount,
+    VkWriteDescriptorSet * writeInfo
 ) {
     RB::UpdateDescriptorSets(
         state.logicalDevice.device,
-        write_info_count,
-        write_info
+        writeInfoCount,
+        writeInfo
     );
 }
 
 void UpdateDescriptorSets(
-    U8 const descriptor_sets_count,
-    VkDescriptorSet_T ** descriptor_sets,
-    U8 const write_info_count,
-    VkWriteDescriptorSet * write_info
+    U8 const descriptorSetsCount,
+    VkDescriptorSet_T ** descriptorSets,
+    U8 const writeInfoCount,
+    VkWriteDescriptorSet * writeInfo
 ) {
     RB::UpdateDescriptorSets(
         state.logicalDevice.device,
-        descriptor_sets_count,
-        descriptor_sets,
-        write_info_count,
-        write_info
+        descriptorSetsCount,
+        descriptorSets,
+        writeInfoCount,
+        writeInfo
     );
 }
 
 void BindDescriptorSet(
-    DrawPass const & draw_pass,
-    VkDescriptorSet_T * descriptor_set
+    DrawPass const & drawPass,
+    VkDescriptorSet_T * descriptorSet
 ) {
-    MFA_ASSERT(draw_pass.is_valid);
-    MFA_PTR_ASSERT(draw_pass.draw_pipeline);
-    MFA_PTR_ASSERT(descriptor_set);
+    MFA_ASSERT(drawPass.isValid);
+    MFA_ASSERT(drawPass.drawPipeline);
+    MFA_ASSERT(descriptorSet);
     // We should bind specific descriptor set with different texture for each mesh
     vkCmdBindDescriptorSets(
-        state.graphic_command_buffers[draw_pass.image_index], 
+        state.graphic_command_buffers[drawPass.imageIndex], 
         VK_PIPELINE_BIND_POINT_GRAPHICS, 
-        draw_pass.draw_pipeline->graphic_pipeline_group.pipelineLayout, 
+        drawPass.drawPipeline->graphic_pipeline_group.pipelineLayout, 
         0, 
         1, 
-        &descriptor_set, 
+        &descriptorSet, 
         0, 
         nullptr
     );
 }
 
 void BindVertexBuffer(
-    DrawPass const draw_pass, 
-    RB::BufferGroup const vertex_buffer,
+    DrawPass const drawPass, 
+    RB::BufferGroup const vertexBuffer,
     VkDeviceSize const offset
 ) {
-    MFA_ASSERT(draw_pass.is_valid);
+    MFA_ASSERT(drawPass.isValid);
     RB::BindVertexBuffer(
-        state.graphic_command_buffers[draw_pass.image_index], 
-        vertex_buffer,
+        state.graphic_command_buffers[drawPass.imageIndex], 
+        vertexBuffer,
         offset
     );
 }
 
 void BindIndexBuffer(
-    DrawPass const draw_pass,
-    RB::BufferGroup const index_buffer,
+    DrawPass const drawPass,
+    RB::BufferGroup const indexBuffer,
     VkDeviceSize const offset,
-    VkIndexType const index_type
+    VkIndexType const indexType
 ) {
-    MFA_ASSERT(draw_pass.is_valid);
+    MFA_ASSERT(drawPass.isValid);
     RB::BindIndexBuffer(
-        state.graphic_command_buffers[draw_pass.image_index], 
-        index_buffer,
+        state.graphic_command_buffers[drawPass.imageIndex], 
+        indexBuffer,
         offset,
-        index_type
+        indexType
     );
 }
 
 void DrawIndexed(
-    DrawPass const draw_pass, 
-    U32 const indices_count,
-    U32 const instance_count,
-    U32 const first_index,
-    U32 const vertex_offset,
-    U32 const first_instance
+    DrawPass const drawPass, 
+    U32 const indicesCount,
+    U32 const instanceCount,
+    U32 const firstIndex,
+    U32 const vertexOffset,
+    U32 const firstInstance
 ) {
     RB::DrawIndexed(
-        state.graphic_command_buffers[draw_pass.image_index], 
-        indices_count,
-        instance_count,
-        first_index,
-        vertex_offset,
-        first_instance
+        state.graphic_command_buffers[drawPass.imageIndex], 
+        indicesCount,
+        instanceCount,
+        firstIndex,
+        vertexOffset,
+        firstInstance
     );
 }
 
-void EndPass(DrawPass & draw_pass) {
+void EndPass(DrawPass & drawPass) {
     // TODO Move these functions to renderBackend, RenderFrontend should not know about backend
-    MFA_ASSERT(draw_pass.is_valid);
-    draw_pass.is_valid = false;
-    vkCmdEndRenderPass(state.graphic_command_buffers[draw_pass.image_index]);
+    MFA_ASSERT(drawPass.isValid);
+    drawPass.isValid = false;
+    vkCmdEndRenderPass(state.graphic_command_buffers[drawPass.imageIndex]);
 
     // If present and graphics queue families differ, then another barrier is required
     if (state.present_queue_family != state.graphic_queue_family) {
@@ -801,11 +803,11 @@ void EndPass(DrawPass & draw_pass) {
         drawToPresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
         drawToPresentBarrier.srcQueueFamilyIndex = state.graphic_queue_family;
         drawToPresentBarrier.dstQueueFamilyIndex = state.present_queue_family;
-        drawToPresentBarrier.image = state.swap_chain_group.swapChainImages[draw_pass.image_index];
+        drawToPresentBarrier.image = state.swap_chain_group.swapChainImages[drawPass.imageIndex];
         drawToPresentBarrier.subresourceRange = subResourceRange;
         // TODO Move to RB
         vkCmdPipelineBarrier(
-            state.graphic_command_buffers[draw_pass.image_index], 
+            state.graphic_command_buffers[drawPass.imageIndex], 
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 
             VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 
             0, 0, nullptr, 
@@ -814,7 +816,7 @@ void EndPass(DrawPass & draw_pass) {
         );
     }
 
-    if (vkEndCommandBuffer(state.graphic_command_buffers[draw_pass.image_index]) != VK_SUCCESS) {
+    if (vkEndCommandBuffer(state.graphic_command_buffers[drawPass.imageIndex]) != VK_SUCCESS) {
         MFA_CRASH("Failed to record command buffer");
     }
 
@@ -822,26 +824,26 @@ void EndPass(DrawPass & draw_pass) {
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore wait_semaphores[] = {state.sync_objects.image_availability_semaphores[draw_pass.frame_index]};
+    VkSemaphore wait_semaphores[] = {state.sync_objects.image_availability_semaphores[drawPass.frame_index]};
     VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = wait_semaphores;
     submitInfo.pWaitDstStageMask = wait_stages;
 
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &state.graphic_command_buffers[draw_pass.image_index];
+    submitInfo.pCommandBuffers = &state.graphic_command_buffers[drawPass.imageIndex];
 
-    VkSemaphore signal_semaphores[] = {state.sync_objects.render_finish_indicator_semaphores[draw_pass.frame_index]};
+    VkSemaphore signal_semaphores[] = {state.sync_objects.render_finish_indicator_semaphores[drawPass.frame_index]};
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signal_semaphores;
 
-    vkResetFences(state.logicalDevice.device, 1, &state.sync_objects.fences_in_flight[draw_pass.frame_index]);
+    vkResetFences(state.logicalDevice.device, 1, &state.sync_objects.fences_in_flight[drawPass.frame_index]);
 
     {
         auto const result = vkQueueSubmit(
             state.graphic_queue, 
             1, &submitInfo, 
-            state.sync_objects.fences_in_flight[draw_pass.frame_index]
+            state.sync_objects.fences_in_flight[drawPass.frame_index]
         );
         if (result != VK_SUCCESS) {
             MFA_CRASH("Failed to submit draw command buffer");
@@ -856,7 +858,7 @@ void EndPass(DrawPass & draw_pass) {
     VkSwapchainKHR swapChains[] = {state.swap_chain_group.swapChain};
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
-    U32 imageIndices = draw_pass.image_index;
+    U32 imageIndices = drawPass.imageIndex;
     presentInfo.pImageIndices = &imageIndices;
 
     {
@@ -871,10 +873,10 @@ void EndPass(DrawPass & draw_pass) {
 }
 
 [[nodiscard]]
-RB::GpuShader CreateShader(AssetSystem::ShaderAsset const & shader_asset) {
+RB::GpuShader CreateShader(AssetSystem::Shader const & shader) {
     return RB::CreateShader(
         state.logicalDevice.device,
-        shader_asset
+        shader
     );
 }
 
@@ -883,11 +885,11 @@ void DestroyShader(RB::GpuShader & gpu_shader) {
 }
 
 void SetScissor(DrawPass const & draw_pass, VkRect2D const & scissor) {
-    RB::SetScissor(state.graphic_command_buffers[draw_pass.image_index], scissor);
+    RB::SetScissor(state.graphic_command_buffers[draw_pass.imageIndex], scissor);
 }
 
 void SetViewport(DrawPass const & draw_pass, VkViewport const & viewport) {
-    RB::SetViewport(state.graphic_command_buffers[draw_pass.image_index], viewport);
+    RB::SetViewport(state.graphic_command_buffers[draw_pass.imageIndex], viewport);
 }
 
 void PushConstants(
@@ -897,8 +899,8 @@ void PushConstants(
     CBlob const data
 ) {
     RB::PushConstants(
-        state.graphic_command_buffers[draw_pass.image_index],
-        draw_pass.draw_pipeline->graphic_pipeline_group.pipelineLayout,
+        state.graphic_command_buffers[draw_pass.imageIndex],
+        draw_pass.drawPipeline->graphic_pipeline_group.pipelineLayout,
         shader_stage,
         offset,
         data

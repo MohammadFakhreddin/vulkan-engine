@@ -151,7 +151,7 @@ AS::Texture ImportInMemoryTexture(
             0,
             components
         );
-        MFA_ASSERT(true == resizeResult);
+        MFA_ASSERT(resizeResult > 0);
         texture.addMipmap(
             currentMipDims,
             mipMapPixels
@@ -354,7 +354,7 @@ AS::Mesh ImportObj(char const * path) {
                     subMeshIndex,
                     AS::Mesh::Primitive {
                         .vertexCount = vertexCount,
-                        .indexCount = indexCount,
+                        .indicesCount = indexCount,
                         .baseColorTextureIndex = 0,
                         .hasNormalBuffer = true
                     },
@@ -880,7 +880,7 @@ AS::Model ImportGLTF(char const * path) {
                                 meshIndex,
                                 AS::MeshPrimitive {
                                     .vertexCount = static_cast<U32>(subMeshVertices.size()),
-                                    .indexCount = static_cast<U32>(subMeshIndices.size()),
+                                    .indicesCount = static_cast<U32>(subMeshIndices.size()),
                                     .baseColorTextureIndex = baseColorTextureIndex,
                                     .metallicRoughnessTextureIndex = metallicRoughnessTextureIndex,
                                     .normalTextureIndex = normalTextureIndex,

@@ -160,7 +160,7 @@ void PBRScene::Shutdown() {
     RF::DestroyDrawPipeline(m_draw_pipeline);
     RF::DestroyDescriptorSetLayout(m_descriptor_set_layout);
     RF::DestroyGpuModel(m_sphere);
-    Importer::FreeModel(&m_sphere.model_asset);
+    Importer::FreeModel(&m_sphere.model);
 }
 
 void PBRScene::OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
@@ -255,17 +255,17 @@ void PBRScene::OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_
         RF::BindDescriptorSet(draw_pass, current_descriptor_set);
     }       
     {// Drawing spheres
-        auto const * header_object = m_sphere.model_asset.mesh.header_object();
+        auto const * header_object = m_sphere.model.mesh.header_object();
         MFA_PTR_ASSERT(header_object);
-        BindVertexBuffer(draw_pass, m_sphere.mesh_buffers.verticesBuffer);
-        BindIndexBuffer(draw_pass, m_sphere.mesh_buffers.indicesBuffer);
-        auto const required_draw_calls = m_sphere.mesh_buffers.sub_mesh_buffers.size();
+        BindVertexBuffer(draw_pass, m_sphere.meshBuffers.verticesBuffer);
+        BindIndexBuffer(draw_pass, m_sphere.meshBuffers.indicesBuffer);
+        auto const required_draw_calls = m_sphere.meshBuffers.subMeshBuffers.size();
         for (MFA::U32 i = 0; i < required_draw_calls; ++i) {
             auto const & current_sub_mesh = header_object->sub_meshes[i];
-            auto const & sub_mesh_buffers = m_sphere.mesh_buffers.sub_mesh_buffers[i];
+            auto const & sub_mesh_buffers = m_sphere.meshBuffers.subMeshBuffers[i];
             DrawIndexed(
                 draw_pass,
-                sub_mesh_buffers.index_count,
+                sub_mesh_buffers.indicesCount,
                 1,
                 current_sub_mesh.indices_starting_index
             );

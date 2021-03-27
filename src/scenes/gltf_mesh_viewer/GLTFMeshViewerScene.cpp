@@ -8,7 +8,7 @@
 
 namespace RF = MFA::RenderFrontend;
 namespace RB = MFA::RenderBackend;
-namespace Asset = MFA::AssetSystem;
+namespace AS = MFA::AssetSystem;
 namespace Importer = MFA::Importer;
 
 void GLTFMeshViewerScene::Init() {
@@ -156,7 +156,7 @@ void GLTFMeshViewerScene::OnDraw(MFA::U32 const delta_time, RF::DrawPass & draw_
         static_assert(sizeof(m_translate_data.perspective) == sizeof(perspectiveMat.cells));
         ::memcpy(m_translate_data.perspective, perspectiveMat.cells, sizeof(perspectiveMat.cells));
 
-        selectedModel.drawableObject.update_uniform_buffer(
+        selectedModel.drawableObject.updateUniformBuffer(
             "transform", 
             MFA::CBlobAliasOf(m_translate_data)
         );
@@ -242,23 +242,23 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
 
     auto & drawableObject = renderRequiredData.drawableObject;
 
-    const auto * subMeshInfoBuffer = drawableObject.create_multiple_uniform_buffer(
+    const auto * subMeshInfoBuffer = drawableObject.createMultipleUniformBuffer(
         "subMeshInfo", 
         sizeof(SubMeshInfo), 
-        drawableObject.get_descriptor_set_count()
+        drawableObject.getDescriptorSetCount()
     );
     MFA_PTR_ASSERT(subMeshInfoBuffer);
 
-    const auto * transform_buffer = drawableObject.create_uniform_buffer("transform", sizeof(ModelTransformBuffer));
+    const auto * transform_buffer = drawableObject.createUniformBuffer("transform", sizeof(ModelTransformBuffer));
     MFA_PTR_ASSERT(transform_buffer);
 
-    auto * model_header = drawableObject.get_model()->model_asset.mesh.header_object();
+    auto * model_header = drawableObject.getModel()->model.mesh.header_object();
     MFA_ASSERT(model_header->sub_mesh_count == drawableObject.get_descriptor_set_count());
 
-    auto const & textures = drawableObject.get_model()->textures;
+    auto const & textures = drawableObject.getModel()->textures;
 
-    for(MFA::U8 i = 0; i < drawableObject.get_descriptor_set_count(); ++i) {// Updating descriptor sets
-        auto * descriptor_set = drawableObject.get_descriptor_set(i);
+    for(MFA::U8 i = 0; i < drawableObject.getDescriptorSetCount(); ++i) {// Updating descriptor sets
+        auto * descriptor_set = drawableObject.getDescriptorSet(i);
         auto const & sub_mesh = model_header->sub_meshes[i];
 
         std::vector<VkWriteDescriptorSet> writeInfo {};
@@ -418,8 +418,8 @@ void GLTFMeshViewerScene::destroyModels() {
         for (auto & group : mModelsRenderData) {
             if (group.isLoaded) {
                 RF::DestroyGpuModel(group.gpuModel);
-                Importer::FreeModel(&group.gpuModel.model_asset);
-                group.drawableObject.delete_uniform_buffers();
+                Importer::FreeModel(&group.gpuModel.model);
+                group.drawableObject.deleteUniformBuffers();
             }
         }
     }
@@ -430,7 +430,7 @@ void GLTFMeshViewerScene::createDrawPipeline(MFA::U8 const gpu_shader_count, MFA
 
     VkVertexInputBindingDescription const vertex_binding_description {
         .binding = 0,
-        .stride = sizeof(Asset::MeshVertex),
+        .stride = sizeof(AS::MeshVertex),
         .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
     };
 
@@ -440,47 +440,47 @@ void GLTFMeshViewerScene::createDrawPipeline(MFA::U8 const gpu_shader_count, MFA
         .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, position),   
+        .offset = offsetof(AS::MeshVertex, position),   
     });
     // BaseColor
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, baseColorUV),   
+        .offset = offsetof(AS::MeshVertex, baseColorUV),   
     });
     // Metallic/Roughness
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, metallicUV), // Metallic and roughness have same uv for gltf files  
+        .offset = offsetof(AS::MeshVertex, metallicUV), // Metallic and roughness have same uv for gltf files  
     });
     // Normal
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, normalMapUV),   
+        .offset = offsetof(AS::MeshVertex, normalMapUV),   
     });
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, tangentValue),   
+        .offset = offsetof(AS::MeshVertex, tangentValue),   
     });
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, normalValue),   
+        .offset = offsetof(AS::MeshVertex, normalValue),   
     });
     // Emissive
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, emissionUV)
+        .offset = offsetof(AS::MeshVertex, emissionUV)
     });
     m_draw_pipeline = RF::CreateBasicDrawPipeline(
         gpu_shader_count, 

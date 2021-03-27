@@ -261,9 +261,9 @@ public:
     
     struct Primitive {
         U32 vertexCount = 0;
-        U32 indexCount = 0;
-        U64 verticesOffset = 0;                // From start of buffer
-        U64 indicesOffset = 0;
+        U32 indicesCount = 0;
+        U32 verticesOffset = 0;                // From start of buffer
+        U32 indicesOffset = 0;
         U32 indicesStartingIndex = 0;          // From start of buffer
         I16 baseColorTextureIndex = 0;
         I16 metallicRoughnessTextureIndex = 0;
@@ -343,12 +343,25 @@ public:
     }
 
     [[nodiscard]]
+    SubMesh & getSubMeshByIndex(U32 const index) {
+        MFA_ASSERT(index < mSubMeshes.size());
+        return mSubMeshes[index];
+    }
+
+    [[nodiscard]]
     SubMesh const * getSubMeshData() const noexcept {
         return mSubMeshes.data();
     }
 
     [[nodiscard]]
-    U32 getNodeSize() const noexcept {
+    Node const & getNodeByIndex(U32 const index) const noexcept {
+        MFA_ASSERT(index >= 0);
+        MFA_ASSERT(index < mNodes.size());
+        return mNodes[index];
+    }
+
+    [[nodiscard]]
+    U32 getNodesCount() const noexcept {
         return static_cast<U32>(mNodes.size());
     }
 

@@ -3,10 +3,12 @@
 #include "engine/DrawableObject.hpp"
 #include "engine/Scene.hpp"
 #include "engine/RenderFrontend.hpp"
+#include "tools/Importer.hpp"
 
 namespace RF = MFA::RenderFrontend;
 namespace RB = MFA::RenderBackend;
-namespace Asset = MFA::AssetSystem;
+namespace AS = MFA::AssetSystem;
+namespace Importer = MFA::Importer;
 
 class TexturedSphereScene final : public MFA::Scene {
 public:
@@ -50,18 +52,18 @@ private:
         .light_color = {}
     };
 
-    float m_light_position[3] {0.0f, 0.0f, -2.0f};
-    float m_light_color[3] {252.0f/256.0f, 212.0f/256.0f, 64.0f/256.0f};
+    float mLightPosition[3] {0.0f, 0.0f, -2.0f};
+    float mLightColor[3] {252.0f/256.0f, 212.0f/256.0f, 64.0f/256.0f};
 
-    float m_model_rotation[3] {45.0f, 45.0f, 45.0f};
-    float m_model_position[3] {0.0f, 0.0f, -6.0f};
+    float mModelRotation[3] {45.0f, 45.0f, 45.0f};
+    float mModelPosition[3] {0.0f, 0.0f, -6.0f};
 
-    MFA::RenderFrontend::GpuModel m_gpu_model {};
-    MFA::RenderFrontend::SamplerGroup m_sampler_group {};
-    VkDescriptorSetLayout_T * m_descriptor_set_layout = nullptr;
-    MFA::RenderFrontend::DrawPipeline m_draw_pipeline {};
-    MFA::RenderFrontend::UniformBufferGroup m_lv_buffer {};
-    MFA::DrawableObject m_drawable_object {};
+    MFA::RenderFrontend::GpuModel mGpuModel {};
+    MFA::RenderFrontend::SamplerGroup mSamplerGroup {};
+    VkDescriptorSetLayout_T * mDescriptorSetLayout = nullptr;
+    MFA::RenderFrontend::DrawPipeline mDrawPipeline {};
+    MFA::RenderFrontend::UniformBufferGroup mLVBuffer {};
+    MFA::DrawableObject mDrawableObject {};
 
 
 };

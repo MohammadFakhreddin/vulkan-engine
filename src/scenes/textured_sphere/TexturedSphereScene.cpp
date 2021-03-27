@@ -1,8 +1,6 @@
 #include "TexturedSphereScene.hpp"
 
-
 #include "libs/imgui/imgui.h"
-#include "tools/Importer.hpp"
 #include "tools/ShapeGenerator.hpp"
 
 void TexturedSphereScene::Init() {
@@ -10,39 +8,39 @@ void TexturedSphereScene::Init() {
     createGpuModel();
 
     // Cpu shader
-    auto cpu_vertex_shader = MFA::Importer::ImportShaderFromSPV(
+    auto cpuVertexShader = Importer::ImportShaderFromSPV(
         "../assets/shaders/textured_sphere/TexturedSphere.vert.spv", 
-        MFA::AssetSystem::Shader::Stage::Vertex, 
+        AS::Shader::Stage::Vertex, 
         "main"
     );
-    MFA_ASSERT(cpu_vertex_shader.valid());
-    auto gpu_vertex_shader = RF::CreateShader(cpu_vertex_shader);
-    MFA_ASSERT(gpu_vertex_shader.valid());
+    MFA_ASSERT(cpuVertexShader.isValid());
+    auto gpuVertexShader = RF::CreateShader(cpuVertexShader);
+    MFA_ASSERT(gpuVertexShader.valid());
     MFA_DEFER {
-        RF::DestroyShader(gpu_vertex_shader);
-        MFA::Importer::FreeAsset(&cpu_vertex_shader);
+        RF::DestroyShader(gpuVertexShader);
+        Importer::FreeShader(&cpuVertexShader);
     };
     
     // Fragment shader
-    auto cpu_fragment_shader = MFA::Importer::ImportShaderFromSPV(
+    auto cpuFragmentShader = Importer::ImportShaderFromSPV(
         "../assets/shaders/textured_sphere/TexturedSphere.frag.spv",
         MFA::AssetSystem::Shader::Stage::Fragment,
         "main"
     );
-    auto gpu_fragment_shader = RF::CreateShader(cpu_fragment_shader);
-    MFA_ASSERT(cpu_fragment_shader.valid());
-    MFA_ASSERT(gpu_fragment_shader.valid());
+    auto gpuFragmentShader = RF::CreateShader(cpuFragmentShader);
+    MFA_ASSERT(cpuFragmentShader.isValid());
+    MFA_ASSERT(gpuFragmentShader.valid());
     MFA_DEFER {
-        RF::DestroyShader(gpu_fragment_shader);
-        MFA::Importer::FreeAsset(&cpu_fragment_shader);
+        RF::DestroyShader(gpuFragmentShader);
+        Importer::FreeShader(&cpuFragmentShader);
     };
 
-    std::vector<RB::GpuShader> shaders {gpu_vertex_shader, gpu_fragment_shader};
+    std::vector<RB::GpuShader> shaders {gpuVertexShader, gpuFragmentShader};
 
     // TODO We should use gltf sampler info here
-    m_sampler_group = RF::CreateSampler();
+    mSamplerGroup = RF::CreateSampler();
 
-    m_lv_buffer = RF::CreateUniformBuffer(sizeof(LightViewBuffer), 1);
+    mLVBuffer = RF::CreateUniformBuffer(sizeof(LightViewBuffer), 1);
 
     createDescriptorSetLayout();
 
@@ -52,7 +50,7 @@ void TexturedSphereScene::Init() {
 }
 
 void TexturedSphereScene::OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
-    RF::BindDrawPipeline(draw_pass, m_draw_pipeline);
+    RF::BindDrawPipeline(draw_pass, mDrawPipeline);
 
     {// Updating Transform buffer
         // Rotation
@@ -60,9 +58,9 @@ void TexturedSphereScene::OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawP
         MFA::Matrix4X4Float rotationMat {};
         MFA::Matrix4X4Float::assignRotationXYZ(
             rotationMat,
-            MFA::Math::Deg2Rad(m_model_rotation[0]),
-            MFA::Math::Deg2Rad(m_model_rotation[1]),
-            MFA::Math::Deg2Rad(m_model_rotation[2])
+            MFA::Math::Deg2Rad(mModelRotation[0]),
+            MFA::Math::Deg2Rad(mModelRotation[1]),
+            MFA::Math::Deg2Rad(mModelRotation[2])
         );
         static_assert(sizeof(m_translate_data.rotation) == sizeof(rotationMat.cells));
         ::memcpy(m_translate_data.rotation, rotationMat.cells, sizeof(rotationMat.cells));
@@ -70,9 +68,9 @@ void TexturedSphereScene::OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawP
         MFA::Matrix4X4Float transformationMat {};
         MFA::Matrix4X4Float::assignTransformation(
             transformationMat,
-            m_model_position[0],
-            m_model_position[1],
-            m_model_position[2]
+            mModelPosition[0],
+            mModelPosition[1],
+            mModelPosition[2]
         );
         static_assert(sizeof(m_translate_data.transformation) == sizeof(transformationMat.cells));
         ::memcpy(m_translate_data.transformation, transformationMat.cells, sizeof(transformationMat.cells));
@@ -91,90 +89,87 @@ void TexturedSphereScene::OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawP
         static_assert(sizeof(m_translate_data.perspective) == sizeof(perspectiveMat.cells));
         ::memcpy(m_translate_data.perspective, perspectiveMat.cells, sizeof(perspectiveMat.cells));
 
-        m_drawable_object.update_uniform_buffer(
+        mDrawableObject.updateUniformBuffer(
             "transform", 
             MFA::CBlobAliasOf(m_translate_data)
         );
     }
     {// LightViewBuffer
-        ::memcpy(m_lv_data.light_position, m_light_position, sizeof(m_light_position));
-        static_assert(sizeof(m_light_position) == sizeof(m_lv_data.light_position));
+        ::memcpy(m_lv_data.light_position, mLightPosition, sizeof(mLightPosition));
+        static_assert(sizeof(mLightPosition) == sizeof(m_lv_data.light_position));
 
-        ::memcpy(m_lv_data.light_color, m_light_color, sizeof(m_light_color));
-        static_assert(sizeof(m_light_color) == sizeof(m_lv_data.light_color));
+        ::memcpy(m_lv_data.light_color, mLightColor, sizeof(mLightColor));
+        static_assert(sizeof(mLightColor) == sizeof(m_lv_data.light_color));
 
-        RF::UpdateUniformBuffer(m_lv_buffer.buffers[0], MFA::CBlobAliasOf(m_lv_data));
+        RF::UpdateUniformBuffer(mLVBuffer.buffers[0], MFA::CBlobAliasOf(m_lv_data));
     }
-    m_drawable_object.draw(draw_pass);
+    mDrawableObject.draw(draw_pass);
 }
 
 void TexturedSphereScene::OnUI(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
     ImGui::Begin("Object viewer");
     ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("XDegree", &m_model_rotation[0], -360.0f, 360.0f);
+    ImGui::SliderFloat("XDegree", &mModelRotation[0], -360.0f, 360.0f);
     ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("YDegree", &m_model_rotation[1], -360.0f, 360.0f);
+    ImGui::SliderFloat("YDegree", &mModelRotation[1], -360.0f, 360.0f);
     ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("ZDegree", &m_model_rotation[2], -360.0f, 360.0f);
+    ImGui::SliderFloat("ZDegree", &mModelRotation[2], -360.0f, 360.0f);
     ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("XDistance", &m_model_position[0], -100.0f, 100.0f);
+    ImGui::SliderFloat("XDistance", &mModelPosition[0], -100.0f, 100.0f);
     ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("YDistance", &m_model_position[1], -100.0f, 100.0f);
+    ImGui::SliderFloat("YDistance", &mModelPosition[1], -100.0f, 100.0f);
     ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("ZDistance", &m_model_position[2], -100.0f, 100.0f);
+    ImGui::SliderFloat("ZDistance", &mModelPosition[2], -100.0f, 100.0f);
     ImGui::End();
 
     ImGui::Begin("Light");
     ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("PositionX", &m_light_position[0], -200.0f, 200.0f);
+    ImGui::SliderFloat("PositionX", &mLightPosition[0], -200.0f, 200.0f);
     ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("PositionY", &m_light_position[1], -200.0f, 200.0f);
+    ImGui::SliderFloat("PositionY", &mLightPosition[1], -200.0f, 200.0f);
     ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("PositionZ", &m_light_position[2], -200.0f, 200.0f);
+    ImGui::SliderFloat("PositionZ", &mLightPosition[2], -200.0f, 200.0f);
     ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("ColorR", &m_light_color[0], 0.0f, 1.0f);
+    ImGui::SliderFloat("ColorR", &mLightColor[0], 0.0f, 1.0f);
     ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("ColorG", &m_light_color[1], 0.0f, 1.0f);
+    ImGui::SliderFloat("ColorG", &mLightColor[1], 0.0f, 1.0f);
     ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("ColorB", &m_light_color[2], 0.0f, 1.0f);
+    ImGui::SliderFloat("ColorB", &mLightColor[2], 0.0f, 1.0f);
     ImGui::End();
 }
 
 void TexturedSphereScene::Shutdown() {
     destroyDrawableObject();
-    RF::DestroyUniformBuffer(m_lv_buffer);
-    RF::DestroyDrawPipeline(m_draw_pipeline);
-    RF::DestroyDescriptorSetLayout(m_descriptor_set_layout);
-    RF::DestroySampler(m_sampler_group);
-    RF::DestroyGpuModel(m_gpu_model);
-    MFA::Importer::FreeModel(&m_gpu_model.model_asset);
+    RF::DestroyUniformBuffer(mLVBuffer);
+    RF::DestroyDrawPipeline(mDrawPipeline);
+    RF::DestroyDescriptorSetLayout(mDescriptorSetLayout);
+    RF::DestroySampler(mSamplerGroup);
+    RF::DestroyGpuModel(mGpuModel);
+    Importer::FreeModel(&mGpuModel.model);
 }
 
 void TexturedSphereScene::createDrawableObject(){
-     m_drawable_object = MFA::DrawableObject(
-        m_gpu_model,
-        m_descriptor_set_layout
+     mDrawableObject = MFA::DrawableObject(
+        mGpuModel,
+        mDescriptorSetLayout
     );
     // TODO AO map for emission
-    const auto * transform_buffer = m_drawable_object.create_uniform_buffer("transform", sizeof(ModelTransformBuffer));
-    MFA_PTR_ASSERT(transform_buffer);
+    const auto * transformBuffer = mDrawableObject.createUniformBuffer("transform", sizeof(ModelTransformBuffer));
+    MFA_ASSERT(transformBuffer != nullptr);
     
-    auto * model_header = m_drawable_object.get_model()->model_asset.mesh.header_object();
-    MFA_ASSERT(model_header->sub_mesh_count == m_drawable_object.get_descriptor_set_count());
+    auto const & textures = mDrawableObject.getModel()->textures;
 
-    auto const & textures = m_drawable_object.get_model()->textures;
-
-    for(MFA::U8 i = 0; i < m_drawable_object.get_descriptor_set_count(); ++i) {// Updating descriptor sets
-        auto * descriptor_set = m_drawable_object.get_descriptor_set(i);
+    for(MFA::U8 i = 0; i < mDrawableObject.getDescriptorSetCount(); ++i) {// Updating descriptor sets
+        auto * descriptor_set = mDrawableObject.getDescriptorSet(i);
         auto const & sub_mesh = model_header->sub_meshes[i];
 
         std::vector<VkWriteDescriptorSet> writeInfo {};
 
         // Transform
         VkDescriptorBufferInfo transformBufferInfo {
-            .buffer = transform_buffer->buffers[0].buffer,
+            .buffer = transformBuffer->buffers[0].buffer,
             .offset = 0,
-            .range = transform_buffer->buffer_size
+            .range = transformBuffer->buffer_size
         };
         writeInfo.emplace_back(VkWriteDescriptorSet {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -188,7 +183,7 @@ void TexturedSphereScene::createDrawableObject(){
 
         // BaseColorTexture
         VkDescriptorImageInfo baseColorImageInfo {
-            .sampler = m_sampler_group.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
+            .sampler = mSamplerGroup.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
             .imageView = textures[sub_mesh.base_color_texture_index].image_view(),
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         };
@@ -204,7 +199,7 @@ void TexturedSphereScene::createDrawableObject(){
 
         // MetallicTexture
         VkDescriptorImageInfo metallicImageInfo {
-            .sampler = m_sampler_group.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
+            .sampler = mSamplerGroup.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
             .imageView = textures[sub_mesh.metallic_texture_index].image_view(),
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         };
@@ -220,7 +215,7 @@ void TexturedSphereScene::createDrawableObject(){
 
         // RoughnessTexture
         VkDescriptorImageInfo roughnessImageInfo {
-            .sampler = m_sampler_group.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
+            .sampler = mSamplerGroup.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
             .imageView = textures[sub_mesh.roughness_texture_index].image_view(),
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         };
@@ -236,7 +231,7 @@ void TexturedSphereScene::createDrawableObject(){
 
         // NormalTexture  
         VkDescriptorImageInfo normalImageInfo {
-            .sampler = m_sampler_group.sampler,
+            .sampler = mSamplerGroup.sampler,
             .imageView = textures[sub_mesh.normal_texture_index].image_view(),
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         };
@@ -252,9 +247,9 @@ void TexturedSphereScene::createDrawableObject(){
 
         // LightViewBuffer
         VkDescriptorBufferInfo light_view_buffer_info {
-            .buffer = m_lv_buffer.buffers[0].buffer,
+            .buffer = mLVBuffer.buffers[0].buffer,
             .offset = 0,
-            .range = m_lv_buffer.buffer_size
+            .range = mLVBuffer.buffer_size
         };
         writeInfo.emplace_back(VkWriteDescriptorSet {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -274,13 +269,13 @@ void TexturedSphereScene::createDrawableObject(){
 }
 
 void TexturedSphereScene::destroyDrawableObject(){
-    m_drawable_object.delete_uniform_buffers();
+    mDrawableObject.deleteUniformBuffers();
 }
 
 void TexturedSphereScene::createDrawPipeline(MFA::U8 gpu_shader_count, MFA::RenderBackend::GpuShader * gpu_shaders){
     VkVertexInputBindingDescription const vertex_binding_description {
         .binding = 0,
-        .stride = sizeof(Asset::MeshVertex),
+        .stride = sizeof(AS::MeshVertex),
         .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
     };
 
@@ -290,49 +285,49 @@ void TexturedSphereScene::createDrawPipeline(MFA::U8 gpu_shader_count, MFA::Rend
         .location = 0,
         .binding = 0,
         .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, position),   
+        .offset = offsetof(AS::MeshVertex, position),   
     });
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = 1,
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, baseColorUV),   
+        .offset = offsetof(AS::MeshVertex, baseColorUV),   
     });
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = 2,
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, metallicUV),   
+        .offset = offsetof(AS::MeshVertex, metallicUV),   
     });
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = 3,
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, roughnessUV),   
+        .offset = offsetof(AS::MeshVertex, roughnessUV),   
     });
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = 4,
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, normalMapUV),   
+        .offset = offsetof(AS::MeshVertex, normalMapUV),   
     });
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = 5,
         .binding = 0,
         .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, normalValue),   
+        .offset = offsetof(AS::MeshVertex, normalValue),   
     });
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = 6,
         .binding = 0,
         .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-        .offset = offsetof(Asset::MeshVertex, tangentValue),   
+        .offset = offsetof(AS::MeshVertex, tangentValue),   
     });
 
-    m_draw_pipeline = RF::CreateDrawPipeline(
+    mDrawPipeline = RF::CreateDrawPipeline(
         gpu_shader_count, 
         gpu_shaders,
-        m_descriptor_set_layout,
+        mDescriptorSetLayout,
         vertex_binding_description,
         static_cast<MFA::U8>(input_attribute_descriptions.size()),
         input_attribute_descriptions.data(),
@@ -411,7 +406,7 @@ void TexturedSphereScene::createDescriptorSetLayout(){
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         .pImmutableSamplers = nullptr, // Optional
     });
-    m_descriptor_set_layout = RF::CreateDescriptorSetLayout(
+    mDescriptorSetLayout = RF::CreateDescriptorSetLayout(
         static_cast<MFA::U8>(bindings.size()),
         bindings.data()
     );
@@ -421,11 +416,11 @@ void TexturedSphereScene::createGpuModel() {
     auto cpuModel = MFA::ShapeGenerator::Sphere();
 
     auto const importTextureForModel = [&cpuModel](char const * address) -> MFA::I16 {
-        auto const texture = MFA::Importer::ImportUncompressedImage(
+        auto const texture = Importer::ImportUncompressedImage(
             address, 
-            MFA::Importer::ImportTextureOptions {.generate_mipmaps = false}
+            Importer::ImportTextureOptions {.generate_mipmaps = false}
         );
-        MFA_ASSERT(texture.valid());
+        MFA_ASSERT(texture.isValid());
         cpuModel.textures.emplace_back(texture);
         return static_cast<MFA::I16>(cpuModel.textures.size() - 1);
     };
@@ -439,22 +434,23 @@ void TexturedSphereScene::createGpuModel() {
     // Roughness
     auto const roughnessIndex = importTextureForModel("../assets/models/rusted_sphere_texture/rustediron2_roughness.png");
     
-    auto * meshHeader = cpuModel.mesh.header_object();
-    MFA_PTR_ASSERT(meshHeader);
-    MFA_ASSERT(meshHeader->is_valid());
-    for (MFA::U32 i = 0; i < meshHeader->sub_mesh_count; ++i) {
-        auto & currentSubMesh = meshHeader->sub_meshes[i];
-        // Texture index
-        currentSubMesh.base_color_texture_index = baseColorIndex;
-        currentSubMesh.normal_texture_index = normalIndex;
-        currentSubMesh.metallic_texture_index = metallicIndex;
-        currentSubMesh.roughness_texture_index = roughnessIndex;
-        // SubMesh features
-        currentSubMesh.has_base_color_texture = true;
-        currentSubMesh.has_normal_texture = true;
-        currentSubMesh.has_metallic_texture = true;
-        currentSubMesh.has_roughness_texture = true;
+    auto const & mesh = cpuModel.mesh;
+    MFA_ASSERT(mesh.isValid());
+    for (MFA::U32 i = 0; i < mesh.getSubMeshCount(); ++i) {
+        auto subMesh = mesh.getSubMeshByIndex(i);
+        for (auto & primitive : subMesh.primitives) {
+            // Texture index
+            primitive.baseColorTextureIndex = baseColorIndex;
+            primitive.normalTextureIndex = normalIndex;
+            primitive.metallicTextureIndex = metallicIndex;
+            primitive.roughnessTextureIndex = roughnessIndex;
+            // SubMesh features
+            primitive.hasBaseColorTexture = true;
+            primitive.hasNormalTexture = true;
+            primitive.hasMetallicTexture = true;
+            primitive.hasRoughnessTexture = true;
+        }
     }
 
-    m_gpu_model = RF::CreateGpuModel(cpuModel);
+    mGpuModel = RF::CreateGpuModel(cpuModel);
 }

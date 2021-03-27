@@ -72,14 +72,17 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSets(
 
 // TODO AdvanceBindingDescriptorSetWriteInfo
 struct MeshBuffers {
-    struct DrawCallData {
-        U64 vertex_offset = 0;
-        U64 index_offset = 0;
-        U32 index_count = 0;
+    struct Primitive {
+        U32 verticesOffset = 0;
+        U32 indicesStartingIndex = 0;
+        U32 indicesCount = 0;
+    };
+    struct SubMesh {
+        std::vector<Primitive> primitives {};
     };
     RB::BufferGroup verticesBuffer {};
     RB::BufferGroup indicesBuffer {};
-    std::vector<DrawCallData> sub_mesh_buffers;    // Organized by sub-mesh index
+    std::vector<SubMesh> subMeshBuffers {};    // Organized by sub-mesh index
 };
 
 void DestroyMeshBuffers(MeshBuffers & mesh_buffers);
@@ -91,7 +94,7 @@ RB::BufferGroup CreateVertexBuffer(CBlob vertices_blob);
 RB::BufferGroup CreateIndexBuffer(CBlob indices_blob);
 
 [[nodiscard]]
-RB::GpuTexture CreateTexture(AssetSystem::Texture & texture_asset);
+RB::GpuTexture CreateTexture(AssetSystem::Texture & texture);
 
 void DestroyTexture(RB::GpuTexture & gpu_texture);
 
@@ -100,15 +103,15 @@ struct SamplerGroup {
 };
 // TODO We should ask for options here
 [[nodiscard]]
-SamplerGroup CreateSampler(RB::CreateSamplerParams const & sampler_params = {});
+SamplerGroup CreateSampler(RB::CreateSamplerParams const & samplerParams = {});
 
 void DestroySampler(SamplerGroup & sampler_group);
 
 struct GpuModel {
     bool valid = false;
-    MeshBuffers mesh_buffers {};
+    MeshBuffers meshBuffers {};
     std::vector<RB::GpuTexture> textures {};
-    AssetSystem::Model model_asset {};
+    AssetSystem::Model model {};
     // TODO Samplers
 };
 [[nodiscard]]
@@ -119,15 +122,15 @@ void DestroyGpuModel(GpuModel & gpu_model);
 void DeviceWaitIdle();
 
 [[nodiscard]]
-RB::GpuShader CreateShader(AssetSystem::Shader const & shader_asset);
+RB::GpuShader CreateShader(AssetSystem::Shader const & shader);
 
 void DestroyShader(RB::GpuShader & gpu_shader);
 
 struct DrawPass {
-    U8 image_index;
+    U8 imageIndex;
     U8 frame_index;
-    bool is_valid = false;
-    DrawPipeline * draw_pipeline = nullptr;
+    bool isValid = false;
+    DrawPipeline * drawPipeline = nullptr;
 };
 
 struct UniformBufferGroup {
@@ -147,41 +150,41 @@ void DestroyUniformBuffer(UniformBufferGroup & uniform_buffer);
 DrawPass BeginPass();
 
 void BindDrawPipeline(
-    DrawPass & draw_pass,
-    DrawPipeline & draw_pipeline   
+    DrawPass & drawPass,
+    DrawPipeline & drawPipeline   
 );
 
 void UpdateDescriptorSetBasic(
-    DrawPass const & draw_pass,
-    VkDescriptorSet_T * descriptor_set,
-    UniformBufferGroup const & uniform_buffer,
-    RB::GpuTexture const & gpu_texture,
-    SamplerGroup const & sampler_group
+    DrawPass const & drawPass,
+    VkDescriptorSet_T * descriptorSet,
+    UniformBufferGroup const & uniformBuffer,
+    RB::GpuTexture const & gpuTexture,
+    SamplerGroup const & samplerGroup
 );
 
 void UpdateDescriptorSetBasic(
-    DrawPass const & draw_pass,
-    VkDescriptorSet_T * descriptor_set,
-    UniformBufferGroup const & uniform_buffer,
-    U32 image_info_count,
-    VkDescriptorImageInfo const * image_infos
+    DrawPass const & drawPass,
+    VkDescriptorSet_T * descriptorSet,
+    UniformBufferGroup const & uniformBuffer,
+    U32 imageInfoCount,
+    VkDescriptorImageInfo const * imageInfos
 );
 
 void UpdateDescriptorSets(
-    U8 write_info_count,
-    VkWriteDescriptorSet * write_info
+    U8 writeInfoCount,
+    VkWriteDescriptorSet * writeInfo
 );
 
 void UpdateDescriptorSets(
-    U8 descriptor_sets_count,
-    VkDescriptorSet_T ** descriptor_sets,
-    U8 write_info_count,
-    VkWriteDescriptorSet * write_info
+    U8 descriptorSetsCount,
+    VkDescriptorSet_T ** descriptorSets,
+    U8 writeInfoCount,
+    VkWriteDescriptorSet * writeInfo
 );
 
 void BindDescriptorSet(
-    DrawPass const & draw_pass,
-    VkDescriptorSet_T * descriptor_set
+    DrawPass const & drawPass,
+    VkDescriptorSet_T * descriptorSet
 );
 
 //: loop through each mesh instance in the mesh instances list to render
@@ -199,28 +202,28 @@ void BindDescriptorSet(
 //: end loop
 
 void BindVertexBuffer(
-    DrawPass draw_pass, 
-    RB::BufferGroup vertex_buffer,
+    DrawPass drawPass, 
+    RB::BufferGroup vertexBuffer,
     VkDeviceSize offset = 0
 );
 
 void BindIndexBuffer(
-    DrawPass draw_pass, 
-    RB::BufferGroup index_buffer,
+    DrawPass drawPass, 
+    RB::BufferGroup indexBuffer,
     VkDeviceSize offset = 0,
-    VkIndexType index_type = VK_INDEX_TYPE_UINT32
+    VkIndexType indexType = VK_INDEX_TYPE_UINT32
 );
 
 void DrawIndexed(
-    DrawPass draw_pass, 
-    U32 indices_count,
-    U32 instance_count = 1,
-    U32 first_index = 0,
-    U32 vertex_offset = 0,
-    U32 first_instance = 0
+    DrawPass drawPass, 
+    U32 indicesCount,
+    U32 instanceCount = 1,
+    U32 firstIndex = 0,
+    U32 vertexOffset = 0,
+    U32 firstInstance = 0
 );
 
-void EndPass(DrawPass & draw_pass);
+void EndPass(DrawPass & drawPass);
 
 void SetScissor(DrawPass const & draw_pass, VkRect2D const & scissor);
 

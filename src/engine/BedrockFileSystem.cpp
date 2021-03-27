@@ -23,26 +23,27 @@ explicit FileHandle(char const * path, Usage const usage) {
         }
     }();
     // TODO Use FopenS
-    auto error_code = ::fopen_s(&m_file, path, mode);
-    if(error_code == 0) {
-        if (MFA_PTR_VALID(m_file) && Usage::Append == usage) {
-            auto const seek_result = seek_to_end();  MFA_ASSERT(seek_result); MFA_CONSUME_VAR(seek_result);    
+    auto errorCode = ::fopen_s(&mFile, path, mode);
+    if(errorCode == 0) {
+        if (mFile != nullptr && Usage::Append == usage) {
+            auto const seekResult = seekToEnd();
+            MFA_ASSERT(seekResult);
         }
     }
-    if (!MFA_PTR_VALID(m_file) && Usage::Append == usage) {
-        error_code = ::fopen_s(&m_file, path, "w+b");
+    if (mFile == nullptr && Usage::Append == usage) {
+        errorCode = ::fopen_s(&mFile, path, "w+b");
     }
-    if(error_code != 0) {
-        m_file = nullptr;
+    if(errorCode != 0) {
+        mFile = nullptr;
     }
 }
 
 ~FileHandle() {close();}
 
 [[nodiscard]]
-bool is_ok() const {
+bool isOk() const {
     bool ret = false;
-    if(true == MFA_PTR_VALID(m_file)) {
+    if(mFile != nullptr) {
         ret = true;
     }
     return ret;
@@ -50,19 +51,20 @@ bool is_ok() const {
 
 bool close() {
     bool ret = false;
-    if (is_ok()) {
+    if (isOk()) {
         // TODO Should we check close result
-        ::fclose(static_cast<FILE*>(m_file));
-        m_file = nullptr;
+        ::fclose(static_cast<FILE*>(mFile));
+        mFile = nullptr;
         ret = true;
     }
     return ret;    
 }
 
-bool seek_to_end() const {
+[[nodiscard]]
+bool seekToEnd() const {
     bool ret = false;
-    if (is_ok()) {
-        int const seek_result = ::fseek(m_file, 0, SEEK_END);
+    if (isOk()) {
+        int const seek_result = ::fseek(mFile, 0, SEEK_END);
         ret = (0 == seek_result);
     }
     return ret;
@@ -71,8 +73,8 @@ bool seek_to_end() const {
 [[nodiscard]]
 uint64_t read (Blob const & memory) const {
     uint64_t ret = 0;
-    if (is_ok() && memory.len > 0) {
-        ret = ::fread(memory.ptr, 1, memory.len, m_file);
+    if (isOk() && memory.len > 0) {
+        ret = ::fread(memory.ptr, 1, memory.len, mFile);
     }
     return ret;
 }
@@ -80,14 +82,14 @@ uint64_t read (Blob const & memory) const {
 // TODO: Write
 
 [[nodiscard]]
-uint64_t total_size () const {
+uint64_t totalSize () const {
     uint64_t ret = 0;
-    if (is_ok()) {
+    if (isOk()) {
         fpos_t pos, end_pos;
-        ::fgetpos(m_file, &pos);
-        ::fseek(m_file, 0, SEEK_END);
-        ::fgetpos(m_file, &end_pos);
-        ::fsetpos(m_file, &pos);
+        ::fgetpos(mFile, &pos);
+        ::fseek(mFile, 0, SEEK_END);
+        ::fgetpos(mFile, &end_pos);
+        ::fsetpos(mFile, &pos);
         ret = static_cast<uint64_t>(end_pos);
     }
     return ret;
@@ -95,7 +97,7 @@ uint64_t total_size () const {
 
 // TODO Delete move/copy constructor
 public:
-    FILE * m_file = nullptr;
+    FILE * mFile = nullptr;
 };
 
 bool Exists(char const * path) {
@@ -110,7 +112,7 @@ FileHandle * OpenFile(char const * path, Usage const usage) {
 
 bool CloseFile(FileHandle * file) {
     bool ret = false;
-    if(MFA_PTR_VALID(file)) {
+    if(file != nullptr) {
         file->close();
         delete file;
         ret = true;
@@ -120,43 +122,35 @@ bool CloseFile(FileHandle * file) {
 
 size_t FileSize(FileHandle * file) {
     size_t ret = 0;
-    if(MFA_PTR_VALID(file)) {
-        ret = file->total_size();
+    if(file != nullptr) {
+        ret = file->totalSize();
     }
     return ret;
 }
 
 uint64_t Read(FileHandle * file, Blob const & memory) {
     uint64_t ret = 0;
-    if(MFA_PTR_VALID(file)) {
+    if(file != nullptr) {
         ret = file->read(memory);
     }
     return ret;
 }
 
 bool IsUsable(FileHandle * file) {
-    return MFA_PTR_VALID(file) && file->is_ok();
+    return file != nullptr && file->isOk();
 }
 
 FILE * GetCHandle(FileHandle * file) {
     FILE * ret {};
-    if(MFA_PTR_VALID(file)) {
-        ret = file->m_file;
+    if(file != nullptr) {
+        ret = file->mFile;
     }
     return ret;
 }
 
 std::string ExtractDirectoryFromPath(char const * path)  {
-    MFA_PTR_ASSERT(path);
+    MFA_ASSERT(path != nullptr);
     return std::filesystem::path(path).parent_path().string();
-    //auto const path_string = std::string(path);
-    //const size_t last_slash_idx = path_string.rfind('\\');
-    //std::string directory;
-    //if (std::string::npos != last_slash_idx)
-    //{
-    //    directory = path_string.substr(0, last_slash_idx);
-    //}
-    //return directory;
 }
 
 }

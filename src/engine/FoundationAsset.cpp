@@ -149,7 +149,7 @@ void Mesh::insertPrimitive(
     Index * indices
 ) {
     primitive.vertexCount = vertexCount;
-    primitive.indexCount = indicesCount;
+    primitive.indicesCount = indicesCount;
     primitive.verticesOffset = mCurrentVertexOffset;
     primitive.indicesStartingIndex = mCurrentStartingIndex;
     U32 const verticesSize = sizeof(Vertex) * vertexCount;

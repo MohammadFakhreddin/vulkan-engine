@@ -5,102 +5,150 @@ namespace MFA {
 // We need other overrides for easier use as well
 DrawableObject::DrawableObject(
     RF::GpuModel & model_,
-    VkDescriptorSetLayout_T * descriptor_set_layout
+    VkDescriptorSetLayout_T * descriptorSetLayout
 )
-    : m_required_draw_calls(static_cast<U32>(model_.mesh_buffers.sub_mesh_buffers.size()))
-    , m_model(&model_)
-    , m_descriptor_sets(RF::CreateDescriptorSets(
-        static_cast<U32>(model_.mesh_buffers.sub_mesh_buffers.size()), 
-        descriptor_set_layout
-    ))
+    : mGpuModel(&model_)
 {
-    MFA_ASSERT(m_model->valid);
-    MFA_ASSERT(m_model->model_asset.mesh.valid());
-    MFA_ASSERT(m_required_draw_calls > 0);
+    mNodeTransformBuffers = RF::CreateUniformBuffer(
+        sizeof(NodeTransformBuffer), 
+        mGpuModel->model.mesh.getNodesCount()
+    );
+    mDescriptorSets = RF::CreateDescriptorSets(
+        static_cast<U32>(model_.meshBuffers.subMeshBuffers.size()), 
+        descriptorSetLayout
+    );
+
+    MFA_ASSERT(mGpuModel->valid);
+    MFA_ASSERT(mGpuModel->model.mesh.isValid());
 }
 
-
-U32 DrawableObject::get_required_draw_calls() const {
-    return m_required_draw_calls;
+RF::GpuModel * DrawableObject::getModel() const {
+    return mGpuModel;
 }
 
-RF::GpuModel * DrawableObject::get_model() const {
-    return m_model;
+U32 DrawableObject::getDescriptorSetCount() const {
+    return static_cast<U32>(mDescriptorSets.size());
 }
 
-U32 DrawableObject::get_descriptor_set_count() const {
-    return static_cast<U32>(m_descriptor_sets.size());
+VkDescriptorSet_T * DrawableObject::getDescriptorSet(U32 const index) {
+    MFA_ASSERT(index < mDescriptorSets.size());
+    return mDescriptorSets[index];
 }
 
-VkDescriptorSet_T * DrawableObject::get_descriptor_set(U32 const index) {
-    MFA_ASSERT(index < m_descriptor_sets.size());
-    return m_descriptor_sets[index];
-}
-
-VkDescriptorSet_T ** DrawableObject::get_descriptor_sets() {
-    return m_descriptor_sets.data();
+VkDescriptorSet_T ** DrawableObject::getDescriptorSets() {
+    return mDescriptorSets.data();
 }
 
 
 // Only for model local buffers
-RF::UniformBufferGroup * DrawableObject::create_uniform_buffer(char const * name, U32 const size) {
-    m_uniforma_buffers[name] = RF::CreateUniformBuffer(size, 1);
-    return &m_uniforma_buffers[name];
+RF::UniformBufferGroup * DrawableObject::createUniformBuffer(char const * name, U32 const size) {
+    mUniformBuffers[name] = RF::CreateUniformBuffer(size, 1);
+    return &mUniformBuffers[name];
 }
 
-RF::UniformBufferGroup * DrawableObject::create_multiple_uniform_buffer(
+RF::UniformBufferGroup * DrawableObject::createMultipleUniformBuffer(
     char const * name, 
     const U32 size, 
     const U8 count
 ) {
-    m_uniforma_buffers[name] = RF::CreateUniformBuffer(size, count);
-    return &m_uniforma_buffers[name];
+    mUniformBuffers[name] = RF::CreateUniformBuffer(size, count);
+    return &mUniformBuffers[name];
 }
 
 // Only for model local buffers
-void DrawableObject::delete_uniform_buffers() {
-    if (m_uniforma_buffers.empty() == false) {
-        for (auto & pair : m_uniforma_buffers) {
+void DrawableObject::deleteUniformBuffers() {
+    if (mUniformBuffers.empty() == false) {
+        for (auto & pair : mUniformBuffers) {
             RF::DestroyUniformBuffer(pair.second);
         }
-        m_uniforma_buffers.clear();
+        mUniformBuffers.clear();
     }
+    RF::DestroyUniformBuffer(mNodeTransformBuffers);
 }
 
-void DrawableObject::update_uniform_buffer(char const * name, CBlob const ubo) {
-    auto const find_result = m_uniforma_buffers.find(name);
-    if (find_result != m_uniforma_buffers.end()) {
+void DrawableObject::updateUniformBuffer(char const * name, CBlob const ubo) {
+    auto const find_result = mUniformBuffers.find(name);
+    if (find_result != mUniformBuffers.end()) {
         RF::UpdateUniformBuffer(find_result->second.buffers[0], ubo);
     } else {
         MFA_CRASH("Buffer not found");
     }
 }
 
-RF::UniformBufferGroup * DrawableObject::get_uniform_buffer(char const * name) {
-    auto const find_result = m_uniforma_buffers.find(name);
-    if (find_result != m_uniforma_buffers.end()) {
+RF::UniformBufferGroup * DrawableObject::getUniformBuffer(char const * name) {
+    auto const find_result = mUniformBuffers.find(name);
+    if (find_result != mUniformBuffers.end()) {
         return &find_result->second;
     }
     return nullptr;
 }
 
-void DrawableObject::draw(RF::DrawPass & draw_pass) {
-    auto const * header_object = m_model->model_asset.mesh.header_object();
-    MFA_PTR_ASSERT(header_object);
-    BindVertexBuffer(draw_pass, m_model->mesh_buffers.verticesBuffer);
-    BindIndexBuffer(draw_pass, m_model->mesh_buffers.indicesBuffer);
-    for (U32 i = 0; i < m_required_draw_calls; ++i) {
-        auto * current_descriptor_set = m_descriptor_sets[i];
-        RF::BindDescriptorSet(draw_pass, current_descriptor_set);
-        auto const & current_sub_mesh = header_object->sub_meshes[i];
-        auto const & sub_mesh_buffers = m_model->mesh_buffers.sub_mesh_buffers[i];
-        DrawIndexed(
-            draw_pass,
-            sub_mesh_buffers.index_count,
-            1,
-            current_sub_mesh.indices_starting_index
-        );
+RF::UniformBufferGroup const & DrawableObject::getNodeTransformBuffer() const noexcept {
+    return mNodeTransformBuffers;
+}
+
+void DrawableObject::draw(RF::DrawPass & drawPass) {
+    BindVertexBuffer(drawPass, mGpuModel->meshBuffers.verticesBuffer);
+    BindIndexBuffer(drawPass, mGpuModel->meshBuffers.indicesBuffer);
+    auto const nodesCount = mGpuModel->model.mesh.getNodesCount();
+    auto const * nodes = mGpuModel->model.mesh.getNodeData();
+    MFA_ASSERT(nodes != nullptr);
+    if (nodesCount <= 0) {
+        return;
     }
+    Matrix4X4Float const transform = Matrix4X4Float::Identity();
+    drawNode(drawPass, 0, transform);
+}
+
+void DrawableObject::drawNode(RF::DrawPass & drawPass, int nodeIndex, Matrix4X4Float const & parentTransform) {
+    MFA_ASSERT(nodeIndex >= 0);
+    MFA_ASSERT(nodeIndex < mGpuModel->model.mesh.getNodesCount());
+    auto const & node = mGpuModel->model.mesh.getNodeByIndex(nodeIndex);
+    MFA_ASSERT(node.subMeshIndex >= 0);
+    MFA_ASSERT(mGpuModel->meshBuffers.subMeshBuffers.size() > node.subMeshIndex);
+
+    Matrix4X4Float nodeTransform {};
+    nodeTransform.assign(node.transformMatrix);
+    nodeTransform.multiply(parentTransform);
+    ::memcpy(mNodeTransformData.transform, nodeTransform.cells, sizeof(nodeTransform.cells));
+    MFA_ASSERT(sizeof(nodeTransform.cells) == sizeof(mNodeTransformData.transform));
+    RF::UpdateUniformBuffer(mNodeTransformBuffers.buffers[nodeIndex], CBlobAliasOf(mNodeTransformData));
+    RF::BindDescriptorSet(drawPass, mDescriptorSets[nodeIndex]);
+    drawSubMesh(drawPass, mGpuModel->meshBuffers.subMeshBuffers[node.subMeshIndex]);
+
+    if (node.children.empty() == false) {
+        for (auto const & child : node.children) {
+            drawNode(drawPass, child, nodeTransform);
+        } 
+    }
+}
+
+void DrawableObject::drawSubMesh(RF::DrawPass & drawPass, RF::MeshBuffers::SubMesh & subMeshBuffers) {
+    // We should update transform for each one before update, Fuck!
+    // TODO Start from here, Draw node tree
+    if (subMeshBuffers.primitives.empty() == false) {
+        for (auto const & primitive : subMeshBuffers.primitives) {
+            RF::DrawIndexed(
+                drawPass,
+                primitive.indicesCount,
+                1,
+                primitive.indicesStartingIndex,
+                primitive.verticesOffset
+            );
+        }
+    }
+    //for (U32 i = 0; i < subMeshBuffers.primitives.size(); ++i) {
+    //    auto * currentDescriptorSet = mDescriptorSets[i];
+    //    RF::BindDescriptorSet(drawPass, currentDescriptorSet);
+    //    auto const & currentSubMesh = header_object->sub_meshes[i];
+    //    auto const & subMeshBuffers = mGpuModel->meshBuffers.subMeshBuffers[i];
+    //    DrawIndexed(
+    //        drawPass,
+    //        subMeshBuffers.index_count,
+    //        1,
+    //        currentSubMesh.indices_starting_index
+    //    );
+    //}
 }
 
 };

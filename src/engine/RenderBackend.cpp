@@ -1385,11 +1385,11 @@ std::vector<VkFramebuffer_T *> CreateFrameBuffers(
 
 void DestroyFrameBuffers(
     VkDevice_T * device,
-    U32 const frame_buffers_count,
-    VkFramebuffer_T ** frame_buffers
+    U32 const frameBuffersCount,
+    VkFramebuffer_T ** frameBuffers
 ) {
-    for(U32 index = 0; index < frame_buffers_count; index++) {
-        vkDestroyFramebuffer(device, frame_buffers[index], nullptr);
+    for(U32 index = 0; index < frameBuffersCount; index++) {
+        vkDestroyFramebuffer(device, frameBuffers[index], nullptr);
     }
 }
 
@@ -1397,13 +1397,13 @@ GpuShader CreateShader(VkDevice_T * device, CpuShader const & cpuShader) {
     MFA_ASSERT(device != nullptr);
     GpuShader gpuShader {};
     if(cpuShader.isValid()) {
-        gpuShader.m_cpu_shader = cpuShader;
+        gpuShader.mCpuShader = cpuShader;
         auto const shaderCode = cpuShader.getCompiledShaderCode();
         VkShaderModuleCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         createInfo.codeSize = shaderCode.len;
         createInfo.pCode = reinterpret_cast<uint32_t const *>(shaderCode.ptr);
-        VK_Check(vkCreateShaderModule(device, &createInfo, nullptr, &gpuShader.m_shader_module));
+        VK_Check(vkCreateShaderModule(device, &createInfo, nullptr, &gpuShader.mShaderModule));
         MFA_LOG_INFO("Creating shader module was successful");
         MFA_ASSERT(gpuShader.valid());
     }
@@ -1414,8 +1414,8 @@ bool DestroyShader(VkDevice_T * device, GpuShader & gpu_shader) {
     MFA_ASSERT(device != nullptr);
     bool ret = false;
     if(gpu_shader.valid()) {
-        vkDestroyShaderModule(device, gpu_shader.m_shader_module, nullptr);
-        gpu_shader.m_shader_module = nullptr;
+        vkDestroyShaderModule(device, gpu_shader.mShaderModule, nullptr);
+        gpu_shader.mShaderModule = nullptr;
         ret = true;
     }
     return ret;

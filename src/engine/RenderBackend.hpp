@@ -344,8 +344,8 @@ std::vector<VkFramebuffer_T *> CreateFrameBuffers(
 
 void DestroyFrameBuffers(
     VkDevice_T * device,
-    U32 frame_buffers_count,
-    VkFramebuffer_T ** frame_buffers
+    U32 frameBuffersCount,
+    VkFramebuffer_T ** frameBuffers
 );
 
 class GpuShader;
@@ -353,23 +353,23 @@ class GpuShader;
 [[nodiscard]]
 GpuShader CreateShader(VkDevice_T * device, CpuShader const & cpuShader);
 
-bool DestroyShader(VkDevice_T * device, GpuShader & gpu_shader);
+bool DestroyShader(VkDevice_T * device, GpuShader & gpuShader);
 
 class GpuShader {
 friend GpuShader CreateShader(VkDevice_T * device, CpuShader const & cpuShader);
-friend bool DestroyShader(VkDevice_T * device, GpuShader & gpu_shader);
+friend bool DestroyShader(VkDevice_T * device, GpuShader & gpuShader);
 public:
     [[nodiscard]]
-    CpuShader * cpuShader() {return &m_cpu_shader;}
+    CpuShader * cpuShader() {return &mCpuShader;}
     [[nodiscard]]
-    CpuShader const * cpuShader() const {return &m_cpu_shader;}
+    CpuShader const * cpuShader() const {return &mCpuShader;}
     [[nodiscard]]
-    bool valid () const {return MFA_PTR_VALID(m_shader_module);}
+    bool valid () const {return mShaderModule != nullptr;}
     [[nodiscard]]
-    VkShaderModule_T * shaderModule() const {return m_shader_module;}
+    VkShaderModule_T * shaderModule() const {return mShaderModule;}
 private:
-    VkShaderModule_T * m_shader_module = nullptr;
-    CpuShader m_cpu_shader {};
+    VkShaderModule_T * mShaderModule = nullptr;
+    CpuShader mCpuShader {};
 };
 
 struct GraphicPipelineGroup {

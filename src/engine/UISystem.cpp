@@ -401,29 +401,29 @@ void OnNewFrame(
                     index_ptr += cmd_list->IdxBuffer.Size;
                 }
             }
-            if(state.mesh_buffers_validation_status[draw_pass.image_index]) {
-                RF::DestroyMeshBuffers(state.mesh_buffers[draw_pass.image_index]);
-                state.mesh_buffers_validation_status[draw_pass.image_index] = false;
+            if(state.mesh_buffers_validation_status[draw_pass.imageIndex]) {
+                RF::DestroyMeshBuffers(state.mesh_buffers[draw_pass.imageIndex]);
+                state.mesh_buffers_validation_status[draw_pass.imageIndex] = false;
             }
-            state.mesh_buffers[draw_pass.image_index].verticesBuffer = RF::CreateVertexBuffer(CBlob {vertex_data.ptr, vertex_data.len});
-            state.mesh_buffers[draw_pass.image_index].indicesBuffer = RF::CreateIndexBuffer(CBlob {index_data.ptr, index_data.len});
-            state.mesh_buffers_validation_status[draw_pass.image_index] = true;
+            state.mesh_buffers[draw_pass.imageIndex].verticesBuffer = RF::CreateVertexBuffer(CBlob {vertex_data.ptr, vertex_data.len});
+            state.mesh_buffers[draw_pass.imageIndex].indicesBuffer = RF::CreateIndexBuffer(CBlob {index_data.ptr, index_data.len});
+            state.mesh_buffers_validation_status[draw_pass.imageIndex] = true;
             // Setup desired Vulkan state
             // Bind pipeline and descriptor sets:
             {
                 RF::BindDrawPipeline(draw_pass, state.draw_pipeline);
-                RF::BindDescriptorSet(draw_pass, state.descriptor_sets[draw_pass.image_index]);
+                RF::BindDescriptorSet(draw_pass, state.descriptor_sets[draw_pass.imageIndex]);
             }
 
             RF::BindIndexBuffer(
                 draw_pass,
-                state.mesh_buffers[draw_pass.image_index].indicesBuffer,
+                state.mesh_buffers[draw_pass.imageIndex].indicesBuffer,
                 0,
                 sizeof(ImDrawIdx) == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32
             );
             RF::BindVertexBuffer(
                 draw_pass,
-                state.mesh_buffers[draw_pass.image_index].verticesBuffer
+                state.mesh_buffers[draw_pass.imageIndex].verticesBuffer
             );
 
             // Update the Descriptor Set:
