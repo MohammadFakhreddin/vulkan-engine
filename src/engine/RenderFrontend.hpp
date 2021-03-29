@@ -125,7 +125,7 @@ struct DrawPass {
 
 struct UniformBufferGroup {
     std::vector<RB::BufferGroup> buffers;
-    size_t buffer_size;
+    size_t bufferSize;
 };
 UniformBufferGroup CreateUniformBuffer(size_t bufferSize, U32 count);
 

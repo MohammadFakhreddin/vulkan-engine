@@ -169,7 +169,7 @@ void TexturedSphereScene::createDrawableObject(){
         VkDescriptorBufferInfo transformBufferInfo {
             .buffer = transformBuffer->buffers[0].buffer,
             .offset = 0,
-            .range = transformBuffer->buffer_size
+            .range = transformBuffer->bufferSize
         };
         writeInfo.emplace_back(VkWriteDescriptorSet {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -249,7 +249,7 @@ void TexturedSphereScene::createDrawableObject(){
         VkDescriptorBufferInfo light_view_buffer_info {
             .buffer = mLVBuffer.buffers[0].buffer,
             .offset = 0,
-            .range = mLVBuffer.buffer_size
+            .range = mLVBuffer.bufferSize
         };
         writeInfo.emplace_back(VkWriteDescriptorSet {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,

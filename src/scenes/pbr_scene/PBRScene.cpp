@@ -350,7 +350,7 @@ void PBRScene::updateDescriptorSet(MFA::U8 const index) {
     VkDescriptorBufferInfo transform_buffer_info {
         .buffer = m_transformation_buffer_group.buffers[index].buffer,
         .offset = 0,
-        .range = m_transformation_buffer_group.buffer_size
+        .range = m_transformation_buffer_group.bufferSize
     };
     
     write_info.emplace_back(VkWriteDescriptorSet {
@@ -366,7 +366,7 @@ void PBRScene::updateDescriptorSet(MFA::U8 const index) {
     VkDescriptorBufferInfo material_buffer_info {
         .buffer = m_material_buffer_group.buffers[index].buffer,
         .offset = 0,
-        .range = m_material_buffer_group.buffer_size
+        .range = m_material_buffer_group.bufferSize
     };
     
     write_info.emplace_back(VkWriteDescriptorSet {
@@ -382,7 +382,7 @@ void PBRScene::updateDescriptorSet(MFA::U8 const index) {
     VkDescriptorBufferInfo light_view_buffer_info {
         .buffer = m_light_view_buffer_group.buffers[index].buffer,
         .offset = 0,
-        .range = m_light_view_buffer_group.buffer_size
+        .range = m_light_view_buffer_group.bufferSize
     };
     
     write_info.emplace_back(VkWriteDescriptorSet {

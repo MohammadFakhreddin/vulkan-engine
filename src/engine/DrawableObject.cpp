@@ -9,21 +9,25 @@ DrawableObject::DrawableObject(
 )
     : mGpuModel(&model_)
 {
+    // DescriptorSetCount
     U32 descriptorSetCount = 0;
-    for (U32 i = 0; i < mGpuModel->model.mesh.getNodesCount(); ++i) {
-        auto const & node = mGpuModel->model.mesh.getNodeByIndex(i);
-        auto const & subMesh = mGpuModel->model.mesh.getSubMeshByIndex(node.subMeshIndex);
+    for (U32 i = 0; i < mGpuModel->model.mesh.getSubMeshCount(); ++i) {
+        auto const & subMesh = mGpuModel->model.mesh.getSubMeshByIndex(i);
         descriptorSetCount += static_cast<U32>(subMesh.primitives.size());
     }
-    mNodeTransformBuffers = RF::CreateUniformBuffer(
-        sizeof(NodeTransformBuffer), 
-        descriptorSetCount
-    );
     mDescriptorSets = RF::CreateDescriptorSets(
         descriptorSetCount, 
         descriptorSetLayout
     );
 
+    // NodeTransformBuffer
+    mNodeTransformBuffers = RF::CreateUniformBuffer(
+        sizeof(NodeTransformBuffer), 
+        mGpuModel->model.mesh.getNodesCount()
+    );
+
+    MFA_ASSERT(mGpuModel->model.mesh.getNodesCount() == mGpuModel->model.mesh.getSubMeshCount());
+    
     MFA_ASSERT(mGpuModel->valid);
     MFA_ASSERT(mGpuModel->model.mesh.isValid());
 }
@@ -149,18 +153,6 @@ void DrawableObject::drawSubMesh(RF::DrawPass & drawPass, AssetSystem::Mesh::Sub
             );
         }
     }
-    //for (U32 i = 0; i < subMeshBuffers.primitives.size(); ++i) {
-    //    auto * currentDescriptorSet = mDescriptorSets[i];
-    //    RF::BindDescriptorSet(drawPass, currentDescriptorSet);
-    //    auto const & currentSubMesh = header_object->sub_meshes[i];
-    //    auto const & subMeshBuffers = mGpuModel->meshBuffers.subMeshBuffers[i];
-    //    DrawIndexed(
-    //        drawPass,
-    //        subMeshBuffers.index_count,
-    //        1,
-    //        currentSubMesh.indices_starting_index
-    //    );
-    //}
 }
 
 };

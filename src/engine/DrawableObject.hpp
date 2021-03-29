@@ -42,6 +42,7 @@ public:
     [[nodiscard]]
     RF::GpuModel * getModel() const;
 
+    // Value equals to primitiveCount
     [[nodiscard]]
     U32 getDescriptorSetCount() const;
 

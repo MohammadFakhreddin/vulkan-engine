@@ -94,7 +94,7 @@ void Texture::addMipmap(
         .size = static_cast<U32>(data.len),
         .dimension = dimension,
     });
-    U32 nextOffset = mCurrentOffset + data.len;
+    U32 nextOffset = mCurrentOffset + static_cast<U32>(data.len);
     MFA_ASSERT(mBuffer.ptr != nullptr);
     MFA_ASSERT(nextOffset < mBuffer.len);
     ::memcpy(mBuffer.ptr + mCurrentOffset, data.ptr, data.len);

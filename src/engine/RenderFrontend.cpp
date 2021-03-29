@@ -409,7 +409,7 @@ UniformBufferGroup CreateUniformBuffer(size_t const bufferSize, U32 const count)
     );
     return {
         .buffers = buffers,
-        .buffer_size = bufferSize
+        .bufferSize = bufferSize
     };
 }
 
@@ -662,7 +662,7 @@ void UpdateDescriptorSetBasic(
     VkDescriptorBufferInfo bufferInfo {};
     bufferInfo.buffer = uniformBuffer.buffers[drawPass.imageIndex].buffer;
     bufferInfo.offset = 0;
-    bufferInfo.range = uniformBuffer.buffer_size;
+    bufferInfo.range = uniformBuffer.bufferSize;
 
     RB::UpdateDescriptorSetsBasic(
         state.logicalDevice.device,

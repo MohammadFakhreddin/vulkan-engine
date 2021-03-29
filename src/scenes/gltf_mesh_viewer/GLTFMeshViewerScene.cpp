@@ -242,20 +242,22 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
 
     auto & drawableObject = renderRequiredData.drawableObject;
 
-    const auto * subMeshInfoBuffer = drawableObject.createMultipleUniformBuffer(
+    const auto * primitiveInfoBuffer = drawableObject.createMultipleUniformBuffer(
         "primitiveInfo", 
         sizeof(PrimitiveInfo), 
         drawableObject.getDescriptorSetCount()
     );
-    MFA_ASSERT(subMeshInfoBuffer != nullptr);
+    MFA_ASSERT(primitiveInfoBuffer != nullptr);
 
-    const auto * transform_buffer = drawableObject.createUniformBuffer("transform", sizeof(ModelTransformBuffer));
-    MFA_ASSERT(transform_buffer != nullptr);
+    const auto * modelTransformBuffer = drawableObject.createUniformBuffer("transform", sizeof(ModelTransformBuffer));
+    MFA_ASSERT(modelTransformBuffer != nullptr);
+
+    const auto & nodeTransformBuffer = drawableObject.getNodeTransformBuffer();
 
     auto const & textures = drawableObject.getModel()->textures;
 
-    for (MFA::U32 i = 0; i < cpuModel.mesh.getNodesCount(); ++i) {// Updating descriptor sets
-        auto const & node = cpuModel.mesh.getNodeByIndex(i);
+    for (MFA::U32 nodeIndex = 0; nodeIndex < cpuModel.mesh.getNodesCount(); ++nodeIndex) {// Updating descriptor sets
+        auto const & node = cpuModel.mesh.getNodeByIndex(nodeIndex);
         auto const & subMesh = cpuModel.mesh.getSubMeshByIndex(node.subMeshIndex);
         if (subMesh.primitives.empty() == false) {
             for (auto const & primitive : subMesh.primitives) {
@@ -265,11 +267,11 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
 
                 std::vector<VkWriteDescriptorSet> writeInfo {};
 
-                // Transform
-                VkDescriptorBufferInfo transformBufferInfo {
-                    .buffer = transform_buffer->buffers[0].buffer,
+                // ModelTransform
+                VkDescriptorBufferInfo modelTransformBufferInfo {
+                    .buffer = modelTransformBuffer->buffers[0].buffer,
                     .offset = 0,
-                    .range = transform_buffer->buffer_size
+                    .range = modelTransformBuffer->bufferSize
                 };
                 writeInfo.emplace_back(VkWriteDescriptorSet {
                     .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -278,14 +280,30 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
                     .dstArrayElement = 0,
                     .descriptorCount = 1,
                     .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                    .pBufferInfo = &transformBufferInfo,
+                    .pBufferInfo = &modelTransformBufferInfo,
+                });
+
+                //NodeTransform
+                VkDescriptorBufferInfo nodeTransformBufferInfo {
+                    .buffer = nodeTransformBuffer.buffers[nodeIndex].buffer,
+                    .offset = 0,
+                    .range = nodeTransformBuffer.bufferSize
+                };
+                writeInfo.emplace_back(VkWriteDescriptorSet {
+                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    .dstSet = descriptorSet,
+                    .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+                    .dstArrayElement = 0,
+                    .descriptorCount = 1,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                    .pBufferInfo = &nodeTransformBufferInfo,
                 });
 
                 // SubMeshInfo
-                VkDescriptorBufferInfo subMeshBufferInfo {
-                    .buffer = subMeshInfoBuffer->buffers[i].buffer,
+                VkDescriptorBufferInfo primitiveBufferInfo {
+                    .buffer = primitiveInfoBuffer->buffers[primitive.uniqueId].buffer,
                     .offset = 0,
-                    .range = subMeshInfoBuffer->buffer_size
+                    .range = primitiveInfoBuffer->bufferSize
                 };
                 writeInfo.emplace_back(VkWriteDescriptorSet {
                     .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -294,8 +312,9 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
                     .dstArrayElement = 0,
                     .descriptorCount = 1,
                     .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                    .pBufferInfo = &subMeshBufferInfo,
+                    .pBufferInfo = &primitiveBufferInfo,
                 });
+                // Update primitive buffer information
                 PrimitiveInfo info {
                     .baseColorFactor {},
                     .emissiveFactor {},
@@ -311,9 +330,8 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
                 static_assert(sizeof(info.baseColorFactor) == sizeof(primitive.baseColorFactor));
                 ::memcpy(info.emissiveFactor, primitive.emissiveFactor, sizeof(info.emissiveFactor));
                 static_assert(sizeof(info.emissiveFactor) == sizeof(primitive.emissiveFactor));
-
                 RF::UpdateUniformBuffer(
-                    subMeshInfoBuffer->buffers[i], 
+                    primitiveInfoBuffer->buffers[nodeIndex], 
                     MFA::CBlobAliasOf(info)
                 );
 
@@ -393,7 +411,7 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
                 VkDescriptorBufferInfo light_view_buffer_info {
                     .buffer = m_lv_buffer.buffers[0].buffer,
                     .offset = 0,
-                    .range = m_lv_buffer.buffer_size
+                    .range = m_lv_buffer.bufferSize
                 };
                 writeInfo.emplace_back(VkWriteDescriptorSet {
                     .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -500,7 +518,15 @@ void GLTFMeshViewerScene::createDrawPipeline(MFA::U8 const gpu_shader_count, MFA
 
 void GLTFMeshViewerScene::createDescriptorSetLayout() {
     std::vector<VkDescriptorSetLayoutBinding> bindings {};
-    // Transformation 
+    // ModelTransformation 
+    bindings.emplace_back(VkDescriptorSetLayoutBinding {
+        .binding = static_cast<MFA::U32>(bindings.size()),
+        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .descriptorCount = 1,
+        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        .pImmutableSamplers = nullptr, // Optional
+    });
+    // NodeTransformation
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
         .binding = static_cast<MFA::U32>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,

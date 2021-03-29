@@ -33,19 +33,19 @@ struct SubMeshInfo {
     int hasEmissiveTexture;
 };
 
-ConstantBuffer <SubMeshInfo> smBuff : register (b1, space0);
+ConstantBuffer <SubMeshInfo> smBuff : register (b2, space0);
 
-sampler baseColorSampler : register(s2, space0);
-Texture2D baseColorTexture : register(t2, space0);
+sampler baseColorSampler : register(s3, space0);
+Texture2D baseColorTexture : register(t3, space0);
 
-sampler metallicRoughnessSampler : register(s3, space0);
-Texture2D metallicRoughnessTexture : register(t3, space0);
+sampler metallicRoughnessSampler : register(s4, space0);
+Texture2D metallicRoughnessTexture : register(t4, space0);
 
-sampler normalSampler : register(s4, space0);
-Texture2D normalTexture : register(t4, space0);
+sampler normalSampler : register(s5, space0);
+Texture2D normalTexture : register(t5, space0);
 
-sampler emissiveSampler : register(s5, space0);
-Texture2D emissiveTexture : register(s5, space0);
+sampler emissiveSampler : register(s6, space0);
+Texture2D emissiveTexture : register(s6, space0);
 
 struct LightViewBuffer {
     float3 lightPosition;
@@ -119,7 +119,7 @@ float3 BRDF(
 
     float3 color = float3(0, 0, 0);
 
-    float distance    = length(lvBuff.lightPosition - worldPos);
+    float distance = length(lvBuff.lightPosition - worldPos);
     // TODO Consider using more advanced attenuation https://github.com/lettier/3d-game-shaders-for-beginners/blob/master/sections/lighting.md
     // float attenuation =
     //     1
