@@ -471,6 +471,8 @@ void MapDataToBuffer(
     VkDeviceMemory_T * bufferMemory,
     CBlob const dataBlob
 ) {
+    MFA_ASSERT(dataBlob.ptr != nullptr);
+    MFA_ASSERT(dataBlob.len > 0);
     void * tempBufferData = nullptr;
     vkMapMemory(device, bufferMemory, 0, dataBlob.len, 0, &tempBufferData);
     MFA_ASSERT(tempBufferData != nullptr);
@@ -588,20 +590,20 @@ GpuTexture CreateTexture(
         auto const format = cpuTexture.GetFormat();
         auto const mipCount = cpuTexture.GetMipCount();
         auto const sliceCount = cpuTexture.GetSlices();
-        auto const largestMipmapInfo = cpuTexture.GetMipmap(mipCount - 1);
+        auto const & largestMipmapInfo = cpuTexture.GetMipmap(mipCount - 1);
         auto const buffer = cpuTexture.GetBuffer();
         MFA_ASSERT(buffer.ptr != nullptr && buffer.len > 0);
         // Create upload buffer
-        auto upload_buffer_group = CreateBuffer(
+        auto uploadBufferGroup = CreateBuffer(
             device,
             physicalDevice,
             buffer.len,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
-        MFA_DEFER {DestroyBuffer(device, upload_buffer_group);};
+        MFA_DEFER {DestroyBuffer(device, uploadBufferGroup);};
         // Map texture data to buffer
-        MapDataToBuffer(device, upload_buffer_group.memory, buffer);
+        MapDataToBuffer(device, uploadBufferGroup.memory, buffer);
 
         auto const vulkan_format = ConvertCpuTextureFormatToGpu(format);
 
@@ -631,7 +633,7 @@ GpuTexture CreateTexture(
         CopyBufferToImage(
             device,
             commandPool,
-            upload_buffer_group.buffer,
+            uploadBufferGroup.buffer,
             imageGroup.image,
             graphicQueue,
             cpuTexture

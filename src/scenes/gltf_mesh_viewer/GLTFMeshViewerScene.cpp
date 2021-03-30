@@ -123,7 +123,7 @@ void GLTFMeshViewerScene::OnDraw(MFA::U32 const delta_time, RF::DrawPass & draw_
         // Rotation
         // TODO Try sending Matrices directly
         MFA::Matrix4X4Float rotationMat {};
-        MFA::Matrix4X4Float::assignRotationXYZ(
+        MFA::Matrix4X4Float::AssignRotationXYZ(
             rotationMat,
             MFA::Math::Deg2Rad(m_model_rotation[0]),
             MFA::Math::Deg2Rad(m_model_rotation[1]),
@@ -133,7 +133,7 @@ void GLTFMeshViewerScene::OnDraw(MFA::U32 const delta_time, RF::DrawPass & draw_
         ::memcpy(m_translate_data.rotation, rotationMat.cells, sizeof(rotationMat.cells));
         // Position
         MFA::Matrix4X4Float transformationMat {};
-        MFA::Matrix4X4Float::assignTransformation(
+        MFA::Matrix4X4Float::AssignTranslation(
             transformationMat,
             m_model_position[0],
             m_model_position[1],
@@ -258,177 +258,179 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
 
     for (MFA::U32 nodeIndex = 0; nodeIndex < cpuModel.mesh.getNodesCount(); ++nodeIndex) {// Updating descriptor sets
         auto const & node = cpuModel.mesh.getNodeByIndex(nodeIndex);
-        auto const & subMesh = cpuModel.mesh.getSubMeshByIndex(node.subMeshIndex);
-        if (subMesh.primitives.empty() == false) {
-            for (auto const & primitive : subMesh.primitives) {
-                MFA_ASSERT(primitive.uniqueId >= 0);
-                auto * descriptorSet = drawableObject.getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
-                MFA_ASSERT(descriptorSet != nullptr);
+        if (node.hasSubMesh()) {
+            auto const & subMesh = cpuModel.mesh.getSubMeshByIndex(node.subMeshIndex);
+            if (subMesh.primitives.empty() == false) {
+                for (auto const & primitive : subMesh.primitives) {
+                    MFA_ASSERT(primitive.uniqueId >= 0);
+                    auto * descriptorSet = drawableObject.getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
+                    MFA_ASSERT(descriptorSet != nullptr);
 
-                std::vector<VkWriteDescriptorSet> writeInfo {};
+                    std::vector<VkWriteDescriptorSet> writeInfo {};
 
-                // ModelTransform
-                VkDescriptorBufferInfo modelTransformBufferInfo {
-                    .buffer = modelTransformBuffer->buffers[0].buffer,
-                    .offset = 0,
-                    .range = modelTransformBuffer->bufferSize
-                };
-                writeInfo.emplace_back(VkWriteDescriptorSet {
-                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                    .dstSet = descriptorSet,
-                    .dstBinding = static_cast<uint32_t>(writeInfo.size()),
-                    .dstArrayElement = 0,
-                    .descriptorCount = 1,
-                    .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                    .pBufferInfo = &modelTransformBufferInfo,
-                });
+                    // ModelTransform
+                    VkDescriptorBufferInfo modelTransformBufferInfo {
+                        .buffer = modelTransformBuffer->buffers[0].buffer,
+                        .offset = 0,
+                        .range = modelTransformBuffer->bufferSize
+                    };
+                    writeInfo.emplace_back(VkWriteDescriptorSet {
+                        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                        .dstSet = descriptorSet,
+                        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+                        .dstArrayElement = 0,
+                        .descriptorCount = 1,
+                        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                        .pBufferInfo = &modelTransformBufferInfo,
+                    });
 
-                //NodeTransform
-                VkDescriptorBufferInfo nodeTransformBufferInfo {
-                    .buffer = nodeTransformBuffer.buffers[nodeIndex].buffer,
-                    .offset = 0,
-                    .range = nodeTransformBuffer.bufferSize
-                };
-                writeInfo.emplace_back(VkWriteDescriptorSet {
-                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                    .dstSet = descriptorSet,
-                    .dstBinding = static_cast<uint32_t>(writeInfo.size()),
-                    .dstArrayElement = 0,
-                    .descriptorCount = 1,
-                    .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                    .pBufferInfo = &nodeTransformBufferInfo,
-                });
+                    //NodeTransform
+                    VkDescriptorBufferInfo nodeTransformBufferInfo {
+                        .buffer = nodeTransformBuffer.buffers[node.subMeshIndex].buffer,
+                        .offset = 0,
+                        .range = nodeTransformBuffer.bufferSize
+                    };
+                    writeInfo.emplace_back(VkWriteDescriptorSet {
+                        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                        .dstSet = descriptorSet,
+                        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+                        .dstArrayElement = 0,
+                        .descriptorCount = 1,
+                        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                        .pBufferInfo = &nodeTransformBufferInfo,
+                    });
 
-                // SubMeshInfo
-                VkDescriptorBufferInfo primitiveBufferInfo {
-                    .buffer = primitiveInfoBuffer->buffers[primitive.uniqueId].buffer,
-                    .offset = 0,
-                    .range = primitiveInfoBuffer->bufferSize
-                };
-                writeInfo.emplace_back(VkWriteDescriptorSet {
-                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                    .dstSet = descriptorSet,
-                    .dstBinding = static_cast<uint32_t>(writeInfo.size()),
-                    .dstArrayElement = 0,
-                    .descriptorCount = 1,
-                    .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                    .pBufferInfo = &primitiveBufferInfo,
-                });
-                // Update primitive buffer information
-                PrimitiveInfo info {
-                    .baseColorFactor {},
-                    .emissiveFactor {},
-                    .placeholder0 {},
-                    .hasBaseColorTexture = primitive.hasBaseColorTexture ? 1 : 0,
-                    .metallicFactor = primitive.metallicFactor,
-                    .roughnessFactor = primitive.roughnessFactor,
-                    .hasMixedMetallicRoughnessOcclusionTexture = primitive.hasMixedMetallicRoughnessOcclusionTexture ? 1 : 0,
-                    .hasNormalTexture = primitive.hasNormalTexture ? 1 : 0,
-                    .hasEmissiveTexture = primitive.hasEmissiveTexture ? 1 : 0,
-                };
-                ::memcpy(info.baseColorFactor, primitive.baseColorFactor, sizeof(info.baseColorFactor));
-                static_assert(sizeof(info.baseColorFactor) == sizeof(primitive.baseColorFactor));
-                ::memcpy(info.emissiveFactor, primitive.emissiveFactor, sizeof(info.emissiveFactor));
-                static_assert(sizeof(info.emissiveFactor) == sizeof(primitive.emissiveFactor));
-                RF::UpdateUniformBuffer(
-                    primitiveInfoBuffer->buffers[nodeIndex], 
-                    MFA::CBlobAliasOf(info)
-                );
+                    // SubMeshInfo
+                    VkDescriptorBufferInfo primitiveBufferInfo {
+                        .buffer = primitiveInfoBuffer->buffers[primitive.uniqueId].buffer,
+                        .offset = 0,
+                        .range = primitiveInfoBuffer->bufferSize
+                    };
+                    writeInfo.emplace_back(VkWriteDescriptorSet {
+                        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                        .dstSet = descriptorSet,
+                        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+                        .dstArrayElement = 0,
+                        .descriptorCount = 1,
+                        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                        .pBufferInfo = &primitiveBufferInfo,
+                    });
+                    // Update primitive buffer information
+                    PrimitiveInfo info {
+                        .baseColorFactor {},
+                        .emissiveFactor {},
+                        .placeholder0 {},
+                        .hasBaseColorTexture = primitive.hasBaseColorTexture ? 1 : 0,
+                        .metallicFactor = primitive.metallicFactor,
+                        .roughnessFactor = primitive.roughnessFactor,
+                        .hasMixedMetallicRoughnessOcclusionTexture = primitive.hasMixedMetallicRoughnessOcclusionTexture ? 1 : 0,
+                        .hasNormalTexture = primitive.hasNormalTexture ? 1 : 0,
+                        .hasEmissiveTexture = primitive.hasEmissiveTexture ? 1 : 0,
+                    };
+                    ::memcpy(info.baseColorFactor, primitive.baseColorFactor, sizeof(info.baseColorFactor));
+                    static_assert(sizeof(info.baseColorFactor) == sizeof(primitive.baseColorFactor));
+                    ::memcpy(info.emissiveFactor, primitive.emissiveFactor, sizeof(info.emissiveFactor));
+                    static_assert(sizeof(info.emissiveFactor) == sizeof(primitive.emissiveFactor));
+                    RF::UpdateUniformBuffer(
+                        primitiveInfoBuffer->buffers[primitive.uniqueId], 
+                        MFA::CBlobAliasOf(info)
+                    );
 
-                // BaseColorTexture
-                VkDescriptorImageInfo baseColorImageInfo {
-                    .sampler = m_sampler_group.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
-                    .imageView = primitive.hasBaseColorTexture
-                        ? textures[primitive.baseColorTextureIndex].image_view()
-                        : m_error_texture.image_view(),
-                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                };
-                writeInfo.emplace_back(VkWriteDescriptorSet {
-                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                    .dstSet = descriptorSet,
-                    .dstBinding = static_cast<uint32_t>(writeInfo.size()),
-                    .dstArrayElement = 0,
-                    .descriptorCount = 1,
-                    .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    .pImageInfo = &baseColorImageInfo,
-                });
+                    // BaseColorTexture
+                    VkDescriptorImageInfo baseColorImageInfo {
+                        .sampler = m_sampler_group.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
+                        .imageView = primitive.hasBaseColorTexture
+                            ? textures[primitive.baseColorTextureIndex].image_view()
+                            : m_error_texture.image_view(),
+                        .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                    };
+                    writeInfo.emplace_back(VkWriteDescriptorSet {
+                        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                        .dstSet = descriptorSet,
+                        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+                        .dstArrayElement = 0,
+                        .descriptorCount = 1,
+                        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                        .pImageInfo = &baseColorImageInfo,
+                    });
 
-                // Metallic/RoughnessTexture
-                VkDescriptorImageInfo metallicImageInfo {
-                    .sampler = m_sampler_group.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
-                    .imageView = primitive.hasMixedMetallicRoughnessOcclusionTexture
-                        ? textures[primitive.mixedMetallicRoughnessOcclusionTextureIndex].image_view()
-                        : m_error_texture.image_view(),
-                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                };
-                writeInfo.emplace_back(VkWriteDescriptorSet {
-                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                    .dstSet = descriptorSet,
-                    .dstBinding = static_cast<uint32_t>(writeInfo.size()),
-                    .dstArrayElement = 0,
-                    .descriptorCount = 1,
-                    .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    .pImageInfo = &metallicImageInfo,
-                });
+                    // Metallic/RoughnessTexture
+                    VkDescriptorImageInfo metallicImageInfo {
+                        .sampler = m_sampler_group.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
+                        .imageView = primitive.hasMixedMetallicRoughnessOcclusionTexture
+                            ? textures[primitive.mixedMetallicRoughnessOcclusionTextureIndex].image_view()
+                            : m_error_texture.image_view(),
+                        .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                    };
+                    writeInfo.emplace_back(VkWriteDescriptorSet {
+                        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                        .dstSet = descriptorSet,
+                        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+                        .dstArrayElement = 0,
+                        .descriptorCount = 1,
+                        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                        .pImageInfo = &metallicImageInfo,
+                    });
 
-                // NormalTexture  
-                VkDescriptorImageInfo normalImageInfo {
-                    .sampler = m_sampler_group.sampler,
-                    .imageView = primitive.hasNormalTexture
-                        ? textures[primitive.normalTextureIndex].image_view()
-                        : m_error_texture.image_view(),
-                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                };
-                writeInfo.emplace_back(VkWriteDescriptorSet {
-                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                    .dstSet = descriptorSet,
-                    .dstBinding = static_cast<uint32_t>(writeInfo.size()),
-                    .dstArrayElement = 0,
-                    .descriptorCount = 1,
-                    .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    .pImageInfo = &normalImageInfo,
-                });
+                    // NormalTexture  
+                    VkDescriptorImageInfo normalImageInfo {
+                        .sampler = m_sampler_group.sampler,
+                        .imageView = primitive.hasNormalTexture
+                            ? textures[primitive.normalTextureIndex].image_view()
+                            : m_error_texture.image_view(),
+                        .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                    };
+                    writeInfo.emplace_back(VkWriteDescriptorSet {
+                        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                        .dstSet = descriptorSet,
+                        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+                        .dstArrayElement = 0,
+                        .descriptorCount = 1,
+                        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                        .pImageInfo = &normalImageInfo,
+                    });
 
-                // EmissiveTexture
-                VkDescriptorImageInfo emissiveImageInfo {
-                    .sampler = m_sampler_group.sampler,
-                    .imageView = primitive.hasEmissiveTexture
-                        ? textures[primitive.emissiveTextureIndex].image_view()
-                        : m_error_texture.image_view(),
-                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                };
-                writeInfo.emplace_back(VkWriteDescriptorSet {
-                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                    .dstSet = descriptorSet,
-                    .dstBinding = static_cast<uint32_t>(writeInfo.size()),
-                    .dstArrayElement = 0,
-                    .descriptorCount = 1,
-                    .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    .pImageInfo = &emissiveImageInfo,
-                });
+                    // EmissiveTexture
+                    VkDescriptorImageInfo emissiveImageInfo {
+                        .sampler = m_sampler_group.sampler,
+                        .imageView = primitive.hasEmissiveTexture
+                            ? textures[primitive.emissiveTextureIndex].image_view()
+                            : m_error_texture.image_view(),
+                        .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                    };
+                    writeInfo.emplace_back(VkWriteDescriptorSet {
+                        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                        .dstSet = descriptorSet,
+                        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+                        .dstArrayElement = 0,
+                        .descriptorCount = 1,
+                        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                        .pImageInfo = &emissiveImageInfo,
+                    });
 
-                // LightViewBuffer
-                VkDescriptorBufferInfo light_view_buffer_info {
-                    .buffer = m_lv_buffer.buffers[0].buffer,
-                    .offset = 0,
-                    .range = m_lv_buffer.bufferSize
-                };
-                writeInfo.emplace_back(VkWriteDescriptorSet {
-                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                    .dstSet = descriptorSet,
-                    .dstBinding = static_cast<uint32_t>(writeInfo.size()),
-                    .dstArrayElement = 0,
-                    .descriptorCount = 1,
-                    .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                    .pBufferInfo = &light_view_buffer_info,
-                });
+                    // LightViewBuffer
+                    VkDescriptorBufferInfo light_view_buffer_info {
+                        .buffer = m_lv_buffer.buffers[0].buffer,
+                        .offset = 0,
+                        .range = m_lv_buffer.bufferSize
+                    };
+                    writeInfo.emplace_back(VkWriteDescriptorSet {
+                        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                        .dstSet = descriptorSet,
+                        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+                        .dstArrayElement = 0,
+                        .descriptorCount = 1,
+                        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                        .pBufferInfo = &light_view_buffer_info,
+                    });
 
-                // TODO Important: Don't forget to bind nodeTransform buffer
+                    // TODO Important: Don't forget to bind nodeTransform buffer
 
-                RF::UpdateDescriptorSets(
-                    static_cast<MFA::U8>(writeInfo.size()),
-                    writeInfo.data()
-                );
+                    RF::UpdateDescriptorSets(
+                        static_cast<MFA::U8>(writeInfo.size()),
+                        writeInfo.data()
+                    );
+                }
             }
         }
     }

@@ -56,7 +56,7 @@ void TexturedSphereScene::OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawP
         // Rotation
         // TODO Try sending Matrices directly
         MFA::Matrix4X4Float rotationMat {};
-        MFA::Matrix4X4Float::assignRotationXYZ(
+        MFA::Matrix4X4Float::AssignRotationXYZ(
             rotationMat,
             MFA::Math::Deg2Rad(mModelRotation[0]),
             MFA::Math::Deg2Rad(mModelRotation[1]),
@@ -66,7 +66,7 @@ void TexturedSphereScene::OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawP
         ::memcpy(m_translate_data.rotation, rotationMat.cells, sizeof(rotationMat.cells));
         // Position
         MFA::Matrix4X4Float transformationMat {};
-        MFA::Matrix4X4Float::assignTransformation(
+        MFA::Matrix4X4Float::AssignTranslation(
             transformationMat,
             mModelPosition[0],
             mModelPosition[1],
@@ -149,6 +149,9 @@ void TexturedSphereScene::Shutdown() {
 }
 
 void TexturedSphereScene::createDrawableObject(){
+
+    auto const & mesh = mGpuModel.model.mesh;
+
      mDrawableObject = MFA::DrawableObject(
         mGpuModel,
         mDescriptorSetLayout
@@ -159,112 +162,119 @@ void TexturedSphereScene::createDrawableObject(){
     
     auto const & textures = mDrawableObject.getModel()->textures;
 
-    for(MFA::U8 i = 0; i < mDrawableObject.getDescriptorSetCount(); ++i) {// Updating descriptor sets
-        auto * descriptor_set = mDrawableObject.getDescriptorSetByPrimitiveUniqueId(i);
-        auto const & sub_mesh = model_header->sub_meshes[i];
+    for (MFA::U32 nodeIndex = 0; nodeIndex < mesh.getNodesCount(); ++nodeIndex) {// Updating descriptor sets
+        auto const & node = mesh.getNodeByIndex(nodeIndex);
+        auto const & subMesh = mesh.getSubMeshByIndex(node.subMeshIndex);
+        if (subMesh.primitives.empty() == false) {
+            for (auto const & primitive : subMesh.primitives) {
+                MFA_ASSERT(primitive.uniqueId >= 0);
+                auto * descriptorSet = mDrawableObject.getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
+                MFA_ASSERT(descriptorSet != nullptr);
 
-        std::vector<VkWriteDescriptorSet> writeInfo {};
+                std::vector<VkWriteDescriptorSet> writeInfo {};
 
-        // Transform
-        VkDescriptorBufferInfo transformBufferInfo {
-            .buffer = transformBuffer->buffers[0].buffer,
-            .offset = 0,
-            .range = transformBuffer->bufferSize
-        };
-        writeInfo.emplace_back(VkWriteDescriptorSet {
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = descriptor_set,
-            .dstBinding = 0,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .pBufferInfo = &transformBufferInfo,
-        });
+                // Transform
+                VkDescriptorBufferInfo transformBufferInfo {
+                    .buffer = transformBuffer->buffers[0].buffer,
+                    .offset = 0,
+                    .range = transformBuffer->bufferSize
+                };
+                writeInfo.emplace_back(VkWriteDescriptorSet {
+                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    .dstSet = descriptorSet,
+                    .dstBinding = 0,
+                    .dstArrayElement = 0,
+                    .descriptorCount = 1,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                    .pBufferInfo = &transformBufferInfo,
+                });
+                // Note: We don't need nodes here
+                // BaseColorTexture
+                VkDescriptorImageInfo baseColorImageInfo {
+                    .sampler = mSamplerGroup.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
+                    .imageView = textures[primitive.baseColorTextureIndex].image_view(),
+                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                };
+                writeInfo.emplace_back(VkWriteDescriptorSet {
+                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    .dstSet = descriptorSet,
+                    .dstBinding = 1,
+                    .dstArrayElement = 0,
+                    .descriptorCount = 1,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    .pImageInfo = &baseColorImageInfo,
+                });
 
-        // BaseColorTexture
-        VkDescriptorImageInfo baseColorImageInfo {
-            .sampler = mSamplerGroup.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
-            .imageView = textures[sub_mesh.base_color_texture_index].image_view(),
-            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        };
-        writeInfo.emplace_back(VkWriteDescriptorSet {
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = descriptor_set,
-            .dstBinding = 1,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .pImageInfo = &baseColorImageInfo,
-        });
+                // MetallicTexture
+                VkDescriptorImageInfo metallicImageInfo {
+                    .sampler = mSamplerGroup.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
+                    .imageView = textures[primitive.metallicTextureIndex].image_view(),
+                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                };
+                writeInfo.emplace_back(VkWriteDescriptorSet {
+                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    .dstSet = descriptorSet,
+                    .dstBinding = 2,
+                    .dstArrayElement = 0,
+                    .descriptorCount = 1,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    .pImageInfo = &metallicImageInfo,
+                });
 
-        // MetallicTexture
-        VkDescriptorImageInfo metallicImageInfo {
-            .sampler = mSamplerGroup.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
-            .imageView = textures[sub_mesh.metallic_texture_index].image_view(),
-            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-        };
-        writeInfo.emplace_back(VkWriteDescriptorSet {
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = descriptor_set,
-            .dstBinding = 2,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .pImageInfo = &metallicImageInfo,
-        });
+                // RoughnessTexture
+                VkDescriptorImageInfo roughnessImageInfo {
+                    .sampler = mSamplerGroup.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
+                    .imageView = textures[primitive.roughnessTextureIndex].image_view(),
+                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                };
+                writeInfo.emplace_back(VkWriteDescriptorSet {
+                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    .dstSet = descriptorSet,
+                    .dstBinding = 3,
+                    .dstArrayElement = 0,
+                    .descriptorCount = 1,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    .pImageInfo = &roughnessImageInfo,
+                });
 
-        // RoughnessTexture
-        VkDescriptorImageInfo roughnessImageInfo {
-            .sampler = mSamplerGroup.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
-            .imageView = textures[sub_mesh.roughness_texture_index].image_view(),
-            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-        };
-        writeInfo.emplace_back(VkWriteDescriptorSet {
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = descriptor_set,
-            .dstBinding = 3,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .pImageInfo = &roughnessImageInfo,
-        });
+                // NormalTexture  
+                VkDescriptorImageInfo normalImageInfo {
+                    .sampler = mSamplerGroup.sampler,
+                    .imageView = textures[primitive.normalTextureIndex].image_view(),
+                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                };
+                writeInfo.emplace_back(VkWriteDescriptorSet {
+                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    .dstSet = descriptorSet,
+                    .dstBinding = 4,
+                    .dstArrayElement = 0,
+                    .descriptorCount = 1,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    .pImageInfo = &normalImageInfo,
+                });
 
-        // NormalTexture  
-        VkDescriptorImageInfo normalImageInfo {
-            .sampler = mSamplerGroup.sampler,
-            .imageView = textures[sub_mesh.normal_texture_index].image_view(),
-            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-        };
-        writeInfo.emplace_back(VkWriteDescriptorSet {
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = descriptor_set,
-            .dstBinding = 4,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .pImageInfo = &normalImageInfo,
-        });
+                // LightViewBuffer
+                VkDescriptorBufferInfo light_view_buffer_info {
+                    .buffer = mLVBuffer.buffers[0].buffer,
+                    .offset = 0,
+                    .range = mLVBuffer.bufferSize
+                };
+                writeInfo.emplace_back(VkWriteDescriptorSet {
+                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    .dstSet = descriptorSet,
+                    .dstBinding = 5,
+                    .dstArrayElement = 0,
+                    .descriptorCount = 1,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                    .pBufferInfo = &light_view_buffer_info,
+                });
 
-        // LightViewBuffer
-        VkDescriptorBufferInfo light_view_buffer_info {
-            .buffer = mLVBuffer.buffers[0].buffer,
-            .offset = 0,
-            .range = mLVBuffer.bufferSize
-        };
-        writeInfo.emplace_back(VkWriteDescriptorSet {
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = descriptor_set,
-            .dstBinding = 5,
-            .dstArrayElement = 0,
-            .descriptorCount = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .pBufferInfo = &light_view_buffer_info,
-        });
-
-        RF::UpdateDescriptorSets(
-            static_cast<MFA::U8>(writeInfo.size()),
-            writeInfo.data()
-        );
+                RF::UpdateDescriptorSets(
+                    static_cast<MFA::U8>(writeInfo.size()),
+                    writeInfo.data()
+                );
+            }
+        }
     }
 }
 

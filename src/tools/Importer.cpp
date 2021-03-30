@@ -14,20 +14,23 @@ AS::Texture ImportUncompressedImage(
     ImportTextureOptions const & options
 ) {
     AS::Texture texture {};
-    Utils::UncompressedTexture::Data image_data {};
+    Utils::UncompressedTexture::Data imageData {};
+    MFA_DEFER {
+        Utils::UncompressedTexture::Unload(&imageData);
+    };
     auto const use_srgb = options.prefer_srgb;
     auto const load_image_result = Utils::UncompressedTexture::Load(
-        image_data, 
+        imageData, 
         path, 
         use_srgb
     );
     if(load_image_result == Utils::UncompressedTexture::LoadResult::Success) {
-        MFA_ASSERT(image_data.valid());
-        auto const image_width = image_data.width;
-        auto const image_height = image_data.height;
-        auto const pixels = image_data.pixels;
-        auto const components = image_data.components;
-        auto const format = image_data.format;
+        MFA_ASSERT(imageData.valid());
+        auto const image_width = imageData.width;
+        auto const image_height = imageData.height;
+        auto const pixels = imageData.pixels;
+        auto const components = imageData.components;
+        auto const format = imageData.format;
         auto const depth = 1; // TODO We need to support depth
         auto const slices = 1;
         texture = ImportInMemoryTexture(
@@ -104,11 +107,6 @@ AS::Texture ImportInMemoryTexture(
         options.sampler,
         Memory::Alloc(bufferSize)
     );
-    MFA_DEFER {
-        if(texture.isValid() == false) {// Pointer being valid means that process has failed
-            Memory::Free(texture.revokeBuffer());
-        }
-    };
 
     // Generating mipmaps (TODO : Code needs debugging)
     for (U8 mipLevel = 0; mipLevel < mipCount - 1; mipLevel++) {
@@ -161,6 +159,9 @@ AS::Texture ImportInMemoryTexture(
     
 
     MFA_ASSERT(texture.isValid());
+    if(texture.isValid() == false) {// Pointer being valid means that process has failed
+        Memory::Free(texture.revokeBuffer());
+    }
 
     return texture;
 }
@@ -365,12 +366,15 @@ AS::Mesh ImportObj(char const * path) {
                     indices.data()
                 );
 
-                mesh.insertNode(AS::MeshNode {
+                auto node = AS::MeshNode {
                     .subMeshIndex = 0,
                     .children {},
-                    .transformMatrix = Matrix4X4Float::Identity(),
-                });
-
+                    .transformMatrix {},
+                };
+                auto const identity = Matrix4X4Float::Identity();
+                ::memcpy(node.transformMatrix, identity.cells, sizeof(node.transformMatrix));
+                static_assert(sizeof(node.transformMatrix) == sizeof(identity.cells));
+                mesh.insertNode(node);
                 MFA_ASSERT(mesh.isValid());
 
             } else if (!error.empty() && error.substr(0, 4) != "WARN") {
@@ -486,15 +490,6 @@ AS::Model ImportGLTF(char const * path) {
                     Memory::Alloc(sizeof(AS::MeshVertex) * totalVerticesCount), 
                     Memory::Alloc(sizeof(AS::MeshIndex) * totalIndicesCount)
                 );
-                MFA_DEFER {
-                    if(resultModel.mesh.isValid() == false) {
-                        Blob vertexBuffer {};
-                        Blob indicesBuffer {};
-                        resultModel.mesh.revokeBuffers(vertexBuffer, indicesBuffer);
-                        Memory::Free(vertexBuffer);
-                        Memory::Free(indicesBuffer);
-                    }
-                };
                 // Step2: Fill subMeshes
                 U32 subMeshIndex = 0;
                 std::vector<AS::Mesh::Vertex> subMeshVertices {};
@@ -915,14 +910,60 @@ AS::Model ImportGLTF(char const * path) {
             }
             // Step3: Fill nodes
             if(false == gltfModel.nodes.empty()) {
-                for (auto const & node : gltfModel.nodes) {
+                for (auto const & gltfNode : gltfModel.nodes) {
                     AS::MeshNode assetNode = {
-                        .subMeshIndex = node.mesh,
-                        .children = node.children,
-                        .transformMatrix {static_cast<U32>(node.matrix.size()), node.matrix.data()}
+                        .subMeshIndex = gltfNode.mesh,
+                        .children = gltfNode.children,
+                        .transformMatrix {}
                     };
+                    Matrix4X4Float transform = Matrix4X4Float::Identity();
+                    if (gltfNode.matrix.empty() == false) {
+                        MFA_ASSERT(gltfNode.matrix.size() == 16);
+                        transform.castAssign(gltfNode.matrix.data());
+                    } else {
+                        if (gltfNode.scale.empty() == false) {
+                            MFA_ASSERT(gltfNode.scale.size() == 3);
+                            Matrix4X4Float scale {};
+                            Matrix4X4Float::AssignScale(
+                                scale,
+                                static_cast<float>(gltfNode.scale[0]),
+                                static_cast<float>(gltfNode.scale[1]),
+                                static_cast<float>(gltfNode.scale[2])
+                            );
+                            transform.multiply(scale);
+                        }
+                        if (gltfNode.rotation.empty() == false) {
+                            MFA_ASSERT(gltfNode.rotation.size() == 4);
+                            Matrix4X4Float rotation {};
+
+                            QuaternionFloat quaternion {};
+                            quaternion.castAssign(gltfNode.rotation.data());
+                            Matrix4X4Float::AssignRotation(rotation, quaternion);
+
+                            transform.multiply(rotation);
+                        }
+                        if (gltfNode.translation.empty() == false) {
+                            MFA_ASSERT(gltfNode.translation.size() == 3);
+                            Matrix4X4Float translate {};
+                            Matrix4X4Float::AssignTranslation(
+                                translate,
+                                static_cast<float>(gltfNode.translation[0]),
+                                static_cast<float>(gltfNode.translation[1]),
+                                static_cast<float>(gltfNode.translation[2])
+                            );
+                            transform.multiply(translate);
+                        }
+                    }
                     resultModel.mesh.insertNode(assetNode);
                 }
+            }
+            // Remove mesh buffers if invalid
+            if(resultModel.mesh.isValid() == false) {
+                Blob vertexBuffer {};
+                Blob indicesBuffer {};
+                resultModel.mesh.revokeBuffers(vertexBuffer, indicesBuffer);
+                Memory::Free(vertexBuffer);
+                Memory::Free(indicesBuffer);
             }
         }
     }

@@ -295,7 +295,11 @@ public:
     struct Node {
         int subMeshIndex;
         std::vector<int> children {};
-        Matrix4X4Float transformMatrix {};
+        float transformMatrix[16] {};
+        [[nodiscard]]
+        bool hasSubMesh() const noexcept {
+            return subMeshIndex >= 0;
+        }
     };
 
     void initForWrite(

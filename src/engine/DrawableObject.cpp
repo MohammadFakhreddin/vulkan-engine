@@ -23,11 +23,9 @@ DrawableObject::DrawableObject(
     // NodeTransformBuffer
     mNodeTransformBuffers = RF::CreateUniformBuffer(
         sizeof(NodeTransformBuffer), 
-        mGpuModel->model.mesh.getNodesCount()
+        mGpuModel->model.mesh.getSubMeshCount()
     );
 
-    MFA_ASSERT(mGpuModel->model.mesh.getNodesCount() == mGpuModel->model.mesh.getSubMeshCount());
-    
     MFA_ASSERT(mGpuModel->valid);
     MFA_ASSERT(mGpuModel->model.mesh.isValid());
 }
@@ -119,7 +117,6 @@ void DrawableObject::drawNode(RF::DrawPass & drawPass, int nodeIndex, Matrix4X4F
     MFA_ASSERT(nodeIndex >= 0);
     MFA_ASSERT(static_cast<U32>(nodeIndex) < mGpuModel->model.mesh.getNodesCount());
     auto const & node = mGpuModel->model.mesh.getNodeByIndex(nodeIndex);
-    MFA_ASSERT(node.subMeshIndex >= 0);
     MFA_ASSERT(static_cast<int>(mesh.getSubMeshCount()) > node.subMeshIndex);
 
     Matrix4X4Float nodeTransform {};
@@ -127,8 +124,11 @@ void DrawableObject::drawNode(RF::DrawPass & drawPass, int nodeIndex, Matrix4X4F
     nodeTransform.multiply(parentTransform);
     ::memcpy(mNodeTransformData.transform, nodeTransform.cells, sizeof(nodeTransform.cells));
     MFA_ASSERT(sizeof(nodeTransform.cells) == sizeof(mNodeTransformData.transform));
-    RF::UpdateUniformBuffer(mNodeTransformBuffers.buffers[nodeIndex], CBlobAliasOf(mNodeTransformData));
-    drawSubMesh(drawPass, mesh.getSubMeshByIndex(node.subMeshIndex));
+
+    if (node.hasSubMesh()) {
+        RF::UpdateUniformBuffer(mNodeTransformBuffers.buffers[node.subMeshIndex], CBlobAliasOf(mNodeTransformData));
+        drawSubMesh(drawPass, mesh.getSubMeshByIndex(node.subMeshIndex));
+    }
 
     if (node.children.empty() == false) {
         for (auto const & child : node.children) {

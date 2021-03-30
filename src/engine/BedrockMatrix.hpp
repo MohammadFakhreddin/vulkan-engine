@@ -330,7 +330,7 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
   }
 
   // working correctly
-  static void assignOrthographicProjection(
+  static void AssignOrthographicProjection(
     _Matrix<T, 4, 4> & matrix,
     const float left,
     const float right,
@@ -360,7 +360,7 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     matrix.set(3,3,1);
   }
   // Broken
-  static void assignPerspectiveProjection(
+  static void AssignPerspectiveProjection(
     _Matrix<T, 4, 4> & matrix,
     float const left,
     float const right,
@@ -407,19 +407,28 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     matrix.set(3,2,-1.0f);
   }
 
-  static void assignScale(
+  static void AssignScale(
     _Matrix<T, 4, 4>& matrix,
-    const float& value
+    const float value
   ) {
-    matrix.set(0, 0, matrix.get(0, 0) + value);
+      AssignScale(matrix, value, value, value);
+  }
+
+  static void AssignScale(
+    _Matrix<T, 4, 4>& matrix,
+    const float valueX,
+    const float valueY,
+    const float valueZ
+  ) {
+    matrix.set(0, 0, valueX);
     MFA_ASSERT(matrix.get(0, 1) == 0);
     MFA_ASSERT(matrix.get(0, 2) == 0);
     MFA_ASSERT(matrix.get(1, 0) == 0);
-    matrix.set(1, 1, matrix.get(1, 1) + value);
-    MFA_ASSERT(matrix.get(1, 2) + value);
-    MFA_ASSERT(matrix.get(2, 0) + value);
-    MFA_ASSERT(matrix.get(2, 1) + value);
-    matrix.set(2, 2, matrix.get(2, 2) + value);
+    matrix.set(1, 1, valueY);
+    MFA_ASSERT(matrix.get(1, 2) == 0);
+    MFA_ASSERT(matrix.get(2, 0) == 0);
+    MFA_ASSERT(matrix.get(2, 1) == 0);
+    matrix.set(2, 2, valueZ);
     MFA_ASSERT(matrix.get(0, 3) == 0);
     MFA_ASSERT(matrix.get(1, 3) == 0);
     MFA_ASSERT(matrix.get(2, 3) == 0);
@@ -429,7 +438,7 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     MFA_ASSERT(matrix.get(3, 2) == 0);
   }
 
-  static void assignTransformation(
+  static void AssignTranslation(
     _Matrix<T,4,4>& matrix,
     const T& x,
     const T& y,
@@ -454,7 +463,7 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
   }
 
   // https://www.brainvoyager.com/bv/doc/UsersGuide/CoordsAndTransforms/SpatialTransformationMatrices.html
-  static void assignRotationX(_Matrix<T, 4, 4>& matrix, const T& degree) {
+  static void AssignRotationX(_Matrix<T, 4, 4>& matrix, const T& degree) {
     matrix.set(0, 0, 1);
     MFA_ASSERT(matrix.get(0, 1) == 0);
     MFA_ASSERT(matrix.get(0, 2) == 0);
@@ -473,7 +482,7 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     matrix.set(3, 3, 1.0f);
   }
 
-  static void assignRotationY(_Matrix<T, 4, 4>& matrix, const T& degree) {
+  static void AssignRotationY(_Matrix<T, 4, 4>& matrix, const T& degree) {
     matrix.set(0, 0, cosf(degree));
     MFA_ASSERT(matrix.get(0, 1) == 0);
     matrix.set(0, 2, sinf(degree));
@@ -492,7 +501,7 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     matrix.set(3, 3, 1.0f);
   }
 
-  static void assignRotationZ(_Matrix<T, 4, 4>& matrix, const T& degree) {
+  static void AssignRotationZ(_Matrix<T, 4, 4>& matrix, const T& degree) {
     matrix.set(0, 0, cosf(degree));
     matrix.set(0, 1, -sinf(degree));
     MFA_ASSERT(matrix.get(0, 2) == 0);
@@ -511,7 +520,7 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     matrix.set(3, 3, 1.0f);
   }
 
-  static void assignRotationXYZ(
+  static void AssignRotationXYZ(
     _Matrix<T, 4, 4>& matrix,
     const T& xDegree,
     const T& yDegree,
@@ -535,8 +544,43 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     matrix.set(3, 3, 1.0f);
   }
 
+   // Based on https://automaticaddison.com/how-to-convert-a-quaternion-to-a-rotation-matrix/
+  static void AssignRotation(
+    _Matrix<T, 4, 4>& matrix,
+    _Matrix<T, 4, 1>& quaternion
+  ) {
+    T const q0 = quaternion.get(0, 0);
+    T const q1 = quaternion.get(1, 0);
+    T const q2 = quaternion.get(2, 0);
+    T const q3 = quaternion.get(3, 0);
+     
+    // First row of the rotation matrix
+    matrix.set(0, 0, 2 * (q0 * q0 + q1 * q1) - 1);
+    matrix.set(0, 1, 2 * (q1 * q2 - q0 * q3));
+    matrix.set(0, 2, 2 * (q1 * q3 + q0 * q2));
+     
+    // Second row of the rotation matrix
+    matrix.set(1, 0, 2 * (q1 * q2 + q0 * q3));
+    matrix.set(1, 1, 2 * (q0 * q0 + q2 * q2) - 1);
+    matrix.set(1, 2, 2 * (q2 * q3 - q0 * q1));
+     
+    // Third row of the rotation matrix
+    matrix.set(2, 0, 2 * (q1 * q3 - q0 * q2));
+    matrix.set(2, 1, 2 * (q2 * q3 + q0 * q1));
+    matrix.set(2, 2, 2 * (q0 * q0 + q3 * q3) - 1);
+
+    MFA_ASSERT(matrix.get(3, 0) == 0.0f);
+    MFA_ASSERT(matrix.get(3, 1) == 0.0f);
+    MFA_ASSERT(matrix.get(3, 2) == 0.0f);
+    MFA_ASSERT(matrix.get(0, 3) == 0.0f);
+    MFA_ASSERT(matrix.get(1, 3) == 0.0f);
+    MFA_ASSERT(matrix.get(2, 3) == 0.0f);
+
+    matrix.set(3, 3, 1.0f);
+  }
+
   // https://www.brainvoyager.com/bv/doc/UsersGuide/CoordsAndTransforms/SpatialTransformationMatrices.html
-  static void assignRotationX(_Matrix<T, 3, 3>& matrix, const T& degree) {
+  static void AssignRotationX(_Matrix<T, 3, 3>& matrix, const T& degree) {
     matrix.set(0, 0, 1);
     MFA_ASSERT(matrix.get(0, 1) == 0);
     MFA_ASSERT(matrix.get(0, 2) == 0);
@@ -548,7 +592,7 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     matrix.set(2, 2, cosf(degree));
   }
 
-  static void assignRotationY(_Matrix<T, 3, 3>& matrix, const T& degree) {
+  static void AssignRotationY(_Matrix<T, 3, 3>& matrix, const T& degree) {
     matrix.set(0, 0, cosf(degree));
     MFA_ASSERT(matrix.get(0, 1) == 0);
     matrix.set(0, 2, sinf(degree));
@@ -560,7 +604,7 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     matrix.set(2, 2, cosf(degree));
   }
 
-  static void assignRotationZ(_Matrix<T,3,3>& matrix, const T& degree) {
+  static void AssignRotationZ(_Matrix<T,3,3>& matrix, const T& degree) {
     matrix.set(0, 0, cosf(degree));
     matrix.set(0, 1, -sinf(degree));
     MFA_ASSERT(matrix.get(0, 2) == 0);
@@ -572,7 +616,7 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     matrix.set(2, 2, 1);
   }
 
-  static void assignRotationXYZ(
+  static void AssignRotationXYZ(
     _Matrix<T,3,3>& matrix,
     const T& xDegree,
     const T& yDegree,
@@ -589,7 +633,7 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     matrix.set(2, 2, cosf(xDegree) * cosf(yDegree));
   }
 
-  static void assignScale(
+  static void AssignScale(
     _Matrix<T,3,3>& matrix,
     const float& value
   ) {
@@ -651,7 +695,21 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
   void hat(_Matrix<T, 3, 1>& matrix) const {
     return _hat(matrix.cells, 3, 1);
   }
-  
+
+  template <typename A>
+  void castAssign(const _Matrix<A, width, height>& rhs) {
+    castAssign(rhs.cells);
+    _assign(rhs.cells, width * height);    
+  }
+
+  template <typename A>
+  void castAssign(const A * cells_) {
+    MFA_ASSERT(cells_ != nullptr);
+    for (uint32_t i = 0; i < width * height; ++i) {
+      cells[i] = static_cast<T>(cells_[i]);    
+    }
+  }
+
   template <unsigned int rhsWidth,unsigned int rhsHeight>
   void assign(const _Matrix<T, rhsWidth, rhsHeight>& rhs) {
     if (rhsWidth == width && rhsHeight == height) {
@@ -666,18 +724,31 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
       _assign(rhs.cells, rhs.matrixSize);
     }
     else {
-      //Logger::exception("Unhandled assign in matrixTemplate");
+      MFA_CRASH("Unhandled assign in matrixTemplate");
     }
+  }
+
+  void assign(const T * cells) {
+    MFA_ASSERT(cells != nullptr);
+    _assign(cells, width * height);
+  }
+
+  void assign(const T * cells, uint32_t elementCount) {
+      MFA_ASSERT(cells != nullptr);
+      MFA_ASSERT(elementCount > 0);
+      _assign(cells, elementCount);
   }
 
   void assign(const T& value) {
     std::fill_n(cells, matrixSize, value);
   }
 
+  [[nodiscard]]
   T dotProduct(const _Matrix<T, 3, 1>& rhs) const {
     return _dotProduct(rhs.cells, 3, 1);
   }
 
+  [[nodiscard]]
   T dotProduct(const _Matrix<T, 4, 1>& rhs) const {
     return _dotProduct(rhs.cells, 4, 1);
   }
@@ -814,5 +885,8 @@ using Vector4Int = _Matrix<int, 4, 1>;
 using Vector4Float = _Matrix<float, 4, 1>;
 using Vector4Double = _Matrix<double, 4, 1>;
 
+using QuaternionInt = _Matrix<int, 4, 1>;
+using QuaternionFloat = _Matrix<float, 4, 1>;
+using QuaternionDouble = _Matrix<double, 4, 1>;
 
 }

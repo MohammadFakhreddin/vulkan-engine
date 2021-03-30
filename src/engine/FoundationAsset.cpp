@@ -78,8 +78,10 @@ void Texture::initForWrite(
     mMipCount = mipCount;
     MFA_ASSERT(depth > 0);
     mDepth = depth;
-    MFA_ASSERT(sampler->isValid);
-    mSampler = *sampler;
+    if (sampler != nullptr) {
+        MFA_ASSERT(sampler->isValid);
+        mSampler = *sampler;
+    }
     mBuffer = buffer;
 }
 
@@ -96,7 +98,7 @@ void Texture::addMipmap(
     });
     U32 nextOffset = mCurrentOffset + static_cast<U32>(data.len);
     MFA_ASSERT(mBuffer.ptr != nullptr);
-    MFA_ASSERT(nextOffset < mBuffer.len);
+    MFA_ASSERT(nextOffset <= mBuffer.len);
     ::memcpy(mBuffer.ptr + mCurrentOffset, data.ptr, data.len);
     mCurrentOffset = nextOffset;
 }
@@ -131,7 +133,11 @@ void Mesh::initForWrite(
     mCurrentVertexOffset = 0;
     mIndexCount = indexCount;
     mCurrentIndexOffset = 0;
+    MFA_ASSERT(vertexBuffer.ptr != nullptr);
+    MFA_ASSERT(vertexBuffer.len > 0);
     mVertexBuffer = vertexBuffer;
+    MFA_ASSERT(indexBuffer.ptr != nullptr);
+    MFA_ASSERT(indexBuffer.len > 0);
     mIndexBuffer = indexBuffer;
 }
 
@@ -154,8 +160,8 @@ void Mesh::insertPrimitive(
     primitive.indicesStartingIndex = mCurrentStartingIndex;
     U32 const verticesSize = sizeof(Vertex) * vertexCount;
     U32 const indicesSize = sizeof(Index) * indicesCount;
-    MFA_ASSERT(mCurrentVertexOffset + verticesSize < mVertexBuffer.len);
-    MFA_ASSERT(mCurrentIndexOffset + indicesSize < mIndexBuffer.len);
+    MFA_ASSERT(mCurrentVertexOffset + verticesSize <= mVertexBuffer.len);
+    MFA_ASSERT(mCurrentIndexOffset + indicesSize <= mIndexBuffer.len);
     ::memcpy(mVertexBuffer.ptr, vertices, verticesSize);
     ::memcpy(mIndexBuffer.ptr, indices, indicesSize);
     MFA_ASSERT(subMeshIndex < mSubMeshes.size());

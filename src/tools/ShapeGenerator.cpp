@@ -36,7 +36,7 @@ namespace MFA::ShapeGenerator {
 
                 // As solution to compute tangent I decided to rotate normal by 90 degree (In any direction :)))
                 Matrix4X4Float rotationMatrix {};
-                Matrix4X4Float::assignRotationXYZ(rotationMatrix, 0.0f, 0.0f, 90.0f);
+                Matrix4X4Float::AssignRotationXYZ(rotationMatrix, 0.0f, 0.0f, 90.0f);
 
                 Matrix4X1Float tangentMatrix {};
                 tangentMatrix.setX(xPos);
@@ -150,12 +150,16 @@ namespace MFA::ShapeGenerator {
             meshIndices.data()
         );
 
-        model.mesh.insertNode(AS::MeshNode {
+        auto node = AS::MeshNode {
             .subMeshIndex = 0,
             .children {},
-            .transformMatrix = Matrix4X4Float::Identity(),
-        });
-
+            .transformMatrix {},
+        };
+        auto const identityMatrix = Matrix4X4Float::Identity();
+        ::memcpy(node.transformMatrix, identityMatrix.cells, sizeof(node.transformMatrix));
+        static_assert(sizeof(node.transformMatrix) == sizeof(identityMatrix.cells));
+        model.mesh.insertNode(node);
+        
         return model;
     }
 }

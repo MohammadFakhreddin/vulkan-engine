@@ -65,5 +65,4 @@ private:
     MFA::RenderFrontend::UniformBufferGroup mLVBuffer {};
     MFA::DrawableObject mDrawableObject {};
 
-
 };

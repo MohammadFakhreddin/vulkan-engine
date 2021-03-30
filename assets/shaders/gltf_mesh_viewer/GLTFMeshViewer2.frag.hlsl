@@ -53,7 +53,7 @@ struct LightViewBuffer {
     float3 lightColor;
 };
 
-ConstantBuffer <LightViewBuffer> lvBuff : register (b6, space0);
+ConstantBuffer <LightViewBuffer> lvBuff : register (b7, space0);
 
 const float PI = 3.14159265359;
 

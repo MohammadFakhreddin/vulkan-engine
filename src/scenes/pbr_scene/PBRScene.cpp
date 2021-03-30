@@ -201,7 +201,7 @@ void PBRScene::OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_
         {// Transform
             // Rotation
             MFA::Matrix4X4Float rotation;
-            MFA::Matrix4X4Float::assignRotationXYZ(
+            MFA::Matrix4X4Float::AssignRotationXYZ(
                 rotation,
                 MFA::Math::Deg2Rad(m_sphere_rotation[0]),
                 MFA::Math::Deg2Rad(m_sphere_rotation[1]),
@@ -212,7 +212,7 @@ void PBRScene::OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_
 
             // Transformation
             MFA::Matrix4X4Float transform;
-            MFA::Matrix4X4Float::assignTransformation(
+            MFA::Matrix4X4Float::AssignTranslation(
                 transform, 
                 m_sphere_position[0], 
                 m_sphere_position[1], 
