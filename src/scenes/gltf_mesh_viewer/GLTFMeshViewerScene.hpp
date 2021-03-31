@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "engine/DrawableObject.hpp"
 #include "engine/Scene.hpp"
 #include "engine/RenderFrontend.hpp"

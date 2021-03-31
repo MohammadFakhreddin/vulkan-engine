@@ -954,6 +954,8 @@ AS::Model ImportGLTF(char const * path) {
                             transform.multiply(translate);
                         }
                     }
+                    ::memcpy(assetNode.transformMatrix, transform.cells, sizeof(transform.cells));
+                    static_assert(sizeof(assetNode.transformMatrix) == sizeof(transform.cells));
                     resultModel.mesh.insertNode(assetNode);
                 }
             }

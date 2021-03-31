@@ -765,25 +765,27 @@ private:
   void _multiply(
     const T* rhsCells
   ) {
-    T placeholderCells[width * height] = { 0 };
-    int index;
-    int i;
-    int j;
-    int k;
-    int rhsRowValue;
-    int rowValue;
-    for (i = 0; i < width; i++) {
-      rhsRowValue = i * width;
-      rowValue = i * height;
-      for (j = 0; j < height; j++) {
-        index = rowValue + j;
-        placeholderCells[rowValue] = 0;
-        for (k = 0; k < width; k++) {
-          placeholderCells[rowValue] += cells[k * height + j] * T(rhsCells[rhsRowValue + k]);
+    //T placeholderCells[width * height] = { 0 };
+    //for (int i = 0; i < width; i++) {
+    //  int const rowValue = i * height;
+    //  for (int j = 0; j < height; j++) {
+    //    placeholderCells[rowValue + j] = 0;
+    //    for (int k = 0; k < width; k++) {
+    //      placeholderCells[rowValue] += cells[k * height + j] * T(rhsCells[j * width + k]);
+    //    }
+    //  }
+    //}
+    //std::memcpy(cells, placeholderCells, matrixSize * sizeof(T));
+  
+    T tempValue = 0;
+    for(int k = 0; k < width; k++) {
+        for(int i = 0; i < height; i++) {
+            tempValue = cells[i * width + k];
+            for(int j = 0; j < width; j++) {
+                cells[i * width + j] = cells[i * width + j] + tempValue * rhsCells[k * height + j];
+            }
         }
-      }
     }
-    std::memcpy(cells, placeholderCells, matrixSize * sizeof(T));
   }
 
   template<typename A>

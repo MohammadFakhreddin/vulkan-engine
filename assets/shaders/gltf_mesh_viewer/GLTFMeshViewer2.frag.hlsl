@@ -171,6 +171,9 @@ float3 calculateNormal(PSIn input)
 }
 
 PSOut main(PSIn input) {
+    PSOut output2;
+    output2.color = float4(1,0,0,1);
+    return output2;
     float3 baseColor = smBuff.hasBaseColorTexture == 1
         ? pow(baseColorTexture.Sample(baseColorSampler, input.baseColorTexCoord).rgb, 2.2f)
         : smBuff.baseColorFactor.rgb;

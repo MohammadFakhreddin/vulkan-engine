@@ -113,7 +113,7 @@ void DrawableObject::draw(RF::DrawPass & drawPass) {
 
 void DrawableObject::drawNode(RF::DrawPass & drawPass, int nodeIndex, Matrix4X4Float const & parentTransform) {
     auto const & mesh = mGpuModel->model.mesh;
-
+    
     MFA_ASSERT(nodeIndex >= 0);
     MFA_ASSERT(static_cast<U32>(nodeIndex) < mGpuModel->model.mesh.getNodesCount());
     auto const & node = mGpuModel->model.mesh.getNodeByIndex(nodeIndex);
