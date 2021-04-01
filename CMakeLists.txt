@@ -1,8 +1,8 @@
 cmake_minimum_required (VERSION 3.10)
 
-set(${PROJECT_NAME} "MFaEngine")
+set(ROJECT_NAME "MFaEngine")
 
-set(${UNIT_TEST_NAME} "UnitTests")
+set(UNIT_TEST_NAME "UnitTests")
 
 project ("MFaEngine" CXX C)
 
@@ -177,10 +177,28 @@ target_include_directories(
 )
 
 #-----------------------------------------------------------------------
+# Unit-tests
+#-----------------------------------------------------------------------
+
+set(UNIT_TEST_SOURCE)
+
+list(
+    APPEND UNIT_TEST_SOURCE
+    "unit_tests/catch.hpp"
+    "unit_tests/rlutil.h"
+    "unit_tests/testMain.cpp"
+    "unit_tests/engine/testBedrockMath.cpp"
+)
+
+#-----------------------------------------------------------------------
 # OS specific
 #-----------------------------------------------------------------------
 
 if (WINDOWS)
+
+#-----------------------------------------------------------------------
+# Windows Executable
+#-----------------------------------------------------------------------
 
     set(WIN_SOURCE)
     
@@ -215,7 +233,7 @@ if (WINDOWS)
         "${CMAKE_SOURCE_DIR}/libs/win/SDL2.dll" 
     )
 
-    add_executable(${PROJECT_NAME} ${WIN_HEADER} ${WIN_SOURCE})
+    add_executable(${PROJECT_NAME} ${WIN_SOURCE})
 
     add_dependencies(${PROJECT_NAME} "Scenes" "Tools" "Engine" "Libs")
 
@@ -235,22 +253,32 @@ if (WINDOWS)
         ${CMAKE_BINARY_DIR}
     )
 
-    # add_executable(
-    #     ${UNIT_TEST_NAME}
-    #     ${UNITTEST_SOURCE}
-    #     ${UNITTEST_HEADER}
-    #     ${APP_SOURCE}
-    #     ${APP_HEADER}
-    # )
+#-----------------------------------------------------------------------
+# Windows unit tests
+#-----------------------------------------------------------------------
 
-    # target_link_libraries(${UNIT_TEST_NAME} ${COMPILED_LIBS})
+    add_executable(
+        ${UNIT_TEST_NAME}
+        ${UNIT_TEST_SOURCE}
+    )
 
-    # add_custom_command(
-    #     TARGET ${UNIT_TEST_NAME} POST_BUILD        # Adds a post-build event to MyTest
-    #     COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
-    #     ${DLLS}      # <--this is in-file
-    #     ${CMAKE_BINARY_DIR}
-    # )
+    add_dependencies(${UNIT_TEST_NAME} "Scenes" "Tools" "Engine" "Libs")
+
+    target_link_libraries(${UNIT_TEST_NAME} ${COMPILED_LIBS} "Scenes" "Tools" "Engine" "Libs")
+
+    target_include_directories(
+        ${UNIT_TEST_NAME} PUBLIC 
+        "unit_tests"
+        "src" 
+        "${CMAKE_SOURCE_DIR}/libs/include"
+    )
+
+    add_custom_command(
+        TARGET ${UNIT_TEST_NAME} POST_BUILD        # Adds a post-build event to MyTest
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
+        ${DLLS}      # <--this is in-file
+        ${CMAKE_BINARY_DIR}
+    )
 
 endif()
 # set(APP_SOURCE)

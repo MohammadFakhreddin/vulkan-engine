@@ -158,7 +158,7 @@ public:
     for (int i = 0; i < height; i++) {
       line = "";
       for (int j = 0; j < width; j++) {
-        line += " " + std::to_string(cells[i * height + j]) + " ";
+        line += " " + std::to_string(cells[i * width + j]) + " ";
       }
       std::cout<<line<<std::endl;
     }
@@ -765,27 +765,17 @@ private:
   void _multiply(
     const T* rhsCells
   ) {
-    //T placeholderCells[width * height] = { 0 };
-    //for (int i = 0; i < width; i++) {
-    //  int const rowValue = i * height;
-    //  for (int j = 0; j < height; j++) {
-    //    placeholderCells[rowValue + j] = 0;
-    //    for (int k = 0; k < width; k++) {
-    //      placeholderCells[rowValue] += cells[k * height + j] * T(rhsCells[j * width + k]);
-    //    }
-    //  }
-    //}
-    //std::memcpy(cells, placeholderCells, matrixSize * sizeof(T));
-  
-    T tempValue = 0;
-    for(int k = 0; k < width; k++) {
-        for(int i = 0; i < height; i++) {
-            tempValue = cells[i * width + k];
-            for(int j = 0; j < width; j++) {
-                cells[i * width + j] = cells[i * width + j] + tempValue * rhsCells[k * height + j];
-            }
+    T placeholderCells[width * height] = { 0 };
+    for (int i = 0; i < height; i++) {
+      for (int j = 0; j < width; j++) {
+        auto const cellIndex = j * height + i;
+        placeholderCells[cellIndex] = 0;
+        for (int k = 0; k < height; k++) {
+          placeholderCells[cellIndex] += cells[k * width + i] * T(rhsCells[j * height + k]);
         }
+      }
     }
+    std::memcpy(cells, placeholderCells, matrixSize * sizeof(T));
   }
 
   template<typename A>

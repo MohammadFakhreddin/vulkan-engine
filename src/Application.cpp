@@ -19,7 +19,7 @@ Application::Application()
     , mTextureViewerScene(std::make_unique<TextureViewerScene>())
 {}
 
-Application::~Application() {}
+Application::~Application() = default;
 
 
 void Application::run() {

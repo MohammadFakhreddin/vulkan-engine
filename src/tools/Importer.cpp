@@ -784,7 +784,6 @@ AS::Model ImportGLTF(char const * path) {
                             MFA_ASSERT(hasPosition == true);
                             bool hasBaseColorTexture = baseColorUvs != nullptr;
                             MFA_ASSERT(baseColorUvs != nullptr == baseColorTextureIndex >= 0);
-                            MFA_ASSERT(hasBaseColorTexture == true);
                             bool hasNormalValue = normalValues != nullptr;
                             MFA_ASSERT(hasNormalValue == true);
                             bool hasNormalTexture = normalsUVs != nullptr;
