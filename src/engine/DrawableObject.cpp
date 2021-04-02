@@ -122,11 +122,18 @@ void DrawableObject::drawNode(RF::DrawPass & drawPass, int nodeIndex, Matrix4X4F
     Matrix4X4Float nodeTransform {};
     nodeTransform.assign(node.transformMatrix);
     nodeTransform.multiply(parentTransform);
-    ::memcpy(mNodeTransformData.transform, nodeTransform.cells, sizeof(nodeTransform.cells));
-    MFA_ASSERT(sizeof(nodeTransform.cells) == sizeof(mNodeTransformData.transform));
-
+    
+    Matrix4X4Float nodeRotationAndScale {};
+    Matrix4X4Float::ExtractRotationAndScaleMatrix(nodeTransform, nodeRotationAndScale);
+    // TODO We can reduce nodes count for better performance when importing
     if (node.hasSubMesh()) {
+        // Updating uniform buffer
+        ::memcpy(mNodeTransformData.transform, nodeTransform.cells, sizeof(nodeTransform.cells));
+        MFA_ASSERT(sizeof(nodeTransform.cells) == sizeof(mNodeTransformData.transform));
+        ::memcpy(mNodeTransformData.rotationAndScale, nodeRotationAndScale.cells, sizeof(nodeRotationAndScale.cells));
+        MFA_ASSERT(sizeof(nodeRotationAndScale.cells) == sizeof(mNodeTransformData.rotationAndScale));
         RF::UpdateUniformBuffer(mNodeTransformBuffers.buffers[node.subMeshIndex], CBlobAliasOf(mNodeTransformData));
+
         drawSubMesh(drawPass, mesh.getSubMeshByIndex(node.subMeshIndex));
     }
 

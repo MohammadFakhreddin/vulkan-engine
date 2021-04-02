@@ -80,6 +80,25 @@ public:
   template <typename A>
   _Matrix<A, width, height>& operator=(const _Matrix<A, width, height>& rhs) = delete;
 
+  static void ExtractRotationAndScaleMatrix(
+    _Matrix<float, 4, 4> const & transformMat, 
+    _Matrix<float, 4, 4> & destinationMat
+  ) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            destinationMat.set(i, j, transformMat.get(i, j));
+        }
+    }
+    destinationMat.set(3, 0, 0.0f);
+    destinationMat.set(3, 1, 0.0f);
+    destinationMat.set(3, 2, 0.0f);
+    destinationMat.set(0, 3, 0.0f);
+    destinationMat.set(1, 3, 0.0f);
+    destinationMat.set(2, 3, 0.0f);
+    destinationMat.set(3, 3, 1.0f);
+       
+  }
+
   template <typename A>
   _Matrix(const _Matrix<A, width, height>& other) = delete;
 
@@ -460,6 +479,22 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     MFA_ASSERT(matrix.get(3, 1) == 0);
     MFA_ASSERT(matrix.get(3, 2) == 0);
     matrix.set(3, 3, T(1));
+    //matrix.set(0, 0, T(1));
+    //MFA_ASSERT(matrix.get(1, 0) == 0);
+    //MFA_ASSERT(matrix.get(2, 0) == 0);
+    //matrix.set(3, 0, x);
+    //MFA_ASSERT(matrix.get(0, 1) == 0);
+    //matrix.set(1, 1, 1);
+    //MFA_ASSERT(matrix.get(2, 1) == 0);
+    //matrix.set(3, 1, y);
+    //MFA_ASSERT(matrix.get(0, 2) == 0);
+    //MFA_ASSERT(matrix.get(1, 2) == 0);
+    //matrix.set(2, 2, 1);
+    //matrix.set(3, 2, z);
+    //MFA_ASSERT(matrix.get(0, 3) == 0);
+    //MFA_ASSERT(matrix.get(1, 3) == 0);
+    //MFA_ASSERT(matrix.get(2, 3) == 0);
+    //matrix.set(3, 3, T(1));
   }
 
   // https://www.brainvoyager.com/bv/doc/UsersGuide/CoordsAndTransforms/SpatialTransformationMatrices.html

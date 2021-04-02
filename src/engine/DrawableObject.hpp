@@ -69,9 +69,7 @@ public:
 private:
 
     struct NodeTransformBuffer {
-        //float translate[16];
-        //float rotation[16];
-        //float scale[16];
+        float rotationAndScale[16];
         float transform[16];
     } mNodeTransformData {};
 
