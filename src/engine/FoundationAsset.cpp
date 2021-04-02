@@ -130,15 +130,20 @@ void Mesh::initForWrite(
     MFA_ASSERT(mVertexBuffer.ptr == nullptr);
     MFA_ASSERT(mIndexBuffer.ptr == nullptr);
     mVertexCount = vertexCount;
-    mCurrentVertexOffset = 0;
+    mNextVertexOffset = 0;
     mIndexCount = indexCount;
-    mCurrentIndexOffset = 0;
+    mNextIndexOffset = 0;
     MFA_ASSERT(vertexBuffer.ptr != nullptr);
     MFA_ASSERT(vertexBuffer.len > 0);
     mVertexBuffer = vertexBuffer;
     MFA_ASSERT(indexBuffer.ptr != nullptr);
     MFA_ASSERT(indexBuffer.len > 0);
     mIndexBuffer = indexBuffer;
+}
+
+void Mesh::DEBUG_checkForDataSanity() const {
+    MFA_ASSERT(mNextIndexOffset == mIndexBuffer.len);
+    MFA_ASSERT(mNextVertexOffset == mVertexBuffer.len);
 }
 
 U32 Mesh::insertSubMesh() {
@@ -154,21 +159,26 @@ void Mesh::insertPrimitive(
     U32 const indicesCount, 
     Index * indices
 ) {
+    MFA_ASSERT(vertexCount > 0);
+    MFA_ASSERT(indicesCount > 0);
+    MFA_ASSERT(vertices != nullptr);
+    MFA_ASSERT(indices != nullptr);
     primitive.vertexCount = vertexCount;
     primitive.indicesCount = indicesCount;
-    primitive.verticesOffset = mCurrentVertexOffset;
-    primitive.indicesStartingIndex = mCurrentStartingIndex;
+    primitive.indicesOffset = mNextIndexOffset;
+    primitive.verticesOffset = mNextVertexOffset;
+    primitive.indicesStartingIndex = mNextStartingIndex;
     U32 const verticesSize = sizeof(Vertex) * vertexCount;
     U32 const indicesSize = sizeof(Index) * indicesCount;
-    MFA_ASSERT(mCurrentVertexOffset + verticesSize <= mVertexBuffer.len);
-    MFA_ASSERT(mCurrentIndexOffset + indicesSize <= mIndexBuffer.len);
-    ::memcpy(mVertexBuffer.ptr, vertices, verticesSize);
-    ::memcpy(mIndexBuffer.ptr, indices, indicesSize);
+    MFA_ASSERT(mNextVertexOffset + verticesSize <= mVertexBuffer.len);
+    MFA_ASSERT(mNextIndexOffset + indicesSize <= mIndexBuffer.len);
+    ::memcpy(mVertexBuffer.ptr + mNextVertexOffset, vertices, verticesSize);
+    ::memcpy(mIndexBuffer.ptr + mNextIndexOffset, indices, indicesSize);
     MFA_ASSERT(subMeshIndex < mSubMeshes.size());
     mSubMeshes[subMeshIndex].primitives.emplace_back(primitive);
-    mCurrentVertexOffset += verticesSize;
-    mCurrentIndexOffset += indicesSize;
-    mCurrentStartingIndex += indicesCount;
+    mNextVertexOffset += verticesSize;
+    mNextIndexOffset += indicesSize;
+    mNextStartingIndex += indicesCount;
 }
 
 void Mesh::insertNode(Node const & node) {

@@ -367,7 +367,7 @@ AS::Mesh ImportObj(char const * path) {
                 );
 
                 auto node = AS::MeshNode {
-                    .subMeshIndex = 0,
+                    .subMeshIndex = static_cast<int>(subMeshIndex),
                     .children {},
                     .transformMatrix {},
                 };
@@ -463,14 +463,12 @@ AS::Model ImportGLTF(char const * path) {
                     //model_asset.textures[base_color_texture_index]  
                 }
                 // Step1: Iterate over all meshes and gather required information for asset buffer
-                U32 sub_mesh_count = 0;
                 U32 totalIndicesCount = 0;
                 U32 totalVerticesCount = 0;
-                U32 indicesStartingIndex = 0;
+                U32 indicesVertexStartingIndex = 0;
                 for(auto & mesh : gltfModel.meshes) {
                     if(false == mesh.primitives.empty()) {
                         for(auto & primitive : mesh.primitives) {
-                            ++sub_mesh_count;
                             {// Indices
                                 MFA_REQUIRE((primitive.indices < gltfModel.accessors.size()));
                                 auto const & accessor = gltfModel.accessors[primitive.indices];
@@ -491,18 +489,18 @@ AS::Model ImportGLTF(char const * path) {
                     Memory::Alloc(sizeof(AS::MeshIndex) * totalIndicesCount)
                 );
                 // Step2: Fill subMeshes
-                U32 subMeshIndex = 0;
-                std::vector<AS::Mesh::Vertex> subMeshVertices {};
-                std::vector<AS::MeshIndex> subMeshIndices {};
-
+                
                 U32 primitiveUniqueId = 0;
+                std::vector<AS::Mesh::Vertex> primitiveVertices {};
+                std::vector<AS::MeshIndex> primitiveIndices {};
 
                 for(auto & mesh : gltfModel.meshes) {
+                    auto const meshIndex = resultModel.mesh.insertSubMesh();
                     if(false == mesh.primitives.empty()) {
-                        auto const meshIndex = resultModel.mesh.insertSubMesh();
                         for(auto & primitive : mesh.primitives) {
-                            subMeshIndices.erase(subMeshIndices.begin(), subMeshIndices.end());
-                            subMeshVertices.erase(subMeshVertices.begin(), subMeshVertices.end());
+                            primitiveIndices.erase(primitiveIndices.begin(), primitiveIndices.end());
+                            primitiveVertices.erase(primitiveVertices.begin(), primitiveVertices.end());
+                            
                             I16 baseColorTextureIndex = -1;
                             int32_t baseColorUvIndex = -1;
                             I16 metallicRoughnessTextureIndex = -1;
@@ -581,7 +579,7 @@ AS::Model ImportGLTF(char const * path) {
                                             &buffer.data[bufferView.byteOffset + accessor.byteOffset]
                                         );
                                         for (U32 i = 0; i < primitiveIndicesCount; i++) {
-                                            subMeshIndices.emplace_back(gltfIndices[i] + indicesStartingIndex);
+                                            primitiveIndices.emplace_back(gltfIndices[i] + indicesVertexStartingIndex);
                                         }
                                     }
                                     break;
@@ -591,7 +589,7 @@ AS::Model ImportGLTF(char const * path) {
                                             &buffer.data[bufferView.byteOffset + accessor.byteOffset]
                                         );
                                         for (U32 i = 0; i < primitiveIndicesCount; i++) {
-                                            subMeshIndices.emplace_back(gltfIndices[i] + indicesStartingIndex);
+                                            primitiveIndices.emplace_back(gltfIndices[i] + indicesVertexStartingIndex);
                                         }
                                     }
                                     break;
@@ -601,7 +599,7 @@ AS::Model ImportGLTF(char const * path) {
                                             &buffer.data[bufferView.byteOffset + accessor.byteOffset]
                                         );
                                         for (U32 i = 0; i < primitiveIndicesCount; i++) {
-                                            subMeshIndices.emplace_back(gltfIndices[i] + indicesStartingIndex);
+                                            primitiveIndices.emplace_back(gltfIndices[i] + indicesVertexStartingIndex);
                                         }
                                     }
                                     break;
@@ -779,7 +777,6 @@ AS::Model ImportGLTF(char const * path) {
                                 );
                             }
                             
-                            indicesStartingIndex += primitiveIndicesCount;
                             bool hasPosition = positions != nullptr;
                             MFA_ASSERT(hasPosition == true);
                             bool hasBaseColorTexture = baseColorUvs != nullptr;
@@ -795,8 +792,8 @@ AS::Model ImportGLTF(char const * path) {
                             bool hasTangentValue = tangentValues != nullptr;
                             MFA_ASSERT(hasTangentValue == hasNormalTexture);
                             for (U32 i = 0; i < primitiveVertexCount; ++i) {
-                                subMeshVertices.emplace_back();
-                                auto & vertex = subMeshVertices.back();
+                                primitiveVertices.emplace_back();
+                                auto & vertex = primitiveVertices.back();
                                 if (hasPosition) {// Vertices
                                     vertex.position[0] = positions[i * 3 + 0];
                                     MFA_ASSERT(vertex.position[0] >= positionsMinValue[0]);
@@ -879,8 +876,6 @@ AS::Model ImportGLTF(char const * path) {
                                 meshIndex,
                                 AS::MeshPrimitive {
                                     .uniqueId = uniqueId,
-                                    .vertexCount = static_cast<U32>(subMeshVertices.size()),
-                                    .indicesCount = static_cast<U32>(subMeshIndices.size()),
                                     .baseColorTextureIndex = baseColorTextureIndex,
                                     .mixedMetallicRoughnessOcclusionTextureIndex = metallicRoughnessTextureIndex,
                                     .normalTextureIndex = normalTextureIndex,
@@ -896,13 +891,14 @@ AS::Model ImportGLTF(char const * path) {
                                     .hasNormalTexture = hasNormalTexture,
                                     .hasTangentBuffer = hasTangentValue
                                 }, 
-                                static_cast<U32>(subMeshVertices.size()), 
-                                subMeshVertices.data(), 
-                                static_cast<U32>(subMeshIndices.size()), 
-                                subMeshIndices.data()
+                                static_cast<U32>(primitiveVertices.size()), 
+                                primitiveVertices.data(), 
+                                static_cast<U32>(primitiveIndices.size()), 
+                                primitiveIndices.data()
                             );
 
-                            ++ subMeshIndex;
+                            indicesVertexStartingIndex += primitiveVertexCount;
+                            
                         }
                     }
                 }
@@ -958,6 +954,7 @@ AS::Model ImportGLTF(char const * path) {
                     resultModel.mesh.insertNode(assetNode);
                 }
             }
+            resultModel.mesh.DEBUG_checkForDataSanity();
             // Remove mesh buffers if invalid
             if(resultModel.mesh.isValid() == false) {
                 Blob vertexBuffer {};

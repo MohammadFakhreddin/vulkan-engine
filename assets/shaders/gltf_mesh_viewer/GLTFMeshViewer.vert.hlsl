@@ -44,15 +44,15 @@ VSOut main(VSIn input) {
     VSOut output;
 
     // Position
-    // float4 rotationResult = mul(modelTransformBuffer.rotation, float4(input.position, 1.0f));
-    // float4 worldPos = mul(modelTransformBuffer.translate, rotationResult);
-    // output.position = mul(modelTransformBuffer.projection, worldPos);
-    // output.worldPos = worldPos.xyz;
-    float4 nodePosition = mul(nodeTransformBuffer.transformMat, float4(input.position, 1.0f));
-    float4 rotationResult = mul(modelTransformBuffer.rotation, nodePosition);
+    float4 rotationResult = mul(modelTransformBuffer.rotation, float4(input.position, 1.0f));
     float4 worldPos = mul(modelTransformBuffer.translate, rotationResult);
-    output.worldPos = worldPos;
     output.position = mul(modelTransformBuffer.projection, worldPos);
+    output.worldPos = worldPos.xyz;
+    // float4 nodePosition = mul(nodeTransformBuffer.transformMat, float4(input.position, 1.0f));
+    // float4 rotationResult = mul(modelTransformBuffer.rotation, nodePosition);
+    // float4 worldPos = mul(modelTransformBuffer.translate, rotationResult);
+    // output.worldPos = worldPos;
+    // output.position = mul(modelTransformBuffer.projection, worldPos);
     
     // BaseColor
     output.baseColorTexCoord = input.baseColorTexCoord;

@@ -264,8 +264,8 @@ public:
         U32 uniqueId = 0;                      // Unique id in entire model
         U32 vertexCount = 0;
         U32 indicesCount = 0;
-        U32 verticesOffset = 0;                // From start of buffer
-        U32 indicesOffset = 0;
+        U64 verticesOffset = 0;                // From start of buffer
+        U64 indicesOffset = 0;
         U32 indicesStartingIndex = 0;          // From start of buffer
         I16 baseColorTextureIndex = 0;
         I16 mixedMetallicRoughnessOcclusionTextureIndex = 0;
@@ -308,6 +308,8 @@ public:
         const Blob & vertexBuffer,
         const Blob & indexBuffer
     );
+
+    void DEBUG_checkForDataSanity() const;
 
     // Returns mesh index
     [[nodiscard]]
@@ -388,9 +390,9 @@ private:
     U32 mIndexCount {};
     Blob mIndexBuffer {};
 
-    U32 mCurrentVertexOffset {};
-    U32 mCurrentIndexOffset {};
-    U32 mCurrentStartingIndex {};
+    U64 mNextVertexOffset {};
+    U64 mNextIndexOffset {};
+    U32 mNextStartingIndex {};
 };
 
 using MeshPrimitive = Mesh::Primitive;
@@ -454,193 +456,6 @@ private:
 };
 
 using ShaderStage = Shader::Stage;
-
-/*//---------------------------------GenericAsset----------------------------------
-
-class GenericAsset {
-public:
-    GenericAsset() : m_asset({}) {}
-    explicit GenericAsset(Blob const asset_) : m_asset(asset_) {}
-    [[nodiscard]]
-    CBlob header_blob() const {
-        return CBlob {m_asset.ptr, compute_header_size()};
-    }
-    [[nodiscard]]
-    virtual size_t compute_header_size() const = 0;
-    [[nodiscard]]
-    CBlob data_cblob() const {
-        auto const & blob = data_blob();
-        return CBlob {
-            blob.ptr,
-            blob.len
-        };
-    }
-    [[nodiscard]]
-    Blob data_blob() const {
-        auto const header_size = compute_header_size();
-        return Blob {
-            m_asset.ptr + header_size,
-            m_asset.len - header_size
-        };
-    }
-    [[nodiscard]]
-    virtual bool valid() const = 0;
-    [[nodiscard]]
-    Blob asset() const {return m_asset;}
-    void set_asset(Blob const asset_) {m_asset = asset_;}
-private:
-    Blob m_asset;
-};
-
-//---------------------------------TextureAsset-----------------------------------
-
-class TextureAsset : public GenericAsset {
-public:
-    TextureAsset() = default;
-    explicit TextureAsset(Blob const asset_) : GenericAsset(asset_) {}
-    [[nodiscard]]
-    size_t compute_header_size() const override {
-        return Texture::Header::Size(asset().as<Texture::Header>()->mip_count);
-    }
-    [[nodiscard]]
-    CBlob mip_data (uint8_t const mip_level) const {
-        auto const * texture_header = asset().as<Texture::Header>();
-        return {
-            asset().ptr + texture_header->mipmap_infos[mip_level].offset,
-            texture_header->mipmap_infos[mip_level].size
-        };
-    }
-    [[nodiscard]]
-    CBlob slice_data (uint8_t const mip_level, uint16_t const slice) const {
-        MFA_ASSERT(slice < header_object()->slices);
-        MFA_ASSERT(mip_level < header_object()->mip_count);
-        auto const blob = mip_data(mip_level);
-        return {
-            blob.ptr + slice * blob.len,
-            blob.len
-        };
-    }
-    [[nodiscard]]
-    TextureHeader const * header_object() const {
-        return header_blob().as<TextureHeader>();
-    }
-    [[nodiscard]]
-    bool valid() const override {
-        return MFA_PTR_VALID(asset().ptr) && header_object()->is_valid();
-    }
-};
-
-//----------------------------------ShaderAsset------------------------------------
-
-class ShaderAsset : public GenericAsset {
-public:
-    ShaderAsset() = default;
-    explicit  ShaderAsset(Blob const asset_) : GenericAsset(asset_) {};
-    [[nodiscard]]
-    size_t compute_header_size() const override {return sizeof(ShaderHeader);}
-    [[nodiscard]]
-    ShaderHeader const * header_object() const {
-        return header_blob().as<ShaderHeader>();
-    }
-    [[nodiscard]]
-    bool valid() const override {
-        return MFA_PTR_VALID(asset().ptr) && header_object()->is_valid();
-    }
-};
-
-//-----------------------------------MeshAsset------------------------------------
-
-class MeshAsset : public GenericAsset {
-public:
-    MeshAsset() = default;
-    explicit MeshAsset(Blob const asset_) : GenericAsset(asset_) {}
-    [[nodiscard]]
-    size_t compute_header_size() const override {
-        auto const * header = header_object();
-        return MeshHeader::ComputeHeaderSize(header->sub_mesh_count);
-    }
-    [[nodiscard]]
-    MeshHeader * header_object() {
-        return reinterpret_cast<MeshHeader *>(asset().ptr);
-    }
-    [[nodiscard]]
-    MeshHeader const * header_object() const {
-        return reinterpret_cast<MeshHeader const *>(asset().ptr);
-    }
-    [[nodiscard]]
-    MeshVertex * vertices(MeshHeader::SubMeshIndexType const sub_mesh_index) {
-        return vertices_blob(sub_mesh_index).as<MeshVertex>();
-    }
-    [[nodiscard]]
-    MeshVertex const * vertices(MeshHeader::SubMeshIndexType const sub_mesh_index) const {
-        return vertices_cblob(sub_mesh_index).as<MeshVertex>();
-    }
-    [[nodiscard]]
-    CBlob vertices_cblob(MeshHeader::SubMeshIndexType const sub_mesh_index) const {
-        auto const blob = vertices_blob(sub_mesh_index);
-        return CBlob {blob.ptr, blob.len};
-    }
-    [[nodiscard]]
-    CBlob vertices_cblob() const {
-        auto const * header = header_object();
-        MFA_PTR_ASSERT(header);
-        MFA_ASSERT(header->sub_mesh_count > 0);
-        MFA_ASSERT(
-            header->sub_meshes[0].vertices_offset + 
-            header->total_vertex_count * 
-            sizeof(Mesh::Data::Vertices::Vertex) == header->sub_meshes[0].indices_offset
-        );
-        return CBlob {
-            asset().ptr + header->sub_meshes[0].vertices_offset,
-            header->total_vertex_count * sizeof(Mesh::Data::Vertices::Vertex)
-        };
-    }
-    [[nodiscard]]
-    Blob vertices_blob(MeshHeader::SubMeshIndexType const sub_mesh_index) const {
-        auto const * header = header_object();
-        auto const & sub_mesh = header->sub_meshes[sub_mesh_index];
-        return Blob {
-            asset().ptr + sub_mesh.vertices_offset,
-            sub_mesh.vertex_count * sizeof(Mesh::Data::Vertices::Vertex)
-        };
-    }
-    [[nodiscard]]
-    MeshIndex * indices(MeshHeader::SubMeshIndexType const sub_mesh_index) {
-        return indices_blob(sub_mesh_index).as<MeshIndex>();
-    }
-    [[nodiscard]]
-    MeshIndex const * indices(MeshHeader::SubMeshIndexType const sub_mesh_index) const {
-        return indices_cblob(sub_mesh_index).as<MeshIndex>();
-    }
-    [[nodiscard]]
-    CBlob indices_cblob(MeshHeader::SubMeshIndexType const sub_mesh_index) const {
-        auto const blob = indices_blob(sub_mesh_index);
-        return CBlob {blob.ptr, blob.len};
-    }
-    [[nodiscard]]
-    CBlob indices_cblob() const {
-        auto const * header = header_object();
-        MFA_PTR_ASSERT(header);
-        MFA_ASSERT(header->sub_mesh_count > 0);
-        return CBlob {
-            asset().ptr + header->sub_meshes[0].indices_offset,
-            header->total_index_count * sizeof(Mesh::Data::Indices::IndexType)
-        };
-    }
-    [[nodiscard]]
-    Blob indices_blob(MeshHeader::SubMeshIndexType const sub_mesh_index) const {
-        auto const * header = header_object();
-        auto const & sub_mesh = header->sub_meshes[sub_mesh_index];
-        return Blob {
-            asset().ptr + sub_mesh.indices_offset,
-            sub_mesh.index_count * sizeof(Mesh::Data::Indices::IndexType)
-        };
-    }
-    [[nodiscard]]
-    bool valid() const override {
-        return MFA_PTR_VALID(asset().ptr) && header_object()->is_valid();
-    }
-};*/
 
 //----------------------------------ModelAsset------------------------------------
 

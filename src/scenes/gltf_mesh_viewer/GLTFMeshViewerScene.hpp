@@ -73,7 +73,7 @@ private:
     float m_light_color[3] {252.0f/256.0f, 212.0f/256.0f, 64.0f/256.0f};
 
     std::vector<ModelRenderRequiredData> mModelsRenderData {};
-    MFA::I32 mSelectedModelIndex = 0;
+    MFA::I32 mSelectedModelIndex = 2;
 
     MFA::RenderFrontend::SamplerGroup m_sampler_group {};
 
