@@ -21,7 +21,14 @@ A Clamp(const A & value, B min_value, C max_value) {
 
 template<typename A>
 A Deg2Rad(const A & value) {
-    return A((static_cast<double>(value) * PiDouble) / 180);
+    static constexpr double degToRadFactor = PiDouble / 180.0;
+    return A(static_cast<double>(value) * degToRadFactor);
+}
+
+template<typename A>
+A Rad2Deg(const A & value) {
+    static constexpr double radToDegFactor = 180.0f / PiDouble;
+    return A(static_cast<double>(value) * radToDegFactor);
 }
 
 template<typename NumberType>
@@ -32,6 +39,13 @@ NumberType Min(NumberType a, NumberType b) {
 template<typename NumberType>
 NumberType Max(NumberType a, NumberType b) {
     return a > b ? a : b;
+}
+
+template<typename genType>
+genType Epsilon()
+{
+	GLM_STATIC_ASSERT(std::numeric_limits<genType>::is_iec559, "'epsilon' only accepts floating-point inputs");
+	return std::numeric_limits<genType>::epsilon();
 }
 
 };

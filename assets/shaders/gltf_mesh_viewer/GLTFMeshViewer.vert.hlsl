@@ -27,7 +27,7 @@ struct VSOut {
 };
 
 struct ModelTransformation {
-    float4x4 rotation;
+    float4x4 rotationAndScale;
     float4x4 translate;
     float4x4 projection;
 };
@@ -48,12 +48,12 @@ VSOut main(VSIn input) {
     
     // Position
 #ifndef NODE_TREE_SUPPORT
-    float4 rotationResult = mul(modelTransformBuffer.rotation, float4(input.position, 1.0f));
+    float4 rotationResult = mul(modelTransformBuffer.rotationAndScale, float4(input.position, 1.0f));
     float4 worldPos = mul(modelTransformBuffer.translate, rotationResult);
     output.position = mul(modelTransformBuffer.projection, worldPos);
     output.worldPos = worldPos.xyz;
 #else 
-    float4 nodePosition = mul(modelTransformBuffer.rotation, float4(input.position, 1.0f));
+    float4 nodePosition = mul(modelTransformBuffer.rotationAndScale, float4(input.position, 1.0f));
     float4 rotationResult = mul(nodeTransformBuffer.transformMat, nodePosition);
     float4 worldPos = mul(modelTransformBuffer.translate, rotationResult);
     output.worldPos = worldPos;
@@ -67,11 +67,11 @@ VSOut main(VSIn input) {
     output.metallicRoughnessTexCoord = input.metallicRoughnessTexCoord;
     
 #ifndef NODE_TREE_SUPPORT
-    float4x4 rotationAndScaleMat = nodeTransformBuffer.rotationAndScaleMat;
+    float4x4 rotationAndScaleMat = modelTransformBuffer.rotationAndScale;
 #else
     float4x4 rotationAndScaleMat = mul(
         nodeTransformBuffer.rotationAndScaleMat, 
-        modelTransformBuffer.rotation
+        modelTransformBuffer.rotationAndScale
     );
 #endif
     // Normals

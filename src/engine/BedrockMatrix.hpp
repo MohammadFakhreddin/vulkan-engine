@@ -148,16 +148,22 @@ public:
   template <typename A>
   void operator*(_Matrix<A,width,height> rhs) = delete;
 
-  bool equal(const _Matrix<T, width, height>& rhs) {
-    for (int i = 0; i < width; i++) {
-      for (int j = 0; j < height; j++) {
-        if (rhs.get(i, j) != get(i, j)) {
-          return false;
-        }
-      }
+    bool equal(const _Matrix<T, width, height>& rhs) {
+        return Equal(*this, rhs);
     }
-    return true;
-  }
+
+    template <typename funcType, uint32_t funcWidth, uint32_t funcHeight>
+    [[nodiscard]]
+    static bool Equal(const _Matrix<funcType, funcWidth, funcHeight>& a, const _Matrix<funcType, funcWidth, funcHeight>& b) {
+        for (int i = 0; i < width; i++) {
+            for (int j = 0; j < height; j++) {
+                if (a.get(i, j) != b.get(i, j)) {
+                  return false;
+                }
+            }
+        }
+        return true;
+    }
 
   template <typename A>
   bool operator==(_Matrix<A, width, height>& rhs) = delete;
@@ -169,8 +175,9 @@ public:
   template <typename A>
   bool operator!=(_Matrix<A,width,height>& rhs) = delete;
   
-  void print() {
+  void print(char const * matName = "Unknown") const {
     std::cout<<"---Printing matrix----"<<std::endl;
+    std::cout<<"MatName:" << matName << std::endl;
     std::cout<<"Width:"<<width<<std::endl;
     std::cout<<"Height:"<<height<<std::endl;
     std::string line = "";
@@ -191,12 +198,12 @@ public:
     return cells[y * width + x];
   }
 
-void set(const unsigned int& x, const unsigned int& y, const T& value) {
-    MFA_ASSERT(x < width);
-    MFA_ASSERT(y < height);
-    //cells[x * height + y] = value;
-    cells[y * width + x] = value;
-  }
+    void set(const unsigned int& x, const unsigned int& y, const T& value) {
+        MFA_ASSERT(x < width);
+        MFA_ASSERT(y < height);
+        //cells[x * height + y] = value;
+        cells[y * width + x] = value;
+    }
 
   const T& getX() const {
     MFA_ASSERT(width == 2 || width == 3 || width == 4);
@@ -479,22 +486,6 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     MFA_ASSERT(matrix.get(3, 1) == 0);
     MFA_ASSERT(matrix.get(3, 2) == 0);
     matrix.set(3, 3, T(1));
-    //matrix.set(0, 0, T(1));
-    //MFA_ASSERT(matrix.get(1, 0) == 0);
-    //MFA_ASSERT(matrix.get(2, 0) == 0);
-    //matrix.set(3, 0, x);
-    //MFA_ASSERT(matrix.get(0, 1) == 0);
-    //matrix.set(1, 1, 1);
-    //MFA_ASSERT(matrix.get(2, 1) == 0);
-    //matrix.set(3, 1, y);
-    //MFA_ASSERT(matrix.get(0, 2) == 0);
-    //MFA_ASSERT(matrix.get(1, 2) == 0);
-    //matrix.set(2, 2, 1);
-    //matrix.set(3, 2, z);
-    //MFA_ASSERT(matrix.get(0, 3) == 0);
-    //MFA_ASSERT(matrix.get(1, 3) == 0);
-    //MFA_ASSERT(matrix.get(2, 3) == 0);
-    //matrix.set(3, 3, T(1));
   }
 
   // https://www.brainvoyager.com/bv/doc/UsersGuide/CoordsAndTransforms/SpatialTransformationMatrices.html
@@ -555,64 +546,83 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     matrix.set(3, 3, 1.0f);
   }
 
-  static void AssignRotationXYZ(
-    _Matrix<T, 4, 4>& matrix,
-    const T& xDegree,
-    const T& yDegree,
-    const T& zDegree
-  ) {
-    matrix.set(0, 0, cosf(yDegree) * cosf(zDegree));
-    matrix.set(0, 1, cosf(yDegree) * (-sinf(zDegree)));
-    matrix.set(0, 2, -sinf(yDegree));
-    matrix.set(1, 0, ((-sinf(xDegree)) * sinf(yDegree) * cosf(zDegree)) + (cosf(xDegree) * sinf(zDegree)));
-    matrix.set(1, 1, (sinf(xDegree) * sinf(yDegree) * sinf(zDegree)) + (cosf(xDegree) * cosf(zDegree)));
-    matrix.set(1, 2, (-sinf(xDegree)) * cosf(yDegree));
-    matrix.set(2, 0, (cosf(xDegree) * sinf(yDegree) * cosf(zDegree)) + (sinf(xDegree) * sinf(zDegree)));
-    matrix.set(2, 1, (cosf(xDegree) * sinf(yDegree) * (-1 * sinf(zDegree))) + (sinf(xDegree) * cosf(zDegree)));
-    matrix.set(2, 2, cosf(xDegree) * cosf(yDegree));
-    MFA_ASSERT(matrix.get(3, 0) == 0.0f);
-    MFA_ASSERT(matrix.get(3, 1) == 0.0f);
-    MFA_ASSERT(matrix.get(3, 2) == 0.0f);
-    MFA_ASSERT(matrix.get(0, 3) == 0.0f);
-    MFA_ASSERT(matrix.get(1, 3) == 0.0f);
-    MFA_ASSERT(matrix.get(2, 3) == 0.0f);
-    matrix.set(3, 3, 1.0f);
-  }
+    // Based on https://automaticaddison.com/how-to-convert-a-quaternion-to-a-rotation-matrix/ and GLM source
+    static void AssignRotation(
+        _Matrix<T, 4, 4>& matrix,
+        const _Matrix<T, 4, 1>& quaternion
+    ) {
+        T const qw = quaternion.get(0, 0);
+        T const qx = quaternion.get(1, 0);
+        T const qy = quaternion.get(2, 0);
+        T const qz = quaternion.get(3, 0);
 
-   // Based on https://automaticaddison.com/how-to-convert-a-quaternion-to-a-rotation-matrix/
-  static void AssignRotation(
-    _Matrix<T, 4, 4>& matrix,
-    _Matrix<T, 4, 1>& quaternion
-  ) {
-    T const q0 = quaternion.get(0, 0);
-    T const q1 = quaternion.get(1, 0);
-    T const q2 = quaternion.get(2, 0);
-    T const q3 = quaternion.get(3, 0);
-     
-    // First row of the rotation matrix
-    matrix.set(0, 0, 2 * (q0 * q0 + q1 * q1) - 1);
-    matrix.set(0, 1, 2 * (q1 * q2 - q0 * q3));
-    matrix.set(0, 2, 2 * (q1 * q3 + q0 * q2));
-     
-    // Second row of the rotation matrix
-    matrix.set(1, 0, 2 * (q1 * q2 + q0 * q3));
-    matrix.set(1, 1, 2 * (q0 * q0 + q2 * q2) - 1);
-    matrix.set(1, 2, 2 * (q2 * q3 - q0 * q1));
-     
-    // Third row of the rotation matrix
-    matrix.set(2, 0, 2 * (q1 * q3 - q0 * q2));
-    matrix.set(2, 1, 2 * (q2 * q3 + q0 * q1));
-    matrix.set(2, 2, 2 * (q0 * q0 + q3 * q3) - 1);
+        T qxx(qx * qx);
+        T qyy(qy * qy);
+        T qzz(qz * qz);
+        T qxz(qx * qz);
+        T qxy(qx * qy);
+        T qyz(qy * qz);
+        T qwx(qw * qx);
+        T qwy(qw * qy);
+        T qwz(qw * qz);
 
-    MFA_ASSERT(matrix.get(3, 0) == 0.0f);
-    MFA_ASSERT(matrix.get(3, 1) == 0.0f);
-    MFA_ASSERT(matrix.get(3, 2) == 0.0f);
-    MFA_ASSERT(matrix.get(0, 3) == 0.0f);
-    MFA_ASSERT(matrix.get(1, 3) == 0.0f);
-    MFA_ASSERT(matrix.get(2, 3) == 0.0f);
+        matrix.set(0, 0, T(1) - T(2) * (qyy +  qzz));
+        matrix.set(0, 1, T(2) * (qxy + qwz));
+        matrix.set(0, 2, T(2) * (qxz - qwy));
 
-    matrix.set(3, 3, 1.0f);
-  }
+        matrix.set(1, 0, T(2) * (qxy - qwz));
+        matrix.set(1, 1, T(1) - T(2) * (qxx +  qzz));
+        matrix.set(1, 2, T(2) * (qyz + qwx));
+
+        matrix.set(2, 0, T(2) * (qxz + qwy));
+        matrix.set(2, 1, T(2) * (qyz - qwx));
+        matrix.set(2, 2, T(1) - T(2) * (qxx +  qyy));
+
+        MFA_ASSERT(matrix.get(0, 3) == 0.0f);
+        MFA_ASSERT(matrix.get(1, 3) == 0.0f);
+        MFA_ASSERT(matrix.get(2, 3) == 0.0f);
+        MFA_ASSERT(matrix.get(3, 0) == 0.0f);
+        MFA_ASSERT(matrix.get(3, 1) == 0.0f);
+        MFA_ASSERT(matrix.get(3, 2) == 0.0f);
+
+        matrix.set(3, 3, 1.0f);
+    }
+
+    static void AssignRotation(
+        _Matrix<T, 4, 4>& matrix,
+        const _Matrix<T, 3, 1>& eulerAnglesInRad
+    ) {
+        AssignRotation(matrix, ToQuaternion(eulerAnglesInRad));
+    }
+
+    static void AssignRotation(
+        _Matrix<T, 4, 4>& matrix,
+        const T& xDegree,
+        const T& yDegree,
+        const T& zDegree
+    ) {
+        _Matrix<T, 3, 1> rotationMat {};
+        rotationMat.set(0, 0, xDegree);
+        rotationMat.set(1, 0, yDegree);
+        rotationMat.set(2, 0, zDegree);
+        AssignRotation(matrix, rotationMat);
+        /*matrix.set(0, 0, cosf(yDegree) * cosf(zDegree));
+        matrix.set(0, 1, cosf(yDegree) * (-sinf(zDegree)));
+        matrix.set(0, 2, -sinf(yDegree));
+        matrix.set(1, 0, ((-sinf(xDegree)) * sinf(yDegree) * cosf(zDegree)) + (cosf(xDegree) * sinf(zDegree)));
+        matrix.set(1, 1, (sinf(xDegree) * sinf(yDegree) * sinf(zDegree)) + (cosf(xDegree) * cosf(zDegree)));
+        matrix.set(1, 2, (-sinf(xDegree)) * cosf(yDegree));
+        matrix.set(2, 0, (cosf(xDegree) * sinf(yDegree) * cosf(zDegree)) + (sinf(xDegree) * sinf(zDegree)));
+        matrix.set(2, 1, (cosf(xDegree) * sinf(yDegree) * (-1 * sinf(zDegree))) + (sinf(xDegree) * cosf(zDegree)));
+        matrix.set(2, 2, cosf(xDegree) * cosf(yDegree));
+        MFA_ASSERT(matrix.get(3, 0) == 0.0f);
+        MFA_ASSERT(matrix.get(3, 1) == 0.0f);
+        MFA_ASSERT(matrix.get(3, 2) == 0.0f);
+        MFA_ASSERT(matrix.get(0, 3) == 0.0f);
+        MFA_ASSERT(matrix.get(1, 3) == 0.0f);
+        MFA_ASSERT(matrix.get(2, 3) == 0.0f);
+        matrix.set(3, 3, 1.0f);*/
+    }
 
   // https://www.brainvoyager.com/bv/doc/UsersGuide/CoordsAndTransforms/SpatialTransformationMatrices.html
   static void AssignRotationX(_Matrix<T, 3, 3>& matrix, const T& degree) {
@@ -651,7 +661,7 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     matrix.set(2, 2, 1);
   }
 
-  static void AssignRotationXYZ(
+  static void AssignRotation(
     _Matrix<T,3,3>& matrix,
     const T& xDegree,
     const T& yDegree,
@@ -737,62 +747,147 @@ void set(const unsigned int& x, const unsigned int& y, const T& value) {
     _assign(rhs.cells, width * height);    
   }
 
-  template <typename A>
-  void castAssign(const A * cells_) {
-    MFA_ASSERT(cells_ != nullptr);
-    for (uint32_t i = 0; i < width * height; ++i) {
-      cells[i] = static_cast<T>(cells_[i]);    
+    template <typename A>
+    void castAssign(const A * cells_) {
+        MFA_ASSERT(cells_ != nullptr);
+        for (uint32_t i = 0; i < width * height; ++i) {
+          cells[i] = static_cast<T>(cells_[i]);    
+        }
     }
-  }
 
-  template <unsigned int rhsWidth,unsigned int rhsHeight>
-  void assign(const _Matrix<T, rhsWidth, rhsHeight>& rhs) {
-    if (rhsWidth == width && rhsHeight == height) {
-      _assign(rhs.cells, matrixSize);
+    template <unsigned int rhsWidth,unsigned int rhsHeight>
+    void assign(const _Matrix<T, rhsWidth, rhsHeight>& rhs) {
+        if (rhsWidth == width && rhsHeight == height) {
+            _assign(rhs.cells, matrixSize);
+        }
+        else if (rhsWidth == 3 && width == 4 && rhsHeight == 1 && height == 1) {
+            _assign(rhs.cells, rhs.matrixSize);
+            cells[3] = T(1);
+        }
+        else if (rhsWidth == 4 && width == 3 && rhsHeight == 1 && height == 1)
+        {
+            _assign(rhs.cells, rhs.matrixSize);
+        }
+        else {
+            MFA_CRASH("Unhandled assign in matrixTemplate");
+        }
     }
-    else if (rhsWidth == 3 && width == 4 && rhsHeight == 1 && height == 1) {
-      _assign(rhs.cells, rhs.matrixSize);
-      cells[3] = T(1);
+
+    void assign(const T * cells) {
+        MFA_ASSERT(cells != nullptr);
+        _assign(cells, width * height);
     }
-    else if (rhsWidth == 4 && width == 3 && rhsHeight == 1 && height == 1)
+
+    void assign(const T * cells, uint32_t elementCount) {
+        MFA_ASSERT(cells != nullptr);
+        MFA_ASSERT(elementCount > 0);
+        _assign(cells, elementCount);
+    }
+
+    void assign(const T& value) {
+        std::fill_n(cells, matrixSize, value);
+    }
+
+    [[nodiscard]]
+    T dotProduct(const _Matrix<T, 3, 1>& rhs) const {
+        return _dotProduct(rhs.cells, 3, 1);
+    }
+
+    [[nodiscard]]
+    T dotProduct(const _Matrix<T, 4, 1>& rhs) const {
+        return _dotProduct(rhs.cells, 4, 1);
+    }
+
+    void multiply(
+        const _Matrix<T, width, width>& matrix
+    ) {
+        return _multiply(matrix.cells);
+    }
+
+    [[nodiscard]]
+    static _Matrix<T, 3, 1> QuaternionToEulerAnglesRadian(_Matrix<T, 4, 1> const& q)
     {
-      _assign(rhs.cells, rhs.matrixSize);
+        return _Matrix<T, 3, 1>(Pitch(q), Yaw(q), Roll(q));
     }
-    else {
-      MFA_CRASH("Unhandled assign in matrixTemplate");
+
+    [[nodiscard]]
+    static _Matrix<T, 3, 1> QuaternionToEulerAnglesDegree(_Matrix<T, 4, 1> const& q)
+    {
+        auto const eulerAngleRadian = QuaternionToEulerAnglesRadian(q);
+        _Matrix<T, 3, 1> eulerAngleDegree {
+            Math::Rad2Deg(eulerAngleRadian.get(0, 0)),
+            Math::Rad2Deg(eulerAngleRadian.get(1, 0)),
+            Math::Rad2Deg(eulerAngleRadian.get(2, 0))
+        };
+        return eulerAngleDegree;
     }
-  }
 
-  void assign(const T * cells) {
-    MFA_ASSERT(cells != nullptr);
-    _assign(cells, width * height);
-  }
+    [[nodiscard]]
+    static T Roll(_Matrix<T, 4, 1> const& q)
+    {
+        auto const qw = q.get(0, 0);
+        auto const qx = q.get(1, 0);
+        auto const qy = q.get(2, 0);
+        auto const qz = q.get(3, 0);
+        return static_cast<T>(atan2(static_cast<T>(2) * (qx * qy + qw * qz), qw * qw + qx * qx - qy * qy - qz * qz));
+    }
 
-  void assign(const T * cells, uint32_t elementCount) {
-      MFA_ASSERT(cells != nullptr);
-      MFA_ASSERT(elementCount > 0);
-      _assign(cells, elementCount);
-  }
+    [[nodiscard]]
+    static T Pitch(_Matrix<T, 4, 1> const& q)
+    {
+        auto const qw = q.get(0, 0);
+        auto const qx = q.get(1, 0);
+        auto const qy = q.get(2, 0);
+        auto const qz = q.get(3, 0);
+        
+        //return T(atan(T(2) * (q.y * q.z + q.w * q.x), q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z));
+        T const y = static_cast<T>(2) * (qy * qz + qw * qx);
+        T const x = qw * qw - qx * qx - qy * qy + qz * qz;
+        // TODO Refactor, Replace epsilon with correct value
+        if(Equal(_Matrix<T, 2, 1>(x, y), _Matrix<T, 2, 1>(0))) { //avoid atan2(0,0) - handle singularity - Matiis
+            return static_cast<T>(static_cast<T>(2) * atan2(qx, qw));
+        }
+        return static_cast<T>(atan2(y, x));
+    }
 
-  void assign(const T& value) {
-    std::fill_n(cells, matrixSize, value);
-  }
+    [[nodiscard]]
+    static T Yaw(_Matrix<T, 4, 1> const& q)
+    {
+        auto const qw = q.get(0, 0);
+        auto const qx = q.get(1, 0);
+        auto const qy = q.get(2, 0);
+        auto const qz = q.get(3, 0);
+        return asin(Math::Clamp(static_cast<T>(-2) * (qx * qz - qw * qy), static_cast<T>(-1), static_cast<T>(1)));
+    }
 
-  [[nodiscard]]
-  T dotProduct(const _Matrix<T, 3, 1>& rhs) const {
-    return _dotProduct(rhs.cells, 3, 1);
-  }
+    [[nodiscard]]
+    static _Matrix<T, 4, 1> ToQuaternion(const _Matrix<T, 3, 1> & degreeInRad) { 
+        return ToQuaternion(
+            degreeInRad.getZ(),
+            degreeInRad.getY(),
+            degreeInRad.getX()
+        );
+    }
 
-  [[nodiscard]]
-  T dotProduct(const _Matrix<T, 4, 1>& rhs) const {
-    return _dotProduct(rhs.cells, 4, 1);
-  }
+    [[nodiscard]]
+    static _Matrix<T, 4, 1> ToQuaternion(T yaw, T pitch, T roll) // yaw (Z), pitch (Y), roll (X) in rad
+    {
+        // Abbreviations for the various angular functions
+        T cy = static_cast<T>(cos(yaw * 0.5));
+        T sy = static_cast<T>(sin(yaw * 0.5));
+        T cp = static_cast<T>(cos(pitch * 0.5));
+        T sp = static_cast<T>(sin(pitch * 0.5));
+        T cr = static_cast<T>(cos(roll * 0.5));
+        T sr = static_cast<T>(sin(roll * 0.5));
 
-  void multiply(
-    const _Matrix<T, width, width>& matrix
-  ) {
-    return _multiply(matrix.cells);
-  }
+        _Matrix<T, 4, 1> q {};
+        q.set(0, 0, cr * cp * cy + sr * sp * sy);
+        q.set(1, 0, sr * cp * cy - cr * sp * sy);
+        q.set(2, 0, cr * sp * cy + sr * cp * sy);
+        q.set(3, 0, cr * cp * sy - sr * sp * cy);
+
+        return q;
+    }
 
 private:
   //Hint rhsHeight == width && rhsWidth == width
@@ -829,53 +924,53 @@ private:
         (double(cells[2])) * double(rhsCells[2]));
   }
 
-  //TODO Write unit tests for project
-  template<typename A, typename B>
-  void _crossProduct(
-    const A* mat1Cells, const unsigned int& mat1Width, const unsigned int& mat1Height,
-    const B* mat2Cells, const unsigned int& mat2Width, const unsigned int& mat2Height
-  ) {
-    MFA_ASSERT(mat1Width == 3 || mat1Width == 4);
-    MFA_ASSERT(mat1Height == 1);
-    MFA_ASSERT(mat2Width == 3 || mat2Width == 4);
-    MFA_ASSERT(mat2Height == 1);
-    MFA_ASSERT(width == 3 || width == 4);
-    MFA_ASSERT(height == 1);
-    this->set(0, 0,
-      (T(mat1Cells[1]) * T(mat2Cells[2]))
-      - (T(mat1Cells[2]) * T(mat2Cells[1]))
-    );
-    this->set(1, 0,
-      (T(mat1Cells[2]) * T(mat2Cells[0]))
-      - (T(mat1Cells[0]) * T(mat2Cells[2]))
-    );
-    this->set(2, 0,
-      (T(mat1Cells[0]) * T(mat2Cells[1]))
-      - (T(mat1Cells[1]) * T(mat2Cells[0]))
-    );
-  }
-
-  template<typename A>
-  void _hat(A* rhsCells, const unsigned int& rhsWidth, const unsigned int& rhsHeight) const {
-    MFA_ASSERT(rhsWidth == 3 || rhsWidth == 4);
-    MFA_ASSERT(rhsHeight == 1);
-    MFA_ASSERT(width == 3 || width == 4);
-    MFA_ASSERT(height == 1);
-    const A vectorSize = size<A>();
-    for (unsigned short i = 0; i < 3; i++) {
-      rhsCells[i] = A(cells[i]) / vectorSize;
+    //TODO Write unit tests for project
+    template<typename A, typename B>
+    void _crossProduct(
+        const A* mat1Cells, const unsigned int& mat1Width, const unsigned int& mat1Height,
+        const B* mat2Cells, const unsigned int& mat2Width, const unsigned int& mat2Height
+    ) {
+        MFA_ASSERT(mat1Width == 3 || mat1Width == 4);
+        MFA_ASSERT(mat1Height == 1);
+        MFA_ASSERT(mat2Width == 3 || mat2Width == 4);
+        MFA_ASSERT(mat2Height == 1);
+        MFA_ASSERT(width == 3 || width == 4);
+        MFA_ASSERT(height == 1);
+        this->set(0, 0,
+          (T(mat1Cells[1]) * T(mat2Cells[2]))
+          - (T(mat1Cells[2]) * T(mat2Cells[1]))
+        );
+        this->set(1, 0,
+          (T(mat1Cells[2]) * T(mat2Cells[0]))
+          - (T(mat1Cells[0]) * T(mat2Cells[2]))
+        );
+        this->set(2, 0,
+          (T(mat1Cells[0]) * T(mat2Cells[1]))
+          - (T(mat1Cells[1]) * T(mat2Cells[0]))
+        );
     }
-  }
 
-  /*
-  *
-  * Because elementsCount is related to matrixSize and it is a constexpr
-  * It cannot be referenced
-  * 
-  */
-  void _assign(const T * rhsCells, const unsigned int& elementsCount) {
-    std::memcpy(cells, rhsCells, elementsCount * sizeof(T));
-  }
+    template<typename A>
+    void _hat(A* rhsCells, const unsigned int& rhsWidth, const unsigned int& rhsHeight) const {
+        MFA_ASSERT(rhsWidth == 3 || rhsWidth == 4);
+        MFA_ASSERT(rhsHeight == 1);
+        MFA_ASSERT(width == 3 || width == 4);
+        MFA_ASSERT(height == 1);
+        const A vectorSize = size<A>();
+        for (unsigned short i = 0; i < 3; i++) {
+          rhsCells[i] = A(cells[i]) / vectorSize;
+        }
+    }
+
+    /*
+    *
+    * Because elementsCount is related to matrixSize and it is a constexpr
+    * It cannot be referenced
+    * 
+    */
+    void _assign(const T * rhsCells, const unsigned int& elementsCount) {
+        std::memcpy(cells, rhsCells, elementsCount * sizeof(T));
+    }
 
 };
 

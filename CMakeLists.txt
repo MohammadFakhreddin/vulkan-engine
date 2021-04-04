@@ -187,7 +187,7 @@ list(
     "unit_tests/catch.hpp"
     "unit_tests/rlutil.h"
     "unit_tests/testMain.cpp"
-    "unit_tests/engine/testBedrockMath.cpp"
+    "unit_tests/engine/testBedrockMatrix.cpp"
 )
 
 #-----------------------------------------------------------------------

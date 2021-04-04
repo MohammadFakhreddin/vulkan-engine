@@ -56,7 +56,7 @@ void TexturedSphereScene::OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawP
         // Rotation
         // TODO Try sending Matrices directly
         MFA::Matrix4X4Float rotationMat {};
-        MFA::Matrix4X4Float::AssignRotationXYZ(
+        MFA::Matrix4X4Float::AssignRotation(
             rotationMat,
             MFA::Math::Deg2Rad(mModelRotation[0]),
             MFA::Math::Deg2Rad(mModelRotation[1]),

@@ -123,14 +123,21 @@ void GLTFMeshViewerScene::OnDraw(MFA::U32 const delta_time, RF::DrawPass & draw_
         // Rotation
         // TODO Try sending Matrices directly
         MFA::Matrix4X4Float rotationMat {};
-        MFA::Matrix4X4Float::AssignRotationXYZ(
+        MFA::Matrix4X4Float::AssignRotation(
             rotationMat,
             MFA::Math::Deg2Rad(m_model_rotation[0]),
             MFA::Math::Deg2Rad(m_model_rotation[1]),
             MFA::Math::Deg2Rad(m_model_rotation[2])
         );
-        static_assert(sizeof(m_translate_data.rotation) == sizeof(rotationMat.cells));
-        ::memcpy(m_translate_data.rotation, rotationMat.cells, sizeof(rotationMat.cells));
+        MFA::Matrix4X4Float scaleMat {};
+        MFA::Matrix4X4Float::AssignScale(scaleMat, m_model_scale);
+
+        MFA::Matrix4X4Float rotationAndScaleMat {};
+        rotationAndScaleMat.assign(rotationMat);
+        rotationAndScaleMat.multiply(scaleMat);
+
+        static_assert(sizeof(m_translate_data.rotationAndScale) == sizeof(rotationAndScaleMat.cells));
+        ::memcpy(m_translate_data.rotationAndScale, rotationAndScaleMat.cells, sizeof(rotationAndScaleMat.cells));
         // Position
         MFA::Matrix4X4Float transformationMat {};
         MFA::Matrix4X4Float::AssignTranslation(
@@ -197,9 +204,11 @@ void GLTFMeshViewerScene::OnUI(MFA::U32 const delta_time, MFA::RenderFrontend::D
     ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("ZDegree", &m_model_rotation[2], -360.0f, 360.0f);
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("XDistance", &m_model_position[0], -100.0f, 100.0f);
+    ImGui::SliderFloat("Scale", &m_model_scale, 0.0f, 10.0f);
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("YDistance", &m_model_position[1], -100.0f, 100.0f);
+    ImGui::SliderFloat("XDistance", &m_model_position[0], -1000.0f, 1000.0f);
+    ImGui::SetNextItemWidth(ItemWidth);
+    ImGui::SliderFloat("YDistance", &m_model_position[1], -1000.0f, 1000.0f);
     ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("ZDistance", &m_model_position[2], -1000.0f, 100.0f);
     ImGui::End();

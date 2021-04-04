@@ -201,7 +201,7 @@ void PBRScene::OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_
         {// Transform
             // Rotation
             MFA::Matrix4X4Float rotation;
-            MFA::Matrix4X4Float::AssignRotationXYZ(
+            MFA::Matrix4X4Float::AssignRotation(
                 rotation,
                 MFA::Math::Deg2Rad(m_sphere_rotation[0]),
                 MFA::Math::Deg2Rad(m_sphere_rotation[1]),

@@ -36,7 +36,7 @@ namespace MFA::ShapeGenerator {
 
                 // As solution to compute tangent I decided to rotate normal by 90 degree (In any direction :)))
                 Matrix4X4Float rotationMatrix {};
-                Matrix4X4Float::AssignRotationXYZ(rotationMatrix, 0.0f, 0.0f, 90.0f);
+                Matrix4X4Float::AssignRotation(rotationMatrix, 0.0f, 0.0f, 90.0f);
 
                 Matrix4X1Float tangentMatrix {};
                 tangentMatrix.setX(xPos);
