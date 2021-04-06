@@ -80,24 +80,35 @@ public:
   template <typename A>
   _Matrix<A, width, height>& operator=(const _Matrix<A, width, height>& rhs) = delete;
 
-  static void ExtractRotationAndScaleMatrix(
-    _Matrix<float, 4, 4> const & transformMat, 
-    _Matrix<float, 4, 4> & destinationMat
-  ) {
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            destinationMat.set(i, j, transformMat.get(i, j));
+    static void ExtractRotationAndScaleMatrix(
+        _Matrix<float, 4, 4> const & transformMat, 
+        _Matrix<float, 4, 4> & destinationMat
+    ) {
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
+                destinationMat.set(i, j, transformMat.get(i, j));
+            }
+        }
+        destinationMat.set(3, 0, 0.0f);
+        destinationMat.set(3, 1, 0.0f);
+        destinationMat.set(3, 2, 0.0f);
+        destinationMat.set(0, 3, 0.0f);
+        destinationMat.set(1, 3, 0.0f);
+        destinationMat.set(2, 3, 0.0f);
+        destinationMat.set(3, 3, 1.0f);
+    }
+
+    static void ExtractTranslateMatrix(
+        _Matrix<float, 4, 4> const & transformMat, 
+        _Matrix<float, 4, 4> & destinationMat
+    )
+    {
+        identity(destinationMat);
+        destinationMat.set(3, 3, 1.0f);
+        for (int i = 0; i < 3; ++i) {
+            destinationMat.set(i, 3, transformMat.get(i, 3));
         }
     }
-    destinationMat.set(3, 0, 0.0f);
-    destinationMat.set(3, 1, 0.0f);
-    destinationMat.set(3, 2, 0.0f);
-    destinationMat.set(0, 3, 0.0f);
-    destinationMat.set(1, 3, 0.0f);
-    destinationMat.set(2, 3, 0.0f);
-    destinationMat.set(3, 3, 1.0f);
-       
-  }
 
   template <typename A>
   _Matrix(const _Matrix<A, width, height>& other) = delete;

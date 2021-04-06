@@ -930,9 +930,13 @@ AS::Model ImportGLTF(char const * path) {
                         if (gltfNode.rotation.empty() == false) {
                             MFA_ASSERT(gltfNode.rotation.size() == 4);
                             Matrix4X4Float rotation {};
-
+                            //https://blender.stackexchange.com/questions/123406/blender-gltf-which-rotation-values-are-really-exported
                             QuaternionFloat quaternion {};
-                            quaternion.castAssign(gltfNode.rotation.data());
+                            quaternion.set(0, 0, static_cast<float>(gltfNode.rotation[3]));
+                            quaternion.set(1, 0, static_cast<float>(gltfNode.rotation[0]));
+                            quaternion.set(2, 0, static_cast<float>(gltfNode.rotation[1]));
+                            quaternion.set(3, 0, static_cast<float>(gltfNode.rotation[2]));
+
                             Matrix4X4Float::AssignRotation(rotation, quaternion);
 
                             transform.multiply(rotation);

@@ -70,7 +70,7 @@ private:
 
     struct NodeTransformBuffer {
         float rotationAndScale[16];
-        float transform[16];
+        float translate[16];
     } mNodeTransformData {};
 
     void drawNode(RF::DrawPass & drawPass, int nodeIndex, Matrix4X4Float const & parentTransform);

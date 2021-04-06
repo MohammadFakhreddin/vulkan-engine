@@ -26,6 +26,11 @@ private:
         std::string displayName {};
         std::string address {};
         MFA::DrawableObject drawableObject {};
+        struct {
+            float rotationEulerAngle[3] {};
+            float scale = 1;
+            float translate[3] {0, 0, -10.0f};
+        } initialParams {};
     };
 
     void createModel(ModelRenderRequiredData & renderRequiredData);
@@ -75,6 +80,7 @@ private:
 
     std::vector<ModelRenderRequiredData> mModelsRenderData {};
     MFA::I32 mSelectedModelIndex = 2;
+    MFA::I32 mPreviousModelSelectedIndex = -1;
 
     MFA::RenderFrontend::SamplerGroup m_sampler_group {};
 

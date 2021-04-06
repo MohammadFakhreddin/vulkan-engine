@@ -23,6 +23,7 @@ void GLTFMeshViewerScene::Init() {
             .displayName {"Car"},
             .address {"../assets/models/free_zuk_3d_model/scene.gltf"},
             .drawableObject {},
+
         });
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
             .isLoaded = false,
@@ -30,6 +31,11 @@ void GLTFMeshViewerScene::Init() {
             .displayName {"Gunship"},
             .address {"../assets/models/gunship/scene.gltf"},
             .drawableObject {},
+            .initialParams {
+                .rotationEulerAngle {28.0f, 180.0f, 0.0f},
+                .scale = 0.031f,
+                .translate {6.0f, -16.0f, -113.0f}
+            }
         });
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
             .isLoaded = false,
@@ -115,6 +121,17 @@ void GLTFMeshViewerScene::OnDraw(MFA::U32 const delta_time, RF::DrawPass & draw_
     auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
     if (selectedModel.isLoaded == false) {
         createModel(selectedModel);
+    }
+    if (mPreviousModelSelectedIndex != mSelectedModelIndex) {
+        mPreviousModelSelectedIndex = mSelectedModelIndex;
+
+        ::memcpy(m_model_rotation, selectedModel.initialParams.rotationEulerAngle, sizeof(m_model_rotation));
+        static_assert(sizeof(m_model_rotation) == sizeof(selectedModel.initialParams.rotationEulerAngle));
+
+        ::memcpy(m_model_position, selectedModel.initialParams.translate, sizeof(m_model_position));
+        static_assert(sizeof(m_model_position) == sizeof(selectedModel.initialParams.translate));
+
+        m_model_scale = selectedModel.initialParams.scale;
     }
 
     RF::BindDrawPipeline(draw_pass, m_draw_pipeline);
@@ -204,22 +221,22 @@ void GLTFMeshViewerScene::OnUI(MFA::U32 const delta_time, MFA::RenderFrontend::D
     ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("ZDegree", &m_model_rotation[2], -360.0f, 360.0f);
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("Scale", &m_model_scale, 0.0f, 10.0f);
+    ImGui::SliderFloat("Scale", &m_model_scale, 0.0f, 1.0f);
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("XDistance", &m_model_position[0], -1000.0f, 1000.0f);
+    ImGui::SliderFloat("XDistance", &m_model_position[0], -500.0f, 500.0f);
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("YDistance", &m_model_position[1], -1000.0f, 1000.0f);
+    ImGui::SliderFloat("YDistance", &m_model_position[1], -500.0f, 500.0f);
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("ZDistance", &m_model_position[2], -1000.0f, 100.0f);
+    ImGui::SliderFloat("ZDistance", &m_model_position[2], -500.0f, 100.0f);
     ImGui::End();
 
     ImGui::Begin("Light");
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("PositionX", &m_light_position[0], -200.0f, 200.0f);
+    ImGui::SliderFloat("PositionX", &m_light_position[0], -500.0f, 500.0f);
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("PositionY", &m_light_position[1], -200.0f, 200.0f);
+    ImGui::SliderFloat("PositionY", &m_light_position[1], -500.0f, 500.0f);
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("PositionZ", &m_light_position[2], -1000.0f, 200.0f);
+    ImGui::SliderFloat("PositionZ", &m_light_position[2], -500.0f, 500.0f);
     ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("ColorR", &m_light_color[0], 0.0f, 1.0f);
     ImGui::SetNextItemWidth(ItemWidth);
