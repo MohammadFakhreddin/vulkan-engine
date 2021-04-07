@@ -122,16 +122,18 @@ void DrawableObject::drawNode(RF::DrawPass & drawPass, int nodeIndex, Matrix4X4F
     Matrix4X4Float nodeTransform {};
     nodeTransform.assign(node.transformMatrix);
     nodeTransform.multiply(parentTransform);
-    
-    Matrix4X4Float nodeRotationAndScale {};
-    Matrix4X4Float::ExtractRotationAndScaleMatrix(nodeTransform, nodeRotationAndScale);
-
-    Matrix4X4Float nodeTranslate {};
-    Matrix4X4Float::ExtractTranslateMatrix(nodeTransform, nodeTranslate);
+    MFA_ASSERT(nodeTransform.get(3, 0) == 0.0f);
+    MFA_ASSERT(nodeTransform.get(3, 1) == 0.0f);
+    MFA_ASSERT(nodeTransform.get(3, 2) == 0.0f);
     // TODO We can reduce nodes count for better performance when importing
     if (node.hasSubMesh()) {
         // Updating uniform buffer
+        Matrix4X4Float nodeRotationAndScale {};
+        Matrix4X4Float::ExtractRotationAndScaleMatrix(nodeTransform, nodeRotationAndScale);
 
+        Matrix4X4Float nodeTranslate {};
+        Matrix4X4Float::ExtractTranslateMatrix(nodeTransform, nodeTranslate);
+        
         // Translate
         ::memcpy(mNodeTransformData.translate, nodeTranslate.cells, sizeof(nodeTranslate.cells));
         MFA_ASSERT(sizeof(nodeTranslate.cells) == sizeof(mNodeTransformData.translate));

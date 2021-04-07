@@ -762,7 +762,7 @@ public:
     void castAssign(const A * cells_) {
         MFA_ASSERT(cells_ != nullptr);
         for (uint32_t i = 0; i < width * height; ++i) {
-          cells[i] = static_cast<T>(cells_[i]);    
+            cells[i] = static_cast<T>(cells_[i]);    
         }
     }
 

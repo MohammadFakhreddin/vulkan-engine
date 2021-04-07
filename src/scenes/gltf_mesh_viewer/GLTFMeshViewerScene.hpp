@@ -27,10 +27,16 @@ private:
         std::string address {};
         MFA::DrawableObject drawableObject {};
         struct {
-            float rotationEulerAngle[3] {};
-            float scale = 1;
-            float translate[3] {0, 0, -10.0f};
-        } initialParams {};
+            struct {
+                float rotationEulerAngle[3] {};
+                float scale = 1;
+                float translate[3] {0, 0, -10.0f};
+            } model {};
+            struct {
+                float position [3] {};
+                float color[3] {252.0f/256.0f, 212.0f/256.0f, 64.0f/256.0f};
+            } light {};
+        } initialParams {.model {}, .light {}};
     };
 
     void createModel(ModelRenderRequiredData & renderRequiredData);
@@ -79,7 +85,7 @@ private:
     float m_light_color[3] {252.0f/256.0f, 212.0f/256.0f, 64.0f/256.0f};
 
     std::vector<ModelRenderRequiredData> mModelsRenderData {};
-    MFA::I32 mSelectedModelIndex = 2;
+    MFA::I32 mSelectedModelIndex = 1;
     MFA::I32 mPreviousModelSelectedIndex = -1;
 
     MFA::RenderFrontend::SamplerGroup m_sampler_group {};

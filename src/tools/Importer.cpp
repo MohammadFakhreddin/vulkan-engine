@@ -431,7 +431,7 @@ AS::Model ImportGLTF(char const * path) {
                 if(false == gltfModel.textures.empty()) {
                     for (auto const & texture : gltfModel.textures) {
                         AS::TextureSampler sampler {.isValid = false};
-                        {// Sampler
+                        if (texture.sampler >= 0) {// Sampler
                             auto const & gltf_sampler = gltfModel.samplers[texture.sampler];
                             sampler.magFilter = gltf_sampler.magFilter;
                             sampler.minFilter = gltf_sampler.minFilter;
@@ -611,16 +611,20 @@ AS::Model ImportGLTF(char const * path) {
                             U32 primitiveVertexCount = 0;
                             float positionsMinValue [3] {};
                             float positionsMaxValue [3] {};
+                            bool hasPositionMinMax = false;
                             if(primitive.attributes.find("POSITION") != primitive.attributes.end()){// Positions
                                 MFA_REQUIRE(primitive.attributes["POSITION"] < gltfModel.accessors.size());
                                 auto const & accessor = gltfModel.accessors[primitive.attributes["POSITION"]];
                                 MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-                                positionsMinValue[0] = static_cast<float>(accessor.minValues[0]);
-                                positionsMinValue[1] = static_cast<float>(accessor.minValues[1]);
-                                positionsMinValue[2] = static_cast<float>(accessor.minValues[2]);
-                                positionsMaxValue[0] = static_cast<float>(accessor.maxValues[0]);
-                                positionsMaxValue[1] = static_cast<float>(accessor.maxValues[1]);
-                                positionsMaxValue[2] = static_cast<float>(accessor.maxValues[2]);
+                                if (accessor.minValues.size() == 3 && accessor.maxValues.size() == 3) {
+                                    positionsMinValue[0] = static_cast<float>(accessor.minValues[0]);
+                                    positionsMinValue[1] = static_cast<float>(accessor.minValues[1]);
+                                    positionsMinValue[2] = static_cast<float>(accessor.minValues[2]);
+                                    positionsMaxValue[0] = static_cast<float>(accessor.maxValues[0]);
+                                    positionsMaxValue[1] = static_cast<float>(accessor.maxValues[1]);
+                                    positionsMaxValue[2] = static_cast<float>(accessor.maxValues[2]);
+                                    hasPositionMinMax = true;
+                                }
                                 auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
                                 MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
                                 auto const & buffer = gltfModel.buffers[bufferView.buffer];
@@ -630,18 +634,22 @@ AS::Model ImportGLTF(char const * path) {
                                 primitiveVertexCount = static_cast<U32>(accessor.count);
                             }
                             float const * baseColorUvs = nullptr;
-                            float baseColorUvMin [2];
-                            float baseColorUvMax [2];
+                            float baseColorUvMin [2] {};
+                            float baseColorUvMax [2] {};
+                            bool hasBaseColorUvMinMax = false;
                             if(baseColorUvIndex >= 0) {// BaseColor
                                 auto texture_coordinate_key_name = generate_uv_keyword(baseColorUvIndex);
                                 MFA_ASSERT(primitive.attributes[texture_coordinate_key_name] >= 0);
                                 MFA_REQUIRE(primitive.attributes[texture_coordinate_key_name] < gltfModel.accessors.size());
                                 auto const & accessor = gltfModel.accessors[primitive.attributes[texture_coordinate_key_name]];
                                 MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-                                baseColorUvMin[0] = static_cast<float>(accessor.minValues[0]);
-                                baseColorUvMin[1] = static_cast<float>(accessor.minValues[1]);
-                                baseColorUvMax[0] = static_cast<float>(accessor.maxValues[0]);
-                                baseColorUvMax[1] = static_cast<float>(accessor.maxValues[1]);
+                                if (accessor.minValues.size() == 2 && accessor.maxValues.size() == 2) {
+                                    baseColorUvMin[0] = static_cast<float>(accessor.minValues[0]);
+                                    baseColorUvMin[1] = static_cast<float>(accessor.minValues[1]);
+                                    baseColorUvMax[0] = static_cast<float>(accessor.maxValues[0]);
+                                    baseColorUvMax[1] = static_cast<float>(accessor.maxValues[1]);
+                                    hasBaseColorUvMinMax = true;
+                                }
                                 auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
                                 MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
                                 auto const & buffer = gltfModel.buffers[bufferView.buffer];
@@ -650,18 +658,22 @@ AS::Model ImportGLTF(char const * path) {
                                 );
                             }
                             float const * metallicRoughnessUvs = nullptr;
-                            float metallicRoughnessUVMin [2];
-                            float metallicRoughnessUVMax [2];
+                            float metallicRoughnessUVMin [2] {};
+                            float metallicRoughnessUVMax [2] {};
+                            bool hasMetallicRoughnessUvMinMax = false;
                             if(metallicRoughnessUvIndex >= 0) {// MetallicRoughness uvs
                                 std::string texture_coordinate_key_name = generate_uv_keyword(metallicRoughnessUvIndex);
                                 MFA_ASSERT(primitive.attributes[texture_coordinate_key_name] >= 0);
                                 MFA_REQUIRE(primitive.attributes[texture_coordinate_key_name] < gltfModel.accessors.size());
                                 auto const & accessor = gltfModel.accessors[primitive.attributes[texture_coordinate_key_name]];
                                 MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-                                metallicRoughnessUVMin[0] = static_cast<float>(accessor.minValues[0]);
-                                metallicRoughnessUVMin[1] = static_cast<float>(accessor.minValues[1]);
-                                metallicRoughnessUVMax[0] = static_cast<float>(accessor.maxValues[0]);
-                                metallicRoughnessUVMax[1] = static_cast<float>(accessor.maxValues[1]);
+                                if (accessor.minValues.size() == 2 && accessor.maxValues.size() == 2) {
+                                    metallicRoughnessUVMin[0] = static_cast<float>(accessor.minValues[0]);
+                                    metallicRoughnessUVMin[1] = static_cast<float>(accessor.minValues[1]);
+                                    metallicRoughnessUVMax[0] = static_cast<float>(accessor.maxValues[0]);
+                                    metallicRoughnessUVMax[1] = static_cast<float>(accessor.maxValues[1]);
+                                    hasMetallicRoughnessUvMinMax = true;
+                                }
                                 auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
                                 MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
                                 auto const & buffer = gltfModel.buffers[bufferView.buffer];
@@ -673,16 +685,20 @@ AS::Model ImportGLTF(char const * path) {
                             float const * emissionUVs = nullptr;
                             float emission_uv_min [2] {};
                             float emission_uv_max [2] {};
+                            bool hasEmissionUvMinMax = false;
                             if(emissiveUvIndex >= 0) {// Emission uvs
                                 std::string texture_coordinate_key_name = generate_uv_keyword(emissiveUvIndex);
                                 MFA_ASSERT(primitive.attributes[texture_coordinate_key_name] >= 0);
                                 MFA_REQUIRE(primitive.attributes[texture_coordinate_key_name] < gltfModel.accessors.size());
                                 auto const & accessor = gltfModel.accessors[primitive.attributes[texture_coordinate_key_name]];
                                 MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-                                emission_uv_min[0] = static_cast<float>(accessor.minValues[0]);
-                                emission_uv_min[1] = static_cast<float>(accessor.minValues[1]);
-                                emission_uv_max[0] = static_cast<float>(accessor.maxValues[0]);
-                                emission_uv_max[1] = static_cast<float>(accessor.maxValues[1]);
+                                if (accessor.minValues.size() == 2 && accessor.maxValues.size() == 2) {
+                                    emission_uv_min[0] = static_cast<float>(accessor.minValues[0]);
+                                    emission_uv_min[1] = static_cast<float>(accessor.minValues[1]);
+                                    emission_uv_max[0] = static_cast<float>(accessor.maxValues[0]);
+                                    emission_uv_max[1] = static_cast<float>(accessor.maxValues[1]);
+                                    hasEmissionUvMinMax = true;
+                                }
                                 auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
                                 MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
                                 auto const & buffer = gltfModel.buffers[bufferView.buffer];
@@ -693,16 +709,20 @@ AS::Model ImportGLTF(char const * path) {
                             float const * normalsUVs = nullptr;
                             float normals_uv_min [2] {};
                             float normals_uv_max [2] {};
+                            bool hasNormalUvMinMax = false;
                             if(normalUvIndex >= 0) {
                                 std::string texture_coordinate_key_name = generate_uv_keyword(normalUvIndex);
                                 MFA_ASSERT(primitive.attributes[texture_coordinate_key_name] >= 0);
                                 MFA_REQUIRE(primitive.attributes[texture_coordinate_key_name] < gltfModel.accessors.size());
                                 auto const & accessor = gltfModel.accessors[primitive.attributes[texture_coordinate_key_name]];
                                 MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-                                normals_uv_min[0] = static_cast<float>(accessor.minValues[0]);
-                                normals_uv_min[1] = static_cast<float>(accessor.minValues[1]);
-                                normals_uv_max[0] = static_cast<float>(accessor.maxValues[0]);
-                                normals_uv_max[1] = static_cast<float>(accessor.maxValues[1]);
+                                if (accessor.minValues.size() == 2 && accessor.maxValues.size() == 2) {
+                                    normals_uv_min[0] = static_cast<float>(accessor.minValues[0]);
+                                    normals_uv_min[1] = static_cast<float>(accessor.minValues[1]);
+                                    normals_uv_max[0] = static_cast<float>(accessor.maxValues[0]);
+                                    normals_uv_max[1] = static_cast<float>(accessor.maxValues[1]);
+                                    hasNormalUvMinMax = true;
+                                }
                                 auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
                                 MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
                                 auto const & buffer = gltfModel.buffers[bufferView.buffer];
@@ -713,16 +733,20 @@ AS::Model ImportGLTF(char const * path) {
                             float const * normalValues = nullptr;
                             float normalsValuesMin [3] {};
                             float normalsValuesMax [3] {};
+                            bool hasNormalValueMinMax = false;
                             if(primitive.attributes.find("NORMAL") != primitive.attributes.end()) {
                                 MFA_REQUIRE(primitive.attributes["NORMAL"] < gltfModel.accessors.size());
                                 auto const & accessor = gltfModel.accessors[primitive.attributes["NORMAL"]];
                                 MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-                                normalsValuesMin[0] = static_cast<float>(accessor.minValues[0]);
-                                normalsValuesMin[1] = static_cast<float>(accessor.minValues[1]);
-                                normalsValuesMin[2] = static_cast<float>(accessor.minValues[2]);
-                                normalsValuesMax[0] = static_cast<float>(accessor.maxValues[0]);
-                                normalsValuesMax[1] = static_cast<float>(accessor.maxValues[1]);
-                                normalsValuesMax[2] = static_cast<float>(accessor.maxValues[2]);
+                                if (accessor.minValues.size() == 3 && accessor.maxValues.size() == 3) {
+                                    normalsValuesMin[0] = static_cast<float>(accessor.minValues[0]);
+                                    normalsValuesMin[1] = static_cast<float>(accessor.minValues[1]);
+                                    normalsValuesMin[2] = static_cast<float>(accessor.minValues[2]);
+                                    normalsValuesMax[0] = static_cast<float>(accessor.maxValues[0]);
+                                    normalsValuesMax[1] = static_cast<float>(accessor.maxValues[1]);
+                                    normalsValuesMax[2] = static_cast<float>(accessor.maxValues[2]);
+                                    hasNormalValueMinMax = true;
+                                }
                                 auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
                                 MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
                                 auto const & buffer = gltfModel.buffers[bufferView.buffer];
@@ -733,18 +757,22 @@ AS::Model ImportGLTF(char const * path) {
                             float const * tangentValues = nullptr;
                             float tangentsValuesMin [4] {};
                             float tangentsValuesMax [4] {};
+                            bool hasTangentsValuesMinMax = false;
                             if(primitive.attributes.find("TANGENT") != primitive.attributes.end()) {
                                 MFA_REQUIRE(primitive.attributes["TANGENT"] < gltfModel.accessors.size());
                                 auto const & accessor = gltfModel.accessors[primitive.attributes["TANGENT"]];
                                 MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-                                tangentsValuesMin[0] = static_cast<float>(accessor.minValues[0]);
-                                tangentsValuesMin[1] = static_cast<float>(accessor.minValues[1]);
-                                tangentsValuesMin[2] = static_cast<float>(accessor.minValues[2]);
-                                tangentsValuesMin[3] = static_cast<float>(accessor.minValues[3]);
-                                tangentsValuesMax[0] = static_cast<float>(accessor.maxValues[0]);
-                                tangentsValuesMax[1] = static_cast<float>(accessor.maxValues[1]);
-                                tangentsValuesMax[2] = static_cast<float>(accessor.maxValues[2]);
-                                tangentsValuesMax[3] = static_cast<float>(accessor.maxValues[3]);
+                                if (accessor.minValues.size() == 3 && accessor.maxValues.size() == 3) {
+                                    tangentsValuesMin[0] = static_cast<float>(accessor.minValues[0]);
+                                    tangentsValuesMin[1] = static_cast<float>(accessor.minValues[1]);
+                                    tangentsValuesMin[2] = static_cast<float>(accessor.minValues[2]);
+                                    tangentsValuesMin[3] = static_cast<float>(accessor.minValues[3]);
+                                    tangentsValuesMax[0] = static_cast<float>(accessor.maxValues[0]);
+                                    tangentsValuesMax[1] = static_cast<float>(accessor.maxValues[1]);
+                                    tangentsValuesMax[2] = static_cast<float>(accessor.maxValues[2]);
+                                    tangentsValuesMax[3] = static_cast<float>(accessor.maxValues[3]);
+                                    hasTangentsValuesMinMax = true;
+                                }
                                 auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
                                 MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
                                 auto const & buffer = gltfModel.buffers[bufferView.buffer];
@@ -756,19 +784,23 @@ AS::Model ImportGLTF(char const * path) {
                             float colorsMinValue [3] {0};
                             float colorsMaxValue [3] {1};
                             float colorsMinMaxDiff [3] {1};
+                            bool hasColorMinMax = false;
                             if(primitive.attributes["COLOR"] >= 0) {
                                 MFA_REQUIRE(primitive.attributes["COLOR"] < gltfModel.accessors.size());
                                 auto const & accessor = gltfModel.accessors[primitive.attributes["COLOR"]];
                                 MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-                                colorsMinValue[0] = static_cast<float>(accessor.minValues[0]);
-                                colorsMinValue[1] = static_cast<float>(accessor.minValues[1]);
-                                colorsMinValue[2] = static_cast<float>(accessor.minValues[2]);
-                                colorsMaxValue[0] = static_cast<float>(accessor.maxValues[0]);
-                                colorsMaxValue[1] = static_cast<float>(accessor.maxValues[1]);
-                                colorsMaxValue[2] = static_cast<float>(accessor.maxValues[2]);
-                                colorsMinMaxDiff[0] = colorsMaxValue[0] - colorsMinValue[0];
-                                colorsMinMaxDiff[1] = colorsMaxValue[1] - colorsMinValue[1];
-                                colorsMinMaxDiff[2] = colorsMaxValue[2] - colorsMinValue[2];
+                                if (accessor.minValues.size() == 3 && accessor.maxValues.size() == 3) {
+                                    colorsMinValue[0] = static_cast<float>(accessor.minValues[0]);
+                                    colorsMinValue[1] = static_cast<float>(accessor.minValues[1]);
+                                    colorsMinValue[2] = static_cast<float>(accessor.minValues[2]);
+                                    colorsMaxValue[0] = static_cast<float>(accessor.maxValues[0]);
+                                    colorsMaxValue[1] = static_cast<float>(accessor.maxValues[1]);
+                                    colorsMaxValue[2] = static_cast<float>(accessor.maxValues[2]);
+                                    colorsMinMaxDiff[0] = colorsMaxValue[0] - colorsMinValue[0];
+                                    colorsMinMaxDiff[1] = colorsMaxValue[1] - colorsMinValue[1];
+                                    colorsMinMaxDiff[2] = colorsMaxValue[2] - colorsMinValue[2];
+                                    hasColorMinMax = true;
+                                }
                                 auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
                                 MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
                                 auto const & buffer = gltfModel.buffers[bufferView.buffer];
@@ -796,74 +828,87 @@ AS::Model ImportGLTF(char const * path) {
                                 auto & vertex = primitiveVertices.back();
                                 if (hasPosition) {// Vertices
                                     vertex.position[0] = positions[i * 3 + 0];
-                                    MFA_ASSERT(vertex.position[0] >= positionsMinValue[0]);
-                                    MFA_ASSERT(vertex.position[0] <= positionsMaxValue[0]);
                                     vertex.position[1] = positions[i * 3 + 1];
-                                    MFA_ASSERT(vertex.position[1] >= positionsMinValue[1]);
-                                    MFA_ASSERT(vertex.position[1] <= positionsMaxValue[1]);
                                     vertex.position[2] = positions[i * 3 + 2];
-                                    MFA_ASSERT(vertex.position[2] >= positionsMinValue[2]);
-                                    MFA_ASSERT(vertex.position[2] <= positionsMaxValue[2]);
+                                    if (hasPositionMinMax) {
+                                        MFA_ASSERT(vertex.position[0] >= positionsMinValue[0]);
+                                        MFA_ASSERT(vertex.position[0] <= positionsMaxValue[0]);
+                                        MFA_ASSERT(vertex.position[1] >= positionsMinValue[1]);
+                                        MFA_ASSERT(vertex.position[1] <= positionsMaxValue[1]);
+                                        MFA_ASSERT(vertex.position[2] >= positionsMinValue[2]);
+                                        MFA_ASSERT(vertex.position[2] <= positionsMaxValue[2]);
+                                    }
                                 }
                                 if(hasNormalValue) {// Normal values
                                     vertex.normalValue[0] = normalValues[i * 3 + 0];
-                                    MFA_ASSERT(vertex.normalValue[0] >= normalsValuesMin[0]);
-                                    MFA_ASSERT(vertex.normalValue[0] <= normalsValuesMax[0]);
                                     vertex.normalValue[1] = normalValues[i * 3 + 1];
-                                    MFA_ASSERT(vertex.normalValue[1] >= normalsValuesMin[1]);
-                                    MFA_ASSERT(vertex.normalValue[1] <= normalsValuesMax[1]);
                                     vertex.normalValue[2] = normalValues[i * 3 + 2];
-                                    MFA_ASSERT(vertex.normalValue[2] >= normalsValuesMin[2]);
-                                    MFA_ASSERT(vertex.normalValue[2] <= normalsValuesMax[2]);
+                                    if (hasNormalValueMinMax) {
+                                        MFA_ASSERT(vertex.normalValue[0] >= normalsValuesMin[0]);
+                                        MFA_ASSERT(vertex.normalValue[0] <= normalsValuesMax[0]);
+                                        MFA_ASSERT(vertex.normalValue[1] >= normalsValuesMin[1]);
+                                        MFA_ASSERT(vertex.normalValue[1] <= normalsValuesMax[1]);
+                                        MFA_ASSERT(vertex.normalValue[2] >= normalsValuesMin[2]);
+                                        MFA_ASSERT(vertex.normalValue[2] <= normalsValuesMax[2]);
+                                    }
                                 }
                                 if(hasNormalTexture) {// Normal uvs
                                     vertex.normalMapUV[0] = normalsUVs[i * 2 + 0];
-                                    MFA_ASSERT(vertex.normalMapUV[0] >= normals_uv_min[0]);
-                                    MFA_ASSERT(vertex.normalMapUV[0] <= normals_uv_max[0]);
                                     vertex.normalMapUV[1] = normalsUVs[i * 2 + 1];
-                                    MFA_ASSERT(vertex.normalMapUV[1] >= normals_uv_min[1]);
-                                    MFA_ASSERT(vertex.normalMapUV[1] <= normals_uv_max[1]);
+                                    if (hasNormalUvMinMax) {
+                                        MFA_ASSERT(vertex.normalMapUV[0] >= normals_uv_min[0]);
+                                        MFA_ASSERT(vertex.normalMapUV[0] <= normals_uv_max[0]);
+                                        MFA_ASSERT(vertex.normalMapUV[1] >= normals_uv_min[1]);
+                                        MFA_ASSERT(vertex.normalMapUV[1] <= normals_uv_max[1]);
+                                    }
                                 }
                                 if(hasTangentValue) {// Tangent
                                     vertex.tangentValue[0] = tangentValues[i * 4 + 0];
-                                    MFA_ASSERT(vertex.tangentValue[0] >= tangentsValuesMin[0]);
-                                    MFA_ASSERT(vertex.tangentValue[0] <= tangentsValuesMax[0]);
                                     vertex.tangentValue[1] = tangentValues[i * 4 + 1];
-                                    MFA_ASSERT(vertex.tangentValue[1] >= tangentsValuesMin[1]);
-                                    MFA_ASSERT(vertex.tangentValue[1] <= tangentsValuesMax[1]);
                                     vertex.tangentValue[2] = tangentValues[i * 4 + 2];
-                                    MFA_ASSERT(vertex.tangentValue[2] >= tangentsValuesMin[2]);
-                                    MFA_ASSERT(vertex.tangentValue[2] <= tangentsValuesMax[2]);
                                     vertex.tangentValue[3] = tangentValues[i * 4 + 3];
-                                    MFA_ASSERT(vertex.tangentValue[3] >= tangentsValuesMin[3]);
-                                    MFA_ASSERT(vertex.tangentValue[3] <= tangentsValuesMax[3]);
+                                    if (hasTangentsValuesMinMax) {
+                                        MFA_ASSERT(vertex.tangentValue[0] >= tangentsValuesMin[0]);
+                                        MFA_ASSERT(vertex.tangentValue[0] <= tangentsValuesMax[0]);
+                                        MFA_ASSERT(vertex.tangentValue[1] >= tangentsValuesMin[1]);
+                                        MFA_ASSERT(vertex.tangentValue[1] <= tangentsValuesMax[1]);
+                                        MFA_ASSERT(vertex.tangentValue[2] >= tangentsValuesMin[2]);
+                                        MFA_ASSERT(vertex.tangentValue[2] <= tangentsValuesMax[2]);
+                                        MFA_ASSERT(vertex.tangentValue[3] >= tangentsValuesMin[3]);
+                                        MFA_ASSERT(vertex.tangentValue[3] <= tangentsValuesMax[3]);
+                                    }
                                 }
                                 if(hasEmissiveTexture) {// Emissive
                                     vertex.emissionUV[0] = emissionUVs[i * 2 + 0];
-                                    MFA_ASSERT(vertex.emissionUV[0] >= emission_uv_min[0]);
-                                    MFA_ASSERT(vertex.emissionUV[0] <= emission_uv_max[0]);
                                     vertex.emissionUV[1] = emissionUVs[i * 2 + 1];
-                                    MFA_ASSERT(vertex.emissionUV[1] >= emission_uv_min[1]);
-                                    MFA_ASSERT(vertex.emissionUV[1] <= emission_uv_max[1]);
+                                    if (hasEmissionUvMinMax) {
+                                        MFA_ASSERT(vertex.emissionUV[0] >= emission_uv_min[0]);
+                                        MFA_ASSERT(vertex.emissionUV[0] <= emission_uv_max[0]);
+                                        MFA_ASSERT(vertex.emissionUV[1] >= emission_uv_min[1]);
+                                        MFA_ASSERT(vertex.emissionUV[1] <= emission_uv_max[1]);
+                                    }
                                 }
                                 if (hasBaseColorTexture) {// BaseColor
                                     vertex.baseColorUV[0] = baseColorUvs[i * 2 + 0];
-                                    MFA_ASSERT(vertex.baseColorUV[0] >= baseColorUvMin[0]);
-                                    MFA_ASSERT(vertex.baseColorUV[0] <= baseColorUvMax[0]);
                                     vertex.baseColorUV[1] = baseColorUvs[i * 2 + 1];
-                                    MFA_ASSERT(vertex.baseColorUV[1] >= baseColorUvMin[1]);
-                                    MFA_ASSERT(vertex.baseColorUV[1] <= baseColorUvMax[1]);
+                                    if (hasBaseColorUvMinMax) {
+                                        MFA_ASSERT(vertex.baseColorUV[0] >= baseColorUvMin[0]);
+                                        MFA_ASSERT(vertex.baseColorUV[0] <= baseColorUvMax[0]);
+                                        MFA_ASSERT(vertex.baseColorUV[1] >= baseColorUvMin[1]);
+                                        MFA_ASSERT(vertex.baseColorUV[1] <= baseColorUvMax[1]);
+                                    }
                                 }
                                 if (hasCombinedMetallicRoughness) {// MetallicRoughness
                                     vertex.roughnessUV[0] = metallicRoughnessUvs[i * 2 + 0];
-                                    MFA_ASSERT(vertex.roughnessUV[0] >= metallicRoughnessUVMin[0]);
-                                    MFA_ASSERT(vertex.roughnessUV[0] <= metallicRoughnessUVMax[0]);
                                     vertex.roughnessUV[1] = metallicRoughnessUvs[i * 2 + 1];
-                                    MFA_ASSERT(vertex.roughnessUV[1] >= metallicRoughnessUVMin[1]);
-                                    MFA_ASSERT(vertex.roughnessUV[1] <= metallicRoughnessUVMax[1]);
-
                                     ::memcpy(vertex.metallicUV, vertex.roughnessUV, sizeof(vertex.roughnessUV));
                                     static_assert(sizeof(vertex.roughnessUV) == sizeof(vertex.metallicUV));
+                                    if (hasMetallicRoughnessUvMinMax) {
+                                        MFA_ASSERT(vertex.roughnessUV[0] >= metallicRoughnessUVMin[0]);
+                                        MFA_ASSERT(vertex.roughnessUV[0] <= metallicRoughnessUVMax[0]);
+                                        MFA_ASSERT(vertex.roughnessUV[1] >= metallicRoughnessUVMin[1]);
+                                        MFA_ASSERT(vertex.roughnessUV[1] <= metallicRoughnessUVMax[1]);
+                                    }
                                 }
                                 // TODO WTF ?
                                 vertex.color[0] = static_cast<U8>((256/(colorsMinMaxDiff[0])) * colors[i * 3 + 0]);
@@ -913,8 +958,20 @@ AS::Model ImportGLTF(char const * path) {
                     };
                     Matrix4X4Float transform = Matrix4X4Float::Identity();
                     if (gltfNode.matrix.empty() == false) {
+                        MFA_ASSERT(gltfNode.scale.empty());
+                        MFA_ASSERT(gltfNode.rotation.empty());
+                        MFA_ASSERT(gltfNode.translation.empty());
                         MFA_ASSERT(gltfNode.matrix.size() == 16);
+                        MFA_ASSERT(gltfNode.matrix[3] == 0.0f);
+                        MFA_ASSERT(gltfNode.matrix[7] == 0.0f);
+                        MFA_ASSERT(gltfNode.matrix[11] == 0.0f);
+
                         transform.castAssign(gltfNode.matrix.data());
+                        /*for (int i = 0; i < 4; ++i) {
+                            for (int j = 0; j < 4; ++j) {
+                                transform.set(j, i, static_cast<float>(gltfNode.matrix[i * 4 + j]));
+                            }
+                        }*/
                     } else {
                         if (gltfNode.scale.empty() == false) {
                             MFA_ASSERT(gltfNode.scale.size() == 3);

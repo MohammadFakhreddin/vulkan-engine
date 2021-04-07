@@ -23,7 +23,12 @@ void GLTFMeshViewerScene::Init() {
             .displayName {"Car"},
             .address {"../assets/models/free_zuk_3d_model/scene.gltf"},
             .drawableObject {},
-
+            .initialParams {
+                .model {
+                    .rotationEulerAngle {14.0f, 158.0f, 0.0f},
+                    .translate {0.0f, 0.0f, -3.0f}
+                }
+            }
         });
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
             .isLoaded = false,
@@ -32,9 +37,14 @@ void GLTFMeshViewerScene::Init() {
             .address {"../assets/models/gunship/scene.gltf"},
             .drawableObject {},
             .initialParams {
-                .rotationEulerAngle {28.0f, 180.0f, 0.0f},
-                .scale = 0.031f,
-                .translate {6.0f, -16.0f, -113.0f}
+                .model {
+                    .rotationEulerAngle {28.0f, 180.0f, 0.0f},
+                    .scale = 0.008f,
+                    .translate {4.0f, -4.0f, -27.0f}
+                },
+                .light {
+                    .position {0.4f, 0.0f, -22.0f}
+                }
             }
         });
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
@@ -43,6 +53,15 @@ void GLTFMeshViewerScene::Init() {
             .displayName {"War-craft soldier"},
             .address {"../assets/models/warcraft_3_alliance_footmanfanmade/scene.gltf"},
             .drawableObject {},
+            .initialParams {
+                .model {
+                    .rotationEulerAngle {-1.0f, 127.0f, -5.0f},
+                    .translate {0.0f, 0.0f, -7.0f}
+                },
+                .light {
+                    .position {0.0f, -2.0f, -2.0f}
+                }
+            }
         });
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
             .isLoaded = false,
@@ -50,6 +69,12 @@ void GLTFMeshViewerScene::Init() {
             .displayName {"Cyberpunk lady"},
             .address {"../assets/models/female_full-body_cyberpunk_themed_avatar/scene.gltf"},
             .drawableObject {},
+            .initialParams {
+                .model {
+                    .rotationEulerAngle {4.0f, 152.0f, 0.0f},
+                    .translate {0.0f, 0.5f, -7.0f}
+                }
+            }
         });
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
             .isLoaded = false,
@@ -64,6 +89,13 @@ void GLTFMeshViewerScene::Init() {
             .displayName {"Mandalorian2"},
             .address {"../assets/models/mandalorian__the_fortnite_season_6_skin_updated/scene.gltf"},
             .drawableObject {},
+        });
+        mModelsRenderData.emplace_back(ModelRenderRequiredData {
+            .isLoaded = false,
+            .gpuModel {},
+            .displayName {"Flight helmet"},
+            .address {"../assets/models/FlightHelmet/glTF/FlightHelmet.gltf"},
+            .drawableObject {}
         });
     }
     ////auto cpu_model = Importer::ImportMeshGLTF("../assets/models/free_zuk_3d_model/scene.gltf");
@@ -124,14 +156,20 @@ void GLTFMeshViewerScene::OnDraw(MFA::U32 const delta_time, RF::DrawPass & draw_
     }
     if (mPreviousModelSelectedIndex != mSelectedModelIndex) {
         mPreviousModelSelectedIndex = mSelectedModelIndex;
+        // Model
+        ::memcpy(m_model_rotation, selectedModel.initialParams.model.rotationEulerAngle, sizeof(m_model_rotation));
+        static_assert(sizeof(m_model_rotation) == sizeof(selectedModel.initialParams.model.rotationEulerAngle));
 
-        ::memcpy(m_model_rotation, selectedModel.initialParams.rotationEulerAngle, sizeof(m_model_rotation));
-        static_assert(sizeof(m_model_rotation) == sizeof(selectedModel.initialParams.rotationEulerAngle));
+        ::memcpy(m_model_position, selectedModel.initialParams.model.translate, sizeof(m_model_position));
+        static_assert(sizeof(m_model_position) == sizeof(selectedModel.initialParams.model.translate));
 
-        ::memcpy(m_model_position, selectedModel.initialParams.translate, sizeof(m_model_position));
-        static_assert(sizeof(m_model_position) == sizeof(selectedModel.initialParams.translate));
+        m_model_scale = selectedModel.initialParams.model.scale;
+        // Light
+        ::memcpy(m_light_position, selectedModel.initialParams.light.position, sizeof(m_light_position));
+        static_assert(sizeof(m_light_position) == sizeof(selectedModel.initialParams.light.position));
 
-        m_model_scale = selectedModel.initialParams.scale;
+        ::memcpy(m_light_color, selectedModel.initialParams.light.color, sizeof(m_light_color));
+        static_assert(sizeof(m_light_color) == sizeof(selectedModel.initialParams.light.color));
     }
 
     RF::BindDrawPipeline(draw_pass, m_draw_pipeline);

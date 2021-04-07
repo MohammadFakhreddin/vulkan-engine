@@ -78,8 +78,7 @@ void Texture::initForWrite(
     mMipCount = mipCount;
     MFA_ASSERT(depth > 0);
     mDepth = depth;
-    if (sampler != nullptr) {
-        MFA_ASSERT(sampler->isValid);
+    if (sampler != nullptr && sampler->isValid) {
         mSampler = *sampler;
     }
     mBuffer = buffer;
