@@ -37,6 +37,7 @@ ConstantBuffer <ModelTransformation> modelTransformBuffer: register(b0, space0);
 struct NodeTranformation {
     float4x4 rotationAndScaleMat;
     float4x4 translateMat;
+    // float4x4 transform;
 };
 
 // #define NODE_TREE_SUPPORT
@@ -66,9 +67,10 @@ VSOut main(VSIn input) {
     // );
 
     // Position
-    float4 tempPosition = 0;
-    tempPosition = mul(nodeTransformBuffer.rotationAndScaleMat, float4(input.position, 1.0f));
+    float4 tempPosition = float4(input.position, 1.0f);
+    // tempPosition = mul(nodeTransformBuffer.transform, tempPosition);
     tempPosition = mul(nodeTransformBuffer.translateMat, tempPosition);
+    tempPosition = mul(nodeTransformBuffer.rotationAndScaleMat, tempPosition);
     tempPosition = mul(modelTransformBuffer.rotationAndScaleMat, tempPosition);
     tempPosition = mul(modelTransformBuffer.translateMat, tempPosition);
     float4 worldPos = tempPosition;
@@ -84,9 +86,10 @@ VSOut main(VSIn input) {
     
     // TODO: Refactor and create function
     // Normals
-	float4 tempTangent;
-    tempTangent = mul(nodeTransformBuffer.rotationAndScaleMat, input.tangent);
+	float4 tempTangent = input.tangent;
+    // tempTangent = mul(nodeTransformBuffer.transform, tempTangent);
     tempTangent = mul(nodeTransformBuffer.translateMat, tempTangent);
+    tempTangent = mul(nodeTransformBuffer.rotationAndScaleMat, tempTangent);
     tempTangent = mul(modelTransformBuffer.rotationAndScaleMat, tempTangent);
     tempTangent = mul(modelTransformBuffer.translateMat, tempTangent);
 
@@ -94,9 +97,10 @@ VSOut main(VSIn input) {
 
 	// float4 tempNormal = mul(rotationAndScaleMat, float4(input.normal, 0.0));
     // float3 worldNormal = normalize(mul(translateMat, tempNormal).xyz);
-    float4 tempNormal;
-    tempNormal = mul(nodeTransformBuffer.rotationAndScaleMat, float4(input.normal, 0.0));
+    float4 tempNormal = float4(input.normal, 0.0);
+    // tempNormal = mul(nodeTransformBuffer.transform, tempNormal);
     tempNormal = mul(nodeTransformBuffer.translateMat, tempNormal);
+    tempNormal = mul(nodeTransformBuffer.rotationAndScaleMat, tempNormal);
     tempNormal = mul(modelTransformBuffer.rotationAndScaleMat, tempNormal);
     tempNormal = mul(modelTransformBuffer.translateMat, tempNormal);
 

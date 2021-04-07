@@ -140,9 +140,17 @@ void Mesh::initForWrite(
     mIndexBuffer = indexBuffer;
 }
 
-void Mesh::DEBUG_checkForDataSanity() const {
+void Mesh::finalizeData() {
     MFA_ASSERT(mNextIndexOffset == mIndexBuffer.len);
     MFA_ASSERT(mNextVertexOffset == mVertexBuffer.len);
+    for (int i = 0; i < static_cast<int>(mNodes.size()); ++i) {
+        auto const & currentNode = mNodes[i];
+        if (currentNode.children.empty() == false) {
+            for (auto const child : currentNode.children) {
+                mNodes[child].parent = i;
+            }
+        }
+    }
 }
 
 U32 Mesh::insertSubMesh() {

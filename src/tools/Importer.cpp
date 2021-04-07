@@ -954,7 +954,7 @@ AS::Model ImportGLTF(char const * path) {
                     AS::MeshNode assetNode = {
                         .subMeshIndex = gltfNode.mesh,
                         .children = gltfNode.children,
-                        .transformMatrix {}
+                        .transformMatrix {},
                     };
                     Matrix4X4Float transform = Matrix4X4Float::Identity();
                     if (gltfNode.matrix.empty() == false) {
@@ -967,22 +967,22 @@ AS::Model ImportGLTF(char const * path) {
                         MFA_ASSERT(gltfNode.matrix[11] == 0.0f);
 
                         transform.castAssign(gltfNode.matrix.data());
-                        /*for (int i = 0; i < 4; ++i) {
-                            for (int j = 0; j < 4; ++j) {
-                                transform.set(j, i, static_cast<float>(gltfNode.matrix[i * 4 + j]));
-                            }
-                        }*/
+                        //for (int i = 0; i < 4; ++i) {
+                        //    for (int j = 0; j < 4; ++j) {
+                        //        transform.set(j, i, static_cast<float>(gltfNode.matrix[i * 4 + j]));
+                        //    }
+                        //}
                     } else {
-                        if (gltfNode.scale.empty() == false) {
-                            MFA_ASSERT(gltfNode.scale.size() == 3);
-                            Matrix4X4Float scale {};
-                            Matrix4X4Float::AssignScale(
-                                scale,
-                                static_cast<float>(gltfNode.scale[0]),
-                                static_cast<float>(gltfNode.scale[1]),
-                                static_cast<float>(gltfNode.scale[2])
+                        if (gltfNode.translation.empty() == false) {
+                            MFA_ASSERT(gltfNode.translation.size() == 3);
+                            Matrix4X4Float translate {};
+                            Matrix4X4Float::AssignTranslation(
+                                translate,
+                                static_cast<float>(gltfNode.translation[0]),
+                                static_cast<float>(gltfNode.translation[1]),
+                                static_cast<float>(gltfNode.translation[2])
                             );
-                            transform.multiply(scale);
+                            transform.multiply(translate);
                         }
                         if (gltfNode.rotation.empty() == false) {
                             MFA_ASSERT(gltfNode.rotation.size() == 4);
@@ -998,24 +998,25 @@ AS::Model ImportGLTF(char const * path) {
 
                             transform.multiply(rotation);
                         }
-                        if (gltfNode.translation.empty() == false) {
-                            MFA_ASSERT(gltfNode.translation.size() == 3);
-                            Matrix4X4Float translate {};
-                            Matrix4X4Float::AssignTranslation(
-                                translate,
-                                static_cast<float>(gltfNode.translation[0]),
-                                static_cast<float>(gltfNode.translation[1]),
-                                static_cast<float>(gltfNode.translation[2])
+                        if (gltfNode.scale.empty() == false) {
+                            MFA_ASSERT(gltfNode.scale.size() == 3);
+                            Matrix4X4Float scale {};
+                            Matrix4X4Float::AssignScale(
+                                scale,
+                                static_cast<float>(gltfNode.scale[0]),
+                                static_cast<float>(gltfNode.scale[1]),
+                                static_cast<float>(gltfNode.scale[2])
                             );
-                            transform.multiply(translate);
+                            transform.multiply(scale);
                         }
+
                     }
                     ::memcpy(assetNode.transformMatrix, transform.cells, sizeof(transform.cells));
                     static_assert(sizeof(assetNode.transformMatrix) == sizeof(transform.cells));
                     resultModel.mesh.insertNode(assetNode);
                 }
             }
-            resultModel.mesh.DEBUG_checkForDataSanity();
+            resultModel.mesh.finalizeData();
             // Remove mesh buffers if invalid
             if(resultModel.mesh.isValid() == false) {
                 Blob vertexBuffer {};

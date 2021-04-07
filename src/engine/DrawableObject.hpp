@@ -71,9 +71,10 @@ private:
     struct NodeTransformBuffer {
         float rotationAndScale[16];
         float translate[16];
+        //float transform[16];
     } mNodeTransformData {};
 
-    void drawNode(RF::DrawPass & drawPass, int nodeIndex, Matrix4X4Float const & parentTransform);
+    void drawNode(RF::DrawPass & drawPass, const AssetSystem::Mesh::Node & node);
 
     void drawSubMesh(RF::DrawPass & drawPass, AssetSystem::Mesh::SubMesh const & subMesh);
 

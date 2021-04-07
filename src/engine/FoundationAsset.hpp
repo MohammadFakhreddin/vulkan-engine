@@ -293,9 +293,10 @@ public:
     };
     
     struct Node {
-        int subMeshIndex;
+        int subMeshIndex = -1;
         std::vector<int> children {};
         float transformMatrix[16] {};
+        int parent = -1;
         [[nodiscard]]
         bool hasSubMesh() const noexcept {
             return subMeshIndex >= 0;
@@ -309,7 +310,7 @@ public:
         const Blob & indexBuffer
     );
 
-    void DEBUG_checkForDataSanity() const;
+    void finalizeData();
 
     // Returns mesh index
     [[nodiscard]]

@@ -107,21 +107,32 @@ void DrawableObject::draw(RF::DrawPass & drawPass) {
     if (nodesCount <= 0) {
         return;
     }
-    Matrix4X4Float const transform = Matrix4X4Float::Identity();
-    drawNode(drawPass, 0, transform);
+    //Matrix4X4Float const transform = Matrix4X4Float::Identity();
+
+    for (U32 i = 0; i < mGpuModel->model.mesh.getNodesCount(); ++i) {
+        drawNode(drawPass, mGpuModel->model.mesh.getNodeByIndex(i));
+    }
 }
 
-void DrawableObject::drawNode(RF::DrawPass & drawPass, int nodeIndex, Matrix4X4Float const & parentTransform) {
+void DrawableObject::drawNode(RF::DrawPass & drawPass, const AssetSystem::Mesh::Node & node) {
     auto const & mesh = mGpuModel->model.mesh;
     
-    MFA_ASSERT(nodeIndex >= 0);
-    MFA_ASSERT(static_cast<U32>(nodeIndex) < mGpuModel->model.mesh.getNodesCount());
-    auto const & node = mGpuModel->model.mesh.getNodeByIndex(nodeIndex);
     MFA_ASSERT(static_cast<int>(mesh.getSubMeshCount()) > node.subMeshIndex);
 
     Matrix4X4Float nodeTransform {};
     nodeTransform.assign(node.transformMatrix);
-    nodeTransform.multiply(parentTransform);
+
+    int parentNodeIndex = node.parent;
+    while(parentNodeIndex >= 0) {
+        auto const & parentNode = mesh.getNodeByIndex(parentNodeIndex);
+
+        Matrix4X4Float parentTransform {};
+        parentTransform.assign(parentNode.transformMatrix);
+        nodeTransform.multiply(parentTransform);
+
+        parentNodeIndex = parentNode.parent;
+    }
+    
     MFA_ASSERT(nodeTransform.get(3, 0) == 0.0f);
     MFA_ASSERT(nodeTransform.get(3, 1) == 0.0f);
     MFA_ASSERT(nodeTransform.get(3, 2) == 0.0f);
@@ -141,16 +152,19 @@ void DrawableObject::drawNode(RF::DrawPass & drawPass, int nodeIndex, Matrix4X4F
         ::memcpy(mNodeTransformData.rotationAndScale, nodeRotationAndScale.cells, sizeof(nodeRotationAndScale.cells));
         MFA_ASSERT(sizeof(nodeRotationAndScale.cells) == sizeof(mNodeTransformData.rotationAndScale));
 
+        //::memcpy(mNodeTransformData.transform, nodeTransform.cells, sizeof(nodeTransform.cells));
+        //MFA_ASSERT(sizeof(nodeTransform.cells) == sizeof(mNodeTransformData.transform));
+
         RF::UpdateUniformBuffer(mNodeTransformBuffers.buffers[node.subMeshIndex], CBlobAliasOf(mNodeTransformData));
 
         drawSubMesh(drawPass, mesh.getSubMeshByIndex(node.subMeshIndex));
     }
 
-    if (node.children.empty() == false) {
-        for (auto const & child : node.children) {
-            drawNode(drawPass, child, nodeTransform);
-        } 
-    }
+    //if (node.children.empty() == false) {
+    //    for (auto const & child : node.children) {
+    //        drawNode(drawPass, child, nodeTransform);
+    //    } 
+    //}
 }
 
 void DrawableObject::drawSubMesh(RF::DrawPass & drawPass, AssetSystem::Mesh::SubMesh const & subMesh) {
