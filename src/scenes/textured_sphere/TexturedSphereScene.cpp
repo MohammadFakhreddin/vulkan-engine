@@ -182,7 +182,7 @@ void TexturedSphereScene::createDrawableObject(){
                 writeInfo.emplace_back(VkWriteDescriptorSet {
                     .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                     .dstSet = descriptorSet,
-                    .dstBinding = 0,
+                    .dstBinding = static_cast<uint32_t>(writeInfo.size()),
                     .dstArrayElement = 0,
                     .descriptorCount = 1,
                     .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -198,7 +198,7 @@ void TexturedSphereScene::createDrawableObject(){
                 writeInfo.emplace_back(VkWriteDescriptorSet {
                     .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                     .dstSet = descriptorSet,
-                    .dstBinding = 1,
+                    .dstBinding = static_cast<uint32_t>(writeInfo.size()),
                     .dstArrayElement = 0,
                     .descriptorCount = 1,
                     .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -214,7 +214,7 @@ void TexturedSphereScene::createDrawableObject(){
                 writeInfo.emplace_back(VkWriteDescriptorSet {
                     .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                     .dstSet = descriptorSet,
-                    .dstBinding = 2,
+                    .dstBinding = static_cast<uint32_t>(writeInfo.size()),
                     .dstArrayElement = 0,
                     .descriptorCount = 1,
                     .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -230,7 +230,7 @@ void TexturedSphereScene::createDrawableObject(){
                 writeInfo.emplace_back(VkWriteDescriptorSet {
                     .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                     .dstSet = descriptorSet,
-                    .dstBinding = 3,
+                    .dstBinding = static_cast<uint32_t>(writeInfo.size()),
                     .dstArrayElement = 0,
                     .descriptorCount = 1,
                     .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -246,7 +246,7 @@ void TexturedSphereScene::createDrawableObject(){
                 writeInfo.emplace_back(VkWriteDescriptorSet {
                     .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                     .dstSet = descriptorSet,
-                    .dstBinding = 4,
+                    .dstBinding = static_cast<uint32_t>(writeInfo.size()),
                     .dstArrayElement = 0,
                     .descriptorCount = 1,
                     .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -370,7 +370,7 @@ void TexturedSphereScene::createDescriptorSetLayout(){
     std::vector<VkDescriptorSetLayoutBinding> bindings {};
     // Transformation 
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = 0,
+        .binding = static_cast<uint32_t>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
@@ -378,7 +378,7 @@ void TexturedSphereScene::createDescriptorSetLayout(){
     });
     // BaseColor
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = 1,
+        .binding = static_cast<uint32_t>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -386,7 +386,7 @@ void TexturedSphereScene::createDescriptorSetLayout(){
     });
     // Metallic
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = 2,
+        .binding = static_cast<uint32_t>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -394,7 +394,7 @@ void TexturedSphereScene::createDescriptorSetLayout(){
     });
     // Roughness
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = 3,
+        .binding = static_cast<uint32_t>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -402,7 +402,7 @@ void TexturedSphereScene::createDescriptorSetLayout(){
     });
     // Normal
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = 4,
+        .binding = static_cast<uint32_t>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -410,7 +410,7 @@ void TexturedSphereScene::createDescriptorSetLayout(){
     });
     // Light/View
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = 5,
+        .binding = static_cast<uint32_t>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -444,10 +444,10 @@ void TexturedSphereScene::createGpuModel() {
     // Roughness
     auto const roughnessIndex = importTextureForModel("../assets/models/rusted_sphere_texture/rustediron2_roughness.png");
     
-    auto const & mesh = cpuModel.mesh;
+    auto & mesh = cpuModel.mesh;
     MFA_ASSERT(mesh.isValid());
     for (MFA::U32 i = 0; i < mesh.getSubMeshCount(); ++i) {
-        auto subMesh = mesh.getSubMeshByIndex(i);
+        auto & subMesh = mesh.getSubMeshByIndex(i);
         for (auto & primitive : subMesh.primitives) {
             // Texture index
             primitive.baseColorTextureIndex = baseColorIndex;

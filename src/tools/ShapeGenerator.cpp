@@ -14,7 +14,7 @@ namespace MFA::ShapeGenerator {
         std::vector<Vector3Float> normals {};
         std::vector<Vector4Float> tangents {};
 
-        std::vector<U16> indices;
+        std::vector<AS::MeshIndex> meshIndices;
         
         const unsigned int X_SEGMENTS = 64;
         const unsigned int Y_SEGMENTS = 64;
@@ -64,22 +64,22 @@ namespace MFA::ShapeGenerator {
             {
                 for (unsigned int x = 0; x <= X_SEGMENTS; ++x)
                 {
-                    indices.push_back(y       * (X_SEGMENTS + 1) + x);
-                    indices.push_back((y + 1) * (X_SEGMENTS + 1) + x);
+                    meshIndices.push_back(y       * (X_SEGMENTS + 1) + x);
+                    meshIndices.push_back((y + 1) * (X_SEGMENTS + 1) + x);
                 }
             }
             else
             {
                 for (int x = X_SEGMENTS; x >= 0; --x)
                 {
-                    indices.push_back((y + 1) * (X_SEGMENTS + 1) + x);
-                    indices.push_back(y       * (X_SEGMENTS + 1) + x);
+                    meshIndices.push_back((y + 1) * (X_SEGMENTS + 1) + x);
+                    meshIndices.push_back(y       * (X_SEGMENTS + 1) + x);
                 }
             }
             oddRow = !oddRow;
         }
 
-        U16 const indicesCount = static_cast<U16>(indices.size());
+        U16 const indicesCount = static_cast<U16>(meshIndices.size());
         U16 const verticesCount = static_cast<U16>(positions.size());
 
         model.mesh.initForWrite(
@@ -89,44 +89,28 @@ namespace MFA::ShapeGenerator {
             Memory::Alloc(sizeof(AS::MeshIndex) * indicesCount)
         );
 
-        MFA_DEFER {
-            if(model.mesh.isValid() == false) {
-                Blob verticesBuffer {};
-                Blob indicesBuffer {};
-                model.mesh.revokeBuffers(verticesBuffer, indicesBuffer);
-                Memory::Free(verticesBuffer);
-                Memory::Free(indicesBuffer);
-            }
-        };
-
-        
         std::vector<AS::MeshVertex> meshVertices {verticesCount};
-        std::vector<AS::MeshIndex> meshIndices {indicesCount};
         
-        for(uintmax_t index = 0; index < indicesCount; ++index) {
-            meshIndices[index] = indices[index];
-        }
-
         for (uintmax_t index = 0; index < verticesCount; ++index) {
             // Positions
             static_assert(sizeof(meshVertices[index].position) == sizeof(positions[index].cells));
             ::memcpy(meshVertices[index].position, positions[index].cells, sizeof(positions[index].cells));
             // UVs We assign uvs for all materials in case a texture get assigned to shape
-                // Base color
-                static_assert(sizeof(meshVertices[index].baseColorUV) == sizeof(uvs[index].cells));
-                ::memcpy(meshVertices[index].baseColorUV, uvs[index].cells, sizeof(uvs[index].cells));
-                // Metallic
-                static_assert(sizeof(meshVertices[index].metallicUV) == sizeof(uvs[index].cells));
-                ::memcpy(meshVertices[index].metallicUV, uvs[index].cells, sizeof(uvs[index].cells));
-                // Roughness
-                static_assert(sizeof(meshVertices[index].roughnessUV) == sizeof(uvs[index].cells));
-                ::memcpy(meshVertices[index].roughnessUV, uvs[index].cells, sizeof(uvs[index].cells));
-                // Emission
-                static_assert(sizeof(meshVertices[index].emissionUV) == sizeof(uvs[index].cells));
-                ::memcpy(meshVertices[index].emissionUV, uvs[index].cells, sizeof(uvs[index].cells));
-                // Normals
-                static_assert(sizeof(meshVertices[index].normalMapUV) == sizeof(uvs[index].cells));
-                ::memcpy(meshVertices[index].normalMapUV, uvs[index].cells, sizeof(uvs[index].cells));
+            // Base color
+            static_assert(sizeof(meshVertices[index].baseColorUV) == sizeof(uvs[index].cells));
+            ::memcpy(meshVertices[index].baseColorUV, uvs[index].cells, sizeof(uvs[index].cells));
+            // Metallic
+            static_assert(sizeof(meshVertices[index].metallicUV) == sizeof(uvs[index].cells));
+            ::memcpy(meshVertices[index].metallicUV, uvs[index].cells, sizeof(uvs[index].cells));
+            // Roughness
+            static_assert(sizeof(meshVertices[index].roughnessUV) == sizeof(uvs[index].cells));
+            ::memcpy(meshVertices[index].roughnessUV, uvs[index].cells, sizeof(uvs[index].cells));
+            // Emission
+            static_assert(sizeof(meshVertices[index].emissionUV) == sizeof(uvs[index].cells));
+            ::memcpy(meshVertices[index].emissionUV, uvs[index].cells, sizeof(uvs[index].cells));
+            // Normals
+            static_assert(sizeof(meshVertices[index].normalMapUV) == sizeof(uvs[index].cells));
+            ::memcpy(meshVertices[index].normalMapUV, uvs[index].cells, sizeof(uvs[index].cells));
             // Normal buffer
             ::memcpy(
                 meshVertices[index].normalValue, 
@@ -159,7 +143,15 @@ namespace MFA::ShapeGenerator {
         ::memcpy(node.transformMatrix, identityMatrix.cells, sizeof(node.transformMatrix));
         static_assert(sizeof(node.transformMatrix) == sizeof(identityMatrix.cells));
         model.mesh.insertNode(node);
-        
+
+        if(model.mesh.isValid() == false) {
+            Blob verticesBuffer {};
+            Blob indicesBuffer {};
+            model.mesh.revokeBuffers(verticesBuffer, indicesBuffer);
+            Memory::Free(verticesBuffer);
+            Memory::Free(indicesBuffer);
+        }
+
         return model;
     }
 }
