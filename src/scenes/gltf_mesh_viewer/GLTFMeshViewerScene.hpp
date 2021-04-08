@@ -48,7 +48,7 @@ private:
     void createDescriptorSetLayout();
 
     static constexpr float Z_NEAR = 0.1f;
-    static constexpr float Z_FAR = 1000.0f;
+    static constexpr float Z_FAR = 3000.0f;
 
     struct PrimitiveInfo {
         alignas(16) float baseColorFactor[4];

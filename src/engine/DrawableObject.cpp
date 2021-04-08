@@ -107,8 +107,7 @@ void DrawableObject::draw(RF::DrawPass & drawPass) {
     if (nodesCount <= 0) {
         return;
     }
-    //Matrix4X4Float const transform = Matrix4X4Float::Identity();
-
+    
     for (U32 i = 0; i < mGpuModel->model.mesh.getNodesCount(); ++i) {
         drawNode(drawPass, mGpuModel->model.mesh.getNodeByIndex(i));
     }
@@ -159,12 +158,6 @@ void DrawableObject::drawNode(RF::DrawPass & drawPass, const AssetSystem::Mesh::
 
         drawSubMesh(drawPass, mesh.getSubMeshByIndex(node.subMeshIndex));
     }
-
-    //if (node.children.empty() == false) {
-    //    for (auto const & child : node.children) {
-    //        drawNode(drawPass, child, nodeTransform);
-    //    } 
-    //}
 }
 
 void DrawableObject::drawSubMesh(RF::DrawPass & drawPass, AssetSystem::Mesh::SubMesh const & subMesh) {

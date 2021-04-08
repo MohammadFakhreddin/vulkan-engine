@@ -39,11 +39,11 @@ void GLTFMeshViewerScene::Init() {
             .initialParams {
                 .model {
                     .rotationEulerAngle {28.0f, 180.0f, 0.0f},
-                    .scale = 0.008f,
-                    .translate {4.0f, -4.0f, -27.0f}
+                    //.scale = 0.008f,
+                    //.translate {4.0f, -4.0f, -27.0f}
                 },
                 .light {
-                    .position {0.4f, 0.0f, -22.0f}
+                    //.position {0.4f, 0.0f, -22.0f}
                 }
             }
         });
@@ -82,6 +82,16 @@ void GLTFMeshViewerScene::Init() {
             .displayName {"Mandalorian"},
             .address {"../assets/models/fortnite_the_mandalorianbaby_yoda/scene.gltf"},
             .drawableObject {},
+            .initialParams {
+                .model {
+                    .rotationEulerAngle {302.0f, -2.0f, 0.0f},
+                    .scale {0.187f},
+                    .translate {-2.0f, 0.0f, -190.0f}
+                },
+                .light {
+                    .position {0.0f, 0.0f, -135.0f}
+                }
+            }
         });
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
             .isLoaded = false,
@@ -95,7 +105,13 @@ void GLTFMeshViewerScene::Init() {
             .gpuModel {},
             .displayName {"Flight helmet"},
             .address {"../assets/models/FlightHelmet/glTF/FlightHelmet.gltf"},
-            .drawableObject {}
+            .drawableObject {},
+            .initialParams {
+                .model {
+                    .rotationEulerAngle {197.0f, 186.0f, -1.5f},
+                    .translate {0.0f, 0.0f, -6.0f},
+                }
+            }
         });
     }
     ////auto cpu_model = Importer::ImportMeshGLTF("../assets/models/free_zuk_3d_model/scene.gltf");
