@@ -14,4 +14,7 @@
 
 ## PBR on GLTF models
 <img src="examples/pbr-car.gif"/>
-<img src="examples/pbr-chopper.gif"/>
+
+## Support for rendering scene from gltf node tree
+<img src="examples/gunship.gif"/>
+<img src="examples/pilot-helmet.gif"/>
