@@ -114,45 +114,34 @@ void DrawableObject::draw(RF::DrawPass & drawPass) {
 }
 
 void DrawableObject::drawNode(RF::DrawPass & drawPass, const AssetSystem::Mesh::Node & node) {
-    auto const & mesh = mGpuModel->model.mesh;
-    
-    MFA_ASSERT(static_cast<int>(mesh.getSubMeshCount()) > node.subMeshIndex);
-
-    Matrix4X4Float nodeTransform {};
-    nodeTransform.assign(node.transformMatrix);
-
-    int parentNodeIndex = node.parent;
-    while(parentNodeIndex >= 0) {
-        auto const & parentNode = mesh.getNodeByIndex(parentNodeIndex);
-
-        Matrix4X4Float parentTransform {};
-        parentTransform.assign(parentNode.transformMatrix);
-        nodeTransform.multiply(parentTransform);
-
-        parentNodeIndex = parentNode.parent;
-    }
-    
-    MFA_ASSERT(nodeTransform.get(3, 0) == 0.0f);
-    MFA_ASSERT(nodeTransform.get(3, 1) == 0.0f);
-    MFA_ASSERT(nodeTransform.get(3, 2) == 0.0f);
     // TODO We can reduce nodes count for better performance when importing
     if (node.hasSubMesh()) {
-        // Updating uniform buffer
-        Matrix4X4Float nodeRotationAndScale {};
-        Matrix4X4Float::ExtractRotationAndScaleMatrix(nodeTransform, nodeRotationAndScale);
+        auto const & mesh = mGpuModel->model.mesh;
+        MFA_ASSERT(static_cast<int>(mesh.getSubMeshCount()) > node.subMeshIndex);
 
-        Matrix4X4Float nodeTranslate {};
-        Matrix4X4Float::ExtractTranslateMatrix(nodeTransform, nodeTranslate);
+        Matrix4X4Float nodeTransform {};
+        nodeTransform.assign(node.transformMatrix);
+
+        int parentNodeIndex = node.parent;
+        while(parentNodeIndex >= 0) {
+            auto const & parentNode = mesh.getNodeByIndex(parentNodeIndex);
+
+            Matrix4X4Float parentTransform {};
+            parentTransform.assign(parentNode.transformMatrix);
+            // Note : Multiplication order matter
+            parentTransform.multiply(nodeTransform);
+            
+            nodeTransform.assign(parentTransform);
+
+            parentNodeIndex = parentNode.parent;
+        }
         
-        // Translate
-        ::memcpy(mNodeTransformData.translate, nodeTranslate.cells, sizeof(nodeTranslate.cells));
-        MFA_ASSERT(sizeof(nodeTranslate.cells) == sizeof(mNodeTransformData.translate));
-        // RotationAndScale
-        ::memcpy(mNodeTransformData.rotationAndScale, nodeRotationAndScale.cells, sizeof(nodeRotationAndScale.cells));
-        MFA_ASSERT(sizeof(nodeRotationAndScale.cells) == sizeof(mNodeTransformData.rotationAndScale));
+        MFA_ASSERT(nodeTransform.get(3, 0) == 0.0f);
+        MFA_ASSERT(nodeTransform.get(3, 1) == 0.0f);
+        MFA_ASSERT(nodeTransform.get(3, 2) == 0.0f);
 
-        //::memcpy(mNodeTransformData.transform, nodeTransform.cells, sizeof(nodeTransform.cells));
-        //MFA_ASSERT(sizeof(nodeTransform.cells) == sizeof(mNodeTransformData.transform));
+        ::memcpy(mNodeTransformData.model, nodeTransform.cells, sizeof(nodeTransform.cells));
+        MFA_ASSERT(sizeof(nodeTransform.cells) == sizeof(mNodeTransformData.model));
 
         RF::UpdateUniformBuffer(mNodeTransformBuffers.buffers[node.subMeshIndex], CBlobAliasOf(mNodeTransformData));
 

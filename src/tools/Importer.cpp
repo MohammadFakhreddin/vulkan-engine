@@ -967,11 +967,10 @@ AS::Model ImportGLTF(char const * path) {
                         MFA_ASSERT(gltfNode.matrix[11] == 0.0f);
 
                         transform.castAssign(gltfNode.matrix.data());
-                        //for (int i = 0; i < 4; ++i) {
-                        //    for (int j = 0; j < 4; ++j) {
-                        //        transform.set(j, i, static_cast<float>(gltfNode.matrix[i * 4 + j]));
-                        //    }
-                        //}
+
+                        MFA_ASSERT(transform.get(3, 0) == 0.0f);
+                        MFA_ASSERT(transform.get(3, 1) == 0.0f);
+                        MFA_ASSERT(transform.get(3, 2) == 0.0f);
                     } else {
                         if (gltfNode.translation.empty() == false) {
                             MFA_ASSERT(gltfNode.translation.size() == 3);
@@ -989,6 +988,7 @@ AS::Model ImportGLTF(char const * path) {
                             Matrix4X4Float rotation {};
                             //https://blender.stackexchange.com/questions/123406/blender-gltf-which-rotation-values-are-really-exported
                             QuaternionFloat quaternion {};
+                            // TODO We can make 2 the 4th parameter instead
                             quaternion.set(0, 0, static_cast<float>(gltfNode.rotation[3]));
                             quaternion.set(1, 0, static_cast<float>(gltfNode.rotation[0]));
                             quaternion.set(2, 0, static_cast<float>(gltfNode.rotation[1]));

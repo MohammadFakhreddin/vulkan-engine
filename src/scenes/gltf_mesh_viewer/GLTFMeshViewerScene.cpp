@@ -38,12 +38,12 @@ void GLTFMeshViewerScene::Init() {
             .drawableObject {},
             .initialParams {
                 .model {
-                    .rotationEulerAngle {28.0f, 180.0f, 0.0f},
-                    //.scale = 0.008f,
-                    //.translate {4.0f, -4.0f, -27.0f}
+                    .rotationEulerAngle {37.0f, 155.0f, 0.0f},
+                    .scale = 0.012f,
+                    .translate {0.0f, 0.0f, -44.0f}
                 },
                 .light {
-                    //.position {0.4f, 0.0f, -22.0f}
+                    .position {-2.0f, -2.0f, -29.0f}
                 }
             }
         });
@@ -109,19 +109,11 @@ void GLTFMeshViewerScene::Init() {
             .initialParams {
                 .model {
                     .rotationEulerAngle {197.0f, 186.0f, -1.5f},
-                    .translate {0.0f, 0.0f, -6.0f},
+                    .translate {0.0f, 0.0f, -4.0f},
                 }
             }
         });
     }
-    ////auto cpu_model = Importer::ImportMeshGLTF("../assets/models/free_zuk_3d_model/scene.gltf");
-    ////auto cpu_model = Importer::ImportMeshGLTF("../assets/models/gunship/scene.gltf");
-    ////auto cpu_model = Importer::ImportMeshGLTF("../assets/models/warcraft_3_alliance_footmanfanmade/scene.gltf");
-    //auto cpu_model = Importer::ImportMeshGLTF("../assets/models/female_full-body_cyberpunk_themed_avatar/scene.gltf");
-    ////auto cpu_model = Importer::ImportMeshGLTF("../assets/models/fortnite_the_mandalorianbaby_yoda/scene.gltf");
-    ////auto cpu_model = Importer::ImportMeshGLTF("../assets/models/mandalorian__the_fortnite_season_6_skin_updated/scene.gltf");
-    //MFA_ASSERT(cpu_model.mesh.valid());    
-    //m_gpu_model = RF::CreateGpuModel(cpu_model);
     
     // Cpu shader
     auto cpu_vertex_shader = Importer::ImportShaderFromSPV(
@@ -192,7 +184,6 @@ void GLTFMeshViewerScene::OnDraw(MFA::U32 const delta_time, RF::DrawPass & draw_
 
     {// Updating Transform buffer
         // Rotation
-        // TODO Try sending Matrices directly
         MFA::Matrix4X4Float rotationMat {};
         MFA::Matrix4X4Float::AssignRotation(
             rotationMat,
@@ -200,25 +191,28 @@ void GLTFMeshViewerScene::OnDraw(MFA::U32 const delta_time, RF::DrawPass & draw_
             MFA::Math::Deg2Rad(m_model_rotation[1]),
             MFA::Math::Deg2Rad(m_model_rotation[2])
         );
+
+        // Scale
         MFA::Matrix4X4Float scaleMat {};
         MFA::Matrix4X4Float::AssignScale(scaleMat, m_model_scale);
 
-        MFA::Matrix4X4Float rotationAndScaleMat {};
-        rotationAndScaleMat.assign(rotationMat);
-        rotationAndScaleMat.multiply(scaleMat);
-
-        static_assert(sizeof(m_translate_data.rotationAndScale) == sizeof(rotationAndScaleMat.cells));
-        ::memcpy(m_translate_data.rotationAndScale, rotationAndScaleMat.cells, sizeof(rotationAndScaleMat.cells));
         // Position
-        MFA::Matrix4X4Float transformationMat {};
+        MFA::Matrix4X4Float translationMat {};
         MFA::Matrix4X4Float::AssignTranslation(
-            transformationMat,
+            translationMat,
             m_model_position[0],
             m_model_position[1],
             m_model_position[2]
         );
-        static_assert(sizeof(m_translate_data.transformation) == sizeof(transformationMat.cells));
-        ::memcpy(m_translate_data.transformation, transformationMat.cells, sizeof(transformationMat.cells));
+
+        MFA::Matrix4X4Float transformMat {};
+        MFA::Matrix4X4Float::identity(transformMat);
+        transformMat.multiply(translationMat);
+        transformMat.multiply(rotationMat);
+        transformMat.multiply(scaleMat);
+        
+        static_assert(sizeof(mTransformData.view) == sizeof(transformMat.cells));
+        ::memcpy(mTransformData.view, transformMat.cells, sizeof(transformMat.cells));
         // Perspective
         MFA::I32 width; MFA::I32 height;
         RF::GetWindowSize(width, height);
@@ -231,12 +225,12 @@ void GLTFMeshViewerScene::OnDraw(MFA::U32 const delta_time, RF::DrawPass & draw_
             Z_NEAR,
             Z_FAR
         );
-        static_assert(sizeof(m_translate_data.perspective) == sizeof(perspectiveMat.cells));
-        ::memcpy(m_translate_data.perspective, perspectiveMat.cells, sizeof(perspectiveMat.cells));
+        static_assert(sizeof(mTransformData.perspective) == sizeof(perspectiveMat.cells));
+        ::memcpy(mTransformData.perspective, perspectiveMat.cells, sizeof(perspectiveMat.cells));
 
         selectedModel.drawableObject.updateUniformBuffer(
             "transform", 
-            MFA::CBlobAliasOf(m_translate_data)
+            MFA::CBlobAliasOf(mTransformData)
         );
     }
     {// LightViewBuffer

@@ -26,8 +26,8 @@ void Application::run() {
     namespace RF = MFA::RenderFrontend;
     namespace UI = MFA::UISystem;
     
-    static constexpr MFA::U16 SCREEN_WIDTH = 1920;
-    static constexpr MFA::U16 SCREEN_HEIGHT = 1080;
+    static constexpr MFA::U16 SCREEN_WIDTH = 800;//1920;
+    static constexpr MFA::U16 SCREEN_HEIGHT = 600;//1080;
 
     RF::Init({SCREEN_WIDTH, SCREEN_HEIGHT, "Cool app"});
     UI::Init();
@@ -39,7 +39,7 @@ void Application::run() {
     mSceneSubSystem.RegisterNew(mPbrScene.get(), "PBRScene");
     mSceneSubSystem.RegisterNew(mTextureViewerScene.get(), "TextureViewerScene");
     
-    mSceneSubSystem.SetActiveScene("TextureSphereScene");
+    mSceneSubSystem.SetActiveScene("GLTFMeshViewerScene");
     mSceneSubSystem.Init();
 
     {// Main loop

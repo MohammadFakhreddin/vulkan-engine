@@ -63,10 +63,9 @@ private:
     }; 
 
     struct ModelTransformBuffer {   // For vertices in Vertex shader
-        float rotationAndScale[16];
-        float transformation[16];
-        float perspective[16];
-    } m_translate_data {};
+        alignas(64) float view[16];
+        alignas(64) float perspective[16];
+    } mTransformData {};
 
     float m_model_rotation[3] {45.0f, 45.0f, 45.0f};
     float m_model_scale = 1.0f;

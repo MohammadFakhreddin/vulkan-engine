@@ -27,17 +27,14 @@ struct VSOut {
 };
 
 struct ModelTransformation {
-    float4x4 rotationAndScaleMat;
-    float4x4 translateMat;
+    float4x4 view;
     float4x4 projectionMat;
 };
 
 ConstantBuffer <ModelTransformation> modelTransformBuffer: register(b0, space0);
 
 struct NodeTranformation {
-    float4x4 rotationAndScaleMat;
-    float4x4 translateMat;
-    // float4x4 transform;
+    float4x4 model;
 };
 
 ConstantBuffer <NodeTranformation> nodeTransformBuffer: register(b1, space0);
@@ -52,13 +49,9 @@ VSOut main(VSIn input) {
 
     // Position
     float4 tempPosition = float4(input.position, 1.0f);
-    // tempPosition = mul(modelViewMat, tempPosition);
-    // // tempPosition = mul(nodeTransformBuffer.transform, tempPosition);
-    tempPosition = mul(nodeTransformBuffer.translateMat, tempPosition);
-    tempPosition = mul(nodeTransformBuffer.rotationAndScaleMat, tempPosition);
-    tempPosition = mul(modelTransformBuffer.rotationAndScaleMat, tempPosition);
-    tempPosition = mul(modelTransformBuffer.translateMat, tempPosition);
-
+    tempPosition = mul(nodeTransformBuffer.model, tempPosition);
+    tempPosition = mul(modelTransformBuffer.view, tempPosition);
+    
     float4 worldPos = tempPosition;
     float4 position = mul(modelTransformBuffer.projectionMat, worldPos);
     output.position = position;
@@ -70,26 +63,16 @@ VSOut main(VSIn input) {
     // Metallic/Roughness
     output.metallicRoughnessTexCoord = input.metallicRoughnessTexCoord;
     
-    // TODO: Refactor and create function
-    // TODO Like sasha willems we can just ignore model transform for normal and tangent
-    // float4 pos = mul(ubo.view, float4(input.Pos, 1.0));
     // Normals
 	float4 tempTangent = input.tangent;
-    // tempTangent = mul(nodeTransformBuffer.transform, tempTangent);
-    tempTangent = mul(nodeTransformBuffer.translateMat, tempTangent);
-    tempTangent = mul(nodeTransformBuffer.rotationAndScaleMat, tempTangent);
-    tempTangent = mul(modelTransformBuffer.rotationAndScaleMat, tempTangent);
-    tempTangent = mul(modelTransformBuffer.translateMat, tempTangent);
-    // tempTangent = mul(modelViewMat, tempTangent);
-
+    tempTangent = mul(nodeTransformBuffer.model, tempTangent);
+    tempTangent = mul(modelTransformBuffer.view, tempTangent);
+    
     float3 worldTangent = normalize(tempTangent.xyz);
 
 	float4 tempNormal = float4(input.normal, 0.0);
-    // tempNormal = mul(nodeTransformBuffer.transform, tempNormal);
-    tempNormal = mul(nodeTransformBuffer.translateMat, tempNormal);
-    tempNormal = mul(nodeTransformBuffer.rotationAndScaleMat, tempNormal);
-    tempNormal = mul(modelTransformBuffer.rotationAndScaleMat, tempNormal);
-    tempNormal = mul(modelTransformBuffer.translateMat, tempNormal);
+    tempNormal = mul(nodeTransformBuffer.model, tempNormal);
+    tempNormal = mul(modelTransformBuffer.view, tempNormal);
     
     float3 worldNormal = normalize(tempNormal.xyz);
     

@@ -755,7 +755,6 @@ public:
   template <typename A>
   void castAssign(const _Matrix<A, width, height>& rhs) {
     castAssign(rhs.cells);
-    _assign(rhs.cells, width * height);    
   }
 
     template <typename A>

@@ -69,9 +69,9 @@ public:
 private:
 
     struct NodeTransformBuffer {
-        float rotationAndScale[16];
-        float translate[16];
-        //float transform[16];
+        //float rotationAndScale[16];
+        //float translate[16];
+        float model[16];
     } mNodeTransformData {};
 
     void drawNode(RF::DrawPass & drawPass, const AssetSystem::Mesh::Node & node);
