@@ -113,6 +113,16 @@ void GLTFMeshViewerScene::Init() {
                 }
             }
         });
+        
+        mModelsRenderData.emplace_back(ModelRenderRequiredData {
+            .isLoaded = false,
+            .gpuModel {},
+            .displayName {"Warhammer tank"},
+            .address {"../assets/models/warhammer_40k_predator_dark_millennium/scene.gltf"},
+            .drawableObject {},
+            .initialParams {
+            }
+        });
     }
     
     // Cpu shader

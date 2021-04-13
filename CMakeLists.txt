@@ -122,7 +122,8 @@ list(
     "src/scenes/textured_sphere/TexturedSphereScene.cpp"
     "src/scenes/textured_sphere/TexturedSphereScene.hpp"
     "src/scenes/SpecularHighlightScene.hpp"
-    "src/scenes/TextureViewerScene.hpp"
+    "src/scenes/texture_viewer_scene/TextureViewerScene.hpp"
+    "src/scenes/texture_viewer_scene/TextureViewerScene.cpp"
 )
 
 add_library("Scenes"
@@ -140,6 +141,18 @@ target_include_directories(
 #-----------------------------------------------------------------------
 
 set(LIBS_SOURCES)
+
+# file(GLOB_RECURSE LIB_KTX_H "src/libs/ktx/*.h")
+# file(GLOB_RECURSE LIB_KTX_HPP "src/libs/ktx/*.hpp")
+# file(GLOB_RECURSE LIB_KTX_C "src/libs/ktx/*.c")
+# file(GLOB_RECURSE LIB_KTX_CPP "src/libs/ktx/*.cpp")
+
+list(APPEND LIB_KTX_SOURCES
+    LIB_KTX_H
+    LIB_KTX_HPP
+    LIB_KTX_C
+    LIB_KTX_CPP
+)
 
 list(
     APPEND LIBS_SOURCES
@@ -164,6 +177,8 @@ list(
     "src/libs/tiny_gltf_loader/tiny_gltf_loader.h"
     #TinyObjLoader
     "src/libs/tiny_obj_loader/tiny_obj_loader.h"
+    #Ktx
+    "src/libs/tiny_ktx/tinyktx2.h"
 )
 
 add_library("Libs"

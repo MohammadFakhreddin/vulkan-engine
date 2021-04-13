@@ -47,8 +47,6 @@ VSOut main(VSIn input) {
     // Position
     float4 tempPosition = float4(input.position, 1.0f);
     tempPosition = mul(modelViewMat, tempPosition);
-    // tempPosition = mul(nodeTransformBuffer.model, tempPosition);
-    // tempPosition = mul(modelTransformBuffer.view, tempPosition);
     
     float4 worldPos = tempPosition;
     float4 position = mul(modelTransformBuffer.projectionMat, worldPos);
@@ -64,15 +62,11 @@ VSOut main(VSIn input) {
     // Normals
 	float4 tempTangent = input.tangent;
     tempTangent = mul(modelViewMat, tempTangent);
-    // tempTangent = mul(nodeTransformBuffer.model, tempTangent);
-    // tempTangent = mul(modelTransformBuffer.view, tempTangent);
     
     float3 worldTangent = normalize(tempTangent.xyz);
 
 	float4 tempNormal = float4(input.normal, 0.0);
     tempNormal = mul(modelViewMat, tempNormal);
-    // tempNormal = mul(nodeTransformBuffer.model, tempNormal);
-    // tempNormal = mul(modelTransformBuffer.view, tempNormal);
     
     float3 worldNormal = normalize(tempNormal.xyz);
     

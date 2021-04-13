@@ -11,6 +11,9 @@
 #define TINYGLTF_NO_INCLUDE_STB_IMAGE_WRITE
 #define TINYGLTF_IMPLEMENTATION
 #include "../src/libs/tiny_gltf_loader/tiny_gltf_loader.h"
+#define TINYKTX_IMPLEMENTATION 
+#include "../src/libs/tiny_ktx/tinyktx2.h"
+
 #include "../src/Application.hpp"
 
 int main(int argc, char* argv[]){

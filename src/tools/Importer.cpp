@@ -822,7 +822,7 @@ AS::Model ImportGLTF(char const * path) {
                             bool hasEmissiveTexture = emissionUVs != nullptr;
                             MFA_ASSERT(emissionUVs != nullptr == emissiveTextureIndex >= 0);
                             bool hasTangentValue = tangentValues != nullptr;
-                            MFA_ASSERT(hasTangentValue == hasNormalTexture);
+                            //MFA_ASSERT(hasTangentValue == hasNormalTexture);
                             for (U32 i = 0; i < primitiveVertexCount; ++i) {
                                 primitiveVertices.emplace_back();
                                 auto & vertex = primitiveVertices.back();
