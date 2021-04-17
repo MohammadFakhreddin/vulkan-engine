@@ -61,13 +61,41 @@ bool close() {
 }
 
 [[nodiscard]]
-bool seekToEnd() const {
+bool seek(const int offset, const Origin origin) const {
     bool ret = false;
     if (isOk()) {
-        int const seek_result = ::fseek(mFile, 0, SEEK_END);
+        int _origin {};
+        switch(origin) {
+            case Origin::Start:
+            _origin = 0;
+            break;
+            case Origin::End:
+            _origin = SEEK_END;
+            break;
+            case Origin::Current:
+            _origin = SEEK_CUR;
+            break;
+            default:
+            MFA_CRASH("Invalid origin");
+        }
+        int const seek_result = ::fseek(mFile, offset, _origin);
         ret = (0 == seek_result);
     }
     return ret;
+}
+
+[[nodiscard]]
+bool seekToEnd() const {
+    return seek(0, Origin::End);
+}
+
+bool tell(int64_t & outLocation) const {
+    bool success = false;
+    if (isOk()) {
+        outLocation = ::ftell(mFile);
+        success = true;
+    }
+    return success;
 }
 
 [[nodiscard]]
@@ -152,5 +180,12 @@ std::string ExtractDirectoryFromPath(char const * path)  {
     MFA_ASSERT(path != nullptr);
     return std::filesystem::path(path).parent_path().string();
 }
+
+bool Seek(FileHandle * file, const int offset, const Origin origin) {
+    MFA_ASSERT(file != nullptr);
+    return file->seek(offset, origin);
+}
+
+bool Tell(FileHandle * file, int64_t & outLocation);
 
 }

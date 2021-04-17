@@ -12,6 +12,8 @@ Blob Alloc (size_t size);
 
 void Free (Blob const & mem);
 
+void PtrFree(void * ptr);
+
 template <typename T>
 T * New_NoConstruct () {
     auto blob = Alloc(sizeof(T));

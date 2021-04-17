@@ -14,4 +14,8 @@ void Free (Blob const & mem) {
     ::free(mem.ptr);
 }
 
+void PtrFree (void * ptr) {
+    ::free(ptr);
+}
+
 }

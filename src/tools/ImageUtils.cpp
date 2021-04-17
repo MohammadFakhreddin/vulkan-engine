@@ -6,6 +6,7 @@
 #include "../engine/BedrockMemory.hpp"
 
 #include "../libs/stb_image/stb_image.h"
+#include "engine/BedrockFileSystem.hpp"
 
 namespace MFA::Utils::UncompressedTexture {
 
@@ -151,6 +152,7 @@ uintmax_t ComputeMipmapLen(
             raw_bytes_per_pixel = AssetSystem::Texture::FormatTable[static_cast<uint8_t>(format)].bits_total / 8;
         break;
         default:
+            MFA_CRASH("Format not supported");
             // Means that format is unsupported by engine
         break;
     };

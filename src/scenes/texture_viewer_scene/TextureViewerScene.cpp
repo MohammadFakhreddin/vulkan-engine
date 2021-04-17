@@ -1,85 +1,117 @@
 #include "TextureViewerScene.hpp"
 
+#include "engine/BedrockMemory.hpp"
 #include "libs/tiny_ktx/tinyktx2.h"
 #include "tools/Importer.hpp"
+#include "engine/BedrockFileSystem.hpp"
 
 namespace RF = MFA::RenderFrontend;
 namespace RB = MFA::RenderBackend;
 namespace AS = MFA::AssetSystem;
 namespace Importer = MFA::Importer;
-
+namespace FS = MFA::FileSystem;
+namespace AS = MFA::AssetSystem;
 
 static void tinyktxCallbackError(void *user, char const *msg) {
-	LOGERROR("Tiny_Ktx ERROR: %s", msg);
+    MFA_LOG_ERROR("Tiny_Ktx ERROR: %s", msg);
 }
 static void *tinyktxCallbackAlloc(void *user, size_t size) {
-	return MEMORY_MALLOC(size);
+    return MFA::Memory::Alloc(size).ptr;
 }
 static void tinyktxCallbackFree(void *user, void *data) {
-	MEMORY_FREE(data);
+    MFA::Memory::PtrFree(data);
 }
+// TODO Start from here, Complete all callbacks
 static size_t tinyktxCallbackRead(void *user, void* data, size_t size) {
-	auto handle = (VFile_Handle) user;
-	return VFile_Read(handle, data, size);
+    auto * handle = static_cast<FS::FileHandle *>(user);
+    return FS::Read(handle, MFA::Blob {data, size});
 }
 static bool tinyktxCallbackSeek(void *user, int64_t offset) {
-	auto handle = (VFile_Handle) user;
-	return VFile_Seek(handle, offset, VFile_SD_Begin);
+    auto * handle = static_cast<FS::FileHandle *>(user);
+    return FS::Seek(handle, offset, FS::Origin::Start);
 
 }
 static int64_t tinyktxCallbackTell(void *user) {
-	auto handle = (VFile_Handle) user;
-	return VFile_Tell(handle);
+    auto * handle = static_cast<FS::FileHandle *>(user);
+    int64_t location = 0;
+    bool success = FS::Tell(handle, location);
+    MFA_ASSERT(success);
+    return location;
 }
 
-AL2O3_EXTERN_C Image_ImageHeader const *Image_LoadKTX(VFile_Handle handle) {
-	TinyKtx_Callbacks callbacks {
-			&tinyktxCallbackError,
-			&tinyktxCallbackAlloc,
-			&tinyktxCallbackFree,
-			tinyktxCallbackRead,
-			&tinyktxCallbackSeek,
-			&tinyktxCallbackTell
-	};
+AS::Texture Image_LoadKTX(FS::FileHandle * handle) {
 
-	auto ctx =  TinyKtx_CreateContext( &callbacks, handle);
-	TinyKtx_ReadHeader(ctx);
-	uint32_t w = TinyKtx_Width(ctx);
-	uint32_t h = TinyKtx_Height(ctx);
-	uint32_t d = TinyKtx_Depth(ctx);
-	uint32_t s = TinyKtx_ArraySlices(ctx);
-	ImageFormat fmt = ImageFormatToTinyKtxFormat(TinyKtx_GetFormat(ctx));
-	if(fmt == ImageFormat_UNDEFINED) {
-		TinyKtx_DestroyContext(ctx);
-		return nullptr;
-	}
+    using namespace MFA;
 
-	Image_ImageHeader const* topImage = nullptr;
-	Image_ImageHeader const* prevImage = nullptr;
-	for(auto i = 0u; i < TinyKtx_NumberOfMipmaps(ctx);++i) {
-		auto image = Image_CreateNoClear(w, h, d, s, fmt);
-		if(i == 0) topImage = image;
+    AS::Texture result {};
 
-		if(Image_ByteCountOf(image) != TinyKtx_ImageSize(ctx, i)) {
-			LOGERROR("KTX file %s mipmap %i size error", VFile_GetName(handle), i);
-			Image_Destroy(topImage);
-			TinyKtx_DestroyContext(ctx);
-			return nullptr;
-		}
-		memcpy(Image_RawDataPtr(image), TinyKtx_ImageRawData(ctx, i), Image_ByteCountOf(image));
-		if(prevImage) {
-			auto p = (Image_ImageHeader *)prevImage;
-			p->nextType = Image_NextType::Image_IT_MipMaps;
-			p->nextImage = image;
-		}
-		if(w > 1) w = w / 2;
-		if(h > 1) h = h / 2;
-		if(d > 1) d = d / 2;
-		prevImage = image;
-	}
+    TinyKtx2_Callbacks callbacks {
+            &tinyktxCallbackError,
+            &tinyktxCallbackAlloc,
+            &tinyktxCallbackFree,
+            tinyktxCallbackRead,
+            &tinyktxCallbackSeek,
+            &tinyktxCallbackTell
+    };
 
-	TinyKtx_DestroyContext(ctx);
-	return topImage;
+    auto * ctx =  TinyKtx2_CreateContext( &callbacks, handle);
+    MFA_DEFER {
+        TinyKtx2_DestroyContext(ctx);
+    };
+    
+    auto const readHeaderResult = TinyKtx2_ReadHeader(ctx);
+    MFA_ASSERT(readHeaderResult);
+
+    uint32_t width = TinyKtx2_Width(ctx);
+    uint32_t height = TinyKtx2_Height(ctx);
+    uint32_t depth = TinyKtx2_Depth(ctx);
+    const uint32_t sliceCount = TinyKtx2_ArraySlices(ctx);
+    
+    auto const tinyKtxFormat = TinyKtx_GetFormat(ctx);
+
+    if(tinyKtxFormat != TKTX_UNDEFINED) {
+        const auto mipmapCount = TinyKtx2_NumberOfMipmaps(ctx);
+        uint32_t totalImageSize = 0;
+
+        for(auto i = 0u; i < mipmapCount; ++i) {
+            totalImageSize += TinyKtx2_ImageSize(ctx, i);
+        }
+
+        // TODO We need convert function here
+
+        result.initForWrite(
+            format, 
+            sliceCount, 
+            mipmapCount, 
+            depth, 
+            nullptr, 
+            Memory::Alloc(totalImageSize)
+        );
+
+        for(auto i = 0u; i < mipmapCount; ++i) {
+            MFA_ASSERT(width >= 1);
+            MFA_ASSERT(height >= 1);
+            MFA_ASSERT(depth >= 1);
+
+            const auto imageSize = TinyKtx2_ImageSize(ctx, i);
+            auto * imageDataPtr = TinyKtx2_ImageRawData(ctx, i);
+            
+            result.addMipmap(
+                AS::Texture::Dimensions {
+                    .width = width,
+                    .height = height,
+                    .depth = depth
+                }, 
+                CBlob {imageDataPtr, imageSize}
+            );
+
+            width = width / 2;
+            height = height / 2;
+            depth = depth / 2;
+        }
+    }
+
+    return result;
 }
 
 void TextureViewerScene::Init() {
