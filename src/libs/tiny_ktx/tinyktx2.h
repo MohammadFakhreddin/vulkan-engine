@@ -50,7 +50,7 @@ typedef struct TinyKtx2_Callbacks {
 } TinyKtx2_Callbacks;
 
 TinyKtx2_ContextHandle TinyKtx2_CreateContext(TinyKtx2_Callbacks const *callbacks, void *user);
-void TinyKtx2_DestroyContext(TinyKtx_ContextHandle handle);
+void TinyKtx2_DestroyContext(TinyKtx2_ContextHandle handle);
 
 // reset lets you reuse the context for another file (saves an alloc/free cycle)
 void TinyKtx2_Reset(TinyKtx2_ContextHandle handle);
@@ -586,7 +586,7 @@ typedef struct TinyKtx2_Context {
 	bool sameEndian;
 	void* sgdData;
 
-	TinyKtx2_Level levels[TINYKTX_MAX_MIPMAPLEVELS];
+	TinyKtx2_Level levels[TINYKTX2_MAX_MIPMAPLEVELS];
 	uint8_t const *mipmaps[TINYKTX_MAX_MIPMAPLEVELS];
 
 } TinyKtx2_Context;
@@ -607,7 +607,7 @@ TinyKtx2_ContextHandle TinyKtx2_CreateContext(TinyKtx2_Callbacks const *callback
 	memcpy(&ctx->callbacks, callbacks, sizeof(TinyKtx2_Callbacks));
 	ctx->user = user;
 	if (ctx->callbacks.error == NULL) {
-		ctx->callbacks.error = &TinyKtx_NullErrorFunc;
+		ctx->callbacks.error = &TinyKtx2_NullErrorFunc;
 	}
 
 	if (ctx->callbacks.read == NULL) {
@@ -652,7 +652,7 @@ void TinyKtx2_Reset(TinyKtx2_ContextHandle handle) {
 
 	// backup user provided callbacks and data
 	TinyKtx2_Callbacks callbacks;
-	memcpy(&callbacks, &ctx->callbacks, sizeof(TinyKtx_Callbacks));
+	memcpy(&callbacks, &ctx->callbacks, sizeof(TinyKtx2_Callbacks));
 	void *user = ctx->user;
 
 	// free any super compression global data we've allocated
@@ -665,21 +665,21 @@ void TinyKtx2_Reset(TinyKtx2_ContextHandle handle) {
 		callbacks.free(user, (void *) ctx->keyData);
 	}
 
-	for (int i = 0; i < TINYKTX_MAX_MIPMAPLEVELS; ++i) {
+	for (int i = 0; i < TINYKTX2_MAX_MIPMAPLEVELS; ++i) {
 		if (ctx->mipmaps[i] != NULL) {
 			callbacks.free(user, (void *) ctx->mipmaps[i]);
 		}
 	}
 
 	// reset to default state
-	memset(ctx, 0, sizeof(TinyKtx_Context));
+	memset(ctx, 0, sizeof(TinyKtx2_Context));
 	memcpy(&ctx->callbacks, &callbacks, sizeof(TinyKtx_Callbacks));
 	ctx->user = user;
 
 }
 
 
-bool TinyKtx2_ReadHeader(TinyKtx_ContextHandle handle) {
+bool TinyKtx2_ReadHeader(TinyKtx2_ContextHandle handle) {
 	TinyKtx2_Context *ctx = (TinyKtx2_Context *) handle;
 	if (ctx == NULL)
 		return false;
@@ -753,7 +753,7 @@ bool TinyKtx2_Is1D(TinyKtx2_ContextHandle handle) {
 	}
 	return (ctx->header.pixelHeight <= 1) && (ctx->header.pixelDepth <= 1 );
 }
-bool TinyKtx2_Is2D(TinyKtx_ContextHandle handle) {
+bool TinyKtx2_Is2D(TinyKtx2_ContextHandle handle) {
 	TinyKtx2_Context *ctx = (TinyKtx2_Context *) handle;
 	if (ctx == NULL)
 		return false;

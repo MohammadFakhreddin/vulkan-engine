@@ -186,6 +186,9 @@ bool Seek(FileHandle * file, const int offset, const Origin origin) {
     return file->seek(offset, origin);
 }
 
-bool Tell(FileHandle * file, int64_t & outLocation);
+bool Tell(FileHandle * file, int64_t & outLocation) {
+    MFA_ASSERT(file != nullptr);
+    return file->tell(outLocation);
+}
 
 }

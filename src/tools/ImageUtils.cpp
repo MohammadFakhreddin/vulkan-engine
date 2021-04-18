@@ -294,6 +294,7 @@ LoadResult Load (Data & out_image_data, char const * path) {
                             }();
                             if(TextureFormat::INVALID != out_image_data.format) {
                                 out_image_data.valid = true;
+                                // TODO Recheck this part
                                 out_image_data.data_offset_in_asset = {
                                     out_image_data.asset.ptr + sizeof(DDS_Header) + sizeof(DDS_Header_DXT10),
                                     out_image_data.asset.len - sizeof(DDS_Header) - sizeof(DDS_Header_DXT10)

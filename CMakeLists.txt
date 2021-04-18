@@ -178,7 +178,7 @@ list(
     #TinyObjLoader
     "src/libs/tiny_obj_loader/tiny_obj_loader.h"
     #Ktx
-    "src/libs/tiny_ktx/tinyktx2.h"
+    "src/libs/tiny_ktx/tinyktx.h"
 )
 
 add_library("Libs"

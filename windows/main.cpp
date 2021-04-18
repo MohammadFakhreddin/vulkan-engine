@@ -12,7 +12,7 @@
 #define TINYGLTF_IMPLEMENTATION
 #include "../src/libs/tiny_gltf_loader/tiny_gltf_loader.h"
 #define TINYKTX_IMPLEMENTATION 
-#include "../src/libs/tiny_ktx/tinyktx2.h"
+#include "../src/libs/tiny_ktx/tinyktx.h"
 
 #include "../src/Application.hpp"
 
