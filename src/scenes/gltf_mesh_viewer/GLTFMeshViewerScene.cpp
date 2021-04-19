@@ -125,7 +125,7 @@ void GLTFMeshViewerScene::Init() {
         });
     }
     
-    // Cpu shader
+    // Vertex shader
     auto cpu_vertex_shader = Importer::ImportShaderFromSPV(
         "../assets/shaders/gltf_mesh_viewer/GLTFMeshViewer.vert.spv", 
         MFA::AssetSystem::Shader::Stage::Vertex, 

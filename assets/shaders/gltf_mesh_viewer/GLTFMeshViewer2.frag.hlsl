@@ -180,6 +180,7 @@ PSOut main(PSIn input) {
     
     float metallic = 0.0f;
     float roughness = 0.0f;
+    // TODO: Is usages of occlusion correct ?
     float ambientOcclusion = 0.3f;
     if (smBuff.hasMetallicRoughnessTexture == 1) {
         float4 metallicRoughness = metallicRoughnessTexture.Sample(metallicRoughnessSampler, input.metallicRoughnessTexCoord);
@@ -189,7 +190,6 @@ PSOut main(PSIn input) {
     } else {
         metallic = smBuff.metallicFactor;
         roughness = smBuff.roughnessFactor;
-        // TODO
     }
 
 	float3 normal = calculateNormal(input);
@@ -204,7 +204,6 @@ PSOut main(PSIn input) {
 		Lo += BRDF(L, V, N, metallic, roughness, baseColor, input.worldPos);
 	};
 
-    // TODO Occlusion texture
     // Combine with ambient
     float3 color = float3(0.0, 0.0, 0.0);
     

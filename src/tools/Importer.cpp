@@ -47,6 +47,7 @@ AS::Texture ImportUncompressedImage(
     // TODO: Handle errors
     return texture;
 }
+
 AS::Texture CreateErrorTexture() {
     auto const data = Memory::Alloc(4);
     auto * pixel = data.as<uint8_t>();

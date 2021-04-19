@@ -65,8 +65,13 @@ AS::Texture Image_LoadKTX(FS::FileHandle * handle) {
 
     U16 width = static_cast<U16>(TinyKtx_Width(ctx));
     U16 height = static_cast<U16>(TinyKtx_Height(ctx));
-    U16 depth = static_cast<U16>(TinyKtx_Depth(ctx));
-    const U8 sliceCount = static_cast<U8>(TinyKtx_ArraySlices(ctx));
+    U16 depth = Math::Max<U16>(static_cast<U16>(TinyKtx_Depth(ctx)), 1);
+    const U8 sliceCount = Math::Max<U8>(static_cast<U8>(TinyKtx_ArraySlices(ctx)), 1);
+    // TODO
+    //TinyKtx_Is1D()
+    //TinyKtx_Is2D()
+    //TinyKtx_Is3D()
+    //TinyKtx_IsCubemap()
     
     TinyKtx_Format const tinyKtxFormat = TinyKtx_GetFormat(ctx);
     TextureFormat const format = [tinyKtxFormat]() -> TextureFormat
@@ -121,9 +126,7 @@ AS::Texture Image_LoadKTX(FS::FileHandle * handle) {
         for(auto i = 0u; i < mipmapCount; ++i) {
             totalImageSize += TinyKtx_ImageSize(ctx, i);
         }
-
-        // TODO We need convert function here
-
+        
         result.initForWrite(
             format, 
             sliceCount, 
@@ -150,9 +153,9 @@ AS::Texture Image_LoadKTX(FS::FileHandle * handle) {
                 CBlob {imageDataPtr, imageSize}
             );
 
-            width = width / 2;
-            height = height / 2;
-            depth = depth / 2;
+            width = Math::Max<U16>(width / 2, 1);
+            height = Math::Max<U16>(height / 2, 1);
+            depth = Math::Max<U16>(depth / 2, 1);
         }
     }
 
@@ -164,13 +167,53 @@ void TextureViewerScene::Init() {
         "../assets/models/sponza/2185409758123873465.ktx", 
         MFA::FileSystem::Usage::Read
     );
-    auto texture = Image_LoadKTX(fileHandle);
-    MFA_ASSERT(texture.isValid());
-    Importer::FreeTexture(&texture);
+    auto cpuTexture = Image_LoadKTX(fileHandle);
+    MFA_ASSERT(cpuTexture.isValid());
+    mGpuTexture = RF::CreateTexture(cpuTexture);
+    //Importer::FreeTexture(&texture);
+
+    // Vertex shader
+    auto cpu_vertex_shader = Importer::ImportShaderFromSPV(
+        "../assets/shaders/texture_viewer/TextureViewer.vert.spv", 
+        MFA::AssetSystem::Shader::Stage::Vertex, 
+        "main"
+    );
+    MFA_ASSERT(cpu_vertex_shader.isValid());
+    auto gpu_vertex_shader = RF::CreateShader(cpu_vertex_shader);
+    MFA_ASSERT(gpu_vertex_shader.valid());
+    MFA_DEFER {
+        RF::DestroyShader(gpu_vertex_shader);
+        Importer::FreeShader(&cpu_vertex_shader);
+    };
+    
+    // Fragment shader
+    auto cpu_fragment_shader = Importer::ImportShaderFromSPV(
+        "../assets/shaders/texture_viewer/TextureViewer.frag.spv",
+        MFA::AssetSystem::Shader::Stage::Fragment,
+        "main"
+    );
+    auto gpu_fragment_shader = RF::CreateShader(cpu_fragment_shader);
+    MFA_ASSERT(cpu_fragment_shader.isValid());
+    MFA_ASSERT(gpu_fragment_shader.valid());
+    MFA_DEFER {
+        RF::DestroyShader(gpu_fragment_shader);
+        Importer::FreeShader(&cpu_fragment_shader);
+    };
+
+    std::vector<RB::GpuShader> shaders {gpu_vertex_shader, gpu_fragment_shader};
+
+    // TODO We need nearest and linear filters
+    mSamplerGroup = RF::CreateSampler();
+
+    createDescriptorSetLayout();
+
+    createDrawPipeline(static_cast<MFA::U8>(shaders.size()), shaders.data());
+    
 }
 
 void TextureViewerScene::Shutdown() {
-    
+    RF::DestroyTexture(mGpuTexture);
+    Importer::FreeTexture(mGpuTexture.cpu_texture());
 }
 
 void TextureViewerScene::OnDraw(
