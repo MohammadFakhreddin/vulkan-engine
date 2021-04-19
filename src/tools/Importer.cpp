@@ -110,7 +110,9 @@ AS::Texture ImportInMemoryTexture(
     );
 
     // Generating mipmaps (TODO : Code needs debugging)
-    for (U8 mipLevel = 0; mipLevel < mipCount - 1; mipLevel++) {
+    texture.addMipmap(originalImageDimension, originalImagePixels);
+    
+    for (U8 mipLevel = 1; mipLevel < mipCount; mipLevel++) {
         auto const currentMipDims = AS::Texture::MipDimensions(
             mipLevel,
             mipCount,
@@ -156,7 +158,6 @@ AS::Texture ImportInMemoryTexture(
             mipMapPixels
         );
     }
-    texture.addMipmap(originalImageDimension, originalImagePixels);
     
 
     MFA_ASSERT(texture.isValid());

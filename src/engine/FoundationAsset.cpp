@@ -28,18 +28,18 @@ size_t Texture::MipSizeBytes (
 }
 
 Texture::Dimensions Texture::MipDimensions (
-    uint8_t const mip_level,
-    uint8_t const mip_count,
-    Dimensions const original_image_dims
+    uint8_t const mipLevel,
+    uint8_t const mipCount,
+    Dimensions const originalImageDims
 )
 {
     Dimensions ret = {};
-    if (mip_level < mip_count) {
-        uint32_t const pow = mip_count - 1 - mip_level;
+    if (mipLevel < mipCount) {
+        uint32_t const pow = mipLevel;
         uint32_t const add = (1 << pow) - 1;
-        ret.width = (original_image_dims.width + add) >> pow;
-        ret.height = (original_image_dims.height + add) >> pow;
-        ret.depth = static_cast<uint16_t>((original_image_dims.depth + add) >> pow);
+        ret.width = (originalImageDims.width + add) >> pow;
+        ret.height = (originalImageDims.height + add) >> pow;
+        ret.depth = static_cast<uint16_t>((originalImageDims.depth + add) >> pow);
     }
     return ret;
 }
@@ -90,12 +90,13 @@ void Texture::addMipmap(
 ) {
     MFA_ASSERT(data.ptr != nullptr);
     MFA_ASSERT(data.len > 0);
+    U32 dataLen = static_cast<U32>(data.len);
     mMipmapInfos.emplace_back(MipmapInfo {
         .offset = mCurrentOffset,
-        .size = static_cast<U32>(data.len),
+        .size = dataLen,
         .dimension = dimension,
     });
-    U32 nextOffset = mCurrentOffset + static_cast<U32>(data.len);
+    U64 nextOffset = mCurrentOffset + dataLen;
     MFA_ASSERT(mBuffer.ptr != nullptr);
     MFA_ASSERT(nextOffset <= mBuffer.len);
     ::memcpy(mBuffer.ptr + mCurrentOffset, data.ptr, data.len);

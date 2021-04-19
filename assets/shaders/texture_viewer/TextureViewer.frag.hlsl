@@ -10,19 +10,19 @@ struct PSOut {
 sampler mSampler : register(s1, space0);
 Texture2D mTexture : register(t1, space0);
 
-struct MipMapOptions {
+struct ImageOptions {
     int mipLevel;
     // int sliceIndex; // TODO: Consider adding sliceIndex in future
 };
 
-ConstantBuffer <MipMapOptions> mipMapOptionsBuff : register(b2, space0);
+ConstantBuffer <ImageOptions> imageOptionsBuff : register(b2, space0);
 
 PSOut main(PSIn input) {
     PSOut output;
     output.color = mTexture.SampleLevel(
         mSampler, 
         input.uv, 
-        mipMapOptionsBuff.mipLevel
+        imageOptionsBuff.mipLevel
     );
     return output;
 }

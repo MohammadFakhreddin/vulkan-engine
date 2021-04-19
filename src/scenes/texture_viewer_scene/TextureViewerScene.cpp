@@ -4,13 +4,14 @@
 #include "libs/tiny_ktx/tinyktx.h"
 #include "tools/Importer.hpp"
 #include "engine/BedrockFileSystem.hpp"
+#include "tools/ShapeGenerator.hpp"
 
 namespace RF = MFA::RenderFrontend;
 namespace RB = MFA::RenderBackend;
-namespace AS = MFA::AssetSystem;
 namespace Importer = MFA::Importer;
 namespace FS = MFA::FileSystem;
 namespace AS = MFA::AssetSystem;
+namespace SG = MFA::ShapeGenerator;
 
 static void tinyktxCallbackError(void *user, char const *msg) {
     MFA_LOG_ERROR("Tiny_Ktx ERROR: %s", msg);
@@ -121,7 +122,7 @@ AS::Texture Image_LoadKTX(FS::FileHandle * handle) {
     if(tinyKtxFormat != TKTX_UNDEFINED) {
         // TODO Maybe I have to reevaluate my values
         const U8 mipmapCount = static_cast<U8>(TinyKtx_NumberOfMipmaps(ctx));
-        uint32_t totalImageSize = 0;
+        uint64_t totalImageSize = 0;
 
         for(auto i = 0u; i < mipmapCount; ++i) {
             totalImageSize += TinyKtx_ImageSize(ctx, i);
@@ -163,14 +164,8 @@ AS::Texture Image_LoadKTX(FS::FileHandle * handle) {
 }
 
 void TextureViewerScene::Init() {
-    auto * fileHandle = MFA::FileSystem::OpenFile(
-        "../assets/models/sponza/2185409758123873465.ktx", 
-        MFA::FileSystem::Usage::Read
-    );
-    auto cpuTexture = Image_LoadKTX(fileHandle);
-    MFA_ASSERT(cpuTexture.isValid());
-    mGpuTexture = RF::CreateTexture(cpuTexture);
-    //Importer::FreeTexture(&texture);
+
+    createModel();
 
     // Vertex shader
     auto cpu_vertex_shader = Importer::ImportShaderFromSPV(
@@ -208,12 +203,31 @@ void TextureViewerScene::Init() {
     createDescriptorSetLayout();
 
     createDrawPipeline(static_cast<MFA::U8>(shaders.size()), shaders.data());
-    
+
+    // Updating perspective mat once for entire application
+    // Perspective
+    MFA::I32 width; MFA::I32 height;
+    RF::GetWindowSize(width, height);
+    float const ratio = static_cast<float>(width) / static_cast<float>(height);
+    MFA::Matrix4X4Float perspectiveMat {};
+    MFA::Matrix4X4Float::PreparePerspectiveProjectionMatrix(
+        perspectiveMat,
+        ratio,
+        40,
+        Z_NEAR,
+        Z_FAR
+    );
+    static_assert(sizeof(mViewProjectionBuffer.perspective) == sizeof(perspectiveMat.cells));
+    ::memcpy(mViewProjectionBuffer.perspective, perspectiveMat.cells, sizeof(perspectiveMat.cells));
+
 }
 
 void TextureViewerScene::Shutdown() {
-    RF::DestroyTexture(mGpuTexture);
-    Importer::FreeTexture(mGpuTexture.cpu_texture());
+    RF::DestroyDrawPipeline(mDrawPipeline);
+    RF::DestroyDescriptorSetLayout(mDescriptorSetLayout);
+    RF::DestroyGpuModel(mGpuModel);
+    Importer::FreeModel(&mGpuModel.model);
+    
 }
 
 void TextureViewerScene::OnDraw(
@@ -228,4 +242,92 @@ void TextureViewerScene::OnUI(
     RF::DrawPass & draw_pass
 ) {
     
+}
+
+void TextureViewerScene::createDescriptorSetLayout() {
+        std::vector<VkDescriptorSetLayoutBinding> bindings {};
+    // ViewProjectionBuffer 
+    bindings.emplace_back(VkDescriptorSetLayoutBinding {
+        .binding = static_cast<MFA::U32>(bindings.size()),
+        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .descriptorCount = 1,
+        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        .pImmutableSamplers = nullptr, // Optional
+    });
+    // Texture
+    bindings.emplace_back(VkDescriptorSetLayoutBinding {
+        .binding = static_cast<MFA::U32>(bindings.size()),
+        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        .descriptorCount = 1,
+        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+        .pImmutableSamplers = nullptr,
+    });
+    // ImageOptions
+    bindings.emplace_back(VkDescriptorSetLayoutBinding {
+        .binding = static_cast<MFA::U32>(bindings.size()),
+        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .descriptorCount = 1,
+        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+        .pImmutableSamplers = nullptr, // Optional
+    });
+    mDescriptorSetLayout = RF::CreateDescriptorSetLayout(
+        static_cast<MFA::U8>(bindings.size()),
+        bindings.data()
+    );
+}
+
+void TextureViewerScene::createDrawPipeline(
+    MFA::U8 const gpuShaderCount, 
+    MFA::RenderBackend::GpuShader * gpuShaders
+) {
+    VkVertexInputBindingDescription const vertexInputBindingDescription {
+        .binding = 0,
+        .stride = sizeof(AS::MeshVertex),
+        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+    };
+
+    std::vector<VkVertexInputAttributeDescription> vkVertexInputAttributeDescriptions {};
+    // Position
+    vkVertexInputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+        .location = static_cast<MFA::U32>(vkVertexInputAttributeDescriptions.size()),
+        .binding = 0,
+        .format = VK_FORMAT_R32G32B32_SFLOAT,
+        .offset = offsetof(AS::MeshVertex, position),   
+    });
+    // BaseColor
+    vkVertexInputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+        .location = static_cast<MFA::U32>(vkVertexInputAttributeDescriptions.size()),
+        .binding = 0,
+        .format = VK_FORMAT_R32G32_SFLOAT,
+        .offset = offsetof(AS::MeshVertex, baseColorUV),   
+    });
+
+    mDrawPipeline = RF::CreateBasicDrawPipeline(
+        gpuShaderCount, 
+        gpuShaders,
+        mDescriptorSetLayout,
+        vertexInputBindingDescription,
+        static_cast<MFA::U8>(vkVertexInputAttributeDescriptions.size()),
+        vkVertexInputAttributeDescriptions.data()
+    );
+}
+
+void TextureViewerScene::createModel() {
+    auto cpuModel = SG::Sheet();
+
+    auto * fileHandle = MFA::FileSystem::OpenFile(
+        "../assets/models/sponza/2185409758123873465.ktx", 
+        MFA::FileSystem::Usage::Read
+    );
+    MFA_ASSERT(fileHandle != nullptr);
+
+    auto cpuTexture = Image_LoadKTX(fileHandle);
+    MFA_ASSERT(cpuTexture.isValid());
+
+    cpuModel.textures.emplace_back(cpuTexture);
+    MFA_ASSERT(cpuModel.mesh.getSubMeshCount() == 1);
+    MFA_ASSERT(cpuModel.mesh.getSubMeshByIndex(0).primitives.size() == 1);
+    cpuModel.mesh.getSubMeshByIndex(0).primitives[0].baseColorTextureIndex = 0;
+
+    mGpuModel = MFA::RenderFrontend::CreateGpuModel(cpuModel);
 }

@@ -111,8 +111,10 @@ void TransferImageLayout(
     VkQueue_T * graphicQueue,
     VkCommandPool_T * commandPool,
     VkImage_T * image, 
-    VkImageLayout const oldLayout, 
-    VkImageLayout const newLayout
+    VkImageLayout oldLayout, 
+    VkImageLayout newLayout,
+    U32 levelCount,
+    U32 layerCount
 );
 
 struct BufferGroup {

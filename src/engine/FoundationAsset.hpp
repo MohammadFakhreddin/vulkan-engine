@@ -62,7 +62,7 @@ public:
     };
 
     struct MipmapInfo {
-        U32 offset {};
+        U64 offset {};
         U32 size {};
         Dimensions dimension {};
     };
@@ -137,9 +137,9 @@ public:
     // NOTE: 0 is the *smallest* mipmap level, and "mip_count - 1" is the *largest*.
     [[nodiscard]]
     static Dimensions MipDimensions (
-        U8 mip_level,
-        U8 mip_count,
-        Dimensions original_image_dims
+        U8 mipLevel,
+        U8 mipCount,
+        Dimensions originalImageDims
     );
 
     /*
@@ -228,7 +228,7 @@ private:
     Sampler mSampler {};
     std::vector<MipmapInfo> mMipmapInfos {};
     Blob mBuffer {};
-    U32 mCurrentOffset = 0;
+    U64 mCurrentOffset = 0;
 };
 
 using TextureFormat = Texture::Format;

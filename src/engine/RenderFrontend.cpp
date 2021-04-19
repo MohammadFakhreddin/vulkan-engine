@@ -279,36 +279,6 @@ DrawPipeline CreateBasicDrawPipeline(
     MFA_ASSERT(gpuShadersCount > 0);
     MFA_ASSERT(gpuShaders);
     MFA_ASSERT(descriptorSetLayout);
-    //VkVertexInputBindingDescription const vertex_binding_description {
-    //    .binding = 0,
-    //    .stride = sizeof(AssetSystem::MeshVertex),
-    //    .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-    //};
-    //std::vector<VkVertexInputAttributeDescription> input_attribute_descriptions {4};
-    //input_attribute_descriptions[0] = VkVertexInputAttributeDescription {
-    //    .location = 0,
-    //    .binding = 0,
-    //    .format = VK_FORMAT_R32G32B32_SFLOAT,
-    //    .offset = offsetof(AssetSystem::MeshVertex, position),
-    //};
-    //input_attribute_descriptions[1] = VkVertexInputAttributeDescription {
-    //    .location = 1,
-    //    .binding = 0,
-    //    .format = VK_FORMAT_R32G32B32_SFLOAT,
-    //    .offset = offsetof(AssetSystem::MeshVertex, normal_map_uv)
-    //};
-    //input_attribute_descriptions[2] = VkVertexInputAttributeDescription {
-    //    .location = 2,
-    //    .binding = 0,
-    //    .format = VK_FORMAT_R32G32_SFLOAT,
-    //    .offset = offsetof(AssetSystem::MeshVertex, base_color_uv)
-    //};
-    //input_attribute_descriptions[3] = VkVertexInputAttributeDescription {
-    //    .location = 3,
-    //    .binding = 0,
-    //    .format = VK_FORMAT_R32G32_SFLOAT,
-    //    .offset = offsetof(AssetSystem::MeshVertex, color)
-    //};
 
     return CreateDrawPipeline(
         gpuShadersCount,

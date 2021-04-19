@@ -6,6 +6,7 @@
 namespace MFA::ShapeGenerator {
 
     namespace AS = AssetSystem;
+
     AssetSystem::Model Sphere() {
         AssetSystem::Model model {};
 
@@ -154,4 +155,86 @@ namespace MFA::ShapeGenerator {
 
         return model;
     }
+
+    AssetSystem::Model Sheet() {
+        AssetSystem::Model model {};
+
+        std::vector<Vector3Float> positions {};
+        std::vector<Vector2Float> uvs {};
+        
+        std::vector<AS::MeshIndex> meshIndices;
+
+        positions.emplace_back(0.0f, 0.0f, 0.0f);
+        positions.emplace_back(1.0f, 0.0f, 0.0f);
+        positions.emplace_back(0.0f, 1.0f, 0.0f);
+        positions.emplace_back(1.0f, 1.0f, 0.0f);
+
+        uvs.emplace_back(0.0f, 0.0f);
+        uvs.emplace_back(1.0f, 0.0f);
+        uvs.emplace_back(0.0f, 1.0f);
+        uvs.emplace_back(1.0f, 1.0f);
+
+        meshIndices.emplace_back(0);
+        meshIndices.emplace_back(1);
+        meshIndices.emplace_back(2);
+
+        meshIndices.emplace_back(1);
+        meshIndices.emplace_back(2);
+        meshIndices.emplace_back(3);
+
+        U16 const indicesCount = static_cast<U16>(meshIndices.size());
+        U16 const verticesCount = static_cast<U16>(positions.size());
+
+        model.mesh.initForWrite(
+            verticesCount, 
+            indicesCount, 
+            Memory::Alloc(sizeof(AS::MeshVertex) * verticesCount), 
+            Memory::Alloc(sizeof(AS::MeshIndex) * indicesCount)
+        );
+
+        std::vector<AS::MeshVertex> meshVertices {verticesCount};
+        
+        for (uintmax_t index = 0; index < verticesCount; ++index) {
+            // Positions
+            static_assert(sizeof(meshVertices[index].position) == sizeof(positions[index].cells));
+            ::memcpy(meshVertices[index].position, positions[index].cells, sizeof(positions[index].cells));
+            // UVs We assign uvs for all materials in case a texture get assigned to shape
+            // Base color
+            static_assert(sizeof(meshVertices[index].baseColorUV) == sizeof(uvs[index].cells));
+            ::memcpy(meshVertices[index].baseColorUV, uvs[index].cells, sizeof(uvs[index].cells));
+        }
+
+        auto const subMeshIndex = model.mesh.insertSubMesh();
+        model.mesh.insertPrimitive(
+            subMeshIndex,
+            AS::Mesh::Primitive {
+                .hasBaseColorTexture = true
+            },
+            verticesCount,
+            meshVertices.data(),
+            indicesCount,
+            meshIndices.data()
+        );
+
+        auto node = AS::MeshNode {
+            .subMeshIndex = 0,
+            .children {},
+            .transformMatrix {},
+        };
+        auto const identityMatrix = Matrix4X4Float::Identity();
+        ::memcpy(node.transformMatrix, identityMatrix.cells, sizeof(node.transformMatrix));
+        static_assert(sizeof(node.transformMatrix) == sizeof(identityMatrix.cells));
+        model.mesh.insertNode(node);
+
+        if(model.mesh.isValid() == false) {
+            Blob verticesBuffer {};
+            Blob indicesBuffer {};
+            model.mesh.revokeBuffers(verticesBuffer, indicesBuffer);
+            Memory::Free(verticesBuffer);
+            Memory::Free(indicesBuffer);
+        }
+
+        return model;
+    }
+
 }

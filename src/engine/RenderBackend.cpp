@@ -370,7 +370,9 @@ void TransferImageLayout(
     VkCommandPool_T * commandPool,
     VkImage_T * image, 
     VkImageLayout const oldLayout, 
-    VkImageLayout const newLayout
+    VkImageLayout const newLayout,
+    U32 const levelCount = 1,
+    U32 const layerCount = 1
 ) {
     MFA_ASSERT(device != nullptr);
     MFA_ASSERT(graphicQueue != nullptr);
@@ -388,9 +390,9 @@ void TransferImageLayout(
     barrier.image = image;
     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = 1;
+    barrier.subresourceRange.levelCount = levelCount;
     barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
+    barrier.subresourceRange.layerCount = layerCount;
 
     VkPipelineStageFlags source_stage;
     VkPipelineStageFlags destination_stage;
@@ -590,7 +592,7 @@ GpuTexture CreateTexture(
         auto const format = cpuTexture.GetFormat();
         auto const mipCount = cpuTexture.GetMipCount();
         auto const sliceCount = cpuTexture.GetSlices();
-        auto const & largestMipmapInfo = cpuTexture.GetMipmap(mipCount - 1);
+        auto const & largestMipmapInfo = cpuTexture.GetMipmap(0);
         auto const buffer = cpuTexture.GetBuffer();
         MFA_ASSERT(buffer.ptr != nullptr && buffer.len > 0);
         // Create upload buffer
@@ -627,9 +629,11 @@ GpuTexture CreateTexture(
             commandPool,
             imageGroup.image,
             VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            mipCount,
+            sliceCount
         );
-
+        
         CopyBufferToImage(
             device,
             commandPool,
@@ -645,7 +649,9 @@ GpuTexture CreateTexture(
             commandPool,
             imageGroup.image,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            mipCount,
+            sliceCount
         );
 
         VkImageView_T * image_view = CreateImageView(
@@ -739,6 +745,10 @@ void CopyBufferToImage(
     MFA_ASSERT(buffer != nullptr);
     MFA_ASSERT(image != nullptr);
     MFA_ASSERT(cpuTexture.isValid());
+    MFA_ASSERT(
+        cpuTexture.GetMipmap(cpuTexture.GetMipCount() - 1).offset + 
+        cpuTexture.GetMipmap(cpuTexture.GetMipCount() - 1).size == cpuTexture.GetBuffer().len
+    );
 
     VkCommandBuffer_T * commandBuffer = BeginSingleTimeCommand(device, commandPool);
 
@@ -761,7 +771,7 @@ void CopyBufferToImage(
             region.imageOffset.z = 0;
             region.bufferOffset = static_cast<U32>(cpuTexture.mipOffsetInBytes(mipLevel, sliceIndex)); 
             region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            region.imageSubresource.mipLevel = mipCount - mipLevel - 1;
+            region.imageSubresource.mipLevel = mipLevel;
             region.imageSubresource.baseArrayLayer = sliceIndex;
             region.imageSubresource.layerCount = 1;
             region.bufferRowLength = 0;

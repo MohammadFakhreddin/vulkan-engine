@@ -163,7 +163,23 @@ void GLTFMeshViewerScene::Init() {
     createDescriptorSetLayout();
 
     createDrawPipeline(static_cast<MFA::U8>(shaders.size()), shaders.data());
-    
+
+    // Updating perspective mat once for entire application
+    // Perspective
+    MFA::I32 width; MFA::I32 height;
+    RF::GetWindowSize(width, height);
+    float const ratio = static_cast<float>(width) / static_cast<float>(height);
+    MFA::Matrix4X4Float perspectiveMat {};
+    MFA::Matrix4X4Float::PreparePerspectiveProjectionMatrix(
+        perspectiveMat,
+        ratio,
+        40,
+        Z_NEAR,
+        Z_FAR
+    );
+    static_assert(sizeof(mTransformData.perspective) == sizeof(perspectiveMat.cells));
+    ::memcpy(mTransformData.perspective, perspectiveMat.cells, sizeof(perspectiveMat.cells));
+
 }
 
 void GLTFMeshViewerScene::OnDraw(MFA::U32 const delta_time, RF::DrawPass & draw_pass) {
@@ -223,20 +239,6 @@ void GLTFMeshViewerScene::OnDraw(MFA::U32 const delta_time, RF::DrawPass & draw_
         
         static_assert(sizeof(mTransformData.view) == sizeof(transformMat.cells));
         ::memcpy(mTransformData.view, transformMat.cells, sizeof(transformMat.cells));
-        // Perspective
-        MFA::I32 width; MFA::I32 height;
-        RF::GetWindowSize(width, height);
-        float const ratio = static_cast<float>(width) / static_cast<float>(height);
-        MFA::Matrix4X4Float perspectiveMat {};
-        MFA::Matrix4X4Float::PreparePerspectiveProjectionMatrix(
-            perspectiveMat,
-            ratio,
-            40,
-            Z_NEAR,
-            Z_FAR
-        );
-        static_assert(sizeof(mTransformData.perspective) == sizeof(perspectiveMat.cells));
-        ::memcpy(mTransformData.perspective, perspectiveMat.cells, sizeof(perspectiveMat.cells));
 
         selectedModel.drawableObject.updateUniformBuffer(
             "transform", 
