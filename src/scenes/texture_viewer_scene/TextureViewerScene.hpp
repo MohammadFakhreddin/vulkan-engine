@@ -9,7 +9,7 @@ public:
     TextureViewerScene() = default;
     void Init() override;
     void Shutdown() override;
-    void OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override;
+    void OnDraw(MFA::U32 deltaTime, MFA::RenderFrontend::DrawPass & drawPass) override;
     void OnUI(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override;
 
 private:
@@ -40,4 +40,10 @@ private:
     MFA::DrawableObject mDrawableObject {};
 
     MFA::RenderFrontend::SamplerGroup mSamplerGroup {};
+
+    float mModelRotation[3] {45.0f, 45.0f, 45.0f};
+    float mModelScale = 1.0f;
+    float mModelPosition[3] {0.0f, 0.0f, -6.0f};
+
+    int mMipLevel = 0; 
 };

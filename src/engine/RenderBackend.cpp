@@ -371,8 +371,8 @@ void TransferImageLayout(
     VkImage_T * image, 
     VkImageLayout const oldLayout, 
     VkImageLayout const newLayout,
-    U32 const levelCount = 1,
-    U32 const layerCount = 1
+    U32 const levelCount,
+    U32 const layerCount
 ) {
     MFA_ASSERT(device != nullptr);
     MFA_ASSERT(graphicQueue != nullptr);
