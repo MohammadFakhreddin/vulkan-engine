@@ -22,8 +22,15 @@ explicit FileHandle(char const * path, Usage const usage) {
             default: return "";
         }
     }();
-    // TODO Use FopenS
+    #ifdef __PLATFORM_MAC__
+    int errorCode = 0;
+    auto mFile = fopen(path, mode);
+    if (mFile != nullptr) {
+        errorCode = 1;
+    }
+    #else
     auto errorCode = ::fopen_s(&mFile, path, mode);
+    #endif
     if(errorCode == 0) {
         if (mFile != nullptr && Usage::Append == usage) {
             auto const seekResult = seekToEnd();
@@ -31,7 +38,15 @@ explicit FileHandle(char const * path, Usage const usage) {
         }
     }
     if (mFile == nullptr && Usage::Append == usage) {
+        #ifdef __PLATFORM_MAC__
+        errorCode = 0;
+        auto mFile = fopen(path, mode);
+        if (mFile != nullptr) {
+            errorCode = 1;
+        }
+        #else
         errorCode = ::fopen_s(&mFile, path, "w+b");
+        #endif
     }
     if(errorCode != 0) {
         mFile = nullptr;

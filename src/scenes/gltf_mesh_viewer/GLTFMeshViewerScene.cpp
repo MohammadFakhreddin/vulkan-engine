@@ -85,7 +85,7 @@ void GLTFMeshViewerScene::Init() {
             .initialParams {
                 .model {
                     .rotationEulerAngle {302.0f, -2.0f, 0.0f},
-                    .scale {0.187f},
+                    .scale = 0.187f,
                     .translate {-2.0f, 0.0f, -190.0f}
                 },
                 .light {

@@ -284,6 +284,14 @@ if (WINDOWS)
         ${CMAKE_BINARY_DIR}
     )
 
+elseif(MACOSX)
+
+#-----------------------------------------------------------------------
+# MACOSX Executable
+#-----------------------------------------------------------------------
+
+# TODO Start from here
+
 endif()
 
 # Useful syntax:
