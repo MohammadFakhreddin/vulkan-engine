@@ -103,7 +103,6 @@ AS::Texture ImportInMemoryTexture(
     texture.initForWrite(
         format,
         slices,
-        mipCount,
         depth,
         options.sampler,
         Memory::Alloc(bufferSize)

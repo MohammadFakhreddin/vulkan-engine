@@ -64,7 +64,6 @@ size_t Texture::CalculateUncompressedTextureRequiredDataSize(
 void Texture::initForWrite(
     const Format format,
     const U16 slices,
-    const U8 mipCount,
     const U16 depth,
     Sampler const * sampler,
     Blob const & buffer
@@ -74,8 +73,6 @@ void Texture::initForWrite(
     mFormat = format;
     MFA_ASSERT(slices > 0);
     mSlices = slices;
-    MFA_ASSERT(mipCount > 0);
-    mMipCount = mipCount;
     MFA_ASSERT(depth > 0);
     mDepth = depth;
     if (sampler != nullptr && sampler->isValid) {
@@ -90,6 +87,12 @@ void Texture::addMipmap(
 ) {
     MFA_ASSERT(data.ptr != nullptr);
     MFA_ASSERT(data.len > 0);
+
+    MFA_ASSERT(mPreviousMipWidth == -1 || mPreviousMipWidth > static_cast<int>(dimension.width));
+    MFA_ASSERT(mPreviousMipHeight == -1 || mPreviousMipHeight > static_cast<int>(dimension.height));
+    mPreviousMipWidth = dimension.width;
+    mPreviousMipHeight = dimension.height;
+
     U32 dataLen = static_cast<U32>(data.len);
     mMipmapInfos.emplace_back(MipmapInfo {
         .offset = mCurrentOffset,
@@ -101,6 +104,8 @@ void Texture::addMipmap(
     MFA_ASSERT(nextOffset <= mBuffer.len);
     ::memcpy(mBuffer.ptr + mCurrentOffset, data.ptr, data.len);
     mCurrentOffset = nextOffset;
+
+    ++mMipCount;
 }
 
 size_t Texture::mipOffsetInBytes(uint8_t const mip_level, uint8_t const slice_index) const {

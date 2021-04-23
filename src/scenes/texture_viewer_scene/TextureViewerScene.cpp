@@ -121,18 +121,21 @@ AS::Texture loadKTX(FS::FileHandle * handle) {
     }();
 
     if(tinyKtxFormat != TKTX_UNDEFINED) {
-        // TODO Maybe I have to reevaluate my values
         const U8 mipmapCount = static_cast<U8>(TinyKtx_NumberOfMipmaps(ctx));
         uint64_t totalImageSize = 0;
 
+        int previousImageSize = -1;
         for(auto i = 0u; i < mipmapCount; ++i) {
-            totalImageSize += TinyKtx_ImageSize(ctx, i);
+            int imageSize = TinyKtx_ImageSize(ctx, i);
+            totalImageSize += imageSize;
+
+            MFA_ASSERT(previousImageSize == -1 || imageSize < previousImageSize);
+            previousImageSize = imageSize;
         }
         
         result.initForWrite(
             format, 
             sliceCount, 
-            mipmapCount, 
             depth, 
             nullptr, 
             Memory::Alloc(totalImageSize)
@@ -204,7 +207,9 @@ void TextureViewerScene::Init() {
     // TODO We need nearest and linear filters
     mSamplerGroup = RF::CreateSampler(RB::CreateSamplerParams {
         .min_lod = 0.0f,
-        .max_lod = static_cast<float>(mTotalMipCount)
+        .max_lod = static_cast<float>(mTotalMipCount),
+        .anisotropy_enabled = true,
+        .max_anisotropy = 16.0f
     });
 
     createDescriptorSetLayout();
@@ -304,7 +309,7 @@ void TextureViewerScene::OnUI(
     static constexpr float ItemWidth = 500;
     ImGui::Begin("Object viewer");
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderInt("MipLevel", &mMipLevel, 0, mTotalMipCount);
+    ImGui::SliderInt("MipLevel", &mMipLevel, 0, mTotalMipCount - 1);
     ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("XDegree", &mModelRotation[0], -360.0f, 360.0f);
     ImGui::SetNextItemWidth(ItemWidth);
@@ -314,11 +319,11 @@ void TextureViewerScene::OnUI(
     ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("Scale", &mModelScale, 0.0f, 1.0f);
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("XDistance", &mModelPosition[0], -500.0f, 500.0f);
+    ImGui::SliderFloat("XDistance", &mModelPosition[0], -50.0f, 50.0f);
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("YDistance", &mModelPosition[1], -500.0f, 500.0f);
+    ImGui::SliderFloat("YDistance", &mModelPosition[1], -50.0f, 50.0f);
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("ZDistance", &mModelPosition[2], -500.0f, 100.0f);
+    ImGui::SliderFloat("ZDistance", &mModelPosition[2], -50.0f, 50.0f);
     ImGui::End();
 }
 
@@ -394,7 +399,8 @@ void TextureViewerScene::createModel() {
     auto cpuModel = SG::Sheet();
 
     auto * fileHandle = MFA::FileSystem::OpenFile(
-        "../assets/models/sponza/2185409758123873465.ktx", 
+        //"../assets/models/sponza/2185409758123873465.ktx", 
+        "../assets/models/sponza/11490520546946913238.ktx",
         MFA::FileSystem::Usage::Read
     );
     MFA_ASSERT(fileHandle != nullptr);

@@ -252,7 +252,8 @@ VkImageView_T * CreateImageView (
     VkDevice_T * device,
     VkImage const & image, 
     VkFormat const format, 
-    VkImageAspectFlags const aspect_flags
+    VkImageAspectFlags const aspect_flags,
+    U32 mipmap_count
 ) {
     MFA_ASSERT(device != nullptr);
 
@@ -270,7 +271,7 @@ VkImageView_T * CreateImageView (
     createInfo.subresourceRange.aspectMask = aspect_flags;
     // TODO Might need to ask these values from image for mipmaps (Check again later)
     createInfo.subresourceRange.baseMipLevel = 0;
-    createInfo.subresourceRange.levelCount = 1;
+    createInfo.subresourceRange.levelCount = mipmap_count;
     createInfo.subresourceRange.baseArrayLayer = 0;
     createInfo.subresourceRange.layerCount = 1;
 
@@ -658,7 +659,8 @@ GpuTexture CreateTexture(
             device,
             imageGroup.image,
             vulkan_format,
-            VK_IMAGE_ASPECT_COLOR_BIT
+            VK_IMAGE_ASPECT_COLOR_BIT,
+            mipCount
         );
 
         MFA_ASSERT(imageGroup.image != nullptr);
@@ -882,7 +884,7 @@ VkSampler_T * CreateSampler(
     sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    sampler_info.anisotropyEnable = VK_TRUE;
+    sampler_info.anisotropyEnable = params.anisotropy_enabled;
     sampler_info.maxAnisotropy = params.max_anisotropy;
     sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     sampler_info.unnormalizedCoordinates = VK_FALSE;
@@ -891,6 +893,7 @@ VkSampler_T * CreateSampler(
     sampler_info.minLod = params.min_lod;
     sampler_info.maxLod = params.max_lod;
     sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    sampler_info.mipLodBias = 0.0f;
 
     VK_Check(vkCreateSampler(device, &sampler_info, nullptr, &sampler));
     
@@ -1216,7 +1219,8 @@ SwapChainGroup CreateSwapChain(
             device,
             ret.swapChainImages[image_index],
             ret.swapChainFormat,
-            VK_IMAGE_ASPECT_COLOR_BIT
+            VK_IMAGE_ASPECT_COLOR_BIT,
+            1
         );
         MFA_ASSERT(ret.swapChainImageViews[image_index] != nullptr);
     }
@@ -1263,7 +1267,8 @@ DepthImageGroup CreateDepth(
         device,
         ret.imageGroup.image,
         depthFormat,
-        VK_IMAGE_ASPECT_DEPTH_BIT
+        VK_IMAGE_ASPECT_DEPTH_BIT,
+        1
     );
     MFA_ASSERT(ret.imageView);
     return ret;

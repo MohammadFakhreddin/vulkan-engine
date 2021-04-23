@@ -157,7 +157,6 @@ public:
     void initForWrite(
         Format format,
         U16 slices,
-        U8 mipCount,
         U16 depth,
         Sampler const * sampler,
         Blob const & buffer
@@ -229,6 +228,8 @@ private:
     std::vector<MipmapInfo> mMipmapInfos {};
     Blob mBuffer {};
     U64 mCurrentOffset = 0;
+    int mPreviousMipWidth = -1;
+    int mPreviousMipHeight = -1;
 };
 
 using TextureFormat = Texture::Format;

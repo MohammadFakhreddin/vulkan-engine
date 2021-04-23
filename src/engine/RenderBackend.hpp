@@ -76,7 +76,8 @@ VkImageView_T * CreateImageView (
     VkDevice_T * device,
     VkImage_T const & image, 
     VkFormat format, 
-    VkImageAspectFlags aspect_flags
+    VkImageAspectFlags aspect_flags,
+    U32 mipmap_count
 );
 
 void DestroyImageView(
@@ -254,6 +255,7 @@ VkQueue_T * GetQueueByFamilyIndex(
 struct CreateSamplerParams {
     float min_lod = 0;  // Level of detail
     float max_lod = 1;
+    bool anisotropy_enabled = true;
     float max_anisotropy = 16.0f;
 };
 [[nodiscard]]
