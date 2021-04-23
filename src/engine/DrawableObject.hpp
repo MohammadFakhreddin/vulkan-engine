@@ -2,6 +2,8 @@
 
 #include "RenderFrontend.hpp"
 
+#include <unordered_map>
+
 namespace MFA {
 
 namespace RF = RenderFrontend;

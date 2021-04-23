@@ -67,6 +67,7 @@ enum class Platform {
     Unknown
 };
 
+#ifdef __PLATFORM_WIN__
 #if defined(_DEBUG) && !defined(NDEBUG)
     #if !defined(MFA_DEBUG)
         #define MFA_DEBUG
@@ -83,6 +84,10 @@ enum class Platform {
     #endif
 #else
     #error Define exactly one of _DEBUG and NDEBUG
+#endif
+#else
+// TODO
+#define MFA_DEBUG
 #endif
 
 using ScreenSize = uint32_t;
