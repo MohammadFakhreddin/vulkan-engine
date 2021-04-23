@@ -8,6 +8,7 @@
         "ts-frag": "glslc -fshader-stage=frag ./assets/shaders/textured_sphere/TexturedSphere.frag.hlsl -o ./assets/shaders/textured_sphere/TexturedSphere.frag.spv ",
         "ts-vert": "glslc -fshader-stage=vert ./assets/shaders/textured_sphere/TexturedSphere.vert.hlsl -o ./assets/shaders/textured_sphere/TexturedSphere.vert.spv ",
         "tv-frag": "glslc -fshader-stage=frag ./assets/shaders/texture_viewer/TextureViewer.frag.hlsl -o ./assets/shaders/texture_viewer/TextureViewer.frag.spv ",
-        "tv-vert": "glslc -fshader-stage=vert ./assets/shaders/texture_viewer/TextureViewer.vert.hlsl -o ./assets/shaders/texture_viewer/TextureViewer.vert.spv "
+        "tv-vert": "glslc -fshader-stage=vert ./assets/shaders/texture_viewer/TextureViewer.vert.hlsl -o ./assets/shaders/texture_viewer/TextureViewer.vert.spv ",
+        "cmake": "cmake . -B build64 -DCMAKE_GENERATOR_PLATFORM=x64"
     }
 }

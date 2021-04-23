@@ -7,11 +7,9 @@ set(UNIT_TEST_NAME "UnitTests")
 project ("MFaEngine" CXX C)
 
 set_property (GLOBAL PROPERTY USE_FOLDERS ON)
-# TODO We need 2 solutions, 1 for Engine and 1 for test cases
+
 set (CMAKE_CXX_STANDARD 20)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
-# set (CMAKE_CONFIGURATION_TYPES Debug;Release CACHE INTERNAL "" FORCE)
-# set (CMAKE_INSTALL_PREFIX "${PROJECT_BINARY_DIR}/install" CACHE INTERNAL "" FORCE)
 
 if(APPLE)
    if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -34,10 +32,6 @@ endif()
 #-----------------------------------------------------------------------
 
 set(ENGINE_SOURCES)
-
-# file(GLOB_RECURSE ENGINE_HEADER_H "src/engine/*.h")
-# file(GLOB_RECURSE ENGINE_HEADER_HPP "src/engine/*.hpp")
-# file(GLOB_RECURSE ENGINE_CPP "src/engine/*.cpp")
 
 list(
     APPEND ENGINE_SOURCES
@@ -141,11 +135,6 @@ target_include_directories(
 #-----------------------------------------------------------------------
 
 set(LIBS_SOURCES)
-
-# file(GLOB_RECURSE LIB_KTX_H "src/libs/ktx/*.h")
-# file(GLOB_RECURSE LIB_KTX_HPP "src/libs/ktx/*.hpp")
-# file(GLOB_RECURSE LIB_KTX_C "src/libs/ktx/*.c")
-# file(GLOB_RECURSE LIB_KTX_CPP "src/libs/ktx/*.cpp")
 
 list(APPEND LIB_KTX_SOURCES
     LIB_KTX_H
@@ -296,165 +285,6 @@ if (WINDOWS)
     )
 
 endif()
-# set(APP_SOURCE)
-# set(APP_HEADER)
 
-# set(UNITTEST_SOURCE)
-# set(UNITTEST_HEADER)
-
-# # These files get included for build process
-# file(GLOB_RECURSE SRC_HEADER_H "src/*.h")
-# file(GLOB_RECURSE SRC_HEADER_HPP "src/*.hpp")
-# file(GLOB_RECURSE SRC_CPP "src/*.cpp")
-
-# file(GLOB_RECURSE UNITTEST_HEADER_H "unit_tests/*.h")
-# file(GLOB_RECURSE UNITTEST_HEADER_HPP "unit_tests/*.hpp")
-# file(GLOB_RECURSE UNITTEST_CPP "unit_tests/*.cpp")
-
-# list(
-#     APPEND APP_SOURCE
-#     ${SRC_CPP}
-# )
-
-# list(
-#     APPEND APP_HEADER
-#     ${SRC_HEADER_H}
-#     ${SRC_HEADER_HPP}
-# )
-
-# list(
-#     APPEND UNITTEST_SOURCE
-#     ${UNITTEST_CPP}
-# )
-
-# list(
-#     APPEND UNITTEST_HEADER
-#     ${UNITTEST_HEADER_H}
-#     ${UNITTEST_HEADER_HPP}
-# )
-
-# # Includes these 2 directory for importing libraries like VULAKN and SDL that get installed without include path
-# # include_directories ("src" "${CMAKE_SOURCE_DIR}/libs/include")
-# link_directories(${LIBRARY_OUTPUT_PATH} ${LIB_ROOT})
-
-# if(WINDOWS)
-
-#     set(WIN_SOURCE)
-#     set(WIN_HEADER)
-
-#     file(GLOB_RECURSE WIN_HEADER_H "windows/*.h")
-#     file(GLOB_RECURSE WIN_HEADER_HPP "windows/*.hpp")
-#     file(GLOB_RECURSE WIN_CPP "windows/*.cpp")
-
-#     list(
-#         APPEND WIN_HEADER
-#         ${WIN_HEADER_H}
-#         ${WIN_HEADER_HPP}
-#     )
-    
-#     list(
-#         APPEND WIN_SOURCE
-#         ${WIN_SOURCE}
-#     )
-
-#     file(GLOB VULKAN "${CMAKE_SOURCE_DIR}/libs/win/vulkan-1.lib")
-#     file(
-#         GLOB SDL 
-#         "${CMAKE_SOURCE_DIR}/libs/win/SDL2.lib" 
-#         "${CMAKE_SOURCE_DIR}/libs/win/SDL2main.lib"
-#     )
-#     file(
-#         GLOB IMGUI
-#         "${CMAKE_SOURCE_DIR}/libs/win/imgui.lib"
-#     )
-#     list(
-#         APPEND COMPILED_LIBS 
-#         ${VULKAN}
-#         ${SDL}
-#     )
-
-#     file(
-#         GLOB DLLS 
-#         "${CMAKE_SOURCE_DIR}/libs/win/SDL2.dll" 
-#     )
-
-#     add_executable(${PROJECT_NAME} ${APP_HEADER} ${APP_SOURCE} ${WIN_HEADER} ${WIN_SOURCE})
-
-#     target_link_libraries(${PROJECT_NAME} ${COMPILED_LIBS})
-
-#     add_custom_command(
-#         TARGET ${PROJECT_NAME} POST_BUILD        # Adds a post-build event to MyTest
-#         COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
-#         ${DLLS}      # <--this is in-file
-#         ${CMAKE_BINARY_DIR}
-#     )
-
-#     # add_executable(
-#     #     ${UNIT_TEST_NAME}
-#     #     ${UNITTEST_SOURCE}
-#     #     ${UNITTEST_HEADER}
-#     #     ${APP_SOURCE}
-#     #     ${APP_HEADER}
-#     # )
-
-#     # target_link_libraries(${UNIT_TEST_NAME} ${COMPILED_LIBS})
-
-#     # add_custom_command(
-#     #     TARGET ${UNIT_TEST_NAME} POST_BUILD        # Adds a post-build event to MyTest
-#     #     COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
-#     #     ${DLLS}      # <--this is in-file
-#     #     ${CMAKE_BINARY_DIR}
-#     # )
-# elseif(MACOSX)
-
-#   # TODO Libs
-
-#   find_package(SDL2 REQUIRED)
-#   find_package(VULAKN REQUIRED)
-#   find_package(IMGUI REQUIRED)
-
-#   include_directories(${SDL2_INCLUDE_DIRS})
-#   include_directories(${VULAKN_INCLUDE_DIRS})
-#   # include_directories(${IMGUI_INCLUDE_DIRS})
-  
-#   target_link_libraries(${PROJECT_NAME} ${VULAKN_LIBRARIES})
-#   target_link_libraries(${PROJECT_NAME} ${SDL2_LIBRARIES})
-#   # target_link_libraries(${PROJECT_NAME} ${IMGUI_LIBRARIES}})
-
-#   set(CMAKE_THREAD_LIBS_INIT "-lpthread")
-#   set(CMAKE_HAVE_THREADS_LIBRARY 1)
-#   set(CMAKE_USE_WIN32_THREADS_INIT 0)
-#   set(CMAKE_USE_PTHREADS_INIT 1)
-#   set(THREADS_PREFER_PTHREAD_FLAG ON)
-#   # Lets bundle it:
-#   set_target_properties(${PROJECT_NAME} PROPERTIES
-#      MACOSX_BUNDLE TRUE
-#      MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/mac/Info.plist
-#   )
-
-# elseif(LINUX)
-
-#   #TODO Libs
-
-#   find_package(SDL REQUIRED)
-#   find_package(VULAKN REQUIRED)
-#   find_package(IMGUI REQUIRED)
-
-#   include_directories(${SDL_INCLUDE_DIRS})
-#   include_directories(${VULAKN_INCLUDE_DIRS})
-#   # include_directories(${IMGUI_INCLUDE_DIRS})
-  
-#   target_link_libraries(${PROJECT_NAME} ${VULAKN_LIBRARIES})
-#   target_link_libraries(${PROJECT_NAME} ${SDL_LIBRARIES})
-#   # target_link_libraries(${PROJECT_NAME} ${IMGUI_LIBRARIES}})
-
-#   set(CMAKE_THREAD_LIBS_INIT "-lpthread")
-#   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
-#   set(CMAKE_HAVE_THREADS_LIBRARY 1)
-#   set(CMAKE_USE_WIN32_THREADS_INIT 0)
-#   set(CMAKE_USE_PTHREADS_INIT 1)
-#   set(THREADS_PREFER_PTHREAD_FLAG ON)
-#   set(CMAKE_C_COMPILER gcc)
-#   set(CMAKE_CXX_COMPILER g++)
-
-# endif()
+# Useful syntax:
+# file(GLOB_RECURSE LIB_KTX_CPP "src/libs/ktx/*.cpp")

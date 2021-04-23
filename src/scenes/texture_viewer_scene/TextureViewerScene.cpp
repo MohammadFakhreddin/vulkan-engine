@@ -196,14 +196,22 @@ void TextureViewerScene::Init() {
 
     std::vector<RB::GpuShader> shaders {gpu_vertex_shader, gpu_fragment_shader};
 
-    // TODO We need nearest and linear filters
-    mSamplerGroup = RF::CreateSampler();
-
-    createDescriptorSetLayout();
-
     createModel();
 
+    MFA_ASSERT(mGpuModel.textures.size() == 1);
+    mTotalMipCount = mGpuModel.textures[0].cpu_texture()->GetMipCount();
+
+    // TODO We need nearest and linear filters
+    mSamplerGroup = RF::CreateSampler(RB::CreateSamplerParams {
+        .min_lod = 0.0f,
+        .max_lod = static_cast<float>(mTotalMipCount)
+    });
+
+    createDescriptorSetLayout();
+    
     createDrawPipeline(static_cast<MFA::U8>(shaders.size()), shaders.data());
+
+    createDrawableObject();
 
     // Updating perspective mat once for entire application
     // Perspective
@@ -220,7 +228,6 @@ void TextureViewerScene::Init() {
     );
     static_assert(sizeof(mViewProjectionBuffer.perspective) == sizeof(perspectiveMat.cells));
     ::memcpy(mViewProjectionBuffer.perspective, perspectiveMat.cells, sizeof(perspectiveMat.cells));
-
 }
 
 void TextureViewerScene::Shutdown() {
@@ -279,7 +286,7 @@ void TextureViewerScene::OnDraw(
     
     // Texture options buffer
     {
-        mImageOptionsBuffer.mipLevel = mMipLevel;
+        mImageOptionsBuffer.mipLevel = static_cast<float>(mMipLevel);
 
         mDrawableObject.updateUniformBuffer(
             "imageOptions",
@@ -294,13 +301,10 @@ void TextureViewerScene::OnUI(
     MFA::U32 delta_time, 
     RF::DrawPass & draw_pass
 ) {
-    // TODO Slider for mip-level, We need to store total mipmap count
-
     static constexpr float ItemWidth = 500;
     ImGui::Begin("Object viewer");
     ImGui::SetNextItemWidth(ItemWidth);
-    MFA_ASSERT(mGpuModel.textures.size() == 1);
-    ImGui::SliderInt("MipLevel", &mMipLevel, 0, mGpuModel.textures[0].cpu_texture()->GetMipCount());
+    ImGui::SliderInt("MipLevel", &mMipLevel, 0, mTotalMipCount);
     ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("XDegree", &mModelRotation[0], -360.0f, 360.0f);
     ImGui::SetNextItemWidth(ItemWidth);
@@ -404,7 +408,10 @@ void TextureViewerScene::createModel() {
     cpuModel.mesh.getSubMeshByIndex(0).primitives[0].baseColorTextureIndex = 0;
 
     mGpuModel = MFA::RenderFrontend::CreateGpuModel(cpuModel);
+}
 
+void TextureViewerScene::createDrawableObject() {
+    auto const & cpuModel = mGpuModel.model;
     mDrawableObject = MFA::DrawableObject {
         mGpuModel,
         mDescriptorSetLayout

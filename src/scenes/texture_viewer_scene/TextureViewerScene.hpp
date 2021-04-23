@@ -23,13 +23,14 @@ private:
     } mViewProjectionBuffer {};
 
     struct ImageOptionsBuffer {
-        int mipLevel;
+        float mipLevel;
         // int sliceIndex; // TODO: Consider adding sliceIndex in future
     } mImageOptionsBuffer {};
 
     void createDescriptorSetLayout();
     void createDrawPipeline(MFA::U8 gpuShaderCount, MFA::RenderBackend::GpuShader * gpuShaders);
     void createModel();
+    void createDrawableObject();
 
     MFA::RenderFrontend::GpuModel mGpuModel {};
 
@@ -45,5 +46,6 @@ private:
     float mModelScale = 1.0f;
     float mModelPosition[3] {0.0f, 0.0f, -6.0f};
 
-    int mMipLevel = 0; 
+    int mMipLevel = 0;
+    int mTotalMipCount = 0;
 };

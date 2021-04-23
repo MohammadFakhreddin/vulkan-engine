@@ -11,7 +11,7 @@ sampler mSampler : register(s1, space0);
 Texture2D mTexture : register(t1, space0);
 
 struct ImageOptions {
-    int mipLevel;
+    float mipLevel;
     // int sliceIndex; // TODO: Consider adding sliceIndex in future
 };
 
@@ -24,5 +24,6 @@ PSOut main(PSIn input) {
         input.uv, 
         imageOptionsBuff.mipLevel
     );
+    // output.color = float4(imageOptionsBuff.mipLevel / 10.0f, 0.0f, 0.0f, 1.0f);
     return output;
 }

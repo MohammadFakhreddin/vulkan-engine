@@ -531,6 +531,7 @@ void GLTFMeshViewerScene::destroyModels() {
                 RF::DestroyGpuModel(group.gpuModel);
                 Importer::FreeModel(&group.gpuModel.model);
                 group.drawableObject.deleteUniformBuffers();
+                group.isLoaded = false;
             }
         }
     }
