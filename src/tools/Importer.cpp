@@ -168,7 +168,7 @@ AS::Texture ImportKTXImage(char const * path, ImportKtxTextureOptions const & op
             imageInfo->format, 
             imageInfo->sliceCount, 
             imageInfo->depth,
-            nullptr,
+            options.sampler,
             Memory::Alloc(imageInfo->totalImageSize)
         );
 

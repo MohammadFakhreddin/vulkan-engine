@@ -455,9 +455,6 @@ Data * Load(LoadResult & loadResult, const char * path) {
     };
 
     auto * ctx =  TinyKtx_CreateContext(&callbacks, fileHandle);
-    MFA_DEFER {
-        TinyKtx_DestroyContext(ctx);
-    };
     
     auto const readHeaderResult = TinyKtx_ReadHeader(ctx);
     MFA_ASSERT(readHeaderResult);
@@ -545,6 +542,8 @@ Data * Load(LoadResult & loadResult, const char * path) {
         MFA_ASSERT(data->isValid());
 
         loadResult = LoadResult::Success;
+    } else {
+        TinyKtx_DestroyContext(ctx);
     }
 
     return data;
