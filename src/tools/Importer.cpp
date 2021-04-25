@@ -12,14 +12,14 @@ namespace FS = FileSystem;
 
 AS::Texture ImportUncompressedImage(
     char const * path,
-    ImportUnCompressedTextureOptions const & options
+    ImportTextureOptions const & options
 ) {
     AS::Texture texture {};
     Utils::UncompressedTexture::Data imageData {};
     MFA_DEFER {
         Utils::UncompressedTexture::Unload(&imageData);
     };
-    auto const use_srgb = options.prefer_srgb;
+    auto const use_srgb = options.preferSrgb;
     auto const load_image_result = Utils::UncompressedTexture::Load(
         imageData, 
         path, 
@@ -76,17 +76,17 @@ AS::Texture ImportInMemoryTexture(
     uint32_t const components,
     uint16_t const depth,
     uint16_t const slices,
-    ImportUnCompressedTextureOptions const & options
+    ImportTextureOptions const & options
 ) {
     using namespace Utils::UncompressedTexture;
 
-    auto const useSrgb = options.prefer_srgb;
+    auto const useSrgb = options.preferSrgb;
     AS::Texture::Dimensions const originalImageDimension {
         static_cast<uint32_t>(width),
         static_cast<uint32_t>(height),
         depth
     };
-    uint8_t const mipCount = options.generate_mipmaps
+    uint8_t const mipCount = options.tryToGenerateMipmaps
         ? AS::Texture::ComputeMipCount(originalImageDimension)
         : 1;
 
@@ -128,6 +128,7 @@ AS::Texture ImportInMemoryTexture(
             .inputImagePixels = originalImagePixels,
             .inputImageWidth = static_cast<int>(originalImageDimension.width),
             .inputImageHeight = static_cast<int>(originalImageDimension.height),
+            .componentsCount = components,
             .outputImagePixels = mipMapPixels,
             .outputWidth = static_cast<int>(currentMipDims.width),
             .outputHeight = static_cast<int>(currentMipDims.height)
@@ -150,7 +151,7 @@ AS::Texture ImportInMemoryTexture(
 }
 
 
-AS::Texture ImportKTXImage(char const * path, ImportKtxTextureOptions const & options) {
+AS::Texture ImportKTXImage(char const * path, ImportTextureOptions const & options) {
     using namespace Utils::KTXTexture;
 
     AS::Texture result {};
@@ -206,6 +207,23 @@ AS::Texture ImportKTXImage(char const * path, ImportKtxTextureOptions const & op
 AS::Texture ImportDDSFile(char const * path) {
     // TODO
     MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+}
+
+AS::Texture ImportImage(char const * path, ImportTextureOptions const & options) {
+    AS::Texture texture {};
+
+    MFA_ASSERT(path != nullptr);
+    if (path != nullptr) {
+        auto const extension = FS::ExtractExtensionFromPath(path);
+
+        if (extension == ".png" || extension == ".jpg") {
+            texture = ImportUncompressedImage(path, options);
+        } else if (extension == ".ktx") {
+            texture = ImportKTXImage(path, options);
+        }
+    }
+
+    return texture;
 }
 
 AS::Shader ImportShaderFromHLSL(char const * path) {
@@ -481,10 +499,9 @@ AS::Model ImportGLTF(char const * path) {
                         auto const & image = gltfModel.images[texture.source];
                         {// Texture
                             std::string image_path = directory_path + "/" + image.uri;
-                            assetSystemTexture = ImportUncompressedImage(
+                            assetSystemTexture = ImportImage(
                                 image_path.c_str(),
-                                // TODO generate_mipmaps = true;
-                                ImportUnCompressedTextureOptions {.generate_mipmaps = false, .sampler = &sampler}
+                                ImportTextureOptions {.tryToGenerateMipmaps = true, .sampler = &sampler}
                             );
                         }
                         MFA_ASSERT(assetSystemTexture.isValid());

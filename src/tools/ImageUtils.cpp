@@ -109,6 +109,18 @@ bool Unload(Data * imageData) {
 }
 
 bool Resize(ResizeInputParams const & params) {
+    MFA_ASSERT(params.inputImageWidth > 0);
+    MFA_ASSERT(params.inputImageHeight > 0);
+    MFA_ASSERT(params.inputImagePixels.ptr != nullptr);
+    MFA_ASSERT(params.inputImagePixels.len > 0);
+
+    MFA_ASSERT(params.componentsCount > 0);
+
+    MFA_ASSERT(params.outputWidth > 0);
+    MFA_ASSERT(params.outputHeight > 0);
+    MFA_ASSERT(params.outputImagePixels.ptr != nullptr);
+    MFA_ASSERT(params.outputImagePixels.len > 0);
+
     auto const resizeResult = params.useSRGB ? stbir_resize_uint8_srgb(
         params.inputImagePixels.ptr,
         params.inputImageWidth,
@@ -550,39 +562,25 @@ Data * Load(LoadResult & loadResult, const char * path) {
 }
 
 CBlob GetMipBlob(Data * imageData, int const mipIndex) {
-    if(!MFA_VERIFY(imageData != nullptr)) {
-        return {};
-    }
-    if(!MFA_VERIFY(imageData->isValid())) {
-        return {};
-    }
-    if(!MFA_VERIFY(mipIndex >= 0)) {
-        return {};
-    }
-    if(!MFA_VERIFY(imageData->mipmapCount > mipIndex)) {
-        return {};
-    }
+    MFA_ASSERT(imageData != nullptr);
+    MFA_ASSERT(imageData->isValid());
+    MFA_ASSERT(mipIndex >= 0);
+    MFA_ASSERT(imageData->mipmapCount > mipIndex);
 
     auto const imageSize = TinyKtx_ImageSize(imageData->context, mipIndex);
-    if (!MFA_VERIFY(imageSize > 0)) {
-        return {};
-    }
+    MFA_ASSERT(imageSize > 0);
 
     auto const * imagePtr = TinyKtx_ImageRawData(imageData->context, mipIndex);
-    if (!MFA_VERIFY(imagePtr != nullptr)) {
-        return {};
-    }
+    MFA_ASSERT(imagePtr != nullptr);
 
     return CBlob {imagePtr, imageSize};
 }
 
 bool Unload(Data * imageData) {
-    if (MFA_VERIFY(imageData != nullptr && imageData->isValid())) {
-        TinyKtx_DestroyContext(imageData->context);
-        delete imageData;
-        return true;
-    }
-    return false;
+    MFA_ASSERT(imageData != nullptr && imageData->isValid());
+    TinyKtx_DestroyContext(imageData->context);
+    delete imageData;
+    return true;
 }
 
 }

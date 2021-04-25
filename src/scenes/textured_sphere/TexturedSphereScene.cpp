@@ -428,7 +428,7 @@ void TexturedSphereScene::createGpuModel() {
     auto const importTextureForModel = [&cpuModel](char const * address) -> int16_t {
         auto const texture = Importer::ImportUncompressedImage(
             address, 
-            Importer::ImportUnCompressedTextureOptions {.generate_mipmaps = false}
+            Importer::ImportTextureOptions {.tryToGenerateMipmaps = false}
         );
         MFA_ASSERT(texture.isValid());
         cpuModel.textures.emplace_back(texture);

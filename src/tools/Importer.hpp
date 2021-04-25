@@ -7,17 +7,17 @@ namespace MFA::Importer {
 namespace AS = AssetSystem;
 //------------------------------Assets-------------------------------------
 
-struct ImportUnCompressedTextureOptions {
-    bool generate_mipmaps = true;
-    bool prefer_srgb = false;       // Not tested and not recommended
-    AS::SamplerConfig * sampler = nullptr;
+struct ImportTextureOptions {
+    bool tryToGenerateMipmaps = true;       // Generates mipmaps for uncompressed texture
+    bool preferSrgb = false;                // Not tested and not recommended
+    AS::SamplerConfig * sampler = nullptr;  // For better sampling, you can specify specific options for sampler
     // TODO Usage flags
 };
 
 [[nodiscard]]
 AS::Texture ImportUncompressedImage(
     char const * path, 
-    ImportUnCompressedTextureOptions const & options = {}
+    ImportTextureOptions const & options = {}
 );
 
 [[nodiscard]]
@@ -32,16 +32,12 @@ AS::Texture ImportInMemoryTexture(
     uint32_t components,
     uint16_t depth = 1,
     uint16_t slices = 1,
-    ImportUnCompressedTextureOptions const & options = {}
+    ImportTextureOptions const & options = {}
 );
-
-struct ImportKtxTextureOptions {
-    AS::SamplerConfig * sampler = nullptr;     
-};
 
 AS::Texture ImportKTXImage(
     char const * path,
-    ImportKtxTextureOptions const & options = {}
+    ImportTextureOptions const & options = {}
 );
 
 // TODO ImageArray
@@ -49,6 +45,10 @@ AS::Texture ImportKTXImage(
 // TODO
 [[nodiscard]]
 AS::Texture ImportDDSFile(char const * path);
+
+
+[[nodiscard]]
+AS::Texture ImportImage(char const * path, ImportTextureOptions const & options = {});
 /*
  * Due to lack of material support, OBJ files are not very useful (Deprecated)
  */

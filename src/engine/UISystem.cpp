@@ -300,7 +300,7 @@ void Init() {
             components_count,
             depth,
             slices,
-            Importer::ImportUnCompressedTextureOptions {.generate_mipmaps = false, .prefer_srgb = false}
+            Importer::ImportTextureOptions {.tryToGenerateMipmaps = false, .preferSrgb = false}
         );
         // TODO Support from in memory import of images inside importer
         state.font_texture = RF::CreateTexture(texture_asset);

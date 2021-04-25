@@ -33,7 +33,11 @@ bool IsUsable(FileHandle * file);
 [[nodiscard]]
 FILE * GetCHandle(FileHandle * file);
 
+[[nodiscard]]
 std::string ExtractDirectoryFromPath(char const * path);
+
+[[nodiscard]]
+std::string ExtractExtensionFromPath(char const * path);
 
 enum class Origin {
     Start,

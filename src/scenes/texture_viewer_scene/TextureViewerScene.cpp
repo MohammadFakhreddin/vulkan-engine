@@ -245,7 +245,13 @@ void TextureViewerScene::createDrawPipeline(
 void TextureViewerScene::createModel() {
     auto cpuModel = SG::Sheet();
 
-    auto cpuTexture = Importer::ImportKTXImage("../assets/models/sponza/11490520546946913238.ktx");
+    //auto cpuTexture = Importer::ImportImage("../assets/models/sponza/11490520546946913238.ktx");
+    auto cpuTexture = Importer::ImportImage(
+        "../assets/models/FlightHelmet/glTF/FlightHelmet_baseColor3.png", 
+        Importer::ImportTextureOptions {
+            .tryToGenerateMipmaps = true
+        }
+    );
     MFA_ASSERT(cpuTexture.isValid());
 
     cpuModel.textures.emplace_back(cpuTexture);

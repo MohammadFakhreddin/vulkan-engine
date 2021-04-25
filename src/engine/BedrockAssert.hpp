@@ -37,12 +37,14 @@
 #define MFA_NOT_IMPLEMENTED_YET(who)    throw std::runtime_error("Method not implemented by " + std::string(who))
 
 bool constexpr MFA_VERIFY(bool const condition) {
-    if (condition) return true;
+    if (condition) {
+        __assume(condition);
+        return true;
+    }
 #ifdef MFA_DEBUG
     throw std::runtime_error("Condition failed");
 #endif
     return false;
 }
-
 
 namespace MFA::Assert {} // namespace MFA::Assert

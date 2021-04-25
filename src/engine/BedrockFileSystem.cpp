@@ -196,6 +196,11 @@ std::string ExtractDirectoryFromPath(char const * path)  {
     return std::filesystem::path(path).parent_path().string();
 }
 
+std::string ExtractExtensionFromPath(char const * path) {
+    MFA_ASSERT(path != nullptr);
+    return std::filesystem::path(path).extension().string();
+}
+
 bool Seek(FileHandle * file, const int offset, const Origin origin) {
     MFA_ASSERT(file != nullptr);
     return file->seek(offset, origin);
