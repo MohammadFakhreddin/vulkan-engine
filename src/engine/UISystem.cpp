@@ -164,7 +164,7 @@ void Init() {
         binding[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
         binding[0].pImmutableSamplers = &state.font_sampler.sampler;
         state.descriptor_set_layout = RF::CreateDescriptorSetLayout(
-            static_cast<U8>(binding.size()),
+            static_cast<uint8_t>(binding.size()),
             binding.data()
         );
     }
@@ -224,16 +224,16 @@ void Init() {
         std::vector<VkDynamicState> dynamic_states = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
         auto dynamic_state_create_info = VkPipelineDynamicStateCreateInfo {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-            .dynamicStateCount = static_cast<U32>(dynamic_states.size()),
+            .dynamicStateCount = static_cast<uint32_t>(dynamic_states.size()),
             .pDynamicStates = dynamic_states.data(),
         };
 
         state.draw_pipeline = RF::CreateDrawPipeline(
-            static_cast<U8>(shader_stages.size()),
+            static_cast<uint8_t>(shader_stages.size()),
             shader_stages.data(),
             state.descriptor_set_layout,
             vertex_binding_description,
-            static_cast<U8>(input_attribute_description.size()),
+            static_cast<uint8_t>(input_attribute_description.size()),
             input_attribute_description.data(),
             RB::CreateGraphicPipelineOptions {
                 .font_face = VK_FRONT_FACE_COUNTER_CLOCKWISE,
@@ -254,7 +254,7 @@ void Init() {
                     .alphaBlendOp = VK_BLEND_OP_ADD,
                     .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
                 },
-                .push_constants_range_count = static_cast<U8>(push_constants.size()),
+                .push_constants_range_count = static_cast<uint8_t>(push_constants.size()),
                 .push_constant_ranges = push_constants.data(),
                 .use_static_viewport_and_scissor = false
             }
@@ -283,14 +283,14 @@ void Init() {
         ImGui::StyleColorsDark();
     
         Byte * pixels = nullptr;
-        I32 width, height;
+        int32_t width, height;
         io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
         MFA_ASSERT(pixels != nullptr);
         MFA_ASSERT(width > 0);
         MFA_ASSERT(height > 0);
-        U8 const components_count = 4;
-        U8 const depth = 1;
-        U8 const slices = 1;
+        uint8_t const components_count = 4;
+        uint8_t const depth = 1;
+        uint8_t const slices = 1;
         size_t const image_size = width * height * components_count * sizeof(Byte);
         auto texture_asset = Importer::ImportInMemoryTexture(
             CBlob {pixels, image_size},
@@ -300,7 +300,7 @@ void Init() {
             components_count,
             depth,
             slices,
-            Importer::ImportTextureOptions {.generate_mipmaps = false, .prefer_srgb = false}
+            Importer::ImportUnCompressedTextureOptions {.generate_mipmaps = false, .prefer_srgb = false}
         );
         // TODO Support from in memory import of images inside importer
         state.font_texture = RF::CreateTexture(texture_asset);
@@ -312,7 +312,7 @@ static void UpdateMousePositionAndButtons() {
 
     // Set OS mouse position if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
     if (io.WantSetMousePos) {
-        RF::WarpMouseInWindow(static_cast<I32>(io.MousePos.x), static_cast<I32>(io.MousePos.y));
+        RF::WarpMouseInWindow(static_cast<int32_t>(io.MousePos.x), static_cast<int32_t>(io.MousePos.y));
     } else {
         io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
     }
@@ -345,7 +345,7 @@ static void UpdateMouseCursor() {
 }
 
 void OnNewFrame(
-    U32 const delta_time,
+    uint32_t const delta_time,
     RF::DrawPass & draw_pass,
     RecordUICallback const & record_ui_callback
 ) {
@@ -353,8 +353,8 @@ void OnNewFrame(
     IM_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! It is generally built by the renderer backend. Missing call to renderer _NewFrame() function? e.g. ImGui_ImplOpenGL3_NewFrame().");
 
     // Setup display size (every frame to accommodate for window resizing)
-    I32 window_width, window_height;
-    I32 drawable_width, drawable_height;
+    int32_t window_width, window_height;
+    int32_t drawable_width, drawable_height;
     RF::GetWindowSize(window_width, window_height);
     if (RF::GetWindowFlags() & SDL_WINDOW_MINIMIZED) {
         window_width = window_height = 0;
@@ -438,9 +438,9 @@ void OnNewFrame(
                 write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                 write_desc[0].pImageInfo = desc_image;
                 RF::UpdateDescriptorSets(
-                    static_cast<U8>(state.descriptor_sets.size()),
+                    static_cast<uint8_t>(state.descriptor_sets.size()),
                     state.descriptor_sets.data(),
-                    static_cast<U8>(write_desc.size()),
+                    static_cast<uint8_t>(write_desc.size()),
                     write_desc.data()
                 );
             }
@@ -506,12 +506,12 @@ void OnNewFrame(
                         // Apply scissor/clipping rectangle
                         VkRect2D scissor {
                             .offset {
-                                .x = static_cast<I32>(clip_rect.x),
-                                .y = static_cast<I32>(clip_rect.y)
+                                .x = static_cast<int32_t>(clip_rect.x),
+                                .y = static_cast<int32_t>(clip_rect.y)
                             },
                             .extent {
-                                .width = static_cast<U32>(clip_rect.z - clip_rect.x),
-                                .height = static_cast<U32>(clip_rect.w - clip_rect.y)
+                                .width = static_cast<uint32_t>(clip_rect.z - clip_rect.x),
+                                .height = static_cast<uint32_t>(clip_rect.w - clip_rect.y)
                             }
                         };
                         RF::SetScissor(draw_pass, scissor);

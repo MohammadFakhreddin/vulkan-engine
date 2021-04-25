@@ -26,8 +26,8 @@ void Application::run() {
     namespace RF = MFA::RenderFrontend;
     namespace UI = MFA::UISystem;
     
-    static constexpr MFA::U16 SCREEN_WIDTH = 1920;
-    static constexpr MFA::U16 SCREEN_HEIGHT = 1080;
+    static constexpr uint16_t SCREEN_WIDTH = 1920;
+    static constexpr uint16_t SCREEN_HEIGHT = 1080;
 
     RF::Init({SCREEN_WIDTH, SCREEN_HEIGHT, "Cool app"});
     UI::Init();
@@ -46,11 +46,11 @@ void Application::run() {
         //Event handler
         SDL_Event e;
         //While application is running
-        MFA::U32 const target_fps = 1000 / 60;
-        MFA::U32 delta_time = 0;
+        uint32_t const target_fps = 1000 / 60;
+        uint32_t delta_time = 0;
         while (!quit)
         {
-            MFA::U32 const start_time = SDL_GetTicks();
+            uint32_t const start_time = SDL_GetTicks();
             // DrawFrame
             mSceneSubSystem.OnNewFrame(delta_time);
             //Handle events

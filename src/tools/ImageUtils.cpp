@@ -7,6 +7,8 @@
 
 #include "../libs/stb_image/stb_image.h"
 #include "engine/BedrockFileSystem.hpp"
+#include "libs/stb_image/stb_image_resize.h"
+#include "libs/tiny_ktx/tinyktx.h"
 
 namespace MFA::Utils::UncompressedTexture {
 
@@ -59,8 +61,8 @@ LoadResult Load(Data & outImageData, const char * path, bool const prefer_srgb) 
                 default: MFA_LOG_WARN("Unhandled component count: %d", outImageData.stbi_components);
             }
         }
-        MFA_ASSERT(outImageData.components >= static_cast<U32>(outImageData.stbi_components));
-        if(outImageData.components == outImageData.stbi_components)
+        MFA_ASSERT(outImageData.components >= static_cast<uint32_t>(outImageData.stbi_components));
+        if(static_cast<int>(outImageData.components) == outImageData.stbi_components)
         {
             outImageData.pixels = outImageData.stbi_pixels;
         } else {
@@ -75,9 +77,9 @@ LoadResult Load(Data & outImageData, const char * path, bool const prefer_srgb) 
             auto const * stbi_pixels_array = outImageData.stbi_pixels.as<uint8_t>();
             for(int pixel_index = 0; pixel_index < outImageData.width * outImageData.height ; pixel_index ++ )
             {
-                for(U32 component_index = 0; component_index < outImageData.components; component_index ++ )
+                for(uint32_t component_index = 0; component_index < outImageData.components; component_index ++ )
                 {
-                    pixels_array[pixel_index * outImageData.components + component_index] = static_cast<I64>(component_index) < outImageData.stbi_components
+                    pixels_array[pixel_index * outImageData.components + component_index] = static_cast<int64_t>(component_index) < outImageData.stbi_components
                         ? stbi_pixels_array[pixel_index * outImageData.stbi_components + component_index]
                         : 255u;
                 }
@@ -104,6 +106,33 @@ bool Unload(Data * imageData) {
         ret = true;
     }
     return ret;
+}
+
+bool Resize(ResizeInputParams const & params) {
+    auto const resizeResult = params.useSRGB ? stbir_resize_uint8_srgb(
+        params.inputImagePixels.ptr,
+        params.inputImageWidth,
+        params.inputImageHeight,
+        0,
+        params.outputImagePixels.ptr,
+        params.outputWidth,
+        params.outputHeight,
+        0,
+        params.componentsCount,
+        params.componentsCount > 3 ? 3 : STBIR_ALPHA_CHANNEL_NONE,
+        0
+    ) : stbir_resize_uint8(
+        params.inputImagePixels.ptr,
+        params.inputImageWidth,
+        params.inputImageHeight,
+        0,
+        params.outputImagePixels.ptr,
+        params.outputWidth,
+        params.outputHeight,
+        0,
+        params.componentsCount
+    );
+    return resizeResult > 0;
 }
 
 } // MFA::Utils
@@ -374,5 +403,187 @@ bool Unload(Data * imageData) {
 }
 
 namespace MFA::Utils::KTXTexture {
+
+namespace FS = FileSystem;
+
+static void tinyktxCallbackError(void *user, char const *msg) {
+    MFA_LOG_ERROR("Tiny_Ktx ERROR: %s", msg);
+}
+static void *tinyktxCallbackAlloc(void *user, const size_t size) {
+    return MFA::Memory::Alloc(size).ptr;
+}
+static void tinyktxCallbackFree(void *user, void *data) {
+    MFA::Memory::PtrFree(data);
+}
+// TODO Start from here, Complete all callbacks
+static size_t tinyktxCallbackRead(void *user, void* data, const size_t size) {
+    auto * handle = static_cast<FS::FileHandle *>(user);
+    return FS::Read(handle, MFA::Blob {data, size});
+}
+static bool tinyktxCallbackSeek(void *user, const int64_t offset) {
+    auto * handle = static_cast<FS::FileHandle *>(user);
+    return FS::Seek(handle, static_cast<int>(offset), FS::Origin::Start);
+}
+
+static int64_t tinyktxCallbackTell(void *user) {
+    auto * handle = static_cast<FS::FileHandle *>(user);
+    int64_t location = 0;
+    bool success = FS::Tell(handle, location);
+    MFA_ASSERT(success);
+    return location;
+}
+
+Data * Load(LoadResult & loadResult, const char * path) {
+
+    Data * data = nullptr;
+
+    loadResult = LoadResult::Invalid;
+
+    auto * fileHandle = FS::OpenFile(path, FS::Usage::Read);
+    if(!MFA_VERIFY(fileHandle != nullptr)) {
+        loadResult = LoadResult::FileNotExists;
+        return nullptr;
+    }
     
+    TinyKtx_Callbacks callbacks {
+            &tinyktxCallbackError,
+            &tinyktxCallbackAlloc,
+            &tinyktxCallbackFree,
+            tinyktxCallbackRead,
+            &tinyktxCallbackSeek,
+            &tinyktxCallbackTell
+    };
+
+    auto * ctx =  TinyKtx_CreateContext(&callbacks, fileHandle);
+    MFA_DEFER {
+        TinyKtx_DestroyContext(ctx);
+    };
+    
+    auto const readHeaderResult = TinyKtx_ReadHeader(ctx);
+    MFA_ASSERT(readHeaderResult);
+
+    auto const width = static_cast<uint16_t>(TinyKtx_Width(ctx));
+    auto const height = static_cast<uint16_t>(TinyKtx_Height(ctx));
+    auto const depth = Math::Max<uint16_t>(static_cast<uint16_t>(TinyKtx_Depth(ctx)), 1);
+    auto const sliceCount = Math::Max<uint8_t>(static_cast<uint8_t>(TinyKtx_ArraySlices(ctx)), 1);
+    // TODO
+    //TinyKtx_Is1D()
+    //TinyKtx_Is2D()
+    //TinyKtx_Is3D()
+    //TinyKtx_IsCubemap()
+    
+    TinyKtx_Format const tinyKtxFormat = TinyKtx_GetFormat(ctx);
+    TextureFormat const format = [tinyKtxFormat]() -> TextureFormat
+    {
+        TextureFormat conversionResult = TextureFormat::INVALID;
+        switch (tinyKtxFormat) 
+        {
+            case TKTX_BC7_SRGB_BLOCK:
+                conversionResult = TextureFormat::BC7_UNorm_sRGB_RGBA;
+            break;
+            case TKTX_BC7_UNORM_BLOCK:
+                conversionResult = TextureFormat::BC7_UNorm_Linear_RGBA;
+            break;
+            case TKTX_BC5_UNORM_BLOCK:
+                conversionResult = TextureFormat::BC5_UNorm_Linear_RG;
+            break;
+            case TKTX_BC5_SNORM_BLOCK:
+                conversionResult = TextureFormat::BC5_SNorm_Linear_RG;
+            break;
+            case TKTX_BC4_UNORM_BLOCK:
+                conversionResult = TextureFormat::BC4_UNorm_Linear_R;
+            break;
+            case TKTX_BC4_SNORM_BLOCK:
+                conversionResult = AssetSystem::Texture::Format::BC4_SNorm_Linear_R;
+            break;
+            case TKTX_R8G8B8A8_UNORM:
+                conversionResult = AssetSystem::Texture::Format::UNCOMPRESSED_UNORM_R8G8B8A8_LINEAR;
+            break;
+            case TKTX_R8G8B8A8_SRGB:
+                conversionResult = TextureFormat::UNCOMPRESSED_UNORM_R8G8B8A8_SRGB;
+            break;
+            case TKTX_R8G8_UNORM:
+                conversionResult = TextureFormat::UNCOMPRESSED_UNORM_R8G8_LINEAR;
+            break;
+            case TKTX_R8_UNORM:
+                conversionResult = TextureFormat::UNCOMPRESSED_UNORM_R8_LINEAR;
+            break;
+            case TKTX_R8_SNORM:
+                conversionResult = TextureFormat::UNCOMPRESSED_UNORM_R8_SRGB;
+            break;
+            default:
+                break;
+        }
+        return conversionResult;
+    } ();
+
+    if (format != TextureFormat::INVALID) {
+
+        auto const mipmapCount = static_cast<uint8_t>(TinyKtx_NumberOfMipmaps(ctx));
+
+        uint64_t totalImageSize = 0;
+
+        int previousImageSize = -1;
+        for(auto i = 0u; i < mipmapCount; ++i) {
+            int imageSize = TinyKtx_ImageSize(ctx, i);
+            totalImageSize += imageSize;
+
+            MFA_ASSERT(previousImageSize == -1 || imageSize < previousImageSize);
+            previousImageSize = imageSize;
+        }
+
+        data = new Data();
+        data->width = width;
+        data->height = height;
+        data->depth = depth;
+        data->context = ctx;
+        data->format = format;
+        data->mipmapCount = mipmapCount;
+        data->sliceCount = sliceCount;
+        data->totalImageSize = totalImageSize;
+
+        MFA_ASSERT(data->isValid());
+
+        loadResult = LoadResult::Success;
+    }
+
+    return data;
+}
+
+CBlob GetMipBlob(Data * imageData, int const mipIndex) {
+    if(!MFA_VERIFY(imageData != nullptr)) {
+        return {};
+    }
+    if(!MFA_VERIFY(imageData->isValid())) {
+        return {};
+    }
+    if(!MFA_VERIFY(mipIndex >= 0)) {
+        return {};
+    }
+    if(!MFA_VERIFY(imageData->mipmapCount > mipIndex)) {
+        return {};
+    }
+
+    auto const imageSize = TinyKtx_ImageSize(imageData->context, mipIndex);
+    if (!MFA_VERIFY(imageSize > 0)) {
+        return {};
+    }
+
+    auto const * imagePtr = TinyKtx_ImageRawData(imageData->context, mipIndex);
+    if (!MFA_VERIFY(imagePtr != nullptr)) {
+        return {};
+    }
+
+    return CBlob {imagePtr, imageSize};
+}
+
+bool Unload(Data * imageData) {
+    if (MFA_VERIFY(imageData != nullptr && imageData->isValid())) {
+        TinyKtx_DestroyContext(imageData->context);
+        delete imageData;
+        return true;
+    }
+    return false;
+}
+
 }

@@ -3,18 +3,20 @@
 #include "../engine/BedrockCommon.hpp"
 #include "../engine/FoundationAsset.hpp"
 
+struct TinyKtx_Context;
+
 namespace MFA::Utils {
 using TextureFormat = AssetSystem::TextureFormat;
     namespace UncompressedTexture {
 
 struct Data {
-    I32 width = 0;
-    I32 height = 0;
-    I32 stbi_components = 0;
+    int32_t width = 0;
+    int32_t height = 0;
+    int32_t stbi_components = 0;
     Blob stbi_pixels;
     AssetSystem::TextureFormat format = TextureFormat::INVALID;
     Blob pixels;
-    U32 components = 0;
+    uint32_t components = 0;
     [[nodiscard]]
     bool valid() const {
         return stbi_pixels.ptr != nullptr && 
@@ -35,6 +37,18 @@ enum class LoadResult {
 LoadResult Load(Data & outImageData, const char * path, bool prefer_srgb);
 
 bool Unload(Data * imageData);
+
+struct ResizeInputParams {
+    CBlob inputImagePixels {}; 
+    int32_t inputImageWidth {}; 
+    int32_t inputImageHeight {}; 
+    uint32_t componentsCount {};
+    Blob outputImagePixels {};
+    int32_t outputWidth {}; 
+    int32_t outputHeight {};
+    bool useSRGB {};
+};
+bool Resize(ResizeInputParams const & params);
 
     } // UncompressedTexture
     namespace DDSTexture {
@@ -288,6 +302,42 @@ bool Unload(Data * imageData);
     } // DDSTexture
 
     namespace KTXTexture {
-        // TODO Start from here
+
+struct Data {
+    int32_t width = 0;
+    int32_t height = 0;
+    uint16_t depth = 0;
+    uint8_t sliceCount = 0;
+    AssetSystem::TextureFormat format = TextureFormat::INVALID;
+    uint8_t mipmapCount = 0;
+    TinyKtx_Context * context = nullptr;
+    uint64_t totalImageSize = 0;
+
+    [[nodiscard]]
+    bool isValid() const noexcept {
+        return width > 0 &&
+            height > 0 &&
+            depth > 0 &&
+            sliceCount > 0 &&
+            format != TextureFormat::INVALID &&
+            mipmapCount > 0 &&
+            context != nullptr &&
+            totalImageSize > 0;
+    }
+};
+
+enum class LoadResult {
+    Invalid,
+    Success,
+    FileNotExists
+    // Format not supported
+};
+
+Data * Load(LoadResult & loadResult, const char * path);
+
+CBlob GetMipBlob(Data * imageData, int mipIndex);
+
+bool Unload(Data * imageData);
+
     } // KTXTexture
 } // MFA::Utils

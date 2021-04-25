@@ -46,16 +46,16 @@ public:
 
     // Value equals to primitiveCount
     [[nodiscard]]
-    U32 getDescriptorSetCount() const;
+    uint32_t getDescriptorSetCount() const;
 
-    [[nodiscard]] VkDescriptorSet_T * getDescriptorSetByPrimitiveUniqueId(U32 index);
+    [[nodiscard]] VkDescriptorSet_T * getDescriptorSetByPrimitiveUniqueId(uint32_t index);
 
     [[nodiscard]] VkDescriptorSet_T ** getDescriptorSets();
 
     // Only for model local buffers
-    RF::UniformBufferGroup * createUniformBuffer(char const * name, U32 size);
+    RF::UniformBufferGroup * createUniformBuffer(char const * name, uint32_t size);
 
-    RF::UniformBufferGroup * createMultipleUniformBuffer(char const * name, U32 size, U32 count);
+    RF::UniformBufferGroup * createMultipleUniformBuffer(char const * name, uint32_t size, uint32_t count);
 
     // Only for model local buffers
     void deleteUniformBuffers();

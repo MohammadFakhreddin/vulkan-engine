@@ -56,28 +56,28 @@ public:
     };
 
     struct Dimensions {
-        U32 width = 0;
-        U32 height = 0;
-        U16 depth = 0;
+        uint32_t width = 0;
+        uint32_t height = 0;
+        uint16_t depth = 0;
     };
 
     struct MipmapInfo {
-        U64 offset {};
-        U32 size {};
+        uint64_t offset {};
+        uint32_t size {};
         Dimensions dimension {};
     };
 
-    struct Sampler {
+    struct SamplerConfig {
         bool isValid = false;
         enum class SampleMode {
             Linear,
             Nearest
         };
         SampleMode sampleMode = SampleMode::Linear;
-        U32 magFilter = 0;
-        U32 minFilter = 0;
-        U32 wrapS = 0;
-        U32 wrapT = 0;
+        uint32_t magFilter = 0;
+        uint32_t minFilter = 0;
+        uint32_t wrapS = 0;
+        uint32_t wrapT = 0;
     };
 
 private:
@@ -118,7 +118,7 @@ public:
     static_assert(ArrayCount(FormatTable) == static_cast<unsigned>(Format::Count));
 public:
 
-    static U8 ComputeMipCount(Dimensions const & dimensions);
+    static uint8_t ComputeMipCount(Dimensions const & dimensions);
 
     /*
      * This function result is only correct for uncompressed data
@@ -126,7 +126,7 @@ public:
     [[nodiscard]]
     static size_t MipSizeBytes (
         Format format,
-        U16 slices,
+        uint16_t slices,
         Dimensions const & mipLevelDimension
     );
 
@@ -137,8 +137,8 @@ public:
     // NOTE: 0 is the *smallest* mipmap level, and "mip_count - 1" is the *largest*.
     [[nodiscard]]
     static Dimensions MipDimensions (
-        U8 mipLevel,
-        U8 mipCount,
+        uint8_t mipLevel,
+        uint8_t mipCount,
         Dimensions originalImageDims
     );
 
@@ -149,16 +149,16 @@ public:
     [[nodiscard]]
     static size_t CalculateUncompressedTextureRequiredDataSize(
         Format format,
-        U16 slices,
+        uint16_t slices,
         Dimensions const & dims,
-        U8 mipCount
+        uint8_t mipCount
     );
 
     void initForWrite(
         Format format,
-        U16 slices,
-        U16 depth,
-        Sampler const * sampler,
+        uint16_t slices,
+        uint16_t depth,
+        SamplerConfig const * sampler,
         Blob const & buffer
     );
 
@@ -191,16 +191,17 @@ public:
     }
 
     [[nodiscard]]
-    U16 GetSlices() const noexcept {
+    uint16_t GetSlices() const noexcept {
         return mSlices;
     }
 
     [[nodiscard]]
-    U8 GetMipCount() const noexcept {
+    uint8_t GetMipCount() const noexcept {
         return mMipCount;
     }
 
-    MipmapInfo const & GetMipmap(U8 const mipLevel) const noexcept {
+    [[nodiscard]]
+    MipmapInfo const & GetMipmap(uint8_t const mipLevel) const noexcept {
         return mMipmapInfos[mipLevel];
     }
 
@@ -210,30 +211,35 @@ public:
     }
 
     [[nodiscard]]
-    U16 GetDepth() const noexcept {
+    uint16_t GetDepth() const noexcept {
         return mDepth;
     }
 
+    void SetSampler(SamplerConfig * sampler) {
+        MFA_ASSERT(sampler != nullptr);
+        mSampler = *sampler;
+    } 
+
     [[nodiscard]]
-    Sampler GetSampler() const noexcept {
+    SamplerConfig const & GetSampler() const noexcept {
         return mSampler;
     }
 
 private:
     Format mFormat = Format::INVALID;
-    U16 mSlices = 0;
-    U8 mMipCount = 0;
-    U16 mDepth = 0;
-    Sampler mSampler {};
+    uint16_t mSlices = 0;
+    uint8_t mMipCount = 0;
+    uint16_t mDepth = 0;
+    SamplerConfig mSampler {};
     std::vector<MipmapInfo> mMipmapInfos {};
     Blob mBuffer {};
-    U64 mCurrentOffset = 0;
+    uint64_t mCurrentOffset = 0;
     int mPreviousMipWidth = -1;
     int mPreviousMipHeight = -1;
 };
 
 using TextureFormat = Texture::Format;
-using TextureSampler = Texture::Sampler;
+using SamplerConfig = Texture::SamplerConfig;
 
 //---------------------------------MeshAsset-------------------------------------
 class Mesh final : public Base {
@@ -243,10 +249,10 @@ public:
     using Position = float[3];
     using Normal = float[3];
     using UV = float[2];
-    using Color = U8[3];
+    using Color = uint8_t[3];
     using Tangent = float[4]; // XYZW vertex tangents where the w component is a sign value (-1 or +1) indicating handedness of the tangent basis. I need to change XYZ order if handness is different from mine
 
-    using Index = U32;
+    using Index = uint32_t;
     struct Vertex {
         Position position;
         UV baseColorUV;
@@ -262,18 +268,18 @@ public:
     // TODO Camera
     
     struct Primitive {
-        U32 uniqueId = 0;                      // Unique id in entire model
-        U32 vertexCount = 0;
-        U32 indicesCount = 0;
-        U64 verticesOffset = 0;                // From start of buffer
-        U64 indicesOffset = 0;
-        U32 indicesStartingIndex = 0;          // From start of buffer
-        I16 baseColorTextureIndex = 0;
-        I16 mixedMetallicRoughnessOcclusionTextureIndex = 0;
-        I16 metallicTextureIndex = 0;
-        I16 roughnessTextureIndex = 0;
-        I16 normalTextureIndex = 0;
-        I16 emissiveTextureIndex = 0;
+        uint32_t uniqueId = 0;                      // Unique id in entire model
+        uint32_t vertexCount = 0;
+        uint32_t indicesCount = 0;
+        uint64_t verticesOffset = 0;                // From start of buffer
+        uint64_t indicesOffset = 0;
+        uint32_t indicesStartingIndex = 0;          // From start of buffer
+        int16_t baseColorTextureIndex = 0;
+        int16_t mixedMetallicRoughnessOcclusionTextureIndex = 0;
+        int16_t metallicTextureIndex = 0;
+        int16_t roughnessTextureIndex = 0;
+        int16_t normalTextureIndex = 0;
+        int16_t emissiveTextureIndex = 0;
         float baseColorFactor[4] {};
         float metallicFactor = 0;              // Metallic color is stored inside blue
         float roughnessFactor = 0;             // Roughness color is stored inside green
@@ -305,8 +311,8 @@ public:
     };
 
     void initForWrite(
-        U32 vertexCount,
-        U32 indexCount,
+        uint32_t vertexCount,
+        uint32_t indexCount,
         const Blob & vertexBuffer,
         const Blob & indexBuffer
     );
@@ -315,14 +321,14 @@ public:
 
     // Returns mesh index
     [[nodiscard]]
-    U32 insertSubMesh();
+    uint32_t insertSubMesh();
 
     void insertPrimitive(
-        U32 subMeshIndex,
+        uint32_t subMeshIndex,
         Primitive && primitive, 
-        U32 vertexCount, 
+        uint32_t vertexCount, 
         Vertex * vertices, 
-        U32 indicesCount, 
+        uint32_t indicesCount, 
         Index * indices
     );
 
@@ -342,18 +348,18 @@ public:
     }
 
     [[nodiscard]]
-    U32 getSubMeshCount() const noexcept {
-        return static_cast<U32>(mSubMeshes.size());
+    uint32_t getSubMeshCount() const noexcept {
+        return static_cast<uint32_t>(mSubMeshes.size());
     }
 
     [[nodiscard]]
-    SubMesh const & getSubMeshByIndex(U32 const index) const noexcept {
+    SubMesh const & getSubMeshByIndex(uint32_t const index) const noexcept {
         MFA_ASSERT(index < mSubMeshes.size());
         return mSubMeshes[index];
     }
 
     [[nodiscard]]
-    SubMesh & getSubMeshByIndex(U32 const index) {
+    SubMesh & getSubMeshByIndex(uint32_t const index) {
         MFA_ASSERT(index < mSubMeshes.size());
         return mSubMeshes[index];
     }
@@ -364,15 +370,15 @@ public:
     }
 
     [[nodiscard]]
-    Node const & getNodeByIndex(U32 const index) const noexcept {
+    Node const & getNodeByIndex(uint32_t const index) const noexcept {
         MFA_ASSERT(index >= 0);
         MFA_ASSERT(index < mNodes.size());
         return mNodes[index];
     }
 
     [[nodiscard]]
-    U32 getNodesCount() const noexcept {
-        return static_cast<U32>(mNodes.size());
+    uint32_t getNodesCount() const noexcept {
+        return static_cast<uint32_t>(mNodes.size());
     }
 
     [[nodiscard]]
@@ -386,15 +392,15 @@ private:
     std::vector<SubMesh> mSubMeshes {};
     std::vector<Node> mNodes {};
 
-    U32 mVertexCount {};
+    uint32_t mVertexCount {};
     Blob mVertexBuffer {};
 
-    U32 mIndexCount {};
+    uint32_t mIndexCount {};
     Blob mIndexBuffer {};
 
-    U64 mNextVertexOffset {};
-    U64 mNextIndexOffset {};
-    U32 mNextStartingIndex {};
+    uint64_t mNextVertexOffset {};
+    uint64_t mNextIndexOffset {};
+    uint32_t mNextStartingIndex {};
 };
 
 using MeshPrimitive = Mesh::Primitive;

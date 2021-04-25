@@ -36,14 +36,14 @@ void SceneSubSystem::RegisterNew(Scene * scene, char const * name) {
 
 void SceneSubSystem::SetActiveScene(char const * name) {
     MFA_ASSERT(name != nullptr);
-    for (I32 i = 0; i < static_cast<I32>(mRegisteredScenes.size()); ++i) {
+    for (int32_t i = 0; i < static_cast<int32_t>(mRegisteredScenes.size()); ++i) {
         if (0 == strcmp(mRegisteredScenes[i].name.c_str(), name)) {
             mActiveScene = i;
         }
     }
 }
 
-void SceneSubSystem::OnNewFrame(U32 const deltaTime) {
+void SceneSubSystem::OnNewFrame(uint32_t const deltaTime) {
     if(mActiveScene != mLastActiveScene) {
         RF::DeviceWaitIdle();
         if(mLastActiveScene >= 0) {
@@ -76,7 +76,7 @@ void SceneSubSystem::OnNewFrame(U32 const deltaTime) {
             "Active scene", 
             &mActiveScene,
             scene_names.data(), 
-            static_cast<I32>(scene_names.size())
+            static_cast<int32_t>(scene_names.size())
         );
         ImGui::End();
         if(mActiveScene >= 0) {

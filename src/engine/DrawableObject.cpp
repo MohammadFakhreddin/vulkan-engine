@@ -10,10 +10,10 @@ DrawableObject::DrawableObject(
     : mGpuModel(&model_)
 {
     // DescriptorSetCount
-    U32 descriptorSetCount = 0;
-    for (U32 i = 0; i < mGpuModel->model.mesh.getSubMeshCount(); ++i) {
+    uint32_t descriptorSetCount = 0;
+    for (uint32_t i = 0; i < mGpuModel->model.mesh.getSubMeshCount(); ++i) {
         auto const & subMesh = mGpuModel->model.mesh.getSubMeshByIndex(i);
-        descriptorSetCount += static_cast<U32>(subMesh.primitives.size());
+        descriptorSetCount += static_cast<uint32_t>(subMesh.primitives.size());
     }
     mDescriptorSets = RF::CreateDescriptorSets(
         descriptorSetCount, 
@@ -34,11 +34,11 @@ RF::GpuModel * DrawableObject::getModel() const {
     return mGpuModel;
 }
 
-U32 DrawableObject::getDescriptorSetCount() const {
-    return static_cast<U32>(mDescriptorSets.size());
+uint32_t DrawableObject::getDescriptorSetCount() const {
+    return static_cast<uint32_t>(mDescriptorSets.size());
 }
 
-VkDescriptorSet_T * DrawableObject::getDescriptorSetByPrimitiveUniqueId(U32 const index) {
+VkDescriptorSet_T * DrawableObject::getDescriptorSetByPrimitiveUniqueId(uint32_t const index) {
     MFA_ASSERT(index < mDescriptorSets.size());
     return mDescriptorSets[index];
 }
@@ -49,15 +49,15 @@ VkDescriptorSet_T ** DrawableObject::getDescriptorSets() {
 
 
 // Only for model local buffers
-RF::UniformBufferGroup * DrawableObject::createUniformBuffer(char const * name, U32 const size) {
+RF::UniformBufferGroup * DrawableObject::createUniformBuffer(char const * name, uint32_t const size) {
     mUniformBuffers[name] = RF::CreateUniformBuffer(size, 1);
     return &mUniformBuffers[name];
 }
 
 RF::UniformBufferGroup * DrawableObject::createMultipleUniformBuffer(
     char const * name, 
-    const U32 size, 
-    const U32 count
+    const uint32_t size, 
+    const uint32_t count
 ) {
     mUniformBuffers[name] = RF::CreateUniformBuffer(size, count);
     return &mUniformBuffers[name];
@@ -108,7 +108,7 @@ void DrawableObject::draw(RF::DrawPass & drawPass) {
         return;
     }
     
-    for (U32 i = 0; i < mGpuModel->model.mesh.getNodesCount(); ++i) {
+    for (uint32_t i = 0; i < mGpuModel->model.mesh.getNodesCount(); ++i) {
         drawNode(drawPass, mGpuModel->model.mesh.getNodeByIndex(i));
     }
 }

@@ -44,12 +44,12 @@ void TexturedSphereScene::Init() {
 
     createDescriptorSetLayout();
 
-    createDrawPipeline(static_cast<MFA::U8>(shaders.size()), shaders.data());
+    createDrawPipeline(static_cast<uint8_t>(shaders.size()), shaders.data());
     
     createDrawableObject();
 }
 
-void TexturedSphereScene::OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
+void TexturedSphereScene::OnDraw(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
     RF::BindDrawPipeline(draw_pass, mDrawPipeline);
 
     {// Updating Transform buffer
@@ -75,7 +75,7 @@ void TexturedSphereScene::OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawP
         static_assert(sizeof(m_translate_data.transformation) == sizeof(transformationMat.cells));
         ::memcpy(m_translate_data.transformation, transformationMat.cells, sizeof(transformationMat.cells));
         // Perspective
-        MFA::I32 width; MFA::I32 height;
+        int32_t width; int32_t height;
         RF::GetWindowSize(width, height);
         float const ratio = static_cast<float>(width) / static_cast<float>(height);
         MFA::Matrix4X4Float perspectiveMat {};
@@ -106,7 +106,7 @@ void TexturedSphereScene::OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawP
     mDrawableObject.draw(draw_pass);
 }
 
-void TexturedSphereScene::OnUI(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
+void TexturedSphereScene::OnUI(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
     ImGui::Begin("Object viewer");
     ImGui::SetNextItemWidth(300.0f);
     ImGui::SliderFloat("XDegree", &mModelRotation[0], -360.0f, 360.0f);
@@ -162,7 +162,7 @@ void TexturedSphereScene::createDrawableObject(){
     
     auto const & textures = mDrawableObject.getModel()->textures;
 
-    for (MFA::U32 nodeIndex = 0; nodeIndex < mesh.getNodesCount(); ++nodeIndex) {// Updating descriptor sets
+    for (uint32_t nodeIndex = 0; nodeIndex < mesh.getNodesCount(); ++nodeIndex) {// Updating descriptor sets
         auto const & node = mesh.getNodeByIndex(nodeIndex);
         auto const & subMesh = mesh.getSubMeshByIndex(node.subMeshIndex);
         if (subMesh.primitives.empty() == false) {
@@ -270,7 +270,7 @@ void TexturedSphereScene::createDrawableObject(){
                 });
 
                 RF::UpdateDescriptorSets(
-                    static_cast<MFA::U8>(writeInfo.size()),
+                    static_cast<uint8_t>(writeInfo.size()),
                     writeInfo.data()
                 );
             }
@@ -282,7 +282,7 @@ void TexturedSphereScene::destroyDrawableObject(){
     mDrawableObject.deleteUniformBuffers();
 }
 
-void TexturedSphereScene::createDrawPipeline(MFA::U8 gpu_shader_count, MFA::RenderBackend::GpuShader * gpu_shaders){
+void TexturedSphereScene::createDrawPipeline(uint8_t gpu_shader_count, MFA::RenderBackend::GpuShader * gpu_shaders){
     VkVertexInputBindingDescription const vertex_binding_description {
         .binding = 0,
         .stride = sizeof(AS::MeshVertex),
@@ -339,7 +339,7 @@ void TexturedSphereScene::createDrawPipeline(MFA::U8 gpu_shader_count, MFA::Rend
         gpu_shaders,
         mDescriptorSetLayout,
         vertex_binding_description,
-        static_cast<MFA::U8>(input_attribute_descriptions.size()),
+        static_cast<uint8_t>(input_attribute_descriptions.size()),
         input_attribute_descriptions.data(),
         RB::CreateGraphicPipelineOptions {
             .depth_stencil {
@@ -417,7 +417,7 @@ void TexturedSphereScene::createDescriptorSetLayout(){
         .pImmutableSamplers = nullptr, // Optional
     });
     mDescriptorSetLayout = RF::CreateDescriptorSetLayout(
-        static_cast<MFA::U8>(bindings.size()),
+        static_cast<uint8_t>(bindings.size()),
         bindings.data()
     );
 }
@@ -425,14 +425,14 @@ void TexturedSphereScene::createDescriptorSetLayout(){
 void TexturedSphereScene::createGpuModel() {
     auto cpuModel = MFA::ShapeGenerator::Sphere();
 
-    auto const importTextureForModel = [&cpuModel](char const * address) -> MFA::I16 {
+    auto const importTextureForModel = [&cpuModel](char const * address) -> int16_t {
         auto const texture = Importer::ImportUncompressedImage(
             address, 
-            Importer::ImportTextureOptions {.generate_mipmaps = false}
+            Importer::ImportUnCompressedTextureOptions {.generate_mipmaps = false}
         );
         MFA_ASSERT(texture.isValid());
         cpuModel.textures.emplace_back(texture);
-        return static_cast<MFA::I16>(cpuModel.textures.size() - 1);
+        return static_cast<int16_t>(cpuModel.textures.size() - 1);
     };
 
     // BaseColor
@@ -446,7 +446,7 @@ void TexturedSphereScene::createGpuModel() {
     
     auto & mesh = cpuModel.mesh;
     MFA_ASSERT(mesh.isValid());
-    for (MFA::U32 i = 0; i < mesh.getSubMeshCount(); ++i) {
+    for (uint32_t i = 0; i < mesh.getSubMeshCount(); ++i) {
         auto & subMesh = mesh.getSubMeshByIndex(i);
         for (auto & primitive : subMesh.primitives) {
             // Texture index

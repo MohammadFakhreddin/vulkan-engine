@@ -80,8 +80,8 @@ namespace MFA::ShapeGenerator {
             oddRow = !oddRow;
         }
 
-        U16 const indicesCount = static_cast<U16>(meshIndices.size());
-        U16 const verticesCount = static_cast<U16>(positions.size());
+        uint16_t const indicesCount = static_cast<uint16_t>(meshIndices.size());
+        uint16_t const verticesCount = static_cast<uint16_t>(positions.size());
 
         model.mesh.initForWrite(
             verticesCount, 
@@ -182,8 +182,8 @@ namespace MFA::ShapeGenerator {
         meshIndices.emplace_back(2);
         meshIndices.emplace_back(3);
 
-        U16 const indicesCount = static_cast<U16>(meshIndices.size());
-        U16 const verticesCount = static_cast<U16>(positions.size());
+        uint16_t const indicesCount = static_cast<uint16_t>(meshIndices.size());
+        uint16_t const verticesCount = static_cast<uint16_t>(positions.size());
 
         model.mesh.initForWrite(
             verticesCount, 

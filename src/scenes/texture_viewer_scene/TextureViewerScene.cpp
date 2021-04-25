@@ -14,159 +14,6 @@ namespace FS = MFA::FileSystem;
 namespace AS = MFA::AssetSystem;
 namespace SG = MFA::ShapeGenerator;
 
-static void tinyktxCallbackError(void *user, char const *msg) {
-    MFA_LOG_ERROR("Tiny_Ktx ERROR: %s", msg);
-}
-static void *tinyktxCallbackAlloc(void *user, const size_t size) {
-    return MFA::Memory::Alloc(size).ptr;
-}
-static void tinyktxCallbackFree(void *user, void *data) {
-    MFA::Memory::PtrFree(data);
-}
-// TODO Start from here, Complete all callbacks
-static size_t tinyktxCallbackRead(void *user, void* data, const size_t size) {
-    auto * handle = static_cast<FS::FileHandle *>(user);
-    return FS::Read(handle, MFA::Blob {data, size});
-}
-static bool tinyktxCallbackSeek(void *user, const int64_t offset) {
-    auto * handle = static_cast<FS::FileHandle *>(user);
-    return FS::Seek(handle, static_cast<int>(offset), FS::Origin::Start);
-
-}
-static int64_t tinyktxCallbackTell(void *user) {
-    auto * handle = static_cast<FS::FileHandle *>(user);
-    int64_t location = 0;
-    bool success = FS::Tell(handle, location);
-    MFA_ASSERT(success);
-    return location;
-}
-
-AS::Texture loadKTX(FS::FileHandle * handle) {
-
-    using namespace MFA;
-    using TextureFormat = AssetSystem::Texture::Format;
-
-    AS::Texture result {};
-
-    TinyKtx_Callbacks callbacks {
-            &tinyktxCallbackError,
-            &tinyktxCallbackAlloc,
-            &tinyktxCallbackFree,
-            tinyktxCallbackRead,
-            &tinyktxCallbackSeek,
-            &tinyktxCallbackTell
-    };
-
-    auto * ctx =  TinyKtx_CreateContext( &callbacks, handle);
-    MFA_DEFER {
-        TinyKtx_DestroyContext(ctx);
-    };
-    
-    auto const readHeaderResult = TinyKtx_ReadHeader(ctx);
-    MFA_ASSERT(readHeaderResult);
-
-    U16 width = static_cast<U16>(TinyKtx_Width(ctx));
-    U16 height = static_cast<U16>(TinyKtx_Height(ctx));
-    U16 depth = Math::Max<U16>(static_cast<U16>(TinyKtx_Depth(ctx)), 1);
-    const U8 sliceCount = Math::Max<U8>(static_cast<U8>(TinyKtx_ArraySlices(ctx)), 1);
-    // TODO
-    //TinyKtx_Is1D()
-    //TinyKtx_Is2D()
-    //TinyKtx_Is3D()
-    //TinyKtx_IsCubemap()
-    
-    TinyKtx_Format const tinyKtxFormat = TinyKtx_GetFormat(ctx);
-    TextureFormat const format = [tinyKtxFormat]() -> TextureFormat
-    {
-        TextureFormat conversionResult = TextureFormat::INVALID;
-        switch (tinyKtxFormat) 
-        {
-            case TKTX_BC7_SRGB_BLOCK:
-                conversionResult = TextureFormat::BC7_UNorm_sRGB_RGBA;
-            break;
-            case TKTX_BC7_UNORM_BLOCK:
-                conversionResult = TextureFormat::BC7_UNorm_Linear_RGBA;
-            break;
-            case TKTX_BC5_UNORM_BLOCK:
-                conversionResult = TextureFormat::BC5_UNorm_Linear_RG;
-            break;
-            case TKTX_BC5_SNORM_BLOCK:
-                conversionResult = TextureFormat::BC5_SNorm_Linear_RG;
-            break;
-            case TKTX_BC4_UNORM_BLOCK:
-                conversionResult = TextureFormat::BC4_UNorm_Linear_R;
-            break;
-            case TKTX_BC4_SNORM_BLOCK:
-                conversionResult = AssetSystem::Texture::Format::BC4_SNorm_Linear_R;
-            break;
-            case TKTX_R8G8B8A8_UNORM:
-                conversionResult = AssetSystem::Texture::Format::UNCOMPRESSED_UNORM_R8G8B8A8_LINEAR;
-            break;
-            case TKTX_R8G8B8A8_SRGB:
-                conversionResult = TextureFormat::UNCOMPRESSED_UNORM_R8G8B8A8_SRGB;
-            break;
-            case TKTX_R8G8_UNORM:
-                conversionResult = TextureFormat::UNCOMPRESSED_UNORM_R8G8_LINEAR;
-            break;
-            case TKTX_R8_UNORM:
-                conversionResult = TextureFormat::UNCOMPRESSED_UNORM_R8_LINEAR;
-            break;
-            case TKTX_R8_SNORM:
-                conversionResult = TextureFormat::UNCOMPRESSED_UNORM_R8_SRGB;
-            break;
-            default:
-                break;
-        }
-        return conversionResult;
-    }();
-
-    if(tinyKtxFormat != TKTX_UNDEFINED) {
-        const U8 mipmapCount = static_cast<U8>(TinyKtx_NumberOfMipmaps(ctx));
-        uint64_t totalImageSize = 0;
-
-        int previousImageSize = -1;
-        for(auto i = 0u; i < mipmapCount; ++i) {
-            int imageSize = TinyKtx_ImageSize(ctx, i);
-            totalImageSize += imageSize;
-
-            MFA_ASSERT(previousImageSize == -1 || imageSize < previousImageSize);
-            previousImageSize = imageSize;
-        }
-        
-        result.initForWrite(
-            format, 
-            sliceCount, 
-            depth, 
-            nullptr, 
-            Memory::Alloc(totalImageSize)
-        );
-
-        for(auto i = 0u; i < mipmapCount; ++i) {
-            MFA_ASSERT(width >= 1);
-            MFA_ASSERT(height >= 1);
-            MFA_ASSERT(depth >= 1);
-
-            auto const imageSize = TinyKtx_ImageSize(ctx, i);
-            auto const * imageDataPtr = TinyKtx_ImageRawData(ctx, i);
-            
-            result.addMipmap(
-                AS::Texture::Dimensions {
-                    .width = width,
-                    .height = height,
-                    .depth = depth
-                }, 
-                CBlob {imageDataPtr, imageSize}
-            );
-
-            width = Math::Max<U16>(width / 2, 1);
-            height = Math::Max<U16>(height / 2, 1);
-            depth = Math::Max<U16>(depth / 2, 1);
-        }
-    }
-
-    return result;
-}
-
 void TextureViewerScene::Init() {
 
     // Vertex shader
@@ -214,13 +61,13 @@ void TextureViewerScene::Init() {
 
     createDescriptorSetLayout();
     
-    createDrawPipeline(static_cast<MFA::U8>(shaders.size()), shaders.data());
+    createDrawPipeline(static_cast<uint8_t>(shaders.size()), shaders.data());
 
     createDrawableObject();
 
     // Updating perspective mat once for entire application
     // Perspective
-    MFA::I32 width; MFA::I32 height;
+    int32_t width; int32_t height;
     RF::GetWindowSize(width, height);
     float const ratio = static_cast<float>(width) / static_cast<float>(height);
     MFA::Matrix4X4Float perspectiveMat {};
@@ -245,7 +92,7 @@ void TextureViewerScene::Shutdown() {
 }
 
 void TextureViewerScene::OnDraw(
-    MFA::U32 deltaTime, 
+    uint32_t deltaTime, 
     RF::DrawPass & drawPass
 ) {
     RF::BindDrawPipeline(drawPass, mDrawPipeline);
@@ -303,7 +150,7 @@ void TextureViewerScene::OnDraw(
 }
 
 void TextureViewerScene::OnUI(
-    MFA::U32 delta_time, 
+    uint32_t delta_time, 
     RF::DrawPass & draw_pass
 ) {
     static constexpr float ItemWidth = 500;
@@ -331,7 +178,7 @@ void TextureViewerScene::createDescriptorSetLayout() {
         std::vector<VkDescriptorSetLayoutBinding> bindings {};
     // ViewProjectionBuffer 
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<MFA::U32>(bindings.size()),
+        .binding = static_cast<uint32_t>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
@@ -339,7 +186,7 @@ void TextureViewerScene::createDescriptorSetLayout() {
     });
     // Texture
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<MFA::U32>(bindings.size()),
+        .binding = static_cast<uint32_t>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -347,20 +194,20 @@ void TextureViewerScene::createDescriptorSetLayout() {
     });
     // ImageOptions
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<MFA::U32>(bindings.size()),
+        .binding = static_cast<uint32_t>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         .pImmutableSamplers = nullptr, // Optional
     });
     mDescriptorSetLayout = RF::CreateDescriptorSetLayout(
-        static_cast<MFA::U8>(bindings.size()),
+        static_cast<uint8_t>(bindings.size()),
         bindings.data()
     );
 }
 
 void TextureViewerScene::createDrawPipeline(
-    MFA::U8 const gpuShaderCount, 
+    uint8_t const gpuShaderCount, 
     MFA::RenderBackend::GpuShader * gpuShaders
 ) {
     VkVertexInputBindingDescription const vertexInputBindingDescription {
@@ -372,14 +219,14 @@ void TextureViewerScene::createDrawPipeline(
     std::vector<VkVertexInputAttributeDescription> vkVertexInputAttributeDescriptions {};
     // Position
     vkVertexInputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = static_cast<MFA::U32>(vkVertexInputAttributeDescriptions.size()),
+        .location = static_cast<uint32_t>(vkVertexInputAttributeDescriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32B32_SFLOAT,
         .offset = offsetof(AS::MeshVertex, position),   
     });
     // BaseColor
     vkVertexInputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = static_cast<MFA::U32>(vkVertexInputAttributeDescriptions.size()),
+        .location = static_cast<uint32_t>(vkVertexInputAttributeDescriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
         .offset = offsetof(AS::MeshVertex, baseColorUV),   
@@ -390,7 +237,7 @@ void TextureViewerScene::createDrawPipeline(
         gpuShaders,
         mDescriptorSetLayout,
         vertexInputBindingDescription,
-        static_cast<MFA::U8>(vkVertexInputAttributeDescriptions.size()),
+        static_cast<uint8_t>(vkVertexInputAttributeDescriptions.size()),
         vkVertexInputAttributeDescriptions.data()
     );
 }
@@ -398,14 +245,7 @@ void TextureViewerScene::createDrawPipeline(
 void TextureViewerScene::createModel() {
     auto cpuModel = SG::Sheet();
 
-    auto * fileHandle = MFA::FileSystem::OpenFile(
-        //"../assets/models/sponza/2185409758123873465.ktx", 
-        "../assets/models/sponza/11490520546946913238.ktx",
-        MFA::FileSystem::Usage::Read
-    );
-    MFA_ASSERT(fileHandle != nullptr);
-
-    auto cpuTexture = loadKTX(fileHandle);
+    auto cpuTexture = Importer::ImportKTXImage("../assets/models/sponza/11490520546946913238.ktx");
     MFA_ASSERT(cpuTexture.isValid());
 
     cpuModel.textures.emplace_back(cpuTexture);
@@ -491,7 +331,7 @@ void TextureViewerScene::createDrawableObject() {
     });
 
     RF::UpdateDescriptorSets(
-        static_cast<MFA::U8>(writeInfo.size()),
+        static_cast<uint8_t>(writeInfo.size()),
         writeInfo.data()
     );
 }

@@ -65,9 +65,9 @@ void DestroyDebugReportCallback(
 );
 
 [[nodiscard]]
-U32 FindMemoryType (
+uint32_t FindMemoryType (
     VkPhysicalDevice * physicalDevice,
-    U32 typeFilter, 
+    uint32_t typeFilter, 
     VkMemoryPropertyFlags propertyFlags
 );
 
@@ -77,7 +77,7 @@ VkImageView_T * CreateImageView (
     VkImage_T const & image, 
     VkFormat format, 
     VkImageAspectFlags aspect_flags,
-    U32 mipmap_count
+    uint32_t mipmap_count
 );
 
 void DestroyImageView(
@@ -114,8 +114,8 @@ void TransferImageLayout(
     VkImage_T * image, 
     VkImageLayout oldLayout, 
     VkImageLayout newLayout,
-    U32 levelCount,
-    U32 layerCount
+    uint32_t levelCount,
+    uint32_t layerCount
 );
 
 struct BufferGroup {
@@ -164,11 +164,11 @@ struct ImageGroup {
 ImageGroup CreateImage(
     VkDevice_T * device,
     VkPhysicalDevice_T * physical_device,
-    U32 width, 
-    U32 height,
-    U32 depth,
-    U8 mip_levels,
-    U16 slice_count,
+    uint32_t width, 
+    uint32_t height,
+    uint32_t depth,
+    uint8_t mip_levels,
+    uint16_t slice_count,
     VkFormat format, 
     VkImageTiling tiling, 
     VkImageUsageFlags usage, 
@@ -239,8 +239,8 @@ struct LogicalDevice {
 [[nodiscard]]
 LogicalDevice CreateLogicalDevice(
     VkPhysicalDevice_T * physicalDevice,
-    U32 graphicsQueueFamily,
-    U32 presentQueueFamily,
+    uint32_t graphicsQueueFamily,
+    uint32_t presentQueueFamily,
     VkPhysicalDeviceFeatures const & enabledPhysicalDeviceFeatures
 );
 
@@ -249,7 +249,7 @@ void DestroyLogicalDevice(LogicalDevice const & logical_device);
 [[nodiscard]]
 VkQueue_T * GetQueueByFamilyIndex(
     VkDevice_T * device,
-    U32 queue_family_index
+    uint32_t queue_family_index
 );
 
 struct CreateSamplerParams {
@@ -284,8 +284,8 @@ FindPhysicalDeviceResult FindPhysicalDevice(VkInstance_T * vk_instance);
 bool CheckSwapChainSupport(VkPhysicalDevice_T * physical_device);
 
 struct FindPresentAndGraphicQueueFamilyResult {
-    U32 present_queue_family;
-    U32 graphic_queue_family;
+    uint32_t present_queue_family;
+    uint32_t graphic_queue_family;
 };
 [[nodiscard]]
 FindPresentAndGraphicQueueFamilyResult FindPresentAndGraphicQueueFamily(
@@ -294,7 +294,7 @@ FindPresentAndGraphicQueueFamilyResult FindPresentAndGraphicQueueFamily(
 );
 
 [[nodiscard]]
-VkCommandPool_T * CreateCommandPool(VkDevice_T * device, U32 queue_family_index);
+VkCommandPool_T * CreateCommandPool(VkDevice_T * device, uint32_t queue_family_index);
 
 void DestroyCommandPool(VkDevice_T * device, VkCommandPool_T * command_pool);
 
@@ -344,7 +344,7 @@ void DestroyRenderPass(VkDevice_T * device, VkRenderPass_T * renderPass);
 std::vector<VkFramebuffer_T *> CreateFrameBuffers(
     VkDevice_T * device,
     VkRenderPass_T * renderPass,
-    U32 swapChainImageViewsCount, 
+    uint32_t swapChainImageViewsCount, 
     VkImageView_T ** swapChainImageViews,
     VkImageView_T * depthImageView,
     VkExtent2D swapChainExtent
@@ -352,7 +352,7 @@ std::vector<VkFramebuffer_T *> CreateFrameBuffers(
 
 void DestroyFrameBuffers(
     VkDevice_T * device,
-    U32 frameBuffersCount,
+    uint32_t frameBuffersCount,
     VkFramebuffer_T ** frameBuffers
 );
 
@@ -405,7 +405,7 @@ struct CreateGraphicPipelineOptions {
         .alphaBlendOp = VK_BLEND_OP_ADD,
         .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
     };
-    U8 push_constants_range_count = 0;
+    uint8_t push_constants_range_count = 0;
     VkPushConstantRange * push_constant_ranges = nullptr;
     bool use_static_viewport_and_scissor = true;
     VkPrimitiveTopology primitive_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -414,10 +414,10 @@ struct CreateGraphicPipelineOptions {
 [[nodiscard]]
 GraphicPipelineGroup CreateGraphicPipeline(
     VkDevice_T * device, 
-    U8 shader_stages_count, 
+    uint8_t shader_stages_count, 
     GpuShader const * shader_stages,
     VkVertexInputBindingDescription vertex_binding_description,
-    U32 attribute_description_count,
+    uint32_t attribute_description_count,
     VkVertexInputAttributeDescription * attribute_description_data,
     VkExtent2D swap_chain_extent,
     VkRenderPass_T * render_pass,
@@ -430,7 +430,7 @@ void DestroyGraphicPipeline(VkDevice_T * device, GraphicPipelineGroup & graphicP
 [[nodiscard]]
 VkDescriptorSetLayout_T * CreateDescriptorSetLayout(
     VkDevice_T * device,
-    U8 bindings_count,
+    uint8_t bindings_count,
     VkDescriptorSetLayoutBinding * bindings
 );
 
@@ -474,7 +474,7 @@ void DestroyIndexBuffer(
 std::vector<BufferGroup> CreateUniformBuffer(
     VkDevice_T * device,
     VkPhysicalDevice_T * physical_device,
-    U32 buffersCount,
+    uint32_t buffersCount,
     VkDeviceSize size 
 );
 
@@ -492,7 +492,7 @@ void DestroyUniformBuffer(
 [[nodiscard]]
 VkDescriptorPool_T * CreateDescriptorPool(
     VkDevice_T * device,
-    U32 swap_chain_images_count
+    uint32_t swap_chain_images_count
 );
 
 void DestroyDescriptorPool(
@@ -506,17 +506,17 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSet(
     VkDevice_T * device,
     VkDescriptorPool_T * descriptor_pool,
     VkDescriptorSetLayout_T * descriptor_set_layout,
-    U32 descriptor_set_count,
-    U8 schemas_count = 0,
+    uint32_t descriptor_set_count,
+    uint8_t schemas_count = 0,
     VkWriteDescriptorSet * schemas = nullptr
 );
 
 // TODO Consider creating an easier interface
 void UpdateDescriptorSets(
     VkDevice_T * device,
-    U8 descriptor_set_count,
+    uint8_t descriptor_set_count,
     VkDescriptorSet_T ** descriptor_sets,
-    U8 schemas_count,
+    uint8_t schemas_count,
     VkWriteDescriptorSet * schemas
 );
 
@@ -527,14 +527,14 @@ void UpdateDescriptorSets(
  ***/
 std::vector<VkCommandBuffer_T *> CreateCommandBuffers(
     VkDevice_T * device,
-    U8 swap_chain_images_count,
+    uint8_t swap_chain_images_count,
     VkCommandPool_T * command_pool
 );
 
 void DestroyCommandBuffers(
     VkDevice_T * device,
     VkCommandPool_T * commandPool,
-    U8 commandBuffersCount,
+    uint8_t commandBuffersCount,
     VkCommandBuffer_T ** commandBuffers
 );
 
@@ -548,8 +548,8 @@ struct SyncObjects {
 [[nodiscard]]
 SyncObjects CreateSyncObjects(
     VkDevice_T * device,
-    U8 maxFramesInFlight,
-    U8 swapChainImagesCount
+    uint8_t maxFramesInFlight,
+    uint8_t swapChainImagesCount
 );
 
 void DestroySyncObjects(VkDevice_T * device, SyncObjects const & syncObjects);
@@ -559,7 +559,7 @@ void DeviceWaitIdle(VkDevice_T * device);
 void WaitForFence(VkDevice_T * device, VkFence_T * inFlightFence);
 
 [[nodiscard]]
-U8 AcquireNextImage(
+uint8_t AcquireNextImage(
     VkDevice_T * device, 
     VkSemaphore_T * imageAvailabilitySemaphore, 
     SwapChainGroup const & swapChainGroup
@@ -580,11 +580,11 @@ void BindIndexBuffer(
 
 void DrawIndexed(
     VkCommandBuffer_T * command_buffer,
-    U32 indices_count,
-    U32 instance_count = 1,
-    U32 first_index = 0,
-    U32 vertex_offset = 0,
-    U32 first_instance = 0
+    uint32_t indices_count,
+    uint32_t instance_count = 1,
+    uint32_t first_index = 0,
+    uint32_t vertex_offset = 0,
+    uint32_t first_instance = 0
 );
 
 void SetScissor(VkCommandBuffer_T * commandBuffer, VkRect2D const & scissor);
@@ -595,22 +595,22 @@ void PushConstants(
     VkCommandBuffer_T * command_buffer,
     VkPipelineLayout_T * pipeline_layout, 
     AssetSystem::ShaderStage shader_stage, 
-    U32 offset, 
+    uint32_t offset, 
     CBlob data
 );
 
 void UpdateDescriptorSetsBasic(
     VkDevice_T * device,
-    U8 descriptor_sets_count,
+    uint8_t descriptor_sets_count,
     VkDescriptorSet_T ** descriptor_sets,
     VkDescriptorBufferInfo const & buffer_info,
-    U32 image_info_count,
+    uint32_t image_info_count,
     VkDescriptorImageInfo const * image_infos
 );
 
 void UpdateDescriptorSets(
     VkDevice_T * device,
-    U8 descriptorWritesCount,
+    uint8_t descriptorWritesCount,
     VkWriteDescriptorSet * descriptorWrites
 );
 

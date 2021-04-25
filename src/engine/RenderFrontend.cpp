@@ -29,8 +29,8 @@ struct State {
     VkSurfaceKHR_T * surface = nullptr;
     VkPhysicalDevice_T * physical_device = nullptr;
     VkPhysicalDeviceFeatures physical_device_features {};
-    U32 graphic_queue_family;
-    U32 present_queue_family;
+    uint32_t graphic_queue_family;
+    uint32_t present_queue_family;
     VkQueue_T * graphic_queue = nullptr;
     VkQueue_T * present_queue = nullptr;
     RB::LogicalDevice logicalDevice {};
@@ -42,7 +42,7 @@ struct State {
     VkDescriptorPool_T * descriptorPool {};
     std::vector<VkCommandBuffer_T *> graphic_command_buffers {};
     RB::SyncObjects sync_objects {};
-    U8 current_frame = 0;
+    uint8_t current_frame = 0;
 } static state {};
 
 static VkBool32 DebugCallback(
@@ -62,7 +62,9 @@ static VkBool32 DebugCallback(
     } else {
         MFA_LOG_INFO("Message code: %d\nMessage: %s\n", message_code, message);
     }
-    MFA_DEBUG_CRASH("Vulkan debug event");
+#ifdef MFA_DEBUG
+    MFA_CRASH("Vulkan debug event");
+#endif
     return true;
 }
 
@@ -144,7 +146,7 @@ bool Init(InitParams const & params) {
     state.frame_buffers = RB::CreateFrameBuffers(
         state.logicalDevice.device,
         state.render_pass,
-        static_cast<U8>(state.swap_chain_group.swapChainImageViews.size()),
+        static_cast<uint8_t>(state.swap_chain_group.swapChainImageViews.size()),
         state.swap_chain_group.swapChainImageViews.data(),
         state.depth_image_group.imageView,
         swap_chain_extent
@@ -155,13 +157,13 @@ bool Init(InitParams const & params) {
     );
     state.graphic_command_buffers = RB::CreateCommandBuffers(
         state.logicalDevice.device,
-        static_cast<U8>(state.swap_chain_group.swapChainImages.size()),
+        static_cast<uint8_t>(state.swap_chain_group.swapChainImages.size()),
         state.graphic_command_pool
     );
     state.sync_objects = RB::CreateSyncObjects(
         state.logicalDevice.device,
         MAX_FRAMES_IN_FLIGHT,
-        static_cast<U8>(state.swap_chain_group.swapChainImages.size())
+        static_cast<uint8_t>(state.swap_chain_group.swapChainImages.size())
     );
     return true;
 }
@@ -176,7 +178,7 @@ bool Shutdown() {
     RB::DestroyCommandBuffers(
         state.logicalDevice.device, 
         state.graphic_command_pool,
-        static_cast<U8>(state.graphic_command_buffers.size()),
+        static_cast<uint8_t>(state.graphic_command_buffers.size()),
         state.graphic_command_buffers.data()
     );
     RB::DestroyDescriptorPool(
@@ -185,7 +187,7 @@ bool Shutdown() {
     );
     RB::DestroyFrameBuffers(
         state.logicalDevice.device,
-        static_cast<U8>(state.frame_buffers.size()),
+        static_cast<uint8_t>(state.frame_buffers.size()),
         state.frame_buffers.data()
     );
     RB::DestroyDepth(
@@ -243,13 +245,13 @@ VkDescriptorSetLayout_T * CreateBasicDescriptorSetLayout() {
     };
 
     return CreateDescriptorSetLayout(
-        static_cast<U8>(descriptor_set_layout_bindings.size()),
+        static_cast<uint8_t>(descriptor_set_layout_bindings.size()),
         descriptor_set_layout_bindings.data()
     );
 }
 
 VkDescriptorSetLayout_T * CreateDescriptorSetLayout(
-    U8 const bindingsCount, 
+    uint8_t const bindingsCount, 
     VkDescriptorSetLayoutBinding * bindings
 ) {
     auto * descriptorSetLayout = RB::CreateDescriptorSetLayout(
@@ -269,11 +271,11 @@ void DestroyDescriptorSetLayout(VkDescriptorSetLayout_T * descriptorSetLayout) {
 }
 
 DrawPipeline CreateBasicDrawPipeline(
-    U8 const gpuShadersCount, 
+    uint8_t const gpuShadersCount, 
     RB::GpuShader * gpuShaders,
     VkDescriptorSetLayout_T * descriptorSetLayout,
     VkVertexInputBindingDescription const & vertexInputBindingDescription,
-    U8 const vertexInputAttributeDescriptionCount,
+    uint8_t const vertexInputAttributeDescriptionCount,
     VkVertexInputAttributeDescription * vertexInputAttributeDescriptions
 ) {
     MFA_ASSERT(gpuShadersCount > 0);
@@ -313,11 +315,11 @@ DrawPipeline CreateBasicDrawPipeline(
 
 [[nodiscard]]
 DrawPipeline CreateDrawPipeline(
-    U8 const gpu_shaders_count, 
+    uint8_t const gpu_shaders_count, 
     RB::GpuShader * gpu_shaders,
     VkDescriptorSetLayout_T * descriptor_set_layout,
     VkVertexInputBindingDescription const vertex_binding_description,
-    U32 const input_attribute_description_count,
+    uint32_t const input_attribute_description_count,
     VkVertexInputAttributeDescription * input_attribute_description_data,
     RB::CreateGraphicPipelineOptions const & options
 ) {
@@ -326,7 +328,7 @@ DrawPipeline CreateDrawPipeline(
         gpu_shaders_count,
         gpu_shaders,
         vertex_binding_description,
-        static_cast<U32>(input_attribute_description_count),
+        static_cast<uint32_t>(input_attribute_description_count),
         input_attribute_description_data,
         VkExtent2D {.width = state.screen_width, .height = state.screen_height},
         state.render_pass,
@@ -353,12 +355,12 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSets(
         state.logicalDevice.device,
         state.descriptorPool,
         descriptor_set_layout,
-        static_cast<U8>(state.swap_chain_group.swapChainImages.size())
+        static_cast<uint8_t>(state.swap_chain_group.swapChainImages.size())
     );
 }
 
 std::vector<VkDescriptorSet_T *> CreateDescriptorSets(
-    U32 const descriptorSetCount,
+    uint32_t const descriptorSetCount,
     VkDescriptorSetLayout_T * descriptorSetLayout
 ) {
     MFA_ASSERT(descriptorSetLayout != nullptr);
@@ -370,7 +372,7 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSets(
     );
 }
 
-UniformBufferGroup CreateUniformBuffer(size_t const bufferSize, U32 const count) {
+UniformBufferGroup CreateUniformBuffer(size_t const bufferSize, uint32_t const count) {
     auto const buffers = RB::CreateUniformBuffer(
         state.logicalDevice.device,
         state.physical_device,
@@ -626,7 +628,7 @@ void UpdateDescriptorSetBasic(
     DrawPass const & drawPass,
     VkDescriptorSet_T * descriptorSet,
     UniformBufferGroup const & uniformBuffer,
-    U32 const imageInfoCount,
+    uint32_t const imageInfoCount,
     VkDescriptorImageInfo const * imageInfos
 ) {
     VkDescriptorBufferInfo bufferInfo {};
@@ -645,7 +647,7 @@ void UpdateDescriptorSetBasic(
 }
 
 void UpdateDescriptorSets(
-    U8 const writeInfoCount,
+    uint8_t const writeInfoCount,
     VkWriteDescriptorSet * writeInfo
 ) {
     RB::UpdateDescriptorSets(
@@ -656,9 +658,9 @@ void UpdateDescriptorSets(
 }
 
 void UpdateDescriptorSets(
-    U8 const descriptorSetsCount,
+    uint8_t const descriptorSetsCount,
     VkDescriptorSet_T ** descriptorSets,
-    U8 const writeInfoCount,
+    uint8_t const writeInfoCount,
     VkWriteDescriptorSet * writeInfo
 ) {
     RB::UpdateDescriptorSets(
@@ -720,11 +722,11 @@ void BindIndexBuffer(
 
 void DrawIndexed(
     DrawPass const drawPass, 
-    U32 const indicesCount,
-    U32 const instanceCount,
-    U32 const firstIndex,
-    U32 const vertexOffset,
-    U32 const firstInstance
+    uint32_t const indicesCount,
+    uint32_t const instanceCount,
+    uint32_t const firstIndex,
+    uint32_t const vertexOffset,
+    uint32_t const firstInstance
 ) {
     RB::DrawIndexed(
         state.graphic_command_buffers[drawPass.imageIndex], 
@@ -815,7 +817,7 @@ void EndPass(DrawPass & drawPass) {
     VkSwapchainKHR swapChains[] = {state.swap_chain_group.swapChain};
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
-    U32 imageIndices = drawPass.imageIndex;
+    uint32_t imageIndices = drawPass.imageIndex;
     presentInfo.pImageIndices = &imageIndices;
 
     {
@@ -852,7 +854,7 @@ void SetViewport(DrawPass const & draw_pass, VkViewport const & viewport) {
 void PushConstants(
     DrawPass const & draw_pass, 
     AssetSystem::ShaderStage const shader_stage, 
-    U32 const offset, 
+    uint32_t const offset, 
     CBlob const data
 ) {
     RB::PushConstants(
@@ -864,25 +866,25 @@ void PushConstants(
     );
 }
 
-U8 SwapChainImagesCount() {
-    return static_cast<U8>(state.swap_chain_group.swapChainImages.size());
+uint8_t SwapChainImagesCount() {
+    return static_cast<uint8_t>(state.swap_chain_group.swapChainImages.size());
 }
 
 // SDL functions
 
-void WarpMouseInWindow(I32 const x, I32 const y) {
+void WarpMouseInWindow(int32_t const x, int32_t const y) {
     SDL_WarpMouseInWindow(state.window, x, y);
 }
 
-U32 GetWindowFlags() {
+uint32_t GetWindowFlags() {
     return SDL_GetWindowFlags(state.window); 
 }
 
-void GetWindowSize(I32 & out_width, I32 & out_height) {
+void GetWindowSize(int32_t & out_width, int32_t & out_height) {
     SDL_GetWindowSize(state.window, &out_width, &out_height);
 }
 
-void GetDrawableSize(I32 & out_width, I32 & out_height) {
+void GetDrawableSize(int32_t & out_width, int32_t & out_height) {
     SDL_GL_GetDrawableSize(state.window, &out_width, &out_height);
 }
 

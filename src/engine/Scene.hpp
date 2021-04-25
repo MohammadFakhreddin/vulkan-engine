@@ -13,7 +13,7 @@ public:
     void Shutdown();
     void RegisterNew(Scene * scene, char const * name);
     void SetActiveScene(char const * name);
-    void OnNewFrame(U32 deltaTime);
+    void OnNewFrame(uint32_t deltaTime);
 private:
 
     struct RegisteredScene {
@@ -22,15 +22,15 @@ private:
     };
     
     std::vector<RegisteredScene> mRegisteredScenes;
-    I32 mActiveScene = -1;
-    I32 mLastActiveScene = -1;
+    int32_t mActiveScene = -1;
+    int32_t mLastActiveScene = -1;
 };
 
 class Scene {
 public:
     virtual ~Scene() = default;
-    virtual void OnDraw(U32 delta_time, RenderFrontend::DrawPass & draw_pass) = 0;
-    virtual void OnUI(U32 delta_time, RenderFrontend::DrawPass & draw_pass) = 0;
+    virtual void OnDraw(uint32_t delta_time, RenderFrontend::DrawPass & draw_pass) = 0;
+    virtual void OnUI(uint32_t delta_time, RenderFrontend::DrawPass & draw_pass) = 0;
     virtual void Init() = 0;
     virtual void Shutdown() = 0;
 };

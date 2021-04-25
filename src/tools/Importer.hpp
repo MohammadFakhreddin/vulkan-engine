@@ -7,17 +7,17 @@ namespace MFA::Importer {
 namespace AS = AssetSystem;
 //------------------------------Assets-------------------------------------
 
-struct ImportTextureOptions {
+struct ImportUnCompressedTextureOptions {
     bool generate_mipmaps = true;
     bool prefer_srgb = false;       // Not tested and not recommended
-    AS::TextureSampler * sampler = nullptr;
+    AS::SamplerConfig * sampler = nullptr;
     // TODO Usage flags
 };
 
 [[nodiscard]]
 AS::Texture ImportUncompressedImage(
     char const * path, 
-    ImportTextureOptions const & options = {}
+    ImportUnCompressedTextureOptions const & options = {}
 );
 
 [[nodiscard]]
@@ -26,13 +26,22 @@ AS::Texture CreateErrorTexture();
 [[nodiscard]]
 AS::Texture ImportInMemoryTexture(
     CBlob originalImagePixels,
-    I32 width,
-    I32 height,
+    int32_t width,
+    int32_t height,
     AS::TextureFormat format,
-    U32 components,
-    U16 depth = 1,
-    U16 slices = 1,
-    ImportTextureOptions const & options = {}
+    uint32_t components,
+    uint16_t depth = 1,
+    uint16_t slices = 1,
+    ImportUnCompressedTextureOptions const & options = {}
+);
+
+struct ImportKtxTextureOptions {
+    AS::SamplerConfig * sampler = nullptr;     
+};
+
+AS::Texture ImportKTXImage(
+    char const * path,
+    ImportKtxTextureOptions const & options = {}
 );
 
 // TODO ImageArray

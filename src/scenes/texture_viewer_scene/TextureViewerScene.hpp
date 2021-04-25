@@ -9,8 +9,8 @@ public:
     TextureViewerScene() = default;
     void Init() override;
     void Shutdown() override;
-    void OnDraw(MFA::U32 deltaTime, MFA::RenderFrontend::DrawPass & drawPass) override;
-    void OnUI(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override;
+    void OnDraw(uint32_t deltaTime, MFA::RenderFrontend::DrawPass & drawPass) override;
+    void OnUI(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override;
 
 private:
 
@@ -28,7 +28,7 @@ private:
     } mImageOptionsBuffer {};
 
     void createDescriptorSetLayout();
-    void createDrawPipeline(MFA::U8 gpuShaderCount, MFA::RenderBackend::GpuShader * gpuShaders);
+    void createDrawPipeline(uint8_t gpuShaderCount, MFA::RenderBackend::GpuShader * gpuShaders);
     void createModel();
     void createDrawableObject();
 

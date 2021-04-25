@@ -2,15 +2,15 @@
 
 namespace MFA::AssetSystem {
 
-U8 Texture::ComputeMipCount(Dimensions const & dimensions) {
-    U32 const max_dimension = Math::Max(
+uint8_t Texture::ComputeMipCount(Dimensions const & dimensions) {
+    uint32_t const max_dimension = Math::Max(
         dimensions.width, 
         Math::Max(
             dimensions.height, 
             static_cast<uint32_t>(dimensions.depth)
         )
     );
-    for (U8 i = 0; i < 32; ++i)
+    for (uint8_t i = 0; i < 32; ++i)
         if ((1ULL << i) >= max_dimension)
             return 1 + i;
     return 33;
@@ -46,9 +46,9 @@ Texture::Dimensions Texture::MipDimensions (
 
 size_t Texture::CalculateUncompressedTextureRequiredDataSize(
     Format const format,
-    U16 const slices,
+    uint16_t const slices,
     Dimensions const & dims,
-    U8 const mipCount
+    uint8_t const mipCount
 ) {
     size_t ret = 0;
     for (uint8_t mip_level = 0; mip_level < mipCount; mip_level++) {
@@ -63,9 +63,9 @@ size_t Texture::CalculateUncompressedTextureRequiredDataSize(
 
 void Texture::initForWrite(
     const Format format,
-    const U16 slices,
-    const U16 depth,
-    Sampler const * sampler,
+    const uint16_t slices,
+    const uint16_t depth,
+    SamplerConfig const * sampler,
     Blob const & buffer
 ) {
     MFA_ASSERT(mBuffer.ptr == nullptr);
@@ -93,13 +93,13 @@ void Texture::addMipmap(
     mPreviousMipWidth = dimension.width;
     mPreviousMipHeight = dimension.height;
 
-    U32 dataLen = static_cast<U32>(data.len);
+    uint32_t dataLen = static_cast<uint32_t>(data.len);
     mMipmapInfos.emplace_back(MipmapInfo {
         .offset = mCurrentOffset,
         .size = dataLen,
         .dimension = dimension,
     });
-    U64 nextOffset = mCurrentOffset + dataLen;
+    uint64_t nextOffset = mCurrentOffset + dataLen;
     MFA_ASSERT(mBuffer.ptr != nullptr);
     MFA_ASSERT(nextOffset <= mBuffer.len);
     ::memcpy(mBuffer.ptr + mCurrentOffset, data.ptr, data.len);
@@ -127,8 +127,8 @@ bool Texture::isValid() const {
 }
 
 void Mesh::initForWrite(
-    const U32 vertexCount,
-    const U32 indexCount,
+    const uint32_t vertexCount,
+    const uint32_t indexCount,
     const Blob & vertexBuffer,
     const Blob & indexBuffer
 ) {
@@ -159,17 +159,17 @@ void Mesh::finalizeData() {
     }
 }
 
-U32 Mesh::insertSubMesh() {
+uint32_t Mesh::insertSubMesh() {
     mSubMeshes.emplace_back();
-    return static_cast<U32>(mSubMeshes.size() - 1);
+    return static_cast<uint32_t>(mSubMeshes.size() - 1);
 }
 
 void Mesh::insertPrimitive(
-    U32 subMeshIndex,
+    uint32_t subMeshIndex,
     Primitive && primitive, 
-    U32 const vertexCount, 
+    uint32_t const vertexCount, 
     Vertex * vertices, 
-    U32 const indicesCount, 
+    uint32_t const indicesCount, 
     Index * indices
 ) {
     MFA_ASSERT(vertexCount > 0);
@@ -181,8 +181,8 @@ void Mesh::insertPrimitive(
     primitive.indicesOffset = mNextIndexOffset;
     primitive.verticesOffset = mNextVertexOffset;
     primitive.indicesStartingIndex = mNextStartingIndex;
-    U32 const verticesSize = sizeof(Vertex) * vertexCount;
-    U32 const indicesSize = sizeof(Index) * indicesCount;
+    uint32_t const verticesSize = sizeof(Vertex) * vertexCount;
+    uint32_t const indicesSize = sizeof(Index) * indicesCount;
     MFA_ASSERT(mNextVertexOffset + verticesSize <= mVertexBuffer.len);
     MFA_ASSERT(mNextIndexOffset + indicesSize <= mIndexBuffer.len);
     ::memcpy(mVertexBuffer.ptr + mNextVertexOffset, vertices, verticesSize);

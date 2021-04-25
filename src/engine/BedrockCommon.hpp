@@ -43,18 +43,18 @@ struct DeferHelper {
 
 namespace MFA {
 
-/* Ubiquitous Types */
-using I8 = std::int8_t;
-using I16 = std::int16_t;
-using I32 = std::int32_t;
-using I64 = std::int64_t;
+///* Ubiquitous Types */
+//using int8_t = std::int8_t;
+//using int16_t = std::int16_t;
+//using int32_t = std::int32_t;
+//using int64_t = std::int64_t;
+//
+//using uint8_t = std::uint8_t;
+//using uint16_t = std::uint16_t;
+//using uint32_t = std::uint32_t;
+//using uint64_t = std::uint64_t;
 
-using U8 = std::uint8_t;
-using U16 = std::uint16_t;
-using U32 = std::uint32_t;
-using U64 = std::uint64_t;
-
-using Byte = U8;
+using Byte = uint8_t;
 
 using F32 = float;
 using F64 = double;
@@ -75,6 +75,9 @@ struct TBlob {
     U * as () const {return reinterpret_cast<U *>(ptr);}
     template <typename U>
     U const * as_const () const {return reinterpret_cast<U const *>(ptr);}
+    bool isEmpty() {
+        return ptr == nullptr && len = 0;
+    }
 };
 
 using Blob = TBlob<Byte>;

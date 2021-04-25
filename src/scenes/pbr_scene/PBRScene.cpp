@@ -80,7 +80,7 @@ void PBRScene::Init() {
             light_buff_binding
         };
         m_descriptor_set_layout = RF::CreateDescriptorSetLayout(
-            static_cast<MFA::U8>(bindings.size()), 
+            static_cast<uint8_t>(bindings.size()), 
             bindings.data()
         );
     }
@@ -106,11 +106,11 @@ void PBRScene::Init() {
         };
 
         m_draw_pipeline = RF::CreateDrawPipeline(
-            static_cast<MFA::U8>(shaders.size()), 
+            static_cast<uint8_t>(shaders.size()), 
             shaders.data(),
             m_descriptor_set_layout,
             vertex_binding_description,
-            static_cast<MFA::U32>(input_attribute_descriptions.size()),
+            static_cast<uint32_t>(input_attribute_descriptions.size()),
             input_attribute_descriptions.data(),
             RB::CreateGraphicPipelineOptions {
                 .depth_stencil {
@@ -163,7 +163,7 @@ void PBRScene::Shutdown() {
     Importer::FreeModel(&m_sphere.model);
 }
 
-void PBRScene::OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
+void PBRScene::OnDraw(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
     RF::BindDrawPipeline(draw_pass, m_draw_pipeline);
     {// Updating uniform buffers
         {// Material
@@ -222,7 +222,7 @@ void PBRScene::OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_
             ::memcpy(m_translate_data.transform, transform.cells, sizeof(transform.cells));
             
             // Perspective
-            MFA::I32 width; MFA::I32 height;
+            int32_t width; int32_t height;
             RF::GetWindowSize(width, height);
             float const ratio = static_cast<float>(width) / static_cast<float>(height);
             // TODO I think we should use camera position here
@@ -257,7 +257,7 @@ void PBRScene::OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_
     {// Drawing spheres
         BindVertexBuffer(draw_pass, m_sphere.meshBuffers.verticesBuffer);
         BindIndexBuffer(draw_pass, m_sphere.meshBuffers.indicesBuffer);
-        for (MFA::U32 i = 0; i < m_sphere.model.mesh.getSubMeshCount(); ++i) {
+        for (uint32_t i = 0; i < m_sphere.model.mesh.getSubMeshCount(); ++i) {
             auto const & subMesh = m_sphere.model.mesh.getSubMeshByIndex(i);
             if (subMesh.primitives.empty() == false) {
                 for (auto const & primitive : subMesh.primitives) {
@@ -273,7 +273,7 @@ void PBRScene::OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_
     }
 }
 
-void PBRScene::OnUI(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
+void PBRScene::OnUI(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
     ImGui::Begin("Sphere");
     ImGui::SetNextItemWidth(300.0f);
     ImGui::SliderFloat("XDegree", &m_sphere_rotation[0], -360.0f, 360.0f);
@@ -319,7 +319,7 @@ void PBRScene::OnUI(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pa
             "Material", 
             &m_selected_material_index, 
             items.data(), 
-            static_cast<MFA::I32>(items.size())
+            static_cast<int32_t>(items.size())
         );
     }
     //ImGui::SetNextItemWidth(300.0f);
@@ -338,12 +338,12 @@ void PBRScene::OnUI(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pa
 }
 
 void PBRScene::updateAllDescriptorSets() {
-    for (MFA::U8 i = 0; i < m_sphere_descriptor_sets.size(); ++i) {
+    for (uint8_t i = 0; i < m_sphere_descriptor_sets.size(); ++i) {
         updateDescriptorSet(i);
     }
 }
 
-void PBRScene::updateDescriptorSet(MFA::U8 const index) {
+void PBRScene::updateDescriptorSet(uint8_t const index) {
     auto * current_descriptor_set = m_sphere_descriptor_sets[index];
     std::vector<VkWriteDescriptorSet> write_info {};
     // Transform
@@ -398,7 +398,7 @@ void PBRScene::updateDescriptorSet(MFA::U8 const index) {
     RF::UpdateDescriptorSets(
         1, 
         &current_descriptor_set, 
-        static_cast<MFA::U8>(write_info.size()), 
+        static_cast<uint8_t>(write_info.size()), 
         write_info.data()
     );
 }

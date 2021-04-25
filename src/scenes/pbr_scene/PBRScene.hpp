@@ -12,15 +12,15 @@ public:
 
     void Shutdown() override;
 
-    void OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override;
+    void OnDraw(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override;
 
-    void OnUI(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override;
+    void OnUI(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override;
 
 private:
 
     void updateAllDescriptorSets();
 
-    void updateDescriptorSet(MFA::U8 index);
+    void updateDescriptorSet(uint8_t index);
 
     static constexpr float Z_NEAR = 0.1f;
     static constexpr float Z_FAR = 1000.0f;
@@ -59,7 +59,7 @@ private:
     MFA::RenderFrontend::UniformBufferGroup m_light_view_buffer_group;
     struct LightViewBuffer {
         alignas(16) float camPos[3];
-        alignas(4) MFA::I32 lightCount;
+        alignas(4) int32_t lightCount;
         alignas(16) float lightPositions[3];
         //alignas(16) float lightColors[3];
     } m_light_view_data {};
@@ -87,7 +87,7 @@ private:
 
     float const m_camera_position[3] {0.0f, 0.0f, 0.0f};   // For now, it's a constant value
  
-    MFA::I32 m_light_count = 1; // For now, it's a constant value
+    int32_t m_light_count = 1; // For now, it's a constant value
     float m_light_position[3] {0.0f, 0.0f, -2.0f};
     //float m_light_colors[3] {1.0f, 1.0f, 1.0f};
 

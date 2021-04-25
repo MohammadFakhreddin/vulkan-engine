@@ -12,9 +12,9 @@ public:
 
     void Init() override;
 
-    void OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override;
+    void OnDraw(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override;
 
-    void OnUI(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override;
+    void OnUI(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override;
 
     void Shutdown() override;
 
@@ -43,7 +43,7 @@ private:
 
     void destroyModels();
 
-    void createDrawPipeline(MFA::U8 gpu_shader_count, MFA::RenderBackend::GpuShader * gpu_shaders);
+    void createDrawPipeline(uint8_t gpu_shader_count, MFA::RenderBackend::GpuShader * gpu_shaders);
 
     void createDescriptorSetLayout();
 
@@ -84,8 +84,8 @@ private:
     float m_light_color[3] {252.0f/256.0f, 212.0f/256.0f, 64.0f/256.0f};
 
     std::vector<ModelRenderRequiredData> mModelsRenderData {};
-    MFA::I32 mSelectedModelIndex = 1;
-    MFA::I32 mPreviousModelSelectedIndex = -1;
+    int32_t mSelectedModelIndex = 1;
+    int32_t mPreviousModelSelectedIndex = -1;
 
     MFA::RenderFrontend::SamplerGroup m_sampler_group {};
 

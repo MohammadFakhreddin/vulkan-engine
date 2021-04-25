@@ -162,11 +162,11 @@ void GLTFMeshViewerScene::Init() {
 
     createDescriptorSetLayout();
 
-    createDrawPipeline(static_cast<MFA::U8>(shaders.size()), shaders.data());
+    createDrawPipeline(static_cast<uint8_t>(shaders.size()), shaders.data());
 
     // Updating perspective mat once for entire application
     // Perspective
-    MFA::I32 width; MFA::I32 height;
+    int32_t width; int32_t height;
     RF::GetWindowSize(width, height);
     float const ratio = static_cast<float>(width) / static_cast<float>(height);
     MFA::Matrix4X4Float perspectiveMat {};
@@ -182,7 +182,7 @@ void GLTFMeshViewerScene::Init() {
 
 }
 
-void GLTFMeshViewerScene::OnDraw(MFA::U32 const delta_time, RF::DrawPass & draw_pass) {
+void GLTFMeshViewerScene::OnDraw(uint32_t const delta_time, RF::DrawPass & draw_pass) {
     MFA_ASSERT(mSelectedModelIndex >=0 && mSelectedModelIndex < mModelsRenderData.size());
     auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
     if (selectedModel.isLoaded == false) {
@@ -257,7 +257,7 @@ void GLTFMeshViewerScene::OnDraw(MFA::U32 const delta_time, RF::DrawPass & draw_
     selectedModel.drawableObject.draw(draw_pass);
 }
 
-void GLTFMeshViewerScene::OnUI(MFA::U32 const delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
+void GLTFMeshViewerScene::OnUI(uint32_t const delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
     static constexpr float ItemWidth = 500;
     ImGui::Begin("Object viewer");
     ImGui::SetNextItemWidth(ItemWidth);
@@ -272,7 +272,7 @@ void GLTFMeshViewerScene::OnUI(MFA::U32 const delta_time, MFA::RenderFrontend::D
         "Object selector",
         &mSelectedModelIndex,
         modelNames.data(), 
-        static_cast<MFA::I32>(modelNames.size())
+        static_cast<int32_t>(modelNames.size())
     );
     ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("XDegree", &m_model_rotation[0], -360.0f, 360.0f);
@@ -342,7 +342,7 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
 
     auto const & textures = drawableObject.getModel()->textures;
 
-    for (MFA::U32 nodeIndex = 0; nodeIndex < cpuModel.mesh.getNodesCount(); ++nodeIndex) {// Updating descriptor sets
+    for (uint32_t nodeIndex = 0; nodeIndex < cpuModel.mesh.getNodesCount(); ++nodeIndex) {// Updating descriptor sets
         auto const & node = cpuModel.mesh.getNodeByIndex(nodeIndex);
         if (node.hasSubMesh()) {
             auto const & subMesh = cpuModel.mesh.getSubMeshByIndex(node.subMeshIndex);
@@ -513,7 +513,7 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
                     // TODO Important: Don't forget to bind nodeTransform buffer
 
                     RF::UpdateDescriptorSets(
-                        static_cast<MFA::U8>(writeInfo.size()),
+                        static_cast<uint8_t>(writeInfo.size()),
                         writeInfo.data()
                     );
                 }
@@ -538,7 +538,7 @@ void GLTFMeshViewerScene::destroyModels() {
  
 }
 
-void GLTFMeshViewerScene::createDrawPipeline(MFA::U8 const gpu_shader_count, MFA::RenderBackend::GpuShader * gpu_shaders) {
+void GLTFMeshViewerScene::createDrawPipeline(uint8_t const gpu_shader_count, MFA::RenderBackend::GpuShader * gpu_shaders) {
 
     VkVertexInputBindingDescription const vertex_binding_description {
         .binding = 0,
@@ -549,47 +549,47 @@ void GLTFMeshViewerScene::createDrawPipeline(MFA::U8 const gpu_shader_count, MFA
     std::vector<VkVertexInputAttributeDescription> input_attribute_descriptions {};
     // Position
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
+        .location = static_cast<uint32_t>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32B32_SFLOAT,
         .offset = offsetof(AS::MeshVertex, position),   
     });
     // BaseColor
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
+        .location = static_cast<uint32_t>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
         .offset = offsetof(AS::MeshVertex, baseColorUV),   
     });
     // Metallic/Roughness
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
+        .location = static_cast<uint32_t>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
         .offset = offsetof(AS::MeshVertex, metallicUV), // Metallic and roughness have same uv for gltf files  
     });
     // Normal
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
+        .location = static_cast<uint32_t>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
         .offset = offsetof(AS::MeshVertex, normalMapUV),   
     });
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
+        .location = static_cast<uint32_t>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32B32A32_SFLOAT,
         .offset = offsetof(AS::MeshVertex, tangentValue),   
     });
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
+        .location = static_cast<uint32_t>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32B32_SFLOAT,
         .offset = offsetof(AS::MeshVertex, normalValue),   
     });
     // Emissive
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = static_cast<MFA::U32>(input_attribute_descriptions.size()),
+        .location = static_cast<uint32_t>(input_attribute_descriptions.size()),
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
         .offset = offsetof(AS::MeshVertex, emissionUV)
@@ -599,7 +599,7 @@ void GLTFMeshViewerScene::createDrawPipeline(MFA::U8 const gpu_shader_count, MFA
         gpu_shaders,
         m_descriptor_set_layout,
         vertex_binding_description,
-        static_cast<MFA::U8>(input_attribute_descriptions.size()),
+        static_cast<uint8_t>(input_attribute_descriptions.size()),
         input_attribute_descriptions.data()
     );
 
@@ -609,7 +609,7 @@ void GLTFMeshViewerScene::createDescriptorSetLayout() {
     std::vector<VkDescriptorSetLayoutBinding> bindings {};
     // ModelTransformation 
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<MFA::U32>(bindings.size()),
+        .binding = static_cast<uint32_t>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
@@ -617,7 +617,7 @@ void GLTFMeshViewerScene::createDescriptorSetLayout() {
     });
     // NodeTransformation
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<MFA::U32>(bindings.size()),
+        .binding = static_cast<uint32_t>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
@@ -625,7 +625,7 @@ void GLTFMeshViewerScene::createDescriptorSetLayout() {
     });
     // SubMeshInfo
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<MFA::U32>(bindings.size()),
+        .binding = static_cast<uint32_t>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -633,7 +633,7 @@ void GLTFMeshViewerScene::createDescriptorSetLayout() {
     });
     // BaseColor
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<MFA::U32>(bindings.size()),
+        .binding = static_cast<uint32_t>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -641,7 +641,7 @@ void GLTFMeshViewerScene::createDescriptorSetLayout() {
     });
     // Metallic/Roughness
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<MFA::U32>(bindings.size()),
+        .binding = static_cast<uint32_t>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -649,7 +649,7 @@ void GLTFMeshViewerScene::createDescriptorSetLayout() {
     });
     // Normal
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<MFA::U32>(bindings.size()),
+        .binding = static_cast<uint32_t>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -657,7 +657,7 @@ void GLTFMeshViewerScene::createDescriptorSetLayout() {
     });
     // Emissive
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<MFA::U32>(bindings.size()),
+        .binding = static_cast<uint32_t>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -665,14 +665,14 @@ void GLTFMeshViewerScene::createDescriptorSetLayout() {
     });
     // Light/View
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<MFA::U32>(bindings.size()),
+        .binding = static_cast<uint32_t>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         .pImmutableSamplers = nullptr, // Optional
     });
     m_descriptor_set_layout = RF::CreateDescriptorSetLayout(
-        static_cast<MFA::U8>(bindings.size()),
+        static_cast<uint8_t>(bindings.size()),
         bindings.data()
     );
 }

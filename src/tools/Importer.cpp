@@ -3,15 +3,16 @@
 #include "../engine/BedrockMemory.hpp"
 #include "../engine/BedrockFileSystem.hpp"
 #include "../tools/ImageUtils.hpp"
-#include "libs/stb_image/stb_image_resize.h"
 #include "libs/tiny_obj_loader/tiny_obj_loader.h"
 #include "libs/tiny_gltf_loader/tiny_gltf_loader.h"
 
 namespace MFA::Importer {
 
+namespace FS = FileSystem;
+
 AS::Texture ImportUncompressedImage(
     char const * path,
-    ImportTextureOptions const & options
+    ImportUnCompressedTextureOptions const & options
 ) {
     AS::Texture texture {};
     Utils::UncompressedTexture::Data imageData {};
@@ -69,30 +70,26 @@ AS::Texture CreateErrorTexture() {
 
 AS::Texture ImportInMemoryTexture(
     CBlob const originalImagePixels,
-    I32 const width,
-    I32 const height,
+    int32_t const width,
+    int32_t const height,
     AS::TextureFormat const format,
-    U32 const components,
-    U16 const depth,
-    U16 const slices,
-    ImportTextureOptions const & options
+    uint32_t const components,
+    uint16_t const depth,
+    uint16_t const slices,
+    ImportUnCompressedTextureOptions const & options
 ) {
+    using namespace Utils::UncompressedTexture;
+
     auto const useSrgb = options.prefer_srgb;
     AS::Texture::Dimensions const originalImageDimension {
-        static_cast<U32>(width),
-        static_cast<U32>(height),
+        static_cast<uint32_t>(width),
+        static_cast<uint32_t>(height),
         depth
     };
-    U8 const mipCount = options.generate_mipmaps
+    uint8_t const mipCount = options.generate_mipmaps
         ? AS::Texture::ComputeMipCount(originalImageDimension)
         : 1;
-    //if (static_cast<unsigned>(options.usage_flags) &
-    //    static_cast<unsigned>(YUGA::TextureUsageFlags::Normal | 
-    //        YUGA::TextureUsageFlags::Metalness |
-    //        YUGA::TextureUsageFlags::Roughness)) {
-    //    use_srgb = false;
-    //}
-    // TODO Maybe we should add a check to make sure asset has uncompressed type
+
     auto const bufferSize = AS::Texture::CalculateUncompressedTextureRequiredDataSize(
         format,
         slices,
@@ -111,7 +108,7 @@ AS::Texture ImportInMemoryTexture(
     // Generating mipmaps (TODO : Code needs debugging)
     texture.addMipmap(originalImageDimension, originalImagePixels);
     
-    for (U8 mipLevel = 1; mipLevel < mipCount; mipLevel++) {
+    for (uint8_t mipLevel = 1; mipLevel < mipCount; mipLevel++) {
         auto const currentMipDims = AS::Texture::MipDimensions(
             mipLevel,
             mipCount,
@@ -126,32 +123,17 @@ AS::Texture ImportInMemoryTexture(
         MFA_DEFER {
             Memory::Free(mipMapPixels);
         };
-        
-        // TODO What should we do for 3d assets ?
-        auto const resizeResult = useSrgb ? stbir_resize_uint8_srgb(
-            originalImagePixels.ptr,
-            width,
-            height,
-            0,
-            mipMapPixels.ptr,
-            currentMipDims.width,
-            currentMipDims.height,
-            0,
-            components,
-            components > 3 ? 3 : STBIR_ALPHA_CHANNEL_NONE,
-            0
-        ) : stbir_resize_uint8(
-            originalImagePixels.ptr,
-            width,
-            height,
-            0,
-            mipMapPixels.ptr,
-            currentMipDims.width,
-            currentMipDims.height, 
-            0,
-            components
-        );
-        MFA_ASSERT(resizeResult > 0);
+
+        auto const resizeResult = Utils::UncompressedTexture::Resize(ResizeInputParams {
+            .inputImagePixels = originalImagePixels,
+            .inputImageWidth = static_cast<int>(originalImageDimension.width),
+            .inputImageHeight = static_cast<int>(originalImageDimension.height),
+            .outputImagePixels = mipMapPixels,
+            .outputWidth = static_cast<int>(currentMipDims.width),
+            .outputHeight = static_cast<int>(currentMipDims.height)
+        });
+        MFA_ASSERT(resizeResult == true);
+
         texture.addMipmap(
             currentMipDims,
             mipMapPixels
@@ -165,6 +147,60 @@ AS::Texture ImportInMemoryTexture(
     }
 
     return texture;
+}
+
+
+AS::Texture ImportKTXImage(char const * path, ImportKtxTextureOptions const & options) {
+    using namespace Utils::KTXTexture;
+
+    AS::Texture result {};
+
+    LoadResult loadResult = LoadResult::Invalid;
+    auto * imageInfo = Load(loadResult, path);
+    
+    if(MFA_VERIFY(loadResult == LoadResult::Success && imageInfo != nullptr)) {
+
+        MFA_DEFER {
+            Unload(imageInfo);
+        };
+
+        result.initForWrite(
+            imageInfo->format, 
+            imageInfo->sliceCount, 
+            imageInfo->depth,
+            nullptr,
+            Memory::Alloc(imageInfo->totalImageSize)
+        );
+
+        auto width = imageInfo->width;
+        auto height = imageInfo->height;
+        auto depth = imageInfo->depth;
+
+        for(auto i = 0u; i < imageInfo->mipmapCount; ++i) {
+            MFA_ASSERT(width >= 1);
+            MFA_ASSERT(height >= 1);
+            MFA_ASSERT(depth >= 1);
+
+            auto const mipBlob = GetMipBlob(imageInfo, i);
+            if (!MFA_VERIFY(mipBlob.ptr != nullptr && mipBlob.len > 0)) {
+                return AS::Texture {};
+            }
+            
+            result.addMipmap(
+                AS::Texture::Dimensions {
+                    .width = static_cast<uint32_t>(width),
+                    .height = static_cast<uint32_t>(height),
+                    .depth = static_cast<uint16_t>(depth)
+                }, 
+                mipBlob
+            );
+
+            width = Math::Max<uint16_t>(width / 2, 1);
+            height = Math::Max<uint16_t>(height / 2, 1);
+            depth = Math::Max<uint16_t>(depth / 2, 1);
+        }
+    }
+    return result;
 }
 
 AS::Texture ImportDDSFile(char const * path) {
@@ -184,17 +220,17 @@ AS::Shader ImportShaderFromSPV(
     MFA_ASSERT(path != nullptr);
     AS::Shader shader {};
     if (path != nullptr) {
-        auto * file = FileSystem::OpenFile(path,  FileSystem::Usage::Read);
-        MFA_DEFER{FileSystem::CloseFile(file);};
-        if(FileSystem::IsUsable(file)) {
-            auto const fileSize = FileSystem::FileSize(file);
+        auto * file = FS::OpenFile(path,  FS::Usage::Read);
+        MFA_DEFER{FS::CloseFile(file);};
+        if(FS::IsUsable(file)) {
+            auto const fileSize = FS::FileSize(file);
             MFA_ASSERT(fileSize > 0);
 
             auto const buffer = Memory::Alloc(fileSize);
 
             shader.init(entryPoint, stage, buffer);
 
-            auto const readBytes = FileSystem::Read(file, buffer);
+            auto const readBytes = FS::Read(file, buffer);
 
             if(readBytes != buffer.len) {
                 shader.revokeData();
@@ -223,15 +259,15 @@ AS::Shader ImportShaderFromSPV(
 
 AS::Mesh ImportObj(char const * path) {
     AS::Mesh mesh {};
-    if(FileSystem::Exists(path)){
-        auto * file = FileSystem::OpenFile(path, FileSystem::Usage::Read);
-        MFA_DEFER {FileSystem::CloseFile(file);};
-        if(FileSystem::IsUsable(file)) {
+    if(FS::Exists(path)){
+        auto * file = FS::OpenFile(path, FS::Usage::Read);
+        MFA_DEFER {FS::CloseFile(file);};
+        if(FS::IsUsable(file)) {
             bool is_counter_clockwise = false;
             {//Check if normal vectors are reverse
                 auto first_line_blob = Memory::Alloc(200);
                 MFA_DEFER {Memory::Free(first_line_blob);};
-                FileSystem::Read(file, first_line_blob);
+                FS::Read(file, first_line_blob);
                 std::string const first_line = std::string(first_line_blob.as<char>());
                 if(first_line.find("ccw") != std::string::npos){
                     is_counter_clockwise = true;
@@ -314,8 +350,8 @@ AS::Mesh ImportObj(char const * path) {
                     normals[normalIndex].value[1] = attributes.normals[normalIndex * 3 + 1];
                     normals[normalIndex].value[2] = attributes.normals[normalIndex * 3 + 2];
                 }
-                auto const vertexCount = static_cast<U32>(positions_count);
-                auto const indexCount = static_cast<U32>(shapes[0].mesh.indices.size());
+                auto const vertexCount = static_cast<uint32_t>(positions_count);
+                auto const indexCount = static_cast<uint32_t>(shapes[0].mesh.indices.size());
                 mesh.initForWrite(
                     vertexCount, 
                     indexCount, 
@@ -361,9 +397,9 @@ AS::Mesh ImportObj(char const * path) {
                         .baseColorTextureIndex = 0,
                         .hasNormalBuffer = true
                     },
-                    static_cast<U32>(vertices.size()),
+                    static_cast<uint32_t>(vertices.size()),
                     vertices.data(),
-                    static_cast<U32>(indices.size()),
+                    static_cast<uint32_t>(indices.size()),
                     indices.data()
                 );
 
@@ -409,10 +445,10 @@ AS::Model ImportGLTF(char const * path) {
             if(false == gltfModel.meshes.empty()) {
                 struct TextureRef {
                     std::string gltf_name;
-                    U8 index;
+                    uint8_t index;
                 };
                 std::vector<TextureRef> textureRefs {};
-                auto const find_texture_by_name = [&textureRefs](char const * gltfName)-> I16 {
+                auto const find_texture_by_name = [&textureRefs](char const * gltfName)-> int16_t {
                     MFA_ASSERT(gltfName != nullptr);
                     if(false == textureRefs.empty()) {
                         for (auto const & textureRef : textureRefs) {
@@ -427,11 +463,11 @@ AS::Model ImportGLTF(char const * path) {
                 auto const generate_uv_keyword = [](int32_t const uv_index) -> std::string{
                     return "TEXCOORD_" + std::to_string(uv_index);
                 };
-                std::string directory_path = FileSystem::ExtractDirectoryFromPath(path);
+                std::string directory_path = FS::ExtractDirectoryFromPath(path);
                 // Extracting textures
                 if(false == gltfModel.textures.empty()) {
                     for (auto const & texture : gltfModel.textures) {
-                        AS::TextureSampler sampler {.isValid = false};
+                        AS::SamplerConfig sampler {.isValid = false};
                         if (texture.sampler >= 0) {// Sampler
                             auto const & gltf_sampler = gltfModel.samplers[texture.sampler];
                             sampler.magFilter = gltf_sampler.magFilter;
@@ -448,13 +484,13 @@ AS::Model ImportGLTF(char const * path) {
                             assetSystemTexture = ImportUncompressedImage(
                                 image_path.c_str(),
                                 // TODO generate_mipmaps = true;
-                                ImportTextureOptions {.generate_mipmaps = false, .sampler = &sampler}
+                                ImportUnCompressedTextureOptions {.generate_mipmaps = false, .sampler = &sampler}
                             );
                         }
                         MFA_ASSERT(assetSystemTexture.isValid());
                         textureRefs.emplace_back(TextureRef {
                             .gltf_name = image.uri,
-                            .index = static_cast<U8>(resultModel.textures.size())
+                            .index = static_cast<uint8_t>(resultModel.textures.size())
                         });
                         resultModel.textures.emplace_back(assetSystemTexture);
                     }
@@ -464,21 +500,21 @@ AS::Model ImportGLTF(char const * path) {
                     //model_asset.textures[base_color_texture_index]  
                 }
                 // Step1: Iterate over all meshes and gather required information for asset buffer
-                U32 totalIndicesCount = 0;
-                U32 totalVerticesCount = 0;
-                U32 indicesVertexStartingIndex = 0;
+                uint32_t totalIndicesCount = 0;
+                uint32_t totalVerticesCount = 0;
+                uint32_t indicesVertexStartingIndex = 0;
                 for(auto & mesh : gltfModel.meshes) {
                     if(false == mesh.primitives.empty()) {
                         for(auto & primitive : mesh.primitives) {
                             {// Indices
                                 MFA_REQUIRE((primitive.indices < gltfModel.accessors.size()));
                                 auto const & accessor = gltfModel.accessors[primitive.indices];
-                                totalIndicesCount += static_cast<U32>(accessor.count);
+                                totalIndicesCount += static_cast<uint32_t>(accessor.count);
                             }
                             {// Positions
                                 MFA_REQUIRE((primitive.attributes["POSITION"] < gltfModel.accessors.size()));
                                 auto const & accessor = gltfModel.accessors[primitive.attributes["POSITION"]];
-                                totalVerticesCount += static_cast<U32>(accessor.count);
+                                totalVerticesCount += static_cast<uint32_t>(accessor.count);
                             }
                         }
                     }
@@ -491,7 +527,7 @@ AS::Model ImportGLTF(char const * path) {
                 );
                 // Step2: Fill subMeshes
                 
-                U32 primitiveUniqueId = 0;
+                uint32_t primitiveUniqueId = 0;
                 std::vector<AS::Mesh::Vertex> primitiveVertices {};
                 std::vector<AS::MeshIndex> primitiveIndices {};
 
@@ -502,19 +538,19 @@ AS::Model ImportGLTF(char const * path) {
                             primitiveIndices.erase(primitiveIndices.begin(), primitiveIndices.end());
                             primitiveVertices.erase(primitiveVertices.begin(), primitiveVertices.end());
                             
-                            I16 baseColorTextureIndex = -1;
+                            int16_t baseColorTextureIndex = -1;
                             int32_t baseColorUvIndex = -1;
-                            I16 metallicRoughnessTextureIndex = -1;
+                            int16_t metallicRoughnessTextureIndex = -1;
                             int32_t metallicRoughnessUvIndex = -1;
-                            I16 normalTextureIndex = -1;
+                            int16_t normalTextureIndex = -1;
                             int32_t normalUvIndex = -1;
-                            I16 emissiveTextureIndex = -1;
+                            int16_t emissiveTextureIndex = -1;
                             int32_t emissiveUvIndex = -1;
                             float baseColorFactor[4] {};
                             float metallicFactor = 0;
                             float roughnessFactor = 0;
                             float emissiveFactor [3] {};
-                            U32 uniqueId = primitiveUniqueId;
+                            uint32_t uniqueId = primitiveUniqueId;
                             primitiveUniqueId++;
                             if(primitive.material >= 0) {// Material
                                 auto const & material = gltfModel.materials[primitive.material];
@@ -564,42 +600,42 @@ AS::Model ImportGLTF(char const * path) {
                                     emissiveFactor[2] = static_cast<float>(material.emissiveFactor[2]);
                                 }
                             }
-                            U32 primitiveIndicesCount = 0;
+                            uint32_t primitiveIndicesCount = 0;
                             {// Indices
                                 MFA_REQUIRE(primitive.indices < gltfModel.accessors.size());
                                 auto const & accessor = gltfModel.accessors[primitive.indices];
                                 auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
                                 MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
                                 auto const & buffer = gltfModel.buffers[bufferView.buffer];
-                                primitiveIndicesCount = static_cast<U32>(accessor.count);
+                                primitiveIndicesCount = static_cast<uint32_t>(accessor.count);
                                 
                                 switch(accessor.componentType) {
                                     case TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT:
                                     {
-                                        auto const * gltfIndices = reinterpret_cast<U32 const *>(
+                                        auto const * gltfIndices = reinterpret_cast<uint32_t const *>(
                                             &buffer.data[bufferView.byteOffset + accessor.byteOffset]
                                         );
-                                        for (U32 i = 0; i < primitiveIndicesCount; i++) {
+                                        for (uint32_t i = 0; i < primitiveIndicesCount; i++) {
                                             primitiveIndices.emplace_back(gltfIndices[i] + indicesVertexStartingIndex);
                                         }
                                     }
                                     break;
                                     case TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT:
                                     {
-                                        auto const * gltfIndices = reinterpret_cast<U16 const *>(
+                                        auto const * gltfIndices = reinterpret_cast<uint16_t const *>(
                                             &buffer.data[bufferView.byteOffset + accessor.byteOffset]
                                         );
-                                        for (U32 i = 0; i < primitiveIndicesCount; i++) {
+                                        for (uint32_t i = 0; i < primitiveIndicesCount; i++) {
                                             primitiveIndices.emplace_back(gltfIndices[i] + indicesVertexStartingIndex);
                                         }
                                     }
                                     break;
                                     case TINYGLTF_PARAMETER_TYPE_UNSIGNED_BYTE:
                                     {
-                                        auto const * gltfIndices = reinterpret_cast<U8 const *>(
+                                        auto const * gltfIndices = reinterpret_cast<uint8_t const *>(
                                             &buffer.data[bufferView.byteOffset + accessor.byteOffset]
                                         );
-                                        for (U32 i = 0; i < primitiveIndicesCount; i++) {
+                                        for (uint32_t i = 0; i < primitiveIndicesCount; i++) {
                                             primitiveIndices.emplace_back(gltfIndices[i] + indicesVertexStartingIndex);
                                         }
                                     }
@@ -609,7 +645,7 @@ AS::Model ImportGLTF(char const * path) {
                                 }
                             }
                             float const * positions = nullptr;
-                            U32 primitiveVertexCount = 0;
+                            uint32_t primitiveVertexCount = 0;
                             float positionsMinValue [3] {};
                             float positionsMaxValue [3] {};
                             bool hasPositionMinMax = false;
@@ -632,7 +668,7 @@ AS::Model ImportGLTF(char const * path) {
                                 positions = reinterpret_cast<const float *>(
                                     &buffer.data[bufferView.byteOffset + accessor.byteOffset]
                                 );
-                                primitiveVertexCount = static_cast<U32>(accessor.count);
+                                primitiveVertexCount = static_cast<uint32_t>(accessor.count);
                             }
                             float const * baseColorUvs = nullptr;
                             float baseColorUvMin [2] {};
@@ -824,7 +860,7 @@ AS::Model ImportGLTF(char const * path) {
                             MFA_ASSERT(emissionUVs != nullptr == emissiveTextureIndex >= 0);
                             bool hasTangentValue = tangentValues != nullptr;
                             //MFA_ASSERT(hasTangentValue == hasNormalTexture);
-                            for (U32 i = 0; i < primitiveVertexCount; ++i) {
+                            for (uint32_t i = 0; i < primitiveVertexCount; ++i) {
                                 primitiveVertices.emplace_back();
                                 auto & vertex = primitiveVertices.back();
                                 if (hasPosition) {// Vertices
@@ -912,9 +948,9 @@ AS::Model ImportGLTF(char const * path) {
                                     }
                                 }
                                 // TODO WTF ?
-                                vertex.color[0] = static_cast<U8>((256/(colorsMinMaxDiff[0])) * colors[i * 3 + 0]);
-                                vertex.color[1] = static_cast<U8>((256/(colorsMinMaxDiff[1])) * colors[i * 3 + 1]);
-                                vertex.color[2] = static_cast<U8>((256/(colorsMinMaxDiff[2])) * colors[i * 3 + 2]);
+                                vertex.color[0] = static_cast<uint8_t>((256/(colorsMinMaxDiff[0])) * colors[i * 3 + 0]);
+                                vertex.color[1] = static_cast<uint8_t>((256/(colorsMinMaxDiff[1])) * colors[i * 3 + 1]);
+                                vertex.color[2] = static_cast<uint8_t>((256/(colorsMinMaxDiff[2])) * colors[i * 3 + 2]);
                             }
 
                             // Creating new subMesh
@@ -937,9 +973,9 @@ AS::Model ImportGLTF(char const * path) {
                                     .hasNormalTexture = hasNormalTexture,
                                     .hasTangentBuffer = hasTangentValue
                                 }, 
-                                static_cast<U32>(primitiveVertices.size()), 
+                                static_cast<uint32_t>(primitiveVertices.size()), 
                                 primitiveVertices.data(), 
-                                static_cast<U32>(primitiveIndices.size()), 
+                                static_cast<uint32_t>(primitiveIndices.size()), 
                                 primitiveIndices.data()
                             );
 
@@ -1094,13 +1130,13 @@ RawFile ReadRawFile(char const * path) {
     RawFile ret {};
     MFA_ASSERT(path != nullptr);
     if(path != nullptr) {
-        auto * file = FileSystem::OpenFile(path, FileSystem::Usage::Read);
-        MFA_DEFER {FileSystem::CloseFile(file);};
-        if(FileSystem::IsUsable(file)) {
-            auto const file_size = FileSystem::FileSize(file);
+        auto * file = FS::OpenFile(path, FS::Usage::Read);
+        MFA_DEFER {FS::CloseFile(file);};
+        if(FS::IsUsable(file)) {
+            auto const file_size = FS::FileSize(file);
             // TODO Allocate using a memory pool system
             auto const memory_blob = Memory::Alloc(file_size);
-            auto const read_bytes = FileSystem::Read(file, ret.data);
+            auto const read_bytes = FS::Read(file, ret.data);
             // Means that reading is successful
             if(read_bytes == file_size) {
                 ret.data = memory_blob;

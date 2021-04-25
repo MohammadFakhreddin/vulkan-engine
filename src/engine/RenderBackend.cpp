@@ -38,8 +38,8 @@ SDL_Window * CreateWindow(ScreenWidth const screen_width, ScreenHeight const scr
     auto const screen_info = MFA::Platforms::ComputeScreenSize();
     return SDL_CreateWindow(
         "VULKAN_ENGINE", 
-        static_cast<U32>((screen_info.screen_width / 2.0f) - (screen_width / 2.0f)), 
-        static_cast<U32>((screen_info.screen_height / 2.0f) - (screen_height / 2.0f)),
+        static_cast<uint32_t>((screen_info.screen_width / 2.0f) - (screen_width / 2.0f)), 
+        static_cast<uint32_t>((screen_info.screen_height / 2.0f) - (screen_height / 2.0f)),
         screen_width, screen_height,
         SDL_WINDOW_SHOWN /*| SDL_WINDOW_FULLSCREEN */| SDL_WINDOW_VULKAN
     );
@@ -90,10 +90,10 @@ VkExtent2D ChooseSwapChainExtent(
 
 [[nodiscard]]
 VkPresentModeKHR ChoosePresentMode(
-    U8 const present_modes_count, 
+    uint8_t const present_modes_count, 
     VkPresentModeKHR const * present_modes
 ) {
-    for(U8 index = 0; index < present_modes_count; index ++) {
+    for(uint8_t index = 0; index < present_modes_count; index ++) {
         if (present_modes[index] == VK_PRESENT_MODE_MAILBOX_KHR) {
             return present_modes[index];
         } 
@@ -103,7 +103,7 @@ VkPresentModeKHR ChoosePresentMode(
 }
 
 VkSurfaceFormatKHR ChooseSurfaceFormat(
-    U8 const available_formats_count,
+    uint8_t const available_formats_count,
     VkSurfaceFormatKHR const * available_formats
 ) {
     // We can either choose any format
@@ -112,7 +112,7 @@ VkSurfaceFormatKHR ChooseSurfaceFormat(
     }
 
     // Or go with the standard format - if available
-    for(U8 index = 0; index < available_formats_count; index ++) {
+    for(uint8_t index = 0; index < available_formats_count; index ++) {
         if (available_formats[index].format == VK_FORMAT_R8G8B8A8_UNORM) {
             return available_formats[index];
         }
@@ -153,7 +153,7 @@ VkInstance_T * CreateInstance(char const * application_name, SDL_Window * window
         instance_extensions.emplace_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
     }
     {// Checking for extension support
-        U32 vk_supported_extension_count = 0;
+        uint32_t vk_supported_extension_count = 0;
         VK_Check(vkEnumerateInstanceExtensionProperties(
             nullptr,
             &vk_supported_extension_count,
@@ -176,13 +176,13 @@ VkInstance_T * CreateInstance(char const * application_name, SDL_Window * window
         // The application info structure is then passed through the instance
         instanceInfo.pApplicationInfo = &application_info;
 #ifdef MFA_DEBUG
-        instanceInfo.enabledLayerCount = static_cast<U32>(DebugLayers.size());
+        instanceInfo.enabledLayerCount = static_cast<uint32_t>(DebugLayers.size());
         instanceInfo.ppEnabledLayerNames = DebugLayers.data();
 #else
         instanceInfo.enabledLayerCount = 0;
         instanceInfo.ppEnabledLayerNames = nullptr;
 #endif
-        instanceInfo.enabledExtensionCount = static_cast<U32>(instance_extensions.size());
+        instanceInfo.enabledExtensionCount = static_cast<uint32_t>(instance_extensions.size());
         instanceInfo.ppEnabledExtensionNames = instance_extensions.data();
     }
     VkInstance vk_instance;
@@ -230,16 +230,16 @@ void DestroyDebugReportCallback(
     DestroyDebugReportCallback(instance, report_callback_ext, nullptr);
 }
 
-U32 FindMemoryType (
+uint32_t FindMemoryType (
     VkPhysicalDevice * physicalDevice,
-    U32 const typeFilter, 
+    uint32_t const typeFilter, 
     VkMemoryPropertyFlags const propertyFlags
 ) {
     MFA_ASSERT(physicalDevice != nullptr);
     VkPhysicalDeviceMemoryProperties memory_properties;
     vkGetPhysicalDeviceMemoryProperties(*physicalDevice, &memory_properties);
 
-    for (U32 memory_type_index = 0; memory_type_index < memory_properties.memoryTypeCount; memory_type_index++) {
+    for (uint32_t memory_type_index = 0; memory_type_index < memory_properties.memoryTypeCount; memory_type_index++) {
         if ((typeFilter & (1 << memory_type_index)) && (memory_properties.memoryTypes[memory_type_index].propertyFlags & propertyFlags) == propertyFlags) {
             return memory_type_index;
         }
@@ -253,7 +253,7 @@ VkImageView_T * CreateImageView (
     VkImage const & image, 
     VkFormat const format, 
     VkImageAspectFlags const aspect_flags,
-    U32 mipmap_count
+    uint32_t mipmap_count
 ) {
     MFA_ASSERT(device != nullptr);
 
@@ -336,7 +336,7 @@ VkFormat FindDepthFormat(VkPhysicalDevice_T * physical_device) {
     };
     return FindSupportedFormat (
         physical_device,
-        static_cast<U8>(candidate_formats.size()),
+        static_cast<uint8_t>(candidate_formats.size()),
         candidate_formats.data(),
         VK_IMAGE_TILING_OPTIMAL,
         VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
@@ -346,12 +346,12 @@ VkFormat FindDepthFormat(VkPhysicalDevice_T * physical_device) {
 [[nodiscard]]
 VkFormat FindSupportedFormat(
     VkPhysicalDevice_T * physical_device,
-    U8 const candidates_count, 
+    uint8_t const candidates_count, 
     VkFormat * candidates,
     VkImageTiling const tiling, 
     VkFormatFeatureFlags const features
 ) {
-    for(U8 index = 0; index < candidates_count; index ++) {
+    for(uint8_t index = 0; index < candidates_count; index ++) {
         VkFormatProperties props;
         vkGetPhysicalDeviceFormatProperties(physical_device, candidates[index], &props);
 
@@ -372,8 +372,8 @@ void TransferImageLayout(
     VkImage_T * image, 
     VkImageLayout const oldLayout, 
     VkImageLayout const newLayout,
-    U32 const levelCount,
-    U32 const layerCount
+    uint32_t const levelCount,
+    uint32_t const layerCount
 ) {
     MFA_ASSERT(device != nullptr);
     MFA_ASSERT(graphicQueue != nullptr);
@@ -522,11 +522,11 @@ void DestroyBuffer(
 ImageGroup CreateImage(
     VkDevice_T * device,
     VkPhysicalDevice_T * physical_device,
-    U32 const width, 
-    U32 const height,
-    U32 const depth,
-    U8 const mip_levels,
-    U16 const slice_count,
+    uint32_t const width, 
+    uint32_t const height,
+    uint32_t const depth,
+    uint8_t const mip_levels,
+    uint16_t const slice_count,
     VkFormat const format, 
     VkImageTiling const tiling, 
     VkImageUsageFlags const usage, 
@@ -761,8 +761,8 @@ void CopyBufferToImage(
     auto const regionsBlob = Memory::Alloc(regionCount * sizeof(VkBufferImageCopy));
     MFA_DEFER {Memory::Free(regionsBlob);};
     auto * regionsArray = regionsBlob.as<VkBufferImageCopy>();
-    for(U8 sliceIndex = 0; sliceIndex < slices; sliceIndex++) {
-        for(U8 mipLevel = 0; mipLevel < mipCount; mipLevel++) {
+    for(uint8_t sliceIndex = 0; sliceIndex < slices; sliceIndex++) {
+        for(uint8_t mipLevel = 0; mipLevel < mipCount; mipLevel++) {
             auto const & mipInfo = cpuTexture.GetMipmap(mipLevel);
             auto & region = regionsArray[mipLevel];
             region.imageExtent.width = mipInfo.dimension.width; 
@@ -771,7 +771,7 @@ void CopyBufferToImage(
             region.imageOffset.x = 0;
             region.imageOffset.y = 0;
             region.imageOffset.z = 0;
-            region.bufferOffset = static_cast<U32>(cpuTexture.mipOffsetInBytes(mipLevel, sliceIndex)); 
+            region.bufferOffset = static_cast<uint32_t>(cpuTexture.mipOffsetInBytes(mipLevel, sliceIndex)); 
             region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             region.imageSubresource.mipLevel = mipLevel;
             region.imageSubresource.baseArrayLayer = sliceIndex;
@@ -796,8 +796,8 @@ void CopyBufferToImage(
 
 LogicalDevice CreateLogicalDevice(
     VkPhysicalDevice_T * physicalDevice,
-    U32 const graphicsQueueFamily,
-    U32 const presentQueueFamily,
+    uint32_t const graphicsQueueFamily,
+    uint32_t const presentQueueFamily,
     VkPhysicalDeviceFeatures const & enabledPhysicalDeviceFeatures
 ) {
     LogicalDevice ret {};
@@ -837,7 +837,7 @@ LogicalDevice CreateLogicalDevice(
     // Necessary for shader (for some reason)
     deviceCreateInfo.pEnabledFeatures = &enabledPhysicalDeviceFeatures;
 #ifdef MFA_DEBUG
-    deviceCreateInfo.enabledLayerCount = static_cast<U32>(DebugLayers.size());
+    deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(DebugLayers.size());
     deviceCreateInfo.ppEnabledLayerNames = DebugLayers.data();
 #else
     deviceCreateInfo.enabledLayerCount = 0;
@@ -857,7 +857,7 @@ void DestroyLogicalDevice(LogicalDevice const & logical_device) {
 
 VkQueue_T * GetQueueByFamilyIndex(
     VkDevice_T * device,
-    U32 const queue_family_index
+    uint32_t const queue_family_index
 ) {
     VkQueue_T * graphic_queue = nullptr;
     vkGetDeviceQueue(
@@ -928,10 +928,10 @@ VkDebugReportCallbackEXT_T * SetDebugCallback(
     return ret;
 }
 
-static FindPhysicalDeviceResult FindPhysicalDevice(VkInstance_T * vk_instance, U8 const retry_count) {
+static FindPhysicalDeviceResult FindPhysicalDevice(VkInstance_T * vk_instance, uint8_t const retry_count) {
     FindPhysicalDeviceResult ret {};
 
-    U32 deviceCount = 0;
+    uint32_t deviceCount = 0;
     //Getting number of physical devices
     VK_Check(vkEnumeratePhysicalDevices(
         vk_instance, 
@@ -962,7 +962,7 @@ static FindPhysicalDeviceResult FindPhysicalDevice(VkInstance_T * vk_instance, U
     vkGetPhysicalDeviceProperties(ret.physicalDevice, &deviceProperties);
     vkGetPhysicalDeviceFeatures(ret.physicalDevice, &ret.physicalDeviceFeatures);
 
-    U32 supportedVersion[] = {
+    uint32_t supportedVersion[] = {
         VK_VERSION_MAJOR(deviceProperties.apiVersion),
         VK_VERSION_MINOR(deviceProperties.apiVersion),
         VK_VERSION_PATCH(deviceProperties.apiVersion)
@@ -982,7 +982,7 @@ FindPhysicalDeviceResult FindPhysicalDevice(VkInstance_T * vk_instance) {
 
 bool CheckSwapChainSupport(VkPhysicalDevice_T * physical_device) {
     bool ret = false;
-    U32 extension_count = 0;
+    uint32_t extension_count = 0;
     VK_Check(vkEnumerateDeviceExtensionProperties(
         physical_device, 
         nullptr, 
@@ -1007,7 +1007,7 @@ FindPresentAndGraphicQueueFamilyResult FindPresentAndGraphicQueueFamily(
 ) {
     FindPresentAndGraphicQueueFamilyResult ret {};
 
-    U32 queue_family_count = 0;
+    uint32_t queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, nullptr);
     if (queue_family_count == 0) {
         MFA_CRASH("physical device has no queue families!");
@@ -1025,7 +1025,7 @@ FindPresentAndGraphicQueueFamilyResult FindPresentAndGraphicQueueFamily(
 
     bool found_graphic_queue_family = false;
     bool found_present_queue_family = false;
-    for (U32 i = 0; i < queue_family_count; i++) {
+    for (uint32_t i = 0; i < queue_family_count; i++) {
         VkBool32 present_is_supported = false;
         vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, window_surface, &present_is_supported);
         if (queueFamilies[i].queueCount > 0 && queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
@@ -1055,7 +1055,7 @@ FindPresentAndGraphicQueueFamilyResult FindPresentAndGraphicQueueFamily(
     return ret; 
 }
 
-VkCommandPool_T * CreateCommandPool(VkDevice_T * device, U32 const queue_family_index) {
+VkCommandPool_T * CreateCommandPool(VkDevice_T * device, uint32_t const queue_family_index) {
     MFA_ASSERT(device);
     // Create graphics command pool
     VkCommandPoolCreateInfo poolCreateInfo = {};
@@ -1363,7 +1363,7 @@ void DestroyRenderPass(VkDevice_T * device, VkRenderPass_T * renderPass) {
 std::vector<VkFramebuffer_T *> CreateFrameBuffers(
     VkDevice_T * device,
     VkRenderPass_T * renderPass,
-    U32 const swapChainImageViewsCount, 
+    uint32_t const swapChainImageViewsCount, 
     VkImageView_T ** swapChainImageViews,
     VkImageView_T * depthImageView,
     VkExtent2D const swapChainExtent
@@ -1402,10 +1402,10 @@ std::vector<VkFramebuffer_T *> CreateFrameBuffers(
 
 void DestroyFrameBuffers(
     VkDevice_T * device,
-    U32 const frameBuffersCount,
+    uint32_t const frameBuffersCount,
     VkFramebuffer_T ** frameBuffers
 ) {
-    for(U32 index = 0; index < frameBuffersCount; index++) {
+    for(uint32_t index = 0; index < frameBuffersCount; index++) {
         vkDestroyFramebuffer(device, frameBuffers[index], nullptr);
     }
 }
@@ -1440,10 +1440,10 @@ bool DestroyShader(VkDevice_T * device, GpuShader & gpu_shader) {
 
 GraphicPipelineGroup CreateGraphicPipeline(
     VkDevice_T * device, 
-    U8 shader_stages_count, 
+    uint8_t shader_stages_count, 
     GpuShader const * shader_stages,
     VkVertexInputBindingDescription vertex_binding_description,
-    U32 attribute_description_count,
+    uint32_t attribute_description_count,
     VkVertexInputAttributeDescription * attribute_description_data,
     VkExtent2D swap_chain_extent,
     VkRenderPass_T * render_pass,
@@ -1455,7 +1455,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
     MFA_ASSERT(descriptor_set_layout);
     // Set up shader stage info
     std::vector<VkPipelineShaderStageCreateInfo> shader_stages_create_infos {shader_stages_count};
-    for(U8 i = 0; i < shader_stages_count; i++) {
+    for(uint8_t i = 0; i < shader_stages_count; i++) {
         VkPipelineShaderStageCreateInfo create_info = {};
         create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         create_info.stage = ConvertAssetShaderStageToGpu(shader_stages[i].cpuShader()->getStage());
@@ -1604,7 +1604,7 @@ void DestroyGraphicPipeline(VkDevice_T * device, GraphicPipelineGroup & graphicP
 [[nodiscard]]
 VkDescriptorSetLayout_T * CreateDescriptorSetLayout(
     VkDevice_T * device,
-    U8 const bindings_count,
+    uint8_t const bindings_count,
     VkDescriptorSetLayoutBinding * bindings
 ) {
     VkDescriptorSetLayoutCreateInfo descriptor_layout_create_info = {};
@@ -1750,11 +1750,11 @@ void DestroyIndexBuffer(
 std::vector<BufferGroup> CreateUniformBuffer(
     VkDevice_T * device,
     VkPhysicalDevice_T * physicalDevice,
-    U32 const buffersCount,
+    uint32_t const buffersCount,
     VkDeviceSize const buffersSize 
 ) {
     std::vector<BufferGroup> uniform_buffers_group {buffersCount};
-    for(U8 index = 0; index < buffersCount; index++) {
+    for(uint8_t index = 0; index < buffersCount; index++) {
         uniform_buffers_group[index] = CreateBuffer(
             device,
             physicalDevice,
@@ -1783,7 +1783,7 @@ void DestroyUniformBuffer(
 
 VkDescriptorPool_T * CreateDescriptorPool(
     VkDevice_T * device,
-    U32 const swap_chain_images_count
+    uint32_t const swap_chain_images_count
 ) {
     // TODO Check if both of these variables must have same value as swap_chain_images_count
     VkDescriptorPoolSize poolSize {};
@@ -1821,8 +1821,8 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSet(
     VkDevice_T * device,
     VkDescriptorPool_T * descriptor_pool,
     VkDescriptorSetLayout_T * descriptor_set_layout,
-    U32 const descriptor_set_count,
-    U8 const schemas_count,
+    uint32_t const descriptor_set_count,
+    uint8_t const schemas_count,
     VkWriteDescriptorSet * schemas
 ) {
     MFA_ASSERT(device != nullptr);
@@ -1849,7 +1849,7 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSet(
         MFA_ASSERT(descriptor_sets.size() < 256);
         UpdateDescriptorSets(
             device,
-            static_cast<U8>(descriptor_sets.size()),
+            static_cast<uint8_t>(descriptor_sets.size()),
             descriptor_sets.data(),
             schemas_count,
             schemas
@@ -1861,21 +1861,21 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSet(
 
 void UpdateDescriptorSets(
     VkDevice_T * device,
-    U8 const descriptor_set_count,
+    uint8_t const descriptor_set_count,
     VkDescriptorSet_T ** descriptor_sets,
-    U8 const schemas_count,
+    uint8_t const schemas_count,
     VkWriteDescriptorSet * schemas
 ) {
     for(auto descriptor_set_index = 0; descriptor_set_index < descriptor_set_count; descriptor_set_index++){
         std::vector<VkWriteDescriptorSet> descriptor_writes {schemas_count};
-        for(U8 schema_index = 0; schema_index < schemas_count; schema_index++) {
+        for(uint8_t schema_index = 0; schema_index < schemas_count; schema_index++) {
             descriptor_writes[schema_index] = schemas[schema_index];
             descriptor_writes[schema_index].dstSet = descriptor_sets[descriptor_set_index];
         }
 
         vkUpdateDescriptorSets(
             device,
-            static_cast<U32>(descriptor_writes.size()), 
+            static_cast<uint32_t>(descriptor_writes.size()), 
             descriptor_writes.data(), 
             0, 
             nullptr
@@ -1885,7 +1885,7 @@ void UpdateDescriptorSets(
 
 std::vector<VkCommandBuffer_T *> CreateCommandBuffers(
     VkDevice_T * device,
-    U8 const swap_chain_images_count,
+    uint8_t const swap_chain_images_count,
     VkCommandPool_T * command_pool
 ) {
     std::vector<VkCommandBuffer_T *> command_buffers {swap_chain_images_count};
@@ -1911,7 +1911,7 @@ std::vector<VkCommandBuffer_T *> CreateCommandBuffers(
 void DestroyCommandBuffers(
     VkDevice_T * device,
     VkCommandPool_T * commandPool,
-    U8 const commandBuffersCount,
+    uint8_t const commandBuffersCount,
     VkCommandBuffer_T ** commandBuffers
 ) {
     MFA_ASSERT(device != nullptr);
@@ -1928,8 +1928,8 @@ void DestroyCommandBuffers(
 
 SyncObjects CreateSyncObjects(
     VkDevice_T * device,
-    U8 const maxFramesInFlight,
-    U8 const swapChainImagesCount
+    uint8_t const maxFramesInFlight,
+    uint8_t const swapChainImagesCount
 ) {
     SyncObjects syncObjects {};
     syncObjects.image_availability_semaphores.resize(maxFramesInFlight);
@@ -1944,7 +1944,7 @@ SyncObjects CreateSyncObjects(
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    for (U8 i = 0; i < maxFramesInFlight; i++) {
+    for (uint8_t i = 0; i < maxFramesInFlight; i++) {
         VK_Check(vkCreateSemaphore(
             device, 
             &semaphoreInfo, 
@@ -1971,7 +1971,7 @@ void DestroySyncObjects(VkDevice_T * device, SyncObjects const & syncObjects) {
     MFA_ASSERT(device != nullptr);
     MFA_ASSERT(syncObjects.fences_in_flight.size() == syncObjects.image_availability_semaphores.size());
     MFA_ASSERT(syncObjects.fences_in_flight.size() == syncObjects.render_finish_indicator_semaphores.size());
-    for(U8 i = 0; i < syncObjects.fences_in_flight.size(); i++) {
+    for(uint8_t i = 0; i < syncObjects.fences_in_flight.size(); i++) {
         vkDestroySemaphore(device, syncObjects.render_finish_indicator_semaphores[i], nullptr);
         vkDestroySemaphore(device, syncObjects.image_availability_semaphores[i], nullptr);
         vkDestroyFence(device, syncObjects.fences_in_flight[i], nullptr);
@@ -1996,14 +1996,14 @@ void WaitForFence(VkDevice_T * device, VkFence_T * inFlightFence) {
 }
 
 [[nodiscard]]
-U8 AcquireNextImage(
+uint8_t AcquireNextImage(
     VkDevice_T * device, 
     VkSemaphore_T * imageAvailabilitySemaphore, 
     SwapChainGroup const & swapChainGroup
 ) {
     MFA_ASSERT(device != nullptr);
     MFA_ASSERT(imageAvailabilitySemaphore != nullptr);
-    U32 image_index;
+    uint32_t image_index;
     // TODO What if acquiring fail ?
     VK_Check(vkAcquireNextImageKHR(
         device,
@@ -2013,7 +2013,7 @@ U8 AcquireNextImage(
         nullptr,
         &image_index
     ));
-    return static_cast<U8>(image_index);
+    return static_cast<uint8_t>(image_index);
 }
 
 void BindVertexBuffer(
@@ -2046,11 +2046,11 @@ void BindIndexBuffer(
 
 void DrawIndexed(
     VkCommandBuffer_T * command_buffer,
-    U32 const indices_count,
-    U32 const instance_count,
-    U32 const first_index,
-    U32 const vertex_offset,
-    U32 const first_instance
+    uint32_t const indices_count,
+    uint32_t const instance_count,
+    uint32_t const first_index,
+    uint32_t const vertex_offset,
+    uint32_t const first_instance
 ) {
     vkCmdDrawIndexed(
         command_buffer, 
@@ -2081,7 +2081,7 @@ void PushConstants(
     VkCommandBuffer_T * command_buffer,
     VkPipelineLayout_T * pipeline_layout, 
     AssetSystem::ShaderStage const shader_stage, 
-    U32 const offset, 
+    uint32_t const offset, 
     CBlob const data
 ) {
     vkCmdPushConstants(
@@ -2089,23 +2089,23 @@ void PushConstants(
         pipeline_layout,
         ConvertAssetShaderStageToGpu(shader_stage),
         offset,
-        static_cast<U32>(data.len), 
+        static_cast<uint32_t>(data.len), 
         data.ptr
     );
 }
 
 void UpdateDescriptorSetsBasic(
     VkDevice_T * device,
-    U8 const descriptor_sets_count,
+    uint8_t const descriptor_sets_count,
     VkDescriptorSet_T ** descriptor_sets,
     VkDescriptorBufferInfo const & buffer_info,
-    U32 const image_info_count,
+    uint32_t const image_info_count,
     VkDescriptorImageInfo const * image_infos
 ) {
     MFA_ASSERT(device != nullptr);
     MFA_ASSERT(descriptor_sets_count > 0);
     MFA_ASSERT(descriptor_sets != nullptr);
-    for(U8 i = 0; i < descriptor_sets_count; i++) {
+    for(uint8_t i = 0; i < descriptor_sets_count; i++) {
         std::vector<VkWriteDescriptorSet> descriptorWrites {2};
         
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -2136,7 +2136,7 @@ void UpdateDescriptorSetsBasic(
 
 void UpdateDescriptorSets(
     VkDevice_T * device,
-    U8 descriptorWritesCount,
+    uint8_t descriptorWritesCount,
     VkWriteDescriptorSet * descriptorWrites
 ) {
     MFA_ASSERT(device != nullptr);

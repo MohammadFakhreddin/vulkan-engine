@@ -30,7 +30,7 @@ VkDescriptorSetLayout_T * CreateBasicDescriptorSetLayout();
 
 [[nodiscard]]
 VkDescriptorSetLayout_T * CreateDescriptorSetLayout(
-    U8 bindingsCount,
+    uint8_t bindingsCount,
     VkDescriptorSetLayoutBinding * bindings
 );
 
@@ -38,21 +38,21 @@ void DestroyDescriptorSetLayout(VkDescriptorSetLayout_T * descriptorSetLayout);
 
 [[nodiscard]]
 DrawPipeline CreateBasicDrawPipeline(
-    U8 gpuShadersCount, 
+    uint8_t gpuShadersCount, 
     RB::GpuShader * gpuShaders,
     VkDescriptorSetLayout_T * descriptorSetLayout,
     VkVertexInputBindingDescription const & vertexInputBindingDescription,
-    U8 vertexInputAttributeDescriptionCount,
+    uint8_t vertexInputAttributeDescriptionCount,
     VkVertexInputAttributeDescription * vertexInputAttributeDescriptions
 );
 
 [[nodiscard]]
 DrawPipeline CreateDrawPipeline(
-    U8 gpu_shaders_count, 
+    uint8_t gpu_shaders_count, 
     RB::GpuShader * gpu_shaders,
     VkDescriptorSetLayout_T * descriptor_set_layout,
     VkVertexInputBindingDescription vertex_binding_description,
-    U32 input_attribute_description_count,
+    uint32_t input_attribute_description_count,
     VkVertexInputAttributeDescription * input_attribute_description_data,
     RB::CreateGraphicPipelineOptions const & options = {}
 );
@@ -66,7 +66,7 @@ std::vector<VkDescriptorSet_T *> CreateDescriptorSets(
 
 [[nodiscard]]
 std::vector<VkDescriptorSet_T *> CreateDescriptorSets(
-    U32 descriptorSetCount,
+    uint32_t descriptorSetCount,
     VkDescriptorSetLayout_T * descriptorSetLayout
 );
 
@@ -117,8 +117,8 @@ RB::GpuShader CreateShader(AssetSystem::Shader const & shader);
 void DestroyShader(RB::GpuShader & gpu_shader);
 
 struct DrawPass {
-    U8 imageIndex;
-    U8 frame_index;
+    uint8_t imageIndex;
+    uint8_t frame_index;
     bool isValid = false;
     DrawPipeline * drawPipeline = nullptr;
 };
@@ -127,7 +127,7 @@ struct UniformBufferGroup {
     std::vector<RB::BufferGroup> buffers;
     size_t bufferSize;
 };
-UniformBufferGroup CreateUniformBuffer(size_t bufferSize, U32 count);
+UniformBufferGroup CreateUniformBuffer(size_t bufferSize, uint32_t count);
 
 void UpdateUniformBuffer(
     RB::BufferGroup const & uniform_buffer, 
@@ -156,19 +156,19 @@ void UpdateDescriptorSetBasic(
     DrawPass const & drawPass,
     VkDescriptorSet_T * descriptorSet,
     UniformBufferGroup const & uniformBuffer,
-    U32 imageInfoCount,
+    uint32_t imageInfoCount,
     VkDescriptorImageInfo const * imageInfos
 );
 
 void UpdateDescriptorSets(
-    U8 writeInfoCount,
+    uint8_t writeInfoCount,
     VkWriteDescriptorSet * writeInfo
 );
 
 void UpdateDescriptorSets(
-    U8 descriptorSetsCount,
+    uint8_t descriptorSetsCount,
     VkDescriptorSet_T ** descriptorSets,
-    U8 writeInfoCount,
+    uint8_t writeInfoCount,
     VkWriteDescriptorSet * writeInfo
 );
 
@@ -206,11 +206,11 @@ void BindIndexBuffer(
 
 void DrawIndexed(
     DrawPass drawPass, 
-    U32 indicesCount,
-    U32 instanceCount = 1,
-    U32 firstIndex = 0,
-    U32 vertexOffset = 0,
-    U32 firstInstance = 0
+    uint32_t indicesCount,
+    uint32_t instanceCount = 1,
+    uint32_t firstIndex = 0,
+    uint32_t vertexOffset = 0,
+    uint32_t firstInstance = 0
 );
 
 void EndPass(DrawPass & drawPass);
@@ -222,21 +222,21 @@ void SetViewport(DrawPass const & draw_pass, VkViewport const & viewport);
 void PushConstants(
     DrawPass const & draw_pass, 
     AssetSystem::ShaderStage shader_stage, 
-    U32 offset, 
+    uint32_t offset, 
     CBlob data
 );
 
-U8 SwapChainImagesCount();
+uint8_t SwapChainImagesCount();
 
 // SDL Functions
 
-void WarpMouseInWindow(I32 x, I32 y);
+void WarpMouseInWindow(int32_t x, int32_t y);
 
 [[nodiscard]]
-U32 GetWindowFlags();
+uint32_t GetWindowFlags();
 
-void GetWindowSize(I32 & out_width, I32 & out_height);
+void GetWindowSize(int32_t & out_width, int32_t & out_height);
 
-void GetDrawableSize(I32 & out_width, I32 & out_height);
+void GetDrawableSize(int32_t & out_width, int32_t & out_height);
 
 }

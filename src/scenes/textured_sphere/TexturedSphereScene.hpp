@@ -15,9 +15,9 @@ public:
 
     void Init() override;
 
-    void OnDraw(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override;
+    void OnDraw(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override;
 
-    void OnUI(MFA::U32 delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override;
+    void OnUI(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override;
 
     void Shutdown() override;
 
@@ -27,7 +27,7 @@ private:
 
     void destroyDrawableObject();
 
-    void createDrawPipeline(MFA::U8 gpu_shader_count, MFA::RenderBackend::GpuShader * gpu_shaders);
+    void createDrawPipeline(uint8_t gpu_shader_count, MFA::RenderBackend::GpuShader * gpu_shaders);
 
     void createDescriptorSetLayout();
 

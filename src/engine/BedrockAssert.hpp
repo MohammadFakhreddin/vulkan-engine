@@ -1,11 +1,10 @@
 #pragma once
 
+#include <stdexcept>
+#include <cassert>
+
 #include "engine/BedrockPlatforms.hpp"
 #include "engine/BedrockLog.hpp"
-
-#include <cassert>
-#include <stdexcept>
-#include <cstring>
 
 #ifdef __PLATFORM_WIN__
 
@@ -18,11 +17,7 @@
 #define MFA_REQUIRE(condition)          if(!(condition)) {MFA_CRASH("Condition failed");}; _assume(condition)
 
 #define MFA_CRASH(message, ...)         MFA_LOG_ERROR(message, __VA_ARGS__); throw std::runtime_error(message)
-#ifdef MFA_DEBUG
-#define MFA_DEBUG_CRASH(message)        MFA_LOG_ERROR(message); throw std::runtime_error(message)
-#else
-#define MFA_DEBUG_CRASH(message)        throw std::runtime_error(message)
-#endif
+
 
 #else
 
@@ -35,16 +30,19 @@
 #define MFA_REQUIRE(condition)          if(!(condition)) {MFA_CRASH("Condition failed");};
 
 #define MFA_CRASH(message, ...)         throw std::runtime_error(message)// TODO MFA_LOG_ERROR(message, __VA_ARGS__); throw std::runtime_error(message)
-#ifdef MFA_DEBUG
-#define MFA_DEBUG_CRASH(message)        throw std::runtime_error(message)// TODO MFA_LOG_ERROR(message); throw std::runtime_error(message)
-#else
-#define MFA_DEBUG_CRASH(message)        throw std::runtime_error(message)
-#endif
+
 
 #endif
 
 #define MFA_NOT_IMPLEMENTED_YET(who)    throw std::runtime_error("Method not implemented by " + std::string(who))
 
+bool constexpr MFA_VERIFY(bool const condition) {
+    if (condition) return true;
+#ifdef MFA_DEBUG
+    throw std::runtime_error("Condition failed");
+#endif
+    return false;
+}
 
 
 namespace MFA::Assert {} // namespace MFA::Assert
