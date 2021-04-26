@@ -453,12 +453,34 @@ AS::Model ImportGLTF(char const * path) {
         std::string error;
         std::string warning;
         TG::Model gltfModel {};
-        auto const success = loader.LoadASCIIFromFile(
-            &gltfModel, 
-            &error,
-            &warning,  
-            std::string(path)
-        );
+
+        auto const extension = FS::ExtractExtensionFromPath(path);
+
+        bool success = false;
+        if (extension == ".gltf") {
+            success = loader.LoadASCIIFromFile(
+                &gltfModel, 
+                &error,
+                &warning,  
+                std::string(path)
+            );            
+        } else if (extension == ".glb") {
+            success = loader.LoadBinaryFromFile(
+                &gltfModel, 
+                &error,
+                &warning,  
+                std::string(path)
+            );
+        } else {
+            MFA_CRASH("ImportGLTF format is not support: %s", extension.c_str());
+        }
+
+        if (error.empty() == false) {
+            MFA_LOG_ERROR("ImportGltf Error: %s", error.c_str());
+        }
+        if (warning.empty() == false) {
+            MFA_LOG_WARN("ImportGltf Warning: %s", warning.c_str());
+        }
         if(success) {
             if(false == gltfModel.meshes.empty()) {
                 struct TextureRef {
@@ -843,7 +865,8 @@ AS::Model ImportGLTF(char const * path) {
                             if(primitive.attributes["COLOR"] >= 0) {
                                 MFA_REQUIRE(primitive.attributes["COLOR"] < gltfModel.accessors.size());
                                 auto const & accessor = gltfModel.accessors[primitive.attributes["COLOR"]];
-                                MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+                                //MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+                                //TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT
                                 if (accessor.minValues.size() == 3 && accessor.maxValues.size() == 3) {
                                     colorsMinValue[0] = static_cast<float>(accessor.minValues[0]);
                                     colorsMinValue[1] = static_cast<float>(accessor.minValues[1]);

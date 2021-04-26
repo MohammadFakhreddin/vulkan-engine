@@ -23,6 +23,7 @@ void GLTFMeshViewerScene::Init() {
             .gpuModel {},
             .displayName {"SponzaScene"},
             .address {"../assets/models/sponza/sponza.gltf"},
+            //.address {"../assets/models/sponza-gltf-pbr/sponza.glb"},
             .drawableObject {},
             .initialParams {
                 .model {

@@ -59,6 +59,8 @@ const float PI = 3.14159265359;
 
 const float attenuationFactor = 200.0f;
 
+const float alphaMaskCutoff = 0.1f;
+
 // const float3 lightColor = float3(252.0f/256.0f, 212.0f/256.0f, 64.0f/256.0f);
 // float3 lightColor = float3(1.0, 1.0, 1.0);
 	
@@ -174,10 +176,15 @@ PSOut main(PSIn input) {
     // PSOut output2;
     // output2.color = float4(1,0,0,1);
     // return output2;
-    float3 baseColor = smBuff.hasBaseColorTexture == 1
-        ? pow(baseColorTexture.Sample(baseColorSampler, input.baseColorTexCoord).rgb, 2.2f)
-        : smBuff.baseColorFactor.rgb;
-    
+    float4 baseColor = smBuff.hasBaseColorTexture == 1
+        ? pow(baseColorTexture.Sample(baseColorSampler, input.baseColorTexCoord).rgba, 2.2f)
+        : smBuff.baseColorFactor.rgba;
+
+    // Alpha mask
+    if (baseColor.a < alphaMaskCutoff) {
+        discard;
+    }
+	
     float metallic = 0.0f;
     float roughness = 0.0f;
     // TODO: Is usages of occlusion correct ?
@@ -201,7 +208,7 @@ PSOut main(PSIn input) {
 	float3 Lo = float3(0.0, 0.0, 0.0);
 	for (int i = 0; i < 1; i++) {   // Light count
 		float3 L = normalize(lvBuff.lightPosition.xyz - input.worldPos);
-		Lo += BRDF(L, V, N, metallic, roughness, baseColor, input.worldPos);
+		Lo += BRDF(L, V, N, metallic, roughness, baseColor.rgb, input.worldPos);
 	};
 
     // Combine with ambient
@@ -211,7 +218,7 @@ PSOut main(PSIn input) {
         float3 ao = emissiveTexture.Sample(emissiveSampler, input.emissiveTexCoord);
         color += float3(baseColor.r * ao.r, baseColor.g * ao.g, baseColor.b * ao.b) * ambientOcclusion;//* 0.3;
     } else {
-        color += baseColor * smBuff.emissiveFactor * ambientOcclusion; // * 0.3
+        color += baseColor.rgb * smBuff.emissiveFactor * ambientOcclusion; // * 0.3
     }
     color += Lo;
 
