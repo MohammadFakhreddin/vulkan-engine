@@ -18,3 +18,6 @@
 ## Support for rendering scene from gltf node tree
 <img src="examples/gunship.gif"/>
 <img src="examples/pilot-helmet.gif"/>
+
+### Sponza scene (Still buggy)
+<img src="examples/sponza-scene.gif"/>
