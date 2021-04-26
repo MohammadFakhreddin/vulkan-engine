@@ -18,7 +18,7 @@ void GLTFMeshViewerScene::Init() {
         m_error_texture = RF::CreateTexture(cpu_texture);
     }
     {// Models
-        // TODO Start from here, Replace faulty sponza scene with correct one, Also it might be good to change gltf library
+        // TODO Start from here, Replace faulty sponza scene with correct one
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
             .gpuModel {},
             .displayName {"SponzaScene"},
