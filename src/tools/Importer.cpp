@@ -216,7 +216,7 @@ AS::Texture ImportImage(char const * path, ImportTextureOptions const & options)
     if (path != nullptr) {
         auto const extension = FS::ExtractExtensionFromPath(path);
 
-        if (extension == ".png" || extension == ".jpg") {
+        if (extension == ".png" || extension == ".jpg" || extension == ".jpeg") {
             texture = ImportUncompressedImage(path, options);
         } else if (extension == ".ktx") {
             texture = ImportKTXImage(path, options);
@@ -501,7 +501,8 @@ AS::Model ImportGLTF(char const * path) {
                             std::string image_path = directory_path + "/" + image.uri;
                             assetSystemTexture = ImportImage(
                                 image_path.c_str(),
-                                ImportTextureOptions {.tryToGenerateMipmaps = true, .sampler = &sampler}
+                                // TODO tryToGenerateMipmaps takes too long
+                                ImportTextureOptions {.tryToGenerateMipmaps = false, .sampler = &sampler}
                             );
                         }
                         MFA_ASSERT(assetSystemTexture.isValid());

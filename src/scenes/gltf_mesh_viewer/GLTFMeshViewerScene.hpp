@@ -31,10 +31,14 @@ private:
                 float rotationEulerAngle[3] {};
                 float scale = 1;
                 float translate[3] {0, 0, -10.0f};
+                float translateMin[3] {-100.0f, -100.0f, -100.0f};
+                float translateMax[3] {100.0f, 100.0f, 100.0f};
             } model {};
             struct {
                 float position [3] {};
                 float color[3] {252.0f/256.0f, 212.0f/256.0f, 64.0f/256.0f};
+                float translateMin[3] {-200.0f, -200.0f, -200.0f};
+                float translateMax[3] {200.0f, 200.0f, 200.0f};
             } light {};
         } initialParams {.model {}, .light {}};
     };
@@ -96,5 +100,11 @@ private:
     MFA::RenderFrontend::UniformBufferGroup m_lv_buffer {};
 
     MFA::RenderBackend::GpuTexture m_error_texture {};
+
+    float mModelTranslateMin[3] {-100.0f, -100.0f, -100.0f};
+    float mModelTranslateMax[3] {100.0f, 100.0f, 100.0f};
+
+    float mLightTranslateMin[3] {-200.0f, -200.0f, -200.0f};
+    float mLightTranslateMax[3] {200.0f, 200.0f, 200.0f};
 
 };

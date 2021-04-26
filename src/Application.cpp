@@ -38,7 +38,7 @@ void Application::run() {
     mSceneSubSystem.RegisterNew(mPbrScene.get(), "PBRScene");
     mSceneSubSystem.RegisterNew(mTextureViewerScene.get(), "TextureViewerScene");
     
-    mSceneSubSystem.SetActiveScene("TextureViewerScene");
+    mSceneSubSystem.SetActiveScene("GLTFMeshViewerScene");
     mSceneSubSystem.Init();
 
     {// Main loop

@@ -5,6 +5,7 @@
 #include "libs/imgui/imgui.h"
 #include "engine/DrawableObject.hpp"
 #include "tools/Importer.hpp"
+#include "engine/BedrockFileSystem.hpp"
 
 namespace RF = MFA::RenderFrontend;
 namespace RB = MFA::RenderBackend;
@@ -17,21 +18,32 @@ void GLTFMeshViewerScene::Init() {
         m_error_texture = RF::CreateTexture(cpu_texture);
     }
     {// Models
+        // TODO Start from here, Replace faulty sponza scene with correct one, Also it might be good to change gltf library
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
-            .isLoaded = false,
+            .gpuModel {},
+            .displayName {"SponzaScene"},
+            .address {"../assets/models/sponza/sponza.gltf"},
+            .drawableObject {},
+            .initialParams {
+                .model {
+                    .rotationEulerAngle {180.0f, -90.0f, 0.0f},
+                    .translate {0.4f, 2.0f, -6.0f},
+                }
+            }
+        });
+        mModelsRenderData.emplace_back(ModelRenderRequiredData {
             .gpuModel {},
             .displayName {"Car"},
             .address {"../assets/models/free_zuk_3d_model/scene.gltf"},
             .drawableObject {},
             .initialParams {
                 .model {
-                    .rotationEulerAngle {14.0f, 158.0f, 0.0f},
-                    .translate {0.0f, 0.0f, -3.0f}
+                    .rotationEulerAngle {8.0f, 158.0f, 0.0f},
+                    .translate {0.0f, 0.0f, -4.0f}
                 }
             }
         });
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
-            .isLoaded = false,
             .gpuModel {},
             .displayName {"Gunship"},
             .address {"../assets/models/gunship/scene.gltf"},
@@ -48,7 +60,6 @@ void GLTFMeshViewerScene::Init() {
             }
         });
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
-            .isLoaded = false,
             .gpuModel {},
             .displayName {"War-craft soldier"},
             .address {"../assets/models/warcraft_3_alliance_footmanfanmade/scene.gltf"},
@@ -64,7 +75,6 @@ void GLTFMeshViewerScene::Init() {
             }
         });
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
-            .isLoaded = false,
             .gpuModel {},
             .displayName {"Cyberpunk lady"},
             .address {"../assets/models/female_full-body_cyberpunk_themed_avatar/scene.gltf"},
@@ -77,7 +87,6 @@ void GLTFMeshViewerScene::Init() {
             }
         });
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
-            .isLoaded = false,
             .gpuModel {},
             .displayName {"Mandalorian"},
             .address {"../assets/models/fortnite_the_mandalorianbaby_yoda/scene.gltf"},
@@ -94,14 +103,12 @@ void GLTFMeshViewerScene::Init() {
             }
         });
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
-            .isLoaded = false,
             .gpuModel {},
             .displayName {"Mandalorian2"},
             .address {"../assets/models/mandalorian__the_fortnite_season_6_skin_updated/scene.gltf"},
             .drawableObject {},
         });
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
-            .isLoaded = false,
             .gpuModel {},
             .displayName {"Flight helmet"},
             .address {"../assets/models/FlightHelmet/glTF/FlightHelmet.gltf"},
@@ -115,7 +122,6 @@ void GLTFMeshViewerScene::Init() {
         });
         
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
-            .isLoaded = false,
             .gpuModel {},
             .displayName {"Warhammer tank"},
             .address {"../assets/models/warhammer_40k_predator_dark_millennium/scene.gltf"},
@@ -198,12 +204,26 @@ void GLTFMeshViewerScene::OnDraw(uint32_t const delta_time, RF::DrawPass & draw_
         static_assert(sizeof(m_model_position) == sizeof(selectedModel.initialParams.model.translate));
 
         m_model_scale = selectedModel.initialParams.model.scale;
+
+        ::memcpy(mModelTranslateMin, selectedModel.initialParams.model.translateMin, sizeof(mModelTranslateMin));
+        static_assert(sizeof(mModelTranslateMin) == sizeof(selectedModel.initialParams.model.translateMin));
+
+        ::memcpy(mModelTranslateMax, selectedModel.initialParams.model.translateMax, sizeof(mModelTranslateMax));
+        static_assert(sizeof(mModelTranslateMax) == sizeof(selectedModel.initialParams.model.translateMin));
+
         // Light
         ::memcpy(m_light_position, selectedModel.initialParams.light.position, sizeof(m_light_position));
         static_assert(sizeof(m_light_position) == sizeof(selectedModel.initialParams.light.position));
 
         ::memcpy(m_light_color, selectedModel.initialParams.light.color, sizeof(m_light_color));
         static_assert(sizeof(m_light_color) == sizeof(selectedModel.initialParams.light.color));
+
+        ::memcpy(mLightTranslateMin, selectedModel.initialParams.light.translateMin, sizeof(mLightTranslateMin));
+        static_assert(sizeof(mLightTranslateMin) == sizeof(selectedModel.initialParams.light.translateMin));
+
+        ::memcpy(mLightTranslateMax, selectedModel.initialParams.light.translateMax, sizeof(mLightTranslateMax));
+        static_assert(sizeof(mLightTranslateMax) == sizeof(selectedModel.initialParams.light.translateMin));
+
     }
 
     RF::BindDrawPipeline(draw_pass, m_draw_pipeline);
@@ -283,20 +303,20 @@ void GLTFMeshViewerScene::OnUI(uint32_t const delta_time, MFA::RenderFrontend::D
     ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("Scale", &m_model_scale, 0.0f, 1.0f);
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("XDistance", &m_model_position[0], -500.0f, 500.0f);
+    ImGui::SliderFloat("XDistance", &m_model_position[0], mModelTranslateMin[0], mModelTranslateMax[0]);
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("YDistance", &m_model_position[1], -500.0f, 500.0f);
+    ImGui::SliderFloat("YDistance", &m_model_position[1], mModelTranslateMin[1], mModelTranslateMax[1]);
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("ZDistance", &m_model_position[2], -500.0f, 100.0f);
+    ImGui::SliderFloat("ZDistance", &m_model_position[2], mModelTranslateMin[2], mModelTranslateMax[2]);
     ImGui::End();
 
     ImGui::Begin("Light");
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("PositionX", &m_light_position[0], -500.0f, 500.0f);
+    ImGui::SliderFloat("PositionX", &m_light_position[0], mLightTranslateMin[0], mLightTranslateMax[0]);
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("PositionY", &m_light_position[1], -500.0f, 500.0f);
+    ImGui::SliderFloat("PositionY", &m_light_position[1], mLightTranslateMin[1], mLightTranslateMax[1]);
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("PositionZ", &m_light_position[2], -500.0f, 500.0f);
+    ImGui::SliderFloat("PositionZ", &m_light_position[2], mLightTranslateMin[2], mLightTranslateMax[2]);
     ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("ColorR", &m_light_color[0], 0.0f, 1.0f);
     ImGui::SetNextItemWidth(ItemWidth);
