@@ -50,20 +50,22 @@ Texture2D emissiveTexture : register(s6, space0);
 struct LightViewBuffer {
     float3 lightPosition;
     float3 camPos;
-    float3 lightColor;
+    float3 lightColor;          // Light color can be from 0 to inf (Sun for example can exceed 1.0f)
 };
 
 ConstantBuffer <LightViewBuffer> lvBuff : register (b7, space0);
 
 const float PI = 3.14159265359;
 
-const float attenuationFactor = 200.0f;
+// TODO Each light source should have its own attenuation, TODO Get this values from cpp code
+// Fow now I assume we have a light source with r = 1.0f
+const float lightSphereRadius = 1.0f;
+const float constantAttenuation = 1.0f;
+const float linearAttenuation = 2.0f / lightSphereRadius;
+const float quadraticAttenuation = 1.0f / (lightSphereRadius * lightSphereRadius);
 
 const float alphaMaskCutoff = 0.1f;
 
-// const float3 lightColor = float3(252.0f/256.0f, 212.0f/256.0f, 64.0f/256.0f);
-// float3 lightColor = float3(1.0, 1.0, 1.0);
-	
 // This function computes ratio between amount of light that reflect and refracts
 // Reflection contrbutes to specular while refraction contributes to diffuse light
 /*
@@ -131,7 +133,15 @@ float3 BRDF(
     //     + p3d_LightSource[i].quadraticAttenuation
     //     * (lightDistance * lightDistance)
     //     );
-    float attenuation = attenuationFactor / (distance * distance);
+    // https://imdoingitwrong.wordpress.com/2011/01/31/light-attenuation/
+    float attenuation =
+        1.0f
+      / ( 
+            constantAttenuation
+            + linearAttenuation * distance
+            + quadraticAttenuation * distance * distance
+        );
+    // float attenuation = attenuationFactor / (distance * distance);
     float3 radiance   = lvBuff.lightColor * attenuation;        
     
     // cook-torrance brdf
@@ -222,8 +232,9 @@ PSOut main(PSIn input) {
     }
     color += Lo;
 
-	// Gamma correct
-    color = color / (color + float3(1.0f));
+    // reinhard tone mapping    --> Try to implement more advanced hdr
+	color = color / (color + float3(1.0f));
+    // Gamma correct
     color = pow(color, float3(1.0f/2.2f)); 
 
     PSOut output;

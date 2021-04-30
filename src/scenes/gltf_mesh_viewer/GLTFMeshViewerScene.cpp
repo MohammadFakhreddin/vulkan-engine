@@ -319,11 +319,11 @@ void GLTFMeshViewerScene::OnUI(uint32_t const delta_time, MFA::RenderFrontend::D
     ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("PositionZ", &m_light_position[2], mLightTranslateMin[2], mLightTranslateMax[2]);
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("ColorR", &m_light_color[0], 0.0f, 1.0f);
+    ImGui::SliderFloat("ColorR", &m_light_color[0], 0.0f, 400.0f);
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("ColorG", &m_light_color[1], 0.0f, 1.0f);
+    ImGui::SliderFloat("ColorG", &m_light_color[1], 0.0f, 400.0f);
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("ColorB", &m_light_color[2], 0.0f, 1.0f);
+    ImGui::SliderFloat("ColorB", &m_light_color[2], 0.0f, 400.0f);
     ImGui::End();
 }
 

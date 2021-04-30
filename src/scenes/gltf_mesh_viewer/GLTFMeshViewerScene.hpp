@@ -20,6 +20,8 @@ public:
 
 private:
 
+    static constexpr float LightScale = 100.0f;
+    
     struct ModelRenderRequiredData {
         bool isLoaded = false;
         MFA::RenderFrontend::GpuModel gpuModel {};
@@ -36,7 +38,11 @@ private:
             } model {};
             struct {
                 float position [3] {};
-                float color[3] {252.0f/256.0f, 212.0f/256.0f, 64.0f/256.0f};
+                float color[3]{
+                    (252.0f/256.0f) * LightScale,
+                    (212.0f/256.0f) * LightScale,
+                    (64.0f/256.0f) * LightScale
+                };
                 float translateMin[3] {-200.0f, -200.0f, -200.0f};
                 float translateMax[3] {200.0f, 200.0f, 200.0f};
             } light {};
@@ -85,7 +91,7 @@ private:
     };
 
     float m_light_position[3] {0.0f, 0.0f, -2.0f};
-    float m_light_color[3] {252.0f/256.0f, 212.0f/256.0f, 64.0f/256.0f};
+    float m_light_color[3]{};
 
     std::vector<ModelRenderRequiredData> mModelsRenderData {};
     int32_t mSelectedModelIndex = 0;
