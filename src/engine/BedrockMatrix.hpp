@@ -854,7 +854,7 @@ public:
         T const y = static_cast<T>(2) * (qy * qz + qw * qx);
         T const x = qw * qw - qx * qx - qy * qy + qz * qz;
         // TODO Refactor, Replace epsilon with correct value
-        if(Equal(_Matrix<T, 2, 1>(x, y), _Matrix<T, 2, 1>(0))) { //avoid atan2(0,0) - handle singularity - Matiis
+        if(x == 0 && y == 0) { //avoid atan2(0,0) - handle singularity - Matiis
             return static_cast<T>(static_cast<T>(2) * atan2(qx, qw));
         }
         return static_cast<T>(atan2(y, x));

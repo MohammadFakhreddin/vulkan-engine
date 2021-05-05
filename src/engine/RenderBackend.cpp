@@ -16,7 +16,7 @@ namespace MFA::RenderBackend {
 
 inline static constexpr char EngineName[256] = "MFA";
 inline static constexpr int EngineVersion = 1;
-std::string ValidationLayer = "VK_LAYER_KHRONOS_validation";
+inline static std::string ValidationLayer = "VK_LAYER_KHRONOS_validation";
 std::vector<char const *> DebugLayers = {
     ValidationLayer.c_str()
 };
@@ -36,13 +36,14 @@ static void SDL_Check(SDL_bool const result) {
 SDL_Window * CreateWindow(ScreenWidth const screen_width, ScreenHeight const screen_height) {
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
     auto const screen_info = MFA::Platforms::ComputeScreenSize();
-    return SDL_CreateWindow(
+    auto * window = SDL_CreateWindow(
         "VULKAN_ENGINE", 
-        static_cast<uint32_t>((screen_info.screen_width / 2.0f) - (screen_width / 2.0f)), 
-        static_cast<uint32_t>((screen_info.screen_height / 2.0f) - (screen_height / 2.0f)),
+        static_cast<uint32_t>((static_cast<float>(screen_info.screen_width) / 2.0f) - (static_cast<float>(screen_width) / 2.0f)), 
+        static_cast<uint32_t>((static_cast<float>(screen_info.screen_height) / 2.0f) - (static_cast<float>(screen_height) / 2.0f)),
         screen_width, screen_height,
         SDL_WINDOW_SHOWN /*| SDL_WINDOW_FULLSCREEN */| SDL_WINDOW_VULKAN
     );
+    return window;
 }
 
 void DestroyWindow(SDL_Window * window) {
@@ -75,11 +76,17 @@ VkExtent2D ChooseSwapChainExtent(
     if (surface_capabilities.currentExtent.width <= 0) {
         VkExtent2D const swap_chain_extent = {
             Math::Min(
-                Math::Max(screen_width, surface_capabilities.minImageExtent.width), 
+                Math::Max(
+                    static_cast<uint32_t>(screen_width), 
+                    surface_capabilities.minImageExtent.width
+                ), 
                 surface_capabilities.maxImageExtent.width
             ),
             Math::Min(
-                Math::Max(screen_height, surface_capabilities.minImageExtent.height), 
+                Math::Max(
+                    static_cast<uint32_t>(screen_height), 
+                    surface_capabilities.minImageExtent.height
+                ), 
                 surface_capabilities.maxImageExtent.height
             )
         };
@@ -1185,13 +1192,7 @@ SwapChainGroup CreateSwapChain(
     VK_Check (vkCreateSwapchainKHR(device, &createInfo, nullptr, &ret.swapChain));
 
     MFA_LOG_INFO("Created swap chain");
-    
-    if (oldSwapChain != nullptr) {
-        vkDestroySwapchainKHR(device, oldSwapChain, nullptr);
-        oldSwapChain = nullptr;
-    }
-    // TODO This should be inside Frontend layer
-    //m_state.old_swap_chain = m_state.swap_chain;
+
     ret.swapChainFormat = selected_surface_format.format;
     
     // Store the images used by the swap chain
@@ -1552,6 +1553,22 @@ GraphicPipelineGroup CreateGraphicPipeline(
     VkPipelineLayout_T * pipelineLayout = nullptr;
     VK_Check(vkCreatePipelineLayout(device, &layout_create_info, nullptr, &pipelineLayout));
 
+    VkPipelineDynamicStateCreateInfo * dynamicStateCreateInfoRef = nullptr;
+    VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo {};
+    std::vector<VkDynamicState> dynamic_states = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    if (options.use_static_viewport_and_scissor == false) {
+        if (options.dynamic_state_create_info == nullptr) {
+            dynamicStateCreateInfo = VkPipelineDynamicStateCreateInfo {
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+                .dynamicStateCount = static_cast<uint32_t>(dynamic_states.size()),
+                .pDynamicStates = dynamic_states.data(),
+            };
+            dynamicStateCreateInfoRef = &dynamicStateCreateInfo;
+        } else {
+            dynamicStateCreateInfoRef = options.dynamic_state_create_info;
+        }
+    }
+
     // Create the graphics pipeline
     VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
     pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -1569,7 +1586,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
     pipelineCreateInfo.basePipelineHandle = nullptr;
     pipelineCreateInfo.basePipelineIndex = -1;
     pipelineCreateInfo.pDepthStencilState = &options.depth_stencil;
-    pipelineCreateInfo.pDynamicState = options.dynamic_state_create_info;
+    pipelineCreateInfo.pDynamicState = dynamicStateCreateInfoRef;
     
     VkPipeline_T * pipeline = nullptr;
     VK_Check(vkCreateGraphicsPipelines(
@@ -1590,6 +1607,30 @@ GraphicPipelineGroup CreateGraphicPipeline(
     group.pipelineLayout = pipelineLayout;
 
     return group;
+}
+
+void AssignViewportAndScissorToCommandBuffer(
+    VkExtent2D const & extent2D, 
+    VkCommandBuffer_T * commandBuffer
+) {
+    MFA_ASSERT(commandBuffer != nullptr);
+
+    VkViewport viewport = {};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = static_cast<float>(extent2D.width);
+    viewport.height = static_cast<float>(extent2D.height);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+
+    VkRect2D scissor = {};
+    scissor.offset.x = 0;
+    scissor.offset.y = 0;
+    scissor.extent.width = extent2D.width;
+    scissor.extent.height = extent2D.height;
+
+    SetViewport(commandBuffer, viewport);
+    SetScissor(commandBuffer, scissor);
 }
 
 void DestroyGraphicPipeline(VkDevice_T * device, GraphicPipelineGroup & graphicPipelineGroup) {
@@ -1912,7 +1953,7 @@ std::vector<VkCommandBuffer_T *> CreateCommandBuffers(
 void DestroyCommandBuffers(
     VkDevice_T * device,
     VkCommandPool_T * commandPool,
-    uint8_t const commandBuffersCount,
+    uint32_t const commandBuffersCount,
     VkCommandBuffer_T ** commandBuffers
 ) {
     MFA_ASSERT(device != nullptr);

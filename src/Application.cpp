@@ -25,8 +25,8 @@ void Application::run() {
     namespace RF = MFA::RenderFrontend;
     namespace UI = MFA::UISystem;
     
-    static constexpr uint16_t SCREEN_WIDTH = 1920;
-    static constexpr uint16_t SCREEN_HEIGHT = 1080;
+    static constexpr uint16_t SCREEN_WIDTH = 800;//1920;
+    static constexpr uint16_t SCREEN_HEIGHT = 600;//1080;
 
     RF::Init({SCREEN_WIDTH, SCREEN_HEIGHT, "Cool app"});
     UI::Init();

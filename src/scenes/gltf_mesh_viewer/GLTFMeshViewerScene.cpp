@@ -173,19 +173,7 @@ void GLTFMeshViewerScene::Init() {
 
     // Updating perspective mat once for entire application
     // Perspective
-    int32_t width; int32_t height;
-    RF::GetWindowSize(width, height);
-    float const ratio = static_cast<float>(width) / static_cast<float>(height);
-    MFA::Matrix4X4Float perspectiveMat {};
-    MFA::Matrix4X4Float::PreparePerspectiveProjectionMatrix(
-        perspectiveMat,
-        ratio,
-        40,
-        Z_NEAR,
-        Z_FAR
-    );
-    static_assert(sizeof(mTransformData.perspective) == sizeof(perspectiveMat.cells));
-    ::memcpy(mTransformData.perspective, perspectiveMat.cells, sizeof(perspectiveMat.cells));
+    updateProjectionBuffer();
 
 }
 
@@ -335,6 +323,10 @@ void GLTFMeshViewerScene::Shutdown() {
     destroyModels();
     RF::DestroyTexture(m_error_texture);
     Importer::FreeTexture(m_error_texture.cpu_texture());
+}
+
+void GLTFMeshViewerScene::OnResize() {
+    updateProjectionBuffer();
 }
 
 void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredData) {
@@ -696,4 +688,20 @@ void GLTFMeshViewerScene::createDescriptorSetLayout() {
         static_cast<uint8_t>(bindings.size()),
         bindings.data()
     );
+}
+
+void GLTFMeshViewerScene::updateProjectionBuffer() {
+    int32_t width; int32_t height;
+    RF::GetWindowSize(width, height);
+    float const ratio = static_cast<float>(width) / static_cast<float>(height);
+    MFA::Matrix4X4Float perspectiveMat {};
+    MFA::Matrix4X4Float::PreparePerspectiveProjectionMatrix(
+        perspectiveMat,
+        ratio,
+        40,
+        Z_NEAR,
+        Z_FAR
+    );
+    static_assert(sizeof(mTransformData.perspective) == sizeof(perspectiveMat.cells));
+    ::memcpy(mTransformData.perspective, perspectiveMat.cells, sizeof(perspectiveMat.cells));
 }

@@ -10,12 +10,11 @@
 
 namespace MFA::Platforms {
 
-using ScreenSize = uint32_t;
 ScreenInfo ComputeScreenSize() {
     ScreenInfo ret {};
     #if defined(__PLATFORM_WIN__)
-        ScreenSize const real_screen_width = static_cast<int>(GetSystemMetrics(SM_CXSCREEN));
-        ScreenSize const real_screen_height = static_cast<int>(GetSystemMetrics(SM_CYSCREEN));
+        auto const real_screen_width = static_cast<int>(GetSystemMetrics(SM_CXSCREEN));
+        auto const real_screen_height = static_cast<int>(GetSystemMetrics(SM_CYSCREEN));
         ret.screen_width = static_cast<ScreenSize>(real_screen_width);
         ret.screen_height = static_cast<ScreenSize>(real_screen_height);
         ret.valid = true;

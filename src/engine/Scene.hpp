@@ -1,6 +1,5 @@
 #pragma once
 
-#include "BedrockCommon.hpp"
 #include "UISystem.hpp"
 
 namespace MFA {
@@ -14,6 +13,7 @@ public:
     void RegisterNew(Scene * scene, char const * name);
     void SetActiveScene(char const * name);
     void OnNewFrame(uint32_t deltaTime);
+    void OnResize();
 private:
 
     struct RegisteredScene {
@@ -31,6 +31,7 @@ public:
     virtual ~Scene() = default;
     virtual void OnDraw(uint32_t delta_time, RenderFrontend::DrawPass & draw_pass) = 0;
     virtual void OnUI(uint32_t delta_time, RenderFrontend::DrawPass & draw_pass) = 0;
+    virtual void OnResize() {};
     virtual void Init() = 0;
     virtual void Shutdown() = 0;
 };

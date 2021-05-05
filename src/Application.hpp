@@ -15,7 +15,7 @@ public:
 
     Application & operator= (Application && rhs) noexcept;
     Application (Application const &) noexcept = delete;
-    Application (Application && rhs) noexcept;
+    Application (Application && rhs) noexcept = delete;
     Application & operator = (Application const &) noexcept = delete;
 
     void run();

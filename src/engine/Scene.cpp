@@ -10,6 +10,7 @@ namespace UI = UISystem;
 namespace RF = RenderFrontend;
 
 void SceneSubSystem::Init() {
+    RF::SetResizeEventListener([this]()->void {OnResize();});
     if(mActiveScene < 0 && false == mRegisteredScenes.empty()) {
         mActiveScene = 0;
     }
@@ -20,6 +21,7 @@ void SceneSubSystem::Init() {
 }
 
 void SceneSubSystem::Shutdown() {
+    RF::SetResizeEventListener(nullptr);
     if(mActiveScene >= 0) {
         mRegisteredScenes[mActiveScene].scene->Shutdown();
     }
@@ -89,6 +91,12 @@ void SceneSubSystem::OnNewFrame(uint32_t const deltaTime) {
 
     RF::EndPass(draw_pass);
     
+}
+
+void SceneSubSystem::OnResize() {
+    if (mActiveScene >= 0) {
+        mRegisteredScenes[mActiveScene].scene->OnResize();
+    }
 }
 
 

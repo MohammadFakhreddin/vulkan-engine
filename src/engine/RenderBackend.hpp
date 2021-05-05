@@ -407,7 +407,7 @@ struct CreateGraphicPipelineOptions {
     };
     uint8_t push_constants_range_count = 0;
     VkPushConstantRange * push_constant_ranges = nullptr;
-    bool use_static_viewport_and_scissor = true;
+    bool use_static_viewport_and_scissor = false;
     VkPrimitiveTopology primitive_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 };
 // Note Shaders can be removed after creating graphic pipeline
@@ -423,6 +423,11 @@ GraphicPipelineGroup CreateGraphicPipeline(
     VkRenderPass_T * render_pass,
     VkDescriptorSetLayout_T * descriptor_set_layout,
     CreateGraphicPipelineOptions const & options
+);
+
+void AssignViewportAndScissorToCommandBuffer(
+    VkExtent2D const & extent2D,
+    VkCommandBuffer_T * commandBuffer
 );
 
 void DestroyGraphicPipeline(VkDevice_T * device, GraphicPipelineGroup & graphicPipelineGroup);
@@ -534,7 +539,7 @@ std::vector<VkCommandBuffer_T *> CreateCommandBuffers(
 void DestroyCommandBuffers(
     VkDevice_T * device,
     VkCommandPool_T * commandPool,
-    uint8_t commandBuffersCount,
+    uint32_t commandBuffersCount,
     VkCommandBuffer_T ** commandBuffers
 );
 

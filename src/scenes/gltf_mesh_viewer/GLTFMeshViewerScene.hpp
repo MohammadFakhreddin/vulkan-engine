@@ -18,6 +18,8 @@ public:
 
     void Shutdown() override;
 
+    void OnResize() override;
+
 private:
 
     static constexpr float LightScale = 100.0f;
@@ -56,6 +58,8 @@ private:
     void createDrawPipeline(uint8_t gpu_shader_count, MFA::RenderBackend::GpuShader * gpu_shaders);
 
     void createDescriptorSetLayout();
+
+    void updateProjectionBuffer();
 
     static constexpr float Z_NEAR = 0.1f;
     static constexpr float Z_FAR = 3000.0f;

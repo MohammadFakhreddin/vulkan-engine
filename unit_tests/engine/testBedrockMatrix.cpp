@@ -103,13 +103,13 @@ TEST_CASE("Matrix TestCase3", "[Matrix][2]") {
     using namespace MFA;
 
     Matrix4X1Float const point {1, 1, 1, 0};
-
+    // TODO Fix this function
     Matrix3X1Float const eulerAnglesInRad {
         Math::Deg2Rad<float>(45.0f),
-        0.0f,
+        Math::Deg2Rad<float>(270.0f),
         Math::Deg2Rad<float>(90.0f)
     };
-    eulerAnglesInRad.print("eulerAnglesInRad");
+    //eulerAnglesInRad.print("eulerAnglesInRad");
 
     Matrix4X4Float eulerAngleMat {};
     Matrix4X4Float::AssignRotation(
@@ -121,14 +121,14 @@ TEST_CASE("Matrix TestCase3", "[Matrix][2]") {
     eulerAnglePoint.assign(point);
     eulerAnglePoint.multiply(eulerAngleMat);
 
-    eulerAnglePoint.print("eulerAnglePoint");
+    //eulerAnglePoint.print("eulerAnglePoint");
 
-    eulerAngleMat.print("eulerAngleMat");
+    //eulerAngleMat.print("eulerAngleMat");
 
-    QuaternionFloat quaternion = Matrix3X1Float::ToQuaternion(eulerAnglesInRad);
+    const QuaternionFloat quaternion = Matrix3X1Float::ToQuaternion(eulerAnglesInRad);
 
     Matrix3X1Float convertedEulerAngles = Matrix4X1Float::QuaternionToEulerAnglesRadian(quaternion);
-    convertedEulerAngles.print("ConvertedQuaternion");
+    //convertedEulerAngles.print("ConvertedQuaternion");
     CHECK(Matrix3X1Float::Equal(eulerAnglesInRad, convertedEulerAngles));
 
     Matrix4X4Float quaternionMat {};
@@ -138,9 +138,9 @@ TEST_CASE("Matrix TestCase3", "[Matrix][2]") {
     quaternionPoint.assign(point);
     quaternionPoint.multiply(quaternionMat);
 
-    quaternionMat.print("quaternionMat");
+    //quaternionMat.print("quaternionMat");
 
-    quaternionPoint.print("quaternionPoint");
+    //quaternionPoint.print("quaternionPoint");
 
     CHECK(Matrix4X1Float::Equal(quaternionPoint, eulerAnglePoint));
 }

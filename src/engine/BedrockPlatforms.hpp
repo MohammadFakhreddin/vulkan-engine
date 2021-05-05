@@ -90,7 +90,7 @@ enum class Platform {
 #define MFA_DEBUG
 #endif
 
-using ScreenSize = uint32_t;
+using ScreenSize = int32_t;
 struct ScreenInfo {
   ScreenSize screen_width = 0;
   ScreenSize screen_height = 0;

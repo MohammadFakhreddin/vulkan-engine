@@ -8,17 +8,19 @@ namespace RB = RenderBackend;
 using ScreenWidth = RB::ScreenWidth;
 using ScreenHeight = RB::ScreenHeight;
 
+using ResizeEventListener = std::function<void()>;
+
 struct InitParams {
     ScreenWidth screen_width;
     ScreenHeight screen_height;
     char const * application_name;
+    bool resizable = true;
 };
 
 bool Init(InitParams const & params);
-// TODO Implement this function
 bool Shutdown();
 
-bool Resize(ScreenWidth screen_width, ScreenHeight screen_height);
+void SetResizeEventListener(ResizeEventListener const & eventListener);
 
 // TODO CreateDrawPipeline + asking for descriptor set layout required bindings
 struct DrawPipeline {
@@ -238,5 +240,9 @@ uint32_t GetWindowFlags();
 void GetWindowSize(int32_t & out_width, int32_t & out_height);
 
 void GetDrawableSize(int32_t & out_width, int32_t & out_height);
+
+void AssignViewportAndScissorToCommandBuffer(
+    VkCommandBuffer_T * commandBuffer
+);
 
 }

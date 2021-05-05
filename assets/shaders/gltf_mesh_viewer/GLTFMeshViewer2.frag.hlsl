@@ -232,7 +232,7 @@ PSOut main(PSIn input) {
     }
     color += Lo;
 
-    // reinhard tone mapping    --> Try to implement more advanced hdr
+    // reinhard tone mapping    --> Try to implement more advanced hdr (Passing exposure parameter is also a good option)
 	color = color / (color + float3(1.0f));
     // Gamma correct
     color = pow(color, float3(1.0f/2.2f)); 
