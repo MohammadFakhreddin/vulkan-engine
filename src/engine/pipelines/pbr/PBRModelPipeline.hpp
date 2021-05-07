@@ -24,7 +24,7 @@ public:
         alignas(4) int hasEmissiveTexture;
     };
 
-    struct ViewProjectionBuffer {   // For vertices in Vertex shader
+    struct ViewProjectionData {   // For vertices in Vertex shader
         alignas(64) float view[16];
         alignas(64) float perspective[16];
     };
@@ -35,11 +35,18 @@ public:
         alignas(16) float lightColor[3];
     };
 
+    explicit PBRModelPipeline() = default;
+
     ~PBRModelPipeline() override {
         if (mIsInitialized) {
             shutdown();
         }
     }
+
+    PBRModelPipeline (PBRModelPipeline const &) noexcept = delete;
+    PBRModelPipeline (PBRModelPipeline &&) noexcept = delete;
+    PBRModelPipeline & operator = (PBRModelPipeline const &) noexcept = delete;
+    PBRModelPipeline & operator = (PBRModelPipeline &&) noexcept = delete;
 
     void init(
         RF::SamplerGroup * samplerGroup, 
@@ -60,7 +67,7 @@ public:
     
     bool updateViewProjectionBuffer(
         DrawableObjectId drawableObjectId, 
-        ViewProjectionBuffer const & viewProjectionData
+        ViewProjectionData const & viewProjectionData
     );
 
     void updateLightViewBuffer(

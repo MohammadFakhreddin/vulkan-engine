@@ -9,7 +9,6 @@
 
 namespace RF = MFA::RenderFrontend;
 namespace RB = MFA::RenderBackend;
-namespace AS = MFA::AssetSystem;
 namespace Importer = MFA::Importer;
 
 void GLTFMeshViewerScene::Init() {

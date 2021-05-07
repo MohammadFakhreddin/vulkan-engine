@@ -12,21 +12,30 @@ namespace MFA {
 class PointLightPipeline final : public BasePipeline {
 public:
 
-    struct ViewProjectionBuffer {
+    struct PrimitiveInfo {
+        alignas(16) float baseColorFactor[4];
+    };
+
+    struct ViewProjectionData {
         float view[16];
         float projectionMat[16];
     };
 
-    PointLightPipeline();
-
     ~PointLightPipeline() override;
+
+    PointLightPipeline (PointLightPipeline const &) noexcept = delete;
+    PointLightPipeline (PointLightPipeline &&) noexcept = delete;
+    PointLightPipeline & operator = (PointLightPipeline const &) noexcept = delete;
+    PointLightPipeline & operator = (PointLightPipeline &&) noexcept = delete;
 
     void init();
 
     void shutdown();
 
-    bool addDrawableObject(DrawableObject * drawableObject);
+    DrawableObjectId addGpuModel(RF::GpuModel & gpuModel);
 
+    bool removeGpuModel(DrawableObjectId drawableObjectId);
+    
     void render(
         RF::DrawPass & drawPass, 
         uint32_t idsCount, 
@@ -35,7 +44,7 @@ public:
 
     bool updateViewProjectionBuffer(
         DrawableObjectId drawableObjectId, 
-        ViewProjectionBuffer viewProjectionBuffer
+        ViewProjectionData const & viewProjectionData
     );
 
 private:
@@ -57,7 +66,7 @@ private:
     VkDescriptorSetLayout_T * mDescriptorSetLayout = nullptr;
     MFA::RenderFrontend::DrawPipeline mDrawPipeline {};
 
-    std::unordered_map<DrawableObjectId, DrawableObject *> mDrawableObjects {};
+    std::unordered_map<DrawableObjectId, std::unique_ptr<DrawableObject>> mDrawableObjects {};
 
 };
 

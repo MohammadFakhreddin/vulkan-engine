@@ -72,7 +72,7 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel
 
     const auto * modelTransformBuffer = drawableObject->createUniformBuffer(
         "ViewProjection", 
-        sizeof(ViewProjectionBuffer)
+        sizeof(ViewProjectionData)
     );
     MFA_ASSERT(modelTransformBuffer != nullptr);
 
@@ -126,7 +126,7 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel
                         .pBufferInfo = &nodeTransformBufferInfo,
                     });
 
-                    // SubMeshInfo
+                    // Primitive
                     VkDescriptorBufferInfo primitiveBufferInfo {
                         .buffer = primitiveInfoBuffer->buffers[primitive.uniqueId].buffer,
                         .offset = 0,
@@ -270,7 +270,7 @@ bool MFA::PBRModelPipeline::removeGpuModel(DrawableObjectId const drawableObject
 
 bool MFA::PBRModelPipeline::updateViewProjectionBuffer(
     DrawableObjectId const drawableObjectId, 
-    ViewProjectionBuffer const & viewProjectionData
+    ViewProjectionData const & viewProjectionData
 ) {
     auto const findResult = mDrawableObjects.find(drawableObjectId);
     if (findResult == mDrawableObjects.end()) {
@@ -317,7 +317,7 @@ void MFA::PBRModelPipeline::createDescriptorSetLayout() {
         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
         .pImmutableSamplers = nullptr, // Optional
     });
-    // SubMeshInfo
+    // Primitive
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
         .binding = static_cast<uint32_t>(bindings.size()),
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -378,7 +378,6 @@ void MFA::PBRModelPipeline::destroyDescriptorSetLayout() {
 }
 
 void MFA::PBRModelPipeline::createPipeline() {
-
     // Vertex shader
     auto cpuVertexShader = Importer::ImportShaderFromSPV(
         "../assets/shaders/gltf_mesh_viewer/GLTFMeshViewer.vert.spv", 

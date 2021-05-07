@@ -73,7 +73,7 @@ private:
         alignas(4) int hasEmissiveTexture;
     }; 
 
-    MFA::PBRModelPipeline::ViewProjectionBuffer mViewProjectionData {};
+    MFA::PBRModelPipeline::ViewProjectionData mViewProjectionData {};
 
     float m_model_rotation[3] {45.0f, 45.0f, 45.0f};
     float m_model_scale = 1.0f;
