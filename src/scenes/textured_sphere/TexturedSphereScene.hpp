@@ -67,6 +67,6 @@ private:
     VkDescriptorSetLayout_T * mDescriptorSetLayout = nullptr;
     MFA::RenderFrontend::DrawPipeline mDrawPipeline {};
     MFA::RenderFrontend::UniformBufferGroup mLVBuffer {};
-    MFA::DrawableObject mDrawableObject {};
+    std::unique_ptr<MFA::DrawableObject> mDrawableObject = nullptr;
 
 };

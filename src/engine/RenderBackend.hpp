@@ -383,6 +383,11 @@ private:
 struct GraphicPipelineGroup {
     VkPipelineLayout_T * pipelineLayout = nullptr;
     VkPipeline_T * graphicPipeline = nullptr;
+
+    [[nodiscard]]
+    bool isValid() const noexcept {
+        return pipelineLayout != nullptr && graphicPipeline != nullptr;
+    }
 };
 struct CreateGraphicPipelineOptions {
     VkFrontFace font_face = VK_FRONT_FACE_CLOCKWISE;

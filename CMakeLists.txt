@@ -59,6 +59,7 @@ list(
     "src/engine/Scene.cpp"
     "src/engine/UISystem.hpp"
     "src/engine/UISystem.cpp"
+    "src/engine/pipelines/BasePipeline.hpp"
     "src/engine/pipelines/pbr/PBRModelPipeline.hpp"
     "src/engine/pipelines/pbr/PBRModelPipeline.cpp"
     "src/engine/pipelines/point_light/PointLightPipeline.hpp"

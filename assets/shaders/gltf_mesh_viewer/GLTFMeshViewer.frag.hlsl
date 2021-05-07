@@ -64,7 +64,7 @@ const float constantAttenuation = 1.0f;
 const float linearAttenuation = 2.0f / lightSphereRadius;
 const float quadraticAttenuation = 1.0f / (lightSphereRadius * lightSphereRadius);
 
-const float alphaMaskCutoff = 0.1f;
+const float alphaMaskCutoff = 0.01f;
 
 // This function computes ratio between amount of light that reflect and refracts
 // Reflection contrbutes to specular while refraction contributes to diffuse light

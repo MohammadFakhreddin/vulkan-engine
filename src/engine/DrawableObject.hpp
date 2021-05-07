@@ -8,20 +8,19 @@ namespace MFA {
 
 namespace RF = RenderFrontend;
 namespace RB = RenderBackend;
-// TODO Start from here, Drawable object currently can be a struct that holds data, Also we can update all descriptor sets once at start
-// TODO Handle system could be useful
+
+using DrawableObjectId = uint32_t;
+
 class DrawableObject {
 public:
-
-    DrawableObject() = default;
-
-    ~DrawableObject() = default;
 
     DrawableObject(
         RF::GpuModel & model_,
         VkDescriptorSetLayout_T * descriptorSetLayout
     );
 
+    ~DrawableObject() = default;
+    
     DrawableObject & operator= (DrawableObject && rhs) noexcept {
         this->mNodeTransformBuffers = std::move(rhs.mNodeTransformBuffers);
         this->mGpuModel = rhs.mGpuModel;
@@ -68,6 +67,11 @@ public:
 
     void draw(RF::DrawPass & drawPass);
 
+    [[nodiscard]]
+    uint32_t getId() const noexcept {
+        return mId;
+    }
+
 private:
 
     struct NodeTransformBuffer {
@@ -80,6 +84,9 @@ private:
 
     void drawSubMesh(RF::DrawPass & drawPass, AssetSystem::Mesh::SubMesh const & subMesh);
 
+    static DrawableObjectId NextId;
+
+    DrawableObjectId const mId = 0;
     // Note: Order is important
     RF::UniformBufferGroup mNodeTransformBuffers {};
     RF::GpuModel * mGpuModel = nullptr;

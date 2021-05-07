@@ -1,14 +1,19 @@
 #include "DrawableObject.hpp"
 
 namespace MFA {
+
+DrawableObjectId DrawableObject::NextId = 0;
+
 // TODO We need RCMGMT very bad
 // We need other overrides for easier use as well
 DrawableObject::DrawableObject(
     RF::GpuModel & model_,
     VkDescriptorSetLayout_T * descriptorSetLayout
 )
-    : mGpuModel(&model_)
+    : mId(NextId)
+    , mGpuModel(&model_)
 {
+    NextId += 1;
     // DescriptorSetCount
     uint32_t descriptorSetCount = 0;
     for (uint32_t i = 0; i < mGpuModel->model.mesh.getSubMeshCount(); ++i) {

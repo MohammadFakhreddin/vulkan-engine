@@ -72,7 +72,7 @@ void TextureViewerScene::Shutdown() {
     RF::DestroySampler(mSamplerGroup);
     RF::DestroyGpuModel(mGpuModel);
     Importer::FreeModel(&mGpuModel.model);
-    mDrawableObject.deleteUniformBuffers();
+    mDrawableObject->deleteUniformBuffers();
 }
 
 void TextureViewerScene::OnDraw(
@@ -114,7 +114,7 @@ void TextureViewerScene::OnDraw(
         ::memcpy(mViewProjectionBuffer.view, transformMat.cells, sizeof(transformMat.cells));
         static_assert(sizeof(transformMat.cells) == sizeof(mViewProjectionBuffer.view));
 
-        mDrawableObject.updateUniformBuffer(
+        mDrawableObject->updateUniformBuffer(
             "viewProjection",
             MFA::CBlobAliasOf(mViewProjectionBuffer)
         );
@@ -124,13 +124,13 @@ void TextureViewerScene::OnDraw(
     {
         mImageOptionsBuffer.mipLevel = static_cast<float>(mMipLevel);
 
-        mDrawableObject.updateUniformBuffer(
+        mDrawableObject->updateUniformBuffer(
             "imageOptions",
             MFA::CBlobAliasOf(mImageOptionsBuffer)
         );
     }
 
-    mDrawableObject.draw(drawPass);
+    mDrawableObject->draw(drawPass);
 }
 
 void TextureViewerScene::OnUI(
@@ -252,18 +252,18 @@ void TextureViewerScene::createModel() {
 
 void TextureViewerScene::createDrawableObject() {
     auto const & cpuModel = mGpuModel.model;
-    mDrawableObject = MFA::DrawableObject {
+    mDrawableObject = std::make_unique<MFA::DrawableObject> (
         mGpuModel,
         mDescriptorSetLayout
-    };
+    );
 
-    auto const * viewProjectionBuffer = mDrawableObject.createUniformBuffer(
+    auto const * viewProjectionBuffer = mDrawableObject->createUniformBuffer(
         "viewProjection", 
         sizeof(ViewProjectionBuffer)
     );
     MFA_ASSERT(viewProjectionBuffer != nullptr);
 
-    auto const * imageOptionsBuffer = mDrawableObject.createUniformBuffer(
+    auto const * imageOptionsBuffer = mDrawableObject->createUniformBuffer(
         "imageOptions", 
         sizeof(ImageOptionsBuffer)
     );
@@ -272,7 +272,7 @@ void TextureViewerScene::createDrawableObject() {
     MFA_ASSERT(cpuModel.mesh.getSubMeshCount() == 1);
     MFA_ASSERT(cpuModel.mesh.getSubMeshByIndex(0).primitives.size() == 1);
     auto const & primitive = cpuModel.mesh.getSubMeshByIndex(0).primitives[0];
-    auto * descriptorSet = mDrawableObject.getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
+    auto * descriptorSet = mDrawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
 
     std::vector<VkWriteDescriptorSet> writeInfo {};
 

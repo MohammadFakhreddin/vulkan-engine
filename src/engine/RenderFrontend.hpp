@@ -22,10 +22,7 @@ bool Shutdown();
 
 void SetResizeEventListener(ResizeEventListener const & eventListener);
 
-// TODO CreateDrawPipeline + asking for descriptor set layout required bindings
-struct DrawPipeline {
-    RB::GraphicPipelineGroup graphic_pipeline_group {};
-};
+using DrawPipeline = RB::GraphicPipelineGroup;
 
 [[nodiscard]]
 VkDescriptorSetLayout_T * CreateBasicDescriptorSetLayout();
@@ -128,7 +125,20 @@ struct DrawPass {
 struct UniformBufferGroup {
     std::vector<RB::BufferGroup> buffers;
     size_t bufferSize;
+    [[nodiscard]]
+    bool isValid() const noexcept {
+        if (bufferSize <= 0 || buffers.empty() == true) {
+            return false;    
+        }
+        for (auto const & buffer : buffers) {
+            if (buffer.isValid() == false) {
+                return false;
+            }
+        }
+        return true;
+    }
 };
+
 UniformBufferGroup CreateUniformBuffer(size_t bufferSize, uint32_t count);
 
 void UpdateUniformBuffer(

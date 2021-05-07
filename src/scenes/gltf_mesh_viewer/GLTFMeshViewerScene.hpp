@@ -4,6 +4,7 @@
 #include "engine/Scene.hpp"
 #include "engine/RenderFrontend.hpp"
 #include "engine/RenderBackend.hpp"
+#include "engine/pipelines/pbr/PBRModelPipeline.hpp"
 
 class GLTFMeshViewerScene final : public MFA::Scene {
 public:
@@ -29,7 +30,7 @@ private:
         MFA::RenderFrontend::GpuModel gpuModel {};
         std::string displayName {};
         std::string address {};
-        MFA::DrawableObject drawableObject {};
+        MFA::DrawableObjectId drawableObjectId {};
         struct {
             struct {
                 float rotationEulerAngle[3] {};
@@ -55,10 +56,6 @@ private:
 
     void destroyModels();
 
-    void createDrawPipeline(uint8_t gpu_shader_count, MFA::RenderBackend::GpuShader * gpu_shaders);
-
-    void createDescriptorSetLayout();
-
     void updateProjectionBuffer();
 
     static constexpr float Z_NEAR = 0.1f;
@@ -76,40 +73,29 @@ private:
         alignas(4) int hasEmissiveTexture;
     }; 
 
-    struct ModelTransformBuffer {   // For vertices in Vertex shader
-        alignas(64) float view[16];
-        alignas(64) float perspective[16];
-    } mTransformData {};
+    MFA::PBRModelPipeline::ViewProjectionBuffer mViewProjectionData {};
 
     float m_model_rotation[3] {45.0f, 45.0f, 45.0f};
     float m_model_scale = 1.0f;
     float m_model_position[3] {0.0f, 0.0f, -6.0f};
 
-    struct LightViewBuffer {
-        alignas(16) float light_position[3];
-        alignas(16) float camera_position[3];
-        alignas(16) float light_color[3];
-    } m_lv_data {
-        .light_position = {},
-        .camera_position = {0.0f, 0.0f, 0.0f},
+    MFA::PBRModelPipeline::LightViewBuffer mLightViewData {
+        .lightPosition = {},
+        .cameraPosition = {0.0f, 0.0f, 0.0f},
     };
 
-    float m_light_position[3] {0.0f, 0.0f, -2.0f};
-    float m_light_color[3]{};
+    float mLightPosition[3] {0.0f, 0.0f, -2.0f};
+    float mLightColor[3]{};
 
     std::vector<ModelRenderRequiredData> mModelsRenderData {};
     int32_t mSelectedModelIndex = 0;
     int32_t mPreviousModelSelectedIndex = -1;
 
-    MFA::RenderFrontend::SamplerGroup m_sampler_group {};
+    MFA::RenderFrontend::SamplerGroup mSamplerGroup {};
 
-    VkDescriptorSetLayout_T * m_descriptor_set_layout = nullptr;
+    MFA::PBRModelPipeline mPbrPipeline {};
 
-    MFA::RenderFrontend::DrawPipeline m_draw_pipeline {};
-
-    MFA::RenderFrontend::UniformBufferGroup m_lv_buffer {};
-
-    MFA::RenderBackend::GpuTexture m_error_texture {};
+    MFA::RenderBackend::GpuTexture mErrorTexture {};
 
     float mModelTranslateMin[3] {-100.0f, -100.0f, -100.0f};
     float mModelTranslateMax[3] {100.0f, 100.0f, 100.0f};

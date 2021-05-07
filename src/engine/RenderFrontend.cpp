@@ -436,15 +436,13 @@ DrawPipeline CreateDrawPipeline(
         options
     );
 
-    return DrawPipeline {
-        .graphic_pipeline_group = graphic_pipeline_group,
-    };
+    return graphic_pipeline_group;
 }
 
 void DestroyDrawPipeline(DrawPipeline & draw_pipeline) {
     RB::DestroyGraphicPipeline(
         state->logicalDevice.device, 
-        draw_pipeline.graphic_pipeline_group
+        draw_pipeline
     );
 }
 
@@ -704,7 +702,7 @@ void BindDrawPipeline(
     vkCmdBindPipeline(
         state->graphic_command_buffers[drawPass.imageIndex], 
         VK_PIPELINE_BIND_POINT_GRAPHICS, 
-        drawPipeline.graphic_pipeline_group.graphicPipeline
+        drawPipeline.graphicPipeline
     );
 }
 // TODO Remove all basic functions
@@ -788,7 +786,7 @@ void BindDescriptorSet(
     vkCmdBindDescriptorSets(
         state->graphic_command_buffers[drawPass.imageIndex], 
         VK_PIPELINE_BIND_POINT_GRAPHICS, 
-        drawPass.drawPipeline->graphic_pipeline_group.pipelineLayout, 
+        drawPass.drawPipeline->pipelineLayout, 
         0, 
         1, 
         &descriptorSet, 
@@ -964,7 +962,7 @@ void PushConstants(
 ) {
     RB::PushConstants(
         state->graphic_command_buffers[draw_pass.imageIndex],
-        draw_pass.drawPipeline->graphic_pipeline_group.pipelineLayout,
+        draw_pass.drawPipeline->pipelineLayout,
         shader_stage,
         offset,
         data

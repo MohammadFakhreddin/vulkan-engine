@@ -6,12 +6,12 @@ struct VSOut {
     float4 position;
 };
 
-struct ModelTransformation {
+struct ViewProjectionBuffer {
     float4x4 view;
     float4x4 projectionMat;
 };
 
-ConstantBuffer <ModelTransformation> modelTransformBuffer: register(b0, space0);
+ConstantBuffer <ViewProjectionBuffer> modelTransformBuffer: register(b0, space0);
 
 struct NodeTranformation {
     float4x4 model;

@@ -40,7 +40,7 @@ private:
 
     MFA::RenderFrontend::DrawPipeline mDrawPipeline {};
 
-    MFA::DrawableObject mDrawableObject {};
+    std::unique_ptr<MFA::DrawableObject> mDrawableObject = nullptr;
 
     MFA::RenderFrontend::SamplerGroup mSamplerGroup {};
 
