@@ -11,6 +11,7 @@ public:
     void Shutdown() override;
     void OnDraw(uint32_t deltaTime, MFA::RenderFrontend::DrawPass & drawPass) override;
     void OnUI(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override;
+    void OnResize() override;
 
 private:
 
@@ -31,6 +32,7 @@ private:
     void createDrawPipeline(uint8_t gpuShaderCount, MFA::RenderBackend::GpuShader * gpuShaders);
     void createModel();
     void createDrawableObject();
+    void updateProjection();
 
     MFA::RenderFrontend::GpuModel mGpuModel {};
 

@@ -47,6 +47,8 @@ void TexturedSphereScene::Init() {
     createDrawPipeline(static_cast<uint8_t>(shaders.size()), shaders.data());
     
     createDrawableObject();
+
+    updateProjectionBuffer();
 }
 
 void TexturedSphereScene::OnDraw(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
@@ -74,21 +76,8 @@ void TexturedSphereScene::OnDraw(uint32_t delta_time, MFA::RenderFrontend::DrawP
         );
         static_assert(sizeof(m_translate_data.transformation) == sizeof(transformationMat.cells));
         ::memcpy(m_translate_data.transformation, transformationMat.cells, sizeof(transformationMat.cells));
-        // Perspective
-        int32_t width; int32_t height;
-        RF::GetWindowSize(width, height);
-        float const ratio = static_cast<float>(width) / static_cast<float>(height);
-        MFA::Matrix4X4Float perspectiveMat {};
-        MFA::Matrix4X4Float::PreparePerspectiveProjectionMatrix(
-            perspectiveMat,
-            ratio,
-            40,
-            Z_NEAR,
-            Z_FAR
-        );
-        static_assert(sizeof(m_translate_data.perspective) == sizeof(perspectiveMat.cells));
-        ::memcpy(m_translate_data.perspective, perspectiveMat.cells, sizeof(perspectiveMat.cells));
 
+        
         mDrawableObject.updateUniformBuffer(
             "transform", 
             MFA::CBlobAliasOf(m_translate_data)
@@ -146,6 +135,10 @@ void TexturedSphereScene::Shutdown() {
     RF::DestroySampler(mSamplerGroup);
     RF::DestroyGpuModel(mGpuModel);
     Importer::FreeModel(&mGpuModel.model);
+}
+
+void TexturedSphereScene::OnResize() {
+    updateProjectionBuffer();
 }
 
 void TexturedSphereScene::createDrawableObject(){
@@ -360,7 +353,7 @@ void TexturedSphereScene::createDrawPipeline(uint8_t gpu_shader_count, MFA::Rend
                 .alphaBlendOp = VK_BLEND_OP_ADD,
                 .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
             },
-            .use_static_viewport_and_scissor = true,
+            .use_static_viewport_and_scissor = false,
             .primitive_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP
         }
     );
@@ -463,4 +456,21 @@ void TexturedSphereScene::createGpuModel() {
     }
 
     mGpuModel = RF::CreateGpuModel(cpuModel);
+}
+
+void TexturedSphereScene::updateProjectionBuffer() {
+    // Perspective
+    int32_t width; int32_t height;
+    RF::GetWindowSize(width, height);
+    float const ratio = static_cast<float>(width) / static_cast<float>(height);
+    MFA::Matrix4X4Float perspectiveMat {};
+    MFA::Matrix4X4Float::PreparePerspectiveProjectionMatrix(
+        perspectiveMat,
+        ratio,
+        40,
+        Z_NEAR,
+        Z_FAR
+    );
+    static_assert(sizeof(m_translate_data.perspective) == sizeof(perspectiveMat.cells));
+    ::memcpy(m_translate_data.perspective, perspectiveMat.cells, sizeof(perspectiveMat.cells));
 }

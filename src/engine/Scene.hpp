@@ -31,7 +31,7 @@ public:
     virtual ~Scene() = default;
     virtual void OnDraw(uint32_t delta_time, RenderFrontend::DrawPass & draw_pass) = 0;
     virtual void OnUI(uint32_t delta_time, RenderFrontend::DrawPass & draw_pass) = 0;
-    virtual void OnResize() {};
+    virtual void OnResize() = 0;
     virtual void Init() = 0;
     virtual void Shutdown() = 0;
 };

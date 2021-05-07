@@ -407,7 +407,7 @@ struct CreateGraphicPipelineOptions {
     };
     uint8_t push_constants_range_count = 0;
     VkPushConstantRange * push_constant_ranges = nullptr;
-    bool use_static_viewport_and_scissor = false;
+    bool use_static_viewport_and_scissor = false;           // Use of dynamic viewport and scissor is recommended
     VkPrimitiveTopology primitive_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 };
 // Note Shaders can be removed after creating graphic pipeline

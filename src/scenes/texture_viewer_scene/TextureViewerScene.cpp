@@ -64,22 +64,6 @@ void TextureViewerScene::Init() {
     createDrawPipeline(static_cast<uint8_t>(shaders.size()), shaders.data());
 
     createDrawableObject();
-
-    // Updating perspective mat once for entire application
-    // Perspective
-    int32_t width; int32_t height;
-    RF::GetWindowSize(width, height);
-    float const ratio = static_cast<float>(width) / static_cast<float>(height);
-    MFA::Matrix4X4Float perspectiveMat {};
-    MFA::Matrix4X4Float::PreparePerspectiveProjectionMatrix(
-        perspectiveMat,
-        ratio,
-        40,
-        Z_NEAR,
-        Z_FAR
-    );
-    static_assert(sizeof(mViewProjectionBuffer.perspective) == sizeof(perspectiveMat.cells));
-    ::memcpy(mViewProjectionBuffer.perspective, perspectiveMat.cells, sizeof(perspectiveMat.cells));
 }
 
 void TextureViewerScene::Shutdown() {
@@ -172,6 +156,10 @@ void TextureViewerScene::OnUI(
     ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("ZDistance", &mModelPosition[2], -50.0f, 50.0f);
     ImGui::End();
+}
+
+void TextureViewerScene::OnResize() {
+    updateProjection();
 }
 
 void TextureViewerScene::createDescriptorSetLayout() {
@@ -340,4 +328,21 @@ void TextureViewerScene::createDrawableObject() {
         static_cast<uint8_t>(writeInfo.size()),
         writeInfo.data()
     );
+}
+
+void TextureViewerScene::updateProjection() {
+    // Perspective
+    int32_t width; int32_t height;
+    RF::GetWindowSize(width, height);
+    float const ratio = static_cast<float>(width) / static_cast<float>(height);
+    MFA::Matrix4X4Float perspectiveMat {};
+    MFA::Matrix4X4Float::PreparePerspectiveProjectionMatrix(
+        perspectiveMat,
+        ratio,
+        40,
+        Z_NEAR,
+        Z_FAR
+    );
+    static_assert(sizeof(mViewProjectionBuffer.perspective) == sizeof(perspectiveMat.cells));
+    ::memcpy(mViewProjectionBuffer.perspective, perspectiveMat.cells, sizeof(perspectiveMat.cells));
 }

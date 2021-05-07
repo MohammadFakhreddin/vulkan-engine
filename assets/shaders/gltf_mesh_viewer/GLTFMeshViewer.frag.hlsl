@@ -1,42 +1,70 @@
 struct PSIn {
     float4 position : SV_POSITION;
-	float2 baseColorTexCoord : TEXCOORD0;
-    float2 metallicRoughnessTexCoord : TEXCOORD1;
-    float2 normalTexCoord: TEXCOORD2;
     float3 worldPos: POSITION0;
-	float3 normal : NORMAL0;
-	float4 tangent: TEXCOORD3;
+    
+    float2 baseColorTexCoord : TEXCOORD0;
+    float2 metallicRoughnessTexCoord : TEXCOORD1;
+    
+    float2 normalTexCoord: TEXCOORD2;
+    float3 worldNormal : NORMAL0;
+    float3 worldTangent: TEXCOORD3;
+    float3 worldBiTangent : TEXCOORD4;
+
+    float2 emissiveTexCoord: TEXCOORD5;
 };
 
-struct PSOut{
+struct PSOut {
     float4 color:SV_Target0;
 };
 
+struct SubMeshInfo {
+    float4 baseColorFactor: COLOR0;
+    float3 emissiveFactor: COLOR3;
+    float placeholder0;
+    
+    int hasBaseColorTexture;
+    
+    float metallicFactor: COLOR1;
+    float roughnessFactor: COLOR2;
+    int hasMetallicRoughnessTexture;
 
-sampler baseColorSampler : register(s1, space0);
-Texture2D baseColorTexture : register(t1, space0);
+    int hasNormalTexture;  
 
-sampler metallicRoughnessSampler : register(s2, space0);
-Texture2D metallicRoughnessTexture : register(t2, space0);
+    int hasEmissiveTexture;
+};
 
-sampler normalSampler : register(s3, space0);
-Texture2D normalTexture : register(t3, space0);
+ConstantBuffer <SubMeshInfo> smBuff : register (b2, space0);
+
+sampler baseColorSampler : register(s3, space0);
+Texture2D baseColorTexture : register(t3, space0);
+
+sampler metallicRoughnessSampler : register(s4, space0);
+Texture2D metallicRoughnessTexture : register(t4, space0);
+
+sampler normalSampler : register(s5, space0);
+Texture2D normalTexture : register(t5, space0);
+
+sampler emissiveSampler : register(s6, space0);
+Texture2D emissiveTexture : register(s6, space0);
 
 struct LightViewBuffer {
     float3 lightPosition;
     float3 camPos;
+    float3 lightColor;          // Light color can be from 0 to inf (Sun for example can exceed 1.0f)
 };
 
-ConstantBuffer <LightViewBuffer> lvBuff : register (b4, space0);
-
-struct RotationBuffer {
-	float4x4 rotation;
-};
-
-ConstantBuffer <RotationBuffer> rBuffer : register (b5, space0);
+ConstantBuffer <LightViewBuffer> lvBuff : register (b7, space0);
 
 const float PI = 3.14159265359;
 
+// TODO Each light source should have its own attenuation, TODO Get this values from cpp code (From I was doing things wrong website)
+// Fow now I assume we have a light source with r = 1.0f
+const float lightSphereRadius = 1.0f;
+const float constantAttenuation = 1.0f;
+const float linearAttenuation = 2.0f / lightSphereRadius;
+const float quadraticAttenuation = 1.0f / (lightSphereRadius * lightSphereRadius);
+
+const float alphaMaskCutoff = 0.1f;
 
 // This function computes ratio between amount of light that reflect and refracts
 // Reflection contrbutes to specular while refraction contributes to diffuse light
@@ -48,7 +76,7 @@ const float PI = 3.14159265359;
     This translates to code as follows:
 */
 // Fresnel function ----------------------------------------------------
-float3 F_Schlick(float cosTheta, float metallic, float4 baseColor)
+float3 F_Schlick(float cosTheta, float metallic, float3 baseColor)
 {
 	float3 F0 = lerp(float3(0.04, 0.04, 0.04), baseColor.rgb, metallic); // * material.specular
 	float3 F = F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
@@ -76,39 +104,62 @@ float G_SchlicksmithGGX(float dotNL, float dotNV, float roughness)
 
 // Specular BRDF composition --------------------------------------------
 
-float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness, float4 baseColor, float3 worldPos)
+float3 BRDF(
+    float3 L,
+    float3 V,
+    float3 N,
+    float metallic,
+    float roughness,
+    float3 baseColor,
+    float3 worldPos
+)
 {
-	// Precalculate vectors and dot products
+    // Precalculate vectors and dot products
 	float3 H = normalize (V + L);
-	float dotNV = clamp(dot(N, V), 0.0, 1.0);
+    float dotNV = clamp(dot(N, V), 0.0, 1.0);
 	float dotNL = clamp(dot(N, L), 0.0, 1.0);
 	float dotLH = clamp(dot(L, H), 0.0, 1.0);
 	float dotNH = clamp(dot(N, H), 0.0, 1.0);
 
-	// Light color fixed
-	float3 lightColor = float3(252.0f/256.0f, 212.0f/256.0f, 64.0f/256.0f);
-	// float3 lightColor = float3(1, 1, 1);
+    float3 color = float3(0, 0, 0);
 
-	float3 color = float3(0.0, 0.0, 0.0);
-
-	if (dotNL > 0.0)
-	{
-		// float rroughness = max(0.05, roughness);
-		// D = Normal distribution (Distribution of the microfacets)
-		float D = D_GGX(dotNH, roughness);
-		// G = Geometric shadowing term (Microfacets shadowing)
-		float G = G_SchlicksmithGGX(dotNL, dotNV, roughness);
-		// F = Fresnel factor (Reflectance depending on angle of incidence)
-		float3 F = F_Schlick(dotNV, metallic, baseColor);
-
-		float3 spec = D * F * G / (4.0 * dotNL * dotNV);
-
-		float distance = length(lvBuff.lightPosition - worldPos);
-		float attenuation = 100.0 / (distance * distance);	// Originally it was 1
-        float3 radiance = lightColor * attenuation;        
-
-		color += spec * dotNL * radiance;
-	}
+    float distance = length(lvBuff.lightPosition - worldPos);
+    // TODO Consider using more advanced attenuation https://github.com/lettier/3d-game-shaders-for-beginners/blob/master/sections/lighting.md
+    // float attenuation =
+    //     1
+    //   / ( p3d_LightSource[i].constantAttenuation
+    //     + p3d_LightSource[i].linearAttenuation
+    //     * lightDistance
+    //     + p3d_LightSource[i].quadraticAttenuation
+    //     * (lightDistance * lightDistance)
+    //     );
+    // https://imdoingitwrong.wordpress.com/2011/01/31/light-attenuation/
+    float attenuation =
+        1.0f
+      / ( 
+            constantAttenuation
+            + linearAttenuation * distance
+            + quadraticAttenuation * distance * distance
+        );
+    // float attenuation = attenuationFactor / (distance * distance);
+    float3 radiance   = lvBuff.lightColor * attenuation;        
+    
+    // cook-torrance brdf
+    float NDF = D_GGX(dotNH, roughness);        
+    float G = G_SchlicksmithGGX(dotNL, dotNV, roughness);  
+    float3 F = F_Schlick(dotNV, metallic, baseColor);;       
+    
+    float3 kS = F;
+    float3 kD = float3(1.0) - kS;
+    kD *= 1.0 - metallic;	  
+    
+    float3 numerator    = NDF * G * F;
+    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
+    float3 specular     = numerator / max(denominator, 0.001);  
+        
+    // add to outgoing radiance Lo
+    float NdotL = max(dot(N, L), 0.0);                
+    color += (kD * baseColor.rgb / PI + specular) * radiance * NdotL; 
 
 	return color;
 }
@@ -116,25 +167,47 @@ float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness, float
 // TODO Use this to compute normal correctly
 float3 calculateNormal(PSIn input)
 {
-	float3 tangentNormal = normalTexture.Sample(normalSampler, input.normalTexCoord).rgb * 2.0 - 1.0;
-
-	float3 N = normalize(input.normal);
-	float3 T = normalize(input.tangent);
-	float3 B = normalize(cross(N, T));
-	float3x3 TBN = transpose(float3x3(T, B, N));
-
-	float3 modelNormal = mul(TBN, tangentNormal);
-	float4 worldNormal = mul(rBuffer.rotation, float4(modelNormal, 0.0f));
-	return normalize(worldNormal.xyz);
+    float3 pixelNormal;
+    if (smBuff.hasNormalTexture == 0) {
+        pixelNormal = input.worldNormal;
+    } else {
+        float3 tangentNormal = normalTexture.Sample(normalSampler, input.normalTexCoord).rgb * 2.0 - 1.0;
+        
+        float3x3 TBN = transpose(float3x3(input.worldTangent, input.worldBiTangent, input.worldNormal));
+        // float3x3 TBN = float3x3(input.worldTangent, input.worldBiTangent, input.worldNormal));
+        float3 pixelNormal = mul(TBN, tangentNormal);
+        
+        pixelNormal = normalize(pixelNormal.xyz);
+    }
+    return pixelNormal;
 }
 
 PSOut main(PSIn input) {
-	float4 baseColor = baseColorTexture.Sample(baseColorSampler, input.baseColorTexCoord);
-    float4 metallicRoughness = metallicRoughnessTexture.Sample(metallicRoughnessSampler, input.metallicRoughnessTexCoord);
-    float metallic = metallicRoughness.b;
-    float roughness = metallicRoughness.g;
+    float4 baseColor = smBuff.hasBaseColorTexture == 1
+        ? pow(baseColorTexture.Sample(baseColorSampler, input.baseColorTexCoord).rgba, 2.2f)
+        : smBuff.baseColorFactor.rgba;
+
+    // Alpha mask
+    if (baseColor.a < alphaMaskCutoff) {
+        discard;
+    }
+	
+    float metallic = 0.0f;
+    float roughness = 0.0f;
+    // TODO: Is usages of occlusion correct ?
+    float ambientOcclusion = 0.3f;
+    if (smBuff.hasMetallicRoughnessTexture == 1) {
+        float4 metallicRoughness = metallicRoughnessTexture.Sample(metallicRoughnessSampler, input.metallicRoughnessTexCoord);
+        metallic = metallicRoughness.b;
+        roughness = metallicRoughness.g;
+        ambientOcclusion = metallicRoughness.r;
+    } else {
+        metallic = smBuff.metallicFactor;
+        roughness = smBuff.roughnessFactor;
+    }
+
 	float3 normal = calculateNormal(input);
-	// float4 worldNormal = normal;
+
 	float3 N = normalize(normal.xyz);
 	float3 V = normalize(lvBuff.camPos - input.worldPos);
     
@@ -142,15 +215,24 @@ PSOut main(PSIn input) {
 	float3 Lo = float3(0.0, 0.0, 0.0);
 	for (int i = 0; i < 1; i++) {   // Light count
 		float3 L = normalize(lvBuff.lightPosition.xyz - input.worldPos);
-		Lo += BRDF(L, V, N, metallic, roughness, baseColor, input.worldPos);
+		Lo += BRDF(L, V, N, metallic, roughness, baseColor.rgb, input.worldPos);
 	};
 
-	// Combine with ambient
-	float3 color = baseColor * 0.02;    // TODO Add emissive color here
-	color += Lo;
+    // Combine with ambient
+    float3 color = float3(0.0, 0.0, 0.0);
+    
+    if (smBuff.hasEmissiveTexture == 1) {
+        float3 ao = emissiveTexture.Sample(emissiveSampler, input.emissiveTexCoord);
+        color += float3(baseColor.r * ao.r, baseColor.g * ao.g, baseColor.b * ao.b) * ambientOcclusion;//* 0.3;
+    } else {
+        color += baseColor.rgb * smBuff.emissiveFactor * ambientOcclusion; // * 0.3
+    }
+    color += Lo;
 
-	// Gamma correct
-	color = pow(color, float3(0.4545, 0.4545, 0.4545));
+    // reinhard tone mapping    --> Try to implement more advanced hdr (Passing exposure parameter is also a good option)
+	color = color / (color + float3(1.0f));
+    // Gamma correct
+    color = pow(color, float3(1.0f/2.2f)); 
 
     PSOut output;
     output.color = float4(color, 1.0);

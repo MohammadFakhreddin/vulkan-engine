@@ -131,7 +131,7 @@ void PBRScene::Init() {
                     .alphaBlendOp = VK_BLEND_OP_ADD,
                     .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
                 },
-                .use_static_viewport_and_scissor = true,
+                .use_static_viewport_and_scissor = false,
                 .primitive_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP
             }
         );
@@ -151,6 +151,7 @@ void PBRScene::Init() {
 
     updateAllDescriptorSets();
 
+    updateProjection();
 }
 
 void PBRScene::Shutdown() {
@@ -221,28 +222,6 @@ void PBRScene::OnDraw(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_
             static_assert(sizeof(transform.cells) == sizeof(m_translate_data.transform));
             ::memcpy(m_translate_data.transform, transform.cells, sizeof(transform.cells));
             
-            // Perspective
-            int32_t width; int32_t height;
-            RF::GetWindowSize(width, height);
-            float const ratio = static_cast<float>(width) / static_cast<float>(height);
-            // TODO I think we should use camera position here
-            // TODO Try storing it as class variable
-            MFA::Matrix4X4Float perspective;
-            MFA::Matrix4X4Float::PreparePerspectiveProjectionMatrix(
-                perspective,
-                ratio,
-                40,
-                Z_NEAR,
-                Z_FAR
-            );
-
-            static_assert(sizeof(m_translate_data.perspective) == sizeof(perspective.cells));
-            ::memcpy(
-                m_translate_data.perspective, 
-                perspective.cells,
-                sizeof(m_translate_data.perspective)
-            );
-
             RF::UpdateUniformBuffer(
                 m_transformation_buffer_group.buffers[0], 
                 MFA::CBlobAliasOf(m_translate_data)
@@ -337,6 +316,10 @@ void PBRScene::OnUI(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pa
     ImGui::End();
 }
 
+void PBRScene::OnResize() {
+    updateProjection();
+}
+
 void PBRScene::updateAllDescriptorSets() {
     for (uint8_t i = 0; i < m_sphere_descriptor_sets.size(); ++i) {
         updateDescriptorSet(i);
@@ -400,5 +383,27 @@ void PBRScene::updateDescriptorSet(uint8_t const index) {
         &current_descriptor_set, 
         static_cast<uint8_t>(write_info.size()), 
         write_info.data()
+    );
+}
+
+void PBRScene::updateProjection() {
+    // Perspective
+    int32_t width; int32_t height;
+    RF::GetWindowSize(width, height);
+    float const ratio = static_cast<float>(width) / static_cast<float>(height);
+    MFA::Matrix4X4Float perspective {};
+    MFA::Matrix4X4Float::PreparePerspectiveProjectionMatrix(
+        perspective,
+        ratio,
+        40,
+        Z_NEAR,
+        Z_FAR
+    );
+
+    static_assert(sizeof(m_translate_data.perspective) == sizeof(perspective.cells));
+    ::memcpy(
+        m_translate_data.perspective, 
+        perspective.cells,
+        sizeof(m_translate_data.perspective)
     );
 }

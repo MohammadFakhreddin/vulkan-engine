@@ -21,6 +21,8 @@ public:
 
     void Shutdown() override;
 
+    void OnResize() override;
+
 private:
 
     void createDrawableObject();
@@ -32,6 +34,8 @@ private:
     void createDescriptorSetLayout();
 
     void createGpuModel();
+
+    void updateProjectionBuffer();
 
     static constexpr float Z_NEAR = 0.1f;
     static constexpr float Z_FAR = 1000.0f;

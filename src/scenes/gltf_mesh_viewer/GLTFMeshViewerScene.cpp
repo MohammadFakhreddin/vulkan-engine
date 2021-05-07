@@ -148,7 +148,7 @@ void GLTFMeshViewerScene::Init() {
     
     // Fragment shader
     auto cpu_fragment_shader = Importer::ImportShaderFromSPV(
-        "../assets/shaders/gltf_mesh_viewer/GLTFMeshViewer2.frag.spv",
+        "../assets/shaders/gltf_mesh_viewer/GLTFMeshViewer.frag.spv",
         MFA::AssetSystem::Shader::Stage::Fragment,
         "main"
     );
@@ -522,9 +522,7 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
                         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                         .pBufferInfo = &light_view_buffer_info,
                     });
-
-                    // TODO Important: Don't forget to bind nodeTransform buffer
-
+                    
                     RF::UpdateDescriptorSets(
                         static_cast<uint8_t>(writeInfo.size()),
                         writeInfo.data()
@@ -698,7 +696,7 @@ void GLTFMeshViewerScene::updateProjectionBuffer() {
     MFA::Matrix4X4Float::PreparePerspectiveProjectionMatrix(
         perspectiveMat,
         ratio,
-        40,
+        80,
         Z_NEAR,
         Z_FAR
     );

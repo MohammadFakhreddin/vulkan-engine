@@ -59,6 +59,10 @@ list(
     "src/engine/Scene.cpp"
     "src/engine/UISystem.hpp"
     "src/engine/UISystem.cpp"
+    "src/engine/pipelines/pbr/PBRModelPipeline.hpp"
+    "src/engine/pipelines/pbr/PBRModelPipeline.cpp"
+    "src/engine/pipelines/point_light/PointLightPipeline.hpp"
+    "src/engine/pipelines/point_light/PointLightPipeline.cpp"
 )
 
 add_library("Engine"
@@ -115,7 +119,6 @@ list(
     "src/scenes/pbr_scene/PBRScene.hpp"
     "src/scenes/textured_sphere/TexturedSphereScene.cpp"
     "src/scenes/textured_sphere/TexturedSphereScene.hpp"
-    "src/scenes/SpecularHighlightScene.hpp"
     "src/scenes/texture_viewer_scene/TextureViewerScene.hpp"
     "src/scenes/texture_viewer_scene/TextureViewerScene.cpp"
 )

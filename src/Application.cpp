@@ -2,7 +2,6 @@
 
 #include "scenes/gltf_mesh_viewer/GLTFMeshViewerScene.hpp"
 #include "scenes/pbr_scene/PBRScene.hpp"
-#include "scenes/SpecularHighlightScene.hpp"
 #include "scenes/textured_sphere/TexturedSphereScene.hpp"
 #include "scenes/texture_viewer_scene/TextureViewerScene.hpp"
 #include "engine/RenderFrontend.hpp"
@@ -12,7 +11,6 @@
 
 Application::Application()
     : mGltfMeshViewerScene(std::make_unique<GLTFMeshViewerScene>())
-    , mSpecularHighlightScene(std::make_unique<SpecularHighlightScene>())
     , mPbrScene(std::make_unique<PBRScene>())
     , mTexturedSphereScene(std::make_unique<TexturedSphereScene>())
     , mTextureViewerScene(std::make_unique<TextureViewerScene>())
@@ -33,7 +31,6 @@ void Application::run() {
     
     mSceneSubSystem.RegisterNew(mTexturedSphereScene.get(), "TextureSphereScene");
     mSceneSubSystem.RegisterNew(mGltfMeshViewerScene.get(), "GLTFMeshViewerScene");
-    mSceneSubSystem.RegisterNew(mSpecularHighlightScene.get(), "SpecularHighlightScene");
     mSceneSubSystem.RegisterNew(mPbrScene.get(), "PBRScene");
     mSceneSubSystem.RegisterNew(mTextureViewerScene.get(), "TextureViewerScene");
     

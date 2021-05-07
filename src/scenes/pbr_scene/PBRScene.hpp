@@ -16,11 +16,15 @@ public:
 
     void OnUI(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override;
 
+    void OnResize() override;
+
 private:
 
     void updateAllDescriptorSets();
 
     void updateDescriptorSet(uint8_t index);
+
+    void updateProjection();
 
     static constexpr float Z_NEAR = 0.1f;
     static constexpr float Z_FAR = 1000.0f;
