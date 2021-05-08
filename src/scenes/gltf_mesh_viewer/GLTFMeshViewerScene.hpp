@@ -5,6 +5,7 @@
 #include "engine/RenderFrontend.hpp"
 #include "engine/RenderBackend.hpp"
 #include "engine/pipelines/pbr/PBRModelPipeline.hpp"
+#include "engine/pipelines/point_light/PointLightPipeline.hpp"
 
 class GLTFMeshViewerScene final : public MFA::Scene {
 public:
@@ -73,7 +74,8 @@ private:
         alignas(4) int hasEmissiveTexture;
     }; 
 
-    MFA::PBRModelPipeline::ViewProjectionData mViewProjectionData {};
+    MFA::PBRModelPipeline::ViewProjectionData mPbrViewProjectionData {};
+    MFA::PointLightPipeline::ViewProjectionData mPointLightViewProjectionData {};
 
     float m_model_rotation[3] {45.0f, 45.0f, 45.0f};
     float m_model_scale = 1.0f;
@@ -94,6 +96,7 @@ private:
     MFA::RenderFrontend::SamplerGroup mSamplerGroup {};
 
     MFA::PBRModelPipeline mPbrPipeline {};
+    MFA::PointLightPipeline mPointLightPipeline {};
 
     MFA::RenderBackend::GpuTexture mErrorTexture {};
 
@@ -102,5 +105,10 @@ private:
 
     float mLightTranslateMin[3] {-200.0f, -200.0f, -200.0f};
     float mLightTranslateMax[3] {200.0f, 200.0f, 200.0f};
+
+    bool mIsLightVisible = true;
+
+    MFA::RF::GpuModel mGpuPointLight {};
+    MFA::DrawableObjectId mPointLightObjectId = 0;
 
 };

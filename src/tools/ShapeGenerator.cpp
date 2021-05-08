@@ -7,7 +7,7 @@ namespace MFA::ShapeGenerator {
 
     namespace AS = AssetSystem;
 
-    AssetSystem::Model Sphere() {
+    AssetSystem::Model Sphere(float scaleFactor) {
         AssetSystem::Model model {};
 
         std::vector<Vector3Float> positions {};
@@ -140,9 +140,14 @@ namespace MFA::ShapeGenerator {
             .children {},
             .transformMatrix {},
         };
-        auto const identityMatrix = Matrix4X4Float::Identity();
-        ::memcpy(node.transformMatrix, identityMatrix.cells, sizeof(node.transformMatrix));
-        static_assert(sizeof(node.transformMatrix) == sizeof(identityMatrix.cells));
+
+        {// Assign value to transformMat
+            auto transform = Matrix4X4Float::Identity();
+            Matrix4X4Float::AssignScale(transform, scaleFactor);
+            ::memcpy(node.transformMatrix, transform.cells, sizeof(node.transformMatrix));
+            static_assert(sizeof(node.transformMatrix) == sizeof(transform.cells));
+        }
+
         model.mesh.insertNode(node);
 
         if(model.mesh.isValid() == false) {

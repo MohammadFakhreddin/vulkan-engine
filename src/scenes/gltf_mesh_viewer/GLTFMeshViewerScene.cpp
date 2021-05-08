@@ -5,7 +5,7 @@
 #include "libs/imgui/imgui.h"
 #include "engine/DrawableObject.hpp"
 #include "tools/Importer.hpp"
-#include "engine/BedrockFileSystem.hpp"
+#include "tools/ShapeGenerator.hpp"
 
 namespace RF = MFA::RenderFrontend;
 namespace RB = MFA::RenderBackend;
@@ -28,6 +28,10 @@ void GLTFMeshViewerScene::Init() {
                 .model {
                     .rotationEulerAngle {180.0f, -90.0f, 0.0f},
                     .translate {0.4f, 2.0f, -6.0f},
+                },
+                .light {
+                    .translateMin {-50.0f, -50.0f, -50.0f},
+                    .translateMax {50.0f, 50.0f, 50.0f}
                 }
             }
         });
@@ -130,46 +134,32 @@ void GLTFMeshViewerScene::Init() {
             }
         });
     }
-    
-    // Vertex shader
-    auto cpu_vertex_shader = Importer::ImportShaderFromSPV(
-        "../assets/shaders/gltf_mesh_viewer/GLTFMeshViewer.vert.spv", 
-        MFA::AssetSystem::Shader::Stage::Vertex, 
-        "main"
-    );
-    MFA_ASSERT(cpu_vertex_shader.isValid());
-    auto gpu_vertex_shader = RF::CreateShader(cpu_vertex_shader);
-    MFA_ASSERT(gpu_vertex_shader.valid());
-    MFA_DEFER {
-        RF::DestroyShader(gpu_vertex_shader);
-        Importer::FreeShader(&cpu_vertex_shader);
-    };
-    
-    // Fragment shader
-    auto cpu_fragment_shader = Importer::ImportShaderFromSPV(
-        "../assets/shaders/gltf_mesh_viewer/GLTFMeshViewer.frag.spv",
-        MFA::AssetSystem::Shader::Stage::Fragment,
-        "main"
-    );
-    auto gpu_fragment_shader = RF::CreateShader(cpu_fragment_shader);
-    MFA_ASSERT(cpu_fragment_shader.isValid());
-    MFA_ASSERT(gpu_fragment_shader.valid());
-    MFA_DEFER {
-        RF::DestroyShader(gpu_fragment_shader);
-        Importer::FreeShader(&cpu_fragment_shader);
-    };
-
-    std::vector<RB::GpuShader> shaders {gpu_vertex_shader, gpu_fragment_shader};
 
     // TODO We should use gltf sampler info here
     mSamplerGroup = RF::CreateSampler();
     
     mPbrPipeline.init(&mSamplerGroup, &mErrorTexture);
 
+    mPointLightPipeline.init();
+
     // Updating perspective mat once for entire application
     // Perspective
     updateProjectionBuffer();
 
+    {// Point light
+        auto cpuModel = MFA::ShapeGenerator::Sphere(0.1f);
+
+        for (uint32_t i = 0; i < cpuModel.mesh.getSubMeshCount(); ++i) {
+            for (auto & primitive : cpuModel.mesh.getSubMeshByIndex(i).primitives) {
+                primitive.baseColorFactor[0] = 1.0f;
+                primitive.baseColorFactor[1] = 1.0f;
+                primitive.baseColorFactor[2] = 1.0f;
+            }
+        }
+
+        mGpuPointLight = RF::CreateGpuModel(cpuModel);
+        mPointLightObjectId = mPointLightPipeline.addGpuModel(mGpuPointLight);
+    }
 }
 
 void GLTFMeshViewerScene::OnDraw(uint32_t const delta_time, RF::DrawPass & draw_pass) {
@@ -239,12 +229,12 @@ void GLTFMeshViewerScene::OnDraw(uint32_t const delta_time, RF::DrawPass & draw_
         transformMat.multiply(rotationMat);
         transformMat.multiply(scaleMat);
         
-        static_assert(sizeof(mViewProjectionData.view) == sizeof(transformMat.cells));
-        ::memcpy(mViewProjectionData.view, transformMat.cells, sizeof(transformMat.cells));
+        static_assert(sizeof(mPbrViewProjectionData.view) == sizeof(transformMat.cells));
+        ::memcpy(mPbrViewProjectionData.view, transformMat.cells, sizeof(transformMat.cells));
 
         mPbrPipeline.updateViewProjectionBuffer(
             selectedModel.drawableObjectId,
-            mViewProjectionData
+            mPbrViewProjectionData
         );
     }
     {// LightViewBuffer
@@ -255,8 +245,40 @@ void GLTFMeshViewerScene::OnDraw(uint32_t const delta_time, RF::DrawPass & draw_
         static_assert(sizeof(mLightColor) == sizeof(mLightViewData.lightColor));
 
         mPbrPipeline.updateLightViewBuffer(mLightViewData);
+
+        // Position
+        MFA::Matrix4X4Float translationMat {};
+        MFA::Matrix4X4Float::AssignTranslation(
+            translationMat,
+            mLightPosition[0],
+            mLightPosition[1],
+            mLightPosition[2]
+        );
+
+        MFA::Matrix4X4Float transformMat {};
+        MFA::Matrix4X4Float::identity(transformMat);
+        transformMat.multiply(translationMat);
+        
+        static_assert(sizeof(mPointLightViewProjectionData.view) == sizeof(transformMat.cells));
+        ::memcpy(mPointLightViewProjectionData.view, transformMat.cells, sizeof(transformMat.cells));
+
+        mPointLightPipeline.updateViewProjectionBuffer(mPointLightObjectId, mPointLightViewProjectionData);
+
+        MFA::PointLightPipeline::PrimitiveInfo const lightPrimitiveInfo {
+            .baseColorFactor {
+                mLightViewData.lightColor[0],
+                mLightViewData.lightColor[1],
+                mLightViewData.lightColor[2],
+                1.0f
+            }
+        };
+        mPointLightPipeline.updatePrimitiveInfo(mPointLightObjectId, lightPrimitiveInfo);
     }
+    // TODO Pipeline should be able to share buffers such as projection buffer to enable us to update them once
     mPbrPipeline.render(draw_pass, 1, &selectedModel.drawableObjectId);
+    if (mIsLightVisible) {
+        mPointLightPipeline.render(draw_pass, 1, &mPointLightObjectId);
+    }
 }
 
 void GLTFMeshViewerScene::OnUI(uint32_t const delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
@@ -294,6 +316,8 @@ void GLTFMeshViewerScene::OnUI(uint32_t const delta_time, MFA::RenderFrontend::D
 
     ImGui::Begin("Light");
     ImGui::SetNextItemWidth(ItemWidth);
+    ImGui::Checkbox("Visible", &mIsLightVisible);
+    ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("PositionX", &mLightPosition[0], mLightTranslateMin[0], mLightTranslateMax[0]);
     ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("PositionY", &mLightPosition[1], mLightTranslateMin[1], mLightTranslateMax[1]);
@@ -310,6 +334,7 @@ void GLTFMeshViewerScene::OnUI(uint32_t const delta_time, MFA::RenderFrontend::D
 
 void GLTFMeshViewerScene::Shutdown() {
     mPbrPipeline.shutdown();
+    mPointLightPipeline.shutdown();
     RF::DestroySampler(mSamplerGroup);
     destroyModels();
     RF::DestroyTexture(mErrorTexture);
@@ -328,6 +353,7 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
 }
 
 void GLTFMeshViewerScene::destroyModels() {
+    // Gpu model
     if (mModelsRenderData.empty() == false) {
         for (auto & group : mModelsRenderData) {
             if (group.isLoaded) {
@@ -337,7 +363,11 @@ void GLTFMeshViewerScene::destroyModels() {
             }
         }
     }
- 
+
+    // Point light
+    MFA_ASSERT(mGpuPointLight.valid);
+    RF::DestroyGpuModel(mGpuPointLight);
+    Importer::FreeModel(&mGpuPointLight.model);
 }
 
 void GLTFMeshViewerScene::updateProjectionBuffer() {
@@ -348,10 +378,16 @@ void GLTFMeshViewerScene::updateProjectionBuffer() {
     MFA::Matrix4X4Float::PreparePerspectiveProjectionMatrix(
         perspectiveMat,
         ratio,
-        80,
+        40,
         Z_NEAR,
         Z_FAR
     );
-    static_assert(sizeof(mViewProjectionData.perspective) == sizeof(perspectiveMat.cells));
-    ::memcpy(mViewProjectionData.perspective, perspectiveMat.cells, sizeof(perspectiveMat.cells));
+
+    // PBR
+    static_assert(sizeof(mPbrViewProjectionData.projection) == sizeof(perspectiveMat.cells));
+    ::memcpy(mPbrViewProjectionData.projection, perspectiveMat.cells, sizeof(perspectiveMat.cells));
+
+    // PointLight
+    static_assert(sizeof(mPointLightViewProjectionData.projection) == sizeof(perspectiveMat.cells));
+    ::memcpy(mPointLightViewProjectionData.projection, perspectiveMat.cells, sizeof(perspectiveMat.cells));
 }

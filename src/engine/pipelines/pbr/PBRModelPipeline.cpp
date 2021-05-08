@@ -422,7 +422,7 @@ void MFA::PBRModelPipeline::createPipeline() {
         .format = VK_FORMAT_R32G32B32_SFLOAT,
         .offset = offsetof(AS::MeshVertex, position),   
     });
-    // BaseColor
+    // BaseColorUV
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = static_cast<uint32_t>(input_attribute_descriptions.size()),
         .binding = 0,
@@ -436,7 +436,7 @@ void MFA::PBRModelPipeline::createPipeline() {
         .format = VK_FORMAT_R32G32_SFLOAT,
         .offset = offsetof(AS::MeshVertex, metallicUV), // Metallic and roughness have same uv for gltf files  
     });
-    // Normal
+    // NormalMapUV
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = static_cast<uint32_t>(input_attribute_descriptions.size()),
         .binding = 0,
@@ -455,7 +455,7 @@ void MFA::PBRModelPipeline::createPipeline() {
         .format = VK_FORMAT_R32G32B32_SFLOAT,
         .offset = offsetof(AS::MeshVertex, normalValue),   
     });
-    // Emissive
+    // EmissionUV
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = static_cast<uint32_t>(input_attribute_descriptions.size()),
         .binding = 0,

@@ -26,7 +26,7 @@ public:
 
     struct ViewProjectionData {   // For vertices in Vertex shader
         alignas(64) float view[16];
-        alignas(64) float perspective[16];
+        alignas(64) float projection[16];
     };
 
     struct LightViewBuffer {

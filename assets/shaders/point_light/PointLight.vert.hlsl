@@ -3,7 +3,7 @@ struct VSIn {
 };
 
 struct VSOut {
-    float4 position;
+    float4 position : SV_POSITION;
 };
 
 struct ViewProjectionBuffer {
@@ -11,7 +11,7 @@ struct ViewProjectionBuffer {
     float4x4 projectionMat;
 };
 
-ConstantBuffer <ViewProjectionBuffer> modelTransformBuffer: register(b0, space0);
+ConstantBuffer <ViewProjectionBuffer> viewProjectionBuffer: register(b0, space0);
 
 struct NodeTranformation {
     float4x4 model;
@@ -22,14 +22,14 @@ ConstantBuffer <NodeTranformation> nodeTransformBuffer: register(b1, space0);
 VSOut main(VSIn input) {
     VSOut output;
 
-    float4x4 modelViewMat = mul(modelTransformBuffer.view, nodeTransformBuffer.model);
+    float4x4 modelViewMat = mul(viewProjectionBuffer.view, nodeTransformBuffer.model);
 
     // Position
     float4 tempPosition = float4(input.position, 1.0f);
     tempPosition = mul(modelViewMat, tempPosition);
     
     float4 worldPos = tempPosition;
-    float4 position = mul(modelTransformBuffer.projectionMat, worldPos);
+    float4 position = mul(viewProjectionBuffer.projectionMat, worldPos);
     output.position = position;
     
     return output;

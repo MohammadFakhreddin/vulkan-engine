@@ -18,9 +18,10 @@ public:
 
     struct ViewProjectionData {
         float view[16];
-        float projectionMat[16];
+        float projection[16];
     };
 
+    PointLightPipeline() = default;
     ~PointLightPipeline() override;
 
     PointLightPipeline (PointLightPipeline const &) noexcept = delete;
@@ -47,17 +48,20 @@ public:
         ViewProjectionData const & viewProjectionData
     );
 
+    bool updatePrimitiveInfo(
+        DrawableObjectId drawableObjectId,
+        PrimitiveInfo const & info
+    );
+
 private:
 
     void createDescriptorSetLayout();
 
-    void destroyDescriptorSetLayout();
+    void destroyDescriptorSetLayout() const;
 
     void createPipeline();
 
     void destroyPipeline();
-
-    void createUniformBuffers();
 
     void destroyUniformBuffers();
 

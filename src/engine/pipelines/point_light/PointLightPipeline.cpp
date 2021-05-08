@@ -17,7 +17,6 @@ void MFA::PointLightPipeline::init() {
     }
     mIsInitialized = true;
 
-    createUniformBuffers();
     createDescriptorSetLayout();
     createPipeline();
 }
@@ -35,16 +34,15 @@ void MFA::PointLightPipeline::shutdown() {
 }
 
 MFA::DrawableObjectId MFA::PointLightPipeline::addGpuModel(RF::GpuModel & gpuModel) {
-        MFA_ASSERT(gpuModel.valid == true);
+    MFA_ASSERT(gpuModel.valid == true);
     
     auto * drawableObject = new DrawableObject(gpuModel, mDescriptorSetLayout);
     MFA_ASSERT(mDrawableObjects.find(drawableObject->getId()) == mDrawableObjects.end());
     mDrawableObjects[drawableObject->getId()] = std::unique_ptr<DrawableObject>(drawableObject);
 
-    const auto * primitiveInfoBuffer = drawableObject->createMultipleUniformBuffer(
+    const auto * primitiveInfoBuffer = drawableObject->createUniformBuffer(
         "PrimitiveInfo", 
-        sizeof(PrimitiveInfo), 
-        drawableObject->getDescriptorSetCount()
+        sizeof(PrimitiveInfo)
     );
     MFA_ASSERT(primitiveInfoBuffer != nullptr);
 
@@ -104,7 +102,7 @@ MFA::DrawableObjectId MFA::PointLightPipeline::addGpuModel(RF::GpuModel & gpuMod
 
                     // Primitive
                     VkDescriptorBufferInfo primitiveBufferInfo {
-                        .buffer = primitiveInfoBuffer->buffers[primitive.uniqueId].buffer,
+                        .buffer = primitiveInfoBuffer->buffers[0].buffer,
                         .offset = 0,
                         .range = primitiveInfoBuffer->bufferSize
                     };
@@ -117,17 +115,7 @@ MFA::DrawableObjectId MFA::PointLightPipeline::addGpuModel(RF::GpuModel & gpuMod
                         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                         .pBufferInfo = &primitiveBufferInfo,
                     });
-                    // Update primitive buffer information
-                    PrimitiveInfo info {
-                        .baseColorFactor {},
-                    };
-                    ::memcpy(info.baseColorFactor, primitive.baseColorFactor, sizeof(info.baseColorFactor));
-                    static_assert(sizeof(info.baseColorFactor) == sizeof(primitive.baseColorFactor));
-                    RF::UpdateUniformBuffer(
-                        primitiveInfoBuffer->buffers[primitive.uniqueId], 
-                        MFA::CBlobAliasOf(info)
-                    );
-                    
+
                     RF::UpdateDescriptorSets(
                         static_cast<uint8_t>(writeInfo.size()),
                         writeInfo.data()
@@ -183,6 +171,26 @@ bool MFA::PointLightPipeline::updateViewProjectionBuffer(
     return true;
 }
 
+bool MFA::PointLightPipeline::updatePrimitiveInfo(
+    DrawableObjectId const drawableObjectId, 
+    PrimitiveInfo const & info
+) {
+    auto const findResult = mDrawableObjects.find(drawableObjectId);
+    if (findResult == mDrawableObjects.end()) {
+        MFA_ASSERT(false);
+        return false;
+    }
+    auto * drawableObject = findResult->second.get();
+    MFA_ASSERT(drawableObject != nullptr);
+
+    drawableObject->updateUniformBuffer(
+        "PrimitiveInfo", 
+        CBlobAliasOf(info)
+    );
+
+    return true;                 
+}
+
 void MFA::PointLightPipeline::createDescriptorSetLayout() {
     std::vector<VkDescriptorSetLayoutBinding> bindings {};
     // ViewProjection 
@@ -216,13 +224,13 @@ void MFA::PointLightPipeline::createDescriptorSetLayout() {
     );
 }
 
-void MFA::PointLightPipeline::destroyDescriptorSetLayout() {
+void MFA::PointLightPipeline::destroyDescriptorSetLayout() const {
     MFA_ASSERT(mDescriptorSetLayout != nullptr);
     RF::DestroyDescriptorSetLayout(mDescriptorSetLayout); 
 }
 
 void MFA::PointLightPipeline::createPipeline() {
-        // Vertex shader
+    // Vertex shader
     auto cpuVertexShader = Importer::ImportShaderFromSPV(
         "../assets/shaders/point_light/PointLight.vert.spv", 
         MFA::AssetSystem::Shader::Stage::Vertex, 
@@ -267,13 +275,17 @@ void MFA::PointLightPipeline::createPipeline() {
         .offset = offsetof(AS::MeshVertex, position),   
     });
     MFA_ASSERT(mDrawPipeline.isValid() == false);
-    mDrawPipeline = RF::CreateBasicDrawPipeline(
+    mDrawPipeline = RF::CreateDrawPipeline(
         static_cast<uint32_t>(shaders.size()), 
         shaders.data(),
         mDescriptorSetLayout,
         vertex_binding_description,
         static_cast<uint8_t>(input_attribute_descriptions.size()),
-        input_attribute_descriptions.data()
+        input_attribute_descriptions.data(),
+        RB::CreateGraphicPipelineOptions {
+            .use_static_viewport_and_scissor = false,
+            .primitive_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP
+        }
     );
 }
 
@@ -282,6 +294,10 @@ void MFA::PointLightPipeline::destroyPipeline() {
     RF::DestroyDrawPipeline(mDrawPipeline);
 }
 
-void MFA::PointLightPipeline::createUniformBuffers() {}
-
-void MFA::PointLightPipeline::destroyUniformBuffers() {}
+void MFA::PointLightPipeline::destroyUniformBuffers() {
+    for (const auto & [id, drawableObject] : mDrawableObjects) {
+        MFA_ASSERT(drawableObject != nullptr);
+        drawableObject->deleteUniformBuffers();
+    }
+    mDrawableObjects.clear();
+}
