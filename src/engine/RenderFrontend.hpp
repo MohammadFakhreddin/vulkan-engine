@@ -116,7 +116,7 @@ RB::GpuShader CreateShader(AssetSystem::Shader const & shader);
 void DestroyShader(RB::GpuShader & gpu_shader);
 
 struct DrawPass {
-    uint8_t imageIndex;
+    uint32_t imageIndex;
     uint8_t frame_index;
     bool isValid = false;
     DrawPipeline * drawPipeline = nullptr;

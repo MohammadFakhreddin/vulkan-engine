@@ -174,6 +174,11 @@ namespace MFA::ShapeGenerator {
         positions.emplace_back(0.0f, 1.0f, 0.0f);
         positions.emplace_back(1.0f, 1.0f, 0.0f);
 
+        for (int i = 0; i < positions.size(); ++i) {
+            positions[i].set(0, 0, positions[i].get(0, 0) - 0.5f);
+            positions[i].set(1, 0, positions[i].get(1, 0) - 0.5f);
+        }
+
         uvs.emplace_back(0.0f, 0.0f);
         uvs.emplace_back(1.0f, 0.0f);
         uvs.emplace_back(0.0f, 1.0f);
