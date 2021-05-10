@@ -8,7 +8,6 @@
 #include "tools/ShapeGenerator.hpp"
 
 namespace RF = MFA::RenderFrontend;
-namespace RB = MFA::RenderBackend;
 namespace Importer = MFA::Importer;
 
 void GLTFMeshViewerScene::Init() {
@@ -378,7 +377,7 @@ void GLTFMeshViewerScene::updateProjectionBuffer() {
     MFA::Matrix4X4Float::PreparePerspectiveProjectionMatrix(
         perspectiveMat,
         ratio,
-        40,
+        40, // TODO Make this number 80, 40 is very low for fov
         Z_NEAR,
         Z_FAR
     );

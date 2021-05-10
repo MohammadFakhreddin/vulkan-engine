@@ -380,7 +380,7 @@ void MFA::PBRModelPipeline::destroyDescriptorSetLayout() {
 void MFA::PBRModelPipeline::createPipeline() {
     // Vertex shader
     auto cpuVertexShader = Importer::ImportShaderFromSPV(
-        "../assets/shaders/gltf_mesh_viewer/GLTFMeshViewer.vert.spv", 
+        "../assets/shaders/pbr_model/PBRModel.vert.spv", 
         MFA::AssetSystem::Shader::Stage::Vertex, 
         "main"
     );
@@ -394,7 +394,7 @@ void MFA::PBRModelPipeline::createPipeline() {
     
     // Fragment shader
     auto cpuFragmentShader = Importer::ImportShaderFromSPV(
-        "../assets/shaders/gltf_mesh_viewer/GLTFMeshViewer.frag.spv",
+        "../assets/shaders/pbr_model/PBRModel.frag.spv",
         MFA::AssetSystem::Shader::Stage::Fragment,
         "main"
     );
