@@ -150,11 +150,11 @@ void TextureViewerScene::OnUI(
     ImGui::SetNextItemWidth(ItemWidth);
     ImGui::SliderFloat("Scale", &mModelScale, 0.0f, 1.0f);
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("XDistance", &mModelPosition[0], -50.0f, 50.0f);
+    ImGui::SliderFloat("XDistance", &mModelPosition[0], -5.0f, 5.0f);
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("YDistance", &mModelPosition[1], -50.0f, 50.0f);
+    ImGui::SliderFloat("YDistance", &mModelPosition[1], -5.0f, 5.0f);
     ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("ZDistance", &mModelPosition[2], -50.0f, 50.0f);
+    ImGui::SliderFloat("ZDistance", &mModelPosition[2], -5.0f, 5.0f);
     ImGui::End();
 }
 

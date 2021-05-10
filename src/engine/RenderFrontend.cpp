@@ -72,6 +72,12 @@ static VkBool32 DebugCallback(
     return true;
 }
 
+static void VK_CHECK(VkResult const result) {
+  if(result != VK_SUCCESS) {
+      MFA_CRASH("Vulkan command failed with code:" + std::to_string(result));
+  }
+}
+
 static int ResizingEventWatcher(void* data, SDL_Event* event) {
     if (
         event->type == SDL_WINDOWEVENT &&
@@ -606,11 +612,14 @@ DrawPass BeginPass() {
         state->logicalDevice.device, 
         state->sync_objects.fences_in_flight[state->current_frame]
     );
-    draw_pass.imageIndex = RB::AcquireNextImage(
+    // We ignore failed acquire of image because a resize will be trigerred at end of pass
+    RB::AcquireNextImage(
         state->logicalDevice.device,
         state->sync_objects.image_availability_semaphores[state->current_frame],
-        state->swap_chain_group
+        state->swap_chain_group,
+        draw_pass.imageIndex
     );
+
     draw_pass.frame_index = state->current_frame;
     draw_pass.isValid = true;
     state->current_frame ++;
@@ -923,14 +932,12 @@ void EndPass(DrawPass & drawPass) {
     uint32_t imageIndices = drawPass.imageIndex;
     presentInfo.pImageIndices = &imageIndices;
 
-    {
-        auto const res = vkQueuePresentKHR(state->present_queue, &presentInfo);
-        // TODO Handle resize event
-        if (res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR || state->windowResized == true) {
-            OnWindowResized();
-        } else if (res != VK_SUCCESS) {
-            MFA_CRASH("Failed to submit present command buffer");
-        }
+    auto const res = vkQueuePresentKHR(state->present_queue, &presentInfo);
+    // TODO Handle resize event
+    if (res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR || state->windowResized == true) {
+        OnWindowResized();
+    } else if (res != VK_SUCCESS) {
+        MFA_CRASH("Failed to submit present command buffer");
     }
 }
 

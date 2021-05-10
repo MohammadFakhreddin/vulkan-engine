@@ -22,7 +22,7 @@ std::vector<char const *> DebugLayers = {
 };
 
 static void VK_Check(VkResult const result) {
-  if(result != VK_SUCCESS) {\
+  if(result != VK_SUCCESS) {
       MFA_CRASH("Vulkan command failed with code:" + std::to_string(result));
   }
 }
@@ -2037,25 +2037,23 @@ void WaitForFence(VkDevice_T * device, VkFence_T * inFlightFence) {
     ));
 }
 
-[[nodiscard]]
-uint8_t AcquireNextImage(
+VkResult AcquireNextImage(
     VkDevice_T * device, 
     VkSemaphore_T * imageAvailabilitySemaphore, 
-    SwapChainGroup const & swapChainGroup
+    SwapChainGroup const & swapChainGroup,
+    uint32_t & outImageIndex
 ) {
     MFA_ASSERT(device != nullptr);
     MFA_ASSERT(imageAvailabilitySemaphore != nullptr);
-    uint32_t image_index;
-    // TODO What if acquiring fail ?
-    VK_Check(vkAcquireNextImageKHR(
+    
+    return vkAcquireNextImageKHR(
         device,
         swapChainGroup.swapChain,
         UINT64_MAX,
         imageAvailabilitySemaphore,
         nullptr,
-        &image_index
-    ));
-    return static_cast<uint8_t>(image_index);
+        &outImageIndex
+    );
 }
 
 void BindVertexBuffer(

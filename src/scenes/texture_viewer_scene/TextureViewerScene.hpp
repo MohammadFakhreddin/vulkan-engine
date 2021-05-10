@@ -46,7 +46,7 @@ private:
 
     float mModelRotation[3] {0.0f, 0.0f, 0.0f};
     float mModelScale = 1.0f;
-    float mModelPosition[3] {-0.5f, -0.5f, -3.0f};
+    float mModelPosition[3] {0.0f, 0.0f, -3.0f};
 
     int mMipLevel = 0;
     int mTotalMipCount = 0;

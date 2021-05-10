@@ -568,11 +568,11 @@ void DeviceWaitIdle(VkDevice_T * device);
 
 void WaitForFence(VkDevice_T * device, VkFence_T * inFlightFence);
 
-[[nodiscard]]
-uint8_t AcquireNextImage(
+VkResult AcquireNextImage(
     VkDevice_T * device, 
     VkSemaphore_T * imageAvailabilitySemaphore, 
-    SwapChainGroup const & swapChainGroup
+    SwapChainGroup const & swapChainGroup,
+    uint32_t & outImageIndex
 );
 
 void BindVertexBuffer(
