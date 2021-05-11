@@ -60,9 +60,9 @@ void TexturedSphereScene::OnDraw(uint32_t delta_time, MFA::RenderFrontend::DrawP
         MFA::Matrix4X4Float rotationMat {};
         MFA::Matrix4X4Float::AssignRotation(
             rotationMat,
-            MFA::Math::Deg2Rad(mModelRotation[0]),
-            MFA::Math::Deg2Rad(mModelRotation[1]),
-            MFA::Math::Deg2Rad(mModelRotation[2])
+            mModelRotation[0],
+            mModelRotation[1],
+            mModelRotation[2]
         );
         static_assert(sizeof(m_translate_data.rotation) == sizeof(rotationMat.cells));
         ::memcpy(m_translate_data.rotation, rotationMat.cells, sizeof(rotationMat.cells));

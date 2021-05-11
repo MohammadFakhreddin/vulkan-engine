@@ -204,9 +204,9 @@ void PBRScene::OnDraw(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_
             MFA::Matrix4X4Float rotation;
             MFA::Matrix4X4Float::AssignRotation(
                 rotation,
-                MFA::Math::Deg2Rad(m_sphere_rotation[0]),
-                MFA::Math::Deg2Rad(m_sphere_rotation[1]),
-                MFA::Math::Deg2Rad(m_sphere_rotation[2])
+                m_sphere_rotation[0],
+                m_sphere_rotation[1],
+                m_sphere_rotation[2]
             );
             static_assert(sizeof(m_translate_data.rotation) == sizeof(rotation.cells));
             ::memcpy(m_translate_data.rotation, rotation.cells, sizeof(rotation.cells));

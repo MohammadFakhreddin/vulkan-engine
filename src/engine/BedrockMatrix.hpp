@@ -21,48 +21,48 @@
 namespace MFA {
 //TODO Write unit tests for project
 //TODO For specific situation matrices use static methods
-template <typename T,unsigned int width,unsigned int height>
+template <typename T,unsigned int Width,unsigned int Height>
 class _Matrix {
 
 public:
 
-  static constexpr unsigned int matrixSize = width * height;
+  static constexpr unsigned int MatrixDimension = Width * Height;
 
-  T cells[width * height] = { 0 };
+  T cells[Width * Height] = { 0 };
 
 public:
 
-  _Matrix()
+  explicit _Matrix()
   {};
 
-  _Matrix(T defaultValue)
+  explicit _Matrix(T defaultValue)
   {
     if (defaultValue != 0) {
-      std::fill_n(cells, matrixSize, defaultValue);
+      std::fill_n(cells, MatrixDimension, defaultValue);
     }
   };
   //Use static generator methods instead
-  _Matrix(const T& x, const T& y)
+  explicit _Matrix(const T& x, const T& y)
   {
-    MFA_ASSERT(width == 2);
-    MFA_ASSERT(height == 1);
+    static_assert(Width == 2);
+    static_assert(Height == 1);
     cells[0] = x;
     cells[1] = y;
   }
 
-  _Matrix(const T& x, const T& y, const T& z)
+  explicit _Matrix(const T& x, const T& y, const T& z)
   {
-    MFA_ASSERT(width == 3);
-    MFA_ASSERT(height == 1);
+    static_assert(Width == 3);
+    static_assert(Height == 1);
     cells[0] = x;
     cells[1] = y;
     cells[2] = z;
   }
 
-  _Matrix(const T x, const T y, const T z, const T w)
+  explicit _Matrix(const T x, const T y, const T z, const T w)
   {
-    MFA_ASSERT(width == 4);
-    MFA_ASSERT(height == 1);
+    static_assert(Width == 4);
+    static_assert(Height == 1);
     cells[0] = x;
     cells[1] = y;
     cells[2] = z;
@@ -71,14 +71,14 @@ public:
 
   template <typename A>
   _Matrix(const uint32_t itemCount, A const * items) {
-      MFA_ASSERT(itemCount == width * height);
+      MFA_ASSERT(itemCount == MatrixDimension);
       for (uint32_t i = 0; i < itemCount; ++i) {
           cells[i] = static_cast<T>(items[i]);
       }
   }
 
   template <typename A>
-  _Matrix<A, width, height>& operator=(const _Matrix<A, width, height>& rhs) = delete;
+  _Matrix<A, Width, Height>& operator=(const _Matrix<A, Width, Height>& rhs) = delete;
 
     static void ExtractRotationAndScaleMatrix(
         _Matrix<float, 4, 4> const & transformMat, 
@@ -103,7 +103,7 @@ public:
         _Matrix<float, 4, 4> & destinationMat
     )
     {
-        identity(destinationMat);
+        Identity(destinationMat);
         destinationMat.set(3, 3, 1.0f);
         for (int i = 0; i < 3; ++i) {
             destinationMat.set(i, 3, transformMat.get(i, 3));
@@ -111,63 +111,63 @@ public:
     }
 
   template <typename A>
-  _Matrix(const _Matrix<A, width, height>& other) = delete;
+  _Matrix(const _Matrix<A, Width, Height>& other) = delete;
 
-  _Matrix(_Matrix<T,width,height>&& other) noexcept {
-    std::memcpy(cells, other.cells, matrixSize * sizeof(T));
+  _Matrix(_Matrix<T,Width,Height>&& other) noexcept {
+    std::memcpy(cells, other.cells, MatrixDimension * sizeof(T));
   }; // move constructor
 
   _Matrix& operator=(const _Matrix& other) = delete;// copy assignment
   
   _Matrix& operator=(_Matrix&& other) = delete; // move assignment
 
-  void sum(const _Matrix<T, width, height>& rhs) {
-    for (int i = 0; i < matrixSize; i++) {
+  void sum(const _Matrix<T, Width, Height>& rhs) {
+    for (int i = 0; i < MatrixDimension; i++) {
       cells[i] += rhs.cells[i];
     }
   }
 
   template <typename A>
-  void operator+=(_Matrix<A, width, height> rhs) = delete;
+  void operator+=(_Matrix<A, Width, Height> rhs) = delete;
 
   template <typename A>
-  void operator+(_Matrix<A, width, height> rhs) = delete;
+  void operator+(_Matrix<A, Width, Height> rhs) = delete;
 
 
-  void minus(const _Matrix<T, width, height>& rhs) {
-    for (int i = 0; i < matrixSize; i++) {
+  void minus(const _Matrix<T, Width, Height>& rhs) {
+    for (int i = 0; i < MatrixDimension; i++) {
       cells[i] -= rhs.cells[i];
     }
   }
 
   template <typename A>
-  void operator-=(_Matrix<A,width,height> rhs) = delete;
+  void operator-=(_Matrix<A,Width,Height> rhs) = delete;
 
   template <typename A>
-  void operator-(_Matrix<A,width,height> rhs) = delete;
+  void operator-(_Matrix<A,Width,Height> rhs) = delete;
 
   void multiply(const T& rhs) {
     int i = 0;
-    for (i = 0; i < matrixSize; i++) {
+    for (i = 0; i < MatrixDimension; i++) {
       cells[i] *= rhs;
     }
   }
 
   template <typename A>
-  void operator*=(_Matrix<A,width,height> rhs) = delete;
+  void operator*=(_Matrix<A,Width,Height> rhs) = delete;
 
   template <typename A>
-  void operator*(_Matrix<A,width,height> rhs) = delete;
+  void operator*(_Matrix<A,Width,Height> rhs) = delete;
 
-    bool equal(const _Matrix<T, width, height>& rhs) {
+    bool equal(const _Matrix<T, Width, Height>& rhs) {
         return Equal(*this, rhs);
     }
 
     template <typename funcType, uint32_t funcWidth, uint32_t funcHeight>
     [[nodiscard]]
     static bool Equal(const _Matrix<funcType, funcWidth, funcHeight>& a, const _Matrix<funcType, funcWidth, funcHeight>& b) {
-        for (int i = 0; i < width; i++) {
-            for (int j = 0; j < height; j++) {
+        for (int i = 0; i < Width; i++) {
+            for (int j = 0; j < Height; j++) {
                 if (a.get(i, j) != b.get(i, j)) {
                   return false;
                 }
@@ -177,25 +177,25 @@ public:
     }
 
   template <typename A>
-  bool operator==(_Matrix<A, width, height>& rhs) = delete;
+  bool operator==(_Matrix<A, Width, Height>& rhs) = delete;
   
-  bool unEqual(const _Matrix<T, width, height>& rhs) {
+  bool unEqual(const _Matrix<T, Width, Height>& rhs) {
     return !(this->equal(rhs));
   }
 
   template <typename A>
-  bool operator!=(_Matrix<A,width,height>& rhs) = delete;
+  bool operator!=(_Matrix<A,Width,Height>& rhs) = delete;
   
   void print(char const * matName = "Unknown") const {
     std::cout<<"---Printing matrix----"<<std::endl;
     std::cout<<"MatName:" << matName << std::endl;
-    std::cout<<"Width:"<<width<<std::endl;
-    std::cout<<"Height:"<<height<<std::endl;
+    std::cout<<"Width:"<<Width<<std::endl;
+    std::cout<<"Height:"<<Height<<std::endl;
     std::string line = "";
-    for (int i = 0; i < height; i++) {
+    for (int i = 0; i < Height; i++) {
       line = "";
-      for (int j = 0; j < width; j++) {
-        line += " " + std::to_string(cells[i * width + j]) + " ";
+      for (int j = 0; j < Width; j++) {
+        line += " " + std::to_string(cells[i * Width + j]) + " ";
       }
       std::cout<<line<<std::endl;
     }
@@ -203,123 +203,123 @@ public:
   }
   
   const T& get(const unsigned int& x, const unsigned int& y) const {
-    MFA_ASSERT(x < width);
-    MFA_ASSERT(y < height);
+    MFA_ASSERT(x < Width);
+    MFA_ASSERT(y < Height);
     //return cells[x * height + y];
-    return cells[y * width + x];
+    return cells[y * Width + x];
   }
 
     void set(const unsigned int& x, const unsigned int& y, const T& value) {
-        MFA_ASSERT(x < width);
-        MFA_ASSERT(y < height);
+        MFA_ASSERT(x < Width);
+        MFA_ASSERT(y < Height);
         //cells[x * height + y] = value;
-        cells[y * width + x] = value;
+        cells[y * Width + x] = value;
     }
 
   const T& getX() const {
-    MFA_ASSERT(width == 2 || width == 3 || width == 4);
-    MFA_ASSERT(height == 1);
+    static_assert(Width == 2 || Width == 3 || Width == 4);
+    static_assert(Height == 1);
     return cells[0];
   }
 
   const T& getY() const {
-    MFA_ASSERT(width == 2 || width == 3 || width == 4);
-    MFA_ASSERT(height == 1);
+    static_assert(Width == 2 || Width == 3 || Width == 4);
+    static_assert(Height == 1);
     return cells[1];
   }
 
   const T& getZ() const {
-    MFA_ASSERT(width == 3 || width == 4);
-    MFA_ASSERT(height == 1);
+    static_assert(Width == 3 || Width == 4);
+    static_assert(Height == 1);
     return cells[2];
   }
 
   const T& getW() const {
-    MFA_ASSERT(width == 4);
-    MFA_ASSERT(height == 1);
+    static_assert(Width == 4);
+    static_assert(Height == 1);
     return cells[3];
   }
 
   //TODO Define separate classes for each matrix
   const T& getR() const {
-    MFA_ASSERT(width == 3 || width == 4);
-    MFA_ASSERT(height == 1);
+    static_assert(Width == 3 || Width == 4);
+    static_assert(Height == 1);
     return cells[0];
   }
 
   const T& getG() const {
-    MFA_ASSERT(width == 3 || width == 4);
-    MFA_ASSERT(height == 1);
+    static_assert(Width == 3 || Width == 4);
+    static_assert(Height == 1);
     return cells[1];
   }
 
   const T& getB() const {
-    MFA_ASSERT(width == 3 || width == 4);
-    MFA_ASSERT(height == 1);
+    static_assert(Width == 3 || Width == 4);
+    static_assert(Height == 1);
     return cells[2];
   }
 
   void setX(const T& value) {
-    MFA_ASSERT(width == 2 || width == 3 || width == 4);
-    MFA_ASSERT(height == 1);
+    static_assert(Width == 2 || Width == 3 || Width == 4);
+    static_assert(Height == 1);
     cells[0] = value;
   }
 
   void setY(const T& value) {
-    MFA_ASSERT(width == 2 || width == 3 || width == 4);
-    MFA_ASSERT(height == 1);
+    static_assert(Width == 2 || Width == 3 || Width == 4);
+    static_assert(Height == 1);
     cells[1] = value;
   }
 
   void setZ(const T& value) {
-    MFA_ASSERT(width == 3 || width == 4);
-    MFA_ASSERT(height == 1);
+    static_assert(Width == 3 || Width == 4);
+    static_assert(Height == 1);
     cells[2] = value;
     MFA_ASSERT(std::isnan(cells[2])==false);
   }
 
   void setW(const T& value) {
-    MFA_ASSERT(width == 4);
-    MFA_ASSERT(height == 1);
+    static_assert(Width == 4);
+    static_assert(Height == 1);
     cells[3] = value;
     MFA_ASSERT(std::isnan(cells[3])==false);
   }
 
   void setR(const T& value) {
-    MFA_ASSERT(width == 3 || width == 4);
-    MFA_ASSERT(height == 1);
+    static_assert(Width == 3 || Width == 4);
+    static_assert(Height == 1);
     cells[0] = value;
     MFA_ASSERT(std::isnan(cells[0])==false);
   }
 
   void setG(const T& value) {
-    MFA_ASSERT(width == 3 || width == 4);
-    MFA_ASSERT(height == 1);
+    static_assert(Width == 3 || Width == 4);
+    static_assert(Height == 1);
     cells[1] = value;
     MFA_ASSERT(std::isnan(cells[1])==false);
   }
 
   void setB(const T& value) {
-    MFA_ASSERT(width == 3 || width == 4);
-    MFA_ASSERT(height == 1);
+    static_assert(Width == 3 || Width == 4);
+    static_assert(Height == 1);
     cells[2] = value;
     MFA_ASSERT(std::isnan(cells[2])==false);
   }
 
   const T& getDirect(const unsigned int& index) const {
-    MFA_ASSERT(index < matrixSize);
+    MFA_ASSERT(index < MatrixDimension);
     return cells[index];
   }
 
   void setDirect(const unsigned int& index, const T& value) {
-    MFA_ASSERT(index < matrixSize);
+    MFA_ASSERT(index < MatrixDimension);
     cells[index] = value;
   }
 
   template<typename A, typename B>
   void setXY(const A& x, const B& y) {
-    MFA_ASSERT(width >= 2);
-    MFA_ASSERT(height == 1);
+    static_assert(Width >= 2);
+    static_assert(Height == 1);
     cells[0] = T(x);
     cells[1] = T(y);
     MFA_ASSERT(std::isnan(cells[0])==false);
@@ -328,8 +328,8 @@ public:
 
   template<typename A, typename B,typename C>
   void setXYZ(const A& x, const B& y,const C& z) {
-    MFA_ASSERT(width >= 3);
-    MFA_ASSERT(height == 1);
+    static_assert(Width >= 3);
+    static_assert(Height == 1);
     cells[0] = T(x);
     cells[1] = T(y);
     cells[2] = T(z);
@@ -340,8 +340,8 @@ public:
 
   template<typename A, typename B, typename C,typename D>
   void setXYZW(const A& x, const B& y, const C& z,const D& w) {
-    MFA_ASSERT(width == 4);
-    MFA_ASSERT(height == 1);
+    static_assert(Width == 4);
+    static_assert(Height == 1);
     cells[0] = T(x);
     cells[1] = T(y);
     cells[2] = T(z);
@@ -352,19 +352,19 @@ public:
     MFA_ASSERT(std::isnan(cells[3])==false);
   }
 
-  template<typename A>
-  A squareSize() const {
+    template<typename A>
+    A squareSize() const {
     return A(
-      cells[0] * cells[0] +
-      cells[1] * cells[1] +
-      cells[2] * cells[2]
+        cells[0] * cells[0] +
+        cells[1] * cells[1] +
+        cells[2] * cells[2]
     );
-  }
+}
 
-  template<typename A>
-  A size() const {
-    return sqrt(squareSize<A>());
-  }
+    template<typename A>
+    A size() const {
+        return sqrt(squareSize<A>());
+    }
 
   // working correctly
   static void AssignOrthographicProjection(
@@ -613,9 +613,9 @@ public:
         const T& zDegree
     ) {
         _Matrix<T, 3, 1> rotationMat {};
-        rotationMat.set(0, 0, xDegree);
-        rotationMat.set(1, 0, yDegree);
-        rotationMat.set(2, 0, zDegree);
+        rotationMat.set(0, 0, Math::Deg2Rad(xDegree));
+        rotationMat.set(1, 0, Math::Deg2Rad(yDegree));
+        rotationMat.set(2, 0, Math::Deg2Rad(zDegree));
         AssignRotation(matrix, rotationMat);
         /*matrix.set(0, 0, cosf(yDegree) * cosf(zDegree));
         matrix.set(0, 1, cosf(yDegree) * (-sinf(zDegree)));
@@ -704,27 +704,27 @@ public:
     matrix.set(2, 2, matrix.get(2, 2) + value);
   }
 
-  static _Matrix<T,width,height> Identity()
+  static _Matrix<T,Width,Height> Identity()
   {
-    _Matrix<T,width,height> matrix {};
-    _Matrix<T,width,height>::identity(matrix);
+    _Matrix<T,Width,Height> matrix {};
+    _Matrix<T,Width,Height>::Identity(matrix);
     return matrix;
   }
 
-  static void identity(_Matrix<T,width,height> & matrix)
+  static void Identity(_Matrix<T,Width,Height> & matrix)
   {
     int i = 0;
     int j = 0;
-    for(i = 0 ; i < width ; i ++ )
+    for(i = 0 ; i < Width ; i ++ )
     {
-        for(j = 0 ; j < height ; j ++)
+        for(j = 0 ; j < Height ; j ++)
         {
             if(i==j)
             {
-                matrix.cells[i * height + j] = T(1);
+                matrix.cells[i * Height + j] = T(1);
             } else
             {
-                matrix.cells[i * height + j] = T(0);
+                matrix.cells[i * Height + j] = T(0);
             }
         }
     }    
@@ -753,30 +753,30 @@ public:
   }
 
   template <typename A>
-  void castAssign(const _Matrix<A, width, height>& rhs) {
+  void castAssign(const _Matrix<A, Width, Height>& rhs) {
     castAssign(rhs.cells);
   }
 
     template <typename A>
     void castAssign(const A * cells_) {
         MFA_ASSERT(cells_ != nullptr);
-        for (uint32_t i = 0; i < width * height; ++i) {
+        for (uint32_t i = 0; i < Width * Height; ++i) {
             cells[i] = static_cast<T>(cells_[i]);    
         }
     }
 
     template <unsigned int rhsWidth,unsigned int rhsHeight>
     void assign(const _Matrix<T, rhsWidth, rhsHeight>& rhs) {
-        if (rhsWidth == width && rhsHeight == height) {
-            _assign(rhs.cells, matrixSize);
+        if (rhsWidth == Width && rhsHeight == Height) {
+            _assign(rhs.cells, MatrixDimension);
         }
-        else if (rhsWidth == 3 && width == 4 && rhsHeight == 1 && height == 1) {
-            _assign(rhs.cells, rhs.matrixSize);
+        else if (rhsWidth == 3 && Width == 4 && rhsHeight == 1 && Height == 1) {
+            _assign(rhs.cells, rhs.MatrixDimension);
             cells[3] = T(1);
         }
-        else if (rhsWidth == 4 && width == 3 && rhsHeight == 1 && height == 1)
+        else if (rhsWidth == 4 && Width == 3 && rhsHeight == 1 && Height == 1)
         {
-            _assign(rhs.cells, rhs.matrixSize);
+            _assign(rhs.cells, rhs.MatrixDimension);
         }
         else {
             MFA_CRASH("Unhandled assign in matrixTemplate");
@@ -785,7 +785,7 @@ public:
 
     void assign(const T * cells) {
         MFA_ASSERT(cells != nullptr);
-        _assign(cells, width * height);
+        _assign(cells, Width * Height);
     }
 
     void assign(const T * cells, uint32_t elementCount) {
@@ -795,7 +795,7 @@ public:
     }
 
     void assign(const T& value) {
-        std::fill_n(cells, matrixSize, value);
+        std::fill_n(cells, MatrixDimension, value);
     }
 
     [[nodiscard]]
@@ -809,7 +809,7 @@ public:
     }
 
     void multiply(
-        const _Matrix<T, width, width>& matrix
+        const _Matrix<T, Width, Width>& matrix
     ) {
         return _multiply(matrix.cells);
     }
@@ -899,23 +899,42 @@ public:
         return q;
     }
 
+    void copy(float outValue[Width * Height]) {
+        ::memcpy(outValue, cells, Width * Height * sizeof(T));
+    }
+
+    static void Normalize(_Matrix<T, 3, 1> & matrix) {
+        auto const matrixSize = matrix.size<T>();
+        matrix.setX(matrix.getX() / matrixSize);
+        matrix.setY(matrix.getY() / matrixSize);
+        matrix.setZ(matrix.getZ() / matrixSize);
+    }
+
+    static void Normalize(_Matrix<T, 4, 1> & matrix) {
+        auto const matrixSize = matrix.size<T>();
+        matrix.setX(matrix.getX() / matrixSize);
+        matrix.setY(matrix.getY() / matrixSize);
+        matrix.setZ(matrix.getZ() / matrixSize);
+    }
+
+
 private:
   //Hint rhsHeight == width && rhsWidth == width
   //TODO write tests
   void _multiply(
     const T* rhsCells
   ) {
-    T placeholderCells[width * height] = { 0 };
-    for (int i = 0; i < height; i++) {
-      for (int j = 0; j < width; j++) {
-        auto const cellIndex = j * height + i;
+    T placeholderCells[Width * Height] = { 0 };
+    for (int i = 0; i < Height; i++) {
+      for (int j = 0; j < Width; j++) {
+        auto const cellIndex = j * Height + i;
         placeholderCells[cellIndex] = 0;
-        for (int k = 0; k < height; k++) {
-          placeholderCells[cellIndex] += cells[k * width + i] * T(rhsCells[j * height + k]);
+        for (int k = 0; k < Height; k++) {
+          placeholderCells[cellIndex] += cells[k * Width + i] * T(rhsCells[j * Height + k]);
         }
       }
     }
-    std::memcpy(cells, placeholderCells, matrixSize * sizeof(T));
+    std::memcpy(cells, placeholderCells, MatrixDimension * sizeof(T));
   }
 
   template<typename A>
@@ -926,8 +945,8 @@ private:
   ) const {
     MFA_ASSERT(rhsWidth == 3 || rhsWidth == 4);
     MFA_ASSERT(rhsHeight == 1);
-    MFA_ASSERT(width == 3 || width == 4);
-    MFA_ASSERT(height == 1);
+    static_assert(Width == 3 || Width == 4);
+    static_assert(Height == 1);
     return
       T((double(cells[0]) * double(rhsCells[0])) +
         (double(cells[1]) * double(rhsCells[1])) +
@@ -944,8 +963,8 @@ private:
         MFA_ASSERT(mat1Height == 1);
         MFA_ASSERT(mat2Width == 3 || mat2Width == 4);
         MFA_ASSERT(mat2Height == 1);
-        MFA_ASSERT(width == 3 || width == 4);
-        MFA_ASSERT(height == 1);
+        static_assert(Width == 3 || Width == 4);
+        static_assert(Height == 1);
         this->set(0, 0,
           (T(mat1Cells[1]) * T(mat2Cells[2]))
           - (T(mat1Cells[2]) * T(mat2Cells[1]))
@@ -964,8 +983,8 @@ private:
     void _hat(A* rhsCells, const unsigned int& rhsWidth, const unsigned int& rhsHeight) const {
         MFA_ASSERT(rhsWidth == 3 || rhsWidth == 4);
         MFA_ASSERT(rhsHeight == 1);
-        MFA_ASSERT(width == 3 || width == 4);
-        MFA_ASSERT(height == 1);
+        static_assert(Width == 3 || Width == 4);
+        static_assert(Height == 1);
         const A vectorSize = size<A>();
         for (unsigned short i = 0; i < 3; i++) {
           rhsCells[i] = A(cells[i]) / vectorSize;

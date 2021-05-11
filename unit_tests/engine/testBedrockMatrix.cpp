@@ -88,7 +88,7 @@ TEST_CASE("Matrix TestCase2", "[Matrix][1]") {
     using namespace MFA;
 
     Matrix4X4Float a {};
-    Matrix4X4Float::identity(a);
+    Matrix4X4Float::Identity(a);
 
     Matrix4X4Float b {};
     Matrix4X4Float::AssignTranslation(b, 10, 10, 10);

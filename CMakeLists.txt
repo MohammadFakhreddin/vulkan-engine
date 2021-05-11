@@ -64,6 +64,9 @@ list(
     "src/engine/pipelines/pbr/PBRModelPipeline.cpp"
     "src/engine/pipelines/point_light/PointLightPipeline.hpp"
     "src/engine/pipelines/point_light/PointLightPipeline.cpp"
+    "src/engine/camera/ICamera.h"
+    "src/engine/camera/FirstPersonCamera.cpp"
+    "src/engine/Camera/FirstPersonCamera.h"
 )
 
 add_library("Engine"

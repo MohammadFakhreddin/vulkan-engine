@@ -33,9 +33,9 @@ public:
 
     void shutdown();
 
-    DrawableObjectId addGpuModel(RF::GpuModel & gpuModel);
+    DrawableObjectId addGpuModel(RF::GpuModel & gpuModel) override;
 
-    bool removeGpuModel(DrawableObjectId drawableObjectId);
+    bool removeGpuModel(DrawableObjectId drawableObjectId) override;
     
     void render(
         RF::DrawPass & drawPass, 

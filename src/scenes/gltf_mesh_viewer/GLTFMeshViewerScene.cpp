@@ -204,9 +204,9 @@ void GLTFMeshViewerScene::OnDraw(uint32_t const delta_time, RF::DrawPass & draw_
         MFA::Matrix4X4Float rotationMat {};
         MFA::Matrix4X4Float::AssignRotation(
             rotationMat,
-            MFA::Math::Deg2Rad(m_model_rotation[0]),
-            MFA::Math::Deg2Rad(m_model_rotation[1]),
-            MFA::Math::Deg2Rad(m_model_rotation[2])
+            m_model_rotation[0],
+            m_model_rotation[1],
+            m_model_rotation[2]
         );
 
         // Scale
@@ -223,7 +223,7 @@ void GLTFMeshViewerScene::OnDraw(uint32_t const delta_time, RF::DrawPass & draw_
         );
 
         MFA::Matrix4X4Float transformMat {};
-        MFA::Matrix4X4Float::identity(transformMat);
+        MFA::Matrix4X4Float::Identity(transformMat);
         transformMat.multiply(translationMat);
         transformMat.multiply(rotationMat);
         transformMat.multiply(scaleMat);
@@ -255,7 +255,7 @@ void GLTFMeshViewerScene::OnDraw(uint32_t const delta_time, RF::DrawPass & draw_
         );
 
         MFA::Matrix4X4Float transformMat {};
-        MFA::Matrix4X4Float::identity(transformMat);
+        MFA::Matrix4X4Float::Identity(transformMat);
         transformMat.multiply(translationMat);
         
         static_assert(sizeof(mPointLightViewProjectionData.view) == sizeof(transformMat.cells));
@@ -377,16 +377,14 @@ void GLTFMeshViewerScene::updateProjectionBuffer() {
     MFA::Matrix4X4Float::PreparePerspectiveProjectionMatrix(
         perspectiveMat,
         ratio,
-        40, // TODO Make this number 80, 40 is very low for fov
+        80,
         Z_NEAR,
         Z_FAR
     );
 
     // PBR
-    static_assert(sizeof(mPbrViewProjectionData.projection) == sizeof(perspectiveMat.cells));
-    ::memcpy(mPbrViewProjectionData.projection, perspectiveMat.cells, sizeof(perspectiveMat.cells));
+    perspectiveMat.copy(mPbrViewProjectionData.projection);
 
     // PointLight
-    static_assert(sizeof(mPointLightViewProjectionData.projection) == sizeof(perspectiveMat.cells));
-    ::memcpy(mPointLightViewProjectionData.projection, perspectiveMat.cells, sizeof(perspectiveMat.cells));
+    perspectiveMat.copy(mPointLightViewProjectionData.projection);
 }

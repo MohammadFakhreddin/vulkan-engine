@@ -87,9 +87,9 @@ void TextureViewerScene::OnDraw(
         MFA::Matrix4X4Float rotationMat {};
         MFA::Matrix4X4Float::AssignRotation(
             rotationMat,
-            MFA::Math::Deg2Rad(mModelRotation[0]),
-            MFA::Math::Deg2Rad(mModelRotation[1]),
-            MFA::Math::Deg2Rad(mModelRotation[2])
+            mModelRotation[0],
+            mModelRotation[1],
+            mModelRotation[2]
         );
 
         // Scale
@@ -106,7 +106,7 @@ void TextureViewerScene::OnDraw(
         );
 
         MFA::Matrix4X4Float transformMat {};
-        MFA::Matrix4X4Float::identity(transformMat);
+        MFA::Matrix4X4Float::Identity(transformMat);
         transformMat.multiply(translationMat);
         transformMat.multiply(rotationMat);
         transformMat.multiply(scaleMat);
