@@ -2,14 +2,14 @@
     "scripts": {
         "pbr-frag" : "glslc -fshader-stage=frag ./assets/shaders/pbr/pbr.frag.hlsl -o ./assets/shaders/pbr/pbr.frag.spv ",
         "pbr-vert" : "glslc -fshader-stage=vert ./assets/shaders/pbr/pbr.vert.hlsl -o ./assets/shaders/pbr/pbr.vert.spv ",
-        "gltf-frag": "glslc -fshader-stage=frag ./assets/shaders/gltf_mesh_viewer/GLTFMeshViewer.frag.hlsl -o ./assets/shaders/gltf_mesh_viewer/GLTFMeshViewer.frag.spv ",
-        "gltf-vert": "glslc -fshader-stage=vert ./assets/shaders/gltf_mesh_viewer/GLTFMeshViewer.vert.hlsl -o ./assets/shaders/gltf_mesh_viewer/GLTFMeshViewer.vert.spv ",
         "ts-frag": "glslc -fshader-stage=frag ./assets/shaders/textured_sphere/TexturedSphere.frag.hlsl -o ./assets/shaders/textured_sphere/TexturedSphere.frag.spv ",
         "ts-vert": "glslc -fshader-stage=vert ./assets/shaders/textured_sphere/TexturedSphere.vert.hlsl -o ./assets/shaders/textured_sphere/TexturedSphere.vert.spv ",
         "tv-frag": "glslc -fshader-stage=frag ./assets/shaders/texture_viewer/TextureViewer.frag.hlsl -o ./assets/shaders/texture_viewer/TextureViewer.frag.spv ",
         "tv-vert": "glslc -fshader-stage=vert ./assets/shaders/texture_viewer/TextureViewer.vert.hlsl -o ./assets/shaders/texture_viewer/TextureViewer.vert.spv ",
         "pl-vert": "glslc -fshader-stage=vert ./assets/shaders/point_light/PointLight.vert.hlsl -o ./assets/shaders/point_light/PointLight.vert.spv ",
         "pl-frag": "glslc -fshader-stage=frag ./assets/shaders/point_light/PointLight.frag.hlsl -o ./assets/shaders/point_light/PointLight.frag.spv ",
+        "pbr-model-vert": "glslc -fshader-stage=vert ./assets/shaders/pbr_model/PbrModel.vert.hlsl -o ./assets/shaders/pbr_model/PbrModel.vert.spv ",
+        "pbr-model-frag": "glslc -fshader-stage=frag ./assets/shaders/pbr_model/PbrModel.frag.hlsl -o ./assets/shaders/pbr_model/PbrModel.frag.spv ",
         "cmake": "cmake . -B build64 -DCMAKE_GENERATOR_PLATFORM=x64"
    }
 }
