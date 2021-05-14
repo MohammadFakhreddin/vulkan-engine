@@ -175,9 +175,7 @@ float3 calculateNormal(PSIn input)
         
         float3x3 TBN = transpose(float3x3(input.worldTangent, input.worldBiTangent, input.worldNormal));
         // float3x3 TBN = float3x3(input.worldTangent, input.worldBiTangent, input.worldNormal));
-        float3 pixelNormal = mul(TBN, tangentNormal);
-        
-        pixelNormal = normalize(pixelNormal.xyz);
+        pixelNormal = mul(TBN, tangentNormal).xyz;
     }
     return pixelNormal;
 }
@@ -209,6 +207,7 @@ PSOut main(PSIn input) {
 	float3 normal = calculateNormal(input);
 
 	float3 N = normalize(normal.xyz);
+    
 	float3 V = normalize(lvBuff.camPos - input.worldPos);
     
     // Specular contribution

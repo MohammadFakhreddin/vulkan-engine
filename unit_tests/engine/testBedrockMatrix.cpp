@@ -103,78 +103,61 @@ TEST_CASE("Matrix TestCase2", "[Matrix][1]") {
 TEST_CASE("Matrix TestCase3", "[Matrix][2]") {
     using namespace MFA;
 
-    Matrix4X1Float const point {1, 1, 1, 0};
-    // TODO Fix this function
-    Matrix3X1Float const eulerAnglesInRad {
-        Math::Deg2Rad<float>(45.0f),
-        Math::Deg2Rad<float>(270.0f),
-        Math::Deg2Rad<float>(90.0f)
-    };
-    //eulerAnglesInRad.print("eulerAnglesInRad");
+    Matrix3X3Float a {};
+    a.set(0, 0, 1);
+    a.set(0, 1, 0);
+    a.set(0, 2, 2);
 
-    Matrix4X4Float eulerAngleMat {};
-    Matrix4X4Float::AssignRotation(
-        eulerAngleMat,
-        eulerAnglesInRad
-    );
+    a.set(1, 0, 2);
+    a.set(1, 1, 1);
+    a.set(1, 2, 3);
 
-    Matrix4X1Float eulerAnglePoint {};
-    eulerAnglePoint.assign(point);
-    eulerAnglePoint.multiply(eulerAngleMat);
+    a.set(2, 0, 1);
+    a.set(2, 1, 0);
+    a.set(2, 2, 4);
 
-    const QuaternionFloat quaternion = Matrix3X1Float::ToQuaternion(eulerAnglesInRad);
-
-    Matrix4X4Float quaternionMat {};
-    Matrix4X4Float::AssignRotation(quaternionMat, quaternion);
-
-    Matrix4X1Float quaternionPoint {};
-    quaternionPoint.assign(point);
-    quaternionPoint.multiply(quaternionMat);
+    _Matrix<float, 3, 1> b {2.0f, 6.0f, 1.0f};
     
-    CHECK(Matrix4X1Float::Equal(quaternionPoint, eulerAnglePoint));
+    b.multiply(a);
+
+    Matrix3X1Float c {15.0f, 6.0f, 26.0f};
+
+    CHECK(b.equal(c));
 }
 
-TEST_CASE("Matrix TestCase4", "[Matrix][3]") {
-    using namespace MFA;
-
-    Matrix4X4Float rotationMatrix {};
-    Matrix4X4Float::Identity(rotationMatrix);
-    Matrix4X4Float::AssignRotation(
-        rotationMatrix,
-        0.0f,
-        0.0f,
-        0.0f
-    );
-
-    Vector4Float forwardDirection {};
-    forwardDirection.assign(ICamera::ForwardVector);
-    forwardDirection.multiply(rotationMatrix);
-    Matrix4X1Float::Normalize(forwardDirection);
-    CHECK(forwardDirection.equal(ICamera::ForwardVector));
-
-    Vector4Float rightDirection {};
-    rightDirection.assign(ICamera::RightVector);
-    rightDirection.multiply(rotationMatrix);
-    Matrix4X4Float::Normalize(rightDirection);
-    CHECK(rightDirection.equal(ICamera::RightVector));
-}
-
-
-TEST_CASE("Matrix TestCase5", "[Matrix][4]") {
-    using namespace MFA;
-
-    //Matrix3X3Float rotationMatrix {};
-    //Matrix3X3Float::Identity(rotationMatrix);
-    //Matrix3X3Float::AssignRotation(
-    //    rotationMatrix,
-    //    0.0f,
-    //    360.0f,
-    //    0.0f
-    //);
-
-    //Vector3Float forwardDirection {};
-    //forwardDirection.assign(ICamera::ForwardVector);
-    //forwardDirection.multiply(rotationMatrix);
-    //Matrix3X1Float::Normalize(forwardDirection);
-    //CHECK(forwardDirection.equal(ICamera::RightVector));
-}
+//TEST_CASE("Matrix TestCase4", "[Matrix][3]") {
+//    using namespace MFA;
+//
+//    Matrix3X3Float a {};
+//    a.set(0, 0, 1);
+//    a.set(0, 1, 0);
+//    a.set(0, 2, 2);
+//
+//    a.set(1, 0, 2);
+//    a.set(1, 1, 1);
+//    a.set(1, 2, 3);
+//
+//    a.set(2, 0, 1);
+//    a.set(2, 1, 0);
+//    a.set(2, 2, 4);
+//
+//    _Matrix<float, 3,2> b {};
+//    b.set(0, 0, 2);
+//    b.set(0, 1, 5);
+//    b.set(1, 0, 6);
+//    b.set(1, 1, 7);
+//    b.set(2, 0, 1);
+//    b.set(2, 1, 8);
+//    
+//    b.multiply(a);
+//
+//    _Matrix<float, 3,2> c {};
+//    c.set(0, 0, 15);
+//    c.set(0, 1, 27);
+//    c.set(1, 0, 6);
+//    c.set(1, 1, 7);   
+//    c.set(2, 0, 26);
+//    c.set(2, 1, 63);
+//
+//    CHECK(b.equal(c));
+//}
