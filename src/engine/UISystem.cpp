@@ -122,7 +122,7 @@ static uint32_t fragment_shader_spv[] =
 
 static VkDeviceSize g_BufferMemoryAlignment = 256;
 
-struct {
+struct State {
     RF::SamplerGroup font_sampler {};
     VkDescriptorSetLayout_T * descriptor_set_layout = nullptr;
     RB::GpuShader vertex_shader {};
@@ -134,7 +134,10 @@ struct {
     SDL_Cursor *  mouse_cursors[ImGuiMouseCursor_COUNT] {};
     std::vector<RF::MeshBuffers> mesh_buffers {};
     std::vector<bool> mesh_buffers_validation_status {};
-} static state {};
+    bool hasFocus = false;
+};
+
+static State * state = nullptr;
 
 struct PushConstants {
     float scale[2];
@@ -142,14 +145,15 @@ struct PushConstants {
 };
 
 void Init() {
+    state = new State();
     auto const swap_chain_images_count = RF::SwapChainImagesCount();
-    state.mesh_buffers.resize(swap_chain_images_count);
-    state.mesh_buffers_validation_status.resize(swap_chain_images_count);
+    state->mesh_buffers.resize(swap_chain_images_count);
+    state->mesh_buffers_validation_status.resize(swap_chain_images_count);
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
 
-    state.font_sampler = RF::CreateSampler(
+    state->font_sampler = RF::CreateSampler(
         RB::CreateSamplerParams {
             .min_lod = -1000,
             .max_lod = 1000,
@@ -162,15 +166,15 @@ void Init() {
         binding[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         binding[0].descriptorCount = 1;
         binding[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-        binding[0].pImmutableSamplers = &state.font_sampler.sampler;
-        state.descriptor_set_layout = RF::CreateDescriptorSetLayout(
+        binding[0].pImmutableSamplers = &state->font_sampler.sampler;
+        state->descriptor_set_layout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(binding.size()),
             binding.data()
         );
     }
 
     // Create Descriptor Set:
-    state.descriptor_sets = RF::CreateDescriptorSets(state.descriptor_set_layout); // Original number was 1 , Now it creates as many as swap_chain_image_count
+    state->descriptor_sets = RF::CreateDescriptorSets(state->descriptor_set_layout); // Original number was 1 , Now it creates as many as swap_chain_image_count
 
     {// Vertex shader
         auto const shader_asset = Importer::ImportShaderFromSPV(
@@ -178,7 +182,7 @@ void Init() {
             AssetSystem::Shader::Stage::Vertex,
             "main"
         );
-        state.vertex_shader = RF::CreateShader(shader_asset);
+        state->vertex_shader = RF::CreateShader(shader_asset);
         // TODO Implement them in shutdown as well
     }
 
@@ -188,7 +192,7 @@ void Init() {
             AssetSystem::Shader::Stage::Fragment,
             "main"
         );
-        state.fragment_shader = RF::CreateShader(shader_asset);
+        state->fragment_shader = RF::CreateShader(shader_asset);
     }
 
     {
@@ -201,7 +205,7 @@ void Init() {
             }
         };
         
-        std::vector<RB::GpuShader> shader_stages {state.vertex_shader, state.fragment_shader};
+        std::vector<RB::GpuShader> shader_stages {state->vertex_shader, state->fragment_shader};
 
         VkVertexInputBindingDescription vertex_binding_description {};
         vertex_binding_description.stride = sizeof(ImDrawVert);
@@ -228,10 +232,10 @@ void Init() {
             .pDynamicStates = dynamic_states.data(),
         };
 
-        state.draw_pipeline = RF::CreateDrawPipeline(
+        state->draw_pipeline = RF::CreateDrawPipeline(
             static_cast<uint8_t>(shader_stages.size()),
             shader_stages.data(),
-            state.descriptor_set_layout,
+            state->descriptor_set_layout,
             vertex_binding_description,
             static_cast<uint8_t>(input_attribute_description.size()),
             input_attribute_description.data(),
@@ -303,7 +307,7 @@ void Init() {
             Importer::ImportTextureOptions {.tryToGenerateMipmaps = false, .preferSrgb = false}
         );
         // TODO Support from in memory import of images inside importer
-        state.font_texture = RF::CreateTexture(texture_asset);
+        state->font_texture = RF::CreateTexture(texture_asset);
     }
 }
 
@@ -318,10 +322,10 @@ static void UpdateMousePositionAndButtons() {
     }
     int mx, my;
     Uint32 const mouse_buttons = SDL_GetMouseState(&mx, &my);
-    io.MouseDown[0] = state.mouse_pressed[0] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_LEFT)) != 0;  // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-    io.MouseDown[1] = state.mouse_pressed[1] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0;
-    io.MouseDown[2] = state.mouse_pressed[2] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0;
-    state.mouse_pressed[0] = state.mouse_pressed[1] = state.mouse_pressed[2] = false;
+    io.MouseDown[0] = state->mouse_pressed[0] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_LEFT)) != 0;  // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
+    io.MouseDown[1] = state->mouse_pressed[1] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0;
+    io.MouseDown[2] = state->mouse_pressed[2] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0;
+    state->mouse_pressed[0] = state->mouse_pressed[1] = state->mouse_pressed[2] = false;
     if (RF::GetWindowFlags() & SDL_WINDOW_INPUT_FOCUS) {
         io.MousePos = ImVec2(static_cast<float>(mx), static_cast<float>(my));
     }
@@ -339,7 +343,7 @@ static void UpdateMouseCursor() {
         SDL_ShowCursor(SDL_FALSE);
     } else {
         // Show OS mouse cursor
-        SDL_SetCursor(state.mouse_cursors[imgui_cursor] ? state.mouse_cursors[imgui_cursor] : state.mouse_cursors[ImGuiMouseCursor_Arrow]);
+        SDL_SetCursor(state->mouse_cursors[imgui_cursor] ? state->mouse_cursors[imgui_cursor] : state->mouse_cursors[ImGuiMouseCursor_Arrow]);
         SDL_ShowCursor(SDL_TRUE);
     }
 }
@@ -372,9 +376,12 @@ void OnNewFrame(
     UpdateMouseCursor();
     // Start the Dear ImGui frame
     ImGui::NewFrame();
+
+    state->hasFocus = false;
     if(record_ui_callback != nullptr) {
         record_ui_callback();
     }
+
     ImGui::Render();
     auto * draw_data = ImGui::GetDrawData();
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
@@ -390,8 +397,8 @@ void OnNewFrame(
             auto index_data = MFA::Memory::Alloc(index_size);
             MFA_DEFER {MFA::Memory::Free(index_data);};
             {
-                ImDrawVert * vertex_ptr = reinterpret_cast<ImDrawVert *>(vertex_data.ptr);
-                ImDrawIdx * index_ptr = reinterpret_cast<ImDrawIdx *>(index_data.ptr);
+                auto * vertex_ptr = reinterpret_cast<ImDrawVert *>(vertex_data.ptr);
+                auto * index_ptr = reinterpret_cast<ImDrawIdx *>(index_data.ptr);
                 for (int n = 0; n < draw_data->CmdListsCount; n++)
                 {
                     const ImDrawList * cmd_list = draw_data->CmdLists[n];
@@ -401,36 +408,36 @@ void OnNewFrame(
                     index_ptr += cmd_list->IdxBuffer.Size;
                 }
             }
-            if(state.mesh_buffers_validation_status[draw_pass.imageIndex]) {
-                RF::DestroyMeshBuffers(state.mesh_buffers[draw_pass.imageIndex]);
-                state.mesh_buffers_validation_status[draw_pass.imageIndex] = false;
+            if(state->mesh_buffers_validation_status[draw_pass.imageIndex]) {
+                RF::DestroyMeshBuffers(state->mesh_buffers[draw_pass.imageIndex]);
+                state->mesh_buffers_validation_status[draw_pass.imageIndex] = false;
             }
-            state.mesh_buffers[draw_pass.imageIndex].verticesBuffer = RF::CreateVertexBuffer(CBlob {vertex_data.ptr, vertex_data.len});
-            state.mesh_buffers[draw_pass.imageIndex].indicesBuffer = RF::CreateIndexBuffer(CBlob {index_data.ptr, index_data.len});
-            state.mesh_buffers_validation_status[draw_pass.imageIndex] = true;
+            state->mesh_buffers[draw_pass.imageIndex].verticesBuffer = RF::CreateVertexBuffer(CBlob {vertex_data.ptr, vertex_data.len});
+            state->mesh_buffers[draw_pass.imageIndex].indicesBuffer = RF::CreateIndexBuffer(CBlob {index_data.ptr, index_data.len});
+            state->mesh_buffers_validation_status[draw_pass.imageIndex] = true;
             // Setup desired Vulkan state
             // Bind pipeline and descriptor sets:
             {
-                RF::BindDrawPipeline(draw_pass, state.draw_pipeline);
-                RF::BindDescriptorSet(draw_pass, state.descriptor_sets[draw_pass.imageIndex]);
+                RF::BindDrawPipeline(draw_pass, state->draw_pipeline);
+                RF::BindDescriptorSet(draw_pass, state->descriptor_sets[draw_pass.imageIndex]);
             }
 
             RF::BindIndexBuffer(
                 draw_pass,
-                state.mesh_buffers[draw_pass.imageIndex].indicesBuffer,
+                state->mesh_buffers[draw_pass.imageIndex].indicesBuffer,
                 0,
                 sizeof(ImDrawIdx) == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32
             );
             RF::BindVertexBuffer(
                 draw_pass,
-                state.mesh_buffers[draw_pass.imageIndex].verticesBuffer
+                state->mesh_buffers[draw_pass.imageIndex].verticesBuffer
             );
 
             // Update the Descriptor Set:
             {
                 VkDescriptorImageInfo desc_image[1] = {};
-                desc_image[0].sampler = state.font_sampler.sampler;
-                desc_image[0].imageView = state.font_texture.image_view();
+                desc_image[0].sampler = state->font_sampler.sampler;
+                desc_image[0].imageView = state->font_texture.image_view();
                 desc_image[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 std::vector<VkWriteDescriptorSet> write_desc {1};
                 write_desc[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -438,8 +445,8 @@ void OnNewFrame(
                 write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                 write_desc[0].pImageInfo = desc_image;
                 RF::UpdateDescriptorSets(
-                    static_cast<uint8_t>(state.descriptor_sets.size()),
-                    state.descriptor_sets.data(),
+                    static_cast<uint8_t>(state->descriptor_sets.size()),
+                    state->descriptor_sets.data(),
                     static_cast<uint8_t>(write_desc.size()),
                     write_desc.data()
                 );
@@ -534,26 +541,95 @@ void OnNewFrame(
     }
 }
 
+void BeginWindow(char const * windowName) {
+    ImGui::Begin(windowName);
+}
+
+void EndWindow() {
+    if (ImGui::IsWindowFocused()) {
+        state->hasFocus = true;
+    }
+    ImGui::End();
+}
+
+void SetNextItemWidth(float const nextItemWidth) {
+    ImGui::SetNextItemWidth(nextItemWidth);
+}
+
+// TODO Maybe we could cache unchanged vertices
+void Combo(
+    char const * label, 
+    int32_t * selectedItemIndex, 
+    char const ** items, 
+    int32_t const itemsCount
+) {
+    ImGui::Combo(
+        label,
+        selectedItemIndex,
+        items,
+        itemsCount
+    );
+}
+
+void SliderInt(
+    char const * label, 
+    int * value, 
+    int const minValue, 
+    int const maxValue
+) {
+    ImGui::SliderInt(
+        label,
+        value,
+        minValue,
+        maxValue
+    );
+}
+
+void SliderFloat(
+    char const * label, 
+    float * value, 
+    float const minValue, 
+    float const maxValue
+) {
+    ImGui::SliderFloat(
+        label, 
+        value, 
+        minValue, 
+        maxValue
+    ); 
+}
+
+void Checkbox(char const * label, bool * value) {
+    ImGui::Checkbox(label, value);
+}
+
+bool HasFocus() {
+    return state->hasFocus;
+}
+
 void Shutdown() {
-    MFA_ASSERT(state.mesh_buffers.size() == state.mesh_buffers_validation_status.size());
-    for(auto i = 0; i < state.mesh_buffers_validation_status.size(); i++) {
-        if(true == state.mesh_buffers_validation_status[i]) {
-            RF::DestroyMeshBuffers(state.mesh_buffers[i]);
-            state.mesh_buffers_validation_status[i] = false;
+    MFA_ASSERT(state->mesh_buffers.size() == state->mesh_buffers_validation_status.size());
+    for(auto i = 0; i < state->mesh_buffers_validation_status.size(); i++) {
+        if(true == state->mesh_buffers_validation_status[i]) {
+            RF::DestroyMeshBuffers(state->mesh_buffers[i]);
+            state->mesh_buffers_validation_status[i] = false;
         }
     }
-    RF::DestroyTexture(state.font_texture);
-    Importer::FreeTexture(state.font_texture.cpu_texture());
+    RF::DestroyTexture(state->font_texture);
+    Importer::FreeTexture(state->font_texture.cpu_texture());
 
-    RF::DestroyDrawPipeline(state.draw_pipeline);
+    RF::DestroyDrawPipeline(state->draw_pipeline);
     // TODO We can remove shader after creating pipeline
-    RF::DestroyShader(state.fragment_shader);
-    Importer::FreeShader(state.fragment_shader.cpuShader());
-    RF::DestroyShader(state.vertex_shader);
-    Importer::FreeShader(state.vertex_shader.cpuShader());
+    RF::DestroyShader(state->fragment_shader);
+    Importer::FreeShader(state->fragment_shader.cpuShader());
+    RF::DestroyShader(state->vertex_shader);
+    Importer::FreeShader(state->vertex_shader.cpuShader());
 
-    RF::DestroyDescriptorSetLayout(state.descriptor_set_layout);
-    RF::DestroySampler(state.font_sampler);
+    RF::DestroyDescriptorSetLayout(state->descriptor_set_layout);
+    RF::DestroySampler(state->font_sampler);
+
+    delete state;
+    state = nullptr;
 }
 
 }

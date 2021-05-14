@@ -1,5 +1,7 @@
 #pragma once
 
+#include <SDL2/SDL_events.h>
+
 #include "RenderBackend.hpp"
 
 namespace MFA::RenderFrontend {
@@ -244,6 +246,10 @@ uint8_t SwapChainImagesCount();
 
 void WarpMouseInWindow(int32_t x, int32_t y);
 
+uint32_t GetMouseState(int32_t * x, int32_t * y);
+
+uint8_t const * GetKeyboardState();
+
 [[nodiscard]]
 uint32_t GetWindowFlags();
 
@@ -254,5 +260,12 @@ void GetDrawableSize(int32_t & out_width, int32_t & out_height);
 void AssignViewportAndScissorToCommandBuffer(
     VkCommandBuffer_T * commandBuffer
 );
+
+using EventWatchId = int;
+using EventWatch = std::function<int(void* data, SDL_Event* event)>;
+
+EventWatchId AddEventWatch(EventWatch const & eventWatch);
+
+void RemoveEventWatch(EventWatchId watchId);
 
 }

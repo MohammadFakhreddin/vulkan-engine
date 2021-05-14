@@ -16,6 +16,11 @@ namespace MFA::RenderFrontend {
 
 static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
+struct EventWatchGroup {
+    int id = 0;
+    EventWatch watch = nullptr;
+};
+
 struct State {
     // CreateWindow
     ScreenWidth screen_width = 0;
@@ -45,8 +50,12 @@ struct State {
     RB::SyncObjects sync_objects {};
     uint8_t current_frame = 0;
     // Resize
+    bool isWindowResizable = false;
     bool windowResized = false;
     ResizeEventListener resizeEventListener = nullptr;
+    // Event watches
+    int nextEventListenerId = 0;
+    std::vector<EventWatchGroup> sdlEventListeners {};
 } static * state = nullptr;
 
 static VkBool32 DebugCallback(
@@ -72,14 +81,9 @@ static VkBool32 DebugCallback(
     return true;
 }
 
-static void VK_CHECK(VkResult const result) {
-  if(result != VK_SUCCESS) {
-      MFA_CRASH("Vulkan command failed with code:" + std::to_string(result));
-  }
-}
-
-static int ResizingEventWatcher(void* data, SDL_Event* event) {
+static int SDLEventWatcher(void* data, SDL_Event* event) {
     if (
+        state->isWindowResizable == true &&
         event->type == SDL_WINDOWEVENT &&
         event->window.event == SDL_WINDOWEVENT_RESIZED
     ) {
@@ -88,27 +92,31 @@ static int ResizingEventWatcher(void* data, SDL_Event* event) {
             state->windowResized = true;
         }
     }
+    for (auto & eventListener : state->sdlEventListeners) {
+        MFA_ASSERT(eventListener.watch != nullptr);
+        eventListener.watch(data, event);
+    }
     return 0;
 }
 
 bool Init(InitParams const & params) {
     state = new State();
-    {
-        state->application_name = params.application_name;
-        state->screen_width = params.screen_width;
-        state->screen_height = params.screen_height;
-    }
+    state->application_name = params.application_name;
+    state->screen_width = params.screen_width;
+    state->screen_height = params.screen_height;
     state->window = RB::CreateWindow(
         state->screen_width, 
         state->screen_height
     );
+    state->isWindowResizable = params.resizable;
 
     if (params.resizable) {
         // Make window resizable
         SDL_SetWindowResizable(state->window, SDL_TRUE);
-        SDL_AddEventWatch(ResizingEventWatcher, state->window);
     }
 
+    SDL_AddEventWatch(SDLEventWatcher, nullptr);
+    
     state->vk_instance = RB::CreateInstance(
         state->application_name.c_str(), 
         state->window
@@ -274,6 +282,10 @@ void OnWindowResized() {
 bool Shutdown() {
     // Common part with resize
     RB::DeviceWaitIdle(state->logicalDevice.device);
+    MFA_ASSERT(state->sdlEventListeners.empty());
+
+    SDL_DelEventWatch(SDLEventWatcher, nullptr);
+
     // DestroyPipeline in application // TODO We should have reference to what user creates + params for re-creation
     // GraphicPipeline, UniformBuffer, PipelineLayout
     // Shutdown only procedure
@@ -986,6 +998,14 @@ void WarpMouseInWindow(int32_t const x, int32_t const y) {
     SDL_WarpMouseInWindow(state->window, x, y);
 }
 
+uint32_t GetMouseState(int32_t * x, int32_t * y) {
+    return SDL_GetMouseState(x, y);
+}
+
+uint8_t const * GetKeyboardState() {
+    return SDL_GetKeyboardState(nullptr);
+}
+
 uint32_t GetWindowFlags() {
     return SDL_GetWindowFlags(state->window); 
 }
@@ -997,6 +1017,7 @@ void GetWindowSize(int32_t & out_width, int32_t & out_height) {
 void GetDrawableSize(int32_t & out_width, int32_t & out_height) {
     SDL_GL_GetDrawableSize(state->window, &out_width, &out_height);
 }
+
 void AssignViewportAndScissorToCommandBuffer(VkCommandBuffer_T * commandBuffer) {
     MFA_ASSERT(commandBuffer != nullptr);
     RB::AssignViewportAndScissorToCommandBuffer(
@@ -1006,6 +1027,26 @@ void AssignViewportAndScissorToCommandBuffer(VkCommandBuffer_T * commandBuffer) 
         },
         commandBuffer
     );
+}
+
+// TODO We might need separate SDL class
+int AddEventWatch(EventWatch const & eventWatch) {
+    MFA_ASSERT(eventWatch != nullptr);
+    auto const group = EventWatchGroup {
+        .id = state->nextEventListenerId,
+        .watch = eventWatch
+    };
+    ++state->nextEventListenerId;
+    state->sdlEventListeners.emplace_back(group);
+    return group.id;
+}
+
+void RemoveEventWatch(int const watchId) {
+    for (int i = static_cast<int>(state->sdlEventListeners.size()) - 1; i >= 0; --i) {
+        if (state->sdlEventListeners[i].id == watchId) {
+            state->sdlEventListeners.erase(state->sdlEventListeners.begin() + i);
+        }
+    }
 }
 
 }

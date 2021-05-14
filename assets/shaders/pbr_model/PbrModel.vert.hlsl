@@ -27,8 +27,9 @@ struct VSOut {
 };
 
 struct ModelTransformation {
+    float4x4 model;
     float4x4 view;
-    float4x4 projectionMat;
+    float4x4 projection;
 };
 
 ConstantBuffer <ModelTransformation> modelTransformBuffer: register(b0, space0);
@@ -42,14 +43,15 @@ ConstantBuffer <NodeTranformation> nodeTransformBuffer: register(b1, space0);
 VSOut main(VSIn input) {
     VSOut output;
 
-    float4x4 modelViewMat = mul(modelTransformBuffer.view, nodeTransformBuffer.model);
+    float4x4 modelMat = mul(modelTransformBuffer.model, nodeTransformBuffer.model);
+    float4x4 modelViewMat = mul(modelTransformBuffer.view, modelMat);
 
     // Position
     float4 tempPosition = float4(input.position, 1.0f);
     tempPosition = mul(modelViewMat, tempPosition);
     
     float4 worldPos = tempPosition;
-    float4 position = mul(modelTransformBuffer.projectionMat, worldPos);
+    float4 position = mul(modelTransformBuffer.projection, worldPos);
     output.position = position;
     output.worldPos = worldPos.xyz;
 

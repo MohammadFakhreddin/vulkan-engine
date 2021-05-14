@@ -4,12 +4,11 @@
 #include "tools/ShapeGenerator.hpp"
 #include "tools/Importer.hpp"
 
-#include "libs/imgui/imgui.h"
-
 namespace RF = MFA::RenderFrontend;
 namespace RB = MFA::RenderBackend;
 namespace SG = MFA::ShapeGenerator;
 namespace Importer = MFA::Importer;
+namespace UI = MFA::UISystem;
 
 void PBRScene::Init() {
 
@@ -253,67 +252,67 @@ void PBRScene::OnDraw(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_
 }
 
 void PBRScene::OnUI(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
-    ImGui::Begin("Sphere");
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("XDegree", &m_sphere_rotation[0], -360.0f, 360.0f);
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("YDegree", &m_sphere_rotation[1], -360.0f, 360.0f);
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("ZDegree", &m_sphere_rotation[2], -360.0f, 360.0f);
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("XDistance", &m_sphere_position[0], -40.0f, 40.0f);
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("YDistance", &m_sphere_position[1], -40.0f, 40.0f);
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("ZDistance", &m_sphere_position[2], -40.0f, 40.0f);
+    UI::BeginWindow("Sphere");
+    UI::SetNextItemWidth(300.0f);
+    UI::SliderFloat("XDegree", &m_sphere_rotation[0], -360.0f, 360.0f);
+    UI::SetNextItemWidth(300.0f);
+    UI::SliderFloat("YDegree", &m_sphere_rotation[1], -360.0f, 360.0f);
+    UI::SetNextItemWidth(300.0f);
+    UI::SliderFloat("ZDegree", &m_sphere_rotation[2], -360.0f, 360.0f);
+    UI::SetNextItemWidth(300.0f);
+    UI::SliderFloat("XDistance", &m_sphere_position[0], -40.0f, 40.0f);
+    UI::SetNextItemWidth(300.0f);
+    UI::SliderFloat("YDistance", &m_sphere_position[1], -40.0f, 40.0f);
+    UI::SetNextItemWidth(300.0f);
+    UI::SliderFloat("ZDistance", &m_sphere_position[2], -40.0f, 40.0f);
     if(m_selected_material_index == CustomMaterialIndex) {
-        ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("RColor", &m_sphere_color[0], 0.0f, 1.0f);
-        ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("GColor", &m_sphere_color[1], 0.0f, 1.0f);
-        ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("BColor", &m_sphere_color[2], 0.0f, 1.0f);
-        ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("Metallic", &m_sphere_metallic, 0.0f, 1.0f);
-        ImGui::SetNextItemWidth(300.0f);
-        ImGui::SliderFloat("Roughness", &m_sphere_roughness, 0.0f, 1.0f);
+        UI::SetNextItemWidth(300.0f);
+        UI::SliderFloat("RColor", &m_sphere_color[0], 0.0f, 1.0f);
+        UI::SetNextItemWidth(300.0f);
+        UI::SliderFloat("GColor", &m_sphere_color[1], 0.0f, 1.0f);
+        UI::SetNextItemWidth(300.0f);
+        UI::SliderFloat("BColor", &m_sphere_color[2], 0.0f, 1.0f);
+        UI::SetNextItemWidth(300.0f);
+        UI::SliderFloat("Metallic", &m_sphere_metallic, 0.0f, 1.0f);
+        UI::SetNextItemWidth(300.0f);
+        UI::SliderFloat("Roughness", &m_sphere_roughness, 0.0f, 1.0f);
     }
-    //ImGui::SetNextItemWidth(300.0f);
-    //ImGui::SliderFloat("Emission", &m_sphere_emission, 0.0f, 1.0f);
-    ImGui::End();
-    ImGui::Begin("Camera and light");
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("LightX", &m_light_position[0], -20.0f, 20.0f);
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("LightY", &m_light_position[1], -20.0f, 20.0f);
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("LightZ", &m_light_position[2], -20.0f, 20.0f);
+    //UI::SetNextItemWidth(300.0f);
+    //UI::SliderFloat("Emission", &m_sphere_emission, 0.0f, 1.0f);
+    UI::EndWindow();
+    UI::BeginWindow("Camera and light");
+    UI::SetNextItemWidth(300.0f);
+    UI::SliderFloat("LightX", &m_light_position[0], -20.0f, 20.0f);
+    UI::SetNextItemWidth(300.0f);
+    UI::SliderFloat("LightY", &m_light_position[1], -20.0f, 20.0f);
+    UI::SetNextItemWidth(300.0f);
+    UI::SliderFloat("LightZ", &m_light_position[2], -20.0f, 20.0f);
 
     {// Materials
         std::vector<char const *> items {};
         for (auto const & material: MaterialInformation) {
             items.emplace_back(material.name);
         }
-        ImGui::Combo(
+        UI::Combo(
             "Material", 
             &m_selected_material_index, 
             items.data(), 
             static_cast<int32_t>(items.size())
         );
     }
-    //ImGui::SetNextItemWidth(300.0f);
-    //ImGui::SliderFloat("LightR", &m_light_colors[0], 0.0f, 1.0f);
-    //ImGui::SetNextItemWidth(300.0f);
-    //ImGui::SliderFloat("LightG", &m_light_colors[1], 0.0f, 1.0f);
-    //ImGui::SetNextItemWidth(300.0f);
-    //ImGui::SliderFloat("LightB", &m_light_colors[2], 0.0f, 1.0f);
-    //ImGui::SetNextItemWidth(300.0f);
-    //ImGui::SliderFloat("CameraX", &m_camera_position[0], -100.0f, 100.0f);
-    //ImGui::SetNextItemWidth(300.0f);
-    //ImGui::SliderFloat("CameraY", &m_camera_position[1], -100.0f, 100.0f);
-    //ImGui::SetNextItemWidth(300.0f);
-    //ImGui::SliderFloat("CameraZ", &m_camera_position[2], -1000.0f, 1000.0f);
-    ImGui::End();
+    //UI::SetNextItemWidth(300.0f);
+    //UI::SliderFloat("LightR", &m_light_colors[0], 0.0f, 1.0f);
+    //UI::SetNextItemWidth(300.0f);
+    //UI::SliderFloat("LightG", &m_light_colors[1], 0.0f, 1.0f);
+    //UI::SetNextItemWidth(300.0f);
+    //UI::SliderFloat("LightB", &m_light_colors[2], 0.0f, 1.0f);
+    //UI::SetNextItemWidth(300.0f);
+    //UI::SliderFloat("CameraX", &m_camera_position[0], -100.0f, 100.0f);
+    //UI::SetNextItemWidth(300.0f);
+    //UI::SliderFloat("CameraY", &m_camera_position[1], -100.0f, 100.0f);
+    //UI::SetNextItemWidth(300.0f);
+    //UI::SliderFloat("CameraZ", &m_camera_position[2], -1000.0f, 1000.0f);
+    UI::EndWindow();
 }
 
 void PBRScene::OnResize() {

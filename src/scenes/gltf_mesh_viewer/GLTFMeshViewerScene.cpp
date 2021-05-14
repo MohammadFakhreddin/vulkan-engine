@@ -7,8 +7,12 @@
 #include "tools/Importer.hpp"
 #include "tools/ShapeGenerator.hpp"
 
+#include <glm/mat4x4.hpp>
+#include <vec4.hpp>
+
 namespace RF = MFA::RenderFrontend;
 namespace Importer = MFA::Importer;
+namespace UI = MFA::UISystem;
 
 void GLTFMeshViewerScene::Init() {
     {// Error texture
@@ -141,6 +145,8 @@ void GLTFMeshViewerScene::Init() {
 
     mPointLightPipeline.init();
 
+    mCamera.init();
+
     // Updating perspective mat once for entire application
     // Perspective
     updateProjectionBuffer();
@@ -161,8 +167,12 @@ void GLTFMeshViewerScene::Init() {
     }
 }
 
+// TODO Why deltaTime is uint32_t ?
 void GLTFMeshViewerScene::OnDraw(uint32_t const delta_time, RF::DrawPass & draw_pass) {
     MFA_ASSERT(mSelectedModelIndex >=0 && mSelectedModelIndex < mModelsRenderData.size());
+
+    mCamera.onNewFrame(static_cast<float>(delta_time));
+
     auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
     if (selectedModel.isLoaded == false) {
         createModel(selectedModel);
@@ -228,21 +238,37 @@ void GLTFMeshViewerScene::OnDraw(uint32_t const delta_time, RF::DrawPass & draw_
         transformMat.multiply(rotationMat);
         transformMat.multiply(scaleMat);
         
-        static_assert(sizeof(mPbrViewProjectionData.view) == sizeof(transformMat.cells));
-        ::memcpy(mPbrViewProjectionData.view, transformMat.cells, sizeof(transformMat.cells));
+        transformMat.copy(mPbrMVPData.model);
+
+        mCamera.getTransform(mPbrMVPData.view);
 
         mPbrPipeline.updateViewProjectionBuffer(
             selectedModel.drawableObjectId,
-            mPbrViewProjectionData
+            mPbrMVPData
         );
     }
     {// LightViewBuffer
-        ::memcpy(mLightViewData.lightPosition, mLightPosition, sizeof(mLightPosition));
-        static_assert(sizeof(mLightPosition) == sizeof(mLightViewData.lightPosition));
+        auto lightPosition = glm::vec4(
+            mLightPosition[0], 
+            mLightPosition[1], 
+            mLightPosition[2], 
+            1.0f
+        );
+        glm::mat4x4 transformMatrix {};
+        float transformData[16];
+        mCamera.getTransform(transformData);
+        for (int i = 0; i < 16; ++i) {
+            transformMatrix[i / 4][i % 4] = transformData[i];
+        }
+        lightPosition = transformMatrix * lightPosition;
 
+        mLightViewData.lightPosition[0] = lightPosition[0];
+        mLightViewData.lightPosition[1] = lightPosition[1];
+        mLightViewData.lightPosition[2] = lightPosition[2];
+        
         ::memcpy(mLightViewData.lightColor, mLightColor, sizeof(mLightColor));
         static_assert(sizeof(mLightColor) == sizeof(mLightViewData.lightColor));
-
+        
         mPbrPipeline.updateLightViewBuffer(mLightViewData);
 
         // Position
@@ -257,11 +283,11 @@ void GLTFMeshViewerScene::OnDraw(uint32_t const delta_time, RF::DrawPass & draw_
         MFA::Matrix4X4Float transformMat {};
         MFA::Matrix4X4Float::Identity(transformMat);
         transformMat.multiply(translationMat);
-        
-        static_assert(sizeof(mPointLightViewProjectionData.view) == sizeof(transformMat.cells));
-        ::memcpy(mPointLightViewProjectionData.view, transformMat.cells, sizeof(transformMat.cells));
 
-        mPointLightPipeline.updateViewProjectionBuffer(mPointLightObjectId, mPointLightViewProjectionData);
+        transformMat.copy(mPointLightMVPData.model);
+        mCamera.getTransform(mPointLightMVPData.view);
+        
+        mPointLightPipeline.updateViewProjectionBuffer(mPointLightObjectId, mPointLightMVPData);
 
         MFA::PointLightPipeline::PrimitiveInfo const lightPrimitiveInfo {
             .baseColorFactor {
@@ -282,8 +308,8 @@ void GLTFMeshViewerScene::OnDraw(uint32_t const delta_time, RF::DrawPass & draw_
 
 void GLTFMeshViewerScene::OnUI(uint32_t const delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
     static constexpr float ItemWidth = 500;
-    ImGui::Begin("Object viewer");
-    ImGui::SetNextItemWidth(ItemWidth);
+    UI::BeginWindow("Object viewer");
+    UI::SetNextItemWidth(ItemWidth);
     // TODO Bad for performance, Find a better name
     std::vector<char const *> modelNames {};
     if(false == mModelsRenderData.empty()) {
@@ -291,44 +317,46 @@ void GLTFMeshViewerScene::OnUI(uint32_t const delta_time, MFA::RenderFrontend::D
             modelNames.emplace_back(renderData.displayName.c_str());
         }
     }
-    ImGui::Combo(
+    UI::Combo(
         "Object selector",
         &mSelectedModelIndex,
         modelNames.data(), 
         static_cast<int32_t>(modelNames.size())
     );
-    ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("XDegree", &m_model_rotation[0], -360.0f, 360.0f);
-    ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("YDegree", &m_model_rotation[1], -360.0f, 360.0f);
-    ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("ZDegree", &m_model_rotation[2], -360.0f, 360.0f);
-    ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("Scale", &m_model_scale, 0.0f, 1.0f);
-    ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("XDistance", &m_model_position[0], mModelTranslateMin[0], mModelTranslateMax[0]);
-    ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("YDistance", &m_model_position[1], mModelTranslateMin[1], mModelTranslateMax[1]);
-    ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("ZDistance", &m_model_position[2], mModelTranslateMin[2], mModelTranslateMax[2]);
-    ImGui::End();
+    UI::SetNextItemWidth(ItemWidth);
+    UI::SliderFloat("XDegree", &m_model_rotation[0], -360.0f, 360.0f);
+    UI::SetNextItemWidth(ItemWidth);
+    UI::SliderFloat("YDegree", &m_model_rotation[1], -360.0f, 360.0f);
+    UI::SetNextItemWidth(ItemWidth);
+    UI::SliderFloat("ZDegree", &m_model_rotation[2], -360.0f, 360.0f);
+    UI::SetNextItemWidth(ItemWidth);
+    UI::SliderFloat("Scale", &m_model_scale, 0.0f, 1.0f);
+    UI::SetNextItemWidth(ItemWidth);
+    UI::SliderFloat("XDistance", &m_model_position[0], mModelTranslateMin[0], mModelTranslateMax[0]);
+    UI::SetNextItemWidth(ItemWidth);
+    UI::SliderFloat("YDistance", &m_model_position[1], mModelTranslateMin[1], mModelTranslateMax[1]);
+    UI::SetNextItemWidth(ItemWidth);
+    UI::SliderFloat("ZDistance", &m_model_position[2], mModelTranslateMin[2], mModelTranslateMax[2]);
+    UI::EndWindow();
 
-    ImGui::Begin("Light");
-    ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::Checkbox("Visible", &mIsLightVisible);
-    ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("PositionX", &mLightPosition[0], mLightTranslateMin[0], mLightTranslateMax[0]);
-    ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("PositionY", &mLightPosition[1], mLightTranslateMin[1], mLightTranslateMax[1]);
-    ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("PositionZ", &mLightPosition[2], mLightTranslateMin[2], mLightTranslateMax[2]);
-    ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("ColorR", &mLightColor[0], 0.0f, 400.0f);
-    ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("ColorG", &mLightColor[1], 0.0f, 400.0f);
-    ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("ColorB", &mLightColor[2], 0.0f, 400.0f);
-    ImGui::End();
+    UI::BeginWindow("Light");
+    UI::SetNextItemWidth(ItemWidth);
+    UI::Checkbox("Visible", &mIsLightVisible);
+    UI::SetNextItemWidth(ItemWidth);
+    UI::SliderFloat("PositionX", &mLightPosition[0], mLightTranslateMin[0], mLightTranslateMax[0]);
+    UI::SetNextItemWidth(ItemWidth);
+    UI::SliderFloat("PositionY", &mLightPosition[1], mLightTranslateMin[1], mLightTranslateMax[1]);
+    UI::SetNextItemWidth(ItemWidth);
+    UI::SliderFloat("PositionZ", &mLightPosition[2], mLightTranslateMin[2], mLightTranslateMax[2]);
+    UI::SetNextItemWidth(ItemWidth);
+    UI::SliderFloat("ColorR", &mLightColor[0], 0.0f, 400.0f);
+    UI::SetNextItemWidth(ItemWidth);
+    UI::SliderFloat("ColorG", &mLightColor[1], 0.0f, 400.0f);
+    UI::SetNextItemWidth(ItemWidth);
+    UI::SliderFloat("ColorB", &mLightColor[2], 0.0f, 400.0f);
+    UI::EndWindow();
+
+    // TODO Node tree
 }
 
 void GLTFMeshViewerScene::Shutdown() {
@@ -341,6 +369,7 @@ void GLTFMeshViewerScene::Shutdown() {
 }
 
 void GLTFMeshViewerScene::OnResize() {
+    mCamera.onResize();
     updateProjectionBuffer();
 }
 
@@ -370,21 +399,8 @@ void GLTFMeshViewerScene::destroyModels() {
 }
 
 void GLTFMeshViewerScene::updateProjectionBuffer() {
-    int32_t width; int32_t height;
-    RF::GetWindowSize(width, height);
-    float const ratio = static_cast<float>(width) / static_cast<float>(height);
-    MFA::Matrix4X4Float perspectiveMat {};
-    MFA::Matrix4X4Float::PreparePerspectiveProjectionMatrix(
-        perspectiveMat,
-        ratio,
-        80,
-        Z_NEAR,
-        Z_FAR
-    );
-
     // PBR
-    perspectiveMat.copy(mPbrViewProjectionData.projection);
-
+    mCamera.getProjection(mPbrMVPData.projection);
     // PointLight
-    perspectiveMat.copy(mPointLightViewProjectionData.projection);
+    mCamera.getProjection(mPointLightMVPData.projection);
 }

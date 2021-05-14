@@ -65,8 +65,8 @@ void SceneSubSystem::OnNewFrame(uint32_t const deltaTime) {
     }
     // TODO Refactor and use interface and register instead
     UI::OnNewFrame(deltaTime, draw_pass, [&deltaTime, &draw_pass, this]()->void{
-        ImGui::Begin("Scene Subsystem");
-        ImGui::SetNextItemWidth(300.0f);
+        UI::BeginWindow("Scene Subsystem");
+        UI::SetNextItemWidth(300.0f);
         // TODO Bad for performance, Find a better name
         std::vector<char const *> scene_names {};
         if(false == mRegisteredScenes.empty()) {
@@ -74,13 +74,13 @@ void SceneSubSystem::OnNewFrame(uint32_t const deltaTime) {
                 scene_names.emplace_back(registered_scene.name.c_str());
             }
         }
-        ImGui::Combo(
+        UI::Combo(
             "Active scene", 
             &mActiveScene,
             scene_names.data(), 
             static_cast<int32_t>(scene_names.size())
         );
-        ImGui::End();
+        UI::EndWindow();
         if(mActiveScene >= 0) {
             mRegisteredScenes[mActiveScene].scene->OnUI(
                 deltaTime,

@@ -14,8 +14,8 @@ public:
         float nearPlane,
         Vector3Float const & position = Vector3Float {0.0f, 0.0f, 0.0f}, 
         Vector3Float const & eulerAngles = Vector3Float {0.0f, 0.0f, 0.0f},
-        float moveSpeed = 1.0f,
-        float rotationSpeed = 1.0f
+        float moveSpeed = 0.01f,
+        float rotationSpeed = 0.01f
     );
 
     ~FirstPersonCamera() override = default;
@@ -25,7 +25,9 @@ public:
     FirstPersonCamera & operator = (FirstPersonCamera const &) noexcept = delete;
     FirstPersonCamera & operator = (FirstPersonCamera &&) noexcept = delete;
 
-    void applyInput(float deltaTime, Input const & input) override;
+    void init();
+
+    void onNewFrame(float deltaTime) override;
 
     void onResize() override;
 
@@ -36,6 +38,8 @@ public:
     void forcePosition(Vector3Float const & position) override;
 
     void forceRotation(Vector3Float const & eulerAngles) override;
+
+    void forcePositionAndRotation(Vector3Float const & position, Vector3Float const & eulerAngles);
 
 private:
 

@@ -3,16 +3,14 @@
 #include "engine/BedrockMemory.hpp"
 #include "libs/tiny_ktx/tinyktx.h"
 #include "tools/Importer.hpp"
-#include "engine/BedrockFileSystem.hpp"
-#include "libs/imgui/imgui.h"
 #include "tools/ShapeGenerator.hpp"
 
 namespace RF = MFA::RenderFrontend;
 namespace RB = MFA::RenderBackend;
 namespace Importer = MFA::Importer;
-namespace FS = MFA::FileSystem;
 namespace AS = MFA::AssetSystem;
 namespace SG = MFA::ShapeGenerator;
+namespace UI = MFA::UISystem;
 
 void TextureViewerScene::Init() {
 
@@ -138,24 +136,24 @@ void TextureViewerScene::OnUI(
     RF::DrawPass & draw_pass
 ) {
     static constexpr float ItemWidth = 500;
-    ImGui::Begin("Object viewer");
-    ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderInt("MipLevel", &mMipLevel, 0, mTotalMipCount - 1);
-    ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("XDegree", &mModelRotation[0], -360.0f, 360.0f);
-    ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("YDegree", &mModelRotation[1], -360.0f, 360.0f);
-    ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("ZDegree", &mModelRotation[2], -360.0f, 360.0f);
-    ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("Scale", &mModelScale, 0.0f, 1.0f);
-    ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("XDistance", &mModelPosition[0], -5.0f, 5.0f);
-    ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("YDistance", &mModelPosition[1], -5.0f, 5.0f);
-    ImGui::SetNextItemWidth(ItemWidth);
-    ImGui::SliderFloat("ZDistance", &mModelPosition[2], -5.0f, 5.0f);
-    ImGui::End();
+    UI::BeginWindow("Object viewer");
+    UI::SetNextItemWidth(ItemWidth);
+    UI::SliderInt("MipLevel", &mMipLevel, 0, mTotalMipCount - 1);
+    UI::SetNextItemWidth(ItemWidth);
+    UI::SliderFloat("XDegree", &mModelRotation[0], -360.0f, 360.0f);
+    UI::SetNextItemWidth(ItemWidth);
+    UI::SliderFloat("YDegree", &mModelRotation[1], -360.0f, 360.0f);
+    UI::SetNextItemWidth(ItemWidth);
+    UI::SliderFloat("ZDegree", &mModelRotation[2], -360.0f, 360.0f);
+    UI::SetNextItemWidth(ItemWidth);
+    UI::SliderFloat("Scale", &mModelScale, 0.0f, 1.0f);
+    UI::SetNextItemWidth(ItemWidth);
+    UI::SliderFloat("XDistance", &mModelPosition[0], -5.0f, 5.0f);
+    UI::SetNextItemWidth(ItemWidth);
+    UI::SliderFloat("YDistance", &mModelPosition[1], -5.0f, 5.0f);
+    UI::SetNextItemWidth(ItemWidth);
+    UI::SliderFloat("ZDistance", &mModelPosition[2], -5.0f, 5.0f);
+    UI::EndWindow();
 }
 
 void TextureViewerScene::OnResize() {
@@ -163,7 +161,7 @@ void TextureViewerScene::OnResize() {
 }
 
 void TextureViewerScene::createDescriptorSetLayout() {
-        std::vector<VkDescriptorSetLayoutBinding> bindings {};
+    std::vector<VkDescriptorSetLayoutBinding> bindings {};
     // ViewProjectionBuffer 
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
         .binding = static_cast<uint32_t>(bindings.size()),

@@ -7,7 +7,7 @@ namespace MFA {
 class ICamera {
 public:
 
-    inline static const Vector4Float ForwardVector {1.0f, 0.0f, 0.0f, 0.0f};
+    inline static const Vector4Float ForwardVector {0.0f, 0.0f, 1.0f, 0.0f};
     inline static const Vector4Float RightVector {1.0f, 0.0f, 0.0f, 0.0f};
 
     virtual ~ICamera() = default;
@@ -15,10 +15,10 @@ public:
     struct Input {
         float mouseDeltaX = 0.0f;
         float mouseDeltaY = 0.0f;
-        float forwardBackwardMove = 0.0f;
-        float rightLeftMove = 0.0f;
+        float forwardMove = 0.0f;
+        float rightMove = 0.0f;
     };
-    virtual void applyInput(float deltaTime, Input const & input) = 0;
+    virtual void onNewFrame(float deltaTime) = 0;
 
     virtual void onResize() = 0;
 

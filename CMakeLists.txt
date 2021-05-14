@@ -27,6 +27,9 @@ if(WINDOWS)
   add_definitions (/WX)           # Warnings as errors
 endif()
 
+include_directories(libs/include/glm)
+
+
 #-----------------------------------------------------------------------
 # Engine
 #-----------------------------------------------------------------------
@@ -65,8 +68,10 @@ list(
     "src/engine/pipelines/point_light/PointLightPipeline.hpp"
     "src/engine/pipelines/point_light/PointLightPipeline.cpp"
     "src/engine/camera/ICamera.h"
+    "src/engine/Camera/FirstPersonCamera.hpp"
     "src/engine/camera/FirstPersonCamera.cpp"
-    "src/engine/Camera/FirstPersonCamera.h"
+    "src/engine/InputManager.hpp"
+    "src/engine/InputManager.cpp"
 )
 
 add_library("Engine"

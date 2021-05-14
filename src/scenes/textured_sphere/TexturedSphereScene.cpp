@@ -1,7 +1,8 @@
 #include "TexturedSphereScene.hpp"
 
-#include "libs/imgui/imgui.h"
 #include "tools/ShapeGenerator.hpp"
+
+namespace UI = MFA::UISystem;
 
 void TexturedSphereScene::Init() {
     // Gpu model
@@ -96,35 +97,35 @@ void TexturedSphereScene::OnDraw(uint32_t delta_time, MFA::RenderFrontend::DrawP
 }
 
 void TexturedSphereScene::OnUI(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
-    ImGui::Begin("Object viewer");
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("XDegree", &mModelRotation[0], -360.0f, 360.0f);
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("YDegree", &mModelRotation[1], -360.0f, 360.0f);
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("ZDegree", &mModelRotation[2], -360.0f, 360.0f);
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("XDistance", &mModelPosition[0], -100.0f, 100.0f);
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("YDistance", &mModelPosition[1], -100.0f, 100.0f);
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("ZDistance", &mModelPosition[2], -100.0f, 100.0f);
-    ImGui::End();
+    UI::BeginWindow("Object viewer");
+    UI::SetNextItemWidth(300.0f);
+    UI::SliderFloat("XDegree", &mModelRotation[0], -360.0f, 360.0f);
+    UI::SetNextItemWidth(300.0f);
+    UI::SliderFloat("YDegree", &mModelRotation[1], -360.0f, 360.0f);
+    UI::SetNextItemWidth(300.0f);
+    UI::SliderFloat("ZDegree", &mModelRotation[2], -360.0f, 360.0f);
+    UI::SetNextItemWidth(300.0f);
+    UI::SliderFloat("XDistance", &mModelPosition[0], -100.0f, 100.0f);
+    UI::SetNextItemWidth(300.0f);
+    UI::SliderFloat("YDistance", &mModelPosition[1], -100.0f, 100.0f);
+    UI::SetNextItemWidth(300.0f);
+    UI::SliderFloat("ZDistance", &mModelPosition[2], -100.0f, 100.0f);
+    UI::EndWindow();
 
-    ImGui::Begin("Light");
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("PositionX", &mLightPosition[0], -200.0f, 200.0f);
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("PositionY", &mLightPosition[1], -200.0f, 200.0f);
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("PositionZ", &mLightPosition[2], -200.0f, 200.0f);
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("ColorR", &mLightColor[0], 0.0f, 1.0f);
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("ColorG", &mLightColor[1], 0.0f, 1.0f);
-    ImGui::SetNextItemWidth(300.0f);
-    ImGui::SliderFloat("ColorB", &mLightColor[2], 0.0f, 1.0f);
-    ImGui::End();
+    UI::BeginWindow("Light");
+    UI::SetNextItemWidth(300.0f);
+    UI::SliderFloat("PositionX", &mLightPosition[0], -200.0f, 200.0f);
+    UI::SetNextItemWidth(300.0f);
+    UI::SliderFloat("PositionY", &mLightPosition[1], -200.0f, 200.0f);
+    UI::SetNextItemWidth(300.0f);
+    UI::SliderFloat("PositionZ", &mLightPosition[2], -200.0f, 200.0f);
+    UI::SetNextItemWidth(300.0f);
+    UI::SliderFloat("ColorR", &mLightColor[0], 0.0f, 1.0f);
+    UI::SetNextItemWidth(300.0f);
+    UI::SliderFloat("ColorG", &mLightColor[1], 0.0f, 1.0f);
+    UI::SetNextItemWidth(300.0f);
+    UI::SliderFloat("ColorB", &mLightColor[2], 0.0f, 1.0f);
+    UI::EndWindow();
 }
 
 void TexturedSphereScene::Shutdown() {

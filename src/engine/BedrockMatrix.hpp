@@ -202,12 +202,12 @@ public:
     std::cout<<"-----------------------"<<std::endl;
   }
   
-  const T& get(const unsigned int& x, const unsigned int& y) const {
-    MFA_ASSERT(x < Width);
-    MFA_ASSERT(y < Height);
-    //return cells[x * height + y];
-    return cells[y * Width + x];
-  }
+    T get(const unsigned int& x, const unsigned int& y) const {
+        MFA_ASSERT(x < Width);
+        MFA_ASSERT(y < Height);
+        //return cells[x * height + y];
+        return cells[y * Width + x];
+    }
 
     void set(const unsigned int& x, const unsigned int& y, const T& value) {
         MFA_ASSERT(x < Width);
@@ -216,150 +216,150 @@ public:
         cells[y * Width + x] = value;
     }
 
-  const T& getX() const {
-    static_assert(Width == 2 || Width == 3 || Width == 4);
-    static_assert(Height == 1);
-    return cells[0];
-  }
+    T getX() const {
+        static_assert(Width == 2 || Width == 3 || Width == 4);
+        static_assert(Height == 1);
+        return cells[0];
+    }
 
-  const T& getY() const {
-    static_assert(Width == 2 || Width == 3 || Width == 4);
-    static_assert(Height == 1);
-    return cells[1];
-  }
+    T getY() const {
+        static_assert(Width == 2 || Width == 3 || Width == 4);
+        static_assert(Height == 1);
+        return cells[1];
+    }
 
-  const T& getZ() const {
-    static_assert(Width == 3 || Width == 4);
-    static_assert(Height == 1);
-    return cells[2];
-  }
+    T getZ() const {
+        static_assert(Width == 3 || Width == 4);
+        static_assert(Height == 1);
+        return cells[2];
+    }
 
-  const T& getW() const {
-    static_assert(Width == 4);
-    static_assert(Height == 1);
-    return cells[3];
-  }
+    T getW() const {
+        static_assert(Width == 4);
+        static_assert(Height == 1);
+        return cells[3];
+    }
 
-  //TODO Define separate classes for each matrix
-  const T& getR() const {
-    static_assert(Width == 3 || Width == 4);
-    static_assert(Height == 1);
-    return cells[0];
-  }
+    //TODO Define separate classes for each matrix
+    T getR() const {
+        static_assert(Width == 3 || Width == 4);
+        static_assert(Height == 1);
+        return cells[0];
+    }
 
-  const T& getG() const {
-    static_assert(Width == 3 || Width == 4);
-    static_assert(Height == 1);
-    return cells[1];
-  }
+    T getG() const {
+        static_assert(Width == 3 || Width == 4);
+        static_assert(Height == 1);
+        return cells[1];
+    }
 
-  const T& getB() const {
-    static_assert(Width == 3 || Width == 4);
-    static_assert(Height == 1);
-    return cells[2];
-  }
+    T getB() const {
+        static_assert(Width == 3 || Width == 4);
+        static_assert(Height == 1);
+        return cells[2];
+    }
 
-  void setX(const T& value) {
-    static_assert(Width == 2 || Width == 3 || Width == 4);
-    static_assert(Height == 1);
-    cells[0] = value;
-  }
+    void setX(const T& value) {
+        static_assert(Width == 2 || Width == 3 || Width == 4);
+        static_assert(Height == 1);
+        cells[0] = value;
+    }
 
-  void setY(const T& value) {
-    static_assert(Width == 2 || Width == 3 || Width == 4);
-    static_assert(Height == 1);
-    cells[1] = value;
-  }
+    void setY(const T& value) {
+        static_assert(Width == 2 || Width == 3 || Width == 4);
+        static_assert(Height == 1);
+        cells[1] = value;
+    }
 
-  void setZ(const T& value) {
-    static_assert(Width == 3 || Width == 4);
-    static_assert(Height == 1);
-    cells[2] = value;
-    MFA_ASSERT(std::isnan(cells[2])==false);
-  }
+    void setZ(const T& value) {
+        static_assert(Width == 3 || Width == 4);
+        static_assert(Height == 1);
+        cells[2] = value;
+        MFA_ASSERT(std::isnan(cells[2])==false);
+    }
 
-  void setW(const T& value) {
-    static_assert(Width == 4);
-    static_assert(Height == 1);
-    cells[3] = value;
-    MFA_ASSERT(std::isnan(cells[3])==false);
-  }
+    void setW(const T& value) {
+        static_assert(Width == 4);
+        static_assert(Height == 1);
+        cells[3] = value;
+        MFA_ASSERT(std::isnan(cells[3])==false);
+    }
 
-  void setR(const T& value) {
-    static_assert(Width == 3 || Width == 4);
-    static_assert(Height == 1);
-    cells[0] = value;
-    MFA_ASSERT(std::isnan(cells[0])==false);
-  }
+    void setR(const T& value) {
+        static_assert(Width == 3 || Width == 4);
+        static_assert(Height == 1);
+        cells[0] = value;
+        MFA_ASSERT(std::isnan(cells[0])==false);
+    }
 
-  void setG(const T& value) {
-    static_assert(Width == 3 || Width == 4);
-    static_assert(Height == 1);
-    cells[1] = value;
-    MFA_ASSERT(std::isnan(cells[1])==false);
-  }
+    void setG(const T& value) {
+        static_assert(Width == 3 || Width == 4);
+        static_assert(Height == 1);
+        cells[1] = value;
+        MFA_ASSERT(std::isnan(cells[1])==false);
+    }
 
-  void setB(const T& value) {
-    static_assert(Width == 3 || Width == 4);
-    static_assert(Height == 1);
-    cells[2] = value;
-    MFA_ASSERT(std::isnan(cells[2])==false);
-  }
+    void setB(const T& value) {
+        static_assert(Width == 3 || Width == 4);
+        static_assert(Height == 1);
+        cells[2] = value;
+        MFA_ASSERT(std::isnan(cells[2])==false);
+    }
 
-  const T& getDirect(const unsigned int& index) const {
-    MFA_ASSERT(index < MatrixDimension);
-    return cells[index];
-  }
+    T getDirect(const unsigned int& index) const {
+        MFA_ASSERT(index < MatrixDimension);
+        return cells[index];
+    }
 
-  void setDirect(const unsigned int& index, const T& value) {
-    MFA_ASSERT(index < MatrixDimension);
-    cells[index] = value;
-  }
+    void setDirect(const unsigned int& index, const T& value) {
+        MFA_ASSERT(index < MatrixDimension);
+        cells[index] = value;
+    }
 
-  template<typename A, typename B>
-  void setXY(const A& x, const B& y) {
-    static_assert(Width >= 2);
-    static_assert(Height == 1);
-    cells[0] = T(x);
-    cells[1] = T(y);
-    MFA_ASSERT(std::isnan(cells[0])==false);
-    MFA_ASSERT(std::isnan(cells[1])==false);
-  }
+    template<typename A, typename B>
+    void setXY(const A& x, const B& y) {
+        static_assert(Width >= 2);
+        static_assert(Height == 1);
+        cells[0] = T(x);
+        cells[1] = T(y);
+        MFA_ASSERT(std::isnan(cells[0])==false);
+        MFA_ASSERT(std::isnan(cells[1])==false);
+    }
 
-  template<typename A, typename B,typename C>
-  void setXYZ(const A& x, const B& y,const C& z) {
-    static_assert(Width >= 3);
-    static_assert(Height == 1);
-    cells[0] = T(x);
-    cells[1] = T(y);
-    cells[2] = T(z);
-    MFA_ASSERT(std::isnan(cells[0])==false);
-    MFA_ASSERT(std::isnan(cells[1])==false);
-    MFA_ASSERT(std::isnan(cells[2])==false);
-  }
+    template<typename A, typename B,typename C>
+    void setXYZ(const A& x, const B& y,const C& z) {
+        static_assert(Width >= 3);
+        static_assert(Height == 1);
+        cells[0] = T(x);
+        cells[1] = T(y);
+        cells[2] = T(z);
+        MFA_ASSERT(std::isnan(cells[0])==false);
+        MFA_ASSERT(std::isnan(cells[1])==false);
+        MFA_ASSERT(std::isnan(cells[2])==false);
+    }
 
-  template<typename A, typename B, typename C,typename D>
-  void setXYZW(const A& x, const B& y, const C& z,const D& w) {
-    static_assert(Width == 4);
-    static_assert(Height == 1);
-    cells[0] = T(x);
-    cells[1] = T(y);
-    cells[2] = T(z);
-    cells[3] = T(w);
-    MFA_ASSERT(std::isnan(cells[0])==false);
-    MFA_ASSERT(std::isnan(cells[1])==false);
-    MFA_ASSERT(std::isnan(cells[2])==false);
-    MFA_ASSERT(std::isnan(cells[3])==false);
-  }
+    template<typename A, typename B, typename C,typename D>
+    void setXYZW(const A& x, const B& y, const C& z,const D& w) {
+        static_assert(Width == 4);
+        static_assert(Height == 1);
+        cells[0] = T(x);
+        cells[1] = T(y);
+        cells[2] = T(z);
+        cells[3] = T(w);
+        MFA_ASSERT(std::isnan(cells[0])==false);
+        MFA_ASSERT(std::isnan(cells[1])==false);
+        MFA_ASSERT(std::isnan(cells[2])==false);
+        MFA_ASSERT(std::isnan(cells[3])==false);
+    }
 
     template<typename A>
     A squareSize() const {
-    return A(
-        cells[0] * cells[0] +
-        cells[1] * cells[1] +
-        cells[2] * cells[2]
-    );
-}
+        return A(
+            cells[0] * cells[0] +
+            cells[1] * cells[1] +
+            cells[2] * cells[2]
+        );
+    }
 
     template<typename A>
     A size() const {
@@ -608,16 +608,19 @@ public:
 
     static void AssignRotation(
         _Matrix<T, 4, 4>& matrix,
-        const T& xDegree,
-        const T& yDegree,
-        const T& zDegree
+        T xDegree,
+        T yDegree,
+        T zDegree
     ) {
-        _Matrix<T, 3, 1> rotationMat {};
-        rotationMat.set(0, 0, Math::Deg2Rad(xDegree));
-        rotationMat.set(1, 0, Math::Deg2Rad(yDegree));
-        rotationMat.set(2, 0, Math::Deg2Rad(zDegree));
-        AssignRotation(matrix, rotationMat);
-        /*matrix.set(0, 0, cosf(yDegree) * cosf(zDegree));
+        xDegree = Math::Deg2Rad(xDegree);
+        yDegree = Math::Deg2Rad(yDegree);
+        zDegree = Math::Deg2Rad(zDegree);
+        //_Matrix<T, 3, 1> rotationMat {};
+        //rotationMat.set(0, 0, Math::Deg2Rad(xDegree));
+        //rotationMat.set(1, 0, Math::Deg2Rad(yDegree));
+        //rotationMat.set(2, 0, Math::Deg2Rad(zDegree));
+        //AssignRotation(matrix, rotationMat);
+        matrix.set(0, 0, cosf(yDegree) * cosf(zDegree));
         matrix.set(0, 1, cosf(yDegree) * (-sinf(zDegree)));
         matrix.set(0, 2, -sinf(yDegree));
         matrix.set(1, 0, ((-sinf(xDegree)) * sinf(yDegree) * cosf(zDegree)) + (cosf(xDegree) * sinf(zDegree)));
@@ -632,7 +635,7 @@ public:
         MFA_ASSERT(matrix.get(0, 3) == 0.0f);
         MFA_ASSERT(matrix.get(1, 3) == 0.0f);
         MFA_ASSERT(matrix.get(2, 3) == 0.0f);
-        matrix.set(3, 3, 1.0f);*/
+        matrix.set(3, 3, 1.0f);
     }
 
   // https://www.brainvoyager.com/bv/doc/UsersGuide/CoordsAndTransforms/SpatialTransformationMatrices.html
@@ -672,22 +675,26 @@ public:
     matrix.set(2, 2, 1);
   }
 
-  static void AssignRotation(
-    _Matrix<T,3,3>& matrix,
-    const T& xDegree,
-    const T& yDegree,
-    const T& zDegree
-  ) {
-    matrix.set(0, 0, cosf(yDegree) * cosf(zDegree));
-    matrix.set(0, 1, cosf(yDegree) * (-sinf(zDegree)));
-    matrix.set(0, 2, -sinf(yDegree));
-    matrix.set(1, 0, ((-sinf(xDegree)) * sinf(yDegree) * cosf(zDegree)) + (cosf(xDegree) * sinf(zDegree)));
-    matrix.set(1, 1, (sinf(xDegree) * sinf(yDegree) * sinf(zDegree)) + (cosf(xDegree) * cosf(zDegree)));
-    matrix.set(1, 2, (-sinf(xDegree)) * cosf(yDegree));
-    matrix.set(2, 0, (cosf(xDegree) * sinf(yDegree) * cosf(zDegree)) + (sinf(xDegree) * sinf(zDegree)));
-    matrix.set(2, 1, (cosf(xDegree) * sinf(yDegree) * (-1 * sinf(zDegree))) + (sinf(xDegree) * cosf(zDegree)));
-    matrix.set(2, 2, cosf(xDegree) * cosf(yDegree));
-  }
+    static void AssignRotation(
+        _Matrix<T,3,3>& matrix,
+        T xDegree,
+        T yDegree,
+        T zDegree
+    ) {
+        xDegree = Math::Deg2Rad(xDegree);
+        yDegree = Math::Deg2Rad(yDegree);
+        zDegree = Math::Deg2Rad(zDegree);
+            
+        matrix.set(0, 0, cosf(yDegree) * cosf(zDegree));
+        matrix.set(0, 1, cosf(yDegree) * (-sinf(zDegree)));
+        matrix.set(0, 2, -sinf(yDegree));
+        matrix.set(1, 0, ((-sinf(xDegree)) * sinf(yDegree) * cosf(zDegree)) + (cosf(xDegree) * sinf(zDegree)));
+        matrix.set(1, 1, (sinf(xDegree) * sinf(yDegree) * sinf(zDegree)) + (cosf(xDegree) * cosf(zDegree)));
+        matrix.set(1, 2, (-sinf(xDegree)) * cosf(yDegree));
+        matrix.set(2, 0, (cosf(xDegree) * sinf(yDegree) * cosf(zDegree)) + (sinf(xDegree) * sinf(zDegree)));
+        matrix.set(2, 1, (cosf(xDegree) * sinf(yDegree) * (-1 * sinf(zDegree))) + (sinf(xDegree) * cosf(zDegree)));
+        matrix.set(2, 2, cosf(xDegree) * cosf(yDegree));
+    }
 
   static void AssignScale(
     _Matrix<T,3,3>& matrix,
@@ -905,6 +912,7 @@ public:
 
     static void Normalize(_Matrix<T, 3, 1> & matrix) {
         auto const matrixSize = matrix.size<T>();
+        MFA_ASSERT(matrixSize > 0);
         matrix.setX(matrix.getX() / matrixSize);
         matrix.setY(matrix.getY() / matrixSize);
         matrix.setZ(matrix.getZ() / matrixSize);
@@ -912,30 +920,59 @@ public:
 
     static void Normalize(_Matrix<T, 4, 1> & matrix) {
         auto const matrixSize = matrix.size<T>();
-        matrix.setX(matrix.getX() / matrixSize);
-        matrix.setY(matrix.getY() / matrixSize);
-        matrix.setZ(matrix.getZ() / matrixSize);
+        MFA_ASSERT(matrixSize > 0);
+        auto const wFactor = matrix.getW() >= 0 ? 1.0f : -1.0f;
+        matrix.setX(matrix.getX() * wFactor / matrixSize);
+        matrix.setY(matrix.getY() * wFactor / matrixSize);
+        matrix.setZ(matrix.getZ() * wFactor / matrixSize);
+        matrix.setW(1.0f);
     }
 
 
 private:
   //Hint rhsHeight == width && rhsWidth == width
   //TODO write tests
-  void _multiply(
-    const T* rhsCells
-  ) {
-    T placeholderCells[Width * Height] = { 0 };
-    for (int i = 0; i < Height; i++) {
-      for (int j = 0; j < Width; j++) {
-        auto const cellIndex = j * Height + i;
-        placeholderCells[cellIndex] = 0;
-        for (int k = 0; k < Height; k++) {
-          placeholderCells[cellIndex] += cells[k * Width + i] * T(rhsCells[j * Height + k]);
+    void _multiply(
+        const T* lhsCells
+    ) {
+        T placeholderCells[Width * Height] = { 0 };
+        //for (int i = 0; i < Height; i++) {
+        //  for (int j = 0; j < Width; j++) {
+        //    auto const cellIndex = i * Width + j;
+        //    placeholderCells[cellIndex] = 0;
+        //    for (int k = 0; k < Height; k++) {
+        //      placeholderCells[cellIndex] += cells[k * Width + i] * T(lhsCells[j * Height + k]);
+        //    }
+        //  }
+        //}
+        /*for (uint32_t i = 0; i < Width; i++) {
+          for (uint32_t j = 0; j < Height; j++) {
+            auto const cellIndex = j * Width + i;
+            placeholderCells[cellIndex] = 0;
+            for (uint32_t k = 0; k < Width; k++) {
+              placeholderCells[cellIndex] += cells[k * Height + i] * T(lhsCells[j * Width + k]);
+            }
+          }
+        }*/
+        // TODO Fix this
+        auto const lhsWidth = Width;
+        auto const lhsHeight = Width;
+
+        auto const rhsWidth = Width;
+        auto const rhsHeight = Height;
+
+        for (uint32_t i = 0; i < lhsWidth; ++i) {
+            for (uint32_t j = 0; j < lhsHeight; ++j) {
+                auto const cellIndex = i * lhsWidth + j;
+                placeholderCells[cellIndex] = 0;
+                for (uint32_t k = 0; k < rhsHeight; k++) {
+                    placeholderCells[cellIndex] += cells[k * Height + i] * T(lhsCells[j * Width + k]);
+                }
+            }
         }
-      }
+
+        std::memcpy(cells, placeholderCells, MatrixDimension * sizeof(T));
     }
-    std::memcpy(cells, placeholderCells, MatrixDimension * sizeof(T));
-  }
 
   template<typename A>
   T _dotProduct(

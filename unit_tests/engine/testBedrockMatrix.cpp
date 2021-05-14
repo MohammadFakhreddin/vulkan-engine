@@ -5,6 +5,7 @@
 #include "catch.hpp"
 
 #include "engine/BedrockMatrix.hpp"
+#include "engine/camera/ICamera.h"
 
 //======================================================================
 //----------------------------------------------------------------------
@@ -121,15 +122,7 @@ TEST_CASE("Matrix TestCase3", "[Matrix][2]") {
     eulerAnglePoint.assign(point);
     eulerAnglePoint.multiply(eulerAngleMat);
 
-    //eulerAnglePoint.print("eulerAnglePoint");
-
-    //eulerAngleMat.print("eulerAngleMat");
-
     const QuaternionFloat quaternion = Matrix3X1Float::ToQuaternion(eulerAnglesInRad);
-
-    Matrix3X1Float convertedEulerAngles = Matrix4X1Float::QuaternionToEulerAnglesRadian(quaternion);
-    //convertedEulerAngles.print("ConvertedQuaternion");
-    CHECK(Matrix3X1Float::Equal(eulerAnglesInRad, convertedEulerAngles));
 
     Matrix4X4Float quaternionMat {};
     Matrix4X4Float::AssignRotation(quaternionMat, quaternion);
@@ -137,10 +130,51 @@ TEST_CASE("Matrix TestCase3", "[Matrix][2]") {
     Matrix4X1Float quaternionPoint {};
     quaternionPoint.assign(point);
     quaternionPoint.multiply(quaternionMat);
-
-    //quaternionMat.print("quaternionMat");
-
-    //quaternionPoint.print("quaternionPoint");
-
+    
     CHECK(Matrix4X1Float::Equal(quaternionPoint, eulerAnglePoint));
+}
+
+TEST_CASE("Matrix TestCase4", "[Matrix][3]") {
+    using namespace MFA;
+
+    Matrix4X4Float rotationMatrix {};
+    Matrix4X4Float::Identity(rotationMatrix);
+    Matrix4X4Float::AssignRotation(
+        rotationMatrix,
+        0.0f,
+        0.0f,
+        0.0f
+    );
+
+    Vector4Float forwardDirection {};
+    forwardDirection.assign(ICamera::ForwardVector);
+    forwardDirection.multiply(rotationMatrix);
+    Matrix4X1Float::Normalize(forwardDirection);
+    CHECK(forwardDirection.equal(ICamera::ForwardVector));
+
+    Vector4Float rightDirection {};
+    rightDirection.assign(ICamera::RightVector);
+    rightDirection.multiply(rotationMatrix);
+    Matrix4X4Float::Normalize(rightDirection);
+    CHECK(rightDirection.equal(ICamera::RightVector));
+}
+
+
+TEST_CASE("Matrix TestCase5", "[Matrix][4]") {
+    using namespace MFA;
+
+    //Matrix3X3Float rotationMatrix {};
+    //Matrix3X3Float::Identity(rotationMatrix);
+    //Matrix3X3Float::AssignRotation(
+    //    rotationMatrix,
+    //    0.0f,
+    //    360.0f,
+    //    0.0f
+    //);
+
+    //Vector3Float forwardDirection {};
+    //forwardDirection.assign(ICamera::ForwardVector);
+    //forwardDirection.multiply(rotationMatrix);
+    //Matrix3X1Float::Normalize(forwardDirection);
+    //CHECK(forwardDirection.equal(ICamera::RightVector));
 }

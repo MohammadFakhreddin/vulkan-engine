@@ -4,6 +4,7 @@
 #include "engine/Scene.hpp"
 #include "engine/RenderFrontend.hpp"
 #include "engine/RenderBackend.hpp"
+#include "engine/camera/FirstPersonCamera.hpp"
 #include "engine/pipelines/pbr/PBRModelPipeline.hpp"
 #include "engine/pipelines/point_light/PointLightPipeline.hpp"
 
@@ -58,7 +59,7 @@ private:
     void destroyModels();
 
     void updateProjectionBuffer();
-
+    
     static constexpr float Z_NEAR = 0.1f;
     static constexpr float Z_FAR = 3000.0f;
 
@@ -74,8 +75,8 @@ private:
         alignas(4) int hasEmissiveTexture;
     }; 
 
-    MFA::PBRModelPipeline::ViewProjectionData mPbrViewProjectionData {};
-    MFA::PointLightPipeline::ViewProjectionData mPointLightViewProjectionData {};
+    MFA::PBRModelPipeline::ViewProjectionData mPbrMVPData {};
+    MFA::PointLightPipeline::ViewProjectionData mPointLightMVPData {};
 
     float m_model_rotation[3] {45.0f, 45.0f, 45.0f};
     float m_model_scale = 1.0f;
@@ -110,5 +111,11 @@ private:
 
     MFA::RF::GpuModel mGpuPointLight {};
     MFA::DrawableObjectId mPointLightObjectId = 0;
+
+    MFA::FirstPersonCamera mCamera {
+        80,
+        Z_FAR,
+        Z_NEAR
+    };
 
 };

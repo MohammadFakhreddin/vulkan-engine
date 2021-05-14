@@ -1,5 +1,8 @@
 #include "Application.hpp"
 
+#include <engine/InputManager.hpp>
+
+
 #include "scenes/gltf_mesh_viewer/GLTFMeshViewerScene.hpp"
 #include "scenes/pbr_scene/PBRScene.hpp"
 #include "scenes/textured_sphere/TexturedSphereScene.hpp"
@@ -22,12 +25,14 @@ Application::~Application() = default;
 void Application::run() {
     namespace RF = MFA::RenderFrontend;
     namespace UI = MFA::UISystem;
+    namespace IM = MFA::InputManager;
     
     static constexpr uint16_t SCREEN_WIDTH = 800;//1920;
     static constexpr uint16_t SCREEN_HEIGHT = 600;//1080;
 
     RF::Init({SCREEN_WIDTH, SCREEN_HEIGHT, "Cool app"});
     UI::Init();
+    IM::Init();
     
     mSceneSubSystem.RegisterNew(mTexturedSphereScene.get(), "TextureSphereScene");
     mSceneSubSystem.RegisterNew(mGltfMeshViewerScene.get(), "GLTFMeshViewerScene");
@@ -47,6 +52,7 @@ void Application::run() {
         while (!quit)
         {
             uint32_t const start_time = SDL_GetTicks();
+            IM::OnNewFrame();
             // DrawFrame
             mSceneSubSystem.OnNewFrame(delta_time);
             //Handle events
@@ -57,7 +63,6 @@ void Application::run() {
                 {
                     quit = true;
                 }
-                // TODO Capture resize event here
             }
             delta_time = SDL_GetTicks() - start_time;
             if(target_fps > delta_time){
@@ -68,6 +73,7 @@ void Application::run() {
     }
     RF::DeviceWaitIdle();
     mSceneSubSystem.Shutdown();
+    IM::Shutdown();
     UI::Shutdown();
     RF::Shutdown();
 }
