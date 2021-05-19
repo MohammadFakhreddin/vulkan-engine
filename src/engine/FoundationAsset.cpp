@@ -198,6 +198,10 @@ void Mesh::insertNode(Node const & node) {
     mNodes.emplace_back(node);
 }
 
+void Mesh::insertSkin(Skin const & skin) {
+    mSkins.emplace_back(skin);
+}
+
 bool Mesh::isValid() const {
     return
         mSubMeshes.empty() == false && 

@@ -442,6 +442,73 @@ AS::Mesh ImportObj(char const * path) {
     return mesh;
 }
 
+template<typename ItemType>
+static bool extractGltfValue(
+    tinygltf::Model & gltfModel,
+    tinygltf::Primitive & primitive,
+    char const * fieldKey,
+    size_t const expectedComponentCount,
+    int expectedComponentType,
+    ItemType const * & outData,
+    uint32_t & outDataCount,
+    bool & outHasMinMax,
+    ItemType * outMin,
+    ItemType * outMax
+) {
+    bool success = false;
+    outHasMinMax = false;
+    if(primitive.attributes.find(fieldKey) != primitive.attributes.end()){// Positions
+        success = true;
+        MFA_REQUIRE(primitive.attributes[fieldKey] < gltfModel.accessors.size());
+        auto const & accessor = gltfModel.accessors[primitive.attributes[fieldKey]];
+        MFA_ASSERT(accessor.componentType == expectedComponentType);
+        if (
+            outMin != nullptr && outMax != nullptr &&
+            accessor.minValues.size() == expectedComponentCount && 
+            accessor.maxValues.size() == expectedComponentCount
+        ) {
+            for (size_t i = 0; i < expectedComponentCount; ++i) {
+                outMin[i] = static_cast<float>(accessor.minValues[i]);
+                outMax[i] = static_cast<float>(accessor.maxValues[i]);
+            }
+            outHasMinMax = true;
+        }
+        auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
+        MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
+        auto const & buffer = gltfModel.buffers[bufferView.buffer];
+        outData = reinterpret_cast<ItemType const *>(
+            &buffer.data[bufferView.byteOffset + accessor.byteOffset]
+        );
+        outDataCount = static_cast<uint32_t>(accessor.count);
+    }
+    return success;
+}
+
+template<typename ItemType>
+static bool extractGltfValue(
+    tinygltf::Model & gltfModel,
+    tinygltf::Primitive & primitive,
+    char const * fieldKey,
+    size_t const expectedComponentCount,
+    int const expectedComponentType,
+    ItemType const * & outData,
+    uint32_t & outDataCount
+) {
+    bool hasMinMax = false;
+    return extractGltfValue<ItemType>(
+        gltfModel,
+        primitive,
+        fieldKey,
+        expectedComponentCount,
+        expectedComponentType,
+        outData,
+        outDataCount,
+        hasMinMax,
+        nullptr,
+        nullptr
+    );
+}
+
 // Based on sasha willems solution and a comment in github
 AS::Model ImportGLTF(char const * path) {
     // TODO Create separate functions for each part
@@ -689,50 +756,42 @@ AS::Model ImportGLTF(char const * path) {
                             float positionsMinValue [3] {};
                             float positionsMaxValue [3] {};
                             bool hasPositionMinMax = false;
-                            if(primitive.attributes.find("POSITION") != primitive.attributes.end()){// Positions
-                                MFA_REQUIRE(primitive.attributes["POSITION"] < gltfModel.accessors.size());
-                                auto const & accessor = gltfModel.accessors[primitive.attributes["POSITION"]];
-                                MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-                                if (accessor.minValues.size() == 3 && accessor.maxValues.size() == 3) {
-                                    positionsMinValue[0] = static_cast<float>(accessor.minValues[0]);
-                                    positionsMinValue[1] = static_cast<float>(accessor.minValues[1]);
-                                    positionsMinValue[2] = static_cast<float>(accessor.minValues[2]);
-                                    positionsMaxValue[0] = static_cast<float>(accessor.maxValues[0]);
-                                    positionsMaxValue[1] = static_cast<float>(accessor.maxValues[1]);
-                                    positionsMaxValue[2] = static_cast<float>(accessor.maxValues[2]);
-                                    hasPositionMinMax = true;
-                                }
-                                auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
-                                MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
-                                auto const & buffer = gltfModel.buffers[bufferView.buffer];
-                                positions = reinterpret_cast<const float *>(
-                                    &buffer.data[bufferView.byteOffset + accessor.byteOffset]
+                            {// Position
+                                auto const result = extractGltfValue(
+                                    gltfModel, 
+                                    primitive, 
+                                    "POSITION", 
+                                    3, 
+                                    TINYGLTF_COMPONENT_TYPE_FLOAT, 
+                                    positions, 
+                                    primitiveVertexCount, 
+                                    hasPositionMinMax, 
+                                    positionsMinValue, 
+                                    positionsMaxValue
                                 );
-                                primitiveVertexCount = static_cast<uint32_t>(accessor.count);
+                                MFA_ASSERT(result);
                             }
                             float const * baseColorUvs = nullptr;
                             float baseColorUvMin [2] {};
                             float baseColorUvMax [2] {};
                             bool hasBaseColorUvMinMax = false;
                             if(baseColorUvIndex >= 0) {// BaseColor
+                                uint32_t baseColorUvsCount = 0;
                                 auto texture_coordinate_key_name = generate_uv_keyword(baseColorUvIndex);
-                                MFA_ASSERT(primitive.attributes[texture_coordinate_key_name] >= 0);
-                                MFA_REQUIRE(primitive.attributes[texture_coordinate_key_name] < gltfModel.accessors.size());
-                                auto const & accessor = gltfModel.accessors[primitive.attributes[texture_coordinate_key_name]];
-                                MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-                                if (accessor.minValues.size() == 2 && accessor.maxValues.size() == 2) {
-                                    baseColorUvMin[0] = static_cast<float>(accessor.minValues[0]);
-                                    baseColorUvMin[1] = static_cast<float>(accessor.minValues[1]);
-                                    baseColorUvMax[0] = static_cast<float>(accessor.maxValues[0]);
-                                    baseColorUvMax[1] = static_cast<float>(accessor.maxValues[1]);
-                                    hasBaseColorUvMinMax = true;
-                                }
-                                auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
-                                MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
-                                auto const & buffer = gltfModel.buffers[bufferView.buffer];
-                                baseColorUvs = reinterpret_cast<const float *>(
-                                    &buffer.data[bufferView.byteOffset + accessor.byteOffset]
+                                auto const result = extractGltfValue(
+                                    gltfModel,
+                                    primitive,
+                                    texture_coordinate_key_name.c_str(),
+                                    2,
+                                    TINYGLTF_COMPONENT_TYPE_FLOAT,
+                                    baseColorUvs,
+                                    baseColorUvsCount,
+                                    hasBaseColorUvMinMax,
+                                    baseColorUvMin,
+                                    baseColorUvMax
                                 );
+                                MFA_ASSERT(result == true);
+                                MFA_ASSERT(baseColorUvsCount == primitiveVertexCount);
                             }
                             float const * metallicRoughnessUvs = nullptr;
                             float metallicRoughnessUVMin [2] {};
@@ -740,23 +799,21 @@ AS::Model ImportGLTF(char const * path) {
                             bool hasMetallicRoughnessUvMinMax = false;
                             if(metallicRoughnessUvIndex >= 0) {// MetallicRoughness uvs
                                 std::string texture_coordinate_key_name = generate_uv_keyword(metallicRoughnessUvIndex);
-                                MFA_ASSERT(primitive.attributes[texture_coordinate_key_name] >= 0);
-                                MFA_REQUIRE(primitive.attributes[texture_coordinate_key_name] < gltfModel.accessors.size());
-                                auto const & accessor = gltfModel.accessors[primitive.attributes[texture_coordinate_key_name]];
-                                MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-                                if (accessor.minValues.size() == 2 && accessor.maxValues.size() == 2) {
-                                    metallicRoughnessUVMin[0] = static_cast<float>(accessor.minValues[0]);
-                                    metallicRoughnessUVMin[1] = static_cast<float>(accessor.minValues[1]);
-                                    metallicRoughnessUVMax[0] = static_cast<float>(accessor.maxValues[0]);
-                                    metallicRoughnessUVMax[1] = static_cast<float>(accessor.maxValues[1]);
-                                    hasMetallicRoughnessUvMinMax = true;
-                                }
-                                auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
-                                MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
-                                auto const & buffer = gltfModel.buffers[bufferView.buffer];
-                                metallicRoughnessUvs = reinterpret_cast<const float *>(
-                                    &buffer.data[bufferView.byteOffset + accessor.byteOffset]
+                                uint32_t metallicRoughnessUvsCount = 0;
+                                auto const result = extractGltfValue(
+                                    gltfModel,
+                                    primitive,
+                                    texture_coordinate_key_name.c_str(),
+                                    2,
+                                    TINYGLTF_COMPONENT_TYPE_FLOAT,
+                                    metallicRoughnessUvs,
+                                    metallicRoughnessUvsCount,
+                                    hasMetallicRoughnessUvMinMax,
+                                    metallicRoughnessUVMin,
+                                    metallicRoughnessUVMax
                                 );
+                                MFA_ASSERT(result == true);
+                                MFA_ASSERT(metallicRoughnessUvsCount == primitiveVertexCount);
                             }
                             // TODO Occlusion texture
                             float const * emissionUVs = nullptr;
@@ -765,103 +822,115 @@ AS::Model ImportGLTF(char const * path) {
                             bool hasEmissionUvMinMax = false;
                             if(emissiveUvIndex >= 0) {// Emission uvs
                                 std::string texture_coordinate_key_name = generate_uv_keyword(emissiveUvIndex);
-                                MFA_ASSERT(primitive.attributes[texture_coordinate_key_name] >= 0);
-                                MFA_REQUIRE(primitive.attributes[texture_coordinate_key_name] < gltfModel.accessors.size());
-                                auto const & accessor = gltfModel.accessors[primitive.attributes[texture_coordinate_key_name]];
-                                MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-                                if (accessor.minValues.size() == 2 && accessor.maxValues.size() == 2) {
-                                    emission_uv_min[0] = static_cast<float>(accessor.minValues[0]);
-                                    emission_uv_min[1] = static_cast<float>(accessor.minValues[1]);
-                                    emission_uv_max[0] = static_cast<float>(accessor.maxValues[0]);
-                                    emission_uv_max[1] = static_cast<float>(accessor.maxValues[1]);
-                                    hasEmissionUvMinMax = true;
-                                }
-                                auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
-                                MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
-                                auto const & buffer = gltfModel.buffers[bufferView.buffer];
-                                emissionUVs = reinterpret_cast<const float *>(
-                                    &buffer.data[bufferView.byteOffset + accessor.byteOffset]
+                                uint32_t emissionUvCount = 0;
+                                auto const result = extractGltfValue(
+                                    gltfModel,
+                                    primitive,
+                                    texture_coordinate_key_name.c_str(),
+                                    2,
+                                    TINYGLTF_COMPONENT_TYPE_FLOAT,
+                                    emissionUVs,
+                                    emissionUvCount,
+                                    hasEmissionUvMinMax,
+                                    emission_uv_min,
+                                    emission_uv_max
                                 );
+                                MFA_ASSERT(result == true);
+                                MFA_ASSERT(emissionUvCount == primitiveVertexCount);
                             }
                             float const * normalsUVs = nullptr;
                             float normals_uv_min [2] {};
                             float normals_uv_max [2] {};
                             bool hasNormalUvMinMax = false;
-                            if(normalUvIndex >= 0) {
+                            if(normalUvIndex >= 0) {// Normal uvs
                                 std::string texture_coordinate_key_name = generate_uv_keyword(normalUvIndex);
-                                MFA_ASSERT(primitive.attributes[texture_coordinate_key_name] >= 0);
-                                MFA_REQUIRE(primitive.attributes[texture_coordinate_key_name] < gltfModel.accessors.size());
-                                auto const & accessor = gltfModel.accessors[primitive.attributes[texture_coordinate_key_name]];
-                                MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-                                if (accessor.minValues.size() == 2 && accessor.maxValues.size() == 2) {
-                                    normals_uv_min[0] = static_cast<float>(accessor.minValues[0]);
-                                    normals_uv_min[1] = static_cast<float>(accessor.minValues[1]);
-                                    normals_uv_max[0] = static_cast<float>(accessor.maxValues[0]);
-                                    normals_uv_max[1] = static_cast<float>(accessor.maxValues[1]);
-                                    hasNormalUvMinMax = true;
-                                }
-                                auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
-                                MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
-                                auto const & buffer = gltfModel.buffers[bufferView.buffer];
-                                normalsUVs = reinterpret_cast<const float *>(
-                                    &buffer.data[bufferView.byteOffset + accessor.byteOffset]
+                                uint32_t normalUvsCount = 0;
+                                auto const result = extractGltfValue(
+                                    gltfModel,
+                                    primitive,
+                                    texture_coordinate_key_name.c_str(),
+                                    2,
+                                    TINYGLTF_COMPONENT_TYPE_FLOAT,
+                                    normalsUVs,
+                                    normalUvsCount,
+                                    hasNormalUvMinMax,
+                                    normals_uv_min,
+                                    normals_uv_max
                                 );
+                                MFA_ASSERT(result == true);
+                                MFA_ASSERT(normalUvsCount == primitiveVertexCount);
                             }
                             float const * normalValues = nullptr;
                             float normalsValuesMin [3] {};
                             float normalsValuesMax [3] {};
                             bool hasNormalValueMinMax = false;
-                            if(primitive.attributes.find("NORMAL") != primitive.attributes.end()) {
-                                MFA_REQUIRE(primitive.attributes["NORMAL"] < gltfModel.accessors.size());
-                                auto const & accessor = gltfModel.accessors[primitive.attributes["NORMAL"]];
-                                MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-                                if (accessor.minValues.size() == 3 && accessor.maxValues.size() == 3) {
-                                    normalsValuesMin[0] = static_cast<float>(accessor.minValues[0]);
-                                    normalsValuesMin[1] = static_cast<float>(accessor.minValues[1]);
-                                    normalsValuesMin[2] = static_cast<float>(accessor.minValues[2]);
-                                    normalsValuesMax[0] = static_cast<float>(accessor.maxValues[0]);
-                                    normalsValuesMax[1] = static_cast<float>(accessor.maxValues[1]);
-                                    normalsValuesMax[2] = static_cast<float>(accessor.maxValues[2]);
-                                    hasNormalValueMinMax = true;
-                                }
-                                auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
-                                MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
-                                auto const & buffer = gltfModel.buffers[bufferView.buffer];
-                                normalValues = reinterpret_cast<const float *>(
-                                    &buffer.data[bufferView.byteOffset + accessor.byteOffset]
+                            {// Normal uvs
+                                uint32_t normalValuesCount = 0;
+                                auto const result = extractGltfValue(
+                                    gltfModel,
+                                    primitive,
+                                    "NORMAL",
+                                    3,
+                                    TINYGLTF_COMPONENT_TYPE_FLOAT,
+                                    normalValues,
+                                    normalValuesCount,
+                                    hasNormalValueMinMax,
+                                    normalsValuesMin,
+                                    normalsValuesMax
                                 );
+                                MFA_ASSERT(result == false || normalValuesCount == primitiveVertexCount);                           
                             }
                             float const * tangentValues = nullptr;
                             float tangentsValuesMin [4] {};
                             float tangentsValuesMax [4] {};
                             bool hasTangentsValuesMinMax = false;
-                            if(primitive.attributes.find("TANGENT") != primitive.attributes.end()) {
-                                MFA_REQUIRE(primitive.attributes["TANGENT"] < gltfModel.accessors.size());
-                                auto const & accessor = gltfModel.accessors[primitive.attributes["TANGENT"]];
-                                MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-                                if (accessor.minValues.size() == 3 && accessor.maxValues.size() == 3) {
-                                    tangentsValuesMin[0] = static_cast<float>(accessor.minValues[0]);
-                                    tangentsValuesMin[1] = static_cast<float>(accessor.minValues[1]);
-                                    tangentsValuesMin[2] = static_cast<float>(accessor.minValues[2]);
-                                    tangentsValuesMin[3] = static_cast<float>(accessor.minValues[3]);
-                                    tangentsValuesMax[0] = static_cast<float>(accessor.maxValues[0]);
-                                    tangentsValuesMax[1] = static_cast<float>(accessor.maxValues[1]);
-                                    tangentsValuesMax[2] = static_cast<float>(accessor.maxValues[2]);
-                                    tangentsValuesMax[3] = static_cast<float>(accessor.maxValues[3]);
-                                    hasTangentsValuesMinMax = true;
-                                }
-                                auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
-                                MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
-                                auto const & buffer = gltfModel.buffers[bufferView.buffer];
-                                tangentValues = reinterpret_cast<const float *>(
-                                    &buffer.data[bufferView.byteOffset + accessor.byteOffset]
+                            {// Tangent values
+                                uint32_t tangentValuesCount = 0;
+                                auto const result = extractGltfValue(
+                                    gltfModel,
+                                    primitive,
+                                    "TANGENT",
+                                    4,
+                                    TINYGLTF_COMPONENT_TYPE_FLOAT,
+                                    tangentValues,
+                                    tangentValuesCount,
+                                    hasTangentsValuesMinMax,
+                                    tangentsValuesMin,
+                                    tangentsValuesMax
+                                );
+                                MFA_ASSERT(result == false || tangentValuesCount == primitiveVertexCount);                           
+                            }
+                            float const * jointValues = nullptr;
+                            uint32_t jointValuesCount = 0;
+                            {// Joints
+                                extractGltfValue(
+                                    gltfModel,
+                                    primitive,
+                                    "JOINTS_0",
+                                    4,
+                                    TINYGLTF_COMPONENT_TYPE_FLOAT,
+                                    jointValues,
+                                    jointValuesCount
                                 );
                             }
+                            float const * weightValues = nullptr;
+                            uint32_t weightValuesCount = 0;
+                            {// Weights
+                                extractGltfValue(
+                                    gltfModel,
+                                    primitive,
+                                    "WEIGHTS_0",
+                                    4,
+                                    TINYGLTF_COMPONENT_TYPE_FLOAT,
+                                    weightValues,
+                                    weightValuesCount
+                                );
+                            }
+                            // TODO Start from here, Assign weight and joint
                             float const * colors = nullptr;
                             float colorsMinValue [3] {0};
                             float colorsMaxValue [3] {1};
                             float colorsMinMaxDiff [3] {1};
-                            bool hasColorMinMax = false;
                             if(primitive.attributes["COLOR"] >= 0) {
                                 MFA_REQUIRE(primitive.attributes["COLOR"] < gltfModel.accessors.size());
                                 auto const & accessor = gltfModel.accessors[primitive.attributes["COLOR"]];
@@ -877,7 +946,6 @@ AS::Model ImportGLTF(char const * path) {
                                     colorsMinMaxDiff[0] = colorsMaxValue[0] - colorsMinValue[0];
                                     colorsMinMaxDiff[1] = colorsMaxValue[1] - colorsMinValue[1];
                                     colorsMinMaxDiff[2] = colorsMaxValue[2] - colorsMinValue[2];
-                                    hasColorMinMax = true;
                                 }
                                 auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
                                 MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
@@ -900,7 +968,6 @@ AS::Model ImportGLTF(char const * path) {
                             bool hasEmissiveTexture = emissionUVs != nullptr;
                             MFA_ASSERT(emissionUVs != nullptr == emissiveTextureIndex >= 0);
                             bool hasTangentValue = tangentValues != nullptr;
-                            //MFA_ASSERT(hasTangentValue == hasNormalTexture);
                             for (uint32_t i = 0; i < primitiveVertexCount; ++i) {
                                 primitiveVertices.emplace_back();
                                 auto & vertex = primitiveVertices.back();
@@ -992,6 +1059,7 @@ AS::Model ImportGLTF(char const * path) {
                                 vertex.color[0] = static_cast<uint8_t>((256/(colorsMinMaxDiff[0])) * colors[i * 3 + 0]);
                                 vertex.color[1] = static_cast<uint8_t>((256/(colorsMinMaxDiff[1])) * colors[i * 3 + 1]);
                                 vertex.color[2] = static_cast<uint8_t>((256/(colorsMinMaxDiff[2])) * colors[i * 3 + 2]);
+                                // TODO Start from here, Assign joint and weight values
                             }
 
                             // Creating new subMesh

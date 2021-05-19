@@ -18,6 +18,7 @@ enum class AssetType {
 //-----------------------------------Asset-------------------------------
 class Base {
 public:
+    virtual ~Base() = default;
     [[nodiscard]]
     virtual int serialize(CBlob const & writeBuffer) {
         MFA_CRASH("Not implemented");
@@ -304,10 +305,24 @@ public:
         std::vector<int> children {};
         float transformMatrix[16] {};
         int parent = -1;
+        float jointIndices[4] {-1, -1, -1, -1};
+        float jointWeights[4] {0, 0, 0, 0};
+        bool hasSkin = false;
+    
         [[nodiscard]]
         bool hasSubMesh() const noexcept {
             return subMeshIndex >= 0;
         }
+    };
+
+    struct InverseBindMatrix {
+        float value[16] {};
+    };
+
+    struct Skin {
+        std::vector<int> joints {};
+        std::vector<InverseBindMatrix> inverseBindMatrices {};
+        int skeletonRootNode = -1;
     };
 
     void initForWrite(
@@ -333,6 +348,8 @@ public:
     );
 
     void insertNode(Node const & node);
+
+    void insertSkin(Skin const & skin);
 
     [[nodiscard]]
     bool isValid() const;
@@ -386,11 +403,29 @@ public:
         return mNodes.data();
     }
 
+    [[nodiscard]]
+    Skin const & getSkinByIndex(uint32_t const index) const noexcept {
+        MFA_ASSERT(index >= 0);
+        MFA_ASSERT(index < mSkins.size());
+        return mSkins[index];
+    }
+
+    [[nodiscard]]
+    uint32_t getSkinsCount() const noexcept {
+        return static_cast<uint32_t>(mSkins.size());
+    }
+
+    [[nodiscard]]
+    Skin const * getSkinData() const noexcept {
+        return mSkins.data();
+    }
+
     void revokeBuffers(Blob & outVertexBuffer, Blob & outIndexBuffer);
 
 private:
     std::vector<SubMesh> mSubMeshes {};
     std::vector<Node> mNodes {};
+    std::vector<Skin> mSkins {};
 
     uint32_t mVertexCount {};
     Blob mVertexBuffer {};

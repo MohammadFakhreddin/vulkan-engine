@@ -248,6 +248,7 @@ void GLTFMeshViewerScene::OnDraw(uint32_t const delta_time, RF::DrawPass & draw_
         );
     }
     {// LightViewBuffer
+        // TODO Maybe I have to use glm from now on
         auto lightPosition = glm::vec4(
             mLightPosition[0], 
             mLightPosition[1], 
@@ -261,10 +262,17 @@ void GLTFMeshViewerScene::OnDraw(uint32_t const delta_time, RF::DrawPass & draw_
             transformMatrix[i / 4][i % 4] = transformData[i];
         }
         lightPosition = transformMatrix * lightPosition;
-
         mLightViewData.lightPosition[0] = lightPosition[0];
         mLightViewData.lightPosition[1] = lightPosition[1];
         mLightViewData.lightPosition[2] = lightPosition[2];
+
+        //MFA::Matrix4X4Float cameraTransform {};
+        //mCamera.getTransform(cameraTransform.cells);
+        //MFA::Vector4Float lightPosition {mLightPosition[0], mLightPosition[1], mLightPosition[2], 1.0f};
+        //lightPosition.multiply(cameraTransform);
+        //mLightViewData.lightPosition[0] = lightPosition.getX();
+        //mLightViewData.lightPosition[1] = lightPosition.getY();
+        //mLightViewData.lightPosition[2] = lightPosition.getZ();
         
         ::memcpy(mLightViewData.lightColor, mLightColor, sizeof(mLightColor));
         static_assert(sizeof(mLightColor) == sizeof(mLightViewData.lightColor));
