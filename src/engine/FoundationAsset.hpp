@@ -255,15 +255,18 @@ public:
 
     using Index = uint32_t;
     struct Vertex {
-        Position position;
-        UV baseColorUV;
-        UV normalMapUV;
-        UV metallicUV;
-        UV roughnessUV;
-        UV emissionUV;
-        Color color;
-        Normal normalValue;
-        Tangent tangentValue;
+        Position position {};
+        UV baseColorUV {};
+        UV normalMapUV {};
+        UV metallicUV {};
+        UV roughnessUV {};
+        UV emissionUV {};
+        Color color {};
+        Normal normalValue {};
+        Tangent tangentValue {};
+        bool hasSkin = false;
+        uint16_t jointIndices[4] {};
+        float jointWeights[4] {};
     };
 
     // TODO Camera
@@ -443,6 +446,7 @@ using SubMesh = Mesh::SubMesh;
 using MeshNode = Mesh::Node;
 using MeshVertex = Mesh::Vertex;
 using MeshIndex = Mesh::Index;
+using MeshSkin = Mesh::Skin;
 
 //--------------------------------ShaderAsset--------------------------------------
 class Shader final : public Base {

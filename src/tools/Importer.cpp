@@ -443,7 +443,27 @@ AS::Mesh ImportObj(char const * path) {
 }
 
 template<typename ItemType>
-static bool extractGltfValue(
+static void GLTF_extractDataFromBuffer(
+    tinygltf::Model & gltfModel,
+    int accessorIndex,
+    int expectedComponentType,
+    ItemType const * & outData,
+    uint32_t & outDataCount 
+) {
+    MFA_ASSERT(accessorIndex >= 0);
+    auto const & accessor = gltfModel.accessors[accessorIndex];
+    MFA_ASSERT(accessor.componentType == expectedComponentType);
+    auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
+    MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
+    auto const & buffer = gltfModel.buffers[bufferView.buffer];
+    outData = reinterpret_cast<ItemType const *>(
+        &buffer.data[bufferView.byteOffset + accessor.byteOffset]
+    );
+    outDataCount = static_cast<uint32_t>(accessor.count);
+}
+
+template<typename ItemType>
+static bool GLTF_extractPrimitiveDataFromBuffer(
     tinygltf::Model & gltfModel,
     tinygltf::Primitive & primitive,
     char const * fieldKey,
@@ -459,7 +479,7 @@ static bool extractGltfValue(
     outHasMinMax = false;
     if(primitive.attributes.find(fieldKey) != primitive.attributes.end()){// Positions
         success = true;
-        MFA_REQUIRE(primitive.attributes[fieldKey] < gltfModel.accessors.size());
+        MFA_REQUIRE(static_cast<size_t>(primitive.attributes[fieldKey]) < gltfModel.accessors.size());
         auto const & accessor = gltfModel.accessors[primitive.attributes[fieldKey]];
         MFA_ASSERT(accessor.componentType == expectedComponentType);
         if (
@@ -468,13 +488,13 @@ static bool extractGltfValue(
             accessor.maxValues.size() == expectedComponentCount
         ) {
             for (size_t i = 0; i < expectedComponentCount; ++i) {
-                outMin[i] = static_cast<float>(accessor.minValues[i]);
-                outMax[i] = static_cast<float>(accessor.maxValues[i]);
+                outMin[i] = static_cast<ItemType>(accessor.minValues[i]);
+                outMax[i] = static_cast<ItemType>(accessor.maxValues[i]);
             }
             outHasMinMax = true;
         }
         auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
-        MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
+        MFA_REQUIRE(static_cast<size_t>(bufferView.buffer) < gltfModel.buffers.size());
         auto const & buffer = gltfModel.buffers[bufferView.buffer];
         outData = reinterpret_cast<ItemType const *>(
             &buffer.data[bufferView.byteOffset + accessor.byteOffset]
@@ -485,7 +505,7 @@ static bool extractGltfValue(
 }
 
 template<typename ItemType>
-static bool extractGltfValue(
+static bool GLTF_extractPrimitiveDataFromBuffer(
     tinygltf::Model & gltfModel,
     tinygltf::Primitive & primitive,
     char const * fieldKey,
@@ -495,7 +515,7 @@ static bool extractGltfValue(
     uint32_t & outDataCount
 ) {
     bool hasMinMax = false;
-    return extractGltfValue<ItemType>(
+    return GLTF_extractPrimitiveDataFromBuffer<ItemType>(
         gltfModel,
         primitive,
         fieldKey,
@@ -508,6 +528,688 @@ static bool extractGltfValue(
         nullptr
     );
 }
+
+struct TextureRef {
+    std::string gltf_name;
+    uint8_t index;
+};
+
+static void GLTF_extractTextures(
+    char const * path,
+    tinygltf::Model & gltfModel, 
+    std::vector<TextureRef> & outTextureRefs,
+    AS::Model & outResultModel
+) {
+    std::string const directoryPath = FS::ExtractDirectoryFromPath(path);
+    // Extracting textures
+    if(false == gltfModel.textures.empty()) {
+        for (auto const & texture : gltfModel.textures) {
+            AS::SamplerConfig sampler {.isValid = false};
+            if (texture.sampler >= 0) {// Sampler
+                auto const & gltfSampler = gltfModel.samplers[texture.sampler];
+                sampler.magFilter = gltfSampler.magFilter;
+                sampler.minFilter = gltfSampler.minFilter;
+                sampler.wrapS = gltfSampler.wrapS;
+                sampler.wrapT = gltfSampler.wrapT;
+                //sampler.sample_mode = gltf_sampler. // TODO
+                sampler.isValid = true;
+            }
+            AS::Texture assetSystemTexture {};
+            auto const & image = gltfModel.images[texture.source];
+            {// Texture
+                std::string image_path = directoryPath + "/" + image.uri;
+                assetSystemTexture = ImportImage(
+                    image_path.c_str(),
+                    // TODO tryToGenerateMipmaps takes too long
+                    ImportTextureOptions {.tryToGenerateMipmaps = false, .sampler = &sampler}
+                );
+            }
+            MFA_ASSERT(assetSystemTexture.isValid());
+            outTextureRefs.emplace_back(TextureRef {
+                .gltf_name = image.uri,
+                .index = static_cast<uint8_t>(outResultModel.textures.size())
+            });
+            outResultModel.textures.emplace_back(assetSystemTexture);
+        }
+    }
+}
+
+static int16_t GLTF_findTextureByName(
+    char const * textureName,
+    std::vector<TextureRef> const & textureRefs    
+) {
+    MFA_ASSERT(textureName != nullptr);
+    if(false == textureRefs.empty()) {
+        for (auto const & textureRef : textureRefs) {
+            if(textureRef.gltf_name == textureName) {
+                return textureRef.index;
+            }
+        }
+    }
+    return -1;
+    //MFA_CRASH("Image not found: %s", gltf_name);
+}
+
+static void GLTF_extractSubMeshes(
+    tinygltf::Model & gltfModel,
+    std::vector<TextureRef> const & textureRefs,
+    AS::Model & outResultModel
+) {
+    auto const generateUvKeyword = [](int32_t const uvIndex) -> std::string{
+        return "TEXCOORD_" + std::to_string(uvIndex);
+    };
+    // Step1: Iterate over all meshes and gather required information for asset buffer
+    uint32_t totalIndicesCount = 0;
+    uint32_t totalVerticesCount = 0;
+    uint32_t indicesVertexStartingIndex = 0;
+    for(auto & mesh : gltfModel.meshes) {
+        if(false == mesh.primitives.empty()) {
+            for(auto & primitive : mesh.primitives) {
+                {// Indices
+                    MFA_REQUIRE((primitive.indices < gltfModel.accessors.size()));
+                    auto const & accessor = gltfModel.accessors[primitive.indices];
+                    totalIndicesCount += static_cast<uint32_t>(accessor.count);
+                }
+                {// Positions
+                    MFA_REQUIRE((primitive.attributes["POSITION"] < gltfModel.accessors.size()));
+                    auto const & accessor = gltfModel.accessors[primitive.attributes["POSITION"]];
+                    totalVerticesCount += static_cast<uint32_t>(accessor.count);
+                }
+            }
+        }
+    }
+    outResultModel.mesh.initForWrite(
+        totalVerticesCount, 
+        totalIndicesCount, 
+        Memory::Alloc(sizeof(AS::MeshVertex) * totalVerticesCount), 
+        Memory::Alloc(sizeof(AS::MeshIndex) * totalIndicesCount)
+    );
+    // Step2: Fill subMeshes
+    uint32_t primitiveUniqueId = 0;
+    std::vector<AS::Mesh::Vertex> primitiveVertices {};
+    std::vector<AS::MeshIndex> primitiveIndices {};
+    for(auto & mesh : gltfModel.meshes) {
+        auto const meshIndex = outResultModel.mesh.insertSubMesh();
+        if(false == mesh.primitives.empty()) {
+            for(auto & primitive : mesh.primitives) {
+                primitiveIndices.erase(primitiveIndices.begin(), primitiveIndices.end());
+                primitiveVertices.erase(primitiveVertices.begin(), primitiveVertices.end());
+                
+                int16_t baseColorTextureIndex = -1;
+                int32_t baseColorUvIndex = -1;
+                int16_t metallicRoughnessTextureIndex = -1;
+                int32_t metallicRoughnessUvIndex = -1;
+                int16_t normalTextureIndex = -1;
+                int32_t normalUvIndex = -1;
+                int16_t emissiveTextureIndex = -1;
+                int32_t emissiveUvIndex = -1;
+                float baseColorFactor[4] {};
+                float metallicFactor = 0;
+                float roughnessFactor = 0;
+                float emissiveFactor [3] {};
+                uint32_t uniqueId = primitiveUniqueId;
+                primitiveUniqueId++;
+                if(primitive.material >= 0) {// Material
+                    auto const & material = gltfModel.materials[primitive.material];
+                    if (material.pbrMetallicRoughness.baseColorTexture.index >= 0) {// Base color texture
+                        auto const & base_color_gltf_texture = gltfModel.textures[material.pbrMetallicRoughness.baseColorTexture.index];
+                        auto const & image = gltfModel.images[base_color_gltf_texture.source];
+                        baseColorTextureIndex = GLTF_findTextureByName(image.uri.c_str(), textureRefs);
+                        if (baseColorTextureIndex >= 0) {
+                            baseColorUvIndex = static_cast<uint16_t>(material.pbrMetallicRoughness.baseColorTexture.texCoord);
+                        }
+                    }
+                    if (material.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0){// Metallic-roughness texture
+                        auto const & metallic_roughness_texture = gltfModel.textures[material.pbrMetallicRoughness.metallicRoughnessTexture.index];
+                        auto const & image = gltfModel.images[metallic_roughness_texture.source];
+                        metallicRoughnessTextureIndex = GLTF_findTextureByName(image.uri.c_str(), textureRefs);
+                        if(metallicRoughnessTextureIndex >= 0) {
+                            metallicRoughnessUvIndex = static_cast<uint16_t>(material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord);
+                        }
+                    }
+                    if (material.normalTexture.index >= 0) {// Normal texture
+                        auto const & normal_texture = gltfModel.textures[material.normalTexture.index];
+                        auto const & image = gltfModel.images[normal_texture.source];
+                        normalTextureIndex = GLTF_findTextureByName(image.uri.c_str(), textureRefs);
+                        if(normalTextureIndex >= 0) {
+                            normalUvIndex = static_cast<uint16_t>(material.normalTexture.texCoord);
+                        }
+                    }
+                    if (material.emissiveTexture.index >= 0) {// Emissive texture
+                        auto const & emissive_texture = gltfModel.textures[material.emissiveTexture.index];
+                        auto const & image = gltfModel.images[emissive_texture.source];
+                        emissiveTextureIndex = GLTF_findTextureByName(image.uri.c_str(), textureRefs);
+                        if (emissiveTextureIndex >= 0) {
+                            emissiveUvIndex = static_cast<uint16_t>(material.emissiveTexture.texCoord);
+                        }
+                    }
+                    {// BaseColorFactor
+                        baseColorFactor[0] = static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[0]);
+                        baseColorFactor[1] = static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[1]);
+                        baseColorFactor[2] = static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[2]);
+                        baseColorFactor[3] = static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[3]);
+                    }
+                    metallicFactor = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
+                    roughnessFactor = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
+                    {// EmissiveFactor
+                        emissiveFactor[0] = static_cast<float>(material.emissiveFactor[0]);
+                        emissiveFactor[1] = static_cast<float>(material.emissiveFactor[1]);
+                        emissiveFactor[2] = static_cast<float>(material.emissiveFactor[2]);
+                    }
+                }
+                uint32_t primitiveIndicesCount = 0;
+                {// Indices
+                    MFA_REQUIRE(primitive.indices < gltfModel.accessors.size());
+                    auto const & accessor = gltfModel.accessors[primitive.indices];
+                    auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
+                    MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
+                    auto const & buffer = gltfModel.buffers[bufferView.buffer];
+                    primitiveIndicesCount = static_cast<uint32_t>(accessor.count);
+                    
+                    switch(accessor.componentType) {
+                        case TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT:
+                        {
+                            auto const * gltfIndices = reinterpret_cast<uint32_t const *>(
+                                &buffer.data[bufferView.byteOffset + accessor.byteOffset]
+                            );
+                            for (uint32_t i = 0; i < primitiveIndicesCount; i++) {
+                                primitiveIndices.emplace_back(gltfIndices[i] + indicesVertexStartingIndex);
+                            }
+                        }
+                        break;
+                        case TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT:
+                        {
+                            auto const * gltfIndices = reinterpret_cast<uint16_t const *>(
+                                &buffer.data[bufferView.byteOffset + accessor.byteOffset]
+                            );
+                            for (uint32_t i = 0; i < primitiveIndicesCount; i++) {
+                                primitiveIndices.emplace_back(gltfIndices[i] + indicesVertexStartingIndex);
+                            }
+                        }
+                        break;
+                        case TINYGLTF_PARAMETER_TYPE_UNSIGNED_BYTE:
+                        {
+                            auto const * gltfIndices = reinterpret_cast<uint8_t const *>(
+                                &buffer.data[bufferView.byteOffset + accessor.byteOffset]
+                            );
+                            for (uint32_t i = 0; i < primitiveIndicesCount; i++) {
+                                primitiveIndices.emplace_back(gltfIndices[i] + indicesVertexStartingIndex);
+                            }
+                        }
+                        break;
+                        default:
+                            MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+                    }
+                }
+                float const * positions = nullptr;
+                uint32_t primitiveVertexCount = 0;
+                float positionsMinValue [3] {};
+                float positionsMaxValue [3] {};
+                bool hasPositionMinMax = false;
+                {// Position
+                    auto const result = GLTF_extractPrimitiveDataFromBuffer(
+                        gltfModel, 
+                        primitive, 
+                        "POSITION", 
+                        3, 
+                        TINYGLTF_COMPONENT_TYPE_FLOAT, 
+                        positions, 
+                        primitiveVertexCount, 
+                        hasPositionMinMax, 
+                        positionsMinValue, 
+                        positionsMaxValue
+                    );
+                    MFA_ASSERT(result);
+                }
+                float const * baseColorUvs = nullptr;
+                float baseColorUvMin [2] {};
+                float baseColorUvMax [2] {};
+                bool hasBaseColorUvMinMax = false;
+                if(baseColorUvIndex >= 0) {// BaseColor
+                    uint32_t baseColorUvsCount = 0;
+                    auto texture_coordinate_key_name = generateUvKeyword(baseColorUvIndex);
+                    auto const result = GLTF_extractPrimitiveDataFromBuffer(
+                        gltfModel,
+                        primitive,
+                        texture_coordinate_key_name.c_str(),
+                        2,
+                        TINYGLTF_COMPONENT_TYPE_FLOAT,
+                        baseColorUvs,
+                        baseColorUvsCount,
+                        hasBaseColorUvMinMax,
+                        baseColorUvMin,
+                        baseColorUvMax
+                    );
+                    MFA_ASSERT(result == true);
+                    MFA_ASSERT(baseColorUvsCount == primitiveVertexCount);
+                }
+                float const * metallicRoughnessUvs = nullptr;
+                float metallicRoughnessUVMin [2] {};
+                float metallicRoughnessUVMax [2] {};
+                bool hasMetallicRoughnessUvMinMax = false;
+                if(metallicRoughnessUvIndex >= 0) {// MetallicRoughness uvs
+                    std::string texture_coordinate_key_name = generateUvKeyword(metallicRoughnessUvIndex);
+                    uint32_t metallicRoughnessUvsCount = 0;
+                    auto const result = GLTF_extractPrimitiveDataFromBuffer(
+                        gltfModel,
+                        primitive,
+                        texture_coordinate_key_name.c_str(),
+                        2,
+                        TINYGLTF_COMPONENT_TYPE_FLOAT,
+                        metallicRoughnessUvs,
+                        metallicRoughnessUvsCount,
+                        hasMetallicRoughnessUvMinMax,
+                        metallicRoughnessUVMin,
+                        metallicRoughnessUVMax
+                    );
+                    MFA_ASSERT(result == true);
+                    MFA_ASSERT(metallicRoughnessUvsCount == primitiveVertexCount);
+                }
+                // TODO Occlusion texture
+                float const * emissionUVs = nullptr;
+                float emission_uv_min [2] {};
+                float emission_uv_max [2] {};
+                bool hasEmissionUvMinMax = false;
+                if(emissiveUvIndex >= 0) {// Emission uvs
+                    std::string texture_coordinate_key_name = generateUvKeyword(emissiveUvIndex);
+                    uint32_t emissionUvCount = 0;
+                    auto const result = GLTF_extractPrimitiveDataFromBuffer(
+                        gltfModel,
+                        primitive,
+                        texture_coordinate_key_name.c_str(),
+                        2,
+                        TINYGLTF_COMPONENT_TYPE_FLOAT,
+                        emissionUVs,
+                        emissionUvCount,
+                        hasEmissionUvMinMax,
+                        emission_uv_min,
+                        emission_uv_max
+                    );
+                    MFA_ASSERT(result == true);
+                    MFA_ASSERT(emissionUvCount == primitiveVertexCount);
+                }
+                float const * normalsUVs = nullptr;
+                float normals_uv_min [2] {};
+                float normals_uv_max [2] {};
+                bool hasNormalUvMinMax = false;
+                if(normalUvIndex >= 0) {// Normal uvs
+                    std::string texture_coordinate_key_name = generateUvKeyword(normalUvIndex);
+                    uint32_t normalUvsCount = 0;
+                    auto const result = GLTF_extractPrimitiveDataFromBuffer(
+                        gltfModel,
+                        primitive,
+                        texture_coordinate_key_name.c_str(),
+                        2,
+                        TINYGLTF_COMPONENT_TYPE_FLOAT,
+                        normalsUVs,
+                        normalUvsCount,
+                        hasNormalUvMinMax,
+                        normals_uv_min,
+                        normals_uv_max
+                    );
+                    MFA_ASSERT(result == true);
+                    MFA_ASSERT(normalUvsCount == primitiveVertexCount);
+                }
+                float const * normalValues = nullptr;
+                float normalsValuesMin [3] {};
+                float normalsValuesMax [3] {};
+                bool hasNormalValueMinMax = false;
+                {// Normal uvs
+                    uint32_t normalValuesCount = 0;
+                    auto const result = GLTF_extractPrimitiveDataFromBuffer(
+                        gltfModel,
+                        primitive,
+                        "NORMAL",
+                        3,
+                        TINYGLTF_COMPONENT_TYPE_FLOAT,
+                        normalValues,
+                        normalValuesCount,
+                        hasNormalValueMinMax,
+                        normalsValuesMin,
+                        normalsValuesMax
+                    );
+                    MFA_ASSERT(result == false || normalValuesCount == primitiveVertexCount);                           
+                }
+                float const * tangentValues = nullptr;
+                float tangentsValuesMin [4] {};
+                float tangentsValuesMax [4] {};
+                bool hasTangentsValuesMinMax = false;
+                {// Tangent values
+                    uint32_t tangentValuesCount = 0;
+                    auto const result = GLTF_extractPrimitiveDataFromBuffer(
+                        gltfModel,
+                        primitive,
+                        "TANGENT",
+                        4,
+                        TINYGLTF_COMPONENT_TYPE_FLOAT,
+                        tangentValues,
+                        tangentValuesCount,
+                        hasTangentsValuesMinMax,
+                        tangentsValuesMin,
+                        tangentsValuesMax
+                    );
+                    MFA_ASSERT(result == false || tangentValuesCount == primitiveVertexCount);                           
+                }
+                uint16_t const * jointValues = nullptr;
+                uint32_t jointValuesCount = 0;
+                {// Joints
+                    GLTF_extractPrimitiveDataFromBuffer(
+                        gltfModel,
+                        primitive,
+                        "JOINTS_0",
+                        4,
+                        TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT,
+                        jointValues,
+                        jointValuesCount
+                    );
+                }
+                float const * weightValues = nullptr;
+                uint32_t weightValuesCount = 0;
+                {// Weights
+                    GLTF_extractPrimitiveDataFromBuffer(
+                        gltfModel,
+                        primitive,
+                        "WEIGHTS_0",
+                        4,
+                        TINYGLTF_COMPONENT_TYPE_FLOAT,
+                        weightValues,
+                        weightValuesCount
+                    );
+                }
+                // TODO Start from here, Assign weight and joint
+                float const * colors = nullptr;
+                float colorsMinValue [3] {0};
+                float colorsMaxValue [3] {1};
+                float colorsMinMaxDiff [3] {1};
+                if(primitive.attributes["COLOR"] >= 0) {
+                    MFA_REQUIRE(primitive.attributes["COLOR"] < gltfModel.accessors.size());
+                    auto const & accessor = gltfModel.accessors[primitive.attributes["COLOR"]];
+                    //MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+                    //TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT
+                    if (accessor.minValues.size() == 3 && accessor.maxValues.size() == 3) {
+                        colorsMinValue[0] = static_cast<float>(accessor.minValues[0]);
+                        colorsMinValue[1] = static_cast<float>(accessor.minValues[1]);
+                        colorsMinValue[2] = static_cast<float>(accessor.minValues[2]);
+                        colorsMaxValue[0] = static_cast<float>(accessor.maxValues[0]);
+                        colorsMaxValue[1] = static_cast<float>(accessor.maxValues[1]);
+                        colorsMaxValue[2] = static_cast<float>(accessor.maxValues[2]);
+                        colorsMinMaxDiff[0] = colorsMaxValue[0] - colorsMinValue[0];
+                        colorsMinMaxDiff[1] = colorsMaxValue[1] - colorsMinValue[1];
+                        colorsMinMaxDiff[2] = colorsMaxValue[2] - colorsMinValue[2];
+                    }
+                    auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
+                    MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
+                    auto const & buffer = gltfModel.buffers[bufferView.buffer];
+                    colors = reinterpret_cast<const float *>(
+                        &buffer.data[bufferView.byteOffset + accessor.byteOffset]
+                    );
+                }
+                
+                bool hasPosition = positions != nullptr;
+                MFA_ASSERT(hasPosition == true);
+                bool hasBaseColorTexture = baseColorUvs != nullptr;
+                MFA_ASSERT(baseColorUvs != nullptr == baseColorTextureIndex >= 0);
+                bool hasNormalValue = normalValues != nullptr;
+                MFA_ASSERT(hasNormalValue == true);
+                bool hasNormalTexture = normalsUVs != nullptr;
+                MFA_ASSERT(normalsUVs != nullptr == normalTextureIndex >= 0);
+                bool hasCombinedMetallicRoughness = metallicRoughnessUvs != nullptr;
+                MFA_ASSERT(metallicRoughnessUvs != nullptr == metallicRoughnessTextureIndex >= 0);
+                bool hasEmissiveTexture = emissionUVs != nullptr;
+                MFA_ASSERT(emissionUVs != nullptr == emissiveTextureIndex >= 0);
+                bool hasTangentValue = tangentValues != nullptr;
+                bool hasSkin = jointValues != nullptr && weightValues != nullptr;
+                for (uint32_t i = 0; i < primitiveVertexCount; ++i) {
+                    primitiveVertices.emplace_back();
+                    auto & vertex = primitiveVertices.back();
+                    if (hasPosition) {// Vertices
+                        vertex.position[0] = positions[i * 3 + 0];
+                        vertex.position[1] = positions[i * 3 + 1];
+                        vertex.position[2] = positions[i * 3 + 2];
+                        if (hasPositionMinMax) {
+                            MFA_ASSERT(vertex.position[0] >= positionsMinValue[0]);
+                            MFA_ASSERT(vertex.position[0] <= positionsMaxValue[0]);
+                            MFA_ASSERT(vertex.position[1] >= positionsMinValue[1]);
+                            MFA_ASSERT(vertex.position[1] <= positionsMaxValue[1]);
+                            MFA_ASSERT(vertex.position[2] >= positionsMinValue[2]);
+                            MFA_ASSERT(vertex.position[2] <= positionsMaxValue[2]);
+                        }
+                    }
+                    if(hasNormalValue) {// Normal values
+                        vertex.normalValue[0] = normalValues[i * 3 + 0];
+                        vertex.normalValue[1] = normalValues[i * 3 + 1];
+                        vertex.normalValue[2] = normalValues[i * 3 + 2];
+                        if (hasNormalValueMinMax) {
+                            MFA_ASSERT(vertex.normalValue[0] >= normalsValuesMin[0]);
+                            MFA_ASSERT(vertex.normalValue[0] <= normalsValuesMax[0]);
+                            MFA_ASSERT(vertex.normalValue[1] >= normalsValuesMin[1]);
+                            MFA_ASSERT(vertex.normalValue[1] <= normalsValuesMax[1]);
+                            MFA_ASSERT(vertex.normalValue[2] >= normalsValuesMin[2]);
+                            MFA_ASSERT(vertex.normalValue[2] <= normalsValuesMax[2]);
+                        }
+                    }
+                    if(hasNormalTexture) {// Normal uvs
+                        vertex.normalMapUV[0] = normalsUVs[i * 2 + 0];
+                        vertex.normalMapUV[1] = normalsUVs[i * 2 + 1];
+                        if (hasNormalUvMinMax) {
+                            MFA_ASSERT(vertex.normalMapUV[0] >= normals_uv_min[0]);
+                            MFA_ASSERT(vertex.normalMapUV[0] <= normals_uv_max[0]);
+                            MFA_ASSERT(vertex.normalMapUV[1] >= normals_uv_min[1]);
+                            MFA_ASSERT(vertex.normalMapUV[1] <= normals_uv_max[1]);
+                        }
+                    }
+                    if(hasTangentValue) {// Tangent
+                        vertex.tangentValue[0] = tangentValues[i * 4 + 0];
+                        vertex.tangentValue[1] = tangentValues[i * 4 + 1];
+                        vertex.tangentValue[2] = tangentValues[i * 4 + 2];
+                        vertex.tangentValue[3] = tangentValues[i * 4 + 3];
+                        if (hasTangentsValuesMinMax) {
+                            MFA_ASSERT(vertex.tangentValue[0] >= tangentsValuesMin[0]);
+                            MFA_ASSERT(vertex.tangentValue[0] <= tangentsValuesMax[0]);
+                            MFA_ASSERT(vertex.tangentValue[1] >= tangentsValuesMin[1]);
+                            MFA_ASSERT(vertex.tangentValue[1] <= tangentsValuesMax[1]);
+                            MFA_ASSERT(vertex.tangentValue[2] >= tangentsValuesMin[2]);
+                            MFA_ASSERT(vertex.tangentValue[2] <= tangentsValuesMax[2]);
+                            MFA_ASSERT(vertex.tangentValue[3] >= tangentsValuesMin[3]);
+                            MFA_ASSERT(vertex.tangentValue[3] <= tangentsValuesMax[3]);
+                        }
+                    }
+                    if(hasEmissiveTexture) {// Emissive
+                        vertex.emissionUV[0] = emissionUVs[i * 2 + 0];
+                        vertex.emissionUV[1] = emissionUVs[i * 2 + 1];
+                        if (hasEmissionUvMinMax) {
+                            MFA_ASSERT(vertex.emissionUV[0] >= emission_uv_min[0]);
+                            MFA_ASSERT(vertex.emissionUV[0] <= emission_uv_max[0]);
+                            MFA_ASSERT(vertex.emissionUV[1] >= emission_uv_min[1]);
+                            MFA_ASSERT(vertex.emissionUV[1] <= emission_uv_max[1]);
+                        }
+                    }
+                    if (hasBaseColorTexture) {// BaseColor
+                        vertex.baseColorUV[0] = baseColorUvs[i * 2 + 0];
+                        vertex.baseColorUV[1] = baseColorUvs[i * 2 + 1];
+                        if (hasBaseColorUvMinMax) {
+                            MFA_ASSERT(vertex.baseColorUV[0] >= baseColorUvMin[0]);
+                            MFA_ASSERT(vertex.baseColorUV[0] <= baseColorUvMax[0]);
+                            MFA_ASSERT(vertex.baseColorUV[1] >= baseColorUvMin[1]);
+                            MFA_ASSERT(vertex.baseColorUV[1] <= baseColorUvMax[1]);
+                        }
+                    }
+                    if (hasCombinedMetallicRoughness) {// MetallicRoughness
+                        vertex.roughnessUV[0] = metallicRoughnessUvs[i * 2 + 0];
+                        vertex.roughnessUV[1] = metallicRoughnessUvs[i * 2 + 1];
+                        ::memcpy(vertex.metallicUV, vertex.roughnessUV, sizeof(vertex.roughnessUV));
+                        static_assert(sizeof(vertex.roughnessUV) == sizeof(vertex.metallicUV));
+                        if (hasMetallicRoughnessUvMinMax) {
+                            MFA_ASSERT(vertex.roughnessUV[0] >= metallicRoughnessUVMin[0]);
+                            MFA_ASSERT(vertex.roughnessUV[0] <= metallicRoughnessUVMax[0]);
+                            MFA_ASSERT(vertex.roughnessUV[1] >= metallicRoughnessUVMin[1]);
+                            MFA_ASSERT(vertex.roughnessUV[1] <= metallicRoughnessUVMax[1]);
+                        }
+                    }
+                    // TODO WTF ?
+                    vertex.color[0] = static_cast<uint8_t>((256/(colorsMinMaxDiff[0])) * colors[i * 3 + 0]);
+                    vertex.color[1] = static_cast<uint8_t>((256/(colorsMinMaxDiff[1])) * colors[i * 3 + 1]);
+                    vertex.color[2] = static_cast<uint8_t>((256/(colorsMinMaxDiff[2])) * colors[i * 3 + 2]);
+
+                    // Joint and weight
+                    vertex.hasSkin = hasSkin;   
+                    if (hasSkin) {
+                        vertex.jointIndices[0] = jointValues[i * 4 + 0];
+                        vertex.jointIndices[1] = jointValues[i * 4 + 1];
+                        vertex.jointIndices[2] = jointValues[i * 4 + 2];
+                        vertex.jointIndices[3] = jointValues[i * 4 + 3];
+
+                        vertex.jointWeights[0] = weightValues[i * 4 + 0];
+                        vertex.jointWeights[1] = weightValues[i * 4 + 1];
+                        vertex.jointWeights[2] = weightValues[i * 4 + 2];
+                        vertex.jointWeights[3] = weightValues[i * 4 + 3];
+                    }
+                }
+
+                // Creating new subMesh
+                outResultModel.mesh.insertPrimitive(
+                    meshIndex,
+                    AS::MeshPrimitive {
+                        .uniqueId = uniqueId,
+                        .baseColorTextureIndex = baseColorTextureIndex,
+                        .mixedMetallicRoughnessOcclusionTextureIndex = metallicRoughnessTextureIndex,
+                        .normalTextureIndex = normalTextureIndex,
+                        .emissiveTextureIndex = emissiveTextureIndex,
+                        .baseColorFactor = {baseColorFactor[0], baseColorFactor[1], baseColorFactor[2], baseColorFactor[3]},
+                        .metallicFactor = metallicFactor,
+                        .roughnessFactor = roughnessFactor,
+                        .emissiveFactor = {emissiveFactor[0], emissiveFactor[1], emissiveFactor[2]},
+                        .hasBaseColorTexture = hasBaseColorTexture,
+                        .hasEmissiveTexture = hasEmissiveTexture,
+                        .hasMixedMetallicRoughnessOcclusionTexture = hasCombinedMetallicRoughness,
+                        .hasNormalBuffer = hasNormalValue,
+                        .hasNormalTexture = hasNormalTexture,
+                        .hasTangentBuffer = hasTangentValue
+                    }, 
+                    static_cast<uint32_t>(primitiveVertices.size()), 
+                    primitiveVertices.data(), 
+                    static_cast<uint32_t>(primitiveIndices.size()), 
+                    primitiveIndices.data()
+                );
+
+                indicesVertexStartingIndex += primitiveVertexCount;
+                
+            }
+        }
+    }
+}
+
+static void GLTF_extractNodes(
+    tinygltf::Model & gltfModel,
+    AS::Model & outResultModel
+) {
+    // Step3: Fill nodes
+    if(false == gltfModel.nodes.empty()) {
+        for (auto const & gltfNode : gltfModel.nodes) {
+            AS::MeshNode assetNode = {
+                .subMeshIndex = gltfNode.mesh,
+                .children = gltfNode.children,
+                .transformMatrix {},
+            };
+            Matrix4X4Float transform = Matrix4X4Float::Identity();
+            if (gltfNode.matrix.empty() == false) {
+                MFA_ASSERT(gltfNode.scale.empty());
+                MFA_ASSERT(gltfNode.rotation.empty());
+                MFA_ASSERT(gltfNode.translation.empty());
+                MFA_ASSERT(gltfNode.matrix.size() == 16);
+                MFA_ASSERT(gltfNode.matrix[3] == 0.0f);
+                MFA_ASSERT(gltfNode.matrix[7] == 0.0f);
+                MFA_ASSERT(gltfNode.matrix[11] == 0.0f);
+
+                transform.castAssign(gltfNode.matrix.data());
+
+                MFA_ASSERT(transform.get(3, 0) == 0.0f);
+                MFA_ASSERT(transform.get(3, 1) == 0.0f);
+                MFA_ASSERT(transform.get(3, 2) == 0.0f);
+            } else {
+                if (gltfNode.translation.empty() == false) {
+                    MFA_ASSERT(gltfNode.translation.size() == 3);
+                    Matrix4X4Float translate {};
+                    Matrix4X4Float::AssignTranslation(
+                        translate,
+                        static_cast<float>(gltfNode.translation[0]),
+                        static_cast<float>(gltfNode.translation[1]),
+                        static_cast<float>(gltfNode.translation[2])
+                    );
+                    transform.multiply(translate);
+                }
+                if (gltfNode.rotation.empty() == false) {
+                    MFA_ASSERT(gltfNode.rotation.size() == 4);
+                    Matrix4X4Float rotation {};
+                    //https://blender.stackexchange.com/questions/123406/blender-gltf-which-rotation-values-are-really-exported
+                    QuaternionFloat quaternion {};
+                    // TODO We can make 2 the 4th parameter instead
+                    quaternion.set(0, 0, static_cast<float>(gltfNode.rotation[3]));
+                    quaternion.set(1, 0, static_cast<float>(gltfNode.rotation[0]));
+                    quaternion.set(2, 0, static_cast<float>(gltfNode.rotation[1]));
+                    quaternion.set(3, 0, static_cast<float>(gltfNode.rotation[2]));
+
+                    Matrix4X4Float::AssignRotation(rotation, quaternion);
+
+                    transform.multiply(rotation);
+                }
+                if (gltfNode.scale.empty() == false) {
+                    MFA_ASSERT(gltfNode.scale.size() == 3);
+                    Matrix4X4Float scale {};
+                    Matrix4X4Float::AssignScale(
+                        scale,
+                        static_cast<float>(gltfNode.scale[0]),
+                        static_cast<float>(gltfNode.scale[1]),
+                        static_cast<float>(gltfNode.scale[2])
+                    );
+                    transform.multiply(scale);
+                }
+
+            }
+            ::memcpy(assetNode.transformMatrix, transform.cells, sizeof(transform.cells));
+            static_assert(sizeof(assetNode.transformMatrix) == sizeof(transform.cells));
+            outResultModel.mesh.insertNode(assetNode);
+        }
+    }
+}
+
+void GLTF_extractSkins(
+    tinygltf::Model & gltfModel,
+    AS::Model & outResultModel
+) {
+    for (auto & gltfSkin : gltfModel.skins) {
+        AS::MeshSkin skin {};
+
+        // Joints
+        skin.joints.insert(skin.joints.end(), gltfSkin.joints.begin(), gltfSkin.joints.end());
+
+        // InverseBindMatrices
+        MFA_REQUIRE(gltfSkin.inverseBindMatrices >= 0);
+        uint32_t inverseBindMatricesCount = 0;
+        float const * inverseBindMatricesPtr = nullptr;
+        GLTF_extractDataFromBuffer(
+            gltfModel, 
+            gltfSkin.inverseBindMatrices, 
+            TINYGLTF_COMPONENT_TYPE_FLOAT,
+            inverseBindMatricesPtr,
+            inverseBindMatricesCount
+        );
+        MFA_ASSERT(inverseBindMatricesPtr != nullptr);
+        skin.inverseBindMatrices.resize(inverseBindMatricesCount / 16);
+        for (size_t i = 0; i < skin.inverseBindMatrices.size(); ++i) {
+            auto & currentMatrix = skin.inverseBindMatrices[i];
+            for (size_t j = 0; j < 16; ++j) {
+                currentMatrix.value[j] = inverseBindMatricesPtr[i * 16 + j];
+            }
+        }
+
+        skin.skeletonRootNode = gltfSkin.skeleton;
+
+        outResultModel.mesh.insertSkin(skin);
+    }
+}
+
+// void GLTF_extractAnimations();
 
 // Based on sasha willems solution and a comment in github
 AS::Model ImportGLTF(char const * path) {
@@ -549,619 +1251,28 @@ AS::Model ImportGLTF(char const * path) {
             MFA_LOG_WARN("ImportGltf Warning: %s", warning.c_str());
         }
         if(success) {
+            // TODO Camera
             if(false == gltfModel.meshes.empty()) {
-                struct TextureRef {
-                    std::string gltf_name;
-                    uint8_t index;
-                };
                 std::vector<TextureRef> textureRefs {};
-                auto const find_texture_by_name = [&textureRefs](char const * gltfName)-> int16_t {
-                    MFA_ASSERT(gltfName != nullptr);
-                    if(false == textureRefs.empty()) {
-                        for (auto const & textureRef : textureRefs) {
-                            if(textureRef.gltf_name == gltfName) {
-                                return textureRef.index;
-                            }
-                        }
-                    }
-                    return -1;
-                    //MFA_CRASH("Image not found: %s", gltf_name);
-                };
-                auto const generate_uv_keyword = [](int32_t const uv_index) -> std::string{
-                    return "TEXCOORD_" + std::to_string(uv_index);
-                };
-                std::string directory_path = FS::ExtractDirectoryFromPath(path);
-                // Extracting textures
-                if(false == gltfModel.textures.empty()) {
-                    for (auto const & texture : gltfModel.textures) {
-                        AS::SamplerConfig sampler {.isValid = false};
-                        if (texture.sampler >= 0) {// Sampler
-                            auto const & gltf_sampler = gltfModel.samplers[texture.sampler];
-                            sampler.magFilter = gltf_sampler.magFilter;
-                            sampler.minFilter = gltf_sampler.minFilter;
-                            sampler.wrapS = gltf_sampler.wrapS;
-                            sampler.wrapT = gltf_sampler.wrapT;
-                            //sampler.sample_mode = gltf_sampler. // TODO
-                            sampler.isValid = true;
-                        }
-                        AS::Texture assetSystemTexture {};
-                        auto const & image = gltfModel.images[texture.source];
-                        {// Texture
-                            std::string image_path = directory_path + "/" + image.uri;
-                            assetSystemTexture = ImportImage(
-                                image_path.c_str(),
-                                // TODO tryToGenerateMipmaps takes too long
-                                ImportTextureOptions {.tryToGenerateMipmaps = false, .sampler = &sampler}
-                            );
-                        }
-                        MFA_ASSERT(assetSystemTexture.isValid());
-                        textureRefs.emplace_back(TextureRef {
-                            .gltf_name = image.uri,
-                            .index = static_cast<uint8_t>(resultModel.textures.size())
-                        });
-                        resultModel.textures.emplace_back(assetSystemTexture);
-                    }
-                }
+                // Textures
+                GLTF_extractTextures(
+                    path,
+                    gltfModel,
+                    textureRefs,
+                    resultModel
+                );
                 {// Reading samplers values from materials
                     //auto const & sampler = model.samplers[base_color_gltf_texture.sampler];
                     //model_asset.textures[base_color_texture_index]  
                 }
-                // Step1: Iterate over all meshes and gather required information for asset buffer
-                uint32_t totalIndicesCount = 0;
-                uint32_t totalVerticesCount = 0;
-                uint32_t indicesVertexStartingIndex = 0;
-                for(auto & mesh : gltfModel.meshes) {
-                    if(false == mesh.primitives.empty()) {
-                        for(auto & primitive : mesh.primitives) {
-                            {// Indices
-                                MFA_REQUIRE((primitive.indices < gltfModel.accessors.size()));
-                                auto const & accessor = gltfModel.accessors[primitive.indices];
-                                totalIndicesCount += static_cast<uint32_t>(accessor.count);
-                            }
-                            {// Positions
-                                MFA_REQUIRE((primitive.attributes["POSITION"] < gltfModel.accessors.size()));
-                                auto const & accessor = gltfModel.accessors[primitive.attributes["POSITION"]];
-                                totalVerticesCount += static_cast<uint32_t>(accessor.count);
-                            }
-                        }
-                    }
-                }
-                resultModel.mesh.initForWrite(
-                    totalVerticesCount, 
-                    totalIndicesCount, 
-                    Memory::Alloc(sizeof(AS::MeshVertex) * totalVerticesCount), 
-                    Memory::Alloc(sizeof(AS::MeshIndex) * totalIndicesCount)
-                );
-                // Step2: Fill subMeshes
-                
-                uint32_t primitiveUniqueId = 0;
-                std::vector<AS::Mesh::Vertex> primitiveVertices {};
-                std::vector<AS::MeshIndex> primitiveIndices {};
-
-                for(auto & mesh : gltfModel.meshes) {
-                    auto const meshIndex = resultModel.mesh.insertSubMesh();
-                    if(false == mesh.primitives.empty()) {
-                        for(auto & primitive : mesh.primitives) {
-                            primitiveIndices.erase(primitiveIndices.begin(), primitiveIndices.end());
-                            primitiveVertices.erase(primitiveVertices.begin(), primitiveVertices.end());
-                            
-                            int16_t baseColorTextureIndex = -1;
-                            int32_t baseColorUvIndex = -1;
-                            int16_t metallicRoughnessTextureIndex = -1;
-                            int32_t metallicRoughnessUvIndex = -1;
-                            int16_t normalTextureIndex = -1;
-                            int32_t normalUvIndex = -1;
-                            int16_t emissiveTextureIndex = -1;
-                            int32_t emissiveUvIndex = -1;
-                            float baseColorFactor[4] {};
-                            float metallicFactor = 0;
-                            float roughnessFactor = 0;
-                            float emissiveFactor [3] {};
-                            uint32_t uniqueId = primitiveUniqueId;
-                            primitiveUniqueId++;
-                            if(primitive.material >= 0) {// Material
-                                auto const & material = gltfModel.materials[primitive.material];
-                                if (material.pbrMetallicRoughness.baseColorTexture.index >= 0) {// Base color texture
-                                    auto const & base_color_gltf_texture = gltfModel.textures[material.pbrMetallicRoughness.baseColorTexture.index];
-                                    auto const & image = gltfModel.images[base_color_gltf_texture.source];
-                                    baseColorTextureIndex = find_texture_by_name(image.uri.c_str());
-                                    if (baseColorTextureIndex >= 0) {
-                                        baseColorUvIndex = static_cast<uint16_t>(material.pbrMetallicRoughness.baseColorTexture.texCoord);
-                                    }
-                                }
-                                if (material.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0){// Metallic-roughness texture
-                                    auto const & metallic_roughness_texture = gltfModel.textures[material.pbrMetallicRoughness.metallicRoughnessTexture.index];
-                                    auto const & image = gltfModel.images[metallic_roughness_texture.source];
-                                    metallicRoughnessTextureIndex = find_texture_by_name(image.uri.c_str());
-                                    if(metallicRoughnessTextureIndex >= 0) {
-                                        metallicRoughnessUvIndex = static_cast<uint16_t>(material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord);
-                                    }
-                                }
-                                if (material.normalTexture.index >= 0) {// Normal texture
-                                    auto const & normal_texture = gltfModel.textures[material.normalTexture.index];
-                                    auto const & image = gltfModel.images[normal_texture.source];
-                                    normalTextureIndex = find_texture_by_name(image.uri.c_str());
-                                    if(normalTextureIndex >= 0) {
-                                        normalUvIndex = static_cast<uint16_t>(material.normalTexture.texCoord);
-                                    }
-                                }
-                                if (material.emissiveTexture.index >= 0) {// Emissive texture
-                                    auto const & emissive_texture = gltfModel.textures[material.emissiveTexture.index];
-                                    auto const & image = gltfModel.images[emissive_texture.source];
-                                    emissiveTextureIndex = find_texture_by_name(image.uri.c_str());
-                                    if (emissiveTextureIndex >= 0) {
-                                        emissiveUvIndex = static_cast<uint16_t>(material.emissiveTexture.texCoord);
-                                    }
-                                }
-                                {// BaseColorFactor
-                                    baseColorFactor[0] = static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[0]);
-                                    baseColorFactor[1] = static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[1]);
-                                    baseColorFactor[2] = static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[2]);
-                                    baseColorFactor[3] = static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[3]);
-                                }
-                                metallicFactor = static_cast<float>(material.pbrMetallicRoughness.metallicFactor);
-                                roughnessFactor = static_cast<float>(material.pbrMetallicRoughness.roughnessFactor);
-                                {// EmissiveFactor
-                                    emissiveFactor[0] = static_cast<float>(material.emissiveFactor[0]);
-                                    emissiveFactor[1] = static_cast<float>(material.emissiveFactor[1]);
-                                    emissiveFactor[2] = static_cast<float>(material.emissiveFactor[2]);
-                                }
-                            }
-                            uint32_t primitiveIndicesCount = 0;
-                            {// Indices
-                                MFA_REQUIRE(primitive.indices < gltfModel.accessors.size());
-                                auto const & accessor = gltfModel.accessors[primitive.indices];
-                                auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
-                                MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
-                                auto const & buffer = gltfModel.buffers[bufferView.buffer];
-                                primitiveIndicesCount = static_cast<uint32_t>(accessor.count);
-                                
-                                switch(accessor.componentType) {
-                                    case TINYGLTF_PARAMETER_TYPE_UNSIGNED_INT:
-                                    {
-                                        auto const * gltfIndices = reinterpret_cast<uint32_t const *>(
-                                            &buffer.data[bufferView.byteOffset + accessor.byteOffset]
-                                        );
-                                        for (uint32_t i = 0; i < primitiveIndicesCount; i++) {
-                                            primitiveIndices.emplace_back(gltfIndices[i] + indicesVertexStartingIndex);
-                                        }
-                                    }
-                                    break;
-                                    case TINYGLTF_PARAMETER_TYPE_UNSIGNED_SHORT:
-                                    {
-                                        auto const * gltfIndices = reinterpret_cast<uint16_t const *>(
-                                            &buffer.data[bufferView.byteOffset + accessor.byteOffset]
-                                        );
-                                        for (uint32_t i = 0; i < primitiveIndicesCount; i++) {
-                                            primitiveIndices.emplace_back(gltfIndices[i] + indicesVertexStartingIndex);
-                                        }
-                                    }
-                                    break;
-                                    case TINYGLTF_PARAMETER_TYPE_UNSIGNED_BYTE:
-                                    {
-                                        auto const * gltfIndices = reinterpret_cast<uint8_t const *>(
-                                            &buffer.data[bufferView.byteOffset + accessor.byteOffset]
-                                        );
-                                        for (uint32_t i = 0; i < primitiveIndicesCount; i++) {
-                                            primitiveIndices.emplace_back(gltfIndices[i] + indicesVertexStartingIndex);
-                                        }
-                                    }
-                                    break;
-                                    default:
-                                        MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
-                                }
-                            }
-                            float const * positions = nullptr;
-                            uint32_t primitiveVertexCount = 0;
-                            float positionsMinValue [3] {};
-                            float positionsMaxValue [3] {};
-                            bool hasPositionMinMax = false;
-                            {// Position
-                                auto const result = extractGltfValue(
-                                    gltfModel, 
-                                    primitive, 
-                                    "POSITION", 
-                                    3, 
-                                    TINYGLTF_COMPONENT_TYPE_FLOAT, 
-                                    positions, 
-                                    primitiveVertexCount, 
-                                    hasPositionMinMax, 
-                                    positionsMinValue, 
-                                    positionsMaxValue
-                                );
-                                MFA_ASSERT(result);
-                            }
-                            float const * baseColorUvs = nullptr;
-                            float baseColorUvMin [2] {};
-                            float baseColorUvMax [2] {};
-                            bool hasBaseColorUvMinMax = false;
-                            if(baseColorUvIndex >= 0) {// BaseColor
-                                uint32_t baseColorUvsCount = 0;
-                                auto texture_coordinate_key_name = generate_uv_keyword(baseColorUvIndex);
-                                auto const result = extractGltfValue(
-                                    gltfModel,
-                                    primitive,
-                                    texture_coordinate_key_name.c_str(),
-                                    2,
-                                    TINYGLTF_COMPONENT_TYPE_FLOAT,
-                                    baseColorUvs,
-                                    baseColorUvsCount,
-                                    hasBaseColorUvMinMax,
-                                    baseColorUvMin,
-                                    baseColorUvMax
-                                );
-                                MFA_ASSERT(result == true);
-                                MFA_ASSERT(baseColorUvsCount == primitiveVertexCount);
-                            }
-                            float const * metallicRoughnessUvs = nullptr;
-                            float metallicRoughnessUVMin [2] {};
-                            float metallicRoughnessUVMax [2] {};
-                            bool hasMetallicRoughnessUvMinMax = false;
-                            if(metallicRoughnessUvIndex >= 0) {// MetallicRoughness uvs
-                                std::string texture_coordinate_key_name = generate_uv_keyword(metallicRoughnessUvIndex);
-                                uint32_t metallicRoughnessUvsCount = 0;
-                                auto const result = extractGltfValue(
-                                    gltfModel,
-                                    primitive,
-                                    texture_coordinate_key_name.c_str(),
-                                    2,
-                                    TINYGLTF_COMPONENT_TYPE_FLOAT,
-                                    metallicRoughnessUvs,
-                                    metallicRoughnessUvsCount,
-                                    hasMetallicRoughnessUvMinMax,
-                                    metallicRoughnessUVMin,
-                                    metallicRoughnessUVMax
-                                );
-                                MFA_ASSERT(result == true);
-                                MFA_ASSERT(metallicRoughnessUvsCount == primitiveVertexCount);
-                            }
-                            // TODO Occlusion texture
-                            float const * emissionUVs = nullptr;
-                            float emission_uv_min [2] {};
-                            float emission_uv_max [2] {};
-                            bool hasEmissionUvMinMax = false;
-                            if(emissiveUvIndex >= 0) {// Emission uvs
-                                std::string texture_coordinate_key_name = generate_uv_keyword(emissiveUvIndex);
-                                uint32_t emissionUvCount = 0;
-                                auto const result = extractGltfValue(
-                                    gltfModel,
-                                    primitive,
-                                    texture_coordinate_key_name.c_str(),
-                                    2,
-                                    TINYGLTF_COMPONENT_TYPE_FLOAT,
-                                    emissionUVs,
-                                    emissionUvCount,
-                                    hasEmissionUvMinMax,
-                                    emission_uv_min,
-                                    emission_uv_max
-                                );
-                                MFA_ASSERT(result == true);
-                                MFA_ASSERT(emissionUvCount == primitiveVertexCount);
-                            }
-                            float const * normalsUVs = nullptr;
-                            float normals_uv_min [2] {};
-                            float normals_uv_max [2] {};
-                            bool hasNormalUvMinMax = false;
-                            if(normalUvIndex >= 0) {// Normal uvs
-                                std::string texture_coordinate_key_name = generate_uv_keyword(normalUvIndex);
-                                uint32_t normalUvsCount = 0;
-                                auto const result = extractGltfValue(
-                                    gltfModel,
-                                    primitive,
-                                    texture_coordinate_key_name.c_str(),
-                                    2,
-                                    TINYGLTF_COMPONENT_TYPE_FLOAT,
-                                    normalsUVs,
-                                    normalUvsCount,
-                                    hasNormalUvMinMax,
-                                    normals_uv_min,
-                                    normals_uv_max
-                                );
-                                MFA_ASSERT(result == true);
-                                MFA_ASSERT(normalUvsCount == primitiveVertexCount);
-                            }
-                            float const * normalValues = nullptr;
-                            float normalsValuesMin [3] {};
-                            float normalsValuesMax [3] {};
-                            bool hasNormalValueMinMax = false;
-                            {// Normal uvs
-                                uint32_t normalValuesCount = 0;
-                                auto const result = extractGltfValue(
-                                    gltfModel,
-                                    primitive,
-                                    "NORMAL",
-                                    3,
-                                    TINYGLTF_COMPONENT_TYPE_FLOAT,
-                                    normalValues,
-                                    normalValuesCount,
-                                    hasNormalValueMinMax,
-                                    normalsValuesMin,
-                                    normalsValuesMax
-                                );
-                                MFA_ASSERT(result == false || normalValuesCount == primitiveVertexCount);                           
-                            }
-                            float const * tangentValues = nullptr;
-                            float tangentsValuesMin [4] {};
-                            float tangentsValuesMax [4] {};
-                            bool hasTangentsValuesMinMax = false;
-                            {// Tangent values
-                                uint32_t tangentValuesCount = 0;
-                                auto const result = extractGltfValue(
-                                    gltfModel,
-                                    primitive,
-                                    "TANGENT",
-                                    4,
-                                    TINYGLTF_COMPONENT_TYPE_FLOAT,
-                                    tangentValues,
-                                    tangentValuesCount,
-                                    hasTangentsValuesMinMax,
-                                    tangentsValuesMin,
-                                    tangentsValuesMax
-                                );
-                                MFA_ASSERT(result == false || tangentValuesCount == primitiveVertexCount);                           
-                            }
-                            float const * jointValues = nullptr;
-                            uint32_t jointValuesCount = 0;
-                            {// Joints
-                                extractGltfValue(
-                                    gltfModel,
-                                    primitive,
-                                    "JOINTS_0",
-                                    4,
-                                    TINYGLTF_COMPONENT_TYPE_FLOAT,
-                                    jointValues,
-                                    jointValuesCount
-                                );
-                            }
-                            float const * weightValues = nullptr;
-                            uint32_t weightValuesCount = 0;
-                            {// Weights
-                                extractGltfValue(
-                                    gltfModel,
-                                    primitive,
-                                    "WEIGHTS_0",
-                                    4,
-                                    TINYGLTF_COMPONENT_TYPE_FLOAT,
-                                    weightValues,
-                                    weightValuesCount
-                                );
-                            }
-                            // TODO Start from here, Assign weight and joint
-                            float const * colors = nullptr;
-                            float colorsMinValue [3] {0};
-                            float colorsMaxValue [3] {1};
-                            float colorsMinMaxDiff [3] {1};
-                            if(primitive.attributes["COLOR"] >= 0) {
-                                MFA_REQUIRE(primitive.attributes["COLOR"] < gltfModel.accessors.size());
-                                auto const & accessor = gltfModel.accessors[primitive.attributes["COLOR"]];
-                                //MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-                                //TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT
-                                if (accessor.minValues.size() == 3 && accessor.maxValues.size() == 3) {
-                                    colorsMinValue[0] = static_cast<float>(accessor.minValues[0]);
-                                    colorsMinValue[1] = static_cast<float>(accessor.minValues[1]);
-                                    colorsMinValue[2] = static_cast<float>(accessor.minValues[2]);
-                                    colorsMaxValue[0] = static_cast<float>(accessor.maxValues[0]);
-                                    colorsMaxValue[1] = static_cast<float>(accessor.maxValues[1]);
-                                    colorsMaxValue[2] = static_cast<float>(accessor.maxValues[2]);
-                                    colorsMinMaxDiff[0] = colorsMaxValue[0] - colorsMinValue[0];
-                                    colorsMinMaxDiff[1] = colorsMaxValue[1] - colorsMinValue[1];
-                                    colorsMinMaxDiff[2] = colorsMaxValue[2] - colorsMinValue[2];
-                                }
-                                auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
-                                MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
-                                auto const & buffer = gltfModel.buffers[bufferView.buffer];
-                                colors = reinterpret_cast<const float *>(
-                                    &buffer.data[bufferView.byteOffset + accessor.byteOffset]
-                                );
-                            }
-                            
-                            bool hasPosition = positions != nullptr;
-                            MFA_ASSERT(hasPosition == true);
-                            bool hasBaseColorTexture = baseColorUvs != nullptr;
-                            MFA_ASSERT(baseColorUvs != nullptr == baseColorTextureIndex >= 0);
-                            bool hasNormalValue = normalValues != nullptr;
-                            MFA_ASSERT(hasNormalValue == true);
-                            bool hasNormalTexture = normalsUVs != nullptr;
-                            MFA_ASSERT(normalsUVs != nullptr == normalTextureIndex >= 0);
-                            bool hasCombinedMetallicRoughness = metallicRoughnessUvs != nullptr;
-                            MFA_ASSERT(metallicRoughnessUvs != nullptr == metallicRoughnessTextureIndex >= 0);
-                            bool hasEmissiveTexture = emissionUVs != nullptr;
-                            MFA_ASSERT(emissionUVs != nullptr == emissiveTextureIndex >= 0);
-                            bool hasTangentValue = tangentValues != nullptr;
-                            for (uint32_t i = 0; i < primitiveVertexCount; ++i) {
-                                primitiveVertices.emplace_back();
-                                auto & vertex = primitiveVertices.back();
-                                if (hasPosition) {// Vertices
-                                    vertex.position[0] = positions[i * 3 + 0];
-                                    vertex.position[1] = positions[i * 3 + 1];
-                                    vertex.position[2] = positions[i * 3 + 2];
-                                    if (hasPositionMinMax) {
-                                        MFA_ASSERT(vertex.position[0] >= positionsMinValue[0]);
-                                        MFA_ASSERT(vertex.position[0] <= positionsMaxValue[0]);
-                                        MFA_ASSERT(vertex.position[1] >= positionsMinValue[1]);
-                                        MFA_ASSERT(vertex.position[1] <= positionsMaxValue[1]);
-                                        MFA_ASSERT(vertex.position[2] >= positionsMinValue[2]);
-                                        MFA_ASSERT(vertex.position[2] <= positionsMaxValue[2]);
-                                    }
-                                }
-                                if(hasNormalValue) {// Normal values
-                                    vertex.normalValue[0] = normalValues[i * 3 + 0];
-                                    vertex.normalValue[1] = normalValues[i * 3 + 1];
-                                    vertex.normalValue[2] = normalValues[i * 3 + 2];
-                                    if (hasNormalValueMinMax) {
-                                        MFA_ASSERT(vertex.normalValue[0] >= normalsValuesMin[0]);
-                                        MFA_ASSERT(vertex.normalValue[0] <= normalsValuesMax[0]);
-                                        MFA_ASSERT(vertex.normalValue[1] >= normalsValuesMin[1]);
-                                        MFA_ASSERT(vertex.normalValue[1] <= normalsValuesMax[1]);
-                                        MFA_ASSERT(vertex.normalValue[2] >= normalsValuesMin[2]);
-                                        MFA_ASSERT(vertex.normalValue[2] <= normalsValuesMax[2]);
-                                    }
-                                }
-                                if(hasNormalTexture) {// Normal uvs
-                                    vertex.normalMapUV[0] = normalsUVs[i * 2 + 0];
-                                    vertex.normalMapUV[1] = normalsUVs[i * 2 + 1];
-                                    if (hasNormalUvMinMax) {
-                                        MFA_ASSERT(vertex.normalMapUV[0] >= normals_uv_min[0]);
-                                        MFA_ASSERT(vertex.normalMapUV[0] <= normals_uv_max[0]);
-                                        MFA_ASSERT(vertex.normalMapUV[1] >= normals_uv_min[1]);
-                                        MFA_ASSERT(vertex.normalMapUV[1] <= normals_uv_max[1]);
-                                    }
-                                }
-                                if(hasTangentValue) {// Tangent
-                                    vertex.tangentValue[0] = tangentValues[i * 4 + 0];
-                                    vertex.tangentValue[1] = tangentValues[i * 4 + 1];
-                                    vertex.tangentValue[2] = tangentValues[i * 4 + 2];
-                                    vertex.tangentValue[3] = tangentValues[i * 4 + 3];
-                                    if (hasTangentsValuesMinMax) {
-                                        MFA_ASSERT(vertex.tangentValue[0] >= tangentsValuesMin[0]);
-                                        MFA_ASSERT(vertex.tangentValue[0] <= tangentsValuesMax[0]);
-                                        MFA_ASSERT(vertex.tangentValue[1] >= tangentsValuesMin[1]);
-                                        MFA_ASSERT(vertex.tangentValue[1] <= tangentsValuesMax[1]);
-                                        MFA_ASSERT(vertex.tangentValue[2] >= tangentsValuesMin[2]);
-                                        MFA_ASSERT(vertex.tangentValue[2] <= tangentsValuesMax[2]);
-                                        MFA_ASSERT(vertex.tangentValue[3] >= tangentsValuesMin[3]);
-                                        MFA_ASSERT(vertex.tangentValue[3] <= tangentsValuesMax[3]);
-                                    }
-                                }
-                                if(hasEmissiveTexture) {// Emissive
-                                    vertex.emissionUV[0] = emissionUVs[i * 2 + 0];
-                                    vertex.emissionUV[1] = emissionUVs[i * 2 + 1];
-                                    if (hasEmissionUvMinMax) {
-                                        MFA_ASSERT(vertex.emissionUV[0] >= emission_uv_min[0]);
-                                        MFA_ASSERT(vertex.emissionUV[0] <= emission_uv_max[0]);
-                                        MFA_ASSERT(vertex.emissionUV[1] >= emission_uv_min[1]);
-                                        MFA_ASSERT(vertex.emissionUV[1] <= emission_uv_max[1]);
-                                    }
-                                }
-                                if (hasBaseColorTexture) {// BaseColor
-                                    vertex.baseColorUV[0] = baseColorUvs[i * 2 + 0];
-                                    vertex.baseColorUV[1] = baseColorUvs[i * 2 + 1];
-                                    if (hasBaseColorUvMinMax) {
-                                        MFA_ASSERT(vertex.baseColorUV[0] >= baseColorUvMin[0]);
-                                        MFA_ASSERT(vertex.baseColorUV[0] <= baseColorUvMax[0]);
-                                        MFA_ASSERT(vertex.baseColorUV[1] >= baseColorUvMin[1]);
-                                        MFA_ASSERT(vertex.baseColorUV[1] <= baseColorUvMax[1]);
-                                    }
-                                }
-                                if (hasCombinedMetallicRoughness) {// MetallicRoughness
-                                    vertex.roughnessUV[0] = metallicRoughnessUvs[i * 2 + 0];
-                                    vertex.roughnessUV[1] = metallicRoughnessUvs[i * 2 + 1];
-                                    ::memcpy(vertex.metallicUV, vertex.roughnessUV, sizeof(vertex.roughnessUV));
-                                    static_assert(sizeof(vertex.roughnessUV) == sizeof(vertex.metallicUV));
-                                    if (hasMetallicRoughnessUvMinMax) {
-                                        MFA_ASSERT(vertex.roughnessUV[0] >= metallicRoughnessUVMin[0]);
-                                        MFA_ASSERT(vertex.roughnessUV[0] <= metallicRoughnessUVMax[0]);
-                                        MFA_ASSERT(vertex.roughnessUV[1] >= metallicRoughnessUVMin[1]);
-                                        MFA_ASSERT(vertex.roughnessUV[1] <= metallicRoughnessUVMax[1]);
-                                    }
-                                }
-                                // TODO WTF ?
-                                vertex.color[0] = static_cast<uint8_t>((256/(colorsMinMaxDiff[0])) * colors[i * 3 + 0]);
-                                vertex.color[1] = static_cast<uint8_t>((256/(colorsMinMaxDiff[1])) * colors[i * 3 + 1]);
-                                vertex.color[2] = static_cast<uint8_t>((256/(colorsMinMaxDiff[2])) * colors[i * 3 + 2]);
-                                // TODO Start from here, Assign joint and weight values
-                            }
-
-                            // Creating new subMesh
-                            resultModel.mesh.insertPrimitive(
-                                meshIndex,
-                                AS::MeshPrimitive {
-                                    .uniqueId = uniqueId,
-                                    .baseColorTextureIndex = baseColorTextureIndex,
-                                    .mixedMetallicRoughnessOcclusionTextureIndex = metallicRoughnessTextureIndex,
-                                    .normalTextureIndex = normalTextureIndex,
-                                    .emissiveTextureIndex = emissiveTextureIndex,
-                                    .baseColorFactor = {baseColorFactor[0], baseColorFactor[1], baseColorFactor[2], baseColorFactor[3]},
-                                    .metallicFactor = metallicFactor,
-                                    .roughnessFactor = roughnessFactor,
-                                    .emissiveFactor = {emissiveFactor[0], emissiveFactor[1], emissiveFactor[2]},
-                                    .hasBaseColorTexture = hasBaseColorTexture,
-                                    .hasEmissiveTexture = hasEmissiveTexture,
-                                    .hasMixedMetallicRoughnessOcclusionTexture = hasCombinedMetallicRoughness,
-                                    .hasNormalBuffer = hasNormalValue,
-                                    .hasNormalTexture = hasNormalTexture,
-                                    .hasTangentBuffer = hasTangentValue
-                                }, 
-                                static_cast<uint32_t>(primitiveVertices.size()), 
-                                primitiveVertices.data(), 
-                                static_cast<uint32_t>(primitiveIndices.size()), 
-                                primitiveIndices.data()
-                            );
-
-                            indicesVertexStartingIndex += primitiveVertexCount;
-                            
-                        }
-                    }
-                }
+                // SubMeshes
+                GLTF_extractSubMeshes(gltfModel, textureRefs, resultModel);
             }
-            // Step3: Fill nodes
-            if(false == gltfModel.nodes.empty()) {
-                for (auto const & gltfNode : gltfModel.nodes) {
-                    AS::MeshNode assetNode = {
-                        .subMeshIndex = gltfNode.mesh,
-                        .children = gltfNode.children,
-                        .transformMatrix {},
-                    };
-                    Matrix4X4Float transform = Matrix4X4Float::Identity();
-                    if (gltfNode.matrix.empty() == false) {
-                        MFA_ASSERT(gltfNode.scale.empty());
-                        MFA_ASSERT(gltfNode.rotation.empty());
-                        MFA_ASSERT(gltfNode.translation.empty());
-                        MFA_ASSERT(gltfNode.matrix.size() == 16);
-                        MFA_ASSERT(gltfNode.matrix[3] == 0.0f);
-                        MFA_ASSERT(gltfNode.matrix[7] == 0.0f);
-                        MFA_ASSERT(gltfNode.matrix[11] == 0.0f);
-
-                        transform.castAssign(gltfNode.matrix.data());
-
-                        MFA_ASSERT(transform.get(3, 0) == 0.0f);
-                        MFA_ASSERT(transform.get(3, 1) == 0.0f);
-                        MFA_ASSERT(transform.get(3, 2) == 0.0f);
-                    } else {
-                        if (gltfNode.translation.empty() == false) {
-                            MFA_ASSERT(gltfNode.translation.size() == 3);
-                            Matrix4X4Float translate {};
-                            Matrix4X4Float::AssignTranslation(
-                                translate,
-                                static_cast<float>(gltfNode.translation[0]),
-                                static_cast<float>(gltfNode.translation[1]),
-                                static_cast<float>(gltfNode.translation[2])
-                            );
-                            transform.multiply(translate);
-                        }
-                        if (gltfNode.rotation.empty() == false) {
-                            MFA_ASSERT(gltfNode.rotation.size() == 4);
-                            Matrix4X4Float rotation {};
-                            //https://blender.stackexchange.com/questions/123406/blender-gltf-which-rotation-values-are-really-exported
-                            QuaternionFloat quaternion {};
-                            // TODO We can make 2 the 4th parameter instead
-                            quaternion.set(0, 0, static_cast<float>(gltfNode.rotation[3]));
-                            quaternion.set(1, 0, static_cast<float>(gltfNode.rotation[0]));
-                            quaternion.set(2, 0, static_cast<float>(gltfNode.rotation[1]));
-                            quaternion.set(3, 0, static_cast<float>(gltfNode.rotation[2]));
-
-                            Matrix4X4Float::AssignRotation(rotation, quaternion);
-
-                            transform.multiply(rotation);
-                        }
-                        if (gltfNode.scale.empty() == false) {
-                            MFA_ASSERT(gltfNode.scale.size() == 3);
-                            Matrix4X4Float scale {};
-                            Matrix4X4Float::AssignScale(
-                                scale,
-                                static_cast<float>(gltfNode.scale[0]),
-                                static_cast<float>(gltfNode.scale[1]),
-                                static_cast<float>(gltfNode.scale[2])
-                            );
-                            transform.multiply(scale);
-                        }
-
-                    }
-                    ::memcpy(assetNode.transformMatrix, transform.cells, sizeof(transform.cells));
-                    static_assert(sizeof(assetNode.transformMatrix) == sizeof(transform.cells));
-                    resultModel.mesh.insertNode(assetNode);
-                }
-            }
+            // Nodes
+            GLTF_extractNodes(gltfModel, resultModel);
+            // Fill skin
+            GLTF_extractSkins(gltfModel, resultModel);
+            // Animation (Soon!)
             resultModel.mesh.finalizeData();
             // Remove mesh buffers if invalid
             if(resultModel.mesh.isValid() == false) {
