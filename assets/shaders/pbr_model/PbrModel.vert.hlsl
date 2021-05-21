@@ -40,6 +40,12 @@ struct NodeTranformation {
 
 ConstantBuffer <NodeTranformation> nodeTransformBuffer: register(b1, space0);
 
+struct SkinJoints {
+    float4x4 joints[1000];
+};
+
+ConstantBuffer <SkinJoints> skinJointsBuffer: register(b2, space0); 
+
 VSOut main(VSIn input) {
     VSOut output;
 

@@ -1052,7 +1052,6 @@ static void GLTF_extractSubMeshes(
                     vertex.color[2] = static_cast<uint8_t>((256/(colorsMinMaxDiff[2])) * colors[i * 3 + 2]);
 
                     // Joint and weight
-                    vertex.hasSkin = hasSkin;   
                     if (hasSkin) {
                         vertex.jointIndices[0] = jointValues[i * 4 + 0];
                         vertex.jointIndices[1] = jointValues[i * 4 + 1];
@@ -1084,7 +1083,8 @@ static void GLTF_extractSubMeshes(
                         .hasMixedMetallicRoughnessOcclusionTexture = hasCombinedMetallicRoughness,
                         .hasNormalBuffer = hasNormalValue,
                         .hasNormalTexture = hasNormalTexture,
-                        .hasTangentBuffer = hasTangentValue
+                        .hasTangentBuffer = hasTangentValue,
+                        .hasSkin = hasSkin
                     }, 
                     static_cast<uint32_t>(primitiveVertices.size()), 
                     primitiveVertices.data(), 
@@ -1110,6 +1110,7 @@ static void GLTF_extractNodes(
                 .subMeshIndex = gltfNode.mesh,
                 .children = gltfNode.children,
                 .transformMatrix {},
+                .skin = gltfNode.skin
             };
             Matrix4X4Float transform = Matrix4X4Float::Identity();
             if (gltfNode.matrix.empty() == false) {

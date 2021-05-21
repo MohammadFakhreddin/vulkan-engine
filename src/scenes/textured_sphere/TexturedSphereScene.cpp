@@ -331,7 +331,8 @@ void TexturedSphereScene::createDrawPipeline(uint8_t gpu_shader_count, MFA::Rend
     mDrawPipeline = RF::CreateDrawPipeline(
         gpu_shader_count, 
         gpu_shaders,
-        mDescriptorSetLayout,
+        1,
+        &mDescriptorSetLayout,
         vertex_binding_description,
         static_cast<uint8_t>(input_attribute_descriptions.size()),
         input_attribute_descriptions.data(),

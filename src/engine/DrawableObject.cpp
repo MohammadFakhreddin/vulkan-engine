@@ -1,5 +1,7 @@
 #include "DrawableObject.hpp"
 
+#include <glm/glm.hpp>
+
 namespace MFA {
 
 DrawableObjectId DrawableObject::NextId = 0;
@@ -31,9 +33,21 @@ DrawableObject::DrawableObject(
         mGpuModel->model.mesh.getSubMeshCount()
     );
 
+    mSkinJointsBuffers = RF::CreateUniformBuffer(
+        JointTransformBufferSize,                
+        mGpuModel->model.mesh.getSkinsCount()
+    );
+
     MFA_ASSERT(mGpuModel->valid);
     MFA_ASSERT(mGpuModel->model.mesh.isValid());
 }
+
+// TODO Support for multiple descriptorSetLayout
+//DrawableObject::DrawableObject(
+//    RF::GpuModel & model_, 
+//    uint32_t descriptorSetLayoutsCount, 
+//    VkDescriptorSetLayout_T ** descriptorSetLayouts
+//) {}
 
 RF::GpuModel * DrawableObject::getModel() const {
     return mGpuModel;
@@ -76,6 +90,7 @@ void DrawableObject::deleteUniformBuffers() {
         }
         mUniformBuffers.clear();
     }
+    RF::DestroyUniformBuffer(mSkinJointsBuffers);
     RF::DestroyUniformBuffer(mNodeTransformBuffers);
 }
 
@@ -100,6 +115,25 @@ RF::UniformBufferGroup const & DrawableObject::getNodeTransformBuffer() const no
     return mNodeTransformBuffers;
 }
 
+RF::UniformBufferGroup const & DrawableObject::getSkinTransformBuffer() const noexcept {
+    return mSkinJointsBuffers;
+}
+
+void DrawableObject::update(float deltaTimeInSec) {
+    auto const & mesh = mGpuModel->model.mesh;
+
+    auto const nodesCount = mesh.getNodesCount();
+    auto const * nodes = mesh.getNodeData();
+    MFA_ASSERT(nodes != nullptr);
+    if (nodesCount <= 0) {
+        return;
+    }
+    
+    for (uint32_t i = 0; i < mGpuModel->model.mesh.getNodesCount(); ++i) {
+        updateNode(deltaTimeInSec, mGpuModel->model.mesh.getNodeByIndex(i));
+    }
+}
+
 void DrawableObject::draw(RF::DrawPass & drawPass) {
     BindVertexBuffer(drawPass, mGpuModel->meshBuffers.verticesBuffer);
     BindIndexBuffer(drawPass, mGpuModel->meshBuffers.indicesBuffer);
@@ -118,33 +152,46 @@ void DrawableObject::draw(RF::DrawPass & drawPass) {
     }
 }
 
-void DrawableObject::drawNode(RF::DrawPass & drawPass, const AssetSystem::Mesh::Node & node) {
+
+void DrawableObject::updateNode(float const deltaTimeInSec, AssetSystem::Mesh::Node const & node) {
+    auto const & mesh = mGpuModel->model.mesh;
+    if (node.skin > -1)
+    {
+        // Update the joint matrices
+        glm::mat4 const inverseTransform = glm::inverse(computeNodeTransform(node));
+        auto const & skin = mesh.getSkinByIndex(node.skin);
+
+        std::vector<glm::mat4> jointMatrices(skin.joints.size());
+        for (size_t i = 0; i < skin.joints.size(); i++)
+        {
+            // It's too much computation (Not as much as rasterizer but still too much)
+        	jointMatrices[i] = computeNodeTransform(mesh.getNodeByIndex(skin.joints[i])) * 
+                Matrix4X4Float::ConvertCellsToGlm(skin.inverseBindMatrices[i].value);         // T - S = changes
+            jointMatrices[i] = inverseTransform * jointMatrices[i];                                                             // Why ?
+        }
+        // Update skin buffer
+        RF::UpdateUniformBuffer(
+            mSkinJointsBuffers.buffers[node.skin], 
+            CBlob {skin.joints.data(), skin.joints.size() * sizeof(mJointTransformData)}
+        );
+    }
+
+    for (auto const & childIndex : node.children)
+    {
+        updateNode(deltaTimeInSec, mesh.getNodeByIndex(childIndex));
+    }
+}
+
+void DrawableObject::drawNode(RF::DrawPass & drawPass, AssetSystem::Mesh::Node const & node) {
     // TODO We can reduce nodes count for better performance when importing
     if (node.hasSubMesh()) {
         auto const & mesh = mGpuModel->model.mesh;
         MFA_ASSERT(static_cast<int>(mesh.getSubMeshCount()) > node.subMeshIndex);
 
         Matrix4X4Float nodeTransform {};
-        nodeTransform.assign(node.transformMatrix);
-
-        int parentNodeIndex = node.parent;
-        while(parentNodeIndex >= 0) {
-            auto const & parentNode = mesh.getNodeByIndex(parentNodeIndex);
-
-            Matrix4X4Float parentTransform {};
-            parentTransform.assign(parentNode.transformMatrix);
-            // Note : Multiplication order matter
-            parentTransform.multiply(nodeTransform);
-            
-            nodeTransform.assign(parentTransform);
-
-            parentNodeIndex = parentNode.parent;
-        }
+        computeNodeTransform(node, nodeTransform);
         
-        MFA_ASSERT(nodeTransform.get(3, 0) == 0.0f);
-        MFA_ASSERT(nodeTransform.get(3, 1) == 0.0f);
-        MFA_ASSERT(nodeTransform.get(3, 2) == 0.0f);
-
+        
         ::memcpy(mNodeTransformData.model, nodeTransform.cells, sizeof(nodeTransform.cells));
         MFA_ASSERT(sizeof(nodeTransform.cells) == sizeof(mNodeTransformData.model));
 
@@ -170,6 +217,39 @@ void DrawableObject::drawSubMesh(RF::DrawPass & drawPass, AssetSystem::Mesh::Sub
             );
         }
     }
+}
+
+void DrawableObject::computeNodeTransform(AS::Mesh::Node const & node, Matrix4X4Float & outMatrix) const {
+    auto const & mesh = mGpuModel->model.mesh;
+
+    outMatrix.assign(node.transformMatrix);
+
+    int parentNodeIndex = node.parent;
+    while(parentNodeIndex >= 0) {
+        auto const & parentNode = mesh.getNodeByIndex(parentNodeIndex);
+
+        Matrix4X4Float parentTransform {};
+        parentTransform.assign(parentNode.transformMatrix);
+        // Note : Multiplication order matter
+        parentTransform.multiply(outMatrix);
+        
+        outMatrix.assign(parentTransform);
+
+        parentNodeIndex = parentNode.parent;
+    }
+
+    MFA_ASSERT(outMatrix.get(3, 0) == 0.0f);
+    MFA_ASSERT(outMatrix.get(3, 1) == 0.0f);
+    MFA_ASSERT(outMatrix.get(3, 2) == 0.0f);
+
+}
+
+glm::mat4 DrawableObject::computeNodeTransform(AS::Mesh::Node const & node) const {
+    glm::mat4 result {};
+    Matrix4X4Float tempMatrix {};
+    computeNodeTransform(node, tempMatrix);
+    Matrix4X4Float::ConvertMatrixToGlm(tempMatrix, result);
+    return result;
 }
 
 };

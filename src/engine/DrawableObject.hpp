@@ -3,20 +3,28 @@
 #include "RenderFrontend.hpp"
 
 #include <unordered_map>
+#include <glm/fwd.hpp>
 
 namespace MFA {
 
 namespace RF = RenderFrontend;
 namespace RB = RenderBackend;
+namespace AS = AssetSystem;
 
 using DrawableObjectId = uint32_t;
 
 class DrawableObject {
 public:
 
-    DrawableObject(
+    explicit DrawableObject(
         RF::GpuModel & model_,
         VkDescriptorSetLayout_T * descriptorSetLayout
+    );
+
+    explicit DrawableObject(
+        RF::GpuModel & model_,
+        uint32_t descriptorSetLayoutsCount,
+        VkDescriptorSetLayout_T ** descriptorSetLayouts
     );
 
     ~DrawableObject() = default;
@@ -65,6 +73,10 @@ public:
 
     [[nodiscard]] RF::UniformBufferGroup const & getNodeTransformBuffer() const noexcept;
 
+    [[nodiscard]] RF::UniformBufferGroup const & getSkinTransformBuffer() const noexcept;
+
+    void update(float deltaTimeInSec);
+
     void draw(RF::DrawPass & drawPass);
 
     [[nodiscard]]
@@ -75,20 +87,32 @@ public:
 private:
 
     struct NodeTransformBuffer {
-        //float rotationAndScale[16];
-        //float translate[16];
         float model[16];
     } mNodeTransformData {};
 
-    void drawNode(RF::DrawPass & drawPass, const AssetSystem::Mesh::Node & node);
+    struct JointTransformBuffer {
+        float model[16];
+    } mJointTransformData {};
 
-    void drawSubMesh(RF::DrawPass & drawPass, AssetSystem::Mesh::SubMesh const & subMesh);
+    // TODO Find a better number, other than 1000
+    static constexpr uintmax_t JointTransformBufferSize = sizeof(JointTransformBuffer) * 1000;
+
+    void updateNode(float deltaTimeInSec, AS::Mesh::Node const & node);
+
+    void drawNode(RF::DrawPass & drawPass, const AS::Mesh::Node & node);
+
+    void drawSubMesh(RF::DrawPass & drawPass, AS::Mesh::SubMesh const & subMesh);
+
+    glm::mat4 computeNodeTransform(AS::Mesh::Node const & node) const;
+
+    void computeNodeTransform(const AS::Mesh::Node & node, Matrix4X4Float & outMatrix) const;
 
     static DrawableObjectId NextId;
 
     DrawableObjectId const mId = 0;
     // Note: Order is important
     RF::UniformBufferGroup mNodeTransformBuffers {};
+    RF::UniformBufferGroup mSkinJointsBuffers {};
     RF::GpuModel * mGpuModel = nullptr;
     std::vector<VkDescriptorSet_T *> mDescriptorSets {};
     std::unordered_map<std::string, RF::UniformBufferGroup> mUniformBuffers {};

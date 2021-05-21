@@ -91,15 +91,18 @@ private:
 
     bool mIsInitialized = false;
 
+    // TODO Support multiple descriptorSetLayouts
     VkDescriptorSetLayout_T * mDescriptorSetLayout = nullptr;
 
-    MFA::RenderFrontend::DrawPipeline mDrawPipeline {};
+    RenderFrontend::DrawPipeline mDrawPipeline {};
 
     std::unordered_map<DrawableObjectId, std::unique_ptr<DrawableObject>> mDrawableObjects {};
 
     RF::SamplerGroup * mSamplerGroup = nullptr; // TODO Each gltf subMesh has its own settings
 
     RB::GpuTexture * mErrorTexture = nullptr;
+
+    RF::UniformBufferGroup mErrorBuffer {};
 
     RF::UniformBufferGroup mLightViewBuffer {};
 };

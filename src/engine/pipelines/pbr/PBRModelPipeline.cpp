@@ -78,6 +78,8 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel
 
     const auto & nodeTransformBuffer = drawableObject->getNodeTransformBuffer();
 
+    const auto & skinTransformBuffer = drawableObject->getSkinTransformBuffer();
+
     auto const & textures = drawableObject->getModel()->textures;
 
     auto const & mesh = drawableObject->getModel()->model.mesh;
@@ -103,7 +105,7 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel
                     writeInfo.emplace_back(VkWriteDescriptorSet {
                         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                         .dstSet = descriptorSet,
-                        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+                        .dstBinding = 0,
                         .dstArrayElement = 0,
                         .descriptorCount = 1,
                         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -119,11 +121,27 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel
                     writeInfo.emplace_back(VkWriteDescriptorSet {
                         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                         .dstSet = descriptorSet,
-                        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+                        .dstBinding = 1,
                         .dstArrayElement = 0,
                         .descriptorCount = 1,
                         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                         .pBufferInfo = &nodeTransformBufferInfo,
+                    });
+
+                    // SkinJoints
+                    VkDescriptorBufferInfo skinTransformBufferInfo {
+                        .buffer = primitive.hasSkin ? skinTransformBuffer.buffers[node.subMeshIndex].buffer : mErrorBuffer.buffers[0].buffer,
+                        .offset = 0,
+                        .range = primitive.hasSkin ? skinTransformBuffer.bufferSize : mErrorBuffer.bufferSize
+                    };
+                    writeInfo.emplace_back(VkWriteDescriptorSet {
+                        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                        .dstSet = descriptorSet,
+                        .dstBinding = 2,
+                        .dstArrayElement = 0,
+                        .descriptorCount = 1,
+                        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                        .pBufferInfo = &skinTransformBufferInfo,
                     });
 
                     // Primitive
@@ -135,12 +153,13 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel
                     writeInfo.emplace_back(VkWriteDescriptorSet {
                         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                         .dstSet = descriptorSet,
-                        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+                        .dstBinding = 3,
                         .dstArrayElement = 0,
                         .descriptorCount = 1,
                         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                         .pBufferInfo = &primitiveBufferInfo,
                     });
+
                     // Update primitive buffer information
                     PrimitiveInfo info {
                         .baseColorFactor {},
@@ -173,7 +192,7 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel
                     writeInfo.emplace_back(VkWriteDescriptorSet {
                         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                         .dstSet = descriptorSet,
-                        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+                        .dstBinding = 4,
                         .dstArrayElement = 0,
                         .descriptorCount = 1,
                         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -191,7 +210,7 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel
                     writeInfo.emplace_back(VkWriteDescriptorSet {
                         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                         .dstSet = descriptorSet,
-                        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+                        .dstBinding = 5,
                         .dstArrayElement = 0,
                         .descriptorCount = 1,
                         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -209,7 +228,7 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel
                     writeInfo.emplace_back(VkWriteDescriptorSet {
                         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                         .dstSet = descriptorSet,
-                        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+                        .dstBinding = 6,
                         .dstArrayElement = 0,
                         .descriptorCount = 1,
                         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -227,7 +246,7 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel
                     writeInfo.emplace_back(VkWriteDescriptorSet {
                         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                         .dstSet = descriptorSet,
-                        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+                        .dstBinding = 7,
                         .dstArrayElement = 0,
                         .descriptorCount = 1,
                         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -243,7 +262,7 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel
                     writeInfo.emplace_back(VkWriteDescriptorSet {
                         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                         .dstSet = descriptorSet,
-                        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+                        .dstBinding = 8,
                         .dstArrayElement = 0,
                         .descriptorCount = 1,
                         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -303,7 +322,7 @@ void MFA::PBRModelPipeline::createDescriptorSetLayout() {
     std::vector<VkDescriptorSetLayoutBinding> bindings {};
     // ModelTransformation 
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<uint32_t>(bindings.size()),
+        .binding = 0,
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
@@ -311,15 +330,22 @@ void MFA::PBRModelPipeline::createDescriptorSetLayout() {
     });
     // NodeTransformation
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<uint32_t>(bindings.size()),
+        .binding = 1,
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
         .pImmutableSamplers = nullptr, // Optional
     });
+    // SkinJoints
+    bindings.emplace_back(VkDescriptorSetLayoutBinding {
+        .binding = 2,
+        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .descriptorCount = 1,
+        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT
+    });
     // Primitive
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<uint32_t>(bindings.size()),
+        .binding = 3,
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -327,7 +353,7 @@ void MFA::PBRModelPipeline::createDescriptorSetLayout() {
     });
     // BaseColor
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<uint32_t>(bindings.size()),
+        .binding = 4,
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -335,7 +361,7 @@ void MFA::PBRModelPipeline::createDescriptorSetLayout() {
     });
     // Metallic/Roughness
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<uint32_t>(bindings.size()),
+        .binding = 5,
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -343,7 +369,7 @@ void MFA::PBRModelPipeline::createDescriptorSetLayout() {
     });
     // Normal
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<uint32_t>(bindings.size()),
+        .binding = 6,
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -351,7 +377,7 @@ void MFA::PBRModelPipeline::createDescriptorSetLayout() {
     });
     // Emissive
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<uint32_t>(bindings.size()),
+        .binding = 7,
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -359,17 +385,16 @@ void MFA::PBRModelPipeline::createDescriptorSetLayout() {
     });
     // Light/View
     bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<uint32_t>(bindings.size()),
+        .binding = 8,
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
         .descriptorCount = 1,
         .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         .pImmutableSamplers = nullptr, // Optional
     });
-    MFA_ASSERT(mDescriptorSetLayout == nullptr);
     mDescriptorSetLayout = RF::CreateDescriptorSetLayout(
         static_cast<uint8_t>(bindings.size()),
         bindings.data()
-    );
+    );  
 }
 
 void MFA::PBRModelPipeline::destroyDescriptorSetLayout() {
@@ -464,9 +489,10 @@ void MFA::PBRModelPipeline::createPipeline() {
     });
     MFA_ASSERT(mDrawPipeline.isValid() == false);
     mDrawPipeline = RF::CreateBasicDrawPipeline(
-        static_cast<uint32_t>(shaders.size()), 
+        static_cast<uint8_t>(shaders.size()), 
         shaders.data(),
-        mDescriptorSetLayout,
+        1,
+        &mDescriptorSetLayout,
         vertex_binding_description,
         static_cast<uint8_t>(input_attribute_descriptions.size()),
         input_attribute_descriptions.data()
@@ -480,9 +506,11 @@ void MFA::PBRModelPipeline::destroyPipeline() {
 
 void MFA::PBRModelPipeline::createUniformBuffers() {
     mLightViewBuffer = RF::CreateUniformBuffer(sizeof(LightViewBuffer), 1);
+    mErrorBuffer = RF::CreateUniformBuffer(1, 1);
 }
 
 void MFA::PBRModelPipeline::destroyUniformBuffers() {
+    RF::DestroyUniformBuffer(mErrorBuffer);
     RF::DestroyUniformBuffer(mLightViewBuffer);
 
     for (const auto & [id, drawableObject] : mDrawableObjects) {

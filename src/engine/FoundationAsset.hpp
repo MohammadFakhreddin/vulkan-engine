@@ -264,7 +264,6 @@ public:
         Color color {};
         Normal normalValue {};
         Tangent tangentValue {};
-        bool hasSkin = false;
         uint16_t jointIndices[4] {};
         float jointWeights[4] {};
     };
@@ -297,6 +296,7 @@ public:
         bool hasNormalBuffer = false;
         bool hasNormalTexture = false;
         bool hasTangentBuffer = false;
+        bool hasSkin = false;
     };
     
     struct SubMesh {
@@ -308,9 +308,7 @@ public:
         std::vector<int> children {};
         float transformMatrix[16] {};
         int parent = -1;
-        float jointIndices[4] {-1, -1, -1, -1};
-        float jointWeights[4] {0, 0, 0, 0};
-        bool hasSkin = false;
+        int skin = -1;
     
         [[nodiscard]]
         bool hasSubMesh() const noexcept {

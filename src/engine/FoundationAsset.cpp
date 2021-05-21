@@ -198,7 +198,8 @@ void Mesh::insertNode(Node const & node) {
     mNodes.emplace_back(node);
 }
 
-void Mesh::insertSkin(Skin const & skin) {
+void Mesh::insertSkin(
+Skin const & skin) {
     mSkins.emplace_back(skin);
 }
 

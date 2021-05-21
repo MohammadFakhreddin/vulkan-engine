@@ -17,7 +17,7 @@ struct PSOut {
     float4 color:SV_Target0;
 };
 
-struct SubMeshInfo {
+struct PrimitiveInfo {
     float4 baseColorFactor: COLOR0;
     float3 emissiveFactor: COLOR3;
     float placeholder0;
@@ -33,19 +33,19 @@ struct SubMeshInfo {
     int hasEmissiveTexture;
 };
 
-ConstantBuffer <SubMeshInfo> smBuff : register (b2, space0);
+ConstantBuffer <PrimitiveInfo> smBuff : register (b3, space0);
 
-sampler baseColorSampler : register(s3, space0);
-Texture2D baseColorTexture : register(t3, space0);
+sampler baseColorSampler : register(s4, space0);
+Texture2D baseColorTexture : register(t4, space0);
 
-sampler metallicRoughnessSampler : register(s4, space0);
-Texture2D metallicRoughnessTexture : register(t4, space0);
+sampler metallicRoughnessSampler : register(s5, space0);
+Texture2D metallicRoughnessTexture : register(t5, space0);
 
-sampler normalSampler : register(s5, space0);
-Texture2D normalTexture : register(t5, space0);
+sampler normalSampler : register(s6, space0);
+Texture2D normalTexture : register(t6, space0);
 
-sampler emissiveSampler : register(s6, space0);
-Texture2D emissiveTexture : register(s6, space0);
+sampler emissiveSampler : register(s7, space0);
+Texture2D emissiveTexture : register(s7, space0);
 
 struct LightViewBuffer {
     float3 lightPosition;
@@ -53,7 +53,7 @@ struct LightViewBuffer {
     float3 lightColor;          // Light color can be from 0 to inf (Sun for example can exceed 1.0f)
 };
 
-ConstantBuffer <LightViewBuffer> lvBuff : register (b7, space0);
+ConstantBuffer <LightViewBuffer> lvBuff : register (b8, space0);
 
 const float PI = 3.14159265359;
 

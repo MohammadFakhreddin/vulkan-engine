@@ -235,7 +235,8 @@ void Init() {
         state->draw_pipeline = RF::CreateDrawPipeline(
             static_cast<uint8_t>(shader_stages.size()),
             shader_stages.data(),
-            state->descriptor_set_layout,
+            1,
+            &state->descriptor_set_layout,
             vertex_binding_description,
             static_cast<uint8_t>(input_attribute_description.size()),
             input_attribute_description.data(),

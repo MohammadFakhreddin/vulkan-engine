@@ -278,7 +278,8 @@ void MFA::PointLightPipeline::createPipeline() {
     mDrawPipeline = RF::CreateDrawPipeline(
         static_cast<uint32_t>(shaders.size()), 
         shaders.data(),
-        mDescriptorSetLayout,
+        1,
+        &mDescriptorSetLayout,
         vertex_binding_description,
         static_cast<uint8_t>(input_attribute_descriptions.size()),
         input_attribute_descriptions.data(),

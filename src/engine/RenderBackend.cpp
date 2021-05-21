@@ -1449,12 +1449,13 @@ GraphicPipelineGroup CreateGraphicPipeline(
     VkVertexInputAttributeDescription * attribute_description_data,
     VkExtent2D swap_chain_extent,
     VkRenderPass_T * render_pass,
-    VkDescriptorSetLayout_T * descriptor_set_layout,
+    uint32_t descriptor_set_layout_count,
+    VkDescriptorSetLayout_T ** descriptor_set_layouts,
     CreateGraphicPipelineOptions const & options
 ) {
     MFA_ASSERT(shader_stages);
     MFA_ASSERT(render_pass);
-    MFA_ASSERT(descriptor_set_layout);
+    MFA_ASSERT(descriptor_set_layouts);
     // Set up shader stage info
     std::vector<VkPipelineShaderStageCreateInfo> shader_stages_create_infos {shader_stages_count};
     for(uint8_t i = 0; i < shader_stages_count; i++) {
@@ -1545,8 +1546,8 @@ GraphicPipelineGroup CreateGraphicPipeline(
 
     VkPipelineLayoutCreateInfo layout_create_info = {};
     layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    layout_create_info.setLayoutCount = 1;
-    layout_create_info.pSetLayouts = &descriptor_set_layout; // Array of descriptor set layout, Order matter when more than 1
+    layout_create_info.setLayoutCount = descriptor_set_layout_count;
+    layout_create_info.pSetLayouts = descriptor_set_layouts; // Array of descriptor set layout, Order matter when more than 1
     layout_create_info.pushConstantRangeCount = options.push_constants_range_count;
     layout_create_info.pPushConstantRanges = options.push_constant_ranges;
     

@@ -426,7 +426,8 @@ GraphicPipelineGroup CreateGraphicPipeline(
     VkVertexInputAttributeDescription * attribute_description_data,
     VkExtent2D swap_chain_extent,
     VkRenderPass_T * render_pass,
-    VkDescriptorSetLayout_T * descriptor_set_layout,
+    uint32_t descriptor_set_layout_count,
+    VkDescriptorSetLayout_T ** descriptor_set_layouts,
     CreateGraphicPipelineOptions const & options
 );
 

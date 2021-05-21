@@ -221,7 +221,8 @@ void TextureViewerScene::createDrawPipeline(
     mDrawPipeline = RF::CreateBasicDrawPipeline(
         gpuShaderCount, 
         gpuShaders,
-        mDescriptorSetLayout,
+        1,
+        &mDescriptorSetLayout,
         vertexInputBindingDescription,
         static_cast<uint8_t>(vkVertexInputAttributeDescriptions.size()),
         vkVertexInputAttributeDescriptions.data()

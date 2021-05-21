@@ -107,7 +107,8 @@ void PBRScene::Init() {
         m_draw_pipeline = RF::CreateDrawPipeline(
             static_cast<uint8_t>(shaders.size()), 
             shaders.data(),
-            m_descriptor_set_layout,
+            1,
+            &m_descriptor_set_layout,
             vertex_binding_description,
             static_cast<uint32_t>(input_attribute_descriptions.size()),
             input_attribute_descriptions.data(),

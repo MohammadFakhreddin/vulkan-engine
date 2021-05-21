@@ -15,6 +15,8 @@
 #undef near
 #endif
 
+#include <glm/glm.hpp>
+
 // Like GLM we can have union to access both linear and 2d or eve
 
 // Note: This class is column major from now on
@@ -708,31 +710,49 @@ public:
     matrix.set(2, 2, matrix.get(2, 2) + value);
   }
 
-  static _Matrix<T,Width,Height> Identity()
-  {
-    _Matrix<T,Width,Height> matrix {};
-    _Matrix<T,Width,Height>::Identity(matrix);
-    return matrix;
-  }
-
-  static void Identity(_Matrix<T,Width,Height> & matrix)
-  {
-    int i = 0;
-    int j = 0;
-    for(i = 0 ; i < Width ; i ++ )
+    static _Matrix<T,Width,Height> Identity()
     {
-        for(j = 0 ; j < Height ; j ++)
+        _Matrix<T,Width,Height> matrix {};
+        _Matrix<T,Width,Height>::Identity(matrix);
+        return matrix;
+    }
+
+    static void Identity(_Matrix<T,Width,Height> & matrix)
+    {
+        int i = 0;
+        int j = 0;
+        for(i = 0 ; i < Width ; i ++ )
         {
-            if(i==j)
+            for(j = 0 ; j < Height ; j ++)
             {
-                matrix.cells[i * Height + j] = T(1);
-            } else
-            {
-                matrix.cells[i * Height + j] = T(0);
+                if(i==j)
+                {
+                    matrix.cells[i * Height + j] = T(1);
+                } else
+                {
+                    matrix.cells[i * Height + j] = T(0);
+                }
+            }
+        }    
+    }
+
+    static void ConvertMatrixToGlm(_Matrix<float, 4, 4> const & inMatrix, glm::mat4 & outMatrix) {
+        ConvertCellsToGlm(inMatrix.cells, outMatrix);
+    }
+
+    static glm::mat4 ConvertCellsToGlm(float const * cells) {
+        glm::mat4 result {};
+        ConvertCellsToGlm(cells, result);
+        return result;
+    }
+
+    static void ConvertCellsToGlm(float const * cells, glm::mat4 & outMatrix) {
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                outMatrix[i][j] = cells[i * 4 + j];
             }
         }
-    }    
-  }
+    }
 
   //TODO Write unit tests for project
   void crossProduct(const _Matrix<T, 4, 1>& mat1, const _Matrix<T, 4, 1>& mat2) {

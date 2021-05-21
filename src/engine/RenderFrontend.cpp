@@ -1,7 +1,5 @@
 #include "RenderFrontend.hpp"
 
-#include <string>
-
 #include "BedrockAssert.hpp"
 #include "RenderBackend.hpp"
 #include "BedrockLog.hpp"
@@ -388,19 +386,21 @@ void DestroyDescriptorSetLayout(VkDescriptorSetLayout_T * descriptorSetLayout) {
 DrawPipeline CreateBasicDrawPipeline(
     uint8_t const gpuShadersCount, 
     RB::GpuShader * gpuShaders,
-    VkDescriptorSetLayout_T * descriptorSetLayout,
+    uint32_t const descriptorSetLayoutCount,
+    VkDescriptorSetLayout_T ** descriptorSetLayouts,
     VkVertexInputBindingDescription const & vertexInputBindingDescription,
     uint8_t const vertexInputAttributeDescriptionCount,
     VkVertexInputAttributeDescription * vertexInputAttributeDescriptions
 ) {
     MFA_ASSERT(gpuShadersCount > 0);
     MFA_ASSERT(gpuShaders);
-    MFA_ASSERT(descriptorSetLayout);
+    MFA_ASSERT(descriptorSetLayouts);
 
     return CreateDrawPipeline(
         gpuShadersCount,
         gpuShaders,
-        descriptorSetLayout,
+        descriptorSetLayoutCount,
+        descriptorSetLayouts,
         vertexInputBindingDescription,
         vertexInputAttributeDescriptionCount,
         vertexInputAttributeDescriptions,
@@ -432,7 +432,8 @@ DrawPipeline CreateBasicDrawPipeline(
 DrawPipeline CreateDrawPipeline(
     uint8_t const gpu_shaders_count, 
     RB::GpuShader * gpu_shaders,
-    VkDescriptorSetLayout_T * descriptor_set_layout,
+    uint32_t descriptor_layouts_count,
+    VkDescriptorSetLayout_T ** descriptor_set_layouts,
     VkVertexInputBindingDescription const vertex_binding_description,
     uint32_t const input_attribute_description_count,
     VkVertexInputAttributeDescription * input_attribute_description_data,
@@ -450,7 +451,8 @@ DrawPipeline CreateDrawPipeline(
             .height = static_cast<uint32_t>(state->screen_height)
         },
         state->render_pass,
-        descriptor_set_layout,
+        descriptor_layouts_count,
+        descriptor_set_layouts,
         options
     );
 
