@@ -13,7 +13,8 @@ public:
     virtual ~BasePipeline() = default;
 
     virtual void render(        
-        RF::DrawPass & drawPass, 
+        RF::DrawPass & drawPass,
+        float deltaTime,
         uint32_t idsCount, 
         DrawableObjectId * ids
     ) = 0;

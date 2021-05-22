@@ -135,7 +135,8 @@ bool MFA::PointLightPipeline::removeGpuModel(DrawableObjectId const drawableObje
 }
 
 void MFA::PointLightPipeline::render(
-    RF::DrawPass & drawPass, 
+    RF::DrawPass & drawPass,
+    float deltaTime,
     uint32_t const idsCount, 
     DrawableObjectId * ids
 ) {

@@ -264,8 +264,9 @@ public:
         Color color {};
         Normal normalValue {};
         Tangent tangentValue {};
-        uint16_t jointIndices[4] {};
-        float jointWeights[4] {};
+        int hasSkin = 0;       // Duplicate data
+        int jointIndices[4] {-1, -1, -1, -1};
+        float jointWeights[4] {0, 0, 0, 0};
     };
 
     // TODO Camera

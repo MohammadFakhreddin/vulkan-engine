@@ -11,6 +11,7 @@ struct PSIn {
     float3 worldBiTangent : TEXCOORD4;
 
     float2 emissiveTexCoord: TEXCOORD5;
+
 };
 
 struct PSOut {
@@ -31,6 +32,8 @@ struct PrimitiveInfo {
     int hasNormalTexture;  
 
     int hasEmissiveTexture;
+    
+    int hasSkin;    // TODO Move hasSkin to vertex
 };
 
 ConstantBuffer <PrimitiveInfo> smBuff : register (b3, space0);

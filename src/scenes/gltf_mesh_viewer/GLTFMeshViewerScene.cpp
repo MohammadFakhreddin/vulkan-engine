@@ -171,7 +171,9 @@ void GLTFMeshViewerScene::Init() {
 void GLTFMeshViewerScene::OnDraw(uint32_t const delta_time, RF::DrawPass & draw_pass) {
     MFA_ASSERT(mSelectedModelIndex >=0 && mSelectedModelIndex < mModelsRenderData.size());
 
-    mCamera.onNewFrame(static_cast<float>(delta_time));
+    auto const fDeltaTime = static_cast<float>(delta_time);
+
+    mCamera.onNewFrame(fDeltaTime);
 
     auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
     if (selectedModel.isLoaded == false) {
@@ -308,9 +310,9 @@ void GLTFMeshViewerScene::OnDraw(uint32_t const delta_time, RF::DrawPass & draw_
         mPointLightPipeline.updatePrimitiveInfo(mPointLightObjectId, lightPrimitiveInfo);
     }
     // TODO Pipeline should be able to share buffers such as projection buffer to enable us to update them once
-    mPbrPipeline.render(draw_pass, 1, &selectedModel.drawableObjectId);
+    mPbrPipeline.render(draw_pass, fDeltaTime, 1, &selectedModel.drawableObjectId);
     if (mIsLightVisible) {
-        mPointLightPipeline.render(draw_pass, 1, &mPointLightObjectId);
+        mPointLightPipeline.render(draw_pass, fDeltaTime, 1, &mPointLightObjectId);
     }
 }
 

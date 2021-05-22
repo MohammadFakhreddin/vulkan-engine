@@ -9,6 +9,10 @@ struct VSIn {
     float3 normal: NORMAL0;
 
     float2 emissiveTexCoord: TEXCOORD4;
+
+    int hasSkin;
+    int4 jointIndices;
+    float4 jointWeights; 
 };
 
 struct VSOut {
@@ -46,10 +50,20 @@ struct SkinJoints {
 
 ConstantBuffer <SkinJoints> skinJointsBuffer: register(b2, space0); 
 
+#define IdentityMat float4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+
 VSOut main(VSIn input) {
     VSOut output;
 
-    float4x4 modelMat = mul(modelTransformBuffer.model, nodeTransformBuffer.model);
+    float4x4 skinMat = IdentityMat;
+    if (input.hasSkin) {
+        for (int i = 0; i < 4; ++i) {
+            if (input.jointIndices[i] >= 0) {
+                skinMat += input.jointWeights[i] * skinJointsBuffer.joints[input.jointIndices[i]];                
+            }
+        }
+    }
+    float4x4 modelMat = mul(modelTransformBuffer.model, mul(nodeTransformBuffer.model, skinMat));
     float4x4 modelViewMat = mul(modelTransformBuffer.view, modelMat);
 
     // Position

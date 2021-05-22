@@ -22,6 +22,7 @@ public:
         alignas(4) int hasMixedMetallicRoughnessOcclusionTexture;
         alignas(4) int hasNormalTexture;
         alignas(4) int hasEmissiveTexture;
+        alignas(4) int hasSkin;
     };
 
     struct ViewProjectionData {   // For vertices in Vertex shader
@@ -57,7 +58,8 @@ public:
     void shutdown();
 
     void render(
-        RF::DrawPass & drawPass, 
+        RF::DrawPass & drawPass,
+        float deltaTime,
         uint32_t idsCount, 
         DrawableObjectId * ids
     ) override;

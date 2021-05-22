@@ -1051,6 +1051,8 @@ static void GLTF_extractSubMeshes(
                     vertex.color[1] = static_cast<uint8_t>((256/(colorsMinMaxDiff[1])) * colors[i * 3 + 1]);
                     vertex.color[2] = static_cast<uint8_t>((256/(colorsMinMaxDiff[2])) * colors[i * 3 + 2]);
 
+                    vertex.hasSkin = hasSkin ? 1 : 0;
+
                     // Joint and weight
                     if (hasSkin) {
                         vertex.jointIndices[0] = jointValues[i * 4 + 0];
@@ -1196,14 +1198,14 @@ void GLTF_extractSkins(
             inverseBindMatricesCount
         );
         MFA_ASSERT(inverseBindMatricesPtr != nullptr);
-        skin.inverseBindMatrices.resize(inverseBindMatricesCount / 16);
+        skin.inverseBindMatrices.resize(inverseBindMatricesCount);
         for (size_t i = 0; i < skin.inverseBindMatrices.size(); ++i) {
             auto & currentMatrix = skin.inverseBindMatrices[i];
             for (size_t j = 0; j < 16; ++j) {
                 currentMatrix.value[j] = inverseBindMatricesPtr[i * 16 + j];
             }
         }
-
+        MFA_ASSERT(skin.inverseBindMatrices.size() == skin.joints.size());
         skin.skeletonRootNode = gltfSkin.skeleton;
 
         outResultModel.mesh.insertSkin(skin);

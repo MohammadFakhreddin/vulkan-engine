@@ -119,7 +119,7 @@ RF::UniformBufferGroup const & DrawableObject::getSkinTransformBuffer() const no
     return mSkinJointsBuffers;
 }
 
-void DrawableObject::update(float deltaTimeInSec) {
+void DrawableObject::update(float const deltaTimeInSec) {
     auto const & mesh = mGpuModel->model.mesh;
 
     auto const nodesCount = mesh.getNodesCount();
@@ -166,7 +166,7 @@ void DrawableObject::updateNode(float const deltaTimeInSec, AssetSystem::Mesh::N
         {
             // It's too much computation (Not as much as rasterizer but still too much)
         	jointMatrices[i] = computeNodeTransform(mesh.getNodeByIndex(skin.joints[i])) * 
-                Matrix4X4Float::ConvertCellsToGlm(skin.inverseBindMatrices[i].value);         // T - S = changes
+                Matrix4X4Float::ConvertCellsToGlm(skin.inverseBindMatrices[i].value);  // TODO It should be skeleton root       // T - S = changes
             jointMatrices[i] = inverseTransform * jointMatrices[i];                                                             // Why ?
         }
         // Update skin buffer
@@ -174,11 +174,6 @@ void DrawableObject::updateNode(float const deltaTimeInSec, AssetSystem::Mesh::N
             mSkinJointsBuffers.buffers[node.skin], 
             CBlob {skin.joints.data(), skin.joints.size() * sizeof(mJointTransformData)}
         );
-    }
-
-    for (auto const & childIndex : node.children)
-    {
-        updateNode(deltaTimeInSec, mesh.getNodeByIndex(childIndex));
     }
 }
 

@@ -39,7 +39,8 @@ public:
     bool removeGpuModel(DrawableObjectId drawableObjectId) override;
     
     void render(
-        RF::DrawPass & drawPass, 
+        RF::DrawPass & drawPass,
+        float deltaTime,
         uint32_t idsCount, 
         DrawableObjectId * ids
     ) override;

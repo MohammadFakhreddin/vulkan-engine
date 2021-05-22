@@ -39,7 +39,8 @@ void MFA::PBRModelPipeline::shutdown() {
 }
 
 void MFA::PBRModelPipeline::render(
-    RF::DrawPass & drawPass, 
+    RF::DrawPass & drawPass,
+    float deltaTime,
     uint32_t const idsCount, 
     DrawableObjectId * ids
 ) {
@@ -50,6 +51,7 @@ void MFA::PBRModelPipeline::render(
         if (findResult != mDrawableObjects.end()) {
             auto * drawableObject = findResult->second.get();
             MFA_ASSERT(drawableObject != nullptr);
+            drawableObject->update(deltaTime);
             drawableObject->draw(drawPass);
         }
     }
@@ -130,7 +132,7 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel
 
                     // SkinJoints
                     VkDescriptorBufferInfo skinTransformBufferInfo {
-                        .buffer = primitive.hasSkin ? skinTransformBuffer.buffers[node.subMeshIndex].buffer : mErrorBuffer.buffers[0].buffer,
+                        .buffer = primitive.hasSkin ? skinTransformBuffer.buffers[node.skin].buffer : mErrorBuffer.buffers[0].buffer,
                         .offset = 0,
                         .range = primitive.hasSkin ? skinTransformBuffer.bufferSize : mErrorBuffer.bufferSize
                     };
@@ -171,6 +173,7 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel
                         .hasMixedMetallicRoughnessOcclusionTexture = primitive.hasMixedMetallicRoughnessOcclusionTexture ? 1 : 0,
                         .hasNormalTexture = primitive.hasNormalTexture ? 1 : 0,
                         .hasEmissiveTexture = primitive.hasEmissiveTexture ? 1 : 0,
+                        .hasSkin = primitive.hasSkin ? 1 : 0
                     };
                     ::memcpy(info.baseColorFactor, primitive.baseColorFactor, sizeof(info.baseColorFactor));
                     static_assert(sizeof(info.baseColorFactor) == sizeof(primitive.baseColorFactor));
@@ -486,6 +489,27 @@ void MFA::PBRModelPipeline::createPipeline() {
         .binding = 0,
         .format = VK_FORMAT_R32G32_SFLOAT,
         .offset = offsetof(AS::MeshVertex, emissionUV)
+    });
+    // HasSkin
+    input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
+        .location = static_cast<uint32_t>(input_attribute_descriptions.size()),
+        .binding = 0,
+        .format = VK_FORMAT_R32G32B32A32_SINT,
+        .offset = offsetof(AS::MeshVertex, hasSkin) // TODO We should use a primitiveInfo instead
+    });
+    // JointIndices
+    input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
+        .location = static_cast<uint32_t>(input_attribute_descriptions.size()),
+        .binding = 0,
+        .format = VK_FORMAT_R32G32B32A32_SINT,
+        .offset = offsetof(AS::MeshVertex, jointIndices)
+    });
+    // JointWeights
+    input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
+        .location = static_cast<uint32_t>(input_attribute_descriptions.size()),
+        .binding = 0,
+        .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+        .offset = offsetof(AS::MeshVertex, jointWeights)
     });
     MFA_ASSERT(mDrawPipeline.isValid() == false);
     mDrawPipeline = RF::CreateBasicDrawPipeline(
