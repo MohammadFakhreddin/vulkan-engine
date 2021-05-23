@@ -40,7 +40,7 @@ void MFA::PBRModelPipeline::shutdown() {
 
 void MFA::PBRModelPipeline::render(
     RF::DrawPass & drawPass,
-    float deltaTime,
+    float const deltaTime,
     uint32_t const idsCount, 
     DrawableObjectId * ids
 ) {
@@ -132,7 +132,7 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel
 
                     // SkinJoints
                     VkDescriptorBufferInfo skinTransformBufferInfo {
-                        .buffer = primitive.hasSkin ? skinTransformBuffer.buffers[node.skin].buffer : mErrorBuffer.buffers[0].buffer,
+                        .buffer = primitive.hasSkin ? skinTransformBuffer.buffers[node.skinBufferIndex].buffer : mErrorBuffer.buffers[0].buffer,
                         .offset = 0,
                         .range = primitive.hasSkin ? skinTransformBuffer.bufferSize : mErrorBuffer.bufferSize
                     };
@@ -494,7 +494,7 @@ void MFA::PBRModelPipeline::createPipeline() {
     input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
         .location = static_cast<uint32_t>(input_attribute_descriptions.size()),
         .binding = 0,
-        .format = VK_FORMAT_R32G32B32A32_SINT,
+        .format = VK_FORMAT_R32_SINT,
         .offset = offsetof(AS::MeshVertex, hasSkin) // TODO We should use a primitiveInfo instead
     });
     // JointIndices

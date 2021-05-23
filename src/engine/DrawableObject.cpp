@@ -2,6 +2,8 @@
 
 #include <glm/glm.hpp>
 
+#include "BedrockMemory.hpp"
+
 namespace MFA {
 
 DrawableObjectId DrawableObject::NextId = 0;
@@ -16,10 +18,13 @@ DrawableObject::DrawableObject(
     , mGpuModel(&model_)
 {
     NextId += 1;
+
+    auto & mesh = mGpuModel->model.mesh;
+
     // DescriptorSetCount
     uint32_t descriptorSetCount = 0;
-    for (uint32_t i = 0; i < mGpuModel->model.mesh.getSubMeshCount(); ++i) {
-        auto const & subMesh = mGpuModel->model.mesh.getSubMeshByIndex(i);
+    for (uint32_t i = 0; i < mesh.getSubMeshCount(); ++i) {
+        auto const & subMesh = mesh.getSubMeshByIndex(i);
         descriptorSetCount += static_cast<uint32_t>(subMesh.primitives.size());
     }
     mDescriptorSets = RF::CreateDescriptorSets(
@@ -33,10 +38,21 @@ DrawableObject::DrawableObject(
         mGpuModel->model.mesh.getSubMeshCount()
     );
 
-    mSkinJointsBuffers = RF::CreateUniformBuffer(
-        JointTransformBufferSize,                
-        mGpuModel->model.mesh.getSkinsCount()
-    );
+
+    uint32_t jointBuffersCount = 0;
+    for (uint32_t i = 0; i < mesh.getNodesCount(); ++i) {
+        auto & node = mesh.getNodeByIndex(i);
+        if (node.skin > -1) {
+            node.skinBufferIndex = jointBuffersCount;
+            jointBuffersCount++;
+        }
+    }
+    if (jointBuffersCount > 0) {
+        mSkinJointsBuffers = RF::CreateUniformBuffer(
+            JointTransformBufferSize,                
+            jointBuffersCount
+        );
+    }
 
     MFA_ASSERT(mGpuModel->valid);
     MFA_ASSERT(mGpuModel->model.mesh.isValid());
@@ -125,12 +141,9 @@ void DrawableObject::update(float const deltaTimeInSec) {
     auto const nodesCount = mesh.getNodesCount();
     auto const * nodes = mesh.getNodeData();
     MFA_ASSERT(nodes != nullptr);
-    if (nodesCount <= 0) {
-        return;
-    }
     
-    for (uint32_t i = 0; i < mGpuModel->model.mesh.getNodesCount(); ++i) {
-        updateNode(deltaTimeInSec, mGpuModel->model.mesh.getNodeByIndex(i));
+    for (uint32_t i = 0; i < nodesCount; ++i) {
+        updateJoint(deltaTimeInSec, nodes[i]);
     }
 }
 
@@ -143,17 +156,13 @@ void DrawableObject::draw(RF::DrawPass & drawPass) {
     auto const nodesCount = mesh.getNodesCount();
     auto const * nodes = mesh.getNodeData();
     MFA_ASSERT(nodes != nullptr);
-    if (nodesCount <= 0) {
-        return;
-    }
     
-    for (uint32_t i = 0; i < mGpuModel->model.mesh.getNodesCount(); ++i) {
-        drawNode(drawPass, mGpuModel->model.mesh.getNodeByIndex(i));
+    for (uint32_t i = 0; i < nodesCount; ++i) {
+        drawNode(drawPass, nodes[i]);
     }
 }
 
-
-void DrawableObject::updateNode(float const deltaTimeInSec, AssetSystem::Mesh::Node const & node) {
+void DrawableObject::updateJoint(float const deltaTimeInSec, AssetSystem::Mesh::Node const & node) {
     auto const & mesh = mGpuModel->model.mesh;
     if (node.skin > -1)
     {
@@ -161,18 +170,35 @@ void DrawableObject::updateNode(float const deltaTimeInSec, AssetSystem::Mesh::N
         glm::mat4 const inverseTransform = glm::inverse(computeNodeTransform(node));
         auto const & skin = mesh.getSkinByIndex(node.skin);
 
-        std::vector<glm::mat4> jointMatrices(skin.joints.size());
+        //std::vector<JointTransformBuffer> jointMatrices(skin.joints.size());
+        // TODO Allocate this memory once
+        auto jointMatricesBlob = Memory::Alloc(skin.joints.size() * sizeof(JointTransformBuffer));
+        MFA_DEFER {
+            Memory::Free(jointMatricesBlob);
+        };
+        auto * jointMatrices = jointMatricesBlob.as<JointTransformBuffer>();
         for (size_t i = 0; i < skin.joints.size(); i++)
         {
             // It's too much computation (Not as much as rasterizer but still too much)
-        	jointMatrices[i] = computeNodeTransform(mesh.getNodeByIndex(skin.joints[i])) * 
-                Matrix4X4Float::ConvertCellsToGlm(skin.inverseBindMatrices[i].value);  // TODO It should be skeleton root       // T - S = changes
-            jointMatrices[i] = inverseTransform * jointMatrices[i];                                                             // Why ?
+            auto const & joint = mesh.getNodeByIndex(skin.joints[i]);
+            auto const nodeMatrix = computeNodeTransform(joint);
+            glm::mat4 matrix = nodeMatrix * 
+                Matrix4X4Float::ConvertCellsToGlm(skin.inverseBindMatrices[i].value);  // T - S = changes
+            matrix = inverseTransform * matrix;                                        // Why ?
+            Matrix4X4Float::ConvertGmToCells(matrix, jointMatrices[i].model);
+
+            /*Matrix4X4Float matrix {};
+            computeNodeTransform(joint, matrix);
+            Matrix4X4Float inverseBindMatrix {};
+            inverseBindMatrix.assign(skin.inverseBindMatrices[i].value);
+            matrix.multiply(inverseBindMatrix);
+            matrix.copy(jointMatrices[i].model);*/
         }
         // Update skin buffer
+        // TODO We should store data separately for each joint ?
         RF::UpdateUniformBuffer(
-            mSkinJointsBuffers.buffers[node.skin], 
-            CBlob {skin.joints.data(), skin.joints.size() * sizeof(mJointTransformData)}
+            mSkinJointsBuffers.buffers[node.skinBufferIndex], 
+            CBlob {jointMatricesBlob.ptr, jointMatricesBlob.len}
         );
     }
 }
@@ -197,7 +223,6 @@ void DrawableObject::drawNode(RF::DrawPass & drawPass, AssetSystem::Mesh::Node c
 }
 
 void DrawableObject::drawSubMesh(RF::DrawPass & drawPass, AssetSystem::Mesh::SubMesh const & subMesh) {
-    // We should update transform for each one before update, Fuck!
     // TODO Start from here, Draw node tree
     if (subMesh.primitives.empty() == false) {
         for (auto const & primitive : subMesh.primitives) {
@@ -240,10 +265,22 @@ void DrawableObject::computeNodeTransform(AS::Mesh::Node const & node, Matrix4X4
 }
 
 glm::mat4 DrawableObject::computeNodeTransform(AS::Mesh::Node const & node) const {
-    glm::mat4 result {};
+   /* glm::mat4 result {};
     Matrix4X4Float tempMatrix {};
     computeNodeTransform(node, tempMatrix);
     Matrix4X4Float::ConvertMatrixToGlm(tempMatrix, result);
+    return result;*/
+    auto const & mesh = mGpuModel->model.mesh;
+    glm::mat4 result = Matrix4X4Float::ConvertCellsToGlm(node.transformMatrix);
+    int parentNodeIndex = node.parent;
+    while(parentNodeIndex >= 0) {
+        auto const & parentNode = mesh.getNodeByIndex(parentNodeIndex);
+
+        auto const parentTransform = Matrix4X4Float::ConvertCellsToGlm(parentNode.transformMatrix);
+        result = parentTransform * result;
+
+        parentNodeIndex = parentNode.parent;
+    }
     return result;
 }
 

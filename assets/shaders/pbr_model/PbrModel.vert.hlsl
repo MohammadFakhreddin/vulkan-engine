@@ -45,29 +45,40 @@ struct NodeTranformation {
 ConstantBuffer <NodeTranformation> nodeTransformBuffer: register(b1, space0);
 
 struct SkinJoints {
-    float4x4 joints[1000];
+    float4x4 joints[];
 };
 
 ConstantBuffer <SkinJoints> skinJointsBuffer: register(b2, space0); 
 
 #define IdentityMat float4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
 
+// float4x4 extractJointMatrix(float jointWeight, int jointIndex) {
+//     // if (jointWeight > 0 && jointIndex >=0 ) {
+//     return jointWeight * skinJointsBuffer.joints[jointIndex];     
+//     // }  
+//     // return 0;
+// }
+
 VSOut main(VSIn input) {
     VSOut output;
 
     float4x4 skinMat = IdentityMat;
-    if (input.hasSkin) {
-        for (int i = 0; i < 4; ++i) {
-            if (input.jointIndices[i] >= 0) {
-                skinMat += input.jointWeights[i] * skinJointsBuffer.joints[input.jointIndices[i]];                
-            }
-        }
+    if (input.hasSkin == 1) {
+        // skinMat = extractJointMatrix(input.jointWeights.x, input.jointIndices.x)
+        //     + extractJointMatrix(input.jointWeights.y, input.jointIndices.y)
+        //     + extractJointMatrix(input.jointWeights.z, input.jointIndices.z)
+        //     + extractJointMatrix(input.jointWeights.w, input.jointIndices.w);
+        skinMat = mul(skinJointsBuffer.joints[input.jointIndices.x], input.jointWeights.x)
+            + mul(skinJointsBuffer.joints[input.jointIndices.y], input.jointWeights.y) 
+            + mul(skinJointsBuffer.joints[input.jointIndices.z], input.jointWeights.z)
+            + mul(skinJointsBuffer.joints[input.jointIndices.w], input.jointWeights.w);
     }
-    float4x4 modelMat = mul(modelTransformBuffer.model, mul(nodeTransformBuffer.model, skinMat));
-    float4x4 modelViewMat = mul(modelTransformBuffer.view, modelMat);
+    float4x4 modelMat = mul(modelTransformBuffer.model, nodeTransformBuffer.model);
+    float4x4 skinModelMat = mul(modelMat, skinMat);
+    float4x4 modelViewMat = mul(modelTransformBuffer.view, skinModelMat);
 
     // Position
-    float4 tempPosition = float4(input.position, 1.0f);
+    float4 tempPosition = float4(input.position, 1.0f); // w is 1 because position is a coordinate
     tempPosition = mul(modelViewMat, tempPosition);
     
     float4 worldPos = tempPosition;
@@ -87,7 +98,7 @@ VSOut main(VSIn input) {
     
     float3 worldTangent = normalize(tempTangent.xyz);
 
-	float4 tempNormal = float4(input.normal, 0.0);
+	float4 tempNormal = float4(input.normal, 0.0);  // W is zero beacuas normal is a vector
     tempNormal = mul(modelViewMat, tempNormal);
     
     float3 worldNormal = normalize(tempNormal.xyz);

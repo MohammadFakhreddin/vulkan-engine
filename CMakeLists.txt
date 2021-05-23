@@ -27,8 +27,8 @@ if(WINDOWS)
   add_definitions (/WX)           # Warnings as errors
 endif()
 
+# add_definitions (-DGLM_FORCE_LEFT_HANDED )
 include_directories(libs/include/glm)
-
 
 #-----------------------------------------------------------------------
 # Engine

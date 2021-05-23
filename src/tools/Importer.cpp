@@ -6,6 +6,8 @@
 #include "libs/tiny_obj_loader/tiny_obj_loader.h"
 #include "libs/tiny_gltf_loader/tiny_gltf_loader.h"
 
+#include <glm/gtx/quaternion.hpp>
+
 namespace MFA::Importer {
 
 namespace FS = FileSystem;
@@ -916,6 +918,7 @@ static void GLTF_extractSubMeshes(
                         weightValuesCount
                     );
                 }
+                MFA_ASSERT(weightValuesCount == jointValuesCount);
                 // TODO Start from here, Assign weight and joint
                 float const * colors = nullptr;
                 float colorsMinValue [3] {0};
@@ -1114,63 +1117,91 @@ static void GLTF_extractNodes(
                 .transformMatrix {},
                 .skin = gltfNode.skin
             };
-            Matrix4X4Float transform = Matrix4X4Float::Identity();
-            if (gltfNode.matrix.empty() == false) {
-                MFA_ASSERT(gltfNode.scale.empty());
-                MFA_ASSERT(gltfNode.rotation.empty());
-                MFA_ASSERT(gltfNode.translation.empty());
-                MFA_ASSERT(gltfNode.matrix.size() == 16);
-                MFA_ASSERT(gltfNode.matrix[3] == 0.0f);
-                MFA_ASSERT(gltfNode.matrix[7] == 0.0f);
-                MFA_ASSERT(gltfNode.matrix[11] == 0.0f);
+            //Matrix4X4Float transform = Matrix4X4Float::Identity();
+            //if (gltfNode.translation.empty() == false) {
+            //    MFA_ASSERT(gltfNode.translation.size() == 3);
+            //    Matrix4X4Float translate {};
+            //    Matrix4X4Float::AssignTranslation(
+            //        translate,
+            //        static_cast<float>(gltfNode.translation[0]),
+            //        static_cast<float>(gltfNode.translation[1]),
+            //        static_cast<float>(gltfNode.translation[2])
+            //    );
+            //    transform.multiply(translate);
+            //}
+            //if (gltfNode.rotation.empty() == false) {
+            //    MFA_ASSERT(gltfNode.rotation.size() == 4);
+            //    Matrix4X4Float rotation {};
+            //    //https://blender.stackexchange.com/questions/123406/blender-gltf-which-rotation-values-are-really-exported
+            //    QuaternionFloat quaternion {};
+            //    // TODO We can make 2 the 4th parameter instead
+            //    quaternion.set(0, 0, static_cast<float>(gltfNode.rotation[3]));
+            //    quaternion.set(1, 0, static_cast<float>(gltfNode.rotation[0]));
+            //    quaternion.set(2, 0, static_cast<float>(gltfNode.rotation[1]));
+            //    quaternion.set(3, 0, static_cast<float>(gltfNode.rotation[2]));
 
-                transform.castAssign(gltfNode.matrix.data());
+            //    Matrix4X4Float::AssignRotation(rotation, quaternion);
 
-                MFA_ASSERT(transform.get(3, 0) == 0.0f);
-                MFA_ASSERT(transform.get(3, 1) == 0.0f);
-                MFA_ASSERT(transform.get(3, 2) == 0.0f);
-            } else {
-                if (gltfNode.translation.empty() == false) {
-                    MFA_ASSERT(gltfNode.translation.size() == 3);
-                    Matrix4X4Float translate {};
-                    Matrix4X4Float::AssignTranslation(
-                        translate,
-                        static_cast<float>(gltfNode.translation[0]),
-                        static_cast<float>(gltfNode.translation[1]),
-                        static_cast<float>(gltfNode.translation[2])
-                    );
-                    transform.multiply(translate);
-                }
-                if (gltfNode.rotation.empty() == false) {
-                    MFA_ASSERT(gltfNode.rotation.size() == 4);
-                    Matrix4X4Float rotation {};
-                    //https://blender.stackexchange.com/questions/123406/blender-gltf-which-rotation-values-are-really-exported
-                    QuaternionFloat quaternion {};
-                    // TODO We can make 2 the 4th parameter instead
-                    quaternion.set(0, 0, static_cast<float>(gltfNode.rotation[3]));
-                    quaternion.set(1, 0, static_cast<float>(gltfNode.rotation[0]));
-                    quaternion.set(2, 0, static_cast<float>(gltfNode.rotation[1]));
-                    quaternion.set(3, 0, static_cast<float>(gltfNode.rotation[2]));
-
-                    Matrix4X4Float::AssignRotation(rotation, quaternion);
-
-                    transform.multiply(rotation);
-                }
-                if (gltfNode.scale.empty() == false) {
-                    MFA_ASSERT(gltfNode.scale.size() == 3);
-                    Matrix4X4Float scale {};
-                    Matrix4X4Float::AssignScale(
-                        scale,
-                        static_cast<float>(gltfNode.scale[0]),
-                        static_cast<float>(gltfNode.scale[1]),
-                        static_cast<float>(gltfNode.scale[2])
-                    );
-                    transform.multiply(scale);
-                }
-
+            //    transform.multiply(rotation);
+            //}
+            //if (gltfNode.scale.empty() == false) {
+            //    MFA_ASSERT(gltfNode.scale.size() == 3);
+            //    Matrix4X4Float scale {};
+            //    Matrix4X4Float::AssignScale(
+            //        scale,
+            //        static_cast<float>(gltfNode.scale[0]),
+            //        static_cast<float>(gltfNode.scale[1]),
+            //        static_cast<float>(gltfNode.scale[2])
+            //    );
+            //    transform.multiply(scale);
+            //}
+            //if (gltfNode.matrix.empty() == false) {
+            //    /*MFA_ASSERT(gltfNode.scale.empty());
+            //    MFA_ASSERT(gltfNode.rotation.empty());
+            //    MFA_ASSERT(gltfNode.translation.empty());*/
+            //   /* MFA_ASSERT(gltfNode.matrix.size() == 16);
+            //    MFA_ASSERT(gltfNode.matrix[3] == 0.0f);
+            //    MFA_ASSERT(gltfNode.matrix[7] == 0.0f);
+            //    MFA_ASSERT(gltfNode.matrix[11] == 0.0f);*/
+            //    Matrix4X4Float gltfTransform {};
+            //    gltfTransform.castAssign(gltfNode.matrix.data());
+            //    transform.multiply(gltfTransform);
+            //    /*MFA_ASSERT(transform.get(3, 0) == 0.0f);
+            //    MFA_ASSERT(transform.get(3, 1) == 0.0f);
+            //    MFA_ASSERT(transform.get(3, 2) == 0.0f);*/
+            //}
+            //::memcpy(assetNode.transformMatrix, transform.cells, sizeof(transform.cells));
+            //static_assert(sizeof(assetNode.transformMatrix) == sizeof(transform.cells));
+            glm::mat4 finalMatrix {1};
+            if (gltfNode.translation.empty() == false) {
+                MFA_ASSERT(gltfNode.translation.size() == 3);
+                glm::vec3 translateMat {gltfNode.translation[0], gltfNode.translation[1], gltfNode.translation[2]};
+                finalMatrix = glm::translate(finalMatrix, translateMat);
             }
-            ::memcpy(assetNode.transformMatrix, transform.cells, sizeof(transform.cells));
-            static_assert(sizeof(assetNode.transformMatrix) == sizeof(transform.cells));
+            if (gltfNode.rotation.empty() == false) {
+                MFA_ASSERT(gltfNode.rotation.size() == 4);
+                glm::quat rotationQuat {
+                    static_cast<float>(gltfNode.rotation[3]),
+                    static_cast<float>(gltfNode.rotation[0]),
+                    static_cast<float>(gltfNode.rotation[1]),
+                    static_cast<float>(gltfNode.rotation[2])
+                };
+                finalMatrix = finalMatrix * glm::toMat4(rotationQuat);
+            }
+            if (gltfNode.scale.empty() == false) {
+                MFA_ASSERT(gltfNode.scale.size() == 3);
+                glm::vec3 scaleMat {gltfNode.scale[0], gltfNode.scale[1], gltfNode.scale[2]};
+                finalMatrix = glm::scale(finalMatrix, scaleMat);
+            }
+            if (gltfNode.matrix.empty() == false) {
+                glm::mat4 gltfTransform {};
+                for (int i = 0; i < 4; ++i) {
+                    for (int j = 0; j < 4; ++j) {
+                        gltfTransform[i][j] = static_cast<float>(gltfNode.matrix[i * 4 + j]);
+                    }
+                }
+            }
+            Matrix4X4Float::ConvertGmToCells(finalMatrix, assetNode.transformMatrix);
             outResultModel.mesh.insertNode(assetNode);
         }
     }

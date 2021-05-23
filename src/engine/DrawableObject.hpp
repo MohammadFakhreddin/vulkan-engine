@@ -21,11 +21,12 @@ public:
         VkDescriptorSetLayout_T * descriptorSetLayout
     );
 
-    explicit DrawableObject(
+    // TODO
+    /*explicit DrawableObject(
         RF::GpuModel & model_,
         uint32_t descriptorSetLayoutsCount,
         VkDescriptorSetLayout_T ** descriptorSetLayouts
-    );
+    );*/
 
     ~DrawableObject() = default;
     
@@ -92,12 +93,12 @@ private:
 
     struct JointTransformBuffer {
         float model[16];
-    } mJointTransformData {};
+    };
 
     // TODO Find a better number, other than 1000
     static constexpr uintmax_t JointTransformBufferSize = sizeof(JointTransformBuffer) * 1000;
 
-    void updateNode(float deltaTimeInSec, AS::Mesh::Node const & node);
+    void updateJoint(float deltaTimeInSec, AS::Mesh::Node const & node);
 
     void drawNode(RF::DrawPass & drawPass, const AS::Mesh::Node & node);
 

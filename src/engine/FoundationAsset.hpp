@@ -265,7 +265,7 @@ public:
         Normal normalValue {};
         Tangent tangentValue {};
         int hasSkin = 0;       // Duplicate data
-        int jointIndices[4] {-1, -1, -1, -1};
+        int jointIndices[4] {0, 0, 0, 0};
         float jointWeights[4] {0, 0, 0, 0};
     };
 
@@ -310,6 +310,7 @@ public:
         float transformMatrix[16] {};
         int parent = -1;
         int skin = -1;
+        int skinBufferIndex = -1;
     
         [[nodiscard]]
         bool hasSubMesh() const noexcept {
@@ -390,6 +391,13 @@ public:
 
     [[nodiscard]]
     Node const & getNodeByIndex(uint32_t const index) const noexcept {
+        MFA_ASSERT(index >= 0);
+        MFA_ASSERT(index < mNodes.size());
+        return mNodes[index];
+    }
+
+    [[nodiscard]]
+    Node & getNodeByIndex(uint32_t const index)  {
         MFA_ASSERT(index >= 0);
         MFA_ASSERT(index < mNodes.size());
         return mNodes[index];

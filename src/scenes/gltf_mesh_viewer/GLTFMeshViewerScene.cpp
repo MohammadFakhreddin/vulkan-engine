@@ -20,7 +20,36 @@ void GLTFMeshViewerScene::Init() {
         mErrorTexture = RF::CreateTexture(cpu_texture);
     }
     {// Models
-        // TODO Start from here, Replace faulty sponza scene with correct one
+        mModelsRenderData.emplace_back(ModelRenderRequiredData {
+            .gpuModel {},
+            .displayName {"CesiumMan"},
+            .address {"../assets/models/CesiumMan/gltf/CesiumMan.gltf"},
+            .drawableObjectId {},
+            .initialParams {
+                .model {
+                    .rotationEulerAngle {-1.0f, 127.0f, -5.0f},
+                    .translate {0.0f, 0.0f, -7.0f}
+                },
+                .light {
+                    .position {0.0f, -2.0f, -2.0f}
+                }
+            }
+        });
+        mModelsRenderData.emplace_back(ModelRenderRequiredData {
+            .gpuModel {},
+            .displayName {"War-craft soldier"},
+            .address {"../assets/models/warcraft_3_alliance_footmanfanmade/scene.gltf"},
+            .drawableObjectId {},
+            .initialParams {
+                .model {
+                    .rotationEulerAngle {-1.0f, 127.0f, -5.0f},
+                    .translate {0.0f, 0.0f, -7.0f}
+                },
+                .light {
+                    .position {0.0f, -2.0f, -2.0f}
+                }
+            }
+        });
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
             .gpuModel {},
             .displayName {"SponzaScene"},
@@ -63,21 +92,6 @@ void GLTFMeshViewerScene::Init() {
                 },
                 .light {
                     .position {-2.0f, -2.0f, -29.0f}
-                }
-            }
-        });
-        mModelsRenderData.emplace_back(ModelRenderRequiredData {
-            .gpuModel {},
-            .displayName {"War-craft soldier"},
-            .address {"../assets/models/warcraft_3_alliance_footmanfanmade/scene.gltf"},
-            .drawableObjectId {},
-            .initialParams {
-                .model {
-                    .rotationEulerAngle {-1.0f, 127.0f, -5.0f},
-                    .translate {0.0f, 0.0f, -7.0f}
-                },
-                .light {
-                    .position {0.0f, -2.0f, -2.0f}
                 }
             }
         });
