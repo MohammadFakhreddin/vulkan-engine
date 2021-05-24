@@ -2,7 +2,6 @@
 
 #include "engine/RenderFrontend.hpp"
 #include "engine/BedrockMatrix.hpp"
-#include "libs/imgui/imgui.h"
 #include "engine/DrawableObject.hpp"
 #include "tools/Importer.hpp"
 #include "tools/ShapeGenerator.hpp"
@@ -332,54 +331,67 @@ void GLTFMeshViewerScene::OnDraw(uint32_t const delta_time, RF::DrawPass & draw_
 
 void GLTFMeshViewerScene::OnUI(uint32_t const delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
     static constexpr float ItemWidth = 500;
-    UI::BeginWindow("Object viewer");
-    UI::SetNextItemWidth(ItemWidth);
-    // TODO Bad for performance, Find a better name
-    std::vector<char const *> modelNames {};
-    if(false == mModelsRenderData.empty()) {
-        for(auto const & renderData : mModelsRenderData) {
-            modelNames.emplace_back(renderData.displayName.c_str());
+    UI::BeginWindow("Scene Subsystem");
+    UI::Checkbox("Object viewer window", &mIsObjectViewerWindowVisible);
+    UI::Checkbox("Light window", &mIsLightWindowVisible);
+    UI::Checkbox("Camera window", &mIsCameraWindowVisible);
+    UI::EndWindow();
+
+    if (mIsObjectViewerWindowVisible) {
+        UI::BeginWindow("Object viewer");
+        UI::SetNextItemWidth(ItemWidth);
+        // TODO Bad for performance, Find a better name
+        std::vector<char const *> modelNames {};
+        if(false == mModelsRenderData.empty()) {
+            for(auto const & renderData : mModelsRenderData) {
+                modelNames.emplace_back(renderData.displayName.c_str());
+            }
         }
+        UI::Combo(
+            "Object selector",
+            &mSelectedModelIndex,
+            modelNames.data(), 
+            static_cast<int32_t>(modelNames.size())
+        );
+        UI::SetNextItemWidth(ItemWidth);
+        UI::SliderFloat("XDegree", &m_model_rotation[0], -360.0f, 360.0f);
+        UI::SetNextItemWidth(ItemWidth);
+        UI::SliderFloat("YDegree", &m_model_rotation[1], -360.0f, 360.0f);
+        UI::SetNextItemWidth(ItemWidth);
+        UI::SliderFloat("ZDegree", &m_model_rotation[2], -360.0f, 360.0f);
+        UI::SetNextItemWidth(ItemWidth);
+        UI::SliderFloat("Scale", &m_model_scale, 0.0f, 1.0f);
+        UI::SetNextItemWidth(ItemWidth);
+        UI::SliderFloat("XDistance", &m_model_position[0], mModelTranslateMin[0], mModelTranslateMax[0]);
+        UI::SetNextItemWidth(ItemWidth);
+        UI::SliderFloat("YDistance", &m_model_position[1], mModelTranslateMin[1], mModelTranslateMax[1]);
+        UI::SetNextItemWidth(ItemWidth);
+        UI::SliderFloat("ZDistance", &m_model_position[2], mModelTranslateMin[2], mModelTranslateMax[2]);
+        UI::EndWindow();
     }
-    UI::Combo(
-        "Object selector",
-        &mSelectedModelIndex,
-        modelNames.data(), 
-        static_cast<int32_t>(modelNames.size())
-    );
-    UI::SetNextItemWidth(ItemWidth);
-    UI::SliderFloat("XDegree", &m_model_rotation[0], -360.0f, 360.0f);
-    UI::SetNextItemWidth(ItemWidth);
-    UI::SliderFloat("YDegree", &m_model_rotation[1], -360.0f, 360.0f);
-    UI::SetNextItemWidth(ItemWidth);
-    UI::SliderFloat("ZDegree", &m_model_rotation[2], -360.0f, 360.0f);
-    UI::SetNextItemWidth(ItemWidth);
-    UI::SliderFloat("Scale", &m_model_scale, 0.0f, 1.0f);
-    UI::SetNextItemWidth(ItemWidth);
-    UI::SliderFloat("XDistance", &m_model_position[0], mModelTranslateMin[0], mModelTranslateMax[0]);
-    UI::SetNextItemWidth(ItemWidth);
-    UI::SliderFloat("YDistance", &m_model_position[1], mModelTranslateMin[1], mModelTranslateMax[1]);
-    UI::SetNextItemWidth(ItemWidth);
-    UI::SliderFloat("ZDistance", &m_model_position[2], mModelTranslateMin[2], mModelTranslateMax[2]);
-    UI::EndWindow();
 
-    UI::BeginWindow("Light");
-    UI::SetNextItemWidth(ItemWidth);
-    UI::Checkbox("Visible", &mIsLightVisible);
-    UI::SetNextItemWidth(ItemWidth);
-    UI::SliderFloat("PositionX", &mLightPosition[0], mLightTranslateMin[0], mLightTranslateMax[0]);
-    UI::SetNextItemWidth(ItemWidth);
-    UI::SliderFloat("PositionY", &mLightPosition[1], mLightTranslateMin[1], mLightTranslateMax[1]);
-    UI::SetNextItemWidth(ItemWidth);
-    UI::SliderFloat("PositionZ", &mLightPosition[2], mLightTranslateMin[2], mLightTranslateMax[2]);
-    UI::SetNextItemWidth(ItemWidth);
-    UI::SliderFloat("ColorR", &mLightColor[0], 0.0f, 400.0f);
-    UI::SetNextItemWidth(ItemWidth);
-    UI::SliderFloat("ColorG", &mLightColor[1], 0.0f, 400.0f);
-    UI::SetNextItemWidth(ItemWidth);
-    UI::SliderFloat("ColorB", &mLightColor[2], 0.0f, 400.0f);
-    UI::EndWindow();
+    if (mIsLightWindowVisible) {
+        UI::BeginWindow("Light");
+        UI::SetNextItemWidth(ItemWidth);
+        UI::Checkbox("Visible", &mIsLightVisible);
+        UI::SetNextItemWidth(ItemWidth);
+        UI::SliderFloat("PositionX", &mLightPosition[0], mLightTranslateMin[0], mLightTranslateMax[0]);
+        UI::SetNextItemWidth(ItemWidth);
+        UI::SliderFloat("PositionY", &mLightPosition[1], mLightTranslateMin[1], mLightTranslateMax[1]);
+        UI::SetNextItemWidth(ItemWidth);
+        UI::SliderFloat("PositionZ", &mLightPosition[2], mLightTranslateMin[2], mLightTranslateMax[2]);
+        UI::SetNextItemWidth(ItemWidth);
+        UI::SliderFloat("ColorR", &mLightColor[0], 0.0f, 400.0f);
+        UI::SetNextItemWidth(ItemWidth);
+        UI::SliderFloat("ColorG", &mLightColor[1], 0.0f, 400.0f);
+        UI::SetNextItemWidth(ItemWidth);
+        UI::SliderFloat("ColorB", &mLightColor[2], 0.0f, 400.0f);
+        UI::EndWindow();
+    }
 
+    if (mIsCameraWindowVisible) {
+        mCamera.onUI();
+    }
     // TODO Node tree
 }
 

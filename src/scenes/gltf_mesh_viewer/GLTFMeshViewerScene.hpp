@@ -112,6 +112,10 @@ private:
     MFA::RF::GpuModel mGpuPointLight {};
     MFA::DrawableObjectId mPointLightObjectId = 0;
 
+    bool mIsObjectViewerWindowVisible = false;
+    bool mIsLightWindowVisible = false;
+    bool mIsCameraWindowVisible = false;
+
     MFA::FirstPersonCamera mCamera {
         80,
         Z_FAR,

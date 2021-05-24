@@ -1200,6 +1200,7 @@ static void GLTF_extractNodes(
                         gltfTransform[i][j] = static_cast<float>(gltfNode.matrix[i * 4 + j]);
                     }
                 }
+                finalMatrix = finalMatrix * gltfTransform;
             }
             Matrix4X4Float::ConvertGmToCells(finalMatrix, assetNode.transformMatrix);
             outResultModel.mesh.insertNode(assetNode);

@@ -2,12 +2,15 @@
 
 #include "engine/RenderFrontend.hpp"
 #include "engine/InputManager.hpp"
+#include "engine/UISystem.hpp"
+
 #include "glm/gtx/quaternion.hpp"
 
 namespace MFA {
 
 namespace RF = RenderFrontend;
 namespace IM = InputManager;
+namespace UI = UISystem;
 
 FirstPersonCamera::FirstPersonCamera(
     float const fieldOfView,
@@ -52,14 +55,7 @@ void FirstPersonCamera::onNewFrame(float const deltaTime) {
         glm::radians(180.0f - mEulerAngles.getY()),
         glm::radians(180.0f - mEulerAngles.getZ())
     )));
-    //Matrix4X4Float rotationMatrix {};
-    //Matrix4X4Float::AssignRotation(
-    //    rotationMatrix,
-    //    180.0f - mEulerAngles.getX(),
-    //    180.0f - mEulerAngles.getY(),
-    //    180.0f - mEulerAngles.getZ()
-    //);
-
+    
     auto forwardDirection = glm::vec4(
         ForwardVector.getX(), 
         ForwardVector.getY(), 
@@ -68,11 +64,7 @@ void FirstPersonCamera::onNewFrame(float const deltaTime) {
     );
     forwardDirection = rotationMatrix * forwardDirection;
     forwardDirection = glm::normalize(forwardDirection);
-    //Matrix4X1Float forwardDirection {};
-    //forwardDirection.assign(ForwardVector);
-    //forwardDirection.multiply(rotationMatrix);
-    //Matrix4X1Float::Normalize(forwardDirection);
-
+    
     auto rightDirection = glm::vec4(
         RightVector.getX(), 
         RightVector.getY(), 
@@ -81,11 +73,7 @@ void FirstPersonCamera::onNewFrame(float const deltaTime) {
     );
     rightDirection = rotationMatrix * rightDirection;
     rightDirection = glm::normalize(rightDirection);
-    /*Matrix4X1Float rightDirection {};
-    rightDirection.assign(ForwardVector);
-    rightDirection.multiply(rotationMatrix);
-    Matrix4X1Float::Normalize(rightDirection);*/
-
+    
     auto const forwardMove = IM::GetForwardMove();
     auto const rightMove = -1.0f * IM::GetRightMove();
     auto const moveDistance = mMoveSpeed * deltaTime;
@@ -94,13 +82,7 @@ void FirstPersonCamera::onNewFrame(float const deltaTime) {
     mPosition.setY(mPosition.getY() + forwardDirection.y * moveDistance * forwardMove);
     mPosition.setZ(mPosition.getZ() + forwardDirection.z * moveDistance * forwardMove);
     mPosition.setW(0.0f);
-    /* mPosition.setX(mPosition.getX() + forwardDirection.getX() * moveDistance * forwardMove);
-    mPosition.setY(mPosition.getY() + forwardDirection.getY() * moveDistance * forwardMove);
-    mPosition.setZ(mPosition.getZ() + forwardDirection.getZ() * moveDistance * forwardMove);*/
-    
-    //mPosition.setX(mPosition.getX() + rightDirection.getX() * moveDistance * rightMove);
-    //mPosition.setY(mPosition.getY() + rightDirection.getY() * moveDistance * rightMove);
-    //mPosition.setZ(mPosition.getZ() + rightDirection.getZ() * moveDistance * rightMove);
+
     mPosition.setX(mPosition.getX() + rightDirection.x * moveDistance * rightMove);
     mPosition.setY(mPosition.getY() + rightDirection.y * moveDistance * rightMove);
     mPosition.setZ(mPosition.getZ() + rightDirection.z * moveDistance * rightMove);
@@ -152,6 +134,13 @@ void FirstPersonCamera::forcePositionAndRotation(
     mPosition.assign(position);
     mEulerAngles.assign(eulerAngles);
     updateTransform();
+}
+
+void FirstPersonCamera::onUI() {
+    UI::BeginWindow("Camera");
+    UI::InputFloat3("Position", mPosition.cells);
+    UI::InputFloat3("EulerAngles", mEulerAngles.cells);
+    UI::EndWindow();
 }
 
 void FirstPersonCamera::updateTransform() {

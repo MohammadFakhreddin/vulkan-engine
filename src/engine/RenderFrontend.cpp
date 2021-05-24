@@ -1004,8 +1004,8 @@ uint32_t GetMouseState(int32_t * x, int32_t * y) {
     return SDL_GetMouseState(x, y);
 }
 
-uint8_t const * GetKeyboardState() {
-    return SDL_GetKeyboardState(nullptr);
+uint8_t const * GetKeyboardState(int * numKeys) {
+    return SDL_GetKeyboardState(numKeys);
 }
 
 uint32_t GetWindowFlags() {

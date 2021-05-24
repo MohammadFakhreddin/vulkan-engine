@@ -30,6 +30,8 @@ public:
 
     virtual void forceRotation(Vector3Float const & eulerAngles) = 0;
 
+    virtual void onUI() {};
+
 };
 
 }

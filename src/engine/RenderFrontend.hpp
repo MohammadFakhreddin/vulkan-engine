@@ -250,7 +250,7 @@ void WarpMouseInWindow(int32_t x, int32_t y);
 
 uint32_t GetMouseState(int32_t * x, int32_t * y);
 
-uint8_t const * GetKeyboardState();
+uint8_t const * GetKeyboardState(int * numKeys = nullptr);
 
 [[nodiscard]]
 uint32_t GetWindowFlags();

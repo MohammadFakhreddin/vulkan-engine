@@ -41,6 +41,8 @@ public:
 
     void forcePositionAndRotation(Vector3Float const & position, Vector3Float const & eulerAngles);
 
+    void onUI() override;
+
 private:
 
     void updateTransform();

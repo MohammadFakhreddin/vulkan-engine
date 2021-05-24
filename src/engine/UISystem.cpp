@@ -135,6 +135,7 @@ struct State {
     std::vector<RF::MeshBuffers> mesh_buffers {};
     std::vector<bool> mesh_buffers_validation_status {};
     bool hasFocus = false;
+    RF::EventWatchId eventWatchId = -1;
 };
 
 static State * state = nullptr;
@@ -143,6 +144,35 @@ struct PushConstants {
     float scale[2];
     float translate[2];
 };
+
+static int EventWatch(void* data, SDL_Event* event) {
+    ImGuiIO& io = ImGui::GetIO();
+    switch (event->type)
+    {
+    case SDL_TEXTINPUT:
+        {
+            io.AddInputCharactersUTF8(event->text.text);
+            return true;
+        }
+    case SDL_KEYDOWN:
+    case SDL_KEYUP:
+        {
+            int key = event->key.keysym.scancode;
+            IM_ASSERT(key >= 0 && key < IM_ARRAYSIZE(io.KeysDown));
+            io.KeysDown[key] = (event->type == SDL_KEYDOWN);
+            io.KeyShift = ((SDL_GetModState() & KMOD_SHIFT) != 0);
+            io.KeyCtrl = ((SDL_GetModState() & KMOD_CTRL) != 0);
+            io.KeyAlt = ((SDL_GetModState() & KMOD_ALT) != 0);
+#ifdef _WIN32
+            io.KeySuper = false;
+#else
+            io.KeySuper = ((SDL_GetModState() & KMOD_GUI) != 0);
+#endif
+            return true;
+        }
+    }
+    return false;
+}
 
 void Init() {
     state = new State();
@@ -309,7 +339,33 @@ void Init() {
         );
         // TODO Support from in memory import of images inside importer
         state->font_texture = RF::CreateTexture(texture_asset);
+
+        // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array.
+        io.KeyMap[ImGuiKey_Tab] = SDL_SCANCODE_TAB;
+        io.KeyMap[ImGuiKey_LeftArrow] = SDL_SCANCODE_LEFT;
+        io.KeyMap[ImGuiKey_RightArrow] = SDL_SCANCODE_RIGHT;
+        io.KeyMap[ImGuiKey_UpArrow] = SDL_SCANCODE_UP;
+        io.KeyMap[ImGuiKey_DownArrow] = SDL_SCANCODE_DOWN;
+        io.KeyMap[ImGuiKey_PageUp] = SDL_SCANCODE_PAGEUP;
+        io.KeyMap[ImGuiKey_PageDown] = SDL_SCANCODE_PAGEDOWN;
+        io.KeyMap[ImGuiKey_Home] = SDL_SCANCODE_HOME;
+        io.KeyMap[ImGuiKey_End] = SDL_SCANCODE_END;
+        io.KeyMap[ImGuiKey_Insert] = SDL_SCANCODE_INSERT;
+        io.KeyMap[ImGuiKey_Delete] = SDL_SCANCODE_DELETE;
+        io.KeyMap[ImGuiKey_Backspace] = SDL_SCANCODE_BACKSPACE;
+        io.KeyMap[ImGuiKey_Space] = SDL_SCANCODE_SPACE;
+        io.KeyMap[ImGuiKey_Enter] = SDL_SCANCODE_RETURN;
+        io.KeyMap[ImGuiKey_Escape] = SDL_SCANCODE_ESCAPE;
+        io.KeyMap[ImGuiKey_KeyPadEnter] = SDL_SCANCODE_KP_ENTER;
+        io.KeyMap[ImGuiKey_A] = SDL_SCANCODE_A;
+        io.KeyMap[ImGuiKey_C] = SDL_SCANCODE_C;
+        io.KeyMap[ImGuiKey_V] = SDL_SCANCODE_V;
+        io.KeyMap[ImGuiKey_X] = SDL_SCANCODE_X;
+        io.KeyMap[ImGuiKey_Y] = SDL_SCANCODE_Y;
+        io.KeyMap[ImGuiKey_Z] = SDL_SCANCODE_Z;
     }
+
+    state->eventWatchId = RF::AddEventWatch(EventWatch);
 }
 
 static void UpdateMousePositionAndButtons() {
@@ -330,6 +386,39 @@ static void UpdateMousePositionAndButtons() {
     if (RF::GetWindowFlags() & SDL_WINDOW_INPUT_FOCUS) {
         io.MousePos = ImVec2(static_cast<float>(mx), static_cast<float>(my));
     }
+
+    //// TODO Move this to input manager
+    //auto const * sdlKeysDown = RF::GetKeyboardState();
+    //if (sdlKeysDown[SDL_SCANCODE_0]) {
+    //    io.AddInputCharacter('0');
+    //}
+    //if (sdlKeysDown[SDL_SCANCODE_1]) {
+    //    io.AddInputCharacter('1');
+    //}
+    //if (sdlKeysDown[SDL_SCANCODE_2]) {
+    //    io.AddInputCharacter('2');
+    //}
+    //if (sdlKeysDown[SDL_SCANCODE_3]) {
+    //    io.AddInputCharacter('3');
+    //}
+    //if (sdlKeysDown[SDL_SCANCODE_4]) {
+    //    io.AddInputCharacter('4');
+    //}
+    //if (sdlKeysDown[SDL_SCANCODE_5]) {
+    //    io.AddInputCharacter('5');
+    //}
+    //if (sdlKeysDown[SDL_SCANCODE_6]) {
+    //    io.AddInputCharacter('6');
+    //}
+    //if (sdlKeysDown[SDL_SCANCODE_7]) {
+    //    io.AddInputCharacter('7');
+    //}
+    //if (sdlKeysDown[SDL_SCANCODE_8]) {
+    //    io.AddInputCharacter('8');
+    //}
+    //if (sdlKeysDown[SDL_SCANCODE_9]) {
+    //    io.AddInputCharacter('9');
+    //}
 }
 
 static void UpdateMouseCursor() {
@@ -557,6 +646,18 @@ void SetNextItemWidth(float const nextItemWidth) {
     ImGui::SetNextItemWidth(nextItemWidth);
 }
 
+void InputFloat(char const * label, float * value) {
+    ImGui::InputFloat(label, value);
+}
+
+void InputFloat2(char const * label, float value[2]) {
+    ImGui::InputFloat2(label, value);
+}
+
+void InputFloat3(char const * label, float value[3]) {
+    ImGui::InputFloat3(label, value);    
+}
+
 // TODO Maybe we could cache unchanged vertices
 void Combo(
     char const * label, 
@@ -628,6 +729,8 @@ void Shutdown() {
 
     RF::DestroyDescriptorSetLayout(state->descriptor_set_layout);
     RF::DestroySampler(state->font_sampler);
+
+    RF::RemoveEventWatch(state->eventWatchId);
 
     delete state;
     state = nullptr;

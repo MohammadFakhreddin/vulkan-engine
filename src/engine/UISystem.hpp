@@ -21,6 +21,13 @@ void EndWindow();
 
 void SetNextItemWidth(float nextItemWidth);
 
+void InputFloat(char const * label, float * value);
+
+void InputFloat2(char const * label, float value[2]);
+
+void InputFloat3(char const * label, float value[3]);
+
+
 void Combo(
     char const * label,
     int32_t * selectedItemIndex,
