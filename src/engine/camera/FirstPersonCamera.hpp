@@ -33,11 +33,17 @@ public:
 
     void getProjection(float outProjectionMatrix[16]) override;
 
+    [[nodiscard]]
+    Matrix4X4Float const & getProjection() const override;
+
     void getTransform(float outTransformMatrix[16]) override;
 
-    void forcePosition(Vector3Float const & position) override;
+    [[nodiscard]]
+    Matrix4X4Float const & getTransform() const override;
 
-    void forceRotation(Vector3Float const & eulerAngles) override;
+    void forcePosition(float position[3]) override;
+
+    void forceRotation(float eulerAngles[3]) override;
 
     void forcePositionAndRotation(Vector3Float const & position, Vector3Float const & eulerAngles);
 

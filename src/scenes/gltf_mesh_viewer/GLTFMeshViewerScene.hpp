@@ -51,6 +51,10 @@ private:
                 float translateMin[3] {-200.0f, -200.0f, -200.0f};
                 float translateMax[3] {200.0f, 200.0f, 200.0f};
             } light {};
+            struct {
+                float position [3] {};
+                float eulerAngles [3] {};
+            } camera {};
         } initialParams {.model {}, .light {}};
     };
 

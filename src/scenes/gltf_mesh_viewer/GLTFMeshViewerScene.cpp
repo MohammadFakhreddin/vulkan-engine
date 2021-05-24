@@ -26,12 +26,16 @@ void GLTFMeshViewerScene::Init() {
             .drawableObjectId {},
             .initialParams {
                 .model {
-                    .rotationEulerAngle {-1.0f, 127.0f, -5.0f},
-                    .translate {0.0f, 0.0f, -7.0f}
+                    .rotationEulerAngle {0.0f, 0.0f, -180.0f},
+                    .translate {0.0f, 0.0f, -7.0f}                    
                 },
                 .light {
                     .position {0.0f, -2.0f, -2.0f}
-                }
+                },
+                .camera {
+                    .position {0.104f, 1.286f, 4.952f},
+                    .eulerAngles {-12.0f, 3.0f, 0.0f}
+                },
             }
         });
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
@@ -41,11 +45,11 @@ void GLTFMeshViewerScene::Init() {
             .drawableObjectId {},
             .initialParams {
                 .model {
-                    .rotationEulerAngle {-1.0f, 127.0f, -5.0f},
-                    .translate {0.0f, 0.0f, -7.0f}
+                    .rotationEulerAngle {0.0f, -5.926f, -180.0f},
+                    .translate {0.0f, 0.9f, -2.0f}
                 },
                 .light {
-                    .position {0.0f, -2.0f, -2.0f}
+                    .position {0.0f, -2.0f, 0.0f}
                 }
             }
         });
@@ -73,8 +77,8 @@ void GLTFMeshViewerScene::Init() {
             .drawableObjectId {},
             .initialParams {
                 .model {
-                    .rotationEulerAngle {8.0f, 158.0f, 0.0f},
-                    .translate {0.0f, 0.0f, -4.0f}
+                    .rotationEulerAngle {-19.0f, -32.0f, 177.0f},
+                    .translate {0.0f, 0.0f, -2.0f}
                 }
             }
         });
@@ -85,12 +89,16 @@ void GLTFMeshViewerScene::Init() {
             .drawableObjectId {},
             .initialParams {
                 .model {
-                    .rotationEulerAngle {37.0f, 155.0f, 0.0f},
-                    .scale = 0.012f,
-                    .translate {0.0f, 0.0f, -44.0f}
+                    .rotationEulerAngle {160.0f, 176.0f, 0.0f},
+                    .scale = 0.008f,
+                    .translate {0.0f, 0.0f, -33.745f}
                 },
                 .light {
                     .position {-2.0f, -2.0f, -29.0f}
+                },
+                .camera {
+                    .position {2.5f, 5.3f, 21.8f},
+                    .eulerAngles {-22.110f, -13.200f, 0.0f}
                 }
             }
         });
@@ -101,8 +109,8 @@ void GLTFMeshViewerScene::Init() {
             .drawableObjectId {},
             .initialParams {
                 .model {
-                    .rotationEulerAngle {4.0f, 152.0f, 0.0f},
-                    .translate {0.0f, 0.5f, -7.0f}
+                    .rotationEulerAngle {-3.0f, 340.0f, 180.0f},
+                    .translate {0.0f, 0.8f, -3.0f}
                 }
             }
         });
@@ -113,12 +121,12 @@ void GLTFMeshViewerScene::Init() {
             .drawableObjectId {},
             .initialParams {
                 .model {
-                    .rotationEulerAngle {302.0f, -2.0f, 0.0f},
-                    .scale = 0.187f,
-                    .translate {-2.0f, 0.0f, -190.0f}
+                    .rotationEulerAngle {180.0f, 180.0f, 0.0f},
+                    .scale = 0.010f,
+                    .translate {0.0f, -0.5f, -2.0f}
                 },
                 .light {
-                    .position {0.0f, 0.0f, -135.0f}
+                    .position {0.0f, 0.0f, 0.0f}
                 }
             }
         });
@@ -127,6 +135,13 @@ void GLTFMeshViewerScene::Init() {
             .displayName {"Mandalorian2"},
             .address {"../assets/models/mandalorian__the_fortnite_season_6_skin_updated/scene.gltf"},
             .drawableObjectId {},
+            .initialParams {
+                .model {
+                    .rotationEulerAngle {180.0f, 180.0f, 0.0f},
+                    .scale = 0.0005f,
+                    .translate {0.0f, 4.5f, -10.0f}
+                }
+            }
         });
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
             .gpuModel {},
@@ -135,8 +150,11 @@ void GLTFMeshViewerScene::Init() {
             .drawableObjectId {},
             .initialParams {
                 .model {
-                    .rotationEulerAngle {197.0f, 186.0f, -1.5f},
-                    .translate {0.0f, 0.0f, -4.0f},
+                    .rotationEulerAngle {180.0f, 180.0f, 0.0f},
+                    .translate {0.0f, 0.0f, -1.0f},
+                },
+                .light {
+                    .position {0.0f, 0.0f, 2.469f}
                 }
             }
         });
@@ -147,6 +165,14 @@ void GLTFMeshViewerScene::Init() {
             .address {"../assets/models/warhammer_40k_predator_dark_millennium/scene.gltf"},
             .drawableObjectId {},
             .initialParams {
+                .model {
+                    .rotationEulerAngle {-45.0f, -45.0f, 180.0f},
+                    .scale = 0.5f,
+                    .translate {0.0f, 0.0f, -16.0f},
+                },
+                .light {
+                    .position {1.5f, 0.0f, -8.0f}
+                }
             }
         });
     }
@@ -222,6 +248,8 @@ void GLTFMeshViewerScene::OnDraw(uint32_t const delta_time, RF::DrawPass & draw_
         ::memcpy(mLightTranslateMax, selectedModel.initialParams.light.translateMax, sizeof(mLightTranslateMax));
         static_assert(sizeof(mLightTranslateMax) == sizeof(selectedModel.initialParams.light.translateMin));
 
+        mCamera.forcePosition(selectedModel.initialParams.camera.position);
+        mCamera.forceRotation(selectedModel.initialParams.camera.eulerAngles);
     }
 
     {// Updating Transform buffer
@@ -263,34 +291,22 @@ void GLTFMeshViewerScene::OnDraw(uint32_t const delta_time, RF::DrawPass & draw_
         );
     }
     {// LightViewBuffer
-        // TODO Maybe I have to use glm from now on
         auto lightPosition = glm::vec4(
             mLightPosition[0], 
             mLightPosition[1], 
             mLightPosition[2], 
             1.0f
         );
-        glm::mat4x4 transformMatrix {};
-        float transformData[16];
-        mCamera.getTransform(transformData);
-        for (int i = 0; i < 16; ++i) {
-            transformMatrix[i / 4][i % 4] = transformData[i];
-        }
+
+        glm::mat4x4 transformMatrix;
+        MFA::Matrix4X4Float::ConvertMatrixToGlm(mCamera.getTransform(), transformMatrix);
+
         lightPosition = transformMatrix * lightPosition;
         mLightViewData.lightPosition[0] = lightPosition[0];
         mLightViewData.lightPosition[1] = lightPosition[1];
         mLightViewData.lightPosition[2] = lightPosition[2];
 
-        //MFA::Matrix4X4Float cameraTransform {};
-        //mCamera.getTransform(cameraTransform.cells);
-        //MFA::Vector4Float lightPosition {mLightPosition[0], mLightPosition[1], mLightPosition[2], 1.0f};
-        //lightPosition.multiply(cameraTransform);
-        //mLightViewData.lightPosition[0] = lightPosition.getX();
-        //mLightViewData.lightPosition[1] = lightPosition.getY();
-        //mLightViewData.lightPosition[2] = lightPosition.getZ();
-        
-        ::memcpy(mLightViewData.lightColor, mLightColor, sizeof(mLightColor));
-        static_assert(sizeof(mLightColor) == sizeof(mLightViewData.lightColor));
+        MFA::Copy<3>(mLightViewData.lightColor, mLightColor);
         
         mPbrPipeline.updateLightViewBuffer(mLightViewData);
 

@@ -24,11 +24,17 @@ public:
 
     virtual void getProjection(float outProjectionMatrix[16]) = 0;
 
+    [[nodiscard]]
+    virtual Matrix4X4Float const & getProjection() const = 0;
+
     virtual void getTransform(float outTransformMatrix[16]) = 0;
 
-    virtual void forcePosition(Vector3Float const & position) = 0;
+    [[nodiscard]]
+    virtual Matrix4X4Float const & getTransform() const = 0;
 
-    virtual void forceRotation(Vector3Float const & eulerAngles) = 0;
+    virtual void forcePosition(float position[3]) = 0;
+
+    virtual void forceRotation(float eulerAngles[3]) = 0;
 
     virtual void onUI() {};
 

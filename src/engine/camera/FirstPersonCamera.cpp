@@ -113,16 +113,24 @@ void FirstPersonCamera::getProjection(float outProjectionMatrix[16]) {
     mProjectionMatrix.copy(outProjectionMatrix);  
 }
 
+Matrix4X4Float const & FirstPersonCamera::getProjection() const {
+    return mProjectionMatrix;
+}
+
 void FirstPersonCamera::getTransform(float outTransformMatrix[16]) {
     mTransformMatrix.copy(outTransformMatrix);
 }
 
-void FirstPersonCamera::forcePosition(Vector3Float const & position) {
-    mPosition.assign(position);
+Matrix4X4Float const & FirstPersonCamera::getTransform() const {
+    return mTransformMatrix;
+}
+
+void FirstPersonCamera::forcePosition(float position[3]) {
+    mPosition.assign(position, 3);
     updateTransform();
 }
 
-void FirstPersonCamera::forceRotation(Vector3Float const & eulerAngles) {
+void FirstPersonCamera::forceRotation(float eulerAngles[3]) {
     mEulerAngles.assign(eulerAngles);
     updateTransform();
 }
