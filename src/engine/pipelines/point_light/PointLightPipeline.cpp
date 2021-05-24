@@ -225,9 +225,10 @@ void MFA::PointLightPipeline::createDescriptorSetLayout() {
     );
 }
 
-void MFA::PointLightPipeline::destroyDescriptorSetLayout() const {
+void MFA::PointLightPipeline::destroyDescriptorSetLayout() {
     MFA_ASSERT(mDescriptorSetLayout != nullptr);
-    RF::DestroyDescriptorSetLayout(mDescriptorSetLayout); 
+    RF::DestroyDescriptorSetLayout(mDescriptorSetLayout);
+    mDescriptorSetLayout = nullptr;
 }
 
 void MFA::PointLightPipeline::createPipeline() {

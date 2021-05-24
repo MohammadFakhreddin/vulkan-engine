@@ -59,7 +59,7 @@ private:
 
     void createDescriptorSetLayout();
 
-    void destroyDescriptorSetLayout() const;
+    void destroyDescriptorSetLayout();
 
     void createPipeline();
 
