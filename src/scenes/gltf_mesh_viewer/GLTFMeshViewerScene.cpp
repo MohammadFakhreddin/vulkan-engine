@@ -14,6 +14,7 @@ namespace Importer = MFA::Importer;
 namespace UI = MFA::UISystem;
 
 void GLTFMeshViewerScene::Init() {
+    // TODO Out of pool memory on macos, We need to only keep a few of recent objects data active.
     {// Error texture
         auto cpu_texture = Importer::CreateErrorTexture();
         mErrorTexture = RF::CreateTexture(cpu_texture);

@@ -117,7 +117,7 @@ template <typename T, int N>
 constexpr int ArrayCountInt(T(&)[N]) { return N; }
 
 template<uint32_t Count, typename T>
-constexpr void Copy(T * dst, T * src) {
+constexpr void Copy(T * dst, T const * src) {
     ::memcpy(dst, src, Count * sizeof(T));
 }
 

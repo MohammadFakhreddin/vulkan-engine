@@ -464,6 +464,25 @@ static void GLTF_extractDataFromBuffer(
     outDataCount = static_cast<uint32_t>(accessor.count);
 }
 
+static void GLTF_extractDataAndTypeFromBuffer(
+    tinygltf::Model & gltfModel,
+    int accessorIndex,
+    int & outComponentType,
+    void const * & outData,
+    uint32_t & outDataCount 
+) {
+    MFA_ASSERT(accessorIndex >= 0);
+    auto const & accessor = gltfModel.accessors[accessorIndex];
+    outComponentType = accessor.componentType;
+    auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
+    MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
+    auto const & buffer = gltfModel.buffers[bufferView.buffer];
+    outData = reinterpret_cast<void const *>(
+        &buffer.data[bufferView.byteOffset + accessor.byteOffset]
+    );
+    outDataCount = static_cast<uint32_t>(accessor.count);
+}
+
 template<typename ItemType>
 static bool GLTF_extractPrimitiveDataFromBuffer(
     tinygltf::Model & gltfModel,
@@ -1249,6 +1268,7 @@ void GLTF_extractAnimations(
     AS::Model & outResultModel
 ) {
     using Sampler = AS::MeshAnimation::Sampler;
+    using Channel = AS::MeshAnimation::Channel;
     using Interpolation = AssetSystem::Mesh::Animation::Interpolation;
     using Path = AssetSystem::Mesh::Animation::Path;
     
@@ -1286,8 +1306,8 @@ void GLTF_extractAnimations(
         // Samplers
         for (auto const & gltfSampler : gltfAnimation.samplers)
         {
-            Sampler animationSampler {}; 
-            animationSampler.interpolation = convertInterpolationToEnum(gltfSampler.interpolation.c_str());
+            Sampler sampler {}; 
+            sampler.interpolation = convertInterpolationToEnum(gltfSampler.interpolation.c_str());
 
             {// Read sampler keyframe input time values
                 float const * inputData = nullptr;
@@ -1299,50 +1319,58 @@ void GLTF_extractAnimations(
                     inputData,
                     inputCount
                 );
-                const tinygltf::Accessor & accessor   = input.accessors[glTFSampler.input];
-                const tinygltf::BufferView & bufferView = input.bufferViews[accessor.bufferView];
-                const tinygltf::Buffer &    buffer     = input.buffers[bufferView.buffer];
-                const void *                dataPtr    = &buffer.data[accessor.byteOffset + bufferView.byteOffset];
-                const float *               buf        = static_cast<const float *>(dataPtr);
-                for (size_t index = 0; index < accessor.count; index++)
+                MFA_ASSERT(inputCount > 0);
+
+                sampler.inputAndOutput.resize(inputCount);
+                for (size_t index = 0; index < inputCount; index++)
                 {
-                    dstSampler.inputs.push_back(buf[index]);
-                }
-                // Adjust animation's start and end times
-                for (auto input : animations[i].samplers[j].inputs)
-                {
-                    if (input < animations[i].start)
-                    {
-                        animations[i].start = input;
-                    };
-                    if (input > animations[i].end)
-                    {
-                        animations[i].end = input;
+                    auto const input = inputData[index];
+                    sampler.inputAndOutput[index].input = input;
+                    if (animation.startTime == -1 || animation.startTime > input) {
+                        animation.startTime = input;
+                    }
+                    if (animation.endTime == -1 || animation.endTime < input) {
+                        animation.endTime = input;
                     }
                 }
             }
 
-            // Read sampler keyframe output translate/rotate/scale values
-            {
-                const tinygltf::Accessor &  accessor   = input.accessors[glTFSampler.output];
-                const tinygltf::BufferView &bufferView = input.bufferViews[accessor.bufferView];
-                const tinygltf::Buffer &    buffer     = input.buffers[bufferView.buffer];
-                const void *                dataPtr    = &buffer.data[accessor.byteOffset + bufferView.byteOffset];
-                switch (accessor.type)
+            {// Read sampler keyframe output translate/rotate/scale values
+                void const * outputData = nullptr;
+                uint32_t outputCount = 0;
+                int outputDataType = 0;
+                GLTF_extractDataAndTypeFromBuffer(
+                    gltfModel, 
+                    gltfSampler.output, 
+                    outputDataType,
+                    outputData,
+                    outputCount
+                );
+                MFA_ASSERT(outputCount == sampler.inputAndOutput.size());
+                
+                struct Output3 {
+                    float value[3];
+                };
+
+                struct Output4 {
+                    float value[4];
+                };
+
+                switch (outputDataType)
                 {
                     case TINYGLTF_TYPE_VEC3: {
-                        const glm::vec3 *buf = static_cast<const glm::vec3 *>(dataPtr);
-                        for (size_t index = 0; index < accessor.count; index++)
+                        auto const * output = static_cast<Output3 const *>(outputData);
+                        for (size_t index = 0; index < outputCount; index++)
                         {
-                            dstSampler.outputsVec4.push_back(glm::vec4(buf[index], 0.0f));
+                            MFA::Copy<3>(sampler.inputAndOutput[index].output, output->value);
                         }
                         break;
                     }
                     case TINYGLTF_TYPE_VEC4: {
-                        const glm::vec4 *buf = static_cast<const glm::vec4 *>(dataPtr);
-                        for (size_t index = 0; index < accessor.count; index++)
+                        auto const * output = static_cast<Output4 const *>(outputData);
+                        for (size_t index = 0; index < outputCount; index++)
                         {
-                            dstSampler.outputsVec4.push_back(buf[index]);
+                            MFA::Copy<4>(sampler.inputAndOutput[index].output, output->value);
                         }
                         break;
                     }
@@ -1355,14 +1383,14 @@ void GLTF_extractAnimations(
         }
 
         // Channels
-        animations[i].channels.resize(glTFAnimation.channels.size());
-        for (size_t j = 0; j < glTFAnimation.channels.size(); j++)
+        animation.channels.resize(gltfAnimation.channels.size());
+        for (auto & gltfChannel : gltfAnimation.channels)
         {
-            tinygltf::AnimationChannel glTFChannel = glTFAnimation.channels[j];
-            AnimationChannel &         dstChannel  = animations[i].channels[j];
-            dstChannel.path                        = glTFChannel.target_path;
-            dstChannel.samplerIndex                = glTFChannel.sampler;
-            dstChannel.node                        = nodeFromIndex(glTFChannel.target_node);
+            Channel channel {};
+            channel.path = convertPathToEnum(gltfChannel.target_path.c_str());
+            channel.samplerIndex = gltfChannel.sampler;
+            channel.nodeIndex = gltfChannel.target_node;
+            animation.channels.emplace_back(channel);
         }
     }
 }

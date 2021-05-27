@@ -339,7 +339,7 @@ public:
 
         enum class Interpolation {
             Invalid,
-            Linear,                     // We only support linear for now
+            Linear,                         // We only support linear for now
             Step,
             CubicSpline
         };
@@ -348,8 +348,8 @@ public:
 
         struct Sampler {
             struct InputAndOutput {
-                float input = -1;           // Input time (Probably in seconds)
-                float output [4] {};        // Output can be from 3 to 4 
+                float input = -1;                           // Input time (Probably in seconds)
+                float output [4] {0.0f, 0.0f, 0.0f, 0.0f};  // Output can be from 3 to 4 
             };
             Interpolation interpolation {};
             std::vector<InputAndOutput> inputAndOutput {};
@@ -359,12 +359,12 @@ public:
         struct Channel {
             Path path = Path::Invalid;      
             uint32_t nodeIndex = 0;         // We might need to store translation, rotation and scale separately
-            uint32_t channelIndex = 0;
+            uint32_t samplerIndex = 0;
         };
         std::vector<Channel> channels {};
 
-        float startTime {};
-        float endTime {};
+        float startTime = -1.0f;
+        float endTime = -1.0f;
         float animationDuration {};         // We should track currentTime somewhere else
     };
 
