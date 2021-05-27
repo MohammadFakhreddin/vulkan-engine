@@ -1212,7 +1212,7 @@ void GLTF_extractSkins(
     tinygltf::Model & gltfModel,
     AS::Model & outResultModel
 ) {
-    for (auto & gltfSkin : gltfModel.skins) {
+    for (auto const & gltfSkin : gltfModel.skins) {
         AS::MeshSkin skin {};
 
         // Joints
@@ -1244,7 +1244,128 @@ void GLTF_extractSkins(
     }
 }
 
-// void GLTF_extractAnimations();
+void GLTF_extractAnimations(
+    tinygltf::Model & gltfModel,
+    AS::Model & outResultModel
+) {
+    using Sampler = AS::MeshAnimation::Sampler;
+    using Interpolation = AssetSystem::Mesh::Animation::Interpolation;
+    using Path = AssetSystem::Mesh::Animation::Path;
+    
+    auto const convertInterpolationToEnum = [](char const * value)-> Interpolation {
+        if (value ==  "LINEAR") {
+            return Interpolation::Linear;
+        }
+        if (value == "STEP") {
+            return Interpolation::Step;
+        }
+        if (value == "CUBICSPLINE") {
+            return Interpolation::CubicSpline;
+        }
+        MFA_CRASH("Unhandled test case");
+        return Interpolation::Invalid;
+    };
+
+    auto const convertPathToEnum = [](char const * value)-> Path {
+        if (value == "TRANSLATION") {
+            return Path::Translation;
+        }
+        if (value == "ROTATION") {
+            return Path::Rotation;
+        }
+        if (value == "SCALE") {
+            return Path::Scale;    
+        }
+        MFA_CRASH("Unhandled test case");
+        return Path::Invalid;
+    };
+
+    for (auto const & gltfAnimation : gltfModel.animations) {
+        AS::MeshAnimation animation {};
+        animation.name = gltfAnimation.name;
+        // Samplers
+        for (auto const & gltfSampler : gltfAnimation.samplers)
+        {
+            Sampler animationSampler {}; 
+            animationSampler.interpolation = convertInterpolationToEnum(gltfSampler.interpolation.c_str());
+
+            {// Read sampler keyframe input time values
+                float const * inputData = nullptr;
+                uint32_t inputCount = 0;
+                GLTF_extractDataFromBuffer(
+                    gltfModel, 
+                    gltfSampler.input, 
+                    TINYGLTF_COMPONENT_TYPE_FLOAT,
+                    inputData,
+                    inputCount
+                );
+                const tinygltf::Accessor & accessor   = input.accessors[glTFSampler.input];
+                const tinygltf::BufferView & bufferView = input.bufferViews[accessor.bufferView];
+                const tinygltf::Buffer &    buffer     = input.buffers[bufferView.buffer];
+                const void *                dataPtr    = &buffer.data[accessor.byteOffset + bufferView.byteOffset];
+                const float *               buf        = static_cast<const float *>(dataPtr);
+                for (size_t index = 0; index < accessor.count; index++)
+                {
+                    dstSampler.inputs.push_back(buf[index]);
+                }
+                // Adjust animation's start and end times
+                for (auto input : animations[i].samplers[j].inputs)
+                {
+                    if (input < animations[i].start)
+                    {
+                        animations[i].start = input;
+                    };
+                    if (input > animations[i].end)
+                    {
+                        animations[i].end = input;
+                    }
+                }
+            }
+
+            // Read sampler keyframe output translate/rotate/scale values
+            {
+                const tinygltf::Accessor &  accessor   = input.accessors[glTFSampler.output];
+                const tinygltf::BufferView &bufferView = input.bufferViews[accessor.bufferView];
+                const tinygltf::Buffer &    buffer     = input.buffers[bufferView.buffer];
+                const void *                dataPtr    = &buffer.data[accessor.byteOffset + bufferView.byteOffset];
+                switch (accessor.type)
+                {
+                    case TINYGLTF_TYPE_VEC3: {
+                        const glm::vec3 *buf = static_cast<const glm::vec3 *>(dataPtr);
+                        for (size_t index = 0; index < accessor.count; index++)
+                        {
+                            dstSampler.outputsVec4.push_back(glm::vec4(buf[index], 0.0f));
+                        }
+                        break;
+                    }
+                    case TINYGLTF_TYPE_VEC4: {
+                        const glm::vec4 *buf = static_cast<const glm::vec4 *>(dataPtr);
+                        for (size_t index = 0; index < accessor.count; index++)
+                        {
+                            dstSampler.outputsVec4.push_back(buf[index]);
+                        }
+                        break;
+                    }
+                    default: {
+                        std::cout << "unknown type" << std::endl;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Channels
+        animations[i].channels.resize(glTFAnimation.channels.size());
+        for (size_t j = 0; j < glTFAnimation.channels.size(); j++)
+        {
+            tinygltf::AnimationChannel glTFChannel = glTFAnimation.channels[j];
+            AnimationChannel &         dstChannel  = animations[i].channels[j];
+            dstChannel.path                        = glTFChannel.target_path;
+            dstChannel.samplerIndex                = glTFChannel.sampler;
+            dstChannel.node                        = nodeFromIndex(glTFChannel.target_node);
+        }
+    }
+}
 
 // Based on sasha willems solution and a comment in github
 AS::Model ImportGLTF(char const * path) {

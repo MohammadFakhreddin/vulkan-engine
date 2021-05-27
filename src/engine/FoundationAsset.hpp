@@ -328,6 +328,46 @@ public:
         int skeletonRootNode = -1;
     };
 
+    struct Animation {
+
+        enum class Path {
+            Invalid,
+            Translation,
+            Scale,
+            Rotation
+        };
+
+        enum class Interpolation {
+            Invalid,
+            Linear,                     // We only support linear for now
+            Step,
+            CubicSpline
+        };
+
+        std::string name {};
+
+        struct Sampler {
+            struct InputAndOutput {
+                float input = -1;           // Input time (Probably in seconds)
+                float output [4] {};        // Output can be from 3 to 4 
+            };
+            Interpolation interpolation {};
+            std::vector<InputAndOutput> inputAndOutput {};
+        };
+        std::vector<Sampler> samplers {};
+
+        struct Channel {
+            Path path = Path::Invalid;      
+            uint32_t nodeIndex = 0;         // We might need to store translation, rotation and scale separately
+            uint32_t channelIndex = 0;
+        };
+        std::vector<Channel> channels {};
+
+        float startTime {};
+        float endTime {};
+        float animationDuration {};         // We should track currentTime somewhere else
+    };
+
     void initForWrite(
         uint32_t vertexCount,
         uint32_t indexCount,
@@ -353,6 +393,8 @@ public:
     void insertNode(Node const & node);
 
     void insertSkin(Skin const & skin);
+
+    void insertAnimation(Animation const & animation);
 
     [[nodiscard]]
     bool isValid() const;
@@ -430,12 +472,29 @@ public:
         return mSkins.data();
     }
 
+    [[nodiscard]]
+    Animation const & getAnimationByIndex(uint32_t const index) const noexcept {
+        MFA_ASSERT(index >= 0);
+        MFA_ASSERT(index < mAnimations.size());
+        return mAnimations[index];
+    }
+
+    [[nodiscard]]
+    uint32_t getAnimationsCount() const noexcept {
+        return static_cast<uint32_t>(mAnimations.size()); 
+    }
+
+    Animation const * getAnimationData() const noexcept {
+        return mAnimations.data();
+    }
+
     void revokeBuffers(Blob & outVertexBuffer, Blob & outIndexBuffer);
 
 private:
     std::vector<SubMesh> mSubMeshes {};
     std::vector<Node> mNodes {};
     std::vector<Skin> mSkins {};
+    std::vector<Animation> mAnimations {};
 
     uint32_t mVertexCount {};
     Blob mVertexBuffer {};
@@ -454,6 +513,7 @@ using MeshNode = Mesh::Node;
 using MeshVertex = Mesh::Vertex;
 using MeshIndex = Mesh::Index;
 using MeshSkin = Mesh::Skin;
+using MeshAnimation = Mesh::Animation;
 
 //--------------------------------ShaderAsset--------------------------------------
 class Shader final : public Base {
