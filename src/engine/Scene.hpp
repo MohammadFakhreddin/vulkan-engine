@@ -12,7 +12,7 @@ public:
     void Shutdown();
     void RegisterNew(Scene * scene, char const * name);
     void SetActiveScene(char const * name);
-    void OnNewFrame(uint32_t deltaTime);
+    void OnNewFrame(float deltaTimeInSec);
     void OnResize();
 private:
 
@@ -29,8 +29,8 @@ private:
 class Scene {
 public:
     virtual ~Scene() = default;
-    virtual void OnDraw(uint32_t delta_time, RenderFrontend::DrawPass & draw_pass) = 0;
-    virtual void OnUI(uint32_t delta_time, RenderFrontend::DrawPass & draw_pass) = 0;
+    virtual void OnDraw(float delta_time, RenderFrontend::DrawPass & draw_pass) = 0;
+    virtual void OnUI(float delta_time, RenderFrontend::DrawPass & draw_pass) = 0;
     virtual void OnResize() = 0;
     virtual void Init() = 0;
     virtual void Shutdown() = 0;

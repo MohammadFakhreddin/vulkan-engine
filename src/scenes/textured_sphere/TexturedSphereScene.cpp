@@ -52,7 +52,7 @@ void TexturedSphereScene::Init() {
     updateProjectionBuffer();
 }
 
-void TexturedSphereScene::OnDraw(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
+void TexturedSphereScene::OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_pass) {
     RF::BindDrawPipeline(draw_pass, mDrawPipeline);
 
     {// Updating Transform buffer
@@ -96,7 +96,7 @@ void TexturedSphereScene::OnDraw(uint32_t delta_time, MFA::RenderFrontend::DrawP
     mDrawableObject->draw(draw_pass);
 }
 
-void TexturedSphereScene::OnUI(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
+void TexturedSphereScene::OnUI(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_pass) {
     UI::BeginWindow("Object viewer");
     UI::SetNextItemWidth(300.0f);
     UI::SliderFloat("XDegree", &mModelRotation[0], -360.0f, 360.0f);

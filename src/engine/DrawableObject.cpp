@@ -1,8 +1,10 @@
 #include "DrawableObject.hpp"
 
-#include <glm/glm.hpp>
-
 #include "BedrockMemory.hpp"
+
+#include <ext/matrix_transform.hpp>
+#include <glm/glm.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 namespace MFA {
 
@@ -136,15 +138,8 @@ RF::UniformBufferGroup const & DrawableObject::getSkinTransformBuffer() const no
 }
 
 void DrawableObject::update(float const deltaTimeInSec) {
-    auto const & mesh = mGpuModel->model.mesh;
-
-    auto const nodesCount = mesh.getNodesCount();
-    auto const * nodes = mesh.getNodeData();
-    MFA_ASSERT(nodes != nullptr);
-    
-    for (uint32_t i = 0; i < nodesCount; ++i) {
-        updateJoint(deltaTimeInSec, nodes[i]);
-    }
+    updateAnimation(deltaTimeInSec);
+    updateJoints(deltaTimeInSec);
 }
 
 void DrawableObject::draw(RF::DrawPass & drawPass) {
@@ -162,6 +157,100 @@ void DrawableObject::draw(RF::DrawPass & drawPass) {
     }
 }
 
+void DrawableObject::updateAnimation(float deltaTimeInSec) {
+    using Animation = AS::Mesh::Animation;
+
+    auto & mesh = mGpuModel->model.mesh;
+
+    if (mesh.getAnimationsCount() <= 0) {
+        return;
+    }
+
+    auto const & activeAnimation = mesh.getAnimationByIndex(mActiveAnimationIndex);
+
+    if (mActiveAnimationIndex != mPreviousAnimationIndex) {
+        mAnimationCurrentTime = activeAnimation.startTime;
+        mPreviousAnimationIndex = mActiveAnimationIndex;
+    }
+
+    mAnimationCurrentTime += deltaTimeInSec;
+
+    if (mAnimationCurrentTime > activeAnimation.endTime) {
+        MFA_ASSERT(activeAnimation.endTime > activeAnimation.startTime);
+        mAnimationCurrentTime -= (activeAnimation.endTime - activeAnimation.startTime);
+    }
+    
+    for (auto const & channel : activeAnimation.channels)
+    {
+        auto const & sampler = activeAnimation.samplers[channel.samplerIndex];
+        auto & node = mesh.getNodeByIndex(channel.nodeIndex);
+
+        for (size_t i = 0; i < sampler.inputAndOutput.size() - 1; i++)
+        {
+            if (sampler.interpolation != Animation::Interpolation::Linear)
+            {
+                MFA_LOG_ERROR("This sample only supports linear interpolations");
+                continue;
+            }
+
+            auto const previousInput = sampler.inputAndOutput[i].input;
+            auto previousOutput = Matrix4X1Float::ConvertCellsToVec4(sampler.inputAndOutput[i].output);
+            auto const nextInput = sampler.inputAndOutput[i + 1].input;
+            auto nextOutput = Matrix4X1Float::ConvertCellsToVec4(sampler.inputAndOutput[i + 1].output);
+            // Get the input keyframe values for the current time stamp
+            if (mAnimationCurrentTime >= previousInput && mAnimationCurrentTime <= nextInput)
+            {
+                // TODO Find a better name for a
+                float const a = (mAnimationCurrentTime - previousInput) / (nextInput - previousInput);
+
+                auto transform = glm::mat4(1);
+                if (channel.path == Animation::Path::Translation)
+                {
+                    auto const translateData = glm::mix(previousOutput, nextOutput, a);
+                    auto const translateVec = glm::vec3(translateData[0], translateData[1], translateData[2]);
+                    transform = glm::translate(transform, translateVec);
+                }
+                else if (channel.path == Animation::Path::Rotation)
+                {
+                    glm::quat previousRotation {};
+                    previousRotation.x = previousOutput[0];
+                    previousRotation.y = previousOutput[1];
+                    previousRotation.z = previousOutput[2];
+                    previousRotation.w = previousOutput[3];
+
+                    glm::quat nextRotation {};
+                    nextRotation.x = nextOutput[0];
+                    nextRotation.y = nextOutput[1];
+                    nextRotation.z = nextOutput[2];
+                    nextRotation.w = nextOutput[3];
+
+                    auto const rotation = glm::normalize(glm::slerp(previousRotation, nextRotation, a));
+                    transform = transform * glm::toMat4(rotation);
+                }
+                else if (channel.path == Animation::Path::Scale)
+                {
+                    auto const scaleData = glm::mix(previousOutput, nextOutput, a);
+                    auto const scaleVec = glm::vec3(scaleData[0], scaleData[1], scaleData[2]); 
+                    transform = glm::scale(transform, scaleVec);
+                }
+                Matrix4X4Float::ConvertGmToCells(transform, node.transformMatrix);
+            }
+        }
+    }
+}
+
+void DrawableObject::updateJoints(float const deltaTimeInSec) {
+    auto const & mesh = mGpuModel->model.mesh;
+
+    auto const nodesCount = mesh.getNodesCount();
+    auto const * nodes = mesh.getNodeData();
+    MFA_ASSERT(nodes != nullptr);
+
+    for (uint32_t i = 0; i < nodesCount; ++i) {
+        updateJoint(deltaTimeInSec, nodes[i]);
+    }
+}
+
 void DrawableObject::updateJoint(float const deltaTimeInSec, AssetSystem::Mesh::Node const & node) {
     auto const & mesh = mGpuModel->model.mesh;
     if (node.skin > -1)
@@ -170,7 +259,6 @@ void DrawableObject::updateJoint(float const deltaTimeInSec, AssetSystem::Mesh::
         glm::mat4 const inverseTransform = glm::inverse(computeNodeTransform(node));
         auto const & skin = mesh.getSkinByIndex(node.skin);
 
-        //std::vector<JointTransformBuffer> jointMatrices(skin.joints.size());
         // TODO Allocate this memory once
         auto jointMatricesBlob = Memory::Alloc(skin.joints.size() * sizeof(JointTransformBuffer));
         MFA_DEFER {
@@ -183,19 +271,11 @@ void DrawableObject::updateJoint(float const deltaTimeInSec, AssetSystem::Mesh::
             auto const & joint = mesh.getNodeByIndex(skin.joints[i]);
             auto const nodeMatrix = computeNodeTransform(joint);
             glm::mat4 matrix = nodeMatrix * 
-                Matrix4X4Float::ConvertCellsToGlm(skin.inverseBindMatrices[i].value);  // T - S = changes
-            matrix = inverseTransform * matrix;                                        // Why ?
+                Matrix4X4Float::ConvertCellsToMat4(skin.inverseBindMatrices[i].value);  // T - S = changes
+            matrix = inverseTransform * matrix;                                         // Why ?
             Matrix4X4Float::ConvertGmToCells(matrix, jointMatrices[i].model);
-
-            /*Matrix4X4Float matrix {};
-            computeNodeTransform(joint, matrix);
-            Matrix4X4Float inverseBindMatrix {};
-            inverseBindMatrix.assign(skin.inverseBindMatrices[i].value);
-            matrix.multiply(inverseBindMatrix);
-            matrix.copy(jointMatrices[i].model);*/
         }
         // Update skin buffer
-        // TODO We should store data separately for each joint ?
         RF::UpdateUniformBuffer(
             mSkinJointsBuffers.buffers[node.skinBufferIndex], 
             CBlob {jointMatricesBlob.ptr, jointMatricesBlob.len}
@@ -271,12 +351,12 @@ glm::mat4 DrawableObject::computeNodeTransform(AS::Mesh::Node const & node) cons
     Matrix4X4Float::ConvertMatrixToGlm(tempMatrix, result);
     return result;*/
     auto const & mesh = mGpuModel->model.mesh;
-    glm::mat4 result = Matrix4X4Float::ConvertCellsToGlm(node.transformMatrix);
+    glm::mat4 result = Matrix4X4Float::ConvertCellsToMat4(node.transformMatrix);
     int parentNodeIndex = node.parent;
     while(parentNodeIndex >= 0) {
         auto const & parentNode = mesh.getNodeByIndex(parentNodeIndex);
 
-        auto const parentTransform = Matrix4X4Float::ConvertCellsToGlm(parentNode.transformMatrix);
+        auto const parentTransform = Matrix4X4Float::ConvertCellsToMat4(parentNode.transformMatrix);
         result = parentTransform * result;
 
         parentNodeIndex = parentNode.parent;

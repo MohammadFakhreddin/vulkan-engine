@@ -14,6 +14,7 @@ namespace Importer = MFA::Importer;
 namespace UI = MFA::UISystem;
 
 void GLTFMeshViewerScene::Init() {
+    // TODO Out of pool memory on macos, We need to only keep a few of recent objects data active.
     {// Error texture
         auto cpu_texture = Importer::CreateErrorTexture();
         mErrorTexture = RF::CreateTexture(cpu_texture);
@@ -207,10 +208,10 @@ void GLTFMeshViewerScene::Init() {
 }
 
 // TODO Why deltaTime is uint32_t ?
-void GLTFMeshViewerScene::OnDraw(uint32_t const delta_time, RF::DrawPass & draw_pass) {
-    MFA_ASSERT(mSelectedModelIndex >=0 && mSelectedModelIndex < mModelsRenderData.size());
+void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & drawPass) {
+    MFA_ASSERT(mSelectedModelIndex >= 0 && mSelectedModelIndex < mModelsRenderData.size());
 
-    auto const fDeltaTime = static_cast<float>(delta_time);
+    auto const fDeltaTime = static_cast<float>(deltaTimeInSec);
 
     mCamera.onNewFrame(fDeltaTime);
 
@@ -339,13 +340,13 @@ void GLTFMeshViewerScene::OnDraw(uint32_t const delta_time, RF::DrawPass & draw_
         mPointLightPipeline.updatePrimitiveInfo(mPointLightObjectId, lightPrimitiveInfo);
     }
     // TODO Pipeline should be able to share buffers such as projection buffer to enable us to update them once
-    mPbrPipeline.render(draw_pass, fDeltaTime, 1, &selectedModel.drawableObjectId);
+    mPbrPipeline.render(drawPass, fDeltaTime, 1, &selectedModel.drawableObjectId);
     if (mIsLightVisible) {
-        mPointLightPipeline.render(draw_pass, fDeltaTime, 1, &mPointLightObjectId);
+        mPointLightPipeline.render(drawPass, fDeltaTime, 1, &mPointLightObjectId);
     }
 }
 
-void GLTFMeshViewerScene::OnUI(uint32_t const delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
+void GLTFMeshViewerScene::OnUI(float const deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) {
     static constexpr float ItemWidth = 500;
     UI::BeginWindow("Scene Subsystem");
     UI::Checkbox("Object viewer window", &mIsObjectViewerWindowVisible);

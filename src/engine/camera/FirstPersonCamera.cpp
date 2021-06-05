@@ -36,11 +36,11 @@ void FirstPersonCamera::init() {
     onResize();
 }
 
-void FirstPersonCamera::onNewFrame(float const deltaTime) {
+void FirstPersonCamera::onNewFrame(float const deltaTimeInSec) {
     if (InputManager::IsLeftMouseDown() == true) {
         auto const mouseDeltaX = IM::GetMouseDeltaX();
         auto const mouseDeltaY = IM::GetMouseDeltaY();
-        auto const rotationDistance = mRotationSpeed * deltaTime;
+        auto const rotationDistance = mRotationSpeed * deltaTimeInSec;
 
         mEulerAngles.setY(mEulerAngles.getY() - mouseDeltaX * rotationDistance);    // Reverse for view mat
         mEulerAngles.setX(Math::Clamp(
@@ -76,7 +76,7 @@ void FirstPersonCamera::onNewFrame(float const deltaTime) {
     
     auto const forwardMove = IM::GetForwardMove();
     auto const rightMove = -1.0f * IM::GetRightMove();
-    auto const moveDistance = mMoveSpeed * deltaTime;
+    auto const moveDistance = mMoveSpeed * deltaTimeInSec;
     
     mPosition.setX(mPosition.getX() + forwardDirection.x * moveDistance * forwardMove);
     mPosition.setY(mPosition.getY() + forwardDirection.y * moveDistance * forwardMove);

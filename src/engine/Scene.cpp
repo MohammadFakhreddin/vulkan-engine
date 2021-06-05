@@ -45,7 +45,7 @@ void SceneSubSystem::SetActiveScene(char const * name) {
     }
 }
 
-void SceneSubSystem::OnNewFrame(uint32_t const deltaTime) {
+void SceneSubSystem::OnNewFrame(float const deltaTimeInSec) {
     if(mActiveScene != mLastActiveScene) {
         RF::DeviceWaitIdle();
         if(mLastActiveScene >= 0) {
@@ -59,12 +59,12 @@ void SceneSubSystem::OnNewFrame(uint32_t const deltaTime) {
         
     if(mActiveScene >= 0) {
         mRegisteredScenes[mActiveScene].scene->OnDraw(
-            deltaTime,
+            deltaTimeInSec,
             draw_pass
         );
     }
     // TODO Refactor and use interface and register instead
-    UI::OnNewFrame(deltaTime, draw_pass, [&deltaTime, &draw_pass, this]()->void{
+    UI::OnNewFrame(deltaTimeInSec, draw_pass, [&deltaTimeInSec, &draw_pass, this]()->void{
         UI::BeginWindow("Scene Subsystem");
         UI::SetNextItemWidth(300.0f);
         // TODO Bad for performance, Find a better name
@@ -83,7 +83,7 @@ void SceneSubSystem::OnNewFrame(uint32_t const deltaTime) {
         UI::EndWindow();
         if(mActiveScene >= 0) {
             mRegisteredScenes[mActiveScene].scene->OnUI(
-                deltaTime,
+                deltaTimeInSec,
                 draw_pass
             );
         } 

@@ -47,14 +47,14 @@ void Application::run() {
         //Event handler
         SDL_Event e;
         //While application is running
-        uint32_t const target_fps = 1000 / 60;
-        uint32_t delta_time = 0;
+        uint32_t const targetFps = 1000 / 60;
+        uint32_t deltaTime = 0;
         while (!quit)
         {
             uint32_t const start_time = SDL_GetTicks();
             IM::OnNewFrame();
             // DrawFrame
-            mSceneSubSystem.OnNewFrame(delta_time);
+            mSceneSubSystem.OnNewFrame(static_cast<float>(deltaTime) / 1000.0f);
             //Handle events
             if (SDL_PollEvent(&e) != 0)
             {
@@ -64,11 +64,11 @@ void Application::run() {
                     quit = true;
                 }
             }
-            delta_time = SDL_GetTicks() - start_time;
-            if(target_fps > delta_time){
-                SDL_Delay( target_fps - delta_time );
+            deltaTime = SDL_GetTicks() - start_time;
+            if(targetFps > deltaTime){
+                SDL_Delay( targetFps - deltaTime );
             }
-            delta_time = SDL_GetTicks() - start_time;
+            deltaTime = SDL_GetTicks() - start_time;
         }
     }
     RF::DeviceWaitIdle();

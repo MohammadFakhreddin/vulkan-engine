@@ -15,9 +15,9 @@ public:
 
     void Init() override;
 
-    void OnDraw(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override;
+    void OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
 
-    void OnUI(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override;
+    void OnUI(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
 
     void Shutdown() override;
 
@@ -55,7 +55,7 @@ private:
                 float position [3] {};
                 float eulerAngles [3] {};
             } camera {};
-        } initialParams {.model {}, .light {}};
+        } initialParams {.model {}, .light {}, .camera {}};
     };
 
     void createModel(ModelRenderRequiredData & renderRequiredData);

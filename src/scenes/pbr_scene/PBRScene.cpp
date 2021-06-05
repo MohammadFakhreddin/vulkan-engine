@@ -164,7 +164,7 @@ void PBRScene::Shutdown() {
     Importer::FreeModel(&m_sphere.model);
 }
 
-void PBRScene::OnDraw(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
+void PBRScene::OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_pass) {
     RF::BindDrawPipeline(draw_pass, m_draw_pipeline);
     {// Updating uniform buffers
         {// Material
@@ -252,7 +252,7 @@ void PBRScene::OnDraw(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_
     }
 }
 
-void PBRScene::OnUI(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) {
+void PBRScene::OnUI(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_pass) {
     UI::BeginWindow("Sphere");
     UI::SetNextItemWidth(300.0f);
     UI::SliderFloat("XDegree", &m_sphere_rotation[0], -360.0f, 360.0f);

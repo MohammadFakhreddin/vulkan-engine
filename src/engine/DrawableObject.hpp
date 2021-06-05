@@ -14,6 +14,16 @@ namespace AS = AssetSystem;
 using DrawableObjectId = uint32_t;
 
 class DrawableObject {
+private:
+    struct NodeTransformBuffer {
+        float model[16];
+    } mNodeTransformData {};
+
+    struct JointTransformBuffer {
+        float model[16];
+    };
+    // TODO Find a better number, other than 1000
+    static constexpr uintmax_t JointTransformBufferSize = sizeof(JointTransformBuffer) * 1000;
 public:
 
     explicit DrawableObject(
@@ -21,7 +31,7 @@ public:
         VkDescriptorSetLayout_T * descriptorSetLayout
     );
 
-    // TODO
+    // TODO Multiple descriptor set layout support
     /*explicit DrawableObject(
         RF::GpuModel & model_,
         uint32_t descriptorSetLayoutsCount,
@@ -87,16 +97,9 @@ public:
 
 private:
 
-    struct NodeTransformBuffer {
-        float model[16];
-    } mNodeTransformData {};
+    void updateAnimation(float deltaTimeInSec);
 
-    struct JointTransformBuffer {
-        float model[16];
-    };
-
-    // TODO Find a better number, other than 1000
-    static constexpr uintmax_t JointTransformBufferSize = sizeof(JointTransformBuffer) * 1000;
+    void updateJoints(float deltaTimeInSec);
 
     void updateJoint(float deltaTimeInSec, AS::Mesh::Node const & node);
 
@@ -104,9 +107,12 @@ private:
 
     void drawSubMesh(RF::DrawPass & drawPass, AS::Mesh::SubMesh const & subMesh);
 
+    [[nodiscard]]
     glm::mat4 computeNodeTransform(AS::Mesh::Node const & node) const;
 
     void computeNodeTransform(const AS::Mesh::Node & node, Matrix4X4Float & outMatrix) const;
+
+private:
 
     static DrawableObjectId NextId;
 
@@ -117,6 +123,10 @@ private:
     RF::GpuModel * mGpuModel = nullptr;
     std::vector<VkDescriptorSet_T *> mDescriptorSets {};
     std::unordered_map<std::string, RF::UniformBufferGroup> mUniformBuffers {};
+
+    int mActiveAnimationIndex = 0;
+    int mPreviousAnimationIndex = -1;
+    float mAnimationCurrentTime = 0.0f;
 };
 
 }

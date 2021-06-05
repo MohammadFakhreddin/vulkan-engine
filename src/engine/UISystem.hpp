@@ -10,9 +10,9 @@ void Init();
 using RecordUICallback = std::function<void()>;
 // TODO It might need to ask for window params
 void OnNewFrame(
-    uint32_t delta_time, 
-    RF::DrawPass & draw_pass,
-    RecordUICallback const & record_ui_callback
+    float deltaTimeInSec, 
+    RF::DrawPass & drawPass,
+    RecordUICallback const & recordUiCallback
 );
 
 void BeginWindow(char const * windowName);

@@ -737,16 +737,24 @@ public:
     }
 
     static void ConvertMatrixToGlm(_Matrix<float, 4, 4> const & inMatrix, glm::mat4 & outMatrix) {
-        ConvertCellsToGlm(inMatrix.cells, outMatrix);
+        ConvertCellsToMat4(inMatrix.cells, outMatrix);
     }
 
-    static glm::mat4 ConvertCellsToGlm(float const * cells) {
+    static glm::mat4 ConvertCellsToMat4(float const * cells) {
         glm::mat4 result {};
-        ConvertCellsToGlm(cells, result);
+        ConvertCellsToMat4(cells, result);
         return result;
     }
 
-    static void ConvertCellsToGlm(float const * cells, glm::mat4 & outMatrix) {
+    static glm::vec3 ConvertCellsToVec3(float const * cells) {
+        return glm::vec3 {cells[0], cells[1], cells[2]};
+    }
+
+    static glm::vec4 ConvertCellsToVec4(float const * cells) {
+        return glm::vec4 {cells[0], cells[1], cells[2], cells[3]};
+    }
+
+    static void ConvertCellsToMat4(float const * cells, glm::mat4 & outMatrix) {
         for (int i = 0; i < 4; ++i) {
             for (int j = 0; j < 4; ++j) {
                 outMatrix[i][j] = cells[i * 4 + j];

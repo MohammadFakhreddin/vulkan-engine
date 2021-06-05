@@ -464,6 +464,27 @@ static void GLTF_extractDataFromBuffer(
     outDataCount = static_cast<uint32_t>(accessor.count);
 }
 
+static void GLTF_extractDataAndTypeFromBuffer(
+    tinygltf::Model & gltfModel,
+    int accessorIndex,
+    int expectedComponentType,
+    int & outType,
+    void const * & outData,
+    uint32_t & outDataCount 
+) {
+    MFA_ASSERT(accessorIndex >= 0);
+    auto const & accessor = gltfModel.accessors[accessorIndex];
+    outType = accessor.type;
+    MFA_ASSERT(expectedComponentType == accessor.componentType);
+    auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
+    MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
+    auto const & buffer = gltfModel.buffers[bufferView.buffer];
+    outData = reinterpret_cast<void const *>(
+        &buffer.data[bufferView.byteOffset + accessor.byteOffset]
+    );
+    outDataCount = static_cast<uint32_t>(accessor.count);
+}
+
 template<typename ItemType>
 static bool GLTF_extractPrimitiveDataFromBuffer(
     tinygltf::Model & gltfModel,
@@ -1117,61 +1138,6 @@ static void GLTF_extractNodes(
                 .transformMatrix {},
                 .skin = gltfNode.skin
             };
-            //Matrix4X4Float transform = Matrix4X4Float::Identity();
-            //if (gltfNode.translation.empty() == false) {
-            //    MFA_ASSERT(gltfNode.translation.size() == 3);
-            //    Matrix4X4Float translate {};
-            //    Matrix4X4Float::AssignTranslation(
-            //        translate,
-            //        static_cast<float>(gltfNode.translation[0]),
-            //        static_cast<float>(gltfNode.translation[1]),
-            //        static_cast<float>(gltfNode.translation[2])
-            //    );
-            //    transform.multiply(translate);
-            //}
-            //if (gltfNode.rotation.empty() == false) {
-            //    MFA_ASSERT(gltfNode.rotation.size() == 4);
-            //    Matrix4X4Float rotation {};
-            //    //https://blender.stackexchange.com/questions/123406/blender-gltf-which-rotation-values-are-really-exported
-            //    QuaternionFloat quaternion {};
-            //    // TODO We can make 2 the 4th parameter instead
-            //    quaternion.set(0, 0, static_cast<float>(gltfNode.rotation[3]));
-            //    quaternion.set(1, 0, static_cast<float>(gltfNode.rotation[0]));
-            //    quaternion.set(2, 0, static_cast<float>(gltfNode.rotation[1]));
-            //    quaternion.set(3, 0, static_cast<float>(gltfNode.rotation[2]));
-
-            //    Matrix4X4Float::AssignRotation(rotation, quaternion);
-
-            //    transform.multiply(rotation);
-            //}
-            //if (gltfNode.scale.empty() == false) {
-            //    MFA_ASSERT(gltfNode.scale.size() == 3);
-            //    Matrix4X4Float scale {};
-            //    Matrix4X4Float::AssignScale(
-            //        scale,
-            //        static_cast<float>(gltfNode.scale[0]),
-            //        static_cast<float>(gltfNode.scale[1]),
-            //        static_cast<float>(gltfNode.scale[2])
-            //    );
-            //    transform.multiply(scale);
-            //}
-            //if (gltfNode.matrix.empty() == false) {
-            //    /*MFA_ASSERT(gltfNode.scale.empty());
-            //    MFA_ASSERT(gltfNode.rotation.empty());
-            //    MFA_ASSERT(gltfNode.translation.empty());*/
-            //   /* MFA_ASSERT(gltfNode.matrix.size() == 16);
-            //    MFA_ASSERT(gltfNode.matrix[3] == 0.0f);
-            //    MFA_ASSERT(gltfNode.matrix[7] == 0.0f);
-            //    MFA_ASSERT(gltfNode.matrix[11] == 0.0f);*/
-            //    Matrix4X4Float gltfTransform {};
-            //    gltfTransform.castAssign(gltfNode.matrix.data());
-            //    transform.multiply(gltfTransform);
-            //    /*MFA_ASSERT(transform.get(3, 0) == 0.0f);
-            //    MFA_ASSERT(transform.get(3, 1) == 0.0f);
-            //    MFA_ASSERT(transform.get(3, 2) == 0.0f);*/
-            //}
-            //::memcpy(assetNode.transformMatrix, transform.cells, sizeof(transform.cells));
-            //static_assert(sizeof(assetNode.transformMatrix) == sizeof(transform.cells));
             glm::mat4 finalMatrix {1};
             if (gltfNode.translation.empty() == false) {
                 MFA_ASSERT(gltfNode.translation.size() == 3);
@@ -1249,18 +1215,19 @@ void GLTF_extractAnimations(
     AS::Model & outResultModel
 ) {
     using Sampler = AS::MeshAnimation::Sampler;
+    using Channel = AS::MeshAnimation::Channel;
     using Interpolation = AssetSystem::Mesh::Animation::Interpolation;
     using Path = AssetSystem::Mesh::Animation::Path;
     using Channel = AssetSystem::Mesh::Animation::Channel;
     
     auto const convertInterpolationToEnum = [](char const * value)-> Interpolation {
-        if (value ==  "LINEAR") {
+        if (strcmp("LINEAR", value) == 0) {
             return Interpolation::Linear;
         }
-        if (value == "STEP") {
+        if (strcmp("STEP", value) == 0) {
             return Interpolation::Step;
         }
-        if (value == "CUBICSPLINE") {
+        if (strcmp("CUBICSPLINE", value) == 0) {
             return Interpolation::CubicSpline;
         }
         MFA_CRASH("Unhandled test case");
@@ -1268,13 +1235,13 @@ void GLTF_extractAnimations(
     };
 
     auto const convertPathToEnum = [](char const * value)-> Path {
-        if (value == "TRANSLATION") {
+        if (strcmp("translation", value) == 0) {
             return Path::Translation;
         }
-        if (value == "ROTATION") {
+        if (strcmp("rotation", value) == 0) {
             return Path::Rotation;
         }
-        if (value == "SCALE") {
+        if (strcmp("scale", value) == 0) {
             return Path::Scale;    
         }
         MFA_CRASH("Unhandled test case");
@@ -1287,8 +1254,8 @@ void GLTF_extractAnimations(
         // Samplers
         for (auto const & gltfSampler : gltfAnimation.samplers)
         {
-            Sampler animationSampler {}; 
-            animationSampler.interpolation = convertInterpolationToEnum(gltfSampler.interpolation.c_str());
+            Sampler sampler {};
+            sampler.interpolation = convertInterpolationToEnum(gltfSampler.interpolation.c_str());
 
             {// Read sampler keyframe input time values
                 float const * inputData = nullptr;
@@ -1300,67 +1267,82 @@ void GLTF_extractAnimations(
                     inputData,
                     inputCount
                 );
+                MFA_ASSERT(inputCount > 0);
+
+                sampler.inputAndOutput.resize(inputCount);
                 for (size_t index = 0; index < inputCount; index++)
                 {
-                    dstSampler.inputs.push_back(inputData[index]);
-                }
-                // Adjust animation's start and end times
-                for (auto input : animations[i].samplers[j].inputs)
-                {
-                    if (input < animations[i].start)
-                    {
-                        animations[i].start = input;
-                    };
-                    if (input > animations[i].end)
-                    {
-                        animations[i].end = input;
+                    auto const input = inputData[index];
+                    sampler.inputAndOutput[index].input = input;
+                    if (animation.startTime == -1.0f || animation.startTime > input) {
+                        animation.startTime = input;
+                    }
+                    if (animation.endTime == -1.0f || animation.endTime < input) {
+                        animation.endTime = input;
                     }
                 }
             }
 
             {// Read sampler keyframe output translate/rotate/scale values
-                const tinygltf::Accessor & accessor = input.accessors[gltfSampler.output];
-                const tinygltf::BufferView & bufferView = input.bufferViews[accessor.bufferView];
-                const tinygltf::Buffer & buffer = input.buffers[bufferView.buffer];
-                void const * dataPtr = &buffer.data[accessor.byteOffset + bufferView.byteOffset];
-                switch (accessor.type)
+                void const * outputData = nullptr;
+                uint32_t outputCount = 0;
+                int outputDataType = 0;
+                GLTF_extractDataAndTypeFromBuffer(
+                    gltfModel, 
+                    gltfSampler.output,
+                    TINYGLTF_COMPONENT_TYPE_FLOAT,
+                    outputDataType,
+                    outputData,
+                    outputCount
+                );
+                MFA_ASSERT(outputCount == sampler.inputAndOutput.size());
+                
+                struct Output3 {
+                    float value[3];
+                };
+
+                struct Output4 {
+                    float value[4];
+                };
+
+                switch (outputDataType)
                 {
                     case TINYGLTF_TYPE_VEC3: {
-                        const glm::vec3 *buf = static_cast<const glm::vec3 *>(dataPtr);
-                        for (size_t index = 0; index < accessor.count; index++)
+                        auto const * output = static_cast<Output3 const *>(outputData);
+                        for (size_t index = 0; index < outputCount; index++)
                         {
-                            dstSampler.outputsVec4.push_back(glm::vec4(buf[index], 0.0f));
+                            MFA::Copy<3>(sampler.inputAndOutput[index].output, output->value);
                         }
                         break;
                     }
                     case TINYGLTF_TYPE_VEC4: {
-                        const glm::vec4 *buf = static_cast<const glm::vec4 *>(dataPtr);
-                        for (size_t index = 0; index < accessor.count; index++)
+                        auto const * output = static_cast<Output4 const *>(outputData);
+                        for (size_t index = 0; index < outputCount; index++)
                         {
-                            dstSampler.outputsVec4.push_back(buf[index]);
+                            MFA::Copy<4>(sampler.inputAndOutput[index].output, output->value);
                         }
                         break;
                     }
                     default: {
-                        std::cout << "unknown type" << std::endl;
+                        MFA_REQUIRE(false);
                         break;
                     }
                 }
             }
+            animation.samplers.emplace_back(sampler);
         }
 
         // Channels
-        for (auto const & glTFChannel : gltfAnimation.channels)
+        for (auto const & gltfChannel : gltfAnimation.channels)
         {
-            MFA_ASSERT(glTFChannel.target_node >= 0);
-            MFA_ASSERT(glTFChannel.sampler >= 0);
-            Channel channel {
-                .path = convertPathToEnum(glTFChannel.target_path.c_str()),
-                .nodeIndex = static_cast<uint32_t>(glTFChannel.target_node),
-                .samplerIndex = static_cast<uint32_t>(glTFChannel.sampler)
-            };
+            Channel channel {};
+            channel.path = convertPathToEnum(gltfChannel.target_path.c_str());
+            channel.samplerIndex = gltfChannel.sampler;
+            channel.nodeIndex = gltfChannel.target_node;
             animation.channels.emplace_back(channel);
         }
+
+        outResultModel.mesh.insertAnimation(animation);
     }
 }
 
@@ -1425,7 +1407,8 @@ AS::Model ImportGLTF(char const * path) {
             GLTF_extractNodes(gltfModel, resultModel);
             // Fill skin
             GLTF_extractSkins(gltfModel, resultModel);
-            // Animation (Soon!)
+            // Animation
+            GLTF_extractAnimations(gltfModel, resultModel);
             resultModel.mesh.finalizeData();
             // Remove mesh buffers if invalid
             if(resultModel.mesh.isValid() == false) {

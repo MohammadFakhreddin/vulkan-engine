@@ -203,6 +203,10 @@ Skin const & skin) {
     mSkins.emplace_back(skin);
 }
 
+void Mesh::insertAnimation(Animation const & animation) {
+    mAnimations.emplace_back(animation);
+}
+
 bool Mesh::isValid() const {
     return
         mSubMeshes.empty() == false && 

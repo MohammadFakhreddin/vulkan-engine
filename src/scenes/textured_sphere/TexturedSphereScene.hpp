@@ -15,9 +15,9 @@ public:
 
     void Init() override;
 
-    void OnDraw(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override;
+    void OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_pass) override;
 
-    void OnUI(uint32_t delta_time, MFA::RenderFrontend::DrawPass & draw_pass) override;
+    void OnUI(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_pass) override;
 
     void Shutdown() override;
 

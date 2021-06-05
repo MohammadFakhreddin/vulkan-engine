@@ -439,9 +439,9 @@ static void UpdateMouseCursor() {
 }
 
 void OnNewFrame(
-    uint32_t const delta_time,
-    RF::DrawPass & draw_pass,
-    RecordUICallback const & record_ui_callback
+    float const deltaTimeInSec,
+    RF::DrawPass & drawPass,
+    RecordUICallback const & recordUiCallback
 ) {
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! It is generally built by the renderer backend. Missing call to renderer _NewFrame() function? e.g. ImGui_ImplOpenGL3_NewFrame().");
@@ -461,15 +461,15 @@ void OnNewFrame(
             static_cast<float>(drawable_height) / static_cast<float>(window_height)
         );
     }
-    io.DeltaTime = static_cast<float>(delta_time) / 1000.0f;
+    io.DeltaTime = deltaTimeInSec;
     UpdateMousePositionAndButtons();
     UpdateMouseCursor();
     // Start the Dear ImGui frame
     ImGui::NewFrame();
 
     state->hasFocus = false;
-    if(record_ui_callback != nullptr) {
-        record_ui_callback();
+    if(recordUiCallback != nullptr) {
+        recordUiCallback();
     }
 
     ImGui::Render();
@@ -498,29 +498,29 @@ void OnNewFrame(
                     index_ptr += cmd_list->IdxBuffer.Size;
                 }
             }
-            if(state->mesh_buffers_validation_status[draw_pass.imageIndex]) {
-                RF::DestroyMeshBuffers(state->mesh_buffers[draw_pass.imageIndex]);
-                state->mesh_buffers_validation_status[draw_pass.imageIndex] = false;
+            if(state->mesh_buffers_validation_status[drawPass.imageIndex]) {
+                RF::DestroyMeshBuffers(state->mesh_buffers[drawPass.imageIndex]);
+                state->mesh_buffers_validation_status[drawPass.imageIndex] = false;
             }
-            state->mesh_buffers[draw_pass.imageIndex].verticesBuffer = RF::CreateVertexBuffer(CBlob {vertex_data.ptr, vertex_data.len});
-            state->mesh_buffers[draw_pass.imageIndex].indicesBuffer = RF::CreateIndexBuffer(CBlob {index_data.ptr, index_data.len});
-            state->mesh_buffers_validation_status[draw_pass.imageIndex] = true;
+            state->mesh_buffers[drawPass.imageIndex].verticesBuffer = RF::CreateVertexBuffer(CBlob {vertex_data.ptr, vertex_data.len});
+            state->mesh_buffers[drawPass.imageIndex].indicesBuffer = RF::CreateIndexBuffer(CBlob {index_data.ptr, index_data.len});
+            state->mesh_buffers_validation_status[drawPass.imageIndex] = true;
             // Setup desired Vulkan state
             // Bind pipeline and descriptor sets:
             {
-                RF::BindDrawPipeline(draw_pass, state->draw_pipeline);
-                RF::BindDescriptorSet(draw_pass, state->descriptor_sets[draw_pass.imageIndex]);
+                RF::BindDrawPipeline(drawPass, state->draw_pipeline);
+                RF::BindDescriptorSet(drawPass, state->descriptor_sets[drawPass.imageIndex]);
             }
 
             RF::BindIndexBuffer(
-                draw_pass,
-                state->mesh_buffers[draw_pass.imageIndex].indicesBuffer,
+                drawPass,
+                state->mesh_buffers[drawPass.imageIndex].indicesBuffer,
                 0,
                 sizeof(ImDrawIdx) == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32
             );
             RF::BindVertexBuffer(
-                draw_pass,
-                state->mesh_buffers[draw_pass.imageIndex].verticesBuffer
+                drawPass,
+                state->mesh_buffers[drawPass.imageIndex].verticesBuffer
             );
 
             // Update the Descriptor Set:
@@ -551,7 +551,7 @@ void OnNewFrame(
                 viewport.height = frame_buffer_height;
                 viewport.minDepth = 0.0f;
                 viewport.maxDepth = 1.0f;
-                RF::SetViewport(draw_pass, viewport);
+                RF::SetViewport(drawPass, viewport);
             }
 
             // Setup scale and translation:
@@ -563,7 +563,7 @@ void OnNewFrame(
                 constants.translate[0] = -1.0f - draw_data->DisplayPos.x * constants.scale[0];
                 constants.translate[1] = -1.0f - draw_data->DisplayPos.y * constants.scale[1];
                 RF::PushConstants(
-                    draw_pass,
+                    drawPass,
                     AssetSystem::Shader::Stage::Vertex,
                     0,
                     CBlobAliasOf(constants)
@@ -611,11 +611,11 @@ void OnNewFrame(
                                 .height = static_cast<uint32_t>(clip_rect.w - clip_rect.y)
                             }
                         };
-                        RF::SetScissor(draw_pass, scissor);
+                        RF::SetScissor(drawPass, scissor);
                         
                         // Draw
                         RF::DrawIndexed(
-                            draw_pass,
+                            drawPass,
                             pcmd->ElemCount,
                             1,
                             pcmd->IdxOffset + global_idx_offset, 

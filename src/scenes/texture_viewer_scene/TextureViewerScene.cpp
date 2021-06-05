@@ -74,7 +74,7 @@ void TextureViewerScene::Shutdown() {
 }
 
 void TextureViewerScene::OnDraw(
-    uint32_t deltaTime, 
+    float deltaTimeInSec, 
     RF::DrawPass & drawPass
 ) {
     RF::BindDrawPipeline(drawPass, mDrawPipeline);
@@ -132,7 +132,7 @@ void TextureViewerScene::OnDraw(
 }
 
 void TextureViewerScene::OnUI(
-    uint32_t delta_time, 
+    float deltaTimeInSec, 
     RF::DrawPass & draw_pass
 ) {
     static constexpr float ItemWidth = 500;
