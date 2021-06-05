@@ -16,6 +16,7 @@
 #endif
 
 #include <glm/glm.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 // Like GLM we can have union to access both linear and 2d or eve
 
@@ -741,16 +742,29 @@ public:
     }
 
     static glm::mat4 ConvertCellsToMat4(float const * cells) {
+        MFA_ASSERT(cells != nullptr);
         glm::mat4 result {};
         ConvertCellsToMat4(cells, result);
         return result;
     }
 
     static glm::vec3 ConvertCellsToVec3(float const * cells) {
+        MFA_ASSERT(cells != nullptr);
         return glm::vec3 {cells[0], cells[1], cells[2]};
     }
 
+    static glm::quat ConvertCellsToQuat(float const * cells) {
+        MFA_ASSERT(cells != nullptr);
+        glm::quat result {};
+        result.x = cells[0];
+        result.y = cells[1];
+        result.z = cells[2];
+        result.w = cells[3];
+        return result;
+    }
+
     static glm::vec4 ConvertCellsToVec4(float const * cells) {
+        MFA_ASSERT(cells != nullptr);
         return glm::vec4 {cells[0], cells[1], cells[2], cells[3]};
     }
 

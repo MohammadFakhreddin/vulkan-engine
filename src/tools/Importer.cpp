@@ -426,11 +426,11 @@ AS::Mesh ImportObj(char const * path) {
                 auto node = AS::MeshNode {
                     .subMeshIndex = static_cast<int>(subMeshIndex),
                     .children {},
-                    .transformMatrix {},
+                    .transform {},
                 };
                 auto const identity = Matrix4X4Float::Identity();
-                ::memcpy(node.transformMatrix, identity.cells, sizeof(node.transformMatrix));
-                static_assert(sizeof(node.transformMatrix) == sizeof(identity.cells));
+                ::memcpy(node.transform, identity.cells, sizeof(node.transform));
+                static_assert(sizeof(node.transform) == sizeof(identity.cells));
                 mesh.insertNode(node);
                 MFA_ASSERT(mesh.isValid());
 
@@ -1132,44 +1132,36 @@ static void GLTF_extractNodes(
     // Step3: Fill nodes
     if(false == gltfModel.nodes.empty()) {
         for (auto const & gltfNode : gltfModel.nodes) {
-            AS::MeshNode assetNode = {
+            AS::MeshNode node = {
                 .subMeshIndex = gltfNode.mesh,
                 .children = gltfNode.children,
-                .transformMatrix {},
                 .skin = gltfNode.skin
             };
-            glm::mat4 finalMatrix {1};
             if (gltfNode.translation.empty() == false) {
                 MFA_ASSERT(gltfNode.translation.size() == 3);
-                glm::vec3 translateMat {gltfNode.translation[0], gltfNode.translation[1], gltfNode.translation[2]};
-                finalMatrix = glm::translate(finalMatrix, translateMat);
+                node.translate[0] = static_cast<float>(gltfNode.translation[0]);
+                node.translate[1] = static_cast<float>(gltfNode.translation[1]);
+                node.translate[2] = static_cast<float>(gltfNode.translation[2]);
             }
             if (gltfNode.rotation.empty() == false) {
                 MFA_ASSERT(gltfNode.rotation.size() == 4);
-                glm::quat rotationQuat {
-                    static_cast<float>(gltfNode.rotation[3]),
-                    static_cast<float>(gltfNode.rotation[0]),
-                    static_cast<float>(gltfNode.rotation[1]),
-                    static_cast<float>(gltfNode.rotation[2])
-                };
-                finalMatrix = finalMatrix * glm::toMat4(rotationQuat);
+                node.rotation[0] = static_cast<float>(gltfNode.rotation[0]);
+                node.rotation[1] = static_cast<float>(gltfNode.rotation[1]);
+                node.rotation[2] = static_cast<float>(gltfNode.rotation[2]);
+                node.rotation[3] = static_cast<float>(gltfNode.rotation[3]);
             }
             if (gltfNode.scale.empty() == false) {
                 MFA_ASSERT(gltfNode.scale.size() == 3);
-                glm::vec3 scaleMat {gltfNode.scale[0], gltfNode.scale[1], gltfNode.scale[2]};
-                finalMatrix = glm::scale(finalMatrix, scaleMat);
+                node.scale[0] = static_cast<float>(gltfNode.scale[0]);
+                node.scale[1] = static_cast<float>(gltfNode.scale[1]);
+                node.scale[2] = static_cast<float>(gltfNode.scale[2]);
             }
             if (gltfNode.matrix.empty() == false) {
-                glm::mat4 gltfTransform {};
-                for (int i = 0; i < 4; ++i) {
-                    for (int j = 0; j < 4; ++j) {
-                        gltfTransform[i][j] = static_cast<float>(gltfNode.matrix[i * 4 + j]);
-                    }
+                for (int i = 0; i < 16; ++i) {
+                    node.transform[i] = static_cast<float>(gltfNode.matrix[i]);
                 }
-                finalMatrix = finalMatrix * gltfTransform;
             }
-            Matrix4X4Float::ConvertGmToCells(finalMatrix, assetNode.transformMatrix);
-            outResultModel.mesh.insertNode(assetNode);
+            outResultModel.mesh.insertNode(node);
         }
     }
 }
@@ -1311,7 +1303,7 @@ void GLTF_extractAnimations(
                         auto const * output = static_cast<Output3 const *>(outputData);
                         for (size_t index = 0; index < outputCount; index++)
                         {
-                            MFA::Copy<3>(sampler.inputAndOutput[index].output, output->value);
+                            MFA::Copy<3>(sampler.inputAndOutput[index].output, output[index].value);
                         }
                         break;
                     }
@@ -1319,7 +1311,7 @@ void GLTF_extractAnimations(
                         auto const * output = static_cast<Output4 const *>(outputData);
                         for (size_t index = 0; index < outputCount; index++)
                         {
-                            MFA::Copy<4>(sampler.inputAndOutput[index].output, output->value);
+                            MFA::Copy<4>(sampler.inputAndOutput[index].output, output[index].value);
                         }
                         break;
                     }

@@ -174,11 +174,13 @@ void DrawableObject::updateAnimation(float deltaTimeInSec) {
     }
 
     mAnimationCurrentTime += deltaTimeInSec;
-
+    
     if (mAnimationCurrentTime > activeAnimation.endTime) {
         MFA_ASSERT(activeAnimation.endTime > activeAnimation.startTime);
         mAnimationCurrentTime -= (activeAnimation.endTime - activeAnimation.startTime);
     }
+
+    MFA_LOG_INFO("%f", mAnimationCurrentTime);
     
     for (auto const & channel : activeAnimation.channels)
     {
@@ -203,12 +205,13 @@ void DrawableObject::updateAnimation(float deltaTimeInSec) {
                 // TODO Find a better name for a
                 float const a = (mAnimationCurrentTime - previousInput) / (nextInput - previousInput);
 
-                auto transform = glm::mat4(1);
                 if (channel.path == Animation::Path::Translation)
                 {
-                    auto const translateData = glm::mix(previousOutput, nextOutput, a);
-                    auto const translateVec = glm::vec3(translateData[0], translateData[1], translateData[2]);
-                    transform = glm::translate(transform, translateVec);
+                    auto const translate = glm::mix(previousOutput, nextOutput, a);
+
+                    node.translate[0] = translate[0];
+                    node.translate[1] = translate[1];
+                    node.translate[2] = translate[2];
                 }
                 else if (channel.path == Animation::Path::Rotation)
                 {
@@ -225,15 +228,21 @@ void DrawableObject::updateAnimation(float deltaTimeInSec) {
                     nextRotation.w = nextOutput[3];
 
                     auto const rotation = glm::normalize(glm::slerp(previousRotation, nextRotation, a));
-                    transform = transform * glm::toMat4(rotation);
+
+                    node.rotation[0] = rotation[0];
+                    node.rotation[1] = rotation[1];
+                    node.rotation[2] = rotation[2];
+                    node.rotation[3] = rotation[3];
                 }
                 else if (channel.path == Animation::Path::Scale)
                 {
-                    auto const scaleData = glm::mix(previousOutput, nextOutput, a);
-                    auto const scaleVec = glm::vec3(scaleData[0], scaleData[1], scaleData[2]); 
-                    transform = glm::scale(transform, scaleVec);
+                    auto const scale = glm::mix(previousOutput, nextOutput, a);
+                    
+                    node.scale[0] = scale[0];
+                    node.scale[1] = scale[1];
+                    node.scale[2] = scale[2];
                 }
-                Matrix4X4Float::ConvertGmToCells(transform, node.transformMatrix);
+                break;
             }
         }
     }
@@ -256,7 +265,7 @@ void DrawableObject::updateJoint(float const deltaTimeInSec, AssetSystem::Mesh::
     if (node.skin > -1)
     {
         // Update the joint matrices
-        glm::mat4 const inverseTransform = glm::inverse(computeNodeTransform(node));
+        glm::mat4 const inverseTransform = glm::inverse(computeNodeGlobalTransform(node));
         auto const & skin = mesh.getSkinByIndex(node.skin);
 
         // TODO Allocate this memory once
@@ -269,7 +278,7 @@ void DrawableObject::updateJoint(float const deltaTimeInSec, AssetSystem::Mesh::
         {
             // It's too much computation (Not as much as rasterizer but still too much)
             auto const & joint = mesh.getNodeByIndex(skin.joints[i]);
-            auto const nodeMatrix = computeNodeTransform(joint);
+            auto const nodeMatrix = computeNodeGlobalTransform(joint);
             glm::mat4 matrix = nodeMatrix * 
                 Matrix4X4Float::ConvertCellsToMat4(skin.inverseBindMatrices[i].value);  // T - S = changes
             matrix = inverseTransform * matrix;                                         // Why ?
@@ -289,13 +298,9 @@ void DrawableObject::drawNode(RF::DrawPass & drawPass, AssetSystem::Mesh::Node c
         auto const & mesh = mGpuModel->model.mesh;
         MFA_ASSERT(static_cast<int>(mesh.getSubMeshCount()) > node.subMeshIndex);
 
-        Matrix4X4Float nodeTransform {};
-        computeNodeTransform(node, nodeTransform);
+        auto const transform = computeNodeGlobalTransform(node);
+        Matrix4X4Float::ConvertGmToCells(transform, mNodeTransformData.model);
         
-        
-        ::memcpy(mNodeTransformData.model, nodeTransform.cells, sizeof(nodeTransform.cells));
-        MFA_ASSERT(sizeof(nodeTransform.cells) == sizeof(mNodeTransformData.model));
-
         RF::UpdateUniformBuffer(mNodeTransformBuffers.buffers[node.subMeshIndex], CBlobAliasOf(mNodeTransformData));
 
         drawSubMesh(drawPass, mesh.getSubMeshByIndex(node.subMeshIndex));
@@ -319,44 +324,48 @@ void DrawableObject::drawSubMesh(RF::DrawPass & drawPass, AssetSystem::Mesh::Sub
     }
 }
 
-void DrawableObject::computeNodeTransform(AS::Mesh::Node const & node, Matrix4X4Float & outMatrix) const {
-    auto const & mesh = mGpuModel->model.mesh;
+//void DrawableObject::computeNodeGlobalTransform(AS::Mesh::Node const & node, Matrix4X4Float & outMatrix) const {
+//    auto const & mesh = mGpuModel->model.mesh;
+//
+//    outMatrix.assign(node.transform);
+//
+//    int parentNodeIndex = node.parent;
+//    while(parentNodeIndex >= 0) {
+//        auto const & parentNode = mesh.getNodeByIndex(parentNodeIndex);
+//
+//        Matrix4X4Float parentTransform {};
+//        parentTransform.assign(parentNode.transform);
+//        // Note : Multiplication order matter
+//        parentTransform.multiply(outMatrix);
+//        
+//        outMatrix.assign(parentTransform);
+//
+//        parentNodeIndex = parentNode.parent;
+//    }
+//
+//    MFA_ASSERT(outMatrix.get(3, 0) == 0.0f);
+//    MFA_ASSERT(outMatrix.get(3, 1) == 0.0f);
+//    MFA_ASSERT(outMatrix.get(3, 2) == 0.0f);
+//
+//}
 
-    outMatrix.assign(node.transformMatrix);
-
-    int parentNodeIndex = node.parent;
-    while(parentNodeIndex >= 0) {
-        auto const & parentNode = mesh.getNodeByIndex(parentNodeIndex);
-
-        Matrix4X4Float parentTransform {};
-        parentTransform.assign(parentNode.transformMatrix);
-        // Note : Multiplication order matter
-        parentTransform.multiply(outMatrix);
-        
-        outMatrix.assign(parentTransform);
-
-        parentNodeIndex = parentNode.parent;
-    }
-
-    MFA_ASSERT(outMatrix.get(3, 0) == 0.0f);
-    MFA_ASSERT(outMatrix.get(3, 1) == 0.0f);
-    MFA_ASSERT(outMatrix.get(3, 2) == 0.0f);
-
+glm::mat4 DrawableObject::computerNodeLocalTransform(AS::Mesh::Node const & node) const {
+    glm::mat4 result {1};
+    result = glm::translate(result, Matrix4X4Float::ConvertCellsToVec3(node.translate));
+    result = result * glm::toMat4(Matrix4X1Float::ConvertCellsToQuat(node.rotation));
+    result = glm::scale(result, Matrix4X4Float::ConvertCellsToVec3(node.scale));
+    result = result * Matrix4X4Float::ConvertCellsToMat4(node.transform);
+    return result;
 }
 
-glm::mat4 DrawableObject::computeNodeTransform(AS::Mesh::Node const & node) const {
-   /* glm::mat4 result {};
-    Matrix4X4Float tempMatrix {};
-    computeNodeTransform(node, tempMatrix);
-    Matrix4X4Float::ConvertMatrixToGlm(tempMatrix, result);
-    return result;*/
+glm::mat4 DrawableObject::computeNodeGlobalTransform(AS::Mesh::Node const & node) const {
     auto const & mesh = mGpuModel->model.mesh;
-    glm::mat4 result = Matrix4X4Float::ConvertCellsToMat4(node.transformMatrix);
+    glm::mat4 result = computerNodeLocalTransform(node);
     int parentNodeIndex = node.parent;
     while(parentNodeIndex >= 0) {
         auto const & parentNode = mesh.getNodeByIndex(parentNodeIndex);
 
-        auto const parentTransform = Matrix4X4Float::ConvertCellsToMat4(parentNode.transformMatrix);
+        auto const parentTransform = computerNodeLocalTransform(parentNode);
         result = parentTransform * result;
 
         parentNodeIndex = parentNode.parent;

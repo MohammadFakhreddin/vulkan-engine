@@ -307,7 +307,15 @@ public:
     struct Node {
         int subMeshIndex = -1;
         std::vector<int> children {};
-        float transformMatrix[16] {};
+        float transform[16]{
+            1.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 1.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 1.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 1.0f
+        };                       // Preset animation value
+        float rotation[4] {0.0f, 0.0f, 0.0f, 1.0f};     // x, y, z, w
+        float scale[3] {1.0f, 1.0f, 1.0f};                  
+        float translate[3] {0.0f, 0.0f, 0.0f};
         int parent = -1;
         int skin = -1;
         int skinBufferIndex = -1;
@@ -484,6 +492,7 @@ public:
         return static_cast<uint32_t>(mAnimations.size()); 
     }
 
+    [[nodiscard]]
     Animation const * getAnimationData() const noexcept {
         return mAnimations.data();
     }

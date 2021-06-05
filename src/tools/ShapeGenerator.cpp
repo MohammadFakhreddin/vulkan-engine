@@ -138,14 +138,14 @@ namespace MFA::ShapeGenerator {
         auto node = AS::MeshNode {
             .subMeshIndex = 0,
             .children {},
-            .transformMatrix {},
+            .transform {},
         };
 
         {// Assign value to transformMat
             auto transform = Matrix4X4Float::Identity();
             Matrix4X4Float::AssignScale(transform, scaleFactor);
-            ::memcpy(node.transformMatrix, transform.cells, sizeof(node.transformMatrix));
-            static_assert(sizeof(node.transformMatrix) == sizeof(transform.cells));
+            ::memcpy(node.transform, transform.cells, sizeof(node.transform));
+            static_assert(sizeof(node.transform) == sizeof(transform.cells));
         }
 
         model.mesh.insertNode(node);
@@ -229,11 +229,11 @@ namespace MFA::ShapeGenerator {
         auto node = AS::MeshNode {
             .subMeshIndex = 0,
             .children {},
-            .transformMatrix {},
+            .transform {},
         };
         auto const identityMatrix = Matrix4X4Float::Identity();
-        ::memcpy(node.transformMatrix, identityMatrix.cells, sizeof(node.transformMatrix));
-        static_assert(sizeof(node.transformMatrix) == sizeof(identityMatrix.cells));
+        ::memcpy(node.transform, identityMatrix.cells, sizeof(node.transform));
+        static_assert(sizeof(node.transform) == sizeof(identityMatrix.cells));
         model.mesh.insertNode(node);
 
         if(model.mesh.isValid() == false) {

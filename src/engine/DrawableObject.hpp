@@ -108,9 +108,12 @@ private:
     void drawSubMesh(RF::DrawPass & drawPass, AS::Mesh::SubMesh const & subMesh);
 
     [[nodiscard]]
-    glm::mat4 computeNodeTransform(AS::Mesh::Node const & node) const;
+    glm::mat4 computerNodeLocalTransform(AS::Mesh::Node const & node) const;
 
-    void computeNodeTransform(const AS::Mesh::Node & node, Matrix4X4Float & outMatrix) const;
+    [[nodiscard]]
+    glm::mat4 computeNodeGlobalTransform(AS::Mesh::Node const & node) const;
+
+    //void computeNodeGlobalTransform(const AS::Mesh::Node & node, Matrix4X4Float & outMatrix) const;
 
 private:
 
