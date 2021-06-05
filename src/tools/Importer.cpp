@@ -1251,6 +1251,7 @@ void GLTF_extractAnimations(
     using Sampler = AS::MeshAnimation::Sampler;
     using Interpolation = AssetSystem::Mesh::Animation::Interpolation;
     using Path = AssetSystem::Mesh::Animation::Path;
+    using Channel = AssetSystem::Mesh::Animation::Channel;
     
     auto const convertInterpolationToEnum = [](char const * value)-> Interpolation {
         if (value ==  "LINEAR") {
@@ -1299,14 +1300,9 @@ void GLTF_extractAnimations(
                     inputData,
                     inputCount
                 );
-                const tinygltf::Accessor & accessor   = input.accessors[glTFSampler.input];
-                const tinygltf::BufferView & bufferView = input.bufferViews[accessor.bufferView];
-                const tinygltf::Buffer &    buffer     = input.buffers[bufferView.buffer];
-                const void *                dataPtr    = &buffer.data[accessor.byteOffset + bufferView.byteOffset];
-                const float *               buf        = static_cast<const float *>(dataPtr);
-                for (size_t index = 0; index < accessor.count; index++)
+                for (size_t index = 0; index < inputCount; index++)
                 {
-                    dstSampler.inputs.push_back(buf[index]);
+                    dstSampler.inputs.push_back(inputData[index]);
                 }
                 // Adjust animation's start and end times
                 for (auto input : animations[i].samplers[j].inputs)
@@ -1322,12 +1318,11 @@ void GLTF_extractAnimations(
                 }
             }
 
-            // Read sampler keyframe output translate/rotate/scale values
-            {
-                const tinygltf::Accessor &  accessor   = input.accessors[glTFSampler.output];
-                const tinygltf::BufferView &bufferView = input.bufferViews[accessor.bufferView];
-                const tinygltf::Buffer &    buffer     = input.buffers[bufferView.buffer];
-                const void *                dataPtr    = &buffer.data[accessor.byteOffset + bufferView.byteOffset];
+            {// Read sampler keyframe output translate/rotate/scale values
+                const tinygltf::Accessor & accessor = input.accessors[gltfSampler.output];
+                const tinygltf::BufferView & bufferView = input.bufferViews[accessor.bufferView];
+                const tinygltf::Buffer & buffer = input.buffers[bufferView.buffer];
+                void const * dataPtr = &buffer.data[accessor.byteOffset + bufferView.byteOffset];
                 switch (accessor.type)
                 {
                     case TINYGLTF_TYPE_VEC3: {
@@ -1355,14 +1350,16 @@ void GLTF_extractAnimations(
         }
 
         // Channels
-        animations[i].channels.resize(glTFAnimation.channels.size());
-        for (size_t j = 0; j < glTFAnimation.channels.size(); j++)
+        for (auto const & glTFChannel : gltfAnimation.channels)
         {
-            tinygltf::AnimationChannel glTFChannel = glTFAnimation.channels[j];
-            AnimationChannel &         dstChannel  = animations[i].channels[j];
-            dstChannel.path                        = glTFChannel.target_path;
-            dstChannel.samplerIndex                = glTFChannel.sampler;
-            dstChannel.node                        = nodeFromIndex(glTFChannel.target_node);
+            MFA_ASSERT(glTFChannel.target_node >= 0);
+            MFA_ASSERT(glTFChannel.sampler >= 0);
+            Channel channel {
+                .path = convertPathToEnum(glTFChannel.target_path.c_str()),
+                .nodeIndex = static_cast<uint32_t>(glTFChannel.target_node),
+                .samplerIndex = static_cast<uint32_t>(glTFChannel.sampler)
+            };
+            animation.channels.emplace_back(channel);
         }
     }
 }

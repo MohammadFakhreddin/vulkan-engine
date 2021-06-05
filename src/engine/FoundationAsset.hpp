@@ -359,7 +359,7 @@ public:
         struct Channel {
             Path path = Path::Invalid;      
             uint32_t nodeIndex = 0;         // We might need to store translation, rotation and scale separately
-            uint32_t channelIndex = 0;
+            uint32_t samplerIndex = 0;
         };
         std::vector<Channel> channels {};
 
