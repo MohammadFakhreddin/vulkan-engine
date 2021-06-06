@@ -128,6 +128,7 @@ void TextureViewerScene::OnDraw(
         );
     }
 
+    mDrawableObject->update(deltaTimeInSec);
     mDrawableObject->draw(drawPass);
 }
 

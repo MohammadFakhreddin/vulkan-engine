@@ -13,6 +13,8 @@ namespace AS = AssetSystem;
 
 using DrawableObjectId = uint32_t;
 
+using Node = AS::Mesh::Node;
+
 class DrawableObject {
 private:
     struct NodeTransformBuffer {
@@ -99,21 +101,20 @@ private:
 
     void updateAnimation(float deltaTimeInSec);
 
+    void computeNodesGlobalTransform();
+
     void updateJoints(float deltaTimeInSec);
 
-    void updateJoint(float deltaTimeInSec, AS::Mesh::Node const & node);
+    void updateJoint(float deltaTimeInSec, Node const & node);
 
-    void drawNode(RF::DrawPass & drawPass, const AS::Mesh::Node & node);
+    void drawNode(RF::DrawPass & drawPass, const Node & node);
 
     void drawSubMesh(RF::DrawPass & drawPass, AS::Mesh::SubMesh const & subMesh);
 
     [[nodiscard]]
-    glm::mat4 computerNodeLocalTransform(AS::Mesh::Node const & node) const;
+    glm::mat4 computeNodeLocalTransform(Node const & node) const;
 
-    [[nodiscard]]
-    glm::mat4 computeNodeGlobalTransform(AS::Mesh::Node const & node) const;
-
-    //void computeNodeGlobalTransform(const AS::Mesh::Node & node, Matrix4X4Float & outMatrix) const;
+    void computeNodeGlobalTransform(Node & node, Node const * parentNode, bool isParentTransformChanged) const;
 
 private:
 

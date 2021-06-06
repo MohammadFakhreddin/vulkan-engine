@@ -40,7 +40,7 @@ public:
     
     void render(
         RF::DrawPass & drawPass,
-        float deltaTime,
+        float deltaTimeInSec,
         uint32_t idsCount, 
         DrawableObjectId * ids
     ) override;

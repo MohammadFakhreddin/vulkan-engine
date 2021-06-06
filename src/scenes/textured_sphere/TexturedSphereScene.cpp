@@ -52,8 +52,8 @@ void TexturedSphereScene::Init() {
     updateProjectionBuffer();
 }
 
-void TexturedSphereScene::OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_pass) {
-    RF::BindDrawPipeline(draw_pass, mDrawPipeline);
+void TexturedSphereScene::OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) {
+    RF::BindDrawPipeline(drawPass, mDrawPipeline);
 
     {// Updating Transform buffer
         // Rotation
@@ -93,7 +93,8 @@ void TexturedSphereScene::OnDraw(float deltaTimeInSec, MFA::RenderFrontend::Draw
 
         RF::UpdateUniformBuffer(mLVBuffer.buffers[0], MFA::CBlobAliasOf(m_lv_data));
     }
-    mDrawableObject->draw(draw_pass);
+    mDrawableObject->update(deltaTimeInSec);
+    mDrawableObject->draw(drawPass);
 }
 
 void TexturedSphereScene::OnUI(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_pass) {

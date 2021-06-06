@@ -139,6 +139,7 @@ RF::UniformBufferGroup const & DrawableObject::getSkinTransformBuffer() const no
 
 void DrawableObject::update(float const deltaTimeInSec) {
     updateAnimation(deltaTimeInSec);
+    computeNodesGlobalTransform();
     updateJoints(deltaTimeInSec);
 }
 
@@ -180,8 +181,6 @@ void DrawableObject::updateAnimation(float deltaTimeInSec) {
         mAnimationCurrentTime -= (activeAnimation.endTime - activeAnimation.startTime);
     }
 
-    MFA_LOG_INFO("%f", mAnimationCurrentTime);
-    
     for (auto const & channel : activeAnimation.channels)
     {
         auto const & sampler = activeAnimation.samplers[channel.samplerIndex];
@@ -241,9 +240,27 @@ void DrawableObject::updateAnimation(float deltaTimeInSec) {
                     node.scale[0] = scale[0];
                     node.scale[1] = scale[1];
                     node.scale[2] = scale[2];
+                } else {
+                    MFA_ASSERT(false);
                 }
+
+                node.isCachedDataValid = false;
+
                 break;
             }
+        }
+    }
+}
+
+void DrawableObject::computeNodesGlobalTransform() {
+    auto & mesh = mGpuModel->model.mesh;
+
+    auto const nodesCount = mesh.getNodesCount();
+
+    for (uint32_t i = 0; i < nodesCount; ++i) {
+        auto & node = mesh.getNodeByIndex(i);
+        if (node.parent < 0) { // Root node
+            computeNodeGlobalTransform(node, nullptr, false);
         }
     }
 }
@@ -264,8 +281,10 @@ void DrawableObject::updateJoint(float const deltaTimeInSec, AssetSystem::Mesh::
     auto const & mesh = mGpuModel->model.mesh;
     if (node.skin > -1)
     {
+        // TODO: Performance, We can cache joints if node.cachedGlobalTransform has not changed
         // Update the joint matrices
-        glm::mat4 const inverseTransform = glm::inverse(computeNodeGlobalTransform(node));
+        MFA_ASSERT(node.isCachedDataValid == true);
+        glm::mat4 const inverseTransform = glm::inverse(node.cachedGlobalTransform);
         auto const & skin = mesh.getSkinByIndex(node.skin);
 
         // TODO Allocate this memory once
@@ -278,7 +297,8 @@ void DrawableObject::updateJoint(float const deltaTimeInSec, AssetSystem::Mesh::
         {
             // It's too much computation (Not as much as rasterizer but still too much)
             auto const & joint = mesh.getNodeByIndex(skin.joints[i]);
-            auto const nodeMatrix = computeNodeGlobalTransform(joint);
+            MFA_ASSERT(node.isCachedDataValid == true);
+            auto const nodeMatrix = joint.cachedGlobalTransform;
             glm::mat4 matrix = nodeMatrix * 
                 Matrix4X4Float::ConvertCellsToMat4(skin.inverseBindMatrices[i].value);  // T - S = changes
             matrix = inverseTransform * matrix;                                         // Why ?
@@ -298,8 +318,8 @@ void DrawableObject::drawNode(RF::DrawPass & drawPass, AssetSystem::Mesh::Node c
         auto const & mesh = mGpuModel->model.mesh;
         MFA_ASSERT(static_cast<int>(mesh.getSubMeshCount()) > node.subMeshIndex);
 
-        auto const transform = computeNodeGlobalTransform(node);
-        Matrix4X4Float::ConvertGmToCells(transform, mNodeTransformData.model);
+        MFA_ASSERT(node.isCachedDataValid == true);
+        Matrix4X4Float::ConvertGmToCells(node.cachedGlobalTransform, mNodeTransformData.model);
         
         RF::UpdateUniformBuffer(mNodeTransformBuffers.buffers[node.subMeshIndex], CBlobAliasOf(mNodeTransformData));
 
@@ -324,32 +344,7 @@ void DrawableObject::drawSubMesh(RF::DrawPass & drawPass, AssetSystem::Mesh::Sub
     }
 }
 
-//void DrawableObject::computeNodeGlobalTransform(AS::Mesh::Node const & node, Matrix4X4Float & outMatrix) const {
-//    auto const & mesh = mGpuModel->model.mesh;
-//
-//    outMatrix.assign(node.transform);
-//
-//    int parentNodeIndex = node.parent;
-//    while(parentNodeIndex >= 0) {
-//        auto const & parentNode = mesh.getNodeByIndex(parentNodeIndex);
-//
-//        Matrix4X4Float parentTransform {};
-//        parentTransform.assign(parentNode.transform);
-//        // Note : Multiplication order matter
-//        parentTransform.multiply(outMatrix);
-//        
-//        outMatrix.assign(parentTransform);
-//
-//        parentNodeIndex = parentNode.parent;
-//    }
-//
-//    MFA_ASSERT(outMatrix.get(3, 0) == 0.0f);
-//    MFA_ASSERT(outMatrix.get(3, 1) == 0.0f);
-//    MFA_ASSERT(outMatrix.get(3, 2) == 0.0f);
-//
-//}
-
-glm::mat4 DrawableObject::computerNodeLocalTransform(AS::Mesh::Node const & node) const {
+glm::mat4 DrawableObject::computeNodeLocalTransform(Node const & node) const {
     glm::mat4 result {1};
     result = glm::translate(result, Matrix4X4Float::ConvertCellsToVec3(node.translate));
     result = result * glm::toMat4(Matrix4X1Float::ConvertCellsToQuat(node.rotation));
@@ -358,19 +353,45 @@ glm::mat4 DrawableObject::computerNodeLocalTransform(AS::Mesh::Node const & node
     return result;
 }
 
-glm::mat4 DrawableObject::computeNodeGlobalTransform(AS::Mesh::Node const & node) const {
-    auto const & mesh = mGpuModel->model.mesh;
-    glm::mat4 result = computerNodeLocalTransform(node);
-    int parentNodeIndex = node.parent;
-    while(parentNodeIndex >= 0) {
-        auto const & parentNode = mesh.getNodeByIndex(parentNodeIndex);
+// TODO Instead of this we should get node and its parent global transform
+void DrawableObject::computeNodeGlobalTransform(Node & node, Node const * parentNode, bool isParentTransformChanged) const {
+    MFA_ASSERT(parentNode == nullptr || parentNode->isCachedDataValid == true);
+    MFA_ASSERT(parentNode != nullptr || isParentTransformChanged == false);
 
-        auto const parentTransform = computerNodeLocalTransform(parentNode);
-        result = parentTransform * result;
+    bool isChanged = false;
 
-        parentNodeIndex = parentNode.parent;
+    if (node.isCachedDataValid == false) {
+        node.cachedLocalTransform = computeNodeLocalTransform(node);
     }
-    return result;
+
+    if (isParentTransformChanged == true || node.isCachedDataValid == false) {
+        if (parentNode == nullptr) {
+            node.cachedGlobalTransform = node.cachedLocalTransform;
+        } else {
+            node.cachedGlobalTransform = parentNode->cachedGlobalTransform * node.cachedLocalTransform;
+        }
+        isChanged = true;
+    }
+
+    node.isCachedDataValid = true;
+
+    auto & mesh = mGpuModel->model.mesh;
+    for (auto const child : node.children) {
+        auto & childNode = mesh.getNodeByIndex(child);
+        computeNodeGlobalTransform(childNode, &node, isChanged);
+    }
+    //auto const & mesh = mGpuModel->model.mesh;
+    //glm::mat4 result = computerNodeLocalTransform(node);
+    //int parentNodeIndex = node.parent;
+    //while(parentNodeIndex >= 0) {
+    //    auto const & parentNode = mesh.getNodeByIndex(parentNodeIndex);
+
+    //    auto const parentTransform = computerNodeLocalTransform(parentNode);
+    //    result = parentTransform * result;
+
+    //    parentNodeIndex = parentNode.parent;
+    //}
+    //return result;
 }
 
 };

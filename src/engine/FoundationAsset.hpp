@@ -319,7 +319,11 @@ public:
         int parent = -1;
         int skin = -1;
         int skinBufferIndex = -1;
-    
+
+        bool isCachedDataValid = false;
+        glm::mat4 cachedLocalTransform {};
+        glm::mat4 cachedGlobalTransform {};
+
         [[nodiscard]]
         bool hasSubMesh() const noexcept {
             return subMeshIndex >= 0;
