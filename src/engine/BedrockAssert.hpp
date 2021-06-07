@@ -1,7 +1,7 @@
 #pragma once
 
-#include "common/BedrockPlatforms.hpp"
-#include "common/BedrockLog.hpp"
+#include "engine/BedrockPlatforms.hpp"
+#include "engine/BedrockLog.hpp"
 
 #include <stdexcept>
 #include <cassert>
