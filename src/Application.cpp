@@ -24,6 +24,7 @@ void Application::run() {
     namespace RF = MFA::RenderFrontend;
     namespace UI = MFA::UISystem;
     namespace IM = MFA::InputManager;
+    namespace MSDL = MFA::MSDL;
     
     static constexpr uint16_t SCREEN_WIDTH = 800;//1920;
     static constexpr uint16_t SCREEN_HEIGHT = 600;//1080;
