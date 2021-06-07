@@ -317,7 +317,7 @@ void Init() {
         // Setup Dear ImGui style
         ImGui::StyleColorsDark();
     
-        Byte * pixels = nullptr;
+        uint8_t * pixels = nullptr;
         int32_t width, height;
         io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
         MFA_ASSERT(pixels != nullptr);
@@ -326,7 +326,7 @@ void Init() {
         uint8_t const components_count = 4;
         uint8_t const depth = 1;
         uint8_t const slices = 1;
-        size_t const image_size = width * height * components_count * sizeof(Byte);
+        size_t const image_size = width * height * components_count * sizeof(uint8_t);
         auto texture_asset = Importer::ImportInMemoryTexture(
             CBlob {pixels, image_size},
             width,
