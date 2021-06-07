@@ -1,8 +1,6 @@
 #include "Application.hpp"
 
-#include <engine/InputManager.hpp>
-
-
+#include "engine/InputManager.hpp"
 #include "scenes/gltf_mesh_viewer/GLTFMeshViewerScene.hpp"
 #include "scenes/pbr_scene/PBRScene.hpp"
 #include "scenes/textured_sphere/TexturedSphereScene.hpp"
@@ -10,7 +8,7 @@
 #include "engine/RenderFrontend.hpp"
 #include "engine/Scene.hpp"
 
-#include <SDL2/SDL.h>
+#include "libs/sdl/SDL.hpp"
 
 Application::Application()
     : mGltfMeshViewerScene(std::make_unique<GLTFMeshViewerScene>())
@@ -45,30 +43,30 @@ void Application::run() {
     {// Main loop
         bool quit = false;
         //Event handler
-        SDL_Event e;
+        MSDL::SDL_Event e;
         //While application is running
         uint32_t const targetFps = 1000 / 60;
         uint32_t deltaTime = 0;
         while (!quit)
         {
-            uint32_t const start_time = SDL_GetTicks();
+            uint32_t const start_time = MSDL::SDL_GetTicks();
             IM::OnNewFrame();
             // DrawFrame
             mSceneSubSystem.OnNewFrame(static_cast<float>(deltaTime) / 1000.0f);
             //Handle events
-            if (SDL_PollEvent(&e) != 0)
+            if (MSDL::SDL_PollEvent(&e) != 0)
             {
                 //User requests quit
-                if (e.type == SDL_QUIT)
+                if (e.type == MSDL::SDL_QUIT)
                 {
                     quit = true;
                 }
             }
-            deltaTime = SDL_GetTicks() - start_time;
+            deltaTime = MSDL::SDL_GetTicks() - start_time;
             if(targetFps > deltaTime){
-                SDL_Delay( targetFps - deltaTime );
+                MSDL::SDL_Delay( targetFps - deltaTime );
             }
-            deltaTime = SDL_GetTicks() - start_time;
+            deltaTime = MSDL::SDL_GetTicks() - start_time;
         }
     }
     RF::DeviceWaitIdle();

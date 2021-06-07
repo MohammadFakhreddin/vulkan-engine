@@ -6,8 +6,7 @@
 #include "BedrockMath.hpp"
 #include "BedrockMemory.hpp"
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_vulkan.h>
+#include "libs/sdl/SDL.hpp"
 
 #include <vector>
 #include <cstring>
@@ -27,33 +26,33 @@ static void VK_Check(VkResult const result) {
   }
 }
 
-static void SDL_Check(SDL_bool const result) {
-  if(result != SDL_TRUE) {\
+static void SDL_Check(MSDL::SDL_bool const result) {
+  if(result != MSDL::SDL_TRUE) {\
       MFA_CRASH("SDL command failed");
   }
 }
 
 SDL_Window * CreateWindow(ScreenWidth const screen_width, ScreenHeight const screen_height) {
-    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
+    MSDL::SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
     auto const screen_info = MFA::Platforms::ComputeScreenSize();
-    auto * window = SDL_CreateWindow(
+    auto * window = MSDL::SDL_CreateWindow(
         "VULKAN_ENGINE", 
         static_cast<uint32_t>((static_cast<float>(screen_info.screen_width) / 2.0f) - (static_cast<float>(screen_width) / 2.0f)), 
         static_cast<uint32_t>((static_cast<float>(screen_info.screen_height) / 2.0f) - (static_cast<float>(screen_height) / 2.0f)),
         screen_width, screen_height,
-        SDL_WINDOW_SHOWN /*| SDL_WINDOW_FULLSCREEN */| SDL_WINDOW_VULKAN
+        MSDL::SDL_WINDOW_SHOWN /*| SDL_WINDOW_FULLSCREEN */| MSDL::SDL_WINDOW_VULKAN
     );
     return window;
 }
 
 void DestroyWindow(SDL_Window * window) {
     MFA_ASSERT(window != nullptr);
-    SDL_DestroyWindow(window);
+    MSDL::SDL_DestroyWindow(window);
 }
 
 VkSurfaceKHR_T * CreateWindowSurface(SDL_Window * window, VkInstance_T * instance) {
     VkSurfaceKHR_T * ret = nullptr;
-    SDL_Check(SDL_Vulkan_CreateSurface(
+    SDL_Check(MSDL::SDL_Vulkan_CreateSurface(
         window,
         instance,
         &ret
@@ -150,9 +149,9 @@ VkInstance_T * CreateInstance(char const * application_name, SDL_Window * window
     std::vector<char const *> instance_extensions {};
     {// Filling sdl extensions
         unsigned int sdl_extenstion_count = 0;
-        SDL_Check(SDL_Vulkan_GetInstanceExtensions(window, &sdl_extenstion_count, nullptr));
+        SDL_Check(MSDL::SDL_Vulkan_GetInstanceExtensions(window, &sdl_extenstion_count, nullptr));
         instance_extensions.resize(sdl_extenstion_count);
-        SDL_Check(SDL_Vulkan_GetInstanceExtensions(
+        SDL_Check(MSDL::SDL_Vulkan_GetInstanceExtensions(
             window,
             &sdl_extenstion_count,
             instance_extensions.data()
@@ -1573,7 +1572,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
     // Create the graphics pipeline
     VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
     pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineCreateInfo.stageCount = static_cast<Uint32>(shader_stages_create_infos.size());
+    pipelineCreateInfo.stageCount = static_cast<uint32_t>(shader_stages_create_infos.size());
     pipelineCreateInfo.pStages = shader_stages_create_infos.data();
     pipelineCreateInfo.pVertexInputState = &vertex_input_state_create_info;
     pipelineCreateInfo.pInputAssemblyState = &input_assembly_create_info;

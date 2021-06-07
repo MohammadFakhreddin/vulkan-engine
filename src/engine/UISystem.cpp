@@ -2,9 +2,10 @@
 
 #include "BedrockMemory.hpp"
 #include "../tools/Importer.hpp"
-#include "libs/imgui/imgui.h"
 
-#include <SDL2/SDL.h>
+#include "libs/imgui/imgui.h"
+#include "libs/sdl/SDL.hpp"
+
 
 namespace MFA::UISystem {
 
@@ -131,7 +132,7 @@ struct State {
     RF::DrawPipeline draw_pipeline {};
     RB::GpuTexture font_texture {};
     bool mouse_pressed[3] {false};
-    SDL_Cursor *  mouse_cursors[ImGuiMouseCursor_COUNT] {};
+    MSDL::SDL_Cursor *  mouse_cursors[ImGuiMouseCursor_COUNT] {};
     std::vector<RF::MeshBuffers> mesh_buffers {};
     std::vector<bool> mesh_buffers_validation_status {};
     bool hasFocus = false;
@@ -145,28 +146,28 @@ struct PushConstants {
     float translate[2];
 };
 
-static int EventWatch(void* data, SDL_Event* event) {
+static int EventWatch(void* data, MSDL::SDL_Event* event) {
     ImGuiIO& io = ImGui::GetIO();
     switch (event->type)
     {
-    case SDL_TEXTINPUT:
+    case MSDL::SDL_TEXTINPUT:
         {
             io.AddInputCharactersUTF8(event->text.text);
             return true;
         }
-    case SDL_KEYDOWN:
-    case SDL_KEYUP:
+    case MSDL::SDL_KEYDOWN:
+    case MSDL::SDL_KEYUP:
         {
             int key = event->key.keysym.scancode;
             IM_ASSERT(key >= 0 && key < IM_ARRAYSIZE(io.KeysDown));
-            io.KeysDown[key] = (event->type == SDL_KEYDOWN);
-            io.KeyShift = ((SDL_GetModState() & KMOD_SHIFT) != 0);
-            io.KeyCtrl = ((SDL_GetModState() & KMOD_CTRL) != 0);
-            io.KeyAlt = ((SDL_GetModState() & KMOD_ALT) != 0);
+            io.KeysDown[key] = (event->type == MSDL::SDL_KEYDOWN);
+            io.KeyShift = ((MSDL::SDL_GetModState() & MSDL::KMOD_SHIFT) != 0);
+            io.KeyCtrl = ((MSDL::SDL_GetModState() & MSDL::KMOD_CTRL) != 0);
+            io.KeyAlt = ((MSDL::SDL_GetModState() & MSDL::KMOD_ALT) != 0);
 #ifdef _WIN32
             io.KeySuper = false;
 #else
-            io.KeySuper = ((SDL_GetModState() & KMOD_GUI) != 0);
+            io.KeySuper = ((MSDL::SDL_GetModState() & MSDL::KMOD_GUI) != 0);
 #endif
             return true;
         }
@@ -341,28 +342,28 @@ void Init() {
         state->font_texture = RF::CreateTexture(texture_asset);
 
         // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array.
-        io.KeyMap[ImGuiKey_Tab] = SDL_SCANCODE_TAB;
-        io.KeyMap[ImGuiKey_LeftArrow] = SDL_SCANCODE_LEFT;
-        io.KeyMap[ImGuiKey_RightArrow] = SDL_SCANCODE_RIGHT;
-        io.KeyMap[ImGuiKey_UpArrow] = SDL_SCANCODE_UP;
-        io.KeyMap[ImGuiKey_DownArrow] = SDL_SCANCODE_DOWN;
-        io.KeyMap[ImGuiKey_PageUp] = SDL_SCANCODE_PAGEUP;
-        io.KeyMap[ImGuiKey_PageDown] = SDL_SCANCODE_PAGEDOWN;
-        io.KeyMap[ImGuiKey_Home] = SDL_SCANCODE_HOME;
-        io.KeyMap[ImGuiKey_End] = SDL_SCANCODE_END;
-        io.KeyMap[ImGuiKey_Insert] = SDL_SCANCODE_INSERT;
-        io.KeyMap[ImGuiKey_Delete] = SDL_SCANCODE_DELETE;
-        io.KeyMap[ImGuiKey_Backspace] = SDL_SCANCODE_BACKSPACE;
-        io.KeyMap[ImGuiKey_Space] = SDL_SCANCODE_SPACE;
-        io.KeyMap[ImGuiKey_Enter] = SDL_SCANCODE_RETURN;
-        io.KeyMap[ImGuiKey_Escape] = SDL_SCANCODE_ESCAPE;
-        io.KeyMap[ImGuiKey_KeyPadEnter] = SDL_SCANCODE_KP_ENTER;
-        io.KeyMap[ImGuiKey_A] = SDL_SCANCODE_A;
-        io.KeyMap[ImGuiKey_C] = SDL_SCANCODE_C;
-        io.KeyMap[ImGuiKey_V] = SDL_SCANCODE_V;
-        io.KeyMap[ImGuiKey_X] = SDL_SCANCODE_X;
-        io.KeyMap[ImGuiKey_Y] = SDL_SCANCODE_Y;
-        io.KeyMap[ImGuiKey_Z] = SDL_SCANCODE_Z;
+        io.KeyMap[ImGuiKey_Tab] = MSDL::SDL_SCANCODE_TAB;
+        io.KeyMap[ImGuiKey_LeftArrow] = MSDL::SDL_SCANCODE_LEFT;
+        io.KeyMap[ImGuiKey_RightArrow] = MSDL::SDL_SCANCODE_RIGHT;
+        io.KeyMap[ImGuiKey_UpArrow] = MSDL::SDL_SCANCODE_UP;
+        io.KeyMap[ImGuiKey_DownArrow] = MSDL::SDL_SCANCODE_DOWN;
+        io.KeyMap[ImGuiKey_PageUp] = MSDL::SDL_SCANCODE_PAGEUP;
+        io.KeyMap[ImGuiKey_PageDown] = MSDL::SDL_SCANCODE_PAGEDOWN;
+        io.KeyMap[ImGuiKey_Home] = MSDL::SDL_SCANCODE_HOME;
+        io.KeyMap[ImGuiKey_End] = MSDL::SDL_SCANCODE_END;
+        io.KeyMap[ImGuiKey_Insert] = MSDL::SDL_SCANCODE_INSERT;
+        io.KeyMap[ImGuiKey_Delete] = MSDL::SDL_SCANCODE_DELETE;
+        io.KeyMap[ImGuiKey_Backspace] = MSDL::SDL_SCANCODE_BACKSPACE;
+        io.KeyMap[ImGuiKey_Space] = MSDL::SDL_SCANCODE_SPACE;
+        io.KeyMap[ImGuiKey_Enter] = MSDL::SDL_SCANCODE_RETURN;
+        io.KeyMap[ImGuiKey_Escape] = MSDL::SDL_SCANCODE_ESCAPE;
+        io.KeyMap[ImGuiKey_KeyPadEnter] = MSDL::SDL_SCANCODE_KP_ENTER;
+        io.KeyMap[ImGuiKey_A] = MSDL::SDL_SCANCODE_A;
+        io.KeyMap[ImGuiKey_C] = MSDL::SDL_SCANCODE_C;
+        io.KeyMap[ImGuiKey_V] = MSDL::SDL_SCANCODE_V;
+        io.KeyMap[ImGuiKey_X] = MSDL::SDL_SCANCODE_X;
+        io.KeyMap[ImGuiKey_Y] = MSDL::SDL_SCANCODE_Y;
+        io.KeyMap[ImGuiKey_Z] = MSDL::SDL_SCANCODE_Z;
     }
 
     state->eventWatchId = RF::AddEventWatch(EventWatch);
@@ -378,45 +379,45 @@ static void UpdateMousePositionAndButtons() {
         io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
     }
     int mx, my;
-    Uint32 const mouse_buttons = SDL_GetMouseState(&mx, &my);
-    io.MouseDown[0] = state->mouse_pressed[0] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_LEFT)) != 0;  // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-    io.MouseDown[1] = state->mouse_pressed[1] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0;
-    io.MouseDown[2] = state->mouse_pressed[2] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0;
+    uint32_t const mouse_buttons = MSDL::SDL_GetMouseState(&mx, &my);
+    io.MouseDown[0] = state->mouse_pressed[0] || ((mouse_buttons & SDL_BUTTON(SDL_BUTTON_LEFT)) != 0);  // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
+    io.MouseDown[1] = state->mouse_pressed[1] || ((mouse_buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0);
+    io.MouseDown[2] = state->mouse_pressed[2] || ((mouse_buttons & SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0);
     state->mouse_pressed[0] = state->mouse_pressed[1] = state->mouse_pressed[2] = false;
-    if (RF::GetWindowFlags() & SDL_WINDOW_INPUT_FOCUS) {
+    if (RF::GetWindowFlags() & MSDL::SDL_WINDOW_INPUT_FOCUS) {
         io.MousePos = ImVec2(static_cast<float>(mx), static_cast<float>(my));
     }
 
     //// TODO Move this to input manager
-    //auto const * sdlKeysDown = RF::GetKeyboardState();
-    //if (sdlKeysDown[SDL_SCANCODE_0]) {
+    //auto const * MSDL::sdlKeysDown = RF::GetKeyboardState();
+    //if (MSDL::sdlKeysDown[MSDL::SDL_SCANCODE_0]) {
     //    io.AddInputCharacter('0');
     //}
-    //if (sdlKeysDown[SDL_SCANCODE_1]) {
+    //if (MSDL::sdlKeysDown[MSDL::SDL_SCANCODE_1]) {
     //    io.AddInputCharacter('1');
     //}
-    //if (sdlKeysDown[SDL_SCANCODE_2]) {
+    //if (MSDL::sdlKeysDown[MSDL::SDL_SCANCODE_2]) {
     //    io.AddInputCharacter('2');
     //}
-    //if (sdlKeysDown[SDL_SCANCODE_3]) {
+    //if (MSDL::sdlKeysDown[MSDL::SDL_SCANCODE_3]) {
     //    io.AddInputCharacter('3');
     //}
-    //if (sdlKeysDown[SDL_SCANCODE_4]) {
+    //if (MSDL::sdlKeysDown[MSDL::SDL_SCANCODE_4]) {
     //    io.AddInputCharacter('4');
     //}
-    //if (sdlKeysDown[SDL_SCANCODE_5]) {
+    //if (MSDL::sdlKeysDown[MSDL::SDL_SCANCODE_5]) {
     //    io.AddInputCharacter('5');
     //}
-    //if (sdlKeysDown[SDL_SCANCODE_6]) {
+    //if (MSDL::sdlKeysDown[MSDL::SDL_SCANCODE_6]) {
     //    io.AddInputCharacter('6');
     //}
-    //if (sdlKeysDown[SDL_SCANCODE_7]) {
+    //if (MSDL::sdlKeysDown[MSDL::SDL_SCANCODE_7]) {
     //    io.AddInputCharacter('7');
     //}
-    //if (sdlKeysDown[SDL_SCANCODE_8]) {
+    //if (MSDL::sdlKeysDown[MSDL::SDL_SCANCODE_8]) {
     //    io.AddInputCharacter('8');
     //}
-    //if (sdlKeysDown[SDL_SCANCODE_9]) {
+    //if (MSDL::sdlKeysDown[MSDL::SDL_SCANCODE_9]) {
     //    io.AddInputCharacter('9');
     //}
 }
@@ -430,11 +431,11 @@ static void UpdateMouseCursor() {
     ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
     if (io.MouseDrawCursor || imgui_cursor == ImGuiMouseCursor_None) {
         // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
-        SDL_ShowCursor(SDL_FALSE);
+        MSDL::SDL_ShowCursor(MSDL::SDL_FALSE);
     } else {
         // Show OS mouse cursor
-        SDL_SetCursor(state->mouse_cursors[imgui_cursor] ? state->mouse_cursors[imgui_cursor] : state->mouse_cursors[ImGuiMouseCursor_Arrow]);
-        SDL_ShowCursor(SDL_TRUE);
+        MSDL::SDL_SetCursor(state->mouse_cursors[imgui_cursor] ? state->mouse_cursors[imgui_cursor] : state->mouse_cursors[ImGuiMouseCursor_Arrow]);
+        MSDL::SDL_ShowCursor(MSDL::SDL_TRUE);
     }
 }
 
@@ -450,7 +451,7 @@ void OnNewFrame(
     int32_t window_width, window_height;
     int32_t drawable_width, drawable_height;
     RF::GetWindowSize(window_width, window_height);
-    if (RF::GetWindowFlags() & SDL_WINDOW_MINIMIZED) {
+    if (RF::GetWindowFlags() & MSDL::SDL_WINDOW_MINIMIZED) {
         window_width = window_height = 0;
     }
     RF::GetDrawableSize(drawable_width, drawable_height);

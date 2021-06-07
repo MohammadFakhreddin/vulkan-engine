@@ -3,9 +3,9 @@
 #include "BedrockAssert.hpp"
 #include "RenderBackend.hpp"
 #include "BedrockLog.hpp"
-#include "../libs/imgui/imgui.h"
 
-#include <SDL2/SDL.h>
+#include "../libs/imgui/imgui.h"
+#include "libs/sdl/SDL.hpp"
 
 #include <string>
 
@@ -27,7 +27,7 @@ struct State {
     std::string application_name {};
     VkInstance vk_instance {};
     // CreateWindow
-    SDL_Window * window = nullptr;
+    MSDL::SDL_Window * window = nullptr;
     // CreateDebugCallback
     VkDebugReportCallbackEXT vk_debug_report_callback_ext = nullptr;
     VkSurfaceKHR_T * surface = nullptr;
@@ -79,14 +79,14 @@ static VkBool32 DebugCallback(
     return true;
 }
 
-static int SDLEventWatcher(void* data, SDL_Event* event) {
+static int SDLEventWatcher(void* data, MSDL::SDL_Event* event) {
     if (
         state->isWindowResizable == true &&
-        event->type == SDL_WINDOWEVENT &&
-        event->window.event == SDL_WINDOWEVENT_RESIZED
+        event->type == MSDL::SDL_WINDOWEVENT &&
+        event->window.event == MSDL::SDL_WINDOWEVENT_RESIZED
     ) {
-        SDL_Window* win = SDL_GetWindowFromID(event->window.windowID);
-        if (win == static_cast<SDL_Window *>(data)) {
+        MSDL::SDL_Window* win = MSDL::SDL_GetWindowFromID(event->window.windowID);
+        if (win == static_cast<MSDL::SDL_Window *>(data)) {
             state->windowResized = true;
         }
     }
@@ -110,10 +110,10 @@ bool Init(InitParams const & params) {
 
     if (params.resizable) {
         // Make window resizable
-        SDL_SetWindowResizable(state->window, SDL_TRUE);
+        MSDL::SDL_SetWindowResizable(state->window, MSDL::SDL_TRUE);
     }
 
-    SDL_AddEventWatch(SDLEventWatcher, nullptr);
+    MSDL::SDL_AddEventWatch(SDLEventWatcher, nullptr);
     
     state->vk_instance = RB::CreateInstance(
         state->application_name.c_str(), 
@@ -282,7 +282,7 @@ bool Shutdown() {
     RB::DeviceWaitIdle(state->logicalDevice.device);
     MFA_ASSERT(state->sdlEventListeners.empty());
 
-    SDL_DelEventWatch(SDLEventWatcher, nullptr);
+    MSDL::SDL_DelEventWatch(SDLEventWatcher, nullptr);
 
     // DestroyPipeline in application // TODO We should have reference to what user creates + params for re-creation
     // GraphicPipeline, UniformBuffer, PipelineLayout
@@ -997,27 +997,27 @@ uint8_t SwapChainImagesCount() {
 // SDL functions
 
 void WarpMouseInWindow(int32_t const x, int32_t const y) {
-    SDL_WarpMouseInWindow(state->window, x, y);
+    MSDL::SDL_WarpMouseInWindow(state->window, x, y);
 }
 
 uint32_t GetMouseState(int32_t * x, int32_t * y) {
-    return SDL_GetMouseState(x, y);
+    return MSDL::SDL_GetMouseState(x, y);
 }
 
 uint8_t const * GetKeyboardState(int * numKeys) {
-    return SDL_GetKeyboardState(numKeys);
+    return MSDL::SDL_GetKeyboardState(numKeys);
 }
 
 uint32_t GetWindowFlags() {
-    return SDL_GetWindowFlags(state->window); 
+    return MSDL::SDL_GetWindowFlags(state->window); 
 }
 
 void GetWindowSize(int32_t & out_width, int32_t & out_height) {
-    SDL_GetWindowSize(state->window, &out_width, &out_height);
+    MSDL::SDL_GetWindowSize(state->window, &out_width, &out_height);
 }
 
 void GetDrawableSize(int32_t & out_width, int32_t & out_height) {
-    SDL_GL_GetDrawableSize(state->window, &out_width, &out_height);
+    MSDL::SDL_GL_GetDrawableSize(state->window, &out_width, &out_height);
 }
 
 void AssignViewportAndScissorToCommandBuffer(VkCommandBuffer_T * commandBuffer) {

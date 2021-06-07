@@ -22,7 +22,7 @@ explicit FileHandle(char const * path, Usage const usage) {
             default: return "";
         }
     }();
-    #ifdef __PLATFORM_MAC__
+    #ifndef __PLATFORM_WIN__
     int errorCode = 0;
     auto mFile = fopen(path, mode);
     if (mFile != nullptr) {
@@ -38,7 +38,7 @@ explicit FileHandle(char const * path, Usage const usage) {
         }
     }
     if (mFile == nullptr && Usage::Append == usage) {
-        #ifdef __PLATFORM_MAC__
+        #ifndef __PLATFORM_WIN__
         errorCode = 0;
         auto mFile = fopen(path, mode);
         if (mFile != nullptr) {
@@ -133,7 +133,11 @@ uint64_t totalSize () const {
         ::fseek(mFile, 0, SEEK_END);
         ::fgetpos(mFile, &end_pos);
         ::fsetpos(mFile, &pos);
+        #ifndef __PLATFORM_WIN__
+        ret = static_cast<uint64_t>(end_pos.__pos);
+        #else
         ret = static_cast<uint64_t>(end_pos);
+        #endif
     }
     return ret;
 }

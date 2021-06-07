@@ -958,7 +958,7 @@ public:
     }
 
     static void Normalize(_Matrix<T, 3, 1> & matrix) {
-        auto const matrixSize = matrix.size<T>();
+        auto const matrixSize = matrix.size();
         MFA_ASSERT(matrixSize > 0);
         matrix.setX(matrix.getX() / matrixSize);
         matrix.setY(matrix.getY() / matrixSize);
@@ -966,7 +966,7 @@ public:
     }
 
     static void Normalize(_Matrix<T, 4, 1> & matrix) {
-        auto const matrixSize = matrix.size<T>();
+        auto const matrixSize = matrix.size();
         MFA_ASSERT(matrixSize > 0);
         auto const wFactor = matrix.getW() >= 0 ? 1.0f : -1.0f;
         matrix.setX(matrix.getX() * wFactor / matrixSize);

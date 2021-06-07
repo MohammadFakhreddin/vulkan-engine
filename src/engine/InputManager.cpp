@@ -54,16 +54,16 @@ void OnNewFrame() {
     state->mouseCurrentY = mousePositionY;
 
     auto const * keys = RF::GetKeyboardState();
-    if (keys[SDL_SCANCODE_W]) {
+    if (keys[MSDL::SDL_SCANCODE_W]) {
         state->forwardMove += 1.0f;
     }
-    if (keys[SDL_SCANCODE_S]) {
+    if (keys[MSDL::SDL_SCANCODE_S]) {
         state->forwardMove -= 1.0f;
     }
-    if (keys[SDL_SCANCODE_D]) {
+    if (keys[MSDL::SDL_SCANCODE_D]) {
         state->rightMove += 1.0f;
     }
-    if (keys[SDL_SCANCODE_A]) {
+    if (keys[MSDL::SDL_SCANCODE_A]) {
         state->rightMove -= 1.0f;   
     }
     

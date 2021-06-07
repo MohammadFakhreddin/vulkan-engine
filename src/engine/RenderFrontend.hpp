@@ -1,8 +1,8 @@
 #pragma once
 
-#include <SDL2/SDL_events.h>
-
 #include "RenderBackend.hpp"
+
+#include "libs/sdl/SDL.hpp"
 
 namespace MFA::RenderFrontend {
 
@@ -264,7 +264,7 @@ void AssignViewportAndScissorToCommandBuffer(
 );
 
 using EventWatchId = int;
-using EventWatch = std::function<int(void* data, SDL_Event* event)>;
+using EventWatch = std::function<int(void* data, MSDL::SDL_Event* event)>;
 
 EventWatchId AddEventWatch(EventWatch const & eventWatch);
 
