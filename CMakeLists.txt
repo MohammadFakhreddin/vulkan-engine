@@ -23,6 +23,10 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
   set(WINDOWS TRUE)
 endif()
 
+if(UNIX AND NOT APPLE AND NOT ANDROID)
+   set(LINUX TRUE)
+endif()
+
 if(WINDOWS)
   add_definitions (/WX)           # Warnings as errors
 endif()
@@ -233,10 +237,10 @@ if (WINDOWS)
         "${CMAKE_SOURCE_DIR}/libs/win/SDL2main.lib"
     )
 
-    file(
-        GLOB IMGUI
-        "${CMAKE_SOURCE_DIR}/libs/win/imgui.lib"
-    )
+    # file(
+    #     GLOB IMGUI
+    #     "${CMAKE_SOURCE_DIR}/libs/win/imgui.lib"
+    # )
 
     list(
         APPEND COMPILED_LIBS 

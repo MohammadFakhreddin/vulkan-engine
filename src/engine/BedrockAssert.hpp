@@ -1,10 +1,10 @@
 #pragma once
 
+#include "common/BedrockPlatforms.hpp"
+#include "common/BedrockLog.hpp"
+
 #include <stdexcept>
 #include <cassert>
-
-#include "engine/BedrockPlatforms.hpp"
-#include "engine/BedrockLog.hpp"
 
 #ifdef __PLATFORM_WIN__
 
@@ -38,7 +38,6 @@
 
 bool constexpr MFA_VERIFY(bool const condition) {
     if (condition) {
-        __assume(condition);
         return true;
     }
 #ifdef MFA_DEBUG

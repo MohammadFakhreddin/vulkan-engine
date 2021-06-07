@@ -5,6 +5,8 @@
 #include "BedrockPlatforms.hpp"
 
 #include <cstdint>
+#include <memory>
+#include <cstring>
 
 #define MFA_BLOB_VALID(blob) (MFA_PTR_VALID(blob.ptr) && blob.len > 0)
 #define MFA_CONSUME_VAR(v_) ((void)(v_))
@@ -43,8 +45,6 @@ struct DeferHelper {
 
 namespace MFA {
 
-using Byte = uint8_t;
-
 using F32 = float;
 using F64 = double;
 
@@ -69,7 +69,7 @@ struct TBlob {
     }
 };
 
-using Blob = TBlob<Byte>;
+using Blob = TBlob<uint8_t>;
 
 template <typename T>
 struct TCBlob {
@@ -85,7 +85,7 @@ struct TCBlob {
     U const * as () const {return reinterpret_cast<U const *>(ptr);}
 };
 
-using CBlob = TCBlob<Byte>;
+using CBlob = TCBlob<uint8_t>;
 
 template <typename T>
 CBlob CBlobAliasOf (T const & v) {
@@ -106,8 +106,8 @@ template <typename T, int N>
 constexpr int ArrayCountInt(T(&)[N]) { return N; }
 
 template<uint32_t Count, typename T>
-constexpr void Copy(T * dst, T const * src) {
-    ::memcpy(dst, src, Count * sizeof(T));
+constexpr void Copy(T * dst, T * src) {
+    memcpy(dst, src, Count * sizeof(T));
 }
 
 }
