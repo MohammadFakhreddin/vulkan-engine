@@ -314,43 +314,19 @@ elseif(LINUX)
         "src/Application.cpp"
     )
 
-    #file(GLOB VULKAN "${CMAKE_SOURCE_DIR}/libs/linux/vulkan-1.lib")
-
-    file(
-        GLOB SDL 
-        "${CMAKE_SOURCE_DIR}/libs/linux/libSDL2.a" 
-        "${CMAKE_SOURCE_DIR}/libs/linux/libSDL2main.a"
-    )
-
-    list(
-        APPEND COMPILED_LIBS 
-        ${VULKAN}
-        ${SDL}
-    )
-
-    file(
-        GLOB DLLS 
-        "${CMAKE_SOURCE_DIR}/libs/linux/libSDL2.so" 
-    )
-
     add_executable(${PROJECT_NAME} ${LINUX_SOURCE})
 
     add_dependencies(${PROJECT_NAME} "Scenes" "Tools" "Engine" "Libs")
 
-    target_link_libraries(${PROJECT_NAME} ${COMPILED_LIBS} "Scenes" "Tools" "Engine" "Libs")
+    target_link_directories(${PROJECT_NAME} PUBLIC "${CMAKE_SOURCE_DIR}/libs/linux/sdl/")
+
+    target_link_libraries(${PROJECT_NAME} SDL2 "Scenes" "Tools" "Engine" "Libs")
 
     target_include_directories(
         ${PROJECT_NAME} PUBLIC 
         "linux"
         "src" 
         "${CMAKE_SOURCE_DIR}/libs/include"
-    )
-
-    add_custom_command(
-        TARGET ${PROJECT_NAME} POST_BUILD        # Adds a post-build event to MyTest
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
-        ${DLLS}      # <--this is in-file
-        ${CMAKE_BINARY_DIR}
     )
 
 elseif(MACOSX)

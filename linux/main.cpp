@@ -4,7 +4,6 @@
 #include "../src/libs/tiny_obj_loader/tiny_obj_loader.h"
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "../src/libs/stb_image/stb_image_resize.h"
-#define STBI_MSC_SECURE_CRT
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../src/libs/stb_image/stb_image_write.h"
 #define TINYGLTF_NO_INCLUDE_STB_IMAGE
