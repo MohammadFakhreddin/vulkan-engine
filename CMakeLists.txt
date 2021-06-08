@@ -355,6 +355,8 @@ elseif(MACOSX)
         "-framework CoreGraphics"
     )
 
+    target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.2.141.dylib")
+
     target_include_directories(
         ${PROJECT_NAME} PUBLIC 
         "mac"
