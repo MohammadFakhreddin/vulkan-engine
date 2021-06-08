@@ -133,7 +133,7 @@ uint64_t totalSize () const {
         ::fseek(mFile, 0, SEEK_END);
         ::fgetpos(mFile, &end_pos);
         ::fsetpos(mFile, &pos);
-        #ifndef __PLATFORM_WIN__
+        #ifdef __PLATFORM_LINUX__
         ret = static_cast<uint64_t>(end_pos.__pos);
         #else
         ret = static_cast<uint64_t>(end_pos);

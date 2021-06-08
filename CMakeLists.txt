@@ -53,7 +53,6 @@ list(
     "src/engine/BedrockMemory.hpp"
     "src/engine/BedrockMemory.cpp"
     "src/engine/BedrockPlatforms.hpp"
-    "src/engine/BedrockPlatforms.cpp"
     "src/engine/DrawableObject.hpp"
     "src/engine/DrawableObject.cpp"
     "src/engine/FoundationAsset.hpp"
@@ -229,6 +228,7 @@ if (WINDOWS)
         "windows/main.cpp"
         "src/Application.hpp"
         "src/Application.cpp"
+        "src/engine/BedrockPlatforms.cpp"
     )
 
     file(GLOB VULKAN "${CMAKE_SOURCE_DIR}/libs/win/vulkan-1.lib")
@@ -304,7 +304,6 @@ if (WINDOWS)
 
 elseif(LINUX)
 
-
     set(LINUX_SOURCE)
     
     list(
@@ -312,6 +311,7 @@ elseif(LINUX)
         "linux/main.cpp"
         "src/Application.hpp"
         "src/Application.cpp"
+        "src/engine/BedrockPlatforms.cpp"
     )
 
     add_executable(${PROJECT_NAME} ${LINUX_SOURCE})
@@ -335,7 +335,40 @@ elseif(MACOSX)
 # MACOSX Executable
 #-----------------------------------------------------------------------
 
-# TODO Start from here
+    set(MAC_SOURCE)
+    
+    list(
+        APPEND MAC_SOURCE
+        "mac/main.cpp"
+        "src/Application.hpp"
+        "src/Application.cpp"
+        "src/engine/BedrockPlatforms.cpp"
+    )
+
+    add_executable(${PROJECT_NAME} ${MAC_SOURCE})
+
+    add_dependencies(${PROJECT_NAME} "Scenes" "Tools" "Engine" "Libs")
+
+    target_link_directories(${PROJECT_NAME} PUBLIC "${CMAKE_SOURCE_DIR}/libs/mac/sdl/")
+
+    target_link_libraries(${PROJECT_NAME} SDL2 "Scenes" "Tools" "Engine" "Libs")
+
+    target_link_libraries(${PROJECT_NAME}
+        "-framework CoreGraphics"
+    )
+
+    target_include_directories(
+        ${PROJECT_NAME} PUBLIC 
+        "mac"
+        "src" 
+        "${CMAKE_SOURCE_DIR}/libs/include"
+    )
+
+    # Lets bundle it:
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/mac/info.plist
+    )
 
 endif()
 
