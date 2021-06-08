@@ -53,6 +53,7 @@ list(
     "src/engine/BedrockMemory.hpp"
     "src/engine/BedrockMemory.cpp"
     "src/engine/BedrockPlatforms.hpp"
+    "src/engine/BedrockPlatforms.cpp"
     "src/engine/DrawableObject.hpp"
     "src/engine/DrawableObject.cpp"
     "src/engine/FoundationAsset.hpp"
@@ -228,7 +229,6 @@ if (WINDOWS)
         "windows/main.cpp"
         "src/Application.hpp"
         "src/Application.cpp"
-        "src/engine/BedrockPlatforms.cpp"
     )
 
     file(GLOB VULKAN "${CMAKE_SOURCE_DIR}/libs/win/vulkan-1.lib")
@@ -311,7 +311,6 @@ elseif(LINUX)
         "linux/main.cpp"
         "src/Application.hpp"
         "src/Application.cpp"
-        "src/engine/BedrockPlatforms.cpp"
     )
 
     add_executable(${PROJECT_NAME} ${LINUX_SOURCE})
@@ -342,7 +341,6 @@ elseif(MACOSX)
         "mac/main.cpp"
         "src/Application.hpp"
         "src/Application.cpp"
-        "src/engine/BedrockPlatforms.cpp"
     )
 
     add_executable(${PROJECT_NAME} ${MAC_SOURCE})
