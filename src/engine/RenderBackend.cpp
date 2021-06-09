@@ -1825,18 +1825,24 @@ void DestroyUniformBuffer(
 
 VkDescriptorPool_T * CreateDescriptorPool(
     VkDevice_T * device,
-    uint32_t const swap_chain_images_count
+    uint32_t const maxSets
 ) {
+    std::vector<VkDescriptorPoolSize> poolSizes {};
     // TODO Check if both of these variables must have same value as swap_chain_images_count
-    VkDescriptorPoolSize poolSize {};
-    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSize.descriptorCount = swap_chain_images_count;
-
+    poolSizes.emplace_back(VkDescriptorPoolSize {
+       .type =  VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+       .descriptorCount = maxSets
+    });
+    poolSizes.emplace_back(VkDescriptorPoolSize {
+       .type =  VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+       .descriptorCount = maxSets
+    });
+    
     VkDescriptorPoolCreateInfo poolInfo = {};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = 1;
-    poolInfo.pPoolSizes = &poolSize;
-    poolInfo.maxSets = swap_chain_images_count;
+    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+    poolInfo.pPoolSizes = poolSizes.data();
+    poolInfo.maxSets = maxSets;
 
     VkDescriptorPool_T * descriptor_pool = nullptr;
 
