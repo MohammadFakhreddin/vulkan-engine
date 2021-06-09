@@ -1,8 +1,10 @@
 #include "TexturedSphereScene.hpp"
 
 #include "tools/ShapeGenerator.hpp"
+#include "engine/BedrockPath.hpp"
 
 namespace UI = MFA::UISystem;
+namespace Path = MFA::Path;
 
 void TexturedSphereScene::Init() {
     // Gpu model
@@ -10,7 +12,7 @@ void TexturedSphereScene::Init() {
 
     // Cpu shader
     auto cpuVertexShader = Importer::ImportShaderFromSPV(
-        "../assets/shaders/textured_sphere/TexturedSphere.vert.spv", 
+        Path::Asset("shaders/textured_sphere/TexturedSphere.vert.spv").c_str(), 
         AS::Shader::Stage::Vertex, 
         "main"
     );
@@ -24,7 +26,7 @@ void TexturedSphereScene::Init() {
     
     // Fragment shader
     auto cpuFragmentShader = Importer::ImportShaderFromSPV(
-        "../assets/shaders/textured_sphere/TexturedSphere.frag.spv",
+        Path::Asset("shaders/textured_sphere/TexturedSphere.frag.spv").c_str(),
         MFA::AssetSystem::Shader::Stage::Fragment,
         "main"
     );
@@ -432,13 +434,13 @@ void TexturedSphereScene::createGpuModel() {
     };
 
     // BaseColor
-    auto const baseColorIndex = importTextureForModel("../assets/models/rusted_sphere_texture/rustediron2_basecolor.png");
+    auto const baseColorIndex = importTextureForModel(Path::Asset("models/rusted_sphere_texture/rustediron2_basecolor.png").c_str());
     // Metallic
-    auto const metallicIndex = importTextureForModel("../assets/models/rusted_sphere_texture/rustediron2_metallic.png");
+    auto const metallicIndex = importTextureForModel(Path::Asset("models/rusted_sphere_texture/rustediron2_metallic.png").c_str());
     // Normal
-    auto const normalIndex = importTextureForModel("../assets/models/rusted_sphere_texture/rustediron2_normal.png");
+    auto const normalIndex = importTextureForModel(Path::Asset("models/rusted_sphere_texture/rustediron2_normal.png").c_str());
     // Roughness
-    auto const roughnessIndex = importTextureForModel("../assets/models/rusted_sphere_texture/rustediron2_roughness.png");
+    auto const roughnessIndex = importTextureForModel(Path::Asset("models/rusted_sphere_texture/rustediron2_roughness.png").c_str());
     
     auto & mesh = cpuModel.mesh;
     MFA_ASSERT(mesh.isValid());

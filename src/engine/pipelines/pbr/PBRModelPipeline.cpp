@@ -2,6 +2,7 @@
 
 #include "engine/FoundationAsset.hpp"
 #include "tools/Importer.hpp"
+#include "engine/BedrockPath.hpp"
 
 namespace AS = MFA::AssetSystem;
 
@@ -409,7 +410,7 @@ void MFA::PBRModelPipeline::createPipeline() {
     // TODO We need path class
     // Vertex shader
     auto cpuVertexShader = Importer::ImportShaderFromSPV(
-        "../assets/shaders/pbr_model/PBRModel.vert.spv", 
+        Path::Asset("shaders/pbr_model/PBRModel.vert.spv").c_str(), 
         MFA::AssetSystem::Shader::Stage::Vertex, 
         "main"
     );
@@ -423,7 +424,7 @@ void MFA::PBRModelPipeline::createPipeline() {
     
     // Fragment shader
     auto cpuFragmentShader = Importer::ImportShaderFromSPV(
-        "../assets/shaders/pbr_model/PBRModel.frag.spv",
+        Path::Asset("shaders/pbr_model/PBRModel.frag.spv").c_str(),
         MFA::AssetSystem::Shader::Stage::Fragment,
         "main"
     );

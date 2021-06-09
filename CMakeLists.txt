@@ -76,6 +76,8 @@ list(
     "src/engine/camera/FirstPersonCamera.cpp"
     "src/engine/InputManager.hpp"
     "src/engine/InputManager.cpp"
+    "src/engine/BedrockPath.hpp"
+    "src/engine/BedrockPath.cpp"
 )
 
 add_library("Engine"

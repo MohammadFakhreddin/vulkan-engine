@@ -1,6 +1,7 @@
 #include "PointLightPipeline.hpp"
 
 #include "tools/Importer.hpp"
+#include "engine/BedrockPath.hpp"
 
 namespace AS = MFA::AssetSystem;
 
@@ -235,7 +236,7 @@ void MFA::PointLightPipeline::destroyDescriptorSetLayout() {
 void MFA::PointLightPipeline::createPipeline() {
     // Vertex shader
     auto cpuVertexShader = Importer::ImportShaderFromSPV(
-        "../assets/shaders/point_light/PointLight.vert.spv", 
+        Path::Asset("shaders/point_light/PointLight.vert.spv").c_str(), 
         MFA::AssetSystem::Shader::Stage::Vertex, 
         "main"
     );
@@ -249,7 +250,7 @@ void MFA::PointLightPipeline::createPipeline() {
     
     // Fragment shader
     auto cpuFragmentShader = Importer::ImportShaderFromSPV(
-        "../assets/shaders/point_light/PointLight.frag.spv",
+        Path::Asset("shaders/point_light/PointLight.frag.spv").c_str(),
         MFA::AssetSystem::Shader::Stage::Fragment,
         "main"
     );

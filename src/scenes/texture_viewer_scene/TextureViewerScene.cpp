@@ -4,6 +4,7 @@
 #include "libs/tiny_ktx/tinyktx.h"
 #include "tools/Importer.hpp"
 #include "tools/ShapeGenerator.hpp"
+#include "engine/BedrockPath.hpp"
 
 namespace RF = MFA::RenderFrontend;
 namespace RB = MFA::RenderBackend;
@@ -11,12 +12,13 @@ namespace Importer = MFA::Importer;
 namespace AS = MFA::AssetSystem;
 namespace SG = MFA::ShapeGenerator;
 namespace UI = MFA::UISystem;
+namespace Path = MFA::Path;
 
 void TextureViewerScene::Init() {
 
     // Vertex shader
     auto cpu_vertex_shader = Importer::ImportShaderFromSPV(
-        "../assets/shaders/texture_viewer/TextureViewer.vert.spv", 
+        Path::Asset("shaders/texture_viewer/TextureViewer.vert.spv").c_str(), 
         MFA::AssetSystem::Shader::Stage::Vertex, 
         "main"
     );
@@ -30,7 +32,7 @@ void TextureViewerScene::Init() {
     
     // Fragment shader
     auto cpu_fragment_shader = Importer::ImportShaderFromSPV(
-        "../assets/shaders/texture_viewer/TextureViewer.frag.spv",
+        Path::Asset("shaders/texture_viewer/TextureViewer.frag.spv").c_str(),
         MFA::AssetSystem::Shader::Stage::Fragment,
         "main"
     );
@@ -235,7 +237,7 @@ void TextureViewerScene::createModel() {
 
     //auto cpuTexture = Importer::ImportImage("../assets/models/sponza/11490520546946913238.ktx");
     auto cpuTexture = Importer::ImportImage(
-        "../assets/models/FlightHelmet/glTF/FlightHelmet_baseColor3.png", 
+        Path::Asset("models/FlightHelmet/glTF/FlightHelmet_baseColor3.png").c_str(), 
         Importer::ImportTextureOptions {
             .tryToGenerateMipmaps = true
         }

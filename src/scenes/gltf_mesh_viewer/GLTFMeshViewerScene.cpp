@@ -5,6 +5,7 @@
 #include "engine/DrawableObject.hpp"
 #include "tools/Importer.hpp"
 #include "tools/ShapeGenerator.hpp"
+#include "engine/BedrockPath.hpp"
 
 #include <glm/mat4x4.hpp>
 #include <vec4.hpp>
@@ -12,6 +13,7 @@
 namespace RF = MFA::RenderFrontend;
 namespace Importer = MFA::Importer;
 namespace UI = MFA::UISystem;
+namespace Path = MFA::Path;
 
 void GLTFMeshViewerScene::Init() {
     // TODO Out of pool memory on macos, We need to only keep a few of recent objects data active.
@@ -23,7 +25,7 @@ void GLTFMeshViewerScene::Init() {
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
             .gpuModel {},
             .displayName {"CesiumMan"},
-            .address {"../assets/models/CesiumMan/gltf/CesiumMan.gltf"},
+            .address {Path::Asset("models/CesiumMan/gltf/CesiumMan.gltf").c_str()},
             .drawableObjectId {},
             .initialParams {
                 .model {
@@ -42,7 +44,7 @@ void GLTFMeshViewerScene::Init() {
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
             .gpuModel {},
             .displayName {"War-craft soldier"},
-            .address {"../assets/models/warcraft_3_alliance_footmanfanmade/scene.gltf"},
+            .address {Path::Asset("models/warcraft_3_alliance_footmanfanmade/scene.gltf").c_str()},
             .drawableObjectId {},
             .initialParams {
                 .model {
@@ -57,7 +59,7 @@ void GLTFMeshViewerScene::Init() {
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
             .gpuModel {},
             .displayName {"SponzaScene"},
-            .address {"../assets/models/sponza/sponza.gltf"},
+            .address {Path::Asset("models/sponza/sponza.gltf").c_str()},
             //.address {"../assets/models/sponza-gltf-pbr/sponza.glb"},
             .drawableObjectId {},
             .initialParams {
@@ -74,7 +76,7 @@ void GLTFMeshViewerScene::Init() {
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
             .gpuModel {},
             .displayName {"Car"},
-            .address {"../assets/models/free_zuk_3d_model/scene.gltf"},
+            .address {Path::Asset("models/free_zuk_3d_model/scene.gltf").c_str()},
             .drawableObjectId {},
             .initialParams {
                 .model {
@@ -86,7 +88,7 @@ void GLTFMeshViewerScene::Init() {
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
             .gpuModel {},
             .displayName {"Gunship"},
-            .address {"../assets/models/gunship/scene.gltf"},
+            .address {Path::Asset("models/gunship/scene.gltf").c_str()},
             .drawableObjectId {},
             .initialParams {
                 .model {
@@ -106,7 +108,7 @@ void GLTFMeshViewerScene::Init() {
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
             .gpuModel {},
             .displayName {"Cyberpunk lady"},
-            .address {"../assets/models/female_full-body_cyberpunk_themed_avatar/scene.gltf"},
+            .address {Path::Asset("models/female_full-body_cyberpunk_themed_avatar/scene.gltf").c_str()},
             .drawableObjectId {},
             .initialParams {
                 .model {
@@ -118,7 +120,7 @@ void GLTFMeshViewerScene::Init() {
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
             .gpuModel {},
             .displayName {"Mandalorian"},
-            .address {"../assets/models/fortnite_the_mandalorianbaby_yoda/scene.gltf"},
+            .address {Path::Asset("models/fortnite_the_mandalorianbaby_yoda/scene.gltf").c_str()},
             .drawableObjectId {},
             .initialParams {
                 .model {
@@ -134,7 +136,7 @@ void GLTFMeshViewerScene::Init() {
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
             .gpuModel {},
             .displayName {"Mandalorian2"},
-            .address {"../assets/models/mandalorian__the_fortnite_season_6_skin_updated/scene.gltf"},
+            .address {Path::Asset("models/mandalorian__the_fortnite_season_6_skin_updated/scene.gltf").c_str()},
             .drawableObjectId {},
             .initialParams {
                 .model {
@@ -147,7 +149,7 @@ void GLTFMeshViewerScene::Init() {
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
             .gpuModel {},
             .displayName {"Flight helmet"},
-            .address {"../assets/models/FlightHelmet/glTF/FlightHelmet.gltf"},
+            .address {Path::Asset("models/FlightHelmet/glTF/FlightHelmet.gltf").c_str()},
             .drawableObjectId {},
             .initialParams {
                 .model {
@@ -163,7 +165,7 @@ void GLTFMeshViewerScene::Init() {
         mModelsRenderData.emplace_back(ModelRenderRequiredData {
             .gpuModel {},
             .displayName {"Warhammer tank"},
-            .address {"../assets/models/warhammer_40k_predator_dark_millennium/scene.gltf"},
+            .address {Path::Asset("models/warhammer_40k_predator_dark_millennium/scene.gltf").c_str()},
             .drawableObjectId {},
             .initialParams {
                 .model {

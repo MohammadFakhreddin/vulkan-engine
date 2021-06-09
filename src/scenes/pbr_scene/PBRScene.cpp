@@ -3,12 +3,14 @@
 #include "engine/BedrockMatrix.hpp"
 #include "tools/ShapeGenerator.hpp"
 #include "tools/Importer.hpp"
+#include "engine/BedrockPath.hpp"
 
 namespace RF = MFA::RenderFrontend;
 namespace RB = MFA::RenderBackend;
 namespace SG = MFA::ShapeGenerator;
 namespace Importer = MFA::Importer;
 namespace UI = MFA::UISystem;
+namespace Path = MFA::Path;
 
 void PBRScene::Init() {
 
@@ -18,7 +20,7 @@ void PBRScene::Init() {
 
     // Vertex shader
     auto cpu_vertex_shader = Importer::ImportShaderFromSPV(
-        "../assets/shaders/pbr/pbr.vert.spv", 
+        Path::Asset("shaders/pbr/pbr.vert.spv").c_str(), 
         MFA::AssetSystem::Shader::Stage::Vertex, 
         "main"
     );
@@ -32,7 +34,7 @@ void PBRScene::Init() {
 
     // Fragment shader
     auto cpu_frag_shader = Importer::ImportShaderFromSPV(
-        "../assets/shaders/pbr/pbr.frag.spv", 
+        Path::Asset("shaders/pbr/pbr.frag.spv").c_str(), 
         MFA::AssetSystem::Shader::Stage::Fragment, 
         "main"
     );
