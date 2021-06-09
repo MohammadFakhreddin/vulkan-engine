@@ -364,11 +364,10 @@ elseif(MACOSX)
         "${CMAKE_SOURCE_DIR}/libs/include"
     )
 
-    # Lets bundle it:
-    set_target_properties(${PROJECT_NAME} PROPERTIES
-        MACOSX_BUNDLE TRUE
-        MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/mac/info.plist
-    )
+    # set_target_properties(${PROJECT_NAME} PROPERTIES
+    #     MACOSX_BUNDLE TRUE
+    #     MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/mac/info.plist
+    # )
 
 endif()
 

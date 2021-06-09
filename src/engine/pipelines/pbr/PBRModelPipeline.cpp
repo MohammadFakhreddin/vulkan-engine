@@ -406,6 +406,7 @@ void MFA::PBRModelPipeline::destroyDescriptorSetLayout() {
 }
 
 void MFA::PBRModelPipeline::createPipeline() {
+    // TODO We need path class
     // Vertex shader
     auto cpuVertexShader = Importer::ImportShaderFromSPV(
         "../assets/shaders/pbr_model/PBRModel.vert.spv", 

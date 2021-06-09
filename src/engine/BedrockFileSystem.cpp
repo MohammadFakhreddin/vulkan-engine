@@ -24,8 +24,8 @@ explicit FileHandle(char const * path, Usage const usage) {
     }();
     #ifndef __PLATFORM_WIN__
     int errorCode = 0;
-    auto mFile = fopen(path, mode);
-    if (mFile != nullptr) {
+    mFile = fopen(path, mode);
+    if (mFile == nullptr) {
         errorCode = 1;
     }
     #else
