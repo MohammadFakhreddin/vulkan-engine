@@ -28,8 +28,11 @@ if(UNIX AND NOT APPLE AND NOT ANDROID)
 endif()
 
 if(WINDOWS)
-  add_definitions (/WX)           # Warnings as errors
-  add_definitions (-D_CRT_SECURE_NO_WARNINGS)
+    add_definitions (/WX)           # Warnings as errors
+    add_definitions (-D_CRT_SECURE_NO_WARNINGS)
+else()
+    # TODO
+    # add_definitions(-Werror)
 endif()
 
 # add_definitions (-DGLM_FORCE_LEFT_HANDED )
@@ -359,6 +362,7 @@ elseif(MACOSX)
     )
 
     target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.2.141.dylib")
+    # target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.dylib")
 
     target_include_directories(
         ${PROJECT_NAME} PUBLIC 

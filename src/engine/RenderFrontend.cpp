@@ -112,7 +112,7 @@ bool Init(InitParams const & params) {
         MSDL::SDL_SetWindowResizable(state->window, MSDL::SDL_TRUE);
     }
 
-    MSDL::SDL_AddEventWatch(SDLEventWatcher, nullptr);
+    MSDL::SDL_AddEventWatch(SDLEventWatcher, state->window);
     
     state->vk_instance = RB::CreateInstance(
         state->application_name.c_str(), 
@@ -187,7 +187,7 @@ bool Init(InitParams const & params) {
     );
     state->descriptorPool = RB::CreateDescriptorPool(
         state->logicalDevice.device, 
-        1000//static_cast<U8>(state->swap_chain_group.swap_chain_images.size())  // TODO We might need to ask this from user
+        1000 // TODO We might need to ask this from user
     );
     state->graphic_command_buffers = RB::CreateCommandBuffers(
         state->logicalDevice.device,
@@ -281,7 +281,7 @@ bool Shutdown() {
     RB::DeviceWaitIdle(state->logicalDevice.device);
     MFA_ASSERT(state->sdlEventListeners.empty());
 
-    MSDL::SDL_DelEventWatch(SDLEventWatcher, nullptr);
+    MSDL::SDL_DelEventWatch(SDLEventWatcher, state->window);
 
     // DestroyPipeline in application // TODO We should have reference to what user creates + params for re-creation
     // GraphicPipeline, UniformBuffer, PipelineLayout
@@ -864,6 +864,10 @@ void DrawIndexed(
 }
 
 void EndPass(DrawPass & drawPass) {
+    if (state->windowResized == true) { // For mac os
+        OnWindowResized();
+        return;
+    }
     // TODO Move these functions to renderBackend, RenderFrontend should not know about backend
     MFA_ASSERT(drawPass.isValid);
     drawPass.isValid = false;
@@ -923,16 +927,15 @@ void EndPass(DrawPass & drawPass) {
 
     vkResetFences(state->logicalDevice.device, 1, &state->sync_objects.fences_in_flight[drawPass.frame_index]);
 
-    {
-        auto const result = vkQueueSubmit(
-            state->graphic_queue, 
-            1, &submitInfo, 
-            state->sync_objects.fences_in_flight[drawPass.frame_index]
-        );
-        if (result != VK_SUCCESS) {
-            MFA_CRASH("Failed to submit draw command buffer");
-        }
+    auto const result = vkQueueSubmit(
+        state->graphic_queue, 
+        1, &submitInfo, 
+        state->sync_objects.fences_in_flight[drawPass.frame_index]
+    );
+    if (result != VK_SUCCESS) {
+        MFA_CRASH("Failed to submit draw command buffer");
     }
+    
     // Present drawn image
     // Note: semaphore here is not strictly necessary, because commands are processed in submission order within a single queue
     VkPresentInfoKHR presentInfo = {};
