@@ -79,20 +79,31 @@ static VkBool32 DebugCallback(
     return true;
 }
 
+static bool IsResizeEvent(uint8_t sdlEvent) {
+#if defined(__PLATFORM_WIN__) || defined(__PLATFORM_LINUX__)
+    return sdlEvent == MSDL::SDL_WINDOWEVENT_RESIZED;
+#elif defined(__PLATFORM_MAC__)
+    return sdlEvent == MSDL::SDL_WINDOWEVENT_RESIZED || 
+        sdlEvent == MSDL::SDL_WINDOWEVENT_SIZE_CHANGED ||
+        sdlEvent == MSDL::SDL_WINDOWEVENT_MAXIMIZED ||
+        sdlEvent == MSDL::SDL_WINDOWEVENT_MINIMIZED ||
+        sdlEvent == MSDL::SDL_WINDOWEVENT_EXPOSED;
+#else 
+    #error Unhandled platform
+#endif
+}
+
 static int SDLEventWatcher(void* data, MSDL::SDL_Event* event) {
     if (
         state->isWindowResizable == true &&
         event->type == MSDL::SDL_WINDOWEVENT &&
-        event->window.event == MSDL::SDL_WINDOWEVENT_RESIZED
+        IsResizeEvent(event->window.event)
     ) {
         MSDL::SDL_Window* win = MSDL::SDL_GetWindowFromID(event->window.windowID);
         if (win == static_cast<MSDL::SDL_Window *>(data)) {
             state->windowResized = true;
         }
     }
-    //if (event->type == MSDL::SDL_WINDOWEVENT && event->window.event == MSDL::SDL_WINDOWEVENT_MAXIMIZED) {
-    //    state->isWindowVisible = true;
-    //}
     for (auto & eventListener : state->sdlEventListeners) {
         MFA_ASSERT(eventListener.watch != nullptr);
         eventListener.watch(data, event);
@@ -110,7 +121,7 @@ bool Init(InitParams const & params) {
         state->screen_height
     );
     state->isWindowResizable = params.resizable;
-
+    
     if (params.resizable) {
         // Make window resizable
         MSDL::SDL_SetWindowResizable(state->window, MSDL::SDL_TRUE);
@@ -877,22 +888,10 @@ void EndPass(DrawPass & drawPass) {
     if (state->isWindowVisible == false) {
         return;
     }
-
     // TODO Move these functions to renderBackend, RenderFrontend should not know about backend
     MFA_ASSERT(drawPass.isValid);
     drawPass.isValid = false;
     vkCmdEndRenderPass(state->graphic_command_buffers[drawPass.imageIndex]);
-
-    // TODO Find a common solution for all platforms
-//#ifdef __PLATFORM_MAC__ // TODO Check for linux as well
-    //if (state->windowResized == true) {
-        //OnWindowResized();
-        //return;
-    //}
-//#endif
-//#ifdef __PLATFORM_WIN__
-
-//#endif
 
     // If present and graphics queue families differ, then another barrier is required
     if (state->present_queue_family != state->graphic_queue_family) {
