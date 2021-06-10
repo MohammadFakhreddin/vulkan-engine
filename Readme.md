@@ -3,6 +3,37 @@
 
 <br/>
 
+## How to build
+### Windows
+```
+Create directory build64
+cmake . -BBuild66 -DCMAKE_GENERATOR=x64
+```
+Find .sln files inside build64 and then run the project
+<br/>
+
+### Macos
+```
+mkdir build64
+cd build64
+cmake ..
+make
+./MFaEngine
+```
+<br/>
+
+### Linux
+Not supported yet!
+<br/>
+
+### Android
+Not supported yet!
+<br/>
+
+### IOS
+Not supported yet!
+<br/>
+
 ## Animation Time!
 <img src="examples/warcraft-animation.gif">
 
