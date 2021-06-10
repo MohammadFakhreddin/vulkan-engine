@@ -26,8 +26,8 @@ void Application::run() {
     namespace IM = MFA::InputManager;
     namespace MSDL = MFA::MSDL;
     
-    static constexpr uint16_t SCREEN_WIDTH = 1920;
-    static constexpr uint16_t SCREEN_HEIGHT = 1080;
+    static constexpr uint16_t SCREEN_WIDTH = 1200;//1920;
+    static constexpr uint16_t SCREEN_HEIGHT = 800;//1080;
 
     RF::Init({SCREEN_WIDTH, SCREEN_HEIGHT, "Cool app"});
     UI::Init();

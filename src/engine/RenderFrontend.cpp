@@ -5,7 +5,6 @@
 #include "BedrockLog.hpp"
 
 #include "../libs/imgui/imgui.h"
-#include "libs/sdl/SDL.hpp"
 
 #include <string>
 

@@ -2,6 +2,7 @@
 
 #include "engine/RenderFrontend.hpp"
 #include "engine/UISystem.hpp"
+#include "libs/sdl/SDL.hpp"
 
 namespace MFA::InputManager {
 

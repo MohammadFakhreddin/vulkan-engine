@@ -29,6 +29,7 @@ endif()
 
 if(WINDOWS)
   add_definitions (/WX)           # Warnings as errors
+  add_definitions (-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
 # add_definitions (-DGLM_FORCE_LEFT_HANDED )
