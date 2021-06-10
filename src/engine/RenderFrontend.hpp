@@ -231,6 +231,8 @@ void DrawIndexed(
 
 void EndPass(DrawPass & drawPass);
 
+void OnNewFrame(float deltaTimeInSec);
+
 void SetScissor(DrawPass const & draw_pass, VkRect2D const & scissor);
 
 void SetViewport(DrawPass const & draw_pass, VkViewport const & viewport);

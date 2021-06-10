@@ -53,6 +53,7 @@ struct State {
     // Event watches
     int nextEventListenerId = 0;
     std::vector<EventWatchGroup> sdlEventListeners {};
+    bool isWindowVisible = true;                        // Currently only minimize can cause this to be false
 } static * state = nullptr;
 
 static VkBool32 DebugCallback(
@@ -89,6 +90,9 @@ static int SDLEventWatcher(void* data, MSDL::SDL_Event* event) {
             state->windowResized = true;
         }
     }
+    //if (event->type == MSDL::SDL_WINDOWEVENT && event->window.event == MSDL::SDL_WINDOWEVENT_MAXIMIZED) {
+    //    state->isWindowVisible = true;
+    //}
     for (auto & eventListener : state->sdlEventListeners) {
         MFA_ASSERT(eventListener.watch != nullptr);
         eventListener.watch(data, event);
@@ -111,6 +115,8 @@ bool Init(InitParams const & params) {
         // Make window resizable
         MSDL::SDL_SetWindowResizable(state->window, MSDL::SDL_TRUE);
     }
+
+    MSDL::SDL_SetWindowMinimumSize(state->window, 100, 100);
 
     MSDL::SDL_AddEventWatch(SDLEventWatcher, state->window);
     
@@ -205,7 +211,7 @@ bool Init(InitParams const & params) {
 
 void OnWindowResized() {
     RB::DeviceWaitIdle(state->logicalDevice.device);
-
+    
     GetWindowSize(state->screen_width, state->screen_height);
     MFA_ASSERT(state->screen_width > 0);
     MFA_ASSERT(state->screen_height > 0);
@@ -621,11 +627,15 @@ void DeviceWaitIdle() {
 DrawPass BeginPass() {
     MFA_ASSERT(MAX_FRAMES_IN_FLIGHT > state->current_frame);
     DrawPass draw_pass {};
+    if (state->isWindowVisible == false || state->windowResized == true) {
+        return DrawPass {.isValid = false};
+    }
+
     RB::WaitForFence(
         state->logicalDevice.device, 
         state->sync_objects.fences_in_flight[state->current_frame]
     );
-    // We ignore failed acquire of image because a resize will be trigerred at end of pass
+    // We ignore failed acquire of image because a resize will be triggered at end of pass
     RB::AcquireNextImage(
         state->logicalDevice.device,
         state->sync_objects.image_availability_semaphores[state->current_frame],
@@ -864,14 +874,25 @@ void DrawIndexed(
 }
 
 void EndPass(DrawPass & drawPass) {
-    if (state->windowResized == true) { // For mac os
-        OnWindowResized();
+    if (state->isWindowVisible == false) {
         return;
     }
+
     // TODO Move these functions to renderBackend, RenderFrontend should not know about backend
     MFA_ASSERT(drawPass.isValid);
     drawPass.isValid = false;
     vkCmdEndRenderPass(state->graphic_command_buffers[drawPass.imageIndex]);
+
+    // TODO Find a common solution for all platforms
+//#ifdef __PLATFORM_MAC__ // TODO Check for linux as well
+    //if (state->windowResized == true) {
+        //OnWindowResized();
+        //return;
+    //}
+//#endif
+//#ifdef __PLATFORM_WIN__
+
+//#endif
 
     // If present and graphics queue families differ, then another barrier is required
     if (state->present_queue_family != state->graphic_queue_family) {
@@ -955,6 +976,13 @@ void EndPass(DrawPass & drawPass) {
     } else if (res != VK_SUCCESS) {
         MFA_CRASH("Failed to submit present command buffer");
     }
+}
+
+void OnNewFrame(float deltaTimeInSec) {
+    if (state->windowResized) {
+        OnWindowResized();
+    }
+    state->isWindowVisible = (GetWindowFlags() & MSDL::SDL_WINDOW_MINIMIZED) > 0 ? false : true;
 }
 
 [[nodiscard]]

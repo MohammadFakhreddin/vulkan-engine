@@ -54,17 +54,22 @@ void SceneSubSystem::OnNewFrame(float const deltaTimeInSec) {
         mRegisteredScenes[mActiveScene].scene->Init();
         mLastActiveScene = mActiveScene;
     }
-    auto draw_pass = RF::BeginPass();
-    MFA_ASSERT(draw_pass.isValid);
+
+    RF::OnNewFrame(deltaTimeInSec);
+
+    auto drawPass = RF::BeginPass();                // Draw pass being invalid means that RF cannot render anything
+    if (drawPass.isValid == false) {
+        return;
+    }
         
     if(mActiveScene >= 0) {
         mRegisteredScenes[mActiveScene].scene->OnDraw(
             deltaTimeInSec,
-            draw_pass
+            drawPass
         );
     }
     // TODO Refactor and use interface and register instead
-    UI::OnNewFrame(deltaTimeInSec, draw_pass, [&deltaTimeInSec, &draw_pass, this]()->void{
+    UI::OnNewFrame(deltaTimeInSec, drawPass, [&deltaTimeInSec, &drawPass, this]()->void{
         UI::BeginWindow("Scene Subsystem");
         UI::SetNextItemWidth(300.0f);
         // TODO Bad for performance, Find a better name
@@ -84,12 +89,12 @@ void SceneSubSystem::OnNewFrame(float const deltaTimeInSec) {
         if(mActiveScene >= 0) {
             mRegisteredScenes[mActiveScene].scene->OnUI(
                 deltaTimeInSec,
-                draw_pass
+                drawPass
             );
         } 
     });
 
-    RF::EndPass(draw_pass);
+    RF::EndPass(drawPass);
     
 }
 
