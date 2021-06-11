@@ -102,3 +102,9 @@ build64
 build
 
 package.json
+
+android/local.properties
+
+.gradle
+.idea
+.ccx

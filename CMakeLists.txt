@@ -382,6 +382,50 @@ elseif(MACOSX)
     #     MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/mac/info.plist
     # )
     
+elseif(ANDROID)
+
+#-----------------------------------------------------------------------
+# Android library
+#-----------------------------------------------------------------------
+
+    set(ANDROID_FILES_ADDRESS "android/app/src/main/jni")
+
+    set(ANDROID_SOURCE)
+        
+    list(
+        APPEND ANDROID_SOURCE
+        "${ANDROID_FILES_ADDRESS}/main.cpp"
+        "src/Application.hpp"
+        "src/Application.cpp"
+    )
+
+    include_directories("${ANDROID_FILES_ADDRESS}/vulkan_wrapper")
+
+    # build native_app_glue as a static lib
+    set(APP_GLUE_DIR ${ANDROID_NDK}/sources/android/native_app_glue)
+    include_directories(${APP_GLUE_DIR})
+    add_library(app-glue STATIC ${APP_GLUE_DIR}/android_native_app_glue.c)
+
+    add_library(
+        ${PROJECT_NAME} SHARED 
+        ${ANDROID_SOURCE} 
+        ${ENGINE_SOURCES} 
+        ${LIBS_SOURCES}
+        ${TOOL_SOURCES}
+        ${SCENE_SOURCES}
+    )
+
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -std=c++20 \
+                        -DVK_USE_PLATFORM_ANDROID_KHR")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -u ANativeActivity_onCreate")
+
+    target_link_libraries(${PROJECT_NAME} app-glue log android)
+
+    target_include_directories(
+        ${PROJECT_NAME} PUBLIC 
+        "src" 
+        "${CMAKE_SOURCE_DIR}/libs/include"
+    )
 
 endif()
 
