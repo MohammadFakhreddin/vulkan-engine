@@ -106,6 +106,24 @@ void PBRScene::Init() {
             .offset = offsetof(MFA::AssetSystem::MeshVertex, normalValue)
         };
 
+        RB::CreateGraphicPipelineOptions graphicPipelineOptions {};
+        graphicPipelineOptions.depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        graphicPipelineOptions.depthStencil.depthTestEnable = VK_TRUE;
+        graphicPipelineOptions.depthStencil.depthWriteEnable = VK_TRUE;
+        graphicPipelineOptions.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+        graphicPipelineOptions.depthStencil.depthBoundsTestEnable = VK_FALSE;
+        graphicPipelineOptions.depthStencil.stencilTestEnable = VK_FALSE;
+        graphicPipelineOptions.colorBlendAttachments.blendEnable = VK_TRUE;
+        graphicPipelineOptions.colorBlendAttachments.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        graphicPipelineOptions.colorBlendAttachments.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        graphicPipelineOptions.colorBlendAttachments.colorBlendOp = VK_BLEND_OP_ADD;
+        graphicPipelineOptions.colorBlendAttachments.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        graphicPipelineOptions.colorBlendAttachments.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        graphicPipelineOptions.colorBlendAttachments.alphaBlendOp = VK_BLEND_OP_ADD;
+        graphicPipelineOptions.colorBlendAttachments.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        graphicPipelineOptions.useStaticViewportAndScissor = false;
+        graphicPipelineOptions.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+
         m_draw_pipeline = RF::CreateDrawPipeline(
             static_cast<uint8_t>(shaders.size()), 
             shaders.data(),
@@ -114,28 +132,7 @@ void PBRScene::Init() {
             vertex_binding_description,
             static_cast<uint32_t>(input_attribute_descriptions.size()),
             input_attribute_descriptions.data(),
-            RB::CreateGraphicPipelineOptions {
-                .depthStencil {
-                    .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-                    .depthTestEnable = VK_TRUE,
-                    .depthWriteEnable = VK_TRUE,
-                    .depthCompareOp = VK_COMPARE_OP_LESS,
-                    .depthBoundsTestEnable = VK_FALSE,
-                    .stencilTestEnable = VK_FALSE
-                },
-                .colorBlendAttachments {
-                    .blendEnable = VK_TRUE,
-                    .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-                    .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-                    .colorBlendOp = VK_BLEND_OP_ADD,
-                    .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-                    .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-                    .alphaBlendOp = VK_BLEND_OP_ADD,
-                    .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
-                },
-                .use_static_viewport_and_scissor = false,
-                .primitive_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP
-            }
+            graphicPipelineOptions
         );
     }
 

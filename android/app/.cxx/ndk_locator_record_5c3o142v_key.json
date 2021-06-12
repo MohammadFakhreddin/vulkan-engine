@@ -1,0 +1,9 @@
+{
+  "ndkVersionFromDsl": "23.0.7421159-beta5",
+  "ndkDirProperty": "C:\\projects\\android-ndk-r23-beta5",
+  "sdkFolder": "C:\\Users\\Admin\\AppData\\Local\\Android\\Sdk",
+  "sideBySideNdkFolderNames": [
+    "21.3.6528147",
+    "22.1.7171670"
+  ]
+}
