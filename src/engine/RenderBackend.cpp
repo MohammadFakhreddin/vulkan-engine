@@ -1286,39 +1286,35 @@ VkRenderPass_T * CreateRenderPass(
     VkDevice_T * device, 
     VkFormat const swapChainFormat
 ) {
-    VkAttachmentDescription const color_attachment = {
-        .format = swapChainFormat,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-    };
-
-    VkAttachmentDescription const depth_attachment {
-        .format = FindDepthFormat(physicalDevice),
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-    };
+    VkAttachmentDescription colorAttachment = {};
+    colorAttachment.format = swapChainFormat;
+    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    
+    VkAttachmentDescription depthAttachment {};
+    depthAttachment.format = FindDepthFormat(physicalDevice);
+    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     
     // Note: hardware will automatically transition attachment to the specified layout
     // Note: index refers to attachment descriptions array
-    VkAttachmentReference colorAttachmentReference {
-        .attachment = 0,
-        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-    };
+    VkAttachmentReference colorAttachmentReference {};
+    colorAttachmentReference.attachment = 0;
+    colorAttachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     
-    VkAttachmentReference depthAttachmentRef {
-        .attachment = 1,
-        .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-    };
+    VkAttachmentReference depthAttachmentRef {};
+    depthAttachmentRef.attachment = 1;
+    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     
     // Note: this is a description of how the attachments of the render pass will be used in this sub pass
     // e.g. if they will be read in shaders and/or drawn to
@@ -1336,7 +1332,7 @@ VkRenderPass_T * CreateRenderPass(
     dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-    std::vector<VkAttachmentDescription> attachments = {color_attachment, depth_attachment};
+    std::vector<VkAttachmentDescription> attachments = {colorAttachment, depthAttachment};
     // Create the render pass
     VkRenderPassCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -1441,28 +1437,28 @@ bool DestroyShader(VkDevice_T * device, GpuShader & gpu_shader) {
 
 GraphicPipelineGroup CreateGraphicPipeline(
     VkDevice_T * device, 
-    uint8_t shader_stages_count, 
-    GpuShader const * shader_stages,
-    VkVertexInputBindingDescription vertex_binding_description,
-    uint32_t attribute_description_count,
-    VkVertexInputAttributeDescription * attribute_description_data,
-    VkExtent2D swap_chain_extent,
-    VkRenderPass_T * render_pass,
-    uint32_t descriptor_set_layout_count,
-    VkDescriptorSetLayout_T ** descriptor_set_layouts,
+    uint8_t shaderStagesCount, 
+    GpuShader const * shaderStages,
+    VkVertexInputBindingDescription vertexBindingDescription,
+    uint32_t attributeDescriptionCount,
+    VkVertexInputAttributeDescription * attributeDescriptionData,
+    VkExtent2D swapChainExtent,
+    VkRenderPass_T * renderPass,
+    uint32_t descriptorSetLayoutCount,
+    VkDescriptorSetLayout_T ** descriptorSetLayouts,
     CreateGraphicPipelineOptions const & options
 ) {
-    MFA_ASSERT(shader_stages);
-    MFA_ASSERT(render_pass);
-    MFA_ASSERT(descriptor_set_layouts);
+    MFA_ASSERT(shaderStages);
+    MFA_ASSERT(renderPass);
+    MFA_ASSERT(descriptorSetLayouts);
     // Set up shader stage info
-    std::vector<VkPipelineShaderStageCreateInfo> shader_stages_create_infos {shader_stages_count};
-    for(uint8_t i = 0; i < shader_stages_count; i++) {
+    std::vector<VkPipelineShaderStageCreateInfo> shader_stages_create_infos {shaderStagesCount};
+    for(uint8_t i = 0; i < shaderStagesCount; i++) {
         VkPipelineShaderStageCreateInfo create_info = {};
         create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        create_info.stage = ConvertAssetShaderStageToGpu(shader_stages[i].cpuShader()->getStage());
-        create_info.module = shader_stages[i].shaderModule();
-        create_info.pName = shader_stages[i].cpuShader()->getEntryPoint();
+        create_info.stage = ConvertAssetShaderStageToGpu(shaderStages[i].cpuShader()->getStage());
+        create_info.module = shaderStages[i].shaderModule();
+        create_info.pName = shaderStages[i].cpuShader()->getEntryPoint();
         shader_stages_create_infos[i] = create_info;
     }
 
@@ -1470,14 +1466,14 @@ GraphicPipelineGroup CreateGraphicPipeline(
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {};
     vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertex_input_state_create_info.vertexBindingDescriptionCount = 1;
-    vertex_input_state_create_info.pVertexBindingDescriptions = &vertex_binding_description;
-    vertex_input_state_create_info.vertexAttributeDescriptionCount = attribute_description_count;
-    vertex_input_state_create_info.pVertexAttributeDescriptions = attribute_description_data;
+    vertex_input_state_create_info.pVertexBindingDescriptions = &vertexBindingDescription;
+    vertex_input_state_create_info.vertexAttributeDescriptionCount = attributeDescriptionCount;
+    vertex_input_state_create_info.pVertexAttributeDescriptions = attributeDescriptionData;
 
     // Describe input assembly
     VkPipelineInputAssemblyStateCreateInfo input_assembly_create_info = {};
     input_assembly_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    input_assembly_create_info.topology = options.primitive_topology;
+    input_assembly_create_info.topology = options.primitiveTopology;
     input_assembly_create_info.primitiveRestartEnable = VK_FALSE;
 
     // Note: scissor test is always enabled (although dynamic scissor is possible)
@@ -1491,19 +1487,19 @@ GraphicPipelineGroup CreateGraphicPipeline(
     VkViewport viewport = {};
     VkRect2D scissor = {};
 
-    if(true == options.use_static_viewport_and_scissor) {
+    if(true == options.useStaticViewportAndScissor) {
         // Describe viewport and scissor
         viewport.x = 0.0f;
         viewport.y = 0.0f;
-        viewport.width = static_cast<float>(swap_chain_extent.width);
-        viewport.height = static_cast<float>(swap_chain_extent.height);
+        viewport.width = static_cast<float>(swapChainExtent.width);
+        viewport.height = static_cast<float>(swapChainExtent.height);
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
 
         scissor.offset.x = 0;
         scissor.offset.y = 0;
-        scissor.extent.width = swap_chain_extent.width;
-        scissor.extent.height = swap_chain_extent.height;
+        scissor.extent.width = swapChainExtent.width;
+        scissor.extent.height = swapChainExtent.height;
 
         viewport_create_info.pViewports = &viewport;
         viewport_create_info.pScissors = &scissor;
@@ -1516,7 +1512,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
     // TODO Might need to ask some of them from outside
     rasterization_create_info.polygonMode = VK_POLYGON_MODE_FILL;
     rasterization_create_info.cullMode = VK_CULL_MODE_NONE;
-    rasterization_create_info.frontFace = options.font_face;
+    rasterization_create_info.frontFace = options.fontFace;
     rasterization_create_info.depthBiasEnable = VK_FALSE;
     rasterization_create_info.lineWidth = 1.0f;
 
@@ -1535,7 +1531,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
     color_blend_create_info.logicOpEnable = VK_FALSE;
     color_blend_create_info.logicOp = VK_LOGIC_OP_COPY;
     color_blend_create_info.attachmentCount = 1;
-    color_blend_create_info.pAttachments = &options.color_blend_attachments;
+    color_blend_create_info.pAttachments = &options.colorBlendAttachments;
     color_blend_create_info.blendConstants[0] = 0.0f;
     color_blend_create_info.blendConstants[1] = 0.0f;
     color_blend_create_info.blendConstants[2] = 0.0f;
@@ -1545,10 +1541,10 @@ GraphicPipelineGroup CreateGraphicPipeline(
 
     VkPipelineLayoutCreateInfo layout_create_info = {};
     layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    layout_create_info.setLayoutCount = descriptor_set_layout_count;
-    layout_create_info.pSetLayouts = descriptor_set_layouts; // Array of descriptor set layout, Order matter when more than 1
-    layout_create_info.pushConstantRangeCount = options.push_constants_range_count;
-    layout_create_info.pPushConstantRanges = options.push_constant_ranges;
+    layout_create_info.setLayoutCount = descriptorSetLayoutCount;
+    layout_create_info.pSetLayouts = descriptorSetLayouts; // Array of descriptor set layout, Order matter when more than 1
+    layout_create_info.pushConstantRangeCount = options.pushConstantsRangeCount;
+    layout_create_info.pPushConstantRanges = options.pushConstantRanges;
     
     VkPipelineLayout_T * pipelineLayout = nullptr;
     VK_Check(vkCreatePipelineLayout(device, &layout_create_info, nullptr, &pipelineLayout));
@@ -1556,16 +1552,15 @@ GraphicPipelineGroup CreateGraphicPipeline(
     VkPipelineDynamicStateCreateInfo * dynamicStateCreateInfoRef = nullptr;
     VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo {};
     std::vector<VkDynamicState> dynamic_states = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-    if (options.use_static_viewport_and_scissor == false) {
-        if (options.dynamic_state_create_info == nullptr) {
-            dynamicStateCreateInfo = VkPipelineDynamicStateCreateInfo {
-                .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-                .dynamicStateCount = static_cast<uint32_t>(dynamic_states.size()),
-                .pDynamicStates = dynamic_states.data(),
-            };
+    if (options.useStaticViewportAndScissor == false) {
+        if (options.dynamicStateCreateInfo == nullptr) {
+            dynamicStateCreateInfo = VkPipelineDynamicStateCreateInfo {};
+            dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+            dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamic_states.size());
+            dynamicStateCreateInfo.pDynamicStates = dynamic_states.data();
             dynamicStateCreateInfoRef = &dynamicStateCreateInfo;
         } else {
-            dynamicStateCreateInfoRef = options.dynamic_state_create_info;
+            dynamicStateCreateInfoRef = options.dynamicStateCreateInfo;
         }
     }
 
@@ -1581,11 +1576,11 @@ GraphicPipelineGroup CreateGraphicPipeline(
     pipelineCreateInfo.pMultisampleState = &multi_sample_state_create_info;
     pipelineCreateInfo.pColorBlendState = &color_blend_create_info;
     pipelineCreateInfo.layout = pipelineLayout;
-    pipelineCreateInfo.renderPass = render_pass;
+    pipelineCreateInfo.renderPass = renderPass;
     pipelineCreateInfo.subpass = 0;
     pipelineCreateInfo.basePipelineHandle = nullptr;
     pipelineCreateInfo.basePipelineIndex = -1;
-    pipelineCreateInfo.pDepthStencilState = &options.depth_stencil;
+    pipelineCreateInfo.pDepthStencilState = &options.depthStencil;
     pipelineCreateInfo.pDynamicState = dynamicStateCreateInfoRef;
     
     VkPipeline_T * pipeline = nullptr;
@@ -1828,16 +1823,19 @@ VkDescriptorPool_T * CreateDescriptorPool(
     uint32_t const maxSets
 ) {
     std::vector<VkDescriptorPoolSize> poolSizes {};
-    // TODO Check if both of these variables must have same value as swap_chain_images_count
-    poolSizes.emplace_back(VkDescriptorPoolSize {
-       .type =  VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-       .descriptorCount = maxSets
-    });
-    poolSizes.emplace_back(VkDescriptorPoolSize {
-       .type =  VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-       .descriptorCount = maxSets
-    });
-    
+    // TODO Check if both of these variables must have same value as maxSets
+    {// Uniform buffers
+        VkDescriptorPoolSize poolSize;
+        poolSize.type =  VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        poolSize.descriptorCount = maxSets;
+        poolSizes.emplace_back(poolSize);
+    }
+    {// Combined image sampler
+        VkDescriptorPoolSize poolSize;
+        poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        poolSize.descriptorCount = maxSets;
+        poolSizes.emplace_back(poolSize);
+    }
     VkDescriptorPoolCreateInfo poolInfo = {};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());

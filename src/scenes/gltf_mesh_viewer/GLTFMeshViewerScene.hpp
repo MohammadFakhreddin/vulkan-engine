@@ -33,15 +33,15 @@ private:
         std::string displayName {};
         std::string address {};
         MFA::DrawableObjectId drawableObjectId {};
-        struct {
-            struct {
+        struct InitialParams {
+            struct Model {
                 float rotationEulerAngle[3] {};
                 float scale = 1;
                 float translate[3] {0, 0, -10.0f};
                 float translateMin[3] {-100.0f, -100.0f, -100.0f};
                 float translateMax[3] {100.0f, 100.0f, 100.0f};
-            } model {};
-            struct {
+            } model;
+            struct Light {
                 float position [3] {};
                 float color[3]{
                     (252.0f/256.0f) * LightScale,
@@ -50,12 +50,17 @@ private:
                 };
                 float translateMin[3] {-200.0f, -200.0f, -200.0f};
                 float translateMax[3] {200.0f, 200.0f, 200.0f};
-            } light {};
-            struct {
+            } light;
+            struct Camera {
                 float position [3] {};
                 float eulerAngles [3] {};
-            } camera {};
-        } initialParams {.model {}, .light {}, .camera {}};
+            } camera;
+            explicit InitialParams()
+                : model({})
+                , light({})
+                , camera({})
+            {}
+        } initialParams {};
     };
 
     void createModel(ModelRenderRequiredData & renderRequiredData);

@@ -340,7 +340,7 @@ void TexturedSphereScene::createDrawPipeline(uint8_t gpu_shader_count, MFA::Rend
         static_cast<uint8_t>(input_attribute_descriptions.size()),
         input_attribute_descriptions.data(),
         RB::CreateGraphicPipelineOptions {
-            .depth_stencil {
+            .depthStencil {
                 .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
                 .depthTestEnable = VK_TRUE,
                 .depthWriteEnable = VK_TRUE,
@@ -348,7 +348,7 @@ void TexturedSphereScene::createDrawPipeline(uint8_t gpu_shader_count, MFA::Rend
                 .depthBoundsTestEnable = VK_FALSE,
                 .stencilTestEnable = VK_FALSE
             },
-            .color_blend_attachments {
+            .colorBlendAttachments {
                 .blendEnable = VK_TRUE,
                 .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
                 .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,

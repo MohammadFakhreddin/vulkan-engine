@@ -272,15 +272,15 @@ void Init() {
             static_cast<uint8_t>(input_attribute_description.size()),
             input_attribute_description.data(),
             RB::CreateGraphicPipelineOptions {
-                .font_face = VK_FRONT_FACE_COUNTER_CLOCKWISE,
-                .dynamic_state_create_info = &dynamic_state_create_info,
-                .depth_stencil {
+                .fontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+                .dynamicStateCreateInfo = &dynamic_state_create_info,
+                .depthStencil {
                     .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
                     .depthTestEnable = false,
                     .depthBoundsTestEnable = false,
                     .stencilTestEnable = false
                 },
-                .color_blend_attachments {
+                .colorBlendAttachments {
                     .blendEnable = VK_TRUE,
                     .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
                     .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
@@ -290,7 +290,7 @@ void Init() {
                     .alphaBlendOp = VK_BLEND_OP_ADD,
                     .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
                 },
-                .push_constants_range_count = static_cast<uint8_t>(push_constants.size()),
+                .pushConstantsRangeCount = static_cast<uint8_t>(push_constants.size()),
                 .push_constant_ranges = push_constants.data(),
                 .use_static_viewport_and_scissor = false
             }

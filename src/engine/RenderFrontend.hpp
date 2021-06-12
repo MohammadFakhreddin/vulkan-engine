@@ -57,7 +57,7 @@ DrawPipeline CreateDrawPipeline(
     VkVertexInputBindingDescription vertex_binding_description,
     uint32_t input_attribute_description_count,
     VkVertexInputAttributeDescription * input_attribute_description_data,
-    RB::CreateGraphicPipelineOptions const & options = {}
+    RB::CreateGraphicPipelineOptions const & options = RB::CreateGraphicPipelineOptions {}
 );
 
 void DestroyDrawPipeline(DrawPipeline & draw_pipeline);

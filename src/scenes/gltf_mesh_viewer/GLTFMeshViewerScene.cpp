@@ -331,13 +331,13 @@ void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & draw
         
         mPointLightPipeline.updateViewProjectionBuffer(mPointLightObjectId, mPointLightMVPData);
 
-        MFA::PointLightPipeline::PrimitiveInfo const lightPrimitiveInfo {
-            .baseColorFactor {
+        MFA::PointLightPipeline::PrimitiveInfo lightPrimitiveInfo {};
+        lightPrimitiveInfo.baseColorFactor = {
                 mLightViewData.lightColor[0],
                 mLightViewData.lightColor[1],
                 mLightViewData.lightColor[2],
                 1.0f
-            }
+            };
         };
         mPointLightPipeline.updatePrimitiveInfo(mPointLightObjectId, lightPrimitiveInfo);
     }

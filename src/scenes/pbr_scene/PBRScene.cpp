@@ -115,7 +115,7 @@ void PBRScene::Init() {
             static_cast<uint32_t>(input_attribute_descriptions.size()),
             input_attribute_descriptions.data(),
             RB::CreateGraphicPipelineOptions {
-                .depth_stencil {
+                .depthStencil {
                     .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
                     .depthTestEnable = VK_TRUE,
                     .depthWriteEnable = VK_TRUE,
@@ -123,7 +123,7 @@ void PBRScene::Init() {
                     .depthBoundsTestEnable = VK_FALSE,
                     .stencilTestEnable = VK_FALSE
                 },
-                .color_blend_attachments {
+                .colorBlendAttachments {
                     .blendEnable = VK_TRUE,
                     .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
                     .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,

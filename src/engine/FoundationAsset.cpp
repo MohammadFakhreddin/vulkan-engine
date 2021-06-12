@@ -166,7 +166,7 @@ uint32_t Mesh::insertSubMesh() {
 
 void Mesh::insertPrimitive(
     uint32_t subMeshIndex,
-    Primitive && primitive, 
+    Primitive & primitive, 
     uint32_t const vertexCount, 
     Vertex * vertices, 
     uint32_t const indicesCount, 

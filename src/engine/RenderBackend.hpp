@@ -389,45 +389,50 @@ struct GraphicPipelineGroup {
         return pipelineLayout != nullptr && graphicPipeline != nullptr;
     }
 };
+
 struct CreateGraphicPipelineOptions {
-    VkFrontFace font_face = VK_FRONT_FACE_CLOCKWISE;
-    VkPipelineDynamicStateCreateInfo * dynamic_state_create_info = nullptr;
-    VkPipelineDepthStencilStateCreateInfo depth_stencil {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-        .depthTestEnable = VK_TRUE,
-        .depthWriteEnable = VK_TRUE,
-        .depthCompareOp = VK_COMPARE_OP_LESS,
-        .depthBoundsTestEnable = VK_FALSE,
-        .stencilTestEnable = VK_FALSE
-    };
-    VkPipelineColorBlendAttachmentState color_blend_attachments {
-        .blendEnable = VK_TRUE,
-        .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-        .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-        .colorBlendOp = VK_BLEND_OP_ADD,
-        .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-        .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-        .alphaBlendOp = VK_BLEND_OP_ADD,
-        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
-    };
-    uint8_t push_constants_range_count = 0;
-    VkPushConstantRange * push_constant_ranges = nullptr;
-    bool use_static_viewport_and_scissor = false;           // Use of dynamic viewport and scissor is recommended
-    VkPrimitiveTopology primitive_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    VkFrontFace fontFace = VK_FRONT_FACE_CLOCKWISE;
+    VkPipelineDynamicStateCreateInfo * dynamicStateCreateInfo = nullptr;
+    VkPipelineDepthStencilStateCreateInfo depthStencil {};
+    VkPipelineColorBlendAttachmentState colorBlendAttachments {};
+    uint8_t pushConstantsRangeCount = 0;
+    VkPushConstantRange * pushConstantRanges = nullptr;
+    bool useStaticViewportAndScissor = false;           // Use of dynamic viewport and scissor is recommended
+    VkPrimitiveTopology primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+    // Default params
+    explicit CreateGraphicPipelineOptions() {
+        depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        depthStencil.depthTestEnable = VK_TRUE;
+        depthStencil.depthWriteEnable = VK_TRUE;
+        depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+        depthStencil.depthBoundsTestEnable = VK_FALSE;
+        depthStencil.stencilTestEnable = VK_FALSE;
+
+        colorBlendAttachments.blendEnable = VK_TRUE;
+        colorBlendAttachments.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        colorBlendAttachments.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        colorBlendAttachments.colorBlendOp = VK_BLEND_OP_ADD;
+        colorBlendAttachments.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        colorBlendAttachments.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        colorBlendAttachments.alphaBlendOp = VK_BLEND_OP_ADD;
+        colorBlendAttachments.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    }
 };
+
 // Note Shaders can be removed after creating graphic pipeline
 [[nodiscard]]
 GraphicPipelineGroup CreateGraphicPipeline(
     VkDevice_T * device, 
-    uint8_t shader_stages_count, 
-    GpuShader const * shader_stages,
-    VkVertexInputBindingDescription vertex_binding_description,
-    uint32_t attribute_description_count,
-    VkVertexInputAttributeDescription * attribute_description_data,
-    VkExtent2D swap_chain_extent,
-    VkRenderPass_T * render_pass,
-    uint32_t descriptor_set_layout_count,
-    VkDescriptorSetLayout_T ** descriptor_set_layouts,
+    uint8_t shaderStagesCount, 
+    GpuShader const * shaderStages,
+    VkVertexInputBindingDescription vertexBindingDescription,
+    uint32_t attributeDescriptionCount,
+    VkVertexInputAttributeDescription * attributeDescriptionData,
+    VkExtent2D swapChainExtent,
+    VkRenderPass_T * renderPass,
+    uint32_t descriptorSetLayoutCount,
+    VkDescriptorSetLayout_T ** descriptorSetLayouts,
     CreateGraphicPipelineOptions const & options
 );
 
@@ -503,7 +508,7 @@ void DestroyUniformBuffer(
 [[nodiscard]]
 VkDescriptorPool_T * CreateDescriptorPool(
     VkDevice_T * device,
-    uint32_t swap_chain_images_count
+    uint32_t maxSets
 );
 
 void DestroyDescriptorPool(

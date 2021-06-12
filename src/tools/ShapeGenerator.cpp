@@ -124,23 +124,22 @@ namespace MFA::ShapeGenerator {
         }
 
         auto const subMeshIndex = model.mesh.insertSubMesh();
+
+        AS::Mesh::Primitive primitive {};
+        primitive.hasNormalBuffer = true;
+
         model.mesh.insertPrimitive(
             subMeshIndex,
-            AS::Mesh::Primitive {
-                .hasNormalBuffer = true
-            },
+            primitive,
             verticesCount,
             meshVertices.data(),
             indicesCount,
             meshIndices.data()
         );
 
-        auto node = AS::MeshNode {
-            .subMeshIndex = 0,
-            .children {},
-            .transform {},
-        };
-
+        AS::MeshNode node {};
+        node.subMeshIndex = 0;
+        
         {// Assign value to transformMat
             auto transform = Matrix4X4Float::Identity();
             Matrix4X4Float::AssignScale(transform, scaleFactor);
@@ -215,22 +214,19 @@ namespace MFA::ShapeGenerator {
         }
 
         auto const subMeshIndex = model.mesh.insertSubMesh();
+
+        AS::Mesh::Primitive primitive {};
+        primitive.hasBaseColorTexture = true;
         model.mesh.insertPrimitive(
             subMeshIndex,
-            AS::Mesh::Primitive {
-                .hasBaseColorTexture = true
-            },
+            primitive,
             verticesCount,
             meshVertices.data(),
             indicesCount,
             meshIndices.data()
         );
 
-        auto node = AS::MeshNode {
-            .subMeshIndex = 0,
-            .children {},
-            .transform {},
-        };
+        auto node = AS::MeshNode {};
         auto const identityMatrix = Matrix4X4Float::Identity();
         ::memcpy(node.transform, identityMatrix.cells, sizeof(node.transform));
         static_assert(sizeof(node.transform) == sizeof(identityMatrix.cells));

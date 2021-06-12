@@ -395,7 +395,7 @@ public:
 
     void insertPrimitive(
         uint32_t subMeshIndex,
-        Primitive && primitive, 
+        Primitive & primitive, 
         uint32_t vertexCount, 
         Vertex * vertices, 
         uint32_t indicesCount, 
