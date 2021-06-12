@@ -76,9 +76,6 @@ output
 CmakeLists.txt.user
 CMakeSettings.json
 
-
-package.json
-
 package-lock.json
 
 3d-cube.dir
@@ -99,4 +96,15 @@ CMakeScripts/*
 
 CMakeScripts
 
-buid/*
+build/*
+build64/*
+build64
+build
+
+package.json
+
+android/local.properties
+
+.gradle
+.idea
+.ccx
