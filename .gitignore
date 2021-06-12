@@ -107,4 +107,4 @@ android/local.properties
 
 .gradle
 .idea
-.ccx
+.ccx/*
