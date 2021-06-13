@@ -126,16 +126,18 @@ AS::Texture ImportInMemoryTexture(
             Memory::Free(mipMapPixels);
         };
 
-        auto const resizeResult = Utils::UncompressedTexture::Resize(ResizeInputParams {
-            .inputImagePixels = originalImagePixels,
-            .inputImageWidth = static_cast<int>(originalImageDimension.width),
-            .inputImageHeight = static_cast<int>(originalImageDimension.height),
-            .componentsCount = components,
-            .outputImagePixels = mipMapPixels,
-            .outputWidth = static_cast<int>(currentMipDims.width),
-            .outputHeight = static_cast<int>(currentMipDims.height)
-        });
-        MFA_ASSERT(resizeResult == true);
+        {// Resize
+            ResizeInputParams inputParams {};
+            inputParams.inputImagePixels = originalImagePixels;
+            inputParams.inputImageWidth = static_cast<int>(originalImageDimension.width);
+            inputParams.inputImageHeight = static_cast<int>(originalImageDimension.height);
+            inputParams.componentsCount = components;
+            inputParams.outputImagePixels = mipMapPixels;
+            inputParams.outputWidth = static_cast<int>(currentMipDims.width);
+            inputParams.outputHeight = static_cast<int>(currentMipDims.height);
+            auto const resizeResult = Utils::UncompressedTexture::Resize(inputParams);
+            MFA_ASSERT(resizeResult == true);
+        }
 
         texture.addMipmap(
             currentMipDims,
@@ -188,15 +190,17 @@ AS::Texture ImportKTXImage(char const * path, ImportTextureOptions const & optio
             if (!MFA_VERIFY(mipBlob.ptr != nullptr && mipBlob.len > 0)) {
                 return AS::Texture {};
             }
-            
-            result.addMipmap(
-                AS::Texture::Dimensions {
-                    .width = static_cast<uint32_t>(width),
-                    .height = static_cast<uint32_t>(height),
-                    .depth = static_cast<uint16_t>(depth)
-                }, 
-                mipBlob
-            );
+
+            {
+                AS::Texture::Dimensions dimensions {};
+                dimensions.width = static_cast<uint32_t>(width);
+                dimensions.height = static_cast<uint32_t>(height);
+                dimensions.depth = static_cast<uint16_t>(depth);
+                result.addMipmap(
+                    dimensions, 
+                    mipBlob
+                );
+            }
 
             width = Math::Max<uint16_t>(width / 2, 1);
             height = Math::Max<uint16_t>(height / 2, 1);
@@ -408,29 +412,27 @@ AS::Mesh ImportObj(char const * path) {
                     ::memcpy(vertices[vertexIndex].normalValue, normals[vertexIndex].value, sizeof(normals[vertexIndex].value));
                 }
 
-                mesh.insertPrimitive(
-                    subMeshIndex,
-                    AS::Mesh::Primitive {
-                        .uniqueId = 0,
-                        .vertexCount = vertexCount,
-                        .indicesCount = indexCount,
-                        .baseColorTextureIndex = 0,
-                        .hasNormalBuffer = true
-                    },
-                    static_cast<uint32_t>(vertices.size()),
-                    vertices.data(),
-                    static_cast<uint32_t>(indices.size()),
-                    indices.data()
-                );
+                {// Insert primitive
+                    AS::Mesh::Primitive primitive {};
+                    primitive.uniqueId = 0;
+                    primitive.vertexCount = vertexCount;
+                    primitive.indicesCount = indexCount;
+                    primitive.baseColorTextureIndex = 0;
+                    primitive.hasNormalBuffer = true;
 
-                auto node = AS::MeshNode {
-                    .subMeshIndex = static_cast<int>(subMeshIndex),
-                    .children {},
-                    .transform {},
-                };
-                auto const identity = Matrix4X4Float::Identity();
-                ::memcpy(node.transform, identity.cells, sizeof(node.transform));
-                static_assert(sizeof(node.transform) == sizeof(identity.cells));
+                    mesh.insertPrimitive(
+                        subMeshIndex,
+                        primitive,
+                        static_cast<uint32_t>(vertices.size()),
+                        vertices.data(),
+                        static_cast<uint32_t>(indices.size()),
+                        indices.data()
+                    );
+                }
+
+                auto node = AS::MeshNode {};
+                node.subMeshIndex = static_cast<int>(subMeshIndex);
+                Copy<16>(node.transform, Matrix4X4Float::Identity().cells);
                 mesh.insertNode(node);
                 MFA_ASSERT(mesh.isValid());
 
@@ -567,7 +569,8 @@ static void GLTF_extractTextures(
     // Extracting textures
     if(false == gltfModel.textures.empty()) {
         for (auto const & texture : gltfModel.textures) {
-            AS::SamplerConfig sampler {.isValid = false};
+            AS::SamplerConfig sampler {};
+            sampler.isValid = false;
             if (texture.sampler >= 0) {// Sampler
                 auto const & gltfSampler = gltfModel.samplers[texture.sampler];
                 sampler.magFilter = gltfSampler.magFilter;
@@ -580,18 +583,23 @@ static void GLTF_extractTextures(
             AS::Texture assetSystemTexture {};
             auto const & image = gltfModel.images[texture.source];
             {// Texture
+                ImportTextureOptions textureOptions {};
+                textureOptions.tryToGenerateMipmaps = false;
+                textureOptions.sampler = &sampler;
                 std::string image_path = directoryPath + "/" + image.uri;
                 assetSystemTexture = ImportImage(
                     image_path.c_str(),
-                    // TODO tryToGenerateMipmaps takes too long
-                    ImportTextureOptions {.tryToGenerateMipmaps = false, .sampler = &sampler}
+                    // TODO tryToGenerateMipmaps takes too long (We should create .asset files)
+                    textureOptions
                 );
             }
             MFA_ASSERT(assetSystemTexture.isValid());
-            outTextureRefs.emplace_back(TextureRef {
-                .gltf_name = image.uri,
-                .index = static_cast<uint8_t>(outResultModel.textures.size())
-            });
+            {
+                TextureRef textureRef {};
+                textureRef.gltf_name = image.uri;
+                textureRef.index = static_cast<uint8_t>(outResultModel.textures.size());
+                outTextureRefs.emplace_back(textureRef);
+            }
             outResultModel.textures.emplace_back(assetSystemTexture);
         }
     }
@@ -1091,33 +1099,34 @@ static void GLTF_extractSubMeshes(
                     }
                 }
 
-                // Creating new subMesh
-                outResultModel.mesh.insertPrimitive(
-                    meshIndex,
-                    AS::MeshPrimitive {
-                        .uniqueId = uniqueId,
-                        .baseColorTextureIndex = baseColorTextureIndex,
-                        .mixedMetallicRoughnessOcclusionTextureIndex = metallicRoughnessTextureIndex,
-                        .normalTextureIndex = normalTextureIndex,
-                        .emissiveTextureIndex = emissiveTextureIndex,
-                        .baseColorFactor = {baseColorFactor[0], baseColorFactor[1], baseColorFactor[2], baseColorFactor[3]},
-                        .metallicFactor = metallicFactor,
-                        .roughnessFactor = roughnessFactor,
-                        .emissiveFactor = {emissiveFactor[0], emissiveFactor[1], emissiveFactor[2]},
-                        .hasBaseColorTexture = hasBaseColorTexture,
-                        .hasEmissiveTexture = hasEmissiveTexture,
-                        .hasMixedMetallicRoughnessOcclusionTexture = hasCombinedMetallicRoughness,
-                        .hasNormalBuffer = hasNormalValue,
-                        .hasNormalTexture = hasNormalTexture,
-                        .hasTangentBuffer = hasTangentValue,
-                        .hasSkin = hasSkin
-                    }, 
-                    static_cast<uint32_t>(primitiveVertices.size()), 
-                    primitiveVertices.data(), 
-                    static_cast<uint32_t>(primitiveIndices.size()), 
-                    primitiveIndices.data()
-                );
+                {// Creating new subMesh
+                    AS::MeshPrimitive primitive = {};
+                    primitive.uniqueId = uniqueId;
+                    primitive.baseColorTextureIndex = baseColorTextureIndex;
+                    primitive.mixedMetallicRoughnessOcclusionTextureIndex = metallicRoughnessTextureIndex;
+                    primitive.normalTextureIndex = normalTextureIndex;
+                    primitive.emissiveTextureIndex = emissiveTextureIndex;
+                    Copy<4>(primitive.baseColorFactor, baseColorFactor);
+                    primitive.metallicFactor = metallicFactor;
+                    primitive.roughnessFactor = roughnessFactor;
+                    Copy<3>(primitive.emissiveFactor, emissiveFactor);
+                    primitive.hasBaseColorTexture = hasBaseColorTexture;
+                    primitive.hasEmissiveTexture = hasEmissiveTexture;
+                    primitive.hasMixedMetallicRoughnessOcclusionTexture = hasCombinedMetallicRoughness;
+                    primitive.hasNormalBuffer = hasNormalValue;
+                    primitive.hasNormalTexture = hasNormalTexture;
+                    primitive.hasTangentBuffer = hasTangentValue;
+                    primitive.hasSkin = hasSkin;
 
+                    outResultModel.mesh.insertPrimitive(
+                        meshIndex,
+                        primitive, 
+                        static_cast<uint32_t>(primitiveVertices.size()), 
+                        primitiveVertices.data(), 
+                        static_cast<uint32_t>(primitiveIndices.size()), 
+                        primitiveIndices.data()
+                    );
+                }
                 indicesVertexStartingIndex += primitiveVertexCount;
                 
             }
@@ -1132,11 +1141,11 @@ static void GLTF_extractNodes(
     // Step3: Fill nodes
     if(false == gltfModel.nodes.empty()) {
         for (auto const & gltfNode : gltfModel.nodes) {
-            AS::MeshNode node = {
-                .subMeshIndex = gltfNode.mesh,
-                .children = gltfNode.children,
-                .skin = gltfNode.skin
-            };
+            AS::MeshNode node {};
+            node.subMeshIndex = gltfNode.mesh;
+            node.children = gltfNode.children;
+            node.skin = gltfNode.skin;
+
             if (gltfNode.translation.empty() == false) {
                 MFA_ASSERT(gltfNode.translation.size() == 3);
                 node.translate[0] = static_cast<float>(gltfNode.translation[0]);

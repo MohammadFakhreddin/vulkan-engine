@@ -1,3 +1,5 @@
+#pragma once
+
 #include "RenderFrontend.hpp"
 
 namespace MFA::UISystem {

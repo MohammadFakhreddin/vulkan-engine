@@ -22,162 +22,103 @@ void GLTFMeshViewerScene::Init() {
         mErrorTexture = RF::CreateTexture(cpu_texture);
     }
     {// Models
-        mModelsRenderData.emplace_back(ModelRenderRequiredData {
-            .gpuModel {},
-            .displayName {"CesiumMan"},
-            .address {Path::Asset("models/CesiumMan/gltf/CesiumMan.gltf").c_str()},
-            .drawableObjectId {},
-            .initialParams {
-                .model {
-                    .rotationEulerAngle {0.0f, 0.0f, -180.0f},
-                    .translate {0.0f, 0.0f, -7.0f}                    
-                },
-                .light {
-                    .position {0.0f, -2.0f, -2.0f}
-                },
-                .camera {
-                    .position {0.104f, 1.286f, 4.952f},
-                    .eulerAngles {-12.0f, 3.0f, 0.0f}
-                },
-            }
-        });
-        mModelsRenderData.emplace_back(ModelRenderRequiredData {
-            .gpuModel {},
-            .displayName {"War-craft soldier"},
-            .address {Path::Asset("models/warcraft_3_alliance_footmanfanmade/scene.gltf").c_str()},
-            .drawableObjectId {},
-            .initialParams {
-                .model {
-                    .rotationEulerAngle {0.0f, -5.926f, -180.0f},
-                    .translate {0.0f, 0.9f, -2.0f}
-                },
-                .light {
-                    .position {0.0f, -2.0f, 0.0f}
-                }
-            }
-        });
-        mModelsRenderData.emplace_back(ModelRenderRequiredData {
-            .gpuModel {},
-            .displayName {"SponzaScene"},
-            .address {Path::Asset("models/sponza/sponza.gltf").c_str()},
-            //.address {"../assets/models/sponza-gltf-pbr/sponza.glb"},
-            .drawableObjectId {},
-            .initialParams {
-                .model {
-                    .rotationEulerAngle {180.0f, -90.0f, 0.0f},
-                    .translate {0.4f, 2.0f, -6.0f},
-                },
-                .light {
-                    .translateMin {-50.0f, -50.0f, -50.0f},
-                    .translateMax {50.0f, 50.0f, 50.0f}
-                }
-            }
-        });
-        mModelsRenderData.emplace_back(ModelRenderRequiredData {
-            .gpuModel {},
-            .displayName {"Car"},
-            .address {Path::Asset("models/free_zuk_3d_model/scene.gltf").c_str()},
-            .drawableObjectId {},
-            .initialParams {
-                .model {
-                    .rotationEulerAngle {-19.0f, -32.0f, 177.0f},
-                    .translate {0.0f, 0.0f, -2.0f}
-                }
-            }
-        });
-        mModelsRenderData.emplace_back(ModelRenderRequiredData {
-            .gpuModel {},
-            .displayName {"Gunship"},
-            .address {Path::Asset("models/gunship/scene.gltf").c_str()},
-            .drawableObjectId {},
-            .initialParams {
-                .model {
-                    .rotationEulerAngle {160.0f, 176.0f, 0.0f},
-                    .scale = 0.008f,
-                    .translate {0.0f, 0.0f, -33.745f}
-                },
-                .light {
-                    .position {-2.0f, -2.0f, -29.0f}
-                },
-                .camera {
-                    .position {2.5f, 5.3f, 21.8f},
-                    .eulerAngles {-22.110f, -13.200f, 0.0f}
-                }
-            }
-        });
-        mModelsRenderData.emplace_back(ModelRenderRequiredData {
-            .gpuModel {},
-            .displayName {"Cyberpunk lady"},
-            .address {Path::Asset("models/female_full-body_cyberpunk_themed_avatar/scene.gltf").c_str()},
-            .drawableObjectId {},
-            .initialParams {
-                .model {
-                    .rotationEulerAngle {-3.0f, 340.0f, 180.0f},
-                    .translate {0.0f, 0.8f, -3.0f}
-                }
-            }
-        });
-        mModelsRenderData.emplace_back(ModelRenderRequiredData {
-            .gpuModel {},
-            .displayName {"Mandalorian"},
-            .address {Path::Asset("models/fortnite_the_mandalorianbaby_yoda/scene.gltf").c_str()},
-            .drawableObjectId {},
-            .initialParams {
-                .model {
-                    .rotationEulerAngle {180.0f, 180.0f, 0.0f},
-                    .scale = 0.010f,
-                    .translate {0.0f, -0.5f, -2.0f}
-                },
-                .light {
-                    .position {0.0f, 0.0f, 0.0f}
-                }
-            }
-        });
-        mModelsRenderData.emplace_back(ModelRenderRequiredData {
-            .gpuModel {},
-            .displayName {"Mandalorian2"},
-            .address {Path::Asset("models/mandalorian__the_fortnite_season_6_skin_updated/scene.gltf").c_str()},
-            .drawableObjectId {},
-            .initialParams {
-                .model {
-                    .rotationEulerAngle {180.0f, 180.0f, 0.0f},
-                    .scale = 0.0005f,
-                    .translate {0.0f, 4.5f, -10.0f}
-                }
-            }
-        });
-        mModelsRenderData.emplace_back(ModelRenderRequiredData {
-            .gpuModel {},
-            .displayName {"Flight helmet"},
-            .address {Path::Asset("models/FlightHelmet/glTF/FlightHelmet.gltf").c_str()},
-            .drawableObjectId {},
-            .initialParams {
-                .model {
-                    .rotationEulerAngle {180.0f, 180.0f, 0.0f},
-                    .translate {0.0f, 0.0f, -1.0f},
-                },
-                .light {
-                    .position {0.0f, 0.0f, 2.469f}
-                }
-            }
-        });
-        
-        mModelsRenderData.emplace_back(ModelRenderRequiredData {
-            .gpuModel {},
-            .displayName {"Warhammer tank"},
-            .address {Path::Asset("models/warhammer_40k_predator_dark_millennium/scene.gltf").c_str()},
-            .drawableObjectId {},
-            .initialParams {
-                .model {
-                    .rotationEulerAngle {-45.0f, -45.0f, 180.0f},
-                    .scale = 0.5f,
-                    .translate {0.0f, 0.0f, -16.0f},
-                },
-                .light {
-                    .position {1.5f, 0.0f, -8.0f}
-                }
-            }
-        });
+        {
+            ModelRenderRequiredData params {};
+            params.displayName = "CesiumMan";
+            Path::Asset("models/CesiumMan/gltf/CesiumMan.gltf", params.address);
+            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {0.0f, 0.0f, -180.0f});
+            MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.0f, -7.0f});        
+            MFA::Copy<3>(params.initialParams.light.position, {0.0f, -2.0f, -2.0f});
+            MFA::Copy<3>(params.initialParams.camera.position, {0.104f, 1.286f, 4.952f});
+            MFA::Copy<3>(params.initialParams.camera.eulerAngles, {-12.0f, 3.0f, 0.0f});
+            mModelsRenderData.emplace_back(params);
+        }
+        {
+            ModelRenderRequiredData params {};
+            params.gpuModel = {};
+            params.displayName = "War-craft soldier";
+            Path::Asset("models/warcraft_3_alliance_footmanfanmade/scene.gltf", params.address);
+            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {0.0f, -5.926f, -180.0f});
+            MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.9f, -2.0f});
+            MFA::Copy<3>(params.initialParams.light.position, {0.0f, -2.0f, 0.0f});
+            mModelsRenderData.emplace_back();
+        }
+        {
+            ModelRenderRequiredData params {};
+            params.displayName = "SponzaScene";
+            Path::Asset("models/sponza/sponza.gltf", params.address);
+            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {180.0f, -90.0f, 0.0f});
+            MFA::Copy<3>(params.initialParams.model.translate, {0.4f, 2.0f, -6.0f});
+            MFA::Copy<3>(params.initialParams.light.translateMin, {-50.0f, -50.0f, -50.0f});
+            MFA::Copy<3>(params.initialParams.light.translateMax, {50.0f, 50.0f, 50.0f});
+            mModelsRenderData.emplace_back(params);
+        }
+        {
+            ModelRenderRequiredData params {};
+            params.displayName = "Car";
+            Path::Asset("models/free_zuk_3d_model/scene.gltf", params.address);
+            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {-19.0f, -32.0f, 177.0f});
+            MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.0f, -2.0f});
+            mModelsRenderData.emplace_back(params);
+        }
+        {
+            ModelRenderRequiredData params {};
+            params.displayName = "Gunship";
+            Path::Asset("models/gunship/scene.gltf", params.address);
+            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {160.0f, 176.0f, 0.0f});
+            params.initialParams.model.scale = 0.008f;
+            MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.0f, -33.745f});
+            MFA::Copy<3>(params.initialParams.light.position, {-2.0f, -2.0f, -29.0f});
+            MFA::Copy<3>(params.initialParams.camera.position, {2.5f, 5.3f, 21.8f});
+            MFA::Copy<3>(params.initialParams.camera.eulerAngles, {-22.110f, -13.200f, 0.0f});
+            mModelsRenderData.emplace_back(params);
+        }
+        {
+            ModelRenderRequiredData params {};
+            params.displayName = "Cyberpunk lady";
+            Path::Asset("models/female_full-body_cyberpunk_themed_avatar/scene.gltf", params.address);
+            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {-3.0f, 340.0f, 180.0f});
+            MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.8f, -3.0f});
+            mModelsRenderData.emplace_back(params);
+        }
+        {
+            ModelRenderRequiredData params {};
+            params.displayName = "Mandalorian";
+            Path::Asset("models/fortnite_the_mandalorianbaby_yoda/scene.gltf", params.address);
+            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {180.0f, 180.0f, 0.0f});
+            params.initialParams.model.scale = 0.010f;
+            MFA::Copy<3>(params.initialParams.model.translate, {0.0f, -0.5f, -2.0f});
+            MFA::Copy<3>(params.initialParams.light.position, {0.0f, 0.0f, 0.0f});
+            mModelsRenderData.emplace_back(params);
+        }
+        {
+            ModelRenderRequiredData params {};
+            params.displayName = "Mandalorian2";
+            Path::Asset("models/mandalorian__the_fortnite_season_6_skin_updated/scene.gltf", params.address);
+            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {180.0f, 180.0f, 0.0f});
+            params.initialParams.model.scale = 0.0005f;
+            MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 4.5f, -10.0f});
+            mModelsRenderData.emplace_back(params);
+        }
+        {
+            ModelRenderRequiredData params {};
+            params.displayName = "Flight helmet";
+            Path::Asset("models/FlightHelmet/glTF/FlightHelmet.gltf", params.address);
+            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {180.0f, 180.0f, 0.0f});
+            MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.0f, -1.0f});
+            MFA::Copy<3>(params.initialParams.light.position, {0.0f, 0.0f, 2.469f});
+            mModelsRenderData.emplace_back(params);
+        }
+        {
+            ModelRenderRequiredData params {};
+            params.displayName = "Warhammer tank";
+            Path::Asset("models/warhammer_40k_predator_dark_millennium/scene.gltf", params.address);
+            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {-45.0f, -45.0f, 180.0f});
+            params.initialParams.model.scale = 0.5f;
+            MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.0f, -16.0f});
+            MFA::Copy<3>(params.initialParams.light.position, {1.5f, 0.0f, -8.0f});
+            mModelsRenderData.emplace_back(params);
+        }
     }
 
     // TODO We should use gltf sampler info here
@@ -224,33 +165,17 @@ void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & draw
     if (mPreviousModelSelectedIndex != mSelectedModelIndex) {
         mPreviousModelSelectedIndex = mSelectedModelIndex;
         // Model
-        ::memcpy(m_model_rotation, selectedModel.initialParams.model.rotationEulerAngle, sizeof(m_model_rotation));
-        static_assert(sizeof(m_model_rotation) == sizeof(selectedModel.initialParams.model.rotationEulerAngle));
-
-        ::memcpy(m_model_position, selectedModel.initialParams.model.translate, sizeof(m_model_position));
-        static_assert(sizeof(m_model_position) == sizeof(selectedModel.initialParams.model.translate));
-
+        MFA::Copy<3>(m_model_rotation, selectedModel.initialParams.model.rotationEulerAngle);
+        MFA::Copy<3>(m_model_position, selectedModel.initialParams.model.translate);
         m_model_scale = selectedModel.initialParams.model.scale;
-
-        ::memcpy(mModelTranslateMin, selectedModel.initialParams.model.translateMin, sizeof(mModelTranslateMin));
-        static_assert(sizeof(mModelTranslateMin) == sizeof(selectedModel.initialParams.model.translateMin));
-
-        ::memcpy(mModelTranslateMax, selectedModel.initialParams.model.translateMax, sizeof(mModelTranslateMax));
-        static_assert(sizeof(mModelTranslateMax) == sizeof(selectedModel.initialParams.model.translateMin));
-
+        MFA::Copy<3>(mModelTranslateMin, selectedModel.initialParams.model.translateMin);
+        MFA::Copy<3>(mModelTranslateMax, selectedModel.initialParams.model.translateMax);
+        
         // Light
-        ::memcpy(mLightPosition, selectedModel.initialParams.light.position, sizeof(mLightPosition));
-        static_assert(sizeof(mLightPosition) == sizeof(selectedModel.initialParams.light.position));
-
-        ::memcpy(mLightColor, selectedModel.initialParams.light.color, sizeof(mLightColor));
-        static_assert(sizeof(mLightColor) == sizeof(selectedModel.initialParams.light.color));
-
-        ::memcpy(mLightTranslateMin, selectedModel.initialParams.light.translateMin, sizeof(mLightTranslateMin));
-        static_assert(sizeof(mLightTranslateMin) == sizeof(selectedModel.initialParams.light.translateMin));
-
-        ::memcpy(mLightTranslateMax, selectedModel.initialParams.light.translateMax, sizeof(mLightTranslateMax));
-        static_assert(sizeof(mLightTranslateMax) == sizeof(selectedModel.initialParams.light.translateMin));
-
+        MFA::Copy<3>(mLightPosition, selectedModel.initialParams.light.position);
+        MFA::Copy<3>(mLightTranslateMin, selectedModel.initialParams.light.translateMin);
+        MFA::Copy<3>(mLightTranslateMax, selectedModel.initialParams.light.translateMax);
+        
         mCamera.forcePosition(selectedModel.initialParams.camera.position);
         mCamera.forceRotation(selectedModel.initialParams.camera.eulerAngles);
     }
@@ -332,13 +257,8 @@ void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & draw
         mPointLightPipeline.updateViewProjectionBuffer(mPointLightObjectId, mPointLightMVPData);
 
         MFA::PointLightPipeline::PrimitiveInfo lightPrimitiveInfo {};
-        lightPrimitiveInfo.baseColorFactor = {
-                mLightViewData.lightColor[0],
-                mLightViewData.lightColor[1],
-                mLightViewData.lightColor[2],
-                1.0f
-            };
-        };
+        MFA::Copy<3>(lightPrimitiveInfo.baseColorFactor, mLightViewData.lightColor);
+        lightPrimitiveInfo.baseColorFactor[4] = 1.0f;
         mPointLightPipeline.updatePrimitiveInfo(mPointLightObjectId, lightPrimitiveInfo);
     }
     // TODO Pipeline should be able to share buffers such as projection buffer to enable us to update them once

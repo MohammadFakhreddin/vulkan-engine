@@ -521,27 +521,29 @@ void MFA::PBRModelPipeline::createPipeline() {
         inputAttributeDescriptions.emplace_back(attributeDescription);
     }
     {// HasSkin
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
-            .format = VK_FORMAT_R32_SINT,
-            .offset = offsetof(AS::MeshVertex, hasSkin) // TODO We should use a primitiveInfo instead
-        });
+        VkVertexInputAttributeDescription attributeDescription {};
+        attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
+        attributeDescription.binding = 0;
+        attributeDescription.format = VK_FORMAT_R32_SINT;
+        attributeDescription.offset = offsetof(AS::MeshVertex, hasSkin); // TODO We should use a primitiveInfo instead
+        inputAttributeDescriptions.emplace_back(attributeDescription);
     }
-    // JointIndices
-    inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-        .binding = 0,
-        .format = VK_FORMAT_R32G32B32A32_SINT,
-        .offset = offsetof(AS::MeshVertex, jointIndices)
-    });
-    // JointWeights
-    inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-        .binding = 0,
-        .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-        .offset = offsetof(AS::MeshVertex, jointWeights)
-    });
+    {// JointIndices
+        VkVertexInputAttributeDescription attributeDescription {};
+        attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
+        attributeDescription.binding = 0;
+        attributeDescription.format = VK_FORMAT_R32G32B32A32_SINT;
+        attributeDescription.offset = offsetof(AS::MeshVertex, jointIndices);
+        inputAttributeDescriptions.emplace_back(attributeDescription);
+    }
+    {// JointWeights
+        VkVertexInputAttributeDescription attributeDescription {};
+        attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
+        attributeDescription.binding = 0;
+        attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+        attributeDescription.offset = offsetof(AS::MeshVertex, jointWeights);
+        inputAttributeDescriptions.emplace_back(attributeDescription);
+    }
     MFA_ASSERT(mDrawPipeline.isValid() == false);
     mDrawPipeline = RF::CreateBasicDrawPipeline(
         static_cast<uint8_t>(shaders.size()), 

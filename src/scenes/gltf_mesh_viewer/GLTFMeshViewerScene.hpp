@@ -92,11 +92,7 @@ private:
     float m_model_position[3] {0.0f, 0.0f, -6.0f};
 
     MFA::PBRModelPipeline::LightViewBuffer mLightViewData {};
-    MFA::Copy<3>(mLightViewData.lightPosition, {0.0f, 0.0f, 0.0f});
-    //mLightViewData.lightPosition = {},
-        //.cameraPosition = {0.0f, 0.0f, 0.0f},
-    //};
-
+    
     float mLightPosition[3] {0.0f, 0.0f, -2.0f};
     float mLightColor[3]{};
 

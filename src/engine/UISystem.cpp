@@ -263,6 +263,25 @@ void Init() {
             .pDynamicStates = dynamic_states.data(),
         };
 
+        RB::CreateGraphicPipelineOptions pipelineOptions {};
+        pipelineOptions.fontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        pipelineOptions.dynamicStateCreateInfo = &dynamic_state_create_info;
+        pipelineOptions.depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        pipelineOptions.depthStencil.depthTestEnable = false;
+        pipelineOptions.depthStencil.depthBoundsTestEnable = false;
+        pipelineOptions.depthStencil.stencilTestEnable = false;
+        pipelineOptions.colorBlendAttachments.blendEnable = VK_TRUE;
+        pipelineOptions.colorBlendAttachments.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        pipelineOptions.colorBlendAttachments.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        pipelineOptions.colorBlendAttachments.colorBlendOp = VK_BLEND_OP_ADD;
+        pipelineOptions.colorBlendAttachments.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        pipelineOptions.colorBlendAttachments.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        pipelineOptions.colorBlendAttachments.alphaBlendOp = VK_BLEND_OP_ADD;
+        pipelineOptions.colorBlendAttachments.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        pipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(push_constants.size());
+        pipelineOptions.pushConstantRanges = push_constants.data();
+        pipelineOptions.useStaticViewportAndScissor = false;
+
         state->draw_pipeline = RF::CreateDrawPipeline(
             static_cast<uint8_t>(shader_stages.size()),
             shader_stages.data(),
@@ -271,29 +290,7 @@ void Init() {
             vertex_binding_description,
             static_cast<uint8_t>(input_attribute_description.size()),
             input_attribute_description.data(),
-            RB::CreateGraphicPipelineOptions {
-                .fontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
-                .dynamicStateCreateInfo = &dynamic_state_create_info,
-                .depthStencil {
-                    .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-                    .depthTestEnable = false,
-                    .depthBoundsTestEnable = false,
-                    .stencilTestEnable = false
-                },
-                .colorBlendAttachments {
-                    .blendEnable = VK_TRUE,
-                    .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-                    .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-                    .colorBlendOp = VK_BLEND_OP_ADD,
-                    .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-                    .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-                    .alphaBlendOp = VK_BLEND_OP_ADD,
-                    .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
-                },
-                .pushConstantsRangeCount = static_cast<uint8_t>(push_constants.size()),
-                .push_constant_ranges = push_constants.data(),
-                .use_static_viewport_and_scissor = false
-            }
+            pipelineOptions
         );
     }
 

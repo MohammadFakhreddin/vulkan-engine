@@ -32,9 +32,9 @@ public:
     };
 
     struct LightViewBuffer {
-        alignas(16) float lightPosition[3];
-        alignas(16) float cameraPosition[3];
-        alignas(16) float lightColor[3];
+        alignas(16) float lightPosition[3] {0, 0, 0};
+        alignas(16) float cameraPosition[3] {0, 0, 0};
+        alignas(16) float lightColor[3] {0, 0, 0};
     };
 
     explicit PBRModelPipeline() = default;
