@@ -20,8 +20,8 @@ struct EventWatchGroup {
 
 struct State {
     // CreateWindow
-    ScreenWidth screen_width = 0;
-    ScreenHeight screen_height = 0;
+    ScreenWidth screenWidth = 0;
+    ScreenHeight screenHeight = 0;
     // CreateInstance
     std::string application_name {};
     VkInstance vk_instance {};
@@ -114,11 +114,11 @@ static int SDLEventWatcher(void* data, MSDL::SDL_Event* event) {
 bool Init(InitParams const & params) {
     state = new State();
     state->application_name = params.application_name;
-    state->screen_width = params.screen_width;
-    state->screen_height = params.screen_height;
+    state->screenWidth = params.screen_width;
+    state->screenHeight = params.screen_height;
     state->window = RB::CreateWindow(
-        state->screen_width, 
-        state->screen_height
+        state->screenWidth, 
+        state->screenHeight
     );
     state->isWindowResizable = params.resizable;
     
@@ -173,16 +173,17 @@ bool Init(InitParams const & params) {
     );
     MFA_LOG_INFO("Acquired graphics and presentation queues");
     state->graphic_command_pool = RB::CreateCommandPool(state->logicalDevice.device, state->graphic_queue_family);
-    VkExtent2D const swap_chain_extent = {
-        .width = static_cast<uint32_t>(state->screen_width),
-        .height = static_cast<uint32_t>(state->screen_height)
-    };
+
+    VkExtent2D swapChainExtend {};
+    swapChainExtend.width = static_cast<uint32_t>(state->screenWidth);
+    swapChainExtend.height = static_cast<uint32_t>(state->screenHeight);
+
     // Creating sampler/TextureImage/VertexBuffer and IndexBuffer + graphic_pipeline is on application level
     state->swap_chain_group = RB::CreateSwapChain(
         state->logicalDevice.device,
         state->physical_device,
         state->surface,
-        swap_chain_extent
+        swapChainExtend
     );
     state->render_pass = RB::CreateRenderPass(
         state->physical_device,
@@ -192,7 +193,7 @@ bool Init(InitParams const & params) {
     state->depth_image_group = RB::CreateDepth(
         state->physical_device,
         state->logicalDevice.device,
-        swap_chain_extent
+        swapChainExtend
     );
     state->frame_buffers = RB::CreateFrameBuffers(
         state->logicalDevice.device,
@@ -200,7 +201,7 @@ bool Init(InitParams const & params) {
         static_cast<uint8_t>(state->swap_chain_group.swapChainImageViews.size()),
         state->swap_chain_group.swapChainImageViews.data(),
         state->depth_image_group.imageView,
-        swap_chain_extent
+        swapChainExtend
     );
     state->descriptorPool = RB::CreateDescriptorPool(
         state->logicalDevice.device, 
@@ -223,14 +224,14 @@ bool Init(InitParams const & params) {
 void OnWindowResized() {
     RB::DeviceWaitIdle(state->logicalDevice.device);
     
-    GetWindowSize(state->screen_width, state->screen_height);
-    MFA_ASSERT(state->screen_width > 0);
-    MFA_ASSERT(state->screen_height > 0);
-    const VkExtent2D extent2D {
-        .width = static_cast<uint32_t>(state->screen_width),
-        .height = static_cast<uint32_t>(state->screen_height)
-    };
+    GetWindowSize(state->screenWidth, state->screenHeight);
+    MFA_ASSERT(state->screenWidth > 0);
+    MFA_ASSERT(state->screenHeight > 0);
 
+    VkExtent2D extent2D {};
+    extent2D.width = static_cast<uint32_t>(state->screenWidth);
+    extent2D.height = static_cast<uint32_t>(state->screenHeight);
+    
     state->windowResized = false;
 
     // Depth image
@@ -412,6 +413,24 @@ DrawPipeline CreateBasicDrawPipeline(
     MFA_ASSERT(gpuShaders);
     MFA_ASSERT(descriptorSetLayouts);
 
+    RB::CreateGraphicPipelineOptions pipelineOptions {};
+    pipelineOptions.depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    pipelineOptions.depthStencil.depthTestEnable = VK_TRUE;
+    pipelineOptions.depthStencil.depthWriteEnable = VK_TRUE;
+    pipelineOptions.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+    pipelineOptions.depthStencil.depthBoundsTestEnable = VK_FALSE;
+    pipelineOptions.depthStencil.stencilTestEnable = VK_FALSE;
+
+    pipelineOptions.colorBlendAttachments.blendEnable = VK_TRUE;
+    pipelineOptions.colorBlendAttachments.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    pipelineOptions.colorBlendAttachments.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    pipelineOptions.colorBlendAttachments.colorBlendOp = VK_BLEND_OP_ADD;
+    pipelineOptions.colorBlendAttachments.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    pipelineOptions.colorBlendAttachments.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    pipelineOptions.colorBlendAttachments.alphaBlendOp = VK_BLEND_OP_ADD;
+    pipelineOptions.colorBlendAttachments.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    pipelineOptions.useStaticViewportAndScissor = false;
+
     return CreateDrawPipeline(
         gpuShadersCount,
         gpuShaders,
@@ -420,27 +439,7 @@ DrawPipeline CreateBasicDrawPipeline(
         vertexInputBindingDescription,
         vertexInputAttributeDescriptionCount,
         vertexInputAttributeDescriptions,
-        RB::CreateGraphicPipelineOptions {
-            .depthStencil {
-                .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-                .depthTestEnable = VK_TRUE,
-                .depthWriteEnable = VK_TRUE,
-                .depthCompareOp = VK_COMPARE_OP_LESS,
-                .depthBoundsTestEnable = VK_FALSE,
-                .stencilTestEnable = VK_FALSE
-            },
-            .colorBlendAttachments {
-                .blendEnable = VK_TRUE,
-                .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-                .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-                .colorBlendOp = VK_BLEND_OP_ADD,
-                .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-                .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-                .alphaBlendOp = VK_BLEND_OP_ADD,
-                .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
-            },
-            .use_static_viewport_and_scissor = false
-        }
+        pipelineOptions
     );
 }
 
@@ -455,24 +454,26 @@ DrawPipeline CreateDrawPipeline(
     VkVertexInputAttributeDescription * input_attribute_description_data,
     RB::CreateGraphicPipelineOptions const & options
 ) {
-    auto const graphic_pipeline_group = RB::CreateGraphicPipeline(
+
+    VkExtent2D extent2D {};
+    extent2D.width = static_cast<uint32_t>(state->screenWidth);
+    extent2D.height = static_cast<uint32_t>(state->screenHeight);
+
+    auto const graphicPipelineGroup = RB::CreateGraphicPipeline(
         state->logicalDevice.device,
         gpu_shaders_count,
         gpu_shaders,
         vertex_binding_description,
         static_cast<uint32_t>(input_attribute_description_count),
         input_attribute_description_data,
-        VkExtent2D {
-            .width = static_cast<uint32_t>(state->screen_width),
-            .height = static_cast<uint32_t>(state->screen_height)
-        },
+        extent2D,
         state->render_pass,
         descriptor_layouts_count,
         descriptor_set_layouts,
         options
     );
 
-    return graphic_pipeline_group;
+    return graphicPipelineGroup;
 }
 
 void DestroyDrawPipeline(DrawPipeline & draw_pipeline) {
@@ -513,10 +514,10 @@ UniformBufferGroup CreateUniformBuffer(size_t const bufferSize, uint32_t const c
         count,
         bufferSize
     );
-    return {
-        .buffers = buffers,
-        .bufferSize = bufferSize
-    };
+    UniformBufferGroup group {};
+    group.buffers = buffers;
+    group.bufferSize = bufferSize;
+    return group;
 }
 
 void UpdateUniformBuffer(
@@ -561,10 +562,9 @@ RB::BufferGroup CreateIndexBuffer(CBlob const indices_blob) {
 
 MeshBuffers CreateMeshBuffers(AssetSystem::Mesh const & mesh) {
     MFA_ASSERT(mesh.isValid());
-    MeshBuffers const buffers {
-        .verticesBuffer = CreateVertexBuffer(mesh.getVerticesBuffer()),
-        .indicesBuffer = CreateIndexBuffer(mesh.getIndicesBuffer())
-    };
+    MeshBuffers buffers {};
+    buffers.verticesBuffer = CreateVertexBuffer(mesh.getVerticesBuffer());
+    buffers.indicesBuffer = CreateIndexBuffer(mesh.getIndicesBuffer());
     return buffers;
 }
 
@@ -593,9 +593,10 @@ void DestroyTexture(RB::GpuTexture & gpu_texture) {
 SamplerGroup CreateSampler(RB::CreateSamplerParams const & samplerParams) {
     auto * sampler = RB::CreateSampler(state->logicalDevice.device, samplerParams);
     MFA_ASSERT(sampler != nullptr);
-    return {
-        .sampler = sampler
-    };
+
+    SamplerGroup samplerGroup {};
+    samplerGroup.sampler = sampler;
+    return samplerGroup;
 }
 
 void DestroySampler(SamplerGroup & sampler_group) {
@@ -604,19 +605,17 @@ void DestroySampler(SamplerGroup & sampler_group) {
 }
 
 GpuModel CreateGpuModel(AssetSystem::Model & model_asset) {
-    GpuModel gpu_model {
-        .valid = true,
-        .meshBuffers = CreateMeshBuffers(model_asset.mesh),
-        .textures {},
-        .model = model_asset
-    };
+    GpuModel gpuModel {};
+    gpuModel.valid = true;
+    gpuModel.meshBuffers = CreateMeshBuffers(model_asset.mesh);
+    gpuModel.model = model_asset;
     if(false == model_asset.textures.empty()) {
         for (auto & texture_asset : model_asset.textures) {
-            gpu_model.textures.emplace_back(CreateTexture(texture_asset));
-            MFA_ASSERT(gpu_model.textures.back().valid());
+            gpuModel.textures.emplace_back(CreateTexture(texture_asset));
+            MFA_ASSERT(gpuModel.textures.back().valid());
         }
     }
-    return gpu_model;
+    return gpuModel;
 }
 
 void DestroyGpuModel(GpuModel & gpu_model) {
@@ -639,7 +638,9 @@ DrawPass BeginPass() {
     MFA_ASSERT(MAX_FRAMES_IN_FLIGHT > state->current_frame);
     DrawPass draw_pass {};
     if (state->isWindowVisible == false || state->windowResized == true) {
-        return DrawPass {.isValid = false};
+        DrawPass drawPass {};
+        drawPass.isValid = false;
+        return drawPass;
     }
 
     RB::WaitForFence(
@@ -721,10 +722,8 @@ DrawPass BeginPass() {
     renderPassBeginInfo.framebuffer = state->frame_buffers[draw_pass.imageIndex];
     renderPassBeginInfo.renderArea.offset.x = 0;
     renderPassBeginInfo.renderArea.offset.y = 0;
-    renderPassBeginInfo.renderArea.extent = VkExtent2D {
-        .width = static_cast<uint32_t>(state->screen_width),
-        .height = static_cast<uint32_t>(state->screen_height)
-    };
+    renderPassBeginInfo.renderArea.extent.width = static_cast<uint32_t>(state->screenWidth);
+    renderPassBeginInfo.renderArea.extent.height = static_cast<uint32_t>(state->screenHeight);
     renderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     renderPassBeginInfo.pClearValues = clearValues.data();
 
@@ -1051,11 +1050,11 @@ void GetDrawableSize(int32_t & out_width, int32_t & out_height) {
 
 void AssignViewportAndScissorToCommandBuffer(VkCommandBuffer_T * commandBuffer) {
     MFA_ASSERT(commandBuffer != nullptr);
+    VkExtent2D extent2D {};
+    extent2D.width = static_cast<uint32_t>(state->screenWidth);
+    extent2D.height = static_cast<uint32_t>(state->screenHeight);
     RB::AssignViewportAndScissorToCommandBuffer(
-        VkExtent2D {
-            .width = static_cast<uint32_t>(state->screen_width),
-            .height = static_cast<uint32_t>(state->screen_height)
-        },
+        extent2D,
         commandBuffer
     );
 }
@@ -1063,10 +1062,11 @@ void AssignViewportAndScissorToCommandBuffer(VkCommandBuffer_T * commandBuffer) 
 // TODO We might need separate SDL class
 int AddEventWatch(EventWatch const & eventWatch) {
     MFA_ASSERT(eventWatch != nullptr);
-    auto const group = EventWatchGroup {
-        .id = state->nextEventListenerId,
-        .watch = eventWatch
-    };
+
+    EventWatchGroup group {};
+    group.id = state->nextEventListenerId;
+    group.watch = eventWatch;
+
     ++state->nextEventListenerId;
     state->sdlEventListeners.emplace_back(group);
     return group.id;

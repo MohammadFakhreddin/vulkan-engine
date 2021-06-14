@@ -41,7 +41,7 @@ void GLTFMeshViewerScene::Init() {
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {0.0f, -5.926f, -180.0f});
             MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.9f, -2.0f});
             MFA::Copy<3>(params.initialParams.light.position, {0.0f, -2.0f, 0.0f});
-            mModelsRenderData.emplace_back();
+            mModelsRenderData.emplace_back(params);
         }
         {
             ModelRenderRequiredData params {};
@@ -258,7 +258,7 @@ void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & draw
 
         MFA::PointLightPipeline::PrimitiveInfo lightPrimitiveInfo {};
         MFA::Copy<3>(lightPrimitiveInfo.baseColorFactor, mLightViewData.lightColor);
-        lightPrimitiveInfo.baseColorFactor[4] = 1.0f;
+        lightPrimitiveInfo.baseColorFactor[3] = 1.0f;
         mPointLightPipeline.updatePrimitiveInfo(mPointLightObjectId, lightPrimitiveInfo);
     }
     // TODO Pipeline should be able to share buffers such as projection buffer to enable us to update them once

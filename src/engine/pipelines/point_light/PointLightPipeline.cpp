@@ -69,54 +69,57 @@ MFA::DrawableObjectId MFA::PointLightPipeline::addGpuModel(RF::GpuModel & gpuMod
 
                     std::vector<VkWriteDescriptorSet> writeInfo {};
 
-                    // ViewProjection
-                    VkDescriptorBufferInfo viewProjectionBufferInfo {
-                        .buffer = viewProjectionBuffer->buffers[0].buffer,
-                        .offset = 0,
-                        .range = viewProjectionBuffer->bufferSize
-                    };
-                    writeInfo.emplace_back(VkWriteDescriptorSet {
-                        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                        .dstSet = descriptorSet,
-                        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
-                        .dstArrayElement = 0,
-                        .descriptorCount = 1,
-                        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                        .pBufferInfo = &viewProjectionBufferInfo,
-                    });
+                    {// ViewProjection
+                        VkDescriptorBufferInfo viewProjectionBufferInfo {};
+                        viewProjectionBufferInfo.buffer = viewProjectionBuffer->buffers[0].buffer;
+                        viewProjectionBufferInfo.offset = 0;
+                        viewProjectionBufferInfo.range = viewProjectionBuffer->bufferSize;
 
-                    //NodeTransform
-                    VkDescriptorBufferInfo nodeTransformBufferInfo {
-                        .buffer = nodeTransformBuffer.buffers[node.subMeshIndex].buffer,
-                        .offset = 0,
-                        .range = nodeTransformBuffer.bufferSize
-                    };
-                    writeInfo.emplace_back(VkWriteDescriptorSet {
-                        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                        .dstSet = descriptorSet,
-                        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
-                        .dstArrayElement = 0,
-                        .descriptorCount = 1,
-                        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                        .pBufferInfo = &nodeTransformBufferInfo,
-                    });
+                        VkWriteDescriptorSet writeDescriptorSet {};
+                        writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                        writeDescriptorSet.dstSet = descriptorSet;
+                        writeDescriptorSet.dstBinding = static_cast<uint32_t>(writeInfo.size());
+                        writeDescriptorSet.dstArrayElement = 0;
+                        writeDescriptorSet.descriptorCount = 1;
+                        writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                        writeDescriptorSet.pBufferInfo = &viewProjectionBufferInfo;
+                        
+                        writeInfo.emplace_back(writeDescriptorSet);
+                    }
+                    {//NodeTransform
+                        VkDescriptorBufferInfo nodeTransformBufferInfo {};
+                        nodeTransformBufferInfo.buffer = nodeTransformBuffer.buffers[node.subMeshIndex].buffer;
+                        nodeTransformBufferInfo.offset = 0;
+                        nodeTransformBufferInfo.range = nodeTransformBuffer.bufferSize;
 
-                    // Primitive
-                    VkDescriptorBufferInfo primitiveBufferInfo {
-                        .buffer = primitiveInfoBuffer->buffers[0].buffer,
-                        .offset = 0,
-                        .range = primitiveInfoBuffer->bufferSize
-                    };
-                    writeInfo.emplace_back(VkWriteDescriptorSet {
-                        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                        .dstSet = descriptorSet,
-                        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
-                        .dstArrayElement = 0,
-                        .descriptorCount = 1,
-                        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                        .pBufferInfo = &primitiveBufferInfo,
-                    });
+                        VkWriteDescriptorSet writeDescriptorSet {};
+                        writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                        writeDescriptorSet.dstSet = descriptorSet;
+                        writeDescriptorSet.dstBinding = static_cast<uint32_t>(writeInfo.size());
+                        writeDescriptorSet.dstArrayElement = 0;
+                        writeDescriptorSet.descriptorCount = 1;
+                        writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                        writeDescriptorSet.pBufferInfo = &nodeTransformBufferInfo;
+                        
+                        writeInfo.emplace_back(writeDescriptorSet);
+                    }
+                    {// Primitive
+                        VkDescriptorBufferInfo primitiveBufferInfo {};
+                        primitiveBufferInfo.buffer = primitiveInfoBuffer->buffers[0].buffer;
+                        primitiveBufferInfo.offset = 0;
+                        primitiveBufferInfo.range = primitiveInfoBuffer->bufferSize;
 
+                        VkWriteDescriptorSet writeDescriptorSet {};
+                        writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                        writeDescriptorSet.dstSet = descriptorSet;
+                        writeDescriptorSet.dstBinding = static_cast<uint32_t>(writeInfo.size());
+                        writeDescriptorSet.dstArrayElement = 0;
+                        writeDescriptorSet.descriptorCount = 1;
+                        writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                        writeDescriptorSet.pBufferInfo = &primitiveBufferInfo;
+
+                        writeInfo.emplace_back(writeDescriptorSet);
+                    }
                     RF::UpdateDescriptorSets(
                         static_cast<uint8_t>(writeInfo.size()),
                         writeInfo.data()
@@ -196,30 +199,33 @@ bool MFA::PointLightPipeline::updatePrimitiveInfo(
 
 void MFA::PointLightPipeline::createDescriptorSetLayout() {
     std::vector<VkDescriptorSetLayoutBinding> bindings {};
-    // ViewProjection 
-    bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<uint32_t>(bindings.size()),
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 1,
-        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-        .pImmutableSamplers = nullptr, // Optional
-    });
-    // NodeTransformation
-    bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<uint32_t>(bindings.size()),
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 1,
-        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-        .pImmutableSamplers = nullptr, // Optional
-    });
-    // Primitive
-    bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<uint32_t>(bindings.size()),
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 1,
-        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-        .pImmutableSamplers = nullptr, // Optional
-    });
+    {// ViewProjection
+        VkDescriptorSetLayoutBinding layoutBinding {};
+        layoutBinding.binding = static_cast<uint32_t>(bindings.size());
+        layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        layoutBinding.descriptorCount = 1;
+        layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+        bindings.emplace_back(layoutBinding);
+    }
+    {// NodeTransformation
+        VkDescriptorSetLayoutBinding layoutBinding {};
+        layoutBinding.binding = static_cast<uint32_t>(bindings.size());
+        layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        layoutBinding.descriptorCount = 1;
+        layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+        bindings.emplace_back(layoutBinding);
+    }
+    {// Primitive
+        VkDescriptorSetLayoutBinding layoutBinding {};
+        layoutBinding.binding = static_cast<uint32_t>(bindings.size()),
+        layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        layoutBinding.descriptorCount = 1,
+        layoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+        
+        bindings.emplace_back(layoutBinding);
+    }
     MFA_ASSERT(mDescriptorSetLayout == nullptr);
     mDescriptorSetLayout = RF::CreateDescriptorSetLayout(
         static_cast<uint8_t>(bindings.size()),
@@ -264,33 +270,36 @@ void MFA::PointLightPipeline::createPipeline() {
 
     std::vector<RB::GpuShader> shaders {gpuVertexShader, gpuFragmentShader};
 
-    VkVertexInputBindingDescription const vertex_binding_description {
-        .binding = 0,
-        .stride = sizeof(AS::MeshVertex),
-        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-    };
+    VkVertexInputBindingDescription bindingDescription {};
+    bindingDescription.binding = 0;
+    bindingDescription.stride = sizeof(AS::MeshVertex);
+    bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    
+    std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions {};
+    {// Position
+        VkVertexInputAttributeDescription attributeDescription {};
+        attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
+        attributeDescription.binding = 0;
+        attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescription.offset = offsetof(AS::MeshVertex, position);
 
-    std::vector<VkVertexInputAttributeDescription> input_attribute_descriptions {};
-    // Position
-    input_attribute_descriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = static_cast<uint32_t>(input_attribute_descriptions.size()),
-        .binding = 0,
-        .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = offsetof(AS::MeshVertex, position),   
-    });
+        inputAttributeDescriptions.emplace_back(attributeDescription);
+    }
     MFA_ASSERT(mDrawPipeline.isValid() == false);
+
+    RB::CreateGraphicPipelineOptions pipelineOptions {};
+    pipelineOptions.useStaticViewportAndScissor = false;
+    pipelineOptions.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+
     mDrawPipeline = RF::CreateDrawPipeline(
         static_cast<uint32_t>(shaders.size()), 
         shaders.data(),
         1,
         &mDescriptorSetLayout,
-        vertex_binding_description,
-        static_cast<uint8_t>(input_attribute_descriptions.size()),
-        input_attribute_descriptions.data(),
-        RB::CreateGraphicPipelineOptions {
-            .use_static_viewport_and_scissor = false,
-            .primitive_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP
-        }
+        bindingDescription,
+        static_cast<uint8_t>(inputAttributeDescriptions.size()),
+        inputAttributeDescriptions.data(),
+        pipelineOptions
     );
 }
 

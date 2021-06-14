@@ -93,12 +93,14 @@ void Texture::addMipmap(
     mPreviousMipWidth = dimension.width;
     mPreviousMipHeight = dimension.height;
 
-    uint32_t dataLen = static_cast<uint32_t>(data.len);
-    mMipmapInfos.emplace_back(MipmapInfo {
-        .offset = mCurrentOffset,
-        .size = dataLen,
-        .dimension = dimension,
-    });
+    auto const dataLen = static_cast<uint32_t>(data.len);
+    {
+        MipmapInfo mipmapInfo {};
+        mipmapInfo.offset = mCurrentOffset;
+        mipmapInfo.size = dataLen;
+        mipmapInfo.dimension = dimension;
+        mMipmapInfos.emplace_back(mipmapInfo);
+    }
     uint64_t nextOffset = mCurrentOffset + dataLen;
     MFA_ASSERT(mBuffer.ptr != nullptr);
     MFA_ASSERT(nextOffset <= mBuffer.len);

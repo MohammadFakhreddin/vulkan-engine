@@ -51,13 +51,15 @@ void TextureViewerScene::Init() {
     MFA_ASSERT(mGpuModel.textures.size() == 1);
     mTotalMipCount = mGpuModel.textures[0].cpu_texture()->GetMipCount();
 
-    // TODO We need nearest and linear filters
-    mSamplerGroup = RF::CreateSampler(RB::CreateSamplerParams {
-        .min_lod = 0.0f,
-        .max_lod = static_cast<float>(mTotalMipCount),
-        .anisotropy_enabled = true,
-        .max_anisotropy = 16.0f
-    });
+    {// Create sampler
+        RB::CreateSamplerParams params {};
+        params.min_lod = 0.0f;
+        params.max_lod = static_cast<float>(mTotalMipCount);
+        params.anisotropy_enabled = true;
+        params.max_anisotropy = 16.0f;
+        // TODO We need nearest and linear filters
+        mSamplerGroup = RF::CreateSampler(params);
+    }
 
     createDescriptorSetLayout();
     
@@ -165,30 +167,34 @@ void TextureViewerScene::OnResize() {
 
 void TextureViewerScene::createDescriptorSetLayout() {
     std::vector<VkDescriptorSetLayoutBinding> bindings {};
-    // ViewProjectionBuffer 
-    bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<uint32_t>(bindings.size()),
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 1,
-        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-        .pImmutableSamplers = nullptr, // Optional
-    });
-    // Texture
-    bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<uint32_t>(bindings.size()),
-        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = 1,
-        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-        .pImmutableSamplers = nullptr,
-    });
-    // ImageOptions
-    bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<uint32_t>(bindings.size()),
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 1,
-        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-        .pImmutableSamplers = nullptr, // Optional
-    });
+    {// ViewProjectionBuffer
+        VkDescriptorSetLayoutBinding layoutBinding {};
+        layoutBinding.binding = static_cast<uint32_t>(bindings.size());
+        layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        layoutBinding.descriptorCount = 1;
+        layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+        bindings.emplace_back(layoutBinding);
+    }
+    {// Texture
+        VkDescriptorSetLayoutBinding layoutBinding {};
+        layoutBinding.binding = static_cast<uint32_t>(bindings.size());
+        layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        layoutBinding.descriptorCount = 1;
+        layoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        layoutBinding.pImmutableSamplers = nullptr;
+
+        bindings.emplace_back(layoutBinding);
+    }
+    {// ImageOptions
+        VkDescriptorSetLayoutBinding layoutBinding {};
+        layoutBinding.binding = static_cast<uint32_t>(bindings.size());
+        layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        layoutBinding.descriptorCount = 1;
+        layoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+        bindings.emplace_back(layoutBinding);
+    }
     mDescriptorSetLayout = RF::CreateDescriptorSetLayout(
         static_cast<uint8_t>(bindings.size()),
         bindings.data()
@@ -199,28 +205,28 @@ void TextureViewerScene::createDrawPipeline(
     uint8_t const gpuShaderCount, 
     MFA::RenderBackend::GpuShader * gpuShaders
 ) {
-    VkVertexInputBindingDescription const vertexInputBindingDescription {
-        .binding = 0,
-        .stride = sizeof(AS::MeshVertex),
-        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-    };
-
+    VkVertexInputBindingDescription vertexInputBindingDescription {};
+    vertexInputBindingDescription.binding = 0;
+    vertexInputBindingDescription.stride = sizeof(AS::MeshVertex);
+    vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    
     std::vector<VkVertexInputAttributeDescription> vkVertexInputAttributeDescriptions {};
-    // Position
-    vkVertexInputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = static_cast<uint32_t>(vkVertexInputAttributeDescriptions.size()),
-        .binding = 0,
-        .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = offsetof(AS::MeshVertex, position),   
-    });
-    // BaseColor
-    vkVertexInputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = static_cast<uint32_t>(vkVertexInputAttributeDescriptions.size()),
-        .binding = 0,
-        .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(AS::MeshVertex, baseColorUV),   
-    });
-
+    {// Position
+        VkVertexInputAttributeDescription attributeDescription {};
+        attributeDescription.location = static_cast<uint32_t>(vkVertexInputAttributeDescriptions.size());
+        attributeDescription.binding = 0;
+        attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescription.offset = offsetof(AS::MeshVertex, position);
+        vkVertexInputAttributeDescriptions.emplace_back(attributeDescription);
+    }
+    {// BaseColor
+        VkVertexInputAttributeDescription attributeDescription {};
+        attributeDescription.location = static_cast<uint32_t>(vkVertexInputAttributeDescriptions.size());
+        attributeDescription.binding = 0;
+        attributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescription.offset = offsetof(AS::MeshVertex, baseColorUV);   
+        vkVertexInputAttributeDescriptions.emplace_back(attributeDescription);
+    }
     mDrawPipeline = RF::CreateBasicDrawPipeline(
         gpuShaderCount, 
         gpuShaders,
@@ -236,11 +242,11 @@ void TextureViewerScene::createModel() {
     auto cpuModel = SG::Sheet();
 
     //auto cpuTexture = Importer::ImportImage("../assets/models/sponza/11490520546946913238.ktx");
+    Importer::ImportTextureOptions options {};
+    options.tryToGenerateMipmaps = true;
     auto cpuTexture = Importer::ImportImage(
         Path::Asset("models/FlightHelmet/glTF/FlightHelmet_baseColor3.png").c_str(), 
-        Importer::ImportTextureOptions {
-            .tryToGenerateMipmaps = true
-        }
+        options
     );
     MFA_ASSERT(cpuTexture.isValid());
 
@@ -278,54 +284,57 @@ void TextureViewerScene::createDrawableObject() {
 
     std::vector<VkWriteDescriptorSet> writeInfo {};
 
-    // ViewProjection
-    VkDescriptorBufferInfo viewProjectionBufferInfo {
-        .buffer = viewProjectionBuffer->buffers[0].buffer,
-        .offset = 0,
-        .range = viewProjectionBuffer->bufferSize
-    };
-    writeInfo.emplace_back(VkWriteDescriptorSet {
-        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        .dstSet = descriptorSet,
-        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
-        .dstArrayElement = 0,
-        .descriptorCount = 1,
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .pBufferInfo = &viewProjectionBufferInfo,
-    });
+    {// ViewProjection
+        VkDescriptorBufferInfo viewProjectionBufferInfo {};
+        viewProjectionBufferInfo.buffer = viewProjectionBuffer->buffers[0].buffer;
+        viewProjectionBufferInfo.offset = 0;
+        viewProjectionBufferInfo.range = viewProjectionBuffer->bufferSize;
 
-    // Texture
-    VkDescriptorImageInfo baseColorImageInfo {
-        .sampler = mSamplerGroup.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
-        .imageView = mGpuModel.textures[primitive.baseColorTextureIndex].image_view(),
-        .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-    };
-    writeInfo.emplace_back(VkWriteDescriptorSet {
-        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        .dstSet = descriptorSet,
-        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
-        .dstArrayElement = 0,
-        .descriptorCount = 1,
-        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .pImageInfo = &baseColorImageInfo,
-    });
+        VkWriteDescriptorSet writeDescriptorSet {};
+        writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        writeDescriptorSet.dstSet = descriptorSet,
+        writeDescriptorSet.dstBinding = static_cast<uint32_t>(writeInfo.size()),
+        writeDescriptorSet.dstArrayElement = 0,
+        writeDescriptorSet.descriptorCount = 1,
+        writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        writeDescriptorSet.pBufferInfo = &viewProjectionBufferInfo,
 
-    // ImageOptions
-    VkDescriptorBufferInfo light_view_buffer_info {
-        .buffer = imageOptionsBuffer->buffers[0].buffer,
-        .offset = 0,
-        .range = imageOptionsBuffer->bufferSize
-    };
-    writeInfo.emplace_back(VkWriteDescriptorSet {
-        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        .dstSet = descriptorSet,
-        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
-        .dstArrayElement = 0,
-        .descriptorCount = 1,
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .pBufferInfo = &light_view_buffer_info,
-    });
+        writeInfo.emplace_back(writeDescriptorSet);
+    }
+    {// Texture
+        VkDescriptorImageInfo baseColorImageInfo {};
+        baseColorImageInfo.sampler = mSamplerGroup.sampler;          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
+        baseColorImageInfo.imageView = mGpuModel.textures[primitive.baseColorTextureIndex].image_view();
+        baseColorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
+        VkWriteDescriptorSet writeDescriptorSet {};
+        writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writeDescriptorSet.dstSet = descriptorSet;
+        writeDescriptorSet.dstBinding = static_cast<uint32_t>(writeInfo.size());
+        writeDescriptorSet.dstArrayElement = 0;
+        writeDescriptorSet.descriptorCount = 1;
+        writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        writeDescriptorSet.pImageInfo = &baseColorImageInfo;
+        
+        writeInfo.emplace_back(writeDescriptorSet);
+    }
+    {// ImageOptions
+        VkDescriptorBufferInfo lightViewBufferInfo {};
+        lightViewBufferInfo.buffer = imageOptionsBuffer->buffers[0].buffer;
+        lightViewBufferInfo.offset = 0;
+        lightViewBufferInfo.range = imageOptionsBuffer->bufferSize;
+        
+        VkWriteDescriptorSet writeDescriptorSet {};
+        writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writeDescriptorSet.dstSet = descriptorSet;
+        writeDescriptorSet.dstBinding = static_cast<uint32_t>(writeInfo.size());
+        writeDescriptorSet.dstArrayElement = 0;
+        writeDescriptorSet.descriptorCount = 1;
+        writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        writeDescriptorSet.pBufferInfo = &lightViewBufferInfo;
+
+        writeInfo.emplace_back(writeDescriptorSet);
+    }
     RF::UpdateDescriptorSets(
         static_cast<uint8_t>(writeInfo.size()),
         writeInfo.data()

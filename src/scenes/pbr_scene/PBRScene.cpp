@@ -50,62 +50,55 @@ void PBRScene::Init() {
     std::vector<RB::GpuShader> shaders {gpu_vertex_shader, gpu_fragment_shader};
 
     {// Descriptor set layout
-        // Transformation 
-        VkDescriptorSetLayoutBinding const transform_buff_binding {
-            .binding = 0,
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1,
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-            .pImmutableSamplers = nullptr, // Optional
-        };
-        // Material
-        VkDescriptorSetLayoutBinding const material_buff_binding {
-            .binding = 1,
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1,
-            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .pImmutableSamplers = nullptr, // Optional     
-        };
-        // Light and view
-        VkDescriptorSetLayoutBinding const light_buff_binding {
-            .binding = 2,
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1,
-            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .pImmutableSamplers = nullptr, // Optional    
-        };
-
-        std::vector<VkDescriptorSetLayoutBinding> bindings {
-            transform_buff_binding,
-            material_buff_binding,
-            light_buff_binding
-        };
-        m_descriptor_set_layout = RF::CreateDescriptorSetLayout(
+        std::vector<VkDescriptorSetLayoutBinding> bindings {};
+        {// Transformation 
+            VkDescriptorSetLayoutBinding layoutBinding {};
+            layoutBinding.binding = static_cast<uint32_t>(bindings.size());
+            layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            layoutBinding.descriptorCount = 1;
+            layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+            bindings.emplace_back(layoutBinding);
+        }
+        {// Material
+            VkDescriptorSetLayoutBinding layoutBinding {};
+            layoutBinding.binding = static_cast<uint32_t>(bindings.size());
+            layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            layoutBinding.descriptorCount = 1;
+            layoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+            bindings.emplace_back(layoutBinding);
+        }
+        {// Light and view
+            VkDescriptorSetLayoutBinding layoutBinding {};
+            layoutBinding.binding = 2;
+            layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            layoutBinding.descriptorCount = 1;
+            layoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+            bindings.emplace_back(layoutBinding);
+        }
+        mDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()), 
             bindings.data()
         );
     }
 
     {// Pipeline
-        VkVertexInputBindingDescription const vertex_binding_description {
-            .binding = 0,
-            .stride = sizeof(MFA::AssetSystem::MeshVertex),
-            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-        };
-        std::vector<VkVertexInputAttributeDescription> input_attribute_descriptions {2};
-        input_attribute_descriptions[0] = VkVertexInputAttributeDescription {
-            .location = 0,
-            .binding = 0,
-            .format = VK_FORMAT_R32G32B32_SFLOAT,
-            .offset = offsetof(MFA::AssetSystem::MeshVertex, position),
-        };
-        input_attribute_descriptions[1] = VkVertexInputAttributeDescription {
-            .location = 1,
-            .binding = 0,
-            .format = VK_FORMAT_R32G32B32_SFLOAT,
-            .offset = offsetof(MFA::AssetSystem::MeshVertex, normalValue)
-        };
+        VkVertexInputBindingDescription vertexBindingDescription {};
+        vertexBindingDescription.binding = 0;
+        vertexBindingDescription.stride = sizeof(MFA::AssetSystem::MeshVertex);
+        vertexBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
+        std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions {2};
+
+        inputAttributeDescriptions[0].location = 0;
+        inputAttributeDescriptions[0].binding = 0;
+        inputAttributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+        inputAttributeDescriptions[0].offset = offsetof(MFA::AssetSystem::MeshVertex, position);
+
+        inputAttributeDescriptions[1].location = 1;
+        inputAttributeDescriptions[1].binding = 0;
+        inputAttributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+        inputAttributeDescriptions[1].offset = offsetof(MFA::AssetSystem::MeshVertex, normalValue);
+        
         RB::CreateGraphicPipelineOptions graphicPipelineOptions {};
         graphicPipelineOptions.depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
         graphicPipelineOptions.depthStencil.depthTestEnable = VK_TRUE;
@@ -128,18 +121,18 @@ void PBRScene::Init() {
             static_cast<uint8_t>(shaders.size()), 
             shaders.data(),
             1,
-            &m_descriptor_set_layout,
-            vertex_binding_description,
-            static_cast<uint32_t>(input_attribute_descriptions.size()),
-            input_attribute_descriptions.data(),
+            &mDescriptorSetLayout,
+            vertexBindingDescription,
+            static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            inputAttributeDescriptions.data(),
             graphicPipelineOptions
         );
     }
 
     // Descriptor set
-    m_sphere_descriptor_sets = RF::CreateDescriptorSets(
+    mSphereDescriptorSets = RF::CreateDescriptorSets(
         1,//RF::SwapChainImagesCount(), 
-        m_descriptor_set_layout
+        mDescriptorSetLayout
     );
 
     {// Uniform buffer
@@ -158,7 +151,7 @@ void PBRScene::Shutdown() {
     RF::DestroyUniformBuffer(m_light_view_buffer_group);
     RF::DestroyUniformBuffer(m_transformation_buffer_group);
     RF::DestroyDrawPipeline(m_draw_pipeline);
-    RF::DestroyDescriptorSetLayout(m_descriptor_set_layout);
+    RF::DestroyDescriptorSetLayout(mDescriptorSetLayout);
     RF::DestroyGpuModel(m_sphere);
     Importer::FreeModel(&m_sphere.model);
 }
@@ -228,7 +221,7 @@ void PBRScene::OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw
         }
     }
     {// Binding and updating descriptor set
-        auto * current_descriptor_set = m_sphere_descriptor_sets[0];
+        auto * current_descriptor_set = mSphereDescriptorSets[0];
         // Bind
         RF::BindDescriptorSet(draw_pass, current_descriptor_set);
     }       
@@ -291,7 +284,7 @@ void PBRScene::OnUI(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_p
     {// Materials
         std::vector<char const *> items {};
         for (auto const & material: MaterialInformation) {
-            items.emplace_back(material.name);
+            items.emplace_back(material.name.c_str());
         }
         UI::Combo(
             "Material", 
@@ -320,66 +313,69 @@ void PBRScene::OnResize() {
 }
 
 void PBRScene::updateAllDescriptorSets() {
-    for (uint8_t i = 0; i < m_sphere_descriptor_sets.size(); ++i) {
+    for (uint8_t i = 0; i < mSphereDescriptorSets.size(); ++i) {
         updateDescriptorSet(i);
     }
 }
 
 void PBRScene::updateDescriptorSet(uint8_t const index) {
-    auto * current_descriptor_set = m_sphere_descriptor_sets[index];
+    auto * currentDescriptorSet = mSphereDescriptorSets[index];
     std::vector<VkWriteDescriptorSet> write_info {};
-    // Transform
-    VkDescriptorBufferInfo transform_buffer_info {
-        .buffer = m_transformation_buffer_group.buffers[index].buffer,
-        .offset = 0,
-        .range = m_transformation_buffer_group.bufferSize
-    };
-    
-    write_info.emplace_back(VkWriteDescriptorSet {
-        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        .dstSet = current_descriptor_set,
-        .dstBinding = 0,
-        .dstArrayElement = 0,
-        .descriptorCount = 1,
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .pBufferInfo = &transform_buffer_info,
-    });
-    // Material
-    VkDescriptorBufferInfo material_buffer_info {
-        .buffer = m_material_buffer_group.buffers[index].buffer,
-        .offset = 0,
-        .range = m_material_buffer_group.bufferSize
-    };
-    
-    write_info.emplace_back(VkWriteDescriptorSet {
-        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        .dstSet = current_descriptor_set,
-        .dstBinding = 1,
-        .dstArrayElement = 0,
-        .descriptorCount = 1,
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .pBufferInfo = &material_buffer_info,
-    });
-    // LightView
-    VkDescriptorBufferInfo light_view_buffer_info {
-        .buffer = m_light_view_buffer_group.buffers[index].buffer,
-        .offset = 0,
-        .range = m_light_view_buffer_group.bufferSize
-    };
-    
-    write_info.emplace_back(VkWriteDescriptorSet {
-        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        .dstSet = current_descriptor_set,
-        .dstBinding = 2,
-        .dstArrayElement = 0,
-        .descriptorCount = 1,
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .pBufferInfo = &light_view_buffer_info,
-    });
+    {// Transform
+        VkDescriptorBufferInfo bufferInfo {};
+        bufferInfo.buffer = m_transformation_buffer_group.buffers[index].buffer;
+        bufferInfo.offset = 0;
+        bufferInfo.range = m_transformation_buffer_group.bufferSize;
+
+        VkWriteDescriptorSet vkWriteDescriptorSet {};
+        vkWriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        vkWriteDescriptorSet.dstSet = currentDescriptorSet;
+        vkWriteDescriptorSet.dstBinding = 0;
+        vkWriteDescriptorSet.dstArrayElement = 0;
+        vkWriteDescriptorSet.descriptorCount = 1;
+        vkWriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        vkWriteDescriptorSet.pBufferInfo = &bufferInfo;
+
+        write_info.emplace_back(vkWriteDescriptorSet);
+    }
+    {// Material
+        VkDescriptorBufferInfo bufferInfo {};
+        bufferInfo.buffer = m_material_buffer_group.buffers[index].buffer;
+        bufferInfo.offset = 0;
+        bufferInfo.range = m_material_buffer_group.bufferSize;
+
+        VkWriteDescriptorSet vkWriteDescriptorSet {};
+        vkWriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        vkWriteDescriptorSet.dstSet = currentDescriptorSet;
+        vkWriteDescriptorSet.dstBinding = 1;
+        vkWriteDescriptorSet.dstArrayElement = 0;
+        vkWriteDescriptorSet.descriptorCount = 1;
+        vkWriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        vkWriteDescriptorSet.pBufferInfo = &bufferInfo;
+        
+        write_info.emplace_back(vkWriteDescriptorSet);
+    }
+    {// LightView
+        VkDescriptorBufferInfo bufferInfo {};
+        bufferInfo.buffer = m_light_view_buffer_group.buffers[index].buffer;
+        bufferInfo.offset = 0;
+        bufferInfo.range = m_light_view_buffer_group.bufferSize;
+
+        VkWriteDescriptorSet vkWriteDescriptorSet {};
+        vkWriteDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        vkWriteDescriptorSet.dstSet = currentDescriptorSet;
+        vkWriteDescriptorSet.dstBinding = 2;
+        vkWriteDescriptorSet.dstArrayElement = 0;
+        vkWriteDescriptorSet.descriptorCount = 1;
+        vkWriteDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        vkWriteDescriptorSet.pBufferInfo = &bufferInfo;
+
+        write_info.emplace_back(vkWriteDescriptorSet);
+    }
 
     RF::UpdateDescriptorSets(
         1, 
-        &current_descriptor_set, 
+        &currentDescriptorSet, 
         static_cast<uint8_t>(write_info.size()), 
         write_info.data()
     );

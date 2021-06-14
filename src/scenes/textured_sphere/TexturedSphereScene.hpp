@@ -27,9 +27,9 @@ private:
 
     void createDrawableObject();
 
-    void destroyDrawableObject();
+    void destroyDrawableObject() const;
 
-    void createDrawPipeline(uint8_t gpu_shader_count, MFA::RenderBackend::GpuShader * gpu_shaders);
+    void createDrawPipeline(uint8_t gpuShaderCount, MFA::RenderBackend::GpuShader * gpuShaders);
 
     void createDescriptorSetLayout();
 
@@ -44,17 +44,13 @@ private:
         float rotation[16];
         float transformation[16];
         float perspective[16];
-    } m_translate_data {};
+    } mTranslateData {};
 
     struct LightViewBuffer {
-        alignas(16) float light_position[3];
-        alignas(16) float camera_position[3];
-        alignas(16) float light_color[3];
-    } m_lv_data {
-        .light_position = {},
-        .camera_position = {0.0f, 0.0f, 0.0f},
-        .light_color = {}
-    };
+        alignas(16) float light_position[3] {};
+        alignas(16) float camera_position[3] {};
+        alignas(16) float light_color[3] {};
+    } mLightViewData;
 
     float mLightPosition[3] {0.0f, 0.0f, -2.0f};
     float mLightColor[3] {252.0f/256.0f, 212.0f/256.0f, 64.0f/256.0f};

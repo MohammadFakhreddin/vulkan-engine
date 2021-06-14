@@ -184,13 +184,14 @@ void Init() {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
 
-    state->font_sampler = RF::CreateSampler(
-        RB::CreateSamplerParams {
-            .min_lod = -1000,
-            .max_lod = 1000,
-            .max_anisotropy = 1.0f
-        }
-    );
+    {// FontSampler
+        RB::CreateSamplerParams params {};
+        params.min_lod = -1000;
+        params.max_lod = 1000;
+        params.max_anisotropy = 1.0f;
+
+        state->font_sampler = RF::CreateSampler(params);
+    }
 
     {// Descriptor set layout
         std::vector<VkDescriptorSetLayoutBinding> binding {1};
@@ -228,13 +229,13 @@ void Init() {
 
     {
         // Constants: we are using 'vec2 offset' and 'vec2 scale' instead of a full 3d projection matrix
-        std::vector<VkPushConstantRange> push_constants {
-            VkPushConstantRange {
-                .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-                .offset = 0,
-                .size = sizeof(push_constants)
-            }
-        };
+        std::vector<VkPushConstantRange> pushConstantRanges {};
+        
+        VkPushConstantRange pushConstantRange {};
+        pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        pushConstantRange.offset = 0;
+        pushConstantRange.size = sizeof(pushConstantRanges);           // TODO ReCheck this value;
+        pushConstantRanges.emplace_back(pushConstantRange);
         
         std::vector<RB::GpuShader> shader_stages {state->vertex_shader, state->fragment_shader};
 
@@ -242,30 +243,29 @@ void Init() {
         vertex_binding_description.stride = sizeof(ImDrawVert);
         vertex_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-        std::vector<VkVertexInputAttributeDescription> input_attribute_description {3};
-        input_attribute_description[0].location = 0;
-        input_attribute_description[0].binding = vertex_binding_description.binding;
-        input_attribute_description[0].format = VK_FORMAT_R32G32_SFLOAT;
-        input_attribute_description[0].offset = offsetof(ImDrawVert, pos);
-        input_attribute_description[1].location = 1;
-        input_attribute_description[1].binding = vertex_binding_description.binding;
-        input_attribute_description[1].format = VK_FORMAT_R32G32_SFLOAT;
-        input_attribute_description[1].offset = offsetof(ImDrawVert, uv);
-        input_attribute_description[2].location = 2;
-        input_attribute_description[2].binding = vertex_binding_description.binding;
-        input_attribute_description[2].format = VK_FORMAT_R8G8B8A8_UNORM;
-        input_attribute_description[2].offset = offsetof(ImDrawVert, col);
+        std::vector<VkVertexInputAttributeDescription> inputAttributeDescription {3};
+        inputAttributeDescription[0].location = 0;
+        inputAttributeDescription[0].binding = vertex_binding_description.binding;
+        inputAttributeDescription[0].format = VK_FORMAT_R32G32_SFLOAT;
+        inputAttributeDescription[0].offset = offsetof(ImDrawVert, pos);
+        inputAttributeDescription[1].location = 1;
+        inputAttributeDescription[1].binding = vertex_binding_description.binding;
+        inputAttributeDescription[1].format = VK_FORMAT_R32G32_SFLOAT;
+        inputAttributeDescription[1].offset = offsetof(ImDrawVert, uv);
+        inputAttributeDescription[2].location = 2;
+        inputAttributeDescription[2].binding = vertex_binding_description.binding;
+        inputAttributeDescription[2].format = VK_FORMAT_R8G8B8A8_UNORM;
+        inputAttributeDescription[2].offset = offsetof(ImDrawVert, col);
 
-        std::vector<VkDynamicState> dynamic_states = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-        auto dynamic_state_create_info = VkPipelineDynamicStateCreateInfo {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-            .dynamicStateCount = static_cast<uint32_t>(dynamic_states.size()),
-            .pDynamicStates = dynamic_states.data(),
-        };
-
+        std::vector<VkDynamicState> dynamicStates { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+        VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo {};
+        dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+        dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
+        
         RB::CreateGraphicPipelineOptions pipelineOptions {};
         pipelineOptions.fontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-        pipelineOptions.dynamicStateCreateInfo = &dynamic_state_create_info;
+        pipelineOptions.dynamicStateCreateInfo = &dynamicStateCreateInfo;
         pipelineOptions.depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
         pipelineOptions.depthStencil.depthTestEnable = false;
         pipelineOptions.depthStencil.depthBoundsTestEnable = false;
@@ -278,8 +278,8 @@ void Init() {
         pipelineOptions.colorBlendAttachments.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
         pipelineOptions.colorBlendAttachments.alphaBlendOp = VK_BLEND_OP_ADD;
         pipelineOptions.colorBlendAttachments.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-        pipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(push_constants.size());
-        pipelineOptions.pushConstantRanges = push_constants.data();
+        pipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
+        pipelineOptions.pushConstantRanges = pushConstantRanges.data();
         pipelineOptions.useStaticViewportAndScissor = false;
 
         state->draw_pipeline = RF::CreateDrawPipeline(
@@ -288,8 +288,8 @@ void Init() {
             1,
             &state->descriptor_set_layout,
             vertex_binding_description,
-            static_cast<uint8_t>(input_attribute_description.size()),
-            input_attribute_description.data(),
+            static_cast<uint8_t>(inputAttributeDescription.size()),
+            inputAttributeDescription.data(),
             pipelineOptions
         );
     }
@@ -325,6 +325,11 @@ void Init() {
         uint8_t const depth = 1;
         uint8_t const slices = 1;
         size_t const image_size = width * height * components_count * sizeof(uint8_t);
+
+        Importer::ImportTextureOptions importTextureOptions {};
+        importTextureOptions.tryToGenerateMipmaps = false;
+        importTextureOptions.preferSrgb = false;
+
         auto texture_asset = Importer::ImportInMemoryTexture(
             CBlob {pixels, image_size},
             width,
@@ -333,7 +338,7 @@ void Init() {
             components_count,
             depth,
             slices,
-            Importer::ImportTextureOptions {.tryToGenerateMipmaps = false, .preferSrgb = false}
+            importTextureOptions
         );
         // TODO Support from in memory import of images inside importer
         state->font_texture = RF::CreateTexture(texture_asset);
@@ -598,18 +603,14 @@ void OnNewFrame(
                         if (clip_rect.y < 0.0f)
                             clip_rect.y = 0.0f;
 
-                        // Apply scissor/clipping rectangle
-                        VkRect2D scissor {
-                            .offset {
-                                .x = static_cast<int32_t>(clip_rect.x),
-                                .y = static_cast<int32_t>(clip_rect.y)
-                            },
-                            .extent {
-                                .width = static_cast<uint32_t>(clip_rect.z - clip_rect.x),
-                                .height = static_cast<uint32_t>(clip_rect.w - clip_rect.y)
-                            }
-                        };
-                        RF::SetScissor(drawPass, scissor);
+                        {// Apply scissor/clipping rectangle
+                            VkRect2D scissor {};
+                            scissor.offset.x = static_cast<int32_t>(clip_rect.x);
+                            scissor.offset.y = static_cast<int32_t>(clip_rect.y);
+                            scissor.extent.width = static_cast<uint32_t>(clip_rect.z - clip_rect.x);
+                            scissor.extent.height = static_cast<uint32_t>(clip_rect.w - clip_rect.y);
+                            RF::SetScissor(drawPass, scissor);
+                        }
                         
                         // Draw
                         RF::DrawIndexed(
