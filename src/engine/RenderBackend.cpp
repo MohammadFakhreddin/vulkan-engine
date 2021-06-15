@@ -1237,7 +1237,11 @@ SwapChainGroup CreateSwapChain(
 
     ret.swapChainImageViews.resize(actualImageCount);
     for(uint32_t image_index = 0; image_index < actualImageCount; image_index++) {
+#ifdef __ANDROID__
+        MFA_ASSERT(ret.swapChainImages[image_index] > 0);
+#else
         MFA_ASSERT(ret.swapChainImages[image_index] != nullptr);
+#endif
         ret.swapChainImageViews[image_index] = CreateImageView(
             device,
             ret.swapChainImages[image_index],
@@ -1245,7 +1249,11 @@ SwapChainGroup CreateSwapChain(
             VK_IMAGE_ASPECT_COLOR_BIT,
             1
         );
+#ifdef __ANDROID__
+        MFA_ASSERT(ret.swapChainImageViews[image_index] > 0);
+#else
         MFA_ASSERT(ret.swapChainImageViews[image_index] != nullptr);
+#endif
     }
 
     MFA_LOG_INFO("Acquired swap chain images");
@@ -1365,7 +1373,7 @@ VkRenderPass CreateRenderPass(
     createInfo.dependencyCount = 1;
     createInfo.pDependencies = &dependency;
 
-    VkRenderPass render_pass = nullptr;
+    VkRenderPass render_pass {};
     VK_Check (vkCreateRenderPass(device, &createInfo, nullptr, &render_pass));
 
     MFA_LOG_INFO("Created render pass.");
@@ -1375,7 +1383,11 @@ VkRenderPass CreateRenderPass(
 
 void DestroyRenderPass(VkDevice device, VkRenderPass renderPass) {
     MFA_ASSERT(device != nullptr);
+#ifdef __ANDROID__
+    MFA_ASSERT(renderPass > 0);
+#else
     MFA_ASSERT(renderPass != nullptr);
+#endif
     vkDestroyRenderPass(device, renderPass, nullptr);
 }
 
@@ -1383,12 +1395,16 @@ std::vector<VkFramebuffer> CreateFrameBuffers(
     VkDevice device,
     VkRenderPass renderPass,
     uint32_t const swapChainImageViewsCount, 
-    VkImageView* swapChainImageViews,
+    VkImageView * swapChainImageViews,
     VkImageView depthImageView,
     VkExtent2D const swapChainExtent
 ) {
     MFA_ASSERT(device != nullptr);
+#ifdef __ANDROID__
+    MFA_ASSERT(renderPass > 0);
+#else
     MFA_ASSERT(renderPass != nullptr);
+#endif
     MFA_ASSERT(swapChainImageViewsCount > 0);
     MFA_ASSERT(swapChainImageViews != nullptr);
     std::vector<VkFramebuffer> swap_chain_frame_buffers {swapChainImageViewsCount};
@@ -1446,12 +1462,12 @@ GpuShader CreateShader(VkDevice device, CpuShader const & cpuShader) {
     return gpuShader;
 }
 
-bool DestroyShader(VkDevice device, GpuShader & gpu_shader) {
+bool DestroyShader(VkDevice device, GpuShader & gpuShader) {
     MFA_ASSERT(device != nullptr);
     bool ret = false;
-    if(gpu_shader.valid()) {
-        vkDestroyShaderModule(device, gpu_shader.mShaderModule, nullptr);
-        gpu_shader.mShaderModule = nullptr;
+    if(gpuShader.valid()) {
+        vkDestroyShaderModule(device, gpuShader.mShaderModule, nullptr);
+        gpuShader.revoke();
         ret = true;
     }
     return ret;
@@ -1568,7 +1584,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
     layout_create_info.pushConstantRangeCount = options.pushConstantsRangeCount;
     layout_create_info.pPushConstantRanges = options.pushConstantRanges;
     
-    VkPipelineLayout pipelineLayout = nullptr;
+    VkPipelineLayout pipelineLayout {};
     VK_Check(vkCreatePipelineLayout(device, &layout_create_info, nullptr, &pipelineLayout));
 
     VkPipelineDynamicStateCreateInfo * dynamicStateCreateInfoRef = nullptr;
@@ -1587,7 +1603,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
     }
 
     // Create the graphics pipeline
-    VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
+    VkGraphicsPipelineCreateInfo pipelineCreateInfo {};
     pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineCreateInfo.stageCount = static_cast<uint32_t>(shader_stages_create_infos.size());
     pipelineCreateInfo.pStages = shader_stages_create_infos.data();
@@ -1600,12 +1616,26 @@ GraphicPipelineGroup CreateGraphicPipeline(
     pipelineCreateInfo.layout = pipelineLayout;
     pipelineCreateInfo.renderPass = renderPass;
     pipelineCreateInfo.subpass = 0;
+#ifdef __ANDROID__
+    pipelineCreateInfo.basePipelineHandle = 0;
+#else
     pipelineCreateInfo.basePipelineHandle = nullptr;
+#endif
     pipelineCreateInfo.basePipelineIndex = -1;
     pipelineCreateInfo.pDepthStencilState = &options.depthStencil;
     pipelineCreateInfo.pDynamicState = dynamicStateCreateInfoRef;
     
-    VkPipeline pipeline = nullptr;
+    VkPipeline pipeline {};
+#ifdef __ANDROID__
+    VK_Check(vkCreateGraphicsPipelines(
+        device,
+        0,
+        1,
+        &pipelineCreateInfo,
+        0,
+        &pipeline
+    ));
+#else
     VK_Check(vkCreateGraphicsPipelines(
         device, 
         nullptr, 
@@ -1614,14 +1644,14 @@ GraphicPipelineGroup CreateGraphicPipeline(
         nullptr, 
         &pipeline
     ));
+#endif
 
     MFA_LOG_INFO("Created graphics pipeline");
 
     GraphicPipelineGroup group {};
-    MFA_ASSERT(pipeline != nullptr);
     group.graphicPipeline = pipeline;
-    MFA_ASSERT(pipelineLayout != nullptr);
     group.pipelineLayout = pipelineLayout;
+    MFA_ASSERT(group.isValid());
 
     return group;
 }
@@ -1652,12 +1682,10 @@ void AssignViewportAndScissorToCommandBuffer(
 
 void DestroyGraphicPipeline(VkDevice device, GraphicPipelineGroup & graphicPipelineGroup) {
     MFA_ASSERT(device != nullptr);
-    MFA_ASSERT(graphicPipelineGroup.graphicPipeline != nullptr);
-    MFA_ASSERT(graphicPipelineGroup.pipelineLayout != nullptr);
+    MFA_ASSERT(graphicPipelineGroup.isValid());
     vkDestroyPipeline(device, graphicPipelineGroup.graphicPipeline, nullptr);
     vkDestroyPipelineLayout(device, graphicPipelineGroup.pipelineLayout, nullptr);
-    graphicPipelineGroup.graphicPipeline = nullptr;
-    graphicPipelineGroup.pipelineLayout = nullptr;
+    graphicPipelineGroup.revoke();
 }
 
 [[nodiscard]]
@@ -1670,7 +1698,7 @@ VkDescriptorSetLayout CreateDescriptorSetLayout(
     descriptor_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptor_layout_create_info.bindingCount = static_cast<uint32_t>(bindings_count);
     descriptor_layout_create_info.pBindings = bindings;
-    VkDescriptorSetLayout descriptor_set_layout = nullptr;
+    VkDescriptorSetLayout descriptor_set_layout {};
     VK_Check (vkCreateDescriptorSetLayout(
         device,
         &descriptor_layout_create_info,
@@ -1773,7 +1801,7 @@ BufferGroup CreateIndexBuffer (
 
     MapDataToBuffer(device, staging_buffer_group.memory, indices_blob);
     
-    auto const indices_buffer_group = CreateBuffer(
+    auto const indicesBufferGroup = CreateBuffer(
         device,
         physical_device,
         bufferSize, 
@@ -1786,16 +1814,15 @@ BufferGroup CreateIndexBuffer (
         command_pool,
         graphic_queue,
         staging_buffer_group.buffer, 
-        indices_buffer_group.buffer, 
+        indicesBufferGroup.buffer, 
         bufferSize
     );
 
     DestroyBuffer(device, staging_buffer_group);
 
-    MFA_ASSERT(indices_buffer_group.memory != nullptr);
-    MFA_ASSERT(indices_buffer_group.buffer != nullptr);
+    MFA_ASSERT(indicesBufferGroup.isValid());
 
-    return indices_buffer_group;
+    return indicesBufferGroup;
 
 }
 
@@ -1864,7 +1891,7 @@ VkDescriptorPool CreateDescriptorPool(
     poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.maxSets = maxSets;
 
-    VkDescriptorPool descriptor_pool = nullptr;
+    VkDescriptorPool descriptor_pool {};
 
     VK_Check(vkCreateDescriptorPool(
         device, 
@@ -1881,27 +1908,36 @@ void DestroyDescriptorPool(
     VkDescriptorPool pool
 ) {
     MFA_ASSERT(device != nullptr);
+#ifdef __ANDROID__
+    MFA_ASSERT(pool > 0);
+#else
     MFA_ASSERT(pool != nullptr);
+#endif
     vkDestroyDescriptorPool(device, pool, nullptr);
 }
 
 std::vector<VkDescriptorSet> CreateDescriptorSet(
     VkDevice device,
-    VkDescriptorPool descriptor_pool,
-    VkDescriptorSetLayout descriptor_set_layout,
-    uint32_t const descriptor_set_count,
+    VkDescriptorPool descriptorPool,
+    VkDescriptorSetLayout descriptorSetLayout,
+    uint32_t const descriptorSetCount,
     uint8_t const schemas_count,
     VkWriteDescriptorSet * schemas
 ) {
     MFA_ASSERT(device != nullptr);
-    MFA_ASSERT(descriptor_pool != nullptr);
-    MFA_ASSERT(descriptor_set_layout != nullptr);
-    std::vector<VkDescriptorSetLayout> layouts(descriptor_set_count, descriptor_set_layout);
+#ifdef __ANDROID__
+    MFA_ASSERT(descriptorPool > 0);
+    MFA_ASSERT(descriptorSetLayout > 0);
+#else
+    MFA_ASSERT(descriptorPool != nullptr);
+    MFA_ASSERT(descriptorSetLayout != nullptr);
+#endif
+    std::vector<VkDescriptorSetLayout> layouts(descriptorSetCount, descriptorSetLayout);
     // There needs to be one descriptor set per binding point in the shader
     VkDescriptorSetAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = descriptor_pool;
-    allocInfo.descriptorSetCount = descriptor_set_count;
+    allocInfo.descriptorPool = descriptorPool;
+    allocInfo.descriptorSetCount = descriptorSetCount;
     allocInfo.pSetLayouts = layouts.data();
 
     std::vector<VkDescriptorSet> descriptor_sets {allocInfo.descriptorSetCount};
@@ -1983,7 +2019,11 @@ void DestroyCommandBuffers(
     VkCommandBuffer* commandBuffers
 ) {
     MFA_ASSERT(device != nullptr);
+#ifdef __ANDROID__
+    MFA_ASSERT(commandPool > 0);
+#else
     MFA_ASSERT(commandPool != nullptr);
+#endif
     MFA_ASSERT(commandBuffersCount > 0);
     MFA_ASSERT(commandBuffers != nullptr);
     vkFreeCommandBuffers(
@@ -2003,7 +2043,11 @@ SyncObjects CreateSyncObjects(
     syncObjects.image_availability_semaphores.resize(maxFramesInFlight);
     syncObjects.render_finish_indicator_semaphores.resize(maxFramesInFlight);
     syncObjects.fences_in_flight.resize(maxFramesInFlight);
+#ifdef __ANDROID__
+    syncObjects.images_in_flight.resize(swapChainImagesCount, 0);
+#else
     syncObjects.images_in_flight.resize(swapChainImagesCount, nullptr);
+#endif
 
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -2053,7 +2097,11 @@ void DeviceWaitIdle(VkDevice device) {
 
 void WaitForFence(VkDevice device, VkFence inFlightFence) {
     MFA_ASSERT(device != nullptr);
+#ifdef __ANDROID__
+    MFA_ASSERT(inFlightFence > 0);
+#else
     MFA_ASSERT(inFlightFence != nullptr);
+#endif
     VK_Check(vkWaitForFences(
         device, 
         1, 
@@ -2070,16 +2118,28 @@ VkResult AcquireNextImage(
     uint32_t & outImageIndex
 ) {
     MFA_ASSERT(device != nullptr);
-    MFA_ASSERT(imageAvailabilitySemaphore != nullptr);
-    
+#ifdef __ANDROID__
+    MFA_ASSERT(imageAvailabilitySemaphore > 0);
     return vkAcquireNextImageKHR(
         device,
         swapChainGroup.swapChain,
         UINT64_MAX,
         imageAvailabilitySemaphore,
-        nullptr,
+        0,
         &outImageIndex
     );
+#else
+    MFA_ASSERT(imageAvailabilitySemaphore != nullptr);
+    return vkAcquireNextImageKHR(
+            device,
+            swapChainGroup.swapChain,
+            UINT64_MAX,
+            imageAvailabilitySemaphore,
+            nullptr,
+            &outImageIndex
+    );
+#endif
+
 }
 
 void BindVertexBuffer(

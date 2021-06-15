@@ -94,7 +94,7 @@ private:
     bool mIsInitialized = false;
 
     // TODO Support multiple descriptorSetLayouts
-    VkDescriptorSetLayout_T * mDescriptorSetLayout = nullptr;
+    VkDescriptorSetLayout mDescriptorSetLayout {};
 
     RenderFrontend::DrawPipeline mDrawPipeline {};
 

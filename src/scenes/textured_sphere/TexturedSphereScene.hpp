@@ -60,7 +60,7 @@ private:
 
     MFA::RenderFrontend::GpuModel mGpuModel {};
     MFA::RenderFrontend::SamplerGroup mSamplerGroup {};
-    VkDescriptorSetLayout_T * mDescriptorSetLayout = nullptr;
+    VkDescriptorSetLayout mDescriptorSetLayout {};
     MFA::RenderFrontend::DrawPipeline mDrawPipeline {};
     MFA::RenderFrontend::UniformBufferGroup mLVBuffer {};
     std::unique_ptr<MFA::DrawableObject> mDrawableObject = nullptr;

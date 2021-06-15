@@ -89,7 +89,7 @@ private:
 
     MFA::RenderFrontend::GpuModel m_sphere {};
 
-    VkDescriptorSetLayout_T * mDescriptorSetLayout = nullptr;
+    VkDescriptorSetLayout mDescriptorSetLayout {};
     MFA::RenderFrontend::DrawPipeline m_draw_pipeline {};
    // https://seblagarde.wordpress.com/2011/08/17/feeding-a-physical-based-lighting-mode/
     float m_sphere_rotation [3] {0, 0, 0};
@@ -107,5 +107,5 @@ private:
     float m_light_position[3] {0.0f, 0.0f, -2.0f};
     //float m_light_colors[3] {1.0f, 1.0f, 1.0f};
 
-    std::vector<VkDescriptorSet_T *> mSphereDescriptorSets {};
+    std::vector<VkDescriptorSet> mSphereDescriptorSets {};
 };

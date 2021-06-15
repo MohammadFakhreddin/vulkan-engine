@@ -69,7 +69,7 @@ private:
 
     bool mIsInitialized = false;
 
-    VkDescriptorSetLayout_T * mDescriptorSetLayout = nullptr;
+    VkDescriptorSetLayout mDescriptorSetLayout {};
     MFA::RenderFrontend::DrawPipeline mDrawPipeline {};
 
     std::unordered_map<DrawableObjectId, std::unique_ptr<DrawableObject>> mDrawableObjects {};

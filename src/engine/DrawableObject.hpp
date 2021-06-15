@@ -30,14 +30,14 @@ public:
 
     explicit DrawableObject(
         RF::GpuModel & model_,
-        VkDescriptorSetLayout_T * descriptorSetLayout
+        VkDescriptorSetLayout descriptorSetLayout
     );
 
     // TODO Multiple descriptor set layout support
     /*explicit DrawableObject(
         RF::GpuModel & model_,
         uint32_t descriptorSetLayoutsCount,
-        VkDescriptorSetLayout_T ** descriptorSetLayouts
+        VkDescriptorSetLayout* descriptorSetLayouts
     );*/
 
     ~DrawableObject() = default;
@@ -68,9 +68,9 @@ public:
     [[nodiscard]]
     uint32_t getDescriptorSetCount() const;
 
-    [[nodiscard]] VkDescriptorSet_T * getDescriptorSetByPrimitiveUniqueId(uint32_t index);
+    [[nodiscard]] VkDescriptorSet getDescriptorSetByPrimitiveUniqueId(uint32_t index);
 
-    [[nodiscard]] VkDescriptorSet_T ** getDescriptorSets();
+    [[nodiscard]] VkDescriptorSet * getDescriptorSets();
 
     // Only for model local buffers
     RF::UniformBufferGroup * createUniformBuffer(char const * name, uint32_t size);
@@ -125,7 +125,7 @@ private:
     RF::UniformBufferGroup mNodeTransformBuffers {};
     RF::UniformBufferGroup mSkinJointsBuffers {};
     RF::GpuModel * mGpuModel = nullptr;
-    std::vector<VkDescriptorSet_T *> mDescriptorSets {};
+    std::vector<VkDescriptorSet> mDescriptorSets {};
     std::unordered_map<std::string, RF::UniformBufferGroup> mUniformBuffers {};
 
     int mActiveAnimationIndex = 0;

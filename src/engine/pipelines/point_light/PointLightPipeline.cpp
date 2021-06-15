@@ -64,8 +64,13 @@ MFA::DrawableObjectId MFA::PointLightPipeline::addGpuModel(RF::GpuModel & gpuMod
             if (subMesh.primitives.empty() == false) {
                 for (auto const & primitive : subMesh.primitives) {
                     MFA_ASSERT(primitive.uniqueId >= 0);
+#ifdef __ANDROID__
+                    auto descriptorSet = drawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
+                    MFA_ASSERT(descriptorSet > 0);
+#else
                     auto * descriptorSet = drawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
                     MFA_ASSERT(descriptorSet != nullptr);
+#endif
 
                     std::vector<VkWriteDescriptorSet> writeInfo {};
 
@@ -226,7 +231,11 @@ void MFA::PointLightPipeline::createDescriptorSetLayout() {
         
         bindings.emplace_back(layoutBinding);
     }
-    MFA_ASSERT(mDescriptorSetLayout == nullptr);
+#ifdef __ANDROID__
+    MFA_ASSERT(mDescriptorSetLayout > 0); 
+#else
+    MFA_ASSERT(mDescriptorSetLayout = nullptr);    
+#endif
     mDescriptorSetLayout = RF::CreateDescriptorSetLayout(
         static_cast<uint8_t>(bindings.size()),
         bindings.data()
@@ -234,9 +243,17 @@ void MFA::PointLightPipeline::createDescriptorSetLayout() {
 }
 
 void MFA::PointLightPipeline::destroyDescriptorSetLayout() {
+#ifdef __ANDROID__
+    MFA_ASSERT(mDescriptorSetLayout > 0);
+#else
     MFA_ASSERT(mDescriptorSetLayout != nullptr);
+#endif
     RF::DestroyDescriptorSetLayout(mDescriptorSetLayout);
+#ifdef __ANDROID__
+    mDescriptorSetLayout = 0;
+#else
     mDescriptorSetLayout = nullptr;
+#endif
 }
 
 void MFA::PointLightPipeline::createPipeline() {

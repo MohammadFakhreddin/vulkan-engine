@@ -14,7 +14,7 @@ DrawableObjectId DrawableObject::NextId = 0;
 // We need other overrides for easier use as well
 DrawableObject::DrawableObject(
     RF::GpuModel & model_,
-    VkDescriptorSetLayout_T * descriptorSetLayout
+    VkDescriptorSetLayout descriptorSetLayout
 )
     : mId(NextId)
     , mGpuModel(&model_)
@@ -64,7 +64,7 @@ DrawableObject::DrawableObject(
 //DrawableObject::DrawableObject(
 //    RF::GpuModel & model_, 
 //    uint32_t descriptorSetLayoutsCount, 
-//    VkDescriptorSetLayout_T ** descriptorSetLayouts
+//    VkDescriptorSetLayout * descriptorSetLayouts
 //) {}
 
 RF::GpuModel * DrawableObject::getModel() const {
@@ -75,12 +75,12 @@ uint32_t DrawableObject::getDescriptorSetCount() const {
     return static_cast<uint32_t>(mDescriptorSets.size());
 }
 
-VkDescriptorSet_T * DrawableObject::getDescriptorSetByPrimitiveUniqueId(uint32_t const index) {
+VkDescriptorSet DrawableObject::getDescriptorSetByPrimitiveUniqueId(uint32_t const index) {
     MFA_ASSERT(index < mDescriptorSets.size());
     return mDescriptorSets[index];
 }
 
-VkDescriptorSet_T ** DrawableObject::getDescriptorSets() {
+VkDescriptorSet * DrawableObject::getDescriptorSets() {
     return mDescriptorSets.data();
 }
 

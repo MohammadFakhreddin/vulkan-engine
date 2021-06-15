@@ -124,17 +124,17 @@ static uint32_t fragment_shader_spv[] =
 static VkDeviceSize g_BufferMemoryAlignment = 256;
 
 struct State {
-    RF::SamplerGroup font_sampler {};
-    VkDescriptorSetLayout_T * descriptor_set_layout = nullptr;
-    RB::GpuShader vertex_shader {};
-    RB::GpuShader fragment_shader {};
-    std::vector<VkDescriptorSet_T *> descriptor_sets {};
-    RF::DrawPipeline draw_pipeline {};
-    RB::GpuTexture font_texture {};
-    bool mouse_pressed[3] {false};
-    MSDL::SDL_Cursor *  mouse_cursors[ImGuiMouseCursor_COUNT] {};
-    std::vector<RF::MeshBuffers> mesh_buffers {};
-    std::vector<bool> mesh_buffers_validation_status {};
+    RF::SamplerGroup fontSampler {};
+    VkDescriptorSetLayout descriptorSetLayout {};
+    RB::GpuShader vertexShader {};
+    RB::GpuShader fragmentShader {};
+    std::vector<VkDescriptorSet> descriptorSets {};
+    RF::DrawPipeline drawPipeline {};
+    RB::GpuTexture fontTexture {};
+    bool mousePressed[3] {false};
+    MSDL::SDL_Cursor *  mouseCursors[ImGuiMouseCursor_COUNT] {};
+    std::vector<RF::MeshBuffers> meshBuffers {};
+    std::vector<bool> meshBuffersValidationStatus {};
     bool hasFocus = false;
     RF::EventWatchId eventWatchId = -1;
 };
@@ -178,8 +178,8 @@ static int EventWatch(void* data, MSDL::SDL_Event* event) {
 void Init() {
     state = new State();
     auto const swap_chain_images_count = RF::SwapChainImagesCount();
-    state->mesh_buffers.resize(swap_chain_images_count);
-    state->mesh_buffers_validation_status.resize(swap_chain_images_count);
+    state->meshBuffers.resize(swap_chain_images_count);
+    state->meshBuffersValidationStatus.resize(swap_chain_images_count);
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -190,7 +190,7 @@ void Init() {
         params.max_lod = 1000;
         params.max_anisotropy = 1.0f;
 
-        state->font_sampler = RF::CreateSampler(params);
+        state->fontSampler = RF::CreateSampler(params);
     }
 
     {// Descriptor set layout
@@ -198,15 +198,15 @@ void Init() {
         binding[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         binding[0].descriptorCount = 1;
         binding[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-        binding[0].pImmutableSamplers = &state->font_sampler.sampler;
-        state->descriptor_set_layout = RF::CreateDescriptorSetLayout(
+        binding[0].pImmutableSamplers = &state->fontSampler.sampler;
+        state->descriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(binding.size()),
             binding.data()
         );
     }
 
     // Create Descriptor Set:
-    state->descriptor_sets = RF::CreateDescriptorSets(state->descriptor_set_layout); // Original number was 1 , Now it creates as many as swap_chain_image_count
+    state->descriptorSets = RF::CreateDescriptorSets(state->descriptorSetLayout); // Original number was 1 , Now it creates as many as swap_chain_image_count
 
     {// Vertex shader
         auto const shader_asset = Importer::ImportShaderFromSPV(
@@ -214,7 +214,7 @@ void Init() {
             AssetSystem::Shader::Stage::Vertex,
             "main"
         );
-        state->vertex_shader = RF::CreateShader(shader_asset);
+        state->vertexShader = RF::CreateShader(shader_asset);
         // TODO Implement them in shutdown as well
     }
 
@@ -224,7 +224,7 @@ void Init() {
             AssetSystem::Shader::Stage::Fragment,
             "main"
         );
-        state->fragment_shader = RF::CreateShader(shader_asset);
+        state->fragmentShader = RF::CreateShader(shader_asset);
     }
 
     {
@@ -237,7 +237,7 @@ void Init() {
         pushConstantRange.size = sizeof(pushConstantRanges);           // TODO ReCheck this value;
         pushConstantRanges.emplace_back(pushConstantRange);
         
-        std::vector<RB::GpuShader> shader_stages {state->vertex_shader, state->fragment_shader};
+        std::vector<RB::GpuShader> shader_stages {state->vertexShader, state->fragmentShader};
 
         VkVertexInputBindingDescription vertex_binding_description {};
         vertex_binding_description.stride = sizeof(ImDrawVert);
@@ -282,11 +282,11 @@ void Init() {
         pipelineOptions.pushConstantRanges = pushConstantRanges.data();
         pipelineOptions.useStaticViewportAndScissor = false;
 
-        state->draw_pipeline = RF::CreateDrawPipeline(
+        state->drawPipeline = RF::CreateDrawPipeline(
             static_cast<uint8_t>(shader_stages.size()),
             shader_stages.data(),
             1,
-            &state->descriptor_set_layout,
+            &state->descriptorSetLayout,
             vertex_binding_description,
             static_cast<uint8_t>(inputAttributeDescription.size()),
             inputAttributeDescription.data(),
@@ -341,7 +341,7 @@ void Init() {
             importTextureOptions
         );
         // TODO Support from in memory import of images inside importer
-        state->font_texture = RF::CreateTexture(texture_asset);
+        state->fontTexture = RF::CreateTexture(texture_asset);
 
         // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array.
         io.KeyMap[ImGuiKey_Tab] = MSDL::SDL_SCANCODE_TAB;
@@ -382,10 +382,10 @@ static void UpdateMousePositionAndButtons() {
     }
     int mx, my;
     uint32_t const mouse_buttons = MSDL::SDL_GetMouseState(&mx, &my);
-    io.MouseDown[0] = state->mouse_pressed[0] || ((mouse_buttons & SDL_BUTTON(SDL_BUTTON_LEFT)) != 0);  // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-    io.MouseDown[1] = state->mouse_pressed[1] || ((mouse_buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0);
-    io.MouseDown[2] = state->mouse_pressed[2] || ((mouse_buttons & SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0);
-    state->mouse_pressed[0] = state->mouse_pressed[1] = state->mouse_pressed[2] = false;
+    io.MouseDown[0] = state->mousePressed[0] || ((mouse_buttons & SDL_BUTTON(SDL_BUTTON_LEFT)) != 0);  // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
+    io.MouseDown[1] = state->mousePressed[1] || ((mouse_buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0);
+    io.MouseDown[2] = state->mousePressed[2] || ((mouse_buttons & SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0);
+    state->mousePressed[0] = state->mousePressed[1] = state->mousePressed[2] = false;
     if (RF::GetWindowFlags() & MSDL::SDL_WINDOW_INPUT_FOCUS) {
         io.MousePos = ImVec2(static_cast<float>(mx), static_cast<float>(my));
     }
@@ -436,7 +436,7 @@ static void UpdateMouseCursor() {
         MSDL::SDL_ShowCursor(MSDL::SDL_FALSE);
     } else {
         // Show OS mouse cursor
-        MSDL::SDL_SetCursor(state->mouse_cursors[imgui_cursor] ? state->mouse_cursors[imgui_cursor] : state->mouse_cursors[ImGuiMouseCursor_Arrow]);
+        MSDL::SDL_SetCursor(state->mouseCursors[imgui_cursor] ? state->mouseCursors[imgui_cursor] : state->mouseCursors[ImGuiMouseCursor_Arrow]);
         MSDL::SDL_ShowCursor(MSDL::SDL_TRUE);
     }
 }
@@ -501,36 +501,36 @@ void OnNewFrame(
                     index_ptr += cmd_list->IdxBuffer.Size;
                 }
             }
-            if(state->mesh_buffers_validation_status[drawPass.imageIndex]) {
-                RF::DestroyMeshBuffers(state->mesh_buffers[drawPass.imageIndex]);
-                state->mesh_buffers_validation_status[drawPass.imageIndex] = false;
+            if(state->meshBuffersValidationStatus[drawPass.imageIndex]) {
+                RF::DestroyMeshBuffers(state->meshBuffers[drawPass.imageIndex]);
+                state->meshBuffersValidationStatus[drawPass.imageIndex] = false;
             }
-            state->mesh_buffers[drawPass.imageIndex].verticesBuffer = RF::CreateVertexBuffer(CBlob {vertex_data.ptr, vertex_data.len});
-            state->mesh_buffers[drawPass.imageIndex].indicesBuffer = RF::CreateIndexBuffer(CBlob {index_data.ptr, index_data.len});
-            state->mesh_buffers_validation_status[drawPass.imageIndex] = true;
+            state->meshBuffers[drawPass.imageIndex].verticesBuffer = RF::CreateVertexBuffer(CBlob {vertex_data.ptr, vertex_data.len});
+            state->meshBuffers[drawPass.imageIndex].indicesBuffer = RF::CreateIndexBuffer(CBlob {index_data.ptr, index_data.len});
+            state->meshBuffersValidationStatus[drawPass.imageIndex] = true;
             // Setup desired Vulkan state
             // Bind pipeline and descriptor sets:
             {
-                RF::BindDrawPipeline(drawPass, state->draw_pipeline);
-                RF::BindDescriptorSet(drawPass, state->descriptor_sets[drawPass.imageIndex]);
+                RF::BindDrawPipeline(drawPass, state->drawPipeline);
+                RF::BindDescriptorSet(drawPass, state->descriptorSets[drawPass.imageIndex]);
             }
 
             RF::BindIndexBuffer(
                 drawPass,
-                state->mesh_buffers[drawPass.imageIndex].indicesBuffer,
+                state->meshBuffers[drawPass.imageIndex].indicesBuffer,
                 0,
                 sizeof(ImDrawIdx) == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32
             );
             RF::BindVertexBuffer(
                 drawPass,
-                state->mesh_buffers[drawPass.imageIndex].verticesBuffer
+                state->meshBuffers[drawPass.imageIndex].verticesBuffer
             );
 
             // Update the Descriptor Set:
             {
                 VkDescriptorImageInfo desc_image[1] = {};
-                desc_image[0].sampler = state->font_sampler.sampler;
-                desc_image[0].imageView = state->font_texture.image_view();
+                desc_image[0].sampler = state->fontSampler.sampler;
+                desc_image[0].imageView = state->fontTexture.image_view();
                 desc_image[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 std::vector<VkWriteDescriptorSet> write_desc {1};
                 write_desc[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -538,8 +538,8 @@ void OnNewFrame(
                 write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                 write_desc[0].pImageInfo = desc_image;
                 RF::UpdateDescriptorSets(
-                    static_cast<uint8_t>(state->descriptor_sets.size()),
-                    state->descriptor_sets.data(),
+                    static_cast<uint8_t>(state->descriptorSets.size()),
+                    state->descriptorSets.data(),
                     static_cast<uint8_t>(write_desc.size()),
                     write_desc.data()
                 );
@@ -709,25 +709,25 @@ bool HasFocus() {
 }
 
 void Shutdown() {
-    MFA_ASSERT(state->mesh_buffers.size() == state->mesh_buffers_validation_status.size());
-    for(auto i = 0; i < state->mesh_buffers_validation_status.size(); i++) {
-        if(true == state->mesh_buffers_validation_status[i]) {
-            RF::DestroyMeshBuffers(state->mesh_buffers[i]);
-            state->mesh_buffers_validation_status[i] = false;
+    MFA_ASSERT(state->meshBuffers.size() == state->meshBuffersValidationStatus.size());
+    for(auto i = 0; i < state->meshBuffersValidationStatus.size(); i++) {
+        if(true == state->meshBuffersValidationStatus[i]) {
+            RF::DestroyMeshBuffers(state->meshBuffers[i]);
+            state->meshBuffersValidationStatus[i] = false;
         }
     }
-    RF::DestroyTexture(state->font_texture);
-    Importer::FreeTexture(state->font_texture.cpuTexture());
+    RF::DestroyTexture(state->fontTexture);
+    Importer::FreeTexture(state->fontTexture.cpuTexture());
 
-    RF::DestroyDrawPipeline(state->draw_pipeline);
+    RF::DestroyDrawPipeline(state->drawPipeline);
     // TODO We can remove shader after creating pipeline
-    RF::DestroyShader(state->fragment_shader);
-    Importer::FreeShader(state->fragment_shader.cpuShader());
-    RF::DestroyShader(state->vertex_shader);
-    Importer::FreeShader(state->vertex_shader.cpuShader());
+    RF::DestroyShader(state->fragmentShader);
+    Importer::FreeShader(state->fragmentShader.cpuShader());
+    RF::DestroyShader(state->vertexShader);
+    Importer::FreeShader(state->vertexShader.cpuShader());
 
-    RF::DestroyDescriptorSetLayout(state->descriptor_set_layout);
-    RF::DestroySampler(state->font_sampler);
+    RF::DestroyDescriptorSetLayout(state->descriptorSetLayout);
+    RF::DestroySampler(state->fontSampler);
 
     RF::RemoveEventWatch(state->eventWatchId);
 

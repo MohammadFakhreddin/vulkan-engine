@@ -27,22 +27,22 @@ void SetResizeEventListener(ResizeEventListener const & eventListener);
 using DrawPipeline = RB::GraphicPipelineGroup;
 
 [[nodiscard]]
-VkDescriptorSetLayout_T * CreateBasicDescriptorSetLayout();
+VkDescriptorSetLayout CreateBasicDescriptorSetLayout();
 
 [[nodiscard]]
-VkDescriptorSetLayout_T * CreateDescriptorSetLayout(
+VkDescriptorSetLayout CreateDescriptorSetLayout(
     uint8_t bindingsCount,
     VkDescriptorSetLayoutBinding * bindings
 );
 
-void DestroyDescriptorSetLayout(VkDescriptorSetLayout_T * descriptorSetLayout);
+void DestroyDescriptorSetLayout(VkDescriptorSetLayout descriptorSetLayout);
 
 [[nodiscard]]
 DrawPipeline CreateBasicDrawPipeline(
     uint8_t gpuShadersCount, 
     RB::GpuShader * gpuShaders,
     uint32_t descriptorSetLayoutCount,
-    VkDescriptorSetLayout_T ** descriptorSetLayouts,
+    VkDescriptorSetLayout * descriptorSetLayouts,
     VkVertexInputBindingDescription const & vertexInputBindingDescription,
     uint8_t vertexInputAttributeDescriptionCount,
     VkVertexInputAttributeDescription * vertexInputAttributeDescriptions
@@ -50,27 +50,27 @@ DrawPipeline CreateBasicDrawPipeline(
 
 [[nodiscard]]
 DrawPipeline CreateDrawPipeline(
-    uint8_t gpu_shaders_count, 
-    RB::GpuShader * gpu_shaders,
-    uint32_t descriptor_layouts_count,
-    VkDescriptorSetLayout_T ** descriptor_set_layouts,
-    VkVertexInputBindingDescription vertex_binding_description,
-    uint32_t input_attribute_description_count,
-    VkVertexInputAttributeDescription * input_attribute_description_data,
+    uint8_t gpuShadersCount, 
+    RB::GpuShader * gpuShaders,
+    uint32_t descriptorLayoutsCount,
+    VkDescriptorSetLayout * descriptorSetLayouts,
+    VkVertexInputBindingDescription vertexBindingDescription,
+    uint32_t inputAttributeDescriptionCount,
+    VkVertexInputAttributeDescription * inputAttributeDescriptionData,
     RB::CreateGraphicPipelineOptions const & options = RB::CreateGraphicPipelineOptions {}
 );
 
 void DestroyDrawPipeline(DrawPipeline & draw_pipeline);
 
 [[nodiscard]]
-std::vector<VkDescriptorSet_T *> CreateDescriptorSets(
-    VkDescriptorSetLayout_T * descriptor_set_layout
+std::vector<VkDescriptorSet> CreateDescriptorSets(
+    VkDescriptorSetLayout descriptor_set_layout
 );
 
 [[nodiscard]]
-std::vector<VkDescriptorSet_T *> CreateDescriptorSets(
+std::vector<VkDescriptorSet> CreateDescriptorSets(
     uint32_t descriptorSetCount,
-    VkDescriptorSetLayout_T * descriptorSetLayout
+    VkDescriptorSetLayout descriptorSetLayout
 );
 
 struct MeshBuffers {
@@ -92,7 +92,23 @@ RB::GpuTexture CreateTexture(AssetSystem::Texture & texture);
 void DestroyTexture(RB::GpuTexture & gpu_texture);
 
 struct SamplerGroup {
-    VkSampler_T * sampler;
+    VkSampler sampler;
+    [[nodiscard]]
+    bool isValid() const noexcept{
+#ifdef __ANDROID__
+        return sampler > 0;
+#else
+        return sampler != nullptr;
+#endif
+    }
+    void revoke() {
+        MFA_ASSERT(isValid());
+#ifdef __ANDROID__
+        sampler = 0;
+#else
+        sampler = nullptr;
+#endif
+    }
 };
 // TODO We should ask for options here
 [[nodiscard]]
@@ -162,7 +178,7 @@ void BindDrawPipeline(
 
 void UpdateDescriptorSetBasic(
     DrawPass const & drawPass,
-    VkDescriptorSet_T * descriptorSet,
+    VkDescriptorSet descriptorSet,
     UniformBufferGroup const & uniformBuffer,
     RB::GpuTexture const & gpuTexture,
     SamplerGroup const & samplerGroup
@@ -170,7 +186,7 @@ void UpdateDescriptorSetBasic(
 
 void UpdateDescriptorSetBasic(
     DrawPass const & drawPass,
-    VkDescriptorSet_T * descriptorSet,
+    VkDescriptorSet descriptorSet,
     UniformBufferGroup const & uniformBuffer,
     uint32_t imageInfoCount,
     VkDescriptorImageInfo const * imageInfos
@@ -183,14 +199,14 @@ void UpdateDescriptorSets(
 
 void UpdateDescriptorSets(
     uint8_t descriptorSetsCount,
-    VkDescriptorSet_T ** descriptorSets,
+    VkDescriptorSet* descriptorSets,
     uint8_t writeInfoCount,
     VkWriteDescriptorSet * writeInfo
 );
 
 void BindDescriptorSet(
     DrawPass const & drawPass,
-    VkDescriptorSet_T * descriptorSet
+    VkDescriptorSet descriptorSet
 );
 
 //: loop through each mesh instance in the mesh instances list to render
@@ -262,7 +278,7 @@ void GetWindowSize(int32_t & out_width, int32_t & out_height);
 void GetDrawableSize(int32_t & out_width, int32_t & out_height);
 
 void AssignViewportAndScissorToCommandBuffer(
-    VkCommandBuffer_T * commandBuffer
+    VkCommandBuffer commandBuffer
 );
 
 using EventWatchId = int;

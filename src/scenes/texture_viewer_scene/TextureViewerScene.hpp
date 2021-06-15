@@ -36,7 +36,7 @@ private:
 
     MFA::RenderFrontend::GpuModel mGpuModel {};
 
-    VkDescriptorSetLayout_T * mDescriptorSetLayout = nullptr;
+    VkDescriptorSetLayout mDescriptorSetLayout {};
 
     MFA::RenderFrontend::DrawPipeline mDrawPipeline {};
 

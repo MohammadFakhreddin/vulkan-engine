@@ -94,11 +94,15 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel
             if (subMesh.primitives.empty() == false) {
                 for (auto const & primitive : subMesh.primitives) {
                     MFA_ASSERT(primitive.uniqueId >= 0);
+#ifdef __ANDROID__
+                    auto descriptorSet = drawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
+                    MFA_ASSERT(descriptorSet > 0);
+#else
                     auto * descriptorSet = drawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
                     MFA_ASSERT(descriptorSet != nullptr);
-
+#endif
                     std::vector<VkWriteDescriptorSet> writeInfo {};
-
+                    // TODO Create functionality for this inside render system
                     {// ModelTransform
                         VkDescriptorBufferInfo modelTransformBufferInfo {};
                         modelTransformBufferInfo.buffer = modelTransformBuffer->buffers[0].buffer;
@@ -232,7 +236,7 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel
                         normalImageInfo.sampler = mSamplerGroup->sampler,
                         normalImageInfo.imageView = primitive.hasNormalTexture
                                 ? textures[primitive.normalTextureIndex].image_view()
-                                : mErrorTexture->image_view(),
+                                : mErrorTexture->image_view();
                         normalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                         
                         VkWriteDescriptorSet writeDescriptorSet {};
@@ -256,7 +260,7 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel
 
                         VkWriteDescriptorSet writeDescriptorSet {};
                         writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                        writeDescriptorSet.dstSet = descriptorSet,
+                        writeDescriptorSet.dstSet = descriptorSet;
                         writeDescriptorSet.dstBinding = static_cast<uint32_t>(writeInfo.size());
                         writeDescriptorSet.dstArrayElement = 0,
                         writeDescriptorSet.descriptorCount = 1,
@@ -415,7 +419,11 @@ void MFA::PBRModelPipeline::createDescriptorSetLayout() {
 }
 
 void MFA::PBRModelPipeline::destroyDescriptorSetLayout() {
+#ifdef __ANDROID__
+    MFA_ASSERT(mDescriptorSetLayout > 0);
+#else
     MFA_ASSERT(mDescriptorSetLayout != nullptr);
+#endif
     RF::DestroyDescriptorSetLayout(mDescriptorSetLayout);    
 }
 

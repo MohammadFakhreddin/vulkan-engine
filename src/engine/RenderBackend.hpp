@@ -17,8 +17,9 @@ struct SDL_Window;
 // Note: Not all functions can be called from outside
 // TODO Remove functions that are not usable from outside
 namespace MFA::RenderBackend {
+    struct CreateGraphicPipelineOptions;
 
-using ScreenWidth = Platforms::ScreenSize;
+    using ScreenWidth = Platforms::ScreenSize;
 using ScreenHeight = Platforms::ScreenSize;
 using CpuTexture = AssetSystem::Texture;
 using CpuShader = AssetSystem::Shader;
@@ -431,12 +432,22 @@ public:
     }
     [[nodiscard]]
     VkShaderModule shaderModule() const {return mShaderModule;}
+    void revoke() {
+#ifdef __ANDROID__
+        mShaderModule = 0;
+#else
+        mShaderModule = nullptr;
+#endif
+    }
 private:
     VkShaderModule mShaderModule {};
     CpuShader mCpuShader {};
 };
 
 struct GraphicPipelineGroup {
+    friend void DestroyGraphicPipeline(VkDevice device, GraphicPipelineGroup & graphicPipelineGroup);
+    // TODO We can make this struct friend of createPipeline as well
+
     VkPipelineLayout pipelineLayout {};
     VkPipeline graphicPipeline {};
 
@@ -446,6 +457,18 @@ struct GraphicPipelineGroup {
         return pipelineLayout > 0 && graphicPipeline > 0;
 #else
         return pipelineLayout != nullptr && graphicPipeline != nullptr;
+#endif
+    }
+
+private:
+
+    void revoke() {
+#ifdef __ANDROID__
+        pipelineLayout = 0;
+        graphicPipeline = 0;
+#else
+        pipelineLayout = nullptr;
+        graphicPipeline = nullptr;
 #endif
     }
 };
@@ -580,8 +603,8 @@ void DestroyDescriptorPool(
 [[nodiscard]]
 std::vector<VkDescriptorSet> CreateDescriptorSet(
     VkDevice device,
-    VkDescriptorPool descriptor_pool,
-    VkDescriptorSetLayout descriptor_set_layout,
+    VkDescriptorPool descriptorPool,
+    VkDescriptorSetLayout descriptorSetLayout,
     uint32_t descriptor_set_count,
     uint8_t schemas_count = 0,
     VkWriteDescriptorSet * schemas = nullptr
