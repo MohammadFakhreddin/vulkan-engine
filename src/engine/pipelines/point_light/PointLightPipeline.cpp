@@ -234,7 +234,7 @@ void MFA::PointLightPipeline::createDescriptorSetLayout() {
 #ifdef __ANDROID__
     MFA_ASSERT(mDescriptorSetLayout > 0); 
 #else
-    MFA_ASSERT(mDescriptorSetLayout = nullptr);    
+    MFA_ASSERT(mDescriptorSetLayout == nullptr);    
 #endif
     mDescriptorSetLayout = RF::CreateDescriptorSetLayout(
         static_cast<uint8_t>(bindings.size()),
