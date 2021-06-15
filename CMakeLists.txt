@@ -390,10 +390,10 @@ elseif(ANDROID)
 
     set(ANDROID_FILES_ADDRESS "android/app/src/main/jni")
 
-    set(ANDROID_SOURCE)
+    set(ANDROID_SOURCES)
         
     list(
-        APPEND ANDROID_SOURCE
+        APPEND ANDROID_SOURCES
         "${ANDROID_FILES_ADDRESS}/main.cpp"
         "src/Application.hpp"
         "src/Application.cpp"
@@ -408,7 +408,7 @@ elseif(ANDROID)
 
     add_library(
         ${PROJECT_NAME} SHARED 
-        ${ANDROID_SOURCE} 
+        ${ANDROID_SOURCES} 
         ${ENGINE_SOURCES} 
         ${LIBS_SOURCES}
         ${TOOL_SOURCES}

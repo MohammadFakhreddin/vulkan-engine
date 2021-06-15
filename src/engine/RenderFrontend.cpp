@@ -581,7 +581,7 @@ RB::GpuTexture CreateTexture(AssetSystem::Texture & texture) {
         state->graphic_queue,
         state->graphic_command_pool
     );
-    MFA_ASSERT(gpuTexture.valid());
+    MFA_ASSERT(gpuTexture.isValid());
     return gpuTexture;
 }
 
@@ -612,7 +612,7 @@ GpuModel CreateGpuModel(AssetSystem::Model & model_asset) {
     if(false == model_asset.textures.empty()) {
         for (auto & texture_asset : model_asset.textures) {
             gpuModel.textures.emplace_back(CreateTexture(texture_asset));
-            MFA_ASSERT(gpuModel.textures.back().valid());
+            MFA_ASSERT(gpuModel.textures.back().isValid());
         }
     }
     return gpuModel;

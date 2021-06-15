@@ -341,7 +341,7 @@ void GLTFMeshViewerScene::Shutdown() {
     RF::DestroySampler(mSamplerGroup);
     destroyModels();
     RF::DestroyTexture(mErrorTexture);
-    Importer::FreeTexture(mErrorTexture.cpu_texture());
+    Importer::FreeTexture(mErrorTexture.cpuTexture());
 }
 
 void GLTFMeshViewerScene::OnResize() {

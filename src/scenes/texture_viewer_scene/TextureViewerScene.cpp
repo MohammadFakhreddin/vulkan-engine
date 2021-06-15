@@ -49,7 +49,7 @@ void TextureViewerScene::Init() {
     createModel();
 
     MFA_ASSERT(mGpuModel.textures.size() == 1);
-    mTotalMipCount = mGpuModel.textures[0].cpu_texture()->GetMipCount();
+    mTotalMipCount = mGpuModel.textures[0].cpuTexture()->GetMipCount();
 
     {// Create sampler
         RB::CreateSamplerParams params {};

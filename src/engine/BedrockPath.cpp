@@ -15,8 +15,12 @@ void Asset(char const * address, std::string & outPath) {
     char addressBuffer[256] {};
     auto const stringSize = sprintf(addressBuffer, "../assets/%s", address);
     outPath.assign(addressBuffer, stringSize);
+#elif defined(__ANDROID__)
+    char addressBuffer[256] {};
+    auto const stringSize = sprintf(addressBuffer, "%s", address);
+    outPath.assign(address, stringSize);
 #else
-    #error "Not implemented"
+#error "Platform not supported"
 #endif
 }
 

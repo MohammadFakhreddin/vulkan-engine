@@ -717,7 +717,7 @@ void Shutdown() {
         }
     }
     RF::DestroyTexture(state->font_texture);
-    Importer::FreeTexture(state->font_texture.cpu_texture());
+    Importer::FreeTexture(state->font_texture.cpuTexture());
 
     RF::DestroyDrawPipeline(state->draw_pipeline);
     // TODO We can remove shader after creating pipeline
