@@ -173,6 +173,7 @@ void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & draw
         
         // Light
         MFA::Copy<3>(mLightPosition, selectedModel.initialParams.light.position);
+        MFA::Copy<3>(mLightColor, selectedModel.initialParams.light.color);
         MFA::Copy<3>(mLightTranslateMin, selectedModel.initialParams.light.translateMin);
         MFA::Copy<3>(mLightTranslateMax, selectedModel.initialParams.light.translateMax);
         
