@@ -14,4 +14,6 @@
 #define MFA_LOG_WARN(fmt_, ...)                     printf("\n-----------WARN------------\nFile: %s\nLine: %d\nFunction: %s\n" #fmt_ "\n---------------------------\n", __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
 #define MFA_LOG_ERROR(fmt_, ...)                    printf("\n-----------ERROR------------\nFile: %s\nLine: %d\nFunction: %s\n" #fmt_ "\n---------------------------\n", __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
 
+// TODO Use __android_log_print for android
+
 namespace MFA::Log {} // MFA::Log

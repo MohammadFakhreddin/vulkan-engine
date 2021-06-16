@@ -13,6 +13,8 @@ public:
 
     explicit GLTFMeshViewerScene() = default;
 
+    ~GLTFMeshViewerScene() override = default;
+
     void Init() override;
 
     void OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;

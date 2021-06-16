@@ -190,9 +190,17 @@ list(
     "src/libs/tiny_obj_loader/tiny_obj_loader.h"
     #Ktx
     "src/libs/tiny_ktx/tinyktx.h"
+)
+
+if (!ANDROID AND !IPHONE) 
+
+list(
+    APPEND LIBS_SOURCES
     #SDL
     "src/libs/sdl/SDL.hpp"
 )
+
+endif()
 
 add_library("Libs"
     ${LIBS_SOURCES}
@@ -387,6 +395,7 @@ elseif(ANDROID)
 #-----------------------------------------------------------------------
 # Android library
 #-----------------------------------------------------------------------
+    message(STATUS "Building for android")    
 
     set(ANDROID_FILES_ADDRESS "android/app/src/main/jni")
 
@@ -395,6 +404,8 @@ elseif(ANDROID)
     list(
         APPEND ANDROID_SOURCES
         "${ANDROID_FILES_ADDRESS}/main.cpp"
+        "${ANDROID_FILES_ADDRESS}/vulkan_wrapper/vulkan_wrapper.h"
+        "${ANDROID_FILES_ADDRESS}/vulkan_wrapper/vulkan_wrapper.cpp"
         "src/Application.hpp"
         "src/Application.cpp"
     )
@@ -415,8 +426,9 @@ elseif(ANDROID)
         ${SCENE_SOURCES}
     )
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -std=c++20 \
-                        -DVK_USE_PLATFORM_ANDROID_KHR")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
+       -std=c++11 -Wall -Wno-unused-variable \
+       -Wno-delete-non-virtual-dtor -DVK_USE_PLATFORM_ANDROID_KHR")
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -u ANativeActivity_onCreate")
 
     target_link_libraries(${PROJECT_NAME} app-glue log android)

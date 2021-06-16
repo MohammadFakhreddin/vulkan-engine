@@ -15,7 +15,11 @@ static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
 struct EventWatchGroup {
     int id = 0;
+#ifdef __DESKTOP__
     EventWatch watch = nullptr;
+#else
+    // TODO
+#endif
 };
 
 struct State {
@@ -25,8 +29,10 @@ struct State {
     // CreateInstance
     std::string application_name {};
     VkInstance vk_instance {};
+#ifdef __DESKTOP__
     // CreateWindow
     MSDL::SDL_Window * window = nullptr;
+#endif
     // CreateDebugCallback
     VkDebugReportCallbackEXT vkDebugReportCallbackExt {};
     VkSurfaceKHR surface {};
@@ -79,6 +85,7 @@ static VkBool32 DebugCallback(
     return true;
 }
 
+#ifdef __DESKTOP__
 static bool IsResizeEvent(uint8_t sdlEvent) {
 #if defined(__PLATFORM_WIN__) || defined(__PLATFORM_LINUX__)
     return sdlEvent == MSDL::SDL_WINDOWEVENT_RESIZED;
@@ -88,13 +95,13 @@ static bool IsResizeEvent(uint8_t sdlEvent) {
         sdlEvent == MSDL::SDL_WINDOWEVENT_MAXIMIZED ||
         sdlEvent == MSDL::SDL_WINDOWEVENT_MINIMIZED ||
         sdlEvent == MSDL::SDL_WINDOWEVENT_EXPOSED;
-#elif defined(__ANDROID__)
-    return sdlEvent == MSDL::SDL_WINDOWEVENT_RESIZED;
 #else
     #error Unhandled platform
 #endif
 }
+#endif
 
+#ifdef __DESKTOP__
 static int SDLEventWatcher(void* data, MSDL::SDL_Event* event) {
     if (
         state->isWindowResizable == true &&
@@ -112,18 +119,24 @@ static int SDLEventWatcher(void* data, MSDL::SDL_Event* event) {
     }
     return 0;
 }
+#endif
 
 bool Init(InitParams const & params) {
     state = new State();
     state->application_name = params.application_name;
     state->screenWidth = params.screen_width;
     state->screenHeight = params.screen_height;
+#ifdef __DESKTOP__
     state->window = RB::CreateWindow(
         state->screenWidth, 
         state->screenHeight
     );
+#else
+    // TODO
+#endif
     state->isWindowResizable = params.resizable;
-    
+
+#ifdef __DESKTOP__
     if (params.resizable) {
         // Make window resizable
         MSDL::SDL_SetWindowResizable(state->window, MSDL::SDL_TRUE);
@@ -132,11 +145,20 @@ bool Init(InitParams const & params) {
     MSDL::SDL_SetWindowMinimumSize(state->window, 100, 100);
 
     MSDL::SDL_AddEventWatch(SDLEventWatcher, state->window);
-    
+#else
+    // TODO
+#endif
+
+
+#ifdef __DESKTOP__
     state->vk_instance = RB::CreateInstance(
         state->application_name.c_str(), 
         state->window
     );
+#else
+    // TODO
+#endif
+
 #if defined(MFA_DEBUG) && defined(__ANDROID__) == false   // TODO Fix support for android
     state->vkDebugReportCallbackExt = RB::CreateDebugCallback(
         state->vk_instance,
@@ -144,7 +166,11 @@ bool Init(InitParams const & params) {
     );
 
 #endif
+#ifdef __DESKTOP__
     state->surface = RB::CreateWindowSurface(state->window, state->vk_instance);
+#else
+    // TODO
+#endif
     {
         auto const find_physical_device_result = RB::FindPhysicalDevice(state->vk_instance); // TODO Check again for retry count number
         state->physicalDevice = find_physical_device_result.physicalDevice;
@@ -302,7 +328,9 @@ bool Shutdown() {
     RB::DeviceWaitIdle(state->logicalDevice.device);
     MFA_ASSERT(state->sdlEventListeners.empty());
 
+#ifdef __DESKTOP__
     MSDL::SDL_DelEventWatch(SDLEventWatcher, state->window);
+#endif
 
     // DestroyPipeline in application // TODO We should have reference to what user creates + params for re-creation
     // GraphicPipeline, UniformBuffer, PipelineLayout
@@ -727,7 +755,7 @@ DrawPass BeginPass() {
 
     std::vector<VkClearValue> clearValues{};
     clearValues.resize(2);
-    clearValues[0].color = { 0.1f, 0.1f, 0.1f, 1.0f };
+    clearValues[0].color = VkClearColorValue { 0.1f, 0.1f, 0.1f, 1.0f };
     clearValues[1].depthStencil = {1.0f, 0};
 
     VkRenderPassBeginInfo renderPassBeginInfo = {};
@@ -994,7 +1022,11 @@ void OnNewFrame(float deltaTimeInSec) {
     if (state->windowResized) {
         OnWindowResized();
     }
+#ifdef __DESKTOP__
     state->isWindowVisible = (GetWindowFlags() & MSDL::SDL_WINDOW_MINIMIZED) > 0 ? false : true;
+#else
+    // TODO
+#endif
 }
 
 [[nodiscard]]
@@ -1036,6 +1068,7 @@ uint8_t SwapChainImagesCount() {
     return static_cast<uint8_t>(state->swapChainGroup.swapChainImages.size());
 }
 
+#ifdef __DESKTOP__
 // SDL functions
 
 void WarpMouseInWindow(int32_t const x, int32_t const y) {
@@ -1058,9 +1091,12 @@ void GetWindowSize(int32_t & out_width, int32_t & out_height) {
     MSDL::SDL_GetWindowSize(state->window, &out_width, &out_height);
 }
 
+// TODO We might need GetDrawableSize
 void GetDrawableSize(int32_t & out_width, int32_t & out_height) {
     MSDL::SDL_GL_GetDrawableSize(state->window, &out_width, &out_height);
 }
+
+#endif
 
 void AssignViewportAndScissorToCommandBuffer(VkCommandBuffer commandBuffer) {
     MFA_ASSERT(commandBuffer != nullptr);
@@ -1073,6 +1109,7 @@ void AssignViewportAndScissorToCommandBuffer(VkCommandBuffer commandBuffer) {
     );
 }
 
+#ifdef __DESKTOP__
 // TODO We might need separate SDL class
 int AddEventWatch(EventWatch const & eventWatch) {
     MFA_ASSERT(eventWatch != nullptr);
@@ -1085,6 +1122,7 @@ int AddEventWatch(EventWatch const & eventWatch) {
     state->sdlEventListeners.emplace_back(group);
     return group.id;
 }
+#endif
 
 void RemoveEventWatch(int const watchId) {
     for (int i = static_cast<int>(state->sdlEventListeners.size()) - 1; i >= 0; --i) {

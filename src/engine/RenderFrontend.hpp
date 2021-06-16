@@ -2,7 +2,9 @@
 
 #include "RenderBackend.hpp"
 
+#ifdef __DESKTOP__
 #include "libs/sdl/SDL.hpp"
+#endif
 
 namespace MFA::RenderFrontend {
 
@@ -282,9 +284,12 @@ void AssignViewportAndScissorToCommandBuffer(
 );
 
 using EventWatchId = int;
+#ifdef __DESKTOP__
 using EventWatch = std::function<int(void* data, MSDL::SDL_Event* event)>;
-
 EventWatchId AddEventWatch(EventWatch const & eventWatch);
+#else
+// TODO
+#endif
 
 void RemoveEventWatch(EventWatchId watchId);
 

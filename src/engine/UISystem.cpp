@@ -368,7 +368,11 @@ void Init() {
         io.KeyMap[ImGuiKey_Z] = MSDL::SDL_SCANCODE_Z;
     }
 
+#ifdef __DESKTOP__
     state->eventWatchId = RF::AddEventWatch(EventWatch);
+#else
+    // TODO
+#endif
 }
 
 static void UpdateMousePositionAndButtons() {

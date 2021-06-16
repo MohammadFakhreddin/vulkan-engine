@@ -8,7 +8,12 @@
 #include "engine/RenderFrontend.hpp"
 #include "engine/Scene.hpp"
 
+#ifdef __DESKTOP__
 #include "libs/sdl/SDL.hpp"
+#endif
+#ifdef __ANDROID__
+#include <android_native_app_glue.h>
+#endif
 
 Application::Application()
     : mGltfMeshViewerScene(std::make_unique<GLTFMeshViewerScene>())
@@ -19,13 +24,15 @@ Application::Application()
 
 Application::~Application() = default;
 
-
 void Application::run() {
     namespace RF = MFA::RenderFrontend;
     namespace UI = MFA::UISystem;
     namespace IM = MFA::InputManager;
+#ifdef __DESKTOP__
     namespace MSDL = MFA::MSDL;
-    
+#else
+    // TODO
+#endif
     static constexpr uint16_t SCREEN_WIDTH = 1200;//1920;
     static constexpr uint16_t SCREEN_HEIGHT = 800;//1080;
 
@@ -40,7 +47,7 @@ void Application::run() {
     
     mSceneSubSystem.SetActiveScene("GLTFMeshViewerScene");
     mSceneSubSystem.Init();
-
+#ifdef __DESKTOP__
     {// Main loop
         bool quit = false;
         //Event handler
@@ -70,10 +77,35 @@ void Application::run() {
             deltaTime = MSDL::SDL_GetTicks() - start_time;
         }
     }
+#elif defined(__ANDROID__)
+    // Used to poll the events in the main loop
+    int events;
+    android_poll_source* source;
+    do {
+        // TODO
+        // if (ALooper_pollAll(IsVulkanReady() ? 1 : 0, nullptr,
+        //                     &events, (void**)&source) >= 0) {
+        //   if (source != NULL) source->process(app, source);
+        // }
+
+        // // render if vulkan is ready
+        // if (IsVulkanReady()) {
+        //   VulkanDrawFrame();
+        // }
+    } while (mAndroidApp->destroyRequested == 0);
+#else
+#error "Platform is not supported"
+#endif
     RF::DeviceWaitIdle();
     mSceneSubSystem.Shutdown();
     IM::Shutdown();
     UI::Shutdown();
     RF::Shutdown();
 }
+
+#ifdef __ANDROID__
+void Application::setAndroidApp(android_app * androidApp) {
+    mAndroidApp = androidApp;
+}
+#endif
 
