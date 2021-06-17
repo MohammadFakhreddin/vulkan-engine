@@ -231,11 +231,7 @@ void MFA::PointLightPipeline::createDescriptorSetLayout() {
         
         bindings.emplace_back(layoutBinding);
     }
-#ifdef __ANDROID__
-    MFA_ASSERT(mDescriptorSetLayout > 0); 
-#else
-    MFA_ASSERT(mDescriptorSetLayout == nullptr);    
-#endif
+    MFA_VK_VALID_ASSERT(mDescriptorSetLayout);
     mDescriptorSetLayout = RF::CreateDescriptorSetLayout(
         static_cast<uint8_t>(bindings.size()),
         bindings.data()
@@ -243,17 +239,9 @@ void MFA::PointLightPipeline::createDescriptorSetLayout() {
 }
 
 void MFA::PointLightPipeline::destroyDescriptorSetLayout() {
-#ifdef __ANDROID__
-    MFA_ASSERT(mDescriptorSetLayout > 0);
-#else
-    MFA_ASSERT(mDescriptorSetLayout != nullptr);
-#endif
+    MFA_VK_VALID_ASSERT(mDescriptorSetLayout);
     RF::DestroyDescriptorSetLayout(mDescriptorSetLayout);
-#ifdef __ANDROID__
-    mDescriptorSetLayout = 0;
-#else
-    mDescriptorSetLayout = nullptr;
-#endif
+    MFA_VK_MAKE_NULL(mDescriptorSetLayout);
 }
 
 void MFA::PointLightPipeline::createPipeline() {

@@ -15,11 +15,7 @@ static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
 struct EventWatchGroup {
     int id = 0;
-#ifdef __DESKTOP__
     EventWatch watch = nullptr;
-#else
-    // TODO
-#endif
 };
 
 struct State {
@@ -29,10 +25,8 @@ struct State {
     // CreateInstance
     std::string application_name {};
     VkInstance vk_instance {};
-#ifdef __DESKTOP__
     // CreateWindow
     MSDL::SDL_Window * window = nullptr;
-#endif
     // CreateDebugCallback
     VkDebugReportCallbackEXT vkDebugReportCallbackExt {};
     VkSurfaceKHR surface {};
@@ -58,7 +52,7 @@ struct State {
     ResizeEventListener resizeEventListener = nullptr;
     // Event watches
     int nextEventListenerId = 0;
-    std::vector<EventWatchGroup> sdlEventListeners {};
+    std::vector<EventWatchGroup> eventListeners {};
     bool isWindowVisible = true;                        // Currently only minimize can cause this to be false
 } static * state = nullptr;
 
@@ -85,8 +79,7 @@ static VkBool32 DebugCallback(
     return true;
 }
 
-#ifdef __DESKTOP__
-static bool IsResizeEvent(uint8_t sdlEvent) {
+static bool IsResizeEvent(uint8_t const sdlEvent) {
 #if defined(__PLATFORM_WIN__) || defined(__PLATFORM_LINUX__)
     return sdlEvent == MSDL::SDL_WINDOWEVENT_RESIZED;
 #elif defined(__PLATFORM_MAC__)
@@ -95,13 +88,14 @@ static bool IsResizeEvent(uint8_t sdlEvent) {
         sdlEvent == MSDL::SDL_WINDOWEVENT_MAXIMIZED ||
         sdlEvent == MSDL::SDL_WINDOWEVENT_MINIMIZED ||
         sdlEvent == MSDL::SDL_WINDOWEVENT_EXPOSED;
+#elif defined(__ANDROID__)
+    // TODO
+    return false;
 #else
     #error Unhandled platform
 #endif
 }
-#endif
 
-#ifdef __DESKTOP__
 static int SDLEventWatcher(void* data, MSDL::SDL_Event* event) {
     if (
         state->isWindowResizable == true &&
@@ -113,30 +107,24 @@ static int SDLEventWatcher(void* data, MSDL::SDL_Event* event) {
             state->windowResized = true;
         }
     }
-    for (auto & eventListener : state->sdlEventListeners) {
+    for (auto & eventListener : state->eventListeners) {
         MFA_ASSERT(eventListener.watch != nullptr);
         eventListener.watch(data, event);
     }
     return 0;
 }
-#endif
 
 bool Init(InitParams const & params) {
     state = new State();
-    state->application_name = params.application_name;
-    state->screenWidth = params.screen_width;
-    state->screenHeight = params.screen_height;
-#ifdef __DESKTOP__
+    state->application_name = params.applicationName;
+    state->screenWidth = params.screenWidth;
+    state->screenHeight = params.screenHeight;
     state->window = RB::CreateWindow(
         state->screenWidth, 
         state->screenHeight
     );
-#else
-    // TODO
-#endif
     state->isWindowResizable = params.resizable;
 
-#ifdef __DESKTOP__
     if (params.resizable) {
         // Make window resizable
         MSDL::SDL_SetWindowResizable(state->window, MSDL::SDL_TRUE);
@@ -145,32 +133,20 @@ bool Init(InitParams const & params) {
     MSDL::SDL_SetWindowMinimumSize(state->window, 100, 100);
 
     MSDL::SDL_AddEventWatch(SDLEventWatcher, state->window);
-#else
-    // TODO
-#endif
 
-
-#ifdef __DESKTOP__
     state->vk_instance = RB::CreateInstance(
         state->application_name.c_str(), 
         state->window
     );
-#else
-    // TODO
-#endif
 
-#if defined(MFA_DEBUG) && defined(__ANDROID__) == false   // TODO Fix support for android
+#if defined(MFA_DEBUG) && defined(__ANDROID__) == false  // TODO Fix support for android
     state->vkDebugReportCallbackExt = RB::CreateDebugCallback(
         state->vk_instance,
         DebugCallback
     );
+#endif
 
-#endif
-#ifdef __DESKTOP__
     state->surface = RB::CreateWindowSurface(state->window, state->vk_instance);
-#else
-    // TODO
-#endif
     {
         auto const find_physical_device_result = RB::FindPhysicalDevice(state->vk_instance); // TODO Check again for retry count number
         state->physicalDevice = find_physical_device_result.physicalDevice;
@@ -326,7 +302,7 @@ void OnWindowResized() {
 bool Shutdown() {
     // Common part with resize
     RB::DeviceWaitIdle(state->logicalDevice.device);
-    MFA_ASSERT(state->sdlEventListeners.empty());
+    MFA_ASSERT(state->eventListeners.empty());
 
 #ifdef __DESKTOP__
     MSDL::SDL_DelEventWatch(SDLEventWatcher, state->window);
@@ -420,11 +396,7 @@ VkDescriptorSetLayout CreateDescriptorSetLayout(
         bindingsCount,
         bindings
     );
-#ifdef __ANDROID__
-    MFA_ASSERT(descriptorSetLayout > 0);
-#else
-    MFA_ASSERT(descriptorSetLayout != nullptr);
-#endif
+    MFA_VK_VALID_ASSERT(descriptorSetLayout);
     return descriptorSetLayout;
 }
 
@@ -481,15 +453,15 @@ DrawPipeline CreateBasicDrawPipeline(
 DrawPipeline CreateDrawPipeline(
     uint8_t const gpuShadersCount, 
     RB::GpuShader * gpuShaders,
-    uint32_t descriptorLayoutsCount,
-    VkDescriptorSetLayout* descriptorSetLayouts,
+    uint32_t const descriptorLayoutsCount,
+    VkDescriptorSetLayout * descriptorSetLayouts,
     VkVertexInputBindingDescription const vertexBindingDescription,
     uint32_t const inputAttributeDescriptionCount,
     VkVertexInputAttributeDescription * inputAttributeDescriptionData,
     RB::CreateGraphicPipelineOptions const & options
 ) {
 
-    VkExtent2D extent2D {};
+    VkExtent2D extent2D;
     extent2D.width = static_cast<uint32_t>(state->screenWidth);
     extent2D.height = static_cast<uint32_t>(state->screenHeight);
 
@@ -518,12 +490,12 @@ void DestroyDrawPipeline(DrawPipeline & draw_pipeline) {
 }
 
 std::vector<VkDescriptorSet> CreateDescriptorSets(
-    VkDescriptorSetLayout descriptor_set_layout
+    VkDescriptorSetLayout descriptorSetLayout
 ) {
     return RB::CreateDescriptorSet(
         state->logicalDevice.device,
         state->descriptorPool,
-        descriptor_set_layout,
+        descriptorSetLayout,
         static_cast<uint8_t>(state->swapChainGroup.swapChainImages.size())
     );
 }
@@ -532,11 +504,7 @@ std::vector<VkDescriptorSet> CreateDescriptorSets(
     uint32_t const descriptorSetCount,
     VkDescriptorSetLayout descriptorSetLayout
 ) {
-#ifdef __ANDROID__
-    MFA_ASSERT(descriptorSetLayout > 0);
-#else
-    MFA_ASSERT(descriptorSetLayout != nullptr);
-#endif
+    MFA_VK_VALID_ASSERT(descriptorSetLayout);
     return RB::CreateDescriptorSet(
         state->logicalDevice.device,
         state->descriptorPool,
@@ -552,7 +520,7 @@ UniformBufferGroup CreateUniformBuffer(size_t const bufferSize, uint32_t const c
         count,
         bufferSize
     );
-    UniformBufferGroup group {};
+    UniformBufferGroup group;
     group.buffers = buffers;
     group.bufferSize = bufferSize;
     return group;
@@ -630,11 +598,7 @@ void DestroyTexture(RB::GpuTexture & gpu_texture) {
 // TODO Ask for options
 SamplerGroup CreateSampler(RB::CreateSamplerParams const & samplerParams) {
     auto sampler = RB::CreateSampler(state->logicalDevice.device, samplerParams);
-#ifdef __ANDROID__
-    MFA_ASSERT(sampler > 0);
-#else
-    MFA_ASSERT(sampler != nullptr);
-#endif
+    MFA_VK_VALID_ASSERT(sampler);
     SamplerGroup samplerGroup {};
     samplerGroup.sampler = sampler;
     MFA_ASSERT(samplerGroup.isValid());
@@ -1119,15 +1083,15 @@ int AddEventWatch(EventWatch const & eventWatch) {
     group.watch = eventWatch;
 
     ++state->nextEventListenerId;
-    state->sdlEventListeners.emplace_back(group);
+    state->eventListeners.emplace_back(group);
     return group.id;
 }
 #endif
 
 void RemoveEventWatch(int const watchId) {
-    for (int i = static_cast<int>(state->sdlEventListeners.size()) - 1; i >= 0; --i) {
-        if (state->sdlEventListeners[i].id == watchId) {
-            state->sdlEventListeners.erase(state->sdlEventListeners.begin() + i);
+    for (int i = static_cast<int>(state->eventListeners.size()) - 1; i >= 0; --i) {
+        if (state->eventListeners[i].id == watchId) {
+            state->eventListeners.erase(state->eventListeners.begin() + i);
         }
     }
 }

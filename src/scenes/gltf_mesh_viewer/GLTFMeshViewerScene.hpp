@@ -11,9 +11,9 @@
 class GLTFMeshViewerScene final : public MFA::Scene {
 public:
 
-    explicit GLTFMeshViewerScene() = default;
+    explicit GLTFMeshViewerScene();
 
-    ~GLTFMeshViewerScene() override = default;
+    ~GLTFMeshViewerScene() override;
 
     void Init() override;
 

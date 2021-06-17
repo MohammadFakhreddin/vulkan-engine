@@ -380,3 +380,7 @@ void GLTFMeshViewerScene::updateProjectionBuffer() {
     // PointLight
     mCamera.getProjection(mPointLightMVPData.projection);
 }
+
+GLTFMeshViewerScene::~GLTFMeshViewerScene() {}
+
+GLTFMeshViewerScene::GLTFMeshViewerScene() {}

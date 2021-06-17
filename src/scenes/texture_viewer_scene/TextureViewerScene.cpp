@@ -280,7 +280,7 @@ void TextureViewerScene::createDrawableObject() {
     MFA_ASSERT(cpuModel.mesh.getSubMeshCount() == 1);
     MFA_ASSERT(cpuModel.mesh.getSubMeshByIndex(0).primitives.size() == 1);
     auto const & primitive = cpuModel.mesh.getSubMeshByIndex(0).primitives[0];
-    auto * descriptorSet = mDrawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
+    auto descriptorSet = mDrawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
 
     std::vector<VkWriteDescriptorSet> writeInfo {};
 

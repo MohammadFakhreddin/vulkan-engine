@@ -165,8 +165,8 @@ void TexturedSphereScene::createDrawableObject(){
         if (subMesh.primitives.empty() == false) {
             for (auto const & primitive : subMesh.primitives) {
                 MFA_ASSERT(primitive.uniqueId >= 0);
-                auto * descriptorSet = mDrawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
-                MFA_ASSERT(descriptorSet != nullptr);
+                auto descriptorSet = mDrawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
+                MFA_VK_VALID_ASSERT(descriptorSet);
 
                 std::vector<VkWriteDescriptorSet> writeInfo {};
 

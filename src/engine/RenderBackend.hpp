@@ -13,15 +13,32 @@
 #undef CreateWindow
 #endif
 
+#ifdef __DESKTOP__
+#define MFA_VK_VALID(vkVariable) vkVariable != nullptr
+#define MFA_VK_INVALID(vkVariable) vkVariable == nullptr
+#define MFA_VK_VALID_ASSERT(vkVariable) MFA_ASSERT(MFA_VK_VALID(vkVariable))
+#define MFA_VK_INVALID_ASSERT(vkVariable) MFA_ASSERT(MFA_VK_INVALID(vkVariable))
+#define MFA_VK_MAKE_NULL(vkVariable) vkVariable = nullptr
+#elif defined(__ANDROID__)
+#define MFA_VK_VALID(vkVariable) vkVariable > 0
+#define MFA_VK_INVALID(vkVariable) vkVariable == 0
+#define MFA_VK_VALID_ASSERT(vkVariable) MFA_ASSERT(MFA_VK_VALID(vkVariable))
+#define MFA_VK_INVALID_ASSERT(vkVariable) MFA_ASSERT(MFA_VK_INVALID(vkVariable))
+#define MFA_VK_MAKE_NULL(vkVariable) vkVariable = 0
+#else
+#error Unhandled platform
+#endif
+
 struct SDL_Window;
 
 // TODO Write description for all functions for learning purpose
 // Note: Not all functions can be called from outside
 // TODO Remove functions that are not usable from outside
 namespace MFA::RenderBackend {
-    struct CreateGraphicPipelineOptions;
 
-    using ScreenWidth = Platforms::ScreenSize;
+struct CreateGraphicPipelineOptions;
+
+using ScreenWidth = Platforms::ScreenSize;
 using ScreenHeight = Platforms::ScreenSize;
 using CpuTexture = AssetSystem::Texture;
 using CpuShader = AssetSystem::Shader;
@@ -34,9 +51,10 @@ SDL_Window * CreateWindow(ScreenWidth screenWidth, ScreenHeight screenHeight);
 void DestroyWindow(SDL_Window * window);
 
 [[nodiscard]]
-VkSurfaceKHR CreateWindowSurface(SDL_Window * window, VkInstance instance);
+VkSurfaceKHR CreateWindowSurface(SDL_Window * window, VkInstance_T * instance);
 
 void DestroyWindowSurface(VkInstance instance, VkSurfaceKHR surface);
+
 
 [[nodiscard]]
 VkExtent2D ChooseSwapChainExtent(
@@ -126,20 +144,12 @@ struct BufferGroup {
     VkDeviceMemory memory {};
     [[nodiscard]]
     bool isValid() const noexcept {
-#ifdef __ANDROID__
-        return buffer > 0 && memory > 0;
-#else
-        return buffer != nullptr && memory != nullptr;
-#endif
+
+        return MFA_VK_VALID(buffer) && MFA_VK_VALID(memory);
     }
     void revoke() {
-#ifdef __ANDROID__
-        buffer = 0;
-        memory = 0;
-#else
-        buffer = nullptr;
-        memory = nullptr;
-#endif
+        MFA_VK_MAKE_NULL(buffer);
+        MFA_VK_MAKE_NULL(memory);
     }
 };
 [[nodiscard]]
@@ -176,20 +186,11 @@ struct ImageGroup {
     VkDeviceMemory memory {};
     [[nodiscard]]
     bool isValid() const noexcept {
-#ifdef __ANDROID__
-        return image > 0 && memory > 0;
-#else
-        return image != nullptr && memory != nullptr;
-#endif
+        return MFA_VK_VALID(image) && MFA_VK_VALID(memory);
     }
     void revoke() {
-#ifdef __ANDROID__
-        image = 0;
-        memory = 0;
-#else
-        image = nullptr;
-        memory = nullptr;
-#endif
+        MFA_VK_MAKE_NULL(image);
+        MFA_VK_MAKE_NULL(memory);
     }
 };
 
@@ -249,19 +250,11 @@ public:
         if (mImageGroup.isValid() == false) {
             return false;
         }
-#ifdef __ANDROID__
-        return mImageView > 0;
-#else
-        return mImageView != nullptr;
-#endif
+        return MFA_VK_VALID(mImageView);
     }
     void revoke() {
         mImageGroup.revoke();
-#ifdef __ANDROID__
-        mImageView = 0;
-#else
-        mImageView = nullptr;
-#endif
+        MFA_VK_MAKE_NULL(mImageView);
     }
     [[nodiscard]]
     VkImage const & image() const {return mImageGroup.image;}
@@ -426,20 +419,12 @@ public:
     CpuShader const * cpuShader() const {return &mCpuShader;}
     [[nodiscard]]
     bool valid () const {
-#ifdef __ANDROID__
-        return mShaderModule > 0;
-#else
-        return mShaderModule != nullptr;
-#endif
+        return MFA_VK_VALID(mShaderModule);
     }
     [[nodiscard]]
     VkShaderModule shaderModule() const {return mShaderModule;}
     void revoke() {
-#ifdef __ANDROID__
-        mShaderModule = 0;
-#else
-        mShaderModule = nullptr;
-#endif
+        MFA_VK_MAKE_NULL(mShaderModule);
     }
 private:
     VkShaderModule mShaderModule {};
@@ -455,23 +440,15 @@ struct GraphicPipelineGroup {
 
     [[nodiscard]]
     bool isValid() const noexcept {
-#ifdef __ANDROID__
-        return pipelineLayout > 0 && graphicPipeline > 0;
-#else
-        return pipelineLayout != nullptr && graphicPipeline != nullptr;
-#endif
+        return MFA_VK_VALID(pipelineLayout)
+            && MFA_VK_VALID(graphicPipeline);
     }
 
 private:
 
     void revoke() {
-#ifdef __ANDROID__
-        pipelineLayout = 0;
-        graphicPipeline = 0;
-#else
-        pipelineLayout = nullptr;
-        graphicPipeline = nullptr;
-#endif
+        MFA_VK_MAKE_NULL(pipelineLayout);
+        MFA_VK_MAKE_NULL(graphicPipeline);
     }
 };
 
@@ -607,8 +584,8 @@ std::vector<VkDescriptorSet> CreateDescriptorSet(
     VkDevice device,
     VkDescriptorPool descriptorPool,
     VkDescriptorSetLayout descriptorSetLayout,
-    uint32_t descriptor_set_count,
-    uint8_t schemas_count = 0,
+    uint32_t descriptorSetCount,
+    uint8_t schemasCount = 0,
     VkWriteDescriptorSet * schemas = nullptr
 );
 
@@ -702,11 +679,11 @@ void PushConstants(
 
 void UpdateDescriptorSetsBasic(
     VkDevice device,
-    uint8_t descriptor_sets_count,
-    VkDescriptorSet* descriptor_sets,
-    VkDescriptorBufferInfo const & buffer_info,
-    uint32_t image_info_count,
-    VkDescriptorImageInfo const * image_infos
+    uint8_t descriptorSetsCount,
+    VkDescriptorSet* descriptorSets,
+    VkDescriptorBufferInfo const & bufferInfo,
+    uint32_t imageInfoCount,
+    VkDescriptorImageInfo const * imageInfos
 );
 
 void UpdateDescriptorSets(

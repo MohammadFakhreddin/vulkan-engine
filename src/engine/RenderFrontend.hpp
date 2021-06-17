@@ -2,9 +2,7 @@
 
 #include "RenderBackend.hpp"
 
-#ifdef __DESKTOP__
 #include "libs/sdl/SDL.hpp"
-#endif
 
 namespace MFA::RenderFrontend {
 
@@ -15,9 +13,9 @@ using ScreenHeight = RB::ScreenHeight;
 using ResizeEventListener = std::function<void()>;
 
 struct InitParams {
-    ScreenWidth screen_width;
-    ScreenHeight screen_height;
-    char const * application_name;
+    ScreenWidth screenWidth = 0;
+    ScreenHeight screenHeight = 0;
+    char const * applicationName = nullptr;
     bool resizable = true;
 };
 
@@ -66,7 +64,7 @@ void DestroyDrawPipeline(DrawPipeline & draw_pipeline);
 
 [[nodiscard]]
 std::vector<VkDescriptorSet> CreateDescriptorSets(
-    VkDescriptorSetLayout descriptor_set_layout
+    VkDescriptorSetLayout descriptorSetLayout
 );
 
 [[nodiscard]]
@@ -97,19 +95,11 @@ struct SamplerGroup {
     VkSampler sampler;
     [[nodiscard]]
     bool isValid() const noexcept{
-#ifdef __ANDROID__
-        return sampler > 0;
-#else
-        return sampler != nullptr;
-#endif
+        return MFA_VK_VALID(sampler);
     }
     void revoke() {
         MFA_ASSERT(isValid());
-#ifdef __ANDROID__
-        sampler = 0;
-#else
-        sampler = nullptr;
-#endif
+        MFA_VK_MAKE_NULL(sampler);
     }
 };
 // TODO We should ask for options here
@@ -284,12 +274,8 @@ void AssignViewportAndScissorToCommandBuffer(
 );
 
 using EventWatchId = int;
-#ifdef __DESKTOP__
 using EventWatch = std::function<int(void* data, MSDL::SDL_Event* event)>;
 EventWatchId AddEventWatch(EventWatch const & eventWatch);
-#else
-// TODO
-#endif
 
 void RemoveEventWatch(EventWatchId watchId);
 

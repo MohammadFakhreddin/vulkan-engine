@@ -8,9 +8,7 @@
 #include "engine/RenderFrontend.hpp"
 #include "engine/Scene.hpp"
 
-#ifdef __DESKTOP__
 #include "libs/sdl/SDL.hpp"
-#endif
 #ifdef __ANDROID__
 #include <android_native_app_glue.h>
 #endif
@@ -28,11 +26,8 @@ void Application::run() {
     namespace RF = MFA::RenderFrontend;
     namespace UI = MFA::UISystem;
     namespace IM = MFA::InputManager;
-#ifdef __DESKTOP__
     namespace MSDL = MFA::MSDL;
-#else
-    // TODO
-#endif
+
     static constexpr uint16_t SCREEN_WIDTH = 1200;//1920;
     static constexpr uint16_t SCREEN_HEIGHT = 800;//1080;
 
