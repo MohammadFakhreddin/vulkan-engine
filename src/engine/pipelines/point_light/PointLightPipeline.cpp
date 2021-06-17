@@ -231,7 +231,7 @@ void MFA::PointLightPipeline::createDescriptorSetLayout() {
         
         bindings.emplace_back(layoutBinding);
     }
-    MFA_VK_VALID_ASSERT(mDescriptorSetLayout);
+    MFA_VK_INVALID_ASSERT(mDescriptorSetLayout);
     mDescriptorSetLayout = RF::CreateDescriptorSetLayout(
         static_cast<uint8_t>(bindings.size()),
         bindings.data()
