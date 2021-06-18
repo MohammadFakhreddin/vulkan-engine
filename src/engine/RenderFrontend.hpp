@@ -284,4 +284,7 @@ EventWatchId AddEventWatch(EventWatch const & eventWatch);
 void RemoveEventWatch(EventWatchId watchId);
 #endif
 
+// Currently only used for android (Probably ios in future)
+void NotifyDeviceResized();
+
 }

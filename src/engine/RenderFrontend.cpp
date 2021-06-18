@@ -1130,4 +1130,8 @@ void RemoveEventWatch(int const watchId) {
 
 #endif
 
+void NotifyDeviceResized() {
+    state->windowResized = true;
+}
+
 }

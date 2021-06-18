@@ -22,11 +22,17 @@ public:
     Application (Application const &) noexcept = delete;
     Application (Application && rhs) noexcept = delete;
     Application & operator = (Application const &) noexcept = delete;
+
+    void Init();
+    void Shutdown();
+
 #ifdef __ANDROID__
     void setAndroidApp(android_app * androidApp);
 #endif
     void run();
 private:
+
+    bool mIsInitialized = false;
 
     MFA::SceneSubSystem mSceneSubSystem {};
 

@@ -32,25 +32,28 @@
 #include "vulkan_wrapper/vulkan_wrapper.h"
 #include <Application.hpp>
 
+Application application {};
+
 // Process the next main command.
 void commandListener(android_app* app, int32_t cmd) {
   switch (cmd) {
     case APP_CMD_INIT_WINDOW:
-      // The window is being shown, get it ready.
-      // TODO
-      // InitVulkan(app);
-      break;
+    {// The window is being shown, get it ready.
+      application.Init();
+    }
+    break;
     case APP_CMD_TERM_WINDOW:
-      // The window is being hidden or closed, clean it up.
-      // TODO
-      // DeleteVulkan();
-      break;
-      case APP_CMD_CONTENT_RECT_CHANGED:
-      // TODO
-      break;
+    {// The window is being hidden or closed, clean it up.
+      application.Shutdown();
+    }
+    break;
+    case APP_CMD_CONTENT_RECT_CHANGED:
+    {
+        MFA::RenderFrontend::NotifyDeviceResized();
+    }
+    break;
     default:
-      __android_log_print(ANDROID_LOG_INFO, "Vulkan Tutorials",
-                          "event not handled: %d", cmd);
+      __android_log_print(ANDROID_LOG_INFO, "MFA", "event not handled: %d", cmd);
   }
 }
 
@@ -59,7 +62,6 @@ void android_main(struct android_app* app) {
   // Set the callback to process system events
   app->onAppCmd = commandListener;
 
-  Application application {};
   application.setAndroidApp(app);
   // Main loop
   application.run();

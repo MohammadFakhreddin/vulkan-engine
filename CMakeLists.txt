@@ -190,9 +190,15 @@ list(
     "src/libs/tiny_obj_loader/tiny_obj_loader.h"
     #Ktx
     "src/libs/tiny_ktx/tinyktx.h"
+)
+
+if (!ANDROID)
+list(
+    APPEND LIBS_SOURCES
     #SDL
     "src/libs/sdl/SDL.hpp"
-)
+)    
+endif ()
 
 add_library("Libs"
     ${LIBS_SOURCES}

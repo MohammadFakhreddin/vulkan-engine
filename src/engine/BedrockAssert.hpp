@@ -34,7 +34,7 @@
 
 #endif
 
-#define MFA_NOT_IMPLEMENTED_YET(who)    throw std::runtime_error("Method not implemented by " + std::string(who))
+#define MFA_NOT_IMPLEMENTED_YET(who)    MFA_LOG_ERROR(who); throw std::runtime_error("Method not implemented by " + std::string(who))
 
 bool constexpr MFA_VERIFY(bool const condition) {
     if (condition) {
