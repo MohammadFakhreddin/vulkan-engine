@@ -13,10 +13,12 @@ namespace MFA::RenderFrontend {
 
 static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
+#ifdef __DESKTOP__
 struct EventWatchGroup {
     int id = 0;
     EventWatch watch = nullptr;
 };
+#endif
 
 struct State {
     // CreateWindow
@@ -25,8 +27,10 @@ struct State {
     // CreateInstance
     std::string application_name {};
     VkInstance vk_instance {};
+#ifdef __DESKTOP__
     // CreateWindow
     MSDL::SDL_Window * window = nullptr;
+#endif
     // CreateDebugCallback
     VkDebugReportCallbackEXT vkDebugReportCallbackExt {};
     VkSurfaceKHR surface {};
@@ -52,11 +56,13 @@ struct State {
     ResizeEventListener resizeEventListener = nullptr;
     // Event watches
     int nextEventListenerId = 0;
+#ifdef __DESKTOP__
     std::vector<EventWatchGroup> eventListeners {};
+#endif
     bool isWindowVisible = true;                        // Currently only minimize can cause this to be false
 } static * state = nullptr;
 
-static VkBool32 DebugCallback(
+static VkBool32 VKAPI_PTR DebugCallback(
   VkDebugReportFlagsEXT const flags,
   VkDebugReportObjectTypeEXT object_type,
   uint64_t src_object, 
@@ -67,18 +73,17 @@ static VkBool32 DebugCallback(
   void * user_data
 ) {
     if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
-        MFA_LOG_ERROR("Message code: %d\nMessage: %s\n", message_code, message);
+        MFA_LOG_ERROR("Message code: %d\nMessage: %s\nLocation: %llu\n", message_code, message, location);
     } else if(flags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
-        MFA_LOG_WARN("Message code: %d\nMessage: %s\n", message_code, message);
+        MFA_LOG_WARN("Message code: %d\nMessage: %s\nLocation: %llu\n", message_code, message, location);
     } else {
-        MFA_LOG_INFO("Message code: %d\nMessage: %s\n", message_code, message);
+        MFA_LOG_INFO("Message code: %d\nMessage: %s\nLocation: %llu\n", message_code, message, location);
     }
-#ifdef MFA_DEBUG
-    MFA_CRASH("Vulkan debug event");
-#endif
+    MFA_ASSERT(false);
     return true;
 }
 
+#ifdef __DESKTOP__
 static bool IsResizeEvent(uint8_t const sdlEvent) {
 #if defined(__PLATFORM_WIN__) || defined(__PLATFORM_LINUX__)
     return sdlEvent == MSDL::SDL_WINDOWEVENT_RESIZED;
@@ -87,10 +92,7 @@ static bool IsResizeEvent(uint8_t const sdlEvent) {
         sdlEvent == MSDL::SDL_WINDOWEVENT_SIZE_CHANGED ||
         sdlEvent == MSDL::SDL_WINDOWEVENT_MAXIMIZED ||
         sdlEvent == MSDL::SDL_WINDOWEVENT_MINIMIZED ||
-        sdlEvent == MSDL::SDL_WINDOWEVENT_EXPOSED;
-#elif defined(__ANDROID__)
-    // TODO
-    return false;
+        sdlEvent == MSDL::SDL_WINDOWEVENT_EXPOSED;;
 #else
     #error Unhandled platform
 #endif
@@ -113,18 +115,24 @@ static int SDLEventWatcher(void* data, MSDL::SDL_Event* event) {
     }
     return 0;
 }
+#endif
 
 bool Init(InitParams const & params) {
     state = new State();
     state->application_name = params.applicationName;
     state->screenWidth = params.screenWidth;
     state->screenHeight = params.screenHeight;
+
+#ifdef __DESKTOP__
     state->window = RB::CreateWindow(
         state->screenWidth, 
         state->screenHeight
     );
+#endif
+
     state->isWindowResizable = params.resizable;
 
+#ifdef __DESKTOP__
     if (params.resizable) {
         // Make window resizable
         MSDL::SDL_SetWindowResizable(state->window, MSDL::SDL_TRUE);
@@ -135,23 +143,35 @@ bool Init(InitParams const & params) {
     MSDL::SDL_AddEventWatch(SDLEventWatcher, state->window);
 
     state->vk_instance = RB::CreateInstance(
-        state->application_name.c_str(), 
+        state->application_name.c_str(),
         state->window
     );
+#elif defined(__ANDROID__)
+    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+#else
+    #error Os is not handled
+#endif
 
-#if defined(MFA_DEBUG) && defined(__ANDROID__) == false  // TODO Fix support for android
+#if defined(MFA_DEBUG)  // TODO Fix support for android
     state->vkDebugReportCallbackExt = RB::CreateDebugCallback(
         state->vk_instance,
         DebugCallback
     );
 #endif
 
+#ifdef __DESKTOP__
     state->surface = RB::CreateWindowSurface(state->window, state->vk_instance);
+#elif defined(__ANDROID__)
+    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+#else
+    #error Os not handled
+#endif
     {
         auto const find_physical_device_result = RB::FindPhysicalDevice(state->vk_instance); // TODO Check again for retry count number
         state->physicalDevice = find_physical_device_result.physicalDevice;
         state->physicalDeviceFeatures = find_physical_device_result.physicalDeviceFeatures;
     }
+
     if(false == RB::CheckSwapChainSupport(state->physicalDevice)) {
         MFA_LOG_ERROR("Swapchain is not supported on this device");
         return false;
@@ -302,9 +322,9 @@ void OnWindowResized() {
 bool Shutdown() {
     // Common part with resize
     RB::DeviceWaitIdle(state->logicalDevice.device);
-    MFA_ASSERT(state->eventListeners.empty());
 
 #ifdef __DESKTOP__
+    MFA_ASSERT(state->eventListeners.empty());
     MSDL::SDL_DelEventWatch(SDLEventWatcher, state->window);
 #endif
 
@@ -988,8 +1008,10 @@ void OnNewFrame(float deltaTimeInSec) {
     }
 #ifdef __DESKTOP__
     state->isWindowVisible = (GetWindowFlags() & MSDL::SDL_WINDOW_MINIMIZED) > 0 ? false : true;
+#elif defined(__ANDROID__)
+    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
 #else
-    // TODO
+    #error Os is not handled
 #endif
 }
 
@@ -1032,6 +1054,26 @@ uint8_t SwapChainImagesCount() {
     return static_cast<uint8_t>(state->swapChainGroup.swapChainImages.size());
 }
 
+void GetWindowSize(int32_t & outWidth, int32_t & outHeight) {
+#ifdef __DESKTOP__
+    MSDL::SDL_GetWindowSize(state->window, &outWidth, &outHeight);
+#elif __ANDROID__
+    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+#else
+#error Os not handled
+#endif
+}
+
+void GetDrawableSize(int32_t & outWidth, int32_t & outHeight) {
+#ifdef __DESKTOP__
+    MSDL::SDL_GL_GetDrawableSize(state->window, &outWidth, &outHeight);
+#elif __ANDROID__
+    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+#else
+#error Os not handled
+#endif
+}
+
 #ifdef __DESKTOP__
 // SDL functions
 
@@ -1049,15 +1091,6 @@ uint8_t const * GetKeyboardState(int * numKeys) {
 
 uint32_t GetWindowFlags() {
     return MSDL::SDL_GetWindowFlags(state->window); 
-}
-
-void GetWindowSize(int32_t & out_width, int32_t & out_height) {
-    MSDL::SDL_GetWindowSize(state->window, &out_width, &out_height);
-}
-
-// TODO We might need GetDrawableSize
-void GetDrawableSize(int32_t & out_width, int32_t & out_height) {
-    MSDL::SDL_GL_GetDrawableSize(state->window, &out_width, &out_height);
 }
 
 #endif
@@ -1086,7 +1119,6 @@ int AddEventWatch(EventWatch const & eventWatch) {
     state->eventListeners.emplace_back(group);
     return group.id;
 }
-#endif
 
 void RemoveEventWatch(int const watchId) {
     for (int i = static_cast<int>(state->eventListeners.size()) - 1; i >= 0; --i) {
@@ -1095,5 +1127,7 @@ void RemoveEventWatch(int const watchId) {
         }
     }
 }
+
+#endif
 
 }

@@ -136,7 +136,9 @@ struct State {
     std::vector<RF::MeshBuffers> meshBuffers {};
     std::vector<bool> meshBuffersValidationStatus {};
     bool hasFocus = false;
+#ifdef __DESKTOP__
     RF::EventWatchId eventWatchId = -1;
+#endif
 };
 
 static State * state = nullptr;
@@ -146,6 +148,7 @@ struct PushConstants {
     float translate[2];
 };
 
+#ifdef __DESKTOP__
 static int EventWatch(void* data, MSDL::SDL_Event* event) {
     ImGuiIO& io = ImGui::GetIO();
     switch (event->type)
@@ -164,7 +167,7 @@ static int EventWatch(void* data, MSDL::SDL_Event* event) {
             io.KeyShift = ((MSDL::SDL_GetModState() & MSDL::KMOD_SHIFT) != 0);
             io.KeyCtrl = ((MSDL::SDL_GetModState() & MSDL::KMOD_CTRL) != 0);
             io.KeyAlt = ((MSDL::SDL_GetModState() & MSDL::KMOD_ALT) != 0);
-#ifdef _WIN32
+#ifdef __PLATFORM_WIN__
             io.KeySuper = false;
 #else
             io.KeySuper = ((MSDL::SDL_GetModState() & MSDL::KMOD_GUI) != 0);
@@ -174,6 +177,7 @@ static int EventWatch(void* data, MSDL::SDL_Event* event) {
     }
     return false;
 }
+#endif
 
 void Init() {
     state = new State();
@@ -370,14 +374,13 @@ void Init() {
 
 #ifdef __DESKTOP__
     state->eventWatchId = RF::AddEventWatch(EventWatch);
-#else
-    // TODO
 #endif
 }
 
 static void UpdateMousePositionAndButtons() {
     auto & io = ImGui::GetIO();
 
+#ifdef __DESKTOP__
     // Set OS mouse position if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
     if (io.WantSetMousePos) {
         RF::WarpMouseInWindow(static_cast<int32_t>(io.MousePos.x), static_cast<int32_t>(io.MousePos.y));
@@ -393,39 +396,11 @@ static void UpdateMousePositionAndButtons() {
     if (RF::GetWindowFlags() & MSDL::SDL_WINDOW_INPUT_FOCUS) {
         io.MousePos = ImVec2(static_cast<float>(mx), static_cast<float>(my));
     }
-
-    //// TODO Move this to input manager
-    //auto const * MSDL::sdlKeysDown = RF::GetKeyboardState();
-    //if (MSDL::sdlKeysDown[MSDL::SDL_SCANCODE_0]) {
-    //    io.AddInputCharacter('0');
-    //}
-    //if (MSDL::sdlKeysDown[MSDL::SDL_SCANCODE_1]) {
-    //    io.AddInputCharacter('1');
-    //}
-    //if (MSDL::sdlKeysDown[MSDL::SDL_SCANCODE_2]) {
-    //    io.AddInputCharacter('2');
-    //}
-    //if (MSDL::sdlKeysDown[MSDL::SDL_SCANCODE_3]) {
-    //    io.AddInputCharacter('3');
-    //}
-    //if (MSDL::sdlKeysDown[MSDL::SDL_SCANCODE_4]) {
-    //    io.AddInputCharacter('4');
-    //}
-    //if (MSDL::sdlKeysDown[MSDL::SDL_SCANCODE_5]) {
-    //    io.AddInputCharacter('5');
-    //}
-    //if (MSDL::sdlKeysDown[MSDL::SDL_SCANCODE_6]) {
-    //    io.AddInputCharacter('6');
-    //}
-    //if (MSDL::sdlKeysDown[MSDL::SDL_SCANCODE_7]) {
-    //    io.AddInputCharacter('7');
-    //}
-    //if (MSDL::sdlKeysDown[MSDL::SDL_SCANCODE_8]) {
-    //    io.AddInputCharacter('8');
-    //}
-    //if (MSDL::sdlKeysDown[MSDL::SDL_SCANCODE_9]) {
-    //    io.AddInputCharacter('9');
-    //}
+#elif defined(__ANDROID__)
+    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+#else
+    #error Os not supported
+#endif
 }
 
 static void UpdateMouseCursor() {
@@ -457,9 +432,15 @@ void OnNewFrame(
     int32_t window_width, window_height;
     int32_t drawable_width, drawable_height;
     RF::GetWindowSize(window_width, window_height);
+#if defined(__DESKTOP__)
     if (RF::GetWindowFlags() & MSDL::SDL_WINDOW_MINIMIZED) {
         window_width = window_height = 0;
     }
+#elif defined(__ANDROID__)
+    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+#else
+#error Os is not supported
+#endif
     RF::GetDrawableSize(drawable_width, drawable_height);
     io.DisplaySize = ImVec2(static_cast<float>(window_width), static_cast<float>(window_height));
     if (window_width > 0 && window_height > 0) {
@@ -733,7 +714,9 @@ void Shutdown() {
     RF::DestroyDescriptorSetLayout(state->descriptorSetLayout);
     RF::DestroySampler(state->fontSampler);
 
+#ifdef __DESKTOP__
     RF::RemoveEventWatch(state->eventWatchId);
+#endif
 
     delete state;
     state = nullptr;

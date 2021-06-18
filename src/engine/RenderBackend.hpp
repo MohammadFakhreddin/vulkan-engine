@@ -20,7 +20,7 @@
 #define MFA_VK_INVALID_ASSERT(vkVariable) MFA_ASSERT(MFA_VK_INVALID(vkVariable))
 #define MFA_VK_MAKE_NULL(vkVariable) vkVariable = nullptr
 #elif defined(__ANDROID__)
-#define MFA_VK_VALID(vkVariable) vkVariable > 0
+#define MFA_VK_VALID(vkVariable) vkVariable != 0
 #define MFA_VK_INVALID(vkVariable) vkVariable == 0
 #define MFA_VK_VALID_ASSERT(vkVariable) MFA_ASSERT(MFA_VK_VALID(vkVariable))
 #define MFA_VK_INVALID_ASSERT(vkVariable) MFA_ASSERT(MFA_VK_INVALID(vkVariable))
@@ -29,7 +29,9 @@
 #error Unhandled platform
 #endif
 
+#ifdef __DESKTOP__
 struct SDL_Window;
+#endif
 
 // TODO Write description for all functions for learning purpose
 // Note: Not all functions can be called from outside
@@ -44,7 +46,7 @@ using CpuTexture = AssetSystem::Texture;
 using CpuShader = AssetSystem::Shader;
 
 // Vulkan functions
-
+#ifdef __DESKTOP__
 [[nodiscard]]
 SDL_Window * CreateWindow(ScreenWidth screenWidth, ScreenHeight screenHeight);
 
@@ -52,6 +54,7 @@ void DestroyWindow(SDL_Window * window);
 
 [[nodiscard]]
 VkSurfaceKHR CreateWindowSurface(SDL_Window * window, VkInstance_T * instance);
+#endif
 
 void DestroyWindowSurface(VkInstance instance, VkSurfaceKHR surface);
 
@@ -69,8 +72,10 @@ VkPresentModeKHR ChoosePresentMode(uint8_t presentModesCount, VkPresentModeKHR c
 [[nodiscard]]
 VkSurfaceFormatKHR ChooseSurfaceFormat(uint8_t availableFormatsCount, VkSurfaceFormatKHR const * availableFormats);
 
+#ifdef __DESKTOP__
 [[nodiscard]]
 VkInstance CreateInstance(char const * applicationName, SDL_Window * window);
+#endif
 
 void DestroyInstance(VkInstance instance);
 
@@ -144,7 +149,6 @@ struct BufferGroup {
     VkDeviceMemory memory {};
     [[nodiscard]]
     bool isValid() const noexcept {
-
         return MFA_VK_VALID(buffer) && MFA_VK_VALID(memory);
     }
     void revoke() {

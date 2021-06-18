@@ -64,13 +64,9 @@ MFA::DrawableObjectId MFA::PointLightPipeline::addGpuModel(RF::GpuModel & gpuMod
             if (subMesh.primitives.empty() == false) {
                 for (auto const & primitive : subMesh.primitives) {
                     MFA_ASSERT(primitive.uniqueId >= 0);
-#ifdef __ANDROID__
+
                     auto descriptorSet = drawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
-                    MFA_ASSERT(descriptorSet > 0);
-#else
-                    auto * descriptorSet = drawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
-                    MFA_ASSERT(descriptorSet != nullptr);
-#endif
+                    MFA_VK_VALID_ASSERT(descriptorSet);
 
                     std::vector<VkWriteDescriptorSet> writeInfo {};
 

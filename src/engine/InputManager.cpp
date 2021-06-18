@@ -39,12 +39,11 @@ void OnNewFrame() {
 
     int32_t mousePositionX = 0;
     int32_t mousePositionY = 0;
+#ifdef __DESKTOP__
     auto const mouseButtonMask = RF::GetMouseState(&mousePositionX, &mousePositionY);
-
     if (UISystem::HasFocus() == false) {
         state->isLeftMouseDown = mouseButtonMask & SDL_BUTTON(SDL_BUTTON_LEFT);
     }
-
     if (state->isMouseLocationValid == true) {
         state->mouseDeltaX = static_cast<float>(mousePositionX - state->mouseCurrentX);
         state->mouseDeltaY = static_cast<float>(mousePositionY - state->mouseCurrentY);
@@ -53,7 +52,13 @@ void OnNewFrame() {
     }
     state->mouseCurrentX = mousePositionX;
     state->mouseCurrentY = mousePositionY;
+#elif defined(__ANDROID__)
+    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+#else
+    #error Os is not supported
+#endif
 
+#ifdef __DESKTOP__
     auto const * keys = RF::GetKeyboardState();
     if (keys[MSDL::SDL_SCANCODE_W]) {
         state->forwardMove += 1.0f;
@@ -67,7 +72,11 @@ void OnNewFrame() {
     if (keys[MSDL::SDL_SCANCODE_A]) {
         state->rightMove -= 1.0f;   
     }
-    
+#elif defined(__ANDROID__)
+    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+#else
+    #error Os is not supported
+#endif
 }
 
 void Shutdown() {

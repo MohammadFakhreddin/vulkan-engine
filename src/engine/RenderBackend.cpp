@@ -26,13 +26,14 @@ static void VK_Check(VkResult const result) {
   }
 }
 
+#ifdef __DESKTOP__
 static void SDL_Check(MSDL::SDL_bool const result) {
   if(result != MSDL::SDL_TRUE) {\
       MFA_CRASH("SDL command failed");
   }
 }
 
-SDL_Window * CreateWindow(ScreenWidth const screenWidth, ScreenHeight const screenHeight) {
+MSDL::SDL_Window * CreateWindow(ScreenWidth const screenWidth, ScreenHeight const screenHeight) {
     MSDL::SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
     auto const screen_info = MFA::Platforms::ComputeScreenSize();
     auto * window = MSDL::SDL_CreateWindow(
@@ -59,6 +60,7 @@ VkSurfaceKHR CreateWindowSurface(SDL_Window * window, VkInstance_T * instance) {
     ));
     return ret;
 }
+#endif
 
 void DestroyWindowSurface(VkInstance instance, VkSurfaceKHR surface) {
     MFA_ASSERT(instance != nullptr);
@@ -128,6 +130,7 @@ VkSurfaceFormatKHR ChooseSurfaceFormat(
     return availableFormats[0];
 }
 
+#ifdef __DESKTOP__
 VkInstance CreateInstance(char const * applicationName, SDL_Window * window) {
     // Filling out application description:
     VkApplicationInfo application_info = {};
@@ -195,6 +198,7 @@ VkInstance CreateInstance(char const * applicationName, SDL_Window * window) {
     VK_Check(vkCreateInstance(&instanceInfo, nullptr, &vk_instance));
     return vk_instance;
 }
+#endif
 
 void DestroyInstance(VkInstance instance) {
     MFA_ASSERT(instance != nullptr);
@@ -209,7 +213,9 @@ VkDebugReportCallbackEXT CreateDebugCallback(
     VkDebugReportCallbackCreateInfoEXT debug_info = {};
     debug_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
     debug_info.pfnCallback = debugCallback;
-    debug_info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
+    debug_info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | 
+        VK_DEBUG_REPORT_WARNING_BIT_EXT | 
+        VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
     auto const debug_report_callback = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(vkGetInstanceProcAddr(
         vkInstance,
         "vkCreateDebugReportCallbackEXT"

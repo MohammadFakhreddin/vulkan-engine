@@ -94,13 +94,8 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel
             if (subMesh.primitives.empty() == false) {
                 for (auto const & primitive : subMesh.primitives) {
                     MFA_ASSERT(primitive.uniqueId >= 0);
-#ifdef __ANDROID__
                     auto descriptorSet = drawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
-                    MFA_ASSERT(descriptorSet > 0);
-#else
-                    auto * descriptorSet = drawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
-                    MFA_ASSERT(descriptorSet != nullptr);
-#endif
+                    MFA_VK_VALID_ASSERT(descriptorSet);
                     std::vector<VkWriteDescriptorSet> writeInfo {};
                     // TODO Create functionality for this inside render system
                     {// ModelTransform
@@ -419,11 +414,7 @@ void MFA::PBRModelPipeline::createDescriptorSetLayout() {
 }
 
 void MFA::PBRModelPipeline::destroyDescriptorSetLayout() {
-#ifdef __ANDROID__
-    MFA_ASSERT(mDescriptorSetLayout > 0);
-#else
-    MFA_ASSERT(mDescriptorSetLayout != nullptr);
-#endif
+    MFA_VK_VALID_ASSERT(mDescriptorSetLayout);
     RF::DestroyDescriptorSetLayout(mDescriptorSetLayout);    
 }
 

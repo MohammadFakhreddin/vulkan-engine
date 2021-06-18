@@ -151,12 +151,12 @@ bool Resize(ResizeInputParams const & params) {
 
 namespace MFA::Utils::DDSTexture {
 
-uintmax_t ComputeMipmapLen(
+size_t ComputeMipmapLen(
     uint32_t const width,
     uint32_t const height,
     TextureFormat const format
 ) {
-    uintmax_t mipmap_len = 0;
+    size_t mipmap_len = 0;
     enum class TextureType
     {
         BC,

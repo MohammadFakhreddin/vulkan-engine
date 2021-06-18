@@ -414,7 +414,7 @@ elseif(ANDROID)
         ${ANDROID_SOURCES} 
         ${ENGINE_SOURCES} 
         ${LIBS_SOURCES}
-        ${TOOL_SOURCES}
+        ${TOOLS_SOURCES}
         ${SCENES_SOURCES}
     )
 

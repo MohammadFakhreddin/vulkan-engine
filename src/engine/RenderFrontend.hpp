@@ -254,6 +254,11 @@ void PushConstants(
 
 uint8_t SwapChainImagesCount();
 
+void GetWindowSize(int32_t & outWidth, int32_t & outHeight);
+
+void GetDrawableSize(int32_t & outWidth, int32_t & outHeight);
+
+#ifdef __DESKTOP__
 // SDL Functions
 
 void WarpMouseInWindow(int32_t x, int32_t y);
@@ -265,18 +270,18 @@ uint8_t const * GetKeyboardState(int * numKeys = nullptr);
 [[nodiscard]]
 uint32_t GetWindowFlags();
 
-void GetWindowSize(int32_t & out_width, int32_t & out_height);
-
-void GetDrawableSize(int32_t & out_width, int32_t & out_height);
+#endif
 
 void AssignViewportAndScissorToCommandBuffer(
     VkCommandBuffer commandBuffer
 );
 
+#ifdef __DESKTOP__
 using EventWatchId = int;
 using EventWatch = std::function<int(void* data, MSDL::SDL_Event* event)>;
 EventWatchId AddEventWatch(EventWatch const & eventWatch);
 
 void RemoveEventWatch(EventWatchId watchId);
+#endif
 
 }

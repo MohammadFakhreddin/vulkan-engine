@@ -11,13 +11,29 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#define STB_IMAGE_IMPLEMENTATION
+#include "../src/libs/stb_image/stb_image.h"
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "../src/libs/tiny_obj_loader/tiny_obj_loader.h"
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#include "../src/libs/stb_image/stb_image_resize.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "../src/libs/stb_image/stb_image_write.h"
+#define TINYGLTF_NO_INCLUDE_STB_IMAGE
+#define TINYGLTF_NO_INCLUDE_STB_IMAGE_WRITE
+#define TINYGLTF_NO_EXTERNAL_IMAGE  // For disabling reading images when decoding json files
+#define TINYGLTF_IMPLEMENTATION
+#include "../src/libs/tiny_gltf_loader/tiny_gltf_loader.h"
+#define TINYKTX_IMPLEMENTATION
+#include "../src/libs/tiny_ktx/tinyktx.h"
+
 #include <android/log.h>
 #include <android_native_app_glue.h>
 #include "vulkan_wrapper/vulkan_wrapper.h"
 #include <Application.hpp>
 
 // Process the next main command.
-void handle_cmd(android_app* app, int32_t cmd) {
+void commandListener(android_app* app, int32_t cmd) {
   switch (cmd) {
     case APP_CMD_INIT_WINDOW:
       // The window is being shown, get it ready.
@@ -41,7 +57,7 @@ void handle_cmd(android_app* app, int32_t cmd) {
 void android_main(struct android_app* app) {
 
   // Set the callback to process system events
-  app->onAppCmd = handle_cmd;
+  app->onAppCmd = commandListener;
 
   Application application {};
   application.setAndroidApp(app);
