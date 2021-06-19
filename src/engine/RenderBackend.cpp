@@ -50,7 +50,9 @@ void DestroyWindow(SDL_Window * window) {
     MFA_ASSERT(window != nullptr);
     MSDL::SDL_DestroyWindow(window);
 }
+#endif
 
+#ifdef __DESKTOP__
 VkSurfaceKHR CreateWindowSurface(SDL_Window * window, VkInstance_T * instance) {
     VkSurfaceKHR ret {};
     SDL_Check(MSDL::SDL_Vulkan_CreateSurface(
@@ -60,6 +62,28 @@ VkSurfaceKHR CreateWindowSurface(SDL_Window * window, VkInstance_T * instance) {
     ));
     return ret;
 }
+#elif defined(__ANDROID__)
+VkSurfaceKHR CreateWindowSurface(ANativeWindow * window, VkInstance_T * instance) {
+    VkSurfaceKHR surface {};
+
+    VkAndroidSurfaceCreateInfoKHR createInfo{
+            .sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR,
+            .pNext = nullptr,
+            .flags = 0,
+            .window = window
+    };
+
+    VK_Check(vkCreateAndroidSurfaceKHR(
+        instance,
+        &createInfo,
+        nullptr,
+        &surface
+    ));
+
+    return surface;
+}
+#else
+    #error Os is not handled
 #endif
 
 void DestroyWindowSurface(VkInstance instance, VkSurfaceKHR surface) {
@@ -130,75 +154,89 @@ VkSurfaceFormatKHR ChooseSurfaceFormat(
     return availableFormats[0];
 }
 
+VkApplicationInfo applicationInfo;
+VkInstanceCreateInfo instanceInfo;
+
 #ifdef __DESKTOP__
 VkInstance CreateInstance(char const * applicationName, SDL_Window * window) {
+#elif defined(__ANDROID__)
+VkInstance CreateInstance(char const * applicationName, ANativeWindow * window) {
+#else
+#error Os not handled
+#endif
     // Filling out application description:
-    VkApplicationInfo application_info = {};
-    {
+    applicationInfo = VkApplicationInfo {
         // sType is mandatory
-        application_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+        .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         // pNext is mandatory
-        application_info.pNext = nullptr;
+        .pNext = nullptr,
         // The name of our application
-        application_info.pApplicationName = applicationName;
-        application_info.applicationVersion = 1;    // TODO Ask this as parameter
+        .pApplicationName = applicationName,
+        .applicationVersion = 1,    // TODO Ask this as parameter
         // The name of the engine (e.g: Game engine name)
-        application_info.pEngineName = EngineName;
+        .pEngineName = EngineName,
         // The version of the engine
-        application_info.engineVersion = EngineVersion;
+        .engineVersion = EngineVersion,
         // The version of Vulkan we're using for this application
-        application_info.apiVersion = VK_API_VERSION_1_1;
-    }
-    std::vector<char const *> instance_extensions {};
+        .apiVersion = VK_API_VERSION_1_1,
+    };
+    std::vector<char const *> instanceExtensions {};
+#ifdef __DESKTOP__
     {// Filling sdl extensions
         unsigned int sdl_extenstion_count = 0;
         SDL_Check(MSDL::SDL_Vulkan_GetInstanceExtensions(window, &sdl_extenstion_count, nullptr));
-        instance_extensions.resize(sdl_extenstion_count);
+        instanceExtensions.resize(sdl_extenstion_count);
         SDL_Check(MSDL::SDL_Vulkan_GetInstanceExtensions(
             window,
             &sdl_extenstion_count,
-            instance_extensions.data()
+            instanceExtensions.data()
         ));
-        instance_extensions.emplace_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
     }
-    {// Checking for extension support
-        uint32_t vk_supported_extension_count = 0;
-        VK_Check(vkEnumerateInstanceExtensionProperties(
-            nullptr,
-            &vk_supported_extension_count,
-            nullptr
-        ));
-        if (vk_supported_extension_count == 0) {
-            MFA_CRASH("no extensions supported!");
-        }
+#elif defined(__ANDROID__)
+    {// Filling android extensions
+        instanceExtensions.emplace_back("VK_KHR_surface");
+        instanceExtensions.emplace_back("VK_KHR_android_surface");
     }
-    // TODO We should enumarate layers before using them
-    // Filling out instance description:
-    VkInstanceCreateInfo instanceInfo = {};
-    {
-        // sType is mandatory
-        instanceInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-        // pNext is mandatory
-        instanceInfo.pNext = nullptr;
-        // flags is mandatory
-        instanceInfo.flags = 0;
-        // The application info structure is then passed through the instance
-        instanceInfo.pApplicationInfo = &application_info;
-#ifdef MFA_DEBUG
-        instanceInfo.enabledLayerCount = static_cast<uint32_t>(DebugLayers.size());
-        instanceInfo.ppEnabledLayerNames = DebugLayers.data();
 #else
-        instanceInfo.enabledLayerCount = 0;
-        instanceInfo.ppEnabledLayerNames = nullptr;
+    #error Os not handled
 #endif
-        instanceInfo.enabledExtensionCount = static_cast<uint32_t>(instance_extensions.size());
-        instanceInfo.ppEnabledExtensionNames = instance_extensions.data();
-    }
-    VkInstance vk_instance;
-    VK_Check(vkCreateInstance(&instanceInfo, nullptr, &vk_instance));
-    return vk_instance;
+    instanceExtensions.emplace_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+//    // TODO We should enumarate layers before using them (Both desktop and android)
+//    {// Checking for extension support
+//        uint32_t vk_supported_extension_count = 0;
+//        VK_Check(vkEnumerateInstanceExtensionProperties(
+//            nullptr,
+//            &vk_supported_extension_count,
+//            nullptr
+//        ));
+//        if (vk_supported_extension_count == 0) {
+//            MFA_CRASH("no extensions supported!");
+//        }
+//    }
+    // Filling out instance description:
+    instanceInfo = VkInstanceCreateInfo {
+        // sType is mandatory
+        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+        // pNext is mandatory
+        .pNext = nullptr,
+        // flags is mandatory
+//        .flags = 0,
+        // The application info structure is then passed through the instance
+        .pApplicationInfo = &applicationInfo,
+#ifdef MFA_DEBUG
+        .enabledLayerCount = static_cast<uint32_t>(DebugLayers.size()),
+        .ppEnabledLayerNames = DebugLayers.data(),
+#else
+        .enabledLayerCount = 0,
+        .ppEnabledLayerNames = nullptr,
+#endif
+        .enabledExtensionCount = static_cast<uint32_t>(instanceExtensions.size()),
+        .ppEnabledExtensionNames = instanceExtensions.data()
+    };
+    VkInstance instance = nullptr;
+    VK_Check(vkCreateInstance(&instanceInfo, nullptr, &instance));
+    return instance;
 }
-#endif
 
 void DestroyInstance(VkInstance instance) {
     MFA_ASSERT(instance != nullptr);

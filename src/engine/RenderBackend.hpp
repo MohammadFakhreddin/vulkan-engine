@@ -6,6 +6,7 @@
 #include <functional>
 #ifdef __ANDROID__
 #include "vulkan_wrapper.h"
+#include <android_native_app_glue.h>
 #else
 #include <vulkan/vulkan.h>
 #endif
@@ -51,9 +52,16 @@ using CpuShader = AssetSystem::Shader;
 SDL_Window * CreateWindow(ScreenWidth screenWidth, ScreenHeight screenHeight);
 
 void DestroyWindow(SDL_Window * window);
+#endif
 
+#ifdef __DESKTOP__
 [[nodiscard]]
 VkSurfaceKHR CreateWindowSurface(SDL_Window * window, VkInstance_T * instance);
+#elif defined(__ANDROID__)
+[[nodiscard]]
+VkSurfaceKHR CreateWindowSurface(ANativeWindow * window, VkInstance_T * instance);
+#else
+    #error Unhandled os detected
 #endif
 
 void DestroyWindowSurface(VkInstance instance, VkSurfaceKHR surface);
@@ -75,6 +83,11 @@ VkSurfaceFormatKHR ChooseSurfaceFormat(uint8_t availableFormatsCount, VkSurfaceF
 #ifdef __DESKTOP__
 [[nodiscard]]
 VkInstance CreateInstance(char const * applicationName, SDL_Window * window);
+#elif defined(__ANDROID__)
+[[nodiscard]]
+VkInstance CreateInstance(char const * applicationName, ANativeWindow * window);
+#else
+#error Os not handled
 #endif
 
 void DestroyInstance(VkInstance instance);

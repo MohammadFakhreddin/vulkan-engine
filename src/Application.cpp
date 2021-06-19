@@ -15,7 +15,9 @@
 namespace RF = MFA::RenderFrontend;
 namespace UI = MFA::UISystem;
 namespace IM = MFA::InputManager;
+#ifdef __DESKTOP__
 namespace MSDL = MFA::MSDL;
+#endif
 
 
 Application::Application()
@@ -33,7 +35,20 @@ void Application::Init() {
 
     MFA_ASSERT(mIsInitialized == false);
 
-    RF::Init({SCREEN_WIDTH, SCREEN_HEIGHT, "Cool app"});
+    {
+        RF::InitParams params{};
+        params.applicationName = "MfaEngine";
+    #ifdef __ANDROID__
+        params.app = mAndroidApp;
+    #elif defined(__DESKTOP__)
+        params.resizable = true;
+        params.screenWidth = SCREEN_WIDTH;
+        params.screenHeight = SCREEN_HEIGHT;
+    #else
+        #error Os not supported
+    #endif
+        RF::Init(params);
+    }
     UI::Init();
     IM::Init();
     
@@ -68,7 +83,7 @@ void Application::run() {
         //Event handler
         MSDL::SDL_Event e;
         //While application is running
-        uint32_t const targetFps = 1000 / 60;
+        uint32_t const targetFps = 1000 / 120;
         uint32_t deltaTime = 0;
         while (!quit)
         {

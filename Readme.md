@@ -7,7 +7,7 @@
 ### Windows
 ```
 Create directory build64
-cmake . -BBuild66 -DCMAKE_GENERATOR=x64
+cmake . -BBuild64 -DCMAKE_GENERATOR=x64
 ```
 Find .sln files inside build64 and then run the project
 <br/>

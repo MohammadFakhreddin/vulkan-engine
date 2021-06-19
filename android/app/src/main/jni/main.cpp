@@ -27,10 +27,11 @@
 #define TINYKTX_IMPLEMENTATION
 #include "../src/libs/tiny_ktx/tinyktx.h"
 
+#include "vulkan_wrapper/vulkan_wrapper.h"
+#include "Application.hpp"
+
 #include <android/log.h>
 #include <android_native_app_glue.h>
-#include "vulkan_wrapper/vulkan_wrapper.h"
-#include <Application.hpp>
 
 Application application {};
 
@@ -39,7 +40,11 @@ void commandListener(android_app* app, int32_t cmd) {
   switch (cmd) {
     case APP_CMD_INIT_WINDOW:
     {// The window is being shown, get it ready.
-      application.Init();
+        if(!InitVulkan()){
+            MFA_CRASH("Vulkan is not supported!");
+            return;
+        }
+        application.Init();
     }
     break;
     case APP_CMD_TERM_WINDOW:
@@ -53,7 +58,7 @@ void commandListener(android_app* app, int32_t cmd) {
     }
     break;
     default:
-      __android_log_print(ANDROID_LOG_INFO, "MFA", "event not handled: %d", cmd);
+      MFA_LOG_INFO("Event not handled: %d", cmd);
   }
 }
 

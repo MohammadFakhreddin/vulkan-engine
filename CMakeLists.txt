@@ -8,7 +8,11 @@ project ("MFaEngine" CXX C)
 
 set_property (GLOBAL PROPERTY USE_FOLDERS ON)
 
+if (ANDROID)
 set (CMAKE_CXX_STANDARD 17)
+else ()
+set (CMAKE_CXX_STANDARD 20)
+endif ()
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(APPLE)
@@ -425,7 +429,7 @@ elseif(ANDROID)
     )
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
-       -std=c++11 -Wall -Wno-unused-variable \
+       -std=c++20 -Wall -Wno-unused-variable \
        -Wno-delete-non-virtual-dtor -DVK_USE_PLATFORM_ANDROID_KHR")
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -u ANativeActivity_onCreate")
 

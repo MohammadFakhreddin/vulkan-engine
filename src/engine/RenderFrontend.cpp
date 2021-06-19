@@ -8,7 +8,6 @@
 
 #include <string>
 
-// TODO RenderFrontend could be a class
 namespace MFA::RenderFrontend {
 
 static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
@@ -26,11 +25,7 @@ struct State {
     ScreenHeight screenHeight = 0;
     // CreateInstance
     std::string application_name {};
-    VkInstance vk_instance {};
-#ifdef __DESKTOP__
-    // CreateWindow
-    MSDL::SDL_Window * window = nullptr;
-#endif
+    VkInstance vk_instance = nullptr;
     // CreateDebugCallback
     VkDebugReportCallbackEXT vkDebugReportCallbackExt {};
     VkSurfaceKHR surface {};
@@ -54,10 +49,16 @@ struct State {
     bool isWindowResizable = false;
     bool windowResized = false;
     ResizeEventListener resizeEventListener = nullptr;
+#ifdef __DESKTOP__
+    // CreateWindow
+    MSDL::SDL_Window * window = nullptr;
     // Event watches
     int nextEventListenerId = 0;
-#ifdef __DESKTOP__
     std::vector<EventWatchGroup> eventListeners {};
+#elif defined(__ANDROID__)
+    ANativeWindow * window = nullptr;
+#else
+#error Os is not handled
 #endif
     bool isWindowVisible = true;                        // Currently only minimize can cause this to be false
 } static * state = nullptr;
@@ -120,19 +121,15 @@ static int SDLEventWatcher(void* data, MSDL::SDL_Event* event) {
 bool Init(InitParams const & params) {
     state = new State();
     state->application_name = params.applicationName;
+#ifdef __DESKTOP__
     state->screenWidth = params.screenWidth;
     state->screenHeight = params.screenHeight;
-
-#ifdef __DESKTOP__
     state->window = RB::CreateWindow(
         state->screenWidth, 
         state->screenHeight
     );
-#endif
-
     state->isWindowResizable = params.resizable;
 
-#ifdef __DESKTOP__
     if (params.resizable) {
         // Make window resizable
         MSDL::SDL_SetWindowResizable(state->window, MSDL::SDL_TRUE);
@@ -142,15 +139,19 @@ bool Init(InitParams const & params) {
 
     MSDL::SDL_AddEventWatch(SDLEventWatcher, state->window);
 
+#elif defined(__ANDROID__)
+    state->window = params.app->window;
+    state->screenWidth = ANativeWindow_getWidth(state->window);
+    state->screenHeight = ANativeWindow_getHeight(state->window);
+#else
+    #error Os is not supported
+#endif
+
     state->vk_instance = RB::CreateInstance(
         state->application_name.c_str(),
         state->window
     );
-#elif defined(__ANDROID__)
-    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
-#else
-    #error Os is not handled
-#endif
+    MFA_VK_VALID_ASSERT(state->vk_instance);
 
 #if defined(MFA_DEBUG)  // TODO Fix support for android
     state->vkDebugReportCallbackExt = RB::CreateDebugCallback(
@@ -159,13 +160,8 @@ bool Init(InitParams const & params) {
     );
 #endif
 
-#ifdef __DESKTOP__
     state->surface = RB::CreateWindowSurface(state->window, state->vk_instance);
-#elif defined(__ANDROID__)
-    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
-#else
-    #error Os not handled
-#endif
+
     {
         auto const find_physical_device_result = RB::FindPhysicalDevice(state->vk_instance); // TODO Check again for retry count number
         state->physicalDevice = find_physical_device_result.physicalDevice;
@@ -1058,7 +1054,8 @@ void GetWindowSize(int32_t & outWidth, int32_t & outHeight) {
 #ifdef __DESKTOP__
     MSDL::SDL_GetWindowSize(state->window, &outWidth, &outHeight);
 #elif __ANDROID__
-    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+    outWidth = ANativeWindow_getWidth(state->window);
+    outHeight = ANativeWindow_getHeight(state->window);
 #else
 #error Os not handled
 #endif
@@ -1067,8 +1064,10 @@ void GetWindowSize(int32_t & outWidth, int32_t & outHeight) {
 void GetDrawableSize(int32_t & outWidth, int32_t & outHeight) {
 #ifdef __DESKTOP__
     MSDL::SDL_GL_GetDrawableSize(state->window, &outWidth, &outHeight);
-#elif __ANDROID__
-    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+#elif defined(__ANDROID__)
+    // TODO Maybe we have to use another function
+    outWidth = ANativeWindow_getWidth(state->window);
+    outHeight = ANativeWindow_getHeight(state->window);
 #else
 #error Os not handled
 #endif

@@ -2,7 +2,13 @@
 
 #include "RenderBackend.hpp"
 
+#ifdef __DESKTOP__
 #include "libs/sdl/SDL.hpp"
+#elif defined(__ANDROID__)
+#include <android_native_app_glue.h>
+#else
+#error Os is not supported
+#endif
 
 namespace MFA::RenderFrontend {
 
@@ -13,13 +19,20 @@ using ScreenHeight = RB::ScreenHeight;
 using ResizeEventListener = std::function<void()>;
 
 struct InitParams {
+#ifdef __DESKTOP__
     ScreenWidth screenWidth = 0;
     ScreenHeight screenHeight = 0;
-    char const * applicationName = nullptr;
     bool resizable = true;
+#elif defined(__ANDROID__)
+    android_app * app = nullptr;
+#else
+    #error Os is not supported
+#endif
+    char const *applicationName = nullptr;
 };
 
 bool Init(InitParams const & params);
+
 bool Shutdown();
 
 void SetResizeEventListener(ResizeEventListener const & eventListener);
