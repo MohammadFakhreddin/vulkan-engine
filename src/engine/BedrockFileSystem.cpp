@@ -8,6 +8,10 @@
 
 namespace MFA::FileSystem {
 
+#ifdef __ANDROID__
+    static android_app * mApp = nullptr;
+#endif
+
 class FileHandle {
 public:
 
@@ -183,7 +187,7 @@ uint64_t Read(FileHandle * file, Blob const & memory) {
     return ret;
 }
 
-bool IsUsable(FileHandle * file) {
+bool FileIsUsable(FileHandle * file) {
     return file != nullptr && file->isOk();
 }
 
@@ -214,5 +218,126 @@ bool Tell(FileHandle * file, int64_t & outLocation) {
     MFA_ASSERT(file != nullptr);
     return file->tell(outLocation);
 }
+
+#ifdef __ANDROID__
+void SetAndroidApp(android_app * androidApp) {
+    MFA_ASSERT(androidApp != nullptr);
+    mApp = androidApp;
+}
+
+AndroidAssetHandle::AndroidAssetHandle(char const * path) {
+    close();
+    mFile = AAssetManager_open(
+        mApp->activity->assetManager,
+        path,
+        AASSET_MODE_BUFFER
+    );
+}
+
+AndroidAssetHandle::~AndroidAssetHandle() {close();}
+
+[[nodiscard]]
+bool AndroidAssetHandle::isOk() const {
+    bool ret = false;
+    if(mFile != nullptr) {
+        ret = true;
+    }
+    return ret;
+}
+
+bool AndroidAssetHandle::close() {
+    bool ret = false;
+    if (isOk()) {
+        AAsset_close(mFile);
+        mFile = nullptr;
+        ret = true;
+    }
+    return ret;
+}
+
+[[nodiscard]]
+bool AndroidAssetHandle::seek(const int offset, const Origin origin) const {
+    bool success = false;
+    if (isOk()) {
+        int _origin {};
+        switch(origin) {
+            case Origin::Start:
+                _origin = 0;
+                break;
+            case Origin::End:
+                _origin = SEEK_END;
+                break;
+            case Origin::Current:
+                _origin = SEEK_CUR;
+                break;
+            default:
+                MFA_CRASH("Invalid origin");
+        }
+        auto const seekResult = AAsset_seek(mFile, offset, _origin);
+        success = (seekResult >= 0);
+    }
+    return success;
+}
+
+[[nodiscard]]
+bool AndroidAssetHandle::seekToEnd() const {
+    return seek(0, Origin::End);
+}
+
+[[nodiscard]]
+uint64_t AndroidAssetHandle::read (Blob const & memory) const {
+    uint64_t ret = 0;
+    if (isOk() && memory.len > 0) {
+        ret = AAsset_read(mFile, memory.ptr, memory.len);
+    }
+    return ret;
+}
+
+[[nodiscard]]
+uint64_t AndroidAssetHandle::totalSize () const {
+    uint64_t totalSize = 0;
+    if (isOk()) {
+        totalSize = AAsset_getLength64(mFile);
+    }
+    return totalSize;
+}
+
+AndroidAssetHandle * Android_OpenAsset(char const * path) {
+    // TODO Use allocator system
+    auto * handle = new AndroidAssetHandle {path};
+    return handle;
+}
+
+bool Android_CloseAsset(AndroidAssetHandle * file) {
+    bool ret = false;
+    if(file != nullptr) {
+        file->close();
+        delete file;
+        ret = true;
+    }
+    return ret;
+}
+
+size_t Android_AssetSize(AndroidAssetHandle * file) {
+    size_t result = 0;
+    if (file != nullptr) {
+        result = file->totalSize();
+    }
+    return result;
+}
+
+uint64_t Android_ReadAsset(AndroidAssetHandle * file, Blob const & memory) {
+    uint64_t readCount = 0;
+    if (file != nullptr) {
+        readCount = file->read(memory);
+    }
+    return readCount;
+}
+
+bool Android_AssetIsUsable(AndroidAssetHandle * file) {
+    return file != nullptr && file->isOk();
+}
+
+#endif
 
 }

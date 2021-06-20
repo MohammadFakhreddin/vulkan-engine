@@ -162,13 +162,13 @@ bool Init(InitParams const & params) {
 
     state->surface = RB::CreateWindowSurface(state->window, state->vk_instance);
 
-    {
-        auto const find_physical_device_result = RB::FindPhysicalDevice(state->vk_instance); // TODO Check again for retry count number
-        state->physicalDevice = find_physical_device_result.physicalDevice;
-        state->physicalDeviceFeatures = find_physical_device_result.physicalDeviceFeatures;
+    {// FindPhysicalDevice
+        auto const findPhysicalDeviceResult = RB::FindPhysicalDevice(state->vk_instance); // TODO Check again for retry count number
+        state->physicalDevice = findPhysicalDeviceResult.physicalDevice;
+        state->physicalDeviceFeatures = findPhysicalDeviceResult.physicalDeviceFeatures;
     }
 
-    if(false == RB::CheckSwapChainSupport(state->physicalDevice)) {
+    if(RB::CheckSwapChainSupport(state->physicalDevice) == false) {
         MFA_LOG_ERROR("Swapchain is not supported on this device");
         return false;
     }

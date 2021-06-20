@@ -181,6 +181,7 @@ VkInstance CreateInstance(char const * applicationName, ANativeWindow * window) 
         .apiVersion = VK_API_VERSION_1_1,
     };
     std::vector<char const *> instanceExtensions {};
+
 #ifdef __DESKTOP__
     {// Filling sdl extensions
         unsigned int sdl_extenstion_count = 0;
@@ -196,6 +197,7 @@ VkInstance CreateInstance(char const * applicationName, ANativeWindow * window) 
     {// Filling android extensions
         instanceExtensions.emplace_back("VK_KHR_surface");
         instanceExtensions.emplace_back("VK_KHR_android_surface");
+        // Note: It appears that debug report is not supported on android
     }
 #else
     #error Os not handled
@@ -220,10 +222,10 @@ VkInstance CreateInstance(char const * applicationName, ANativeWindow * window) 
         // pNext is mandatory
         .pNext = nullptr,
         // flags is mandatory
-//        .flags = 0,
+        .flags = 0,
         // The application info structure is then passed through the instance
         .pApplicationInfo = &applicationInfo,
-#ifdef MFA_DEBUG
+#if defined(MFA_DEBUG) && defined(__ANDROID__) == false
         .enabledLayerCount = static_cast<uint32_t>(DebugLayers.size()),
         .ppEnabledLayerNames = DebugLayers.data(),
 #else
@@ -433,7 +435,7 @@ void TransferImageLayout(
     MFA_VK_VALID_ASSERT(commandPool);
     MFA_VK_VALID_ASSERT(image);
 
-    VkCommandBuffer const commandBuffer = BeginSingleTimeCommand(device, commandPool);
+    auto const commandBuffer = BeginSingleTimeCommand(device, commandPool);
 
     VkImageMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -523,8 +525,8 @@ BufferGroup CreateBuffer(
 }
 
 void MapDataToBuffer(
-    VkDevice const device,
-    VkDeviceMemory const bufferMemory,
+    VkDevice device,
+    VkDeviceMemory bufferMemory,
     CBlob const dataBlob
 ) {
     MFA_ASSERT(dataBlob.ptr != nullptr);
@@ -537,11 +539,11 @@ void MapDataToBuffer(
 }
 
 void CopyBuffer(
-    VkDevice const device,
-    VkCommandPool const commandPool,
-    VkQueue const graphicQueue,
-    VkBuffer const sourceBuffer,
-    VkBuffer const destinationBuffer,
+    VkDevice device,
+    VkCommandPool commandPool,
+    VkQueue graphicQueue,
+    VkBuffer sourceBuffer,
+    VkBuffer destinationBuffer,
     VkDeviceSize const size
 ) {
     auto * command_buffer = BeginSingleTimeCommand(device, commandPool);
@@ -621,7 +623,7 @@ ImageGroup CreateImage(
 }
 
 void DestroyImage(
-    VkDevice const device,
+    VkDevice device,
     ImageGroup const & image_group
 ) {
     vkDestroyImage(device, image_group.image, nullptr);
@@ -881,7 +883,7 @@ LogicalDevice CreateLogicalDevice(
     deviceCreateInfo.ppEnabledExtensionNames = &device_extensions;
     // Necessary for shader (for some reason)
     deviceCreateInfo.pEnabledFeatures = &enabledPhysicalDeviceFeatures;
-#ifdef MFA_DEBUG
+#if defined(MFA_DEBUG) && defined(__ANDROID__) == false
     deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(DebugLayers.size());
     deviceCreateInfo.ppEnabledLayerNames = DebugLayers.data();
 #else

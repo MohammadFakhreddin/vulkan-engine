@@ -150,7 +150,6 @@ void GLTFMeshViewerScene::Init() {
     }
 }
 
-// TODO Why deltaTime is uint32_t ?
 void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & drawPass) {
     MFA_ASSERT(mSelectedModelIndex >= 0 && mSelectedModelIndex < mModelsRenderData.size());
 

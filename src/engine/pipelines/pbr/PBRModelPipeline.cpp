@@ -422,7 +422,7 @@ void MFA::PBRModelPipeline::createPipeline() {
     // TODO We need path class
     // Vertex shader
     auto cpuVertexShader = Importer::ImportShaderFromSPV(
-        Path::Asset("shaders/pbr_model/PBRModel.vert.spv").c_str(), 
+        Path::Asset("shaders/pbr_model/PbrModel.vert.spv").c_str(),
         MFA::AssetSystem::Shader::Stage::Vertex, 
         "main"
     );
@@ -436,7 +436,7 @@ void MFA::PBRModelPipeline::createPipeline() {
     
     // Fragment shader
     auto cpuFragmentShader = Importer::ImportShaderFromSPV(
-        Path::Asset("shaders/pbr_model/PBRModel.frag.spv").c_str(),
+        Path::Asset("shaders/pbr_model/PbrModel.frag.spv").c_str(),
         MFA::AssetSystem::Shader::Stage::Fragment,
         "main"
     );

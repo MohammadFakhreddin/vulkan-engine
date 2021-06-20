@@ -217,7 +217,7 @@ size_t ComputeMipmapLen(
 LoadResult Load (Data & out_image_data, char const * path) {
     LoadResult ret = LoadResult::INVALID;
     auto * file = FileSystem::OpenFile(path, FileSystem::Usage::Read);
-    if(FileSystem::IsUsable(file)){
+    if(FileSystem::FileIsUsable(file)){
         auto const file_size = FileSystem::FileSize(file);
         MFA_ASSERT(file_size > 0);
         out_image_data.asset = Memory::Alloc(file_size);

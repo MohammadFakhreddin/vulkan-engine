@@ -244,23 +244,43 @@ AS::Shader ImportShaderFromSPV(
     MFA_ASSERT(path != nullptr);
     AS::Shader shader {};
     if (path != nullptr) {
+#ifdef __DESKTOP__
         auto * file = FS::OpenFile(path,  FS::Usage::Read);
         MFA_DEFER{FS::CloseFile(file);};
-        if(FS::IsUsable(file)) {
+        if(FS::FileIsUsable(file)) {
             auto const fileSize = FS::FileSize(file);
             MFA_ASSERT(fileSize > 0);
 
             auto const buffer = Memory::Alloc(fileSize);
 
-            shader.init(entryPoint, stage, buffer);
-
             auto const readBytes = FS::Read(file, buffer);
 
             if(readBytes != buffer.len) {
-                shader.revokeData();
                 Memory::Free(buffer);
+            } else {
+                shader.init(entryPoint, stage, buffer);
             }
         }
+#elif defined(__ANDROID__)
+        auto * file = FS::Android_OpenAsset(path);
+        MFA_DEFER {FS::Android_CloseAsset(file);};
+        if (FS::Android_AssetIsUsable(file)) {
+            auto const fileSize = FS::Android_AssetSize(file);
+            MFA_ASSERT(fileSize > 0);
+
+            auto const buffer = Memory::Alloc(fileSize);
+
+            auto const readBytes = FS::Android_ReadAsset(file, buffer);
+            if(readBytes != buffer.len) {
+                shader.revokeData();
+                Memory::Free(buffer);
+            } else {
+                shader.init(entryPoint, stage, buffer);
+            }
+        }
+#else
+#error Os not handled
+#endif
     }
     return shader;
 }
@@ -286,7 +306,7 @@ AS::Mesh ImportObj(char const * path) {
     if(FS::Exists(path)){
         auto * file = FS::OpenFile(path, FS::Usage::Read);
         MFA_DEFER {FS::CloseFile(file);};
-        if(FS::IsUsable(file)) {
+        if(FS::FileIsUsable(file)) {
             bool is_counter_clockwise = false;
             {//Check if normal vectors are reverse
                 auto first_line_blob = Memory::Alloc(200);
@@ -1489,7 +1509,7 @@ RawFile ReadRawFile(char const * path) {
     if(path != nullptr) {
         auto * file = FS::OpenFile(path, FS::Usage::Read);
         MFA_DEFER {FS::CloseFile(file);};
-        if(FS::IsUsable(file)) {
+        if(FS::FileIsUsable(file)) {
             auto const file_size = FS::FileSize(file);
             // TODO Allocate using a memory pool system
             auto const memory_blob = Memory::Alloc(file_size);

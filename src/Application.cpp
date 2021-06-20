@@ -7,6 +7,7 @@
 #include "scenes/texture_viewer_scene/TextureViewerScene.hpp"
 #include "engine/RenderFrontend.hpp"
 #include "engine/Scene.hpp"
+#include "engine/BedrockFileSystem.hpp"
 
 #ifdef __ANDROID__
 #include <android_native_app_glue.h>
@@ -15,6 +16,7 @@
 namespace RF = MFA::RenderFrontend;
 namespace UI = MFA::UISystem;
 namespace IM = MFA::InputManager;
+namespace FS = MFA::FileSystem;
 #ifdef __DESKTOP__
 namespace MSDL = MFA::MSDL;
 #endif
@@ -136,6 +138,7 @@ void Application::run() {
 #ifdef __ANDROID__
 void Application::setAndroidApp(android_app * androidApp) {
     mAndroidApp = androidApp;
+    MFA::FileSystem::SetAndroidApp(androidApp);
 }
 #endif
 
