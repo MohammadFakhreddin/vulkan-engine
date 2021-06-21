@@ -25,7 +25,7 @@ void GLTFMeshViewerScene::Init() {
         {
             ModelRenderRequiredData params {};
             params.displayName = "CesiumMan";
-            Path::Asset("models/CesiumMan/gltf/CesiumMan.gltf", params.address);
+            Path::Asset("models/CesiumMan/glTF/CesiumMan.gltf", params.address);
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {0.0f, 0.0f, -180.0f});
             MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.0f, -7.0f});        
             MFA::Copy<3>(params.initialParams.light.position, {0.0f, -2.0f, -2.0f});

@@ -74,6 +74,8 @@ public:
     [[nodiscard]]
     bool seekToEnd() const;
 
+    bool tell(int64_t & outLocation) const;
+
     [[nodiscard]]
     uint64_t read (Blob const & memory) const;
 
@@ -98,6 +100,13 @@ uint64_t Android_ReadAsset(AndroidAssetHandle * file, Blob const & memory);
 
 [[nodiscard]]
 bool Android_AssetIsUsable(AndroidAssetHandle * file);
+
+[[nodiscard]]
+bool Android_Seek(AndroidAssetHandle * file, int offset, Origin origin);
+
+[[nodiscard]]
+bool Android_Tell(AndroidAssetHandle * file, int64_t & outLocation);
+
 #endif
 
 

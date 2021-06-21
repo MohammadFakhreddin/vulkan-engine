@@ -7,6 +7,7 @@
 #include "libs/tiny_gltf_loader/tiny_gltf_loader.h"
 
 #include <glm/gtx/quaternion.hpp>
+#include <libs/tiny_gltf_loader/tiny_gltf_loader.h>
 
 namespace MFA::Importer {
 
@@ -1369,7 +1370,6 @@ void GLTF_extractAnimations(
 
 // Based on sasha willems solution and a comment in github
 AS::Model ImportGLTF(char const * path) {
-    // TODO Create separate functions for each part
     MFA_ASSERT(path != nullptr);
     AS::Model resultModel {};
     if (path != nullptr) {
@@ -1382,19 +1382,20 @@ AS::Model ImportGLTF(char const * path) {
         auto const extension = FS::ExtractExtensionFromPath(path);
 
         bool success = false;
+
         if (extension == ".gltf") {
             success = loader.LoadASCIIFromFile(
-                &gltfModel, 
-                &error,
-                &warning,  
-                std::string(path)
-            );            
+                    &gltfModel,
+                    &error,
+                    &warning,
+                    path
+            );
         } else if (extension == ".glb") {
             success = loader.LoadBinaryFromFile(
-                &gltfModel, 
-                &error,
-                &warning,  
-                std::string(path)
+                    &gltfModel,
+                    &error,
+                    &warning,
+                    path
             );
         } else {
             MFA_CRASH("ImportGLTF format is not support: %s", extension.c_str());
@@ -1504,25 +1505,43 @@ bool FreeMesh(AS::Mesh * mesh) {
 }
 
 RawFile ReadRawFile(char const * path) {
-    RawFile ret {};
+    RawFile rawFile {};
     MFA_ASSERT(path != nullptr);
     if(path != nullptr) {
+#ifdef __DESKTOP__
         auto * file = FS::OpenFile(path, FS::Usage::Read);
         MFA_DEFER {FS::CloseFile(file);};
         if(FS::FileIsUsable(file)) {
             auto const file_size = FS::FileSize(file);
             // TODO Allocate using a memory pool system
             auto const memory_blob = Memory::Alloc(file_size);
-            auto const read_bytes = FS::Read(file, ret.data);
+            auto const read_bytes = FS::Read(file, memory_blob);
             // Means that reading is successful
             if(read_bytes == file_size) {
-                ret.data = memory_blob;
+                rawFile.data = memory_blob;
             } else {
                 Memory::Free(memory_blob);
             }
         }
+#elif defined(__ANDROID__)
+        auto * file = FS::Android_OpenAsset(path);
+        MFA_DEFER {FS::Android_CloseAsset(file);};
+        if (FS::Android_AssetIsUsable(file)) {
+            auto const fileSize = FS::Android_AssetSize(file);
+            auto const memoryBlob = Memory::Alloc(fileSize);
+            auto const readBytes = FS::Android_ReadAsset(file, memoryBlob);
+            // Means that reading is successful
+            if(readBytes == fileSize) {
+                rawFile.data = memoryBlob;
+            } else {
+                Memory::Free(memoryBlob);
+            }
+        }
+#else
+    #error Os not handled
+#endif
     }
-    return ret;
+    return rawFile;
 }
 
 bool FreeRawFile (RawFile * rawFile) {

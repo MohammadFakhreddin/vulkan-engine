@@ -1,5 +1,9 @@
 #pragma once
 
+#if defined(__ANDROID__)
+#include <android_native_app_glue.h>
+#endif
+
 namespace MFA::InputManager {
 
     void Init();
@@ -22,5 +26,9 @@ namespace MFA::InputManager {
 
     [[nodiscard]]
     bool IsLeftMouseDown();
-    
+
+#ifdef __ANDROID__
+    void SetInputQueue(AInputQueue * inputQueue_);
+#endif
+
 }

@@ -1005,7 +1005,6 @@ void OnNewFrame(float deltaTimeInSec) {
 #ifdef __DESKTOP__
     state->isWindowVisible = (GetWindowFlags() & MSDL::SDL_WINDOW_MINIMIZED) > 0 ? false : true;
 #elif defined(__ANDROID__)
-    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
 #else
     #error Os is not handled
 #endif

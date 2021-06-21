@@ -19,6 +19,7 @@
 #include "../src/libs/stb_image/stb_image_resize.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../src/libs/stb_image/stb_image_write.h"
+#define TINYGLTF_ANDROID_LOAD_FROM_ASSETS
 #define TINYGLTF_NO_INCLUDE_STB_IMAGE
 #define TINYGLTF_NO_INCLUDE_STB_IMAGE_WRITE
 #define TINYGLTF_NO_EXTERNAL_IMAGE  // For disabling reading images when decoding json files
@@ -28,7 +29,9 @@
 #include "../src/libs/tiny_ktx/tinyktx.h"
 
 #include "vulkan_wrapper/vulkan_wrapper.h"
+
 #include "Application.hpp"
+#include "engine/InputManager.hpp"
 
 #include <android/log.h>
 #include <android_native_app_glue.h>
@@ -57,6 +60,12 @@ void commandListener(android_app* app, int32_t cmd) {
         MFA::RenderFrontend::NotifyDeviceResized();
     }
     break;
+    case APP_CMD_INPUT_CHANGED:
+    {
+        MFA_ASSERT(app->inputQueue != nullptr);
+        MFA::InputManager::SetInputQueue(app->inputQueue);
+    }
+    break;
     default:
       MFA_LOG_INFO("Event not handled: %d", cmd);
   }
@@ -68,6 +77,7 @@ void android_main(struct android_app* app) {
   app->onAppCmd = commandListener;
 
   application.setAndroidApp(app);
+  tinygltf::asset_manager = app->activity->assetManager;
   // Main loop
   application.run();
 }

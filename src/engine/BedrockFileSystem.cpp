@@ -302,6 +302,13 @@ uint64_t AndroidAssetHandle::totalSize () const {
     return totalSize;
 }
 
+bool AndroidAssetHandle::tell(int64_t & outLocation) const {
+    if (isOk()) {
+        outLocation = totalSize() - AAsset_getRemainingLength64(mFile);
+    }
+    return false;
+}
+
 AndroidAssetHandle * Android_OpenAsset(char const * path) {
     // TODO Use allocator system
     auto * handle = new AndroidAssetHandle {path};
@@ -336,6 +343,17 @@ uint64_t Android_ReadAsset(AndroidAssetHandle * file, Blob const & memory) {
 
 bool Android_AssetIsUsable(AndroidAssetHandle * file) {
     return file != nullptr && file->isOk();
+}
+
+bool Android_Seek(AndroidAssetHandle * file, int offset, Origin origin) {
+    return false;
+}
+
+bool Android_Tell(AndroidAssetHandle * file, int64_t &outLocation) {
+    if (file != nullptr) {
+        return file->tell(outLocation);
+    }
+    return false;
 }
 
 #endif

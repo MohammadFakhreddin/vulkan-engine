@@ -4,6 +4,7 @@
 #include "../engine/BedrockLog.hpp"
 #include "../engine/BedrockAssert.hpp"
 #include "../engine/BedrockMemory.hpp"
+#include "../tools/Importer.hpp"
 
 #include "../libs/stb_image/stb_image.h"
 #include "engine/BedrockFileSystem.hpp"
@@ -15,8 +16,15 @@ namespace MFA::Utils::UncompressedTexture {
 LoadResult Load(Data & outImageData, const char * path, bool const prefer_srgb) {
     using namespace AssetSystem;
     LoadResult ret = LoadResult::Invalid;
-    auto * readData = stbi_load(
-        path,
+
+    auto rawFile = Importer::ReadRawFile(path);
+    MFA_DEFER {Importer::FreeRawFile(&rawFile);};
+    if (rawFile.valid() == false) {
+        return ret;
+    }
+    auto * readData = stbi_load_from_memory(
+        rawFile.data.ptr,
+        static_cast<int>(rawFile.data.len),
         &outImageData.width,
         &outImageData.height,
         &outImageData.stbi_components,
@@ -427,22 +435,47 @@ static void *tinyktxCallbackAlloc(void *user, const size_t size) {
 static void tinyktxCallbackFree(void *user, void *data) {
     MFA::Memory::PtrFree(data);
 }
-// TODO Start from here, Complete all callbacks
-static size_t tinyktxCallbackRead(void *user, void* data, const size_t size) {
-    auto * handle = static_cast<FS::FileHandle *>(user);
+
+static size_t tinyktxCallbackRead(void * userData, void* data, const size_t size) {
+#ifdef __DESKTOP__
+    auto * handle = static_cast<FS::FileHandle *>(userData);
     return FS::Read(handle, MFA::Blob {data, size});
-}
-static bool tinyktxCallbackSeek(void *user, const int64_t offset) {
-    auto * handle = static_cast<FS::FileHandle *>(user);
-    return FS::Seek(handle, static_cast<int>(offset), FS::Origin::Start);
+#elif defined(__ANDROID__)
+    auto * handle = static_cast<FS::AndroidAssetHandle *>(userData);
+    return FS::Android_ReadAsset(handle, MFA::Blob {data, size});
+#else
+#error Os not handled
+#endif
 }
 
-static int64_t tinyktxCallbackTell(void *user) {
-    auto * handle = static_cast<FS::FileHandle *>(user);
+static bool tinyktxCallbackSeek(void * userData, const int64_t offset) {
+#ifdef __DESKTOP__
+    auto * handle = static_cast<FS::FileHandle *>(userData);
+    return FS::Seek(handle, static_cast<int>(offset), FS::Origin::Start);
+#elif defined(__ANDROID__)
+    auto * handle = static_cast<FS::AndroidAssetHandle *>(userData);
+    return FS::Android_Seek(handle, static_cast<int>(offset), FS::Origin::Start);
+#else
+#error Os not handled
+#endif
+}
+
+static int64_t tinyktxCallbackTell(void * userData) {
+#ifdef __DESKTOP__
+    auto * handle = static_cast<FS::FileHandle *>(userData);
     int64_t location = 0;
     bool success = FS::Tell(handle, location);
     MFA_ASSERT(success);
     return location;
+#elif defined(__ANDROID__)
+    auto * handle = static_cast<FS::AndroidAssetHandle *>(userData);
+    int64_t location = 0;
+    bool success = FS::Android_Tell(handle, location);
+    MFA_ASSERT(success);
+    return location;
+#else
+#error Os not handled
+#endif
 }
 
 Data * Load(LoadResult & loadResult, const char * path) {
@@ -451,7 +484,13 @@ Data * Load(LoadResult & loadResult, const char * path) {
 
     loadResult = LoadResult::Invalid;
 
+#ifdef __DESKTOP__
     auto * fileHandle = FS::OpenFile(path, FS::Usage::Read);
+#elif defined(__ANDROID__)
+    auto * fileHandle = FS::Android_OpenAsset(path);
+#else
+    #error Os is not handled
+#endif
     if(!MFA_VERIFY(fileHandle != nullptr)) {
         loadResult = LoadResult::FileNotExists;
         return nullptr;
