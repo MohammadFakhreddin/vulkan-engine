@@ -225,7 +225,7 @@ VkInstance CreateInstance(char const * applicationName, ANativeWindow * window) 
         .flags = 0,
         // The application info structure is then passed through the instance
         .pApplicationInfo = &applicationInfo,
-#if defined(MFA_DEBUG) && defined(__ANDROID__) == false
+#if defined(MFA_DEBUG)
         .enabledLayerCount = static_cast<uint32_t>(DebugLayers.size()),
         .ppEnabledLayerNames = DebugLayers.data(),
 #else
