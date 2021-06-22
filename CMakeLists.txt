@@ -24,7 +24,8 @@ if(APPLE)
 endif()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-  set(WINDOWS TRUE)
+    set(WINDOWS TRUE)
+    # SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")# %MyVS%/lib/x64/clang_rt.asan_dynamic-x86_64.lib %MyVS%/lib/x64/clang_rt.asan_dynamic_runtime_thunk-x86_64.lib")
 endif()
 
 if(UNIX AND NOT APPLE AND NOT ANDROID)
@@ -256,19 +257,22 @@ if (WINDOWS)
     )
 
     # file(
-    #     GLOB IMGUI
-    #     "${CMAKE_SOURCE_DIR}/libs/win/imgui.lib"
+    #     GLOB ASAN
+    #     "${CMAKE_SOURCE_DIR}/libs/win/clang_rt.asan_dynamic-x86_64.lib"
+    #     "${CMAKE_SOURCE_DIR}/libs/win/clang_rt.asan_dynamic_runtime_thunk-x86_64.lib"
     # )
 
     list(
         APPEND COMPILED_LIBS 
         ${VULKAN}
         ${SDL}
+        # ${ASAN}
     )
 
     file(
         GLOB DLLS 
         "${CMAKE_SOURCE_DIR}/libs/win/SDL2.dll" 
+        "${CMAKE_SOURCE_DIR}/libs/win/clang_rt.asan_dynamic-x86_64.dll"
     )
 
     add_executable(${PROJECT_NAME} ${WIN_SOURCE})
@@ -433,12 +437,41 @@ elseif(ANDROID)
        -Wno-delete-non-virtual-dtor -DVK_USE_PLATFORM_ANDROID_KHR")
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -u ANativeActivity_onCreate")
 
+    function(get_architecture ABI ARCH)
+        if (ABI STREQUAL armeabi-v7a)
+            set(${ARCH} arm PARENT_SCOPE)
+        elseif(ABI STREQUAL arm64-v8a)
+            set(${ARCH} aarch64 PARENT_SCOPE)
+        elseif(ABI STREQUAL x86)
+            set(${ARCH} i686 PARENT_SCOPE)
+        elseif(ABI STREQUAL x86_64)
+            set(${ARCH} x86_64 PARENT_SCOPE)
+        else()
+            message(FATAL_ERROR "Unsupported ABI")
+        endif()
+    endfunction()
+
     target_link_libraries(${PROJECT_NAME} app-glue log android)
+    target_compile_options(${PROJECT_NAME} PUBLIC -fsanitize=address -fno-omit-frame-pointer)
+    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS -fsanitize=address)
 
     target_include_directories(
         ${PROJECT_NAME} PUBLIC 
         "src" 
         "${CMAKE_SOURCE_DIR}/libs/include"
+    )
+
+        # Asan libs are "somewhere" in the toolchain's root, we try to find the
+    # right one for the current architecture and copy it to the libs output dir
+    # (so that it will be packed in the apk):
+
+    get_architecture(${ANDROID_ABI} ARCH)
+    file(GLOB_RECURSE ASAN_SRC ${ANDROID_TOOLCHAIN_ROOT}/*.asan*${ARCH}*-android.so)
+    set(ASAN_DEST ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+
+    add_custom_command(
+            TARGET ${PROJECT_NAME} PRE_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ASAN_SRC} ${ASAN_DEST}
     )
 
 endif()

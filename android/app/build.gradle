@@ -34,6 +34,17 @@ android {
                 }
             }
         }
+        sanitize {
+            initWith debug
+            sourceSets.sanitize.resources.srcDir "wrap"
+
+            externalNativeBuild {
+                cmake {
+                    arguments "-DANDROID_STL=c++_shared", "-DSANITIZE=TRUE"
+                }
+            }
+
+        }
     }
     sourceSets.main {
         assets.srcDir "../../assets/"

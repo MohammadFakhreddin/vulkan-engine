@@ -397,12 +397,13 @@ static void UpdateMousePositionAndButtons() {
         io.MousePos = ImVec2(static_cast<float>(mx), static_cast<float>(my));
     }
 #elif defined(__ANDROID__)
-    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+    //MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
 #else
     #error Os not supported
 #endif
 }
 
+#ifdef __DESKTOP__
 static void UpdateMouseCursor() {
     auto & io = ImGui::GetIO();
 
@@ -419,6 +420,7 @@ static void UpdateMouseCursor() {
         MSDL::SDL_ShowCursor(MSDL::SDL_TRUE);
     }
 }
+#endif
 
 void OnNewFrame(
     float const deltaTimeInSec,
@@ -437,7 +439,6 @@ void OnNewFrame(
         window_width = window_height = 0;
     }
 #elif defined(__ANDROID__)
-    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
 #else
 #error Os is not supported
 #endif
@@ -451,7 +452,12 @@ void OnNewFrame(
     }
     io.DeltaTime = deltaTimeInSec;
     UpdateMousePositionAndButtons();
+#if defined(__DESKTOP__)
     UpdateMouseCursor();
+#elif defined (__ANDROID__)
+    // TODO
+#else
+#endif
     // Start the Dear ImGui frame
     ImGui::NewFrame();
 

@@ -1632,7 +1632,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
         0,
         1,
         &pipelineCreateInfo,
-        0,
+        nullptr,
         &pipeline
     ));
 #else

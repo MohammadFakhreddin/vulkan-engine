@@ -8,6 +8,8 @@
 ```
 Create directory build64
 cmake . -BBuild64 -DCMAKE_GENERATOR=x64
+Or 86 if you prefer (ASan does not work on x64 currently)
+cmake .. -G "Visual Studio 16 2019" -A Win32
 ```
 Find .sln files inside build64 and then run the project
 <br/>

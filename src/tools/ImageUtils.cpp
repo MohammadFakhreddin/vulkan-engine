@@ -18,7 +18,9 @@ LoadResult Load(Data & outImageData, const char * path, bool const prefer_srgb) 
     LoadResult ret = LoadResult::Invalid;
 
     auto rawFile = Importer::ReadRawFile(path);
-    MFA_DEFER {Importer::FreeRawFile(&rawFile);};
+    MFA_DEFER {
+        Importer::FreeRawFile(&rawFile);
+    };
     if (rawFile.valid() == false) {
         return ret;
     }
