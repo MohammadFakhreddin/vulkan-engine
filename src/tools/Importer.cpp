@@ -416,8 +416,8 @@ AS::Mesh ImportObj(char const * path) {
                     }
                 };
                 
-                std::vector<AS::Mesh::Vertex> vertices {vertexCount};
-                std::vector<AS::Mesh::Index> indices {indexCount};
+                std::vector<AS::Mesh::Vertex> vertices (vertexCount);
+                std::vector<AS::Mesh::Index> indices (indexCount);
                 for(
                     uintmax_t indicesIndex = 0;
                     indicesIndex < shapes[0].mesh.indices.size();

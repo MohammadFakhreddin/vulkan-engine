@@ -90,7 +90,7 @@ namespace MFA::ShapeGenerator {
             Memory::Alloc(sizeof(AS::MeshIndex) * indicesCount)
         );
 
-        std::vector<AS::MeshVertex> meshVertices {verticesCount};
+        std::vector<AS::MeshVertex> meshVertices (verticesCount);
         
         for (uintmax_t index = 0; index < verticesCount; ++index) {
             // Positions
@@ -201,7 +201,7 @@ namespace MFA::ShapeGenerator {
             Memory::Alloc(sizeof(AS::MeshIndex) * indicesCount)
         );
 
-        std::vector<AS::MeshVertex> meshVertices {verticesCount};
+        std::vector<AS::MeshVertex> meshVertices (verticesCount);
         
         for (uintmax_t index = 0; index < verticesCount; ++index) {
             // Positions

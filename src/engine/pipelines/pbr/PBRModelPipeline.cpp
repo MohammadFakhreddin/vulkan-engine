@@ -254,13 +254,13 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel
                         emissiveImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
                         VkWriteDescriptorSet writeDescriptorSet {};
-                        writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                        writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
                         writeDescriptorSet.dstSet = descriptorSet;
                         writeDescriptorSet.dstBinding = static_cast<uint32_t>(writeInfo.size());
-                        writeDescriptorSet.dstArrayElement = 0,
-                        writeDescriptorSet.descriptorCount = 1,
-                        writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                        writeDescriptorSet.pImageInfo = &emissiveImageInfo,
+                        writeDescriptorSet.dstArrayElement = 0;
+                        writeDescriptorSet.descriptorCount = 1;
+                        writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                        writeDescriptorSet.pImageInfo = &emissiveImageInfo;
 
                         writeInfo.emplace_back(writeDescriptorSet);
                     }

@@ -11,11 +11,15 @@ Blob Alloc (size_t const size) {
 }
 
 void Free (Blob const & mem) {
-    ::free(mem.ptr);
+    if (mem.ptr != nullptr) {
+        ::free(mem.ptr);
+    }
 }
 
 void PtrFree (void * ptr) {
-    ::free(ptr);
+    if (ptr != nullptr) {
+        ::free(ptr);
+    }
 }
 
 }

@@ -461,7 +461,7 @@ elseif(ANDROID)
         "${CMAKE_SOURCE_DIR}/libs/include"
     )
 
-        # Asan libs are "somewhere" in the toolchain's root, we try to find the
+    # Asan libs are "somewhere" in the toolchain's root, we try to find the
     # right one for the current architecture and copy it to the libs output dir
     # (so that it will be packed in the apk):
 

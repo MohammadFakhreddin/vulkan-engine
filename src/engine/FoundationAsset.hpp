@@ -587,8 +587,8 @@ using ShaderStage = Shader::Stage;
 //----------------------------------ModelAsset------------------------------------
 
 struct Model {
-    std::vector<Texture> textures;
-    Mesh mesh;
+    std::vector<Texture> textures {};
+    Mesh mesh {};
 };
 
 };  // MFA::Asset

@@ -4,8 +4,6 @@
 #include "../tools/Importer.hpp"
 
 #include "libs/imgui/imgui.h"
-#include "libs/sdl/SDL.hpp"
-
 
 namespace MFA::UISystem {
 
@@ -132,7 +130,9 @@ struct State {
     RF::DrawPipeline drawPipeline {};
     RB::GpuTexture fontTexture {};
     bool mousePressed[3] {false};
+#ifdef __DESKTOP__
     MSDL::SDL_Cursor *  mouseCursors[ImGuiMouseCursor_COUNT] {};
+#endif
     std::vector<RF::MeshBuffers> meshBuffers {};
     std::vector<bool> meshBuffersValidationStatus {};
     bool hasFocus = false;
@@ -238,7 +238,7 @@ void Init() {
         VkPushConstantRange pushConstantRange {};
         pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
         pushConstantRange.offset = 0;
-        pushConstantRange.size = sizeof(pushConstantRanges);           // TODO ReCheck this value;
+        pushConstantRange.size = 4 * sizeof(float);//sizeof(pushConstantRanges);           // TODO ReCheck this value;
         pushConstantRanges.emplace_back(pushConstantRange);
         
         std::vector<RB::GpuShader> shader_stages {state->vertexShader, state->fragmentShader};
@@ -247,7 +247,7 @@ void Init() {
         vertex_binding_description.stride = sizeof(ImDrawVert);
         vertex_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-        std::vector<VkVertexInputAttributeDescription> inputAttributeDescription {3};
+        std::vector<VkVertexInputAttributeDescription> inputAttributeDescription (3);
         inputAttributeDescription[0].location = 0;
         inputAttributeDescription[0].binding = vertex_binding_description.binding;
         inputAttributeDescription[0].format = VK_FORMAT_R32G32_SFLOAT;
@@ -347,6 +347,7 @@ void Init() {
         // TODO Support from in memory import of images inside importer
         state->fontTexture = RF::CreateTexture(texture_asset);
 
+#ifdef __DESKTOP__
         // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array.
         io.KeyMap[ImGuiKey_Tab] = MSDL::SDL_SCANCODE_TAB;
         io.KeyMap[ImGuiKey_LeftArrow] = MSDL::SDL_SCANCODE_LEFT;
@@ -370,6 +371,29 @@ void Init() {
         io.KeyMap[ImGuiKey_X] = MSDL::SDL_SCANCODE_X;
         io.KeyMap[ImGuiKey_Y] = MSDL::SDL_SCANCODE_Y;
         io.KeyMap[ImGuiKey_Z] = MSDL::SDL_SCANCODE_Z;
+#endif
+    }
+
+    // Update the Descriptor Set:
+    for (auto & descriptorSet : state->descriptorSets) {
+        auto const imageInfo = VkDescriptorImageInfo {
+            .sampler = state->fontSampler.sampler,
+            .imageView = state->fontTexture.image_view(),
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+        };
+        auto writeDescriptorSet = VkWriteDescriptorSet {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = descriptorSet,
+            .dstBinding = 0,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .pImageInfo = &imageInfo,
+        };
+        RF::UpdateDescriptorSets(
+            1,
+            &writeDescriptorSet
+        );
     }
 
 #ifdef __DESKTOP__
@@ -516,26 +540,6 @@ void OnNewFrame(
                 drawPass,
                 state->meshBuffers[drawPass.imageIndex].verticesBuffer
             );
-
-            // Update the Descriptor Set:
-            {
-                VkDescriptorImageInfo desc_image[1] = {};
-                desc_image[0].sampler = state->fontSampler.sampler;
-                desc_image[0].imageView = state->fontTexture.image_view();
-                desc_image[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                std::vector<VkWriteDescriptorSet> write_desc {1};
-                write_desc[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                write_desc[0].descriptorCount = 1;
-                write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-                write_desc[0].pImageInfo = desc_image;
-                RF::UpdateDescriptorSets(
-                    static_cast<uint8_t>(state->descriptorSets.size()),
-                    state->descriptorSets.data(),
-                    static_cast<uint8_t>(write_desc.size()),
-                    write_desc.data()
-                );
-            }
-
             // Setup viewport:
             {
                 VkViewport viewport;

@@ -1223,7 +1223,13 @@ SwapChainGroup CreateSwapChain(
     createInfo.queueFamilyIndexCount = 0;
     createInfo.pQueueFamilyIndices = nullptr;
     createInfo.preTransform = surfaceTransform;
+#ifdef __DESKTOP__
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+#elif defined(__ANDROID__)
+    createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
+#else
+    #error Os is not supported
+#endif
     createInfo.presentMode = selected_present_mode;
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = oldSwapChain;
@@ -1411,7 +1417,7 @@ std::vector<VkFramebuffer> CreateFrameBuffers(
     MFA_VK_VALID_ASSERT(renderPass);
     MFA_ASSERT(swapChainImageViewsCount > 0);
     MFA_ASSERT(swapChainImageViews != nullptr);
-    std::vector<VkFramebuffer> swap_chain_frame_buffers {swapChainImageViewsCount};
+    std::vector<VkFramebuffer> swap_chain_frame_buffers (swapChainImageViewsCount);
 
     // Note: FrameBuffer is basically a specific choice of attachments for a render pass
     // That means all attachments must have the same dimensions, interesting restriction
@@ -1494,7 +1500,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
     MFA_ASSERT(renderPass);
     MFA_ASSERT(descriptorSetLayouts);
     // Set up shader stage info
-    std::vector<VkPipelineShaderStageCreateInfo> shader_stages_create_infos {shaderStagesCount};
+    std::vector<VkPipelineShaderStageCreateInfo> shader_stages_create_infos (shaderStagesCount);
     for(uint8_t i = 0; i < shaderStagesCount; i++) {
         VkPipelineShaderStageCreateInfo create_info = {};
         create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -1839,7 +1845,7 @@ std::vector<BufferGroup> CreateUniformBuffer(
     uint32_t const buffersCount,
     VkDeviceSize const buffersSize 
 ) {
-    std::vector<BufferGroup> uniform_buffers_group {buffersCount};
+    std::vector<BufferGroup> uniform_buffers_group (buffersCount);
     for(uint8_t index = 0; index < buffersCount; index++) {
         uniform_buffers_group[index] = CreateBuffer(
             device,
@@ -1932,7 +1938,8 @@ std::vector<VkDescriptorSet> CreateDescriptorSet(
     allocInfo.descriptorSetCount = descriptorSetCount;
     allocInfo.pSetLayouts = layouts.data();
 
-    std::vector<VkDescriptorSet> descriptor_sets {allocInfo.descriptorSetCount};
+    std::vector<VkDescriptorSet> descriptor_sets {};
+    descriptor_sets.resize(allocInfo.descriptorSetCount);
     // Descriptor sets gets destroyed automatically when descriptor pool is destroyed
     VK_Check(vkAllocateDescriptorSets (
         device, 
@@ -1963,7 +1970,7 @@ void UpdateDescriptorSets(
     VkWriteDescriptorSet * schemas
 ) {
     for(auto descriptor_set_index = 0; descriptor_set_index < descriptor_set_count; descriptor_set_index++){
-        std::vector<VkWriteDescriptorSet> descriptor_writes {schemas_count};
+        std::vector<VkWriteDescriptorSet> descriptor_writes (schemas_count);
         for(uint8_t schema_index = 0; schema_index < schemas_count; schema_index++) {
             descriptor_writes[schema_index] = schemas[schema_index];
             descriptor_writes[schema_index].dstSet = descriptor_sets[descriptor_set_index];
@@ -1984,7 +1991,7 @@ std::vector<VkCommandBuffer> CreateCommandBuffers(
     uint8_t const swap_chain_images_count,
     VkCommandPool const command_pool
 ) {
-    std::vector<VkCommandBuffer> command_buffers {swap_chain_images_count};
+    std::vector<VkCommandBuffer> command_buffers (swap_chain_images_count);
     
     VkCommandBufferAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -2215,7 +2222,7 @@ void UpdateDescriptorSetsBasic(
     MFA_ASSERT(descriptorSetsCount > 0);
     MFA_ASSERT(descriptorSets != nullptr);
     for(uint8_t i = 0; i < descriptorSetsCount; i++) {
-        std::vector<VkWriteDescriptorSet> descriptorWrites {2};
+        std::vector<VkWriteDescriptorSet> descriptorWrites (2);
         
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[0].dstSet = descriptorSets[i];

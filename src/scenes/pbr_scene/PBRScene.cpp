@@ -87,7 +87,7 @@ void PBRScene::Init() {
         vertexBindingDescription.stride = sizeof(MFA::AssetSystem::MeshVertex);
         vertexBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-        std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions {2};
+        std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions (2);
 
         inputAttributeDescriptions[0].location = 0;
         inputAttributeDescriptions[0].binding = 0;

@@ -266,6 +266,7 @@ void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & draw
     if (mIsLightVisible) {
         mPointLightPipeline.render(drawPass, fDeltaTime, 1, &mPointLightObjectId);
     }
+    int a = 10;
 }
 
 void GLTFMeshViewerScene::OnUI(float const deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) {
