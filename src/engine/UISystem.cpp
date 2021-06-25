@@ -457,7 +457,7 @@ void OnNewFrame(
     // Setup display size (every frame to accommodate for window resizing)
     int32_t window_width, window_height;
     int32_t drawable_width, drawable_height;
-    RF::GetWindowSize(window_width, window_height);
+    RF::GetDrawableSize(window_width, window_height);
 #if defined(__DESKTOP__)
     if (RF::GetWindowFlags() & MSDL::SDL_WINDOW_MINIMIZED) {
         window_width = window_height = 0;

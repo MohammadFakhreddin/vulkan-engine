@@ -932,7 +932,13 @@ VkSampler CreateSampler(
     sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+#ifdef __DESKTOP__
     sampler_info.anisotropyEnable = params.anisotropy_enabled;
+#elif defined(__ANDROID__)
+    sampler_info.anisotropyEnable = false;
+#else
+    #error Os not handled
+#endif
     sampler_info.maxAnisotropy = params.max_anisotropy;
     sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     sampler_info.unnormalizedCoordinates = VK_FALSE;
@@ -1118,28 +1124,35 @@ VkCommandPool CreateCommandPool(VkDevice device, uint32_t const queue_family_ind
     return command_pool;
 }
 
-void DestroyCommandPool(VkDevice device, VkCommandPool command_pool) {
+void DestroyCommandPool(VkDevice device, VkCommandPool commandPool) {
     MFA_ASSERT(device);
-    vkDestroyCommandPool(device, command_pool, nullptr);
+    vkDestroyCommandPool(device, commandPool, nullptr);
+}
+
+VkSurfaceCapabilitiesKHR GetSurfaceCapabilities(
+    VkPhysicalDevice physicalDevice, 
+    VkSurfaceKHR windowSurface
+) {
+    MFA_VK_VALID_ASSERT(physicalDevice);
+    MFA_VK_VALID_ASSERT(windowSurface);
+    VkSurfaceCapabilitiesKHR surfaceCapabilities;
+    VK_Check (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, windowSurface, &surfaceCapabilities));
+    return surfaceCapabilities;
 }
 
 SwapChainGroup CreateSwapChain(
     VkDevice device,
-    VkPhysicalDevice physical_device, 
-    VkSurfaceKHR window_surface,
-    VkExtent2D swap_chain_extend,
+    VkPhysicalDevice physicalDevice, 
+    VkSurfaceKHR windowSurface,
+    VkSurfaceCapabilitiesKHR surfaceCapabilities,
     VkSwapchainKHR oldSwapChain
 ) {
-    // Find surface capabilities
-    VkSurfaceCapabilitiesKHR surface_capabilities;
-    VK_Check (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, window_surface, &surface_capabilities));
-
     // Find supported surface formats
     uint32_t formatCount;
     if (
         vkGetPhysicalDeviceSurfaceFormatsKHR(
-            physical_device, 
-            window_surface, 
+            physicalDevice, 
+            windowSurface, 
             &formatCount, 
             nullptr
         ) != VK_SUCCESS || 
@@ -1150,8 +1163,8 @@ SwapChainGroup CreateSwapChain(
     
     std::vector<VkSurfaceFormatKHR> surface_formats(formatCount);
     VK_Check (vkGetPhysicalDeviceSurfaceFormatsKHR(
-        physical_device, 
-        window_surface, 
+        physicalDevice, 
+        windowSurface, 
         &formatCount, 
         surface_formats.data()
     ));
@@ -1159,8 +1172,8 @@ SwapChainGroup CreateSwapChain(
     // Find supported present modes
     uint32_t presentModeCount;
     if (vkGetPhysicalDeviceSurfacePresentModesKHR(
-        physical_device, 
-        window_surface, 
+        physicalDevice, 
+        windowSurface, 
         &presentModeCount, 
         nullptr
     ) != VK_SUCCESS || presentModeCount == 0) {
@@ -1169,17 +1182,23 @@ SwapChainGroup CreateSwapChain(
 
     std::vector<VkPresentModeKHR> present_modes(presentModeCount);
     VK_Check (vkGetPhysicalDeviceSurfacePresentModesKHR(
-        physical_device, 
-        window_surface, 
+        physicalDevice, 
+        windowSurface, 
         &presentModeCount, 
         present_modes.data())
     );
 
     // Determine number of images for swap chain
-    uint32_t imageCount = surface_capabilities.minImageCount + 1;
-    if (surface_capabilities.maxImageCount != 0 && imageCount > surface_capabilities.maxImageCount) {
-        imageCount = surface_capabilities.maxImageCount;
+    uint32_t imageCount = surfaceCapabilities.minImageCount + 1;
+    if (surfaceCapabilities.maxImageCount != 0 && imageCount > surfaceCapabilities.maxImageCount) {
+        imageCount = surfaceCapabilities.maxImageCount;
     }
+
+    MFA_LOG_INFO(
+        "Surface extend width: %d, height: %d"
+        , surfaceCapabilities.currentExtent.width
+        , surfaceCapabilities.currentExtent.height
+    );
 
     MFA_LOG_INFO("Using %d images for swap chain.", imageCount);
     MFA_ASSERT(surface_formats.size() <= 255);
@@ -1191,18 +1210,18 @@ SwapChainGroup CreateSwapChain(
 
     // Select swap chain size
     auto const selected_swap_chain_extent = ChooseSwapChainExtent(
-        surface_capabilities, 
-        swap_chain_extend.width, 
-        swap_chain_extend.height
+        surfaceCapabilities, 
+        surfaceCapabilities.currentExtent.width, 
+        surfaceCapabilities.currentExtent.height
     );
 
     // Determine transformation to use (preferring no transform)
     VkSurfaceTransformFlagBitsKHR surfaceTransform {};
-    if (surface_capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
+    if (surfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
         surfaceTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     }
     else {
-        surfaceTransform = surface_capabilities.currentTransform;
+        surfaceTransform = surfaceCapabilities.currentTransform;
     }
 
     MFA_ASSERT(present_modes.size() <= 255);
@@ -1212,7 +1231,7 @@ SwapChainGroup CreateSwapChain(
     // Finally, create the swap chain
     VkSwapchainCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface = window_surface;
+    createInfo.surface = windowSurface;
     createInfo.minImageCount = imageCount;
     createInfo.imageFormat = selected_surface_format.format;
     createInfo.imageColorSpace = selected_surface_format.colorSpace;
@@ -1563,6 +1582,8 @@ GraphicPipelineGroup CreateGraphicPipeline(
     rasterization_create_info.frontFace = options.fontFace;
     rasterization_create_info.depthBiasEnable = VK_FALSE;
     rasterization_create_info.lineWidth = 1.0f;
+    rasterization_create_info.depthClampEnable = VK_FALSE;
+    rasterization_create_info.rasterizerDiscardEnable = VK_FALSE;
 
     // Describe multi-sampling
     // Note: using multi-sampling also requires turning on device features

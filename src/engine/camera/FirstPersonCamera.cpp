@@ -94,7 +94,7 @@ void FirstPersonCamera::onNewFrame(float const deltaTimeInSec) {
 void FirstPersonCamera::onResize() {
     int32_t width;
     int32_t height;
-    RF::GetWindowSize(width, height);
+    RF::GetDrawableSize(width, height);
     MFA_ASSERT(width > 0);
     MFA_ASSERT(height > 0);
 

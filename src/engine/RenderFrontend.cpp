@@ -122,11 +122,9 @@ bool Init(InitParams const & params) {
     state = new State();
     state->application_name = params.applicationName;
 #ifdef __DESKTOP__
-    state->screenWidth = params.screenWidth;
-    state->screenHeight = params.screenHeight;
     state->window = RB::CreateWindow(
-        state->screenWidth, 
-        state->screenHeight
+        params.screenWidth, 
+        params.screenHeight
     );
     state->isWindowResizable = params.resizable;
 
@@ -141,8 +139,6 @@ bool Init(InitParams const & params) {
 
 #elif defined(__ANDROID__)
     state->window = params.app->window;
-    state->screenWidth = ANativeWindow_getWidth(state->window);
-    state->screenHeight = ANativeWindow_getHeight(state->window);
 #else
     #error Os is not supported
 #endif
@@ -168,6 +164,13 @@ bool Init(InitParams const & params) {
         state->physicalDeviceFeatures = findPhysicalDeviceResult.physicalDeviceFeatures;
     }
 
+        // Find surface capabilities
+    auto const surfaceCapabilities = RB::GetSurfaceCapabilities(state->physicalDevice, state->surface);
+
+    state->screenWidth = surfaceCapabilities.currentExtent.width;
+    state->screenHeight = surfaceCapabilities.currentExtent.height;
+
+    
     if(RB::CheckSwapChainSupport(state->physicalDevice) == false) {
         MFA_LOG_ERROR("Swapchain is not supported on this device");
         return false;
@@ -204,7 +207,7 @@ bool Init(InitParams const & params) {
         state->logicalDevice.device,
         state->physicalDevice,
         state->surface,
-        swapChainExtend
+        surfaceCapabilities
     );
     state->renderPass = RB::CreateRenderPass(
         state->physicalDevice,
@@ -244,8 +247,12 @@ bool Init(InitParams const & params) {
 
 void OnWindowResized() {
     RB::DeviceWaitIdle(state->logicalDevice.device);
-    
-    GetWindowSize(state->screenWidth, state->screenHeight);
+
+    auto const surfaceCapabilities = RB::GetSurfaceCapabilities(state->physicalDevice, state->surface);
+
+    state->screenWidth = surfaceCapabilities.currentExtent.width;
+    state->screenHeight = surfaceCapabilities.currentExtent.height;
+
     MFA_ASSERT(state->screenWidth > 0);
     MFA_ASSERT(state->screenHeight > 0);
 
@@ -272,7 +279,7 @@ void OnWindowResized() {
         state->logicalDevice.device,
         state->physicalDevice,
         state->surface,
-        extent2D,
+        surfaceCapabilities,
         oldSwapChainGroup.swapChain
     );
     RB::DestroySwapChain(
@@ -1049,27 +1056,9 @@ uint8_t SwapChainImagesCount() {
     return static_cast<uint8_t>(state->swapChainGroup.swapChainImages.size());
 }
 
-void GetWindowSize(int32_t & outWidth, int32_t & outHeight) {
-#ifdef __DESKTOP__
-    MSDL::SDL_GetWindowSize(state->window, &outWidth, &outHeight);
-#elif __ANDROID__
-    outWidth = ANativeWindow_getWidth(state->window);
-    outHeight = ANativeWindow_getHeight(state->window);
-#else
-#error Os not handled
-#endif
-}
-
 void GetDrawableSize(int32_t & outWidth, int32_t & outHeight) {
-#ifdef __DESKTOP__
-    MSDL::SDL_GL_GetDrawableSize(state->window, &outWidth, &outHeight);
-#elif defined(__ANDROID__)
-    // TODO Maybe we have to use another function
-    outWidth = ANativeWindow_getWidth(state->window);
-    outHeight = ANativeWindow_getHeight(state->window);
-#else
-#error Os not handled
-#endif
+    outWidth = state->screenWidth;
+    outHeight = state->screenHeight;
 }
 
 #ifdef __DESKTOP__

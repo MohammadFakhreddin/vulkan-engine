@@ -344,7 +344,7 @@ void TextureViewerScene::createDrawableObject() {
 void TextureViewerScene::updateProjection() {
     // Perspective
     int32_t width; int32_t height;
-    RF::GetWindowSize(width, height);
+    RF::GetDrawableSize(width, height);
     float const ratio = static_cast<float>(width) / static_cast<float>(height);
     MFA::Matrix4X4Float perspectiveMat {};
     MFA::Matrix4X4Float::PreparePerspectiveProjectionMatrix(

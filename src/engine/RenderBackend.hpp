@@ -359,7 +359,13 @@ FindPresentAndGraphicQueueFamilyResult FindPresentAndGraphicQueueFamily(
 [[nodiscard]]
 VkCommandPool CreateCommandPool(VkDevice device, uint32_t queue_family_index);
 
-void DestroyCommandPool(VkDevice device, VkCommandPool command_pool);
+void DestroyCommandPool(VkDevice device, VkCommandPool commandPool);
+
+[[nodiscard]]
+VkSurfaceCapabilitiesKHR GetSurfaceCapabilities(
+    VkPhysicalDevice physicalDevice, 
+    VkSurfaceKHR windowSurface
+);
 
 struct SwapChainGroup {
     VkSwapchainKHR swapChain {};
@@ -371,9 +377,9 @@ struct SwapChainGroup {
 [[nodiscard]]
 SwapChainGroup CreateSwapChain(
     VkDevice device,
-    VkPhysicalDevice physical_device, 
-    VkSurfaceKHR window_surface,
-    VkExtent2D swap_chain_extend,
+    VkPhysicalDevice physicalDevice, 
+    VkSurfaceKHR windowSurface,
+    VkSurfaceCapabilitiesKHR surfaceCapabilities,
     VkSwapchainKHR oldSwapChain = VkSwapchainKHR {}
 );
 

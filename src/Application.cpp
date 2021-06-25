@@ -116,7 +116,7 @@ void Application::run() {
     android_poll_source* source;
     //While application is running
     uint32_t const targetFps = 1000 / 120;
-    uint32_t deltaTime = 1;
+    uint32_t deltaTime = static_cast<uint32_t>(1000.0f / 33.0f);    // TODO
 
     while (mAndroidApp->destroyRequested == 0) {
         if (ALooper_pollAll(mIsInitialized ? 1 : 0, nullptr,
@@ -130,10 +130,6 @@ void Application::run() {
         IM::OnNewFrame();
         // DrawFrame
         mSceneSubSystem.OnNewFrame(static_cast<float>(deltaTime) / 1000.0f);
-        // // render if vulkan is ready
-        // if (IsVulkanReady()) {
-        //   VulkanDrawFrame();
-        // }
     };
 #else
 #error "Platform is not supported"

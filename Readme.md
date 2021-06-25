@@ -28,8 +28,10 @@ make
 Not supported yet!
 <br/>
 
-### Android
-Not supported yet!
+### Android (Experimental)
+```
+Open android folder using android studio. You might need to change ndk version based on your installed version
+```
 <br/>
 
 ### IOS
@@ -42,6 +44,10 @@ Not supported yet!
 <img src="examples/mandalorian-animation.gif">
 
 <br>
+
+## Experimental android port
+
+<img src="examples/android-port.jpg">
 
 ## .obj file:
 <img src="examples/viking_house.gif">
@@ -74,5 +80,5 @@ Not supported yet!
 
 <br>
 
-## Sponza scene (Still buggy)
+## Sponza scene
 <img src="examples/sponza-scene.gif"/>

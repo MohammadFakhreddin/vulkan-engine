@@ -267,8 +267,6 @@ void PushConstants(
 
 uint8_t SwapChainImagesCount();
 
-void GetWindowSize(int32_t & outWidth, int32_t & outHeight);
-
 void GetDrawableSize(int32_t & outWidth, int32_t & outHeight);
 
 #ifdef __DESKTOP__
