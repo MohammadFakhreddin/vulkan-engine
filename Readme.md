@@ -47,7 +47,7 @@ Not supported yet!
 
 ## Experimental android port
 
-<img src="examples/android-port.jpg">
+<img src="examples/android-port.jpg" height=400>
 
 ## .obj file:
 <img src="examples/viking_house.gif">
