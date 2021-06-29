@@ -28,7 +28,8 @@ namespace MFA::InputManager {
     bool IsLeftMouseDown();
 
 #ifdef __ANDROID__
-    void SetInputQueue(AInputQueue * inputQueue_);
+//    void SetInputQueue(AInputQueue * inputQueue_);
+    void SetAndroidApp(android_app * androidApp);
 #endif
 
 }

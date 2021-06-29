@@ -60,11 +60,11 @@ void commandListener(android_app* app, int32_t cmd) {
         MFA::RenderFrontend::NotifyDeviceResized();
     }
     break;
-    case APP_CMD_INPUT_CHANGED:
-    {
-        MFA_ASSERT(app->inputQueue != nullptr);
-        MFA::InputManager::SetInputQueue(app->inputQueue);
-    }
+//    case APP_CMD_INPUT_CHANGED:
+//    {
+//        MFA_ASSERT(app->inputQueue != nullptr);
+//        MFA::InputManager::SetInputQueue(app->inputQueue);
+//    }
     break;
     default:
       MFA_LOG_INFO("Event not handled: %d", cmd);

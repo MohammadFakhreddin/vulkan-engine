@@ -8,10 +8,18 @@
 #include "libs/sdl/SDL.hpp"
 #endif
 
+#ifdef __ANDROID__
+#include <queue>
+#endif
+
 namespace MFA::InputManager {
 
 namespace RF = RenderFrontend;
 namespace UI = UISystem;
+
+#ifdef __ANDROID__
+inline static constexpr float TouchEndDelayInSec = 50.0f / 1000.0f;
+#endif
 
 struct State {
     bool isMouseLocationValid = false;
@@ -24,12 +32,15 @@ struct State {
 #else
 #error Os is not handled
 #endif
-
     float mouseDeltaX = 0.0f;
     float mouseDeltaY = 0.0f;
     float forwardMove = 0.0f;
     float rightMove = 0.0f;
     bool isLeftMouseDown = false;
+#ifdef __ANDROID__
+//    bool hadTouchEventThisFrame = false;
+    float lastTimeSinceTouchInSec = 0;
+#endif
     void reset() {
         mouseDeltaX = 0.0f;
         mouseDeltaY = 0.0f;
@@ -43,17 +54,12 @@ State * state = nullptr;
 
 #ifdef __ANDROID__
 
-AInputQueue * inputQueue = nullptr;
-
-void SetInputQueue(AInputQueue * inputQueue_) {
-    MFA_ASSERT(inputQueue_ != nullptr);
-    inputQueue = inputQueue_;
-}
-
 static void handleMotionEvent(AInputEvent * event) {
     float mousePositionX = AMotionEvent_getX(event, 0);
     float mousePositionY = AMotionEvent_getY(event, 0);
-    state->isLeftMouseDown = true;
+//    state->hadTouchEventThisFrame = true;
+    // TODO Create time class
+    state->lastTimeSinceTouchInSec = static_cast<float>(clock()) / CLOCKS_PER_SEC;
 //        if (UISystem::HasFocus() == false) {
 //            state->isLeftMouseDown = mouseButtonMask & SDL_BUTTON(SDL_BUTTON_LEFT);
 //        }
@@ -63,12 +69,45 @@ static void handleMotionEvent(AInputEvent * event) {
     } else {
         state->isMouseLocationValid = true;
     }
+    MFA_LOG_INFO("MouseDeltaXY: %f, %f", state->mouseDeltaX, state->mouseDeltaY);
     state->mouseCurrentX = mousePositionX;
     state->mouseCurrentY = mousePositionY;
 }
 
 static void handleKeyEvent(AInputEvent * event) {
-    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+//    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+}
+
+static void HandleInputEvent(AInputEvent * event) {
+    switch (AInputEvent_getType(event)) {
+        case AINPUT_EVENT_TYPE_MOTION: {
+            handleMotionEvent(event);
+            break;
+        }
+        case AINPUT_EVENT_TYPE_KEY: {
+            handleKeyEvent(event);
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+// Based on https://groups.google.com/g/android-ndk/c/-pqmAFs9Xck
+static int32_t OnInputEvent(android_app * app, AInputEvent * event) {
+    int32_t isHandled = 0;
+    if (state != nullptr) {
+        isHandled = 1;
+        MFA_ASSERT(event != nullptr);
+        HandleInputEvent(event);
+    }
+    return isHandled;
+
+}
+
+void SetAndroidApp(android_app * androidApp) {
+    MFA_ASSERT(androidApp != nullptr);
+    androidApp->onInputEvent = OnInputEvent;
 }
 
 #endif
@@ -78,8 +117,8 @@ void Init() {
 }
 
 void OnNewFrame() {
-    state->reset();
 #ifdef __DESKTOP__
+    state->reset();
     int32_t mousePositionX = 0;
     int32_t mousePositionY = 0;
     auto const mouseButtonMask = RF::GetMouseState(&mousePositionX, &mousePositionY);
@@ -109,28 +148,14 @@ void OnNewFrame() {
         state->rightMove -= 1.0f;
     }
 #elif defined(__ANDROID__)
-    if (inputQueue == nullptr) {
-        return;
-    }
     state->isLeftMouseDown = false;
-    AInputEvent * inputEvent = nullptr;
-    while (AInputQueue_hasEvents(inputQueue)) {
-        AInputQueue_getEvent(inputQueue, &inputEvent);
-        auto const eventType = AInputEvent_getType(inputEvent);
-        switch (eventType) {
-            case AINPUT_EVENT_TYPE_MOTION: {
-                handleMotionEvent(inputEvent);
-                break;
-            }
-            case AINPUT_EVENT_TYPE_KEY: {
-                handleKeyEvent(inputEvent);
-                break;
-            }
-            default:
-                break;
-        }
-        AInputQueue_finishEvent(inputQueue, inputEvent, 0);
+    float const nowInSec = static_cast<float>(clock()) / CLOCKS_PER_SEC;
+    if (nowInSec - state->lastTimeSinceTouchInSec < TouchEndDelayInSec) {
+        state->isLeftMouseDown = true;
+    } else {
+        state->isMouseLocationValid = false;
     }
+//    state->hadTouchEventThisFrame = false;
 #else
     #error Os is not supported
 #endif

@@ -41,7 +41,6 @@ void FirstPersonCamera::onNewFrame(float const deltaTimeInSec) {
         auto const mouseDeltaX = IM::GetMouseDeltaX();
         auto const mouseDeltaY = IM::GetMouseDeltaY();
         auto const rotationDistance = mRotationSpeed * deltaTimeInSec;
-
         mEulerAngles.setY(mEulerAngles.getY() - mouseDeltaX * rotationDistance);    // Reverse for view mat
         mEulerAngles.setX(Math::Clamp(
             mEulerAngles.getX() - mouseDeltaY * rotationDistance,

@@ -11,6 +11,7 @@
 
 #ifdef __ANDROID__
 #include <android_native_app_glue.h>
+#include <thread>
 #endif
 
 namespace RF = MFA::RenderFrontend;
@@ -78,6 +79,8 @@ void Application::Shutdown() {
 }
 
 void Application::run() {
+    static constexpr uint32_t TargetFpsDeltaTimeInMs = 1000 / 120;
+    static constexpr float TargetFpsDeltaTimeInSec = 1.0f / 120.0f;
 #ifdef __DESKTOP__
     Init();
     {// Main loop
@@ -85,14 +88,13 @@ void Application::run() {
         //Event handler
         MSDL::SDL_Event e;
         //While application is running
-        uint32_t const targetFps = 1000 / 120;
-        uint32_t deltaTime = 0;
+        uint32_t deltaTimeInMs = 0;
         while (!quit)
         {
             uint32_t const start_time = MSDL::SDL_GetTicks();
             IM::OnNewFrame();
             // DrawFrame
-            mSceneSubSystem.OnNewFrame(static_cast<float>(deltaTime) / 1000.0f);
+            mSceneSubSystem.OnNewFrame(static_cast<float>(deltaTimeInMs) / 1000.0f);
             //Handle events
             if (MSDL::SDL_PollEvent(&e) != 0)
             {
@@ -102,11 +104,11 @@ void Application::run() {
                     quit = true;
                 }
             }
-            deltaTime = MSDL::SDL_GetTicks() - start_time;
-            if(targetFps > deltaTime){
-                MSDL::SDL_Delay( targetFps - deltaTime );
+            deltaTimeInMs = MSDL::SDL_GetTicks() - start_time;
+            if(TargetFpsDeltaTimeInMs > deltaTimeInMs){
+                MSDL::SDL_Delay( TargetFpsDeltaTimeInMs - deltaTimeInMs);
             }
-            deltaTime = MSDL::SDL_GetTicks() - start_time;
+            deltaTimeInMs = MSDL::SDL_GetTicks() - start_time;
         }
     }
     Shutdown();
@@ -115,10 +117,11 @@ void Application::run() {
     int events;
     android_poll_source* source;
     //While application is running
-    uint32_t const targetFps = 1000 / 120;
-    uint32_t deltaTime = static_cast<uint32_t>(1000.0f / 33.0f);    // TODO
 
+    clock_t deltaTimeClock = 0;
+    clock_t startTime;
     while (mAndroidApp->destroyRequested == 0) {
+        startTime = clock();
         if (ALooper_pollAll(mIsInitialized ? 1 : 0, nullptr,
                          &events, (void**)&source) >= 0) {
             if (source != nullptr) source->process(mAndroidApp, source);
@@ -129,7 +132,13 @@ void Application::run() {
 
         IM::OnNewFrame();
         // DrawFrame
-        mSceneSubSystem.OnNewFrame(static_cast<float>(deltaTime) / 1000.0f);
+        mSceneSubSystem.OnNewFrame(static_cast<float>(deltaTimeClock) / CLOCKS_PER_SEC);
+        deltaTimeClock = clock() - startTime;
+        auto const deltaTimeInSec = static_cast<float>(deltaTimeClock) / CLOCKS_PER_SEC;
+        if (TargetFpsDeltaTimeInSec > deltaTimeInSec) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<u_int32_t>(1000 * (TargetFpsDeltaTimeInSec - deltaTimeInSec))));
+            deltaTimeClock = clock() - startTime;
+        }
     };
 #else
 #error "Platform is not supported"
@@ -141,6 +150,7 @@ void Application::run() {
 void Application::setAndroidApp(android_app * androidApp) {
     mAndroidApp = androidApp;
     MFA::FileSystem::SetAndroidApp(androidApp);
+    MFA::InputManager::SetAndroidApp(androidApp);
 }
 #endif
 
