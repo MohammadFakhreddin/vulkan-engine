@@ -7,9 +7,6 @@
 #include "tools/ShapeGenerator.hpp"
 #include "engine/BedrockPath.hpp"
 
-#include <glm/mat4x4.hpp>
-#include <vec4.hpp>
-
 namespace RF = MFA::RenderFrontend;
 namespace Importer = MFA::Importer;
 namespace UI = MFA::UISystem;

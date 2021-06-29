@@ -11,6 +11,8 @@
 namespace MFA::RenderFrontend {
 
 static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+static constexpr ScreenWidth RESOLUTION_MAX_WIDTH = 1920;
+static constexpr ScreenHeight RESOLUTION_MAX_HEIGHT = 1080;
 
 #ifdef __DESKTOP__
 struct EventWatchGroup {
@@ -105,8 +107,8 @@ static int SDLEventWatcher(void* data, MSDL::SDL_Event* event) {
         event->type == MSDL::SDL_WINDOWEVENT &&
         IsResizeEvent(event->window.event)
     ) {
-        MSDL::SDL_Window* win = MSDL::SDL_GetWindowFromID(event->window.windowID);
-        if (win == static_cast<MSDL::SDL_Window *>(data)) {
+        MSDL::SDL_Window * sdlWindow = MSDL::SDL_GetWindowFromID(event->window.windowID);
+        if (sdlWindow == static_cast<MSDL::SDL_Window *>(data)) {
             state->windowResized = true;
         }
     }
@@ -164,21 +166,32 @@ bool Init(InitParams const & params) {
         state->physicalDeviceFeatures = findPhysicalDeviceResult.physicalDeviceFeatures;
     }
 
-        // Find surface capabilities
+    // Find surface capabilities
     auto const surfaceCapabilities = RB::GetSurfaceCapabilities(state->physicalDevice, state->surface);
 
     state->screenWidth = surfaceCapabilities.currentExtent.width;
     state->screenHeight = surfaceCapabilities.currentExtent.height;
 
-    
+    if (state->screenWidth > RESOLUTION_MAX_WIDTH || state->screenHeight > RESOLUTION_MAX_WIDTH) {
+        auto const downScaleResolution = [](ScreenWidth & screenWidth, ScreenHeight & screenHeight)->void{
+            screenHeight = static_cast<ScreenWidth>((static_cast<float>(RESOLUTION_MAX_WIDTH) / static_cast<float>(screenWidth)) * static_cast<float>(screenHeight));
+            screenWidth = RESOLUTION_MAX_WIDTH;
+        };
+        if (state->screenWidth > state->screenHeight) {
+            downScaleResolution(state->screenWidth, state->screenHeight);
+        } else {
+            downScaleResolution(state->screenHeight, state->screenWidth);
+        }
+    }
+
     if(RB::CheckSwapChainSupport(state->physicalDevice) == false) {
         MFA_LOG_ERROR("Swapchain is not supported on this device");
         return false;
     }
-    {
-        auto const find_queue_family_result = RB::FindPresentAndGraphicQueueFamily(state->physicalDevice, state->surface);
-        state->graphicQueueFamily = find_queue_family_result.graphic_queue_family;
-        state->presentQueueFamily = find_queue_family_result.present_queue_family;
+    {// Trying to find queue family
+        auto const result = RB::FindPresentAndGraphicQueueFamily(state->physicalDevice, state->surface);
+        state->graphicQueueFamily = result.graphic_queue_family;
+        state->presentQueueFamily = result.present_queue_family;
     }
     state->logicalDevice = RB::CreateLogicalDevice(
         state->physicalDevice,
@@ -198,9 +211,10 @@ bool Init(InitParams const & params) {
     MFA_LOG_INFO("Acquired graphics and presentation queues");
     state->graphicCommandPool = RB::CreateCommandPool(state->logicalDevice.device, state->graphicQueueFamily);
 
-    VkExtent2D swapChainExtend {};
-    swapChainExtend.width = static_cast<uint32_t>(state->screenWidth);
-    swapChainExtend.height = static_cast<uint32_t>(state->screenHeight);
+    auto const swapChainExtend = VkExtent2D {
+        .width = static_cast<uint32_t>(state->screenWidth),
+        .height = static_cast<uint32_t>(state->screenHeight)
+    };
 
     // Creating sampler/TextureImage/VertexBuffer and IndexBuffer + graphic_pipeline is on application level
     state->swapChainGroup = RB::CreateSwapChain(
@@ -256,10 +270,11 @@ void OnWindowResized() {
     MFA_ASSERT(state->screenWidth > 0);
     MFA_ASSERT(state->screenHeight > 0);
 
-    VkExtent2D extent2D {};
-    extent2D.width = static_cast<uint32_t>(state->screenWidth);
-    extent2D.height = static_cast<uint32_t>(state->screenHeight);
-    
+    auto const extent2D = VkExtent2D {
+        .width = static_cast<uint32_t>(state->screenWidth),
+        .height = static_cast<uint32_t>(state->screenHeight)
+    };
+
     state->windowResized = false;
 
     // Depth image

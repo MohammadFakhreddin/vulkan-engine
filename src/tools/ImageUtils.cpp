@@ -104,16 +104,19 @@ LoadResult Load(Data & outImageData, const char * path, bool const prefer_srgb) 
 
 bool Unload(Data * imageData) {
     bool ret = false;
-    MFA_ASSERT((imageData->stbi_pixels.ptr != nullptr) == (imageData->pixels.ptr != nullptr));
-    MFA_ASSERT((imageData->stbi_pixels.ptr != nullptr) == imageData->valid());
-    if(imageData != nullptr && imageData->stbi_pixels.ptr != nullptr) {
-        stbi_image_free(imageData->stbi_pixels.ptr);
-        if(imageData->components != imageData->stbi_components) {
-            Memory::Free(imageData->pixels);
+    MFA_ASSERT(imageData != nullptr);
+    if (imageData != nullptr) {
+        MFA_ASSERT((imageData->stbi_pixels.ptr != nullptr) == (imageData->pixels.ptr != nullptr));
+        MFA_ASSERT((imageData->stbi_pixels.ptr != nullptr) == imageData->valid());
+        if (imageData->stbi_pixels.ptr != nullptr) {
+            stbi_image_free(imageData->stbi_pixels.ptr);
+            if (imageData->components != imageData->stbi_components) {
+                Memory::Free(imageData->pixels);
+            }
+            imageData->pixels = {};
+            imageData->stbi_pixels = {};
+            ret = true;
         }
-        imageData->pixels = {};
-        imageData->stbi_pixels = {};
-        ret = true;
     }
     return ret;
 }
@@ -458,7 +461,7 @@ static bool tinyktxCallbackSeek(void * userData, const int64_t offset) {
     auto * handle = static_cast<FS::AndroidAssetHandle *>(userData);
     return FS::Android_Seek(handle, static_cast<int>(offset), FS::Origin::Start);
 #else
-#error Os not handled
+    #error Os not handled
 #endif
 }
 
@@ -476,7 +479,7 @@ static int64_t tinyktxCallbackTell(void * userData) {
     MFA_ASSERT(success);
     return location;
 #else
-#error Os not handled
+    #error Os not handled
 #endif
 }
 
@@ -499,12 +502,12 @@ Data * Load(LoadResult & loadResult, const char * path) {
     }
     
     TinyKtx_Callbacks callbacks {
-            &tinyktxCallbackError,
-            &tinyktxCallbackAlloc,
-            &tinyktxCallbackFree,
-            tinyktxCallbackRead,
-            &tinyktxCallbackSeek,
-            &tinyktxCallbackTell
+        &tinyktxCallbackError,
+        &tinyktxCallbackAlloc,
+        &tinyktxCallbackFree,
+        tinyktxCallbackRead,
+        &tinyktxCallbackSeek,
+        &tinyktxCallbackTell
     };
 
     auto * ctx =  TinyKtx_CreateContext(&callbacks, fileHandle);
@@ -569,15 +572,15 @@ Data * Load(LoadResult & loadResult, const char * path) {
 
     if (format != TextureFormat::INVALID) {
 
-        auto const mipmapCount = static_cast<uint8_t>(TinyKtx_NumberOfMipmaps(ctx));
+        auto mipmapCount = static_cast<uint8_t>(TinyKtx_NumberOfMipmaps(ctx));
 
         uint64_t totalImageSize = 0;
 
         int previousImageSize = -1;
         for(auto i = 0u; i < mipmapCount; ++i) {
             int imageSize = TinyKtx_ImageSize(ctx, i);
+            MFA_ASSERT(imageSize > 0);
             totalImageSize += imageSize;
-
             MFA_ASSERT(previousImageSize == -1 || imageSize < previousImageSize);
             previousImageSize = imageSize;
         }

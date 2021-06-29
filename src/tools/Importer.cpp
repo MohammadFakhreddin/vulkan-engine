@@ -7,7 +7,6 @@
 #include "libs/tiny_gltf_loader/tiny_gltf_loader.h"
 
 #include <glm/gtx/quaternion.hpp>
-#include <libs/tiny_gltf_loader/tiny_gltf_loader.h>
 
 namespace MFA::Importer {
 

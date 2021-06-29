@@ -303,10 +303,12 @@ uint64_t AndroidAssetHandle::totalSize () const {
 }
 
 bool AndroidAssetHandle::tell(int64_t & outLocation) const {
+    bool success = false;
     if (isOk()) {
         outLocation = totalSize() - AAsset_getRemainingLength64(mFile);
+        success = true;
     }
-    return false;
+    return success;
 }
 
 AndroidAssetHandle * Android_OpenAsset(char const * path) {
@@ -346,7 +348,7 @@ bool Android_AssetIsUsable(AndroidAssetHandle * file) {
 }
 
 bool Android_Seek(AndroidAssetHandle * file, int offset, Origin origin) {
-    return false;
+    return file != nullptr && file->seek(offset, origin);
 }
 
 bool Android_Tell(AndroidAssetHandle * file, int64_t &outLocation) {
