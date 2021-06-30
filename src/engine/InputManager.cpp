@@ -1,6 +1,5 @@
 #include "InputManager.hpp"
 
-#include "BedrockPlatforms.hpp"
 #include "engine/RenderFrontend.hpp"
 #include "engine/UISystem.hpp"
 
@@ -23,22 +22,14 @@ inline static constexpr float TouchEndDelayInSec = 50.0f / 1000.0f;
 
 struct State {
     bool isMouseLocationValid = false;
-#ifdef __DESKTOP__
-    int32_t mouseCurrentX = 0;
-    int32_t mouseCurrentY = 0;
-#elif defined(__ANDROID__)
-    float mouseCurrentX = 0;
-    float mouseCurrentY = 0;
-#else
-#error Os is not handled
-#endif
+    MousePosition mouseCurrentX = 0;
+    MousePosition mouseCurrentY = 0;
     float mouseDeltaX = 0.0f;
     float mouseDeltaY = 0.0f;
     float forwardMove = 0.0f;
     float rightMove = 0.0f;
     bool isLeftMouseDown = false;
 #ifdef __ANDROID__
-//    bool hadTouchEventThisFrame = false;
     float lastTimeSinceTouchInSec = 0;
 #endif
     void reset() {
@@ -122,9 +113,7 @@ void OnNewFrame() {
     int32_t mousePositionX = 0;
     int32_t mousePositionY = 0;
     auto const mouseButtonMask = RF::GetMouseState(&mousePositionX, &mousePositionY);
-    if (UISystem::HasFocus() == false) {
-        state->isLeftMouseDown = mouseButtonMask & SDL_BUTTON(SDL_BUTTON_LEFT);
-    }
+    state->isLeftMouseDown = mouseButtonMask & SDL_BUTTON(SDL_BUTTON_LEFT);
     if (state->isMouseLocationValid == true) {
         state->mouseDeltaX = static_cast<float>(mousePositionX - state->mouseCurrentX);
         state->mouseDeltaY = static_cast<float>(mousePositionY - state->mouseCurrentY);
@@ -154,8 +143,9 @@ void OnNewFrame() {
         state->isLeftMouseDown = true;
     } else {
         state->isMouseLocationValid = false;
+        state->mouseCurrentX = -1.0f;
+        state->mouseCurrentY = -1.0f;
     }
-//    state->hadTouchEventThisFrame = false;
 #else
     #error Os is not supported
 #endif
@@ -189,6 +179,14 @@ float GetRightMove() {
 [[nodiscard]]
 bool IsLeftMouseDown() {
     return state->isLeftMouseDown;
+}
+
+MousePosition GetMouseX() {
+    return state->mouseCurrentX;
+}
+
+MousePosition GetMouseY() {
+    return state->mouseCurrentY;
 }
 
 }

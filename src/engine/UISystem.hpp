@@ -29,7 +29,6 @@ void InputFloat2(char const * label, float value[2]);
 
 void InputFloat3(char const * label, float value[3]);
 
-
 void Combo(
     char const * label,
     int32_t * selectedItemIndex,
@@ -60,5 +59,9 @@ void Checkbox(
 bool HasFocus();
 
 void Shutdown();
+
+#ifdef __ANDROID__
+void SetAndroidApp(android_app *pApp);
+#endif
 
 }

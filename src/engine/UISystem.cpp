@@ -2,6 +2,7 @@
 
 #include "BedrockMemory.hpp"
 #include "../tools/Importer.hpp"
+#include "InputManager.hpp"
 
 #include "libs/imgui/imgui.h"
 
@@ -9,6 +10,7 @@ namespace MFA::UISystem {
 
 namespace RB = RenderBackend;
 namespace Importer = Importer;
+namespace IM = InputManager;
 
 //-----------------------------------------------------------------------------
 // SHADERS
@@ -130,18 +132,20 @@ struct State {
     RF::DrawPipeline drawPipeline {};
     RB::GpuTexture fontTexture {};
     bool mousePressed[3] {false};
-#ifdef __DESKTOP__
-    MSDL::SDL_Cursor *  mouseCursors[ImGuiMouseCursor_COUNT] {};
-#endif
     std::vector<RF::MeshBuffers> meshBuffers {};
     std::vector<bool> meshBuffersValidationStatus {};
     bool hasFocus = false;
 #ifdef __DESKTOP__
+    MSDL::SDL_Cursor *  mouseCursors[ImGuiMouseCursor_COUNT] {};
     RF::EventWatchId eventWatchId = -1;
 #endif
 };
 
 static State * state = nullptr;
+
+#ifdef __ANDROID__
+static android_app * androidApp = nullptr;
+#endif
 
 struct PushConstants {
     float scale[2];
@@ -179,6 +183,16 @@ static int EventWatch(void* data, MSDL::SDL_Event* event) {
 }
 #endif
 
+#ifdef __ANDROID__
+static int32_t getDensityDpi(android_app * app) {
+    AConfiguration* config = AConfiguration_new();
+    AConfiguration_fromAssetManager(config, app->activity->assetManager);
+    int32_t density = AConfiguration_getDensity(config);
+    AConfiguration_delete(config);
+    return density;
+}
+#endif
+
 void Init() {
     state = new State();
     auto const swap_chain_images_count = RF::SwapChainImagesCount();
@@ -193,7 +207,6 @@ void Init() {
         params.min_lod = -1000;
         params.max_lod = 1000;
         params.max_anisotropy = 1.0f;
-
         state->fontSampler = RF::CreateSampler(params);
     }
 
@@ -285,7 +298,7 @@ void Init() {
         pipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
         pipelineOptions.pushConstantRanges = pushConstantRanges.data();
         pipelineOptions.useStaticViewportAndScissor = false;
-
+        
         state->drawPipeline = RF::CreateDrawPipeline(
             static_cast<uint8_t>(shader_stages.size()),
             shader_stages.data(),
@@ -318,7 +331,8 @@ void Init() {
 
         // Setup Dear ImGui style
         ImGui::StyleColorsDark();
-    
+
+
         uint8_t * pixels = nullptr;
         int32_t width, height;
         io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
@@ -421,7 +435,8 @@ static void UpdateMousePositionAndButtons() {
         io.MousePos = ImVec2(static_cast<float>(mx), static_cast<float>(my));
     }
 #elif defined(__ANDROID__)
-    //MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+    io.MousePos = ImVec2(IM::GetMouseX(), IM::GetMouseY());
+    io.MouseDown[0] = IM::IsLeftMouseDown();
 #else
     #error Os not supported
 #endif
@@ -478,9 +493,6 @@ void OnNewFrame(
     UpdateMousePositionAndButtons();
 #if defined(__DESKTOP__)
     UpdateMouseCursor();
-#elif defined (__ANDROID__)
-    // TODO
-#else
 #endif
     // Start the Dear ImGui frame
     ImGui::NewFrame();
@@ -731,5 +743,12 @@ void Shutdown() {
     delete state;
     state = nullptr;
 }
+
+#ifdef __ANDROID__
+void SetAndroidApp(android_app * pApp)
+{
+    androidApp = pApp;
+}
+#endif
 
 }

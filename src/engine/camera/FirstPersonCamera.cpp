@@ -37,7 +37,7 @@ void FirstPersonCamera::init() {
 }
 
 void FirstPersonCamera::onNewFrame(float const deltaTimeInSec) {
-    if (InputManager::IsLeftMouseDown() == true) {
+    if (InputManager::IsLeftMouseDown() == true && UISystem::HasFocus() == false) {
         auto const mouseDeltaX = IM::GetMouseDeltaX();
         auto const mouseDeltaY = IM::GetMouseDeltaY();
         auto const rotationDistance = mRotationSpeed * deltaTimeInSec;

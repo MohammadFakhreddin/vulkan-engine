@@ -1,10 +1,22 @@
 #pragma once
 
+#include "BedrockPlatforms.hpp"
+
 #if defined(__ANDROID__)
 #include <android_native_app_glue.h>
 #endif
 
+#include <cstdint>
+
 namespace MFA::InputManager {
+
+#ifdef __DESKTOP__
+    using MousePosition = int32_t;
+#elif defined(__ANDROID__)
+    using MousePosition = float;
+#else
+    #error Os is not handled
+#endif
 
     void Init();
 
@@ -27,8 +39,13 @@ namespace MFA::InputManager {
     [[nodiscard]]
     bool IsLeftMouseDown();
 
+    [[nodiscard]]
+    MousePosition GetMouseX();
+
+    [[nodiscard]]
+    MousePosition GetMouseY();
+
 #ifdef __ANDROID__
-//    void SetInputQueue(AInputQueue * inputQueue_);
     void SetAndroidApp(android_app * androidApp);
 #endif
 

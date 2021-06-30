@@ -151,6 +151,7 @@ void Application::setAndroidApp(android_app * androidApp) {
     mAndroidApp = androidApp;
     MFA::FileSystem::SetAndroidApp(androidApp);
     MFA::InputManager::SetAndroidApp(androidApp);
+    MFA::UISystem::SetAndroidApp(androidApp);
 }
 #endif
 

@@ -11,8 +11,15 @@
 namespace MFA::RenderFrontend {
 
 static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
-static constexpr ScreenWidth RESOLUTION_MAX_WIDTH = 1920;
-static constexpr ScreenHeight RESOLUTION_MAX_HEIGHT = 1080;
+//#ifdef __DESKTOP__
+//static constexpr ScreenWidth RESOLUTION_MAX_WIDTH = 1920;
+//static constexpr ScreenHeight RESOLUTION_MAX_HEIGHT = 1080;
+//#elif defined(__ANDROID__)
+//static constexpr ScreenWidth RESOLUTION_MAX_WIDTH = 800;
+//static constexpr ScreenHeight RESOLUTION_MAX_HEIGHT = 600;
+//#else
+//#error Os is not handled
+//#endif
 
 #ifdef __DESKTOP__
 struct EventWatchGroup {
@@ -172,7 +179,7 @@ bool Init(InitParams const & params) {
     state->screenWidth = surfaceCapabilities.currentExtent.width;
     state->screenHeight = surfaceCapabilities.currentExtent.height;
 
-    if (state->screenWidth > RESOLUTION_MAX_WIDTH || state->screenHeight > RESOLUTION_MAX_WIDTH) {
+   /* if (state->screenWidth > RESOLUTION_MAX_WIDTH || state->screenHeight > RESOLUTION_MAX_WIDTH) {
         auto const downScaleResolution = [](ScreenWidth & screenWidth, ScreenHeight & screenHeight)->void{
             screenHeight = static_cast<ScreenWidth>((static_cast<float>(RESOLUTION_MAX_WIDTH) / static_cast<float>(screenWidth)) * static_cast<float>(screenHeight));
             screenWidth = RESOLUTION_MAX_WIDTH;
@@ -182,7 +189,7 @@ bool Init(InitParams const & params) {
         } else {
             downScaleResolution(state->screenHeight, state->screenWidth);
         }
-    }
+    }*/
 
     if(RB::CheckSwapChainSupport(state->physicalDevice) == false) {
         MFA_LOG_ERROR("Swapchain is not supported on this device");
@@ -269,6 +276,18 @@ void OnWindowResized() {
 
     MFA_ASSERT(state->screenWidth > 0);
     MFA_ASSERT(state->screenHeight > 0);
+
+  /*  if (state->screenWidth > RESOLUTION_MAX_WIDTH || state->screenHeight > RESOLUTION_MAX_WIDTH) {
+        auto const downScaleResolution = [](ScreenWidth & screenWidth, ScreenHeight & screenHeight)->void{
+            screenHeight = static_cast<ScreenWidth>((static_cast<float>(RESOLUTION_MAX_WIDTH) / static_cast<float>(screenWidth)) * static_cast<float>(screenHeight));
+            screenWidth = RESOLUTION_MAX_WIDTH;
+        };
+        if (state->screenWidth > state->screenHeight) {
+            downScaleResolution(state->screenWidth, state->screenHeight);
+        } else {
+            downScaleResolution(state->screenHeight, state->screenWidth);
+        }
+    }*/
 
     auto const extent2D = VkExtent2D {
         .width = static_cast<uint32_t>(state->screenWidth),
