@@ -124,8 +124,16 @@ private:
     bool mIsLightWindowVisible = false;
     bool mIsCameraWindowVisible = false;
 
+#ifdef __DESKTOP__
+    static constexpr float FOV = 80;
+#elif defined(__ANDROID__)
+    static constexpr float FOV = 40;
+#else
+#error Os is not handled
+#endif
+
     MFA::FirstPersonCamera mCamera {
-        80,
+        FOV,
         Z_FAR,
         Z_NEAR
     };

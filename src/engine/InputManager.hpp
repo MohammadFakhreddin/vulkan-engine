@@ -45,6 +45,9 @@ namespace MFA::InputManager {
     [[nodiscard]]
     MousePosition GetMouseY();
 
+    [[nodiscard]]
+    bool IsMouseLocationValid();
+
 #ifdef __ANDROID__
     void SetAndroidApp(android_app * androidApp);
 #endif

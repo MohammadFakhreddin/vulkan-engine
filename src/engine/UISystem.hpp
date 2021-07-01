@@ -55,6 +55,11 @@ void Checkbox(
     bool * value
 );
 
+void Button(
+    char const * label, 
+    std::function<void()> const & onPress
+);
+
 [[nodiscard]]
 bool HasFocus();
 

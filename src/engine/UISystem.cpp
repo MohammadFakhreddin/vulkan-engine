@@ -131,10 +131,13 @@ struct State {
     std::vector<VkDescriptorSet> descriptorSets {};
     RF::DrawPipeline drawPipeline {};
     RB::GpuTexture fontTexture {};
-    bool mousePressed[3] {false};
     std::vector<RF::MeshBuffers> meshBuffers {};
     std::vector<bool> meshBuffersValidationStatus {};
     bool hasFocus = false;
+#ifdef __ANDROID__
+    IM::MousePosition previousMousePositionX = 0.0f;
+    IM::MousePosition previousMousePositionY = 0.0f;
+#endif
 #ifdef __DESKTOP__
     MSDL::SDL_Cursor *  mouseCursors[ImGuiMouseCursor_COUNT] {};
     RF::EventWatchId eventWatchId = -1;
@@ -332,7 +335,6 @@ void Init() {
         // Setup Dear ImGui style
         ImGui::StyleColorsDark();
 
-
         uint8_t * pixels = nullptr;
         int32_t width, height;
         io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
@@ -386,6 +388,11 @@ void Init() {
         io.KeyMap[ImGuiKey_Y] = MSDL::SDL_SCANCODE_Y;
         io.KeyMap[ImGuiKey_Z] = MSDL::SDL_SCANCODE_Z;
 #endif
+
+#ifdef __ANDROID__
+        // Scaling fonts    // TODO Find a better way
+        io.FontGlobalScale = 3.5f;
+#endif
     }
 
     // Update the Descriptor Set:
@@ -427,16 +434,22 @@ static void UpdateMousePositionAndButtons() {
     }
     int mx, my;
     uint32_t const mouse_buttons = MSDL::SDL_GetMouseState(&mx, &my);
-    io.MouseDown[0] = state->mousePressed[0] || ((mouse_buttons & SDL_BUTTON(SDL_BUTTON_LEFT)) != 0);  // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-    io.MouseDown[1] = state->mousePressed[1] || ((mouse_buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0);
-    io.MouseDown[2] = state->mousePressed[2] || ((mouse_buttons & SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0);
-    state->mousePressed[0] = state->mousePressed[1] = state->mousePressed[2] = false;
+    io.MouseDown[0] = (mouse_buttons & SDL_BUTTON(SDL_BUTTON_LEFT)) != 0;  // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
+    io.MouseDown[1] = (mouse_buttons & SDL_BUTTON(SDL_BUTTON_RIGHT)) != 0;
+    io.MouseDown[2] = (mouse_buttons & SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0;
     if (RF::GetWindowFlags() & MSDL::SDL_WINDOW_INPUT_FOCUS) {
         io.MousePos = ImVec2(static_cast<float>(mx), static_cast<float>(my));
     }
 #elif defined(__ANDROID__)
-    io.MousePos = ImVec2(IM::GetMouseX(), IM::GetMouseY());
+    if (IM::IsMouseLocationValid()) {
+        state->previousMousePositionX = IM::GetMouseX();
+        state->previousMousePositionY = IM::GetMouseY();
+    }
+    io.MousePos = ImVec2(state->previousMousePositionX, state->previousMousePositionY);
+
     io.MouseDown[0] = IM::IsLeftMouseDown();
+    io.MouseDown[1] = false;
+    io.MouseDown[2] = false;
 #else
     #error Os not supported
 #endif
@@ -468,26 +481,26 @@ void OnNewFrame(
 ) {
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! It is generally built by the renderer backend. Missing call to renderer _NewFrame() function? e.g. ImGui_ImplOpenGL3_NewFrame().");
-
+    
     // Setup display size (every frame to accommodate for window resizing)
     int32_t window_width, window_height;
     int32_t drawable_width, drawable_height;
     RF::GetDrawableSize(window_width, window_height);
+
 #if defined(__DESKTOP__)
     if (RF::GetWindowFlags() & MSDL::SDL_WINDOW_MINIMIZED) {
         window_width = window_height = 0;
     }
-#elif defined(__ANDROID__)
-#else
-#error Os is not supported
 #endif
+
     RF::GetDrawableSize(drawable_width, drawable_height);
     io.DisplaySize = ImVec2(static_cast<float>(window_width), static_cast<float>(window_height));
     if (window_width > 0 && window_height > 0) {
-        io.DisplayFramebufferScale = ImVec2(
-            static_cast<float>(drawable_width) / static_cast<float>(window_width), 
-            static_cast<float>(drawable_height) / static_cast<float>(window_height)
-        );
+        //io.DisplayFramebufferScale = ImVec2(
+        //    static_cast<float>(drawable_width) / static_cast<float>(window_width), 
+        //    static_cast<float>(drawable_height) / static_cast<float>(window_height)
+        //);
+        io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
     }
     io.DeltaTime = deltaTimeInSec;
     UpdateMousePositionAndButtons();
@@ -496,13 +509,14 @@ void OnNewFrame(
 #endif
     // Start the Dear ImGui frame
     ImGui::NewFrame();
-
+    
     state->hasFocus = false;
     if(recordUiCallback != nullptr) {
         recordUiCallback();
     }
-
+    
     ImGui::Render();
+
     auto * draw_data = ImGui::GetDrawData();
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
     auto const frame_buffer_width = static_cast<float>(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
@@ -709,6 +723,13 @@ void SliderFloat(
 
 void Checkbox(char const * label, bool * value) {
     ImGui::Checkbox(label, value);
+}
+
+void Button(char const * label, std::function<void()> const & onPress) {
+    if (ImGui::Button(label)) {
+        MFA_ASSERT(onPress != nullptr);
+        onPress();
+    }
 }
 
 bool HasFocus() {

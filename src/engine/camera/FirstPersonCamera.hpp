@@ -15,7 +15,13 @@ public:
         Vector3Float const & position = Vector3Float {0.0f, 0.0f, 0.0f}, 
         Vector3Float const & eulerAngles = Vector3Float {0.0f, 0.0f, 0.0f},
         float moveSpeed = 10.0f,
+#ifdef __DESKTOP__
         float rotationSpeed = 10.0f
+#elif defined(__ANDROID__)
+        float rotationSpeed = 15.0f
+#else
+#error Os is not handled
+#endif
     );
 
     ~FirstPersonCamera() override = default;

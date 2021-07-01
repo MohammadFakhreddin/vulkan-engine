@@ -263,7 +263,6 @@ void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & draw
     if (mIsLightVisible) {
         mPointLightPipeline.render(drawPass, fDeltaTime, 1, &mPointLightObjectId);
     }
-    int a = 10;
 }
 
 void GLTFMeshViewerScene::OnUI(float const deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) {
@@ -272,6 +271,9 @@ void GLTFMeshViewerScene::OnUI(float const deltaTimeInSec, MFA::RenderFrontend::
     UI::Checkbox("Object viewer window", &mIsObjectViewerWindowVisible);
     UI::Checkbox("Light window", &mIsLightWindowVisible);
     UI::Checkbox("Camera window", &mIsCameraWindowVisible);
+    UI::Button("Reset values", [this]()->void{
+        mPreviousModelSelectedIndex = -1;
+    });
     UI::EndWindow();
 
     if (mIsObjectViewerWindowVisible) {

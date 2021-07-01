@@ -17,7 +17,7 @@ namespace RF = RenderFrontend;
 namespace UI = UISystem;
 
 #ifdef __ANDROID__
-inline static constexpr float TouchEndDelayInSec = 50.0f / 1000.0f;
+inline static constexpr float TouchEndDelayInSec = 10.0f / 1000.0f;
 #endif
 
 struct State {
@@ -48,19 +48,19 @@ State * state = nullptr;
 static void handleMotionEvent(AInputEvent * event) {
     float mousePositionX = AMotionEvent_getX(event, 0);
     float mousePositionY = AMotionEvent_getY(event, 0);
-//    state->hadTouchEventThisFrame = true;
+    if (mousePositionX < 0 || mousePositionY < 0) {
+        // Maybe also check width and height
+        state->isMouseLocationValid = false;
+        return;
+    }
     // TODO Create time class
     state->lastTimeSinceTouchInSec = static_cast<float>(clock()) / CLOCKS_PER_SEC;
-//        if (UISystem::HasFocus() == false) {
-//            state->isLeftMouseDown = mouseButtonMask & SDL_BUTTON(SDL_BUTTON_LEFT);
-//        }
     if (state->isMouseLocationValid == true) {
         state->mouseDeltaX = mousePositionX - state->mouseCurrentX;
         state->mouseDeltaY = mousePositionY - state->mouseCurrentY;
     } else {
         state->isMouseLocationValid = true;
     }
-    MFA_LOG_INFO("MouseDeltaXY: %f, %f", state->mouseDeltaX, state->mouseDeltaY);
     state->mouseCurrentX = mousePositionX;
     state->mouseCurrentY = mousePositionY;
 }
@@ -187,6 +187,10 @@ MousePosition GetMouseX() {
 
 MousePosition GetMouseY() {
     return state->mouseCurrentY;
+}
+
+bool IsMouseLocationValid() {
+    return state->isMouseLocationValid;
 }
 
 }
