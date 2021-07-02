@@ -357,7 +357,7 @@ elseif(LINUX)
         "${CMAKE_SOURCE_DIR}/libs/include"
     )
 
-elseif(MACOSX)
+elseif(MACOSX OR IPHONE)
 
 #-----------------------------------------------------------------------
 # MACOSX Executable
