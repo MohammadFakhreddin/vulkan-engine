@@ -101,6 +101,8 @@ build/*
 build64/*
 build64
 build
+buildIOS
+buildIOS/*
 
 android/local.properties
 

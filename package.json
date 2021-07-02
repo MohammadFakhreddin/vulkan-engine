@@ -1,6 +1,9 @@
 {
     "scripts": {
         "pbr-vert": "glslc -fshader-stage=vert assets/shaders/pbr_model/PbrModel.vert.hlsl  -o assets/shaders/pbr_model/PbrModel.vert.spv",
-        "pbr-frag": "glslc -fshader-stage=frag assets/shaders/pbr_model/PbrModel.frag.hlsl  -o assets/shaders/pbr_model/PbrModel.frag.spv"
+        "pbr-frag": "glslc -fshader-stage=frag assets/shaders/pbr_model/PbrModel.frag.hlsl  -o assets/shaders/pbr_model/PbrModel.frag.spv",
+
+        "cmake-mac": "cd build64 && cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=../ios/ios.toolchain.cmake -DPLATFORM=MAC && cd ..",
+        "cmake-ios:": "cd build64 && cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=../ios/ios.toolchain.cmake -DPLATFORM=OS64COMBINED && cd .."
     }
 }

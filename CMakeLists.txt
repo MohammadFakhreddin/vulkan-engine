@@ -383,25 +383,13 @@ elseif(MACOSX)
     )
 
     target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.2.141.dylib")
-    # target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.dylib")
-
+    
     target_include_directories(
         ${PROJECT_NAME} PUBLIC 
         "mac"
         "src" 
         "${CMAKE_SOURCE_DIR}/libs/include"
     )
-
-    # add_compile_definitions (-DCMAKE_SYSTEM_NAME=iOS)
-    # add_compile_definitions (-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64)
-    # add_compile_definitions (-DCMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH=NO)
-    # add_compile_definitions (-DCMAKE_IOS_INSTALL_COMBINED=YES)
-    # add_compile_definitions (-DCMAKE_INSTALL_PREFIX=install)
-    
-    # set_target_properties(${PROJECT_NAME} PROPERTIES
-    #     MACOSX_BUNDLE TRUE
-    #     MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/mac/info.plist
-    # )
     
 elseif(ANDROID)
 
