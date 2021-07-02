@@ -106,6 +106,28 @@ void FirstPersonCamera::onResize() {
         mNearPlane,
         mFarPlane
     );
+
+// TODO We should handle orientation change on android/IOS (UI shader might need a change)
+// https://android-developers.googleblog.com/2020/02/handling-device-orientation-efficiently.html
+//#ifdef __ANDROID__
+//    // For mobile
+//    glm::mat4 projectionMatrix;
+//    Matrix4X4Float::ConvertMatrixToGlm(mProjectionMatrix, projectionMatrix);
+//
+//    static constexpr glm::vec3 rotationAxis = glm::vec3(0.0f, 0.0f, 1.0f);
+//    // TODO Should we cache it or it is not important ?
+//    auto const capabilities = RF::GetSurfaceCapabilities();
+//
+//    if (capabilities.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR) {
+//        projectionMatrix = glm::rotate(projectionMatrix, glm::radians(90.0f), rotationAxis);
+//    } else if (capabilities.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR) {
+//        projectionMatrix = glm::rotate(projectionMatrix, glm::radians(270.0f), rotationAxis);
+//    } else if (capabilities.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR) {
+//        projectionMatrix = glm::rotate(projectionMatrix, glm::radians(180.0f), rotationAxis);
+//    }
+//
+//    Matrix4X4Float::ConvertGmToCells(projectionMatrix, mProjectionMatrix.cells);
+//#endif
 }
 
 void FirstPersonCamera::getProjection(float outProjectionMatrix[16]) {

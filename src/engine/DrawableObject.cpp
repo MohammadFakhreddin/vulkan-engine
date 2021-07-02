@@ -201,12 +201,11 @@ void DrawableObject::updateAnimation(float deltaTimeInSec) {
             // Get the input keyframe values for the current time stamp
             if (mAnimationCurrentTime >= previousInput && mAnimationCurrentTime <= nextInput)
             {
-                // TODO Find a better name for a
-                float const a = (mAnimationCurrentTime - previousInput) / (nextInput - previousInput);
+                float const fraction = (mAnimationCurrentTime - previousInput) / (nextInput - previousInput);
 
                 if (channel.path == Animation::Path::Translation)
                 {
-                    auto const translate = glm::mix(previousOutput, nextOutput, a);
+                    auto const translate = glm::mix(previousOutput, nextOutput, fraction);
 
                     node.translate[0] = translate[0];
                     node.translate[1] = translate[1];
@@ -226,7 +225,7 @@ void DrawableObject::updateAnimation(float deltaTimeInSec) {
                     nextRotation.z = nextOutput[2];
                     nextRotation.w = nextOutput[3];
 
-                    auto const rotation = glm::normalize(glm::slerp(previousRotation, nextRotation, a));
+                    auto const rotation = glm::normalize(glm::slerp(previousRotation, nextRotation, fraction));
 
                     node.rotation[0] = rotation[0];
                     node.rotation[1] = rotation[1];
@@ -235,7 +234,7 @@ void DrawableObject::updateAnimation(float deltaTimeInSec) {
                 }
                 else if (channel.path == Animation::Path::Scale)
                 {
-                    auto const scale = glm::mix(previousOutput, nextOutput, a);
+                    auto const scale = glm::mix(previousOutput, nextOutput, fraction);
                     
                     node.scale[0] = scale[0];
                     node.scale[1] = scale[1];

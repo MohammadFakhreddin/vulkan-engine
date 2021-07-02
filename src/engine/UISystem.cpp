@@ -254,7 +254,7 @@ void Init() {
         VkPushConstantRange pushConstantRange {};
         pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
         pushConstantRange.offset = 0;
-        pushConstantRange.size = 4 * sizeof(float);//sizeof(pushConstantRanges);           // TODO ReCheck this value;
+        pushConstantRange.size = 4 * sizeof(float);
         pushConstantRanges.emplace_back(pushConstantRange);
         
         std::vector<RB::GpuShader> shader_stages {state->vertexShader, state->fragmentShader};

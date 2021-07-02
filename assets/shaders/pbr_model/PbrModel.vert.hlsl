@@ -52,26 +52,17 @@ ConstantBuffer <SkinJoints> skinJointsBuffer: register(b2, space0);
 
 #define IdentityMat float4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
 
-// float4x4 extractJointMatrix(float jointWeight, int jointIndex) {
-//     // if (jointWeight > 0 && jointIndex >=0 ) {
-//     return jointWeight * skinJointsBuffer.joints[jointIndex];     
-//     // }  
-//     // return 0;
-// }
-
 VSOut main(VSIn input) {
     VSOut output;
 
-    float4x4 skinMat = IdentityMat;
+    float4x4 skinMat;
     if (input.hasSkin == 1) {
-        // skinMat = extractJointMatrix(input.jointWeights.x, input.jointIndices.x)
-        //     + extractJointMatrix(input.jointWeights.y, input.jointIndices.y)
-        //     + extractJointMatrix(input.jointWeights.z, input.jointIndices.z)
-        //     + extractJointMatrix(input.jointWeights.w, input.jointIndices.w);
         skinMat = mul(skinJointsBuffer.joints[input.jointIndices.x], input.jointWeights.x)
             + mul(skinJointsBuffer.joints[input.jointIndices.y], input.jointWeights.y) 
             + mul(skinJointsBuffer.joints[input.jointIndices.z], input.jointWeights.z)
             + mul(skinJointsBuffer.joints[input.jointIndices.w], input.jointWeights.w);
+    } else {
+        skinMat = IdentityMat;
     }
     float4x4 modelMat = mul(modelTransformBuffer.model, nodeTransformBuffer.model);
     float4x4 skinModelMat = mul(modelMat, skinMat);

@@ -59,6 +59,7 @@ settings.json
 3d-cube
 
 .vscode
+.vscode/*
 
 out/*
 
@@ -100,8 +101,6 @@ build/*
 build64/*
 build64
 build
-
-package.json
 
 android/local.properties
 

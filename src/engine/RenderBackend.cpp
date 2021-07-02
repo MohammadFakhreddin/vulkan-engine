@@ -532,9 +532,9 @@ void MapDataToBuffer(
     MFA_ASSERT(dataBlob.ptr != nullptr);
     MFA_ASSERT(dataBlob.len > 0);
     void * tempBufferData = nullptr;
-    vkMapMemory(device, bufferMemory, 0, dataBlob.len, 0, &tempBufferData);
+    VK_Check(vkMapMemory(device, bufferMemory, 0, dataBlob.len, 0, &tempBufferData));
     MFA_ASSERT(tempBufferData != nullptr);
-    ::memcpy(tempBufferData, dataBlob.ptr, static_cast<size_t>(dataBlob.len));
+    ::memcpy(tempBufferData, dataBlob.ptr, dataBlob.len);
     vkUnmapMemory(device, bufferMemory);
 }
 
@@ -1216,13 +1216,14 @@ SwapChainGroup CreateSwapChain(
     );
 
     // Determine transformation to use (preferring no transform)
-    VkSurfaceTransformFlagBitsKHR surfaceTransform {};
-    if (surfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
-        surfaceTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-    }
-    else {
-        surfaceTransform = surfaceCapabilities.currentTransform;
-    }
+    VkSurfaceTransformFlagBitsKHR surfaceTransform;
+    //if (surfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR) {
+        //surfaceTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+    //} else if (surfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
+        //surfaceTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+    //} else {
+    surfaceTransform = surfaceCapabilities.currentTransform;
+    //}
 
     MFA_ASSERT(present_modes.size() <= 255);
     // Choose presentation mode (preferring MAILBOX ~= triple buffering)

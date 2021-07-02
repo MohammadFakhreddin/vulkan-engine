@@ -298,4 +298,7 @@ void RemoveEventWatch(EventWatchId watchId);
 // Currently only used for android (Probably ios in future)
 void NotifyDeviceResized();
 
+[[nodiscard]]
+VkSurfaceCapabilitiesKHR GetSurfaceCapabilities();
+
 }
