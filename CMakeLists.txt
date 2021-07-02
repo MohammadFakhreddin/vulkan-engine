@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 3.10)
 
+set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)
+
 set(PROJECT_NAME "MFaEngine")
 
 set(UNIT_TEST_NAME "UnitTests")
@@ -390,7 +392,7 @@ elseif(MACOSX)
         "src" 
         "${CMAKE_SOURCE_DIR}/libs/include"
     )
-    
+
 elseif(ANDROID)
 
 #-----------------------------------------------------------------------
