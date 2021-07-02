@@ -40,6 +40,13 @@ else()
     # add_definitions(-Werror)
 endif()
 
+message(STATUS "Build type is ${CMAKE_BUILD_TYPE}")
+if(${CMAKE_BUILD_TYPE} MATCHES Release)
+    add_definitions(-DNDEBUG)
+else()
+    add_definitions(-D_DEBUG)
+endif()
+
 # add_definitions (-DGLM_FORCE_LEFT_HANDED )
 include_directories(libs/include/glm)
 

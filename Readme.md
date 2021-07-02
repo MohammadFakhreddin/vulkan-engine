@@ -18,7 +18,7 @@ Find .sln files inside build64 and then run the project
 ```
 mkdir build64
 cd build64
-cmake ..
+cmake .. -DCMAKE_BUILD_TYPE=Debug (Release)
 make
 ./MFaEngine
 ```
