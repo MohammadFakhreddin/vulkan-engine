@@ -19,9 +19,9 @@ set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(APPLE)
    if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-      set(MACOSX TRUE)
-   elseif()
-      set(IPHONE TRUE)
+        set(MACOSX TRUE)
+   else()
+        set(IPHONE TRUE)
    endif()
 endif()
 
@@ -206,7 +206,7 @@ list(
     "src/libs/tiny_ktx/tinyktx.h"
 )
 
-if (!ANDROID)
+if (NOT ANDROID)
 list(
     APPEND LIBS_SOURCES
     #SDL
@@ -357,11 +357,12 @@ elseif(LINUX)
         "${CMAKE_SOURCE_DIR}/libs/include"
     )
 
-elseif(MACOSX OR IPHONE)
+elseif(MACOSX)
 
 #-----------------------------------------------------------------------
 # MACOSX Executable
 #-----------------------------------------------------------------------
+    message(STATUS "Building for macos")
 
     set(MAC_SOURCE)
     
@@ -392,6 +393,58 @@ elseif(MACOSX OR IPHONE)
         "src" 
         "${CMAKE_SOURCE_DIR}/libs/include"
     )
+
+elseif(IPHONE)
+
+#-----------------------------------------------------------------------
+# IPHONE Executable
+#-----------------------------------------------------------------------
+    message(STATUS "Building for iphone")
+
+#https://stackoverflow.com/questions/822404/how-to-set-up-cmake-to-build-an-app-for-the-iphone
+    set(IPHONE_SOURCE)
+        
+    list(
+        APPEND IPHONE_SOURCE
+        "ios/main.m"
+        "ios/ViewController.h"
+        "ios/ViewController.mm"
+        "ios/AppDelegate.h"
+        "ios/AppDelegate.m"
+        "src/Application.hpp"
+        "src/Application.cpp"
+    )
+
+    # set(CMAKE_OSX_SYSROOT iphoneos2.2.1)
+    # set(CMAKE_OSX_ARCHITECTURES $(ARCHS_STANDARD_32_BIT))
+
+    set(MACOSX_BUNDLE_GUI_IDENTIFIER "co.radx.\${PRODUCT_NAME:identifier}")
+    
+    add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${IPHONE_SOURCE})
+
+    add_dependencies(${PROJECT_NAME} "Scenes" "Tools" "Engine" "Libs")
+
+    target_link_libraries(${PROJECT_NAME} "Scenes" "Tools" "Engine" "Libs")
+
+    target_link_libraries(${PROJECT_NAME}
+        "-framework CoreGraphics"
+        "-framework UIKit"
+    )
+
+    target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.2.141.dylib")
+
+    target_include_directories(
+        ${PROJECT_NAME} PUBLIC 
+        "ios"
+        "src" 
+        "${CMAKE_SOURCE_DIR}/libs/include"
+    )
+
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fobjc-arc -ObjC++")
+    ELSE()
+        SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fobjc-arc -xobjective-c++")
+    ENDIF()
 
 elseif(ANDROID)
 

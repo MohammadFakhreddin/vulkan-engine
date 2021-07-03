@@ -109,3 +109,5 @@ android/local.properties
 .gradle
 .idea
 .cxx
+
+!ios.toolchain.cmake
