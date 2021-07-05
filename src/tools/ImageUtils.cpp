@@ -442,7 +442,7 @@ static void tinyktxCallbackFree(void *user, void *data) {
 }
 
 static size_t tinyktxCallbackRead(void * userData, void* data, const size_t size) {
-#ifdef __DESKTOP__
+#if defined(__DESKTOP__) || defined(__IOS__)
     auto * handle = static_cast<FS::FileHandle *>(userData);
     return FS::Read(handle, MFA::Blob {data, size});
 #elif defined(__ANDROID__)
@@ -454,7 +454,7 @@ static size_t tinyktxCallbackRead(void * userData, void* data, const size_t size
 }
 
 static bool tinyktxCallbackSeek(void * userData, const int64_t offset) {
-#ifdef __DESKTOP__
+#if defined(__DESKTOP__) || defined(__IOS__)
     auto * handle = static_cast<FS::FileHandle *>(userData);
     return FS::Seek(handle, static_cast<int>(offset), FS::Origin::Start);
 #elif defined(__ANDROID__)
@@ -466,7 +466,7 @@ static bool tinyktxCallbackSeek(void * userData, const int64_t offset) {
 }
 
 static int64_t tinyktxCallbackTell(void * userData) {
-#ifdef __DESKTOP__
+#if defined(__DESKTOP__) || defined(__IOS__)
     auto * handle = static_cast<FS::FileHandle *>(userData);
     int64_t location = 0;
     bool success = FS::Tell(handle, location);
@@ -489,7 +489,7 @@ Data * Load(LoadResult & loadResult, const char * path) {
 
     loadResult = LoadResult::Invalid;
 
-#ifdef __DESKTOP__
+#if defined(__DESKTOP__) || defined(__IOS__)
     auto * fileHandle = FS::OpenFile(path, FS::Usage::Read);
 #elif defined(__ANDROID__)
     auto * fileHandle = FS::Android_OpenAsset(path);

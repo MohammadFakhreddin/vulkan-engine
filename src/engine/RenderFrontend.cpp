@@ -57,6 +57,8 @@ struct State {
     std::vector<EventWatchGroup> eventListeners {};
 #elif defined(__ANDROID__)
     ANativeWindow * window = nullptr;
+#elif defined(__IOS__)
+    void * window = nullptr;
 #else
 #error Os is not handled
 #endif
@@ -139,14 +141,22 @@ bool Init(InitParams const & params) {
 
 #elif defined(__ANDROID__)
     state->window = params.app->window;
+#elif defined(__IOS__)
+    state->window = params.view;
 #else
-    #error Os is not supported
+    #error "Os is not supported"
 #endif
 
+#ifdef __DESKTOP__
     state->vk_instance = RB::CreateInstance(
         state->application_name.c_str(),
         state->window
     );
+#elif defined(__ANDROID__) || defined(__IOS__)
+    state->vk_instance = RB::CreateInstance(state->application_name.c_str());
+#else
+    #error "Os is not supported"
+#endif
     MFA_VK_VALID_ASSERT(state->vk_instance);
 
 #if defined(MFA_DEBUG)  // TODO Fix support for android
@@ -1012,9 +1022,6 @@ void OnNewFrame(float deltaTimeInSec) {
     }
 #ifdef __DESKTOP__
     state->isWindowVisible = (GetWindowFlags() & MSDL::SDL_WINDOW_MINIMIZED) > 0 ? false : true;
-#elif defined(__ANDROID__)
-#else
-    #error Os is not handled
 #endif
 }
 

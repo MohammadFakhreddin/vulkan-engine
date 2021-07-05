@@ -29,7 +29,7 @@ void Asset(char const * address, std::string & outPath) {
 #elif defined(__IOS__)
     char addressBuffer[256] {};
     // TODO Check for correctness
-    auto const stringSize = sprintf(addressBuffer, "%s/%s", GetAssetPath(), address);
+    auto const stringSize = sprintf(addressBuffer, "%s/%s", GetAssetPath().c_str(), address);
     outPath.assign(address, stringSize);
 #else
 #error "Platform not supported"

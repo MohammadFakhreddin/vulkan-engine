@@ -60,6 +60,9 @@ VkSurfaceKHR CreateWindowSurface(SDL_Window * window, VkInstance_T * instance);
 #elif defined(__ANDROID__)
 [[nodiscard]]
 VkSurfaceKHR CreateWindowSurface(ANativeWindow * window, VkInstance_T * instance);
+#elif defined(__IOS__)
+[[nodiscard]]
+VkSurfaceKHR CreateWindowSurface(void * view, VkInstance_T * instance);
 #else
     #error Unhandled os detected
 #endif
@@ -83,9 +86,10 @@ VkSurfaceFormatKHR ChooseSurfaceFormat(uint8_t availableFormatsCount, VkSurfaceF
 #ifdef __DESKTOP__
 [[nodiscard]]
 VkInstance CreateInstance(char const * applicationName, SDL_Window * window);
-#elif defined(__ANDROID__)
+#elif defined(__ANDROID__) || defined(__IOS__)
 [[nodiscard]]
-VkInstance CreateInstance(char const * applicationName, ANativeWindow * window);
+VkInstance CreateInstance(char const * applicationName);
+#elif defined(__IOS__)
 #else
 #error Os not handled
 #endif

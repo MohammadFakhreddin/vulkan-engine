@@ -244,7 +244,7 @@ AS::Shader ImportShaderFromSPV(
     MFA_ASSERT(path != nullptr);
     AS::Shader shader {};
     if (path != nullptr) {
-#ifdef __DESKTOP__
+#if defined(__DESKTOP__) || defined(__IOS__)
         auto * file = FS::OpenFile(path,  FS::Usage::Read);
         MFA_DEFER{FS::CloseFile(file);};
         if(FS::FileIsUsable(file)) {
@@ -279,7 +279,7 @@ AS::Shader ImportShaderFromSPV(
             }
         }
 #else
-#error Os not handled
+#error "Os not handled"
 #endif
     }
     return shader;
@@ -1507,7 +1507,7 @@ RawFile ReadRawFile(char const * path) {
     RawFile rawFile {};
     MFA_ASSERT(path != nullptr);
     if(path != nullptr) {
-#ifdef __DESKTOP__
+#if defined(__DESKTOP__) || defined(__IOS__)
         auto * file = FS::OpenFile(path, FS::Usage::Read);
         MFA_DEFER {FS::CloseFile(file);};
         if(FS::FileIsUsable(file)) {

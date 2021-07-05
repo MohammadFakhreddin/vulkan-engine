@@ -109,6 +109,7 @@ void Init() {
 
 void OnNewFrame() {
 #ifdef __DESKTOP__
+    // TODO Make other systems to get input for this class
     state->reset();
     int32_t mousePositionX = 0;
     int32_t mousePositionY = 0;
@@ -146,6 +147,8 @@ void OnNewFrame() {
         state->mouseCurrentX = -1.0f;
         state->mouseCurrentY = -1.0f;
     }
+#elif defined(__IOS__)
+    // TODO
 #else
     #error Os is not supported
 #endif

@@ -126,8 +126,8 @@ private:
 
 #ifdef __DESKTOP__
     static constexpr float FOV = 80;
-#elif defined(__ANDROID__)
-    static constexpr float FOV = 40;
+#elif defined(__ANDROID__) || defined(__IOS__)
+    static constexpr float FOV = 40;    // TODO It should be only for standing orientation
 #else
 #error Os is not handled
 #endif

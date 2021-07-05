@@ -8,6 +8,10 @@
 
 #include "libs/sdl/SDL.hpp"
 
+#ifdef __IOS__
+#include <vulkan/vulkan_ios.h>
+#endif
+
 #include <vector>
 #include <cstring>
 
@@ -173,8 +177,8 @@ VkInstanceCreateInfo instanceInfo;
 
 #ifdef __DESKTOP__
 VkInstance CreateInstance(char const * applicationName, SDL_Window * window) {
-#elif defined(__ANDROID__)
-VkInstance CreateInstance(char const * applicationName, ANativeWindow * window) {
+#elif defined(__ANDROID__) || defined(__IOS__)
+VkInstance CreateInstance(char const * applicationName) {
 #else
 #error Os not handled
 #endif
@@ -208,11 +212,13 @@ VkInstance CreateInstance(char const * applicationName, ANativeWindow * window) 
         ));
     }
 #elif defined(__ANDROID__)
-    {// Filling android extensions
-        instanceExtensions.emplace_back("VK_KHR_surface");
-        instanceExtensions.emplace_back("VK_KHR_android_surface");
-        // Note: It appears that debug report is not supported on android
-    }
+    // Filling android extensions
+    instanceExtensions.emplace_back("VK_KHR_surface");
+    instanceExtensions.emplace_back("VK_KHR_android_surface");
+#elif defined(__IOS__)
+    // Filling IOS extensions
+    instanceExtensions.emplace_back(VK_KHR_SURFACE_EXTENSION_NAME);
+    instanceExtensions.emplace_back(VK_MVK_IOS_SURFACE_EXTENSION_NAME);
 #else
     #error Os not handled
 #endif
@@ -946,7 +952,7 @@ VkSampler CreateSampler(
     sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-#ifdef __DESKTOP__
+#if defined(__DESKTOP__) || defined(__IOS__)
     sampler_info.anisotropyEnable = params.anisotropy_enabled;
 #elif defined(__ANDROID__)
     sampler_info.anisotropyEnable = false;
@@ -1257,7 +1263,7 @@ SwapChainGroup CreateSwapChain(
     createInfo.queueFamilyIndexCount = 0;
     createInfo.pQueueFamilyIndices = nullptr;
     createInfo.preTransform = surfaceTransform;
-#ifdef __DESKTOP__
+#if defined(__DESKTOP__) || defined(__IOS__)
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 #elif defined(__ANDROID__)
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;

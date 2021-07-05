@@ -10,7 +10,7 @@
 
 namespace MFA::InputManager {
 
-#ifdef __DESKTOP__
+#if defined(__DESKTOP__) || defined(__IOS__)
     using MousePosition = int32_t;
 #elif defined(__ANDROID__)
     using MousePosition = float;

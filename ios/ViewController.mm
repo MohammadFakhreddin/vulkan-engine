@@ -10,8 +10,6 @@
 #include "Application.hpp"
 #include "engine/BedrockPath.hpp"
 
-#include <alghorithm>
-
 std::string MFA::Path::GetAssetPath() {
     return [NSBundle.mainBundle.resourcePath stringByAppendingString: @"/data/"].UTF8String;
 }
@@ -24,13 +22,15 @@ std::string MFA::Path::GetAssetPath() {
     Application mApplication;
     CADisplayLink * mDisplayLink;
     bool mViewHasAppeared;
-    CFTimeInterval mPreviousFrameTime = 0.0f;
+    CFTimeInterval mPreviousFrameTime;
 }
 
 /** Since this is a single-view app, init Vulkan when the view is loaded. */
 -(void) viewDidLoad {
     [super viewDidLoad];
 
+    mPreviousFrameTime = 0.0f;
+    
     self.view.contentScaleFactor = UIScreen.mainScreen.nativeScale;
     
     mApplication.SetView((__bridge void *)(self.view));
