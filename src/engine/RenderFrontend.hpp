@@ -25,10 +25,12 @@ struct InitParams {
     bool resizable = true;
 #elif defined(__ANDROID__)
     android_app * app = nullptr;
+#elif defined(__IOS__)
+    void * view = nullptr;
 #else
     #error Os is not supported
 #endif
-    char const *applicationName = nullptr;
+    char const * applicationName = nullptr;
 };
 
 bool Init(InitParams const & params);

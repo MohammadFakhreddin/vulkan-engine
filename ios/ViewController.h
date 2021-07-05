@@ -9,17 +9,17 @@
 
 
 #pragma mark -
-#pragma mark DemoViewController
+#pragma mark ViewController
 
 /** The main view controller for the demo storyboard. */
-@interface DemoViewController : UIViewController <UIKeyInput>
+@interface ViewController : UIViewController <UIKeyInput>
 @end
 
 
 #pragma mark -
-#pragma mark DemoView
+#pragma mark RootView
 
 /** The Metal-compatibile view for the demo Storyboard. */
-@interface DemoView : UIView
+@interface RootView : UIView
 @end
 

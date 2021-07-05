@@ -1,5 +1,7 @@
 #pragma once
 
+#include "BedrockPlatforms.hpp"
+
 #include <string>
 
 namespace MFA::Path {
@@ -8,5 +10,9 @@ namespace MFA::Path {
 std::string Asset(char const * address);
 
 void Asset(char const * address, std::string & outPath);
+
+#ifdef __IOS__
+std::string GetAssetPath();
+#endif
 
 }

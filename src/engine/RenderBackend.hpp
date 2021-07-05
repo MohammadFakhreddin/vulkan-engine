@@ -14,7 +14,7 @@
 #undef CreateWindow
 #endif
 
-#ifdef __DESKTOP__
+#if defined(__DESKTOP__) || defined(__IOS__)
 #define MFA_VK_VALID(vkVariable) vkVariable != nullptr
 #define MFA_VK_INVALID(vkVariable) vkVariable == nullptr
 #define MFA_VK_VALID_ASSERT(vkVariable) MFA_ASSERT(MFA_VK_VALID(vkVariable))

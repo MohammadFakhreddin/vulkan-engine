@@ -43,6 +43,8 @@ void Application::Init() {
         params.applicationName = "MfaEngine";
     #ifdef __ANDROID__
         params.app = mAndroidApp;
+    #elif defined(__IOS__)
+        params.view = mView;
     #elif defined(__DESKTOP__)
         params.resizable = true;
         params.screenWidth = SCREEN_WIDTH;
@@ -92,9 +94,7 @@ void Application::run() {
         while (!quit)
         {
             uint32_t const start_time = MSDL::SDL_GetTicks();
-            IM::OnNewFrame();
-            // DrawFrame
-            mSceneSubSystem.OnNewFrame(static_cast<float>(deltaTimeInMs) / 1000.0f);
+            RenderFrame(static_cast<float>(deltaTimeInMs) / 1000.0f);
             //Handle events
             if (MSDL::SDL_PollEvent(&e) != 0)
             {
@@ -130,9 +130,7 @@ void Application::run() {
             continue;
         }
 
-        IM::OnNewFrame();
-        // DrawFrame
-        mSceneSubSystem.OnNewFrame(static_cast<float>(deltaTimeClock) / CLOCKS_PER_SEC);
+        RenderFrame(static_cast<float>(deltaTimeClock) / CLOCKS_PER_SEC);
         deltaTimeClock = clock() - startTime;
         auto const deltaTimeInSec = static_cast<float>(deltaTimeClock) / CLOCKS_PER_SEC;
         if (TargetFpsDeltaTimeInSec > deltaTimeInSec) {
@@ -140,10 +138,16 @@ void Application::run() {
             deltaTimeClock = clock() - startTime;
         }
     };
+#elif defined(__IOS__)
 #else
 #error "Platform is not supported"
 #endif
 
+}
+
+void Application::RenderFrame(float deltaTimeInSec) {
+    IM::OnNewFrame();
+    mSceneSubSystem.OnNewFrame(deltaTimeInSec);
 }
 
 #ifdef __ANDROID__
@@ -155,3 +159,8 @@ void Application::setAndroidApp(android_app * androidApp) {
 }
 #endif
 
+#ifdef __IOS__
+void Application::SetView(void * view) {
+    mView = view;
+}
+#endif

@@ -5,37 +5,41 @@
  *  This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
  */
 
-#import "DemoViewController.h"
+#import "ViewController.h"
 
-#include "MVKExample.h"
+#include "Application.hpp"
+#include "engine/BedrockPath.hpp"
 
+#include <alghorithm>
 
-const std::string VulkanExampleBase::getAssetPath() {
+std::string MFA::Path::GetAssetPath() {
     return [NSBundle.mainBundle.resourcePath stringByAppendingString: @"/data/"].UTF8String;
 }
 
 
 #pragma mark -
-#pragma mark DemoViewController
+#pragma mark ViewController
 
-@implementation DemoViewController {
-    MVKExample* _mvkExample;
-    CADisplayLink* _displayLink;
-    BOOL _viewHasAppeared;
+@implementation ViewController {
+    Application mApplication;
+    CADisplayLink * mDisplayLink;
+    bool mViewHasAppeared;
+    CFTimeInterval mPreviousFrameTime = 0.0f;
 }
 
 /** Since this is a single-view app, init Vulkan when the view is loaded. */
 -(void) viewDidLoad {
-	[super viewDidLoad];
+    [super viewDidLoad];
 
     self.view.contentScaleFactor = UIScreen.mainScreen.nativeScale;
-
-    _mvkExample = new MVKExample(self.view);
-
-    uint32_t fps = 60;
-    _displayLink = [CADisplayLink displayLinkWithTarget: self selector: @selector(renderFrame)];
-    [_displayLink setFrameInterval: 60 / fps];
-    [_displayLink addToRunLoop: NSRunLoop.currentRunLoop forMode: NSDefaultRunLoopMode];
+    
+    mApplication.SetView((__bridge void *)(self.view));
+    mApplication.Init();
+    
+    static constexpr uint32_t TargetFPS = 60;
+    mDisplayLink = [CADisplayLink displayLinkWithTarget: self selector: @selector(renderFrame)];
+    [mDisplayLink setPreferredFramesPerSecond: TargetFPS];
+    [mDisplayLink addToRunLoop: NSRunLoop.currentRunLoop forMode: NSDefaultRunLoopMode];
 
     // Setup tap gesture to toggle virtual keyboard
     UITapGestureRecognizer* tapSelector = [[UITapGestureRecognizer alloc]
@@ -44,23 +48,25 @@ const std::string VulkanExampleBase::getAssetPath() {
     tapSelector.cancelsTouchesInView = YES;
     [self.view addGestureRecognizer: tapSelector];
 
-    _viewHasAppeared = NO;
+    mViewHasAppeared = NO;
 }
 
 -(void) viewDidAppear: (BOOL) animated {
     [super viewDidAppear: animated];
-    _viewHasAppeared = YES;
+    mViewHasAppeared = YES;
 }
 
--(BOOL) canBecomeFirstResponder { return _viewHasAppeared; }
+-(BOOL) canBecomeFirstResponder { return mViewHasAppeared; }
 
 -(void) renderFrame {
-    _mvkExample->renderFrame();
+    static constexpr float MinimumDeltaTimeInSec = 1.0f / 30.0f;
+    auto currentFrameTime = [mDisplayLink timestamp];
+    float deltaTime = std::fmaxf(currentFrameTime - mPreviousFrameTime, MinimumDeltaTimeInSec);
+    mApplication.RenderFrame(deltaTime);
 }
 
 -(void) dealloc {
-    delete _mvkExample;
-    [super dealloc];
+    mApplication.Shutdown();
 }
 
 // Toggle the display of the virtual keyboard
@@ -74,14 +80,15 @@ const std::string VulkanExampleBase::getAssetPath() {
 
 // Display and hide the keyboard by tapping on the view
 -(void) handleTapGesture: (UITapGestureRecognizer*) gestureRecognizer {
-    if (gestureRecognizer.state == UIGestureRecognizerStateEnded) {
-        [self toggleKeyboard];
-    }
+//    if (gestureRecognizer.state == UIGestureRecognizerStateEnded) {
+//        [self toggleKeyboard];
+//    }
+    // TODO handle gesture
 }
 
 // Handle keyboard input
 -(void) handleKeyboardInput: (unichar) keycode {
-    _mvkExample->keyPressed(keycode);
+//    _mvkExample->keyPressed(keycode);
 }
 
 
@@ -92,13 +99,13 @@ const std::string VulkanExampleBase::getAssetPath() {
 
 // A key on the keyboard has been pressed.
 -(void) insertText: (NSString*) text {
-    unichar keycode = (text.length > 0) ? [text characterAtIndex: 0] : 0;
-    [self handleKeyboardInput: keycode];
+//    unichar keycode = (text.length > 0) ? [text characterAtIndex: 0] : 0;
+//    [self handleKeyboardInput: keycode];
 }
 
 // The delete backward key has been pressed.
 -(void) deleteBackward {
-    [self handleKeyboardInput: 0x33];
+//    [self handleKeyboardInput: 0x33];
 }
 
 
@@ -106,9 +113,9 @@ const std::string VulkanExampleBase::getAssetPath() {
 
 
 #pragma mark -
-#pragma mark DemoView
+#pragma mark RootView
 
-@implementation DemoView
+@implementation RootView
 
 /** Returns a Metal-compatible layer. */
 +(Class) layerClass { return [CAMetalLayer class]; }

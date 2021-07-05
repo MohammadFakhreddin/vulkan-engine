@@ -1,6 +1,5 @@
 #include "BedrockPath.hpp"
 
-#include "BedrockPlatforms.hpp"
 #include "BedrockAssert.hpp"
 
 #include <filesystem>
@@ -16,12 +15,6 @@ std::string Asset(char const * address) {
 
 void Asset(char const * address, std::string & outPath) {
 #if defined(__PLATFORM_MAC__)
-////    auto iterator = std::filesystem::directory_iterator(".");
-////    std::filesystem::directory_iterator endIterator;
-////    while (iterator != endIterator) {
-////        printf("%s\n", iterator->path().c_str());
-////        iterator++;
-////    }
     char addressBuffer[256] {};
     auto const stringSize = sprintf(addressBuffer, "../../assets/%s", address);
     outPath.assign(addressBuffer, stringSize);
@@ -32,6 +25,11 @@ void Asset(char const * address, std::string & outPath) {
 #elif defined(__ANDROID__)
     char addressBuffer[256] {};
     auto const stringSize = sprintf(addressBuffer, "%s", address);
+    outPath.assign(address, stringSize);
+#elif defined(__IOS__)
+    char addressBuffer[256] {};
+    // TODO Check for correctness
+    auto const stringSize = sprintf(addressBuffer, "%s/%s", GetAssetPath(), address);
     outPath.assign(address, stringSize);
 #else
 #error "Platform not supported"
