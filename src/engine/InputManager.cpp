@@ -1,7 +1,7 @@
 #include "InputManager.hpp"
 
-#include "engine/RenderFrontend.hpp"
-#include "engine/UISystem.hpp"
+#include "engine/render_system/RenderFrontend.hpp"
+#include "engine/ui_system//UISystem.hpp"
 
 #ifdef __DESKTOP__
 #include "libs/sdl/SDL.hpp"

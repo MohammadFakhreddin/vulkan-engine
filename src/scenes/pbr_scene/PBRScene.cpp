@@ -12,6 +12,10 @@ namespace Importer = MFA::Importer;
 namespace UI = MFA::UISystem;
 namespace Path = MFA::Path;
 
+PBRScene::PBRScene()
+    : mRecordObject([this]()->void {OnUI();})
+{}
+
 void PBRScene::Init() {
 
     // Gpu model
@@ -144,9 +148,12 @@ void PBRScene::Init() {
     updateAllDescriptorSets();
 
     updateProjection();
+
+    mRecordObject.Enable();
 }
 
 void PBRScene::Shutdown() {
+    mRecordObject.Disable();
     RF::DestroyUniformBuffer(m_material_buffer_group);
     RF::DestroyUniformBuffer(m_light_view_buffer_group);
     RF::DestroyUniformBuffer(m_transformation_buffer_group);
@@ -244,7 +251,7 @@ void PBRScene::OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw
     }
 }
 
-void PBRScene::OnUI(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_pass) {
+void PBRScene::OnUI() {
     UI::BeginWindow("Sphere");
     UI::SetNextItemWidth(300.0f);
     UI::SliderFloat("XDegree", &m_sphere_rotation[0], -360.0f, 360.0f);

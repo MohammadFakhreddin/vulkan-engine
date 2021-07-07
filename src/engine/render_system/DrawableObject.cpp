@@ -1,6 +1,6 @@
 #include "DrawableObject.hpp"
 
-#include "BedrockMemory.hpp"
+#include "engine/BedrockMemory.hpp"
 
 #include <ext/matrix_transform.hpp>
 #include <glm/glm.hpp>

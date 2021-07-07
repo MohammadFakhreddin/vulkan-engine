@@ -14,6 +14,11 @@ namespace SG = MFA::ShapeGenerator;
 namespace UI = MFA::UISystem;
 namespace Path = MFA::Path;
 
+TextureViewerScene::TextureViewerScene()
+    : mRecordObject([this]()->void{OnUI();})
+{}
+
+
 void TextureViewerScene::Init() {
 
     // Vertex shader
@@ -66,9 +71,12 @@ void TextureViewerScene::Init() {
     createDrawPipeline(static_cast<uint8_t>(shaders.size()), shaders.data());
 
     createDrawableObject();
+
+    mRecordObject.Enable();
 }
 
 void TextureViewerScene::Shutdown() {
+    mRecordObject.Disable();
     RF::DestroyDrawPipeline(mDrawPipeline);
     RF::DestroyDescriptorSetLayout(mDescriptorSetLayout);
     RF::DestroySampler(mSamplerGroup);
@@ -136,10 +144,8 @@ void TextureViewerScene::OnDraw(
     mDrawableObject->draw(drawPass);
 }
 
-void TextureViewerScene::OnUI(
-    float deltaTimeInSec, 
-    RF::DrawPass & draw_pass
-) {
+
+void TextureViewerScene::OnUI() {
     static constexpr float ItemWidth = 500;
     UI::BeginWindow("Object viewer");
     UI::SetNextItemWidth(ItemWidth);
@@ -280,7 +286,7 @@ void TextureViewerScene::createDrawableObject() {
     MFA_ASSERT(cpuModel.mesh.getSubMeshCount() == 1);
     MFA_ASSERT(cpuModel.mesh.getSubMeshByIndex(0).primitives.size() == 1);
     auto const & primitive = cpuModel.mesh.getSubMeshByIndex(0).primitives[0];
-    auto descriptorSet = mDrawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
+    auto const descriptorSet = mDrawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
 
     std::vector<VkWriteDescriptorSet> writeInfo {};
 
@@ -302,36 +308,39 @@ void TextureViewerScene::createDrawableObject() {
         writeInfo.emplace_back(writeDescriptorSet);
     }
     {// Texture
-        VkDescriptorImageInfo baseColorImageInfo {};
-        baseColorImageInfo.sampler = mSamplerGroup.sampler;          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
-        baseColorImageInfo.imageView = mGpuModel.textures[primitive.baseColorTextureIndex].image_view();
-        baseColorImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        VkDescriptorImageInfo baseColorImageInfo {
+            .sampler = mSamplerGroup.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
+            .imageView = mGpuModel.textures[primitive.baseColorTextureIndex].image_view(),
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        };
 
-        VkWriteDescriptorSet writeDescriptorSet {};
-        writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        writeDescriptorSet.dstSet = descriptorSet;
-        writeDescriptorSet.dstBinding = static_cast<uint32_t>(writeInfo.size());
-        writeDescriptorSet.dstArrayElement = 0;
-        writeDescriptorSet.descriptorCount = 1;
-        writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        writeDescriptorSet.pImageInfo = &baseColorImageInfo;
-        
+        VkWriteDescriptorSet writeDescriptorSet {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = descriptorSet,
+            .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .pImageInfo = &baseColorImageInfo,
+        };
         writeInfo.emplace_back(writeDescriptorSet);
     }
     {// ImageOptions
-        VkDescriptorBufferInfo lightViewBufferInfo {};
-        lightViewBufferInfo.buffer = imageOptionsBuffer->buffers[0].buffer;
-        lightViewBufferInfo.offset = 0;
-        lightViewBufferInfo.range = imageOptionsBuffer->bufferSize;
-        
-        VkWriteDescriptorSet writeDescriptorSet {};
-        writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        writeDescriptorSet.dstSet = descriptorSet;
-        writeDescriptorSet.dstBinding = static_cast<uint32_t>(writeInfo.size());
-        writeDescriptorSet.dstArrayElement = 0;
-        writeDescriptorSet.descriptorCount = 1;
-        writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        writeDescriptorSet.pBufferInfo = &lightViewBufferInfo;
+        VkDescriptorBufferInfo lightViewBufferInfo {
+            .buffer = imageOptionsBuffer->buffers[0].buffer,
+            .offset = 0,
+            .range = imageOptionsBuffer->bufferSize,
+        };
+
+        VkWriteDescriptorSet writeDescriptorSet {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = descriptorSet,
+            .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .pBufferInfo = &lightViewBufferInfo,
+        };
 
         writeInfo.emplace_back(writeDescriptorSet);
     }

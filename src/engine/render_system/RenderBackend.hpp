@@ -1,7 +1,7 @@
 #pragma once
 
-#include "BedrockCommon.hpp"
-#include "FoundationAsset.hpp"
+#include "engine/BedrockCommon.hpp"
+#include "engine/FoundationAsset.hpp"
 
 #include <functional>
 #ifdef __ANDROID__

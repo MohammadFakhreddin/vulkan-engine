@@ -1,16 +1,16 @@
 #pragma once
 
-#include "engine/DrawableObject.hpp"
+#include "engine/render_system/DrawableObject.hpp"
 #include "engine/Scene.hpp"
 
 class TextureViewerScene final : public MFA::Scene {
 public:
 
-    TextureViewerScene() = default;
+    TextureViewerScene();
     void Init() override;
     void Shutdown() override;
     void OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
-    void OnUI(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_pass) override;
+    void OnUI();
     void OnResize() override;
 
 private:
@@ -50,4 +50,6 @@ private:
 
     int mMipLevel = 0;
     int mTotalMipCount = 0;
+
+    MFA::UIRecordObject mRecordObject;
 };

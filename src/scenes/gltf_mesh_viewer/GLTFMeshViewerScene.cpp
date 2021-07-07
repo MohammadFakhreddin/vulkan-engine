@@ -1,8 +1,8 @@
 #include "GLTFMeshViewerScene.hpp"
 
-#include "engine/RenderFrontend.hpp"
+#include "engine/render_system/RenderFrontend.hpp"
 #include "engine/BedrockMatrix.hpp"
-#include "engine/DrawableObject.hpp"
+#include "engine/render_system/DrawableObject.hpp"
 #include "tools/Importer.hpp"
 #include "tools/ShapeGenerator.hpp"
 #include "engine/BedrockPath.hpp"
@@ -11,6 +11,11 @@ namespace RF = MFA::RenderFrontend;
 namespace Importer = MFA::Importer;
 namespace UI = MFA::UISystem;
 namespace Path = MFA::Path;
+
+GLTFMeshViewerScene::GLTFMeshViewerScene()
+    : Scene()
+    , mRecordObject([this]()->void {OnUI();})
+{}
 
 void GLTFMeshViewerScene::Init() {
     // TODO Out of pool memory on macos, We need to only keep a few of recent objects data active.
@@ -145,6 +150,8 @@ void GLTFMeshViewerScene::Init() {
         mGpuPointLight = RF::CreateGpuModel(cpuModel);
         mPointLightObjectId = mPointLightPipeline.addGpuModel(mGpuPointLight);
     }
+
+    mRecordObject.Enable();
 }
 
 void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & drawPass) {
@@ -265,7 +272,7 @@ void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & draw
     }
 }
 
-void GLTFMeshViewerScene::OnUI(float const deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) {
+void GLTFMeshViewerScene::OnUI() {
     static constexpr float ItemWidth = 500;
     UI::BeginWindow("Scene Subsystem");
     UI::Checkbox("Object viewer window", &mIsObjectViewerWindowVisible);
@@ -335,6 +342,7 @@ void GLTFMeshViewerScene::OnUI(float const deltaTimeInSec, MFA::RenderFrontend::
 }
 
 void GLTFMeshViewerScene::Shutdown() {
+    mRecordObject.Disable();
     mPbrPipeline.shutdown();
     mPointLightPipeline.shutdown();
     RF::DestroySampler(mSamplerGroup);
@@ -379,7 +387,3 @@ void GLTFMeshViewerScene::updateProjectionBuffer() {
     // PointLight
     mCamera.getProjection(mPointLightMVPData.projection);
 }
-
-GLTFMeshViewerScene::~GLTFMeshViewerScene() {}
-
-GLTFMeshViewerScene::GLTFMeshViewerScene() {}

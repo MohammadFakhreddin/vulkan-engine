@@ -1,6 +1,7 @@
 #pragma once
 
-#include "engine/RenderFrontend.hpp"
+#include "engine/render_system/DrawableObject.hpp"
+#include "engine/render_system/RenderFrontend.hpp"
 
 namespace MFA {
 

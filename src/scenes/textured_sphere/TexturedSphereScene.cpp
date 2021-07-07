@@ -6,6 +6,10 @@
 namespace UI = MFA::UISystem;
 namespace Path = MFA::Path;
 
+TexturedSphereScene::TexturedSphereScene()
+    : mUIRecordObject([this]()->void {OnUI();})
+{}
+
 void TexturedSphereScene::Init() {
     // Gpu model
     createGpuModel();
@@ -52,6 +56,8 @@ void TexturedSphereScene::Init() {
     createDrawableObject();
 
     updateProjectionBuffer();
+
+    mUIRecordObject.Enable();
 }
 
 void TexturedSphereScene::OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) {
@@ -99,7 +105,7 @@ void TexturedSphereScene::OnDraw(float deltaTimeInSec, MFA::RenderFrontend::Draw
     mDrawableObject->draw(drawPass);
 }
 
-void TexturedSphereScene::OnUI(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_pass) {
+void TexturedSphereScene::OnUI() {
     UI::BeginWindow("Object viewer");
     UI::SetNextItemWidth(300.0f);
     UI::SliderFloat("XDegree", &mModelRotation[0], -360.0f, 360.0f);
@@ -132,6 +138,7 @@ void TexturedSphereScene::OnUI(float deltaTimeInSec, MFA::RenderFrontend::DrawPa
 }
 
 void TexturedSphereScene::Shutdown() {
+    mUIRecordObject.Disable();
     destroyDrawableObject();
     RF::DestroyUniformBuffer(mLVBuffer);
     RF::DestroyDrawPipeline(mDrawPipeline);

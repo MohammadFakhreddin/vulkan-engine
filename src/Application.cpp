@@ -5,7 +5,7 @@
 #include "scenes/pbr_scene/PBRScene.hpp"
 #include "scenes/textured_sphere/TexturedSphereScene.hpp"
 #include "scenes/texture_viewer_scene/TextureViewerScene.hpp"
-#include "engine/RenderFrontend.hpp"
+#include "engine/render_system/RenderFrontend.hpp"
 #include "engine/Scene.hpp"
 #include "engine/BedrockFileSystem.hpp"
 

@@ -1,8 +1,8 @@
 #include "FirstPersonCamera.hpp"
 
-#include "engine/RenderFrontend.hpp"
+#include "engine/render_system/RenderFrontend.hpp"
 #include "engine/InputManager.hpp"
-#include "engine/UISystem.hpp"
+#include "engine/ui_system/UISystem.hpp"
 
 #include "glm/gtx/quaternion.hpp"
 
