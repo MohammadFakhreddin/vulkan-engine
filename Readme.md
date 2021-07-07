@@ -18,10 +18,16 @@ Find .sln files inside build64 and then run the project
 ```
 mkdir build64
 cd build64
-cmake ..
+cmake .. -DCMAKE_BUILD_TYPE=Debug (Release)
 make
 ./MFaEngine
 ```
+
+Or using xcode if you prefer.  Create a build folder then execute following command :
+```
+cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=./ios.toolchain.cmake -DPLATFORM=MAC
+```
+
 <br/>
 
 ### Linux
@@ -34,8 +40,10 @@ Open android folder using android studio. You might need to change ndk version b
 ```
 <br/>
 
-### IOS
-Not supported yet!
+### IOS (Incomplete)
+```
+cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=./ios.toolchain.cmake -DPLATFORM=OS64COMBINED
+```
 <br/>
 
 ## Animation Time!

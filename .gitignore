@@ -101,9 +101,13 @@ build/*
 build64/*
 build64
 build
+buildIOS
+buildIOS/*
 
 android/local.properties
 
 .gradle
 .idea
 .cxx
+
+!ios.toolchain.cmake

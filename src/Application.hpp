@@ -29,7 +29,11 @@ public:
 #ifdef __ANDROID__
     void setAndroidApp(android_app * androidApp);
 #endif
+#ifdef __IOS__
+    void SetView(void * view);
+#endif
     void run();
+    void RenderFrame(float deltaTimeInSec);
 private:
 
     bool mIsInitialized = false;
@@ -43,5 +47,8 @@ private:
 
 #ifdef __ANDROID__
     android_app * mAndroidApp = nullptr;
+#endif
+#ifdef __IOS__
+  void * mView = nullptr;
 #endif
 };

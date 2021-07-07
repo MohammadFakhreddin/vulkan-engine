@@ -66,11 +66,11 @@ VkSurfaceKHR CreateWindowSurface(SDL_Window * window, VkInstance_T * instance) {
 VkSurfaceKHR CreateWindowSurface(ANativeWindow * window, VkInstance_T * instance) {
     VkSurfaceKHR surface {};
 
-    VkAndroidSurfaceCreateInfoKHR createInfo{
-            .sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR,
-            .pNext = nullptr,
-            .flags = 0,
-            .window = window
+    VkAndroidSurfaceCreateInfoKHR createInfo {
+        .sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR,
+        .pNext = nullptr,
+        .flags = 0,
+        .window = window
     };
 
     VK_Check(vkCreateAndroidSurfaceKHR(
@@ -80,6 +80,20 @@ VkSurfaceKHR CreateWindowSurface(ANativeWindow * window, VkInstance_T * instance
         &surface
     ));
 
+    return surface;
+}
+#elif defined(__IOS__)
+VkSurfaceKHR CreateWindowSurface(void * view, VkInstance_T * instance) {
+    VkSurfaceKHR surface {};
+
+    VkIOSSurfaceCreateInfoMVK const surfaceCreateInfo {
+        .sType = VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_MVK,
+        .pNext = nullptr,
+        .flags = 0,
+        .pView = view
+    };
+    VK_Check(vkCreateIOSSurfaceMVK(instance, &surfaceCreateInfo, nullptr, &surface));
+    
     return surface;
 }
 #else
