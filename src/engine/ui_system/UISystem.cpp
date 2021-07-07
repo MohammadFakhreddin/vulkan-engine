@@ -426,6 +426,7 @@ void Init() {
 #ifdef __DESKTOP__
     state->eventWatchId = RF::AddEventWatch(EventWatch);
 #endif
+
 }
 
 static void UpdateMousePositionAndButtons() {
@@ -744,6 +745,10 @@ void SliderFloat(
 
 void Checkbox(char const * label, bool * value) {
     ImGui::Checkbox(label, value);
+}
+
+void Spacing() {
+    ImGui::Spacing();
 }
 
 void Button(char const * label, std::function<void()> const & onPress) {

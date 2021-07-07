@@ -166,6 +166,17 @@ void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & draw
         createModel(selectedModel);
     }
     if (mPreviousModelSelectedIndex != mSelectedModelIndex) {
+        {// Enabling ui for current model
+            auto * selectedDrawable = mPbrPipeline.GetDrawableById(mModelsRenderData[mSelectedModelIndex].drawableObjectId);
+            MFA_ASSERT(selectedDrawable != nullptr);
+            selectedDrawable->EnableUI("Active model", &mIsDrawableObjectWindowVisible);
+        }
+        if (mPreviousModelSelectedIndex >= 0) {// Disabling ui for previous model
+            auto * previousDrawable = mPbrPipeline.GetDrawableById(mModelsRenderData[mPreviousModelSelectedIndex].drawableObjectId);
+            MFA_ASSERT(previousDrawable != nullptr);
+            previousDrawable->DisableUI();
+        }
+
         mPreviousModelSelectedIndex = mSelectedModelIndex;
         // Model
         MFA::Copy<3>(m_model_rotation, selectedModel.initialParams.model.rotationEulerAngle);
@@ -275,9 +286,15 @@ void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & draw
 void GLTFMeshViewerScene::OnUI() {
     static constexpr float ItemWidth = 500;
     UI::BeginWindow("Scene Subsystem");
+    UI::Spacing();
     UI::Checkbox("Object viewer window", &mIsObjectViewerWindowVisible);
+    UI::Spacing();
     UI::Checkbox("Light window", &mIsLightWindowVisible);
+    UI::Spacing();
     UI::Checkbox("Camera window", &mIsCameraWindowVisible);
+    UI::Spacing();
+    UI::Checkbox("Active model", &mIsDrawableObjectWindowVisible);
+    UI::Spacing(); UI::Spacing();
     UI::Button("Reset values", [this]()->void{
         mPreviousModelSelectedIndex = -1;
     });
@@ -285,6 +302,7 @@ void GLTFMeshViewerScene::OnUI() {
 
     if (mIsObjectViewerWindowVisible) {
         UI::BeginWindow("Object viewer");
+        UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
         // TODO Bad for performance, Find a better name
         std::vector<char const *> modelNames {};
@@ -299,20 +317,28 @@ void GLTFMeshViewerScene::OnUI() {
             modelNames.data(), 
             static_cast<int32_t>(modelNames.size())
         );
+        UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
         UI::SliderFloat("XDegree", &m_model_rotation[0], -360.0f, 360.0f);
+        UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
         UI::SliderFloat("YDegree", &m_model_rotation[1], -360.0f, 360.0f);
+        UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
         UI::SliderFloat("ZDegree", &m_model_rotation[2], -360.0f, 360.0f);
+        UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
         UI::SliderFloat("Scale", &m_model_scale, 0.0f, 1.0f);
+        UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
         UI::SliderFloat("XDistance", &m_model_position[0], mModelTranslateMin[0], mModelTranslateMax[0]);
+        UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
         UI::SliderFloat("YDistance", &m_model_position[1], mModelTranslateMin[1], mModelTranslateMax[1]);
+        UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
         UI::SliderFloat("ZDistance", &m_model_position[2], mModelTranslateMin[2], mModelTranslateMax[2]);
+        UI::Spacing();
         UI::EndWindow();
     }
 
@@ -338,10 +364,19 @@ void GLTFMeshViewerScene::OnUI() {
     if (mIsCameraWindowVisible) {
         mCamera.onUI();
     }
+
+    
+
     // TODO Node tree
 }
 
 void GLTFMeshViewerScene::Shutdown() {
+    {// Disabling ui for current model
+        auto * selectedDrawable = mPbrPipeline.GetDrawableById(mModelsRenderData[mSelectedModelIndex].drawableObjectId);
+        MFA_ASSERT(selectedDrawable != nullptr);
+        selectedDrawable->DisableUI();
+    }
+        
     mRecordObject.Disable();
     mPbrPipeline.shutdown();
     mPointLightPipeline.shutdown();

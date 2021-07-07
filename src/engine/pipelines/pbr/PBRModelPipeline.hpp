@@ -77,6 +77,8 @@ public:
         LightViewBuffer const & lightViewData
     );
 
+    DrawableObject * GetDrawableById(DrawableObjectId objectId);
+
 private:
 
     void createDescriptorSetLayout();

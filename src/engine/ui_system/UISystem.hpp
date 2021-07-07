@@ -59,6 +59,8 @@ void Checkbox(
     bool * value
 );
 
+void Spacing();
+
 void Button(
     char const * label, 
     std::function<void()> const & onPress

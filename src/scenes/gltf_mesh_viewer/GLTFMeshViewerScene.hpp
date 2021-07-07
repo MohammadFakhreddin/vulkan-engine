@@ -121,6 +121,7 @@ private:
     bool mIsObjectViewerWindowVisible = false;
     bool mIsLightWindowVisible = false;
     bool mIsCameraWindowVisible = false;
+    bool mIsDrawableObjectWindowVisible = false;
 
 #ifdef __DESKTOP__
     static constexpr float FOV = 80;

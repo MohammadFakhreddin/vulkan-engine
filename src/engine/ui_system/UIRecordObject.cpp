@@ -23,6 +23,9 @@ UIRecordObject::~UIRecordObject() {
 }
 
 void UIRecordObject::Enable() {
+    if (mIsActive) {
+        return;
+    }
     UISystem::Register(this);
     mIsActive = true;
 }
@@ -33,6 +36,9 @@ void UIRecordObject::Record() const {
 }
 
 void UIRecordObject::Disable() {
+    if (mIsActive == false) {
+        return;
+    }
     UISystem::UnRegister(this);
     mIsActive = false;
 }

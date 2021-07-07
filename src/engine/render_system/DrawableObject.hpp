@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include <glm/fwd.hpp>
 
+#include "engine/ui_system/UIRecordObject.hpp"
+
 namespace MFA {
 
 namespace RF = RenderFrontend;
@@ -52,12 +54,14 @@ public:
 
     DrawableObject (DrawableObject const &) noexcept = delete;
 
-    DrawableObject (DrawableObject && rhs) noexcept {
+    DrawableObject (DrawableObject && rhs) noexcept = delete;
+    /*{
         this->mNodeTransformBuffers = std::move(rhs.mNodeTransformBuffers);
         this->mGpuModel = rhs.mGpuModel;
         this->mDescriptorSets = std::move(rhs.mDescriptorSets);
         this->mUniformBuffers = std::move(rhs.mUniformBuffers);
-    }
+        this->mRecordUIObject = std::move(rhs.mRecordUIObject);
+    }*/
 
     DrawableObject & operator = (DrawableObject const &) noexcept = delete;
 
@@ -97,6 +101,10 @@ public:
         return mId;
     }
 
+    void EnableUI(char const * windowName, bool * isVisible);
+
+    void DisableUI();
+
 private:
 
     void updateAnimation(float deltaTimeInSec);
@@ -116,6 +124,8 @@ private:
 
     void computeNodeGlobalTransform(Node & node, Node const * parentNode, bool isParentTransformChanged) const;
 
+    void onUI();
+
 private:
 
     static DrawableObjectId NextId;
@@ -131,6 +141,10 @@ private:
     int mActiveAnimationIndex = 0;
     int mPreviousAnimationIndex = -1;
     float mAnimationCurrentTime = 0.0f;
+
+    std::string mRecordWindowName = "";
+    MFA::UIRecordObject mRecordUIObject;
+    bool * mIsUIVisible = nullptr;
 };
 
 }

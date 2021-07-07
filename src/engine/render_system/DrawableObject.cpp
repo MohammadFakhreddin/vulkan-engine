@@ -1,12 +1,15 @@
 #include "DrawableObject.hpp"
 
 #include "engine/BedrockMemory.hpp"
+#include "engine/ui_system/UISystem.hpp"
 
 #include <ext/matrix_transform.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
 
 namespace MFA {
+
+namespace UI = UISystem;
 
 DrawableObjectId DrawableObject::NextId = 0;
 
@@ -18,6 +21,7 @@ DrawableObject::DrawableObject(
 )
     : mId(NextId)
     , mGpuModel(&model_)
+    , mRecordUIObject([this]()->void {onUI();})
 {
     NextId += 1;
 
@@ -158,6 +162,17 @@ void DrawableObject::draw(RF::DrawPass & drawPass) {
     }
 }
 
+void DrawableObject::EnableUI(char const * windowName, bool * isVisible) {
+    MFA_ASSERT(windowName != nullptr && strlen(windowName) > 0);
+    mRecordUIObject.Enable();
+    mRecordWindowName = "DrawableObject: " + std::string(windowName);
+    mIsUIVisible = isVisible;
+}
+
+void DrawableObject::DisableUI() {
+    mRecordUIObject.Disable();
+}
+
 void DrawableObject::updateAnimation(float deltaTimeInSec) {
     using Animation = AS::Mesh::Animation;
 
@@ -177,7 +192,7 @@ void DrawableObject::updateAnimation(float deltaTimeInSec) {
     mAnimationCurrentTime += deltaTimeInSec;
     
     if (mAnimationCurrentTime > activeAnimation.endTime) {
-        MFA_ASSERT(activeAnimation.endTime > activeAnimation.startTime);
+        MFA_ASSERT(activeAnimation.endTime >= activeAnimation.startTime);
         mAnimationCurrentTime -= (activeAnimation.endTime - activeAnimation.startTime);
     }
 
@@ -379,18 +394,29 @@ void DrawableObject::computeNodeGlobalTransform(Node & node, Node const * parent
         auto & childNode = mesh.getNodeByIndex(child);
         computeNodeGlobalTransform(childNode, &node, isChanged);
     }
-    //auto const & mesh = mGpuModel->model.mesh;
-    //glm::mat4 result = computerNodeLocalTransform(node);
-    //int parentNodeIndex = node.parent;
-    //while(parentNodeIndex >= 0) {
-    //    auto const & parentNode = mesh.getNodeByIndex(parentNodeIndex);
+}
 
-    //    auto const parentTransform = computerNodeLocalTransform(parentNode);
-    //    result = parentTransform * result;
+void DrawableObject::onUI() {
+    MFA_ASSERT(mIsUIVisible != nullptr);
+    if (*mIsUIVisible == false) {
+        return;
+    } 
 
-    //    parentNodeIndex = parentNode.parent;
-    //}
-    //return result;
+    auto & mesh = mGpuModel->model.mesh;
+
+    std::vector<char const *> animationsList {mesh.getAnimationsCount()};
+    for (size_t i = 0; i < animationsList.size(); ++i) {
+        animationsList[i] = mesh.getAnimationByIndex(static_cast<uint32_t>(i)).name.c_str();
+    }
+
+    UI::BeginWindow(mRecordWindowName.c_str());
+    UI::Combo(
+        "Active animation", 
+        &mActiveAnimationIndex, 
+        animationsList.data(), 
+        static_cast<int32_t>(animationsList.size())
+    );
+    UI::EndWindow();
 }
 
 };

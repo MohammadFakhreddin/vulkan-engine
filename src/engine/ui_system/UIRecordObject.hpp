@@ -17,6 +17,11 @@ public:
     ~UIRecordObject();
 
     UIRecordObject & operator= (UIRecordObject && rhs) noexcept = delete;
+    //{
+    //    mId = rhs.mId;
+    //    mIsActive = rhs.mIsActive;
+    //    mDrawFunction = std::move(rhs.mDrawFunction);
+    //};
     UIRecordObject (UIRecordObject const &) noexcept = delete;
     UIRecordObject (UIRecordObject && rhs) noexcept = delete;
     UIRecordObject & operator= (UIRecordObject const &) noexcept = delete;
