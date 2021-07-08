@@ -331,6 +331,16 @@ void MFA::PBRModelPipeline::updateLightViewBuffer(
     );
 }
 
+// TODO We can place common pipelines inside a class
+MFA::DrawableObject * MFA::PBRModelPipeline::GetDrawableById(DrawableObjectId const objectId) {
+    auto const findResult = mDrawableObjects.find(objectId);
+    if (findResult != mDrawableObjects.end()) {
+        auto * drawableObject = findResult->second.get();
+        return drawableObject;
+    }
+    return nullptr;
+}
+
 void MFA::PBRModelPipeline::createDescriptorSetLayout() {
     std::vector<VkDescriptorSetLayoutBinding> bindings {};
     {// ModelTransformation

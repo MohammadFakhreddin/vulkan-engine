@@ -1,10 +1,10 @@
 #include "RenderFrontend.hpp"
 
-#include "BedrockAssert.hpp"
+#include "engine/BedrockAssert.hpp"
 #include "RenderBackend.hpp"
-#include "BedrockLog.hpp"
+#include "engine/BedrockLog.hpp"
 
-#include "../libs/imgui/imgui.h"
+#include "libs/imgui/imgui.h"
 
 #include <string>
 
@@ -66,14 +66,14 @@ struct State {
 } static * state = nullptr;
 
 static VkBool32 VKAPI_PTR DebugCallback(
-  VkDebugReportFlagsEXT const flags,
-  VkDebugReportObjectTypeEXT object_type,
-  uint64_t src_object, 
-  size_t location,
-  int32_t const message_code,
-  char const * player_prefix,
-  char const * message,
-  void * user_data
+    VkDebugReportFlagsEXT const flags,
+    VkDebugReportObjectTypeEXT object_type,
+    uint64_t src_object, 
+    size_t location,
+    int32_t const message_code,
+    char const * player_prefix,
+    char const * message,
+    void * user_data
 ) {
     if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
         MFA_LOG_ERROR("Message code: %d\nMessage: %s\nLocation: %llu\n", message_code, message, location);
@@ -545,6 +545,18 @@ std::vector<VkDescriptorSet> CreateDescriptorSets(
         descriptorSetLayout,
         descriptorSetCount
     );
+}
+
+bool UniformBufferGroup::isValid() const noexcept {
+    if(bufferSize <= 0 || buffers.empty() == true) {
+        return false;
+    }
+    for(auto const & buffer : buffers) {
+        if(buffer.isValid() == false) {
+            return false;
+        }
+    }
+    return true;
 }
 
 UniformBufferGroup CreateUniformBuffer(size_t const bufferSize, uint32_t const count) {

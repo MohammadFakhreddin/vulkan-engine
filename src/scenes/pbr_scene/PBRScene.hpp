@@ -1,12 +1,12 @@
 #pragma once
 
 #include "engine/Scene.hpp"
-#include "engine/RenderFrontend.hpp"
+#include "engine/render_system/RenderFrontend.hpp"
 
 class PBRScene final : public MFA::Scene {
 public:
 
-    explicit PBRScene() = default;
+    explicit PBRScene();
 
     void Init() override;
 
@@ -14,7 +14,7 @@ public:
 
     void OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_pass) override;
 
-    void OnUI(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_pass) override;
+    void OnUI();
 
     void OnResize() override;
 
@@ -108,4 +108,6 @@ private:
     //float m_light_colors[3] {1.0f, 1.0f, 1.0f};
 
     std::vector<VkDescriptorSet> mSphereDescriptorSets {};
+
+    MFA::UIRecordObject mRecordObject;
 };

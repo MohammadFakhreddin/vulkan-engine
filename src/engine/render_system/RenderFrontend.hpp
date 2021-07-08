@@ -6,7 +6,6 @@
 #include "libs/sdl/SDL.hpp"
 #elif defined(__ANDROID__)
 #include <android_native_app_glue.h>
-#elif defined(__IOS__)
 #else
 #error Os is not supported
 #endif
@@ -154,17 +153,7 @@ struct UniformBufferGroup {
     std::vector<RB::BufferGroup> buffers;
     size_t bufferSize;
     [[nodiscard]]
-    bool isValid() const noexcept {
-        if (bufferSize <= 0 || buffers.empty() == true) {
-            return false;    
-        }
-        for (auto const & buffer : buffers) {
-            if (buffer.isValid() == false) {
-                return false;
-            }
-        }
-        return true;
-    }
+    bool isValid() const noexcept;
 };
 
 UniformBufferGroup CreateUniformBuffer(size_t bufferSize, uint32_t count);

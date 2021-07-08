@@ -1,25 +1,23 @@
 #pragma once
 
-#include "engine/DrawableObject.hpp"
 #include "engine/Scene.hpp"
-#include "engine/RenderFrontend.hpp"
-#include "engine/RenderBackend.hpp"
 #include "engine/camera/FirstPersonCamera.hpp"
 #include "engine/pipelines/pbr/PBRModelPipeline.hpp"
 #include "engine/pipelines/point_light/PointLightPipeline.hpp"
+#include "engine/render_system/DrawableObject.hpp"
 
 class GLTFMeshViewerScene final : public MFA::Scene {
 public:
 
     explicit GLTFMeshViewerScene();
 
-    ~GLTFMeshViewerScene() override;
+    ~GLTFMeshViewerScene() override = default;
 
     void Init() override;
 
     void OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
 
-    void OnUI(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
+    void OnUI();
 
     void Shutdown() override;
 
@@ -123,6 +121,7 @@ private:
     bool mIsObjectViewerWindowVisible = false;
     bool mIsLightWindowVisible = false;
     bool mIsCameraWindowVisible = false;
+    bool mIsDrawableObjectWindowVisible = false;
 
 #ifdef __DESKTOP__
     static constexpr float FOV = 80;
@@ -137,5 +136,7 @@ private:
         Z_FAR,
         Z_NEAR
     };
+
+    MFA::UIRecordObject mRecordObject;
 
 };

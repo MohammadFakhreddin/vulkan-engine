@@ -14,6 +14,11 @@ std::string Asset(char const * address) {
 }
 
 void Asset(char const * address, std::string & outPath) {
+//    auto iterator = std::filesystem::directory_iterator(address);
+//    while (iterator != std::filesystem::directory_iterator::end()) {
+//        MFA_LOG_INFO("%s", iterator->path().c_str());
+//        iterator++;
+//    }
 #if defined(__PLATFORM_MAC__)
     char addressBuffer[256] {};
     auto const stringSize = sprintf(addressBuffer, "../../assets/%s", address);

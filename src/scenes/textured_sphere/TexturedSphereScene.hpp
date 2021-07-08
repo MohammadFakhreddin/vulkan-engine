@@ -1,9 +1,10 @@
 #pragma once
 
-#include "engine/DrawableObject.hpp"
+#include "engine/render_system/DrawableObject.hpp"
 #include "engine/Scene.hpp"
-#include "engine/RenderFrontend.hpp"
+#include "engine/render_system/RenderFrontend.hpp"
 #include "tools/Importer.hpp"
+#include "engine/ui_system/UIRecordObject.hpp"
 
 namespace RF = MFA::RenderFrontend;
 namespace RB = MFA::RenderBackend;
@@ -13,11 +14,13 @@ namespace Importer = MFA::Importer;
 class TexturedSphereScene final : public MFA::Scene {
 public:
 
+    explicit TexturedSphereScene();
+
     void Init() override;
 
     void OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
 
-    void OnUI(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_pass) override;
+    void OnUI();
 
     void Shutdown() override;
 
@@ -65,4 +68,5 @@ private:
     MFA::RenderFrontend::UniformBufferGroup mLVBuffer {};
     std::unique_ptr<MFA::DrawableObject> mDrawableObject = nullptr;
 
+    MFA::UIRecordObject mUIRecordObject;
 };

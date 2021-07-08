@@ -1,8 +1,8 @@
 #include "GLTFMeshViewerScene.hpp"
 
-#include "engine/RenderFrontend.hpp"
+#include "engine/render_system/RenderFrontend.hpp"
 #include "engine/BedrockMatrix.hpp"
-#include "engine/DrawableObject.hpp"
+#include "engine/render_system/DrawableObject.hpp"
 #include "tools/Importer.hpp"
 #include "tools/ShapeGenerator.hpp"
 #include "engine/BedrockPath.hpp"
@@ -11,6 +11,11 @@ namespace RF = MFA::RenderFrontend;
 namespace Importer = MFA::Importer;
 namespace UI = MFA::UISystem;
 namespace Path = MFA::Path;
+
+GLTFMeshViewerScene::GLTFMeshViewerScene()
+    : Scene()
+    , mRecordObject([this]()->void {OnUI();})
+{}
 
 void GLTFMeshViewerScene::Init() {
     // TODO Out of pool memory on macos, We need to only keep a few of recent objects data active.
@@ -145,6 +150,8 @@ void GLTFMeshViewerScene::Init() {
         mGpuPointLight = RF::CreateGpuModel(cpuModel);
         mPointLightObjectId = mPointLightPipeline.addGpuModel(mGpuPointLight);
     }
+
+    mRecordObject.Enable();
 }
 
 void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & drawPass) {
@@ -159,6 +166,17 @@ void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & draw
         createModel(selectedModel);
     }
     if (mPreviousModelSelectedIndex != mSelectedModelIndex) {
+        {// Enabling ui for current model
+            auto * selectedDrawable = mPbrPipeline.GetDrawableById(mModelsRenderData[mSelectedModelIndex].drawableObjectId);
+            MFA_ASSERT(selectedDrawable != nullptr);
+            selectedDrawable->EnableUI("Active model", &mIsDrawableObjectWindowVisible);
+        }
+        if (mPreviousModelSelectedIndex >= 0) {// Disabling ui for previous model
+            auto * previousDrawable = mPbrPipeline.GetDrawableById(mModelsRenderData[mPreviousModelSelectedIndex].drawableObjectId);
+            MFA_ASSERT(previousDrawable != nullptr);
+            previousDrawable->DisableUI();
+        }
+
         mPreviousModelSelectedIndex = mSelectedModelIndex;
         // Model
         MFA::Copy<3>(m_model_rotation, selectedModel.initialParams.model.rotationEulerAngle);
@@ -265,12 +283,18 @@ void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & draw
     }
 }
 
-void GLTFMeshViewerScene::OnUI(float const deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) {
+void GLTFMeshViewerScene::OnUI() {
     static constexpr float ItemWidth = 500;
     UI::BeginWindow("Scene Subsystem");
+    UI::Spacing();
     UI::Checkbox("Object viewer window", &mIsObjectViewerWindowVisible);
+    UI::Spacing();
     UI::Checkbox("Light window", &mIsLightWindowVisible);
+    UI::Spacing();
     UI::Checkbox("Camera window", &mIsCameraWindowVisible);
+    UI::Spacing();
+    UI::Checkbox("Active model", &mIsDrawableObjectWindowVisible);
+    UI::Spacing(); UI::Spacing();
     UI::Button("Reset values", [this]()->void{
         mPreviousModelSelectedIndex = -1;
     });
@@ -278,6 +302,7 @@ void GLTFMeshViewerScene::OnUI(float const deltaTimeInSec, MFA::RenderFrontend::
 
     if (mIsObjectViewerWindowVisible) {
         UI::BeginWindow("Object viewer");
+        UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
         // TODO Bad for performance, Find a better name
         std::vector<char const *> modelNames {};
@@ -292,20 +317,28 @@ void GLTFMeshViewerScene::OnUI(float const deltaTimeInSec, MFA::RenderFrontend::
             modelNames.data(), 
             static_cast<int32_t>(modelNames.size())
         );
+        UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
         UI::SliderFloat("XDegree", &m_model_rotation[0], -360.0f, 360.0f);
+        UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
         UI::SliderFloat("YDegree", &m_model_rotation[1], -360.0f, 360.0f);
+        UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
         UI::SliderFloat("ZDegree", &m_model_rotation[2], -360.0f, 360.0f);
+        UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
         UI::SliderFloat("Scale", &m_model_scale, 0.0f, 1.0f);
+        UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
         UI::SliderFloat("XDistance", &m_model_position[0], mModelTranslateMin[0], mModelTranslateMax[0]);
+        UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
         UI::SliderFloat("YDistance", &m_model_position[1], mModelTranslateMin[1], mModelTranslateMax[1]);
+        UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
         UI::SliderFloat("ZDistance", &m_model_position[2], mModelTranslateMin[2], mModelTranslateMax[2]);
+        UI::Spacing();
         UI::EndWindow();
     }
 
@@ -331,10 +364,20 @@ void GLTFMeshViewerScene::OnUI(float const deltaTimeInSec, MFA::RenderFrontend::
     if (mIsCameraWindowVisible) {
         mCamera.onUI();
     }
+
+    
+
     // TODO Node tree
 }
 
 void GLTFMeshViewerScene::Shutdown() {
+    {// Disabling ui for current model
+        auto * selectedDrawable = mPbrPipeline.GetDrawableById(mModelsRenderData[mSelectedModelIndex].drawableObjectId);
+        MFA_ASSERT(selectedDrawable != nullptr);
+        selectedDrawable->DisableUI();
+    }
+        
+    mRecordObject.Disable();
     mPbrPipeline.shutdown();
     mPointLightPipeline.shutdown();
     RF::DestroySampler(mSamplerGroup);
@@ -379,7 +422,3 @@ void GLTFMeshViewerScene::updateProjectionBuffer() {
     // PointLight
     mCamera.getProjection(mPointLightMVPData.projection);
 }
-
-GLTFMeshViewerScene::~GLTFMeshViewerScene() {}
-
-GLTFMeshViewerScene::GLTFMeshViewerScene() {}
