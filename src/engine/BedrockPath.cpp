@@ -14,14 +14,12 @@ std::string Asset(char const * address) {
 }
 
 void Asset(char const * address, std::string & outPath) {
-//    auto iterator = std::filesystem::directory_iterator(address);
-//    while (iterator != std::filesystem::directory_iterator::end()) {
-//        MFA_LOG_INFO("%s", iterator->path().c_str());
-//        iterator++;
+//    for (auto const & iterator : std::filesystem::directory_iterator(".")) {
+//        MFA_LOG_INFO("%s", iterator.path().c_str());
 //    }
 #if defined(__PLATFORM_MAC__)
     char addressBuffer[256] {};
-    auto const stringSize = sprintf(addressBuffer, "../../assets/%s", address);
+    auto const stringSize = sprintf(addressBuffer, "%s/assets/%s", GetAssetPath().c_str(), address);
     outPath.assign(addressBuffer, stringSize);
 #elif defined(__PLATFORM_WIN__)
     char addressBuffer[256] {};

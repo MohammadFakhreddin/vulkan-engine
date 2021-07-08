@@ -13,8 +13,14 @@
 #include "../src/libs/tiny_gltf_loader/tiny_gltf_loader.h"
 #define TINYKTX_IMPLEMENTATION 
 #include "../src/libs/tiny_ktx/tinyktx.h"
-
 #include "../src/Application.hpp"
+#include "engine/BedrockPath.hpp"
+
+#import <Foundation/Foundation.h>
+
+std::string MFA::Path::GetAssetPath() {
+    return [NSBundle.mainBundle.resourcePath stringByAppendingString: @"/data/"].UTF8String;
+}
 
 int main(int argc, char* argv[]){
     Application app;
