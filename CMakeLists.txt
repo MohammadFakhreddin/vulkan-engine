@@ -410,6 +410,12 @@ elseif(MACOSX)
         COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Debug/MFaEngine.app/Contents/Resources/data/"
     )
 
+    add_custom_command(
+        TARGET ${PROJECT_NAME} POST_BUILD        # Adds a post-build event to MyTest
+        COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Release/MFaEngine.app/Contents/Resources/data/"
+        COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Release/MFaEngine.app/Contents/Resources/data/"
+    )
+
 elseif(IPHONE)
 
 #-----------------------------------------------------------------------
