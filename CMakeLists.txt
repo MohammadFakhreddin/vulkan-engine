@@ -1,6 +1,7 @@
 cmake_minimum_required (VERSION 3.10)
 
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)
+set(CMAKE_IOS_DEPLOYMENT_TARGET 13)
 
 set(PROJECT_NAME "MFaEngine")
 
@@ -406,7 +407,7 @@ elseif(IPHONE)
         
     list(
         APPEND IPHONE_SOURCE
-        "ios/main.m"
+        "ios/main.mm"
         "ios/ViewController.h"
         "ios/ViewController.mm"
         "ios/AppDelegate.h"
@@ -429,9 +430,11 @@ elseif(IPHONE)
     target_link_libraries(${PROJECT_NAME}
         "-framework CoreGraphics"
         "-framework UIKit"
+        "-framework Metal"
+        "-framework QuartzCore"
     )
 
-    target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.2.141.dylib")
+    target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/libs/ios/libMoltenVK.dylib")
 
     target_include_directories(
         ${PROJECT_NAME} PUBLIC 
