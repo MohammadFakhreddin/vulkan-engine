@@ -146,6 +146,8 @@ void OnNewFrame() {
         state->mouseCurrentX = -1.0f;
         state->mouseCurrentY = -1.0f;
     }
+#elif defined(__IOS__)
+    // TODO
 #else
     #error Os is not supported
 #endif

@@ -6,6 +6,7 @@
 #include "libs/sdl/SDL.hpp"
 #elif defined(__ANDROID__)
 #include <android_native_app_glue.h>
+#elif defined(__IOS__)
 #else
 #error Os is not supported
 #endif

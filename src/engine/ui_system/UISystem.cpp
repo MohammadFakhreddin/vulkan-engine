@@ -457,6 +457,8 @@ static void UpdateMousePositionAndButtons() {
     io.MouseDown[0] = IM::IsLeftMouseDown();
     io.MouseDown[1] = false;
     io.MouseDown[2] = false;
+#elif defined(__IOS__)
+    // TODO
 #else
     #error Os not supported
 #endif
