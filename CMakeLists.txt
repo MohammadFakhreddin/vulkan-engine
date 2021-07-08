@@ -453,9 +453,10 @@ elseif(IPHONE)
         "-framework UIKit"
         "-framework Metal"
         "-framework QuartzCore"
+        "${CMAKE_SOURCE_DIR}/libs/ios/libMoltenVK.a"
     )
 
-    target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/libs/ios/libMoltenVK.dylib")
+    # target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/libs/ios/libMoltenVK.dylib")
 
     target_include_directories(
         ${PROJECT_NAME} PUBLIC 

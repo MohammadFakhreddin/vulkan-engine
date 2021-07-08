@@ -196,7 +196,7 @@ VkInstance CreateInstance(char const * applicationName) {
         // The version of the engine
         .engineVersion = EngineVersion,
         // The version of Vulkan we're using for this application
-        .apiVersion = VK_API_VERSION_1_1,
+        .apiVersion = VK_API_VERSION_1_0,
     };
     std::vector<char const *> instanceExtensions {};
 
@@ -245,7 +245,7 @@ VkInstance CreateInstance(char const * applicationName) {
         .flags = 0,
         // The application info structure is then passed through the instance
         .pApplicationInfo = &applicationInfo,
-#if defined(MFA_DEBUG)
+#if defined(MFA_DEBUG) && !defined(__IOS__)
         .enabledLayerCount = static_cast<uint32_t>(DebugLayers.size()),
         .ppEnabledLayerNames = DebugLayers.data(),
 #else

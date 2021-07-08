@@ -11,9 +11,8 @@
 #include "engine/BedrockPath.hpp"
 
 std::string MFA::Path::GetAssetPath() {
-    return [NSBundle.mainBundle.resourcePath stringByAppendingString: @"/data/"].UTF8String;
+    return [NSBundle.mainBundle.resourcePath stringByAppendingString: @"/"].UTF8String;
 }
-
 
 #pragma mark -
 #pragma mark ViewController
@@ -61,7 +60,8 @@ std::string MFA::Path::GetAssetPath() {
 -(void) renderFrame {
     static constexpr float MinimumDeltaTimeInSec = 1.0f / 30.0f;
     auto currentFrameTime = [mDisplayLink timestamp];
-    float deltaTime = std::fmaxf(currentFrameTime - mPreviousFrameTime, MinimumDeltaTimeInSec);
+    float deltaTime = std::fminf(currentFrameTime - mPreviousFrameTime, MinimumDeltaTimeInSec);
+    mPreviousFrameTime = currentFrameTime;
     mApplication.RenderFrame(deltaTime);
 }
 

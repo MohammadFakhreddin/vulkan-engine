@@ -14,9 +14,6 @@ std::string Asset(char const * address) {
 }
 
 void Asset(char const * address, std::string & outPath) {
-//    for (auto const & iterator : std::filesystem::directory_iterator(".")) {
-//        MFA_LOG_INFO("%s", iterator.path().c_str());
-//    }
 #if defined(__PLATFORM_MAC__)
     char addressBuffer[256] {};
     auto const stringSize = sprintf(addressBuffer, "%s/assets/%s", GetAssetPath().c_str(), address);
@@ -30,10 +27,10 @@ void Asset(char const * address, std::string & outPath) {
     auto const stringSize = sprintf(addressBuffer, "%s", address);
     outPath.assign(address, stringSize);
 #elif defined(__IOS__)
-    char addressBuffer[256] {};
+    char addressBuffer[1024] {};
     // TODO Check for correctness
-    auto const stringSize = sprintf(addressBuffer, "%s/%s", GetAssetPath().c_str(), address);
-    outPath.assign(address, stringSize);
+    auto const stringSize = sprintf(addressBuffer, "%s/assets/%s", GetAssetPath().c_str(), address);
+    outPath = std::string(addressBuffer, stringSize);
 #else
 #error "Platform not supported"
 #endif
