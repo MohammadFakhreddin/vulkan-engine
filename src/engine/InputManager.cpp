@@ -198,14 +198,16 @@ bool IsMouseLocationValid() {
 void UpdateTouchState(bool isMouseDown, bool isTouchValueValid, MousePosition mouseX, MousePosition mouseY) {
     if (state->isMouseLocationValid && isTouchValueValid) {
         state->mouseDeltaX = mouseX - state->mouseCurrentX;
-        state->mouseDeltaY = mouseY - state->mouseCurrentX;
+        state->mouseDeltaY = mouseY - state->mouseCurrentY;
     } else {
         state->mouseDeltaX = 0.0f;
         state->mouseDeltaY = 0.0f;
     }
     state->mouseCurrentX = mouseX;
     state->mouseCurrentY = mouseY;
-    state->isMouseLocationValid = isTouchValueValid;
+    state->isLeftMouseDown = isMouseDown;
+    state->isMouseLocationValid = isTouchValueValid && isMouseDown;
+    // MFA_LOG_INFO("Mouse: DeltaX: %f, DeltaY: %f", state->mouseDeltaX, state->mouseDeltaY);
 }
 #endif
 
