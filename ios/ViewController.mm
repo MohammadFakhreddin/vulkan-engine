@@ -34,6 +34,7 @@ std::string MFA::Path::GetAssetPath() {
     MFA_LOG_INFO("IOS: Main screen info: NativeScale: %f, Width: %f, Height: %f"
                  , UIScreen.mainScreen.nativeScale, UIScreen.mainScreen.bounds.size.width, UIScreen.mainScreen.bounds.size.height);
     
+    
     self.view.contentScaleFactor = UIScreen.mainScreen.nativeScale;
     
     mApplication.SetView((__bridge void *)(self.view));
