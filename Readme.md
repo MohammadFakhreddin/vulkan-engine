@@ -40,7 +40,7 @@ Open android folder using android studio. You might need to change ndk version b
 ```
 <br/>
 
-### IOS (Incomplete)
+### IOS (Experimental)
 ```
 cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=./ios.toolchain.cmake -DPLATFORM=OS64COMBINED
 ```

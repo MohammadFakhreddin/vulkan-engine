@@ -10,9 +10,9 @@
 
 namespace MFA::InputManager {
 
-#ifdef __DESKTOP__
+#if defined(__DESKTOP__)
     using MousePosition = int32_t;
-#elif defined(__ANDROID__)
+#elif defined(__ANDROID__) || defined(__IOS__)
     using MousePosition = float;
 #else
     #error Os is not handled
@@ -50,6 +50,10 @@ namespace MFA::InputManager {
 
 #ifdef __ANDROID__
     void SetAndroidApp(android_app * androidApp);
+#endif
+
+#ifdef __IOS__
+    void UpdateTouchState(bool isMouseDown, bool isTouchValueValid, MousePosition mouseX, MousePosition mouseY);
 #endif
 
 }

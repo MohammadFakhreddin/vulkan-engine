@@ -1,6 +1,7 @@
 cmake_minimum_required (VERSION 3.10)
 
-set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)
+set(CMAKE_OSX_DEPLOYMENT_TARGET 13)
+set(CMAKE_IOS_DEPLOYMENT_TARGET 13)
 
 set(PROJECT_NAME "MFaEngine")
 
@@ -370,7 +371,7 @@ elseif(MACOSX)
     
     list(
         APPEND MAC_SOURCE
-        "mac/main.cpp"
+        "mac/main.mm"
         "src/Application.hpp"
         "src/Application.cpp"
     )
@@ -385,6 +386,7 @@ elseif(MACOSX)
 
     target_link_libraries(${PROJECT_NAME}
         "-framework CoreGraphics"
+        "-framework Foundation"
     )
 
     target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.2.141.dylib")
@@ -394,6 +396,24 @@ elseif(MACOSX)
         "mac"
         "src" 
         "${CMAKE_SOURCE_DIR}/libs/include"
+    )
+
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        MACOSX_BUNDLE TRUE
+        MACOSX_FRAMEWORK_IDENTIFIER co.radx.MFaEngine
+    )
+
+    # Copying assets to correct place
+    add_custom_command(
+        TARGET ${PROJECT_NAME} POST_BUILD        # Adds a post-build event to MyTest
+        COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Debug/MFaEngine.app/Contents/Resources/data/"
+        COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Debug/MFaEngine.app/Contents/Resources/data/"
+    )
+
+    add_custom_command(
+        TARGET ${PROJECT_NAME} POST_BUILD        # Adds a post-build event to MyTest
+        COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Release/MFaEngine.app/Contents/Resources/data/"
+        COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Release/MFaEngine.app/Contents/Resources/data/"
     )
 
 elseif(IPHONE)
@@ -408,7 +428,7 @@ elseif(IPHONE)
         
     list(
         APPEND IPHONE_SOURCE
-        "ios/main.m"
+        "ios/main.mm"
         "ios/ViewController.h"
         "ios/ViewController.mm"
         "ios/AppDelegate.h"
@@ -431,9 +451,12 @@ elseif(IPHONE)
     target_link_libraries(${PROJECT_NAME}
         "-framework CoreGraphics"
         "-framework UIKit"
+        "-framework Metal"
+        "-framework QuartzCore"
+        "${CMAKE_SOURCE_DIR}/libs/ios/libMoltenVK.a"
     )
 
-    target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.2.141.dylib")
+    # target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/libs/ios/libMoltenVK.dylib")
 
     target_include_directories(
         ${PROJECT_NAME} PUBLIC 

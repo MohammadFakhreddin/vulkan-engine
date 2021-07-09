@@ -9,13 +9,11 @@
 
 #include "Application.hpp"
 #include "engine/BedrockPath.hpp"
-
-#include <alghorithm>
+#include "engine/InputManager.hpp"
 
 std::string MFA::Path::GetAssetPath() {
-    return [NSBundle.mainBundle.resourcePath stringByAppendingString: @"/data/"].UTF8String;
+    return [NSBundle.mainBundle.resourcePath stringByAppendingString: @"/"].UTF8String;
 }
-
 
 #pragma mark -
 #pragma mark ViewController
@@ -24,13 +22,18 @@ std::string MFA::Path::GetAssetPath() {
     Application mApplication;
     CADisplayLink * mDisplayLink;
     bool mViewHasAppeared;
-    CFTimeInterval mPreviousFrameTime = 0.0f;
+    CFTimeInterval mPreviousFrameTime;
 }
 
 /** Since this is a single-view app, init Vulkan when the view is loaded. */
 -(void) viewDidLoad {
     [super viewDidLoad];
-
+    
+    mPreviousFrameTime = 0.0f;
+    
+    MFA_LOG_INFO("IOS: Main screen info: NativeScale: %f, Width: %f, Height: %f"
+                 , UIScreen.mainScreen.nativeScale, UIScreen.mainScreen.bounds.size.width, UIScreen.mainScreen.bounds.size.height);
+    
     self.view.contentScaleFactor = UIScreen.mainScreen.nativeScale;
     
     mApplication.SetView((__bridge void *)(self.view));
@@ -61,7 +64,8 @@ std::string MFA::Path::GetAssetPath() {
 -(void) renderFrame {
     static constexpr float MinimumDeltaTimeInSec = 1.0f / 30.0f;
     auto currentFrameTime = [mDisplayLink timestamp];
-    float deltaTime = std::fmaxf(currentFrameTime - mPreviousFrameTime, MinimumDeltaTimeInSec);
+    float deltaTime = std::fminf(currentFrameTime - mPreviousFrameTime, MinimumDeltaTimeInSec);
+    mPreviousFrameTime = currentFrameTime;
     mApplication.RenderFrame(deltaTime);
 }
 
@@ -84,6 +88,34 @@ std::string MFA::Path::GetAssetPath() {
 //        [self toggleKeyboard];
 //    }
     // TODO handle gesture
+//    [touch ]
+}
+
+- (void) touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event {
+    UITouch *touch = [[event allTouches] anyObject];
+    CGPoint location = [touch preciseLocationInView: self.view];
+    MFA::InputManager::UpdateTouchState(true, true, location.x * UIScreen.mainScreen.nativeScale, location.y * UIScreen.mainScreen.nativeScale);
+}
+
+- (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    UITouch *touch = [[event allTouches] anyObject];
+    CGPoint location = [touch locationInView: self.view];
+//    MFA_LOG_INFO("TouchMoved: %f %f", location.x, location.y);
+    MFA::InputManager::UpdateTouchState(true, true, location.x * UIScreen.mainScreen.nativeScale, location.y * UIScreen.mainScreen.nativeScale);
+}
+
+- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    UITouch *touch = [[event allTouches] anyObject];
+    CGPoint location = [touch locationInView: self.view];
+//    MFA_LOG_INFO("TouchEnded: %f %f", location.x, location.y);
+    MFA::InputManager::UpdateTouchState(false, true, location.x * UIScreen.mainScreen.nativeScale, location.y * UIScreen.mainScreen.nativeScale);
+}
+
+- (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    UITouch *touch = [[event allTouches] anyObject];
+    CGPoint location = [touch locationInView: self.view];
+//    MFA_LOG_INFO("TouchCancelled: %f %f", location.x, location.y);
+    MFA::InputManager::UpdateTouchState(false, false, location.x * UIScreen.mainScreen.nativeScale, location.y * UIScreen.mainScreen.nativeScale);
 }
 
 // Handle keyboard input

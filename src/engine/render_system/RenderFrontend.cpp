@@ -57,6 +57,8 @@ struct State {
     std::vector<EventWatchGroup> eventListeners {};
 #elif defined(__ANDROID__)
     ANativeWindow * window = nullptr;
+#elif defined(__IOS__)
+    void * window = nullptr;
 #else
 #error Os is not handled
 #endif
@@ -74,11 +76,11 @@ static VkBool32 VKAPI_PTR DebugCallback(
     void * user_data
 ) {
     if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
-        MFA_LOG_ERROR("Message code: %d\nMessage: %s\nLocation: %llu\n", message_code, message, location);
+        MFA_LOG_ERROR("Message code: %d\nMessage: %s\nLocation: %llu\n", message_code, message, static_cast<uint64_t>(location));
     } else if(flags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
-        MFA_LOG_WARN("Message code: %d\nMessage: %s\nLocation: %llu\n", message_code, message, location);
+        MFA_LOG_WARN("Message code: %d\nMessage: %s\nLocation: %llu\n", message_code, message, static_cast<uint64_t>(location));
     } else {
-        MFA_LOG_INFO("Message code: %d\nMessage: %s\nLocation: %llu\n", message_code, message, location);
+        MFA_LOG_INFO("Message code: %d\nMessage: %s\nLocation: %llu\n", message_code, message, static_cast<uint64_t>(location));
     }
     MFA_ASSERT(false);
     return true;
@@ -139,14 +141,22 @@ bool Init(InitParams const & params) {
 
 #elif defined(__ANDROID__)
     state->window = params.app->window;
+#elif defined(__IOS__)
+    state->window = params.view;
 #else
-    #error Os is not supported
+    #error "Os is not supported"
 #endif
 
+#ifdef __DESKTOP__
     state->vk_instance = RB::CreateInstance(
         state->application_name.c_str(),
         state->window
     );
+#elif defined(__ANDROID__) || defined(__IOS__)
+    state->vk_instance = RB::CreateInstance(state->application_name.c_str());
+#else
+    #error "Os is not supported"
+#endif
     MFA_VK_VALID_ASSERT(state->vk_instance);
 
 #if defined(MFA_DEBUG)  // TODO Fix support for android
@@ -169,6 +179,7 @@ bool Init(InitParams const & params) {
 
     state->screenWidth = surfaceCapabilities.currentExtent.width;
     state->screenHeight = surfaceCapabilities.currentExtent.height;
+    MFA_LOG_INFO("ScreenWidth: %f \nScreenHeight: %f", static_cast<float>(state->screenWidth), static_cast<float>(state->screenHeight));
 
     if(RB::CheckSwapChainSupport(state->physicalDevice) == false) {
         MFA_LOG_ERROR("Swapchain is not supported on this device");
@@ -1024,9 +1035,6 @@ void OnNewFrame(float deltaTimeInSec) {
     }
 #ifdef __DESKTOP__
     state->isWindowVisible = (GetWindowFlags() & MSDL::SDL_WINDOW_MINIMIZED) > 0 ? false : true;
-#elif defined(__ANDROID__)
-#else
-    #error Os is not handled
 #endif
 }
 
