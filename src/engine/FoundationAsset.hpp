@@ -323,7 +323,7 @@ public:
         bool isCachedDataValid = false;
         glm::mat4 cachedLocalTransform {};
         glm::mat4 cachedGlobalTransform {};
-
+        
         [[nodiscard]]
         bool hasSubMesh() const noexcept {
             return subMeshIndex >= 0;

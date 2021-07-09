@@ -19,7 +19,7 @@ using Node = AS::Mesh::Node;
 using Skin = AS::Mesh::Skin;
 
 class DrawableObject {
-private:
+public:
     struct NodeTransformBuffer {
         float model[16];
     } mNodeTransformData {};
@@ -29,7 +29,6 @@ private:
     };
     // TODO Find a better number, other than 1000
 //    static constexpr uintmax_t JointTransformBufferSize = sizeof(JointTransformBuffer) * 1000;
-public:
 
     explicit DrawableObject(
         RF::GpuModel & model_,
@@ -43,7 +42,7 @@ public:
         VkDescriptorSetLayout* descriptorSetLayouts
     );*/
 
-    ~DrawableObject() = default;
+    ~DrawableObject();
     
     DrawableObject & operator= (DrawableObject && rhs) noexcept {
         this->mNodeTransformBuffers = std::move(rhs.mNodeTransformBuffers);
@@ -56,13 +55,6 @@ public:
     DrawableObject (DrawableObject const &) noexcept = delete;
 
     DrawableObject (DrawableObject && rhs) noexcept = delete;
-    /*{
-        this->mNodeTransformBuffers = std::move(rhs.mNodeTransformBuffers);
-        this->mGpuModel = rhs.mGpuModel;
-        this->mDescriptorSets = std::move(rhs.mDescriptorSets);
-        this->mUniformBuffers = std::move(rhs.mUniformBuffers);
-        this->mRecordUIObject = std::move(rhs.mRecordUIObject);
-    }*/
 
     DrawableObject & operator = (DrawableObject const &) noexcept = delete;
 
@@ -91,7 +83,7 @@ public:
 
     [[nodiscard]] RF::UniformBufferGroup const & getNodeTransformBuffer() const noexcept;
 
-    [[nodiscard]] RF::UniformBufferGroup const & getSkinTransformBuffer() const noexcept;
+    [[nodiscard]] RF::UniformBufferGroup const & getSkinTransformBuffer(uint32_t nodeIndex) const noexcept;
 
     void update(float deltaTimeInSec);
 
@@ -112,9 +104,13 @@ private:
 
     void computeNodesGlobalTransform();
 
-    void updateJoints(float deltaTimeInSec);
+    void updateAllSkinsJoints();
 
-    void updateJoint(float deltaTimeInSec, uint32_t skinIndex, Skin const & skin);
+    void updateSkinJoints(uint32_t skinIndex, Skin const & skin);
+
+    void updateAllNodesJoints();
+
+    void updateNodeJoint(Node const & node);
 
     void drawNode(RF::DrawPass & drawPass, Node const & node);
 
@@ -134,7 +130,7 @@ private:
     DrawableObjectId const mId = 0;
     // Note: Order is important
     RF::UniformBufferGroup mNodeTransformBuffers {};
-    RF::UniformBufferGroup mSkinJointsBuffers {};
+    std::vector<RF::UniformBufferGroup> mSkinJointsBuffers {};
     RF::GpuModel * mGpuModel = nullptr;
     std::vector<VkDescriptorSet> mDescriptorSets {};
     std::unordered_map<std::string, RF::UniformBufferGroup> mUniformBuffers {};
@@ -146,6 +142,9 @@ private:
     std::string mRecordWindowName = "";
     MFA::UIRecordObject mRecordUIObject;
     bool * mIsUIVisible = nullptr;
+
+    std::vector<Blob> mCachedSkinsJoints {};
+    std::vector<Blob> mNodesJoints {};
 };
 
 }

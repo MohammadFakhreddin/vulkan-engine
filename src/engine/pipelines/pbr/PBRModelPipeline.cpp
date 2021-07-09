@@ -81,8 +81,6 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel
 
     const auto & nodeTransformBuffer = drawableObject->getNodeTransformBuffer();
 
-    const auto & skinTransformBuffer = drawableObject->getSkinTransformBuffer();
-
     auto const & textures = drawableObject->getModel()->textures;
 
     auto const & mesh = drawableObject->getModel()->model.mesh;
@@ -134,10 +132,14 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel
                         writeInfo.emplace_back(writeDescriptorSet);
                     }
                     {// SkinJoints
+                        auto const & skinBuffer = node.skinBufferIndex >= 0
+                            ? drawableObject->getSkinTransformBuffer(node.skinBufferIndex)
+                            : mErrorBuffer;
+
                         VkDescriptorBufferInfo skinTransformBufferInfo {};
-                        skinTransformBufferInfo.buffer = primitive.hasSkin ? skinTransformBuffer.buffers[node.skinBufferIndex].buffer : mErrorBuffer.buffers[0].buffer;
+                        skinTransformBufferInfo.buffer = skinBuffer.buffers[0].buffer;
                         skinTransformBufferInfo.offset = 0;
-                        skinTransformBufferInfo.range = primitive.hasSkin ? skinTransformBuffer.bufferSize : mErrorBuffer.bufferSize;
+                        skinTransformBufferInfo.range = skinBuffer.bufferSize;
 
                         VkWriteDescriptorSet writeDescriptorSet {};
                         writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -572,7 +574,7 @@ void MFA::PBRModelPipeline::destroyPipeline() {
 
 void MFA::PBRModelPipeline::createUniformBuffers() {
     mLightViewBuffer = RF::CreateUniformBuffer(sizeof(LightViewBuffer), 1);
-    mErrorBuffer = RF::CreateUniformBuffer(1, 1);
+    mErrorBuffer = RF::CreateUniformBuffer(sizeof(DrawableObject::JointTransformBuffer), 1);
 }
 
 void MFA::PBRModelPipeline::destroyUniformBuffers() {
