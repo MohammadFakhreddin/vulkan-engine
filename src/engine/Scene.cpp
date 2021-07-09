@@ -74,7 +74,6 @@ void SceneSubSystem::OnNewFrame(float const deltaTimeInSec) {
             drawPass
         );
     }
-    // TODO Refactor and use interface and register instead
     UI::OnNewFrame(deltaTimeInSec, drawPass);
 
     RF::EndPass(drawPass);
