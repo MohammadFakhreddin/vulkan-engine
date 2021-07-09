@@ -147,7 +147,6 @@ void OnNewFrame() {
         state->mouseCurrentY = -1.0f;
     }
 #elif defined(__IOS__)
-    // TODO
 #else
     #error Os is not supported
 #endif
@@ -194,5 +193,20 @@ MousePosition GetMouseY() {
 bool IsMouseLocationValid() {
     return state->isMouseLocationValid;
 }
+
+#ifdef __IOS__
+void UpdateTouchState(bool isMouseDown, bool isTouchValueValid, MousePosition mouseX, MousePosition mouseY) {
+    if (state->isMouseLocationValid && isTouchValueValid) {
+        state->mouseDeltaX = mouseX - state->mouseCurrentX;
+        state->mouseDeltaY = mouseY - state->mouseCurrentX;
+    } else {
+        state->mouseDeltaX = 0.0f;
+        state->mouseDeltaY = 0.0f;
+    }
+    state->mouseCurrentX = mouseX;
+    state->mouseCurrentY = mouseY;
+    state->isMouseLocationValid = isTouchValueValid;
+}
+#endif
 
 }

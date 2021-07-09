@@ -9,6 +9,7 @@
 
 #include "Application.hpp"
 #include "engine/BedrockPath.hpp"
+#include "engine/InputManager.hpp"
 
 std::string MFA::Path::GetAssetPath() {
     return [NSBundle.mainBundle.resourcePath stringByAppendingString: @"/"].UTF8String;
@@ -27,7 +28,7 @@ std::string MFA::Path::GetAssetPath() {
 /** Since this is a single-view app, init Vulkan when the view is loaded. */
 -(void) viewDidLoad {
     [super viewDidLoad];
-
+    
     mPreviousFrameTime = 0.0f;
     
     self.view.contentScaleFactor = UIScreen.mainScreen.nativeScale;
@@ -84,6 +85,34 @@ std::string MFA::Path::GetAssetPath() {
 //        [self toggleKeyboard];
 //    }
     // TODO handle gesture
+}
+
+- (void) touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event {
+    UITouch *touch = [[event allTouches] anyObject];
+    CGPoint location = [touch locationInView: self.view];
+    MFA_LOG_INFO("TouchBegin: %f %f", location.x, location.y);
+    MFA::InputManager::UpdateTouchState(true, true, location.x, location.y);
+}
+
+- (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    UITouch *touch = [[event allTouches] anyObject];
+    CGPoint location = [touch locationInView: self.view];
+    MFA_LOG_INFO("TouchMoved: %f %f", location.x, location.y);
+    MFA::InputManager::UpdateTouchState(true, true, location.x, location.y);
+}
+
+- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    UITouch *touch = [[event allTouches] anyObject];
+    CGPoint location = [touch locationInView: self.view];
+    MFA_LOG_INFO("TouchEnded: %f %f", location.x, location.y);
+    MFA::InputManager::UpdateTouchState(false, true, location.x, location.y);
+}
+
+- (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+    UITouch *touch = [[event allTouches] anyObject];
+    CGPoint location = [touch locationInView: self.view];
+    MFA_LOG_INFO("TouchCancelled: %f %f", location.x, location.y);
+    MFA::InputManager::UpdateTouchState(false, false, location.x, location.y);
 }
 
 // Handle keyboard input

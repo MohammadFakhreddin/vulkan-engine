@@ -76,11 +76,11 @@ static VkBool32 VKAPI_PTR DebugCallback(
     void * user_data
 ) {
     if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
-        MFA_LOG_ERROR("Message code: %d\nMessage: %s\nLocation: %llu\n", message_code, message, location);
+        MFA_LOG_ERROR("Message code: %d\nMessage: %s\nLocation: %llu\n", message_code, message, static_cast<uint64_t>(location));
     } else if(flags & VK_DEBUG_REPORT_WARNING_BIT_EXT) {
-        MFA_LOG_WARN("Message code: %d\nMessage: %s\nLocation: %llu\n", message_code, message, location);
+        MFA_LOG_WARN("Message code: %d\nMessage: %s\nLocation: %llu\n", message_code, message, static_cast<uint64_t>(location));
     } else {
-        MFA_LOG_INFO("Message code: %d\nMessage: %s\nLocation: %llu\n", message_code, message, location);
+        MFA_LOG_INFO("Message code: %d\nMessage: %s\nLocation: %llu\n", message_code, message, static_cast<uint64_t>(location));
     }
     MFA_ASSERT(false);
     return true;
@@ -179,6 +179,7 @@ bool Init(InitParams const & params) {
 
     state->screenWidth = surfaceCapabilities.currentExtent.width;
     state->screenHeight = surfaceCapabilities.currentExtent.height;
+    MFA_LOG_INFO("ScreenWidth: %f \nScreenHeight: %f", static_cast<float>(state->screenWidth), static_cast<float>(state->screenHeight));
 
     if(RB::CheckSwapChainSupport(state->physicalDevice) == false) {
         MFA_LOG_ERROR("Swapchain is not supported on this device");

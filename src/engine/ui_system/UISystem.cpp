@@ -140,7 +140,7 @@ struct State {
     std::vector<bool> meshBuffersValidationStatus {};
     bool hasFocus = false;
     std::vector<UIRecordObject *> mRecordObjects {};
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(__IOS__)
     IM::MousePosition previousMousePositionX = 0.0f;
     IM::MousePosition previousMousePositionY = 0.0f;
 #endif
@@ -395,9 +395,11 @@ void Init() {
         io.KeyMap[ImGuiKey_Z] = MSDL::SDL_SCANCODE_Z;
 #endif
 
-#ifdef __ANDROID__
+#if defined(__ANDROID__)
         // Scaling fonts    // TODO Find a better way
         io.FontGlobalScale = 3.5f;
+#elif defined(__IOS__)
+        io.FontGlobalScale = 2.0f;
 #endif
     }
 
@@ -447,7 +449,7 @@ static void UpdateMousePositionAndButtons() {
     if (RF::GetWindowFlags() & MSDL::SDL_WINDOW_INPUT_FOCUS) {
         io.MousePos = ImVec2(static_cast<float>(mx), static_cast<float>(my));
     }
-#elif defined(__ANDROID__)
+#elif defined(__ANDROID__) || defined(__IOS__)
     if (IM::IsMouseLocationValid()) {
         state->previousMousePositionX = IM::GetMouseX();
         state->previousMousePositionY = IM::GetMouseY();
@@ -457,8 +459,6 @@ static void UpdateMousePositionAndButtons() {
     io.MouseDown[0] = IM::IsLeftMouseDown();
     io.MouseDown[1] = false;
     io.MouseDown[2] = false;
-#elif defined(__IOS__)
-    // TODO
 #else
     #error Os not supported
 #endif

@@ -1098,10 +1098,10 @@ static void GLTF_extractSubMeshes(
                             MFA_ASSERT(vertex.roughnessUV[1] <= metallicRoughnessUVMax[1]);
                         }
                     }
-                    // TODO WTF ?
-                    vertex.color[0] = static_cast<uint8_t>((256/(colorsMinMaxDiff[0])) * colors[i * 3 + 0]);
-                    vertex.color[1] = static_cast<uint8_t>((256/(colorsMinMaxDiff[1])) * colors[i * 3 + 1]);
-                    vertex.color[2] = static_cast<uint8_t>((256/(colorsMinMaxDiff[2])) * colors[i * 3 + 2]);
+                    // TODO WTF ? Outside of range error. Why do we need color range anyways ?
+                    // vertex.color[0] = static_cast<uint8_t>((256/(colorsMinMaxDiff[0])) * colors[i * 3 + 0]);
+                    // vertex.color[1] = static_cast<uint8_t>((256/(colorsMinMaxDiff[1])) * colors[i * 3 + 1]);
+                    // vertex.color[2] = static_cast<uint8_t>((256/(colorsMinMaxDiff[2])) * colors[i * 3 + 2]);
 
                     vertex.hasSkin = hasSkin ? 1 : 0;
 

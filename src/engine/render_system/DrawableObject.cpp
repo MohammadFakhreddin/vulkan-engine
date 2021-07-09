@@ -45,18 +45,26 @@ DrawableObject::DrawableObject(
     );
 
 
-    uint32_t jointBuffersCount = 0;
+//    uint32_t jointBuffersCount = 0;
     for (uint32_t i = 0; i < mesh.getNodesCount(); ++i) {
         auto & node = mesh.getNodeByIndex(i);
         if (node.skin > -1) {
-            node.skinBufferIndex = jointBuffersCount;
-            jointBuffersCount++;
+            node.skinBufferIndex = node.skin;
+//            jointBuffersCount++;
         }
     }
-    if (jointBuffersCount > 0) {
+    uint32_t maxJointsCount = 0;
+    for (uint32_t i = 0; i < mesh.getSkinsCount(); ++i) {
+        auto & skin = mesh.getSkinByIndex(i);
+        auto const jointsCount = static_cast<uint32_t>(skin.joints.size());
+        if (jointsCount > maxJointsCount) {
+            maxJointsCount = jointsCount;
+        }
+    }
+    if (maxJointsCount > 0) {
         mSkinJointsBuffers = RF::CreateUniformBuffer(
-            JointTransformBufferSize,                
-            jointBuffersCount
+            sizeof(JointTransformBuffer) * maxJointsCount,
+            mesh.getSkinsCount()
         );
     }
 
@@ -282,48 +290,51 @@ void DrawableObject::computeNodesGlobalTransform() {
 void DrawableObject::updateJoints(float const deltaTimeInSec) {
     auto const & mesh = mGpuModel->model.mesh;
 
-    auto const nodesCount = mesh.getNodesCount();
-    auto const * nodes = mesh.getNodeData();
-    MFA_ASSERT(nodes != nullptr);
+    auto const skinsCount = mesh.getSkinsCount();
+    if (skinsCount > 0) {
+        auto const * skins = mesh.getSkinData();
+        MFA_ASSERT(skins != nullptr);
 
-    for (uint32_t i = 0; i < nodesCount; ++i) {
-        updateJoint(deltaTimeInSec, nodes[i]);
+        for (uint32_t i = 0; i < skinsCount; ++i) {
+            updateJoint(deltaTimeInSec, i, skins[i]);
+        }
     }
 }
 
-void DrawableObject::updateJoint(float const deltaTimeInSec, AssetSystem::Mesh::Node const & node) {
+void DrawableObject::updateJoint(float const deltaTimeInSec, uint32_t skinIndex, Skin const & skin) {
     auto const & mesh = mGpuModel->model.mesh;
-    if (node.skin > -1)
-    {
-        // TODO: Performance, We can cache joints if node.cachedGlobalTransform has not changed
-        // Update the joint matrices
-        MFA_ASSERT(node.isCachedDataValid == true);
-        glm::mat4 const inverseTransform = glm::inverse(node.cachedGlobalTransform);
-        auto const & skin = mesh.getSkinByIndex(node.skin);
+//    if (node.skin > -1)
+//    {
+    // TODO: Performance, We can cache joints if node.cachedGlobalTransform has not changed
+    // Update the joint matrices
+//        MFA_ASSERT(node.isCachedDataValid == true);
+//        glm::mat4 const inverseTransform = glm::inverse(node.cachedGlobalTransform);
+//        auto const & skin = mesh.getSkinByIndex(node.skin);
 
-        // TODO Allocate this memory once
-        auto jointMatricesBlob = Memory::Alloc(skin.joints.size() * sizeof(JointTransformBuffer));
-        MFA_DEFER {
-            Memory::Free(jointMatricesBlob);
-        };
-        auto * jointMatrices = jointMatricesBlob.as<JointTransformBuffer>();
-        for (size_t i = 0; i < skin.joints.size(); i++)
-        {
-            // It's too much computation (Not as much as rasterizer but still too much)
-            auto const & joint = mesh.getNodeByIndex(skin.joints[i]);
-            MFA_ASSERT(node.isCachedDataValid == true);
-            auto const nodeMatrix = joint.cachedGlobalTransform;
-            glm::mat4 matrix = nodeMatrix * 
-                Matrix4X4Float::ConvertCellsToMat4(skin.inverseBindMatrices[i].value);  // T - S = changes
-            matrix = inverseTransform * matrix;                                         // Why ?
-            Matrix4X4Float::ConvertGmToCells(matrix, jointMatrices[i].model);
-        }
-        // Update skin buffer
-        RF::UpdateUniformBuffer(
-            mSkinJointsBuffers.buffers[node.skinBufferIndex], 
-            CBlob {jointMatricesBlob.ptr, jointMatricesBlob.len}
-        );
+    // TODO Allocate this memory once
+    auto jointMatricesBlob = Memory::Alloc(skin.joints.size() * sizeof(JointTransformBuffer));
+    MFA_DEFER {
+        Memory::Free(jointMatricesBlob);
+    };
+    auto * jointMatrices = jointMatricesBlob.as<JointTransformBuffer>();
+    for (size_t i = 0; i < skin.joints.size(); i++)
+    {
+        // It's too much computation (Not as much as rasterizer but still too much)
+        auto const & joint = mesh.getNodeByIndex(skin.joints[i]);
+//            MFA_ASSERT(node.isCachedDataValid == true);
+        auto const nodeMatrix = joint.cachedGlobalTransform;
+        glm::mat4 matrix = nodeMatrix *
+            Matrix4X4Float::ConvertCellsToMat4(skin.inverseBindMatrices[i].value);  // T - S = changes
+//            matrix = inverseTransform * matrix;                                         // Why ?
+        Matrix4X4Float::ConvertGmToCells(matrix, jointMatrices[i].model);
     }
+    // Update skin buffer
+    RF::UpdateUniformBuffer(
+//        mSkinJointsBuffers.buffers[node.skinBufferIndex],
+        mSkinJointsBuffers.buffers[skinIndex],
+        CBlob {jointMatricesBlob.ptr, jointMatricesBlob.len}
+    );
+//    }
 }
 
 void DrawableObject::drawNode(RF::DrawPass & drawPass, AssetSystem::Mesh::Node const & node) {

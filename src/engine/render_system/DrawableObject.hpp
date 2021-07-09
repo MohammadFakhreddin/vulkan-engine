@@ -16,6 +16,7 @@ namespace AS = AssetSystem;
 using DrawableObjectId = uint32_t;
 
 using Node = AS::Mesh::Node;
+using Skin = AS::Mesh::Skin;
 
 class DrawableObject {
 private:
@@ -27,7 +28,7 @@ private:
         float model[16];
     };
     // TODO Find a better number, other than 1000
-    static constexpr uintmax_t JointTransformBufferSize = sizeof(JointTransformBuffer) * 1000;
+//    static constexpr uintmax_t JointTransformBufferSize = sizeof(JointTransformBuffer) * 1000;
 public:
 
     explicit DrawableObject(
@@ -113,9 +114,9 @@ private:
 
     void updateJoints(float deltaTimeInSec);
 
-    void updateJoint(float deltaTimeInSec, Node const & node);
+    void updateJoint(float deltaTimeInSec, uint32_t skinIndex, Skin const & skin);
 
-    void drawNode(RF::DrawPass & drawPass, const Node & node);
+    void drawNode(RF::DrawPass & drawPass, Node const & node);
 
     void drawSubMesh(RF::DrawPass & drawPass, AS::Mesh::SubMesh const & subMesh);
 
