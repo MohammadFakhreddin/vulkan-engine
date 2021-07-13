@@ -28,7 +28,7 @@ void GLTFMeshViewerScene::Init() {
             ModelRenderRequiredData params {};
             params.displayName = "CesiumMan";
             Path::Asset("models/CesiumMan/glTF/CesiumMan.gltf", params.address);
-            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {0.0f, 90.0f, -90.0f});
+            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {0.0f, 0.0f, -180.0f});
             MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.0f, -7.0f});        
             MFA::Copy<3>(params.initialParams.light.position, {0.0f, -2.0f, -2.0f});
             MFA::Copy<3>(params.initialParams.camera.position, {0.104f, 1.286f, 4.952f});
@@ -139,8 +139,8 @@ void GLTFMeshViewerScene::Init() {
     {// Point light
         auto cpuModel = MFA::ShapeGenerator::Sphere(0.1f);
 
-        for (uint32_t i = 0; i < cpuModel.mesh.getSubMeshCount(); ++i) {
-            for (auto & primitive : cpuModel.mesh.getSubMeshByIndex(i).primitives) {
+        for (uint32_t i = 0; i < cpuModel.mesh.GetSubMeshCount(); ++i) {
+            for (auto & primitive : cpuModel.mesh.GetSubMeshByIndex(i).primitives) {
                 primitive.baseColorFactor[0] = 1.0f;
                 primitive.baseColorFactor[1] = 1.0f;
                 primitive.baseColorFactor[2] = 1.0f;

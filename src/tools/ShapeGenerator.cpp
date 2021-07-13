@@ -83,7 +83,7 @@ namespace MFA::ShapeGenerator {
         uint16_t const indicesCount = static_cast<uint16_t>(meshIndices.size());
         uint16_t const verticesCount = static_cast<uint16_t>(positions.size());
 
-        model.mesh.initForWrite(
+        model.mesh.InitForWrite(
             verticesCount, 
             indicesCount, 
             Memory::Alloc(sizeof(AS::MeshVertex) * verticesCount), 
@@ -123,12 +123,12 @@ namespace MFA::ShapeGenerator {
             ::memcpy(meshVertices[index].tangentValue, tangents[index].cells, sizeof(tangents[index].cells));
         }
 
-        auto const subMeshIndex = model.mesh.insertSubMesh();
+        auto const subMeshIndex = model.mesh.InsertSubMesh();
 
         AS::Mesh::Primitive primitive {};
         primitive.hasNormalBuffer = true;
 
-        model.mesh.insertPrimitive(
+        model.mesh.InsertPrimitive(
             subMeshIndex,
             primitive,
             verticesCount,
@@ -147,12 +147,14 @@ namespace MFA::ShapeGenerator {
             static_assert(sizeof(node.transform) == sizeof(transform.cells));
         }
 
-        model.mesh.insertNode(node);
+        model.mesh.InsertNode(node);
 
-        if(model.mesh.isValid() == false) {
+        model.mesh.FinalizeData();
+
+        if(model.mesh.IsValid() == false) {
             Blob verticesBuffer {};
             Blob indicesBuffer {};
-            model.mesh.revokeBuffers(verticesBuffer, indicesBuffer);
+            model.mesh.RevokeBuffers(verticesBuffer, indicesBuffer);
             Memory::Free(verticesBuffer);
             Memory::Free(indicesBuffer);
         }
@@ -194,7 +196,7 @@ namespace MFA::ShapeGenerator {
         uint16_t const indicesCount = static_cast<uint16_t>(meshIndices.size());
         uint16_t const verticesCount = static_cast<uint16_t>(positions.size());
 
-        model.mesh.initForWrite(
+        model.mesh.InitForWrite(
             verticesCount, 
             indicesCount, 
             Memory::Alloc(sizeof(AS::MeshVertex) * verticesCount), 
@@ -213,11 +215,11 @@ namespace MFA::ShapeGenerator {
             ::memcpy(meshVertices[index].baseColorUV, uvs[index].cells, sizeof(uvs[index].cells));
         }
 
-        auto const subMeshIndex = model.mesh.insertSubMesh();
+        auto const subMeshIndex = model.mesh.InsertSubMesh();
 
         AS::Mesh::Primitive primitive {};
         primitive.hasBaseColorTexture = true;
-        model.mesh.insertPrimitive(
+        model.mesh.InsertPrimitive(
             subMeshIndex,
             primitive,
             verticesCount,
@@ -230,12 +232,12 @@ namespace MFA::ShapeGenerator {
         auto const identityMatrix = Matrix4X4Float::Identity();
         ::memcpy(node.transform, identityMatrix.cells, sizeof(node.transform));
         static_assert(sizeof(node.transform) == sizeof(identityMatrix.cells));
-        model.mesh.insertNode(node);
+        model.mesh.InsertNode(node);
 
-        if(model.mesh.isValid() == false) {
+        if(model.mesh.IsValid() == false) {
             Blob verticesBuffer {};
             Blob indicesBuffer {};
-            model.mesh.revokeBuffers(verticesBuffer, indicesBuffer);
+            model.mesh.RevokeBuffers(verticesBuffer, indicesBuffer);
             Memory::Free(verticesBuffer);
             Memory::Free(indicesBuffer);
         }

@@ -396,20 +396,20 @@ AS::Mesh ImportObj(char const * path) {
                 }
                 auto const vertexCount = static_cast<uint32_t>(positions_count);
                 auto const indexCount = static_cast<uint32_t>(shapes[0].mesh.indices.size());
-                mesh.initForWrite(
+                mesh.InitForWrite(
                     vertexCount, 
                     indexCount, 
                     Memory::Alloc(sizeof(AS::Mesh::Vertex) * vertexCount),
                     Memory::Alloc(sizeof(AS::Mesh::Index) * indexCount)
                 );
 
-                auto const subMeshIndex = mesh.insertSubMesh();
+                auto const subMeshIndex = mesh.InsertSubMesh();
                 
                 MFA_DEFER {
-                    if (mesh.isValid() == false) {
+                    if (mesh.IsValid() == false) {
                         Blob vertexBuffer {};
                         Blob indexBuffer {};
-                        mesh.revokeBuffers(vertexBuffer, indexBuffer);
+                        mesh.RevokeBuffers(vertexBuffer, indexBuffer);
                         Memory::Free(vertexBuffer);
                         Memory::Free(indexBuffer);
                     }
@@ -440,7 +440,7 @@ AS::Mesh ImportObj(char const * path) {
                     primitive.baseColorTextureIndex = 0;
                     primitive.hasNormalBuffer = true;
 
-                    mesh.insertPrimitive(
+                    mesh.InsertPrimitive(
                         subMeshIndex,
                         primitive,
                         static_cast<uint32_t>(vertices.size()),
@@ -453,8 +453,8 @@ AS::Mesh ImportObj(char const * path) {
                 auto node = AS::MeshNode {};
                 node.subMeshIndex = static_cast<int>(subMeshIndex);
                 Copy<16>(node.transform, Matrix4X4Float::Identity().cells);
-                mesh.insertNode(node);
-                MFA_ASSERT(mesh.isValid());
+                mesh.InsertNode(node);
+                MFA_ASSERT(mesh.IsValid());
 
             } else if (!error.empty() && error.substr(0, 4) != "WARN") {
                 MFA_CRASH("LoadObj returned error: %s, File: %s", error.c_str(), path);
@@ -669,7 +669,7 @@ static void GLTF_extractSubMeshes(
             }
         }
     }
-    outResultModel.mesh.initForWrite(
+    outResultModel.mesh.InitForWrite(
         totalVerticesCount, 
         totalIndicesCount, 
         Memory::Alloc(sizeof(AS::MeshVertex) * totalVerticesCount), 
@@ -680,7 +680,7 @@ static void GLTF_extractSubMeshes(
     std::vector<AS::Mesh::Vertex> primitiveVertices {};
     std::vector<AS::MeshIndex> primitiveIndices {};
     for(auto & mesh : gltfModel.meshes) {
-        auto const meshIndex = outResultModel.mesh.insertSubMesh();
+        auto const meshIndex = outResultModel.mesh.InsertSubMesh();
         if(false == mesh.primitives.empty()) {
             for(auto & primitive : mesh.primitives) {
                 primitiveIndices.erase(primitiveIndices.begin(), primitiveIndices.end());
@@ -1138,7 +1138,7 @@ static void GLTF_extractSubMeshes(
                     primitive.hasTangentBuffer = hasTangentValue;
                     primitive.hasSkin = hasSkin;
 
-                    outResultModel.mesh.insertPrimitive(
+                    outResultModel.mesh.InsertPrimitive(
                         meshIndex,
                         primitive, 
                         static_cast<uint32_t>(primitiveVertices.size()), 
@@ -1190,7 +1190,7 @@ static void GLTF_extractNodes(
                     node.transform[i] = static_cast<float>(gltfNode.matrix[i]);
                 }
             }
-            outResultModel.mesh.insertNode(node);
+            outResultModel.mesh.InsertNode(node);
         }
     }
 }
@@ -1227,7 +1227,7 @@ void GLTF_extractSkins(
         MFA_ASSERT(skin.inverseBindMatrices.size() == skin.joints.size());
         skin.skeletonRootNode = gltfSkin.skeleton;
 
-        outResultModel.mesh.insertSkin(skin);
+        outResultModel.mesh.InsertSkin(skin);
     }
 }
 
@@ -1363,7 +1363,7 @@ void GLTF_extractAnimations(
             animation.channels.emplace_back(channel);
         }
 
-        outResultModel.mesh.insertAnimation(animation);
+        outResultModel.mesh.InsertAnimation(animation);
     }
 }
 
@@ -1430,12 +1430,12 @@ AS::Model ImportGLTF(char const * path) {
             GLTF_extractSkins(gltfModel, resultModel);
             // Animation
             GLTF_extractAnimations(gltfModel, resultModel);
-            resultModel.mesh.finalizeData();
+            resultModel.mesh.FinalizeData();
             // Remove mesh buffers if invalid
-            if(resultModel.mesh.isValid() == false) {
+            if(resultModel.mesh.IsValid() == false) {
                 Blob vertexBuffer {};
                 Blob indicesBuffer {};
-                resultModel.mesh.revokeBuffers(vertexBuffer, indicesBuffer);
+                resultModel.mesh.RevokeBuffers(vertexBuffer, indicesBuffer);
                 Memory::Free(vertexBuffer);
                 Memory::Free(indicesBuffer);
             }
@@ -1491,11 +1491,11 @@ bool FreeShader(AS::Shader * shader) {
 bool FreeMesh(AS::Mesh * mesh) {
     bool success = false;
     MFA_ASSERT(mesh != nullptr);
-    MFA_ASSERT(mesh->isValid());
-    if (mesh != nullptr && mesh->isValid()) {
+    MFA_ASSERT(mesh->IsValid());
+    if (mesh != nullptr && mesh->IsValid()) {
         Blob vertexBuffer {};
         Blob indexBuffer {};
-        mesh->revokeBuffers(vertexBuffer, indexBuffer);
+        mesh->RevokeBuffers(vertexBuffer, indexBuffer);
         Memory::Free(vertexBuffer);
         Memory::Free(indexBuffer);
         success = true;

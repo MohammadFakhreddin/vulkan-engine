@@ -57,10 +57,10 @@ MFA::DrawableObjectId MFA::PointLightPipeline::addGpuModel(RF::GpuModel & gpuMod
 
     auto const & mesh = drawableObject->getModel()->model.mesh;
 
-    for (uint32_t nodeIndex = 0; nodeIndex < mesh.getNodesCount(); ++nodeIndex) {// Updating descriptor sets
-        auto const & node = mesh.getNodeByIndex(nodeIndex);
+    for (uint32_t nodeIndex = 0; nodeIndex < mesh.GetNodesCount(); ++nodeIndex) {// Updating descriptor sets
+        auto const & node = mesh.GetNodeByIndex(nodeIndex);
         if (node.hasSubMesh()) {
-            auto const & subMesh = mesh.getSubMeshByIndex(node.subMeshIndex);
+            auto const & subMesh = mesh.GetSubMeshByIndex(node.subMeshIndex);
             if (subMesh.primitives.empty() == false) {
                 for (auto const & primitive : subMesh.primitives) {
                     MFA_ASSERT(primitive.uniqueId >= 0);

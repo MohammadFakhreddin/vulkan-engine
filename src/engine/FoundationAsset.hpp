@@ -5,6 +5,8 @@
 
 #include <vector>
 
+// TODO Separate this file into multiple files
+
 namespace MFA::AssetSystem {
 
 enum class AssetType {
@@ -380,20 +382,20 @@ public:
         float animationDuration {};         // We should track currentTime somewhere else
     };
 
-    void initForWrite(
+    void InitForWrite(
         uint32_t vertexCount,
         uint32_t indexCount,
         const Blob & vertexBuffer,
         const Blob & indexBuffer
     );
 
-    void finalizeData();
+    void FinalizeData();
 
     // Returns mesh index
     [[nodiscard]]
-    uint32_t insertSubMesh();
+    uint32_t InsertSubMesh();
 
-    void insertPrimitive(
+    void InsertPrimitive(
         uint32_t subMeshIndex,
         Primitive & primitive, 
         uint32_t vertexCount, 
@@ -402,112 +404,140 @@ public:
         Index * indices
     );
 
-    void insertNode(Node const & node);
+    void InsertNode(Node const & node);
 
-    void insertSkin(Skin const & skin);
+    void InsertSkin(Skin const & skin);
 
-    void insertAnimation(Animation const & animation);
-
-    [[nodiscard]]
-    bool isValid() const;
+    void InsertAnimation(Animation const & animation);
 
     [[nodiscard]]
-    CBlob getVerticesBuffer() const noexcept {
+    bool IsValid() const;
+
+    [[nodiscard]]
+    CBlob GetVerticesBuffer() const noexcept {
         return mVertexBuffer;
     }
 
     [[nodiscard]]
-    CBlob getIndicesBuffer() const noexcept {
+    CBlob GetIndicesBuffer() const noexcept {
         return mIndexBuffer;
     }
 
     [[nodiscard]]
-    uint32_t getSubMeshCount() const noexcept {
+    uint32_t GetSubMeshCount() const noexcept {
         return static_cast<uint32_t>(mSubMeshes.size());
     }
 
     [[nodiscard]]
-    SubMesh const & getSubMeshByIndex(uint32_t const index) const noexcept {
+    SubMesh const & GetSubMeshByIndex(uint32_t const index) const noexcept {
         MFA_ASSERT(index < mSubMeshes.size());
         return mSubMeshes[index];
     }
 
     [[nodiscard]]
-    SubMesh & getSubMeshByIndex(uint32_t const index) {
+    SubMesh & GetSubMeshByIndex(uint32_t const index) {
         MFA_ASSERT(index < mSubMeshes.size());
         return mSubMeshes[index];
     }
 
     [[nodiscard]]
-    SubMesh const * getSubMeshData() const noexcept {
+    SubMesh const * GetSubMeshData() const noexcept {
         return mSubMeshes.data();
     }
 
     [[nodiscard]]
-    Node const & getNodeByIndex(uint32_t const index) const noexcept {
+    Node const & GetNodeByIndex(uint32_t const index) const noexcept {
         MFA_ASSERT(index >= 0);
         MFA_ASSERT(index < mNodes.size());
         return mNodes[index];
     }
 
     [[nodiscard]]
-    Node & getNodeByIndex(uint32_t const index)  {
+    Node & GetNodeByIndex(uint32_t const index)  {
         MFA_ASSERT(index >= 0);
         MFA_ASSERT(index < mNodes.size());
         return mNodes[index];
     }
 
     [[nodiscard]]
-    uint32_t getNodesCount() const noexcept {
+    uint32_t GetNodesCount() const noexcept {
         return static_cast<uint32_t>(mNodes.size());
     }
 
     [[nodiscard]]
-    Node const * getNodeData() const noexcept {
+    Node const * GetNodeData() const noexcept {
         return mNodes.data();
     }
 
     [[nodiscard]]
-    Skin const & getSkinByIndex(uint32_t const index) const noexcept {
+    Skin const & GetSkinByIndex(uint32_t const index) const noexcept {
         MFA_ASSERT(index >= 0);
         MFA_ASSERT(index < mSkins.size());
         return mSkins[index];
     }
 
     [[nodiscard]]
-    uint32_t getSkinsCount() const noexcept {
+    uint32_t GetSkinsCount() const noexcept {
         return static_cast<uint32_t>(mSkins.size());
     }
 
     [[nodiscard]]
-    Skin const * getSkinData() const noexcept {
+    Skin const * GetSkinData() const noexcept {
         return mSkins.data();
     }
 
     [[nodiscard]]
-    Animation const & getAnimationByIndex(uint32_t const index) const noexcept {
+    Animation const & GetAnimationByIndex(uint32_t const index) const noexcept {
         MFA_ASSERT(index >= 0);
         MFA_ASSERT(index < mAnimations.size());
         return mAnimations[index];
     }
 
     [[nodiscard]]
-    uint32_t getAnimationsCount() const noexcept {
+    uint32_t GetAnimationsCount() const noexcept {
         return static_cast<uint32_t>(mAnimations.size()); 
     }
 
     [[nodiscard]]
-    Animation const * getAnimationData() const noexcept {
+    Animation const * GetAnimationData() const noexcept {
         return mAnimations.data();
     }
 
-    void revokeBuffers(Blob & outVertexBuffer, Blob & outIndexBuffer);
+    [[nodiscard]]
+    uint32_t GetRootNodesCount() const {
+        return static_cast<uint32_t>(mRootNodes.size());
+    }
+
+    [[nodiscard]]
+    uint32_t const * GetRootNodesData() {
+        return mRootNodes.data();
+    }
+
+    [[nodiscard]]
+    Node & GetRootNodeByIndex(uint32_t const index) {
+        MFA_ASSERT(index < mRootNodes.size());
+        auto const rootNodeIndex = mRootNodes[index];
+        MFA_ASSERT(rootNodeIndex < mNodes.size());
+        return mNodes[rootNodeIndex];
+    }
+
+    [[nodiscard]]
+    Node const & GetRootNodeByIndex(uint32_t const index) const {
+        MFA_ASSERT(index < mRootNodes.size());
+        auto const rootNodeIndex = mRootNodes[index];
+        MFA_ASSERT(rootNodeIndex < mNodes.size());
+        return mNodes[rootNodeIndex];
+    }
+
+    void RevokeBuffers(Blob & outVertexBuffer, Blob & outIndexBuffer);
 
 private:
+
     std::vector<SubMesh> mSubMeshes {};
     std::vector<Node> mNodes {};
     std::vector<Skin> mSkins {};
     std::vector<Animation> mAnimations {};
+    std::vector<uint32_t> mRootNodes {};         // Nodes that have no parent
 
     uint32_t mVertexCount {};
     Blob mVertexBuffer {};
@@ -518,6 +548,7 @@ private:
     uint64_t mNextVertexOffset {};
     uint64_t mNextIndexOffset {};
     uint32_t mNextStartingIndex {};
+
 };
 
 using MeshPrimitive = Mesh::Primitive;

@@ -614,10 +614,10 @@ RB::BufferGroup CreateIndexBuffer(CBlob const indices_blob) {
 }
 
 MeshBuffers CreateMeshBuffers(AssetSystem::Mesh const & mesh) {
-    MFA_ASSERT(mesh.isValid());
+    MFA_ASSERT(mesh.IsValid());
     MeshBuffers buffers {};
-    buffers.verticesBuffer = CreateVertexBuffer(mesh.getVerticesBuffer());
-    buffers.indicesBuffer = CreateIndexBuffer(mesh.getIndicesBuffer());
+    buffers.verticesBuffer = CreateVertexBuffer(mesh.GetVerticesBuffer());
+    buffers.indicesBuffer = CreateIndexBuffer(mesh.GetIndicesBuffer());
     return buffers;
 }
 

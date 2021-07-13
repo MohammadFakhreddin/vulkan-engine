@@ -257,9 +257,9 @@ void TextureViewerScene::createModel() {
     MFA_ASSERT(cpuTexture.isValid());
 
     cpuModel.textures.emplace_back(cpuTexture);
-    MFA_ASSERT(cpuModel.mesh.getSubMeshCount() == 1);
-    MFA_ASSERT(cpuModel.mesh.getSubMeshByIndex(0).primitives.size() == 1);
-    cpuModel.mesh.getSubMeshByIndex(0).primitives[0].baseColorTextureIndex = 0;
+    MFA_ASSERT(cpuModel.mesh.GetSubMeshCount() == 1);
+    MFA_ASSERT(cpuModel.mesh.GetSubMeshByIndex(0).primitives.size() == 1);
+    cpuModel.mesh.GetSubMeshByIndex(0).primitives[0].baseColorTextureIndex = 0;
 
     mGpuModel = MFA::RenderFrontend::CreateGpuModel(cpuModel);
 }
@@ -283,9 +283,9 @@ void TextureViewerScene::createDrawableObject() {
     );
     MFA_ASSERT(imageOptionsBuffer != nullptr);
 
-    MFA_ASSERT(cpuModel.mesh.getSubMeshCount() == 1);
-    MFA_ASSERT(cpuModel.mesh.getSubMeshByIndex(0).primitives.size() == 1);
-    auto const & primitive = cpuModel.mesh.getSubMeshByIndex(0).primitives[0];
+    MFA_ASSERT(cpuModel.mesh.GetSubMeshCount() == 1);
+    MFA_ASSERT(cpuModel.mesh.GetSubMeshByIndex(0).primitives.size() == 1);
+    auto const & primitive = cpuModel.mesh.GetSubMeshByIndex(0).primitives[0];
     auto const descriptorSet = mDrawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
 
     std::vector<VkWriteDescriptorSet> writeInfo {};

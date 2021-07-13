@@ -166,9 +166,9 @@ void TexturedSphereScene::createDrawableObject(){
     
     auto const & textures = mDrawableObject->getModel()->textures;
 
-    for (uint32_t nodeIndex = 0; nodeIndex < mesh.getNodesCount(); ++nodeIndex) {// Updating descriptor sets
-        auto const & node = mesh.getNodeByIndex(nodeIndex);
-        auto const & subMesh = mesh.getSubMeshByIndex(node.subMeshIndex);
+    for (uint32_t nodeIndex = 0; nodeIndex < mesh.GetNodesCount(); ++nodeIndex) {// Updating descriptor sets
+        auto const & node = mesh.GetNodeByIndex(nodeIndex);
+        auto const & subMesh = mesh.GetSubMeshByIndex(node.subMeshIndex);
         if (subMesh.primitives.empty() == false) {
             for (auto const & primitive : subMesh.primitives) {
                 MFA_ASSERT(primitive.uniqueId >= 0);
@@ -474,9 +474,9 @@ void TexturedSphereScene::createGpuModel() {
     auto const roughnessIndex = importTextureForModel(Path::Asset("models/rusted_sphere_texture/rustediron2_roughness.png").c_str());
     
     auto & mesh = cpuModel.mesh;
-    MFA_ASSERT(mesh.isValid());
-    for (uint32_t i = 0; i < mesh.getSubMeshCount(); ++i) {
-        auto & subMesh = mesh.getSubMeshByIndex(i);
+    MFA_ASSERT(mesh.IsValid());
+    for (uint32_t i = 0; i < mesh.GetSubMeshCount(); ++i) {
+        auto & subMesh = mesh.GetSubMeshByIndex(i);
         for (auto & primitive : subMesh.primitives) {
             // Texture index
             primitive.baseColorTextureIndex = baseColorIndex;

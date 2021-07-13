@@ -235,8 +235,8 @@ void PBRScene::OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw
     {// Drawing spheres
         BindVertexBuffer(draw_pass, m_sphere.meshBuffers.verticesBuffer);
         BindIndexBuffer(draw_pass, m_sphere.meshBuffers.indicesBuffer);
-        for (uint32_t i = 0; i < m_sphere.model.mesh.getSubMeshCount(); ++i) {
-            auto const & subMesh = m_sphere.model.mesh.getSubMeshByIndex(i);
+        for (uint32_t i = 0; i < m_sphere.model.mesh.GetSubMeshCount(); ++i) {
+            auto const & subMesh = m_sphere.model.mesh.GetSubMeshByIndex(i);
             if (subMesh.primitives.empty() == false) {
                 for (auto const & primitive : subMesh.primitives) {
                     DrawIndexed(
