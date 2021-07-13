@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ICamera.h"
+#include "engine/ui_system/UIRecordObject.hpp"
 
 namespace MFA {
 
@@ -53,9 +54,13 @@ public:
 
     void forcePositionAndRotation(Vector3Float const & position, Vector3Float const & eulerAngles);
 
-    void onUI() override;
+    void EnableUI(char const * windowName, bool * isVisible) override;
+
+    void DisableUI() override;
 
 private:
+
+    void onUI();
 
     void updateTransform();
     
@@ -72,8 +77,10 @@ private:
     Vector4Float mPosition {};
     Vector3Float mEulerAngles {};
 
-   
+    std::string mRecordWindowName {};
+    UIRecordObject mRecordUIObject;
+    bool * mIsUIVisible = nullptr;
 
 };
 
-}
+};

@@ -36,7 +36,9 @@ public:
 
     virtual void forceRotation(float eulerAngles[3]) = 0;
 
-    virtual void onUI() {};
+    virtual void EnableUI(char const * windowName, bool * isVisible) {}
+
+    virtual void DisableUI() {};
 
 };
 

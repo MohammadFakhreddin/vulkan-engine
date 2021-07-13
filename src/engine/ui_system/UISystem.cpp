@@ -793,6 +793,10 @@ void Shutdown() {
     state = nullptr;
 }
 
+bool IsItemClicked() {
+    return ImGui::IsItemClicked();
+}
+
 #ifdef __ANDROID__
 void SetAndroidApp(android_app * pApp)
 {

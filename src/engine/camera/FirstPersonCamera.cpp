@@ -26,6 +26,7 @@ FirstPersonCamera::FirstPersonCamera(
     , mNearPlane(nearPlane)
     , mMoveSpeed(moveSpeed)
     , mRotationSpeed(rotationSpeed)
+    , mRecordUIObject([this]()->void{onUI();})
 {
     mPosition.assign(position);
     mEulerAngles.assign(eulerAngles);
@@ -165,11 +166,24 @@ void FirstPersonCamera::forcePositionAndRotation(
     updateTransform();
 }
 
+void FirstPersonCamera::EnableUI(char const * windowName, bool * isVisible) {
+    MFA_ASSERT(windowName != nullptr);
+    mRecordWindowName = "Camera" + std::string(windowName);
+    mIsUIVisible = isVisible;
+    mRecordUIObject.Enable();
+}
+
+void FirstPersonCamera::DisableUI() {
+    mRecordUIObject.Disable();
+}
+
 void FirstPersonCamera::onUI() {
-    UI::BeginWindow("Camera");
-    UI::InputFloat3("Position", mPosition.cells);
-    UI::InputFloat3("EulerAngles", mEulerAngles.cells);
-    UI::EndWindow();
+    if (*mIsUIVisible == true) {
+        UI::BeginWindow(mRecordWindowName.c_str());
+        UI::InputFloat3("Position", mPosition.cells);
+        UI::InputFloat3("EulerAngles", mEulerAngles.cells);
+        UI::EndWindow();
+    }
 }
 
 void FirstPersonCamera::updateTransform() {

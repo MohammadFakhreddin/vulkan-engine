@@ -32,6 +32,9 @@ struct State {
 #ifdef __ANDROID__
     float lastTimeSinceTouchInSec = 0;
 #endif
+
+    UIRecordObject mRecordUIObject;
+
     void reset() {
         mouseDeltaX = 0.0f;
         mouseDeltaY = 0.0f;
@@ -103,8 +106,36 @@ void SetAndroidApp(android_app * androidApp) {
 
 #endif
 
+static void onUI() {
+#if defined(__ANDROID__) || defined(__IOS__)
+    state->forwardMove = 0.0f;
+    state->rightMove = 0.0f;
+    UI::BeginWindow("Input controller");
+    UI::Button("Forward", []()->void {});
+    if (UI::IsItemClicked()) {
+        state->forwardMove += 1.0f;
+    }
+    UI::Button("Right", []()->void {});
+    if (UI::IsItemClicked()) {
+        state->rightMove += 1.0f;
+    }
+    UI::Button("Left", []()->void {});
+    if (UI::IsItemClicked()) {
+        state->rightMove -= 1.0f;
+    }
+    UI::Button("Backward", []()->void {});
+    if (UI::IsItemClicked()) {
+        state->forwardMove -= 1.0f;
+    }
+    UI::EndWindow();
+#endif
+}
+
 void Init() {
-    state = new State();   
+    state = new State {
+        .mRecordUIObject = UIRecordObject([]()->void{onUI();})
+    };
+    state->mRecordUIObject.Enable();
 }
 
 void OnNewFrame() {
@@ -153,6 +184,7 @@ void OnNewFrame() {
 }
 
 void Shutdown() {
+    state->mRecordUIObject.Disable();
     delete state;
     state = nullptr;
 }

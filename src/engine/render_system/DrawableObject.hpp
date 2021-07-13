@@ -140,7 +140,7 @@ private:
     float mAnimationCurrentTime = 0.0f;
 
     std::string mRecordWindowName = "";
-    MFA::UIRecordObject mRecordUIObject;
+    UIRecordObject mRecordUIObject;
     bool * mIsUIVisible = nullptr;
 
     std::vector<Blob> mCachedSkinsJoints {};

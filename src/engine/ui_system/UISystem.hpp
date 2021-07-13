@@ -71,6 +71,8 @@ bool HasFocus();
 
 void Shutdown();
 
+bool IsItemClicked();
+
 #ifdef __ANDROID__
 void SetAndroidApp(android_app *pApp);
 #endif

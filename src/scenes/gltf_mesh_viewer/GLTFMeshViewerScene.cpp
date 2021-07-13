@@ -131,6 +131,7 @@ void GLTFMeshViewerScene::Init() {
     mPointLightPipeline.init();
 
     mCamera.init();
+    mCamera.EnableUI("", &mIsCameraWindowVisible);
 
     // Updating perspective mat once for entire application
     // Perspective
@@ -360,13 +361,7 @@ void GLTFMeshViewerScene::OnUI() {
         UI::SliderFloat("ColorB", &mLightColor[2], 0.0f, 400.0f);
         UI::EndWindow();
     }
-
-    if (mIsCameraWindowVisible) {
-        mCamera.onUI();
-    }
-
-    
-
+   
     // TODO Node tree
 }
 
@@ -376,7 +371,7 @@ void GLTFMeshViewerScene::Shutdown() {
         MFA_ASSERT(selectedDrawable != nullptr);
         selectedDrawable->DisableUI();
     }
-        
+    mCamera.DisableUI();
     mRecordObject.Disable();
     mPbrPipeline.shutdown();
     mPointLightPipeline.shutdown();
