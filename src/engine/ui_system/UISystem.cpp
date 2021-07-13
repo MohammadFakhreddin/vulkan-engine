@@ -399,7 +399,7 @@ void Init() {
         // Scaling fonts    // TODO Find a better way
         io.FontGlobalScale = 3.5f;
 #elif defined(__IOS__)
-        io.FontGlobalScale = 2.0f;
+        io.FontGlobalScale = 3.0f;
 #endif
     }
 
@@ -793,8 +793,8 @@ void Shutdown() {
     state = nullptr;
 }
 
-bool IsItemClicked() {
-    return ImGui::IsItemClicked();
+bool IsItemActive() {
+    return ImGui::IsItemActive();
 }
 
 #ifdef __ANDROID__
