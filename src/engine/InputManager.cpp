@@ -111,22 +111,31 @@ static void onUI() {
     state->forwardMove = 0.0f;
     state->rightMove = 0.0f;
     UI::BeginWindow("Input controller");
+    
     UI::Button("Forward", []()->void {});
-    if (UI::IsItemClicked()) {
+    if (UI::IsItemActive()) {
         state->forwardMove += 1.0f;
     }
+    UI::Spacing();
+    
     UI::Button("Right", []()->void {});
-    if (UI::IsItemClicked()) {
+    if (UI::IsItemActive()) {
         state->rightMove += 1.0f;
     }
+    UI::Spacing();
+    
     UI::Button("Left", []()->void {});
-    if (UI::IsItemClicked()) {
+    if (UI::IsItemActive()) {
         state->rightMove -= 1.0f;
     }
+    UI::Spacing();
+    
     UI::Button("Backward", []()->void {});
-    if (UI::IsItemClicked()) {
+    if (UI::IsItemActive()) {
         state->forwardMove -= 1.0f;
     }
+    UI::Spacing();
+    
     UI::EndWindow();
 #endif
 }
