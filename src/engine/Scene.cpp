@@ -63,7 +63,7 @@ void SceneSubSystem::OnNewFrame(float const deltaTimeInSec) {
 
     RF::OnNewFrame(deltaTimeInSec);
 
-    auto drawPass = RF::BeginPass();                // Draw pass being invalid means that RF cannot render anything
+    auto drawPass = RF::BeginDrawPass();                // Draw pass being invalid means that RF cannot render anything
     if (drawPass.isValid == false) {
         return;
     }
@@ -76,7 +76,7 @@ void SceneSubSystem::OnNewFrame(float const deltaTimeInSec) {
     }
     UI::OnNewFrame(deltaTimeInSec, drawPass);
 
-    RF::EndPass(drawPass);
+    RF::EndDrawPass(drawPass);
     
 }
 

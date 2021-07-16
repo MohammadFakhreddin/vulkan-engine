@@ -34,7 +34,7 @@ void MFA::PointLightPipeline::shutdown() {
     destroyUniformBuffers();
 }
 
-MFA::DrawableObjectId MFA::PointLightPipeline::addGpuModel(RF::GpuModel & gpuModel) {
+MFA::DrawableObjectId MFA::PointLightPipeline::AddGpuModel(RF::GpuModel & gpuModel) {
     MFA_ASSERT(gpuModel.valid == true);
     
     auto * drawableObject = new DrawableObject(gpuModel, mDescriptorSetLayout);
@@ -133,13 +133,13 @@ MFA::DrawableObjectId MFA::PointLightPipeline::addGpuModel(RF::GpuModel & gpuMod
     return drawableObject->getId();
 }
 
-bool MFA::PointLightPipeline::removeGpuModel(DrawableObjectId const drawableObjectId) {
+bool MFA::PointLightPipeline::RemoveGpuModel(DrawableObjectId const drawableObjectId) {
     auto const deleteCount = mDrawableObjects.erase(drawableObjectId);  // Unique ptr should be deleted correctly
     MFA_ASSERT(deleteCount == 1);
     return deleteCount;
 }
 
-void MFA::PointLightPipeline::render(
+void MFA::PointLightPipeline::Render(
     RF::DrawPass & drawPass,
     float deltaTimeInSec,
     uint32_t const idsCount, 

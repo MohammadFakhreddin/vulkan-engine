@@ -41,7 +41,7 @@ public:
 
     ~PBRModelPipeline() override {
         if (mIsInitialized) {
-            shutdown();
+            Shutdown();
         }
     }
 
@@ -50,30 +50,30 @@ public:
     PBRModelPipeline & operator = (PBRModelPipeline const &) noexcept = delete;
     PBRModelPipeline & operator = (PBRModelPipeline &&) noexcept = delete;
 
-    void init(
+    void Init(
         RF::SamplerGroup * samplerGroup, 
         RB::GpuTexture * errorTexture
     );
 
-    void shutdown();
+    void Shutdown();
 
-    void render(
+    void Render(
         RF::DrawPass & drawPass,
         float deltaTime,
         uint32_t idsCount, 
         DrawableObjectId * ids
     ) override;
 
-    DrawableObjectId addGpuModel(RF::GpuModel & gpuModel) override;
+    DrawableObjectId AddGpuModel(RF::GpuModel & gpuModel) override;
 
-    bool removeGpuModel(DrawableObjectId drawableObjectId) override;
+    bool RemoveGpuModel(DrawableObjectId drawableObjectId) override;
     
-    bool updateViewProjectionBuffer(
+    bool UpdateViewProjectionBuffer(
         DrawableObjectId drawableObjectId, 
         ViewProjectionData const & viewProjectionData
     );
 
-    void updateLightViewBuffer(
+    void UpdateLightViewBuffer(
         LightViewBuffer const & lightViewData
     );
 

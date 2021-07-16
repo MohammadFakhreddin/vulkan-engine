@@ -167,7 +167,7 @@ void UpdateUniformBuffer(
 void DestroyUniformBuffer(UniformBufferGroup & uniform_buffer);
 
 [[nodiscard]]
-DrawPass BeginPass();
+DrawPass BeginDrawPass();
 
 void BindDrawPipeline(
     DrawPass & drawPass,
@@ -222,20 +222,20 @@ void BindDescriptorSet(
 //: end loop
 
 void BindVertexBuffer(
-    DrawPass drawPass, 
+    DrawPass const & drawPass, 
     RB::BufferGroup vertexBuffer,
     VkDeviceSize offset = 0
 );
 
 void BindIndexBuffer(
-    DrawPass drawPass, 
+    DrawPass const & drawPass, 
     RB::BufferGroup indexBuffer,
     VkDeviceSize offset = 0,
     VkIndexType indexType = VK_INDEX_TYPE_UINT32
 );
 
 void DrawIndexed(
-    DrawPass drawPass, 
+    DrawPass const & drawPass, 
     uint32_t indicesCount,
     uint32_t instanceCount = 1,
     uint32_t firstIndex = 0,
@@ -243,7 +243,11 @@ void DrawIndexed(
     uint32_t firstInstance = 0
 );
 
-void EndPass(DrawPass & drawPass);
+void BeginDisplayRenderPass(DrawPass const & drawPass);
+
+void EndDisplayRenderPass(DrawPass const & drawPass);
+
+void EndDrawPass(DrawPass & drawPass);
 
 void OnNewFrame(float deltaTimeInSec);
 

@@ -126,7 +126,7 @@ void GLTFMeshViewerScene::Init() {
     // TODO We should use gltf sampler info here
     mSamplerGroup = RF::CreateSampler();
     
-    mPbrPipeline.init(&mSamplerGroup, &mErrorTexture);
+    mPbrPipeline.Init(&mSamplerGroup, &mErrorTexture);
 
     mPointLightPipeline.init();
 
@@ -149,7 +149,7 @@ void GLTFMeshViewerScene::Init() {
         }
 
         mGpuPointLight = RF::CreateGpuModel(cpuModel);
-        mPointLightObjectId = mPointLightPipeline.addGpuModel(mGpuPointLight);
+        mPointLightObjectId = mPointLightPipeline.AddGpuModel(mGpuPointLight);
     }
 
     mRecordObject.Enable();
@@ -229,7 +229,7 @@ void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & draw
 
         mCamera.getTransform(mPbrMVPData.view);
 
-        mPbrPipeline.updateViewProjectionBuffer(
+        mPbrPipeline.UpdateViewProjectionBuffer(
             selectedModel.drawableObjectId,
             mPbrMVPData
         );
@@ -252,7 +252,7 @@ void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & draw
 
         MFA::Copy<3>(mLightViewData.lightColor, mLightColor);
         
-        mPbrPipeline.updateLightViewBuffer(mLightViewData);
+        mPbrPipeline.UpdateLightViewBuffer(mLightViewData);
 
         // Position
         MFA::Matrix4X4Float translationMat {};
@@ -278,9 +278,9 @@ void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & draw
         mPointLightPipeline.updatePrimitiveInfo(mPointLightObjectId, lightPrimitiveInfo);
     }
     // TODO Pipeline should be able to share buffers such as projection buffer to enable us to update them once
-    mPbrPipeline.render(drawPass, fDeltaTime, 1, &selectedModel.drawableObjectId);
+    mPbrPipeline.Render(drawPass, fDeltaTime, 1, &selectedModel.drawableObjectId);
     if (mIsLightVisible) {
-        mPointLightPipeline.render(drawPass, fDeltaTime, 1, &mPointLightObjectId);
+        mPointLightPipeline.Render(drawPass, fDeltaTime, 1, &mPointLightObjectId);
     }
 }
 
@@ -373,7 +373,7 @@ void GLTFMeshViewerScene::Shutdown() {
     }
     mCamera.DisableUI();
     mRecordObject.Disable();
-    mPbrPipeline.shutdown();
+    mPbrPipeline.Shutdown();
     mPointLightPipeline.shutdown();
     RF::DestroySampler(mSamplerGroup);
     destroyModels();
@@ -389,7 +389,7 @@ void GLTFMeshViewerScene::OnResize() {
 void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredData) {
     auto cpuModel = Importer::ImportGLTF(renderRequiredData.address.c_str());
     renderRequiredData.gpuModel = RF::CreateGpuModel(cpuModel);
-    renderRequiredData.drawableObjectId = mPbrPipeline.addGpuModel(renderRequiredData.gpuModel);
+    renderRequiredData.drawableObjectId = mPbrPipeline.AddGpuModel(renderRequiredData.gpuModel);
     renderRequiredData.isLoaded = true;
 }
 

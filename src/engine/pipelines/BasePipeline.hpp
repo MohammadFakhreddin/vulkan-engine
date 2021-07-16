@@ -13,16 +13,16 @@ public:
     
     virtual ~BasePipeline() = default;
 
-    virtual void render(        
+    virtual void Render(        
         RF::DrawPass & drawPass,
         float deltaTime,
         uint32_t idsCount, 
         DrawableObjectId * ids
     ) = 0;
 
-    virtual DrawableObjectId addGpuModel(RF::GpuModel & gpuModel) = 0;
+    virtual DrawableObjectId AddGpuModel(RF::GpuModel & gpuModel) = 0;
 
-    virtual bool removeGpuModel(DrawableObjectId drawableObjectId) = 0;
+    virtual bool RemoveGpuModel(DrawableObjectId drawableObjectId) = 0;
 
 };
 

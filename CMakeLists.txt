@@ -92,6 +92,8 @@ list(
     "src/engine/pipelines/pbr/PBRModelPipeline.cpp"
     "src/engine/pipelines/point_light/PointLightPipeline.hpp"
     "src/engine/pipelines/point_light/PointLightPipeline.cpp"
+    "src/engine/pipelines/pbr_with_shadow/PbrWithShadowPipeline.hpp"
+    "src/engine/pipelines/pbr_with_shadow/PbrWithShadowPipeline.cpp"
     "src/engine/camera/ICamera.h"
     "src/engine/camera/FirstPersonCamera.hpp"
     "src/engine/camera/FirstPersonCamera.cpp"
@@ -149,14 +151,21 @@ set(SCENE_SOURCES)
 
 list(
     APPEND SCENES_SOURCES
+    
     "src/scenes/gltf_mesh_viewer/GLTFMeshViewerScene.cpp"
     "src/scenes/gltf_mesh_viewer/GLTFMeshViewerScene.hpp"
+    
     "src/scenes/pbr_scene/PBRScene.cpp"
     "src/scenes/pbr_scene/PBRScene.hpp"
+    
     "src/scenes/textured_sphere/TexturedSphereScene.cpp"
     "src/scenes/textured_sphere/TexturedSphereScene.hpp"
+    
     "src/scenes/texture_viewer_scene/TextureViewerScene.hpp"
     "src/scenes/texture_viewer_scene/TextureViewerScene.cpp"
+
+    "src/scenes/omnidirectional_shadow_mapping/OmnidirectionalShadowMapping.hpp"
+    "src/scenes/omnidirectional_shadow_mapping/OmnidirectionalShadowMapping.cpp"
 )
 
 add_library("Scenes"

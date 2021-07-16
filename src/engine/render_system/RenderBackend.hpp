@@ -413,6 +413,10 @@ VkRenderPass CreateRenderPass(
 
 void DestroyRenderPass(VkDevice device, VkRenderPass renderPass);
 
+void BeginRenderPass(VkCommandBuffer commandBuffer, VkRenderPassBeginInfo const & renderPassBeginInfo);
+
+void EndRenderPass(VkCommandBuffer commandBuffer);
+
 [[nodiscard]]
 std::vector<VkFramebuffer> CreateFrameBuffers(
     VkDevice device,

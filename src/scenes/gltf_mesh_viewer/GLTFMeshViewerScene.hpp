@@ -2,7 +2,7 @@
 
 #include "engine/Scene.hpp"
 #include "engine/camera/FirstPersonCamera.hpp"
-#include "engine/pipelines/pbr/PBRModelPipeline.hpp"
+#include "engine/pipelines/pbr_with_shadow/PBRWithShadowPipeline.hpp"
 #include "engine/pipelines/point_light/PointLightPipeline.hpp"
 #include "engine/render_system/DrawableObject.hpp"
 
@@ -12,6 +12,11 @@ public:
     explicit GLTFMeshViewerScene();
 
     ~GLTFMeshViewerScene() override = default;
+   
+    GLTFMeshViewerScene (GLTFMeshViewerScene const &) noexcept = delete;
+    GLTFMeshViewerScene (GLTFMeshViewerScene &&) noexcept = delete;
+    GLTFMeshViewerScene & operator = (GLTFMeshViewerScene const &) noexcept = delete;
+    GLTFMeshViewerScene & operator = (GLTFMeshViewerScene &&) noexcept = delete;
 
     void Init() override;
 
@@ -84,25 +89,25 @@ private:
         alignas(4) int hasEmissiveTexture;
     }; 
 
-    MFA::PBRModelPipeline::ViewProjectionData mPbrMVPData {};
+    MFA::PBRWithShadowPipeline::ViewProjectionData mPbrMVPData {};
     MFA::PointLightPipeline::ViewProjectionData mPointLightMVPData {};
 
     float m_model_rotation[3] {45.0f, 45.0f, 45.0f};
     float m_model_scale = 1.0f;
     float m_model_position[3] {0.0f, 0.0f, -6.0f};
 
-    MFA::PBRModelPipeline::LightViewBuffer mLightViewData {};
+    MFA::PBRWithShadowPipeline::LightViewBuffer mLightViewData {};
     
     float mLightPosition[3] {0.0f, 0.0f, -2.0f};
     float mLightColor[3]{};
 
     std::vector<ModelRenderRequiredData> mModelsRenderData {};
-    int32_t mSelectedModelIndex = 0;
+    int32_t mSelectedModelIndex = 2;
     int32_t mPreviousModelSelectedIndex = -1;
 
     MFA::RenderFrontend::SamplerGroup mSamplerGroup {};
 
-    MFA::PBRModelPipeline mPbrPipeline {};
+    MFA::PBRWithShadowPipeline mPbrPipeline {};
     MFA::PointLightPipeline mPointLightPipeline {};
 
     MFA::RenderBackend::GpuTexture mErrorTexture {};

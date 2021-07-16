@@ -6,7 +6,7 @@
 
 namespace AS = MFA::AssetSystem;
 
-void MFA::PBRModelPipeline::init(
+void MFA::PBRModelPipeline::Init(
     RF::SamplerGroup * samplerGroup, 
     RB::GpuTexture * errorTexture
 ) {
@@ -25,7 +25,7 @@ void MFA::PBRModelPipeline::init(
     createPipeline();
 }
 
-void MFA::PBRModelPipeline::shutdown() {
+void MFA::PBRModelPipeline::Shutdown() {
     if (mIsInitialized == false) {
         MFA_ASSERT(false);
         return;
@@ -39,7 +39,7 @@ void MFA::PBRModelPipeline::shutdown() {
     destroyUniformBuffers();
 }
 
-void MFA::PBRModelPipeline::render(
+void MFA::PBRModelPipeline::Render(
     RF::DrawPass & drawPass,
     float const deltaTime,
     uint32_t const idsCount, 
@@ -58,7 +58,7 @@ void MFA::PBRModelPipeline::render(
     }
 }
 
-MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel) {
+MFA::DrawableObjectId MFA::PBRModelPipeline::AddGpuModel(RF::GpuModel & gpuModel) {
 
     MFA_ASSERT(gpuModel.valid == true);
     
@@ -296,13 +296,13 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::addGpuModel(RF::GpuModel & gpuModel
     return drawableObject->getId();
 }
 
-bool MFA::PBRModelPipeline::removeGpuModel(DrawableObjectId const drawableObjectId) {
+bool MFA::PBRModelPipeline::RemoveGpuModel(DrawableObjectId const drawableObjectId) {
     auto const deleteCount = mDrawableObjects.erase(drawableObjectId);  // Unique ptr should be deleted correctly
     MFA_ASSERT(deleteCount == 1);
     return deleteCount;
 }
 
-bool MFA::PBRModelPipeline::updateViewProjectionBuffer(
+bool MFA::PBRModelPipeline::UpdateViewProjectionBuffer(
     DrawableObjectId const drawableObjectId, 
     ViewProjectionData const & viewProjectionData
 ) {
@@ -322,7 +322,7 @@ bool MFA::PBRModelPipeline::updateViewProjectionBuffer(
     return true;
 }
 
-void MFA::PBRModelPipeline::updateLightViewBuffer(
+void MFA::PBRModelPipeline::UpdateLightViewBuffer(
     LightViewBuffer const & lightViewData
 ) {
     MFA_ASSERT(mLightViewBuffer.isValid());
@@ -431,7 +431,6 @@ void MFA::PBRModelPipeline::destroyDescriptorSetLayout() {
 }
 
 void MFA::PBRModelPipeline::createPipeline() {
-    // TODO We need path class
     // Vertex shader
     auto cpuVertexShader = Importer::ImportShaderFromSPV(
         Path::Asset("shaders/pbr_model/PbrModel.vert.spv").c_str(),

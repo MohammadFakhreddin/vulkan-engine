@@ -38,7 +38,7 @@ struct State {
     RB::LogicalDevice logicalDevice {};
     VkCommandPool graphicCommandPool {};
     RB::SwapChainGroup swapChainGroup {};
-    VkRenderPass renderPass {};
+    VkRenderPass displayRenderPass {};          // We can also move this inside basePipeline class
     RB::DepthImageGroup depthImageGroup {};
     std::vector<VkFramebuffer> frameBuffers {};
     VkDescriptorPool descriptorPool {};
@@ -220,7 +220,7 @@ bool Init(InitParams const & params) {
         state->surface,
         surfaceCapabilities
     );
-    state->renderPass = RB::CreateRenderPass(
+    state->displayRenderPass = RB::CreateRenderPass(
         state->physicalDevice,
         state->logicalDevice.device,
         state->swapChainGroup.swapChainFormat
@@ -232,7 +232,7 @@ bool Init(InitParams const & params) {
     );
     state->frameBuffers = RB::CreateFrameBuffers(
         state->logicalDevice.device,
-        state->renderPass,
+        state->displayRenderPass,
         static_cast<uint8_t>(state->swapChainGroup.swapChainImageViews.size()),
         state->swapChainGroup.swapChainImageViews.data(),
         state->depthImageGroup.imageView,
@@ -307,7 +307,7 @@ void OnWindowResized() {
     );
     state->frameBuffers = RB::CreateFrameBuffers(
         state->logicalDevice.device,
-        state->renderPass,
+        state->displayRenderPass,
         static_cast<uint32_t>(state->swapChainGroup.swapChainImageViews.size()),
         state->swapChainGroup.swapChainImageViews.data(),
         state->depthImageGroup.imageView,
@@ -366,7 +366,7 @@ bool Shutdown() {
         state->logicalDevice.device,
         state->depthImageGroup
     );
-    RB::DestroyRenderPass(state->logicalDevice.device, state->renderPass);
+    RB::DestroyRenderPass(state->logicalDevice.device, state->displayRenderPass);
     RB::DestroySwapChain(
         state->logicalDevice.device,
         state->swapChainGroup
@@ -508,7 +508,7 @@ DrawPipeline CreateDrawPipeline(
         static_cast<uint32_t>(inputAttributeDescriptionCount),
         inputAttributeDescriptionData,
         extent2D,
-        state->renderPass,
+        state->displayRenderPass,
         descriptorLayoutsCount,
         descriptorSetLayouts,
         options
@@ -687,9 +687,9 @@ void DeviceWaitIdle() {
 }
 
 [[nodiscard]]
-DrawPass BeginPass() {
+DrawPass BeginDrawPass() {
     MFA_ASSERT(MAX_FRAMES_IN_FLIGHT > state->currentFrame);
-    DrawPass draw_pass {};
+    DrawPass drawPass {};
     if (state->isWindowVisible == false || state->windowResized == true) {
         DrawPass drawPass {};
         drawPass.isValid = false;
@@ -705,11 +705,11 @@ DrawPass BeginPass() {
         state->logicalDevice.device,
         state->syncObjects.image_availability_semaphores[state->currentFrame],
         state->swapChainGroup,
-        draw_pass.imageIndex
+        drawPass.imageIndex
     );
 
-    draw_pass.frame_index = state->currentFrame;
-    draw_pass.isValid = true;
+    drawPass.frame_index = state->currentFrame;
+    drawPass.isValid = true;
     state->currentFrame ++;
     if(state->currentFrame >= MAX_FRAMES_IN_FLIGHT) {
         state->currentFrame = 0;
@@ -723,7 +723,7 @@ DrawPass BeginPass() {
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
     {
-        auto result = vkBeginCommandBuffer(state->graphicCommandBuffers[draw_pass.imageIndex], &beginInfo);
+        auto result = vkBeginCommandBuffer(state->graphicCommandBuffers[drawPass.imageIndex], &beginInfo);
         if(VK_SUCCESS != result) {
             MFA_CRASH("vkBeginCommandBuffer failed with error code %d,", result);
         }
@@ -746,45 +746,31 @@ DrawPass BeginPass() {
         presentToDrawBarrier.dstQueueFamilyIndex = state->graphicQueueFamily;
     }
 
-    presentToDrawBarrier.image = state->swapChainGroup.swapChainImages[draw_pass.imageIndex];
+    presentToDrawBarrier.image = state->swapChainGroup.swapChainImages[drawPass.imageIndex];
 
-    VkImageSubresourceRange subResourceRange = {};
-    subResourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    subResourceRange.baseMipLevel = 0;
-    subResourceRange.levelCount = 1;
-    subResourceRange.baseArrayLayer = 0;
-    subResourceRange.layerCount = 1;
+    VkImageSubresourceRange const subResourceRange {
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .baseMipLevel = 0,
+        .levelCount = 1,
+        .baseArrayLayer = 0,
+        .layerCount = 1,
+    };
+
     presentToDrawBarrier.subresourceRange = subResourceRange;
-
+    
     vkCmdPipelineBarrier(
-        state->graphicCommandBuffers[draw_pass.imageIndex], 
+        state->graphicCommandBuffers[drawPass.imageIndex], 
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 
         0, 0, nullptr, 0, nullptr, 1, 
         &presentToDrawBarrier
     );
+    
+    AssignViewportAndScissorToCommandBuffer(state->graphicCommandBuffers[drawPass.imageIndex]);
 
-    std::vector<VkClearValue> clearValues{};
-    clearValues.resize(2);
-    clearValues[0].color = VkClearColorValue { 0.1f, 0.1f, 0.1f, 1.0f };
-    clearValues[1].depthStencil = {1.0f, 0};
+    BeginDisplayRenderPass(drawPass);
 
-    VkRenderPassBeginInfo renderPassBeginInfo = {};
-    renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassBeginInfo.renderPass = state->renderPass;
-    renderPassBeginInfo.framebuffer = state->frameBuffers[draw_pass.imageIndex];
-    renderPassBeginInfo.renderArea.offset.x = 0;
-    renderPassBeginInfo.renderArea.offset.y = 0;
-    renderPassBeginInfo.renderArea.extent.width = static_cast<uint32_t>(state->screenWidth);
-    renderPassBeginInfo.renderArea.extent.height = static_cast<uint32_t>(state->screenHeight);
-    renderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-    renderPassBeginInfo.pClearValues = clearValues.data();
-
-    vkCmdBeginRenderPass(state->graphicCommandBuffers[draw_pass.imageIndex], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-    AssignViewportAndScissorToCommandBuffer(state->graphicCommandBuffers[draw_pass.imageIndex]);
-
-    return draw_pass;
+    return drawPass;
 }
 
 void BindDrawPipeline(
@@ -891,7 +877,7 @@ void BindDescriptorSet(
 }
 
 void BindVertexBuffer(
-    DrawPass const drawPass, 
+    DrawPass const & drawPass, 
     RB::BufferGroup const vertexBuffer,
     VkDeviceSize const offset
 ) {
@@ -904,7 +890,7 @@ void BindVertexBuffer(
 }
 
 void BindIndexBuffer(
-    DrawPass const drawPass,
+    DrawPass const & drawPass,
     RB::BufferGroup const indexBuffer,
     VkDeviceSize const offset,
     VkIndexType const indexType
@@ -919,7 +905,7 @@ void BindIndexBuffer(
 }
 
 void DrawIndexed(
-    DrawPass const drawPass, 
+    DrawPass const & drawPass, 
     uint32_t const indicesCount,
     uint32_t const instanceCount,
     uint32_t const firstIndex,
@@ -936,15 +922,42 @@ void DrawIndexed(
     );
 }
 
-void EndPass(DrawPass & drawPass) {
+void BeginDisplayRenderPass(DrawPass const & drawPass) {
+    std::vector<VkClearValue> clearValues {};
+    clearValues.resize(2);
+    clearValues[0].color = VkClearColorValue { 0.1f, 0.1f, 0.1f, 1.0f };
+    clearValues[1].depthStencil = {1.0f, 0};
+
+    VkRenderPassBeginInfo renderPassBeginInfo = {};
+    renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassBeginInfo.renderPass = state->displayRenderPass;
+    renderPassBeginInfo.framebuffer = state->frameBuffers[drawPass.imageIndex];
+    renderPassBeginInfo.renderArea.offset.x = 0;
+    renderPassBeginInfo.renderArea.offset.y = 0;
+    renderPassBeginInfo.renderArea.extent.width = static_cast<uint32_t>(state->screenWidth);
+    renderPassBeginInfo.renderArea.extent.height = static_cast<uint32_t>(state->screenHeight);
+    renderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    renderPassBeginInfo.pClearValues = clearValues.data();
+
+    RB::BeginRenderPass(state->graphicCommandBuffers[drawPass.imageIndex], renderPassBeginInfo);
+}
+
+void EndDisplayRenderPass(DrawPass const & drawPass) {
+    RB::EndRenderPass(state->graphicCommandBuffers[drawPass.imageIndex]);
+}
+
+void EndDrawPass(DrawPass & drawPass) {
     if (state->isWindowVisible == false) {
         return;
     }
-    // TODO Move these functions to renderBackend, RenderFrontend should not know about backend
+
+    // TODO Remove this , Each pipeline should call this separately
+    EndDisplayRenderPass(drawPass);
+    
     MFA_ASSERT(drawPass.isValid);
     drawPass.isValid = false;
-    vkCmdEndRenderPass(state->graphicCommandBuffers[drawPass.imageIndex]);
 
+    
     // If present and graphics queue families differ, then another barrier is required
     if (state->presentQueueFamily != state->graphicQueueFamily) {
         // TODO Check that WTF is this ?

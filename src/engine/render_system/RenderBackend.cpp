@@ -1445,6 +1445,17 @@ void DestroyRenderPass(VkDevice device, VkRenderPass renderPass) {
     vkDestroyRenderPass(device, renderPass, nullptr);
 }
 
+void BeginRenderPass(
+    VkCommandBuffer commandBuffer, 
+    VkRenderPassBeginInfo const & renderPassBeginInfo
+) {
+    vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+}
+
+void EndRenderPass(VkCommandBuffer commandBuffer) {
+    vkCmdEndRenderPass(commandBuffer);
+}
+
 std::vector<VkFramebuffer> CreateFrameBuffers(
     VkDevice device,
     VkRenderPass renderPass,
