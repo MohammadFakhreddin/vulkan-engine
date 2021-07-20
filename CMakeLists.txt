@@ -61,6 +61,8 @@ set(ENGINE_SOURCES)
 
 list(
     APPEND ENGINE_SOURCES
+
+    # Bedrock
     "src/engine/BedrockAssert.cpp"
     "src/engine/BedrockAssert.hpp"
     "src/engine/BedrockCommon.hpp"
@@ -73,34 +75,48 @@ list(
     "src/engine/BedrockMemory.cpp"
     "src/engine/BedrockPlatforms.hpp"
     "src/engine/BedrockPlatforms.cpp"
+    "src/engine/BedrockPath.hpp"
+    "src/engine/BedrockPath.cpp"
+
+    # RenderSystem
     "src/engine/render_system/DrawableObject.hpp"
     "src/engine/render_system/DrawableObject.cpp"
     "src/engine/render_system/RenderBackend.hpp"
     "src/engine/render_system/RenderBackend.cpp"
     "src/engine/render_system/RenderFrontend.hpp"
     "src/engine/render_system/RenderFrontend.cpp"
+
+    # RenderPass
+    "src/engine/render_system/render_passes/RenderPass.hpp"
+    "src/engine/render_system/render_passes/RenderPass.cpp"
+    "src/engine/render_system/render_passes/DisplayRenderPass.hpp"
+    "src/engine/render_system/render_passes/DisplayRenderPass.cpp"
+    
+    # Pipeline
+    "src/engine/render_system/pipelines/BasePipeline.hpp"
+    "src/engine/render_system/pipelines/pbr/PBRModelPipeline.hpp"
+    "src/engine/render_system/pipelines/pbr/PBRModelPipeline.cpp"
+    "src/engine/render_system/pipelines/point_light/PointLightPipeline.hpp"
+    "src/engine/render_system/pipelines/point_light/PointLightPipeline.cpp"
+    "src/engine/render_system/pipelines/pbr_with_shadow/PbrWithShadowPipeline.hpp"
+    "src/engine/render_system/pipelines/pbr_with_shadow/PbrWithShadowPipeline.cpp"
+
     "src/engine/FoundationAsset.hpp"
     "src/engine/FoundationAsset.cpp"
     "src/engine/Scene.hpp"
     "src/engine/Scene.cpp"
+
+    # UI System
     "src/engine/ui_system/UIRecordObject.hpp"
     "src/engine/ui_system/UIRecordObject.cpp"
     "src/engine/ui_system/UISystem.hpp"
     "src/engine/ui_system/UISystem.cpp"
-    "src/engine/pipelines/BasePipeline.hpp"
-    "src/engine/pipelines/pbr/PBRModelPipeline.hpp"
-    "src/engine/pipelines/pbr/PBRModelPipeline.cpp"
-    "src/engine/pipelines/point_light/PointLightPipeline.hpp"
-    "src/engine/pipelines/point_light/PointLightPipeline.cpp"
-    "src/engine/pipelines/pbr_with_shadow/PbrWithShadowPipeline.hpp"
-    "src/engine/pipelines/pbr_with_shadow/PbrWithShadowPipeline.cpp"
+
     "src/engine/camera/ICamera.h"
     "src/engine/camera/FirstPersonCamera.hpp"
     "src/engine/camera/FirstPersonCamera.cpp"
     "src/engine/InputManager.hpp"
     "src/engine/InputManager.cpp"
-    "src/engine/BedrockPath.hpp"
-    "src/engine/BedrockPath.cpp"
 )
 
 add_library("Engine"

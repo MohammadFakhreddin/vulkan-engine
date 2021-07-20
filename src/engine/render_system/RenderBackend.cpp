@@ -1209,10 +1209,7 @@ SwapChainGroup CreateSwapChain(
     );
 
     // Determine number of images for swap chain
-    uint32_t imageCount = surfaceCapabilities.minImageCount + 1;
-    if (surfaceCapabilities.maxImageCount != 0 && imageCount > surfaceCapabilities.maxImageCount) {
-        imageCount = surfaceCapabilities.maxImageCount;
-    }
+    auto const imageCount = ComputeSwapChainImagesCount(surfaceCapabilities);
 
     MFA_LOG_INFO(
         "Surface extend width: %d, height: %d"
@@ -1236,14 +1233,15 @@ SwapChainGroup CreateSwapChain(
     );
 
     // Determine transformation to use (preferring no transform)
-    VkSurfaceTransformFlagBitsKHR surfaceTransform;
+    /*VkSurfaceTransformFlagBitsKHR surfaceTransform;*/
     //if (surfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR) {
         //surfaceTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     //} else if (surfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
         //surfaceTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     //} else {
-    surfaceTransform = surfaceCapabilities.currentTransform;
+    //surfaceTransform = surfaceCapabilities.currentTransform;
     //}
+    VkSurfaceTransformFlagBitsKHR const surfaceTransform = surfaceCapabilities.currentTransform;
 
     MFA_ASSERT(present_modes.size() <= 255);
     // Choose presentation mode (preferring MAILBOX ~= triple buffering)
@@ -1330,7 +1328,7 @@ void DestroySwapChain(VkDevice device, SwapChainGroup const & swapChainGroup) {
     }
 }
 
-DepthImageGroup CreateDepth(
+DepthImageGroup CreateDepthImage(
     VkPhysicalDevice physical_device,
     VkDevice device,
     VkExtent2D const swap_chain_extend
@@ -1363,7 +1361,7 @@ DepthImageGroup CreateDepth(
     return ret;
 }
 
-void DestroyDepth(VkDevice device, DepthImageGroup const & depthGroup) {
+void DestroyDepthImage(VkDevice device, DepthImageGroup const & depthGroup) {
     MFA_ASSERT(device != nullptr);
     DestroyImageView(device, depthGroup.imageView);
     DestroyImage(device, depthGroup.imageGroup);
@@ -1753,14 +1751,14 @@ VkDescriptorSetLayout CreateDescriptorSetLayout(
     uint8_t const bindings_count,
     VkDescriptorSetLayoutBinding * bindings
 ) {
-    VkDescriptorSetLayoutCreateInfo descriptor_layout_create_info = {};
-    descriptor_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    descriptor_layout_create_info.bindingCount = static_cast<uint32_t>(bindings_count);
-    descriptor_layout_create_info.pBindings = bindings;
+    VkDescriptorSetLayoutCreateInfo descriptorLayoutCreateInfo = {};
+    descriptorLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descriptorLayoutCreateInfo.bindingCount = static_cast<uint32_t>(bindings_count);
+    descriptorLayoutCreateInfo.pBindings = bindings;
     VkDescriptorSetLayout descriptor_set_layout {};
     VK_Check (vkCreateDescriptorSetLayout(
         device,
-        &descriptor_layout_create_info,
+        &descriptorLayoutCreateInfo,
         nullptr,
         &descriptor_set_layout
     ));
@@ -2040,17 +2038,17 @@ void UpdateDescriptorSets(
 }
 
 std::vector<VkCommandBuffer> CreateCommandBuffers(
-    VkDevice const device,
-    uint8_t const swap_chain_images_count,
-    VkCommandPool const command_pool
+    VkDevice device, 
+    uint32_t swapChainImagesCount, 
+    VkCommandPool commandPool
 ) {
-    std::vector<VkCommandBuffer> command_buffers (swap_chain_images_count);
+    std::vector<VkCommandBuffer> command_buffers (swapChainImagesCount);
     
     VkCommandBufferAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = command_pool;
+    allocInfo.commandPool = commandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = swap_chain_images_count;
+    allocInfo.commandBufferCount = swapChainImagesCount;
 
     VK_Check(vkAllocateCommandBuffers(
         device, 
@@ -2085,12 +2083,12 @@ void DestroyCommandBuffers(
 SyncObjects CreateSyncObjects(
     VkDevice const device,
     uint8_t const maxFramesInFlight,
-    uint8_t const swapChainImagesCount
+    uint32_t const swapChainImagesCount
 ) {
     SyncObjects syncObjects {};
-    syncObjects.image_availability_semaphores.resize(maxFramesInFlight);
-    syncObjects.render_finish_indicator_semaphores.resize(maxFramesInFlight);
-    syncObjects.fences_in_flight.resize(maxFramesInFlight);
+    syncObjects.imageAvailabilitySemaphores.resize(maxFramesInFlight);
+    syncObjects.renderFinishIndicatorSemaphores.resize(maxFramesInFlight);
+    syncObjects.fencesInFlight.resize(maxFramesInFlight);
 #ifdef __ANDROID__
     syncObjects.images_in_flight.resize(swapChainImagesCount, 0);
 #else
@@ -2109,19 +2107,19 @@ SyncObjects CreateSyncObjects(
             device, 
             &semaphoreInfo, 
             nullptr, 
-            &syncObjects.image_availability_semaphores[i]
+            &syncObjects.imageAvailabilitySemaphores[i]
         ));
         VK_Check(vkCreateSemaphore(
             device, 
             &semaphoreInfo,
             nullptr,
-            &syncObjects.render_finish_indicator_semaphores[i]
+            &syncObjects.renderFinishIndicatorSemaphores[i]
         ));
         VK_Check(vkCreateFence(
             device, 
             &fenceInfo, 
             nullptr, 
-            &syncObjects.fences_in_flight[i]
+            &syncObjects.fencesInFlight[i]
         ));
     }
     return syncObjects;
@@ -2129,12 +2127,12 @@ SyncObjects CreateSyncObjects(
 
 void DestroySyncObjects(VkDevice device, SyncObjects const & syncObjects) {
     MFA_ASSERT(device != nullptr);
-    MFA_ASSERT(syncObjects.fences_in_flight.size() == syncObjects.image_availability_semaphores.size());
-    MFA_ASSERT(syncObjects.fences_in_flight.size() == syncObjects.render_finish_indicator_semaphores.size());
-    for(uint8_t i = 0; i < syncObjects.fences_in_flight.size(); i++) {
-        vkDestroySemaphore(device, syncObjects.render_finish_indicator_semaphores[i], nullptr);
-        vkDestroySemaphore(device, syncObjects.image_availability_semaphores[i], nullptr);
-        vkDestroyFence(device, syncObjects.fences_in_flight[i], nullptr);
+    MFA_ASSERT(syncObjects.fencesInFlight.size() == syncObjects.imageAvailabilitySemaphores.size());
+    MFA_ASSERT(syncObjects.fencesInFlight.size() == syncObjects.renderFinishIndicatorSemaphores.size());
+    for(uint8_t i = 0; i < syncObjects.fencesInFlight.size(); i++) {
+        vkDestroySemaphore(device, syncObjects.renderFinishIndicatorSemaphores[i], nullptr);
+        vkDestroySemaphore(device, syncObjects.imageAvailabilitySemaphores[i], nullptr);
+        vkDestroyFence(device, syncObjects.fencesInFlight[i], nullptr);
     }
 }
 
@@ -2319,6 +2317,55 @@ void UpdateDescriptorSets(
         0, 
         nullptr
     );
+}
+
+uint32_t ComputeSwapChainImagesCount(VkSurfaceCapabilitiesKHR surfaceCapabilities) {
+    uint32_t imageCount = surfaceCapabilities.minImageCount + 1;
+    if (surfaceCapabilities.maxImageCount != 0 && imageCount > surfaceCapabilities.maxImageCount) {
+        imageCount = surfaceCapabilities.maxImageCount;
+    }
+    return imageCount;
+}
+
+void BeginCommandBuffer(
+    VkCommandBuffer commandBuffer, 
+    VkCommandBufferBeginInfo const & beginInfo
+) {
+    VK_Check(vkBeginCommandBuffer(commandBuffer, &beginInfo));
+}
+
+void PipelineBarrier(
+    VkCommandBuffer commandBuffer,
+    VkPipelineStageFlags sourceStageMask,
+    VkPipelineStageFlags destinationStateMask,
+    VkImageMemoryBarrier const & memoryBarrier
+) {
+    vkCmdPipelineBarrier(
+        commandBuffer,
+        sourceStageMask,
+        destinationStateMask,
+        0, 0, nullptr, 0, nullptr, 1, 
+        &memoryBarrier
+    );
+}
+
+void EndCommandBuffer(VkCommandBuffer commandBuffer) {
+    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+        MFA_CRASH("Failed to record command buffer");
+    }
+}
+
+void SubmitQueues(
+    VkQueue queue, 
+    uint32_t submitCount, 
+    VkSubmitInfo * submitInfos, 
+    VkFence fence
+) {
+    VK_Check(vkQueueSubmit(queue, submitCount, submitInfos, fence));
+}
+
+void ResetFences(VkDevice device, uint32_t fencesCount, VkFence const * fences) {
+    VK_Check(vkResetFences(device, fencesCount, fences));
 }
 
 }

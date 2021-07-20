@@ -5,6 +5,7 @@
 #include "tools/Importer.hpp"
 #include "tools/ShapeGenerator.hpp"
 #include "engine/BedrockPath.hpp"
+#include "engine/render_system/render_passes/DisplayRenderPass.hpp"
 
 namespace RF = MFA::RenderFrontend;
 namespace RB = MFA::RenderBackend;
@@ -234,6 +235,7 @@ void TextureViewerScene::createDrawPipeline(
         vkVertexInputAttributeDescriptions.emplace_back(attributeDescription);
     }
     mDrawPipeline = RF::CreateBasicDrawPipeline(
+        RF::GetDisplayRenderPass()->GetVkRenderPass(),
         gpuShaderCount, 
         gpuShaders,
         1,

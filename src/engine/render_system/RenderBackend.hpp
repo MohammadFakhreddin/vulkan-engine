@@ -395,13 +395,13 @@ struct DepthImageGroup {
 };
 
 [[nodiscard]]
-DepthImageGroup CreateDepth(
+DepthImageGroup CreateDepthImage(
     VkPhysicalDevice physical_device,
     VkDevice device,
     VkExtent2D swap_chain_extend
 );
 
-void DestroyDepth(VkDevice device, DepthImageGroup const & depthGroup);
+void DestroyDepthImage(VkDevice device, DepthImageGroup const & depthGroup);
 
 // TODO Ask for options
 [[nodiscard]]
@@ -636,8 +636,8 @@ void UpdateDescriptorSets(
  ***/
 std::vector<VkCommandBuffer> CreateCommandBuffers(
     VkDevice device,
-    uint8_t swap_chain_images_count,
-    VkCommandPool command_pool
+    uint32_t swapChainImagesCount,
+    VkCommandPool commandPool
 );
 
 void DestroyCommandBuffers(
@@ -649,16 +649,16 @@ void DestroyCommandBuffers(
 
 // CreateSyncObjects (Fence, Semaphore, ...)
 struct SyncObjects {
-    std::vector<VkSemaphore> image_availability_semaphores;
-    std::vector<VkSemaphore> render_finish_indicator_semaphores;
-    std::vector<VkFence> fences_in_flight;
+    std::vector<VkSemaphore> imageAvailabilitySemaphores;
+    std::vector<VkSemaphore> renderFinishIndicatorSemaphores;
+    std::vector<VkFence> fencesInFlight;
     std::vector<VkFence> images_in_flight;
 };
 [[nodiscard]]
 SyncObjects CreateSyncObjects(
     VkDevice device,
     uint8_t maxFramesInFlight,
-    uint8_t swapChainImagesCount
+    uint32_t swapChainImagesCount
 );
 
 void DestroySyncObjects(VkDevice device, SyncObjects const & syncObjects);
@@ -722,5 +722,30 @@ void UpdateDescriptorSets(
     uint8_t descriptorWritesCount,
     VkWriteDescriptorSet * descriptorWrites
 );
+
+uint32_t ComputeSwapChainImagesCount(VkSurfaceCapabilitiesKHR surfaceCapabilities);
+
+void BeginCommandBuffer(
+    VkCommandBuffer commandBuffer, 
+    VkCommandBufferBeginInfo const & beginInfo
+);
+
+void PipelineBarrier(
+    VkCommandBuffer commandBuffer,
+    VkPipelineStageFlags sourceStageMask,
+    VkPipelineStageFlags destinationStateMask,
+    VkImageMemoryBarrier const & memoryBarrier
+);
+
+void EndCommandBuffer(VkCommandBuffer commandBuffer);
+
+void SubmitQueues(
+    VkQueue queue,
+    uint32_t submitCount,
+    VkSubmitInfo * submitInfos,
+    VkFence fence
+);
+
+void ResetFences(VkDevice device, uint32_t fencesCount, VkFence const * fences);
 
 }

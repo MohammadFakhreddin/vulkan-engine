@@ -8,9 +8,7 @@
 namespace MFA {
 
 class Scene;
-namespace RenderFrontend {
-    struct DrawPass;
-}
+class DisplayRenderPass;
 
 class SceneSubSystem {
 public:
@@ -34,6 +32,7 @@ private:
     int32_t mActiveScene = -1;
     int32_t mLastActiveScene = -1;
 
+    DisplayRenderPass * mDisplayRenderPass {};
     
     UIRecordObject mUIRecordObject;
 };

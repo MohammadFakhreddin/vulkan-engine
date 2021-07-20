@@ -2,7 +2,7 @@
 
 #include "engine/render_system/DrawableObject.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/pipelines/BasePipeline.hpp"
+#include "engine/render_system/pipelines/BasePipeline.hpp"
 
 namespace MFA {
 
@@ -58,6 +58,8 @@ public:
     void Shutdown();
 
     void Render(RF::DrawPass & drawPass, float deltaTime, uint32_t idsCount, DrawableObjectId * ids) override;
+
+    void OnResize() override {}
 
     DrawableObjectId AddGpuModel(RF::GpuModel & gpuModel) override;
 

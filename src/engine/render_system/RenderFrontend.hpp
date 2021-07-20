@@ -11,7 +11,13 @@
 #error Os is not supported
 #endif
 
+namespace MFA {
+    class DisplayRenderPass;
+}
+
 namespace MFA::RenderFrontend {
+
+inline static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
 
 namespace RB = RenderBackend;
 using ScreenWidth = RB::ScreenWidth;
@@ -55,6 +61,7 @@ void DestroyDescriptorSetLayout(VkDescriptorSetLayout descriptorSetLayout);
 
 [[nodiscard]]
 DrawPipeline CreateBasicDrawPipeline(
+    VkRenderPass renderPass,
     uint8_t gpuShadersCount, 
     RB::GpuShader * gpuShaders,
     uint32_t descriptorSetLayoutCount,
@@ -66,6 +73,7 @@ DrawPipeline CreateBasicDrawPipeline(
 
 [[nodiscard]]
 DrawPipeline CreateDrawPipeline(
+    VkRenderPass renderPass,
     uint8_t gpuShadersCount, 
     RB::GpuShader * gpuShaders,
     uint32_t descriptorLayoutsCount,
@@ -145,7 +153,7 @@ void DestroyShader(RB::GpuShader & gpu_shader);
 
 struct DrawPass {
     uint32_t imageIndex;
-    uint8_t frame_index;
+    uint8_t frameIndex;
     bool isValid = false;
     DrawPipeline * drawPipeline = nullptr;
 };
@@ -166,8 +174,8 @@ void UpdateUniformBuffer(
 
 void DestroyUniformBuffer(UniformBufferGroup & uniform_buffer);
 
-[[nodiscard]]
-DrawPass BeginDrawPass();
+//[[nodiscard]]
+//DrawPass BeginDrawPass();
 
 void BindDrawPipeline(
     DrawPass & drawPass,
@@ -243,11 +251,15 @@ void DrawIndexed(
     uint32_t firstInstance = 0
 );
 
-void BeginDisplayRenderPass(DrawPass const & drawPass);
+//void BeginDisplayRenderPass(DrawPass const & drawPass);
+//
+//void EndDisplayRenderPass(DrawPass const & drawPass);
 
-void EndDisplayRenderPass(DrawPass const & drawPass);
+void BeginRenderPass(DrawPass const & drawPass, VkRenderPass renderPass, VkFramebuffer * frameBuffers);
 
-void EndDrawPass(DrawPass & drawPass);
+void EndRenderPass(DrawPass const & drawPass);
+
+//void EndDrawPass(DrawPass & drawPass);
 
 void OnNewFrame(float deltaTimeInSec);
 
@@ -262,7 +274,8 @@ void PushConstants(
     CBlob data
 );
 
-uint8_t SwapChainImagesCount();
+[[nodiscard]]
+uint32_t GetSwapChainImagesCount();
 
 void GetDrawableSize(int32_t & outWidth, int32_t & outHeight);
 
@@ -280,9 +293,7 @@ uint32_t GetWindowFlags();
 
 #endif
 
-void AssignViewportAndScissorToCommandBuffer(
-    VkCommandBuffer commandBuffer
-);
+void AssignViewportAndScissorToCommandBuffer(uint32_t imageIndex);
 
 #ifdef __DESKTOP__
 using EventWatchId = int;
@@ -292,10 +303,86 @@ EventWatchId AddEventWatch(EventWatch const & eventWatch);
 void RemoveEventWatch(EventWatchId watchId);
 #endif
 
-// Currently only used for android (Probably ios in future)
 void NotifyDeviceResized();
 
 [[nodiscard]]
 VkSurfaceCapabilitiesKHR GetSurfaceCapabilities();
+
+[[nodiscard]]
+RB::SwapChainGroup CreateSwapChain(VkSwapchainKHR oldSwapChain = VkSwapchainKHR {});
+
+void DestroySwapChain(RB::SwapChainGroup const & swapChainGroup);
+
+
+[[nodiscard]]
+VkRenderPass CreateRenderPass(VkFormat imageFormat);
+
+void DestroyRenderPass(VkRenderPass renderPass);
+
+
+RB::DepthImageGroup CreateDepthImage(VkExtent2D const & imageSize);
+
+void DestroyDepthImage(RB::DepthImageGroup const & depthImage);
+
+// TODO We can gather all renderTypes in one file
+
+std::vector<VkFramebuffer> CreateFrameBuffers(
+    VkRenderPass renderPass,
+    uint32_t swapChainImageViewsCount, 
+    VkImageView* swapChainImageViews,
+    VkImageView depthImageView,
+    VkExtent2D swapChainExtent
+);
+
+void DestroyFrameBuffers(
+    uint32_t frameBuffersCount,
+    VkFramebuffer * frameBuffers
+);
+
+
+bool IsWindowVisible();
+
+bool IsWindowResized();
+
+
+void WaitForFence(uint8_t frameIndex);
+
+void AcquireNextImage(
+    uint8_t frameIndex,
+    RB::SwapChainGroup const & swapChainGroup,
+    uint32_t & outImageIndex
+);
+
+
+void BeginCommandBuffer(
+    uint32_t imageIndex,
+    VkCommandBufferBeginInfo const & beginInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT
+    }
+);
+
+uint32_t GetPresentQueueFamily();
+
+uint32_t GetGraphicQueueFamily();
+
+void PipelineBarrier(
+    uint32_t imageIndex,
+    VkPipelineStageFlags sourceStageMask,
+    VkPipelineStageFlags destinationStateMask,
+    VkImageMemoryBarrier const & memoryBarrier
+);
+
+void EndCommandBuffer(uint32_t imageIndex);
+
+void SubmitQueue(uint32_t imageIndex, uint8_t frameIndex);
+
+void PresentQueue(
+    uint32_t imageIndex, 
+    uint8_t frameIndex, 
+    VkSwapchainKHR swapChain
+);
+
+DisplayRenderPass * GetDisplayRenderPass();
 
 }

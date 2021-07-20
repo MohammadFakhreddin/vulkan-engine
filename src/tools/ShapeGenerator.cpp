@@ -80,8 +80,8 @@ namespace MFA::ShapeGenerator {
             oddRow = !oddRow;
         }
 
-        uint16_t const indicesCount = static_cast<uint16_t>(meshIndices.size());
-        uint16_t const verticesCount = static_cast<uint16_t>(positions.size());
+        auto const indicesCount = static_cast<uint16_t>(meshIndices.size());
+        auto const verticesCount = static_cast<uint16_t>(positions.size());
 
         model.mesh.InitForWrite(
             verticesCount, 
@@ -93,6 +93,7 @@ namespace MFA::ShapeGenerator {
         std::vector<AS::MeshVertex> meshVertices (verticesCount);
         
         for (uintmax_t index = 0; index < verticesCount; ++index) {
+            // TODO Use copy inside bedrock
             // Positions
             static_assert(sizeof(meshVertices[index].position) == sizeof(positions[index].cells));
             ::memcpy(meshVertices[index].position, positions[index].cells, sizeof(positions[index].cells));

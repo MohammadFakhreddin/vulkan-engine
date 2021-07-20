@@ -1,6 +1,7 @@
 #include "PBRWithShadowPipeline.hpp"
 
 #include "engine/BedrockPath.hpp"
+#include "engine/render_system/render_passes/DisplayRenderPass.hpp"
 #include "tools/Importer.hpp"
 
 // HLSL Geometry shader example:
@@ -36,9 +37,14 @@ void MFA::PBRWithShadowPipeline::Shutdown() {
     destroyUniformBuffers();
 }
 
-void MFA::PBRWithShadowPipeline::Render(RF::DrawPass & drawPass, float const deltaTime, uint32_t const idsCount, DrawableObjectId * ids) {
+void MFA::PBRWithShadowPipeline::Render(
+    RF::DrawPass & drawPass, 
+    float const deltaTime, 
+    uint32_t const idsCount, 
+    DrawableObjectId * ids
+) {
     RF::BindDrawPipeline(drawPass, mDrawPipeline);
-
+    
     for (uint32_t i = 0; i < idsCount; ++i) {
         auto const findResult = mDrawableObjects.find(ids[i]);
         if (findResult != mDrawableObjects.end()) {
@@ -541,6 +547,7 @@ void MFA::PBRWithShadowPipeline::createPipeline() {
     }
     MFA_ASSERT(mDrawPipeline.isValid() == false);
     mDrawPipeline = RF::CreateBasicDrawPipeline(
+        RF::GetDisplayRenderPass()->GetVkRenderPass(),
         static_cast<uint8_t>(shaders.size()), 
         shaders.data(),
         1,

@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "libs/imgui/imgui.h"
+#include "render_system/render_passes/DisplayRenderPass.hpp"
 
 namespace MFA {
 
@@ -23,6 +24,7 @@ void SceneSubSystem::Init() {
         mRegisteredScenes[mActiveScene].scene->Init();
         mLastActiveScene = mActiveScene;
     }
+    mDisplayRenderPass = RF::GetDisplayRenderPass();
 }
 
 void SceneSubSystem::Shutdown() {
@@ -63,11 +65,11 @@ void SceneSubSystem::OnNewFrame(float const deltaTimeInSec) {
 
     RF::OnNewFrame(deltaTimeInSec);
 
-    auto drawPass = RF::BeginDrawPass();                // Draw pass being invalid means that RF cannot render anything
+    auto drawPass = mDisplayRenderPass->Begin();                // Draw pass being invalid means that RF cannot render anything
     if (drawPass.isValid == false) {
         return;
     }
-        
+    
     if(mActiveScene >= 0) {
         mRegisteredScenes[mActiveScene].scene->OnDraw(
             deltaTimeInSec,
@@ -76,8 +78,7 @@ void SceneSubSystem::OnNewFrame(float const deltaTimeInSec) {
     }
     UI::OnNewFrame(deltaTimeInSec, drawPass);
 
-    RF::EndDrawPass(drawPass);
-    
+    mDisplayRenderPass->End(drawPass); 
 }
 
 void SceneSubSystem::OnResize() {

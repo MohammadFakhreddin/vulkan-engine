@@ -4,6 +4,7 @@
 #include "tools/ShapeGenerator.hpp"
 #include "tools/Importer.hpp"
 #include "engine/BedrockPath.hpp"
+#include "engine/render_system/render_passes/DisplayRenderPass.hpp"
 
 namespace RF = MFA::RenderFrontend;
 namespace RB = MFA::RenderBackend;
@@ -122,6 +123,7 @@ void PBRScene::Init() {
         graphicPipelineOptions.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
         m_draw_pipeline = RF::CreateDrawPipeline(
+            RF::GetDisplayRenderPass()->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()), 
             shaders.data(),
             1,

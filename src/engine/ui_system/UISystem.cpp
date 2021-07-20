@@ -8,6 +8,7 @@
 #include "engine/InputManager.hpp"
 #endif
 
+#include "engine/render_system/render_passes/DisplayRenderPass.hpp"
 #include "libs/imgui/imgui.h"
 
 namespace MFA::UISystem {
@@ -204,9 +205,9 @@ static int32_t getDensityDpi(android_app * app) {
 
 void Init() {
     state = new State();
-    auto const swap_chain_images_count = RF::SwapChainImagesCount();
-    state->meshBuffers.resize(swap_chain_images_count);
-    state->meshBuffersValidationStatus.resize(swap_chain_images_count);
+    auto const swapChainImagesCount = RF::GetSwapChainImagesCount();
+    state->meshBuffers.resize(swapChainImagesCount);
+    state->meshBuffersValidationStatus.resize(swapChainImagesCount);
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -309,6 +310,7 @@ void Init() {
         pipelineOptions.useStaticViewportAndScissor = false;
         
         state->drawPipeline = RF::CreateDrawPipeline(
+            RF::GetDisplayRenderPass()->GetVkRenderPass(),
             static_cast<uint8_t>(shader_stages.size()),
             shader_stages.data(),
             1,

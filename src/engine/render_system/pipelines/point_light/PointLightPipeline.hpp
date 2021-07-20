@@ -2,7 +2,7 @@
 
 #include "engine/render_system/DrawableObject.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/pipelines/BasePipeline.hpp"
+#include "engine/render_system/pipelines/BasePipeline.hpp"
 
 namespace MFA {
     
@@ -54,6 +54,8 @@ public:
         DrawableObjectId drawableObjectId,
         PrimitiveInfo const & info
     );
+
+    void OnResize() override {}
 
 private:
 

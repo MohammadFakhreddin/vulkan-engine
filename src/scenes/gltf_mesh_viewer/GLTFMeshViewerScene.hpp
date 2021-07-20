@@ -2,8 +2,8 @@
 
 #include "engine/Scene.hpp"
 #include "engine/camera/FirstPersonCamera.hpp"
-#include "engine/pipelines/pbr_with_shadow/PBRWithShadowPipeline.hpp"
-#include "engine/pipelines/point_light/PointLightPipeline.hpp"
+#include "engine/render_system/pipelines/pbr_with_shadow/PBRWithShadowPipeline.hpp"
+#include "engine/render_system/pipelines/point_light/PointLightPipeline.hpp"
 #include "engine/render_system/DrawableObject.hpp"
 
 class GLTFMeshViewerScene final : public MFA::Scene {

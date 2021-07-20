@@ -2,6 +2,7 @@
 
 #include "tools/ShapeGenerator.hpp"
 #include "engine/BedrockPath.hpp"
+#include "engine/render_system/render_passes/DisplayRenderPass.hpp"
 
 namespace UI = MFA::UISystem;
 namespace Path = MFA::Path;
@@ -376,6 +377,7 @@ void TexturedSphereScene::createDrawPipeline(uint8_t gpuShaderCount, MFA::Render
     graphicPipelineOptions.useStaticViewportAndScissor = false;
     graphicPipelineOptions.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
     mDrawPipeline = RF::CreateDrawPipeline(
+        RF::GetDisplayRenderPass()->GetVkRenderPass(),
         gpuShaderCount, 
         gpuShaders,
         1,

@@ -3,6 +3,7 @@
 #include "engine/FoundationAsset.hpp"
 #include "tools/Importer.hpp"
 #include "engine/BedrockPath.hpp"
+#include "engine/render_system/render_passes/DisplayRenderPass.hpp"
 
 namespace AS = MFA::AssetSystem;
 
@@ -556,6 +557,7 @@ void MFA::PBRModelPipeline::createPipeline() {
     }
     MFA_ASSERT(mDrawPipeline.isValid() == false);
     mDrawPipeline = RF::CreateBasicDrawPipeline(
+        RF::GetDisplayRenderPass()->GetVkRenderPass(),
         static_cast<uint8_t>(shaders.size()), 
         shaders.data(),
         1,
