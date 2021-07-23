@@ -21,6 +21,8 @@ public:
 
     VkRenderPass GetVkRenderPass() override;
 
+    VkCommandBuffer GetCommandBuffer(RF::DrawPass const & drawPass) override;
+
 protected:
 
     void internalInit() override;
@@ -35,12 +37,28 @@ protected:
 
 private:
 
+    VkSemaphore getImageAvailabilitySemaphore(RF::DrawPass const & drawPass);
+
+    VkSemaphore getRenderFinishIndicatorSemaphore(RF::DrawPass const & drawPass);
+
+    VkFence getInFlightFence(RF::DrawPass const & drawPass);
+
+    VkImage getSwapChainImage(RF::DrawPass const & drawPass);
+
+    VkFramebuffer getFrameBuffer(RF::DrawPass const & drawPass);
+
+    void createFrameBuffers(VkExtent2D const & extent);
+
+    inline static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+    
     VkRenderPass mVkRenderPass {};
+    uint32_t mSwapChainImagesCount = 0;
     RB::SwapChainGroup mSwapChainImages {};
     std::vector<VkFramebuffer> mFrameBuffers {};
     RB::DepthImageGroup mDepthImageGroup {};
     RB::SyncObjects mSyncObjects {};
     uint8_t mCurrentFrame = 0;
+    std::vector<VkCommandBuffer> mGraphicCommandBuffers {};
 };
 
 }

@@ -147,7 +147,7 @@ struct State {
 #endif
 #ifdef __DESKTOP__
     MSDL::SDL_Cursor *  mouseCursors[ImGuiMouseCursor_COUNT] {};
-    RF::EventWatchId eventWatchId = -1;
+    RF::SDLEventWatchId eventWatchId = -1;
 #endif
 };
 
@@ -530,9 +530,9 @@ void OnNewFrame(
 
     auto * draw_data = ImGui::GetDrawData();
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-    float const frame_buffer_width = draw_data->DisplaySize.x * draw_data->FramebufferScale.x;
-    float const frame_buffer_height = draw_data->DisplaySize.y * draw_data->FramebufferScale.y;
-    if (frame_buffer_width > 0 && frame_buffer_height > 0) {
+    float const frameBufferWidth = draw_data->DisplaySize.x * draw_data->FramebufferScale.x;
+    float const frameBufferHeight = draw_data->DisplaySize.y * draw_data->FramebufferScale.y;
+    if (frameBufferWidth > 0 && frameBufferHeight > 0) {
         if (draw_data->TotalVtxCount > 0) {
             // Create or resize the vertex/index buffers
             size_t const vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
@@ -582,8 +582,8 @@ void OnNewFrame(
                 VkViewport viewport;
                 viewport.x = 0;
                 viewport.y = 0;
-                viewport.width = frame_buffer_width;
-                viewport.height = frame_buffer_height;
+                viewport.width = frameBufferWidth;
+                viewport.height = frameBufferHeight;
                 viewport.minDepth = 0.0f;
                 viewport.maxDepth = 1.0f;
                 RF::SetViewport(drawPass, viewport);
@@ -627,7 +627,7 @@ void OnNewFrame(
                     clip_rect.z = (pcmd->ClipRect.z - clip_off.x) * clip_scale.x;
                     clip_rect.w = (pcmd->ClipRect.w - clip_off.y) * clip_scale.y;
 
-                    if (clip_rect.x < frame_buffer_width && clip_rect.y < frame_buffer_height && clip_rect.z >= 0.0f && clip_rect.w >= 0.0f)
+                    if (clip_rect.x < frameBufferWidth && clip_rect.y < frameBufferHeight && clip_rect.z >= 0.0f && clip_rect.w >= 0.0f)
                     {
                         // Negative offsets are illegal for vkCmdSetScissor
                         if (clip_rect.x < 0.0f)

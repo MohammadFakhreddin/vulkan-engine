@@ -16,7 +16,7 @@ SceneSubSystem::SceneSubSystem()
 
 void SceneSubSystem::Init() {
     mUIRecordObject.Enable();
-    RF::SetResizeEventListener([this]()->void {OnResize();});
+    mResizeListenerId = RF::AddResizeEventListener([this]()->void {OnResize();});
     if(mActiveScene < 0 && false == mRegisteredScenes.empty()) {
         mActiveScene = 0;
     }
@@ -28,7 +28,7 @@ void SceneSubSystem::Init() {
 }
 
 void SceneSubSystem::Shutdown() {
-    RF::SetResizeEventListener(nullptr);
+    RF::RemoveResizeEventListener(mResizeListenerId);
     if(mActiveScene >= 0) {
         mRegisteredScenes[mActiveScene].scene->Shutdown();
     }
@@ -64,6 +64,10 @@ void SceneSubSystem::OnNewFrame(float const deltaTimeInSec) {
     }
 
     RF::OnNewFrame(deltaTimeInSec);
+
+    if(mActiveScene >= 0) {
+        mRegisteredScenes[mActiveScene].scene->OnUpdate(deltaTimeInSec);
+    }
 
     auto drawPass = mDisplayRenderPass->Begin();                // Draw pass being invalid means that RF cannot render anything
     if (drawPass.isValid == false) {

@@ -91,6 +91,8 @@ list(
     "src/engine/render_system/render_passes/RenderPass.cpp"
     "src/engine/render_system/render_passes/DisplayRenderPass.hpp"
     "src/engine/render_system/render_passes/DisplayRenderPass.cpp"
+    "src/engine/render_system/render_passes/OffScreenRenderPass.hpp"
+    "src/engine/render_system/render_passes/OffScreenRenderPass.cpp"
     
     # Pipeline
     "src/engine/render_system/pipelines/BasePipeline.hpp"

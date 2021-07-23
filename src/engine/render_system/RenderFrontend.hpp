@@ -12,18 +12,15 @@
 #endif
 
 namespace MFA {
+    class RenderPass;
     class DisplayRenderPass;
 }
 
 namespace MFA::RenderFrontend {
 
-inline static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
-
 namespace RB = RenderBackend;
 using ScreenWidth = RB::ScreenWidth;
 using ScreenHeight = RB::ScreenHeight;
-
-using ResizeEventListener = std::function<void()>;
 
 struct InitParams {
 #ifdef __DESKTOP__
@@ -44,7 +41,12 @@ bool Init(InitParams const & params);
 
 bool Shutdown();
 
-void SetResizeEventListener(ResizeEventListener const & eventListener);
+
+using ResizeEventListenerId = int;
+using ResizeEventListener = std::function<void()>;
+
+int AddResizeEventListener(ResizeEventListener const & eventListener);
+bool RemoveResizeEventListener(ResizeEventListenerId listenerId);
 
 using DrawPipeline = RB::GraphicPipelineGroup;
 
@@ -156,6 +158,7 @@ struct DrawPass {
     uint8_t frameIndex;
     bool isValid = false;
     DrawPipeline * drawPipeline = nullptr;
+    RenderPass * renderPass = nullptr;
 };
 
 struct UniformBufferGroup {
@@ -173,9 +176,6 @@ void UpdateUniformBuffer(
 );
 
 void DestroyUniformBuffer(UniformBufferGroup & uniform_buffer);
-
-//[[nodiscard]]
-//DrawPass BeginDrawPass();
 
 void BindDrawPipeline(
     DrawPass & drawPass,
@@ -251,25 +251,23 @@ void DrawIndexed(
     uint32_t firstInstance = 0
 );
 
-//void BeginDisplayRenderPass(DrawPass const & drawPass);
-//
-//void EndDisplayRenderPass(DrawPass const & drawPass);
+void BeginRenderPass(
+    VkCommandBuffer commandBuffer, 
+    VkRenderPass renderPass, 
+    VkFramebuffer frameBuffer
+);
 
-void BeginRenderPass(DrawPass const & drawPass, VkRenderPass renderPass, VkFramebuffer * frameBuffers);
-
-void EndRenderPass(DrawPass const & drawPass);
-
-//void EndDrawPass(DrawPass & drawPass);
+void EndRenderPass(VkCommandBuffer commandBuffer);
 
 void OnNewFrame(float deltaTimeInSec);
 
-void SetScissor(DrawPass const & draw_pass, VkRect2D const & scissor);
+void SetScissor(DrawPass const & drawPass, VkRect2D const & scissor);
 
-void SetViewport(DrawPass const & draw_pass, VkViewport const & viewport);
+void SetViewport(DrawPass const & drawPass, VkViewport const & viewport);
 
 void PushConstants(
-    DrawPass const & draw_pass, 
-    AssetSystem::ShaderStage shader_stage, 
+    DrawPass const & drawPass, 
+    AssetSystem::ShaderStage shaderStage, 
     uint32_t offset, 
     CBlob data
 );
@@ -293,14 +291,14 @@ uint32_t GetWindowFlags();
 
 #endif
 
-void AssignViewportAndScissorToCommandBuffer(uint32_t imageIndex);
+void AssignViewportAndScissorToCommandBuffer(VkCommandBuffer commandBuffer, VkExtent2D const & extent2D);
 
 #ifdef __DESKTOP__
-using EventWatchId = int;
-using EventWatch = std::function<int(void* data, MSDL::SDL_Event* event)>;
-EventWatchId AddEventWatch(EventWatch const & eventWatch);
+using SDLEventWatchId = int;
+using SDLEventWatch = std::function<int(void* data, MSDL::SDL_Event* event)>;
+SDLEventWatchId AddEventWatch(SDLEventWatch const & eventWatch);
 
-void RemoveEventWatch(EventWatchId watchId);
+void RemoveEventWatch(SDLEventWatchId watchId);
 #endif
 
 void NotifyDeviceResized();
@@ -313,25 +311,26 @@ RB::SwapChainGroup CreateSwapChain(VkSwapchainKHR oldSwapChain = VkSwapchainKHR 
 
 void DestroySwapChain(RB::SwapChainGroup const & swapChainGroup);
 
-
 [[nodiscard]]
 VkRenderPass CreateRenderPass(VkFormat imageFormat);
 
 void DestroyRenderPass(VkRenderPass renderPass);
 
-
-RB::DepthImageGroup CreateDepthImage(VkExtent2D const & imageSize);
+RB::DepthImageGroup CreateDepthImage(
+    VkExtent2D const & imageSize,
+    RB::CreateDepthImageOptions const & options = {}
+);
 
 void DestroyDepthImage(RB::DepthImageGroup const & depthImage);
 
 // TODO We can gather all renderTypes in one file
 
-std::vector<VkFramebuffer> CreateFrameBuffers(
+[[nodiscard]]
+VkFramebuffer CreateFrameBuffer(
     VkRenderPass renderPass,
-    uint32_t swapChainImageViewsCount, 
-    VkImageView* swapChainImageViews,
-    VkImageView depthImageView,
-    VkExtent2D swapChainExtent
+    VkImageView const * attachments,
+    uint32_t attachmentsCount,
+    VkExtent2D frameBufferExtent
 );
 
 void DestroyFrameBuffers(
@@ -339,27 +338,33 @@ void DestroyFrameBuffers(
     VkFramebuffer * frameBuffers
 );
 
-
 bool IsWindowVisible();
 
 bool IsWindowResized();
 
-
-void WaitForFence(uint8_t frameIndex);
+void WaitForFence(VkFence fence);
 
 void AcquireNextImage(
-    uint8_t frameIndex,
+    VkSemaphore imageAvailabilitySemaphore,
     RB::SwapChainGroup const & swapChainGroup,
     uint32_t & outImageIndex
 );
 
+std::vector<VkCommandBuffer> CreateGraphicCommandBuffers(uint32_t count);
 
 void BeginCommandBuffer(
-    uint32_t imageIndex,
+    VkCommandBuffer commandBuffer,
     VkCommandBufferBeginInfo const & beginInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT
     }
+);
+
+void EndCommandBuffer(VkCommandBuffer commandBuffer);
+
+void DestroyGraphicCommandBuffer(
+    VkCommandBuffer * commandBuffers, 
+    uint32_t commandBuffersCount
 );
 
 uint32_t GetPresentQueueFamily();
@@ -367,22 +372,32 @@ uint32_t GetPresentQueueFamily();
 uint32_t GetGraphicQueueFamily();
 
 void PipelineBarrier(
-    uint32_t imageIndex,
+    VkCommandBuffer commandBuffer,
     VkPipelineStageFlags sourceStageMask,
     VkPipelineStageFlags destinationStateMask,
     VkImageMemoryBarrier const & memoryBarrier
 );
 
-void EndCommandBuffer(uint32_t imageIndex);
-
-void SubmitQueue(uint32_t imageIndex, uint8_t frameIndex);
+void SubmitQueue(
+    VkCommandBuffer commandBuffer, 
+    VkSemaphore imageAvailabilitySemaphore,  
+    VkSemaphore renderFinishIndicatorSemaphore,
+    VkFence inFlightFence
+);
 
 void PresentQueue(
     uint32_t imageIndex, 
-    uint8_t frameIndex, 
+    VkSemaphore renderFinishIndicatorSemaphore,
     VkSwapchainKHR swapChain
 );
 
 DisplayRenderPass * GetDisplayRenderPass();
+
+RB::SyncObjects createSyncObjects(    
+    uint8_t maxFramesInFlight,
+    uint32_t swapChainImagesCount
+);
+
+void DestroySyncObjects(RB::SyncObjects & syncObjects);
 
 }

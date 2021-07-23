@@ -35,6 +35,8 @@ private:
     DisplayRenderPass * mDisplayRenderPass {};
     
     UIRecordObject mUIRecordObject;
+
+    RenderFrontend::ResizeEventListenerId mResizeListenerId = 0;
 };
 
 class Scene {
@@ -47,7 +49,8 @@ public:
     Scene (Scene && rhs) noexcept = delete;
     Scene & operator = (Scene const &) noexcept = delete;
 
-    virtual void OnDraw(float delta_time, RenderFrontend::DrawPass & draw_pass) = 0;
+    virtual void OnUpdate(float deltaTimeInSec) {};
+    virtual void OnDraw(float deltaTimeInSec, RenderFrontend::DrawPass & drawPass) = 0;
     virtual void OnResize() = 0;
     virtual void Init() = 0;
     virtual void Shutdown() = 0;

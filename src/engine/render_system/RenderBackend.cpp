@@ -1329,23 +1329,25 @@ void DestroySwapChain(VkDevice device, SwapChainGroup const & swapChainGroup) {
 }
 
 DepthImageGroup CreateDepthImage(
-    VkPhysicalDevice physical_device,
+    VkPhysicalDevice physicalDevice,
     VkDevice device,
-    VkExtent2D const swap_chain_extend
+    VkExtent2D const imageExtend,
+    CreateDepthImageOptions const & options
+
 ) {
     DepthImageGroup ret {};
-    auto const depthFormat = FindDepthFormat(physical_device);
+    auto const depthFormat = FindDepthFormat(physicalDevice);
     ret.imageGroup = CreateImage(
         device,
-        physical_device,
-        swap_chain_extend.width,
-        swap_chain_extend.height,
+        physicalDevice,
+        imageExtend.width,
+        imageExtend.height,
         1,
         1,
-        1,
+        options.sliceCount,
         depthFormat,
         VK_IMAGE_TILING_OPTIMAL, 
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 
+        options.usageFlags, 
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
     );
     MFA_ASSERT(ret.imageGroup.image);
@@ -1394,14 +1396,15 @@ VkRenderPass CreateRenderPass(
     
     // Note: hardware will automatically transition attachment to the specified layout
     // Note: index refers to attachment descriptions array
-    VkAttachmentReference colorAttachmentReference {};
-    colorAttachmentReference.attachment = 0;
-    colorAttachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    
-    VkAttachmentReference depthAttachmentRef {};
-    depthAttachmentRef.attachment = 1;
-    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    
+    VkAttachmentReference colorAttachmentReference {
+        .attachment = 0,
+        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    };
+
+    VkAttachmentReference depthAttachmentRef {
+        .attachment = 1,
+        .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+    };
     // Note: this is a description of how the attachments of the render pass will be used in this sub pass
     // e.g. if they will be read in shaders and/or drawn to
     VkSubpassDescription subPassDescription = {};
@@ -1454,44 +1457,35 @@ void EndRenderPass(VkCommandBuffer commandBuffer) {
     vkCmdEndRenderPass(commandBuffer);
 }
 
-std::vector<VkFramebuffer> CreateFrameBuffers(
+VkFramebuffer CreateFrameBuffers(
     VkDevice device,
     VkRenderPass renderPass,
-    uint32_t const swapChainImageViewsCount, 
-    VkImageView * swapChainImageViews,
-    VkImageView const depthImageView,
+    VkImageView const * attachments,
+    uint32_t attachmentsCount,
     VkExtent2D const swapChainExtent
 ) {
     MFA_ASSERT(device != nullptr);
     MFA_VK_VALID_ASSERT(renderPass);
-    MFA_ASSERT(swapChainImageViewsCount > 0);
-    MFA_ASSERT(swapChainImageViews != nullptr);
-    std::vector<VkFramebuffer> swap_chain_frame_buffers (swapChainImageViewsCount);
+    MFA_ASSERT(attachments != nullptr);
+    MFA_ASSERT(attachmentsCount > 0);
+
+    VkFramebuffer frameBuffer {};
 
     // Note: FrameBuffer is basically a specific choice of attachments for a render pass
     // That means all attachments must have the same dimensions, interesting restriction
-    for (size_t i = 0; i < swapChainImageViewsCount; i++) {
+   
+    VkFramebufferCreateInfo createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    createInfo.renderPass = renderPass;
+    createInfo.attachmentCount = attachmentsCount;
+    createInfo.pAttachments = attachments;
+    createInfo.width = swapChainExtent.width;
+    createInfo.height = swapChainExtent.height;
+    createInfo.layers = 1;
 
-        std::vector<VkImageView> attachments = {
-            swapChainImageViews[i],
-            depthImageView
-        };
+    VK_Check(vkCreateFramebuffer(device, &createInfo, nullptr, &frameBuffer));
 
-        VkFramebufferCreateInfo create_info = {};
-        create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        create_info.renderPass = renderPass;
-        create_info.attachmentCount = static_cast<uint32_t>(attachments.size());
-        create_info.pAttachments = attachments.data();
-        create_info.width = swapChainExtent.width;
-        create_info.height = swapChainExtent.height;
-        create_info.layers = 1;
-
-        VK_Check(vkCreateFramebuffer(device, &create_info, nullptr, &swap_chain_frame_buffers[i]));
-    }
-
-    MFA_LOG_INFO("Created frame-buffers for swap chain image views");
-
-    return swap_chain_frame_buffers;
+    return frameBuffer;
 }
 
 void DestroyFrameBuffers(
@@ -2039,27 +2033,27 @@ void UpdateDescriptorSets(
 
 std::vector<VkCommandBuffer> CreateCommandBuffers(
     VkDevice device, 
-    uint32_t swapChainImagesCount, 
+    uint32_t const count, 
     VkCommandPool commandPool
 ) {
-    std::vector<VkCommandBuffer> command_buffers (swapChainImagesCount);
+    std::vector<VkCommandBuffer> commandBuffers (count);
     
     VkCommandBufferAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool = commandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = swapChainImagesCount;
+    allocInfo.commandBufferCount = count;
 
     VK_Check(vkAllocateCommandBuffers(
         device, 
         &allocInfo, 
-        command_buffers.data()
+        commandBuffers.data()
     ));
     
     MFA_LOG_INFO("Allocated graphics command buffers.");
 
     // Command buffer data gets recorded each time
-    return command_buffers;
+    return commandBuffers;
 }
 
 void DestroyCommandBuffers(
@@ -2081,7 +2075,7 @@ void DestroyCommandBuffers(
 }
 
 SyncObjects CreateSyncObjects(
-    VkDevice const device,
+    VkDevice device,
     uint8_t const maxFramesInFlight,
     uint32_t const swapChainImagesCount
 ) {
@@ -2092,7 +2086,7 @@ SyncObjects CreateSyncObjects(
 #ifdef __ANDROID__
     syncObjects.images_in_flight.resize(swapChainImagesCount, 0);
 #else
-    syncObjects.images_in_flight.resize(swapChainImagesCount, nullptr);
+    syncObjects.imagesInFlight.resize(swapChainImagesCount, nullptr);
 #endif
 
     VkSemaphoreCreateInfo semaphoreInfo{};

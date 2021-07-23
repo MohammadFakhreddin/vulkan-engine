@@ -394,11 +394,16 @@ struct DepthImageGroup {
     VkImageView imageView {};
 };
 
+struct CreateDepthImageOptions {
+    uint16_t sliceCount = 1;
+    VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+};
 [[nodiscard]]
 DepthImageGroup CreateDepthImage(
-    VkPhysicalDevice physical_device,
+    VkPhysicalDevice physicalDevice,
     VkDevice device,
-    VkExtent2D swap_chain_extend
+    VkExtent2D imageExtend,
+    CreateDepthImageOptions const & options
 );
 
 void DestroyDepthImage(VkDevice device, DepthImageGroup const & depthGroup);
@@ -418,12 +423,11 @@ void BeginRenderPass(VkCommandBuffer commandBuffer, VkRenderPassBeginInfo const 
 void EndRenderPass(VkCommandBuffer commandBuffer);
 
 [[nodiscard]]
-std::vector<VkFramebuffer> CreateFrameBuffers(
+VkFramebuffer CreateFrameBuffers(
     VkDevice device,
     VkRenderPass renderPass,
-    uint32_t swapChainImageViewsCount, 
-    VkImageView* swapChainImageViews,
-    VkImageView depthImageView,
+    VkImageView const * attachments,
+    uint32_t attachmentsCount,
     VkExtent2D swapChainExtent
 );
 
@@ -636,7 +640,7 @@ void UpdateDescriptorSets(
  ***/
 std::vector<VkCommandBuffer> CreateCommandBuffers(
     VkDevice device,
-    uint32_t swapChainImagesCount,
+    uint32_t count,
     VkCommandPool commandPool
 );
 
@@ -652,7 +656,7 @@ struct SyncObjects {
     std::vector<VkSemaphore> imageAvailabilitySemaphores;
     std::vector<VkSemaphore> renderFinishIndicatorSemaphores;
     std::vector<VkFence> fencesInFlight;
-    std::vector<VkFence> images_in_flight;
+    std::vector<VkFence> imagesInFlight;
 };
 [[nodiscard]]
 SyncObjects CreateSyncObjects(
