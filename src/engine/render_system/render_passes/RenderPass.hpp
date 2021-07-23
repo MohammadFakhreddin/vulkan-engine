@@ -15,9 +15,9 @@ public:
 
     void Shutdown();
 
-    RF::DrawPass Begin();
+    void BeginRenderPass(RF::DrawPass const & drawPass);
 
-    void End(RF::DrawPass & drawPass);
+    void EndRenderPass(RF::DrawPass const & drawPass);
 
     void OnResize();
 
@@ -31,9 +31,9 @@ protected:
 
     virtual void internalShutdown() = 0;
 
-    virtual RF::DrawPass internalBegin() = 0;
+    virtual void internalBeginRenderPass(RF::DrawPass const & drawPass) = 0;
 
-    virtual void internalEnd(RF::DrawPass & drawPass) = 0;
+    virtual void internalEndRenderPass(RF::DrawPass const & drawPass) = 0;
 
     virtual void internalResize() = 0;
 

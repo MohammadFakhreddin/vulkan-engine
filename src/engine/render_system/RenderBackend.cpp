@@ -1370,8 +1370,8 @@ void DestroyDepthImage(VkDevice device, DepthImageGroup const & depthGroup) {
  }
 
 VkRenderPass CreateRenderPass(
-    VkPhysicalDevice const physicalDevice, 
-    VkDevice const device, 
+    VkPhysicalDevice physicalDevice, 
+    VkDevice device, 
     VkFormat const swapChainFormat
 ) {
     VkAttachmentDescription colorAttachment = {};
@@ -1412,7 +1412,7 @@ VkRenderPass CreateRenderPass(
     subPassDescription.colorAttachmentCount = 1;
     subPassDescription.pColorAttachments = &colorAttachmentReference;
     subPassDescription.pDepthStencilAttachment = &depthAttachmentRef;
-
+   
     VkSubpassDependency dependency{};
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
     dependency.dstSubpass = 0;
@@ -1420,7 +1420,7 @@ VkRenderPass CreateRenderPass(
     dependency.srcAccessMask = 0;
     dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
+    
     std::vector<VkAttachmentDescription> attachments = {colorAttachment, depthAttachment};
     // Create the render pass
     VkRenderPassCreateInfo createInfo = {};
@@ -1431,7 +1431,7 @@ VkRenderPass CreateRenderPass(
     createInfo.pSubpasses = &subPassDescription;
     createInfo.dependencyCount = 1;
     createInfo.pDependencies = &dependency;
-
+    
     VkRenderPass render_pass {};
     VK_Check (vkCreateRenderPass(device, &createInfo, nullptr, &render_pass));
 

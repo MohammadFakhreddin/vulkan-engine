@@ -18,23 +18,26 @@ void OffScreenRenderPass::internalInit() {
         .width = mImageWidth,
         .height = mImageHeight
     };
+
     mDepthImageGroup = RF::CreateDepthImage(shadowExtend, RB::CreateDepthImageOptions {
         .sliceCount = 6, // * light count
         .usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
     });
 
+    //mVkRenderPass = RF::CreateRenderPass(mSwapChainImages.swapChainFormat);
+
+    //mFrameBuffer = RF::CreateFrameBuffer()
 }
 
 void OffScreenRenderPass::internalShutdown() {
     // TODO
 }
 
-RF::DrawPass OffScreenRenderPass::internalBegin() {
+void OffScreenRenderPass::internalBeginRenderPass(RF::DrawPass const & drawPass) {
     // TODO
-    return RF::DrawPass {}; 
 }
 
-void OffScreenRenderPass::internalEnd(RF::DrawPass & drawPass) {
+void OffScreenRenderPass::internalEndRenderPass(RF::DrawPass const & drawPass) {
     // TODO
 }
 

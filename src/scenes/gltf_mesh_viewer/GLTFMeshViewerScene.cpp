@@ -155,6 +155,10 @@ void GLTFMeshViewerScene::Init() {
     mRecordObject.Enable();
 }
 
+void GLTFMeshViewerScene::OnUpdate(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) {
+    // TODO
+}
+
 void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & drawPass) {
     MFA_ASSERT(mSelectedModelIndex >= 0 && mSelectedModelIndex < mModelsRenderData.size());
 

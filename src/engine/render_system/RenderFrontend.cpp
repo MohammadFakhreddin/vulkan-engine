@@ -222,37 +222,7 @@ bool Init(InitParams const & params) {
     );
     MFA_LOG_INFO("Acquired graphics and presentation queues");
     state->graphicCommandPool = RB::CreateCommandPool(state->logicalDevice.device, state->graphicQueueFamily);
-
-    //auto const swapChainExtend = VkExtent2D {
-    //    .width = static_cast<uint32_t>(state->screenWidth),
-    //    .height = static_cast<uint32_t>(state->screenHeight)
-    //};
-
-    //Creating sampler/TextureImage/VertexBuffer and IndexBuffer + graphic_pipeline is on application level
-    /*state->swapChainGroup = RB::CreateSwapChain(
-        state->logicalDevice.device,
-        state->physicalDevice,
-        state->surface,
-        surfaceCapabilities
-    );
-    state->displayRenderPass = RB::CreateRenderPass(
-        state->physicalDevice,
-        state->logicalDevice.device,
-        state->swapChainGroup.swapChainFormat
-    );
-    state->depthImageGroup = RB::CreateDepthImage(
-        state->physicalDevice,
-        state->logicalDevice.device,
-        swapChainExtend
-    );
-    state->frameBuffers = RB::CreateFrameBuffers(
-        state->logicalDevice.device,
-        state->displayRenderPass,
-        static_cast<uint8_t>(state->swapChainGroup.swapChainImageViews.size()),
-        state->swapChainGroup.swapChainImageViews.data(),
-        state->depthImageGroup.imageView,
-        swapChainExtend
-    );*/
+    
     state->descriptorPool = RB::CreateDescriptorPool(
         state->logicalDevice.device, 
         1000 // TODO We might need to ask this from user
@@ -274,73 +244,15 @@ static void OnResize() {
     MFA_ASSERT(state->screenWidth > 0);
     MFA_ASSERT(state->screenHeight > 0);
 
-    //auto const extent2D = VkExtent2D {
-    //    .width = static_cast<uint32_t>(state->screenWidth),
-    //    .height = static_cast<uint32_t>(state->screenHeight)
-    //};
-
     state->windowResized = false;
 
-    //// Depth image
-    //RB::DestroyDepthImage(
-    //    state->logicalDevice.device,
-    //    state->depthImageGroup
-    //);
-    //state->depthImageGroup = RB::CreateDepthImage(
-    //    state->physicalDevice,
-    //    state->logicalDevice.device,
-    //    extent2D
-    //);
-
-    //// Swap-chain
-    //auto const oldSwapChainGroup = state->swapChainGroup;
-    //state->swapChainGroup = RB::CreateSwapChain(
-    //    state->logicalDevice.device,
-    //    state->physicalDevice,
-    //    state->surface,
-    //    surfaceCapabilities,
-    //    oldSwapChainGroup.swapChain
-    //);
-    //RB::DestroySwapChain(
-    //    state->logicalDevice.device,
-    //    oldSwapChainGroup
-    //);
-
-    //// Frame-buffer
-    //RB::DestroyFrameBuffers(
-    //    state->logicalDevice.device, 
-    //    static_cast<uint32_t>(state->frameBuffers.size()), 
-    //    state->frameBuffers.data()
-    //);
-    //state->frameBuffers = RB::CreateFrameBuffers(
-    //    state->logicalDevice.device,
-    //    state->displayRenderPass,
-    //    static_cast<uint32_t>(state->swapChainGroup.swapChainImageViews.size()),
-    //    state->swapChainGroup.swapChainImageViews.data(),
-    //    state->depthImageGroup.imageView,
-    //    extent2D
-    //);
-
-    // Command buffer
-    //RB::DestroyCommandBuffers(
-    //    state->logicalDevice.device,
-    //    state->graphicCommandPool,
-    //    static_cast<uint32_t>(state->graphicCommandBuffers.size()),
-    //    state->graphicCommandBuffers.data()
-    //);   
-
-    //state->graphicCommandBuffers = RB::CreateCommandBuffers(
-    //    state->logicalDevice.device,
-    //    state->swapChainImageCount,
-    //    state->graphicCommandPool
-    //);
+    state->displayRenderPass.OnResize();
 
     for (auto & eventWatchGroup : state->resizeEventListeners) {
         MFA_ASSERT(eventWatchGroup.watch != nullptr);
         eventWatchGroup.watch();
     }
 
-    state->displayRenderPass.OnResize();
 }
 
 bool Shutdown() {
@@ -359,42 +271,29 @@ bool Shutdown() {
     // DestroyPipeline in application // TODO We should have reference to what user creates + params for re-creation
     // GraphicPipeline, UniformBuffer, PipelineLayout
     // Shutdown only procedure
-    /*RB::DestroySyncObjects(state->logicalDevice.device, state->syncObjects);
-    RB::DestroyCommandBuffers(
-        state->logicalDevice.device, 
-        state->graphicCommandPool,
-        static_cast<uint8_t>(state->graphicCommandBuffers.size()),
-        state->graphicCommandBuffers.data()
-    );*/
+    
     RB::DestroyDescriptorPool(
         state->logicalDevice.device,
         state->descriptorPool
     );
-    /*RB::DestroyFrameBuffers(
-        state->logicalDevice.device,
-        static_cast<uint8_t>(state->frameBuffers.size()),
-        state->frameBuffers.data()
-    );*/
-    //RB::DestroyDepthImage(
-    //    state->logicalDevice.device,
-    //    state->depthImageGroup
-    //);
-    //RB::DestroyRenderPass(state->logicalDevice.device, state->displayRenderPass);
-    //RB::DestroySwapChain(
-    //    state->logicalDevice.device,
-    //    state->swapChainGroup
-    //);
+
     RB::DestroyCommandPool(
         state->logicalDevice.device,
         state->graphicCommandPool
     );
+
     RB::DestroyLogicalDevice(state->logicalDevice);
+    
     RB::DestroyWindowSurface(state->vk_instance, state->surface);
+
 #ifdef MFA_DEBUG
     RB::DestroyDebugReportCallback(state->vk_instance, state->vkDebugReportCallbackExt);
 #endif
+
     RB::DestroyInstance(state->vk_instance);
+
     delete state;
+
     return true;
 }
 

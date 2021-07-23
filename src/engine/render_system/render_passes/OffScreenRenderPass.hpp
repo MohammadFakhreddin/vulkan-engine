@@ -34,9 +34,9 @@ protected:
 
     void internalShutdown() override;
 
-    RF::DrawPass internalBegin() override;
+    void internalBeginRenderPass(RF::DrawPass const & drawPass) override;
 
-    void internalEnd(RF::DrawPass & drawPass) override;
+    void internalEndRenderPass(RF::DrawPass const & drawPass) override;
 
     void internalResize() override;
 

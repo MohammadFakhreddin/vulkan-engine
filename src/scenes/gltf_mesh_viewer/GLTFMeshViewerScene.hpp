@@ -20,6 +20,8 @@ public:
 
     void Init() override;
 
+    void OnUpdate(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
+
     void OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
 
     void OnUI();

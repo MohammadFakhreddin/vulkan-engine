@@ -61,7 +61,7 @@ void TexturedSphereScene::Init() {
     mUIRecordObject.Enable();
 }
 
-void TexturedSphereScene::OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) {
+void TexturedSphereScene::OnDraw(float const deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) {
     RF::BindDrawPipeline(drawPass, mDrawPipeline);
 
     {// Updating Transform buffer

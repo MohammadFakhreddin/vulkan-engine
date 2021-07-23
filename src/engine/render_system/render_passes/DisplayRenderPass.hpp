@@ -23,15 +23,20 @@ public:
 
     VkCommandBuffer GetCommandBuffer(RF::DrawPass const & drawPass) override;
 
+    [[nodiscard]]
+    RF::DrawPass StartGraphicCommandBufferRecording();
+
+    void EndGraphicCommandBufferRecording(RF::DrawPass & drawPass);
+
 protected:
 
     void internalInit() override;
 
     void internalShutdown() override;
 
-    RF::DrawPass internalBegin() override;
+    void internalBeginRenderPass(RF::DrawPass const & drawPass) override;
 
-    void internalEnd(RF::DrawPass & drawPass) override;
+    void internalEndRenderPass(RF::DrawPass const & drawPass) override;
 
     void internalResize() override;
 
@@ -59,6 +64,7 @@ private:
     RB::SyncObjects mSyncObjects {};
     uint8_t mCurrentFrame = 0;
     std::vector<VkCommandBuffer> mGraphicCommandBuffers {};
+
 };
 
 }

@@ -10,12 +10,12 @@ void RenderPass::Shutdown() {
     internalShutdown();
 }
 
-RF::DrawPass RenderPass::Begin() {
-    return internalBegin();
+void RenderPass::BeginRenderPass(RF::DrawPass const & drawPass) {
+    internalBeginRenderPass(drawPass);
 }
 
-void RenderPass::End(RF::DrawPass & drawPass) {
-    internalEnd(drawPass);
+void RenderPass::EndRenderPass(RF::DrawPass const & drawPass) {
+    internalEndRenderPass(drawPass);
 }
 
 void RenderPass::OnResize() {

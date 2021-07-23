@@ -49,7 +49,7 @@ public:
     Scene (Scene && rhs) noexcept = delete;
     Scene & operator = (Scene const &) noexcept = delete;
 
-    virtual void OnUpdate(float deltaTimeInSec) {};
+    virtual void OnUpdate(float deltaTimeInSec, RenderFrontend::DrawPass & drawPass) {};
     virtual void OnDraw(float deltaTimeInSec, RenderFrontend::DrawPass & drawPass) = 0;
     virtual void OnResize() = 0;
     virtual void Init() = 0;

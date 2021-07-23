@@ -65,14 +65,19 @@ void SceneSubSystem::OnNewFrame(float const deltaTimeInSec) {
 
     RF::OnNewFrame(deltaTimeInSec);
 
-    if(mActiveScene >= 0) {
-        mRegisteredScenes[mActiveScene].scene->OnUpdate(deltaTimeInSec);
-    }
-
-    auto drawPass = mDisplayRenderPass->Begin();                // Draw pass being invalid means that RF cannot render anything
+    auto drawPass = mDisplayRenderPass->StartGraphicCommandBufferRecording();
     if (drawPass.isValid == false) {
         return;
     }
+    
+    if(mActiveScene >= 0) {
+        mRegisteredScenes[mActiveScene].scene->OnUpdate(
+            deltaTimeInSec, 
+            drawPass
+        );
+    }
+
+    mDisplayRenderPass->BeginRenderPass(drawPass); // Draw pass being invalid means that RF cannot render anything
     
     if(mActiveScene >= 0) {
         mRegisteredScenes[mActiveScene].scene->OnDraw(
@@ -82,7 +87,9 @@ void SceneSubSystem::OnNewFrame(float const deltaTimeInSec) {
     }
     UI::OnNewFrame(deltaTimeInSec, drawPass);
 
-    mDisplayRenderPass->End(drawPass); 
+    mDisplayRenderPass->EndRenderPass(drawPass);
+
+    mDisplayRenderPass->EndGraphicCommandBufferRecording(drawPass);
 }
 
 void SceneSubSystem::OnResize() {

@@ -13,6 +13,13 @@ public:
     
     virtual ~BasePipeline() = default;
 
+    virtual void Update(
+        RF::DrawPass & drawPass,
+        float deltaTime,
+        uint32_t idsCount, 
+        DrawableObjectId * ids
+    ) {};
+
     virtual void Render(        
         RF::DrawPass & drawPass,
         float deltaTime,

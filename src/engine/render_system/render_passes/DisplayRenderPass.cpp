@@ -56,15 +56,16 @@ void DisplayRenderPass::internalShutdown() {
     RF::DestroySwapChain(mSwapChainImages);
 }
 
-RF::DrawPass DisplayRenderPass::internalBegin() {
+// TODO We might need a separate class for commandBufferClass->GraphicCommandBuffer to begin and submit commandBuffer recording.
+// TODO Rename DrawPass to recordPass
+RF::DrawPass DisplayRenderPass::StartGraphicCommandBufferRecording() {
     MFA_ASSERT(MAX_FRAMES_IN_FLIGHT > mCurrentFrame);
     RF::DrawPass drawPass {.renderPass = this};
     if (RF::IsWindowVisible() == false || RF::IsWindowResized() == true) {
         drawPass.isValid = false;
         return drawPass;
     }
-
-
+    
     drawPass.frameIndex = mCurrentFrame;
     drawPass.isValid = true;
     ++mCurrentFrame;
@@ -89,6 +90,32 @@ RF::DrawPass DisplayRenderPass::internalBegin() {
     // Prepare data for recording command buffers
     RF::BeginCommandBuffer(GetCommandBuffer(drawPass));
 
+    return drawPass;
+}
+
+void DisplayRenderPass::EndGraphicCommandBufferRecording(RF::DrawPass & drawPass) {
+    MFA_ASSERT(drawPass.isValid);
+    drawPass.isValid = false;
+
+    RF::EndCommandBuffer(GetCommandBuffer(drawPass));
+    
+    // Wait for image to be available and draw
+    RF::SubmitQueue(
+        GetCommandBuffer(drawPass),
+        getImageAvailabilitySemaphore(drawPass),
+        getRenderFinishIndicatorSemaphore(drawPass),
+        getInFlightFence(drawPass)
+    );
+    
+    // Present drawn image
+    RF::PresentQueue(
+        drawPass.imageIndex, 
+        getRenderFinishIndicatorSemaphore(drawPass), 
+        mSwapChainImages.swapChain
+    );
+}
+
+void DisplayRenderPass::internalBeginRenderPass(RF::DrawPass const & drawPass) {
     // If present queue family and graphics queue family are different, then a barrier is necessary
     // The barrier is also needed initially to transition the image to the present layout
     VkImageMemoryBarrier presentToDrawBarrier = {};
@@ -142,21 +169,15 @@ RF::DrawPass DisplayRenderPass::internalBegin() {
         mVkRenderPass, 
         getFrameBuffer(drawPass)
     );
-
-    return drawPass;
 }
 
-void DisplayRenderPass::internalEnd(RF::DrawPass & drawPass) {
+void DisplayRenderPass::internalEndRenderPass(RF::DrawPass const & drawPass) {
     if (RF::IsWindowVisible() == false) {
         return;
     }
 
     RF::EndRenderPass(GetCommandBuffer(drawPass));
     
-    MFA_ASSERT(drawPass.isValid);
-    drawPass.isValid = false;
-
-
     auto const presentQueueFamily = RF::GetPresentQueueFamily();
     auto const graphicQueueFamily = RF::GetGraphicQueueFamily();
 
@@ -189,23 +210,6 @@ void DisplayRenderPass::internalEnd(RF::DrawPass & drawPass) {
             drawToPresentBarrier
         );
     }
-
-    RF::EndCommandBuffer(GetCommandBuffer(drawPass));
-    
-    // Wait for image to be available and draw
-    RF::SubmitQueue(
-        GetCommandBuffer(drawPass),
-        getImageAvailabilitySemaphore(drawPass),
-        getRenderFinishIndicatorSemaphore(drawPass),
-        getInFlightFence(drawPass)
-    );
-    
-    // Present drawn image
-    RF::PresentQueue(
-        drawPass.imageIndex, 
-        getRenderFinishIndicatorSemaphore(drawPass), 
-        mSwapChainImages.swapChain
-    );
 }
 
 void DisplayRenderPass::internalResize() {
@@ -227,7 +231,7 @@ void DisplayRenderPass::internalResize() {
 
     // Swap-chain
     auto const oldSwapChainImages = mSwapChainImages;
-    mSwapChainImages = RF::CreateSwapChain();
+    mSwapChainImages = RF::CreateSwapChain(oldSwapChainImages.swapChain);
     RF::DestroySwapChain(oldSwapChainImages);
     
     // Frame-buffer
@@ -236,13 +240,6 @@ void DisplayRenderPass::internalResize() {
         mFrameBuffers.data()
     );
     createFrameBuffers(swapChainExtent2D);
-
-    // Command buffer
-    RF::DestroyGraphicCommandBuffer(
-        mGraphicCommandBuffers.data(), 
-        static_cast<uint32_t>(mGraphicCommandBuffers.size())
-    );
-    mGraphicCommandBuffers = RF::CreateGraphicCommandBuffers(mSwapChainImagesCount);
 
 }
 
