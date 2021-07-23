@@ -930,11 +930,22 @@ void DestroySwapChain(RB::SwapChainGroup const & swapChainGroup) {
 }
 
 
-VkRenderPass CreateRenderPass(VkFormat imageFormat) {
+VkRenderPass CreateRenderPass(
+    VkAttachmentDescription * attachments,
+    uint32_t const attachmentsCount,
+    VkSubpassDescription * subPasses,
+    uint32_t const subPassesCount,
+    VkSubpassDependency * dependencies,
+    uint32_t const dependenciesCount
+) {
     return RB::CreateRenderPass(
-        state->physicalDevice,
         state->logicalDevice.device,
-        imageFormat
+        attachments,
+        attachmentsCount,
+        subPasses,
+        subPassesCount,
+        dependencies,
+        dependenciesCount
     );
 }
 

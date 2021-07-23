@@ -1337,6 +1337,7 @@ DepthImageGroup CreateDepthImage(
 ) {
     DepthImageGroup ret {};
     auto const depthFormat = FindDepthFormat(physicalDevice);
+    ret.imageFormat = depthFormat;
     ret.imageGroup = CreateImage(
         device,
         physicalDevice,
@@ -1370,68 +1371,82 @@ void DestroyDepthImage(VkDevice device, DepthImageGroup const & depthGroup) {
  }
 
 VkRenderPass CreateRenderPass(
-    VkPhysicalDevice physicalDevice, 
-    VkDevice device, 
-    VkFormat const swapChainFormat
+    VkDevice device,
+    VkAttachmentDescription * attachments,
+    uint32_t const attachmentsCount,
+    VkSubpassDescription * subPasses,
+    uint32_t const subPassesCount,
+    VkSubpassDependency * dependencies,
+    uint32_t const dependenciesCount
 ) {
-    VkAttachmentDescription colorAttachment = {};
-    colorAttachment.format = swapChainFormat;
-    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    
-    VkAttachmentDescription depthAttachment {};
-    depthAttachment.format = FindDepthFormat(physicalDevice);
-    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    
-    // Note: hardware will automatically transition attachment to the specified layout
-    // Note: index refers to attachment descriptions array
-    VkAttachmentReference colorAttachmentReference {
-        .attachment = 0,
-        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    //VkAttachmentDescription colorAttachment = {};
+    //colorAttachment.format = swapChainFormat;
+    //colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    //colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    //colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    //colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    //colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    //colorAttachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    //colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    //
+    //VkAttachmentDescription depthAttachment {};
+    //depthAttachment.format = FindDepthFormat(physicalDevice);
+    //depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    //depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    //depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    //depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    //depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    //depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    //depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    //
+    //// Note: hardware will automatically transition attachment to the specified layout
+    //// Note: index refers to attachment descriptions array
+    //VkAttachmentReference colorAttachmentReference {
+    //    .attachment = 0,
+    //    .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    //};
+
+    //VkAttachmentReference depthAttachmentRef {
+    //    .attachment = 1,
+    //    .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+    //};
+    //// Note: this is a description of how the attachments of the render pass will be used in this sub pass
+    //// e.g. if they will be read in shaders and/or drawn to
+    //VkSubpassDescription subPassDescription = {};
+    //subPassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    //subPassDescription.colorAttachmentCount = 1;
+    //subPassDescription.pColorAttachments = &colorAttachmentReference;
+    //subPassDescription.pDepthStencilAttachment = &depthAttachmentRef;
+   
+    //VkSubpassDependency dependency{};
+    //dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    //dependency.dstSubpass = 0;
+    //dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    //dependency.srcAccessMask = 0;
+    //dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    //dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    //
+    //std::vector<VkAttachmentDescription> attachments = {colorAttachment, depthAttachment};
+    //// Create the render pass
+    //VkRenderPassCreateInfo createInfo = {};
+    //createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    //createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());;
+    //createInfo.pAttachments = attachments.data();
+    //createInfo.subpassCount = 1;
+    //createInfo.pSubpasses = &subPassDescription;
+    //createInfo.dependencyCount = 1;
+    //createInfo.pDependencies = &dependency;
+
+    VkRenderPassCreateInfo createInfo {
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+        .attachmentCount = attachmentsCount,
+        .pAttachments = attachments,
+        .subpassCount = subPassesCount,
+        .pSubpasses = subPasses,
+        .dependencyCount = dependenciesCount,
+        .pDependencies = dependencies,
     };
 
-    VkAttachmentReference depthAttachmentRef {
-        .attachment = 1,
-        .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-    };
-    // Note: this is a description of how the attachments of the render pass will be used in this sub pass
-    // e.g. if they will be read in shaders and/or drawn to
-    VkSubpassDescription subPassDescription = {};
-    subPassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subPassDescription.colorAttachmentCount = 1;
-    subPassDescription.pColorAttachments = &colorAttachmentReference;
-    subPassDescription.pDepthStencilAttachment = &depthAttachmentRef;
-   
-    VkSubpassDependency dependency{};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask = 0;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    
-    std::vector<VkAttachmentDescription> attachments = {colorAttachment, depthAttachment};
-    // Create the render pass
-    VkRenderPassCreateInfo createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());;
-    createInfo.pAttachments = attachments.data();
-    createInfo.subpassCount = 1;
-    createInfo.pSubpasses = &subPassDescription;
-    createInfo.dependencyCount = 1;
-    createInfo.pDependencies = &dependency;
-    
     VkRenderPass render_pass {};
     VK_Check (vkCreateRenderPass(device, &createInfo, nullptr, &render_pass));
 

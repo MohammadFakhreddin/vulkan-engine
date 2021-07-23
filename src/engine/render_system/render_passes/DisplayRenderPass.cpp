@@ -21,10 +21,10 @@ void DisplayRenderPass::internalInit() {
     mSwapChainImagesCount = RF::GetSwapChainImagesCount();
 
     mSwapChainImages = RF::CreateSwapChain();
-
-    mVkRenderPass = RF::CreateRenderPass(mSwapChainImages.swapChainFormat);
-
+    
     mDepthImageGroup = RF::CreateDepthImage(swapChainExtent);
+
+    createRenderPass();
 
     createFrameBuffers(swapChainExtent);
 
@@ -278,6 +278,68 @@ void DisplayRenderPass::createFrameBuffers(VkExtent2D const & extent) {
             extent
         );
     }
+}
+
+void DisplayRenderPass::createRenderPass() {
+    VkAttachmentDescription colorAttachment = {};
+    colorAttachment.format = mSwapChainImages.swapChainFormat;
+    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    
+    VkAttachmentDescription depthAttachment {};
+    depthAttachment.format = mDepthImageGroup.imageFormat;
+    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    
+    // Note: hardware will automatically transition attachment to the specified layout
+    // Note: index refers to attachment descriptions array
+    VkAttachmentReference colorAttachmentReference {
+        .attachment = 0,
+        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    };
+
+    VkAttachmentReference depthAttachmentRef {
+        .attachment = 1,
+        .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+    };
+    // Note: this is a description of how the attachments of the render pass will be used in this sub pass
+    // e.g. if they will be read in shaders and/or drawn to
+    std::vector<VkSubpassDescription> subPassDescription {VkSubpassDescription {
+        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &colorAttachmentReference,
+        .pDepthStencilAttachment = &depthAttachmentRef,
+    }};
+    
+    std::vector<VkSubpassDependency> dependencies {VkSubpassDependency {
+        .srcSubpass = VK_SUBPASS_EXTERNAL,
+        .dstSubpass = 0,
+        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .srcAccessMask = 0,
+        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+    }};
+    
+    std::vector<VkAttachmentDescription> attachments = {colorAttachment, depthAttachment};
+
+    mVkRenderPass = RF::CreateRenderPass(
+        attachments.data(),
+        static_cast<uint32_t>(attachments.size()),
+        subPassDescription.data(),
+        static_cast<uint32_t>(subPassDescription.size()),
+        dependencies.data(),
+        static_cast<uint32_t>(dependencies.size())
+    );
 }
 
 }

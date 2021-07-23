@@ -392,6 +392,7 @@ void DestroySwapChain(VkDevice device, SwapChainGroup const & swapChainGroup);
 struct DepthImageGroup {
     ImageGroup imageGroup {};
     VkImageView imageView {};
+    VkFormat imageFormat;
 };
 
 struct CreateDepthImageOptions {
@@ -411,9 +412,13 @@ void DestroyDepthImage(VkDevice device, DepthImageGroup const & depthGroup);
 // TODO Ask for options
 [[nodiscard]]
 VkRenderPass CreateRenderPass(
-    VkPhysicalDevice physicalDevice, 
-    VkDevice device, 
-    VkFormat swapChainFormat
+    VkDevice device,
+    VkAttachmentDescription * attachments,
+    uint32_t attachmentsCount,
+    VkSubpassDescription * subPasses,
+    uint32_t subPassesCount,
+    VkSubpassDependency * dependencies,
+    uint32_t dependenciesCount
 );
 
 void DestroyRenderPass(VkDevice device, VkRenderPass renderPass);

@@ -312,7 +312,14 @@ RB::SwapChainGroup CreateSwapChain(VkSwapchainKHR oldSwapChain = VkSwapchainKHR 
 void DestroySwapChain(RB::SwapChainGroup const & swapChainGroup);
 
 [[nodiscard]]
-VkRenderPass CreateRenderPass(VkFormat imageFormat);
+VkRenderPass CreateRenderPass(
+    VkAttachmentDescription * attachments,
+    uint32_t attachmentsCount,
+    VkSubpassDescription * subPasses,
+    uint32_t subPassesCount,
+    VkSubpassDependency * dependencies,
+    uint32_t dependenciesCount
+);
 
 void DestroyRenderPass(VkRenderPass renderPass);
 
