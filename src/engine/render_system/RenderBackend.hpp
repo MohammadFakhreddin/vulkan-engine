@@ -433,7 +433,8 @@ VkFramebuffer CreateFrameBuffers(
     VkRenderPass renderPass,
     VkImageView const * attachments,
     uint32_t attachmentsCount,
-    VkExtent2D swapChainExtent
+    VkExtent2D swapChainExtent,
+    uint32_t layersCount
 );
 
 void DestroyFrameBuffers(

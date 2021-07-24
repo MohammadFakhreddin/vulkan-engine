@@ -10,7 +10,7 @@ namespace RB = RenderBackend;
 class OffScreenRenderPass final : public RenderPass {
 public:
     
-    OffScreenRenderPass(
+    explicit OffScreenRenderPass(
         uint32_t const imageWidth = 1024,
         uint32_t const imageHeight = 1024
     )
@@ -41,6 +41,12 @@ protected:
     void internalResize() override;
 
 private:
+
+    void createRenderPass();
+
+    void createFrameBuffer(VkExtent2D const & shadowExtent);
+
+    inline static constexpr VkFormat SHADOW_MAP_FORMAT = VK_FORMAT_R32_SFLOAT;
 
     VkRenderPass mVkRenderPass {};
     VkFramebuffer mFrameBuffer {};

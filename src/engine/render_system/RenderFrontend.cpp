@@ -974,14 +974,16 @@ VkFramebuffer CreateFrameBuffer(
     VkRenderPass renderPass,
     VkImageView const * attachments,
     uint32_t attachmentsCount,
-    VkExtent2D frameBufferExtent
+    VkExtent2D frameBufferExtent,
+    uint32_t layersCount
 ) {
     return RB::CreateFrameBuffers(
         state->logicalDevice.device,
         renderPass,
         attachments,
         attachmentsCount,
-        frameBufferExtent
+        frameBufferExtent,
+        layersCount
     );
 }
 

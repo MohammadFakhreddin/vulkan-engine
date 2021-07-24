@@ -5,6 +5,7 @@
 #include "engine/render_system/pipelines/pbr_with_shadow/PBRWithShadowPipeline.hpp"
 #include "engine/render_system/pipelines/point_light/PointLightPipeline.hpp"
 #include "engine/render_system/DrawableObject.hpp"
+#include "engine/render_system/render_passes/OffScreenRenderPass.hpp"
 
 class GLTFMeshViewerScene final : public MFA::Scene {
 public:
@@ -145,5 +146,7 @@ private:
     };
 
     MFA::UIRecordObject mRecordObject;
+
+    MFA::OffScreenRenderPass mOffScreenRenderPass {};
 
 };

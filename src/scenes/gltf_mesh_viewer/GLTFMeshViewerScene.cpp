@@ -153,6 +153,8 @@ void GLTFMeshViewerScene::Init() {
     }
 
     mRecordObject.Enable();
+
+    mOffScreenRenderPass.Init();
 }
 
 void GLTFMeshViewerScene::OnUpdate(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) {
@@ -370,6 +372,7 @@ void GLTFMeshViewerScene::OnUI() {
 }
 
 void GLTFMeshViewerScene::Shutdown() {
+    mOffScreenRenderPass.Shutdown();
     {// Disabling ui for current model
         auto * selectedDrawable = mPbrPipeline.GetDrawableById(mModelsRenderData[mSelectedModelIndex].drawableObjectId);
         MFA_ASSERT(selectedDrawable != nullptr);

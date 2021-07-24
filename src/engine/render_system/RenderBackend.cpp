@@ -1477,7 +1477,8 @@ VkFramebuffer CreateFrameBuffers(
     VkRenderPass renderPass,
     VkImageView const * attachments,
     uint32_t attachmentsCount,
-    VkExtent2D const swapChainExtent
+    VkExtent2D const swapChainExtent,
+    uint32_t layersCount
 ) {
     MFA_ASSERT(device != nullptr);
     MFA_VK_VALID_ASSERT(renderPass);
