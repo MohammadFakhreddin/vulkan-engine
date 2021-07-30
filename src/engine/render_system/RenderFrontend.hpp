@@ -199,7 +199,7 @@ void UpdateDescriptorSetBasic(
 );
 
 void UpdateDescriptorSets(
-    uint8_t writeInfoCount,
+    uint32_t writeInfoCount,
     VkWriteDescriptorSet * writeInfo
 );
 
@@ -254,7 +254,8 @@ void DrawIndexed(
 void BeginRenderPass(
     VkCommandBuffer commandBuffer, 
     VkRenderPass renderPass, 
-    VkFramebuffer frameBuffer
+    VkFramebuffer frameBuffer,
+    VkExtent2D const & extent2D
 );
 
 void EndRenderPass(VkCommandBuffer commandBuffer);
@@ -306,10 +307,22 @@ void NotifyDeviceResized();
 [[nodiscard]]
 VkSurfaceCapabilitiesKHR GetSurfaceCapabilities();
 
+
 [[nodiscard]]
 RB::SwapChainGroup CreateSwapChain(VkSwapchainKHR oldSwapChain = VkSwapchainKHR {});
 
 void DestroySwapChain(RB::SwapChainGroup const & swapChainGroup);
+
+
+[[nodiscard]]
+RB::ColorImageGroup CreateColorImage(
+    VkExtent2D const & imageExtent,
+    VkFormat imageFormat,
+    RB::CreateColorImageOptions const & options
+);
+
+void DestroyColorImage(RB::ColorImageGroup const & colorImageGroup);
+
 
 [[nodiscard]]
 VkRenderPass CreateRenderPass(

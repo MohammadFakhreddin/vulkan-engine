@@ -76,6 +76,7 @@ private:
 
     std::unordered_map<DrawableObjectId, std::unique_ptr<DrawableObject>> mDrawableObjects {};
 
+    DrawableObjectId mNextDrawableId = 0;
 };
 
 }

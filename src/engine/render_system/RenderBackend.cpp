@@ -324,8 +324,9 @@ VkImageView CreateImageView (
     VkDevice device,
     VkImage const & image, 
     VkFormat const format, 
-    VkImageAspectFlags const aspect_flags,
-    uint32_t mipmap_count
+    VkImageAspectFlags const aspectFlags,
+    uint32_t const mipmapCount,
+    uint32_t const layerCount
 ) {
     MFA_ASSERT(device != nullptr);
 
@@ -340,13 +341,13 @@ VkImageView CreateImageView (
     createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
     createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
     createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-    createInfo.subresourceRange.aspectMask = aspect_flags;
+    createInfo.subresourceRange.aspectMask = aspectFlags;
     // TODO Might need to ask these values from image for mipmaps (Check again later)
     createInfo.subresourceRange.baseMipLevel = 0;
-    createInfo.subresourceRange.levelCount = mipmap_count;
+    createInfo.subresourceRange.levelCount = mipmapCount;
     createInfo.subresourceRange.baseArrayLayer = 0;
-    createInfo.subresourceRange.layerCount = 1;
-
+    createInfo.subresourceRange.layerCount = layerCount;
+   
     VK_Check(vkCreateImageView(device, &createInfo, nullptr, &image_view));
 
     return image_view;
@@ -354,9 +355,9 @@ VkImageView CreateImageView (
 
 void DestroyImageView(
     VkDevice device,
-    VkImageView image_view
+    VkImageView imageView
 ) {
-    vkDestroyImageView(device, image_view, nullptr);
+    vkDestroyImageView(device, imageView, nullptr);
 }
 
 VkCommandBuffer BeginSingleTimeCommand(VkDevice device, VkCommandPool const & command_pool) {
@@ -734,7 +735,8 @@ GpuTexture CreateTexture(
             imageGroup.image,
             vulkan_format,
             VK_IMAGE_ASPECT_COLOR_BIT,
-            mipCount
+            mipCount,
+            sliceCount
         );
 
         gpuTexture.mImageGroup = imageGroup;
@@ -1307,6 +1309,7 @@ SwapChainGroup CreateSwapChain(
             ret.swapChainImages[image_index],
             ret.swapChainFormat,
             VK_IMAGE_ASPECT_COLOR_BIT,
+            1,
             1
         );
         MFA_VK_VALID_ASSERT(ret.swapChainImageViews[image_index]);
@@ -1331,7 +1334,7 @@ void DestroySwapChain(VkDevice device, SwapChainGroup const & swapChainGroup) {
 DepthImageGroup CreateDepthImage(
     VkPhysicalDevice physicalDevice,
     VkDevice device,
-    VkExtent2D const imageExtend,
+    VkExtent2D const imageExtent,
     CreateDepthImageOptions const & options
 
 ) {
@@ -1341,11 +1344,11 @@ DepthImageGroup CreateDepthImage(
     ret.imageGroup = CreateImage(
         device,
         physicalDevice,
-        imageExtend.width,
-        imageExtend.height,
+        imageExtent.width,
+        imageExtent.height,
         1,
         1,
-        options.sliceCount,
+        options.layerCount,
         depthFormat,
         VK_IMAGE_TILING_OPTIMAL, 
         options.usageFlags, 
@@ -1358,17 +1361,62 @@ DepthImageGroup CreateDepthImage(
         ret.imageGroup.image,
         depthFormat,
         VK_IMAGE_ASPECT_DEPTH_BIT,
-        1
+        1,
+        options.layerCount
     );
     MFA_ASSERT(ret.imageView);
     return ret;
 }
 
-void DestroyDepthImage(VkDevice device, DepthImageGroup const & depthGroup) {
+void DestroyDepthImage(VkDevice device, DepthImageGroup const & depthImageGroup) {
     MFA_ASSERT(device != nullptr);
-    DestroyImageView(device, depthGroup.imageView);
-    DestroyImage(device, depthGroup.imageGroup);
- }
+    DestroyImageView(device, depthImageGroup.imageView);
+    DestroyImage(device, depthImageGroup.imageGroup);
+}
+
+
+ColorImageGroup CreateColorImage(
+    VkPhysicalDevice physicalDevice, 
+    VkDevice device, 
+    VkExtent2D const & imageExtent,
+    VkFormat const imageFormat,
+    CreateColorImageOptions const & options
+) {
+    ColorImageGroup ret {};
+    ret.imageFormat = imageFormat;
+    ret.imageGroup = CreateImage(
+        device,
+        physicalDevice,
+        imageExtent.width,
+        imageExtent.height,
+        1,
+        1,
+        options.layerCount,
+        imageFormat,
+        VK_IMAGE_TILING_OPTIMAL, 
+        options.usageFlags, 
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+    );
+    MFA_ASSERT(ret.imageGroup.image);
+    MFA_ASSERT(ret.imageGroup.memory);
+    ret.imageView = CreateImageView(
+        device,
+        ret.imageGroup.image,
+        imageFormat,
+        VK_IMAGE_ASPECT_COLOR_BIT,
+        1,
+        options.layerCount
+    );
+    MFA_ASSERT(ret.imageView);
+    return ret;
+}
+
+void DestroyColorImage(VkDevice device, ColorImageGroup const & colorImageGroup) {
+    MFA_ASSERT(device != nullptr);
+    DestroyImageView(device, colorImageGroup.imageView);
+    DestroyImage(device, colorImageGroup.imageGroup);
+}
+
 
 VkRenderPass CreateRenderPass(
     VkDevice device,
@@ -1497,7 +1545,7 @@ VkFramebuffer CreateFrameBuffers(
     createInfo.pAttachments = attachments;
     createInfo.width = swapChainExtent.width;
     createInfo.height = swapChainExtent.height;
-    createInfo.layers = 1;
+    createInfo.layers = layersCount;
 
     VK_Check(vkCreateFramebuffer(device, &createInfo, nullptr, &frameBuffer));
 
@@ -1729,19 +1777,21 @@ void AssignViewportAndScissorToCommandBuffer(
 ) {
     MFA_ASSERT(commandBuffer != nullptr);
 
-    VkViewport viewport = {};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = static_cast<float>(extent2D.width);
-    viewport.height = static_cast<float>(extent2D.height);
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
+    VkViewport const viewport {
+        .x = 0.0f,
+        .y = 0.0f,
+        .width = static_cast<float>(extent2D.width),
+        .height = static_cast<float>(extent2D.height),
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f,
+    };
 
-    VkRect2D scissor = {};
-    scissor.offset.x = 0;
-    scissor.offset.y = 0;
-    scissor.extent.width = extent2D.width;
-    scissor.extent.height = extent2D.height;
+    VkRect2D scissor {
+        scissor.offset.x = 0,
+        scissor.offset.y = 0,
+        scissor.extent.width = extent2D.width,
+        scissor.extent.height = extent2D.height,
+    };
 
     SetViewport(commandBuffer, viewport);
     SetScissor(commandBuffer, scissor);
@@ -1792,6 +1842,8 @@ VkShaderStageFlagBits ConvertAssetShaderStageToGpu(AssetSystem::ShaderStage cons
         return VK_SHADER_STAGE_VERTEX_BIT;
         case AssetSystem::Shader::Stage::Fragment:
         return VK_SHADER_STAGE_FRAGMENT_BIT;
+        case AssetSystem::Shader::Stage::Geometry:
+        return VK_SHADER_STAGE_GEOMETRY_BIT;
         case AssetSystem::Shader::Stage::Invalid:
         default:
         MFA_CRASH("Unhandled shader stage");
@@ -2313,7 +2365,7 @@ void UpdateDescriptorSetsBasic(
 
 void UpdateDescriptorSets(
     VkDevice device,
-    uint8_t descriptorWritesCount,
+    uint32_t descriptorWritesCount,
     VkWriteDescriptorSet * descriptorWrites
 ) {
     MFA_ASSERT(device != nullptr);

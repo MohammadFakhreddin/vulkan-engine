@@ -62,10 +62,12 @@ void MFA::PBRModelPipeline::Render(
 MFA::DrawableObjectId MFA::PBRModelPipeline::AddGpuModel(RF::GpuModel & gpuModel) {
 
     MFA_ASSERT(gpuModel.valid == true);
-    
+
+    auto const drawableId = mNextDrawableId++;
+
     auto * drawableObject = new DrawableObject(gpuModel, mDescriptorSetLayout);
-    MFA_ASSERT(mDrawableObjects.find(drawableObject->getId()) == mDrawableObjects.end());
-    mDrawableObjects[drawableObject->getId()] = std::unique_ptr<DrawableObject>(drawableObject);
+    MFA_ASSERT(mDrawableObjects.find(drawableId) == mDrawableObjects.end());
+    mDrawableObjects[drawableId] = std::unique_ptr<DrawableObject>(drawableObject);
 
     const auto * primitiveInfoBuffer = drawableObject->createMultipleUniformBuffer(
         "PrimitiveInfo", 
@@ -294,7 +296,7 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::AddGpuModel(RF::GpuModel & gpuModel
         }
     }
     
-    return drawableObject->getId();
+    return drawableId;
 }
 
 bool MFA::PBRModelPipeline::RemoveGpuModel(DrawableObjectId const drawableObjectId) {

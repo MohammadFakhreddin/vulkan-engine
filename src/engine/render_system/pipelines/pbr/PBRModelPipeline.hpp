@@ -109,6 +109,9 @@ private:
     RF::UniformBufferGroup mErrorBuffer {};
 
     RF::UniformBufferGroup mLightViewBuffer {};
+
+    DrawableObjectId mNextDrawableId = 0;
+
 };
 
 }

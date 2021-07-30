@@ -120,12 +120,13 @@ VkImageView CreateImageView (
     VkImage const & image, 
     VkFormat format, 
     VkImageAspectFlags aspectFlags,
-    uint32_t mipmapCount
+    uint32_t mipmapCount,
+    uint32_t layerCount
 );
 
 void DestroyImageView(
     VkDevice device,
-    VkImageView image_view
+    VkImageView imageView
 );
 
 [[nodiscard]]
@@ -389,6 +390,7 @@ SwapChainGroup CreateSwapChain(
 
 void DestroySwapChain(VkDevice device, SwapChainGroup const & swapChainGroup);
 
+// TODO Maybe we should move this render frontend
 struct DepthImageGroup {
     ImageGroup imageGroup {};
     VkImageView imageView {};
@@ -396,18 +398,42 @@ struct DepthImageGroup {
 };
 
 struct CreateDepthImageOptions {
-    uint16_t sliceCount = 1;
+    uint16_t layerCount = 1;
     VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 };
 [[nodiscard]]
 DepthImageGroup CreateDepthImage(
     VkPhysicalDevice physicalDevice,
     VkDevice device,
-    VkExtent2D imageExtend,
+    VkExtent2D imageExtent,
     CreateDepthImageOptions const & options
 );
 
-void DestroyDepthImage(VkDevice device, DepthImageGroup const & depthGroup);
+void DestroyDepthImage(VkDevice device, DepthImageGroup const & depthImageGroup);
+
+
+struct ColorImageGroup {
+    ImageGroup imageGroup {};
+    VkImageView imageView {};
+    VkFormat imageFormat;
+};
+
+struct CreateColorImageOptions {
+    uint16_t layerCount = 1;
+    VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+};
+
+[[nodiscard]]
+ColorImageGroup CreateColorImage(
+    VkPhysicalDevice physicalDevice, 
+    VkDevice device, 
+    VkExtent2D const & imageExtent,
+    VkFormat imageFormat,
+    CreateColorImageOptions const & options
+);
+
+void DestroyColorImage(VkDevice device, ColorImageGroup const & colorImageGroup);
+
 
 // TODO Ask for options
 [[nodiscard]]
@@ -729,7 +755,7 @@ void UpdateDescriptorSetsBasic(
 
 void UpdateDescriptorSets(
     VkDevice device,
-    uint8_t descriptorWritesCount,
+    uint32_t descriptorWritesCount,
     VkWriteDescriptorSet * descriptorWrites
 );
 

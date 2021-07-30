@@ -4,6 +4,8 @@
 
 namespace MFA {
 
+class DisplayRenderPass;
+
 namespace RF = RenderFrontend;
 namespace RB = RenderBackend;
 
@@ -11,8 +13,8 @@ class OffScreenRenderPass final : public RenderPass {
 public:
     
     explicit OffScreenRenderPass(
-        uint32_t const imageWidth = 1024,
-        uint32_t const imageHeight = 1024
+        uint32_t const imageWidth = 2048,
+        uint32_t const imageHeight = 2048
     )
         : mImageWidth(imageWidth)
         , mImageHeight(imageHeight)
@@ -25,8 +27,6 @@ public:
     OffScreenRenderPass & operator = (OffScreenRenderPass &&) noexcept = delete;
 
     VkRenderPass GetVkRenderPass() override;
-
-    VkCommandBuffer GetCommandBuffer(RF::DrawPass const & drawPass) override;
 
 protected:
 
@@ -50,13 +50,15 @@ private:
 
     VkRenderPass mVkRenderPass {};
     VkFramebuffer mFrameBuffer {};
-    VkCommandBuffer mCommandBuffer {};
-
+    
     RB::DepthImageGroup mDepthImageGroup {};
     
     uint32_t mImageWidth = 0;
     uint32_t mImageHeight = 0;
 
+    DisplayRenderPass * mDisplayRenderPass = nullptr;
+
+    RB::ColorImageGroup mColorImageGroup {};
 };
 
 }

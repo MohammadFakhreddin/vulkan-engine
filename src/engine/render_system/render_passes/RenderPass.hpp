@@ -23,8 +23,6 @@ public:
 
     virtual VkRenderPass GetVkRenderPass() = 0;
 
-    virtual VkCommandBuffer GetCommandBuffer(RF::DrawPass const & drawPass) = 0;
-
 protected:
 
     virtual void internalInit() = 0;

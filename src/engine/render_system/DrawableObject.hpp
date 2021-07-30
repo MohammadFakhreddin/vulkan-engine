@@ -89,11 +89,6 @@ public:
 
     void draw(RF::DrawPass & drawPass);
 
-    [[nodiscard]]
-    uint32_t getId() const noexcept {
-        return mId;
-    }
-
     void EnableUI(char const * windowName, bool * isVisible);
 
     void DisableUI();
@@ -125,9 +120,6 @@ private:
 
 private:
 
-    static DrawableObjectId NextId;
-
-    DrawableObjectId const mId = 0;
     // Note: Order is important
     RF::UniformBufferGroup mNodeTransformBuffers {};
     std::vector<RF::UniformBufferGroup> mSkinJointsBuffers {};

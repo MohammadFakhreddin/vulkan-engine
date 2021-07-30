@@ -35,4 +35,62 @@ public:
 
 };
 
+class DescriptorSetSchema {
+public:
+
+    explicit DescriptorSetSchema(VkDescriptorSet descriptorSet)
+        : mDescriptorSet(descriptorSet)
+    {
+        MFA_VK_VALID_ASSERT(descriptorSet);
+        isActive = true;
+    }
+
+    void AddUniformBuffer(VkDescriptorBufferInfo const & bufferInfo) {
+        MFA_ASSERT(isActive);
+
+        VkWriteDescriptorSet writeDescriptorSet {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = mDescriptorSet,
+            .dstBinding = static_cast<uint32_t>(mWriteInfo.size()),
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .pBufferInfo = &bufferInfo,
+        };
+
+        mWriteInfo.emplace_back(writeDescriptorSet);
+    }
+
+    void AddCombinedImageSampler(VkDescriptorImageInfo const & imageInfo) {
+        MFA_ASSERT(isActive);
+
+        VkWriteDescriptorSet writeDescriptorSet {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = mDescriptorSet,
+            .dstBinding = static_cast<uint32_t>(mWriteInfo.size()),
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .pImageInfo = &imageInfo,
+        };
+
+        mWriteInfo.emplace_back(writeDescriptorSet);
+    }
+
+    void UpdateDescriptorSets() {
+        isActive = false;
+        RF::UpdateDescriptorSets(
+            static_cast<uint32_t>(mWriteInfo.size()), 
+            mWriteInfo.data()
+        );
+    }
+
+private:
+
+    bool isActive = false;
+    VkDescriptorSet mDescriptorSet {};
+    std::vector<VkWriteDescriptorSet> mWriteInfo {};
+
 };
+
+}

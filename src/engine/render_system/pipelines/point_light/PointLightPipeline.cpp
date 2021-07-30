@@ -4,15 +4,17 @@
 #include "engine/BedrockPath.hpp"
 #include "engine/render_system/render_passes/DisplayRenderPass.hpp"
 
-namespace AS = MFA::AssetSystem;
+namespace MFA {
 
-MFA::PointLightPipeline::~PointLightPipeline() {
+namespace AS = AssetSystem;
+
+PointLightPipeline::~PointLightPipeline() {
     if (mIsInitialized) {
         shutdown();
     }
 }
 
-void MFA::PointLightPipeline::init() {
+void PointLightPipeline::init() {
     if (mIsInitialized == true) {
         MFA_ASSERT(false);
         return;
@@ -23,7 +25,7 @@ void MFA::PointLightPipeline::init() {
     createPipeline();
 }
 
-void MFA::PointLightPipeline::shutdown() {
+void PointLightPipeline::shutdown() {
     if (mIsInitialized == false) {
         MFA_ASSERT(false);
         return;
@@ -35,12 +37,14 @@ void MFA::PointLightPipeline::shutdown() {
     destroyUniformBuffers();
 }
 
-MFA::DrawableObjectId MFA::PointLightPipeline::AddGpuModel(RF::GpuModel & gpuModel) {
+DrawableObjectId PointLightPipeline::AddGpuModel(RF::GpuModel & gpuModel) {
     MFA_ASSERT(gpuModel.valid == true);
-    
+
+    auto const drawableId = mNextDrawableId++;
+
     auto * drawableObject = new DrawableObject(gpuModel, mDescriptorSetLayout);
-    MFA_ASSERT(mDrawableObjects.find(drawableObject->getId()) == mDrawableObjects.end());
-    mDrawableObjects[drawableObject->getId()] = std::unique_ptr<DrawableObject>(drawableObject);
+    MFA_ASSERT(mDrawableObjects.find(drawableId) == mDrawableObjects.end());
+    mDrawableObjects[drawableId] = std::unique_ptr<DrawableObject>(drawableObject);
 
     const auto * primitiveInfoBuffer = drawableObject->createUniformBuffer(
         "PrimitiveInfo", 
@@ -131,16 +135,16 @@ MFA::DrawableObjectId MFA::PointLightPipeline::AddGpuModel(RF::GpuModel & gpuMod
         }
     }
     
-    return drawableObject->getId();
+    return drawableId;
 }
 
-bool MFA::PointLightPipeline::RemoveGpuModel(DrawableObjectId const drawableObjectId) {
+bool PointLightPipeline::RemoveGpuModel(DrawableObjectId const drawableObjectId) {
     auto const deleteCount = mDrawableObjects.erase(drawableObjectId);  // Unique ptr should be deleted correctly
     MFA_ASSERT(deleteCount == 1);
     return deleteCount;
 }
 
-void MFA::PointLightPipeline::Render(
+void PointLightPipeline::Render(
     RF::DrawPass & drawPass,
     float const deltaTimeInSec,
     uint32_t const idsCount, 
@@ -159,7 +163,7 @@ void MFA::PointLightPipeline::Render(
     }
 }
 
-bool MFA::PointLightPipeline::updateViewProjectionBuffer(
+bool PointLightPipeline::updateViewProjectionBuffer(
     DrawableObjectId const drawableObjectId, 
     ViewProjectionData const & viewProjectionData
 ) {
@@ -179,7 +183,7 @@ bool MFA::PointLightPipeline::updateViewProjectionBuffer(
     return true;
 }
 
-bool MFA::PointLightPipeline::updatePrimitiveInfo(
+bool PointLightPipeline::updatePrimitiveInfo(
     DrawableObjectId const drawableObjectId, 
     PrimitiveInfo const & info
 ) {
@@ -199,7 +203,7 @@ bool MFA::PointLightPipeline::updatePrimitiveInfo(
     return true;                 
 }
 
-void MFA::PointLightPipeline::createDescriptorSetLayout() {
+void PointLightPipeline::createDescriptorSetLayout() {
     std::vector<VkDescriptorSetLayoutBinding> bindings {};
     {// ViewProjection
         VkDescriptorSetLayoutBinding layoutBinding {};
@@ -235,17 +239,17 @@ void MFA::PointLightPipeline::createDescriptorSetLayout() {
     );
 }
 
-void MFA::PointLightPipeline::destroyDescriptorSetLayout() {
+void PointLightPipeline::destroyDescriptorSetLayout() {
     MFA_VK_VALID_ASSERT(mDescriptorSetLayout);
     RF::DestroyDescriptorSetLayout(mDescriptorSetLayout);
     MFA_VK_MAKE_NULL(mDescriptorSetLayout);
 }
 
-void MFA::PointLightPipeline::createPipeline() {
+void PointLightPipeline::createPipeline() {
     // Vertex shader
     auto cpuVertexShader = Importer::ImportShaderFromSPV(
         Path::Asset("shaders/point_light/PointLight.vert.spv").c_str(), 
-        MFA::AssetSystem::Shader::Stage::Vertex, 
+        AssetSystem::Shader::Stage::Vertex, 
         "main"
     );
     MFA_ASSERT(cpuVertexShader.isValid());
@@ -259,7 +263,7 @@ void MFA::PointLightPipeline::createPipeline() {
     // Fragment shader
     auto cpuFragmentShader = Importer::ImportShaderFromSPV(
         Path::Asset("shaders/point_light/PointLight.frag.spv").c_str(),
-        MFA::AssetSystem::Shader::Stage::Fragment,
+        AssetSystem::Shader::Stage::Fragment,
         "main"
     );
     auto gpuFragmentShader = RF::CreateShader(cpuFragmentShader);
@@ -306,15 +310,17 @@ void MFA::PointLightPipeline::createPipeline() {
     );
 }
 
-void MFA::PointLightPipeline::destroyPipeline() {
+void PointLightPipeline::destroyPipeline() {
     MFA_ASSERT(mDrawPipeline.isValid());
     RF::DestroyDrawPipeline(mDrawPipeline);
 }
 
-void MFA::PointLightPipeline::destroyUniformBuffers() {
+void PointLightPipeline::destroyUniformBuffers() {
     for (const auto & [id, drawableObject] : mDrawableObjects) {
         MFA_ASSERT(drawableObject != nullptr);
         drawableObject->deleteUniformBuffers();
     }
     mDrawableObjects.clear();
+}
+
 }

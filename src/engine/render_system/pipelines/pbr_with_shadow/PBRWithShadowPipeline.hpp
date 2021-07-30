@@ -3,6 +3,7 @@
 #include "engine/render_system/DrawableObject.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
+#include "engine/render_system/render_passes/OffScreenRenderPass.hpp"
 
 namespace MFA {
 
@@ -25,16 +26,25 @@ public:
         alignas(4) int hasSkin;
     };
 
-    struct ViewProjectionData {   // For vertices in Vertex shader
+    struct ModelViewProjectionData {   // For vertices in Vertex shader
         alignas(64) float model[16];
         alignas(64) float view[16];
         alignas(64) float projection[16];
     };
 
-    struct LightViewBuffer {
-        alignas(16) float lightPosition[3] {0, 0, 0};
-        alignas(16) float cameraPosition[3] {0, 0, 0};
-        alignas(16) float lightColor[3] {0, 0, 0};
+    struct DisplayLightViewData {
+        alignas(16) float lightPosition[3];
+        alignas(16) float cameraPosition[3];
+        alignas(16) float lightColor[3];
+    };
+
+    struct ShadowMatricesData {
+        float viewMatrices[6][16];
+    };
+
+    struct ShadowLightData {
+        alignas(16) float lightPosition[4];
+        alignas(4) float projectionMatrixDistance;
     };
 
     explicit PBRWithShadowPipeline() = default;
@@ -52,10 +62,13 @@ public:
 
     void Init(
         RF::SamplerGroup * samplerGroup, 
-        RB::GpuTexture * errorTexture
+        RB::GpuTexture * errorTexture,
+        float projectionMatrixFarToNearDistance
     );
 
     void Shutdown();
+
+    void Update(RF::DrawPass & drawPass, float deltaTime, uint32_t idsCount, DrawableObjectId * ids) override;
 
     void Render(RF::DrawPass & drawPass, float deltaTime, uint32_t idsCount, DrawableObjectId * ids) override;
 
@@ -67,22 +80,32 @@ public:
 
     bool UpdateViewProjectionBuffer(
         DrawableObjectId drawableObjectId, 
-        ViewProjectionData const & viewProjectionData
+        ModelViewProjectionData const & viewProjectionData
     );
 
-    void UpdateLightViewBuffer(
-        LightViewBuffer const & lightViewData
-    );
+    void UpdateLightPosition(float lightPosition[3]);
+
+    void UpdateCameraPosition(float cameraPosition[3]);
+
+    void UpdateLightColor(float lightColor[3]);
 
     DrawableObject * GetDrawableById(DrawableObjectId objectId);
 
+    void CreateDisplayPassDrawableObject(RF::GpuModel & gpuModel, DrawableObjectId drawableObjectId);
+
+    void CreateShadowPassDrawableObject(RF::GpuModel & gpuModel, DrawableObjectId drawableObjectId);
+
 private:
 
-    void createDescriptorSetLayout();
+    void createDisplayPassDescriptorSetLayout();
 
-    void destroyDescriptorSetLayout();
+    void createShadowPassDescriptorSetLayout();
 
-    void createPipeline();
+    void destroyDescriptorSetLayout() const;
+
+    void createDisplayPassPipeline();
+
+    void createShadowPassPipeline();
 
     void destroyPipeline();
 
@@ -93,11 +116,14 @@ private:
     bool mIsInitialized = false;
 
     // TODO Support multiple descriptorSetLayouts
-    VkDescriptorSetLayout mDescriptorSetLayout {};
-
-    RenderFrontend::DrawPipeline mDrawPipeline {};
-
-    std::unordered_map<DrawableObjectId, std::unique_ptr<DrawableObject>> mDrawableObjects {};
+    VkDescriptorSetLayout mDisplayPassDescriptorSetLayout {};
+    VkDescriptorSetLayout mShadowPassDescriptorSetLayout {};
+    
+    RF::DrawPipeline mDisplayPassPipeline {};
+    std::unordered_map<DrawableObjectId, std::unique_ptr<DrawableObject>> mDisplayPassDrawableObjects {};
+    
+    RF::DrawPipeline mShadowPassPipeline {};
+    std::unordered_map<DrawableObjectId, std::unique_ptr<DrawableObject>> mShadowPassDrawableObjects {};
 
     RF::SamplerGroup * mSamplerGroup = nullptr; // TODO Each gltf subMesh has its own settings
 
@@ -105,8 +131,24 @@ private:
 
     RF::UniformBufferGroup mErrorBuffer {};
 
-    RF::UniformBufferGroup mLightViewBuffer {};
+    RF::UniformBufferGroup mShadowMatricesBuffer {};
+    RF::UniformBufferGroup mShadowLightBuffer {};
+
+    RF::UniformBufferGroup mDisplayLightViewBuffer {};
+
+    OffScreenRenderPass mOffScreenRenderPass {};
+
+    float mLightPosition[3] {};
+    float mCameraPosition[3] {};
+    float mLightColor[3] {};
+
+    float mProjectionMatrixFarToNearDistance = 0.0f;
+
+    bool mNeedToUpdateDisplayLightBuffer = false;
+    bool mNeedToUpdateShadowLightBuffer = false;
+
+    DrawableObjectId mNextDrawableObjectId = 0;
 
 };
 
-}
+};

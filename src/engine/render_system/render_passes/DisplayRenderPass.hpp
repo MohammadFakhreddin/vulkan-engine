@@ -21,7 +21,7 @@ public:
 
     VkRenderPass GetVkRenderPass() override;
 
-    VkCommandBuffer GetCommandBuffer(RF::DrawPass const & drawPass) override;
+    VkCommandBuffer GetCommandBuffer(RF::DrawPass const & drawPass);
 
     [[nodiscard]]
     RF::DrawPass StartGraphicCommandBufferRecording();

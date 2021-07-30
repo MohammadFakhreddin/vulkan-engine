@@ -115,4 +115,9 @@ constexpr void Copy(T * dst, std::initializer_list<T> items) {
     memcpy(dst, items.begin(), Count * sizeof(T));
 }
 
+template<uint32_t Count, typename T>
+constexpr bool IsEqual(T * dst, T const * src) {
+    return memcmp(dst, src, Count * sizeof(T)) == 0;
+}
+
 }

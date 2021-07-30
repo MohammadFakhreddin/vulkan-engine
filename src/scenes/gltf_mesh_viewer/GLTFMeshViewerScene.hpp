@@ -5,7 +5,6 @@
 #include "engine/render_system/pipelines/pbr_with_shadow/PBRWithShadowPipeline.hpp"
 #include "engine/render_system/pipelines/point_light/PointLightPipeline.hpp"
 #include "engine/render_system/DrawableObject.hpp"
-#include "engine/render_system/render_passes/OffScreenRenderPass.hpp"
 
 class GLTFMeshViewerScene final : public MFA::Scene {
 public:
@@ -92,15 +91,13 @@ private:
         alignas(4) int hasEmissiveTexture;
     }; 
 
-    MFA::PBRWithShadowPipeline::ViewProjectionData mPbrMVPData {};
+    MFA::PBRWithShadowPipeline::ModelViewProjectionData mPbrMVPData {};
     MFA::PointLightPipeline::ViewProjectionData mPointLightMVPData {};
 
     float m_model_rotation[3] {45.0f, 45.0f, 45.0f};
     float m_model_scale = 1.0f;
     float m_model_position[3] {0.0f, 0.0f, -6.0f};
 
-    MFA::PBRWithShadowPipeline::LightViewBuffer mLightViewData {};
-    
     float mLightPosition[3] {0.0f, 0.0f, -2.0f};
     float mLightColor[3]{};
 
@@ -146,7 +143,5 @@ private:
     };
 
     MFA::UIRecordObject mRecordObject;
-
-    MFA::OffScreenRenderPass mOffScreenRenderPass {};
 
 };

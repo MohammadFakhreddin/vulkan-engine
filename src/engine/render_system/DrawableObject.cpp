@@ -11,7 +11,8 @@ namespace MFA {
 
 namespace UI = UISystem;
 
-DrawableObjectId DrawableObject::NextId = 0;
+// TODO Create 2 class: DisplayDrawableObject and OffScreenDrawableObject
+
 
 // TODO We need RCMGMT very bad
 // We need other overrides for easier use as well
@@ -19,11 +20,9 @@ DrawableObject::DrawableObject(
     RF::GpuModel & model_,
     VkDescriptorSetLayout descriptorSetLayout
 )
-    : mId(NextId)
-    , mGpuModel(&model_)
+    : mGpuModel(&model_)
     , mRecordUIObject([this]()->void {onUI();})
 {
-    NextId += 1;
 
     auto & mesh = mGpuModel->model.mesh;
 
@@ -101,7 +100,6 @@ VkDescriptorSet DrawableObject::getDescriptorSetByPrimitiveUniqueId(uint32_t con
 VkDescriptorSet * DrawableObject::getDescriptorSets() {
     return mDescriptorSets.data();
 }
-
 
 // Only for model local buffers
 RF::UniformBufferGroup * DrawableObject::createUniformBuffer(char const * name, uint32_t const size) {

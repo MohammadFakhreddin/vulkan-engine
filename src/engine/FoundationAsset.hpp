@@ -565,6 +565,7 @@ public:
     enum class Stage {
         Invalid,
         Vertex,
+        Geometry,
         Fragment
     };
 

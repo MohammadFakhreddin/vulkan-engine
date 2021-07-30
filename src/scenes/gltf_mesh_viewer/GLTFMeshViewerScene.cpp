@@ -18,7 +18,7 @@ GLTFMeshViewerScene::GLTFMeshViewerScene()
 {}
 
 void GLTFMeshViewerScene::Init() {
-    // TODO Out of pool memory on macos, We need to only keep a few of recent objects data active.
+    // TODO Out of pool memory on MacOs, We need to only keep a few of recent objects data active.
     {// Error texture
         auto cpu_texture = Importer::CreateErrorTexture();
         mErrorTexture = RF::CreateTexture(cpu_texture);
@@ -126,12 +126,12 @@ void GLTFMeshViewerScene::Init() {
     // TODO We should use gltf sampler info here
     mSamplerGroup = RF::CreateSampler();
     
-    mPbrPipeline.Init(&mSamplerGroup, &mErrorTexture);
-
     mPointLightPipeline.init();
 
     mCamera.init();
     mCamera.EnableUI("", &mIsCameraWindowVisible);
+
+    mPbrPipeline.Init(&mSamplerGroup, &mErrorTexture, Z_FAR - Z_NEAR);
 
     // Updating perspective mat once for entire application
     // Perspective
@@ -153,21 +153,9 @@ void GLTFMeshViewerScene::Init() {
     }
 
     mRecordObject.Enable();
-
-    mOffScreenRenderPass.Init();
 }
 
 void GLTFMeshViewerScene::OnUpdate(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) {
-    // TODO
-}
-
-void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & drawPass) {
-    MFA_ASSERT(mSelectedModelIndex >= 0 && mSelectedModelIndex < mModelsRenderData.size());
-
-    auto const fDeltaTime = static_cast<float>(deltaTimeInSec);
-
-    mCamera.onNewFrame(fDeltaTime);
-
     auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
     if (selectedModel.isLoaded == false) {
         createModel(selectedModel);
@@ -202,6 +190,15 @@ void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & draw
         mCamera.forceRotation(selectedModel.initialParams.camera.eulerAngles);
     }
 
+    mPbrPipeline.Update(drawPass, deltaTimeInSec, 1, &selectedModel.drawableObjectId);
+}
+
+void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & drawPass) {
+    MFA_ASSERT(mSelectedModelIndex >= 0 && mSelectedModelIndex < mModelsRenderData.size());
+
+    mCamera.onNewFrame(deltaTimeInSec);
+
+    auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
     {// Updating Transform buffer
         // Rotation
         MFA::Matrix4X4Float rotationMat {};
@@ -252,14 +249,11 @@ void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & draw
         MFA::Matrix4X4Float::ConvertMatrixToGlm(mCamera.getTransform(), transformMatrix);
 
         lightPosition = transformMatrix * lightPosition;
-        mLightViewData.lightPosition[0] = lightPosition[0];
-        mLightViewData.lightPosition[1] = lightPosition[1];
-        mLightViewData.lightPosition[2] = lightPosition[2];
-
-        MFA::Copy<3>(mLightViewData.lightColor, mLightColor);
         
-        mPbrPipeline.UpdateLightViewBuffer(mLightViewData);
+        mPbrPipeline.UpdateLightPosition(mLightPosition);
+        mPbrPipeline.UpdateLightColor(mLightColor);
 
+        
         // Position
         MFA::Matrix4X4Float translationMat {};
         MFA::Matrix4X4Float::AssignTranslation(
@@ -279,14 +273,14 @@ void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & draw
         mPointLightPipeline.updateViewProjectionBuffer(mPointLightObjectId, mPointLightMVPData);
 
         MFA::PointLightPipeline::PrimitiveInfo lightPrimitiveInfo {};
-        MFA::Copy<3>(lightPrimitiveInfo.baseColorFactor, mLightViewData.lightColor);
+        MFA::Copy<3>(lightPrimitiveInfo.baseColorFactor, mLightColor);
         lightPrimitiveInfo.baseColorFactor[3] = 1.0f;
         mPointLightPipeline.updatePrimitiveInfo(mPointLightObjectId, lightPrimitiveInfo);
     }
     // TODO Pipeline should be able to share buffers such as projection buffer to enable us to update them once
-    mPbrPipeline.Render(drawPass, fDeltaTime, 1, &selectedModel.drawableObjectId);
+    mPbrPipeline.Render(drawPass, deltaTimeInSec, 1, &selectedModel.drawableObjectId);
     if (mIsLightVisible) {
-        mPointLightPipeline.Render(drawPass, fDeltaTime, 1, &mPointLightObjectId);
+        mPointLightPipeline.Render(drawPass, deltaTimeInSec, 1, &mPointLightObjectId);
     }
 }
 
@@ -372,7 +366,6 @@ void GLTFMeshViewerScene::OnUI() {
 }
 
 void GLTFMeshViewerScene::Shutdown() {
-    mOffScreenRenderPass.Shutdown();
     {// Disabling ui for current model
         auto * selectedDrawable = mPbrPipeline.GetDrawableById(mModelsRenderData[mSelectedModelIndex].drawableObjectId);
         MFA_ASSERT(selectedDrawable != nullptr);

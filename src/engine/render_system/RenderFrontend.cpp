@@ -625,7 +625,7 @@ void BindDrawPipeline(
     drawPass.drawPipeline = &drawPipeline;
     // We can bind command buffer to multiple pipeline
     vkCmdBindPipeline(
-        drawPass.renderPass->GetCommandBuffer(drawPass),
+        state->displayRenderPass.GetCommandBuffer(drawPass),
         VK_PIPELINE_BIND_POINT_GRAPHICS, 
         drawPipeline.graphicPipeline
     );
@@ -675,7 +675,7 @@ void UpdateDescriptorSetBasic(
 }
 
 void UpdateDescriptorSets(
-    uint8_t const writeInfoCount,
+    uint32_t const writeInfoCount,
     VkWriteDescriptorSet * writeInfo
 ) {
     RB::UpdateDescriptorSets(
@@ -709,7 +709,7 @@ void BindDescriptorSet(
     MFA_ASSERT(descriptorSet);
     // We should bind specific descriptor set with different texture for each mesh
     vkCmdBindDescriptorSets(
-        drawPass.renderPass->GetCommandBuffer(drawPass),
+        state->displayRenderPass.GetCommandBuffer(drawPass),
         VK_PIPELINE_BIND_POINT_GRAPHICS, 
         drawPass.drawPipeline->pipelineLayout, 
         0, 
@@ -727,7 +727,7 @@ void BindVertexBuffer(
 ) {
     MFA_ASSERT(drawPass.isValid);
     RB::BindVertexBuffer(
-        drawPass.renderPass->GetCommandBuffer(drawPass),
+        state->displayRenderPass.GetCommandBuffer(drawPass),
         vertexBuffer,
         offset
     );
@@ -741,7 +741,7 @@ void BindIndexBuffer(
 ) {
     MFA_ASSERT(drawPass.isValid);
     RB::BindIndexBuffer(
-        drawPass.renderPass->GetCommandBuffer(drawPass),
+        state->displayRenderPass.GetCommandBuffer(drawPass),
         indexBuffer,
         offset,
         indexType
@@ -758,7 +758,7 @@ void DrawIndexed(
 ) {
     MFA_ASSERT(drawPass.isValid);
     RB::DrawIndexed(
-        drawPass.renderPass->GetCommandBuffer(drawPass),
+        state->displayRenderPass.GetCommandBuffer(drawPass),
         indicesCount,
         instanceCount,
         firstIndex,
@@ -770,7 +770,8 @@ void DrawIndexed(
 void BeginRenderPass(
     VkCommandBuffer commandBuffer, 
     VkRenderPass renderPass, 
-    VkFramebuffer frameBuffer
+    VkFramebuffer frameBuffer,
+    VkExtent2D const & extent2D
 ) {
     std::vector<VkClearValue> clearValues {};
     clearValues.resize(2);
@@ -783,8 +784,8 @@ void BeginRenderPass(
     renderPassBeginInfo.framebuffer = frameBuffer;
     renderPassBeginInfo.renderArea.offset.x = 0;
     renderPassBeginInfo.renderArea.offset.y = 0;
-    renderPassBeginInfo.renderArea.extent.width = static_cast<uint32_t>(state->screenWidth);
-    renderPassBeginInfo.renderArea.extent.height = static_cast<uint32_t>(state->screenHeight);
+    renderPassBeginInfo.renderArea.extent.width = extent2D.width;
+    renderPassBeginInfo.renderArea.extent.height = extent2D.height;
     renderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
     renderPassBeginInfo.pClearValues = clearValues.data();
 
@@ -819,13 +820,13 @@ void DestroyShader(RB::GpuShader & gpu_shader) {
 void SetScissor(DrawPass const & drawPass, VkRect2D const & scissor) {
     MFA_ASSERT(drawPass.isValid);
     MFA_ASSERT(drawPass.renderPass != nullptr);
-    RB::SetScissor(drawPass.renderPass->GetCommandBuffer(drawPass), scissor);
+    RB::SetScissor(state->displayRenderPass.GetCommandBuffer(drawPass), scissor);
 }
 
 void SetViewport(DrawPass const & drawPass, VkViewport const & viewport) {
     MFA_ASSERT(drawPass.isValid);
     MFA_ASSERT(drawPass.renderPass != nullptr);
-    RB::SetViewport(drawPass.renderPass->GetCommandBuffer(drawPass), viewport);
+    RB::SetViewport(state->displayRenderPass.GetCommandBuffer(drawPass), viewport);
 }
 
 void PushConstants(
@@ -837,7 +838,7 @@ void PushConstants(
     MFA_ASSERT(drawPass.isValid);
     MFA_ASSERT(drawPass.renderPass != nullptr);
     RB::PushConstants(
-        drawPass.renderPass->GetCommandBuffer(drawPass),
+        state->displayRenderPass.GetCommandBuffer(drawPass),
         drawPass.drawPipeline->pipelineLayout,
         shaderStage,
         offset,
@@ -927,6 +928,25 @@ RB::SwapChainGroup CreateSwapChain(VkSwapchainKHR oldSwapChain) {
 
 void DestroySwapChain(RB::SwapChainGroup const & swapChainGroup) {
     RB::DestroySwapChain(state->logicalDevice.device, swapChainGroup);
+}
+
+// TODO There might be a need to request for image count as well
+RB::ColorImageGroup CreateColorImage(
+    VkExtent2D const & imageExtent,
+    VkFormat imageFormat,
+    RB::CreateColorImageOptions const & options
+) {
+    return RB::CreateColorImage(
+        state->physicalDevice,
+        state->logicalDevice.device,
+        imageExtent,
+        imageFormat,
+        options
+    );
+}
+
+void DestroyColorImage(RB::ColorImageGroup const & colorImageGroup) {
+    RB::DestroyColorImage(state->logicalDevice.device, colorImageGroup);
 }
 
 
