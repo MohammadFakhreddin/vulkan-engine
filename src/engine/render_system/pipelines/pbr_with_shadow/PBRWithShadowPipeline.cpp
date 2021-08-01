@@ -1,8 +1,10 @@
 #include "PBRWithShadowPipeline.hpp"
 
 #include "engine/BedrockPath.hpp"
+#include "engine/camera/FirstPersonCamera.hpp"
 #include "engine/render_system/render_passes/DisplayRenderPass.hpp"
 #include "tools/Importer.hpp"
+#include "engine/BedrockMatrix.hpp"
 
 namespace MFA {
 
@@ -12,7 +14,8 @@ namespace MFA {
 void PBRWithShadowPipeline::Init(
     RF::SamplerGroup * samplerGroup, 
     RB::GpuTexture * errorTexture,
-    float const projectionMatrixFarToNearDistance
+    float const projectionNear,
+    float const projectionFar
 ) {
     if (mIsInitialized == true) {
         MFA_ASSERT(false);
@@ -24,18 +27,35 @@ void PBRWithShadowPipeline::Init(
     MFA_ASSERT(errorTexture != nullptr);
     mErrorTexture = errorTexture;
 
-    MFA_ASSERT(projectionMatrixFarToNearDistance > 0.0f);
-    mProjectionMatrixFarToNearDistance = projectionMatrixFarToNearDistance;
-
+    mProjectionFar = projectionFar;
+    mProjectionNear = projectionNear;
+    mProjectionFarToNearDistance = projectionFar - projectionNear;
+    MFA_ASSERT(mProjectionFarToNearDistance > 0.0f);
+    
     createUniformBuffers();
 
     createDisplayPassDescriptorSetLayout();
     createDisplayPassPipeline();
 
+    mShadowRenderPass.Init();
     createShadowPassDescriptorSetLayout();
     createShadowPassPipeline();
 
-    mOffScreenRenderPass.Init();
+
+    static float FOV = 90.0f;          // TODO Maybe it should be the same with our camera's FOV.
+    
+    const float ratio = SHADOW_WIDTH / SHADOW_HEIGHT;
+
+    Matrix4X4Float projectionMatrix4X4 {};
+    Matrix4X4Float::PreparePerspectiveProjectionMatrix(
+        projectionMatrix4X4,
+        ratio,
+        FOV,
+        mProjectionNear,
+        mProjectionFar
+    );
+
+    mShadowProjection = Matrix4X4Float::ConvertCellsToMat4(projectionMatrix4X4.cells);
 }
 
 void PBRWithShadowPipeline::Shutdown() {
@@ -47,7 +67,7 @@ void PBRWithShadowPipeline::Shutdown() {
     mSamplerGroup = nullptr;
     mErrorTexture = nullptr;
 
-    mOffScreenRenderPass.Shutdown();
+    mShadowRenderPass.Shutdown();
 
     destroyPipeline();
     destroyDescriptorSetLayout();
@@ -56,12 +76,14 @@ void PBRWithShadowPipeline::Shutdown() {
 
 void PBRWithShadowPipeline::Update(
     RF::DrawPass & drawPass, 
-    float deltaTime, 
-    uint32_t idsCount, 
+    float const deltaTime, 
+    uint32_t const idsCount, 
     DrawableObjectId * ids
 ) {
     
     if (mNeedToUpdateDisplayLightBuffer) {
+        mNeedToUpdateDisplayLightBuffer = false;
+
         DisplayLightViewData displayLightViewData {};
         Copy<3>(displayLightViewData.cameraPosition, mCameraPosition);
         Copy<3>(displayLightViewData.lightColor, mLightColor);
@@ -70,17 +92,95 @@ void PBRWithShadowPipeline::Update(
     }
 
     if (mNeedToUpdateShadowLightBuffer) {
+        mNeedToUpdateShadowLightBuffer = false;
+    
         ShadowLightData shadowLightData {
-            .projectionMatrixDistance = {mProjectionMatrixFarToNearDistance}
+            .projectionMatrixDistance = {mProjectionFarToNearDistance}
         };
         Copy<3>(shadowLightData.lightPosition, mLightPosition);
+        RF::UpdateUniformBuffer(mShadowLightBuffer.buffers[0], CBlobAliasOf(shadowLightData));
     }
 
-    mOffScreenRenderPass.BeginRenderPass(drawPass);
+    if (mNeedToUpdateShadowProjectionBuffer) {
+        mNeedToUpdateShadowProjectionBuffer = false;
 
-    // TODO Draw shadow here
+        auto const lightPositionVector = glm::vec3(mLightPosition[0], mLightPosition[1], mLightPosition[2]);
 
-    mOffScreenRenderPass.EndRenderPass(drawPass);
+        ShadowMatricesData shadowMatricesData {};
+
+        Matrix4X4Float::ConvertGmToCells(
+            mShadowProjection * glm::lookAt(
+                lightPositionVector, 
+                lightPositionVector + glm::vec3( 1.0, 0.0, 0.0), 
+                glm::vec3(0.0,-1.0, 0.0)
+            ), 
+            shadowMatricesData.viewMatrices[0]
+        );
+
+        Matrix4X4Float::ConvertGmToCells(
+            mShadowProjection * glm::lookAt(
+                lightPositionVector, 
+                lightPositionVector + glm::vec3(-1.0, 0.0, 0.0), 
+                glm::vec3(0.0,-1.0, 0.0)
+            ), 
+            shadowMatricesData.viewMatrices[1]
+        );
+
+        Matrix4X4Float::ConvertGmToCells(
+            mShadowProjection * glm::lookAt(
+                lightPositionVector, 
+                lightPositionVector + glm::vec3( 0.0, 1.0, 0.0), 
+                glm::vec3(0.0, 0.0, 1.0)
+            ), 
+            shadowMatricesData.viewMatrices[2]
+        );
+
+        Matrix4X4Float::ConvertGmToCells(
+            mShadowProjection * glm::lookAt(
+                lightPositionVector, 
+                lightPositionVector + glm::vec3( 0.0,-1.0, 0.0), 
+                glm::vec3(0.0, 0.0,-1.0)
+            ), 
+            shadowMatricesData.viewMatrices[3]
+        );
+
+        Matrix4X4Float::ConvertGmToCells(
+            mShadowProjection * glm::lookAt(
+                lightPositionVector, 
+                lightPositionVector + glm::vec3( 0.0, 0.0, 1.0), 
+                glm::vec3(0.0,-1.0, 0.0)
+            ), 
+            shadowMatricesData.viewMatrices[4]
+        );
+
+        Matrix4X4Float::ConvertGmToCells(
+            mShadowProjection * glm::lookAt(
+                lightPositionVector, 
+                lightPositionVector + glm::vec3( 0.0, 0.0,-1.0), 
+                glm::vec3(0.0,-1.0, 0.0)
+            ), 
+            shadowMatricesData.viewMatrices[5]
+        );
+
+
+        RF::UpdateUniformBuffer(mShadowMatricesBuffer.buffers[0], CBlobAliasOf(shadowMatricesData));
+    }
+
+    mShadowRenderPass.BeginRenderPass(drawPass);
+
+    RF::BindDrawPipeline(drawPass, mShadowPassPipeline);
+
+    for (uint32_t i = 0; i < idsCount; ++i) {
+        auto const findResult = mShadowPassDrawableObjects.find(ids[i]);
+        if (findResult != mShadowPassDrawableObjects.end()) {
+            auto * drawableObject = findResult->second.get();
+            MFA_ASSERT(drawableObject != nullptr);
+            drawableObject->update(deltaTime);
+            drawableObject->draw(drawPass);
+        }
+    }
+
+    mShadowRenderPass.EndRenderPass(drawPass);
 }
 
 void PBRWithShadowPipeline::Render(
@@ -108,12 +208,15 @@ DrawableObjectId PBRWithShadowPipeline::AddGpuModel(RF::GpuModel & gpuModel) {
     auto const drawableObjectId = mNextDrawableObjectId ++;
 
     CreateDisplayPassDrawableObject(gpuModel, drawableObjectId);
+    CreateShadowPassDrawableObject(gpuModel, drawableObjectId);
     
     return drawableObjectId;
 }
 
 bool PBRWithShadowPipeline::RemoveGpuModel(DrawableObjectId const drawableObjectId) {
-    auto const deleteCount = mDisplayPassDrawableObjects.erase(drawableObjectId);  // Unique ptr should be deleted correctly
+    auto deleteCount = mDisplayPassDrawableObjects.erase(drawableObjectId);  // Unique ptr should be deleted correctly
+    MFA_ASSERT(deleteCount == 1);
+    deleteCount = mShadowPassDrawableObjects.erase(drawableObjectId);
     MFA_ASSERT(deleteCount == 1);
     return deleteCount;
 }
@@ -139,10 +242,11 @@ bool PBRWithShadowPipeline::UpdateViewProjectionBuffer(
 }
 
 void PBRWithShadowPipeline::UpdateLightPosition(float lightPosition[3]) {
-    if (IsEqual<3>(mLightPosition, lightPosition)) {
+    if (IsEqual<3>(mLightPosition, lightPosition) == false) {
         Copy<3>(mLightPosition, lightPosition);
         mNeedToUpdateDisplayLightBuffer = true;
         mNeedToUpdateShadowLightBuffer = true;
+        mNeedToUpdateShadowProjectionBuffer = true;
     }
 }
 
@@ -331,12 +435,7 @@ void PBRWithShadowPipeline::CreateShadowPassDrawableObject(RF::GpuModel & gpuMod
     MFA_ASSERT(mShadowPassDrawableObjects.find(drawableObjectId) == mShadowPassDrawableObjects.end());
     mShadowPassDrawableObjects[drawableObjectId] = std::unique_ptr<DrawableObject>(drawableObject);
 
-    const auto * primitiveInfoBuffer = drawableObject->createMultipleUniformBuffer(
-        "PrimitiveInfo", 
-        sizeof(PrimitiveInfo), 
-        drawableObject->getDescriptorSetCount()
-    );
-    MFA_ASSERT(primitiveInfoBuffer != nullptr);
+    // TODO We need a better drawable object or maybe we can use push constants instead
 
     const auto * modelTransformBuffer = drawableObject->createUniformBuffer(
         "ViewProjection", 
@@ -345,8 +444,6 @@ void PBRWithShadowPipeline::CreateShadowPassDrawableObject(RF::GpuModel & gpuMod
     MFA_ASSERT(modelTransformBuffer != nullptr);
 
     const auto & nodeTransformBuffer = drawableObject->getNodeTransformBuffer();
-
-    auto const & textures = drawableObject->getModel()->textures;
 
     auto const & mesh = drawableObject->getModel()->model.mesh;
 
@@ -357,11 +454,13 @@ void PBRWithShadowPipeline::CreateShadowPassDrawableObject(RF::GpuModel & gpuMod
             if (subMesh.primitives.empty() == false) {
                 for (auto const & primitive : subMesh.primitives) {
                     MFA_ASSERT(primitive.uniqueId >= 0);
+                    // TODO Remove this shit and use push constants instead
                     auto descriptorSet = drawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
                     MFA_VK_VALID_ASSERT(descriptorSet);
 
                     DescriptorSetSchema descriptorSetSchema {descriptorSet};
 
+                    // Vertex shader
                     {// ModelTransform
                         VkDescriptorBufferInfo modelTransformBufferInfo {};
                         modelTransformBufferInfo.buffer = modelTransformBuffer->buffers[0].buffer;
@@ -370,7 +469,6 @@ void PBRWithShadowPipeline::CreateShadowPassDrawableObject(RF::GpuModel & gpuMod
 
                         descriptorSetSchema.AddUniformBuffer(modelTransformBufferInfo);
                     }
-
                     {//NodeTransform
                         VkDescriptorBufferInfo nodeTransformBufferInfo {
                             .buffer = nodeTransformBuffer.buffers[node.subMeshIndex].buffer,
@@ -380,7 +478,6 @@ void PBRWithShadowPipeline::CreateShadowPassDrawableObject(RF::GpuModel & gpuMod
 
                         descriptorSetSchema.AddUniformBuffer(nodeTransformBufferInfo);
                     }
-
                     {// SkinJoints
                         auto const & skinBuffer = node.skinBufferIndex >= 0
                             ? drawableObject->getSkinTransformBuffer(node.skinBufferIndex)
@@ -394,87 +491,24 @@ void PBRWithShadowPipeline::CreateShadowPassDrawableObject(RF::GpuModel & gpuMod
                         descriptorSetSchema.AddUniformBuffer(skinTransformBufferInfo);
                     }
 
-                    {// Primitive
-                        VkDescriptorBufferInfo primitiveBufferInfo {};
-                        primitiveBufferInfo.buffer = primitiveInfoBuffer->buffers[primitive.uniqueId].buffer;
-                        primitiveBufferInfo.offset = 0;
-                        primitiveBufferInfo.range = primitiveInfoBuffer->bufferSize;
+                    // Geometry shader
+                    {// ShadowMatrices
+                        VkDescriptorBufferInfo bufferInfo {};
+                        bufferInfo.buffer = mShadowMatricesBuffer.buffers[0].buffer;
+                        bufferInfo.offset = 0;
+                        bufferInfo.range = mShadowMatricesBuffer.bufferSize;
 
-                        descriptorSetSchema.AddUniformBuffer(primitiveBufferInfo);
+                        descriptorSetSchema.AddUniformBuffer(bufferInfo);
                     }
 
-                    {// Update primitive buffer information
-                        PrimitiveInfo primitiveInfo {};
-                        primitiveInfo.hasBaseColorTexture = primitive.hasBaseColorTexture ? 1 : 0;
-                        primitiveInfo.metallicFactor = primitive.metallicFactor;
-                        primitiveInfo.roughnessFactor = primitive.roughnessFactor;
-                        primitiveInfo.hasMixedMetallicRoughnessOcclusionTexture = primitive.hasMixedMetallicRoughnessOcclusionTexture ? 1 : 0;
-                        primitiveInfo.hasNormalTexture = primitive.hasNormalTexture ? 1 : 0;
-                        primitiveInfo.hasEmissiveTexture = primitive.hasEmissiveTexture ? 1 : 0;
-                        primitiveInfo.hasSkin = primitive.hasSkin ? 1 : 0;
+                    // Fragment shader
+                    {// LightBuffer
+                        VkDescriptorBufferInfo bufferInfo {};
+                        bufferInfo.buffer = mShadowLightBuffer.buffers[0].buffer;
+                        bufferInfo.offset = 0;
+                        bufferInfo.range = mShadowLightBuffer.bufferSize;
 
-                        ::memcpy(primitiveInfo.baseColorFactor, primitive.baseColorFactor, sizeof(primitiveInfo.baseColorFactor));
-                        static_assert(sizeof(primitiveInfo.baseColorFactor) == sizeof(primitive.baseColorFactor));
-                        ::memcpy(primitiveInfo.emissiveFactor, primitive.emissiveFactor, sizeof(primitiveInfo.emissiveFactor));
-                        static_assert(sizeof(primitiveInfo.emissiveFactor) == sizeof(primitive.emissiveFactor));
-                        RF::UpdateUniformBuffer(
-                            primitiveInfoBuffer->buffers[primitive.uniqueId], 
-                            CBlobAliasOf(primitiveInfo)
-                        );
-                    }
-
-                    {// BaseColorTexture
-                        VkDescriptorImageInfo baseColorImageInfo {
-                            .sampler = mSamplerGroup->sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
-                            .imageView = primitive.hasBaseColorTexture
-                                    ? textures[primitive.baseColorTextureIndex].image_view()
-                                    : mErrorTexture->image_view(),
-                            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                        };
-
-                        descriptorSetSchema.AddCombinedImageSampler(baseColorImageInfo);
-                    }
-
-                    {// Metallic/RoughnessTexture
-                        VkDescriptorImageInfo metallicImageInfo {};
-                        metallicImageInfo.sampler = mSamplerGroup->sampler;          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
-                        metallicImageInfo.imageView = primitive.hasMixedMetallicRoughnessOcclusionTexture
-                                ? textures[primitive.mixedMetallicRoughnessOcclusionTextureIndex].image_view()
-                                : mErrorTexture->image_view();
-                        metallicImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-                        descriptorSetSchema.AddCombinedImageSampler(metallicImageInfo);
-                    }
-
-                    {// NormalTexture  
-                        VkDescriptorImageInfo normalImageInfo {};
-                        normalImageInfo.sampler = mSamplerGroup->sampler,
-                        normalImageInfo.imageView = primitive.hasNormalTexture
-                                ? textures[primitive.normalTextureIndex].image_view()
-                                : mErrorTexture->image_view();
-                        normalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-                        descriptorSetSchema.AddCombinedImageSampler(normalImageInfo);
-                    }
-
-                    {// EmissiveTexture
-                        VkDescriptorImageInfo emissiveImageInfo {};
-                        emissiveImageInfo.sampler = mSamplerGroup->sampler;
-                        emissiveImageInfo.imageView = primitive.hasEmissiveTexture
-                                ? textures[primitive.emissiveTextureIndex].image_view()
-                                : mErrorTexture->image_view();
-                        emissiveImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-                        descriptorSetSchema.AddCombinedImageSampler(emissiveImageInfo);
-                    }
-
-                    {// LightViewBuffer
-                        VkDescriptorBufferInfo lightViewBufferInfo {};
-                        lightViewBufferInfo.buffer = mDisplayLightViewBuffer.buffers[0].buffer;
-                        lightViewBufferInfo.offset = 0;
-                        lightViewBufferInfo.range = mDisplayLightViewBuffer.bufferSize;
-
-                        descriptorSetSchema.AddUniformBuffer(lightViewBufferInfo);
+                        descriptorSetSchema.AddUniformBuffer(bufferInfo);
                     }
 
                     descriptorSetSchema.UpdateDescriptorSets();
@@ -849,16 +883,36 @@ void PBRWithShadowPipeline::createShadowPassPipeline() {
         attributeDescription.offset = offsetof(AS::MeshVertex, jointWeights);
         inputAttributeDescriptions.emplace_back(attributeDescription);
     }
+
+    RB::CreateGraphicPipelineOptions graphicPipelineOptions {};
+    //graphicPipelineOptions.colorBlendAttachments.blendEnable = VK_TRUE;
+    //graphicPipelineOptions.colorBlendAttachments.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    //graphicPipelineOptions.colorBlendAttachments.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    //graphicPipelineOptions.colorBlendAttachments.colorBlendOp = VK_BLEND_OP_ADD;
+    //graphicPipelineOptions.colorBlendAttachments.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    //graphicPipelineOptions.colorBlendAttachments.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    //graphicPipelineOptions.colorBlendAttachments.alphaBlendOp = VK_BLEND_OP_ADD;
+    //graphicPipelineOptions.colorBlendAttachments.colorWriteMask = VK_COLOR_COMPONENT_R_BIT;
+    //graphicPipelineOptions.useStaticViewportAndScissor = false;
+
+    //graphicPipelineOptions.depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    //graphicPipelineOptions.depthStencil.depthTestEnable = VK_TRUE;
+    //graphicPipelineOptions.depthStencil.depthWriteEnable = VK_TRUE;
+    //graphicPipelineOptions.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+    //graphicPipelineOptions.depthStencil.depthBoundsTestEnable = VK_FALSE;
+    //graphicPipelineOptions.depthStencil.stencilTestEnable = VK_FALSE;
+    
     MFA_ASSERT(mShadowPassPipeline.isValid() == false);
-    mShadowPassPipeline = RF::CreateBasicDrawPipeline(
-        RF::GetDisplayRenderPass()->GetVkRenderPass(),
+    mShadowPassPipeline = RF::CreateDrawPipeline(
+        mShadowRenderPass.GetVkRenderPass(),
         static_cast<uint8_t>(shaders.size()), 
         shaders.data(),
         1,
         &mShadowPassDescriptorSetLayout,
         vertexInputBindingDescription,
         static_cast<uint8_t>(inputAttributeDescriptions.size()),
-        inputAttributeDescriptions.data()
+        inputAttributeDescriptions.data(),
+        graphicPipelineOptions
     );
 }
 
@@ -873,17 +927,29 @@ void PBRWithShadowPipeline::destroyPipeline() {
 void PBRWithShadowPipeline::createUniformBuffers() {
     mDisplayLightViewBuffer = RF::CreateUniformBuffer(sizeof(DisplayLightViewData), 1);
     mErrorBuffer = RF::CreateUniformBuffer(sizeof(DrawableObject::JointTransformBuffer), 1);
+
+    mShadowMatricesBuffer = RF::CreateUniformBuffer(sizeof(ShadowMatricesData), 1);
+    mShadowLightBuffer = RF::CreateUniformBuffer(sizeof(ShadowLightData), 1);
 }
 
 void PBRWithShadowPipeline::destroyUniformBuffers() {
     RF::DestroyUniformBuffer(mErrorBuffer);
     RF::DestroyUniformBuffer(mDisplayLightViewBuffer);
+    RF::DestroyUniformBuffer(mShadowMatricesBuffer);
+    RF::DestroyUniformBuffer(mShadowLightBuffer);
 
     for (const auto & [id, drawableObject] : mDisplayPassDrawableObjects) {
         MFA_ASSERT(drawableObject != nullptr);
         drawableObject->deleteUniformBuffers();
     }
     mDisplayPassDrawableObjects.clear();
+
+    for (const auto & [id, drawableObject] : mShadowPassDrawableObjects) {
+        MFA_ASSERT(drawableObject != nullptr);
+        drawableObject->deleteUniformBuffers();
+    }
+    mShadowPassDrawableObjects.clear();
+
 }
 
 }

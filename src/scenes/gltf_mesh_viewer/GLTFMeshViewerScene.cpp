@@ -131,7 +131,7 @@ void GLTFMeshViewerScene::Init() {
     mCamera.init();
     mCamera.EnableUI("", &mIsCameraWindowVisible);
 
-    mPbrPipeline.Init(&mSamplerGroup, &mErrorTexture, Z_FAR - Z_NEAR);
+    mPbrPipeline.Init(&mSamplerGroup, &mErrorTexture, Z_NEAR, Z_FAR);
 
     // Updating perspective mat once for entire application
     // Perspective
@@ -249,8 +249,9 @@ void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & draw
         MFA::Matrix4X4Float::ConvertMatrixToGlm(mCamera.getTransform(), transformMatrix);
 
         lightPosition = transformMatrix * lightPosition;
-        
-        mPbrPipeline.UpdateLightPosition(mLightPosition);
+
+        float transformedLightPosition[4] = {lightPosition[0], lightPosition[1], lightPosition[2]};
+        mPbrPipeline.UpdateLightPosition(transformedLightPosition);
         mPbrPipeline.UpdateLightColor(mLightColor);
 
         

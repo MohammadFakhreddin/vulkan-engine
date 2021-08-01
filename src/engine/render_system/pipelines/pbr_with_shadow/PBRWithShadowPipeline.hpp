@@ -63,7 +63,8 @@ public:
     void Init(
         RF::SamplerGroup * samplerGroup, 
         RB::GpuTexture * errorTexture,
-        float projectionMatrixFarToNearDistance
+        float projectionNear,
+        float projectionFar
     );
 
     void Shutdown();
@@ -113,41 +114,46 @@ private:
 
     void destroyUniformBuffers();
 
+    inline static constexpr float SHADOW_WIDTH = 1024;
+    inline static constexpr float SHADOW_HEIGHT = 1024;
+
     bool mIsInitialized = false;
+
+    RF::SamplerGroup * mSamplerGroup = nullptr; // TODO Each gltf subMesh has its own settings
+    RB::GpuTexture * mErrorTexture = nullptr;
+    RF::UniformBufferGroup mErrorBuffer {};
 
     // TODO Support multiple descriptorSetLayouts
     VkDescriptorSetLayout mDisplayPassDescriptorSetLayout {};
-    VkDescriptorSetLayout mShadowPassDescriptorSetLayout {};
-    
     RF::DrawPipeline mDisplayPassPipeline {};
     std::unordered_map<DrawableObjectId, std::unique_ptr<DrawableObject>> mDisplayPassDrawableObjects {};
+    RF::UniformBufferGroup mDisplayLightViewBuffer {};
     
+    VkDescriptorSetLayout mShadowPassDescriptorSetLayout {};
     RF::DrawPipeline mShadowPassPipeline {};
     std::unordered_map<DrawableObjectId, std::unique_ptr<DrawableObject>> mShadowPassDrawableObjects {};
-
-    RF::SamplerGroup * mSamplerGroup = nullptr; // TODO Each gltf subMesh has its own settings
-
-    RB::GpuTexture * mErrorTexture = nullptr;
-
-    RF::UniformBufferGroup mErrorBuffer {};
-
     RF::UniformBufferGroup mShadowMatricesBuffer {};
     RF::UniformBufferGroup mShadowLightBuffer {};
-
-    RF::UniformBufferGroup mDisplayLightViewBuffer {};
-
-    OffScreenRenderPass mOffScreenRenderPass {};
+    OffScreenRenderPass mShadowRenderPass {
+        static_cast<uint32_t>(SHADOW_WIDTH),
+        static_cast<uint32_t>(SHADOW_HEIGHT)
+    };
 
     float mLightPosition[3] {};
     float mCameraPosition[3] {};
     float mLightColor[3] {};
 
-    float mProjectionMatrixFarToNearDistance = 0.0f;
+    float mProjectionNear = 0.0f;
+    float mProjectionFar = 0.0f;
+    float mProjectionFarToNearDistance = 0.0f;
 
-    bool mNeedToUpdateDisplayLightBuffer = false;
-    bool mNeedToUpdateShadowLightBuffer = false;
+    bool mNeedToUpdateDisplayLightBuffer = true;
+    bool mNeedToUpdateShadowLightBuffer = true;
+    bool mNeedToUpdateShadowProjectionBuffer = true;
 
     DrawableObjectId mNextDrawableObjectId = 0;
+
+    glm::mat4 mShadowProjection;
 
 };
 

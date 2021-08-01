@@ -14,7 +14,7 @@ struct GSOutput
 };
 
 struct ShadowMatricesBuffer {
-    float4 viewMatrices[6];
+    float4x4 viewMatrices[6];
 };
 
 ConstantBuffer <ShadowMatricesBuffer> smBuffer : register (b3, space0);
