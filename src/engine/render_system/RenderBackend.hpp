@@ -121,7 +121,8 @@ VkImageView CreateImageView (
     VkFormat format, 
     VkImageAspectFlags aspectFlags,
     uint32_t mipmapCount,
-    uint32_t layerCount
+    uint32_t layerCount,
+    VkImageViewType viewType
 );
 
 void DestroyImageView(
@@ -228,7 +229,8 @@ ImageGroup CreateImage(
     VkFormat format, 
     VkImageTiling tiling, 
     VkImageUsageFlags usage, 
-    VkMemoryPropertyFlags properties
+    VkMemoryPropertyFlags properties,
+    VkImageCreateFlags imageCreateFlags = 0
 );
 
 void DestroyImage(
@@ -400,6 +402,8 @@ struct DepthImageGroup {
 struct CreateDepthImageOptions {
     uint16_t layerCount = 1;
     VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D;
+    VkImageCreateFlags imageCreateFlags = 0;
 };
 [[nodiscard]]
 DepthImageGroup CreateDepthImage(

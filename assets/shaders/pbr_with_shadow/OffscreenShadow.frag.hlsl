@@ -3,8 +3,8 @@ struct PSIn {
 };
 
 struct PSOut {
-    float color : SV_Target0;
-    // float depth : SV_Depth;
+    // float color : SV_Target0;
+    float depth : SV_Depth;
 };
 
 struct LightBuffer {
@@ -26,6 +26,6 @@ PSOut main(PSIn input) {
     float depth = lightDistance;
 
     PSOut output;
-    output.color = depth;
+    output.depth = depth;
 	return output;
 }

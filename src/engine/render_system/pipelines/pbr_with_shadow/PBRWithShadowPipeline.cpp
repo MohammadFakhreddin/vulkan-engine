@@ -84,7 +84,9 @@ void PBRWithShadowPipeline::Update(
     if (mNeedToUpdateDisplayLightBuffer) {
         mNeedToUpdateDisplayLightBuffer = false;
 
-        DisplayLightViewData displayLightViewData {};
+        DisplayLightViewData displayLightViewData {
+            .projectFarToNearDistance = mProjectionFarToNearDistance
+        };
         Copy<3>(displayLightViewData.cameraPosition, mCameraPosition);
         Copy<3>(displayLightViewData.lightColor, mLightColor);
         Copy<3>(displayLightViewData.lightPosition, mLightPosition);
@@ -423,6 +425,15 @@ void PBRWithShadowPipeline::CreateDisplayPassDrawableObject(RF::GpuModel & gpuMo
                         descriptorSetSchema.AddUniformBuffer(lightViewBufferInfo);
                     }
 
+                    {// ShadowMap
+                        VkDescriptorImageInfo shadowMapImageInfo {};
+                        shadowMapImageInfo.sampler = mSamplerGroup->sampler;
+                        shadowMapImageInfo.imageView = mShadowRenderPass.GetDepthImageGroup().imageView;
+                        shadowMapImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+                        descriptorSetSchema.AddCombinedImageSampler(shadowMapImageInfo);
+                    }
+
                     descriptorSetSchema.UpdateDescriptorSets();
                 }
             }
@@ -580,7 +591,7 @@ void PBRWithShadowPipeline::createDisplayPassDescriptorSetLayout() {
     }
     {// Emissive
         VkDescriptorSetLayoutBinding layoutBinding {};
-        layoutBinding.binding = 7;
+        layoutBinding.binding = static_cast<uint32_t>(bindings.size());;
         layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         layoutBinding.descriptorCount = 1;
         layoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -589,8 +600,17 @@ void PBRWithShadowPipeline::createDisplayPassDescriptorSetLayout() {
     }
     {// Light/View
         VkDescriptorSetLayoutBinding layoutBinding {};
-        layoutBinding.binding = 8;
+        layoutBinding.binding = static_cast<uint32_t>(bindings.size());;
         layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        layoutBinding.descriptorCount = 1;
+        layoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        
+        bindings.emplace_back(layoutBinding);
+    }
+    {// ShadowMap
+        VkDescriptorSetLayoutBinding layoutBinding {};
+        layoutBinding.binding = static_cast<uint32_t>(bindings.size());;
+        layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         layoutBinding.descriptorCount = 1;
         layoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
         

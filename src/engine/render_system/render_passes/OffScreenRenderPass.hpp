@@ -28,6 +28,9 @@ public:
 
     VkRenderPass GetVkRenderPass() override;
 
+    [[nodiscard]]
+    RB::DepthImageGroup const & GetDepthImageGroup() const;
+
 protected:
 
     void internalInit() override;
@@ -58,7 +61,7 @@ private:
 
     DisplayRenderPass * mDisplayRenderPass = nullptr;
 
-    RB::ColorImageGroup mColorImageGroup {};
+    //RB::ColorImageGroup mColorImageGroup {};
 };
 
 }

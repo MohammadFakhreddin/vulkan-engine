@@ -326,7 +326,8 @@ VkImageView CreateImageView (
     VkFormat const format, 
     VkImageAspectFlags const aspectFlags,
     uint32_t const mipmapCount,
-    uint32_t const layerCount
+    uint32_t const layerCount,
+    VkImageViewType const imageViewType
 ) {
     MFA_ASSERT(device != nullptr);
 
@@ -335,7 +336,7 @@ VkImageView CreateImageView (
     VkImageViewCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     createInfo.image = image;
-    createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    createInfo.viewType = imageViewType;
     createInfo.format = format;
     createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
     createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -604,7 +605,8 @@ ImageGroup CreateImage(
     VkFormat const format, 
     VkImageTiling const tiling, 
     VkImageUsageFlags const usage, 
-    VkMemoryPropertyFlags const properties
+    VkMemoryPropertyFlags const properties,
+    VkImageCreateFlags const imageCreateFlags
 ) {
     ImageGroup ret {};
 
@@ -622,6 +624,7 @@ ImageGroup CreateImage(
     image_info.usage = usage;
     image_info.samples = VK_SAMPLE_COUNT_1_BIT;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_info.flags = imageCreateFlags;
 
     VK_Check(vkCreateImage(device, &image_info, nullptr, &ret.image));
 
@@ -736,7 +739,8 @@ GpuTexture CreateTexture(
             vulkan_format,
             VK_IMAGE_ASPECT_COLOR_BIT,
             mipCount,
-            sliceCount
+            sliceCount,
+            VK_IMAGE_VIEW_TYPE_2D
         );
 
         gpuTexture.mImageGroup = imageGroup;
@@ -1310,7 +1314,8 @@ SwapChainGroup CreateSwapChain(
             ret.swapChainFormat,
             VK_IMAGE_ASPECT_COLOR_BIT,
             1,
-            1
+            1,
+            VK_IMAGE_VIEW_TYPE_2D
         );
         MFA_VK_VALID_ASSERT(ret.swapChainImageViews[image_index]);
     }
@@ -1352,7 +1357,8 @@ DepthImageGroup CreateDepthImage(
         depthFormat,
         VK_IMAGE_TILING_OPTIMAL, 
         options.usageFlags, 
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        options.imageCreateFlags
     );
     MFA_ASSERT(ret.imageGroup.image);
     MFA_ASSERT(ret.imageGroup.memory);
@@ -1362,7 +1368,8 @@ DepthImageGroup CreateDepthImage(
         depthFormat,
         VK_IMAGE_ASPECT_DEPTH_BIT,
         1,
-        options.layerCount
+        options.layerCount,
+        options.viewType
     );
     MFA_ASSERT(ret.imageView);
     return ret;
@@ -1405,7 +1412,8 @@ ColorImageGroup CreateColorImage(
         imageFormat,
         VK_IMAGE_ASPECT_COLOR_BIT,
         1,
-        options.layerCount
+        options.layerCount,
+        VK_IMAGE_VIEW_TYPE_2D
     );
     MFA_ASSERT(ret.imageView);
     return ret;

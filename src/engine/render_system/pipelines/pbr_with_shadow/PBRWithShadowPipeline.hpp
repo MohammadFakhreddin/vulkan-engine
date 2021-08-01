@@ -36,6 +36,7 @@ public:
         alignas(16) float lightPosition[3];
         alignas(16) float cameraPosition[3];
         alignas(16) float lightColor[3];
+        alignas(4) float projectFarToNearDistance;
     };
 
     struct ShadowMatricesData {
@@ -153,7 +154,7 @@ private:
 
     DrawableObjectId mNextDrawableObjectId = 0;
 
-    glm::mat4 mShadowProjection;
+    glm::mat4 mShadowProjection {};
 
 };
 

@@ -52,11 +52,15 @@ Texture2D emissiveTexture : register(s7, space0);
 
 struct LightViewBuffer {
     float3 lightPosition;
-    float3 camPos;
+    float3 camPos;              // It shouldn't be always 0, I might need to 
     float3 lightColor;          // Light color can be from 0 to inf (Sun for example can exceed 1.0f)
+    float nearToFarPlaneDistance;
 };
 
 ConstantBuffer <LightViewBuffer> lvBuff : register (b8, space0);
+
+sampler shadowMapSampler : register(s9, space0);
+TextureCube shadowMapTexture : register(s9, space0);
 
 const float PI = 3.14159265359;
 
@@ -183,6 +187,24 @@ float3 calculateNormal(PSIn input)
     return pixelNormal;
 }
 
+float ShadowCalculation(float3 fragPos)
+{
+    // get vector between fragment position and light position
+    // float3 fragToLight = fragPos - lvBuff.lightPosition;
+    float3 fragToLight = fragPos - lvBuff.lightPosition;    // TODO I think we should normalize this    
+    // use the light to fragment vector to sample from the depth map    
+    float closestDepth = shadowMapTexture.Sample(shadowMapSampler, fragToLight).r;
+    // it is currently in linear range between [0,1]. Re-transform back to original value
+    closestDepth *= lvBuff.nearToFarPlaneDistance;
+    // now get current linear depth as the length between the fragment and light position
+    float currentDepth = length(fragToLight);
+    // now test for shadows
+    float bias = 0.05; 
+    float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
+
+    return shadow;
+}
+
 PSOut main(PSIn input) {
     float4 baseColor = smBuff.hasBaseColorTexture == 1
         ? pow(baseColorTexture.Sample(baseColorSampler, input.baseColorTexCoord).rgba, 2.2f)
@@ -229,7 +251,13 @@ PSOut main(PSIn input) {
     } else {
         color += baseColor.rgb * smBuff.emissiveFactor * ambientOcclusion; // * 0.3
     }
-    color += Lo;
+    // color += Lo;
+    
+    float shadow = ShadowCalculation(input.worldPos);
+    color += (1.0 - shadow) * Lo;
+
+    // float shadow = ShadowCalculation(fs_in.FragPos);
+    // vec3 lighting = (ambient + (1.0 - shadow) * (diffuse + specular)) * color;  
 
     // reinhard tone mapping    --> Try to implement more advanced hdr (Passing exposure parameter is also a good option)
 	color = color / (color + float3(1.0f));
