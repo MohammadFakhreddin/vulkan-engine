@@ -8,6 +8,7 @@ struct VSIn {
 
 struct VSOut {
     float4 position : SV_POSITION;
+    float4 worldPosition : POSITION0;
 };
 
 // In this next shader (Geometry shader) Shadow matrices does the view projection part
@@ -47,12 +48,13 @@ VSOut main(VSIn input) {
     }
     float4x4 modelMat = mul(modelTransformBuffer.model, nodeTransformBuffer.model);
     float4x4 skinModelMat = mul(modelMat, skinMat);
-    // float4x4 modelViewMat = mul(modelTransformBuffer.view, skinModelMat);
+    float4x4 modelProjectionMat = mul(modelTransformBuffer.projection, modelTransformBuffer.view);
 
     // Position
-    float4 worldPosition = float4(input.position, 1.0f); // w is 1 because position is a coordinate
-    worldPosition = mul(skinModelMat, worldPosition);
-    output.position = worldPosition;
-    
+    float4 tempPosition = float4(input.position, 1.0f); // w is 1 because position is a coordinate
+    float4 worldPosition = mul(skinModelMat, tempPosition);;
+    output.worldPosition = worldPosition;
+    output.position = mul(modelProjectionMat, worldPosition);
+
     return output;
 }

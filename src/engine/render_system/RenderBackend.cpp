@@ -1402,7 +1402,8 @@ ColorImageGroup CreateColorImage(
         imageFormat,
         VK_IMAGE_TILING_OPTIMAL, 
         options.usageFlags, 
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        options.imageCreateFlags
     );
     MFA_ASSERT(ret.imageGroup.image);
     MFA_ASSERT(ret.imageGroup.memory);
@@ -1413,7 +1414,7 @@ ColorImageGroup CreateColorImage(
         VK_IMAGE_ASPECT_COLOR_BIT,
         1,
         options.layerCount,
-        VK_IMAGE_VIEW_TYPE_2D
+        options.viewType
     );
     MFA_ASSERT(ret.imageView);
     return ret;

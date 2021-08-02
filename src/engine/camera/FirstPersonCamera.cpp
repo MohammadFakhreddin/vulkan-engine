@@ -28,7 +28,7 @@ FirstPersonCamera::FirstPersonCamera(
     , mRotationSpeed(rotationSpeed)
     , mRecordUIObject([this]()->void{onUI();})
 {
-    mPosition.assign(position);
+    mViewPosition.assign(position);
     mEulerAngles.assign(eulerAngles);
 }
 
@@ -78,15 +78,15 @@ void FirstPersonCamera::onNewFrame(float const deltaTimeInSec) {
     auto const rightMove = -1.0f * IM::GetRightMove();
     auto const moveDistance = mMoveSpeed * deltaTimeInSec;
     
-    mPosition.setX(mPosition.getX() + forwardDirection.x * moveDistance * forwardMove);
-    mPosition.setY(mPosition.getY() + forwardDirection.y * moveDistance * forwardMove);
-    mPosition.setZ(mPosition.getZ() + forwardDirection.z * moveDistance * forwardMove);
-    mPosition.setW(0.0f);
+    mViewPosition.setX(mViewPosition.getX() + forwardDirection.x * moveDistance * forwardMove);
+    mViewPosition.setY(mViewPosition.getY() + forwardDirection.y * moveDistance * forwardMove);
+    mViewPosition.setZ(mViewPosition.getZ() + forwardDirection.z * moveDistance * forwardMove);
+    mViewPosition.setW(0.0f);
 
-    mPosition.setX(mPosition.getX() + rightDirection.x * moveDistance * rightMove);
-    mPosition.setY(mPosition.getY() + rightDirection.y * moveDistance * rightMove);
-    mPosition.setZ(mPosition.getZ() + rightDirection.z * moveDistance * rightMove);
-    mPosition.setW(0.0f);
+    mViewPosition.setX(mViewPosition.getX() + rightDirection.x * moveDistance * rightMove);
+    mViewPosition.setY(mViewPosition.getY() + rightDirection.y * moveDistance * rightMove);
+    mViewPosition.setZ(mViewPosition.getZ() + rightDirection.z * moveDistance * rightMove);
+    mViewPosition.setW(0.0f);
 
     updateTransform();
 }
@@ -148,7 +148,7 @@ Matrix4X4Float const & FirstPersonCamera::getTransform() const {
 }
 
 void FirstPersonCamera::forcePosition(float position[3]) {
-    mPosition.assign(position, 3);
+    mViewPosition.assign(position, 3);
     updateTransform();
 }
 
@@ -161,7 +161,7 @@ void FirstPersonCamera::forcePositionAndRotation(
     Vector3Float const & position, 
     Vector3Float const & eulerAngles
 ) {
-    mPosition.assign(position);
+    mViewPosition.assign(position);
     mEulerAngles.assign(eulerAngles);
     updateTransform();
 }
@@ -177,10 +177,16 @@ void FirstPersonCamera::DisableUI() {
     mRecordUIObject.Disable();
 }
 
+void FirstPersonCamera::GetPosition(float position[3]) const {
+    position[0] = -1 * mViewPosition.cells[0];
+    position[1] = -1 * mViewPosition.cells[1];
+    position[2] = -1 * mViewPosition.cells[2];
+}
+
 void FirstPersonCamera::onUI() {
     if (*mIsUIVisible == true) {
         UI::BeginWindow(mRecordWindowName.c_str());
-        UI::InputFloat3("Position", mPosition.cells);
+        UI::InputFloat3("Position", mViewPosition.cells);
         UI::InputFloat3("EulerAngles", mEulerAngles.cells);
         UI::EndWindow();
     }
@@ -200,9 +206,9 @@ void FirstPersonCamera::updateTransform() {
     Matrix4X4Float translationMatrix {};
     Matrix4X4Float::AssignTranslation(
         translationMatrix,
-        mPosition.getX(),
-        mPosition.getY(),
-        mPosition.getZ()
+        mViewPosition.getX(),
+        mViewPosition.getY(),
+        mViewPosition.getZ()
     );
 
     mTransformMatrix.multiply(rotationMatrix);

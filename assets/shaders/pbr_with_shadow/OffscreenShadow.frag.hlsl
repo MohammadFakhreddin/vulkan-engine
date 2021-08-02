@@ -1,15 +1,16 @@
 struct PSIn {
-    float4 position : SV_POSITION;                  // Refers to world position
+    float4 position : SV_POSITION;                  
+    float4 worldPosition: POSITION0;
 };
 
 struct PSOut {
     // float color : SV_Target0;
-    float depth : SV_Depth;
+    float depth : SV_DEPTH;
 };
 
 struct LightBuffer {
     float4 lightPosition;
-    float4 projectionMaximumDistance;       // abs(Far - near)
+    float projectionMaximumDistance;       // abs(Far - near)
 };
 
 ConstantBuffer <LightBuffer> lBuffer : register (b4, space0);
@@ -17,7 +18,7 @@ ConstantBuffer <LightBuffer> lBuffer : register (b4, space0);
 PSOut main(PSIn input) {
 
     // get distance between fragment and light source
-    float lightDistance = length(input.position.xyz - lBuffer.lightPosition.xyz);
+    float lightDistance = length(input.worldPosition.xyz - lBuffer.lightPosition.xyz);
     
     // map to [0;1] range by dividing by far_plane
     lightDistance = lightDistance / lBuffer.projectionMaximumDistance;
@@ -28,4 +29,8 @@ PSOut main(PSIn input) {
     PSOut output;
     output.depth = depth;
 	return output;
+
+    // PSOut output;
+    // output.color = 0.0f;
+	// return output;
 }

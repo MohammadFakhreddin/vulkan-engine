@@ -115,8 +115,8 @@ private:
 
     void destroyUniformBuffers();
 
-    inline static constexpr float SHADOW_WIDTH = 1024;
-    inline static constexpr float SHADOW_HEIGHT = 1024;
+    inline static constexpr float SHADOW_WIDTH = 1024 * 2;
+    inline static constexpr float SHADOW_HEIGHT = 1024 * 2;
 
     bool mIsInitialized = false;
 

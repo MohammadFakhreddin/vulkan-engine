@@ -238,23 +238,25 @@ void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & draw
         );
     }
     {// LightViewBuffer
-        auto lightPosition = glm::vec4(
-            mLightPosition[0], 
-            mLightPosition[1], 
-            mLightPosition[2], 
-            1.0f
-        );
+        //auto lightPosition = glm::vec4(
+        //    mLightPosition[0], 
+        //    mLightPosition[1], 
+        //    mLightPosition[2], 
+        //    1.0f
+        //);
 
-        glm::mat4x4 transformMatrix;
-        MFA::Matrix4X4Float::ConvertMatrixToGlm(mCamera.getTransform(), transformMatrix);
+        //glm::mat4x4 transformMatrix;
+        //MFA::Matrix4X4Float::ConvertMatrixToGlm(mCamera.getTransform(), transformMatrix);
 
-        lightPosition = transformMatrix * lightPosition;
+        //lightPosition = transformMatrix * lightPosition;
 
-        float transformedLightPosition[4] = {lightPosition[0], lightPosition[1], lightPosition[2]};
-        mPbrPipeline.UpdateLightPosition(transformedLightPosition);
+        //float transformedLightPosition[4] = {lightPosition[0], lightPosition[1], lightPosition[2]};
+        mPbrPipeline.UpdateLightPosition(mLightPosition);
+        float cameraPosition[3];
+        mCamera.GetPosition(cameraPosition);
+        mPbrPipeline.UpdateCameraPosition(cameraPosition);
         mPbrPipeline.UpdateLightColor(mLightColor);
 
-        
         // Position
         MFA::Matrix4X4Float translationMat {};
         MFA::Matrix4X4Float::AssignTranslation(

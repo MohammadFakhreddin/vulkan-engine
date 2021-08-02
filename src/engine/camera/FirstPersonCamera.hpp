@@ -58,6 +58,8 @@ public:
 
     void DisableUI() override;
 
+    void GetPosition(float position[3]) const;
+
 private:
 
     void onUI();
@@ -74,7 +76,7 @@ private:
     Matrix4X4Float mProjectionMatrix {};
     Matrix4X4Float mTransformMatrix {};
 
-    Vector4Float mPosition {};
+    Vector4Float mViewPosition {};
     Vector3Float mEulerAngles {};
 
     std::string mRecordWindowName {};

@@ -12,6 +12,10 @@ RB::DepthImageGroup const & OffScreenRenderPass::GetDepthImageGroup() const {
     return mDepthImageGroup;
 }
 
+//RB::ColorImageGroup const & OffScreenRenderPass::GetColorImageGroup() const {
+//    //return mColorImageGroup;
+//}
+
 void OffScreenRenderPass::internalInit() {
     MFA_ASSERT(mImageWidth > 0);
     MFA_ASSERT(mImageHeight > 0);
@@ -34,7 +38,9 @@ void OffScreenRenderPass::internalInit() {
     //    SHADOW_MAP_FORMAT,
     //    RB::CreateColorImageOptions {
     //        .layerCount = 6, // * light count
-    //        .usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
+    //        .usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+    //        .viewType = VK_IMAGE_VIEW_TYPE_CUBE,
+    //        .imageCreateFlags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT
     //    }
     //);
 
@@ -185,6 +191,35 @@ void OffScreenRenderPass::internalEndRenderPass(RF::DrawPass const & drawPass) {
             pipelineBarrier
         );
     }
+
+    //{// Color barrier
+    //    VkImageSubresourceRange const subResourceRange {
+    //        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+    //        .baseMipLevel = 0,
+    //        .levelCount = 1,
+    //        .baseArrayLayer = 0,
+    //        .layerCount = 6,
+    //    };
+
+    //    VkImageMemoryBarrier const pipelineBarrier {
+    //        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+    //        .srcAccessMask = 0,
+    //        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+    //        .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    //        .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    //        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    //        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    //        .image = mColorImageGroup.imageGroup.image,
+    //        .subresourceRange = subResourceRange
+    //    };
+    //    
+    //    RF::PipelineBarrier(
+    //        RF::GetDisplayRenderPass()->GetCommandBuffer(drawPass),
+    //        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+    //        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+    //        pipelineBarrier
+    //    );
+    //}
 }
 
 void OffScreenRenderPass::internalResize() {
@@ -210,7 +245,7 @@ void OffScreenRenderPass::createRenderPass() {
         .format = mDepthImageGroup.imageFormat,
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
         .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
         .initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
@@ -223,16 +258,15 @@ void OffScreenRenderPass::createRenderPass() {
     //};
 
     VkAttachmentReference depthReference {
-        .attachment = 0,//1,
+        .attachment = 0,
         .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
     
     std::vector<VkSubpassDescription> subPasses {
         VkSubpassDescription {
             .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-            //.colorAttachmentCount = 1,
-            //.pColorAttachments = &colorReference,
             .colorAttachmentCount = 0,
+            //.pColorAttachments = &colorReference,
             .pDepthStencilAttachment = &depthReference,
         }
     };

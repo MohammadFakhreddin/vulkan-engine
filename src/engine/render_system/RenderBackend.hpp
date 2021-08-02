@@ -425,6 +425,8 @@ struct ColorImageGroup {
 struct CreateColorImageOptions {
     uint16_t layerCount = 1;
     VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D;
+    VkImageCreateFlags imageCreateFlags = 0;
 };
 
 [[nodiscard]]

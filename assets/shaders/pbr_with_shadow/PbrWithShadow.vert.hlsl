@@ -72,10 +72,11 @@ VSOut main(VSIn input) {
     float4 tempPosition = float4(input.position, 1.0f); // w is 1 because position is a coordinate
     tempPosition = mul(modelViewMat, tempPosition);
     
-    float4 worldPos = tempPosition;
-    float4 position = mul(modelTransformBuffer.projection, worldPos);
+    float4 position = mul(modelTransformBuffer.projection, tempPosition);
     output.position = position;
-    output.worldPos = worldPos.xyz;
+    
+    float4 tempPosition2 = float4(input.position, 1.0f); // w is 1 because position is a coordinate
+    output.worldPos = mul(skinModelMat, tempPosition2).xyz;
 
     // BaseColor
     output.baseColorTexCoord = input.baseColorTexCoord;
@@ -85,12 +86,14 @@ VSOut main(VSIn input) {
     
     // Normals
 	float4 tempTangent = input.tangent;
-    tempTangent = mul(modelViewMat, tempTangent);
+    // tempTangent = mul(modelViewMat, tempTangent);
+    tempTangent = mul(skinModelMat, tempTangent);
     
     float3 worldTangent = normalize(tempTangent.xyz);
 
 	float4 tempNormal = float4(input.normal, 0.0);  // W is zero beacuas normal is a vector
-    tempNormal = mul(modelViewMat, tempNormal);
+    // tempNormal = mul(modelViewMat, tempNormal);
+    tempNormal = mul(skinModelMat, tempNormal);
     
     float3 worldNormal = normalize(tempNormal.xyz);
     

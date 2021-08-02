@@ -97,7 +97,7 @@ void PBRWithShadowPipeline::Update(
         mNeedToUpdateShadowLightBuffer = false;
     
         ShadowLightData shadowLightData {
-            .projectionMatrixDistance = {mProjectionFarToNearDistance}
+            .projectionMatrixDistance = mProjectionFarToNearDistance
         };
         Copy<3>(shadowLightData.lightPosition, mLightPosition);
         RF::UpdateUniformBuffer(mShadowLightBuffer.buffers[0], CBlobAliasOf(shadowLightData));
@@ -227,19 +227,35 @@ bool PBRWithShadowPipeline::UpdateViewProjectionBuffer(
     DrawableObjectId const drawableObjectId, 
     ModelViewProjectionData const & viewProjectionData
 ) {
-    auto const findResult = mDisplayPassDrawableObjects.find(drawableObjectId);
-    if (findResult == mDisplayPassDrawableObjects.end()) {
-        MFA_ASSERT(false);
-        return false;
+    // We should share buffers
+    {// Display
+        auto const findResult = mDisplayPassDrawableObjects.find(drawableObjectId);
+        if (findResult == mDisplayPassDrawableObjects.end()) {
+            MFA_ASSERT(false);
+            return false;
+        }
+        auto * drawableObject = findResult->second.get();
+        MFA_ASSERT(drawableObject != nullptr);
+
+        drawableObject->updateUniformBuffer(
+            "ViewProjection", 
+            CBlobAliasOf(viewProjectionData)
+        );
     }
-    auto * drawableObject = findResult->second.get();
-    MFA_ASSERT(drawableObject != nullptr);
+    {// Shadow
+        auto const findResult = mShadowPassDrawableObjects.find(drawableObjectId);
+        if (findResult == mShadowPassDrawableObjects.end()) {
+            MFA_ASSERT(false);
+            return false;
+        }
+        auto * drawableObject = findResult->second.get();
+        MFA_ASSERT(drawableObject != nullptr);
 
-    drawableObject->updateUniformBuffer(
-        "ViewProjection", 
-        CBlobAliasOf(viewProjectionData)
-    );
-
+        drawableObject->updateUniformBuffer(
+            "ViewProjection", 
+            CBlobAliasOf(viewProjectionData)
+        );
+    }
     return true;
 }
 

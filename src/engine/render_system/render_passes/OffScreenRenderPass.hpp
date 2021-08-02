@@ -31,6 +31,9 @@ public:
     [[nodiscard]]
     RB::DepthImageGroup const & GetDepthImageGroup() const;
 
+    //[[nodiscard]]
+    //RB::ColorImageGroup const & GetColorImageGroup() const;
+
 protected:
 
     void internalInit() override;

@@ -148,8 +148,7 @@ float3 BRDF(
             + linearAttenuation * distance
             + quadraticAttenuation * distance * distance
         );
-    // float attenuation = attenuationFactor / (distance * distance);
-    float3 radiance   = lvBuff.lightColor * attenuation;        
+    float3 radiance = lvBuff.lightColor * attenuation;        
     
     // cook-torrance brdf
     float NDF = D_GGX(dotNH, roughness);        
@@ -187,11 +186,11 @@ float3 calculateNormal(PSIn input)
     return pixelNormal;
 }
 
-float ShadowCalculation(float3 fragPos)
+float shadowCalculation(float3 fragPos, float3 lightPosition)
 {
     // get vector between fragment position and light position
     // float3 fragToLight = fragPos - lvBuff.lightPosition;
-    float3 fragToLight = fragPos - lvBuff.lightPosition;    // TODO I think we should normalize this    
+    float3 fragToLight = fragPos - lightPosition;    // TODO I think we should normalize this    
     // use the light to fragment vector to sample from the depth map    
     float closestDepth = shadowMapTexture.Sample(shadowMapSampler, fragToLight).r;
     // it is currently in linear range between [0,1]. Re-transform back to original value
@@ -239,7 +238,9 @@ PSOut main(PSIn input) {
 	float3 Lo = float3(0.0, 0.0, 0.0);
 	for (int i = 0; i < 1; i++) {   // Light count
 		float3 L = normalize(lvBuff.lightPosition.xyz - input.worldPos);
-		Lo += BRDF(L, V, N, metallic, roughness, baseColor.rgb, input.worldPos);
+        // TODO Use L parameter
+        float shadow = shadowCalculation(input.worldPos, lvBuff.lightPosition.xyz);
+    	Lo += BRDF(L, V, N, metallic, roughness, baseColor.rgb, input.worldPos) * (1.0 - shadow);
 	};
 
     // Combine with ambient
@@ -251,14 +252,8 @@ PSOut main(PSIn input) {
     } else {
         color += baseColor.rgb * smBuff.emissiveFactor * ambientOcclusion; // * 0.3
     }
-    // color += Lo;
+    color += Lo;
     
-    float shadow = ShadowCalculation(input.worldPos);
-    color += (1.0 - shadow) * Lo;
-
-    // float shadow = ShadowCalculation(fs_in.FragPos);
-    // vec3 lighting = (ambient + (1.0 - shadow) * (diffuse + specular)) * color;  
-
     // reinhard tone mapping    --> Try to implement more advanced hdr (Passing exposure parameter is also a good option)
 	color = color / (color + float3(1.0f));
     // Gamma correct
@@ -267,4 +262,17 @@ PSOut main(PSIn input) {
     PSOut output;
     output.color = float4(color, 1.0);
 	return output;
+
+    // // get vector between fragment position and light position
+    // // float3 fragToLight = fragPos - lvBuff.lightPosition;
+    // float3 fragToLight = input.worldPos - lvBuff.lightPosition;    // TODO I think we should normalize this    
+    // // use the light to fragment vector to sample from the depth map    
+    // float closestDepth = shadowMapTexture.Sample(shadowMapSampler, fragToLight).r;
+    // // it is currently in linear range between [0,1]. Re-transform back to original value
+    // closestDepth *= lvBuff.nearToFarPlaneDistance;
+
+    // PSOut output;
+    // output.color = float4(closestDepth / lvBuff.nearToFarPlaneDistance, 0.0f, 0.0f , 1.0);
+	// return output;
+
 }
