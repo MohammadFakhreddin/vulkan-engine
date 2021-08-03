@@ -75,6 +75,8 @@
 		D00B345182DA40538646456E /* imgui_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FB3B4AEF7F444EC9949B0841 /* imgui_tables.cpp */; };
 		D09CA8820282453EB02DE69E /* BedrockPath.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 395999F6E65E4FE4811FFBBD /* BedrockPath.cpp */; };
 		D6479B161DE345F1BF8C2852 /* BedrockPlatforms.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5002BDC19A394463B09133F0 /* BedrockPlatforms.cpp */; };
+		D6A3807626B9C1ED009DA093 /* assets in Resources */ = {isa = PBXBuildFile; fileRef = D6A3807526B9C1ED009DA093 /* assets */; };
+		D6A3807826B9C258009DA093 /* Storyboard.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D6A3807726B9C258009DA093 /* Storyboard.storyboard */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -269,6 +271,8 @@
 		CED00EC7F4574B979D9A7584 /* PBRModelPipeline.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = PBRModelPipeline.cpp; path = src/engine/render_system/pipelines/pbr/PBRModelPipeline.cpp; sourceTree = SOURCE_ROOT; };
 		D0FFDB226D4949B684BB70A7 /* TexturedSphereScene.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = TexturedSphereScene.cpp; path = src/scenes/textured_sphere/TexturedSphereScene.cpp; sourceTree = SOURCE_ROOT; };
 		D5A5B60BDBC449B29B38CA7C /* CMakeLists.txt */ = {isa = PBXFileReference; explicitFileType = sourcecode.text; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = SOURCE_ROOT; };
+		D6A3807526B9C1ED009DA093 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = "<group>"; };
+		D6A3807726B9C258009DA093 /* Storyboard.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = Storyboard.storyboard; sourceTree = "<group>"; };
 		D82E076890E544B3B4323396 /* Importer.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = Importer.cpp; path = src/tools/Importer.cpp; sourceTree = SOURCE_ROOT; };
 		DA63846AFF724278B016F9D1 /* TexturedSphereScene.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = TexturedSphereScene.hpp; path = src/scenes/textured_sphere/TexturedSphereScene.hpp; sourceTree = SOURCE_ROOT; };
 		DAE16F3C081146E18C8C2B67 /* BasePipeline.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = BasePipeline.hpp; path = src/engine/render_system/pipelines/BasePipeline.hpp; sourceTree = SOURCE_ROOT; };
@@ -416,6 +420,7 @@
 		4C11CEF99B254A98A33D1322 = {
 			isa = PBXGroup;
 			children = (
+				D6A3807526B9C1ED009DA093 /* assets */,
 				319405F2726849DB9F3B6CD3 /* Libs */,
 				BA74E245240148BA84F1940E /* MFaEngine */,
 				6E71AD7EBA354810ABC2E486 /* Scenes */,
@@ -526,6 +531,7 @@
 				DC7EDE5CB3344BC5AA57E35B /* Header Files */,
 				07D98764D7D9420793028A05 /* Resources */,
 				80AC07929A754979AB9A2857 /* CMakeLists.txt */,
+				D6A3807726B9C258009DA093 /* Storyboard.storyboard */,
 			);
 			name = MFaEngine;
 			sourceTree = "<group>";
@@ -682,6 +688,11 @@
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 1250;
+				TargetAttributes = {
+					9AA24BF539F74B20A220AF78 = {
+						DevelopmentTeam = 9U43KQLKUS;
+					};
+				};
 			};
 			buildConfigurationList = 0F314DE2893E4CA78DD4E27D /* Build configuration list for PBXProject "MFaEngine" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -711,6 +722,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D6A3807626B9C1ED009DA093 /* assets in Resources */,
+				D6A3807826B9C258009DA093 /* Storyboard.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1327,6 +1340,7 @@
 					x86_64,
 				);
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 9U43KQLKUS;
 				EXECUTABLE_PREFIX = "";
 				EXECUTABLE_SUFFIX = "";
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
@@ -1419,6 +1433,7 @@
 					x86_64,
 				);
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 9U43KQLKUS;
 				EXECUTABLE_PREFIX = "";
 				EXECUTABLE_SUFFIX = "";
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
@@ -1485,6 +1500,7 @@
 					x86_64,
 				);
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 9U43KQLKUS;
 				EXECUTABLE_PREFIX = "";
 				EXECUTABLE_SUFFIX = "";
 				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
