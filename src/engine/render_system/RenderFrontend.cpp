@@ -57,11 +57,11 @@ struct State {
     VkSurfaceCapabilitiesKHR surfaceCapabilities {};
     uint32_t swapChainImageCount = 0;
     DisplayRenderPass displayRenderPass {};
+    int nextEventListenerId = 0;
 #ifdef __DESKTOP__
     // CreateWindow
     MSDL::SDL_Window * window = nullptr;
     // Event watches
-    int nextEventListenerId = 0;
     std::vector<SDLEventWatchGroup> sdlEventListeners {};
 #elif defined(__ANDROID__)
     ANativeWindow * window = nullptr;
