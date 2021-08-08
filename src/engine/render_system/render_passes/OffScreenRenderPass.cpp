@@ -273,7 +273,7 @@ void OffScreenRenderPass::createRenderPass() {
 
     // TODO Are these dependencies correct ?
     // Subpass dependencies for layout transitions
-    std::array<VkSubpassDependency, 2> dependencies {
+    std::vector<VkSubpassDependency> dependencies {
         VkSubpassDependency {
             .srcSubpass = VK_SUBPASS_EXTERNAL,
             .dstSubpass = 0,

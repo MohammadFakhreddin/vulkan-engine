@@ -57,11 +57,11 @@ struct State {
     VkSurfaceCapabilitiesKHR surfaceCapabilities {};
     uint32_t swapChainImageCount = 0;
     DisplayRenderPass displayRenderPass {};
+    int nextEventListenerId = 0;
 #ifdef __DESKTOP__
     // CreateWindow
     MSDL::SDL_Window * window = nullptr;
     // Event watches
-    int nextEventListenerId = 0;
     std::vector<SDLEventWatchGroup> sdlEventListeners {};
 #elif defined(__ANDROID__)
     ANativeWindow * window = nullptr;
@@ -184,7 +184,9 @@ bool Init(InitParams const & params) {
     {// FindPhysicalDevice
         auto const findPhysicalDeviceResult = RB::FindPhysicalDevice(state->vk_instance); // TODO Check again for retry count number
         state->physicalDevice = findPhysicalDeviceResult.physicalDevice;
+        // I'm not sure if this is a correct thing to do but currently I'm enabling all gpu features.
         state->physicalDeviceFeatures = findPhysicalDeviceResult.physicalDeviceFeatures;
+        MFA_REQUIRE(state->physicalDeviceFeatures.geometryShader == true);
     }
 
     // Find surface capabilities

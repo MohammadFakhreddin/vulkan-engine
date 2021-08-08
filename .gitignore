@@ -101,8 +101,12 @@ build/*
 build64/*
 build64
 build
-buildIOS
-buildIOS/*
+# buildIOS
+# buildIOS/*
+Debug-iphoneos
+Debug-iphonesimulator
+MFaEngine.build
+Release-iphoneos
 
 android/local.properties
 
