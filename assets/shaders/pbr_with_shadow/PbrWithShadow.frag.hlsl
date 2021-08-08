@@ -73,6 +73,8 @@ const float quadraticAttenuation = 1.0f / (lightSphereRadius * lightSphereRadius
 
 const float alphaMaskCutoff = 0.01f;
 
+const float ambientOcclusion = 0.02f;
+
 // This function computes ratio between amount of light that reflect and refracts
 // Reflection contrbutes to specular while refraction contributes to diffuse light
 /*
@@ -203,7 +205,7 @@ float shadowCalculation(float3 fragPos, float3 lightPosition)
 
     return shadow;
 }
-
+// TODO Strength in ambient occulusion and Scale for normals
 PSOut main(PSIn input) {
     float4 baseColor = smBuff.hasBaseColorTexture == 1
         ? pow(baseColorTexture.Sample(baseColorSampler, input.baseColorTexCoord).rgba, 2.2f)
@@ -217,12 +219,11 @@ PSOut main(PSIn input) {
     float metallic = 0.0f;
     float roughness = 0.0f;
     // TODO: Is usages of occlusion correct ?
-    float ambientOcclusion = 0.3f;
+    // TODO Handle occlusionTexture and its strength
     if (smBuff.hasMetallicRoughnessTexture == 1) {
         float4 metallicRoughness = metallicRoughnessTexture.Sample(metallicRoughnessSampler, input.metallicRoughnessTexCoord);
         metallic = metallicRoughness.b;
         roughness = metallicRoughness.g;
-        ambientOcclusion = metallicRoughness.r;
     } else {
         metallic = smBuff.metallicFactor;
         roughness = smBuff.roughnessFactor;
@@ -248,10 +249,11 @@ PSOut main(PSIn input) {
     
     if (smBuff.hasEmissiveTexture == 1) {
         float3 ao = emissiveTexture.Sample(emissiveSampler, input.emissiveTexCoord);
-        color += float3(baseColor.r * ao.r, baseColor.g * ao.g, baseColor.b * ao.b) * ambientOcclusion;//* 0.3;
+        color += float3(baseColor.r * ao.r, baseColor.g * ao.g, baseColor.b * ao.b) * smBuff.emissiveFactor;
     } else {
-        color += baseColor.rgb * smBuff.emissiveFactor * ambientOcclusion; // * 0.3
+        color += baseColor.rgb * smBuff.emissiveFactor; // * 0.3
     }
+    color += baseColor.rgb * ambientOcclusion;
     color += Lo;
     
     // reinhard tone mapping    --> Try to implement more advanced hdr (Passing exposure parameter is also a good option)
