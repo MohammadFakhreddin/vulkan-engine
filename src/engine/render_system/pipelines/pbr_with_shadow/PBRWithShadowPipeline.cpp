@@ -921,6 +921,8 @@ void PBRWithShadowPipeline::createShadowPassPipeline() {
     }
 
     RB::CreateGraphicPipelineOptions graphicPipelineOptions {};
+    graphicPipelineOptions.cullMode = VK_CULL_MODE_NONE;
+            
     //graphicPipelineOptions.colorBlendAttachments.blendEnable = VK_TRUE;
     //graphicPipelineOptions.colorBlendAttachments.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
     //graphicPipelineOptions.colorBlendAttachments.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;

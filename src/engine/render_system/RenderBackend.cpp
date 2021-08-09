@@ -1673,10 +1673,9 @@ GraphicPipelineGroup CreateGraphicPipeline(
     // Note: depth bias and using polygon modes other than fill require changes to logical device creation (device features)
     VkPipelineRasterizationStateCreateInfo rasterization_create_info = {};
     rasterization_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    // TODO Might need to ask some of them from outside
     rasterization_create_info.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterization_create_info.cullMode = VK_CULL_MODE_NONE;
-    rasterization_create_info.frontFace = options.fontFace;
+    rasterization_create_info.cullMode = options.cullMode;
+    rasterization_create_info.frontFace = options.frontFace;
     rasterization_create_info.depthBiasEnable = VK_FALSE;
     rasterization_create_info.lineWidth = 1.0f;
     rasterization_create_info.depthClampEnable = VK_FALSE;

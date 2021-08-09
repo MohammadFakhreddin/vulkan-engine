@@ -291,7 +291,7 @@ void Init() {
         dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
         
         RB::CreateGraphicPipelineOptions pipelineOptions {};
-        pipelineOptions.fontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        pipelineOptions.frontFace = VK_FRONT_FACE_CLOCKWISE;
         pipelineOptions.dynamicStateCreateInfo = &dynamicStateCreateInfo;
         pipelineOptions.depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
         pipelineOptions.depthStencil.depthTestEnable = false;
@@ -308,6 +308,7 @@ void Init() {
         pipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
         pipelineOptions.pushConstantRanges = pushConstantRanges.data();
         pipelineOptions.useStaticViewportAndScissor = false;
+        pipelineOptions.cullMode = VK_CULL_MODE_NONE;
         
         state->drawPipeline = RF::CreateDrawPipeline(
             RF::GetDisplayRenderPass()->GetVkRenderPass(),
