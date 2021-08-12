@@ -89,12 +89,12 @@ DrawPipeline CreateDrawPipeline(
 void DestroyDrawPipeline(DrawPipeline & draw_pipeline);
 
 [[nodiscard]]
-std::vector<VkDescriptorSet> CreateDescriptorSets(
+RB::DescriptorSetGroup CreateDescriptorSets(
     VkDescriptorSetLayout descriptorSetLayout
 );
 
 [[nodiscard]]
-std::vector<VkDescriptorSet> CreateDescriptorSets(
+RB::DescriptorSetGroup CreateDescriptorSets(
     uint32_t descriptorSetCount,
     VkDescriptorSetLayout descriptorSetLayout
 );

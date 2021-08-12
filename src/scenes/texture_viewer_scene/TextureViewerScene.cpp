@@ -83,7 +83,7 @@ void TextureViewerScene::Shutdown() {
     RF::DestroySampler(mSamplerGroup);
     RF::DestroyGpuModel(mGpuModel);
     Importer::FreeModel(&mGpuModel.model);
-    mDrawableObject->deleteUniformBuffers();
+    mDrawableObject->DeleteUniformBuffers();
 }
 
 void TextureViewerScene::OnDraw(
@@ -125,7 +125,7 @@ void TextureViewerScene::OnDraw(
         ::memcpy(mViewProjectionBuffer.view, transformMat.cells, sizeof(transformMat.cells));
         static_assert(sizeof(transformMat.cells) == sizeof(mViewProjectionBuffer.view));
 
-        mDrawableObject->updateUniformBuffer(
+        mDrawableObject->UpdateUniformBuffer(
             "viewProjection",
             MFA::CBlobAliasOf(mViewProjectionBuffer)
         );
@@ -135,14 +135,19 @@ void TextureViewerScene::OnDraw(
     {
         mImageOptionsBuffer.mipLevel = static_cast<float>(mMipLevel);
 
-        mDrawableObject->updateUniformBuffer(
+        mDrawableObject->UpdateUniformBuffer(
             "imageOptions",
             MFA::CBlobAliasOf(mImageOptionsBuffer)
         );
     }
 
-    mDrawableObject->update(deltaTimeInSec);
-    mDrawableObject->draw(drawPass);
+    mDrawableObject->Update(deltaTimeInSec);
+    mDrawableObject->Draw(drawPass, [&drawPass, this](AS::MeshPrimitive const & primitive)-> void {
+        RF::BindDescriptorSet(
+            drawPass, 
+            mDrawableObject->GetDescriptorSetGroup("DisplayPipeline")->descriptorSets[0]
+        );
+    });
 }
 
 
@@ -268,18 +273,15 @@ void TextureViewerScene::createModel() {
 
 void TextureViewerScene::createDrawableObject() {
     auto const & cpuModel = mGpuModel.model;
-    mDrawableObject = std::make_unique<MFA::DrawableObject> (
-        mGpuModel,
-        mDescriptorSetLayout
-    );
+    mDrawableObject = std::make_unique<MFA::DrawableObject> (mGpuModel);
 
-    auto const * viewProjectionBuffer = mDrawableObject->createUniformBuffer(
+    auto const * viewProjectionBuffer = mDrawableObject->CreateUniformBuffer(
         "viewProjection", 
         sizeof(ViewProjectionBuffer)
     );
     MFA_ASSERT(viewProjectionBuffer != nullptr);
 
-    auto const * imageOptionsBuffer = mDrawableObject->createUniformBuffer(
+    auto const * imageOptionsBuffer = mDrawableObject->CreateUniformBuffer(
         "imageOptions", 
         sizeof(ImageOptionsBuffer)
     );
@@ -288,7 +290,11 @@ void TextureViewerScene::createDrawableObject() {
     MFA_ASSERT(cpuModel.mesh.GetSubMeshCount() == 1);
     MFA_ASSERT(cpuModel.mesh.GetSubMeshByIndex(0).primitives.size() == 1);
     auto const & primitive = cpuModel.mesh.GetSubMeshByIndex(0).primitives[0];
-    auto const descriptorSet = mDrawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
+    auto const descriptorSet = mDrawableObject->CreateDescriptorSetGroup(
+        "DisplayPass", 
+        mDescriptorSetLayout, 
+        1
+    );
 
     std::vector<VkWriteDescriptorSet> writeInfo {};
 
@@ -300,7 +306,7 @@ void TextureViewerScene::createDrawableObject() {
 
         VkWriteDescriptorSet writeDescriptorSet {};
         writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        writeDescriptorSet.dstSet = descriptorSet,
+        writeDescriptorSet.dstSet = descriptorSet.descriptorSets[0],
         writeDescriptorSet.dstBinding = static_cast<uint32_t>(writeInfo.size()),
         writeDescriptorSet.dstArrayElement = 0,
         writeDescriptorSet.descriptorCount = 1,
@@ -318,7 +324,7 @@ void TextureViewerScene::createDrawableObject() {
 
         VkWriteDescriptorSet writeDescriptorSet {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = descriptorSet,
+            .dstSet = descriptorSet.descriptorSets[0],
             .dstBinding = static_cast<uint32_t>(writeInfo.size()),
             .dstArrayElement = 0,
             .descriptorCount = 1,
@@ -336,7 +342,7 @@ void TextureViewerScene::createDrawableObject() {
 
         VkWriteDescriptorSet writeDescriptorSet {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .dstSet = descriptorSet,
+            .dstSet = descriptorSet.descriptorSets[0],
             .dstBinding = static_cast<uint32_t>(writeInfo.size()),
             .dstArrayElement = 0,
             .descriptorCount = 1,

@@ -71,7 +71,7 @@ const float constantAttenuation = 1.0f;
 const float linearAttenuation = 2.0f / lightSphereRadius;
 const float quadraticAttenuation = 1.0f / (lightSphereRadius * lightSphereRadius);
 
-const float alphaMaskCutoff = 0.01f;
+const float alphaMaskCutoff = 0.001f;
 
 const float ambientOcclusion = 0.02f;
 

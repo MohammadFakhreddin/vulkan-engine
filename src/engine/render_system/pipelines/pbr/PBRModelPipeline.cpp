@@ -53,8 +53,13 @@ void MFA::PBRModelPipeline::Render(
         if (findResult != mDrawableObjects.end()) {
             auto * drawableObject = findResult->second.get();
             MFA_ASSERT(drawableObject != nullptr);
-            drawableObject->update(deltaTime);
-            drawableObject->draw(drawPass);
+            drawableObject->Update(deltaTime);
+            drawableObject->Draw(drawPass, [&drawPass, &drawableObject](AS::MeshPrimitive const & primitive)-> void {
+                RF::BindDescriptorSet(
+                    drawPass, 
+                    drawableObject->GetDescriptorSetGroup("DisplayPipeline")->descriptorSets[primitive.uniqueId]
+                );
+            });
         }
     }
 }
@@ -65,28 +70,34 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::AddGpuModel(RF::GpuModel & gpuModel
 
     auto const drawableId = mNextDrawableId++;
 
-    auto * drawableObject = new DrawableObject(gpuModel, mDescriptorSetLayout);
+    auto * drawableObject = new DrawableObject(gpuModel);
     MFA_ASSERT(mDrawableObjects.find(drawableId) == mDrawableObjects.end());
     mDrawableObjects[drawableId] = std::unique_ptr<DrawableObject>(drawableObject);
 
-    const auto * primitiveInfoBuffer = drawableObject->createMultipleUniformBuffer(
+    const auto * primitiveInfoBuffer = drawableObject->CreateMultipleUniformBuffer(
         "PrimitiveInfo", 
         sizeof(PrimitiveInfo), 
-        drawableObject->getDescriptorSetCount()
+        drawableObject->GetPrimitiveCount()
     );
     MFA_ASSERT(primitiveInfoBuffer != nullptr);
 
-    const auto * modelTransformBuffer = drawableObject->createUniformBuffer(
+    const auto * modelTransformBuffer = drawableObject->CreateUniformBuffer(
         "ViewProjection", 
         sizeof(ViewProjectionData)
     );
     MFA_ASSERT(modelTransformBuffer != nullptr);
 
-    const auto & nodeTransformBuffer = drawableObject->getNodeTransformBuffer();
+    const auto & nodeTransformBuffer = drawableObject->GetNodeTransformBuffer();
 
-    auto const & textures = drawableObject->getModel()->textures;
+    auto const & textures = drawableObject->GetModel()->textures;
 
-    auto const & mesh = drawableObject->getModel()->model.mesh;
+    auto const & mesh = drawableObject->GetModel()->model.mesh;
+
+    auto const descriptorSetGroup = drawableObject->CreateDescriptorSetGroup(
+        "DisplayPipeline", 
+        mDescriptorSetLayout, 
+        drawableObject->GetPrimitiveCount()
+    );
 
     for (uint32_t nodeIndex = 0; nodeIndex < mesh.GetNodesCount(); ++nodeIndex) {// Updating descriptor sets
         auto const & node = mesh.GetNodeByIndex(nodeIndex);
@@ -95,7 +106,7 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::AddGpuModel(RF::GpuModel & gpuModel
             if (subMesh.primitives.empty() == false) {
                 for (auto const & primitive : subMesh.primitives) {
                     MFA_ASSERT(primitive.uniqueId >= 0);
-                    auto descriptorSet = drawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
+                    auto descriptorSet = descriptorSetGroup.descriptorSets[primitive.uniqueId];
                     MFA_VK_VALID_ASSERT(descriptorSet);
                     std::vector<VkWriteDescriptorSet> writeInfo {};
                     // TODO Create functionality for this inside render system
@@ -136,7 +147,7 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::AddGpuModel(RF::GpuModel & gpuModel
                     }
                     {// SkinJoints
                         auto const & skinBuffer = node.skinBufferIndex >= 0
-                            ? drawableObject->getSkinTransformBuffer(node.skinBufferIndex)
+                            ? drawableObject->GetSkinTransformBuffer(node.skinBufferIndex)
                             : mErrorBuffer;
 
                         VkDescriptorBufferInfo skinTransformBufferInfo {};
@@ -317,7 +328,7 @@ bool MFA::PBRModelPipeline::UpdateViewProjectionBuffer(
     auto * drawableObject = findResult->second.get();
     MFA_ASSERT(drawableObject != nullptr);
 
-    drawableObject->updateUniformBuffer(
+    drawableObject->UpdateUniformBuffer(
         "ViewProjection", 
         CBlobAliasOf(viewProjectionData)
     );
@@ -586,7 +597,7 @@ void MFA::PBRModelPipeline::destroyUniformBuffers() {
 
     for (const auto & [id, drawableObject] : mDrawableObjects) {
         MFA_ASSERT(drawableObject != nullptr);
-        drawableObject->deleteUniformBuffers();
+        drawableObject->DeleteUniformBuffers();
     }
     mDrawableObjects.clear();
 }

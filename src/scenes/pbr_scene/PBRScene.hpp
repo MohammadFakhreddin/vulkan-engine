@@ -107,7 +107,7 @@ private:
     float m_light_position[3] {0.0f, 0.0f, -2.0f};
     //float m_light_colors[3] {1.0f, 1.0f, 1.0f};
 
-    std::vector<VkDescriptorSet> mSphereDescriptorSets {};
+    MFA::RenderBackend::DescriptorSetGroup mSphereDescriptorSets {};
 
     MFA::UIRecordObject mRecordObject;
 };

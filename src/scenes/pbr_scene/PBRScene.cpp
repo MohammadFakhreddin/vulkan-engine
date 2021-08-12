@@ -230,7 +230,7 @@ void PBRScene::OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw
         }
     }
     {// Binding and updating descriptor set
-        auto current_descriptor_set = mSphereDescriptorSets[0];
+        auto current_descriptor_set = mSphereDescriptorSets.descriptorSets[0];
         // Bind
         RF::BindDescriptorSet(draw_pass, current_descriptor_set);
     }       
@@ -322,13 +322,13 @@ void PBRScene::OnResize() {
 }
 
 void PBRScene::updateAllDescriptorSets() {
-    for (uint8_t i = 0; i < mSphereDescriptorSets.size(); ++i) {
+    for (uint8_t i = 0; i < mSphereDescriptorSets.descriptorSets.size(); ++i) {
         updateDescriptorSet(i);
     }
 }
 
 void PBRScene::updateDescriptorSet(uint8_t const index) {
-    auto currentDescriptorSet = mSphereDescriptorSets[index];
+    auto currentDescriptorSet = mSphereDescriptorSets.descriptorSets[index];
     std::vector<VkWriteDescriptorSet> write_info {};
     {// Transform
         VkDescriptorBufferInfo bufferInfo {};

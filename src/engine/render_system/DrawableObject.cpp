@@ -11,31 +11,26 @@ namespace MFA {
 
 namespace UI = UISystem;
 
-// TODO Create 2 class: DisplayDrawableObject and OffScreenDrawableObject
-
-
 // TODO We need RCMGMT very bad
 // We need other overrides for easier use as well
-DrawableObject::DrawableObject(
-    RF::GpuModel & model_,
-    VkDescriptorSetLayout descriptorSetLayout
-)
+DrawableObject::DrawableObject(RF::GpuModel & model_)
     : mGpuModel(&model_)
     , mRecordUIObject([this]()->void {onUI();})
 {
 
     auto & mesh = mGpuModel->model.mesh;
 
-    // DescriptorSetCount
-    uint32_t descriptorSetCount = 0;
-    for (uint32_t i = 0; i < mesh.GetSubMeshCount(); ++i) {
-        auto const & subMesh = mesh.GetSubMeshByIndex(i);
-        descriptorSetCount += static_cast<uint32_t>(subMesh.primitives.size());
+    {// PrimitiveCount
+        mPrimitiveCount = 0;
+        for (uint32_t i = 0; i < mesh.GetSubMeshCount(); ++i) {
+            auto const & subMesh = mesh.GetSubMeshByIndex(i);
+            mPrimitiveCount += static_cast<uint32_t>(subMesh.primitives.size());
+        }
     }
-    mDescriptorSets = RF::CreateDescriptorSets(
-        descriptorSetCount, 
-        descriptorSetLayout
-    );
+    //mDescriptorSets = RF::CreateDescriptorSets(
+    //    descriptorSetCount, 
+    //    descriptorSetLayout
+    //);
 
     // NodeTransformBuffer
     mNodeTransformBuffers = RF::CreateUniformBuffer(
@@ -77,37 +72,18 @@ DrawableObject::~DrawableObject() {
     }
 }
 
-// TODO Support for multiple descriptorSetLayout
-//DrawableObject::DrawableObject(
-//    RF::GpuModel & model_, 
-//    uint32_t descriptorSetLayoutsCount, 
-//    VkDescriptorSetLayout * descriptorSetLayouts
-//) {}
-
-RF::GpuModel * DrawableObject::getModel() const {
+RF::GpuModel * DrawableObject::GetModel() const {
     return mGpuModel;
 }
 
-uint32_t DrawableObject::getDescriptorSetCount() const {
-    return static_cast<uint32_t>(mDescriptorSets.size());
-}
-
-VkDescriptorSet DrawableObject::getDescriptorSetByPrimitiveUniqueId(uint32_t const index) {
-    MFA_ASSERT(index < mDescriptorSets.size());
-    return mDescriptorSets[index];
-}
-
-VkDescriptorSet * DrawableObject::getDescriptorSets() {
-    return mDescriptorSets.data();
-}
-
 // Only for model local buffers
-RF::UniformBufferGroup * DrawableObject::createUniformBuffer(char const * name, uint32_t const size) {
+RF::UniformBufferGroup * DrawableObject::CreateUniformBuffer(char const * name, uint32_t const size) {
+    MFA_ASSERT(mUniformBuffers.find(name) ==  mUniformBuffers.end());
     mUniformBuffers[name] = RF::CreateUniformBuffer(size, 1);
     return &mUniformBuffers[name];
 }
 
-RF::UniformBufferGroup * DrawableObject::createMultipleUniformBuffer(
+RF::UniformBufferGroup * DrawableObject::CreateMultipleUniformBuffer(
     char const * name, 
     const uint32_t size, 
     const uint32_t count
@@ -117,7 +93,7 @@ RF::UniformBufferGroup * DrawableObject::createMultipleUniformBuffer(
 }
 
 // Only for model local buffers
-void DrawableObject::deleteUniformBuffers() {
+void DrawableObject::DeleteUniformBuffers() {
     if (mUniformBuffers.empty() == false) {
         for (auto & pair : mUniformBuffers) {
             RF::DestroyUniformBuffer(pair.second);
@@ -130,7 +106,7 @@ void DrawableObject::deleteUniformBuffers() {
     RF::DestroyUniformBuffer(mNodeTransformBuffers);
 }
 
-void DrawableObject::updateUniformBuffer(char const * name, CBlob const ubo) {
+void DrawableObject::UpdateUniformBuffer(char const * name, CBlob const ubo) {
     auto const find_result = mUniformBuffers.find(name);
     if (find_result != mUniformBuffers.end()) {
         RF::UpdateUniformBuffer(find_result->second.buffers[0], ubo);
@@ -139,7 +115,7 @@ void DrawableObject::updateUniformBuffer(char const * name, CBlob const ubo) {
     }
 }
 
-RF::UniformBufferGroup * DrawableObject::getUniformBuffer(char const * name) {
+RF::UniformBufferGroup * DrawableObject::GetUniformBuffer(char const * name) {
     auto const find_result = mUniformBuffers.find(name);
     if (find_result != mUniformBuffers.end()) {
         return &find_result->second;
@@ -147,22 +123,25 @@ RF::UniformBufferGroup * DrawableObject::getUniformBuffer(char const * name) {
     return nullptr;
 }
 
-RF::UniformBufferGroup const & DrawableObject::getNodeTransformBuffer() const noexcept {
+RF::UniformBufferGroup const & DrawableObject::GetNodeTransformBuffer() const noexcept {
     return mNodeTransformBuffers;
 }
 
-RF::UniformBufferGroup const & DrawableObject::getSkinTransformBuffer(uint32_t const nodeIndex) const noexcept {
+RF::UniformBufferGroup const & DrawableObject::GetSkinTransformBuffer(uint32_t const nodeIndex) const noexcept {
     return mSkinJointsBuffers[nodeIndex];
 }
 
-void DrawableObject::update(float const deltaTimeInSec) {
+void DrawableObject::Update(float const deltaTimeInSec) {
     updateAnimation(deltaTimeInSec);
     computeNodesGlobalTransform();
     updateAllSkinsJoints();
     updateAllNodesJoints();
 }
 
-void DrawableObject::draw(RF::DrawPass & drawPass) {
+void DrawableObject::Draw(
+    RF::DrawPass & drawPass, 
+    BindDescriptorSetFunction const & bindFunction
+) {
     BindVertexBuffer(drawPass, mGpuModel->meshBuffers.verticesBuffer);
     BindIndexBuffer(drawPass, mGpuModel->meshBuffers.indicesBuffer);
 
@@ -173,7 +152,7 @@ void DrawableObject::draw(RF::DrawPass & drawPass) {
     MFA_ASSERT(nodes != nullptr);
     
     for (uint32_t i = 0; i < nodesCount; ++i) {
-        drawNode(drawPass, nodes[i]);
+        drawNode(drawPass, nodes[i], bindFunction);
     }
 }
 
@@ -186,6 +165,29 @@ void DrawableObject::EnableUI(char const * windowName, bool * isVisible) {
 
 void DrawableObject::DisableUI() {
     mRecordUIObject.Disable();
+}
+
+RB::DescriptorSetGroup const & DrawableObject::CreateDescriptorSetGroup(
+    char const * name, 
+    VkDescriptorSetLayout descriptorSetLayout, 
+    uint32_t const descriptorSetCount
+) {
+    MFA_ASSERT(mDescriptorSetGroups.find(name) == mDescriptorSetGroups.end());
+    auto const descriptorSetGroup = RF::CreateDescriptorSets(
+        descriptorSetCount, 
+        descriptorSetLayout
+    );
+    mDescriptorSetGroups[name] = descriptorSetGroup;
+    return mDescriptorSetGroups[name];
+}
+
+RB::DescriptorSetGroup * DrawableObject::GetDescriptorSetGroup(char const * name) {
+    MFA_ASSERT(name != nullptr);
+    auto const findResult = mDescriptorSetGroups.find(name);
+    if (findResult != mDescriptorSetGroups.end()) {
+        return &findResult->second;
+    }
+    return nullptr;
 }
 
 void DrawableObject::updateAnimation(float deltaTimeInSec) {
@@ -361,7 +363,11 @@ void DrawableObject::updateNodeJoint(Node const & node) {
     }
 }
 
-void DrawableObject::drawNode(RF::DrawPass & drawPass, AssetSystem::Mesh::Node const & node) {
+void DrawableObject::drawNode(
+    RF::DrawPass & drawPass, 
+    AS::MeshNode const & node, 
+    BindDescriptorSetFunction const & bindFunction
+) {
     // TODO We can reduce nodes count for better performance when importing
     if (node.hasSubMesh()) {
         auto const & mesh = mGpuModel->model.mesh;
@@ -372,17 +378,21 @@ void DrawableObject::drawNode(RF::DrawPass & drawPass, AssetSystem::Mesh::Node c
         
         RF::UpdateUniformBuffer(mNodeTransformBuffers.buffers[node.subMeshIndex], CBlobAliasOf(mNodeTransformData));
 
-        drawSubMesh(drawPass, mesh.GetSubMeshByIndex(node.subMeshIndex));
+        drawSubMesh(drawPass, mesh.GetSubMeshByIndex(node.subMeshIndex), bindFunction);
     }
 }
 
-void DrawableObject::drawSubMesh(RF::DrawPass & drawPass, AssetSystem::Mesh::SubMesh const & subMesh) {
-    // TODO Start from here, Draw node tree
+void DrawableObject::drawSubMesh(
+    RF::DrawPass & drawPass, 
+    AssetSystem::Mesh::SubMesh const & subMesh,
+    BindDescriptorSetFunction const & bindFunction
+) {
     if (subMesh.primitives.empty() == false) {
         for (auto const & primitive : subMesh.primitives) {
-            MFA_ASSERT(primitive.uniqueId >= 0);
+            /*MFA_ASSERT(primitive.uniqueId >= 0);
             MFA_ASSERT(primitive.uniqueId < mDescriptorSets.size());
-            RF::BindDescriptorSet(drawPass, mDescriptorSets[primitive.uniqueId]);
+            RF::BindDescriptorSet(drawPass, mDescriptorSets[primitive.uniqueId]);*/
+            bindFunction(primitive);
             RF::DrawIndexed(
                 drawPass,
                 primitive.indicesCount,

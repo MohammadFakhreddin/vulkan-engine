@@ -73,7 +73,7 @@ void PBRWithShadowPipeline::Shutdown() {
     destroyDescriptorSetLayout();
     destroyUniformBuffers();
 }
-
+// TODO Having animation inside drawable object is really really bad and having 2 drawable is a mess! Merge them no matter what!
 void PBRWithShadowPipeline::Update(
     RF::DrawPass & drawPass, 
     float const deltaTime, 
@@ -173,12 +173,17 @@ void PBRWithShadowPipeline::Update(
     RF::BindDrawPipeline(drawPass, mShadowPassPipeline);
 
     for (uint32_t i = 0; i < idsCount; ++i) {
-        auto const findResult = mShadowPassDrawableObjects.find(ids[i]);
-        if (findResult != mShadowPassDrawableObjects.end()) {
+        auto const findResult = mDrawableObjects.find(ids[i]);
+        if (findResult != mDrawableObjects.end()) {
             auto * drawableObject = findResult->second.get();
             MFA_ASSERT(drawableObject != nullptr);
-            drawableObject->update(deltaTime);
-            drawableObject->draw(drawPass);
+            drawableObject->Update(deltaTime);
+            drawableObject->Draw(drawPass, [&drawPass, &drawableObject](AS::MeshPrimitive const & primitive)-> void {
+                RF::BindDescriptorSet(
+                    drawPass, 
+                    drawableObject->GetDescriptorSetGroup("ShadowPipeline")->descriptorSets[primitive.uniqueId]
+                );
+            });
         }
     }
 
@@ -194,12 +199,16 @@ void PBRWithShadowPipeline::Render(
     RF::BindDrawPipeline(drawPass, mDisplayPassPipeline);
     
     for (uint32_t i = 0; i < idsCount; ++i) {
-        auto const findResult = mDisplayPassDrawableObjects.find(ids[i]);
-        if (findResult != mDisplayPassDrawableObjects.end()) {
+        auto const findResult = mDrawableObjects.find(ids[i]);
+        if (findResult != mDrawableObjects.end()) {
             auto * drawableObject = findResult->second.get();
             MFA_ASSERT(drawableObject != nullptr);
-            drawableObject->update(deltaTime);
-            drawableObject->draw(drawPass);
+            drawableObject->Draw(drawPass, [&drawPass, &drawableObject](AS::MeshPrimitive const & primitive)-> void {
+                RF::BindDescriptorSet(
+                    drawPass, 
+                    drawableObject->GetDescriptorSetGroup("DisplayPipeline")->descriptorSets[primitive.uniqueId]
+                );
+            });
         }
     }
 }
@@ -208,17 +217,25 @@ DrawableObjectId PBRWithShadowPipeline::AddGpuModel(RF::GpuModel & gpuModel) {
     MFA_ASSERT(gpuModel.valid == true);
 
     auto const drawableObjectId = mNextDrawableObjectId ++;
+    MFA_ASSERT(mDrawableObjects.find(drawableObjectId) == mDrawableObjects.end());
+    mDrawableObjects[drawableObjectId] = std::make_unique<DrawableObject>(gpuModel);
 
-    CreateDisplayPassDrawableObject(gpuModel, drawableObjectId);
-    CreateShadowPassDrawableObject(gpuModel, drawableObjectId);
+    auto * drawableObject = mDrawableObjects[drawableObjectId].get();
+    MFA_ASSERT(drawableObject != nullptr);
+
+    drawableObject->CreateUniformBuffer(
+        "ViewProjection", 
+        sizeof(ModelViewProjectionData)
+    );
+    
+    CreateDisplayPassDescriptorSets(drawableObject);
+    CreateShadowPassDescriptorSets(drawableObject);
     
     return drawableObjectId;
 }
 
 bool PBRWithShadowPipeline::RemoveGpuModel(DrawableObjectId const drawableObjectId) {
-    auto deleteCount = mDisplayPassDrawableObjects.erase(drawableObjectId);  // Unique ptr should be deleted correctly
-    MFA_ASSERT(deleteCount == 1);
-    deleteCount = mShadowPassDrawableObjects.erase(drawableObjectId);
+    auto deleteCount = mDrawableObjects.erase(drawableObjectId);
     MFA_ASSERT(deleteCount == 1);
     return deleteCount;
 }
@@ -228,34 +245,18 @@ bool PBRWithShadowPipeline::UpdateViewProjectionBuffer(
     ModelViewProjectionData const & viewProjectionData
 ) {
     // We should share buffers
-    {// Display
-        auto const findResult = mDisplayPassDrawableObjects.find(drawableObjectId);
-        if (findResult == mDisplayPassDrawableObjects.end()) {
-            MFA_ASSERT(false);
-            return false;
-        }
-        auto * drawableObject = findResult->second.get();
-        MFA_ASSERT(drawableObject != nullptr);
-
-        drawableObject->updateUniformBuffer(
-            "ViewProjection", 
-            CBlobAliasOf(viewProjectionData)
-        );
+    auto const findResult = mDrawableObjects.find(drawableObjectId);
+    if (findResult == mDrawableObjects.end()) {
+        MFA_ASSERT(false);
+        return false;
     }
-    {// Shadow
-        auto const findResult = mShadowPassDrawableObjects.find(drawableObjectId);
-        if (findResult == mShadowPassDrawableObjects.end()) {
-            MFA_ASSERT(false);
-            return false;
-        }
-        auto * drawableObject = findResult->second.get();
-        MFA_ASSERT(drawableObject != nullptr);
+    auto * drawableObject = findResult->second.get();
+    MFA_ASSERT(drawableObject != nullptr);
 
-        drawableObject->updateUniformBuffer(
-            "ViewProjection", 
-            CBlobAliasOf(viewProjectionData)
-        );
-    }
+    drawableObject->UpdateUniformBuffer(
+        "ViewProjection", 
+        CBlobAliasOf(viewProjectionData)
+    );
     return true;
 }
 
@@ -283,36 +284,32 @@ void PBRWithShadowPipeline::UpdateLightColor(float lightColor[3]) {
 }
 
 DrawableObject * PBRWithShadowPipeline::GetDrawableById(DrawableObjectId const objectId) {
-    auto const findResult = mDisplayPassDrawableObjects.find(objectId);
-    if (findResult != mDisplayPassDrawableObjects.end()) {
+    auto const findResult = mDrawableObjects.find(objectId);
+    if (findResult != mDrawableObjects.end()) {
         return findResult->second.get();
     }
     return nullptr;
 }
 
-void PBRWithShadowPipeline::CreateDisplayPassDrawableObject(RF::GpuModel & gpuModel, DrawableObjectId drawableObjectId) {
-    auto * drawableObject = new DrawableObject(gpuModel, mDisplayPassDescriptorSetLayout);
-    MFA_ASSERT(mDisplayPassDrawableObjects.find(drawableObjectId) == mDisplayPassDrawableObjects.end());
-    mDisplayPassDrawableObjects[drawableObjectId] = std::unique_ptr<DrawableObject>(drawableObject);
+void PBRWithShadowPipeline::CreateDisplayPassDescriptorSets(DrawableObject * drawableObject) {
+    const auto * modelTransformBuffer = drawableObject->GetUniformBuffer("ViewProjection");
+    MFA_ASSERT(modelTransformBuffer != nullptr);
 
-    const auto * primitiveInfoBuffer = drawableObject->createMultipleUniformBuffer(
+    // TODO Maybe mesh should track number of primitives instead
+    const auto * primitiveInfoBuffer = drawableObject->CreateMultipleUniformBuffer(
         "PrimitiveInfo", 
         sizeof(PrimitiveInfo), 
-        drawableObject->getDescriptorSetCount()
+        drawableObject->GetPrimitiveCount()
     );
     MFA_ASSERT(primitiveInfoBuffer != nullptr);
 
-    const auto * modelTransformBuffer = drawableObject->createUniformBuffer(
-        "ViewProjection", 
-        sizeof(ModelViewProjectionData)
-    );
-    MFA_ASSERT(modelTransformBuffer != nullptr);
+    const auto & nodeTransformBuffer = drawableObject->GetNodeTransformBuffer();
 
-    const auto & nodeTransformBuffer = drawableObject->getNodeTransformBuffer();
+    auto const & textures = drawableObject->GetModel()->textures;
 
-    auto const & textures = drawableObject->getModel()->textures;
+    auto const & mesh = drawableObject->GetModel()->model.mesh;
 
-    auto const & mesh = drawableObject->getModel()->model.mesh;
+    auto const descriptorSetGroup = drawableObject->CreateDescriptorSetGroup("DisplayPipeline", mDisplayPassDescriptorSetLayout, drawableObject->GetPrimitiveCount());
 
     for (uint32_t nodeIndex = 0; nodeIndex < mesh.GetNodesCount(); ++nodeIndex) {// Updating descriptor sets
         auto const & node = mesh.GetNodeByIndex(nodeIndex);
@@ -320,8 +317,9 @@ void PBRWithShadowPipeline::CreateDisplayPassDrawableObject(RF::GpuModel & gpuMo
             auto const & subMesh = mesh.GetSubMeshByIndex(node.subMeshIndex);
             if (subMesh.primitives.empty() == false) {
                 for (auto const & primitive : subMesh.primitives) {
+
                     MFA_ASSERT(primitive.uniqueId >= 0);
-                    auto descriptorSet = drawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
+                    auto descriptorSet = descriptorSetGroup.descriptorSets[primitive.uniqueId];
                     MFA_VK_VALID_ASSERT(descriptorSet);
 
                     DescriptorSetSchema descriptorSetSchema {descriptorSet};
@@ -347,7 +345,7 @@ void PBRWithShadowPipeline::CreateDisplayPassDrawableObject(RF::GpuModel & gpuMo
 
                     {// SkinJoints
                         auto const & skinBuffer = node.skinBufferIndex >= 0
-                            ? drawableObject->getSkinTransformBuffer(node.skinBufferIndex)
+                            ? drawableObject->GetSkinTransformBuffer(node.skinBufferIndex)
                             : mErrorBuffer;
 
                         VkDescriptorBufferInfo skinTransformBufferInfo {};
@@ -457,23 +455,20 @@ void PBRWithShadowPipeline::CreateDisplayPassDrawableObject(RF::GpuModel & gpuMo
     }
 }
 
-void PBRWithShadowPipeline::CreateShadowPassDrawableObject(RF::GpuModel & gpuModel, DrawableObjectId drawableObjectId) {
-    auto * drawableObject = new DrawableObject(gpuModel, mShadowPassDescriptorSetLayout);
-    MFA_ASSERT(mShadowPassDrawableObjects.find(drawableObjectId) == mShadowPassDrawableObjects.end());
-    mShadowPassDrawableObjects[drawableObjectId] = std::unique_ptr<DrawableObject>(drawableObject);
-
-    // TODO We need a better drawable object or maybe we can use push constants instead
-
-    const auto * modelTransformBuffer = drawableObject->createUniformBuffer(
-        "ViewProjection", 
-        sizeof(ModelViewProjectionData)
-    );
+void PBRWithShadowPipeline::CreateShadowPassDescriptorSets(DrawableObject * drawableObject) {
+    const auto * modelTransformBuffer = drawableObject->GetUniformBuffer("ViewProjection");
     MFA_ASSERT(modelTransformBuffer != nullptr);
 
-    const auto & nodeTransformBuffer = drawableObject->getNodeTransformBuffer();
+    const auto & nodeTransformBuffer = drawableObject->GetNodeTransformBuffer();
 
-    auto const & mesh = drawableObject->getModel()->model.mesh;
-
+    auto const & mesh = drawableObject->GetModel()->model.mesh;
+    // TODO Each subMesh should know its node index as well
+    auto const descriptorSetGroup = drawableObject->CreateDescriptorSetGroup(
+        "ShadowPipeline", 
+        mShadowPassDescriptorSetLayout, 
+        drawableObject->GetPrimitiveCount()
+    );
+    
     for (uint32_t nodeIndex = 0; nodeIndex < mesh.GetNodesCount(); ++nodeIndex) {// Updating descriptor sets
         auto const & node = mesh.GetNodeByIndex(nodeIndex);
         if (node.hasSubMesh()) {
@@ -481,8 +476,8 @@ void PBRWithShadowPipeline::CreateShadowPassDrawableObject(RF::GpuModel & gpuMod
             if (subMesh.primitives.empty() == false) {
                 for (auto const & primitive : subMesh.primitives) {
                     MFA_ASSERT(primitive.uniqueId >= 0);
-                    // TODO Remove this shit and use push constants instead
-                    auto descriptorSet = drawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
+
+                    auto descriptorSet = descriptorSetGroup.descriptorSets[primitive.uniqueId];
                     MFA_VK_VALID_ASSERT(descriptorSet);
 
                     DescriptorSetSchema descriptorSetSchema {descriptorSet};
@@ -507,7 +502,7 @@ void PBRWithShadowPipeline::CreateShadowPassDrawableObject(RF::GpuModel & gpuMod
                     }
                     {// SkinJoints
                         auto const & skinBuffer = node.skinBufferIndex >= 0
-                            ? drawableObject->getSkinTransformBuffer(node.skinBufferIndex)
+                            ? drawableObject->GetSkinTransformBuffer(node.skinBufferIndex)
                             : mErrorBuffer;
 
                         VkDescriptorBufferInfo skinTransformBufferInfo {};
@@ -976,18 +971,11 @@ void PBRWithShadowPipeline::destroyUniformBuffers() {
     RF::DestroyUniformBuffer(mShadowMatricesBuffer);
     RF::DestroyUniformBuffer(mShadowLightBuffer);
 
-    for (const auto & [id, drawableObject] : mDisplayPassDrawableObjects) {
+    for (const auto & [id, drawableObject] : mDrawableObjects) {
         MFA_ASSERT(drawableObject != nullptr);
-        drawableObject->deleteUniformBuffers();
+        drawableObject->DeleteUniformBuffers();
     }
-    mDisplayPassDrawableObjects.clear();
-
-    for (const auto & [id, drawableObject] : mShadowPassDrawableObjects) {
-        MFA_ASSERT(drawableObject != nullptr);
-        drawableObject->deleteUniformBuffers();
-    }
-    mShadowPassDrawableObjects.clear();
-
+    mDrawableObjects.clear();
 }
 
 }

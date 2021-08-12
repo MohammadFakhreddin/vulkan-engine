@@ -42,26 +42,32 @@ DrawableObjectId PointLightPipeline::AddGpuModel(RF::GpuModel & gpuModel) {
 
     auto const drawableId = mNextDrawableId++;
 
-    auto * drawableObject = new DrawableObject(gpuModel, mDescriptorSetLayout);
+    auto * drawableObject = new DrawableObject(gpuModel);
     MFA_ASSERT(mDrawableObjects.find(drawableId) == mDrawableObjects.end());
     mDrawableObjects[drawableId] = std::unique_ptr<DrawableObject>(drawableObject);
 
-    const auto * primitiveInfoBuffer = drawableObject->createUniformBuffer(
+    const auto * primitiveInfoBuffer = drawableObject->CreateUniformBuffer(
         "PrimitiveInfo", 
         sizeof(PrimitiveInfo)
     );
     MFA_ASSERT(primitiveInfoBuffer != nullptr);
 
-    const auto * viewProjectionBuffer = drawableObject->createUniformBuffer(
+    const auto * viewProjectionBuffer = drawableObject->CreateUniformBuffer(
         "ViewProjection", 
         sizeof(ViewProjectionData)
     );
     MFA_ASSERT(viewProjectionBuffer != nullptr);
 
-    const auto & nodeTransformBuffer = drawableObject->getNodeTransformBuffer();
+    const auto & nodeTransformBuffer = drawableObject->GetNodeTransformBuffer();
 
-    auto const & mesh = drawableObject->getModel()->model.mesh;
+    auto const & mesh = drawableObject->GetModel()->model.mesh;
 
+    auto const descriptorSetGroup = drawableObject->CreateDescriptorSetGroup(
+        "DisplayPipeline", 
+        mDescriptorSetLayout, 
+        drawableObject->GetPrimitiveCount()
+    );
+    
     for (uint32_t nodeIndex = 0; nodeIndex < mesh.GetNodesCount(); ++nodeIndex) {// Updating descriptor sets
         auto const & node = mesh.GetNodeByIndex(nodeIndex);
         if (node.hasSubMesh()) {
@@ -70,7 +76,7 @@ DrawableObjectId PointLightPipeline::AddGpuModel(RF::GpuModel & gpuModel) {
                 for (auto const & primitive : subMesh.primitives) {
                     MFA_ASSERT(primitive.uniqueId >= 0);
 
-                    auto descriptorSet = drawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
+                    auto descriptorSet = descriptorSetGroup.descriptorSets[primitive.uniqueId];
                     MFA_VK_VALID_ASSERT(descriptorSet);
 
                     std::vector<VkWriteDescriptorSet> writeInfo {};
@@ -157,8 +163,13 @@ void PointLightPipeline::Render(
         if (findResult != mDrawableObjects.end()) {
             auto * drawableObject = findResult->second.get();
             MFA_ASSERT(drawableObject != nullptr);
-            drawableObject->update(deltaTimeInSec);
-            drawableObject->draw(drawPass);
+            drawableObject->Update(deltaTimeInSec);
+            drawableObject->Draw(drawPass, [&drawPass, &drawableObject](AS::MeshPrimitive const & primitive)-> void {
+                RF::BindDescriptorSet(
+                    drawPass, 
+                    drawableObject->GetDescriptorSetGroup("DisplayPipeline")->descriptorSets[primitive.uniqueId]
+                );
+            });
         }
     }
 }
@@ -175,7 +186,7 @@ bool PointLightPipeline::updateViewProjectionBuffer(
     auto * drawableObject = findResult->second.get();
     MFA_ASSERT(drawableObject != nullptr);
 
-    drawableObject->updateUniformBuffer(
+    drawableObject->UpdateUniformBuffer(
         "ViewProjection", 
         CBlobAliasOf(viewProjectionData)
     );
@@ -195,7 +206,7 @@ bool PointLightPipeline::updatePrimitiveInfo(
     auto * drawableObject = findResult->second.get();
     MFA_ASSERT(drawableObject != nullptr);
 
-    drawableObject->updateUniformBuffer(
+    drawableObject->UpdateUniformBuffer(
         "PrimitiveInfo", 
         CBlobAliasOf(info)
     );
@@ -318,7 +329,7 @@ void PointLightPipeline::destroyPipeline() {
 void PointLightPipeline::destroyUniformBuffers() {
     for (const auto & [id, drawableObject] : mDrawableObjects) {
         MFA_ASSERT(drawableObject != nullptr);
-        drawableObject->deleteUniformBuffers();
+        drawableObject->DeleteUniformBuffers();
     }
     mDrawableObjects.clear();
 }

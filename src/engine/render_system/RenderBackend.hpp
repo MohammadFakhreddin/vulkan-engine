@@ -652,9 +652,13 @@ void DestroyDescriptorPool(
     VkDescriptorPool pool
 );
 
+struct DescriptorSetGroup {
+    std::vector<VkDescriptorSet> descriptorSets;
+};
+
 // Descriptor sets gets destroyed automatically when descriptor pool is destroyed
 [[nodiscard]]
-std::vector<VkDescriptorSet> CreateDescriptorSet(
+DescriptorSetGroup CreateDescriptorSet(
     VkDevice device,
     VkDescriptorPool descriptorPool,
     VkDescriptorSetLayout descriptorSetLayout,

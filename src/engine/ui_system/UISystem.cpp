@@ -134,7 +134,7 @@ struct State {
     VkDescriptorSetLayout descriptorSetLayout {};
     RB::GpuShader vertexShader {};
     RB::GpuShader fragmentShader {};
-    std::vector<VkDescriptorSet> descriptorSets {};
+    RB::DescriptorSetGroup descriptorSetGroup {};
     RF::DrawPipeline drawPipeline {};
     RB::GpuTexture fontTexture {};
     std::vector<RF::MeshBuffers> meshBuffers {};
@@ -233,7 +233,7 @@ void Init() {
     }
 
     // Create Descriptor Set:
-    state->descriptorSets = RF::CreateDescriptorSets(state->descriptorSetLayout); // Original number was 1 , Now it creates as many as swap_chain_image_count
+    state->descriptorSetGroup = RF::CreateDescriptorSets(state->descriptorSetLayout); // Original number was 1 , Now it creates as many as swap_chain_image_count
 
     {// Vertex shader
         auto const shader_asset = Importer::ImportShaderFromSPV(
@@ -407,7 +407,7 @@ void Init() {
     }
 
     // Update the Descriptor Set:
-    for (auto & descriptorSet : state->descriptorSets) {
+    for (auto & descriptorSet : state->descriptorSetGroup.descriptorSets) {
         auto const imageInfo = VkDescriptorImageInfo {
             .sampler = state->fontSampler.sampler,
             .imageView = state->fontTexture.image_view(),
@@ -565,7 +565,7 @@ void OnNewFrame(
             // Bind pipeline and descriptor sets:
             {
                 RF::BindDrawPipeline(drawPass, state->drawPipeline);
-                RF::BindDescriptorSet(drawPass, state->descriptorSets[drawPass.imageIndex]);
+                RF::BindDescriptorSet(drawPass, state->descriptorSetGroup.descriptorSets[drawPass.imageIndex]);
             }
 
             RF::BindIndexBuffer(

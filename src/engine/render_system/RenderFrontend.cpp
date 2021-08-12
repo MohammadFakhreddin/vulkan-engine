@@ -458,7 +458,8 @@ void DestroyDrawPipeline(DrawPipeline & draw_pipeline) {
     );
 }
 
-std::vector<VkDescriptorSet> CreateDescriptorSets(VkDescriptorSetLayout descriptorSetLayout) {
+// TODO Not a good overload!
+RB::DescriptorSetGroup CreateDescriptorSets(VkDescriptorSetLayout descriptorSetLayout) {
     return RB::CreateDescriptorSet(
         state->logicalDevice.device,
         state->descriptorPool,
@@ -467,7 +468,7 @@ std::vector<VkDescriptorSet> CreateDescriptorSets(VkDescriptorSetLayout descript
     );
 }
 
-std::vector<VkDescriptorSet> CreateDescriptorSets(
+RB::DescriptorSetGroup CreateDescriptorSets(
     uint32_t const descriptorSetCount,
     VkDescriptorSetLayout descriptorSetLayout
 ) {

@@ -26,6 +26,7 @@ public:
         alignas(4) int hasSkin;
     };
 
+    // TODO We could have a model buffer for each drawable but with a single viewProjection buffer
     struct ModelViewProjectionData {   // For vertices in Vertex shader
         alignas(64) float model[16];
         alignas(64) float view[16];
@@ -93,9 +94,9 @@ public:
 
     DrawableObject * GetDrawableById(DrawableObjectId objectId);
 
-    void CreateDisplayPassDrawableObject(RF::GpuModel & gpuModel, DrawableObjectId drawableObjectId);
+    void CreateDisplayPassDescriptorSets(DrawableObject * drawableObject);
 
-    void CreateShadowPassDrawableObject(RF::GpuModel & gpuModel, DrawableObjectId drawableObjectId);
+    void CreateShadowPassDescriptorSets(DrawableObject * drawableObject);
 
 private:
 
@@ -125,14 +126,16 @@ private:
     RF::UniformBufferGroup mErrorBuffer {};
 
     // TODO Support multiple descriptorSetLayouts
+
+    std::unordered_map<DrawableObjectId, std::unique_ptr<DrawableObject>> mDrawableObjects {};
+    
     VkDescriptorSetLayout mDisplayPassDescriptorSetLayout {};
     RF::DrawPipeline mDisplayPassPipeline {};
-    std::unordered_map<DrawableObjectId, std::unique_ptr<DrawableObject>> mDisplayPassDrawableObjects {};
     RF::UniformBufferGroup mDisplayLightViewBuffer {};
     
     VkDescriptorSetLayout mShadowPassDescriptorSetLayout {};
     RF::DrawPipeline mShadowPassPipeline {};
-    std::unordered_map<DrawableObjectId, std::unique_ptr<DrawableObject>> mShadowPassDrawableObjects {};
+    //std::unordered_map<DrawableObjectId, std::unique_ptr<DrawableObject>> mShadowPassDrawableObjects {};
     RF::UniformBufferGroup mShadowMatricesBuffer {};
     RF::UniformBufferGroup mShadowLightBuffer {};
     OffScreenRenderPass mShadowRenderPass {

@@ -1962,7 +1962,7 @@ void DestroyIndexBuffer(
 
 std::vector<BufferGroup> CreateUniformBuffer(
     VkDevice device,
-    VkPhysicalDevice const physicalDevice,
+    VkPhysicalDevice physicalDevice,
     uint32_t const buffersCount,
     VkDeviceSize const buffersSize 
 ) {
@@ -2039,7 +2039,7 @@ void DestroyDescriptorPool(
     vkDestroyDescriptorPool(device, pool, nullptr);
 }
 
-std::vector<VkDescriptorSet> CreateDescriptorSet(
+DescriptorSetGroup CreateDescriptorSet(
     VkDevice device,
     VkDescriptorPool descriptorPool,
     VkDescriptorSetLayout descriptorSetLayout,
@@ -2080,7 +2080,7 @@ std::vector<VkDescriptorSet> CreateDescriptorSet(
         );
     }
 
-    return descriptor_sets;
+    return DescriptorSetGroup {.descriptorSets = descriptor_sets};
 }
 
 void UpdateDescriptorSets(

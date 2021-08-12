@@ -88,7 +88,7 @@ void TexturedSphereScene::OnDraw(float const deltaTimeInSec, MFA::RenderFrontend
         ::memcpy(mTranslateData.transformation, transformationMat.cells, sizeof(transformationMat.cells));
 
         
-        mDrawableObject->updateUniformBuffer(
+        mDrawableObject->UpdateUniformBuffer(
             "transform", 
             MFA::CBlobAliasOf(mTranslateData)
         );
@@ -102,8 +102,13 @@ void TexturedSphereScene::OnDraw(float const deltaTimeInSec, MFA::RenderFrontend
 
         RF::UpdateUniformBuffer(mLVBuffer.buffers[0], MFA::CBlobAliasOf(mLightViewData));
     }
-    mDrawableObject->update(deltaTimeInSec);
-    mDrawableObject->draw(drawPass);
+    mDrawableObject->Update(deltaTimeInSec);
+    mDrawableObject->Draw(drawPass, [&drawPass, this](AS::MeshPrimitive const & primitive)-> void {
+        RF::BindDescriptorSet(
+            drawPass, 
+            mDrawableObject->GetDescriptorSetGroup("DisplayPipeline")->descriptorSets[0]
+        );
+    });
 }
 
 void TexturedSphereScene::OnUI() {
@@ -157,15 +162,21 @@ void TexturedSphereScene::createDrawableObject(){
 
     auto const & mesh = mGpuModel.model.mesh;
 
-     mDrawableObject = std::make_unique<MFA::DrawableObject>(
-        mGpuModel,
-        mDescriptorSetLayout
+    mDrawableObject = std::make_unique<MFA::DrawableObject>(
+        mGpuModel
     );
-    // TODO AO map for emission
-    const auto * transformBuffer = mDrawableObject->createUniformBuffer("transform", sizeof(ModelTransformBuffer));
+
+    const auto * transformBuffer = mDrawableObject->CreateUniformBuffer("transform", sizeof(ModelTransformBuffer));
     MFA_ASSERT(transformBuffer != nullptr);
     
-    auto const & textures = mDrawableObject->getModel()->textures;
+    auto const & textures = mDrawableObject->GetModel()->textures;
+
+    auto const descriptorSetGroup = mDrawableObject->CreateDescriptorSetGroup(
+        "ShadowPipeline", 
+        mDescriptorSetLayout, 
+        mDrawableObject->GetPrimitiveCount()
+    );
+
 
     for (uint32_t nodeIndex = 0; nodeIndex < mesh.GetNodesCount(); ++nodeIndex) {// Updating descriptor sets
         auto const & node = mesh.GetNodeByIndex(nodeIndex);
@@ -173,7 +184,7 @@ void TexturedSphereScene::createDrawableObject(){
         if (subMesh.primitives.empty() == false) {
             for (auto const & primitive : subMesh.primitives) {
                 MFA_ASSERT(primitive.uniqueId >= 0);
-                auto descriptorSet = mDrawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
+                auto descriptorSet = descriptorSetGroup.descriptorSets[primitive.uniqueId];
                 MFA_VK_VALID_ASSERT(descriptorSet);
 
                 std::vector<VkWriteDescriptorSet> writeInfo {};
@@ -292,7 +303,7 @@ void TexturedSphereScene::createDrawableObject(){
 }
 
 void TexturedSphereScene::destroyDrawableObject() const {
-    mDrawableObject->deleteUniformBuffers();
+    mDrawableObject->DeleteUniformBuffers();
 }
 
 void TexturedSphereScene::createDrawPipeline(uint8_t gpuShaderCount, MFA::RenderBackend::GpuShader * gpuShaders){
