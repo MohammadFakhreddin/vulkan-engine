@@ -8,8 +8,8 @@
 
 namespace MFA {
 
-// HLSL Geometry shader example:
-// https://stackoverflow.com/questions/29124668/rendering-to-a-full-3d-render-target-in-one-pass
+// TODO Implement again without geometry shader
+// TODO Implement smooth shadows
 
 void PBRWithShadowPipeline::Init(
     RF::SamplerGroup * samplerGroup, 
