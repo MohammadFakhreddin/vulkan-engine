@@ -75,6 +75,10 @@ const float alphaMaskCutoff = 0.001f;
 
 const float ambientOcclusion = 0.02f;
 
+const float shadowBias = 0.05;
+const int shadowSamples = 20;
+const float shadowPerSample = 1.0f / float(shadowSamples);
+
 // This function computes ratio between amount of light that reflect and refracts
 // Reflection contrbutes to specular while refraction contributes to diffuse light
 /*
@@ -187,22 +191,57 @@ float3 calculateNormal(PSIn input)
         pixelNormal = mul(TBN, tangentNormal).xyz;
     }
     return pixelNormal;
-}
+};
 
-float shadowCalculation(float3 fragPos, float3 lightPosition)
+float shadowCalculation(float3 lightVector, float viewDistance)
 {
     // get vector between fragment position and light position
-    // float3 fragToLight = fragPos - lvBuff.lightPosition;
-    float3 fragToLight = fragPos - lightPosition;    // TODO I think we should normalize this    
-    // use the light to fragment vector to sample from the depth map    
-    float closestDepth = shadowMapTexture.Sample(shadowMapSampler, fragToLight).r;
-    // it is currently in linear range between [0,1]. Re-transform back to original value
-    closestDepth *= lvBuff.nearToFarPlaneDistance;
-    // now get current linear depth as the length between the fragment and light position
-    float currentDepth = length(fragToLight);
-    // now test for shadows
-    float bias = 0.05; 
-    float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
+    // Because we sampled the shadow cubemap from light to each position now we need to reverse the worldPosition to light vector
+    float3 lightToFrag = -1 * lightVector;
+    
+    // // Old way
+    // // use the light to fragment vector to sample from the depth map    
+    // float closestDepth = shadowMapTexture.Sample(shadowMapSampler, lightToFrag).r;
+    // // it is currently in linear range between [0,1]. Re-transform back to original value
+    // closestDepth *= lvBuff.nearToFarPlaneDistance;
+    // // now get current linear depth as the length between the fragment and light position
+    // float currentDepth = length(lightToFrag);
+    // // now test for shadows
+    // float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
+
+    float3 sampleOffsetDirections[20];
+    sampleOffsetDirections[0] = float3(1,  1,  1);
+    sampleOffsetDirections[1] = float3(1,  -1,  1);
+    sampleOffsetDirections[2] = float3(-1,  -1,  1);
+    sampleOffsetDirections[3] = float3(-1,  1,  1);
+    sampleOffsetDirections[4] = float3(1,  1,  -1);
+    sampleOffsetDirections[5] = float3(1,  -1,  -1);
+    sampleOffsetDirections[6] = float3(-1,  -1,  -1);
+    sampleOffsetDirections[7] = float3(-1,  1,  -1);
+    sampleOffsetDirections[8] = float3(1,  1,  0);
+    sampleOffsetDirections[9] = float3(1,  -1,  0);
+    sampleOffsetDirections[10] = float3(-1,  -1,  0);
+    sampleOffsetDirections[11] = float3(-1,  1,  0);
+    sampleOffsetDirections[12] = float3(1,  0,  1);
+    sampleOffsetDirections[13] = float3(-1,  0,  1);
+    sampleOffsetDirections[14] = float3(1,  0,  -1);
+    sampleOffsetDirections[15] = float3(-1,  0,  -1);
+    sampleOffsetDirections[16] = float3(0,  1,  1);
+    sampleOffsetDirections[17] = float3(0,  -1,  1);
+    sampleOffsetDirections[18] = float3(0,  -1,  -1);
+    sampleOffsetDirections[19] = float3(0,  1,  -1);
+    
+    float shadow = 0.0f;
+    float currentDepth = length(lightToFrag);
+    float diskRadius = (1.0f + (viewDistance / lvBuff.nearToFarPlaneDistance)) / 75.0f;  
+    for(int i = 0; i < shadowSamples; ++i)
+    {
+        float closestDepth = shadowMapTexture.Sample(shadowMapSampler, lightToFrag + sampleOffsetDirections[i] * diskRadius).r;
+        closestDepth *= lvBuff.nearToFarPlaneDistance;
+        if(currentDepth - shadowBias > closestDepth) {
+            shadow += shadowPerSample;
+        }
+    }
 
     return shadow;
 }
@@ -239,10 +278,9 @@ PSOut main(PSIn input) {
     // Specular contribution
 	float3 Lo = float3(0.0, 0.0, 0.0);
 	for (int i = 0; i < 1; i++) {   // Light count
-		float3 L = normalize(lvBuff.lightPosition.xyz - input.worldPos);
-        // TODO Use L parameter
-        float shadow = shadowCalculation(input.worldPos, lvBuff.lightPosition.xyz);
-    	Lo += BRDF(L, V, N, metallic, roughness, baseColor.rgb, input.worldPos) * (1.0 - shadow);
+		float3 L = lvBuff.lightPosition.xyz - input.worldPos;
+        float shadow = shadowCalculation(L, length(lvBuff.camPos - input.worldPos));
+    	Lo += BRDF(normalize(L), V, N, metallic, roughness, baseColor.rgb, input.worldPos) * (1.0 - shadow);
 	};
 
     // Combine with ambient
