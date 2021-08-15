@@ -309,6 +309,7 @@ void Init() {
         pipelineOptions.pushConstantRanges = pushConstantRanges.data();
         pipelineOptions.useStaticViewportAndScissor = false;
         pipelineOptions.cullMode = VK_CULL_MODE_NONE;
+        pipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
         
         state->drawPipeline = RF::CreateDrawPipeline(
             RF::GetDisplayRenderPass()->GetVkRenderPass(),

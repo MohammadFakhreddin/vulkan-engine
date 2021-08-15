@@ -62,6 +62,7 @@ private:
     uint32_t mSwapChainImagesCount = 0;
     RB::SwapChainGroup mSwapChainImages {};
     std::vector<VkFramebuffer> mFrameBuffers {};
+    RB::ColorImageGroup mMSAAImageGroup {};
     RB::DepthImageGroup mDepthImageGroup {};
     RB::SyncObjects mSyncObjects {};
     uint8_t mCurrentFrame = 0;

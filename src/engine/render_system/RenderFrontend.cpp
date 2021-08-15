@@ -35,21 +35,15 @@ struct State {
     VkSurfaceKHR surface {};
     VkPhysicalDevice physicalDevice {};
     VkPhysicalDeviceFeatures physicalDeviceFeatures {};
+    VkPhysicalDeviceProperties physicalDeviceProperties {};
+    VkSampleCountFlagBits maxSampleCount {};
     uint32_t graphicQueueFamily = 0;
     uint32_t presentQueueFamily = 0;
     VkQueue graphicQueue {};
     VkQueue presentQueue {};
     RB::LogicalDevice logicalDevice {};
     VkCommandPool graphicCommandPool {};
-    //RB::SwapChainGroup swapChainGroup {};
-    //VkRenderPass displayRenderPass {};
-    //RB::DepthImageGroup depthImageGroup {};
-    //std::vector<VkFramebuffer> frameBuffers {};
     VkDescriptorPool descriptorPool {};
-    // Each renderPass should have its own commandBuffer and syncedObject
-    //std::vector<VkCommandBuffer> graphicCommandBuffers {};
-    //RB::SyncObjects syncObjects {};
-    //uint8_t currentFrame = 0;
     // Resize
     bool isWindowResizable = false;
     bool windowResized = false;
@@ -186,6 +180,15 @@ bool Init(InitParams const & params) {
         state->physicalDevice = findPhysicalDeviceResult.physicalDevice;
         // I'm not sure if this is a correct thing to do but currently I'm enabling all gpu features.
         state->physicalDeviceFeatures = findPhysicalDeviceResult.physicalDeviceFeatures;
+        state->maxSampleCount = findPhysicalDeviceResult.maxSampleCount;
+        state->physicalDeviceProperties = findPhysicalDeviceResult.physicalDeviceProperties;
+
+        std::string message = "Supported physical device features are:";
+        message += "\nSample rate shading support: ";
+        message += state->physicalDeviceFeatures.sampleRateShading ? "True" : "False";
+        message += "\nSampler anisotropy support: ";
+        message += state->physicalDeviceFeatures.samplerAnisotropy ? "True" : "False";
+        MFA_LOG_INFO("%s", message.c_str());
     }
 
     // Find surface capabilities
@@ -434,6 +437,8 @@ DrawPipeline CreateDrawPipeline(
     extent2D.width = static_cast<uint32_t>(state->screenWidth);
     extent2D.height = static_cast<uint32_t>(state->screenHeight);
 
+
+    // TODO Maybe we should do ui in a seprate render pass because we do not need MSAA on ui
     auto const graphicPipelineGroup = RB::CreateGraphicPipeline(
         state->logicalDevice.device,
         gpuShadersCount,
@@ -776,9 +781,10 @@ void BeginRenderPass(
     VkExtent2D const & extent2D
 ) {
     std::vector<VkClearValue> clearValues {};
-    clearValues.resize(2);
+    clearValues.resize(3);
     clearValues[0].color = VkClearColorValue { .float32 = {0.1f, 0.1f, 0.1f, 1.0f }};
-    clearValues[1].depthStencil = { .depth = 1.0f, .stencil = 0};
+    clearValues[1].color = VkClearColorValue { .float32 = {0.1f, 0.1f, 0.1f, 1.0f }};
+    clearValues[2].depthStencil = { .depth = 1.0f, .stencil = 0};
 
     VkRenderPassBeginInfo renderPassBeginInfo = {};
     renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -1176,6 +1182,10 @@ RB::SyncObjects createSyncObjects(
 
 void DestroySyncObjects(RB::SyncObjects & syncObjects) {
     RB::DestroySyncObjects(state->logicalDevice.device, syncObjects);
+}
+
+VkSampleCountFlagBits GetMaxSamplesCount() {
+    return state->maxSampleCount;
 }
 
 }

@@ -604,7 +604,8 @@ ImageGroup CreateImage(
     uint16_t const slice_count,
     VkFormat const format, 
     VkImageTiling const tiling, 
-    VkImageUsageFlags const usage, 
+    VkImageUsageFlags const usage,
+    VkSampleCountFlagBits const samplesCount,
     VkMemoryPropertyFlags const properties,
     VkImageCreateFlags const imageCreateFlags
 ) {
@@ -622,7 +623,7 @@ ImageGroup CreateImage(
     image_info.tiling = tiling;
     image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     image_info.usage = usage;
-    image_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_info.samples = samplesCount;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     image_info.flags = imageCreateFlags;
 
@@ -697,8 +698,9 @@ GpuTexture CreateTexture(
             mipCount,
             sliceCount,
             vulkan_format,
-            VK_IMAGE_TILING_OPTIMAL, 
-            VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            VK_SAMPLE_COUNT_1_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
         
@@ -1009,13 +1011,13 @@ VkDebugReportCallbackEXT SetDebugCallback(
     return ret;
 }
 
-static FindPhysicalDeviceResult FindPhysicalDevice(VkInstance vk_instance, uint8_t const retry_count) {
+static FindPhysicalDeviceResult findPhysicalDevice(VkInstance instance, uint8_t const retryCount) {
     FindPhysicalDeviceResult ret {};
 
     uint32_t deviceCount = 0;
     //Getting number of physical devices
     VK_Check(vkEnumeratePhysicalDevices(
-        vk_instance, 
+        instance, 
         &deviceCount, 
         nullptr
     ));
@@ -1023,17 +1025,17 @@ static FindPhysicalDeviceResult FindPhysicalDevice(VkInstance vk_instance, uint8
 
     std::vector<VkPhysicalDevice> devices (deviceCount);
     const auto phyDevResult = vkEnumeratePhysicalDevices(
-        vk_instance, 
+        instance, 
         &deviceCount, 
         devices.data()
     );
     //TODO Search about incomplete
     MFA_ASSERT(phyDevResult == VK_SUCCESS || phyDevResult == VK_INCOMPLETE);
     // TODO We need to choose physical device based on features that we need
-    if(retry_count >= devices.size()) {
+    if(retryCount >= devices.size()) {
         MFA_CRASH("No suitable physical device exists");
     }
-    ret.physicalDevice = devices[retry_count];
+    ret.physicalDevice = devices[retryCount];
     MFA_ASSERT(ret.physicalDevice != nullptr);
     ret.physicalDeviceFeatures.samplerAnisotropy = VK_TRUE;
     ret.physicalDeviceFeatures.shaderClipDistance = VK_TRUE;
@@ -1054,11 +1056,14 @@ static FindPhysicalDeviceResult FindPhysicalDevice(VkInstance vk_instance, uint8
         supportedVersion[0], supportedVersion[1], supportedVersion[2]
     );
 
+    ret.maxSampleCount = ComputeMaxUsableSampleCount(deviceProperties);
+    ret.physicalDeviceProperties = deviceProperties;
+
     return ret;
 }
 
-FindPhysicalDeviceResult FindPhysicalDevice(VkInstance vk_instance) {
-    return FindPhysicalDevice(vk_instance, 0);
+FindPhysicalDeviceResult FindPhysicalDevice(VkInstance instance) {
+    return findPhysicalDevice(instance, 0);
 }
 
 bool CheckSwapChainSupport(VkPhysicalDevice physical_device) {
@@ -1187,12 +1192,12 @@ SwapChainGroup CreateSwapChain(
         MFA_CRASH("Failed to get number of supported surface formats");
     }
     
-    std::vector<VkSurfaceFormatKHR> surface_formats(formatCount);
+    std::vector<VkSurfaceFormatKHR> surfaceFormats(formatCount);
     VK_Check (vkGetPhysicalDeviceSurfaceFormatsKHR(
         physicalDevice, 
         windowSurface, 
         &formatCount, 
-        surface_formats.data()
+        surfaceFormats.data()
     ));
 
     // Find supported present modes
@@ -1224,11 +1229,11 @@ SwapChainGroup CreateSwapChain(
     );
 
     MFA_LOG_INFO("Using %d images for swap chain.", imageCount);
-    MFA_ASSERT(surface_formats.size() <= 255);
+    MFA_ASSERT(surfaceFormats.size() <= 255);
     // Select a surface format
     auto const selected_surface_format = ChooseSurfaceFormat(
-        static_cast<uint8_t>(surface_formats.size()),
-        surface_formats.data()
+        static_cast<uint8_t>(surfaceFormats.size()),
+        surfaceFormats.data()
     );
 
     // Select swap chain size
@@ -1356,7 +1361,8 @@ DepthImageGroup CreateDepthImage(
         options.layerCount,
         depthFormat,
         VK_IMAGE_TILING_OPTIMAL, 
-        options.usageFlags, 
+        options.usageFlags,
+        options.samplesCount,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         options.imageCreateFlags
     );
@@ -1401,7 +1407,8 @@ ColorImageGroup CreateColorImage(
         options.layerCount,
         imageFormat,
         VK_IMAGE_TILING_OPTIMAL, 
-        options.usageFlags, 
+        options.usageFlags,
+        options.samplesCount,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         options.imageCreateFlags
     );
@@ -1436,64 +1443,6 @@ VkRenderPass CreateRenderPass(
     VkSubpassDependency * dependencies,
     uint32_t const dependenciesCount
 ) {
-    //VkAttachmentDescription colorAttachment = {};
-    //colorAttachment.format = swapChainFormat;
-    //colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    //colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    //colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    //colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    //colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    //colorAttachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    //colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    //
-    //VkAttachmentDescription depthAttachment {};
-    //depthAttachment.format = FindDepthFormat(physicalDevice);
-    //depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    //depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    //depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    //depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    //depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    //depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    //depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    //
-    //// Note: hardware will automatically transition attachment to the specified layout
-    //// Note: index refers to attachment descriptions array
-    //VkAttachmentReference colorAttachmentReference {
-    //    .attachment = 0,
-    //    .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    //};
-
-    //VkAttachmentReference depthAttachmentRef {
-    //    .attachment = 1,
-    //    .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-    //};
-    //// Note: this is a description of how the attachments of the render pass will be used in this sub pass
-    //// e.g. if they will be read in shaders and/or drawn to
-    //VkSubpassDescription subPassDescription = {};
-    //subPassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    //subPassDescription.colorAttachmentCount = 1;
-    //subPassDescription.pColorAttachments = &colorAttachmentReference;
-    //subPassDescription.pDepthStencilAttachment = &depthAttachmentRef;
-   
-    //VkSubpassDependency dependency{};
-    //dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    //dependency.dstSubpass = 0;
-    //dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    //dependency.srcAccessMask = 0;
-    //dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    //dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    //
-    //std::vector<VkAttachmentDescription> attachments = {colorAttachment, depthAttachment};
-    //// Create the render pass
-    //VkRenderPassCreateInfo createInfo = {};
-    //createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    //createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());;
-    //createInfo.pAttachments = attachments.data();
-    //createInfo.subpassCount = 1;
-    //createInfo.pSubpasses = &subPassDescription;
-    //createInfo.dependencyCount = 1;
-    //createInfo.pDependencies = &dependency;
-
     VkRenderPassCreateInfo createInfo {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
         .attachmentCount = attachmentsCount,
@@ -1685,9 +1634,9 @@ GraphicPipelineGroup CreateGraphicPipeline(
     // Note: using multi-sampling also requires turning on device features
     VkPipelineMultisampleStateCreateInfo multi_sample_state_create_info = {};
     multi_sample_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    multi_sample_state_create_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-    multi_sample_state_create_info.sampleShadingEnable = VK_FALSE;
-    multi_sample_state_create_info.minSampleShading = 1.0f;
+    multi_sample_state_create_info.rasterizationSamples = options.rasterizationSamples;
+    multi_sample_state_create_info.sampleShadingEnable = VK_TRUE;
+    multi_sample_state_create_info.minSampleShading = 1.0f; // It can be in range of 0 to 1. Min fraction for sample shading; closer to one is smooth
     multi_sample_state_create_info.alphaToCoverageEnable = VK_FALSE;
     multi_sample_state_create_info.alphaToOneEnable = VK_FALSE;
 
@@ -2436,6 +2385,29 @@ void SubmitQueues(
 
 void ResetFences(VkDevice device, uint32_t fencesCount, VkFence const * fences) {
     VK_Check(vkResetFences(device, fencesCount, fences));
+}
+
+VkSampleCountFlagBits ComputeMaxUsableSampleCount(VkPhysicalDevice physicalDevice) {
+    MFA_VK_VALID_ASSERT(physicalDevice);
+
+    VkPhysicalDeviceProperties physicalDeviceProperties;
+    vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
+
+    return ComputeMaxUsableSampleCount(physicalDeviceProperties);
+}
+
+VkSampleCountFlagBits ComputeMaxUsableSampleCount(VkPhysicalDeviceProperties deviceProperties) {
+    auto const counts = deviceProperties.limits.framebufferColorSampleCounts
+        & deviceProperties.limits.framebufferDepthSampleCounts;
+
+    if (counts & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
+    if (counts & VK_SAMPLE_COUNT_32_BIT) { return VK_SAMPLE_COUNT_32_BIT; }
+    if (counts & VK_SAMPLE_COUNT_16_BIT) { return VK_SAMPLE_COUNT_16_BIT; }
+    if (counts & VK_SAMPLE_COUNT_8_BIT) { return VK_SAMPLE_COUNT_8_BIT; }
+    if (counts & VK_SAMPLE_COUNT_4_BIT) { return VK_SAMPLE_COUNT_4_BIT; }
+    if (counts & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
+
+    return VK_SAMPLE_COUNT_1_BIT;
 }
 
 }

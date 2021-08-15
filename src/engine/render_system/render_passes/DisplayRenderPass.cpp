@@ -21,8 +21,18 @@ void DisplayRenderPass::internalInit() {
     mSwapChainImagesCount = RF::GetSwapChainImagesCount();
 
     mSwapChainImages = RF::CreateSwapChain();
-    
-    mDepthImageGroup = RF::CreateDepthImage(swapChainExtent);
+
+    mMSAAImageGroup = RF::CreateColorImage(
+        swapChainExtent, 
+        mSwapChainImages.swapChainFormat, 
+        RB::CreateColorImageOptions {
+            .samplesCount = RF::GetMaxSamplesCount()
+        }
+    );
+
+    mDepthImageGroup = RF::CreateDepthImage(swapChainExtent, RB::CreateDepthImageOptions {
+        .samplesCount = RF::GetMaxSamplesCount()
+    });
 
     createRenderPass();
 
@@ -54,6 +64,8 @@ void DisplayRenderPass::internalShutdown() {
     RF::DestroyRenderPass(mVkRenderPass);
 
     RF::DestroySwapChain(mSwapChainImages);
+
+    RF::DestroyColorImage(mMSAAImageGroup);
 }
 
 // TODO We might need a separate class for commandBufferClass->GraphicCommandBuffer to begin and submit commandBuffer recording.
@@ -228,7 +240,19 @@ void DisplayRenderPass::internalResize() {
 
     // Depth image
     RF::DestroyDepthImage(mDepthImageGroup);
-    mDepthImageGroup = RF::CreateDepthImage(swapChainExtent2D);
+    mDepthImageGroup = RF::CreateDepthImage(swapChainExtent2D, RB::CreateDepthImageOptions {
+        .samplesCount = RF::GetMaxSamplesCount()
+    });
+
+    // MSAA image
+    RF::DestroyColorImage(mMSAAImageGroup);
+    mMSAAImageGroup = RF::CreateColorImage(
+        swapChainExtent2D, 
+        mSwapChainImages.swapChainFormat, 
+        RB::CreateColorImageOptions {
+            .samplesCount = RF::GetMaxSamplesCount()
+        }
+    );
 
     // Swap-chain
     auto const oldSwapChainImages = mSwapChainImages;
@@ -269,6 +293,7 @@ void DisplayRenderPass::createFrameBuffers(VkExtent2D const & extent) {
     mFrameBuffers.resize(mSwapChainImagesCount);
     for (int i = 0; i < static_cast<int>(mFrameBuffers.size()); ++i) {
         std::vector<VkImageView> const attachments = {
+            mMSAAImageGroup.imageView,
             mSwapChainImages.swapChainImageViews[i],
             mDepthImageGroup.imageView
         };
@@ -284,7 +309,19 @@ void DisplayRenderPass::createFrameBuffers(VkExtent2D const & extent) {
 
 void DisplayRenderPass::createRenderPass() {
 
-    VkAttachmentDescription const colorAttachment {
+    // Multisampled attachment that we render to
+    VkAttachmentDescription const msaaAttachment {
+        .format = mSwapChainImages.swapChainFormat,
+	    .samples = RF::GetMaxSamplesCount(),
+	    .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+	    .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+	    .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+	    .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+	    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+	    .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    };
+
+    VkAttachmentDescription const swapChainAttachment {
         .format = mSwapChainImages.swapChainFormat,
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
@@ -297,7 +334,7 @@ void DisplayRenderPass::createRenderPass() {
 
     VkAttachmentDescription const depthAttachment {
         .format = mDepthImageGroup.imageFormat,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .samples = RF::GetMaxSamplesCount(),
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
@@ -308,13 +345,18 @@ void DisplayRenderPass::createRenderPass() {
 
     // Note: hardware will automatically transition attachment to the specified layout
     // Note: index refers to attachment descriptions array
-    VkAttachmentReference colorAttachmentReference {
+    VkAttachmentReference msaaAttachmentReference {
         .attachment = 0,
         .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
     };
 
-    VkAttachmentReference depthAttachmentRef {
+    VkAttachmentReference swapChainAttachmentReference {
         .attachment = 1,
+        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    };
+
+    VkAttachmentReference depthAttachmentRef {
+        .attachment = 2,
         .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
 
@@ -324,12 +366,13 @@ void DisplayRenderPass::createRenderPass() {
         VkSubpassDescription {
             .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
             .colorAttachmentCount = 1,
-            .pColorAttachments = &colorAttachmentReference,
+            .pColorAttachments = &msaaAttachmentReference,
+            .pResolveAttachments = &swapChainAttachmentReference,
             .pDepthStencilAttachment = &depthAttachmentRef,
         }
     };
     
-	// Subpass dependencies for layout transitions
+    // Subpass dependencies for layout transitions
     std::vector<VkSubpassDependency> dependencies {
         VkSubpassDependency {
             .srcSubpass = VK_SUBPASS_EXTERNAL,
@@ -351,7 +394,7 @@ void DisplayRenderPass::createRenderPass() {
         }
     };
     
-    std::vector<VkAttachmentDescription> attachments = {colorAttachment, depthAttachment};
+    std::vector<VkAttachmentDescription> attachments = {msaaAttachment, swapChainAttachment, depthAttachment};
 
     mVkRenderPass = RF::CreateRenderPass(
         attachments.data(),

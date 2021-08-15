@@ -421,4 +421,6 @@ RB::SyncObjects createSyncObjects(
 
 void DestroySyncObjects(RB::SyncObjects & syncObjects);
 
+VkSampleCountFlagBits GetMaxSamplesCount();
+
 }

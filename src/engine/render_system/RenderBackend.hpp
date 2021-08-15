@@ -228,7 +228,8 @@ ImageGroup CreateImage(
     uint16_t slice_count,
     VkFormat format, 
     VkImageTiling tiling, 
-    VkImageUsageFlags usage, 
+    VkImageUsageFlags usage,
+    VkSampleCountFlagBits samplesCount,
     VkMemoryPropertyFlags properties,
     VkImageCreateFlags imageCreateFlags = 0
 );
@@ -346,9 +347,11 @@ VkDebugReportCallbackEXT SetDebugCallback(
 struct FindPhysicalDeviceResult {
     VkPhysicalDevice physicalDevice = nullptr;
     VkPhysicalDeviceFeatures physicalDeviceFeatures {};
+    VkSampleCountFlagBits maxSampleCount {};
+    VkPhysicalDeviceProperties physicalDeviceProperties {};
 };
 [[nodiscard]]
-FindPhysicalDeviceResult FindPhysicalDevice(VkInstance vk_instance);
+FindPhysicalDeviceResult FindPhysicalDevice(VkInstance instance);
 
 [[nodiscard]]
 bool CheckSwapChainSupport(VkPhysicalDevice physical_device);
@@ -404,6 +407,7 @@ struct CreateDepthImageOptions {
     VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D;
     VkImageCreateFlags imageCreateFlags = 0;
+    VkSampleCountFlagBits samplesCount = VK_SAMPLE_COUNT_1_BIT; 
 };
 [[nodiscard]]
 DepthImageGroup CreateDepthImage(
@@ -424,9 +428,10 @@ struct ColorImageGroup {
 
 struct CreateColorImageOptions {
     uint16_t layerCount = 1;
-    VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D;
     VkImageCreateFlags imageCreateFlags = 0;
+    VkSampleCountFlagBits samplesCount = VK_SAMPLE_COUNT_1_BIT; 
 };
 
 [[nodiscard]]
@@ -535,6 +540,7 @@ struct CreateGraphicPipelineOptions {
     VkPushConstantRange * pushConstantRanges = nullptr;
     bool useStaticViewportAndScissor = false;           // Use of dynamic viewport and scissor is recommended
     VkPrimitiveTopology primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    VkSampleCountFlagBits rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
     // Default params
     explicit CreateGraphicPipelineOptions() {
@@ -794,5 +800,9 @@ void SubmitQueues(
 );
 
 void ResetFences(VkDevice device, uint32_t fencesCount, VkFence const * fences);
+
+VkSampleCountFlagBits ComputeMaxUsableSampleCount(VkPhysicalDevice physicalDevice);
+
+VkSampleCountFlagBits ComputeMaxUsableSampleCount(VkPhysicalDeviceProperties deviceProperties);
 
 }

@@ -818,7 +818,11 @@ void PBRWithShadowPipeline::createDisplayPassPipeline() {
         inputAttributeDescriptions.emplace_back(attributeDescription);
     }
     MFA_ASSERT(mDisplayPassPipeline.isValid() == false);
-    mDisplayPassPipeline = RF::CreateBasicDrawPipeline(
+
+    RB::CreateGraphicPipelineOptions options {};
+    options.rasterizationSamples = RF::GetMaxSamplesCount();
+
+    mDisplayPassPipeline = RF::CreateDrawPipeline(
         RF::GetDisplayRenderPass()->GetVkRenderPass(),
         static_cast<uint8_t>(shaders.size()), 
         shaders.data(),
@@ -826,7 +830,8 @@ void PBRWithShadowPipeline::createDisplayPassPipeline() {
         &mDisplayPassDescriptorSetLayout,
         vertexInputBindingDescription,
         static_cast<uint8_t>(inputAttributeDescriptions.size()),
-        inputAttributeDescriptions.data()
+        inputAttributeDescriptions.data(),
+        options
     );
 }
 
@@ -917,23 +922,6 @@ void PBRWithShadowPipeline::createShadowPassPipeline() {
 
     RB::CreateGraphicPipelineOptions graphicPipelineOptions {};
     graphicPipelineOptions.cullMode = VK_CULL_MODE_NONE;
-            
-    //graphicPipelineOptions.colorBlendAttachments.blendEnable = VK_TRUE;
-    //graphicPipelineOptions.colorBlendAttachments.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-    //graphicPipelineOptions.colorBlendAttachments.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-    //graphicPipelineOptions.colorBlendAttachments.colorBlendOp = VK_BLEND_OP_ADD;
-    //graphicPipelineOptions.colorBlendAttachments.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-    //graphicPipelineOptions.colorBlendAttachments.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-    //graphicPipelineOptions.colorBlendAttachments.alphaBlendOp = VK_BLEND_OP_ADD;
-    //graphicPipelineOptions.colorBlendAttachments.colorWriteMask = VK_COLOR_COMPONENT_R_BIT;
-    //graphicPipelineOptions.useStaticViewportAndScissor = false;
-
-    //graphicPipelineOptions.depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    //graphicPipelineOptions.depthStencil.depthTestEnable = VK_TRUE;
-    //graphicPipelineOptions.depthStencil.depthWriteEnable = VK_TRUE;
-    //graphicPipelineOptions.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-    //graphicPipelineOptions.depthStencil.depthBoundsTestEnable = VK_FALSE;
-    //graphicPipelineOptions.depthStencil.stencilTestEnable = VK_FALSE;
     
     MFA_ASSERT(mShadowPassPipeline.isValid() == false);
     mShadowPassPipeline = RF::CreateDrawPipeline(

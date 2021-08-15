@@ -124,9 +124,7 @@ private:
     RF::SamplerGroup * mSamplerGroup = nullptr; // TODO Each gltf subMesh has its own settings
     RB::GpuTexture * mErrorTexture = nullptr;
     RF::UniformBufferGroup mErrorBuffer {};
-
-    // TODO Support multiple descriptorSetLayouts
-
+    
     std::unordered_map<DrawableObjectId, std::unique_ptr<DrawableObject>> mDrawableObjects {};
     
     VkDescriptorSetLayout mDisplayPassDescriptorSetLayout {};

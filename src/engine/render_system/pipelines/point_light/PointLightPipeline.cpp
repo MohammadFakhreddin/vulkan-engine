@@ -307,6 +307,7 @@ void PointLightPipeline::createPipeline() {
     RB::CreateGraphicPipelineOptions pipelineOptions {};
     pipelineOptions.useStaticViewportAndScissor = false;
     pipelineOptions.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+    pipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
 
     mDrawPipeline = RF::CreateDrawPipeline(
         RF::GetDisplayRenderPass()->GetVkRenderPass(),
