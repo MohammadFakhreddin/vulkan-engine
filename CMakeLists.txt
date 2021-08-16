@@ -93,6 +93,8 @@ list(
     "src/engine/render_system/render_passes/DisplayRenderPass.cpp"
     "src/engine/render_system/render_passes/OffScreenRenderPass.hpp"
     "src/engine/render_system/render_passes/OffScreenRenderPass.cpp"
+    "src/engine/render_system/render_passes/OffScreenRenderPassV2.hpp"
+    "src/engine/render_system/render_passes/OffScreenRenderPassV2.cpp"
     
     # Pipeline
     "src/engine/render_system/pipelines/BasePipeline.hpp"
@@ -102,6 +104,8 @@ list(
     "src/engine/render_system/pipelines/point_light/PointLightPipeline.cpp"
     "src/engine/render_system/pipelines/pbr_with_shadow/PbrWithShadowPipeline.hpp"
     "src/engine/render_system/pipelines/pbr_with_shadow/PbrWithShadowPipeline.cpp"
+    "src/engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
+    "src/engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.cpp"
 
     "src/engine/FoundationAsset.hpp"
     "src/engine/FoundationAsset.cpp"

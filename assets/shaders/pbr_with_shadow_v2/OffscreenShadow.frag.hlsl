@@ -4,7 +4,6 @@ struct PSIn {
 };
 
 struct PSOut {
-    // float color : SV_Target0;
     float depth : SV_DEPTH;
 };
 
@@ -13,7 +12,7 @@ struct LightBuffer {
     float projectionMaximumDistance;       // abs(Far - near)
 };
 
-ConstantBuffer <LightBuffer> lBuffer : register (b4, space0);
+ConstantBuffer <LightBuffer> lBuffer : register (b5, space0);
 
 PSOut main(PSIn input) {
 

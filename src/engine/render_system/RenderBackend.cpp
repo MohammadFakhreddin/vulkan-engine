@@ -1504,7 +1504,7 @@ VkFramebuffer CreateFrameBuffers(
     createInfo.width = swapChainExtent.width;
     createInfo.height = swapChainExtent.height;
     createInfo.layers = layersCount;
-
+    
     VK_Check(vkCreateFramebuffer(device, &createInfo, nullptr, &frameBuffer));
 
     return frameBuffer;
@@ -2408,6 +2408,24 @@ VkSampleCountFlagBits ComputeMaxUsableSampleCount(VkPhysicalDeviceProperties dev
     if (counts & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
 
     return VK_SAMPLE_COUNT_1_BIT;
+}
+
+void CopyImage(
+    VkCommandBuffer commandBuffer,
+    VkImage sourceImage,
+    VkImage destinationImage,
+    VkImageCopy const & copyRegion
+) {
+    // Put image copy into command buffer
+    vkCmdCopyImage(
+        commandBuffer,
+        sourceImage,
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        destinationImage,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        1,
+        &copyRegion
+    );
 }
 
 }
