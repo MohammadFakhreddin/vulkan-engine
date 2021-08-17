@@ -38,12 +38,12 @@ public:
 
     void onResize() override;
 
-    void getProjection(float outProjectionMatrix[16]) override;
+    void GetProjection(float outProjectionMatrix[16]) override;
 
     [[nodiscard]]
-    Matrix4X4Float const & getProjection() const override;
+    Matrix4X4Float const & GetProjection() const override;
 
-    void getTransform(float outTransformMatrix[16]) override;
+    void GetTransform(float outTransformMatrix[16]) override;
 
     [[nodiscard]]
     Matrix4X4Float const & getTransform() const override;

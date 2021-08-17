@@ -918,6 +918,7 @@ LogicalDevice CreateLogicalDevice(
     deviceCreateInfo.enabledLayerCount = 0;
     deviceCreateInfo.ppEnabledLayerNames = nullptr;
 #endif
+    
     VK_Check(vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &ret.device));
     MFA_ASSERT(ret.device != nullptr);
     MFA_LOG_INFO("Logical device create was successful");    

@@ -41,7 +41,6 @@ void PBRWithShadowPipelineV2::Init(
     createShadowPassDescriptorSetLayout();
     createShadowPassPipeline();
 
-
     static float FOV = 90.0f;          // TODO Maybe it should be the same with our camera's FOV.
     
     const float ratio = SHADOW_WIDTH / SHADOW_HEIGHT;
@@ -57,63 +56,63 @@ void PBRWithShadowPipelineV2::Init(
 
     mShadowProjection = Matrix4X4Float::ConvertCellsToMat4(projectionMatrix4X4.cells);
 
-            auto const lightPositionVector = glm::vec3(mLightPosition[0], mLightPosition[1], mLightPosition[2]);
+    auto const lightPositionVector = glm::vec3(mLightPosition[0], mLightPosition[1], mLightPosition[2]);
 
-        Matrix4X4Float::ConvertGmToCells(
-            mShadowProjection * glm::lookAt(
-                lightPositionVector, 
-                lightPositionVector + glm::vec3( 1.0, 0.0, 0.0), 
-                glm::vec3(0.0,-1.0, 0.0)
-            ), 
-            mViewMatricesData.viewMatrices[0]
-        );
+    Matrix4X4Float::ConvertGmToCells(
+        mShadowProjection * glm::lookAt(
+            lightPositionVector, 
+            lightPositionVector + glm::vec3( 1.0, 0.0, 0.0), 
+            glm::vec3(0.0,-1.0, 0.0)
+        ), 
+        mShadowViewProjectionData.viewMatrices[0]
+    );
 
-        Matrix4X4Float::ConvertGmToCells(
-            mShadowProjection * glm::lookAt(
-                lightPositionVector, 
-                lightPositionVector + glm::vec3(-1.0, 0.0, 0.0), 
-                glm::vec3(0.0,-1.0, 0.0)
-            ), 
-            mViewMatricesData.viewMatrices[1]
-        );
+    Matrix4X4Float::ConvertGmToCells(
+        mShadowProjection * glm::lookAt(
+            lightPositionVector, 
+            lightPositionVector + glm::vec3(-1.0, 0.0, 0.0), 
+            glm::vec3(0.0,-1.0, 0.0)
+        ), 
+        mShadowViewProjectionData.viewMatrices[1]
+    );
 
-        Matrix4X4Float::ConvertGmToCells(
-            mShadowProjection * glm::lookAt(
-                lightPositionVector, 
-                lightPositionVector + glm::vec3( 0.0, 1.0, 0.0), 
-                glm::vec3(0.0, 0.0, 1.0)
-            ), 
-            mViewMatricesData.viewMatrices[2]
-        );
+    Matrix4X4Float::ConvertGmToCells(
+        mShadowProjection * glm::lookAt(
+            lightPositionVector, 
+            lightPositionVector + glm::vec3( 0.0, 1.0, 0.0), 
+            glm::vec3(0.0, 0.0, 1.0)
+        ), 
+        mShadowViewProjectionData.viewMatrices[2]
+    );
 
-        Matrix4X4Float::ConvertGmToCells(
-            mShadowProjection * glm::lookAt(
-                lightPositionVector, 
-                lightPositionVector + glm::vec3( 0.0,-1.0, 0.0), 
-                glm::vec3(0.0, 0.0,-1.0)
-            ), 
-            mViewMatricesData.viewMatrices[3]
-        );
+    Matrix4X4Float::ConvertGmToCells(
+        mShadowProjection * glm::lookAt(
+            lightPositionVector, 
+            lightPositionVector + glm::vec3( 0.0,-1.0, 0.0), 
+            glm::vec3(0.0, 0.0,-1.0)
+        ), 
+        mShadowViewProjectionData.viewMatrices[3]
+    );
 
-        Matrix4X4Float::ConvertGmToCells(
-            mShadowProjection * glm::lookAt(
-                lightPositionVector, 
-                lightPositionVector + glm::vec3( 0.0, 0.0, 1.0), 
-                glm::vec3(0.0,-1.0, 0.0)
-            ), 
-            mViewMatricesData.viewMatrices[4]
-        );
+    Matrix4X4Float::ConvertGmToCells(
+        mShadowProjection * glm::lookAt(
+            lightPositionVector, 
+            lightPositionVector + glm::vec3( 0.0, 0.0, 1.0), 
+            glm::vec3(0.0,-1.0, 0.0)
+        ), 
+        mShadowViewProjectionData.viewMatrices[4]
+    );
 
-        Matrix4X4Float::ConvertGmToCells(
-            mShadowProjection * glm::lookAt(
-                lightPositionVector, 
-                lightPositionVector + glm::vec3( 0.0, 0.0,-1.0), 
-                glm::vec3(0.0,-1.0, 0.0)
-            ), 
-            mViewMatricesData.viewMatrices[5]
-        );
+    Matrix4X4Float::ConvertGmToCells(
+        mShadowProjection * glm::lookAt(
+            lightPositionVector, 
+            lightPositionVector + glm::vec3( 0.0, 0.0,-1.0), 
+            glm::vec3(0.0,-1.0, 0.0)
+        ), 
+        mShadowViewProjectionData.viewMatrices[5]
+    );
 
-        RF::UpdateUniformBuffer(mShadowViewProjectionBuffer.buffers[0], CBlobAliasOf(mViewMatricesData));
+    RF::UpdateUniformBuffer(mShadowViewProjectionBuffer.buffers[0], CBlobAliasOf(mShadowViewProjectionData));
 }
 
 void PBRWithShadowPipelineV2::Shutdown() {
@@ -163,6 +162,15 @@ void PBRWithShadowPipelineV2::Update(
 
     mShadowRenderPass.PrepareCubemapForTransferDestination(drawPass);
     for (int i = 0; i < 6; ++i) {
+        ShadowPushConstants shadowConstants {
+            .faceIndex = i
+        };
+        RF::PushConstants(
+            drawPass,
+            AS::ShaderStage::Vertex,
+            0,
+            CBlobAliasOf(shadowConstants)
+        );
         mShadowRenderPass.SetNextPassParams(i);
         mShadowRenderPass.BeginRenderPass(drawPass);
 
@@ -223,7 +231,7 @@ DrawableObjectId PBRWithShadowPipelineV2::AddGpuModel(RF::GpuModel & gpuModel) {
 
     drawableObject->CreateUniformBuffer(
         "Model", 
-        sizeof(ModelViewProjectionData)
+        sizeof(ModelData)
     );
     
     CreateDisplayPassDescriptorSets(drawableObject);
@@ -238,9 +246,9 @@ bool PBRWithShadowPipelineV2::RemoveGpuModel(DrawableObjectId const drawableObje
     return deleteCount;
 }
 
-bool PBRWithShadowPipelineV2::UpdateViewProjectionBuffer(
+bool PBRWithShadowPipelineV2::UpdateModel(
     DrawableObjectId const drawableObjectId, 
-    ModelViewProjectionData const & viewProjectionData
+    ModelData const & modelData
 ) {
     // We should share buffers
     auto const findResult = mDrawableObjects.find(drawableObjectId);
@@ -252,10 +260,24 @@ bool PBRWithShadowPipelineV2::UpdateViewProjectionBuffer(
     MFA_ASSERT(drawableObject != nullptr);
 
     drawableObject->UpdateUniformBuffer(
-        "DisplayPassModelViewProjection", 
-        CBlobAliasOf(viewProjectionData)
+        "Model", 
+        CBlobAliasOf(modelData)
     );
     return true;
+}
+
+void PBRWithShadowPipelineV2::UpdateCameraView(DisplayViewData const & viewData) {
+    RF::UpdateUniformBuffer(
+        mDisplayViewBuffer.buffers[0],
+        CBlobAliasOf(viewData)
+    );
+}
+
+void PBRWithShadowPipelineV2::UpdateCameraProjection(DisplayProjectionData const & projectionData) {
+    RF::UpdateUniformBuffer(
+        mDisplayProjectionBuffer.buffers[0], 
+        CBlobAliasOf(projectionData)
+    );
 }
 
 void PBRWithShadowPipelineV2::UpdateLightPosition(float lightPosition[3]) {
@@ -263,7 +285,6 @@ void PBRWithShadowPipelineV2::UpdateLightPosition(float lightPosition[3]) {
         Copy<3>(mLightPosition, lightPosition);
         mNeedToUpdateDisplayLightBuffer = true;
         mNeedToUpdateShadowLightBuffer = true;
-        mNeedToUpdateShadowProjectionBuffer = true;
     }
 }
 
@@ -290,7 +311,7 @@ DrawableObject * PBRWithShadowPipelineV2::GetDrawableById(DrawableObjectId const
 }
 
 void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableObject * drawableObject) {
-    const auto * modelTransformBuffer = drawableObject->GetUniformBuffer("DisplayPassModelViewProjection");
+    const auto * modelTransformBuffer = drawableObject->GetUniformBuffer("Model");
     MFA_ASSERT(modelTransformBuffer != nullptr);
 
     // TODO Maybe "mesh" should track number of primitives instead
@@ -322,13 +343,35 @@ void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableObject * d
 
                     DescriptorSetSchema descriptorSetSchema {descriptorSet};
 
+                    /////////////////////////////////////////////////////////////////
+                    // Vertex shader
+                    /////////////////////////////////////////////////////////////////
+                    
                     {// ModelTransform
-                        VkDescriptorBufferInfo modelTransformBufferInfo {};
-                        modelTransformBufferInfo.buffer = modelTransformBuffer->buffers[0].buffer;
-                        modelTransformBufferInfo.offset = 0;
-                        modelTransformBufferInfo.range = modelTransformBuffer->bufferSize;
+                        VkDescriptorBufferInfo bufferInfo {
+                            .buffer = modelTransformBuffer->buffers[0].buffer,
+                            .offset = 0,
+                            .range = modelTransformBuffer->bufferSize,
+                        };
+                        descriptorSetSchema.AddUniformBuffer(bufferInfo);
+                    }
 
-                        descriptorSetSchema.AddUniformBuffer(modelTransformBufferInfo);
+                    {// ViewTransform
+                        VkDescriptorBufferInfo bufferInfo {
+                            .buffer = mDisplayViewBuffer.buffers[0].buffer,
+                            .offset = 0,
+                            .range = mDisplayLightViewBuffer.bufferSize,
+                        };
+                        descriptorSetSchema.AddUniformBuffer(bufferInfo);
+                    }
+
+                    {// ProjectionTransform
+                        VkDescriptorBufferInfo bufferInfo {
+                            .buffer = mDisplayProjectionBuffer.buffers[0].buffer,
+                            .offset = 0,
+                            .range = mDisplayProjectionBuffer.bufferSize,
+                        };
+                        descriptorSetSchema.AddUniformBuffer(bufferInfo);
                     }
 
                     {//NodeTransform
@@ -354,6 +397,10 @@ void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableObject * d
                         descriptorSetSchema.AddUniformBuffer(skinTransformBufferInfo);
                     }
 
+                    /////////////////////////////////////////////////////////////////
+                    // Fragment shader
+                    /////////////////////////////////////////////////////////////////
+                    
                     {// Primitive
                         VkDescriptorBufferInfo primitiveBufferInfo {};
                         primitiveBufferInfo.buffer = primitiveInfoBuffer->buffers[primitive.uniqueId].buffer;
@@ -454,8 +501,8 @@ void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableObject * d
 }
 
 void PBRWithShadowPipelineV2::CreateShadowPassDescriptorSets(DrawableObject * drawableObject) {
-    const auto * modelTransformBuffer = drawableObject->GetUniformBuffer("ModelViewProjection");
-    MFA_ASSERT(modelTransformBuffer != nullptr);
+    const auto * modelBuffer = drawableObject->GetUniformBuffer("Model");
+    MFA_ASSERT(modelBuffer != nullptr);
 
     const auto & nodeTransformBuffer = drawableObject->GetNodeTransformBuffer();
 
@@ -480,14 +527,25 @@ void PBRWithShadowPipelineV2::CreateShadowPassDescriptorSets(DrawableObject * dr
 
                     DescriptorSetSchema descriptorSetSchema {descriptorSet};
 
+                    /////////////////////////////////////////////////////////////////
                     // Vertex shader
+                    /////////////////////////////////////////////////////////////////
+                    
                     {// ModelTransform
-                        VkDescriptorBufferInfo modelTransformBufferInfo {};
-                        modelTransformBufferInfo.buffer = modelTransformBuffer->buffers[0].buffer;
-                        modelTransformBufferInfo.offset = 0;
-                        modelTransformBufferInfo.range = modelTransformBuffer->bufferSize;
-
-                        descriptorSetSchema.AddUniformBuffer(modelTransformBufferInfo);
+                        VkDescriptorBufferInfo modelBufferInfo {
+                            .buffer = modelBuffer->buffers[0].buffer,
+                            .offset = 0,
+                            .range = modelBuffer->bufferSize,
+                        };
+                        descriptorSetSchema.AddUniformBuffer(modelBufferInfo);
+                    }
+                    {// ViewProjectionTransform
+                        VkDescriptorBufferInfo viewProjectionBufferInfo {
+                            .buffer = mShadowViewProjectionBuffer.buffers[0].buffer,
+                            .offset = 0,
+                            .range = mShadowViewProjectionBuffer.bufferSize
+                        };
+                        descriptorSetSchema.AddUniformBuffer(viewProjectionBufferInfo);
                     }
                     {//NodeTransform
                         VkDescriptorBufferInfo nodeTransformBufferInfo {
@@ -511,17 +569,10 @@ void PBRWithShadowPipelineV2::CreateShadowPassDescriptorSets(DrawableObject * dr
                         descriptorSetSchema.AddUniformBuffer(skinTransformBufferInfo);
                     }
 
-                    // Geometry shader
-                    {// ShadowMatrices
-                        VkDescriptorBufferInfo bufferInfo {};
-                        bufferInfo.buffer = mShadowMatricesBuffer.buffers[0].buffer;
-                        bufferInfo.offset = 0;
-                        bufferInfo.range = mShadowMatricesBuffer.bufferSize;
-
-                        descriptorSetSchema.AddUniformBuffer(bufferInfo);
-                    }
-
+                    /////////////////////////////////////////////////////////////////
                     // Fragment shader
+                    /////////////////////////////////////////////////////////////////
+
                     {// LightBuffer
                         VkDescriptorBufferInfo bufferInfo {};
                         bufferInfo.buffer = mShadowLightBuffer.buffers[0].buffer;
@@ -540,14 +591,37 @@ void PBRWithShadowPipelineV2::CreateShadowPassDescriptorSets(DrawableObject * dr
 
 void PBRWithShadowPipelineV2::createDisplayPassDescriptorSetLayout() {
     std::vector<VkDescriptorSetLayoutBinding> bindings {};
+    
+    /////////////////////////////////////////////////////////////////
     // Vertex shader
+    /////////////////////////////////////////////////////////////////
+    
     {// ModelTransformation
-        VkDescriptorSetLayoutBinding layoutBinding {};
-        layoutBinding.binding = static_cast<uint32_t>(bindings.size());
-        layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        layoutBinding.descriptorCount = 1;
-        layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        VkDescriptorSetLayoutBinding layoutBinding {
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        };
         bindings.emplace_back(layoutBinding);
+    }
+    {// ViewTransformation
+        VkDescriptorSetLayoutBinding layoutBinding {
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        };
+        bindings.emplace_back(layoutBinding);
+    }
+    {// ProjectionTransform
+        VkDescriptorSetLayoutBinding layoutBinding {
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        };
+        bindings.emplace_back(layoutBinding);   
     }
     {// NodeTransformation
         VkDescriptorSetLayoutBinding layoutBinding {};
@@ -565,7 +639,11 @@ void PBRWithShadowPipelineV2::createDisplayPassDescriptorSetLayout() {
         layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
         bindings.emplace_back(layoutBinding);
     }
+   
+    /////////////////////////////////////////////////////////////////
     // Fragment shader
+    /////////////////////////////////////////////////////////////////
+
     {// Primitive
         VkDescriptorSetLayoutBinding layoutBinding {};
         layoutBinding.binding = static_cast<uint32_t>(bindings.size());
@@ -633,41 +711,52 @@ void PBRWithShadowPipelineV2::createDisplayPassDescriptorSetLayout() {
 
 void PBRWithShadowPipelineV2::createShadowPassDescriptorSetLayout() {
     std::vector<VkDescriptorSetLayoutBinding> bindings {};
+    
+    /////////////////////////////////////////////////////////////////
     // Vertex shader
+    /////////////////////////////////////////////////////////////////
+
     {// ModelTransformation
-        VkDescriptorSetLayoutBinding layoutBinding {};
-        layoutBinding.binding = static_cast<uint32_t>(bindings.size());
-        layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        layoutBinding.descriptorCount = 1;
-        layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        VkDescriptorSetLayoutBinding layoutBinding {
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        };
+        bindings.emplace_back(layoutBinding);
+    }
+    {// ViewProjectionTransform
+        VkDescriptorSetLayoutBinding layoutBinding {
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        };
         bindings.emplace_back(layoutBinding);
     }
     {// NodeTransformation
-        VkDescriptorSetLayoutBinding layoutBinding {};
-        layoutBinding.binding = static_cast<uint32_t>(bindings.size());
-        layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        layoutBinding.descriptorCount = 1;
-        layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        VkDescriptorSetLayoutBinding layoutBinding {
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        };
         bindings.emplace_back(layoutBinding);
     }
     {// SkinJoints
-        VkDescriptorSetLayoutBinding layoutBinding {};
-        layoutBinding.binding = static_cast<uint32_t>(bindings.size());
-        layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        layoutBinding.descriptorCount = 1;
-        layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        VkDescriptorSetLayoutBinding layoutBinding {
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        };
         bindings.emplace_back(layoutBinding);
     }
-    // Geometry shader
-    {// ShadowMatrices
-        VkDescriptorSetLayoutBinding layoutBinding {};
-        layoutBinding.binding = static_cast<uint32_t>(bindings.size());
-        layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        layoutBinding.descriptorCount = 1;
-        layoutBinding.stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT;
-        bindings.emplace_back(layoutBinding);
-    }
+    
+    /////////////////////////////////////////////////////////////////
     // Fragment shader
+    /////////////////////////////////////////////////////////////////
+
     {// Light
         VkDescriptorSetLayoutBinding layoutBinding {};
         layoutBinding.binding = static_cast<uint32_t>(bindings.size());
@@ -694,7 +783,7 @@ void PBRWithShadowPipelineV2::destroyDescriptorSetLayout() const {
 void PBRWithShadowPipelineV2::createDisplayPassPipeline() {
     // Vertex shader
     auto cpuVertexShader = Importer::ImportShaderFromSPV(
-        Path::Asset("shaders/pbr_with_shadow/PbrWithShadow.vert.spv").c_str(),
+        Path::Asset("shaders/pbr_with_shadow_v2/PbrWithShadow.vert.spv").c_str(),
         AssetSystem::Shader::Stage::Vertex, 
         "main"
     );
@@ -708,7 +797,7 @@ void PBRWithShadowPipelineV2::createDisplayPassPipeline() {
     
     // Fragment shader
     auto cpuFragmentShader = Importer::ImportShaderFromSPV(
-        Path::Asset("shaders/pbr_with_shadow/PbrWithShadow.frag.spv").c_str(),
+        Path::Asset("shaders/pbr_with_shadow_v2/PbrWithShadow.frag.spv").c_str(),
         AssetSystem::Shader::Stage::Fragment,
         "main"
     );
@@ -904,8 +993,20 @@ void PBRWithShadowPipelineV2::createShadowPassPipeline() {
         inputAttributeDescriptions.emplace_back(attributeDescription);
     }
 
+    std::vector<VkPushConstantRange> pushConstantRanges {};
+    {// FaceIndex  
+        VkPushConstantRange pushConstantRange {
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+            .offset = 0,
+            .size = sizeof(ShadowPushConstants),
+        };
+        pushConstantRanges.emplace_back(pushConstantRange);
+    }  
     RB::CreateGraphicPipelineOptions graphicPipelineOptions {};
     graphicPipelineOptions.cullMode = VK_CULL_MODE_NONE;
+    graphicPipelineOptions.pushConstantRanges = pushConstantRanges.data();
+    // TODO Probably we need to make pushConstantsRangeCount uint32_t
+    graphicPipelineOptions.pushConstantsRangeCount = static_cast<uint32_t>(pushConstantRanges.size());
     
     MFA_ASSERT(mShadowPassPipeline.isValid() == false);
     mShadowPassPipeline = RF::CreateDrawPipeline(
@@ -936,7 +1037,6 @@ void PBRWithShadowPipelineV2::createUniformBuffers() {
     mErrorBuffer = RF::CreateUniformBuffer(sizeof(DrawableObject::JointTransformBuffer), 1);
 
     mShadowViewProjectionBuffer = RF::CreateUniformBuffer(sizeof(DisplayViewData), 1);
-    mShadowProjectionBuffer = RF::CreateUniformBuffer(sizeof(DisplayProjectionData), 1);
     mShadowLightBuffer = RF::CreateUniformBuffer(sizeof(ShadowLightData), 1);
 }
 

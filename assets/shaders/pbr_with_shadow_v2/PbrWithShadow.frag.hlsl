@@ -57,10 +57,10 @@ struct LightViewBuffer {
     float nearToFarPlaneDistance;
 };
 
-ConstantBuffer <LightViewBuffer> lvBuff : register (b8, space0);
+ConstantBuffer <LightViewBuffer> lvBuff : register (b10, space0);
 
-sampler shadowMapSampler : register(s9, space0);
-TextureCube shadowMapTexture : register(s9, space0);
+sampler shadowMapSampler : register(s11, space0);
+TextureCube shadowMapTexture : register(s11, space0);
 
 const float PI = 3.14159265359;
 

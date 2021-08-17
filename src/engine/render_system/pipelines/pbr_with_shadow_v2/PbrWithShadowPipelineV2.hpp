@@ -96,15 +96,9 @@ public:
         ModelData const & modelData
     );
 
-    bool UpdateView(
-        DrawableObjectId drawableObjectId, 
-        DisplayViewData const & viewData
-    );
+    void UpdateCameraView(DisplayViewData const & viewData);
 
-    bool UpdateProjection(
-        DrawableObjectId drawableObjectId,
-        DisplayProjectionData const & projectionData
-    );
+    void UpdateCameraProjection(DisplayProjectionData const & projectionData);
 
     void UpdateLightPosition(float lightPosition[3]);
 
@@ -161,8 +155,7 @@ private:
         static_cast<uint32_t>(SHADOW_HEIGHT)
     };
     RF::UniformBufferGroup mShadowViewProjectionBuffer {};
-    RF::UniformBufferGroup mShadowProjectionBuffer {};
-
+    
     float mLightPosition[3] {};
     float mCameraPosition[3] {};
     float mLightColor[3] {};
@@ -178,8 +171,9 @@ private:
 
     glm::mat4 mShadowProjection {};
 
-    ShadowMatricesData mViewMatricesData {};
+    ShadowViewProjectionData mShadowViewProjectionData {};
 
+    ModelData mModelData {};
 
 };
 

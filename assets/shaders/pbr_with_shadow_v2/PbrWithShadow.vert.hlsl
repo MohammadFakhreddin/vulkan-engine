@@ -36,6 +36,7 @@ struct ModelData {
 
 ConstantBuffer <ModelData> modelBuffer: register(b0, space0);
 
+// TODO We can combine view and projection
 struct ViewData {
     float4x4 view;
 };

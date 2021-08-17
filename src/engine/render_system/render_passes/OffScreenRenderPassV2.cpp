@@ -230,7 +230,7 @@ void OffScreenRenderPassV2::internalEndRenderPass(RF::DrawPass const & drawPass)
             .srcOffset = { 0, 0, 0 },
 
             .dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .dstSubresource.baseArrayLayer = mFaceIndex,
+            .dstSubresource.baseArrayLayer = static_cast<uint32_t>(mFaceIndex),
             .dstSubresource.mipLevel = 0,
             .dstSubresource.layerCount = 1,
             .dstOffset = { 0, 0, 0 },
@@ -332,7 +332,7 @@ void OffScreenRenderPassV2::createFrameBuffer(VkExtent2D const & shadowExtent) {
         attachments.data(), 
         static_cast<uint32_t>(attachments.size()),
         shadowExtent,
-        6   // * lightCount
+        1   // * lightCount
     );
 }
 
