@@ -68,6 +68,7 @@ void OffScreenRenderPassV2::internalShutdown() {
     RF::DestroyFrameBuffers(1, &mFrameBuffer);
     RF::DestroyRenderPass(mVkRenderPass);
     RF::DestroyDepthImage(mDepthCubeMap);
+    RF::DestroyDepthImage(mDepthImage);
 }
 
 void OffScreenRenderPassV2::SetNextPassParams(int faceIndex) {

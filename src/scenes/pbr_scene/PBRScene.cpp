@@ -165,7 +165,7 @@ void PBRScene::Shutdown() {
     Importer::FreeModel(&m_sphere.model);
 }
 
-void PBRScene::OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_pass) {
+void PBRScene::OnRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_pass) {
     RF::BindDrawPipeline(draw_pass, m_draw_pipeline);
     {// Updating uniform buffers
         {// Material

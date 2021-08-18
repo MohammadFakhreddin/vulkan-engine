@@ -86,7 +86,7 @@ void TextureViewerScene::Shutdown() {
     mDrawableObject->DeleteUniformBuffers();
 }
 
-void TextureViewerScene::OnDraw(
+void TextureViewerScene::OnRender(
     float deltaTimeInSec, 
     RF::DrawPass & drawPass
 ) {

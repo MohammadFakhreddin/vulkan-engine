@@ -1032,18 +1032,23 @@ void PBRWithShadowPipelineV2::destroyPipeline() {
 }
 
 void PBRWithShadowPipelineV2::createUniformBuffers() {
+    mErrorBuffer = RF::CreateUniformBuffer(sizeof(DrawableObject::JointTransformBuffer), 1);
+
     mDisplayViewBuffer = RF::CreateUniformBuffer(sizeof(DisplayViewData), 1);
     mDisplayProjectionBuffer = RF::CreateUniformBuffer(sizeof(DisplayProjectionData), 1);
     mDisplayLightViewBuffer = RF::CreateUniformBuffer(sizeof(DisplayLightAndCameraData), 1);
-    mErrorBuffer = RF::CreateUniformBuffer(sizeof(DrawableObject::JointTransformBuffer), 1);
-
+    
     mShadowViewProjectionBuffer = RF::CreateUniformBuffer(sizeof(ShadowViewProjectionData), 1);
     mShadowLightBuffer = RF::CreateUniformBuffer(sizeof(ShadowLightData), 1);
 }
 
 void PBRWithShadowPipelineV2::destroyUniformBuffers() {
     RF::DestroyUniformBuffer(mErrorBuffer);
+
+    RF::DestroyUniformBuffer(mDisplayViewBuffer);
     RF::DestroyUniformBuffer(mDisplayLightViewBuffer);
+    RF::DestroyUniformBuffer(mDisplayProjectionBuffer);
+    
     RF::DestroyUniformBuffer(mShadowViewProjectionBuffer);
     RF::DestroyUniformBuffer(mShadowLightBuffer);
 

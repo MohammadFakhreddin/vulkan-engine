@@ -22,9 +22,11 @@ public:
 
     void UpdateBuffers();
 
-    void OnUpdate(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
+    void OnPreRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
 
-    void OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
+    void OnRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
+
+    void OnPostRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
 
     void OnUI();
 

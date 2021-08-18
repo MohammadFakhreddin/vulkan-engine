@@ -155,7 +155,30 @@ void GLTFMeshViewerScene::Init() {
     mRecordObject.Enable();
 }
 
-void GLTFMeshViewerScene::UpdateBuffers() {
+void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) {
+    auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
+    mPbrPipeline.Update(drawPass, deltaTimeInSec, 1, &selectedModel.drawableObjectId);
+}
+
+void GLTFMeshViewerScene::OnRender(float const deltaTimeInSec, RF::DrawPass & drawPass) {
+    MFA_ASSERT(mSelectedModelIndex >= 0 && mSelectedModelIndex < mModelsRenderData.size());
+
+    mCamera.onNewFrame(deltaTimeInSec);
+
+    auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
+
+    // TODO Pipeline should be able to share buffers such as projection buffer to enable us to update them once
+    mPbrPipeline.Render(drawPass, deltaTimeInSec, 1, &selectedModel.drawableObjectId);
+    if (mIsLightVisible) {
+        mPointLightPipeline.Render(drawPass, deltaTimeInSec, 1, &mPointLightObjectId);
+    }
+}
+
+void GLTFMeshViewerScene::OnPostRender(
+    float deltaTimeInSec, 
+    MFA::RenderFrontend::DrawPass & drawPass
+)
+{
     auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
     if (selectedModel.isLoaded == false) {
         createModel(selectedModel);
@@ -222,7 +245,7 @@ void GLTFMeshViewerScene::UpdateBuffers() {
             transformMat.multiply(scaleMat);
             
             MFA::PBRWithShadowPipelineV2::ModelData modelData {};
-            MFA::Copy<16, float>(modelData.model, translationMat.cells);
+            MFA::Copy<16, float>(modelData.model, transformMat.cells);
 
             mPbrPipeline.UpdateModel(
                 selectedModel.drawableObjectId, 
@@ -265,27 +288,6 @@ void GLTFMeshViewerScene::UpdateBuffers() {
         MFA::Copy<3>(lightPrimitiveInfo.baseColorFactor, mLightColor);
         lightPrimitiveInfo.baseColorFactor[3] = 1.0f;
         mPointLightPipeline.updatePrimitiveInfo(mPointLightObjectId, lightPrimitiveInfo);
-    }
-}
-
-void GLTFMeshViewerScene::OnUpdate(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) {
-    UpdateBuffers();
-
-    auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
-    mPbrPipeline.Update(drawPass, deltaTimeInSec, 1, &selectedModel.drawableObjectId);
-}
-
-void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & drawPass) {
-    MFA_ASSERT(mSelectedModelIndex >= 0 && mSelectedModelIndex < mModelsRenderData.size());
-
-    mCamera.onNewFrame(deltaTimeInSec);
-
-    auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
-
-    // TODO Pipeline should be able to share buffers such as projection buffer to enable us to update them once
-    mPbrPipeline.Render(drawPass, deltaTimeInSec, 1, &selectedModel.drawableObjectId);
-    if (mIsLightVisible) {
-        mPointLightPipeline.Render(drawPass, deltaTimeInSec, 1, &mPointLightObjectId);
     }
 }
 
