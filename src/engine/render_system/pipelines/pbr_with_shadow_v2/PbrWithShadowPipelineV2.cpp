@@ -167,16 +167,17 @@ void PBRWithShadowPipelineV2::Update(
 
         RF::BindDrawPipeline(drawPass, mShadowPassPipeline);
 
-        ShadowPushConstants shadowConstants {
-            .faceIndex = i
-        };
-        RF::PushConstants(
-            drawPass,
-            AS::ShaderStage::Vertex,
-            0,
-            CBlobAliasOf(shadowConstants)
-        );
-
+        {// Shadow constants
+            ShadowPushConstants shadowConstants {
+                .faceIndex = i
+            };
+            RF::PushConstants(
+                drawPass,
+                AS::ShaderStage::Vertex,
+                0,
+                CBlobAliasOf(shadowConstants)
+            );
+        }
         for (uint32_t i = 0; i < idsCount; ++i) {
             auto const findResult = mDrawableObjects.find(ids[i]);
             if (findResult != mDrawableObjects.end()) {

@@ -629,7 +629,7 @@ void BindDrawPipeline(
     DrawPipeline & drawPipeline   
 ) {
     MFA_ASSERT(drawPass.isValid);
-    drawPass.drawPipeline = &drawPipeline;
+    drawPass.pipeline = &drawPipeline;
     // We can bind command buffer to multiple pipeline
     vkCmdBindPipeline(
         state->displayRenderPass.GetCommandBuffer(drawPass),
@@ -712,13 +712,13 @@ void BindDescriptorSet(
     VkDescriptorSet descriptorSet
 ) {
     MFA_ASSERT(drawPass.isValid);
-    MFA_ASSERT(drawPass.drawPipeline);
+    MFA_ASSERT(drawPass.pipeline);
     MFA_ASSERT(descriptorSet);
     // We should bind specific descriptor set with different texture for each mesh
     vkCmdBindDescriptorSets(
         state->displayRenderPass.GetCommandBuffer(drawPass),
         VK_PIPELINE_BIND_POINT_GRAPHICS, 
-        drawPass.drawPipeline->pipelineLayout, 
+        drawPass.pipeline->pipelineLayout, 
         0, 
         1, 
         &descriptorSet, 
@@ -847,7 +847,7 @@ void PushConstants(
     MFA_ASSERT(drawPass.renderPass != nullptr);
     RB::PushConstants(
         state->displayRenderPass.GetCommandBuffer(drawPass),
-        drawPass.drawPipeline->pipelineLayout,
+        drawPass.pipeline->pipelineLayout,
         shaderStage,
         offset,
         data

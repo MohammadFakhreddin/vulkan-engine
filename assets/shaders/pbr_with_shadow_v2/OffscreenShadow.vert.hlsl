@@ -18,7 +18,7 @@ struct ModelData {
 ConstantBuffer <ModelData> modelBuffer: register(b0, space0);
 
 struct ViewDataProjectionData {
-    float4x4 data[];
+    float4x4 data[6];
 };
 
 ConstantBuffer <ViewDataProjectionData> viewProjectionBuffer: register(b1, space0);
