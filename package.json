@@ -15,6 +15,7 @@
         "offscreen-shadow-frag-v2": "glslc -fshader-stage=frag assets/shaders/pbr_with_shadow_v2/OffscreenShadow.frag.hlsl  -o assets/shaders/pbr_with_shadow_v2/OffscreenShadow.frag.spv",
         
         "cmake-mac": "cd build64 && cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=./ios.toolchain.cmake -DPLATFORM=MAC && cd ..",
-        "cmake-ios": "cd buildIOS && cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=./ios.toolchain.cmake -DPLATFORM=OS64COMBINED && cd .."
+        "cmake-ios": "cd buildIOS && cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=./ios.toolchain.cmake -DPLATFORM=OS64COMBINED && cd ..",
+        "cmake-windows": "cd build64 && cmake .. || cd .."
     }
 }

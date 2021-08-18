@@ -89,7 +89,7 @@ void OffScreenRenderPassV2::PrepareCubemapForTransferDestination(RF::DrawPass co
         .srcAccessMask = 0,
         .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
         .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        .newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .image = mDepthCubeMap.imageGroup.image,
@@ -117,7 +117,7 @@ void OffScreenRenderPassV2::PrepareCubemapForSampling(RF::DrawPass const & drawP
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .srcAccessMask = 0,
         .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-        .oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -152,7 +152,7 @@ void OffScreenRenderPassV2::internalBeginRenderPass(RF::DrawPass const & drawPas
             .newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = mDepthCubeMap.imageGroup.image,
+            .image = mDepthImage.imageGroup.image,
             .subresourceRange = subResourceRange
         };
         
@@ -204,7 +204,7 @@ void OffScreenRenderPassV2::internalEndRenderPass(RF::DrawPass const & drawPass)
             .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = mDepthCubeMap.imageGroup.image,
+            .image = mDepthImage.imageGroup.image,
             .subresourceRange = subResourceRange
         };
         
@@ -223,21 +223,25 @@ void OffScreenRenderPassV2::internalEndRenderPass(RF::DrawPass const & drawPass)
         };
         // Copy region for transfer from framebuffer to cube face
 		VkImageCopy copyRegion {
-            .srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .srcSubresource.baseArrayLayer = 0,
-            .srcSubresource.mipLevel = 0,
-            .srcSubresource.layerCount = 1,
+            .srcSubresource = {
+                .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+                .mipLevel = 0,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
             .srcOffset = { 0, 0, 0 },
-
-            .dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .dstSubresource.baseArrayLayer = static_cast<uint32_t>(mFaceIndex),
-            .dstSubresource.mipLevel = 0,
-            .dstSubresource.layerCount = 1,
+            .dstSubresource {
+                .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+                .mipLevel = 0,
+                .baseArrayLayer = static_cast<uint32_t>(mFaceIndex),
+                .layerCount = 1,
+            },
             .dstOffset = { 0, 0, 0 },
-
-            .extent.width = shadowExtend.width,
-            .extent.height = shadowExtend.height,
-            .extent.depth = 1,
+            .extent {
+                .width = shadowExtend.width,
+                .height = shadowExtend.height,
+                .depth = 1,
+            }
         };
         RB::CopyImage(
             mDisplayRenderPass->GetCommandBuffer(drawPass), 
@@ -258,7 +262,7 @@ void OffScreenRenderPassV2::createRenderPass() {
     
     // Depth attachment
     attachments.emplace_back(VkAttachmentDescription {
-        .format = mDepthCubeMap.imageFormat,
+        .format = mDepthImage.imageFormat,
         .samples = VK_SAMPLE_COUNT_1_BIT,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,

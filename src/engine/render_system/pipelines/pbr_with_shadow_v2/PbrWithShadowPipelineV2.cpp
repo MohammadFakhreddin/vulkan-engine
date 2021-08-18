@@ -162,6 +162,11 @@ void PBRWithShadowPipelineV2::Update(
 
     mShadowRenderPass.PrepareCubemapForTransferDestination(drawPass);
     for (int i = 0; i < 6; ++i) {
+        mShadowRenderPass.SetNextPassParams(i);
+        mShadowRenderPass.BeginRenderPass(drawPass);
+
+        RF::BindDrawPipeline(drawPass, mShadowPassPipeline);
+
         ShadowPushConstants shadowConstants {
             .faceIndex = i
         };
@@ -171,10 +176,6 @@ void PBRWithShadowPipelineV2::Update(
             0,
             CBlobAliasOf(shadowConstants)
         );
-        mShadowRenderPass.SetNextPassParams(i);
-        mShadowRenderPass.BeginRenderPass(drawPass);
-
-        RF::BindDrawPipeline(drawPass, mShadowPassPipeline);
 
         for (uint32_t i = 0; i < idsCount; ++i) {
             auto const findResult = mDrawableObjects.find(ids[i]);
@@ -193,7 +194,7 @@ void PBRWithShadowPipelineV2::Update(
 
         mShadowRenderPass.EndRenderPass(drawPass);
     }
-    mShadowRenderPass.PrepareCubemapForTransferDestination(drawPass);
+    mShadowRenderPass.PrepareCubemapForSampling(drawPass);
 }
 
 void PBRWithShadowPipelineV2::Render(
@@ -1036,7 +1037,7 @@ void PBRWithShadowPipelineV2::createUniformBuffers() {
     mDisplayLightViewBuffer = RF::CreateUniformBuffer(sizeof(DisplayLightAndCameraData), 1);
     mErrorBuffer = RF::CreateUniformBuffer(sizeof(DrawableObject::JointTransformBuffer), 1);
 
-    mShadowViewProjectionBuffer = RF::CreateUniformBuffer(sizeof(DisplayViewData), 1);
+    mShadowViewProjectionBuffer = RF::CreateUniformBuffer(sizeof(ShadowViewProjectionData), 1);
     mShadowLightBuffer = RF::CreateUniformBuffer(sizeof(ShadowLightData), 1);
 }
 
