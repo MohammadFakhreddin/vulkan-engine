@@ -479,6 +479,7 @@ elseif(IPHONE)
 
     target_link_libraries(${PROJECT_NAME} "Scenes" "Tools" "Engine" "Libs")
 
+    # TODO I think we should use .dylib instead
     target_link_libraries(${PROJECT_NAME}
         "-framework CoreGraphics"
         "-framework UIKit"

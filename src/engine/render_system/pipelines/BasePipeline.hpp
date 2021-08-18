@@ -45,13 +45,13 @@ public:
         isActive = true;
     }
 
-    void AddUniformBuffer(VkDescriptorBufferInfo const & bufferInfo) {
+    void AddUniformBuffer(VkDescriptorBufferInfo const & bufferInfo, uint32_t offset = 0) {
         MFA_ASSERT(isActive);
 
         VkWriteDescriptorSet writeDescriptorSet {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .dstSet = mDescriptorSet,
-            .dstBinding = static_cast<uint32_t>(mWriteInfo.size()),
+            .dstBinding = static_cast<uint32_t>(mWriteInfo.size()) + offset,
             .dstArrayElement = 0,
             .descriptorCount = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -61,13 +61,13 @@ public:
         mWriteInfo.emplace_back(writeDescriptorSet);
     }
 
-    void AddCombinedImageSampler(VkDescriptorImageInfo const & imageInfo) {
+    void AddCombinedImageSampler(VkDescriptorImageInfo const & imageInfo, uint32_t offset = 0) {
         MFA_ASSERT(isActive);
 
         VkWriteDescriptorSet writeDescriptorSet {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .dstSet = mDescriptorSet,
-            .dstBinding = static_cast<uint32_t>(mWriteInfo.size()),
+            .dstBinding = static_cast<uint32_t>(mWriteInfo.size()) + offset,
             .dstArrayElement = 0,
             .descriptorCount = 1,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
