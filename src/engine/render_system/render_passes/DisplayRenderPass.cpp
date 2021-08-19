@@ -312,13 +312,13 @@ void DisplayRenderPass::createRenderPass() {
     // Multisampled attachment that we render to
     VkAttachmentDescription const msaaAttachment {
         .format = mSwapChainImages.swapChainFormat,
-	    .samples = RF::GetMaxSamplesCount(),
-	    .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-	    .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-	    .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-	    .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-	    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-	    .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .samples = RF::GetMaxSamplesCount(),
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
     };
 
     VkAttachmentDescription const swapChainAttachment {
