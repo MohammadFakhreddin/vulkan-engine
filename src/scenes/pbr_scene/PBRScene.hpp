@@ -12,7 +12,7 @@ public:
 
     void Shutdown() override;
 
-    void OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_pass) override;
+    void OnRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_pass) override;
 
     void OnUI();
 

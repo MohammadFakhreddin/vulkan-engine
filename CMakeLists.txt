@@ -93,6 +93,8 @@ list(
     "src/engine/render_system/render_passes/DisplayRenderPass.cpp"
     "src/engine/render_system/render_passes/OffScreenRenderPass.hpp"
     "src/engine/render_system/render_passes/OffScreenRenderPass.cpp"
+    "src/engine/render_system/render_passes/OffScreenRenderPassV2.hpp"
+    "src/engine/render_system/render_passes/OffScreenRenderPassV2.cpp"
     
     # Pipeline
     "src/engine/render_system/pipelines/BasePipeline.hpp"
@@ -102,6 +104,8 @@ list(
     "src/engine/render_system/pipelines/point_light/PointLightPipeline.cpp"
     "src/engine/render_system/pipelines/pbr_with_shadow/PbrWithShadowPipeline.hpp"
     "src/engine/render_system/pipelines/pbr_with_shadow/PbrWithShadowPipeline.cpp"
+    "src/engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
+    "src/engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.cpp"
 
     "src/engine/FoundationAsset.hpp"
     "src/engine/FoundationAsset.cpp"
@@ -415,9 +419,9 @@ elseif(MACOSX)
         "-framework CoreGraphics"
         "-framework Foundation"
     )
-
-    target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.2.141.dylib")
     
+    target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.2.141.dylib")
+     
     target_include_directories(
         ${PROJECT_NAME} PUBLIC 
         "mac"
@@ -475,12 +479,14 @@ elseif(IPHONE)
 
     target_link_libraries(${PROJECT_NAME} "Scenes" "Tools" "Engine" "Libs")
 
+    # TODO I think we should use .dylib instead
     target_link_libraries(${PROJECT_NAME}
         "-framework CoreGraphics"
         "-framework UIKit"
         "-framework Metal"
-        "-framework QuartzCore"
-        "${CMAKE_SOURCE_DIR}/libs/ios/libMoltenVK.a"
+        "-framework QuartzCore"   
+        "${CMAKE_SOURCE_DIR}/libs/ios-arm64/libMoltenVK.a"
+        "${CMAKE_SOURCE_DIR}/libs/ios-arm64_x86_64-simulator/libMoltenVK.a"
     )
 
     # target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/libs/ios/libMoltenVK.dylib")

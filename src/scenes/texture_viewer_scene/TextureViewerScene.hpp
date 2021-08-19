@@ -9,7 +9,7 @@ public:
     TextureViewerScene();
     void Init() override;
     void Shutdown() override;
-    void OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
+    void OnRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
     void OnUI();
     void OnResize() override;
 

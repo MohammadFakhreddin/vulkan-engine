@@ -164,7 +164,6 @@ void PBRWithShadowPipeline::Update(
             shadowMatricesData.viewMatrices[5]
         );
 
-
         RF::UpdateUniformBuffer(mShadowMatricesBuffer.buffers[0], CBlobAliasOf(shadowMatricesData));
     }
 

@@ -155,11 +155,35 @@ void GLTFMeshViewerScene::Init() {
     mRecordObject.Enable();
 }
 
-void GLTFMeshViewerScene::OnUpdate(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) {
+void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) {
+    auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
+    mPbrPipeline.Update(drawPass, deltaTimeInSec, 1, &selectedModel.drawableObjectId);
+}
+
+void GLTFMeshViewerScene::OnRender(float const deltaTimeInSec, RF::DrawPass & drawPass) {
+    MFA_ASSERT(mSelectedModelIndex >= 0 && mSelectedModelIndex < mModelsRenderData.size());
+
+    mCamera.onNewFrame(deltaTimeInSec);
+
+    auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
+
+    // TODO Pipeline should be able to share buffers such as projection buffer to enable us to update them once
+    mPbrPipeline.Render(drawPass, deltaTimeInSec, 1, &selectedModel.drawableObjectId);
+    if (mIsLightVisible) {
+        mPointLightPipeline.Render(drawPass, deltaTimeInSec, 1, &mPointLightObjectId);
+    }
+}
+
+void GLTFMeshViewerScene::OnPostRender(
+    float deltaTimeInSec, 
+    MFA::RenderFrontend::DrawPass & drawPass
+)
+{
     auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
     if (selectedModel.isLoaded == false) {
         createModel(selectedModel);
     }
+
     if (mPreviousModelSelectedIndex != mSelectedModelIndex) {
         {// Enabling ui for current model
             auto * selectedDrawable = mPbrPipeline.GetDrawableById(mModelsRenderData[mSelectedModelIndex].drawableObjectId);
@@ -190,67 +214,52 @@ void GLTFMeshViewerScene::OnUpdate(float deltaTimeInSec, MFA::RenderFrontend::Dr
         mCamera.forceRotation(selectedModel.initialParams.camera.eulerAngles);
     }
 
-    mPbrPipeline.Update(drawPass, deltaTimeInSec, 1, &selectedModel.drawableObjectId);
-}
+    {// Updating PBR-Pipeline
+        {// Model
+            // Rotation
+            MFA::Matrix4X4Float rotationMat {};
+            MFA::Matrix4X4Float::AssignRotation(
+                rotationMat,
+                m_model_rotation[0],
+                m_model_rotation[1],
+                m_model_rotation[2]
+            );
 
-void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & drawPass) {
-    MFA_ASSERT(mSelectedModelIndex >= 0 && mSelectedModelIndex < mModelsRenderData.size());
+            // Scale
+            MFA::Matrix4X4Float scaleMat {};
+            MFA::Matrix4X4Float::AssignScale(scaleMat, m_model_scale);
 
-    mCamera.onNewFrame(deltaTimeInSec);
+            // Position
+            MFA::Matrix4X4Float translationMat {};
+            MFA::Matrix4X4Float::AssignTranslation(
+                translationMat,
+                m_model_position[0],
+                m_model_position[1],
+                m_model_position[2]
+            );
 
-    auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
-    {// Updating Transform buffer
-        // Rotation
-        MFA::Matrix4X4Float rotationMat {};
-        MFA::Matrix4X4Float::AssignRotation(
-            rotationMat,
-            m_model_rotation[0],
-            m_model_rotation[1],
-            m_model_rotation[2]
-        );
+            MFA::Matrix4X4Float transformMat {};
+            MFA::Matrix4X4Float::Identity(transformMat);
+            transformMat.multiply(translationMat);
+            transformMat.multiply(rotationMat);
+            transformMat.multiply(scaleMat);
+            
+            MFA::PBRWithShadowPipelineV2::ModelData modelData {};
+            MFA::Copy<16, float>(modelData.model, transformMat.cells);
 
-        // Scale
-        MFA::Matrix4X4Float scaleMat {};
-        MFA::Matrix4X4Float::AssignScale(scaleMat, m_model_scale);
-
-        // Position
-        MFA::Matrix4X4Float translationMat {};
-        MFA::Matrix4X4Float::AssignTranslation(
-            translationMat,
-            m_model_position[0],
-            m_model_position[1],
-            m_model_position[2]
-        );
-
-        MFA::Matrix4X4Float transformMat {};
-        MFA::Matrix4X4Float::Identity(transformMat);
-        transformMat.multiply(translationMat);
-        transformMat.multiply(rotationMat);
-        transformMat.multiply(scaleMat);
-        
-        transformMat.copy(mPbrMVPData.model);
-
-        mCamera.getTransform(mPbrMVPData.view);
-
-        mPbrPipeline.UpdateViewProjectionBuffer(
-            selectedModel.drawableObjectId,
-            mPbrMVPData
-        );
+            mPbrPipeline.UpdateModel(
+                selectedModel.drawableObjectId, 
+                modelData
+            );
+        }
+        {// View
+            MFA::PBRWithShadowPipelineV2::DisplayViewData viewData {};
+            mCamera.GetTransform(viewData.view);
+            mPbrPipeline.UpdateCameraView(viewData);
+        }
     }
+
     {// LightViewBuffer
-        //auto lightPosition = glm::vec4(
-        //    mLightPosition[0], 
-        //    mLightPosition[1], 
-        //    mLightPosition[2], 
-        //    1.0f
-        //);
-
-        //glm::mat4x4 transformMatrix;
-        //MFA::Matrix4X4Float::ConvertMatrixToGlm(mCamera.getTransform(), transformMatrix);
-
-        //lightPosition = transformMatrix * lightPosition;
-
-        //float transformedLightPosition[4] = {lightPosition[0], lightPosition[1], lightPosition[2]};
         mPbrPipeline.UpdateLightPosition(mLightPosition);
         float cameraPosition[3];
         mCamera.GetPosition(cameraPosition);
@@ -271,7 +280,7 @@ void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & draw
         transformMat.multiply(translationMat);
 
         transformMat.copy(mPointLightMVPData.model);
-        mCamera.getTransform(mPointLightMVPData.view);
+        mCamera.GetTransform(mPointLightMVPData.view);
         
         mPointLightPipeline.updateViewProjectionBuffer(mPointLightObjectId, mPointLightMVPData);
 
@@ -279,11 +288,6 @@ void GLTFMeshViewerScene::OnDraw(float const deltaTimeInSec, RF::DrawPass & draw
         MFA::Copy<3>(lightPrimitiveInfo.baseColorFactor, mLightColor);
         lightPrimitiveInfo.baseColorFactor[3] = 1.0f;
         mPointLightPipeline.updatePrimitiveInfo(mPointLightObjectId, lightPrimitiveInfo);
-    }
-    // TODO Pipeline should be able to share buffers such as projection buffer to enable us to update them once
-    mPbrPipeline.Render(drawPass, deltaTimeInSec, 1, &selectedModel.drawableObjectId);
-    if (mIsLightVisible) {
-        mPointLightPipeline.Render(drawPass, deltaTimeInSec, 1, &mPointLightObjectId);
     }
 }
 
@@ -415,8 +419,11 @@ void GLTFMeshViewerScene::destroyModels() {
 }
 
 void GLTFMeshViewerScene::updateProjectionBuffer() {
-    // PBR
-    mCamera.getProjection(mPbrMVPData.projection);
+    {// PBR
+        MFA::PBRWithShadowPipelineV2::DisplayProjectionData projectionData {};
+        mCamera.GetProjection(projectionData.projection);
+        mPbrPipeline.UpdateCameraProjection(projectionData);
+    }
     // PointLight
-    mCamera.getProjection(mPointLightMVPData.projection);
+    mCamera.GetProjection(mPointLightMVPData.projection);
 }

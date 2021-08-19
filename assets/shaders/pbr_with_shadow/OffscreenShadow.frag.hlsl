@@ -29,8 +29,4 @@ PSOut main(PSIn input) {
     PSOut output;
     output.depth = depth;
 	return output;
-
-    // PSOut output;
-    // output.color = 0.0f;
-	// return output;
 }

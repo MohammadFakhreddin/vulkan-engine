@@ -71,7 +71,7 @@ void SceneSubSystem::OnNewFrame(float const deltaTimeInSec) {
     }
     
     if(mActiveScene >= 0) {
-        mRegisteredScenes[mActiveScene].scene->OnUpdate(
+        mRegisteredScenes[mActiveScene].scene->OnPreRender(
             deltaTimeInSec, 
             drawPass
         );
@@ -80,7 +80,7 @@ void SceneSubSystem::OnNewFrame(float const deltaTimeInSec) {
     mDisplayRenderPass->BeginRenderPass(drawPass); // Draw pass being invalid means that RF cannot render anything
     
     if(mActiveScene >= 0) {
-        mRegisteredScenes[mActiveScene].scene->OnDraw(
+        mRegisteredScenes[mActiveScene].scene->OnRender(
             deltaTimeInSec,
             drawPass
         );
@@ -90,6 +90,14 @@ void SceneSubSystem::OnNewFrame(float const deltaTimeInSec) {
     mDisplayRenderPass->EndRenderPass(drawPass);
 
     mDisplayRenderPass->EndGraphicCommandBufferRecording(drawPass);
+
+    if(mActiveScene >= 0) {
+        mRegisteredScenes[mActiveScene].scene->OnPostRender(
+            deltaTimeInSec, 
+            drawPass
+        );
+    }
+
 }
 
 void SceneSubSystem::OnResize() {

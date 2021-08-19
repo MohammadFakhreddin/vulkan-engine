@@ -157,7 +157,7 @@ struct DrawPass {
     uint32_t imageIndex;
     uint8_t frameIndex;
     bool isValid = false;
-    DrawPipeline * drawPipeline = nullptr;
+    DrawPipeline * pipeline = nullptr;
     RenderPass * renderPass = nullptr;
 };
 

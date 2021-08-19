@@ -35,6 +35,15 @@ protected:
 
     virtual void internalResize() = 0;
 
+    [[nodiscard]]
+    bool getIsRenderPassActive() {
+        return mIsRenderPassActive;
+    }
+
+private:
+
+    bool mIsRenderPassActive = false;
+
 };
 
 }

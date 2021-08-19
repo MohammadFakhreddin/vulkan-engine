@@ -210,6 +210,9 @@ VkInstance CreateInstance(char const * applicationName) {
             &sdl_extenstion_count,
             instanceExtensions.data()
         ));
+#ifdef __PLATFORM_MAC__
+        instanceExtensions.emplace_back("VK_KHR_get_physical_device_properties2");
+#endif
     }
 #elif defined(__ANDROID__)
     // Filling android extensions
@@ -257,6 +260,7 @@ VkInstance CreateInstance(char const * applicationName) {
     };
     VkInstance instance = nullptr;
     VK_Check(vkCreateInstance(&instanceInfo, nullptr, &instance));
+    MFA_ASSERT(instance != nullptr);
     return instance;
 }
 
@@ -906,9 +910,12 @@ LogicalDevice CreateLogicalDevice(
         deviceCreateInfo.queueCreateInfoCount = 2;
     }
 
-    const char * device_extensions = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
-    deviceCreateInfo.enabledExtensionCount = 1;
-    deviceCreateInfo.ppEnabledExtensionNames = &device_extensions;
+    std::vector<char const *> enabledExtensionNames {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+#if defined(__PLATFORM_MAC__)// TODO We should query instead
+    enabledExtensionNames.emplace_back("VK_KHR_portability_subset");
+#endif
+    deviceCreateInfo.ppEnabledExtensionNames = enabledExtensionNames.data();
+    deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensionNames.size());
     // Necessary for shader (for some reason)
     deviceCreateInfo.pEnabledFeatures = &enabledPhysicalDeviceFeatures;
 #if defined(MFA_DEBUG) && defined(__ANDROID__) == false
@@ -918,6 +925,7 @@ LogicalDevice CreateLogicalDevice(
     deviceCreateInfo.enabledLayerCount = 0;
     deviceCreateInfo.ppEnabledLayerNames = nullptr;
 #endif
+    
     VK_Check(vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &ret.device));
     MFA_ASSERT(ret.device != nullptr);
     MFA_LOG_INFO("Logical device create was successful");    
@@ -970,7 +978,10 @@ VkSampler CreateSampler(
     sampler_info.maxAnisotropy = params.max_anisotropy;
     sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     sampler_info.unnormalizedCoordinates = VK_FALSE;
-    sampler_info.compareEnable = VK_TRUE;
+    /*
+    "Message code: 0\nMessage: Validation Error: [ VUID-VkDescriptorImageInfo-mutableComparisonSamplers-04450 ] Object 0: handle = 0x62200004c918, type = VK_OBJECT_TYPE_DEVICE; | MessageID = 0xf467460 | vkUpdateDescriptorSets() (portability error): sampler comparison not available. The Vulkan spec states: If the [VK_KHR_portability_subset] extension is enabled, and VkPhysicalDevicePortabilitySubsetFeaturesKHR::mutableComparisonSamplers is VK_FALSE, then sampler must have been created with VkSamplerCreateInfo::compareEnable set to VK_FALSE. (https://vulkan.lunarg.com/doc/view/1.2.182.0/mac/1.2-extensions/vkspec.html#VUID-VkDescriptorImageInfo-mutableComparisonSamplers-04450)\nLocation: 256275552\n"
+     **/
+    sampler_info.compareEnable = VK_FALSE;
     sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
     sampler_info.minLod = params.min_lod;
     sampler_info.maxLod = params.max_lod;
@@ -1504,7 +1515,7 @@ VkFramebuffer CreateFrameBuffers(
     createInfo.width = swapChainExtent.width;
     createInfo.height = swapChainExtent.height;
     createInfo.layers = layersCount;
-
+    
     VK_Check(vkCreateFramebuffer(device, &createInfo, nullptr, &frameBuffer));
 
     return frameBuffer;
@@ -2408,6 +2419,24 @@ VkSampleCountFlagBits ComputeMaxUsableSampleCount(VkPhysicalDeviceProperties dev
     if (counts & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
 
     return VK_SAMPLE_COUNT_1_BIT;
+}
+
+void CopyImage(
+    VkCommandBuffer commandBuffer,
+    VkImage sourceImage,
+    VkImage destinationImage,
+    VkImageCopy const & copyRegion
+) {
+    // Put image copy into command buffer
+    vkCmdCopyImage(
+        commandBuffer,
+        sourceImage,
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        destinationImage,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        1,
+        &copyRegion
+    );
 }
 
 }

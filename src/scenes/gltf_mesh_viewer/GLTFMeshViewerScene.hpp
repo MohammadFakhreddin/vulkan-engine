@@ -2,7 +2,7 @@
 
 #include "engine/Scene.hpp"
 #include "engine/camera/FirstPersonCamera.hpp"
-#include "engine/render_system/pipelines/pbr_with_shadow/PBRWithShadowPipeline.hpp"
+#include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
 #include "engine/render_system/pipelines/point_light/PointLightPipeline.hpp"
 #include "engine/render_system/DrawableObject.hpp"
 
@@ -20,9 +20,13 @@ public:
 
     void Init() override;
 
-    void OnUpdate(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
+    void UpdateBuffers();
 
-    void OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
+    void OnPreRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
+
+    void OnRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
+
+    void OnPostRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
 
     void OnUI();
 
@@ -91,7 +95,6 @@ private:
         alignas(4) int hasEmissiveTexture;
     }; 
 
-    MFA::PBRWithShadowPipeline::ModelViewProjectionData mPbrMVPData {};
     MFA::PointLightPipeline::ViewProjectionData mPointLightMVPData {};
 
     float m_model_rotation[3] {45.0f, 45.0f, 45.0f};
@@ -107,7 +110,7 @@ private:
 
     MFA::RenderFrontend::SamplerGroup mSamplerGroup {};
 
-    MFA::PBRWithShadowPipeline mPbrPipeline {};
+    MFA::PBRWithShadowPipelineV2 mPbrPipeline {};
     MFA::PointLightPipeline mPointLightPipeline {};
 
     MFA::RenderBackend::GpuTexture mErrorTexture {};

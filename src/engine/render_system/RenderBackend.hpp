@@ -805,4 +805,11 @@ VkSampleCountFlagBits ComputeMaxUsableSampleCount(VkPhysicalDevice physicalDevic
 
 VkSampleCountFlagBits ComputeMaxUsableSampleCount(VkPhysicalDeviceProperties deviceProperties);
 
+void CopyImage(
+    VkCommandBuffer commandBuffer,
+    VkImage sourceImage,
+    VkImage destinationImage,
+    VkImageCopy const & copyRegion
+);
+
 }

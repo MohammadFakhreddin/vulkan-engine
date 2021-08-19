@@ -131,15 +131,15 @@ void FirstPersonCamera::onResize() {
 //#endif
 }
 
-void FirstPersonCamera::getProjection(float outProjectionMatrix[16]) {
+void FirstPersonCamera::GetProjection(float outProjectionMatrix[16]) {
     mProjectionMatrix.copy(outProjectionMatrix);  
 }
 
-Matrix4X4Float const & FirstPersonCamera::getProjection() const {
+Matrix4X4Float const & FirstPersonCamera::GetProjection() const {
     return mProjectionMatrix;
 }
 
-void FirstPersonCamera::getTransform(float outTransformMatrix[16]) {
+void FirstPersonCamera::GetTransform(float outTransformMatrix[16]) {
     mTransformMatrix.copy(outTransformMatrix);
 }
 
