@@ -532,7 +532,7 @@ private:
 
 struct CreateGraphicPipelineOptions {
     VkFrontFace frontFace = VK_FRONT_FACE_CLOCKWISE;
-    VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;           // TODO It should be VK_CULL_MODE_BACK_BIT although somehow it breaks imgui. Why?
+    VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;           
     VkPipelineDynamicStateCreateInfo * dynamicStateCreateInfo = nullptr;
     VkPipelineDepthStencilStateCreateInfo depthStencil {};
     VkPipelineColorBlendAttachmentState colorBlendAttachments {};

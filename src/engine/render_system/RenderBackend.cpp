@@ -979,9 +979,10 @@ VkSampler CreateSampler(
     sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     sampler_info.unnormalizedCoordinates = VK_FALSE;
     /*
+     *TODO Issue for mac:
     "Message code: 0\nMessage: Validation Error: [ VUID-VkDescriptorImageInfo-mutableComparisonSamplers-04450 ] Object 0: handle = 0x62200004c918, type = VK_OBJECT_TYPE_DEVICE; | MessageID = 0xf467460 | vkUpdateDescriptorSets() (portability error): sampler comparison not available. The Vulkan spec states: If the [VK_KHR_portability_subset] extension is enabled, and VkPhysicalDevicePortabilitySubsetFeaturesKHR::mutableComparisonSamplers is VK_FALSE, then sampler must have been created with VkSamplerCreateInfo::compareEnable set to VK_FALSE. (https://vulkan.lunarg.com/doc/view/1.2.182.0/mac/1.2-extensions/vkspec.html#VUID-VkDescriptorImageInfo-mutableComparisonSamplers-04450)\nLocation: 256275552\n"
      **/
-    sampler_info.compareEnable = VK_FALSE;
+    sampler_info.compareEnable = VK_TRUE;
     sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
     sampler_info.minLod = params.min_lod;
     sampler_info.maxLod = params.max_lod;
@@ -1647,7 +1648,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
     multi_sample_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multi_sample_state_create_info.rasterizationSamples = options.rasterizationSamples;
     multi_sample_state_create_info.sampleShadingEnable = VK_TRUE;
-    multi_sample_state_create_info.minSampleShading = 1.0f; // It can be in range of 0 to 1. Min fraction for sample shading; closer to one is smooth
+    multi_sample_state_create_info.minSampleShading = 0.2f; // It can be in range of 0 to 1. Min fraction for sample shading; closer to one is smooth
     multi_sample_state_create_info.alphaToCoverageEnable = VK_FALSE;
     multi_sample_state_create_info.alphaToOneEnable = VK_FALSE;
 

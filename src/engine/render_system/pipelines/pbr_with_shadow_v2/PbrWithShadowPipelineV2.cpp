@@ -131,35 +131,12 @@ void PBRWithShadowPipelineV2::Shutdown() {
     destroyUniformBuffers();
 }
 // TODO Updating buffer inside commandBuffer might not be a good idea, Research about it!
-void PBRWithShadowPipelineV2::Update(
+void PBRWithShadowPipelineV2::PreRender(
     RF::DrawPass & drawPass, 
     float const deltaTime, 
     uint32_t const idsCount, 
     DrawableObjectId * ids
 ) {
-    
-    if (mNeedToUpdateDisplayLightBuffer) {
-        mNeedToUpdateDisplayLightBuffer = false;
-
-        DisplayLightAndCameraData displayLightViewData {
-            .projectFarToNearDistance = mProjectionFarToNearDistance
-        };
-        Copy<3>(displayLightViewData.cameraPosition, mCameraPosition);
-        Copy<3>(displayLightViewData.lightColor, mLightColor);
-        Copy<3>(displayLightViewData.lightPosition, mLightPosition);
-        RF::UpdateUniformBuffer(mDisplayLightViewBuffer.buffers[0], CBlobAliasOf(displayLightViewData));
-    }
-
-    if (mNeedToUpdateShadowLightBuffer) {
-        mNeedToUpdateShadowLightBuffer = false;
-    
-        ShadowLightData shadowLightData {
-            .projectionMatrixDistance = mProjectionFarToNearDistance
-        };
-        Copy<3>(shadowLightData.lightPosition, mLightPosition);
-        RF::UpdateUniformBuffer(mShadowLightBuffer.buffers[0], CBlobAliasOf(shadowLightData));
-    }
-
     mShadowRenderPass.PrepareCubemapForTransferDestination(drawPass);
     for (int i = 0; i < 6; ++i) {
         mShadowRenderPass.SetNextPassParams(i);
@@ -282,26 +259,45 @@ void PBRWithShadowPipelineV2::UpdateCameraProjection(DisplayProjectionData const
     );
 }
 
+// TODO Make 2 shader data similar to each other
 void PBRWithShadowPipelineV2::UpdateLightPosition(float lightPosition[3]) {
     if (IsEqual<3>(mLightPosition, lightPosition) == false) {
         Copy<3>(mLightPosition, lightPosition);
-        mNeedToUpdateDisplayLightBuffer = true;
-        mNeedToUpdateShadowLightBuffer = true;
+        updateDisplayLightBuffer();
+        updateShadowLightBuffer();
     }
 }
 
 void PBRWithShadowPipelineV2::UpdateCameraPosition(float cameraPosition[3]) {
     if (IsEqual<3>(mCameraPosition, cameraPosition) == false) {
         Copy<3>(mCameraPosition, cameraPosition);
-        mNeedToUpdateDisplayLightBuffer = true;
+        updateDisplayLightBuffer();
     }
 }
 
 void PBRWithShadowPipelineV2::UpdateLightColor(float lightColor[3]) {
     if (IsEqual<3>(mLightColor, lightColor) == false) {
         Copy<3>(mLightColor, lightColor);
-        mNeedToUpdateDisplayLightBuffer = true;
+        updateDisplayLightBuffer();
     }
+}
+
+void PBRWithShadowPipelineV2::updateDisplayLightBuffer() {
+    DisplayLightAndCameraData displayLightViewData {
+        .projectFarToNearDistance = mProjectionFarToNearDistance
+    };
+    Copy<3>(displayLightViewData.cameraPosition, mCameraPosition);
+    Copy<3>(displayLightViewData.lightColor, mLightColor);
+    Copy<3>(displayLightViewData.lightPosition, mLightPosition);
+    RF::UpdateUniformBuffer(mDisplayLightAndCameraBuffer.buffers[0], CBlobAliasOf(displayLightViewData));
+}
+
+void PBRWithShadowPipelineV2::updateShadowLightBuffer() {
+    ShadowLightData shadowLightData {
+        .projectionMatrixDistance = mProjectionFarToNearDistance
+    };
+    Copy<3>(shadowLightData.lightPosition, mLightPosition);
+    RF::UpdateUniformBuffer(mShadowLightBuffer.buffers[0], CBlobAliasOf(shadowLightData));
 }
 
 DrawableObject * PBRWithShadowPipelineV2::GetDrawableById(DrawableObjectId const objectId) {
@@ -362,7 +358,7 @@ void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableObject * d
                         VkDescriptorBufferInfo bufferInfo {
                             .buffer = mDisplayViewBuffer.buffers[0].buffer,
                             .offset = 0,
-                            .range = mDisplayLightViewBuffer.bufferSize,
+                            .range = mDisplayViewBuffer.bufferSize,
                         };
                         descriptorSetSchema.AddUniformBuffer(bufferInfo);
                     }
@@ -479,9 +475,9 @@ void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableObject * d
 
                     {// LightViewBuffer
                         VkDescriptorBufferInfo lightViewBufferInfo {};
-                        lightViewBufferInfo.buffer = mDisplayLightViewBuffer.buffers[0].buffer;
+                        lightViewBufferInfo.buffer = mDisplayLightAndCameraBuffer.buffers[0].buffer;
                         lightViewBufferInfo.offset = 0;
-                        lightViewBufferInfo.range = mDisplayLightViewBuffer.bufferSize;
+                        lightViewBufferInfo.range = mDisplayLightAndCameraBuffer.bufferSize;
 
                         descriptorSetSchema.AddUniformBuffer(lightViewBufferInfo);
                     }
@@ -963,10 +959,10 @@ void PBRWithShadowPipelineV2::createShadowPassPipeline() {
     std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions {};
     {// Position
         VkVertexInputAttributeDescription attributeDescription {};
-        attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-        attributeDescription.binding = 0,
-        attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT,
-        attributeDescription.offset = offsetof(AS::MeshVertex, position),   
+        attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
+        attributeDescription.binding = 0;
+        attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescription.offset = offsetof(AS::MeshVertex, position);   
         
         inputAttributeDescriptions.emplace_back(attributeDescription);
     }
@@ -1037,7 +1033,7 @@ void PBRWithShadowPipelineV2::createUniformBuffers() {
 
     mDisplayViewBuffer = RF::CreateUniformBuffer(sizeof(DisplayViewData), 1);
     mDisplayProjectionBuffer = RF::CreateUniformBuffer(sizeof(DisplayProjectionData), 1);
-    mDisplayLightViewBuffer = RF::CreateUniformBuffer(sizeof(DisplayLightAndCameraData), 1);
+    mDisplayLightAndCameraBuffer = RF::CreateUniformBuffer(sizeof(DisplayLightAndCameraData), 1);
     
     mShadowViewProjectionBuffer = RF::CreateUniformBuffer(sizeof(ShadowViewProjectionData), 1);
     mShadowLightBuffer = RF::CreateUniformBuffer(sizeof(ShadowLightData), 1);
@@ -1047,7 +1043,7 @@ void PBRWithShadowPipelineV2::destroyUniformBuffers() {
     RF::DestroyUniformBuffer(mErrorBuffer);
 
     RF::DestroyUniformBuffer(mDisplayViewBuffer);
-    RF::DestroyUniformBuffer(mDisplayLightViewBuffer);
+    RF::DestroyUniformBuffer(mDisplayLightAndCameraBuffer);
     RF::DestroyUniformBuffer(mDisplayProjectionBuffer);
     
     RF::DestroyUniformBuffer(mShadowViewProjectionBuffer);

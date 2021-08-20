@@ -157,7 +157,7 @@ void GLTFMeshViewerScene::Init() {
 
 void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) {
     auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
-    mPbrPipeline.Update(drawPass, deltaTimeInSec, 1, &selectedModel.drawableObjectId);
+    mPbrPipeline.PreRender(drawPass, deltaTimeInSec, 1, &selectedModel.drawableObjectId);
 }
 
 void GLTFMeshViewerScene::OnRender(float const deltaTimeInSec, RF::DrawPass & drawPass) {

@@ -74,7 +74,7 @@ void PBRWithShadowPipeline::Shutdown() {
     destroyUniformBuffers();
 }
 // TODO Having animation inside drawable object is really really bad and having 2 drawable is a mess! Merge them no matter what!
-void PBRWithShadowPipeline::Update(
+void PBRWithShadowPipeline::PreRender(
     RF::DrawPass & drawPass, 
     float const deltaTime, 
     uint32_t const idsCount, 

@@ -13,7 +13,7 @@ public:
     
     virtual ~BasePipeline() = default;
 
-    virtual void Update(
+    virtual void PreRender(
         RF::DrawPass & drawPass,
         float deltaTime,
         uint32_t idsCount, 

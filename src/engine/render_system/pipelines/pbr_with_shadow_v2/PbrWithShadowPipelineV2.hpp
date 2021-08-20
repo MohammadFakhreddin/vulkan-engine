@@ -30,14 +30,17 @@ public:
     struct ModelData {   // For vertices in Vertex shader
         alignas(64) float model[16];
     };
+    static_assert(sizeof(ModelData) == 64);
 
     struct DisplayViewData {
         alignas(64) float view[16];
     };
+    static_assert(sizeof(DisplayViewData) == 64);
 
     struct DisplayProjectionData {
         alignas(64) float projection[16];
     };
+    static_assert(sizeof(DisplayProjectionData) == 64);
 
     struct ShadowViewProjectionData {
         float viewMatrices[6][16];
@@ -81,7 +84,7 @@ public:
 
     void Shutdown();
 
-    void Update(RF::DrawPass & drawPass, float deltaTime, uint32_t idsCount, DrawableObjectId * ids) override;
+    void PreRender(RF::DrawPass & drawPass, float deltaTime, uint32_t idsCount, DrawableObjectId * ids) override;
 
     void Render(RF::DrawPass & drawPass, float deltaTime, uint32_t idsCount, DrawableObjectId * ids) override;
 
@@ -130,6 +133,10 @@ private:
 
     void destroyUniformBuffers();
 
+    void updateDisplayLightBuffer();
+
+    void updateShadowLightBuffer();
+
     inline static constexpr float SHADOW_WIDTH = 1024;
     inline static constexpr float SHADOW_HEIGHT = 1024;
 
@@ -143,7 +150,7 @@ private:
     
     VkDescriptorSetLayout mDisplayPassDescriptorSetLayout {};
     RF::DrawPipeline mDisplayPassPipeline {};
-    RF::UniformBufferGroup mDisplayLightViewBuffer {};
+    RF::UniformBufferGroup mDisplayLightAndCameraBuffer {};
     RF::UniformBufferGroup mDisplayViewBuffer {};
     RF::UniformBufferGroup mDisplayProjectionBuffer {};
 
@@ -164,9 +171,6 @@ private:
     float mProjectionFar = 0.0f;
     float mProjectionFarToNearDistance = 0.0f;
 
-    bool mNeedToUpdateDisplayLightBuffer = true;
-    bool mNeedToUpdateShadowLightBuffer = true;
-    
     DrawableObjectId mNextDrawableObjectId = 0;
 
     glm::mat4 mShadowProjection {};
