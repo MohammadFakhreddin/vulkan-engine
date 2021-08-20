@@ -6,6 +6,8 @@
 #include "tools/Importer.hpp"
 #include "engine/BedrockMatrix.hpp"
 
+
+//https://stackoverflow.com/questions/54182706/why-do-i-need-resources-per-swapchain-image
 namespace MFA {
 
 void PBRWithShadowPipelineV2::Init(
@@ -227,6 +229,7 @@ void PBRWithShadowPipelineV2::UpdateLightPosition(float lightPosition[3]) {
         Copy<3>(mLightPosition, lightPosition);
         updateDisplayLightBuffer();
         updateShadowLightBuffer();
+        updateViewProjectionBuffer();
     }
 }
 

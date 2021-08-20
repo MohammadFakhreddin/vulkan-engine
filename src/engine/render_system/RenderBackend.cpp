@@ -1648,7 +1648,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
     multi_sample_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multi_sample_state_create_info.rasterizationSamples = options.rasterizationSamples;
     multi_sample_state_create_info.sampleShadingEnable = VK_TRUE;
-    multi_sample_state_create_info.minSampleShading = 0.2f; // It can be in range of 0 to 1. Min fraction for sample shading; closer to one is smooth
+    multi_sample_state_create_info.minSampleShading = 0.5f; // It can be in range of 0 to 1. Min fraction for sample shading; closer to one is smooth
     multi_sample_state_create_info.alphaToCoverageEnable = VK_FALSE;
     multi_sample_state_create_info.alphaToOneEnable = VK_FALSE;
 
