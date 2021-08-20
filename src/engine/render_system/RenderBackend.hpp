@@ -532,7 +532,7 @@ private:
 
 struct CreateGraphicPipelineOptions {
     VkFrontFace frontFace = VK_FRONT_FACE_CLOCKWISE;
-    VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;           
+    VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;                   // TODO We need no cull for certain objects
     VkPipelineDynamicStateCreateInfo * dynamicStateCreateInfo = nullptr;
     VkPipelineDepthStencilStateCreateInfo depthStencil {};
     VkPipelineColorBlendAttachmentState colorBlendAttachments {};

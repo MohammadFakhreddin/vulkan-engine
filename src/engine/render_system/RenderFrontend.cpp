@@ -778,14 +778,10 @@ void BeginRenderPass(
     VkCommandBuffer commandBuffer, 
     VkRenderPass renderPass, 
     VkFramebuffer frameBuffer,
-    VkExtent2D const & extent2D
+    VkExtent2D const & extent2D,
+    uint32_t clearValuesCount,
+    VkClearValue * clearValues
 ) {
-    std::vector<VkClearValue> clearValues {};
-    clearValues.resize(3);
-    clearValues[0].color = VkClearColorValue { .float32 = {0.1f, 0.1f, 0.1f, 1.0f }};
-    clearValues[1].color = VkClearColorValue { .float32 = {0.1f, 0.1f, 0.1f, 1.0f }};
-    clearValues[2].depthStencil = { .depth = 1.0f, .stencil = 0};
-
     VkRenderPassBeginInfo renderPassBeginInfo = {};
     renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassBeginInfo.renderPass = renderPass;
@@ -794,8 +790,8 @@ void BeginRenderPass(
     renderPassBeginInfo.renderArea.offset.y = 0;
     renderPassBeginInfo.renderArea.extent.width = extent2D.width;
     renderPassBeginInfo.renderArea.extent.height = extent2D.height;
-    renderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-    renderPassBeginInfo.pClearValues = clearValues.data();
+    renderPassBeginInfo.clearValueCount = clearValuesCount;
+    renderPassBeginInfo.pClearValues = clearValues;
 
     RB::BeginRenderPass(commandBuffer, renderPassBeginInfo);
 }

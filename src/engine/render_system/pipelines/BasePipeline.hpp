@@ -18,7 +18,7 @@ public:
         float deltaTime,
         uint32_t idsCount, 
         DrawableObjectId * ids
-    ) {};
+    ) {}
 
     virtual void Render(        
         RF::DrawPass & drawPass,
@@ -26,6 +26,13 @@ public:
         uint32_t idsCount, 
         DrawableObjectId * ids
     ) = 0;
+
+    virtual void PostRender(
+        RF::DrawPass & drawPass,
+        float deltaTime,
+        uint32_t idsCount, 
+        DrawableObjectId * ids
+    ) {}
 
     virtual DrawableObjectId AddGpuModel(RF::GpuModel & gpuModel) = 0;
 

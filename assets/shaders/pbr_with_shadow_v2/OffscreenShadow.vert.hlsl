@@ -35,11 +35,15 @@ struct SkinJoints {
 
 ConstantBuffer <SkinJoints> skinJointsBuffer: register(b3, space0); 
 
-struct MConstants {
-    int faceIndex;
+struct PushConsts
+{
+	int faceIndex;
 };
 
-[[vk::push_constant]] MConstants mConstants;
+[[vk::push_constant]]
+cbuffer {
+    PushConsts pushConsts;
+};
 
 #define IdentityMat float4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
 
@@ -62,7 +66,7 @@ VSOut main(VSIn input) {
     float4 tempPosition = float4(input.position, 1.0f); // w is 1 because position is a coordinate
     float4 worldPosition = mul(skinModelMat, tempPosition);;
     output.worldPosition = worldPosition;
-    output.position = mul(viewProjectionBuffer.data[mConstants.faceIndex], worldPosition);
+    output.position = mul(viewProjectionBuffer.data[pushConsts.faceIndex], worldPosition);
 
     return output;
 }

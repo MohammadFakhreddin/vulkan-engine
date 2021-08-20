@@ -26,7 +26,7 @@ namespace IM = InputManager;
 // # glslangValidator -V -x -o glsl_shader.vert.u32 glsl_shader.vert
 /*
 #version 450 core
-layout(location = 0) in vec2 aPos;
+layout(location = 0) in vec2 aPos;d
 layout(location = 1) in vec2 aUV;
 layout(location = 2) in vec4 aColor;
 layout(push_constant) uniform uPushConstant { vec2 uScale; vec2 uTranslate; } pc;
@@ -309,6 +309,7 @@ void Init() {
         pipelineOptions.pushConstantRanges = pushConstantRanges.data();
         pipelineOptions.useStaticViewportAndScissor = false;
         pipelineOptions.cullMode = VK_CULL_MODE_NONE;
+        // TODO I wish we could render ui without MaxSamplesCount
         pipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
         
         state->drawPipeline = RF::CreateDrawPipeline(

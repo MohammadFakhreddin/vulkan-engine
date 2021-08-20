@@ -165,7 +165,7 @@ void OffScreenRenderPassV2::internalBeginRenderPass(RF::DrawPass const & drawPas
         );
     }
 
-    //  Shadow map generation
+    // Shadow map generation
     auto const shadowExtend = VkExtent2D {
         .width = mImageWidth,
         .height = mImageHeight
@@ -176,11 +176,17 @@ void OffScreenRenderPassV2::internalBeginRenderPass(RF::DrawPass const & drawPas
 
     RF::AssignViewportAndScissorToCommandBuffer(commandBuffer, shadowExtend);
 
+    std::vector<VkClearValue> clearValues {};
+    clearValues.resize(1);
+    clearValues[0].depthStencil = { .depth = 1.0f, .stencil = 0};
+
     RF::BeginRenderPass(
         commandBuffer,
         mVkRenderPass,
         mFrameBuffer,
-        shadowExtend
+        shadowExtend,
+        static_cast<uint32_t>(clearValues.size()),
+        clearValues.data()
     );
 }
 
@@ -222,8 +228,8 @@ void OffScreenRenderPassV2::internalEndRenderPass(RF::DrawPass const & drawPass)
             .width = mImageWidth,
             .height = mImageHeight
         };
-        // Copy region for transfer from framebuffer to cube face
-		VkImageCopy copyRegion {
+        // Copy region for transfer from frame buffer to cube face
+        VkImageCopy const copyRegion {
             .srcSubresource = {
                 .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
                 .mipLevel = 0,

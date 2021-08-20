@@ -176,11 +176,19 @@ void DisplayRenderPass::internalBeginRenderPass(RF::DrawPass const & drawPass) {
 
     RF::AssignViewportAndScissorToCommandBuffer(GetCommandBuffer(drawPass), swapChainExtend);
 
+    std::vector<VkClearValue> clearValues {};
+    clearValues.resize(3);
+    clearValues[0].color = VkClearColorValue { .float32 = {0.1f, 0.1f, 0.1f, 1.0f }};
+    clearValues[1].color = VkClearColorValue { .float32 = {0.1f, 0.1f, 0.1f, 1.0f }};
+    clearValues[2].depthStencil = { .depth = 1.0f, .stencil = 0};
+
     RF::BeginRenderPass(
         GetCommandBuffer(drawPass), 
         mVkRenderPass, 
         getFrameBuffer(drawPass),
-        swapChainExtend
+        swapChainExtend,
+        static_cast<uint32_t>(clearValues.size()),
+        clearValues.data()
     );
 }
 

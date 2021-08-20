@@ -289,6 +289,9 @@ void GLTFMeshViewerScene::OnPostRender(
         lightPrimitiveInfo.baseColorFactor[3] = 1.0f;
         mPointLightPipeline.updatePrimitiveInfo(mPointLightObjectId, lightPrimitiveInfo);
     }
+
+    mPbrPipeline.PostRender(drawPass, deltaTimeInSec, 1, &selectedModel.drawableObjectId);
+
 }
 
 void GLTFMeshViewerScene::OnUI() {

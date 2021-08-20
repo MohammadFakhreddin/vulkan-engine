@@ -88,6 +88,8 @@ public:
 
     void Render(RF::DrawPass & drawPass, float deltaTime, uint32_t idsCount, DrawableObjectId * ids) override;
 
+    void PostRender(RF::DrawPass & drawPass, float deltaTime, uint32_t idsCount, DrawableObjectId * ids) override;
+
     void OnResize() override {}
 
     DrawableObjectId AddGpuModel(RF::GpuModel & gpuModel) override;
@@ -137,6 +139,8 @@ private:
 
     void updateShadowLightBuffer();
 
+    void updateViewProjectionBuffer();
+    
     inline static constexpr float SHADOW_WIDTH = 1024;
     inline static constexpr float SHADOW_HEIGHT = 1024;
 

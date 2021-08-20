@@ -8,9 +8,6 @@
 
 namespace MFA {
 
-// TODO Implement again without geometry shader
-// TODO Implement smooth shadows
-
 void PBRWithShadowPipelineV2::Init(
     RF::SamplerGroup * samplerGroup, 
     RB::GpuTexture * errorTexture,
@@ -56,63 +53,9 @@ void PBRWithShadowPipelineV2::Init(
 
     mShadowProjection = Matrix4X4Float::ConvertCellsToMat4(projectionMatrix4X4.cells);
 
-    auto const lightPositionVector = glm::vec3(mLightPosition[0], mLightPosition[1], mLightPosition[2]);
-
-    Matrix4X4Float::ConvertGmToCells(
-        mShadowProjection * glm::lookAt(
-            lightPositionVector, 
-            lightPositionVector + glm::vec3( 1.0, 0.0, 0.0), 
-            glm::vec3(0.0,-1.0, 0.0)
-        ), 
-        mShadowViewProjectionData.viewMatrices[0]
-    );
-
-    Matrix4X4Float::ConvertGmToCells(
-        mShadowProjection * glm::lookAt(
-            lightPositionVector, 
-            lightPositionVector + glm::vec3(-1.0, 0.0, 0.0), 
-            glm::vec3(0.0,-1.0, 0.0)
-        ), 
-        mShadowViewProjectionData.viewMatrices[1]
-    );
-
-    Matrix4X4Float::ConvertGmToCells(
-        mShadowProjection * glm::lookAt(
-            lightPositionVector, 
-            lightPositionVector + glm::vec3( 0.0, 1.0, 0.0), 
-            glm::vec3(0.0, 0.0, 1.0)
-        ), 
-        mShadowViewProjectionData.viewMatrices[2]
-    );
-
-    Matrix4X4Float::ConvertGmToCells(
-        mShadowProjection * glm::lookAt(
-            lightPositionVector, 
-            lightPositionVector + glm::vec3( 0.0,-1.0, 0.0), 
-            glm::vec3(0.0, 0.0,-1.0)
-        ), 
-        mShadowViewProjectionData.viewMatrices[3]
-    );
-
-    Matrix4X4Float::ConvertGmToCells(
-        mShadowProjection * glm::lookAt(
-            lightPositionVector, 
-            lightPositionVector + glm::vec3( 0.0, 0.0, 1.0), 
-            glm::vec3(0.0,-1.0, 0.0)
-        ), 
-        mShadowViewProjectionData.viewMatrices[4]
-    );
-
-    Matrix4X4Float::ConvertGmToCells(
-        mShadowProjection * glm::lookAt(
-            lightPositionVector, 
-            lightPositionVector + glm::vec3( 0.0, 0.0,-1.0), 
-            glm::vec3(0.0,-1.0, 0.0)
-        ), 
-        mShadowViewProjectionData.viewMatrices[5]
-    );
-
-    RF::UpdateUniformBuffer(mShadowViewProjectionBuffer.buffers[0], CBlobAliasOf(mShadowViewProjectionData));
+    updateShadowLightBuffer();
+    updateDisplayLightBuffer();
+    updateViewProjectionBuffer();
 }
 
 void PBRWithShadowPipelineV2::Shutdown() {
@@ -130,6 +73,7 @@ void PBRWithShadowPipelineV2::Shutdown() {
     destroyDescriptorSetLayout();
     destroyUniformBuffers();
 }
+
 // TODO Updating buffer inside commandBuffer might not be a good idea, Research about it!
 void PBRWithShadowPipelineV2::PreRender(
     RF::DrawPass & drawPass, 
@@ -137,6 +81,7 @@ void PBRWithShadowPipelineV2::PreRender(
     uint32_t const idsCount, 
     DrawableObjectId * ids
 ) {
+
     mShadowRenderPass.PrepareCubemapForTransferDestination(drawPass);
     for (int i = 0; i < 6; ++i) {
         mShadowRenderPass.SetNextPassParams(i);
@@ -155,12 +100,13 @@ void PBRWithShadowPipelineV2::PreRender(
                 CBlobAliasOf(shadowConstants)
             );
         }
+
+        // TODO We can query drawable objects once
         for (uint32_t i = 0; i < idsCount; ++i) {
             auto const findResult = mDrawableObjects.find(ids[i]);
             if (findResult != mDrawableObjects.end()) {
                 auto * drawableObject = findResult->second.get();
                 MFA_ASSERT(drawableObject != nullptr);
-                drawableObject->Update(deltaTime);
                 drawableObject->Draw(drawPass, [&drawPass, &drawableObject](AS::MeshPrimitive const & primitive)-> void {
                     RF::BindDescriptorSet(
                         drawPass, 
@@ -194,6 +140,22 @@ void PBRWithShadowPipelineV2::Render(
                     drawableObject->GetDescriptorSetGroup("DisplayPipeline")->descriptorSets[primitive.uniqueId]
                 );
             });
+        }
+    }
+}
+
+void PBRWithShadowPipelineV2::PostRender(
+    RF::DrawPass & drawPass, 
+    float const deltaTime, 
+    uint32_t const idsCount, 
+    DrawableObjectId * ids
+) {
+    for (uint32_t i = 0; i < idsCount; ++i) {
+        auto const findResult = mDrawableObjects.find(ids[i]);
+        if (findResult != mDrawableObjects.end()) {
+            auto * drawableObject = findResult->second.get();
+            MFA_ASSERT(drawableObject != nullptr);
+            drawableObject->Update(deltaTime);
         }
     }
 }
@@ -298,6 +260,66 @@ void PBRWithShadowPipelineV2::updateShadowLightBuffer() {
     };
     Copy<3>(shadowLightData.lightPosition, mLightPosition);
     RF::UpdateUniformBuffer(mShadowLightBuffer.buffers[0], CBlobAliasOf(shadowLightData));
+}
+
+void PBRWithShadowPipelineV2::updateViewProjectionBuffer() {
+    auto const lightPositionVector = glm::vec3(mLightPosition[0], mLightPosition[1], mLightPosition[2]);
+
+    Matrix4X4Float::ConvertGmToCells(
+        mShadowProjection * glm::lookAt(
+            lightPositionVector, 
+            lightPositionVector + glm::vec3( 1.0, 0.0, 0.0), 
+            glm::vec3(0.0,-1.0, 0.0)
+        ), 
+        mShadowViewProjectionData.viewMatrices[0]
+    );
+
+    Matrix4X4Float::ConvertGmToCells(
+        mShadowProjection * glm::lookAt(
+            lightPositionVector, 
+            lightPositionVector + glm::vec3(-1.0, 0.0, 0.0), 
+            glm::vec3(0.0,-1.0, 0.0)
+        ), 
+        mShadowViewProjectionData.viewMatrices[1]
+    );
+
+    Matrix4X4Float::ConvertGmToCells(
+        mShadowProjection * glm::lookAt(
+            lightPositionVector, 
+            lightPositionVector + glm::vec3( 0.0, 1.0, 0.0), 
+            glm::vec3(0.0, 0.0, 1.0)
+        ), 
+        mShadowViewProjectionData.viewMatrices[2]
+    );
+
+    Matrix4X4Float::ConvertGmToCells(
+        mShadowProjection * glm::lookAt(
+            lightPositionVector, 
+            lightPositionVector + glm::vec3( 0.0,-1.0, 0.0), 
+            glm::vec3(0.0, 0.0,-1.0)
+        ), 
+        mShadowViewProjectionData.viewMatrices[3]
+    );
+
+    Matrix4X4Float::ConvertGmToCells(
+        mShadowProjection * glm::lookAt(
+            lightPositionVector, 
+            lightPositionVector + glm::vec3( 0.0, 0.0, 1.0), 
+            glm::vec3(0.0,-1.0, 0.0)
+        ), 
+        mShadowViewProjectionData.viewMatrices[4]
+    );
+
+    Matrix4X4Float::ConvertGmToCells(
+        mShadowProjection * glm::lookAt(
+            lightPositionVector, 
+            lightPositionVector + glm::vec3( 0.0, 0.0,-1.0), 
+            glm::vec3(0.0,-1.0, 0.0)
+        ), 
+        mShadowViewProjectionData.viewMatrices[5]
+    );
+
+    RF::UpdateUniformBuffer(mShadowViewProjectionBuffer.buffers[0], CBlobAliasOf(mShadowViewProjectionData));
 }
 
 DrawableObject * PBRWithShadowPipelineV2::GetDrawableById(DrawableObjectId const objectId) {
@@ -1004,7 +1026,7 @@ void PBRWithShadowPipelineV2::createShadowPassPipeline() {
     graphicPipelineOptions.cullMode = VK_CULL_MODE_NONE;
     graphicPipelineOptions.pushConstantRanges = pushConstantRanges.data();
     // TODO Probably we need to make pushConstantsRangeCount uint32_t
-    graphicPipelineOptions.pushConstantsRangeCount = static_cast<uint32_t>(pushConstantRanges.size());
+    graphicPipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
     
     MFA_ASSERT(mShadowPassPipeline.isValid() == false);
     mShadowPassPipeline = RF::CreateDrawPipeline(

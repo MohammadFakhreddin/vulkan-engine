@@ -108,11 +108,17 @@ void OffScreenRenderPass::internalBeginRenderPass(RF::DrawPass const & drawPass)
 
     RF::AssignViewportAndScissorToCommandBuffer(commandBuffer, shadowExtend);
 
+    std::vector<VkClearValue> clearValues {};
+    clearValues.resize(1);
+    clearValues[0].depthStencil = { .depth = 1.0f, .stencil = 0};
+
     RF::BeginRenderPass(
         commandBuffer,
         mVkRenderPass,
         mFrameBuffer,
-        shadowExtend
+        shadowExtend,
+        static_cast<uint32_t>(clearValues.size()),
+        clearValues.data()
     );
 }
 
