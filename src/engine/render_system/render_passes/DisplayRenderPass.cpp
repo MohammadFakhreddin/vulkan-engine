@@ -7,7 +7,7 @@ VkRenderPass DisplayRenderPass::GetVkRenderPass() {
 }
 
 VkCommandBuffer DisplayRenderPass::GetCommandBuffer(RF::DrawPass const & drawPass) {
-    return mGraphicCommandBuffers[drawPass.imageIndex];
+    return mGraphicCommandBuffers[drawPass.frameIndex];
 }
 
 void DisplayRenderPass::internalInit() {
@@ -38,7 +38,7 @@ void DisplayRenderPass::internalInit() {
 
     createFrameBuffers(swapChainExtent);
 
-    mGraphicCommandBuffers = RF::CreateGraphicCommandBuffers(mSwapChainImagesCount);
+    mGraphicCommandBuffers = RF::CreateGraphicCommandBuffers(MAX_FRAMES_IN_FLIGHT);
 
     mSyncObjects = RF::createSyncObjects(
         MAX_FRAMES_IN_FLIGHT,
@@ -86,7 +86,7 @@ RF::DrawPass DisplayRenderPass::StartGraphicCommandBufferRecording() {
     }
 
     RF::WaitForFence(getInFlightFence(drawPass));
-
+    
     // TODO Maybe we should care for failed image acquire
     // We ignore failed acquire of image because a resize will be triggered at end of pass
     RF::AcquireNextImage(

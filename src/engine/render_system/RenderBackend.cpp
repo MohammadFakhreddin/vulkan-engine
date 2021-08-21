@@ -982,7 +982,11 @@ VkSampler CreateSampler(
      *TODO Issue for mac:
     "Message code: 0\nMessage: Validation Error: [ VUID-VkDescriptorImageInfo-mutableComparisonSamplers-04450 ] Object 0: handle = 0x62200004c918, type = VK_OBJECT_TYPE_DEVICE; | MessageID = 0xf467460 | vkUpdateDescriptorSets() (portability error): sampler comparison not available. The Vulkan spec states: If the [VK_KHR_portability_subset] extension is enabled, and VkPhysicalDevicePortabilitySubsetFeaturesKHR::mutableComparisonSamplers is VK_FALSE, then sampler must have been created with VkSamplerCreateInfo::compareEnable set to VK_FALSE. (https://vulkan.lunarg.com/doc/view/1.2.182.0/mac/1.2-extensions/vkspec.html#VUID-VkDescriptorImageInfo-mutableComparisonSamplers-04450)\nLocation: 256275552\n"
      **/
+#ifdef __PLATFORM_MAC__
+    sampler_info.compareEnable = VK_FALSE;
+#else
     sampler_info.compareEnable = VK_TRUE;
+#endif
     sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
     sampler_info.minLod = params.min_lod;
     sampler_info.maxLod = params.max_lod;
