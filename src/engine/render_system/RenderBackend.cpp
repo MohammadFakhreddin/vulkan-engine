@@ -2440,4 +2440,8 @@ void CopyImage(
     );
 }
 
+void WaitForQueue(VkQueue queue) {
+    VK_Check(vkQueueWaitIdle(queue));
+}
+
 }

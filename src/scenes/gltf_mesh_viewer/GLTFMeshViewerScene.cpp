@@ -156,6 +156,37 @@ void GLTFMeshViewerScene::Init() {
 }
 
 void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) {
+    {// LightViewBuffer
+        mPbrPipeline.UpdateLightPosition(mLightPosition);
+        float cameraPosition[3];
+        mCamera.GetPosition(cameraPosition);
+        mPbrPipeline.UpdateCameraPosition(cameraPosition);
+        mPbrPipeline.UpdateLightColor(mLightColor);
+
+        // Position
+        MFA::Matrix4X4Float translationMat {};
+        MFA::Matrix4X4Float::AssignTranslation(
+            translationMat,
+            mLightPosition[0],
+            mLightPosition[1],
+            mLightPosition[2]
+        );
+
+        MFA::Matrix4X4Float transformMat {};
+        MFA::Matrix4X4Float::Identity(transformMat);
+        transformMat.multiply(translationMat);
+
+        transformMat.copy(mPointLightMVPData.model);
+        mCamera.GetTransform(mPointLightMVPData.view);
+        
+        mPointLightPipeline.updateViewProjectionBuffer(mPointLightObjectId, mPointLightMVPData);
+
+        MFA::PointLightPipeline::PrimitiveInfo lightPrimitiveInfo {};
+        MFA::Copy<3>(lightPrimitiveInfo.baseColorFactor, mLightColor);
+        lightPrimitiveInfo.baseColorFactor[3] = 1.0f;
+        mPointLightPipeline.updatePrimitiveInfo(mPointLightObjectId, lightPrimitiveInfo);
+    }
+
     auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
     mPbrPipeline.PreRender(drawPass, deltaTimeInSec, 1, &selectedModel.drawableObjectId);
 }
@@ -257,37 +288,6 @@ void GLTFMeshViewerScene::OnPostRender(
             mCamera.GetTransform(viewData.view);
             mPbrPipeline.UpdateCameraView(viewData);
         }
-    }
-
-    {// LightViewBuffer
-        mPbrPipeline.UpdateLightPosition(mLightPosition);
-        float cameraPosition[3];
-        mCamera.GetPosition(cameraPosition);
-        mPbrPipeline.UpdateCameraPosition(cameraPosition);
-        mPbrPipeline.UpdateLightColor(mLightColor);
-
-        // Position
-        MFA::Matrix4X4Float translationMat {};
-        MFA::Matrix4X4Float::AssignTranslation(
-            translationMat,
-            mLightPosition[0],
-            mLightPosition[1],
-            mLightPosition[2]
-        );
-
-        MFA::Matrix4X4Float transformMat {};
-        MFA::Matrix4X4Float::Identity(transformMat);
-        transformMat.multiply(translationMat);
-
-        transformMat.copy(mPointLightMVPData.model);
-        mCamera.GetTransform(mPointLightMVPData.view);
-        
-        mPointLightPipeline.updateViewProjectionBuffer(mPointLightObjectId, mPointLightMVPData);
-
-        MFA::PointLightPipeline::PrimitiveInfo lightPrimitiveInfo {};
-        MFA::Copy<3>(lightPrimitiveInfo.baseColorFactor, mLightColor);
-        lightPrimitiveInfo.baseColorFactor[3] = 1.0f;
-        mPointLightPipeline.updatePrimitiveInfo(mPointLightObjectId, lightPrimitiveInfo);
     }
 
     mPbrPipeline.PostRender(drawPass, deltaTimeInSec, 1, &selectedModel.drawableObjectId);

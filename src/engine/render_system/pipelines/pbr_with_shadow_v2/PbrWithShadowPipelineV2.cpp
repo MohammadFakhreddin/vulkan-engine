@@ -84,6 +84,15 @@ void PBRWithShadowPipelineV2::PreRender(
     DrawableObjectId * ids
 ) {
 
+    for (uint32_t i = 0; i < idsCount; ++i) {
+        auto const findResult = mDrawableObjects.find(ids[i]);
+        if (findResult != mDrawableObjects.end()) {
+            auto * drawableObject = findResult->second.get();
+            MFA_ASSERT(drawableObject != nullptr);
+            drawableObject->Update(deltaTime);
+        }
+    }
+
     mShadowRenderPass.PrepareCubemapForTransferDestination(drawPass);
     for (int i = 0; i < 6; ++i) {
         mShadowRenderPass.SetNextPassParams(i);
@@ -152,14 +161,7 @@ void PBRWithShadowPipelineV2::PostRender(
     uint32_t const idsCount, 
     DrawableObjectId * ids
 ) {
-    for (uint32_t i = 0; i < idsCount; ++i) {
-        auto const findResult = mDrawableObjects.find(ids[i]);
-        if (findResult != mDrawableObjects.end()) {
-            auto * drawableObject = findResult->second.get();
-            MFA_ASSERT(drawableObject != nullptr);
-            drawableObject->Update(deltaTime);
-        }
-    }
+
 }
 
 DrawableObjectId PBRWithShadowPipelineV2::AddGpuModel(RF::GpuModel & gpuModel) {

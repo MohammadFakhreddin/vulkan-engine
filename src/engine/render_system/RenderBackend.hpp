@@ -812,4 +812,6 @@ void CopyImage(
     VkImageCopy const & copyRegion
 );
 
+void WaitForQueue(VkQueue queue);
+
 }

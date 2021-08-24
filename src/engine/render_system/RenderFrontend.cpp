@@ -1184,4 +1184,12 @@ VkSampleCountFlagBits GetMaxSamplesCount() {
     return state->maxSampleCount;
 }
 
+void WaitForGraphicQueue() {
+    RB::WaitForQueue(state->graphicQueue);
+}
+
+void WaitForPresentQueue() {
+    RB::WaitForQueue(state->presentQueue);
+}
+
 }

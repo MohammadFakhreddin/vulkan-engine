@@ -84,10 +84,9 @@ RF::DrawPass DisplayRenderPass::StartGraphicCommandBufferRecording() {
     if(mCurrentFrame >= MAX_FRAMES_IN_FLIGHT) {
         mCurrentFrame = 0;
     }
-
+    
     RF::WaitForFence(getInFlightFence(drawPass));
 
-    // TODO Maybe we should care for failed image acquire
     // We ignore failed acquire of image because a resize will be triggered at end of pass
     RF::AcquireNextImage(
         getImageAvailabilitySemaphore(drawPass),

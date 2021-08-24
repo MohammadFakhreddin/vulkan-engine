@@ -425,4 +425,10 @@ void DestroySyncObjects(RB::SyncObjects & syncObjects);
 
 VkSampleCountFlagBits GetMaxSamplesCount();
 
+// Not recommended
+void WaitForGraphicQueue();
+
+// Not recommended
+void WaitForPresentQueue();
+
 }
