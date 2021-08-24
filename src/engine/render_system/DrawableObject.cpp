@@ -27,10 +27,6 @@ DrawableObject::DrawableObject(RF::GpuModel & model_)
             mPrimitiveCount += static_cast<uint32_t>(subMesh.primitives.size());
         }
     }
-    //mDescriptorSets = RF::CreateDescriptorSets(
-    //    descriptorSetCount, 
-    //    descriptorSetLayout
-    //);
 
     // NodeTransformBuffer
     mNodeTransformBuffers = RF::CreateUniformBuffer(
@@ -131,11 +127,14 @@ RF::UniformBufferGroup const & DrawableObject::GetSkinTransformBuffer(uint32_t c
     return mSkinJointsBuffers[nodeIndex];
 }
 
-void DrawableObject::Update(float const deltaTimeInSec) {
+void DrawableObject::Update(
+    float const deltaTimeInSec, 
+    RF::DrawPass const & drawPass
+) {
     updateAnimation(deltaTimeInSec);
     computeNodesGlobalTransform();
     updateAllSkinsJoints();
-    updateAllNodesJoints();
+    updateAllNodes(drawPass);
 }
 
 void DrawableObject::Draw(
@@ -322,7 +321,7 @@ void DrawableObject::updateSkinJoints(uint32_t const skinIndex, Skin const & ski
     }
 }
 
-void DrawableObject::updateAllNodesJoints() {
+void DrawableObject::updateAllNodes(RF::DrawPass const & drawPass) {
     auto const & mesh = mGpuModel->model.mesh;
 
     auto const nodesCount = mesh.GetNodesCount();
@@ -331,12 +330,18 @@ void DrawableObject::updateAllNodesJoints() {
         MFA_ASSERT(nodes != nullptr);
 
         for (uint32_t i = 0; i < nodesCount; ++i) {
-            updateNodeJoint(nodes[i]);
+            updateNodeJoint(drawPass, nodes[i]);
+        }
+        for (uint32_t i = 0; i < nodesCount; ++i) {
+            updateNode(drawPass, nodes[i]);
         }
     }
 }
 
-void DrawableObject::updateNodeJoint(Node const & node) {
+void DrawableObject::updateNodeJoint(
+    RF::DrawPass const & drawPass,
+    Node const & node
+) {
     auto const & mesh = mGpuModel->model.mesh;
     if (node.skin > -1)
     {
@@ -363,20 +368,32 @@ void DrawableObject::updateNodeJoint(Node const & node) {
     }
 }
 
+void DrawableObject::updateNode(
+    RF::DrawPass const & drawPass,
+    AS::MeshNode const & node
+) {
+    if (node.hasSubMesh()) 
+    {
+        MFA_ASSERT(node.isCachedDataValid == true);
+        Matrix4X4Float::ConvertGmToCells(node.cachedGlobalTransform, mNodeTransformData.model); 
+        RF::UpdateUniformBuffer(mNodeTransformBuffers.buffers[node.subMeshIndex], CBlobAliasOf(mNodeTransformData));
+    }
+}
+
 void DrawableObject::drawNode(
     RF::DrawPass & drawPass, 
     AS::MeshNode const & node, 
     BindDescriptorSetFunction const & bindFunction
 ) {
     // TODO We can reduce nodes count for better performance when importing
-    if (node.hasSubMesh()) {
+    if (node.hasSubMesh()) 
+    {
         auto const & mesh = mGpuModel->model.mesh;
         MFA_ASSERT(static_cast<int>(mesh.GetSubMeshCount()) > node.subMeshIndex);
 
-        MFA_ASSERT(node.isCachedDataValid == true);
-        Matrix4X4Float::ConvertGmToCells(node.cachedGlobalTransform, mNodeTransformData.model);
-        
-        RF::UpdateUniformBuffer(mNodeTransformBuffers.buffers[node.subMeshIndex], CBlobAliasOf(mNodeTransformData));
+        // MFA_ASSERT(node.isCachedDataValid == true);
+        // Matrix4X4Float::ConvertGmToCells(node.cachedGlobalTransform, mNodeTransformData.model);   
+        // RF::UpdateUniformBuffer(mNodeTransformBuffers.buffers[node.subMeshIndex], CBlobAliasOf(mNodeTransformData));
 
         drawSubMesh(drawPass, mesh.GetSubMeshByIndex(node.subMeshIndex), bindFunction);
     }

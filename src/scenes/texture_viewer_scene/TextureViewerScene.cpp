@@ -141,7 +141,7 @@ void TextureViewerScene::OnRender(
         );
     }
 
-    mDrawableObject->Update(deltaTimeInSec);
+    mDrawableObject->Update(deltaTimeInSec, drawPass);
     mDrawableObject->Draw(drawPass, [&drawPass, this](AS::MeshPrimitive const & primitive)-> void {
         RF::BindDescriptorSet(
             drawPass, 

@@ -93,7 +93,7 @@ RF::DrawPass DisplayRenderPass::StartGraphicCommandBufferRecording() {
         mSwapChainImages,
         drawPass.imageIndex
     );
-
+    
     // Recording command buffer data at each render frame
     // We need 1 renderPass and multiple command buffer recording
     // Each pipeline has its own set of shader, But we can reuse a pipeline for multiple shaders.

@@ -163,7 +163,7 @@ void PointLightPipeline::Render(
         if (findResult != mDrawableObjects.end()) {
             auto * drawableObject = findResult->second.get();
             MFA_ASSERT(drawableObject != nullptr);
-            drawableObject->Update(deltaTimeInSec);
+            drawableObject->Update(deltaTimeInSec, drawPass);
             drawableObject->Draw(drawPass, [&drawPass, &drawableObject](AS::MeshPrimitive const & primitive)-> void {
                 RF::BindDescriptorSet(
                     drawPass, 
