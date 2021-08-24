@@ -7,7 +7,7 @@ VkRenderPass DisplayRenderPass::GetVkRenderPass() {
 }
 
 VkCommandBuffer DisplayRenderPass::GetCommandBuffer(RF::DrawPass const & drawPass) {
-    return mGraphicCommandBuffers[drawPass.imageIndex];
+    return mGraphicCommandBuffers[drawPass.frameIndex];
 }
 
 void DisplayRenderPass::internalInit() {
@@ -38,7 +38,7 @@ void DisplayRenderPass::internalInit() {
 
     createFrameBuffers(swapChainExtent);
 
-    mGraphicCommandBuffers = RF::CreateGraphicCommandBuffers(mSwapChainImagesCount);
+    mGraphicCommandBuffers = RF::CreateGraphicCommandBuffers(MAX_FRAMES_IN_FLIGHT);
 
     mSyncObjects = RF::createSyncObjects(
         MAX_FRAMES_IN_FLIGHT,

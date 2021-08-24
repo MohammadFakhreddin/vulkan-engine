@@ -556,29 +556,30 @@ void OnNewFrame(
                     index_ptr += cmd_list->IdxBuffer.Size;
                 }
             }
-            if(state->meshBuffersValidationStatus[drawPass.imageIndex]) {
-                RF::DestroyMeshBuffers(state->meshBuffers[drawPass.imageIndex]);
-                state->meshBuffersValidationStatus[drawPass.imageIndex] = false;
+            // TODO Write function to get mesh buffer and its status
+            if(state->meshBuffersValidationStatus[drawPass.frameIndex]) {
+                RF::DestroyMeshBuffers(state->meshBuffers[drawPass.frameIndex]);
+                state->meshBuffersValidationStatus[drawPass.frameIndex] = false;
             }
-            state->meshBuffers[drawPass.imageIndex].verticesBuffer = RF::CreateVertexBuffer(CBlob {vertex_data.ptr, vertex_data.len});
-            state->meshBuffers[drawPass.imageIndex].indicesBuffer = RF::CreateIndexBuffer(CBlob {index_data.ptr, index_data.len});
-            state->meshBuffersValidationStatus[drawPass.imageIndex] = true;
+            state->meshBuffers[drawPass.frameIndex].verticesBuffer = RF::CreateVertexBuffer(CBlob {vertex_data.ptr, vertex_data.len});
+            state->meshBuffers[drawPass.frameIndex].indicesBuffer = RF::CreateIndexBuffer(CBlob {index_data.ptr, index_data.len});
+            state->meshBuffersValidationStatus[drawPass.frameIndex] = true;
             // Setup desired Vulkan state
             // Bind pipeline and descriptor sets:
             {
                 RF::BindDrawPipeline(drawPass, state->drawPipeline);
-                RF::BindDescriptorSet(drawPass, state->descriptorSetGroup.descriptorSets[drawPass.imageIndex]);
+                RF::BindDescriptorSet(drawPass, state->descriptorSetGroup.descriptorSets[drawPass.frameIndex]);
             }
 
             RF::BindIndexBuffer(
                 drawPass,
-                state->meshBuffers[drawPass.imageIndex].indicesBuffer,
+                state->meshBuffers[drawPass.frameIndex].indicesBuffer,
                 0,
                 sizeof(ImDrawIdx) == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32
             );
             RF::BindVertexBuffer(
                 drawPass,
-                state->meshBuffers[drawPass.imageIndex].verticesBuffer
+                state->meshBuffers[drawPass.frameIndex].verticesBuffer
             );
             // Setup viewport:
             {
