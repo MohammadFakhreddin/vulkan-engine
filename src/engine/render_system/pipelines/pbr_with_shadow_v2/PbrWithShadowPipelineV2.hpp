@@ -186,8 +186,6 @@ private:
     glm::mat4 mShadowProjection {};
 
     ShadowViewProjectionData mShadowViewProjectionData {};
-
-    ModelData mModelData {};
     
     DisplayProjectionData mDisplayProjectionData {};
     

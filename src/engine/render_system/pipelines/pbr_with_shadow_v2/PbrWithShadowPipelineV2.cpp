@@ -221,6 +221,7 @@ bool PBRWithShadowPipelineV2::RemoveGpuModel(DrawableObjectId const drawableObje
     return deleteCount;
 }
 
+// TODO Fix frequent model data update in each frame
 bool PBRWithShadowPipelineV2::UpdateModel(
     DrawableObjectId const drawableObjectId, 
     ModelData const & modelData
