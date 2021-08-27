@@ -11,7 +11,7 @@ namespace RF = MFA::RenderFrontend;
 namespace Importer = MFA::Importer;
 namespace UI = MFA::UISystem;
 namespace Path = MFA::Path;
-
+// TODO: Use less descriptor sets!
 GLTFMeshViewerScene::GLTFMeshViewerScene()
     : Scene()
     , mRecordObject([this]()->void {OnUI();})
