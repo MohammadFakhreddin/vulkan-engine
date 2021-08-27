@@ -11,6 +11,8 @@
 
 namespace MFA::RenderFrontend {
 
+uint32_t MAX_FRAMES_IN_FLIGHT = 2;
+
 #ifdef __DESKTOP__
 struct SDLEventWatchGroup {
     SDLEventWatchId id = 0;
@@ -854,6 +856,10 @@ uint32_t GetSwapChainImagesCount() {
     return state->swapChainImageCount;
 }
 
+uint32_t GetMaxFramesPerFlight() {
+    return MAX_FRAMES_IN_FLIGHT;
+}
+
 void GetDrawableSize(int32_t & outWidth, int32_t & outHeight) {
     outWidth = state->screenWidth;
     outHeight = state->screenHeight;
@@ -1050,10 +1056,10 @@ void AcquireNextImage(
     );
 }
 
-std::vector<VkCommandBuffer> CreateGraphicCommandBuffers(uint32_t const count) {
+std::vector<VkCommandBuffer> CreateGraphicCommandBuffers(uint32_t const maxFramesPerFlight) {
     return RB::CreateCommandBuffers(
         state->logicalDevice.device,
-        count,
+        maxFramesPerFlight,
         state->graphicCommandPool
     );   
 }

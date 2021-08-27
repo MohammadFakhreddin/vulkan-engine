@@ -48,13 +48,15 @@ DrawableObjectId PointLightPipeline::AddGpuModel(RF::GpuModel & gpuModel) {
 
     const auto * primitiveInfoBuffer = drawableObject->CreateUniformBuffer(
         "PrimitiveInfo", 
-        sizeof(PrimitiveInfo)
+        sizeof(PrimitiveInfo),
+        RF::GetMaxFramesPerFlight()
     );
     MFA_ASSERT(primitiveInfoBuffer != nullptr);
 
     const auto * viewProjectionBuffer = drawableObject->CreateUniformBuffer(
         "ViewProjection", 
-        sizeof(ViewProjectionData)
+        sizeof(ViewProjectionData),
+        RF::GetMaxFramesPerFlight()
     );
     MFA_ASSERT(viewProjectionBuffer != nullptr);
 
@@ -187,7 +189,8 @@ bool PointLightPipeline::updateViewProjectionBuffer(
     MFA_ASSERT(drawableObject != nullptr);
 
     drawableObject->UpdateUniformBuffer(
-        "ViewProjection", 
+        "ViewProjection",
+        0,
         CBlobAliasOf(viewProjectionData)
     );
 
@@ -207,7 +210,8 @@ bool PointLightPipeline::updatePrimitiveInfo(
     MFA_ASSERT(drawableObject != nullptr);
 
     drawableObject->UpdateUniformBuffer(
-        "PrimitiveInfo", 
+        "PrimitiveInfo",
+        0,
         CBlobAliasOf(info)
     );
 

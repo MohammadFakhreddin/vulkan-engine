@@ -135,11 +135,17 @@ private:
 
     void destroyUniformBuffers();
 
-    void updateDisplayLightBuffer();
+    void updateDisplayLightBuffer(RF::DrawPass const & drawPass);
 
-    void updateShadowLightBuffer();
+    void updateShadowLightBuffer(RF::DrawPass const & drawPass);
 
-    void updateViewProjectionBuffer();
+    void updateShadowViewProjectionBuffer(RF::DrawPass const & drawPass);
+    
+    void updateShadowViewProjectionData();
+    
+    void updateDisplayProjectionBuffer(RF::DrawPass const & drawPass);
+    
+    void updateDisplayViewBuffer(RF::DrawPass const & drawPass);
     
     inline static constexpr float SHADOW_WIDTH = 1024;
     inline static constexpr float SHADOW_HEIGHT = 1024;
@@ -182,6 +188,16 @@ private:
     ShadowViewProjectionData mShadowViewProjectionData {};
 
     ModelData mModelData {};
+    
+    DisplayProjectionData mDisplayProjectionData {};
+    
+    DisplayViewData mDisplayViewData {};
+    
+    uint8_t mDisplayProjectionNeedUpdate = 0;
+    uint8_t mDisplayViewNeedUpdate = 0;
+    uint8_t mDisplayLightNeedUpdate = 0;
+    uint8_t mShadowLightNeedUpdate = 0;
+    uint8_t mShadowViewProjectionNeedUpdate = 0;
 
 };
 

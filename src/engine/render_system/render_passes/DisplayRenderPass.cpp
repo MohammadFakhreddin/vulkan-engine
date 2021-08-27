@@ -38,10 +38,10 @@ void DisplayRenderPass::internalInit() {
 
     createFrameBuffers(swapChainExtent);
 
-    mGraphicCommandBuffers = RF::CreateGraphicCommandBuffers(MAX_FRAMES_IN_FLIGHT);
+    mGraphicCommandBuffers = RF::CreateGraphicCommandBuffers(RF::GetMaxFramesPerFlight());
 
     mSyncObjects = RF::createSyncObjects(
-        MAX_FRAMES_IN_FLIGHT,
+        RF::GetMaxFramesPerFlight(),
         mSwapChainImagesCount
     );
 }
@@ -71,7 +71,7 @@ void DisplayRenderPass::internalShutdown() {
 // TODO We might need a separate class for commandBufferClass->GraphicCommandBuffer to begin and submit commandBuffer recording.
 // TODO Rename DrawPass to recordPass
 RF::DrawPass DisplayRenderPass::StartGraphicCommandBufferRecording() {
-    MFA_ASSERT(MAX_FRAMES_IN_FLIGHT > mCurrentFrame);
+    MFA_ASSERT(RF::GetMaxFramesPerFlight() > mCurrentFrame);
     RF::DrawPass drawPass {.renderPass = this};
     if (RF::IsWindowVisible() == false || RF::IsWindowResized() == true) {
         drawPass.isValid = false;
@@ -81,7 +81,7 @@ RF::DrawPass DisplayRenderPass::StartGraphicCommandBufferRecording() {
     drawPass.frameIndex = mCurrentFrame;
     drawPass.isValid = true;
     ++mCurrentFrame;
-    if(mCurrentFrame >= MAX_FRAMES_IN_FLIGHT) {
+    if(mCurrentFrame >= RF::GetMaxFramesPerFlight()) {
         mCurrentFrame = 0;
     }
     

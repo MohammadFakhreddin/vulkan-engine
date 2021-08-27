@@ -31,7 +31,7 @@ DrawableObject::DrawableObject(RF::GpuModel & model_)
     // NodeTransformBuffer
     mNodeTransformBuffers = RF::CreateUniformBuffer(
         sizeof(NodeTransformBuffer), 
-        mGpuModel->model.mesh.GetSubMeshCount()
+        mGpuModel->model.mesh.GetSubMeshCount() * RF::GetMaxFramesPerFlight()
     );
 
     // Creating cachedSkinJoints array
@@ -50,7 +50,7 @@ DrawableObject::DrawableObject(RF::GpuModel & model_)
             mNodesJoints.emplace_back(Memory::Alloc(sizeof(JointTransformBuffer) * skin.joints.size()));
             mSkinJointsBuffers.emplace_back(RF::CreateUniformBuffer(
                 sizeof(JointTransformBuffer) * skin.joints.size(), 
-                1
+                RF::GetMaxFramesPerFlight()
             ));
         }
     }
@@ -73,42 +73,71 @@ RF::GpuModel * DrawableObject::GetModel() const {
 }
 
 // Only for model local buffers
-RF::UniformBufferGroup * DrawableObject::CreateUniformBuffer(char const * name, uint32_t const size) {
-    MFA_ASSERT(mUniformBuffers.find(name) ==  mUniformBuffers.end());
-    mUniformBuffers[name] = RF::CreateUniformBuffer(size, 1);
-    return &mUniformBuffers[name];
-}
-
-RF::UniformBufferGroup * DrawableObject::CreateMultipleUniformBuffer(
-    char const * name, 
-    const uint32_t size, 
-    const uint32_t count
+RF::UniformBufferGroup * DrawableObject::CreateUniformBuffer(
+    char const * name,
+    uint32_t const size,
+    uint32_t const count
 ) {
+    MFA_ASSERT(mUniformBuffers.find(name) ==  mUniformBuffers.end());
     mUniformBuffers[name] = RF::CreateUniformBuffer(size, count);
     return &mUniformBuffers[name];
 }
 
 // Only for model local buffers
 void DrawableObject::DeleteUniformBuffers() {
-    if (mUniformBuffers.empty() == false) {
-        for (auto & pair : mUniformBuffers) {
-            RF::DestroyUniformBuffer(pair.second);
-        }
-        mUniformBuffers.clear();
+    for (auto & dirtyBuffer : mDirtyBuffers) {
+        delete dirtyBuffer.ubo.ptr;
     }
+    mDirtyBuffers.clear();
+    
+    for (auto & pair : mUniformBuffers) {
+        RF::DestroyUniformBuffer(pair.second);
+    }
+    mUniformBuffers.clear();
+    
     for (auto & skinJointBuffer : mSkinJointsBuffers) {
         RF::DestroyUniformBuffer(skinJointBuffer);
     }
     RF::DestroyUniformBuffer(mNodeTransformBuffers);
 }
 
-void DrawableObject::UpdateUniformBuffer(char const * name, CBlob const ubo) {
-    auto const find_result = mUniformBuffers.find(name);
-    if (find_result != mUniformBuffers.end()) {
-        RF::UpdateUniformBuffer(find_result->second.buffers[0], ubo);
-    } else {
-        MFA_CRASH("Buffer not found");
+void DrawableObject::UpdateUniformBuffer(
+    char const * name,
+    uint32_t startingIndex,
+    CBlob const ubo
+) {
+    for (auto & dirtyBuffer : mDirtyBuffers) {
+        if (
+            strcmp(dirtyBuffer.bufferName.c_str(), name) == 0 &&
+            dirtyBuffer.startingIndex == startingIndex
+        ) {
+            MFA_ASSERT(dirtyBuffer.ubo.len == ubo.len);
+            Memory::Free(dirtyBuffer.ubo);
+            dirtyBuffer.ubo.ptr = new uint8_t[ubo.len];
+            dirtyBuffer.ubo.len = ubo.len;
+            ::memcpy(dirtyBuffer.ubo.ptr, ubo.ptr, ubo.len);
+            
+            dirtyBuffer.remainingUpdateCount = RF::GetMaxFramesPerFlight();
+            return;
+        }
     }
+    
+    auto const findResult = mUniformBuffers.find(name);
+    if (findResult == mUniformBuffers.end()) {
+        MFA_CRASH("Buffer not found");
+        return;
+    }
+    
+    DirtyBuffer dirtyBuffer {
+        .bufferName = name,
+        .bufferGroup = &findResult->second,
+        .startingIndex = startingIndex,
+        .remainingUpdateCount = RF::GetMaxFramesPerFlight(),
+        .ubo = Memory::Alloc(ubo.len),
+    };
+    ::memcpy(dirtyBuffer.ubo.ptr, ubo.ptr, ubo.len);
+    
+    mDirtyBuffers.emplace_back(dirtyBuffer);
 }
 
 RF::UniformBufferGroup * DrawableObject::GetUniformBuffer(char const * name) {
@@ -131,6 +160,20 @@ void DrawableObject::Update(
     float const deltaTimeInSec, 
     RF::DrawPass const & drawPass
 ) {
+    for (int i = static_cast<uint32_t>(mDirtyBuffers.size()) - 1; i >= 0; --i) {
+        auto & dirtyBuffer = mDirtyBuffers[i];
+        if (dirtyBuffer.remainingUpdateCount > 0) {
+            --dirtyBuffer.remainingUpdateCount;
+            RF::UpdateUniformBuffer(
+                dirtyBuffer.bufferGroup->buffers[dirtyBuffer.startingIndex + drawPass.frameIndex],
+                dirtyBuffer.ubo
+            );
+        } else {
+            Memory::Free(dirtyBuffer.ubo);
+            mDirtyBuffers.erase(mDirtyBuffers.begin() + i);
+        }
+    }
+    
     updateAnimation(deltaTimeInSec);
     computeNodesGlobalTransform();
     updateAllSkinsJoints();
@@ -362,7 +405,7 @@ void DrawableObject::updateNodeJoint(
         }
         // Update skin buffer
         RF::UpdateUniformBuffer(
-            mSkinJointsBuffers[node.skinBufferIndex].buffers[0],
+            mSkinJointsBuffers[node.skinBufferIndex].buffers[drawPass.frameIndex],
             nodeJointsBlob
         );
     }
@@ -376,7 +419,10 @@ void DrawableObject::updateNode(
     {
         MFA_ASSERT(node.isCachedDataValid == true);
         Matrix4X4Float::ConvertGmToCells(node.cachedGlobalTransform, mNodeTransformData.model); 
-        RF::UpdateUniformBuffer(mNodeTransformBuffers.buffers[node.subMeshIndex], CBlobAliasOf(mNodeTransformData));
+        RF::UpdateUniformBuffer(
+            mNodeTransformBuffers.buffers[node.subMeshIndex * RF::GetMaxFramesPerFlight() + drawPass.frameIndex],
+            CBlobAliasOf(mNodeTransformData)
+        );
     }
 }
 
@@ -406,9 +452,6 @@ void DrawableObject::drawSubMesh(
 ) {
     if (subMesh.primitives.empty() == false) {
         for (auto const & primitive : subMesh.primitives) {
-            /*MFA_ASSERT(primitive.uniqueId >= 0);
-            MFA_ASSERT(primitive.uniqueId < mDescriptorSets.size());
-            RF::BindDescriptorSet(drawPass, mDescriptorSets[primitive.uniqueId]);*/
             bindFunction(primitive);
             RF::DrawIndexed(
                 drawPass,
