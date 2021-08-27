@@ -480,11 +480,11 @@ void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableObject * d
 
                         {// SkinJoints
                             auto const & skinBuffer = node.skinBufferIndex >= 0
-                                ? drawableObject->GetSkinTransformBuffer(node.skinBufferIndex * RF::GetMaxFramesPerFlight() + frameIndex)
+                                ? drawableObject->GetSkinTransformBuffer(node.skinBufferIndex)
                                 : mErrorBuffer;
 
                             VkDescriptorBufferInfo skinTransformBufferInfo {};
-                            skinTransformBufferInfo.buffer = skinBuffer.buffers[0].buffer;
+                            skinTransformBufferInfo.buffer = skinBuffer.buffers[frameIndex].buffer;
                             skinTransformBufferInfo.offset = 0;
                             skinTransformBufferInfo.range = skinBuffer.bufferSize;
 
@@ -654,11 +654,11 @@ void PBRWithShadowPipelineV2::CreateShadowPassDescriptorSets(DrawableObject * dr
                         }
                         {// SkinJoints
                             auto const & skinBuffer = node.skinBufferIndex >= 0
-                                ? drawableObject->GetSkinTransformBuffer(node.skinBufferIndex * RF::GetMaxFramesPerFlight() + frameIndex)
+                                ? drawableObject->GetSkinTransformBuffer(node.skinBufferIndex)
                                 : mErrorBuffer;
 
                             VkDescriptorBufferInfo skinTransformBufferInfo {};
-                            skinTransformBufferInfo.buffer = skinBuffer.buffers[0].buffer;
+                            skinTransformBufferInfo.buffer = skinBuffer.buffers[frameIndex].buffer;
                             skinTransformBufferInfo.offset = 0;
                             skinTransformBufferInfo.range = skinBuffer.bufferSize;
 
@@ -1128,7 +1128,7 @@ void PBRWithShadowPipelineV2::destroyPipeline() {
 }
 
 void PBRWithShadowPipelineV2::createUniformBuffers() {
-    mErrorBuffer = RF::CreateUniformBuffer(sizeof(DrawableObject::JointTransformBuffer), 1);
+    mErrorBuffer = RF::CreateUniformBuffer(sizeof(DrawableObject::JointTransformBuffer), RF::GetMaxFramesPerFlight());
 
     mDisplayViewBuffer = RF::CreateUniformBuffer(sizeof(DisplayViewData), RF::GetMaxFramesPerFlight());
     mDisplayProjectionBuffer = RF::CreateUniformBuffer(sizeof(DisplayProjectionData), RF::GetMaxFramesPerFlight());
