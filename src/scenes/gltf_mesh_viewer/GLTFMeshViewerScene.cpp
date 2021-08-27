@@ -126,7 +126,7 @@ void GLTFMeshViewerScene::Init() {
     // TODO We should use gltf sampler info here
     mSamplerGroup = RF::CreateSampler();
     
-    mPointLightPipeline.init();
+    mPointLightPipeline.Init();
 
     mCamera.init();
     mCamera.EnableUI("", &mIsCameraWindowVisible);
@@ -179,16 +179,27 @@ void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RenderFrontend:
         transformMat.copy(mPointLightMVPData.model);
         mCamera.GetTransform(mPointLightMVPData.view);
         
-        mPointLightPipeline.updateViewProjectionBuffer(mPointLightObjectId, mPointLightMVPData);
+        mPointLightPipeline.UpdateViewProjectionBuffer(mPointLightObjectId, mPointLightMVPData);
 
         MFA::PointLightPipeline::PrimitiveInfo lightPrimitiveInfo {};
         MFA::Copy<3>(lightPrimitiveInfo.baseColorFactor, mLightColor);
         lightPrimitiveInfo.baseColorFactor[3] = 1.0f;
-        mPointLightPipeline.updatePrimitiveInfo(mPointLightObjectId, lightPrimitiveInfo);
+        mPointLightPipeline.UpdatePrimitiveInfo(mPointLightObjectId, lightPrimitiveInfo);
     }
 
     auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
-    mPbrPipeline.PreRender(drawPass, deltaTimeInSec, 1, &selectedModel.drawableObjectId);
+    mPbrPipeline.PreRender(
+        drawPass, 
+        deltaTimeInSec, 
+        1, 
+        &selectedModel.drawableObjectId
+    );
+    mPointLightPipeline.PreRender(
+        drawPass, 
+        deltaTimeInSec, 
+        1, 
+        &selectedModel.drawableObjectId
+    );
 }
 
 void GLTFMeshViewerScene::OnRender(float const deltaTimeInSec, RF::DrawPass & drawPass) {
@@ -384,7 +395,7 @@ void GLTFMeshViewerScene::Shutdown() {
     mCamera.DisableUI();
     mRecordObject.Disable();
     mPbrPipeline.Shutdown();
-    mPointLightPipeline.shutdown();
+    mPointLightPipeline.Shutdown();
     RF::DestroySampler(mSamplerGroup);
     destroyModels();
     RF::DestroyTexture(mErrorTexture);

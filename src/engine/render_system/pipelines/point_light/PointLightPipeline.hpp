@@ -16,7 +16,7 @@ public:
         alignas(16) float baseColorFactor[4];
     };
 
-    struct ViewProjectionData {
+    struct ModelViewProjectionData {
         alignas(64) float model[16];
         alignas(64) float view[16];
         alignas(64) float projection[16];
@@ -30,14 +30,21 @@ public:
     PointLightPipeline & operator = (PointLightPipeline const &) noexcept = delete;
     PointLightPipeline & operator = (PointLightPipeline &&) noexcept = delete;
 
-    void init();
+    void Init();
 
-    void shutdown();
+    void Shutdown();
 
     DrawableObjectId AddGpuModel(RF::GpuModel & gpuModel) override;
 
     bool RemoveGpuModel(DrawableObjectId drawableObjectId) override;
-    
+
+    void PreRender(
+        RF::DrawPass & drawPass, 
+        float deltaTimeInSec,
+        uint32_t idsCount, 
+        DrawableObjectId * ids 
+    ) override;
+
     void Render(
         RF::DrawPass & drawPass,
         float deltaTimeInSec,
@@ -45,12 +52,12 @@ public:
         DrawableObjectId * ids
     ) override;
 
-    bool updateViewProjectionBuffer(
+    bool UpdateViewProjectionBuffer(
         DrawableObjectId drawableObjectId, 
-        ViewProjectionData const & viewProjectionData
+        ModelViewProjectionData const & viewProjectionData
     );
 
-    bool updatePrimitiveInfo(
+    bool UpdatePrimitiveInfo(
         DrawableObjectId drawableObjectId,
         PrimitiveInfo const & info
     );
