@@ -231,7 +231,7 @@ bool Init(InitParams const & params) {
     
     state->descriptorPool = RB::CreateDescriptorPool(
         state->logicalDevice.device, 
-        1000 // TODO We might need to ask this from user
+        5000 // TODO We might need to ask this from user
     );
 
     state->displayRenderPass.Init();

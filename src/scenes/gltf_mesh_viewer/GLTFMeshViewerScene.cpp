@@ -198,7 +198,7 @@ void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RenderFrontend:
         drawPass, 
         deltaTimeInSec, 
         1, 
-        &selectedModel.drawableObjectId
+        &mPointLightObjectId
     );
 }
 
