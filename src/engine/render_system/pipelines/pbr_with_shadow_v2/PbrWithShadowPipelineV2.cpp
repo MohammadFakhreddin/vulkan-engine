@@ -93,12 +93,12 @@ void PBRWithShadowPipelineV2::PreRender(
         }
     }
 
+    RF::BindDrawPipeline(drawPass, mShadowPassPipeline);
+
     mShadowRenderPass.PrepareCubemapForTransferDestination(drawPass);
     for (int i = 0; i < 6; ++i) {
         mShadowRenderPass.SetNextPassParams(i);
         mShadowRenderPass.BeginRenderPass(drawPass);
-
-        RF::BindDrawPipeline(drawPass, mShadowPassPipeline);
 
         {// Shadow constants
             ShadowPushConstants shadowConstants {
