@@ -55,8 +55,6 @@ private:
     void createFrameBuffers(VkExtent2D const & extent);
 
     void createRenderPass();
-
-    inline static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
     
     VkRenderPass mVkRenderPass {};
     uint32_t mSwapChainImagesCount = 0;

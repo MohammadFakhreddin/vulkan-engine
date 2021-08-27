@@ -278,6 +278,8 @@ void PushConstants(
 [[nodiscard]]
 uint32_t GetSwapChainImagesCount();
 
+uint32_t GetMaxFramesPerFlight();
+
 void GetDrawableSize(int32_t & outWidth, int32_t & outHeight);
 
 #ifdef __DESKTOP__
@@ -373,7 +375,7 @@ void AcquireNextImage(
     uint32_t & outImageIndex
 );
 
-std::vector<VkCommandBuffer> CreateGraphicCommandBuffers(uint32_t count);
+std::vector<VkCommandBuffer> CreateGraphicCommandBuffers(uint32_t maxFramesPerFlight);
 
 void BeginCommandBuffer(
     VkCommandBuffer commandBuffer,

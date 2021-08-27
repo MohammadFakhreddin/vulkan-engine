@@ -53,7 +53,7 @@ void MFA::PBRModelPipeline::Render(
         if (findResult != mDrawableObjects.end()) {
             auto * drawableObject = findResult->second.get();
             MFA_ASSERT(drawableObject != nullptr);
-            drawableObject->Update(deltaTime);
+            drawableObject->Update(deltaTime, drawPass);
             drawableObject->Draw(drawPass, [&drawPass, &drawableObject](AS::MeshPrimitive const & primitive)-> void {
                 RF::BindDescriptorSet(
                     drawPass, 
@@ -74,16 +74,17 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::AddGpuModel(RF::GpuModel & gpuModel
     MFA_ASSERT(mDrawableObjects.find(drawableId) == mDrawableObjects.end());
     mDrawableObjects[drawableId] = std::unique_ptr<DrawableObject>(drawableObject);
 
-    const auto * primitiveInfoBuffer = drawableObject->CreateMultipleUniformBuffer(
+    const auto * primitiveInfoBuffer = drawableObject->CreateUniformBuffer(
         "PrimitiveInfo", 
         sizeof(PrimitiveInfo), 
-        drawableObject->GetPrimitiveCount()
+        drawableObject->GetPrimitiveCount() * RF::GetMaxFramesPerFlight()
     );
     MFA_ASSERT(primitiveInfoBuffer != nullptr);
 
     const auto * modelTransformBuffer = drawableObject->CreateUniformBuffer(
         "ViewProjection", 
-        sizeof(ViewProjectionData)
+        sizeof(ViewProjectionData),
+        RF::GetMaxFramesPerFlight()
     );
     MFA_ASSERT(modelTransformBuffer != nullptr);
 
@@ -329,7 +330,8 @@ bool MFA::PBRModelPipeline::UpdateViewProjectionBuffer(
     MFA_ASSERT(drawableObject != nullptr);
 
     drawableObject->UpdateUniformBuffer(
-        "ViewProjection", 
+        "ViewProjection",
+        0,
         CBlobAliasOf(viewProjectionData)
     );
 

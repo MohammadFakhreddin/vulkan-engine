@@ -51,14 +51,12 @@ public:
     RF::GpuModel * GetModel() const;
 
     // Only for model local buffers
-    RF::UniformBufferGroup * CreateUniformBuffer(char const * name, uint32_t size);
-
-    RF::UniformBufferGroup * CreateMultipleUniformBuffer(char const * name, uint32_t size, uint32_t count);
+    RF::UniformBufferGroup * CreateUniformBuffer(char const * name, uint32_t size, uint32_t count);
 
     // Only for model local buffers
     void DeleteUniformBuffers();
 
-    void UpdateUniformBuffer(char const * name, CBlob ubo);
+    void UpdateUniformBuffer(char const * name, uint32_t startingIndex, CBlob ubo);
 
     [[nodiscard]] RF::UniformBufferGroup * GetUniformBuffer(char const * name);
 
@@ -66,7 +64,7 @@ public:
 
     [[nodiscard]] RF::UniformBufferGroup const & GetSkinTransformBuffer(uint32_t nodeIndex) const noexcept;
 
-    void Update(float deltaTimeInSec);
+    void Update(float deltaTimeInSec, RF::DrawPass const & drawPass);
 
     using BindDescriptorSetFunction = std::function<void(AS::MeshPrimitive const &)>;
     void Draw(RF::DrawPass & drawPass, BindDescriptorSetFunction const & bindFunction);
@@ -98,9 +96,14 @@ private:
 
     void updateSkinJoints(uint32_t skinIndex, Skin const & skin);
 
-    void updateAllNodesJoints();
+    void updateAllNodes(RF::DrawPass const & drawPass);
 
-    void updateNodeJoint(Node const & node);
+    void updateNodeJoint(RF::DrawPass const & drawPass, Node const & node);
+
+    void updateNode(
+        RF::DrawPass const & drawPass,
+        AS::MeshNode const & node
+    );
 
     void drawNode(
         RF::DrawPass & drawPass, 
@@ -152,6 +155,15 @@ private:
     std::vector<Blob> mNodesJoints {};
 
     uint32_t mPrimitiveCount = 0;
+    
+    struct DirtyBuffer {
+        std::string bufferName;
+        RF::UniformBufferGroup * bufferGroup;
+        uint32_t startingIndex;
+        uint32_t remainingUpdateCount;
+        Blob ubo;
+    };
+    std::vector<DirtyBuffer> mDirtyBuffers {};
 };
 
 }

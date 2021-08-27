@@ -116,8 +116,8 @@ constexpr void Copy(T * dst, std::initializer_list<T> items) {
 }
 
 template<uint32_t Count, typename T>
-constexpr bool IsEqual(T * dst, T const * src) {
-    return memcmp(dst, src, Count * sizeof(T)) == 0;
+constexpr bool IsEqual(T const * memory1, T const * memory2) {
+    return memcmp(memory1, memory2, Count * sizeof(T)) == 0;
 }
 
 }

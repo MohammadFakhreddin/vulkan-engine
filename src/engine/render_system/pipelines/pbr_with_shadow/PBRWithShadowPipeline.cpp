@@ -176,7 +176,7 @@ void PBRWithShadowPipeline::PreRender(
         if (findResult != mDrawableObjects.end()) {
             auto * drawableObject = findResult->second.get();
             MFA_ASSERT(drawableObject != nullptr);
-            drawableObject->Update(deltaTime);
+            drawableObject->Update(deltaTime, drawPass);
             drawableObject->Draw(drawPass, [&drawPass, &drawableObject](AS::MeshPrimitive const & primitive)-> void {
                 RF::BindDescriptorSet(
                     drawPass, 
@@ -224,7 +224,8 @@ DrawableObjectId PBRWithShadowPipeline::AddGpuModel(RF::GpuModel & gpuModel) {
 
     drawableObject->CreateUniformBuffer(
         "ViewProjection", 
-        sizeof(ModelViewProjectionData)
+        sizeof(ModelViewProjectionData),
+        RF::GetMaxFramesPerFlight()
     );
     
     CreateDisplayPassDescriptorSets(drawableObject);
@@ -253,7 +254,8 @@ bool PBRWithShadowPipeline::UpdateViewProjectionBuffer(
     MFA_ASSERT(drawableObject != nullptr);
 
     drawableObject->UpdateUniformBuffer(
-        "ViewProjection", 
+        "ViewProjection",
+        0,
         CBlobAliasOf(viewProjectionData)
     );
     return true;
@@ -295,10 +297,10 @@ void PBRWithShadowPipeline::CreateDisplayPassDescriptorSets(DrawableObject * dra
     MFA_ASSERT(modelTransformBuffer != nullptr);
 
     // TODO Maybe mesh should track number of primitives instead
-    const auto * primitiveInfoBuffer = drawableObject->CreateMultipleUniformBuffer(
+    const auto * primitiveInfoBuffer = drawableObject->CreateUniformBuffer(
         "PrimitiveInfo", 
         sizeof(PrimitiveInfo), 
-        drawableObject->GetPrimitiveCount()
+        drawableObject->GetPrimitiveCount() * RF::GetMaxFramesPerFlight()
     );
     MFA_ASSERT(primitiveInfoBuffer != nullptr);
 

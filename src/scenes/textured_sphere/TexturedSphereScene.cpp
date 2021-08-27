@@ -89,7 +89,8 @@ void TexturedSphereScene::OnRender(float const deltaTimeInSec, MFA::RenderFronte
 
         
         mDrawableObject->UpdateUniformBuffer(
-            "transform", 
+            "transform",
+            0,
             MFA::CBlobAliasOf(mTranslateData)
         );
     }
@@ -102,7 +103,7 @@ void TexturedSphereScene::OnRender(float const deltaTimeInSec, MFA::RenderFronte
 
         RF::UpdateUniformBuffer(mLVBuffer.buffers[0], MFA::CBlobAliasOf(mLightViewData));
     }
-    mDrawableObject->Update(deltaTimeInSec);
+    mDrawableObject->Update(deltaTimeInSec, drawPass);
     mDrawableObject->Draw(drawPass, [&drawPass, this](AS::MeshPrimitive const & primitive)-> void {
         RF::BindDescriptorSet(
             drawPass, 
@@ -166,7 +167,11 @@ void TexturedSphereScene::createDrawableObject(){
         mGpuModel
     );
 
-    const auto * transformBuffer = mDrawableObject->CreateUniformBuffer("transform", sizeof(ModelTransformBuffer));
+    const auto * transformBuffer = mDrawableObject->CreateUniformBuffer(
+        "transform",
+        sizeof(ModelTransformBuffer),
+        RF::GetMaxFramesPerFlight()
+    );
     MFA_ASSERT(transformBuffer != nullptr);
     
     auto const & textures = mDrawableObject->GetModel()->textures;

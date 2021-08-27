@@ -127,6 +127,7 @@ void TextureViewerScene::OnRender(
 
         mDrawableObject->UpdateUniformBuffer(
             "viewProjection",
+            0,
             MFA::CBlobAliasOf(mViewProjectionBuffer)
         );
     }
@@ -137,11 +138,12 @@ void TextureViewerScene::OnRender(
 
         mDrawableObject->UpdateUniformBuffer(
             "imageOptions",
+            0,
             MFA::CBlobAliasOf(mImageOptionsBuffer)
         );
     }
 
-    mDrawableObject->Update(deltaTimeInSec);
+    mDrawableObject->Update(deltaTimeInSec, drawPass);
     mDrawableObject->Draw(drawPass, [&drawPass, this](AS::MeshPrimitive const & primitive)-> void {
         RF::BindDescriptorSet(
             drawPass, 
@@ -277,13 +279,15 @@ void TextureViewerScene::createDrawableObject() {
 
     auto const * viewProjectionBuffer = mDrawableObject->CreateUniformBuffer(
         "viewProjection", 
-        sizeof(ViewProjectionBuffer)
+        sizeof(ViewProjectionBuffer),
+        RF::GetMaxFramesPerFlight()
     );
     MFA_ASSERT(viewProjectionBuffer != nullptr);
 
     auto const * imageOptionsBuffer = mDrawableObject->CreateUniformBuffer(
         "imageOptions", 
-        sizeof(ImageOptionsBuffer)
+        sizeof(ImageOptionsBuffer),
+        RF::GetMaxFramesPerFlight()
     );
     MFA_ASSERT(imageOptionsBuffer != nullptr);
 
