@@ -12,14 +12,14 @@ namespace MFA {
 class PointLightPipeline final : public BasePipeline {
 public:
 
-    struct PrimitiveInfo {
-        alignas(16) float baseColorFactor[4];
+    struct PushConstants {
+        float model[16];
+        float baseColorFactor[3];
     };
+    static_assert(sizeof(PushConstants) == 76);
 
-    struct ModelViewProjectionData {
-        alignas(64) float model[16];
-        alignas(64) float view[16];
-        alignas(64) float projection[16];
+    struct ViewProjectionData {
+        alignas(64) float viewProjection[16];
     };
 
     PointLightPipeline() = default;
@@ -52,19 +52,21 @@ public:
         DrawableObjectId * ids
     ) override;
 
-    bool UpdateViewProjectionBuffer(
-        DrawableObjectId drawableObjectId, 
-        ModelViewProjectionData const & viewProjectionData
-    );
+    void UpdateLightTransform(uint32_t id, float lightTransform[16]);
 
-    bool UpdatePrimitiveInfo(
-        DrawableObjectId drawableObjectId,
-        PrimitiveInfo const & info
-    );
+    void UpdateLightColor(uint32_t id, float lightColor[3]);
+
+    void UpdateCameraView(float cameraTransform[16]);
+
+    void UpdateCameraProjection(float cameraProjection[16]);
 
     void OnResize() override {}
 
 private:
+
+    struct DrawableStorageData {
+        float color[3] {};
+    };
 
     void createDescriptorSetLayout();
 
@@ -73,6 +75,14 @@ private:
     void createPipeline();
 
     void destroyPipeline();
+
+    void destroyDrawableObjects();
+
+    void createDescriptorSets();
+
+    void updateViewProjectionBuffer(RF::DrawPass const & drawPass);
+
+    void createUniformBuffers();
 
     void destroyUniformBuffers();
 
@@ -84,6 +94,15 @@ private:
     std::unordered_map<DrawableObjectId, std::unique_ptr<DrawableObject>> mDrawableObjects {};
 
     DrawableObjectId mNextDrawableId = 0;
+
+    RB::DescriptorSetGroup mDescriptorSetGroup {};
+
+    RF::UniformBufferGroup mViewProjectionBuffers {};
+
+    glm::mat4 mCameraTransform {};
+    glm::mat4 mCameraProjection {};
+    ViewProjectionData mViewProjectionData {};
+    uint32_t mViewProjectionBufferDirtyCounter = 0;
 };
 
 }

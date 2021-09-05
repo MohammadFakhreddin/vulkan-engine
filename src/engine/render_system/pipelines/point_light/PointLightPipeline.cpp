@@ -8,11 +8,15 @@ namespace MFA {
 
 namespace AS = AssetSystem;
 
+//-------------------------------------------------------------------------------------------------
+
 PointLightPipeline::~PointLightPipeline() {
     if (mIsInitialized) {
         Shutdown();
     }
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void PointLightPipeline::Init() {
     if (mIsInitialized == true) {
@@ -21,9 +25,13 @@ void PointLightPipeline::Init() {
     }
     mIsInitialized = true;
 
+    createUniformBuffers();
     createDescriptorSetLayout();
     createPipeline();
+    createDescriptorSets();
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void PointLightPipeline::Shutdown() {
     if (mIsInitialized == false) {
@@ -34,93 +42,34 @@ void PointLightPipeline::Shutdown() {
 
     destroyPipeline();
     destroyDescriptorSetLayout();
+    destroyDrawableObjects();
     destroyUniformBuffers();
 }
+
+//-------------------------------------------------------------------------------------------------
 
 DrawableObjectId PointLightPipeline::AddGpuModel(RF::GpuModel & gpuModel) {
     MFA_ASSERT(gpuModel.valid == true);
 
     auto const drawableId = mNextDrawableId++;
 
-    auto * drawableObject = new DrawableObject(gpuModel);
+    auto drawableObject = std::make_unique<DrawableObject>(gpuModel);
     MFA_ASSERT(mDrawableObjects.find(drawableId) == mDrawableObjects.end());
-    mDrawableObjects[drawableId] = std::unique_ptr<DrawableObject>(drawableObject);
-
-    const auto * lightInfoBuffer = drawableObject->CreateUniformBuffer(
-        "LightInfo", 
-        sizeof(PrimitiveInfo),
-        RF::GetMaxFramesPerFlight()
-    );
-    MFA_ASSERT(lightInfoBuffer != nullptr);
-
-    const auto * mvpBuffer = drawableObject->CreateUniformBuffer(
-        "ModelViewProjection", 
-        sizeof(ModelViewProjectionData),
-        RF::GetMaxFramesPerFlight()
-    );
-    MFA_ASSERT(mvpBuffer != nullptr);
-    
-    auto const descriptorSetGroup = drawableObject->CreateDescriptorSetGroup(
-        "DisplayPipeline", 
-        mDescriptorSetLayout, 
-        RF::GetMaxFramesPerFlight()
-    );
-
-    for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex) {
-        
-        auto descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
-        MFA_VK_VALID_ASSERT(descriptorSet);
-
-        std::vector<VkWriteDescriptorSet> writeInfo {};
-
-        {// ModelViewProjection
-            VkDescriptorBufferInfo viewProjectionBufferInfo {};
-            viewProjectionBufferInfo.buffer = mvpBuffer->buffers[frameIndex].buffer;
-            viewProjectionBufferInfo.offset = 0;
-            viewProjectionBufferInfo.range = mvpBuffer->bufferSize;
-
-            VkWriteDescriptorSet writeDescriptorSet {};
-            writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            writeDescriptorSet.dstSet = descriptorSet;
-            writeDescriptorSet.dstBinding = static_cast<uint32_t>(writeInfo.size());
-            writeDescriptorSet.dstArrayElement = 0;
-            writeDescriptorSet.descriptorCount = 1;
-            writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            writeDescriptorSet.pBufferInfo = &viewProjectionBufferInfo;
-            
-            writeInfo.emplace_back(writeDescriptorSet);
-        }
-        {// Light info
-            VkDescriptorBufferInfo primitiveBufferInfo {};
-            primitiveBufferInfo.buffer = lightInfoBuffer->buffers[frameIndex].buffer;
-            primitiveBufferInfo.offset = 0;
-            primitiveBufferInfo.range = lightInfoBuffer->bufferSize;
-
-            VkWriteDescriptorSet writeDescriptorSet {};
-            writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            writeDescriptorSet.dstSet = descriptorSet;
-            writeDescriptorSet.dstBinding = static_cast<uint32_t>(writeInfo.size());
-            writeDescriptorSet.dstArrayElement = 0;
-            writeDescriptorSet.descriptorCount = 1;
-            writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            writeDescriptorSet.pBufferInfo = &primitiveBufferInfo;
-
-            writeInfo.emplace_back(writeDescriptorSet);
-        }
-        RF::UpdateDescriptorSets(
-            static_cast<uint8_t>(writeInfo.size()),
-            writeInfo.data()
-        );
-    }
+    drawableObject->AllocStorage("PointLight", sizeof(DrawableStorageData));
+    mDrawableObjects[drawableId] = std::move(drawableObject);
     
     return drawableId;
 }
+
+//-------------------------------------------------------------------------------------------------
 
 bool PointLightPipeline::RemoveGpuModel(DrawableObjectId const drawableObjectId) {
     auto const deleteCount = mDrawableObjects.erase(drawableObjectId);  // Unique ptr should be deleted correctly
     MFA_ASSERT(deleteCount == 1);
     return deleteCount;
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void PointLightPipeline::PreRender(
     RF::DrawPass & drawPass, 
@@ -136,7 +85,10 @@ void PointLightPipeline::PreRender(
             drawableObject->Update(deltaTimeInSec, drawPass);
         }
     }
+    updateViewProjectionBuffer(drawPass);
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void PointLightPipeline::Render(
     RF::DrawPass & drawPass,
@@ -145,6 +97,7 @@ void PointLightPipeline::Render(
     DrawableObjectId * ids
 ) {
     RF::BindDrawPipeline(drawPass, mDrawPipeline);
+    RF::BindDescriptorSet(drawPass, mDescriptorSetGroup.descriptorSets[drawPass.frameIndex]);
 
     for (uint32_t i = 0; i < idsCount; ++i) {
         auto const findResult = mDrawableObjects.find(ids[i]);
@@ -152,57 +105,89 @@ void PointLightPipeline::Render(
             auto * drawableObject = findResult->second.get();
             MFA_ASSERT(drawableObject != nullptr);
             drawableObject->Draw(drawPass, [&drawPass, &drawableObject](AS::MeshPrimitive const & primitive, DrawableObject::Node const & node)-> void {
-                RF::BindDescriptorSet(
-                    drawPass, 
-                    drawableObject->GetDescriptorSetGroup("DisplayPipeline")
-                        ->descriptorSets[primitive.uniqueId * RF::GetMaxFramesPerFlight() + drawPass.frameIndex]
+                auto const & storageData = drawableObject->GetStorage("PointLight").as<DrawableStorageData>()[0];
+
+                PushConstants pushConstants {};
+                Copy<3>(pushConstants.baseColorFactor, storageData.color);
+                Matrix4X4Float::ConvertGmToCells(node.cachedModelTransform, pushConstants.model);
+                        
+                RF::PushConstants(
+                    drawPass,
+                    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                    0,
+                    CBlobAliasOf(pushConstants)   
                 );
             });
         }
     }
 }
 
-bool PointLightPipeline::UpdateViewProjectionBuffer(
-    DrawableObjectId const drawableObjectId, 
-    ModelViewProjectionData const & viewProjectionData
-) {
-    auto const findResult = mDrawableObjects.find(drawableObjectId);
-    if (findResult == mDrawableObjects.end()) {
-        MFA_ASSERT(false);
-        return false;
-    }
-    auto * drawableObject = findResult->second.get();
-    MFA_ASSERT(drawableObject != nullptr);
+//-------------------------------------------------------------------------------------------------
 
-    drawableObject->UpdateUniformBuffer(
-        "ModelViewProjection",
-        0,
-        CBlobAliasOf(viewProjectionData)
-    );
-
-    return true;
+void PointLightPipeline::UpdateLightTransform(uint32_t const id, float lightTransform[16]) {
+    auto findResult = mDrawableObjects.find(id);   
+    MFA_ASSERT(findResult != mDrawableObjects.end());
+    findResult->second->UpdateModelTransform(lightTransform);
 }
 
-bool PointLightPipeline::UpdatePrimitiveInfo(
-    DrawableObjectId const drawableObjectId, 
-    PrimitiveInfo const & info
-) {
-    auto const findResult = mDrawableObjects.find(drawableObjectId);
-    if (findResult == mDrawableObjects.end()) {
-        MFA_ASSERT(false);
-        return false;
-    }
-    auto * drawableObject = findResult->second.get();
-    MFA_ASSERT(drawableObject != nullptr);
+//-------------------------------------------------------------------------------------------------
 
-    drawableObject->UpdateUniformBuffer(
-        "LightInfo",
-        0,
-        CBlobAliasOf(info)
-    );
-
-    return true;                 
+void PointLightPipeline::UpdateLightColor(uint32_t const id, float lightColor[3]) {
+    auto findResult = mDrawableObjects.find(id);
+    auto & storageData = findResult->second->GetStorage("PointLight").as<DrawableStorageData>()[0];
+    Copy<3>(storageData.color, lightColor);
 }
+
+//-------------------------------------------------------------------------------------------------
+
+void PointLightPipeline::UpdateCameraView(float cameraTransform[16]) {
+    if (Matrix4X4Float::IsEqual(mCameraTransform, cameraTransform) == false) {
+        Matrix4X4Float::ConvertCellsToMat4(cameraTransform, mCameraTransform);
+        mViewProjectionBufferDirtyCounter = RF::GetMaxFramesPerFlight();
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void PointLightPipeline::UpdateCameraProjection(float cameraProjection[16]) {
+    if (Matrix4X4Float::IsEqual(mCameraProjection, cameraProjection) == false) {
+        Matrix4X4Float::ConvertCellsToMat4(cameraProjection, mCameraProjection);
+        mViewProjectionBufferDirtyCounter = RF::GetMaxFramesPerFlight();
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void PointLightPipeline::updateViewProjectionBuffer(RF::DrawPass const & drawPass) {
+    if (mViewProjectionBufferDirtyCounter <= 0) {
+        return;
+    }
+    if (mViewProjectionBufferDirtyCounter == RF::GetMaxFramesPerFlight()) {
+        glm::mat4 const viewProjection = mCameraProjection * mCameraTransform;
+        Matrix4X4Float::ConvertGmToCells(viewProjection, mViewProjectionData.viewProjection);
+    }
+    --mViewProjectionBufferDirtyCounter;
+    MFA_ASSERT(mViewProjectionBufferDirtyCounter >= 0);
+    
+    RF::UpdateUniformBuffer(mViewProjectionBuffers.buffers[drawPass.frameIndex], CBlobAliasOf(mViewProjectionData));
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void PointLightPipeline::createUniformBuffers() {
+    mViewProjectionBuffers = RF::CreateUniformBuffer(sizeof(ViewProjectionData), RF::GetMaxFramesPerFlight());
+    for (uint32_t i = 0; i < RF::GetMaxFramesPerFlight(); ++i) {
+        RF::UpdateUniformBuffer(mViewProjectionBuffers.buffers[i], CBlobAliasOf(mViewProjectionData));
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void PointLightPipeline::destroyUniformBuffers() {
+    RF::DestroyUniformBuffer(mViewProjectionBuffers);
+}
+
+//-------------------------------------------------------------------------------------------------
 
 void PointLightPipeline::createDescriptorSetLayout() {
     std::vector<VkDescriptorSetLayoutBinding> bindings {};
@@ -215,15 +200,6 @@ void PointLightPipeline::createDescriptorSetLayout() {
         };
         bindings.emplace_back(layoutBinding);
     }
-    {// LightInfo
-        VkDescriptorSetLayoutBinding layoutBinding {
-            .binding = static_cast<uint32_t>(bindings.size()),
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1,
-            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
-        };
-        bindings.emplace_back(layoutBinding);
-    }
     MFA_VK_INVALID_ASSERT(mDescriptorSetLayout);
     mDescriptorSetLayout = RF::CreateDescriptorSetLayout(
         static_cast<uint8_t>(bindings.size()),
@@ -231,11 +207,15 @@ void PointLightPipeline::createDescriptorSetLayout() {
     );
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void PointLightPipeline::destroyDescriptorSetLayout() {
     MFA_VK_VALID_ASSERT(mDescriptorSetLayout);
     RF::DestroyDescriptorSetLayout(mDescriptorSetLayout);
     MFA_VK_MAKE_NULL(mDescriptorSetLayout);
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void PointLightPipeline::createPipeline() {
     // Vertex shader
@@ -289,6 +269,17 @@ void PointLightPipeline::createPipeline() {
     pipelineOptions.useStaticViewportAndScissor = false;
     pipelineOptions.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
     pipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
+    pipelineOptions.cullMode = VK_CULL_MODE_BACK_BIT;
+
+    std::vector<VkPushConstantRange> pushConstantRanges {
+        VkPushConstantRange {
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT,
+            .offset = 0,
+            .size = sizeof(PushConstants),
+        }
+    };
+    pipelineOptions.pushConstantsRangeCount = static_cast<uint32_t>(pushConstantRanges.size());
+    pipelineOptions.pushConstantRanges = pushConstantRanges.data();
 
     mDrawPipeline = RF::CreateDrawPipeline(
         RF::GetDisplayRenderPass()->GetVkRenderPass(),
@@ -303,17 +294,49 @@ void PointLightPipeline::createPipeline() {
     );
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void PointLightPipeline::destroyPipeline() {
     MFA_ASSERT(mDrawPipeline.isValid());
     RF::DestroyDrawPipeline(mDrawPipeline);
 }
 
-void PointLightPipeline::destroyUniformBuffers() {
-    for (const auto & [id, drawableObject] : mDrawableObjects) {
-        MFA_ASSERT(drawableObject != nullptr);
-        drawableObject->DeleteUniformBuffers();
-    }
+//-------------------------------------------------------------------------------------------------
+
+void PointLightPipeline::destroyDrawableObjects() {
     mDrawableObjects.clear();
 }
+
+//-------------------------------------------------------------------------------------------------
+
+void PointLightPipeline::createDescriptorSets() {
+    mDescriptorSetGroup = RF::CreateDescriptorSets(2, mDescriptorSetLayout);
+
+    for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex) {
+
+        auto descriptorSet = mDescriptorSetGroup.descriptorSets[frameIndex];
+        MFA_VK_VALID_ASSERT(descriptorSet);
+
+        DescriptorSetSchema descriptorSetSchema {descriptorSet};
+
+        /////////////////////////////////////////////////////////////////
+        // Vertex shader
+        /////////////////////////////////////////////////////////////////
+        
+        {// ViewProjectionTransform
+            VkDescriptorBufferInfo bufferInfo {
+                .buffer = mViewProjectionBuffers.buffers[frameIndex].buffer,
+                .offset = 0,
+                .range = mViewProjectionBuffers.bufferSize,
+            };
+            descriptorSetSchema.AddUniformBuffer(bufferInfo);
+        }
+        
+        descriptorSetSchema.UpdateDescriptorSets();
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+
 
 }

@@ -11,7 +11,7 @@ namespace RF = MFA::RenderFrontend;
 namespace Importer = MFA::Importer;
 namespace UI = MFA::UISystem;
 namespace Path = MFA::Path;
-// TODO: Use less descriptor sets!
+
 GLTFMeshViewerScene::GLTFMeshViewerScene()
     : Scene()
     , mRecordObject([this]()->void {OnUI();})
@@ -156,72 +156,8 @@ void GLTFMeshViewerScene::Init() {
 }
 
 void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) {
-    {// LightViewBuffer
-        mPbrPipeline.UpdateLightPosition(mLightPosition);
-        float cameraPosition[3];
-        mCamera.GetPosition(cameraPosition);
-        mPbrPipeline.UpdateCameraPosition(cameraPosition);
-        mPbrPipeline.UpdateLightColor(mLightColor);
-
-        // Position
-        MFA::Matrix4X4Float translationMat {};
-        MFA::Matrix4X4Float::AssignTranslation(
-            translationMat,
-            mLightPosition[0],
-            mLightPosition[1],
-            mLightPosition[2]
-        );
-
-        MFA::Matrix4X4Float transformMat {};
-        MFA::Matrix4X4Float::Identity(transformMat);
-        transformMat.multiply(translationMat);
-
-        transformMat.copy(mPointLightMVPData.model);
-        mCamera.GetTransform(mPointLightMVPData.view);
-        
-        mPointLightPipeline.UpdateViewProjectionBuffer(mPointLightObjectId, mPointLightMVPData);
-
-        MFA::PointLightPipeline::PrimitiveInfo lightPrimitiveInfo {};
-        MFA::Copy<3>(lightPrimitiveInfo.baseColorFactor, mLightColor);
-        lightPrimitiveInfo.baseColorFactor[3] = 1.0f;
-        mPointLightPipeline.UpdatePrimitiveInfo(mPointLightObjectId, lightPrimitiveInfo);
-    }
-
-    auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
-    mPbrPipeline.PreRender(
-        drawPass, 
-        deltaTimeInSec, 
-        1, 
-        &selectedModel.drawableObjectId
-    );
-    mPointLightPipeline.PreRender(
-        drawPass, 
-        deltaTimeInSec, 
-        1, 
-        &mPointLightObjectId
-    );
-}
-
-void GLTFMeshViewerScene::OnRender(float const deltaTimeInSec, RF::DrawPass & drawPass) {
-    MFA_ASSERT(mSelectedModelIndex >= 0 && mSelectedModelIndex < mModelsRenderData.size());
-
-    mCamera.onNewFrame(deltaTimeInSec);
-
     auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
 
-    // TODO Pipeline should be able to share buffers such as projection buffer to enable us to update them once
-    mPbrPipeline.Render(drawPass, deltaTimeInSec, 1, &selectedModel.drawableObjectId);
-    if (mIsLightVisible) {
-        mPointLightPipeline.Render(drawPass, deltaTimeInSec, 1, &mPointLightObjectId);
-    }
-}
-
-void GLTFMeshViewerScene::OnPostRender(
-    float deltaTimeInSec, 
-    MFA::RenderFrontend::DrawPass & drawPass
-)
-{
-    auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
     if (selectedModel.isLoaded == false) {
         createModel(selectedModel);
     }
@@ -254,6 +190,26 @@ void GLTFMeshViewerScene::OnPostRender(
         
         mCamera.forcePosition(selectedModel.initialParams.camera.position);
         mCamera.forceRotation(selectedModel.initialParams.camera.eulerAngles);
+    }
+    
+    {// LightViewBuffer
+        mPbrPipeline.UpdateLightPosition(mLightPosition);
+        float cameraPosition[3];
+        mCamera.GetPosition(cameraPosition);
+        mPbrPipeline.UpdateCameraPosition(cameraPosition);
+        mPbrPipeline.UpdateLightColor(mLightColor);
+
+        // LightPosition
+        MFA::Matrix4X4Float translationMat {};
+        MFA::Matrix4X4Float::AssignTranslation(
+            translationMat,
+            mLightPosition[0],
+            mLightPosition[1],
+            mLightPosition[2]
+        );
+
+        mPointLightPipeline.UpdateLightTransform(mPointLightObjectId, translationMat.cells);
+        mPointLightPipeline.UpdateLightColor(mPointLightObjectId, mLightColor);
     }
 
     {// Updating PBR-Pipeline
@@ -295,9 +251,46 @@ void GLTFMeshViewerScene::OnPostRender(
         // View
         float viewData [16];
         mCamera.GetTransform(viewData);
+        mPointLightPipeline.UpdateCameraView(viewData);
         mPbrPipeline.UpdateCameraView(viewData);
     }
 
+    mPbrPipeline.PreRender(
+        drawPass, 
+        deltaTimeInSec, 
+        1, 
+        &selectedModel.drawableObjectId
+    );
+    mPointLightPipeline.PreRender(
+        drawPass, 
+        deltaTimeInSec, 
+        1, 
+        &mPointLightObjectId
+    );
+}
+
+void GLTFMeshViewerScene::OnRender(float const deltaTimeInSec, RF::DrawPass & drawPass) {
+    MFA_ASSERT(mSelectedModelIndex >= 0 && mSelectedModelIndex < mModelsRenderData.size());
+
+    mCamera.onNewFrame(deltaTimeInSec);
+
+    auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
+
+    // TODO Pipeline should be able to share buffers such as projection buffer to enable us to update them once
+    mPbrPipeline.Render(drawPass, deltaTimeInSec, 1, &selectedModel.drawableObjectId);
+    if (mIsLightVisible) {
+        mPointLightPipeline.Render(drawPass, deltaTimeInSec, 1, &mPointLightObjectId);
+    }
+}
+
+void GLTFMeshViewerScene::OnPostRender(
+    float deltaTimeInSec, 
+    MFA::RenderFrontend::DrawPass & drawPass
+)
+{
+    auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
+
+    mPointLightPipeline.PostRender(drawPass, deltaTimeInSec, 1, &mPointLightObjectId);
     mPbrPipeline.PostRender(drawPass, deltaTimeInSec, 1, &selectedModel.drawableObjectId);
 
 }
@@ -430,11 +423,8 @@ void GLTFMeshViewerScene::destroyModels() {
 }
 
 void GLTFMeshViewerScene::updateProjectionBuffer() {
-    {// PBR
-        float projectionData [16];
-        mCamera.GetProjection(projectionData);
-        mPbrPipeline.UpdateCameraProjection(projectionData);
-    }
-    // PointLight
-    mCamera.GetProjection(mPointLightMVPData.projection);
+    float projectionData [16];
+    mCamera.GetProjection(projectionData);          // TODO It can return
+    mPbrPipeline.UpdateCameraProjection(projectionData);
+    mPointLightPipeline.UpdateCameraProjection(projectionData);
 }

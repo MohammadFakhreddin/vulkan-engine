@@ -118,6 +118,8 @@ DrawableObject::DrawableObject(RF::GpuModel & model_)
     MFA_ASSERT(mGpuModel->model.mesh.IsValid());
 }
 
+//-------------------------------------------------------------------------------------------------
+
 DrawableObject::~DrawableObject() {
     mCachedSkinsJoints.clear();
 
@@ -131,11 +133,19 @@ DrawableObject::~DrawableObject() {
         RF::DestroyUniformBuffer(mPrimitivesBuffer);
     }
     DeleteUniformBuffers();
+
+    for (auto & storedData : mStorageMap) {
+        Memory::Free(storedData.second);    
+    }
 }
+
+//-------------------------------------------------------------------------------------------------
 
 RF::GpuModel * DrawableObject::GetModel() const {
     return mGpuModel;
 }
+
+//-------------------------------------------------------------------------------------------------
 
 // Only for model local buffers
 RF::UniformBufferGroup * DrawableObject::CreateUniformBuffer(
@@ -148,6 +158,8 @@ RF::UniformBufferGroup * DrawableObject::CreateUniformBuffer(
     return &mUniformBuffers[name];
 }
 
+//-------------------------------------------------------------------------------------------------
+
 // Only for model local buffers
 void DrawableObject::DeleteUniformBuffers() {
     for (auto & dirtyBuffer : mDirtyBuffers) {
@@ -159,9 +171,9 @@ void DrawableObject::DeleteUniformBuffers() {
         RF::DestroyUniformBuffer(pair.second);
     }
     mUniformBuffers.clear();
-    
-    //RF::DestroyUniformBuffer(mNodeTransformBuffers);
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void DrawableObject::UpdateUniformBuffer(
     char const * name,
@@ -202,6 +214,8 @@ void DrawableObject::UpdateUniformBuffer(
     mDirtyBuffers.emplace_back(dirtyBuffer);
 }
 
+//-------------------------------------------------------------------------------------------------
+
 RF::UniformBufferGroup * DrawableObject::GetUniformBuffer(char const * name) {
     auto const find_result = mUniformBuffers.find(name);
     if (find_result != mUniformBuffers.end()) {
@@ -210,18 +224,20 @@ RF::UniformBufferGroup * DrawableObject::GetUniformBuffer(char const * name) {
     return nullptr;
 }
 
-//RF::UniformBufferGroup const & DrawableObject::GetNodeTransformBuffer() const noexcept {
-//    return mNodeTransformBuffers;
-//}
+//-------------------------------------------------------------------------------------------------
 
 [[nodiscard]]
 RF::UniformBufferGroup const & DrawableObject::GetNodesJointsBuffer() const noexcept {
     return mNodesJointsBuffer;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 RF::UniformBufferGroup const & DrawableObject::GetPrimitivesBuffer() const noexcept {
     return mPrimitivesBuffer;
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void DrawableObject::Update(float const deltaTimeInSec, RF::DrawPass const & drawPass) {
     updateAnimation(deltaTimeInSec);
@@ -256,6 +272,8 @@ void DrawableObject::Update(float const deltaTimeInSec, RF::DrawPass const & dra
     }
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void DrawableObject::Draw(
     RF::DrawPass & drawPass, 
     BindDescriptorSetFunction const & bindFunction
@@ -263,20 +281,12 @@ void DrawableObject::Draw(
     BindVertexBuffer(drawPass, mGpuModel->meshBuffers.verticesBuffer);
     BindIndexBuffer(drawPass, mGpuModel->meshBuffers.indicesBuffer);
 
-    //auto const & mesh = mGpuModel->model.mesh;
-
-    //auto const nodesCount = mesh.GetNodesCount();
-    //auto const * nodes = mesh.GetNodeData();
-    //MFA_ASSERT(nodes != nullptr);
-    //
-    //for (uint32_t i = 0; i < nodesCount; ++i) {
-    //    drawNode(drawPass, nodes[i], bindFunction);
-    //}
-
     for (auto & node : mNodes) {
         drawNode(drawPass, node, bindFunction);
     }
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void DrawableObject::EnableUI(char const * windowName, bool * isVisible) {
     MFA_ASSERT(windowName != nullptr && strlen(windowName) > 0);
@@ -285,9 +295,13 @@ void DrawableObject::EnableUI(char const * windowName, bool * isVisible) {
     mIsUIVisible = isVisible;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void DrawableObject::DisableUI() {
     mRecordUIObject.Disable();
 }
+
+//-------------------------------------------------------------------------------------------------
 
 RB::DescriptorSetGroup const & DrawableObject::CreateDescriptorSetGroup(
     char const * name, 
@@ -303,6 +317,8 @@ RB::DescriptorSetGroup const & DrawableObject::CreateDescriptorSetGroup(
     return mDescriptorSetGroups[name];
 }
 
+//-------------------------------------------------------------------------------------------------
+
 RB::DescriptorSetGroup * DrawableObject::GetDescriptorSetGroup(char const * name) {
     MFA_ASSERT(name != nullptr);
     auto const findResult = mDescriptorSetGroups.find(name);
@@ -312,12 +328,33 @@ RB::DescriptorSetGroup * DrawableObject::GetDescriptorSetGroup(char const * name
     return nullptr;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void DrawableObject::UpdateModelTransform(float modelTransform[16]) {
     if (Matrix4X4Float::IsEqual(mModelTransform, modelTransform) == false) {
         mModelTransform = Matrix4X4Float::ConvertCellsToMat4(modelTransform);
         mIsModelTransformChanged = true;
     }
 }
+
+//-------------------------------------------------------------------------------------------------
+
+void DrawableObject::AllocStorage(char const * name, size_t const size) {
+    MFA_ASSERT(mStorageMap.find(name) == mStorageMap.end());
+    mStorageMap[name] = Memory::Alloc(size);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+Blob DrawableObject::GetStorage(char const * name) {
+    auto const findResult = mStorageMap.find(name);
+    if (findResult == mStorageMap.end()) {
+        return {};
+    }
+    return findResult->second;
+}
+
+//-------------------------------------------------------------------------------------------------
 
 void DrawableObject::updateAnimation(float const deltaTimeInSec) {
     using Animation = AS::Mesh::Animation;
@@ -401,6 +438,8 @@ void DrawableObject::updateAnimation(float const deltaTimeInSec) {
     }
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void DrawableObject::computeNodesGlobalTransform() {
     auto & mesh = mGpuModel->model.mesh;
 
@@ -411,6 +450,8 @@ void DrawableObject::computeNodesGlobalTransform() {
         computeNodeGlobalTransform(node, nullptr, false);
     }
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void DrawableObject::updateAllSkinsJoints() {
     auto const & mesh = mGpuModel->model.mesh;
@@ -426,6 +467,8 @@ void DrawableObject::updateAllSkinsJoints() {
     }
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void DrawableObject::updateSkinJoints(uint32_t const skinIndex, Skin const & skin) {
     auto jointMatrices = mCachedSkinsJoints[skinIndex];
     for (size_t i = 0; i < skin.joints.size(); i++)
@@ -437,6 +480,8 @@ void DrawableObject::updateSkinJoints(uint32_t const skinIndex, Skin const & ski
         Matrix4X4Float::ConvertGmToCells(matrix, jointMatrices[i].model);
     }
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void DrawableObject::updateAllNodes(RF::DrawPass const & drawPass) {
     //auto const nodesCount = mesh.GetNodesCount();
@@ -452,6 +497,8 @@ void DrawableObject::updateAllNodes(RF::DrawPass const & drawPass) {
         updateNodes(drawPass, node);
     }
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void DrawableObject::updateNodes(
     RF::DrawPass const & drawPass,
@@ -477,6 +524,8 @@ void DrawableObject::updateNodes(
     }
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void DrawableObject::drawNode(
     RF::DrawPass & drawPass, 
     Node const & node, 
@@ -497,6 +546,8 @@ void DrawableObject::drawNode(
     }
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void DrawableObject::drawSubMesh(
     RF::DrawPass & drawPass, 
     AssetSystem::Mesh::SubMesh const & subMesh,
@@ -516,6 +567,8 @@ void DrawableObject::drawSubMesh(
     }
 }
 
+//-------------------------------------------------------------------------------------------------
+
 glm::mat4 DrawableObject::computeNodeLocalTransform(Node const & node) const {
     glm::mat4 result {1};
     result = glm::translate(result, Matrix4X4Float::ConvertCellsToVec3(node.meshNode->translate));
@@ -525,7 +578,8 @@ glm::mat4 DrawableObject::computeNodeLocalTransform(Node const & node) const {
     return result;
 }
 
-// TODO Instead of this we should get node and its parent global transform
+//-------------------------------------------------------------------------------------------------
+
 void DrawableObject::computeNodeGlobalTransform(Node & node, Node const * parentNode, bool isParentTransformChanged) {
     MFA_ASSERT(parentNode == nullptr || parentNode->isCachedDataValid == true);
     MFA_ASSERT(parentNode != nullptr || isParentTransformChanged == false);
@@ -557,6 +611,8 @@ void DrawableObject::computeNodeGlobalTransform(Node & node, Node const * parent
     }
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void DrawableObject::onUI() {
     MFA_ASSERT(mIsUIVisible != nullptr);
     if (*mIsUIVisible == false) {
@@ -579,5 +635,7 @@ void DrawableObject::onUI() {
     );
     UI::EndWindow();
 }
+
+//-------------------------------------------------------------------------------------------------
 
 };

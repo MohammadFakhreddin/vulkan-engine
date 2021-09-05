@@ -142,7 +142,7 @@ void PBRWithShadowPipelineV2::PreRender(
 
                 RF::BindDescriptorSet(
                     drawPass, 
-                    drawableObject->GetDescriptorSetGroup("ShadowPipeline")->descriptorSets[drawPass.frameIndex]
+                    drawableObject->GetDescriptorSetGroup("PbrWithShadowV2ShadowPipeline")->descriptorSets[drawPass.frameIndex]
                 );
 
                 drawableObject->Draw(drawPass, [&drawPass, &faceIndex](AS::MeshPrimitive const & primitive, DrawableObject::Node const & node)-> void {
@@ -186,7 +186,7 @@ void PBRWithShadowPipelineV2::Render(
 
             RF::BindDescriptorSet(
                 drawPass, 
-                drawableObject->GetDescriptorSetGroup("DisplayPipeline")->descriptorSets[drawPass.frameIndex]
+                drawableObject->GetDescriptorSetGroup("PbrWithShadowV2DisplayPipeline")->descriptorSets[drawPass.frameIndex]
             );
 
             drawableObject->Draw(drawPass, [&drawPass](AS::MeshPrimitive const & primitive, DrawableObject::Node const & node)-> void {
@@ -402,7 +402,7 @@ void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableObject * d
     auto const & textures = drawableObject->GetModel()->textures;
     
     auto const descriptorSetGroup = drawableObject->CreateDescriptorSetGroup(
-        "DisplayPipeline",
+        "PbrWithShadowV2DisplayPipeline",
         mDisplayPassDescriptorSetLayout,
         RF::GetMaxFramesPerFlight()
     );
@@ -511,7 +511,7 @@ void PBRWithShadowPipelineV2::CreateShadowPassDescriptorSets(DrawableObject * dr
     auto const & mesh = drawableObject->GetModel()->model.mesh;
     // TODO Each subMesh should know its node index as well
     auto const descriptorSetGroup = drawableObject->CreateDescriptorSetGroup(
-        "ShadowPipeline", 
+        "PbrWithShadowV2ShadowPipeline", 
         mShadowPassDescriptorSetLayout, 
         drawableObject->GetPrimitiveCount() * RF::GetMaxFramesPerFlight()
     );

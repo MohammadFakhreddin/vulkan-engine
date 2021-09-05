@@ -93,8 +93,6 @@ private:
         alignas(4) int hasEmissiveTexture;
     }; 
 
-    MFA::PointLightPipeline::ModelViewProjectionData mPointLightMVPData {};
-
     float m_model_rotation[3] {45.0f, 45.0f, 45.0f};
     float m_model_scale = 1.0f;
     float m_model_position[3] {0.0f, 0.0f, -6.0f};

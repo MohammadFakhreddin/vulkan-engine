@@ -114,6 +114,19 @@ public:
 
     void UpdateModelTransform(float modelTransform[16]);
 
+    [[nodiscard]]
+    int GetActiveAnimationIndex() const noexcept {
+        return mActiveAnimationIndex;
+    }
+
+    void SetActiveAnimationIndex(int const activeAnimationIndex) {
+        mActiveAnimationIndex = activeAnimationIndex;
+    }
+
+    void AllocStorage(char const * name, size_t size);
+
+    Blob GetStorage(char const * name);
+
 private:
 
     void updateAnimation(float deltaTimeInSec);
@@ -151,15 +164,6 @@ private:
     );
 
     void onUI();
-
-    [[nodiscard]]
-    int GetActiveAnimationIndex() const noexcept {
-        return mActiveAnimationIndex;
-    }
-
-    void SetActiveAnimationIndex(int const activeAnimationIndex) {
-        mActiveAnimationIndex = activeAnimationIndex;
-    }
 
 private:
 
@@ -201,6 +205,8 @@ private:
     glm::mat4 mModelTransform = glm::identity<glm::mat4>();
 
     std::vector<Node> mNodes {};
+
+    std::unordered_map<std::string, Blob> mStorageMap {};
 
 };
 

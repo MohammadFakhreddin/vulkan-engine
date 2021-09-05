@@ -138,16 +138,11 @@ namespace MFA::ShapeGenerator {
             meshIndices.data()
         );
 
-        AS::MeshNode node {};
-        node.subMeshIndex = 0;
+        AS::MeshNode node {
+            .subMeshIndex = 0,
+            .scale = {scaleFactor, scaleFactor, scaleFactor}
+        };
         
-        {// Assign value to transformMat
-            auto transform = Matrix4X4Float::Identity();
-            Matrix4X4Float::AssignScale(transform, scaleFactor);
-            ::memcpy(node.transform, transform.cells, sizeof(node.transform));
-            static_assert(sizeof(node.transform) == sizeof(transform.cells));
-        }
-
         model.mesh.InsertNode(node);
 
         model.mesh.FinalizeData();

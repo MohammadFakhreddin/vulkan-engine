@@ -6,16 +6,21 @@ struct PSOut {
     float4 color : SV_Target0;
 };
 
-struct LightInfo {    // TODO Use passed color instead of primitive info
-    float4 baseColorFactor : COLOR0;
+struct PushConsts
+{    
+    float4x4 model;
+    float3 baseColorFactor : COLOR0;
 };
 
-ConstantBuffer <LightInfo> lightBuffer : register (b1, space0);
+[[vk::push_constant]]
+cbuffer {
+    PushConsts pushConsts;
+};
 
 PSOut main(PSIn input) {
     PSOut output;
 
-    float3 color = lightBuffer.baseColorFactor.rgb;
+    float3 color = pushConsts.baseColorFactor.rgb;
     // exposure tone mapping
     float exposure = 1.0f;
     if (color.r > exposure) {
