@@ -177,7 +177,10 @@ void PBRWithShadowPipeline::PreRender(
             auto * drawableObject = findResult->second.get();
             MFA_ASSERT(drawableObject != nullptr);
             drawableObject->Update(deltaTime, drawPass);
-            drawableObject->Draw(drawPass, [&drawPass, &drawableObject](AS::MeshPrimitive const & primitive)-> void {
+            drawableObject->Draw(drawPass, [&drawPass, &drawableObject] (
+                AS::MeshPrimitive const & primitive, 
+                DrawableObject::Node const & node
+            )-> void {
                 RF::BindDescriptorSet(
                     drawPass, 
                     drawableObject->GetDescriptorSetGroup("ShadowPipeline")->descriptorSets[primitive.uniqueId]
@@ -371,7 +374,7 @@ void PBRWithShadowPipeline::CreateDisplayPassDescriptorSets(DrawableObject * dra
                         primitiveInfo.hasBaseColorTexture = primitive.hasBaseColorTexture ? 1 : 0;
                         primitiveInfo.metallicFactor = primitive.metallicFactor;
                         primitiveInfo.roughnessFactor = primitive.roughnessFactor;
-                        primitiveInfo.hasMixedMetallicRoughnessOcclusionTexture = primitive.hasMixedMetallicRoughnessOcclusionTexture ? 1 : 0;
+                        primitiveInfo.hasMixedMetallicRoughnessOcclusionTexture = primitive.hasMetallicRoughnessTexture ? 1 : 0;
                         primitiveInfo.hasNormalTexture = primitive.hasNormalTexture ? 1 : 0;
                         primitiveInfo.hasEmissiveTexture = primitive.hasEmissiveTexture ? 1 : 0;
                         primitiveInfo.hasSkin = primitive.hasSkin ? 1 : 0;
@@ -401,7 +404,7 @@ void PBRWithShadowPipeline::CreateDisplayPassDescriptorSets(DrawableObject * dra
                     {// Metallic/RoughnessTexture
                         VkDescriptorImageInfo metallicImageInfo {};
                         metallicImageInfo.sampler = mSamplerGroup->sampler;          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
-                        metallicImageInfo.imageView = primitive.hasMixedMetallicRoughnessOcclusionTexture
+                        metallicImageInfo.imageView = primitive.hasMetallicRoughnessTexture
                                 ? textures[primitive.mixedMetallicRoughnessOcclusionTextureIndex].image_view()
                                 : mErrorTexture->image_view();
                         metallicImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -948,7 +951,7 @@ void PBRWithShadowPipeline::destroyPipeline() {
 
 void PBRWithShadowPipeline::createUniformBuffers() {
     mDisplayLightViewBuffer = RF::CreateUniformBuffer(sizeof(DisplayLightViewData), 1);
-    mErrorBuffer = RF::CreateUniformBuffer(sizeof(DrawableObject::JointTransformBuffer), 1);
+    mErrorBuffer = RF::CreateUniformBuffer(sizeof(DrawableObject::JointTransformData), 1);
 
     mShadowMatricesBuffer = RF::CreateUniformBuffer(sizeof(ShadowMatricesData), 1);
     mShadowLightBuffer = RF::CreateUniformBuffer(sizeof(ShadowLightData), 1);

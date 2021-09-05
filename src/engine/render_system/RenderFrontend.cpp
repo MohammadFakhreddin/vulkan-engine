@@ -852,6 +852,23 @@ void PushConstants(
     );
 }
 
+void PushConstants(
+    DrawPass const & drawPass,
+    VkShaderStageFlags const shaderStage, 
+    uint32_t const offset, 
+    CBlob const data
+) {
+    MFA_ASSERT(drawPass.isValid);
+    MFA_ASSERT(drawPass.renderPass != nullptr);
+    RB::PushConstants(
+        state->displayRenderPass.GetCommandBuffer(drawPass),
+        drawPass.pipeline->pipelineLayout,
+        shaderStage,
+        offset,
+        data
+    );
+}
+
 uint32_t GetSwapChainImagesCount() {
     return state->swapChainImageCount;
 }

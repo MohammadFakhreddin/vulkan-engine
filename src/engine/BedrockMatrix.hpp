@@ -784,6 +784,17 @@ public:
         }
     }
 
+    static bool IsEqual(glm::mat4 const & matrix, float * cells) {
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                if (cells[i * 4 + j] != matrix[i][j]) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
   //TODO Write unit tests for project
   void crossProduct(const _Matrix<T, 4, 1>& mat1, const _Matrix<T, 4, 1>& mat2) {
     _crossProduct(mat1.cells, 4, 1, mat2.cells, 4, 1);

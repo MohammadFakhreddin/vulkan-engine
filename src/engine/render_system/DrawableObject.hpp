@@ -20,13 +20,38 @@ using Skin = AS::Mesh::Skin;
 
 class DrawableObject {
 public:
-    
-    struct NodeTransformBuffer {
-        float model[16];
-    } mNodeTransformData {};
 
-    struct JointTransformBuffer {
+    struct JointTransformData {
         float model[16];
+    };
+
+    struct PrimitiveInfo {
+        alignas(16) float baseColorFactor[4];
+        float emissiveFactor[3];
+        int placeholder0;
+        alignas(4) int baseColorTextureIndex;
+        alignas(4) float metallicFactor;
+        alignas(4) float roughnessFactor;
+        alignas(4) int metallicRoughnessTextureIndex;
+        alignas(4) int normalTextureIndex;
+        alignas(4) int emissiveTextureIndex;
+        alignas(4) int hasSkin;
+        // TODO Occlusion
+    };
+
+    struct Node {
+        AS::MeshNode * meshNode = nullptr;
+
+        glm::quat rotation {0.0f, 0.0f, 0.0f, 1.0f};     // x, y, z, w
+        glm::vec3 scale {1.0f, 1.0f, 1.0f};                  
+        glm::vec3 translate {0.0f, 0.0f, 0.0f};
+
+        int skinBufferIndex = -1;
+        
+        bool isCachedDataValid = false;
+        glm::mat4 cachedLocalTransform {};
+        glm::mat4 cachedGlobalTransform {};
+        glm::mat4 cachedModelTransform {};
     };
 
     explicit DrawableObject(RF::GpuModel & model_);
@@ -34,7 +59,8 @@ public:
     ~DrawableObject();
     
     DrawableObject & operator= (DrawableObject && rhs) noexcept {
-        this->mNodeTransformBuffers = std::move(rhs.mNodeTransformBuffers);
+        this->mNodesJointsData = rhs.mNodesJointsData;
+        this->mNodesJointsBuffer = std::move(rhs.mNodesJointsBuffer);
         this->mGpuModel = rhs.mGpuModel;
         this->mDescriptorSetGroups = std::move(rhs.mDescriptorSetGroups);
         this->mUniformBuffers = std::move(rhs.mUniformBuffers);
@@ -59,14 +85,14 @@ public:
     void UpdateUniformBuffer(char const * name, uint32_t startingIndex, CBlob ubo);
 
     [[nodiscard]] RF::UniformBufferGroup * GetUniformBuffer(char const * name);
+    
+    [[nodiscard]] RF::UniformBufferGroup const & GetNodesJointsBuffer() const noexcept;
 
-    [[nodiscard]] RF::UniformBufferGroup const & GetNodeTransformBuffer() const noexcept;
-
-    [[nodiscard]] RF::UniformBufferGroup const & GetSkinTransformBuffer(uint32_t nodeIndex) const noexcept;
+    [[nodiscard]] RF::UniformBufferGroup const & GetPrimitivesBuffer() const noexcept;
 
     void Update(float deltaTimeInSec, RF::DrawPass const & drawPass);
 
-    using BindDescriptorSetFunction = std::function<void(AS::MeshPrimitive const &)>;
+    using BindDescriptorSetFunction = std::function<void(AS::MeshPrimitive const &, Node const & node)>;
     void Draw(RF::DrawPass & drawPass, BindDescriptorSetFunction const & bindFunction);
 
     void EnableUI(char const * windowName, bool * isVisible);
@@ -86,6 +112,8 @@ public:
 
     RB::DescriptorSetGroup * GetDescriptorSetGroup(char const * name);
 
+    void UpdateModelTransform(float modelTransform[16]);
+
 private:
 
     void updateAnimation(float deltaTimeInSec);
@@ -98,13 +126,8 @@ private:
 
     void updateAllNodes(RF::DrawPass const & drawPass);
 
-    void updateNodeJoint(RF::DrawPass const & drawPass, Node const & node);
-
-    void updateNode(
-        RF::DrawPass const & drawPass,
-        AS::MeshNode const & node
-    );
-
+    void updateNodes(RF::DrawPass const & drawPass, Node & node);
+    
     void drawNode(
         RF::DrawPass & drawPass, 
         Node const & node, 
@@ -114,13 +137,18 @@ private:
     void drawSubMesh(
         RF::DrawPass & drawPass, 
         AS::Mesh::SubMesh const & subMesh,
+        Node const & node,
         BindDescriptorSetFunction const & bindFunction
     );
 
     [[nodiscard]]
     glm::mat4 computeNodeLocalTransform(Node const & node) const;
 
-    void computeNodeGlobalTransform(Node & node, Node const * parentNode, bool isParentTransformChanged) const;
+    void computeNodeGlobalTransform(
+        Node & node, 
+        Node const * parentNode, 
+        bool isParentTransformChanged
+    );
 
     void onUI();
 
@@ -138,8 +166,11 @@ private:
     std::unordered_map<std::string, RB::DescriptorSetGroup> mDescriptorSetGroups {};
 
     // Note: Order is important
-    RF::UniformBufferGroup mNodeTransformBuffers {};
-    std::vector<RF::UniformBufferGroup> mSkinJointsBuffers {};
+    //RF::UniformBufferGroup mNodeTransformBuffers {};
+    RF::UniformBufferGroup mNodesJointsBuffer {};
+    RF::UniformBufferGroup mPrimitivesBuffer {};
+
+    //std::vector<JointTransformData> mNodesJointTransformData {};
     RF::GpuModel * mGpuModel = nullptr;
     std::unordered_map<std::string, RF::UniformBufferGroup> mUniformBuffers {};
 
@@ -151,8 +182,9 @@ private:
     UIRecordObject mRecordUIObject;
     bool * mIsUIVisible = nullptr;
 
-    std::vector<Blob> mCachedSkinsJoints {};
-    std::vector<Blob> mNodesJoints {};
+    std::vector<std::vector<JointTransformData>> mCachedSkinsJoints {};
+    Blob mNodesJointsData {};
+    uint32_t mNodesJointsSubBufferCount = 0;
 
     uint32_t mPrimitiveCount = 0;
     
@@ -164,6 +196,12 @@ private:
         Blob ubo;
     };
     std::vector<DirtyBuffer> mDirtyBuffers {};
+
+    bool mIsModelTransformChanged = true;
+    glm::mat4 mModelTransform = glm::identity<glm::mat4>();
+
+    std::vector<Node> mNodes {};
+
 };
 
 }

@@ -232,7 +232,7 @@ void TexturedSphereScene::createDrawableObject(){
                 {// MetallicTexture
                     VkDescriptorImageInfo metallicImageInfo {};
                     metallicImageInfo.sampler = mSamplerGroup.sampler;          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
-                    metallicImageInfo.imageView = textures[primitive.metallicTextureIndex].image_view();
+                    metallicImageInfo.imageView = textures[primitive.metallicRoughnessTextureIndex].image_view();
                     metallicImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
                     VkWriteDescriptorSet writeDescriptorSet {};
@@ -499,7 +499,7 @@ void TexturedSphereScene::createGpuModel() {
             // Texture index
             primitive.baseColorTextureIndex = baseColorIndex;
             primitive.normalTextureIndex = normalIndex;
-            primitive.metallicTextureIndex = metallicIndex;
+            primitive.metallicRoughnessTextureIndex = metallicIndex;
             primitive.roughnessTextureIndex = roughnessIndex;
             // SubMesh features
             primitive.hasBaseColorTexture = true;

@@ -6,16 +6,16 @@ struct PSOut {
     float4 color : SV_Target0;
 };
 
-struct PrimitiveInfo {    // TODO Use passed color instead of primitive info
+struct LightInfo {    // TODO Use passed color instead of primitive info
     float4 baseColorFactor : COLOR0;
 };
 
-ConstantBuffer <PrimitiveInfo> smBuff : register (b2, space0);
+ConstantBuffer <LightInfo> lightBuffer : register (b1, space0);
 
 PSOut main(PSIn input) {
     PSOut output;
 
-    float3 color = smBuff.baseColorFactor.rgb;
+    float3 color = lightBuffer.baseColorFactor.rgb;
     // exposure tone mapping
     float exposure = 1.0f;
     if (color.r > exposure) {

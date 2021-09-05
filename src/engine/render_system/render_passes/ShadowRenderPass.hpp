@@ -9,33 +9,30 @@ class DisplayRenderPass;
 namespace RF = RenderFrontend;
 namespace RB = RenderBackend;
 
-class OffScreenRenderPassV2 final : public RenderPass {
+class ShadowRenderPass final : public RenderPass {
 public:
     
-    explicit OffScreenRenderPassV2(
+    explicit ShadowRenderPass(
         uint32_t const imageWidth = 2048,
         uint32_t const imageHeight = 2048
     )
         : mImageWidth(imageWidth)
         , mImageHeight(imageHeight)
     {}
-    ~OffScreenRenderPassV2() override = default;
+    ~ShadowRenderPass() override = default;
 
-    OffScreenRenderPassV2 (OffScreenRenderPassV2 const &) noexcept = delete;
-    OffScreenRenderPassV2 (OffScreenRenderPassV2 &&) noexcept = delete;
-    OffScreenRenderPassV2 & operator = (OffScreenRenderPassV2 const &) noexcept = delete;
-    OffScreenRenderPassV2 & operator = (OffScreenRenderPassV2 &&) noexcept = delete;
+    ShadowRenderPass (ShadowRenderPass const &) noexcept = delete;
+    ShadowRenderPass (ShadowRenderPass &&) noexcept = delete;
+    ShadowRenderPass & operator = (ShadowRenderPass const &) noexcept = delete;
+    ShadowRenderPass & operator = (ShadowRenderPass &&) noexcept = delete;
 
     VkRenderPass GetVkRenderPass() override;
 
     [[nodiscard]]
-    RB::DepthImageGroup const & GetDepthCubeMap() const;
+    RB::DepthImageGroup const & GetDepthImageGroup() const;
 
-    void PrepareCubemapForTransferDestination(RF::DrawPass const & drawPass);
-
-    void PrepareCubemapForSampling(RF::DrawPass const & drawPass);
-
-    void SetNextPassParams(int faceIndex);
+    //[[nodiscard]]
+    //RB::ColorImageGroup const & GetColorImageGroup() const;
 
 protected:
 
@@ -60,15 +57,14 @@ private:
     VkRenderPass mVkRenderPass {};
     VkFramebuffer mFrameBuffer {};
     
-    RB::DepthImageGroup mDepthCubeMap {};
-    RB::DepthImageGroup mDepthImage {};
-
+    RB::DepthImageGroup mDepthImageGroup {};
+    
     uint32_t mImageWidth = 0;
     uint32_t mImageHeight = 0;
 
     DisplayRenderPass * mDisplayRenderPass = nullptr;
 
-    int mFaceIndex = -1;
+    //RB::ColorImageGroup mColorImageGroup {};
 };
 
 }

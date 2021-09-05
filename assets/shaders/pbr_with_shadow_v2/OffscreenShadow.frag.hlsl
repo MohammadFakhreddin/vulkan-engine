@@ -12,7 +12,7 @@ struct LightBuffer {
     float projectionMaximumDistance;       // abs(Far - near)
 };
 
-ConstantBuffer <LightBuffer> lBuffer : register (b4, space0);
+ConstantBuffer <LightBuffer> lBuffer : register (b2, space0);
 
 PSOut main(PSIn input) {
 

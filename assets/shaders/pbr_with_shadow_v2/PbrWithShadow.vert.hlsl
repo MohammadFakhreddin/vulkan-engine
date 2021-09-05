@@ -30,36 +30,34 @@ struct VSOut {
     float2 emissiveTexCoord: TEXCOORD4;
 };
 
-struct ModelData {
-    float4x4 model;
-};
-
-ConstantBuffer <ModelData> modelBuffer: register(b0, space0);
-
 // TODO We can combine view and projection
-struct ViewData {
-    float4x4 view;
+struct ViewProjectionData {
+    float4x4 viewProjection;
 };
 
-ConstantBuffer <ViewData> viewBuffer: register(b1, space0);
+ConstantBuffer <ViewProjectionData> viewProjectionBuffer: register(b0, space0);
 
-struct ProjectionData {
-    float4x4 projection;
-};
-
-ConstantBuffer <ProjectionData> projectionBuffer: register(b2, space0);
-
-struct NodeTranformation {
-    float4x4 model;
-};
-
-ConstantBuffer <NodeTranformation> nodeBuffer: register(b3, space0);
-
-struct SkinJoints {
+struct NodeJoints {
     float4x4 joints[];
 };
 
-ConstantBuffer <SkinJoints> skinJointsBuffer: register(b4, space0); 
+struct NodesSkinJoints {
+    NodeJoints nodeJoints[];
+};
+
+ConstantBuffer <NodesSkinJoints> skinJointsBuffer: register(b1, space0); 
+
+struct PushConsts
+{
+    float4x4 model;
+	int nodeSkinIndex;
+    uint primitiveIndex;
+};
+
+[[vk::push_constant]]
+cbuffer {
+    PushConsts pushConsts;
+};
 
 #define IdentityMat float4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
 
@@ -68,23 +66,21 @@ VSOut main(VSIn input) {
 
     float4x4 skinMat;
     if (input.hasSkin == 1) {
-        skinMat = mul(skinJointsBuffer.joints[input.jointIndices.x], input.jointWeights.x)
-            + mul(skinJointsBuffer.joints[input.jointIndices.y], input.jointWeights.y) 
-            + mul(skinJointsBuffer.joints[input.jointIndices.z], input.jointWeights.z)
-            + mul(skinJointsBuffer.joints[input.jointIndices.w], input.jointWeights.w);
+        NodeJoints nodeJoints = skinJointsBuffer.nodeJoints[pushConsts.nodeSkinIndex];
+        skinMat = mul(nodeJoints.joints[input.jointIndices.x], input.jointWeights.x)
+            + mul(nodeJoints.joints[input.jointIndices.y], input.jointWeights.y) 
+            + mul(nodeJoints.joints[input.jointIndices.z], input.jointWeights.z)
+            + mul(nodeJoints.joints[input.jointIndices.w], input.jointWeights.w);
     } else {
         skinMat = IdentityMat;
     }
-    float4x4 modelMat = mul(modelBuffer.model, nodeBuffer.model);
-    float4x4 skinModelMat = mul(modelMat, skinMat);
-    float4x4 modelViewMat = mul(viewBuffer.view, skinModelMat);
-
-    // Position
-    float4 tempPosition = float4(input.position, 1.0f); // w is 1 because position is a coordinate
-    tempPosition = mul(modelViewMat, tempPosition);
     
-    float4 position = mul(projectionBuffer.projection, tempPosition);
-    output.position = position;
+    float4x4 skinModelMat = mul(pushConsts.model, skinMat);
+    
+    // Position
+    float4 worldPos = mul(skinModelMat, float4(input.position, 1.0f)); // w is 1 because position is a coordinate
+    
+    output.position = mul(viewProjectionBuffer.viewProjection, worldPos);
     
     float4 tempPosition2 = float4(input.position, 1.0f); // w is 1 because position is a coordinate
     output.worldPos = mul(skinModelMat, tempPosition2).xyz;

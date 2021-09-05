@@ -2,9 +2,6 @@
 
 #include "engine/InputManager.hpp"
 #include "scenes/gltf_mesh_viewer/GLTFMeshViewerScene.hpp"
-#include "scenes/pbr_scene/PBRScene.hpp"
-#include "scenes/textured_sphere/TexturedSphereScene.hpp"
-#include "scenes/texture_viewer_scene/TextureViewerScene.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/Scene.hpp"
 #include "engine/BedrockFileSystem.hpp"
@@ -25,9 +22,6 @@ namespace MSDL = MFA::MSDL;
 
 Application::Application()
     : mGltfMeshViewerScene(std::make_unique<GLTFMeshViewerScene>())
-    , mPbrScene(std::make_unique<PBRScene>())
-    , mTexturedSphereScene(std::make_unique<TexturedSphereScene>())
-    , mTextureViewerScene(std::make_unique<TextureViewerScene>())
 {}
 
 Application::~Application() = default;
@@ -57,10 +51,7 @@ void Application::Init() {
     UI::Init();
     IM::Init();
     
-    mSceneSubSystem.RegisterNew(mTexturedSphereScene.get(), "TextureSphereScene");
     mSceneSubSystem.RegisterNew(mGltfMeshViewerScene.get(), "GLTFMeshViewerScene");
-    mSceneSubSystem.RegisterNew(mPbrScene.get(), "PBRScene");
-    mSceneSubSystem.RegisterNew(mTextureViewerScene.get(), "TextureViewerScene");
     
     mSceneSubSystem.SetActiveScene("GLTFMeshViewerScene");
     mSceneSubSystem.Init();

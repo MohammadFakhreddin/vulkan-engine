@@ -4,10 +4,6 @@
 #include "engine/Scene.hpp"
 
 class GLTFMeshViewerScene;
-class SpecularHighlightScene;
-class PBRScene;
-class TexturedSphereScene;
-class TextureViewerScene;
 
 #ifdef __ANDROID__
 struct android_app;
@@ -41,9 +37,6 @@ private:
     MFA::SceneSubSystem mSceneSubSystem {};
 
     std::unique_ptr<GLTFMeshViewerScene> mGltfMeshViewerScene;
-    std::unique_ptr<PBRScene> mPbrScene;
-    std::unique_ptr<TexturedSphereScene> mTexturedSphereScene;
-    std::unique_ptr<TextureViewerScene> mTextureViewerScene;
 
 #ifdef __ANDROID__
     android_app * mAndroidApp = nullptr;

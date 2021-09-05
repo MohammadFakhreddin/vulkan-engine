@@ -761,6 +761,14 @@ void PushConstants(
     CBlob data
 );
 
+void PushConstants(
+    VkCommandBuffer command_buffer,
+    VkPipelineLayout pipeline_layout, 
+    VkShaderStageFlags shader_stage, 
+    uint32_t offset, 
+    CBlob data
+);
+
 void UpdateDescriptorSetsBasic(
     VkDevice device,
     uint8_t descriptorSetsCount,

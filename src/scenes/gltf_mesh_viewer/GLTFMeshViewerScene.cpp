@@ -257,48 +257,45 @@ void GLTFMeshViewerScene::OnPostRender(
     }
 
     {// Updating PBR-Pipeline
-        {// Model
-            // Rotation
-            MFA::Matrix4X4Float rotationMat {};
-            MFA::Matrix4X4Float::AssignRotation(
-                rotationMat,
-                m_model_rotation[0],
-                m_model_rotation[1],
-                m_model_rotation[2]
-            );
+        // Model
 
-            // Scale
-            MFA::Matrix4X4Float scaleMat {};
-            MFA::Matrix4X4Float::AssignScale(scaleMat, m_model_scale);
+        // Rotation
+        MFA::Matrix4X4Float rotationMat {};
+        MFA::Matrix4X4Float::AssignRotation(
+            rotationMat,
+            m_model_rotation[0],
+            m_model_rotation[1],
+            m_model_rotation[2]
+        );
 
-            // Position
-            MFA::Matrix4X4Float translationMat {};
-            MFA::Matrix4X4Float::AssignTranslation(
-                translationMat,
-                m_model_position[0],
-                m_model_position[1],
-                m_model_position[2]
-            );
+        // Scale
+        MFA::Matrix4X4Float scaleMat {};
+        MFA::Matrix4X4Float::AssignScale(scaleMat, m_model_scale);
 
-            MFA::Matrix4X4Float transformMat {};
-            MFA::Matrix4X4Float::Identity(transformMat);
-            transformMat.multiply(translationMat);
-            transformMat.multiply(rotationMat);
-            transformMat.multiply(scaleMat);
-            
-            MFA::PBRWithShadowPipelineV2::ModelData modelData {};
-            MFA::Copy<16, float>(modelData.model, transformMat.cells);
+        // Position
+        MFA::Matrix4X4Float translationMat {};
+        MFA::Matrix4X4Float::AssignTranslation(
+            translationMat,
+            m_model_position[0],
+            m_model_position[1],
+            m_model_position[2]
+        );
 
-            mPbrPipeline.UpdateModel(
-                selectedModel.drawableObjectId, 
-                modelData
-            );
-        }
-        {// View
-            MFA::PBRWithShadowPipelineV2::DisplayViewData viewData {};
-            mCamera.GetTransform(viewData.view);
-            mPbrPipeline.UpdateCameraView(viewData);
-        }
+        MFA::Matrix4X4Float transformMat {};
+        MFA::Matrix4X4Float::Identity(transformMat);
+        transformMat.multiply(translationMat);
+        transformMat.multiply(rotationMat);
+        transformMat.multiply(scaleMat);
+        
+        mPbrPipeline.UpdateModel(
+            selectedModel.drawableObjectId, 
+            transformMat.cells
+        );
+
+        // View
+        float viewData [16];
+        mCamera.GetTransform(viewData);
+        mPbrPipeline.UpdateCameraView(viewData);
     }
 
     mPbrPipeline.PostRender(drawPass, deltaTimeInSec, 1, &selectedModel.drawableObjectId);
@@ -434,8 +431,8 @@ void GLTFMeshViewerScene::destroyModels() {
 
 void GLTFMeshViewerScene::updateProjectionBuffer() {
     {// PBR
-        MFA::PBRWithShadowPipelineV2::DisplayProjectionData projectionData {};
-        mCamera.GetProjection(projectionData.projection);
+        float projectionData [16];
+        mCamera.GetProjection(projectionData);
         mPbrPipeline.UpdateCameraProjection(projectionData);
     }
     // PointLight

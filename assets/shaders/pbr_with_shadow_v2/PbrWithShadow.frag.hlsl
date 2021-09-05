@@ -23,32 +23,26 @@ struct PrimitiveInfo {
     float3 emissiveFactor: COLOR3;
     float placeholder0;
     
-    int hasBaseColorTexture;
+    int baseColorTextureIndex;
     
     float metallicFactor: COLOR1;
     float roughnessFactor: COLOR2;
-    int hasMetallicRoughnessTexture;
+    int metallicRoughnessTextureIndex;
 
-    int hasNormalTexture;  
+    int normalTextureIndex;  
 
-    int hasEmissiveTexture;
+    int emissiveTextureIndex;
+    
+    // TODO Occlusion texture
     
     int hasSkin;    // TODO Move hasSkin to vertex
 };
 
-ConstantBuffer <PrimitiveInfo> smBuff : register (b5, space0);
+struct PrimitiveInfoBuffer {
+    PrimitiveInfo primitiveInfo[];
+};
 
-sampler baseColorSampler : register(s6, space0);
-Texture2D baseColorTexture : register(t6, space0);
-
-sampler metallicRoughnessSampler : register(s7, space0);
-Texture2D metallicRoughnessTexture : register(t7, space0);
-
-sampler normalSampler : register(s8, space0);
-Texture2D normalTexture : register(t8, space0);
-
-sampler emissiveSampler : register(s9, space0);
-Texture2D emissiveTexture : register(s9, space0);
+ConstantBuffer <PrimitiveInfoBuffer> smBuff : register (b2, space0);
 
 struct LightViewBuffer {
     float3 lightPosition;
@@ -57,10 +51,25 @@ struct LightViewBuffer {
     float nearToFarPlaneDistance;
 };
 
-ConstantBuffer <LightViewBuffer> lvBuff : register (b10, space0);
+ConstantBuffer <LightViewBuffer> lvBuff : register (b3, space0);
 
-sampler shadowMapSampler : register(s11, space0);
-TextureCube shadowMapTexture : register(s11, space0);
+sampler shadowMapSampler : register(s4, space0);
+TextureCube shadowMapTexture : register(t4, space0);
+
+sampler samplers[64] : register(s5, space0);
+Texture2D textures[64] : register(t5, space0);
+
+struct PushConsts
+{
+    float4x4 model;
+	int nodeSkinIndex;
+    uint primitiveIndex;
+};
+
+[[vk::push_constant]]
+cbuffer {
+    PushConsts pushConsts;
+};
 
 const float PI = 3.14159265359;
 
@@ -178,13 +187,13 @@ float3 BRDF(
 }
 
 // TODO Use this to compute normal correctly
-float3 calculateNormal(PSIn input)
+float3 calculateNormal(PSIn input, int normalTextureIndex)
 {
     float3 pixelNormal;
-    if (smBuff.hasNormalTexture == 0) {
+    if (normalTextureIndex < 0) {
         pixelNormal = input.worldNormal;
     } else {
-        float3 tangentNormal = normalTexture.Sample(normalSampler, input.normalTexCoord).rgb * 2.0 - 1.0;
+        float3 tangentNormal = textures[normalTextureIndex].Sample(samplers[normalTextureIndex], input.normalTexCoord).rgb * 2.0 - 1.0;
         
         float3x3 TBN = transpose(float3x3(input.worldTangent, input.worldBiTangent, input.worldNormal));
         // float3x3 TBN = float3x3(input.worldTangent, input.worldBiTangent, input.worldNormal));
@@ -209,6 +218,7 @@ float shadowCalculation(float3 lightVector, float viewDistance)
     // // now test for shadows
     // float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
 
+    // TODO We can make this array an buffer
     float3 sampleOffsetDirections[20];
     sampleOffsetDirections[0] = float3(1,  1,  1);
     sampleOffsetDirections[1] = float3(1,  -1,  1);
@@ -247,9 +257,11 @@ float shadowCalculation(float3 lightVector, float viewDistance)
 }
 // TODO Strength in ambient occulusion and Scale for normals
 PSOut main(PSIn input) {
-    float4 baseColor = smBuff.hasBaseColorTexture == 1
-        ? pow(baseColorTexture.Sample(baseColorSampler, input.baseColorTexCoord).rgba, 2.2f)
-        : smBuff.baseColorFactor.rgba;
+    PrimitiveInfo primitiveInfo = smBuff.primitiveInfo[pushConsts.primitiveIndex];
+
+    float4 baseColor = primitiveInfo.baseColorTextureIndex >= 0
+        ? pow(textures[primitiveInfo.baseColorTextureIndex].Sample(samplers[primitiveInfo.baseColorTextureIndex], input.baseColorTexCoord).rgba, 2.2f)
+        : primitiveInfo.baseColorFactor.rgba;
 
     // Alpha mask
     if (baseColor.a < alphaMaskCutoff) {
@@ -260,16 +272,16 @@ PSOut main(PSIn input) {
     float roughness = 0.0f;
     // TODO: Is usages of occlusion correct ?
     // TODO Handle occlusionTexture and its strength
-    if (smBuff.hasMetallicRoughnessTexture == 1) {
-        float4 metallicRoughness = metallicRoughnessTexture.Sample(metallicRoughnessSampler, input.metallicRoughnessTexCoord);
+    if (primitiveInfo.metallicRoughnessTextureIndex >= 0) {
+        float4 metallicRoughness = textures[primitiveInfo.metallicRoughnessTextureIndex].Sample(samplers[primitiveInfo.metallicRoughnessTextureIndex], input.metallicRoughnessTexCoord);
         metallic = metallicRoughness.b;
         roughness = metallicRoughness.g;
     } else {
-        metallic = smBuff.metallicFactor;
-        roughness = smBuff.roughnessFactor;
+        metallic = primitiveInfo.metallicFactor;
+        roughness = primitiveInfo.roughnessFactor;
     }
 
-	float3 normal = calculateNormal(input);
+	float3 normal = calculateNormal(input, primitiveInfo.normalTextureIndex);
 
 	float3 N = normalize(normal.xyz);
     
@@ -286,11 +298,11 @@ PSOut main(PSIn input) {
     // Combine with ambient
     float3 color = float3(0.0, 0.0, 0.0);
     
-    if (smBuff.hasEmissiveTexture == 1) {
-        float3 ao = emissiveTexture.Sample(emissiveSampler, input.emissiveTexCoord);
-        color += float3(baseColor.r * ao.r, baseColor.g * ao.g, baseColor.b * ao.b) * smBuff.emissiveFactor;
+    if (primitiveInfo.emissiveTextureIndex >= 0) {
+        float3 ao = textures[primitiveInfo.emissiveTextureIndex].Sample(samplers[primitiveInfo.emissiveTextureIndex], input.emissiveTexCoord);
+        color += float3(baseColor.r * ao.r, baseColor.g * ao.g, baseColor.b * ao.b) * primitiveInfo.emissiveFactor;
     } else {
-        color += baseColor.rgb * smBuff.emissiveFactor; // * 0.3
+        color += baseColor.rgb * primitiveInfo.emissiveFactor; // * 0.3
     }
     color += baseColor.rgb * ambientOcclusion;
     color += Lo;

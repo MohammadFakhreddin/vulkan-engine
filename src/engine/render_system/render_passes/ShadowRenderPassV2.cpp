@@ -1,18 +1,18 @@
-#include "OffScreenRenderPassV2.hpp"
+#include "ShadowRenderPassV2.hpp"
 
 #include "DisplayRenderPass.hpp"
 
 namespace MFA {
 
-VkRenderPass OffScreenRenderPassV2::GetVkRenderPass() {
+VkRenderPass ShadowRenderPassV2::GetVkRenderPass() {
     return mVkRenderPass;
 }
 
-RB::DepthImageGroup const & OffScreenRenderPassV2::GetDepthCubeMap() const {
+RB::DepthImageGroup const & ShadowRenderPassV2::GetDepthCubeMap() const {
     return mDepthCubeMap;
 }
 
-void OffScreenRenderPassV2::internalInit() {
+void ShadowRenderPassV2::internalInit() {
     MFA_ASSERT(mImageWidth > 0);
     MFA_ASSERT(mImageHeight > 0);
 
@@ -64,19 +64,19 @@ void OffScreenRenderPassV2::internalInit() {
     mDisplayRenderPass = RF::GetDisplayRenderPass();
 }
 
-void OffScreenRenderPassV2::internalShutdown() {
+void ShadowRenderPassV2::internalShutdown() {
     RF::DestroyFrameBuffers(1, &mFrameBuffer);
     RF::DestroyRenderPass(mVkRenderPass);
     RF::DestroyDepthImage(mDepthCubeMap);
     RF::DestroyDepthImage(mDepthImage);
 }
 
-void OffScreenRenderPassV2::SetNextPassParams(int faceIndex) {
+void ShadowRenderPassV2::SetNextPassParams(int faceIndex) {
     MFA_ASSERT(getIsRenderPassActive() == false);
     mFaceIndex = faceIndex;
 }
 
-void OffScreenRenderPassV2::PrepareCubemapForTransferDestination(RF::DrawPass const & drawPass) {
+void ShadowRenderPassV2::PrepareCubemapForTransferDestination(RF::DrawPass const & drawPass) {
     VkImageSubresourceRange const subResourceRange {
         .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
         .baseMipLevel = 0,
@@ -105,7 +105,7 @@ void OffScreenRenderPassV2::PrepareCubemapForTransferDestination(RF::DrawPass co
     );
 }
 
-void OffScreenRenderPassV2::PrepareCubemapForSampling(RF::DrawPass const & drawPass) {
+void ShadowRenderPassV2::PrepareCubemapForSampling(RF::DrawPass const & drawPass) {
     VkImageSubresourceRange const subResourceRange {
         .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
         .baseMipLevel = 0,
@@ -134,7 +134,7 @@ void OffScreenRenderPassV2::PrepareCubemapForSampling(RF::DrawPass const & drawP
     );
 }
 
-void OffScreenRenderPassV2::internalBeginRenderPass(RF::DrawPass const & drawPass) {
+void ShadowRenderPassV2::internalBeginRenderPass(RF::DrawPass const & drawPass) {
 
     {// Making depth image ready for depth attachment
         VkImageSubresourceRange const subResourceRange {
@@ -190,7 +190,7 @@ void OffScreenRenderPassV2::internalBeginRenderPass(RF::DrawPass const & drawPas
     );
 }
 
-void OffScreenRenderPassV2::internalEndRenderPass(RF::DrawPass const & drawPass) {
+void ShadowRenderPassV2::internalEndRenderPass(RF::DrawPass const & drawPass) {
     MFA_ASSERT(mFaceIndex >= 0 && mFaceIndex < 6);
     RF::EndRenderPass(mDisplayRenderPass->GetCommandBuffer(drawPass));
 
@@ -261,10 +261,10 @@ void OffScreenRenderPassV2::internalEndRenderPass(RF::DrawPass const & drawPass)
     mFaceIndex = -1;
 }
 
-void OffScreenRenderPassV2::internalResize() {
+void ShadowRenderPassV2::internalResize() {
 }
 
-void OffScreenRenderPassV2::createRenderPass() {
+void ShadowRenderPassV2::createRenderPass() {
     std::vector<VkAttachmentDescription> attachments {};
     
     // Depth attachment
@@ -326,7 +326,7 @@ void OffScreenRenderPassV2::createRenderPass() {
     );
 }
 
-void OffScreenRenderPassV2::createFrameBuffer(VkExtent2D const & shadowExtent) {
+void ShadowRenderPassV2::createFrameBuffer(VkExtent2D const & shadowExtent) {
 
     // Note: This comment is useful though does not match 100% with my code
     // Create a layered depth attachment for rendering the depth maps from the lights' point of view

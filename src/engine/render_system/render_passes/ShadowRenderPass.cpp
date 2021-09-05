@@ -1,18 +1,18 @@
-#include "OffScreenRenderPass.hpp"
+#include "ShadowRenderPass.hpp"
 
 #include "DisplayRenderPass.hpp"
 
 namespace MFA {
 
-VkRenderPass OffScreenRenderPass::GetVkRenderPass() {
+VkRenderPass ShadowRenderPass::GetVkRenderPass() {
     return mVkRenderPass;
 }
 
-RB::DepthImageGroup const & OffScreenRenderPass::GetDepthImageGroup() const {
+RB::DepthImageGroup const & ShadowRenderPass::GetDepthImageGroup() const {
     return mDepthImageGroup;
 }
 
-void OffScreenRenderPass::internalInit() {
+void ShadowRenderPass::internalInit() {
     MFA_ASSERT(mImageWidth > 0);
     MFA_ASSERT(mImageHeight > 0);
 
@@ -60,14 +60,14 @@ void OffScreenRenderPass::internalInit() {
     mDisplayRenderPass = RF::GetDisplayRenderPass();
 }
 
-void OffScreenRenderPass::internalShutdown() {
+void ShadowRenderPass::internalShutdown() {
     RF::DestroyFrameBuffers(1, &mFrameBuffer);
     RF::DestroyRenderPass(mVkRenderPass);
     //RF::DestroyColorImage(mColorImageGroup);
     RF::DestroyDepthImage(mDepthImageGroup);
 }
 
-void OffScreenRenderPass::internalBeginRenderPass(RF::DrawPass const & drawPass) {
+void ShadowRenderPass::internalBeginRenderPass(RF::DrawPass const & drawPass) {
     {// Depth barrier
         VkImageSubresourceRange const subResourceRange {
             .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
@@ -122,7 +122,7 @@ void OffScreenRenderPass::internalBeginRenderPass(RF::DrawPass const & drawPass)
     );
 }
 
-void OffScreenRenderPass::internalEndRenderPass(RF::DrawPass const & drawPass) {
+void ShadowRenderPass::internalEndRenderPass(RF::DrawPass const & drawPass) {
     RF::EndRenderPass(mDisplayRenderPass->GetCommandBuffer(drawPass));
 
     {// Depth barrier
@@ -155,10 +155,10 @@ void OffScreenRenderPass::internalEndRenderPass(RF::DrawPass const & drawPass) {
     }
 }
 
-void OffScreenRenderPass::internalResize() {
+void ShadowRenderPass::internalResize() {
 }
 
-void OffScreenRenderPass::createRenderPass() {
+void ShadowRenderPass::createRenderPass() {
     std::vector<VkAttachmentDescription> attachments {};
     
     // Depth attachment
@@ -219,7 +219,7 @@ void OffScreenRenderPass::createRenderPass() {
     );
 }
 
-void OffScreenRenderPass::createFrameBuffer(VkExtent2D const & shadowExtent) {
+void ShadowRenderPass::createFrameBuffer(VkExtent2D const & shadowExtent) {
 
     // Note: This comment is useful though does not match 100% with my code
     // Create a layered depth attachment for rendering the depth maps from the lights' point of view

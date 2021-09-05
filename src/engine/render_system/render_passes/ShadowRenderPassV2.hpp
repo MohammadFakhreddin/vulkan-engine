@@ -9,30 +9,33 @@ class DisplayRenderPass;
 namespace RF = RenderFrontend;
 namespace RB = RenderBackend;
 
-class OffScreenRenderPass final : public RenderPass {
+class ShadowRenderPassV2 final : public RenderPass {
 public:
     
-    explicit OffScreenRenderPass(
+    explicit ShadowRenderPassV2(
         uint32_t const imageWidth = 2048,
         uint32_t const imageHeight = 2048
     )
         : mImageWidth(imageWidth)
         , mImageHeight(imageHeight)
     {}
-    ~OffScreenRenderPass() override = default;
+    ~ShadowRenderPassV2() override = default;
 
-    OffScreenRenderPass (OffScreenRenderPass const &) noexcept = delete;
-    OffScreenRenderPass (OffScreenRenderPass &&) noexcept = delete;
-    OffScreenRenderPass & operator = (OffScreenRenderPass const &) noexcept = delete;
-    OffScreenRenderPass & operator = (OffScreenRenderPass &&) noexcept = delete;
+    ShadowRenderPassV2 (ShadowRenderPassV2 const &) noexcept = delete;
+    ShadowRenderPassV2 (ShadowRenderPassV2 &&) noexcept = delete;
+    ShadowRenderPassV2 & operator = (ShadowRenderPassV2 const &) noexcept = delete;
+    ShadowRenderPassV2 & operator = (ShadowRenderPassV2 &&) noexcept = delete;
 
     VkRenderPass GetVkRenderPass() override;
 
     [[nodiscard]]
-    RB::DepthImageGroup const & GetDepthImageGroup() const;
+    RB::DepthImageGroup const & GetDepthCubeMap() const;
 
-    //[[nodiscard]]
-    //RB::ColorImageGroup const & GetColorImageGroup() const;
+    void PrepareCubemapForTransferDestination(RF::DrawPass const & drawPass);
+
+    void PrepareCubemapForSampling(RF::DrawPass const & drawPass);
+
+    void SetNextPassParams(int faceIndex);
 
 protected:
 
@@ -57,14 +60,15 @@ private:
     VkRenderPass mVkRenderPass {};
     VkFramebuffer mFrameBuffer {};
     
-    RB::DepthImageGroup mDepthImageGroup {};
-    
+    RB::DepthImageGroup mDepthCubeMap {};
+    RB::DepthImageGroup mDepthImage {};
+
     uint32_t mImageWidth = 0;
     uint32_t mImageHeight = 0;
 
     DisplayRenderPass * mDisplayRenderPass = nullptr;
 
-    //RB::ColorImageGroup mColorImageGroup {};
+    int mFaceIndex = -1;
 };
 
 }

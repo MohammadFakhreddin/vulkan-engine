@@ -54,7 +54,11 @@ void MFA::PBRModelPipeline::Render(
             auto * drawableObject = findResult->second.get();
             MFA_ASSERT(drawableObject != nullptr);
             drawableObject->Update(deltaTime, drawPass);
-            drawableObject->Draw(drawPass, [&drawPass, &drawableObject](AS::MeshPrimitive const & primitive)-> void {
+            drawableObject->Draw(
+                drawPass, 
+                [&drawPass, &drawableObject]
+                (AS::MeshPrimitive const & primitive, DrawableObject::Node const & node)-> void {
+                // Push node transform here
                 RF::BindDescriptorSet(
                     drawPass, 
                     drawableObject->GetDescriptorSetGroup("DisplayPipeline")->descriptorSets[primitive.uniqueId]
@@ -188,7 +192,7 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::AddGpuModel(RF::GpuModel & gpuModel
                         primitiveInfo.hasBaseColorTexture = primitive.hasBaseColorTexture ? 1 : 0;
                         primitiveInfo.metallicFactor = primitive.metallicFactor;
                         primitiveInfo.roughnessFactor = primitive.roughnessFactor;
-                        primitiveInfo.hasMixedMetallicRoughnessOcclusionTexture = primitive.hasMixedMetallicRoughnessOcclusionTexture ? 1 : 0;
+                        primitiveInfo.hasMixedMetallicRoughnessOcclusionTexture = primitive.hasMetallicRoughnessTexture ? 1 : 0;
                         primitiveInfo.hasNormalTexture = primitive.hasNormalTexture ? 1 : 0;
                         primitiveInfo.hasEmissiveTexture = primitive.hasEmissiveTexture ? 1 : 0;
                         primitiveInfo.hasSkin = primitive.hasSkin ? 1 : 0;
@@ -226,7 +230,7 @@ MFA::DrawableObjectId MFA::PBRModelPipeline::AddGpuModel(RF::GpuModel & gpuModel
                     {// Metallic/RoughnessTexture
                         VkDescriptorImageInfo metallicImageInfo {};
                         metallicImageInfo.sampler = mSamplerGroup->sampler;          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
-                        metallicImageInfo.imageView = primitive.hasMixedMetallicRoughnessOcclusionTexture
+                        metallicImageInfo.imageView = primitive.hasMetallicRoughnessTexture
                                 ? textures[primitive.mixedMetallicRoughnessOcclusionTextureIndex].image_view()
                                 : mErrorTexture->image_view();
                         metallicImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -590,7 +594,7 @@ void MFA::PBRModelPipeline::destroyPipeline() {
 
 void MFA::PBRModelPipeline::createUniformBuffers() {
     mLightViewBuffer = RF::CreateUniformBuffer(sizeof(LightViewBuffer), 1);
-    mErrorBuffer = RF::CreateUniformBuffer(sizeof(DrawableObject::JointTransformBuffer), 1);
+    mErrorBuffer = RF::CreateUniformBuffer(sizeof(DrawableObject::JointTransformData), 1);
 }
 
 void MFA::PBRModelPipeline::destroyUniformBuffers() {

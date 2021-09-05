@@ -2296,6 +2296,23 @@ void PushConstants(
     );
 }
 
+void PushConstants(
+    VkCommandBuffer command_buffer,
+    VkPipelineLayout pipeline_layout, 
+    VkShaderStageFlags const shader_stage, 
+    uint32_t const offset, 
+    CBlob const data
+) {
+    vkCmdPushConstants(
+        command_buffer,
+        pipeline_layout,
+        shader_stage,
+        offset,
+        static_cast<uint32_t>(data.len), 
+        data.ptr
+    );
+}
+
 void UpdateDescriptorSetsBasic(
     VkDevice device,
     uint8_t const descriptorSetsCount,

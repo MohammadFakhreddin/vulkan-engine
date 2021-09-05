@@ -91,19 +91,19 @@ list(
     "src/engine/render_system/render_passes/RenderPass.cpp"
     "src/engine/render_system/render_passes/DisplayRenderPass.hpp"
     "src/engine/render_system/render_passes/DisplayRenderPass.cpp"
-    "src/engine/render_system/render_passes/OffScreenRenderPass.hpp"
-    "src/engine/render_system/render_passes/OffScreenRenderPass.cpp"
-    "src/engine/render_system/render_passes/OffScreenRenderPassV2.hpp"
-    "src/engine/render_system/render_passes/OffScreenRenderPassV2.cpp"
+    "src/engine/render_system/render_passes/ShadowRenderPass.hpp"
+    "src/engine/render_system/render_passes/ShadowRenderPass.cpp"
+    "src/engine/render_system/render_passes/ShadowRenderPassV2.hpp"
+    "src/engine/render_system/render_passes/ShadowRenderPassV2.cpp"
     
     # Pipeline
     "src/engine/render_system/pipelines/BasePipeline.hpp"
-    "src/engine/render_system/pipelines/pbr/PBRModelPipeline.hpp"
-    "src/engine/render_system/pipelines/pbr/PBRModelPipeline.cpp"
+    # "src/engine/render_system/pipelines/pbr/PBRModelPipeline.hpp"
+    # "src/engine/render_system/pipelines/pbr/PBRModelPipeline.cpp"
     "src/engine/render_system/pipelines/point_light/PointLightPipeline.hpp"
     "src/engine/render_system/pipelines/point_light/PointLightPipeline.cpp"
-    "src/engine/render_system/pipelines/pbr_with_shadow/PbrWithShadowPipeline.hpp"
-    "src/engine/render_system/pipelines/pbr_with_shadow/PbrWithShadowPipeline.cpp"
+    # "src/engine/render_system/pipelines/pbr_with_shadow/PbrWithShadowPipeline.hpp"
+    # "src/engine/render_system/pipelines/pbr_with_shadow/PbrWithShadowPipeline.cpp"
     "src/engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
     "src/engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.cpp"
 
@@ -177,17 +177,17 @@ list(
     "src/scenes/gltf_mesh_viewer/GLTFMeshViewerScene.cpp"
     "src/scenes/gltf_mesh_viewer/GLTFMeshViewerScene.hpp"
     
-    "src/scenes/pbr_scene/PBRScene.cpp"
-    "src/scenes/pbr_scene/PBRScene.hpp"
+    # "src/scenes/pbr_scene/PBRScene.cpp"
+    # "src/scenes/pbr_scene/PBRScene.hpp"
     
-    "src/scenes/textured_sphere/TexturedSphereScene.cpp"
-    "src/scenes/textured_sphere/TexturedSphereScene.hpp"
+    # "src/scenes/textured_sphere/TexturedSphereScene.cpp"
+    # "src/scenes/textured_sphere/TexturedSphereScene.hpp"
     
-    "src/scenes/texture_viewer_scene/TextureViewerScene.hpp"
-    "src/scenes/texture_viewer_scene/TextureViewerScene.cpp"
+    # "src/scenes/texture_viewer_scene/TextureViewerScene.hpp"
+    # "src/scenes/texture_viewer_scene/TextureViewerScene.cpp"
 
-    "src/scenes/omnidirectional_shadow_mapping/OmnidirectionalShadowMapping.hpp"
-    "src/scenes/omnidirectional_shadow_mapping/OmnidirectionalShadowMapping.cpp"
+    # "src/scenes/omnidirectional_shadow_mapping/OmnidirectionalShadowMapping.hpp"
+    # "src/scenes/omnidirectional_shadow_mapping/OmnidirectionalShadowMapping.cpp"
 )
 
 add_library("Scenes"

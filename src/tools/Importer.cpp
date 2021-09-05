@@ -1132,7 +1132,7 @@ static void GLTF_extractSubMeshes(
                     Copy<3>(primitive.emissiveFactor, emissiveFactor);
                     primitive.hasBaseColorTexture = hasBaseColorTexture;
                     primitive.hasEmissiveTexture = hasEmissiveTexture;
-                    primitive.hasMixedMetallicRoughnessOcclusionTexture = hasCombinedMetallicRoughness;
+                    primitive.hasMetallicRoughnessTexture = hasCombinedMetallicRoughness;
                     primitive.hasNormalBuffer = hasNormalValue;
                     primitive.hasNormalTexture = hasNormalTexture;
                     primitive.hasTangentBuffer = hasTangentValue;

@@ -3,52 +3,41 @@
 #include "engine/render_system/DrawableObject.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
-#include "engine/render_system/render_passes/OffScreenRenderPassV2.hpp"
+
+// Optimize this file using https://simoncoenen.com/blog/programming/graphics/DoomEternalStudy
 
 namespace MFA {
 
 namespace RB = RenderBackend;
 namespace RF = RenderFrontend;
 
+class ShadowRenderPassV2;
+
 class PBRWithShadowPipelineV2 final : public BasePipeline {
 public:
 
-    struct PrimitiveInfo {
-        alignas(16) float baseColorFactor[4];
-        float emissiveFactor[3];
-        int placeholder0;
-        alignas(4) int hasBaseColorTexture;
-        alignas(4) float metallicFactor;
-        alignas(4) float roughnessFactor;
-        alignas(4) int hasMixedMetallicRoughnessOcclusionTexture;
-        alignas(4) int hasNormalTexture;
-        alignas(4) int hasEmissiveTexture;
-        alignas(4) int hasSkin;
-    };
-
-    // TODO We could have a model buffer for each drawable but with a single viewProjection buffer
-    struct ModelData {   // For vertices in Vertex shader
-        alignas(64) float model[16];
-    };
-    static_assert(sizeof(ModelData) == 64);
-
-    struct DisplayViewData {
-        alignas(64) float view[16];
-    };
-    static_assert(sizeof(DisplayViewData) == 64);
-
-    struct DisplayProjectionData {
+    struct DisplayViewProjectionData {
         alignas(64) float projection[16];
     };
-    static_assert(sizeof(DisplayProjectionData) == 64);
+    static_assert(sizeof(DisplayViewProjectionData) == 64);
 
     struct ShadowViewProjectionData {
         float viewMatrices[6][16];
     };
 
-    struct ShadowPushConstants {
+    struct ShadowPassVertexStagePushConstants {
+        float modeTransform[16];
         int faceIndex;
+        int nodeSkinIndex;
     };
+    static_assert(sizeof(ShadowPassVertexStagePushConstants) == 72);
+
+    struct DisplayPassAllStagesPushConstants {
+        float modeTransform[16];
+        int nodeSkinIndex;
+        uint32_t primitiveIndex;      // Unique id
+    };
+    static_assert(sizeof(DisplayPassAllStagesPushConstants) == 72);
 
     struct DisplayLightAndCameraData {
         alignas(16) float lightPosition[3];
@@ -62,13 +51,9 @@ public:
         alignas(4) float projectionMatrixDistance;
     };
 
-    explicit PBRWithShadowPipelineV2() = default;
+    explicit PBRWithShadowPipelineV2();
 
-    ~PBRWithShadowPipelineV2() override {
-        if (mIsInitialized) {
-            Shutdown();
-        }
-    }
+    ~PBRWithShadowPipelineV2() override;
 
     PBRWithShadowPipelineV2 (PBRWithShadowPipelineV2 const &) noexcept = delete;
     PBRWithShadowPipelineV2 (PBRWithShadowPipelineV2 &&) noexcept = delete;
@@ -98,12 +83,12 @@ public:
 
     bool UpdateModel(
         DrawableObjectId drawableObjectId, 
-        ModelData const & modelData
+        float modelTransform[16]
     );
 
-    void UpdateCameraView(DisplayViewData const & viewData);
+    void UpdateCameraView(float view[16]);
 
-    void UpdateCameraProjection(DisplayProjectionData const & projectionData);
+    void UpdateCameraProjection(float projection[16]);
 
     void UpdateLightPosition(float lightPosition[3]);
 
@@ -143,9 +128,7 @@ private:
     
     void updateShadowViewProjectionData();
     
-    void updateDisplayProjectionBuffer(RF::DrawPass const & drawPass);
-    
-    void updateDisplayViewBuffer(RF::DrawPass const & drawPass);
+    void updateDisplayViewProjectionBuffer(RF::DrawPass const & drawPass);
     
     inline static constexpr float SHADOW_WIDTH = 1024;
     inline static constexpr float SHADOW_HEIGHT = 1024;
@@ -161,16 +144,14 @@ private:
     VkDescriptorSetLayout mDisplayPassDescriptorSetLayout {};
     RF::DrawPipeline mDisplayPassPipeline {};
     RF::UniformBufferGroup mDisplayLightAndCameraBuffer {};
-    RF::UniformBufferGroup mDisplayViewBuffer {};
-    RF::UniformBufferGroup mDisplayProjectionBuffer {};
-
+    RF::UniformBufferGroup mDisplayViewProjectionBuffer {};
+    
     VkDescriptorSetLayout mShadowPassDescriptorSetLayout {};
     RF::DrawPipeline mShadowPassPipeline {};
     RF::UniformBufferGroup mShadowLightBuffer {};
-    OffScreenRenderPassV2 mShadowRenderPass {
-        static_cast<uint32_t>(SHADOW_WIDTH),
-        static_cast<uint32_t>(SHADOW_HEIGHT)
-    };
+
+    std::unique_ptr<ShadowRenderPassV2> mShadowRenderPass;
+
     RF::UniformBufferGroup mShadowViewProjectionBuffer {};
     
     float mLightPosition[3] {};
@@ -187,15 +168,14 @@ private:
 
     ShadowViewProjectionData mShadowViewProjectionData {};
     
-    DisplayProjectionData mDisplayProjectionData {};
+    float mDisplayProjection [16] {};
     
-    DisplayViewData mDisplayViewData {};
+    float mDisplayView [16] {};
     
-    uint8_t mDisplayProjectionNeedUpdate = 0;
-    uint8_t mDisplayViewNeedUpdate = 0;
-    uint8_t mDisplayLightNeedUpdate = 0;
-    uint8_t mShadowLightNeedUpdate = 0;
-    uint8_t mShadowViewProjectionNeedUpdate = 0;
+    uint32_t mDisplayViewProjectionNeedUpdate = 0;
+    uint32_t mDisplayLightNeedUpdate = 0;
+    uint32_t mShadowLightNeedUpdate = 0;
+    uint32_t mShadowViewProjectionNeedUpdate = 0;
 
 };
 

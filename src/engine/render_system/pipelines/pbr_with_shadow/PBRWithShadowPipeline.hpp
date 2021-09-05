@@ -3,7 +3,7 @@
 #include "engine/render_system/DrawableObject.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
-#include "engine/render_system/render_passes/OffScreenRenderPass.hpp"
+#include "engine/render_system/render_passes/ShadowRenderPass.hpp"
 
 namespace MFA {
 
@@ -136,7 +136,7 @@ private:
     //std::unordered_map<DrawableObjectId, std::unique_ptr<DrawableObject>> mShadowPassDrawableObjects {};
     RF::UniformBufferGroup mShadowMatricesBuffer {};
     RF::UniformBufferGroup mShadowLightBuffer {};
-    OffScreenRenderPass mShadowRenderPass {
+    ShadowRenderPass mShadowRenderPass {
         static_cast<uint32_t>(SHADOW_WIDTH),
         static_cast<uint32_t>(SHADOW_HEIGHT)
     };

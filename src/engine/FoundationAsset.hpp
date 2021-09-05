@@ -282,7 +282,7 @@ public:
         uint32_t indicesStartingIndex = 0;          // From start of buffer
         int16_t baseColorTextureIndex = 0;
         int16_t mixedMetallicRoughnessOcclusionTextureIndex = 0;
-        int16_t metallicTextureIndex = 0;
+        int16_t metallicRoughnessTextureIndex = 0;
         int16_t roughnessTextureIndex = 0;
         int16_t normalTextureIndex = 0;
         int16_t emissiveTextureIndex = 0;
@@ -295,7 +295,7 @@ public:
         bool hasRoughnessTexture = false;
         bool hasEmissiveTexture = false;
         bool hasOcclusionTexture = false;
-        bool hasMixedMetallicRoughnessOcclusionTexture = false;
+        bool hasMetallicRoughnessTexture = false;
         bool hasNormalBuffer = false;
         bool hasNormalTexture = false;
         bool hasTangentBuffer = false;
@@ -320,11 +320,6 @@ public:
         float translate[3] {0.0f, 0.0f, 0.0f};
         int parent = -1;
         int skin = -1;
-        int skinBufferIndex = -1;
-
-        bool isCachedDataValid = false;
-        glm::mat4 cachedLocalTransform {};
-        glm::mat4 cachedGlobalTransform {};
         
         [[nodiscard]]
         bool hasSubMesh() const noexcept {
@@ -513,6 +508,11 @@ public:
         return mRootNodes.data();
     }
 
+    uint32_t GetIndexOfRootNode(uint32_t const index) {
+        MFA_ASSERT(index < mRootNodes.size());
+        return mRootNodes[index];
+    }
+
     [[nodiscard]]
     Node & GetRootNodeByIndex(uint32_t const index) {
         MFA_ASSERT(index < mRootNodes.size());
@@ -566,7 +566,7 @@ public:
         Invalid,
         Vertex,
         Geometry,
-        Fragment
+        Fragment,
     };
 
     [[nodiscard]]

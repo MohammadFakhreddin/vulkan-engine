@@ -11,33 +11,27 @@ struct VSOut {
     float4 worldPosition : POSITION0;
 };
 
-struct ModelData {
-    float4x4 model;
-};
-
-ConstantBuffer <ModelData> modelBuffer: register(b0, space0);
-
 struct ViewDataProjectionData {
     float4x4 data[6];
 };
 
-ConstantBuffer <ViewDataProjectionData> viewProjectionBuffer: register(b1, space0);
+ConstantBuffer <ViewDataProjectionData> viewProjectionBuffer: register(b0, space0);
 
-struct NodeTranformation {
-    float4x4 model;
-};
-
-ConstantBuffer <NodeTranformation> nodeTransformBuffer: register(b2, space0);
-
-struct SkinJoints {
+struct NodeJoints {
     float4x4 joints[];
 };
 
-ConstantBuffer <SkinJoints> skinJointsBuffer: register(b3, space0); 
+struct NodesSkinJoints {
+    NodeJoints nodeJoints[];
+};
+
+ConstantBuffer <NodesSkinJoints> skinJointsBuffer: register(b1, space0); 
 
 struct PushConsts
-{
-	int faceIndex;
+{   
+    float4x4 model;
+    int faceIndex;
+    int nodeskinIndex;
 };
 
 [[vk::push_constant]]
@@ -52,15 +46,17 @@ VSOut main(VSIn input) {
 
     float4x4 skinMat;
     if (input.hasSkin == 1) {
-        skinMat = mul(skinJointsBuffer.joints[input.jointIndices.x], input.jointWeights.x)
-            + mul(skinJointsBuffer.joints[input.jointIndices.y], input.jointWeights.y) 
-            + mul(skinJointsBuffer.joints[input.jointIndices.z], input.jointWeights.z)
-            + mul(skinJointsBuffer.joints[input.jointIndices.w], input.jointWeights.w);
+        NodeJoints nodeJoints = skinJointsBuffer.nodeJoints[pushConsts.nodeskinIndex];
+        skinMat = mul(nodeJoints.joints[input.jointIndices.x], input.jointWeights.x)
+            + mul(nodeJoints.joints[input.jointIndices.y], input.jointWeights.y) 
+            + mul(nodeJoints.joints[input.jointIndices.z], input.jointWeights.z)
+            + mul(nodeJoints.joints[input.jointIndices.w], input.jointWeights.w);
     } else {
         skinMat = IdentityMat;
     }
-    float4x4 modelMat = mul(modelBuffer.model, nodeTransformBuffer.model);
-    float4x4 skinModelMat = mul(modelMat, skinMat);
+    // float4x4 modelMat = mul(modelBuffer.model, nodeTransformBuffer.model);
+    // float4x4 skinModelMat = mul(modelMat, skinMat);
+    float4x4 skinModelMat = mul(pushConsts.model, skinMat);
     
     // Position
     float4 tempPosition = float4(input.position, 1.0f); // w is 1 because position is a coordinate

@@ -6,33 +6,20 @@ struct VSOut {
     float4 position : SV_POSITION;
 };
 
-struct ViewProjectionBuffer {
+// TOOD Just get Combined MVP
+struct ModelViewProjectionBuffer {
     float4x4 model;
     float4x4 view;
     float4x4 projection;
 };
 
-ConstantBuffer <ViewProjectionBuffer> viewProjectionBuffer: register(b0, space0);
-
-struct NodeTranformation {
-    float4x4 model;
-};
-
-ConstantBuffer <NodeTranformation> nodeTransformBuffer: register(b1, space0);
+ConstantBuffer <ModelViewProjectionBuffer> mvpBuffer: register(b0, space0);
 
 VSOut main(VSIn input) {
     VSOut output;
 
-    float4x4 modelMat = mul(viewProjectionBuffer.model, nodeTransformBuffer.model);
-    float4x4 modelViewMat = mul(viewProjectionBuffer.view, modelMat);
-
-    // Position
-    float4 tempPosition = float4(input.position, 1.0f);
-    tempPosition = mul(modelViewMat, tempPosition);
-    
-    float4 worldPos = tempPosition;
-    float4 position = mul(viewProjectionBuffer.projection, worldPos);
-    output.position = position;
+    float4x4 mvpMatrix = mul(mvpBuffer.projection, mul(mvpBuffer.view, mvpBuffer.model));
+    output.position = mul(mvpMatrix, float4(input.position, 1.0));
     
     return output;
 }

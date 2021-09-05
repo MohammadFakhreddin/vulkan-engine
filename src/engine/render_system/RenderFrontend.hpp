@@ -275,6 +275,13 @@ void PushConstants(
     CBlob data
 );
 
+void PushConstants(
+    DrawPass const & drawPass,
+    VkShaderStageFlags shaderStage, 
+    uint32_t offset, 
+    CBlob data
+);
+
 [[nodiscard]]
 uint32_t GetSwapChainImagesCount();
 

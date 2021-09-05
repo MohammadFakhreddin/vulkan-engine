@@ -84,6 +84,23 @@ public:
         mWriteInfo.emplace_back(writeDescriptorSet);
     }
 
+    
+    void AddCombinedImageSampler(VkDescriptorImageInfo * imageInfoList, uint32_t imageInfoCount, uint32_t offset = 0) {
+        MFA_ASSERT(isActive);
+
+        VkWriteDescriptorSet writeDescriptorSet {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = mDescriptorSet,
+            .dstBinding = static_cast<uint32_t>(mWriteInfo.size()) + offset,
+            .dstArrayElement = 0,
+            .descriptorCount = imageInfoCount,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .pImageInfo = imageInfoList,
+        };
+
+        mWriteInfo.emplace_back(writeDescriptorSet);
+    }
+
     void UpdateDescriptorSets() {
         isActive = false;
         RF::UpdateDescriptorSets(
