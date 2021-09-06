@@ -277,7 +277,7 @@ struct Data {
 };
 
 [[nodiscard]]
-uintmax_t ComputeMipmapLen(
+size_t ComputeMipmapLen(
     uint32_t width,
     uint32_t height,
     TextureFormat format

@@ -4,6 +4,7 @@
 #include "../engine/BedrockLog.hpp"
 #include "../engine/BedrockAssert.hpp"
 #include "../engine/BedrockMemory.hpp"
+#include "../tools/Importer.hpp"
 
 #include "../libs/stb_image/stb_image.h"
 #include "engine/BedrockFileSystem.hpp"
@@ -15,8 +16,17 @@ namespace MFA::Utils::UncompressedTexture {
 LoadResult Load(Data & outImageData, const char * path, bool const prefer_srgb) {
     using namespace AssetSystem;
     LoadResult ret = LoadResult::Invalid;
-    auto * readData = stbi_load(
-        path,
+
+    auto rawFile = Importer::ReadRawFile(path);
+    MFA_DEFER {
+        Importer::FreeRawFile(&rawFile);
+    };
+    if (rawFile.valid() == false) {
+        return ret;
+    }
+    auto * readData = stbi_load_from_memory(
+        rawFile.data.ptr,
+        static_cast<int>(rawFile.data.len),
         &outImageData.width,
         &outImageData.height,
         &outImageData.stbi_components,
@@ -94,16 +104,19 @@ LoadResult Load(Data & outImageData, const char * path, bool const prefer_srgb) 
 
 bool Unload(Data * imageData) {
     bool ret = false;
-    MFA_ASSERT((imageData->stbi_pixels.ptr != nullptr) == (imageData->pixels.ptr != nullptr));
-    MFA_ASSERT((imageData->stbi_pixels.ptr != nullptr) == imageData->valid());
-    if(imageData != nullptr && imageData->stbi_pixels.ptr != nullptr) {
-        stbi_image_free(imageData->stbi_pixels.ptr);
-        if(imageData->components != imageData->stbi_components) {
-            Memory::Free(imageData->pixels);
+    MFA_ASSERT(imageData != nullptr);
+    if (imageData != nullptr) {
+        MFA_ASSERT((imageData->stbi_pixels.ptr != nullptr) == (imageData->pixels.ptr != nullptr));
+        MFA_ASSERT((imageData->stbi_pixels.ptr != nullptr) == imageData->valid());
+        if (imageData->stbi_pixels.ptr != nullptr) {
+            stbi_image_free(imageData->stbi_pixels.ptr);
+            if (imageData->components != imageData->stbi_components) {
+                Memory::Free(imageData->pixels);
+            }
+            imageData->pixels = {};
+            imageData->stbi_pixels = {};
+            ret = true;
         }
-        imageData->pixels = {};
-        imageData->stbi_pixels = {};
-        ret = true;
     }
     return ret;
 }
@@ -151,12 +164,12 @@ bool Resize(ResizeInputParams const & params) {
 
 namespace MFA::Utils::DDSTexture {
 
-uintmax_t ComputeMipmapLen(
+size_t ComputeMipmapLen(
     uint32_t const width,
     uint32_t const height,
     TextureFormat const format
 ) {
-    uintmax_t mipmap_len = 0;
+    size_t mipmap_len = 0;
     enum class TextureType
     {
         BC,
@@ -217,7 +230,7 @@ uintmax_t ComputeMipmapLen(
 LoadResult Load (Data & out_image_data, char const * path) {
     LoadResult ret = LoadResult::INVALID;
     auto * file = FileSystem::OpenFile(path, FileSystem::Usage::Read);
-    if(FileSystem::IsUsable(file)){
+    if(FileSystem::FileIsUsable(file)){
         auto const file_size = FileSystem::FileSize(file);
         MFA_ASSERT(file_size > 0);
         out_image_data.asset = Memory::Alloc(file_size);
@@ -427,22 +440,47 @@ static void *tinyktxCallbackAlloc(void *user, const size_t size) {
 static void tinyktxCallbackFree(void *user, void *data) {
     MFA::Memory::PtrFree(data);
 }
-// TODO Start from here, Complete all callbacks
-static size_t tinyktxCallbackRead(void *user, void* data, const size_t size) {
-    auto * handle = static_cast<FS::FileHandle *>(user);
+
+static size_t tinyktxCallbackRead(void * userData, void* data, const size_t size) {
+#if defined(__DESKTOP__) || defined(__IOS__)
+    auto * handle = static_cast<FS::FileHandle *>(userData);
     return FS::Read(handle, MFA::Blob {data, size});
-}
-static bool tinyktxCallbackSeek(void *user, const int64_t offset) {
-    auto * handle = static_cast<FS::FileHandle *>(user);
-    return FS::Seek(handle, static_cast<int>(offset), FS::Origin::Start);
+#elif defined(__ANDROID__)
+    auto * handle = static_cast<FS::AndroidAssetHandle *>(userData);
+    return FS::Android_ReadAsset(handle, MFA::Blob {data, size});
+#else
+#error Os not handled
+#endif
 }
 
-static int64_t tinyktxCallbackTell(void *user) {
-    auto * handle = static_cast<FS::FileHandle *>(user);
+static bool tinyktxCallbackSeek(void * userData, const int64_t offset) {
+#if defined(__DESKTOP__) || defined(__IOS__)
+    auto * handle = static_cast<FS::FileHandle *>(userData);
+    return FS::Seek(handle, static_cast<int>(offset), FS::Origin::Start);
+#elif defined(__ANDROID__)
+    auto * handle = static_cast<FS::AndroidAssetHandle *>(userData);
+    return FS::Android_Seek(handle, static_cast<int>(offset), FS::Origin::Start);
+#else
+    #error Os not handled
+#endif
+}
+
+static int64_t tinyktxCallbackTell(void * userData) {
+#if defined(__DESKTOP__) || defined(__IOS__)
+    auto * handle = static_cast<FS::FileHandle *>(userData);
     int64_t location = 0;
     bool success = FS::Tell(handle, location);
     MFA_ASSERT(success);
     return location;
+#elif defined(__ANDROID__)
+    auto * handle = static_cast<FS::AndroidAssetHandle *>(userData);
+    int64_t location = 0;
+    bool success = FS::Android_Tell(handle, location);
+    MFA_ASSERT(success);
+    return location;
+#else
+    #error Os not handled
+#endif
 }
 
 Data * Load(LoadResult & loadResult, const char * path) {
@@ -451,19 +489,25 @@ Data * Load(LoadResult & loadResult, const char * path) {
 
     loadResult = LoadResult::Invalid;
 
+#if defined(__DESKTOP__) || defined(__IOS__)
     auto * fileHandle = FS::OpenFile(path, FS::Usage::Read);
+#elif defined(__ANDROID__)
+    auto * fileHandle = FS::Android_OpenAsset(path);
+#else
+    #error Os is not handled
+#endif
     if(!MFA_VERIFY(fileHandle != nullptr)) {
         loadResult = LoadResult::FileNotExists;
         return nullptr;
     }
     
     TinyKtx_Callbacks callbacks {
-            &tinyktxCallbackError,
-            &tinyktxCallbackAlloc,
-            &tinyktxCallbackFree,
-            tinyktxCallbackRead,
-            &tinyktxCallbackSeek,
-            &tinyktxCallbackTell
+        &tinyktxCallbackError,
+        &tinyktxCallbackAlloc,
+        &tinyktxCallbackFree,
+        tinyktxCallbackRead,
+        &tinyktxCallbackSeek,
+        &tinyktxCallbackTell
     };
 
     auto * ctx =  TinyKtx_CreateContext(&callbacks, fileHandle);
@@ -528,15 +572,15 @@ Data * Load(LoadResult & loadResult, const char * path) {
 
     if (format != TextureFormat::INVALID) {
 
-        auto const mipmapCount = static_cast<uint8_t>(TinyKtx_NumberOfMipmaps(ctx));
+        auto mipmapCount = static_cast<uint8_t>(TinyKtx_NumberOfMipmaps(ctx));
 
         uint64_t totalImageSize = 0;
 
         int previousImageSize = -1;
         for(auto i = 0u; i < mipmapCount; ++i) {
             int imageSize = TinyKtx_ImageSize(ctx, i);
+            MFA_ASSERT(imageSize > 0);
             totalImageSize += imageSize;
-
             MFA_ASSERT(previousImageSize == -1 || imageSize < previousImageSize);
             previousImageSize = imageSize;
         }

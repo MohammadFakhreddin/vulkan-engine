@@ -59,6 +59,7 @@ settings.json
 3d-cube
 
 .vscode
+.vscode/*
 
 out/*
 
@@ -100,11 +101,17 @@ build/*
 build64/*
 build64
 build
-
-package.json
+# buildIOS
+# buildIOS/*
+Debug-iphoneos
+Debug-iphonesimulator
+MFaEngine.build
+Release-iphoneos
 
 android/local.properties
 
 .gradle
 .idea
-.ccx
+.cxx
+
+!ios.toolchain.cmake

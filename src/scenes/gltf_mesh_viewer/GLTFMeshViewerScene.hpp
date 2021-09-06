@@ -1,23 +1,32 @@
 #pragma once
 
-#include "engine/DrawableObject.hpp"
 #include "engine/Scene.hpp"
-#include "engine/RenderFrontend.hpp"
-#include "engine/RenderBackend.hpp"
 #include "engine/camera/FirstPersonCamera.hpp"
-#include "engine/pipelines/pbr/PBRModelPipeline.hpp"
-#include "engine/pipelines/point_light/PointLightPipeline.hpp"
+#include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
+#include "engine/render_system/pipelines/point_light/PointLightPipeline.hpp"
+#include "engine/render_system/DrawableObject.hpp"
 
 class GLTFMeshViewerScene final : public MFA::Scene {
 public:
 
-    explicit GLTFMeshViewerScene() = default;
+    explicit GLTFMeshViewerScene();
+
+    ~GLTFMeshViewerScene() override = default;
+   
+    GLTFMeshViewerScene (GLTFMeshViewerScene const &) noexcept = delete;
+    GLTFMeshViewerScene (GLTFMeshViewerScene &&) noexcept = delete;
+    GLTFMeshViewerScene & operator = (GLTFMeshViewerScene const &) noexcept = delete;
+    GLTFMeshViewerScene & operator = (GLTFMeshViewerScene &&) noexcept = delete;
 
     void Init() override;
 
-    void OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
+    void OnPreRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
 
-    void OnUI(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
+    void OnRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
+
+    void OnPostRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
+
+    void OnUI();
 
     void Shutdown() override;
 
@@ -33,15 +42,15 @@ private:
         std::string displayName {};
         std::string address {};
         MFA::DrawableObjectId drawableObjectId {};
-        struct {
-            struct {
+        struct InitialParams {
+            struct Model {
                 float rotationEulerAngle[3] {};
                 float scale = 1;
                 float translate[3] {0, 0, -10.0f};
                 float translateMin[3] {-100.0f, -100.0f, -100.0f};
                 float translateMax[3] {100.0f, 100.0f, 100.0f};
-            } model {};
-            struct {
+            } model;
+            struct Light {
                 float position [3] {};
                 float color[3]{
                     (252.0f/256.0f) * LightScale,
@@ -50,12 +59,17 @@ private:
                 };
                 float translateMin[3] {-200.0f, -200.0f, -200.0f};
                 float translateMax[3] {200.0f, 200.0f, 200.0f};
-            } light {};
-            struct {
+            } light;
+            struct Camera {
                 float position [3] {};
                 float eulerAngles [3] {};
-            } camera {};
-        } initialParams {.model {}, .light {}, .camera {}};
+            } camera;
+            explicit InitialParams()
+                : model({})
+                , light({})
+                , camera({})
+            {}
+        } initialParams {};
     };
 
     void createModel(ModelRenderRequiredData & renderRequiredData);
@@ -79,17 +93,9 @@ private:
         alignas(4) int hasEmissiveTexture;
     }; 
 
-    MFA::PBRModelPipeline::ViewProjectionData mPbrMVPData {};
-    MFA::PointLightPipeline::ViewProjectionData mPointLightMVPData {};
-
     float m_model_rotation[3] {45.0f, 45.0f, 45.0f};
     float m_model_scale = 1.0f;
     float m_model_position[3] {0.0f, 0.0f, -6.0f};
-
-    MFA::PBRModelPipeline::LightViewBuffer mLightViewData {
-        .lightPosition = {},
-        .cameraPosition = {0.0f, 0.0f, 0.0f},
-    };
 
     float mLightPosition[3] {0.0f, 0.0f, -2.0f};
     float mLightColor[3]{};
@@ -100,7 +106,7 @@ private:
 
     MFA::RenderFrontend::SamplerGroup mSamplerGroup {};
 
-    MFA::PBRModelPipeline mPbrPipeline {};
+    MFA::PBRWithShadowPipelineV2 mPbrPipeline {};
     MFA::PointLightPipeline mPointLightPipeline {};
 
     MFA::RenderBackend::GpuTexture mErrorTexture {};
@@ -119,11 +125,22 @@ private:
     bool mIsObjectViewerWindowVisible = false;
     bool mIsLightWindowVisible = false;
     bool mIsCameraWindowVisible = false;
+    bool mIsDrawableObjectWindowVisible = false;
+
+#ifdef __DESKTOP__
+    static constexpr float FOV = 80;
+#elif defined(__ANDROID__) || defined(__IOS__)
+    static constexpr float FOV = 40;    // TODO It should be only for standing orientation
+#else
+#error Os is not handled
+#endif
 
     MFA::FirstPersonCamera mCamera {
-        80,
+        FOV,
         Z_FAR,
         Z_NEAR
     };
+
+    MFA::UIRecordObject mRecordObject;
 
 };

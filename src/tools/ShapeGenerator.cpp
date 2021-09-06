@@ -80,19 +80,20 @@ namespace MFA::ShapeGenerator {
             oddRow = !oddRow;
         }
 
-        uint16_t const indicesCount = static_cast<uint16_t>(meshIndices.size());
-        uint16_t const verticesCount = static_cast<uint16_t>(positions.size());
+        auto const indicesCount = static_cast<uint16_t>(meshIndices.size());
+        auto const verticesCount = static_cast<uint16_t>(positions.size());
 
-        model.mesh.initForWrite(
+        model.mesh.InitForWrite(
             verticesCount, 
             indicesCount, 
             Memory::Alloc(sizeof(AS::MeshVertex) * verticesCount), 
             Memory::Alloc(sizeof(AS::MeshIndex) * indicesCount)
         );
 
-        std::vector<AS::MeshVertex> meshVertices {verticesCount};
+        std::vector<AS::MeshVertex> meshVertices (verticesCount);
         
         for (uintmax_t index = 0; index < verticesCount; ++index) {
+            // TODO Use copy inside bedrock
             // Positions
             static_assert(sizeof(meshVertices[index].position) == sizeof(positions[index].cells));
             ::memcpy(meshVertices[index].position, positions[index].cells, sizeof(positions[index].cells));
@@ -123,37 +124,33 @@ namespace MFA::ShapeGenerator {
             ::memcpy(meshVertices[index].tangentValue, tangents[index].cells, sizeof(tangents[index].cells));
         }
 
-        auto const subMeshIndex = model.mesh.insertSubMesh();
-        model.mesh.insertPrimitive(
+        auto const subMeshIndex = model.mesh.InsertSubMesh();
+
+        AS::Mesh::Primitive primitive {};
+        primitive.hasNormalBuffer = true;
+
+        model.mesh.InsertPrimitive(
             subMeshIndex,
-            AS::Mesh::Primitive {
-                .hasNormalBuffer = true
-            },
+            primitive,
             verticesCount,
             meshVertices.data(),
             indicesCount,
             meshIndices.data()
         );
 
-        auto node = AS::MeshNode {
+        AS::MeshNode node {
             .subMeshIndex = 0,
-            .children {},
-            .transform {},
+            .scale = {scaleFactor, scaleFactor, scaleFactor}
         };
+        
+        model.mesh.InsertNode(node);
 
-        {// Assign value to transformMat
-            auto transform = Matrix4X4Float::Identity();
-            Matrix4X4Float::AssignScale(transform, scaleFactor);
-            ::memcpy(node.transform, transform.cells, sizeof(node.transform));
-            static_assert(sizeof(node.transform) == sizeof(transform.cells));
-        }
+        model.mesh.FinalizeData();
 
-        model.mesh.insertNode(node);
-
-        if(model.mesh.isValid() == false) {
+        if(model.mesh.IsValid() == false) {
             Blob verticesBuffer {};
             Blob indicesBuffer {};
-            model.mesh.revokeBuffers(verticesBuffer, indicesBuffer);
+            model.mesh.RevokeBuffers(verticesBuffer, indicesBuffer);
             Memory::Free(verticesBuffer);
             Memory::Free(indicesBuffer);
         }
@@ -195,14 +192,14 @@ namespace MFA::ShapeGenerator {
         uint16_t const indicesCount = static_cast<uint16_t>(meshIndices.size());
         uint16_t const verticesCount = static_cast<uint16_t>(positions.size());
 
-        model.mesh.initForWrite(
+        model.mesh.InitForWrite(
             verticesCount, 
             indicesCount, 
             Memory::Alloc(sizeof(AS::MeshVertex) * verticesCount), 
             Memory::Alloc(sizeof(AS::MeshIndex) * indicesCount)
         );
 
-        std::vector<AS::MeshVertex> meshVertices {verticesCount};
+        std::vector<AS::MeshVertex> meshVertices (verticesCount);
         
         for (uintmax_t index = 0; index < verticesCount; ++index) {
             // Positions
@@ -214,32 +211,29 @@ namespace MFA::ShapeGenerator {
             ::memcpy(meshVertices[index].baseColorUV, uvs[index].cells, sizeof(uvs[index].cells));
         }
 
-        auto const subMeshIndex = model.mesh.insertSubMesh();
-        model.mesh.insertPrimitive(
+        auto const subMeshIndex = model.mesh.InsertSubMesh();
+
+        AS::Mesh::Primitive primitive {};
+        primitive.hasBaseColorTexture = true;
+        model.mesh.InsertPrimitive(
             subMeshIndex,
-            AS::Mesh::Primitive {
-                .hasBaseColorTexture = true
-            },
+            primitive,
             verticesCount,
             meshVertices.data(),
             indicesCount,
             meshIndices.data()
         );
 
-        auto node = AS::MeshNode {
-            .subMeshIndex = 0,
-            .children {},
-            .transform {},
-        };
+        auto node = AS::MeshNode {};
         auto const identityMatrix = Matrix4X4Float::Identity();
         ::memcpy(node.transform, identityMatrix.cells, sizeof(node.transform));
         static_assert(sizeof(node.transform) == sizeof(identityMatrix.cells));
-        model.mesh.insertNode(node);
+        model.mesh.InsertNode(node);
 
-        if(model.mesh.isValid() == false) {
+        if(model.mesh.IsValid() == false) {
             Blob verticesBuffer {};
             Blob indicesBuffer {};
-            model.mesh.revokeBuffers(verticesBuffer, indicesBuffer);
+            model.mesh.RevokeBuffers(verticesBuffer, indicesBuffer);
             Memory::Free(verticesBuffer);
             Memory::Free(indicesBuffer);
         }

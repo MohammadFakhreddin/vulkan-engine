@@ -1,0 +1,2312 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXAggregateTarget section */
+		6B80245798DA40C9906FDE10 /* ZERO_CHECK */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = 4E599F54C8164B19A1935FA0 /* Build configuration list for PBXAggregateTarget "ZERO_CHECK" */;
+			buildPhases = (
+				84D486C579264FB8BA85A402 /* CMake Rules */,
+			);
+			dependencies = (
+			);
+			name = ZERO_CHECK;
+			productName = ZERO_CHECK;
+		};
+		F70573F4D45041558AC0E28E /* ALL_BUILD */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = CF7C834BA6524B96BD2EAF31 /* Build configuration list for PBXAggregateTarget "ALL_BUILD" */;
+			buildPhases = (
+				A092156355394F98A630EEFB /* CMake Rules */,
+			);
+			dependencies = (
+				E5E3F1153DC24EDA888B2473 /* PBXTargetDependency */,
+				F771C29E8AAB49A9A3B3861E /* PBXTargetDependency */,
+				5648A677FF42448C96469DAA /* PBXTargetDependency */,
+				9E75F8325CD94AC7B4D2098C /* PBXTargetDependency */,
+				C08CBC87963A40A5A97C8BA6 /* PBXTargetDependency */,
+				337A4547B0E645AE80441A2A /* PBXTargetDependency */,
+			);
+			name = ALL_BUILD;
+			productName = ALL_BUILD;
+		};
+/* End PBXAggregateTarget section */
+
+/* Begin PBXBuildFile section */
+		0442ADDF8D1C447C91ECED18 /* PointLightPipeline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 04310F407E50476EB1B1C9AE /* PointLightPipeline.cpp */; };
+		0683F6AA5332457F9036356E /* TextureViewerScene.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E0B1C16FB0A8431691709820 /* TextureViewerScene.cpp */; };
+		08CF403D187949A68087EBDD /* PbrWithShadowPipeline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 76FDF22235844069B0A3BA92 /* PbrWithShadowPipeline.cpp */; };
+		0C4F3A846CA145BFB530E19C /* imgui.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 57533537414648D692FDA909 /* imgui.cpp */; };
+		1725FBAB88934F76A2E81507 /* FirstPersonCamera.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 632029507C844F8ABC4A6724 /* FirstPersonCamera.cpp */; };
+		1BCAB7A8545A4B3AAE29821C /* InputManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CA90F16119B1480A8F29B684 /* InputManager.cpp */; };
+		25732569628243A0B5C45A9C /* DrawableObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E1249C28DAFF4B90A7EE278B /* DrawableObject.cpp */; };
+		2A76BD66CD2949C199E68F73 /* TexturedSphereScene.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D0FFDB226D4949B684BB70A7 /* TexturedSphereScene.cpp */; };
+		2BD032F7B3E9435AA7FF0673 /* imgui_demo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69FB9646BB3D4A85AB555B14 /* imgui_demo.cpp */; };
+		30BE9EEDAF5446A5BF36BB21 /* FoundationAsset.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6C7DD12FBACE42EEBC707A7C /* FoundationAsset.cpp */; };
+		32BFA6D6FB944030AB462A8E /* DisplayRenderPass.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5BFA553CEE48484492F05EBA /* DisplayRenderPass.cpp */; };
+		3AA33ABB4B5B486BBDB888CB /* ViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 28B3EA56621E4DC28AAFE296 /* ViewController.mm */; };
+		3B854407BEBB418AA6536351 /* RenderPass.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8329414C5C9546F6A50ED781 /* RenderPass.cpp */; };
+		405D3F79E78347058B9D3B46 /* PBRModelPipeline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = CED00EC7F4574B979D9A7584 /* PBRModelPipeline.cpp */; };
+		5001A7CBDF164B1696CB6BBB /* imgui_widgets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = EB0F6EFC64AD4CDF9DD1D35C /* imgui_widgets.cpp */; };
+		645A608C553343AABD9D5D5B /* RenderBackend.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 970069AC290A46B8B6B7D149 /* RenderBackend.cpp */; };
+		66AB25E80731450584029868 /* BedrockFileSystem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 13FD9F2DD1F641DB9B71DF48 /* BedrockFileSystem.cpp */; };
+		66CFB807E6D0490D92AE8EDB /* imgui_draw.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2789601C77B94426BF26EB1F /* imgui_draw.cpp */; };
+		692D03A956D64B92A997A695 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 5A3D29F22C72466CBE5D7495 /* AppDelegate.m */; };
+		782046ED75334FD291857835 /* BedrockAssert.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E03A290BD337425DB23EFAEE /* BedrockAssert.cpp */; };
+		7B635151F53445BCABDE0922 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = DE7808F91C5A43DBB81B7FA0 /* main.mm */; };
+		7F16B753366F4F8EB6EF38E9 /* OmnidirectionalShadowMapping.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4B21E4455FCD427DBBC0A309 /* OmnidirectionalShadowMapping.cpp */; };
+		83A7DE5F39774D1D8982E8D4 /* UIRecordObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 754EEA43096E4CA59B83550D /* UIRecordObject.cpp */; };
+		96CA6E7127874F28B0D213E7 /* Scene.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 508B509D55F340E19F5F2B2A /* Scene.cpp */; };
+		A287528B477F4D7193365E30 /* ImageUtils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1C0D126D5E2E4CCF935C68BB /* ImageUtils.cpp */; };
+		A35A8032C6B04965AF723E8B /* Importer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D82E076890E544B3B4323396 /* Importer.cpp */; };
+		AF29E01759BC47B6B730E7E8 /* GLTFMeshViewerScene.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 48D7D0DFF3BF4A1794931E86 /* GLTFMeshViewerScene.cpp */; };
+		B00EE6BB0AFE4FDB89898777 /* Application.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1DE63E1A66C4493DA563FF46 /* Application.cpp */; };
+		B2D9FE4155CE4E57BB9279B7 /* PBRScene.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 81A792E202184921A2E15200 /* PBRScene.cpp */; };
+		B623C63EE610434B93C59DBF /* BedrockMemory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 25C437C1FC9C4A468529CAD6 /* BedrockMemory.cpp */; };
+		BAA784472F644F138DC1AEA6 /* RenderFrontend.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 376D64DDEF0F43D8B9456A18 /* RenderFrontend.cpp */; };
+		BCB8256041A44223934BE74A /* ShapeGenerator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 14D3F4E69E094BC68D5FC473 /* ShapeGenerator.cpp */; };
+		C220A8F8BD8D42C2A769C261 /* UISystem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 334FA53A26CF47218F61AEEA /* UISystem.cpp */; };
+		CC24519BA6F849DAB918D806 /* OffScreenRenderPass.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7879845148D34A6088D11138 /* OffScreenRenderPass.cpp */; };
+		D00B345182DA40538646456E /* imgui_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = FB3B4AEF7F444EC9949B0841 /* imgui_tables.cpp */; };
+		D09CA8820282453EB02DE69E /* BedrockPath.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 395999F6E65E4FE4811FFBBD /* BedrockPath.cpp */; };
+		D6479B161DE345F1BF8C2852 /* BedrockPlatforms.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5002BDC19A394463B09133F0 /* BedrockPlatforms.cpp */; };
+		D6A3807626B9C1ED009DA093 /* assets in Resources */ = {isa = PBXBuildFile; fileRef = D6A3807526B9C1ED009DA093 /* assets */; };
+		D6A3807826B9C258009DA093 /* Storyboard.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D6A3807726B9C258009DA093 /* Storyboard.storyboard */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		099792E5E49049AFB079526A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 279E302268EE483C9ADF9ACD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9AA24BF539F74B20A220AF78;
+			remoteInfo = MFaEngine;
+		};
+		2F5240FC138941A7BB70ED8E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 279E302268EE483C9ADF9ACD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 903BEDF232954318AF1B3654;
+			remoteInfo = Scenes;
+		};
+		3928C9D42BB4434D90FF5DF4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 279E302268EE483C9ADF9ACD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 22EDDCFCF8564816AF0B2D28;
+			remoteInfo = Libs;
+		};
+		4E27C0AE6A124D4B9D222A65 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 279E302268EE483C9ADF9ACD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6B80245798DA40C9906FDE10;
+			remoteInfo = ZERO_CHECK;
+		};
+		569A0D36F63A4012B82E0790 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 279E302268EE483C9ADF9ACD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6B80245798DA40C9906FDE10;
+			remoteInfo = ZERO_CHECK;
+		};
+		5F4B20A98861461F912C4C85 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 279E302268EE483C9ADF9ACD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6B80245798DA40C9906FDE10;
+			remoteInfo = ZERO_CHECK;
+		};
+		67B15C3782A94145AF3E2EAE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 279E302268EE483C9ADF9ACD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6B80245798DA40C9906FDE10;
+			remoteInfo = ZERO_CHECK;
+		};
+		782AAFD87742438D8C111DF8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 279E302268EE483C9ADF9ACD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2A4952D28B8C43829412A30D;
+			remoteInfo = Tools;
+		};
+		9C0922E4BFF243FBA085C3CE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 279E302268EE483C9ADF9ACD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6B80245798DA40C9906FDE10;
+			remoteInfo = ZERO_CHECK;
+		};
+		A2A05C2884BC42E7A81BDC13 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 279E302268EE483C9ADF9ACD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 22EDDCFCF8564816AF0B2D28;
+			remoteInfo = Libs;
+		};
+		B0FF178E3CE1475DA53DC4E2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 279E302268EE483C9ADF9ACD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2A4952D28B8C43829412A30D;
+			remoteInfo = Tools;
+		};
+		B5D7480DFB094A41A2409ACD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 279E302268EE483C9ADF9ACD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 89F73C4D1EA5495BAC2F7B55;
+			remoteInfo = Engine;
+		};
+		BA4371C1CE93469FB5D72DD0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 279E302268EE483C9ADF9ACD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6B80245798DA40C9906FDE10;
+			remoteInfo = ZERO_CHECK;
+		};
+		EDAC58CD323B4C16A43A9AE1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 279E302268EE483C9ADF9ACD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 903BEDF232954318AF1B3654;
+			remoteInfo = Scenes;
+		};
+		F6A9A69D04C64D54A99595E0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 279E302268EE483C9ADF9ACD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 89F73C4D1EA5495BAC2F7B55;
+			remoteInfo = Engine;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		027A400329464D06BE2CB1D1 /* imgui_internal.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = imgui_internal.h; path = src/libs/imgui/imgui_internal.h; sourceTree = SOURCE_ROOT; };
+		04310F407E50476EB1B1C9AE /* PointLightPipeline.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = PointLightPipeline.cpp; path = src/engine/render_system/pipelines/point_light/PointLightPipeline.cpp; sourceTree = SOURCE_ROOT; };
+		0544EB9B2EAB4F959DFF0230 /* RenderPass.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = RenderPass.hpp; path = src/engine/render_system/render_passes/RenderPass.hpp; sourceTree = SOURCE_ROOT; };
+		13FD9F2DD1F641DB9B71DF48 /* BedrockFileSystem.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = BedrockFileSystem.cpp; path = src/engine/BedrockFileSystem.cpp; sourceTree = SOURCE_ROOT; };
+		14D3F4E69E094BC68D5FC473 /* ShapeGenerator.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = ShapeGenerator.cpp; path = src/tools/ShapeGenerator.cpp; sourceTree = SOURCE_ROOT; };
+		1C0D126D5E2E4CCF935C68BB /* ImageUtils.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = ImageUtils.cpp; path = src/tools/ImageUtils.cpp; sourceTree = SOURCE_ROOT; };
+		1C8578A187FB4EED95391F37 /* Importer.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = Importer.hpp; path = src/tools/Importer.hpp; sourceTree = SOURCE_ROOT; };
+		1DE63E1A66C4493DA563FF46 /* Application.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = Application.cpp; path = src/Application.cpp; sourceTree = SOURCE_ROOT; };
+		201DCDA11EC94207BF0CA403 /* Info.plist */ = {isa = PBXFileReference; explicitFileType = sourcecode.text.plist; fileEncoding = 4; lastKnownFileType = text.plist; name = Info.plist; path = buildIOS/CMakeFiles/Tools.dir/Info.plist; sourceTree = SOURCE_ROOT; };
+		2180C451FDEF439EA5C571FC /* Application.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = Application.hpp; path = src/Application.hpp; sourceTree = SOURCE_ROOT; };
+		22AFBC1563D440FB859CF9AA /* PbrWithShadowPipeline.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = PbrWithShadowPipeline.hpp; path = src/engine/render_system/pipelines/pbr_with_shadow/PbrWithShadowPipeline.hpp; sourceTree = SOURCE_ROOT; };
+		25C437C1FC9C4A468529CAD6 /* BedrockMemory.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = BedrockMemory.cpp; path = src/engine/BedrockMemory.cpp; sourceTree = SOURCE_ROOT; };
+		25DD2A45B7414D288409B4CF /* CMakeLists.txt */ = {isa = PBXFileReference; explicitFileType = sourcecode.text; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = SOURCE_ROOT; };
+		26D212D9B11240A6A23048C8 /* tiny_gltf_loader.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = tiny_gltf_loader.h; path = src/libs/tiny_gltf_loader/tiny_gltf_loader.h; sourceTree = SOURCE_ROOT; };
+		2789601C77B94426BF26EB1F /* imgui_draw.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = imgui_draw.cpp; path = src/libs/imgui/imgui_draw.cpp; sourceTree = SOURCE_ROOT; };
+		28B3EA56621E4DC28AAFE296 /* ViewController.mm */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = ViewController.mm; path = ios/ViewController.mm; sourceTree = SOURCE_ROOT; };
+		290989BCA9B24066AD667A30 /* json.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = json.hpp; path = src/libs/tiny_gltf_loader/json.hpp; sourceTree = SOURCE_ROOT; };
+		2E689AFF6424488096D777CC /* BedrockPlatforms.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = BedrockPlatforms.hpp; path = src/engine/BedrockPlatforms.hpp; sourceTree = SOURCE_ROOT; };
+		2FB295CDF22D41A5A4113802 /* imgui.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = imgui.h; path = src/libs/imgui/imgui.h; sourceTree = SOURCE_ROOT; };
+		334FA53A26CF47218F61AEEA /* UISystem.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = UISystem.cpp; path = src/engine/ui_system/UISystem.cpp; sourceTree = SOURCE_ROOT; };
+		376D64DDEF0F43D8B9456A18 /* RenderFrontend.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = RenderFrontend.cpp; path = src/engine/render_system/RenderFrontend.cpp; sourceTree = SOURCE_ROOT; };
+		395999F6E65E4FE4811FFBBD /* BedrockPath.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = BedrockPath.cpp; path = src/engine/BedrockPath.cpp; sourceTree = SOURCE_ROOT; };
+		3A95B984EC67491CBD02D511 /* Info.plist */ = {isa = PBXFileReference; explicitFileType = sourcecode.text.plist; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = buildIOS/CMakeFiles/MFaEngine.dir/Info.plist; sourceTree = SOURCE_ROOT; };
+		3C880EC33F6A4DDCA32E9705 /* GLTFMeshViewerScene.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = GLTFMeshViewerScene.hpp; path = src/scenes/gltf_mesh_viewer/GLTFMeshViewerScene.hpp; sourceTree = SOURCE_ROOT; };
+		3E63A0EF56864A6FB05C0C9F /* RenderFrontend.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = RenderFrontend.hpp; path = src/engine/render_system/RenderFrontend.hpp; sourceTree = SOURCE_ROOT; };
+		40FCBA7C25984E498286FA7C /* FirstPersonCamera.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = FirstPersonCamera.hpp; path = src/engine/camera/FirstPersonCamera.hpp; sourceTree = SOURCE_ROOT; };
+		48D7D0DFF3BF4A1794931E86 /* GLTFMeshViewerScene.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = GLTFMeshViewerScene.cpp; path = src/scenes/gltf_mesh_viewer/GLTFMeshViewerScene.cpp; sourceTree = SOURCE_ROOT; };
+		4B21E4455FCD427DBBC0A309 /* OmnidirectionalShadowMapping.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = OmnidirectionalShadowMapping.cpp; path = src/scenes/omnidirectional_shadow_mapping/OmnidirectionalShadowMapping.cpp; sourceTree = SOURCE_ROOT; };
+		4DCB3A15237F4439887B94C7 /* AppDelegate.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = AppDelegate.h; path = ios/AppDelegate.h; sourceTree = SOURCE_ROOT; };
+		5002BDC19A394463B09133F0 /* BedrockPlatforms.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = BedrockPlatforms.cpp; path = src/engine/BedrockPlatforms.cpp; sourceTree = SOURCE_ROOT; };
+		508B509D55F340E19F5F2B2A /* Scene.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = Scene.cpp; path = src/engine/Scene.cpp; sourceTree = SOURCE_ROOT; };
+		54F3658241554714A99930F5 /* stb_image.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = stb_image.h; path = src/libs/stb_image/stb_image.h; sourceTree = SOURCE_ROOT; };
+		57533537414648D692FDA909 /* imgui.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = imgui.cpp; path = src/libs/imgui/imgui.cpp; sourceTree = SOURCE_ROOT; };
+		57A2F035DEA44FF98E2C80BC /* PBRModelPipeline.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = PBRModelPipeline.hpp; path = src/engine/render_system/pipelines/pbr/PBRModelPipeline.hpp; sourceTree = SOURCE_ROOT; };
+		5A3D29F22C72466CBE5D7495 /* AppDelegate.m */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.objc; fileEncoding = 4; name = AppDelegate.m; path = ios/AppDelegate.m; sourceTree = SOURCE_ROOT; };
+		5BFA553CEE48484492F05EBA /* DisplayRenderPass.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = DisplayRenderPass.cpp; path = src/engine/render_system/render_passes/DisplayRenderPass.cpp; sourceTree = SOURCE_ROOT; };
+		632029507C844F8ABC4A6724 /* FirstPersonCamera.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = FirstPersonCamera.cpp; path = src/engine/camera/FirstPersonCamera.cpp; sourceTree = SOURCE_ROOT; };
+		6394371EFD2548DDAC889644 /* DrawableObject.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = DrawableObject.hpp; path = src/engine/render_system/DrawableObject.hpp; sourceTree = SOURCE_ROOT; };
+		639DBBC8A01F4044907CDE8B /* Scene.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = Scene.hpp; path = src/engine/Scene.hpp; sourceTree = SOURCE_ROOT; };
+		6837B9282E044EEFAD97C381 /* OffScreenRenderPass.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = OffScreenRenderPass.hpp; path = src/engine/render_system/render_passes/OffScreenRenderPass.hpp; sourceTree = SOURCE_ROOT; };
+		69FB9646BB3D4A85AB555B14 /* imgui_demo.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = imgui_demo.cpp; path = src/libs/imgui/imgui_demo.cpp; sourceTree = SOURCE_ROOT; };
+		6AE25307E6FB455F83A96588 /* BedrockCommon.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = BedrockCommon.hpp; path = src/engine/BedrockCommon.hpp; sourceTree = SOURCE_ROOT; };
+		6C7DD12FBACE42EEBC707A7C /* FoundationAsset.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = FoundationAsset.cpp; path = src/engine/FoundationAsset.cpp; sourceTree = SOURCE_ROOT; };
+		730BC3C01A1C421D9A671374 /* imstb_rectpack.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = imstb_rectpack.h; path = src/libs/imgui/imstb_rectpack.h; sourceTree = SOURCE_ROOT; };
+		754EEA43096E4CA59B83550D /* UIRecordObject.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = UIRecordObject.cpp; path = src/engine/ui_system/UIRecordObject.cpp; sourceTree = SOURCE_ROOT; };
+		76FDF22235844069B0A3BA92 /* PbrWithShadowPipeline.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = PbrWithShadowPipeline.cpp; path = src/engine/render_system/pipelines/pbr_with_shadow/PbrWithShadowPipeline.cpp; sourceTree = SOURCE_ROOT; };
+		77000C3C8E3D45F8A9D091C0 /* Info.plist */ = {isa = PBXFileReference; explicitFileType = sourcecode.text.plist; fileEncoding = 4; lastKnownFileType = text.plist; name = Info.plist; path = buildIOS/CMakeFiles/Libs.dir/Info.plist; sourceTree = SOURCE_ROOT; };
+		7879845148D34A6088D11138 /* OffScreenRenderPass.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = OffScreenRenderPass.cpp; path = src/engine/render_system/render_passes/OffScreenRenderPass.cpp; sourceTree = SOURCE_ROOT; };
+		80A98CE7BDFF429E81528B73 /* PBRScene.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = PBRScene.hpp; path = src/scenes/pbr_scene/PBRScene.hpp; sourceTree = SOURCE_ROOT; };
+		80AC07929A754979AB9A2857 /* CMakeLists.txt */ = {isa = PBXFileReference; explicitFileType = sourcecode.text; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = SOURCE_ROOT; };
+		81A792E202184921A2E15200 /* PBRScene.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = PBRScene.cpp; path = src/scenes/pbr_scene/PBRScene.cpp; sourceTree = SOURCE_ROOT; };
+		8329414C5C9546F6A50ED781 /* RenderPass.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = RenderPass.cpp; path = src/engine/render_system/render_passes/RenderPass.cpp; sourceTree = SOURCE_ROOT; };
+		856830E138C34F499DFFA95F /* Info.plist */ = {isa = PBXFileReference; explicitFileType = sourcecode.text.plist; fileEncoding = 4; lastKnownFileType = text.plist; name = Info.plist; path = buildIOS/CMakeFiles/Scenes.dir/Info.plist; sourceTree = SOURCE_ROOT; };
+		8658200D99AD4DACA7F97118 /* OmnidirectionalShadowMapping.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = OmnidirectionalShadowMapping.hpp; path = src/scenes/omnidirectional_shadow_mapping/OmnidirectionalShadowMapping.hpp; sourceTree = SOURCE_ROOT; };
+		8AB4EE228FB74E53A0C9162E /* stb_image_resize.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = stb_image_resize.h; path = src/libs/stb_image/stb_image_resize.h; sourceTree = SOURCE_ROOT; };
+		8D7A6B9A975D416BA0272099 /* PointLightPipeline.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = PointLightPipeline.hpp; path = src/engine/render_system/pipelines/point_light/PointLightPipeline.hpp; sourceTree = SOURCE_ROOT; };
+		90C59F31BADF4A18B843124B /* libTools.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libTools.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		9471D176C86A45C0B051C002 /* Info.plist */ = {isa = PBXFileReference; explicitFileType = sourcecode.text.plist; fileEncoding = 4; lastKnownFileType = text.plist; name = Info.plist; path = buildIOS/CMakeFiles/Engine.dir/Info.plist; sourceTree = SOURCE_ROOT; };
+		970069AC290A46B8B6B7D149 /* RenderBackend.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = RenderBackend.cpp; path = src/engine/render_system/RenderBackend.cpp; sourceTree = SOURCE_ROOT; };
+		994C1E09BC094CABACAF49D2 /* UIRecordObject.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = UIRecordObject.hpp; path = src/engine/ui_system/UIRecordObject.hpp; sourceTree = SOURCE_ROOT; };
+		998EDC698437441E8D5CE414 /* BedrockMath.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = BedrockMath.hpp; path = src/engine/BedrockMath.hpp; sourceTree = SOURCE_ROOT; };
+		9A004B3BB53E49018E32BC38 /* BedrockMemory.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = BedrockMemory.hpp; path = src/engine/BedrockMemory.hpp; sourceTree = SOURCE_ROOT; };
+		9A8F5A1DEFDD4BAE9BD95DFE /* BedrockFileSystem.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = BedrockFileSystem.hpp; path = src/engine/BedrockFileSystem.hpp; sourceTree = SOURCE_ROOT; };
+		A05F955CEA7E469E827DCF31 /* CMakeLists.txt */ = {isa = PBXFileReference; explicitFileType = sourcecode.text; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = SOURCE_ROOT; };
+		A263ED81C52F4CAE85045FC5 /* ViewController.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = ViewController.h; path = ios/ViewController.h; sourceTree = SOURCE_ROOT; };
+		A61C2F8D358C4B5EABCEE419 /* imstb_truetype.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = imstb_truetype.h; path = src/libs/imgui/imstb_truetype.h; sourceTree = SOURCE_ROOT; };
+		AA48F3288A00427898AA6B3D /* BedrockLog.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = BedrockLog.hpp; path = src/engine/BedrockLog.hpp; sourceTree = SOURCE_ROOT; };
+		AB5677783D09421597823E55 /* BedrockPath.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = BedrockPath.hpp; path = src/engine/BedrockPath.hpp; sourceTree = SOURCE_ROOT; };
+		AB620B65ABB54BF6B9EC0CB1 /* CMakeLists.txt */ = {isa = PBXFileReference; explicitFileType = sourcecode.text; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = SOURCE_ROOT; };
+		ACB0826BDF684A8B8B73AE5C /* stb_image_write.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = stb_image_write.h; path = src/libs/stb_image/stb_image_write.h; sourceTree = SOURCE_ROOT; };
+		AF69BE7C731644CC9E63AF65 /* BedrockMatrix.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = BedrockMatrix.hpp; path = src/engine/BedrockMatrix.hpp; sourceTree = SOURCE_ROOT; };
+		B4B0EF01E2CA49048B3D5C00 /* DisplayRenderPass.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = DisplayRenderPass.hpp; path = src/engine/render_system/render_passes/DisplayRenderPass.hpp; sourceTree = SOURCE_ROOT; };
+		B5180ECAA7704D92858EA447 /* imconfig.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = imconfig.h; path = src/libs/imgui/imconfig.h; sourceTree = SOURCE_ROOT; };
+		B5A764F1FDE64406B0FEE3AD /* ImageUtils.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = ImageUtils.hpp; path = src/tools/ImageUtils.hpp; sourceTree = SOURCE_ROOT; };
+		B8DB34F4868C4EDEAD1F006E /* MFaEngine.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = MFaEngine.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BE2F3EE5A8554DC3A1A17572 /* RenderBackend.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = RenderBackend.hpp; path = src/engine/render_system/RenderBackend.hpp; sourceTree = SOURCE_ROOT; };
+		C4F8D46701AF41DF95AAEA4F /* libScenes.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libScenes.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		C793033B57DE4853829B09E6 /* ShapeGenerator.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = ShapeGenerator.hpp; path = src/tools/ShapeGenerator.hpp; sourceTree = SOURCE_ROOT; };
+		C7F82BF058D74062984329E0 /* TextureViewerScene.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = TextureViewerScene.hpp; path = src/scenes/texture_viewer_scene/TextureViewerScene.hpp; sourceTree = SOURCE_ROOT; };
+		CA90F16119B1480A8F29B684 /* InputManager.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = InputManager.cpp; path = src/engine/InputManager.cpp; sourceTree = SOURCE_ROOT; };
+		CED00EC7F4574B979D9A7584 /* PBRModelPipeline.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = PBRModelPipeline.cpp; path = src/engine/render_system/pipelines/pbr/PBRModelPipeline.cpp; sourceTree = SOURCE_ROOT; };
+		D0FFDB226D4949B684BB70A7 /* TexturedSphereScene.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = TexturedSphereScene.cpp; path = src/scenes/textured_sphere/TexturedSphereScene.cpp; sourceTree = SOURCE_ROOT; };
+		D5A5B60BDBC449B29B38CA7C /* CMakeLists.txt */ = {isa = PBXFileReference; explicitFileType = sourcecode.text; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = SOURCE_ROOT; };
+		D6A3807526B9C1ED009DA093 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = "<group>"; };
+		D6A3807726B9C258009DA093 /* Storyboard.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = Storyboard.storyboard; sourceTree = "<group>"; };
+		D82E076890E544B3B4323396 /* Importer.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = Importer.cpp; path = src/tools/Importer.cpp; sourceTree = SOURCE_ROOT; };
+		DA63846AFF724278B016F9D1 /* TexturedSphereScene.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = TexturedSphereScene.hpp; path = src/scenes/textured_sphere/TexturedSphereScene.hpp; sourceTree = SOURCE_ROOT; };
+		DAE16F3C081146E18C8C2B67 /* BasePipeline.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = BasePipeline.hpp; path = src/engine/render_system/pipelines/BasePipeline.hpp; sourceTree = SOURCE_ROOT; };
+		DCA50B8E50BC4379A16B793E /* FoundationAsset.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = FoundationAsset.hpp; path = src/engine/FoundationAsset.hpp; sourceTree = SOURCE_ROOT; };
+		DDF986E2DEB14635A14355CB /* SDL.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = SDL.hpp; path = src/libs/sdl/SDL.hpp; sourceTree = SOURCE_ROOT; };
+		DE7808F91C5A43DBB81B7FA0 /* main.mm */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; fileEncoding = 4; name = main.mm; path = ios/main.mm; sourceTree = SOURCE_ROOT; };
+		E03A290BD337425DB23EFAEE /* BedrockAssert.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = BedrockAssert.cpp; path = src/engine/BedrockAssert.cpp; sourceTree = SOURCE_ROOT; };
+		E0B1C16FB0A8431691709820 /* TextureViewerScene.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = TextureViewerScene.cpp; path = src/scenes/texture_viewer_scene/TextureViewerScene.cpp; sourceTree = SOURCE_ROOT; };
+		E10D42A49598481E9260D00D /* tinyktx.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = tinyktx.h; path = src/libs/tiny_ktx/tinyktx.h; sourceTree = SOURCE_ROOT; };
+		E1249C28DAFF4B90A7EE278B /* DrawableObject.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = DrawableObject.cpp; path = src/engine/render_system/DrawableObject.cpp; sourceTree = SOURCE_ROOT; };
+		E95CF8D6770A4E55A100E996 /* libEngine.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libEngine.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		E9EB6AE1208346858B8FAEFE /* ICamera.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = ICamera.h; path = src/engine/camera/ICamera.h; sourceTree = SOURCE_ROOT; };
+		EA0A31A0EB5B492E9BC3FE67 /* BedrockAssert.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = BedrockAssert.hpp; path = src/engine/BedrockAssert.hpp; sourceTree = SOURCE_ROOT; };
+		EB0F6EFC64AD4CDF9DD1D35C /* imgui_widgets.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = imgui_widgets.cpp; path = src/libs/imgui/imgui_widgets.cpp; sourceTree = SOURCE_ROOT; };
+		EF7948857D17464E8780D16C /* InputManager.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = InputManager.hpp; path = src/engine/InputManager.hpp; sourceTree = SOURCE_ROOT; };
+		F735A2C6124648B9BDD1D656 /* CMakeLists.txt */ = {isa = PBXFileReference; explicitFileType = sourcecode.text; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = SOURCE_ROOT; };
+		FB3B4AEF7F444EC9949B0841 /* imgui_tables.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.cpp; fileEncoding = 4; name = imgui_tables.cpp; path = src/libs/imgui/imgui_tables.cpp; sourceTree = SOURCE_ROOT; };
+		FB68ED4763B84C90838C629A /* tiny_obj_loader.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = tiny_obj_loader.h; path = src/libs/tiny_obj_loader/tiny_obj_loader.h; sourceTree = SOURCE_ROOT; };
+		FD3C0BE78A0F46D788671185 /* UISystem.hpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; fileEncoding = 4; name = UISystem.hpp; path = src/engine/ui_system/UISystem.hpp; sourceTree = SOURCE_ROOT; };
+		FE26AD39649B45698BA73C40 /* imstb_textedit.h */ = {isa = PBXFileReference; explicitFileType = sourcecode.c.h; fileEncoding = 4; name = imstb_textedit.h; path = src/libs/imgui/imstb_textedit.h; sourceTree = SOURCE_ROOT; };
+		FE63E230E1CB4F679904C2A6 /* libLibs.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libLibs.a; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		07D98764D7D9420793028A05 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				3A95B984EC67491CBD02D511 /* Info.plist */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+		0A26E203D1D342F79213CE8C /* Engine */ = {
+			isa = PBXGroup;
+			children = (
+				35D7D49D316F43BC85DC6A1F /* Source Files */,
+				AF56A319D88146C1ABC78F69 /* Header Files */,
+				40054C83081943C496A59B3C /* Resources */,
+				AB620B65ABB54BF6B9EC0CB1 /* CMakeLists.txt */,
+			);
+			name = Engine;
+			sourceTree = "<group>";
+		};
+		0AFD4938773D4212B3C5FC3D /* ALL_BUILD */ = {
+			isa = PBXGroup;
+			children = (
+				FDD7471E6D3F42F49CB5AC21 /* CMake Rules */,
+				A05F955CEA7E469E827DCF31 /* CMakeLists.txt */,
+			);
+			name = ALL_BUILD;
+			sourceTree = "<group>";
+		};
+		0BDA62E06A594BCB9CEF1F39 /* Source Files */ = {
+			isa = PBXGroup;
+			children = (
+				57533537414648D692FDA909 /* imgui.cpp */,
+				69FB9646BB3D4A85AB555B14 /* imgui_demo.cpp */,
+				2789601C77B94426BF26EB1F /* imgui_draw.cpp */,
+				FB3B4AEF7F444EC9949B0841 /* imgui_tables.cpp */,
+				EB0F6EFC64AD4CDF9DD1D35C /* imgui_widgets.cpp */,
+			);
+			name = "Source Files";
+			sourceTree = "<group>";
+		};
+		17C386BF36984E1A98EBE733 /* Header Files */ = {
+			isa = PBXGroup;
+			children = (
+				B5A764F1FDE64406B0FEE3AD /* ImageUtils.hpp */,
+				1C8578A187FB4EED95391F37 /* Importer.hpp */,
+				C793033B57DE4853829B09E6 /* ShapeGenerator.hpp */,
+			);
+			name = "Header Files";
+			sourceTree = "<group>";
+		};
+		30058B72D13F466E974D009A /* Source Files */ = {
+			isa = PBXGroup;
+			children = (
+				48D7D0DFF3BF4A1794931E86 /* GLTFMeshViewerScene.cpp */,
+				4B21E4455FCD427DBBC0A309 /* OmnidirectionalShadowMapping.cpp */,
+				81A792E202184921A2E15200 /* PBRScene.cpp */,
+				E0B1C16FB0A8431691709820 /* TextureViewerScene.cpp */,
+				D0FFDB226D4949B684BB70A7 /* TexturedSphereScene.cpp */,
+			);
+			name = "Source Files";
+			sourceTree = "<group>";
+		};
+		319405F2726849DB9F3B6CD3 /* Libs */ = {
+			isa = PBXGroup;
+			children = (
+				E55D1AE3F1694C5BA4B7907F /* Header Files */,
+				0BDA62E06A594BCB9CEF1F39 /* Source Files */,
+				934445374AA046F1BFD663D7 /* Resources */,
+				F735A2C6124648B9BDD1D656 /* CMakeLists.txt */,
+			);
+			name = Libs;
+			sourceTree = "<group>";
+		};
+		35D7D49D316F43BC85DC6A1F /* Source Files */ = {
+			isa = PBXGroup;
+			children = (
+				E03A290BD337425DB23EFAEE /* BedrockAssert.cpp */,
+				13FD9F2DD1F641DB9B71DF48 /* BedrockFileSystem.cpp */,
+				25C437C1FC9C4A468529CAD6 /* BedrockMemory.cpp */,
+				395999F6E65E4FE4811FFBBD /* BedrockPath.cpp */,
+				5002BDC19A394463B09133F0 /* BedrockPlatforms.cpp */,
+				6C7DD12FBACE42EEBC707A7C /* FoundationAsset.cpp */,
+				CA90F16119B1480A8F29B684 /* InputManager.cpp */,
+				508B509D55F340E19F5F2B2A /* Scene.cpp */,
+				632029507C844F8ABC4A6724 /* FirstPersonCamera.cpp */,
+				E1249C28DAFF4B90A7EE278B /* DrawableObject.cpp */,
+				970069AC290A46B8B6B7D149 /* RenderBackend.cpp */,
+				376D64DDEF0F43D8B9456A18 /* RenderFrontend.cpp */,
+				CED00EC7F4574B979D9A7584 /* PBRModelPipeline.cpp */,
+				76FDF22235844069B0A3BA92 /* PbrWithShadowPipeline.cpp */,
+				04310F407E50476EB1B1C9AE /* PointLightPipeline.cpp */,
+				5BFA553CEE48484492F05EBA /* DisplayRenderPass.cpp */,
+				7879845148D34A6088D11138 /* OffScreenRenderPass.cpp */,
+				8329414C5C9546F6A50ED781 /* RenderPass.cpp */,
+				754EEA43096E4CA59B83550D /* UIRecordObject.cpp */,
+				334FA53A26CF47218F61AEEA /* UISystem.cpp */,
+			);
+			name = "Source Files";
+			sourceTree = "<group>";
+		};
+		3CDA1451765744B49CEAF73B /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				E95CF8D6770A4E55A100E996 /* libEngine.a */,
+				FE63E230E1CB4F679904C2A6 /* libLibs.a */,
+				B8DB34F4868C4EDEAD1F006E /* MFaEngine.app */,
+				C4F8D46701AF41DF95AAEA4F /* libScenes.a */,
+				90C59F31BADF4A18B843124B /* libTools.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		40054C83081943C496A59B3C /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				9471D176C86A45C0B051C002 /* Info.plist */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+		4C11CEF99B254A98A33D1322 = {
+			isa = PBXGroup;
+			children = (
+				D6A3807526B9C1ED009DA093 /* assets */,
+				319405F2726849DB9F3B6CD3 /* Libs */,
+				BA74E245240148BA84F1940E /* MFaEngine */,
+				6E71AD7EBA354810ABC2E486 /* Scenes */,
+				82F57B31305D41319DEB42B3 /* Tools */,
+				0A26E203D1D342F79213CE8C /* Engine */,
+				0AFD4938773D4212B3C5FC3D /* ALL_BUILD */,
+				3CDA1451765744B49CEAF73B /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		6E71AD7EBA354810ABC2E486 /* Scenes */ = {
+			isa = PBXGroup;
+			children = (
+				30058B72D13F466E974D009A /* Source Files */,
+				B5941CBFC50A4AB2A7D9A310 /* Header Files */,
+				EC66E11A0B8A43A18C6378D2 /* Resources */,
+				D5A5B60BDBC449B29B38CA7C /* CMakeLists.txt */,
+			);
+			name = Scenes;
+			sourceTree = "<group>";
+		};
+		82F57B31305D41319DEB42B3 /* Tools */ = {
+			isa = PBXGroup;
+			children = (
+				A1494F0C570A4DC1A9CD2F3C /* Source Files */,
+				17C386BF36984E1A98EBE733 /* Header Files */,
+				ABE5F62BB2124A9C8D3C4BFF /* Resources */,
+				25DD2A45B7414D288409B4CF /* CMakeLists.txt */,
+			);
+			name = Tools;
+			sourceTree = "<group>";
+		};
+		934445374AA046F1BFD663D7 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				77000C3C8E3D45F8A9D091C0 /* Info.plist */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+		A1494F0C570A4DC1A9CD2F3C /* Source Files */ = {
+			isa = PBXGroup;
+			children = (
+				1C0D126D5E2E4CCF935C68BB /* ImageUtils.cpp */,
+				D82E076890E544B3B4323396 /* Importer.cpp */,
+				14D3F4E69E094BC68D5FC473 /* ShapeGenerator.cpp */,
+			);
+			name = "Source Files";
+			sourceTree = "<group>";
+		};
+		ABE5F62BB2124A9C8D3C4BFF /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				201DCDA11EC94207BF0CA403 /* Info.plist */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+		AF56A319D88146C1ABC78F69 /* Header Files */ = {
+			isa = PBXGroup;
+			children = (
+				EA0A31A0EB5B492E9BC3FE67 /* BedrockAssert.hpp */,
+				6AE25307E6FB455F83A96588 /* BedrockCommon.hpp */,
+				9A8F5A1DEFDD4BAE9BD95DFE /* BedrockFileSystem.hpp */,
+				AA48F3288A00427898AA6B3D /* BedrockLog.hpp */,
+				998EDC698437441E8D5CE414 /* BedrockMath.hpp */,
+				AF69BE7C731644CC9E63AF65 /* BedrockMatrix.hpp */,
+				9A004B3BB53E49018E32BC38 /* BedrockMemory.hpp */,
+				AB5677783D09421597823E55 /* BedrockPath.hpp */,
+				2E689AFF6424488096D777CC /* BedrockPlatforms.hpp */,
+				DCA50B8E50BC4379A16B793E /* FoundationAsset.hpp */,
+				EF7948857D17464E8780D16C /* InputManager.hpp */,
+				639DBBC8A01F4044907CDE8B /* Scene.hpp */,
+				40FCBA7C25984E498286FA7C /* FirstPersonCamera.hpp */,
+				E9EB6AE1208346858B8FAEFE /* ICamera.h */,
+				6394371EFD2548DDAC889644 /* DrawableObject.hpp */,
+				BE2F3EE5A8554DC3A1A17572 /* RenderBackend.hpp */,
+				3E63A0EF56864A6FB05C0C9F /* RenderFrontend.hpp */,
+				DAE16F3C081146E18C8C2B67 /* BasePipeline.hpp */,
+				57A2F035DEA44FF98E2C80BC /* PBRModelPipeline.hpp */,
+				22AFBC1563D440FB859CF9AA /* PbrWithShadowPipeline.hpp */,
+				8D7A6B9A975D416BA0272099 /* PointLightPipeline.hpp */,
+				B4B0EF01E2CA49048B3D5C00 /* DisplayRenderPass.hpp */,
+				6837B9282E044EEFAD97C381 /* OffScreenRenderPass.hpp */,
+				0544EB9B2EAB4F959DFF0230 /* RenderPass.hpp */,
+				994C1E09BC094CABACAF49D2 /* UIRecordObject.hpp */,
+				FD3C0BE78A0F46D788671185 /* UISystem.hpp */,
+			);
+			name = "Header Files";
+			sourceTree = "<group>";
+		};
+		B5941CBFC50A4AB2A7D9A310 /* Header Files */ = {
+			isa = PBXGroup;
+			children = (
+				3C880EC33F6A4DDCA32E9705 /* GLTFMeshViewerScene.hpp */,
+				8658200D99AD4DACA7F97118 /* OmnidirectionalShadowMapping.hpp */,
+				80A98CE7BDFF429E81528B73 /* PBRScene.hpp */,
+				C7F82BF058D74062984329E0 /* TextureViewerScene.hpp */,
+				DA63846AFF724278B016F9D1 /* TexturedSphereScene.hpp */,
+			);
+			name = "Header Files";
+			sourceTree = "<group>";
+		};
+		BA74E245240148BA84F1940E /* MFaEngine */ = {
+			isa = PBXGroup;
+			children = (
+				E30E1FB529894D22916D4C21 /* Source Files */,
+				DC7EDE5CB3344BC5AA57E35B /* Header Files */,
+				07D98764D7D9420793028A05 /* Resources */,
+				80AC07929A754979AB9A2857 /* CMakeLists.txt */,
+				D6A3807726B9C258009DA093 /* Storyboard.storyboard */,
+			);
+			name = MFaEngine;
+			sourceTree = "<group>";
+		};
+		DC7EDE5CB3344BC5AA57E35B /* Header Files */ = {
+			isa = PBXGroup;
+			children = (
+				4DCB3A15237F4439887B94C7 /* AppDelegate.h */,
+				A263ED81C52F4CAE85045FC5 /* ViewController.h */,
+				2180C451FDEF439EA5C571FC /* Application.hpp */,
+			);
+			name = "Header Files";
+			sourceTree = "<group>";
+		};
+		E30E1FB529894D22916D4C21 /* Source Files */ = {
+			isa = PBXGroup;
+			children = (
+				5A3D29F22C72466CBE5D7495 /* AppDelegate.m */,
+				28B3EA56621E4DC28AAFE296 /* ViewController.mm */,
+				DE7808F91C5A43DBB81B7FA0 /* main.mm */,
+				1DE63E1A66C4493DA563FF46 /* Application.cpp */,
+			);
+			name = "Source Files";
+			sourceTree = "<group>";
+		};
+		E55D1AE3F1694C5BA4B7907F /* Header Files */ = {
+			isa = PBXGroup;
+			children = (
+				B5180ECAA7704D92858EA447 /* imconfig.h */,
+				2FB295CDF22D41A5A4113802 /* imgui.h */,
+				027A400329464D06BE2CB1D1 /* imgui_internal.h */,
+				730BC3C01A1C421D9A671374 /* imstb_rectpack.h */,
+				FE26AD39649B45698BA73C40 /* imstb_textedit.h */,
+				A61C2F8D358C4B5EABCEE419 /* imstb_truetype.h */,
+				DDF986E2DEB14635A14355CB /* SDL.hpp */,
+				54F3658241554714A99930F5 /* stb_image.h */,
+				8AB4EE228FB74E53A0C9162E /* stb_image_resize.h */,
+				ACB0826BDF684A8B8B73AE5C /* stb_image_write.h */,
+				290989BCA9B24066AD667A30 /* json.hpp */,
+				26D212D9B11240A6A23048C8 /* tiny_gltf_loader.h */,
+				E10D42A49598481E9260D00D /* tinyktx.h */,
+				FB68ED4763B84C90838C629A /* tiny_obj_loader.h */,
+			);
+			name = "Header Files";
+			sourceTree = "<group>";
+		};
+		EC66E11A0B8A43A18C6378D2 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				856830E138C34F499DFFA95F /* Info.plist */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+		FDD7471E6D3F42F49CB5AC21 /* CMake Rules */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = "CMake Rules";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		22EDDCFCF8564816AF0B2D28 /* Libs */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F06DF93253344D31A110E4D5 /* Build configuration list for PBXNativeTarget "Libs" */;
+			buildPhases = (
+				8A749DB6836142BCB4FF7F19 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E9E657817BDF452AB3DFEE05 /* PBXTargetDependency */,
+			);
+			name = Libs;
+			productName = Libs;
+			productReference = FE63E230E1CB4F679904C2A6 /* libLibs.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		2A4952D28B8C43829412A30D /* Tools */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 856A7EFCEF84445AB1EF802E /* Build configuration list for PBXNativeTarget "Tools" */;
+			buildPhases = (
+				B31055CC22C7436C83CF567A /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				950244530E5C470FA62CBD36 /* PBXTargetDependency */,
+			);
+			name = Tools;
+			productName = Tools;
+			productReference = 90C59F31BADF4A18B843124B /* libTools.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		89F73C4D1EA5495BAC2F7B55 /* Engine */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 89B9CE4E06294112B380057F /* Build configuration list for PBXNativeTarget "Engine" */;
+			buildPhases = (
+				58F6BBE2E8A149D28EE0D0A6 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				8BF97058D9F94ADC9420CCD3 /* PBXTargetDependency */,
+			);
+			name = Engine;
+			productName = Engine;
+			productReference = E95CF8D6770A4E55A100E996 /* libEngine.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		903BEDF232954318AF1B3654 /* Scenes */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EA47D9E39E4D40D19EAADC6C /* Build configuration list for PBXNativeTarget "Scenes" */;
+			buildPhases = (
+				F06AC663E107475BB30F1606 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				335AE692CD97451D8843E2F1 /* PBXTargetDependency */,
+			);
+			name = Scenes;
+			productName = Scenes;
+			productReference = C4F8D46701AF41DF95AAEA4F /* libScenes.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		9AA24BF539F74B20A220AF78 /* MFaEngine */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F33F998CF6194CA0BE426DDF /* Build configuration list for PBXNativeTarget "MFaEngine" */;
+			buildPhases = (
+				DE11C1A94737458DB0178E8F /* Sources */,
+				D6A3807426B9BD6A009DA093 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				8901214A46714264A31008DD /* PBXTargetDependency */,
+				DC1A3986805D4BB2BCE9DC32 /* PBXTargetDependency */,
+				2582E93D362E43699F6DFDD4 /* PBXTargetDependency */,
+				001006BC2E6944589C726658 /* PBXTargetDependency */,
+				5338EC103B0441F8969DA18F /* PBXTargetDependency */,
+			);
+			name = MFaEngine;
+			productName = MFaEngine;
+			productReference = B8DB34F4868C4EDEAD1F006E /* MFaEngine.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		279E302268EE483C9ADF9ACD /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 1250;
+				TargetAttributes = {
+					9AA24BF539F74B20A220AF78 = {
+						DevelopmentTeam = 9U43KQLKUS;
+					};
+				};
+			};
+			buildConfigurationList = 0F314DE2893E4CA78DD4E27D /* Build configuration list for PBXProject "MFaEngine" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 4C11CEF99B254A98A33D1322;
+			projectDirPath = ../;
+			projectRoot = "";
+			targets = (
+				F70573F4D45041558AC0E28E /* ALL_BUILD */,
+				89F73C4D1EA5495BAC2F7B55 /* Engine */,
+				22EDDCFCF8564816AF0B2D28 /* Libs */,
+				9AA24BF539F74B20A220AF78 /* MFaEngine */,
+				903BEDF232954318AF1B3654 /* Scenes */,
+				2A4952D28B8C43829412A30D /* Tools */,
+				6B80245798DA40C9906FDE10 /* ZERO_CHECK */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D6A3807426B9BD6A009DA093 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D6A3807626B9C1ED009DA093 /* assets in Resources */,
+				D6A3807826B9C258009DA093 /* Storyboard.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		84D486C579264FB8BA85A402 /* CMake Rules */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			name = "CMake Rules";
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "make -C /Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS -f /Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/CMakeScripts/ZERO_CHECK_cmakeRulesBuildPhase.make$CONFIGURATION OBJDIR=$(basename \"$OBJECT_FILE_DIR_normal\") all";
+			showEnvVarsInLog = 0;
+		};
+		A092156355394F98A630EEFB /* CMake Rules */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			name = "CMake Rules";
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "make -C /Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS -f /Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/CMakeScripts/ALL_BUILD_cmakeRulesBuildPhase.make$CONFIGURATION OBJDIR=$(basename \"$OBJECT_FILE_DIR_normal\") all";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		58F6BBE2E8A149D28EE0D0A6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				782046ED75334FD291857835 /* BedrockAssert.cpp in Sources */,
+				66AB25E80731450584029868 /* BedrockFileSystem.cpp in Sources */,
+				B623C63EE610434B93C59DBF /* BedrockMemory.cpp in Sources */,
+				D09CA8820282453EB02DE69E /* BedrockPath.cpp in Sources */,
+				D6479B161DE345F1BF8C2852 /* BedrockPlatforms.cpp in Sources */,
+				30BE9EEDAF5446A5BF36BB21 /* FoundationAsset.cpp in Sources */,
+				1BCAB7A8545A4B3AAE29821C /* InputManager.cpp in Sources */,
+				96CA6E7127874F28B0D213E7 /* Scene.cpp in Sources */,
+				1725FBAB88934F76A2E81507 /* FirstPersonCamera.cpp in Sources */,
+				25732569628243A0B5C45A9C /* DrawableObject.cpp in Sources */,
+				645A608C553343AABD9D5D5B /* RenderBackend.cpp in Sources */,
+				BAA784472F644F138DC1AEA6 /* RenderFrontend.cpp in Sources */,
+				405D3F79E78347058B9D3B46 /* PBRModelPipeline.cpp in Sources */,
+				08CF403D187949A68087EBDD /* PbrWithShadowPipeline.cpp in Sources */,
+				0442ADDF8D1C447C91ECED18 /* PointLightPipeline.cpp in Sources */,
+				32BFA6D6FB944030AB462A8E /* DisplayRenderPass.cpp in Sources */,
+				CC24519BA6F849DAB918D806 /* OffScreenRenderPass.cpp in Sources */,
+				3B854407BEBB418AA6536351 /* RenderPass.cpp in Sources */,
+				83A7DE5F39774D1D8982E8D4 /* UIRecordObject.cpp in Sources */,
+				C220A8F8BD8D42C2A769C261 /* UISystem.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8A749DB6836142BCB4FF7F19 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0C4F3A846CA145BFB530E19C /* imgui.cpp in Sources */,
+				2BD032F7B3E9435AA7FF0673 /* imgui_demo.cpp in Sources */,
+				66CFB807E6D0490D92AE8EDB /* imgui_draw.cpp in Sources */,
+				D00B345182DA40538646456E /* imgui_tables.cpp in Sources */,
+				5001A7CBDF164B1696CB6BBB /* imgui_widgets.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B31055CC22C7436C83CF567A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A287528B477F4D7193365E30 /* ImageUtils.cpp in Sources */,
+				A35A8032C6B04965AF723E8B /* Importer.cpp in Sources */,
+				BCB8256041A44223934BE74A /* ShapeGenerator.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE11C1A94737458DB0178E8F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				692D03A956D64B92A997A695 /* AppDelegate.m in Sources */,
+				3AA33ABB4B5B486BBDB888CB /* ViewController.mm in Sources */,
+				7B635151F53445BCABDE0922 /* main.mm in Sources */,
+				B00EE6BB0AFE4FDB89898777 /* Application.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F06AC663E107475BB30F1606 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AF29E01759BC47B6B730E7E8 /* GLTFMeshViewerScene.cpp in Sources */,
+				7F16B753366F4F8EB6EF38E9 /* OmnidirectionalShadowMapping.cpp in Sources */,
+				B2D9FE4155CE4E57BB9279B7 /* PBRScene.cpp in Sources */,
+				0683F6AA5332457F9036356E /* TextureViewerScene.cpp in Sources */,
+				2A76BD66CD2949C199E68F73 /* TexturedSphereScene.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		001006BC2E6944589C726658 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 89F73C4D1EA5495BAC2F7B55 /* Engine */;
+			targetProxy = F6A9A69D04C64D54A99595E0 /* PBXContainerItemProxy */;
+		};
+		2582E93D362E43699F6DFDD4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2A4952D28B8C43829412A30D /* Tools */;
+			targetProxy = 782AAFD87742438D8C111DF8 /* PBXContainerItemProxy */;
+		};
+		335AE692CD97451D8843E2F1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6B80245798DA40C9906FDE10 /* ZERO_CHECK */;
+			targetProxy = BA4371C1CE93469FB5D72DD0 /* PBXContainerItemProxy */;
+		};
+		337A4547B0E645AE80441A2A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6B80245798DA40C9906FDE10 /* ZERO_CHECK */;
+			targetProxy = 9C0922E4BFF243FBA085C3CE /* PBXContainerItemProxy */;
+		};
+		5338EC103B0441F8969DA18F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6B80245798DA40C9906FDE10 /* ZERO_CHECK */;
+			targetProxy = 4E27C0AE6A124D4B9D222A65 /* PBXContainerItemProxy */;
+		};
+		5648A677FF42448C96469DAA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 903BEDF232954318AF1B3654 /* Scenes */;
+			targetProxy = 2F5240FC138941A7BB70ED8E /* PBXContainerItemProxy */;
+		};
+		8901214A46714264A31008DD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 22EDDCFCF8564816AF0B2D28 /* Libs */;
+			targetProxy = 3928C9D42BB4434D90FF5DF4 /* PBXContainerItemProxy */;
+		};
+		8BF97058D9F94ADC9420CCD3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6B80245798DA40C9906FDE10 /* ZERO_CHECK */;
+			targetProxy = 569A0D36F63A4012B82E0790 /* PBXContainerItemProxy */;
+		};
+		950244530E5C470FA62CBD36 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6B80245798DA40C9906FDE10 /* ZERO_CHECK */;
+			targetProxy = 5F4B20A98861461F912C4C85 /* PBXContainerItemProxy */;
+		};
+		9E75F8325CD94AC7B4D2098C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2A4952D28B8C43829412A30D /* Tools */;
+			targetProxy = B0FF178E3CE1475DA53DC4E2 /* PBXContainerItemProxy */;
+		};
+		C08CBC87963A40A5A97C8BA6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 89F73C4D1EA5495BAC2F7B55 /* Engine */;
+			targetProxy = B5D7480DFB094A41A2409ACD /* PBXContainerItemProxy */;
+		};
+		DC1A3986805D4BB2BCE9DC32 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 903BEDF232954318AF1B3654 /* Scenes */;
+			targetProxy = EDAC58CD323B4C16A43A9AE1 /* PBXContainerItemProxy */;
+		};
+		E5E3F1153DC24EDA888B2473 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 22EDDCFCF8564816AF0B2D28 /* Libs */;
+			targetProxy = A2A05C2884BC42E7A81BDC13 /* PBXContainerItemProxy */;
+		};
+		E9E657817BDF452AB3DFEE05 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6B80245798DA40C9906FDE10 /* ZERO_CHECK */;
+			targetProxy = 67B15C3782A94145AF3E2EAE /* PBXContainerItemProxy */;
+		};
+		F771C29E8AAB49A9A3B3861E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9AA24BF539F74B20A220AF78 /* MFaEngine */;
+			targetProxy = 099792E5E49049AFB079526A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0818A6A8D5F444ECAE17852E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				COMBINE_HIDPI_IMAGES = YES;
+				EXECUTABLE_PREFIX = lib;
+				EXECUTABLE_SUFFIX = .a;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					_DEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = (
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include/glm",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/src",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include",
+				);
+				INSTALL_PATH = "";
+				LIBRARY_STYLE = STATIC;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-fobjc-arc",
+					"-ObjC++",
+					"'-std=gnu++2a'",
+				);
+				OTHER_LIBTOOLFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = Tools;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = Debug;
+		};
+		260F032997B245E9AAD9A739 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				COMBINE_HIDPI_IMAGES = YES;
+				EXECUTABLE_PREFIX = lib;
+				EXECUTABLE_SUFFIX = .a;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					_DEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = (
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include/glm",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/src",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include",
+				);
+				INSTALL_PATH = "";
+				LIBRARY_STYLE = STATIC;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-fobjc-arc",
+					"-ObjC++",
+					"'-std=gnu++2a'",
+				);
+				OTHER_LIBTOOLFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = Scenes;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = Debug;
+		};
+		2F8E3A0205394B76A1405F76 /* MinSizeRel */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				"ARCHS[sdk=iphoneos*]" = arm64;
+				"ARCHS[sdk=iphonesimulator*]" = x86_64;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGNING_REQUIRED = NO;
+				ENABLE_BITCODE = NO;
+				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				ONLY_ACTIVE_ARCH = NO;
+				SDKROOT = /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS14.5.sdk;
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/build";
+				"VALID_ARCHS[sdk=iphoneos*]" = arm64;
+				"VALID_ARCHS[sdk=iphonesimulator*]" = x86_64;
+			};
+			name = MinSizeRel;
+		};
+		34B7EE1247DD4A85BA0922B9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = "'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'";
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				INSTALL_PATH = "";
+				OTHER_LDFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = ZERO_CHECK;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = Release;
+		};
+		44539BE88F1C4072BCD911C4 /* MinSizeRel */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				COMBINE_HIDPI_IMAGES = YES;
+				EXECUTABLE_PREFIX = lib;
+				EXECUTABLE_SUFFIX = .a;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = s;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					_DEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = (
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include/glm",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/src",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include",
+				);
+				INSTALL_PATH = "";
+				LIBRARY_STYLE = STATIC;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-fobjc-arc",
+					"-ObjC++",
+					"-DNDEBUG",
+					"'-std=gnu++2a'",
+				);
+				OTHER_LIBTOOLFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = Scenes;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = MinSizeRel;
+		};
+		508D2B7772B146BF88C0CA3A /* MinSizeRel */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = "'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'";
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				INSTALL_PATH = "";
+				OTHER_LDFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = ZERO_CHECK;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = MinSizeRel;
+		};
+		5CA6C84BF3644DE6B6DD5DAF /* MinSizeRel */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = "'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'";
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				INSTALL_PATH = "";
+				OTHER_LDFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = ALL_BUILD;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = MinSizeRel;
+		};
+		66A8F3762B184B0DA69AF448 /* MinSizeRel */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				COMBINE_HIDPI_IMAGES = YES;
+				EXECUTABLE_PREFIX = lib;
+				EXECUTABLE_SUFFIX = .a;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = s;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					_DEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = (
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include/glm",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/src",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include",
+				);
+				INSTALL_PATH = "";
+				LIBRARY_STYLE = STATIC;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-fobjc-arc",
+					"-ObjC++",
+					"-DNDEBUG",
+					"'-std=gnu++2a'",
+				);
+				OTHER_LIBTOOLFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = Engine;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = MinSizeRel;
+		};
+		6D538210A2714C329447C0A0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				COMBINE_HIDPI_IMAGES = YES;
+				EXECUTABLE_PREFIX = lib;
+				EXECUTABLE_SUFFIX = .a;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					_DEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = (
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include/glm",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/src",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include",
+				);
+				INSTALL_PATH = "";
+				LIBRARY_STYLE = STATIC;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-fobjc-arc",
+					"-ObjC++",
+					"-DNDEBUG",
+					"'-std=gnu++2a'",
+				);
+				OTHER_LIBTOOLFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = Engine;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = Release;
+		};
+		7878D43FE1A8443FB712A0FE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = "'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'";
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				INSTALL_PATH = "";
+				OTHER_LDFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = ZERO_CHECK;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = Debug;
+		};
+		82FD13FD2A524FDB9079BE14 /* RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				COMBINE_HIDPI_IMAGES = YES;
+				EXECUTABLE_PREFIX = lib;
+				EXECUTABLE_SUFFIX = .a;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 2;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					_DEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = (
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include/glm",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/src",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include",
+				);
+				INSTALL_PATH = "";
+				LIBRARY_STYLE = STATIC;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-fobjc-arc",
+					"-ObjC++",
+					"-DNDEBUG",
+					"'-std=gnu++2a'",
+				);
+				OTHER_LIBTOOLFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = Engine;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = RelWithDebInfo;
+		};
+		83D8D6098ADB4A28B16C5FF4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				"ARCHS[sdk=iphoneos*]" = arm64;
+				"ARCHS[sdk=iphonesimulator*]" = x86_64;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGNING_REQUIRED = NO;
+				ENABLE_BITCODE = NO;
+				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				ONLY_ACTIVE_ARCH = NO;
+				SDKROOT = /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS14.5.sdk;
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/build";
+				"VALID_ARCHS[sdk=iphoneos*]" = arm64;
+				"VALID_ARCHS[sdk=iphonesimulator*]" = x86_64;
+			};
+			name = Release;
+		};
+		841A98B913B34E7D88C098F3 /* MinSizeRel */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 9U43KQLKUS;
+				EXECUTABLE_PREFIX = "";
+				EXECUTABLE_SUFFIX = "";
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = s;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					_DEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = (
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include/glm",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/ios",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/src",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include",
+				);
+				INFOPLIST_FILE = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/CMakeFiles/MFaEngine.dir/Info.plist";
+				INSTALL_PATH = "";
+				LIBRARY_SEARCH_PATHS = "";
+				MARKETING_VERSION = 1.0;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CFLAGS = "    -DNDEBUG  ";
+				OTHER_CPLUSPLUSFLAGS = (
+					"-fobjc-arc",
+					"-ObjC++",
+					"-DNDEBUG",
+					"'-std=gnu++2a'",
+				);
+				OTHER_LDFLAGS = (
+					"-Wl,-search_paths_first",
+					"-Wl,-headerpad_max_install_names",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/MinSizeRel${EFFECTIVE_PLATFORM_NAME}/libScenes.a",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/MinSizeRel${EFFECTIVE_PLATFORM_NAME}/libTools.a",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/MinSizeRel${EFFECTIVE_PLATFORM_NAME}/libEngine.a",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/MinSizeRel${EFFECTIVE_PLATFORM_NAME}/libLibs.a",
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					UIKit,
+					"-framework",
+					Metal,
+					"-framework",
+					QuartzCore,
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/ios/libMoltenVK.a",
+				);
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = MFaEngine;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = MinSizeRel;
+		};
+		87E1A5EF76C2440686739FA4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = "'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'";
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				INSTALL_PATH = "";
+				OTHER_LDFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = ALL_BUILD;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = Debug;
+		};
+		8BAE447CB45F45FC9EAA1F7F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 9U43KQLKUS;
+				EXECUTABLE_PREFIX = "";
+				EXECUTABLE_SUFFIX = "";
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					_DEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = (
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include/glm",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/ios",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/src",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include",
+				);
+				INFOPLIST_FILE = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/CMakeFiles/MFaEngine.dir/Info.plist";
+				INSTALL_PATH = "";
+				LIBRARY_SEARCH_PATHS = "";
+				MARKETING_VERSION = 1.0;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CFLAGS = "    ";
+				OTHER_CPLUSPLUSFLAGS = (
+					"-fobjc-arc",
+					"-ObjC++",
+					"'-std=gnu++2a'",
+				);
+				OTHER_LDFLAGS = (
+					"-Wl,-search_paths_first",
+					"-Wl,-headerpad_max_install_names",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/Debug${EFFECTIVE_PLATFORM_NAME}/libScenes.a",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/Debug${EFFECTIVE_PLATFORM_NAME}/libTools.a",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/Debug${EFFECTIVE_PLATFORM_NAME}/libEngine.a",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/Debug${EFFECTIVE_PLATFORM_NAME}/libLibs.a",
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					UIKit,
+					"-framework",
+					Metal,
+					"-framework",
+					QuartzCore,
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/ios/libMoltenVK.a",
+				);
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = MFaEngine;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = Debug;
+		};
+		9A62496613564A47A3128796 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 9U43KQLKUS;
+				EXECUTABLE_PREFIX = "";
+				EXECUTABLE_SUFFIX = "";
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					_DEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = (
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include/glm",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/ios",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/src",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include",
+				);
+				INFOPLIST_FILE = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/CMakeFiles/MFaEngine.dir/Info.plist";
+				INSTALL_PATH = "";
+				LIBRARY_SEARCH_PATHS = "";
+				MARKETING_VERSION = 1.0;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CFLAGS = "    -DNDEBUG  ";
+				OTHER_CPLUSPLUSFLAGS = (
+					"-fobjc-arc",
+					"-ObjC++",
+					"-DNDEBUG",
+					"'-std=gnu++2a'",
+				);
+				OTHER_LDFLAGS = (
+					"-Wl,-search_paths_first",
+					"-Wl,-headerpad_max_install_names",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/Release${EFFECTIVE_PLATFORM_NAME}/libScenes.a",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/Release${EFFECTIVE_PLATFORM_NAME}/libTools.a",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/Release${EFFECTIVE_PLATFORM_NAME}/libEngine.a",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/Release${EFFECTIVE_PLATFORM_NAME}/libLibs.a",
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					UIKit,
+					"-framework",
+					Metal,
+					"-framework",
+					QuartzCore,
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/ios/libMoltenVK.a",
+				);
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = MFaEngine;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = Release;
+		};
+		9AAA498BC3D94EEFB394B2F8 /* MinSizeRel */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				COMBINE_HIDPI_IMAGES = YES;
+				EXECUTABLE_PREFIX = lib;
+				EXECUTABLE_SUFFIX = .a;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = s;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					_DEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = (
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include/glm",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/src",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include",
+				);
+				INSTALL_PATH = "";
+				LIBRARY_STYLE = STATIC;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-fobjc-arc",
+					"-ObjC++",
+					"-DNDEBUG",
+					"'-std=gnu++2a'",
+				);
+				OTHER_LIBTOOLFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = Libs;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = MinSizeRel;
+		};
+		9FAA8AFB806442FB821EE765 /* RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = "'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'";
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				INSTALL_PATH = "";
+				OTHER_LDFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = ALL_BUILD;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = RelWithDebInfo;
+		};
+		A0A0225D372044299ACF1C88 /* RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = "'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'";
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				INSTALL_PATH = "";
+				OTHER_LDFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = ZERO_CHECK;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = RelWithDebInfo;
+		};
+		A7FAEAD19E7D49098B94A726 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				COMBINE_HIDPI_IMAGES = YES;
+				EXECUTABLE_PREFIX = lib;
+				EXECUTABLE_SUFFIX = .a;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					_DEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = (
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include/glm",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/src",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include",
+				);
+				INSTALL_PATH = "";
+				LIBRARY_STYLE = STATIC;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-fobjc-arc",
+					"-ObjC++",
+					"'-std=gnu++2a'",
+				);
+				OTHER_LIBTOOLFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = Libs;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = Debug;
+		};
+		AA691AACEA4D4B63B43E2818 /* RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				COMBINE_HIDPI_IMAGES = YES;
+				EXECUTABLE_PREFIX = lib;
+				EXECUTABLE_SUFFIX = .a;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 2;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					_DEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = (
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include/glm",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/src",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include",
+				);
+				INSTALL_PATH = "";
+				LIBRARY_STYLE = STATIC;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-fobjc-arc",
+					"-ObjC++",
+					"-DNDEBUG",
+					"'-std=gnu++2a'",
+				);
+				OTHER_LIBTOOLFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = Scenes;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = RelWithDebInfo;
+		};
+		B192CF7260FF491F96D8D55E /* MinSizeRel */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				COMBINE_HIDPI_IMAGES = YES;
+				EXECUTABLE_PREFIX = lib;
+				EXECUTABLE_SUFFIX = .a;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = s;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					_DEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = (
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include/glm",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/src",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include",
+				);
+				INSTALL_PATH = "";
+				LIBRARY_STYLE = STATIC;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-fobjc-arc",
+					"-ObjC++",
+					"-DNDEBUG",
+					"'-std=gnu++2a'",
+				);
+				OTHER_LIBTOOLFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = Tools;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = MinSizeRel;
+		};
+		BE7DB2AE6E89471CA6CC0DF6 /* RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = 9U43KQLKUS;
+				EXECUTABLE_PREFIX = "";
+				EXECUTABLE_SUFFIX = "";
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 2;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					_DEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = (
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include/glm",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/ios",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/src",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include",
+				);
+				INFOPLIST_FILE = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/CMakeFiles/MFaEngine.dir/Info.plist";
+				INSTALL_PATH = "";
+				LIBRARY_SEARCH_PATHS = "";
+				MARKETING_VERSION = 1.0;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CFLAGS = "       -DNDEBUG  ";
+				OTHER_CPLUSPLUSFLAGS = (
+					"-fobjc-arc",
+					"-ObjC++",
+					"-DNDEBUG",
+					"'-std=gnu++2a'",
+				);
+				OTHER_LDFLAGS = (
+					"-Wl,-search_paths_first",
+					"-Wl,-headerpad_max_install_names",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/RelWithDebInfo${EFFECTIVE_PLATFORM_NAME}/libScenes.a",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/RelWithDebInfo${EFFECTIVE_PLATFORM_NAME}/libTools.a",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/RelWithDebInfo${EFFECTIVE_PLATFORM_NAME}/libEngine.a",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/RelWithDebInfo${EFFECTIVE_PLATFORM_NAME}/libLibs.a",
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					UIKit,
+					"-framework",
+					Metal,
+					"-framework",
+					QuartzCore,
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/ios/libMoltenVK.a",
+				);
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = MFaEngine;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = RelWithDebInfo;
+		};
+		BE84C551B62B44B4BF716435 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				"ARCHS[sdk=iphoneos*]" = arm64;
+				"ARCHS[sdk=iphonesimulator*]" = x86_64;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGNING_REQUIRED = NO;
+				ENABLE_BITCODE = NO;
+				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				ONLY_ACTIVE_ARCH = NO;
+				SDKROOT = /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS14.5.sdk;
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/build";
+				"VALID_ARCHS[sdk=iphoneos*]" = arm64;
+				"VALID_ARCHS[sdk=iphonesimulator*]" = x86_64;
+			};
+			name = Debug;
+		};
+		BFF5E87260264EAE84E79E8E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				COMBINE_HIDPI_IMAGES = YES;
+				EXECUTABLE_PREFIX = lib;
+				EXECUTABLE_SUFFIX = .a;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					_DEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = (
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include/glm",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/src",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include",
+				);
+				INSTALL_PATH = "";
+				LIBRARY_STYLE = STATIC;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-fobjc-arc",
+					"-ObjC++",
+					"-DNDEBUG",
+					"'-std=gnu++2a'",
+				);
+				OTHER_LIBTOOLFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = Scenes;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = Release;
+		};
+		C4E246F9C4F943AEAC9E0C65 /* RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				COMBINE_HIDPI_IMAGES = YES;
+				EXECUTABLE_PREFIX = lib;
+				EXECUTABLE_SUFFIX = .a;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 2;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					_DEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = (
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include/glm",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/src",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include",
+				);
+				INSTALL_PATH = "";
+				LIBRARY_STYLE = STATIC;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-fobjc-arc",
+					"-ObjC++",
+					"-DNDEBUG",
+					"'-std=gnu++2a'",
+				);
+				OTHER_LIBTOOLFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = Libs;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = RelWithDebInfo;
+		};
+		DEB635BC4DCE4615AFA2D44E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				COMBINE_HIDPI_IMAGES = YES;
+				EXECUTABLE_PREFIX = lib;
+				EXECUTABLE_SUFFIX = .a;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					_DEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = (
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include/glm",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/src",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include",
+				);
+				INSTALL_PATH = "";
+				LIBRARY_STYLE = STATIC;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-fobjc-arc",
+					"-ObjC++",
+					"-DNDEBUG",
+					"'-std=gnu++2a'",
+				);
+				OTHER_LIBTOOLFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = Libs;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = Release;
+		};
+		E5D42AD8D96F49DFBCAC28B4 /* RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				"ARCHS[sdk=iphoneos*]" = arm64;
+				"ARCHS[sdk=iphonesimulator*]" = x86_64;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGNING_REQUIRED = NO;
+				ENABLE_BITCODE = NO;
+				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				ONLY_ACTIVE_ARCH = NO;
+				SDKROOT = /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS14.5.sdk;
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS/build";
+				"VALID_ARCHS[sdk=iphoneos*]" = arm64;
+				"VALID_ARCHS[sdk=iphonesimulator*]" = x86_64;
+			};
+			name = RelWithDebInfo;
+		};
+		E8FD075DA8DB43EFBDB8B5C2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				COMBINE_HIDPI_IMAGES = YES;
+				EXECUTABLE_PREFIX = lib;
+				EXECUTABLE_SUFFIX = .a;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					_DEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = (
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include/glm",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/src",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include",
+				);
+				INSTALL_PATH = "";
+				LIBRARY_STYLE = STATIC;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-fobjc-arc",
+					"-ObjC++",
+					"'-std=gnu++2a'",
+				);
+				OTHER_LIBTOOLFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = Engine;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = Debug;
+		};
+		ECA0A55345BE4BADBDBE210F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = "'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'";
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				INSTALL_PATH = "";
+				OTHER_LDFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = ALL_BUILD;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = Release;
+		};
+		F6473925CBFF4568A72DD783 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				COMBINE_HIDPI_IMAGES = YES;
+				EXECUTABLE_PREFIX = lib;
+				EXECUTABLE_SUFFIX = .a;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					_DEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = (
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include/glm",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/src",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include",
+				);
+				INSTALL_PATH = "";
+				LIBRARY_STYLE = STATIC;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-fobjc-arc",
+					"-ObjC++",
+					"-DNDEBUG",
+					"'-std=gnu++2a'",
+				);
+				OTHER_LIBTOOLFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = Tools;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = Release;
+		};
+		F84E65627B014B899A2DD059 /* RelWithDebInfo */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				COMBINE_HIDPI_IMAGES = YES;
+				EXECUTABLE_PREFIX = lib;
+				EXECUTABLE_SUFFIX = .a;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				GCC_OPTIMIZATION_LEVEL = 2;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"'CMAKE_INTDIR=\"$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)\"'",
+					_DEBUG,
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				HEADER_SEARCH_PATHS = (
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include/glm",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/src",
+					"/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/libs/include",
+				);
+				INSTALL_PATH = "";
+				LIBRARY_STYLE = STATIC;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-fobjc-arc",
+					"-ObjC++",
+					"-DNDEBUG",
+					"'-std=gnu++2a'",
+				);
+				OTHER_LIBTOOLFLAGS = " ";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = Tools;
+				SECTORDER_FLAGS = "";
+				SYMROOT = "/Users/mohammad.fakhreddin/Documents/c-plus-plus-projects/vulkan-engine/buildIOS";
+				USE_HEADERMAP = NO;
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+					"$(inherited)",
+				);
+			};
+			name = RelWithDebInfo;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0F314DE2893E4CA78DD4E27D /* Build configuration list for PBXProject "MFaEngine" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BE84C551B62B44B4BF716435 /* Debug */,
+				83D8D6098ADB4A28B16C5FF4 /* Release */,
+				2F8E3A0205394B76A1405F76 /* MinSizeRel */,
+				E5D42AD8D96F49DFBCAC28B4 /* RelWithDebInfo */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		4E599F54C8164B19A1935FA0 /* Build configuration list for PBXAggregateTarget "ZERO_CHECK" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7878D43FE1A8443FB712A0FE /* Debug */,
+				34B7EE1247DD4A85BA0922B9 /* Release */,
+				508D2B7772B146BF88C0CA3A /* MinSizeRel */,
+				A0A0225D372044299ACF1C88 /* RelWithDebInfo */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		856A7EFCEF84445AB1EF802E /* Build configuration list for PBXNativeTarget "Tools" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0818A6A8D5F444ECAE17852E /* Debug */,
+				F6473925CBFF4568A72DD783 /* Release */,
+				B192CF7260FF491F96D8D55E /* MinSizeRel */,
+				F84E65627B014B899A2DD059 /* RelWithDebInfo */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		89B9CE4E06294112B380057F /* Build configuration list for PBXNativeTarget "Engine" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E8FD075DA8DB43EFBDB8B5C2 /* Debug */,
+				6D538210A2714C329447C0A0 /* Release */,
+				66A8F3762B184B0DA69AF448 /* MinSizeRel */,
+				82FD13FD2A524FDB9079BE14 /* RelWithDebInfo */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		CF7C834BA6524B96BD2EAF31 /* Build configuration list for PBXAggregateTarget "ALL_BUILD" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				87E1A5EF76C2440686739FA4 /* Debug */,
+				ECA0A55345BE4BADBDBE210F /* Release */,
+				5CA6C84BF3644DE6B6DD5DAF /* MinSizeRel */,
+				9FAA8AFB806442FB821EE765 /* RelWithDebInfo */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		EA47D9E39E4D40D19EAADC6C /* Build configuration list for PBXNativeTarget "Scenes" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				260F032997B245E9AAD9A739 /* Debug */,
+				BFF5E87260264EAE84E79E8E /* Release */,
+				44539BE88F1C4072BCD911C4 /* MinSizeRel */,
+				AA691AACEA4D4B63B43E2818 /* RelWithDebInfo */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F06DF93253344D31A110E4D5 /* Build configuration list for PBXNativeTarget "Libs" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A7FAEAD19E7D49098B94A726 /* Debug */,
+				DEB635BC4DCE4615AFA2D44E /* Release */,
+				9AAA498BC3D94EEFB394B2F8 /* MinSizeRel */,
+				C4E246F9C4F943AEAC9E0C65 /* RelWithDebInfo */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F33F998CF6194CA0BE426DDF /* Build configuration list for PBXNativeTarget "MFaEngine" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8BAE447CB45F45FC9EAA1F7F /* Debug */,
+				9A62496613564A47A3128796 /* Release */,
+				841A98B913B34E7D88C098F3 /* MinSizeRel */,
+				BE7DB2AE6E89471CA6CC0DF6 /* RelWithDebInfo */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 279E302268EE483C9ADF9ACD /* Project object */;
+}

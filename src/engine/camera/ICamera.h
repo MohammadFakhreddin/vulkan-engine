@@ -22,12 +22,12 @@ public:
 
     virtual void onResize() = 0;
 
-    virtual void getProjection(float outProjectionMatrix[16]) = 0;
+    virtual void GetProjection(float outProjectionMatrix[16]) = 0;
 
     [[nodiscard]]
-    virtual Matrix4X4Float const & getProjection() const = 0;
+    virtual Matrix4X4Float const & GetProjection() const = 0;
 
-    virtual void getTransform(float outTransformMatrix[16]) = 0;
+    virtual void GetTransform(float outTransformMatrix[16]) = 0;
 
     [[nodiscard]]
     virtual Matrix4X4Float const & getTransform() const = 0;
@@ -36,7 +36,9 @@ public:
 
     virtual void forceRotation(float eulerAngles[3]) = 0;
 
-    virtual void onUI() {};
+    virtual void EnableUI(char const * windowName, bool * isVisible) {}
+
+    virtual void DisableUI() {};
 
 };
 

@@ -5,6 +5,7 @@
 #include "tools/Importer.hpp"
 #include "tools/ShapeGenerator.hpp"
 #include "engine/BedrockPath.hpp"
+#include "engine/render_system/render_passes/DisplayRenderPass.hpp"
 
 namespace RF = MFA::RenderFrontend;
 namespace RB = MFA::RenderBackend;
@@ -13,6 +14,11 @@ namespace AS = MFA::AssetSystem;
 namespace SG = MFA::ShapeGenerator;
 namespace UI = MFA::UISystem;
 namespace Path = MFA::Path;
+
+TextureViewerScene::TextureViewerScene()
+    : mRecordObject([this]()->void{OnUI();})
+{}
+
 
 void TextureViewerScene::Init() {
 
@@ -49,33 +55,38 @@ void TextureViewerScene::Init() {
     createModel();
 
     MFA_ASSERT(mGpuModel.textures.size() == 1);
-    mTotalMipCount = mGpuModel.textures[0].cpu_texture()->GetMipCount();
+    mTotalMipCount = mGpuModel.textures[0].cpuTexture()->GetMipCount();
 
-    // TODO We need nearest and linear filters
-    mSamplerGroup = RF::CreateSampler(RB::CreateSamplerParams {
-        .min_lod = 0.0f,
-        .max_lod = static_cast<float>(mTotalMipCount),
-        .anisotropy_enabled = true,
-        .max_anisotropy = 16.0f
-    });
+    {// Create sampler
+        RB::CreateSamplerParams params {};
+        params.min_lod = 0.0f;
+        params.max_lod = static_cast<float>(mTotalMipCount);
+        params.anisotropy_enabled = true;
+        params.max_anisotropy = 16.0f;
+        // TODO We need nearest and linear filters
+        mSamplerGroup = RF::CreateSampler(params);
+    }
 
     createDescriptorSetLayout();
     
     createDrawPipeline(static_cast<uint8_t>(shaders.size()), shaders.data());
 
     createDrawableObject();
+
+    mRecordObject.Enable();
 }
 
 void TextureViewerScene::Shutdown() {
+    mRecordObject.Disable();
     RF::DestroyDrawPipeline(mDrawPipeline);
     RF::DestroyDescriptorSetLayout(mDescriptorSetLayout);
     RF::DestroySampler(mSamplerGroup);
     RF::DestroyGpuModel(mGpuModel);
     Importer::FreeModel(&mGpuModel.model);
-    mDrawableObject->deleteUniformBuffers();
+    mDrawableObject->DeleteUniformBuffers();
 }
 
-void TextureViewerScene::OnDraw(
+void TextureViewerScene::OnRender(
     float deltaTimeInSec, 
     RF::DrawPass & drawPass
 ) {
@@ -114,8 +125,9 @@ void TextureViewerScene::OnDraw(
         ::memcpy(mViewProjectionBuffer.view, transformMat.cells, sizeof(transformMat.cells));
         static_assert(sizeof(transformMat.cells) == sizeof(mViewProjectionBuffer.view));
 
-        mDrawableObject->updateUniformBuffer(
+        mDrawableObject->UpdateUniformBuffer(
             "viewProjection",
+            0,
             MFA::CBlobAliasOf(mViewProjectionBuffer)
         );
     }
@@ -124,20 +136,24 @@ void TextureViewerScene::OnDraw(
     {
         mImageOptionsBuffer.mipLevel = static_cast<float>(mMipLevel);
 
-        mDrawableObject->updateUniformBuffer(
+        mDrawableObject->UpdateUniformBuffer(
             "imageOptions",
+            0,
             MFA::CBlobAliasOf(mImageOptionsBuffer)
         );
     }
 
-    mDrawableObject->update(deltaTimeInSec);
-    mDrawableObject->draw(drawPass);
+    mDrawableObject->Update(deltaTimeInSec, drawPass);
+    mDrawableObject->Draw(drawPass, [&drawPass, this](AS::MeshPrimitive const & primitive)-> void {
+        RF::BindDescriptorSet(
+            drawPass, 
+            mDrawableObject->GetDescriptorSetGroup("DisplayPipeline")->descriptorSets[0]
+        );
+    });
 }
 
-void TextureViewerScene::OnUI(
-    float deltaTimeInSec, 
-    RF::DrawPass & draw_pass
-) {
+
+void TextureViewerScene::OnUI() {
     static constexpr float ItemWidth = 500;
     UI::BeginWindow("Object viewer");
     UI::SetNextItemWidth(ItemWidth);
@@ -165,30 +181,34 @@ void TextureViewerScene::OnResize() {
 
 void TextureViewerScene::createDescriptorSetLayout() {
     std::vector<VkDescriptorSetLayoutBinding> bindings {};
-    // ViewProjectionBuffer 
-    bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<uint32_t>(bindings.size()),
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 1,
-        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-        .pImmutableSamplers = nullptr, // Optional
-    });
-    // Texture
-    bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<uint32_t>(bindings.size()),
-        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = 1,
-        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-        .pImmutableSamplers = nullptr,
-    });
-    // ImageOptions
-    bindings.emplace_back(VkDescriptorSetLayoutBinding {
-        .binding = static_cast<uint32_t>(bindings.size()),
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .descriptorCount = 1,
-        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-        .pImmutableSamplers = nullptr, // Optional
-    });
+    {// ViewProjectionBuffer
+        VkDescriptorSetLayoutBinding layoutBinding {};
+        layoutBinding.binding = static_cast<uint32_t>(bindings.size());
+        layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        layoutBinding.descriptorCount = 1;
+        layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+        bindings.emplace_back(layoutBinding);
+    }
+    {// Texture
+        VkDescriptorSetLayoutBinding layoutBinding {};
+        layoutBinding.binding = static_cast<uint32_t>(bindings.size());
+        layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        layoutBinding.descriptorCount = 1;
+        layoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        layoutBinding.pImmutableSamplers = nullptr;
+
+        bindings.emplace_back(layoutBinding);
+    }
+    {// ImageOptions
+        VkDescriptorSetLayoutBinding layoutBinding {};
+        layoutBinding.binding = static_cast<uint32_t>(bindings.size());
+        layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        layoutBinding.descriptorCount = 1;
+        layoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+        bindings.emplace_back(layoutBinding);
+    }
     mDescriptorSetLayout = RF::CreateDescriptorSetLayout(
         static_cast<uint8_t>(bindings.size()),
         bindings.data()
@@ -199,29 +219,30 @@ void TextureViewerScene::createDrawPipeline(
     uint8_t const gpuShaderCount, 
     MFA::RenderBackend::GpuShader * gpuShaders
 ) {
-    VkVertexInputBindingDescription const vertexInputBindingDescription {
-        .binding = 0,
-        .stride = sizeof(AS::MeshVertex),
-        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-    };
-
+    VkVertexInputBindingDescription vertexInputBindingDescription {};
+    vertexInputBindingDescription.binding = 0;
+    vertexInputBindingDescription.stride = sizeof(AS::MeshVertex);
+    vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    
     std::vector<VkVertexInputAttributeDescription> vkVertexInputAttributeDescriptions {};
-    // Position
-    vkVertexInputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = static_cast<uint32_t>(vkVertexInputAttributeDescriptions.size()),
-        .binding = 0,
-        .format = VK_FORMAT_R32G32B32_SFLOAT,
-        .offset = offsetof(AS::MeshVertex, position),   
-    });
-    // BaseColor
-    vkVertexInputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
-        .location = static_cast<uint32_t>(vkVertexInputAttributeDescriptions.size()),
-        .binding = 0,
-        .format = VK_FORMAT_R32G32_SFLOAT,
-        .offset = offsetof(AS::MeshVertex, baseColorUV),   
-    });
-
+    {// Position
+        VkVertexInputAttributeDescription attributeDescription {};
+        attributeDescription.location = static_cast<uint32_t>(vkVertexInputAttributeDescriptions.size());
+        attributeDescription.binding = 0;
+        attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+        attributeDescription.offset = offsetof(AS::MeshVertex, position);
+        vkVertexInputAttributeDescriptions.emplace_back(attributeDescription);
+    }
+    {// BaseColor
+        VkVertexInputAttributeDescription attributeDescription {};
+        attributeDescription.location = static_cast<uint32_t>(vkVertexInputAttributeDescriptions.size());
+        attributeDescription.binding = 0;
+        attributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
+        attributeDescription.offset = offsetof(AS::MeshVertex, baseColorUV);   
+        vkVertexInputAttributeDescriptions.emplace_back(attributeDescription);
+    }
     mDrawPipeline = RF::CreateBasicDrawPipeline(
+        RF::GetDisplayRenderPass()->GetVkRenderPass(),
         gpuShaderCount, 
         gpuShaders,
         1,
@@ -236,96 +257,105 @@ void TextureViewerScene::createModel() {
     auto cpuModel = SG::Sheet();
 
     //auto cpuTexture = Importer::ImportImage("../assets/models/sponza/11490520546946913238.ktx");
+    Importer::ImportTextureOptions options {};
+    options.tryToGenerateMipmaps = true;
     auto cpuTexture = Importer::ImportImage(
         Path::Asset("models/FlightHelmet/glTF/FlightHelmet_baseColor3.png").c_str(), 
-        Importer::ImportTextureOptions {
-            .tryToGenerateMipmaps = true
-        }
+        options
     );
     MFA_ASSERT(cpuTexture.isValid());
 
     cpuModel.textures.emplace_back(cpuTexture);
-    MFA_ASSERT(cpuModel.mesh.getSubMeshCount() == 1);
-    MFA_ASSERT(cpuModel.mesh.getSubMeshByIndex(0).primitives.size() == 1);
-    cpuModel.mesh.getSubMeshByIndex(0).primitives[0].baseColorTextureIndex = 0;
+    MFA_ASSERT(cpuModel.mesh.GetSubMeshCount() == 1);
+    MFA_ASSERT(cpuModel.mesh.GetSubMeshByIndex(0).primitives.size() == 1);
+    cpuModel.mesh.GetSubMeshByIndex(0).primitives[0].baseColorTextureIndex = 0;
 
     mGpuModel = MFA::RenderFrontend::CreateGpuModel(cpuModel);
 }
 
 void TextureViewerScene::createDrawableObject() {
     auto const & cpuModel = mGpuModel.model;
-    mDrawableObject = std::make_unique<MFA::DrawableObject> (
-        mGpuModel,
-        mDescriptorSetLayout
-    );
+    mDrawableObject = std::make_unique<MFA::DrawableObject> (mGpuModel);
 
-    auto const * viewProjectionBuffer = mDrawableObject->createUniformBuffer(
+    auto const * viewProjectionBuffer = mDrawableObject->CreateUniformBuffer(
         "viewProjection", 
-        sizeof(ViewProjectionBuffer)
+        sizeof(ViewProjectionBuffer),
+        RF::GetMaxFramesPerFlight()
     );
     MFA_ASSERT(viewProjectionBuffer != nullptr);
 
-    auto const * imageOptionsBuffer = mDrawableObject->createUniformBuffer(
+    auto const * imageOptionsBuffer = mDrawableObject->CreateUniformBuffer(
         "imageOptions", 
-        sizeof(ImageOptionsBuffer)
+        sizeof(ImageOptionsBuffer),
+        RF::GetMaxFramesPerFlight()
     );
     MFA_ASSERT(imageOptionsBuffer != nullptr);
 
-    MFA_ASSERT(cpuModel.mesh.getSubMeshCount() == 1);
-    MFA_ASSERT(cpuModel.mesh.getSubMeshByIndex(0).primitives.size() == 1);
-    auto const & primitive = cpuModel.mesh.getSubMeshByIndex(0).primitives[0];
-    auto * descriptorSet = mDrawableObject->getDescriptorSetByPrimitiveUniqueId(primitive.uniqueId);
+    MFA_ASSERT(cpuModel.mesh.GetSubMeshCount() == 1);
+    MFA_ASSERT(cpuModel.mesh.GetSubMeshByIndex(0).primitives.size() == 1);
+    auto const & primitive = cpuModel.mesh.GetSubMeshByIndex(0).primitives[0];
+    auto const descriptorSet = mDrawableObject->CreateDescriptorSetGroup(
+        "DisplayPass", 
+        mDescriptorSetLayout, 
+        1
+    );
 
     std::vector<VkWriteDescriptorSet> writeInfo {};
 
-    // ViewProjection
-    VkDescriptorBufferInfo viewProjectionBufferInfo {
-        .buffer = viewProjectionBuffer->buffers[0].buffer,
-        .offset = 0,
-        .range = viewProjectionBuffer->bufferSize
-    };
-    writeInfo.emplace_back(VkWriteDescriptorSet {
-        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        .dstSet = descriptorSet,
-        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
-        .dstArrayElement = 0,
-        .descriptorCount = 1,
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .pBufferInfo = &viewProjectionBufferInfo,
-    });
+    {// ViewProjection
+        VkDescriptorBufferInfo viewProjectionBufferInfo {};
+        viewProjectionBufferInfo.buffer = viewProjectionBuffer->buffers[0].buffer;
+        viewProjectionBufferInfo.offset = 0;
+        viewProjectionBufferInfo.range = viewProjectionBuffer->bufferSize;
 
-    // Texture
-    VkDescriptorImageInfo baseColorImageInfo {
-        .sampler = mSamplerGroup.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
-        .imageView = mGpuModel.textures[primitive.baseColorTextureIndex].image_view(),
-        .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-    };
-    writeInfo.emplace_back(VkWriteDescriptorSet {
-        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        .dstSet = descriptorSet,
-        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
-        .dstArrayElement = 0,
-        .descriptorCount = 1,
-        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .pImageInfo = &baseColorImageInfo,
-    });
+        VkWriteDescriptorSet writeDescriptorSet {};
+        writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        writeDescriptorSet.dstSet = descriptorSet.descriptorSets[0],
+        writeDescriptorSet.dstBinding = static_cast<uint32_t>(writeInfo.size()),
+        writeDescriptorSet.dstArrayElement = 0,
+        writeDescriptorSet.descriptorCount = 1,
+        writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        writeDescriptorSet.pBufferInfo = &viewProjectionBufferInfo,
 
-    // ImageOptions
-    VkDescriptorBufferInfo light_view_buffer_info {
-        .buffer = imageOptionsBuffer->buffers[0].buffer,
-        .offset = 0,
-        .range = imageOptionsBuffer->bufferSize
-    };
-    writeInfo.emplace_back(VkWriteDescriptorSet {
-        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        .dstSet = descriptorSet,
-        .dstBinding = static_cast<uint32_t>(writeInfo.size()),
-        .dstArrayElement = 0,
-        .descriptorCount = 1,
-        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .pBufferInfo = &light_view_buffer_info,
-    });
+        writeInfo.emplace_back(writeDescriptorSet);
+    }
+    {// Texture
+        VkDescriptorImageInfo baseColorImageInfo {
+            .sampler = mSamplerGroup.sampler,          // TODO Each texture has it's own properties that may need it's own sampler (Not sure yet)
+            .imageView = mGpuModel.textures[primitive.baseColorTextureIndex].image_view(),
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        };
 
+        VkWriteDescriptorSet writeDescriptorSet {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = descriptorSet.descriptorSets[0],
+            .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .pImageInfo = &baseColorImageInfo,
+        };
+        writeInfo.emplace_back(writeDescriptorSet);
+    }
+    {// ImageOptions
+        VkDescriptorBufferInfo lightViewBufferInfo {
+            .buffer = imageOptionsBuffer->buffers[0].buffer,
+            .offset = 0,
+            .range = imageOptionsBuffer->bufferSize,
+        };
+
+        VkWriteDescriptorSet writeDescriptorSet {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = descriptorSet.descriptorSets[0],
+            .dstBinding = static_cast<uint32_t>(writeInfo.size()),
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .pBufferInfo = &lightViewBufferInfo,
+        };
+
+        writeInfo.emplace_back(writeDescriptorSet);
+    }
     RF::UpdateDescriptorSets(
         static_cast<uint8_t>(writeInfo.size()),
         writeInfo.data()
@@ -335,7 +365,7 @@ void TextureViewerScene::createDrawableObject() {
 void TextureViewerScene::updateProjection() {
     // Perspective
     int32_t width; int32_t height;
-    RF::GetWindowSize(width, height);
+    RF::GetDrawableSize(width, height);
     float const ratio = static_cast<float>(width) / static_cast<float>(height);
     MFA::Matrix4X4Float perspectiveMat {};
     MFA::Matrix4X4Float::PreparePerspectiveProjectionMatrix(

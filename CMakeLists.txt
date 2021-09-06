@@ -1,5 +1,8 @@
 cmake_minimum_required (VERSION 3.10)
 
+set(CMAKE_OSX_DEPLOYMENT_TARGET 13)
+set(CMAKE_IOS_DEPLOYMENT_TARGET 13)
+
 set(PROJECT_NAME "MFaEngine")
 
 set(UNIT_TEST_NAME "UnitTests")
@@ -8,19 +11,24 @@ project ("MFaEngine" CXX C)
 
 set_property (GLOBAL PROPERTY USE_FOLDERS ON)
 
+if (ANDROID)
+set (CMAKE_CXX_STANDARD 17)
+else ()
 set (CMAKE_CXX_STANDARD 20)
+endif ()
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(APPLE)
    if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-      set(MACOSX TRUE)
-   elseif()
-      set(IPHONE TRUE)
+        set(MACOSX TRUE)
+   else()
+        set(IPHONE TRUE)
    endif()
 endif()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-  set(WINDOWS TRUE)
+    set(WINDOWS TRUE)
+    # SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")# %MyVS%/lib/x64/clang_rt.asan_dynamic-x86_64.lib %MyVS%/lib/x64/clang_rt.asan_dynamic_runtime_thunk-x86_64.lib")
 endif()
 
 if(UNIX AND NOT APPLE AND NOT ANDROID)
@@ -35,6 +43,13 @@ else()
     # add_definitions(-Werror)
 endif()
 
+message(STATUS "Build type is ${CMAKE_BUILD_TYPE}")
+if(${CMAKE_BUILD_TYPE} MATCHES Release)
+    add_definitions(-DNDEBUG)
+else()
+    add_definitions(-D_DEBUG)
+endif()
+
 # add_definitions (-DGLM_FORCE_LEFT_HANDED )
 include_directories(libs/include/glm)
 
@@ -46,6 +61,8 @@ set(ENGINE_SOURCES)
 
 list(
     APPEND ENGINE_SOURCES
+
+    # Bedrock
     "src/engine/BedrockAssert.cpp"
     "src/engine/BedrockAssert.hpp"
     "src/engine/BedrockCommon.hpp"
@@ -58,30 +75,54 @@ list(
     "src/engine/BedrockMemory.cpp"
     "src/engine/BedrockPlatforms.hpp"
     "src/engine/BedrockPlatforms.cpp"
-    "src/engine/DrawableObject.hpp"
-    "src/engine/DrawableObject.cpp"
+    "src/engine/BedrockPath.hpp"
+    "src/engine/BedrockPath.cpp"
+
+    # RenderSystem
+    "src/engine/render_system/DrawableObject.hpp"
+    "src/engine/render_system/DrawableObject.cpp"
+    "src/engine/render_system/RenderBackend.hpp"
+    "src/engine/render_system/RenderBackend.cpp"
+    "src/engine/render_system/RenderFrontend.hpp"
+    "src/engine/render_system/RenderFrontend.cpp"
+
+    # RenderPass
+    "src/engine/render_system/render_passes/RenderPass.hpp"
+    "src/engine/render_system/render_passes/RenderPass.cpp"
+    "src/engine/render_system/render_passes/DisplayRenderPass.hpp"
+    "src/engine/render_system/render_passes/DisplayRenderPass.cpp"
+    "src/engine/render_system/render_passes/ShadowRenderPass.hpp"
+    "src/engine/render_system/render_passes/ShadowRenderPass.cpp"
+    "src/engine/render_system/render_passes/ShadowRenderPassV2.hpp"
+    "src/engine/render_system/render_passes/ShadowRenderPassV2.cpp"
+    
+    # Pipeline
+    "src/engine/render_system/pipelines/BasePipeline.hpp"
+    # "src/engine/render_system/pipelines/pbr/PBRModelPipeline.hpp"
+    # "src/engine/render_system/pipelines/pbr/PBRModelPipeline.cpp"
+    "src/engine/render_system/pipelines/point_light/PointLightPipeline.hpp"
+    "src/engine/render_system/pipelines/point_light/PointLightPipeline.cpp"
+    # "src/engine/render_system/pipelines/pbr_with_shadow/PbrWithShadowPipeline.hpp"
+    # "src/engine/render_system/pipelines/pbr_with_shadow/PbrWithShadowPipeline.cpp"
+    "src/engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
+    "src/engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.cpp"
+
     "src/engine/FoundationAsset.hpp"
     "src/engine/FoundationAsset.cpp"
-    "src/engine/RenderBackend.hpp"
-    "src/engine/RenderBackend.cpp"
-    "src/engine/RenderFrontend.hpp"
-    "src/engine/RenderFrontend.cpp"
     "src/engine/Scene.hpp"
     "src/engine/Scene.cpp"
-    "src/engine/UISystem.hpp"
-    "src/engine/UISystem.cpp"
-    "src/engine/pipelines/BasePipeline.hpp"
-    "src/engine/pipelines/pbr/PBRModelPipeline.hpp"
-    "src/engine/pipelines/pbr/PBRModelPipeline.cpp"
-    "src/engine/pipelines/point_light/PointLightPipeline.hpp"
-    "src/engine/pipelines/point_light/PointLightPipeline.cpp"
+
+    # UI System
+    "src/engine/ui_system/UIRecordObject.hpp"
+    "src/engine/ui_system/UIRecordObject.cpp"
+    "src/engine/ui_system/UISystem.hpp"
+    "src/engine/ui_system/UISystem.cpp"
+
     "src/engine/camera/ICamera.h"
     "src/engine/camera/FirstPersonCamera.hpp"
     "src/engine/camera/FirstPersonCamera.cpp"
     "src/engine/InputManager.hpp"
     "src/engine/InputManager.cpp"
-    "src/engine/BedrockPath.hpp"
-    "src/engine/BedrockPath.cpp"
 )
 
 add_library("Engine"
@@ -132,14 +173,21 @@ set(SCENE_SOURCES)
 
 list(
     APPEND SCENES_SOURCES
+    
     "src/scenes/gltf_mesh_viewer/GLTFMeshViewerScene.cpp"
     "src/scenes/gltf_mesh_viewer/GLTFMeshViewerScene.hpp"
-    "src/scenes/pbr_scene/PBRScene.cpp"
-    "src/scenes/pbr_scene/PBRScene.hpp"
-    "src/scenes/textured_sphere/TexturedSphereScene.cpp"
-    "src/scenes/textured_sphere/TexturedSphereScene.hpp"
-    "src/scenes/texture_viewer_scene/TextureViewerScene.hpp"
-    "src/scenes/texture_viewer_scene/TextureViewerScene.cpp"
+    
+    # "src/scenes/pbr_scene/PBRScene.cpp"
+    # "src/scenes/pbr_scene/PBRScene.hpp"
+    
+    # "src/scenes/textured_sphere/TexturedSphereScene.cpp"
+    # "src/scenes/textured_sphere/TexturedSphereScene.hpp"
+    
+    # "src/scenes/texture_viewer_scene/TextureViewerScene.hpp"
+    # "src/scenes/texture_viewer_scene/TextureViewerScene.cpp"
+
+    # "src/scenes/omnidirectional_shadow_mapping/OmnidirectionalShadowMapping.hpp"
+    # "src/scenes/omnidirectional_shadow_mapping/OmnidirectionalShadowMapping.cpp"
 )
 
 add_library("Scenes"
@@ -190,9 +238,15 @@ list(
     "src/libs/tiny_obj_loader/tiny_obj_loader.h"
     #Ktx
     "src/libs/tiny_ktx/tinyktx.h"
+)
+
+if (NOT ANDROID)
+list(
+    APPEND LIBS_SOURCES
     #SDL
     "src/libs/sdl/SDL.hpp"
-)
+)    
+endif ()
 
 add_library("Libs"
     ${LIBS_SOURCES}
@@ -246,19 +300,22 @@ if (WINDOWS)
     )
 
     # file(
-    #     GLOB IMGUI
-    #     "${CMAKE_SOURCE_DIR}/libs/win/imgui.lib"
+    #     GLOB ASAN
+    #     "${CMAKE_SOURCE_DIR}/libs/win/clang_rt.asan_dynamic-x86_64.lib"
+    #     "${CMAKE_SOURCE_DIR}/libs/win/clang_rt.asan_dynamic_runtime_thunk-x86_64.lib"
     # )
 
     list(
         APPEND COMPILED_LIBS 
         ${VULKAN}
         ${SDL}
+        # ${ASAN}
     )
 
     file(
         GLOB DLLS 
         "${CMAKE_SOURCE_DIR}/libs/win/SDL2.dll" 
+        "${CMAKE_SOURCE_DIR}/libs/win/clang_rt.asan_dynamic-x86_64.dll"
     )
 
     add_executable(${PROJECT_NAME} ${WIN_SOURCE})
@@ -339,12 +396,13 @@ elseif(MACOSX)
 #-----------------------------------------------------------------------
 # MACOSX Executable
 #-----------------------------------------------------------------------
+    message(STATUS "Building for macos")
 
     set(MAC_SOURCE)
     
     list(
         APPEND MAC_SOURCE
-        "mac/main.cpp"
+        "mac/main.mm"
         "src/Application.hpp"
         "src/Application.cpp"
     )
@@ -359,11 +417,11 @@ elseif(MACOSX)
 
     target_link_libraries(${PROJECT_NAME}
         "-framework CoreGraphics"
+        "-framework Foundation"
     )
-
+    
     target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.2.141.dylib")
-    # target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.dylib")
-
+     
     target_include_directories(
         ${PROJECT_NAME} PUBLIC 
         "mac"
@@ -371,30 +429,97 @@ elseif(MACOSX)
         "${CMAKE_SOURCE_DIR}/libs/include"
     )
 
-    # add_compile_definitions (-DCMAKE_SYSTEM_NAME=iOS)
-    # add_compile_definitions (-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64)
-    # add_compile_definitions (-DCMAKE_XCODE_ATTRIBUTE_ONLY_ACTIVE_ARCH=NO)
-    # add_compile_definitions (-DCMAKE_IOS_INSTALL_COMBINED=YES)
-    # add_compile_definitions (-DCMAKE_INSTALL_PREFIX=install)
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        MACOSX_BUNDLE TRUE
+        MACOSX_FRAMEWORK_IDENTIFIER co.radx.MFaEngine
+    )
+
+    # Copying assets to correct place
+    add_custom_command(
+        TARGET ${PROJECT_NAME} POST_BUILD        # Adds a post-build event to MyTest
+        COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Debug/MFaEngine.app/Contents/Resources/data/"
+        COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Debug/MFaEngine.app/Contents/Resources/data/"
+    )
+
+    add_custom_command(
+        TARGET ${PROJECT_NAME} POST_BUILD        # Adds a post-build event to MyTest
+        COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Release/MFaEngine.app/Contents/Resources/data/"
+        COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Release/MFaEngine.app/Contents/Resources/data/"
+    )
+
+elseif(IPHONE)
+
+#-----------------------------------------------------------------------
+# IPHONE Executable
+#-----------------------------------------------------------------------
+    message(STATUS "Building for iphone")
+
+#https://stackoverflow.com/questions/822404/how-to-set-up-cmake-to-build-an-app-for-the-iphone
+    set(IPHONE_SOURCE)
+        
+    list(
+        APPEND IPHONE_SOURCE
+        "ios/main.mm"
+        "ios/ViewController.h"
+        "ios/ViewController.mm"
+        "ios/AppDelegate.h"
+        "ios/AppDelegate.m"
+        "src/Application.hpp"
+        "src/Application.cpp"
+    )
+
+    # set(CMAKE_OSX_SYSROOT iphoneos2.2.1)
+    # set(CMAKE_OSX_ARCHITECTURES $(ARCHS_STANDARD_32_BIT))
+
+    set(MACOSX_BUNDLE_GUI_IDENTIFIER "co.radx.\${PRODUCT_NAME:identifier}")
     
-    # set_target_properties(${PROJECT_NAME} PROPERTIES
-    #     MACOSX_BUNDLE TRUE
-    #     MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/mac/info.plist
-    # )
-    
+    add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${IPHONE_SOURCE})
+
+    add_dependencies(${PROJECT_NAME} "Scenes" "Tools" "Engine" "Libs")
+
+    target_link_libraries(${PROJECT_NAME} "Scenes" "Tools" "Engine" "Libs")
+
+    # TODO I think we should use .dylib instead
+    target_link_libraries(${PROJECT_NAME}
+        "-framework CoreGraphics"
+        "-framework UIKit"
+        "-framework Metal"
+        "-framework QuartzCore"   
+        "${CMAKE_SOURCE_DIR}/libs/ios-arm64/libMoltenVK.a"
+        "${CMAKE_SOURCE_DIR}/libs/ios-arm64_x86_64-simulator/libMoltenVK.a"
+    )
+
+    # target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/libs/ios/libMoltenVK.dylib")
+
+    target_include_directories(
+        ${PROJECT_NAME} PUBLIC 
+        "ios"
+        "src" 
+        "${CMAKE_SOURCE_DIR}/libs/include"
+    )
+
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fobjc-arc -ObjC++")
+    ELSE()
+        SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fobjc-arc -xobjective-c++")
+    ENDIF()
+
 elseif(ANDROID)
 
 #-----------------------------------------------------------------------
 # Android library
 #-----------------------------------------------------------------------
+    message(STATUS "Building for android")    
 
     set(ANDROID_FILES_ADDRESS "android/app/src/main/jni")
 
-    set(ANDROID_SOURCE)
+    set(ANDROID_SOURCES)
         
     list(
-        APPEND ANDROID_SOURCE
+        APPEND ANDROID_SOURCES
         "${ANDROID_FILES_ADDRESS}/main.cpp"
+        "${ANDROID_FILES_ADDRESS}/vulkan_wrapper/vulkan_wrapper.h"
+        "${ANDROID_FILES_ADDRESS}/vulkan_wrapper/vulkan_wrapper.cpp"
         "src/Application.hpp"
         "src/Application.cpp"
     )
@@ -408,23 +533,53 @@ elseif(ANDROID)
 
     add_library(
         ${PROJECT_NAME} SHARED 
-        ${ANDROID_SOURCE} 
+        ${ANDROID_SOURCES} 
         ${ENGINE_SOURCES} 
         ${LIBS_SOURCES}
-        ${TOOL_SOURCES}
-        ${SCENE_SOURCES}
+        ${TOOLS_SOURCES}
+        ${SCENES_SOURCES}
     )
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -std=c++20 \
-                        -DVK_USE_PLATFORM_ANDROID_KHR")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
+       -std=c++20 -Wall -Wno-unused-variable \
+       -Wno-delete-non-virtual-dtor -DVK_USE_PLATFORM_ANDROID_KHR")
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -u ANativeActivity_onCreate")
 
+    function(get_architecture ABI ARCH)
+        if (ABI STREQUAL armeabi-v7a)
+            set(${ARCH} arm PARENT_SCOPE)
+        elseif(ABI STREQUAL arm64-v8a)
+            set(${ARCH} aarch64 PARENT_SCOPE)
+        elseif(ABI STREQUAL x86)
+            set(${ARCH} i686 PARENT_SCOPE)
+        elseif(ABI STREQUAL x86_64)
+            set(${ARCH} x86_64 PARENT_SCOPE)
+        else()
+            message(FATAL_ERROR "Unsupported ABI")
+        endif()
+    endfunction()
+
     target_link_libraries(${PROJECT_NAME} app-glue log android)
+    target_compile_options(${PROJECT_NAME} PUBLIC -fsanitize=address -fno-omit-frame-pointer)
+    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS -fsanitize=address)
 
     target_include_directories(
         ${PROJECT_NAME} PUBLIC 
         "src" 
         "${CMAKE_SOURCE_DIR}/libs/include"
+    )
+
+    # Asan libs are "somewhere" in the toolchain's root, we try to find the
+    # right one for the current architecture and copy it to the libs output dir
+    # (so that it will be packed in the apk):
+
+    get_architecture(${ANDROID_ABI} ARCH)
+    file(GLOB_RECURSE ASAN_SRC ${ANDROID_TOOLCHAIN_ROOT}/*.asan*${ARCH}*-android.so)
+    set(ASAN_DEST ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+
+    add_custom_command(
+            TARGET ${PROJECT_NAME} PRE_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ASAN_SRC} ${ASAN_DEST}
     )
 
 endif()

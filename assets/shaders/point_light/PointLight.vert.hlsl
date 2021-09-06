@@ -7,32 +7,27 @@ struct VSOut {
 };
 
 struct ViewProjectionBuffer {
-    float4x4 model;
-    float4x4 view;
-    float4x4 projection;
+    float4x4 viewProjection;
 };
 
-ConstantBuffer <ViewProjectionBuffer> viewProjectionBuffer: register(b0, space0);
+ConstantBuffer <ViewProjectionBuffer> mvpBuffer: register(b0, space0);
 
-struct NodeTranformation {
+struct PushConsts
+{
     float4x4 model;
+    float4 baseColorFactor : COLOR0;
 };
 
-ConstantBuffer <NodeTranformation> nodeTransformBuffer: register(b1, space0);
+[[vk::push_constant]]
+cbuffer {
+    PushConsts pushConsts;
+};
 
 VSOut main(VSIn input) {
     VSOut output;
 
-    float4x4 modelMat = mul(viewProjectionBuffer.model, nodeTransformBuffer.model);
-    float4x4 modelViewMat = mul(viewProjectionBuffer.view, modelMat);
-
-    // Position
-    float4 tempPosition = float4(input.position, 1.0f);
-    tempPosition = mul(modelViewMat, tempPosition);
-    
-    float4 worldPos = tempPosition;
-    float4 position = mul(viewProjectionBuffer.projection, worldPos);
-    output.position = position;
+    float4x4 mvpMatrix = mul(mvpBuffer.viewProjection, pushConsts.model);
+    output.position = mul(mvpMatrix, float4(input.position, 1.0));
     
     return output;
 }

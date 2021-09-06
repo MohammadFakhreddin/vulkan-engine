@@ -1,9 +1,10 @@
 #pragma once
 
-#include "engine/DrawableObject.hpp"
+#include "engine/render_system/DrawableObject.hpp"
 #include "engine/Scene.hpp"
-#include "engine/RenderFrontend.hpp"
+#include "engine/render_system/RenderFrontend.hpp"
 #include "tools/Importer.hpp"
+#include "engine/ui_system/UIRecordObject.hpp"
 
 namespace RF = MFA::RenderFrontend;
 namespace RB = MFA::RenderBackend;
@@ -13,11 +14,13 @@ namespace Importer = MFA::Importer;
 class TexturedSphereScene final : public MFA::Scene {
 public:
 
+    explicit TexturedSphereScene();
+
     void Init() override;
 
-    void OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
+    void OnRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
 
-    void OnUI(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_pass) override;
+    void OnUI();
 
     void Shutdown() override;
 
@@ -27,9 +30,9 @@ private:
 
     void createDrawableObject();
 
-    void destroyDrawableObject();
+    void destroyDrawableObject() const;
 
-    void createDrawPipeline(uint8_t gpu_shader_count, MFA::RenderBackend::GpuShader * gpu_shaders);
+    void createDrawPipeline(uint8_t gpuShaderCount, MFA::RenderBackend::GpuShader * gpuShaders);
 
     void createDescriptorSetLayout();
 
@@ -44,17 +47,13 @@ private:
         float rotation[16];
         float transformation[16];
         float perspective[16];
-    } m_translate_data {};
+    } mTranslateData {};
 
     struct LightViewBuffer {
-        alignas(16) float light_position[3];
-        alignas(16) float camera_position[3];
-        alignas(16) float light_color[3];
-    } m_lv_data {
-        .light_position = {},
-        .camera_position = {0.0f, 0.0f, 0.0f},
-        .light_color = {}
-    };
+        alignas(16) float light_position[3] {};
+        alignas(16) float camera_position[3] {};
+        alignas(16) float light_color[3] {};
+    } mLightViewData;
 
     float mLightPosition[3] {0.0f, 0.0f, -2.0f};
     float mLightColor[3] {252.0f/256.0f, 212.0f/256.0f, 64.0f/256.0f};
@@ -64,9 +63,10 @@ private:
 
     MFA::RenderFrontend::GpuModel mGpuModel {};
     MFA::RenderFrontend::SamplerGroup mSamplerGroup {};
-    VkDescriptorSetLayout_T * mDescriptorSetLayout = nullptr;
+    VkDescriptorSetLayout mDescriptorSetLayout {};
     MFA::RenderFrontend::DrawPipeline mDrawPipeline {};
     MFA::RenderFrontend::UniformBufferGroup mLVBuffer {};
     std::unique_ptr<MFA::DrawableObject> mDrawableObject = nullptr;
 
+    MFA::UIRecordObject mUIRecordObject;
 };

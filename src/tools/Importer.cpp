@@ -126,16 +126,18 @@ AS::Texture ImportInMemoryTexture(
             Memory::Free(mipMapPixels);
         };
 
-        auto const resizeResult = Utils::UncompressedTexture::Resize(ResizeInputParams {
-            .inputImagePixels = originalImagePixels,
-            .inputImageWidth = static_cast<int>(originalImageDimension.width),
-            .inputImageHeight = static_cast<int>(originalImageDimension.height),
-            .componentsCount = components,
-            .outputImagePixels = mipMapPixels,
-            .outputWidth = static_cast<int>(currentMipDims.width),
-            .outputHeight = static_cast<int>(currentMipDims.height)
-        });
-        MFA_ASSERT(resizeResult == true);
+        {// Resize
+            ResizeInputParams inputParams {};
+            inputParams.inputImagePixels = originalImagePixels;
+            inputParams.inputImageWidth = static_cast<int>(originalImageDimension.width);
+            inputParams.inputImageHeight = static_cast<int>(originalImageDimension.height);
+            inputParams.componentsCount = components;
+            inputParams.outputImagePixels = mipMapPixels;
+            inputParams.outputWidth = static_cast<int>(currentMipDims.width);
+            inputParams.outputHeight = static_cast<int>(currentMipDims.height);
+            auto const resizeResult = Utils::UncompressedTexture::Resize(inputParams);
+            MFA_ASSERT(resizeResult == true);
+        }
 
         texture.addMipmap(
             currentMipDims,
@@ -188,15 +190,17 @@ AS::Texture ImportKTXImage(char const * path, ImportTextureOptions const & optio
             if (!MFA_VERIFY(mipBlob.ptr != nullptr && mipBlob.len > 0)) {
                 return AS::Texture {};
             }
-            
-            result.addMipmap(
-                AS::Texture::Dimensions {
-                    .width = static_cast<uint32_t>(width),
-                    .height = static_cast<uint32_t>(height),
-                    .depth = static_cast<uint16_t>(depth)
-                }, 
-                mipBlob
-            );
+
+            {
+                AS::Texture::Dimensions dimensions {};
+                dimensions.width = static_cast<uint32_t>(width);
+                dimensions.height = static_cast<uint32_t>(height);
+                dimensions.depth = static_cast<uint16_t>(depth);
+                result.addMipmap(
+                    dimensions, 
+                    mipBlob
+                );
+            }
 
             width = Math::Max<uint16_t>(width / 2, 1);
             height = Math::Max<uint16_t>(height / 2, 1);
@@ -240,23 +244,43 @@ AS::Shader ImportShaderFromSPV(
     MFA_ASSERT(path != nullptr);
     AS::Shader shader {};
     if (path != nullptr) {
+#if defined(__DESKTOP__) || defined(__IOS__)
         auto * file = FS::OpenFile(path,  FS::Usage::Read);
         MFA_DEFER{FS::CloseFile(file);};
-        if(FS::IsUsable(file)) {
+        if(FS::FileIsUsable(file)) {
             auto const fileSize = FS::FileSize(file);
             MFA_ASSERT(fileSize > 0);
 
             auto const buffer = Memory::Alloc(fileSize);
 
-            shader.init(entryPoint, stage, buffer);
-
             auto const readBytes = FS::Read(file, buffer);
 
             if(readBytes != buffer.len) {
-                shader.revokeData();
                 Memory::Free(buffer);
+            } else {
+                shader.init(entryPoint, stage, buffer);
             }
         }
+#elif defined(__ANDROID__)
+        auto * file = FS::Android_OpenAsset(path);
+        MFA_DEFER {FS::Android_CloseAsset(file);};
+        if (FS::Android_AssetIsUsable(file)) {
+            auto const fileSize = FS::Android_AssetSize(file);
+            MFA_ASSERT(fileSize > 0);
+
+            auto const buffer = Memory::Alloc(fileSize);
+
+            auto const readBytes = FS::Android_ReadAsset(file, buffer);
+            if(readBytes != buffer.len) {
+                shader.revokeData();
+                Memory::Free(buffer);
+            } else {
+                shader.init(entryPoint, stage, buffer);
+            }
+        }
+#else
+#error "Os not handled"
+#endif
     }
     return shader;
 }
@@ -282,7 +306,7 @@ AS::Mesh ImportObj(char const * path) {
     if(FS::Exists(path)){
         auto * file = FS::OpenFile(path, FS::Usage::Read);
         MFA_DEFER {FS::CloseFile(file);};
-        if(FS::IsUsable(file)) {
+        if(FS::FileIsUsable(file)) {
             bool is_counter_clockwise = false;
             {//Check if normal vectors are reverse
                 auto first_line_blob = Memory::Alloc(200);
@@ -372,27 +396,27 @@ AS::Mesh ImportObj(char const * path) {
                 }
                 auto const vertexCount = static_cast<uint32_t>(positions_count);
                 auto const indexCount = static_cast<uint32_t>(shapes[0].mesh.indices.size());
-                mesh.initForWrite(
+                mesh.InitForWrite(
                     vertexCount, 
                     indexCount, 
                     Memory::Alloc(sizeof(AS::Mesh::Vertex) * vertexCount),
                     Memory::Alloc(sizeof(AS::Mesh::Index) * indexCount)
                 );
 
-                auto const subMeshIndex = mesh.insertSubMesh();
+                auto const subMeshIndex = mesh.InsertSubMesh();
                 
                 MFA_DEFER {
-                    if (mesh.isValid() == false) {
+                    if (mesh.IsValid() == false) {
                         Blob vertexBuffer {};
                         Blob indexBuffer {};
-                        mesh.revokeBuffers(vertexBuffer, indexBuffer);
+                        mesh.RevokeBuffers(vertexBuffer, indexBuffer);
                         Memory::Free(vertexBuffer);
                         Memory::Free(indexBuffer);
                     }
                 };
                 
-                std::vector<AS::Mesh::Vertex> vertices {vertexCount};
-                std::vector<AS::Mesh::Index> indices {indexCount};
+                std::vector<AS::Mesh::Vertex> vertices (vertexCount);
+                std::vector<AS::Mesh::Index> indices (indexCount);
                 for(
                     uintmax_t indicesIndex = 0;
                     indicesIndex < shapes[0].mesh.indices.size();
@@ -408,31 +432,29 @@ AS::Mesh ImportObj(char const * path) {
                     ::memcpy(vertices[vertexIndex].normalValue, normals[vertexIndex].value, sizeof(normals[vertexIndex].value));
                 }
 
-                mesh.insertPrimitive(
-                    subMeshIndex,
-                    AS::Mesh::Primitive {
-                        .uniqueId = 0,
-                        .vertexCount = vertexCount,
-                        .indicesCount = indexCount,
-                        .baseColorTextureIndex = 0,
-                        .hasNormalBuffer = true
-                    },
-                    static_cast<uint32_t>(vertices.size()),
-                    vertices.data(),
-                    static_cast<uint32_t>(indices.size()),
-                    indices.data()
-                );
+                {// Insert primitive
+                    AS::Mesh::Primitive primitive {};
+                    primitive.uniqueId = 0;
+                    primitive.vertexCount = vertexCount;
+                    primitive.indicesCount = indexCount;
+                    primitive.baseColorTextureIndex = 0;
+                    primitive.hasNormalBuffer = true;
 
-                auto node = AS::MeshNode {
-                    .subMeshIndex = static_cast<int>(subMeshIndex),
-                    .children {},
-                    .transform {},
-                };
-                auto const identity = Matrix4X4Float::Identity();
-                ::memcpy(node.transform, identity.cells, sizeof(node.transform));
-                static_assert(sizeof(node.transform) == sizeof(identity.cells));
-                mesh.insertNode(node);
-                MFA_ASSERT(mesh.isValid());
+                    mesh.InsertPrimitive(
+                        subMeshIndex,
+                        primitive,
+                        static_cast<uint32_t>(vertices.size()),
+                        vertices.data(),
+                        static_cast<uint32_t>(indices.size()),
+                        indices.data()
+                    );
+                }
+
+                auto node = AS::MeshNode {};
+                node.subMeshIndex = static_cast<int>(subMeshIndex);
+                Copy<16>(node.transform, Matrix4X4Float::Identity().cells);
+                mesh.InsertNode(node);
+                MFA_ASSERT(mesh.IsValid());
 
             } else if (!error.empty() && error.substr(0, 4) != "WARN") {
                 MFA_CRASH("LoadObj returned error: %s, File: %s", error.c_str(), path);
@@ -567,7 +589,8 @@ static void GLTF_extractTextures(
     // Extracting textures
     if(false == gltfModel.textures.empty()) {
         for (auto const & texture : gltfModel.textures) {
-            AS::SamplerConfig sampler {.isValid = false};
+            AS::SamplerConfig sampler {};
+            sampler.isValid = false;
             if (texture.sampler >= 0) {// Sampler
                 auto const & gltfSampler = gltfModel.samplers[texture.sampler];
                 sampler.magFilter = gltfSampler.magFilter;
@@ -580,18 +603,23 @@ static void GLTF_extractTextures(
             AS::Texture assetSystemTexture {};
             auto const & image = gltfModel.images[texture.source];
             {// Texture
+                ImportTextureOptions textureOptions {};
+                textureOptions.tryToGenerateMipmaps = false;
+                textureOptions.sampler = &sampler;
                 std::string image_path = directoryPath + "/" + image.uri;
                 assetSystemTexture = ImportImage(
                     image_path.c_str(),
-                    // TODO tryToGenerateMipmaps takes too long
-                    ImportTextureOptions {.tryToGenerateMipmaps = false, .sampler = &sampler}
+                    // TODO tryToGenerateMipmaps takes too long (We should create .asset files)
+                    textureOptions
                 );
             }
             MFA_ASSERT(assetSystemTexture.isValid());
-            outTextureRefs.emplace_back(TextureRef {
-                .gltf_name = image.uri,
-                .index = static_cast<uint8_t>(outResultModel.textures.size())
-            });
+            {
+                TextureRef textureRef {};
+                textureRef.gltf_name = image.uri;
+                textureRef.index = static_cast<uint8_t>(outResultModel.textures.size());
+                outTextureRefs.emplace_back(textureRef);
+            }
             outResultModel.textures.emplace_back(assetSystemTexture);
         }
     }
@@ -641,7 +669,7 @@ static void GLTF_extractSubMeshes(
             }
         }
     }
-    outResultModel.mesh.initForWrite(
+    outResultModel.mesh.InitForWrite(
         totalVerticesCount, 
         totalIndicesCount, 
         Memory::Alloc(sizeof(AS::MeshVertex) * totalVerticesCount), 
@@ -652,7 +680,7 @@ static void GLTF_extractSubMeshes(
     std::vector<AS::Mesh::Vertex> primitiveVertices {};
     std::vector<AS::MeshIndex> primitiveIndices {};
     for(auto & mesh : gltfModel.meshes) {
-        auto const meshIndex = outResultModel.mesh.insertSubMesh();
+        auto const meshIndex = outResultModel.mesh.InsertSubMesh();
         if(false == mesh.primitives.empty()) {
             for(auto & primitive : mesh.primitives) {
                 primitiveIndices.erase(primitiveIndices.begin(), primitiveIndices.end());
@@ -1070,10 +1098,10 @@ static void GLTF_extractSubMeshes(
                             MFA_ASSERT(vertex.roughnessUV[1] <= metallicRoughnessUVMax[1]);
                         }
                     }
-                    // TODO WTF ?
-                    vertex.color[0] = static_cast<uint8_t>((256/(colorsMinMaxDiff[0])) * colors[i * 3 + 0]);
-                    vertex.color[1] = static_cast<uint8_t>((256/(colorsMinMaxDiff[1])) * colors[i * 3 + 1]);
-                    vertex.color[2] = static_cast<uint8_t>((256/(colorsMinMaxDiff[2])) * colors[i * 3 + 2]);
+                    // TODO WTF ? Outside of range error. Why do we need color range anyways ?
+                    // vertex.color[0] = static_cast<uint8_t>((256/(colorsMinMaxDiff[0])) * colors[i * 3 + 0]);
+                    // vertex.color[1] = static_cast<uint8_t>((256/(colorsMinMaxDiff[1])) * colors[i * 3 + 1]);
+                    // vertex.color[2] = static_cast<uint8_t>((256/(colorsMinMaxDiff[2])) * colors[i * 3 + 2]);
 
                     vertex.hasSkin = hasSkin ? 1 : 0;
 
@@ -1091,33 +1119,34 @@ static void GLTF_extractSubMeshes(
                     }
                 }
 
-                // Creating new subMesh
-                outResultModel.mesh.insertPrimitive(
-                    meshIndex,
-                    AS::MeshPrimitive {
-                        .uniqueId = uniqueId,
-                        .baseColorTextureIndex = baseColorTextureIndex,
-                        .mixedMetallicRoughnessOcclusionTextureIndex = metallicRoughnessTextureIndex,
-                        .normalTextureIndex = normalTextureIndex,
-                        .emissiveTextureIndex = emissiveTextureIndex,
-                        .baseColorFactor = {baseColorFactor[0], baseColorFactor[1], baseColorFactor[2], baseColorFactor[3]},
-                        .metallicFactor = metallicFactor,
-                        .roughnessFactor = roughnessFactor,
-                        .emissiveFactor = {emissiveFactor[0], emissiveFactor[1], emissiveFactor[2]},
-                        .hasBaseColorTexture = hasBaseColorTexture,
-                        .hasEmissiveTexture = hasEmissiveTexture,
-                        .hasMixedMetallicRoughnessOcclusionTexture = hasCombinedMetallicRoughness,
-                        .hasNormalBuffer = hasNormalValue,
-                        .hasNormalTexture = hasNormalTexture,
-                        .hasTangentBuffer = hasTangentValue,
-                        .hasSkin = hasSkin
-                    }, 
-                    static_cast<uint32_t>(primitiveVertices.size()), 
-                    primitiveVertices.data(), 
-                    static_cast<uint32_t>(primitiveIndices.size()), 
-                    primitiveIndices.data()
-                );
+                {// Creating new subMesh
+                    AS::MeshPrimitive primitive = {};
+                    primitive.uniqueId = uniqueId;
+                    primitive.baseColorTextureIndex = baseColorTextureIndex;
+                    primitive.metallicRoughnessTextureIndex = metallicRoughnessTextureIndex;
+                    primitive.normalTextureIndex = normalTextureIndex;
+                    primitive.emissiveTextureIndex = emissiveTextureIndex;
+                    Copy<4>(primitive.baseColorFactor, baseColorFactor);
+                    primitive.metallicFactor = metallicFactor;
+                    primitive.roughnessFactor = roughnessFactor;
+                    Copy<3>(primitive.emissiveFactor, emissiveFactor);
+                    primitive.hasBaseColorTexture = hasBaseColorTexture;
+                    primitive.hasEmissiveTexture = hasEmissiveTexture;
+                    primitive.hasMetallicRoughnessTexture = hasCombinedMetallicRoughness;
+                    primitive.hasNormalBuffer = hasNormalValue;
+                    primitive.hasNormalTexture = hasNormalTexture;
+                    primitive.hasTangentBuffer = hasTangentValue;
+                    primitive.hasSkin = hasSkin;
 
+                    outResultModel.mesh.InsertPrimitive(
+                        meshIndex,
+                        primitive, 
+                        static_cast<uint32_t>(primitiveVertices.size()), 
+                        primitiveVertices.data(), 
+                        static_cast<uint32_t>(primitiveIndices.size()), 
+                        primitiveIndices.data()
+                    );
+                }
                 indicesVertexStartingIndex += primitiveVertexCount;
                 
             }
@@ -1132,11 +1161,11 @@ static void GLTF_extractNodes(
     // Step3: Fill nodes
     if(false == gltfModel.nodes.empty()) {
         for (auto const & gltfNode : gltfModel.nodes) {
-            AS::MeshNode node = {
-                .subMeshIndex = gltfNode.mesh,
-                .children = gltfNode.children,
-                .skin = gltfNode.skin
-            };
+            AS::MeshNode node {};
+            node.subMeshIndex = gltfNode.mesh;
+            node.children = gltfNode.children;
+            node.skin = gltfNode.skin;
+
             if (gltfNode.translation.empty() == false) {
                 MFA_ASSERT(gltfNode.translation.size() == 3);
                 node.translate[0] = static_cast<float>(gltfNode.translation[0]);
@@ -1161,7 +1190,7 @@ static void GLTF_extractNodes(
                     node.transform[i] = static_cast<float>(gltfNode.matrix[i]);
                 }
             }
-            outResultModel.mesh.insertNode(node);
+            outResultModel.mesh.InsertNode(node);
         }
     }
 }
@@ -1198,7 +1227,7 @@ void GLTF_extractSkins(
         MFA_ASSERT(skin.inverseBindMatrices.size() == skin.joints.size());
         skin.skeletonRootNode = gltfSkin.skeleton;
 
-        outResultModel.mesh.insertSkin(skin);
+        outResultModel.mesh.InsertSkin(skin);
     }
 }
 
@@ -1334,13 +1363,12 @@ void GLTF_extractAnimations(
             animation.channels.emplace_back(channel);
         }
 
-        outResultModel.mesh.insertAnimation(animation);
+        outResultModel.mesh.InsertAnimation(animation);
     }
 }
 
 // Based on sasha willems solution and a comment in github
 AS::Model ImportGLTF(char const * path) {
-    // TODO Create separate functions for each part
     MFA_ASSERT(path != nullptr);
     AS::Model resultModel {};
     if (path != nullptr) {
@@ -1353,19 +1381,20 @@ AS::Model ImportGLTF(char const * path) {
         auto const extension = FS::ExtractExtensionFromPath(path);
 
         bool success = false;
+
         if (extension == ".gltf") {
             success = loader.LoadASCIIFromFile(
-                &gltfModel, 
-                &error,
-                &warning,  
-                std::string(path)
-            );            
+                    &gltfModel,
+                    &error,
+                    &warning,
+                    path
+            );
         } else if (extension == ".glb") {
             success = loader.LoadBinaryFromFile(
-                &gltfModel, 
-                &error,
-                &warning,  
-                std::string(path)
+                    &gltfModel,
+                    &error,
+                    &warning,
+                    path
             );
         } else {
             MFA_CRASH("ImportGLTF format is not support: %s", extension.c_str());
@@ -1401,12 +1430,12 @@ AS::Model ImportGLTF(char const * path) {
             GLTF_extractSkins(gltfModel, resultModel);
             // Animation
             GLTF_extractAnimations(gltfModel, resultModel);
-            resultModel.mesh.finalizeData();
+            resultModel.mesh.FinalizeData();
             // Remove mesh buffers if invalid
-            if(resultModel.mesh.isValid() == false) {
+            if(resultModel.mesh.IsValid() == false) {
                 Blob vertexBuffer {};
                 Blob indicesBuffer {};
-                resultModel.mesh.revokeBuffers(vertexBuffer, indicesBuffer);
+                resultModel.mesh.RevokeBuffers(vertexBuffer, indicesBuffer);
                 Memory::Free(vertexBuffer);
                 Memory::Free(indicesBuffer);
             }
@@ -1462,11 +1491,11 @@ bool FreeShader(AS::Shader * shader) {
 bool FreeMesh(AS::Mesh * mesh) {
     bool success = false;
     MFA_ASSERT(mesh != nullptr);
-    MFA_ASSERT(mesh->isValid());
-    if (mesh != nullptr && mesh->isValid()) {
+    MFA_ASSERT(mesh->IsValid());
+    if (mesh != nullptr && mesh->IsValid()) {
         Blob vertexBuffer {};
         Blob indexBuffer {};
-        mesh->revokeBuffers(vertexBuffer, indexBuffer);
+        mesh->RevokeBuffers(vertexBuffer, indexBuffer);
         Memory::Free(vertexBuffer);
         Memory::Free(indexBuffer);
         success = true;
@@ -1475,25 +1504,43 @@ bool FreeMesh(AS::Mesh * mesh) {
 }
 
 RawFile ReadRawFile(char const * path) {
-    RawFile ret {};
+    RawFile rawFile {};
     MFA_ASSERT(path != nullptr);
     if(path != nullptr) {
+#if defined(__DESKTOP__) || defined(__IOS__)
         auto * file = FS::OpenFile(path, FS::Usage::Read);
         MFA_DEFER {FS::CloseFile(file);};
-        if(FS::IsUsable(file)) {
+        if(FS::FileIsUsable(file)) {
             auto const file_size = FS::FileSize(file);
             // TODO Allocate using a memory pool system
             auto const memory_blob = Memory::Alloc(file_size);
-            auto const read_bytes = FS::Read(file, ret.data);
+            auto const read_bytes = FS::Read(file, memory_blob);
             // Means that reading is successful
             if(read_bytes == file_size) {
-                ret.data = memory_blob;
+                rawFile.data = memory_blob;
             } else {
                 Memory::Free(memory_blob);
             }
         }
+#elif defined(__ANDROID__)
+        auto * file = FS::Android_OpenAsset(path);
+        MFA_DEFER {FS::Android_CloseAsset(file);};
+        if (FS::Android_AssetIsUsable(file)) {
+            auto const fileSize = FS::Android_AssetSize(file);
+            auto const memoryBlob = Memory::Alloc(fileSize);
+            auto const readBytes = FS::Android_ReadAsset(file, memoryBlob);
+            // Means that reading is successful
+            if(readBytes == fileSize) {
+                rawFile.data = memoryBlob;
+            } else {
+                Memory::Free(memoryBlob);
+            }
+        }
+#else
+    #error Os not handled
+#endif
     }
-    return ret;
+    return rawFile;
 }
 
 bool FreeRawFile (RawFile * rawFile) {

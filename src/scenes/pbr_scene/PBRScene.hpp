@@ -1,20 +1,20 @@
 #pragma once
 
 #include "engine/Scene.hpp"
-#include "engine/RenderFrontend.hpp"
+#include "engine/render_system/RenderFrontend.hpp"
 
 class PBRScene final : public MFA::Scene {
 public:
 
-    explicit PBRScene() = default;
+    explicit PBRScene();
 
     void Init() override;
 
     void Shutdown() override;
 
-    void OnDraw(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_pass) override;
+    void OnRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_pass) override;
 
-    void OnUI(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & draw_pass) override;
+    void OnUI();
 
     void OnResize() override;
 
@@ -30,26 +30,38 @@ private:
     static constexpr float Z_FAR = 1000.0f;
 
     struct _MaterialInformation {
-        char const * name;
-        float color[3];
-        float roughness;
-        float metallic;
+        std::string name;
+        float color[3] {};
+        float roughness = 0.0f;
+        float metallic = 0.0f;
+        explicit _MaterialInformation(
+            char const * name_,
+            std::initializer_list<float> const & color_,
+            float const roughness_,
+            float const metallic_
+        )
+            : name(name_)
+            , roughness(roughness_)
+            , metallic(metallic_)
+        {
+            MFA::Copy<3>(color, color_);    
+        }
     };
 
     static constexpr int CustomMaterialIndex = 7;
-    static constexpr _MaterialInformation MaterialInformation [8] = {
-        { .name = "Gold", .color = {1.0f, 0.765557f, 0.336057f}, .roughness = 0.1f, .metallic = 1.0f },
-        { .name = "Copper", .color = {0.955008f, 0.637427f, 0.538163f}, .roughness = 0.1f, .metallic = 1.0f },
-        { .name = "Chromium", .color = {0.549585f, 0.556114f, 0.554256f}, .roughness = 0.1f, .metallic = 1.0f },
-        { .name = "Nickel", .color = {0.659777f, 0.608679f, 0.525649f}, .roughness = 0.1f, .metallic = 1.0f },
-        { .name = "Titanium", .color = {0.541931f, 0.496791f, 0.449419f}, .roughness = 0.1f, .metallic = 1.0f },
-        { .name = "Cobalt", .color = {0.662124f, 0.654864f, 0.633732f}, .roughness = 0.1f, .metallic = 1.0f },
-        { .name = "Platinum", .color = {0.672411f, 0.637331f, 0.585456f}, .roughness = 0.1f, .metallic = 1.0f },
+    inline static _MaterialInformation MaterialInformation [8] {
+        _MaterialInformation { "Gold", {1.0f, 0.765557f, 0.336057f}, 0.1f, 1.0f },
+        _MaterialInformation { "Copper", {0.955008f, 0.637427f, 0.538163f}, 0.1f, 1.0f },
+        _MaterialInformation { "Chromium", {0.549585f, 0.556114f, 0.554256f}, 0.1f, 1.0f },
+        _MaterialInformation { "Nickel", {0.659777f, 0.608679f, 0.525649f}, 0.1f, 1.0f },
+        _MaterialInformation { "Titanium", {0.541931f, 0.496791f, 0.449419f}, 0.1f, 1.0f },
+        _MaterialInformation { "Cobalt", {0.662124f, 0.654864f, 0.633732f}, 0.1f, 1.0f },
+        _MaterialInformation { "Platinum", {0.672411f, 0.637331f, 0.585456f}, 0.1f, 1.0f },
         // Testing materials
-        //{ .name = "White", .color = {1.0f, 1.0f, 1.0f}, .roughness = 0.1f, .metallic = 1.0f },
-        { .name = "Custom", .color = {1.0f, 0.0f, 0.0f}, .roughness = 0.5f, .metallic = 0.1f },
-        //{ .name = "Blue", .color = {0.0f, 0.0f, 1.0f}, .roughness = 0.1f, .metallic = 1.0f },
-        //{ .name = "Black", .color = {0.0f, 0.0f, 0.0f}, .roughness = 0.1f, .metallic = 1.0f },
+        //{ "White", {1.0f, 1.0f, 1.0f}, 0.1f, 1.0f },
+        _MaterialInformation { "Custom", {1.0f, 0.0f, 0.0f}, 0.5f, 0.1f },
+        //{ "Blue", {0.0f, 0.0f, 1.0f}, 0.1f, 1.0f },
+        //{ "Black", {0.0f, 0.0f, 0.0f}, 0.1f, 1.0f },
     };
 
     MFA::RenderFrontend::UniformBufferGroup m_material_buffer_group;
@@ -77,7 +89,7 @@ private:
 
     MFA::RenderFrontend::GpuModel m_sphere {};
 
-    VkDescriptorSetLayout_T * m_descriptor_set_layout = nullptr;
+    VkDescriptorSetLayout mDescriptorSetLayout {};
     MFA::RenderFrontend::DrawPipeline m_draw_pipeline {};
    // https://seblagarde.wordpress.com/2011/08/17/feeding-a-physical-based-lighting-mode/
     float m_sphere_rotation [3] {0, 0, 0};
@@ -95,5 +107,7 @@ private:
     float m_light_position[3] {0.0f, 0.0f, -2.0f};
     //float m_light_colors[3] {1.0f, 1.0f, 1.0f};
 
-    std::vector<VkDescriptorSet_T *> m_sphere_descriptor_sets {};
+    MFA::RenderBackend::DescriptorSetGroup mSphereDescriptorSets {};
+
+    MFA::UIRecordObject mRecordObject;
 };

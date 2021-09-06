@@ -93,12 +93,14 @@ void Texture::addMipmap(
     mPreviousMipWidth = dimension.width;
     mPreviousMipHeight = dimension.height;
 
-    uint32_t dataLen = static_cast<uint32_t>(data.len);
-    mMipmapInfos.emplace_back(MipmapInfo {
-        .offset = mCurrentOffset,
-        .size = dataLen,
-        .dimension = dimension,
-    });
+    auto const dataLen = static_cast<uint32_t>(data.len);
+    {
+        MipmapInfo mipmapInfo {};
+        mipmapInfo.offset = mCurrentOffset;
+        mipmapInfo.size = dataLen;
+        mipmapInfo.dimension = dimension;
+        mMipmapInfos.emplace_back(mipmapInfo);
+    }
     uint64_t nextOffset = mCurrentOffset + dataLen;
     MFA_ASSERT(mBuffer.ptr != nullptr);
     MFA_ASSERT(nextOffset <= mBuffer.len);
@@ -126,7 +128,7 @@ bool Texture::isValid() const {
         mBuffer.len > 0;
 }
 
-void Mesh::initForWrite(
+void Mesh::InitForWrite(
     const uint32_t vertexCount,
     const uint32_t indexCount,
     const Blob & vertexBuffer,
@@ -146,9 +148,14 @@ void Mesh::initForWrite(
     mIndexBuffer = indexBuffer;
 }
 
-void Mesh::finalizeData() {
+// Calling this function is required to generate valid data
+void Mesh::FinalizeData() {
     MFA_ASSERT(mNextIndexOffset == mIndexBuffer.len);
     MFA_ASSERT(mNextVertexOffset == mVertexBuffer.len);
+    MFA_ASSERT(mNodes.empty() == false);
+    MFA_ASSERT(mRootNodes.empty() == true);
+   
+    // Pass one: Store parent index for each child
     for (int i = 0; i < static_cast<int>(mNodes.size()); ++i) {
         auto const & currentNode = mNodes[i];
         if (currentNode.children.empty() == false) {
@@ -157,16 +164,23 @@ void Mesh::finalizeData() {
             }
         }
     }
+    // Pass tow: Cache parent nodes in a separate daa structure for faster access
+    for (uint32_t i = 0; i < static_cast<uint32_t>(mNodes.size()); ++i) {
+        auto const & currentNode = mNodes[i];
+        if (currentNode.parent < 0) {
+            mRootNodes.emplace_back(i);
+        }
+    }
 }
 
-uint32_t Mesh::insertSubMesh() {
+uint32_t Mesh::InsertSubMesh() {
     mSubMeshes.emplace_back();
     return static_cast<uint32_t>(mSubMeshes.size() - 1);
 }
 
-void Mesh::insertPrimitive(
+void Mesh::InsertPrimitive(
     uint32_t subMeshIndex,
-    Primitive && primitive, 
+    Primitive & primitive, 
     uint32_t const vertexCount, 
     Vertex * vertices, 
     uint32_t const indicesCount, 
@@ -194,21 +208,22 @@ void Mesh::insertPrimitive(
     mNextStartingIndex += indicesCount;
 }
 
-void Mesh::insertNode(Node const & node) {
+void Mesh::InsertNode(Node const & node) {
     mNodes.emplace_back(node);
 }
 
-void Mesh::insertSkin(
+void Mesh::InsertSkin(
 Skin const & skin) {
     mSkins.emplace_back(skin);
 }
 
-void Mesh::insertAnimation(Animation const & animation) {
+void Mesh::InsertAnimation(Animation const & animation) {
     mAnimations.emplace_back(animation);
 }
 
-bool Mesh::isValid() const {
+bool Mesh::IsValid() const {
     return
+        mRootNodes.empty() == false &&
         mSubMeshes.empty() == false && 
         mNodes.empty() == false &&
         mVertexCount > 0 &&
@@ -219,7 +234,7 @@ bool Mesh::isValid() const {
         mIndexBuffer.len > 0;
 }
 
-void Mesh::revokeBuffers(Blob & outVertexBuffer, Blob & outIndexBuffer) {
+void Mesh::RevokeBuffers(Blob & outVertexBuffer, Blob & outIndexBuffer) {
     outVertexBuffer = mVertexBuffer;
     outIndexBuffer = mIndexBuffer;
     mVertexBuffer = {};
