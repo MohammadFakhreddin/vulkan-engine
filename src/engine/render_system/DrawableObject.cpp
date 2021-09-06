@@ -62,6 +62,9 @@ DrawableObject::DrawableObject(RF::GpuModel & model_)
         }
     }
 
+    // Skins
+    mSkins.resize(mesh.GetSkinsCount());
+    
     {// Nodes
         uint32_t const nodesCount = mesh.GetNodesCount();
         mNodes.resize(nodesCount);
@@ -86,33 +89,36 @@ DrawableObject::DrawableObject(RF::GpuModel & model_)
             node.translate.y = meshNode.translate[1];
             node.translate.z = meshNode.translate[2];
 
+            node.skin = meshNode.skin > -1 ? &mSkins[meshNode.skin] : nullptr;
+
+            Matrix4X4Float::ConvertCellsToMat4(meshNode.transform, node.transform);
         }
     }
 
-    // Creating cachedSkinJoints array
-    mCachedSkinsJoints.resize(mesh.GetSkinsCount());
-    for (uint32_t i = 0; i < mesh.GetSkinsCount(); ++i) {
-        auto & skin = mesh.GetSkinByIndex(i);
-        auto const jointsCount = static_cast<uint32_t>(skin.joints.size());
-        mCachedSkinsJoints[i].resize(jointsCount);
-    }
-
-    {// Creating nodesJoints array
-        size_t totalBufferSize = 0;
-        mNodesJointsSubBufferCount = 0;
-        for (auto & node : mNodes) {
-            if (node.meshNode->skin > -1) {
-                node.skinBufferIndex = mNodesJointsSubBufferCount;
-                auto & skin = mesh.GetSkinByIndex(node.meshNode->skin);
-                size_t const localBufferSize = sizeof(JointTransformData) * skin.joints.size();
-                totalBufferSize += localBufferSize;
-                ++mNodesJointsSubBufferCount;
+    {// Creating cachedSkinJoints array
+        {
+            uint32_t totalJointsCount = 0;
+            for (uint32_t i = 0; i < mesh.GetSkinsCount(); ++i) {
+                auto & skin = mesh.GetSkinByIndex(i);
+                auto const jointsCount = static_cast<uint32_t>(skin.joints.size());
+                totalJointsCount += jointsCount;
+            }
+            if (totalJointsCount > 0) {
+                mCachedSkinsJointsBlob = Memory::Alloc(sizeof(JointTransformData) * totalJointsCount);
+                mSkinsJointsBuffer = RF::CreateUniformBuffer(mCachedSkinsJointsBlob.len, RF::GetMaxFramesPerFlight());
             }
         }
-        if (totalBufferSize > 0) {
-            mNodesJointsData = Memory::Alloc(totalBufferSize);
-            mNodesJointsBuffer = RF::CreateUniformBuffer(totalBufferSize, 1);
-        }
+        {
+            mCachedSkinsJoints.resize(mesh.GetSkinsCount());
+            uint32_t startingJointIndex = 0;
+            for (uint32_t i = 0; i < mesh.GetSkinsCount(); ++i) {
+                auto & skin = mesh.GetSkinByIndex(i);
+                auto const jointsCount = static_cast<uint32_t>(skin.joints.size());
+                mCachedSkinsJoints[i] = reinterpret_cast<JointTransformData *>(mCachedSkinsJointsBlob.ptr + startingJointIndex * sizeof(JointTransformData));
+                mSkins[i].skinStartingIndex = startingJointIndex;
+                startingJointIndex += jointsCount;
+            }
+        }   
     }
     MFA_ASSERT(mGpuModel->valid);
     MFA_ASSERT(mGpuModel->model.mesh.IsValid());
@@ -121,13 +127,11 @@ DrawableObject::DrawableObject(RF::GpuModel & model_)
 //-------------------------------------------------------------------------------------------------
 
 DrawableObject::~DrawableObject() {
-    mCachedSkinsJoints.clear();
-
-    if (mNodesJointsData.len > 0) {
-        Memory::Free(mNodesJointsData);
+    if (mCachedSkinsJointsBlob.len > 0) {
+        Memory::Free(mCachedSkinsJointsBlob);
     }
-    if (mNodesJointsBuffer.bufferSize > 0) {
-        RF::DestroyUniformBuffer(mNodesJointsBuffer);
+    if (mSkinsJointsBuffer.bufferSize > 0) {
+        RF::DestroyUniformBuffer(mSkinsJointsBuffer);
     }
     if (mPrimitivesBuffer.bufferSize > 0) {
         RF::DestroyUniformBuffer(mPrimitivesBuffer);
@@ -227,8 +231,8 @@ RF::UniformBufferGroup * DrawableObject::GetUniformBuffer(char const * name) {
 //-------------------------------------------------------------------------------------------------
 
 [[nodiscard]]
-RF::UniformBufferGroup const & DrawableObject::GetNodesJointsBuffer() const noexcept {
-    return mNodesJointsBuffer;
+RF::UniformBufferGroup const & DrawableObject::GetSkinJointsBuffer() const noexcept {
+    return mSkinsJointsBuffer;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -243,8 +247,7 @@ void DrawableObject::Update(float const deltaTimeInSec, RF::DrawPass const & dra
     updateAnimation(deltaTimeInSec);
     computeNodesGlobalTransform();
     updateAllSkinsJoints();
-    updateAllNodes(drawPass);
-
+    
     mIsModelTransformChanged = false;
     // We update buffers after all of computations
     
@@ -262,12 +265,10 @@ void DrawableObject::Update(float const deltaTimeInSec, RF::DrawPass const & dra
         }
     }
 
-
-    // TODO We should update only if data is changed!
-    if (mNodesJointsBuffer.bufferSize > 0) {
+    if (mSkinsJointsBuffer.bufferSize > 0) {
         RF::UpdateUniformBuffer(
-            mNodesJointsBuffer.buffers[0],
-            mNodesJointsData
+            mSkinsJointsBuffer.buffers[drawPass.frameIndex],
+            mCachedSkinsJointsBlob
         );
     }
 }
@@ -469,58 +470,16 @@ void DrawableObject::updateAllSkinsJoints() {
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableObject::updateSkinJoints(uint32_t const skinIndex, Skin const & skin) {
-    auto jointMatrices = mCachedSkinsJoints[skinIndex];
+void DrawableObject::updateSkinJoints(uint32_t const skinIndex, AS::MeshSkin const & skin) {
+    // TODO We can do some caching here as well
+    auto & jointMatrices = mCachedSkinsJoints[skinIndex];
     for (size_t i = 0; i < skin.joints.size(); i++)
     {
         auto const & joint = mNodes[skin.joints[i]];
         auto const nodeMatrix = joint.cachedGlobalTransform;
         glm::mat4 matrix = nodeMatrix *
             Matrix4X4Float::ConvertCellsToMat4(skin.inverseBindMatrices[i].value);  // T - S = changes
-        Matrix4X4Float::ConvertGmToCells(matrix, jointMatrices[i].model);
-    }
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void DrawableObject::updateAllNodes(RF::DrawPass const & drawPass) {
-    //auto const nodesCount = mesh.GetNodesCount();
-    //if (nodesCount > 0) {
-    //    auto const * nodes = mesh.GetNodeData();
-    //    MFA_ASSERT(nodes != nullptr);
-
-    //    for (uint32_t i = 0; i < nodesCount; ++i) {
-    //        updateNodeJoint(drawPass, nodes[i]);
-    //    }
-    //}
-    for (auto & node : mNodes) {
-        updateNodes(drawPass, node);
-    }
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void DrawableObject::updateNodes(
-    RF::DrawPass const & drawPass,
-    Node & node
-) {
-    auto const & mesh = mGpuModel->model.mesh;
-    if (node.meshNode->skin > -1)
-    {
-        // Update the joint matrices
-        MFA_ASSERT(node.isCachedDataValid == true);
-        glm::mat4 const inverseTransform = glm::inverse(node.cachedGlobalTransform);
-        auto const & skin = mesh.GetSkinByIndex(node.meshNode->skin);
-
-        auto const nodeJointsBlob = mNodesJointsData.as<Blob>()[node.skinBufferIndex];
-        auto * nodeJoints = nodeJointsBlob.as<JointTransformData>();
-
-        auto cachedJointMatrices = mCachedSkinsJoints[node.meshNode->skin]; 
-        for (size_t i = 0; i < skin.joints.size(); i++)
-        {
-            glm::mat4 matrix = inverseTransform * Matrix4X4Float::ConvertCellsToMat4(cachedJointMatrices[i].model);   // Because jointTransform already has a transform inside which needs to be undone
-            Matrix4X4Float::ConvertGmToCells(matrix, nodeJoints[i].model);
-        }
+        Matrix4X4Float::ConvertGlmToCells(matrix, jointMatrices[i].model);
     }
 }
 
@@ -569,12 +528,12 @@ void DrawableObject::drawSubMesh(
 
 //-------------------------------------------------------------------------------------------------
 
-glm::mat4 DrawableObject::computeNodeLocalTransform(Node const & node) const {
+glm::mat4 DrawableObject::computeNodeLocalTransform(Node const & node) {
     glm::mat4 result {1};
-    result = glm::translate(result, Matrix4X4Float::ConvertCellsToVec3(node.meshNode->translate));
-    result = result * glm::toMat4(Matrix4X1Float::ConvertCellsToQuat(node.meshNode->rotation));
-    result = glm::scale(result, Matrix4X4Float::ConvertCellsToVec3(node.meshNode->scale));
-    result = result * Matrix4X4Float::ConvertCellsToMat4(node.meshNode->transform);
+    result = glm::translate(result, node.translate);
+    result = result * glm::toMat4(node.rotation);
+    result = glm::scale(result, node.scale);
+    result = result * node.transform;
     return result;
 }
 
@@ -601,6 +560,9 @@ void DrawableObject::computeNodeGlobalTransform(Node & node, Node const * parent
 
     if ((isChanged || mIsModelTransformChanged) && node.meshNode->hasSubMesh()) {
         node.cachedModelTransform = mModelTransform * node.cachedGlobalTransform;
+    }
+    if (isChanged && node.meshNode->hasSubMesh() && node.meshNode->skin > -1) {
+        node.cachedGlobalInverseTransform = glm::inverse(node.cachedGlobalTransform);
     }
 
     node.isCachedDataValid = true;

@@ -27,16 +27,23 @@ public:
 
     struct PrimitiveInfo {
         alignas(16) float baseColorFactor[4];
+
         float emissiveFactor[3];
         int placeholder0;
-        alignas(4) int baseColorTextureIndex;
-        alignas(4) float metallicFactor;
-        alignas(4) float roughnessFactor;
-        alignas(4) int metallicRoughnessTextureIndex;
-        alignas(4) int normalTextureIndex;
-        alignas(4) int emissiveTextureIndex;
-        alignas(4) int hasSkin;
-        // TODO Occlusion
+
+        int baseColorTextureIndex;
+        float metallicFactor;
+        float roughnessFactor;
+        int metallicRoughnessTextureIndex;
+
+        int normalTextureIndex;
+        int emissiveTextureIndex;
+        int hasSkin;
+        int placeholder1;
+    };
+
+    struct Skin {
+        int skinStartingIndex;
     };
 
     struct Node {
@@ -45,13 +52,15 @@ public:
         glm::quat rotation {0.0f, 0.0f, 0.0f, 1.0f};     // x, y, z, w
         glm::vec3 scale {1.0f, 1.0f, 1.0f};                  
         glm::vec3 translate {0.0f, 0.0f, 0.0f};
+        glm::mat4 transform {};
 
-        int skinBufferIndex = -1;
-        
         bool isCachedDataValid = false;
         glm::mat4 cachedLocalTransform {};
         glm::mat4 cachedGlobalTransform {};
         glm::mat4 cachedModelTransform {};
+        glm::mat4 cachedGlobalInverseTransform {};
+
+        Skin * skin = nullptr;
     };
 
     explicit DrawableObject(RF::GpuModel & model_);
@@ -59,8 +68,9 @@ public:
     ~DrawableObject();
     
     DrawableObject & operator= (DrawableObject && rhs) noexcept {
-        this->mNodesJointsData = rhs.mNodesJointsData;
-        this->mNodesJointsBuffer = std::move(rhs.mNodesJointsBuffer);
+        this->mCachedSkinsJointsBlob = rhs.mCachedSkinsJointsBlob;
+        this->mCachedSkinsJoints = rhs.mCachedSkinsJoints;
+        this->mSkinsJointsBuffer = std::move(rhs.mSkinsJointsBuffer);
         this->mGpuModel = rhs.mGpuModel;
         this->mDescriptorSetGroups = std::move(rhs.mDescriptorSetGroups);
         this->mUniformBuffers = std::move(rhs.mUniformBuffers);
@@ -86,7 +96,7 @@ public:
 
     [[nodiscard]] RF::UniformBufferGroup * GetUniformBuffer(char const * name);
     
-    [[nodiscard]] RF::UniformBufferGroup const & GetNodesJointsBuffer() const noexcept;
+    [[nodiscard]] RF::UniformBufferGroup const & GetSkinJointsBuffer() const noexcept;
 
     [[nodiscard]] RF::UniformBufferGroup const & GetPrimitivesBuffer() const noexcept;
 
@@ -135,11 +145,11 @@ private:
 
     void updateAllSkinsJoints();
 
-    void updateSkinJoints(uint32_t skinIndex, Skin const & skin);
+    void updateSkinJoints(uint32_t skinIndex, AS::MeshSkin const & skin);
 
-    void updateAllNodes(RF::DrawPass const & drawPass);
+    //void updateAllNodes(RF::DrawPass const & drawPass);
 
-    void updateNodes(RF::DrawPass const & drawPass, Node & node);
+    //void updateNodes(RF::DrawPass const & drawPass, Node & node);
     
     void drawNode(
         RF::DrawPass & drawPass, 
@@ -155,7 +165,7 @@ private:
     );
 
     [[nodiscard]]
-    glm::mat4 computeNodeLocalTransform(Node const & node) const;
+    static glm::mat4 computeNodeLocalTransform(Node const & node);
 
     void computeNodeGlobalTransform(
         Node & node, 
@@ -170,8 +180,7 @@ private:
     std::unordered_map<std::string, RB::DescriptorSetGroup> mDescriptorSetGroups {};
 
     // Note: Order is important
-    //RF::UniformBufferGroup mNodeTransformBuffers {};
-    RF::UniformBufferGroup mNodesJointsBuffer {};
+    RF::UniformBufferGroup mSkinsJointsBuffer {};
     RF::UniformBufferGroup mPrimitivesBuffer {};
 
     //std::vector<JointTransformData> mNodesJointTransformData {};
@@ -186,9 +195,8 @@ private:
     UIRecordObject mRecordUIObject;
     bool * mIsUIVisible = nullptr;
 
-    std::vector<std::vector<JointTransformData>> mCachedSkinsJoints {};
-    Blob mNodesJointsData {};
-    uint32_t mNodesJointsSubBufferCount = 0;
+    Blob mCachedSkinsJointsBlob {};
+    std::vector<JointTransformData *> mCachedSkinsJoints {};
 
     uint32_t mPrimitiveCount = 0;
     
@@ -204,6 +212,7 @@ private:
     bool mIsModelTransformChanged = true;
     glm::mat4 mModelTransform = glm::identity<glm::mat4>();
 
+    std::vector<Skin> mSkins {};
     std::vector<Node> mNodes {};
 
     std::unordered_map<std::string, Blob> mStorageMap {};

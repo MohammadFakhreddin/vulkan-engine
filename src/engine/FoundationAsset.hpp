@@ -281,7 +281,6 @@ public:
         uint64_t indicesOffset = 0;
         uint32_t indicesStartingIndex = 0;          // From start of buffer
         int16_t baseColorTextureIndex = 0;
-        int16_t mixedMetallicRoughnessOcclusionTextureIndex = 0;
         int16_t metallicRoughnessTextureIndex = 0;
         int16_t roughnessTextureIndex = 0;
         int16_t normalTextureIndex = 0;

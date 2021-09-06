@@ -66,6 +66,8 @@ void PBRWithShadowPipelineV2::Init(
 
     mShadowProjection = Matrix4X4Float::ConvertCellsToMat4(projectionMatrix4X4.cells);
 
+    updateShadowViewProjectionData();
+        
     RF::DrawPass drawPass {};
     for (uint32_t i = 0; i < RF::GetMaxFramesPerFlight(); ++i) {
         drawPass.frameIndex = i;
@@ -150,9 +152,10 @@ void PBRWithShadowPipelineV2::PreRender(
                     {// Vertex push constants
                         ShadowPassVertexStagePushConstants pushConstants {
                             .faceIndex = faceIndex,
-                            .nodeSkinIndex = node.skinBufferIndex,
+                            .skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1,
                         };
-                        Matrix4X4Float::ConvertGmToCells(node.cachedModelTransform, pushConstants.modeTransform);
+                        Matrix4X4Float::ConvertGlmToCells(node.cachedModelTransform, pushConstants.modeTransform);
+                        Matrix4X4Float::ConvertGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
                         RF::PushConstants(
                             drawPass,
                             AS::ShaderStage::Vertex,
@@ -192,10 +195,11 @@ void PBRWithShadowPipelineV2::Render(
             drawableObject->Draw(drawPass, [&drawPass](AS::MeshPrimitive const & primitive, DrawableObject::Node const & node)-> void {
                 // Push constants
                 DisplayPassAllStagesPushConstants pushConstants {
-                    .nodeSkinIndex = node.skinBufferIndex,
+                    .skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1,
                     .primitiveIndex = primitive.uniqueId
                 };
-                Matrix4X4Float::ConvertGmToCells(node.cachedModelTransform, pushConstants.modeTransform);
+                Matrix4X4Float::ConvertGlmToCells(node.cachedModelTransform, pushConstants.modeTransform);
+                Matrix4X4Float::ConvertGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
                 RF::PushConstants(
                     drawPass,
                     VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -327,7 +331,7 @@ void PBRWithShadowPipelineV2::updateShadowLightBuffer(RF::DrawPass const & drawP
 void PBRWithShadowPipelineV2::updateShadowViewProjectionData() {
     auto const lightPositionVector = glm::vec3(mLightPosition[0], mLightPosition[1], mLightPosition[2]);
 
-    Matrix4X4Float::ConvertGmToCells(
+    Matrix4X4Float::ConvertGlmToCells(
         mShadowProjection * glm::lookAt(
             lightPositionVector, 
             lightPositionVector + glm::vec3( 1.0, 0.0, 0.0), 
@@ -336,7 +340,7 @@ void PBRWithShadowPipelineV2::updateShadowViewProjectionData() {
         mShadowViewProjectionData.viewMatrices[0]
     );
 
-    Matrix4X4Float::ConvertGmToCells(
+    Matrix4X4Float::ConvertGlmToCells(
         mShadowProjection * glm::lookAt(
             lightPositionVector, 
             lightPositionVector + glm::vec3(-1.0, 0.0, 0.0), 
@@ -345,7 +349,7 @@ void PBRWithShadowPipelineV2::updateShadowViewProjectionData() {
         mShadowViewProjectionData.viewMatrices[1]
     );
 
-    Matrix4X4Float::ConvertGmToCells(
+    Matrix4X4Float::ConvertGlmToCells(
         mShadowProjection * glm::lookAt(
             lightPositionVector, 
             lightPositionVector + glm::vec3( 0.0, 1.0, 0.0), 
@@ -354,7 +358,7 @@ void PBRWithShadowPipelineV2::updateShadowViewProjectionData() {
         mShadowViewProjectionData.viewMatrices[2]
     );
 
-    Matrix4X4Float::ConvertGmToCells(
+    Matrix4X4Float::ConvertGlmToCells(
         mShadowProjection * glm::lookAt(
             lightPositionVector, 
             lightPositionVector + glm::vec3( 0.0,-1.0, 0.0), 
@@ -363,7 +367,7 @@ void PBRWithShadowPipelineV2::updateShadowViewProjectionData() {
         mShadowViewProjectionData.viewMatrices[3]
     );
 
-    Matrix4X4Float::ConvertGmToCells(
+    Matrix4X4Float::ConvertGlmToCells(
         mShadowProjection * glm::lookAt(
             lightPositionVector, 
             lightPositionVector + glm::vec3( 0.0, 0.0, 1.0), 
@@ -372,7 +376,7 @@ void PBRWithShadowPipelineV2::updateShadowViewProjectionData() {
         mShadowViewProjectionData.viewMatrices[4]
     );
 
-    Matrix4X4Float::ConvertGmToCells(
+    Matrix4X4Float::ConvertGlmToCells(
         mShadowProjection * glm::lookAt(
             lightPositionVector, 
             lightPositionVector + glm::vec3( 0.0, 0.0,-1.0), 
@@ -409,7 +413,7 @@ void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableObject * d
 
     auto const & primitivesBuffer = drawableObject->GetPrimitivesBuffer();
 
-    auto const & nodesJointsBuffer = drawableObject->GetNodesJointsBuffer();
+    auto const & skinJointsBuffer = drawableObject->GetSkinJointsBuffer();
 
     for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex) {
 
@@ -434,9 +438,9 @@ void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableObject * d
         {// SkinJoints
             VkBuffer buffer = mErrorBuffer.buffers[0].buffer;
             size_t bufferSize = mErrorBuffer.bufferSize;
-            if (nodesJointsBuffer.bufferSize > 0) {
-                buffer = nodesJointsBuffer.buffers[frameIndex].buffer;
-                bufferSize = nodesJointsBuffer.bufferSize;
+            if (skinJointsBuffer.bufferSize > 0) {
+                buffer = skinJointsBuffer.buffers[frameIndex].buffer;
+                bufferSize = skinJointsBuffer.bufferSize;
             }
             VkDescriptorBufferInfo skinTransformBufferInfo {
                 .buffer = buffer,
@@ -508,13 +512,13 @@ void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableObject * d
 
 void PBRWithShadowPipelineV2::CreateShadowPassDescriptorSets(DrawableObject * drawableObject) {
 
-    auto const & mesh = drawableObject->GetModel()->model.mesh;
-    // TODO Each subMesh should know its node index as well
     auto const descriptorSetGroup = drawableObject->CreateDescriptorSetGroup(
         "PbrWithShadowV2ShadowPipeline", 
         mShadowPassDescriptorSetLayout, 
         drawableObject->GetPrimitiveCount() * RF::GetMaxFramesPerFlight()
     );
+
+    auto const & skinJointsBuffer = drawableObject->GetSkinJointsBuffer();
     
     for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex) {
 
@@ -536,16 +540,17 @@ void PBRWithShadowPipelineV2::CreateShadowPassDescriptorSets(DrawableObject * dr
             descriptorSetSchema.AddUniformBuffer(viewProjectionBufferInfo);
         }
         {// SkinJoints
-            auto const & drawableNodeJointsBuffer = drawableObject->GetNodesJointsBuffer();
-            auto const & descriptorBuffer = drawableNodeJointsBuffer.bufferSize > 0
-                ? drawableNodeJointsBuffer
-                : mErrorBuffer;
-
-            VkDescriptorBufferInfo skinTransformBufferInfo {};
-            skinTransformBufferInfo.buffer = descriptorBuffer.buffers[0].buffer,
-            skinTransformBufferInfo.offset = 0;
-            skinTransformBufferInfo.range = descriptorBuffer.bufferSize;
-
+            VkBuffer buffer = mErrorBuffer.buffers[0].buffer;
+            size_t bufferSize = mErrorBuffer.bufferSize;
+            if (skinJointsBuffer.bufferSize > 0) {
+                buffer = skinJointsBuffer.buffers[frameIndex].buffer;
+                bufferSize = skinJointsBuffer.bufferSize;
+            }
+            VkDescriptorBufferInfo skinTransformBufferInfo {
+                .buffer = buffer,
+                .offset = 0,
+                .range = bufferSize,
+            };
             descriptorSetSchema.AddUniformBuffer(skinTransformBufferInfo);
         }
 
@@ -554,11 +559,11 @@ void PBRWithShadowPipelineV2::CreateShadowPassDescriptorSets(DrawableObject * dr
         /////////////////////////////////////////////////////////////////
 
         {// LightBuffer
-            VkDescriptorBufferInfo bufferInfo {};
-            bufferInfo.buffer = mShadowLightBuffer.buffers[frameIndex].buffer;
-            bufferInfo.offset = 0;
-            bufferInfo.range = mShadowLightBuffer.bufferSize;
-
+            VkDescriptorBufferInfo bufferInfo {
+                .buffer = mShadowLightBuffer.buffers[frameIndex].buffer,
+                .offset = 0,
+                .range = mShadowLightBuffer.bufferSize,
+            };
             descriptorSetSchema.AddUniformBuffer(bufferInfo);
         }
 

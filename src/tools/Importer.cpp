@@ -1123,7 +1123,7 @@ static void GLTF_extractSubMeshes(
                     AS::MeshPrimitive primitive = {};
                     primitive.uniqueId = uniqueId;
                     primitive.baseColorTextureIndex = baseColorTextureIndex;
-                    primitive.mixedMetallicRoughnessOcclusionTextureIndex = metallicRoughnessTextureIndex;
+                    primitive.metallicRoughnessTextureIndex = metallicRoughnessTextureIndex;
                     primitive.normalTextureIndex = normalTextureIndex;
                     primitive.emissiveTextureIndex = emissiveTextureIndex;
                     Copy<4>(primitive.baseColorFactor, baseColorFactor);

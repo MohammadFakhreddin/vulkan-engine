@@ -17,21 +17,19 @@ struct ViewDataProjectionData {
 
 ConstantBuffer <ViewDataProjectionData> viewProjectionBuffer: register(b0, space0);
 
-struct NodeJoints {
+struct SkinJoints {
     float4x4 joints[];
 };
 
-struct NodesSkinJoints {
-    NodeJoints nodeJoints[];
-};
+ConstantBuffer <SkinJoints> skinJointsBuffer: register(b1, space0); 
 
-ConstantBuffer <NodesSkinJoints> skinJointsBuffer: register(b1, space0); 
 
 struct PushConsts
 {   
     float4x4 model;
+    float4x4 inverseNodeTransform;
     int faceIndex;
-    int nodeskinIndex;
+    int skinIndex;
 };
 
 [[vk::push_constant]]
@@ -46,11 +44,12 @@ VSOut main(VSIn input) {
 
     float4x4 skinMat;
     if (input.hasSkin == 1) {
-        NodeJoints nodeJoints = skinJointsBuffer.nodeJoints[pushConsts.nodeskinIndex];
-        skinMat = mul(nodeJoints.joints[input.jointIndices.x], input.jointWeights.x)
-            + mul(nodeJoints.joints[input.jointIndices.y], input.jointWeights.y) 
-            + mul(nodeJoints.joints[input.jointIndices.z], input.jointWeights.z)
-            + mul(nodeJoints.joints[input.jointIndices.w], input.jointWeights.w);
+        int skinIndex = pushConsts.skinIndex;
+        float4x4 inverseNodeTransform = pushConsts.inverseNodeTransform;
+        skinMat = mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.x]), input.jointWeights.x)
+            + mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.y]), input.jointWeights.y) 
+            + mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.z]), input.jointWeights.z)
+            + mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.w]), input.jointWeights.w);
     } else {
         skinMat = IdentityMat;
     }

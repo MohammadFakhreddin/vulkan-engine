@@ -27,17 +27,20 @@ public:
 
     struct ShadowPassVertexStagePushConstants {
         float modeTransform[16];
+        float inverseNodeTransform[16];
         int faceIndex;
-        int nodeSkinIndex;
+        int skinIndex;
+        int placeholder0[2];
     };
-    static_assert(sizeof(ShadowPassVertexStagePushConstants) == 72);
-
+    //static_assert(sizeof(ShadowPassVertexStagePushConstants) == 136);
     struct DisplayPassAllStagesPushConstants {
         float modeTransform[16];
-        int nodeSkinIndex;
+        float inverseNodeTransform[16];
+        int skinIndex;
         uint32_t primitiveIndex;      // Unique id
+        int placeholder0[2];
     };
-    static_assert(sizeof(DisplayPassAllStagesPushConstants) == 72);
+    //static_assert(sizeof(DisplayPassAllStagesPushConstants) == 136);
 
     struct DisplayLightAndCameraData {
         alignas(16) float lightPosition[3];

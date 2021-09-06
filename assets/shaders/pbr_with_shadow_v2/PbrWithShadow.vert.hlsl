@@ -37,20 +37,17 @@ struct ViewProjectionData {
 
 ConstantBuffer <ViewProjectionData> viewProjectionBuffer: register(b0, space0);
 
-struct NodeJoints {
+struct SkinJoints {
     float4x4 joints[];
 };
 
-struct NodesSkinJoints {
-    NodeJoints nodeJoints[];
-};
-
-ConstantBuffer <NodesSkinJoints> skinJointsBuffer: register(b1, space0); 
+ConstantBuffer <SkinJoints> skinJointsBuffer: register(b1, space0); 
 
 struct PushConsts
 {
     float4x4 model;
-	int nodeSkinIndex;
+    float4x4 inverseNodeTransform;
+	int skinIndex;
     uint primitiveIndex;
 };
 
@@ -66,11 +63,12 @@ VSOut main(VSIn input) {
 
     float4x4 skinMat;
     if (input.hasSkin == 1) {
-        NodeJoints nodeJoints = skinJointsBuffer.nodeJoints[pushConsts.nodeSkinIndex];
-        skinMat = mul(nodeJoints.joints[input.jointIndices.x], input.jointWeights.x)
-            + mul(nodeJoints.joints[input.jointIndices.y], input.jointWeights.y) 
-            + mul(nodeJoints.joints[input.jointIndices.z], input.jointWeights.z)
-            + mul(nodeJoints.joints[input.jointIndices.w], input.jointWeights.w);
+        int skinIndex = pushConsts.skinIndex;
+        float4x4 inverseNodeTransform = pushConsts.inverseNodeTransform;
+        skinMat = mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.x]), input.jointWeights.x)
+            + mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.y]), input.jointWeights.y) 
+            + mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.z]), input.jointWeights.z)
+            + mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.w]), input.jointWeights.w);
     } else {
         skinMat = IdentityMat;
     }
@@ -82,8 +80,7 @@ VSOut main(VSIn input) {
     
     output.position = mul(viewProjectionBuffer.viewProjection, worldPos);
     
-    float4 tempPosition2 = float4(input.position, 1.0f); // w is 1 because position is a coordinate
-    output.worldPos = mul(skinModelMat, tempPosition2).xyz;
+    output.worldPos = worldPos.xyz;
 
     // BaseColor
     output.baseColorTexCoord = input.baseColorTexCoord;
@@ -93,13 +90,11 @@ VSOut main(VSIn input) {
     
     // Normals
 	float4 tempTangent = input.tangent;
-    // tempTangent = mul(modelViewMat, tempTangent);
     tempTangent = mul(skinModelMat, tempTangent);
     
     float3 worldTangent = normalize(tempTangent.xyz);
 
 	float4 tempNormal = float4(input.normal, 0.0);  // W is zero beacuas normal is a vector
-    // tempNormal = mul(modelViewMat, tempNormal);
     tempNormal = mul(skinModelMat, tempNormal);
     
     float3 worldNormal = normalize(tempNormal.xyz);

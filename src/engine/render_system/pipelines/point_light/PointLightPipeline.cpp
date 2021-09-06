@@ -109,7 +109,7 @@ void PointLightPipeline::Render(
 
                 PushConstants pushConstants {};
                 Copy<3>(pushConstants.baseColorFactor, storageData.color);
-                Matrix4X4Float::ConvertGmToCells(node.cachedModelTransform, pushConstants.model);
+                Matrix4X4Float::ConvertGlmToCells(node.cachedModelTransform, pushConstants.model);
                         
                 RF::PushConstants(
                     drawPass,
@@ -164,7 +164,7 @@ void PointLightPipeline::updateViewProjectionBuffer(RF::DrawPass const & drawPas
     }
     if (mViewProjectionBufferDirtyCounter == RF::GetMaxFramesPerFlight()) {
         glm::mat4 const viewProjection = mCameraProjection * mCameraTransform;
-        Matrix4X4Float::ConvertGmToCells(viewProjection, mViewProjectionData.viewProjection);
+        Matrix4X4Float::ConvertGlmToCells(viewProjection, mViewProjectionData.viewProjection);
     }
     --mViewProjectionBufferDirtyCounter;
     MFA_ASSERT(mViewProjectionBufferDirtyCounter >= 0);

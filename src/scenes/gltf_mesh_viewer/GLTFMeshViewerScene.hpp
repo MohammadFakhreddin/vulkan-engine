@@ -101,7 +101,7 @@ private:
     float mLightColor[3]{};
 
     std::vector<ModelRenderRequiredData> mModelsRenderData {};
-    int32_t mSelectedModelIndex = 2;
+    int32_t mSelectedModelIndex = 0;
     int32_t mPreviousModelSelectedIndex = -1;
 
     MFA::RenderFrontend::SamplerGroup mSamplerGroup {};

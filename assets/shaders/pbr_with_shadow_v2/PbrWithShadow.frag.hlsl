@@ -36,6 +36,8 @@ struct PrimitiveInfo {
     // TODO Occlusion texture
     
     int hasSkin;    // TODO Move hasSkin to vertex
+
+    int placeholder1;
 };
 
 struct PrimitiveInfoBuffer {
@@ -62,7 +64,8 @@ Texture2D textures[64] : register(t5, space0);
 struct PushConsts
 {
     float4x4 model;
-	int nodeSkinIndex;
+    float4x4 inverseNodeTransform;
+	int skinIndex;
     uint primitiveIndex;
 };
 
@@ -316,16 +319,5 @@ PSOut main(PSIn input) {
     output.color = float4(color, 1.0);
 	return output;
 
-    // // get vector between fragment position and light position
-    // // float3 fragToLight = fragPos - lvBuff.lightPosition;
-    // float3 fragToLight = input.worldPos - lvBuff.lightPosition;    // TODO I think we should normalize this    
-    // // use the light to fragment vector to sample from the depth map    
-    // float closestDepth = shadowMapTexture.Sample(shadowMapSampler, fragToLight).r;
-    // // it is currently in linear range between [0,1]. Re-transform back to original value
-    // closestDepth *= lvBuff.nearToFarPlaneDistance;
-
-    // PSOut output;
-    // output.color = float4(closestDepth / lvBuff.nearToFarPlaneDistance, 0.0f, 0.0f , 1.0);
-	// return output;
 
 }
