@@ -481,6 +481,15 @@ void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableObject * d
             descriptorSetSchema.AddCombinedImageSampler(shadowMapImageInfo);
         }
 
+        {// Sampler
+            VkDescriptorImageInfo samplerInfo {
+                .sampler = mSamplerGroup->sampler,
+                .imageView = nullptr,
+                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            };
+            descriptorSetSchema.AddSampler(samplerInfo);
+        }
+
         // TODO Each one need their own sampler
         // Textures
         MFA_ASSERT(textures.size() <= 64);
@@ -488,20 +497,20 @@ void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableObject * d
         std::vector<VkDescriptorImageInfo> imageInfos {};
         for (auto const & texture : textures) {
             imageInfos.emplace_back(VkDescriptorImageInfo {
-                .sampler = mSamplerGroup->sampler,
+                .sampler = nullptr,
                 .imageView = texture.image_view(),
                 .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             });
         }
         for (auto i = static_cast<uint32_t>(textures.size()); i < 64; ++i) {
             imageInfos.emplace_back(VkDescriptorImageInfo {
-                .sampler = mSamplerGroup->sampler,
+                .sampler = nullptr,
                 .imageView = mErrorTexture->image_view(),
                 .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             });
         }
         MFA_ASSERT(imageInfos.size() == 64);
-        descriptorSetSchema.AddCombinedImageSampler(
+        descriptorSetSchema.AddImage(
             imageInfos.data(), 
             static_cast<uint32_t>(imageInfos.size())
         );
@@ -627,10 +636,19 @@ void PBRWithShadowPipelineV2::createDisplayPassDescriptorSetLayout() {
         };
         bindings.emplace_back(layoutBinding);
     }
+    {// TextureSampler
+        VkDescriptorSetLayoutBinding layoutBinding {
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+        };
+        bindings.emplace_back(layoutBinding);
+    }
     {// Textures
         VkDescriptorSetLayoutBinding layoutBinding {
             .binding = static_cast<uint32_t>(bindings.size()),
-            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             .descriptorCount = 64,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         };

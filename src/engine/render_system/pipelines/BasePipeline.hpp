@@ -100,6 +100,34 @@ public:
 
         mWriteInfo.emplace_back(writeDescriptorSet);
     }
+    
+    void AddSampler(VkDescriptorImageInfo const & samplerInfo, uint32_t offset = 0) {
+        VkWriteDescriptorSet writeDescriptorSet {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = mDescriptorSet,
+            .dstBinding = static_cast<uint32_t>(mWriteInfo.size()) + offset,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
+            .pImageInfo = &samplerInfo,
+        };
+
+        mWriteInfo.emplace_back(writeDescriptorSet);
+    }
+    
+    void AddImage(VkDescriptorImageInfo const * imageInfoList, uint32_t imageInfoCount, uint32_t offset = 0) {
+        VkWriteDescriptorSet writeDescriptorSet {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = mDescriptorSet,
+            .dstBinding = static_cast<uint32_t>(mWriteInfo.size()) + offset,
+            .dstArrayElement = 0,
+            .descriptorCount = imageInfoCount,
+            .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            .pImageInfo = imageInfoList
+        };
+
+        mWriteInfo.emplace_back(writeDescriptorSet);
+    }
 
     void UpdateDescriptorSets() {
         isActive = false;

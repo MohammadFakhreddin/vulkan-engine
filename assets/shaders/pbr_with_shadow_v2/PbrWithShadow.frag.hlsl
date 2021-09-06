@@ -58,8 +58,9 @@ ConstantBuffer <LightViewBuffer> lvBuff : register (b3, space0);
 sampler shadowMapSampler : register(s4, space0);
 TextureCube shadowMapTexture : register(t4, space0);
 
-sampler samplers[64] : register(s5, space0);
-Texture2D textures[64] : register(t5, space0);
+sampler textureSampler : register(s5, space0);
+
+Texture2D textures[64] : register(t6, space0);
 
 struct PushConsts
 {
@@ -196,7 +197,7 @@ float3 calculateNormal(PSIn input, int normalTextureIndex)
     if (normalTextureIndex < 0) {
         pixelNormal = input.worldNormal;
     } else {
-        float3 tangentNormal = textures[normalTextureIndex].Sample(samplers[normalTextureIndex], input.normalTexCoord).rgb * 2.0 - 1.0;
+        float3 tangentNormal = textures[normalTextureIndex].Sample(textureSampler, input.normalTexCoord).rgb * 2.0 - 1.0;
         
         float3x3 TBN = transpose(float3x3(input.worldTangent, input.worldBiTangent, input.worldNormal));
         // float3x3 TBN = float3x3(input.worldTangent, input.worldBiTangent, input.worldNormal));
@@ -263,7 +264,7 @@ PSOut main(PSIn input) {
     PrimitiveInfo primitiveInfo = smBuff.primitiveInfo[pushConsts.primitiveIndex];
 
     float4 baseColor = primitiveInfo.baseColorTextureIndex >= 0
-        ? pow(textures[primitiveInfo.baseColorTextureIndex].Sample(samplers[primitiveInfo.baseColorTextureIndex], input.baseColorTexCoord).rgba, 2.2f)
+        ? pow(textures[primitiveInfo.baseColorTextureIndex].Sample(textureSampler, input.baseColorTexCoord).rgba, 2.2f)
         : primitiveInfo.baseColorFactor.rgba;
 
     // Alpha mask
@@ -276,7 +277,7 @@ PSOut main(PSIn input) {
     // TODO: Is usages of occlusion correct ?
     // TODO Handle occlusionTexture and its strength
     if (primitiveInfo.metallicRoughnessTextureIndex >= 0) {
-        float4 metallicRoughness = textures[primitiveInfo.metallicRoughnessTextureIndex].Sample(samplers[primitiveInfo.metallicRoughnessTextureIndex], input.metallicRoughnessTexCoord);
+        float4 metallicRoughness = textures[primitiveInfo.metallicRoughnessTextureIndex].Sample(textureSampler, input.metallicRoughnessTexCoord);
         metallic = metallicRoughness.b;
         roughness = metallicRoughness.g;
     } else {
@@ -302,7 +303,7 @@ PSOut main(PSIn input) {
     float3 color = float3(0.0, 0.0, 0.0);
     
     if (primitiveInfo.emissiveTextureIndex >= 0) {
-        float3 ao = textures[primitiveInfo.emissiveTextureIndex].Sample(samplers[primitiveInfo.emissiveTextureIndex], input.emissiveTexCoord);
+        float3 ao = textures[primitiveInfo.emissiveTextureIndex].Sample(textureSampler, input.emissiveTexCoord);
         color += float3(baseColor.r * ao.r, baseColor.g * ao.g, baseColor.b * ao.b) * primitiveInfo.emissiveFactor;
     } else {
         color += baseColor.rgb * primitiveInfo.emissiveFactor; // * 0.3
