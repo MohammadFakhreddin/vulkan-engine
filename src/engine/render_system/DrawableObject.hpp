@@ -134,7 +134,7 @@ public:
         return mActiveAnimationIndex;
     }
 
-    void SetActiveAnimationIndex(int const nextAnimationIndex, float transitionDurationInSec = 0.3f);
+    void SetActiveAnimationIndex(int nextAnimationIndex, float transitionDurationInSec = 0.3f);
 
     void AllocStorage(char const * name, size_t size);
 
@@ -164,7 +164,7 @@ private:
     );
 
     [[nodiscard]]
-    glm::mat4 computeNodeLocalTransform(Node const & node);
+    glm::mat4 computeNodeLocalTransform(Node const & node) const;
 
     void computeNodeGlobalTransform(
         Node & node, 
@@ -182,7 +182,6 @@ private:
     RF::UniformBufferGroup mSkinsJointsBuffer {};
     RF::UniformBufferGroup mPrimitivesBuffer {};
 
-    //std::vector<JointTransformData> mNodesJointTransformData {};
     RF::GpuModel * mGpuModel = nullptr;
     std::unordered_map<std::string, RF::UniformBufferGroup> mUniformBuffers {};
 

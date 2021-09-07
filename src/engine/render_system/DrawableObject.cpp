@@ -89,9 +89,23 @@ DrawableObject::DrawableObject(RF::GpuModel & model_)
             node.currentTranslate.y = meshNode.translate[1];
             node.currentTranslate.z = meshNode.translate[2];
 
+            node.previousRotation.x = meshNode.rotation[0];
+            node.previousRotation.y = meshNode.rotation[1];
+            node.previousRotation.z = meshNode.rotation[2];
+            node.previousRotation.w = meshNode.rotation[3];
+
+            node.previousScale.x = meshNode.scale[0];
+            node.previousScale.y = meshNode.scale[1];
+            node.previousScale.z = meshNode.scale[2];
+
+            node.previousTranslate.x = meshNode.translate[0];
+            node.previousTranslate.y = meshNode.translate[1];
+            node.previousTranslate.z = meshNode.translate[2];
+
             node.skin = meshNode.skin > -1 ? &mSkins[meshNode.skin] : nullptr;
 
             Matrix4X4Float::ConvertCellsToMat4(meshNode.transform, node.currentTransform);
+            Matrix4X4Float::ConvertCellsToMat4(meshNode.transform, node.previousTransform);
         }
     }
 
@@ -444,11 +458,19 @@ void DrawableObject::updateAnimation(float const deltaTimeInSec) {
         mActiveAnimationTimeInSec += deltaTimeInSec;
         if (mActiveAnimationTimeInSec > activeAnimation.endTime) {
             MFA_ASSERT(activeAnimation.endTime >= activeAnimation.startTime);
+
+            // TODO This should be a setting, We also have to define whether an animation needs to be looped or not
+            //mPreviousAnimationTimeInSec = activeAnimation.endTime;
+            //mPreviousAnimationIndex = mActiveAnimationIndex;
+            //mAnimationTransitionDurationInSec = 0.1f;
+            //mAnimationRemainingTransitionDurationInSec = 0.3f;
+
             mActiveAnimationTimeInSec -= (activeAnimation.endTime - activeAnimation.startTime);
+
         }
     }
     {// Previous animation
-        if (mAnimationRemainingTransitionDurationInSec <= 0 || mPreviousAnimationIndex >= 0) {
+        if (mAnimationRemainingTransitionDurationInSec <= 0 || mPreviousAnimationIndex < 0) {
             return;
         }
         
@@ -513,12 +535,6 @@ void DrawableObject::updateAnimation(float const deltaTimeInSec) {
         }
         
         mAnimationRemainingTransitionDurationInSec -= deltaTimeInSec;
-        
-        mPreviousAnimationTimeInSec += deltaTimeInSec;
-        if (mPreviousAnimationIndex > previousAnimation.endTime) {
-            MFA_ASSERT(previousAnimation.endTime >= previousAnimation.startTime);
-            mPreviousAnimationTimeInSec -= (previousAnimation.endTime - previousAnimation.startTime);
-        }
     }
 }
 
@@ -611,7 +627,7 @@ void DrawableObject::drawSubMesh(
 
 //-------------------------------------------------------------------------------------------------
 
-glm::mat4 DrawableObject::computeNodeLocalTransform(Node const & node) {
+glm::mat4 DrawableObject::computeNodeLocalTransform(Node const & node) const {
     glm::mat4 currentTransform {1};
     currentTransform = glm::translate(currentTransform, node.currentTranslate);
     currentTransform = currentTransform * glm::toMat4(node.currentRotation);
@@ -624,8 +640,8 @@ glm::mat4 DrawableObject::computeNodeLocalTransform(Node const & node) {
         previousTransform = glm::scale(previousTransform, node.previousScale);
         previousTransform = previousTransform * node.previousTransform;
         
-        currentTransform = currentTransform * ((1 - mAnimationRemainingTransitionDurationInSec) / mAnimationTransitionDurationInSec)
-            + previousTransform * (mAnimationRemainingTransitionDurationInSec / mAnimationTransitionDurationInSec);
+        currentTransform = (currentTransform * ((mAnimationTransitionDurationInSec - mAnimationRemainingTransitionDurationInSec) / mAnimationTransitionDurationInSec))
+            + (previousTransform * (mAnimationRemainingTransitionDurationInSec / mAnimationTransitionDurationInSec));
     }
     return currentTransform;
 }
