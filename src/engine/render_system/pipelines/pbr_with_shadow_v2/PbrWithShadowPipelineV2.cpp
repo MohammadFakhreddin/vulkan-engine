@@ -854,6 +854,7 @@ void PBRWithShadowPipelineV2::createDisplayPassPipeline() {
     options.rasterizationSamples = RF::GetMaxSamplesCount();
     options.pushConstantRanges = mPushConstantRanges.data();
     options.pushConstantsRangeCount = static_cast<uint8_t>(mPushConstantRanges.size());
+    options.cullMode = VK_CULL_MODE_BACK_BIT;
 
     mDisplayPassPipeline = RF::CreateDrawPipeline(
         RF::GetDisplayRenderPass()->GetVkRenderPass(),

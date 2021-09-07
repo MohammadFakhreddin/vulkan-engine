@@ -84,7 +84,7 @@ const float constantAttenuation = 1.0f;
 const float linearAttenuation = 2.0f / lightSphereRadius;
 const float quadraticAttenuation = 1.0f / (lightSphereRadius * lightSphereRadius);
 
-const float alphaMaskCutoff = 0.001f;
+const float alphaMaskCutoff = 0.01f;
 
 const float ambientOcclusion = 0.02f;
 
@@ -317,7 +317,7 @@ PSOut main(PSIn input) {
     color = pow(color, float3(1.0f/2.2f)); 
 
     PSOut output;
-    output.color = float4(color, 1.0);
+    output.color = float4(color, baseColor.a);
 	return output;
 
 
