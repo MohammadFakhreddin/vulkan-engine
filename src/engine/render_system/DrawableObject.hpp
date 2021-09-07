@@ -49,10 +49,15 @@ public:
     struct Node {
         AS::MeshNode * meshNode = nullptr;
 
-        glm::quat rotation {0.0f, 0.0f, 0.0f, 1.0f};     // x, y, z, w
-        glm::vec3 scale {1.0f, 1.0f, 1.0f};                  
-        glm::vec3 translate {0.0f, 0.0f, 0.0f};
-        glm::mat4 transform {};
+        glm::quat currentRotation {0.0f, 0.0f, 0.0f, 1.0f};     // x, y, z, w
+        glm::vec3 currentScale {1.0f, 1.0f, 1.0f};
+        glm::vec3 currentTranslate {0.0f, 0.0f, 0.0f};
+        glm::mat4 currentTransform {};
+        
+        glm::quat previousRotation {0.0f, 0.0f, 0.0f, 1.0f};     // x, y, z, w
+        glm::vec3 previousScale {1.0f, 1.0f, 1.0f};
+        glm::vec3 previousTranslate {0.0f, 0.0f, 0.0f};
+        glm::mat4 previousTransform {};
 
         bool isCachedDataValid = false;
         glm::mat4 cachedLocalTransform {};
@@ -129,9 +134,7 @@ public:
         return mActiveAnimationIndex;
     }
 
-    void SetActiveAnimationIndex(int const activeAnimationIndex) {
-        mActiveAnimationIndex = activeAnimationIndex;
-    }
+    void SetActiveAnimationIndex(int const nextAnimationIndex, float transitionDurationInSec = 0.3f);
 
     void AllocStorage(char const * name, size_t size);
 
@@ -146,10 +149,6 @@ private:
     void updateAllSkinsJoints();
 
     void updateSkinJoints(uint32_t skinIndex, AS::MeshSkin const & skin);
-
-    //void updateAllNodes(RF::DrawPass const & drawPass);
-
-    //void updateNodes(RF::DrawPass const & drawPass, Node & node);
     
     void drawNode(
         RF::DrawPass & drawPass, 
@@ -165,7 +164,7 @@ private:
     );
 
     [[nodiscard]]
-    static glm::mat4 computeNodeLocalTransform(Node const & node);
+    glm::mat4 computeNodeLocalTransform(Node const & node);
 
     void computeNodeGlobalTransform(
         Node & node, 
@@ -189,7 +188,12 @@ private:
 
     int mActiveAnimationIndex = 0;
     int mPreviousAnimationIndex = -1;
-    float mAnimationCurrentTime = 0.0f;
+    float mActiveAnimationTimeInSec = 0.0f;
+    float mPreviousAnimationTimeInSec = 0.0f;
+    float mAnimationTransitionDurationInSec = 0.0f;
+    float mAnimationRemainingTransitionDurationInSec = 0.0f;
+
+    int mUISelectedAnimationIndex = 0;
 
     std::string mRecordWindowName {};
     UIRecordObject mRecordUIObject;
@@ -216,6 +220,8 @@ private:
     std::vector<Node> mNodes {};
 
     std::unordered_map<std::string, Blob> mStorageMap {};
+    
+    
 
 };
 

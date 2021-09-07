@@ -845,17 +845,13 @@ void PBRWithShadowPipelineV2::createDisplayPassPipeline() {
         .offset = 0,
         .size = sizeof(DisplayPassAllStagesPushConstants),
     });
-    //mPushConstantRanges.emplace_back(VkPushConstantRange {
-    //    .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-    //    .offset = 0,
-    //    .size = sizeof(DisplayPassAllStagesPushConstants),
-    //});
+    
     RB::CreateGraphicPipelineOptions options {};
     options.rasterizationSamples = RF::GetMaxSamplesCount();
     options.pushConstantRanges = mPushConstantRanges.data();
     options.pushConstantsRangeCount = static_cast<uint8_t>(mPushConstantRanges.size());
     options.cullMode = VK_CULL_MODE_BACK_BIT;
-
+    
     mDisplayPassPipeline = RF::CreateDrawPipeline(
         RF::GetDisplayRenderPass()->GetVkRenderPass(),
         static_cast<uint8_t>(shaders.size()), 

@@ -76,22 +76,22 @@ DrawableObject::DrawableObject(RF::GpuModel & model_)
             node.meshNode = &meshNode;
             node.isCachedDataValid = false;
             
-            node.rotation.x = meshNode.rotation[0];
-            node.rotation.y = meshNode.rotation[1];
-            node.rotation.z = meshNode.rotation[2];
-            node.rotation.w = meshNode.rotation[3];
+            node.currentRotation.x = meshNode.rotation[0];
+            node.currentRotation.y = meshNode.rotation[1];
+            node.currentRotation.z = meshNode.rotation[2];
+            node.currentRotation.w = meshNode.rotation[3];
 
-            node.scale.x = meshNode.scale[0];
-            node.scale.y = meshNode.scale[1];
-            node.scale.z = meshNode.scale[2];
+            node.currentScale.x = meshNode.scale[0];
+            node.currentScale.y = meshNode.scale[1];
+            node.currentScale.z = meshNode.scale[2];
 
-            node.translate.x = meshNode.translate[0];
-            node.translate.y = meshNode.translate[1];
-            node.translate.z = meshNode.translate[2];
+            node.currentTranslate.x = meshNode.translate[0];
+            node.currentTranslate.y = meshNode.translate[1];
+            node.currentTranslate.z = meshNode.translate[2];
 
             node.skin = meshNode.skin > -1 ? &mSkins[meshNode.skin] : nullptr;
 
-            Matrix4X4Float::ConvertCellsToMat4(meshNode.transform, node.transform);
+            Matrix4X4Float::ConvertCellsToMat4(meshNode.transform, node.currentTransform);
         }
     }
 
@@ -340,6 +340,20 @@ void DrawableObject::UpdateModelTransform(float modelTransform[16]) {
 
 //-------------------------------------------------------------------------------------------------
 
+void DrawableObject::SetActiveAnimationIndex(int const nextAnimationIndex, float transitionDuration) {
+    if (nextAnimationIndex == mActiveAnimationIndex) {
+        return;
+    }
+    mPreviousAnimationIndex = mActiveAnimationIndex;
+    mActiveAnimationIndex = nextAnimationIndex;
+    mAnimationTransitionDurationInSec = transitionDuration;
+    mAnimationRemainingTransitionDurationInSec = transitionDuration;
+    mPreviousAnimationTimeInSec = mActiveAnimationTimeInSec;
+    mActiveAnimationTimeInSec = mGpuModel->model.mesh.GetAnimationByIndex(mActiveAnimationIndex).startTime;
+}
+
+//-------------------------------------------------------------------------------------------------
+
 void DrawableObject::AllocStorage(char const * name, size_t const size) {
     MFA_ASSERT(mStorageMap.find(name) == mStorageMap.end());
     mStorageMap[name] = Memory::Alloc(size);
@@ -366,75 +380,144 @@ void DrawableObject::updateAnimation(float const deltaTimeInSec) {
         return;
     }
 
-    auto const & activeAnimation = mesh.GetAnimationByIndex(mActiveAnimationIndex);
-
-    if (mActiveAnimationIndex != mPreviousAnimationIndex) {
-        mAnimationCurrentTime = activeAnimation.startTime;
-        mPreviousAnimationIndex = mActiveAnimationIndex;
-    }
-
-    mAnimationCurrentTime += deltaTimeInSec;
-    
-    if (mAnimationCurrentTime > activeAnimation.endTime) {
-        MFA_ASSERT(activeAnimation.endTime >= activeAnimation.startTime);
-        mAnimationCurrentTime -= (activeAnimation.endTime - activeAnimation.startTime);
-    }
-
-    for (auto const & channel : activeAnimation.channels)
-    {
-        auto const & sampler = activeAnimation.samplers[channel.samplerIndex];
-        auto & node = mNodes[channel.nodeIndex];
-
-        for (size_t i = 0; i < sampler.inputAndOutput.size() - 1; i++)
+    {// Active animation
+        auto const & activeAnimation = mesh.GetAnimationByIndex(mActiveAnimationIndex);
+        
+        for (auto const & channel : activeAnimation.channels)
         {
-            if (sampler.interpolation != Animation::Interpolation::Linear)
+            auto const & sampler = activeAnimation.samplers[channel.samplerIndex];
+            auto & node = mNodes[channel.nodeIndex];
+
+            for (size_t i = 0; i < sampler.inputAndOutput.size() - 1; i++)
             {
-                MFA_LOG_ERROR("This sample only supports linear interpolations");
-                continue;
-            }
+                if (sampler.interpolation != Animation::Interpolation::Linear)
+                {
+                    MFA_LOG_ERROR("This sample only supports linear interpolations");
+                    continue;
+                }
 
-            auto const previousInput = sampler.inputAndOutput[i].input;
-            auto previousOutput = Matrix4X1Float::ConvertCellsToVec4(sampler.inputAndOutput[i].output);
-            auto const nextInput = sampler.inputAndOutput[i + 1].input;
-            auto nextOutput = Matrix4X1Float::ConvertCellsToVec4(sampler.inputAndOutput[i + 1].output);
-            // Get the input keyframe values for the current time stamp
-            if (mAnimationCurrentTime >= previousInput && mAnimationCurrentTime <= nextInput)
+                auto const previousInput = sampler.inputAndOutput[i].input;
+                auto previousOutput = Matrix4X1Float::ConvertCellsToVec4(sampler.inputAndOutput[i].output);
+                auto const nextInput = sampler.inputAndOutput[i + 1].input;
+                auto nextOutput = Matrix4X1Float::ConvertCellsToVec4(sampler.inputAndOutput[i + 1].output);
+                // Get the input keyframe values for the current time stamp
+                if (mActiveAnimationTimeInSec >= previousInput && mActiveAnimationTimeInSec <= nextInput)
+                {
+                    float const fraction = (mActiveAnimationTimeInSec - previousInput) / (nextInput - previousInput);
+
+                    if (channel.path == Animation::Path::Translation)
+                    {
+                        node.currentTranslate = glm::mix(previousOutput, nextOutput, fraction);
+                    }
+                    else if (channel.path == Animation::Path::Rotation)
+                    {
+                        glm::quat previousRotation {};
+                        previousRotation.x = previousOutput[0];
+                        previousRotation.y = previousOutput[1];
+                        previousRotation.z = previousOutput[2];
+                        previousRotation.w = previousOutput[3];
+
+                        glm::quat nextRotation {};
+                        nextRotation.x = nextOutput[0];
+                        nextRotation.y = nextOutput[1];
+                        nextRotation.z = nextOutput[2];
+                        nextRotation.w = nextOutput[3];
+
+                        node.currentRotation = glm::normalize(glm::slerp(previousRotation, nextRotation, fraction));
+                    }
+                    else if (channel.path == Animation::Path::Scale)
+                    {
+                        node.currentScale = glm::mix(previousOutput, nextOutput, fraction);
+                    }
+                    else
+                    {
+                        MFA_ASSERT(false);
+                    }
+
+                    node.isCachedDataValid = false;
+
+                    break;
+                }
+            }
+        }
+        
+        mActiveAnimationTimeInSec += deltaTimeInSec;
+        if (mActiveAnimationTimeInSec > activeAnimation.endTime) {
+            MFA_ASSERT(activeAnimation.endTime >= activeAnimation.startTime);
+            mActiveAnimationTimeInSec -= (activeAnimation.endTime - activeAnimation.startTime);
+        }
+    }
+    {// Previous animation
+        if (mAnimationRemainingTransitionDurationInSec <= 0 || mPreviousAnimationIndex >= 0) {
+            return;
+        }
+        
+        auto const & previousAnimation = mesh.GetAnimationByIndex(mPreviousAnimationIndex);
+        
+        for (auto const & channel : previousAnimation.channels)
+        {
+            auto const & sampler = previousAnimation.samplers[channel.samplerIndex];
+            auto & node = mNodes[channel.nodeIndex];
+
+            for (size_t i = 0; i < sampler.inputAndOutput.size() - 1; i++)
             {
-                float const fraction = (mAnimationCurrentTime - previousInput) / (nextInput - previousInput);
-
-                if (channel.path == Animation::Path::Translation)
+                if (sampler.interpolation != Animation::Interpolation::Linear)
                 {
-                    node.translate = glm::mix(previousOutput, nextOutput, fraction);
-                }
-                else if (channel.path == Animation::Path::Rotation)
-                {
-                    glm::quat previousRotation {};
-                    previousRotation.x = previousOutput[0];
-                    previousRotation.y = previousOutput[1];
-                    previousRotation.z = previousOutput[2];
-                    previousRotation.w = previousOutput[3];
-
-                    glm::quat nextRotation {};
-                    nextRotation.x = nextOutput[0];
-                    nextRotation.y = nextOutput[1];
-                    nextRotation.z = nextOutput[2];
-                    nextRotation.w = nextOutput[3];
-
-                    node.rotation = glm::normalize(glm::slerp(previousRotation, nextRotation, fraction));
-                }
-                else if (channel.path == Animation::Path::Scale)
-                {
-                    node.scale = glm::mix(previousOutput, nextOutput, fraction);
-                }
-                else 
-                {
-                    MFA_ASSERT(false);
+                    MFA_LOG_ERROR("This sample only supports linear interpolations");
+                    continue;
                 }
 
-                node.isCachedDataValid = false;
+                auto const previousInput = sampler.inputAndOutput[i].input;
+                auto previousOutput = Matrix4X1Float::ConvertCellsToVec4(sampler.inputAndOutput[i].output);
+                auto const nextInput = sampler.inputAndOutput[i + 1].input;
+                auto nextOutput = Matrix4X1Float::ConvertCellsToVec4(sampler.inputAndOutput[i + 1].output);
+                // Get the input keyframe values for the current time stamp
+                if (mPreviousAnimationTimeInSec >= previousInput && mPreviousAnimationTimeInSec <= nextInput)
+                {
+                    float const fraction = (mPreviousAnimationTimeInSec - previousInput) / (nextInput - previousInput);
 
-                break;
+                    if (channel.path == Animation::Path::Translation)
+                    {
+                        node.previousTranslate = glm::mix(previousOutput, nextOutput, fraction);
+                    }
+                    else if (channel.path == Animation::Path::Rotation)
+                    {
+                        glm::quat previousRotation {};
+                        previousRotation.x = previousOutput[0];
+                        previousRotation.y = previousOutput[1];
+                        previousRotation.z = previousOutput[2];
+                        previousRotation.w = previousOutput[3];
+
+                        glm::quat nextRotation {};
+                        nextRotation.x = nextOutput[0];
+                        nextRotation.y = nextOutput[1];
+                        nextRotation.z = nextOutput[2];
+                        nextRotation.w = nextOutput[3];
+
+                        node.previousRotation = glm::normalize(glm::slerp(previousRotation, nextRotation, fraction));
+                    }
+                    else if (channel.path == Animation::Path::Scale)
+                    {
+                        node.previousScale = glm::mix(previousOutput, nextOutput, fraction);
+                    }
+                    else
+                    {
+                        MFA_ASSERT(false);
+                    }
+
+                    node.isCachedDataValid = false;
+
+                    break;
+                }
             }
+        }
+        
+        mAnimationRemainingTransitionDurationInSec -= deltaTimeInSec;
+        
+        mPreviousAnimationTimeInSec += deltaTimeInSec;
+        if (mPreviousAnimationIndex > previousAnimation.endTime) {
+            MFA_ASSERT(previousAnimation.endTime >= previousAnimation.startTime);
+            mPreviousAnimationTimeInSec -= (previousAnimation.endTime - previousAnimation.startTime);
         }
     }
 }
@@ -529,12 +612,22 @@ void DrawableObject::drawSubMesh(
 //-------------------------------------------------------------------------------------------------
 
 glm::mat4 DrawableObject::computeNodeLocalTransform(Node const & node) {
-    glm::mat4 result {1};
-    result = glm::translate(result, node.translate);
-    result = result * glm::toMat4(node.rotation);
-    result = glm::scale(result, node.scale);
-    result = result * node.transform;
-    return result;
+    glm::mat4 currentTransform {1};
+    currentTransform = glm::translate(currentTransform, node.currentTranslate);
+    currentTransform = currentTransform * glm::toMat4(node.currentRotation);
+    currentTransform = glm::scale(currentTransform, node.currentScale);
+    currentTransform = currentTransform * node.currentTransform;
+    if (mAnimationRemainingTransitionDurationInSec > 0 && mPreviousAnimationIndex >= 0) {
+        glm::mat4 previousTransform {1};
+        previousTransform = glm::translate(previousTransform, node.previousTranslate);
+        previousTransform = previousTransform * glm::toMat4(node.previousRotation);
+        previousTransform = glm::scale(previousTransform, node.previousScale);
+        previousTransform = previousTransform * node.previousTransform;
+        
+        currentTransform = currentTransform * ((1 - mAnimationRemainingTransitionDurationInSec) / mAnimationTransitionDurationInSec)
+            + previousTransform * (mAnimationRemainingTransitionDurationInSec / mAnimationTransitionDurationInSec);
+    }
+    return currentTransform;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -591,10 +684,11 @@ void DrawableObject::onUI() {
     UI::BeginWindow(mRecordWindowName.c_str());
     UI::Combo(
         "Active animation", 
-        &mActiveAnimationIndex, 
+        &mUISelectedAnimationIndex,
         animationsList.data(), 
         static_cast<int32_t>(animationsList.size())
     );
+    SetActiveAnimationIndex(mUISelectedAnimationIndex);
     UI::EndWindow();
 }
 
