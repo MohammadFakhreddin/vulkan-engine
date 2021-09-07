@@ -57,22 +57,23 @@ void GLTFMeshViewerScene::Init() {
         }
         {
             ModelRenderRequiredData params {};
-            params.displayName = "Car";
-            Path::Asset("models/free_zuk_3d_model/scene.gltf", params.address);
-            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {-19.0f, -32.0f, 177.0f});
-            MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.0f, -2.0f});
+            params.displayName = "Mira";
+            Path::Asset("models/mira/scene.gltf", params.address);
+            params.initialParams.model.scale = 0.005f;
+            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {180.0f, 180.0f, 0.0f});
+            MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.9f, -2.0f});
+            MFA::Copy<3>(params.initialParams.light.position, {0.0f, -2.0f, 0.0f});
+            MFA::Copy<3>(params.initialParams.camera.position, {0.5f, 1.1f, -1.3f});
+            MFA::Copy<3>(params.initialParams.camera.eulerAngles, {-13.0f, 0.0f, 0.0f});
+
             mModelsRenderData.emplace_back(params);
         }
         {
             ModelRenderRequiredData params {};
-            params.displayName = "Gunship";
-            Path::Asset("models/gunship/scene.gltf", params.address);
-            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {160.0f, 176.0f, 0.0f});
-            params.initialParams.model.scale = 0.008f;
-            MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.0f, -33.745f});
-            MFA::Copy<3>(params.initialParams.light.position, {-2.0f, -2.0f, -29.0f});
-            MFA::Copy<3>(params.initialParams.camera.position, {2.5f, 5.3f, 21.8f});
-            MFA::Copy<3>(params.initialParams.camera.eulerAngles, {-22.110f, -13.200f, 0.0f});
+            params.displayName = "Car";
+            Path::Asset("models/free_zuk_3d_model/scene.gltf", params.address);
+            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {-19.0f, -32.0f, 177.0f});
+            MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.0f, -2.0f});
             mModelsRenderData.emplace_back(params);
         }
         {
@@ -95,30 +96,11 @@ void GLTFMeshViewerScene::Init() {
         }
         {
             ModelRenderRequiredData params {};
-            params.displayName = "Mandalorian2";
-            Path::Asset("models/mandalorian__the_fortnite_season_6_skin_updated/scene.gltf", params.address);
-            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {180.0f, 180.0f, 0.0f});
-            params.initialParams.model.scale = 0.0005f;
-            MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 4.5f, -10.0f});
-            mModelsRenderData.emplace_back(params);
-        }
-        {
-            ModelRenderRequiredData params {};
             params.displayName = "Flight helmet";
             Path::Asset("models/FlightHelmet/glTF/FlightHelmet.gltf", params.address);
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {180.0f, 180.0f, 0.0f});
             MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.0f, -1.0f});
             MFA::Copy<3>(params.initialParams.light.position, {0.0f, 0.0f, 2.469f});
-            mModelsRenderData.emplace_back(params);
-        }
-        {
-            ModelRenderRequiredData params {};
-            params.displayName = "Warhammer tank";
-            Path::Asset("models/warhammer_40k_predator_dark_millennium/scene.gltf", params.address);
-            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {-45.0f, -45.0f, 180.0f});
-            params.initialParams.model.scale = 0.5f;
-            MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.0f, -16.0f});
-            MFA::Copy<3>(params.initialParams.light.position, {1.5f, 0.0f, -8.0f});
             mModelsRenderData.emplace_back(params);
         }
     }
