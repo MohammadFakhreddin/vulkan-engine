@@ -1977,6 +1977,18 @@ VkDescriptorPool CreateDescriptorPool(
         poolSize.descriptorCount = maxSets;
         poolSizes.emplace_back(poolSize);
     }
+    {// Sampled image
+        VkDescriptorPoolSize poolSize;
+        poolSize.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        poolSize.descriptorCount = maxSets;
+        poolSizes.emplace_back(poolSize);
+    }
+    {// Sampler
+        VkDescriptorPoolSize poolSize;
+        poolSize.type = VK_DESCRIPTOR_TYPE_SAMPLER;
+        poolSize.descriptorCount = maxSets;
+        poolSizes.emplace_back(poolSize);
+    }
     VkDescriptorPoolCreateInfo poolInfo = {};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
