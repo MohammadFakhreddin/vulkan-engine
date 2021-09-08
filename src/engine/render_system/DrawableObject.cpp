@@ -629,20 +629,19 @@ void DrawableObject::drawSubMesh(
 
 glm::mat4 DrawableObject::computeNodeLocalTransform(Node const & node) const {
     glm::mat4 currentTransform {1};
-    currentTransform = glm::translate(currentTransform, node.currentTranslate);
-    currentTransform = currentTransform * glm::toMat4(node.currentRotation);
-    currentTransform = glm::scale(currentTransform, node.currentScale);
-    currentTransform = currentTransform * node.currentTransform;
-    if (mAnimationRemainingTransitionDurationInSec > 0 && mPreviousAnimationIndex >= 0) {
-        glm::mat4 previousTransform {1};
-        previousTransform = glm::translate(previousTransform, node.previousTranslate);
-        previousTransform = previousTransform * glm::toMat4(node.previousRotation);
-        previousTransform = glm::scale(previousTransform, node.previousScale);
-        previousTransform = previousTransform * node.previousTransform;
-        
-        currentTransform = (currentTransform * ((mAnimationTransitionDurationInSec - mAnimationRemainingTransitionDurationInSec) / mAnimationTransitionDurationInSec))
-            + (previousTransform * (mAnimationRemainingTransitionDurationInSec / mAnimationTransitionDurationInSec));
+    auto translate = node.currentTranslate;
+    auto rotation = node.currentRotation;
+    auto scale = node.currentScale;
+    if (mAnimationRemainingTransitionDurationInSec > 0 && mPreviousAnimationIndex > 0) {
+        auto const fraction = (mAnimationTransitionDurationInSec - mAnimationRemainingTransitionDurationInSec) / mAnimationTransitionDurationInSec;
+        translate = glm::mix(node.previousTranslate, translate, fraction);
+        rotation = glm::slerp(node.previousRotation, rotation, fraction);
+        scale = glm::mix(node.previousScale, scale, fraction);
     }
+    currentTransform = glm::translate(currentTransform, translate);
+    currentTransform = currentTransform * glm::toMat4(rotation);
+    currentTransform = glm::scale(currentTransform, scale);
+    currentTransform = currentTransform * node.currentTransform;
     return currentTransform;
 }
 
