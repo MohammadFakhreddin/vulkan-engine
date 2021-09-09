@@ -2,13 +2,12 @@
 
 #include "engine/BedrockPath.hpp"
 #include "engine/camera/FirstPersonCamera.hpp"
-#include "engine/render_system/render_passes/DisplayRenderPass.hpp"
+#include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "tools/Importer.hpp"
 #include "engine/BedrockMatrix.hpp"
-#include "engine/render_system/render_passes/ShadowRenderPassV2.hpp"
+#include "engine/render_system/render_passes/shadow_render_pass_v2/ShadowRenderPassV2.hpp"
 
 namespace MFA {
-
 
 PBRWithShadowPipelineV2::PBRWithShadowPipelineV2()
     : mShadowRenderPass(std::make_unique<ShadowRenderPassV2>(
@@ -403,7 +402,7 @@ DrawableObject * PBRWithShadowPipelineV2::GetDrawableById(DrawableObjectId const
 
 void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableObject * drawableObject) {
    
-    auto const & textures = drawableObject->GetModel()->textures;
+    auto const & textures = drawableObject->GetGpuModel()->textures;
     
     auto const descriptorSetGroup = drawableObject->CreateDescriptorSetGroup(
         "PbrWithShadowV2DisplayPipeline",

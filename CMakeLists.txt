@@ -79,8 +79,10 @@ list(
     "src/engine/BedrockPath.cpp"
 
     # RenderSystem
-    "src/engine/render_system/DrawableObject.hpp"
-    "src/engine/render_system/DrawableObject.cpp"
+    "src/engine/render_system/drawable_essence/DrawableEssence.hpp"
+    "src/engine/render_system/drawable_essence/DrawableEssence.cpp"
+    "src/engine/render_system/drawable_variant/DrawableVariant.hpp"
+    "src/engine/render_system/drawable_variant/DrawableVariant.cpp"
     "src/engine/render_system/RenderBackend.hpp"
     "src/engine/render_system/RenderBackend.cpp"
     "src/engine/render_system/RenderFrontend.hpp"
@@ -89,12 +91,12 @@ list(
     # RenderPass
     "src/engine/render_system/render_passes/RenderPass.hpp"
     "src/engine/render_system/render_passes/RenderPass.cpp"
-    "src/engine/render_system/render_passes/DisplayRenderPass.hpp"
-    "src/engine/render_system/render_passes/DisplayRenderPass.cpp"
-    "src/engine/render_system/render_passes/ShadowRenderPass.hpp"
-    "src/engine/render_system/render_passes/ShadowRenderPass.cpp"
-    "src/engine/render_system/render_passes/ShadowRenderPassV2.hpp"
-    "src/engine/render_system/render_passes/ShadowRenderPassV2.cpp"
+    "src/engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
+    "src/engine/render_system/render_passes/display_render_pass/DisplayRenderPass.cpp"
+    "src/engine/render_system/render_passes/shadow_render_pass/ShadowRenderPass.hpp"
+    "src/engine/render_system/render_passes/shadow_render_pass/ShadowRenderPass.cpp"
+    "src/engine/render_system/render_passes/shadow_render_pass_v2/ShadowRenderPassV2.hpp"
+    "src/engine/render_system/render_passes/shadow_render_pass_v2/ShadowRenderPassV2.cpp"
     
     # Pipeline
     "src/engine/render_system/pipelines/BasePipeline.hpp"

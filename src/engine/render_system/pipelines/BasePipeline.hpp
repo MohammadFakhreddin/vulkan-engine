@@ -1,6 +1,7 @@
 #pragma once
 
-#include "engine/render_system/DrawableObject.hpp"
+#include "engine/render_system/drawable_essence/DrawableEssence.hpp"
+#include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 
 namespace MFA {
@@ -34,11 +35,23 @@ public:
         DrawableObjectId * ids
     ) {}
 
-    virtual DrawableObjectId AddGpuModel(RF::GpuModel & gpuModel) = 0;
+    virtual void CreateDrawableEssence(
+        char const * name, 
+        RF::GpuModel const & gpuModel, 
+        DrawableEssenceId & outEssenceId
+    ) = 0;
 
-    virtual bool RemoveGpuModel(DrawableObjectId drawableObjectId) = 0;
+    virtual bool RemoveDrawableEssence(char const * name) = 0;
 
+    virtual DrawableVariant * CreateDrawableVariant(char const * name) = 0;
+
+    virtual void RemoveDrawableVariant(DrawableVariant * variant) = 0;
+    
     virtual void OnResize() = 0;
+
+private:
+
+    std::unordered_map<std::string, std::unique_ptr<DrawableEssence>> mDrawableEssenceMap {};
 
 };
 
