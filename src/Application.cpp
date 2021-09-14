@@ -11,6 +11,10 @@
 #include <thread>
 #endif
 
+#ifdef __DESKTOP__
+#include "libs/sdl/SDL.hpp"
+#endif
+
 namespace RF = MFA::RenderFrontend;
 namespace UI = MFA::UISystem;
 namespace IM = MFA::InputManager;

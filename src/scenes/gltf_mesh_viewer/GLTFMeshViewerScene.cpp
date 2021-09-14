@@ -2,7 +2,7 @@
 
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/BedrockMatrix.hpp"
-#include "engine/render_system/DrawableObject.hpp"
+#include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 #include "tools/Importer.hpp"
 #include "tools/ShapeGenerator.hpp"
 #include "engine/BedrockPath.hpp"
@@ -12,10 +12,14 @@ namespace Importer = MFA::Importer;
 namespace UI = MFA::UISystem;
 namespace Path = MFA::Path;
 
+//-------------------------------------------------------------------------------------------------
+
 GLTFMeshViewerScene::GLTFMeshViewerScene()
     : Scene()
     , mRecordObject([this]()->void {OnUI();})
 {}
+
+//-------------------------------------------------------------------------------------------------
 
 void GLTFMeshViewerScene::Init() {
     // TODO Out of pool memory on MacOs, We need to only keep a few of recent objects data active.
@@ -106,7 +110,7 @@ void GLTFMeshViewerScene::Init() {
     }
 
     // TODO We should use gltf sampler info here
-    mSamplerGroup = RF::CreateSampler();
+    mSamplerGroup = RF::CreateSampler(MFA::RT::CreateSamplerParams {});
     
     mPointLightPipeline.Init();
 
@@ -130,14 +134,15 @@ void GLTFMeshViewerScene::Init() {
             }
         }
 
-        mGpuPointLight = RF::CreateGpuModel(cpuModel);
-        mPointLightObjectId = mPointLightPipeline.AddGpuModel(mGpuPointLight);
+        mPointLightModel = RF::CreateGpuModel(cpuModel);
+        mPointLightPipeline.CreateDrawableEssence("Sphere", mPointLightModel);
+        mPointLightVariant = mPointLightPipeline.CreateDrawableVariant("Sphere");
     }
 
     mRecordObject.Enable();
 }
 
-void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) {
+void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RT::DrawPass & drawPass) {
     auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
 
     if (selectedModel.isLoaded == false) {
@@ -146,20 +151,20 @@ void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RenderFrontend:
 
     if (mPreviousModelSelectedIndex != mSelectedModelIndex) {
         {// Enabling ui for current model
-            auto * selectedDrawable = mPbrPipeline.GetDrawableById(mModelsRenderData[mSelectedModelIndex].drawableObjectId);
-            MFA_ASSERT(selectedDrawable != nullptr);
-            selectedDrawable->EnableUI("Active model", &mIsDrawableObjectWindowVisible);
+            auto * selectedVariant = mModelsRenderData[mSelectedModelIndex].variant;
+            MFA_ASSERT(selectedVariant != nullptr);
+            selectedVariant->EnableUI("Active model", &mIsDrawableObjectWindowVisible);
         }
         if (mPreviousModelSelectedIndex >= 0) {// Disabling ui for previous model
-            auto * previousDrawable = mPbrPipeline.GetDrawableById(mModelsRenderData[mPreviousModelSelectedIndex].drawableObjectId);
-            MFA_ASSERT(previousDrawable != nullptr);
-            previousDrawable->DisableUI();
+            auto * previousVariant = mModelsRenderData[mPreviousModelSelectedIndex].variant;
+            MFA_ASSERT(previousVariant != nullptr);
+            previousVariant->DisableUI();
         }
 
         mPreviousModelSelectedIndex = mSelectedModelIndex;
         // Model
-        MFA::Copy<3>(m_model_rotation, selectedModel.initialParams.model.rotationEulerAngle);
-        MFA::Copy<3>(m_model_position, selectedModel.initialParams.model.translate);
+        MFA::Copy<3>(mModelRotation, selectedModel.initialParams.model.rotationEulerAngle);
+        MFA::Copy<3>(mModelPosition, selectedModel.initialParams.model.translate);
         m_model_scale = selectedModel.initialParams.model.scale;
         MFA::Copy<3>(mModelTranslateMin, selectedModel.initialParams.model.translateMin);
         MFA::Copy<3>(mModelTranslateMax, selectedModel.initialParams.model.translateMax);
@@ -190,8 +195,8 @@ void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RenderFrontend:
             mLightPosition[2]
         );
 
-        mPointLightPipeline.UpdateLightTransform(mPointLightObjectId, translationMat.cells);
-        mPointLightPipeline.UpdateLightColor(mPointLightObjectId, mLightColor);
+        mPointLightVariant->UpdateModelTransform(translationMat.cells);
+        mPointLightPipeline.UpdateLightColor(mPointLightVariant, mLightColor);
     }
 
     {// Updating PBR-Pipeline
@@ -201,9 +206,9 @@ void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RenderFrontend:
         MFA::Matrix4X4Float rotationMat {};
         MFA::Matrix4X4Float::AssignRotation(
             rotationMat,
-            m_model_rotation[0],
-            m_model_rotation[1],
-            m_model_rotation[2]
+            mModelRotation[0],
+            mModelRotation[1],
+            mModelRotation[2]
         );
 
         // Scale
@@ -214,9 +219,9 @@ void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RenderFrontend:
         MFA::Matrix4X4Float translationMat {};
         MFA::Matrix4X4Float::AssignTranslation(
             translationMat,
-            m_model_position[0],
-            m_model_position[1],
-            m_model_position[2]
+            mModelPosition[0],
+            mModelPosition[1],
+            mModelPosition[2]
         );
 
         MFA::Matrix4X4Float transformMat {};
@@ -225,10 +230,7 @@ void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RenderFrontend:
         transformMat.multiply(rotationMat);
         transformMat.multiply(scaleMat);
         
-        mPbrPipeline.UpdateModel(
-            selectedModel.drawableObjectId, 
-            transformMat.cells
-        );
+        selectedModel.variant->UpdateModelTransform(transformMat.cells);
 
         // View
         float viewData [16];
@@ -237,21 +239,13 @@ void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RenderFrontend:
         mPbrPipeline.UpdateCameraView(viewData);
     }
 
-    mPbrPipeline.PreRender(
-        drawPass, 
-        deltaTimeInSec, 
-        1, 
-        &selectedModel.drawableObjectId
-    );
-    mPointLightPipeline.PreRender(
-        drawPass, 
-        deltaTimeInSec, 
-        1, 
-        &mPointLightObjectId
-    );
+    mPbrPipeline.PreRender(drawPass, deltaTimeInSec);
+    mPointLightPipeline.PreRender(drawPass, deltaTimeInSec);
 }
 
-void GLTFMeshViewerScene::OnRender(float const deltaTimeInSec, RF::DrawPass & drawPass) {
+//-------------------------------------------------------------------------------------------------
+
+void GLTFMeshViewerScene::OnRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass) {
     MFA_ASSERT(mSelectedModelIndex >= 0 && mSelectedModelIndex < mModelsRenderData.size());
 
     mCamera.onNewFrame(deltaTimeInSec);
@@ -259,23 +253,22 @@ void GLTFMeshViewerScene::OnRender(float const deltaTimeInSec, RF::DrawPass & dr
     auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
 
     // TODO Pipeline should be able to share buffers such as projection buffer to enable us to update them once
-    mPbrPipeline.Render(drawPass, deltaTimeInSec, 1, &selectedModel.drawableObjectId);
+    mPbrPipeline.Render(drawPass, deltaTimeInSec);
     if (mIsLightVisible) {
-        mPointLightPipeline.Render(drawPass, deltaTimeInSec, 1, &mPointLightObjectId);
+        mPointLightPipeline.Render(drawPass, deltaTimeInSec);
     }
 }
 
-void GLTFMeshViewerScene::OnPostRender(
-    float deltaTimeInSec, 
-    MFA::RenderFrontend::DrawPass & drawPass
-)
-{
-    auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
+//-------------------------------------------------------------------------------------------------
 
-    mPointLightPipeline.PostRender(drawPass, deltaTimeInSec, 1, &mPointLightObjectId);
-    mPbrPipeline.PostRender(drawPass, deltaTimeInSec, 1, &selectedModel.drawableObjectId);
+void GLTFMeshViewerScene::OnPostRender(float deltaTimeInSec, MFA::RT::DrawPass & drawPass)
+{
+    mPointLightPipeline.PostRender(drawPass, deltaTimeInSec);
+    mPbrPipeline.PostRender(drawPass, deltaTimeInSec);
 
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void GLTFMeshViewerScene::OnUI() {
     static constexpr float ItemWidth = 500;
@@ -313,25 +306,25 @@ void GLTFMeshViewerScene::OnUI() {
         );
         UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
-        UI::SliderFloat("XDegree", &m_model_rotation[0], -360.0f, 360.0f);
+        UI::SliderFloat("XDegree", &mModelRotation[0], -360.0f, 360.0f);
         UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
-        UI::SliderFloat("YDegree", &m_model_rotation[1], -360.0f, 360.0f);
+        UI::SliderFloat("YDegree", &mModelRotation[1], -360.0f, 360.0f);
         UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
-        UI::SliderFloat("ZDegree", &m_model_rotation[2], -360.0f, 360.0f);
+        UI::SliderFloat("ZDegree", &mModelRotation[2], -360.0f, 360.0f);
         UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
         UI::SliderFloat("Scale", &m_model_scale, 0.0f, 1.0f);
         UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
-        UI::SliderFloat("XDistance", &m_model_position[0], mModelTranslateMin[0], mModelTranslateMax[0]);
+        UI::SliderFloat("XDistance", &mModelPosition[0], mModelTranslateMin[0], mModelTranslateMax[0]);
         UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
-        UI::SliderFloat("YDistance", &m_model_position[1], mModelTranslateMin[1], mModelTranslateMax[1]);
+        UI::SliderFloat("YDistance", &mModelPosition[1], mModelTranslateMin[1], mModelTranslateMax[1]);
         UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
-        UI::SliderFloat("ZDistance", &m_model_position[2], mModelTranslateMin[2], mModelTranslateMax[2]);
+        UI::SliderFloat("ZDistance", &mModelPosition[2], mModelTranslateMin[2], mModelTranslateMax[2]);
         UI::Spacing();
         UI::EndWindow();
     }
@@ -358,9 +351,11 @@ void GLTFMeshViewerScene::OnUI() {
     // TODO Node tree
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void GLTFMeshViewerScene::Shutdown() {
     {// Disabling ui for current model
-        auto * selectedDrawable = mPbrPipeline.GetDrawableById(mModelsRenderData[mSelectedModelIndex].drawableObjectId);
+        auto * selectedDrawable = mModelsRenderData[mSelectedModelIndex].variant;
         MFA_ASSERT(selectedDrawable != nullptr);
         selectedDrawable->DisableUI();
     }
@@ -374,17 +369,24 @@ void GLTFMeshViewerScene::Shutdown() {
     Importer::FreeTexture(mErrorTexture.cpuTexture());
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void GLTFMeshViewerScene::OnResize() {
     mCamera.onResize();
     updateProjectionBuffer();
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredData) {
     auto cpuModel = Importer::ImportGLTF(renderRequiredData.address.c_str());
     renderRequiredData.gpuModel = RF::CreateGpuModel(cpuModel);
-    renderRequiredData.drawableObjectId = mPbrPipeline.AddGpuModel(renderRequiredData.gpuModel);
+    mPbrPipeline.CreateDrawableEssence(renderRequiredData.displayName.c_str(), renderRequiredData.gpuModel);
+    renderRequiredData.variant = mPbrPipeline.CreateDrawableVariant(renderRequiredData.displayName.c_str());
     renderRequiredData.isLoaded = true;
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void GLTFMeshViewerScene::destroyModels() {
     // Gpu model
@@ -392,17 +394,19 @@ void GLTFMeshViewerScene::destroyModels() {
         for (auto & group : mModelsRenderData) {
             if (group.isLoaded) {
                 RF::DestroyGpuModel(group.gpuModel);
-                Importer::FreeModel(&group.gpuModel.model);
+                Importer::FreeModel(group.gpuModel.model);
                 group.isLoaded = false;
             }
         }
     }
 
     // Point light
-    MFA_ASSERT(mGpuPointLight.valid);
-    RF::DestroyGpuModel(mGpuPointLight);
-    Importer::FreeModel(&mGpuPointLight.model);
+    MFA_ASSERT(mPointLightModel.valid);
+    RF::DestroyGpuModel(mPointLightModel);
+    Importer::FreeModel(mPointLightModel.model);
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void GLTFMeshViewerScene::updateProjectionBuffer() {
     float projectionData [16];
@@ -410,3 +414,5 @@ void GLTFMeshViewerScene::updateProjectionBuffer() {
     mPbrPipeline.UpdateCameraProjection(projectionData);
     mPointLightPipeline.UpdateCameraProjection(projectionData);
 }
+
+//-------------------------------------------------------------------------------------------------

@@ -1,10 +1,10 @@
 #pragma once
 
+#include "engine/render_system/RenderTypes.hpp"
 #include "engine/Scene.hpp"
 #include "engine/camera/FirstPersonCamera.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
 #include "engine/render_system/pipelines/point_light/PointLightPipeline.hpp"
-#include "engine/render_system/DrawableObject.hpp"
 
 class GLTFMeshViewerScene final : public MFA::Scene {
 public:
@@ -20,11 +20,11 @@ public:
 
     void Init() override;
 
-    void OnPreRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
+    void OnPreRender(float deltaTimeInSec, MFA::RT::DrawPass & drawPass) override;
 
-    void OnRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
+    void OnRender(float deltaTimeInSec, MFA::RT::DrawPass & drawPass) override;
 
-    void OnPostRender(float deltaTimeInSec, MFA::RenderFrontend::DrawPass & drawPass) override;
+    void OnPostRender(float deltaTimeInSec, MFA::RT::DrawPass & drawPass) override;
 
     void OnUI();
 
@@ -38,10 +38,10 @@ private:
     
     struct ModelRenderRequiredData {
         bool isLoaded = false;
-        MFA::RenderFrontend::GpuModel gpuModel {};
+        MFA::RT::GpuModel gpuModel {};
         std::string displayName {};
         std::string address {};
-        MFA::DrawableObjectId drawableObjectId {};
+        MFA::DrawableVariant * variant = nullptr;
         struct InitialParams {
             struct Model {
                 float rotationEulerAngle[3] {};
@@ -93,9 +93,9 @@ private:
         alignas(4) int hasEmissiveTexture;
     }; 
 
-    float m_model_rotation[3] {45.0f, 45.0f, 45.0f};
+    float mModelRotation[3] {45.0f, 45.0f, 45.0f};
     float m_model_scale = 1.0f;
-    float m_model_position[3] {0.0f, 0.0f, -6.0f};
+    float mModelPosition[3] {0.0f, 0.0f, -6.0f};
 
     float mLightPosition[3] {0.0f, 0.0f, -2.0f};
     float mLightColor[3]{};
@@ -104,12 +104,12 @@ private:
     int32_t mSelectedModelIndex = 0;
     int32_t mPreviousModelSelectedIndex = -1;
 
-    MFA::RenderFrontend::SamplerGroup mSamplerGroup {};
+    MFA::RT::SamplerGroup mSamplerGroup {};
 
     MFA::PBRWithShadowPipelineV2 mPbrPipeline {};
     MFA::PointLightPipeline mPointLightPipeline {};
 
-    MFA::RenderBackend::GpuTexture mErrorTexture {};
+    MFA::RT::GpuTexture mErrorTexture {};
 
     float mModelTranslateMin[3] {-100.0f, -100.0f, -100.0f};
     float mModelTranslateMax[3] {100.0f, 100.0f, 100.0f};
@@ -119,8 +119,8 @@ private:
 
     bool mIsLightVisible = true;
 
-    MFA::RF::GpuModel mGpuPointLight {};
-    MFA::DrawableObjectId mPointLightObjectId = 0;
+    MFA::RT::GpuModel mPointLightModel {};
+    MFA::DrawableVariant * mPointLightVariant = nullptr;
 
     bool mIsObjectViewerWindowVisible = false;
     bool mIsLightWindowVisible = false;

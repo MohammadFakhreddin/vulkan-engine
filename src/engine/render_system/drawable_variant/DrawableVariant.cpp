@@ -1,67 +1,34 @@
-#include "DrawableObject.hpp"
+#include "DrawableVariant.hpp"
 
+#include "engine/render_system/RenderTypes.hpp"
 #include "engine/BedrockMemory.hpp"
+#include "engine/render_system/drawable_essence/DrawableEssence.hpp"
+#include "engine/render_system/RenderFrontend.hpp"
+#include "engine/FoundationAsset.hpp"
 #include "engine/ui_system/UISystem.hpp"
 
 #include <ext/matrix_transform.hpp>
-#include <glm/glm.hpp>
-#include <glm/gtx/quaternion.hpp>
 
 namespace MFA {
 
 namespace UI = UISystem;
 
-// TODO: We should have one drawableFactory per gpuModel and drawableInstance per instance
-// TODO: Drawables should be separate from factory
-// We need other overrides for easier use as well
-DrawableObject::DrawableObject(RF::GpuModel & model_)
-    : mGpuModel(&model_)
-    , mRecordUIObject([this]()->void {onUI();})
+//-------------------------------------------------------------------------------------------------
+
+RT::DrawableVariantId DrawableVariant::NextInstanceId = 0;
+
+//-------------------------------------------------------------------------------------------------
+
+DrawableVariant::DrawableVariant(DrawableEssence const & essence)
+    : mId(NextInstanceId)
+    , mEssence(&essence)
+    , mRecordUIObject(std::make_unique<UIRecordObject>([this]()->void {onUI();}))
 {
+    NextInstanceId += 1;
 
-    auto & mesh = mGpuModel->model.mesh;
-
-    {// PrimitiveCount
-        mPrimitiveCount = 0;
-        for (uint32_t i = 0; i < mesh.GetSubMeshCount(); ++i) {
-            auto const & subMesh = mesh.GetSubMeshByIndex(i);
-            mPrimitiveCount += static_cast<uint32_t>(subMesh.primitives.size());
-        }
-        if (mPrimitiveCount > 0) {
-            size_t const bufferSize = sizeof(PrimitiveInfo) * mPrimitiveCount;
-            mPrimitivesBuffer = RF::CreateUniformBuffer(bufferSize, 1);
-            Blob primitiveData = Memory::Alloc(bufferSize);
-            MFA_DEFER {
-                Memory::Free(primitiveData);
-            };
-
-            auto * primitivesArray = primitiveData.as<PrimitiveInfo>();
-            for (uint32_t i = 0; i < mesh.GetSubMeshCount(); ++i) {
-                auto const & subMesh = mesh.GetSubMeshByIndex(i);
-                for (auto const & primitive : subMesh.primitives) {
-
-                    // Copy primitive into primitive info
-                    PrimitiveInfo & primitiveInfo = primitivesArray[primitive.uniqueId];
-                    primitiveInfo.baseColorTextureIndex = primitive.hasBaseColorTexture ? primitive.baseColorTextureIndex : -1;
-                    primitiveInfo.metallicFactor = primitive.metallicFactor;
-                    primitiveInfo.roughnessFactor = primitive.roughnessFactor;
-                    primitiveInfo.metallicRoughnessTextureIndex = primitive.hasMetallicRoughnessTexture ? primitive.metallicRoughnessTextureIndex : -1;
-                    primitiveInfo.normalTextureIndex = primitive.hasNormalTexture ? primitive.normalTextureIndex : -1;
-                    primitiveInfo.emissiveTextureIndex = primitive.hasEmissiveTexture ? primitive.emissiveTextureIndex : -1;
-                    primitiveInfo.hasSkin = primitive.hasSkin ? 1 : 0;
-                    // TODO Occlusion
-
-                    ::memcpy(primitiveInfo.baseColorFactor, primitive.baseColorFactor, sizeof(primitiveInfo.baseColorFactor));
-                    static_assert(sizeof(primitiveInfo.baseColorFactor) == sizeof(primitive.baseColorFactor));
-                    ::memcpy(primitiveInfo.emissiveFactor, primitive.emissiveFactor, sizeof(primitiveInfo.emissiveFactor));
-                    static_assert(sizeof(primitiveInfo.emissiveFactor) == sizeof(primitive.emissiveFactor));
-                }
-            }
-
-            RF::UpdateUniformBuffer(mPrimitivesBuffer.buffers[0], primitiveData);
-        }
-    }
-
+    auto & mesh = mEssence->GetGpuModel().model.mesh;
+    MFA_ASSERT(mesh.IsValid());
+    
     // Skins
     mSkins.resize(mesh.GetSkinsCount());
     
@@ -70,7 +37,6 @@ DrawableObject::DrawableObject(RF::GpuModel & model_)
         mNodes.resize(nodesCount);
         for (uint32_t i = 0; i < nodesCount; ++i) {
             auto & meshNode = mesh.GetNodeByIndex(i);
-
             auto & node = mNodes[i];
 
             node.meshNode = &meshNode;
@@ -119,7 +85,10 @@ DrawableObject::DrawableObject(RF::GpuModel & model_)
             }
             if (totalJointsCount > 0) {
                 mCachedSkinsJointsBlob = Memory::Alloc(sizeof(JointTransformData) * totalJointsCount);
-                mSkinsJointsBuffer = RF::CreateUniformBuffer(mCachedSkinsJointsBlob.len, RF::GetMaxFramesPerFlight());
+                mSkinsJointsBuffer = RF::CreateUniformBuffer(
+                    mCachedSkinsJointsBlob.len, 
+                    RF::GetMaxFramesPerFlight()
+                );
             }
         }
         {
@@ -132,54 +101,43 @@ DrawableObject::DrawableObject(RF::GpuModel & model_)
                 mSkins[i].skinStartingIndex = startingJointIndex;
                 startingJointIndex += jointsCount;
             }
-        }   
+        }
     }
-    MFA_ASSERT(mGpuModel->valid);
-    MFA_ASSERT(mGpuModel->model.mesh.IsValid());
 }
 
 //-------------------------------------------------------------------------------------------------
 
-DrawableObject::~DrawableObject() {
+DrawableVariant::~DrawableVariant() {
     if (mCachedSkinsJointsBlob.len > 0) {
         Memory::Free(mCachedSkinsJointsBlob);
     }
     if (mSkinsJointsBuffer.bufferSize > 0) {
         RF::DestroyUniformBuffer(mSkinsJointsBuffer);
     }
-    if (mPrimitivesBuffer.bufferSize > 0) {
-        RF::DestroyUniformBuffer(mPrimitivesBuffer);
-    }
     DeleteUniformBuffers();
 
     for (auto & storedData : mStorageMap) {
-        Memory::Free(storedData.second);    
+        Memory::Free(storedData.second);
     }
-}
-
-//-------------------------------------------------------------------------------------------------
-
-RF::GpuModel * DrawableObject::GetModel() const {
-    return mGpuModel;
 }
 
 //-------------------------------------------------------------------------------------------------
 
 // Only for model local buffers
-RF::UniformBufferGroup * DrawableObject::CreateUniformBuffer(
+RT::UniformBufferGroup const & DrawableVariant::CreateUniformBuffer(
     char const * name,
     uint32_t const size,
     uint32_t const count
 ) {
-    MFA_ASSERT(mUniformBuffers.find(name) ==  mUniformBuffers.end());
+    MFA_ASSERT(mUniformBuffers.find(name) == mUniformBuffers.end());
     mUniformBuffers[name] = RF::CreateUniformBuffer(size, count);
-    return &mUniformBuffers[name];
+    return mUniformBuffers[name];
 }
 
 //-------------------------------------------------------------------------------------------------
 
 // Only for model local buffers
-void DrawableObject::DeleteUniformBuffers() {
+void DrawableVariant::DeleteUniformBuffers() {
     for (auto & dirtyBuffer : mDirtyBuffers) {
         delete dirtyBuffer.ubo.ptr;
     }
@@ -193,7 +151,7 @@ void DrawableObject::DeleteUniformBuffers() {
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableObject::UpdateUniformBuffer(
+void DrawableVariant::UpdateUniformBuffer(
     char const * name,
     uint32_t startingIndex,
     CBlob const ubo
@@ -234,10 +192,10 @@ void DrawableObject::UpdateUniformBuffer(
 
 //-------------------------------------------------------------------------------------------------
 
-RF::UniformBufferGroup * DrawableObject::GetUniformBuffer(char const * name) {
-    auto const find_result = mUniformBuffers.find(name);
-    if (find_result != mUniformBuffers.end()) {
-        return &find_result->second;
+RT::UniformBufferGroup const * DrawableVariant::GetUniformBuffer(char const * name) {
+    auto const findResult = mUniformBuffers.find(name);
+    if (findResult != mUniformBuffers.end()) {
+        return &findResult->second;
     }
     return nullptr;
 }
@@ -245,19 +203,13 @@ RF::UniformBufferGroup * DrawableObject::GetUniformBuffer(char const * name) {
 //-------------------------------------------------------------------------------------------------
 
 [[nodiscard]]
-RF::UniformBufferGroup const & DrawableObject::GetSkinJointsBuffer() const noexcept {
+RT::UniformBufferGroup const & DrawableVariant::GetSkinJointsBuffer() const noexcept {
     return mSkinsJointsBuffer;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-RF::UniformBufferGroup const & DrawableObject::GetPrimitivesBuffer() const noexcept {
-    return mPrimitivesBuffer;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void DrawableObject::Update(float const deltaTimeInSec, RF::DrawPass const & drawPass) {
+void DrawableVariant::Update(float const deltaTimeInSec, RT::DrawPass const & drawPass) {
     updateAnimation(deltaTimeInSec);
     computeNodesGlobalTransform();
     updateAllSkinsJoints();
@@ -289,12 +241,12 @@ void DrawableObject::Update(float const deltaTimeInSec, RF::DrawPass const & dra
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableObject::Draw(
-    RF::DrawPass & drawPass, 
+void DrawableVariant::Draw(
+    RT::DrawPass & drawPass,
     BindDescriptorSetFunction const & bindFunction
 ) {
-    BindVertexBuffer(drawPass, mGpuModel->meshBuffers.verticesBuffer);
-    BindIndexBuffer(drawPass, mGpuModel->meshBuffers.indicesBuffer);
+    RF::BindVertexBuffer(drawPass, mEssence->GetGpuModel().meshBuffers.verticesBuffer);
+    RF::BindIndexBuffer(drawPass, mEssence->GetGpuModel().meshBuffers.indicesBuffer);
 
     for (auto & node : mNodes) {
         drawNode(drawPass, node, bindFunction);
@@ -303,49 +255,22 @@ void DrawableObject::Draw(
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableObject::EnableUI(char const * windowName, bool * isVisible) {
+void DrawableVariant::EnableUI(char const * windowName, bool * isVisible) {
     MFA_ASSERT(windowName != nullptr && strlen(windowName) > 0);
-    mRecordUIObject.Enable();
+    mRecordUIObject->Enable();
     mRecordWindowName = "DrawableObject: " + std::string(windowName);
     mIsUIVisible = isVisible;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableObject::DisableUI() {
-    mRecordUIObject.Disable();
+void DrawableVariant::DisableUI() {
+    mRecordUIObject->Disable();
 }
 
 //-------------------------------------------------------------------------------------------------
 
-RB::DescriptorSetGroup const & DrawableObject::CreateDescriptorSetGroup(
-    char const * name, 
-    VkDescriptorSetLayout descriptorSetLayout, 
-    uint32_t const descriptorSetCount
-) {
-    MFA_ASSERT(mDescriptorSetGroups.find(name) == mDescriptorSetGroups.end());
-    auto const descriptorSetGroup = RF::CreateDescriptorSets(
-        descriptorSetCount, 
-        descriptorSetLayout
-    );
-    mDescriptorSetGroups[name] = descriptorSetGroup;
-    return mDescriptorSetGroups[name];
-}
-
-//-------------------------------------------------------------------------------------------------
-
-RB::DescriptorSetGroup * DrawableObject::GetDescriptorSetGroup(char const * name) {
-    MFA_ASSERT(name != nullptr);
-    auto const findResult = mDescriptorSetGroups.find(name);
-    if (findResult != mDescriptorSetGroups.end()) {
-        return &findResult->second;
-    }
-    return nullptr;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void DrawableObject::UpdateModelTransform(float modelTransform[16]) {
+void DrawableVariant::UpdateModelTransform(float modelTransform[16]) {
     if (Matrix4X4Float::IsEqual(mModelTransform, modelTransform) == false) {
         mModelTransform = Matrix4X4Float::ConvertCellsToMat4(modelTransform);
         mIsModelTransformChanged = true;
@@ -354,7 +279,7 @@ void DrawableObject::UpdateModelTransform(float modelTransform[16]) {
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableObject::SetActiveAnimationIndex(int const nextAnimationIndex, float transitionDuration) {
+void DrawableVariant::SetActiveAnimationIndex(int const nextAnimationIndex, float transitionDuration) {
     if (nextAnimationIndex == mActiveAnimationIndex) {
         return;
     }
@@ -363,19 +288,19 @@ void DrawableObject::SetActiveAnimationIndex(int const nextAnimationIndex, float
     mAnimationTransitionDurationInSec = transitionDuration;
     mAnimationRemainingTransitionDurationInSec = transitionDuration;
     mPreviousAnimationTimeInSec = mActiveAnimationTimeInSec;
-    mActiveAnimationTimeInSec = mGpuModel->model.mesh.GetAnimationByIndex(mActiveAnimationIndex).startTime;
+    mActiveAnimationTimeInSec = mEssence->GetGpuModel().model.mesh.GetAnimationByIndex(mActiveAnimationIndex).startTime;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableObject::AllocStorage(char const * name, size_t const size) {
+void DrawableVariant::AllocStorage(char const * name, size_t const size) {
     MFA_ASSERT(mStorageMap.find(name) == mStorageMap.end());
     mStorageMap[name] = Memory::Alloc(size);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-Blob DrawableObject::GetStorage(char const * name) {
+Blob DrawableVariant::GetStorage(char const * name) {
     auto const findResult = mStorageMap.find(name);
     if (findResult == mStorageMap.end()) {
         return {};
@@ -385,10 +310,10 @@ Blob DrawableObject::GetStorage(char const * name) {
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableObject::updateAnimation(float const deltaTimeInSec) {
+void DrawableVariant::updateAnimation(float const deltaTimeInSec) {
     using Animation = AS::Mesh::Animation;
 
-    auto & mesh = mGpuModel->model.mesh;
+    auto & mesh = mEssence->GetGpuModel().model.mesh;
 
     if (mesh.GetAnimationsCount() <= 0) {
         return;
@@ -540,8 +465,8 @@ void DrawableObject::updateAnimation(float const deltaTimeInSec) {
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableObject::computeNodesGlobalTransform() {
-    auto & mesh = mGpuModel->model.mesh;
+void DrawableVariant::computeNodesGlobalTransform() {
+    auto const & mesh = mEssence->GetGpuModel().model.mesh;
 
     auto const rootNodesCount = mesh.GetRootNodesCount();
 
@@ -553,8 +478,8 @@ void DrawableObject::computeNodesGlobalTransform() {
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableObject::updateAllSkinsJoints() {
-    auto const & mesh = mGpuModel->model.mesh;
+void DrawableVariant::updateAllSkinsJoints() {
+    auto const & mesh = mEssence->GetGpuModel().model.mesh;
 
     auto const skinsCount = mesh.GetSkinsCount();
     if (skinsCount > 0) {
@@ -569,7 +494,7 @@ void DrawableObject::updateAllSkinsJoints() {
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableObject::updateSkinJoints(uint32_t const skinIndex, AS::MeshSkin const & skin) {
+void DrawableVariant::updateSkinJoints(uint32_t const skinIndex, AS::MeshSkin const & skin) {
     // TODO We can do some caching here as well
     auto & jointMatrices = mCachedSkinsJoints[skinIndex];
     for (size_t i = 0; i < skin.joints.size(); i++)
@@ -584,21 +509,21 @@ void DrawableObject::updateSkinJoints(uint32_t const skinIndex, AS::MeshSkin con
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableObject::drawNode(
-    RF::DrawPass & drawPass, 
-    Node const & node, 
+void DrawableVariant::drawNode(
+    RT::DrawPass & drawPass,
+    Node const & node,
     BindDescriptorSetFunction const & bindFunction
 ) {
     // TODO We can reduce nodes count for better performance when importing
-    if (node.meshNode->hasSubMesh()) 
+    if (node.meshNode->hasSubMesh())
     {
-        auto const & mesh = mGpuModel->model.mesh;
+        auto const & mesh = mEssence->GetGpuModel().model.mesh;
         MFA_ASSERT(static_cast<int>(mesh.GetSubMeshCount()) > node.meshNode->subMeshIndex);
         
         drawSubMesh(
-            drawPass, 
-            mesh.GetSubMeshByIndex(node.meshNode->subMeshIndex), 
-            node, 
+            drawPass,
+            mesh.GetSubMeshByIndex(node.meshNode->subMeshIndex),
+            node,
             bindFunction
         );
     }
@@ -606,8 +531,8 @@ void DrawableObject::drawNode(
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableObject::drawSubMesh(
-    RF::DrawPass & drawPass, 
+void DrawableVariant::drawSubMesh(
+    RT::DrawPass & drawPass,
     AssetSystem::Mesh::SubMesh const & subMesh,
     Node const & node,
     BindDescriptorSetFunction const & bindFunction
@@ -627,7 +552,7 @@ void DrawableObject::drawSubMesh(
 
 //-------------------------------------------------------------------------------------------------
 
-glm::mat4 DrawableObject::computeNodeLocalTransform(Node const & node) const {
+glm::mat4 DrawableVariant::computeNodeLocalTransform(Node const & node) const {
     glm::mat4 currentTransform {1};
     auto translate = node.currentTranslate;
     auto rotation = node.currentRotation;
@@ -647,7 +572,7 @@ glm::mat4 DrawableObject::computeNodeLocalTransform(Node const & node) const {
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableObject::computeNodeGlobalTransform(Node & node, Node const * parentNode, bool isParentTransformChanged) {
+void DrawableVariant::computeNodeGlobalTransform(Node & node, Node const * parentNode, bool isParentTransformChanged) {
     MFA_ASSERT(parentNode == nullptr || parentNode->isCachedDataValid == true);
     MFA_ASSERT(parentNode != nullptr || isParentTransformChanged == false);
 
@@ -683,13 +608,13 @@ void DrawableObject::computeNodeGlobalTransform(Node & node, Node const * parent
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableObject::onUI() {
+void DrawableVariant::onUI() {
     MFA_ASSERT(mIsUIVisible != nullptr);
     if (*mIsUIVisible == false) {
         return;
-    } 
+    }
 
-    auto & mesh = mGpuModel->model.mesh;
+    auto & mesh = mEssence->GetGpuModel().model.mesh;
 
     std::vector<char const *> animationsList {mesh.GetAnimationsCount()};
     for (size_t i = 0; i < animationsList.size(); ++i) {
@@ -698,9 +623,9 @@ void DrawableObject::onUI() {
 
     UI::BeginWindow(mRecordWindowName.c_str());
     UI::Combo(
-        "Active animation", 
+        "Active animation",
         &mUISelectedAnimationIndex,
-        animationsList.data(), 
+        animationsList.data(),
         static_cast<int32_t>(animationsList.size())
     );
     SetActiveAnimationIndex(mUISelectedAnimationIndex);
@@ -709,4 +634,43 @@ void DrawableObject::onUI() {
 
 //-------------------------------------------------------------------------------------------------
 
-};
+DrawableEssence const * DrawableVariant::GetEssence() const noexcept {
+    return mEssence;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+RT::DrawableVariantId DrawableVariant::GetId() const noexcept {
+    return mId;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+RT::DescriptorSetGroup const & DrawableVariant::CreateDescriptorSetGroup(
+    char const * name, 
+    VkDescriptorSetLayout descriptorSetLayout, 
+    uint32_t descriptorSetCount
+) {
+    MFA_ASSERT(mDescriptorSetGroups.find(name) == mDescriptorSetGroups.end());
+    auto const descriptorSetGroup = RF::CreateDescriptorSets(
+        descriptorSetCount,
+        descriptorSetLayout
+    );
+    mDescriptorSetGroups[name] = descriptorSetGroup;
+    return mDescriptorSetGroups[name];
+}
+
+//-------------------------------------------------------------------------------------------------
+
+RT::DescriptorSetGroup const * DrawableVariant::GetDescriptorSetGroup(char const * name) {
+    MFA_ASSERT(name != nullptr);
+    auto const findResult = mDescriptorSetGroups.find(name);
+    if (findResult != mDescriptorSetGroups.end()) {
+        return &findResult->second;
+    }
+    return nullptr;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+}

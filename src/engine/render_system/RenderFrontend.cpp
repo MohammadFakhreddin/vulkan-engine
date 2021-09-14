@@ -1,9 +1,19 @@
 #include "RenderFrontend.hpp"
 
+#include "engine/render_system/RenderTypes.hpp"
 #include "engine/BedrockAssert.hpp"
 #include "RenderBackend.hpp"
 #include "engine/BedrockLog.hpp"
-#include "render_passes/DisplayRenderPass.hpp"
+#include "render_passes/display_render_pass/DisplayRenderPass.hpp"
+
+#ifdef __DESKTOP__
+#include "libs/sdl/SDL.hpp"
+#elif defined(__ANDROID__)
+#include <android_native_app_glue.h>
+#elif defined(__IOS__)
+#else
+#error Os is not supported
+#endif
 
 #include "libs/imgui/imgui.h"
 
@@ -21,8 +31,8 @@ struct SDLEventWatchGroup {
 #endif
 
 struct ResizeEventWatchGroup {
-    ResizeEventListenerId id = 0;
-    ResizeEventListener watch = nullptr;
+    RT::ResizeEventListenerId id = 0;
+    RT::ResizeEventListener watch = nullptr;
 };
 
 struct State {
@@ -43,7 +53,7 @@ struct State {
     uint32_t presentQueueFamily = 0;
     VkQueue graphicQueue {};
     VkQueue presentQueue {};
-    RB::LogicalDevice logicalDevice {};
+    RT::LogicalDevice logicalDevice {};
     VkCommandPool graphicCommandPool {};
     VkDescriptorPool descriptorPool {};
     // Resize
@@ -69,6 +79,8 @@ struct State {
     bool isWindowVisible = true;                        // Currently only minimize can cause this to be false
 } static * state = nullptr;
 
+//-------------------------------------------------------------------------------------------------
+
 static VkBool32 VKAPI_PTR DebugCallback(
     VkDebugReportFlagsEXT const flags,
     VkDebugReportObjectTypeEXT object_type,
@@ -90,6 +102,8 @@ static VkBool32 VKAPI_PTR DebugCallback(
     return true;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 #ifdef __DESKTOP__
 static bool IsResizeEvent(uint8_t const sdlEvent) {
 #if defined(__PLATFORM_WIN__) || defined(__PLATFORM_LINUX__)
@@ -104,6 +118,8 @@ static bool IsResizeEvent(uint8_t const sdlEvent) {
     #error Unhandled platform
 #endif
 }
+
+//-------------------------------------------------------------------------------------------------
 
 static int SDLEventWatcher(void* data, MSDL::SDL_Event* event) {
     if (
@@ -124,10 +140,14 @@ static int SDLEventWatcher(void* data, MSDL::SDL_Event* event) {
 }
 #endif
 
+//-------------------------------------------------------------------------------------------------
+
 [[nodiscard]]
 static VkSurfaceCapabilitiesKHR computeSurfaceCapabilities() {
     return RB::GetSurfaceCapabilities(state->physicalDevice, state->surface);    
 }
+
+//-------------------------------------------------------------------------------------------------
 
 bool Init(InitParams const & params) {
     state = new State();
@@ -239,6 +259,8 @@ bool Init(InitParams const & params) {
     return true;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 static void OnResize() {
     RB::DeviceWaitIdle(state->logicalDevice.device);
 
@@ -260,6 +282,8 @@ static void OnResize() {
     }
 
 }
+
+//-------------------------------------------------------------------------------------------------
 
 bool Shutdown() {
     // Common part with resize
@@ -303,7 +327,9 @@ bool Shutdown() {
     return true;
 }
 
-int AddResizeEventListener(ResizeEventListener const & eventListener) {
+//-------------------------------------------------------------------------------------------------
+
+int AddResizeEventListener(RT::ResizeEventListener const & eventListener) {
     MFA_ASSERT(eventListener != nullptr);
     state->resizeEventListeners.emplace_back(ResizeEventWatchGroup {
         .id = state->nextEventListenerId++,
@@ -312,7 +338,9 @@ int AddResizeEventListener(ResizeEventListener const & eventListener) {
     return state->resizeEventListeners.back().id;
 }
 
-bool RemoveResizeEventListener(ResizeEventListenerId listenerId) {
+//-------------------------------------------------------------------------------------------------
+
+bool RemoveResizeEventListener(RT::ResizeEventListenerId listenerId) {
     bool success = false;
     for (int i = static_cast<int>(state->resizeEventListeners.size()) - 1; i >= 0; --i) {
         auto & listener = state->resizeEventListeners[i];
@@ -325,38 +353,7 @@ bool RemoveResizeEventListener(ResizeEventListenerId listenerId) {
     return success;
 }
 
-VkDescriptorSetLayout CreateBasicDescriptorSetLayout() {
-    // Describe pipeline layout
-    // Note: this describes the mapping between memory and shader resources (descriptor sets)
-    // This is for uniform buffers and samplers
-    VkDescriptorSetLayoutBinding uboLayoutBinding {};
-    uboLayoutBinding.binding = 0;
-    // Our object type is uniformBuffer
-    uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    // Number of values in buffer
-    uboLayoutBinding.descriptorCount = 1;
-    // Which shader stage we are going to reffer to // In our case we only need vertex shader to access to it
-    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    // For Image sampler, Currently we do not need this
-    uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
-
-    VkDescriptorSetLayoutBinding sampler_layout_binding{};
-    sampler_layout_binding.binding = 1;
-    sampler_layout_binding.descriptorCount = 1;
-    sampler_layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    sampler_layout_binding.pImmutableSamplers = nullptr;
-    sampler_layout_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-    std::vector<VkDescriptorSetLayoutBinding> descriptor_set_layout_bindings {
-        uboLayoutBinding,
-        sampler_layout_binding
-    };
-
-    return CreateDescriptorSetLayout(
-        static_cast<uint8_t>(descriptor_set_layout_bindings.size()),
-        descriptor_set_layout_bindings.data()
-    );
-}
+//-------------------------------------------------------------------------------------------------
 
 VkDescriptorSetLayout CreateDescriptorSetLayout(
     uint8_t const bindingsCount, 
@@ -371,77 +368,34 @@ VkDescriptorSetLayout CreateDescriptorSetLayout(
     return descriptorSetLayout;
 }
 
+//-------------------------------------------------------------------------------------------------
 
 void DestroyDescriptorSetLayout(VkDescriptorSetLayout descriptorSetLayout) {
     MFA_ASSERT(descriptorSetLayout);
     RB::DestroyDescriptorSetLayout(state->logicalDevice.device, descriptorSetLayout);
 }
 
-DrawPipeline CreateBasicDrawPipeline(
-    VkRenderPass renderPass,
-    uint8_t const gpuShadersCount, 
-    RB::GpuShader * gpuShaders,
-    uint32_t const descriptorSetLayoutCount,
-    VkDescriptorSetLayout* descriptorSetLayouts,
-    VkVertexInputBindingDescription const & vertexInputBindingDescription,
-    uint8_t const vertexInputAttributeDescriptionCount,
-    VkVertexInputAttributeDescription * vertexInputAttributeDescriptions
-) {
-    MFA_ASSERT(gpuShadersCount > 0);
-    MFA_ASSERT(gpuShaders);
-    MFA_ASSERT(descriptorSetLayouts);
-
-    RB::CreateGraphicPipelineOptions pipelineOptions {};
-    pipelineOptions.depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    pipelineOptions.depthStencil.depthTestEnable = VK_TRUE;
-    pipelineOptions.depthStencil.depthWriteEnable = VK_TRUE;
-    pipelineOptions.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-    pipelineOptions.depthStencil.depthBoundsTestEnable = VK_FALSE;
-    pipelineOptions.depthStencil.stencilTestEnable = VK_FALSE;
-
-    pipelineOptions.colorBlendAttachments.blendEnable = VK_TRUE;
-    pipelineOptions.colorBlendAttachments.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-    pipelineOptions.colorBlendAttachments.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-    pipelineOptions.colorBlendAttachments.colorBlendOp = VK_BLEND_OP_ADD;
-    pipelineOptions.colorBlendAttachments.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-    pipelineOptions.colorBlendAttachments.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-    pipelineOptions.colorBlendAttachments.alphaBlendOp = VK_BLEND_OP_ADD;
-    pipelineOptions.colorBlendAttachments.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    pipelineOptions.useStaticViewportAndScissor = false;
-
-    return CreateDrawPipeline(
-        renderPass,
-        gpuShadersCount,
-        gpuShaders,
-        descriptorSetLayoutCount,
-        descriptorSetLayouts,
-        vertexInputBindingDescription,
-        vertexInputAttributeDescriptionCount,
-        vertexInputAttributeDescriptions,
-        pipelineOptions
-    );
-}
+//-------------------------------------------------------------------------------------------------
 
 [[nodiscard]]
-DrawPipeline CreateDrawPipeline(
-    VkRenderPass renderPass,
-    uint8_t const gpuShadersCount, 
-    RB::GpuShader * gpuShaders,
-    uint32_t const descriptorLayoutsCount,
+RT::PipelineGroup CreatePipeline(
+    RenderPass * renderPass,
+    uint8_t gpuShadersCount, 
+    RT::GpuShader const ** gpuShaders,
+    uint32_t descriptorLayoutsCount,
     VkDescriptorSetLayout * descriptorSetLayouts,
-    VkVertexInputBindingDescription const vertexBindingDescription,
-    uint32_t const inputAttributeDescriptionCount,
+    VkVertexInputBindingDescription const & vertexBindingDescription,
+    uint32_t inputAttributeDescriptionCount,
     VkVertexInputAttributeDescription * inputAttributeDescriptionData,
-    RB::CreateGraphicPipelineOptions const & options
+    RT::CreateGraphicPipelineOptions const & options
 ) {
+    
+    VkExtent2D const extent2D {
+        .width = static_cast<uint32_t>(state->screenWidth),
+        .height = static_cast<uint32_t>(state->screenHeight),
+    };
 
-    VkExtent2D extent2D;
-    extent2D.width = static_cast<uint32_t>(state->screenWidth);
-    extent2D.height = static_cast<uint32_t>(state->screenHeight);
-
-
-    // TODO Maybe we should do ui in a seprate render pass because we do not need MSAA on ui
-    auto const graphicPipelineGroup = RB::CreateGraphicPipeline(
+    auto const pipelineGroup = RB::CreatePipelineGroup(
         state->logicalDevice.device,
         gpuShadersCount,
         gpuShaders,
@@ -449,24 +403,28 @@ DrawPipeline CreateDrawPipeline(
         static_cast<uint32_t>(inputAttributeDescriptionCount),
         inputAttributeDescriptionData,
         extent2D,
-        renderPass,
+        renderPass->GetVkRenderPass(),
         descriptorLayoutsCount,
         descriptorSetLayouts,
         options
     );
 
-    return graphicPipelineGroup;
+    return pipelineGroup;
 }
 
-void DestroyDrawPipeline(DrawPipeline & draw_pipeline) {
-    RB::DestroyGraphicPipeline(
+//-------------------------------------------------------------------------------------------------
+
+void DestroyPipelineGroup(RT::PipelineGroup & drawPipeline) {
+    RB::DestroyPipelineGroup(
         state->logicalDevice.device, 
-        draw_pipeline
+        drawPipeline
     );
 }
 
+//-------------------------------------------------------------------------------------------------
+
 // TODO Not a good overload!
-RB::DescriptorSetGroup CreateDescriptorSets(VkDescriptorSetLayout descriptorSetLayout) {
+RT::DescriptorSetGroup CreateDescriptorSets(VkDescriptorSetLayout descriptorSetLayout) {
     return RB::CreateDescriptorSet(
         state->logicalDevice.device,
         state->descriptorPool,
@@ -475,7 +433,9 @@ RB::DescriptorSetGroup CreateDescriptorSets(VkDescriptorSetLayout descriptorSetL
     );
 }
 
-RB::DescriptorSetGroup CreateDescriptorSets(
+//-------------------------------------------------------------------------------------------------
+
+RT::DescriptorSetGroup CreateDescriptorSets(
     uint32_t const descriptorSetCount,
     VkDescriptorSetLayout descriptorSetLayout
 ) {
@@ -488,85 +448,93 @@ RB::DescriptorSetGroup CreateDescriptorSets(
     );
 }
 
-bool UniformBufferGroup::isValid() const noexcept {
-    if(bufferSize <= 0 || buffers.empty() == true) {
-        return false;
-    }
-    for(auto const & buffer : buffers) {
-        if(buffer.isValid() == false) {
-            return false;
-        }
-    }
-    return true;
-}
+//-------------------------------------------------------------------------------------------------
 
-UniformBufferGroup CreateUniformBuffer(size_t const bufferSize, uint32_t const count) {
-    auto const buffers = RB::CreateUniformBuffer(
+RT::UniformBufferGroup CreateUniformBuffer(size_t const bufferSize, uint32_t const count) {
+
+    std::vector<RT::BufferGroup> buffers (count);
+    RB::CreateBufferGroups(
         state->logicalDevice.device,
         state->physicalDevice,
         count,
-        bufferSize
+        bufferSize,
+        buffers.data()
     );
-    UniformBufferGroup group;
-    group.buffers = buffers;
-    group.bufferSize = bufferSize;
-    return group;
+    RT::UniformBufferGroup uniformBufferGroup {
+        .buffers = buffers,
+        .bufferSize = bufferSize,
+    };
+    return uniformBufferGroup;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void UpdateUniformBuffer(
-    RB::BufferGroup const & uniform_buffer, 
+    RT::BufferGroup const & uniformBuffer, 
     CBlob const data
 ) {
-    RB::UpdateUniformBuffer(
+    RB::UpdateBufferGroup(
         state->logicalDevice.device, 
-        uniform_buffer, 
+        uniformBuffer, 
         data
     );
 }
 
-void DestroyUniformBuffer(UniformBufferGroup & uniform_buffer) {
-    for(auto & buffer_group : uniform_buffer.buffers) {
-        RB::DestroyUniformBuffer(
+//-------------------------------------------------------------------------------------------------
+
+void DestroyUniformBuffer(RT::UniformBufferGroup & uniformBuffer) {
+    for(auto & bufferGroup : uniformBuffer.buffers) {
+        RB::DestroyBufferGroup(
             state->logicalDevice.device,
-            buffer_group
+            bufferGroup
         );
     }
 }
 
-RB::BufferGroup CreateVertexBuffer(CBlob const vertices_blob) {
+//-------------------------------------------------------------------------------------------------
+
+RT::BufferGroup CreateVertexBuffer(CBlob const verticesBlob) {
     return RB::CreateVertexBuffer(
         state->logicalDevice.device,
         state->physicalDevice,
         state->graphicCommandPool,
         state->graphicQueue,
-        vertices_blob
+        verticesBlob
     );
 }
 
-RB::BufferGroup CreateIndexBuffer(CBlob const indices_blob) {
+//-------------------------------------------------------------------------------------------------
+
+RT::BufferGroup CreateIndexBuffer(CBlob const indicesBlob) {
     return RB::CreateIndexBuffer(
         state->logicalDevice.device,
         state->physicalDevice,
         state->graphicCommandPool,
         state->graphicQueue,
-        indices_blob
+        indicesBlob
     );
 }
 
-MeshBuffers CreateMeshBuffers(AssetSystem::Mesh const & mesh) {
+//-------------------------------------------------------------------------------------------------
+
+RT::MeshBuffers CreateMeshBuffers(AssetSystem::Mesh const & mesh) {
     MFA_ASSERT(mesh.IsValid());
-    MeshBuffers buffers {};
+    RT::MeshBuffers buffers {};
     buffers.verticesBuffer = CreateVertexBuffer(mesh.GetVerticesBuffer());
     buffers.indicesBuffer = CreateIndexBuffer(mesh.GetIndicesBuffer());
     return buffers;
 }
 
-void DestroyMeshBuffers(MeshBuffers & meshBuffers) {
+//-------------------------------------------------------------------------------------------------
+
+void DestroyMeshBuffers(RT::MeshBuffers & meshBuffers) {
     RB::DestroyVertexBuffer(state->logicalDevice.device, meshBuffers.verticesBuffer);
     RB::DestroyIndexBuffer(state->logicalDevice.device, meshBuffers.indicesBuffer);
 }
 
-RB::GpuTexture CreateTexture(AssetSystem::Texture & texture) {
+//-------------------------------------------------------------------------------------------------
+
+RT::GpuTexture CreateTexture(AssetSystem::Texture & texture) {
     auto gpuTexture = RB::CreateTexture(
         texture,
         state->logicalDevice.device,
@@ -578,32 +546,42 @@ RB::GpuTexture CreateTexture(AssetSystem::Texture & texture) {
     return gpuTexture;
 }
 
-void DestroyTexture(RB::GpuTexture & gpu_texture) {
-    RB::DestroyTexture(state->logicalDevice.device, gpu_texture);
+//-------------------------------------------------------------------------------------------------
+
+void DestroyTexture(RT::GpuTexture & gpuTexture) {
+    RB::DestroyTexture(state->logicalDevice.device, gpuTexture);
 }
 
+//-------------------------------------------------------------------------------------------------
+
 // TODO Ask for options
-SamplerGroup CreateSampler(RB::CreateSamplerParams const & samplerParams) {
+RT::SamplerGroup CreateSampler(RT::CreateSamplerParams const & samplerParams) {
     auto sampler = RB::CreateSampler(state->logicalDevice.device, samplerParams);
     MFA_VK_VALID_ASSERT(sampler);
-    SamplerGroup samplerGroup {};
-    samplerGroup.sampler = sampler;
+    RT::SamplerGroup samplerGroup {
+        .sampler = sampler
+    };
     MFA_ASSERT(samplerGroup.isValid());
     return samplerGroup;
 }
 
-void DestroySampler(SamplerGroup & sampler_group) {
-    RB::DestroySampler(state->logicalDevice.device, sampler_group.sampler);
-    sampler_group.revoke();
+//-------------------------------------------------------------------------------------------------
+
+void DestroySampler(RT::SamplerGroup & samplerGroup) {
+    RB::DestroySampler(state->logicalDevice.device, samplerGroup.sampler);
+    samplerGroup.revoke();
 }
 
-GpuModel CreateGpuModel(AssetSystem::Model & model_asset) {
-    GpuModel gpuModel {};
-    gpuModel.valid = true;
-    gpuModel.meshBuffers = CreateMeshBuffers(model_asset.mesh);
-    gpuModel.model = model_asset;
-    if(false == model_asset.textures.empty()) {
-        for (auto & texture_asset : model_asset.textures) {
+//-------------------------------------------------------------------------------------------------
+
+RT::GpuModel CreateGpuModel(AssetSystem::Model & modelAsset) {
+    RT::GpuModel gpuModel {
+        .valid = true,
+        .meshBuffers = CreateMeshBuffers(modelAsset.mesh),
+        .model = modelAsset,
+    };
+    if(modelAsset.textures.empty() == false) {
+        for (auto & texture_asset : modelAsset.textures) {
             gpuModel.textures.emplace_back(CreateTexture(texture_asset));
             MFA_ASSERT(gpuModel.textures.back().isValid());
         }
@@ -611,77 +589,42 @@ GpuModel CreateGpuModel(AssetSystem::Model & model_asset) {
     return gpuModel;
 }
 
-void DestroyGpuModel(GpuModel & gpu_model) {
-    MFA_ASSERT(gpu_model.valid);
-    gpu_model.valid = false;
-    DestroyMeshBuffers(gpu_model.meshBuffers);
-    if(false == gpu_model.textures.empty()) {
-        for (auto & gpu_texture : gpu_model.textures) {
-            DestroyTexture(gpu_texture);
+//-------------------------------------------------------------------------------------------------
+
+void DestroyGpuModel(RT::GpuModel & gpuModel) {
+    MFA_ASSERT(gpuModel.valid);
+    gpuModel.valid = false;
+    DestroyMeshBuffers(gpuModel.meshBuffers);
+    if(false == gpuModel.textures.empty()) {
+        for (auto & gpuTexture : gpuModel.textures) {
+            DestroyTexture(gpuTexture);
         }
     }
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void DeviceWaitIdle() {
     RB::DeviceWaitIdle(state->logicalDevice.device);
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void BindDrawPipeline(
-    DrawPass & drawPass,
-    DrawPipeline & drawPipeline   
+    RT::DrawPass & drawPass,
+    RT::PipelineGroup & pipeline   
 ) {
     MFA_ASSERT(drawPass.isValid);
-    drawPass.pipeline = &drawPipeline;
+    drawPass.pipeline = &pipeline;
     // We can bind command buffer to multiple pipeline
     vkCmdBindPipeline(
         state->displayRenderPass.GetCommandBuffer(drawPass),
         VK_PIPELINE_BIND_POINT_GRAPHICS, 
-        drawPipeline.graphicPipeline
-    );
-}
-// TODO Remove all basic functions
-void UpdateDescriptorSetBasic(
-    DrawPass const & drawPass,
-    VkDescriptorSet descriptorSet,
-    UniformBufferGroup const & uniformBuffer,
-    RB::GpuTexture const & gpuTexture,
-    SamplerGroup const & samplerGroup
-) {
-    VkDescriptorImageInfo imageInfo {};
-    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    imageInfo.imageView = gpuTexture.image_view();
-    imageInfo.sampler = samplerGroup.sampler;
-
-    UpdateDescriptorSetBasic(
-        drawPass,
-        descriptorSet,
-        uniformBuffer,
-        1,
-        &imageInfo
+        pipeline.graphicPipeline
     );
 }
 
-void UpdateDescriptorSetBasic(
-    DrawPass const & drawPass,
-    VkDescriptorSet descriptorSet,
-    UniformBufferGroup const & uniformBuffer,
-    uint32_t const imageInfoCount,
-    VkDescriptorImageInfo const * imageInfos
-) {
-    VkDescriptorBufferInfo bufferInfo {};
-    bufferInfo.buffer = uniformBuffer.buffers[drawPass.imageIndex].buffer;
-    bufferInfo.offset = 0;
-    bufferInfo.range = uniformBuffer.bufferSize;
-
-    RB::UpdateDescriptorSetsBasic(
-        state->logicalDevice.device,
-        1,
-        &descriptorSet,
-        bufferInfo,
-        imageInfoCount,
-        imageInfos
-    );
-}
+//-------------------------------------------------------------------------------------------------
 
 void UpdateDescriptorSets(
     uint32_t const writeInfoCount,
@@ -693,6 +636,8 @@ void UpdateDescriptorSets(
         writeInfo
     );
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void UpdateDescriptorSets(
     uint8_t const descriptorSetsCount,
@@ -709,8 +654,10 @@ void UpdateDescriptorSets(
     );
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void BindDescriptorSet(
-    DrawPass const & drawPass,
+    RT::DrawPass const & drawPass,
     VkDescriptorSet descriptorSet
 ) {
     MFA_ASSERT(drawPass.isValid);
@@ -729,9 +676,11 @@ void BindDescriptorSet(
     );
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void BindVertexBuffer(
-    DrawPass const & drawPass, 
-    RB::BufferGroup const vertexBuffer,
+    RT::DrawPass const & drawPass, 
+    RT::BufferGroup const & vertexBuffer,
     VkDeviceSize const offset
 ) {
     MFA_ASSERT(drawPass.isValid);
@@ -742,9 +691,11 @@ void BindVertexBuffer(
     );
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void BindIndexBuffer(
-    DrawPass const & drawPass,
-    RB::BufferGroup const indexBuffer,
+    RT::DrawPass const & drawPass,
+    RT::BufferGroup const & indexBuffer,
     VkDeviceSize const offset,
     VkIndexType const indexType
 ) {
@@ -757,8 +708,10 @@ void BindIndexBuffer(
     );
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void DrawIndexed(
-    DrawPass const & drawPass, 
+    RT::DrawPass const & drawPass, 
     uint32_t const indicesCount,
     uint32_t const instanceCount,
     uint32_t const firstIndex,
@@ -775,6 +728,8 @@ void DrawIndexed(
         firstInstance
     );
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void BeginRenderPass(
     VkCommandBuffer commandBuffer, 
@@ -798,9 +753,13 @@ void BeginRenderPass(
     RB::BeginRenderPass(commandBuffer, renderPassBeginInfo);
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void EndRenderPass(VkCommandBuffer commandBuffer) {
     RB::EndRenderPass(commandBuffer);
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void OnNewFrame(float deltaTimeInSec) {
     if (state->windowResized) {
@@ -811,32 +770,42 @@ void OnNewFrame(float deltaTimeInSec) {
 #endif
 }
 
+//-------------------------------------------------------------------------------------------------
+
 [[nodiscard]]
-RB::GpuShader CreateShader(AssetSystem::Shader const & shader) {
+RT::GpuShader CreateShader(AssetSystem::Shader const & shader) {
     return RB::CreateShader(
         state->logicalDevice.device,
         shader
     );
 }
 
-void DestroyShader(RB::GpuShader & gpu_shader) {
-    RB::DestroyShader(state->logicalDevice.device, gpu_shader);
+//-------------------------------------------------------------------------------------------------
+
+void DestroyShader(RT::GpuShader & gpuShader) {
+    RB::DestroyShader(state->logicalDevice.device, gpuShader);
 }
 
-void SetScissor(DrawPass const & drawPass, VkRect2D const & scissor) {
+//-------------------------------------------------------------------------------------------------
+
+void SetScissor(RT::DrawPass const & drawPass, VkRect2D const & scissor) {
     MFA_ASSERT(drawPass.isValid);
     MFA_ASSERT(drawPass.renderPass != nullptr);
     RB::SetScissor(state->displayRenderPass.GetCommandBuffer(drawPass), scissor);
 }
 
-void SetViewport(DrawPass const & drawPass, VkViewport const & viewport) {
+//-------------------------------------------------------------------------------------------------
+
+void SetViewport(RT::DrawPass const & drawPass, VkViewport const & viewport) {
     MFA_ASSERT(drawPass.isValid);
     MFA_ASSERT(drawPass.renderPass != nullptr);
     RB::SetViewport(state->displayRenderPass.GetCommandBuffer(drawPass), viewport);
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void PushConstants(
-    DrawPass const & drawPass,
+    RT::DrawPass const & drawPass, 
     AssetSystem::ShaderStage const shaderStage, 
     uint32_t const offset, 
     CBlob const data
@@ -852,8 +821,10 @@ void PushConstants(
     );
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void PushConstants(
-    DrawPass const & drawPass,
+    RT::DrawPass const & drawPass,
     VkShaderStageFlags const shaderStage, 
     uint32_t const offset, 
     CBlob const data
@@ -869,13 +840,19 @@ void PushConstants(
     );
 }
 
+//-------------------------------------------------------------------------------------------------
+
 uint32_t GetSwapChainImagesCount() {
     return state->swapChainImageCount;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 uint32_t GetMaxFramesPerFlight() {
     return MAX_FRAMES_IN_FLIGHT;
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void GetDrawableSize(int32_t & outWidth, int32_t & outHeight) {
     outWidth = state->screenWidth;
@@ -885,23 +862,33 @@ void GetDrawableSize(int32_t & outWidth, int32_t & outHeight) {
 #ifdef __DESKTOP__
 // SDL functions
 
+//-------------------------------------------------------------------------------------------------
+
 void WarpMouseInWindow(int32_t const x, int32_t const y) {
     MSDL::SDL_WarpMouseInWindow(state->window, x, y);
 }
+
+//-------------------------------------------------------------------------------------------------
 
 uint32_t GetMouseState(int32_t * x, int32_t * y) {
     return MSDL::SDL_GetMouseState(x, y);
 }
 
+//-------------------------------------------------------------------------------------------------
+
 uint8_t const * GetKeyboardState(int * numKeys) {
     return MSDL::SDL_GetKeyboardState(numKeys);
 }
+
+//-------------------------------------------------------------------------------------------------
 
 uint32_t GetWindowFlags() {
     return MSDL::SDL_GetWindowFlags(state->window); 
 }
 
 #endif
+
+//-------------------------------------------------------------------------------------------------
 
 void AssignViewportAndScissorToCommandBuffer(VkCommandBuffer commandBuffer, VkExtent2D const & extent2D) {
     RB::AssignViewportAndScissorToCommandBuffer(
@@ -910,11 +897,11 @@ void AssignViewportAndScissorToCommandBuffer(VkCommandBuffer commandBuffer, VkEx
     );
 }
 
+//-------------------------------------------------------------------------------------------------
+
 #ifdef __DESKTOP__
 // TODO We might need separate SDL class
 int AddEventWatch(SDLEventWatch const & eventWatch) {
-    MFA_ASSERT(eventWatch != nullptr);
-
     SDLEventWatchGroup const group {
         .id = state->nextEventListenerId,
         .watch = eventWatch,
@@ -925,6 +912,8 @@ int AddEventWatch(SDLEventWatch const & eventWatch) {
     return group.id;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void RemoveEventWatch(SDLEventWatchId const watchId) {
     for (int i = static_cast<int>(state->sdlEventListeners.size()) - 1; i >= 0; --i) {
         if (state->sdlEventListeners[i].id == watchId) {
@@ -933,17 +922,23 @@ void RemoveEventWatch(SDLEventWatchId const watchId) {
     }
 }
 
+//-------------------------------------------------------------------------------------------------
+
 #endif
 
 void NotifyDeviceResized() {
     state->windowResized = true;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 VkSurfaceCapabilitiesKHR GetSurfaceCapabilities() {
     return state->surfaceCapabilities;    
 }
 
-RB::SwapChainGroup CreateSwapChain(VkSwapchainKHR oldSwapChain) {
+//-------------------------------------------------------------------------------------------------
+
+RT::SwapChainGroup CreateSwapChain(VkSwapchainKHR oldSwapChain) {
     return RB::CreateSwapChain(
         state->logicalDevice.device,
         state->physicalDevice,
@@ -953,15 +948,18 @@ RB::SwapChainGroup CreateSwapChain(VkSwapchainKHR oldSwapChain) {
     );
 }
 
-void DestroySwapChain(RB::SwapChainGroup const & swapChainGroup) {
+//-------------------------------------------------------------------------------------------------
+
+void DestroySwapChain(RT::SwapChainGroup const & swapChainGroup) {
     RB::DestroySwapChain(state->logicalDevice.device, swapChainGroup);
 }
 
-// TODO There might be a need to request for image count as well
-RB::ColorImageGroup CreateColorImage(
+//-------------------------------------------------------------------------------------------------
+
+RT::ColorImageGroup CreateColorImage(
     VkExtent2D const & imageExtent,
     VkFormat imageFormat,
-    RB::CreateColorImageOptions const & options
+    RT::CreateColorImageOptions const & options
 ) {
     return RB::CreateColorImage(
         state->physicalDevice,
@@ -972,10 +970,13 @@ RB::ColorImageGroup CreateColorImage(
     );
 }
 
-void DestroyColorImage(RB::ColorImageGroup const & colorImageGroup) {
+//-------------------------------------------------------------------------------------------------
+
+void DestroyColorImage(RT::ColorImageGroup const & colorImageGroup) {
     RB::DestroyColorImage(state->logicalDevice.device, colorImageGroup);
 }
 
+//-------------------------------------------------------------------------------------------------
 
 VkRenderPass CreateRenderPass(
     VkAttachmentDescription * attachments,
@@ -996,14 +997,18 @@ VkRenderPass CreateRenderPass(
     );
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void DestroyRenderPass(VkRenderPass renderPass) {
     RB::DestroyRenderPass(state->logicalDevice.device, renderPass);
 }
 
+//-------------------------------------------------------------------------------------------------
+
 [[nodiscard]]
-RB::DepthImageGroup CreateDepthImage(
+RT::DepthImageGroup CreateDepthImage(
     VkExtent2D const & imageSize, 
-    RB::CreateDepthImageOptions const & options
+    RT::CreateDepthImageOptions const & options
 ) {
     return RB::CreateDepthImage(
         state->physicalDevice,
@@ -1013,9 +1018,13 @@ RB::DepthImageGroup CreateDepthImage(
     );
 }
 
-void DestroyDepthImage(RB::DepthImageGroup const & depthImage) {
+//-------------------------------------------------------------------------------------------------
+
+void DestroyDepthImage(RT::DepthImageGroup const & depthImage) {
     RB::DestroyDepthImage(state->logicalDevice.device, depthImage);
 }
+
+//-------------------------------------------------------------------------------------------------
 
 VkFramebuffer CreateFrameBuffer(
     VkRenderPass renderPass,
@@ -1034,6 +1043,8 @@ VkFramebuffer CreateFrameBuffer(
     );
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void DestroyFrameBuffers(
     uint32_t const frameBuffersCount,
     VkFramebuffer * frameBuffers
@@ -1045,13 +1056,19 @@ void DestroyFrameBuffers(
     );
 }
 
+//-------------------------------------------------------------------------------------------------
+
 bool IsWindowVisible() {
     return state->isWindowVisible;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 bool IsWindowResized() {
     return state->windowResized;
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void WaitForFence(VkFence fence) {
     RB::WaitForFence(
@@ -1060,9 +1077,11 @@ void WaitForFence(VkFence fence) {
     );
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void AcquireNextImage(
     VkSemaphore imageAvailabilitySemaphore,
-    RB::SwapChainGroup const & swapChainGroup,
+    RT::SwapChainGroup const & swapChainGroup,
     uint32_t & outImageIndex
 ) {
     RB::AcquireNextImage(
@@ -1073,6 +1092,8 @@ void AcquireNextImage(
     );
 }
 
+//-------------------------------------------------------------------------------------------------
+
 std::vector<VkCommandBuffer> CreateGraphicCommandBuffers(uint32_t const maxFramesPerFlight) {
     return RB::CreateCommandBuffers(
         state->logicalDevice.device,
@@ -1080,6 +1101,8 @@ std::vector<VkCommandBuffer> CreateGraphicCommandBuffers(uint32_t const maxFrame
         state->graphicCommandPool
     );   
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void BeginCommandBuffer(
     VkCommandBuffer commandBuffer, 
@@ -1091,9 +1114,13 @@ void BeginCommandBuffer(
     );
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void EndCommandBuffer(VkCommandBuffer commandBuffer) {
     RB::EndCommandBuffer(commandBuffer);
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void DestroyGraphicCommandBuffer(VkCommandBuffer * commandBuffers, uint32_t const commandBuffersCount) {
     RB::DestroyCommandBuffers(
@@ -1104,13 +1131,19 @@ void DestroyGraphicCommandBuffer(VkCommandBuffer * commandBuffers, uint32_t cons
     );
 }
 
+//-------------------------------------------------------------------------------------------------
+
 uint32_t GetPresentQueueFamily() {
     return state->presentQueueFamily;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 uint32_t GetGraphicQueueFamily() {
     return state->graphicQueueFamily;
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void PipelineBarrier(
     VkCommandBuffer commandBuffer,
@@ -1125,6 +1158,8 @@ void PipelineBarrier(
         memoryBarrier
     );
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void SubmitQueue(
     VkCommandBuffer commandBuffer, 
@@ -1160,6 +1195,8 @@ void SubmitQueue(
     );
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void PresentQueue(
     uint32_t const imageIndex, 
     VkSemaphore renderFinishIndicatorSemaphore, 
@@ -1184,12 +1221,16 @@ void PresentQueue(
     }  
 }
 
+//-------------------------------------------------------------------------------------------------
+
 DisplayRenderPass * GetDisplayRenderPass() {
     return &state->displayRenderPass;
 }
 
-RB::SyncObjects createSyncObjects(
-    uint8_t const maxFramesInFlight, 
+//-------------------------------------------------------------------------------------------------
+
+RT::SyncObjects createSyncObjects(
+    uint32_t const maxFramesInFlight, 
     uint32_t const swapChainImagesCount
 ) {
     return RB::CreateSyncObjects(
@@ -1199,20 +1240,30 @@ RB::SyncObjects createSyncObjects(
     );
 }
 
-void DestroySyncObjects(RB::SyncObjects & syncObjects) {
+//-------------------------------------------------------------------------------------------------
+
+void DestroySyncObjects(RT::SyncObjects const & syncObjects) {
     RB::DestroySyncObjects(state->logicalDevice.device, syncObjects);
 }
+
+//-------------------------------------------------------------------------------------------------
 
 VkSampleCountFlagBits GetMaxSamplesCount() {
     return state->maxSampleCount;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void WaitForGraphicQueue() {
     RB::WaitForQueue(state->graphicQueue);
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void WaitForPresentQueue() {
     RB::WaitForQueue(state->presentQueue);
 }
+
+//-------------------------------------------------------------------------------------------------
 
 }

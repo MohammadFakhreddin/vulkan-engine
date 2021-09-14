@@ -1,9 +1,9 @@
 #pragma once
 
+#include "RenderTypesFWD.hpp"
 #include "engine/BedrockCommon.hpp"
 #include "engine/FoundationAsset.hpp"
 
-#include <functional>
 #ifdef __ANDROID__
 #include "vulkan_wrapper.h"
 #include <android_native_app_glue.h>
@@ -14,24 +14,8 @@
 #undef CreateWindow
 #endif
 
-#if defined(__DESKTOP__) || defined(__IOS__)
-#define MFA_VK_VALID(vkVariable) vkVariable != nullptr
-#define MFA_VK_INVALID(vkVariable) vkVariable == nullptr
-#define MFA_VK_VALID_ASSERT(vkVariable) MFA_ASSERT(MFA_VK_VALID(vkVariable))
-#define MFA_VK_INVALID_ASSERT(vkVariable) MFA_ASSERT(MFA_VK_INVALID(vkVariable))
-#define MFA_VK_MAKE_NULL(vkVariable) vkVariable = nullptr
-#elif defined(__ANDROID__)
-#define MFA_VK_VALID(vkVariable) vkVariable != 0
-#define MFA_VK_INVALID(vkVariable) vkVariable == 0
-#define MFA_VK_VALID_ASSERT(vkVariable) MFA_ASSERT(MFA_VK_VALID(vkVariable))
-#define MFA_VK_INVALID_ASSERT(vkVariable) MFA_ASSERT(MFA_VK_INVALID(vkVariable))
-#define MFA_VK_MAKE_NULL(vkVariable) vkVariable = 0
-#else
-#error Unhandled platform
-#endif
-
 #ifdef __DESKTOP__
-struct SDL_Window;
+#include "libs/sdl/SDL.hpp"
 #endif
 
 // TODO Write description for all functions for learning purpose
@@ -39,24 +23,20 @@ struct SDL_Window;
 // TODO Remove functions that are not usable from outside
 namespace MFA::RenderBackend {
 
-struct CreateGraphicPipelineOptions;
-
 using ScreenWidth = Platforms::ScreenSize;
 using ScreenHeight = Platforms::ScreenSize;
-using CpuTexture = AssetSystem::Texture;
-using CpuShader = AssetSystem::Shader;
 
 // Vulkan functions
 #ifdef __DESKTOP__
 [[nodiscard]]
-SDL_Window * CreateWindow(ScreenWidth screenWidth, ScreenHeight screenHeight);
+MSDL::SDL_Window * CreateWindow(ScreenWidth screenWidth, ScreenHeight screenHeight);
 
-void DestroyWindow(SDL_Window * window);
+void DestroyWindow(MSDL::SDL_Window * window);
 #endif
 
 #ifdef __DESKTOP__
 [[nodiscard]]
-VkSurfaceKHR CreateWindowSurface(SDL_Window * window, VkInstance_T * instance);
+VkSurfaceKHR CreateWindowSurface(MSDL::SDL_Window * window, VkInstance_T * instance);
 #elif defined(__ANDROID__)
 [[nodiscard]]
 VkSurfaceKHR CreateWindowSurface(ANativeWindow * window, VkInstance_T * instance);
@@ -85,7 +65,7 @@ VkSurfaceFormatKHR ChooseSurfaceFormat(uint8_t availableFormatsCount, VkSurfaceF
 
 #ifdef __DESKTOP__
 [[nodiscard]]
-VkInstance CreateInstance(char const * applicationName, SDL_Window * window);
+VkInstance CreateInstance(char const * applicationName, MSDL::SDL_Window * window);
 #elif defined(__ANDROID__) || defined(__IOS__)
 [[nodiscard]]
 VkInstance CreateInstance(char const * applicationName);
@@ -163,20 +143,8 @@ void TransferImageLayout(
     uint32_t layerCount
 );
 
-struct BufferGroup {
-    VkBuffer buffer {};
-    VkDeviceMemory memory {};
-    [[nodiscard]]
-    bool isValid() const noexcept {
-        return MFA_VK_VALID(buffer) && MFA_VK_VALID(memory);
-    }
-    void revoke() {
-        MFA_VK_MAKE_NULL(buffer);
-        MFA_VK_MAKE_NULL(memory);
-    }
-};
 [[nodiscard]]
-BufferGroup CreateBuffer(
+RT::BufferGroup CreateBuffer(
     VkDevice device,
     VkPhysicalDevice physicalDevice,
     VkDeviceSize size, 
@@ -201,24 +169,11 @@ void CopyBuffer(
 
 void DestroyBuffer(
     VkDevice device,
-    BufferGroup & bufferGroup
+    RT::BufferGroup & bufferGroup
 );
 
-struct ImageGroup {
-    VkImage image {};
-    VkDeviceMemory memory {};
-    [[nodiscard]]
-    bool isValid() const noexcept {
-        return MFA_VK_VALID(image) && MFA_VK_VALID(memory);
-    }
-    void revoke() {
-        MFA_VK_MAKE_NULL(image);
-        MFA_VK_MAKE_NULL(memory);
-    }
-};
-
 [[nodiscard]]
-ImageGroup CreateImage(
+RT::ImageGroup CreateImage(
     VkDevice device,
     VkPhysicalDevice physical_device,
     uint32_t width, 
@@ -236,63 +191,22 @@ ImageGroup CreateImage(
 
 void DestroyImage(
     VkDevice device,
-    ImageGroup const & image_group
+    RT::ImageGroup const & imageGroup
 );
 
-class GpuTexture;
-
 [[nodiscard]]
-GpuTexture CreateTexture(
-    CpuTexture & cpuTexture,
+RT::GpuTexture CreateTexture(
+    AS::Texture & cpuTexture,
     VkDevice device,
     VkPhysicalDevice physicalDevice,
     VkQueue graphicQueue,
     VkCommandPool commandPool
 );
 
-bool DestroyTexture(VkDevice device, GpuTexture & gpuTexture);
-
-// TODO It needs handle system // TODO Might be moved to a new class called render_types
-class GpuTexture {
-friend GpuTexture CreateTexture(
-    CpuTexture & cpuTexture,
-    VkDevice device,
-    VkPhysicalDevice physicalDevice,
-    VkQueue graphicQueue,
-    VkCommandPool commandPool
-);
-friend bool DestroyTexture(VkDevice device, GpuTexture & gpuTexture);
-public:
-    [[nodiscard]]
-    CpuTexture const * cpuTexture() const {return &mCpuTexture;}
-    [[nodiscard]]
-    CpuTexture * cpuTexture() {return &mCpuTexture;}
-    [[nodiscard]]
-    bool isValid () const {
-        if (mCpuTexture.isValid() == false) {
-            return false;
-        }
-        if (mImageGroup.isValid() == false) {
-            return false;
-        }
-        return MFA_VK_VALID(mImageView);
-    }
-    void revoke() {
-        mImageGroup.revoke();
-        MFA_VK_MAKE_NULL(mImageView);
-    }
-    [[nodiscard]]
-    VkImage const & image() const {return mImageGroup.image;}
-    [[nodiscard]]
-    VkImageView image_view() const {return mImageView;}
-private:
-    ImageGroup mImageGroup {};
-    VkImageView mImageView {};
-    CpuTexture mCpuTexture {};
-};
+bool DestroyTexture(VkDevice device, RT::GpuTexture & gpuTexture);
 
 [[nodiscard]]
-VkFormat ConvertCpuTextureFormatToGpu(AssetSystem::TextureFormat cpuFormat);
+VkFormat ConvertCpuTextureFormatToGpu(AS::TextureFormat cpuFormat);
 
 void CopyBufferToImage(
     VkDevice device,
@@ -300,39 +214,29 @@ void CopyBufferToImage(
     VkBuffer buffer,
     VkImage image,
     VkQueue graphicQueue,
-    CpuTexture const & cpuTexture
+    AS::Texture const & cpuTexture
 );
 
-struct LogicalDevice {
-    VkDevice device;
-    VkPhysicalDeviceMemoryProperties physical_memory_properties;
-};
 [[nodiscard]]
-LogicalDevice CreateLogicalDevice(
+RT::LogicalDevice CreateLogicalDevice(
     VkPhysicalDevice physicalDevice,
     uint32_t graphicsQueueFamily,
     uint32_t presentQueueFamily,
     VkPhysicalDeviceFeatures const & enabledPhysicalDeviceFeatures
 );
 
-void DestroyLogicalDevice(LogicalDevice const & logical_device);
+void DestroyLogicalDevice(RT::LogicalDevice const & logicalDevice);
 
 [[nodiscard]]
 VkQueue GetQueueByFamilyIndex(
     VkDevice device,
-    uint32_t queue_family_index
+    uint32_t queueFamilyIndex
 );
 
-struct CreateSamplerParams {
-    float min_lod = 0;  // Level of detail
-    float max_lod = 1;
-    bool anisotropy_enabled = true;
-    float max_anisotropy = 16.0f;
-};
 [[nodiscard]]
 VkSampler CreateSampler(
     VkDevice device, 
-    CreateSamplerParams const & params = {}
+    RT::CreateSamplerParams const & params
 );
 
 void DestroySampler(VkDevice device, VkSampler sampler);
@@ -377,15 +281,10 @@ VkSurfaceCapabilitiesKHR GetSurfaceCapabilities(
     VkSurfaceKHR windowSurface
 );
 
-struct SwapChainGroup {
-    VkSwapchainKHR swapChain {};
-    VkFormat swapChainFormat {};
-    std::vector<VkImage> swapChainImages {};
-    std::vector<VkImageView> swapChainImageViews {};
-};
+
 
 [[nodiscard]]
-SwapChainGroup CreateSwapChain(
+RT::SwapChainGroup CreateSwapChain(
     VkDevice device,
     VkPhysicalDevice physicalDevice, 
     VkSurfaceKHR windowSurface,
@@ -393,58 +292,28 @@ SwapChainGroup CreateSwapChain(
     VkSwapchainKHR oldSwapChain = VkSwapchainKHR {}
 );
 
-void DestroySwapChain(VkDevice device, SwapChainGroup const & swapChainGroup);
+void DestroySwapChain(VkDevice device, RT::SwapChainGroup const & swapChainGroup);
 
-// TODO Maybe we should move this render frontend
-struct DepthImageGroup {
-    ImageGroup imageGroup {};
-    VkImageView imageView {};
-    VkFormat imageFormat;
-};
-
-struct CreateDepthImageOptions {
-    uint16_t layerCount = 1;
-    VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-    VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D;
-    VkImageCreateFlags imageCreateFlags = 0;
-    VkSampleCountFlagBits samplesCount = VK_SAMPLE_COUNT_1_BIT; 
-};
 [[nodiscard]]
-DepthImageGroup CreateDepthImage(
+RT::DepthImageGroup CreateDepthImage(
     VkPhysicalDevice physicalDevice,
     VkDevice device,
     VkExtent2D imageExtent,
-    CreateDepthImageOptions const & options
+    RT::CreateDepthImageOptions const & options
 );
 
-void DestroyDepthImage(VkDevice device, DepthImageGroup const & depthImageGroup);
-
-
-struct ColorImageGroup {
-    ImageGroup imageGroup {};
-    VkImageView imageView {};
-    VkFormat imageFormat;
-};
-
-struct CreateColorImageOptions {
-    uint16_t layerCount = 1;
-    VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D;
-    VkImageCreateFlags imageCreateFlags = 0;
-    VkSampleCountFlagBits samplesCount = VK_SAMPLE_COUNT_1_BIT; 
-};
+void DestroyDepthImage(VkDevice device, RT::DepthImageGroup const & depthImageGroup);
 
 [[nodiscard]]
-ColorImageGroup CreateColorImage(
+RT::ColorImageGroup CreateColorImage(
     VkPhysicalDevice physicalDevice, 
     VkDevice device, 
     VkExtent2D const & imageExtent,
     VkFormat imageFormat,
-    CreateColorImageOptions const & options
+    RT::CreateColorImageOptions const & options
 );
 
-void DestroyColorImage(VkDevice device, ColorImageGroup const & colorImageGroup);
-
+void DestroyColorImage(VkDevice device, RT::ColorImageGroup const & colorImageGroup);
 
 // TODO Ask for options
 [[nodiscard]]
@@ -480,94 +349,17 @@ void DestroyFrameBuffers(
     VkFramebuffer * frameBuffers
 );
 
-class GpuShader;
-
 [[nodiscard]]
-GpuShader CreateShader(VkDevice device, CpuShader const & cpuShader);
+RT::GpuShader CreateShader(VkDevice device, AS::Shader const & cpuShader);
 
-bool DestroyShader(VkDevice device, GpuShader & gpuShader);
-
-class GpuShader {
-friend GpuShader CreateShader(VkDevice device, CpuShader const & cpuShader);
-friend bool DestroyShader(VkDevice device, GpuShader & gpuShader);
-public:
-    [[nodiscard]]
-    CpuShader * cpuShader() {return &mCpuShader;}
-    [[nodiscard]]
-    CpuShader const * cpuShader() const {return &mCpuShader;}
-    [[nodiscard]]
-    bool valid () const {
-        return MFA_VK_VALID(mShaderModule);
-    }
-    [[nodiscard]]
-    VkShaderModule shaderModule() const {return mShaderModule;}
-    void revoke() {
-        MFA_VK_MAKE_NULL(mShaderModule);
-    }
-private:
-    VkShaderModule mShaderModule {};
-    CpuShader mCpuShader {};
-};
-
-struct GraphicPipelineGroup {
-    friend void DestroyGraphicPipeline(VkDevice device, GraphicPipelineGroup & graphicPipelineGroup);
-    // TODO We can make this struct friend of createPipeline as well
-
-    VkPipelineLayout pipelineLayout {};
-    VkPipeline graphicPipeline {};
-
-    [[nodiscard]]
-    bool isValid() const noexcept {
-        return MFA_VK_VALID(pipelineLayout)
-            && MFA_VK_VALID(graphicPipeline);
-    }
-
-private:
-
-    void revoke() {
-        MFA_VK_MAKE_NULL(pipelineLayout);
-        MFA_VK_MAKE_NULL(graphicPipeline);
-    }
-};
-
-struct CreateGraphicPipelineOptions {
-    VkFrontFace frontFace = VK_FRONT_FACE_CLOCKWISE;
-    VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;                   // TODO We need no cull for certain objects
-    VkPipelineDynamicStateCreateInfo * dynamicStateCreateInfo = nullptr;
-    VkPipelineDepthStencilStateCreateInfo depthStencil {};
-    VkPipelineColorBlendAttachmentState colorBlendAttachments {};
-    uint8_t pushConstantsRangeCount = 0;
-    VkPushConstantRange * pushConstantRanges = nullptr;
-    bool useStaticViewportAndScissor = false;           // Use of dynamic viewport and scissor is recommended
-    VkPrimitiveTopology primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    VkSampleCountFlagBits rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-    // Default params
-    explicit CreateGraphicPipelineOptions() {
-        depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-        depthStencil.depthTestEnable = VK_TRUE;
-        depthStencil.depthWriteEnable = VK_TRUE;
-        depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-        depthStencil.depthBoundsTestEnable = VK_FALSE;
-        depthStencil.stencilTestEnable = VK_FALSE;
-
-        colorBlendAttachments.blendEnable = VK_TRUE;
-        colorBlendAttachments.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-        colorBlendAttachments.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-        colorBlendAttachments.colorBlendOp = VK_BLEND_OP_ADD;
-        colorBlendAttachments.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-        colorBlendAttachments.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-        colorBlendAttachments.alphaBlendOp = VK_BLEND_OP_ADD;
-        colorBlendAttachments.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    }
-};
+bool DestroyShader(VkDevice device, RT::GpuShader & gpuShader);
 
 // Note Shaders can be removed after creating graphic pipeline
 [[nodiscard]]
-GraphicPipelineGroup CreateGraphicPipeline(
+RT::PipelineGroup CreatePipelineGroup(
     VkDevice device, 
     uint8_t shaderStagesCount, 
-    GpuShader const * shaderStages,
+    RT::GpuShader const ** shaderStages,
     VkVertexInputBindingDescription vertexBindingDescription,
     uint32_t attributeDescriptionCount,
     VkVertexInputAttributeDescription * attributeDescriptionData,
@@ -575,7 +367,7 @@ GraphicPipelineGroup CreateGraphicPipeline(
     VkRenderPass renderPass,
     uint32_t descriptorSetLayoutCount,
     VkDescriptorSetLayout* descriptorSetLayouts,
-    CreateGraphicPipelineOptions const & options
+    RT::CreateGraphicPipelineOptions const & options
 );
 
 void AssignViewportAndScissorToCommandBuffer(
@@ -583,7 +375,7 @@ void AssignViewportAndScissorToCommandBuffer(
     VkCommandBuffer commandBuffer
 );
 
-void DestroyGraphicPipeline(VkDevice device, GraphicPipelineGroup & graphicPipelineGroup);
+void DestroyPipelineGroup(VkDevice device, RT::PipelineGroup & graphicPipelineGroup);
 
 [[nodiscard]]
 VkDescriptorSetLayout CreateDescriptorSetLayout(
@@ -601,50 +393,50 @@ void DestroyDescriptorSetLayout(
 VkShaderStageFlagBits ConvertAssetShaderStageToGpu(AssetSystem::ShaderStage stage);
 
 [[nodiscard]]
-BufferGroup CreateVertexBuffer(
+RT::BufferGroup CreateVertexBuffer(
     VkDevice device,
-    VkPhysicalDevice physical_device,
-    VkCommandPool command_pool,
-    VkQueue graphic_queue,
-    CBlob vertices_blob
+    VkPhysicalDevice physicalDevice,
+    VkCommandPool commandPool,
+    VkQueue graphicQueue,
+    CBlob verticesBlob
 );
 
 void DestroyVertexBuffer(
     VkDevice device,
-    BufferGroup & vertex_buffer_group
+    RT::BufferGroup & vertexBufferGroup
 );
 
 [[nodiscard]]
-BufferGroup CreateIndexBuffer (
+RT::BufferGroup CreateIndexBuffer (
     VkDevice device,
-    VkPhysicalDevice physical_device,
-    VkCommandPool command_pool,
-    VkQueue graphic_queue,
-    CBlob indices_blob
+    VkPhysicalDevice physicalDevice,
+    VkCommandPool commandPool,
+    VkQueue graphicQueue,
+    CBlob indicesBlob
 );
 
 void DestroyIndexBuffer(
     VkDevice device,
-    BufferGroup & index_buffer_group
+    RT::BufferGroup & indexBufferGroup
 );
 
-[[nodiscard]]
-std::vector<BufferGroup> CreateUniformBuffer(
+void CreateBufferGroups(
     VkDevice device,
-    VkPhysicalDevice physical_device,
+    VkPhysicalDevice physicalDevice,
     uint32_t buffersCount,
-    VkDeviceSize size 
+    VkDeviceSize buffersSize,
+    RT::BufferGroup * outUniformBuffers
 );
 
-void UpdateUniformBuffer(
+void UpdateBufferGroup(
     VkDevice device,
-    BufferGroup const & uniform_buffer_group,
+    RT::BufferGroup const & bufferGroup,
     CBlob data
 );
 
-void DestroyUniformBuffer(
+void DestroyBufferGroup(
     VkDevice device,
-    BufferGroup & buffer_group
+    RT::BufferGroup & bufferGroup
 );
 
 [[nodiscard]]
@@ -658,13 +450,9 @@ void DestroyDescriptorPool(
     VkDescriptorPool pool
 );
 
-struct DescriptorSetGroup {
-    std::vector<VkDescriptorSet> descriptorSets;
-};
-
 // Descriptor sets gets destroyed automatically when descriptor pool is destroyed
 [[nodiscard]]
-DescriptorSetGroup CreateDescriptorSet(
+RT::DescriptorSetGroup CreateDescriptorSet(
     VkDevice device,
     VkDescriptorPool descriptorPool,
     VkDescriptorSetLayout descriptorSetLayout,
@@ -676,9 +464,9 @@ DescriptorSetGroup CreateDescriptorSet(
 // TODO Consider creating an easier interface
 void UpdateDescriptorSets(
     VkDevice device,
-    uint8_t descriptor_set_count,
-    VkDescriptorSet * descriptor_sets,
-    uint8_t schemas_count,
+    uint8_t descriptorSetCount,
+    VkDescriptorSet * descriptorSets,
+    uint8_t schemasCount,
     VkWriteDescriptorSet * schemas
 );
 
@@ -700,21 +488,14 @@ void DestroyCommandBuffers(
     VkCommandBuffer* commandBuffers
 );
 
-// CreateSyncObjects (Fence, Semaphore, ...)
-struct SyncObjects {
-    std::vector<VkSemaphore> imageAvailabilitySemaphores;
-    std::vector<VkSemaphore> renderFinishIndicatorSemaphores;
-    std::vector<VkFence> fencesInFlight;
-    std::vector<VkFence> imagesInFlight;
-};
 [[nodiscard]]
-SyncObjects CreateSyncObjects(
+RT::SyncObjects CreateSyncObjects(
     VkDevice device,
     uint8_t maxFramesInFlight,
     uint32_t swapChainImagesCount
 );
 
-void DestroySyncObjects(VkDevice device, SyncObjects const & syncObjects);
+void DestroySyncObjects(VkDevice device, RT::SyncObjects const & syncObjects);
 
 void DeviceWaitIdle(VkDevice device);
 
@@ -723,30 +504,30 @@ void WaitForFence(VkDevice device, VkFence inFlightFence);
 VkResult AcquireNextImage(
     VkDevice device, 
     VkSemaphore imageAvailabilitySemaphore, 
-    SwapChainGroup const & swapChainGroup,
+    RT::SwapChainGroup const & swapChainGroup,
     uint32_t & outImageIndex
 );
 
 void BindVertexBuffer(
-    VkCommandBuffer command_buffer,
-    BufferGroup vertex_buffer,
+    VkCommandBuffer commandBuffer,
+    RT::BufferGroup const & vertexBuffer,
     VkDeviceSize offset = 0
 );
 
 void BindIndexBuffer(
     VkCommandBuffer commandBuffer,
-    BufferGroup indexBuffer,
+    RT::BufferGroup const & indexBuffer,
     VkDeviceSize offset = 0,
     VkIndexType indexType = VK_INDEX_TYPE_UINT32
 );
 
 void DrawIndexed(
-    VkCommandBuffer command_buffer,
-    uint32_t indices_count,
-    uint32_t instance_count = 1,
-    uint32_t first_index = 0,
-    uint32_t vertex_offset = 0,
-    uint32_t first_instance = 0
+    VkCommandBuffer commandBuffer,
+    uint32_t indicesCount,
+    uint32_t instanceCount = 1,
+    uint32_t firstIndex = 0,
+    uint32_t vertexOffset = 0,
+    uint32_t firstInstance = 0
 );
 
 void SetScissor(VkCommandBuffer commandBuffer, VkRect2D const & scissor);
@@ -821,5 +602,11 @@ void CopyImage(
 );
 
 void WaitForQueue(VkQueue queue);
+
+}
+
+namespace MFA {
+
+namespace RB = RenderBackend;
 
 }

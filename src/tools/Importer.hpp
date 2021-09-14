@@ -4,7 +4,6 @@
 
 namespace MFA::Importer {
 //TODO:// After implementing Resource system return handle instead
-namespace AS = AssetSystem;
 //------------------------------Assets-------------------------------------
 
 struct ImportTextureOptions {
@@ -76,15 +75,15 @@ AS::Shader ImportShaderFromSPV(
 );
 
 // Temporary function for freeing imported assets, Will be replaced with RCMGMT system in future
-bool FreeModel(AS::Model * model);
+bool FreeModel(AS::Model & model);
 
 // Temporary function for freeing imported assets, Will be replaced with RCMGMT system in future
-bool FreeTexture(AS::Texture * texture);
+bool FreeTexture(AS::Texture & texture);
 
-bool FreeShader(AS::Shader * shader);
+bool FreeShader(AS::Shader & shader);
 
 // Calling this function is not required because meshed does not allocate dynamic memory
-bool FreeMesh(AS::Mesh * mesh);
+bool FreeMesh(AS::Mesh & mesh);
 
 //------------------------------RawFile------------------------------------
 

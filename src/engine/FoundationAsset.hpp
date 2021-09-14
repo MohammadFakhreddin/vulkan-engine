@@ -507,7 +507,7 @@ public:
         return mRootNodes.data();
     }
 
-    uint32_t GetIndexOfRootNode(uint32_t const index) {
+    uint32_t GetIndexOfRootNode(uint32_t const index) const {
         MFA_ASSERT(index < mRootNodes.size());
         return mRootNodes[index];
     }
@@ -623,3 +623,7 @@ struct Model {
 };
 
 };  // MFA::Asset
+
+namespace MFA {
+    namespace AS = AssetSystem;
+}

@@ -1,17 +1,18 @@
 #pragma once
 
-#include "engine/render_system/DrawableObject.hpp"
-#include "engine/render_system/RenderFrontend.hpp"
+#include <fwd.hpp>
+
+#include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
+
+#include <glm/fwd.hpp>
 
 // Optimize this file using https://simoncoenen.com/blog/programming/graphics/DoomEternalStudy
 
 namespace MFA {
 
-namespace RB = RenderBackend;
-namespace RF = RenderFrontend;
-
 class ShadowRenderPassV2;
+class DrawableVariant;
 
 class PBRWithShadowPipelineV2 final : public BasePipeline {
 public:
@@ -32,7 +33,6 @@ public:
         int skinIndex;
         int placeholder0[2];
     };
-    //static_assert(sizeof(ShadowPassVertexStagePushConstants) == 136);
     struct DisplayPassAllStagesPushConstants {
         float modeTransform[16];
         float inverseNodeTransform[16];
@@ -40,8 +40,7 @@ public:
         uint32_t primitiveIndex;      // Unique id
         int placeholder0[2];
     };
-    //static_assert(sizeof(DisplayPassAllStagesPushConstants) == 136);
-
+    
     struct DisplayLightAndCameraData {
         alignas(16) float lightPosition[3];
         alignas(16) float cameraPosition[3];
@@ -63,47 +62,36 @@ public:
     PBRWithShadowPipelineV2 & operator = (PBRWithShadowPipelineV2 const &) noexcept = delete;
     PBRWithShadowPipelineV2 & operator = (PBRWithShadowPipelineV2 &&) noexcept = delete;
 
-    void Init(
-        RF::SamplerGroup * samplerGroup, 
-        RB::GpuTexture * errorTexture,
+    void Init (
+        RT::SamplerGroup * samplerGroup, 
+        RT::GpuTexture * errorTexture,
         float projectionNear,
         float projectionFar
     );
 
-    void Shutdown();
+    void Shutdown() override;
 
-    void PreRender(RF::DrawPass & drawPass, float deltaTime, uint32_t idsCount, DrawableObjectId * ids) override;
+    void PreRender(RT::DrawPass & drawPass, float deltaTime) override;
 
-    void Render(RF::DrawPass & drawPass, float deltaTime, uint32_t idsCount, DrawableObjectId * ids) override;
-
-    void PostRender(RF::DrawPass & drawPass, float deltaTime, uint32_t idsCount, DrawableObjectId * ids) override;
+    void Render(RT::DrawPass & drawPass, float deltaTime) override;
 
     void OnResize() override {}
 
-    DrawableObjectId AddGpuModel(RF::GpuModel & gpuModel) override;
+    void UpdateCameraView(const float view[16]);
 
-    bool RemoveGpuModel(DrawableObjectId drawableObjectId) override;
+    void UpdateCameraProjection(const float projection[16]);
 
-    bool UpdateModel(
-        DrawableObjectId drawableObjectId, 
-        float modelTransform[16]
-    );
+    void UpdateLightPosition(const float lightPosition[3]);
 
-    void UpdateCameraView(float view[16]);
+    void UpdateCameraPosition(const float cameraPosition[3]);
 
-    void UpdateCameraProjection(float projection[16]);
+    void UpdateLightColor(const float lightColor[3]);
 
-    void UpdateLightPosition(float lightPosition[3]);
+    void CreateDisplayPassDescriptorSets(DrawableVariant * variant);
 
-    void UpdateCameraPosition(float cameraPosition[3]);
+    void CreateShadowPassDescriptorSets(DrawableVariant * variant);
 
-    void UpdateLightColor(float lightColor[3]);
-
-    DrawableObject * GetDrawableById(DrawableObjectId objectId);
-
-    void CreateDisplayPassDescriptorSets(DrawableObject * drawableObject);
-
-    void CreateShadowPassDescriptorSets(DrawableObject * drawableObject);
+    DrawableVariant * CreateDrawableVariant(char const * essenceName) override;
 
 private:
 
@@ -123,39 +111,37 @@ private:
 
     void destroyUniformBuffers();
 
-    void updateDisplayLightBuffer(RF::DrawPass const & drawPass);
+    void updateDisplayLightBuffer(RT::DrawPass const & drawPass);
 
-    void updateShadowLightBuffer(RF::DrawPass const & drawPass);
+    void updateShadowLightBuffer(RT::DrawPass const & drawPass);
 
-    void updateShadowViewProjectionBuffer(RF::DrawPass const & drawPass);
+    void updateShadowViewProjectionBuffer(RT::DrawPass const & drawPass);
     
     void updateShadowViewProjectionData();
     
-    void updateDisplayViewProjectionBuffer(RF::DrawPass const & drawPass);
+    void updateDisplayViewProjectionBuffer(RT::DrawPass const & drawPass);
     
     inline static constexpr float SHADOW_WIDTH = 1024;
     inline static constexpr float SHADOW_HEIGHT = 1024;
 
     bool mIsInitialized = false;
 
-    RF::SamplerGroup * mSamplerGroup = nullptr; // TODO Each gltf subMesh has its own settings
-    RB::GpuTexture * mErrorTexture = nullptr;
-    RF::UniformBufferGroup mErrorBuffer {};
-    
-    std::unordered_map<DrawableObjectId, std::unique_ptr<DrawableObject>> mDrawableObjects {};
+    RT::SamplerGroup * mSamplerGroup = nullptr; // TODO Each gltf subMesh has its own settings
+    RT::GpuTexture * mErrorTexture = nullptr;
+    RT::UniformBufferGroup mErrorBuffer {};
     
     VkDescriptorSetLayout mDisplayPassDescriptorSetLayout {};
-    RF::DrawPipeline mDisplayPassPipeline {};
-    RF::UniformBufferGroup mDisplayLightAndCameraBuffer {};
-    RF::UniformBufferGroup mDisplayViewProjectionBuffer {};
+    RT::PipelineGroup mDisplayPassPipeline {};
+    RT::UniformBufferGroup mDisplayLightAndCameraBuffer {};
+    RT::UniformBufferGroup mDisplayViewProjectionBuffer {};
     
     VkDescriptorSetLayout mShadowPassDescriptorSetLayout {};
-    RF::DrawPipeline mShadowPassPipeline {};
-    RF::UniformBufferGroup mShadowLightBuffer {};
+    RT::PipelineGroup mShadowPassPipeline {};
+    RT::UniformBufferGroup mShadowLightBuffer {};
 
     std::unique_ptr<ShadowRenderPassV2> mShadowRenderPass;
 
-    RF::UniformBufferGroup mShadowViewProjectionBuffer {};
+    RT::UniformBufferGroup mShadowViewProjectionBuffer {};
     
     float mLightPosition[3] {};
     float mCameraPosition[3] {};
@@ -164,10 +150,8 @@ private:
     float mProjectionNear = 0.0f;
     float mProjectionFar = 0.0f;
     float mProjectionFarToNearDistance = 0.0f;
-
-    DrawableObjectId mNextDrawableObjectId = 0;
-
-    glm::mat4 mShadowProjection {};
+    
+    glm::mat4 mShadowProjection;
 
     ShadowViewProjectionData mShadowViewProjectionData {};
     

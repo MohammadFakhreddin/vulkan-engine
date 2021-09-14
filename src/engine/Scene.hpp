@@ -1,14 +1,16 @@
 #pragma once
 
+#include "render_system/RenderTypesFWD.hpp"
+#include "ui_system/UISystem.hpp"
+
 #include <string>
 #include <vector>
-
-#include "ui_system/UISystem.hpp"
 
 namespace MFA {
 
 class Scene;
 class DisplayRenderPass;
+class UIRecordObject; 
 
 class SceneSubSystem {
 public:
@@ -34,9 +36,9 @@ private:
 
     DisplayRenderPass * mDisplayRenderPass {};
     
-    UIRecordObject mUIRecordObject;
+    std::unique_ptr<UIRecordObject> mUIRecordObject;
 
-    RenderFrontend::ResizeEventListenerId mResizeListenerId = 0;
+    RT::ResizeEventListenerId mResizeListenerId = 0;
 };
 
 class Scene {
@@ -49,9 +51,9 @@ public:
     Scene (Scene && rhs) noexcept = delete;
     Scene & operator = (Scene const &) noexcept = delete;
 
-    virtual void OnPreRender(float deltaTimeInSec, RenderFrontend::DrawPass & drawPass) {};
-    virtual void OnRender(float deltaTimeInSec, RenderFrontend::DrawPass & drawPass) = 0;
-    virtual void OnPostRender(float deltaTimeInSec, RenderFrontend::DrawPass & drawPass) {};
+    virtual void OnPreRender(float deltaTimeInSec, RT::DrawPass & drawPass) {};
+    virtual void OnRender(float deltaTimeInSec, RT::DrawPass & drawPass) = 0;
+    virtual void OnPostRender(float deltaTimeInSec, RT::DrawPass & drawPass) {};
 
     virtual void OnResize() = 0;
     virtual void Init() = 0;

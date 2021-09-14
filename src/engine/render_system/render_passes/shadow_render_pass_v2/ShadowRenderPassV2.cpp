@@ -1,6 +1,9 @@
 #include "ShadowRenderPassV2.hpp"
 
-#include "DisplayRenderPass.hpp"
+#include "engine/render_system/render_passes/RenderPass.hpp"
+#include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
+#include "engine/render_system/RenderFrontend.hpp"
+#include "engine/render_system/RenderBackend.hpp"
 
 namespace MFA {
 
@@ -8,7 +11,7 @@ VkRenderPass ShadowRenderPassV2::GetVkRenderPass() {
     return mVkRenderPass;
 }
 
-RB::DepthImageGroup const & ShadowRenderPassV2::GetDepthCubeMap() const {
+RT::DepthImageGroup const & ShadowRenderPassV2::GetDepthCubeMap() const {
     return mDepthCubeMap;
 }
 
@@ -21,14 +24,14 @@ void ShadowRenderPassV2::internalInit() {
         .height = mImageHeight
     };
 
-    mDepthCubeMap = RF::CreateDepthImage(shadowExtend, RB::CreateDepthImageOptions {
+    mDepthCubeMap = RF::CreateDepthImage(shadowExtend, RT::CreateDepthImageOptions {
         .layerCount = 6, // * light count
         .usageFlags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         .viewType = VK_IMAGE_VIEW_TYPE_CUBE,
         .imageCreateFlags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT
     });
 
-    mDepthImage = RF::CreateDepthImage(shadowExtend, RB::CreateDepthImageOptions {
+    mDepthImage = RF::CreateDepthImage(shadowExtend, RT::CreateDepthImageOptions {
         .layerCount = 1,
         .usageFlags = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
     });
@@ -76,7 +79,7 @@ void ShadowRenderPassV2::SetNextPassParams(int faceIndex) {
     mFaceIndex = faceIndex;
 }
 
-void ShadowRenderPassV2::PrepareCubemapForTransferDestination(RF::DrawPass const & drawPass) {
+void ShadowRenderPassV2::PrepareCubeMapForTransferDestination(RT::DrawPass const & drawPass) {
     VkImageSubresourceRange const subResourceRange {
         .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
         .baseMipLevel = 0,
@@ -105,7 +108,7 @@ void ShadowRenderPassV2::PrepareCubemapForTransferDestination(RF::DrawPass const
     );
 }
 
-void ShadowRenderPassV2::PrepareCubemapForSampling(RF::DrawPass const & drawPass) {
+void ShadowRenderPassV2::PrepareCubeMapForSampling(RT::DrawPass const & drawPass) {
     VkImageSubresourceRange const subResourceRange {
         .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
         .baseMipLevel = 0,
@@ -134,7 +137,7 @@ void ShadowRenderPassV2::PrepareCubemapForSampling(RF::DrawPass const & drawPass
     );
 }
 
-void ShadowRenderPassV2::internalBeginRenderPass(RF::DrawPass const & drawPass) {
+void ShadowRenderPassV2::internalBeginRenderPass(RT::DrawPass & drawPass) {
 
     {// Making depth image ready for depth attachment
         VkImageSubresourceRange const subResourceRange {
@@ -190,7 +193,7 @@ void ShadowRenderPassV2::internalBeginRenderPass(RF::DrawPass const & drawPass) 
     );
 }
 
-void ShadowRenderPassV2::internalEndRenderPass(RF::DrawPass const & drawPass) {
+void ShadowRenderPassV2::internalEndRenderPass(RT::DrawPass & drawPass) {
     MFA_ASSERT(mFaceIndex >= 0 && mFaceIndex < 6);
     RF::EndRenderPass(mDisplayRenderPass->GetCommandBuffer(drawPass));
 

@@ -1,13 +1,9 @@
 #pragma once
 
-#include "engine/render_system/DrawableObject.hpp"
-#include "engine/render_system/RenderFrontend.hpp"
+#include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
 
 namespace MFA {
-    
-    namespace RB = RenderBackend;
-    namespace RF = RenderFrontend;
     
 class PointLightPipeline final : public BasePipeline {
 public:
@@ -30,31 +26,17 @@ public:
     PointLightPipeline & operator = (PointLightPipeline const &) noexcept = delete;
     PointLightPipeline & operator = (PointLightPipeline &&) noexcept = delete;
 
-    void Init();
+    void Init() override;
 
-    void Shutdown();
+    void Shutdown() override;
 
-    DrawableObjectId AddGpuModel(RF::GpuModel & gpuModel) override;
+    void PreRender(RT::DrawPass & drawPass, float deltaTime) override;
 
-    bool RemoveGpuModel(DrawableObjectId drawableObjectId) override;
+    void Render(RT::DrawPass & drawPass, float deltaTime) override;
 
-    void PreRender(
-        RF::DrawPass & drawPass, 
-        float deltaTimeInSec,
-        uint32_t idsCount, 
-        DrawableObjectId * ids 
-    ) override;
-
-    void Render(
-        RF::DrawPass & drawPass,
-        float deltaTimeInSec,
-        uint32_t idsCount, 
-        DrawableObjectId * ids
-    ) override;
-
-    void UpdateLightTransform(uint32_t id, float lightTransform[16]);
-
-    void UpdateLightColor(uint32_t id, float lightColor[3]);
+    DrawableVariant * CreateDrawableVariant(char const * essenceName) override;
+    
+    void UpdateLightColor(DrawableVariant * variant, float lightColor[3]);
 
     void UpdateCameraView(float cameraTransform[16]);
 
@@ -74,13 +56,9 @@ private:
 
     void createPipeline();
 
-    void destroyPipeline();
-
-    void destroyDrawableObjects();
-
     void createDescriptorSets();
 
-    void updateViewProjectionBuffer(RF::DrawPass const & drawPass);
+    void updateViewProjectionBuffer(RT::DrawPass const & drawPass);
 
     void createUniformBuffers();
 
@@ -89,15 +67,11 @@ private:
     bool mIsInitialized = false;
 
     VkDescriptorSetLayout mDescriptorSetLayout {};
-    MFA::RenderFrontend::DrawPipeline mDrawPipeline {};
+    RT::PipelineGroup mDrawPipeline {};
 
-    std::unordered_map<DrawableObjectId, std::unique_ptr<DrawableObject>> mDrawableObjects {};
+    RT::DescriptorSetGroup mDescriptorSetGroup {};
 
-    DrawableObjectId mNextDrawableId = 0;
-
-    RB::DescriptorSetGroup mDescriptorSetGroup {};
-
-    RF::UniformBufferGroup mViewProjectionBuffers {};
+    RT::UniformBufferGroup mViewProjectionBuffers {};
 
     glm::mat4 mCameraTransform {};
     glm::mat4 mCameraProjection {};

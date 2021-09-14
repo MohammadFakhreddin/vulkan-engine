@@ -1,20 +1,18 @@
 #pragma once
 
 #include "UIRecordObject.hpp"
-#include "engine/render_system/RenderFrontend.hpp"
+#include "engine/render_system/RenderTypesFWD.hpp"
 
 class UIRecordObject;
 
 namespace MFA::UISystem {
-
-namespace RF = MFA::RenderFrontend;
 
 // TODO Support for custom font
 void Init();
 
 void OnNewFrame(
     float deltaTimeInSec, 
-    RF::DrawPass & drawPass
+    RT::DrawPass & drawPass
 );
 
 void BeginWindow(char const * windowName);
@@ -77,4 +75,8 @@ bool IsItemActive();
 void SetAndroidApp(android_app *pApp);
 #endif
 
+}
+
+namespace MFA {
+    namespace UI = UISystem;
 }
