@@ -623,3 +623,7 @@ struct Model {
 };
 
 };  // MFA::Asset
+
+namespace MFA {
+    namespace AS = AssetSystem;
+}

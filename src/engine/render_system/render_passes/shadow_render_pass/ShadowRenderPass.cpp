@@ -1,16 +1,25 @@
 #include "ShadowRenderPass.hpp"
 
-#include "DisplayRenderPass.hpp"
+#include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
+#include "engine/render_system/RenderFrontend.hpp"
 
 namespace MFA {
+
+// TODO RF Should own graphic command buffer instead
+
+//-------------------------------------------------------------------------------------------------
 
 VkRenderPass ShadowRenderPass::GetVkRenderPass() {
     return mVkRenderPass;
 }
 
-RB::DepthImageGroup const & ShadowRenderPass::GetDepthImageGroup() const {
+//-------------------------------------------------------------------------------------------------
+
+RT::DepthImageGroup const & ShadowRenderPass::GetDepthImageGroup() const {
     return mDepthImageGroup;
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void ShadowRenderPass::internalInit() {
     MFA_ASSERT(mImageWidth > 0);
@@ -22,7 +31,7 @@ void ShadowRenderPass::internalInit() {
     };
 
     // TODO We might need to change usageFlags: VK_IMAGE_USAGE_TRANSFER_SRC_BIT feels extra
-    mDepthImageGroup = RF::CreateDepthImage(shadowExtend, RB::CreateDepthImageOptions {
+    mDepthImageGroup = RF::CreateDepthImage(shadowExtend, RT::CreateDepthImageOptions {
         .layerCount = 6, // * light count
         .usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         .viewType = VK_IMAGE_VIEW_TYPE_CUBE,
@@ -60,6 +69,8 @@ void ShadowRenderPass::internalInit() {
     mDisplayRenderPass = RF::GetDisplayRenderPass();
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void ShadowRenderPass::internalShutdown() {
     RF::DestroyFrameBuffers(1, &mFrameBuffer);
     RF::DestroyRenderPass(mVkRenderPass);
@@ -67,7 +78,9 @@ void ShadowRenderPass::internalShutdown() {
     RF::DestroyDepthImage(mDepthImageGroup);
 }
 
-void ShadowRenderPass::internalBeginRenderPass(RF::DrawPass const & drawPass) {
+//-------------------------------------------------------------------------------------------------
+
+void ShadowRenderPass::internalBeginRenderPass(RT::DrawPass & drawPass) {
     {// Depth barrier
         VkImageSubresourceRange const subResourceRange {
             .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
@@ -122,7 +135,9 @@ void ShadowRenderPass::internalBeginRenderPass(RF::DrawPass const & drawPass) {
     );
 }
 
-void ShadowRenderPass::internalEndRenderPass(RF::DrawPass const & drawPass) {
+//-------------------------------------------------------------------------------------------------
+
+void ShadowRenderPass::internalEndRenderPass(RT::DrawPass & drawPass) {
     RF::EndRenderPass(mDisplayRenderPass->GetCommandBuffer(drawPass));
 
     {// Depth barrier
@@ -155,8 +170,12 @@ void ShadowRenderPass::internalEndRenderPass(RF::DrawPass const & drawPass) {
     }
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void ShadowRenderPass::internalResize() {
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void ShadowRenderPass::createRenderPass() {
     std::vector<VkAttachmentDescription> attachments {};
@@ -219,6 +238,8 @@ void ShadowRenderPass::createRenderPass() {
     );
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void ShadowRenderPass::createFrameBuffer(VkExtent2D const & shadowExtent) {
 
     // Note: This comment is useful though does not match 100% with my code
@@ -240,5 +261,7 @@ void ShadowRenderPass::createFrameBuffer(VkExtent2D const & shadowExtent) {
         6   // * lightCount
     );
 }
+
+//-------------------------------------------------------------------------------------------------
 
 }

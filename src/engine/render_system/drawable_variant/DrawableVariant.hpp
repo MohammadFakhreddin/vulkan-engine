@@ -1,26 +1,22 @@
 #pragma once
 
+#include "engine/render_system/RenderTypes.hpp"
+#include "engine/BedrockCommon.hpp"
+#include "engine/FoundationAsset.hpp"
 
-#include <glm/fwd.hpp>
+#include <glm/glm.hpp>
+#include <glm/gtx/quaternion.hpp>
 
+#include <functional>
 #include <memory>
 
 namespace MFA {
 
 class DrawableEssence;
-class RenderFrontend {          // TODO I have to define RFTypes! or FWD headers
-    struct UniformBufferGroup;
-};
-class  UIRecordObject;
-
-namespace RF = RenderFrontend;
-namespace RB = RenderBackend;
-namespace AS = AssetSystem;
+class UIRecordObject;
 
 class DrawableVariant {
 public:
-    
-    using InstanceId = uint32_t;
     
     struct JointTransformData {
         float model[16];
@@ -30,12 +26,35 @@ public:
         int skinStartingIndex;
     };
 
-    struct Node;
+    struct Node {
+        AS::MeshNode const * meshNode = nullptr;
+
+        glm::quat currentRotation;     // x, y, z, w
+        glm::vec3 currentScale;
+        glm::vec3 currentTranslate;
+        glm::mat4 currentTransform;
+        
+        glm::quat previousRotation;     // x, y, z, w
+        glm::vec3 previousScale;
+        glm::vec3 previousTranslate;
+        glm::mat4 previousTransform;
+
+        bool isCachedDataValid = false;
+        glm::mat4 cachedLocalTransform;
+        glm::mat4 cachedGlobalTransform;
+        glm::mat4 cachedModelTransform;
+        glm::mat4 cachedGlobalInverseTransform;
+
+        Skin * skin = nullptr;
+    };
     
     explicit DrawableVariant(DrawableEssence const & essence);
 
     ~DrawableVariant();
-    
+
+    DrawableVariant (DrawableVariant const &) noexcept = delete;
+    DrawableVariant (DrawableVariant &&) noexcept = delete;
+    DrawableVariant & operator = (DrawableVariant const &) noexcept = delete;
     DrawableVariant & operator= (DrawableVariant && rhs) noexcept {
         this->mCachedSkinsJointsBlob = rhs.mCachedSkinsJointsBlob;
         this->mCachedSkinsJoints = rhs.mCachedSkinsJoints;
@@ -57,18 +76,18 @@ public:
 
     Blob GetStorage(char const * name);
     
-    // We can just call drawUI instead and have way more controll
+    // We can just call drawUI instead and have way more control
     void EnableUI(char const * windowName, bool * isVisible);
 
     void DisableUI();
     
-    void Update(float deltaTimeInSec, RF::DrawPass const & drawPass);
+    void Update(float deltaTimeInSec, RT::DrawPass const & drawPass);
 
     using BindDescriptorSetFunction = std::function<void(AS::MeshPrimitive const & primitive, Node const & node)>;
-    void Draw(RF::DrawPass & drawPass, BindDescriptorSetFunction const & bindFunction);
+    void Draw(RT::DrawPass & drawPass, BindDescriptorSetFunction const & bindFunction);
     
     // Only for model local buffers
-    RF::UniformBufferGroup const * CreateUniformBuffer(char const * name, uint32_t size, uint32_t count);
+    RT::UniformBufferGroup const & CreateUniformBuffer(char const * name, uint32_t size, uint32_t count);
 
     // Only for model local buffers
     void DeleteUniformBuffers();
@@ -76,10 +95,25 @@ public:
     void UpdateUniformBuffer(char const * name, uint32_t startingIndex, CBlob ubo);
 
     [[nodiscard]] 
-    RF::UniformBufferGroup const * GetUniformBuffer(char const * name);
+    RT::UniformBufferGroup const * GetUniformBuffer(char const * name);
     
     [[nodiscard]] 
-    RF::UniformBufferGroup const * GetSkinJointsBuffer() const noexcept;
+    RT::UniformBufferGroup const & GetSkinJointsBuffer() const noexcept;
+
+    [[nodiscard]]
+    DrawableEssence const * GetEssence() const noexcept;
+
+    [[nodiscard]]
+    RT::DrawableVariantId GetId() const noexcept;
+
+    RT::DescriptorSetGroup const & CreateDescriptorSetGroup(
+        char const * name, 
+        VkDescriptorSetLayout descriptorSetLayout, 
+        uint32_t descriptorSetCount
+    );
+
+    [[nodiscard]]
+    RT::DescriptorSetGroup const * GetDescriptorSetGroup(char const * name);
 
 private:
 
@@ -92,23 +126,23 @@ private:
     void updateSkinJoints(uint32_t skinIndex, AS::MeshSkin const & skin);
     
     void drawNode(
-        RF::DrawPass & drawPass,
-        Node const * node,
+        RT::DrawPass & drawPass,
+        Node const & node,
         BindDescriptorSetFunction const & bindFunction
     );
 
     void drawSubMesh(
-        RF::DrawPass & drawPass,
+        RT::DrawPass & drawPass,
         AS::Mesh::SubMesh const & subMesh,
-        Node const * node,
+        Node const & node,
         BindDescriptorSetFunction const & bindFunction
     );
 
     [[nodiscard]]
-    glm::mat4 computeNodeLocalTransform(Node const * node);
+    glm::mat4 computeNodeLocalTransform(Node const & node) const;
 
     void computeNodeGlobalTransform(
-        Node * node,
+        Node & node,
         Node const * parentNode,
         bool isParentTransformChanged
     );
@@ -117,14 +151,14 @@ private:
 
 private:
 
-    static InstanceId NextInstanceId ;
-    InstanceId mId;
+    static RT::DrawableVariantId NextInstanceId;
+    RT::DrawableVariantId mId = 0;
 
     DrawableEssence const * mEssence = nullptr;
     
-    std::unique_ptr<RF::UniformBufferGroup> mSkinsJointsBuffer {};
+    RT::UniformBufferGroup mSkinsJointsBuffer {};
     
-    std::unordered_map<std::string, std::unique_ptr<RF::UniformBufferGroup>> mUniformBuffers {};
+    std::unordered_map<std::string, RT::UniformBufferGroup> mUniformBuffers {};
 
     int mActiveAnimationIndex = 0;
     int mPreviousAnimationIndex = -1;
@@ -145,7 +179,7 @@ private:
 
     struct DirtyBuffer {
         std::string bufferName;
-        RF::UniformBufferGroup * bufferGroup;
+        RT::UniformBufferGroup * bufferGroup;
         uint32_t startingIndex;
         uint32_t remainingUpdateCount;
         Blob ubo;
@@ -156,10 +190,12 @@ private:
     glm::mat4 mModelTransform = glm::identity<glm::mat4>();
 
     std::vector<Skin> mSkins {};
-    std::vector<std::unique_ptr<Node>> mNodes {};
+    std::vector<Node> mNodes {};
 
     std::unordered_map<std::string, Blob> mStorageMap {};
-    
+
+    std::unordered_map<std::string, RT::DescriptorSetGroup> mDescriptorSetGroups {};
+
 };
 
 };

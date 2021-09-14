@@ -1,18 +1,25 @@
 #include "PbrWithShadowPipelineV2.hpp"
 
 #include "engine/BedrockPath.hpp"
-#include "engine/camera/FirstPersonCamera.hpp"
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "tools/Importer.hpp"
 #include "engine/BedrockMatrix.hpp"
+#include "engine/render_system/drawable_essence/DrawableEssence.hpp"
+#include "engine/render_system/drawable_variant/DrawableVariant.hpp"
+#include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
 #include "engine/render_system/render_passes/shadow_render_pass_v2/ShadowRenderPassV2.hpp"
 
 namespace MFA {
 
+//-------------------------------------------------------------------------------------------------
+
 PBRWithShadowPipelineV2::PBRWithShadowPipelineV2()
-    : mShadowRenderPass(std::make_unique<ShadowRenderPassV2>(
-        static_cast<uint32_t>(SHADOW_WIDTH),
-        static_cast<uint32_t>(SHADOW_HEIGHT))) {}
+: mShadowRenderPass(std::make_unique<ShadowRenderPassV2>(
+    static_cast<uint32_t>(SHADOW_WIDTH),
+    static_cast<uint32_t>(SHADOW_HEIGHT)))
+{}
+
+//-------------------------------------------------------------------------------------------------
 
 PBRWithShadowPipelineV2::~PBRWithShadowPipelineV2() {
     if(mIsInitialized) {
@@ -20,9 +27,11 @@ PBRWithShadowPipelineV2::~PBRWithShadowPipelineV2() {
     }
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void PBRWithShadowPipelineV2::Init(
-    RF::SamplerGroup * samplerGroup, 
-    RB::GpuTexture * errorTexture,
+    RT::SamplerGroup * samplerGroup, 
+    RT::GpuTexture * errorTexture,
     float const projectionNear,
     float const projectionFar
 ) {
@@ -31,6 +40,9 @@ void PBRWithShadowPipelineV2::Init(
         return;
     }
     mIsInitialized = true;
+
+    BasePipeline::Init();
+
     MFA_ASSERT(samplerGroup != nullptr);
     mSamplerGroup = samplerGroup;
     MFA_ASSERT(errorTexture != nullptr);
@@ -67,7 +79,7 @@ void PBRWithShadowPipelineV2::Init(
 
     updateShadowViewProjectionData();
         
-    RF::DrawPass drawPass {};
+    RT::DrawPass drawPass {};
     for (uint32_t i = 0; i < RF::GetMaxFramesPerFlight(); ++i) {
         drawPass.frameIndex = i;
         updateShadowLightBuffer(drawPass);
@@ -77,12 +89,15 @@ void PBRWithShadowPipelineV2::Init(
     }
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void PBRWithShadowPipelineV2::Shutdown() {
     if (mIsInitialized == false) {
         MFA_ASSERT(false);
         return;
     }
     mIsInitialized = false;
+
     mSamplerGroup = nullptr;
     mErrorTexture = nullptr;
 
@@ -91,25 +106,17 @@ void PBRWithShadowPipelineV2::Shutdown() {
     destroyPipeline();
     destroyDescriptorSetLayout();
     destroyUniformBuffers();
+
+    BasePipeline::Shutdown();
+    
 }
 
-// TODO Updating buffer inside commandBuffer might not be a good idea, Research about it!
-void PBRWithShadowPipelineV2::PreRender(
-    RF::DrawPass & drawPass, 
-    float const deltaTime, 
-    uint32_t const idsCount, 
-    DrawableObjectId * ids
-) {
+//-------------------------------------------------------------------------------------------------
 
-    for (uint32_t i = 0; i < idsCount; ++i) {
-        auto const findResult = mDrawableObjects.find(ids[i]);
-        if (findResult != mDrawableObjects.end()) {
-            auto * drawableObject = findResult->second.get();
-            MFA_ASSERT(drawableObject != nullptr);
-            drawableObject->Update(deltaTime, drawPass);
-        }
-    }
-    
+void PBRWithShadowPipelineV2::PreRender(RT::DrawPass & drawPass, float const deltaTime) {
+
+    BasePipeline::PreRender(drawPass, deltaTime);
+
     if (mDisplayViewProjectionNeedUpdate > 0) {
         updateDisplayViewProjectionBuffer(drawPass);
         --mDisplayViewProjectionNeedUpdate;
@@ -129,24 +136,19 @@ void PBRWithShadowPipelineV2::PreRender(
 
     RF::BindDrawPipeline(drawPass, mShadowPassPipeline);
 
-    mShadowRenderPass->PrepareCubemapForTransferDestination(drawPass);
+    mShadowRenderPass->PrepareCubeMapForTransferDestination(drawPass);
     for (int faceIndex = 0; faceIndex < 6; ++faceIndex) {
         mShadowRenderPass->SetNextPassParams(faceIndex);
         mShadowRenderPass->BeginRenderPass(drawPass);
 
-        // TODO We can query drawable objects once
-        for (uint32_t drawableIdIndex = 0; drawableIdIndex < idsCount; ++drawableIdIndex) {
-            auto const findResult = mDrawableObjects.find(ids[drawableIdIndex]);
-            if (findResult != mDrawableObjects.end()) {
-                auto * drawableObject = findResult->second.get();
-                MFA_ASSERT(drawableObject != nullptr);
-
+        for (auto & essenceAndVariant : mEssenceAndVariantsMap) {
+            for (auto & variant : essenceAndVariant.second.variants) {
                 RF::BindDescriptorSet(
                     drawPass, 
-                    drawableObject->GetDescriptorSetGroup("PbrWithShadowV2ShadowPipeline")->descriptorSets[drawPass.frameIndex]
+                    variant->GetDescriptorSetGroup("PbrWithShadowV2ShadowPipeline")->descriptorSets[drawPass.frameIndex]
                 );
 
-                drawableObject->Draw(drawPass, [&drawPass, &faceIndex](AS::MeshPrimitive const & primitive, DrawableObject::Node const & node)-> void {
+                variant->Draw(drawPass, [&drawPass, &faceIndex](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void {
 
                     {// Vertex push constants
                         ShadowPassVertexStagePushConstants pushConstants {
@@ -166,32 +168,24 @@ void PBRWithShadowPipelineV2::PreRender(
                 });
             }
         }
-
         mShadowRenderPass->EndRenderPass(drawPass);
     }
-    mShadowRenderPass->PrepareCubemapForSampling(drawPass);
+    mShadowRenderPass->PrepareCubeMapForSampling(drawPass);
 }
 
-void PBRWithShadowPipelineV2::Render(
-    RF::DrawPass & drawPass, 
-    float const deltaTime, 
-    uint32_t const idsCount, 
-    DrawableObjectId * ids
-) {
+//-------------------------------------------------------------------------------------------------
+
+void PBRWithShadowPipelineV2::Render(RT::DrawPass & drawPass, float deltaTime) {
     RF::BindDrawPipeline(drawPass, mDisplayPassPipeline);
     
-    for (uint32_t i = 0; i < idsCount; ++i) {
-        auto const findResult = mDrawableObjects.find(ids[i]);
-        if (findResult != mDrawableObjects.end()) {
-            auto * drawableObject = findResult->second.get();
-            MFA_ASSERT(drawableObject != nullptr);
-
+    for (auto & essenceAndVariant : mEssenceAndVariantsMap) {
+        for (auto & variant : essenceAndVariant.second.variants) {
             RF::BindDescriptorSet(
                 drawPass, 
-                drawableObject->GetDescriptorSetGroup("PbrWithShadowV2DisplayPipeline")->descriptorSets[drawPass.frameIndex]
+                variant->GetDescriptorSetGroup("PbrWithShadowV2DisplayPipeline")->descriptorSets[drawPass.frameIndex]
             );
 
-            drawableObject->Draw(drawPass, [&drawPass](AS::MeshPrimitive const & primitive, DrawableObject::Node const & node)-> void {
+            variant->Draw(drawPass, [&drawPass](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void {
                 // Push constants
                 DisplayPassAllStagesPushConstants pushConstants {
                     .skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1,
@@ -210,71 +204,39 @@ void PBRWithShadowPipelineV2::Render(
     }
 }
 
-void PBRWithShadowPipelineV2::PostRender(
-    RF::DrawPass & drawPass, 
-    float const deltaTime, 
-    uint32_t const idsCount, 
-    DrawableObjectId * ids
-) {
+//-------------------------------------------------------------------------------------------------
 
-}
+DrawableVariant * PBRWithShadowPipelineV2::CreateDrawableVariant(char const * essenceName) {
+    auto * variant = BasePipeline::CreateDrawableVariant(essenceName);
+    MFA_ASSERT(variant != nullptr);
 
-DrawableObjectId PBRWithShadowPipelineV2::AddGpuModel(RF::GpuModel & gpuModel) {
-    MFA_ASSERT(gpuModel.valid == true);
-
-    auto const drawableObjectId = mNextDrawableObjectId ++;
-    MFA_ASSERT(mDrawableObjects.find(drawableObjectId) == mDrawableObjects.end());
-    mDrawableObjects[drawableObjectId] = std::make_unique<DrawableObject>(gpuModel);
-
-    auto * drawableObject = mDrawableObjects[drawableObjectId].get();
-    MFA_ASSERT(drawableObject != nullptr);
+    CreateDisplayPassDescriptorSets(variant);
+    CreateShadowPassDescriptorSets(variant);
     
-    CreateDisplayPassDescriptorSets(drawableObject);
-    CreateShadowPassDescriptorSets(drawableObject);
-    
-    return drawableObjectId;
+    return variant;
 }
 
-bool PBRWithShadowPipelineV2::RemoveGpuModel(DrawableObjectId const drawableObjectId) {
-    auto deleteCount = mDrawableObjects.erase(drawableObjectId);
-    MFA_ASSERT(deleteCount == 1);
-    return deleteCount;
-}
+//-------------------------------------------------------------------------------------------------
 
-// TODO Fix frequent model data update in each frame
-bool PBRWithShadowPipelineV2::UpdateModel(
-    DrawableObjectId const drawableObjectId, 
-    float modelTransform[16]
-) {
-    // We should share buffers
-    auto const findResult = mDrawableObjects.find(drawableObjectId);
-    if (findResult == mDrawableObjects.end()) {
-        MFA_ASSERT(false);
-        return false;
-    }
-    auto * drawableObject = findResult->second.get();
-    MFA_ASSERT(drawableObject != nullptr);
-
-    drawableObject->UpdateModelTransform(modelTransform);
-    return true;
-}
-
-void PBRWithShadowPipelineV2::UpdateCameraView(float view[16]) {
+void PBRWithShadowPipelineV2::UpdateCameraView(const float view[16]) {
     if (IsEqual<16>(mDisplayView, view) == false) {
         Copy<16>(mDisplayView, view);
         mDisplayViewProjectionNeedUpdate = RF::GetMaxFramesPerFlight();
     }
 }
 
-void PBRWithShadowPipelineV2::UpdateCameraProjection(float projection[16]) {
+//-------------------------------------------------------------------------------------------------
+
+void PBRWithShadowPipelineV2::UpdateCameraProjection(const float projection[16]) {
     if (IsEqual<16>(mDisplayProjection, projection) == false) {
         Copy<16>(mDisplayProjection, projection);
         mDisplayViewProjectionNeedUpdate = RF::GetMaxFramesPerFlight();
     }
 }
 
-// TODO Make 2 shader data similar to each other
-void PBRWithShadowPipelineV2::UpdateLightPosition(float lightPosition[3]) {
+//-------------------------------------------------------------------------------------------------
+
+void PBRWithShadowPipelineV2::UpdateLightPosition(const float lightPosition[3]) {
     if (IsEqual<3>(mLightPosition, lightPosition) == false) {
         Copy<3>(mLightPosition, lightPosition);
         updateShadowViewProjectionData();
@@ -284,21 +246,27 @@ void PBRWithShadowPipelineV2::UpdateLightPosition(float lightPosition[3]) {
     }
 }
 
-void PBRWithShadowPipelineV2::UpdateCameraPosition(float cameraPosition[3]) {
+//-------------------------------------------------------------------------------------------------
+
+void PBRWithShadowPipelineV2::UpdateCameraPosition(const float cameraPosition[3]) {
     if (IsEqual<3>(mCameraPosition, cameraPosition) == false) {
         Copy<3>(mCameraPosition, cameraPosition);
         mDisplayLightNeedUpdate = RF::GetMaxFramesPerFlight();
     }
 }
 
-void PBRWithShadowPipelineV2::UpdateLightColor(float lightColor[3]) {
+//-------------------------------------------------------------------------------------------------
+
+void PBRWithShadowPipelineV2::UpdateLightColor(const float lightColor[3]) {
     if (IsEqual<3>(mLightColor, lightColor) == false) {
         Copy<3>(mLightColor, lightColor);
         mDisplayLightNeedUpdate = RF::GetMaxFramesPerFlight();
     }
 }
 
-void PBRWithShadowPipelineV2::updateDisplayViewProjectionBuffer(RF::DrawPass const & drawPass) {
+//-------------------------------------------------------------------------------------------------
+
+void PBRWithShadowPipelineV2::updateDisplayViewProjectionBuffer(RT::DrawPass const & drawPass) {
 
     auto const viewProjectionMatrix = Matrix4X4Float::ConvertCellsToMat4(mDisplayProjection)
         * Matrix4X4Float::ConvertCellsToMat4(mDisplayView);
@@ -309,7 +277,9 @@ void PBRWithShadowPipelineV2::updateDisplayViewProjectionBuffer(RF::DrawPass con
     );
 }
 
-void PBRWithShadowPipelineV2::updateDisplayLightBuffer(RF::DrawPass const & drawPass) {
+//-------------------------------------------------------------------------------------------------
+
+void PBRWithShadowPipelineV2::updateDisplayLightBuffer(RT::DrawPass const & drawPass) {
     DisplayLightAndCameraData displayLightViewData {
         .projectFarToNearDistance = mProjectionFarToNearDistance
     };
@@ -319,13 +289,17 @@ void PBRWithShadowPipelineV2::updateDisplayLightBuffer(RF::DrawPass const & draw
     RF::UpdateUniformBuffer(mDisplayLightAndCameraBuffer.buffers[drawPass.frameIndex], CBlobAliasOf(displayLightViewData));
 }
 
-void PBRWithShadowPipelineV2::updateShadowLightBuffer(RF::DrawPass const & drawPass) {
+//-------------------------------------------------------------------------------------------------
+
+void PBRWithShadowPipelineV2::updateShadowLightBuffer(RT::DrawPass const & drawPass) {
     ShadowLightData shadowLightData {
         .projectionMatrixDistance = mProjectionFarToNearDistance
     };
     Copy<3>(shadowLightData.lightPosition, mLightPosition);
     RF::UpdateUniformBuffer(mShadowLightBuffer.buffers[drawPass.frameIndex], CBlobAliasOf(shadowLightData));
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void PBRWithShadowPipelineV2::updateShadowViewProjectionData() {
     auto const lightPositionVector = glm::vec3(mLightPosition[0], mLightPosition[1], mLightPosition[2]);
@@ -385,34 +359,30 @@ void PBRWithShadowPipelineV2::updateShadowViewProjectionData() {
     );
 }
 
-void PBRWithShadowPipelineV2::updateShadowViewProjectionBuffer(RF::DrawPass const & drawPass) {
+//-------------------------------------------------------------------------------------------------
+
+void PBRWithShadowPipelineV2::updateShadowViewProjectionBuffer(RT::DrawPass const & drawPass) {
     RF::UpdateUniformBuffer(
         mShadowViewProjectionBuffer.buffers[drawPass.frameIndex],
         CBlobAliasOf(mShadowViewProjectionData)
     );
 }
 
-DrawableObject * PBRWithShadowPipelineV2::GetDrawableById(DrawableObjectId const objectId) {
-    auto const findResult = mDrawableObjects.find(objectId);
-    if (findResult != mDrawableObjects.end()) {
-        return findResult->second.get();
-    }
-    return nullptr;
-}
+//-------------------------------------------------------------------------------------------------
 
-void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableObject * drawableObject) {
-   
-    auto const & textures = drawableObject->GetGpuModel()->textures;
+void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableVariant * variant) {
+    MFA_ASSERT(variant != nullptr);
+    auto const & textures = variant->GetEssence()->GetGpuModel().textures;
     
-    auto const descriptorSetGroup = drawableObject->CreateDescriptorSetGroup(
+    auto const descriptorSetGroup = variant->CreateDescriptorSetGroup(
         "PbrWithShadowV2DisplayPipeline",
         mDisplayPassDescriptorSetLayout,
         RF::GetMaxFramesPerFlight()
     );
 
-    auto const & primitivesBuffer = drawableObject->GetPrimitivesBuffer();
+    auto const & primitivesBuffer = variant->GetEssence()->GetPrimitivesBuffer();
 
-    auto const & skinJointsBuffer = drawableObject->GetSkinJointsBuffer();
+    auto const & skinJointsBuffer = variant->GetSkinJointsBuffer();
 
     for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex) {
 
@@ -497,14 +467,14 @@ void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableObject * d
         for (auto const & texture : textures) {
             imageInfos.emplace_back(VkDescriptorImageInfo {
                 .sampler = nullptr,
-                .imageView = texture.image_view(),
+                .imageView = texture.imageView(),
                 .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             });
         }
         for (auto i = static_cast<uint32_t>(textures.size()); i < 64; ++i) {
             imageInfos.emplace_back(VkDescriptorImageInfo {
                 .sampler = nullptr,
-                .imageView = mErrorTexture->image_view(),
+                .imageView = mErrorTexture->imageView(),
                 .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             });
         }
@@ -518,15 +488,15 @@ void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableObject * d
     }
 }
 
-void PBRWithShadowPipelineV2::CreateShadowPassDescriptorSets(DrawableObject * drawableObject) {
+void PBRWithShadowPipelineV2::CreateShadowPassDescriptorSets(DrawableVariant * variant) {
 
-    auto const descriptorSetGroup = drawableObject->CreateDescriptorSetGroup(
+    auto const descriptorSetGroup = variant->CreateDescriptorSetGroup(
         "PbrWithShadowV2ShadowPipeline", 
         mShadowPassDescriptorSetLayout, 
-        drawableObject->GetPrimitiveCount() * RF::GetMaxFramesPerFlight()
+        variant->GetEssence()->GetPrimitiveCount() * RF::GetMaxFramesPerFlight()
     );
 
-    auto const & skinJointsBuffer = drawableObject->GetSkinJointsBuffer();
+    auto const & skinJointsBuffer = variant->GetSkinJointsBuffer();
     
     for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex) {
 
@@ -724,7 +694,7 @@ void PBRWithShadowPipelineV2::createDisplayPassPipeline() {
     MFA_ASSERT(gpuVertexShader.valid());
     MFA_DEFER {
         RF::DestroyShader(gpuVertexShader);
-        Importer::FreeShader(&cpuVertexShader);
+        Importer::FreeShader(cpuVertexShader);
     };
     
     // Fragment shader
@@ -738,10 +708,10 @@ void PBRWithShadowPipelineV2::createDisplayPassPipeline() {
     MFA_ASSERT(gpuFragmentShader.valid());
     MFA_DEFER {
         RF::DestroyShader(gpuFragmentShader);
-        Importer::FreeShader(&cpuFragmentShader);
+        Importer::FreeShader(cpuFragmentShader);
     };
 
-    std::vector<RB::GpuShader> shaders {gpuVertexShader, gpuFragmentShader};
+    std::vector<RT::GpuShader const *> shaders {&gpuVertexShader, &gpuFragmentShader};
 
     VkVertexInputBindingDescription vertexInputBindingDescription {};
     vertexInputBindingDescription.binding = 0;
@@ -845,14 +815,14 @@ void PBRWithShadowPipelineV2::createDisplayPassPipeline() {
         .size = sizeof(DisplayPassAllStagesPushConstants),
     });
     
-    RB::CreateGraphicPipelineOptions options {};
+    RT::CreateGraphicPipelineOptions options {};
     options.rasterizationSamples = RF::GetMaxSamplesCount();
     options.pushConstantRanges = mPushConstantRanges.data();
     options.pushConstantsRangeCount = static_cast<uint8_t>(mPushConstantRanges.size());
     options.cullMode = VK_CULL_MODE_BACK_BIT;
     
-    mDisplayPassPipeline = RF::CreateDrawPipeline(
-        RF::GetDisplayRenderPass()->GetVkRenderPass(),
+    mDisplayPassPipeline = RF::CreatePipeline(
+        RF::GetDisplayRenderPass(),
         static_cast<uint8_t>(shaders.size()), 
         shaders.data(),
         1,
@@ -876,7 +846,7 @@ void PBRWithShadowPipelineV2::createShadowPassPipeline() {
     MFA_ASSERT(gpuVertexShader.valid());
     MFA_DEFER {
         RF::DestroyShader(gpuVertexShader);
-        Importer::FreeShader(&cpuVertexShader);
+        Importer::FreeShader(cpuVertexShader);
     };
 
     // Fragment shader
@@ -890,10 +860,10 @@ void PBRWithShadowPipelineV2::createShadowPassPipeline() {
     MFA_ASSERT(gpuFragmentShader.valid());
     MFA_DEFER {
         RF::DestroyShader(gpuFragmentShader);
-        Importer::FreeShader(&cpuFragmentShader);
+        Importer::FreeShader(cpuFragmentShader);
     };
 
-    std::vector<RB::GpuShader> shaders {gpuVertexShader, gpuFragmentShader};
+    std::vector<RT::GpuShader const *> shaders {&gpuVertexShader, &gpuFragmentShader};
 
     VkVertexInputBindingDescription vertexInputBindingDescription {};
     vertexInputBindingDescription.binding = 0;
@@ -944,15 +914,15 @@ void PBRWithShadowPipelineV2::createShadowPassPipeline() {
         };
         pushConstantRanges.emplace_back(pushConstantRange);
     }  
-    RB::CreateGraphicPipelineOptions graphicPipelineOptions {};
+    RT::CreateGraphicPipelineOptions graphicPipelineOptions {};
     graphicPipelineOptions.cullMode = VK_CULL_MODE_NONE;
     graphicPipelineOptions.pushConstantRanges = pushConstantRanges.data();
     // TODO Probably we need to make pushConstantsRangeCount uint32_t
     graphicPipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
     
     MFA_ASSERT(mShadowPassPipeline.isValid() == false);
-    mShadowPassPipeline = RF::CreateDrawPipeline(
-        mShadowRenderPass->GetVkRenderPass(),
+    mShadowPassPipeline = RF::CreatePipeline(
+        mShadowRenderPass.get(),
         static_cast<uint8_t>(shaders.size()), 
         shaders.data(),
         1,
@@ -966,14 +936,14 @@ void PBRWithShadowPipelineV2::createShadowPassPipeline() {
 
 void PBRWithShadowPipelineV2::destroyPipeline() {
     MFA_ASSERT(mDisplayPassPipeline.isValid());
-    RF::DestroyDrawPipeline(mDisplayPassPipeline);
+    RF::DestroyPipelineGroup(mDisplayPassPipeline);
 
     MFA_ASSERT(mShadowPassPipeline.isValid());
-    RF::DestroyDrawPipeline(mShadowPassPipeline);
+    RF::DestroyPipelineGroup(mShadowPassPipeline);
 }
 
 void PBRWithShadowPipelineV2::createUniformBuffers() {
-    mErrorBuffer = RF::CreateUniformBuffer(sizeof(DrawableObject::JointTransformData), 1);
+    mErrorBuffer = RF::CreateUniformBuffer(sizeof(DrawableVariant::JointTransformData), 1);
 
     mDisplayViewProjectionBuffer = RF::CreateUniformBuffer(sizeof(DisplayViewProjectionData), RF::GetMaxFramesPerFlight());
     mDisplayLightAndCameraBuffer = RF::CreateUniformBuffer(sizeof(DisplayLightAndCameraData), RF::GetMaxFramesPerFlight());
@@ -990,12 +960,6 @@ void PBRWithShadowPipelineV2::destroyUniformBuffers() {
     
     RF::DestroyUniformBuffer(mShadowViewProjectionBuffer);
     RF::DestroyUniformBuffer(mShadowLightBuffer);
-
-    for (const auto & [id, drawableObject] : mDrawableObjects) {
-        MFA_ASSERT(drawableObject != nullptr);
-        drawableObject->DeleteUniformBuffers();
-    }
-    mDrawableObjects.clear();
 }
 
 }

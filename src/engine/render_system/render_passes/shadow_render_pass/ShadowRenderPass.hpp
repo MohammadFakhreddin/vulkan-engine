@@ -1,13 +1,11 @@
 #pragma once
 
-#include "RenderPass.hpp"
+#include "engine/render_system/RenderTypes.hpp"
+#include "engine/render_system/render_passes/RenderPass.hpp"
 
 namespace MFA {
 
 class DisplayRenderPass;
-
-namespace RF = RenderFrontend;
-namespace RB = RenderBackend;
 
 class ShadowRenderPass final : public RenderPass {
 public:
@@ -29,20 +27,17 @@ public:
     VkRenderPass GetVkRenderPass() override;
 
     [[nodiscard]]
-    RB::DepthImageGroup const & GetDepthImageGroup() const;
-
-    //[[nodiscard]]
-    //RB::ColorImageGroup const & GetColorImageGroup() const;
-
+    RT::DepthImageGroup const & GetDepthImageGroup() const;
+    
 protected:
 
     void internalInit() override;
 
     void internalShutdown() override;
 
-    void internalBeginRenderPass(RF::DrawPass const & drawPass) override;
+    void internalBeginRenderPass(RT::DrawPass & drawPass) override;
 
-    void internalEndRenderPass(RF::DrawPass const & drawPass) override;
+    void internalEndRenderPass(RT::DrawPass & drawPass) override;
 
     void internalResize() override;
 
@@ -57,14 +52,12 @@ private:
     VkRenderPass mVkRenderPass {};
     VkFramebuffer mFrameBuffer {};
     
-    RB::DepthImageGroup mDepthImageGroup {};
+    RT::DepthImageGroup mDepthImageGroup {};
     
     uint32_t mImageWidth = 0;
     uint32_t mImageHeight = 0;
 
     DisplayRenderPass * mDisplayRenderPass = nullptr;
-
-    //RB::ColorImageGroup mColorImageGroup {};
 };
 
 }

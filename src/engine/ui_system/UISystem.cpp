@@ -8,13 +8,15 @@
 #include "engine/InputManager.hpp"
 #endif
 
-#include "engine/render_system/render_passes/DisplayRenderPass.hpp"
+#include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "libs/imgui/imgui.h"
+
+#ifdef __DESKTOP__
+#include "libs/sdl/SDL.hpp"
+#endif
 
 namespace MFA::UISystem {
 
-namespace RB = RenderBackend;
-namespace Importer = Importer;
 #if defined(__ANDROID__) || defined(__IOS__)
 namespace IM = InputManager;
 #endif
@@ -130,14 +132,14 @@ static uint32_t fragment_shader_spv[] =
 static VkDeviceSize g_BufferMemoryAlignment = 256;
 
 struct State {
-    RF::SamplerGroup fontSampler {};
+    RT::SamplerGroup fontSampler {};
     VkDescriptorSetLayout descriptorSetLayout {};
-    RB::GpuShader vertexShader {};
-    RB::GpuShader fragmentShader {};
-    RB::DescriptorSetGroup descriptorSetGroup {};
-    RF::DrawPipeline drawPipeline {};
-    RB::GpuTexture fontTexture {};
-    std::vector<RF::MeshBuffers> meshBuffers {};
+    RT::GpuShader vertexShader {};
+    RT::GpuShader fragmentShader {};
+    RT::DescriptorSetGroup descriptorSetGroup {};
+    RT::PipelineGroup drawPipeline {};
+    RT::GpuTexture fontTexture {};
+    std::vector<RT::MeshBuffers> meshBuffers {};
     std::vector<bool> meshBuffersValidationStatus {};
     bool hasFocus = false;
     std::vector<UIRecordObject *> mRecordObjects {};
@@ -213,7 +215,7 @@ void Init() {
     ImGui::CreateContext();
 
     {// FontSampler
-        RB::CreateSamplerParams params {};
+        RT::CreateSamplerParams params {};
         params.min_lod = -1000;
         params.max_lod = 1000;
         params.max_anisotropy = 1.0f;
@@ -263,9 +265,10 @@ void Init() {
         pushConstantRange.offset = 0;
         pushConstantRange.size = 4 * sizeof(float);
         pushConstantRanges.emplace_back(pushConstantRange);
-        
-        std::vector<RB::GpuShader> shader_stages {state->vertexShader, state->fragmentShader};
 
+        //state->vertexShader, state->fragmentShader
+        std::vector<RT::GpuShader const *> shaderStages {&state->vertexShader, &state->fragmentShader};
+        
         VkVertexInputBindingDescription vertex_binding_description {};
         vertex_binding_description.stride = sizeof(ImDrawVert);
         vertex_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
@@ -290,7 +293,7 @@ void Init() {
         dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
         dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
         
-        RB::CreateGraphicPipelineOptions pipelineOptions {};
+        RT::CreateGraphicPipelineOptions pipelineOptions {};
         pipelineOptions.frontFace = VK_FRONT_FACE_CLOCKWISE;
         pipelineOptions.dynamicStateCreateInfo = &dynamicStateCreateInfo;
         pipelineOptions.depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -312,10 +315,10 @@ void Init() {
         // TODO I wish we could render ui without MaxSamplesCount
         pipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
         
-        state->drawPipeline = RF::CreateDrawPipeline(
-            RF::GetDisplayRenderPass()->GetVkRenderPass(),
-            static_cast<uint8_t>(shader_stages.size()),
-            shader_stages.data(),
+        state->drawPipeline = RF::CreatePipeline(
+            RF::GetDisplayRenderPass(),
+            static_cast<uint8_t>(shaderStages.size()),
+            shaderStages.data(),
             1,
             &state->descriptorSetLayout,
             vertex_binding_description,
@@ -412,7 +415,7 @@ void Init() {
     for (auto & descriptorSet : state->descriptorSetGroup.descriptorSets) {
         auto const imageInfo = VkDescriptorImageInfo {
             .sampler = state->fontSampler.sampler,
-            .imageView = state->fontTexture.image_view(),
+            .imageView = state->fontTexture.imageView(),
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         };
         auto writeDescriptorSet = VkWriteDescriptorSet {
@@ -490,7 +493,7 @@ static void UpdateMouseCursor() {
 
 void OnNewFrame(
     float const deltaTimeInSec,
-    RF::DrawPass & drawPass
+    RT::DrawPass & drawPass
 ) {
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! It is generally built by the renderer backend. Missing call to renderer _NewFrame() function? e.g. ImGui_ImplOpenGL3_NewFrame().");
@@ -781,7 +784,7 @@ void Shutdown() {
     RF::DestroyTexture(state->fontTexture);
     Importer::FreeTexture(state->fontTexture.cpuTexture());
 
-    RF::DestroyDrawPipeline(state->drawPipeline);
+    RF::DestroyPipelineGroup(state->drawPipeline);
     // TODO We can remove shader after creating pipeline
     RF::DestroyShader(state->fragmentShader);
     Importer::FreeShader(state->fragmentShader.cpuShader());

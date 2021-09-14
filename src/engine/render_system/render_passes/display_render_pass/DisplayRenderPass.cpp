@@ -2,13 +2,19 @@
 
 namespace MFA {
 
+//-------------------------------------------------------------------------------------------------
+
 VkRenderPass DisplayRenderPass::GetVkRenderPass() {
     return mVkRenderPass;
 }
 
-VkCommandBuffer DisplayRenderPass::GetCommandBuffer(RF::DrawPass const & drawPass) {
+//-------------------------------------------------------------------------------------------------
+
+VkCommandBuffer DisplayRenderPass::GetCommandBuffer(RT::DrawPass const & drawPass) {
     return mGraphicCommandBuffers[drawPass.frameIndex];
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void DisplayRenderPass::internalInit() {
 
@@ -25,12 +31,12 @@ void DisplayRenderPass::internalInit() {
     mMSAAImageGroup = RF::CreateColorImage(
         swapChainExtent, 
         mSwapChainImages.swapChainFormat, 
-        RB::CreateColorImageOptions {
+        RT::CreateColorImageOptions {
             .samplesCount = RF::GetMaxSamplesCount()
         }
     );
 
-    mDepthImageGroup = RF::CreateDepthImage(swapChainExtent, RB::CreateDepthImageOptions {
+    mDepthImageGroup = RF::CreateDepthImage(swapChainExtent, RT::CreateDepthImageOptions {
         .samplesCount = RF::GetMaxSamplesCount()
     });
 
@@ -45,6 +51,8 @@ void DisplayRenderPass::internalInit() {
         mSwapChainImagesCount
     );
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void DisplayRenderPass::internalShutdown() {
     RF::DestroySyncObjects(mSyncObjects);
@@ -68,11 +76,13 @@ void DisplayRenderPass::internalShutdown() {
     RF::DestroyColorImage(mMSAAImageGroup);
 }
 
+//-------------------------------------------------------------------------------------------------
+
 // TODO We might need a separate class for commandBufferClass->GraphicCommandBuffer to begin and submit commandBuffer recording.
 // TODO Rename DrawPass to recordPass
-RF::DrawPass DisplayRenderPass::StartGraphicCommandBufferRecording() {
+RT::DrawPass DisplayRenderPass::StartGraphicCommandBufferRecording() {
     MFA_ASSERT(RF::GetMaxFramesPerFlight() > mCurrentFrame);
-    RF::DrawPass drawPass {.renderPass = this};
+    RT::DrawPass drawPass {.renderPass = this};
     if (RF::IsWindowVisible() == false || RF::IsWindowResized() == true) {
         drawPass.isValid = false;
         return drawPass;
@@ -104,7 +114,9 @@ RF::DrawPass DisplayRenderPass::StartGraphicCommandBufferRecording() {
     return drawPass;
 }
 
-void DisplayRenderPass::EndGraphicCommandBufferRecording(RF::DrawPass & drawPass) {
+//-------------------------------------------------------------------------------------------------
+
+void DisplayRenderPass::EndGraphicCommandBufferRecording(RT::DrawPass & drawPass) {
     MFA_ASSERT(drawPass.isValid);
     drawPass.isValid = false;
 
@@ -126,7 +138,9 @@ void DisplayRenderPass::EndGraphicCommandBufferRecording(RF::DrawPass & drawPass
     );
 }
 
-void DisplayRenderPass::internalBeginRenderPass(RF::DrawPass const & drawPass) {
+//-------------------------------------------------------------------------------------------------
+
+void DisplayRenderPass::internalBeginRenderPass(RT::DrawPass & drawPass) {
     // If present queue family and graphics queue family are different, then a barrier is necessary
     // The barrier is also needed initially to transition the image to the present layout
     VkImageMemoryBarrier presentToDrawBarrier = {};
@@ -191,7 +205,9 @@ void DisplayRenderPass::internalBeginRenderPass(RF::DrawPass const & drawPass) {
     );
 }
 
-void DisplayRenderPass::internalEndRenderPass(RF::DrawPass const & drawPass) {
+//-------------------------------------------------------------------------------------------------
+
+void DisplayRenderPass::internalEndRenderPass(RT::DrawPass & drawPass) {
     if (RF::IsWindowVisible() == false) {
         return;
     }
@@ -232,6 +248,8 @@ void DisplayRenderPass::internalEndRenderPass(RF::DrawPass const & drawPass) {
     }
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void DisplayRenderPass::internalResize() {
 
     auto surfaceCapabilities = RF::GetSurfaceCapabilities();
@@ -247,7 +265,7 @@ void DisplayRenderPass::internalResize() {
 
     // Depth image
     RF::DestroyDepthImage(mDepthImageGroup);
-    mDepthImageGroup = RF::CreateDepthImage(swapChainExtent2D, RB::CreateDepthImageOptions {
+    mDepthImageGroup = RF::CreateDepthImage(swapChainExtent2D, RT::CreateDepthImageOptions {
         .samplesCount = RF::GetMaxSamplesCount()
     });
 
@@ -256,7 +274,7 @@ void DisplayRenderPass::internalResize() {
     mMSAAImageGroup = RF::CreateColorImage(
         swapChainExtent2D, 
         mSwapChainImages.swapChainFormat, 
-        RB::CreateColorImageOptions {
+        RT::CreateColorImageOptions {
             .samplesCount = RF::GetMaxSamplesCount()
         }
     );
@@ -275,25 +293,37 @@ void DisplayRenderPass::internalResize() {
 
 }
 
-VkSemaphore DisplayRenderPass::getImageAvailabilitySemaphore(RF::DrawPass const & drawPass) {
+//-------------------------------------------------------------------------------------------------
+
+VkSemaphore DisplayRenderPass::getImageAvailabilitySemaphore(RT::DrawPass const & drawPass) {
     return mSyncObjects.imageAvailabilitySemaphores[drawPass.frameIndex];
 }
 
-VkSemaphore DisplayRenderPass::getRenderFinishIndicatorSemaphore(RF::DrawPass const & drawPass) {
+//-------------------------------------------------------------------------------------------------
+
+VkSemaphore DisplayRenderPass::getRenderFinishIndicatorSemaphore(RT::DrawPass const & drawPass) {
     return mSyncObjects.renderFinishIndicatorSemaphores[drawPass.frameIndex];    
 }
 
-VkFence DisplayRenderPass::getInFlightFence(RF::DrawPass const & drawPass) {
+//-------------------------------------------------------------------------------------------------
+
+VkFence DisplayRenderPass::getInFlightFence(RT::DrawPass const & drawPass) {
     return mSyncObjects.fencesInFlight[drawPass.frameIndex];
 }
 
-VkImage DisplayRenderPass::getSwapChainImage(RF::DrawPass const & drawPass) {
+//-------------------------------------------------------------------------------------------------
+
+VkImage DisplayRenderPass::getSwapChainImage(RT::DrawPass const & drawPass) {
     return mSwapChainImages.swapChainImages[drawPass.imageIndex];
 }
 
-VkFramebuffer DisplayRenderPass::getFrameBuffer(RF::DrawPass const & drawPass) {
+//-------------------------------------------------------------------------------------------------
+
+VkFramebuffer DisplayRenderPass::getFrameBuffer(RT::DrawPass const & drawPass) {
     return mFrameBuffers[drawPass.imageIndex];
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void DisplayRenderPass::createFrameBuffers(VkExtent2D const & extent) {
     mFrameBuffers.erase(mFrameBuffers.begin(), mFrameBuffers.end());
@@ -313,6 +343,8 @@ void DisplayRenderPass::createFrameBuffers(VkExtent2D const & extent) {
         );
     }
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void DisplayRenderPass::createRenderPass() {
 
@@ -412,5 +444,7 @@ void DisplayRenderPass::createRenderPass() {
         static_cast<uint32_t>(dependencies.size())
     );
 }
+
+//-------------------------------------------------------------------------------------------------
 
 }

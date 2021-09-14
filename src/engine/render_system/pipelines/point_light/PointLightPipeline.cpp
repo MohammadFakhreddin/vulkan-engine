@@ -2,7 +2,9 @@
 
 #include "tools/Importer.hpp"
 #include "engine/BedrockPath.hpp"
-#include "engine/render_system/render_passes/DisplayRenderPass.hpp"
+#include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
+#include "engine/render_system/drawable_variant/DrawableVariant.hpp"
+#include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
 
 namespace MFA {
 
@@ -25,6 +27,8 @@ void PointLightPipeline::Init() {
     }
     mIsInitialized = true;
 
+    BasePipeline::Init();
+
     createUniformBuffers();
     createDescriptorSetLayout();
     createPipeline();
@@ -40,72 +44,30 @@ void PointLightPipeline::Shutdown() {
     }
     mIsInitialized = false;
 
-    destroyPipeline();
+    RF::DestroyPipelineGroup(mDrawPipeline);
     destroyDescriptorSetLayout();
-    destroyDrawableObjects();
     destroyUniformBuffers();
+
+    BasePipeline::Shutdown();
 }
 
 //-------------------------------------------------------------------------------------------------
 
-DrawableObjectId PointLightPipeline::AddGpuModel(RF::GpuModel & gpuModel) {
-    MFA_ASSERT(gpuModel.valid == true);
-
-    auto const drawableId = mNextDrawableId++;
-
-    auto drawableObject = std::make_unique<DrawableObject>(gpuModel);
-    MFA_ASSERT(mDrawableObjects.find(drawableId) == mDrawableObjects.end());
-    drawableObject->AllocStorage("PointLight", sizeof(DrawableStorageData));
-    mDrawableObjects[drawableId] = std::move(drawableObject);
-    
-    return drawableId;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-bool PointLightPipeline::RemoveGpuModel(DrawableObjectId const drawableObjectId) {
-    auto const deleteCount = mDrawableObjects.erase(drawableObjectId);  // Unique ptr should be deleted correctly
-    MFA_ASSERT(deleteCount == 1);
-    return deleteCount;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void PointLightPipeline::PreRender(
-    RF::DrawPass & drawPass, 
-    float const deltaTimeInSec, 
-    uint32_t const idsCount, 
-    DrawableObjectId * ids
-) {
-    for (uint32_t i = 0; i < idsCount; ++i) {
-        auto const findResult = mDrawableObjects.find(ids[i]);
-        if (findResult != mDrawableObjects.end()) {
-            auto * drawableObject = findResult->second.get();
-            MFA_ASSERT(drawableObject != nullptr);
-            drawableObject->Update(deltaTimeInSec, drawPass);
-        }
-    }
+void PointLightPipeline::PreRender(RT::DrawPass & drawPass, float const deltaTime) {
+    BasePipeline::PreRender(drawPass, deltaTime);
     updateViewProjectionBuffer(drawPass);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void PointLightPipeline::Render(
-    RF::DrawPass & drawPass,
-    float const deltaTimeInSec,
-    uint32_t const idsCount, 
-    DrawableObjectId * ids
-) {
+void PointLightPipeline::Render(RT::DrawPass & drawPass, float deltaTime) {
     RF::BindDrawPipeline(drawPass, mDrawPipeline);
     RF::BindDescriptorSet(drawPass, mDescriptorSetGroup.descriptorSets[drawPass.frameIndex]);
 
-    for (uint32_t i = 0; i < idsCount; ++i) {
-        auto const findResult = mDrawableObjects.find(ids[i]);
-        if (findResult != mDrawableObjects.end()) {
-            auto * drawableObject = findResult->second.get();
-            MFA_ASSERT(drawableObject != nullptr);
-            drawableObject->Draw(drawPass, [&drawPass, &drawableObject](AS::MeshPrimitive const & primitive, DrawableObject::Node const & node)-> void {
-                auto const & storageData = drawableObject->GetStorage("PointLight").as<DrawableStorageData>()[0];
+    for (auto & essenceAndVariant : mEssenceAndVariantsMap) {
+        for (auto & variant : essenceAndVariant.second.variants) {
+            variant->Draw(drawPass, [&drawPass, &variant](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void {
+                auto const & storageData = variant->GetStorage("PointLight").as<DrawableStorageData>()[0];
 
                 PushConstants pushConstants {};
                 Copy<3>(pushConstants.baseColorFactor, storageData.color);
@@ -124,17 +86,20 @@ void PointLightPipeline::Render(
 
 //-------------------------------------------------------------------------------------------------
 
-void PointLightPipeline::UpdateLightTransform(uint32_t const id, float lightTransform[16]) {
-    auto findResult = mDrawableObjects.find(id);   
-    MFA_ASSERT(findResult != mDrawableObjects.end());
-    findResult->second->UpdateModelTransform(lightTransform);
+DrawableVariant * PointLightPipeline::CreateDrawableVariant(char const * essenceName) {
+
+    auto * variant = BasePipeline::CreateDrawableVariant(essenceName);
+    MFA_ASSERT(variant != nullptr);
+    variant->AllocStorage("PointLight", sizeof(DrawableStorageData));
+
+    return variant;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void PointLightPipeline::UpdateLightColor(uint32_t const id, float lightColor[3]) {
-    auto findResult = mDrawableObjects.find(id);
-    auto & storageData = findResult->second->GetStorage("PointLight").as<DrawableStorageData>()[0];
+void PointLightPipeline::UpdateLightColor(DrawableVariant * variant, float lightColor[3]) {
+    MFA_ASSERT(variant != nullptr);
+    auto & storageData = variant->GetStorage("PointLight").as<DrawableStorageData>()[0];
     Copy<3>(storageData.color, lightColor);
 }
 
@@ -158,7 +123,7 @@ void PointLightPipeline::UpdateCameraProjection(float cameraProjection[16]) {
 
 //-------------------------------------------------------------------------------------------------
 
-void PointLightPipeline::updateViewProjectionBuffer(RF::DrawPass const & drawPass) {
+void PointLightPipeline::updateViewProjectionBuffer(RT::DrawPass const & drawPass) {
     if (mViewProjectionBufferDirtyCounter <= 0) {
         return;
     }
@@ -229,7 +194,7 @@ void PointLightPipeline::createPipeline() {
     MFA_ASSERT(gpuVertexShader.valid());
     MFA_DEFER {
         RF::DestroyShader(gpuVertexShader);
-        Importer::FreeShader(&cpuVertexShader);
+        Importer::FreeShader(cpuVertexShader);
     };
     
     // Fragment shader
@@ -243,10 +208,10 @@ void PointLightPipeline::createPipeline() {
     MFA_ASSERT(gpuFragmentShader.valid());
     MFA_DEFER {
         RF::DestroyShader(gpuFragmentShader);
-        Importer::FreeShader(&cpuFragmentShader);
+        Importer::FreeShader(cpuFragmentShader);
     };
 
-    std::vector<RB::GpuShader> shaders {gpuVertexShader, gpuFragmentShader};
+    std::vector<RT::GpuShader const *> shaders {&gpuVertexShader, &gpuFragmentShader};
 
     VkVertexInputBindingDescription bindingDescription {};
     bindingDescription.binding = 0;
@@ -265,7 +230,7 @@ void PointLightPipeline::createPipeline() {
     }
     MFA_ASSERT(mDrawPipeline.isValid() == false);
 
-    RB::CreateGraphicPipelineOptions pipelineOptions {};
+    RT::CreateGraphicPipelineOptions pipelineOptions {};
     pipelineOptions.useStaticViewportAndScissor = false;
     pipelineOptions.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
     pipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
@@ -281,8 +246,8 @@ void PointLightPipeline::createPipeline() {
     pipelineOptions.pushConstantsRangeCount = static_cast<uint32_t>(pushConstantRanges.size());
     pipelineOptions.pushConstantRanges = pushConstantRanges.data();
 
-    mDrawPipeline = RF::CreateDrawPipeline(
-        RF::GetDisplayRenderPass()->GetVkRenderPass(),
+    mDrawPipeline = RF::CreatePipeline(
+        RF::GetDisplayRenderPass(),
         static_cast<uint8_t>(shaders.size()), 
         shaders.data(),
         1,
@@ -292,19 +257,6 @@ void PointLightPipeline::createPipeline() {
         inputAttributeDescriptions.data(),
         pipelineOptions
     );
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void PointLightPipeline::destroyPipeline() {
-    MFA_ASSERT(mDrawPipeline.isValid());
-    RF::DestroyDrawPipeline(mDrawPipeline);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void PointLightPipeline::destroyDrawableObjects() {
-    mDrawableObjects.clear();
 }
 
 //-------------------------------------------------------------------------------------------------

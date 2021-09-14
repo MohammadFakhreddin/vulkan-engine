@@ -1,13 +1,10 @@
 #pragma once
 
-#include "RenderPass.hpp"
+#include "engine/render_system/render_passes/RenderPass.hpp"
 
 namespace MFA {
 
 class DisplayRenderPass;
-
-namespace RF = RenderFrontend;
-namespace RB = RenderBackend;
 
 class ShadowRenderPassV2 final : public RenderPass {
 public:
@@ -29,11 +26,11 @@ public:
     VkRenderPass GetVkRenderPass() override;
 
     [[nodiscard]]
-    RB::DepthImageGroup const & GetDepthCubeMap() const;
+    RT::DepthImageGroup const & GetDepthCubeMap() const;
 
-    void PrepareCubemapForTransferDestination(RF::DrawPass const & drawPass);
+    void PrepareCubeMapForTransferDestination(RT::DrawPass const & drawPass);
 
-    void PrepareCubemapForSampling(RF::DrawPass const & drawPass);
+    void PrepareCubeMapForSampling(RT::DrawPass const & drawPass);
 
     void SetNextPassParams(int faceIndex);
 
@@ -43,9 +40,9 @@ protected:
 
     void internalShutdown() override;
 
-    void internalBeginRenderPass(RF::DrawPass const & drawPass) override;
+    void internalBeginRenderPass(RT::DrawPass & drawPass) override;
 
-    void internalEndRenderPass(RF::DrawPass const & drawPass) override;
+    void internalEndRenderPass(RT::DrawPass & drawPass) override;
 
     void internalResize() override;
 
@@ -60,8 +57,8 @@ private:
     VkRenderPass mVkRenderPass {};
     VkFramebuffer mFrameBuffer {};
     
-    RB::DepthImageGroup mDepthCubeMap {};
-    RB::DepthImageGroup mDepthImage {};
+    RT::DepthImageGroup mDepthCubeMap {};
+    RT::DepthImageGroup mDepthImage {};
 
     uint32_t mImageWidth = 0;
     uint32_t mImageHeight = 0;

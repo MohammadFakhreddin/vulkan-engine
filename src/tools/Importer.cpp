@@ -1444,58 +1444,52 @@ AS::Model ImportGLTF(char const * path) {
     return resultModel;
 }
 
-bool FreeModel(AS::Model * model) {
+bool FreeModel(AS::Model & model) {
     bool success = false;
-    MFA_ASSERT(model != nullptr);
     bool freeResult = false;
-    if(model != nullptr) {
-        // Mesh
-        freeResult = FreeMesh(&model->mesh);
-        MFA_ASSERT(freeResult);
-        // Textures
-        if(false == model->textures.empty()) {
-            for (auto & texture : model->textures) {
-                freeResult = FreeTexture(&texture);
-                MFA_ASSERT(freeResult);
-            }
+    // Mesh
+    freeResult = FreeMesh(model.mesh);
+    MFA_ASSERT(freeResult);
+    // Textures
+    if(false == model.textures.empty()) {
+        for (auto & texture : model.textures) {
+            freeResult = FreeTexture(texture);
+            MFA_ASSERT(freeResult);
         }
-        success = true;
     }
+    success = true;
     return success;
 }
 
 // Temporary function for freeing imported assets // Resource system will be used instead
-bool FreeTexture(AS::Texture * texture) {
+bool FreeTexture(AS::Texture & texture) {
     bool success = false;
-    MFA_ASSERT(texture != nullptr);
-    MFA_ASSERT(texture->isValid());
-    if(texture != nullptr && texture->isValid()) {
+    MFA_ASSERT(texture.isValid());
+    if(texture.isValid()) {
         // TODO This is RCMGMT task
-        Memory::Free(texture->revokeBuffer());
+        Memory::Free(texture.revokeBuffer());
         success = true;
     }
     return success;
 }
 
-bool FreeShader(AS::Shader * shader) {
+bool FreeShader(AS::Shader & shader) {
     bool success = false;
-    MFA_ASSERT(shader != nullptr);
-    MFA_ASSERT(shader->isValid());
-    if (shader != nullptr && shader->isValid()) {
-        Memory::Free(shader->revokeData());
+    MFA_ASSERT(shader.isValid());
+    if (shader.isValid()) {
+        Memory::Free(shader.revokeData());
         success = true;
     }
     return success;
 }
 
-bool FreeMesh(AS::Mesh * mesh) {
+bool FreeMesh(AS::Mesh & mesh) {
     bool success = false;
-    MFA_ASSERT(mesh != nullptr);
-    MFA_ASSERT(mesh->IsValid());
-    if (mesh != nullptr && mesh->IsValid()) {
+    MFA_ASSERT(mesh.IsValid());
+    if (mesh.IsValid()) {
         Blob vertexBuffer {};
         Blob indexBuffer {};
-        mesh->RevokeBuffers(vertexBuffer, indexBuffer);
+        mesh.RevokeBuffers(vertexBuffer, indexBuffer);
         Memory::Free(vertexBuffer);
         Memory::Free(indexBuffer);
         success = true;

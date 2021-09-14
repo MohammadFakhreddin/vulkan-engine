@@ -1,26 +1,24 @@
 #pragma once
 
-#include "RenderBackend.hpp"
+#include "RenderTypes.hpp"
+#include "engine/BedrockPlatforms.hpp"
+#include "engine/FoundationAsset.hpp"
 
 #ifdef __DESKTOP__
 #include "libs/sdl/SDL.hpp"
-#elif defined(__ANDROID__)
-#include <android_native_app_glue.h>
-#elif defined(__IOS__)
-#else
-#error Os is not supported
 #endif
+
+#include <functional>
 
 namespace MFA {
     class RenderPass;
     class DisplayRenderPass;
-}
+};
 
 namespace MFA::RenderFrontend {
 
-namespace RB = RenderBackend;
-using ScreenWidth = RB::ScreenWidth;
-using ScreenHeight = RB::ScreenHeight;
+using ScreenWidth = Platforms::ScreenSize;
+using ScreenHeight = Platforms::ScreenSize;
 
 struct InitParams {
 #ifdef __DESKTOP__
@@ -41,17 +39,8 @@ bool Init(InitParams const & params);
 
 bool Shutdown();
 
-
-using ResizeEventListenerId = int;
-using ResizeEventListener = std::function<void()>;
-
-int AddResizeEventListener(ResizeEventListener const & eventListener);
-bool RemoveResizeEventListener(ResizeEventListenerId listenerId);
-
-using DrawPipeline = RB::GraphicPipelineGroup;
-
-[[nodiscard]]
-VkDescriptorSetLayout CreateBasicDescriptorSetLayout();
+int AddResizeEventListener(RT::ResizeEventListener const & eventListener);
+bool RemoveResizeEventListener(RT::ResizeEventListenerId listenerId);
 
 [[nodiscard]]
 VkDescriptorSetLayout CreateDescriptorSetLayout(
@@ -62,140 +51,75 @@ VkDescriptorSetLayout CreateDescriptorSetLayout(
 void DestroyDescriptorSetLayout(VkDescriptorSetLayout descriptorSetLayout);
 
 [[nodiscard]]
-DrawPipeline CreateBasicDrawPipeline(
-    VkRenderPass renderPass,
+RT::PipelineGroup CreatePipeline(
+    RenderPass * renderPass,
     uint8_t gpuShadersCount, 
-    RB::GpuShader * gpuShaders,
-    uint32_t descriptorSetLayoutCount,
-    VkDescriptorSetLayout * descriptorSetLayouts,
-    VkVertexInputBindingDescription const & vertexInputBindingDescription,
-    uint8_t vertexInputAttributeDescriptionCount,
-    VkVertexInputAttributeDescription * vertexInputAttributeDescriptions
-);
-
-[[nodiscard]]
-DrawPipeline CreateDrawPipeline(
-    VkRenderPass renderPass,
-    uint8_t gpuShadersCount, 
-    RB::GpuShader * gpuShaders,
+    RT::GpuShader const ** gpuShaders,
     uint32_t descriptorLayoutsCount,
     VkDescriptorSetLayout * descriptorSetLayouts,
-    VkVertexInputBindingDescription vertexBindingDescription,
+    VkVertexInputBindingDescription const & vertexBindingDescription,
     uint32_t inputAttributeDescriptionCount,
     VkVertexInputAttributeDescription * inputAttributeDescriptionData,
-    RB::CreateGraphicPipelineOptions const & options = RB::CreateGraphicPipelineOptions {}
+    RT::CreateGraphicPipelineOptions const & options
 );
 
-void DestroyDrawPipeline(DrawPipeline & draw_pipeline);
+void DestroyPipelineGroup(RT::PipelineGroup & drawPipeline);
 
 [[nodiscard]]
-RB::DescriptorSetGroup CreateDescriptorSets(
-    VkDescriptorSetLayout descriptorSetLayout
-);
+RT::DescriptorSetGroup CreateDescriptorSets(VkDescriptorSetLayout descriptorSetLayout);
 
 [[nodiscard]]
-RB::DescriptorSetGroup CreateDescriptorSets(
+RT::DescriptorSetGroup CreateDescriptorSets(
     uint32_t descriptorSetCount,
     VkDescriptorSetLayout descriptorSetLayout
 );
 
-struct MeshBuffers {
-    RB::BufferGroup verticesBuffer {};
-    RB::BufferGroup indicesBuffer {};
-};
-
-void DestroyMeshBuffers(MeshBuffers & meshBuffers);
+[[nodiscard]]
+RT::BufferGroup CreateVertexBuffer(CBlob verticesBlob);
 
 [[nodiscard]]
-RB::BufferGroup CreateVertexBuffer(CBlob vertices_blob);
+RT::BufferGroup CreateIndexBuffer(CBlob indicesBlob);
 
 [[nodiscard]]
-RB::BufferGroup CreateIndexBuffer(CBlob indices_blob);
+RT::MeshBuffers CreateMeshBuffers(AssetSystem::Mesh const & mesh);
+
+void DestroyMeshBuffers(RT::MeshBuffers & meshBuffers);
 
 [[nodiscard]]
-RB::GpuTexture CreateTexture(AssetSystem::Texture & texture);
+RT::GpuTexture CreateTexture(AS::Texture & texture);
 
-void DestroyTexture(RB::GpuTexture & gpu_texture);
+void DestroyTexture(RT::GpuTexture & gpuTexture);
 
-struct SamplerGroup {
-    VkSampler sampler;
-    [[nodiscard]]
-    bool isValid() const noexcept{
-        return MFA_VK_VALID(sampler);
-    }
-    void revoke() {
-        MFA_ASSERT(isValid());
-        MFA_VK_MAKE_NULL(sampler);
-    }
-};
 // TODO We should ask for options here
 [[nodiscard]]
-SamplerGroup CreateSampler(RB::CreateSamplerParams const & samplerParams = {});
+RT::SamplerGroup CreateSampler(RT::CreateSamplerParams const & samplerParams);
 
-void DestroySampler(SamplerGroup & sampler_group);
+void DestroySampler(RT::SamplerGroup & samplerGroup);
 
-struct GpuModel {
-    bool valid = false;
-    MeshBuffers meshBuffers {};
-    std::vector<RB::GpuTexture> textures {};
-    AssetSystem::Model model {};
-    // TODO Samplers
-};
 [[nodiscard]]
-GpuModel CreateGpuModel(AssetSystem::Model & model_asset);
+RT::GpuModel CreateGpuModel(AS::Model & modelAsset);
 
-void DestroyGpuModel(GpuModel & gpu_model);
+void DestroyGpuModel(RT::GpuModel & gpuModel);
 
 void DeviceWaitIdle();
 
 [[nodiscard]]
-RB::GpuShader CreateShader(AssetSystem::Shader const & shader);
+RT::GpuShader CreateShader(AS::Shader const & shader);
 
-void DestroyShader(RB::GpuShader & gpu_shader);
+void DestroyShader(RT::GpuShader & gpuShader);
 
-struct DrawPass {
-    uint32_t imageIndex;
-    uint8_t frameIndex;
-    bool isValid = false;
-    DrawPipeline * pipeline = nullptr;
-    RenderPass * renderPass = nullptr;
-};
-
-struct UniformBufferGroup {
-    std::vector<RB::BufferGroup> buffers;
-    size_t bufferSize;
-    [[nodiscard]]
-    bool isValid() const noexcept;
-};
-
-UniformBufferGroup CreateUniformBuffer(size_t bufferSize, uint32_t count);
+RT::UniformBufferGroup CreateUniformBuffer(size_t bufferSize, uint32_t count);
 
 void UpdateUniformBuffer(
-    RB::BufferGroup const & uniform_buffer, 
+    RT::BufferGroup const & uniformBuffer, 
     CBlob data
 );
 
-void DestroyUniformBuffer(UniformBufferGroup & uniform_buffer);
+void DestroyUniformBuffer(RT::UniformBufferGroup & uniformBuffer);
 
 void BindDrawPipeline(
-    DrawPass & drawPass,
-    DrawPipeline & drawPipeline   
-);
-
-void UpdateDescriptorSetBasic(
-    DrawPass const & drawPass,
-    VkDescriptorSet descriptorSet,
-    UniformBufferGroup const & uniformBuffer,
-    RB::GpuTexture const & gpuTexture,
-    SamplerGroup const & samplerGroup
-);
-
-void UpdateDescriptorSetBasic(
-    DrawPass const & drawPass,
-    VkDescriptorSet descriptorSet,
-    UniformBufferGroup const & uniformBuffer,
-    uint32_t imageInfoCount,
-    VkDescriptorImageInfo const * imageInfos
+    RT::DrawPass & drawPass,
+    RT::PipelineGroup & pipeline   
 );
 
 void UpdateDescriptorSets(
@@ -205,13 +129,13 @@ void UpdateDescriptorSets(
 
 void UpdateDescriptorSets(
     uint8_t descriptorSetsCount,
-    VkDescriptorSet* descriptorSets,
+    VkDescriptorSet * descriptorSets,
     uint8_t writeInfoCount,
     VkWriteDescriptorSet * writeInfo
 );
 
 void BindDescriptorSet(
-    DrawPass const & drawPass,
+    RT::DrawPass const & drawPass,
     VkDescriptorSet descriptorSet
 );
 
@@ -230,20 +154,20 @@ void BindDescriptorSet(
 //: end loop
 
 void BindVertexBuffer(
-    DrawPass const & drawPass, 
-    RB::BufferGroup vertexBuffer,
-    VkDeviceSize offset = 0
+    RT::DrawPass const & drawPass, 
+    RT::BufferGroup const & vertexBuffer,
+    size_t offset = 0
 );
 
 void BindIndexBuffer(
-    DrawPass const & drawPass, 
-    RB::BufferGroup indexBuffer,
-    VkDeviceSize offset = 0,
+    RT::DrawPass const & drawPass, 
+    RT::BufferGroup const & indexBuffer,
+    size_t offset = 0,
     VkIndexType indexType = VK_INDEX_TYPE_UINT32
 );
 
 void DrawIndexed(
-    DrawPass const & drawPass, 
+    RT::DrawPass const & drawPass, 
     uint32_t indicesCount,
     uint32_t instanceCount = 1,
     uint32_t firstIndex = 0,
@@ -264,19 +188,19 @@ void EndRenderPass(VkCommandBuffer commandBuffer);
 
 void OnNewFrame(float deltaTimeInSec);
 
-void SetScissor(DrawPass const & drawPass, VkRect2D const & scissor);
+void SetScissor(RT::DrawPass const & drawPass, VkRect2D const & scissor);
 
-void SetViewport(DrawPass const & drawPass, VkViewport const & viewport);
+void SetViewport(RT::DrawPass const & drawPass, VkViewport const & viewport);
 
 void PushConstants(
-    DrawPass const & drawPass, 
-    AssetSystem::ShaderStage shaderStage, 
+    RT::DrawPass const & drawPass, 
+    AS::ShaderStage shaderStage, 
     uint32_t offset, 
     CBlob data
 );
 
 void PushConstants(
-    DrawPass const & drawPass,
+    RT::DrawPass const & drawPass,
     VkShaderStageFlags shaderStage, 
     uint32_t offset, 
     CBlob data
@@ -307,7 +231,7 @@ void AssignViewportAndScissorToCommandBuffer(VkCommandBuffer commandBuffer, VkEx
 
 #ifdef __DESKTOP__
 using SDLEventWatchId = int;
-using SDLEventWatch = std::function<int(void* data, MSDL::SDL_Event* event)>;
+using SDLEventWatch = std::function<int(void * data, MSDL::SDL_Event * event)>;
 SDLEventWatchId AddEventWatch(SDLEventWatch const & eventWatch);
 
 void RemoveEventWatch(SDLEventWatchId watchId);
@@ -320,19 +244,19 @@ VkSurfaceCapabilitiesKHR GetSurfaceCapabilities();
 
 
 [[nodiscard]]
-RB::SwapChainGroup CreateSwapChain(VkSwapchainKHR oldSwapChain = VkSwapchainKHR {});
+RT::SwapChainGroup CreateSwapChain(VkSwapchainKHR oldSwapChain = VkSwapchainKHR {});
 
-void DestroySwapChain(RB::SwapChainGroup const & swapChainGroup);
+void DestroySwapChain(RT::SwapChainGroup const & swapChainGroup);
 
 
 [[nodiscard]]
-RB::ColorImageGroup CreateColorImage(
+RT::ColorImageGroup CreateColorImage(
     VkExtent2D const & imageExtent,
     VkFormat imageFormat,
-    RB::CreateColorImageOptions const & options
+    RT::CreateColorImageOptions const & options
 );
 
-void DestroyColorImage(RB::ColorImageGroup const & colorImageGroup);
+void DestroyColorImage(RT::ColorImageGroup const & colorImageGroup);
 
 
 [[nodiscard]]
@@ -347,12 +271,12 @@ VkRenderPass CreateRenderPass(
 
 void DestroyRenderPass(VkRenderPass renderPass);
 
-RB::DepthImageGroup CreateDepthImage(
+RT::DepthImageGroup CreateDepthImage(
     VkExtent2D const & imageSize,
-    RB::CreateDepthImageOptions const & options = {}
+    RT::CreateDepthImageOptions const & options
 );
 
-void DestroyDepthImage(RB::DepthImageGroup const & depthImage);
+void DestroyDepthImage(RT::DepthImageGroup const & depthImage);
 
 // TODO We can gather all renderTypes in one file
 
@@ -378,7 +302,7 @@ void WaitForFence(VkFence fence);
 
 void AcquireNextImage(
     VkSemaphore imageAvailabilitySemaphore,
-    RB::SwapChainGroup const & swapChainGroup,
+    RT::SwapChainGroup const & swapChainGroup,
     uint32_t & outImageIndex
 );
 
@@ -425,12 +349,12 @@ void PresentQueue(
 
 DisplayRenderPass * GetDisplayRenderPass();
 
-RB::SyncObjects createSyncObjects(    
-    uint8_t maxFramesInFlight,
+RT::SyncObjects createSyncObjects(    
+    uint32_t maxFramesInFlight,
     uint32_t swapChainImagesCount
 );
 
-void DestroySyncObjects(RB::SyncObjects & syncObjects);
+void DestroySyncObjects(RT::SyncObjects const & syncObjects);
 
 VkSampleCountFlagBits GetMaxSamplesCount();
 
@@ -441,3 +365,7 @@ void WaitForGraphicQueue();
 void WaitForPresentQueue();
 
 }
+
+namespace MFA {
+    namespace RF = RenderFrontend;
+};

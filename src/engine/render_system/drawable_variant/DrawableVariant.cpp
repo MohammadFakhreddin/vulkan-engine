@@ -1,5 +1,6 @@
 #include "DrawableVariant.hpp"
 
+#include "engine/render_system/RenderTypes.hpp"
 #include "engine/BedrockMemory.hpp"
 #include "engine/render_system/drawable_essence/DrawableEssence.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
@@ -7,38 +8,14 @@
 #include "engine/ui_system/UISystem.hpp"
 
 #include <ext/matrix_transform.hpp>
-#include <glm/glm.hpp>
-#include <glm/gtx/quaternion.hpp>
 
 namespace MFA {
 
 namespace UI = UISystem;
 
-DrawableVariant::InstanceId DrawableVariant::NextInstanceId = 0;
-
 //-------------------------------------------------------------------------------------------------
 
-struct DrawableVariant::Node {
-    AS::MeshNode const * meshNode = nullptr;
-
-    glm::quat currentRotation {0.0f, 0.0f, 0.0f, 1.0f};     // x, y, z, w
-    glm::vec3 currentScale {1.0f, 1.0f, 1.0f};
-    glm::vec3 currentTranslate {0.0f, 0.0f, 0.0f};
-    glm::mat4 currentTransform {};
-    
-    glm::quat previousRotation {0.0f, 0.0f, 0.0f, 1.0f};     // x, y, z, w
-    glm::vec3 previousScale {1.0f, 1.0f, 1.0f};
-    glm::vec3 previousTranslate {0.0f, 0.0f, 0.0f};
-    glm::mat4 previousTransform {};
-
-    bool isCachedDataValid = false;
-    glm::mat4 cachedLocalTransform {};
-    glm::mat4 cachedGlobalTransform {};
-    glm::mat4 cachedModelTransform {};
-    glm::mat4 cachedGlobalInverseTransform {};
-
-    Skin * skin = nullptr;
-};
+RT::DrawableVariantId DrawableVariant::NextInstanceId = 0;
 
 //-------------------------------------------------------------------------------------------------
 
@@ -49,7 +26,7 @@ DrawableVariant::DrawableVariant(DrawableEssence const & essence)
 {
     NextInstanceId += 1;
 
-    auto & mesh = mEssence->GetGpuModel()->model.mesh;
+    auto & mesh = mEssence->GetGpuModel().model.mesh;
     MFA_ASSERT(mesh.IsValid());
     
     // Skins
@@ -57,30 +34,30 @@ DrawableVariant::DrawableVariant(DrawableEssence const & essence)
     
     {// Nodes
         uint32_t const nodesCount = mesh.GetNodesCount();
+        mNodes.resize(nodesCount);
         for (uint32_t i = 0; i < nodesCount; ++i) {
-            mNodes.emplace_back(std::make_unique<Node>());
             auto & meshNode = mesh.GetNodeByIndex(i);
-            auto & node = mNodes.back();
+            auto & node = mNodes[i];
 
-            node->meshNode = &meshNode;
-            node->isCachedDataValid = false;
+            node.meshNode = &meshNode;
+            node.isCachedDataValid = false;
             
-            node->currentRotation.x = meshNode.rotation[0];
-            node->currentRotation.y = meshNode.rotation[1];
-            node->currentRotation.z = meshNode.rotation[2];
-            node->currentRotation.w = meshNode.rotation[3];
+            node.currentRotation.x = meshNode.rotation[0];
+            node.currentRotation.y = meshNode.rotation[1];
+            node.currentRotation.z = meshNode.rotation[2];
+            node.currentRotation.w = meshNode.rotation[3];
 
-            node->currentScale.x = meshNode.scale[0];
-            node->currentScale.y = meshNode.scale[1];
-            node->currentScale.z = meshNode.scale[2];
+            node.currentScale.x = meshNode.scale[0];
+            node.currentScale.y = meshNode.scale[1];
+            node.currentScale.z = meshNode.scale[2];
 
-            node->currentTranslate.x = meshNode.translate[0];
-            node->currentTranslate.y = meshNode.translate[1];
-            node->currentTranslate.z = meshNode.translate[2];
+            node.currentTranslate.x = meshNode.translate[0];
+            node.currentTranslate.y = meshNode.translate[1];
+            node.currentTranslate.z = meshNode.translate[2];
 
-            node->skin = meshNode.skin > -1 ? &mSkins[meshNode.skin] : nullptr;
+            node.skin = meshNode.skin > -1 ? &mSkins[meshNode.skin] : nullptr;
 
-            Matrix4X4Float::ConvertCellsToMat4(meshNode.transform, node->currentTransform);
+            Matrix4X4Float::ConvertCellsToMat4(meshNode.transform, node.currentTransform);
         }
     }
 
@@ -94,11 +71,9 @@ DrawableVariant::DrawableVariant(DrawableEssence const & essence)
             }
             if (totalJointsCount > 0) {
                 mCachedSkinsJointsBlob = Memory::Alloc(sizeof(JointTransformData) * totalJointsCount);
-                mSkinsJointsBuffer = std::make_unique<RF::UniformBufferGroup>(
-                    RF::CreateUniformBuffer(
-                        mCachedSkinsJointsBlob.len, 
-                        RF::GetMaxFramesPerFlight()
-                    )
+                mSkinsJointsBuffer = RF::CreateUniformBuffer(
+                    mCachedSkinsJointsBlob.len, 
+                    RF::GetMaxFramesPerFlight()
                 );
             }
         }
@@ -122,9 +97,8 @@ DrawableVariant::~DrawableVariant() {
     if (mCachedSkinsJointsBlob.len > 0) {
         Memory::Free(mCachedSkinsJointsBlob);
     }
-    if (mSkinsJointsBuffer->bufferSize > 0) {
-        RF::DestroyUniformBuffer(*mSkinsJointsBuffer.get());
-        mSkinsJointsBuffer.release();
+    if (mSkinsJointsBuffer.bufferSize > 0) {
+        RF::DestroyUniformBuffer(mSkinsJointsBuffer);
     }
     DeleteUniformBuffers();
 
@@ -136,14 +110,14 @@ DrawableVariant::~DrawableVariant() {
 //-------------------------------------------------------------------------------------------------
 
 // Only for model local buffers
-RF::UniformBufferGroup const * DrawableVariant::CreateUniformBuffer(
+RT::UniformBufferGroup const & DrawableVariant::CreateUniformBuffer(
     char const * name,
     uint32_t const size,
     uint32_t const count
 ) {
     MFA_ASSERT(mUniformBuffers.find(name) == mUniformBuffers.end());
-    mUniformBuffers[name] = std::make_unique<RF::UniformBufferGroup>(RF::CreateUniformBuffer(size, count));
-    return mUniformBuffers[name].get();
+    mUniformBuffers[name] = RF::CreateUniformBuffer(size, count);
+    return mUniformBuffers[name];
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -156,8 +130,7 @@ void DrawableVariant::DeleteUniformBuffers() {
     mDirtyBuffers.clear();
     
     for (auto & pair : mUniformBuffers) {
-        RF::DestroyUniformBuffer(*pair.second.get());
-        pair.second.release();
+        RF::DestroyUniformBuffer(pair.second);
     }
     mUniformBuffers.clear();
 }
@@ -193,7 +166,7 @@ void DrawableVariant::UpdateUniformBuffer(
     
     DirtyBuffer dirtyBuffer {
         .bufferName = name,
-        .bufferGroup = findResult->second.get(),
+        .bufferGroup = &findResult->second,
         .startingIndex = startingIndex,
         .remainingUpdateCount = RF::GetMaxFramesPerFlight(),
         .ubo = Memory::Alloc(ubo.len),
@@ -205,10 +178,10 @@ void DrawableVariant::UpdateUniformBuffer(
 
 //-------------------------------------------------------------------------------------------------
 
-RF::UniformBufferGroup const * DrawableVariant::GetUniformBuffer(char const * name) {
-    auto const find_result = mUniformBuffers.find(name);
-    if (find_result != mUniformBuffers.end()) {
-        return find_result->second.get();
+RT::UniformBufferGroup const * DrawableVariant::GetUniformBuffer(char const * name) {
+    auto const findResult = mUniformBuffers.find(name);
+    if (findResult != mUniformBuffers.end()) {
+        return &findResult->second;
     }
     return nullptr;
 }
@@ -216,13 +189,13 @@ RF::UniformBufferGroup const * DrawableVariant::GetUniformBuffer(char const * na
 //-------------------------------------------------------------------------------------------------
 
 [[nodiscard]]
-RF::UniformBufferGroup const * DrawableVariant::GetSkinJointsBuffer() const noexcept {
-    return mSkinsJointsBuffer.get();
+RT::UniformBufferGroup const & DrawableVariant::GetSkinJointsBuffer() const noexcept {
+    return mSkinsJointsBuffer;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableVariant::Update(float const deltaTimeInSec, RF::DrawPass const & drawPass) {
+void DrawableVariant::Update(float const deltaTimeInSec, RT::DrawPass const & drawPass) {
     updateAnimation(deltaTimeInSec);
     computeNodesGlobalTransform();
     updateAllSkinsJoints();
@@ -244,9 +217,9 @@ void DrawableVariant::Update(float const deltaTimeInSec, RF::DrawPass const & dr
         }
     }
 
-    if (mSkinsJointsBuffer->bufferSize > 0) {
+    if (mSkinsJointsBuffer.bufferSize > 0) {
         RF::UpdateUniformBuffer(
-            mSkinsJointsBuffer->buffers[drawPass.frameIndex],
+            mSkinsJointsBuffer.buffers[drawPass.frameIndex],
             mCachedSkinsJointsBlob
         );
     }
@@ -255,14 +228,14 @@ void DrawableVariant::Update(float const deltaTimeInSec, RF::DrawPass const & dr
 //-------------------------------------------------------------------------------------------------
 
 void DrawableVariant::Draw(
-    RF::DrawPass & drawPass,
+    RT::DrawPass & drawPass,
     BindDescriptorSetFunction const & bindFunction
 ) {
-    BindVertexBuffer(drawPass, mEssence->GetGpuModel()->meshBuffers.verticesBuffer);
-    BindIndexBuffer(drawPass, mEssence->GetGpuModel()->meshBuffers.indicesBuffer);
+    RF::BindVertexBuffer(drawPass, mEssence->GetGpuModel().meshBuffers.verticesBuffer);
+    RF::BindIndexBuffer(drawPass, mEssence->GetGpuModel().meshBuffers.indicesBuffer);
 
     for (auto & node : mNodes) {
-        drawNode(drawPass, node.get(), bindFunction);
+        drawNode(drawPass, node, bindFunction);
     }
 }
 
@@ -301,7 +274,7 @@ void DrawableVariant::SetActiveAnimationIndex(int const nextAnimationIndex, floa
     mAnimationTransitionDurationInSec = transitionDuration;
     mAnimationRemainingTransitionDurationInSec = transitionDuration;
     mPreviousAnimationTimeInSec = mActiveAnimationTimeInSec;
-    mActiveAnimationTimeInSec = mEssence->GetGpuModel()->model.mesh.GetAnimationByIndex(mActiveAnimationIndex).startTime;
+    mActiveAnimationTimeInSec = mEssence->GetGpuModel().model.mesh.GetAnimationByIndex(mActiveAnimationIndex).startTime;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -326,7 +299,7 @@ Blob DrawableVariant::GetStorage(char const * name) {
 void DrawableVariant::updateAnimation(float const deltaTimeInSec) {
     using Animation = AS::Mesh::Animation;
 
-    auto & mesh = mEssence->GetGpuModel()->model.mesh;
+    auto & mesh = mEssence->GetGpuModel().model.mesh;
 
     if (mesh.GetAnimationsCount() <= 0) {
         return;
@@ -359,7 +332,7 @@ void DrawableVariant::updateAnimation(float const deltaTimeInSec) {
 
                     if (channel.path == Animation::Path::Translation)
                     {
-                        node->currentTranslate = glm::mix(previousOutput, nextOutput, fraction);
+                        node.currentTranslate = glm::mix(previousOutput, nextOutput, fraction);
                     }
                     else if (channel.path == Animation::Path::Rotation)
                     {
@@ -375,18 +348,18 @@ void DrawableVariant::updateAnimation(float const deltaTimeInSec) {
                         nextRotation.z = nextOutput[2];
                         nextRotation.w = nextOutput[3];
 
-                        node->currentRotation = glm::normalize(glm::slerp(previousRotation, nextRotation, fraction));
+                        node.currentRotation = glm::normalize(glm::slerp(previousRotation, nextRotation, fraction));
                     }
                     else if (channel.path == Animation::Path::Scale)
                     {
-                        node->currentScale = glm::mix(previousOutput, nextOutput, fraction);
+                        node.currentScale = glm::mix(previousOutput, nextOutput, fraction);
                     }
                     else
                     {
                         MFA_ASSERT(false);
                     }
 
-                    node->isCachedDataValid = false;
+                    node.isCachedDataValid = false;
 
                     break;
                 }
@@ -430,7 +403,7 @@ void DrawableVariant::updateAnimation(float const deltaTimeInSec) {
 
                     if (channel.path == Animation::Path::Translation)
                     {
-                        node->previousTranslate = glm::mix(previousOutput, nextOutput, fraction);
+                        node.previousTranslate = glm::mix(previousOutput, nextOutput, fraction);
                     }
                     else if (channel.path == Animation::Path::Rotation)
                     {
@@ -446,18 +419,18 @@ void DrawableVariant::updateAnimation(float const deltaTimeInSec) {
                         nextRotation.z = nextOutput[2];
                         nextRotation.w = nextOutput[3];
 
-                        node->previousRotation = glm::normalize(glm::slerp(previousRotation, nextRotation, fraction));
+                        node.previousRotation = glm::normalize(glm::slerp(previousRotation, nextRotation, fraction));
                     }
                     else if (channel.path == Animation::Path::Scale)
                     {
-                        node->previousScale = glm::mix(previousOutput, nextOutput, fraction);
+                        node.previousScale = glm::mix(previousOutput, nextOutput, fraction);
                     }
                     else
                     {
                         MFA_ASSERT(false);
                     }
 
-                    node->isCachedDataValid = false;
+                    node.isCachedDataValid = false;
 
                     break;
                 }
@@ -477,20 +450,20 @@ void DrawableVariant::updateAnimation(float const deltaTimeInSec) {
 //-------------------------------------------------------------------------------------------------
 
 void DrawableVariant::computeNodesGlobalTransform() {
-    auto const & mesh = mEssence->GetGpuModel()->model.mesh;
+    auto const & mesh = mEssence->GetGpuModel().model.mesh;
 
     auto const rootNodesCount = mesh.GetRootNodesCount();
 
     for (uint32_t i = 0; i < rootNodesCount; ++i) {
         auto & node = mNodes[mesh.GetIndexOfRootNode(i)];
-        computeNodeGlobalTransform(node.get(), nullptr, false);
+        computeNodeGlobalTransform(node, nullptr, false);
     }
 }
 
 //-------------------------------------------------------------------------------------------------
 
 void DrawableVariant::updateAllSkinsJoints() {
-    auto const & mesh = mEssence->GetGpuModel()->model.mesh;
+    auto const & mesh = mEssence->GetGpuModel().model.mesh;
 
     auto const skinsCount = mesh.GetSkinsCount();
     if (skinsCount > 0) {
@@ -511,7 +484,7 @@ void DrawableVariant::updateSkinJoints(uint32_t const skinIndex, AS::MeshSkin co
     for (size_t i = 0; i < skin.joints.size(); i++)
     {
         auto const & joint = mNodes[skin.joints[i]];
-        auto const nodeMatrix = joint->cachedGlobalTransform;
+        auto const nodeMatrix = joint.cachedGlobalTransform;
         glm::mat4 matrix = nodeMatrix *
             Matrix4X4Float::ConvertCellsToMat4(skin.inverseBindMatrices[i].value);  // T - S = changes
         Matrix4X4Float::ConvertGlmToCells(matrix, jointMatrices[i].model);
@@ -521,20 +494,19 @@ void DrawableVariant::updateSkinJoints(uint32_t const skinIndex, AS::MeshSkin co
 //-------------------------------------------------------------------------------------------------
 
 void DrawableVariant::drawNode(
-    RF::DrawPass & drawPass,
-    Node const * node,
+    RT::DrawPass & drawPass,
+    Node const & node,
     BindDescriptorSetFunction const & bindFunction
 ) {
-    MFA_ASSERT(node != nullptr);
     // TODO We can reduce nodes count for better performance when importing
-    if (node->meshNode->hasSubMesh())
+    if (node.meshNode->hasSubMesh())
     {
-        auto const & mesh = mEssence->GetGpuModel()->model.mesh;
-        MFA_ASSERT(static_cast<int>(mesh.GetSubMeshCount()) > node->meshNode->subMeshIndex);
+        auto const & mesh = mEssence->GetGpuModel().model.mesh;
+        MFA_ASSERT(static_cast<int>(mesh.GetSubMeshCount()) > node.meshNode->subMeshIndex);
         
         drawSubMesh(
             drawPass,
-            mesh.GetSubMeshByIndex(node->meshNode->subMeshIndex),
+            mesh.GetSubMeshByIndex(node.meshNode->subMeshIndex),
             node,
             bindFunction
         );
@@ -544,15 +516,14 @@ void DrawableVariant::drawNode(
 //-------------------------------------------------------------------------------------------------
 
 void DrawableVariant::drawSubMesh(
-    RF::DrawPass & drawPass,
+    RT::DrawPass & drawPass,
     AssetSystem::Mesh::SubMesh const & subMesh,
-    Node const * node,
+    Node const & node,
     BindDescriptorSetFunction const & bindFunction
 ) {
-    MFA_ASSERT(node != nullptr);
     if (subMesh.primitives.empty() == false) {
         for (auto const & primitive : subMesh.primitives) {
-            bindFunction(primitive, *node);
+            bindFunction(primitive, node);
             RF::DrawIndexed(
                 drawPass,
                 primitive.indicesCount,
@@ -565,19 +536,18 @@ void DrawableVariant::drawSubMesh(
 
 //-------------------------------------------------------------------------------------------------
 
-glm::mat4 DrawableVariant::computeNodeLocalTransform(Node const * node) {
-    MFA_ASSERT(node != nullptr);
+glm::mat4 DrawableVariant::computeNodeLocalTransform(Node const & node) const {
     glm::mat4 currentTransform {1};
-    currentTransform = glm::translate(currentTransform, node->currentTranslate);
-    currentTransform = currentTransform * glm::toMat4(node->currentRotation);
-    currentTransform = glm::scale(currentTransform, node->currentScale);
-    currentTransform = currentTransform * node->currentTransform;
+    currentTransform = glm::translate(currentTransform, node.currentTranslate);
+    currentTransform = currentTransform * glm::toMat4(node.currentRotation);
+    currentTransform = glm::scale(currentTransform, node.currentScale);
+    currentTransform = currentTransform * node.currentTransform;
     if (mAnimationRemainingTransitionDurationInSec > 0 && mPreviousAnimationIndex >= 0) {
         glm::mat4 previousTransform {1};
-        previousTransform = glm::translate(previousTransform, node->previousTranslate);
-        previousTransform = previousTransform * glm::toMat4(node->previousRotation);
-        previousTransform = glm::scale(previousTransform, node->previousScale);
-        previousTransform = previousTransform * node->previousTransform;
+        previousTransform = glm::translate(previousTransform, node.previousTranslate);
+        previousTransform = previousTransform * glm::toMat4(node.previousRotation);
+        previousTransform = glm::scale(previousTransform, node.previousScale);
+        previousTransform = previousTransform * node.previousTransform;
         
         currentTransform = currentTransform * ((1 - mAnimationRemainingTransitionDurationInSec) / mAnimationTransitionDurationInSec)
             + previousTransform * (mAnimationRemainingTransitionDurationInSec / mAnimationTransitionDurationInSec);
@@ -587,38 +557,37 @@ glm::mat4 DrawableVariant::computeNodeLocalTransform(Node const * node) {
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableVariant::computeNodeGlobalTransform(Node * node, Node const * parentNode, bool isParentTransformChanged) {
-    MFA_ASSERT(node != nullptr);
+void DrawableVariant::computeNodeGlobalTransform(Node & node, Node const * parentNode, bool isParentTransformChanged) {
     MFA_ASSERT(parentNode == nullptr || parentNode->isCachedDataValid == true);
     MFA_ASSERT(parentNode != nullptr || isParentTransformChanged == false);
 
     bool isChanged = false;
 
-    if (node->isCachedDataValid == false) {
-        node->cachedLocalTransform = computeNodeLocalTransform(node);
+    if (node.isCachedDataValid == false) {
+        node.cachedLocalTransform = computeNodeLocalTransform(node);
     }
 
-    if (isParentTransformChanged == true || node->isCachedDataValid == false) {
+    if (isParentTransformChanged == true || node.isCachedDataValid == false) {
         if (parentNode == nullptr) {
-            node->cachedGlobalTransform = node->cachedLocalTransform;
+            node.cachedGlobalTransform = node.cachedLocalTransform;
         } else {
-            node->cachedGlobalTransform = parentNode->cachedGlobalTransform * node->cachedLocalTransform;
+            node.cachedGlobalTransform = parentNode->cachedGlobalTransform * node.cachedLocalTransform;
         }
         isChanged = true;
     }
 
-    if ((isChanged || mIsModelTransformChanged) && node->meshNode->hasSubMesh()) {
-        node->cachedModelTransform = mModelTransform * node->cachedGlobalTransform;
+    if ((isChanged || mIsModelTransformChanged) && node.meshNode->hasSubMesh()) {
+        node.cachedModelTransform = mModelTransform * node.cachedGlobalTransform;
     }
-    if (isChanged && node->meshNode->hasSubMesh() && node->meshNode->skin > -1) {
-        node->cachedGlobalInverseTransform = glm::inverse(node->cachedGlobalTransform);
+    if (isChanged && node.meshNode->hasSubMesh() && node.meshNode->skin > -1) {
+        node.cachedGlobalInverseTransform = glm::inverse(node.cachedGlobalTransform);
     }
 
-    node->isCachedDataValid = true;
+    node.isCachedDataValid = true;
 
-    for (auto const childIndex : node->meshNode->children) {
+    for (auto const childIndex : node.meshNode->children) {
         auto & childNode = mNodes[childIndex];
-        computeNodeGlobalTransform(childNode.get(), node, isChanged);
+        computeNodeGlobalTransform(childNode, &node, isChanged);
     }
 }
 
@@ -630,7 +599,7 @@ void DrawableVariant::onUI() {
         return;
     }
 
-    auto & mesh = mEssence->GetGpuModel()->model.mesh;
+    auto & mesh = mEssence->GetGpuModel().model.mesh;
 
     std::vector<char const *> animationsList {mesh.GetAnimationsCount()};
     for (size_t i = 0; i < animationsList.size(); ++i) {
@@ -646,6 +615,45 @@ void DrawableVariant::onUI() {
     );
     SetActiveAnimationIndex(mUISelectedAnimationIndex);
     UI::EndWindow();
+}
+
+//-------------------------------------------------------------------------------------------------
+
+DrawableEssence const * DrawableVariant::GetEssence() const noexcept {
+    return mEssence;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+RT::DrawableVariantId DrawableVariant::GetId() const noexcept {
+    return mId;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+RT::DescriptorSetGroup const & DrawableVariant::CreateDescriptorSetGroup(
+    char const * name, 
+    VkDescriptorSetLayout descriptorSetLayout, 
+    uint32_t descriptorSetCount
+) {
+    MFA_ASSERT(mDescriptorSetGroups.find(name) == mDescriptorSetGroups.end());
+    auto const descriptorSetGroup = RF::CreateDescriptorSets(
+        descriptorSetCount,
+        descriptorSetLayout
+    );
+    mDescriptorSetGroups[name] = descriptorSetGroup;
+    return mDescriptorSetGroups[name];
+}
+
+//-------------------------------------------------------------------------------------------------
+
+RT::DescriptorSetGroup const * DrawableVariant::GetDescriptorSetGroup(char const * name) {
+    MFA_ASSERT(name != nullptr);
+    auto const findResult = mDescriptorSetGroups.find(name);
+    if (findResult != mDescriptorSetGroups.end()) {
+        return &findResult->second;
+    }
+    return nullptr;
 }
 
 //-------------------------------------------------------------------------------------------------

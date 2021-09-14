@@ -1,15 +1,9 @@
 #pragma once
 
-#include "engine/render_system/RenderFrontend.hpp"
-#include "engine/ui_system/UIRecordObject.hpp"
-
-#include <unordered_map>
+#include "engine/render_system/RenderTypes.hpp"
 
 namespace MFA {
 
-namespace RF = RenderFrontend;
-namespace RB = RenderBackend;
-namespace AS = AssetSystem;
 
 class DrawableEssence {
 public:
@@ -31,15 +25,11 @@ public:
         int placeholder1;
     };
 
-    explicit DrawableEssence(RF::GpuModel & model_);
+    explicit DrawableEssence(char const * name, RT::GpuModel const & model_);
 
     ~DrawableEssence();
     
-    DrawableEssence & operator= (DrawableEssence && rhs) noexcept {
-        this->mGpuModel = rhs.mGpuModel;
-        this->mDescriptorSetGroups = std::move(rhs.mDescriptorSetGroups);
-        return *this;
-    }
+    DrawableEssence & operator= (DrawableEssence && rhs) noexcept = delete;
 
     DrawableEssence (DrawableEssence const &) noexcept = delete;
 
@@ -48,33 +38,25 @@ public:
     DrawableEssence & operator = (DrawableEssence const &) noexcept = delete;
 
     [[nodiscard]]
-    RF::GpuModel const * GetGpuModel() const;
+    RT::GpuModel const & GetGpuModel() const;
 
-    [[nodiscard]] RF::UniformBufferGroup const & GetPrimitivesBuffer() const noexcept;
+    [[nodiscard]] RT::UniformBufferGroup const & GetPrimitivesBuffer() const noexcept;
 
     [[nodiscard]]
     uint32_t GetPrimitiveCount() const noexcept {
         return mPrimitiveCount;
     }
 
-    RB::DescriptorSetGroup const & CreateDescriptorSetGroup(
-        char const * name, 
-        VkDescriptorSetLayout descriptorSetLayout, 
-        uint32_t descriptorSetCount
-    );
-
-    RB::DescriptorSetGroup * GetDescriptorSetGroup(char const * name);
+    [[nodiscard]]
+    std::string const & GetName() const noexcept;
 
 private:
 
-private:
+    std::string mName {};
 
-    std::unordered_map<std::string, RB::DescriptorSetGroup> mDescriptorSetGroups {};
+    RT::UniformBufferGroup mPrimitivesBuffer;
 
-    // Note: Order is important
-    RF::UniformBufferGroup mPrimitivesBuffer {};
-
-    RF::GpuModel * mGpuModel = nullptr;
+    RT::GpuModel const & mGpuModel;
     
     uint32_t mPrimitiveCount = 0;
     

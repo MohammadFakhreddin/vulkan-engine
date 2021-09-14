@@ -1,24 +1,22 @@
 #include "DrawableEssence.hpp"
 
 #include "engine/BedrockMemory.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/render_system/RenderFrontend.hpp"
 
 namespace MFA {
 
 //-------------------------------------------------------------------------------------------------
 
-namespace UI = UISystem;
-
-// TODO: We should have one drawableFactory per gpuModel and drawableInstance per instance
-// TODO: Drawables should be separate from factory
 // We need other overrides for easier use as well
-DrawableEssence::DrawableEssence(RF::GpuModel & model_)
-    : mGpuModel(&model_)
+DrawableEssence::DrawableEssence(char const * name, RT::GpuModel const & model_)
+    : mName(name)
+    , mGpuModel(model_)
 {
-    MFA_ASSERT(mGpuModel->valid);
-    MFA_ASSERT(mGpuModel->model.mesh.IsValid());
+    MFA_ASSERT(mName.empty() == false);
+    MFA_ASSERT(mGpuModel.valid);
+    MFA_ASSERT(mGpuModel.model.mesh.IsValid());
     
-    auto & mesh = mGpuModel->model.mesh;
+    auto & mesh = mGpuModel.model.mesh;
 
     {// PrimitiveCount
         mPrimitiveCount = 0;
@@ -72,41 +70,20 @@ DrawableEssence::~DrawableEssence() {
 
 //-------------------------------------------------------------------------------------------------
 
-RF::GpuModel const * DrawableEssence::GetGpuModel() const {
+RT::GpuModel const & DrawableEssence::GetGpuModel() const {
     return mGpuModel;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-RF::UniformBufferGroup const & DrawableEssence::GetPrimitivesBuffer() const noexcept {
+RT::UniformBufferGroup const & DrawableEssence::GetPrimitivesBuffer() const noexcept {
     return mPrimitivesBuffer;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-RB::DescriptorSetGroup const & DrawableEssence::CreateDescriptorSetGroup(
-    char const * name,
-    VkDescriptorSetLayout descriptorSetLayout,
-    uint32_t const descriptorSetCount
-) {
-    MFA_ASSERT(mDescriptorSetGroups.find(name) == mDescriptorSetGroups.end());
-    auto const descriptorSetGroup = RF::CreateDescriptorSets(
-        descriptorSetCount,
-        descriptorSetLayout
-    );
-    mDescriptorSetGroups[name] = descriptorSetGroup;
-    return mDescriptorSetGroups[name];
-}
-
-//-------------------------------------------------------------------------------------------------
-
-RB::DescriptorSetGroup * DrawableEssence::GetDescriptorSetGroup(char const * name) {
-    MFA_ASSERT(name != nullptr);
-    auto const findResult = mDescriptorSetGroups.find(name);
-    if (findResult != mDescriptorSetGroups.end()) {
-        return &findResult->second;
-    }
-    return nullptr;
+std::string const & DrawableEssence::GetName() const noexcept {
+    return mName;
 }
 
 //-------------------------------------------------------------------------------------------------

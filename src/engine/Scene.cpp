@@ -3,19 +3,17 @@
 #include <vector>
 
 #include "libs/imgui/imgui.h"
-#include "render_system/render_passes/DisplayRenderPass.hpp"
+#include "ui_system/UIRecordObject.hpp"
+#include "render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 
 namespace MFA {
 
-namespace UI = UISystem;
-namespace RF = RenderFrontend;
-
 SceneSubSystem::SceneSubSystem()
-    : mUIRecordObject([this]()->void {OnUI();})
+    : mUIRecordObject(std::make_unique<UIRecordObject>([this]()->void {OnUI();}))
 {}
 
 void SceneSubSystem::Init() {
-    mUIRecordObject.Enable();
+    mUIRecordObject->Enable();
     mResizeListenerId = RF::AddResizeEventListener([this]()->void {OnResize();});
     if(mActiveScene < 0 && false == mRegisteredScenes.empty()) {
         mActiveScene = 0;
@@ -35,7 +33,7 @@ void SceneSubSystem::Shutdown() {
     mActiveScene = -1;
     mLastActiveScene = -1;
     mRegisteredScenes.resize(0);
-    mUIRecordObject.Disable();
+    mUIRecordObject->Disable();
 }
 
 void SceneSubSystem::RegisterNew(Scene * scene, char const * name) {
