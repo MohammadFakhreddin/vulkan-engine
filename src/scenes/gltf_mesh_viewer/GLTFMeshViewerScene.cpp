@@ -153,12 +153,12 @@ void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RT::DrawPass & 
         {// Enabling ui for current model
             auto * selectedVariant = mModelsRenderData[mSelectedModelIndex].variant;
             MFA_ASSERT(selectedVariant != nullptr);
-            selectedVariant->EnableUI("Active model", &mIsDrawableObjectWindowVisible);
+            selectedVariant->SetActive(true);
         }
         if (mPreviousModelSelectedIndex >= 0) {// Disabling ui for previous model
             auto * previousVariant = mModelsRenderData[mPreviousModelSelectedIndex].variant;
             MFA_ASSERT(previousVariant != nullptr);
-            previousVariant->DisableUI();
+            previousVariant->SetActive(false);
         }
 
         mPreviousModelSelectedIndex = mSelectedModelIndex;
@@ -249,9 +249,7 @@ void GLTFMeshViewerScene::OnRender(float const deltaTimeInSec, MFA::RT::DrawPass
     MFA_ASSERT(mSelectedModelIndex >= 0 && mSelectedModelIndex < mModelsRenderData.size());
 
     mCamera.onNewFrame(deltaTimeInSec);
-
-    auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
-
+    
     // TODO Pipeline should be able to share buffers such as projection buffer to enable us to update them once
     mPbrPipeline.Render(drawPass, deltaTimeInSec);
     if (mIsLightVisible) {
@@ -280,7 +278,7 @@ void GLTFMeshViewerScene::OnUI() {
     UI::Spacing();
     UI::Checkbox("Camera window", &mIsCameraWindowVisible);
     UI::Spacing();
-    UI::Checkbox("Active model", &mIsDrawableObjectWindowVisible);
+    UI::Checkbox("Active model", &mIsDrawableVariantWindowVisible);
     UI::Spacing(); UI::Spacing();
     UI::Button("Reset values", [this]()->void{
         mPreviousModelSelectedIndex = -1;
@@ -347,7 +345,15 @@ void GLTFMeshViewerScene::OnUI() {
         UI::SliderFloat("ColorB", &mLightColor[2], 0.0f, 400.0f);
         UI::EndWindow();
     }
-   
+
+    if (mIsDrawableVariantWindowVisible) {
+        auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
+        auto * variant = selectedModel.variant;
+        if (variant != nullptr) {
+            variant->OnUI();
+        }
+    }
+
     // TODO Node tree
 }
 
@@ -357,7 +363,7 @@ void GLTFMeshViewerScene::Shutdown() {
     {// Disabling ui for current model
         auto * selectedDrawable = mModelsRenderData[mSelectedModelIndex].variant;
         MFA_ASSERT(selectedDrawable != nullptr);
-        selectedDrawable->DisableUI();
+        selectedDrawable->SetActive(false);
     }
     mCamera.DisableUI();
     mRecordObject.Disable();

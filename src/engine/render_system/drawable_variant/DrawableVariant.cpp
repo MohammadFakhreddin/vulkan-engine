@@ -22,7 +22,6 @@ RT::DrawableVariantId DrawableVariant::NextInstanceId = 0;
 DrawableVariant::DrawableVariant(DrawableEssence const & essence)
     : mId(NextInstanceId)
     , mEssence(&essence)
-    , mRecordUIObject(std::make_unique<UIRecordObject>([this]()->void {onUI();}))
 {
     NextInstanceId += 1;
 
@@ -103,6 +102,9 @@ DrawableVariant::DrawableVariant(DrawableEssence const & essence)
             }
         }
     }
+
+    SetActive(true);
+    mName = std::format("{} Clone({})", mEssence->GetName().c_str(), static_cast<int>(mId));
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -210,6 +212,12 @@ RT::UniformBufferGroup const & DrawableVariant::GetSkinJointsBuffer() const noex
 //-------------------------------------------------------------------------------------------------
 
 void DrawableVariant::Update(float const deltaTimeInSec, RT::DrawPass const & drawPass) {
+    if (mIsActive == false) {
+        return;
+    }
+
+    // If object is not visible we only need to update animation time
+    
     updateAnimation(deltaTimeInSec);
     computeNodesGlobalTransform();
     updateAllSkinsJoints();
@@ -245,27 +253,17 @@ void DrawableVariant::Draw(
     RT::DrawPass & drawPass,
     BindDescriptorSetFunction const & bindFunction
 ) {
+
+    if (mIsActive == false) {
+        return;
+    } 
+
     RF::BindVertexBuffer(drawPass, mEssence->GetGpuModel().meshBuffers.verticesBuffer);
     RF::BindIndexBuffer(drawPass, mEssence->GetGpuModel().meshBuffers.indicesBuffer);
 
     for (auto & node : mNodes) {
         drawNode(drawPass, node, bindFunction);
     }
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void DrawableVariant::EnableUI(char const * windowName, bool * isVisible) {
-    MFA_ASSERT(windowName != nullptr && strlen(windowName) > 0);
-    mRecordUIObject->Enable();
-    mRecordWindowName = "DrawableObject: " + std::string(windowName);
-    mIsUIVisible = isVisible;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void DrawableVariant::DisableUI() {
-    mRecordUIObject->Disable();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -608,12 +606,7 @@ void DrawableVariant::computeNodeGlobalTransform(Node & node, Node const * paren
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableVariant::onUI() {
-    MFA_ASSERT(mIsUIVisible != nullptr);
-    if (*mIsUIVisible == false) {
-        return;
-    }
-
+void DrawableVariant::OnUI() {
     auto & mesh = mEssence->GetGpuModel().model.mesh;
 
     std::vector<char const *> animationsList {mesh.GetAnimationsCount()};
@@ -621,7 +614,7 @@ void DrawableVariant::onUI() {
         animationsList[i] = mesh.GetAnimationByIndex(static_cast<uint32_t>(i)).name.c_str();
     }
 
-    UI::BeginWindow(mRecordWindowName.c_str());
+    UI::BeginWindow(mName.data());
     UI::Combo(
         "Active animation",
         &mUISelectedAnimationIndex,
@@ -630,6 +623,19 @@ void DrawableVariant::onUI() {
     );
     SetActiveAnimationIndex(mUISelectedAnimationIndex);
     UI::EndWindow();
+}
+
+//-------------------------------------------------------------------------------------------------
+
+std::string const & DrawableVariant::GetName() const noexcept {
+    return mName;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void DrawableVariant::SetName(char const * name) {
+    MFA_ASSERT(name != nullptr && strlen(name) > 0);
+    mName = name;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -669,6 +675,18 @@ RT::DescriptorSetGroup const * DrawableVariant::GetDescriptorSetGroup(char const
         return &findResult->second;
     }
     return nullptr;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+bool DrawableVariant::IsActive() const noexcept {
+    return mIsActive;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void DrawableVariant::SetActive(const bool isActive) {
+    mIsActive = isActive;
 }
 
 //-------------------------------------------------------------------------------------------------

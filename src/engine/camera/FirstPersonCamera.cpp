@@ -38,16 +38,38 @@ void FirstPersonCamera::init() {
 }
 
 void FirstPersonCamera::onNewFrame(float const deltaTimeInSec) {
+
+    bool mRotationIsChanged = false;
     if (InputManager::IsLeftMouseDown() == true && UISystem::HasFocus() == false) {
+
         auto const mouseDeltaX = IM::GetMouseDeltaX();
         auto const mouseDeltaY = IM::GetMouseDeltaY();
-        auto const rotationDistance = mRotationSpeed * deltaTimeInSec;
-        mEulerAngles.setY(mEulerAngles.getY() - mouseDeltaX * rotationDistance);    // Reverse for view mat
-        mEulerAngles.setX(Math::Clamp(
-            mEulerAngles.getX() - mouseDeltaY * rotationDistance,
-            -90.0f,
-            90.0f
-        ));    // Reverse for view mat
+
+        if (mouseDeltaX != 0.0f || mouseDeltaY != 0.0f) {
+
+            auto const rotationDistance = mRotationSpeed * deltaTimeInSec;
+            mEulerAngles.setY(mEulerAngles.getY() - mouseDeltaX * rotationDistance);    // Reverse for view mat
+            mEulerAngles.setX(Math::Clamp(
+                mEulerAngles.getX() - mouseDeltaY * rotationDistance,
+                -90.0f,
+                90.0f
+            ));    // Reverse for view mat
+
+            mRotationIsChanged = true;
+
+        }
+    }
+
+    auto const forwardMove = IM::GetForwardMove();
+    auto const rightMove = -1.0f * IM::GetRightMove();
+
+    bool mPositionIsChanged = false;
+    if (forwardMove != 0.0f || rightMove != 0.0f) {
+        mPositionIsChanged = true;
+    }
+
+    if (mPositionIsChanged == false && mRotationIsChanged == false) {
+        return;
     }
 
     auto const rotationMatrix = glm::toMat4(glm::quat(glm::vec3(
@@ -74,8 +96,6 @@ void FirstPersonCamera::onNewFrame(float const deltaTimeInSec) {
     rightDirection = rotationMatrix * rightDirection;
     rightDirection = glm::normalize(rightDirection);
     
-    auto const forwardMove = IM::GetForwardMove();
-    auto const rightMove = -1.0f * IM::GetRightMove();
     auto const moveDistance = mMoveSpeed * deltaTimeInSec;
     
     mViewPosition.setX(mViewPosition.getX() + forwardDirection.x * moveDistance * forwardMove);

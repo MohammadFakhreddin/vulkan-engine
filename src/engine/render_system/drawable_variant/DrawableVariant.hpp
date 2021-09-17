@@ -9,11 +9,14 @@
 
 #include <functional>
 #include <memory>
+#include <string>
 
 namespace MFA {
 
 class DrawableEssence;
 class UIRecordObject;
+
+// TODO: We need bounding sphere to check for visibility
 
 class DrawableVariant {
 public:
@@ -55,7 +58,7 @@ public:
     DrawableVariant (DrawableVariant const &) noexcept = delete;
     DrawableVariant (DrawableVariant &&) noexcept = delete;
     DrawableVariant & operator = (DrawableVariant const &) noexcept = delete;
-    DrawableVariant & operator= (DrawableVariant && rhs) noexcept {
+    DrawableVariant & operator = (DrawableVariant && rhs) noexcept {
         this->mCachedSkinsJointsBlob = rhs.mCachedSkinsJointsBlob;
         this->mCachedSkinsJoints = rhs.mCachedSkinsJoints;
         this->mSkinsJointsBuffer = std::move(rhs.mSkinsJointsBuffer);
@@ -75,11 +78,6 @@ public:
     void AllocStorage(char const * name, size_t size);
 
     Blob GetStorage(char const * name);
-    
-    // We can just call drawUI instead and have way more control
-    void EnableUI(char const * windowName, bool * isVisible);
-
-    void DisableUI();
     
     void Update(float deltaTimeInSec, RT::DrawPass const & drawPass);
 
@@ -115,6 +113,18 @@ public:
     [[nodiscard]]
     RT::DescriptorSetGroup const * GetDescriptorSetGroup(char const * name);
 
+    [[nodiscard]]
+    bool IsActive() const noexcept;
+
+    void SetActive(bool isActive);
+
+    void OnUI();
+
+    [[nodiscard]]
+    std::string const & GetName() const noexcept;
+
+    void SetName(char const * name);
+
 private:
 
     void updateAnimation(float deltaTimeInSec);
@@ -147,8 +157,6 @@ private:
         bool isParentTransformChanged
     );
 
-    void onUI();
-
 private:
 
     static RT::DrawableVariantId NextInstanceId;
@@ -168,11 +176,6 @@ private:
     float mAnimationRemainingTransitionDurationInSec = 0.0f;
 
     int mUISelectedAnimationIndex = 0;
-
-    // TODO We need to separate UI from drawableEssence
-    std::string mRecordWindowName {};
-    std::unique_ptr<UIRecordObject> mRecordUIObject;
-    bool * mIsUIVisible = nullptr;
 
     Blob mCachedSkinsJointsBlob {};
     std::vector<JointTransformData *> mCachedSkinsJoints {};
@@ -196,6 +199,10 @@ private:
 
     std::unordered_map<std::string, RT::DescriptorSetGroup> mDescriptorSetGroups {};
 
+    bool mIsActive = true;     // I'll be back when entity system is complete
+    // bool mIsVisible = false  // Visibility of bounding sphere
+
+    std::string mName {};
 };
 
 };
