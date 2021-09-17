@@ -39,6 +39,8 @@ private:
     std::unique_ptr<UIRecordObject> mUIRecordObject;
 
     RT::ResizeEventListenerId mResizeListenerId = 0;
+    
+    float mCurrentFps = 0.0f;
 };
 
 class Scene {

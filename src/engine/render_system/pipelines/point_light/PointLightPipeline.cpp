@@ -65,7 +65,7 @@ void PointLightPipeline::Render(RT::DrawPass & drawPass, float deltaTime) {
     RF::BindDescriptorSet(drawPass, mDescriptorSetGroup.descriptorSets[drawPass.frameIndex]);
 
     for (auto & essenceAndVariant : mEssenceAndVariantsMap) {
-        for (auto & variant : essenceAndVariant.second.variants) {
+        for (auto & variant : essenceAndVariant.second->variants) {
             variant->Draw(drawPass, [&drawPass, &variant](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void {
                 auto const & storageData = variant->GetStorage("PointLight").as<DrawableStorageData>()[0];
 

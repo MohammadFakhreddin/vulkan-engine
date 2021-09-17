@@ -156,13 +156,13 @@ void BindDescriptorSet(
 void BindVertexBuffer(
     RT::DrawPass const & drawPass, 
     RT::BufferGroup const & vertexBuffer,
-    size_t offset = 0
+    VkDeviceSize offset = 0
 );
 
 void BindIndexBuffer(
     RT::DrawPass const & drawPass, 
     RT::BufferGroup const & indexBuffer,
-    size_t offset = 0,
+    VkDeviceSize offset = 0,
     VkIndexType indexType = VK_INDEX_TYPE_UINT32
 );
 

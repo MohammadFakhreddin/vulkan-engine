@@ -180,6 +180,9 @@ list(
     "src/scenes/gltf_mesh_viewer/GLTFMeshViewerScene.cpp"
     "src/scenes/gltf_mesh_viewer/GLTFMeshViewerScene.hpp"
     
+    "src/scenes/demo_3rd_person_scene/Demo3rdPersonScene.hpp"
+    "src/scenes/demo_3rd_person_scene/Demo3rdPersonScene.cpp"
+    
     # "src/scenes/pbr_scene/PBRScene.cpp"
     # "src/scenes/pbr_scene/PBRScene.hpp"
     

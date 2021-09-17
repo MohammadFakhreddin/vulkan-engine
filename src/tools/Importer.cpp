@@ -82,7 +82,7 @@ AS::Texture ImportInMemoryTexture(
 ) {
     using namespace Utils::UncompressedTexture;
 
-    auto const useSrgb = options.preferSrgb;
+    auto const useSrgb = options.preferSrgb;            // TODO: Variable not used! Why!
     AS::Texture::Dimensions const originalImageDimension {
         static_cast<uint32_t>(width),
         static_cast<uint32_t>(height),
@@ -314,7 +314,7 @@ AS::Mesh ImportObj(char const * path) {
                 FS::Read(file, first_line_blob);
                 std::string const first_line = std::string(first_line_blob.as<char>());
                 if(first_line.find("ccw") != std::string::npos){
-                    is_counter_clockwise = true;
+                    is_counter_clockwise = true;            // TODO: Variable not used! Why?
                 }
             }
 
@@ -992,7 +992,7 @@ static void GLTF_extractSubMeshes(
                     auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
                     MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
                     auto const & buffer = gltfModel.buffers[bufferView.buffer];
-                    colors = reinterpret_cast<const float *>(
+                    colors = reinterpret_cast<const float *>(                           // TODO: Variable not used! Why?
                         &buffer.data[bufferView.byteOffset + accessor.byteOffset]
                     );
                 }

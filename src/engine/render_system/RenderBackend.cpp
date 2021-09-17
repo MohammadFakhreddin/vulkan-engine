@@ -1891,10 +1891,14 @@ void AssignViewportAndScissorToCommandBuffer(
     };
 
     VkRect2D scissor {
-        scissor.offset.x = 0,
-        scissor.offset.y = 0,
-        scissor.extent.width = extent2D.width,
-        scissor.extent.height = extent2D.height,
+        .offset {
+            .x = 0,
+            .y = 0
+        },
+        .extent {
+            .width = extent2D.width,
+            .height = extent2D.height,
+        }
     };
 
     SetViewport(commandBuffer, viewport);

@@ -129,7 +129,7 @@ static uint32_t fragment_shader_spv[] =
     0x00010038
 };
 
-static VkDeviceSize g_BufferMemoryAlignment = 256;
+//static VkDeviceSize g_BufferMemoryAlignment = 256;
 
 struct State {
     RT::SamplerGroup fontSampler {};
@@ -697,6 +697,10 @@ void UnRegister(UIRecordObject * recordObject) {
 
 void SetNextItemWidth(float const nextItemWidth) {
     ImGui::SetNextItemWidth(nextItemWidth);
+}
+
+void Text(char const * label) {
+    ImGui::Text("%s", label);
 }
 
 void InputFloat(char const * label, float * value) {

@@ -25,6 +25,8 @@ void UnRegister(UIRecordObject * recordObject);
 
 void SetNextItemWidth(float nextItemWidth);
 
+void Text(char const * label);
+
 void InputFloat(char const * label, float * value);
 
 void InputFloat2(char const * label, float value[2]);
