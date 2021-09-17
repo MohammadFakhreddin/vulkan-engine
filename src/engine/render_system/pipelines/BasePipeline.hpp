@@ -2,6 +2,11 @@
 
 #include "engine/render_system/RenderTypesFWD.hpp"
 
+#include <string>
+#include <memory>
+#include <unordered_map>
+#include <vector>
+
 namespace MFA {
 
 class DrawableEssence;
@@ -47,13 +52,12 @@ protected:
     virtual void Shutdown();
 
     struct EssenceAndItsVariants {
-        DrawableEssence * essence;
-        std::vector<DrawableVariant *> variants;
-        explicit EssenceAndItsVariants();
-        explicit EssenceAndItsVariants(DrawableEssence * essence);
+        std::unique_ptr<DrawableEssence> essence;
+        std::vector<std::unique_ptr<DrawableVariant>> variants;
+        explicit EssenceAndItsVariants(std::unique_ptr<DrawableEssence> && essence);
     };
 
-    std::unordered_map<std::string, EssenceAndItsVariants> mEssenceAndVariantsMap;
+    std::unordered_map<std::string, std::unique_ptr<EssenceAndItsVariants>> mEssenceAndVariantsMap;
 
 };
 

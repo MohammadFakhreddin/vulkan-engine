@@ -250,9 +250,7 @@ void GLTFMeshViewerScene::OnRender(float const deltaTimeInSec, MFA::RT::DrawPass
 
     mCamera.onNewFrame(deltaTimeInSec);
 
-    auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
-
-    // TODO Pipeline should be able to share buffers such as projection buffer to enable us to update them once
+    // TODO Pipeline should be able to share buffers such as projection buffer to enable us to update them once -> Solution: Store camera buffers inside camera
     mPbrPipeline.Render(drawPass, deltaTimeInSec);
     if (mIsLightVisible) {
         mPointLightPipeline.Render(drawPass, deltaTimeInSec);

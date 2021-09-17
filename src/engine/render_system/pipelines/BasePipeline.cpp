@@ -9,9 +9,7 @@ namespace MFA {
 
 //-------------------------------------------------------------------------------------------------
 
-BasePipeline::BasePipeline()
-    : mEssenceAndVariantsMap({})
-{}
+BasePipeline::BasePipeline() = default;
 
 //-------------------------------------------------------------------------------------------------
 
@@ -24,12 +22,12 @@ void BasePipeline::Init() {}
 //-------------------------------------------------------------------------------------------------
 
 void BasePipeline::Shutdown() {
-    for (auto & essence : mEssenceAndVariantsMap) {
-        delete essence.second.essence;
-        for (auto & variant : essence.second.variants) {
-            delete variant;
-        }
-    }
+//    for (auto & essence : mEssenceAndVariantsMap) {
+//        delete essence.second.essence;
+//        for (auto & variant : essence.second.variants) {
+//            delete variant;
+//        }
+//    }
     mEssenceAndVariantsMap.clear();
 }
 
@@ -40,7 +38,7 @@ void BasePipeline::PreRender(
     float const deltaTime
 ) {
     for (auto & essenceAndVariant : mEssenceAndVariantsMap) {
-        for (auto & variant : essenceAndVariant.second.variants) {
+        for (auto & variant : essenceAndVariant.second->variants) {
             variant->Update(deltaTime, drawPass);
         }
     }
@@ -57,7 +55,7 @@ void BasePipeline::CreateDrawableEssence(char const * essenceName, RT::GpuModel 
     MFA_ASSERT(strlen(essenceName) > 0);
     MFA_ASSERT(mEssenceAndVariantsMap.find(essenceName) == mEssenceAndVariantsMap.end());
 
-    mEssenceAndVariantsMap[essenceName] = EssenceAndItsVariants (new DrawableEssence(essenceName, gpuModel));
+    mEssenceAndVariantsMap[essenceName] = std::make_unique<EssenceAndItsVariants>(EssenceAndItsVariants (std::make_unique<DrawableEssence>(essenceName, gpuModel)));
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -69,8 +67,8 @@ DrawableVariant * BasePipeline::CreateDrawableVariant(char const * essenceName) 
     auto findResult = mEssenceAndVariantsMap.find(essenceName);
     MFA_ASSERT(findResult != mEssenceAndVariantsMap.end());
 
-    findResult->second.variants.emplace_back(new DrawableVariant(*findResult->second.essence));
-    return findResult->second.variants.back();
+    findResult->second->variants.emplace_back(new DrawableVariant(*findResult->second->essence));
+    return findResult->second->variants.back().get();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -85,16 +83,8 @@ void BasePipeline::RemoveDrawableVariant(DrawableVariant * variant) {
 
 //-------------------------------------------------------------------------------------------------
 
-BasePipeline::EssenceAndItsVariants::EssenceAndItsVariants()
-    : essence(nullptr)
-    , variants({})
-{}
-
-//-------------------------------------------------------------------------------------------------
-
-BasePipeline::EssenceAndItsVariants::EssenceAndItsVariants(DrawableEssence * essence)
-    : essence(essence)
-    , variants({})
+BasePipeline::EssenceAndItsVariants::EssenceAndItsVariants(std::unique_ptr<DrawableEssence> && essence)
+    : essence(std::move(essence))
 {}
 
 //-------------------------------------------------------------------------------------------------

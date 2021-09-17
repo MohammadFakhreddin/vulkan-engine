@@ -142,7 +142,7 @@ void PBRWithShadowPipelineV2::PreRender(RT::DrawPass & drawPass, float const del
         mShadowRenderPass->BeginRenderPass(drawPass);
 
         for (auto & essenceAndVariant : mEssenceAndVariantsMap) {
-            for (auto & variant : essenceAndVariant.second.variants) {
+            for (auto & variant : essenceAndVariant.second->variants) {
                 RF::BindDescriptorSet(
                     drawPass, 
                     variant->GetDescriptorSetGroup("PbrWithShadowV2ShadowPipeline")->descriptorSets[drawPass.frameIndex]
@@ -179,7 +179,7 @@ void PBRWithShadowPipelineV2::Render(RT::DrawPass & drawPass, float deltaTime) {
     RF::BindDrawPipeline(drawPass, mDisplayPassPipeline);
     
     for (auto & essenceAndVariant : mEssenceAndVariantsMap) {
-        for (auto & variant : essenceAndVariant.second.variants) {
+        for (auto & variant : essenceAndVariant.second->variants) {
             RF::BindDescriptorSet(
                 drawPass, 
                 variant->GetDescriptorSetGroup("PbrWithShadowV2DisplayPipeline")->descriptorSets[drawPass.frameIndex]

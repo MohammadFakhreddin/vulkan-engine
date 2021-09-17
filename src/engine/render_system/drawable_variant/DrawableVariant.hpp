@@ -9,6 +9,7 @@
 
 #include <functional>
 #include <memory>
+#include <unordered_map>
 
 namespace MFA {
 
