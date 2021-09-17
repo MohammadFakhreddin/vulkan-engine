@@ -52,6 +52,10 @@ void SceneSubSystem::SetActiveScene(char const * name) {
 }
 
 void SceneSubSystem::OnNewFrame(float const deltaTimeInSec) {
+    if (deltaTimeInSec > 0.0f) {
+        mCurrentFps = mCurrentFps * 0.9f + (1.0f / deltaTimeInSec) * 0.1f;
+    }
+
     if(mActiveScene != mLastActiveScene) {
         RF::DeviceWaitIdle();
         if(mLastActiveScene >= 0) {
@@ -106,6 +110,10 @@ void SceneSubSystem::OnResize() {
 
 void SceneSubSystem::OnUI() {
     UI::BeginWindow("Scene Subsystem");
+    
+    UI::SetNextItemWidth(300.0f);
+    UI::Text(("Current fps is " + std::to_string(mCurrentFps)).data());
+    
     UI::SetNextItemWidth(300.0f);
     // TODO Bad for performance, Find a better name
     std::vector<char const *> scene_names {};

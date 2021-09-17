@@ -699,6 +699,10 @@ void SetNextItemWidth(float const nextItemWidth) {
     ImGui::SetNextItemWidth(nextItemWidth);
 }
 
+void Text(char const * label) {
+    ImGui::Text("%s", label);
+}
+
 void InputFloat(char const * label, float * value) {
     ImGui::InputFloat(label, value);
 }
