@@ -9,6 +9,8 @@
 
 #include <ext/matrix_transform.hpp>
 
+#include <string>
+
 namespace MFA {
 
 namespace UI = UISystem;
@@ -104,7 +106,7 @@ DrawableVariant::DrawableVariant(DrawableEssence const & essence)
     }
 
     SetActive(true);
-    mName = std::format("{} Clone({})", mEssence->GetName().c_str(), static_cast<int>(mId));
+    mName = mEssence->GetName() + " Clone(" + std::to_string(mId) + ")";
 }
 
 //-------------------------------------------------------------------------------------------------
