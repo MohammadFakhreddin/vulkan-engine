@@ -5,7 +5,7 @@
 #include "catch.hpp"
 
 #include "engine/BedrockMatrix.hpp"
-#include "engine/camera/ICamera.h"
+#include "engine/camera/CameraBase.h"
 
 //======================================================================
 //----------------------------------------------------------------------

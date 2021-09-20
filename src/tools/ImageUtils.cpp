@@ -8,6 +8,7 @@
 
 #include "../libs/stb_image/stb_image.h"
 #include "engine/BedrockFileSystem.hpp"
+#include "engine/BedrockMath.hpp"
 #include "libs/stb_image/stb_image_resize.h"
 #include "libs/tiny_ktx/tinyktx.h"
 

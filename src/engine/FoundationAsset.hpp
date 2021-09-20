@@ -1,6 +1,5 @@
 #pragma once
 
-#include "BedrockMatrix.hpp"
 #include "BedrockCommon.hpp"
 
 #include <vector>
@@ -18,19 +17,21 @@ enum class AssetType {
 };
 
 //-----------------------------------Asset-------------------------------
+
 class Base {
 public:
+
     virtual ~Base() = default;
+
     [[nodiscard]]
-    virtual int serialize(CBlob const & writeBuffer) {
-        MFA_CRASH("Not implemented");
-    }   // Maybe import BitStream from NSO project
-    virtual void deserialize(CBlob const & readBuffer) {
-        MFA_CRASH("Not implemented");
-    }
+    virtual int serialize(CBlob const & writeBuffer);
+
+    // Maybe import BitStream from NSO project
+    virtual void deserialize(CBlob const & readBuffer);
 };
 
 //----------------------------------Texture------------------------------
+
 class Texture final : public Base {
 public:
     enum class Format {
@@ -177,56 +178,35 @@ public:
     bool isValid() const;
 
     [[nodiscard]]
-    Blob revokeBuffer() {
-        auto const buffer = mBuffer;
-        mBuffer = {};
-        return buffer;
-    }
+    Blob revokeBuffer();
 
     [[nodiscard]]
-    CBlob GetBuffer() const noexcept {
-        return mBuffer;
-    }
+    CBlob GetBuffer() const noexcept;
 
     [[nodiscard]]
-    Format GetFormat() const noexcept {
-        return mFormat;
-    }
+    Format GetFormat() const noexcept;
 
     [[nodiscard]]
-    uint16_t GetSlices() const noexcept {
-        return mSlices;
-    }
+    uint16_t GetSlices() const noexcept;
 
     [[nodiscard]]
-    uint8_t GetMipCount() const noexcept {
-        return mMipCount;
-    }
+    uint8_t GetMipCount() const noexcept;
 
     [[nodiscard]]
-    MipmapInfo const & GetMipmap(uint8_t const mipLevel) const noexcept {
-        return mMipmapInfos[mipLevel];
-    }
+    MipmapInfo const & GetMipmap(uint8_t const mipLevel) const noexcept;
 
     [[nodiscard]]
-    MipmapInfo const * GetMipmaps() const noexcept {
-        return mMipmapInfos.data();
-    }
+    MipmapInfo const * GetMipmaps() const noexcept;
 
     [[nodiscard]]
     uint16_t GetDepth() const noexcept {
         return mDepth;
     }
 
-    void SetSampler(SamplerConfig * sampler) {
-        MFA_ASSERT(sampler != nullptr);
-        mSampler = *sampler;
-    } 
+    void SetSampler(SamplerConfig * sampler);
 
     [[nodiscard]]
-    SamplerConfig const & GetSampler() const noexcept {
-        return mSampler;
-    }
+    SamplerConfig const & GetSampler() const noexcept;
 
 private:
     Format mFormat = Format::INVALID;
@@ -408,31 +388,19 @@ public:
     bool IsValid() const;
 
     [[nodiscard]]
-    CBlob GetVerticesBuffer() const noexcept {
-        return mVertexBuffer;
-    }
+    CBlob GetVerticesBuffer() const noexcept;
 
     [[nodiscard]]
-    CBlob GetIndicesBuffer() const noexcept {
-        return mIndexBuffer;
-    }
+    CBlob GetIndicesBuffer() const noexcept;
 
     [[nodiscard]]
-    uint32_t GetSubMeshCount() const noexcept {
-        return static_cast<uint32_t>(mSubMeshes.size());
-    }
+    uint32_t GetSubMeshCount() const noexcept;
 
     [[nodiscard]]
-    SubMesh const & GetSubMeshByIndex(uint32_t const index) const noexcept {
-        MFA_ASSERT(index < mSubMeshes.size());
-        return mSubMeshes[index];
-    }
+    SubMesh const & GetSubMeshByIndex(uint32_t const index) const noexcept;
 
     [[nodiscard]]
-    SubMesh & GetSubMeshByIndex(uint32_t const index) {
-        MFA_ASSERT(index < mSubMeshes.size());
-        return mSubMeshes[index];
-    }
+    SubMesh & GetSubMeshByIndex(uint32_t const index);
 
     [[nodiscard]]
     SubMesh const * GetSubMeshData() const noexcept {
@@ -440,18 +408,10 @@ public:
     }
 
     [[nodiscard]]
-    Node const & GetNodeByIndex(uint32_t const index) const noexcept {
-        MFA_ASSERT(index >= 0);
-        MFA_ASSERT(index < mNodes.size());
-        return mNodes[index];
-    }
+    Node const & GetNodeByIndex(uint32_t const index) const noexcept;
 
     [[nodiscard]]
-    Node & GetNodeByIndex(uint32_t const index)  {
-        MFA_ASSERT(index >= 0);
-        MFA_ASSERT(index < mNodes.size());
-        return mNodes[index];
-    }
+    Node & GetNodeByIndex(uint32_t const index);
 
     [[nodiscard]]
     uint32_t GetNodesCount() const noexcept {
@@ -464,11 +424,7 @@ public:
     }
 
     [[nodiscard]]
-    Skin const & GetSkinByIndex(uint32_t const index) const noexcept {
-        MFA_ASSERT(index >= 0);
-        MFA_ASSERT(index < mSkins.size());
-        return mSkins[index];
-    }
+    Skin const & GetSkinByIndex(uint32_t const index) const noexcept;
 
     [[nodiscard]]
     uint32_t GetSkinsCount() const noexcept {
@@ -481,11 +437,7 @@ public:
     }
 
     [[nodiscard]]
-    Animation const & GetAnimationByIndex(uint32_t const index) const noexcept {
-        MFA_ASSERT(index >= 0);
-        MFA_ASSERT(index < mAnimations.size());
-        return mAnimations[index];
-    }
+    Animation const & GetAnimationByIndex(uint32_t const index) const noexcept;
 
     [[nodiscard]]
     uint32_t GetAnimationsCount() const noexcept {
@@ -507,26 +459,14 @@ public:
         return mRootNodes.data();
     }
 
-    uint32_t GetIndexOfRootNode(uint32_t const index) const {
-        MFA_ASSERT(index < mRootNodes.size());
-        return mRootNodes[index];
-    }
+    [[nodiscard]]
+    uint32_t GetIndexOfRootNode(uint32_t const index) const;
 
     [[nodiscard]]
-    Node & GetRootNodeByIndex(uint32_t const index) {
-        MFA_ASSERT(index < mRootNodes.size());
-        auto const rootNodeIndex = mRootNodes[index];
-        MFA_ASSERT(rootNodeIndex < mNodes.size());
-        return mNodes[rootNodeIndex];
-    }
+    Node & GetRootNodeByIndex(uint32_t const index);
 
     [[nodiscard]]
-    Node const & GetRootNodeByIndex(uint32_t const index) const {
-        MFA_ASSERT(index < mRootNodes.size());
-        auto const rootNodeIndex = mRootNodes[index];
-        MFA_ASSERT(rootNodeIndex < mNodes.size());
-        return mNodes[rootNodeIndex];
-    }
+    Node const & GetRootNodeByIndex(uint32_t const index) const;
 
     void RevokeBuffers(Blob & outVertexBuffer, Blob & outIndexBuffer);
 

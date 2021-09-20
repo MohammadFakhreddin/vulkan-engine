@@ -1,7 +1,18 @@
 #include "FoundationAsset.hpp"
 
+#include "BedrockAssert.hpp"
+#include "BedrockMath.hpp"
+
 namespace MFA::AssetSystem {
 
+//-------------------------------------------------------------------------------------------------
+
+int Base::serialize(CBlob const & writeBuffer) {
+    MFA_CRASH("Not implemented");
+}
+void Base::deserialize(CBlob const & readBuffer) {
+    MFA_CRASH("Not implemented");
+}
 uint8_t Texture::ComputeMipCount(Dimensions const & dimensions) {
     uint32_t const max_dimension = Math::Max(
         dimensions.width, 
@@ -16,6 +27,8 @@ uint8_t Texture::ComputeMipCount(Dimensions const & dimensions) {
     return 33;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 size_t Texture::MipSizeBytes (
     Format format,
     uint16_t const slices,
@@ -26,6 +39,8 @@ size_t Texture::MipSizeBytes (
     size_t const p = FormatTable[static_cast<unsigned>(format)].bits_total / 8;
     return p * slices * d.width * d.height * d.depth;
 }
+
+//-------------------------------------------------------------------------------------------------
 
 Texture::Dimensions Texture::MipDimensions (
     uint8_t const mipLevel,
@@ -44,6 +59,8 @@ Texture::Dimensions Texture::MipDimensions (
     return ret;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 size_t Texture::CalculateUncompressedTextureRequiredDataSize(
     Format const format,
     uint16_t const slices,
@@ -60,6 +77,8 @@ size_t Texture::CalculateUncompressedTextureRequiredDataSize(
     }
     return ret;
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void Texture::initForWrite(
     const Format format,
@@ -80,6 +99,8 @@ void Texture::initForWrite(
     }
     mBuffer = buffer;
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void Texture::addMipmap(
     Dimensions const & dimension,
@@ -110,6 +131,8 @@ void Texture::addMipmap(
     ++mMipCount;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 size_t Texture::mipOffsetInBytes(uint8_t const mip_level, uint8_t const slice_index) const {
     size_t ret = 0;
     if(mip_level < mMipCount && slice_index < mSlices) {
@@ -117,6 +140,8 @@ size_t Texture::mipOffsetInBytes(uint8_t const mip_level, uint8_t const slice_in
     }
     return ret;
 }
+
+//-------------------------------------------------------------------------------------------------
 
 bool Texture::isValid() const {
     return
@@ -127,6 +152,65 @@ bool Texture::isValid() const {
         mBuffer.ptr != nullptr && 
         mBuffer.len > 0;
 }
+
+//-------------------------------------------------------------------------------------------------
+
+Blob Texture::revokeBuffer() {
+    auto const buffer = mBuffer;
+    mBuffer = {};
+    return buffer;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+CBlob Texture::GetBuffer() const noexcept {
+    return mBuffer;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+Texture::Format Texture::GetFormat() const noexcept {
+    return mFormat;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+uint16_t Texture::GetSlices() const noexcept {
+    return mSlices;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+uint8_t Texture::GetMipCount() const noexcept {
+    return mMipCount;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+Texture::MipmapInfo const & Texture::GetMipmap(uint8_t const mipLevel) const noexcept {
+    return mMipmapInfos[mipLevel];
+}
+
+//-------------------------------------------------------------------------------------------------
+
+Texture::MipmapInfo const * Texture::GetMipmaps() const noexcept {
+    return mMipmapInfos.data();
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void Texture::SetSampler(SamplerConfig * sampler) {
+    MFA_ASSERT(sampler != nullptr);
+    mSampler = *sampler;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+SamplerConfig const & Texture::GetSampler() const noexcept {
+    return mSampler;
+}
+
+//-------------------------------------------------------------------------------------------------
 
 void Mesh::InitForWrite(
     const uint32_t vertexCount,
@@ -147,6 +231,8 @@ void Mesh::InitForWrite(
     MFA_ASSERT(indexBuffer.len > 0);
     mIndexBuffer = indexBuffer;
 }
+
+//-------------------------------------------------------------------------------------------------
 
 // Calling this function is required to generate valid data
 void Mesh::FinalizeData() {
@@ -173,13 +259,17 @@ void Mesh::FinalizeData() {
     }
 }
 
+//-------------------------------------------------------------------------------------------------
+
 uint32_t Mesh::InsertSubMesh() {
     mSubMeshes.emplace_back();
     return static_cast<uint32_t>(mSubMeshes.size() - 1);
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void Mesh::InsertPrimitive(
-    uint32_t subMeshIndex,
+    uint32_t const subMeshIndex,
     Primitive & primitive, 
     uint32_t const vertexCount, 
     Vertex * vertices, 
@@ -208,18 +298,25 @@ void Mesh::InsertPrimitive(
     mNextStartingIndex += indicesCount;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void Mesh::InsertNode(Node const & node) {
     mNodes.emplace_back(node);
 }
 
-void Mesh::InsertSkin(
-Skin const & skin) {
+//-------------------------------------------------------------------------------------------------
+
+void Mesh::InsertSkin(Skin const & skin) {
     mSkins.emplace_back(skin);
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void Mesh::InsertAnimation(Animation const & animation) {
     mAnimations.emplace_back(animation);
 }
+
+//-------------------------------------------------------------------------------------------------
 
 bool Mesh::IsValid() const {
     return
@@ -234,12 +331,105 @@ bool Mesh::IsValid() const {
         mIndexBuffer.len > 0;
 }
 
+//-------------------------------------------------------------------------------------------------
+
+CBlob Mesh::GetVerticesBuffer() const noexcept {
+    return mVertexBuffer;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+CBlob Mesh::GetIndicesBuffer() const noexcept {
+    return mIndexBuffer;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+uint32_t Mesh::GetSubMeshCount() const noexcept {
+    return static_cast<uint32_t>(mSubMeshes.size());
+}
+
+//-------------------------------------------------------------------------------------------------
+
+SubMesh const & Mesh::GetSubMeshByIndex(uint32_t const index) const noexcept {
+    MFA_ASSERT(index < mSubMeshes.size());
+    return mSubMeshes[index];
+}
+
+//-------------------------------------------------------------------------------------------------
+
+SubMesh & Mesh::GetSubMeshByIndex(uint32_t const index) {
+    MFA_ASSERT(index < mSubMeshes.size());
+    return mSubMeshes[index];
+}
+
+//-------------------------------------------------------------------------------------------------
+
+Mesh::Node const & Mesh::GetNodeByIndex(uint32_t const index) const noexcept {
+    MFA_ASSERT(index >= 0);
+    MFA_ASSERT(index < mNodes.size());
+    return mNodes[index];
+}
+
+//-------------------------------------------------------------------------------------------------
+
+Mesh::Node & Mesh::GetNodeByIndex(uint32_t const index) {
+    MFA_ASSERT(index >= 0);
+    MFA_ASSERT(index < mNodes.size());
+    return mNodes[index];
+}
+
+//-------------------------------------------------------------------------------------------------
+
+Mesh::Skin const & Mesh::GetSkinByIndex(uint32_t const index) const noexcept {
+    MFA_ASSERT(index >= 0);
+    MFA_ASSERT(index < mSkins.size());
+    return mSkins[index];
+}
+
+//-------------------------------------------------------------------------------------------------
+
+Mesh::Animation const & Mesh::GetAnimationByIndex(uint32_t const index) const noexcept {
+    MFA_ASSERT(index >= 0);
+    MFA_ASSERT(index < mAnimations.size());
+    return mAnimations[index];
+}
+
+//-------------------------------------------------------------------------------------------------
+
+uint32_t Mesh::GetIndexOfRootNode(uint32_t const index) const {
+    MFA_ASSERT(index < mRootNodes.size());
+    return mRootNodes[index];
+}
+
+//-------------------------------------------------------------------------------------------------
+
+Mesh::Node & Mesh::GetRootNodeByIndex(uint32_t const index) {
+    MFA_ASSERT(index < mRootNodes.size());
+    auto const rootNodeIndex = mRootNodes[index];
+    MFA_ASSERT(rootNodeIndex < mNodes.size());
+    return mNodes[rootNodeIndex];
+}
+
+//-------------------------------------------------------------------------------------------------
+
+Mesh::Node const & Mesh::GetRootNodeByIndex(uint32_t const index) const {
+    MFA_ASSERT(index < mRootNodes.size());
+    auto const rootNodeIndex = mRootNodes[index];
+    MFA_ASSERT(rootNodeIndex < mNodes.size());
+    return mNodes[rootNodeIndex];
+}
+
+//-------------------------------------------------------------------------------------------------
+
 void Mesh::RevokeBuffers(Blob & outVertexBuffer, Blob & outIndexBuffer) {
     outVertexBuffer = mVertexBuffer;
     outIndexBuffer = mIndexBuffer;
     mVertexBuffer = {};
     mIndexBuffer = {};
 }
+
+//-------------------------------------------------------------------------------------------------
 
 
 }

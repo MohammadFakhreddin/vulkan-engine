@@ -6,8 +6,11 @@
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/FoundationAsset.hpp"
 #include "engine/ui_system/UISystem.hpp"
+#include "engine/BedrockAssert.hpp"
 
 #include <ext/matrix_transform.hpp>
+
+#include "engine/BedrockMatrix.hpp"
 
 namespace MFA {
 
@@ -69,8 +72,8 @@ DrawableVariant::DrawableVariant(DrawableEssence const & essence)
 
             node.skin = meshNode.skin > -1 ? &mSkins[meshNode.skin] : nullptr;
 
-            Matrix4X4Float::ConvertCellsToMat4(meshNode.transform, node.currentTransform);
-            Matrix4X4Float::ConvertCellsToMat4(meshNode.transform, node.previousTransform);
+            Matrix::CopyCellsToMat4(meshNode.transform, node.currentTransform);
+            Matrix::CopyCellsToMat4(meshNode.transform, node.previousTransform);
         }
     }
 
@@ -268,23 +271,125 @@ void DrawableVariant::Draw(
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableVariant::UpdateModelTransform(float modelTransform[16]) {
-    if (Matrix4X4Float::IsEqual(mModelTransform, modelTransform) == false) {
-        mModelTransform = Matrix4X4Float::ConvertCellsToMat4(modelTransform);
-        mIsModelTransformChanged = true;
+void DrawableVariant::UpdateTransform(
+    float position[3], 
+    float rotation[3], 
+    float scale[3]
+) {
+    bool hasChanged = false;
+    if (IsEqual<3>(mPosition, position) == false) {
+        Copy<3>(mPosition, position);
+        hasChanged = true;
+    }
+    if (IsEqual<3>(mRotation, rotation) == false) {
+        Copy<3>(mRotation, rotation);
+        hasChanged = true;
+    }
+    if (IsEqual<3>(mScale, scale) == false) {
+        Copy<3>(mScale, scale);
+        hasChanged = true;
+    }
+    if (hasChanged) {
+        computeTransform();
     }
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableVariant::SetActiveAnimationIndex(int const nextAnimationIndex, float transitionDuration) {
+void DrawableVariant::UpdatePosition(float position[3]) {
+    bool hasChanged = false;
+    if (IsEqual<3>(mPosition, position) == false) {
+        Copy<3>(mPosition, position);
+        hasChanged = true;
+    }
+    if (hasChanged) {
+        computeTransform();
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void DrawableVariant::UpdateRotation(float rotation[3]) {
+    bool hasChanged = false;
+    if (IsEqual<3>(mRotation, rotation) == false) {
+        Copy<3>(mRotation, rotation);
+        hasChanged = true;
+    }
+    if (hasChanged) {
+        computeTransform();
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void DrawableVariant::UpdateScale(float scale[3]) {
+    bool hasChanged = false;
+    if (IsEqual<3>(mScale, scale) == false) {
+        Copy<3>(mScale, scale);
+        hasChanged = true;
+    }
+    if (hasChanged) {
+        computeTransform();
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+
+const glm::mat4 & DrawableVariant::GetTransform() const noexcept {
+    return mTransform;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void DrawableVariant::GetPosition(float outPosition[3]) const {
+    Copy<3>(outPosition, mPosition);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void DrawableVariant::GetRotation(float outRotation[3]) const {
+    Copy<3>(outRotation, mRotation);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void DrawableVariant::GetScale(float outScale[3]) const {
+    Copy<3>(outScale, mScale);
+}
+
+//-------------------------------------------------------------------------------------------------
+// TODO I might need transform component
+void DrawableVariant::computeTransform() {
+    // Model
+
+    // Position
+    auto translateMatrix = glm::identity<glm::mat4>();
+    Matrix::GlmTranslate(translateMatrix, mPosition);
+
+    // Scale
+    auto scaleMatrix = glm::identity<glm::mat4>();
+    Matrix::GlmScale(scaleMatrix, mScale);
+    
+    // Rotation
+    auto rotationMatrix = glm::identity<glm::mat4>();
+    Matrix::GlmRotate(rotationMatrix, mRotation);
+
+    mTransform = translateMatrix * scaleMatrix * rotationMatrix;
+
+    mIsModelTransformChanged = true;
+    
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void DrawableVariant::SetActiveAnimationIndex(int const nextAnimationIndex, AnimationParams const & params) {
     if (nextAnimationIndex == mActiveAnimationIndex) {
         return;
     }
     mPreviousAnimationIndex = mActiveAnimationIndex;
     mActiveAnimationIndex = nextAnimationIndex;
-    mAnimationTransitionDurationInSec = transitionDuration;
-    mAnimationRemainingTransitionDurationInSec = transitionDuration;
+    mAnimationTransitionDurationInSec = params.transitionDuration;
+    mAnimationRemainingTransitionDurationInSec = params.transitionDuration;
     mPreviousAnimationTimeInSec = mActiveAnimationTimeInSec;
     mActiveAnimationTimeInSec = mEssence->GetGpuModel().model.mesh.GetAnimationByIndex(mActiveAnimationIndex).startTime;
 }
@@ -334,9 +439,9 @@ void DrawableVariant::updateAnimation(float const deltaTimeInSec) {
                 }
 
                 auto const previousInput = sampler.inputAndOutput[i].input;
-                auto previousOutput = Matrix4X1Float::ConvertCellsToVec4(sampler.inputAndOutput[i].output);
+                auto previousOutput = Matrix::ConvertCellsToVec4(sampler.inputAndOutput[i].output);
                 auto const nextInput = sampler.inputAndOutput[i + 1].input;
-                auto nextOutput = Matrix4X1Float::ConvertCellsToVec4(sampler.inputAndOutput[i + 1].output);
+                auto nextOutput = Matrix::ConvertCellsToVec4(sampler.inputAndOutput[i + 1].output);
                 // Get the input keyframe values for the current time stamp
                 if (mActiveAnimationTimeInSec >= previousInput && mActiveAnimationTimeInSec <= nextInput)
                 {
@@ -413,9 +518,9 @@ void DrawableVariant::updateAnimation(float const deltaTimeInSec) {
                 }
 
                 auto const previousInput = sampler.inputAndOutput[i].input;
-                auto previousOutput = Matrix4X1Float::ConvertCellsToVec4(sampler.inputAndOutput[i].output);
+                auto previousOutput = Matrix::ConvertCellsToVec4(sampler.inputAndOutput[i].output);
                 auto const nextInput = sampler.inputAndOutput[i + 1].input;
-                auto nextOutput = Matrix4X1Float::ConvertCellsToVec4(sampler.inputAndOutput[i + 1].output);
+                auto nextOutput = Matrix::ConvertCellsToVec4(sampler.inputAndOutput[i + 1].output);
                 // Get the input keyframe values for the current time stamp
                 if (mPreviousAnimationTimeInSec >= previousInput && mPreviousAnimationTimeInSec <= nextInput)
                 {
@@ -494,14 +599,14 @@ void DrawableVariant::updateAllSkinsJoints() {
 
 void DrawableVariant::updateSkinJoints(uint32_t const skinIndex, AS::MeshSkin const & skin) {
     // TODO We can do some caching here as well
-    auto & jointMatrices = mCachedSkinsJoints[skinIndex];
+    auto const & jointMatrices = mCachedSkinsJoints[skinIndex];
     for (size_t i = 0; i < skin.joints.size(); i++)
     {
         auto const & joint = mNodes[skin.joints[i]];
         auto const nodeMatrix = joint.cachedGlobalTransform;
         glm::mat4 matrix = nodeMatrix *
-            Matrix4X4Float::ConvertCellsToMat4(skin.inverseBindMatrices[i].value);  // T - S = changes
-        Matrix4X4Float::ConvertGlmToCells(matrix, jointMatrices[i].model);
+            Matrix::CopyCellsToMat4(skin.inverseBindMatrices[i].value);  // T - S = changes
+        Matrix::CopyGlmToCells(matrix, jointMatrices[i].model);
     }
 }
 
@@ -530,7 +635,7 @@ void DrawableVariant::drawNode(
 //-------------------------------------------------------------------------------------------------
 
 void DrawableVariant::drawSubMesh(
-    RT::DrawPass & drawPass,
+    RT::DrawPass const & drawPass,
     AssetSystem::Mesh::SubMesh const & subMesh,
     Node const & node,
     BindDescriptorSetFunction const & bindFunction
@@ -590,7 +695,7 @@ void DrawableVariant::computeNodeGlobalTransform(Node & node, Node const * paren
     }
 
     if ((isChanged || mIsModelTransformChanged) && node.meshNode->hasSubMesh()) {
-        node.cachedModelTransform = mModelTransform * node.cachedGlobalTransform;
+        node.cachedModelTransform = mTransform * node.cachedGlobalTransform;
     }
     if (isChanged && node.meshNode->hasSubMesh() && node.meshNode->skin > -1) {
         node.cachedGlobalInverseTransform = glm::inverse(node.cachedGlobalTransform);
@@ -638,7 +743,7 @@ void DrawableVariant::SetName(char const * name) {
     mName = name;
 }
 
-//-------------------------------------------------------------------------------------------------
+ //-------------------------------------------------------------------------------------------------
 
 DrawableEssence const * DrawableVariant::GetEssence() const noexcept {
     return mEssence;
@@ -655,7 +760,7 @@ RT::DrawableVariantId DrawableVariant::GetId() const noexcept {
 RT::DescriptorSetGroup const & DrawableVariant::CreateDescriptorSetGroup(
     char const * name, 
     VkDescriptorSetLayout descriptorSetLayout, 
-    uint32_t descriptorSetCount
+    uint32_t const descriptorSetCount
 ) {
     MFA_ASSERT(mDescriptorSetGroups.find(name) == mDescriptorSetGroups.end());
     auto const descriptorSetGroup = RF::CreateDescriptorSets(

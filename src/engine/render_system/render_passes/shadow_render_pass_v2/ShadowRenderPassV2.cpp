@@ -1,5 +1,6 @@
 #include "ShadowRenderPassV2.hpp"
 
+#include "engine/BedrockAssert.hpp"
 #include "engine/render_system/render_passes/RenderPass.hpp"
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
@@ -7,13 +8,19 @@
 
 namespace MFA {
 
+//-------------------------------------------------------------------------------------------------
+
 VkRenderPass ShadowRenderPassV2::GetVkRenderPass() {
     return mVkRenderPass;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 RT::DepthImageGroup const & ShadowRenderPassV2::GetDepthCubeMap() const {
     return mDepthCubeMap;
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void ShadowRenderPassV2::internalInit() {
     MFA_ASSERT(mImageWidth > 0);
@@ -67,6 +74,8 @@ void ShadowRenderPassV2::internalInit() {
     mDisplayRenderPass = RF::GetDisplayRenderPass();
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void ShadowRenderPassV2::internalShutdown() {
     RF::DestroyFrameBuffers(1, &mFrameBuffer);
     RF::DestroyRenderPass(mVkRenderPass);
@@ -74,10 +83,14 @@ void ShadowRenderPassV2::internalShutdown() {
     RF::DestroyDepthImage(mDepthImage);
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void ShadowRenderPassV2::SetNextPassParams(int faceIndex) {
     MFA_ASSERT(getIsRenderPassActive() == false);
     mFaceIndex = faceIndex;
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void ShadowRenderPassV2::PrepareCubeMapForTransferDestination(RT::DrawPass const & drawPass) {
     VkImageSubresourceRange const subResourceRange {
@@ -108,6 +121,8 @@ void ShadowRenderPassV2::PrepareCubeMapForTransferDestination(RT::DrawPass const
     );
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void ShadowRenderPassV2::PrepareCubeMapForSampling(RT::DrawPass const & drawPass) {
     VkImageSubresourceRange const subResourceRange {
         .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
@@ -136,6 +151,8 @@ void ShadowRenderPassV2::PrepareCubeMapForSampling(RT::DrawPass const & drawPass
         pipelineBarrier
     );
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void ShadowRenderPassV2::internalBeginRenderPass(RT::DrawPass & drawPass) {
 
@@ -192,6 +209,8 @@ void ShadowRenderPassV2::internalBeginRenderPass(RT::DrawPass & drawPass) {
         clearValues.data()
     );
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void ShadowRenderPassV2::internalEndRenderPass(RT::DrawPass & drawPass) {
     MFA_ASSERT(mFaceIndex >= 0 && mFaceIndex < 6);
@@ -264,8 +283,12 @@ void ShadowRenderPassV2::internalEndRenderPass(RT::DrawPass & drawPass) {
     mFaceIndex = -1;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void ShadowRenderPassV2::internalResize() {
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void ShadowRenderPassV2::createRenderPass() {
     std::vector<VkAttachmentDescription> attachments {};
@@ -329,6 +352,8 @@ void ShadowRenderPassV2::createRenderPass() {
     );
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void ShadowRenderPassV2::createFrameBuffer(VkExtent2D const & shadowExtent) {
 
     // Note: This comment is useful though does not match 100% with my code
@@ -349,5 +374,7 @@ void ShadowRenderPassV2::createFrameBuffer(VkExtent2D const & shadowExtent) {
         1   // * lightCount
     );
 }
+
+//-------------------------------------------------------------------------------------------------
 
 }

@@ -8,6 +8,7 @@
 #include "engine/InputManager.hpp"
 #endif
 
+#include "engine/BedrockAssert.hpp"
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "libs/imgui/imgui.h"
 
@@ -216,9 +217,9 @@ void Init() {
 
     {// FontSampler
         RT::CreateSamplerParams params {};
-        params.min_lod = -1000;
-        params.max_lod = 1000;
-        params.max_anisotropy = 1.0f;
+        params.minLod = -1000;
+        params.maxLod = 1000;
+        params.maxAnisotropy = 1.0f;
         state->fontSampler = RF::CreateSampler(params);
     }
 

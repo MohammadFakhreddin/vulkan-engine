@@ -1,12 +1,17 @@
 #include "Importer.hpp"
 
-#include "../engine/BedrockMemory.hpp"
-#include "../engine/BedrockFileSystem.hpp"
-#include "../tools/ImageUtils.hpp"
+#include "engine/BedrockMemory.hpp"
+#include "engine/BedrockFileSystem.hpp"
+#include "tools/ImageUtils.hpp"
+#include "engine/BedrockAssert.hpp"
+
 #include "libs/tiny_obj_loader/tiny_obj_loader.h"
 #include "libs/tiny_gltf_loader/tiny_gltf_loader.h"
 
 #include <glm/gtx/quaternion.hpp>
+
+#include "engine/BedrockMath.hpp"
+#include "engine/BedrockMatrix.hpp"
 
 namespace MFA::Importer {
 
@@ -452,7 +457,7 @@ AS::Mesh ImportObj(char const * path) {
 
                 auto node = AS::MeshNode {};
                 node.subMeshIndex = static_cast<int>(subMeshIndex);
-                Copy<16>(node.transform, Matrix4X4Float::Identity().cells);
+                Matrix::CopyGlmToCells(glm::identity<glm::mat4>(), node.transform);
                 mesh.InsertNode(node);
                 MFA_ASSERT(mesh.IsValid());
 
@@ -469,8 +474,8 @@ AS::Mesh ImportObj(char const * path) {
 template<typename ItemType>
 static void GLTF_extractDataFromBuffer(
     tinygltf::Model & gltfModel,
-    int accessorIndex,
-    int expectedComponentType,
+    int const accessorIndex,
+    int const expectedComponentType,
     ItemType const * & outData,
     uint32_t & outDataCount 
 ) {
@@ -487,12 +492,12 @@ static void GLTF_extractDataFromBuffer(
 }
 
 static void GLTF_extractDataAndTypeFromBuffer(
-    tinygltf::Model & gltfModel,
+    tinygltf::Model const & gltfModel,
     int accessorIndex,
     int expectedComponentType,
     int & outType,
     void const * & outData,
-    uint32_t & outDataCount 
+    uint32_t & outDataCount
 ) {
     MFA_ASSERT(accessorIndex >= 0);
     auto const & accessor = gltfModel.accessors[accessorIndex];
@@ -581,7 +586,7 @@ struct TextureRef {
 
 static void GLTF_extractTextures(
     char const * path,
-    tinygltf::Model & gltfModel, 
+    tinygltf::Model const & gltfModel, 
     std::vector<TextureRef> & outTextureRefs,
     AS::Model & outResultModel
 ) {
@@ -1537,6 +1542,8 @@ RawFile ReadRawFile(char const * path) {
     return rawFile;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 bool FreeRawFile (RawFile * rawFile) {
     bool ret = false;
     MFA_ASSERT(rawFile != nullptr);
@@ -1548,5 +1555,7 @@ bool FreeRawFile (RawFile * rawFile) {
     }
     return ret;
 }
+
+//-------------------------------------------------------------------------------------------------
 
 }

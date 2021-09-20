@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "BedrockAssert.hpp"
 #include "libs/imgui/imgui.h"
 #include "ui_system/UIRecordObject.hpp"
 #include "render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"

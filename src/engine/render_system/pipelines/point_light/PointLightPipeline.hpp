@@ -3,6 +3,8 @@
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
 
+#include <glm/glm.hpp>
+
 namespace MFA {
     
 class PointLightPipeline final : public BasePipeline {

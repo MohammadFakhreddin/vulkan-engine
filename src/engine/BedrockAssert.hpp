@@ -46,4 +46,20 @@ bool constexpr MFA_VERIFY(bool const condition) {
     return false;
 }
 
+#if defined(__DESKTOP__) || defined(__IOS__)
+#define MFA_VK_VALID(vkVariable) vkVariable != nullptr
+#define MFA_VK_INVALID(vkVariable) vkVariable == nullptr
+#define MFA_VK_VALID_ASSERT(vkVariable) MFA_ASSERT(MFA_VK_VALID(vkVariable))
+#define MFA_VK_INVALID_ASSERT(vkVariable) MFA_ASSERT(MFA_VK_INVALID(vkVariable))
+#define MFA_VK_MAKE_NULL(vkVariable) vkVariable = nullptr
+#elif defined(__ANDROID__)
+#define MFA_VK_VALID(vkVariable) vkVariable != 0
+#define MFA_VK_INVALID(vkVariable) vkVariable == 0
+#define MFA_VK_VALID_ASSERT(vkVariable) MFA_ASSERT(MFA_VK_VALID(vkVariable))
+#define MFA_VK_INVALID_ASSERT(vkVariable) MFA_ASSERT(MFA_VK_INVALID(vkVariable))
+#define MFA_VK_MAKE_NULL(vkVariable) vkVariable = 0
+#else
+#error Unhandled platform
+#endif
+
 namespace MFA::Assert {} // namespace MFA::Assert

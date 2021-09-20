@@ -1,5 +1,6 @@
 #include "DescriptorSetSchema.hpp"
 
+#include "engine/BedrockAssert.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 
 namespace MFA {

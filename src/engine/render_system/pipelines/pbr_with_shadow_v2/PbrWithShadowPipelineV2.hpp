@@ -1,11 +1,9 @@
 #pragma once
 
-#include <fwd.hpp>
-
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
 
-#include <glm/fwd.hpp>
+#include "glm/glm.hpp"
 
 // Optimize this file using https://simoncoenen.com/blog/programming/graphics/DoomEternalStudy
 

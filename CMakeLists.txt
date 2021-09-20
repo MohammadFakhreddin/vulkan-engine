@@ -71,6 +71,7 @@ list(
     "src/engine/BedrockLog.hpp"
     "src/engine/BedrockMath.hpp"
     "src/engine/BedrockMatrix.hpp"
+    "src/engine/BedrockMatrix.cpp"
     "src/engine/BedrockMemory.hpp"
     "src/engine/BedrockMemory.cpp"
     "src/engine/BedrockPlatforms.hpp"
@@ -81,6 +82,7 @@ list(
     # RenderSystem
     "src/engine/render_system/RenderTypes.hpp"
     "src/engine/render_system/RenderTypesFWD.hpp"
+    "src/engine/render_system/RenderTypes.cpp"
     "src/engine/render_system/drawable_essence/DrawableEssence.hpp"
     "src/engine/render_system/drawable_essence/DrawableEssence.cpp"
     "src/engine/render_system/drawable_variant/DrawableVariant.hpp"
@@ -121,9 +123,12 @@ list(
     "src/engine/ui_system/UISystem.hpp"
     "src/engine/ui_system/UISystem.cpp"
 
-    "src/engine/camera/ICamera.h"
-    "src/engine/camera/FirstPersonCamera.hpp"
-    "src/engine/camera/FirstPersonCamera.cpp"
+    "src/engine/camera/CameraBase.hpp"
+    "src/engine/camera/CameraBase.cpp"
+    "src/engine/camera/ObserverCamera.hpp"
+    "src/engine/camera/ObserverCamera.cpp"
+    "src/engine/camera/ThirdPersonCamera.hpp"
+    "src/engine/camera/ThirdPersonCamera.cpp"
     "src/engine/InputManager.hpp"
     "src/engine/InputManager.cpp"
 )

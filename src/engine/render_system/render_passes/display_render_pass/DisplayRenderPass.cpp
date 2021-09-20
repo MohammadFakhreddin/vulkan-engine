@@ -1,5 +1,7 @@
 #include "DisplayRenderPass.hpp"
 
+#include "engine/BedrockAssert.hpp"
+
 namespace MFA {
 
 //-------------------------------------------------------------------------------------------------

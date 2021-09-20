@@ -1,10 +1,10 @@
 #include "Application.hpp"
 
+#include "engine/BedrockAssert.hpp"
 #include "engine/InputManager.hpp"
 #include "scenes/gltf_mesh_viewer/GLTFMeshViewerScene.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/Scene.hpp"
-#include "engine/BedrockFileSystem.hpp"
 
 #ifdef __ANDROID__
 #include <android_native_app_glue.h>
@@ -18,7 +18,6 @@
 namespace RF = MFA::RenderFrontend;
 namespace UI = MFA::UISystem;
 namespace IM = MFA::InputManager;
-namespace FS = MFA::FileSystem;
 #ifdef __DESKTOP__
 namespace MSDL = MFA::MSDL;
 #endif

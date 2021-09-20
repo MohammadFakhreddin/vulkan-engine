@@ -814,7 +814,7 @@ RT::GpuTexture CreateTexture(
         RT::GpuTexture gpuTexture {
             std::move(imageGroup),
             imageView,
-            cpuTexture
+            std::move(cpuTexture)
         };
         MFA_ASSERT(gpuTexture.isValid());
         return gpuTexture;
@@ -1048,13 +1048,13 @@ VkSampler CreateSampler(
     sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 #if defined(__DESKTOP__) || defined(__IOS__)
-    sampler_info.anisotropyEnable = params.anisotropy_enabled;
+    sampler_info.anisotropyEnable = params.anisotropyEnabled;
 #elif defined(__ANDROID__)
     sampler_info.anisotropyEnable = false;
 #else
     #error Os not handled
 #endif
-    sampler_info.maxAnisotropy = params.max_anisotropy;
+    sampler_info.maxAnisotropy = params.maxAnisotropy;
     sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     sampler_info.unnormalizedCoordinates = VK_FALSE;
     /*
@@ -1067,8 +1067,8 @@ VkSampler CreateSampler(
     sampler_info.compareEnable = VK_TRUE;
 #endif
     sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
-    sampler_info.minLod = params.min_lod;
-    sampler_info.maxLod = params.max_lod;
+    sampler_info.minLod = params.minLod;
+    sampler_info.maxLod = params.maxLod;
     sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
     sampler_info.mipLodBias = 0.0f;
 

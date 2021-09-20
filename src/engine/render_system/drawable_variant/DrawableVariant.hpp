@@ -67,14 +67,17 @@ public:
         return *this;
     }
     
-    void UpdateModelTransform(float modelTransform[16]);
-
     [[nodiscard]]
     int GetActiveAnimationIndex() const noexcept {
         return mActiveAnimationIndex;
     }
 
-    void SetActiveAnimationIndex(int const nextAnimationIndex, float transitionDurationInSec = 0.3f);
+    struct AnimationParams {
+        float transitionDuration = 0.3f;
+        bool loop = true;
+    };
+
+    void SetActiveAnimationIndex(int nextAnimationIndex, AnimationParams const & params = {});
 
     void AllocStorage(char const * name, size_t size);
 
@@ -126,7 +129,26 @@ public:
 
     void SetName(char const * name);
 
+    void UpdateTransform(float position[3], float rotation[3], float scale[3]);
+
+    void UpdatePosition(float position[3]);
+
+    void UpdateRotation(float rotation[3]);
+
+    void UpdateScale(float scale[3]);
+
+    [[nodiscard]]
+    glm::mat4 const & GetTransform() const noexcept;
+
+    void GetPosition(float outPosition[3]) const;
+
+    void GetRotation(float outRotation[3]) const;
+
+    void GetScale(float outScale[3]) const;
+
 private:
+
+    void computeTransform();
 
     void updateAnimation(float deltaTimeInSec);
 
@@ -143,7 +165,7 @@ private:
     );
 
     void drawSubMesh(
-        RT::DrawPass & drawPass,
+        RT::DrawPass const & drawPass,
         AS::Mesh::SubMesh const & subMesh,
         Node const & node,
         BindDescriptorSetFunction const & bindFunction
@@ -191,7 +213,10 @@ private:
     std::vector<DirtyBuffer> mDirtyBuffers {};
 
     bool mIsModelTransformChanged = true;
-    glm::mat4 mModelTransform = glm::identity<glm::mat4>();
+    float mPosition[3] {0.0f, 0.0f, 0.0f};
+    float mRotation[3] {0.0f, 0.0f, 0.0f};          // In euler angle
+    float mScale[3] {1.0f, 1.0f, 1.0f};
+    glm::mat4 mTransform = glm::identity<glm::mat4>();
 
     std::vector<Skin> mSkins {};
     std::vector<Node> mNodes {};
@@ -204,6 +229,9 @@ private:
     // bool mIsVisible = false  // Visibility of bounding sphere
 
     std::string mName {};
+
+    AnimationParams mActiveAnimationParams {};
+
 };
 
 };

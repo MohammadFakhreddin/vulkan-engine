@@ -1,5 +1,8 @@
 #include "PbrWithShadowPipelineV2.hpp"
 
+#include <ranges>
+
+#include "engine/BedrockAssert.hpp"
 #include "engine/BedrockPath.hpp"
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "tools/Importer.hpp"
@@ -66,17 +69,15 @@ void PBRWithShadowPipelineV2::Init(
     
     const float ratio = SHADOW_WIDTH / SHADOW_HEIGHT;
 
-    Matrix4X4Float projectionMatrix4X4 {};
-    Matrix4X4Float::PreparePerspectiveProjectionMatrix(
-        projectionMatrix4X4,
+    mShadowProjection = glm::identity<glm::mat4>();
+    Matrix::PreparePerspectiveProjectionMatrix(
+        mShadowProjection,
         ratio,
         FOV,
         mProjectionNear,
         mProjectionFar
     );
-
-    mShadowProjection = Matrix4X4Float::ConvertCellsToMat4(projectionMatrix4X4.cells);
-
+    
     updateShadowViewProjectionData();
         
     RT::DrawPass drawPass {};
@@ -140,9 +141,8 @@ void PBRWithShadowPipelineV2::PreRender(RT::DrawPass & drawPass, float const del
     for (int faceIndex = 0; faceIndex < 6; ++faceIndex) {
         mShadowRenderPass->SetNextPassParams(faceIndex);
         mShadowRenderPass->BeginRenderPass(drawPass);
-
-        for (auto & essenceAndVariant : mEssenceAndVariantsMap) {
-            for (auto & variant : essenceAndVariant.second->variants) {
+        for (auto const & variantsList : mEssenceAndVariantsMap | std::views::values) {
+            for (auto const & variant : variantsList->variants) {
                 RF::BindDescriptorSet(
                     drawPass, 
                     variant->GetDescriptorSetGroup("PbrWithShadowV2ShadowPipeline")->descriptorSets[drawPass.frameIndex]
@@ -155,8 +155,8 @@ void PBRWithShadowPipelineV2::PreRender(RT::DrawPass & drawPass, float const del
                             .faceIndex = faceIndex,
                             .skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1,
                         };
-                        Matrix4X4Float::ConvertGlmToCells(node.cachedModelTransform, pushConstants.modeTransform);
-                        Matrix4X4Float::ConvertGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
+                        Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modeTransform);
+                        Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
                         RF::PushConstants(
                             drawPass,
                             AS::ShaderStage::Vertex,
@@ -178,8 +178,8 @@ void PBRWithShadowPipelineV2::PreRender(RT::DrawPass & drawPass, float const del
 void PBRWithShadowPipelineV2::Render(RT::DrawPass & drawPass, float deltaTime) {
     RF::BindDrawPipeline(drawPass, mDisplayPassPipeline);
     
-    for (auto & essenceAndVariant : mEssenceAndVariantsMap) {
-        for (auto & variant : essenceAndVariant.second->variants) {
+    for (auto const & variantsList : mEssenceAndVariantsMap | std::views::values) {
+        for (auto const & variant : variantsList->variants) {
             RF::BindDescriptorSet(
                 drawPass, 
                 variant->GetDescriptorSetGroup("PbrWithShadowV2DisplayPipeline")->descriptorSets[drawPass.frameIndex]
@@ -191,8 +191,8 @@ void PBRWithShadowPipelineV2::Render(RT::DrawPass & drawPass, float deltaTime) {
                     .skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1,
                     .primitiveIndex = primitive.uniqueId
                 };
-                Matrix4X4Float::ConvertGlmToCells(node.cachedModelTransform, pushConstants.modeTransform);
-                Matrix4X4Float::ConvertGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
+                Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modeTransform);
+                Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
                 RF::PushConstants(
                     drawPass,
                     VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -268,8 +268,7 @@ void PBRWithShadowPipelineV2::UpdateLightColor(const float lightColor[3]) {
 
 void PBRWithShadowPipelineV2::updateDisplayViewProjectionBuffer(RT::DrawPass const & drawPass) {
 
-    auto const viewProjectionMatrix = Matrix4X4Float::ConvertCellsToMat4(mDisplayProjection)
-        * Matrix4X4Float::ConvertCellsToMat4(mDisplayView);
+    auto const viewProjectionMatrix = Matrix::CopyCellsToMat4(mDisplayProjection) * Matrix::CopyCellsToMat4(mDisplayView);
 
     RF::UpdateUniformBuffer(
         mDisplayViewProjectionBuffer.buffers[drawPass.frameIndex],
@@ -304,7 +303,7 @@ void PBRWithShadowPipelineV2::updateShadowLightBuffer(RT::DrawPass const & drawP
 void PBRWithShadowPipelineV2::updateShadowViewProjectionData() {
     auto const lightPositionVector = glm::vec3(mLightPosition[0], mLightPosition[1], mLightPosition[2]);
 
-    Matrix4X4Float::ConvertGlmToCells(
+    Matrix::CopyGlmToCells(
         mShadowProjection * glm::lookAt(
             lightPositionVector, 
             lightPositionVector + glm::vec3( 1.0, 0.0, 0.0), 
@@ -313,7 +312,7 @@ void PBRWithShadowPipelineV2::updateShadowViewProjectionData() {
         mShadowViewProjectionData.viewMatrices[0]
     );
 
-    Matrix4X4Float::ConvertGlmToCells(
+    Matrix::CopyGlmToCells(
         mShadowProjection * glm::lookAt(
             lightPositionVector, 
             lightPositionVector + glm::vec3(-1.0, 0.0, 0.0), 
@@ -322,7 +321,7 @@ void PBRWithShadowPipelineV2::updateShadowViewProjectionData() {
         mShadowViewProjectionData.viewMatrices[1]
     );
 
-    Matrix4X4Float::ConvertGlmToCells(
+    Matrix::CopyGlmToCells(
         mShadowProjection * glm::lookAt(
             lightPositionVector, 
             lightPositionVector + glm::vec3( 0.0, 1.0, 0.0), 
@@ -331,7 +330,7 @@ void PBRWithShadowPipelineV2::updateShadowViewProjectionData() {
         mShadowViewProjectionData.viewMatrices[2]
     );
 
-    Matrix4X4Float::ConvertGlmToCells(
+    Matrix::CopyGlmToCells(
         mShadowProjection * glm::lookAt(
             lightPositionVector, 
             lightPositionVector + glm::vec3( 0.0,-1.0, 0.0), 
@@ -340,7 +339,7 @@ void PBRWithShadowPipelineV2::updateShadowViewProjectionData() {
         mShadowViewProjectionData.viewMatrices[3]
     );
 
-    Matrix4X4Float::ConvertGlmToCells(
+    Matrix::CopyGlmToCells(
         mShadowProjection * glm::lookAt(
             lightPositionVector, 
             lightPositionVector + glm::vec3( 0.0, 0.0, 1.0), 
@@ -349,7 +348,7 @@ void PBRWithShadowPipelineV2::updateShadowViewProjectionData() {
         mShadowViewProjectionData.viewMatrices[4]
     );
 
-    Matrix4X4Float::ConvertGlmToCells(
+    Matrix::CopyGlmToCells(
         mShadowProjection * glm::lookAt(
             lightPositionVector, 
             lightPositionVector + glm::vec3( 0.0, 0.0,-1.0), 
@@ -386,7 +385,7 @@ void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableVariant * 
 
     for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex) {
 
-        auto descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
+        auto const descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
         MFA_VK_VALID_ASSERT(descriptorSet);
 
         DescriptorSetSchema descriptorSetSchema {descriptorSet};
@@ -500,7 +499,7 @@ void PBRWithShadowPipelineV2::CreateShadowPassDescriptorSets(DrawableVariant * v
     
     for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex) {
 
-        auto descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
+        auto const descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
         MFA_VK_VALID_ASSERT(descriptorSet);
        
         DescriptorSetSchema descriptorSetSchema {descriptorSet};

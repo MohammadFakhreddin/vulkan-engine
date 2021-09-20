@@ -1,5 +1,7 @@
 #include "./ShapeGenerator.hpp"
 
+#include "engine/BedrockAssert.hpp"
+#include "engine/BedrockMath.hpp"
 #include "engine/BedrockMatrix.hpp"
 #include "engine/BedrockMemory.hpp"
 
@@ -10,15 +12,15 @@ namespace MFA::ShapeGenerator {
     AssetSystem::Model Sphere(float scaleFactor) {
         AssetSystem::Model model {};
 
-        std::vector<Vector3Float> positions {};
-        std::vector<Vector2Float> uvs {};
-        std::vector<Vector3Float> normals {};
-        std::vector<Vector4Float> tangents {};
+        std::vector<glm::vec3> positions {};
+        std::vector<glm::vec2> uvs {};
+        std::vector<glm::vec3> normals {};
+        std::vector<glm::vec4> tangents {};
 
         std::vector<AS::MeshIndex> meshIndices;
         
-        const unsigned int X_SEGMENTS = 64;
-        const unsigned int Y_SEGMENTS = 64;
+        static constexpr unsigned int X_SEGMENTS = 64;
+        static constexpr unsigned int Y_SEGMENTS = 64;
 
         for (unsigned int y = 0; y <= Y_SEGMENTS; ++y)
         {
@@ -36,20 +38,13 @@ namespace MFA::ShapeGenerator {
                 normals.emplace_back(xPos, yPos, zPos);
 
                 // As solution to compute tangent I decided to rotate normal by 90 degree (In any direction :)))
-                Matrix4X4Float rotationMatrix {};
-                Matrix4X4Float::AssignRotation(rotationMatrix, 0.0f, 0.0f, 90.0f);
-
-                Matrix4X1Float tangentMatrix {};
-                tangentMatrix.setX(xPos);
-                tangentMatrix.setY(yPos);
-                tangentMatrix.setZ(zPos);
-
-                tangentMatrix.multiply(rotationMatrix);
-
-                tangents.emplace_back(Vector4Float {});
-                tangents.back().setX(tangentMatrix.getX());
-                tangents.back().setY(tangentMatrix.getY());
-                tangents.back().setZ(tangentMatrix.getZ());
+                auto rotationMatrix = glm::identity<glm::mat4>();
+                float angle[3] {0.0f, 0.0f, 90.0f};
+                Matrix::GlmRotate(rotationMatrix, angle);
+                
+                glm::vec4 tangentMatrix {xPos, yPos, zPos, 0.0f};
+                
+                tangents.emplace_back(rotationMatrix  * tangentMatrix);
             }
         }
 
@@ -93,35 +88,32 @@ namespace MFA::ShapeGenerator {
         std::vector<AS::MeshVertex> meshVertices (verticesCount);
         
         for (uintmax_t index = 0; index < verticesCount; ++index) {
-            // TODO Use copy inside bedrock
+
             // Positions
-            static_assert(sizeof(meshVertices[index].position) == sizeof(positions[index].cells));
-            ::memcpy(meshVertices[index].position, positions[index].cells, sizeof(positions[index].cells));
+            Matrix::CopyGlmToCells(positions[index], meshVertices[index].position);
+
             // UVs We assign uvs for all materials in case a texture get assigned to shape
             // Base color
-            static_assert(sizeof(meshVertices[index].baseColorUV) == sizeof(uvs[index].cells));
-            ::memcpy(meshVertices[index].baseColorUV, uvs[index].cells, sizeof(uvs[index].cells));
+            Matrix::CopyGlmToCells(uvs[index], meshVertices[index].baseColorUV);
+
             // Metallic
-            static_assert(sizeof(meshVertices[index].metallicUV) == sizeof(uvs[index].cells));
-            ::memcpy(meshVertices[index].metallicUV, uvs[index].cells, sizeof(uvs[index].cells));
+            Matrix::CopyGlmToCells(uvs[index], meshVertices[index].metallicUV);
+
             // Roughness
-            static_assert(sizeof(meshVertices[index].roughnessUV) == sizeof(uvs[index].cells));
-            ::memcpy(meshVertices[index].roughnessUV, uvs[index].cells, sizeof(uvs[index].cells));
+            Matrix::CopyGlmToCells(uvs[index], meshVertices[index].roughnessUV);
+
             // Emission
-            static_assert(sizeof(meshVertices[index].emissionUV) == sizeof(uvs[index].cells));
-            ::memcpy(meshVertices[index].emissionUV, uvs[index].cells, sizeof(uvs[index].cells));
+            Matrix::CopyGlmToCells(uvs[index], meshVertices[index].emissionUV);
+
             // Normals
-            static_assert(sizeof(meshVertices[index].normalMapUV) == sizeof(uvs[index].cells));
-            ::memcpy(meshVertices[index].normalMapUV, uvs[index].cells, sizeof(uvs[index].cells));
+            Matrix::CopyGlmToCells(uvs[index], meshVertices[index].normalMapUV);
+
             // Normal buffer
-            ::memcpy(
-                meshVertices[index].normalValue, 
-                normals[index].cells, 
-                sizeof(normals[index].cells)
-            );
+            Matrix::CopyGlmToCells(normals[index], meshVertices[index].normalValue);
+
             // Tangent buffer
-            static_assert(sizeof(meshVertices[index].tangentValue) == sizeof(tangents[index].cells));
-            ::memcpy(meshVertices[index].tangentValue, tangents[index].cells, sizeof(tangents[index].cells));
+            Matrix::CopyGlmToCells(tangents[index], meshVertices[index].tangentValue);
+
         }
 
         auto const subMeshIndex = model.mesh.InsertSubMesh();
@@ -161,8 +153,8 @@ namespace MFA::ShapeGenerator {
     AssetSystem::Model Sheet() {
         AssetSystem::Model model {};
 
-        std::vector<Vector3Float> positions {};
-        std::vector<Vector2Float> uvs {};
+        std::vector<glm::vec3> positions {};
+        std::vector<glm::vec2> uvs {};
         
         std::vector<AS::MeshIndex> meshIndices;
 
@@ -171,9 +163,9 @@ namespace MFA::ShapeGenerator {
         positions.emplace_back(0.0f, 1.0f, 0.0f);
         positions.emplace_back(1.0f, 1.0f, 0.0f);
 
-        for (int i = 0; i < positions.size(); ++i) {
-            positions[i].set(0, 0, positions[i].get(0, 0) - 0.5f);
-            positions[i].set(1, 0, positions[i].get(1, 0) - 0.5f);
+        for(auto & position : positions) {
+            position[0] = position[0] - 0.5f;
+            position[1] = position[1] - 0.5f;
         }
 
         uvs.emplace_back(0.0f, 0.0f);
@@ -189,8 +181,8 @@ namespace MFA::ShapeGenerator {
         meshIndices.emplace_back(2);
         meshIndices.emplace_back(3);
 
-        uint16_t const indicesCount = static_cast<uint16_t>(meshIndices.size());
-        uint16_t const verticesCount = static_cast<uint16_t>(positions.size());
+        auto const indicesCount = static_cast<uint16_t>(meshIndices.size());
+        auto const verticesCount = static_cast<uint16_t>(positions.size());
 
         model.mesh.InitForWrite(
             verticesCount, 
@@ -203,12 +195,10 @@ namespace MFA::ShapeGenerator {
         
         for (uintmax_t index = 0; index < verticesCount; ++index) {
             // Positions
-            static_assert(sizeof(meshVertices[index].position) == sizeof(positions[index].cells));
-            ::memcpy(meshVertices[index].position, positions[index].cells, sizeof(positions[index].cells));
+            Matrix::CopyGlmToCells(positions[index], meshVertices[index].position);
             // UVs We assign uvs for all materials in case a texture get assigned to shape
             // Base color
-            static_assert(sizeof(meshVertices[index].baseColorUV) == sizeof(uvs[index].cells));
-            ::memcpy(meshVertices[index].baseColorUV, uvs[index].cells, sizeof(uvs[index].cells));
+            Matrix::CopyGlmToCells(uvs[index], meshVertices[index].baseColorUV);
         }
 
         auto const subMeshIndex = model.mesh.InsertSubMesh();
@@ -225,9 +215,7 @@ namespace MFA::ShapeGenerator {
         );
 
         auto node = AS::MeshNode {};
-        auto const identityMatrix = Matrix4X4Float::Identity();
-        ::memcpy(node.transform, identityMatrix.cells, sizeof(node.transform));
-        static_assert(sizeof(node.transform) == sizeof(identityMatrix.cells));
+        Matrix::CopyGlmToCells(glm::identity<glm::mat4>(), node.transform);
         model.mesh.InsertNode(node);
 
         if(model.mesh.IsValid() == false) {

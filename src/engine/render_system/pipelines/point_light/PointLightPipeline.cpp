@@ -1,10 +1,14 @@
 #include "PointLightPipeline.hpp"
 
+#include "engine/BedrockAssert.hpp"
+#include "engine/BedrockMatrix.hpp"
 #include "tools/Importer.hpp"
 #include "engine/BedrockPath.hpp"
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 #include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
+
+#include <ranges>
 
 namespace MFA {
 
@@ -64,14 +68,14 @@ void PointLightPipeline::Render(RT::DrawPass & drawPass, float deltaTime) {
     RF::BindDrawPipeline(drawPass, mDrawPipeline);
     RF::BindDescriptorSet(drawPass, mDescriptorSetGroup.descriptorSets[drawPass.frameIndex]);
 
-    for (auto & essenceAndVariant : mEssenceAndVariantsMap) {
-        for (auto & variant : essenceAndVariant.second->variants) {
+    for (const auto & variantsArray : mEssenceAndVariantsMap | std::views::values) {
+        for (auto & variant : variantsArray->variants) {
             variant->Draw(drawPass, [&drawPass, &variant](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void {
                 auto const & storageData = variant->GetStorage("PointLight").as<DrawableStorageData>()[0];
 
                 PushConstants pushConstants {};
                 Copy<3>(pushConstants.baseColorFactor, storageData.color);
-                Matrix4X4Float::ConvertGlmToCells(node.cachedModelTransform, pushConstants.model);
+                Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.model);
                         
                 RF::PushConstants(
                     drawPass,
@@ -106,8 +110,8 @@ void PointLightPipeline::UpdateLightColor(DrawableVariant * variant, float light
 //-------------------------------------------------------------------------------------------------
 
 void PointLightPipeline::UpdateCameraView(float cameraTransform[16]) {
-    if (Matrix4X4Float::IsEqual(mCameraTransform, cameraTransform) == false) {
-        Matrix4X4Float::ConvertCellsToMat4(cameraTransform, mCameraTransform);
+    if (Matrix::IsEqual(mCameraTransform, cameraTransform) == false) {
+        Matrix::CopyCellsToMat4(cameraTransform, mCameraTransform);
         mViewProjectionBufferDirtyCounter = RF::GetMaxFramesPerFlight();
     }
 }
@@ -115,8 +119,8 @@ void PointLightPipeline::UpdateCameraView(float cameraTransform[16]) {
 //-------------------------------------------------------------------------------------------------
 
 void PointLightPipeline::UpdateCameraProjection(float cameraProjection[16]) {
-    if (Matrix4X4Float::IsEqual(mCameraProjection, cameraProjection) == false) {
-        Matrix4X4Float::ConvertCellsToMat4(cameraProjection, mCameraProjection);
+    if (Matrix::IsEqual(mCameraProjection, cameraProjection) == false) {
+        Matrix::CopyCellsToMat4(cameraProjection, mCameraProjection);
         mViewProjectionBufferDirtyCounter = RF::GetMaxFramesPerFlight();
     }
 }
@@ -129,7 +133,7 @@ void PointLightPipeline::updateViewProjectionBuffer(RT::DrawPass const & drawPas
     }
     if (mViewProjectionBufferDirtyCounter == RF::GetMaxFramesPerFlight()) {
         glm::mat4 const viewProjection = mCameraProjection * mCameraTransform;
-        Matrix4X4Float::ConvertGlmToCells(viewProjection, mViewProjectionData.viewProjection);
+        Matrix::CopyGlmToCells(viewProjection, mViewProjectionData.viewProjection);
     }
     --mViewProjectionBufferDirtyCounter;
     MFA_ASSERT(mViewProjectionBufferDirtyCounter >= 0);
