@@ -166,10 +166,25 @@ void PreparePerspectiveProjectionMatrix(
     float const invDepthDiff = 1.0f / (nearPlane - farPlane);
 
     outMatrix[0][0] = invTan;
+    MFA_ASSERT(outMatrix[0][1] == 0.0f);
+    MFA_ASSERT(outMatrix[0][2] == 0.0f);
+    MFA_ASSERT(outMatrix[0][3] == 0.0f);
+
+    MFA_ASSERT(outMatrix[1][0] == 0.0f);
     outMatrix[1][1] = invTan * aspectRatio;
+    MFA_ASSERT(outMatrix[1][2] == 0.0f);
+    MFA_ASSERT(outMatrix[1][3] == 0.0f);
+
+    MFA_ASSERT(outMatrix[2][0] == 0.0f);
+    MFA_ASSERT(outMatrix[2][1] == 0.0f);
     outMatrix[2][2] = 1.0f * farPlane * invDepthDiff;
-    outMatrix[3][2] = 1.0f * nearPlane * farPlane * invDepthDiff;
     outMatrix[2][3] = -1.0f;
+
+    MFA_ASSERT(outMatrix[3][0] == 0.0f);
+    MFA_ASSERT(outMatrix[3][1] == 0.0f);
+    outMatrix[3][2] = 1.0f * nearPlane * farPlane * invDepthDiff;
+    MFA_ASSERT(outMatrix[3][3] == 0.0f);
+    
 }
 
 //-------------------------------------------------------------------------------------------------

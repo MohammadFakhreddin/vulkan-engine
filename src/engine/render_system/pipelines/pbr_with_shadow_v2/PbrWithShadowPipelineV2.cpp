@@ -69,7 +69,6 @@ void PBRWithShadowPipelineV2::Init(
     
     const float ratio = SHADOW_WIDTH / SHADOW_HEIGHT;
 
-    mShadowProjection = glm::identity<glm::mat4>();
     Matrix::PreparePerspectiveProjectionMatrix(
         mShadowProjection,
         ratio,

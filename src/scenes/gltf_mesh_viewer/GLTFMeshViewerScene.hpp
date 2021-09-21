@@ -2,7 +2,7 @@
 
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/Scene.hpp"
-#include "engine/camera/FirstPersonCamera.hpp"
+#include "engine/camera/ObserverCamera.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
 #include "engine/render_system/pipelines/point_light/PointLightPipeline.hpp"
 
@@ -94,14 +94,14 @@ private:
     }; 
 
     float mModelRotation[3] {45.0f, 45.0f, 45.0f};
-    float m_model_scale = 1.0f;
+    float mModelScale = 1.0f;
     float mModelPosition[3] {0.0f, 0.0f, -6.0f};
 
     float mLightPosition[3] {0.0f, 0.0f, -2.0f};
-    float mLightColor[3]{};
+    float mLightColor[3] {};
 
     std::vector<ModelRenderRequiredData> mModelsRenderData {};
-    int32_t mSelectedModelIndex = 0;
+    int32_t mSelectedModelIndex = 2;
     int32_t mPreviousModelSelectedIndex = -1;
 
     MFA::RT::SamplerGroup mSamplerGroup {};
@@ -135,7 +135,7 @@ private:
 #error Os is not handled
 #endif
 
-    MFA::FirstPersonCamera mCamera {
+    MFA::ObserverCamera mCamera {
         FOV,
         Z_FAR,
         Z_NEAR

@@ -1,16 +1,13 @@
 #include "GLTFMeshViewerScene.hpp"
 
+#include "engine/BedrockAssert.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/BedrockMatrix.hpp"
 #include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 #include "tools/Importer.hpp"
 #include "tools/ShapeGenerator.hpp"
 #include "engine/BedrockPath.hpp"
 
-namespace RF = MFA::RenderFrontend;
-namespace Importer = MFA::Importer;
-namespace UI = MFA::UISystem;
-namespace Path = MFA::Path;
+using namespace MFA;
 
 //-------------------------------------------------------------------------------------------------
 
@@ -114,9 +111,8 @@ void GLTFMeshViewerScene::Init() {
     
     mPointLightPipeline.Init();
 
-    mCamera.init();
-    mCamera.EnableUI("", &mIsCameraWindowVisible);
-
+    mCamera.Init();
+    
     mPbrPipeline.Init(&mSamplerGroup, &mErrorTexture, Z_NEAR, Z_FAR);
 
     // Updating perspective mat once for entire application
@@ -143,6 +139,8 @@ void GLTFMeshViewerScene::Init() {
 }
 
 void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RT::DrawPass & drawPass) {
+    mCamera.OnUpdate(deltaTimeInSec);
+
     auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
 
     if (selectedModel.isLoaded == false) {
@@ -165,7 +163,7 @@ void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RT::DrawPass & 
         // Model
         MFA::Copy<3>(mModelRotation, selectedModel.initialParams.model.rotationEulerAngle);
         MFA::Copy<3>(mModelPosition, selectedModel.initialParams.model.translate);
-        m_model_scale = selectedModel.initialParams.model.scale;
+        mModelScale = selectedModel.initialParams.model.scale;
         MFA::Copy<3>(mModelTranslateMin, selectedModel.initialParams.model.translateMin);
         MFA::Copy<3>(mModelTranslateMax, selectedModel.initialParams.model.translateMax);
         
@@ -175,62 +173,36 @@ void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RT::DrawPass & 
         MFA::Copy<3>(mLightTranslateMin, selectedModel.initialParams.light.translateMin);
         MFA::Copy<3>(mLightTranslateMax, selectedModel.initialParams.light.translateMax);
         
-        mCamera.forcePosition(selectedModel.initialParams.camera.position);
-        mCamera.forceRotation(selectedModel.initialParams.camera.eulerAngles);
+        mCamera.ForcePosition(selectedModel.initialParams.camera.position);
+        mCamera.ForceRotation(selectedModel.initialParams.camera.eulerAngles);
     }
     
     {// LightViewBuffer
         mPbrPipeline.UpdateLightPosition(mLightPosition);
+
         float cameraPosition[3];
         mCamera.GetPosition(cameraPosition);
         mPbrPipeline.UpdateCameraPosition(cameraPosition);
+
         mPbrPipeline.UpdateLightColor(mLightColor);
 
         // LightPosition
-        MFA::Matrix4X4Float translationMat {};
-        MFA::Matrix4X4Float::AssignTranslation(
-            translationMat,
-            mLightPosition[0],
-            mLightPosition[1],
-            mLightPosition[2]
-        );
+        /*glm::mat4 transformMatrix;
+        MFA::Matrix::GlmTranslate(transformMatrix, mLightPosition);
+        mPbrPipeline.UpdateLightPosition(mLightPosition);*/
 
-        mPointLightVariant->UpdateModelTransform(translationMat.cells);
+        mPointLightVariant->UpdatePosition(mLightPosition);
         mPointLightPipeline.UpdateLightColor(mPointLightVariant, mLightColor);
     }
 
     {// Updating PBR-Pipeline
         // Model
-
-        // Rotation
-        MFA::Matrix4X4Float rotationMat {};
-        MFA::Matrix4X4Float::AssignRotation(
-            rotationMat,
-            mModelRotation[0],
-            mModelRotation[1],
-            mModelRotation[2]
+        float scale[3] {mModelScale, mModelScale, mModelScale};
+        selectedModel.variant->UpdateTransform(
+            mModelPosition,
+            mModelRotation,
+            scale
         );
-
-        // Scale
-        MFA::Matrix4X4Float scaleMat {};
-        MFA::Matrix4X4Float::AssignScale(scaleMat, m_model_scale);
-
-        // Position
-        MFA::Matrix4X4Float translationMat {};
-        MFA::Matrix4X4Float::AssignTranslation(
-            translationMat,
-            mModelPosition[0],
-            mModelPosition[1],
-            mModelPosition[2]
-        );
-
-        MFA::Matrix4X4Float transformMat {};
-        MFA::Matrix4X4Float::Identity(transformMat);
-        transformMat.multiply(translationMat);
-        transformMat.multiply(rotationMat);
-        transformMat.multiply(scaleMat);
-        
-        selectedModel.variant->UpdateModelTransform(transformMat.cells);
 
         // View
         float viewData [16];
@@ -246,9 +218,7 @@ void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RT::DrawPass & 
 //-------------------------------------------------------------------------------------------------
 
 void GLTFMeshViewerScene::OnRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass) {
-    MFA_ASSERT(mSelectedModelIndex >= 0 && mSelectedModelIndex < mModelsRenderData.size());
-
-    mCamera.onNewFrame(deltaTimeInSec);
+    MFA_ASSERT(mSelectedModelIndex >= 0 && mSelectedModelIndex < static_cast<int32_t>(mModelsRenderData.size()));
 
     // TODO Pipeline should be able to share buffers such as projection buffer to enable us to update them once -> Solution: Store camera buffers inside camera
     mPbrPipeline.Render(drawPass, deltaTimeInSec);
@@ -313,7 +283,7 @@ void GLTFMeshViewerScene::OnUI() {
         UI::SliderFloat("ZDegree", &mModelRotation[2], -360.0f, 360.0f);
         UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
-        UI::SliderFloat("Scale", &m_model_scale, 0.0f, 1.0f);
+        UI::SliderFloat("Scale", &mModelScale, 0.0f, 1.0f);
         UI::Spacing();
         UI::SetNextItemWidth(ItemWidth);
         UI::SliderFloat("XDistance", &mModelPosition[0], mModelTranslateMin[0], mModelTranslateMax[0]);
@@ -347,11 +317,15 @@ void GLTFMeshViewerScene::OnUI() {
     }
 
     if (mIsDrawableVariantWindowVisible) {
-        auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
+        const auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
         auto * variant = selectedModel.variant;
         if (variant != nullptr) {
             variant->OnUI();
         }
+    }
+
+    if (mIsCameraWindowVisible) {
+        mCamera.OnUI();
     }
 
     // TODO Node tree
@@ -365,7 +339,6 @@ void GLTFMeshViewerScene::Shutdown() {
         MFA_ASSERT(selectedDrawable != nullptr);
         selectedDrawable->SetActive(false);
     }
-    mCamera.DisableUI();
     mRecordObject.Disable();
     mPbrPipeline.Shutdown();
     mPointLightPipeline.Shutdown();
@@ -378,7 +351,7 @@ void GLTFMeshViewerScene::Shutdown() {
 //-------------------------------------------------------------------------------------------------
 
 void GLTFMeshViewerScene::OnResize() {
-    mCamera.onResize();
+    mCamera.OnResize();
     updateProjectionBuffer();
 }
 

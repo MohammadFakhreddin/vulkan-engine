@@ -11,22 +11,6 @@
 #include <vulkan/vulkan.h>
 #endif
 
-#if defined(__DESKTOP__) || defined(__IOS__)
-#define MFA_VK_VALID(vkVariable) vkVariable != nullptr
-#define MFA_VK_INVALID(vkVariable) vkVariable == nullptr
-#define MFA_VK_VALID_ASSERT(vkVariable) MFA_ASSERT(MFA_VK_VALID(vkVariable))
-#define MFA_VK_INVALID_ASSERT(vkVariable) MFA_ASSERT(MFA_VK_INVALID(vkVariable))
-#define MFA_VK_MAKE_NULL(vkVariable) vkVariable = nullptr
-#elif defined(__ANDROID__)
-#define MFA_VK_VALID(vkVariable) vkVariable != 0
-#define MFA_VK_INVALID(vkVariable) vkVariable == 0
-#define MFA_VK_VALID_ASSERT(vkVariable) MFA_ASSERT(MFA_VK_VALID(vkVariable))
-#define MFA_VK_INVALID_ASSERT(vkVariable) MFA_ASSERT(MFA_VK_INVALID(vkVariable))
-#define MFA_VK_MAKE_NULL(vkVariable) vkVariable = 0
-#else
-#error Unhandled platform
-#endif
-
 namespace MFA {
 
 class RenderPass;
@@ -37,25 +21,15 @@ struct BufferGroup {
     VkBuffer buffer {};
     VkDeviceMemory memory {};
     [[nodiscard]]
-    bool isValid() const noexcept {
-        return MFA_VK_VALID(buffer) && MFA_VK_VALID(memory);
-    }
-    void revoke() {
-        MFA_VK_MAKE_NULL(buffer);
-        MFA_VK_MAKE_NULL(memory);
-    }
+    bool isValid() const noexcept;
+    void revoke();
 };
 
 struct SamplerGroup {
     VkSampler sampler;
     [[nodiscard]]
-    bool isValid() const noexcept{
-        return MFA_VK_VALID(sampler);
-    }
-    void revoke() {
-        MFA_ASSERT(isValid());
-        MFA_VK_MAKE_NULL(sampler);
-    }
+    bool isValid() const noexcept;
+    void revoke();
 };
 
 struct MeshBuffers {
@@ -67,29 +41,20 @@ struct ImageGroup {
     VkImage image {};
     VkDeviceMemory memory {};
     [[nodiscard]]
-    bool isValid() const noexcept {
-        return MFA_VK_VALID(image) && MFA_VK_VALID(memory);
-    }
-    void revoke() {
-        MFA_VK_MAKE_NULL(image);
-        MFA_VK_MAKE_NULL(memory);
-    }
+    bool isValid() const noexcept;
+    void revoke();
 };
 
 class GpuTexture {
 public:
 
-    explicit GpuTexture() {}
+    explicit GpuTexture() = default;
 
     explicit GpuTexture(
         ImageGroup && imageGroup, 
         VkImageView imageView, 
-        AS::Texture & cpuTexture
-    )
-        : mImageGroup(imageGroup)
-        , mImageView(imageView)
-        , mCpuTexture(cpuTexture)
-    {}
+        AS::Texture && cpuTexture
+    );
 
     [[nodiscard]]
     AS::Texture const & cpuTexture() const {return mCpuTexture;}
@@ -98,20 +63,9 @@ public:
     AS::Texture & cpuTexture() {return mCpuTexture;}
 
     [[nodiscard]]
-    bool isValid () const {
-        if (mCpuTexture.isValid() == false) {
-            return false;
-        }
-        if (mImageGroup.isValid() == false) {
-            return false;
-        }
-        return MFA_VK_VALID(mImageView);
-    }
+    bool isValid () const;
 
-    void revoke() {
-        mImageGroup.revoke();
-        MFA_VK_MAKE_NULL(mImageView);
-    }
+    void revoke();
 
     [[nodiscard]]
     VkImage const & image() const {return mImageGroup.image;}
@@ -142,11 +96,8 @@ public:
 
     explicit GpuShader() = default;
 
-    explicit GpuShader(VkShaderModule shaderModule, AS::Shader cpuShader)
-        : mShaderModule(shaderModule)
-        , mCpuShader(std::move(cpuShader))
-    {}
-    
+    explicit GpuShader(VkShaderModule shaderModule, AS::Shader cpuShader);
+
     [[nodiscard]]
     AS::Shader & cpuShader() {return mCpuShader;}
 
@@ -154,16 +105,12 @@ public:
     AS::Shader const & cpuShader() const {return mCpuShader;}
 
     [[nodiscard]]
-    bool valid () const {
-        return MFA_VK_VALID(mShaderModule);
-    }
+    bool valid () const;
 
     [[nodiscard]]
     VkShaderModule shaderModule() const {return mShaderModule;}
 
-    void revoke() {
-        MFA_VK_MAKE_NULL(mShaderModule);
-    }
+    void revoke();
 
 private:
 
@@ -178,15 +125,9 @@ struct PipelineGroup {
     VkPipeline graphicPipeline {};
 
     [[nodiscard]]
-    bool isValid() const noexcept {
-        return MFA_VK_VALID(pipelineLayout)
-            && MFA_VK_VALID(graphicPipeline);
-    }
+    bool isValid() const noexcept;
 
-    void revoke() {
-        MFA_VK_MAKE_NULL(pipelineLayout);
-        MFA_VK_MAKE_NULL(graphicPipeline);
-    }
+    void revoke();
 };
 
 struct DrawPass {
@@ -201,17 +142,7 @@ struct UniformBufferGroup {
     std::vector<BufferGroup> buffers;
     size_t bufferSize;
     [[nodiscard]]
-    bool isValid() const noexcept {
-        if(bufferSize <= 0 || buffers.empty() == true) {
-            return false;
-        }
-        for(auto const & buffer : buffers) {
-            if(buffer.isValid() == false) {
-                return false;
-            }
-        }
-        return true;
-    }
+    bool isValid() const noexcept;
 };
 
 struct SwapChainGroup {
@@ -283,10 +214,10 @@ struct CreateGraphicPipelineOptions {
 };
 
 struct CreateSamplerParams {
-    float min_lod = 0;  // Level of detail
-    float max_lod = 1;
-    bool anisotropy_enabled = true;
-    float max_anisotropy = 16.0f;
+    float minLod = 0;  // Level of detail
+    float maxLod = 1;
+    bool anisotropyEnabled = true;
+    float maxAnisotropy = 16.0f;
 };
 
 struct CreateColorImageOptions {

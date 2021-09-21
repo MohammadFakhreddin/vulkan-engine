@@ -149,7 +149,7 @@ private:
     float mProjectionFar = 0.0f;
     float mProjectionFarToNearDistance = 0.0f;
     
-    glm::mat4 mShadowProjection;
+    glm::mat4 mShadowProjection {};
 
     ShadowViewProjectionData mShadowViewProjectionData {};
     
