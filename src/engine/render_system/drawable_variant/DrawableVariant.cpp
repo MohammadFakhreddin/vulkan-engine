@@ -7,10 +7,11 @@
 #include "engine/FoundationAsset.hpp"
 #include "engine/ui_system/UISystem.hpp"
 #include "engine/BedrockAssert.hpp"
+#include "engine/BedrockMatrix.hpp"
 
 #include <ext/matrix_transform.hpp>
 
-#include "engine/BedrockMatrix.hpp"
+#include <string>
 
 namespace MFA {
 
@@ -107,7 +108,7 @@ DrawableVariant::DrawableVariant(DrawableEssence const & essence)
     }
 
     SetActive(true);
-    mName = std::format("{} Clone({})", mEssence->GetName().c_str(), static_cast<int>(mId));
+    mName = mEssence->GetName() + " Clone(" + std::to_string(mId) + ")";
 }
 
 //-------------------------------------------------------------------------------------------------
