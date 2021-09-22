@@ -3,6 +3,7 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/InputManager.hpp"
 #include "scenes/gltf_mesh_viewer/GLTFMeshViewerScene.hpp"
+#include "scenes/demo_3rd_person_scene/Demo3rdPersonScene.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/Scene.hpp"
 
@@ -24,7 +25,8 @@ namespace MSDL = MFA::MSDL;
 
 
 Application::Application()
-    : mGltfMeshViewerScene(std::make_unique<GLTFMeshViewerScene>())
+    : mThirdPersonDemoScene(std::make_unique<Demo3rdPersonScene>())
+    , mGltfMeshViewerScene(std::make_unique<GLTFMeshViewerScene>())
 {}
 
 Application::~Application() = default;
@@ -53,10 +55,11 @@ void Application::Init() {
     }
     UI::Init();
     IM::Init();
-    
+
+    mSceneSubSystem.RegisterNew(mThirdPersonDemoScene.get(), "ThirdPersonDemoScene");
     mSceneSubSystem.RegisterNew(mGltfMeshViewerScene.get(), "GLTFMeshViewerScene");
     
-    mSceneSubSystem.SetActiveScene("GLTFMeshViewerScene");
+    mSceneSubSystem.SetActiveScene("ThirdPersonDemoScene");
     mSceneSubSystem.Init();
 
     mIsInitialized = true;

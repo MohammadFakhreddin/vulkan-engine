@@ -14,10 +14,7 @@ public:
     explicit ThirdPersonCamera(
         float fieldOfView,
         float farPlane,
-        float nearPlane,
-        DrawableVariant * variant, 
-        float distance[3], 
-        float eulerAngles[3]
+        float nearPlane
     );
 
     ~ThirdPersonCamera() override = default;
@@ -27,7 +24,11 @@ public:
     ThirdPersonCamera & operator = (ThirdPersonCamera const &) noexcept = delete;
     ThirdPersonCamera & operator = (ThirdPersonCamera &&) noexcept = delete;
 
-    void Init();
+    void Init(
+        DrawableVariant * variant, 
+        float distance[3], 
+        float eulerAngles[3]
+    );
 
     void OnUpdate(float deltaTime) override;
 
@@ -61,7 +62,7 @@ private:
     float mRelativePosition[3] {};
     float mRelativeEulerAngles[3] {};
     glm::mat4 mTransform {1};
-    glm::mat4 mProjection {1};
+    glm::mat4 mProjection {};
 
     bool mIsTransformDirty = true;
 

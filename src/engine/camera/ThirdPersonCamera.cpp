@@ -12,24 +12,25 @@ namespace MFA {
 ThirdPersonCamera::ThirdPersonCamera(
     float const fieldOfView,
     float const farPlane,
-    float const nearPlane,
-    DrawableVariant * variant,
-    float distance[3], 
-    float eulerAngles[3]
+    float const nearPlane
 )
     : mFieldOfView(fieldOfView)
     , mFarPlane(farPlane)
     , mNearPlane(nearPlane)
-    , mVariant(variant)
-{
-    MFA_ASSERT(mVariant != nullptr);
-    Copy<3>(mRelativePosition, distance);
-    Copy<3>(mRelativeEulerAngles, eulerAngles);
-}
+{}
 
 //-------------------------------------------------------------------------------------------------
 
-void ThirdPersonCamera::Init() {
+void ThirdPersonCamera::Init(
+    DrawableVariant * variant, 
+    float distance[3], 
+    float eulerAngles[3]
+) {
+    mVariant = variant;
+    MFA_ASSERT(mVariant != nullptr);
+    Copy<3>(mRelativePosition, distance);
+    Copy<3>(mRelativeEulerAngles, eulerAngles);
+
     OnResize();
     updateTransform();
 }

@@ -121,15 +121,6 @@ void GLTFMeshViewerScene::Init() {
 
     {// Point light
         auto cpuModel = MFA::ShapeGenerator::Sphere(0.1f);
-
-        for (uint32_t i = 0; i < cpuModel.mesh.GetSubMeshCount(); ++i) {
-            for (auto & primitive : cpuModel.mesh.GetSubMeshByIndex(i).primitives) {
-                primitive.baseColorFactor[0] = 1.0f;
-                primitive.baseColorFactor[1] = 1.0f;
-                primitive.baseColorFactor[2] = 1.0f;
-            }
-        }
-
         mPointLightModel = RF::CreateGpuModel(cpuModel);
         mPointLightPipeline.CreateDrawableEssence("Sphere", mPointLightModel);
         mPointLightVariant = mPointLightPipeline.CreateDrawableVariant("Sphere");

@@ -50,7 +50,6 @@ else()
     add_definitions(-D_DEBUG)
 endif()
 
-# add_definitions (-DGLM_FORCE_LEFT_HANDED )
 include_directories(libs/include/glm)
 
 #-----------------------------------------------------------------------

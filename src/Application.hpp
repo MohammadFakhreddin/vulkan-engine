@@ -4,6 +4,7 @@
 #include "engine/Scene.hpp"
 
 class GLTFMeshViewerScene;
+class Demo3rdPersonScene;
 
 #ifdef __ANDROID__
 struct android_app;
@@ -35,6 +36,8 @@ private:
     bool mIsInitialized = false;
 
     MFA::SceneSubSystem mSceneSubSystem {};
+
+    std::unique_ptr<Demo3rdPersonScene> mThirdPersonDemoScene;
 
     std::unique_ptr<GLTFMeshViewerScene> mGltfMeshViewerScene;
 

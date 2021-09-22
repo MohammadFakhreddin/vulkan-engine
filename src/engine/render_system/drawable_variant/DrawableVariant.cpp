@@ -12,6 +12,7 @@
 #include <ext/matrix_transform.hpp>
 
 #include <string>
+#include <ranges>
 
 namespace MFA {
 
@@ -122,8 +123,8 @@ DrawableVariant::~DrawableVariant() {
     }
     DeleteUniformBuffers();
 
-    for (auto & storedData : mStorageMap) {
-        Memory::Free(storedData.second);
+    for (auto & blob : mStorageMap | std::views::values) {
+        Memory::Free(blob);
     }
 }
 
