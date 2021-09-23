@@ -408,7 +408,7 @@ void DrawableVariant::SetActiveAnimationIndex(int const nextAnimationIndex, Anim
 
 void DrawableVariant::SetActiveAnimation(char const * animationName, AnimationParams const & params) {
     auto const index = mEssence->GetAnimationIndex(animationName);
-    if (MFA_VERIFY(index > 0)) {
+    if (MFA_VERIFY(index >= 0)) {
         SetActiveAnimationIndex(index, params);
     }
 }
@@ -683,7 +683,7 @@ glm::mat4 DrawableVariant::computeNodeLocalTransform(Node const & node) const {
     auto translate = node.currentTranslate;
     auto rotation = node.currentRotation;
     auto scale = node.currentScale;
-    if (mAnimationRemainingTransitionDurationInSec > 0 && mPreviousAnimationIndex > 0) {
+    if (mAnimationRemainingTransitionDurationInSec > 0 && mPreviousAnimationIndex >= 0) {
         auto const fraction = (mAnimationTransitionDurationInSec - mAnimationRemainingTransitionDurationInSec) / mAnimationTransitionDurationInSec;
         translate = glm::mix(node.previousTranslate, translate, fraction);
         rotation = glm::normalize(glm::slerp(node.previousRotation, rotation, fraction));

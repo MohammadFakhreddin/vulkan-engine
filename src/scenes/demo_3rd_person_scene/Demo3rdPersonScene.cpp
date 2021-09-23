@@ -89,11 +89,6 @@ void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPa
         auto const inputForwardMove = IM::GetForwardMove();
         auto const inputRightMove = IM::GetRightMove();
         if (inputForwardMove != 0.0f || inputRightMove != 0.0f) {
-            glm::vec2 moveValue (inputForwardMove, inputRightMove);
-            moveValue = glm::normalize(moveValue);
-            float const forwardMove = moveValue[0];
-            float const rightMove = moveValue[1];
-
             float position [3] {};
             mSoldierVariant->GetPosition(position);
             float scale[3] {};
@@ -105,75 +100,33 @@ void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPa
             mCamera.GetRotation(cameraEulerAngles);
 
             targetEulerAngles[1] = cameraEulerAngles[1];
-
-            auto rotationMatrix = glm::identity<glm::mat4>();
-            Matrix::GlmRotate(rotationMatrix, targetEulerAngles);
-
-            float deltaPosition[3] {};
-        
-            if (forwardMove != 0.0f) {
-                glm::vec4 forwardDirection (
-                    CameraBase::ForwardVector[0], 
-                    CameraBase::ForwardVector[1], 
-                    CameraBase::ForwardVector[2], 
-                    CameraBase::ForwardVector[3]
-                );
-                forwardDirection = forwardDirection * rotationMatrix;
-                forwardDirection = glm::normalize(forwardDirection);
-                forwardDirection *= forwardMove * deltaTimeInSec * SoldierSpeed;
-
-                deltaPosition[0] += forwardDirection[0];
-                deltaPosition[1] += forwardDirection[1];
-                deltaPosition[2] += forwardDirection[2];
-            }
-            if (rightMove != 0.0f) {
-                glm::vec4 rightDirection(
-                    CameraBase::RightVector[0], 
-                    CameraBase::RightVector[1], 
-                    CameraBase::RightVector[2], 
-                    CameraBase::RightVector[3]
-                );
-
-                rightDirection = rightDirection * rotationMatrix;
-                rightDirection = glm::normalize(rightDirection);
-                rightDirection *= rightMove * deltaTimeInSec * SoldierSpeed;
-
-                deltaPosition[0] += rightDirection[0];
-                deltaPosition[1] += rightDirection[1];
-                deltaPosition[2] += rightDirection[2];
-            }
-
-            position[0] += deltaPosition[0];
-            position[1] += deltaPosition[1];
-            position[2] += deltaPosition[2];
-
             float extraAngleValue = 0.0f;
-            if (inputRightMove == 1) {
-                if (inputForwardMove == 1) {
+            if (inputRightMove == 1.0f) {
+                if (inputForwardMove == 1.0f) {
                     extraAngleValue = +45.0f;
-                } else if (inputForwardMove == 0) {
+                } else if (inputForwardMove == 0.0f) {
                     extraAngleValue = +90.0f;
-                } else if (inputForwardMove == -1) {
+                } else if (inputForwardMove == -1.0f) {
                     extraAngleValue = +135.0f;
                 } else {
                     MFA_ASSERT(false);
                 }
-            } else if (inputRightMove == 0) {
-                if (inputForwardMove == 1) {
+            } else if (inputRightMove == 0.0f) {
+                if (inputForwardMove == 1.0f) {
                     extraAngleValue = 0.0f;
-                } else if (inputForwardMove == 0) {
+                } else if (inputForwardMove == 0.0f) {
                     extraAngleValue = 0.0f;
-                } else if (inputForwardMove == -1) {
+                } else if (inputForwardMove == -1.0f) {
                         extraAngleValue = +180.0f;
                 } else {
                     MFA_ASSERT(false);
                 }
-            } else if (inputRightMove == -1) {
-                if (inputForwardMove == 1) {
+            } else if (inputRightMove == -1.0f) {
+                if (inputForwardMove == 1.0f) {
                     extraAngleValue = -45.0f;
-                } else if (inputForwardMove == 0) {
+                } else if (inputForwardMove == 0.0f) {
                     extraAngleValue = -90.0f;
-                } else if (inputForwardMove == -1) {
+                } else if (inputForwardMove == -1.0f) {
                     extraAngleValue = -135.0f;
                 } else {
                     MFA_ASSERT(false);
@@ -181,17 +134,17 @@ void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPa
             } else {
                 MFA_ASSERT(false);
             }
-            targetEulerAngles[1] += extraAngleValue;
             
+            targetEulerAngles[1] += extraAngleValue;
+
             float currentEulerAngles [3];
             mSoldierVariant->GetRotation(currentEulerAngles);
 
-            auto targetQuat = Matrix::GlmToQuat(currentEulerAngles[0], targetEulerAngles[1], currentEulerAngles[2]);
+            auto const targetQuat = Matrix::GlmToQuat(currentEulerAngles[0], targetEulerAngles[1], currentEulerAngles[2]);
 
-            
-            auto currentQuat = Matrix::GlmToQuat(currentEulerAngles[0], currentEulerAngles[1], currentEulerAngles[2]);
+            auto const currentQuat = Matrix::GlmToQuat(currentEulerAngles[0], currentEulerAngles[1], currentEulerAngles[2]);
 
-            auto nextQuat = glm::slerp(currentQuat, targetQuat, 0.1f);
+            auto const nextQuat = glm::slerp(currentQuat, targetQuat, 0.05f);
             auto nextAnglesVec3 = Matrix::GlmToEulerAngles(nextQuat);
 
             float nextAngles[3] {nextAnglesVec3[0], nextAnglesVec3[1], nextAnglesVec3[2]};
@@ -202,19 +155,36 @@ void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPa
                 nextAngles[2] += 180.f;
             }
 
+            auto rotationMatrix = glm::identity<glm::mat4>();
+            Matrix::GlmRotate(rotationMatrix, nextAngles);
+            
+            glm::vec4 forwardDirection (
+                CameraBase::ForwardVector[0], 
+                CameraBase::ForwardVector[1], 
+                CameraBase::ForwardVector[2], 
+                CameraBase::ForwardVector[3]
+            );
+            forwardDirection = forwardDirection * rotationMatrix;
+            forwardDirection = glm::normalize(forwardDirection);
+            forwardDirection *= 1 * deltaTimeInSec * SoldierSpeed;
+
+            position[0] += forwardDirection[0];
+            position[1] += forwardDirection[1];
+            position[2] += forwardDirection[2];
+
             mSoldierVariant->UpdateTransform(
                 position,
                 nextAngles,
                 scale
             );
 
-            mSoldierVariant->SetActiveAnimation("SwordAndShieldRun");
-
-            //}
-
-        
+            mSoldierVariant->SetActiveAnimation("SwordAndShieldRun", {.transitionDuration = 0.2f});
+            
         } else {
-            mSoldierVariant->SetActiveAnimation("SwordAndShieldIdle");
+
+            //mSoldierVariant->SetActiveAnimation("SwordAndShieldIdle");
+            mSoldierVariant->SetActiveAnimation("Idle");
+
         }
     }
     // TODO We should listen for player input and move character here
