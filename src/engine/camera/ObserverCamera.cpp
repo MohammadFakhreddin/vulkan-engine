@@ -79,11 +79,6 @@ void ObserverCamera::OnUpdate(float const deltaTimeInSec) {
     }
 
     auto rotationMatrix = glm::identity<glm::mat4>();
-    /*float reverseEulerAngles [3] {
-        180.0f - mEulerAngles[0], 
-        180.0f - mEulerAngles[1], 
-        180.0f - mEulerAngles[2]
-    };*/
     Matrix::GlmRotate(rotationMatrix, mEulerAngles);
     
     auto forwardDirection = glm::vec4(

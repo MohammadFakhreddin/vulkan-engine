@@ -87,8 +87,8 @@ enum class Platform {
 
 using ScreenSize = int32_t;
 struct ScreenInfo {
-  ScreenSize screen_width = 0;
-  ScreenSize screen_height = 0;
+  ScreenSize screenWidth = 0;
+  ScreenSize screenHeight = 0;
   bool valid = false;
 };
 ScreenInfo ComputeScreenSize();

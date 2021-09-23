@@ -33,21 +33,21 @@ public:
     struct Node {
         AS::MeshNode const * meshNode = nullptr;
 
-        glm::quat currentRotation;     // x, y, z, w
-        glm::vec3 currentScale;
-        glm::vec3 currentTranslate;
-        glm::mat4 currentTransform;
+        glm::quat currentRotation {};     // x, y, z, w
+        glm::vec3 currentScale {};
+        glm::vec3 currentTranslate {};
+        glm::mat4 currentTransform {};
         
-        glm::quat previousRotation;     // x, y, z, w
-        glm::vec3 previousScale;
-        glm::vec3 previousTranslate;
-        glm::mat4 previousTransform;
+        glm::quat previousRotation {};     // x, y, z, w
+        glm::vec3 previousScale {};
+        glm::vec3 previousTranslate {};
+        glm::mat4 previousTransform {};
 
         bool isCachedDataValid = false;
-        glm::mat4 cachedLocalTransform;
-        glm::mat4 cachedGlobalTransform;
-        glm::mat4 cachedModelTransform;
-        glm::mat4 cachedGlobalInverseTransform;
+        glm::mat4 cachedLocalTransform {};
+        glm::mat4 cachedGlobalTransform {};
+        glm::mat4 cachedModelTransform {};
+        glm::mat4 cachedGlobalInverseTransform {};
 
         Skin * skin = nullptr;
     };
@@ -78,6 +78,8 @@ public:
     };
 
     void SetActiveAnimationIndex(int nextAnimationIndex, AnimationParams const & params = {});
+
+    void SetActiveAnimation(char const * animationName, AnimationParams const & params = {});
 
     void AllocStorage(char const * name, size_t size);
 
@@ -145,6 +147,9 @@ public:
     void GetRotation(float outRotation[3]) const;
 
     void GetScale(float outScale[3]) const;
+
+    [[nodiscard]]
+    bool IsCurrentAnimationFinished() const;
 
 private:
 
@@ -231,6 +236,8 @@ private:
     std::string mName {};
 
     AnimationParams mActiveAnimationParams {};
+
+    bool mIsAnimationFinished = false;
 
 };
 

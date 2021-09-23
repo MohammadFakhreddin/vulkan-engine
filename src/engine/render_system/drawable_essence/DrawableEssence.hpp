@@ -50,6 +50,9 @@ public:
     [[nodiscard]]
     std::string const & GetName() const noexcept;
 
+    [[nodiscard]]
+    int GetAnimationIndex(char const * name) const noexcept;
+
 private:
 
     std::string mName {};
@@ -59,6 +62,8 @@ private:
     RT::GpuModel const & mGpuModel;
     
     uint32_t mPrimitiveCount = 0;
+
+    std::unordered_map<std::string, int> mAnimationNameLookupTable {};
     
 };
 

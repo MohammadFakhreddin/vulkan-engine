@@ -59,6 +59,14 @@ DrawableEssence::DrawableEssence(char const * name, RT::GpuModel const & model_)
             RF::UpdateUniformBuffer(mPrimitivesBuffer.buffers[0], primitiveData);
         }
     }
+    {// Animations
+        auto const animationCount = mesh.GetAnimationsCount();
+        for (uint32_t i = 0; i < animationCount; ++i) {
+            auto const & animation = mesh.GetAnimationByIndex(i);
+            MFA_ASSERT(mAnimationNameLookupTable.find(animation.name) == mAnimationNameLookupTable.end());
+            mAnimationNameLookupTable[animation.name] = static_cast<int>(i);
+        }
+    }
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -85,6 +93,16 @@ RT::UniformBufferGroup const & DrawableEssence::GetPrimitivesBuffer() const noex
 
 std::string const & DrawableEssence::GetName() const noexcept {
     return mName;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+int DrawableEssence::GetAnimationIndex(char const * name) const noexcept {
+    auto const findResult = mAnimationNameLookupTable.find(name);
+    if (findResult != mAnimationNameLookupTable.end()) {
+        return findResult->second;
+    }
+    return -1;
 }
 
 //-------------------------------------------------------------------------------------------------

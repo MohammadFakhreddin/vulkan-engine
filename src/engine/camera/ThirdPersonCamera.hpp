@@ -3,6 +3,7 @@
 #include <fwd.hpp>
 
 #include "CameraBase.hpp"
+#include "engine/BedrockPlatforms.hpp"
 
 namespace MFA {
 
@@ -14,7 +15,14 @@ public:
     explicit ThirdPersonCamera(
         float fieldOfView,
         float farPlane,
-        float nearPlane
+        float nearPlane,
+#if defined(__DESKTOP__) || defined(__IOS__)
+        float rotationSpeed = 20.0f
+#elif defined(__ANDROID__)
+        float rotationSpeed = 30.0f
+#else
+#error Os is not handled
+#endif
     );
 
     ~ThirdPersonCamera() override = default;
@@ -26,11 +34,11 @@ public:
 
     void Init(
         DrawableVariant * variant, 
-        float distance[3], 
+        float distance, 
         float eulerAngles[3]
     );
 
-    void OnUpdate(float deltaTime) override;
+    void OnUpdate(float deltaTimeInSec) override;
 
     void OnResize() override;
 
@@ -50,6 +58,10 @@ public:
 
     void GetPosition(float outPosition[3]) const override;
 
+    void GetRotation(float outEulerAngles[3]) const;
+
+    void OnUI() override;
+
 private:
 
     void updateTransform();
@@ -59,12 +71,15 @@ private:
     float const mNearPlane;
 
     DrawableVariant * mVariant = nullptr;
-    float mRelativePosition[3] {};
-    float mRelativeEulerAngles[3] {};
+    float mPosition[3] {};
+    float mEulerAngles[3] {};
+    float mDistance = 0.0f;
     glm::mat4 mTransform {1};
     glm::mat4 mProjection {};
 
     bool mIsTransformDirty = true;
+
+    float mRotationSpeed;
 
 };
 

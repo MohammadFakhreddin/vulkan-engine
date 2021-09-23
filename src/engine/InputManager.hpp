@@ -57,3 +57,7 @@ namespace MFA::InputManager {
 #endif
 
 }
+
+namespace MFA {
+    namespace IM = InputManager;
+}

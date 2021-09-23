@@ -1,9 +1,12 @@
 #include "ThirdPersonCamera.hpp"
 
+#include "engine/InputManager.hpp"
+#include "engine/ui_system/UISystem.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockCommon.hpp"
+#include "engine/BedrockMath.hpp"
 
 namespace MFA {
 
@@ -12,24 +15,29 @@ namespace MFA {
 ThirdPersonCamera::ThirdPersonCamera(
     float const fieldOfView,
     float const farPlane,
-    float const nearPlane
+    float const nearPlane,
+    float const rotationSpeed
 )
     : mFieldOfView(fieldOfView)
     , mFarPlane(farPlane)
     , mNearPlane(nearPlane)
+    , mRotationSpeed(rotationSpeed)
 {}
 
 //-------------------------------------------------------------------------------------------------
 
 void ThirdPersonCamera::Init(
     DrawableVariant * variant, 
-    float distance[3], 
+    float const distance, 
     float eulerAngles[3]
 ) {
     mVariant = variant;
     MFA_ASSERT(mVariant != nullptr);
-    Copy<3>(mRelativePosition, distance);
-    Copy<3>(mRelativeEulerAngles, eulerAngles);
+
+    MFA_ASSERT(distance >= 0);
+    mDistance = distance;
+
+    Copy<3>(mEulerAngles, eulerAngles);
 
     OnResize();
     updateTransform();
@@ -37,7 +45,46 @@ void ThirdPersonCamera::Init(
 
 //-------------------------------------------------------------------------------------------------
 
-void ThirdPersonCamera::OnUpdate(float deltaTime) {
+void ThirdPersonCamera::OnUpdate(float const deltaTimeInSec) {
+    {// Rotation
+        auto const mouseDeltaX = IM::GetMouseDeltaX();
+        auto const mouseDeltaY = IM::GetMouseDeltaY();
+
+        if (mouseDeltaX != 0.0f || mouseDeltaY != 0.0f) {
+
+            auto const rotationDistance = mRotationSpeed * deltaTimeInSec;
+            mEulerAngles[1] = mEulerAngles[1] + mouseDeltaX * rotationDistance;    // Reverse for view mat
+            mEulerAngles[0] = Math::Clamp(
+                mEulerAngles[0] - mouseDeltaY * rotationDistance,
+                -90.0f,
+                90.0f
+            );    // Reverse for view mat
+
+            mIsTransformDirty = true;
+
+        }
+    }
+    {// Position
+        float variantPosition[3];
+        mVariant->GetPosition(variantPosition);
+
+        auto rotationMatrix = glm::identity<glm::mat4>();
+        Matrix::GlmRotate(rotationMatrix, mEulerAngles);
+    
+        glm::vec4 forwardDirection (ForwardVector[0], ForwardVector[1], ForwardVector[2], ForwardVector[3]);
+
+        forwardDirection = forwardDirection * rotationMatrix;
+        forwardDirection = glm::normalize(forwardDirection);
+
+        forwardDirection *= mDistance;
+
+        float cameraPosition[3]{
+            -variantPosition[0] - forwardDirection[0],
+            -variantPosition[1] - forwardDirection[1] + 1.0f,
+            -variantPosition[2] - forwardDirection[2]
+        };
+        ForcePosition(cameraPosition);
+    }
     if (mIsTransformDirty) {
         updateTransform();
     }
@@ -90,8 +137,8 @@ glm::mat4 const & ThirdPersonCamera::GetTransform() const {
 //-------------------------------------------------------------------------------------------------
 
 void ThirdPersonCamera::ForcePosition(float position[3]) {
-    if (IsEqual<3>(mRelativePosition, position) == false) {
-        Copy<3>(mRelativePosition, position);
+    if (IsEqual<3>(mPosition, position) == false) {
+        Copy<3>(mPosition, position);
         mIsTransformDirty = true;
     }
 }
@@ -99,8 +146,8 @@ void ThirdPersonCamera::ForcePosition(float position[3]) {
 //-------------------------------------------------------------------------------------------------
 
 void ThirdPersonCamera::ForceRotation(float eulerAngles[3]) {
-    if (IsEqual<3>(mRelativePosition, eulerAngles) == false) {
-        Copy<3>(mRelativePosition, eulerAngles);
+    if (IsEqual<3>(mPosition, eulerAngles) == false) {
+        Copy<3>(mPosition, eulerAngles);
         mIsTransformDirty = true;
     }
 }
@@ -108,15 +155,17 @@ void ThirdPersonCamera::ForceRotation(float eulerAngles[3]) {
 //-------------------------------------------------------------------------------------------------
 
 void ThirdPersonCamera::GetPosition(float outPosition[3]) const {
-    auto transform = mVariant->GetTransform();
+    outPosition[0] = -1 * mPosition[0];
+    outPosition[1] = -1 * mPosition[1];
+    outPosition[2] = -1 * mPosition[2];
+}
 
-    const auto variantX = transform[0][3];
-    const auto variantY = transform[1][3];
-    const auto variantZ = transform[2][3];
+//-------------------------------------------------------------------------------------------------
 
-    outPosition[0] = -1 * (variantX + mRelativePosition[0]);
-    outPosition[1] = -1 * (variantY + mRelativePosition[1]);
-    outPosition[2] = -1 * (variantZ + mRelativePosition[2]);
+void ThirdPersonCamera::GetRotation(float outEulerAngles[3]) const {
+    outEulerAngles[0] = mEulerAngles[0];
+    outEulerAngles[1] = mEulerAngles[1];
+    outEulerAngles[2] = mEulerAngles[2];
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -125,17 +174,28 @@ void ThirdPersonCamera::updateTransform() {
 
     MFA_ASSERT(mIsTransformDirty == true);
 
-    mTransform = mVariant->GetTransform();
+    auto rotationMatrix = glm::identity<glm::mat4>();
+    Matrix::GlmRotate(rotationMatrix, mEulerAngles);
 
-    // TODO Maybe it is better to rotate on our own
-    Matrix::GlmRotate(mTransform, mRelativeEulerAngles);
-
-    Matrix::GlmTranslate(mTransform, mRelativePosition);
+    auto translateMatrix = glm::identity<glm::mat4>();
+    Matrix::GlmTranslate(translateMatrix, mPosition);
+    
+    mTransform = rotationMatrix * translateMatrix;
 
     mIsTransformDirty = false;
 
 }
 
 //-------------------------------------------------------------------------------------------------
+
+void ThirdPersonCamera::OnUI() {
+    UI::BeginWindow(mName.c_str());
+    UI::InputFloat3("Position", mPosition);
+    UI::InputFloat3("EulerAngles", mEulerAngles);
+    UI::EndWindow();
+}
+
+//-------------------------------------------------------------------------------------------------
+
 
 }

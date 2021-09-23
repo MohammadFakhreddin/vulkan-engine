@@ -15,8 +15,8 @@ ScreenInfo ComputeScreenSize() {
     #if defined(__PLATFORM_WIN__)
         auto const real_screen_width = static_cast<int>(GetSystemMetrics(SM_CXSCREEN));
         auto const real_screen_height = static_cast<int>(GetSystemMetrics(SM_CYSCREEN));
-        ret.screen_width = static_cast<ScreenSize>(real_screen_width);
-        ret.screen_height = static_cast<ScreenSize>(real_screen_height);
+        ret.screenWidth = static_cast<ScreenSize>(real_screen_width);
+        ret.screenHeight = static_cast<ScreenSize>(real_screen_height);
         ret.valid = true;
     #elif defined(__PLATFORM_MAC__)
         auto main_display_id = CGMainDisplayID();	

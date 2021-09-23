@@ -109,6 +109,13 @@ glm::quat GlmToQuat(const float x, const float y, const float z) {
 
 //-------------------------------------------------------------------------------------------------
 
+// Returns degree
+glm::vec3 GlmToEulerAngles(glm::quat const & quaternion) {
+    return glm::degrees(glm::eulerAngles(quaternion));
+}
+
+//-------------------------------------------------------------------------------------------------
+
 void GlmRotate(glm::mat4 & transform, float eulerAngles[3]) {
     transform = glm::rotate(transform, glm::radians(eulerAngles[0]), glm::vec3(1.0f, 0.0f, 0.0f));
     transform = glm::rotate(transform, glm::radians(eulerAngles[1]), glm::vec3(0.0f, 1.0f, 0.0f));

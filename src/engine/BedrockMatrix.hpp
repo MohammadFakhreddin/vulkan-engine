@@ -28,6 +28,9 @@ namespace MFA::Matrix
     [[nodiscard]]
     glm::quat GlmToQuat(float x, float y, float z);
 
+    [[nodiscard]]
+    glm::vec3 GlmToEulerAngles(glm::quat const & quaternion);
+
     void GlmRotate(glm::mat4 & transform, float eulerAngles[3]);
 
     void GlmScale(glm::mat4 & transform, float scale[3]);

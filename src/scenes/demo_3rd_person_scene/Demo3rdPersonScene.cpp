@@ -1,10 +1,11 @@
 #include "Demo3rdPersonScene.hpp"
 
+#include "engine/BedrockAssert.hpp"
 #include "engine/BedrockPath.hpp"
 #include "tools/Importer.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/BedrockPath.hpp"
 #include "tools/ShapeGenerator.hpp"
+#include "engine/InputManager.hpp"
 
 using namespace MFA;
 
@@ -48,8 +49,6 @@ void Demo3rdPersonScene::Init() {
         
         mPointLightVariant->UpdatePosition(mLightPosition);
         mPointLightPipeline.UpdateLightColor(mPointLightVariant, mLightColor);
-
-        mPointLightVariant->SetActive(false);
     }
     {// Soldier
         auto cpuModel = Importer::ImportGLTF(Path::Asset("models/warcraft_3_alliance_footmanfanmade/scene.gltf").c_str());
@@ -74,15 +73,8 @@ void Demo3rdPersonScene::Init() {
         mMapVariant->UpdateTransform(position, eulerAngle, scale);
     }
     {// Camera
-        float distance[3] {0.0f, 0.0f, 5.0f};
-        float eulerAngle[3] {0.0f, 0.0f, 0.0f};
-        //mCamera.Init(mSoldierVariant, distance, eulerAngle);
-        mCamera.Init();
-
-        float position[3] {0.104f, 1.286f, 4.952f};
-        float eulerAngles[3] {-12.0f, 3.0f, 0.0f};
-        mCamera.ForcePosition(position);
-        mCamera.ForceRotation(eulerAngles);
+        float eulerAngle[3] {-15.0f, 0.0f, 0.0f};
+        mCamera.Init(mSoldierVariant, 3.0f, eulerAngle);
 
         updateProjectionBuffer();
     }
@@ -92,6 +84,139 @@ void Demo3rdPersonScene::Init() {
 //-------------------------------------------------------------------------------------------------
 
 void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass) {
+    {// Soldier
+        static constexpr float SoldierSpeed = 5.0f;
+        auto const inputForwardMove = IM::GetForwardMove();
+        auto const inputRightMove = IM::GetRightMove();
+        if (inputForwardMove != 0.0f || inputRightMove != 0.0f) {
+            glm::vec2 moveValue (inputForwardMove, inputRightMove);
+            moveValue = glm::normalize(moveValue);
+            float const forwardMove = moveValue[0];
+            float const rightMove = moveValue[1];
+
+            float position [3] {};
+            mSoldierVariant->GetPosition(position);
+            float scale[3] {};
+            mSoldierVariant->GetScale(scale);
+            float targetEulerAngles[3] {};
+            mSoldierVariant->GetRotation(targetEulerAngles);
+
+            float cameraEulerAngles[3];
+            mCamera.GetRotation(cameraEulerAngles);
+
+            targetEulerAngles[1] = cameraEulerAngles[1];
+
+            auto rotationMatrix = glm::identity<glm::mat4>();
+            Matrix::GlmRotate(rotationMatrix, targetEulerAngles);
+
+            float deltaPosition[3] {};
+        
+            if (forwardMove != 0.0f) {
+                glm::vec4 forwardDirection (
+                    CameraBase::ForwardVector[0], 
+                    CameraBase::ForwardVector[1], 
+                    CameraBase::ForwardVector[2], 
+                    CameraBase::ForwardVector[3]
+                );
+                forwardDirection = forwardDirection * rotationMatrix;
+                forwardDirection = glm::normalize(forwardDirection);
+                forwardDirection *= forwardMove * deltaTimeInSec * SoldierSpeed;
+
+                deltaPosition[0] += forwardDirection[0];
+                deltaPosition[1] += forwardDirection[1];
+                deltaPosition[2] += forwardDirection[2];
+            }
+            if (rightMove != 0.0f) {
+                glm::vec4 rightDirection(
+                    CameraBase::RightVector[0], 
+                    CameraBase::RightVector[1], 
+                    CameraBase::RightVector[2], 
+                    CameraBase::RightVector[3]
+                );
+
+                rightDirection = rightDirection * rotationMatrix;
+                rightDirection = glm::normalize(rightDirection);
+                rightDirection *= rightMove * deltaTimeInSec * SoldierSpeed;
+
+                deltaPosition[0] += rightDirection[0];
+                deltaPosition[1] += rightDirection[1];
+                deltaPosition[2] += rightDirection[2];
+            }
+
+            position[0] += deltaPosition[0];
+            position[1] += deltaPosition[1];
+            position[2] += deltaPosition[2];
+
+            float extraAngleValue = 0.0f;
+            if (inputRightMove == 1) {
+                if (inputForwardMove == 1) {
+                    extraAngleValue = +45.0f;
+                } else if (inputForwardMove == 0) {
+                    extraAngleValue = +90.0f;
+                } else if (inputForwardMove == -1) {
+                    extraAngleValue = +135.0f;
+                } else {
+                    MFA_ASSERT(false);
+                }
+            } else if (inputRightMove == 0) {
+                if (inputForwardMove == 1) {
+                    extraAngleValue = 0.0f;
+                } else if (inputForwardMove == 0) {
+                    extraAngleValue = 0.0f;
+                } else if (inputForwardMove == -1) {
+                        extraAngleValue = +180.0f;
+                } else {
+                    MFA_ASSERT(false);
+                }
+            } else if (inputRightMove == -1) {
+                if (inputForwardMove == 1) {
+                    extraAngleValue = -45.0f;
+                } else if (inputForwardMove == 0) {
+                    extraAngleValue = -90.0f;
+                } else if (inputForwardMove == -1) {
+                    extraAngleValue = -135.0f;
+                } else {
+                    MFA_ASSERT(false);
+                }
+            } else {
+                MFA_ASSERT(false);
+            }
+            targetEulerAngles[1] += extraAngleValue;
+            
+            float currentEulerAngles [3];
+            mSoldierVariant->GetRotation(currentEulerAngles);
+
+            auto targetQuat = Matrix::GlmToQuat(currentEulerAngles[0], targetEulerAngles[1], currentEulerAngles[2]);
+
+            
+            auto currentQuat = Matrix::GlmToQuat(currentEulerAngles[0], currentEulerAngles[1], currentEulerAngles[2]);
+
+            auto nextQuat = glm::slerp(currentQuat, targetQuat, 0.1f);
+            auto nextAnglesVec3 = Matrix::GlmToEulerAngles(nextQuat);
+
+            float nextAngles[3] {nextAnglesVec3[0], nextAnglesVec3[1], nextAnglesVec3[2]};
+
+            if (std::fabs(nextAngles[2]) >= 90) {
+                nextAngles[0] += 180.f;
+                nextAngles[1] = 180.f - nextAngles[1];
+                nextAngles[2] += 180.f;
+            }
+
+            mSoldierVariant->UpdateTransform(
+                position,
+                nextAngles,
+                scale
+            );
+
+            mSoldierVariant->SetActiveAnimation("SwordAndShieldRun");
+
+            //}
+
+        
+        } else {
+            mSoldierVariant->SetActiveAnimation("SwordAndShieldIdle");
+        }
+    }
     // TODO We should listen for player input and move character here
     mCamera.OnUpdate(deltaTimeInSec);
 
@@ -144,7 +269,7 @@ void Demo3rdPersonScene::Shutdown() {
     {// Pbr pipeline
         mPbrPipeline.Shutdown();
     }
-    {
+    {// Point light
         mPointLightPipeline.Shutdown();   
     }
     {// Sampler
@@ -174,7 +299,7 @@ void Demo3rdPersonScene::updateProjectionBuffer() {
 //-------------------------------------------------------------------------------------------------
 
 void Demo3rdPersonScene::OnUI() {
-    //mCamera.OnUI();
+    mCamera.OnUI();
 }
 
 //-------------------------------------------------------------------------------------------------

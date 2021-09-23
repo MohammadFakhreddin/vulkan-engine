@@ -360,6 +360,12 @@ void DrawableVariant::GetScale(float outScale[3]) const {
 }
 
 //-------------------------------------------------------------------------------------------------
+
+bool DrawableVariant::IsCurrentAnimationFinished() const {
+    return mIsAnimationFinished;
+}
+
+//-------------------------------------------------------------------------------------------------
 // TODO I might need transform component
 void DrawableVariant::computeTransform() {
     // Model
@@ -388,12 +394,23 @@ void DrawableVariant::SetActiveAnimationIndex(int const nextAnimationIndex, Anim
     if (nextAnimationIndex == mActiveAnimationIndex) {
         return;
     }
+    mIsAnimationFinished = false;
     mPreviousAnimationIndex = mActiveAnimationIndex;
     mActiveAnimationIndex = nextAnimationIndex;
     mAnimationTransitionDurationInSec = params.transitionDuration;
     mAnimationRemainingTransitionDurationInSec = params.transitionDuration;
     mPreviousAnimationTimeInSec = mActiveAnimationTimeInSec;
     mActiveAnimationTimeInSec = mEssence->GetGpuModel().model.mesh.GetAnimationByIndex(mActiveAnimationIndex).startTime;
+    mActiveAnimationParams = params;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void DrawableVariant::SetActiveAnimation(char const * animationName, AnimationParams const & params) {
+    auto const index = mEssence->GetAnimationIndex(animationName);
+    if (MFA_VERIFY(index > 0)) {
+        SetActiveAnimationIndex(index, params);
+    }
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -489,13 +506,17 @@ void DrawableVariant::updateAnimation(float const deltaTimeInSec) {
         if (mActiveAnimationTimeInSec > activeAnimation.endTime) {
             MFA_ASSERT(activeAnimation.endTime >= activeAnimation.startTime);
 
-            // TODO This should be a setting, We also have to define whether an animation needs to be looped or not
-            //mPreviousAnimationTimeInSec = activeAnimation.endTime;
-            //mPreviousAnimationIndex = mActiveAnimationIndex;
-            //mAnimationTransitionDurationInSec = 0.1f;
-            //mAnimationRemainingTransitionDurationInSec = 0.3f;
+            if (mActiveAnimationParams.loop) {
+                // TODO This should be a setting, We also have to define whether an animation needs to be looped or not
+                //mPreviousAnimationTimeInSec = activeAnimation.endTime;
+                //mPreviousAnimationIndex = mActiveAnimationIndex;
+                //mAnimationTransitionDurationInSec = 0.1f;
+                //mAnimationRemainingTransitionDurationInSec = 0.3f;
 
-            mActiveAnimationTimeInSec -= (activeAnimation.endTime - activeAnimation.startTime);
+                mActiveAnimationTimeInSec -= (activeAnimation.endTime - activeAnimation.startTime);
+            } else {
+                mIsAnimationFinished = true;
+            }
 
         }
     }
@@ -665,7 +686,7 @@ glm::mat4 DrawableVariant::computeNodeLocalTransform(Node const & node) const {
     if (mAnimationRemainingTransitionDurationInSec > 0 && mPreviousAnimationIndex > 0) {
         auto const fraction = (mAnimationTransitionDurationInSec - mAnimationRemainingTransitionDurationInSec) / mAnimationTransitionDurationInSec;
         translate = glm::mix(node.previousTranslate, translate, fraction);
-        rotation = glm::slerp(node.previousRotation, rotation, fraction);
+        rotation = glm::normalize(glm::slerp(node.previousRotation, rotation, fraction));
         scale = glm::mix(node.previousScale, scale, fraction);
     }
     currentTransform = glm::translate(currentTransform, translate);

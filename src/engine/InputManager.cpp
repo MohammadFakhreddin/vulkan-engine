@@ -33,7 +33,7 @@ struct State {
     float lastTimeSinceTouchInSec = 0;
 #endif
 
-    UIRecordObject mRecordUIObject;
+    UIRecordObject recordUIObject;
 
     void reset() {
         mouseDeltaX = 0.0f;
@@ -142,9 +142,9 @@ static void onUI() {
 
 void Init() {
     state = new State {
-        .mRecordUIObject = UIRecordObject([]()->void{onUI();})
+        .recordUIObject = UIRecordObject([]()->void{onUI();})
     };
-    state->mRecordUIObject.Enable();
+    state->recordUIObject.Enable();
 }
 
 void OnNewFrame() {
@@ -162,6 +162,31 @@ void OnNewFrame() {
     }
     state->mouseCurrentX = mousePositionX;
     state->mouseCurrentY = mousePositionY;
+
+    auto const surfaceCapabilities = RF::GetSurfaceCapabilities();
+    auto const screenWidth = surfaceCapabilities.currentExtent.width;
+    auto const screenHeight = surfaceCapabilities.currentExtent.height;
+    
+    bool mousePositionNeedsWarping = false;
+    if (state->mouseCurrentX < static_cast<int>(static_cast<float>(screenWidth) * 0.01f)) {
+        state->mouseCurrentX = static_cast<int>(static_cast<float>(screenWidth) * 0.99f);
+        mousePositionNeedsWarping = true;
+    }
+    if (state->mouseCurrentX > static_cast<int>(static_cast<float>(screenWidth) * 0.99f)) {
+        state->mouseCurrentX = static_cast<int>(static_cast<float>(screenWidth) * 0.01f);
+        mousePositionNeedsWarping = true;
+    }
+    if (state->mouseCurrentY < static_cast<int>(static_cast<float>(screenHeight) * 0.01f)) {
+        state->mouseCurrentY = static_cast<int>(static_cast<float>(screenHeight) * 0.99f);
+        mousePositionNeedsWarping = true;
+    }
+    if (state->mouseCurrentY > static_cast<int>(static_cast<float>(screenHeight) * 0.99f)) {
+        state->mouseCurrentY = static_cast<int>(static_cast<float>(screenHeight) * 0.01f);
+        mousePositionNeedsWarping = true;
+    }
+    if (mousePositionNeedsWarping) {
+        RF::WarpMouseInWindow(state->mouseCurrentX, state->mouseCurrentY);
+    }
 
     auto const * keys = RF::GetKeyboardState();
     if (keys[MSDL::SDL_SCANCODE_W]) {
@@ -193,7 +218,8 @@ void OnNewFrame() {
 }
 
 void Shutdown() {
-    state->mRecordUIObject.Disable();
+    //RF::RemoveEventWatch(state->motionEventWatchId);
+    state->recordUIObject.Disable();
     delete state;
     state = nullptr;
 }

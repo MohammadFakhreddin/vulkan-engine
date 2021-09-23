@@ -4,7 +4,6 @@
 #include "engine/camera/ThirdPersonCamera.hpp"
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/BedrockPlatforms.hpp"
-#include "engine/camera/ObserverCamera.hpp"
 #include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
 #include "engine/render_system/pipelines/point_light/PointLightPipeline.hpp"
@@ -57,15 +56,10 @@ private:
     MFA::RT::GpuModel mMapModel {};
     MFA::DrawableVariant * mMapVariant = nullptr;
 
-    //MFA::ThirdPersonCamera mCamera {
-    //    FOV,
-    //    Z_FAR,
-    //    Z_NEAR,
-    //};
-    MFA::ObserverCamera mCamera {
+    MFA::ThirdPersonCamera mCamera {
         FOV,
         Z_FAR,
-        Z_NEAR
+        Z_NEAR,
     };
 
     MFA::RT::SamplerGroup mSampler {};

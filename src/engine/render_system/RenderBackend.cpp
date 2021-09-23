@@ -54,11 +54,11 @@ static void SDL_Check(MSDL::SDL_bool const result) {
 
 MSDL::SDL_Window * CreateWindow(ScreenWidth const screenWidth, ScreenHeight const screenHeight) {
     MSDL::SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
-    auto const screen_info = MFA::Platforms::ComputeScreenSize();
+    auto const screen_info = Platforms::ComputeScreenSize();
     auto * window = MSDL::SDL_CreateWindow(
         "VULKAN_ENGINE", 
-        static_cast<uint32_t>((static_cast<float>(screen_info.screen_width) / 2.0f) - (static_cast<float>(screenWidth) / 2.0f)), 
-        static_cast<uint32_t>((static_cast<float>(screen_info.screen_height) / 2.0f) - (static_cast<float>(screenHeight) / 2.0f)),
+        static_cast<int>((static_cast<float>(screen_info.screenWidth) / 2.0f) - (static_cast<float>(screenWidth) / 2.0f)), 
+        static_cast<int>((static_cast<float>(screen_info.screenHeight) / 2.0f) - (static_cast<float>(screenHeight) / 2.0f)),
         screenWidth, screenHeight,
         MSDL::SDL_WINDOW_SHOWN /*| SDL_WINDOW_FULLSCREEN */| MSDL::SDL_WINDOW_VULKAN
     );
