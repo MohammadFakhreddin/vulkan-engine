@@ -32,7 +32,9 @@ struct State {
 #ifdef __ANDROID__
     float lastTimeSinceTouchInSec = 0;
 #endif
-
+#ifdef __DESKTOP__
+    bool warpMouseAtEdges = false;
+#endif
     UIRecordObject recordUIObject;
 
     void reset() {
@@ -163,31 +165,32 @@ void OnNewFrame() {
     state->mouseCurrentX = mousePositionX;
     state->mouseCurrentY = mousePositionY;
 
-    auto const surfaceCapabilities = RF::GetSurfaceCapabilities();
-    auto const screenWidth = surfaceCapabilities.currentExtent.width;
-    auto const screenHeight = surfaceCapabilities.currentExtent.height;
-    
-    bool mousePositionNeedsWarping = false;
-    if (state->mouseCurrentX < static_cast<int>(static_cast<float>(screenWidth) * 0.01f)) {
-        state->mouseCurrentX = static_cast<int>(static_cast<float>(screenWidth) * 0.99f);
-        mousePositionNeedsWarping = true;
+    if (state->warpMouseAtEdges) {
+        auto const surfaceCapabilities = RF::GetSurfaceCapabilities();
+        auto const screenWidth = surfaceCapabilities.currentExtent.width;
+        //auto const screenHeight = surfaceCapabilities.currentExtent.height;
+        
+        bool mousePositionNeedsWarping = false;
+        if (state->mouseCurrentX < static_cast<int>(static_cast<float>(screenWidth) * 0.001f)) {
+            state->mouseCurrentX = static_cast<int>(static_cast<float>(screenWidth) * 0.8f);
+            mousePositionNeedsWarping = true;
+        }
+        if (state->mouseCurrentX > static_cast<int>(static_cast<float>(screenWidth) * 0.999f)) {
+            state->mouseCurrentX = static_cast<int>(static_cast<float>(screenWidth) * 0.2f);
+            mousePositionNeedsWarping = true;
+        }
+        //if (state->mouseCurrentY < static_cast<int>(static_cast<float>(screenHeight) * 0.001f)) {
+        //    state->mouseCurrentY = static_cast<int>(static_cast<float>(screenHeight) * 0.5f);
+        //    mousePositionNeedsWarping = true;
+        //}
+        //if (state->mouseCurrentY > static_cast<int>(static_cast<float>(screenHeight) * 0.999f)) {
+        //    state->mouseCurrentY = static_cast<int>(static_cast<float>(screenHeight) * 0.5f);
+        //    mousePositionNeedsWarping = true;
+        //}
+        if (mousePositionNeedsWarping) {
+            RF::WarpMouseInWindow(state->mouseCurrentX, state->mouseCurrentY);
+        }
     }
-    if (state->mouseCurrentX > static_cast<int>(static_cast<float>(screenWidth) * 0.99f)) {
-        state->mouseCurrentX = static_cast<int>(static_cast<float>(screenWidth) * 0.01f);
-        mousePositionNeedsWarping = true;
-    }
-    if (state->mouseCurrentY < static_cast<int>(static_cast<float>(screenHeight) * 0.01f)) {
-        state->mouseCurrentY = static_cast<int>(static_cast<float>(screenHeight) * 0.99f);
-        mousePositionNeedsWarping = true;
-    }
-    if (state->mouseCurrentY > static_cast<int>(static_cast<float>(screenHeight) * 0.99f)) {
-        state->mouseCurrentY = static_cast<int>(static_cast<float>(screenHeight) * 0.01f);
-        mousePositionNeedsWarping = true;
-    }
-    if (mousePositionNeedsWarping) {
-        RF::WarpMouseInWindow(state->mouseCurrentX, state->mouseCurrentY);
-    }
-
     auto const * keys = RF::GetKeyboardState();
     if (keys[MSDL::SDL_SCANCODE_W]) {
         state->forwardMove += 1.0f;
@@ -275,6 +278,12 @@ void UpdateTouchState(bool isMouseDown, bool isTouchValueValid, MousePosition mo
     state->isLeftMouseDown = isMouseDown;
     state->isMouseLocationValid = isTouchValueValid && isMouseDown;
     // MFA_LOG_INFO("Mouse: DeltaX: %f, DeltaY: %f", state->mouseDeltaX, state->mouseDeltaY);
+}
+#endif
+
+#ifdef __DESKTOP__
+void WarpMouseAtEdges(bool const warp) {
+    state->warpMouseAtEdges = warp;
 }
 #endif
 

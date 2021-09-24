@@ -380,8 +380,8 @@ void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableVariant * 
 
     auto const & primitivesBuffer = variant->GetEssence()->GetPrimitivesBuffer();
 
-    auto const & skinJointsBuffer = variant->GetSkinJointsBuffer();
-
+    auto const & actualSkinJointsBuffer = variant->GetSkinJointsBuffer();
+    
     for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex) {
 
         auto const descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
@@ -393,70 +393,64 @@ void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableVariant * 
         // Vertex shader
         /////////////////////////////////////////////////////////////////
         
-        {// ViewProjectionTransform
-            VkDescriptorBufferInfo bufferInfo {
-                .buffer = mDisplayViewProjectionBuffer.buffers[frameIndex].buffer,
-                .offset = 0,
-                .range = mDisplayViewProjectionBuffer.bufferSize,
-            };
-            descriptorSetSchema.AddUniformBuffer(bufferInfo);
+        // ViewProjectionTransform
+        VkDescriptorBufferInfo viewProjectionBufferInfo {
+            .buffer = mDisplayViewProjectionBuffer.buffers[frameIndex].buffer,
+            .offset = 0,
+            .range = mDisplayViewProjectionBuffer.bufferSize,
+        };
+        descriptorSetSchema.AddUniformBuffer(viewProjectionBufferInfo);
+        
+        // SkinJoints
+        VkBuffer skinJointsBuffer = mErrorBuffer.buffers[0].buffer;
+        size_t skinJointsBufferSize = mErrorBuffer.bufferSize;
+        if (actualSkinJointsBuffer.bufferSize > 0) {
+            skinJointsBuffer = actualSkinJointsBuffer.buffers[frameIndex].buffer;
+            skinJointsBufferSize = actualSkinJointsBuffer.bufferSize;
         }
-
-        {// SkinJoints
-            VkBuffer buffer = mErrorBuffer.buffers[0].buffer;
-            size_t bufferSize = mErrorBuffer.bufferSize;
-            if (skinJointsBuffer.bufferSize > 0) {
-                buffer = skinJointsBuffer.buffers[frameIndex].buffer;
-                bufferSize = skinJointsBuffer.bufferSize;
-            }
-            VkDescriptorBufferInfo skinTransformBufferInfo {
-                .buffer = buffer,
-                .offset = 0,
-                .range = bufferSize,
-            };
-            descriptorSetSchema.AddUniformBuffer(skinTransformBufferInfo);
-        }
-
+        VkDescriptorBufferInfo skinTransformBufferInfo {
+            .buffer = skinJointsBuffer,
+            .offset = 0,
+            .range = skinJointsBufferSize,
+        };
+        descriptorSetSchema.AddUniformBuffer(skinTransformBufferInfo);
+        
         /////////////////////////////////////////////////////////////////
         // Fragment shader
         /////////////////////////////////////////////////////////////////
         
-        {// Primitives
-            VkDescriptorBufferInfo primitiveBufferInfo {
-                .buffer = primitivesBuffer.buffers[0].buffer,
-                .offset = 0,
-                .range = primitivesBuffer.bufferSize,
-            };
-            descriptorSetSchema.AddUniformBuffer(primitiveBufferInfo);
-        }
-
-        {// LightViewBuffer
-            VkDescriptorBufferInfo lightViewBufferInfo {
-                .buffer = mDisplayLightAndCameraBuffer.buffers[frameIndex].buffer,
-                .offset = 0,
-                .range = mDisplayLightAndCameraBuffer.bufferSize,
-            };
-            descriptorSetSchema.AddUniformBuffer(lightViewBufferInfo);
-        }
-
-        {// ShadowMap
-            VkDescriptorImageInfo shadowMapImageInfo {
-                .sampler = mSamplerGroup->sampler,
-                .imageView = mShadowRenderPass->GetDepthCubeMap().imageView,
-                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            };
-            descriptorSetSchema.AddCombinedImageSampler(shadowMapImageInfo);
-        }
-
-        {// Sampler
-            VkDescriptorImageInfo samplerInfo {
-                .sampler = mSamplerGroup->sampler,
-                .imageView = nullptr,
-                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            };
-            descriptorSetSchema.AddSampler(samplerInfo);
-        }
-
+        // Primitives
+        VkDescriptorBufferInfo primitiveBufferInfo {
+            .buffer = primitivesBuffer.buffers[0].buffer,
+            .offset = 0,
+            .range = primitivesBuffer.bufferSize,
+        };
+        descriptorSetSchema.AddUniformBuffer(primitiveBufferInfo);
+        
+        // LightViewBuffer
+        VkDescriptorBufferInfo lightViewBufferInfo {
+            .buffer = mDisplayLightAndCameraBuffer.buffers[frameIndex].buffer,
+            .offset = 0,
+            .range = mDisplayLightAndCameraBuffer.bufferSize,
+        };
+        descriptorSetSchema.AddUniformBuffer(lightViewBufferInfo);
+        
+        // ShadowMap
+        VkDescriptorImageInfo shadowMapImageInfo {
+            .sampler = mSamplerGroup->sampler,
+            .imageView = mShadowRenderPass->GetDepthCubeMap().imageView,
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        };
+        descriptorSetSchema.AddCombinedImageSampler(shadowMapImageInfo);
+        
+        // Sampler
+        VkDescriptorImageInfo texturesSamplerInfo {
+            .sampler = mSamplerGroup->sampler,
+            .imageView = nullptr,
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        };
+        descriptorSetSchema.AddSampler(texturesSamplerInfo);
+        
         // TODO Each one need their own sampler
         // Textures
         MFA_ASSERT(textures.size() <= 64);
@@ -494,7 +488,7 @@ void PBRWithShadowPipelineV2::CreateShadowPassDescriptorSets(DrawableVariant * v
         variant->GetEssence()->GetPrimitiveCount() * RF::GetMaxFramesPerFlight()
     );
 
-    auto const & skinJointsBuffer = variant->GetSkinJointsBuffer();
+    auto const & actualSkinJointsBuffer = variant->GetSkinJointsBuffer();
     
     for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex) {
 
@@ -507,42 +501,40 @@ void PBRWithShadowPipelineV2::CreateShadowPassDescriptorSets(DrawableVariant * v
         // Vertex shader
         /////////////////////////////////////////////////////////////////
         
-        {// ViewProjectionTransform
-            VkDescriptorBufferInfo viewProjectionBufferInfo {
-                .buffer = mShadowViewProjectionBuffer.buffers[frameIndex].buffer,
-                .offset = 0,
-                .range = mShadowViewProjectionBuffer.bufferSize
-            };
-            descriptorSetSchema.AddUniformBuffer(viewProjectionBufferInfo);
-        }
-        {// SkinJoints
-            VkBuffer buffer = mErrorBuffer.buffers[0].buffer;
-            size_t bufferSize = mErrorBuffer.bufferSize;
-            if (skinJointsBuffer.bufferSize > 0) {
-                buffer = skinJointsBuffer.buffers[frameIndex].buffer;
-                bufferSize = skinJointsBuffer.bufferSize;
-            }
-            VkDescriptorBufferInfo skinTransformBufferInfo {
-                .buffer = buffer,
-                .offset = 0,
-                .range = bufferSize,
-            };
-            descriptorSetSchema.AddUniformBuffer(skinTransformBufferInfo);
-        }
+        // ViewProjectionTransform
+        VkDescriptorBufferInfo viewProjectionBufferInfo {
+            .buffer = mShadowViewProjectionBuffer.buffers[frameIndex].buffer,
+            .offset = 0,
+            .range = mShadowViewProjectionBuffer.bufferSize
+        };
+        descriptorSetSchema.AddUniformBuffer(viewProjectionBufferInfo);
 
+        // SkinJoints
+        VkBuffer skinJointBuffer = mErrorBuffer.buffers[0].buffer;
+        size_t skinJointBufferSize = mErrorBuffer.bufferSize;
+        if (actualSkinJointsBuffer.bufferSize > 0) {
+            skinJointBuffer = actualSkinJointsBuffer.buffers[frameIndex].buffer;
+            skinJointBufferSize = actualSkinJointsBuffer.bufferSize;
+        }
+        VkDescriptorBufferInfo skinTransformBufferInfo {
+            .buffer = skinJointBuffer,
+            .offset = 0,
+            .range = skinJointBufferSize,
+        };
+        descriptorSetSchema.AddUniformBuffer(skinTransformBufferInfo);
+        
         /////////////////////////////////////////////////////////////////
         // Fragment shader
         /////////////////////////////////////////////////////////////////
 
-        {// LightBuffer
-            VkDescriptorBufferInfo bufferInfo {
-                .buffer = mShadowLightBuffer.buffers[frameIndex].buffer,
-                .offset = 0,
-                .range = mShadowLightBuffer.bufferSize,
-            };
-            descriptorSetSchema.AddUniformBuffer(bufferInfo);
-        }
-
+        // LightBuffer
+        VkDescriptorBufferInfo lightBufferInfo {
+            .buffer = mShadowLightBuffer.buffers[frameIndex].buffer,
+            .offset = 0,
+            .range = mShadowLightBuffer.bufferSize,
+        };
+        descriptorSetSchema.AddUniformBuffer(lightBufferInfo);
+        
         descriptorSetSchema.UpdateDescriptorSets();
     }
 }

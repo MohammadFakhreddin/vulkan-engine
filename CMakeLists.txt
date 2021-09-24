@@ -44,10 +44,13 @@ else()
 endif()
 
 message(STATUS "Build type is ${CMAKE_BUILD_TYPE}")
-if(${CMAKE_BUILD_TYPE} MATCHES Release)
-    add_definitions(-DNDEBUG)
-else()
-    add_definitions(-D_DEBUG)
+
+if (NOT WINDOWS) 
+    if(${CMAKE_BUILD_TYPE} MATCHES Release)
+        add_definitions(-DNDEBUG)
+    else()
+        add_definitions(-D_DEBUG)
+    endif()
 endif()
 
 include_directories(libs/include/glm)

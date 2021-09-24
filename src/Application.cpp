@@ -32,8 +32,8 @@ Application::Application()
 Application::~Application() = default;
 
 void Application::Init() {
-    static constexpr uint16_t SCREEN_WIDTH = 1920;//1200;//1920;
-    static constexpr uint16_t SCREEN_HEIGHT = 1080;//800;//1080;
+    static constexpr uint16_t SCREEN_WIDTH = 1200;//1920;
+    static constexpr uint16_t SCREEN_HEIGHT = 800;//1080;
 
     MFA_ASSERT(mIsInitialized == false);
 

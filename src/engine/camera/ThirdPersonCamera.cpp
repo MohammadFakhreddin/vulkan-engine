@@ -41,6 +41,15 @@ void ThirdPersonCamera::Init(
 
     OnResize();
     updateTransform();
+
+    auto const surfaceCapabilities = RF::GetSurfaceCapabilities();
+    auto const screenWidth = surfaceCapabilities.currentExtent.width;
+    auto const screenHeight = surfaceCapabilities.currentExtent.height;
+    RF::WarpMouseInWindow(
+        static_cast<int>(static_cast<float>(screenWidth) / 2.0f), 
+        static_cast<int>(static_cast<float>(screenHeight) / 2.0f)
+    );
+    IM::WarpMouseAtEdges(true);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -56,8 +65,8 @@ void ThirdPersonCamera::OnUpdate(float const deltaTimeInSec) {
             mEulerAngles[1] = mEulerAngles[1] + mouseDeltaX * rotationDistance;    // Reverse for view mat
             mEulerAngles[0] = Math::Clamp(
                 mEulerAngles[0] - mouseDeltaY * rotationDistance,
-                -90.0f,
-                90.0f
+                -45.0f,
+                18.0f
             );    // Reverse for view mat
 
             mIsTransformDirty = true;
@@ -107,6 +116,14 @@ void ThirdPersonCamera::OnResize() {
         mFieldOfView,
         mNearPlane,
         mFarPlane
+    );
+
+    auto const surfaceCapabilities = RF::GetSurfaceCapabilities();
+    auto const screenWidth = surfaceCapabilities.currentExtent.width;
+    auto const screenHeight = surfaceCapabilities.currentExtent.height;
+    RF::WarpMouseInWindow(
+        static_cast<int>(static_cast<float>(screenWidth) / 2.0f), 
+        static_cast<int>(static_cast<float>(screenHeight) / 2.0f)
     );
 }
 

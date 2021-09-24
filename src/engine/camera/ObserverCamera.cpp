@@ -35,6 +35,7 @@ ObserverCamera::ObserverCamera(
 void ObserverCamera::Init() {
     updateTransform();
     OnResize();
+    IM::WarpMouseAtEdges(false);
 }
 
 //-------------------------------------------------------------------------------------------------

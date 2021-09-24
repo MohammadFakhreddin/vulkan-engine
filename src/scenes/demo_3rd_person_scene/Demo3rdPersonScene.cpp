@@ -144,7 +144,7 @@ void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPa
 
             auto const currentQuat = Matrix::GlmToQuat(currentEulerAngles[0], currentEulerAngles[1], currentEulerAngles[2]);
 
-            auto const nextQuat = glm::slerp(currentQuat, targetQuat, 0.05f);
+            auto const nextQuat = glm::slerp(currentQuat, targetQuat, 0.07f);
             auto nextAnglesVec3 = Matrix::GlmToEulerAngles(nextQuat);
 
             float nextAngles[3] {nextAnglesVec3[0], nextAnglesVec3[1], nextAnglesVec3[2]};
@@ -178,12 +178,12 @@ void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPa
                 scale
             );
 
-            mSoldierVariant->SetActiveAnimation("SwordAndShieldRun", {.transitionDuration = 0.2f});
+            mSoldierVariant->SetActiveAnimation("SwordAndShieldRun", {.transitionDuration = 0.3f});
             
         } else {
 
             //mSoldierVariant->SetActiveAnimation("SwordAndShieldIdle");
-            mSoldierVariant->SetActiveAnimation("Idle");
+            mSoldierVariant->SetActiveAnimation("Idle", {.transitionDuration = 0.3f});
 
         }
     }
