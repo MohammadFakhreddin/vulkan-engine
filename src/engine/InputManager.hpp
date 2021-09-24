@@ -20,7 +20,7 @@ namespace MFA::InputManager {
 
     void Init();
 
-    void OnNewFrame();
+    void OnNewFrame(float deltaTimeInSec);
 
     void Shutdown();
 

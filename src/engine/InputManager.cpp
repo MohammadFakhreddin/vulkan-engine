@@ -149,7 +149,7 @@ void Init() {
     state->recordUIObject.Enable();
 }
 
-void OnNewFrame() {
+void OnNewFrame(float deltaTimeInSec) {
 #ifdef __DESKTOP__
     state->reset();
     int32_t mousePositionX = 0;
@@ -159,6 +159,16 @@ void OnNewFrame() {
     if (state->isMouseLocationValid == true) {
         state->mouseDeltaX = static_cast<float>(mousePositionX - state->mouseCurrentX);
         state->mouseDeltaY = static_cast<float>(mousePositionY - state->mouseCurrentY);
+        //if (state->mouseDeltaX > 0) {
+        //    state->mouseDeltaX = 
+        //} else if (state->mouseDeltaY < 0) {
+        //    
+        //}
+        //if (state->mouseDeltaY > 0) {
+        //    
+        //} else if (state->mouseDeltaY < 0) {
+        //    
+        //}
     } else {
         state->isMouseLocationValid = true;
     }
@@ -168,25 +178,25 @@ void OnNewFrame() {
     if (state->warpMouseAtEdges) {
         auto const surfaceCapabilities = RF::GetSurfaceCapabilities();
         auto const screenWidth = surfaceCapabilities.currentExtent.width;
-        //auto const screenHeight = surfaceCapabilities.currentExtent.height;
+        auto const screenHeight = surfaceCapabilities.currentExtent.height;
         
         bool mousePositionNeedsWarping = false;
-        if (state->mouseCurrentX < static_cast<int>(static_cast<float>(screenWidth) * 0.001f)) {
-            state->mouseCurrentX = static_cast<int>(static_cast<float>(screenWidth) * 0.8f);
+        if (state->mouseCurrentX < static_cast<int>(static_cast<float>(screenWidth) * 0.010f)) {
+            state->mouseCurrentX = static_cast<int>(static_cast<float>(screenWidth) * 0.010f) + 1;
             mousePositionNeedsWarping = true;
         }
-        if (state->mouseCurrentX > static_cast<int>(static_cast<float>(screenWidth) * 0.999f)) {
-            state->mouseCurrentX = static_cast<int>(static_cast<float>(screenWidth) * 0.2f);
+        if (state->mouseCurrentX > static_cast<int>(static_cast<float>(screenWidth) * 0.990f)) {
+            state->mouseCurrentX = static_cast<int>(static_cast<float>(screenWidth) * 0.990f) - 1;
             mousePositionNeedsWarping = true;
         }
-        //if (state->mouseCurrentY < static_cast<int>(static_cast<float>(screenHeight) * 0.001f)) {
-        //    state->mouseCurrentY = static_cast<int>(static_cast<float>(screenHeight) * 0.5f);
-        //    mousePositionNeedsWarping = true;
-        //}
-        //if (state->mouseCurrentY > static_cast<int>(static_cast<float>(screenHeight) * 0.999f)) {
-        //    state->mouseCurrentY = static_cast<int>(static_cast<float>(screenHeight) * 0.5f);
-        //    mousePositionNeedsWarping = true;
-        //}
+        if (state->mouseCurrentY < static_cast<int>(static_cast<float>(screenHeight) * 0.010f)) {
+            state->mouseCurrentY = static_cast<int>(static_cast<float>(screenHeight) * 0.010f) + 1;
+            mousePositionNeedsWarping = true;
+        }
+        if (state->mouseCurrentY > static_cast<int>(static_cast<float>(screenHeight) * 0.990f)) {
+            state->mouseCurrentY = static_cast<int>(static_cast<float>(screenHeight) * 0.990f) - 1;
+            mousePositionNeedsWarping = true;
+        }
         if (mousePositionNeedsWarping) {
             RF::WarpMouseInWindow(state->mouseCurrentX, state->mouseCurrentY);
         }

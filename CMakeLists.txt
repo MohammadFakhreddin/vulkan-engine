@@ -81,6 +81,17 @@ list(
     "src/engine/BedrockPath.hpp"
     "src/engine/BedrockPath.cpp"
 
+    # Entity system
+    "src/engine/entity_system/IEntitySystem.h"
+    "src/engine/entity_system/EntitySystem.h"
+    "src/engine/entity_system/EntitySystem.cpp"
+    "src/engine/entity_system/IEntity.h"
+    "src/engine/entity_system/Entity.h"
+    "src/engine/entity_system/Entity.cpp"
+    "src/engine/entity_system/IComponent.h"
+    "src/engine/entity_system/Component.h"
+    "src/engine/entity_system/Component.cpp"
+    
     # RenderSystem
     "src/engine/render_system/RenderTypes.hpp"
     "src/engine/render_system/RenderTypesFWD.hpp"

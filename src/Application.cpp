@@ -32,11 +32,6 @@ Application::Application()
 Application::~Application() = default;
 
 void Application::Init() {
-    static constexpr uint16_t SCREEN_WIDTH = 1200;//1920;
-    static constexpr uint16_t SCREEN_HEIGHT = 800;//1080;
-
-    MFA_ASSERT(mIsInitialized == false);
-
     {
         RF::InitParams params{};
         params.applicationName = "MfaEngine";
@@ -45,9 +40,16 @@ void Application::Init() {
     #elif defined(__IOS__)
         params.view = mView;
     #elif defined(__DESKTOP__)
+        auto const screenInfo = MFA::Platforms::ComputeScreenSize();
+        auto const screenWidth = screenInfo.screenWidth;
+        auto const screenHeight = screenInfo.screenHeight;
+
+        MFA_ASSERT(mIsInitialized == false);
+
+
         params.resizable = true;
-        params.screenWidth = SCREEN_WIDTH;
-        params.screenHeight = SCREEN_HEIGHT;
+        params.screenWidth = screenWidth;
+        params.screenHeight = screenHeight;
     #else
         #error Os not supported
     #endif
@@ -142,8 +144,8 @@ void Application::run() {
 
 }
 
-void Application::RenderFrame(float deltaTimeInSec) {
-    IM::OnNewFrame();
+void Application::RenderFrame(float const deltaTimeInSec) {
+    IM::OnNewFrame(deltaTimeInSec);
     mSceneSubSystem.OnNewFrame(deltaTimeInSec);
 }
 

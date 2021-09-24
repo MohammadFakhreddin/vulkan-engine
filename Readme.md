@@ -3,6 +3,9 @@
 
 <br/>
 
+## Character control
+<img src="examples/character-control.gif">
+
 ## Shadow mapping
 <img src="examples/shadow-mapping.gif">
 
