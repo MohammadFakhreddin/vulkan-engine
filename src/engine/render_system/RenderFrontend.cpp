@@ -737,7 +737,7 @@ void BeginRenderPass(
     VkFramebuffer frameBuffer,
     VkExtent2D const & extent2D,
     uint32_t clearValuesCount,
-    VkClearValue * clearValues
+    VkClearValue const * clearValues
 ) {
     VkRenderPassBeginInfo renderPassBeginInfo = {};
     renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;

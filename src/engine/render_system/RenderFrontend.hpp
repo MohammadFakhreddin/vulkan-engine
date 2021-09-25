@@ -181,7 +181,7 @@ void BeginRenderPass(
     VkFramebuffer frameBuffer,
     VkExtent2D const & extent2D,
     uint32_t clearValuesCount,
-    VkClearValue * clearValues
+    VkClearValue const * clearValues
 );
 
 void EndRenderPass(VkCommandBuffer commandBuffer);

@@ -146,6 +146,7 @@ void Application::run() {
 
 void Application::RenderFrame(float const deltaTimeInSec) {
     IM::OnNewFrame(deltaTimeInSec);
+    RF::OnNewFrame(deltaTimeInSec);
     mSceneSubSystem.OnNewFrame(deltaTimeInSec);
 }
 

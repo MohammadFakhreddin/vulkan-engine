@@ -182,19 +182,19 @@ void OnNewFrame(float deltaTimeInSec) {
         
         bool mousePositionNeedsWarping = false;
         if (state->mouseCurrentX < static_cast<int>(static_cast<float>(screenWidth) * 0.010f)) {
-            state->mouseCurrentX = static_cast<int>(static_cast<float>(screenWidth) * 0.010f) + 1;
+            state->mouseCurrentX = static_cast<int>(static_cast<float>(screenWidth) * 0.010f) + 50;
             mousePositionNeedsWarping = true;
         }
         if (state->mouseCurrentX > static_cast<int>(static_cast<float>(screenWidth) * 0.990f)) {
-            state->mouseCurrentX = static_cast<int>(static_cast<float>(screenWidth) * 0.990f) - 1;
+            state->mouseCurrentX = static_cast<int>(static_cast<float>(screenWidth) * 0.990f) - 50;
             mousePositionNeedsWarping = true;
         }
         if (state->mouseCurrentY < static_cast<int>(static_cast<float>(screenHeight) * 0.010f)) {
-            state->mouseCurrentY = static_cast<int>(static_cast<float>(screenHeight) * 0.010f) + 1;
+            state->mouseCurrentY = static_cast<int>(static_cast<float>(screenHeight) * 0.010f) + 50;
             mousePositionNeedsWarping = true;
         }
         if (state->mouseCurrentY > static_cast<int>(static_cast<float>(screenHeight) * 0.990f)) {
-            state->mouseCurrentY = static_cast<int>(static_cast<float>(screenHeight) * 0.990f) - 1;
+            state->mouseCurrentY = static_cast<int>(static_cast<float>(screenHeight) * 0.990f) - 50;
             mousePositionNeedsWarping = true;
         }
         if (mousePositionNeedsWarping) {

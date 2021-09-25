@@ -66,8 +66,6 @@ void SceneSubSystem::OnNewFrame(float const deltaTimeInSec) {
         mLastActiveScene = mActiveScene;
     }
 
-    RF::OnNewFrame(deltaTimeInSec);
-
     auto drawPass = mDisplayRenderPass->StartGraphicCommandBufferRecording();
     if (drawPass.isValid == false) {
         return;
