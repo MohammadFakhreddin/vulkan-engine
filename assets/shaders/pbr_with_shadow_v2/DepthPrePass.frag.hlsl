@@ -7,7 +7,8 @@ struct PSOut {
 };
 
 PSOut main(PSIn input) {
+    float depth = input.position.z / input.position.w;
     PSOut output;
-    output.depth = input.position.z;
+    output.depth = depth;
 	return output;
 }
