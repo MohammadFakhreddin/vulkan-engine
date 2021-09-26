@@ -80,8 +80,7 @@ void Application::Shutdown() {
 }
 
 void Application::run() {
-    static constexpr uint32_t TargetFpsDeltaTimeInMs = 1000 / 120;
-//    static constexpr float TargetFpsDeltaTimeInSec = 1.0f / 120.0f;
+    static constexpr uint32_t TargetFpsDeltaTimeInMs = 1000 / 1000;
 #ifdef __DESKTOP__
     Init();
     {// Main loop

@@ -55,7 +55,7 @@ private:
     inline static constexpr VkFormat SHADOW_MAP_FORMAT = VK_FORMAT_R32_SFLOAT;
 
     VkRenderPass mVkRenderPass {};
-    VkFramebuffer mFrameBuffer {};
+    VkFramebuffer mFrameBuffer {};  // TODO We need per swapChain => FrameBuffer, Other images
     
     RT::DepthImageGroup mDepthCubeMap {};
     RT::DepthImageGroup mDepthImage {};

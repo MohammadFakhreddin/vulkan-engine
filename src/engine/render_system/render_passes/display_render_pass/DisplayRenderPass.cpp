@@ -7,7 +7,13 @@ namespace MFA {
 //-------------------------------------------------------------------------------------------------
 
 VkRenderPass DisplayRenderPass::GetVkRenderPass() {
-    return mVkRenderPass;
+    return mVkDisplayRenderPass;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+VkRenderPass DisplayRenderPass::GetVkDepthRenderPass() const {
+    return mDepthRenderPass;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -42,9 +48,13 @@ void DisplayRenderPass::internalInit() {
         .samplesCount = RF::GetMaxSamplesCount()
     });
 
-    createRenderPass();
+    createDisplayRenderPass();
 
-    createFrameBuffers(swapChainExtent);
+    createDepthRenderPass();
+
+    createDisplayFrameBuffers(swapChainExtent);
+
+    createDepthFrameBuffers(swapChainExtent);
 
     mGraphicCommandBuffers = RF::CreateGraphicCommandBuffers(RF::GetMaxFramesPerFlight());
 
@@ -65,13 +75,15 @@ void DisplayRenderPass::internalShutdown() {
     );
 
     RF::DestroyFrameBuffers(
-        static_cast<uint32_t>(mFrameBuffers.size()), 
-        mFrameBuffers.data()
+        static_cast<uint32_t>(mDisplayFrameBuffers.size()), 
+        mDisplayFrameBuffers.data()
     );
 
-    RF::DestroyDepthImage(mDepthImageGroup);
+    RF::DestroyRenderPass(mVkDisplayRenderPass);
 
-    RF::DestroyRenderPass(mVkRenderPass);
+    RF::DestroyRenderPass(mDepthRenderPass);
+
+    RF::DestroyDepthImage(mDepthImageGroup);
 
     RF::DestroySwapChain(mSwapChainImages);
 
@@ -142,6 +154,37 @@ void DisplayRenderPass::EndGraphicCommandBufferRecording(RT::DrawPass & drawPass
 
 //-------------------------------------------------------------------------------------------------
 
+void DisplayRenderPass::BeginDepthPrePass(RT::DrawPass & drawPass) {
+    auto surfaceCapabilities = RF::GetSurfaceCapabilities();
+    auto const swapChainExtend = VkExtent2D {
+        .width = surfaceCapabilities.currentExtent.width,
+        .height = surfaceCapabilities.currentExtent.height
+    };
+
+    RF::AssignViewportAndScissorToCommandBuffer(GetCommandBuffer(drawPass), swapChainExtend);
+
+    std::vector<VkClearValue> clearValues {};
+    clearValues.resize(1);
+    clearValues[0].depthStencil = { .depth = 1.0f, .stencil = 0};
+
+    RF::BeginRenderPass(
+        GetCommandBuffer(drawPass), 
+        mDepthRenderPass, 
+        mDepthFrameBuffer, 
+        swapChainExtend, 
+        static_cast<uint32_t>(clearValues.size()), 
+        clearValues.data()
+    );
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void DisplayRenderPass::EndDepthPrePass(RT::DrawPass & drawPass) {
+    RF::EndRenderPass(GetCommandBuffer(drawPass));
+}
+
+//-------------------------------------------------------------------------------------------------
+
 void DisplayRenderPass::internalBeginRenderPass(RT::DrawPass & drawPass) {
     // If present queue family and graphics queue family are different, then a barrier is necessary
     // The barrier is also needed initially to transition the image to the present layout
@@ -199,7 +242,7 @@ void DisplayRenderPass::internalBeginRenderPass(RT::DrawPass & drawPass) {
 
     RF::BeginRenderPass(
         GetCommandBuffer(drawPass), 
-        mVkRenderPass, 
+        mVkDisplayRenderPass, 
         getFrameBuffer(drawPass),
         swapChainExtend,
         static_cast<uint32_t>(clearValues.size()),
@@ -288,10 +331,10 @@ void DisplayRenderPass::internalResize() {
     
     // Frame-buffer
     RF::DestroyFrameBuffers(
-        static_cast<uint32_t>(mFrameBuffers.size()), 
-        mFrameBuffers.data()
+        static_cast<uint32_t>(mDisplayFrameBuffers.size()), 
+        mDisplayFrameBuffers.data()
     );
-    createFrameBuffers(swapChainExtent2D);
+    createDisplayFrameBuffers(swapChainExtent2D);
 
 }
 
@@ -322,22 +365,22 @@ VkImage DisplayRenderPass::getSwapChainImage(RT::DrawPass const & drawPass) {
 //-------------------------------------------------------------------------------------------------
 
 VkFramebuffer DisplayRenderPass::getFrameBuffer(RT::DrawPass const & drawPass) {
-    return mFrameBuffers[drawPass.imageIndex];
+    return mDisplayFrameBuffers[drawPass.imageIndex];
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void DisplayRenderPass::createFrameBuffers(VkExtent2D const & extent) {
-    mFrameBuffers.erase(mFrameBuffers.begin(), mFrameBuffers.end());
-    mFrameBuffers.resize(mSwapChainImagesCount);
-    for (int i = 0; i < static_cast<int>(mFrameBuffers.size()); ++i) {
+void DisplayRenderPass::createDisplayFrameBuffers(VkExtent2D const & extent) {
+    mDisplayFrameBuffers.erase(mDisplayFrameBuffers.begin(), mDisplayFrameBuffers.end());
+    mDisplayFrameBuffers.resize(mSwapChainImagesCount);
+    for (int i = 0; i < static_cast<int>(mDisplayFrameBuffers.size()); ++i) {
         std::vector<VkImageView> const attachments = {
             mMSAAImageGroup.imageView,
             mSwapChainImages.swapChainImageViews[i],
             mDepthImageGroup.imageView
         };
-        mFrameBuffers[i] = RF::CreateFrameBuffer(
-            mVkRenderPass, 
+        mDisplayFrameBuffers[i] = RF::CreateFrameBuffer(
+            mVkDisplayRenderPass, 
             attachments.data(),
             static_cast<uint32_t>(attachments.size()),
             extent,
@@ -348,7 +391,22 @@ void DisplayRenderPass::createFrameBuffers(VkExtent2D const & extent) {
 
 //-------------------------------------------------------------------------------------------------
 
-void DisplayRenderPass::createRenderPass() {
+void DisplayRenderPass::createDepthFrameBuffers(VkExtent2D const & extent) {
+     std::vector<VkImageView> const attachments = {
+        mDepthImageGroup.imageView
+    };
+    mDepthFrameBuffer = RF::CreateFrameBuffer(
+        mDepthRenderPass, 
+        attachments.data(), 
+        static_cast<uint32_t>(attachments.size()), 
+        extent, 
+        1
+    );
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void DisplayRenderPass::createDisplayRenderPass() {
 
     // Multisampled attachment that we render to
     VkAttachmentDescription const msaaAttachment {
@@ -376,11 +434,11 @@ void DisplayRenderPass::createRenderPass() {
     VkAttachmentDescription const depthAttachment {
         .format = mDepthImageGroup.imageFormat,
         .samples = RF::GetMaxSamplesCount(),
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
         .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
         .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
 
@@ -437,7 +495,7 @@ void DisplayRenderPass::createRenderPass() {
     
     std::vector<VkAttachmentDescription> attachments = {msaaAttachment, swapChainAttachment, depthAttachment};
 
-    mVkRenderPass = RF::CreateRenderPass(
+    mVkDisplayRenderPass = RF::CreateRenderPass(
         attachments.data(),
         static_cast<uint32_t>(attachments.size()),
         subPassDescription.data(),
@@ -445,6 +503,73 @@ void DisplayRenderPass::createRenderPass() {
         dependencies.data(),
         static_cast<uint32_t>(dependencies.size())
     );
+}
+
+
+//-------------------------------------------------------------------------------------------------
+
+void DisplayRenderPass::createDepthRenderPass() {
+    
+    VkAttachmentDescription const depthAttachment {
+        .format = mDepthImageGroup.imageFormat,
+        .samples = RF::GetMaxSamplesCount(),
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+    };
+
+    VkAttachmentReference depthAttachmentRef {
+        .attachment = 0,
+        .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+    };
+
+    // Note: this is a description of how the attachments of the render pass will be used in this sub pass
+    // e.g. if they will be read in shaders and/or drawn to
+    std::vector<VkSubpassDescription> subPassDescription {
+        VkSubpassDescription {
+            .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+            .colorAttachmentCount = 0,
+            .pDepthStencilAttachment = &depthAttachmentRef,
+        }
+    };
+
+    // TODO Fill dependencies correctly
+    // Subpass dependencies for layout transitions
+    std::vector<VkSubpassDependency> dependencies {
+        VkSubpassDependency {
+            .srcSubpass = VK_SUBPASS_EXTERNAL,
+            .dstSubpass = 0,
+            .srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+            .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .srcAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+        },
+        VkSubpassDependency {
+            .srcSubpass = 0,
+            .dstSubpass = VK_SUBPASS_EXTERNAL,
+            .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+            .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+            .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+        }
+    };
+
+    std::vector<VkAttachmentDescription> attachments {depthAttachment};
+
+    mDepthRenderPass = RF::CreateRenderPass(
+        attachments.data(),
+        static_cast<uint32_t>(attachments.size()),
+        subPassDescription.data(),
+        static_cast<uint32_t>(subPassDescription.size()),
+        dependencies.data(),
+        static_cast<uint32_t>(dependencies.size())
+    );
+
 }
 
 //-------------------------------------------------------------------------------------------------

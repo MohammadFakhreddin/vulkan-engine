@@ -317,7 +317,7 @@ void Init() {
         pipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
         
         state->drawPipeline = RF::CreatePipeline(
-            RF::GetDisplayRenderPass(),
+            RF::GetDisplayRenderPass()->GetVkRenderPass(),
             static_cast<uint8_t>(shaderStages.size()),
             shaderStages.data(),
             1,

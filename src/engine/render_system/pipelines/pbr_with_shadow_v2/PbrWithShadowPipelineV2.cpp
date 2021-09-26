@@ -65,6 +65,9 @@ void PBRWithShadowPipelineV2::Init(
     createShadowPassDescriptorSetLayout();
     createShadowPassPipeline();
 
+    createDepthDescriptorSetLayout();
+    createDepthPassPipeline();
+
     static float FOV = 90.0f;          // TODO Maybe it should be the same with our camera's FOV.
     
     const float ratio = SHADOW_WIDTH / SHADOW_HEIGHT;
@@ -110,7 +113,7 @@ void PBRWithShadowPipelineV2::Shutdown() {
     BasePipeline::Shutdown();
     
 }
-
+// TODO Draw only visible items to camera in future
 //-------------------------------------------------------------------------------------------------
 
 void PBRWithShadowPipelineV2::PreRender(RT::DrawPass & drawPass, float const deltaTime) {
@@ -134,42 +137,71 @@ void PBRWithShadowPipelineV2::PreRender(RT::DrawPass & drawPass, float const del
         --mShadowViewProjectionNeedUpdate;
     }
 
+    // Shadow pass
     RF::BindDrawPipeline(drawPass, mShadowPassPipeline);
 
     mShadowRenderPass->PrepareCubeMapForTransferDestination(drawPass);
     for (int faceIndex = 0; faceIndex < 6; ++faceIndex) {
         mShadowRenderPass->SetNextPassParams(faceIndex);
         mShadowRenderPass->BeginRenderPass(drawPass);
-        for (auto const & variantsList : mEssenceAndVariantsMap | std::views::values) {
-            for (auto const & variant : variantsList->variants) {
+        for (auto const & variantsList : mEssenceAndVariantsMap) {
+            for (auto const & variant : variantsList.second->variants) {
                 RF::BindDescriptorSet(
                     drawPass, 
                     variant->GetDescriptorSetGroup("PbrWithShadowV2ShadowPipeline")->descriptorSets[drawPass.frameIndex]
                 );
 
                 variant->Draw(drawPass, [&drawPass, &faceIndex](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void {
-
-                    {// Vertex push constants
-                        ShadowPassVertexStagePushConstants pushConstants {
-                            .faceIndex = faceIndex,
-                            .skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1,
-                        };
-                        Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modeTransform);
-                        Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
-                        RF::PushConstants(
-                            drawPass,
-                            AS::ShaderStage::Vertex,
-                            0,
-                            CBlobAliasOf(pushConstants)
-                        );
-                    }
-                    
+                    // Vertex push constants
+                    ShadowPassVertexStagePushConstants pushConstants {
+                        .faceIndex = faceIndex,
+                        .skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1,
+                    };
+                    Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modeTransform);
+                    Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
+                    RF::PushConstants(
+                        drawPass,
+                        AS::ShaderStage::Vertex,
+                        0,
+                        CBlobAliasOf(pushConstants)
+                    );
                 });
             }
         }
         mShadowRenderPass->EndRenderPass(drawPass);
     }
     mShadowRenderPass->PrepareCubeMapForSampling(drawPass);
+
+    // Depth pre pass
+    RF::BindDrawPipeline(drawPass, mDepthPassPipeline);
+    RF::GetDisplayRenderPass()->BeginDepthPrePass(drawPass);
+    for (auto const & variantsList : mEssenceAndVariantsMap) {
+        for (auto const & variant : variantsList.second->variants) {
+            RF::BindDescriptorSet(
+                drawPass, 
+                variant->GetDescriptorSetGroup("PbrWithShadowV2DepthPipeline")->descriptorSets[drawPass.frameIndex]
+            );
+
+            variant->Draw(drawPass, [&drawPass](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void {
+
+                {// Vertex push constants
+                    DepthPrePassVertexStagePushConstants pushConstants {
+                        .skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1,
+                    };
+                    Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modeTransform);
+                    Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
+                    RF::PushConstants(
+                        drawPass,
+                        AS::ShaderStage::Vertex,
+                        0,
+                        CBlobAliasOf(pushConstants)
+                    );
+                }
+                
+            });
+        }
+    }
+    RF::GetDisplayRenderPass()->EndDepthPrePass(drawPass);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -211,7 +243,8 @@ DrawableVariant * PBRWithShadowPipelineV2::CreateDrawableVariant(char const * es
 
     CreateDisplayPassDescriptorSets(variant);
     CreateShadowPassDescriptorSets(variant);
-    
+    CreateDepthPassDescriptorSets(variant);
+
     return variant;
 }
 
@@ -480,6 +513,8 @@ void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableVariant * 
     }
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void PBRWithShadowPipelineV2::CreateShadowPassDescriptorSets(DrawableVariant * variant) {
 
     auto const descriptorSetGroup = variant->CreateDescriptorSetGroup(
@@ -538,6 +573,57 @@ void PBRWithShadowPipelineV2::CreateShadowPassDescriptorSets(DrawableVariant * v
         descriptorSetSchema.UpdateDescriptorSets();
     }
 }
+
+//-------------------------------------------------------------------------------------------------
+
+void PBRWithShadowPipelineV2::CreateDepthPassDescriptorSets(DrawableVariant * variant) {
+
+    auto const descriptorSetGroup = variant->CreateDescriptorSetGroup(
+        "PbrWithShadowV2DepthPipeline", 
+        mDepthPassDescriptorSetLayout, 
+        variant->GetEssence()->GetPrimitiveCount() * RF::GetMaxFramesPerFlight()
+    );
+
+    auto const & actualSkinJointsBuffer = variant->GetSkinJointsBuffer();
+    
+    for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex) {
+
+        auto const descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
+        MFA_VK_VALID_ASSERT(descriptorSet);
+       
+        DescriptorSetSchema descriptorSetSchema {descriptorSet};
+
+        /////////////////////////////////////////////////////////////////
+        // Vertex shader
+        /////////////////////////////////////////////////////////////////
+        
+        // ViewProjectionTransform
+        VkDescriptorBufferInfo viewProjectionBufferInfo {
+            .buffer = mDisplayViewProjectionBuffer.buffers[frameIndex].buffer,
+            .offset = 0,
+            .range = mDisplayViewProjectionBuffer.bufferSize
+        };
+        descriptorSetSchema.AddUniformBuffer(viewProjectionBufferInfo);
+
+        // SkinJoints
+        VkBuffer skinJointBuffer = mErrorBuffer.buffers[0].buffer;
+        size_t skinJointBufferSize = mErrorBuffer.bufferSize;
+        if (actualSkinJointsBuffer.bufferSize > 0) {
+            skinJointBuffer = actualSkinJointsBuffer.buffers[frameIndex].buffer;
+            skinJointBufferSize = actualSkinJointsBuffer.bufferSize;
+        }
+        VkDescriptorBufferInfo skinTransformBufferInfo {
+            .buffer = skinJointBuffer,
+            .offset = 0,
+            .range = skinJointBufferSize,
+        };
+        descriptorSetSchema.AddUniformBuffer(skinTransformBufferInfo);
+        
+        descriptorSetSchema.UpdateDescriptorSets();
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
 
 void PBRWithShadowPipelineV2::createDisplayPassDescriptorSetLayout() {
     std::vector<VkDescriptorSetLayoutBinding> bindings {};
@@ -619,6 +705,8 @@ void PBRWithShadowPipelineV2::createDisplayPassDescriptorSetLayout() {
     );  
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void PBRWithShadowPipelineV2::createShadowPassDescriptorSetLayout() {
     std::vector<VkDescriptorSetLayoutBinding> bindings {};
     
@@ -664,13 +752,51 @@ void PBRWithShadowPipelineV2::createShadowPassDescriptorSetLayout() {
     );  
 }
 
+//-------------------------------------------------------------------------------------------------
+
+void PBRWithShadowPipelineV2::createDepthDescriptorSetLayout() {
+    std::vector<VkDescriptorSetLayoutBinding> bindings {};
+    
+    /////////////////////////////////////////////////////////////////
+    // Vertex shader
+    /////////////////////////////////////////////////////////////////
+
+    // ViewProjectionTransform
+    bindings.emplace_back(VkDescriptorSetLayoutBinding {
+        .binding = static_cast<uint32_t>(bindings.size()),
+        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .descriptorCount = 1,
+        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+    });
+
+    // SkinJoints
+    bindings.emplace_back( VkDescriptorSetLayoutBinding {
+        .binding = static_cast<uint32_t>(bindings.size()),
+        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .descriptorCount = 1,
+        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+    });
+
+     mDepthPassDescriptorSetLayout = RF::CreateDescriptorSetLayout(
+        static_cast<uint8_t>(bindings.size()),
+        bindings.data()
+    );  
+}
+
+//-------------------------------------------------------------------------------------------------
+
 void PBRWithShadowPipelineV2::destroyDescriptorSetLayout() const {
     MFA_VK_VALID_ASSERT(mDisplayPassDescriptorSetLayout);
     RF::DestroyDescriptorSetLayout(mDisplayPassDescriptorSetLayout);
 
     MFA_VK_VALID_ASSERT(mShadowPassDescriptorSetLayout);
     RF::DestroyDescriptorSetLayout(mShadowPassDescriptorSetLayout);
+
+    MFA_VK_VALID_ASSERT(mDepthPassDescriptorSetLayout);
+    RF::DestroyDescriptorSetLayout(mDepthPassDescriptorSetLayout);
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void PBRWithShadowPipelineV2::createDisplayPassPipeline() {
     // Vertex shader
@@ -810,9 +936,10 @@ void PBRWithShadowPipelineV2::createDisplayPassPipeline() {
     options.pushConstantRanges = mPushConstantRanges.data();
     options.pushConstantsRangeCount = static_cast<uint8_t>(mPushConstantRanges.size());
     options.cullMode = VK_CULL_MODE_BACK_BIT;
-    
+    options.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+
     mDisplayPassPipeline = RF::CreatePipeline(
-        RF::GetDisplayRenderPass(),
+        RF::GetDisplayRenderPass()->GetVkRenderPass(),
         static_cast<uint8_t>(shaders.size()), 
         shaders.data(),
         1,
@@ -912,11 +1039,111 @@ void PBRWithShadowPipelineV2::createShadowPassPipeline() {
     
     MFA_ASSERT(mShadowPassPipeline.isValid() == false);
     mShadowPassPipeline = RF::CreatePipeline(
-        mShadowRenderPass.get(),
+        mShadowRenderPass->GetVkRenderPass(),
         static_cast<uint8_t>(shaders.size()), 
         shaders.data(),
         1,
         &mShadowPassDescriptorSetLayout,
+        vertexInputBindingDescription,
+        static_cast<uint8_t>(inputAttributeDescriptions.size()),
+        inputAttributeDescriptions.data(),
+        graphicPipelineOptions
+    );
+}
+
+void PBRWithShadowPipelineV2::createDepthPassPipeline() {
+        // Vertex shader
+    auto cpuVertexShader = Importer::ImportShaderFromSPV(
+        Path::Asset("shaders/pbr_with_shadow_v2/DepthPrePass.vert.spv").c_str(),
+        AssetSystem::Shader::Stage::Vertex, 
+        "main"
+    );
+    MFA_ASSERT(cpuVertexShader.isValid());
+    auto gpuVertexShader = RF::CreateShader(cpuVertexShader);
+    MFA_ASSERT(gpuVertexShader.valid());
+    MFA_DEFER {
+        RF::DestroyShader(gpuVertexShader);
+        Importer::FreeShader(cpuVertexShader);
+    };
+
+    // Fragment shader
+    auto cpuFragmentShader = Importer::ImportShaderFromSPV(
+        Path::Asset("shaders/pbr_with_shadow_v2/DepthPrePass.frag.spv").c_str(),
+        AssetSystem::Shader::Stage::Fragment,
+        "main"
+    );
+    auto gpuFragmentShader = RF::CreateShader(cpuFragmentShader);
+    MFA_ASSERT(cpuFragmentShader.isValid());
+    MFA_ASSERT(gpuFragmentShader.valid());
+    MFA_DEFER {
+        RF::DestroyShader(gpuFragmentShader);
+        Importer::FreeShader(cpuFragmentShader);
+    };
+
+    std::vector<RT::GpuShader const *> shaders {&gpuVertexShader, &gpuFragmentShader};
+
+    VkVertexInputBindingDescription vertexInputBindingDescription {};
+    vertexInputBindingDescription.binding = 0;
+    vertexInputBindingDescription.stride = sizeof(AS::MeshVertex);
+    vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    
+    std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions {};
+
+    // Position
+    inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+        .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+        .binding = 0,
+        .format = VK_FORMAT_R32G32B32_SFLOAT,
+        .offset = offsetof(AS::MeshVertex, position),   
+    });
+
+    // HasSkin
+    inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+        .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+        .binding = 0,
+        .format = VK_FORMAT_R32_SINT,
+        .offset = offsetof(AS::MeshVertex, hasSkin), // TODO We should use a primitiveInfo instead
+    });
+
+    // JointIndices
+    inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+        .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+        .binding = 0,
+        .format = VK_FORMAT_R32G32B32A32_SINT,
+        .offset = offsetof(AS::MeshVertex, jointIndices),
+    });
+
+    // JointWeights
+    inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+        .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+        .binding = 0,
+        .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+        .offset = offsetof(AS::MeshVertex, jointWeights),
+    });
+    
+    std::vector<VkPushConstantRange> pushConstantRanges {};
+    // FaceIndex  
+    VkPushConstantRange pushConstantRange {
+        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        .offset = 0,
+        .size = sizeof(DepthPrePassVertexStagePushConstants),
+    };
+    pushConstantRanges.emplace_back(pushConstantRange);
+
+    RT::CreateGraphicPipelineOptions graphicPipelineOptions {};
+    graphicPipelineOptions.cullMode = VK_CULL_MODE_BACK_BIT;
+    graphicPipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
+    graphicPipelineOptions.pushConstantRanges = pushConstantRanges.data();
+    // TODO Probably we need to make pushConstantsRangeCount uint32_t
+    graphicPipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
+    
+    MFA_ASSERT(mDepthPassPipeline.isValid() == false);
+    mDepthPassPipeline = RF::CreatePipeline(
+        RF::GetDisplayRenderPass()->GetVkDepthRenderPass(),
+        static_cast<uint8_t>(shaders.size()), 
+        shaders.data(),
+        1,
+        &mDepthPassDescriptorSetLayout,
         vertexInputBindingDescription,
         static_cast<uint8_t>(inputAttributeDescriptions.size()),
         inputAttributeDescriptions.data(),
@@ -930,6 +1157,9 @@ void PBRWithShadowPipelineV2::destroyPipeline() {
 
     MFA_ASSERT(mShadowPassPipeline.isValid());
     RF::DestroyPipelineGroup(mShadowPassPipeline);
+
+    MFA_ASSERT(mDepthPassPipeline.isValid());
+    RF::DestroyPipelineGroup(mDepthPassPipeline);
 }
 
 void PBRWithShadowPipelineV2::createUniformBuffers() {

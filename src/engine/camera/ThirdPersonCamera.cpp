@@ -42,13 +42,6 @@ void ThirdPersonCamera::Init(
     OnResize();
     updateTransform();
 
-    auto const surfaceCapabilities = RF::GetSurfaceCapabilities();
-    auto const screenWidth = surfaceCapabilities.currentExtent.width;
-    auto const screenHeight = surfaceCapabilities.currentExtent.height;
-    RF::WarpMouseInWindow(
-        static_cast<int>(static_cast<float>(screenWidth) / 2.0f), 
-        static_cast<int>(static_cast<float>(screenHeight) / 2.0f)
-    );
     IM::WarpMouseAtEdges(true);
 }
 
@@ -116,14 +109,6 @@ void ThirdPersonCamera::OnResize() {
         mFieldOfView,
         mNearPlane,
         mFarPlane
-    );
-
-    auto const surfaceCapabilities = RF::GetSurfaceCapabilities();
-    auto const screenWidth = surfaceCapabilities.currentExtent.width;
-    auto const screenHeight = surfaceCapabilities.currentExtent.height;
-    RF::WarpMouseInWindow(
-        static_cast<int>(static_cast<float>(screenWidth) / 2.0f), 
-        static_cast<int>(static_cast<float>(screenHeight) / 2.0f)
     );
 }
 

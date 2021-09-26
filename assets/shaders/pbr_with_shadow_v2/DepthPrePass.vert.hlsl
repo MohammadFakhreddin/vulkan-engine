@@ -8,14 +8,13 @@ struct VSIn {
 
 struct VSOut {
     float4 position : SV_POSITION;
-    float4 worldPosition : POSITION0;
 };
 
-struct ViewDataProjectionData {
-    float4x4 data[6];
+struct ViewProjectionData {
+    float4x4 viewProjection;
 };
 
-ConstantBuffer <ViewDataProjectionData> viewProjectionBuffer: register(b0, space0);
+ConstantBuffer <ViewProjectionData> viewProjectionBuffer: register(b0, space0);
 
 struct SkinJoints {
     float4x4 joints[];
@@ -28,7 +27,6 @@ struct PushConsts
 {   
     float4x4 model;
     float4x4 inverseNodeTransform;
-    int faceIndex;
     int skinIndex;
 };
 
@@ -69,8 +67,7 @@ VSOut main(VSIn input) {
     // Position
     float4 tempPosition = float4(input.position, 1.0f); // w is 1 because position is a coordinate
     float4 worldPosition = mul(skinModelMat, tempPosition);;
-    output.worldPosition = worldPosition;
-    output.position = mul(viewProjectionBuffer.data[pushConsts.faceIndex], worldPosition);
+    output.position = mul(viewProjectionBuffer.viewProjection, worldPosition);
 
     return output;
 }

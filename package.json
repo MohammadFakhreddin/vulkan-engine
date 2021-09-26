@@ -13,11 +13,8 @@
         "pbr-with-shadow-frag-v2": "glslc -fshader-stage=frag assets/shaders/pbr_with_shadow_v2/PbrWithShadow.frag.hlsl  -o assets/shaders/pbr_with_shadow_v2/PbrWithShadow.frag.spv",
         "offscreen-shadow-vert-v2": "glslc -fshader-stage=vert assets/shaders/pbr_with_shadow_v2/OffscreenShadow.vert.hlsl  -o assets/shaders/pbr_with_shadow_v2/OffscreenShadow.vert.spv",
         "offscreen-shadow-frag-v2": "glslc -fshader-stage=frag assets/shaders/pbr_with_shadow_v2/OffscreenShadow.frag.hlsl  -o assets/shaders/pbr_with_shadow_v2/OffscreenShadow.frag.spv",
-
-        "v3-shadow-pass-vert": "glslc -fshader-stage=vert assets/shaders/pbr_with_shadow_v3/PbrWithShadow.vert.hlsl  -o assets/shaders/pbr_with_shadow_v3/PbrWithShadow.vert.spv",
-        "v3-shadow-pass-frag": "glslc -fshader-stage=frag assets/shaders/pbr_with_shadow_v3/PbrWithShadow.frag.hlsl  -o assets/shaders/pbr_with_shadow_v3/PbrWithShadow.frag.spv",
-        "v3-display-pass-vert": "glslc -fshader-stage=vert assets/shaders/pbr_with_shadow_v3/OffscreenShadow.vert.hlsl  -o assets/shaders/pbr_with_shadow_v3/OffscreenShadow.vert.spv",
-        "v3-display-pass-frag": "glslc -fshader-stage=frag assets/shaders/pbr_with_shadow_v3/OffscreenShadow.frag.hlsl  -o assets/shaders/pbr_with_shadow_v3/OffscreenShadow.frag.spv",
+        "depth-pre-pass-vert": "glslc -fshader-stage=vert assets/shaders/pbr_with_shadow_v2/DepthPrePass.vert.hlsl  -o assets/shaders/pbr_with_shadow_v2/DepthPrePass.vert.spv",
+        "depth-pre-pass-frag": "glslc -fshader-stage=frag assets/shaders/pbr_with_shadow_v2/DepthPrePass.frag.hlsl  -o assets/shaders/pbr_with_shadow_v2/DepthPrePass.frag.spv",
         
         "point-light-vert": "glslc -fshader-stage=vert assets/shaders/point_light/PointLight.vert.hlsl  -o assets/shaders/point_light/PointLight.vert.spv",
         "point-light-frag": "glslc -fshader-stage=frag assets/shaders/point_light/PointLight.frag.hlsl  -o assets/shaders/point_light/PointLight.frag.spv",

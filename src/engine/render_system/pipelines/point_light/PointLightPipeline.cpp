@@ -251,7 +251,7 @@ void PointLightPipeline::createPipeline() {
     pipelineOptions.pushConstantRanges = pushConstantRanges.data();
 
     mDrawPipeline = RF::CreatePipeline(
-        RF::GetDisplayRenderPass(),
+        RF::GetDisplayRenderPass()->GetVkRenderPass(),
         static_cast<uint8_t>(shaders.size()), 
         shaders.data(),
         1,

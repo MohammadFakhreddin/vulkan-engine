@@ -31,6 +31,12 @@ public:
         int skinIndex;
         int placeholder0[2];
     };
+    struct DepthPrePassVertexStagePushConstants {
+        float modeTransform[16];
+        float inverseNodeTransform[16];
+        int skinIndex;
+        int placeholder0[3];
+    };
     struct DisplayPassAllStagesPushConstants {
         float modeTransform[16];
         float inverseNodeTransform[16];
@@ -89,6 +95,8 @@ public:
 
     void CreateShadowPassDescriptorSets(DrawableVariant * variant);
 
+    void CreateDepthPassDescriptorSets(DrawableVariant * variant);
+
     DrawableVariant * CreateDrawableVariant(char const * essenceName) override;
 
 private:
@@ -97,11 +105,15 @@ private:
 
     void createShadowPassDescriptorSetLayout();
 
+    void createDepthDescriptorSetLayout();
+
     void destroyDescriptorSetLayout() const;
 
     void createDisplayPassPipeline();
 
     void createShadowPassPipeline();
+
+    void createDepthPassPipeline();
 
     void destroyPipeline();
 
@@ -137,6 +149,9 @@ private:
     RT::PipelineGroup mShadowPassPipeline {};
     RT::UniformBufferGroup mShadowLightBuffer {};
 
+    VkDescriptorSetLayout mDepthPassDescriptorSetLayout {};
+    RT::PipelineGroup mDepthPassPipeline {};
+    
     std::unique_ptr<ShadowRenderPassV2> mShadowRenderPass;
 
     RT::UniformBufferGroup mShadowViewProjectionBuffer {};

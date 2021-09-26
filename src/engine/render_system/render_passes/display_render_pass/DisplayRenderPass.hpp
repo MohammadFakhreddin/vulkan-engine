@@ -17,7 +17,11 @@ public:
     DisplayRenderPass & operator = (DisplayRenderPass const &) noexcept = delete;
     DisplayRenderPass & operator = (DisplayRenderPass &&) noexcept = delete;
 
+    [[nodiscard]]
     VkRenderPass GetVkRenderPass() override;
+
+    [[nodiscard]]
+    VkRenderPass GetVkDepthRenderPass() const;
 
     VkCommandBuffer GetCommandBuffer(RT::DrawPass const & drawPass);
 
@@ -25,6 +29,10 @@ public:
     RT::DrawPass StartGraphicCommandBufferRecording();
 
     void EndGraphicCommandBufferRecording(RT::DrawPass & drawPass);
+
+    void BeginDepthPrePass(RT::DrawPass & drawPass);
+
+    void EndDepthPrePass(RT::DrawPass & drawPass);
 
 protected:
 
@@ -50,20 +58,26 @@ private:
 
     VkFramebuffer getFrameBuffer(RT::DrawPass const & drawPass);
 
-    void createFrameBuffers(VkExtent2D const & extent);
+    void createDisplayFrameBuffers(VkExtent2D const & extent);
 
-    void createRenderPass();
+    void createDepthFrameBuffers(VkExtent2D const & extent);
+
+    void createDisplayRenderPass();
+
+    void createDepthRenderPass();
     
-    VkRenderPass mVkRenderPass {};
+    VkRenderPass mVkDisplayRenderPass {};
     uint32_t mSwapChainImagesCount = 0;
     RT::SwapChainGroup mSwapChainImages {};
-    std::vector<VkFramebuffer> mFrameBuffers {};
+    std::vector<VkFramebuffer> mDisplayFrameBuffers {};
     RT::ColorImageGroup mMSAAImageGroup {};
     RT::DepthImageGroup mDepthImageGroup {};
     RT::SyncObjects mSyncObjects {};
     uint8_t mCurrentFrame = 0;
     std::vector<VkCommandBuffer> mGraphicCommandBuffers {};
 
+    VkRenderPass mDepthRenderPass {};
+    VkFramebuffer mDepthFrameBuffer {};
 };
 
 }

@@ -379,7 +379,7 @@ void DestroyDescriptorSetLayout(VkDescriptorSetLayout descriptorSetLayout) {
 
 [[nodiscard]]
 RT::PipelineGroup CreatePipeline(
-    RenderPass * renderPass,
+    VkRenderPass vkRenderPass,
     uint8_t gpuShadersCount, 
     RT::GpuShader const ** gpuShaders,
     uint32_t descriptorLayoutsCount,
@@ -403,7 +403,7 @@ RT::PipelineGroup CreatePipeline(
         static_cast<uint32_t>(inputAttributeDescriptionCount),
         inputAttributeDescriptionData,
         extent2D,
-        renderPass->GetVkRenderPass(),
+        vkRenderPass,
         descriptorLayoutsCount,
         descriptorSetLayouts,
         options

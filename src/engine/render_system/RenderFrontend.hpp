@@ -52,7 +52,7 @@ void DestroyDescriptorSetLayout(VkDescriptorSetLayout descriptorSetLayout);
 
 [[nodiscard]]
 RT::PipelineGroup CreatePipeline(
-    RenderPass * renderPass,
+    VkRenderPass vkRenderPass,
     uint8_t gpuShadersCount, 
     RT::GpuShader const ** gpuShaders,
     uint32_t descriptorLayoutsCount,
