@@ -48,15 +48,23 @@ protected:
 
 private:
 
+    [[nodiscard]]
     VkSemaphore getImageAvailabilitySemaphore(RT::DrawPass const & drawPass);
 
+    [[nodiscard]]
     VkSemaphore getRenderFinishIndicatorSemaphore(RT::DrawPass const & drawPass);
 
+    [[nodiscard]]
     VkFence getInFlightFence(RT::DrawPass const & drawPass);
 
+    [[nodiscard]]
     VkImage getSwapChainImage(RT::DrawPass const & drawPass);
 
-    VkFramebuffer getFrameBuffer(RT::DrawPass const & drawPass);
+    [[nodiscard]]
+    VkFramebuffer getDisplayFrameBuffer(RT::DrawPass const & drawPass);
+
+    [[nodiscard]]
+    VkFramebuffer getDepthFrameBuffer(RT::DrawPass const & drawPass);
 
     void createDisplayFrameBuffers(VkExtent2D const & extent);
 
@@ -70,14 +78,14 @@ private:
     uint32_t mSwapChainImagesCount = 0;
     RT::SwapChainGroup mSwapChainImages {};
     std::vector<VkFramebuffer> mDisplayFrameBuffers {};
-    RT::ColorImageGroup mMSAAImageGroup {};
-    RT::DepthImageGroup mDepthImageGroup {};
+    std::vector<RT::ColorImageGroup> mMSAAImageGroupList {};
+    std::vector<RT::DepthImageGroup> mDepthImageGroupList {};
     RT::SyncObjects mSyncObjects {};
     uint8_t mCurrentFrame = 0;
     std::vector<VkCommandBuffer> mGraphicCommandBuffers {};
 
     VkRenderPass mDepthRenderPass {};
-    VkFramebuffer mDepthFrameBuffer {};
+    std::vector<VkFramebuffer> mDepthFrameBuffer {};
 };
 
 }

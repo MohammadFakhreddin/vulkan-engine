@@ -21,8 +21,6 @@
 
 namespace MFA::RenderFrontend {
 
-uint32_t MAX_FRAMES_IN_FLIGHT = 2;
-
 #ifdef __DESKTOP__
 struct SDLEventWatchGroup {
     SDLEventWatchId id = 0;
@@ -36,6 +34,7 @@ struct ResizeEventWatchGroup {
 };
 
 struct State {
+    uint32_t maxFramesPerFlight = 0;
     // CreateWindow
     ScreenWidth screenWidth = 0;
     ScreenHeight screenHeight = 0;
@@ -198,11 +197,11 @@ bool Init(InitParams const & params) {
     state->surface = RB::CreateWindowSurface(state->window, state->vk_instance);
 
     {// FindPhysicalDevice
-        auto const findPhysicalDeviceResult = RB::FindPhysicalDevice(state->vk_instance); // TODO Check again for retry count number
+        auto const findPhysicalDeviceResult = RB::FindPhysicalDevice(state->vk_instance);   // TODO Check again for retry count number
         state->physicalDevice = findPhysicalDeviceResult.physicalDevice;
         // I'm not sure if this is a correct thing to do but currently I'm enabling all gpu features.
         state->physicalDeviceFeatures = findPhysicalDeviceResult.physicalDeviceFeatures;
-        state->maxSampleCount = findPhysicalDeviceResult.maxSampleCount;
+        state->maxSampleCount = findPhysicalDeviceResult.maxSampleCount;                    // TODO It should be a setting
         state->physicalDeviceProperties = findPhysicalDeviceResult.physicalDeviceProperties;
 
         std::string message = "Supported physical device features are:";
@@ -217,6 +216,7 @@ bool Init(InitParams const & params) {
     state->surfaceCapabilities = computeSurfaceCapabilities();
 
     state->swapChainImageCount = RB::ComputeSwapChainImagesCount(state->surfaceCapabilities);
+    state->maxFramesPerFlight = state->swapChainImageCount;
 
     state->screenWidth = state->surfaceCapabilities.currentExtent.width;
     state->screenHeight = state->surfaceCapabilities.currentExtent.height;
@@ -849,7 +849,7 @@ uint32_t GetSwapChainImagesCount() {
 //-------------------------------------------------------------------------------------------------
 
 uint32_t GetMaxFramesPerFlight() {
-    return MAX_FRAMES_IN_FLIGHT;
+    return state->maxFramesPerFlight;
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -266,7 +266,7 @@ void PointLightPipeline::createPipeline() {
 //-------------------------------------------------------------------------------------------------
 
 void PointLightPipeline::createDescriptorSets() {
-    mDescriptorSetGroup = RF::CreateDescriptorSets(2, mDescriptorSetLayout);
+    mDescriptorSetGroup = RF::CreateDescriptorSets(RF::GetMaxFramesPerFlight(), mDescriptorSetLayout);
 
     for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex) {
 

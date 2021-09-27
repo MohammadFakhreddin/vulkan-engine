@@ -471,7 +471,7 @@ void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableVariant * 
         // ShadowMap
         VkDescriptorImageInfo shadowMapImageInfo {
             .sampler = mSamplerGroup->sampler,
-            .imageView = mShadowRenderPass->GetDepthCubeMap().imageView,
+            .imageView = mShadowRenderPass->GetDepthCubeMap(frameIndex).imageView,
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         };
         descriptorSetSchema.AddCombinedImageSampler(shadowMapImageInfo);
