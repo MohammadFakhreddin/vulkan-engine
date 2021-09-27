@@ -99,7 +99,13 @@ list(
     "src/engine/entity_system/components/ColliderComponent.cpp"
     "src/engine/entity_system/components/RenderComponent.hpp"
     "src/engine/entity_system/components/RenderComponent.cpp"
-    
+
+    # Job system
+    "src/engine/job_system/ThreadPool.hpp"
+    "src/engine/job_system/ThreadPool.cpp"
+    "src/engine/job_system/ThreadSafeQueue.hpp"
+    "src/engine/job_system/JobSystem.hpp"
+    "src/engine/job_system/JobSystem.cpp"
     
     # RenderSystem
     "src/engine/render_system/RenderTypes.hpp"

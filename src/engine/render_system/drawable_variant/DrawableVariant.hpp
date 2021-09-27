@@ -23,7 +23,7 @@ class DrawableVariant {
 public:
     
     struct JointTransformData {
-        float model[16];
+        glm::mat4 model;
     };
     
     struct Skin {
@@ -164,7 +164,7 @@ private:
     void updateSkinJoints(uint32_t skinIndex, AS::MeshSkin const & skin);
     
     void drawNode(
-        RT::DrawPass & drawPass,
+        RT::DrawPass const & drawPass,
         Node const & node,
         BindDescriptorSetFunction const & bindFunction
     );

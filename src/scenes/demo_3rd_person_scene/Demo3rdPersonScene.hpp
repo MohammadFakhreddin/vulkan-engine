@@ -52,6 +52,7 @@ private:
 
     MFA::RT::GpuModel mSoldierGpuModel {};
     MFA::DrawableVariant * mSoldierVariant = nullptr;
+    std::vector<MFA::DrawableVariant *> mNPCs {};
 
     MFA::RT::GpuModel mMapModel {};
     MFA::DrawableVariant * mMapVariant = nullptr;

@@ -43,21 +43,13 @@ glm::vec4 ConvertCellsToVec4(float const * cells) {
 //-------------------------------------------------------------------------------------------------
 
 void CopyCellsToMat4(float const * cells, glm::mat4 & outMatrix) {
-    for (int i = 0; i < 4; ++i) {
-        for (int j = 0; j < 4; ++j) {
-            outMatrix[i][j] = cells[i * 4 + j];
-        }
-    }
+    ::memcpy(&outMatrix, cells, sizeof(float) * 16);
 }
 
 //-------------------------------------------------------------------------------------------------
 
 void CopyGlmToCells(glm::mat4 const & matrix, float * cells) {
-    for (int i = 0; i < 4; ++i) {
-        for (int j = 0; j < 4; ++j) {
-            cells[i * 4 + j] = matrix[i][j];
-        }
-    }
+    ::memcpy(cells, &matrix, sizeof(float) * 16);
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -451,24 +451,21 @@ void DrawableVariant::updateAnimation(float const deltaTimeInSec) {
 
             for (size_t i = 0; i < sampler.inputAndOutput.size() - 1; i++)
             {
-                if (sampler.interpolation != Animation::Interpolation::Linear)
-                {
-                    MFA_LOG_ERROR("This sample only supports linear interpolations");
-                    continue;
-                }
-
-                auto const previousInput = sampler.inputAndOutput[i].input;
-                auto previousOutput = Matrix::ConvertCellsToVec4(sampler.inputAndOutput[i].output);
-                auto const nextInput = sampler.inputAndOutput[i + 1].input;
-                auto nextOutput = Matrix::ConvertCellsToVec4(sampler.inputAndOutput[i + 1].output);
+                MFA_ASSERT(sampler.interpolation == Animation::Interpolation::Linear);
+                
+                auto const & previousInput = sampler.inputAndOutput[i].input;
+                auto const & previousOutput = sampler.inputAndOutput[i].output;
+                auto const & nextInput = sampler.inputAndOutput[i + 1].input;
+                auto const & nextOutput = sampler.inputAndOutput[i + 1].output;
                 // Get the input keyframe values for the current time stamp
+                [[likely]]
                 if (mActiveAnimationTimeInSec >= previousInput && mActiveAnimationTimeInSec <= nextInput)
                 {
                     float const fraction = (mActiveAnimationTimeInSec - previousInput) / (nextInput - previousInput);
 
                     if (channel.path == Animation::Path::Translation)
                     {
-                        node.currentTranslate = glm::mix(previousOutput, nextOutput, fraction);
+                        node.currentTranslate = glm::mix(Matrix::ConvertCellsToVec3(previousOutput), Matrix::ConvertCellsToVec3(nextOutput), fraction);
                     }
                     else if (channel.path == Animation::Path::Rotation)
                     {
@@ -488,7 +485,7 @@ void DrawableVariant::updateAnimation(float const deltaTimeInSec) {
                     }
                     else if (channel.path == Animation::Path::Scale)
                     {
-                        node.currentScale = glm::mix(previousOutput, nextOutput, fraction);
+                        node.currentScale = glm::mix(Matrix::ConvertCellsToVec3(previousOutput), Matrix::ConvertCellsToVec3(nextOutput), fraction);
                     }
                     else
                     {
@@ -627,16 +624,14 @@ void DrawableVariant::updateSkinJoints(uint32_t const skinIndex, AS::MeshSkin co
     {
         auto const & joint = mNodes[skin.joints[i]];
         auto const nodeMatrix = joint.cachedGlobalTransform;
-        glm::mat4 matrix = nodeMatrix *
-            Matrix::CopyCellsToMat4(skin.inverseBindMatrices[i].value);  // T - S = changes
-        Matrix::CopyGlmToCells(matrix, jointMatrices[i].model);
+        jointMatrices[i].model = nodeMatrix * skin.inverseBindMatrices[i];  // T - S = changes
     }
 }
 
 //-------------------------------------------------------------------------------------------------
 
 void DrawableVariant::drawNode(
-    RT::DrawPass & drawPass,
+    RT::DrawPass const & drawPass,
     Node const & node,
     BindDescriptorSetFunction const & bindFunction
 ) {
@@ -698,7 +693,7 @@ glm::mat4 DrawableVariant::computeNodeLocalTransform(Node const & node) const {
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableVariant::computeNodeGlobalTransform(Node & node, Node const * parentNode, bool isParentTransformChanged) {
+void DrawableVariant::computeNodeGlobalTransform(Node & node, Node const * parentNode, bool const isParentTransformChanged) {
     MFA_ASSERT(parentNode == nullptr || parentNode->isCachedDataValid == true);
     MFA_ASSERT(parentNode != nullptr || isParentTransformChanged == false);
 

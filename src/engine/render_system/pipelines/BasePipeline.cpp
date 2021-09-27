@@ -4,6 +4,7 @@
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/drawable_essence/DrawableEssence.hpp"
 #include "engine/render_system/drawable_variant/DrawableVariant.hpp"
+#include "engine/job_system/JobSystem.hpp"
 
 namespace MFA {
 
@@ -22,12 +23,6 @@ void BasePipeline::Init() {}
 //-------------------------------------------------------------------------------------------------
 
 void BasePipeline::Shutdown() {
-//    for (auto & essence : mEssenceAndVariantsMap) {
-//        delete essence.second.essence;
-//        for (auto & variant : essence.second.variants) {
-//            delete variant;
-//        }
-//    }
     mEssenceAndVariantsMap.clear();
 }
 
@@ -37,11 +32,21 @@ void BasePipeline::PreRender(
     RT::DrawPass & drawPass,
     float const deltaTime
 ) {
-    for (auto & essenceAndVariant : mEssenceAndVariantsMap) {
-        for (auto & variant : essenceAndVariant.second->variants) {
-            variant->Update(deltaTime, drawPass);
+    uint32_t nextThreadNumber = 0;
+    auto const availableThreadCount = JS::GetNumberOfAvailableThreads();
+    for (const auto & essenceAndVariant : mEssenceAndVariantsMap) {
+        for (const auto & variant : essenceAndVariant.second->variants) {
+            JS::AssignTask(nextThreadNumber, [&variant, deltaTime, &drawPass]()->void{
+                variant->Update(deltaTime, drawPass);
+            });
+            ++nextThreadNumber;
+            if (nextThreadNumber >= availableThreadCount)
+            {
+                nextThreadNumber = 0;
+            }
         }
     }
+    JS::WaitForThreadsToFinish();
 }
 
 //-------------------------------------------------------------------------------------------------

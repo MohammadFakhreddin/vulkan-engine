@@ -2,6 +2,8 @@
 
 #include "BedrockCommon.hpp"
 
+#include <glm/glm.hpp>
+
 #include <vector>
 
 // TODO Separate this file into multiple files
@@ -306,13 +308,9 @@ public:
         }
     };
 
-    struct InverseBindMatrix {
-        float value[16] {};
-    };
-
     struct Skin {
         std::vector<int> joints {};
-        std::vector<InverseBindMatrix> inverseBindMatrices {};
+        std::vector<glm::mat4> inverseBindMatrices {};
         int skeletonRootNode = -1;
     };
 

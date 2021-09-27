@@ -13,7 +13,7 @@ using namespace MFA;
 
 Demo3rdPersonScene::Demo3rdPersonScene()
     : Scene()
-    , mRecordObject([this]()->void {OnUI();})
+    , mRecordObject([this]()->void { OnUI(); })
 {};
 
 //-------------------------------------------------------------------------------------------------
@@ -22,14 +22,15 @@ Demo3rdPersonScene::~Demo3rdPersonScene() = default;
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::Init() {
+void Demo3rdPersonScene::Init()
+{
     // TODO Add directional light!
     {// Error texture
         auto cpuTexture = Importer::CreateErrorTexture();
         mErrorTexture = RF::CreateTexture(cpuTexture);
     }
     {// Sampler
-        mSampler = RF::CreateSampler(RT::CreateSamplerParams {});
+        mSampler = RF::CreateSampler(RT::CreateSamplerParams{});
     }
     {// Pbr pipeline
         mPbrPipeline.Init(&mSampler, &mErrorTexture, Z_NEAR, Z_FAR);
@@ -46,7 +47,7 @@ void Demo3rdPersonScene::Init() {
         mPointLightModel = RF::CreateGpuModel(cpuModel);
         mPointLightPipeline.CreateDrawableEssence("Sphere", mPointLightModel);
         mPointLightVariant = mPointLightPipeline.CreateDrawableVariant("Sphere");
-        
+
         mPointLightVariant->UpdatePosition(mLightPosition);
         mPointLightPipeline.UpdateLightColor(mPointLightVariant, mLightColor);
     }
@@ -54,12 +55,28 @@ void Demo3rdPersonScene::Init() {
         auto cpuModel = Importer::ImportGLTF(Path::Asset("models/warcraft_3_alliance_footmanfanmade/scene.gltf").c_str());
         mSoldierGpuModel = RF::CreateGpuModel(cpuModel);
         mPbrPipeline.CreateDrawableEssence("Soldier", mSoldierGpuModel);
-        mSoldierVariant = mPbrPipeline.CreateDrawableVariant("Soldier");
 
-        float position[3] {0.0f, 2.0f, 0.0f};
-        float eulerAngles[3] {0.0f, 180.0f, -180.0f};
-        float scale[3] {1.0f, 1.0f, 1.0f};
-        mSoldierVariant->UpdateTransform(position, eulerAngles, scale);
+        {// Playable character
+            mSoldierVariant = mPbrPipeline.CreateDrawableVariant("Soldier");
+
+            float position[3]{ 0.0f, 2.0f, -5.0f };
+            float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
+            float scale[3]{ 1.0f, 1.0f, 1.0f };
+            mSoldierVariant->UpdateTransform(position, eulerAngles, scale);
+        }
+        {// NPCs
+            for (uint32_t i = 0; i < 10; ++i)
+            {
+                for (uint32_t j = 0; j < 10; ++j) {
+                    mNPCs.emplace_back(mPbrPipeline.CreateDrawableVariant("Soldier"));
+
+                    float position[3]{static_cast<float>(i) - 5.0f, 2.0f, static_cast<float>(j) - 4.0f};
+                    float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
+                    float scale[3]{ 1.0f, 1.0f, 1.0f };
+                    mNPCs.back()->UpdateTransform(position, eulerAngles, scale);
+                }
+            }
+        }
     }
     {// Map
         auto cpuModel = Importer::ImportGLTF(Path::Asset("models/sponza/sponza.gltf").c_str());
@@ -67,13 +84,13 @@ void Demo3rdPersonScene::Init() {
         mPbrPipeline.CreateDrawableEssence("SponzaMap", mMapModel);
         mMapVariant = mPbrPipeline.CreateDrawableVariant("SponzaMap");
 
-        float position[3] {0.4f, 2.0f, -6.0f};
-        float eulerAngle[3] {180.0f, -90.0f, 0.0f};
-        float scale[3] {1.0f, 1.0f, 1.0f};
+        float position[3]{ 0.4f, 2.0f, -6.0f };
+        float eulerAngle[3]{ 180.0f, -90.0f, 0.0f };
+        float scale[3]{ 1.0f, 1.0f, 1.0f };
         mMapVariant->UpdateTransform(position, eulerAngle, scale);
     }
     {// Camera
-        float eulerAngle[3] {-15.0f, 0.0f, 0.0f};
+        float eulerAngle[3]{ -15.0f, 0.0f, 0.0f };
         mCamera.Init(mSoldierVariant, 3.0f, eulerAngle);
 
         updateProjectionBuffer();
@@ -83,73 +100,104 @@ void Demo3rdPersonScene::Init() {
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass) {
+void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass)
+{
     {// Soldier
         static constexpr float SoldierSpeed = 5.0f;
         auto const inputForwardMove = IM::GetForwardMove();
         auto const inputRightMove = IM::GetRightMove();
-        if (inputForwardMove != 0.0f || inputRightMove != 0.0f) {
-            float position [3] {};
+        if (inputForwardMove != 0.0f || inputRightMove != 0.0f)
+        {
+            float position[3]{};
             mSoldierVariant->GetPosition(position);
-            float scale[3] {};
+            float scale[3]{};
             mSoldierVariant->GetScale(scale);
-            float targetEulerAngles[3] {};
+            float targetEulerAngles[3]{};
             mSoldierVariant->GetRotation(targetEulerAngles);
 
             float cameraEulerAngles[3];
             mCamera.GetRotation(cameraEulerAngles);
 
             targetEulerAngles[1] = cameraEulerAngles[1];
-            float extraAngleValue = 0.0f;
-            if (inputRightMove == 1.0f) {
-                if (inputForwardMove == 1.0f) {
+            float extraAngleValue;
+            if (inputRightMove == 1.0f)
+            {
+                if (inputForwardMove == 1.0f)
+                {
                     extraAngleValue = +45.0f;
-                } else if (inputForwardMove == 0.0f) {
+                }
+                else if (inputForwardMove == 0.0f)
+                {
                     extraAngleValue = +90.0f;
-                } else if (inputForwardMove == -1.0f) {
+                }
+                else if (inputForwardMove == -1.0f)
+                {
                     extraAngleValue = +135.0f;
-                } else {
+                }
+                else
+                {
                     MFA_ASSERT(false);
                 }
-            } else if (inputRightMove == 0.0f) {
-                if (inputForwardMove == 1.0f) {
+            }
+            else if (inputRightMove == 0.0f)
+            {
+                if (inputForwardMove == 1.0f)
+                {
                     extraAngleValue = 0.0f;
-                } else if (inputForwardMove == 0.0f) {
+                }
+                else if (inputForwardMove == 0.0f)
+                {
                     extraAngleValue = 0.0f;
-                } else if (inputForwardMove == -1.0f) {
-                        extraAngleValue = +180.0f;
-                } else {
+                }
+                else if (inputForwardMove == -1.0f)
+                {
+                    extraAngleValue = +180.0f;
+                }
+                else
+                {
                     MFA_ASSERT(false);
                 }
-            } else if (inputRightMove == -1.0f) {
-                if (inputForwardMove == 1.0f) {
+            }
+            else if (inputRightMove == -1.0f)
+            {
+                if (inputForwardMove == 1.0f)
+                {
                     extraAngleValue = -45.0f;
-                } else if (inputForwardMove == 0.0f) {
+                }
+                else if (inputForwardMove == 0.0f)
+                {
                     extraAngleValue = -90.0f;
-                } else if (inputForwardMove == -1.0f) {
+                }
+                else if (inputForwardMove == -1.0f)
+                {
                     extraAngleValue = -135.0f;
-                } else {
+                }
+                else
+                {
                     MFA_ASSERT(false);
                 }
-            } else {
+            }
+            else
+            {
                 MFA_ASSERT(false);
             }
-            
+
             targetEulerAngles[1] += extraAngleValue;
 
-            float currentEulerAngles [3];
+            float currentEulerAngles[3];
             mSoldierVariant->GetRotation(currentEulerAngles);
 
             auto const targetQuat = Matrix::GlmToQuat(currentEulerAngles[0], targetEulerAngles[1], currentEulerAngles[2]);
 
             auto const currentQuat = Matrix::GlmToQuat(currentEulerAngles[0], currentEulerAngles[1], currentEulerAngles[2]);
 
-            auto const nextQuat = glm::slerp(currentQuat, targetQuat, 0.07f);
+            auto const nextQuat = glm::slerp(currentQuat, targetQuat, 10.0f * deltaTimeInSec);
             auto nextAnglesVec3 = Matrix::GlmToEulerAngles(nextQuat);
 
-            float nextAngles[3] {nextAnglesVec3[0], nextAnglesVec3[1], nextAnglesVec3[2]};
+            float nextAngles[3]{ nextAnglesVec3[0], nextAnglesVec3[1], nextAnglesVec3[2] };
 
-            if (std::fabs(nextAngles[2]) >= 90) {
+            if (std::fabs(nextAngles[2]) >= 90)
+            {
                 nextAngles[0] += 180.f;
                 nextAngles[1] = 180.f - nextAngles[1];
                 nextAngles[2] += 180.f;
@@ -157,11 +205,11 @@ void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPa
 
             auto rotationMatrix = glm::identity<glm::mat4>();
             Matrix::GlmRotate(rotationMatrix, nextAngles);
-            
-            glm::vec4 forwardDirection (
-                CameraBase::ForwardVector[0], 
-                CameraBase::ForwardVector[1], 
-                CameraBase::ForwardVector[2], 
+
+            glm::vec4 forwardDirection(
+                CameraBase::ForwardVector[0],
+                CameraBase::ForwardVector[1],
+                CameraBase::ForwardVector[2],
                 CameraBase::ForwardVector[3]
             );
             forwardDirection = forwardDirection * rotationMatrix;
@@ -178,12 +226,14 @@ void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPa
                 scale
             );
 
-            mSoldierVariant->SetActiveAnimation("SwordAndShieldRun", {.transitionDuration = 0.3f});
-            
-        } else {
+            mSoldierVariant->SetActiveAnimation("SwordAndShieldRun", { .transitionDuration = 0.3f });
+
+        }
+        else
+        {
 
             //mSoldierVariant->SetActiveAnimation("SwordAndShieldIdle");
-            mSoldierVariant->SetActiveAnimation("Idle", {.transitionDuration = 0.3f});
+            mSoldierVariant->SetActiveAnimation("Idle", { .transitionDuration = 0.3f });
 
         }
     }
@@ -191,7 +241,7 @@ void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPa
     mCamera.OnUpdate(deltaTimeInSec);
 
     {// Read camera View to update pipeline buffer
-        float viewData [16];
+        float viewData[16];
         mCamera.GetTransform(viewData);
         mPbrPipeline.UpdateCameraView(viewData);
         mPointLightPipeline.UpdateCameraView(viewData);
@@ -207,21 +257,24 @@ void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPa
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::OnRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass) {
+void Demo3rdPersonScene::OnRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass)
+{
     mPointLightPipeline.Render(drawPass, deltaTimeInSec);
     mPbrPipeline.Render(drawPass, deltaTimeInSec);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass) {
+void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass)
+{
     mPointLightPipeline.PostRender(drawPass, deltaTimeInSec);
     mPbrPipeline.PostRender(drawPass, deltaTimeInSec);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::Shutdown() {
+void Demo3rdPersonScene::Shutdown()
+{
     mRecordObject.Disable();
     {// Soldier
         RF::DestroyGpuModel(mSoldierGpuModel);
@@ -240,27 +293,29 @@ void Demo3rdPersonScene::Shutdown() {
         mPbrPipeline.Shutdown();
     }
     {// Point light
-        mPointLightPipeline.Shutdown();   
+        mPointLightPipeline.Shutdown();
     }
     {// Sampler
         RF::DestroySampler(mSampler);
     }
     {// Error texture
-        RF::DestroyTexture(mErrorTexture);        
+        RF::DestroyTexture(mErrorTexture);
     }
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::OnResize() {
+void Demo3rdPersonScene::OnResize()
+{
     mCamera.OnResize();
     updateProjectionBuffer();
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::updateProjectionBuffer() {
-    float projectionData [16];
+void Demo3rdPersonScene::updateProjectionBuffer()
+{
+    float projectionData[16];
     mCamera.GetProjection(projectionData);
     mPbrPipeline.UpdateCameraProjection(projectionData);
     mPointLightPipeline.UpdateCameraProjection(projectionData);
@@ -268,7 +323,8 @@ void Demo3rdPersonScene::updateProjectionBuffer() {
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::OnUI() {
+void Demo3rdPersonScene::OnUI()
+{
     mCamera.OnUI();
 }
 

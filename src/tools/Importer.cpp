@@ -4,14 +4,15 @@
 #include "engine/BedrockFileSystem.hpp"
 #include "tools/ImageUtils.hpp"
 #include "engine/BedrockAssert.hpp"
+#include "engine/BedrockMath.hpp"
+#include "engine/BedrockMatrix.hpp"
+#include "engine/job_system/ThreadSafeQueue.hpp"
+#include "engine/job_system/JobSystem.hpp"
 
 #include "libs/tiny_obj_loader/tiny_obj_loader.h"
 #include "libs/tiny_gltf_loader/tiny_gltf_loader.h"
 
 #include <glm/gtx/quaternion.hpp>
-
-#include "engine/BedrockMath.hpp"
-#include "engine/BedrockMatrix.hpp"
 
 namespace MFA::Importer {
 
@@ -591,43 +592,77 @@ static void GLTF_extractTextures(
     AS::Model & outResultModel
 ) {
     std::string const directoryPath = FS::ExtractDirectoryFromPath(path);
+
+    struct QueueItem
+    {
+        std::string gltfName {};
+        AS::Texture texture {};
+    };
+    ThreadSafeQueue<QueueItem> resultTextureQueue {};
+    
     // Extracting textures
     if(false == gltfModel.textures.empty()) {
+        JS::ThreadNumber nextThreadNumber = 0;
+        JS::ThreadNumber const availableThreads = JS::GetNumberOfAvailableThreads();
         for (auto const & texture : gltfModel.textures) {
-            AS::SamplerConfig sampler {};
-            sampler.isValid = false;
-            if (texture.sampler >= 0) {// Sampler
-                auto const & gltfSampler = gltfModel.samplers[texture.sampler];
-                sampler.magFilter = gltfSampler.magFilter;
-                sampler.minFilter = gltfSampler.minFilter;
-                sampler.wrapS = gltfSampler.wrapS;
-                sampler.wrapT = gltfSampler.wrapT;
-                //sampler.sample_mode = gltf_sampler. // TODO
-                sampler.isValid = true;
-            }
-            AS::Texture assetSystemTexture {};
-            auto const & image = gltfModel.images[texture.source];
-            {// Texture
-                ImportTextureOptions textureOptions {};
-                textureOptions.tryToGenerateMipmaps = false;
-                textureOptions.sampler = &sampler;
-                std::string image_path = directoryPath + "/" + image.uri;
-                assetSystemTexture = ImportImage(
-                    image_path.c_str(),
-                    // TODO tryToGenerateMipmaps takes too long (We should create .asset files)
-                    textureOptions
-                );
-            }
-            MFA_ASSERT(assetSystemTexture.isValid());
+            JS::AssignTask(nextThreadNumber, [&texture, &gltfModel, &directoryPath, &resultTextureQueue]()->void{
+                AS::SamplerConfig sampler {};
+                sampler.isValid = false;
+                if (texture.sampler >= 0) {// Sampler
+                    auto const & gltfSampler = gltfModel.samplers[texture.sampler];
+                    sampler.magFilter = gltfSampler.magFilter;
+                    sampler.minFilter = gltfSampler.minFilter;
+                    sampler.wrapS = gltfSampler.wrapS;
+                    sampler.wrapT = gltfSampler.wrapT;
+                    //sampler.sample_mode = gltf_sampler. // TODO
+                    sampler.isValid = true;
+                }
+                AS::Texture assetSystemTexture;
+                auto const & image = gltfModel.images[texture.source];
+                {// Texture
+                    ImportTextureOptions textureOptions {};
+                    textureOptions.tryToGenerateMipmaps = false;
+                    textureOptions.sampler = &sampler;
+                    std::string const image_path = directoryPath + "/" + image.uri;
+                    assetSystemTexture = ImportImage(
+                        image_path.c_str(),
+                        // TODO tryToGenerateMipmaps takes too long (We should create .asset files)
+                        textureOptions
+                    );
+                }
+                MFA_ASSERT(assetSystemTexture.isValid());
+
+                QueueItem const item {
+                    .gltfName = image.uri,
+                    .texture = assetSystemTexture,
+                };
+                while(resultTextureQueue.TryToPush(item) == false);
+
+            });
+            ++nextThreadNumber;
+            if (nextThreadNumber >= availableThreads)
             {
-                TextureRef textureRef {};
-                textureRef.gltf_name = image.uri;
-                textureRef.index = static_cast<uint8_t>(outResultModel.textures.size());
-                outTextureRefs.emplace_back(textureRef);
+                nextThreadNumber = 0;
             }
-            outResultModel.textures.emplace_back(assetSystemTexture);
+        }
+
+        JS::WaitForThreadsToFinish();
+
+    }
+
+    while (resultTextureQueue.IsEmpty() == false)
+    {
+        QueueItem item;
+        if (resultTextureQueue.TryToPop(item)) {
+            TextureRef textureRef {
+                .gltf_name = item.gltfName,
+                .index = static_cast<uint8_t>(outResultModel.textures.size()),
+            };
+            outTextureRefs.emplace_back(textureRef);
+            outResultModel.textures.emplace_back(item.texture);
         }
     }
+    
 }
 
 static int16_t GLTF_findTextureByName(
@@ -1225,9 +1260,7 @@ void GLTF_extractSkins(
         skin.inverseBindMatrices.resize(inverseBindMatricesCount);
         for (size_t i = 0; i < skin.inverseBindMatrices.size(); ++i) {
             auto & currentMatrix = skin.inverseBindMatrices[i];
-            for (size_t j = 0; j < 16; ++j) {
-                currentMatrix.value[j] = inverseBindMatricesPtr[i * 16 + j];
-            }
+            Matrix::CopyCellsToMat4(&inverseBindMatricesPtr[i * 16], currentMatrix);
         }
         MFA_ASSERT(skin.inverseBindMatrices.size() == skin.joints.size());
         skin.skeletonRootNode = gltfSkin.skeleton;

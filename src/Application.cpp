@@ -6,6 +6,7 @@
 #include "scenes/demo_3rd_person_scene/Demo3rdPersonScene.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/Scene.hpp"
+#include "engine/job_system/JobSystem.hpp"
 
 #ifdef __ANDROID__
 #include <android_native_app_glue.h>
@@ -16,12 +17,7 @@
 #include "libs/sdl/SDL.hpp"
 #endif
 
-namespace RF = MFA::RenderFrontend;
-namespace UI = MFA::UISystem;
-namespace IM = MFA::InputManager;
-#ifdef __DESKTOP__
-namespace MSDL = MFA::MSDL;
-#endif
+using namespace MFA;
 
 
 Application::Application()
@@ -32,7 +28,7 @@ Application::Application()
 Application::~Application() = default;
 
 void Application::Init() {
-    {
+    {// Initializing render frontend
         RF::InitParams params{};
         params.applicationName = "MfaEngine";
     #ifdef __ANDROID__
@@ -57,6 +53,7 @@ void Application::Init() {
     }
     UI::Init();
     IM::Init();
+    JS::Init();
 
     mSceneSubSystem.RegisterNew(mThirdPersonDemoScene.get(), "ThirdPersonDemoScene");
     mSceneSubSystem.RegisterNew(mGltfMeshViewerScene.get(), "GLTFMeshViewerScene");
@@ -72,6 +69,7 @@ void Application::Shutdown() {
 
     RF::DeviceWaitIdle();
     mSceneSubSystem.Shutdown();
+    JS::Shutdown();
     IM::Shutdown();
     UI::Shutdown();
     RF::Shutdown();

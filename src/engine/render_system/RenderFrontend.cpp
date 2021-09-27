@@ -251,7 +251,7 @@ bool Init(InitParams const & params) {
     
     state->descriptorPool = RB::CreateDescriptorPool(
         state->logicalDevice.device, 
-        5000 // TODO We might need to ask this from user
+        40000 // TODO We might need to ask this from user
     );
 
     state->displayRenderPass.Init();
@@ -1170,10 +1170,10 @@ void SubmitQueue(
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    VkPipelineStageFlags const waitStages[] {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = &imageAvailabilitySemaphore;
-    submitInfo.pWaitDstStageMask = wait_stages;
+    submitInfo.pWaitDstStageMask = waitStages;
 
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
