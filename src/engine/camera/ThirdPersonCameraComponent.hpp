@@ -2,17 +2,18 @@
 
 #include <fwd.hpp>
 
-#include "CameraBase.hpp"
+#include "CameraComponent.hpp"
 #include "engine/BedrockPlatforms.hpp"
 
 namespace MFA {
 
 class DrawableVariant;
+class TransformComponent;
 
-class ThirdPersonCamera final : public CameraBase {
+class ThirdPersonCameraComponent final : public CameraComponent {
 public:
     // ThirdPerson camera must act like a child to variant
-    explicit ThirdPersonCamera(
+    explicit ThirdPersonCameraComponent(
         float fieldOfView,
         float farPlane,
         float nearPlane,
@@ -25,20 +26,25 @@ public:
 #endif
     );
 
-    ~ThirdPersonCamera() override = default;
+    ~ThirdPersonCameraComponent() override = default;
 
-    ThirdPersonCamera (ThirdPersonCamera const &) noexcept = delete;
-    ThirdPersonCamera (ThirdPersonCamera &&) noexcept = delete;
-    ThirdPersonCamera & operator = (ThirdPersonCamera const &) noexcept = delete;
-    ThirdPersonCamera & operator = (ThirdPersonCamera &&) noexcept = delete;
+    static uint8_t GetClassType(ClassType outComponentTypes[3])
+    {
+        // TODO It should be reverse CameraComponent must return all its child 
+        outComponentTypes[0] = ClassType::ThirdPersonCamera;
+        return 1;
+    }
 
-    void Init(
-        DrawableVariant * variant, 
+    void SetDistanceAndRotation(
         float distance, 
         float eulerAngles[3]
     );
 
-    void OnUpdate(float deltaTimeInSec) override;
+    void Init() override;
+
+    void Update(float deltaTimeInSec) override;
+
+    void Shutdown() override;
 
     void OnResize() override;
 
@@ -70,10 +76,12 @@ private:
     float const mFarPlane;
     float const mNearPlane;
 
-    DrawableVariant * mVariant = nullptr;
+    TransformComponent * mTransformComponent = nullptr;
+    int mTransformChangeListenerId = 0;
+
     float mPosition[3] {};
-    float mEulerAngles[3] {};
-    float mDistance = 0.0f;
+    float mEulerAngles[3] {-15.0f, 0.0f, 0.0f};
+    float mDistance = 3.0f;
     glm::mat4 mTransform {1};
     glm::mat4 mProjection {};
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "UIRecordObject.hpp"
 #include "engine/render_system/RenderTypesFWD.hpp"
 
 class UIRecordObject;
@@ -19,9 +18,9 @@ void BeginWindow(char const * windowName);
 
 void EndWindow();
 
-void Register(UIRecordObject * recordObject);
+int Register(std::function<void()> const & listener);
 
-void UnRegister(UIRecordObject * recordObject);
+bool UnRegister(int listenerId);
 
 void SetNextItemWidth(float nextItemWidth);
 

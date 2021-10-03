@@ -3,12 +3,11 @@
 #include "engine/BedrockMemory.hpp"
 #include "tools/Importer.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "UIRecordObject.hpp"
 #if defined(__ANDROID__) || defined(__IOS__)
 #include "engine/InputManager.hpp"
 #endif
-
 #include "engine/BedrockAssert.hpp"
+#include "engine/BedrockSignal.hpp"
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "libs/imgui/imgui.h"
 
@@ -143,7 +142,7 @@ struct State {
     std::vector<RT::MeshBuffers> meshBuffers {};
     std::vector<bool> meshBuffersValidationStatus {};
     bool hasFocus = false;
-    std::vector<UIRecordObject *> mRecordObjects {};
+    Signal<> UIRecordSignal {};
 #if defined(__ANDROID__) || defined(__IOS__)
     IM::MousePosition previousMousePositionX = 0.0f;
     IM::MousePosition previousMousePositionY = 0.0f;
@@ -178,7 +177,7 @@ static int EventWatch(void* data, MSDL::SDL_Event* event) {
     case MSDL::SDL_KEYDOWN:
     case MSDL::SDL_KEYUP:
         {
-            int key = event->key.keysym.scancode;
+            const int key = event->key.keysym.scancode;
             IM_ASSERT(key >= 0 && key < IM_ARRAYSIZE(io.KeysDown));
             io.KeysDown[key] = (event->type == MSDL::SDL_KEYDOWN);
             io.KeyShift = ((MSDL::SDL_GetModState() & MSDL::KMOD_SHIFT) != 0);
@@ -205,6 +204,8 @@ static int32_t getDensityDpi(android_app * app) {
     return density;
 }
 #endif
+
+//-------------------------------------------------------------------------------------------------
 
 void Init() {
     state = new State();
@@ -529,9 +530,7 @@ void OnNewFrame(
     
     state->hasFocus = false;
 
-    for (auto recordObject : state->mRecordObjects) {
-        recordObject->Record();
-    }
+    state->UIRecordSignal.Emit();
     
     ImGui::Render();
 
@@ -670,9 +669,13 @@ void OnNewFrame(
     }
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void BeginWindow(char const * windowName) {
     ImGui::Begin(windowName);
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void EndWindow() {
     if (ImGui::IsWindowFocused()) {
@@ -681,40 +684,51 @@ void EndWindow() {
     ImGui::End();
 }
 
-void Register(UIRecordObject * recordObject) {
-    MFA_ASSERT(recordObject != nullptr);
-    state->mRecordObjects.emplace_back(recordObject);
+//-------------------------------------------------------------------------------------------------
+
+int Register(std::function<void()> const & listener) {
+    
+    MFA_ASSERT(listener != nullptr);
+    return state->UIRecordSignal.Register(listener);
 }
 
-void UnRegister(UIRecordObject * recordObject) {
-    for (size_t i = 0; i < state->mRecordObjects.size(); ++i) {
-        if (*state->mRecordObjects[i] == *recordObject) {
-            state->mRecordObjects.erase(state->mRecordObjects.begin() + i);
-            break;
-        }
-    }
+//-------------------------------------------------------------------------------------------------
+
+bool UnRegister(int const listenerId) {
+    return state->UIRecordSignal.UnRegister(listenerId);
 }
 
+//-------------------------------------------------------------------------------------------------
 
 void SetNextItemWidth(float const nextItemWidth) {
     ImGui::SetNextItemWidth(nextItemWidth);
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void Text(char const * label) {
     ImGui::Text("%s", label);
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void InputFloat(char const * label, float * value) {
     ImGui::InputFloat(label, value);
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void InputFloat2(char const * label, float value[2]) {
     ImGui::InputFloat2(label, value);
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void InputFloat3(char const * label, float value[3]) {
     ImGui::InputFloat3(label, value);    
 }
+
+//-------------------------------------------------------------------------------------------------
 
 // TODO Maybe we could cache unchanged vertices
 void Combo(
@@ -731,6 +745,8 @@ void Combo(
     );
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void SliderInt(
     char const * label, 
     int * value, 
@@ -744,6 +760,8 @@ void SliderInt(
         maxValue
     );
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void SliderFloat(
     char const * label, 
@@ -759,13 +777,19 @@ void SliderFloat(
     ); 
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void Checkbox(char const * label, bool * value) {
     ImGui::Checkbox(label, value);
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void Spacing() {
     ImGui::Spacing();
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void Button(char const * label, std::function<void()> const & onPress) {
     if (ImGui::Button(label)) {
@@ -774,9 +798,13 @@ void Button(char const * label, std::function<void()> const & onPress) {
     }
 }
 
+//-------------------------------------------------------------------------------------------------
+
 bool HasFocus() {
     return state->hasFocus;
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void Shutdown() {
     MFA_ASSERT(state->meshBuffers.size() == state->meshBuffersValidationStatus.size());
@@ -807,9 +835,13 @@ void Shutdown() {
     state = nullptr;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 bool IsItemActive() {
     return ImGui::IsItemActive();
 }
+
+//-------------------------------------------------------------------------------------------------
 
 #ifdef __ANDROID__
 void SetAndroidApp(android_app * pApp)
@@ -817,5 +849,7 @@ void SetAndroidApp(android_app * pApp)
     androidApp = pApp;
 }
 #endif
+
+//-------------------------------------------------------------------------------------------------
 
 }

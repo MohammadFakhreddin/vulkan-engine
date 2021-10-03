@@ -35,7 +35,7 @@ struct State {
 #ifdef __DESKTOP__
     bool warpMouseAtEdges = false;
 #endif
-    UIRecordObject recordUIObject;
+    int recordUI_Id;
 
     void reset() {
         mouseDeltaX = 0.0f;
@@ -143,10 +143,10 @@ static void onUI() {
 }
 
 void Init() {
+    
     state = new State {
-        .recordUIObject = UIRecordObject([]()->void{onUI();})
+        .recordUI_Id = UI::Register([]()->void{onUI();})
     };
-    state->recordUIObject.Enable();
 }
 
 void OnNewFrame(float deltaTimeInSec) {
@@ -159,16 +159,6 @@ void OnNewFrame(float deltaTimeInSec) {
     if (state->isMouseLocationValid == true) {
         state->mouseDeltaX = static_cast<float>(mousePositionX - state->mouseCurrentX);
         state->mouseDeltaY = static_cast<float>(mousePositionY - state->mouseCurrentY);
-        //if (state->mouseDeltaX > 0) {
-        //    state->mouseDeltaX = 
-        //} else if (state->mouseDeltaY < 0) {
-        //    
-        //}
-        //if (state->mouseDeltaY > 0) {
-        //    
-        //} else if (state->mouseDeltaY < 0) {
-        //    
-        //}
     } else {
         state->isMouseLocationValid = true;
     }
@@ -231,8 +221,7 @@ void OnNewFrame(float deltaTimeInSec) {
 }
 
 void Shutdown() {
-    //RF::RemoveEventWatch(state->motionEventWatchId);
-    state->recordUIObject.Disable();
+    UI::UnRegister(state->recordUI_Id);
     delete state;
     state = nullptr;
 }

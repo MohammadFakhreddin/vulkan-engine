@@ -1,52 +1,81 @@
 #pragma once
 
-#include "IEntity.hpp"
+#include <functional>
 
 #include "Component.hpp"
 #include "engine/BedrockAssert.hpp"
+#include "engine/BedrockSignal.hpp"
 
-#include <unordered_map>
 #include <memory>
+#include <unordered_set>
+#include <utility>
 
 // TODO This class will need optimization in future
 
+namespace MFA::EntitySystem
+{
+    void InitEntity(Entity * entity);
+    bool DestroyEntity(Entity * entity);
+}
+
 namespace MFA {
 
-class Entity final : public IEntity {
+class Entity {
 public:
+    friend void EntitySystem::InitEntity(Entity * entity);
+    friend bool EntitySystem::DestroyEntity(Entity * entity);
 
-    explicit Entity(Entity * parent = nullptr)
-        : mParent(parent)
-    {}
+    explicit Entity(char const * name, Entity * parent = nullptr);
 
-    template<typename ComponentClass>
-    ComponentClass * AddComponent() {
-        MFA_ASSERT(GetComponent<ComponentClass>() == nullptr);
-        auto component = std::make_unique<ComponentClass>();
-        return static_cast<ComponentClass *>(insertComponent(component));
+    ~Entity();
+
+    Entity (Entity const &) noexcept = delete;
+    Entity (Entity &&) noexcept = delete;
+    Entity & operator = (Entity const &) noexcept = delete;
+    Entity & operator = (Entity && rhs) noexcept = delete;
+
+    [[nodiscard]]
+    bool NeedUpdateEvent() const noexcept
+    {
+        return mUpdateSignal.IsEmpty() == false;
     }
 
-    void AddComponent(std::unique_ptr<Component> && component) {
-        auto exists = [this](Component * targetComponent)->bool{
-            MFA_ASSERT(targetComponent != nullptr);
-            for (auto const & componentRef : mComponentsRef) {
-                if (typeid(*componentRef.Ptr) == typeid(*targetComponent)) {
-                    return true;
-                }
-            }
-            return false;
-        };
-        MFA_ASSERT(exists(component.get()) == false);
-        insertComponent(std::move(component));
+    void Init();
+
+    void Update(float deltaTimeInSec) const;
+    
+    void Shutdown();
+
+    template<typename ComponentClass, typename ... ArgsT>
+    ComponentClass * AddComponent(ArgsT && ... args) {
+        MFA_ASSERT(GetComponent<ComponentClass>() == nullptr);
+
+        Component::ClassType classTypes[3] {};
+        uint8_t const typesCount = ComponentClass::GetClassType(classTypes);
+        if (MFA_VERIFY(typesCount > 0)) {
+            mComponents[classTypes[0]] = std::make_unique<ComponentClass>(std::forward<ArgsT>(args)...);
+
+            auto * component = mComponents[classTypes[0]].get();
+            linkComponent(component);
+            return dynamic_cast<ComponentClass *>(component);
+        }
+
+        return nullptr;
     }
 
     template<typename ComponentClass>
     [[nodiscard]]
-    Component * GetComponent() {
-        for (auto & componentRef : mComponentsRef) {
-            auto * targetComponent = dynamic_cast<ComponentClass *>(componentRef.Ptr);
-            if (targetComponent != nullptr) {
-                return targetComponent;
+    ComponentClass * GetComponent() {
+
+        Component::ClassType classTypes[3] {};
+        uint8_t const typesCount = ComponentClass::GetClassType(classTypes);
+
+        for (uint8_t i = 0; i < typesCount; ++i)
+        {
+            auto findResult = mComponents.find(classTypes[i]);
+            if (findResult != mComponents.end())
+            {
+                return dynamic_cast<ComponentClass *>(findResult->second.get());        
             }
         }
         return nullptr;
@@ -57,21 +86,43 @@ public:
         return mParent;
     }
 
+    [[nodiscard]]
+    std::string const & GetName() const noexcept;
+
+    void SetName(char const * name);
+
+    [[nodiscard]]
+    bool IsActive() const noexcept;
+
+    void SetActive(bool active);
+
 private:
 
-    Component * insertComponent(std::unique_ptr<Component> && component) {
-        mComponentsRef.emplace_back(ComponentRef {.Ptr = std::move(component)});
-        auto * ptr = mComponentsRef.back().Ptr.get();
-        ptr->mEntity = this;
-        return ptr;
-    }
+    void notifyANewChildAdded(Entity * entity);
 
+    void notifyAChildRemoved(Entity * entity);
+
+    int findChild(Entity * entity);
+
+    void linkComponent(Component * component);
+
+    std::string mName {};
     Entity * mParent = nullptr;
 
-    struct ComponentRef {
-        std::unique_ptr<Component> Ptr = nullptr;
-    };
-    std::vector<ComponentRef> mComponentsRef {};
+    std::unordered_map<Component::ClassType, std::unique_ptr<Component>> mComponents {};
+
+    Signal<> mInitSignal {};
+    Signal<float> mUpdateSignal {};
+    Signal<> mShutdownSignal {};
+
+    bool mIsActive = true;
+
+    int mUpdateListenerId = 0;
+
+    std::vector<Entity *> mChildEntities {};
+
+    bool mIsInitialized = false;
+
 };
 
 }

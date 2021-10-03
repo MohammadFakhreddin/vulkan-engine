@@ -18,7 +18,9 @@ glm::mat4 CopyCellsToMat4(float const * cells) {
 
 glm::vec3 ConvertCellsToVec3(float const * cells) {
     MFA_ASSERT(cells != nullptr);
-    return glm::vec3 {cells[0], cells[1], cells[2]};
+    glm::vec3 result;
+    ::memcpy(&result, cells, sizeof(float) * 3);
+    return result;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -26,10 +28,11 @@ glm::vec3 ConvertCellsToVec3(float const * cells) {
 glm::quat ConvertCellsToQuat(float const * cells) {
     MFA_ASSERT(cells != nullptr);
     glm::quat result {};
-    result.x = cells[0];
+    ::memcpy(&result, cells, sizeof(float) * 4);
+    /*result.x = cells[0];
     result.y = cells[1];
     result.z = cells[2];
-    result.w = cells[3];
+    result.w = cells[3];*/
     return result;
 }
 

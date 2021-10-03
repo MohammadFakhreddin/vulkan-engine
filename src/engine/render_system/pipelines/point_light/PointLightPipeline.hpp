@@ -35,11 +35,7 @@ public:
     void PreRender(RT::DrawPass & drawPass, float deltaTime) override;
 
     void Render(RT::DrawPass & drawPass, float deltaTime) override;
-
-    DrawableVariant * CreateDrawableVariant(char const * essenceName) override;
     
-    void UpdateLightColor(DrawableVariant * variant, float lightColor[3]);
-
     void UpdateCameraView(float cameraTransform[16]);
 
     void UpdateCameraProjection(float cameraProjection[16]);

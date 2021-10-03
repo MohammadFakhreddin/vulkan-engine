@@ -3,24 +3,32 @@
 #include <string>
 
 #include "engine/BedrockMatrix.hpp"
+#include "engine/entity_system/Component.hpp"
 
 namespace MFA {
 
-class CameraBase {
+class CameraComponent : public Component {
 public:
 
     static constexpr float ForwardVector[4] {0.0f, 0.0f, 1.0f, 0.0f};
     static constexpr float RightVector[4] {1.0f, 0.0f, 0.0f, 0.0f};
 
-    virtual ~CameraBase() = default;
+    virtual ~CameraComponent() override = default;
 
-    struct Input {
-        float mouseDeltaX = 0.0f;
-        float mouseDeltaY = 0.0f;
-        float forwardMove = 0.0f;
-        float rightMove = 0.0f;
-    };
-    virtual void OnUpdate(float deltaTime) = 0;
+    static uint8_t GetClassType(ClassType outComponentTypes[3])
+    {
+        // TODO It should be reverse CameraComponent must return all its child 
+        outComponentTypes[0] = ClassType::CameraComponent;
+        outComponentTypes[1] = ClassType::ObserverCameraComponent;
+        outComponentTypes[2] = ClassType::ThirdPersonCamera;
+        return 3;
+    }
+
+    [[nodiscard]]
+    EventType RequiredEvents() const override
+    {
+        return EventTypes::InitEvent | EventTypes::UpdateEvent | EventTypes::ShutdownEvent;
+    }
 
     virtual void OnResize() = 0;
 
@@ -48,6 +56,8 @@ public:
     virtual void GetPosition(float position[3]) const = 0;
 
 protected:
+
+    explicit CameraComponent();
 
     std::string mName = "Camera";
 

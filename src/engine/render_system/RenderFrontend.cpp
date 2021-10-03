@@ -19,6 +19,8 @@
 
 #include <string>
 
+#include "engine/BedrockSignal.hpp"
+
 namespace MFA::RenderFrontend {
 
 #ifdef __DESKTOP__
@@ -27,11 +29,6 @@ struct SDLEventWatchGroup {
     SDLEventWatch watch = nullptr;
 };
 #endif
-
-struct ResizeEventWatchGroup {
-    RT::ResizeEventListenerId id = 0;
-    RT::ResizeEventListener watch = nullptr;
-};
 
 struct State {
     uint32_t maxFramesPerFlight = 0;
@@ -58,7 +55,7 @@ struct State {
     // Resize
     bool isWindowResizable = false;
     bool windowResized = false;
-    std::vector<ResizeEventWatchGroup> resizeEventListeners {};
+    Signal<> resizeEventSignal {};
     VkSurfaceCapabilitiesKHR surfaceCapabilities {};
     uint32_t swapChainImageCount = 0;
     DisplayRenderPass displayRenderPass {};
@@ -201,7 +198,7 @@ bool Init(InitParams const & params) {
         state->physicalDevice = findPhysicalDeviceResult.physicalDevice;
         // I'm not sure if this is a correct thing to do but currently I'm enabling all gpu features.
         state->physicalDeviceFeatures = findPhysicalDeviceResult.physicalDeviceFeatures;
-        state->maxSampleCount = findPhysicalDeviceResult.maxSampleCount;                    // TODO It should be a setting
+        state->maxSampleCount = VK_SAMPLE_COUNT_2_BIT;//findPhysicalDeviceResult.maxSampleCount;                    // TODO It should be a setting
         state->physicalDeviceProperties = findPhysicalDeviceResult.physicalDeviceProperties;
 
         std::string message = "Supported physical device features are:";
@@ -276,10 +273,7 @@ static void OnResize() {
 
     state->displayRenderPass.OnResize();
 
-    for (auto & eventWatchGroup : state->resizeEventListeners) {
-        MFA_ASSERT(eventWatchGroup.watch != nullptr);
-        eventWatchGroup.watch();
-    }
+    state->resizeEventSignal.Emit();
 
 }
 
@@ -289,7 +283,7 @@ bool Shutdown() {
     // Common part with resize
     RB::DeviceWaitIdle(state->logicalDevice.device);
 
-    MFA_ASSERT(state->resizeEventListeners.empty());
+    MFA_ASSERT( state->resizeEventSignal.IsEmpty());
 
 #ifdef __DESKTOP__
     MFA_ASSERT(state->sdlEventListeners.empty());
@@ -331,26 +325,13 @@ bool Shutdown() {
 
 int AddResizeEventListener(RT::ResizeEventListener const & eventListener) {
     MFA_ASSERT(eventListener != nullptr);
-    state->resizeEventListeners.emplace_back(ResizeEventWatchGroup {
-        .id = state->nextEventListenerId++,
-        .watch = eventListener
-    });
-    return state->resizeEventListeners.back().id;
+    return state->resizeEventSignal.Register(eventListener);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-bool RemoveResizeEventListener(RT::ResizeEventListenerId listenerId) {
-    bool success = false;
-    for (int i = static_cast<int>(state->resizeEventListeners.size()) - 1; i >= 0; --i) {
-        auto & listener = state->resizeEventListeners[i];
-        if (listener.id == listenerId) {
-            success = true;
-            state->resizeEventListeners.erase(state->resizeEventListeners.begin() + i);
-            break;
-        }
-    }
-    return success;
+bool RemoveResizeEventListener(RT::ResizeEventListenerId const listenerId) {
+    return state->resizeEventSignal.UnRegister(listenerId);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -558,7 +539,7 @@ void DestroyTexture(RT::GpuTexture & gpuTexture) {
 RT::SamplerGroup CreateSampler(RT::CreateSamplerParams const & samplerParams) {
     auto sampler = RB::CreateSampler(state->logicalDevice.device, samplerParams);
     MFA_VK_VALID_ASSERT(sampler);
-    RT::SamplerGroup samplerGroup {
+    RT::SamplerGroup const samplerGroup {
         .sampler = sampler
     };
     MFA_ASSERT(samplerGroup.isValid());

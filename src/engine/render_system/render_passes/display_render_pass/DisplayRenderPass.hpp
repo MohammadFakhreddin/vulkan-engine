@@ -86,6 +86,8 @@ private:
 
     VkRenderPass mDepthRenderPass {};
     std::vector<VkFramebuffer> mDepthFrameBuffer {};
+
+    RT::DrawPass mDrawPass {};
 };
 
 }

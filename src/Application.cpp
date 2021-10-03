@@ -2,11 +2,13 @@
 
 #include "engine/BedrockAssert.hpp"
 #include "engine/InputManager.hpp"
+#include "engine/entity_system/EntitySystem.hpp"
 #include "scenes/gltf_mesh_viewer/GLTFMeshViewerScene.hpp"
 #include "scenes/demo_3rd_person_scene/Demo3rdPersonScene.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/Scene.hpp"
+#include "engine/ui_system/UISystem.hpp"
 #include "engine/job_system/JobSystem.hpp"
+#include "engine/scene_manager/SceneManager.hpp"
 
 #ifdef __ANDROID__
 #include <android_native_app_glue.h>
@@ -54,12 +56,14 @@ void Application::Init() {
     UI::Init();
     IM::Init();
     JS::Init();
-
-    mSceneSubSystem.RegisterNew(mThirdPersonDemoScene.get(), "ThirdPersonDemoScene");
-    mSceneSubSystem.RegisterNew(mGltfMeshViewerScene.get(), "GLTFMeshViewerScene");
+    EntitySystem::Init();
     
-    mSceneSubSystem.SetActiveScene("ThirdPersonDemoScene");
-    mSceneSubSystem.Init();
+    SceneManager::Init();
+
+    SceneManager::RegisterNew(mThirdPersonDemoScene.get(), "ThirdPersonDemoScene");
+    SceneManager::RegisterNew(mGltfMeshViewerScene.get(), "GLTFMeshViewerScene");
+    
+    SceneManager::SetActiveScene("ThirdPersonDemoScene");
 
     mIsInitialized = true;
 }
@@ -68,7 +72,8 @@ void Application::Shutdown() {
     MFA_ASSERT(mIsInitialized == true);
 
     RF::DeviceWaitIdle();
-    mSceneSubSystem.Shutdown();
+    SceneManager::Shutdown();
+    EntitySystem::Shutdown();
     JS::Shutdown();
     IM::Shutdown();
     UI::Shutdown();
@@ -144,7 +149,7 @@ void Application::run() {
 void Application::RenderFrame(float const deltaTimeInSec) {
     IM::OnNewFrame(deltaTimeInSec);
     RF::OnNewFrame(deltaTimeInSec);
-    mSceneSubSystem.OnNewFrame(deltaTimeInSec);
+    SceneManager::OnNewFrame(deltaTimeInSec);
 }
 
 #ifdef __ANDROID__

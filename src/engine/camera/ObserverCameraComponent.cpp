@@ -1,9 +1,10 @@
-#include "ObserverCamera.hpp"
+#include "ObserverCameraComponent.hpp"
 
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockMath.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/InputManager.hpp"
+#include "engine/entity_system/Entity.hpp"
 #include "engine/ui_system/UISystem.hpp"
 
 #include "glm/gtx/quaternion.hpp"
@@ -16,7 +17,7 @@ namespace UI = UISystem;
 
 //-------------------------------------------------------------------------------------------------
 
-ObserverCamera::ObserverCamera(
+ObserverCameraComponent::ObserverCameraComponent(
     float const fieldOfView,
     float const farPlane,
     float const nearPlane,
@@ -32,7 +33,9 @@ ObserverCamera::ObserverCamera(
 
 //-------------------------------------------------------------------------------------------------
 
-void ObserverCamera::Init() {
+void ObserverCameraComponent::Init() {
+    CameraComponent::Init();
+
     updateTransform();
     OnResize();
     IM::WarpMouseAtEdges(false);
@@ -40,7 +43,9 @@ void ObserverCamera::Init() {
 
 //-------------------------------------------------------------------------------------------------
 
-void ObserverCamera::OnUpdate(float const deltaTimeInSec) {
+void ObserverCameraComponent::Update(float const deltaTimeInSec) {
+
+    CameraComponent::Update(deltaTimeInSec);
 
     if (mIsTransformDirty) {
         updateTransform();
@@ -117,7 +122,7 @@ void ObserverCamera::OnUpdate(float const deltaTimeInSec) {
 
 //-------------------------------------------------------------------------------------------------
 
-void ObserverCamera::OnResize() {
+void ObserverCameraComponent::OnResize() {
     int32_t width;
     int32_t height;
     RF::GetDrawableSize(width, height);
@@ -159,31 +164,31 @@ void ObserverCamera::OnResize() {
 
 //-------------------------------------------------------------------------------------------------
 
-void ObserverCamera::GetProjection(float outProjection[16]) {
+void ObserverCameraComponent::GetProjection(float outProjection[16]) {
     Matrix::CopyGlmToCells(mProjectionMatrix, outProjection);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-glm::mat4 const & ObserverCamera::GetProjection() const {
+glm::mat4 const & ObserverCameraComponent::GetProjection() const {
     return mProjectionMatrix;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void ObserverCamera::GetTransform(float outTransformMatrix[16]) {
+void ObserverCameraComponent::GetTransform(float outTransformMatrix[16]) {
     Matrix::CopyGlmToCells(mTransformMatrix, outTransformMatrix);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-glm::mat4 const & ObserverCamera::GetTransform() const {
+glm::mat4 const & ObserverCameraComponent::GetTransform() const {
     return mTransformMatrix;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void ObserverCamera::ForcePosition(float position[3]) {
+void ObserverCameraComponent::ForcePosition(float position[3]) {
     if (IsEqual<3>(position, mPosition) == false) {
         Copy<3>(mPosition, position);
         updateTransform();
@@ -192,7 +197,7 @@ void ObserverCamera::ForcePosition(float position[3]) {
 
 //-------------------------------------------------------------------------------------------------
 
-void ObserverCamera::ForceRotation(float eulerAngles[3]) {
+void ObserverCameraComponent::ForceRotation(float eulerAngles[3]) {
     if (IsEqual<3>(eulerAngles, mEulerAngles) == false) {
         Copy<3>(mEulerAngles, eulerAngles);
         updateTransform();
@@ -201,7 +206,7 @@ void ObserverCamera::ForceRotation(float eulerAngles[3]) {
 
 //-------------------------------------------------------------------------------------------------
 
-void ObserverCamera::GetPosition(float outPosition[3]) const {
+void ObserverCameraComponent::GetPosition(float outPosition[3]) const {
     outPosition[0] = -1 * mPosition[0];
     outPosition[1] = -1 * mPosition[1];
     outPosition[2] = -1 * mPosition[2];
@@ -209,7 +214,7 @@ void ObserverCamera::GetPosition(float outPosition[3]) const {
 
 //-------------------------------------------------------------------------------------------------
 
-void ObserverCamera::OnUI() {
+void ObserverCameraComponent::OnUI() {
     UI::BeginWindow(mName.c_str());
     UI::InputFloat3("Position", mPosition);
     UI::InputFloat3("EulerAngles", mEulerAngles);
@@ -218,7 +223,7 @@ void ObserverCamera::OnUI() {
 
 //-------------------------------------------------------------------------------------------------
 
-void ObserverCamera::updateTransform() {
+void ObserverCameraComponent::updateTransform() {
     auto rotationMatrix = glm::identity<glm::mat4>();
     Matrix::GlmRotate(rotationMatrix, mEulerAngles);
 
