@@ -6,7 +6,7 @@
 #include "engine/BedrockPlatforms.hpp"
 #include "engine/entity_system/components/MeshRendererComponent.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
-#include "engine/render_system/pipelines/point_light/DebugRendererPipeline.hpp"
+#include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
 
 class Demo3rdPersonScene final : public MFA::Scene {
 public:

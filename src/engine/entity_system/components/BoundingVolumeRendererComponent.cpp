@@ -1,7 +1,7 @@
 #include "BoundingVolumeRendererComponent.hpp"
 
 #include "engine/BedrockAssert.hpp"
-#include "engine/render_system/pipelines/point_light/DebugRendererPipeline.hpp"
+#include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
 #include "BoundingVolumeComponent.hpp"
 #include "TransformComponent.hpp"
 #include "engine/entity_system/Entity.hpp"

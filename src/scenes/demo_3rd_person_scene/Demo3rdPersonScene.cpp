@@ -103,14 +103,13 @@ void Demo3rdPersonScene::Init()
             MFA_ASSERT(mPlayerMeshRenderer != nullptr);
             mPlayerMeshRenderer->SetActive(true);
 
-            entity->AddComponent<AxisAlignedBoundingBoxComponent>();
+            entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
 
             auto * colorComponent = entity->AddComponent<ColorComponent>();
             colorComponent->SetColor(glm::vec3 {1.0f, 0.0f, 0.0f});
 
             auto * debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
             debugRenderComponent->SetActive(false);
-
 
             mThirdPersonCamera = entity->AddComponent<ThirdPersonCameraComponent>(
                 FOV,
@@ -146,7 +145,7 @@ void Demo3rdPersonScene::Init()
                     meshRendererComponent->GetVariant()->SetActiveAnimation("SwordAndShieldIdle", {.startTimeOffsetInSec = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX)) * 10});
                     meshRendererComponent->SetActive(true);
 
-                    entity->AddComponent<AxisAlignedBoundingBoxComponent>();
+                    entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
 
                     auto * colorComponent = entity->AddComponent<ColorComponent>();
                     colorComponent->SetColor(glm::vec3 {0.0f, 0.0f, 1.0f});
@@ -155,6 +154,8 @@ void Demo3rdPersonScene::Init()
                     debugRenderComponent->SetActive(false);
 
                     EntitySystem::InitEntity(entity);
+
+                    entity->SetActive(true);
                 }
             }
         }
@@ -178,7 +179,7 @@ void Demo3rdPersonScene::Init()
         auto * meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "SponzaMap");
         MFA_ASSERT(meshRendererComponent != nullptr);
 
-        entity->AddComponent<AxisAlignedBoundingBoxComponent>();
+        entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 5.0f, 0.0f), glm::vec3(15.0f, 6.0f, 9.0f));
 
         auto * debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
         debugRenderComponent->SetActive(false);

@@ -204,7 +204,7 @@ void DebugRendererPipeline::createPipeline()
 {
     // Vertex shader
     auto cpuVertexShader = Importer::ImportShaderFromSPV(
-        Path::Asset("shaders/point_light/PointLight.vert.spv").c_str(),
+        Path::Asset("shaders/debug_renderer/DebugRenderer.vert.spv").c_str(),
         AssetSystem::Shader::Stage::Vertex,
         "main"
     );
@@ -218,7 +218,7 @@ void DebugRendererPipeline::createPipeline()
 
     // Fragment shader
     auto cpuFragmentShader = Importer::ImportShaderFromSPV(
-        Path::Asset("shaders/point_light/PointLight.frag.spv").c_str(),
+        Path::Asset("shaders/debug_renderer/DebugRenderer.frag.spv").c_str(),
         AssetSystem::Shader::Stage::Fragment,
         "main"
     );

@@ -110,6 +110,7 @@ bool Entity::IsActive() const noexcept
 void Entity::SetActive(bool const active)
 {
     mIsActive = active;
+    // TODO We can register/unregister from entity system update event
 }
 
 //-------------------------------------------------------------------------------------------------
