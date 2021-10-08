@@ -252,6 +252,8 @@ void PBRWithShadowPipelineV2::Render(RT::DrawPass & drawPass, float deltaTime)
 
     DisplayPassAllStagesPushConstants pushConstants {};
 
+    int renderedObjects = 0;
+
     for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
     {
         auto & essence = essenceAndVariantList.second->essence;
@@ -263,6 +265,8 @@ void PBRWithShadowPipelineV2::Render(RT::DrawPass & drawPass, float deltaTime)
         {
             if (variant->IsActive() && variant->IsInFrustum())
             {
+                renderedObjects++;
+
                 RF::BindDescriptorSet(
                     drawPass,
                     variant->GetDescriptorSetGroup("PbrWithShadowV2DisplayPipeline")->descriptorSets[drawPass.frameIndex]

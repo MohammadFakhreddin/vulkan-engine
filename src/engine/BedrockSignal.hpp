@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/BedrockAssert.hpp"
+#include "engine/job_system/JobSystem.hpp"
 
 #include <functional>
 
@@ -51,6 +52,30 @@ public:
             slot.listener(std::forward<ArgsT>(args)...);
         }
     }
+
+    //template<typename ... PassedArgs>
+    //void EmitMultiThread(PassedArgs && ... args) const
+    //{
+    //    uint32_t nextThreadNumber = 0;
+    //    auto const availableThreadCount = JS::GetNumberOfAvailableThreads();
+    //
+    //    for (int i = static_cast<int>(mSlots.size()) - 1; i >= 0; --i)
+    //    {
+    //        const auto & slot = mSlots[i];
+    //        JS::AssignTask(nextThreadNumber, [&slot, args...]()->void{
+    //            slot.listener(std::forward<ArgsT>(args)...);
+    //        });
+    //        ++nextThreadNumber;
+    //        if (nextThreadNumber >= availableThreadCount)
+    //        {
+    //            nextThreadNumber = 0;
+    //        }
+    //    }
+
+    //    JS::WaitForThreadsToFinish();
+
+    //}
+
 
     [[nodiscard]]
     bool IsEmpty() const

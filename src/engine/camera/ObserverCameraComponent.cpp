@@ -1,6 +1,5 @@
 #include "ObserverCameraComponent.hpp"
 
-#include "engine/BedrockAssert.hpp"
 #include "engine/BedrockMath.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/InputManager.hpp"
@@ -9,24 +8,18 @@
 
 #include "glm/gtx/quaternion.hpp"
 
-namespace MFA {
-
-namespace RF = RenderFrontend;
-namespace IM = InputManager;
-namespace UI = UISystem;
+using namespace MFA;
 
 //-------------------------------------------------------------------------------------------------
 
 ObserverCameraComponent::ObserverCameraComponent(
     float const fieldOfView,
-    float const farPlane,
-    float const nearPlane,
+    float const nearDistance,
+    float const farDistance,
     float const moveSpeed,
     float const rotationSpeed
 )
-    : mFieldOfView(fieldOfView)
-    , mFarPlane(farPlane)
-    , mNearPlane(nearPlane)
+    : CameraComponent(fieldOfView, nearDistance, farDistance)
     , mMoveSpeed(moveSpeed)
     , mRotationSpeed(rotationSpeed)
 {}
@@ -85,14 +78,9 @@ void ObserverCameraComponent::Update(float const deltaTimeInSec) {
     }
 
     auto rotationMatrix = glm::identity<glm::mat4>();
-    Matrix::GlmRotate(rotationMatrix, mEulerAngles);
+    Matrix::Rotate(rotationMatrix, mEulerAngles);
     
-    auto forwardDirection = glm::vec4(
-        ForwardVector[0], 
-        ForwardVector[1], 
-        ForwardVector[2], 
-        ForwardVector[3]
-    );
+    auto forwardDirection = ForwardVector;
     forwardDirection = forwardDirection * rotationMatrix;
     forwardDirection = glm::normalize(forwardDirection);
     
@@ -122,60 +110,6 @@ void ObserverCameraComponent::Update(float const deltaTimeInSec) {
 
 //-------------------------------------------------------------------------------------------------
 
-void ObserverCameraComponent::OnResize() {
-    int32_t width;
-    int32_t height;
-    RF::GetDrawableSize(width, height);
-    MFA_ASSERT(width > 0);
-    MFA_ASSERT(height > 0);
-
-    const float ratio = static_cast<float>(width) / static_cast<float>(height);
-
-    Matrix::PreparePerspectiveProjectionMatrix(
-        mProjectionMatrix,
-        ratio,
-        mFieldOfView,
-        mNearPlane,
-        mFarPlane
-    );
-
-// TODO We should handle orientation change on android/IOS (UI shader might need a change)
-// https://android-developers.googleblog.com/2020/02/handling-device-orientation-efficiently.html
-//#ifdef __ANDROID__
-//    // For mobile
-//    glm::mat4 projectionMatrix;
-//    glm::mat4::ConvertMatrixToGlm(mProjectionMatrix, projectionMatrix);
-//
-//    static constexpr glm::vec3 rotationAxis = glm::vec3(0.0f, 0.0f, 1.0f);
-//    // TODO Should we cache it or it is not important ?
-//    auto const capabilities = RF::GetSurfaceCapabilities();
-//
-//    if (capabilities.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR) {
-//        projectionMatrix = glm::rotate(projectionMatrix, glm::radians(90.0f), rotationAxis);
-//    } else if (capabilities.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR) {
-//        projectionMatrix = glm::rotate(projectionMatrix, glm::radians(270.0f), rotationAxis);
-//    } else if (capabilities.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR) {
-//        projectionMatrix = glm::rotate(projectionMatrix, glm::radians(180.0f), rotationAxis);
-//    }
-//
-//    glm::mat4::ConvertGmToCells(projectionMatrix, mProjectionMatrix.cells);
-//#endif
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void ObserverCameraComponent::GetProjection(float outProjection[16]) {
-    Matrix::CopyGlmToCells(mProjectionMatrix, outProjection);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-glm::mat4 const & ObserverCameraComponent::GetProjection() const {
-    return mProjectionMatrix;
-}
-
-//-------------------------------------------------------------------------------------------------
-
 void ObserverCameraComponent::GetTransform(float outTransformMatrix[16]) {
     Matrix::CopyGlmToCells(mTransformMatrix, outTransformMatrix);
 }
@@ -189,8 +123,8 @@ glm::mat4 const & ObserverCameraComponent::GetTransform() const {
 //-------------------------------------------------------------------------------------------------
 
 void ObserverCameraComponent::ForcePosition(float position[3]) {
-    if (IsEqual<3>(position, mPosition) == false) {
-        Copy<3>(mPosition, position);
+    if (Matrix::IsEqual(mPosition, position) == false) {
+        Matrix::CopyCellsToGlm(position, mPosition);
         updateTransform();
     }
 }
@@ -198,8 +132,8 @@ void ObserverCameraComponent::ForcePosition(float position[3]) {
 //-------------------------------------------------------------------------------------------------
 
 void ObserverCameraComponent::ForceRotation(float eulerAngles[3]) {
-    if (IsEqual<3>(eulerAngles, mEulerAngles) == false) {
-        Copy<3>(mEulerAngles, eulerAngles);
+    if (Matrix::IsEqual(mEulerAngles, eulerAngles) == false) {
+        Matrix::CopyCellsToGlm(eulerAngles, mEulerAngles);
         updateTransform();
     }
 }
@@ -215,9 +149,9 @@ void ObserverCameraComponent::GetPosition(float outPosition[3]) const {
 //-------------------------------------------------------------------------------------------------
 
 void ObserverCameraComponent::OnUI() {
-    UI::BeginWindow(mName.c_str());
-    UI::InputFloat3("Position", mPosition);
-    UI::InputFloat3("EulerAngles", mEulerAngles);
+    UI::BeginWindow(GetEntity()->GetName().c_str());
+    UI::InputFloat3("Position", reinterpret_cast<float *>(&mPosition));
+    UI::InputFloat3("EulerAngles", reinterpret_cast<float *>(&mEulerAngles));
     UI::EndWindow();
 }
 
@@ -225,10 +159,10 @@ void ObserverCameraComponent::OnUI() {
 
 void ObserverCameraComponent::updateTransform() {
     auto rotationMatrix = glm::identity<glm::mat4>();
-    Matrix::GlmRotate(rotationMatrix, mEulerAngles);
+    Matrix::Rotate(rotationMatrix, mEulerAngles);
 
     auto translateMatrix = glm::identity<glm::mat4>();
-    Matrix::GlmTranslate(translateMatrix, mPosition);
+    Matrix::Translate(translateMatrix, mPosition);
 
     mTransformMatrix = rotationMatrix * translateMatrix;
 
@@ -236,5 +170,3 @@ void ObserverCameraComponent::updateTransform() {
 }
 
 //-------------------------------------------------------------------------------------------------
-
-}

@@ -24,6 +24,7 @@ class Entity {
 public:
     friend void EntitySystem::InitEntity(Entity * entity);
     friend bool EntitySystem::DestroyEntity(Entity * entity);
+    friend Component;
 
     explicit Entity(char const * name, Entity * parent = nullptr);
 

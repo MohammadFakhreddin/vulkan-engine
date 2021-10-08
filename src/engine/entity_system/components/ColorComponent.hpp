@@ -1,5 +1,5 @@
 #pragma once
-#include "engine/BedrockCommon.hpp"
+
 #include "engine/entity_system/Component.hpp"
 
 namespace MFA {
@@ -23,30 +23,32 @@ public:
 
     explicit ColorComponent() = default;
 
-    explicit ColorComponent(std::initializer_list<float> const & color)
-    {
-        ::memcpy(mColor, color.begin(), sizeof(float) * 3);
-    }
+    explicit ColorComponent(glm::vec3 const & color) : mColor(color) {}
 
     void SetColor(float color[3])
     {
-        Copy<3>(mColor, color);
+        Matrix::CopyCellsToGlm(color, mColor);
+    }
+
+    void SetColor(glm::vec3 const & color)
+    {
+        mColor = color;
     }
 
     void GetColor(float outColor[3]) const
     {
-        Copy<3>(outColor, mColor);
+        Matrix::CopyGlmToCells(mColor, outColor);
     }
 
     [[nodiscard]]
-    float const * GetColor() const
+    glm::vec3 const & GetColor() const
     {
         return mColor;
     }
 
 private:
 
-    float mColor[3] {};
+    glm::vec3 mColor {};
 };
 
 }

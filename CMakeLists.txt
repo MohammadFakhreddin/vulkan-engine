@@ -153,8 +153,8 @@ list(
     "src/engine/render_system/pipelines/DescriptorSetSchema.hpp"
     "src/engine/render_system/pipelines/DescriptorSetSchema.cpp"
 
-    "src/engine/render_system/pipelines/point_light/PointLightPipeline.hpp"
-    "src/engine/render_system/pipelines/point_light/PointLightPipeline.cpp"
+    "src/engine/render_system/pipelines/point_light/DebugRendererPipeline.hpp"
+    "src/engine/render_system/pipelines/point_light/DebugRendererPipeline.cpp"
     
     "src/engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
     "src/engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.cpp"

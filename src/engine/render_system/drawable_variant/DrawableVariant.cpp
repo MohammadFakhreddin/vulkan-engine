@@ -79,8 +79,8 @@ DrawableVariant::DrawableVariant(DrawableEssence const & essence)
 
             node.skin = meshNode.skin > -1 ? &mSkins[meshNode.skin] : nullptr;
 
-            Matrix::CopyCellsToMat4(meshNode.transform, node.currentTransform);
-            Matrix::CopyCellsToMat4(meshNode.transform, node.previousTransform);
+            Matrix::CopyCellsToGlm(meshNode.transform, node.currentTransform);
+            Matrix::CopyCellsToGlm(meshNode.transform, node.previousTransform);
         }
     }
 
@@ -128,76 +128,7 @@ DrawableVariant::~DrawableVariant()
     }
     //DeleteUniformBuffers();
 
-};
-
-//-------------------------------------------------------------------------------------------------
-
-//// Only for model local buffers
-//RT::UniformBufferGroup const & DrawableVariant::CreateUniformBuffer(
-//    char const * name,
-//    uint32_t const size,
-//    uint32_t const count
-//) {
-//    MFA_ASSERT(mUniformBuffers.find(name) == mUniformBuffers.end());
-//    mUniformBuffers[name] = RF::CreateUniformBuffer(size, count);
-//    return mUniformBuffers[name];
-//}
-//
-////-------------------------------------------------------------------------------------------------
-//
-//// Only for model local buffers
-//void DrawableVariant::DeleteUniformBuffers() {
-//    for (auto const & dirtyBuffer : mDirtyBuffers) {
-//        delete dirtyBuffer.ubo.ptr;
-//    }
-//    mDirtyBuffers.clear();
-//    
-//    for (auto & pair : mUniformBuffers) {
-//        RF::DestroyUniformBuffer(pair.second);
-//    }
-//    mUniformBuffers.clear();
-//}
-//
-////-------------------------------------------------------------------------------------------------
-//
-//void DrawableVariant::UpdateUniformBuffer(
-//    char const * name,
-//    uint32_t startingIndex,
-//    CBlob const ubo
-//) {
-//    for (auto & dirtyBuffer : mDirtyBuffers) {
-//        if (
-//            strcmp(dirtyBuffer.bufferName.c_str(), name) == 0 &&
-//            dirtyBuffer.startingIndex == startingIndex
-//        ) {
-//            MFA_ASSERT(dirtyBuffer.ubo.len == ubo.len);
-//            Memory::Free(dirtyBuffer.ubo);
-//            dirtyBuffer.ubo.ptr = new uint8_t[ubo.len];
-//            dirtyBuffer.ubo.len = ubo.len;
-//            ::memcpy(dirtyBuffer.ubo.ptr, ubo.ptr, ubo.len);
-//            
-//            dirtyBuffer.remainingUpdateCount = RF::GetMaxFramesPerFlight();
-//            return;
-//        }
-//    }
-//    
-//    auto const findResult = mUniformBuffers.find(name);
-//    if (findResult == mUniformBuffers.end()) {
-//        MFA_CRASH("Buffer not found");
-//        return;
-//    }
-//    
-//    DirtyBuffer dirtyBuffer {
-//        .bufferName = name,
-//        .bufferGroup = &findResult->second,
-//        .startingIndex = startingIndex,
-//        .remainingUpdateCount = RF::GetMaxFramesPerFlight(),
-//        .ubo = Memory::Alloc(ubo.len),
-//    };
-//    ::memcpy(dirtyBuffer.ubo.ptr, ubo.ptr, ubo.len);
-//    
-//    mDirtyBuffers.emplace_back(dirtyBuffer);
-//}
+}
 
 //-------------------------------------------------------------------------------------------------
 
@@ -218,7 +149,7 @@ RT::UniformBufferGroup const & DrawableVariant::GetSkinJointsBuffer() const noex
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableVariant::Init(MeshRendererComponent * meshRendererComponent)
+void DrawableVariant::Init(Component * rendererComponent, TransformComponent * transformComponent)
 {
     if (mIsInitialized)
     {
@@ -226,14 +157,14 @@ void DrawableVariant::Init(MeshRendererComponent * meshRendererComponent)
     }
     mIsInitialized = true;
 
-    MFA_ASSERT(meshRendererComponent != nullptr);
-    mMeshRendererComponent = meshRendererComponent; 
+    MFA_ASSERT(rendererComponent != nullptr);
+    mRendererComponent = rendererComponent; 
 
-    mEntity = mMeshRendererComponent->GetEntity();
+    mEntity = mRendererComponent->GetEntity();
     MFA_ASSERT(mEntity != nullptr);
 
-    mTransformComponent = mEntity->GetComponent<TransformComponent>();
-    MFA_ASSERT(mTransformComponent != nullptr);
+    MFA_ASSERT(transformComponent != nullptr);
+    mTransformComponent = transformComponent;
 
     mTransformListenerId = mTransformComponent->RegisterChangeListener([this]()->void{
         mIsModelTransformChanged = true;
@@ -265,26 +196,13 @@ void DrawableVariant::Update(float const deltaTimeInSec, RT::DrawPass const & dr
     
     mIsModelTransformChanged = false;
     // We update buffers after all of computations
-    
-    //for (int i = static_cast<int>(mDirtyBuffers.size()) - 1; i >= 0; --i) {
-    //    auto & dirtyBuffer = mDirtyBuffers[i];
-    //    if (dirtyBuffer.remainingUpdateCount > 0) {
-    //        --dirtyBuffer.remainingUpdateCount;
-    //        RF::UpdateUniformBuffer(
-    //            dirtyBuffer.bufferGroup->buffers[dirtyBuffer.startingIndex + drawPass.frameIndex],
-    //            dirtyBuffer.ubo
-    //        );
-    //    } else {
-    //        Memory::Free(dirtyBuffer.ubo);
-    //        mDirtyBuffers.erase(mDirtyBuffers.begin() + i);
-    //    }
-    //}
 
-    if (mSkinsJointsBuffer.bufferSize > 0) {
+    if (mSkinsJointsBuffer.bufferSize > 0 && mIsSkinJointsChanged == true) {
         RF::UpdateUniformBuffer(
             mSkinsJointsBuffer.buffers[drawPass.frameIndex],
             mCachedSkinsJointsBlob
         );
+        mIsSkinJointsChanged = false;
     }
 }
 
@@ -346,7 +264,7 @@ void DrawableVariant::SetActiveAnimationIndex(int const nextAnimationIndex, Anim
     mAnimationTransitionDurationInSec = params.transitionDuration;
     mAnimationRemainingTransitionDurationInSec = params.transitionDuration;
     mPreviousAnimationTimeInSec = mActiveAnimationTimeInSec;
-    mActiveAnimationTimeInSec = mEssence->GetGpuModel().model.mesh.GetAnimationByIndex(mActiveAnimationIndex).startTime;
+    mActiveAnimationTimeInSec = params.startTimeOffsetInSec + mEssence->GetGpuModel().model.mesh.GetAnimationByIndex(mActiveAnimationIndex).startTime;
     mActiveAnimationParams = params;
 }
 
@@ -394,7 +312,7 @@ void DrawableVariant::updateAnimation(float const deltaTimeInSec, bool isInFrust
 
                         if (channel.path == Animation::Path::Translation)
                         {
-                            node.currentTranslate = glm::mix(Matrix::ConvertCellsToVec3(previousOutput), Matrix::ConvertCellsToVec3(nextOutput), fraction);
+                            node.currentTranslate = glm::mix(Matrix::CopyCellsToVec3(previousOutput), Matrix::CopyCellsToVec3(nextOutput), fraction);
                         }
                         else if (channel.path == Animation::Path::Rotation)
                         {
@@ -414,7 +332,7 @@ void DrawableVariant::updateAnimation(float const deltaTimeInSec, bool isInFrust
                         }
                         else if (channel.path == Animation::Path::Scale)
                         {
-                            node.currentScale = glm::mix(Matrix::ConvertCellsToVec3(previousOutput), Matrix::ConvertCellsToVec3(nextOutput), fraction);
+                            node.currentScale = glm::mix(Matrix::CopyCellsToVec3(previousOutput), Matrix::CopyCellsToVec3(nextOutput), fraction);
                         }
                         else
                         {
@@ -461,9 +379,9 @@ void DrawableVariant::updateAnimation(float const deltaTimeInSec, bool isInFrust
                 }
 
                 auto const previousInput = sampler.inputAndOutput[i].input;
-                auto previousOutput = Matrix::ConvertCellsToVec4(sampler.inputAndOutput[i].output);
+                auto previousOutput = Matrix::CopyCellsToVec4(sampler.inputAndOutput[i].output);
                 auto const nextInput = sampler.inputAndOutput[i + 1].input;
-                auto nextOutput = Matrix::ConvertCellsToVec4(sampler.inputAndOutput[i + 1].output);
+                auto nextOutput = Matrix::CopyCellsToVec4(sampler.inputAndOutput[i + 1].output);
                 // Get the input keyframe values for the current time stamp
                 if (mPreviousAnimationTimeInSec >= previousInput && mPreviousAnimationTimeInSec <= nextInput)
                 {
@@ -543,9 +461,13 @@ void DrawableVariant::updateSkinJoints(uint32_t const skinIndex, AS::MeshSkin co
     auto const & jointMatrices = mCachedSkinsJoints[skinIndex];
     for (size_t i = 0; i < skin.joints.size(); i++)
     {
-        auto const & joint = mNodes[skin.joints[i]];
-        auto const nodeMatrix = joint.cachedGlobalTransform;
-        jointMatrices[i].model = nodeMatrix * skin.inverseBindMatrices[i];  // T - S = changes
+        auto & joint = mNodes[skin.joints[i]];
+        if (joint.isCachedGlobalTransformChanged) {
+            auto const nodeMatrix = joint.cachedGlobalTransform;
+            jointMatrices[i].model = nodeMatrix * skin.inverseBindMatrices[i];  // T - S = changes
+            joint.isCachedGlobalTransformChanged = false;
+            mIsSkinJointsChanged = true;
+        }
     }
 }
 
@@ -631,6 +553,7 @@ void DrawableVariant::computeNodeGlobalTransform(Node & node, Node const * paren
             node.cachedGlobalTransform = parentNode->cachedGlobalTransform * node.cachedLocalTransform;
         }
         isChanged = true;
+        node.isCachedGlobalTransformChanged = true;
     }
 
     if ((isChanged || mIsModelTransformChanged) && node.meshNode->hasSubMesh()) {
@@ -711,7 +634,7 @@ RT::DescriptorSetGroup const * DrawableVariant::GetDescriptorSetGroup(char const
 //-------------------------------------------------------------------------------------------------
 
 bool DrawableVariant::IsActive() const noexcept {
-    return mMeshRendererComponent->IsActive();
+    return mRendererComponent->IsActive();
 }
 
 //-------------------------------------------------------------------------------------------------

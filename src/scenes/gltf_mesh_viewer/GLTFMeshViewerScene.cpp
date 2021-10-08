@@ -123,8 +123,8 @@ void GLTFMeshViewerScene::Init() {
 
         mCamera = entity->AddComponent<ObserverCameraComponent>(
             FOV,
-            Z_FAR,
-            Z_NEAR
+            Z_NEAR,
+            Z_FAR
         );
         MFA_ASSERT(mCamera != nullptr);
         EntitySystem::InitEntity(entity);
@@ -139,7 +139,7 @@ void GLTFMeshViewerScene::Init() {
     updateProjectionBuffer();
 
     {// Point light
-        auto cpuModel = MFA::ShapeGenerator::Sphere(0.1f);
+        auto cpuModel = MFA::ShapeGenerator::Sphere();
         mPointLightModel = RF::CreateGpuModel(cpuModel);
         mPointLightPipeline.CreateDrawableEssence("Sphere", mPointLightModel);
 
@@ -168,7 +168,7 @@ void GLTFMeshViewerScene::Init() {
     mUIRegisterId = UI::Register([this]()->void {OnUI();});
 }
 
-void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RT::DrawPass & drawPass) {
+void GLTFMeshViewerScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass) {
     auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
 
     if (selectedModel.isLoaded == false) {
@@ -341,10 +341,12 @@ void GLTFMeshViewerScene::OnUI() {
 
     if (mIsDrawableVariantWindowVisible) {
         const auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
-        // TODO We should not expose variant
-        auto * variant = selectedModel.meshRendererComponent->GetVariant();
-        if (variant != nullptr) {
-            variant->OnUI();
+        if (selectedModel.isLoaded) {
+            // TODO We should not expose variant
+            auto * variant = selectedModel.meshRendererComponent->GetVariant();
+            if (variant != nullptr) {
+                variant->OnUI();
+            }
         }
     }
 
@@ -402,7 +404,7 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
     );
     MFA_ASSERT(renderRequiredData.meshRendererComponent != nullptr);
 
-    entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(1, 0.5, 0.2f));
+    entity->AddComponent<AxisAlignedBoundingBoxComponent>();
 
     EntitySystem::InitEntity(entity);
         

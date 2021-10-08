@@ -17,7 +17,7 @@ void MFA::BoundingVolumeComponent::Update(float const deltaTimeInSec)
 {
     Component::Update(deltaTimeInSec);
 
-    mIsInFrustum = IsInsideCameraFrustum(SceneManager::GetActiveScene()->GetActiveCamera()); // TODO We need global reference to active camera
+    mIsInFrustum = IsInsideCameraFrustum(SceneManager::GetActiveScene()->GetActiveCamera());
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -32,7 +32,7 @@ bool MFA::BoundingVolumeComponent::IsInFrustum() const
 bool MFA::BoundingVolumeComponent::IsInsideCameraFrustum(CameraComponent const * camera)
 {
     MFA_ASSERT(camera != nullptr);
-    return true;            
+    return true;
 }
 
 //-------------------------------------------------------------------------------------------------

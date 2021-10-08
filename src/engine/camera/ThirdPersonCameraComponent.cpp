@@ -5,37 +5,35 @@
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 #include "engine/BedrockAssert.hpp"
-#include "engine/BedrockCommon.hpp"
 #include "engine/BedrockMath.hpp"
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
 
-namespace MFA {
+using namespace MFA;
 
 //-------------------------------------------------------------------------------------------------
 
 ThirdPersonCameraComponent::ThirdPersonCameraComponent(
     float const fieldOfView,
-    float const farPlane,
-    float const nearPlane,
+    float const nearDistance,
+    float const farDistance,
     float const rotationSpeed
 )
-    : mFieldOfView(fieldOfView)
-    , mFarPlane(farPlane)
-    , mNearPlane(nearPlane)
+    : CameraComponent(fieldOfView, nearDistance, farDistance)
     , mRotationSpeed(rotationSpeed)
 {}
 
 //-------------------------------------------------------------------------------------------------
 
 void ThirdPersonCameraComponent::SetDistanceAndRotation(
-    float const distance, 
+    float const distance,
     float eulerAngles[3]
-) {
+)
+{
     MFA_ASSERT(distance >= 0);
     mDistance = distance;
 
-    Copy<3>(mEulerAngles, eulerAngles);
+    Matrix::CopyCellsToGlm(eulerAngles, mEulerAngles);
 
     mIsTransformDirty = true;
 }
@@ -49,8 +47,9 @@ void ThirdPersonCameraComponent::Init()
     mTransformComponent = GetEntity()->GetComponent<TransformComponent>();
     MFA_ASSERT(mTransformComponent != nullptr);
 
-    mTransformChangeListenerId = mTransformComponent->RegisterChangeListener([this]()->void{
-        mIsTransformDirty = true;
+    mTransformChangeListenerId = mTransformComponent->RegisterChangeListener([this]()->void
+{
+    mIsTransformDirty = true;
     });
 
     OnResize();
@@ -70,7 +69,8 @@ void ThirdPersonCameraComponent::Update(float const deltaTimeInSec)
     auto const mouseDeltaX = IM::GetMouseDeltaX();
     auto const mouseDeltaY = IM::GetMouseDeltaY();
 
-    if (mouseDeltaX != 0.0f || mouseDeltaY != 0.0f) {
+    if (mouseDeltaX != 0.0f || mouseDeltaY != 0.0f)
+    {
 
         auto const rotationDistance = mRotationSpeed * deltaTimeInSec;
         mEulerAngles[1] = mEulerAngles[1] + mouseDeltaX * rotationDistance;    // Reverse for view mat
@@ -82,15 +82,16 @@ void ThirdPersonCameraComponent::Update(float const deltaTimeInSec)
 
         mIsTransformDirty = true;
     }
-    
-    if (mIsTransformDirty){
+
+    if (mIsTransformDirty)
+    {
         float variantPosition[3];
         mTransformComponent->GetPosition(variantPosition);
 
         auto rotationMatrix = glm::identity<glm::mat4>();
-        Matrix::GlmRotate(rotationMatrix, mEulerAngles);
-    
-        glm::vec4 forwardDirection (ForwardVector[0], ForwardVector[1], ForwardVector[2], ForwardVector[3]);
+        Matrix::Rotate(rotationMatrix, mEulerAngles);
+
+        glm::vec4 forwardDirection = ForwardVector;
 
         forwardDirection = forwardDirection * rotationMatrix;
         forwardDirection = glm::normalize(forwardDirection);
@@ -100,7 +101,7 @@ void ThirdPersonCameraComponent::Update(float const deltaTimeInSec)
         mPosition[0] = -variantPosition[0] - forwardDirection[0];
         mPosition[1] = -variantPosition[1] - forwardDirection[1] + 1.0f;
         mPosition[2] = -variantPosition[2] - forwardDirection[2];
-        
+
         updateTransform();
     }
 }
@@ -115,69 +116,44 @@ void ThirdPersonCameraComponent::Shutdown()
 
 //-------------------------------------------------------------------------------------------------
 
-void ThirdPersonCameraComponent::OnResize() {
-    int32_t width;
-    int32_t height;
-    RF::GetDrawableSize(width, height);
-    MFA_ASSERT(width > 0);
-    MFA_ASSERT(height > 0);
-
-    const float ratio = static_cast<float>(width) / static_cast<float>(height);
-
-    Matrix::PreparePerspectiveProjectionMatrix(
-        mProjection,
-        ratio,
-        mFieldOfView,
-        mNearPlane,
-        mFarPlane
-    );
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void ThirdPersonCameraComponent::GetProjection(float outProjectionMatrix[16]) {
-    Matrix::CopyGlmToCells(mProjection, outProjectionMatrix);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-glm::mat4 const & ThirdPersonCameraComponent::GetProjection() const {
-    return mProjection;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void ThirdPersonCameraComponent::GetTransform(float outTransformMatrix[16]) {
+void ThirdPersonCameraComponent::GetTransform(float outTransformMatrix[16])
+{
     Matrix::CopyGlmToCells(mTransform, outTransformMatrix);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-glm::mat4 const & ThirdPersonCameraComponent::GetTransform() const {
+glm::mat4 const & ThirdPersonCameraComponent::GetTransform() const
+{
     return mTransform;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void ThirdPersonCameraComponent::ForcePosition(float position[3]) {
-    if (IsEqual<3>(mPosition, position) == false) {
-        Copy<3>(mPosition, position);
+void ThirdPersonCameraComponent::ForcePosition(float position[3])
+{
+    if (Matrix::IsEqual(mPosition, position) == false)
+    {
+        Matrix::CopyCellsToGlm(position, mPosition);
         mIsTransformDirty = true;
     }
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void ThirdPersonCameraComponent::ForceRotation(float eulerAngles[3]) {
-    if (IsEqual<3>(mPosition, eulerAngles) == false) {
-        Copy<3>(mPosition, eulerAngles);
+void ThirdPersonCameraComponent::ForceRotation(float eulerAngles[3])
+{
+    if (Matrix::IsEqual(mPosition, eulerAngles) == false)
+    {
+        Matrix::CopyCellsToGlm(eulerAngles, mEulerAngles);
         mIsTransformDirty = true;
     }
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void ThirdPersonCameraComponent::GetPosition(float outPosition[3]) const {
+void ThirdPersonCameraComponent::GetPosition(float outPosition[3]) const
+{
     outPosition[0] = -1 * mPosition[0];
     outPosition[1] = -1 * mPosition[1];
     outPosition[2] = -1 * mPosition[2];
@@ -185,7 +161,8 @@ void ThirdPersonCameraComponent::GetPosition(float outPosition[3]) const {
 
 //-------------------------------------------------------------------------------------------------
 
-void ThirdPersonCameraComponent::GetRotation(float outEulerAngles[3]) const {
+void ThirdPersonCameraComponent::GetRotation(float outEulerAngles[3]) const
+{
     outEulerAngles[0] = mEulerAngles[0];
     outEulerAngles[1] = mEulerAngles[1];
     outEulerAngles[2] = mEulerAngles[2];
@@ -193,16 +170,17 @@ void ThirdPersonCameraComponent::GetRotation(float outEulerAngles[3]) const {
 
 //-------------------------------------------------------------------------------------------------
 
-void ThirdPersonCameraComponent::updateTransform() {
+void ThirdPersonCameraComponent::updateTransform()
+{
 
     MFA_ASSERT(mIsTransformDirty == true);
 
     auto rotationMatrix = glm::identity<glm::mat4>();
-    Matrix::GlmRotate(rotationMatrix, mEulerAngles);
+    Matrix::Rotate(rotationMatrix, mEulerAngles);
 
     auto translateMatrix = glm::identity<glm::mat4>();
-    Matrix::GlmTranslate(translateMatrix, mPosition);
-    
+    Matrix::Translate(translateMatrix, mPosition);
+
     mTransform = rotationMatrix * translateMatrix;
 
     mIsTransformDirty = false;
@@ -211,14 +189,13 @@ void ThirdPersonCameraComponent::updateTransform() {
 
 //-------------------------------------------------------------------------------------------------
 
-void ThirdPersonCameraComponent::OnUI() {
-    UI::BeginWindow(mName.c_str());
-    UI::InputFloat3("Position", mPosition);
-    UI::InputFloat3("EulerAngles", mEulerAngles);
+void ThirdPersonCameraComponent::OnUI()
+{
+    UI::BeginWindow(GetEntity()->GetName().c_str());
+    UI::InputFloat3("Position", reinterpret_cast<float *>(&mPosition));
+    UI::InputFloat3("EulerAngles", reinterpret_cast<float *>(&mEulerAngles));
+    CameraComponent::OnUI();
     UI::EndWindow();
 }
 
 //-------------------------------------------------------------------------------------------------
-
-
-}

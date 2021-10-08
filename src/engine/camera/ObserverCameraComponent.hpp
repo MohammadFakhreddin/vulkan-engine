@@ -14,8 +14,8 @@ namespace MFA
 
         explicit ObserverCameraComponent(
             float fieldOfView,
-            float farPlane,
-            float nearPlane,
+            float nearDistance,
+            float farDistance,
             float moveSpeed = 10.0f,
 #if defined(__DESKTOP__) || defined(__IOS__)
             float rotationSpeed = 10.0f
@@ -43,13 +43,6 @@ namespace MFA
 
         void Update(float deltaTimeInSec) override;
 
-        void OnResize() override;
-
-        void GetProjection(float outProjection[16]) override;
-
-        [[nodiscard]]
-        glm::mat4 const & GetProjection() const override;
-
         void GetTransform(float outTransformMatrix[16]) override;
 
         [[nodiscard]]
@@ -67,17 +60,9 @@ namespace MFA
 
         void updateTransform();
 
-        float const mFieldOfView;
-        float const mFarPlane;
-        float const mNearPlane;
-
         float const mMoveSpeed;
         float const mRotationSpeed;
 
-        float mPosition[3] {};
-        float mEulerAngles[3] {0.0f, 0.0f, 0.0f};
-
-        glm::mat4 mProjectionMatrix{};
         glm::mat4 mTransformMatrix{};
 
         bool mIsTransformDirty = false;

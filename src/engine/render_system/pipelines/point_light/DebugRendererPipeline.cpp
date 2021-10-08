@@ -1,4 +1,4 @@
-#include "PointLightPipeline.hpp"
+#include "DebugRendererPipeline.hpp"
 
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockMatrix.hpp"
@@ -17,7 +17,7 @@ using namespace MFA;
 
 //-------------------------------------------------------------------------------------------------
 
-PointLightPipeline::~PointLightPipeline()
+DebugRendererPipeline::~DebugRendererPipeline()
 {
     if (mIsInitialized)
     {
@@ -27,7 +27,7 @@ PointLightPipeline::~PointLightPipeline()
 
 //-------------------------------------------------------------------------------------------------
 
-void PointLightPipeline::Init()
+void DebugRendererPipeline::Init()
 {
     if (mIsInitialized == true)
     {
@@ -46,7 +46,7 @@ void PointLightPipeline::Init()
 
 //-------------------------------------------------------------------------------------------------
 
-void PointLightPipeline::Shutdown()
+void DebugRendererPipeline::Shutdown()
 {
     if (mIsInitialized == false)
     {
@@ -64,7 +64,7 @@ void PointLightPipeline::Shutdown()
 
 //-------------------------------------------------------------------------------------------------
 
-void PointLightPipeline::PreRender(RT::DrawPass & drawPass, float const deltaTime)
+void DebugRendererPipeline::PreRender(RT::DrawPass & drawPass, float const deltaTime)
 {
     BasePipeline::PreRender(drawPass, deltaTime);
     updateViewProjectionBuffer(drawPass);
@@ -72,7 +72,7 @@ void PointLightPipeline::PreRender(RT::DrawPass & drawPass, float const deltaTim
 
 //-------------------------------------------------------------------------------------------------
 
-void PointLightPipeline::Render(RT::DrawPass & drawPass, float deltaTime)
+void DebugRendererPipeline::Render(RT::DrawPass & drawPass, float deltaTime)
 {
     RF::BindDrawPipeline(drawPass, mDrawPipeline);
     RF::BindDescriptorSet(drawPass, mDescriptorSetGroup.descriptorSets[drawPass.frameIndex]);
@@ -88,12 +88,10 @@ void PointLightPipeline::Render(RT::DrawPass & drawPass, float deltaTime)
 
         for (auto const & variant : variantsList)
         {
-            if (variant->IsActive() && variant->IsInFrustum())
+            if (variant->IsActive())
             {
-                auto * color = variant->GetEntity()->GetComponent<ColorComponent>()->GetColor();
-
-                Copy<3>(pushConstants.baseColorFactor, color);
-
+                variant->GetEntity()->GetComponent<ColorComponent>()->GetColor(pushConstants.baseColorFactor);
+                
                 variant->Draw(drawPass, [&drawPass, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
                     {
                         Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.model);
@@ -113,29 +111,29 @@ void PointLightPipeline::Render(RT::DrawPass & drawPass, float deltaTime)
 
 //-------------------------------------------------------------------------------------------------
 
-void PointLightPipeline::UpdateCameraView(float cameraTransform[16])
+void DebugRendererPipeline::UpdateCameraView(float cameraTransform[16])
 {
     if (Matrix::IsEqual(mCameraTransform, cameraTransform) == false)
     {
-        Matrix::CopyCellsToMat4(cameraTransform, mCameraTransform);
+        Matrix::CopyCellsToGlm(cameraTransform, mCameraTransform);
         mViewProjectionBufferDirtyCounter = RF::GetMaxFramesPerFlight();
     }
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void PointLightPipeline::UpdateCameraProjection(float cameraProjection[16])
+void DebugRendererPipeline::UpdateCameraProjection(float cameraProjection[16])
 {
     if (Matrix::IsEqual(mCameraProjection, cameraProjection) == false)
     {
-        Matrix::CopyCellsToMat4(cameraProjection, mCameraProjection);
+        Matrix::CopyCellsToGlm(cameraProjection, mCameraProjection);
         mViewProjectionBufferDirtyCounter = RF::GetMaxFramesPerFlight();
     }
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void PointLightPipeline::updateViewProjectionBuffer(RT::DrawPass const & drawPass)
+void DebugRendererPipeline::updateViewProjectionBuffer(RT::DrawPass const & drawPass)
 {
     if (mViewProjectionBufferDirtyCounter <= 0)
     {
@@ -154,7 +152,7 @@ void PointLightPipeline::updateViewProjectionBuffer(RT::DrawPass const & drawPas
 
 //-------------------------------------------------------------------------------------------------
 
-void PointLightPipeline::createUniformBuffers()
+void DebugRendererPipeline::createUniformBuffers()
 {
     mViewProjectionBuffers = RF::CreateUniformBuffer(sizeof(ViewProjectionData), RF::GetMaxFramesPerFlight());
     for (uint32_t i = 0; i < RF::GetMaxFramesPerFlight(); ++i)
@@ -165,14 +163,14 @@ void PointLightPipeline::createUniformBuffers()
 
 //-------------------------------------------------------------------------------------------------
 
-void PointLightPipeline::destroyUniformBuffers()
+void DebugRendererPipeline::destroyUniformBuffers()
 {
     RF::DestroyUniformBuffer(mViewProjectionBuffers);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void PointLightPipeline::createDescriptorSetLayout()
+void DebugRendererPipeline::createDescriptorSetLayout()
 {
     std::vector<VkDescriptorSetLayoutBinding> bindings{};
     {// ModelViewProjection
@@ -193,7 +191,7 @@ void PointLightPipeline::createDescriptorSetLayout()
 
 //-------------------------------------------------------------------------------------------------
 
-void PointLightPipeline::destroyDescriptorSetLayout()
+void DebugRendererPipeline::destroyDescriptorSetLayout()
 {
     MFA_VK_VALID_ASSERT(mDescriptorSetLayout);
     RF::DestroyDescriptorSetLayout(mDescriptorSetLayout);
@@ -202,7 +200,7 @@ void PointLightPipeline::destroyDescriptorSetLayout()
 
 //-------------------------------------------------------------------------------------------------
 
-void PointLightPipeline::createPipeline()
+void DebugRendererPipeline::createPipeline()
 {
     // Vertex shader
     auto cpuVertexShader = Importer::ImportShaderFromSPV(
@@ -253,9 +251,9 @@ void PointLightPipeline::createPipeline()
 
     RT::CreateGraphicPipelineOptions pipelineOptions{};
     pipelineOptions.useStaticViewportAndScissor = false;
-    pipelineOptions.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+    pipelineOptions.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
     pipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
-    pipelineOptions.cullMode = VK_CULL_MODE_BACK_BIT;
+    pipelineOptions.cullMode = VK_CULL_MODE_NONE;
 
     std::vector<VkPushConstantRange> pushConstantRanges{
         VkPushConstantRange {
@@ -282,7 +280,7 @@ void PointLightPipeline::createPipeline()
 
 //-------------------------------------------------------------------------------------------------
 
-void PointLightPipeline::createDescriptorSets()
+void DebugRendererPipeline::createDescriptorSets()
 {
     mDescriptorSetGroup = RF::CreateDescriptorSets(RF::GetMaxFramesPerFlight(), mDescriptorSetLayout);
 

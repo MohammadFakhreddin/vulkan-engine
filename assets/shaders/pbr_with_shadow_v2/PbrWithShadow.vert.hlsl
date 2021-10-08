@@ -27,7 +27,7 @@ struct VSOut {
     float3 worldTangent: TEXCOORD3;
     float3 worldBiTangent : TEXCOORD4;
 
-    float2 emissiveTexCoord: TEXCOORD4;
+    float2 emissiveTexCoord: TEXCOORD5;
 };
 
 // TODO We can combine view and projection

@@ -257,6 +257,43 @@ void Mesh::FinalizeData() {
             mRootNodes.emplace_back(i);
         }
     }
+
+    // Creating position min max for entire mesh based on subMeshes
+    for (auto const & subMesh : mSubMeshes)
+    {
+        if (subMesh.hasPositionMinMax)
+        {
+            mHasPositionMinMax = true;
+
+            // Position min
+            if (subMesh.positionMin[0] < mPositionMin[0])
+            {
+                mPositionMin[0] = subMesh.positionMin[0];
+            }
+            if (subMesh.positionMin[1] < mPositionMin[1])
+            {
+                mPositionMin[1] = subMesh.positionMin[1];
+            }
+            if (subMesh.positionMin[2] < mPositionMin[2])
+            {
+                mPositionMin[2] = subMesh.positionMin[2];
+            }
+
+            // Position max
+            if (subMesh.positionMax[0] > mPositionMax[0])
+            {
+                mPositionMax[0] = subMesh.positionMax[0];
+            }
+            if (subMesh.positionMax[1] > mPositionMax[1])
+            {
+                mPositionMax[1] = subMesh.positionMax[1];
+            }
+            if (subMesh.positionMax[2] > mPositionMax[2])
+            {
+                mPositionMax[2] = subMesh.positionMax[2];
+            }
+        }
+    }
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -291,8 +328,42 @@ void Mesh::InsertPrimitive(
     MFA_ASSERT(mNextIndexOffset + indicesSize <= mIndexBuffer.len);
     ::memcpy(mVertexBuffer.ptr + mNextVertexOffset, vertices, verticesSize);
     ::memcpy(mIndexBuffer.ptr + mNextIndexOffset, indices, indicesSize);
+
     MFA_ASSERT(subMeshIndex < mSubMeshes.size());
-    mSubMeshes[subMeshIndex].primitives.emplace_back(primitive);
+    auto & subMesh = mSubMeshes[subMeshIndex];
+    
+    if (primitive.hasPositionMinMax) {
+        subMesh.hasPositionMinMax = true;
+        // Position min
+        if (primitive.positionMin[0] < subMesh.positionMin[0])
+        {
+            subMesh.positionMin[0] = primitive.positionMin[0];
+        }
+        if (primitive.positionMin[1] < subMesh.positionMin[1])
+        {
+            subMesh.positionMin[1] = primitive.positionMin[1];
+        }
+        if (primitive.positionMin[2] < subMesh.positionMin[2])
+        {
+            subMesh.positionMin[2] = primitive.positionMin[2];
+        }
+
+        // Position max
+        if (primitive.positionMax[0] > subMesh.positionMax[0])
+        {
+            subMesh.positionMax[0] = primitive.positionMax[0];
+        }
+        if (primitive.positionMax[1] > subMesh.positionMax[1])
+        {
+            subMesh.positionMax[1] = primitive.positionMax[1];
+        }
+        if (primitive.positionMax[2] > subMesh.positionMax[2])
+        {
+            subMesh.positionMax[2] = primitive.positionMax[2];
+        }
+    }
+    subMesh.primitives.emplace_back(primitive);
+
     mNextVertexOffset += verticesSize;
     mNextIndexOffset += indicesSize;
     mNextStartingIndex += indicesCount;

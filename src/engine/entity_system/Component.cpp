@@ -22,7 +22,27 @@ void MFA::Component::Shutdown() {}
 
 void MFA::Component::SetActive(bool const isActive)
 {
+    if (mIsActive == isActive)
+    {
+        return;
+    }
     mIsActive = isActive;
+
+    // Update event
+    if ((RequiredEvents() & EventTypes::UpdateEvent) > 0)
+    {
+        if (mIsActive)
+        {
+            mUpdateEventId = GetEntity()->mUpdateSignal.Register([this](float const deltaTimeInSec)->void
+                {
+                    Update(deltaTimeInSec);
+                }
+            );
+        } else
+        {
+            GetEntity()->mUpdateSignal.UnRegister(mUpdateEventId);
+        }
+    }
 }
 
 //-------------------------------------------------------------------------------------------------

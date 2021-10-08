@@ -1,9 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <vector>
-
-#include "engine/BedrockAssert.hpp"
 
 namespace MFA
 {
@@ -44,6 +41,7 @@ public:
         TransformComponent,
 
         MeshRendererComponent,
+        BoundingVolumeRendererComponent,
 
         BoundingVolumeComponent,
         SphereBoundingVolumeComponent,
@@ -59,14 +57,13 @@ public:
 
     static uint8_t GetClassType(ClassType outComponentTypes[3])
     {
-        MFA_ASSERT(false);
         return 0;
     }
     
     virtual void Init();
 
     virtual void Update(float deltaTimeInSec);
-
+    
     virtual void Shutdown();
 
     void SetActive(bool isActive);

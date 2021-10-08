@@ -15,8 +15,8 @@ public:
     // ThirdPerson camera must act like a child to variant
     explicit ThirdPersonCameraComponent(
         float fieldOfView,
-        float farPlane,
-        float nearPlane,
+        float nearDistance,
+        float farDistance,
 #if defined(__DESKTOP__) || defined(__IOS__)
         float rotationSpeed = 20.0f
 #elif defined(__ANDROID__)
@@ -46,13 +46,6 @@ public:
 
     void Shutdown() override;
 
-    void OnResize() override;
-
-    void GetProjection(float outProjectionMatrix[16]) override;
-
-    [[nodiscard]]
-    glm::mat4 const & GetProjection() const override;
-
     void GetTransform(float outTransformMatrix[16]) override;
 
     [[nodiscard]]
@@ -72,19 +65,12 @@ private:
 
     void updateTransform();
 
-    float const mFieldOfView;
-    float const mFarPlane;
-    float const mNearPlane;
-
     TransformComponent * mTransformComponent = nullptr;
     int mTransformChangeListenerId = 0;
 
-    float mPosition[3] {};
-    float mEulerAngles[3] {-15.0f, 0.0f, 0.0f};
     float mDistance = 3.0f;
     glm::mat4 mTransform {1};
-    glm::mat4 mProjection {};
-
+    
     bool mIsTransformDirty = true;
 
     float mRotationSpeed;

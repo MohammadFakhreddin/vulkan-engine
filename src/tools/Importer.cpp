@@ -719,10 +719,10 @@ static void GLTF_extractSubMeshes(
     uint32_t primitiveUniqueId = 0;
     std::vector<AS::Mesh::Vertex> primitiveVertices {};
     std::vector<AS::MeshIndex> primitiveIndices {};
-    for(auto & mesh : gltfModel.meshes) {
+    for(auto & gltfMesh : gltfModel.meshes) {
         auto const meshIndex = outResultModel.mesh.InsertSubMesh();
-        if(false == mesh.primitives.empty()) {
-            for(auto & primitive : mesh.primitives) {
+        if(false == gltfMesh.primitives.empty()) {
+            for(auto & gltfPrimitive : gltfMesh.primitives) {
                 primitiveIndices.erase(primitiveIndices.begin(), primitiveIndices.end());
                 primitiveVertices.erase(primitiveVertices.begin(), primitiveVertices.end());
                 
@@ -740,8 +740,8 @@ static void GLTF_extractSubMeshes(
                 float emissiveFactor [3] {};
                 uint32_t uniqueId = primitiveUniqueId;
                 primitiveUniqueId++;
-                if(primitive.material >= 0) {// Material
-                    auto const & material = gltfModel.materials[primitive.material];
+                if(gltfPrimitive.material >= 0) {// Material
+                    auto const & material = gltfModel.materials[gltfPrimitive.material];
                     if (material.pbrMetallicRoughness.baseColorTexture.index >= 0) {// Base color texture
                         auto const & base_color_gltf_texture = gltfModel.textures[material.pbrMetallicRoughness.baseColorTexture.index];
                         auto const & image = gltfModel.images[base_color_gltf_texture.source];
@@ -790,8 +790,8 @@ static void GLTF_extractSubMeshes(
                 }
                 uint32_t primitiveIndicesCount = 0;
                 {// Indices
-                    MFA_REQUIRE(primitive.indices < gltfModel.accessors.size());
-                    auto const & accessor = gltfModel.accessors[primitive.indices];
+                    MFA_REQUIRE(gltfPrimitive.indices < gltfModel.accessors.size());
+                    auto const & accessor = gltfModel.accessors[gltfPrimitive.indices];
                     auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
                     MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
                     auto const & buffer = gltfModel.buffers[bufferView.buffer];
@@ -840,7 +840,7 @@ static void GLTF_extractSubMeshes(
                 {// Position
                     auto const result = GLTF_extractPrimitiveDataFromBuffer(
                         gltfModel, 
-                        primitive, 
+                        gltfPrimitive, 
                         "POSITION", 
                         3, 
                         TINYGLTF_COMPONENT_TYPE_FLOAT, 
@@ -852,6 +852,7 @@ static void GLTF_extractSubMeshes(
                     );
                     MFA_ASSERT(result);
                 }
+
                 float const * baseColorUvs = nullptr;
                 float baseColorUvMin [2] {};
                 float baseColorUvMax [2] {};
@@ -861,7 +862,7 @@ static void GLTF_extractSubMeshes(
                     auto texture_coordinate_key_name = generateUvKeyword(baseColorUvIndex);
                     auto const result = GLTF_extractPrimitiveDataFromBuffer(
                         gltfModel,
-                        primitive,
+                        gltfPrimitive,
                         texture_coordinate_key_name.c_str(),
                         2,
                         TINYGLTF_COMPONENT_TYPE_FLOAT,
@@ -883,7 +884,7 @@ static void GLTF_extractSubMeshes(
                     uint32_t metallicRoughnessUvsCount = 0;
                     auto const result = GLTF_extractPrimitiveDataFromBuffer(
                         gltfModel,
-                        primitive,
+                        gltfPrimitive,
                         texture_coordinate_key_name.c_str(),
                         2,
                         TINYGLTF_COMPONENT_TYPE_FLOAT,
@@ -906,7 +907,7 @@ static void GLTF_extractSubMeshes(
                     uint32_t emissionUvCount = 0;
                     auto const result = GLTF_extractPrimitiveDataFromBuffer(
                         gltfModel,
-                        primitive,
+                        gltfPrimitive,
                         texture_coordinate_key_name.c_str(),
                         2,
                         TINYGLTF_COMPONENT_TYPE_FLOAT,
@@ -928,7 +929,7 @@ static void GLTF_extractSubMeshes(
                     uint32_t normalUvsCount = 0;
                     auto const result = GLTF_extractPrimitiveDataFromBuffer(
                         gltfModel,
-                        primitive,
+                        gltfPrimitive,
                         texture_coordinate_key_name.c_str(),
                         2,
                         TINYGLTF_COMPONENT_TYPE_FLOAT,
@@ -949,7 +950,7 @@ static void GLTF_extractSubMeshes(
                     uint32_t normalValuesCount = 0;
                     auto const result = GLTF_extractPrimitiveDataFromBuffer(
                         gltfModel,
-                        primitive,
+                        gltfPrimitive,
                         "NORMAL",
                         3,
                         TINYGLTF_COMPONENT_TYPE_FLOAT,
@@ -969,7 +970,7 @@ static void GLTF_extractSubMeshes(
                     uint32_t tangentValuesCount = 0;
                     auto const result = GLTF_extractPrimitiveDataFromBuffer(
                         gltfModel,
-                        primitive,
+                        gltfPrimitive,
                         "TANGENT",
                         4,
                         TINYGLTF_COMPONENT_TYPE_FLOAT,
@@ -986,7 +987,7 @@ static void GLTF_extractSubMeshes(
                 {// Joints
                     GLTF_extractPrimitiveDataFromBuffer(
                         gltfModel,
-                        primitive,
+                        gltfPrimitive,
                         "JOINTS_0",
                         4,
                         TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT,
@@ -999,7 +1000,7 @@ static void GLTF_extractSubMeshes(
                 {// Weights
                     GLTF_extractPrimitiveDataFromBuffer(
                         gltfModel,
-                        primitive,
+                        gltfPrimitive,
                         "WEIGHTS_0",
                         4,
                         TINYGLTF_COMPONENT_TYPE_FLOAT,
@@ -1013,9 +1014,9 @@ static void GLTF_extractSubMeshes(
                 float colorsMinValue [3] {0};
                 float colorsMaxValue [3] {1};
                 float colorsMinMaxDiff [3] {1};
-                if(primitive.attributes["COLOR"] >= 0) {
-                    MFA_REQUIRE(primitive.attributes["COLOR"] < gltfModel.accessors.size());
-                    auto const & accessor = gltfModel.accessors[primitive.attributes["COLOR"]];
+                if(gltfPrimitive.attributes["COLOR"] >= 0) {
+                    MFA_REQUIRE(gltfPrimitive.attributes["COLOR"] < gltfModel.accessors.size());
+                    auto const & accessor = gltfModel.accessors[gltfPrimitive.attributes["COLOR"]];
                     //MFA_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
                     //TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT
                     if (accessor.minValues.size() == 3 && accessor.maxValues.size() == 3) {
@@ -1160,7 +1161,7 @@ static void GLTF_extractSubMeshes(
                 }
 
                 {// Creating new subMesh
-                    AS::MeshPrimitive primitive = {};
+                    AS::MeshPrimitive primitive {};
                     primitive.uniqueId = uniqueId;
                     primitive.baseColorTextureIndex = baseColorTextureIndex;
                     primitive.metallicRoughnessTextureIndex = metallicRoughnessTextureIndex;
@@ -1177,6 +1178,9 @@ static void GLTF_extractSubMeshes(
                     primitive.hasNormalTexture = hasNormalTexture;
                     primitive.hasTangentBuffer = hasTangentValue;
                     primitive.hasSkin = hasSkin;
+                    primitive.hasPositionMinMax = hasPositionMinMax;
+                    Copy<3>(primitive.positionMin, positionsMinValue);
+                    Copy<3>(primitive.positionMax, positionsMaxValue);
 
                     outResultModel.mesh.InsertPrimitive(
                         meshIndex,
@@ -1260,7 +1264,7 @@ void GLTF_extractSkins(
         skin.inverseBindMatrices.resize(inverseBindMatricesCount);
         for (size_t i = 0; i < skin.inverseBindMatrices.size(); ++i) {
             auto & currentMatrix = skin.inverseBindMatrices[i];
-            Matrix::CopyCellsToMat4(&inverseBindMatricesPtr[i * 16], currentMatrix);
+            Matrix::CopyCellsToGlm(&inverseBindMatricesPtr[i * 16], currentMatrix);
         }
         MFA_ASSERT(skin.inverseBindMatrices.size() == skin.joints.size());
         skin.skeletonRootNode = gltfSkin.skeleton;

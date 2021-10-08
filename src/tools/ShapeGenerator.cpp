@@ -9,7 +9,7 @@ namespace MFA::ShapeGenerator {
 
     namespace AS = AssetSystem;
 
-    AssetSystem::Model Sphere(float scaleFactor) {
+    AssetSystem::Model Sphere() {
         AssetSystem::Model model {};
 
         std::vector<glm::vec3> positions {};
@@ -40,7 +40,7 @@ namespace MFA::ShapeGenerator {
                 // As solution to compute tangent I decided to rotate normal by 90 degree (In any direction :)))
                 auto rotationMatrix = glm::identity<glm::mat4>();
                 float angle[3] {0.0f, 0.0f, 90.0f};
-                Matrix::GlmRotate(rotationMatrix, angle);
+                Matrix::Rotate(rotationMatrix, angle);
                 
                 glm::vec4 tangentMatrix {xPos, yPos, zPos, 0.0f};
                 
@@ -132,7 +132,7 @@ namespace MFA::ShapeGenerator {
 
         AS::MeshNode node {
             .subMeshIndex = 0,
-            .scale = {scaleFactor, scaleFactor, scaleFactor}
+            .scale = {1, 1, 1}
         };
         
         model.mesh.InsertNode(node);
@@ -218,6 +218,8 @@ namespace MFA::ShapeGenerator {
         Matrix::CopyGlmToCells(glm::identity<glm::mat4>(), node.transform);
         model.mesh.InsertNode(node);
 
+        model.mesh.FinalizeData();
+
         if(model.mesh.IsValid() == false) {
             Blob verticesBuffer {};
             Blob indicesBuffer {};
@@ -227,6 +229,94 @@ namespace MFA::ShapeGenerator {
         }
 
         return model;
+    }
+
+    AssetSystem::Model Cube()
+    {
+
+        std::vector<glm::vec3> const positions {
+            // front
+            glm::vec3(-1.0, -1.0,  1.0),
+            glm::vec3(1.0, -1.0,  1.0),
+            glm::vec3(1.0,  1.0,  1.0),
+            glm::vec3(-1.0,  1.0,  1.0),
+            // back
+            glm::vec3(-1.0, -1.0, -1.0),
+            glm::vec3(1.0, -1.0, -1.0),
+            glm::vec3(1.0,  1.0, -1.0),
+            glm::vec3(-1.0,  1.0, -1.0)
+        };
+
+        std::vector<AS::MeshIndex> meshIndices {
+            // front
+            0, 1, 2,
+            2, 3, 0,
+            // right
+            1, 5, 6,
+            6, 2, 1,
+            // back
+            7, 6, 5,
+            5, 4, 7,
+            // left
+            4, 0, 3,
+            3, 7, 4,
+            // bottom
+            4, 5, 1,
+            1, 0, 4,
+            // top
+            3, 2, 6,
+            6, 7, 3
+        };
+
+        auto const indicesCount = static_cast<uint16_t>(meshIndices.size());
+        auto const verticesCount = static_cast<uint16_t>(positions.size());
+
+        AssetSystem::Model model {};
+
+        model.mesh.InitForWrite(
+            verticesCount, 
+            indicesCount, 
+            Memory::Alloc(sizeof(AS::MeshVertex) * verticesCount), 
+            Memory::Alloc(sizeof(AS::MeshIndex) * indicesCount)
+        );
+
+        std::vector<AS::MeshVertex> meshVertices (verticesCount);
+        
+        for (uintmax_t index = 0; index < verticesCount; ++index) {
+            // Positions
+            Matrix::CopyGlmToCells(positions[index], meshVertices[index].position);
+        }
+
+        auto const subMeshIndex = model.mesh.InsertSubMesh();
+
+        AS::Mesh::Primitive primitive {};
+        primitive.hasBaseColorTexture = true;
+        model.mesh.InsertPrimitive(
+            subMeshIndex,
+            primitive,
+            verticesCount,
+            meshVertices.data(),
+            indicesCount,
+            meshIndices.data()
+        );
+
+        AS::MeshNode node {};
+        node.subMeshIndex = 0;
+        Matrix::CopyGlmToCells(glm::identity<glm::mat4>(), node.transform);
+        model.mesh.InsertNode(node);
+
+        model.mesh.FinalizeData();
+
+        if(model.mesh.IsValid() == false) {
+            Blob verticesBuffer {};
+            Blob indicesBuffer {};
+            model.mesh.RevokeBuffers(verticesBuffer, indicesBuffer);
+            Memory::Free(verticesBuffer);
+            Memory::Free(indicesBuffer);
+        }
+
+        return model;
+
     }
 
 }

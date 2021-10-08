@@ -7,7 +7,7 @@
 
 namespace MFA {
     
-class PointLightPipeline final : public BasePipeline {
+class DebugRendererPipeline final : public BasePipeline {
 public:
 
     struct PushConstants {
@@ -20,13 +20,13 @@ public:
         alignas(64) float viewProjection[16];
     };
 
-    PointLightPipeline() = default;
-    ~PointLightPipeline() override;
+    DebugRendererPipeline() = default;
+    ~DebugRendererPipeline() override;
 
-    PointLightPipeline (PointLightPipeline const &) noexcept = delete;
-    PointLightPipeline (PointLightPipeline &&) noexcept = delete;
-    PointLightPipeline & operator = (PointLightPipeline const &) noexcept = delete;
-    PointLightPipeline & operator = (PointLightPipeline &&) noexcept = delete;
+    DebugRendererPipeline (DebugRendererPipeline const &) noexcept = delete;
+    DebugRendererPipeline (DebugRendererPipeline &&) noexcept = delete;
+    DebugRendererPipeline & operator = (DebugRendererPipeline const &) noexcept = delete;
+    DebugRendererPipeline & operator = (DebugRendererPipeline &&) noexcept = delete;
 
     void Init() override;
 

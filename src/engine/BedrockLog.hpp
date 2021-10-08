@@ -18,7 +18,7 @@
         #error Os is not supported
     #endif
 #else
-#define MFA_LOG_DEBUG(fmt_)                         
+#define MFA_LOG_DEBUG(fmt_, ...)                         
 #endif
 
 #if defined(__DESKTOP__) || defined(__IOS__)

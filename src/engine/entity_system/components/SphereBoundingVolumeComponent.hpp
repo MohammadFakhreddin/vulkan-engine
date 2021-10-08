@@ -20,6 +20,8 @@ public:
 
     void Init() override;
 
+    DEBUG_CenterAndRadius DEBUG_GetCenterAndRadius() override;
+
 protected:
 
     bool IsInsideCameraFrustum(CameraComponent const * camera) override;

@@ -1,8 +1,10 @@
 #include "MeshRendererComponent.hpp"
 
 #include "engine/BedrockAssert.hpp"
+#include "engine/entity_system/Entity.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
 #include "engine/render_system/drawable_variant/DrawableVariant.hpp"
+#include "engine/entity_system/components/TransformComponent.hpp"
 
 using namespace MFA;
 
@@ -21,7 +23,7 @@ MeshRendererComponent::MeshRendererComponent(BasePipeline & pipeline, char const
 void MeshRendererComponent::Init()
 {
     Component::Init();
-    mVariant->Init(this);
+    mVariant->Init(this, GetEntity()->GetComponent<TransformComponent>());
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -38,26 +40,4 @@ DrawableVariant * MeshRendererComponent::GetVariant() const
     return mVariant;
 }
 
-/*
-//-------------------------------------------------------------------------------------------------
-
-void MeshRendererComponent::SetActiveAnimationIndex(int const nextAnimationIndex, DrawableVariant::AnimationParams const & params) const
-{
-    mVariant->SetActiveAnimationIndex(nextAnimationIndex, params);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void MeshRendererComponent::SetActiveAnimation(char const * animationName, DrawableVariant::AnimationParams const & params) const
-{
-    mVariant->SetActiveAnimation(animationName, params);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-bool MeshRendererComponent::IsCurrentAnimationFinished() const
-{
-    return mVariant->IsCurrentAnimationFinished();
-}
-*/
 //-------------------------------------------------------------------------------------------------

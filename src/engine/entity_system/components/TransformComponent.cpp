@@ -39,16 +39,40 @@ void TransformComponent::Shutdown()
 void TransformComponent::UpdateTransform(float position[3], float rotation[3], float scale[3])
 {
     bool hasChanged = false;
-    if (IsEqual<3>(mPosition, position) == false) {
-        Copy<3>(mPosition, position);
+    if (Matrix::IsEqual(mPosition, position) == false) {
+        Matrix::CopyCellsToGlm(position, mPosition);
         hasChanged = true;
     }
-    if (IsEqual<3>(mRotation, rotation) == false) {
-        Copy<3>(mRotation, rotation);
+    if (Matrix::IsEqual(mRotation, rotation) == false) {
+        Matrix::CopyCellsToGlm(rotation, mRotation);
         hasChanged = true;
     }
-    if (IsEqual<3>(mScale, scale) == false) {
-        Copy<3>(mScale, scale);
+    if (Matrix::IsEqual(mScale, scale) == false) {
+        Matrix::CopyCellsToGlm(scale, mScale);
+        hasChanged = true;
+    }
+    if (hasChanged) {
+        computeTransform();
+    }
+}
+
+void TransformComponent::UpdateTransform(
+    glm::vec3 const & position,
+    glm::vec3 const & rotation,
+    glm::vec3 const & scale
+)
+{
+    bool hasChanged = false;
+    if (mPosition != position) {
+        mPosition = position;
+        hasChanged = true;
+    }
+    if (mRotation != rotation) {
+        mRotation = rotation;
+        hasChanged = true;
+    }
+    if (mScale != scale) {
+        mScale = scale;
         hasChanged = true;
     }
     if (hasChanged) {
@@ -59,12 +83,8 @@ void TransformComponent::UpdateTransform(float position[3], float rotation[3], f
 //-------------------------------------------------------------------------------------------------
 
 void TransformComponent::UpdatePosition(float position[3]) {
-    bool hasChanged = false;
-    if (IsEqual<3>(mPosition, position) == false) {
-        Copy<3>(mPosition, position);
-        hasChanged = true;
-    }
-    if (hasChanged) {
+    if (Matrix::IsEqual(mPosition, position) == false) {
+        Matrix::CopyCellsToGlm(position, mPosition);
         computeTransform();
     }
 }
@@ -72,12 +92,8 @@ void TransformComponent::UpdatePosition(float position[3]) {
 //-------------------------------------------------------------------------------------------------
 
 void TransformComponent::UpdateRotation(float rotation[3]) {
-    bool hasChanged = false;
-    if (IsEqual<3>(mRotation, rotation) == false) {
-        Copy<3>(mRotation, rotation);
-        hasChanged = true;
-    }
-    if (hasChanged) {
+    if (Matrix::IsEqual(mRotation, rotation) == false) {
+        Matrix::CopyCellsToGlm(rotation, mRotation);
         computeTransform();
     }
 }
@@ -85,12 +101,17 @@ void TransformComponent::UpdateRotation(float rotation[3]) {
 //-------------------------------------------------------------------------------------------------
 
 void TransformComponent::UpdateScale(float scale[3]) {
-    bool hasChanged = false;
-    if (IsEqual<3>(mScale, scale) == false) {
-        Copy<3>(mScale, scale);
-        hasChanged = true;
+    if (Matrix::IsEqual(mScale, scale) == false) {
+        Matrix::CopyCellsToGlm(scale, mScale);
+        computeTransform();
     }
-    if (hasChanged) {
+}
+
+void TransformComponent::UpdateScale(glm::vec3 const & scale)
+{
+    if (mScale != scale)
+    {
+        mScale = scale;
         computeTransform();
     }
 }
@@ -104,19 +125,40 @@ const glm::mat4 & TransformComponent::GetTransform() const noexcept {
 //-------------------------------------------------------------------------------------------------
 
 void TransformComponent::GetPosition(float outPosition[3]) const {
-    Copy<3>(outPosition, mPosition);
+    Matrix::CopyGlmToCells(mPosition, outPosition);
 }
 
 //-------------------------------------------------------------------------------------------------
 
 void TransformComponent::GetRotation(float outRotation[3]) const {
-    Copy<3>(outRotation, mRotation);
+    Matrix::CopyGlmToCells(mRotation, outRotation);
 }
 
 //-------------------------------------------------------------------------------------------------
 
 void TransformComponent::GetScale(float outScale[3]) const {
-    Copy<3>(outScale, mScale);
+    Matrix::CopyGlmToCells(mScale, outScale);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+glm::vec3 const & TransformComponent::GetPosition() const
+{
+    return mPosition;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+glm::vec3 const & TransformComponent::GetRotation() const
+{
+    return mRotation;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+glm::vec3 const & TransformComponent::GetScale() const
+{
+    return mScale;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -140,15 +182,15 @@ void TransformComponent::computeTransform() {
 
     // Position
     auto translateMatrix = glm::identity<glm::mat4>();
-    Matrix::GlmTranslate(translateMatrix, mPosition);
+    Matrix::Translate(translateMatrix, mPosition);
 
     // Scale
     auto scaleMatrix = glm::identity<glm::mat4>();
-    Matrix::GlmScale(scaleMatrix, mScale);
+    Matrix::Scale(scaleMatrix, mScale);
     
     // Rotation
     auto rotationMatrix = glm::identity<glm::mat4>();
-    Matrix::GlmRotate(rotationMatrix, mRotation);
+    Matrix::Rotate(rotationMatrix, mRotation);
 
     auto parentTransform = glm::identity<glm::mat4>();
     if (mParentTransform != nullptr)

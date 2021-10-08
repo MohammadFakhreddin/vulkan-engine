@@ -10,6 +10,7 @@
 #include "engine/ui_system/UISystem.hpp"
 #include "engine/entity_system/EntitySystem.hpp"
 #include "engine/entity_system/components/AxisAlignedBoundingBoxComponent.hpp"
+#include "engine/entity_system/components/BoundingVolumeRendererComponent.hpp"
 #include "engine/entity_system/components/ColorComponent.hpp"
 #include "engine/entity_system/components/MeshRendererComponent.hpp"
 #include "engine/entity_system/components/SphereBoundingVolumeComponent.hpp"
@@ -29,7 +30,7 @@ Demo3rdPersonScene::Demo3rdPersonScene()
 Demo3rdPersonScene::~Demo3rdPersonScene() = default;
 
 //-------------------------------------------------------------------------------------------------
-
+// TODO Make piplines global that start at beginning of application
 void Demo3rdPersonScene::Init()
 {
     Scene::Init();
@@ -47,14 +48,20 @@ void Demo3rdPersonScene::Init()
         mPbrPipeline.UpdateLightPosition(mLightPosition);
         mPbrPipeline.UpdateLightColor(mLightColor);
     }
+
+    {// Debug renderer pipeline
+        auto sphereCpuModel = MFA::ShapeGenerator::Sphere();
+        mSphereModel = RF::CreateGpuModel(sphereCpuModel);
+        mDebugRenderPipeline.CreateDrawableEssence("Sphere", mSphereModel);
+
+        auto cubeCpuModel = ShapeGenerator::Cube();
+        mCubeModel = RF::CreateGpuModel(cubeCpuModel);
+        mDebugRenderPipeline.CreateDrawableEssence("Cube", mCubeModel);
+    }
+
     {// PointLight
 
-        mPointLightPipeline.Init();
-
-        auto cpuModel = MFA::ShapeGenerator::Sphere(0.1f);
-
-        mPointLightModel = RF::CreateGpuModel(cpuModel);
-        mPointLightPipeline.CreateDrawableEssence("Sphere", mPointLightModel);
+        mDebugRenderPipeline.Init();
 
         auto * entity = EntitySystem::CreateEntity("PointLight", GetRootEntity());
         MFA_ASSERT(entity != nullptr);
@@ -66,10 +73,11 @@ void Demo3rdPersonScene::Init()
         auto * transformComponent = entity->AddComponent<TransformComponent>();
         MFA_ASSERT(transformComponent != nullptr);
         transformComponent->UpdatePosition(mLightPosition);
+        transformComponent->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
 
-        auto * meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPointLightPipeline, "Sphere");
+        auto * meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, "Sphere");
         MFA_ASSERT(meshRendererComponent != nullptr);
-
+        
         entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
         
         EntitySystem::InitEntity(entity);
@@ -93,13 +101,21 @@ void Demo3rdPersonScene::Init()
 
             mPlayerMeshRenderer = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "Soldier");
             MFA_ASSERT(mPlayerMeshRenderer != nullptr);
+            mPlayerMeshRenderer->SetActive(true);
 
-            entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(1, 0.5, 0.2f));
+            entity->AddComponent<AxisAlignedBoundingBoxComponent>();
+
+            auto * colorComponent = entity->AddComponent<ColorComponent>();
+            colorComponent->SetColor(glm::vec3 {1.0f, 0.0f, 0.0f});
+
+            auto * debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
+            debugRenderComponent->SetActive(false);
+
 
             mThirdPersonCamera = entity->AddComponent<ThirdPersonCameraComponent>(
                 FOV,
-                Z_FAR,
-                Z_NEAR
+                Z_NEAR,
+                Z_FAR
             );
             MFA_ASSERT(mThirdPersonCamera != nullptr);
             float eulerAngle[3]{ -15.0f, 0.0f, 0.0f };
@@ -127,7 +143,16 @@ void Demo3rdPersonScene::Init()
                     auto * meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "Soldier");
                     MFA_ASSERT(meshRendererComponent != nullptr);
 
-                    entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(1, 0.5, 0.2f));
+                    meshRendererComponent->GetVariant()->SetActiveAnimation("SwordAndShieldIdle", {.startTimeOffsetInSec = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX)) * 10});
+                    meshRendererComponent->SetActive(true);
+
+                    entity->AddComponent<AxisAlignedBoundingBoxComponent>();
+
+                    auto * colorComponent = entity->AddComponent<ColorComponent>();
+                    colorComponent->SetColor(glm::vec3 {0.0f, 0.0f, 1.0f});
+
+                    auto * debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
+                    debugRenderComponent->SetActive(false);
 
                     EntitySystem::InitEntity(entity);
                 }
@@ -152,8 +177,13 @@ void Demo3rdPersonScene::Init()
 
         auto * meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "SponzaMap");
         MFA_ASSERT(meshRendererComponent != nullptr);
-        // TODO Generate default AABB from vertices then let use modify it
-        entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(10, 10, 10));
+
+        entity->AddComponent<AxisAlignedBoundingBoxComponent>();
+
+        auto * debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
+        debugRenderComponent->SetActive(false);
+
+        entity->AddComponent<ColorComponent>(glm::vec3(0.0f, 0.0f, 1.0f));
 
         EntitySystem::InitEntity(entity);
     }
@@ -251,12 +281,12 @@ void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPa
             float currentEulerAngles[3];
             mPlayerTransform->GetRotation(currentEulerAngles);
 
-            auto const targetQuat = Matrix::GlmToQuat(currentEulerAngles[0], targetEulerAngles[1], currentEulerAngles[2]);
+            auto const targetQuat = Matrix::ToQuat(currentEulerAngles[0], targetEulerAngles[1], currentEulerAngles[2]);
 
-            auto const currentQuat = Matrix::GlmToQuat(currentEulerAngles[0], currentEulerAngles[1], currentEulerAngles[2]);
+            auto const currentQuat = Matrix::ToQuat(currentEulerAngles[0], currentEulerAngles[1], currentEulerAngles[2]);
 
             auto const nextQuat = glm::slerp(currentQuat, targetQuat, 10.0f * deltaTimeInSec);
-            auto nextAnglesVec3 = Matrix::GlmToEulerAngles(nextQuat);
+            auto nextAnglesVec3 = Matrix::ToEulerAngles(nextQuat);
 
             float nextAngles[3]{ nextAnglesVec3[0], nextAnglesVec3[1], nextAnglesVec3[2] };
 
@@ -268,7 +298,7 @@ void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPa
             }
 
             auto rotationMatrix = glm::identity<glm::mat4>();
-            Matrix::GlmRotate(rotationMatrix, nextAngles);
+            Matrix::Rotate(rotationMatrix, nextAngles);
 
             glm::vec4 forwardDirection(
                 CameraComponent::ForwardVector[0],
@@ -308,14 +338,14 @@ void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPa
         float viewData[16];
         activeCamera->GetTransform(viewData);
         mPbrPipeline.UpdateCameraView(viewData);
-        mPointLightPipeline.UpdateCameraView(viewData);
+        mDebugRenderPipeline.UpdateCameraView(viewData);
 
         float cameraPosition[3];
         activeCamera->GetPosition(cameraPosition);
         mPbrPipeline.UpdateCameraPosition(cameraPosition);
 
     }
-    mPointLightPipeline.PreRender(drawPass, deltaTimeInSec);
+    mDebugRenderPipeline.PreRender(drawPass, deltaTimeInSec);
     mPbrPipeline.PreRender(drawPass, deltaTimeInSec);
 }
 
@@ -323,7 +353,7 @@ void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPa
 
 void Demo3rdPersonScene::OnRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass)
 {
-    mPointLightPipeline.Render(drawPass, deltaTimeInSec);
+    mDebugRenderPipeline.Render(drawPass, deltaTimeInSec);
     mPbrPipeline.Render(drawPass, deltaTimeInSec);
 }
 
@@ -331,7 +361,7 @@ void Demo3rdPersonScene::OnRender(float const deltaTimeInSec, MFA::RT::DrawPass 
 
 void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass)
 {
-    mPointLightPipeline.PostRender(drawPass, deltaTimeInSec);
+    mDebugRenderPipeline.PostRender(drawPass, deltaTimeInSec);
     mPbrPipeline.PostRender(drawPass, deltaTimeInSec);
 }
 
@@ -352,15 +382,19 @@ void Demo3rdPersonScene::Shutdown()
         RF::DestroyGpuModel(mMapModel);
         Importer::FreeModel(mMapModel.model);
     }
-    {// PointLight
-        RF::DestroyGpuModel(mPointLightModel);
-        Importer::FreeModel(mPointLightModel.model);
+    {// Sphere
+        RF::DestroyGpuModel(mSphereModel);
+        Importer::FreeModel(mSphereModel.model);
+    }
+    {// Cube
+        RF::DestroyGpuModel(mCubeModel);
+        Importer::FreeModel(mCubeModel.model);
     }
     {// Pbr pipeline
         mPbrPipeline.Shutdown();
     }
     {// Point light
-        mPointLightPipeline.Shutdown();
+        mDebugRenderPipeline.Shutdown();
     }
     {// Sampler
         RF::DestroySampler(mSampler);
@@ -386,10 +420,11 @@ void Demo3rdPersonScene::updateProjectionBuffer()
 {
     auto * camera = GetActiveCamera();
     MFA_ASSERT(camera != nullptr);
+
     float projectionData[16];
     camera->GetProjection(projectionData);
     mPbrPipeline.UpdateCameraProjection(projectionData);
-    mPointLightPipeline.UpdateCameraProjection(projectionData);
+    mDebugRenderPipeline.UpdateCameraProjection(projectionData);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -399,6 +434,13 @@ void Demo3rdPersonScene::onUI() const
     auto * camera = GetActiveCamera();
     MFA_ASSERT(camera != nullptr);
     camera->OnUI();
+
+    UI::BeginWindow("Controllable character");
+    UI::InputFloat3("Position", const_cast<float *>(reinterpret_cast<float const *>(&mPlayerTransform->GetPosition())));
+    UI::InputFloat3("Rotation", const_cast<float *>(reinterpret_cast<float const *>(&mPlayerTransform->GetRotation())));
+    auto forwardDirection = mPlayerTransform->GetTransform() * CameraComponent::ForwardVector;
+    UI::InputFloat3("Direction", reinterpret_cast<float *>(&forwardDirection));
+    UI::EndWindow();
 }
 
 //-------------------------------------------------------------------------------------------------

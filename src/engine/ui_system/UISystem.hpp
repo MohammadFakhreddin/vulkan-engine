@@ -28,9 +28,9 @@ void Text(char const * label);
 
 void InputFloat(char const * label, float * value);
 
-void InputFloat2(char const * label, float value[2]);
+void InputFloat2(char const * label, float * value);
 
-void InputFloat3(char const * label, float value[3]);
+void InputFloat3(char const * label, float * value);
 
 void Combo(
     char const * label,

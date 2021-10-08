@@ -718,13 +718,13 @@ void InputFloat(char const * label, float * value) {
 
 //-------------------------------------------------------------------------------------------------
 
-void InputFloat2(char const * label, float value[2]) {
+void InputFloat2(char const * label, float * value) {
     ImGui::InputFloat2(label, value);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void InputFloat3(char const * label, float value[3]) {
+void InputFloat3(char const * label, float * value) {
     ImGui::InputFloat3(label, value);    
 }
 

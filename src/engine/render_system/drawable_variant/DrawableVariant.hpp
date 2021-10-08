@@ -14,8 +14,8 @@
 
 namespace MFA {
 
+class Component;
 class Entity;
-class MeshRendererComponent;
 class BoundingVolumeComponent;
 class TransformComponent;
 class DrawableEssence;
@@ -47,6 +47,7 @@ public:
         glm::mat4 previousTransform {};
 
         bool isCachedDataValid = false;
+        bool isCachedGlobalTransformChanged = false;
         glm::mat4 cachedLocalTransform {};
         glm::mat4 cachedGlobalTransform {};
         glm::mat4 cachedModelTransform {};
@@ -77,13 +78,14 @@ public:
     struct AnimationParams {
         float transitionDuration = 0.3f;
         bool loop = true;
+        float startTimeOffsetInSec = 0.0f;
     };
 
     void SetActiveAnimationIndex(int nextAnimationIndex, AnimationParams const & params = {});
 
     void SetActiveAnimation(char const * animationName, AnimationParams const & params = {});
     
-    void Init(MeshRendererComponent * meshRendererComponent);
+    void Init(Component * rendererComponent, TransformComponent * transformComponent);
 
     void Update(float deltaTimeInSec, RT::DrawPass const & drawPass);
 
@@ -214,13 +216,15 @@ private:
 
     Entity * mEntity = nullptr;
 
-    MeshRendererComponent * mMeshRendererComponent = nullptr;
+    Component * mRendererComponent = nullptr;
 
     BoundingVolumeComponent * mBoundingVolumeComponent = nullptr;
 
     bool mIsModelTransformChanged = true;
     TransformComponent * mTransformComponent = nullptr;
     int mTransformListenerId = 0;
+
+    bool mIsSkinJointsChanged = true;
 
 };
 

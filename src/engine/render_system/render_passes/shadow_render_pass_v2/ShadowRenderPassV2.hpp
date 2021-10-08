@@ -10,8 +10,8 @@ class ShadowRenderPassV2 final : public RenderPass {
 public:
     
     explicit ShadowRenderPassV2(
-        uint32_t const imageWidth = 2048,
-        uint32_t const imageHeight = 2048
+        uint32_t const imageWidth = 1024,
+        uint32_t const imageHeight = 1024
     )
         : mImageWidth(imageWidth)
         , mImageHeight(imageHeight)

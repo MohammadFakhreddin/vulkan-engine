@@ -3,8 +3,9 @@
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/camera/ObserverCameraComponent.hpp"
+#include "engine/entity_system/components/MeshRendererComponent.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
-#include "engine/render_system/pipelines/point_light/PointLightPipeline.hpp"
+#include "engine/render_system/pipelines/point_light/DebugRendererPipeline.hpp"
 
 namespace MFA
 {
@@ -114,7 +115,7 @@ private:
     MFA::RT::SamplerGroup mSamplerGroup {};
 
     MFA::PBRWithShadowPipelineV2 mPbrPipeline {};
-    MFA::PointLightPipeline mPointLightPipeline {};
+    MFA::DebugRendererPipeline mPointLightPipeline {};
 
     MFA::RT::GpuTexture mErrorTexture {};
 
