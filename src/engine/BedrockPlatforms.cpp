@@ -19,11 +19,11 @@ ScreenInfo ComputeScreenSize() {
         ret.screenHeight = static_cast<ScreenSize>(real_screen_height);
         ret.valid = true;
     #elif defined(__PLATFORM_MAC__)
-        auto main_display_id = CGMainDisplayID();	
-        unsigned int real_screen_width = CGDisplayPixelsWide(main_display_id);
-        unsigned int real_screen_height = CGDisplayPixelsHigh(main_display_id);
-        ret.screen_width = static_cast<ScreenSize>(real_screen_width);
-        ret.screen_height = static_cast<ScreenSize>(real_screen_height);
+        auto mainDisplayId = CGMainDisplayID();
+        unsigned int realScreenWidth = CGDisplayPixelsWide(mainDisplayId);
+        unsigned int realScreenHeight = CGDisplayPixelsHigh(mainDisplayId);
+        ret.screenWidth = static_cast<ScreenSize>(realScreenWidth);
+        ret.screenHeight = static_cast<ScreenSize>(realScreenHeight);
         ret.valid = true;
     #elif defined(__PLATFORM_LINUX__)
     // TODO

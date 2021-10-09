@@ -2,6 +2,7 @@
 
 #include "BedrockCommon.hpp"
 
+#include <string>
 #include <vector>
 
 // TODO Separate this file into multiple files
