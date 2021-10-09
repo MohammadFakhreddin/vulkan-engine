@@ -6,6 +6,15 @@
 #include "engine/render_system/RenderFrontend.hpp"
 #include "tools/ShapeGenerator.hpp"
 #include "engine/InputManager.hpp"
+#include "engine/entity_system/Entity.hpp"
+#include "engine/ui_system/UISystem.hpp"
+#include "engine/entity_system/EntitySystem.hpp"
+#include "engine/entity_system/components/AxisAlignedBoundingBoxComponent.hpp"
+#include "engine/entity_system/components/BoundingVolumeRendererComponent.hpp"
+#include "engine/entity_system/components/ColorComponent.hpp"
+#include "engine/entity_system/components/MeshRendererComponent.hpp"
+#include "engine/entity_system/components/SphereBoundingVolumeComponent.hpp"
+#include "engine/entity_system/components/TransformComponent.hpp"
 
 using namespace MFA;
 
@@ -13,23 +22,25 @@ using namespace MFA;
 
 Demo3rdPersonScene::Demo3rdPersonScene()
     : Scene()
-    , mRecordObject([this]()->void {OnUI();})
-{};
+{
+}
 
 //-------------------------------------------------------------------------------------------------
 
 Demo3rdPersonScene::~Demo3rdPersonScene() = default;
 
 //-------------------------------------------------------------------------------------------------
-
-void Demo3rdPersonScene::Init() {
+// TODO Make piplines global that start at beginning of application
+void Demo3rdPersonScene::Init()
+{
+    Scene::Init();
     // TODO Add directional light!
     {// Error texture
         auto cpuTexture = Importer::CreateErrorTexture();
         mErrorTexture = RF::CreateTexture(cpuTexture);
     }
     {// Sampler
-        mSampler = RF::CreateSampler(RT::CreateSamplerParams {});
+        mSampler = RF::CreateSampler(RT::CreateSamplerParams{});
     }
     {// Pbr pipeline
         mPbrPipeline.Init(&mSampler, &mErrorTexture, Z_NEAR, Z_FAR);
@@ -37,222 +48,335 @@ void Demo3rdPersonScene::Init() {
         mPbrPipeline.UpdateLightPosition(mLightPosition);
         mPbrPipeline.UpdateLightColor(mLightColor);
     }
+
+    {// Debug renderer pipeline
+        auto sphereCpuModel = MFA::ShapeGenerator::Sphere();
+        mSphereModel = RF::CreateGpuModel(sphereCpuModel);
+        mDebugRenderPipeline.CreateDrawableEssence("Sphere", mSphereModel);
+
+        auto cubeCpuModel = ShapeGenerator::Cube();
+        mCubeModel = RF::CreateGpuModel(cubeCpuModel);
+        mDebugRenderPipeline.CreateDrawableEssence("Cube", mCubeModel);
+    }
+
     {// PointLight
 
-        mPointLightPipeline.Init();
+        mDebugRenderPipeline.Init();
 
-        auto cpuModel = MFA::ShapeGenerator::Sphere(0.1f);
+        auto * entity = EntitySystem::CreateEntity("PointLight", GetRootEntity());
+        MFA_ASSERT(entity != nullptr);
 
-        mPointLightModel = RF::CreateGpuModel(cpuModel);
-        mPointLightPipeline.CreateDrawableEssence("Sphere", mPointLightModel);
-        mPointLightVariant = mPointLightPipeline.CreateDrawableVariant("Sphere");
+        auto * colorComponent = entity->AddComponent<ColorComponent>();
+        MFA_ASSERT(colorComponent != nullptr);
+        colorComponent->SetColor(mLightColor);
+
+        auto * transformComponent = entity->AddComponent<TransformComponent>();
+        MFA_ASSERT(transformComponent != nullptr);
+        transformComponent->UpdatePosition(mLightPosition);
+        transformComponent->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
+
+        auto * meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, "Sphere");
+        MFA_ASSERT(meshRendererComponent != nullptr);
         
-        mPointLightVariant->UpdatePosition(mLightPosition);
-        mPointLightPipeline.UpdateLightColor(mPointLightVariant, mLightColor);
+        entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
+        
+        EntitySystem::InitEntity(entity);
     }
     {// Soldier
         auto cpuModel = Importer::ImportGLTF(Path::Asset("models/warcraft_3_alliance_footmanfanmade/scene.gltf").c_str());
         mSoldierGpuModel = RF::CreateGpuModel(cpuModel);
         mPbrPipeline.CreateDrawableEssence("Soldier", mSoldierGpuModel);
-        mSoldierVariant = mPbrPipeline.CreateDrawableVariant("Soldier");
 
-        float position[3] {0.0f, 2.0f, 0.0f};
-        float eulerAngles[3] {0.0f, 180.0f, -180.0f};
-        float scale[3] {1.0f, 1.0f, 1.0f};
-        mSoldierVariant->UpdateTransform(position, eulerAngles, scale);
+        {// Playable character
+            auto * entity = EntitySystem::CreateEntity("Playable soldier", GetRootEntity());
+            MFA_ASSERT(entity != nullptr);
+
+            mPlayerTransform = entity->AddComponent<TransformComponent>();
+            MFA_ASSERT(mPlayerTransform != nullptr);
+
+            float position[3]{ 0.0f, 2.0f, -5.0f };
+            float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
+            float scale[3]{ 1.0f, 1.0f, 1.0f };
+            mPlayerTransform->UpdateTransform(position, eulerAngles, scale);
+
+            mPlayerMeshRenderer = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "Soldier");
+            MFA_ASSERT(mPlayerMeshRenderer != nullptr);
+            mPlayerMeshRenderer->SetActive(true);
+
+            entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
+
+            auto * colorComponent = entity->AddComponent<ColorComponent>();
+            colorComponent->SetColor(glm::vec3 {1.0f, 0.0f, 0.0f});
+
+            auto * debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
+            debugRenderComponent->SetActive(false);
+
+            mThirdPersonCamera = entity->AddComponent<ThirdPersonCameraComponent>(
+                FOV,
+                Z_NEAR,
+                Z_FAR
+            );
+            MFA_ASSERT(mThirdPersonCamera != nullptr);
+            float eulerAngle[3]{ -15.0f, 0.0f, 0.0f };
+            mThirdPersonCamera->SetDistanceAndRotation(3.0f, eulerAngle);
+    
+            SetActiveCamera(mThirdPersonCamera);
+
+            EntitySystem::InitEntity(entity);
+        }
+        {// NPCs
+            for (uint32_t i = 0; i < 10; ++i)
+            {
+                for (uint32_t j = 0; j < 10; ++j) {
+                    auto * entity = EntitySystem::CreateEntity("Random soldier", GetRootEntity());
+                    MFA_ASSERT(entity != nullptr);
+
+                    auto * transformComponent = entity->AddComponent<TransformComponent>();
+                    MFA_ASSERT(transformComponent != nullptr);
+
+                    float position[3]{static_cast<float>(i) - 5.0f, 2.0f, static_cast<float>(j) - 4.0f};
+                    float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
+                    float scale[3]{ 1.0f, 1.0f, 1.0f };
+                    transformComponent->UpdateTransform(position, eulerAngles, scale);
+
+                    auto * meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "Soldier");
+                    MFA_ASSERT(meshRendererComponent != nullptr);
+
+                    meshRendererComponent->GetVariant()->SetActiveAnimation(
+                        "SwordAndShieldIdle",
+                        {.startTimeOffsetInSec = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX)) * 10}
+                    );
+                    meshRendererComponent->SetActive(true);
+
+                    entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
+
+                    auto * colorComponent = entity->AddComponent<ColorComponent>();
+                    colorComponent->SetColor(glm::vec3 {0.0f, 0.0f, 1.0f});
+
+                    auto * debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
+                    debugRenderComponent->SetActive(false);
+
+                    EntitySystem::InitEntity(entity);
+
+                    entity->SetActive(true);
+                }
+            }
+        }
     }
     {// Map
         auto cpuModel = Importer::ImportGLTF(Path::Asset("models/sponza/sponza.gltf").c_str());
         mMapModel = RF::CreateGpuModel(cpuModel);
         mPbrPipeline.CreateDrawableEssence("SponzaMap", mMapModel);
-        mMapVariant = mPbrPipeline.CreateDrawableVariant("SponzaMap");
 
-        float position[3] {0.4f, 2.0f, -6.0f};
-        float eulerAngle[3] {180.0f, -90.0f, 0.0f};
-        float scale[3] {1.0f, 1.0f, 1.0f};
-        mMapVariant->UpdateTransform(position, eulerAngle, scale);
-    }
-    {// Camera
-        float eulerAngle[3] {-15.0f, 0.0f, 0.0f};
-        mCamera.Init(mSoldierVariant, 3.0f, eulerAngle);
+        auto * entity = EntitySystem::CreateEntity("Sponza scene", GetRootEntity());
+        MFA_ASSERT(entity != nullptr);
 
-        updateProjectionBuffer();
+        auto * transformComponent = entity->AddComponent<TransformComponent>();
+        MFA_ASSERT(transformComponent != nullptr);
+
+        float position[3]{ 0.4f, 2.0f, -6.0f };
+        float eulerAngle[3]{ 180.0f, -90.0f, 0.0f };
+        float scale[3]{ 1.0f, 1.0f, 1.0f };
+        transformComponent->UpdateTransform(position, eulerAngle, scale);
+
+        auto * meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "SponzaMap");
+        MFA_ASSERT(meshRendererComponent != nullptr);
+
+        entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 5.0f, 0.0f), glm::vec3(15.0f, 6.0f, 9.0f));
+
+        auto * debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
+        debugRenderComponent->SetActive(false);
+
+        entity->AddComponent<ColorComponent>(glm::vec3(0.0f, 0.0f, 1.0f));
+
+        EntitySystem::InitEntity(entity);
     }
-    mRecordObject.Enable();
+    mUIRecordId = UI::Register([this]()->void {onUI();});
+    updateProjectionBuffer();
+    
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass) {
+void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass)
+{
     {// Soldier
         static constexpr float SoldierSpeed = 5.0f;
         auto const inputForwardMove = IM::GetForwardMove();
         auto const inputRightMove = IM::GetRightMove();
-        if (inputForwardMove != 0.0f || inputRightMove != 0.0f) {
-            glm::vec2 moveValue (inputForwardMove, inputRightMove);
-            moveValue = glm::normalize(moveValue);
-            float const forwardMove = moveValue[0];
-            float const rightMove = moveValue[1];
-
-            float position [3] {};
-            mSoldierVariant->GetPosition(position);
-            float scale[3] {};
-            mSoldierVariant->GetScale(scale);
-            float targetEulerAngles[3] {};
-            mSoldierVariant->GetRotation(targetEulerAngles);
+        if (inputForwardMove != 0.0f || inputRightMove != 0.0f)
+        {
+            float position[3]{};
+            mPlayerTransform->GetPosition(position);
+            float scale[3]{};
+            mPlayerTransform->GetScale(scale);
+            float targetEulerAngles[3]{};
+            mPlayerTransform->GetRotation(targetEulerAngles);
 
             float cameraEulerAngles[3];
-            mCamera.GetRotation(cameraEulerAngles);
+            mThirdPersonCamera->GetRotation(cameraEulerAngles);
 
             targetEulerAngles[1] = cameraEulerAngles[1];
-
-            auto rotationMatrix = glm::identity<glm::mat4>();
-            Matrix::GlmRotate(rotationMatrix, targetEulerAngles);
-
-            float deltaPosition[3] {};
-        
-            if (forwardMove != 0.0f) {
-                glm::vec4 forwardDirection (
-                    CameraBase::ForwardVector[0], 
-                    CameraBase::ForwardVector[1], 
-                    CameraBase::ForwardVector[2], 
-                    CameraBase::ForwardVector[3]
-                );
-                forwardDirection = forwardDirection * rotationMatrix;
-                forwardDirection = glm::normalize(forwardDirection);
-                forwardDirection *= forwardMove * deltaTimeInSec * SoldierSpeed;
-
-                deltaPosition[0] += forwardDirection[0];
-                deltaPosition[1] += forwardDirection[1];
-                deltaPosition[2] += forwardDirection[2];
-            }
-            if (rightMove != 0.0f) {
-                glm::vec4 rightDirection(
-                    CameraBase::RightVector[0], 
-                    CameraBase::RightVector[1], 
-                    CameraBase::RightVector[2], 
-                    CameraBase::RightVector[3]
-                );
-
-                rightDirection = rightDirection * rotationMatrix;
-                rightDirection = glm::normalize(rightDirection);
-                rightDirection *= rightMove * deltaTimeInSec * SoldierSpeed;
-
-                deltaPosition[0] += rightDirection[0];
-                deltaPosition[1] += rightDirection[1];
-                deltaPosition[2] += rightDirection[2];
-            }
-
-            position[0] += deltaPosition[0];
-            position[1] += deltaPosition[1];
-            position[2] += deltaPosition[2];
-
-            float extraAngleValue = 0.0f;
-            if (inputRightMove == 1) {
-                if (inputForwardMove == 1) {
+            float extraAngleValue;
+            if (inputRightMove == 1.0f)
+            {
+                if (inputForwardMove == 1.0f)
+                {
                     extraAngleValue = +45.0f;
-                } else if (inputForwardMove == 0) {
+                }
+                else if (inputForwardMove == 0.0f)
+                {
                     extraAngleValue = +90.0f;
-                } else if (inputForwardMove == -1) {
+                }
+                else if (inputForwardMove == -1.0f)
+                {
                     extraAngleValue = +135.0f;
-                } else {
+                }
+                else
+                {
                     MFA_ASSERT(false);
                 }
-            } else if (inputRightMove == 0) {
-                if (inputForwardMove == 1) {
+            }
+            else if (inputRightMove == 0.0f)
+            {
+                if (inputForwardMove == 1.0f)
+                {
                     extraAngleValue = 0.0f;
-                } else if (inputForwardMove == 0) {
+                }
+                else if (inputForwardMove == 0.0f)
+                {
                     extraAngleValue = 0.0f;
-                } else if (inputForwardMove == -1) {
-                        extraAngleValue = +180.0f;
-                } else {
+                }
+                else if (inputForwardMove == -1.0f)
+                {
+                    extraAngleValue = +180.0f;
+                }
+                else
+                {
                     MFA_ASSERT(false);
                 }
-            } else if (inputRightMove == -1) {
-                if (inputForwardMove == 1) {
+            }
+            else if (inputRightMove == -1.0f)
+            {
+                if (inputForwardMove == 1.0f)
+                {
                     extraAngleValue = -45.0f;
-                } else if (inputForwardMove == 0) {
+                }
+                else if (inputForwardMove == 0.0f)
+                {
                     extraAngleValue = -90.0f;
-                } else if (inputForwardMove == -1) {
+                }
+                else if (inputForwardMove == -1.0f)
+                {
                     extraAngleValue = -135.0f;
-                } else {
+                }
+                else
+                {
                     MFA_ASSERT(false);
                 }
-            } else {
+            }
+            else
+            {
                 MFA_ASSERT(false);
             }
+
             targetEulerAngles[1] += extraAngleValue;
-            
-            float currentEulerAngles [3];
-            mSoldierVariant->GetRotation(currentEulerAngles);
 
-            auto targetQuat = Matrix::GlmToQuat(currentEulerAngles[0], targetEulerAngles[1], currentEulerAngles[2]);
+            float currentEulerAngles[3];
+            mPlayerTransform->GetRotation(currentEulerAngles);
 
-            
-            auto currentQuat = Matrix::GlmToQuat(currentEulerAngles[0], currentEulerAngles[1], currentEulerAngles[2]);
+            auto const targetQuat = Matrix::ToQuat(currentEulerAngles[0], targetEulerAngles[1], currentEulerAngles[2]);
 
-            auto nextQuat = glm::slerp(currentQuat, targetQuat, 0.1f);
-            auto nextAnglesVec3 = Matrix::GlmToEulerAngles(nextQuat);
+            auto const currentQuat = Matrix::ToQuat(currentEulerAngles[0], currentEulerAngles[1], currentEulerAngles[2]);
 
-            float nextAngles[3] {nextAnglesVec3[0], nextAnglesVec3[1], nextAnglesVec3[2]};
+            auto const nextQuat = glm::slerp(currentQuat, targetQuat, 10.0f * deltaTimeInSec);
+            auto nextAnglesVec3 = Matrix::ToEulerAngles(nextQuat);
 
-            if (std::fabs(nextAngles[2]) >= 90) {
+            float nextAngles[3]{ nextAnglesVec3[0], nextAnglesVec3[1], nextAnglesVec3[2] };
+
+            if (std::fabs(nextAngles[2]) >= 90)
+            {
                 nextAngles[0] += 180.f;
                 nextAngles[1] = 180.f - nextAngles[1];
                 nextAngles[2] += 180.f;
             }
 
-            mSoldierVariant->UpdateTransform(
+            auto rotationMatrix = glm::identity<glm::mat4>();
+            Matrix::Rotate(rotationMatrix, nextAngles);
+
+            glm::vec4 forwardDirection(
+                CameraComponent::ForwardVector[0],
+                CameraComponent::ForwardVector[1],
+                CameraComponent::ForwardVector[2],
+                CameraComponent::ForwardVector[3]
+            );
+            forwardDirection = forwardDirection * rotationMatrix;
+            forwardDirection = glm::normalize(forwardDirection);
+            forwardDirection *= 1 * deltaTimeInSec * SoldierSpeed;
+
+            position[0] += forwardDirection[0];
+            position[1] += forwardDirection[1];
+            position[2] += forwardDirection[2];
+
+            mPlayerTransform->UpdateTransform(
                 position,
                 nextAngles,
                 scale
             );
+            // TODO What should we do for animations ?
+            mPlayerMeshRenderer->GetVariant()->SetActiveAnimation("SwordAndShieldRun", { .transitionDuration = 0.3f });
 
-            mSoldierVariant->SetActiveAnimation("SwordAndShieldRun");
+        }
+        else
+        {
+            //mSoldierVariant->SetActiveAnimation("SwordAndShieldIdle");
+            mPlayerMeshRenderer->GetVariant()->SetActiveAnimation("Idle", { .transitionDuration = 0.3f });
 
-            //}
-
-        
-        } else {
-            mSoldierVariant->SetActiveAnimation("SwordAndShieldIdle");
         }
     }
-    // TODO We should listen for player input and move character here
-    mCamera.OnUpdate(deltaTimeInSec);
 
+    // TODO Pipelines should get info of active camera by themselves
     {// Read camera View to update pipeline buffer
-        float viewData [16];
-        mCamera.GetTransform(viewData);
+        auto * activeCamera = GetActiveCamera();
+
+        float viewData[16];
+        activeCamera->GetTransform(viewData);
         mPbrPipeline.UpdateCameraView(viewData);
-        mPointLightPipeline.UpdateCameraView(viewData);
+        mDebugRenderPipeline.UpdateCameraView(viewData);
 
         float cameraPosition[3];
-        mCamera.GetPosition(cameraPosition);
+        activeCamera->GetPosition(cameraPosition);
         mPbrPipeline.UpdateCameraPosition(cameraPosition);
 
     }
-    mPointLightPipeline.PreRender(drawPass, deltaTimeInSec);
+    mDebugRenderPipeline.PreRender(drawPass, deltaTimeInSec);
     mPbrPipeline.PreRender(drawPass, deltaTimeInSec);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::OnRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass) {
-    mPointLightPipeline.Render(drawPass, deltaTimeInSec);
+void Demo3rdPersonScene::OnRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass)
+{
+    mDebugRenderPipeline.Render(drawPass, deltaTimeInSec);
     mPbrPipeline.Render(drawPass, deltaTimeInSec);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass) {
-    mPointLightPipeline.PostRender(drawPass, deltaTimeInSec);
+void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass)
+{
+    mDebugRenderPipeline.PostRender(drawPass, deltaTimeInSec);
     mPbrPipeline.PostRender(drawPass, deltaTimeInSec);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::Shutdown() {
-    mRecordObject.Disable();
+void Demo3rdPersonScene::Shutdown()
+{
+    Scene::Shutdown();
+
+    UI::UnRegister(mUIRecordId);
+
     {// Soldier
         RF::DestroyGpuModel(mSoldierGpuModel);
         Importer::FreeModel(mSoldierGpuModel.model);
@@ -262,44 +386,65 @@ void Demo3rdPersonScene::Shutdown() {
         RF::DestroyGpuModel(mMapModel);
         Importer::FreeModel(mMapModel.model);
     }
-    {// PointLight
-        RF::DestroyGpuModel(mPointLightModel);
-        Importer::FreeModel(mPointLightModel.model);
+    {// Sphere
+        RF::DestroyGpuModel(mSphereModel);
+        Importer::FreeModel(mSphereModel.model);
+    }
+    {// Cube
+        RF::DestroyGpuModel(mCubeModel);
+        Importer::FreeModel(mCubeModel.model);
     }
     {// Pbr pipeline
         mPbrPipeline.Shutdown();
     }
     {// Point light
-        mPointLightPipeline.Shutdown();   
+        mDebugRenderPipeline.Shutdown();
     }
     {// Sampler
         RF::DestroySampler(mSampler);
     }
     {// Error texture
-        RF::DestroyTexture(mErrorTexture);        
+        RF::DestroyTexture(mErrorTexture);
     }
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::OnResize() {
-    mCamera.OnResize();
+void Demo3rdPersonScene::OnResize()
+{
+    auto * camera = GetActiveCamera();
+    MFA_ASSERT(camera != nullptr);
+    camera->OnResize();
     updateProjectionBuffer();
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::updateProjectionBuffer() {
-    float projectionData [16];
-    mCamera.GetProjection(projectionData);
+void Demo3rdPersonScene::updateProjectionBuffer()
+{
+    auto * camera = GetActiveCamera();
+    MFA_ASSERT(camera != nullptr);
+
+    float projectionData[16];
+    camera->GetProjection(projectionData);
     mPbrPipeline.UpdateCameraProjection(projectionData);
-    mPointLightPipeline.UpdateCameraProjection(projectionData);
+    mDebugRenderPipeline.UpdateCameraProjection(projectionData);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::OnUI() {
-    mCamera.OnUI();
+void Demo3rdPersonScene::onUI() const
+{
+    auto * camera = GetActiveCamera();
+    MFA_ASSERT(camera != nullptr);
+    camera->OnUI();
+
+    UI::BeginWindow("Controllable character");
+    UI::InputFloat3("Position", const_cast<float *>(reinterpret_cast<float const *>(&mPlayerTransform->GetPosition())));
+    UI::InputFloat3("Rotation", const_cast<float *>(reinterpret_cast<float const *>(&mPlayerTransform->GetRotation())));
+    auto forwardDirection = mPlayerTransform->GetTransform() * CameraComponent::ForwardVector;
+    UI::InputFloat3("Direction", reinterpret_cast<float *>(&forwardDirection));
+    UI::EndWindow();
 }
 
 //-------------------------------------------------------------------------------------------------

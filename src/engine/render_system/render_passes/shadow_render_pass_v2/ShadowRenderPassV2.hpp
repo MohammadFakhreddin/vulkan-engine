@@ -10,8 +10,8 @@ class ShadowRenderPassV2 final : public RenderPass {
 public:
     
     explicit ShadowRenderPassV2(
-        uint32_t const imageWidth = 2048,
-        uint32_t const imageHeight = 2048
+        uint32_t const imageWidth = 1024,
+        uint32_t const imageHeight = 1024
     )
         : mImageWidth(imageWidth)
         , mImageHeight(imageHeight)
@@ -26,8 +26,11 @@ public:
     VkRenderPass GetVkRenderPass() override;
 
     [[nodiscard]]
-    RT::DepthImageGroup const & GetDepthCubeMap() const;
+    RT::DepthImageGroup const & GetDepthCubeMap(RT::DrawPass const & drawPass) const;
 
+    [[nodiscard]]
+    RT::DepthImageGroup const & GetDepthCubeMap(uint8_t frameIndex) const;
+    
     void PrepareCubeMapForTransferDestination(RT::DrawPass const & drawPass);
 
     void PrepareCubeMapForSampling(RT::DrawPass const & drawPass);
@@ -52,13 +55,19 @@ private:
 
     void createFrameBuffer(VkExtent2D const & shadowExtent);
 
+    [[nodiscard]]
+    RT::DepthImageGroup const & getDepthImage(RT::DrawPass const & drawPass) const;
+
+    [[nodiscard]]
+    VkFramebuffer getFrameBuffer(RT::DrawPass const & drawPass) const;
+
     inline static constexpr VkFormat SHADOW_MAP_FORMAT = VK_FORMAT_R32_SFLOAT;
 
     VkRenderPass mVkRenderPass {};
-    VkFramebuffer mFrameBuffer {};
+    std::vector<VkFramebuffer> mFrameBuffers {};  // TODO We need per swapChain => FrameBuffer, Other images
     
-    RT::DepthImageGroup mDepthCubeMap {};
-    RT::DepthImageGroup mDepthImage {};
+    std::vector<RT::DepthImageGroup> mDepthCubeMapList {};
+    std::vector<RT::DepthImageGroup> mDepthImageList {};
 
     uint32_t mImageWidth = 0;
     uint32_t mImageHeight = 0;

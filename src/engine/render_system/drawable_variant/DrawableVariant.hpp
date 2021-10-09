@@ -14,8 +14,18 @@
 
 namespace MFA {
 
+class Component;
+class Entity;
+class BoundingVolumeComponent;
+class TransformComponent;
 class DrawableEssence;
-class UIRecordObject;
+
+
+struct AnimationParams {
+    float transitionDuration = 0.3f;
+    bool loop = true;
+    float startTimeOffsetInSec = 0.0f;
+};
 
 // TODO: We need bounding sphere to check for visibility
 
@@ -23,7 +33,7 @@ class DrawableVariant {
 public:
     
     struct JointTransformData {
-        float model[16];
+        glm::mat4 model;
     };
     
     struct Skin {
@@ -44,6 +54,7 @@ public:
         glm::mat4 previousTransform {};
 
         bool isCachedDataValid = false;
+        bool isCachedGlobalTransformChanged = false;
         glm::mat4 cachedLocalTransform {};
         glm::mat4 cachedGlobalTransform {};
         glm::mat4 cachedModelTransform {};
@@ -58,13 +69,12 @@ public:
 
     DrawableVariant (DrawableVariant const &) noexcept = delete;
     DrawableVariant (DrawableVariant &&) noexcept = delete;
-    DrawableVariant & operator = (DrawableVariant const &) noexcept = delete;
-    DrawableVariant & operator = (DrawableVariant && rhs) noexcept {
-        this->mCachedSkinsJointsBlob = rhs.mCachedSkinsJointsBlob;
-        this->mCachedSkinsJoints = rhs.mCachedSkinsJoints;
-        this->mSkinsJointsBuffer = std::move(rhs.mSkinsJointsBuffer);
-        this->mUniformBuffers = std::move(rhs.mUniformBuffers);
-        return *this;
+    DrawableVariant & operator= (DrawableVariant const & rhs) noexcept = delete;
+    DrawableVariant & operator= (DrawableVariant && rhs) noexcept = delete;
+
+    bool operator== (DrawableVariant const & rhs) const noexcept
+    {
+        return mId == rhs.mId;
     }
     
     [[nodiscard]]
@@ -72,33 +82,20 @@ public:
         return mActiveAnimationIndex;
     }
 
-    struct AnimationParams {
-        float transitionDuration = 0.3f;
-        bool loop = true;
-    };
+    void SetActiveAnimationIndex(int nextAnimationIndex, AnimationParams const & params = AnimationParams {});
 
-    void SetActiveAnimationIndex(int nextAnimationIndex, AnimationParams const & params = {});
-
-    void SetActiveAnimation(char const * animationName, AnimationParams const & params = {});
-
-    void AllocStorage(char const * name, size_t size);
-
-    Blob GetStorage(char const * name);
+    void SetActiveAnimation(char const * animationName, AnimationParams const & params = AnimationParams {});
     
+    void Init(Component * rendererComponent, TransformComponent * transformComponent);
+
     void Update(float deltaTimeInSec, RT::DrawPass const & drawPass);
 
+    void Shutdown();
+
     using BindDescriptorSetFunction = std::function<void(AS::MeshPrimitive const & primitive, Node const & node)>;
-    void Draw(RT::DrawPass & drawPass, BindDescriptorSetFunction const & bindFunction);
+    void Draw(RT::DrawPass const & drawPass, BindDescriptorSetFunction const & bindFunction);
     
-    // Only for model local buffers
-    RT::UniformBufferGroup const & CreateUniformBuffer(char const * name, uint32_t size, uint32_t count);
-
-    // Only for model local buffers
-    void DeleteUniformBuffers();
-
-    void UpdateUniformBuffer(char const * name, uint32_t startingIndex, CBlob ubo);
-
-    [[nodiscard]] 
+    [[nodiscard]]
     RT::UniformBufferGroup const * GetUniformBuffer(char const * name);
     
     [[nodiscard]] 
@@ -122,40 +119,20 @@ public:
     [[nodiscard]]
     bool IsActive() const noexcept;
 
-    void SetActive(bool isActive);
-
     void OnUI();
-
-    [[nodiscard]]
-    std::string const & GetName() const noexcept;
-
-    void SetName(char const * name);
-
-    void UpdateTransform(float position[3], float rotation[3], float scale[3]);
-
-    void UpdatePosition(float position[3]);
-
-    void UpdateRotation(float rotation[3]);
-
-    void UpdateScale(float scale[3]);
-
-    [[nodiscard]]
-    glm::mat4 const & GetTransform() const noexcept;
-
-    void GetPosition(float outPosition[3]) const;
-
-    void GetRotation(float outRotation[3]) const;
-
-    void GetScale(float outScale[3]) const;
 
     [[nodiscard]]
     bool IsCurrentAnimationFinished() const;
 
+    [[nodiscard]]
+    bool IsInFrustum() const;
+
+    [[nodiscard]]
+    Entity * GetEntity() const;
+
 private:
 
-    void computeTransform();
-
-    void updateAnimation(float deltaTimeInSec);
+    void updateAnimation(float deltaTimeInSec, bool isInFrustum);
 
     void computeNodesGlobalTransform();
 
@@ -164,7 +141,7 @@ private:
     void updateSkinJoints(uint32_t skinIndex, AS::MeshSkin const & skin);
     
     void drawNode(
-        RT::DrawPass & drawPass,
+        RT::DrawPass const & drawPass,
         Node const & node,
         BindDescriptorSetFunction const & bindFunction
     );
@@ -208,36 +185,30 @@ private:
     Blob mCachedSkinsJointsBlob {};
     std::vector<JointTransformData *> mCachedSkinsJoints {};
 
-    struct DirtyBuffer {
-        std::string bufferName;
-        RT::UniformBufferGroup * bufferGroup;
-        uint32_t startingIndex;
-        uint32_t remainingUpdateCount;
-        Blob ubo;
-    };
-    std::vector<DirtyBuffer> mDirtyBuffers {};
-
-    bool mIsModelTransformChanged = true;
-    float mPosition[3] {0.0f, 0.0f, 0.0f};
-    float mRotation[3] {0.0f, 0.0f, 0.0f};          // In euler angle
-    float mScale[3] {1.0f, 1.0f, 1.0f};
-    glm::mat4 mTransform = glm::identity<glm::mat4>();
-
     std::vector<Skin> mSkins {};
     std::vector<Node> mNodes {};
-
-    std::unordered_map<std::string, Blob> mStorageMap {};
-
+    
     std::unordered_map<std::string, RT::DescriptorSetGroup> mDescriptorSetGroups {};
-
-    bool mIsActive = true;     // I'll be back when entity system is complete
-    // bool mIsVisible = false  // Visibility of bounding sphere
-
-    std::string mName {};
 
     AnimationParams mActiveAnimationParams {};
 
     bool mIsAnimationFinished = false;
+
+    bool mIsInitialized = false;
+
+    AS::Mesh const * mMesh = nullptr; 
+
+    Entity * mEntity = nullptr;
+
+    Component * mRendererComponent = nullptr;
+
+    BoundingVolumeComponent * mBoundingVolumeComponent = nullptr;
+
+    bool mIsModelTransformChanged = true;
+    TransformComponent * mTransformComponent = nullptr;
+    int mTransformListenerId = 0;
+
+    bool mIsSkinJointsChanged = true;
 
 };
 

@@ -1,7 +1,8 @@
 #pragma once
 
 #include "engine/BedrockPlatforms.hpp"
-#include "engine/Scene.hpp"
+
+#include <memory>
 
 class GLTFMeshViewerScene;
 class Demo3rdPersonScene;
@@ -34,8 +35,6 @@ public:
 private:
 
     bool mIsInitialized = false;
-
-    MFA::SceneSubSystem mSceneSubSystem {};
 
     std::unique_ptr<Demo3rdPersonScene> mThirdPersonDemoScene;
 

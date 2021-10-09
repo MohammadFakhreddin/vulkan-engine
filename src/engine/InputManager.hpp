@@ -20,7 +20,7 @@ namespace MFA::InputManager {
 
     void Init();
 
-    void OnNewFrame();
+    void OnNewFrame(float deltaTimeInSec);
 
     void Shutdown();
 
@@ -54,6 +54,10 @@ namespace MFA::InputManager {
 
 #ifdef __IOS__
     void UpdateTouchState(bool isMouseDown, bool isTouchValueValid, MousePosition mouseX, MousePosition mouseY);
+#endif
+
+#ifdef __DESKTOP__
+    void WarpMouseAtEdges(bool warp);
 #endif
 
 }

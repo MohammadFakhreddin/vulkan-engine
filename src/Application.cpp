@@ -2,10 +2,13 @@
 
 #include "engine/BedrockAssert.hpp"
 #include "engine/InputManager.hpp"
+#include "engine/entity_system/EntitySystem.hpp"
 #include "scenes/gltf_mesh_viewer/GLTFMeshViewerScene.hpp"
 #include "scenes/demo_3rd_person_scene/Demo3rdPersonScene.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/Scene.hpp"
+#include "engine/ui_system/UISystem.hpp"
+#include "engine/job_system/JobSystem.hpp"
+#include "engine/scene_manager/SceneManager.hpp"
 
 #ifdef __ANDROID__
 #include <android_native_app_glue.h>
@@ -16,12 +19,7 @@
 #include "libs/sdl/SDL.hpp"
 #endif
 
-namespace RF = MFA::RenderFrontend;
-namespace UI = MFA::UISystem;
-namespace IM = MFA::InputManager;
-#ifdef __DESKTOP__
-namespace MSDL = MFA::MSDL;
-#endif
+using namespace MFA;
 
 
 Application::Application()
@@ -32,12 +30,7 @@ Application::Application()
 Application::~Application() = default;
 
 void Application::Init() {
-    static constexpr uint16_t SCREEN_WIDTH = 1920;//1200;//1920;
-    static constexpr uint16_t SCREEN_HEIGHT = 1080;//800;//1080;
-
-    MFA_ASSERT(mIsInitialized == false);
-
-    {
+    {// Initializing render frontend
         RF::InitParams params{};
         params.applicationName = "MfaEngine";
     #ifdef __ANDROID__
@@ -45,9 +38,16 @@ void Application::Init() {
     #elif defined(__IOS__)
         params.view = mView;
     #elif defined(__DESKTOP__)
+        auto const screenInfo = MFA::Platforms::ComputeScreenSize();
+        auto const screenWidth = screenInfo.screenWidth;
+        auto const screenHeight = screenInfo.screenHeight;
+
+        MFA_ASSERT(mIsInitialized == false);
+
+
         params.resizable = true;
-        params.screenWidth = SCREEN_WIDTH;
-        params.screenHeight = SCREEN_HEIGHT;
+        params.screenWidth = screenWidth;
+        params.screenHeight = screenHeight;
     #else
         #error Os not supported
     #endif
@@ -55,12 +55,15 @@ void Application::Init() {
     }
     UI::Init();
     IM::Init();
-
-    mSceneSubSystem.RegisterNew(mThirdPersonDemoScene.get(), "ThirdPersonDemoScene");
-    mSceneSubSystem.RegisterNew(mGltfMeshViewerScene.get(), "GLTFMeshViewerScene");
+    JS::Init();
+    EntitySystem::Init();
     
-    mSceneSubSystem.SetActiveScene("ThirdPersonDemoScene");
-    mSceneSubSystem.Init();
+    SceneManager::Init();
+
+    SceneManager::RegisterNew(mThirdPersonDemoScene.get(), "ThirdPersonDemoScene");
+    SceneManager::RegisterNew(mGltfMeshViewerScene.get(), "GLTFMeshViewerScene");
+    
+    SceneManager::SetActiveScene("ThirdPersonDemoScene");
 
     mIsInitialized = true;
 }
@@ -69,7 +72,9 @@ void Application::Shutdown() {
     MFA_ASSERT(mIsInitialized == true);
 
     RF::DeviceWaitIdle();
-    mSceneSubSystem.Shutdown();
+    SceneManager::Shutdown();
+    EntitySystem::Shutdown();
+    JS::Shutdown();
     IM::Shutdown();
     UI::Shutdown();
     RF::Shutdown();
@@ -78,8 +83,7 @@ void Application::Shutdown() {
 }
 
 void Application::run() {
-    static constexpr uint32_t TargetFpsDeltaTimeInMs = 1000 / 120;
-//    static constexpr float TargetFpsDeltaTimeInSec = 1.0f / 120.0f;
+    static constexpr uint32_t TargetFpsDeltaTimeInMs = 1000 / 1000;
 #ifdef __DESKTOP__
     Init();
     {// Main loop
@@ -142,9 +146,10 @@ void Application::run() {
 
 }
 
-void Application::RenderFrame(float deltaTimeInSec) {
-    IM::OnNewFrame();
-    mSceneSubSystem.OnNewFrame(deltaTimeInSec);
+void Application::RenderFrame(float const deltaTimeInSec) {
+    IM::OnNewFrame(deltaTimeInSec);
+    RF::OnNewFrame(deltaTimeInSec);
+    SceneManager::OnNewFrame(deltaTimeInSec);
 }
 
 #ifdef __ANDROID__

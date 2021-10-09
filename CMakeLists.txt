@@ -44,14 +44,24 @@ else()
 endif()
 
 message(STATUS "Build type is ${CMAKE_BUILD_TYPE}")
-if(${CMAKE_BUILD_TYPE} MATCHES Release)
-    add_definitions(-DNDEBUG)
-else()
-    add_definitions(-D_DEBUG)
+
+if (NOT WINDOWS) 
+    if(${CMAKE_BUILD_TYPE} MATCHES Release)
+        add_definitions(-DNDEBUG)
+    else()
+        add_definitions(-D_DEBUG)
+    endif()
 endif()
 
 include_directories(libs/include/glm)
 
+# TODO: Linux On MacOS 10.14 with clang++ compiler, I get executable with SIMD right away.
+# On Ubuntu 16.04 with g++ compiler, I will have to use the compiler flag -mavx2 to generate a SIMD executable. There are other compiler options for other SIMD instructions here. Without the compiler flag, I still get a serial executable.
+add_definitions(-DGLM_FORCE_DEFAULT_ALIGNED_GENTYPES)
+add_definitions(-DGLM_FORCE_INTRINSICS)
+if (LINUX)
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
+endif ()
 #-----------------------------------------------------------------------
 # Engine
 #-----------------------------------------------------------------------
@@ -77,7 +87,45 @@ list(
     "src/engine/BedrockPlatforms.cpp"
     "src/engine/BedrockPath.hpp"
     "src/engine/BedrockPath.cpp"
+    "src/engine/BedrockSignal.hpp"
 
+    # Entity system
+    "src/engine/entity_system/EntitySystem.hpp"
+    "src/engine/entity_system/EntitySystem.cpp"
+    "src/engine/entity_system/EntityHandle.hpp"
+    "src/engine/entity_system/Entity.hpp"
+    "src/engine/entity_system/Entity.cpp"
+    "src/engine/entity_system/Component.hpp"
+    "src/engine/entity_system/Component.cpp"
+
+    # Components
+    "src/engine/entity_system/components/TransformComponent.hpp"
+    "src/engine/entity_system/components/TransformComponent.cpp"
+    "src/engine/entity_system/components/ColliderComponent.hpp"
+    "src/engine/entity_system/components/ColliderComponent.cpp"
+
+    "src/engine/entity_system/components/MeshRendererComponent.hpp"
+    "src/engine/entity_system/components/MeshRendererComponent.cpp"
+    "src/engine/entity_system/components/BoundingVolumeRendererComponent.hpp"
+    "src/engine/entity_system/components/BoundingVolumeRendererComponent.cpp"
+    
+    "src/engine/entity_system/components/BoundingVolumeComponent.hpp"
+    "src/engine/entity_system/components/BoundingVolumeComponent.cpp"
+    "src/engine/entity_system/components/AxisAlignedBoundingBoxComponent.hpp"
+    "src/engine/entity_system/components/AxisAlignedBoundingBoxComponent.cpp"
+    "src/engine/entity_system/components/SphereBoundingVolumeComponent.hpp"
+    "src/engine/entity_system/components/SphereBoundingVolumeComponent.cpp"
+
+    "src/engine/entity_system/components/ColorComponent.hpp"
+    
+
+    # Job system
+    "src/engine/job_system/ThreadPool.hpp"
+    "src/engine/job_system/ThreadPool.cpp"
+    "src/engine/job_system/ThreadSafeQueue.hpp"
+    "src/engine/job_system/JobSystem.hpp"
+    "src/engine/job_system/JobSystem.cpp"
+    
     # RenderSystem
     "src/engine/render_system/RenderTypes.hpp"
     "src/engine/render_system/RenderTypesFWD.hpp"
@@ -96,8 +144,6 @@ list(
     "src/engine/render_system/render_passes/RenderPass.cpp"
     "src/engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
     "src/engine/render_system/render_passes/display_render_pass/DisplayRenderPass.cpp"
-    # "src/engine/render_system/render_passes/shadow_render_pass/ShadowRenderPass.hpp"
-    # "src/engine/render_system/render_passes/shadow_render_pass/ShadowRenderPass.cpp"
     "src/engine/render_system/render_passes/shadow_render_pass_v2/ShadowRenderPassV2.hpp"
     "src/engine/render_system/render_passes/shadow_render_pass_v2/ShadowRenderPassV2.cpp"
     
@@ -106,30 +152,39 @@ list(
     "src/engine/render_system/pipelines/BasePipeline.cpp"
     "src/engine/render_system/pipelines/DescriptorSetSchema.hpp"
     "src/engine/render_system/pipelines/DescriptorSetSchema.cpp"
-    "src/engine/render_system/pipelines/point_light/PointLightPipeline.hpp"
-    "src/engine/render_system/pipelines/point_light/PointLightPipeline.cpp"
+
+    "src/engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
+    "src/engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.cpp"
+    
     "src/engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
     "src/engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.cpp"
 
+    # AssetSystem
     "src/engine/FoundationAsset.hpp"
     "src/engine/FoundationAsset.cpp"
-    "src/engine/Scene.hpp"
-    "src/engine/Scene.cpp"
-
+    
     # UI System
-    "src/engine/ui_system/UIRecordObject.hpp"
-    "src/engine/ui_system/UIRecordObject.cpp"
     "src/engine/ui_system/UISystem.hpp"
     "src/engine/ui_system/UISystem.cpp"
 
-    "src/engine/camera/CameraBase.hpp"
-    "src/engine/camera/CameraBase.cpp"
-    "src/engine/camera/ObserverCamera.hpp"
-    "src/engine/camera/ObserverCamera.cpp"
-    "src/engine/camera/ThirdPersonCamera.hpp"
-    "src/engine/camera/ThirdPersonCamera.cpp"
+    # Camera
+    "src/engine/camera/CameraComponent.hpp"
+    "src/engine/camera/CameraComponent.cpp"
+    "src/engine/camera/ObserverCameraComponent.hpp"
+    "src/engine/camera/ObserverCameraComponent.cpp"
+    "src/engine/camera/ThirdPersonCameraComponent.hpp"
+    "src/engine/camera/ThirdPersonCameraComponent.cpp"
+
+    # InputManager
     "src/engine/InputManager.hpp"
     "src/engine/InputManager.cpp"
+
+    # SceneManager
+    "src/engine/scene_manager/SceneManager.hpp"
+    "src/engine/scene_manager/SceneManager.cpp"
+    "src/engine/scene_manager/Scene.hpp"
+    "src/engine/scene_manager/Scene.cpp"
+    
 )
 
 add_library("Engine"
@@ -456,6 +511,7 @@ elseif(MACOSX)
         COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Release/MFaEngine.app/Contents/Resources/data/"
         COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Release/MFaEngine.app/Contents/Resources/data/"
     )
+
 
 elseif(IPHONE)
 

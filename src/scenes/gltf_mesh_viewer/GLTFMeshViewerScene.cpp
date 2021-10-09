@@ -6,6 +6,14 @@
 #include "tools/Importer.hpp"
 #include "tools/ShapeGenerator.hpp"
 #include "engine/BedrockPath.hpp"
+#include "engine/entity_system/Entity.hpp"
+#include "engine/entity_system/EntitySystem.hpp"
+#include "engine/entity_system/components/AxisAlignedBoundingBoxComponent.hpp"
+#include "engine/entity_system/components/ColorComponent.hpp"
+#include "engine/entity_system/components/MeshRendererComponent.hpp"
+#include "engine/entity_system/components/SphereBoundingVolumeComponent.hpp"
+#include "engine/entity_system/components/TransformComponent.hpp"
+#include "engine/ui_system/UISystem.hpp"
 
 using namespace MFA;
 
@@ -13,13 +21,12 @@ using namespace MFA;
 
 GLTFMeshViewerScene::GLTFMeshViewerScene()
     : Scene()
-    , mRecordObject([this]()->void {OnUI();})
 {}
 
 //-------------------------------------------------------------------------------------------------
 
 void GLTFMeshViewerScene::Init() {
-    // TODO Out of pool memory on MacOs, We need to only keep a few of recent objects data active.
+    Scene::Init();
     {// Error texture
         auto cpu_texture = Importer::CreateErrorTexture();
         mErrorTexture = RF::CreateTexture(cpu_texture);
@@ -111,7 +118,19 @@ void GLTFMeshViewerScene::Init() {
     
     mPointLightPipeline.Init();
 
-    mCamera.Init();
+    {// Camera
+        auto * entity = EntitySystem::CreateEntity("Camera", GetRootEntity());
+
+        mCamera = entity->AddComponent<ObserverCameraComponent>(
+            FOV,
+            Z_NEAR,
+            Z_FAR
+        );
+        MFA_ASSERT(mCamera != nullptr);
+        EntitySystem::InitEntity(entity);
+
+        SetActiveCamera(mCamera);
+    }
     
     mPbrPipeline.Init(&mSamplerGroup, &mErrorTexture, Z_NEAR, Z_FAR);
 
@@ -120,18 +139,36 @@ void GLTFMeshViewerScene::Init() {
     updateProjectionBuffer();
 
     {// Point light
-        auto cpuModel = MFA::ShapeGenerator::Sphere(0.1f);
+        auto cpuModel = MFA::ShapeGenerator::Sphere();
         mPointLightModel = RF::CreateGpuModel(cpuModel);
         mPointLightPipeline.CreateDrawableEssence("Sphere", mPointLightModel);
-        mPointLightVariant = mPointLightPipeline.CreateDrawableVariant("Sphere");
+
+        auto * entity = EntitySystem::CreateEntity("PointLight", GetRootEntity());
+
+        auto * colorComponent = entity->AddComponent<ColorComponent>();
+        MFA_ASSERT(colorComponent != nullptr);
+        colorComponent->SetColor(mLightColor);
+
+        mPointLightColor = colorComponent;
+
+        auto * transformComponent = entity->AddComponent<TransformComponent>();
+        MFA_ASSERT(transformComponent != nullptr);
+        transformComponent->UpdatePosition(mLightPosition);
+
+        mPointLightTransform = transformComponent;
+
+        auto * meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPointLightPipeline, "Sphere");
+        MFA_ASSERT(meshRendererComponent != nullptr);
+
+        entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
+
+        EntitySystem::InitEntity(entity);
     }
 
-    mRecordObject.Enable();
+    mUIRegisterId = UI::Register([this]()->void {OnUI();});
 }
 
-void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RT::DrawPass & drawPass) {
-    mCamera.OnUpdate(deltaTimeInSec);
-
+void GLTFMeshViewerScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass) {
     auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
 
     if (selectedModel.isLoaded == false) {
@@ -140,14 +177,14 @@ void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RT::DrawPass & 
 
     if (mPreviousModelSelectedIndex != mSelectedModelIndex) {
         {// Enabling ui for current model
-            auto * selectedVariant = mModelsRenderData[mSelectedModelIndex].variant;
-            MFA_ASSERT(selectedVariant != nullptr);
-            selectedVariant->SetActive(true);
+            auto * entity = mModelsRenderData[mSelectedModelIndex].entity;
+            MFA_ASSERT(entity != nullptr);
+            entity->SetActive(true);
         }
         if (mPreviousModelSelectedIndex >= 0) {// Disabling ui for previous model
-            auto * previousVariant = mModelsRenderData[mPreviousModelSelectedIndex].variant;
-            MFA_ASSERT(previousVariant != nullptr);
-            previousVariant->SetActive(false);
+            auto * entity = mModelsRenderData[mPreviousModelSelectedIndex].entity;
+            MFA_ASSERT(entity != nullptr);
+            entity->SetActive(false);
         }
 
         mPreviousModelSelectedIndex = mSelectedModelIndex;
@@ -164,32 +201,27 @@ void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RT::DrawPass & 
         MFA::Copy<3>(mLightTranslateMin, selectedModel.initialParams.light.translateMin);
         MFA::Copy<3>(mLightTranslateMax, selectedModel.initialParams.light.translateMax);
         
-        mCamera.ForcePosition(selectedModel.initialParams.camera.position);
-        mCamera.ForceRotation(selectedModel.initialParams.camera.eulerAngles);
+        mCamera->ForcePosition(selectedModel.initialParams.camera.position);
+        mCamera->ForceRotation(selectedModel.initialParams.camera.eulerAngles);
     }
     
     {// LightViewBuffer
         mPbrPipeline.UpdateLightPosition(mLightPosition);
 
         float cameraPosition[3];
-        mCamera.GetPosition(cameraPosition);
+        mCamera->GetPosition(cameraPosition);
         mPbrPipeline.UpdateCameraPosition(cameraPosition);
 
         mPbrPipeline.UpdateLightColor(mLightColor);
 
-        // LightPosition
-        /*glm::mat4 transformMatrix;
-        MFA::Matrix::GlmTranslate(transformMatrix, mLightPosition);
-        mPbrPipeline.UpdateLightPosition(mLightPosition);*/
-
-        mPointLightVariant->UpdatePosition(mLightPosition);
-        mPointLightPipeline.UpdateLightColor(mPointLightVariant, mLightColor);
+        mPointLightTransform->UpdatePosition(mLightPosition);
+        mPointLightColor->SetColor(mLightColor);
     }
 
     {// Updating PBR-Pipeline
         // Model
         float scale[3] {mModelScale, mModelScale, mModelScale};
-        selectedModel.variant->UpdateTransform(
+        selectedModel.transformComponent->UpdateTransform(
             mModelPosition,
             mModelRotation,
             scale
@@ -197,7 +229,7 @@ void GLTFMeshViewerScene::OnPreRender(float deltaTimeInSec, MFA::RT::DrawPass & 
 
         // View
         float viewData [16];
-        mCamera.GetTransform(viewData);
+        mCamera->GetTransform(viewData);
         mPointLightPipeline.UpdateCameraView(viewData);
         mPbrPipeline.UpdateCameraView(viewData);
     }
@@ -220,7 +252,7 @@ void GLTFMeshViewerScene::OnRender(float const deltaTimeInSec, MFA::RT::DrawPass
 
 //-------------------------------------------------------------------------------------------------
 
-void GLTFMeshViewerScene::OnPostRender(float deltaTimeInSec, MFA::RT::DrawPass & drawPass)
+void GLTFMeshViewerScene::OnPostRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass)
 {
     mPointLightPipeline.PostRender(drawPass, deltaTimeInSec);
     mPbrPipeline.PostRender(drawPass, deltaTimeInSec);
@@ -309,14 +341,17 @@ void GLTFMeshViewerScene::OnUI() {
 
     if (mIsDrawableVariantWindowVisible) {
         const auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
-        auto * variant = selectedModel.variant;
-        if (variant != nullptr) {
-            variant->OnUI();
+        if (selectedModel.isLoaded) {
+            // TODO We should not expose variant
+            auto * variant = selectedModel.meshRendererComponent->GetVariant();
+            if (variant != nullptr) {
+                variant->OnUI();
+            }
         }
     }
 
     if (mIsCameraWindowVisible) {
-        mCamera.OnUI();
+        mCamera->OnUI();
     }
 
     // TODO Node tree
@@ -325,12 +360,15 @@ void GLTFMeshViewerScene::OnUI() {
 //-------------------------------------------------------------------------------------------------
 
 void GLTFMeshViewerScene::Shutdown() {
-    {// Disabling ui for current model
-        auto * selectedDrawable = mModelsRenderData[mSelectedModelIndex].variant;
-        MFA_ASSERT(selectedDrawable != nullptr);
-        selectedDrawable->SetActive(false);
-    }
-    mRecordObject.Disable();
+    Scene::Shutdown();
+
+    UI::UnRegister(mUIRegisterId);
+
+    //{// Disabling ui for current model
+    //    auto * selectedDrawable = mModelsRenderData[mSelectedModelIndex].variant;
+    //    MFA_ASSERT(selectedDrawable != nullptr);
+    //    selectedDrawable->SetActive(false);
+    //}
     mPbrPipeline.Shutdown();
     mPointLightPipeline.Shutdown();
     RF::DestroySampler(mSamplerGroup);
@@ -342,7 +380,7 @@ void GLTFMeshViewerScene::Shutdown() {
 //-------------------------------------------------------------------------------------------------
 
 void GLTFMeshViewerScene::OnResize() {
-    mCamera.OnResize();
+    mCamera->OnResize();
     updateProjectionBuffer();
 }
 
@@ -352,7 +390,24 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
     auto cpuModel = Importer::ImportGLTF(renderRequiredData.address.c_str());
     renderRequiredData.gpuModel = RF::CreateGpuModel(cpuModel);
     mPbrPipeline.CreateDrawableEssence(renderRequiredData.displayName.c_str(), renderRequiredData.gpuModel);
-    renderRequiredData.variant = mPbrPipeline.CreateDrawableVariant(renderRequiredData.displayName.c_str());
+
+    auto * entity = EntitySystem::CreateEntity("Instance", GetRootEntity());
+    MFA_ASSERT(entity != nullptr);
+    renderRequiredData.entity = entity;
+
+    renderRequiredData.transformComponent = entity->AddComponent<TransformComponent>();
+    MFA_ASSERT(renderRequiredData.transformComponent != nullptr);
+
+    renderRequiredData.meshRendererComponent = entity->AddComponent<MeshRendererComponent>(
+        mPbrPipeline,
+        renderRequiredData.displayName.c_str()
+    );
+    MFA_ASSERT(renderRequiredData.meshRendererComponent != nullptr);
+
+    entity->AddComponent<AxisAlignedBoundingBoxComponent>();
+
+    EntitySystem::InitEntity(entity);
+        
     renderRequiredData.isLoaded = true;
 }
 
@@ -380,7 +435,7 @@ void GLTFMeshViewerScene::destroyModels() {
 
 void GLTFMeshViewerScene::updateProjectionBuffer() {
     float projectionData [16];
-    mCamera.GetProjection(projectionData);          // TODO It can return
+    mCamera->GetProjection(projectionData);          // TODO It can return
     mPbrPipeline.UpdateCameraProjection(projectionData);
     mPointLightPipeline.UpdateCameraProjection(projectionData);
 }

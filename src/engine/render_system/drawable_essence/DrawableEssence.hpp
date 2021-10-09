@@ -2,8 +2,9 @@
 
 #include "engine/render_system/RenderTypes.hpp"
 
-namespace MFA {
+#include <unordered_map>
 
+namespace MFA {
 
 class DrawableEssence {
 public:

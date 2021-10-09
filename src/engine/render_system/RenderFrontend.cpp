@@ -19,9 +19,9 @@
 
 #include <string>
 
-namespace MFA::RenderFrontend {
+#include "engine/BedrockSignal.hpp"
 
-uint32_t MAX_FRAMES_IN_FLIGHT = 2;
+namespace MFA::RenderFrontend {
 
 #ifdef __DESKTOP__
 struct SDLEventWatchGroup {
@@ -30,12 +30,8 @@ struct SDLEventWatchGroup {
 };
 #endif
 
-struct ResizeEventWatchGroup {
-    RT::ResizeEventListenerId id = 0;
-    RT::ResizeEventListener watch = nullptr;
-};
-
 struct State {
+    uint32_t maxFramesPerFlight = 0;
     // CreateWindow
     ScreenWidth screenWidth = 0;
     ScreenHeight screenHeight = 0;
@@ -59,7 +55,7 @@ struct State {
     // Resize
     bool isWindowResizable = false;
     bool windowResized = false;
-    std::vector<ResizeEventWatchGroup> resizeEventListeners {};
+    Signal<> resizeEventSignal {};
     VkSurfaceCapabilitiesKHR surfaceCapabilities {};
     uint32_t swapChainImageCount = 0;
     DisplayRenderPass displayRenderPass {};
@@ -198,11 +194,11 @@ bool Init(InitParams const & params) {
     state->surface = RB::CreateWindowSurface(state->window, state->vk_instance);
 
     {// FindPhysicalDevice
-        auto const findPhysicalDeviceResult = RB::FindPhysicalDevice(state->vk_instance); // TODO Check again for retry count number
+        auto const findPhysicalDeviceResult = RB::FindPhysicalDevice(state->vk_instance);   // TODO Check again for retry count number
         state->physicalDevice = findPhysicalDeviceResult.physicalDevice;
         // I'm not sure if this is a correct thing to do but currently I'm enabling all gpu features.
         state->physicalDeviceFeatures = findPhysicalDeviceResult.physicalDeviceFeatures;
-        state->maxSampleCount = findPhysicalDeviceResult.maxSampleCount;
+        state->maxSampleCount = VK_SAMPLE_COUNT_2_BIT;//findPhysicalDeviceResult.maxSampleCount;                    // TODO It should be a setting
         state->physicalDeviceProperties = findPhysicalDeviceResult.physicalDeviceProperties;
 
         std::string message = "Supported physical device features are:";
@@ -217,6 +213,7 @@ bool Init(InitParams const & params) {
     state->surfaceCapabilities = computeSurfaceCapabilities();
 
     state->swapChainImageCount = RB::ComputeSwapChainImagesCount(state->surfaceCapabilities);
+    state->maxFramesPerFlight = state->swapChainImageCount;
 
     state->screenWidth = state->surfaceCapabilities.currentExtent.width;
     state->screenHeight = state->surfaceCapabilities.currentExtent.height;
@@ -251,7 +248,7 @@ bool Init(InitParams const & params) {
     
     state->descriptorPool = RB::CreateDescriptorPool(
         state->logicalDevice.device, 
-        5000 // TODO We might need to ask this from user
+        40000 // TODO We might need to ask this from user
     );
 
     state->displayRenderPass.Init();
@@ -276,10 +273,7 @@ static void OnResize() {
 
     state->displayRenderPass.OnResize();
 
-    for (auto & eventWatchGroup : state->resizeEventListeners) {
-        MFA_ASSERT(eventWatchGroup.watch != nullptr);
-        eventWatchGroup.watch();
-    }
+    state->resizeEventSignal.Emit();
 
 }
 
@@ -289,7 +283,7 @@ bool Shutdown() {
     // Common part with resize
     RB::DeviceWaitIdle(state->logicalDevice.device);
 
-    MFA_ASSERT(state->resizeEventListeners.empty());
+    MFA_ASSERT( state->resizeEventSignal.IsEmpty());
 
 #ifdef __DESKTOP__
     MFA_ASSERT(state->sdlEventListeners.empty());
@@ -331,26 +325,13 @@ bool Shutdown() {
 
 int AddResizeEventListener(RT::ResizeEventListener const & eventListener) {
     MFA_ASSERT(eventListener != nullptr);
-    state->resizeEventListeners.emplace_back(ResizeEventWatchGroup {
-        .id = state->nextEventListenerId++,
-        .watch = eventListener
-    });
-    return state->resizeEventListeners.back().id;
+    return state->resizeEventSignal.Register(eventListener);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-bool RemoveResizeEventListener(RT::ResizeEventListenerId listenerId) {
-    bool success = false;
-    for (int i = static_cast<int>(state->resizeEventListeners.size()) - 1; i >= 0; --i) {
-        auto & listener = state->resizeEventListeners[i];
-        if (listener.id == listenerId) {
-            success = true;
-            state->resizeEventListeners.erase(state->resizeEventListeners.begin() + i);
-            break;
-        }
-    }
-    return success;
+bool RemoveResizeEventListener(RT::ResizeEventListenerId const listenerId) {
+    return state->resizeEventSignal.UnRegister(listenerId);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -379,7 +360,7 @@ void DestroyDescriptorSetLayout(VkDescriptorSetLayout descriptorSetLayout) {
 
 [[nodiscard]]
 RT::PipelineGroup CreatePipeline(
-    RenderPass * renderPass,
+    VkRenderPass vkRenderPass,
     uint8_t gpuShadersCount, 
     RT::GpuShader const ** gpuShaders,
     uint32_t descriptorLayoutsCount,
@@ -403,7 +384,7 @@ RT::PipelineGroup CreatePipeline(
         static_cast<uint32_t>(inputAttributeDescriptionCount),
         inputAttributeDescriptionData,
         extent2D,
-        renderPass->GetVkRenderPass(),
+        vkRenderPass,
         descriptorLayoutsCount,
         descriptorSetLayouts,
         options
@@ -558,7 +539,7 @@ void DestroyTexture(RT::GpuTexture & gpuTexture) {
 RT::SamplerGroup CreateSampler(RT::CreateSamplerParams const & samplerParams) {
     auto sampler = RB::CreateSampler(state->logicalDevice.device, samplerParams);
     MFA_VK_VALID_ASSERT(sampler);
-    RT::SamplerGroup samplerGroup {
+    RT::SamplerGroup const samplerGroup {
         .sampler = sampler
     };
     MFA_ASSERT(samplerGroup.isValid());
@@ -737,7 +718,7 @@ void BeginRenderPass(
     VkFramebuffer frameBuffer,
     VkExtent2D const & extent2D,
     uint32_t clearValuesCount,
-    VkClearValue * clearValues
+    VkClearValue const * clearValues
 ) {
     VkRenderPassBeginInfo renderPassBeginInfo = {};
     renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -849,7 +830,7 @@ uint32_t GetSwapChainImagesCount() {
 //-------------------------------------------------------------------------------------------------
 
 uint32_t GetMaxFramesPerFlight() {
-    return MAX_FRAMES_IN_FLIGHT;
+    return state->maxFramesPerFlight;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -1170,10 +1151,10 @@ void SubmitQueue(
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    VkPipelineStageFlags const waitStages[] {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = &imageAvailabilitySemaphore;
-    submitInfo.pWaitDstStageMask = wait_stages;
+    submitInfo.pWaitDstStageMask = waitStages;
 
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;

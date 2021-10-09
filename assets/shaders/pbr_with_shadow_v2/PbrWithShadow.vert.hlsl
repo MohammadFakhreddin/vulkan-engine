@@ -27,7 +27,7 @@ struct VSOut {
     float3 worldTangent: TEXCOORD3;
     float3 worldBiTangent : TEXCOORD4;
 
-    float2 emissiveTexCoord: TEXCOORD4;
+    float2 emissiveTexCoord: TEXCOORD5;
 };
 
 // TODO We can combine view and projection
@@ -65,10 +65,19 @@ VSOut main(VSIn input) {
     if (input.hasSkin == 1) {
         int skinIndex = pushConsts.skinIndex;
         float4x4 inverseNodeTransform = pushConsts.inverseNodeTransform;
-        skinMat = mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.x]), input.jointWeights.x)
-            + mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.y]), input.jointWeights.y) 
-            + mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.z]), input.jointWeights.z)
-            + mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.w]), input.jointWeights.w);
+        skinMat = 0;
+        if (input.jointWeights.x > 0) {
+            skinMat += mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.x]), input.jointWeights.x);
+            if (input.jointWeights.y > 0) {
+                skinMat += mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.y]), input.jointWeights.y);
+                if (input.jointWeights.z > 0) {
+                    skinMat += mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.z]), input.jointWeights.z);
+                    if (input.jointWeights.w > 0) {
+                        skinMat += mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.w]), input.jointWeights.w);
+                    }
+                }
+            }
+        }
     } else {
         skinMat = IdentityMat;
     }

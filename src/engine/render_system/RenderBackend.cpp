@@ -2572,7 +2572,7 @@ void UpdateDescriptorSets(
 
     vkUpdateDescriptorSets(
         device, 
-        static_cast<uint32_t>(descriptorWritesCount), 
+        descriptorWritesCount, 
         descriptorWrites, 
         0, 
         nullptr

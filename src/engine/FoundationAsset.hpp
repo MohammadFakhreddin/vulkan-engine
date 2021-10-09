@@ -3,6 +3,7 @@
 #include "BedrockCommon.hpp"
 
 #include <string>
+#include <glm/glm.hpp>
 #include <vector>
 
 // TODO Separate this file into multiple files
@@ -280,10 +281,38 @@ public:
         bool hasNormalTexture = false;
         bool hasTangentBuffer = false;
         bool hasSkin = false;
+
+        bool hasPositionMinMax = false;
+
+        float positionMin[3] {
+            std::numeric_limits<float>::max(),
+            std::numeric_limits<float>::max(),
+            std::numeric_limits<float>::max()
+        };
+
+        float positionMax[3] {
+            std::numeric_limits<float>::min(),
+            std::numeric_limits<float>::min(),
+            std::numeric_limits<float>::min()
+        };
     };
     
     struct SubMesh {
         std::vector<Primitive> primitives {};
+
+        bool hasPositionMinMax = false;
+
+        float positionMin[3] {
+            std::numeric_limits<float>::max(),
+            std::numeric_limits<float>::max(),
+            std::numeric_limits<float>::max()
+        };
+
+        float positionMax[3] {
+            std::numeric_limits<float>::min(),
+            std::numeric_limits<float>::min(),
+            std::numeric_limits<float>::min()
+        };
     };
     
     struct Node {
@@ -307,13 +336,9 @@ public:
         }
     };
 
-    struct InverseBindMatrix {
-        float value[16] {};
-    };
-
     struct Skin {
         std::vector<int> joints {};
-        std::vector<InverseBindMatrix> inverseBindMatrices {};
+        std::vector<glm::mat4> inverseBindMatrices {};
         int skeletonRootNode = -1;
     };
 
@@ -461,15 +486,33 @@ public:
     }
 
     [[nodiscard]]
-    uint32_t GetIndexOfRootNode(uint32_t const index) const;
+    uint32_t GetIndexOfRootNode(uint32_t index) const;
 
     [[nodiscard]]
-    Node & GetRootNodeByIndex(uint32_t const index);
+    Node & GetRootNodeByIndex(uint32_t index);
 
     [[nodiscard]]
-    Node const & GetRootNodeByIndex(uint32_t const index) const;
+    Node const & GetRootNodeByIndex(uint32_t index) const;
 
     void RevokeBuffers(Blob & outVertexBuffer, Blob & outIndexBuffer);
+
+    [[nodiscard]]
+    bool HasPositionMinMax() const
+    {
+        return mHasPositionMinMax;
+    }
+
+    [[nodiscard]]
+    float const * GetPositionMin() const
+    {
+        return mPositionMin;
+    }
+
+    [[nodiscard]]
+    float const * GetPositionMax() const
+    {
+        return mPositionMax;
+    }
 
 private:
 
@@ -488,6 +531,21 @@ private:
     uint64_t mNextVertexOffset {};
     uint64_t mNextIndexOffset {};
     uint32_t mNextStartingIndex {};
+
+    // We could do this with a T-Pose for more accurate result
+    bool mHasPositionMinMax = false;
+
+    float mPositionMin[3] {
+        std::numeric_limits<float>::max(),
+        std::numeric_limits<float>::max(),
+        std::numeric_limits<float>::max()
+    };
+
+    float mPositionMax[3] {
+        std::numeric_limits<float>::min(),
+        std::numeric_limits<float>::min(),
+        std::numeric_limits<float>::min()
+    };
 
 };
 

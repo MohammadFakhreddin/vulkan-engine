@@ -1,10 +1,16 @@
 #pragma once
 
 #include "engine/render_system/RenderTypes.hpp"
-#include "engine/Scene.hpp"
-#include "engine/camera/ObserverCamera.hpp"
+#include "engine/scene_manager/Scene.hpp"
+#include "engine/camera/ObserverCameraComponent.hpp"
+#include "engine/entity_system/components/MeshRendererComponent.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
-#include "engine/render_system/pipelines/point_light/PointLightPipeline.hpp"
+#include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
+
+namespace MFA
+{
+    class ColorComponent;
+}
 
 class GLTFMeshViewerScene final : public MFA::Scene {
 public:
@@ -41,7 +47,9 @@ private:
         MFA::RT::GpuModel gpuModel {};
         std::string displayName {};
         std::string address {};
-        MFA::DrawableVariant * variant = nullptr;
+        MFA::Entity * entity = nullptr;
+        MFA::MeshRendererComponent * meshRendererComponent = nullptr;
+        MFA::TransformComponent * transformComponent = nullptr;
         struct InitialParams {
             struct Model {
                 float rotationEulerAngle[3] {};
@@ -107,7 +115,7 @@ private:
     MFA::RT::SamplerGroup mSamplerGroup {};
 
     MFA::PBRWithShadowPipelineV2 mPbrPipeline {};
-    MFA::PointLightPipeline mPointLightPipeline {};
+    MFA::DebugRendererPipeline mPointLightPipeline {};
 
     MFA::RT::GpuTexture mErrorTexture {};
 
@@ -120,8 +128,10 @@ private:
     bool mIsLightVisible = true;
 
     MFA::RT::GpuModel mPointLightModel {};
-    MFA::DrawableVariant * mPointLightVariant = nullptr;
 
+    MFA::TransformComponent * mPointLightTransform = nullptr;
+    MFA::ColorComponent * mPointLightColor = nullptr;
+    
     bool mIsObjectViewerWindowVisible = false;
     bool mIsLightWindowVisible = false;
     bool mIsCameraWindowVisible = false;
@@ -135,12 +145,8 @@ private:
 #error Os is not handled
 #endif
 
-    MFA::ObserverCamera mCamera {
-        FOV,
-        Z_FAR,
-        Z_NEAR
-    };
+    MFA::ObserverCameraComponent * mCamera = nullptr;
 
-    MFA::UIRecordObject mRecordObject;
+    int mUIRegisterId = 0;
 
 };

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "UIRecordObject.hpp"
 #include "engine/render_system/RenderTypesFWD.hpp"
 
 class UIRecordObject;
@@ -19,9 +18,9 @@ void BeginWindow(char const * windowName);
 
 void EndWindow();
 
-void Register(UIRecordObject * recordObject);
+int Register(std::function<void()> const & listener);
 
-void UnRegister(UIRecordObject * recordObject);
+bool UnRegister(int listenerId);
 
 void SetNextItemWidth(float nextItemWidth);
 
@@ -29,9 +28,9 @@ void Text(char const * label);
 
 void InputFloat(char const * label, float * value);
 
-void InputFloat2(char const * label, float value[2]);
+void InputFloat2(char const * label, float * value);
 
-void InputFloat3(char const * label, float value[3]);
+void InputFloat3(char const * label, float * value);
 
 void Combo(
     char const * label,

@@ -296,7 +296,9 @@ PSOut main(PSIn input) {
 	for (int i = 0; i < 1; i++) {   // Light count
 		float3 L = lvBuff.lightPosition.xyz - input.worldPos;
         float shadow = shadowCalculation(L, length(lvBuff.camPos - input.worldPos));
-    	Lo += BRDF(normalize(L), V, N, metallic, roughness, baseColor.rgb, input.worldPos) * (1.0 - shadow);
+        if (shadow < 1.0f) {
+    	    Lo += BRDF(normalize(L), V, N, metallic, roughness, baseColor.rgb, input.worldPos) * (1.0 - shadow);
+        }
 	};
 
     // Combine with ambient

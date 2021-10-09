@@ -17,7 +17,11 @@ public:
     DisplayRenderPass & operator = (DisplayRenderPass const &) noexcept = delete;
     DisplayRenderPass & operator = (DisplayRenderPass &&) noexcept = delete;
 
+    [[nodiscard]]
     VkRenderPass GetVkRenderPass() override;
+
+    [[nodiscard]]
+    VkRenderPass GetVkDepthRenderPass() const;
 
     VkCommandBuffer GetCommandBuffer(RT::DrawPass const & drawPass);
 
@@ -25,6 +29,10 @@ public:
     RT::DrawPass StartGraphicCommandBufferRecording();
 
     void EndGraphicCommandBufferRecording(RT::DrawPass & drawPass);
+
+    void BeginDepthPrePass(RT::DrawPass & drawPass);
+
+    void EndDepthPrePass(RT::DrawPass & drawPass);
 
 protected:
 
@@ -40,30 +48,46 @@ protected:
 
 private:
 
+    [[nodiscard]]
     VkSemaphore getImageAvailabilitySemaphore(RT::DrawPass const & drawPass);
 
+    [[nodiscard]]
     VkSemaphore getRenderFinishIndicatorSemaphore(RT::DrawPass const & drawPass);
 
+    [[nodiscard]]
     VkFence getInFlightFence(RT::DrawPass const & drawPass);
 
+    [[nodiscard]]
     VkImage getSwapChainImage(RT::DrawPass const & drawPass);
 
-    VkFramebuffer getFrameBuffer(RT::DrawPass const & drawPass);
+    [[nodiscard]]
+    VkFramebuffer getDisplayFrameBuffer(RT::DrawPass const & drawPass);
 
-    void createFrameBuffers(VkExtent2D const & extent);
+    [[nodiscard]]
+    VkFramebuffer getDepthFrameBuffer(RT::DrawPass const & drawPass);
 
-    void createRenderPass();
+    void createDisplayFrameBuffers(VkExtent2D const & extent);
+
+    void createDepthFrameBuffers(VkExtent2D const & extent);
+
+    void createDisplayRenderPass();
+
+    void createDepthRenderPass();
     
-    VkRenderPass mVkRenderPass {};
+    VkRenderPass mVkDisplayRenderPass {};
     uint32_t mSwapChainImagesCount = 0;
     RT::SwapChainGroup mSwapChainImages {};
-    std::vector<VkFramebuffer> mFrameBuffers {};
-    RT::ColorImageGroup mMSAAImageGroup {};
-    RT::DepthImageGroup mDepthImageGroup {};
+    std::vector<VkFramebuffer> mDisplayFrameBuffers {};
+    std::vector<RT::ColorImageGroup> mMSAAImageGroupList {};
+    std::vector<RT::DepthImageGroup> mDepthImageGroupList {};
     RT::SyncObjects mSyncObjects {};
     uint8_t mCurrentFrame = 0;
     std::vector<VkCommandBuffer> mGraphicCommandBuffers {};
 
+    VkRenderPass mDepthRenderPass {};
+    std::vector<VkFramebuffer> mDepthFrameBuffer {};
+
+    RT::DrawPass mDrawPass {};
 };
 
 }
