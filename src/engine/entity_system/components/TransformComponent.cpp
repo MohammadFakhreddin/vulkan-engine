@@ -31,7 +31,10 @@ void TransformComponent::Init()
 void TransformComponent::Shutdown()
 {
     Component::Shutdown();
-    mParentTransform->UnRegisterChangeListener(mParentTransformChangeListenerId);
+    if (mParentTransform != nullptr)
+    {
+        mParentTransform->UnRegisterChangeListener(mParentTransformChangeListenerId);
+    }
 }
 
 //-------------------------------------------------------------------------------------------------

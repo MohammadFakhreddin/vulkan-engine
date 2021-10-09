@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/entity_system/Component.hpp"
+#include "engine/entity_system/components/RendererComponent.hpp"
 
 namespace MFA
 {
@@ -10,7 +10,7 @@ namespace MFA
     class DrawableVariant;
     class BoundingVolumeComponent;
 
-    class BoundingVolumeRendererComponent final : public Component
+    class BoundingVolumeRendererComponent final : public RendererComponent
     {
     public:
 
@@ -33,6 +33,8 @@ namespace MFA
         void Update(float deltaTimeInSec) override;
 
         void Shutdown() override;
+        
+        void NotifyVariantDestroyed() override;
 
     private:
 

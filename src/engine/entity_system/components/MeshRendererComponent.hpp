@@ -2,11 +2,12 @@
 
 #include "engine/entity_system/Component.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
+#include "engine/entity_system/components/RendererComponent.hpp"
 
 namespace MFA
 {
 
-    class MeshRendererComponent final : public Component
+    class MeshRendererComponent final : public RendererComponent
     {
     public:
 
@@ -30,6 +31,8 @@ namespace MFA
 
         [[nodiscard]]
         DrawableVariant * GetVariant() const;
+        
+        void NotifyVariantDestroyed() override;
 
     private:
 

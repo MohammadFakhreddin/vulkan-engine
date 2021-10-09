@@ -30,7 +30,10 @@ void MeshRendererComponent::Init()
 
 void MeshRendererComponent::Shutdown()
 {
-    mPipeline->RemoveDrawableVariant(mVariant);
+    if (mVariant != nullptr)
+    {
+        mPipeline->RemoveDrawableVariant(mVariant);
+    }
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -38,6 +41,13 @@ void MeshRendererComponent::Shutdown()
 DrawableVariant * MeshRendererComponent::GetVariant() const
 {
     return mVariant;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MeshRendererComponent::NotifyVariantDestroyed()
+{
+    mVariant = nullptr;
 }
 
 //-------------------------------------------------------------------------------------------------

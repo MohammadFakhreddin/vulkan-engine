@@ -55,8 +55,17 @@ void BoundingVolumeRendererComponent::Update(float const deltaTimeInSec)
 void BoundingVolumeRendererComponent::Shutdown()
 {
     Component::Shutdown();
-    mPipeline->RemoveDrawableVariant(mVariant);
+    if (mVariant != nullptr)
+    {
+        mPipeline->RemoveDrawableVariant(mVariant);
+    }
 }
 
 //-------------------------------------------------------------------------------------------------
 
+void BoundingVolumeRendererComponent::NotifyVariantDestroyed()
+{
+    mVariant = nullptr;
+}
+
+//-------------------------------------------------------------------------------------------------

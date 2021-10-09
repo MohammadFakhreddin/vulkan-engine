@@ -104,6 +104,7 @@ list(
     "src/engine/entity_system/components/ColliderComponent.hpp"
     "src/engine/entity_system/components/ColliderComponent.cpp"
 
+    "src/engine/entity_system/components/RendererComponent.hpp"
     "src/engine/entity_system/components/MeshRendererComponent.hpp"
     "src/engine/entity_system/components/MeshRendererComponent.cpp"
     "src/engine/entity_system/components/BoundingVolumeRendererComponent.hpp"

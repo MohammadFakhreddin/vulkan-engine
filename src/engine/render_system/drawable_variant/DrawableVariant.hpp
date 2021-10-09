@@ -19,7 +19,7 @@ class Entity;
 class BoundingVolumeComponent;
 class TransformComponent;
 class DrawableEssence;
-
+class RendererComponent;
 
 struct AnimationParams {
     float transitionDuration = 0.3f;
@@ -86,7 +86,7 @@ public:
 
     void SetActiveAnimation(char const * animationName, AnimationParams const & params = AnimationParams {});
     
-    void Init(Component * rendererComponent, TransformComponent * transformComponent);
+    void Init(RendererComponent * rendererComponent, TransformComponent * transformComponent);
 
     void Update(float deltaTimeInSec, RT::DrawPass const & drawPass);
 
@@ -200,7 +200,7 @@ private:
 
     Entity * mEntity = nullptr;
 
-    Component * mRendererComponent = nullptr;
+    RendererComponent * mRendererComponent = nullptr;
 
     BoundingVolumeComponent * mBoundingVolumeComponent = nullptr;
 

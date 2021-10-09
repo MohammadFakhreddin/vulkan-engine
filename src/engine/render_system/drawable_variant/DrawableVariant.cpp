@@ -146,7 +146,7 @@ RT::UniformBufferGroup const & DrawableVariant::GetSkinJointsBuffer() const noex
 
 //-------------------------------------------------------------------------------------------------
 
-void DrawableVariant::Init(Component * rendererComponent, TransformComponent * transformComponent)
+void DrawableVariant::Init(RendererComponent * rendererComponent, TransformComponent * transformComponent)
 {
     if (mIsInitialized)
     {
@@ -214,6 +214,8 @@ void DrawableVariant::Shutdown()
     mIsInitialized = false;
 
     mTransformComponent->UnRegisterChangeListener(mTransformListenerId);
+    
+    mRendererComponent->NotifyVariantDestroyed();
 
 }
 
