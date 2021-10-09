@@ -16,7 +16,7 @@
 namespace MFA::EntitySystem
 {
     void InitEntity(Entity * entity);
-    bool DestroyEntity(Entity * entity);
+    bool DestroyEntity(Entity * entity, bool shouldNotifyParent);
 }
 
 namespace MFA {
@@ -24,7 +24,7 @@ namespace MFA {
 class Entity {
 public:
     friend void EntitySystem::InitEntity(Entity * entity);
-    friend bool EntitySystem::DestroyEntity(Entity * entity);
+    friend bool EntitySystem::DestroyEntity(Entity * entity, bool shouldNotifyParent);
     friend Component;
 
     explicit Entity(char const * name, Entity * parent = nullptr);
@@ -46,7 +46,7 @@ public:
 
     void Update(float deltaTimeInSec) const;
     
-    void Shutdown();
+    void Shutdown(bool shouldNotifyParent = true);
 
     template<typename ComponentClass, typename ... ArgsT>
     ComponentClass * AddComponent(ArgsT && ... args) {
@@ -97,6 +97,9 @@ public:
     bool IsActive() const noexcept;
 
     void SetActive(bool active);
+
+    [[nodiscard]]
+    std::vector<Entity *> const & GetChildEntities() const;
 
 private:
 

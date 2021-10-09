@@ -42,10 +42,9 @@ void OnNewFrame(float deltaTimeInSec)
 
 void Shutdown()
 {
-    for (auto & entityRef : state->EntitiesRefsList)
+    for (auto const & entityRef : state->EntitiesRefsList)
     {
         entityRef.Ptr->Shutdown();
-        entityRef.Ptr.reset();
     }
     delete state;
 }
@@ -89,12 +88,18 @@ void InitEntity(Entity * entity)
 
 //-------------------------------------------------------------------------------------------------
 
-bool DestroyEntity(Entity * entity)
+bool DestroyEntity(Entity * entity, bool const shouldNotifyParent)
 {
-    entity->Shutdown();
+    MFA_ASSERT(entity != nullptr);
+    entity->Shutdown(shouldNotifyParent);
     if (entity->NeedUpdateEvent())
     {
         state->UpdateSignal.UnRegister(entity->mUpdateListenerId);
+    }
+    for (auto * childEntity : entity->GetChildEntities())
+    {
+        MFA_ASSERT(childEntity != nullptr);
+        DestroyEntity(childEntity, false);
     }
 
     for (int i = static_cast<int>(state->EntitiesRefsList.size()) - 1; i >= 0; --i)

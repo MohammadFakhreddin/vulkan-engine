@@ -27,11 +27,10 @@ void BoundingVolumeRendererComponent::Init()
 
     mBoundingVolumeComponent = GetEntity()->GetComponent<BoundingVolumeComponent>();
 
-
-    mEntity = EntitySystem::CreateEntity("Child", GetEntity());
-    mChildTransformComponent = mEntity->AddComponent<TransformComponent>();
+    auto * entity = EntitySystem::CreateEntity("Child", GetEntity());
+    mChildTransformComponent = entity->AddComponent<TransformComponent>();
     MFA_ASSERT(mChildTransformComponent != nullptr);
-    EntitySystem::InitEntity(mEntity);
+    EntitySystem::InitEntity(entity);
 
     mVariant->Init(this, mChildTransformComponent);
 }

@@ -42,9 +42,7 @@ namespace MFA
         DrawableVariant * mVariant = nullptr;
 
         BoundingVolumeComponent * mBoundingVolumeComponent = nullptr;
-
-        Entity * mEntity = nullptr;
-
+        
         TransformComponent * mChildTransformComponent = nullptr;
 
     };

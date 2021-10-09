@@ -47,7 +47,7 @@ void Entity::Update(float deltaTimeInSec) const
 
 //-------------------------------------------------------------------------------------------------
 
-void Entity::Shutdown()
+void Entity::Shutdown(bool shouldNotifyParent)
 {
     if (mIsInitialized == false)
     {
@@ -57,17 +57,17 @@ void Entity::Shutdown()
 
     mShutdownSignal.Emit();
 
-    if (mParent != nullptr)
+    if (shouldNotifyParent && mParent != nullptr)
     {
         mParent->notifyAChildRemoved(this);
     }
-    for (auto * childEntity : mChildEntities)
-    {
-        if (childEntity != nullptr)
-        {
-            childEntity->Shutdown();
-        }
-    }
+    //for (auto * childEntity : mChildEntities)
+    //{
+    //    if (childEntity != nullptr)
+    //    {
+    //        childEntity->Shutdown();
+    //    }
+    //}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -111,6 +111,13 @@ void Entity::SetActive(bool const active)
 {
     mIsActive = active;
     // TODO We can register/unregister from entity system update event
+}
+
+//-------------------------------------------------------------------------------------------------
+
+std::vector<Entity *> const & Entity::GetChildEntities() const
+{
+    return mChildEntities;
 }
 
 //-------------------------------------------------------------------------------------------------

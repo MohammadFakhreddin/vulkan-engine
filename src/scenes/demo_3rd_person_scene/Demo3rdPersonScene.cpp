@@ -109,7 +109,7 @@ void Demo3rdPersonScene::Init()
             colorComponent->SetColor(glm::vec3 {1.0f, 0.0f, 0.0f});
 
             auto * debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
-            debugRenderComponent->SetActive(false);
+            debugRenderComponent->SetActive(true);
 
             mThirdPersonCamera = entity->AddComponent<ThirdPersonCameraComponent>(
                 FOV,
@@ -154,7 +154,7 @@ void Demo3rdPersonScene::Init()
                     colorComponent->SetColor(glm::vec3 {0.0f, 0.0f, 1.0f});
 
                     auto * debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
-                    debugRenderComponent->SetActive(false);
+                    debugRenderComponent->SetActive(true);
 
                     EntitySystem::InitEntity(entity);
 
@@ -185,7 +185,7 @@ void Demo3rdPersonScene::Init()
         entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 5.0f, 0.0f), glm::vec3(15.0f, 6.0f, 9.0f));
 
         auto * debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
-        debugRenderComponent->SetActive(false);
+        debugRenderComponent->SetActive(true);
 
         entity->AddComponent<ColorComponent>(glm::vec3(0.0f, 0.0f, 1.0f));
 

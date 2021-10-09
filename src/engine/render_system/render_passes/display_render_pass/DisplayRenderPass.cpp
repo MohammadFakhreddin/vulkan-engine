@@ -96,6 +96,11 @@ namespace MFA
             mDisplayFrameBuffers.data()
         );
 
+        RF::DestroyFrameBuffers(
+            static_cast<uint32_t>(mDepthFrameBuffers.size()),
+            mDepthFrameBuffers.data()
+        );
+
         RF::DestroyRenderPass(mVkDisplayRenderPass);
 
         RF::DestroyRenderPass(mDepthRenderPass);
@@ -382,8 +387,8 @@ namespace MFA
 
         // Depth frame-buffer
         RF::DestroyFrameBuffers(
-            static_cast<uint32_t>(mDepthFrameBuffer.size()),
-            mDepthFrameBuffer.data()
+            static_cast<uint32_t>(mDepthFrameBuffers.size()),
+            mDepthFrameBuffers.data()
         );
         createDepthFrameBuffers(swapChainExtent2D);
     }
@@ -427,7 +432,7 @@ namespace MFA
 
     VkFramebuffer DisplayRenderPass::getDepthFrameBuffer(RT::DrawPass const & drawPass)
     {
-        return mDepthFrameBuffer[drawPass.imageIndex];
+        return mDepthFrameBuffers[drawPass.imageIndex];
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -457,14 +462,14 @@ namespace MFA
 
     void DisplayRenderPass::createDepthFrameBuffers(VkExtent2D const & extent)
     {
-        mDepthFrameBuffer.clear();
-        mDepthFrameBuffer.resize(mSwapChainImagesCount);
-        for (int i = 0; i < static_cast<int>(mDepthFrameBuffer.size()); ++i)
+        mDepthFrameBuffers.clear();
+        mDepthFrameBuffers.resize(mSwapChainImagesCount);
+        for (int i = 0; i < static_cast<int>(mDepthFrameBuffers.size()); ++i)
         {
             std::vector<VkImageView> const attachments = {
                mDepthImageGroupList[i].imageView
             };
-            mDepthFrameBuffer[i] = RF::CreateFrameBuffer(
+            mDepthFrameBuffers[i] = RF::CreateFrameBuffer(
                 mDepthRenderPass,
                 attachments.data(),
                 static_cast<uint32_t>(attachments.size()),

@@ -85,7 +85,7 @@ private:
     std::vector<VkCommandBuffer> mGraphicCommandBuffers {};
 
     VkRenderPass mDepthRenderPass {};
-    std::vector<VkFramebuffer> mDepthFrameBuffer {};
+    std::vector<VkFramebuffer> mDepthFrameBuffers {};
 
     RT::DrawPass mDrawPass {};
 };
