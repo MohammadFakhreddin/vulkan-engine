@@ -102,7 +102,7 @@ void OnNewFrame(float const deltaTimeInSec) {
     EntitySystem::OnNewFrame(deltaTimeInSec);
     
     // Start of graphic record
-    auto drawPass = state->DisplayRenderPass->StartGraphicCommandBufferRecording();
+    auto drawPass = RF::StartGraphicCommandBufferRecording();
     if (drawPass.isValid == false) {
         return;
     }
@@ -128,7 +128,7 @@ void OnNewFrame(float const deltaTimeInSec) {
 
     state->DisplayRenderPass->EndRenderPass(drawPass);
 
-    state->DisplayRenderPass->EndGraphicCommandBufferRecording(drawPass);
+    RF::EndGraphicCommandBufferRecording(drawPass);
     // End of graphic record
 
     // Post render 

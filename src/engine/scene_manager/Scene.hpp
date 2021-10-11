@@ -21,9 +21,9 @@ public:
     Scene (Scene && rhs) noexcept = delete;
     Scene & operator = (Scene const &) noexcept = delete;
 
-    virtual void OnPreRender(float deltaTimeInSec, RT::DrawPass & drawPass) {}
-    virtual void OnRender(float deltaTimeInSec, RT::DrawPass & drawPass) = 0;
-    virtual void OnPostRender(float deltaTimeInSec, RT::DrawPass & drawPass) {}
+    virtual void OnPreRender(float deltaTimeInSec, RT::CommandRecordState & drawPass) {}
+    virtual void OnRender(float deltaTimeInSec, RT::CommandRecordState & drawPass) = 0;
+    virtual void OnPostRender(float deltaTimeInSec, RT::CommandRecordState & drawPass) {}
 
     virtual void OnResize() = 0;
     virtual void Init();   

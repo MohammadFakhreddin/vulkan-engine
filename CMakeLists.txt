@@ -55,13 +55,15 @@ endif()
 
 include_directories(libs/include/glm)
 
-# TODO: Linux On MacOS 10.14 with clang++ compiler, I get executable with SIMD right away.
-# On Ubuntu 16.04 with g++ compiler, I will have to use the compiler flag -mavx2 to generate a SIMD executable. There are other compiler options for other SIMD instructions here. Without the compiler flag, I still get a serial executable.
+# Note: Linux On MacOS 10.14 with clang++ compiler, I get executable with SIMD right away.
+# On Ubuntu 16.04 with g++ compiler, I will have to use the compiler flag -mavx2 to generate a SIMD executable. 
+# There are other compiler options for other SIMD instructions here. Without the compiler flag, I still get a serial executable.
 add_definitions(-DGLM_FORCE_DEFAULT_ALIGNED_GENTYPES)
 add_definitions(-DGLM_FORCE_INTRINSICS)
 if (LINUX)
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
 endif ()
+
 #-----------------------------------------------------------------------
 # Engine
 #-----------------------------------------------------------------------
@@ -147,7 +149,9 @@ list(
     "src/engine/render_system/render_passes/display_render_pass/DisplayRenderPass.cpp"
     "src/engine/render_system/render_passes/shadow_render_pass_v2/ShadowRenderPassV2.hpp"
     "src/engine/render_system/render_passes/shadow_render_pass_v2/ShadowRenderPassV2.cpp"
-    
+    "src/engine/render_system/render_passes/depth_pre_pass/DepthPrePass.hpp"
+    "src/engine/render_system/render_passes/depth_pre_pass/DepthPrePass.cpp"
+
     # Pipeline
     "src/engine/render_system/pipelines/BasePipeline.hpp"
     "src/engine/render_system/pipelines/BasePipeline.cpp"

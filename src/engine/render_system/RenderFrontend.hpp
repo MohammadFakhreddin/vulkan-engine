@@ -10,362 +10,399 @@
 
 #include <functional>
 
-namespace MFA {
+namespace MFA
+{
     class RenderPass;
     class DisplayRenderPass;
 };
 
-namespace MFA::RenderFrontend {
+namespace MFA::RenderFrontend
+{
 
-using ScreenWidth = Platforms::ScreenSize;
-using ScreenHeight = Platforms::ScreenSize;
+    using ScreenWidth = Platforms::ScreenSize;
+    using ScreenHeight = Platforms::ScreenSize;
 
-struct InitParams {
+    struct InitParams
+    {
 #ifdef __DESKTOP__
-    ScreenWidth screenWidth = 0;
-    ScreenHeight screenHeight = 0;
-    bool resizable = true;
+        ScreenWidth screenWidth = 0;
+        ScreenHeight screenHeight = 0;
+        bool resizable = true;
 #elif defined(__ANDROID__)
-    android_app * app = nullptr;
+        android_app * app = nullptr;
 #elif defined(__IOS__)
-    void * view = nullptr;
+        void * view = nullptr;
 #else
-    #error Os is not supported
+#error Os is not supported
 #endif
-    char const * applicationName = nullptr;
-};
+        char const * applicationName = nullptr;
+    };
 
-bool Init(InitParams const & params);
+    bool Init(InitParams const & params);
 
-bool Shutdown();
+    bool Shutdown();
 
-int AddResizeEventListener(RT::ResizeEventListener const & eventListener);
-bool RemoveResizeEventListener(RT::ResizeEventListenerId listenerId);
+    int AddResizeEventListener(RT::ResizeEventListener const & eventListener);
+    bool RemoveResizeEventListener(RT::ResizeEventListenerId listenerId);
 
-[[nodiscard]]
-VkDescriptorSetLayout CreateDescriptorSetLayout(
-    uint8_t bindingsCount,
-    VkDescriptorSetLayoutBinding * bindings
-);
+    [[nodiscard]]
+    VkDescriptorSetLayout CreateDescriptorSetLayout(
+        uint8_t bindingsCount,
+        VkDescriptorSetLayoutBinding * bindings
+    );
 
-void DestroyDescriptorSetLayout(VkDescriptorSetLayout descriptorSetLayout);
+    void DestroyDescriptorSetLayout(VkDescriptorSetLayout descriptorSetLayout);
 
-[[nodiscard]]
-RT::PipelineGroup CreatePipeline(
-    VkRenderPass vkRenderPass,
-    uint8_t gpuShadersCount, 
-    RT::GpuShader const ** gpuShaders,
-    uint32_t descriptorLayoutsCount,
-    VkDescriptorSetLayout * descriptorSetLayouts,
-    VkVertexInputBindingDescription const & vertexBindingDescription,
-    uint32_t inputAttributeDescriptionCount,
-    VkVertexInputAttributeDescription * inputAttributeDescriptionData,
-    RT::CreateGraphicPipelineOptions const & options
-);
+    [[nodiscard]]
+    RT::PipelineGroup CreatePipeline(
+        VkRenderPass vkRenderPass,
+        uint8_t gpuShadersCount,
+        RT::GpuShader const ** gpuShaders,
+        uint32_t descriptorLayoutsCount,
+        VkDescriptorSetLayout * descriptorSetLayouts,
+        VkVertexInputBindingDescription const & vertexBindingDescription,
+        uint32_t inputAttributeDescriptionCount,
+        VkVertexInputAttributeDescription * inputAttributeDescriptionData,
+        RT::CreateGraphicPipelineOptions const & options
+    );
 
-void DestroyPipelineGroup(RT::PipelineGroup & drawPipeline);
+    void DestroyPipelineGroup(RT::PipelineGroup & drawPipeline);
 
-[[nodiscard]]
-RT::DescriptorSetGroup CreateDescriptorSets(VkDescriptorSetLayout descriptorSetLayout);
+    [[nodiscard]]
+    RT::DescriptorSetGroup CreateDescriptorSets(VkDescriptorSetLayout descriptorSetLayout);
 
-[[nodiscard]]
-RT::DescriptorSetGroup CreateDescriptorSets(
-    uint32_t descriptorSetCount,
-    VkDescriptorSetLayout descriptorSetLayout
-);
+    [[nodiscard]]
+    RT::DescriptorSetGroup CreateDescriptorSets(
+        uint32_t descriptorSetCount,
+        VkDescriptorSetLayout descriptorSetLayout
+    );
 
-[[nodiscard]]
-RT::BufferGroup CreateVertexBuffer(CBlob verticesBlob);
+    [[nodiscard]]
+    RT::BufferGroup CreateVertexBuffer(CBlob verticesBlob);
 
-[[nodiscard]]
-RT::BufferGroup CreateIndexBuffer(CBlob indicesBlob);
+    [[nodiscard]]
+    RT::BufferGroup CreateIndexBuffer(CBlob indicesBlob);
 
-[[nodiscard]]
-RT::MeshBuffers CreateMeshBuffers(AssetSystem::Mesh const & mesh);
+    [[nodiscard]]
+    RT::MeshBuffers CreateMeshBuffers(AssetSystem::Mesh const & mesh);
 
-void DestroyMeshBuffers(RT::MeshBuffers & meshBuffers);
+    void DestroyMeshBuffers(RT::MeshBuffers & meshBuffers);
 
-[[nodiscard]]
-RT::GpuTexture CreateTexture(AS::Texture & texture);
+    [[nodiscard]]
+    RT::GpuTexture CreateTexture(AS::Texture & texture);
 
-void DestroyTexture(RT::GpuTexture & gpuTexture);
+    void DestroyTexture(RT::GpuTexture & gpuTexture);
 
-// TODO We should ask for options here
-[[nodiscard]]
-RT::SamplerGroup CreateSampler(RT::CreateSamplerParams const & samplerParams);
+    // TODO We should ask for options here
+    [[nodiscard]]
+    RT::SamplerGroup CreateSampler(RT::CreateSamplerParams const & samplerParams);
 
-void DestroySampler(RT::SamplerGroup & samplerGroup);
+    void DestroySampler(RT::SamplerGroup & samplerGroup);
 
-[[nodiscard]]
-RT::GpuModel CreateGpuModel(AS::Model & modelAsset);
+    [[nodiscard]]
+    RT::GpuModel CreateGpuModel(AS::Model & modelAsset);
 
-void DestroyGpuModel(RT::GpuModel & gpuModel);
+    void DestroyGpuModel(RT::GpuModel & gpuModel);
 
-void DeviceWaitIdle();
+    void DeviceWaitIdle();
 
-[[nodiscard]]
-RT::GpuShader CreateShader(AS::Shader const & shader);
+    [[nodiscard]]
+    RT::GpuShader CreateShader(AS::Shader const & shader);
 
-void DestroyShader(RT::GpuShader & gpuShader);
+    void DestroyShader(RT::GpuShader & gpuShader);
 
-RT::UniformBufferGroup CreateUniformBuffer(size_t bufferSize, uint32_t count);
+    RT::UniformBufferGroup CreateUniformBuffer(size_t bufferSize, uint32_t count);
 
-void UpdateUniformBuffer(
-    RT::BufferGroup const & uniformBuffer, 
-    CBlob data
-);
+    void UpdateUniformBuffer(
+        RT::BufferGroup const & uniformBuffer,
+        CBlob data
+    );
 
-void DestroyUniformBuffer(RT::UniformBufferGroup & uniformBuffer);
+    void DestroyUniformBuffer(RT::UniformBufferGroup & uniformBuffer);
 
-void BindDrawPipeline(
-    RT::DrawPass & drawPass,
-    RT::PipelineGroup & pipeline   
-);
+    void BindDrawPipeline(
+        RT::CommandRecordState & drawPass,
+        RT::PipelineGroup & pipeline
+    );
 
-void UpdateDescriptorSets(
-    uint32_t writeInfoCount,
-    VkWriteDescriptorSet * writeInfo
-);
+    void UpdateDescriptorSets(
+        uint32_t writeInfoCount,
+        VkWriteDescriptorSet * writeInfo
+    );
 
-void UpdateDescriptorSets(
-    uint8_t descriptorSetsCount,
-    VkDescriptorSet * descriptorSets,
-    uint8_t writeInfoCount,
-    VkWriteDescriptorSet * writeInfo
-);
+    void UpdateDescriptorSets(
+        uint8_t descriptorSetsCount,
+        VkDescriptorSet * descriptorSets,
+        uint8_t writeInfoCount,
+        VkWriteDescriptorSet * writeInfo
+    );
 
-void BindDescriptorSet(
-    RT::DrawPass const & drawPass,
-    VkDescriptorSet descriptorSet
-);
+    void BindDescriptorSet(
+        RT::CommandRecordState const & drawPass,
+        VkDescriptorSet descriptorSet
+    );
 
-//: loop through each mesh instance in the mesh instances list to render
-//
-//  - get the mesh from the asset manager
-//  - populate the push constants with the transformation matrix of the mesh
-//  - bind the pipeline to the command buffer
-//  - bind the vertex buffer for the mesh to the command buffer
-//  - bind the index buffer for the mesh to the command buffer
-//  - get the texture instance to apply to the mesh from the asset manager
-//  - get the descriptor set for the texture that defines how it maps to the pipeline's descriptor set layout
-//  - bind the descriptor set for the texture into the pipeline's descriptor set layout
-//  - tell the command buffer to draw the mesh
-//
-//: end loop
+    //: loop through each mesh instance in the mesh instances list to render
+    //
+    //  - get the mesh from the asset manager
+    //  - populate the push constants with the transformation matrix of the mesh
+    //  - bind the pipeline to the command buffer
+    //  - bind the vertex buffer for the mesh to the command buffer
+    //  - bind the index buffer for the mesh to the command buffer
+    //  - get the texture instance to apply to the mesh from the asset manager
+    //  - get the descriptor set for the texture that defines how it maps to the pipeline's descriptor set layout
+    //  - bind the descriptor set for the texture into the pipeline's descriptor set layout
+    //  - tell the command buffer to draw the mesh
+    //
+    //: end loop
 
-void BindVertexBuffer(
-    RT::DrawPass const & drawPass, 
-    RT::BufferGroup const & vertexBuffer,
-    VkDeviceSize offset = 0
-);
+    void BindVertexBuffer(
+        RT::CommandRecordState const & drawPass,
+        RT::BufferGroup const & vertexBuffer,
+        VkDeviceSize offset = 0
+    );
 
-void BindIndexBuffer(
-    RT::DrawPass const & drawPass, 
-    RT::BufferGroup const & indexBuffer,
-    VkDeviceSize offset = 0,
-    VkIndexType indexType = VK_INDEX_TYPE_UINT32
-);
+    void BindIndexBuffer(
+        RT::CommandRecordState const & drawPass,
+        RT::BufferGroup const & indexBuffer,
+        VkDeviceSize offset = 0,
+        VkIndexType indexType = VK_INDEX_TYPE_UINT32
+    );
 
-void DrawIndexed(
-    RT::DrawPass const & drawPass, 
-    uint32_t indicesCount,
-    uint32_t instanceCount = 1,
-    uint32_t firstIndex = 0,
-    uint32_t vertexOffset = 0,
-    uint32_t firstInstance = 0
-);
+    void DrawIndexed(
+        RT::CommandRecordState const & drawPass,
+        uint32_t indicesCount,
+        uint32_t instanceCount = 1,
+        uint32_t firstIndex = 0,
+        uint32_t vertexOffset = 0,
+        uint32_t firstInstance = 0
+    );
 
-void BeginRenderPass(
-    VkCommandBuffer commandBuffer, 
-    VkRenderPass renderPass, 
-    VkFramebuffer frameBuffer,
-    VkExtent2D const & extent2D,
-    uint32_t clearValuesCount,
-    VkClearValue const * clearValues
-);
+    void BeginRenderPass(
+        VkCommandBuffer commandBuffer,
+        VkRenderPass renderPass,
+        VkFramebuffer frameBuffer,
+        VkExtent2D const & extent2D,
+        uint32_t clearValuesCount,
+        VkClearValue const * clearValues
+    );
 
-void EndRenderPass(VkCommandBuffer commandBuffer);
+    void EndRenderPass(VkCommandBuffer commandBuffer);
 
-void OnNewFrame(float deltaTimeInSec);
+    void OnNewFrame(float deltaTimeInSec);
 
-void SetScissor(RT::DrawPass const & drawPass, VkRect2D const & scissor);
+    void SetScissor(RT::CommandRecordState const & drawPass, VkRect2D const & scissor);
 
-void SetViewport(RT::DrawPass const & drawPass, VkViewport const & viewport);
+    void SetViewport(RT::CommandRecordState const & drawPass, VkViewport const & viewport);
 
-void PushConstants(
-    RT::DrawPass const & drawPass, 
-    AS::ShaderStage shaderStage, 
-    uint32_t offset, 
-    CBlob data
-);
+    void PushConstants(
+        RT::CommandRecordState const & drawPass,
+        AS::ShaderStage shaderStage,
+        uint32_t offset,
+        CBlob data
+    );
 
-void PushConstants(
-    RT::DrawPass const & drawPass,
-    VkShaderStageFlags shaderStage, 
-    uint32_t offset, 
-    CBlob data
-);
+    void PushConstants(
+        RT::CommandRecordState const & drawPass,
+        VkShaderStageFlags shaderStage,
+        uint32_t offset,
+        CBlob data
+    );
 
-[[nodiscard]]
-uint32_t GetSwapChainImagesCount();
+    [[nodiscard]]
+    uint32_t GetSwapChainImagesCount();
 
-uint32_t GetMaxFramesPerFlight();
+    uint32_t GetMaxFramesPerFlight();
 
-void GetDrawableSize(int32_t & outWidth, int32_t & outHeight);
+    void GetDrawableSize(int32_t & outWidth, int32_t & outHeight);
 
 #ifdef __DESKTOP__
-// SDL Functions
+    // SDL Functions
 
-void WarpMouseInWindow(int32_t x, int32_t y);
+    void WarpMouseInWindow(int32_t x, int32_t y);
 
-uint32_t GetMouseState(int32_t * x, int32_t * y);
+    uint32_t GetMouseState(int32_t * x, int32_t * y);
 
-uint8_t const * GetKeyboardState(int * numKeys = nullptr);
+    uint8_t const * GetKeyboardState(int * numKeys = nullptr);
 
-[[nodiscard]]
-uint32_t GetWindowFlags();
+    [[nodiscard]]
+    uint32_t GetWindowFlags();
 
 #endif
 
-void AssignViewportAndScissorToCommandBuffer(VkCommandBuffer commandBuffer, VkExtent2D const & extent2D);
+    void AssignViewportAndScissorToCommandBuffer(VkCommandBuffer commandBuffer, VkExtent2D const & extent2D);
 
 #ifdef __DESKTOP__
-using SDLEventWatchId = int;
-using SDLEventWatch = std::function<int(void * data, MSDL::SDL_Event * event)>;
-SDLEventWatchId AddEventWatch(SDLEventWatch const & eventWatch);
+    using SDLEventWatchId = int;
+    using SDLEventWatch = std::function<int(void * data, MSDL::SDL_Event * event)>;
+    SDLEventWatchId AddEventWatch(SDLEventWatch const & eventWatch);
 
-void RemoveEventWatch(SDLEventWatchId watchId);
+    void RemoveEventWatch(SDLEventWatchId watchId);
 #endif
 
-void NotifyDeviceResized();
+    void NotifyDeviceResized();
 
-[[nodiscard]]
-VkSurfaceCapabilitiesKHR GetSurfaceCapabilities();
-
-
-[[nodiscard]]
-RT::SwapChainGroup CreateSwapChain(VkSwapchainKHR oldSwapChain = VkSwapchainKHR {});
-
-void DestroySwapChain(RT::SwapChainGroup const & swapChainGroup);
+    [[nodiscard]]
+    VkSurfaceCapabilitiesKHR GetSurfaceCapabilities();
 
 
-[[nodiscard]]
-RT::ColorImageGroup CreateColorImage(
-    VkExtent2D const & imageExtent,
-    VkFormat imageFormat,
-    RT::CreateColorImageOptions const & options
-);
+    [[nodiscard]]
+    RT::SwapChainGroup CreateSwapChain(VkSwapchainKHR oldSwapChain = VkSwapchainKHR{});
 
-void DestroyColorImage(RT::ColorImageGroup const & colorImageGroup);
+    void DestroySwapChain(RT::SwapChainGroup const & swapChainGroup);
 
 
-[[nodiscard]]
-VkRenderPass CreateRenderPass(
-    VkAttachmentDescription * attachments,
-    uint32_t attachmentsCount,
-    VkSubpassDescription * subPasses,
-    uint32_t subPassesCount,
-    VkSubpassDependency * dependencies,
-    uint32_t dependenciesCount
-);
+    [[nodiscard]]
+    RT::ColorImageGroup CreateColorImage(
+        VkExtent2D const & imageExtent,
+        VkFormat imageFormat,
+        RT::CreateColorImageOptions const & options
+    );
 
-void DestroyRenderPass(VkRenderPass renderPass);
+    void DestroyColorImage(RT::ColorImageGroup const & colorImageGroup);
 
-RT::DepthImageGroup CreateDepthImage(
-    VkExtent2D const & imageSize,
-    RT::CreateDepthImageOptions const & options
-);
 
-void DestroyDepthImage(RT::DepthImageGroup const & depthImage);
+    [[nodiscard]]
+    VkRenderPass CreateRenderPass(
+        VkAttachmentDescription * attachments,
+        uint32_t attachmentsCount,
+        VkSubpassDescription * subPasses,
+        uint32_t subPassesCount,
+        VkSubpassDependency * dependencies,
+        uint32_t dependenciesCount
+    );
 
-// TODO We can gather all renderTypes in one file
+    void DestroyRenderPass(VkRenderPass renderPass);
 
-[[nodiscard]]
-VkFramebuffer CreateFrameBuffer(
-    VkRenderPass renderPass,
-    VkImageView const * attachments,
-    uint32_t attachmentsCount,
-    VkExtent2D frameBufferExtent,
-    uint32_t layersCount
-);
+    RT::DepthImageGroup CreateDepthImage(
+        VkExtent2D const & imageSize,
+        RT::CreateDepthImageOptions const & options
+    );
 
-void DestroyFrameBuffers(
-    uint32_t frameBuffersCount,
-    VkFramebuffer * frameBuffers
-);
+    void DestroyDepthImage(RT::DepthImageGroup const & depthImage);
 
-bool IsWindowVisible();
+    // TODO We can gather all renderTypes in one file
 
-bool IsWindowResized();
+    [[nodiscard]]
+    VkFramebuffer CreateFrameBuffer(
+        VkRenderPass renderPass,
+        VkImageView const * attachments,
+        uint32_t attachmentsCount,
+        VkExtent2D frameBufferExtent,
+        uint32_t layersCount
+    );
 
-void WaitForFence(VkFence fence);
+    void DestroyFrameBuffers(
+        uint32_t frameBuffersCount,
+        VkFramebuffer * frameBuffers
+    );
 
-void AcquireNextImage(
-    VkSemaphore imageAvailabilitySemaphore,
-    RT::SwapChainGroup const & swapChainGroup,
-    uint32_t & outImageIndex
-);
+#ifdef __DESKTOP__
+    bool IsWindowVisible();
+#endif
 
-std::vector<VkCommandBuffer> CreateGraphicCommandBuffers(uint32_t maxFramesPerFlight);
+    bool IsWindowResized();
 
-void BeginCommandBuffer(
-    VkCommandBuffer commandBuffer,
-    VkCommandBufferBeginInfo const & beginInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT
-    }
-);
+    void WaitForFence(VkFence fence);
 
-void EndCommandBuffer(VkCommandBuffer commandBuffer);
+    void AcquireNextImage(
+        VkSemaphore imageAvailabilitySemaphore,
+        RT::SwapChainGroup const & swapChainGroup,
+        uint32_t & outImageIndex
+    );
 
-void DestroyGraphicCommandBuffer(
-    VkCommandBuffer * commandBuffers, 
-    uint32_t commandBuffersCount
-);
+    std::vector<VkCommandBuffer> CreateGraphicCommandBuffers(uint32_t maxFramesPerFlight);
 
-uint32_t GetPresentQueueFamily();
+    void BeginCommandBuffer(
+        VkCommandBuffer commandBuffer,
+        VkCommandBufferBeginInfo const & beginInfo = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT
+        }
+    );
 
-uint32_t GetGraphicQueueFamily();
+    void EndCommandBuffer(VkCommandBuffer commandBuffer);
 
-void PipelineBarrier(
-    VkCommandBuffer commandBuffer,
-    VkPipelineStageFlags sourceStageMask,
-    VkPipelineStageFlags destinationStateMask,
-    VkImageMemoryBarrier const & memoryBarrier
-);
+    void DestroyGraphicCommandBuffer(
+        VkCommandBuffer * commandBuffers,
+        uint32_t commandBuffersCount
+    );
 
-void SubmitQueue(
-    VkCommandBuffer commandBuffer, 
-    VkSemaphore imageAvailabilitySemaphore,  
-    VkSemaphore renderFinishIndicatorSemaphore,
-    VkFence inFlightFence
-);
+    uint32_t GetPresentQueueFamily();
 
-void PresentQueue(
-    uint32_t imageIndex, 
-    VkSemaphore renderFinishIndicatorSemaphore,
-    VkSwapchainKHR swapChain
-);
+    uint32_t GetGraphicQueueFamily();
 
-DisplayRenderPass * GetDisplayRenderPass();
+    void PipelineBarrier(
+        VkCommandBuffer commandBuffer,
+        VkPipelineStageFlags sourceStageMask,
+        VkPipelineStageFlags destinationStateMask,
+        VkImageMemoryBarrier const & memoryBarrier
+    );
 
-RT::SyncObjects createSyncObjects(    
-    uint32_t maxFramesInFlight,
-    uint32_t swapChainImagesCount
-);
+    void SubmitQueue(
+        VkCommandBuffer commandBuffer,
+        VkSemaphore imageAvailabilitySemaphore,
+        VkSemaphore renderFinishIndicatorSemaphore,
+        VkFence inFlightFence
+    );
 
-void DestroySyncObjects(RT::SyncObjects const & syncObjects);
+    void PresentQueue(
+        uint32_t imageIndex,
+        VkSemaphore renderFinishIndicatorSemaphore,
+        VkSwapchainKHR swapChain
+    );
 
-VkSampleCountFlagBits GetMaxSamplesCount();
+    DisplayRenderPass * GetDisplayRenderPass();
 
-// Not recommended
-void WaitForGraphicQueue();
+    RT::SyncObjects createSyncObjects(
+        uint32_t maxFramesInFlight,
+        uint32_t swapChainImagesCount
+    );
 
-// Not recommended
-void WaitForPresentQueue();
+    void DestroySyncObjects(RT::SyncObjects const & syncObjects);
+
+    VkSampleCountFlagBits GetMaxSamplesCount();
+
+    // Not recommended
+    void WaitForGraphicQueue();
+
+    // Not recommended
+    void WaitForPresentQueue();
+
+    [[nodiscard]]
+    VkQueryPool CreateQueryPool(VkQueryPoolCreateInfo const & createInfo);
+
+    void DestroyQueryPool(VkQueryPool queryPool);
+
+    void BeginQuery(RT::CommandRecordState const & drawPass, VkQueryPool queryPool, uint32_t queryId);
+
+    void EndQuery(RT::CommandRecordState const & drawPass, VkQueryPool queryPool, uint32_t queryId);
+
+    void GetQueryPoolResult(
+        VkQueryPool queryPool,
+        uint32_t samplesCount,
+        uint64_t * outSamplesData,
+        uint32_t samplesOffset = 0
+    );
+
+    VkCommandBuffer GetGraphicCommandBuffer(RT::CommandRecordState const & drawPass);
+
+    [[nodiscard]]
+    RT::CommandRecordState StartGraphicCommandBufferRecording();
+
+    void EndGraphicCommandBufferRecording(RT::CommandRecordState & drawPass);
+
+    VkFence GetInFlightFence(RT::CommandRecordState const & drawPass);
+
+    [[nodiscard]]
+    VkSemaphore GetRenderFinishIndicatorSemaphore(RT::CommandRecordState const & drawPass);
+
+    [[nodiscard]]
+    VkSemaphore getImageAvailabilitySemaphore(RT::CommandRecordState const & drawPass);
 
 }
 
-namespace MFA {
+namespace MFA
+{
     namespace RF = RenderFrontend;
 };

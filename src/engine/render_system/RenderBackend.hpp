@@ -603,6 +603,23 @@ void CopyImage(
 
 void WaitForQueue(VkQueue queue);
 
+VkQueryPool CreateQueryPool(VkDevice device, VkQueryPoolCreateInfo const & createInfo);
+
+void DestroyQueryPool(VkDevice device, VkQueryPool queryPool);
+
+void BeginQuery(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t queryId);
+
+void EndQuery(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t queryId);
+
+void GetQueryPoolResult(
+    VkDevice device,
+    VkQueryPool queryPool,
+    uint32_t samplesCount,
+    uint64_t * outSamplesData,
+    uint32_t samplesOffset = 0
+);
+
+
 }
 
 namespace MFA {

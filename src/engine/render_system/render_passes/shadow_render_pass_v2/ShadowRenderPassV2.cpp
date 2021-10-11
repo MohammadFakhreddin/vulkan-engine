@@ -18,7 +18,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::DepthImageGroup const & ShadowRenderPassV2::GetDepthCubeMap(RT::DrawPass const & drawPass) const
+    RT::DepthImageGroup const & ShadowRenderPassV2::GetDepthCubeMap(RT::CommandRecordState const & drawPass) const
     {
         return GetDepthCubeMap(drawPass.frameIndex);
     }
@@ -126,7 +126,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ShadowRenderPassV2::PrepareCubeMapForTransferDestination(RT::DrawPass const & drawPass)
+    void ShadowRenderPassV2::PrepareCubeMapForTransferDestination(RT::CommandRecordState const & drawPass)
     {
         VkImageSubresourceRange const subResourceRange{
             .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
@@ -149,7 +149,7 @@ namespace MFA
         };
 
         RF::PipelineBarrier(
-            RF::GetDisplayRenderPass()->GetCommandBuffer(drawPass),
+            RF::GetGraphicCommandBuffer(drawPass),
             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
             pipelineBarrier
@@ -158,7 +158,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ShadowRenderPassV2::PrepareCubeMapForSampling(RT::DrawPass const & drawPass)
+    void ShadowRenderPassV2::PrepareCubeMapForSampling(RT::CommandRecordState const & drawPass)
     {
         VkImageSubresourceRange const subResourceRange{
             .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
@@ -181,7 +181,7 @@ namespace MFA
         };
 
         RF::PipelineBarrier(
-            RF::GetDisplayRenderPass()->GetCommandBuffer(drawPass),
+            RF::GetGraphicCommandBuffer(drawPass),
             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
             pipelineBarrier
@@ -190,7 +190,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ShadowRenderPassV2::internalBeginRenderPass(RT::DrawPass & drawPass)
+    void ShadowRenderPassV2::internalBeginRenderPass(RT::CommandRecordState & drawPass)
     {
 
         {// Making depth image ready for depth attachment
@@ -215,7 +215,7 @@ namespace MFA
             };
 
             RF::PipelineBarrier(
-                RF::GetDisplayRenderPass()->GetCommandBuffer(drawPass),
+                RF::GetGraphicCommandBuffer(drawPass),
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                 pipelineBarrier
@@ -228,7 +228,7 @@ namespace MFA
             .height = mImageHeight
         };
 
-        auto * commandBuffer = mDisplayRenderPass->GetCommandBuffer(drawPass);
+        auto * commandBuffer = RF::GetGraphicCommandBuffer(drawPass);
         MFA_ASSERT(commandBuffer != nullptr);
 
         RF::AssignViewportAndScissorToCommandBuffer(commandBuffer, shadowExtend);
@@ -249,10 +249,10 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ShadowRenderPassV2::internalEndRenderPass(RT::DrawPass & drawPass)
+    void ShadowRenderPassV2::internalEndRenderPass(RT::CommandRecordState & drawPass)
     {
         MFA_ASSERT(mFaceIndex >= 0 && mFaceIndex < 6);
-        RF::EndRenderPass(mDisplayRenderPass->GetCommandBuffer(drawPass));
+        RF::EndRenderPass(RF::GetGraphicCommandBuffer(drawPass));
 
         {// Depth image barrier
             VkImageSubresourceRange const subResourceRange{
@@ -276,7 +276,7 @@ namespace MFA
             };
 
             RF::PipelineBarrier(
-                RF::GetDisplayRenderPass()->GetCommandBuffer(drawPass),
+                RF::GetGraphicCommandBuffer(drawPass),
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                 pipelineBarrier
@@ -311,7 +311,7 @@ namespace MFA
                 }
             };
             RB::CopyImage(
-                mDisplayRenderPass->GetCommandBuffer(drawPass),
+                RF::GetGraphicCommandBuffer(drawPass),
                 getDepthImage(drawPass).imageGroup.image,
                 GetDepthCubeMap(drawPass).imageGroup.image,
                 copyRegion
@@ -421,14 +421,14 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::DepthImageGroup const & ShadowRenderPassV2::getDepthImage(RT::DrawPass const & drawPass) const
+    RT::DepthImageGroup const & ShadowRenderPassV2::getDepthImage(RT::CommandRecordState const & drawPass) const
     {
         return mDepthImageList[drawPass.frameIndex];
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    VkFramebuffer ShadowRenderPassV2::getFrameBuffer(RT::DrawPass const & drawPass) const
+    VkFramebuffer ShadowRenderPassV2::getFrameBuffer(RT::CommandRecordState const & drawPass) const
     {
         return mFrameBuffers[drawPass.frameIndex];
     }

@@ -22,11 +22,11 @@ public:
 
     void Init() override;
 
-    void OnPreRender(float deltaTimeInSec, MFA::RT::DrawPass & drawPass) override;
+    void OnPreRender(float deltaTimeInSec, MFA::RT::CommandRecordState & drawPass) override;
 
-    void OnRender(float deltaTimeInSec, MFA::RT::DrawPass & drawPass) override;
+    void OnRender(float deltaTimeInSec, MFA::RT::CommandRecordState & drawPass) override;
 
-    void OnPostRender(float deltaTimeInSec, MFA::RT::DrawPass & drawPass) override;
+    void OnPostRender(float deltaTimeInSec, MFA::RT::CommandRecordState & drawPass) override;
 
     void Shutdown() override;
 

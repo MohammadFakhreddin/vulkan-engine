@@ -168,7 +168,7 @@ void GLTFMeshViewerScene::Init() {
     mUIRegisterId = UI::Register([this]()->void {OnUI();});
 }
 
-void GLTFMeshViewerScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass) {
+void GLTFMeshViewerScene::OnPreRender(float const deltaTimeInSec, MFA::RT::CommandRecordState & drawPass) {
     auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
 
     if (selectedModel.isLoaded == false) {
@@ -240,7 +240,7 @@ void GLTFMeshViewerScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawP
 
 //-------------------------------------------------------------------------------------------------
 
-void GLTFMeshViewerScene::OnRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass) {
+void GLTFMeshViewerScene::OnRender(float const deltaTimeInSec, MFA::RT::CommandRecordState & drawPass) {
     MFA_ASSERT(mSelectedModelIndex >= 0 && mSelectedModelIndex < static_cast<int32_t>(mModelsRenderData.size()));
 
     // TODO Pipeline should be able to share buffers such as projection buffer to enable us to update them once -> Solution: Store camera buffers inside camera
@@ -252,7 +252,7 @@ void GLTFMeshViewerScene::OnRender(float const deltaTimeInSec, MFA::RT::DrawPass
 
 //-------------------------------------------------------------------------------------------------
 
-void GLTFMeshViewerScene::OnPostRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass)
+void GLTFMeshViewerScene::OnPostRender(float const deltaTimeInSec, MFA::RT::CommandRecordState & drawPass)
 {
     mPointLightPipeline.PostRender(drawPass, deltaTimeInSec);
     mPbrPipeline.PostRender(drawPass, deltaTimeInSec);

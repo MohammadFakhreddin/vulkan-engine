@@ -26,14 +26,14 @@ public:
     VkRenderPass GetVkRenderPass() override;
 
     [[nodiscard]]
-    RT::DepthImageGroup const & GetDepthCubeMap(RT::DrawPass const & drawPass) const;
+    RT::DepthImageGroup const & GetDepthCubeMap(RT::CommandRecordState const & drawPass) const;
 
     [[nodiscard]]
     RT::DepthImageGroup const & GetDepthCubeMap(uint8_t frameIndex) const;
     
-    void PrepareCubeMapForTransferDestination(RT::DrawPass const & drawPass);
+    void PrepareCubeMapForTransferDestination(RT::CommandRecordState const & drawPass);
 
-    void PrepareCubeMapForSampling(RT::DrawPass const & drawPass);
+    void PrepareCubeMapForSampling(RT::CommandRecordState const & drawPass);
 
     void SetNextPassParams(int faceIndex);
 
@@ -43,9 +43,9 @@ protected:
 
     void internalShutdown() override;
 
-    void internalBeginRenderPass(RT::DrawPass & drawPass) override;
+    void internalBeginRenderPass(RT::CommandRecordState & drawPass) override;
 
-    void internalEndRenderPass(RT::DrawPass & drawPass) override;
+    void internalEndRenderPass(RT::CommandRecordState & drawPass) override;
 
     void internalResize() override;
 
@@ -56,10 +56,10 @@ private:
     void createFrameBuffer(VkExtent2D const & shadowExtent);
 
     [[nodiscard]]
-    RT::DepthImageGroup const & getDepthImage(RT::DrawPass const & drawPass) const;
+    RT::DepthImageGroup const & getDepthImage(RT::CommandRecordState const & drawPass) const;
 
     [[nodiscard]]
-    VkFramebuffer getFrameBuffer(RT::DrawPass const & drawPass) const;
+    VkFramebuffer getFrameBuffer(RT::CommandRecordState const & drawPass) const;
 
     inline static constexpr VkFormat SHADOW_MAP_FORMAT = VK_FORMAT_R32_SFLOAT;
 

@@ -37,17 +37,17 @@ public:
     BasePipeline & operator = (BasePipeline && rhs) noexcept = delete;
 
     virtual void PreRender(
-        RT::DrawPass & drawPass,
+        RT::CommandRecordState & drawPass,
         float deltaTime
     );
 
     virtual void Render(        
-        RT::DrawPass & drawPass,
+        RT::CommandRecordState & drawPass,
         float deltaTime
     );
 
     virtual void PostRender(
-        RT::DrawPass & drawPass,
+        RT::CommandRecordState & drawPass,
         float deltaTime
     );
 

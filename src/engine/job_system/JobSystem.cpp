@@ -3,60 +3,61 @@
 #include "ThreadPool.hpp"
 #include "engine/BedrockAssert.hpp"
 
-namespace MFA::JobSystem {
-
-// TODO We need token functionality
-
-struct State
+namespace MFA::JobSystem
 {
-    ThreadPool threadPool {};
-};
-State * state = nullptr; 
 
-//-------------------------------------------------------------------------------------------------
+    // TODO We need token functionality
 
-void Init()
-{
-    MFA_ASSERT(state == nullptr);
-    state = new State();
-}
+    struct State
+    {
+        ThreadPool threadPool{};
+    };
+    State * state = nullptr;
 
-//-------------------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------------
 
-void AssignTaskToAllThreads(Task const & task)
-{
-    state->threadPool.AssignTaskToAllThreads(task);
-}
+    void Init()
+    {
+        MFA_ASSERT(state == nullptr);
+        state = new State();
+    }
 
-//-------------------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------------
 
-void AssignTask(uint32_t const threadNumber, Task const & task)
-{
-    state->threadPool.AssignTask(threadNumber, task);
-}
+    void AssignTaskToAllThreads(Task const & task)
+    {
+        state->threadPool.AssignTaskToAllThreads(task);
+    }
 
-//-------------------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------------
 
-uint32_t GetNumberOfAvailableThreads()
-{
-    return state->threadPool.GetNumberOfAvailableThreads();
-}
+    void AssignTask(uint32_t const threadNumber, Task const & task)
+    {
+        state->threadPool.AssignTask(threadNumber, task);
+    }
 
-//-------------------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------------
 
-void WaitForThreadsToFinish()
-{
-    state->threadPool.WaitForThreadsToFinish();
-}
+    uint32_t GetNumberOfAvailableThreads()
+    {
+        return state->threadPool.GetNumberOfAvailableThreads();
+    }
 
-//-------------------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------------
 
-void Shutdown()
-{
-    MFA_ASSERT(state != nullptr);
-    delete state;
-}
+    void WaitForThreadsToFinish()
+    {
+        state->threadPool.WaitForThreadsToFinish();
+    }
 
-//-------------------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------------
+
+    void Shutdown()
+    {
+        MFA_ASSERT(state != nullptr);
+        delete state;
+    }
+
+    //-------------------------------------------------------------------------------------------------
 
 }

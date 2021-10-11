@@ -495,7 +495,7 @@ static void UpdateMouseCursor() {
 
 void OnNewFrame(
     float const deltaTimeInSec,
-    RT::DrawPass & drawPass
+    RT::CommandRecordState & drawPass
 ) {
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! It is generally built by the renderer backend. Missing call to renderer _NewFrame() function? e.g. ImGui_ImplOpenGL3_NewFrame().");

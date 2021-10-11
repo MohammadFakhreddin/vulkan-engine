@@ -2,92 +2,62 @@
 
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/render_passes/RenderPass.hpp"
-#include "engine/render_system/RenderFrontend.hpp"
 
-namespace MFA {
+namespace MFA
+{
 
-class DisplayRenderPass final : public RenderPass {
-public:
+    class DisplayRenderPass final : public RenderPass
+    {
+    public:
 
-    DisplayRenderPass() = default;
-    ~DisplayRenderPass() override = default;
+        DisplayRenderPass() = default;
+        ~DisplayRenderPass() override = default;
 
-    DisplayRenderPass (DisplayRenderPass const &) noexcept = delete;
-    DisplayRenderPass (DisplayRenderPass &&) noexcept = delete;
-    DisplayRenderPass & operator = (DisplayRenderPass const &) noexcept = delete;
-    DisplayRenderPass & operator = (DisplayRenderPass &&) noexcept = delete;
+        DisplayRenderPass(DisplayRenderPass const &) noexcept = delete;
+        DisplayRenderPass(DisplayRenderPass &&) noexcept = delete;
+        DisplayRenderPass & operator = (DisplayRenderPass const &) noexcept = delete;
+        DisplayRenderPass & operator = (DisplayRenderPass &&) noexcept = delete;
 
-    [[nodiscard]]
-    VkRenderPass GetVkRenderPass() override;
+        [[nodiscard]]
+        VkRenderPass GetVkRenderPass() override;
 
-    [[nodiscard]]
-    VkRenderPass GetVkDepthRenderPass() const;
+        [[nodiscard]]
+        VkImage GetSwapChainImage(RT::CommandRecordState const & drawPass);
 
-    VkCommandBuffer GetCommandBuffer(RT::DrawPass const & drawPass);
+        [[nodiscard]]
+        RT::SwapChainGroup const & GetSwapChainImages() const;
 
-    [[nodiscard]]
-    RT::DrawPass StartGraphicCommandBufferRecording();
+        [[nodiscard]]
+        std::vector<RT::DepthImageGroup> const & GetDepthImages() const;
 
-    void EndGraphicCommandBufferRecording(RT::DrawPass & drawPass);
+    protected:
 
-    void BeginDepthPrePass(RT::DrawPass & drawPass);
+        void internalInit() override;
 
-    void EndDepthPrePass(RT::DrawPass & drawPass);
+        void internalShutdown() override;
 
-protected:
+        void internalBeginRenderPass(RT::CommandRecordState & drawPass) override;
 
-    void internalInit() override;
+        void internalEndRenderPass(RT::CommandRecordState & drawPass) override;
 
-    void internalShutdown() override;
+        void internalResize() override;
 
-    void internalBeginRenderPass(RT::DrawPass & drawPass) override;
+    private:
 
-    void internalEndRenderPass(RT::DrawPass & drawPass) override;
+        [[nodiscard]]
+        VkFramebuffer getDisplayFrameBuffer(RT::CommandRecordState const & drawPass);
 
-    void internalResize() override;
+        void createDisplayFrameBuffers(VkExtent2D const & extent);
 
-private:
+        void createDisplayRenderPass();
 
-    [[nodiscard]]
-    VkSemaphore getImageAvailabilitySemaphore(RT::DrawPass const & drawPass);
-
-    [[nodiscard]]
-    VkSemaphore getRenderFinishIndicatorSemaphore(RT::DrawPass const & drawPass);
-
-    [[nodiscard]]
-    VkFence getInFlightFence(RT::DrawPass const & drawPass);
-
-    [[nodiscard]]
-    VkImage getSwapChainImage(RT::DrawPass const & drawPass);
-
-    [[nodiscard]]
-    VkFramebuffer getDisplayFrameBuffer(RT::DrawPass const & drawPass);
-
-    [[nodiscard]]
-    VkFramebuffer getDepthFrameBuffer(RT::DrawPass const & drawPass);
-
-    void createDisplayFrameBuffers(VkExtent2D const & extent);
-
-    void createDepthFrameBuffers(VkExtent2D const & extent);
-
-    void createDisplayRenderPass();
-
-    void createDepthRenderPass();
+        VkRenderPass mVkDisplayRenderPass{};
+        uint32_t mSwapChainImagesCount = 0;
+        RT::SwapChainGroup mSwapChainImages{};
+        std::vector<VkFramebuffer> mDisplayFrameBuffers{};
+        std::vector<RT::ColorImageGroup> mMSAAImageGroupList{};
+        std::vector<RT::DepthImageGroup> mDepthImageGroupList{};
     
-    VkRenderPass mVkDisplayRenderPass {};
-    uint32_t mSwapChainImagesCount = 0;
-    RT::SwapChainGroup mSwapChainImages {};
-    std::vector<VkFramebuffer> mDisplayFrameBuffers {};
-    std::vector<RT::ColorImageGroup> mMSAAImageGroupList {};
-    std::vector<RT::DepthImageGroup> mDepthImageGroupList {};
-    RT::SyncObjects mSyncObjects {};
-    uint8_t mCurrentFrame = 0;
-    std::vector<VkCommandBuffer> mGraphicCommandBuffers {};
-
-    VkRenderPass mDepthRenderPass {};
-    std::vector<VkFramebuffer> mDepthFrameBuffers {};
-
-    RT::DrawPass mDrawPass {};
-};
+    };
 
 }

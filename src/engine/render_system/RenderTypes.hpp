@@ -130,7 +130,7 @@ struct PipelineGroup {
     void revoke();
 };
 
-struct DrawPass {
+struct CommandRecordState {
     uint32_t imageIndex;
     uint8_t frameIndex;
     bool isValid = false;

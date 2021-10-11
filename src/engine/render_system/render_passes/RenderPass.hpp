@@ -21,9 +21,9 @@ public:
 
     void Shutdown();
 
-    void BeginRenderPass(RT::DrawPass & drawPass);
+    void BeginRenderPass(RT::CommandRecordState & drawPass);
 
-    void EndRenderPass(RT::DrawPass & drawPass);
+    void EndRenderPass(RT::CommandRecordState & drawPass);
 
     void OnResize();
 
@@ -35,9 +35,9 @@ protected:
 
     virtual void internalShutdown() = 0;
 
-    virtual void internalBeginRenderPass(RT::DrawPass & drawPass) = 0;
+    virtual void internalBeginRenderPass(RT::CommandRecordState & drawPass) = 0;
 
-    virtual void internalEndRenderPass(RT::DrawPass & drawPass) = 0;
+    virtual void internalEndRenderPass(RT::CommandRecordState & drawPass) = 0;
 
     virtual void internalResize() = 0;
 

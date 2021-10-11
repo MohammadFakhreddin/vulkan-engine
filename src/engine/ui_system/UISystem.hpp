@@ -11,7 +11,7 @@ void Init();
 
 void OnNewFrame(
     float deltaTimeInSec, 
-    RT::DrawPass & drawPass
+    RT::CommandRecordState & drawPass
 );
 
 void BeginWindow(char const * windowName);

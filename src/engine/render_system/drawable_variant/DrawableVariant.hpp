@@ -88,12 +88,12 @@ public:
     
     void Init(RendererComponent * rendererComponent, TransformComponent * transformComponent);
 
-    void Update(float deltaTimeInSec, RT::DrawPass const & drawPass);
+    void Update(float deltaTimeInSec, RT::CommandRecordState const & drawPass);
 
     void Shutdown();
 
     using BindDescriptorSetFunction = std::function<void(AS::MeshPrimitive const & primitive, Node const & node)>;
-    void Draw(RT::DrawPass const & drawPass, BindDescriptorSetFunction const & bindFunction);
+    void Draw(RT::CommandRecordState const & drawPass, BindDescriptorSetFunction const & bindFunction);
     
     [[nodiscard]]
     RT::UniformBufferGroup const * GetUniformBuffer(char const * name);
@@ -141,13 +141,13 @@ private:
     void updateSkinJoints(uint32_t skinIndex, AS::MeshSkin const & skin);
     
     void drawNode(
-        RT::DrawPass const & drawPass,
+        RT::CommandRecordState const & drawPass,
         Node const & node,
         BindDescriptorSetFunction const & bindFunction
     );
 
     void drawSubMesh(
-        RT::DrawPass const & drawPass,
+        RT::CommandRecordState const & drawPass,
         AS::Mesh::SubMesh const & subMesh,
         Node const & node,
         BindDescriptorSetFunction const & bindFunction

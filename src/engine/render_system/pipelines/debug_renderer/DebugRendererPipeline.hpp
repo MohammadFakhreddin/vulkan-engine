@@ -32,9 +32,9 @@ public:
 
     void Shutdown() override;
 
-    void PreRender(RT::DrawPass & drawPass, float deltaTime) override;
+    void PreRender(RT::CommandRecordState & drawPass, float deltaTime) override;
 
-    void Render(RT::DrawPass & drawPass, float deltaTime) override;
+    void Render(RT::CommandRecordState & drawPass, float deltaTime) override;
     
     void UpdateCameraView(float cameraTransform[16]);
 
@@ -56,7 +56,7 @@ private:
 
     void createDescriptorSets();
 
-    void updateViewProjectionBuffer(RT::DrawPass const & drawPass);
+    void updateViewProjectionBuffer(RT::CommandRecordState const & drawPass);
 
     void createUniformBuffers();
 

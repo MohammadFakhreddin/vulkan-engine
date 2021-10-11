@@ -6,48 +6,51 @@
 #include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
 
-using namespace MFA;
-
-//-------------------------------------------------------------------------------------------------
-
-MeshRendererComponent::MeshRendererComponent(BasePipeline & pipeline, char const * essenceName)
-    : mPipeline(&pipeline)
-    , mVariant(mPipeline->CreateDrawableVariant(essenceName))
+namespace MFA
 {
-    MFA_ASSERT(mPipeline != nullptr);
-    MFA_ASSERT(mVariant != nullptr);
-}
 
-//-------------------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------------
 
-void MeshRendererComponent::Init()
-{
-    Component::Init();
-    mVariant->Init(this, GetEntity()->GetComponent<TransformComponent>());
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void MeshRendererComponent::Shutdown()
-{
-    if (mVariant != nullptr)
+    MeshRendererComponent::MeshRendererComponent(BasePipeline & pipeline, char const * essenceName)
+        : mPipeline(&pipeline)
+        , mVariant(mPipeline->CreateDrawableVariant(essenceName))
     {
-        mPipeline->RemoveDrawableVariant(mVariant);
+        MFA_ASSERT(mPipeline != nullptr);
+        MFA_ASSERT(mVariant != nullptr);
     }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void MeshRendererComponent::Init()
+    {
+        Component::Init();
+        mVariant->Init(this, GetEntity()->GetComponent<TransformComponent>());
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void MeshRendererComponent::Shutdown()
+    {
+        if (mVariant != nullptr)
+        {
+            mPipeline->RemoveDrawableVariant(mVariant);
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    DrawableVariant * MeshRendererComponent::GetVariant() const
+    {
+        return mVariant;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void MeshRendererComponent::NotifyVariantDestroyed()
+    {
+        mVariant = nullptr;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
 }
-
-//-------------------------------------------------------------------------------------------------
-
-DrawableVariant * MeshRendererComponent::GetVariant() const
-{
-    return mVariant;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void MeshRendererComponent::NotifyVariantDestroyed()
-{
-    mVariant = nullptr;
-}
-
-//-------------------------------------------------------------------------------------------------

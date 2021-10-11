@@ -21,7 +21,7 @@ class GpuShader;
 
 struct PipelineGroup;
 
-struct DrawPass;
+struct CommandRecordState;
 
 struct UniformBufferGroup;
 

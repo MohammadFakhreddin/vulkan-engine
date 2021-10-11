@@ -2695,4 +2695,60 @@ void WaitForQueue(VkQueue queue) {
 
 //-------------------------------------------------------------------------------------------------
 
+VkQueryPool CreateQueryPool(VkDevice device, VkQueryPoolCreateInfo const & createInfo)
+{
+    VkQueryPool queryPool;
+    VK_Check(vkCreateQueryPool(device, &createInfo, nullptr, &queryPool));
+    return queryPool;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void DestroyQueryPool(VkDevice device, VkQueryPool queryPool)
+{
+    vkDestroyQueryPool(device, queryPool, nullptr);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void BeginQuery(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t const queryId)
+{
+    vkCmdBeginQuery(commandBuffer, queryPool, queryId, 0);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void EndQuery(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint32_t const queryId)
+{
+    vkCmdEndQuery(commandBuffer, queryPool, queryId);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void GetQueryPoolResult(
+    VkDevice device,
+    VkQueryPool queryPool,
+    uint32_t const samplesCount,
+    uint64_t * outSamplesData,
+    uint32_t samplesOffset
+)
+{
+    // We use vkGetQueryResults to copy the results into a host visible buffer
+    vkGetQueryPoolResults(
+        device,
+        queryPool,
+        samplesOffset,
+        samplesCount,
+        samplesCount * sizeof(uint64_t),
+        outSamplesData,
+        sizeof(uint64_t),
+        // Store results a 64 bit values and wait until the results have been finished
+        // If you don't want to wait, you can use VK_QUERY_RESULT_WITH_AVAILABILITY_BIT
+        // which also returns the state of the result (ready) in the result
+        VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT
+    );
+}
+
+//-------------------------------------------------------------------------------------------------
+
 }

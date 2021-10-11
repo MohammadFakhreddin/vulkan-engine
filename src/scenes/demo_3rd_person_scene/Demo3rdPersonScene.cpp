@@ -22,8 +22,7 @@ using namespace MFA;
 
 Demo3rdPersonScene::Demo3rdPersonScene()
     : Scene()
-{
-}
+{}
 
 //-------------------------------------------------------------------------------------------------
 
@@ -50,6 +49,8 @@ void Demo3rdPersonScene::Init()
     }
 
     {// Debug renderer pipeline
+        mDebugRenderPipeline.Init();
+
         auto sphereCpuModel = MFA::ShapeGenerator::Sphere();
         mSphereModel = RF::CreateGpuModel(sphereCpuModel);
         mDebugRenderPipeline.CreateDrawableEssence("Sphere", mSphereModel);
@@ -60,9 +61,7 @@ void Demo3rdPersonScene::Init()
     }
 
     {// PointLight
-
-        mDebugRenderPipeline.Init();
-
+        
         auto * entity = EntitySystem::CreateEntity("PointLight", GetRootEntity());
         MFA_ASSERT(entity != nullptr);
 
@@ -77,9 +76,9 @@ void Demo3rdPersonScene::Init()
 
         auto * meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, "Sphere");
         MFA_ASSERT(meshRendererComponent != nullptr);
-        
+
         entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
-        
+
         EntitySystem::InitEntity(entity);
     }
     {// Soldier
@@ -106,7 +105,7 @@ void Demo3rdPersonScene::Init()
             entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
 
             auto * colorComponent = entity->AddComponent<ColorComponent>();
-            colorComponent->SetColor(glm::vec3 {1.0f, 0.0f, 0.0f});
+            colorComponent->SetColor(glm::vec3{ 1.0f, 0.0f, 0.0f });
 
             auto * debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
             debugRenderComponent->SetActive(true);
@@ -119,7 +118,7 @@ void Demo3rdPersonScene::Init()
             MFA_ASSERT(mThirdPersonCamera != nullptr);
             float eulerAngle[3]{ -15.0f, 0.0f, 0.0f };
             mThirdPersonCamera->SetDistanceAndRotation(3.0f, eulerAngle);
-    
+
             SetActiveCamera(mThirdPersonCamera);
 
             EntitySystem::InitEntity(entity);
@@ -127,14 +126,15 @@ void Demo3rdPersonScene::Init()
         {// NPCs
             for (uint32_t i = 0; i < 10; ++i)
             {
-                for (uint32_t j = 0; j < 10; ++j) {
+                for (uint32_t j = 0; j < 10; ++j)
+                {
                     auto * entity = EntitySystem::CreateEntity("Random soldier", GetRootEntity());
                     MFA_ASSERT(entity != nullptr);
 
                     auto * transformComponent = entity->AddComponent<TransformComponent>();
                     MFA_ASSERT(transformComponent != nullptr);
 
-                    float position[3]{static_cast<float>(i) - 5.0f, 2.0f, static_cast<float>(j) - 4.0f};
+                    float position[3]{ static_cast<float>(i) - 5.0f, 2.0f, static_cast<float>(j) - 4.0f };
                     float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
                     float scale[3]{ 1.0f, 1.0f, 1.0f };
                     transformComponent->UpdateTransform(position, eulerAngles, scale);
@@ -144,14 +144,14 @@ void Demo3rdPersonScene::Init()
 
                     meshRendererComponent->GetVariant()->SetActiveAnimation(
                         "SwordAndShieldIdle",
-                        {.startTimeOffsetInSec = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX)) * 10}
+                        { .startTimeOffsetInSec = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX)) * 10 }
                     );
                     meshRendererComponent->SetActive(true);
 
                     entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
 
                     auto * colorComponent = entity->AddComponent<ColorComponent>();
-                    colorComponent->SetColor(glm::vec3 {0.0f, 0.0f, 1.0f});
+                    colorComponent->SetColor(glm::vec3{ 0.0f, 0.0f, 1.0f });
 
                     auto * debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
                     debugRenderComponent->SetActive(true);
@@ -191,15 +191,34 @@ void Demo3rdPersonScene::Init()
 
         EntitySystem::InitEntity(entity);
     }
-    mUIRecordId = UI::Register([this]()->void {onUI();});
+    mUIRecordId = UI::Register([this]()->void { onUI(); });
     updateProjectionBuffer();
-    
+
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass)
+void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::CommandRecordState & drawPass)
 {
+    mDebugRenderPipeline.PreRender(drawPass, deltaTimeInSec);
+    mPbrPipeline.PreRender(drawPass, deltaTimeInSec);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void Demo3rdPersonScene::OnRender(float const deltaTimeInSec, MFA::RT::CommandRecordState & drawPass)
+{
+    mDebugRenderPipeline.Render(drawPass, deltaTimeInSec);
+    mPbrPipeline.Render(drawPass, deltaTimeInSec);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, MFA::RT::CommandRecordState & drawPass)
+{
+    mDebugRenderPipeline.PostRender(drawPass, deltaTimeInSec);
+    mPbrPipeline.PostRender(drawPass, deltaTimeInSec);
+
     {// Soldier
         static constexpr float SoldierSpeed = 5.0f;
         auto const inputForwardMove = IM::GetForwardMove();
@@ -349,24 +368,6 @@ void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::DrawPa
         mPbrPipeline.UpdateCameraPosition(cameraPosition);
 
     }
-    mDebugRenderPipeline.PreRender(drawPass, deltaTimeInSec);
-    mPbrPipeline.PreRender(drawPass, deltaTimeInSec);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void Demo3rdPersonScene::OnRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass)
-{
-    mDebugRenderPipeline.Render(drawPass, deltaTimeInSec);
-    mPbrPipeline.Render(drawPass, deltaTimeInSec);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, MFA::RT::DrawPass & drawPass)
-{
-    mDebugRenderPipeline.PostRender(drawPass, deltaTimeInSec);
-    mPbrPipeline.PostRender(drawPass, deltaTimeInSec);
 }
 
 //-------------------------------------------------------------------------------------------------
