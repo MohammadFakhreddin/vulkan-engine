@@ -9,12 +9,17 @@
         "offscreen-shadow-geom": "glslc -fshader-stage=geom assets/shaders/pbr_with_shadow/OffscreenShadow.geom.hlsl  -o assets/shaders/pbr_with_shadow/OffscreenShadow.geom.spv",
         "offscreen-shadow-frag": "glslc -fshader-stage=frag assets/shaders/pbr_with_shadow/OffscreenShadow.frag.hlsl  -o assets/shaders/pbr_with_shadow/OffscreenShadow.frag.spv",
         
+        "occlusion-vert": "glslc -fshader-stage=vert assets/shaders/occlusion_query/Occlusion.vert.hlsl  -o assets/shaders/occlusion_query/Occlusion.vert.spv",
+        "occlusion-frag": "glslc -fshader-stage=frag assets/shaders/occlusion_query/Occlusion.frag.hlsl  -o assets/shaders/occlusion_query/Occlusion.frag.spv",
+        
         "pbr-with-shadow-vert-v2": "glslc -fshader-stage=vert assets/shaders/pbr_with_shadow_v2/PbrWithShadow.vert.hlsl  -o assets/shaders/pbr_with_shadow_v2/PbrWithShadow.vert.spv",
         "pbr-with-shadow-frag-v2": "glslc -fshader-stage=frag assets/shaders/pbr_with_shadow_v2/PbrWithShadow.frag.hlsl  -o assets/shaders/pbr_with_shadow_v2/PbrWithShadow.frag.spv",
-        "offscreen-shadow-vert-v2": "glslc -fshader-stage=vert assets/shaders/pbr_with_shadow_v2/OffscreenShadow.vert.hlsl  -o assets/shaders/pbr_with_shadow_v2/OffscreenShadow.vert.spv",
-        "offscreen-shadow-frag-v2": "glslc -fshader-stage=frag assets/shaders/pbr_with_shadow_v2/OffscreenShadow.frag.hlsl  -o assets/shaders/pbr_with_shadow_v2/OffscreenShadow.frag.spv",
-        "depth-pre-pass-vert": "glslc -fshader-stage=vert assets/shaders/pbr_with_shadow_v2/DepthPrePass.vert.hlsl  -o assets/shaders/pbr_with_shadow_v2/DepthPrePass.vert.spv",
-        "depth-pre-pass-frag": "glslc -fshader-stage=frag assets/shaders/pbr_with_shadow_v2/DepthPrePass.frag.hlsl  -o assets/shaders/pbr_with_shadow_v2/DepthPrePass.frag.spv",
+        
+        "offscreen-shadow-vert-v2": "glslc -fshader-stage=vert assets/shaders/shadow/OffscreenShadow.vert.hlsl  -o assets/shaders/shadow/OffscreenShadow.vert.spv",
+        "offscreen-shadow-frag-v2": "glslc -fshader-stage=frag assets/shaders/shadow/OffscreenShadow.frag.hlsl  -o assets/shaders/shadow/OffscreenShadow.frag.spv",
+        
+        "depth-pre-pass-vert": "glslc -fshader-stage=vert assets/shaders/depth_pre_pass/DepthPrePass.vert.hlsl  -o assets/shaders/depth_pre_pass/DepthPrePass.vert.spv",
+        "depth-pre-pass-frag": "glslc -fshader-stage=frag assets/shaders/depth_pre_pass/DepthPrePass.frag.hlsl  -o assets/shaders/depth_pre_pass/DepthPrePass.frag.spv",
         
         "point-light-vert": "glslc -fshader-stage=vert assets/shaders/debug_renderer/DebugRenderer.vert.hlsl  -o assets/shaders/debug_renderer/DebugRenderer.vert.spv",
         "point-light-frag": "glslc -fshader-stage=frag assets/shaders/debug_renderer/DebugRenderer.frag.hlsl  -o assets/shaders/debug_renderer/DebugRenderer.frag.spv",

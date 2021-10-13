@@ -151,6 +151,8 @@ list(
     "src/engine/render_system/render_passes/shadow_render_pass_v2/ShadowRenderPassV2.cpp"
     "src/engine/render_system/render_passes/depth_pre_pass/DepthPrePass.hpp"
     "src/engine/render_system/render_passes/depth_pre_pass/DepthPrePass.cpp"
+    "src/engine/render_system/render_passes/occlusion_render_pass/OcclusionRenderPass.hpp"
+    "src/engine/render_system/render_passes/occlusion_render_pass/OcclusionRenderPass.cpp"
 
     # Pipeline
     "src/engine/render_system/pipelines/BasePipeline.hpp"

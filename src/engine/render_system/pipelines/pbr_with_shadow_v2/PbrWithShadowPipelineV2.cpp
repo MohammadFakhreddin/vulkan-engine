@@ -11,6 +11,7 @@
 #include "engine/render_system/render_passes/shadow_render_pass_v2/ShadowRenderPassV2.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/render_passes/depth_pre_pass/DepthPrePass.hpp"
+#include "engine/render_system/render_passes/occlusion_render_pass/OcclusionRenderPass.hpp"
 
 namespace MFA
 {
@@ -22,6 +23,7 @@ namespace MFA
             static_cast<uint32_t>(SHADOW_WIDTH),
             static_cast<uint32_t>(SHADOW_HEIGHT)))
         , mDepthPrePass(std::make_unique<DepthPrePass>())
+        , mOcclusionRenderPass(std::make_unique<OcclusionRenderPass>())
     {}
 
     //-------------------------------------------------------------------------------------------------
@@ -69,12 +71,17 @@ namespace MFA
 
         mShadowRenderPass->Init();
         mDepthPrePass->Init();
+        mOcclusionRenderPass->Init();
 
         createShadowPassDescriptorSetLayout();
         createShadowPassPipeline();
 
         createDepthDescriptorSetLayout();
         createDepthPassPipeline();
+
+        createOcclusionPassDescriptorSetLayout();
+        createOcclusionQueryPipeline();
+        createOcclusionPassDescriptorSets();
 
         static float FOV = 90.0f;          // TODO Maybe it should be the same with our camera's FOV.
 
@@ -99,6 +106,16 @@ namespace MFA
             updateShadowViewProjectionBuffer(drawPass);
             updateDisplayViewProjectionBuffer(drawPass);
         }
+
+        mOcclusionQueryDataList.resize(RF::GetMaxFramesPerFlight());
+        for (auto & occlusionQueryData : mOcclusionQueryDataList)
+        {
+            occlusionQueryData.Pool = RF::CreateQueryPool(VkQueryPoolCreateInfo {
+                .sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
+                .queryType = VK_QUERY_TYPE_OCCLUSION,
+                .queryCount = 10000,
+            });
+        }
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -112,9 +129,18 @@ namespace MFA
         }
         mIsInitialized = false;
 
+        {// Cleaning occlusion query
+            for (auto const & occlusionQueryData : mOcclusionQueryDataList)
+            {
+                RF::DestroyQueryPool(occlusionQueryData.Pool);
+            }
+            mOcclusionQueryDataList.clear();
+        }
+
         mSamplerGroup = nullptr;
         mErrorTexture = nullptr;
 
+        mOcclusionRenderPass->Shutdown();
         mDepthPrePass->Shutdown();
         mShadowRenderPass->Shutdown();
 
@@ -130,7 +156,88 @@ namespace MFA
 
     void PBRWithShadowPipelineV2::PreRender(RT::CommandRecordState & drawPass, float const deltaTime)
     {
+        // TODO I should render bounding volume for objects and geometry for occluders and I should draw walls first
+        auto & occlusionQueryData = mOcclusionQueryDataList[drawPass.frameIndex];
+        // Retrieving previous frame results
+        if (occlusionQueryData.Variants.empty() == false) {// Trying to get previous frame results
+            
+            occlusionQueryData.Results.resize(occlusionQueryData.Variants.size());
 
+            RF::GetQueryPoolResult(
+                occlusionQueryData.Pool,
+                static_cast<uint32_t>(occlusionQueryData.Results.size()),
+                occlusionQueryData.Results.data()
+            );
+
+            uint32_t occlusionCount = 0;
+            for (uint32_t i = 0; i < static_cast<uint32_t>(occlusionQueryData.Results.size()); ++i)
+            {
+                occlusionQueryData.Variants[i]->SetIsOccluded(occlusionQueryData.Results[i] == 0);
+                if (occlusionQueryData.Results[i] == 0)
+                {
+                    occlusionCount++;
+                }
+            }
+            MFA_LOG_INFO("Occluded objects: %d", static_cast<int>(occlusionCount));
+
+            occlusionQueryData.Variants.clear();
+
+            RF::ResetQueryPool(
+                drawPass,
+                occlusionQueryData.Pool,
+                10000
+            );
+
+        }
+        {// Occlusion pass
+        
+            RF::BindDrawPipeline(drawPass, mOcclusionQueryPipeline);
+            
+            mOcclusionRenderPass->BeginRenderPass(drawPass);
+            
+            OcclusionPassVertexStagePushConstants pushConstants{};
+
+            RF::BindDescriptorSet(
+                drawPass,
+                mOcclusionDescriptorSetGroup.descriptorSets[drawPass.frameIndex]
+            );
+
+            for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
+            {
+                auto & essence = essenceAndVariantList.second->essence;
+                auto & variantsList = essenceAndVariantList.second->variants;
+                RF::BindVertexBuffer(drawPass, essence.GetGpuModel().meshBuffers.verticesBuffer);
+                RF::BindIndexBuffer(drawPass, essence.GetGpuModel().meshBuffers.indicesBuffer);
+
+                for (auto const & variant : variantsList)
+                {
+                    if (variant->IsActive() && variant->IsInFrustum())
+                    {
+
+                        RF::BeginQuery(drawPass, occlusionQueryData.Pool, static_cast<uint32_t>(occlusionQueryData.Variants.size()));
+                        
+                        variant->Draw(drawPass, [&drawPass, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
+                            {
+                                // Vertex push constants
+                                Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
+
+                                RF::PushConstants(
+                                    drawPass,
+                                    AS::ShaderStage::Vertex,
+                                    0,
+                                    CBlobAliasOf(pushConstants)
+                                );
+                            }
+                        );
+
+                        RF::EndQuery(drawPass, occlusionQueryData.Pool, static_cast<uint32_t>(occlusionQueryData.Variants.size()));
+
+                        occlusionQueryData.Variants.emplace_back(variant.get());
+                    }
+                }
+            }
+            mOcclusionRenderPass->EndRenderPass(drawPass);
+        }
         BasePipeline::PreRender(drawPass, deltaTime);
 
         if (mDisplayViewProjectionNeedUpdate > 0)
@@ -176,7 +283,8 @@ namespace MFA
 
                     for (auto const & variant : variantsList)
                     {
-                        if (variant->IsActive() && variant->IsInFrustum())
+                        // TODO We can have a isVisible class
+                        if (variant->IsActive() && variant->IsInFrustum() && variant->IsOccluded() == false)
                         {
                             RF::BindDescriptorSet(
                                 drawPass,
@@ -185,17 +293,17 @@ namespace MFA
 
                             variant->Draw(drawPass, [&drawPass, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
                             {
-                                    // Vertex push constants
-                                    pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
-                                    Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
-                                    Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
+                                // Vertex push constants
+                                pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
+                                Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
+                                Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
 
-                                    RF::PushConstants(
-                                        drawPass,
-                                        AS::ShaderStage::Vertex,
-                                        0,
-                                        CBlobAliasOf(pushConstants)
-                                    );
+                                RF::PushConstants(
+                                    drawPass,
+                                    AS::ShaderStage::Vertex,
+                                    0,
+                                    CBlobAliasOf(pushConstants)
+                                );
                             });
                         }
                     }
@@ -219,7 +327,7 @@ namespace MFA
 
                 for (auto const & variant : variantsList)
                 {
-                    if (variant->IsActive() && variant->IsInFrustum())
+                    if (variant->IsActive() && variant->IsInFrustum() && variant->IsOccluded() == false)
                     {
                         RF::BindDescriptorSet(
                             drawPass,
@@ -228,17 +336,17 @@ namespace MFA
 
                         variant->Draw(drawPass, [&drawPass, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
                             {
-                                    // Vertex push constants
-                                    pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1,
-                                        Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
-                                    Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
+                                // Vertex push constants
+                                pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1,
+                                    Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
+                                Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
 
-                                    RF::PushConstants(
-                                        drawPass,
-                                        AS::ShaderStage::Vertex,
-                                        0,
-                                        CBlobAliasOf(pushConstants)
-                                    );
+                                RF::PushConstants(
+                                    drawPass,
+                                    AS::ShaderStage::Vertex,
+                                    0,
+                                    CBlobAliasOf(pushConstants)
+                                );
                             }
                         );
 
@@ -268,7 +376,7 @@ namespace MFA
 
             for (auto const & variant : variantsList)
             {
-                if (variant->IsActive() && variant->IsInFrustum())
+                if (variant->IsActive() && variant->IsInFrustum() && variant->IsOccluded() == false)
                 {
                     renderedObjects++;
 
@@ -279,17 +387,17 @@ namespace MFA
 
                     variant->Draw(drawPass, [&drawPass, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
                         {
-                                // Push constants
-                                pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
-                                pushConstants.primitiveIndex = primitive.uniqueId;
-                                Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
-                                Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
-                                RF::PushConstants(
-                                    drawPass,
-                                    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-                                    0,
-                                    CBlobAliasOf(pushConstants)
-                                );
+                            // Push constants
+                            pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
+                            pushConstants.primitiveIndex = primitive.uniqueId;
+                            Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
+                            Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
+                            RF::PushConstants(
+                                drawPass,
+                                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                                0,
+                                CBlobAliasOf(pushConstants)
+                            );
                         }
                     );
                 }
@@ -304,9 +412,9 @@ namespace MFA
         auto * variant = BasePipeline::CreateDrawableVariant(essenceName);
         MFA_ASSERT(variant != nullptr);
 
-        CreateDisplayPassDescriptorSets(variant);
-        CreateShadowPassDescriptorSets(variant);
-        CreateDepthPassDescriptorSets(variant);
+        createDisplayPassDescriptorSets(variant);
+        createShadowPassDescriptorSets(variant);
+        createDepthPassDescriptorSets(variant);
 
         return variant;
     }
@@ -479,9 +587,10 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::CreateDisplayPassDescriptorSets(DrawableVariant * variant)
+    void PBRWithShadowPipelineV2::createDisplayPassDescriptorSets(DrawableVariant * variant)
     {
         MFA_ASSERT(variant != nullptr);
+
         auto const & textures = variant->GetEssence()->GetGpuModel().textures;
 
         auto const descriptorSetGroup = variant->CreateDescriptorSetGroup(
@@ -598,13 +707,14 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::CreateShadowPassDescriptorSets(DrawableVariant * variant)
+    void PBRWithShadowPipelineV2::createShadowPassDescriptorSets(DrawableVariant * variant)
     {
+        MFA_ASSERT(variant != nullptr);
 
         auto const descriptorSetGroup = variant->CreateDescriptorSetGroup(
             "PbrWithShadowV2ShadowPipeline",
             mShadowPassDescriptorSetLayout,
-            variant->GetEssence()->GetPrimitiveCount() * RF::GetMaxFramesPerFlight()
+            RF::GetMaxFramesPerFlight()
         );
 
         auto const & actualSkinJointsBuffer = variant->GetSkinJointsBuffer();
@@ -662,13 +772,14 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::CreateDepthPassDescriptorSets(DrawableVariant * variant)
+    void PBRWithShadowPipelineV2::createDepthPassDescriptorSets(DrawableVariant * variant)
     {
+        MFA_ASSERT(variant != nullptr);
 
         auto const descriptorSetGroup = variant->CreateDescriptorSetGroup(
             "PbrWithShadowV2DepthPipeline",
             mDepthPassDescriptorSetLayout,
-            variant->GetEssence()->GetPrimitiveCount() * RF::GetMaxFramesPerFlight()
+            RF::GetMaxFramesPerFlight()
         );
 
         auto const & actualSkinJointsBuffer = variant->GetSkinJointsBuffer();
@@ -714,6 +825,35 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    void PBRWithShadowPipelineV2::createOcclusionPassDescriptorSets()
+    {
+        mOcclusionDescriptorSetGroup = RF::CreateDescriptorSets(RF::GetMaxFramesPerFlight(), mOcclusionDescriptorSetLayout);
+        for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
+        {
+
+            auto const descriptorSet = mOcclusionDescriptorSetGroup.descriptorSets[frameIndex];
+            MFA_VK_VALID_ASSERT(descriptorSet);
+
+            DescriptorSetSchema descriptorSetSchema{ descriptorSet };
+
+            /////////////////////////////////////////////////////////////////
+            // Vertex shader
+            /////////////////////////////////////////////////////////////////
+
+            // ViewProjectionTransform
+            VkDescriptorBufferInfo viewProjectionBufferInfo{
+                .buffer = mDisplayViewProjectionBuffer.buffers[frameIndex].buffer,
+                .offset = 0,
+                .range = mDisplayViewProjectionBuffer.bufferSize
+            };
+            descriptorSetSchema.AddUniformBuffer(viewProjectionBufferInfo);
+
+            descriptorSetSchema.UpdateDescriptorSets();
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+    // TODO I should support multiple descriptor set layout
     void PBRWithShadowPipelineV2::createDisplayPassDescriptorSetLayout()
     {
         std::vector<VkDescriptorSetLayoutBinding> bindings{};
@@ -870,6 +1010,30 @@ namespace MFA
         });
 
         mDepthPassDescriptorSetLayout = RF::CreateDescriptorSetLayout(
+           static_cast<uint8_t>(bindings.size()),
+           bindings.data()
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::createOcclusionPassDescriptorSetLayout()
+    {
+        std::vector<VkDescriptorSetLayoutBinding> bindings{};
+
+        /////////////////////////////////////////////////////////////////
+        // Vertex shader
+        /////////////////////////////////////////////////////////////////
+
+        // ViewProjectionTransform
+        bindings.emplace_back(VkDescriptorSetLayoutBinding{
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        });
+
+        mOcclusionDescriptorSetLayout = RF::CreateDescriptorSetLayout(
            static_cast<uint8_t>(bindings.size()),
            bindings.data()
         );
@@ -1045,11 +1209,13 @@ namespace MFA
         );
     }
 
+    //-------------------------------------------------------------------------------------------------
+
     void PBRWithShadowPipelineV2::createShadowPassPipeline()
     {
         // Vertex shader
         auto cpuVertexShader = Importer::ImportShaderFromSPV(
-            Path::Asset("shaders/pbr_with_shadow_v2/OffScreenShadow.vert.spv").c_str(),
+            Path::Asset("shaders/shadow/OffScreenShadow.vert.spv").c_str(),
             AssetSystem::Shader::Stage::Vertex,
             "main"
         );
@@ -1063,7 +1229,7 @@ namespace MFA
 
         // Fragment shader
         auto cpuFragmentShader = Importer::ImportShaderFromSPV(
-            Path::Asset("shaders/pbr_with_shadow_v2/OffScreenShadow.frag.spv").c_str(),
+            Path::Asset("shaders/shadow/OffScreenShadow.frag.spv").c_str(),
             AssetSystem::Shader::Stage::Fragment,
             "main"
         );
@@ -1146,11 +1312,13 @@ namespace MFA
         );
     }
 
+    //-------------------------------------------------------------------------------------------------
+
     void PBRWithShadowPipelineV2::createDepthPassPipeline()
     {
         // Vertex shader
         auto cpuVertexShader = Importer::ImportShaderFromSPV(
-            Path::Asset("shaders/pbr_with_shadow_v2/DepthPrePass.vert.spv").c_str(),
+            Path::Asset("shaders/depth_pre_pass/DepthPrePass.vert.spv").c_str(),
             AssetSystem::Shader::Stage::Vertex,
             "main"
         );
@@ -1164,7 +1332,7 @@ namespace MFA
 
         // Fragment shader
         auto cpuFragmentShader = Importer::ImportShaderFromSPV(
-            Path::Asset("shaders/pbr_with_shadow_v2/DepthPrePass.frag.spv").c_str(),
+            Path::Asset("shaders/depth_pre_pass/DepthPrePass.frag.spv").c_str(),
             AssetSystem::Shader::Stage::Fragment,
             "main"
         );
@@ -1248,6 +1416,88 @@ namespace MFA
         );
     }
 
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::createOcclusionQueryPipeline()
+    {
+        // Vertex shader
+        auto cpuVertexShader = Importer::ImportShaderFromSPV(
+            Path::Asset("shaders/occlusion_query/Occlusion.vert.spv").c_str(),
+            AssetSystem::Shader::Stage::Vertex,
+            "main"
+        );
+        MFA_ASSERT(cpuVertexShader.isValid());
+        auto gpuVertexShader = RF::CreateShader(cpuVertexShader);
+        MFA_ASSERT(gpuVertexShader.valid());
+        MFA_DEFER{
+            RF::DestroyShader(gpuVertexShader);
+            Importer::FreeShader(cpuVertexShader);
+        };
+
+        // Fragment shader
+        auto cpuFragmentShader = Importer::ImportShaderFromSPV(
+            Path::Asset("shaders/occlusion_query/Occlusion.frag.spv").c_str(),
+            AssetSystem::Shader::Stage::Fragment,
+            "main"
+        );
+        auto gpuFragmentShader = RF::CreateShader(cpuFragmentShader);
+        MFA_ASSERT(cpuFragmentShader.isValid());
+        MFA_ASSERT(gpuFragmentShader.valid());
+        MFA_DEFER{
+            RF::DestroyShader(gpuFragmentShader);
+            Importer::FreeShader(cpuFragmentShader);
+        };
+
+        std::vector<RT::GpuShader const *> shaders{ &gpuVertexShader, &gpuFragmentShader };
+
+        VkVertexInputBindingDescription vertexInputBindingDescription{};
+        vertexInputBindingDescription.binding = 0;
+        vertexInputBindingDescription.stride = sizeof(AS::MeshVertex);
+        vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+        std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
+
+        // Position
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32G32B32_SFLOAT,
+            .offset = offsetof(AS::MeshVertex, position),
+        });
+
+        std::vector<VkPushConstantRange> pushConstantRanges{};
+        // Model data  
+        VkPushConstantRange pushConstantRange{
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+            .offset = 0,
+            .size = sizeof(OcclusionPassVertexStagePushConstants),
+        };
+        pushConstantRanges.emplace_back(pushConstantRange);
+
+        RT::CreateGraphicPipelineOptions graphicPipelineOptions{};
+        graphicPipelineOptions.cullMode = VK_CULL_MODE_BACK_BIT;
+        graphicPipelineOptions.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+        graphicPipelineOptions.pushConstantRanges = pushConstantRanges.data();
+        // TODO Probably we need to make pushConstantsRangeCount uint32_t
+        graphicPipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
+        graphicPipelineOptions.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+
+        MFA_ASSERT(mOcclusionQueryPipeline.isValid() == false);
+        mOcclusionQueryPipeline = RF::CreatePipeline(
+            mOcclusionRenderPass->GetVkRenderPass(),
+            static_cast<uint8_t>(shaders.size()),
+            shaders.data(),
+            1,
+            &mOcclusionDescriptorSetLayout,
+            vertexInputBindingDescription,
+            static_cast<uint8_t>(inputAttributeDescriptions.size()),
+            inputAttributeDescriptions.data(),
+            graphicPipelineOptions
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void PBRWithShadowPipelineV2::destroyPipeline()
     {
         MFA_ASSERT(mDisplayPassPipeline.isValid());
@@ -1258,8 +1508,13 @@ namespace MFA
 
         MFA_ASSERT(mDepthPassPipeline.isValid());
         RF::DestroyPipelineGroup(mDepthPassPipeline);
+
+        MFA_ASSERT(mOcclusionQueryPipeline.isValid());
+        RF::DestroyPipelineGroup(mOcclusionQueryPipeline);
     }
 
+    //-------------------------------------------------------------------------------------------------
+    
     void PBRWithShadowPipelineV2::createUniformBuffers()
     {
         mErrorBuffer = RF::CreateUniformBuffer(sizeof(DrawableVariant::JointTransformData), 1);
@@ -1271,6 +1526,8 @@ namespace MFA
         mShadowLightBuffer = RF::CreateUniformBuffer(sizeof(ShadowLightData), RF::GetMaxFramesPerFlight());
     }
 
+    //-------------------------------------------------------------------------------------------------
+
     void PBRWithShadowPipelineV2::destroyUniformBuffers()
     {
         RF::DestroyUniformBuffer(mErrorBuffer);
@@ -1281,5 +1538,7 @@ namespace MFA
         RF::DestroyUniformBuffer(mShadowViewProjectionBuffer);
         RF::DestroyUniformBuffer(mShadowLightBuffer);
     }
+
+    //-------------------------------------------------------------------------------------------------
 
 }

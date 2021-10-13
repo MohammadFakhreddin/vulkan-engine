@@ -10,6 +10,7 @@
 namespace MFA
 {
 
+    class OcclusionRenderPass;
     class ShadowRenderPassV2;
     class DrawableVariant;
     class DepthPrePass;
@@ -29,6 +30,11 @@ namespace MFA
             float viewMatrices[6][16];
         };
 
+        struct OcclusionPassVertexStagePushConstants
+        {
+            float modelTransform[16];
+        };
+
         struct ShadowPassVertexStagePushConstants
         {
             float modelTransform[16];
@@ -37,6 +43,7 @@ namespace MFA
             int skinIndex;
             int placeholder0[2];
         };
+
         struct DepthPrePassVertexStagePushConstants
         {
             float modelTransform[16];
@@ -44,6 +51,7 @@ namespace MFA
             int skinIndex;
             int placeholder0[3];
         };
+
         struct DisplayPassAllStagesPushConstants
         {
             float modelTransform[16];
@@ -101,21 +109,25 @@ namespace MFA
 
         void UpdateLightColor(const float lightColor[3]);
 
-        void CreateDisplayPassDescriptorSets(DrawableVariant * variant);
-
-        void CreateShadowPassDescriptorSets(DrawableVariant * variant);
-
-        void CreateDepthPassDescriptorSets(DrawableVariant * variant);
-
         DrawableVariant * CreateDrawableVariant(char const * essenceName) override;
 
     private:
+
+        void createDisplayPassDescriptorSets(DrawableVariant * variant);
+
+        void createShadowPassDescriptorSets(DrawableVariant * variant);
+
+        void createDepthPassDescriptorSets(DrawableVariant * variant);
+
+        void createOcclusionPassDescriptorSets();
 
         void createDisplayPassDescriptorSetLayout();
 
         void createShadowPassDescriptorSetLayout();
 
         void createDepthDescriptorSetLayout();
+
+        void createOcclusionPassDescriptorSetLayout();
 
         void destroyDescriptorSetLayout() const;
 
@@ -124,6 +136,8 @@ namespace MFA
         void createShadowPassPipeline();
 
         void createDepthPassPipeline();
+
+        void createOcclusionQueryPipeline();
 
         void destroyPipeline();
 
@@ -141,9 +155,9 @@ namespace MFA
 
         void updateDisplayViewProjectionBuffer(RT::CommandRecordState const & drawPass);
 
-        inline static constexpr float SHADOW_WIDTH = 1024;
-        inline static constexpr float SHADOW_HEIGHT = 1024;
-
+        static constexpr float SHADOW_WIDTH = 1024;
+        static constexpr float SHADOW_HEIGHT = 1024;
+        
         bool mIsInitialized = false;
 
         RT::SamplerGroup * mSamplerGroup = nullptr; // TODO Each gltf subMesh has its own settings
@@ -162,9 +176,13 @@ namespace MFA
         VkDescriptorSetLayout mDepthPassDescriptorSetLayout{};
         RT::PipelineGroup mDepthPassPipeline{};
 
+        RT::PipelineGroup mOcclusionQueryPipeline {};
+
         std::unique_ptr<ShadowRenderPassV2> mShadowRenderPass;
 
         std::unique_ptr<DepthPrePass> mDepthPrePass;
+
+        std::unique_ptr<OcclusionRenderPass> mOcclusionRenderPass;
 
         RT::UniformBufferGroup mShadowViewProjectionBuffer{};
 
@@ -189,6 +207,17 @@ namespace MFA
         uint32_t mShadowLightNeedUpdate = 0;
         uint32_t mShadowViewProjectionNeedUpdate = 0;
 
+        struct OcclusionQueryData {
+            std::vector<DrawableVariant *> Variants {};
+            std::vector<uint64_t> Results {};
+            VkQueryPool Pool {};
+        };
+        std::vector<OcclusionQueryData> mOcclusionQueryDataList {}; // We need one per frame
+
+        VkDescriptorSetLayout mOcclusionDescriptorSetLayout {};
+        RT::DescriptorSetGroup mOcclusionDescriptorSetGroup {}; 
+
+        
     };
 
 };

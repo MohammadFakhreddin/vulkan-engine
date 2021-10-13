@@ -1,51 +1,60 @@
-#include "DepthPrePass.hpp"
+#include "OcclusionRenderPass.hpp"
 
 #include "engine/BedrockAssert.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 
 //-------------------------------------------------------------------------------------------------
 
-VkRenderPass MFA::DepthPrePass::GetVkRenderPass()
+MFA::OcclusionRenderPass::OcclusionRenderPass()
+{
+}
+
+//-------------------------------------------------------------------------------------------------
+
+VkRenderPass MFA::OcclusionRenderPass::GetVkRenderPass()
 {
     return mRenderPass;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DepthPrePass::internalInit()
+void MFA::OcclusionRenderPass::internalInit()
 {
-    auto * displayRenderPass = RF::GetDisplayRenderPass();
-    MFA_ASSERT(displayRenderPass != nullptr);
+    auto const capabilities = RF::GetSurfaceCapabilities();
+    mImageWidth = static_cast<uint32_t>(static_cast<float>(capabilities.currentExtent.width) / 4.0f);
+    mImageHeight = static_cast<uint32_t>(static_cast<float>(capabilities.currentExtent.height) / 4.0f);
 
-    mDepthImages = &displayRenderPass->GetDepthImages();
-
-    auto surfaceCapabilities = RF::GetSurfaceCapabilities();
-    auto const swapChainExtent = VkExtent2D {
-        .width = surfaceCapabilities.currentExtent.width,
-        .height = surfaceCapabilities.currentExtent.height
+    auto const extent = VkExtent2D {
+        .width = mImageWidth,
+        .height = mImageHeight
     };
 
-    mColorImageGroup.resize(RF::GetSwapChainImagesCount());
-    for (auto & colorImage : mColorImageGroup)
+    // Color images
+    mColorImages.resize(RF::GetSwapChainImagesCount());
+    for (auto & colorImage : mColorImages)
     {
         colorImage = RF::CreateColorImage(
-            swapChainExtent,
+            extent,
             VK_FORMAT_R8_UINT,
-            RT::CreateColorImageOptions {
-                .samplesCount = RF::GetMaxSamplesCount()    // TODO Can we avoid doing samples for depth pre pass?
-            }
+            {}
         );
+    }
+
+    // Depth images
+    mDepthImages.resize(RF::GetSwapChainImagesCount());
+    for (auto & depthImage : mDepthImages)
+    {
+        depthImage = RF::CreateDepthImage(extent, {});
     }
 
     createRenderPass();
 
-    createFrameBuffers(swapChainExtent);
+    createFrameBuffers(extent);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DepthPrePass::internalShutdown()
+void MFA::OcclusionRenderPass::internalShutdown()
 {
     RF::DestroyFrameBuffers(
         static_cast<uint32_t>(mFrameBuffers.size()),
@@ -54,25 +63,31 @@ void MFA::DepthPrePass::internalShutdown()
 
     RF::DestroyRenderPass(mRenderPass);
 
-    for (auto & colorImage : mColorImageGroup)
+    // Color images
+    for (auto & colorImage : mColorImages)
     {
         RF::DestroyColorImage(colorImage);
     }
-    mColorImageGroup.clear();
+    mColorImages.clear();
 
+    // Depth images
+    for (auto & depthImage : mDepthImages)
+    {
+        RF::DestroyDepthImage(depthImage);
+    }
+    mDepthImages.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DepthPrePass::internalBeginRenderPass(RT::CommandRecordState & drawPass)
+void MFA::OcclusionRenderPass::internalBeginRenderPass(RT::CommandRecordState & drawPass)
 {
-    auto surfaceCapabilities = RF::GetSurfaceCapabilities();
-    auto const swapChainExtend = VkExtent2D{
-        .width = surfaceCapabilities.currentExtent.width,
-        .height = surfaceCapabilities.currentExtent.height
+    auto const extent = VkExtent2D {
+        .width = mImageWidth,
+        .height = mImageHeight
     };
 
-    RF::AssignViewportAndScissorToCommandBuffer(RF::GetGraphicCommandBuffer(drawPass), swapChainExtend);
+    RF::AssignViewportAndScissorToCommandBuffer(RF::GetGraphicCommandBuffer(drawPass), extent);
 
     std::vector<VkClearValue> clearValues{};
     clearValues.resize(2);
@@ -83,7 +98,7 @@ void MFA::DepthPrePass::internalBeginRenderPass(RT::CommandRecordState & drawPas
         RF::GetGraphicCommandBuffer(drawPass),
         mRenderPass,
         getFrameBuffer(drawPass),
-        swapChainExtend,
+        extent,
         static_cast<uint32_t>(clearValues.size()),
         clearValues.data()
     );
@@ -91,28 +106,34 @@ void MFA::DepthPrePass::internalBeginRenderPass(RT::CommandRecordState & drawPas
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DepthPrePass::internalEndRenderPass(RT::CommandRecordState & drawPass)
+void MFA::OcclusionRenderPass::internalEndRenderPass(RT::CommandRecordState & drawPass)
 {
     RF::EndRenderPass(RF::GetGraphicCommandBuffer(drawPass));
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DepthPrePass::internalResize()
+void MFA::OcclusionRenderPass::internalResize()
 {
-    // Color image
-    auto surfaceCapabilities = RF::GetSurfaceCapabilities();
-    auto const swapChainExtend = VkExtent2D{
-        .width = surfaceCapabilities.currentExtent.width,
-        .height = surfaceCapabilities.currentExtent.height
+    auto const capabilities = RF::GetSurfaceCapabilities();
+    mImageWidth = static_cast<uint32_t>(static_cast<float>(capabilities.currentExtent.width) / 4.0f);
+    mImageHeight = static_cast<uint32_t>(static_cast<float>(capabilities.currentExtent.height) / 4.0f);
+
+    auto const extent = VkExtent2D {
+        .width = mImageWidth,
+        .height = mImageHeight
     };
 
-    for (auto & colorImage : mColorImageGroup)
+    for (auto & colorImage : mColorImages)
     {
         RF::DestroyColorImage(colorImage);
-        colorImage = RF::CreateColorImage(swapChainExtend, colorImage.imageFormat, RT::CreateColorImageOptions {
-            .samplesCount = RF::GetMaxSamplesCount()
-        });
+        colorImage = RF::CreateColorImage(extent, colorImage.imageFormat, {});
+    }
+
+    for (auto & depthImage : mDepthImages)
+    {
+        RF::DestroyDepthImage(depthImage);
+        depthImage = RF::CreateDepthImage(extent, {});
     }
 
     // Depth frame-buffer
@@ -120,16 +141,16 @@ void MFA::DepthPrePass::internalResize()
         static_cast<uint32_t>(mFrameBuffers.size()),
         mFrameBuffers.data()
     );
-    createFrameBuffers(swapChainExtend);
+    createFrameBuffers(extent);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DepthPrePass::createRenderPass()
+void MFA::OcclusionRenderPass::createRenderPass()
 {
     VkAttachmentDescription const colorAttachment{
         .format = VK_FORMAT_R8_UINT,
-        .samples = RF::GetMaxSamplesCount(),
+        .samples = VK_SAMPLE_COUNT_1_BIT,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
@@ -144,8 +165,8 @@ void MFA::DepthPrePass::createRenderPass()
     };
 
     VkAttachmentDescription const depthAttachment{
-        .format = (*mDepthImages)[0].imageFormat,
-        .samples = RF::GetMaxSamplesCount(),
+        .format = mDepthImages[0].imageFormat,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
@@ -208,15 +229,15 @@ void MFA::DepthPrePass::createRenderPass()
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DepthPrePass::createFrameBuffers(VkExtent2D const & extent)
+void MFA::OcclusionRenderPass::createFrameBuffers(VkExtent2D const & extent)
 {
     mFrameBuffers.clear();
     mFrameBuffers.resize(RF::GetSwapChainImagesCount());
     for (int i = 0; i < static_cast<int>(mFrameBuffers.size()); ++i)
     {
         std::vector<VkImageView> const attachments = {
-            mColorImageGroup[i].imageView,
-            (*mDepthImages)[i].imageView
+            mColorImages[i].imageView,
+            mDepthImages[i].imageView
         };
         mFrameBuffers[i] = RF::CreateFrameBuffer(
             mRenderPass,
@@ -230,7 +251,7 @@ void MFA::DepthPrePass::createFrameBuffers(VkExtent2D const & extent)
 
 //-------------------------------------------------------------------------------------------------
 
-VkFramebuffer MFA::DepthPrePass::getFrameBuffer(RT::CommandRecordState const & drawPass)
+VkFramebuffer MFA::OcclusionRenderPass::getFrameBuffer(RT::CommandRecordState const & drawPass)
 {
     return mFrameBuffers[drawPass.imageIndex];
 }

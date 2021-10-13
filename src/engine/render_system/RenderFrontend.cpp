@@ -446,16 +446,16 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    // TODO Not a good overload!
-    RT::DescriptorSetGroup CreateDescriptorSets(VkDescriptorSetLayout descriptorSetLayout)
-    {
-        return RB::CreateDescriptorSet(
-            state->logicalDevice.device,
-            state->descriptorPool,
-            descriptorSetLayout,
-            state->swapChainImageCount
-        );
-    }
+    //// TODO Not a good overload!
+    //RT::DescriptorSetGroup CreateDescriptorSets(VkDescriptorSetLayout descriptorSetLayout)
+    //{
+    //    return RB::CreateDescriptorSet(
+    //        state->logicalDevice.device,
+    //        state->descriptorPool,
+    //        descriptorSetLayout,
+    //        state->swapChainImageCount
+    //    );
+    //}
 
     //-------------------------------------------------------------------------------------------------
 
@@ -1517,6 +1517,18 @@ namespace MFA::RenderFrontend
     VkSemaphore getImageAvailabilitySemaphore(RT::CommandRecordState const & drawPass)
     {
         return state->syncObjects.imageAvailabilitySemaphores[drawPass.frameIndex];
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ResetQueryPool(RT::CommandRecordState const & recordState, VkQueryPool queryPool, uint32_t queryCount, uint32_t firstQueryIndex)
+    {
+        RB::ResetQueryPool(
+            GetGraphicCommandBuffer(recordState),
+            queryPool,
+            queryCount,
+            firstQueryIndex
+        );
     }
 
     //-------------------------------------------------------------------------------------------------

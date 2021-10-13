@@ -4,20 +4,13 @@
 
 namespace MFA
 {
-    class DisplayRenderPass;
 
-    class DepthPrePass final : public RenderPass
+    class OcclusionRenderPass final : public RenderPass
     {
     public:
-        DepthPrePass() = default;
-        ~DepthPrePass() override = default;
 
-        DepthPrePass(DepthPrePass const &) noexcept = delete;
-        DepthPrePass(DepthPrePass &&) noexcept = delete;
-        DepthPrePass & operator = (DepthPrePass const &) noexcept = delete;
-        DepthPrePass & operator = (DepthPrePass &&) noexcept = delete;
+        explicit OcclusionRenderPass();
 
-        [[nodiscard]]
         VkRenderPass GetVkRenderPass() override;
 
     protected:
@@ -41,11 +34,13 @@ namespace MFA
         [[nodiscard]]
         VkFramebuffer getFrameBuffer(RT::CommandRecordState const & drawPass);
 
+        uint32_t mImageWidth;
+        uint32_t mImageHeight;
+
         VkRenderPass mRenderPass {};
         std::vector<VkFramebuffer> mFrameBuffers {};
-        std::vector<RT::ColorImageGroup> mColorImageGroup {};
-        
-        std::vector<RT::DepthImageGroup> const * mDepthImages = nullptr;
+        std::vector<RT::ColorImageGroup> mColorImages {};
+        std::vector<RT::DepthImageGroup> mDepthImages {};
 
     };
 

@@ -81,6 +81,34 @@ void Demo3rdPersonScene::Init()
 
         EntitySystem::InitEntity(entity);
     }
+    {// Map
+        auto cpuModel = Importer::ImportGLTF(Path::Asset("models/sponza/sponza.gltf").c_str());
+        mMapModel = RF::CreateGpuModel(cpuModel);
+        mPbrPipeline.CreateDrawableEssence("SponzaMap", mMapModel);
+
+        auto * entity = EntitySystem::CreateEntity("Sponza scene", GetRootEntity());
+        MFA_ASSERT(entity != nullptr);
+
+        auto * transformComponent = entity->AddComponent<TransformComponent>();
+        MFA_ASSERT(transformComponent != nullptr);
+
+        float position[3]{ 0.4f, 2.0f, -6.0f };
+        float eulerAngle[3]{ 180.0f, -90.0f, 0.0f };
+        float scale[3]{ 1.0f, 1.0f, 1.0f };
+        transformComponent->UpdateTransform(position, eulerAngle, scale);
+
+        auto * meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "SponzaMap");
+        MFA_ASSERT(meshRendererComponent != nullptr);
+
+        entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 5.0f, 0.0f), glm::vec3(15.0f, 6.0f, 9.0f));
+
+        auto * debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
+        debugRenderComponent->SetActive(true);
+
+        entity->AddComponent<ColorComponent>(glm::vec3(0.0f, 0.0f, 1.0f));
+
+        EntitySystem::InitEntity(entity);
+    }
     {// Soldier
         auto cpuModel = Importer::ImportGLTF(Path::Asset("models/warcraft_3_alliance_footmanfanmade/scene.gltf").c_str());
         mSoldierGpuModel = RF::CreateGpuModel(cpuModel);
@@ -162,34 +190,6 @@ void Demo3rdPersonScene::Init()
                 }
             }
         }
-    }
-    {// Map
-        auto cpuModel = Importer::ImportGLTF(Path::Asset("models/sponza/sponza.gltf").c_str());
-        mMapModel = RF::CreateGpuModel(cpuModel);
-        mPbrPipeline.CreateDrawableEssence("SponzaMap", mMapModel);
-
-        auto * entity = EntitySystem::CreateEntity("Sponza scene", GetRootEntity());
-        MFA_ASSERT(entity != nullptr);
-
-        auto * transformComponent = entity->AddComponent<TransformComponent>();
-        MFA_ASSERT(transformComponent != nullptr);
-
-        float position[3]{ 0.4f, 2.0f, -6.0f };
-        float eulerAngle[3]{ 180.0f, -90.0f, 0.0f };
-        float scale[3]{ 1.0f, 1.0f, 1.0f };
-        transformComponent->UpdateTransform(position, eulerAngle, scale);
-
-        auto * meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "SponzaMap");
-        MFA_ASSERT(meshRendererComponent != nullptr);
-
-        entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 5.0f, 0.0f), glm::vec3(15.0f, 6.0f, 9.0f));
-
-        auto * debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
-        debugRenderComponent->SetActive(true);
-
-        entity->AddComponent<ColorComponent>(glm::vec3(0.0f, 0.0f, 1.0f));
-
-        EntitySystem::InitEntity(entity);
     }
     mUIRecordId = UI::Register([this]()->void { onUI(); });
     updateProjectionBuffer();

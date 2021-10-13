@@ -23,193 +23,216 @@
 #include <vector>
 #include <cstring>
 
-namespace MFA::RenderBackend {
+namespace MFA::RenderBackend
+{
 
-constexpr char EngineName[256] = "MFA";
-constexpr int EngineVersion = 1;
-constexpr char ValidationLayer[100] = "VK_LAYER_KHRONOS_validation";
+    constexpr char EngineName[256] = "MFA";
+    constexpr int EngineVersion = 1;
+    constexpr char ValidationLayer[100] = "VK_LAYER_KHRONOS_validation";
 
-std::vector<char const *> DebugLayers = {
-    ValidationLayer
-};
-
-//-------------------------------------------------------------------------------------------------
-
-static void VK_Check(VkResult const result) {
-  if(result != VK_SUCCESS) {
-      MFA_CRASH("Vulkan command failed with code:" + std::to_string(result));
-  }
-}
-
-//-------------------------------------------------------------------------------------------------
-
-#ifdef __DESKTOP__
-static void SDL_Check(MSDL::SDL_bool const result) {
-  if(result != MSDL::SDL_TRUE) {\
-      MFA_CRASH("SDL command failed");
-  }
-}
-
-//-------------------------------------------------------------------------------------------------
-
-MSDL::SDL_Window * CreateWindow(ScreenWidth const screenWidth, ScreenHeight const screenHeight) {
-    MSDL::SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
-    auto const screen_info = Platforms::ComputeScreenSize();
-    auto * window = MSDL::SDL_CreateWindow(
-        "VULKAN_ENGINE", 
-        static_cast<int>((static_cast<float>(screen_info.screenWidth) / 2.0f) - (static_cast<float>(screenWidth) / 2.0f)), 
-        static_cast<int>((static_cast<float>(screen_info.screenHeight) / 2.0f) - (static_cast<float>(screenHeight) / 2.0f)),
-        screenWidth, screenHeight,
-        MSDL::SDL_WINDOW_SHOWN /*| SDL_WINDOW_FULLSCREEN */| MSDL::SDL_WINDOW_VULKAN
-    );
-    return window;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void DestroyWindow(MSDL::SDL_Window * window) {
-    MFA_ASSERT(window != nullptr);
-    MSDL::SDL_DestroyWindow(window);
-}
-#endif
-
-//-------------------------------------------------------------------------------------------------
-
-#ifdef __DESKTOP__
-VkSurfaceKHR CreateWindowSurface(MSDL::SDL_Window * window, VkInstance_T * instance) {
-    VkSurfaceKHR ret {};
-    SDL_Check(MSDL::SDL_Vulkan_CreateSurface(
-        window,
-        instance,
-        &ret
-    ));
-    return ret;
-}
-#elif defined(__ANDROID__)
-VkSurfaceKHR CreateWindowSurface(ANativeWindow * window, VkInstance_T * instance) {
-    VkSurfaceKHR surface {};
-
-    VkAndroidSurfaceCreateInfoKHR createInfo {
-        .sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR,
-        .pNext = nullptr,
-        .flags = 0,
-        .window = window
+    std::vector<char const *> DebugLayers = {
+        ValidationLayer
     };
 
-    VK_Check(vkCreateAndroidSurfaceKHR(
-        instance,
-        &createInfo,
-        nullptr,
-        &surface
-    ));
+    //-------------------------------------------------------------------------------------------------
 
-    return surface;
-}
-#elif defined(__IOS__)
-VkSurfaceKHR CreateWindowSurface(void * view, VkInstance_T * instance) {
-    VkSurfaceKHR surface {};
-
-    VkIOSSurfaceCreateInfoMVK const surfaceCreateInfo {
-        .sType = VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_MVK,
-        .pNext = nullptr,
-        .flags = 0,
-        .pView = view
-    };
-    VK_Check(vkCreateIOSSurfaceMVK(instance, &surfaceCreateInfo, nullptr, &surface));
-    
-    return surface;
-}
-#else
-    #error Os is not handled
-#endif
-
-//-------------------------------------------------------------------------------------------------
-
-void DestroyWindowSurface(VkInstance instance, VkSurfaceKHR surface) {
-    MFA_ASSERT(instance != nullptr);
-    MFA_VK_VALID_ASSERT(surface);
-    vkDestroySurfaceKHR(instance, surface, nullptr);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-[[nodiscard]]
-VkExtent2D ChooseSwapChainExtent(
-    VkSurfaceCapabilitiesKHR const & surfaceCapabilities, 
-    ScreenWidth const screenWidth, 
-    ScreenHeight const screenHeight
-) {
-    if (surfaceCapabilities.currentExtent.width <= 0) {
-        VkExtent2D const swap_chain_extent = {
-            Math::Min(
-                Math::Max(
-                    static_cast<uint32_t>(screenWidth), 
-                    surfaceCapabilities.minImageExtent.width
-                ), 
-                surfaceCapabilities.maxImageExtent.width
-            ),
-            Math::Min(
-                Math::Max(
-                    static_cast<uint32_t>(screenHeight), 
-                    surfaceCapabilities.minImageExtent.height
-                ), 
-                surfaceCapabilities.maxImageExtent.height
-            )
-        };
-        return swap_chain_extent;
-    }
-    return surfaceCapabilities.currentExtent;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-[[nodiscard]]
-VkPresentModeKHR ChoosePresentMode(
-    uint8_t const presentModesCount, 
-    VkPresentModeKHR const * present_modes
-) {
-    for(uint8_t index = 0; index < presentModesCount; index ++) {
-        if (present_modes[index] == VK_PRESENT_MODE_MAILBOX_KHR) {
-            return present_modes[index];
-        } 
-    }
-    // If mailbox is unavailable, fall back to FIFO (guaranteed to be available)
-    return VK_PRESENT_MODE_FIFO_KHR;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-VkSurfaceFormatKHR ChooseSurfaceFormat(
-    uint8_t const availableFormatsCount,
-    VkSurfaceFormatKHR const * availableFormats
-) {
-    // We can either choose any format
-    if (availableFormatsCount == 1 && availableFormats[0].format == VK_FORMAT_UNDEFINED) {
-        return { VK_FORMAT_R8G8B8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR };
-    }
-
-    // Or go with the standard format - if available
-    for(uint8_t index = 0; index < availableFormatsCount; index ++) {
-        if (availableFormats[index].format == VK_FORMAT_R8G8B8A8_UNORM) {
-            return availableFormats[index];
+    static void VK_Check(VkResult const result)
+    {
+        if (result != VK_SUCCESS)
+        {
+            MFA_CRASH("Vulkan command failed with code:" + std::to_string(result));
         }
     }
 
-    // Or fall back to the first available one
-    return availableFormats[0];
-}
+    //-------------------------------------------------------------------------------------------------
+
+#ifdef __DESKTOP__
+    static void SDL_Check(MSDL::SDL_bool const result)
+    {
+        if (result != MSDL::SDL_TRUE)
+        {
+            \
+                MFA_CRASH("SDL command failed");
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    MSDL::SDL_Window * CreateWindow(ScreenWidth const screenWidth, ScreenHeight const screenHeight)
+    {
+        MSDL::SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
+        auto const screen_info = Platforms::ComputeScreenSize();
+        auto * window = MSDL::SDL_CreateWindow(
+            "VULKAN_ENGINE",
+            static_cast<int>((static_cast<float>(screen_info.screenWidth) / 2.0f) - (static_cast<float>(screenWidth) / 2.0f)),
+            static_cast<int>((static_cast<float>(screen_info.screenHeight) / 2.0f) - (static_cast<float>(screenHeight) / 2.0f)),
+            screenWidth, screenHeight,
+            MSDL::SDL_WINDOW_SHOWN /*| SDL_WINDOW_FULLSCREEN */ | MSDL::SDL_WINDOW_VULKAN
+        );
+        return window;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void DestroyWindow(MSDL::SDL_Window * window)
+    {
+        MFA_ASSERT(window != nullptr);
+        MSDL::SDL_DestroyWindow(window);
+    }
+#endif
+
+    //-------------------------------------------------------------------------------------------------
+
+#ifdef __DESKTOP__
+    VkSurfaceKHR CreateWindowSurface(MSDL::SDL_Window * window, VkInstance_T * instance)
+    {
+        VkSurfaceKHR ret{};
+        SDL_Check(MSDL::SDL_Vulkan_CreateSurface(
+            window,
+            instance,
+            &ret
+        ));
+        return ret;
+    }
+#elif defined(__ANDROID__)
+    VkSurfaceKHR CreateWindowSurface(ANativeWindow * window, VkInstance_T * instance)
+    {
+        VkSurfaceKHR surface{};
+
+        VkAndroidSurfaceCreateInfoKHR createInfo{
+            .sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR,
+            .pNext = nullptr,
+            .flags = 0,
+            .window = window
+        };
+
+        VK_Check(vkCreateAndroidSurfaceKHR(
+            instance,
+            &createInfo,
+            nullptr,
+            &surface
+        ));
+
+        return surface;
+    }
+#elif defined(__IOS__)
+    VkSurfaceKHR CreateWindowSurface(void * view, VkInstance_T * instance)
+    {
+        VkSurfaceKHR surface{};
+
+        VkIOSSurfaceCreateInfoMVK const surfaceCreateInfo{
+            .sType = VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_MVK,
+            .pNext = nullptr,
+            .flags = 0,
+            .pView = view
+        };
+        VK_Check(vkCreateIOSSurfaceMVK(instance, &surfaceCreateInfo, nullptr, &surface));
+
+        return surface;
+    }
+#else
+#error Os is not handled
+#endif
 
 //-------------------------------------------------------------------------------------------------
 
+    void DestroyWindowSurface(VkInstance instance, VkSurfaceKHR surface)
+    {
+        MFA_ASSERT(instance != nullptr);
+        MFA_VK_VALID_ASSERT(surface);
+        vkDestroySurfaceKHR(instance, surface, nullptr);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    [[nodiscard]]
+    VkExtent2D ChooseSwapChainExtent(
+        VkSurfaceCapabilitiesKHR const & surfaceCapabilities,
+        ScreenWidth const screenWidth,
+        ScreenHeight const screenHeight
+    )
+    {
+        if (surfaceCapabilities.currentExtent.width <= 0)
+        {
+            VkExtent2D const swap_chain_extent = {
+                Math::Min(
+                    Math::Max(
+                        static_cast<uint32_t>(screenWidth),
+                        surfaceCapabilities.minImageExtent.width
+                    ),
+                    surfaceCapabilities.maxImageExtent.width
+                ),
+                Math::Min(
+                    Math::Max(
+                        static_cast<uint32_t>(screenHeight),
+                        surfaceCapabilities.minImageExtent.height
+                    ),
+                    surfaceCapabilities.maxImageExtent.height
+                )
+            };
+            return swap_chain_extent;
+        }
+        return surfaceCapabilities.currentExtent;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    [[nodiscard]]
+    VkPresentModeKHR ChoosePresentMode(
+        uint8_t const presentModesCount,
+        VkPresentModeKHR const * present_modes
+    )
+    {
+        for (uint8_t index = 0; index < presentModesCount; index++)
+        {
+            if (present_modes[index] == VK_PRESENT_MODE_MAILBOX_KHR)
+            {
+                return present_modes[index];
+            }
+        }
+        // If mailbox is unavailable, fall back to FIFO (guaranteed to be available)
+        return VK_PRESENT_MODE_FIFO_KHR;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    VkSurfaceFormatKHR ChooseSurfaceFormat(
+        uint8_t const availableFormatsCount,
+        VkSurfaceFormatKHR const * availableFormats
+    )
+    {
+        // We can either choose any format
+        if (availableFormatsCount == 1 && availableFormats[0].format == VK_FORMAT_UNDEFINED)
+        {
+            return { VK_FORMAT_R8G8B8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR };
+        }
+
+        // Or go with the standard format - if available
+        for (uint8_t index = 0; index < availableFormatsCount; index++)
+        {
+            if (availableFormats[index].format == VK_FORMAT_R8G8B8A8_UNORM)
+            {
+                return availableFormats[index];
+            }
+        }
+
+        // Or fall back to the first available one
+        return availableFormats[0];
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
 #ifdef __DESKTOP__
-VkInstance CreateInstance(char const * applicationName, MSDL::SDL_Window * window) {
+    VkInstance CreateInstance(char const * applicationName, MSDL::SDL_Window * window)
+    {
 #elif defined(__ANDROID__) || defined(__IOS__)
-VkInstance CreateInstance(char const * applicationName) {
+    VkInstance CreateInstance(char const * applicationName)
+    {
 #else
 #error Os not handled
 #endif
     // Filling out application description:
-    auto applicationInfo = VkApplicationInfo {
+    auto applicationInfo = VkApplicationInfo{
         // sType is mandatory
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         // pNext is mandatory
@@ -224,7 +247,7 @@ VkInstance CreateInstance(char const * applicationName) {
         // The version of Vulkan we're using for this application
         .apiVersion = VK_API_VERSION_1_0,
     };
-    std::vector<char const *> instanceExtensions {};
+    std::vector<char const *> instanceExtensions{};
 
 #ifdef __DESKTOP__
     {// Filling sdl extensions
@@ -249,23 +272,23 @@ VkInstance CreateInstance(char const * applicationName) {
     instanceExtensions.emplace_back(VK_KHR_SURFACE_EXTENSION_NAME);
     instanceExtensions.emplace_back(VK_MVK_IOS_SURFACE_EXTENSION_NAME);
 #else
-    #error Os not handled
+#error Os not handled
 #endif
     instanceExtensions.emplace_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-//    // TODO We should enumarate layers before using them (Both desktop and android)
-//    {// Checking for extension support
-//        uint32_t vk_supported_extension_count = 0;
-//        VK_Check(vkEnumerateInstanceExtensionProperties(
-//            nullptr,
-//            &vk_supported_extension_count,
-//            nullptr
-//        ));
-//        if (vk_supported_extension_count == 0) {
-//            MFA_CRASH("no extensions supported!");
-//        }
-//    }
-    // Filling out instance description:
-    auto instanceInfo = VkInstanceCreateInfo {
+    //    // TODO We should enumarate layers before using them (Both desktop and android)
+    //    {// Checking for extension support
+    //        uint32_t vk_supported_extension_count = 0;
+    //        VK_Check(vkEnumerateInstanceExtensionProperties(
+    //            nullptr,
+    //            &vk_supported_extension_count,
+    //            nullptr
+    //        ));
+    //        if (vk_supported_extension_count == 0) {
+    //            MFA_CRASH("no extensions supported!");
+    //        }
+    //    }
+        // Filling out instance description:
+    auto instanceInfo = VkInstanceCreateInfo{
         // sType is mandatory
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         // pNext is mandatory
@@ -288,11 +311,12 @@ VkInstance CreateInstance(char const * applicationName) {
     VK_Check(vkCreateInstance(&instanceInfo, nullptr, &instance));
     MFA_ASSERT(instance != nullptr);
     return instance;
-}
+    }
 
 //-------------------------------------------------------------------------------------------------
 
-void DestroyInstance(VkInstance instance) {
+void DestroyInstance(VkInstance instance)
+{
     MFA_ASSERT(instance != nullptr);
     vkDestroyInstance(instance, nullptr);
 }
@@ -302,13 +326,14 @@ void DestroyInstance(VkInstance instance) {
 VkDebugReportCallbackEXT CreateDebugCallback(
     VkInstance vkInstance,
     PFN_vkDebugReportCallbackEXT const & debugCallback
-) {
+)
+{
     MFA_ASSERT(vkInstance != nullptr);
     VkDebugReportCallbackCreateInfoEXT debug_info = {};
     debug_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
     debug_info.pfnCallback = debugCallback;
-    debug_info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | 
-        VK_DEBUG_REPORT_WARNING_BIT_EXT | 
+    debug_info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT |
+        VK_DEBUG_REPORT_WARNING_BIT_EXT |
         VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
     auto const debug_report_callback = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(vkGetInstanceProcAddr(
         vkInstance,
@@ -316,9 +341,9 @@ VkDebugReportCallbackEXT CreateDebugCallback(
     ));
     VkDebugReportCallbackEXT debug_report_callback_ext;
     VK_Check(debug_report_callback(
-        vkInstance, 
-        &debug_info, 
-        nullptr, 
+        vkInstance,
+        &debug_info,
+        nullptr,
         &debug_report_callback_ext
     ));
     return debug_report_callback_ext;
@@ -329,10 +354,11 @@ VkDebugReportCallbackEXT CreateDebugCallback(
 void DestroyDebugReportCallback(
     VkInstance instance,
     VkDebugReportCallbackEXT const & reportCallbackExt
-) {
+)
+{
     MFA_ASSERT(instance != nullptr);
     auto const DestroyDebugReportCallback = reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>(vkGetInstanceProcAddr(
-        instance, 
+        instance,
         "vkDestroyDebugReportCallbackEXT"
     ));
     DestroyDebugReportCallback(instance, reportCallbackExt, nullptr);
@@ -340,17 +366,20 @@ void DestroyDebugReportCallback(
 
 //-------------------------------------------------------------------------------------------------
 
-uint32_t FindMemoryType (
+uint32_t FindMemoryType(
     VkPhysicalDevice * physicalDevice,
-    uint32_t const typeFilter, 
+    uint32_t const typeFilter,
     VkMemoryPropertyFlags const propertyFlags
-) {
+)
+{
     MFA_ASSERT(physicalDevice != nullptr);
     VkPhysicalDeviceMemoryProperties memory_properties;
     vkGetPhysicalDeviceMemoryProperties(*physicalDevice, &memory_properties);
 
-    for (uint32_t memory_type_index = 0; memory_type_index < memory_properties.memoryTypeCount; memory_type_index++) {
-        if ((typeFilter & (1 << memory_type_index)) && (memory_properties.memoryTypes[memory_type_index].propertyFlags & propertyFlags) == propertyFlags) {
+    for (uint32_t memory_type_index = 0; memory_type_index < memory_properties.memoryTypeCount; memory_type_index++)
+    {
+        if ((typeFilter & (1 << memory_type_index)) && (memory_properties.memoryTypes[memory_type_index].propertyFlags & propertyFlags) == propertyFlags)
+        {
             return memory_type_index;
         }
     }
@@ -360,18 +389,19 @@ uint32_t FindMemoryType (
 
 //-------------------------------------------------------------------------------------------------
 
-VkImageView CreateImageView (
+VkImageView CreateImageView(
     VkDevice device,
-    VkImage const & image, 
-    VkFormat const format, 
+    VkImage const & image,
+    VkFormat const format,
     VkImageAspectFlags const aspectFlags,
     uint32_t const mipmapCount,
     uint32_t const layerCount,
     VkImageViewType const imageViewType
-) {
+)
+{
     MFA_ASSERT(device != nullptr);
 
-    VkImageView image_view {};
+    VkImageView image_view{};
 
     VkImageViewCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -388,7 +418,7 @@ VkImageView CreateImageView (
     createInfo.subresourceRange.levelCount = mipmapCount;
     createInfo.subresourceRange.baseArrayLayer = 0;
     createInfo.subresourceRange.layerCount = layerCount;
-   
+
     VK_Check(vkCreateImageView(device, &createInfo, nullptr, &image_view));
 
     return image_view;
@@ -399,15 +429,17 @@ VkImageView CreateImageView (
 void DestroyImageView(
     VkDevice device,
     VkImageView imageView
-) {
+)
+{
     vkDestroyImageView(device, imageView, nullptr);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-VkCommandBuffer BeginSingleTimeCommand(VkDevice device, VkCommandPool const & command_pool) {
+VkCommandBuffer BeginSingleTimeCommand(VkDevice device, VkCommandPool const & command_pool)
+{
     MFA_ASSERT(device != nullptr);
-    
+
     VkCommandBufferAllocateInfo allocate_info{};
     allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -429,14 +461,15 @@ VkCommandBuffer BeginSingleTimeCommand(VkDevice device, VkCommandPool const & co
 //-------------------------------------------------------------------------------------------------
 
 void EndAndSubmitSingleTimeCommand(
-    VkDevice device, 
-    VkCommandPool const & commandPool, 
-    VkQueue const & graphicQueue, 
+    VkDevice device,
+    VkCommandPool const & commandPool,
+    VkQueue const & graphicQueue,
     VkCommandBuffer const & commandBuffer
-) {
+)
+{
     VK_Check(vkEndCommandBuffer(commandBuffer));
 
-    VkSubmitInfo submit_info {};
+    VkSubmitInfo submit_info{};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &commandBuffer;
@@ -453,13 +486,14 @@ void EndAndSubmitSingleTimeCommand(
 //-------------------------------------------------------------------------------------------------
 
 [[nodiscard]]
-VkFormat FindDepthFormat(VkPhysicalDevice physical_device) {
-    std::vector<VkFormat> candidate_formats {
+VkFormat FindDepthFormat(VkPhysicalDevice physical_device)
+{
+    std::vector<VkFormat> candidate_formats{
         VK_FORMAT_D32_SFLOAT,
         VK_FORMAT_D32_SFLOAT_S8_UINT,
         VK_FORMAT_D24_UNORM_S8_UINT
     };
-    return FindSupportedFormat (
+    return FindSupportedFormat(
         physical_device,
         static_cast<uint8_t>(candidate_formats.size()),
         candidate_formats.data(),
@@ -473,19 +507,23 @@ VkFormat FindDepthFormat(VkPhysicalDevice physical_device) {
 [[nodiscard]]
 VkFormat FindSupportedFormat(
     VkPhysicalDevice physical_device,
-    uint8_t const candidates_count, 
+    uint8_t const candidates_count,
     VkFormat * candidates,
-    VkImageTiling const tiling, 
+    VkImageTiling const tiling,
     VkFormatFeatureFlags const features
-) {
-    for(uint8_t index = 0; index < candidates_count; index ++) {
+)
+{
+    for (uint8_t index = 0; index < candidates_count; index++)
+    {
         VkFormatProperties props;
         vkGetPhysicalDeviceFormatProperties(physical_device, candidates[index], &props);
 
-        if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
+        if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features)
+        {
             return candidates[index];
         }
-        if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+        if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features)
+        {
             return candidates[index];
         }
     }
@@ -498,12 +536,13 @@ void TransferImageLayout(
     VkDevice device,
     VkQueue graphicQueue,
     VkCommandPool commandPool,
-    VkImage image, 
-    VkImageLayout const oldLayout, 
+    VkImage image,
+    VkImageLayout const oldLayout,
     VkImageLayout const newLayout,
     uint32_t const levelCount,
     uint32_t const layerCount
-) {
+)
+{
     MFA_ASSERT(device != nullptr);
     MFA_ASSERT(graphicQueue != nullptr);
     MFA_VK_VALID_ASSERT(commandPool);
@@ -528,24 +567,29 @@ void TransferImageLayout(
     VkPipelineStageFlags destination_stage;
 
     if (
-        oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && 
+        oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
         newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-    ) {
+    )
+    {
         barrier.srcAccessMask = 0;
         barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
         source_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         destination_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    } else if (
-        oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && 
-        newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-    ) {
+    }
+    else if (
+     oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+     newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+ )
+    {
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
         source_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
         destination_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    } else {
+    }
+    else
+    {
         MFA_CRASH("unsupported layout transition!");
     }
 
@@ -566,16 +610,17 @@ void TransferImageLayout(
 RT::BufferGroup CreateBuffer(
     VkDevice device,
     VkPhysicalDevice physicalDevice,
-    VkDeviceSize const size, 
-    VkBufferUsageFlags const usage, 
-    VkMemoryPropertyFlags const properties 
-) {
+    VkDeviceSize const size,
+    VkBufferUsageFlags const usage,
+    VkMemoryPropertyFlags const properties
+)
+{
     MFA_ASSERT(device != nullptr);
     MFA_ASSERT(physicalDevice != nullptr);
 
-    RT::BufferGroup bufferGroup {};
+    RT::BufferGroup bufferGroup{};
 
-    VkBufferCreateInfo buffer_info {};
+    VkBufferCreateInfo buffer_info{};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buffer_info.size = size;
     buffer_info.usage = usage;
@@ -583,15 +628,15 @@ RT::BufferGroup CreateBuffer(
 
     VK_Check(vkCreateBuffer(device, &buffer_info, nullptr, &bufferGroup.buffer));
     MFA_VK_VALID_ASSERT(bufferGroup.buffer);
-    VkMemoryRequirements memory_requirements {};
+    VkMemoryRequirements memory_requirements{};
     vkGetBufferMemoryRequirements(device, bufferGroup.buffer, &memory_requirements);
 
-    VkMemoryAllocateInfo memory_allocation_info {};
+    VkMemoryAllocateInfo memory_allocation_info{};
     memory_allocation_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     memory_allocation_info.allocationSize = memory_requirements.size;
     memory_allocation_info.memoryTypeIndex = FindMemoryType(
-        &physicalDevice, 
-        memory_requirements.memoryTypeBits, 
+        &physicalDevice,
+        memory_requirements.memoryTypeBits,
         properties
     );
 
@@ -606,7 +651,8 @@ void MapDataToBuffer(
     VkDevice device,
     VkDeviceMemory bufferMemory,
     CBlob const dataBlob
-) {
+)
+{
     MFA_ASSERT(dataBlob.ptr != nullptr);
     MFA_ASSERT(dataBlob.len > 0);
     void * tempBufferData = nullptr;
@@ -625,7 +671,8 @@ void CopyBuffer(
     VkBuffer sourceBuffer,
     VkBuffer destinationBuffer,
     VkDeviceSize const size
-) {
+)
+{
     auto * command_buffer = BeginSingleTimeCommand(device, commandPool);
 
     VkBufferCopy copyRegion{};
@@ -634,11 +681,11 @@ void CopyBuffer(
         command_buffer,
         sourceBuffer,
         destinationBuffer,
-        1, 
+        1,
         &copyRegion
     );
 
-    EndAndSubmitSingleTimeCommand(device, commandPool, graphicQueue, command_buffer); 
+    EndAndSubmitSingleTimeCommand(device, commandPool, graphicQueue, command_buffer);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -646,7 +693,8 @@ void CopyBuffer(
 void DestroyBuffer(
     VkDevice device,
     RT::BufferGroup & bufferGroup
-) {
+)
+{
     MFA_ASSERT(device != nullptr);
     MFA_ASSERT(bufferGroup.isValid() == true);
     vkFreeMemory(device, bufferGroup.memory, nullptr);
@@ -659,19 +707,20 @@ void DestroyBuffer(
 RT::ImageGroup CreateImage(
     VkDevice device,
     VkPhysicalDevice physical_device,
-    uint32_t const width, 
+    uint32_t const width,
     uint32_t const height,
     uint32_t const depth,
     uint8_t const mip_levels,
     uint16_t const slice_count,
-    VkFormat const format, 
-    VkImageTiling const tiling, 
+    VkFormat const format,
+    VkImageTiling const tiling,
     VkImageUsageFlags const usage,
     VkSampleCountFlagBits const samplesCount,
     VkMemoryPropertyFlags const properties,
     VkImageCreateFlags const imageCreateFlags
-) {
-    RT::ImageGroup imageGroup {};
+)
+{
+    RT::ImageGroup imageGroup{};
 
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -698,8 +747,8 @@ RT::ImageGroup CreateImage(
     allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocate_info.allocationSize = memory_requirements.size;
     allocate_info.memoryTypeIndex = FindMemoryType(
-        &physical_device, 
-        memory_requirements.memoryTypeBits, 
+        &physical_device,
+        memory_requirements.memoryTypeBits,
         properties
     );
 
@@ -714,7 +763,8 @@ RT::ImageGroup CreateImage(
 void DestroyImage(
     VkDevice device,
     RT::ImageGroup const & imageGroup
-) {
+)
+{
     vkDestroyImage(device, imageGroup.image, nullptr);
     vkFreeMemory(device, imageGroup.memory, nullptr);
 }
@@ -727,14 +777,16 @@ RT::GpuTexture CreateTexture(
     VkPhysicalDevice physicalDevice,
     VkQueue graphicQueue,
     VkCommandPool commandPool
-) {
+)
+{
     MFA_ASSERT(device != nullptr);
     MFA_ASSERT(physicalDevice != nullptr);
     MFA_ASSERT(graphicQueue != nullptr);
     MFA_VK_VALID_ASSERT(commandPool);
     MFA_ASSERT(cpuTexture.isValid());
 
-    if(cpuTexture.isValid()) {
+    if (cpuTexture.isValid())
+    {
         auto const format = cpuTexture.GetFormat();
         auto const mipCount = cpuTexture.GetMipCount();
         auto const sliceCount = cpuTexture.GetSlices();
@@ -746,18 +798,18 @@ RT::GpuTexture CreateTexture(
             device,
             physicalDevice,
             buffer.len,
-            VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
         );
-        MFA_DEFER {DestroyBuffer(device, uploadBufferGroup);};
+        MFA_DEFER{ DestroyBuffer(device, uploadBufferGroup); };
         // Map texture data to buffer
         MapDataToBuffer(device, uploadBufferGroup.memory, buffer);
 
         auto const vulkan_format = ConvertCpuTextureFormatToGpu(format);
 
         auto imageGroup = CreateImage(
-            device, 
-            physicalDevice, 
+            device,
+            physicalDevice,
             largestMipmapInfo.dimension.width,
             largestMipmapInfo.dimension.height,
             largestMipmapInfo.dimension.depth,
@@ -769,7 +821,7 @@ RT::GpuTexture CreateTexture(
             VK_SAMPLE_COUNT_1_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
-        
+
         TransferImageLayout(
             device,
             graphicQueue,
@@ -780,7 +832,7 @@ RT::GpuTexture CreateTexture(
             mipCount,
             sliceCount
         );
-        
+
         CopyBufferToImage(
             device,
             commandPool,
@@ -795,7 +847,7 @@ RT::GpuTexture CreateTexture(
             graphicQueue,
             commandPool,
             imageGroup.image,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             mipCount,
             sliceCount
@@ -811,7 +863,7 @@ RT::GpuTexture CreateTexture(
             VK_IMAGE_VIEW_TYPE_2D
         );
 
-        RT::GpuTexture gpuTexture {
+        RT::GpuTexture gpuTexture{
             std::move(imageGroup),
             imageView,
             std::move(cpuTexture)
@@ -819,15 +871,17 @@ RT::GpuTexture CreateTexture(
         MFA_ASSERT(gpuTexture.isValid());
         return gpuTexture;
     }
-    return RT::GpuTexture {};
+    return RT::GpuTexture{};
 }
 
 //-------------------------------------------------------------------------------------------------
 
-bool DestroyTexture(VkDevice device, RT::GpuTexture & gpuTexture) {
+bool DestroyTexture(VkDevice device, RT::GpuTexture & gpuTexture)
+{
     MFA_ASSERT(device != nullptr);
     bool success = false;
-    if(gpuTexture.isValid()) {
+    if (gpuTexture.isValid())
+    {
         MFA_ASSERT(device != nullptr);
         DestroyImage(
             device,
@@ -845,7 +899,8 @@ bool DestroyTexture(VkDevice device, RT::GpuTexture & gpuTexture) {
 
 //-------------------------------------------------------------------------------------------------
 
-VkFormat ConvertCpuTextureFormatToGpu(AssetSystem::TextureFormat const cpuFormat) {
+VkFormat ConvertCpuTextureFormatToGpu(AssetSystem::TextureFormat const cpuFormat)
+{
     using namespace AssetSystem;
     switch (cpuFormat)
     {
@@ -891,14 +946,15 @@ void CopyBufferToImage(
     VkImage image,
     VkQueue graphicQueue,
     AS::Texture const & cpuTexture
-) {
+)
+{
     MFA_ASSERT(device != nullptr);
     MFA_VK_VALID_ASSERT(commandPool);
     MFA_VK_VALID_ASSERT(buffer);
     MFA_VK_VALID_ASSERT(image);
     MFA_ASSERT(cpuTexture.isValid());
     MFA_ASSERT(
-        cpuTexture.GetMipmap(cpuTexture.GetMipCount() - 1).offset + 
+        cpuTexture.GetMipmap(cpuTexture.GetMipCount() - 1).offset +
         cpuTexture.GetMipmap(cpuTexture.GetMipCount() - 1).size == cpuTexture.GetBuffer().len
     );
 
@@ -909,19 +965,21 @@ void CopyBufferToImage(
     auto const regionCount = mipCount * slices;
     // TODO Maybe add a function allocate from heap
     auto const regionsBlob = Memory::Alloc(regionCount * sizeof(VkBufferImageCopy));
-    MFA_DEFER {Memory::Free(regionsBlob);};
+    MFA_DEFER{ Memory::Free(regionsBlob); };
     auto * regionsArray = regionsBlob.as<VkBufferImageCopy>();
-    for(uint8_t sliceIndex = 0; sliceIndex < slices; sliceIndex++) {
-        for(uint8_t mipLevel = 0; mipLevel < mipCount; mipLevel++) {
+    for (uint8_t sliceIndex = 0; sliceIndex < slices; sliceIndex++)
+    {
+        for (uint8_t mipLevel = 0; mipLevel < mipCount; mipLevel++)
+        {
             auto const & mipInfo = cpuTexture.GetMipmap(mipLevel);
             auto & region = regionsArray[mipLevel];
-            region.imageExtent.width = mipInfo.dimension.width; 
-            region.imageExtent.height = mipInfo.dimension.height; 
+            region.imageExtent.width = mipInfo.dimension.width;
+            region.imageExtent.height = mipInfo.dimension.height;
             region.imageExtent.depth = mipInfo.dimension.depth;
             region.imageOffset.x = 0;
             region.imageOffset.y = 0;
             region.imageOffset.z = 0;
-            region.bufferOffset = static_cast<uint32_t>(cpuTexture.mipOffsetInBytes(mipLevel, sliceIndex)); 
+            region.bufferOffset = static_cast<uint32_t>(cpuTexture.mipOffsetInBytes(mipLevel, sliceIndex));
             region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             region.imageSubresource.mipLevel = mipLevel;
             region.imageSubresource.baseArrayLayer = sliceIndex;
@@ -951,11 +1009,12 @@ RT::LogicalDevice CreateLogicalDevice(
     uint32_t const graphicsQueueFamily,
     uint32_t const presentQueueFamily,
     VkPhysicalDeviceFeatures const & enabledPhysicalDeviceFeatures
-) {
-    RT::LogicalDevice logicalDevice {};
+)
+{
+    RT::LogicalDevice logicalDevice{};
 
     MFA_ASSERT(physicalDevice != nullptr);
-    
+
     // Create one graphics queue and optionally a separate presentation queue
     float queue_priority = 1.0f;
 
@@ -977,13 +1036,16 @@ RT::LogicalDevice CreateLogicalDevice(
     deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     deviceCreateInfo.pQueueCreateInfos = queueCreateInfo;
 
-    if (graphicsQueueFamily == presentQueueFamily) {
+    if (graphicsQueueFamily == presentQueueFamily)
+    {
         deviceCreateInfo.queueCreateInfoCount = 1;
-    } else {
+    }
+    else
+    {
         deviceCreateInfo.queueCreateInfoCount = 2;
     }
 
-    std::vector<char const *> enabledExtensionNames {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+    std::vector<char const *> enabledExtensionNames{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 #if defined(__PLATFORM_MAC__)// TODO We should query instead
     enabledExtensionNames.emplace_back("VK_KHR_portability_subset");
 #endif
@@ -998,10 +1060,10 @@ RT::LogicalDevice CreateLogicalDevice(
     deviceCreateInfo.enabledLayerCount = 0;
     deviceCreateInfo.ppEnabledLayerNames = nullptr;
 #endif
-    
+
     VK_Check(vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &logicalDevice.device));
     MFA_ASSERT(logicalDevice.device != nullptr);
-    MFA_LOG_INFO("Logical device create was successful");    
+    MFA_LOG_INFO("Logical device create was successful");
     vkGetPhysicalDeviceMemoryProperties(physicalDevice, &logicalDevice.physicalMemoryProperties);
 
     return logicalDevice;
@@ -1009,7 +1071,8 @@ RT::LogicalDevice CreateLogicalDevice(
 
 //-------------------------------------------------------------------------------------------------
 
-void DestroyLogicalDevice(RT::LogicalDevice const & logicalDevice) {
+void DestroyLogicalDevice(RT::LogicalDevice const & logicalDevice)
+{
     vkDestroyDevice(logicalDevice.device, nullptr);
 }
 
@@ -1018,12 +1081,13 @@ void DestroyLogicalDevice(RT::LogicalDevice const & logicalDevice) {
 VkQueue GetQueueByFamilyIndex(
     VkDevice device,
     uint32_t const queueFamilyIndex
-) {
+)
+{
     VkQueue graphic_queue = nullptr;
     vkGetDeviceQueue(
-        device, 
-        queueFamilyIndex, 
-        0, 
+        device,
+        queueFamilyIndex,
+        0,
         &graphic_queue
     );
     return graphic_queue;
@@ -1033,11 +1097,12 @@ VkQueue GetQueueByFamilyIndex(
 
 // TODO Consider oop and storing data
 VkSampler CreateSampler(
-    VkDevice device, 
+    VkDevice device,
     RT::CreateSamplerParams const & params
-) {
+)
+{
     MFA_ASSERT(device != nullptr);
-    VkSampler sampler {};
+    VkSampler sampler{};
 
     VkSamplerCreateInfo sampler_info{};
     sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -1052,7 +1117,7 @@ VkSampler CreateSampler(
 #elif defined(__ANDROID__)
     sampler_info.anisotropyEnable = false;
 #else
-    #error Os not handled
+#error Os not handled
 #endif
     sampler_info.maxAnisotropy = params.maxAnisotropy;
     sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
@@ -1073,23 +1138,25 @@ VkSampler CreateSampler(
     sampler_info.mipLodBias = 0.0f;
 
     VK_Check(vkCreateSampler(device, &sampler_info, nullptr, &sampler));
-    
+
     return sampler;
 }
 
 //-------------------------------------------------------------------------------------------------
 
 // TODO Create wrapper for all vk types
-void DestroySampler(VkDevice device, VkSampler sampler) {
+void DestroySampler(VkDevice device, VkSampler sampler)
+{
     MFA_ASSERT(device != nullptr);
     MFA_VK_VALID_ASSERT(sampler);
     vkDestroySampler(device, sampler, nullptr);
 }
 
 VkDebugReportCallbackEXT SetDebugCallback(
-    VkInstance instance, 
+    VkInstance instance,
     PFN_vkDebugReportCallbackEXT const & callback
-) {
+)
+{
     VkDebugReportCallbackCreateInfoEXT debug_info = {};
     debug_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
     debug_info.pfnCallback = callback;
@@ -1098,11 +1165,11 @@ VkDebugReportCallbackEXT SetDebugCallback(
         instance,
         "vkCreateDebugReportCallbackEXT"
     ));
-    VkDebugReportCallbackEXT ret {};
+    VkDebugReportCallbackEXT ret{};
     VK_Check(debug_report_callback(
-        instance, 
-        &debug_info, 
-        nullptr, 
+        instance,
+        &debug_info,
+        nullptr,
         &ret
     ));
     return ret;
@@ -1110,28 +1177,30 @@ VkDebugReportCallbackEXT SetDebugCallback(
 
 //-------------------------------------------------------------------------------------------------
 
-static FindPhysicalDeviceResult findPhysicalDevice(VkInstance instance, uint8_t const retryCount) {
-    FindPhysicalDeviceResult ret {};
+static FindPhysicalDeviceResult findPhysicalDevice(VkInstance instance, uint8_t const retryCount)
+{
+    FindPhysicalDeviceResult ret{};
 
     uint32_t deviceCount = 0;
     //Getting number of physical devices
     VK_Check(vkEnumeratePhysicalDevices(
-        instance, 
-        &deviceCount, 
+        instance,
+        &deviceCount,
         nullptr
     ));
     MFA_ASSERT(deviceCount > 0);
 
-    std::vector<VkPhysicalDevice> devices (deviceCount);
+    std::vector<VkPhysicalDevice> devices(deviceCount);
     const auto phyDevResult = vkEnumeratePhysicalDevices(
-        instance, 
-        &deviceCount, 
+        instance,
+        &deviceCount,
         devices.data()
     );
     //TODO Search about incomplete
     MFA_ASSERT(phyDevResult == VK_SUCCESS || phyDevResult == VK_INCOMPLETE);
     // TODO We need to choose physical device based on features that we need
-    if(retryCount >= devices.size()) {
+    if (retryCount >= devices.size())
+    {
         MFA_CRASH("No suitable physical device exists");
     }
     ret.physicalDevice = devices[retryCount];
@@ -1139,7 +1208,7 @@ static FindPhysicalDeviceResult findPhysicalDevice(VkInstance instance, uint8_t 
     ret.physicalDeviceFeatures.samplerAnisotropy = VK_TRUE;
     ret.physicalDeviceFeatures.shaderClipDistance = VK_TRUE;
     ret.physicalDeviceFeatures.shaderCullDistance = VK_TRUE;
-    
+
     VkPhysicalDeviceProperties deviceProperties;
     vkGetPhysicalDeviceProperties(ret.physicalDevice, &deviceProperties);
     vkGetPhysicalDeviceFeatures(ret.physicalDevice, &ret.physicalDeviceFeatures);
@@ -1151,7 +1220,7 @@ static FindPhysicalDeviceResult findPhysicalDevice(VkInstance instance, uint8_t 
     };
 
     MFA_LOG_INFO(
-        "Physical device supports version %d.%d.%d\n", 
+        "Physical device supports version %d.%d.%d\n",
         supportedVersion[0], supportedVersion[1], supportedVersion[2]
     );
 
@@ -1163,25 +1232,29 @@ static FindPhysicalDeviceResult findPhysicalDevice(VkInstance instance, uint8_t 
 
 //-------------------------------------------------------------------------------------------------
 
-FindPhysicalDeviceResult FindPhysicalDevice(VkInstance instance) {
+FindPhysicalDeviceResult FindPhysicalDevice(VkInstance instance)
+{
     return findPhysicalDevice(instance, 0);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-bool CheckSwapChainSupport(VkPhysicalDevice physical_device) {
+bool CheckSwapChainSupport(VkPhysicalDevice physical_device)
+{
     bool ret = false;
     uint32_t extension_count = 0;
     VK_Check(vkEnumerateDeviceExtensionProperties(
-        physical_device, 
-        nullptr, 
-        &extension_count, 
+        physical_device,
+        nullptr,
+        &extension_count,
         nullptr
     ));
     std::vector<VkExtensionProperties> device_extensions(extension_count);
     vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &extension_count, device_extensions.data());
-    for (const auto& extension : device_extensions) {
-        if (strcmp(extension.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
+    for (const auto & extension : device_extensions)
+    {
+        if (strcmp(extension.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0)
+        {
             MFA_LOG_INFO("Physical device supports swap chains");
             ret = true;
             break;
@@ -1193,62 +1266,75 @@ bool CheckSwapChainSupport(VkPhysicalDevice physical_device) {
 //-------------------------------------------------------------------------------------------------
 
 FindPresentAndGraphicQueueFamilyResult FindPresentAndGraphicQueueFamily(
-    VkPhysicalDevice physical_device, 
+    VkPhysicalDevice physical_device,
     VkSurfaceKHR window_surface
-) {
-    FindPresentAndGraphicQueueFamilyResult ret {};
+)
+{
+    FindPresentAndGraphicQueueFamilyResult ret{};
 
     uint32_t queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, nullptr);
-    if (queue_family_count == 0) {
+    if (queue_family_count == 0)
+    {
         MFA_CRASH("physical device has no queue families!");
     }
     // Find queue family with graphics support
     // Note: is a transfer queue necessary to copy vertices to the gpu or can a graphics queue handle that?
     std::vector<VkQueueFamilyProperties> queueFamilies(queue_family_count);
     vkGetPhysicalDeviceQueueFamilyProperties(
-        physical_device, 
-        &queue_family_count, 
+        physical_device,
+        &queue_family_count,
         queueFamilies.data()
     );
-    
+
     MFA_LOG_INFO("physical device has %d queue families.", queue_family_count);
 
     bool found_graphic_queue_family = false;
     bool found_present_queue_family = false;
-    for (uint32_t i = 0; i < queue_family_count; i++) {
+    for (uint32_t i = 0; i < queue_family_count; i++)
+    {
         VkBool32 present_is_supported = false;
         vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, window_surface, &present_is_supported);
-        if (queueFamilies[i].queueCount > 0 && queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+        if (queueFamilies[i].queueCount > 0 && queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        {
             ret.graphic_queue_family = i;
             found_graphic_queue_family = true;
-            if (present_is_supported) {
+            if (present_is_supported)
+            {
                 ret.present_queue_family = i;
                 found_present_queue_family = true;
                 break;
             }
         }
-        if (!found_present_queue_family && present_is_supported) {
+        if (!found_present_queue_family && present_is_supported)
+        {
             ret.present_queue_family = i;
             found_present_queue_family = true;
         }
     }
-    if (found_graphic_queue_family) {
+    if (found_graphic_queue_family)
+    {
         MFA_LOG_INFO("Queue family # %d supports graphics", ret.graphic_queue_family);
-        if (found_present_queue_family) {
+        if (found_present_queue_family)
+        {
             MFA_LOG_INFO("Queue family # %d supports presentation", ret.present_queue_family);
-        } else {
+        }
+        else
+        {
             MFA_CRASH("Could not find a valid queue family with present support");
         }
-    } else {
+    }
+    else
+    {
         MFA_CRASH("Could not find a valid queue family with graphics support");
     }
-    return ret; 
+    return ret;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-VkCommandPool CreateCommandPool(VkDevice device, uint32_t const queue_family_index) {
+VkCommandPool CreateCommandPool(VkDevice device, uint32_t const queue_family_index)
+{
     MFA_ASSERT(device);
     // Create graphics command pool
     VkCommandPoolCreateInfo poolCreateInfo = {};
@@ -1256,7 +1342,7 @@ VkCommandPool CreateCommandPool(VkDevice device, uint32_t const queue_family_ind
     poolCreateInfo.queueFamilyIndex = queue_family_index;
     poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-    VkCommandPool command_pool {};
+    VkCommandPool command_pool{};
     VK_Check(vkCreateCommandPool(device, &poolCreateInfo, nullptr, &command_pool));
 
     return command_pool;
@@ -1264,7 +1350,8 @@ VkCommandPool CreateCommandPool(VkDevice device, uint32_t const queue_family_ind
 
 //-------------------------------------------------------------------------------------------------
 
-void DestroyCommandPool(VkDevice device, VkCommandPool commandPool) {
+void DestroyCommandPool(VkDevice device, VkCommandPool commandPool)
+{
     MFA_ASSERT(device);
     vkDestroyCommandPool(device, commandPool, nullptr);
 }
@@ -1272,13 +1359,14 @@ void DestroyCommandPool(VkDevice device, VkCommandPool commandPool) {
 //-------------------------------------------------------------------------------------------------
 
 VkSurfaceCapabilitiesKHR GetSurfaceCapabilities(
-    VkPhysicalDevice physicalDevice, 
+    VkPhysicalDevice physicalDevice,
     VkSurfaceKHR windowSurface
-) {
+)
+{
     MFA_VK_VALID_ASSERT(physicalDevice);
     MFA_VK_VALID_ASSERT(windowSurface);
     VkSurfaceCapabilitiesKHR surfaceCapabilities;
-    VK_Check (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, windowSurface, &surfaceCapabilities));
+    VK_Check(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, windowSurface, &surfaceCapabilities));
     return surfaceCapabilities;
 }
 
@@ -1286,49 +1374,52 @@ VkSurfaceCapabilitiesKHR GetSurfaceCapabilities(
 
 RT::SwapChainGroup CreateSwapChain(
     VkDevice device,
-    VkPhysicalDevice physicalDevice, 
+    VkPhysicalDevice physicalDevice,
     VkSurfaceKHR windowSurface,
     VkSurfaceCapabilitiesKHR surfaceCapabilities,
     VkSwapchainKHR oldSwapChain
-) {
+)
+{
     // Find supported surface formats
     uint32_t formatCount;
     if (
         vkGetPhysicalDeviceSurfaceFormatsKHR(
-            physicalDevice, 
-            windowSurface, 
-            &formatCount, 
+            physicalDevice,
+            windowSurface,
+            &formatCount,
             nullptr
-        ) != VK_SUCCESS || 
+        ) != VK_SUCCESS ||
         formatCount == 0
-    ) {
+    )
+    {
         MFA_CRASH("Failed to get number of supported surface formats");
     }
-    
+
     std::vector<VkSurfaceFormatKHR> surfaceFormats(formatCount);
-    VK_Check (vkGetPhysicalDeviceSurfaceFormatsKHR(
-        physicalDevice, 
-        windowSurface, 
-        &formatCount, 
+    VK_Check(vkGetPhysicalDeviceSurfaceFormatsKHR(
+        physicalDevice,
+        windowSurface,
+        &formatCount,
         surfaceFormats.data()
     ));
 
     // Find supported present modes
     uint32_t presentModeCount;
     if (vkGetPhysicalDeviceSurfacePresentModesKHR(
-        physicalDevice, 
-        windowSurface, 
-        &presentModeCount, 
+        physicalDevice,
+        windowSurface,
+        &presentModeCount,
         nullptr
-    ) != VK_SUCCESS || presentModeCount == 0) {
+    ) != VK_SUCCESS || presentModeCount == 0)
+    {
         MFA_CRASH("Failed to get number of supported presentation modes");
     }
 
     std::vector<VkPresentModeKHR> present_modes(presentModeCount);
-    VK_Check (vkGetPhysicalDeviceSurfacePresentModesKHR(
-        physicalDevice, 
-        windowSurface, 
-        &presentModeCount, 
+    VK_Check(vkGetPhysicalDeviceSurfacePresentModesKHR(
+        physicalDevice,
+        windowSurface,
+        &presentModeCount,
         present_modes.data())
     );
 
@@ -1351,8 +1442,8 @@ RT::SwapChainGroup CreateSwapChain(
 
     // Select swap chain size
     auto const selected_swap_chain_extent = ChooseSwapChainExtent(
-        surfaceCapabilities, 
-        surfaceCapabilities.currentExtent.width, 
+        surfaceCapabilities,
+        surfaceCapabilities.currentExtent.width,
         surfaceCapabilities.currentExtent.height
     );
 
@@ -1390,33 +1481,34 @@ RT::SwapChainGroup CreateSwapChain(
 #elif defined(__ANDROID__)
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
 #else
-    #error Os is not supported
+#error Os is not supported
 #endif
     createInfo.presentMode = selected_present_mode;
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = oldSwapChain;
 
-    RT::SwapChainGroup swapChainGroup {};
+    RT::SwapChainGroup swapChainGroup{};
 
-    VK_Check (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChainGroup.swapChain));
+    VK_Check(vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChainGroup.swapChain));
 
     MFA_LOG_INFO("Created swap chain");
 
     swapChainGroup.swapChainFormat = selected_surface_format.format;
-    
+
     // Store the images used by the swap chain
     // Note: these are the images that swap chain image indices refer to
     // Note: actual number of images may differ from requested number, since it's a lower bound
     uint32_t actualImageCount = 0;
     if (
-        vkGetSwapchainImagesKHR(device, swapChainGroup.swapChain, &actualImageCount, nullptr) != VK_SUCCESS || 
+        vkGetSwapchainImagesKHR(device, swapChainGroup.swapChain, &actualImageCount, nullptr) != VK_SUCCESS ||
         actualImageCount == 0
-    ) {
+    )
+    {
         MFA_CRASH("Failed to acquire number of swap chain images");
     }
 
     swapChainGroup.swapChainImages.resize(actualImageCount);
-    VK_Check (vkGetSwapchainImagesKHR(
+    VK_Check(vkGetSwapchainImagesKHR(
         device,
         swapChainGroup.swapChain,
         &actualImageCount,
@@ -1424,7 +1516,8 @@ RT::SwapChainGroup CreateSwapChain(
     ));
 
     swapChainGroup.swapChainImageViews.resize(actualImageCount);
-    for(uint32_t image_index = 0; image_index < actualImageCount; image_index++) {
+    for (uint32_t image_index = 0; image_index < actualImageCount; image_index++)
+    {
         MFA_VK_VALID_ASSERT(swapChainGroup.swapChainImages[image_index]);
         swapChainGroup.swapChainImageViews[image_index] = CreateImageView(
             device,
@@ -1444,14 +1537,16 @@ RT::SwapChainGroup CreateSwapChain(
 
 //-------------------------------------------------------------------------------------------------
 
-void DestroySwapChain(VkDevice device, RT::SwapChainGroup const & swapChainGroup) {
+void DestroySwapChain(VkDevice device, RT::SwapChainGroup const & swapChainGroup)
+{
     MFA_ASSERT(device);
     MFA_ASSERT(swapChainGroup.swapChain);
     MFA_ASSERT(swapChainGroup.swapChainImageViews.empty() == false);
     MFA_ASSERT(swapChainGroup.swapChainImages.empty() == false);
     MFA_ASSERT(swapChainGroup.swapChainImages.size() == swapChainGroup.swapChainImageViews.size());
     vkDestroySwapchainKHR(device, swapChainGroup.swapChain, nullptr);
-    for(auto const & swap_chain_image_view : swapChainGroup.swapChainImageViews) {
+    for (auto const & swap_chain_image_view : swapChainGroup.swapChainImageViews)
+    {
         vkDestroyImageView(device, swap_chain_image_view, nullptr);
     }
 }
@@ -1464,8 +1559,9 @@ RT::DepthImageGroup CreateDepthImage(
     VkExtent2D const imageExtent,
     RT::CreateDepthImageOptions const & options
 
-) {
-    RT::DepthImageGroup depthImageGroup {};
+)
+{
+    RT::DepthImageGroup depthImageGroup{};
     auto const depthFormat = FindDepthFormat(physicalDevice);
     depthImageGroup.imageFormat = depthFormat;
     depthImageGroup.imageGroup = CreateImage(
@@ -1477,7 +1573,7 @@ RT::DepthImageGroup CreateDepthImage(
         1,
         options.layerCount,
         depthFormat,
-        VK_IMAGE_TILING_OPTIMAL, 
+        VK_IMAGE_TILING_OPTIMAL,
         options.usageFlags,
         options.samplesCount,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -1500,7 +1596,8 @@ RT::DepthImageGroup CreateDepthImage(
 
 //-------------------------------------------------------------------------------------------------
 
-void DestroyDepthImage(VkDevice device, RT::DepthImageGroup const & depthImageGroup) {
+void DestroyDepthImage(VkDevice device, RT::DepthImageGroup const & depthImageGroup)
+{
     MFA_ASSERT(device != nullptr);
     DestroyImageView(device, depthImageGroup.imageView);
     DestroyImage(device, depthImageGroup.imageGroup);
@@ -1509,13 +1606,14 @@ void DestroyDepthImage(VkDevice device, RT::DepthImageGroup const & depthImageGr
 //-------------------------------------------------------------------------------------------------
 
 RT::ColorImageGroup CreateColorImage(
-    VkPhysicalDevice physicalDevice, 
-    VkDevice device, 
+    VkPhysicalDevice physicalDevice,
+    VkDevice device,
     VkExtent2D const & imageExtent,
     VkFormat const imageFormat,
     RT::CreateColorImageOptions const & options
-) {
-    RT::ColorImageGroup colorImageGroup {};
+)
+{
+    RT::ColorImageGroup colorImageGroup{};
     colorImageGroup.imageFormat = imageFormat;
     colorImageGroup.imageGroup = CreateImage(
         device,
@@ -1526,7 +1624,7 @@ RT::ColorImageGroup CreateColorImage(
         1,
         options.layerCount,
         imageFormat,
-        VK_IMAGE_TILING_OPTIMAL, 
+        VK_IMAGE_TILING_OPTIMAL,
         options.usageFlags,
         options.samplesCount,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -1549,7 +1647,8 @@ RT::ColorImageGroup CreateColorImage(
 
 //-------------------------------------------------------------------------------------------------
 
-void DestroyColorImage(VkDevice device, RT::ColorImageGroup const & colorImageGroup) {
+void DestroyColorImage(VkDevice device, RT::ColorImageGroup const & colorImageGroup)
+{
     MFA_ASSERT(device != nullptr);
     DestroyImageView(device, colorImageGroup.imageView);
     DestroyImage(device, colorImageGroup.imageGroup);
@@ -1565,8 +1664,9 @@ VkRenderPass CreateRenderPass(
     uint32_t subPassesCount,
     VkSubpassDependency * dependencies,
     uint32_t dependenciesCount
-) {
-    VkRenderPassCreateInfo createInfo {
+)
+{
+    VkRenderPassCreateInfo createInfo{
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
         .attachmentCount = attachmentsCount,
         .pAttachments = attachments,
@@ -1576,8 +1676,8 @@ VkRenderPass CreateRenderPass(
         .pDependencies = dependencies,
     };
 
-    VkRenderPass renderPass {};
-    VK_Check (vkCreateRenderPass(device, &createInfo, nullptr, &renderPass));
+    VkRenderPass renderPass{};
+    VK_Check(vkCreateRenderPass(device, &createInfo, nullptr, &renderPass));
 
     MFA_LOG_INFO("Created render pass.");
 
@@ -1586,7 +1686,8 @@ VkRenderPass CreateRenderPass(
 
 //-------------------------------------------------------------------------------------------------
 
-void DestroyRenderPass(VkDevice device, VkRenderPass renderPass) {
+void DestroyRenderPass(VkDevice device, VkRenderPass renderPass)
+{
     MFA_ASSERT(device != nullptr);
     MFA_VK_VALID_ASSERT(renderPass);
     vkDestroyRenderPass(device, renderPass, nullptr);
@@ -1595,15 +1696,17 @@ void DestroyRenderPass(VkDevice device, VkRenderPass renderPass) {
 //-------------------------------------------------------------------------------------------------
 
 void BeginRenderPass(
-    VkCommandBuffer commandBuffer, 
+    VkCommandBuffer commandBuffer,
     VkRenderPassBeginInfo const & renderPassBeginInfo
-) {
+)
+{
     vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void EndRenderPass(VkCommandBuffer commandBuffer) {
+void EndRenderPass(VkCommandBuffer commandBuffer)
+{
     vkCmdEndRenderPass(commandBuffer);
 }
 
@@ -1616,17 +1719,18 @@ VkFramebuffer CreateFrameBuffers(
     uint32_t attachmentsCount,
     VkExtent2D const swapChainExtent,
     uint32_t layersCount
-) {
+)
+{
     MFA_ASSERT(device != nullptr);
     MFA_VK_VALID_ASSERT(renderPass);
     MFA_ASSERT(attachments != nullptr);
     MFA_ASSERT(attachmentsCount > 0);
 
-    VkFramebuffer frameBuffer {};
+    VkFramebuffer frameBuffer{};
 
     // Note: FrameBuffer is basically a specific choice of attachments for a render pass
     // That means all attachments must have the same dimensions, interesting restriction
-   
+
     VkFramebufferCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     createInfo.renderPass = renderPass;
@@ -1635,7 +1739,7 @@ VkFramebuffer CreateFrameBuffers(
     createInfo.width = swapChainExtent.width;
     createInfo.height = swapChainExtent.height;
     createInfo.layers = layersCount;
-    
+
     VK_Check(vkCreateFramebuffer(device, &createInfo, nullptr, &frameBuffer));
 
     return frameBuffer;
@@ -1647,23 +1751,27 @@ void DestroyFrameBuffers(
     VkDevice device,
     uint32_t const frameBuffersCount,
     VkFramebuffer * frameBuffers
-) {
-    for(uint32_t index = 0; index < frameBuffersCount; index++) {
+)
+{
+    for (uint32_t index = 0; index < frameBuffersCount; index++)
+    {
         vkDestroyFramebuffer(device, frameBuffers[index], nullptr);
     }
 }
 
 //-------------------------------------------------------------------------------------------------
 
-RT::GpuShader CreateShader(VkDevice device, AS::Shader const & cpuShader) {
+RT::GpuShader CreateShader(VkDevice device, AS::Shader const & cpuShader)
+{
     MFA_ASSERT(device != nullptr);
-    RT::GpuShader gpuShader {};
-    if(cpuShader.isValid()) {
+    RT::GpuShader gpuShader{};
+    if (cpuShader.isValid())
+    {
         auto const shaderCode = cpuShader.getCompiledShaderCode();
-        
-        VkShaderModule shaderModule {};
-        
-        VkShaderModuleCreateInfo createInfo {
+
+        VkShaderModule shaderModule{};
+
+        VkShaderModuleCreateInfo createInfo{
             .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
             .codeSize = shaderCode.len,
             .pCode = reinterpret_cast<uint32_t const *>(shaderCode.ptr),
@@ -1671,7 +1779,7 @@ RT::GpuShader CreateShader(VkDevice device, AS::Shader const & cpuShader) {
         VK_Check(vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule));
         MFA_LOG_INFO("Creating shader module was successful");
         gpuShader = RT::GpuShader(shaderModule, cpuShader);
-        
+
         MFA_ASSERT(gpuShader.valid());
     }
     return gpuShader;
@@ -1679,10 +1787,12 @@ RT::GpuShader CreateShader(VkDevice device, AS::Shader const & cpuShader) {
 
 //-------------------------------------------------------------------------------------------------
 
-bool DestroyShader(VkDevice device, RT::GpuShader & gpuShader) {
+bool DestroyShader(VkDevice device, RT::GpuShader & gpuShader)
+{
     MFA_ASSERT(device != nullptr);
     bool ret = false;
-    if(gpuShader.valid()) {
+    if (gpuShader.valid())
+    {
         vkDestroyShaderModule(device, gpuShader.shaderModule(), nullptr);
         gpuShader.revoke();
         ret = true;
@@ -1693,8 +1803,8 @@ bool DestroyShader(VkDevice device, RT::GpuShader & gpuShader) {
 //-------------------------------------------------------------------------------------------------
 
 RT::PipelineGroup CreatePipelineGroup(
-    VkDevice device, 
-    uint8_t shaderStagesCount, 
+    VkDevice device,
+    uint8_t shaderStagesCount,
     RT::GpuShader const ** shaderStages,
     VkVertexInputBindingDescription vertexBindingDescription,
     uint32_t attributeDescriptionCount,
@@ -1704,13 +1814,15 @@ RT::PipelineGroup CreatePipelineGroup(
     uint32_t descriptorSetLayoutCount,
     VkDescriptorSetLayout * descriptorSetLayouts,
     RT::CreateGraphicPipelineOptions const & options
-) {
+)
+{
     MFA_ASSERT(shaderStages);
     MFA_ASSERT(renderPass);
     MFA_ASSERT(descriptorSetLayouts);
     // Set up shader stage info
-    std::vector<VkPipelineShaderStageCreateInfo> shaderStagesCreateInfos (shaderStagesCount);
-    for(uint8_t i = 0; i < shaderStagesCount; i++) {
+    std::vector<VkPipelineShaderStageCreateInfo> shaderStagesCreateInfos(shaderStagesCount);
+    for (uint8_t i = 0; i < shaderStagesCount; i++)
+    {
         VkPipelineShaderStageCreateInfo create_info = {};
         create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         create_info.stage = ConvertAssetShaderStageToGpu(shaderStages[i]->cpuShader().getStage());
@@ -1744,7 +1856,8 @@ RT::PipelineGroup CreatePipelineGroup(
     VkViewport viewport = {};
     VkRect2D scissor = {};
 
-    if(true == options.useStaticViewportAndScissor) {
+    if (true == options.useStaticViewportAndScissor)
+    {
         // Describe viewport and scissor
         viewport.x = 0.0f;
         viewport.y = 0.0f;
@@ -1803,27 +1916,31 @@ RT::PipelineGroup CreatePipelineGroup(
     layout_create_info.pSetLayouts = descriptorSetLayouts; // Array of descriptor set layout, Order matter when more than 1
     layout_create_info.pushConstantRangeCount = options.pushConstantsRangeCount;
     layout_create_info.pPushConstantRanges = options.pushConstantRanges;
-    
-    VkPipelineLayout pipelineLayout {};
+
+    VkPipelineLayout pipelineLayout{};
     VK_Check(vkCreatePipelineLayout(device, &layout_create_info, nullptr, &pipelineLayout));
 
     VkPipelineDynamicStateCreateInfo * dynamicStateCreateInfoRef = nullptr;
-    VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo {};
-    std::vector<VkDynamicState> dynamicStates { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-    if (options.useStaticViewportAndScissor == false) {
-        if (options.dynamicStateCreateInfo == nullptr) {
-            dynamicStateCreateInfo = VkPipelineDynamicStateCreateInfo {};
+    VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo{};
+    std::vector<VkDynamicState> dynamicStates{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    if (options.useStaticViewportAndScissor == false)
+    {
+        if (options.dynamicStateCreateInfo == nullptr)
+        {
+            dynamicStateCreateInfo = VkPipelineDynamicStateCreateInfo{};
             dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
             dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
             dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
             dynamicStateCreateInfoRef = &dynamicStateCreateInfo;
-        } else {
+        }
+        else
+        {
             dynamicStateCreateInfoRef = options.dynamicStateCreateInfo;
         }
     }
 
     // Create the graphics pipeline
-    VkGraphicsPipelineCreateInfo pipelineCreateInfo {};
+    VkGraphicsPipelineCreateInfo pipelineCreateInfo{};
     pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineCreateInfo.stageCount = static_cast<uint32_t>(shaderStagesCreateInfos.size());
     pipelineCreateInfo.pStages = shaderStagesCreateInfos.data();
@@ -1840,8 +1957,8 @@ RT::PipelineGroup CreatePipelineGroup(
     pipelineCreateInfo.basePipelineIndex = -1;
     pipelineCreateInfo.pDepthStencilState = &options.depthStencil;
     pipelineCreateInfo.pDynamicState = dynamicStateCreateInfoRef;
-    
-    VkPipeline pipeline {};
+
+    VkPipeline pipeline{};
 #ifdef __ANDROID__
     VK_Check(vkCreateGraphicsPipelines(
         device,
@@ -1853,18 +1970,18 @@ RT::PipelineGroup CreatePipelineGroup(
     ));
 #else
     VK_Check(vkCreateGraphicsPipelines(
-        device, 
-        nullptr, 
-        1, 
-        &pipelineCreateInfo, 
-        nullptr, 
+        device,
+        nullptr,
+        1,
+        &pipelineCreateInfo,
+        nullptr,
         &pipeline
     ));
 #endif
 
     MFA_LOG_INFO("Created graphics pipeline");
 
-    RT::PipelineGroup pipelineGroup {
+    RT::PipelineGroup pipelineGroup{
         .pipelineLayout = pipelineLayout,
         .graphicPipeline = pipeline,
     };
@@ -1876,12 +1993,13 @@ RT::PipelineGroup CreatePipelineGroup(
 //-------------------------------------------------------------------------------------------------
 
 void AssignViewportAndScissorToCommandBuffer(
-    VkExtent2D const & extent2D, 
+    VkExtent2D const & extent2D,
     VkCommandBuffer commandBuffer
-) {
+)
+{
     MFA_ASSERT(commandBuffer != nullptr);
 
-    VkViewport const viewport {
+    VkViewport const viewport{
         .x = 0.0f,
         .y = 0.0f,
         .width = static_cast<float>(extent2D.width),
@@ -1890,7 +2008,7 @@ void AssignViewportAndScissorToCommandBuffer(
         .maxDepth = 1.0f,
     };
 
-    VkRect2D scissor {
+    VkRect2D scissor{
         .offset {
             .x = 0,
             .y = 0
@@ -1907,7 +2025,8 @@ void AssignViewportAndScissorToCommandBuffer(
 
 //-------------------------------------------------------------------------------------------------
 
-void DestroyPipelineGroup(VkDevice device, RT::PipelineGroup & graphicPipelineGroup) {
+void DestroyPipelineGroup(VkDevice device, RT::PipelineGroup & graphicPipelineGroup)
+{
     MFA_ASSERT(device != nullptr);
     MFA_ASSERT(graphicPipelineGroup.isValid());
     vkDestroyPipeline(device, graphicPipelineGroup.graphicPipeline, nullptr);
@@ -1921,13 +2040,14 @@ VkDescriptorSetLayout CreateDescriptorSetLayout(
     VkDevice device,
     uint8_t const bindings_count,
     VkDescriptorSetLayoutBinding * bindings
-) {
+)
+{
     VkDescriptorSetLayoutCreateInfo descriptorLayoutCreateInfo = {};
     descriptorLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptorLayoutCreateInfo.bindingCount = static_cast<uint32_t>(bindings_count);
     descriptorLayoutCreateInfo.pBindings = bindings;
-    VkDescriptorSetLayout descriptor_set_layout {};
-    VK_Check (vkCreateDescriptorSetLayout(
+    VkDescriptorSetLayout descriptor_set_layout{};
+    VK_Check(vkCreateDescriptorSetLayout(
         device,
         &descriptorLayoutCreateInfo,
         nullptr,
@@ -1941,7 +2061,8 @@ VkDescriptorSetLayout CreateDescriptorSetLayout(
 void DestroyDescriptorSetLayout(
     VkDevice device,
     VkDescriptorSetLayout descriptor_set_layout
-) {
+)
+{
     vkDestroyDescriptorSetLayout(
         device,
         descriptor_set_layout,
@@ -1951,16 +2072,18 @@ void DestroyDescriptorSetLayout(
 
 //-------------------------------------------------------------------------------------------------
 
-VkShaderStageFlagBits ConvertAssetShaderStageToGpu(AssetSystem::ShaderStage const stage) {
-    switch(stage) {
-        case AssetSystem::Shader::Stage::Vertex:
+VkShaderStageFlagBits ConvertAssetShaderStageToGpu(AssetSystem::ShaderStage const stage)
+{
+    switch (stage)
+    {
+    case AssetSystem::Shader::Stage::Vertex:
         return VK_SHADER_STAGE_VERTEX_BIT;
-        case AssetSystem::Shader::Stage::Fragment:
+    case AssetSystem::Shader::Stage::Fragment:
         return VK_SHADER_STAGE_FRAGMENT_BIT;
-        case AssetSystem::Shader::Stage::Geometry:
+    case AssetSystem::Shader::Stage::Geometry:
         return VK_SHADER_STAGE_GEOMETRY_BIT;
-        case AssetSystem::Shader::Stage::Invalid:
-        default:
+    case AssetSystem::Shader::Stage::Invalid:
+    default:
         MFA_CRASH("Unhandled shader stage");
     }
 }
@@ -1973,24 +2096,25 @@ RT::BufferGroup CreateVertexBuffer(
     VkCommandPool commandPool,
     VkQueue graphicQueue,
     CBlob const verticesBlob
-) {
+)
+{
     VkDeviceSize const bufferSize = verticesBlob.len;
 
     auto stagingBufferGroup = CreateBuffer(
-        device, 
-        physicalDevice, 
-        bufferSize, 
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+        device,
+        physicalDevice,
+        bufferSize,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     );
 
     MapDataToBuffer(device, stagingBufferGroup.memory, verticesBlob);
-    
+
     auto vertexBufferGroup = CreateBuffer(
-        device, 
-        physicalDevice, 
-        bufferSize, 
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+        device,
+        physicalDevice,
+        bufferSize,
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
     );
 
@@ -1998,8 +2122,8 @@ RT::BufferGroup CreateVertexBuffer(
         device,
         commandPool,
         graphicQueue,
-        stagingBufferGroup.buffer, 
-        vertexBufferGroup.buffer, 
+        stagingBufferGroup.buffer,
+        vertexBufferGroup.buffer,
         bufferSize
     );
 
@@ -2016,45 +2140,47 @@ RT::BufferGroup CreateVertexBuffer(
 void DestroyVertexBuffer(
     VkDevice device,
     RT::BufferGroup & vertexBufferGroup
-) {
+)
+{
     DestroyBuffer(device, vertexBufferGroup);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-RT::BufferGroup CreateIndexBuffer (
+RT::BufferGroup CreateIndexBuffer(
     VkDevice device,
     VkPhysicalDevice physicalDevice,
     VkCommandPool commandPool,
     VkQueue graphicQueue,
     CBlob const indicesBlob
-) {
+)
+{
     auto const bufferSize = indicesBlob.len;
 
     auto stagingBufferGroup = CreateBuffer(
         device,
         physicalDevice,
-        bufferSize, 
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+        bufferSize,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     );
 
     MapDataToBuffer(device, stagingBufferGroup.memory, indicesBlob);
-    
+
     auto indicesBufferGroup = CreateBuffer(
         device,
         physicalDevice,
-        bufferSize, 
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT 
+        bufferSize,
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
     );
 
     CopyBuffer(
         device,
         commandPool,
         graphicQueue,
-        stagingBufferGroup.buffer, 
-        indicesBufferGroup.buffer, 
+        stagingBufferGroup.buffer,
+        indicesBufferGroup.buffer,
         bufferSize
     );
 
@@ -2071,7 +2197,8 @@ RT::BufferGroup CreateIndexBuffer (
 void DestroyIndexBuffer(
     VkDevice const device,
     RT::BufferGroup & indexBufferGroup
-) {
+)
+{
     DestroyBuffer(device, indexBufferGroup);
 }
 
@@ -2083,9 +2210,11 @@ void CreateBufferGroups(
     uint32_t const buffersCount,
     VkDeviceSize const buffersSize,
     RT::BufferGroup * outUniformBuffers
-) {
+)
+{
     MFA_ASSERT(outUniformBuffers != nullptr);
-    for(uint8_t index = 0; index < buffersCount; index++) {
+    for (uint8_t index = 0; index < buffersCount; index++)
+    {
         outUniformBuffers[index] = CreateBuffer(
             device,
             physicalDevice,
@@ -2102,7 +2231,8 @@ void UpdateBufferGroup(
     VkDevice device,
     RT::BufferGroup const & bufferGroup,
     CBlob const data
-) {
+)
+{
     MapDataToBuffer(device, bufferGroup.memory, data);
 }
 
@@ -2111,7 +2241,8 @@ void UpdateBufferGroup(
 void DestroyBufferGroup(
     VkDevice device,
     RT::BufferGroup & bufferGroup
-) {
+)
+{
     DestroyBuffer(device, bufferGroup);
 }
 
@@ -2120,12 +2251,13 @@ void DestroyBufferGroup(
 VkDescriptorPool CreateDescriptorPool(
     VkDevice device,
     uint32_t const maxSets
-) {
-    std::vector<VkDescriptorPoolSize> poolSizes {};
+)
+{
+    std::vector<VkDescriptorPoolSize> poolSizes{};
     // TODO Check if both of these variables must have same value as maxSets
     {// Uniform buffers
         VkDescriptorPoolSize poolSize;
-        poolSize.type =  VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSize.descriptorCount = maxSets;
         poolSizes.emplace_back(poolSize);
     }
@@ -2153,12 +2285,12 @@ VkDescriptorPool CreateDescriptorPool(
     poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.maxSets = maxSets;
 
-    VkDescriptorPool descriptor_pool {};
+    VkDescriptorPool descriptor_pool{};
 
     VK_Check(vkCreateDescriptorPool(
-        device, 
-        &poolInfo, 
-        nullptr, 
+        device,
+        &poolInfo,
+        nullptr,
         &descriptor_pool
     ));
 
@@ -2168,9 +2300,10 @@ VkDescriptorPool CreateDescriptorPool(
 //-------------------------------------------------------------------------------------------------
 
 void DestroyDescriptorPool(
-    VkDevice device, 
+    VkDevice device,
     VkDescriptorPool pool
-) {
+)
+{
     MFA_ASSERT(device != nullptr);
     MFA_VK_VALID_ASSERT(pool);
     vkDestroyDescriptorPool(device, pool, nullptr);
@@ -2185,7 +2318,8 @@ RT::DescriptorSetGroup CreateDescriptorSet(
     uint32_t const descriptorSetCount,
     uint8_t const schemasCount,
     VkWriteDescriptorSet * schemas
-) {
+)
+{
     MFA_ASSERT(device != nullptr);
     MFA_VK_VALID_ASSERT(descriptorPool);
     MFA_VK_VALID_ASSERT(descriptorSetLayout);
@@ -2198,17 +2332,18 @@ RT::DescriptorSetGroup CreateDescriptorSet(
     allocInfo.descriptorSetCount = descriptorSetCount;
     allocInfo.pSetLayouts = layouts.data();
 
-    std::vector<VkDescriptorSet> descriptorSets {};
+    std::vector<VkDescriptorSet> descriptorSets{};
     descriptorSets.resize(allocInfo.descriptorSetCount);
     // Descriptor sets gets destroyed automatically when descriptor pool is destroyed
-    VK_Check(vkAllocateDescriptorSets (
-        device, 
-        &allocInfo, 
+    VK_Check(vkAllocateDescriptorSets(
+        device,
+        &allocInfo,
         descriptorSets.data()
     ));
     MFA_LOG_INFO("Create descriptor set is successful");
 
-    if(schemasCount > 0 && schemas != nullptr) {
+    if (schemasCount > 0 && schemas != nullptr)
+    {
         MFA_ASSERT(descriptorSets.size() < 256);
         UpdateDescriptorSets(
             device,
@@ -2219,7 +2354,7 @@ RT::DescriptorSetGroup CreateDescriptorSet(
         );
     }
 
-    return RT::DescriptorSetGroup {.descriptorSets = descriptorSets};
+    return RT::DescriptorSetGroup{ .descriptorSets = descriptorSets };
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2227,22 +2362,25 @@ RT::DescriptorSetGroup CreateDescriptorSet(
 void UpdateDescriptorSets(
     VkDevice const device,
     uint8_t const descriptorSetCount,
-    VkDescriptorSet* descriptorSets,
+    VkDescriptorSet * descriptorSets,
     uint8_t const schemasCount,
     VkWriteDescriptorSet * schemas
-) {
-    for(auto descriptor_set_index = 0; descriptor_set_index < descriptorSetCount; descriptor_set_index++){
-        std::vector<VkWriteDescriptorSet> descriptor_writes (schemasCount);
-        for(uint8_t schema_index = 0; schema_index < schemasCount; schema_index++) {
+)
+{
+    for (auto descriptor_set_index = 0; descriptor_set_index < descriptorSetCount; descriptor_set_index++)
+    {
+        std::vector<VkWriteDescriptorSet> descriptor_writes(schemasCount);
+        for (uint8_t schema_index = 0; schema_index < schemasCount; schema_index++)
+        {
             descriptor_writes[schema_index] = schemas[schema_index];
             descriptor_writes[schema_index].dstSet = descriptorSets[descriptor_set_index];
         }
 
         vkUpdateDescriptorSets(
             device,
-            static_cast<uint32_t>(descriptor_writes.size()), 
-            descriptor_writes.data(), 
-            0, 
+            static_cast<uint32_t>(descriptor_writes.size()),
+            descriptor_writes.data(),
+            0,
             nullptr
         );
     }
@@ -2251,12 +2389,13 @@ void UpdateDescriptorSets(
 //-------------------------------------------------------------------------------------------------
 
 std::vector<VkCommandBuffer> CreateCommandBuffers(
-    VkDevice device, 
-    uint32_t const count, 
+    VkDevice device,
+    uint32_t const count,
     VkCommandPool commandPool
-) {
-    std::vector<VkCommandBuffer> commandBuffers (count);
-    
+)
+{
+    std::vector<VkCommandBuffer> commandBuffers(count);
+
     VkCommandBufferAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool = commandPool;
@@ -2264,11 +2403,11 @@ std::vector<VkCommandBuffer> CreateCommandBuffers(
     allocInfo.commandBufferCount = count;
 
     VK_Check(vkAllocateCommandBuffers(
-        device, 
-        &allocInfo, 
+        device,
+        &allocInfo,
         commandBuffers.data()
     ));
-    
+
     MFA_LOG_INFO("Allocated graphics command buffers.");
 
     // Command buffer data gets recorded each time
@@ -2281,8 +2420,9 @@ void DestroyCommandBuffers(
     VkDevice device,
     VkCommandPool commandPool,
     uint32_t const commandBuffersCount,
-    VkCommandBuffer* commandBuffers
-) {
+    VkCommandBuffer * commandBuffers
+)
+{
     MFA_ASSERT(device != nullptr);
     MFA_VK_VALID_ASSERT(commandPool);
     MFA_ASSERT(commandBuffersCount > 0);
@@ -2301,8 +2441,9 @@ RT::SyncObjects CreateSyncObjects(
     VkDevice device,
     uint8_t const maxFramesInFlight,
     uint32_t const swapChainImagesCount
-) {
-    RT::SyncObjects syncObjects {};
+)
+{
+    RT::SyncObjects syncObjects{};
     syncObjects.imageAvailabilitySemaphores.resize(maxFramesInFlight);
     syncObjects.renderFinishIndicatorSemaphores.resize(maxFramesInFlight);
     syncObjects.fencesInFlight.resize(maxFramesInFlight);
@@ -2319,23 +2460,24 @@ RT::SyncObjects CreateSyncObjects(
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    for (uint8_t i = 0; i < maxFramesInFlight; i++) {
+    for (uint8_t i = 0; i < maxFramesInFlight; i++)
+    {
         VK_Check(vkCreateSemaphore(
-            device, 
-            &semaphoreInfo, 
-            nullptr, 
+            device,
+            &semaphoreInfo,
+            nullptr,
             &syncObjects.imageAvailabilitySemaphores[i]
         ));
         VK_Check(vkCreateSemaphore(
-            device, 
+            device,
             &semaphoreInfo,
             nullptr,
             &syncObjects.renderFinishIndicatorSemaphores[i]
         ));
         VK_Check(vkCreateFence(
-            device, 
-            &fenceInfo, 
-            nullptr, 
+            device,
+            &fenceInfo,
+            nullptr,
             &syncObjects.fencesInFlight[i]
         ));
     }
@@ -2344,11 +2486,13 @@ RT::SyncObjects CreateSyncObjects(
 
 //-------------------------------------------------------------------------------------------------
 
-void DestroySyncObjects(VkDevice device, RT::SyncObjects const & syncObjects) {
+void DestroySyncObjects(VkDevice device, RT::SyncObjects const & syncObjects)
+{
     MFA_ASSERT(device != nullptr);
     MFA_ASSERT(syncObjects.fencesInFlight.size() == syncObjects.imageAvailabilitySemaphores.size());
     MFA_ASSERT(syncObjects.fencesInFlight.size() == syncObjects.renderFinishIndicatorSemaphores.size());
-    for(uint8_t i = 0; i < syncObjects.fencesInFlight.size(); i++) {
+    for (uint8_t i = 0; i < syncObjects.fencesInFlight.size(); i++)
+    {
         vkDestroySemaphore(device, syncObjects.renderFinishIndicatorSemaphores[i], nullptr);
         vkDestroySemaphore(device, syncObjects.imageAvailabilitySemaphores[i], nullptr);
         vkDestroyFence(device, syncObjects.fencesInFlight[i], nullptr);
@@ -2357,21 +2501,23 @@ void DestroySyncObjects(VkDevice device, RT::SyncObjects const & syncObjects) {
 
 //-------------------------------------------------------------------------------------------------
 
-void DeviceWaitIdle(VkDevice device) {
+void DeviceWaitIdle(VkDevice device)
+{
     MFA_ASSERT(device != nullptr);
     VK_Check(vkDeviceWaitIdle(device));
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void WaitForFence(VkDevice device, VkFence inFlightFence) {
+void WaitForFence(VkDevice device, VkFence inFlightFence)
+{
     MFA_ASSERT(device != nullptr);
     MFA_VK_VALID_ASSERT(inFlightFence);
     VK_Check(vkWaitForFences(
-        device, 
-        1, 
-        &inFlightFence, 
-        VK_TRUE, 
+        device,
+        1,
+        &inFlightFence,
+        VK_TRUE,
         UINT64_MAX
     ));
 }
@@ -2379,11 +2525,12 @@ void WaitForFence(VkDevice device, VkFence inFlightFence) {
 //-------------------------------------------------------------------------------------------------
 
 VkResult AcquireNextImage(
-    VkDevice device, 
-    VkSemaphore imageAvailabilitySemaphore, 
+    VkDevice device,
+    VkSemaphore imageAvailabilitySemaphore,
     RT::SwapChainGroup const & swapChainGroup,
     uint32_t & outImageIndex
-) {
+)
+{
     MFA_ASSERT(device != nullptr);
     MFA_VK_VALID_ASSERT(imageAvailabilitySemaphore);
 #ifdef __ANDROID__
@@ -2414,12 +2561,13 @@ void BindVertexBuffer(
     VkCommandBuffer commandBuffer,
     RT::BufferGroup const & vertexBuffer,
     VkDeviceSize offset
-) {
+)
+{
     vkCmdBindVertexBuffers(
-        commandBuffer, 
-        0, 
-        1, 
-        &vertexBuffer.buffer, 
+        commandBuffer,
+        0,
+        1,
+        &vertexBuffer.buffer,
         &offset
     );
 }
@@ -2431,11 +2579,12 @@ void BindIndexBuffer(
     RT::BufferGroup const & indexBuffer,
     VkDeviceSize offset,
     VkIndexType indexType
-) {
+)
+{
     vkCmdBindIndexBuffer(
         commandBuffer,
         indexBuffer.buffer,
-        offset, 
+        offset,
         indexType
     );
 }
@@ -2449,32 +2598,35 @@ void DrawIndexed(
     uint32_t const firstIndex,
     uint32_t const vertexOffset,
     uint32_t const firstInstance
-) {
+)
+{
     vkCmdDrawIndexed(
-        commandBuffer, 
-        indicesCount, 
-        instanceCount, 
-        firstIndex, 
-        vertexOffset, 
+        commandBuffer,
+        indicesCount,
+        instanceCount,
+        firstIndex,
+        vertexOffset,
         firstInstance
     );
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void SetScissor(VkCommandBuffer commandBuffer, VkRect2D const & scissor) {
+void SetScissor(VkCommandBuffer commandBuffer, VkRect2D const & scissor)
+{
     MFA_ASSERT(commandBuffer != nullptr);
     vkCmdSetScissor(
-        commandBuffer, 
-        0, 
-        1, 
+        commandBuffer,
+        0,
+        1,
         &scissor
     );
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void SetViewport(VkCommandBuffer commandBuffer, VkViewport const & viewport) {
+void SetViewport(VkCommandBuffer commandBuffer, VkViewport const & viewport)
+{
     MFA_ASSERT(commandBuffer != nullptr);
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 }
@@ -2483,17 +2635,18 @@ void SetViewport(VkCommandBuffer commandBuffer, VkViewport const & viewport) {
 
 void PushConstants(
     VkCommandBuffer command_buffer,
-    VkPipelineLayout pipeline_layout, 
-    AssetSystem::ShaderStage const shader_stage, 
-    uint32_t const offset, 
+    VkPipelineLayout pipeline_layout,
+    AssetSystem::ShaderStage const shader_stage,
+    uint32_t const offset,
     CBlob const data
-) {
+)
+{
     vkCmdPushConstants(
         command_buffer,
         pipeline_layout,
         ConvertAssetShaderStageToGpu(shader_stage),
         offset,
-        static_cast<uint32_t>(data.len), 
+        static_cast<uint32_t>(data.len),
         data.ptr
     );
 }
@@ -2502,17 +2655,18 @@ void PushConstants(
 
 void PushConstants(
     VkCommandBuffer command_buffer,
-    VkPipelineLayout pipeline_layout, 
-    VkShaderStageFlags const shader_stage, 
-    uint32_t const offset, 
+    VkPipelineLayout pipeline_layout,
+    VkShaderStageFlags const shader_stage,
+    uint32_t const offset,
     CBlob const data
-) {
+)
+{
     vkCmdPushConstants(
         command_buffer,
         pipeline_layout,
         shader_stage,
         offset,
-        static_cast<uint32_t>(data.len), 
+        static_cast<uint32_t>(data.len),
         data.ptr
     );
 }
@@ -2522,17 +2676,19 @@ void PushConstants(
 void UpdateDescriptorSetsBasic(
     VkDevice device,
     uint8_t const descriptorSetsCount,
-    VkDescriptorSet* descriptorSets,
+    VkDescriptorSet * descriptorSets,
     VkDescriptorBufferInfo const & bufferInfo,
     uint32_t const imageInfoCount,
     VkDescriptorImageInfo const * imageInfos
-) {
+)
+{
     MFA_ASSERT(device != nullptr);
     MFA_ASSERT(descriptorSetsCount > 0);
     MFA_ASSERT(descriptorSets != nullptr);
-    for(uint8_t i = 0; i < descriptorSetsCount; i++) {
-        std::vector<VkWriteDescriptorSet> descriptorWrites (2);
-        
+    for (uint8_t i = 0; i < descriptorSetsCount; i++)
+    {
+        std::vector<VkWriteDescriptorSet> descriptorWrites(2);
+
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[0].dstSet = descriptorSets[i];
         descriptorWrites[0].dstBinding = 0;
@@ -2550,10 +2706,10 @@ void UpdateDescriptorSetsBasic(
         descriptorWrites[1].pImageInfo = imageInfos;
 
         vkUpdateDescriptorSets(
-            device, 
-            static_cast<uint32_t>(descriptorWrites.size()), 
-            descriptorWrites.data(), 
-            0, 
+            device,
+            static_cast<uint32_t>(descriptorWrites.size()),
+            descriptorWrites.data(),
+            0,
             nullptr
         );
     }
@@ -2565,25 +2721,28 @@ void UpdateDescriptorSets(
     VkDevice device,
     uint32_t descriptorWritesCount,
     VkWriteDescriptorSet * descriptorWrites
-) {
+)
+{
     MFA_ASSERT(device != nullptr);
     MFA_ASSERT(descriptorWritesCount > 0);
     MFA_ASSERT(descriptorWrites != nullptr);
 
     vkUpdateDescriptorSets(
-        device, 
-        descriptorWritesCount, 
-        descriptorWrites, 
-        0, 
+        device,
+        descriptorWritesCount,
+        descriptorWrites,
+        0,
         nullptr
     );
 }
 
 //-------------------------------------------------------------------------------------------------
 
-uint32_t ComputeSwapChainImagesCount(VkSurfaceCapabilitiesKHR surfaceCapabilities) {
+uint32_t ComputeSwapChainImagesCount(VkSurfaceCapabilitiesKHR surfaceCapabilities)
+{
     uint32_t imageCount = surfaceCapabilities.minImageCount + 1;
-    if (surfaceCapabilities.maxImageCount != 0 && imageCount > surfaceCapabilities.maxImageCount) {
+    if (surfaceCapabilities.maxImageCount != 0 && imageCount > surfaceCapabilities.maxImageCount)
+    {
         imageCount = surfaceCapabilities.maxImageCount;
     }
     return imageCount;
@@ -2592,9 +2751,10 @@ uint32_t ComputeSwapChainImagesCount(VkSurfaceCapabilitiesKHR surfaceCapabilitie
 //-------------------------------------------------------------------------------------------------
 
 void BeginCommandBuffer(
-    VkCommandBuffer commandBuffer, 
+    VkCommandBuffer commandBuffer,
     VkCommandBufferBeginInfo const & beginInfo
-) {
+)
+{
     VK_Check(vkBeginCommandBuffer(commandBuffer, &beginInfo));
 }
 
@@ -2605,20 +2765,23 @@ void PipelineBarrier(
     VkPipelineStageFlags sourceStageMask,
     VkPipelineStageFlags destinationStateMask,
     VkImageMemoryBarrier const & memoryBarrier
-) {
+)
+{
     vkCmdPipelineBarrier(
         commandBuffer,
         sourceStageMask,
         destinationStateMask,
-        0, 0, nullptr, 0, nullptr, 1, 
+        0, 0, nullptr, 0, nullptr, 1,
         &memoryBarrier
     );
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void EndCommandBuffer(VkCommandBuffer commandBuffer) {
-    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+void EndCommandBuffer(VkCommandBuffer commandBuffer)
+{
+    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
+    {
         MFA_CRASH("Failed to record command buffer");
     }
 }
@@ -2626,23 +2789,26 @@ void EndCommandBuffer(VkCommandBuffer commandBuffer) {
 //-------------------------------------------------------------------------------------------------
 
 void SubmitQueues(
-    VkQueue queue, 
-    uint32_t submitCount, 
-    VkSubmitInfo * submitInfos, 
+    VkQueue queue,
+    uint32_t submitCount,
+    VkSubmitInfo * submitInfos,
     VkFence fence
-) {
+)
+{
     VK_Check(vkQueueSubmit(queue, submitCount, submitInfos, fence));
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void ResetFences(VkDevice device, uint32_t fencesCount, VkFence const * fences) {
+void ResetFences(VkDevice device, uint32_t fencesCount, VkFence const * fences)
+{
     VK_Check(vkResetFences(device, fencesCount, fences));
 }
 
 //-------------------------------------------------------------------------------------------------
 
-VkSampleCountFlagBits ComputeMaxUsableSampleCount(VkPhysicalDevice physicalDevice) {
+VkSampleCountFlagBits ComputeMaxUsableSampleCount(VkPhysicalDevice physicalDevice)
+{
     MFA_VK_VALID_ASSERT(physicalDevice);
 
     VkPhysicalDeviceProperties physicalDeviceProperties;
@@ -2653,7 +2819,8 @@ VkSampleCountFlagBits ComputeMaxUsableSampleCount(VkPhysicalDevice physicalDevic
 
 //-------------------------------------------------------------------------------------------------
 
-VkSampleCountFlagBits ComputeMaxUsableSampleCount(VkPhysicalDeviceProperties deviceProperties) {
+VkSampleCountFlagBits ComputeMaxUsableSampleCount(VkPhysicalDeviceProperties deviceProperties)
+{
     auto const counts = deviceProperties.limits.framebufferColorSampleCounts
         & deviceProperties.limits.framebufferDepthSampleCounts;
 
@@ -2674,7 +2841,8 @@ void CopyImage(
     VkImage sourceImage,
     VkImage destinationImage,
     VkImageCopy const & copyRegion
-) {
+)
+{
     // Put image copy into command buffer
     vkCmdCopyImage(
         commandBuffer,
@@ -2689,7 +2857,8 @@ void CopyImage(
 
 //-------------------------------------------------------------------------------------------------
 
-void WaitForQueue(VkQueue queue) {
+void WaitForQueue(VkQueue queue)
+{
     VK_Check(vkQueueWaitIdle(queue));
 }
 
@@ -2747,6 +2916,18 @@ void GetQueryPoolResult(
         // which also returns the state of the result (ready) in the result
         VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT
     );
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void ResetQueryPool(
+    VkCommandBuffer commandBuffer,
+    VkQueryPool queryPool,
+    uint32_t const queryCount,
+    uint32_t const firstQueryIndex
+)
+{
+    vkCmdResetQueryPool(commandBuffer, queryPool, firstQueryIndex, queryCount);
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -192,12 +192,12 @@ namespace MFA
         }
 
         // Check if object is visible in frustum
-        bool const isInFrustum = mBoundingVolumeComponent->IsInFrustum();
+        bool const isVisible = mBoundingVolumeComponent->IsInFrustum() && mIsOccluded == false;
 
         // If object is not visible we only need to update animation time
 
-        updateAnimation(deltaTimeInSec, isInFrustum);
-        if (isInFrustum == false)
+        updateAnimation(deltaTimeInSec, isVisible);
+        if (isVisible == false)
         {
             return;
         }
@@ -299,7 +299,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DrawableVariant::updateAnimation(float const deltaTimeInSec, bool isInFrustum)
+    void DrawableVariant::updateAnimation(float const deltaTimeInSec, bool isVisible)
     {
         using Animation = AS::Mesh::Animation;
 
@@ -313,7 +313,7 @@ namespace MFA
         {// Active animation
             auto const & activeAnimation = mMesh->GetAnimationByIndex(mActiveAnimationIndex);
 
-            if (isInFrustum)
+            if (isVisible)
             {
                 for (auto const & channel : activeAnimation.channels)
                 {
@@ -385,7 +385,7 @@ namespace MFA
 
             }
         }
-        if (isInFrustum)
+        if (isVisible)
         {// Previous animation
             if (mAnimationRemainingTransitionDurationInSec <= 0 || mPreviousAnimationIndex < 0)
             {

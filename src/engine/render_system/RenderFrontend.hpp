@@ -68,8 +68,8 @@ namespace MFA::RenderFrontend
 
     void DestroyPipelineGroup(RT::PipelineGroup & drawPipeline);
 
-    [[nodiscard]]
-    RT::DescriptorSetGroup CreateDescriptorSets(VkDescriptorSetLayout descriptorSetLayout);
+    //[[nodiscard]]
+    //RT::DescriptorSetGroup CreateDescriptorSets(VkDescriptorSetLayout descriptorSetLayout);
 
     [[nodiscard]]
     RT::DescriptorSetGroup CreateDescriptorSets(
@@ -399,6 +399,13 @@ namespace MFA::RenderFrontend
 
     [[nodiscard]]
     VkSemaphore getImageAvailabilitySemaphore(RT::CommandRecordState const & drawPass);
+
+    void ResetQueryPool(
+        RT::CommandRecordState const & recordState,
+        VkQueryPool queryPool,
+        uint32_t queryCount,
+        uint32_t firstQueryIndex = 0
+    );
 
 }
 

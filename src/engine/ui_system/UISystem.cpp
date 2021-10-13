@@ -237,7 +237,10 @@ void Init() {
     }
 
     // Create Descriptor Set:
-    state->descriptorSetGroup = RF::CreateDescriptorSets(state->descriptorSetLayout); // Original number was 1 , Now it creates as many as swap_chain_image_count
+    state->descriptorSetGroup = RF::CreateDescriptorSets(
+        RF::GetMaxFramesPerFlight(),
+        state->descriptorSetLayout
+    ); // Original number was 1 , Now it creates as many as swap_chain_image_count
 
     {// Vertex shader
         auto const shader_asset = Importer::ImportShaderFromSPV(

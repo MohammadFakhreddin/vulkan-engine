@@ -130,9 +130,20 @@ public:
     [[nodiscard]]
     Entity * GetEntity() const;
 
+    [[nodiscard]]
+    bool IsOccluded() const
+    {
+        return mIsOccluded;
+    }
+
+    void SetIsOccluded(bool const isOccluded)
+    {
+        mIsOccluded = isOccluded;
+    }
+
 private:
 
-    void updateAnimation(float deltaTimeInSec, bool isInFrustum);
+    void updateAnimation(float deltaTimeInSec, bool isVisible);
 
     void computeNodesGlobalTransform();
 
@@ -209,6 +220,8 @@ private:
     int mTransformListenerId = 0;
 
     bool mIsSkinJointsChanged = true;
+
+    bool mIsOccluded = false;
 
 };
 
