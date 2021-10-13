@@ -90,6 +90,8 @@ void OnNewFrame(float const deltaTimeInSec) {
         state->CurrentFps = state->CurrentFps * 0.9f + (1.0f / deltaTimeInSec) * 0.1f;
     }
 
+    // TODO We might need a logic step here as well
+
     if(state->ActiveScene != state->LastActiveScene) {
         RF::DeviceWaitIdle();
         if(state->LastActiveScene >= 0) {
@@ -128,9 +130,6 @@ void OnNewFrame(float const deltaTimeInSec) {
 
     state->DisplayRenderPass->EndRenderPass(drawPass);
 
-    RF::EndGraphicCommandBufferRecording(drawPass);
-    // End of graphic record
-
     // Post render 
     if(state->ActiveScene >= 0) {
         state->RegisteredScenes[state->ActiveScene].scene->OnPostRender(
@@ -138,6 +137,9 @@ void OnNewFrame(float const deltaTimeInSec) {
             drawPass
         );
     }
+
+    RF::EndGraphicCommandBufferRecording(drawPass);
+    // End of graphic record
 
 }
 

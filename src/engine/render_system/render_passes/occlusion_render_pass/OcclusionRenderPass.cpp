@@ -2,6 +2,7 @@
 
 #include "engine/BedrockAssert.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
+#include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 
 //-------------------------------------------------------------------------------------------------
 
@@ -21,8 +22,8 @@ VkRenderPass MFA::OcclusionRenderPass::GetVkRenderPass()
 void MFA::OcclusionRenderPass::internalInit()
 {
     auto const capabilities = RF::GetSurfaceCapabilities();
-    mImageWidth = static_cast<uint32_t>(static_cast<float>(capabilities.currentExtent.width) / 4.0f);
-    mImageHeight = static_cast<uint32_t>(static_cast<float>(capabilities.currentExtent.height) / 4.0f);
+    mImageWidth = capabilities.currentExtent.width;
+    mImageHeight = capabilities.currentExtent.height;
 
     auto const extent = VkExtent2D {
         .width = mImageWidth,
@@ -36,16 +37,18 @@ void MFA::OcclusionRenderPass::internalInit()
         colorImage = RF::CreateColorImage(
             extent,
             VK_FORMAT_R8_UINT,
-            {}
+            {
+                .samplesCount = RF::GetMaxSamplesCount(),
+            }
         );
     }
 
     // Depth images
-    mDepthImages.resize(RF::GetSwapChainImagesCount());
-    for (auto & depthImage : mDepthImages)
-    {
-        depthImage = RF::CreateDepthImage(extent, {});
-    }
+    //mDepthImages.resize(RF::GetSwapChainImagesCount());
+    //for (auto & depthImage : mDepthImages)
+    //{
+    //    depthImage = RF::CreateDepthImage(extent, {});
+    //}
 
     createRenderPass();
 
@@ -71,11 +74,11 @@ void MFA::OcclusionRenderPass::internalShutdown()
     mColorImages.clear();
 
     // Depth images
-    for (auto & depthImage : mDepthImages)
-    {
-        RF::DestroyDepthImage(depthImage);
-    }
-    mDepthImages.clear();
+    //for (auto & depthImage : mDepthImages)
+    //{
+    //    RF::DestroyDepthImage(depthImage);
+    //}
+    //mDepthImages.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -116,8 +119,8 @@ void MFA::OcclusionRenderPass::internalEndRenderPass(RT::CommandRecordState & dr
 void MFA::OcclusionRenderPass::internalResize()
 {
     auto const capabilities = RF::GetSurfaceCapabilities();
-    mImageWidth = static_cast<uint32_t>(static_cast<float>(capabilities.currentExtent.width) / 4.0f);
-    mImageHeight = static_cast<uint32_t>(static_cast<float>(capabilities.currentExtent.height) / 4.0f);
+    mImageWidth = capabilities.currentExtent.width;
+    mImageHeight = capabilities.currentExtent.height;
 
     auto const extent = VkExtent2D {
         .width = mImageWidth,
@@ -127,14 +130,14 @@ void MFA::OcclusionRenderPass::internalResize()
     for (auto & colorImage : mColorImages)
     {
         RF::DestroyColorImage(colorImage);
-        colorImage = RF::CreateColorImage(extent, colorImage.imageFormat, {});
+        colorImage = RF::CreateColorImage(extent, colorImage.imageFormat, {.samplesCount = RF::GetMaxSamplesCount()});
     }
 
-    for (auto & depthImage : mDepthImages)
-    {
-        RF::DestroyDepthImage(depthImage);
-        depthImage = RF::CreateDepthImage(extent, {});
-    }
+    //for (auto & depthImage : mDepthImages)
+    //{
+    //    RF::DestroyDepthImage(depthImage);
+    //    depthImage = RF::CreateDepthImage(extent, {});
+    //}
 
     // Depth frame-buffer
     RF::DestroyFrameBuffers(
@@ -150,7 +153,7 @@ void MFA::OcclusionRenderPass::createRenderPass()
 {
     VkAttachmentDescription const colorAttachment{
         .format = VK_FORMAT_R8_UINT,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .samples = RF::GetMaxSamplesCount(),
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
@@ -165,13 +168,13 @@ void MFA::OcclusionRenderPass::createRenderPass()
     };
 
     VkAttachmentDescription const depthAttachment{
-        .format = mDepthImages[0].imageFormat,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .format = RF::GetDisplayRenderPass()->GetDepthImages()[0].imageFormat,
+        .samples = RF::GetMaxSamplesCount(),
+        .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
 
@@ -233,11 +236,12 @@ void MFA::OcclusionRenderPass::createFrameBuffers(VkExtent2D const & extent)
 {
     mFrameBuffers.clear();
     mFrameBuffers.resize(RF::GetSwapChainImagesCount());
+    auto & depthImages = RF::GetDisplayRenderPass()->GetDepthImages();
     for (int i = 0; i < static_cast<int>(mFrameBuffers.size()); ++i)
     {
         std::vector<VkImageView> const attachments = {
             mColorImages[i].imageView,
-            mDepthImages[i].imageView
+            depthImages[i].imageView
         };
         mFrameBuffers[i] = RF::CreateFrameBuffer(
             mRenderPass,

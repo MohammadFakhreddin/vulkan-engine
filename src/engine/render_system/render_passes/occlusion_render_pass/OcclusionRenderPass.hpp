@@ -40,7 +40,7 @@ namespace MFA
         VkRenderPass mRenderPass {};
         std::vector<VkFramebuffer> mFrameBuffers {};
         std::vector<RT::ColorImageGroup> mColorImages {};
-        std::vector<RT::DepthImageGroup> mDepthImages {};
+        //std::vector<RT::DepthImageGroup> mDepthImages {};
 
     };
 

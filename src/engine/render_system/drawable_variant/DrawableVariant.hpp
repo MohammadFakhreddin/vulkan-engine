@@ -223,6 +223,8 @@ private:
 
     bool mIsOccluded = false;
 
+    int bufferDirtyCounter = 0;
+
 };
 
 };

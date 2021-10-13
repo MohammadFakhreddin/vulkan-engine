@@ -197,23 +197,28 @@ namespace MFA
         // If object is not visible we only need to update animation time
 
         updateAnimation(deltaTimeInSec, isVisible);
-        if (isVisible == false)
+        if (isVisible == true)
         {
-            return;
+            computeNodesGlobalTransform();
+            updateAllSkinsJoints();
+            mIsModelTransformChanged = false;
         }
-        computeNodesGlobalTransform();
-        updateAllSkinsJoints();
-
-        mIsModelTransformChanged = false;
+        
         // We update buffers after all of computations
 
         if (mSkinsJointsBuffer.bufferSize > 0 && mIsSkinJointsChanged == true)
         {
-            RF::UpdateUniformBuffer(
+            bufferDirtyCounter = 2;
+           
+            mIsSkinJointsChanged = false;
+        }
+        if (bufferDirtyCounter > 0)
+        {
+             RF::UpdateUniformBuffer(
                 mSkinsJointsBuffer.buffers[drawPass.frameIndex],
                 mCachedSkinsJointsBlob
             );
-            mIsSkinJointsChanged = false;
+            bufferDirtyCounter -= 1;
         }
     }
 

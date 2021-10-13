@@ -33,6 +33,9 @@ namespace MFA
         struct OcclusionPassVertexStagePushConstants
         {
             float modelTransform[16];
+            float inverseNodeTransform[16];
+            int skinIndex;
+            int placeholder0[3];
         };
 
         struct ShadowPassVertexStagePushConstants
@@ -97,7 +100,9 @@ namespace MFA
 
         void Render(RT::CommandRecordState & drawPass, float deltaTime) override;
 
-        void OnResize() override {}
+        void PostRender(RT::CommandRecordState & drawPass, float deltaTime) override;
+
+        void OnResize() override;
 
         void UpdateCameraView(const float view[16]);
 
@@ -119,7 +124,7 @@ namespace MFA
 
         void createDepthPassDescriptorSets(DrawableVariant * variant);
 
-        void createOcclusionPassDescriptorSets();
+        void createOcclusionPassDescriptorSets(DrawableVariant * variant);
 
         void createDisplayPassDescriptorSetLayout();
 
@@ -215,8 +220,6 @@ namespace MFA
         std::vector<OcclusionQueryData> mOcclusionQueryDataList {}; // We need one per frame
 
         VkDescriptorSetLayout mOcclusionDescriptorSetLayout {};
-        RT::DescriptorSetGroup mOcclusionDescriptorSetGroup {}; 
-
         
     };
 

@@ -1666,7 +1666,7 @@ VkRenderPass CreateRenderPass(
     uint32_t dependenciesCount
 )
 {
-    VkRenderPassCreateInfo createInfo{
+    VkRenderPassCreateInfo const createInfo {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
         .attachmentCount = attachmentsCount,
         .pAttachments = attachments,
