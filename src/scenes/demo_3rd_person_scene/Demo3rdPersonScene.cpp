@@ -61,7 +61,7 @@ void Demo3rdPersonScene::Init()
     }
 
     {// PointLight
-        
+
         auto * entity = EntitySystem::CreateEntity("PointLight", GetRootEntity());
         MFA_ASSERT(entity != nullptr);
 

@@ -174,9 +174,10 @@ namespace MFA
         mTransformComponent = transformComponent;
 
         mTransformListenerId = mTransformComponent->RegisterChangeListener([this]()->void
-    {
-            mIsModelTransformChanged = true;
-        });
+            {
+                mIsModelTransformChanged = true;
+            }
+        );
 
         mBoundingVolumeComponent = mEntity->GetComponent<BoundingVolumeComponent>();
         MFA_ASSERT(mBoundingVolumeComponent != nullptr);
@@ -192,7 +193,7 @@ namespace MFA
         }
 
         // Check if object is visible in frustum
-        bool const isVisible = mBoundingVolumeComponent->IsInFrustum() && mIsOccluded == false;
+        bool const isVisible = mBoundingVolumeComponent->IsInFrustum();
 
         // If object is not visible we only need to update animation time
 
@@ -200,23 +201,26 @@ namespace MFA
         if (isVisible == true)
         {
             computeNodesGlobalTransform();
-            updateAllSkinsJoints();
+            if (IsOccluded() == false)
+            {
+                updateAllSkinsJoints();
+            }
             mIsModelTransformChanged = false;
         }
-        
+
         // We update buffers after all of computations
 
         if (mSkinsJointsBuffer.bufferSize > 0 && mIsSkinJointsChanged == true)
         {
             bufferDirtyCounter = 2;
-           
+
             mIsSkinJointsChanged = false;
         }
         if (bufferDirtyCounter > 0)
         {
-             RF::UpdateUniformBuffer(
-                mSkinsJointsBuffer.buffers[drawPass.frameIndex],
-                mCachedSkinsJointsBlob
+            RF::UpdateUniformBuffer(
+               mSkinsJointsBuffer.buffers[drawPass.frameIndex],
+               mCachedSkinsJointsBlob
             );
             bufferDirtyCounter -= 1;
         }
