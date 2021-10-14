@@ -157,6 +157,14 @@ namespace MFA
     {
         // TODO I should render bounding volume for objects and geometry for occluders and I should draw walls first
         {// Retrieving previous frame results
+
+            // I was thinking to retrieve previous frame result
+            //auto previousFrame = drawPass.frameIndex - 1;
+            //if (previousFrame < 0)
+            //{
+            //    previousFrame = RF::GetMaxFramesPerFlight() - 1;
+            //}
+
             auto & occlusionQueryData = mOcclusionQueryDataList[drawPass.frameIndex];
             if (occlusionQueryData.Variants.empty() == false) {// Trying to get previous frame results
                 
@@ -1076,7 +1084,7 @@ namespace MFA
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
         });
 
-            // SkinJoints
+        // SkinJoints
         bindings.emplace_back(VkDescriptorSetLayoutBinding{
             .binding = static_cast<uint32_t>(bindings.size()),
             .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
