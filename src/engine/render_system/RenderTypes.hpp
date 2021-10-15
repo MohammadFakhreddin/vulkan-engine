@@ -132,7 +132,7 @@ struct PipelineGroup {
 
 struct CommandRecordState {
     uint32_t imageIndex;
-    uint8_t frameIndex;
+    uint32_t frameIndex;
     bool isValid = false;
     PipelineGroup * pipeline;
     RenderPass * renderPass;

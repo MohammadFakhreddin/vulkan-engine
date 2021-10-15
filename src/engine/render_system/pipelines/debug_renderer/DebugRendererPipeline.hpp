@@ -20,7 +20,7 @@ public:
         alignas(64) float viewProjection[16];
     };
 
-    DebugRendererPipeline() = default;
+    DebugRendererPipeline();
     ~DebugRendererPipeline() override;
 
     DebugRendererPipeline (DebugRendererPipeline const &) noexcept = delete;

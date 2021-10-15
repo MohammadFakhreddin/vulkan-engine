@@ -8,19 +8,28 @@ struct PSOut {
 };
 
 struct LightBuffer {
-    float4 lightPosition;
-    float projectionMaximumDistance;       // abs(Far - near)
+    float3 lightPosition; //TODO We will have multiple lights and visibility info
+    float placeholder0;
+    float3 lightColor;
+    float placeholder1;
 };
 
-ConstantBuffer <LightBuffer> lBuffer : register (b2, space0);
+ConstantBuffer <LightBuffer> lightBuffer : register (b2, space0);
+
+struct CameraBuffer {
+    float3 cameraPosition;
+    float projectFarToNearDistance;
+};
+
+ConstantBuffer <CameraBuffer> cameraBuffer : register (b3, space0);
 
 PSOut main(PSIn input) {
 
     // get distance between fragment and light source
-    float lightDistance = length(input.worldPosition.xyz - lBuffer.lightPosition.xyz);
+    float lightDistance = length(input.worldPosition.xyz - lightBuffer.lightPosition.xyz);
     
     // map to [0;1] range by dividing by far_plane
-    lightDistance = lightDistance / lBuffer.projectionMaximumDistance;
+    lightDistance = lightDistance / cameraBuffer.projectFarToNearDistance;
     
     // write this as modified depth
     float depth = lightDistance;

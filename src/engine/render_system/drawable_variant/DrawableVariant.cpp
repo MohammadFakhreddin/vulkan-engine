@@ -671,31 +671,27 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     RT::DescriptorSetGroup const & DrawableVariant::CreateDescriptorSetGroup(
-        char const * name,
-        VkDescriptorSetLayout descriptorSetLayout,
-        uint32_t const descriptorSetCount
+        VkDescriptorPool descriptorPool,
+        uint32_t const descriptorSetCount,
+        VkDescriptorSetLayout descriptorSetLayout
     )
     {
-        MFA_ASSERT(mDescriptorSetGroups.find(name) == mDescriptorSetGroups.end());
-        auto const descriptorSetGroup = RF::CreateDescriptorSets(
+        MFA_ASSERT(mIsDescriptorSetGroupValid == false);
+        mDescriptorSetGroup = RF::CreateDescriptorSets(
+            descriptorPool,
             descriptorSetCount,
             descriptorSetLayout
         );
-        mDescriptorSetGroups[name] = descriptorSetGroup;
-        return mDescriptorSetGroups[name];
+        mIsDescriptorSetGroupValid = true;
+        return mDescriptorSetGroup;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::DescriptorSetGroup const * DrawableVariant::GetDescriptorSetGroup(char const * name)
+    RT::DescriptorSetGroup const & DrawableVariant::GetDescriptorSetGroup() const
     {
-        MFA_ASSERT(name != nullptr);
-        auto const findResult = mDescriptorSetGroups.find(name);
-        if (findResult != mDescriptorSetGroups.end())
-        {
-            return &findResult->second;
-        }
-        return nullptr;
+        MFA_ASSERT(mIsDescriptorSetGroupValid == true);
+        return mDescriptorSetGroup;
     }
 
     //-------------------------------------------------------------------------------------------------

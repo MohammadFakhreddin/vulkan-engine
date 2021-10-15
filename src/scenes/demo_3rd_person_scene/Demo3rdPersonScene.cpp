@@ -124,9 +124,9 @@ void Demo3rdPersonScene::Init()
             EntitySystem::InitEntity(entity);
         }
         {// NPCs
-            for (uint32_t i = 0; i < 10; ++i)
+            for (uint32_t i = 0; i < 33; ++i)
             {
-                for (uint32_t j = 0; j < 10; ++j)
+                for (uint32_t j = 0; j < 33; ++j)
                 {
                     auto * entity = EntitySystem::CreateEntity("Random soldier", GetRootEntity());
                     MFA_ASSERT(entity != nullptr);
@@ -134,7 +134,7 @@ void Demo3rdPersonScene::Init()
                     auto * transformComponent = entity->AddComponent<TransformComponent>();
                     MFA_ASSERT(transformComponent != nullptr);
 
-                    float position[3]{ static_cast<float>(i) - 5.0f, 2.0f, static_cast<float>(j) - 4.0f };
+                    float position[3]{ static_cast<float>(i) - 15.0f, 2.0f, static_cast<float>(j) - 30.0f };
                     float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
                     float scale[3]{ 1.0f, 1.0f, 1.0f };
                     transformComponent->UpdateTransform(position, eulerAngles, scale);
@@ -188,6 +188,8 @@ void Demo3rdPersonScene::Init()
 
             entity->AddComponent<ColorComponent>(glm::vec3(0.0f, 0.0f, 1.0f));
 
+            entity->SetActive(true);
+
             EntitySystem::InitEntity(entity);
         }
     }
@@ -220,7 +222,7 @@ void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, MFA::RT::Comma
     mPbrPipeline.PostRender(drawPass, deltaTimeInSec);
 
     {// Soldier
-        static constexpr float SoldierSpeed = 5.0f;
+        static constexpr float SoldierSpeed = 4.0f;
         auto const inputForwardMove = IM::GetForwardMove();
         auto const inputRightMove = IM::GetRightMove();
         if (inputForwardMove != 0.0f || inputRightMove != 0.0f)

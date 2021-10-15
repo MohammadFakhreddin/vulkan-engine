@@ -27,7 +27,7 @@ private:
 
 public:
 
-    explicit BasePipeline();
+    explicit BasePipeline(uint32_t maxSets);
 
     virtual ~BasePipeline();
 
@@ -68,7 +68,11 @@ protected:
 
     virtual void Shutdown();
 
+    virtual void internalCreateDrawableEssence(DrawableEssence & essence) {}
+
     std::unordered_map<std::string, std::unique_ptr<EssenceAndItsVariants>> mEssenceAndVariantsMap;
+
+    VkDescriptorPool mDescriptorPool;
 
 };
 

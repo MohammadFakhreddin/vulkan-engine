@@ -14,6 +14,11 @@
 namespace MFA
 {
 
+
+    DebugRendererPipeline::DebugRendererPipeline()
+        : BasePipeline(10)
+    {}
+
     //-------------------------------------------------------------------------------------------------
 
     DebugRendererPipeline::~DebugRendererPipeline()
@@ -74,7 +79,12 @@ namespace MFA
     void DebugRendererPipeline::Render(RT::CommandRecordState & drawPass, float deltaTime)
     {
         RF::BindDrawPipeline(drawPass, mDrawPipeline);
-        RF::BindDescriptorSet(drawPass, mDescriptorSetGroup.descriptorSets[drawPass.frameIndex]);
+
+        RF::BindDescriptorSet(
+            drawPass,
+            RenderFrontend::DescriptorSetType::PerFrame,
+            mDescriptorSetGroup
+        );
 
         PushConstants pushConstants{};
 
@@ -281,7 +291,11 @@ namespace MFA
 
     void DebugRendererPipeline::createDescriptorSets()
     {
-        mDescriptorSetGroup = RF::CreateDescriptorSets(RF::GetMaxFramesPerFlight(), mDescriptorSetLayout);
+        mDescriptorSetGroup = RF::CreateDescriptorSets(
+            mDescriptorPool,
+            RF::GetMaxFramesPerFlight(),
+            mDescriptorSetLayout
+        );
 
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {

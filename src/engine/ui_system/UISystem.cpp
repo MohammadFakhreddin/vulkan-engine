@@ -136,6 +136,7 @@ struct State {
     VkDescriptorSetLayout descriptorSetLayout {};
     RT::GpuShader vertexShader {};
     RT::GpuShader fragmentShader {};
+    VkDescriptorPool descriptorPool {};
     RT::DescriptorSetGroup descriptorSetGroup {};
     RT::PipelineGroup drawPipeline {};
     RT::GpuTexture fontTexture {};
@@ -236,8 +237,11 @@ void Init() {
         );
     }
 
+    state->descriptorPool = RF::CreateDescriptorPool(RF::GetMaxFramesPerFlight());
+
     // Create Descriptor Set:
     state->descriptorSetGroup = RF::CreateDescriptorSets(
+        state->descriptorPool,
         RF::GetMaxFramesPerFlight(),
         state->descriptorSetLayout
     ); // Original number was 1 , Now it creates as many as swap_chain_image_count
@@ -537,6 +541,15 @@ void OnNewFrame(
     
     ImGui::Render();
 
+    // Setup desired Vulkan state
+    // Bind pipeline and descriptor sets:
+    RF::BindDrawPipeline(drawPass, state->drawPipeline);
+    RF::BindDescriptorSet(
+        drawPass,
+        RenderFrontend::DescriptorSetType::PerFrame,
+        state->descriptorSetGroup
+    );
+
     auto * draw_data = ImGui::GetDrawData();
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
     float const frameBufferWidth = draw_data->DisplaySize.x * draw_data->FramebufferScale.x;
@@ -570,12 +583,7 @@ void OnNewFrame(
             state->meshBuffers[drawPass.frameIndex].verticesBuffer = RF::CreateVertexBuffer(CBlob {vertex_data.ptr, vertex_data.len});
             state->meshBuffers[drawPass.frameIndex].indicesBuffer = RF::CreateIndexBuffer(CBlob {index_data.ptr, index_data.len});
             state->meshBuffersValidationStatus[drawPass.frameIndex] = true;
-            // Setup desired Vulkan state
-            // Bind pipeline and descriptor sets:
-            {
-                RF::BindDrawPipeline(drawPass, state->drawPipeline);
-                RF::BindDescriptorSet(drawPass, state->descriptorSetGroup.descriptorSets[drawPass.frameIndex]);
-            }
+
 
             RF::BindIndexBuffer(
                 drawPass,
@@ -819,6 +827,8 @@ void Shutdown() {
     }
     RF::DestroyTexture(state->fontTexture);
     Importer::FreeTexture(state->fontTexture.cpuTexture());
+
+    RF::DestroyDescriptorPool(state->descriptorPool);
 
     RF::DestroyPipelineGroup(state->drawPipeline);
     // TODO We can remove shader after creating pipeline

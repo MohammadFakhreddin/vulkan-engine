@@ -54,6 +54,15 @@ public:
     [[nodiscard]]
     int GetAnimationIndex(char const * name) const noexcept;
 
+    RT::DescriptorSetGroup const & CreateDescriptorSetGroup(
+        VkDescriptorPool descriptorPool,
+        uint32_t descriptorSetCount,
+        VkDescriptorSetLayout descriptorSetLayout
+    );
+
+    [[nodiscard]]
+    RT::DescriptorSetGroup const & GetDescriptorSetGroup() const;
+
 private:
 
     std::string mName {};
@@ -65,6 +74,11 @@ private:
     uint32_t mPrimitiveCount = 0;
 
     std::unordered_map<std::string, int> mAnimationNameLookupTable {};
+
+    std::unordered_map<std::string, RT::DescriptorSetGroup> mDescriptorSetGroups {};
+
+    RT::DescriptorSetGroup mDescriptorSetGroup {};
+    bool mIsDescriptorSetGroupValid = false;
     
 };
 

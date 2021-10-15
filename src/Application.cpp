@@ -23,8 +23,8 @@ using namespace MFA;
 
 
 Application::Application()
-    : mThirdPersonDemoScene(std::make_unique<Demo3rdPersonScene>())
-    , mGltfMeshViewerScene(std::make_unique<GLTFMeshViewerScene>())
+    : mThirdPersonDemoScene(nullptr)
+    , mGltfMeshViewerScene(nullptr)
 {}
 
 Application::~Application() = default;
@@ -59,6 +59,9 @@ void Application::Init() {
     EntitySystem::Init();
     
     SceneManager::Init();
+
+    mThirdPersonDemoScene = std::make_unique<Demo3rdPersonScene>();
+    mGltfMeshViewerScene = std::make_unique<GLTFMeshViewerScene>();
 
     SceneManager::RegisterNew(mThirdPersonDemoScene.get(), "ThirdPersonDemoScene");
     SceneManager::RegisterNew(mGltfMeshViewerScene.get(), "GLTFMeshViewerScene");

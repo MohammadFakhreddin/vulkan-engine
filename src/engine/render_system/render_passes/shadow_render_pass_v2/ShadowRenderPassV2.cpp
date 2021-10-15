@@ -25,7 +25,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::DepthImageGroup const & ShadowRenderPassV2::GetDepthCubeMap(uint8_t const frameIndex) const
+    RT::DepthImageGroup const & ShadowRenderPassV2::GetDepthCubeMap(uint32_t const frameIndex) const
     {
         MFA_ASSERT(mDepthCubeMapList.size() > frameIndex);
         return mDepthCubeMapList[frameIndex];

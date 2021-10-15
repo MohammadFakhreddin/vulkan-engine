@@ -108,13 +108,13 @@ public:
     RT::DrawableVariantId GetId() const noexcept;
 
     RT::DescriptorSetGroup const & CreateDescriptorSetGroup(
-        char const * name, 
-        VkDescriptorSetLayout descriptorSetLayout, 
-        uint32_t descriptorSetCount
+        VkDescriptorPool descriptorPool,
+        uint32_t descriptorSetCount,
+        VkDescriptorSetLayout descriptorSetLayout
     );
 
     [[nodiscard]]
-    RT::DescriptorSetGroup const * GetDescriptorSetGroup(char const * name);
+    RT::DescriptorSetGroup const & GetDescriptorSetGroup() const;
 
     [[nodiscard]]
     bool IsActive() const noexcept;
@@ -199,7 +199,8 @@ private:
     std::vector<Skin> mSkins {};
     std::vector<Node> mNodes {};
     
-    std::unordered_map<std::string, RT::DescriptorSetGroup> mDescriptorSetGroups {};
+    RT::DescriptorSetGroup mDescriptorSetGroup {};
+    bool mIsDescriptorSetGroupValid = false;
 
     AnimationParams mActiveAnimationParams {};
 

@@ -19,7 +19,8 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     PBRWithShadowPipelineV2::PBRWithShadowPipelineV2()
-        : mShadowRenderPass(std::make_unique<ShadowRenderPassV2>(
+        : BasePipeline(10000)
+        , mShadowRenderPass(std::make_unique<ShadowRenderPassV2>(
             static_cast<uint32_t>(SHADOW_WIDTH),
             static_cast<uint32_t>(SHADOW_HEIGHT)))
         , mDepthPrePass(std::make_unique<DepthPrePass>())
@@ -30,6 +31,7 @@ namespace MFA
 
     PBRWithShadowPipelineV2::~PBRWithShadowPipelineV2()
     {
+        BasePipeline::~BasePipeline();
         if (mIsInitialized)
         {
             Shutdown();
@@ -66,21 +68,22 @@ namespace MFA
 
         createUniformBuffers();
 
-        createDisplayPassDescriptorSetLayout();
-        createDisplayPassPipeline();
-
         mShadowRenderPass->Init();
         mDepthPrePass->Init();
         mOcclusionRenderPass->Init();
 
-        createShadowPassDescriptorSetLayout();
+        createPerFrameDescriptorSetLayout();
+        createPerEssenceDescriptorSetLayout();
+        createPerVariantDescriptorSetLayout();
+
+        mDescriptorSetLayouts = { mPerFrameDescriptorSetLayout, mPerEssenceDescriptorSetLayout, mPerVariantDescriptorSetLayout };
+
+        createDisplayPassPipeline();
         createShadowPassPipeline();
-
-        createDepthDescriptorSetLayout();
         createDepthPassPipeline();
-
-        createOcclusionPassDescriptorSetLayout();
         createOcclusionQueryPipeline();
+
+        createFrameDescriptorSets();
 
         static float FOV = 90.0f;          // TODO Maybe it should be the same with our camera's FOV.
 
@@ -100,8 +103,8 @@ namespace MFA
         for (uint32_t i = 0; i < RF::GetMaxFramesPerFlight(); ++i)
         {
             drawPass.frameIndex = i;
-            updateShadowLightBuffer(drawPass);
-            updateDisplayLightBuffer(drawPass);
+            updateCameraBuffer(drawPass);
+            updateLightBuffer(drawPass);
             updateShadowViewProjectionBuffer(drawPass);
             updateDisplayViewProjectionBuffer(drawPass);
         }
@@ -109,7 +112,7 @@ namespace MFA
         mOcclusionQueryDataList.resize(RF::GetMaxFramesPerFlight());
         for (auto & occlusionQueryData : mOcclusionQueryDataList)
         {
-            occlusionQueryData.Pool = RF::CreateQueryPool(VkQueryPoolCreateInfo {
+            occlusionQueryData.Pool = RF::CreateQueryPool(VkQueryPoolCreateInfo{
                 .sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
                 .queryType = VK_QUERY_TYPE_OCCLUSION,
                 .queryCount = 10000,
@@ -155,19 +158,14 @@ namespace MFA
 
     void PBRWithShadowPipelineV2::PreRender(RT::CommandRecordState & drawPass, float const deltaTime)
     {
-        // TODO I should render bounding volume for objects and geometry for occluders and I should draw walls first
+        // TODO I should render bounding volume for objects and geometry for occluders. 
         {// Retrieving previous frame results
 
-            // I was thinking to retrieve previous frame result
-            //auto previousFrame = drawPass.frameIndex - 1;
-            //if (previousFrame < 0)
-            //{
-            //    previousFrame = RF::GetMaxFramesPerFlight() - 1;
-            //}
-
+            // I was thinking to retrieve previous frame result but it is impossible
             auto & occlusionQueryData = mOcclusionQueryDataList[drawPass.frameIndex];
-            if (occlusionQueryData.Variants.empty() == false) {// Trying to get previous frame results
-                
+            if (occlusionQueryData.Variants.empty() == false)
+            {// Trying to get previous frame results
+
                 occlusionQueryData.Results.resize(occlusionQueryData.Variants.size());
 
                 RF::GetQueryPoolResult(
@@ -193,29 +191,34 @@ namespace MFA
 
         BasePipeline::PreRender(drawPass, deltaTime);
 
-        if (mDisplayViewProjectionNeedUpdate > 0)
+        if (mDisplayViewProjectionUpdateCounter > 0)
         {
             updateDisplayViewProjectionBuffer(drawPass);
-            --mDisplayViewProjectionNeedUpdate;
+            --mDisplayViewProjectionUpdateCounter;
         }
-        if (mDisplayLightNeedUpdate > 0)
+        if (mLightBufferUpdateCounter > 0)
         {
-            updateDisplayLightBuffer(drawPass);
-            --mDisplayLightNeedUpdate;
+            updateLightBuffer(drawPass);
+            --mLightBufferUpdateCounter;
         }
-        if (mShadowLightNeedUpdate > 0)
+        if (mCameraBufferUpdateCounter > 0)
         {
-            updateShadowLightBuffer(drawPass);
-            --mShadowLightNeedUpdate;
+            updateCameraBuffer(drawPass);
+            --mCameraBufferUpdateCounter;
         }
-        if (mShadowViewProjectionNeedUpdate > 0)
+        if (mShadowViewProjectionUpdateCounter > 0)
         {
             updateShadowViewProjectionBuffer(drawPass);
-            --mShadowViewProjectionNeedUpdate;
+            --mShadowViewProjectionUpdateCounter;
         }
 
         {// Shadow pass
             RF::BindDrawPipeline(drawPass, mShadowPassPipeline);
+            RF::BindDescriptorSet(
+                drawPass,
+                RenderFrontend::DescriptorSetType::PerFrame,
+                mPerFrameDescriptorSetGroup
+            );
 
             // Vertex push constants
             ShadowPassVertexStagePushConstants pushConstants{};
@@ -234,6 +237,12 @@ namespace MFA
                     RF::BindVertexBuffer(drawPass, essence.GetGpuModel().meshBuffers.verticesBuffer);
                     RF::BindIndexBuffer(drawPass, essence.GetGpuModel().meshBuffers.indicesBuffer);
 
+                    RF::BindDescriptorSet(
+                        drawPass,
+                        RenderFrontend::DescriptorSetType::PerEssence,
+                        essence.GetDescriptorSetGroup()
+                    );
+
                     for (auto const & variant : variantsList)
                     {
                         // TODO We can have a isVisible class
@@ -241,7 +250,8 @@ namespace MFA
                         {
                             RF::BindDescriptorSet(
                                 drawPass,
-                                variant->GetDescriptorSetGroup("PbrWithShadowV2ShadowPipeline")->descriptorSets[drawPass.frameIndex]
+                                RenderFrontend::DescriptorSetType::PerVariant,
+                                variant->GetDescriptorSetGroup()
                             );
 
                             variant->Draw(drawPass, [&drawPass, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
@@ -270,21 +280,36 @@ namespace MFA
             DepthPrePassVertexStagePushConstants pushConstants{};
 
             RF::BindDrawPipeline(drawPass, mDepthPassPipeline);
+            RF::BindDescriptorSet(
+                drawPass,
+                RenderFrontend::DescriptorSetType::PerFrame,
+                mPerFrameDescriptorSetGroup
+            );
+
             mDepthPrePass->BeginRenderPass(drawPass);
             for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
             {
                 auto & essence = essenceAndVariantList.second->essence;
                 auto & variantsList = essenceAndVariantList.second->variants;
+
                 RF::BindVertexBuffer(drawPass, essence.GetGpuModel().meshBuffers.verticesBuffer);
                 RF::BindIndexBuffer(drawPass, essence.GetGpuModel().meshBuffers.indicesBuffer);
+
+                RF::BindDescriptorSet(
+                    drawPass,
+                    RenderFrontend::DescriptorSetType::PerEssence,
+                    essence.GetDescriptorSetGroup()
+                );
 
                 for (auto const & variant : variantsList)
                 {
                     if (variant->IsActive() && variant->IsInFrustum() && variant->IsOccluded() == false)
                     {
+
                         RF::BindDescriptorSet(
                             drawPass,
-                            variant->GetDescriptorSetGroup("PbrWithShadowV2DepthPipeline")->descriptorSets[drawPass.frameIndex]
+                            RenderFrontend::DescriptorSetType::PerVariant,
+                            variant->GetDescriptorSetGroup()
                         );
 
                         variant->Draw(drawPass, [&drawPass, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
@@ -318,39 +343,50 @@ namespace MFA
             );
 
             RF::BindDrawPipeline(drawPass, mOcclusionQueryPipeline);
-            
+            RF::BindDescriptorSet(
+                drawPass,
+                RenderFrontend::DescriptorSetType::PerFrame,
+                mPerFrameDescriptorSetGroup
+            );
+
             mOcclusionRenderPass->BeginRenderPass(drawPass);
-            
+
             OcclusionPassVertexStagePushConstants pushConstants{};
 
             for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
             {
                 auto & essence = essenceAndVariantList.second->essence;
                 auto & variantsList = essenceAndVariantList.second->variants;
+
                 RF::BindVertexBuffer(drawPass, essence.GetGpuModel().meshBuffers.verticesBuffer);
                 RF::BindIndexBuffer(drawPass, essence.GetGpuModel().meshBuffers.indicesBuffer);
+
+                RF::BindDescriptorSet(
+                    drawPass,
+                    RenderFrontend::DescriptorSetType::PerEssence,
+                    essence.GetDescriptorSetGroup()
+                );
 
                 for (auto const & variant : variantsList)
                 {
                     if (variant->IsActive() && variant->IsInFrustum())
                     {
 
-                        auto * descriptorSetGroup = variant->GetDescriptorSetGroup("OcclusionPipeline");
-                        MFA_ASSERT(descriptorSetGroup != nullptr);
                         RF::BindDescriptorSet(
                             drawPass,
-                            descriptorSetGroup->descriptorSets[drawPass.frameIndex]
+                            RenderFrontend::DescriptorSetType::PerVariant,
+                            variant->GetDescriptorSetGroup()
                         );
 
                         RF::BeginQuery(drawPass, occlusionQueryData.Pool, static_cast<uint32_t>(occlusionQueryData.Variants.size()));
-                        
+
                         variant->Draw(drawPass, [&drawPass, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
                             {
                                 // Vertex push constants
                                 Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
                                 Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
                                 pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
-                                    
+
                                 RF::PushConstants(
                                     drawPass,
                                     AS::ShaderStage::Vertex,
@@ -377,6 +413,11 @@ namespace MFA
     {
         // Display pass
         RF::BindDrawPipeline(drawPass, mDisplayPassPipeline);
+        RF::BindDescriptorSet(
+            drawPass,
+            RenderFrontend::DescriptorSetType::PerFrame,
+            mPerFrameDescriptorSetGroup
+        );
 
         DisplayPassAllStagesPushConstants pushConstants{};
 
@@ -384,16 +425,26 @@ namespace MFA
         {
             auto & essence = essenceAndVariantList.second->essence;
             auto & variantsList = essenceAndVariantList.second->variants;
+
             RF::BindVertexBuffer(drawPass, essence.GetGpuModel().meshBuffers.verticesBuffer);
             RF::BindIndexBuffer(drawPass, essence.GetGpuModel().meshBuffers.indicesBuffer);
+
+            RF::BindDescriptorSet(
+                drawPass,
+                RenderFrontend::DescriptorSetType::PerEssence,
+                essence.GetDescriptorSetGroup()
+            );
+
 
             for (auto const & variant : variantsList)
             {
                 if (variant->IsActive() && variant->IsInFrustum() && variant->IsOccluded() == false)
                 {
+
                     RF::BindDescriptorSet(
                         drawPass,
-                        variant->GetDescriptorSetGroup("PbrWithShadowV2DisplayPipeline")->descriptorSets[drawPass.frameIndex]
+                        RenderFrontend::DescriptorSetType::PerVariant,
+                        variant->GetDescriptorSetGroup()
                     );
 
                     variant->Draw(drawPass, [&drawPass, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
@@ -438,12 +489,204 @@ namespace MFA
         auto * variant = BasePipeline::CreateDrawableVariant(essenceName);
         MFA_ASSERT(variant != nullptr);
 
-        createDisplayPassDescriptorSets(variant);
-        createShadowPassDescriptorSets(variant);
-        createDepthPassDescriptorSets(variant);
-        createOcclusionPassDescriptorSets(variant);
+        createVariantDescriptorSets(variant);
 
         return variant;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+    
+    void PBRWithShadowPipelineV2::internalCreateDrawableEssence(DrawableEssence & essence)
+    {
+        createEssenceDescriptorSets(essence);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::createFrameDescriptorSets()
+    {
+        mPerFrameDescriptorSetGroup = RF::CreateDescriptorSets(
+            mDescriptorPool,
+            RF::GetMaxFramesPerFlight(),
+            mPerFrameDescriptorSetLayout
+        );
+
+        for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
+        {
+
+            auto const descriptorSet = mPerFrameDescriptorSetGroup.descriptorSets[frameIndex];
+            MFA_VK_VALID_ASSERT(descriptorSet);
+
+            DescriptorSetSchema descriptorSetSchema{ descriptorSet };
+
+            /////////////////////////////////////////////////////////////////
+            // Vertex shader
+            /////////////////////////////////////////////////////////////////
+
+            // DisplayViewProjection
+            VkDescriptorBufferInfo viewProjectionBufferInfo{
+                .buffer = mDisplayViewProjectionBuffer.buffers[frameIndex].buffer,
+                .offset = 0,
+                .range = mDisplayViewProjectionBuffer.bufferSize,
+            };
+            descriptorSetSchema.AddUniformBuffer(viewProjectionBufferInfo);
+
+            // ShadowViewProjection
+            VkDescriptorBufferInfo shadowViewProjectionBufferInfo{
+                .buffer = mShadowViewProjectionBuffer.buffers[frameIndex].buffer,
+                .offset = 0,
+                .range = mShadowViewProjectionBuffer.bufferSize
+            };
+            descriptorSetSchema.AddUniformBuffer(shadowViewProjectionBufferInfo);
+
+            /////////////////////////////////////////////////////////////////
+            // Fragment shader
+            /////////////////////////////////////////////////////////////////
+
+            // LightBuffer
+            VkDescriptorBufferInfo lightViewBufferInfo{
+                .buffer = mLightBuffer.buffers[frameIndex].buffer,
+                .offset = 0,
+                .range = mLightBuffer.bufferSize,
+            };
+            descriptorSetSchema.AddUniformBuffer(lightViewBufferInfo);
+
+            // CameraBuffer
+            VkDescriptorBufferInfo cameraBufferInfo{
+                .buffer = mCameraBuffer.buffers[frameIndex].buffer,
+                .offset = 0,
+                .range = mCameraBuffer.bufferSize
+            };
+            descriptorSetSchema.AddUniformBuffer(cameraBufferInfo);
+
+            // ShadowMap
+            VkDescriptorImageInfo shadowMapImageInfo{
+                .sampler = mSamplerGroup->sampler,
+                .imageView = mShadowRenderPass->GetDepthCubeMap(frameIndex).imageView,
+                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            };
+            descriptorSetSchema.AddCombinedImageSampler(shadowMapImageInfo);
+
+            descriptorSetSchema.UpdateDescriptorSets();
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::createEssenceDescriptorSets(DrawableEssence & essence) const
+    {
+        auto const & textures = essence.GetGpuModel().textures;
+
+        auto const descriptorSetGroup = essence.CreateDescriptorSetGroup(
+            mDescriptorPool,
+            RF::GetMaxFramesPerFlight(),
+            mPerEssenceDescriptorSetLayout
+        );
+
+        auto & primitiveBuffer = essence.GetPrimitivesBuffer();
+
+        for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
+        {
+
+            auto const descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
+            MFA_VK_VALID_ASSERT(descriptorSet);
+
+            DescriptorSetSchema descriptorSetSchema{ descriptorSet };
+
+            /////////////////////////////////////////////////////////////////
+            // Fragment shader
+            /////////////////////////////////////////////////////////////////
+
+            // Primitives
+            VkDescriptorBufferInfo primitiveBufferInfo{
+                .buffer = primitiveBuffer.buffers[0].buffer,
+                .offset = 0,
+                .range = primitiveBuffer.bufferSize,
+            };
+            descriptorSetSchema.AddUniformBuffer(primitiveBufferInfo);
+
+            // Sampler
+            VkDescriptorImageInfo texturesSamplerInfo{
+                .sampler = mSamplerGroup->sampler,
+                .imageView = nullptr,
+                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            };
+            descriptorSetSchema.AddSampler(texturesSamplerInfo);
+
+            // TODO Each one need their own sampler
+            // Textures
+            MFA_ASSERT(textures.size() <= 64);
+            // We need to keep imageInfos alive
+            std::vector<VkDescriptorImageInfo> imageInfos{};
+            for (auto const & texture : textures)
+            {
+                imageInfos.emplace_back(VkDescriptorImageInfo{
+                    .sampler = nullptr,
+                    .imageView = texture.imageView(),
+                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                });
+            }
+            for (auto i = static_cast<uint32_t>(textures.size()); i < 64; ++i)
+            {
+                imageInfos.emplace_back(VkDescriptorImageInfo{
+                    .sampler = nullptr,
+                    .imageView = mErrorTexture->imageView(),
+                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                });
+            }
+            MFA_ASSERT(imageInfos.size() == 64);
+            descriptorSetSchema.AddImage(
+                imageInfos.data(),
+                static_cast<uint32_t>(imageInfos.size())
+            );
+
+            descriptorSetSchema.UpdateDescriptorSets();
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::createVariantDescriptorSets(DrawableVariant * variant)
+    {
+        MFA_ASSERT(variant != nullptr);
+
+        auto const descriptorSetGroup = variant->CreateDescriptorSetGroup(
+            mDescriptorPool,
+            RF::GetMaxFramesPerFlight(),
+            mPerVariantDescriptorSetLayout
+        );
+        auto const & actualSkinJointsBuffer = variant->GetSkinJointsBuffer();
+
+        for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
+        {
+
+            auto const descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
+            MFA_VK_VALID_ASSERT(descriptorSet);
+
+            DescriptorSetSchema descriptorSetSchema{ descriptorSet };
+
+            /////////////////////////////////////////////////////////////////
+            // Vertex shader
+            /////////////////////////////////////////////////////////////////
+
+            // SkinJoints
+            VkBuffer skinJointsBuffer = mErrorBuffer.buffers[0].buffer;
+            size_t skinJointsBufferSize = mErrorBuffer.bufferSize;
+            if (actualSkinJointsBuffer.bufferSize > 0)
+            {
+                skinJointsBuffer = actualSkinJointsBuffer.buffers[frameIndex].buffer;
+                skinJointsBufferSize = actualSkinJointsBuffer.bufferSize;
+            }
+            VkDescriptorBufferInfo skinTransformBufferInfo{
+                .buffer = skinJointsBuffer,
+                .offset = 0,
+                .range = skinJointsBufferSize,
+            };
+            descriptorSetSchema.AddUniformBuffer(skinTransformBufferInfo);
+
+            descriptorSetSchema.UpdateDescriptorSets();
+        }
+
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -453,7 +696,7 @@ namespace MFA
         if (IsEqual<16>(mDisplayView, view) == false)
         {
             Copy<16>(mDisplayView, view);
-            mDisplayViewProjectionNeedUpdate = RF::GetMaxFramesPerFlight();
+            mDisplayViewProjectionUpdateCounter = RF::GetMaxFramesPerFlight();
         }
     }
 
@@ -464,7 +707,7 @@ namespace MFA
         if (IsEqual<16>(mDisplayProjection, projection) == false)
         {
             Copy<16>(mDisplayProjection, projection);
-            mDisplayViewProjectionNeedUpdate = RF::GetMaxFramesPerFlight();
+            mDisplayViewProjectionUpdateCounter = RF::GetMaxFramesPerFlight();
         }
     }
 
@@ -476,9 +719,8 @@ namespace MFA
         {
             Copy<3>(mLightPosition, lightPosition);
             updateShadowViewProjectionData();
-            mDisplayLightNeedUpdate = RF::GetMaxFramesPerFlight();
-            mShadowLightNeedUpdate = RF::GetMaxFramesPerFlight();
-            mShadowViewProjectionNeedUpdate = RF::GetMaxFramesPerFlight();
+            mShadowViewProjectionUpdateCounter = RF::GetMaxFramesPerFlight();
+            mLightBufferUpdateCounter = RF::GetMaxFramesPerFlight();
         }
     }
 
@@ -489,7 +731,7 @@ namespace MFA
         if (IsEqual<3>(mCameraPosition, cameraPosition) == false)
         {
             Copy<3>(mCameraPosition, cameraPosition);
-            mDisplayLightNeedUpdate = RF::GetMaxFramesPerFlight();
+            mCameraBufferUpdateCounter = RF::GetMaxFramesPerFlight();
         }
     }
 
@@ -500,7 +742,7 @@ namespace MFA
         if (IsEqual<3>(mLightColor, lightColor) == false)
         {
             Copy<3>(mLightColor, lightColor);
-            mDisplayLightNeedUpdate = RF::GetMaxFramesPerFlight();
+            mLightBufferUpdateCounter = RF::GetMaxFramesPerFlight();
         }
     }
 
@@ -519,26 +761,25 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::updateDisplayLightBuffer(RT::CommandRecordState const & drawPass)
+    void PBRWithShadowPipelineV2::updateLightBuffer(RT::CommandRecordState const & drawPass)
     {
-        DisplayLightAndCameraData displayLightViewData{
-            .projectFarToNearDistance = mProjectionFarToNearDistance
-        };
-        Copy<3>(displayLightViewData.cameraPosition, mCameraPosition);
-        Copy<3>(displayLightViewData.lightColor, mLightColor);
-        Copy<3>(displayLightViewData.lightPosition, mLightPosition);
-        RF::UpdateUniformBuffer(mDisplayLightAndCameraBuffer.buffers[drawPass.frameIndex], CBlobAliasOf(displayLightViewData));
+        LightData lightData{};
+
+        Copy<3>(lightData.lightPosition, mLightPosition);
+        Copy<3>(lightData.lightColor, mLightColor);
+
+        RF::UpdateUniformBuffer(mLightBuffer.buffers[drawPass.frameIndex], CBlobAliasOf(lightData));
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::updateShadowLightBuffer(RT::CommandRecordState const & drawPass)
+    void PBRWithShadowPipelineV2::updateCameraBuffer(RT::CommandRecordState const & drawPass)
     {
-        ShadowLightData shadowLightData{
-            .projectionMatrixDistance = mProjectionFarToNearDistance
+        CameraData cameraData{
+            .projectFarToNearDistance = mProjectionFarToNearDistance
         };
-        Copy<3>(shadowLightData.lightPosition, mLightPosition);
-        RF::UpdateUniformBuffer(mShadowLightBuffer.buffers[drawPass.frameIndex], CBlobAliasOf(shadowLightData));
+        Copy<3>(cameraData.cameraPosition, mCameraPosition);
+        RF::UpdateUniformBuffer(mCameraBuffer.buffers[drawPass.frameIndex], CBlobAliasOf(cameraData));
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -613,299 +854,7 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-
-    void PBRWithShadowPipelineV2::createDisplayPassDescriptorSets(DrawableVariant * variant)
-    {
-        MFA_ASSERT(variant != nullptr);
-
-        auto const & textures = variant->GetEssence()->GetGpuModel().textures;
-
-        auto const descriptorSetGroup = variant->CreateDescriptorSetGroup(
-            "PbrWithShadowV2DisplayPipeline",
-            mDisplayPassDescriptorSetLayout,
-            RF::GetMaxFramesPerFlight()
-        );
-
-        auto const & primitivesBuffer = variant->GetEssence()->GetPrimitivesBuffer();
-
-        auto const & actualSkinJointsBuffer = variant->GetSkinJointsBuffer();
-
-        for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
-        {
-
-            auto const descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
-            MFA_VK_VALID_ASSERT(descriptorSet);
-
-            DescriptorSetSchema descriptorSetSchema{ descriptorSet };
-
-            /////////////////////////////////////////////////////////////////
-            // Vertex shader
-            /////////////////////////////////////////////////////////////////
-
-            // ViewProjectionTransform
-            VkDescriptorBufferInfo viewProjectionBufferInfo{
-                .buffer = mDisplayViewProjectionBuffer.buffers[frameIndex].buffer,
-                .offset = 0,
-                .range = mDisplayViewProjectionBuffer.bufferSize,
-            };
-            descriptorSetSchema.AddUniformBuffer(viewProjectionBufferInfo);
-
-            // SkinJoints
-            VkBuffer skinJointsBuffer = mErrorBuffer.buffers[0].buffer;
-            size_t skinJointsBufferSize = mErrorBuffer.bufferSize;
-            if (actualSkinJointsBuffer.bufferSize > 0)
-            {
-                skinJointsBuffer = actualSkinJointsBuffer.buffers[frameIndex].buffer;
-                skinJointsBufferSize = actualSkinJointsBuffer.bufferSize;
-            }
-            VkDescriptorBufferInfo skinTransformBufferInfo{
-                .buffer = skinJointsBuffer,
-                .offset = 0,
-                .range = skinJointsBufferSize,
-            };
-            descriptorSetSchema.AddUniformBuffer(skinTransformBufferInfo);
-
-            /////////////////////////////////////////////////////////////////
-            // Fragment shader
-            /////////////////////////////////////////////////////////////////
-
-            // Primitives
-            VkDescriptorBufferInfo primitiveBufferInfo{
-                .buffer = primitivesBuffer.buffers[0].buffer,
-                .offset = 0,
-                .range = primitivesBuffer.bufferSize,
-            };
-            descriptorSetSchema.AddUniformBuffer(primitiveBufferInfo);
-
-            // LightViewBuffer
-            VkDescriptorBufferInfo lightViewBufferInfo{
-                .buffer = mDisplayLightAndCameraBuffer.buffers[frameIndex].buffer,
-                .offset = 0,
-                .range = mDisplayLightAndCameraBuffer.bufferSize,
-            };
-            descriptorSetSchema.AddUniformBuffer(lightViewBufferInfo);
-
-            // ShadowMap
-            VkDescriptorImageInfo shadowMapImageInfo{
-                .sampler = mSamplerGroup->sampler,
-                .imageView = mShadowRenderPass->GetDepthCubeMap(frameIndex).imageView,
-                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            };
-            descriptorSetSchema.AddCombinedImageSampler(shadowMapImageInfo);
-
-            // Sampler
-            VkDescriptorImageInfo texturesSamplerInfo{
-                .sampler = mSamplerGroup->sampler,
-                .imageView = nullptr,
-                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            };
-            descriptorSetSchema.AddSampler(texturesSamplerInfo);
-
-            // TODO Each one need their own sampler
-            // Textures
-            MFA_ASSERT(textures.size() <= 64);
-            // We need to keep imageInfos alive
-            std::vector<VkDescriptorImageInfo> imageInfos{};
-            for (auto const & texture : textures)
-            {
-                imageInfos.emplace_back(VkDescriptorImageInfo{
-                    .sampler = nullptr,
-                    .imageView = texture.imageView(),
-                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                });
-            }
-            for (auto i = static_cast<uint32_t>(textures.size()); i < 64; ++i)
-            {
-                imageInfos.emplace_back(VkDescriptorImageInfo{
-                    .sampler = nullptr,
-                    .imageView = mErrorTexture->imageView(),
-                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                });
-            }
-            MFA_ASSERT(imageInfos.size() == 64);
-            descriptorSetSchema.AddImage(
-                imageInfos.data(),
-                static_cast<uint32_t>(imageInfos.size())
-            );
-
-            descriptorSetSchema.UpdateDescriptorSets();
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void PBRWithShadowPipelineV2::createShadowPassDescriptorSets(DrawableVariant * variant)
-    {
-        MFA_ASSERT(variant != nullptr);
-
-        auto const descriptorSetGroup = variant->CreateDescriptorSetGroup(
-            "PbrWithShadowV2ShadowPipeline",
-            mShadowPassDescriptorSetLayout,
-            RF::GetMaxFramesPerFlight()
-        );
-
-        auto const & actualSkinJointsBuffer = variant->GetSkinJointsBuffer();
-
-        for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
-        {
-
-            auto const descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
-            MFA_VK_VALID_ASSERT(descriptorSet);
-
-            DescriptorSetSchema descriptorSetSchema{ descriptorSet };
-
-            /////////////////////////////////////////////////////////////////
-            // Vertex shader
-            /////////////////////////////////////////////////////////////////
-
-            // ViewProjectionTransform
-            VkDescriptorBufferInfo viewProjectionBufferInfo{
-                .buffer = mShadowViewProjectionBuffer.buffers[frameIndex].buffer,
-                .offset = 0,
-                .range = mShadowViewProjectionBuffer.bufferSize
-            };
-            descriptorSetSchema.AddUniformBuffer(viewProjectionBufferInfo);
-
-            // SkinJoints
-            VkBuffer skinJointBuffer = mErrorBuffer.buffers[0].buffer;
-            size_t skinJointBufferSize = mErrorBuffer.bufferSize;
-            if (actualSkinJointsBuffer.bufferSize > 0)
-            {
-                skinJointBuffer = actualSkinJointsBuffer.buffers[frameIndex].buffer;
-                skinJointBufferSize = actualSkinJointsBuffer.bufferSize;
-            }
-            VkDescriptorBufferInfo skinTransformBufferInfo{
-                .buffer = skinJointBuffer,
-                .offset = 0,
-                .range = skinJointBufferSize,
-            };
-            descriptorSetSchema.AddUniformBuffer(skinTransformBufferInfo);
-
-            /////////////////////////////////////////////////////////////////
-            // Fragment shader
-            /////////////////////////////////////////////////////////////////
-
-            // LightBuffer
-            VkDescriptorBufferInfo lightBufferInfo{
-                .buffer = mShadowLightBuffer.buffers[frameIndex].buffer,
-                .offset = 0,
-                .range = mShadowLightBuffer.bufferSize,
-            };
-            descriptorSetSchema.AddUniformBuffer(lightBufferInfo);
-
-            descriptorSetSchema.UpdateDescriptorSets();
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-    // TODO We need multiple descriptor set layout to reduce descriptor set usage and avoid creating duplicate descriptor sets
-    void PBRWithShadowPipelineV2::createDepthPassDescriptorSets(DrawableVariant * variant)
-    {
-        MFA_ASSERT(variant != nullptr);
-
-        auto const descriptorSetGroup = variant->CreateDescriptorSetGroup(
-            "PbrWithShadowV2DepthPipeline",
-            mDepthPassDescriptorSetLayout,
-            RF::GetMaxFramesPerFlight()
-        );
-
-        auto const & actualSkinJointsBuffer = variant->GetSkinJointsBuffer();
-
-        for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
-        {
-
-            auto const descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
-            MFA_VK_VALID_ASSERT(descriptorSet);
-
-            DescriptorSetSchema descriptorSetSchema{ descriptorSet };
-
-            /////////////////////////////////////////////////////////////////
-            // Vertex shader
-            /////////////////////////////////////////////////////////////////
-
-            // ViewProjectionTransform
-            VkDescriptorBufferInfo viewProjectionBufferInfo{
-                .buffer = mDisplayViewProjectionBuffer.buffers[frameIndex].buffer,
-                .offset = 0,
-                .range = mDisplayViewProjectionBuffer.bufferSize
-            };
-            descriptorSetSchema.AddUniformBuffer(viewProjectionBufferInfo);
-
-            // SkinJoints
-            VkBuffer skinJointBuffer = mErrorBuffer.buffers[0].buffer;
-            size_t skinJointBufferSize = mErrorBuffer.bufferSize;
-            if (actualSkinJointsBuffer.bufferSize > 0)
-            {
-                skinJointBuffer = actualSkinJointsBuffer.buffers[frameIndex].buffer;
-                skinJointBufferSize = actualSkinJointsBuffer.bufferSize;
-            }
-            VkDescriptorBufferInfo skinTransformBufferInfo{
-                .buffer = skinJointBuffer,
-                .offset = 0,
-                .range = skinJointBufferSize,
-            };
-            descriptorSetSchema.AddUniformBuffer(skinTransformBufferInfo);
-
-            descriptorSetSchema.UpdateDescriptorSets();
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void PBRWithShadowPipelineV2::createOcclusionPassDescriptorSets(DrawableVariant * variant)
-    {
-        MFA_ASSERT(variant != nullptr);
-
-        auto const descriptorSetGroup = variant->CreateDescriptorSetGroup(
-            "OcclusionPipeline",
-            mOcclusionDescriptorSetLayout,
-            RF::GetMaxFramesPerFlight()
-        );
-
-        auto const & actualSkinJointsBuffer = variant->GetSkinJointsBuffer();
-
-        for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
-        {
-
-            auto const descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
-            MFA_VK_VALID_ASSERT(descriptorSet);
-
-            DescriptorSetSchema descriptorSetSchema{ descriptorSet };
-
-            /////////////////////////////////////////////////////////////////
-            // Vertex shader
-            /////////////////////////////////////////////////////////////////
-
-            // ViewProjectionTransform
-            VkDescriptorBufferInfo viewProjectionBufferInfo{
-                .buffer = mDisplayViewProjectionBuffer.buffers[frameIndex].buffer,
-                .offset = 0,
-                .range = mDisplayViewProjectionBuffer.bufferSize
-            };
-            descriptorSetSchema.AddUniformBuffer(viewProjectionBufferInfo);
-
-            // SkinJoints
-            VkBuffer skinJointBuffer = mErrorBuffer.buffers[0].buffer;
-            size_t skinJointBufferSize = mErrorBuffer.bufferSize;
-            if (actualSkinJointsBuffer.bufferSize > 0)
-            {
-                skinJointBuffer = actualSkinJointsBuffer.buffers[frameIndex].buffer;
-                skinJointBufferSize = actualSkinJointsBuffer.bufferSize;
-            }
-            VkDescriptorBufferInfo skinTransformBufferInfo{
-                .buffer = skinJointBuffer,
-                .offset = 0,
-                .range = skinJointBufferSize,
-            };
-            descriptorSetSchema.AddUniformBuffer(skinTransformBufferInfo);
-
-            descriptorSetSchema.UpdateDescriptorSets();
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-    // TODO I should support multiple descriptor set layout
-    void PBRWithShadowPipelineV2::createDisplayPassDescriptorSetLayout()
+    void PBRWithShadowPipelineV2::createPerFrameDescriptorSetLayout()
     {
         std::vector<VkDescriptorSetLayoutBinding> bindings{};
 
@@ -913,50 +862,75 @@ namespace MFA
         // Vertex shader
         /////////////////////////////////////////////////////////////////
 
-        {// ViewProjectionTransform
-            VkDescriptorSetLayoutBinding layoutBinding{
-                .binding = static_cast<uint32_t>(bindings.size()),
-                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                .descriptorCount = 1,
-                .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-            };
-            bindings.emplace_back(layoutBinding);
-        }
-        {// SkinJoints
-            VkDescriptorSetLayoutBinding layoutBinding{};
-            layoutBinding.binding = static_cast<uint32_t>(bindings.size());
-            layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            layoutBinding.descriptorCount = 1;
-            layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-            bindings.emplace_back(layoutBinding);
-        }
+        // DisplayViewProjection
+        VkDescriptorSetLayoutBinding displayViewProjectionLayoutBinding{
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        };
+        bindings.emplace_back(displayViewProjectionLayoutBinding);
+
+        // ShadowViewProjection
+        VkDescriptorSetLayoutBinding shadowViewProjectionLayoutBinding{
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        };
+        bindings.emplace_back(shadowViewProjectionLayoutBinding);
 
         /////////////////////////////////////////////////////////////////
         // Fragment shader
         /////////////////////////////////////////////////////////////////
 
+        // LightBuffer
+        VkDescriptorSetLayoutBinding lightViewLayoutBinding{
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+        };
+        bindings.emplace_back(lightViewLayoutBinding);
+
+        // CameraBuffer
+        VkDescriptorSetLayoutBinding cameraLayoutBinding{
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+        };
+        bindings.emplace_back(cameraLayoutBinding);
+
+        // ShadowMap
+        VkDescriptorSetLayoutBinding shadowLayoutBinding{
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+        };
+        bindings.emplace_back(shadowLayoutBinding);
+
+
+        mPerFrameDescriptorSetLayout = RF::CreateDescriptorSetLayout(
+            static_cast<uint8_t>(bindings.size()),
+            bindings.data()
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::createPerEssenceDescriptorSetLayout()
+    {
+        std::vector<VkDescriptorSetLayoutBinding> bindings{};
+
+        /////////////////////////////////////////////////////////////////
+        // Fragment shader
+        /////////////////////////////////////////////////////////////////
         {// Primitive
             VkDescriptorSetLayoutBinding layoutBinding{
                 .binding = static_cast<uint32_t>(bindings.size()),
                 .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                .descriptorCount = 1,
-                .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-            };
-            bindings.emplace_back(layoutBinding);
-        }
-        {// Light/View
-            VkDescriptorSetLayoutBinding layoutBinding{
-                .binding = static_cast<uint32_t>(bindings.size()),
-                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                .descriptorCount = 1,
-                .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-            };
-            bindings.emplace_back(layoutBinding);
-        }
-        {// ShadowMap
-            VkDescriptorSetLayoutBinding layoutBinding{
-                .binding = static_cast<uint32_t>(bindings.size()),
-                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                 .descriptorCount = 1,
                 .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
             };
@@ -980,7 +954,8 @@ namespace MFA
             };
             bindings.emplace_back(layoutBinding);
         }
-        mDisplayPassDescriptorSetLayout = RF::CreateDescriptorSetLayout(
+
+        mPerEssenceDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
             bindings.data()
         );
@@ -988,7 +963,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createShadowPassDescriptorSetLayout()
+    void PBRWithShadowPipelineV2::createPerVariantDescriptorSetLayout()
     {
         std::vector<VkDescriptorSetLayoutBinding> bindings{};
 
@@ -996,105 +971,18 @@ namespace MFA
         // Vertex shader
         /////////////////////////////////////////////////////////////////
 
-        {// ViewProjectionTransform
-            VkDescriptorSetLayoutBinding layoutBinding{
-                .binding = static_cast<uint32_t>(bindings.size()),
-                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                .descriptorCount = 1,
-                .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-            };
-            bindings.emplace_back(layoutBinding);
-        }
         {// SkinJoints
-            VkDescriptorSetLayoutBinding layoutBinding{
-                .binding = static_cast<uint32_t>(bindings.size()),
-                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                .descriptorCount = 1,
-                .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-            };
-            bindings.emplace_back(layoutBinding);
-        }
-
-        /////////////////////////////////////////////////////////////////
-        // Fragment shader
-        /////////////////////////////////////////////////////////////////
-
-        {// Light
             VkDescriptorSetLayoutBinding layoutBinding{};
             layoutBinding.binding = static_cast<uint32_t>(bindings.size());
             layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             layoutBinding.descriptorCount = 1;
-            layoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
+            layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
             bindings.emplace_back(layoutBinding);
         }
-        mShadowPassDescriptorSetLayout = RF::CreateDescriptorSetLayout(
+
+        mPerVariantDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
             bindings.data()
-        );
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void PBRWithShadowPipelineV2::createDepthDescriptorSetLayout()
-    {
-        std::vector<VkDescriptorSetLayoutBinding> bindings{};
-
-        /////////////////////////////////////////////////////////////////
-        // Vertex shader
-        /////////////////////////////////////////////////////////////////
-
-        // ViewProjectionTransform
-        bindings.emplace_back(VkDescriptorSetLayoutBinding{
-            .binding = static_cast<uint32_t>(bindings.size()),
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1,
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-        });
-
-        // SkinJoints
-        bindings.emplace_back(VkDescriptorSetLayoutBinding{
-            .binding = static_cast<uint32_t>(bindings.size()),
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1,
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-        });
-
-        mDepthPassDescriptorSetLayout = RF::CreateDescriptorSetLayout(
-           static_cast<uint8_t>(bindings.size()),
-           bindings.data()
-        );
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void PBRWithShadowPipelineV2::createOcclusionPassDescriptorSetLayout()
-    {
-        std::vector<VkDescriptorSetLayoutBinding> bindings{};
-
-        /////////////////////////////////////////////////////////////////
-        // Vertex shader
-        /////////////////////////////////////////////////////////////////
-
-        // ViewProjectionTransform
-        bindings.emplace_back(VkDescriptorSetLayoutBinding{
-            .binding = static_cast<uint32_t>(bindings.size()),
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1,
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-        });
-
-        // SkinJoints
-        bindings.emplace_back(VkDescriptorSetLayoutBinding{
-            .binding = static_cast<uint32_t>(bindings.size()),
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1,
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-        });
-
-        mOcclusionDescriptorSetLayout = RF::CreateDescriptorSetLayout(
-           static_cast<uint8_t>(bindings.size()),
-           bindings.data()
         );
     }
 
@@ -1102,14 +990,14 @@ namespace MFA
 
     void PBRWithShadowPipelineV2::destroyDescriptorSetLayout() const
     {
-        MFA_VK_VALID_ASSERT(mDisplayPassDescriptorSetLayout);
-        RF::DestroyDescriptorSetLayout(mDisplayPassDescriptorSetLayout);
+        MFA_VK_VALID_ASSERT(mPerFrameDescriptorSetLayout);
+        RF::DestroyDescriptorSetLayout(mPerFrameDescriptorSetLayout);
 
-        MFA_VK_VALID_ASSERT(mShadowPassDescriptorSetLayout);
-        RF::DestroyDescriptorSetLayout(mShadowPassDescriptorSetLayout);
+        MFA_VK_VALID_ASSERT(mPerEssenceDescriptorSetLayout);
+        RF::DestroyDescriptorSetLayout(mPerEssenceDescriptorSetLayout);
 
-        MFA_VK_VALID_ASSERT(mDepthPassDescriptorSetLayout);
-        RF::DestroyDescriptorSetLayout(mDepthPassDescriptorSetLayout);
+        MFA_VK_VALID_ASSERT(mPerVariantDescriptorSetLayout);
+        RF::DestroyDescriptorSetLayout(mPerVariantDescriptorSetLayout);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -1259,8 +1147,8 @@ namespace MFA
             RF::GetDisplayRenderPass()->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),
-            1,
-            &mDisplayPassDescriptorSetLayout,
+            static_cast<uint32_t>(mDescriptorSetLayouts.size()),
+            mDescriptorSetLayouts.data(),
             vertexInputBindingDescription,
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
             inputAttributeDescriptions.data(),
@@ -1362,8 +1250,8 @@ namespace MFA
             mShadowRenderPass->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),
-            1,
-            &mShadowPassDescriptorSetLayout,
+            static_cast<uint32_t>(mDescriptorSetLayouts.size()),
+            mDescriptorSetLayouts.data(),
             vertexInputBindingDescription,
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
             inputAttributeDescriptions.data(),
@@ -1466,8 +1354,8 @@ namespace MFA
             mDepthPrePass->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),
-            1,
-            &mDepthPassDescriptorSetLayout,
+            static_cast<uint32_t>(mDescriptorSetLayouts.size()),
+            mDescriptorSetLayouts.data(),
             vertexInputBindingDescription,
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
             inputAttributeDescriptions.data(),
@@ -1570,8 +1458,8 @@ namespace MFA
             mOcclusionRenderPass->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),
-            1,
-            &mOcclusionDescriptorSetLayout,
+            static_cast<uint32_t>(mDescriptorSetLayouts.size()),
+            mDescriptorSetLayouts.data(),
             vertexInputBindingDescription,
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
             inputAttributeDescriptions.data(),
@@ -1597,16 +1485,16 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-    
+
     void PBRWithShadowPipelineV2::createUniformBuffers()
     {
         mErrorBuffer = RF::CreateUniformBuffer(sizeof(DrawableVariant::JointTransformData), 1);
 
         mDisplayViewProjectionBuffer = RF::CreateUniformBuffer(sizeof(DisplayViewProjectionData), RF::GetMaxFramesPerFlight());
-        mDisplayLightAndCameraBuffer = RF::CreateUniformBuffer(sizeof(DisplayLightAndCameraData), RF::GetMaxFramesPerFlight());
-
+        mLightBuffer = RF::CreateUniformBuffer(sizeof(LightData), RF::GetMaxFramesPerFlight());
+        mCameraBuffer = RF::CreateUniformBuffer(sizeof(CameraData), RF::GetMaxFramesPerFlight());
         mShadowViewProjectionBuffer = RF::CreateUniformBuffer(sizeof(ShadowViewProjectionData), RF::GetMaxFramesPerFlight());
-        mShadowLightBuffer = RF::CreateUniformBuffer(sizeof(ShadowLightData), RF::GetMaxFramesPerFlight());
+
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -1616,10 +1504,9 @@ namespace MFA
         RF::DestroyUniformBuffer(mErrorBuffer);
 
         RF::DestroyUniformBuffer(mDisplayViewProjectionBuffer);
-        RF::DestroyUniformBuffer(mDisplayLightAndCameraBuffer);
-
+        RF::DestroyUniformBuffer(mLightBuffer);
+        RF::DestroyUniformBuffer(mCameraBuffer);
         RF::DestroyUniformBuffer(mShadowViewProjectionBuffer);
-        RF::DestroyUniformBuffer(mShadowLightBuffer);
     }
 
     //-------------------------------------------------------------------------------------------------

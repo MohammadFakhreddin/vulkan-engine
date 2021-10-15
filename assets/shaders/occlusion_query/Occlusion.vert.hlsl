@@ -20,8 +20,7 @@ struct SkinJoints {
     float4x4 joints[];
 };
 
-ConstantBuffer <SkinJoints> skinJointsBuffer: register(b1, space0); 
-
+ConstantBuffer <SkinJoints> skinJointsBuffer: register(b0, space2); 
 
 struct PushConsts
 {   

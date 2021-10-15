@@ -3,6 +3,7 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/job_system/JobSystem.hpp"
+#include "engine/render_system/RenderFrontend.hpp"
 
 namespace MFA
 {
@@ -17,11 +18,17 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    BasePipeline::BasePipeline() = default;
+    BasePipeline::BasePipeline(uint32_t maxSets)
+    {
+        mDescriptorPool = RF::CreateDescriptorPool(maxSets);
+    }
 
     //-------------------------------------------------------------------------------------------------
 
-    BasePipeline::~BasePipeline() = default;
+    BasePipeline::~BasePipeline()
+    {
+        RF::DestroyDescriptorPool(mDescriptorPool);
+    }
 
     //-------------------------------------------------------------------------------------------------
 
@@ -69,7 +76,11 @@ namespace MFA
         MFA_ASSERT(strlen(essenceName) > 0);
         MFA_ASSERT(mEssenceAndVariantsMap.find(essenceName) == mEssenceAndVariantsMap.end());
 
-        mEssenceAndVariantsMap[essenceName] = std::make_unique<EssenceAndItsVariants>(essenceName, gpuModel);
+        auto essenceAndVariants = std::make_unique<EssenceAndItsVariants>(essenceName, gpuModel);
+
+        internalCreateDrawableEssence(essenceAndVariants->essence);
+
+        mEssenceAndVariantsMap[essenceName] = std::move(essenceAndVariants);
     }
 
     //-------------------------------------------------------------------------------------------------

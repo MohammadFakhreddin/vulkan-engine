@@ -10,17 +10,17 @@ struct VSOut {
     float4 position : SV_POSITION;
 };
 
-struct ViewProjectionData {
+struct DisplayViewProjectionData {
     float4x4 viewProjection;
 };
 
-ConstantBuffer <ViewProjectionData> viewProjectionBuffer: register(b0, space0);
+ConstantBuffer <DisplayViewProjectionData> viewProjectionBuffer: register(b0, space0);
 
 struct SkinJoints {
     float4x4 joints[];
 };
 
-ConstantBuffer <SkinJoints> skinJointsBuffer: register(b1, space0); 
+ConstantBuffer <SkinJoints> skinJointsBuffer: register(b0, space2); 
 
 
 struct PushConsts

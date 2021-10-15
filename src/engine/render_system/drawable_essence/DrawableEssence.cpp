@@ -3,13 +3,12 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockMemory.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-
-namespace MFA {
+#include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 
 //-------------------------------------------------------------------------------------------------
 
 // We need other overrides for easier use as well
-DrawableEssence::DrawableEssence(char const * name, RT::GpuModel const & model_)
+MFA::DrawableEssence::DrawableEssence(char const * name, RT::GpuModel const & model_)
     : mName(name)
     , mGpuModel(model_)
 {
@@ -71,7 +70,7 @@ DrawableEssence::DrawableEssence(char const * name, RT::GpuModel const & model_)
 
 //-------------------------------------------------------------------------------------------------
 
-DrawableEssence::~DrawableEssence() {
+MFA::DrawableEssence::~DrawableEssence() {
     if (mPrimitivesBuffer.bufferSize > 0) {
         RF::DestroyUniformBuffer(mPrimitivesBuffer);
     }
@@ -79,25 +78,25 @@ DrawableEssence::~DrawableEssence() {
 
 //-------------------------------------------------------------------------------------------------
 
-RT::GpuModel const & DrawableEssence::GetGpuModel() const {
+MFA::RT::GpuModel const & MFA::DrawableEssence::GetGpuModel() const {
     return mGpuModel;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-RT::UniformBufferGroup const & DrawableEssence::GetPrimitivesBuffer() const noexcept {
+MFA::RT::UniformBufferGroup const & MFA::DrawableEssence::GetPrimitivesBuffer() const noexcept {
     return mPrimitivesBuffer;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-std::string const & DrawableEssence::GetName() const noexcept {
+std::string const & MFA::DrawableEssence::GetName() const noexcept {
     return mName;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-int DrawableEssence::GetAnimationIndex(char const * name) const noexcept {
+int MFA::DrawableEssence::GetAnimationIndex(char const * name) const noexcept {
     auto const findResult = mAnimationNameLookupTable.find(name);
     if (findResult != mAnimationNameLookupTable.end()) {
         return findResult->second;
@@ -107,4 +106,29 @@ int DrawableEssence::GetAnimationIndex(char const * name) const noexcept {
 
 //-------------------------------------------------------------------------------------------------
 
-};
+  
+MFA::RT::DescriptorSetGroup const & MFA::DrawableEssence::CreateDescriptorSetGroup(
+    VkDescriptorPool descriptorPool,
+    uint32_t const descriptorSetCount,
+    VkDescriptorSetLayout descriptorSetLayout
+)
+{
+    MFA_ASSERT(mIsDescriptorSetGroupValid == false);
+    mDescriptorSetGroup = RF::CreateDescriptorSets(
+        descriptorPool,
+        descriptorSetCount,
+        descriptorSetLayout
+    );
+    mIsDescriptorSetGroupValid = true;
+    return mDescriptorSetGroup;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RT::DescriptorSetGroup const & MFA::DrawableEssence::GetDescriptorSetGroup() const
+{
+    MFA_ASSERT(mIsDescriptorSetGroupValid == true);
+    return mDescriptorSetGroup;
+}
+
+//-------------------------------------------------------------------------------------------------

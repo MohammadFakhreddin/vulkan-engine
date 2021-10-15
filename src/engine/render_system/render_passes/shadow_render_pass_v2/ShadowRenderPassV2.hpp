@@ -29,7 +29,7 @@ public:
     RT::DepthImageGroup const & GetDepthCubeMap(RT::CommandRecordState const & drawPass) const;
 
     [[nodiscard]]
-    RT::DepthImageGroup const & GetDepthCubeMap(uint8_t frameIndex) const;
+    RT::DepthImageGroup const & GetDepthCubeMap(uint32_t frameIndex) const;
     
     void PrepareCubeMapForTransferDestination(RT::CommandRecordState const & drawPass);
 

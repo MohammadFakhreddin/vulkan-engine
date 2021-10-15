@@ -19,17 +19,6 @@ namespace MFA
     {
     public:
 
-        struct DisplayViewProjectionData
-        {
-            alignas(64) float projection[16];
-        };
-        static_assert(sizeof(DisplayViewProjectionData) == 64);
-
-        struct ShadowViewProjectionData
-        {
-            float viewMatrices[6][16];
-        };
-
         struct OcclusionPassVertexStagePushConstants
         {
             float modelTransform[16];
@@ -64,18 +53,30 @@ namespace MFA
             int placeholder0[2];
         };
 
-        struct DisplayLightAndCameraData
+        struct DisplayViewProjectionData
         {
-            alignas(16) float lightPosition[3];
-            alignas(16) float cameraPosition[3];
-            alignas(16) float lightColor[3];
-            alignas(4) float projectFarToNearDistance;
+            alignas(64) float projection[16];
+        };
+        static_assert(sizeof(DisplayViewProjectionData) == 64);
+
+        struct ShadowViewProjectionData
+        {
+            float viewMatrices[6][16];
+        };
+        static_assert(sizeof(ShadowViewProjectionData) == 6 * 64);
+
+        struct LightData
+        {
+            float lightPosition[3]; //TODO We will have multiple lights and visibility info
+            float placeholder0;
+            float lightColor[3];
+            float placeholder1;
         };
 
-        struct ShadowLightData
+        struct CameraData
         {
-            alignas(16) float lightPosition[4];
-            alignas(4) float projectionMatrixDistance;
+            float cameraPosition[3];
+            float projectFarToNearDistance;
         };
 
         explicit PBRWithShadowPipelineV2();
@@ -116,23 +117,23 @@ namespace MFA
 
         DrawableVariant * CreateDrawableVariant(char const * essenceName) override;
 
+    protected:
+
+        void internalCreateDrawableEssence(DrawableEssence & essence) override;
+
     private:
 
-        void createDisplayPassDescriptorSets(DrawableVariant * variant);
+        void createFrameDescriptorSets();
 
-        void createShadowPassDescriptorSets(DrawableVariant * variant);
+        void createEssenceDescriptorSets(DrawableEssence & essence) const;
 
-        void createDepthPassDescriptorSets(DrawableVariant * variant);
+        void createVariantDescriptorSets(DrawableVariant * variant);
 
-        void createOcclusionPassDescriptorSets(DrawableVariant * variant);
+        void createPerFrameDescriptorSetLayout();
 
-        void createDisplayPassDescriptorSetLayout();
+        void createPerEssenceDescriptorSetLayout();
 
-        void createShadowPassDescriptorSetLayout();
-
-        void createDepthDescriptorSetLayout();
-
-        void createOcclusionPassDescriptorSetLayout();
+        void createPerVariantDescriptorSetLayout();
 
         void destroyDescriptorSetLayout() const;
 
@@ -150,9 +151,9 @@ namespace MFA
 
         void destroyUniformBuffers();
 
-        void updateDisplayLightBuffer(RT::CommandRecordState const & drawPass);
+        void updateLightBuffer(RT::CommandRecordState const & drawPass);
 
-        void updateShadowLightBuffer(RT::CommandRecordState const & drawPass);
+        void updateCameraBuffer(RT::CommandRecordState const & drawPass);
 
         void updateShadowViewProjectionBuffer(RT::CommandRecordState const & drawPass);
 
@@ -162,26 +163,17 @@ namespace MFA
 
         static constexpr float SHADOW_WIDTH = 1024;
         static constexpr float SHADOW_HEIGHT = 1024;
-        
+
         bool mIsInitialized = false;
 
         RT::SamplerGroup * mSamplerGroup = nullptr; // TODO Each gltf subMesh has its own settings
         RT::GpuTexture * mErrorTexture = nullptr;
         RT::UniformBufferGroup mErrorBuffer{};
 
-        VkDescriptorSetLayout mDisplayPassDescriptorSetLayout{};
         RT::PipelineGroup mDisplayPassPipeline{};
-        RT::UniformBufferGroup mDisplayLightAndCameraBuffer{};
-        RT::UniformBufferGroup mDisplayViewProjectionBuffer{};
-
-        VkDescriptorSetLayout mShadowPassDescriptorSetLayout{};
         RT::PipelineGroup mShadowPassPipeline{};
-        RT::UniformBufferGroup mShadowLightBuffer{};
-
-        VkDescriptorSetLayout mDepthPassDescriptorSetLayout{};
         RT::PipelineGroup mDepthPassPipeline{};
-
-        RT::PipelineGroup mOcclusionQueryPipeline {};
+        RT::PipelineGroup mOcclusionQueryPipeline{};
 
         std::unique_ptr<ShadowRenderPassV2> mShadowRenderPass;
 
@@ -189,6 +181,10 @@ namespace MFA
 
         std::unique_ptr<OcclusionRenderPass> mOcclusionRenderPass;
 
+
+        RT::UniformBufferGroup mDisplayViewProjectionBuffer{};
+        RT::UniformBufferGroup mLightBuffer{};
+        RT::UniformBufferGroup mCameraBuffer{};
         RT::UniformBufferGroup mShadowViewProjectionBuffer{};
 
         float mLightPosition[3]{};
@@ -207,20 +203,27 @@ namespace MFA
 
         float mDisplayView[16]{};
 
-        uint32_t mDisplayViewProjectionNeedUpdate = 0;
-        uint32_t mDisplayLightNeedUpdate = 0;
-        uint32_t mShadowLightNeedUpdate = 0;
-        uint32_t mShadowViewProjectionNeedUpdate = 0;
+        uint32_t mDisplayViewProjectionUpdateCounter = 0;
+        uint32_t mLightBufferUpdateCounter = 0;
+        uint32_t mCameraBufferUpdateCounter = 0;
+        uint32_t mShadowViewProjectionUpdateCounter = 0;
 
-        struct OcclusionQueryData {
-            std::vector<DrawableVariant *> Variants {};
-            std::vector<uint64_t> Results {};
-            VkQueryPool Pool {};
+        struct OcclusionQueryData
+        {
+            std::vector<DrawableVariant *> Variants{};
+            std::vector<uint64_t> Results{};
+            VkQueryPool Pool{};
         };
-        std::vector<OcclusionQueryData> mOcclusionQueryDataList {}; // We need one per frame
+        std::vector<OcclusionQueryData> mOcclusionQueryDataList{}; // We need one per frame
 
-        VkDescriptorSetLayout mOcclusionDescriptorSetLayout {};
-        
+        VkDescriptorSetLayout mPerFrameDescriptorSetLayout{};
+        VkDescriptorSetLayout mPerEssenceDescriptorSetLayout{};
+        VkDescriptorSetLayout mPerVariantDescriptorSetLayout{};
+
+        std::vector<VkDescriptorSetLayout> mDescriptorSetLayouts{};
+
+        RT::DescriptorSetGroup mPerFrameDescriptorSetGroup{};
+
     };
 
 };

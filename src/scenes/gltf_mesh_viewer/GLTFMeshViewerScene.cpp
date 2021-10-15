@@ -154,6 +154,7 @@ void GLTFMeshViewerScene::Init() {
         auto * transformComponent = entity->AddComponent<TransformComponent>();
         MFA_ASSERT(transformComponent != nullptr);
         transformComponent->UpdatePosition(mLightPosition);
+        transformComponent->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
 
         mPointLightTransform = transformComponent;
 

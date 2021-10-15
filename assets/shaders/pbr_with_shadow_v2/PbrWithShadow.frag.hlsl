@@ -44,23 +44,30 @@ struct PrimitiveInfoBuffer {
     PrimitiveInfo primitiveInfo[];
 };
 
-ConstantBuffer <PrimitiveInfoBuffer> smBuff : register (b2, space0);
+ConstantBuffer <PrimitiveInfoBuffer> smBuff : register (b0, space1);
 
-struct LightViewBuffer {
-    float3 lightPosition;
-    float3 camPos;              // It shouldn't be always 0, I might need to 
-    float3 lightColor;          // Light color can be from 0 to inf (Sun for example can exceed 1.0f)
-    float nearToFarPlaneDistance;
+struct LightBuffer {
+    float3 lightPosition; //TODO We will have multiple lights and visibility info
+    float placeholder0;
+    float3 lightColor;
+    float placeholder1;
 };
 
-ConstantBuffer <LightViewBuffer> lvBuff : register (b3, space0);
+ConstantBuffer <LightBuffer> lightBuffer : register (b2, space0);
+
+struct CameraBuffer {
+    float3 cameraPosition;
+    float projectFarToNearDistance;
+};
+
+ConstantBuffer <CameraBuffer> cameraBuffer : register (b3, space0);
 
 sampler shadowMapSampler : register(s4, space0);
 TextureCube shadowMapTexture : register(t4, space0);
 
-sampler textureSampler : register(s5, space0);
+sampler textureSampler : register(s1, space1);
 
-Texture2D textures[64] : register(t6, space0);
+Texture2D textures[64] : register(t2, space1);
 
 struct PushConsts
 {
@@ -86,7 +93,7 @@ const float quadraticAttenuation = 1.0f / (lightSphereRadius * lightSphereRadius
 
 const float alphaMaskCutoff = 0.1f;
 
-const float ambientOcclusion = 0.02f;
+const float ambientOcclusion = 0.008f;
 
 const float shadowBias = 0.05;
 const int shadowSamples = 20;
@@ -150,7 +157,7 @@ float3 BRDF(
 
     float3 color = float3(0, 0, 0);
 
-    float distance = length(lvBuff.lightPosition - worldPos);
+    float distance = length(lightBuffer.lightPosition - worldPos);
     // TODO Consider using more advanced attenuation https://github.com/lettier/3d-game-shaders-for-beginners/blob/master/sections/lighting.md
     // float attenuation =
     //     1
@@ -168,7 +175,7 @@ float3 BRDF(
             + linearAttenuation * distance
             + quadraticAttenuation * distance * distance
         );
-    float3 radiance = lvBuff.lightColor * attenuation;        
+    float3 radiance = lightBuffer.lightColor * attenuation;        
     
     // cook-torrance brdf
     float NDF = D_GGX(dotNH, roughness);        
@@ -247,11 +254,11 @@ float shadowCalculation(float3 lightVector, float viewDistance)
     
     float shadow = 0.0f;
     float currentDepth = length(lightToFrag);
-    float diskRadius = (1.0f + (viewDistance / lvBuff.nearToFarPlaneDistance)) / 75.0f;  
+    float diskRadius = (1.0f + (viewDistance / cameraBuffer.projectFarToNearDistance)) / 75.0f;  
     for(int i = 0; i < shadowSamples; ++i)
     {
         float closestDepth = shadowMapTexture.Sample(shadowMapSampler, lightToFrag + sampleOffsetDirections[i] * diskRadius).r;
-        closestDepth *= lvBuff.nearToFarPlaneDistance;
+        closestDepth *= cameraBuffer.projectFarToNearDistance;
         if(currentDepth - shadowBias > closestDepth) {
             shadow += shadowPerSample;
         }
@@ -289,13 +296,13 @@ PSOut main(PSIn input) {
 
 	float3 N = normalize(normal.xyz);
     
-	float3 V = normalize(lvBuff.camPos - input.worldPos);
+	float3 V = normalize(cameraBuffer.cameraPosition - input.worldPos);
     
     // Specular contribution
 	float3 Lo = float3(0.0, 0.0, 0.0);
 	for (int i = 0; i < 1; i++) {   // Light count
-		float3 L = lvBuff.lightPosition.xyz - input.worldPos;
-        float shadow = shadowCalculation(L, length(lvBuff.camPos - input.worldPos));
+		float3 L = lightBuffer.lightPosition.xyz - input.worldPos;
+        float shadow = shadowCalculation(L, length(cameraBuffer.cameraPosition - input.worldPos));
         if (shadow < 1.0f) {
     	    Lo += BRDF(normalize(L), V, N, metallic, roughness, baseColor.rgb, input.worldPos) * (1.0 - shadow);
         }

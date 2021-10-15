@@ -53,7 +53,7 @@ namespace MFA::RenderFrontend
         VkQueue presentQueue{};
         RT::LogicalDevice logicalDevice{};
         VkCommandPool graphicCommandPool{};
-        VkDescriptorPool descriptorPool{};
+        //VkDescriptorPool descriptorPool{};
         // Resize
         bool isWindowResizable = false;
         bool windowResized = false;
@@ -266,11 +266,6 @@ namespace MFA::RenderFrontend
         MFA_LOG_INFO("Acquired graphics and presentation queues");
         state->graphicCommandPool = RB::CreateCommandPool(state->logicalDevice.device, state->graphicQueueFamily);
 
-        state->descriptorPool = RB::CreateDescriptorPool(
-            state->logicalDevice.device,
-            40000 // TODO We might need to ask this from user
-        );
-
         state->graphicCommandBuffer = RF::CreateGraphicCommandBuffers(RF::GetMaxFramesPerFlight());
 
         state->syncObjects = RF::createSyncObjects(
@@ -331,11 +326,6 @@ namespace MFA::RenderFrontend
         // DestroyPipeline in application // TODO We should have reference to what user creates + params for re-creation
         // GraphicPipeline, UniformBuffer, PipelineLayout
         // Shutdown only procedure
-
-        RB::DestroyDescriptorPool(
-            state->logicalDevice.device,
-            state->descriptorPool
-        );
 
         RB::DestroyCommandPool(
             state->logicalDevice.device,
@@ -460,6 +450,7 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     RT::DescriptorSetGroup CreateDescriptorSets(
+        VkDescriptorPool descriptorPool,
         uint32_t const descriptorSetCount,
         VkDescriptorSetLayout descriptorSetLayout
     )
@@ -467,7 +458,7 @@ namespace MFA::RenderFrontend
         MFA_VK_VALID_ASSERT(descriptorSetLayout);
         return RB::CreateDescriptorSet(
             state->logicalDevice.device,
-            state->descriptorPool,
+            descriptorPool,
             descriptorSetLayout,
             descriptorSetCount
         );
@@ -705,21 +696,21 @@ namespace MFA::RenderFrontend
 
     void BindDescriptorSet(
         RT::CommandRecordState const & drawPass,
-        VkDescriptorSet descriptorSet
+        DescriptorSetType frequency,
+        RT::DescriptorSetGroup descriptorSetGroup
     )
     {
         MFA_ASSERT(drawPass.isValid);
         MFA_ASSERT(drawPass.pipeline);
-        MFA_ASSERT(descriptorSet);
         // We should bind specific descriptor set with different texture for each mesh
         vkCmdBindDescriptorSets(
             GetGraphicCommandBuffer(drawPass),
             VK_PIPELINE_BIND_POINT_GRAPHICS,
             drawPass.pipeline->pipelineLayout,
-            0,
+            static_cast<uint32_t>(frequency),
             1,
-            &descriptorSet,
-            0,
+            &descriptorSetGroup.descriptorSets[drawPass.frameIndex],
+            0, 
             nullptr
         );
     }
@@ -1521,13 +1512,38 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    void ResetQueryPool(RT::CommandRecordState const & recordState, VkQueryPool queryPool, uint32_t queryCount, uint32_t firstQueryIndex)
+    void ResetQueryPool(
+        RT::CommandRecordState const & recordState,
+        VkQueryPool queryPool,
+        uint32_t queryCount,
+        uint32_t firstQueryIndex
+    )
     {
         RB::ResetQueryPool(
             GetGraphicCommandBuffer(recordState),
             queryPool,
             queryCount,
             firstQueryIndex
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    VkDescriptorPool CreateDescriptorPool(uint32_t const maxSets)
+    {
+        return RB::CreateDescriptorPool(
+            state->logicalDevice.device,
+            maxSets
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void DestroyDescriptorPool(VkDescriptorPool descriptorPool)
+    {
+        RB::DestroyDescriptorPool(
+            state->logicalDevice.device,
+            descriptorPool
         );
     }
 

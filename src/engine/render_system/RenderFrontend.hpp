@@ -73,6 +73,7 @@ namespace MFA::RenderFrontend
 
     [[nodiscard]]
     RT::DescriptorSetGroup CreateDescriptorSets(
+        VkDescriptorPool descriptorPool,
         uint32_t descriptorSetCount,
         VkDescriptorSetLayout descriptorSetLayout
     );
@@ -137,9 +138,18 @@ namespace MFA::RenderFrontend
         VkWriteDescriptorSet * writeInfo
     );
 
+
+    enum class DescriptorSetType : uint32_t
+    {
+        PerFrame = 0,
+        PerEssence = 1,
+        PerVariant = 2
+    };
+
     void BindDescriptorSet(
         RT::CommandRecordState const & drawPass,
-        VkDescriptorSet descriptorSet
+        DescriptorSetType frequency,
+        RT::DescriptorSetGroup descriptorSetGroup
     );
 
     //: loop through each mesh instance in the mesh instances list to render
@@ -406,6 +416,11 @@ namespace MFA::RenderFrontend
         uint32_t queryCount,
         uint32_t firstQueryIndex = 0
     );
+
+    [[nodiscard]]
+    VkDescriptorPool CreateDescriptorPool(uint32_t maxSets);
+
+    void DestroyDescriptorPool(VkDescriptorPool descriptorPool);
 
 }
 
