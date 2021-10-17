@@ -3,13 +3,13 @@ struct PSIn {
 };
 
 struct PSOut {
-    uint color : SV_Target0;
+    // uint color : SV_Target0;
 };
 
-PSOut main(PSIn input) {
+void main(PSIn input) {
     // float depth = input.position.z / input.position.w;
-    PSOut output;
-    output.color = 1;
+    // PSOut output;
+    // output.color = 1;
     // output.depth = depth;
-	return output;
+	// return output;
 }

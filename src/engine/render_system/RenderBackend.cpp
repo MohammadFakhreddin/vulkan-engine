@@ -1666,7 +1666,7 @@ VkRenderPass CreateRenderPass(
     uint32_t dependenciesCount
 )
 {
-    VkRenderPassCreateInfo const createInfo {
+    VkRenderPassCreateInfo const createInfo{
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
         .attachmentCount = attachmentsCount,
         .pAttachments = attachments,
@@ -2195,7 +2195,7 @@ RT::BufferGroup CreateIndexBuffer(
 //-------------------------------------------------------------------------------------------------
 
 void DestroyIndexBuffer(
-    VkDevice const device,
+    VkDevice device,
     RT::BufferGroup & indexBufferGroup
 )
 {
@@ -2204,7 +2204,7 @@ void DestroyIndexBuffer(
 
 //-------------------------------------------------------------------------------------------------
 
-void CreateBufferGroups(
+void CreateUniformBuffer(
     VkDevice device,
     VkPhysicalDevice physicalDevice,
     uint32_t const buffersCount,
@@ -2213,7 +2213,7 @@ void CreateBufferGroups(
 )
 {
     MFA_ASSERT(outUniformBuffers != nullptr);
-    for (uint8_t index = 0; index < buffersCount; index++)
+    for (uint32_t index = 0; index < buffersCount; index++)
     {
         outUniformBuffers[index] = CreateBuffer(
             device,
@@ -2244,6 +2244,29 @@ void DestroyBufferGroup(
 )
 {
     DestroyBuffer(device, bufferGroup);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void CreateStorageBuffer(
+    VkDevice device,
+    VkPhysicalDevice physicalDevice,
+    uint32_t const buffersCount,
+    VkDeviceSize const buffersSize,
+    RT::BufferGroup * outStorageBuffer
+)
+{
+    MFA_ASSERT(outStorageBuffer != nullptr);
+    for (uint32_t index = 0; index < buffersCount; index++)
+    {
+        outStorageBuffer[index] = CreateBuffer(
+            device,
+            physicalDevice,
+            buffersSize,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+        );
+    }
 }
 
 //-------------------------------------------------------------------------------------------------

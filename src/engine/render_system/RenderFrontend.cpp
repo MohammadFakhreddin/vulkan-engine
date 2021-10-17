@@ -470,7 +470,7 @@ namespace MFA::RenderFrontend
     {
 
         std::vector<RT::BufferGroup> buffers(count);
-        RB::CreateBufferGroups(
+        RB::CreateUniformBuffer(
             state->logicalDevice.device,
             state->physicalDevice,
             count,

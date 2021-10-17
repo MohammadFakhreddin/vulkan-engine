@@ -18,7 +18,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    BasePipeline::BasePipeline(uint32_t maxSets)
+    BasePipeline::BasePipeline(uint32_t const maxSets)
     {
         mDescriptorPool = RF::CreateDescriptorPool(maxSets);
     }
@@ -35,25 +35,16 @@ namespace MFA
     void BasePipeline::PreRender(RT::CommandRecordState & drawPass, float deltaTime)
     {
         // Multi-thread update of variant animation
-        uint32_t nextThreadNumber = 0;
         auto const availableThreadCount = JS::GetNumberOfAvailableThreads();
-        for (const auto & essenceAndVariant : mEssenceAndVariantsMap)
+        for (uint32_t threadNumber = 0; threadNumber < availableThreadCount; ++threadNumber)
         {
-            auto & variants = essenceAndVariant.second->variants;
-            for (auto & variant : variants)
+            JS::AssignTask(threadNumber, [this, &drawPass, deltaTime, threadNumber, availableThreadCount]()->void
             {
-                JS::AssignTask(nextThreadNumber, [&variant, deltaTime, &drawPass]()->void
-                    {
-                        // TODO We might need to separate update tasks for buffer update and normal computation
-                        variant->Update(deltaTime, drawPass);
-                    }
-                );
-                ++nextThreadNumber;
-                if (nextThreadNumber >= availableThreadCount)
+                for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mVariantsRef.size()); i += availableThreadCount)
                 {
-                    nextThreadNumber = 0;
+                    mVariantsRef[i]->Update(deltaTime, drawPass);
                 }
-            }
+            });
         }
         JS::WaitForThreadsToFinish();
     }
@@ -97,6 +88,8 @@ namespace MFA
 
         variants.emplace_back(std::make_unique<DrawableVariant>(findResult->second->essence));
 
+        mVariantsRef.emplace_back(variants.back().get());
+
         return variants.back().get();
     }
 
@@ -108,6 +101,18 @@ namespace MFA
 
         auto const findResult = mEssenceAndVariantsMap.find(variant->GetEssence()->GetName());
         MFA_ASSERT(findResult != mEssenceAndVariantsMap.end());
+
+        bool foundInVariantsRef = false;
+        for (int i = static_cast<int>(mVariantsRef.size()) - 1; i >= 0; --i)
+        {
+            if (mVariantsRef[i] == variant)
+            {
+                mVariantsRef.erase(mVariantsRef.begin() + i);
+                foundInVariantsRef = true;
+                break;
+            }
+        }
+        MFA_ASSERT(foundInVariantsRef == true);
 
         auto & variants = findResult->second->variants;
         for (int i = static_cast<int>(variants.size()) - 1; i >= 0; --i)
@@ -121,6 +126,7 @@ namespace MFA
                 return;
             }
         }
+
         MFA_ASSERT(false);
     }
 

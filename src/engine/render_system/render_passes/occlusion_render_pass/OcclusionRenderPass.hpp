@@ -34,14 +34,11 @@ namespace MFA
         [[nodiscard]]
         VkFramebuffer getFrameBuffer(RT::CommandRecordState const & drawPass);
 
-        uint32_t mImageWidth;
-        uint32_t mImageHeight;
+        uint32_t mImageWidth = 0;
+        uint32_t mImageHeight = 0;
 
         VkRenderPass mRenderPass {};
         std::vector<VkFramebuffer> mFrameBuffers {};
-        std::vector<RT::ColorImageGroup> mColorImages {};
-        //std::vector<RT::DepthImageGroup> mDepthImages {};
-
     };
 
 }

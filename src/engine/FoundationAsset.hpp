@@ -239,6 +239,7 @@ public:
 
     using Index = uint32_t;
     struct Vertex {
+        uint32_t uniqueId {};   // I'm planning to use this for generating skinned map / texture
         Position position {};
         UV baseColorUV {};
         UV normalMapUV {};

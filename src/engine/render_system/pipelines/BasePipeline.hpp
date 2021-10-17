@@ -72,6 +72,8 @@ protected:
 
     std::unordered_map<std::string, std::unique_ptr<EssenceAndItsVariants>> mEssenceAndVariantsMap;
 
+    std::vector<DrawableVariant *> mVariantsRef {};
+
     VkDescriptorPool mDescriptorPool;
 
 };

@@ -26,18 +26,6 @@ void MFA::DepthPrePass::internalInit()
         .height = surfaceCapabilities.currentExtent.height
     };
 
-    mColorImageGroup.resize(RF::GetSwapChainImagesCount());
-    for (auto & colorImage : mColorImageGroup)
-    {
-        colorImage = RF::CreateColorImage(
-            swapChainExtent,
-            VK_FORMAT_R8_UINT,
-            RT::CreateColorImageOptions {
-                .samplesCount = RF::GetMaxSamplesCount()    // TODO Can we avoid doing samples for depth pre pass?
-            }
-        );
-    }
-
     createRenderPass();
 
     createFrameBuffers(swapChainExtent);
@@ -53,13 +41,6 @@ void MFA::DepthPrePass::internalShutdown()
     );
 
     RF::DestroyRenderPass(mRenderPass);
-
-    for (auto & colorImage : mColorImageGroup)
-    {
-        RF::DestroyColorImage(colorImage);
-    }
-    mColorImageGroup.clear();
-
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -75,9 +56,8 @@ void MFA::DepthPrePass::internalBeginRenderPass(RT::CommandRecordState & drawPas
     RF::AssignViewportAndScissorToCommandBuffer(RF::GetGraphicCommandBuffer(drawPass), swapChainExtend);
 
     std::vector<VkClearValue> clearValues{};
-    clearValues.resize(2);
-    clearValues[0].color = VkClearColorValue{ .float32 = {0.1f, 0.1f, 0.1f, 1.0f } };
-    clearValues[1].depthStencil = { .depth = 1.0f, .stencil = 0 };
+    clearValues.resize(1);
+    clearValues[0].depthStencil = { .depth = 1.0f, .stencil = 0 };
 
     RF::BeginRenderPass(
         RF::GetGraphicCommandBuffer(drawPass),
@@ -107,14 +87,6 @@ void MFA::DepthPrePass::internalResize()
         .height = surfaceCapabilities.currentExtent.height
     };
 
-    for (auto & colorImage : mColorImageGroup)
-    {
-        RF::DestroyColorImage(colorImage);
-        colorImage = RF::CreateColorImage(swapChainExtend, colorImage.imageFormat, RT::CreateColorImageOptions {
-            .samplesCount = RF::GetMaxSamplesCount()
-        });
-    }
-
     // Depth frame-buffer
     RF::DestroyFrameBuffers(
         static_cast<uint32_t>(mFrameBuffers.size()),
@@ -127,21 +99,6 @@ void MFA::DepthPrePass::internalResize()
 
 void MFA::DepthPrePass::createRenderPass()
 {
-    VkAttachmentDescription const colorAttachment{
-        .format = VK_FORMAT_R8_UINT,
-        .samples = RF::GetMaxSamplesCount(),
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    };
-
-    VkAttachmentReference colorAttachmentReference{
-        .attachment = 0,
-        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    };
 
     VkAttachmentDescription const depthAttachment{
         .format = (*mDepthImages)[0].imageFormat,
@@ -155,7 +112,7 @@ void MFA::DepthPrePass::createRenderPass()
     };
 
     VkAttachmentReference depthAttachmentRef{
-        .attachment = 1,
+        .attachment = 0,
         .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
 
@@ -165,8 +122,7 @@ void MFA::DepthPrePass::createRenderPass()
     std::vector<VkSubpassDescription> subPassDescription{
         VkSubpassDescription {
             .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-            .colorAttachmentCount = 1,
-            .pColorAttachments = &colorAttachmentReference,
+            .colorAttachmentCount = 0,
             .pDepthStencilAttachment = &depthAttachmentRef,
         }
     };
@@ -194,7 +150,7 @@ void MFA::DepthPrePass::createRenderPass()
         }
     };
 
-    std::vector<VkAttachmentDescription> attachments{ colorAttachment, depthAttachment };
+    std::vector<VkAttachmentDescription> attachments{ depthAttachment };
 
     mRenderPass = RF::CreateRenderPass(
         attachments.data(),
@@ -215,7 +171,7 @@ void MFA::DepthPrePass::createFrameBuffers(VkExtent2D const & extent)
     for (int i = 0; i < static_cast<int>(mFrameBuffers.size()); ++i)
     {
         std::vector<VkImageView> const attachments = {
-            mColorImageGroup[i].imageView,
+            //mColorImageGroup[i].imageView,
             (*mDepthImages)[i].imageView
         };
         mFrameBuffers[i] = RF::CreateFrameBuffer(

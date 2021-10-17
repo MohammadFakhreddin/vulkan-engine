@@ -6,9 +6,7 @@
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::OcclusionRenderPass::OcclusionRenderPass()
-{
-}
+MFA::OcclusionRenderPass::OcclusionRenderPass() = default;
 
 //-------------------------------------------------------------------------------------------------
 
@@ -30,26 +28,6 @@ void MFA::OcclusionRenderPass::internalInit()
         .height = mImageHeight
     };
 
-    // Color images
-    mColorImages.resize(RF::GetSwapChainImagesCount());
-    for (auto & colorImage : mColorImages)
-    {
-        colorImage = RF::CreateColorImage(
-            extent,
-            VK_FORMAT_R8_UINT,
-            {
-                .samplesCount = RF::GetMaxSamplesCount(),
-            }
-        );
-    }
-
-    // Depth images
-    //mDepthImages.resize(RF::GetSwapChainImagesCount());
-    //for (auto & depthImage : mDepthImages)
-    //{
-    //    depthImage = RF::CreateDepthImage(extent, {});
-    //}
-
     createRenderPass();
 
     createFrameBuffers(extent);
@@ -65,20 +43,6 @@ void MFA::OcclusionRenderPass::internalShutdown()
     );
 
     RF::DestroyRenderPass(mRenderPass);
-
-    // Color images
-    for (auto & colorImage : mColorImages)
-    {
-        RF::DestroyColorImage(colorImage);
-    }
-    mColorImages.clear();
-
-    // Depth images
-    //for (auto & depthImage : mDepthImages)
-    //{
-    //    RF::DestroyDepthImage(depthImage);
-    //}
-    //mDepthImages.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -93,9 +57,8 @@ void MFA::OcclusionRenderPass::internalBeginRenderPass(RT::CommandRecordState & 
     RF::AssignViewportAndScissorToCommandBuffer(RF::GetGraphicCommandBuffer(drawPass), extent);
 
     std::vector<VkClearValue> clearValues{};
-    clearValues.resize(2);
-    clearValues[0].color = VkClearColorValue{ .float32 = {0.1f, 0.1f, 0.1f, 1.0f } };
-    clearValues[1].depthStencil = { .depth = 1.0f, .stencil = 0 };
+    clearValues.resize(1);
+    clearValues[0].depthStencil = { .depth = 1.0f, .stencil = 0 };
 
     RF::BeginRenderPass(
         RF::GetGraphicCommandBuffer(drawPass),
@@ -127,18 +90,6 @@ void MFA::OcclusionRenderPass::internalResize()
         .height = mImageHeight
     };
 
-    for (auto & colorImage : mColorImages)
-    {
-        RF::DestroyColorImage(colorImage);
-        colorImage = RF::CreateColorImage(extent, colorImage.imageFormat, {.samplesCount = RF::GetMaxSamplesCount()});
-    }
-
-    //for (auto & depthImage : mDepthImages)
-    //{
-    //    RF::DestroyDepthImage(depthImage);
-    //    depthImage = RF::CreateDepthImage(extent, {});
-    //}
-
     // Depth frame-buffer
     RF::DestroyFrameBuffers(
         static_cast<uint32_t>(mFrameBuffers.size()),
@@ -151,21 +102,6 @@ void MFA::OcclusionRenderPass::internalResize()
 
 void MFA::OcclusionRenderPass::createRenderPass()
 {
-    VkAttachmentDescription const colorAttachment{
-        .format = VK_FORMAT_R8_UINT,
-        .samples = RF::GetMaxSamplesCount(),
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    };
-
-    VkAttachmentReference colorAttachmentReference{
-        .attachment = 0,
-        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    };
 
     VkAttachmentDescription const depthAttachment{
         .format = RF::GetDisplayRenderPass()->GetDepthImages()[0].imageFormat,
@@ -179,7 +115,7 @@ void MFA::OcclusionRenderPass::createRenderPass()
     };
 
     VkAttachmentReference depthAttachmentRef{
-        .attachment = 1,
+        .attachment = 0,
         .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
 
@@ -189,8 +125,7 @@ void MFA::OcclusionRenderPass::createRenderPass()
     std::vector<VkSubpassDescription> subPassDescription{
         VkSubpassDescription {
             .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-            .colorAttachmentCount = 1,
-            .pColorAttachments = &colorAttachmentReference,
+            .colorAttachmentCount = 0,
             .pDepthStencilAttachment = &depthAttachmentRef,
         }
     };
@@ -218,7 +153,7 @@ void MFA::OcclusionRenderPass::createRenderPass()
         }
     };
 
-    std::vector<VkAttachmentDescription> attachments{ colorAttachment, depthAttachment };
+    std::vector<VkAttachmentDescription> attachments{ depthAttachment };
 
     mRenderPass = RF::CreateRenderPass(
         attachments.data(),
@@ -240,7 +175,6 @@ void MFA::OcclusionRenderPass::createFrameBuffers(VkExtent2D const & extent)
     for (int i = 0; i < static_cast<int>(mFrameBuffers.size()); ++i)
     {
         std::vector<VkImageView> const attachments = {
-            mColorImages[i].imageView,
             depthImages[i].imageView
         };
         mFrameBuffers[i] = RF::CreateFrameBuffer(

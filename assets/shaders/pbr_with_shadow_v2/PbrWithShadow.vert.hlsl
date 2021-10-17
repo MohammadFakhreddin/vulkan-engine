@@ -1,4 +1,6 @@
 struct VSIn {
+    uint uniqueId;
+    
     float3 position : POSITION0;
     
     float2 baseColorTexCoord : TEXCOORD0;  

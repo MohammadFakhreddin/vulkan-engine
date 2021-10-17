@@ -75,8 +75,8 @@ namespace MFA::ShapeGenerator {
             oddRow = !oddRow;
         }
 
-        auto const indicesCount = static_cast<uint16_t>(meshIndices.size());
-        auto const verticesCount = static_cast<uint16_t>(positions.size());
+        auto const indicesCount = static_cast<uint32_t>(meshIndices.size());
+        auto const verticesCount = static_cast<uint32_t>(positions.size());
 
         model.mesh.InitForWrite(
             verticesCount, 
@@ -87,32 +87,35 @@ namespace MFA::ShapeGenerator {
 
         std::vector<AS::MeshVertex> meshVertices (verticesCount);
         
-        for (uintmax_t index = 0; index < verticesCount; ++index) {
+        for (uint32_t index = 0; index < verticesCount; ++index) {
+            auto & vertex = meshVertices[index];
+
+            vertex.uniqueId = index;
 
             // Positions
-            Matrix::CopyGlmToCells(positions[index], meshVertices[index].position);
+            Matrix::CopyGlmToCells(positions[index], vertex.position);
 
             // UVs We assign uvs for all materials in case a texture get assigned to shape
             // Base color
-            Matrix::CopyGlmToCells(uvs[index], meshVertices[index].baseColorUV);
+            Matrix::CopyGlmToCells(uvs[index], vertex.baseColorUV);
 
             // Metallic
-            Matrix::CopyGlmToCells(uvs[index], meshVertices[index].metallicUV);
+            Matrix::CopyGlmToCells(uvs[index], vertex.metallicUV);
 
             // Roughness
-            Matrix::CopyGlmToCells(uvs[index], meshVertices[index].roughnessUV);
+            Matrix::CopyGlmToCells(uvs[index], vertex.roughnessUV);
 
             // Emission
-            Matrix::CopyGlmToCells(uvs[index], meshVertices[index].emissionUV);
+            Matrix::CopyGlmToCells(uvs[index], vertex.emissionUV);
 
             // Normals
-            Matrix::CopyGlmToCells(uvs[index], meshVertices[index].normalMapUV);
+            Matrix::CopyGlmToCells(uvs[index], vertex.normalMapUV);
 
             // Normal buffer
-            Matrix::CopyGlmToCells(normals[index], meshVertices[index].normalValue);
+            Matrix::CopyGlmToCells(normals[index], vertex.normalValue);
 
             // Tangent buffer
-            Matrix::CopyGlmToCells(tangents[index], meshVertices[index].tangentValue);
+            Matrix::CopyGlmToCells(tangents[index], vertex.tangentValue);
 
         }
 
@@ -193,12 +196,14 @@ namespace MFA::ShapeGenerator {
 
         std::vector<AS::MeshVertex> meshVertices (verticesCount);
         
-        for (uintmax_t index = 0; index < verticesCount; ++index) {
+        for (uint32_t index = 0; index < verticesCount; ++index) {
+            auto & vertex = meshVertices[index];
+            vertex.uniqueId = index;
             // Positions
-            Matrix::CopyGlmToCells(positions[index], meshVertices[index].position);
+            Matrix::CopyGlmToCells(positions[index], vertex.position);
             // UVs We assign uvs for all materials in case a texture get assigned to shape
             // Base color
-            Matrix::CopyGlmToCells(uvs[index], meshVertices[index].baseColorUV);
+            Matrix::CopyGlmToCells(uvs[index], vertex.baseColorUV);
         }
 
         auto const subMeshIndex = model.mesh.InsertSubMesh();
@@ -268,9 +273,11 @@ namespace MFA::ShapeGenerator {
 
         std::vector<AS::MeshVertex> meshVertices (verticesCount);
         
-        for (uintmax_t index = 0; index < verticesCount; ++index) {
+        for (uint32_t index = 0; index < verticesCount; ++index) {
+            auto & vertex = meshVertices[index];
+            vertex.uniqueId = index;
             // Positions
-            Matrix::CopyGlmToCells(positions[index], meshVertices[index].position);
+            Matrix::CopyGlmToCells(positions[index], vertex.position);
         }
 
         auto const subMeshIndex = model.mesh.InsertSubMesh();

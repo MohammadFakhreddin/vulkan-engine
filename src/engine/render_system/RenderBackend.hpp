@@ -423,7 +423,7 @@ namespace MFA::RenderBackend
         RT::BufferGroup & indexBufferGroup
     );
 
-    void CreateBufferGroups(
+    void CreateUniformBuffer(
         VkDevice device,
         VkPhysicalDevice physicalDevice,
         uint32_t buffersCount,
@@ -441,6 +441,15 @@ namespace MFA::RenderBackend
         VkDevice device,
         RT::BufferGroup & bufferGroup
     );
+
+    void CreateStorageBuffer(
+        VkDevice device,
+        VkPhysicalDevice physicalDevice,
+        uint32_t buffersCount,
+        VkDeviceSize buffersSize,
+        RT::BufferGroup * outStorageBuffer
+    );
+
 
     [[nodiscard]]
     VkDescriptorPool CreateDescriptorPool(

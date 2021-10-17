@@ -97,7 +97,7 @@ namespace MFA
 
         void Shutdown() override;
 
-        void PreRender(RT::CommandRecordState & drawPass, float deltaTime) override;
+        void PreRender(RT::CommandRecordState & recordState, float deltaTime) override;
 
         void Render(RT::CommandRecordState & drawPass, float deltaTime) override;
 
@@ -160,6 +160,16 @@ namespace MFA
         void updateShadowViewProjectionData();
 
         void updateDisplayViewProjectionBuffer(RT::CommandRecordState const & drawPass);
+
+        void retrieveOcclusionQueryResult(RT::CommandRecordState const & recordState);
+
+        void performDepthPrePass(RT::CommandRecordState & recordState);
+
+        void performShadowPass(RT::CommandRecordState & recordState);
+
+        void performOcclusionQueryPass(RT::CommandRecordState & recordState);
+
+        void performDisplayPass(RT::CommandRecordState & recordState);
 
         static constexpr float SHADOW_WIDTH = 1024;
         static constexpr float SHADOW_HEIGHT = 1024;
