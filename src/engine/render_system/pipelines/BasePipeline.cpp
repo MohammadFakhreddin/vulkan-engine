@@ -19,16 +19,13 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     BasePipeline::BasePipeline(uint32_t const maxSets)
+        : mMaxSets(maxSets)
     {
-        mDescriptorPool = RF::CreateDescriptorPool(maxSets);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    BasePipeline::~BasePipeline()
-    {
-        RF::DestroyDescriptorPool(mDescriptorPool);
-    }
+    BasePipeline::~BasePipeline() = default;
 
     //-------------------------------------------------------------------------------------------------
 
@@ -133,7 +130,9 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     void BasePipeline::Init()
-    {}
+    {
+        mDescriptorPool = RF::CreateDescriptorPool(mMaxSets);
+    }
 
     //-------------------------------------------------------------------------------------------------
 
@@ -147,6 +146,8 @@ namespace MFA
             }
         }
         mEssenceAndVariantsMap.clear();
+
+        RF::DestroyDescriptorPool(mDescriptorPool);
     }
 
     //-------------------------------------------------------------------------------------------------

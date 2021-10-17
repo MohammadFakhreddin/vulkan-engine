@@ -74,7 +74,9 @@ protected:
 
     std::vector<DrawableVariant *> mVariantsRef {};
 
-    VkDescriptorPool mDescriptorPool;
+    VkDescriptorPool mDescriptorPool {};
+
+    uint32_t mMaxSets;
 
 };
 

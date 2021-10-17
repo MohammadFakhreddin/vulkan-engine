@@ -31,7 +31,6 @@ namespace MFA
 
     PBRWithShadowPipelineV2::~PBRWithShadowPipelineV2()
     {
-        BasePipeline::~BasePipeline();
         if (mIsInitialized)
         {
             Shutdown();
