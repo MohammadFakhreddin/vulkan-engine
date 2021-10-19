@@ -96,10 +96,10 @@ public:
     void Draw(RT::CommandRecordState const & drawPass, BindDescriptorSetFunction const & bindFunction);
     
     [[nodiscard]]
-    RT::UniformBufferGroup const * GetUniformBuffer(char const * name);
+    RT::UniformBufferCollection const * GetUniformBuffer(char const * name);
     
     [[nodiscard]] 
-    RT::UniformBufferGroup const & GetSkinJointsBuffer() const noexcept;
+    RT::UniformBufferCollection const & GetSkinJointsBuffer() const noexcept;
 
     [[nodiscard]]
     DrawableEssence const * GetEssence() const noexcept;
@@ -141,6 +141,11 @@ public:
         mIsOccluded = isOccluded;
     }
 
+    RT::StorageBufferCollection const & CreateStorageBuffer(uint32_t size, uint32_t count);
+
+    [[nodiscard]]
+    RT::StorageBufferCollection const & GetStorageBuffer() const;
+
 private:
 
     void updateAnimation(float deltaTimeInSec, bool isVisible);
@@ -180,9 +185,9 @@ private:
 
     DrawableEssence const * mEssence = nullptr;
     
-    RT::UniformBufferGroup mSkinsJointsBuffer {};
+    RT::UniformBufferCollection mSkinsJointsBuffer {};
     
-    std::unordered_map<std::string, RT::UniformBufferGroup> mUniformBuffers {};
+    std::unordered_map<std::string, RT::UniformBufferCollection> mUniformBuffers {};
 
     int mActiveAnimationIndex = 0;
     int mPreviousAnimationIndex = -1;
@@ -200,7 +205,8 @@ private:
     std::vector<Node> mNodes {};
     
     RT::DescriptorSetGroup mDescriptorSetGroup {};
-    bool mIsDescriptorSetGroupValid = false;
+    
+    RT::StorageBufferCollection mStorageBuffer {};
 
     AnimationParams mActiveAnimationParams {};
 
@@ -225,6 +231,8 @@ private:
     bool mIsOccluded = false;
 
     int bufferDirtyCounter = 0;
+
+    size_t mAnimationInputIndex [300] {};
 
 };
 

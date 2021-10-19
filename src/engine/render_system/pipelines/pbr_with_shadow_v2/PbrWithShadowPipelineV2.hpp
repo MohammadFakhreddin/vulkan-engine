@@ -178,7 +178,7 @@ namespace MFA
 
         RT::SamplerGroup * mSamplerGroup = nullptr; // TODO Each gltf subMesh has its own settings
         RT::GpuTexture * mErrorTexture = nullptr;
-        RT::UniformBufferGroup mErrorBuffer{};
+        RT::UniformBufferCollection mErrorBuffer{};
 
         RT::PipelineGroup mDisplayPassPipeline{};
         RT::PipelineGroup mShadowPassPipeline{};
@@ -192,10 +192,10 @@ namespace MFA
         std::unique_ptr<OcclusionRenderPass> mOcclusionRenderPass;
 
 
-        RT::UniformBufferGroup mDisplayViewProjectionBuffer{};
-        RT::UniformBufferGroup mLightBuffer{};
-        RT::UniformBufferGroup mCameraBuffer{};
-        RT::UniformBufferGroup mShadowViewProjectionBuffer{};
+        RT::UniformBufferCollection mDisplayViewProjectionBuffer{};
+        RT::UniformBufferCollection mLightBuffer{};
+        RT::UniformBufferCollection mCameraBuffer{};
+        RT::UniformBufferCollection mShadowViewProjectionBuffer{};
 
         float mLightPosition[3]{};
         float mCameraPosition[3]{};

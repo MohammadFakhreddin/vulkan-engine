@@ -84,7 +84,7 @@ MFA::RT::GpuModel const & MFA::DrawableEssence::GetGpuModel() const {
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RT::UniformBufferGroup const & MFA::DrawableEssence::GetPrimitivesBuffer() const noexcept {
+MFA::RT::UniformBufferCollection const & MFA::DrawableEssence::GetPrimitivesBuffer() const noexcept {
     return mPrimitivesBuffer;
 }
 

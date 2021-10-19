@@ -69,7 +69,7 @@ private:
 
     RT::DescriptorSetGroup mDescriptorSetGroup {};
 
-    RT::UniformBufferGroup mViewProjectionBuffers {};
+    RT::UniformBufferCollection mViewProjectionBuffers {};
 
     glm::mat4 mCameraTransform {};
     glm::mat4 mCameraProjection {};

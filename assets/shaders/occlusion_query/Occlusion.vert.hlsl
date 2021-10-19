@@ -1,6 +1,4 @@
-struct VSIn {
-    uint uniqueId;
-    
+struct VSIn {    
     float3 position : POSITION0;
 
     int hasSkin;

@@ -17,7 +17,7 @@ class RenderPass;
 
 namespace RenderTypes {
 
-struct BufferGroup {
+struct BufferAndMemory {
     VkBuffer buffer {};
     VkDeviceMemory memory {};
     [[nodiscard]]
@@ -33,8 +33,8 @@ struct SamplerGroup {
 };
 
 struct MeshBuffers {
-    BufferGroup verticesBuffer {};
-    BufferGroup indicesBuffer {};
+    BufferAndMemory verticesBuffer {};
+    BufferAndMemory indicesBuffer {};
 };
 
 struct ImageGroup {
@@ -138,8 +138,16 @@ struct CommandRecordState {
     RenderPass * renderPass;
 };
 
-struct UniformBufferGroup {
-    std::vector<BufferGroup> buffers;
+struct UniformBufferCollection {
+    std::vector<BufferAndMemory> buffers;
+    size_t bufferSize;
+    [[nodiscard]]
+    bool isValid() const noexcept;
+};
+
+struct StorageBufferCollection
+{
+    std::vector<BufferAndMemory> buffers;
     size_t bufferSize;
     [[nodiscard]]
     bool isValid() const noexcept;
@@ -166,6 +174,12 @@ struct ColorImageGroup {
 
 struct DescriptorSetGroup {
     std::vector<VkDescriptorSet> descriptorSets {};
+
+    [[nodiscard]]
+    bool IsValid() const noexcept
+    {
+        return descriptorSets.empty() == false;
+    }
 };
 
 struct LogicalDevice {

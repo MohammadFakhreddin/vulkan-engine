@@ -145,7 +145,7 @@ namespace MFA::RenderBackend
     );
 
     [[nodiscard]]
-    RT::BufferGroup CreateBuffer(
+    RT::BufferAndMemory CreateBuffer(
         VkDevice device,
         VkPhysicalDevice physicalDevice,
         VkDeviceSize size,
@@ -170,7 +170,7 @@ namespace MFA::RenderBackend
 
     void DestroyBuffer(
         VkDevice device,
-        RT::BufferGroup & bufferGroup
+        RT::BufferAndMemory & bufferGroup
     );
 
     [[nodiscard]]
@@ -284,8 +284,6 @@ namespace MFA::RenderBackend
         VkSurfaceKHR windowSurface
     );
 
-
-
     [[nodiscard]]
     RT::SwapChainGroup CreateSwapChain(
         VkDevice device,
@@ -396,7 +394,7 @@ namespace MFA::RenderBackend
     VkShaderStageFlagBits ConvertAssetShaderStageToGpu(AssetSystem::ShaderStage stage);
 
     [[nodiscard]]
-    RT::BufferGroup CreateVertexBuffer(
+    RT::BufferAndMemory CreateVertexBuffer(
         VkDevice device,
         VkPhysicalDevice physicalDevice,
         VkCommandPool commandPool,
@@ -406,11 +404,11 @@ namespace MFA::RenderBackend
 
     void DestroyVertexBuffer(
         VkDevice device,
-        RT::BufferGroup & vertexBufferGroup
+        RT::BufferAndMemory & vertexBufferGroup
     );
 
     [[nodiscard]]
-    RT::BufferGroup CreateIndexBuffer(
+    RT::BufferAndMemory CreateIndexBuffer(
         VkDevice device,
         VkPhysicalDevice physicalDevice,
         VkCommandPool commandPool,
@@ -420,7 +418,7 @@ namespace MFA::RenderBackend
 
     void DestroyIndexBuffer(
         VkDevice device,
-        RT::BufferGroup & indexBufferGroup
+        RT::BufferAndMemory & indexBufferGroup
     );
 
     void CreateUniformBuffer(
@@ -428,18 +426,18 @@ namespace MFA::RenderBackend
         VkPhysicalDevice physicalDevice,
         uint32_t buffersCount,
         VkDeviceSize buffersSize,
-        RT::BufferGroup * outUniformBuffers
+        RT::BufferAndMemory * outUniformBuffers
     );
 
     void UpdateBufferGroup(
         VkDevice device,
-        RT::BufferGroup const & bufferGroup,
+        RT::BufferAndMemory const & bufferGroup,
         CBlob data
     );
 
-    void DestroyBufferGroup(
+    void DestroyBufferAndMemory(
         VkDevice device,
-        RT::BufferGroup & bufferGroup
+        RT::BufferAndMemory & bufferAndMemory
     );
 
     void CreateStorageBuffer(
@@ -447,9 +445,8 @@ namespace MFA::RenderBackend
         VkPhysicalDevice physicalDevice,
         uint32_t buffersCount,
         VkDeviceSize buffersSize,
-        RT::BufferGroup * outStorageBuffer
+        RT::BufferAndMemory * outStorageBuffer
     );
-
 
     [[nodiscard]]
     VkDescriptorPool CreateDescriptorPool(
@@ -522,13 +519,13 @@ namespace MFA::RenderBackend
 
     void BindVertexBuffer(
         VkCommandBuffer commandBuffer,
-        RT::BufferGroup const & vertexBuffer,
+        RT::BufferAndMemory const & vertexBuffer,
         VkDeviceSize offset = 0
     );
 
     void BindIndexBuffer(
         VkCommandBuffer commandBuffer,
-        RT::BufferGroup const & indexBuffer,
+        RT::BufferAndMemory const & indexBuffer,
         VkDeviceSize offset = 0,
         VkIndexType indexType = VK_INDEX_TYPE_UINT32
     );
@@ -589,6 +586,13 @@ namespace MFA::RenderBackend
         VkPipelineStageFlags sourceStageMask,
         VkPipelineStageFlags destinationStateMask,
         VkImageMemoryBarrier const & memoryBarrier
+    );
+
+    void PipelineBarrier(
+        VkCommandBuffer commandBuffer,
+        VkPipelineStageFlags sourceStageMask,
+        VkPipelineStageFlags destinationStateMask,
+        VkBufferMemoryBarrier const & bufferMemoryBarrier
     );
 
     void EndCommandBuffer(VkCommandBuffer commandBuffer);

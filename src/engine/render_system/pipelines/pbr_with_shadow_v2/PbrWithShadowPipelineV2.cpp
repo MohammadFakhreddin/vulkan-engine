@@ -1067,14 +1067,6 @@ namespace MFA
         vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
-
-        // UniqueId
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
-            .format = VK_FORMAT_R32_UINT,
-            .offset = offsetof(AS::MeshVertex, uniqueId)
-        });
         
         // Position
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
@@ -1230,14 +1222,6 @@ namespace MFA
 
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
 
-        // UniqueId
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
-            .format = VK_FORMAT_R32_UINT,
-            .offset = offsetof(AS::MeshVertex, uniqueId)
-        });
-
         {// Position
             VkVertexInputAttributeDescription attributeDescription{};
             attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
@@ -1328,14 +1312,6 @@ namespace MFA
 
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
 
-        // UniqueId
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
-            .format = VK_FORMAT_R32_UINT,
-            .offset = offsetof(AS::MeshVertex, uniqueId)
-        });
-
         // Position
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
@@ -1425,14 +1401,6 @@ namespace MFA
         vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
-
-        // UniqueId
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
-            .format = VK_FORMAT_R32_UINT,
-            .offset = offsetof(AS::MeshVertex, uniqueId)
-        });
 
         // Position
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{

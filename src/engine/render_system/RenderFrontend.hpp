@@ -79,10 +79,10 @@ namespace MFA::RenderFrontend
     );
 
     [[nodiscard]]
-    RT::BufferGroup CreateVertexBuffer(CBlob verticesBlob);
+    RT::BufferAndMemory CreateVertexBuffer(CBlob verticesBlob);
 
     [[nodiscard]]
-    RT::BufferGroup CreateIndexBuffer(CBlob indicesBlob);
+    RT::BufferAndMemory CreateIndexBuffer(CBlob indicesBlob);
 
     [[nodiscard]]
     RT::MeshBuffers CreateMeshBuffers(AssetSystem::Mesh const & mesh);
@@ -107,19 +107,36 @@ namespace MFA::RenderFrontend
 
     void DeviceWaitIdle();
 
+    //---------------------------------------------Shader------------------------------------------------
+
     [[nodiscard]]
     RT::GpuShader CreateShader(AS::Shader const & shader);
 
     void DestroyShader(RT::GpuShader & gpuShader);
 
-    RT::UniformBufferGroup CreateUniformBuffer(size_t bufferSize, uint32_t count);
+    //-------------------------------------------UniformBuffer--------------------------------------------
+
+    RT::UniformBufferCollection CreateUniformBuffer(size_t bufferSize, uint32_t count);
 
     void UpdateUniformBuffer(
-        RT::BufferGroup const & uniformBuffer,
+        RT::BufferAndMemory const & buffer,
         CBlob data
     );
 
-    void DestroyUniformBuffer(RT::UniformBufferGroup & uniformBuffer);
+    void DestroyUniformBuffer(RT::UniformBufferCollection & uniformBuffer);
+
+    //-------------------------------------------StorageBuffer--------------------------------------------
+
+    RT::StorageBufferCollection CreateStorageBuffer(size_t bufferSize, uint32_t count);
+
+    void UpdateStorageBuffer(
+        RT::BufferAndMemory const & buffer,
+        CBlob data
+    );
+    
+    void DestroyStorageBuffer(RT::StorageBufferCollection & storageBuffer);
+
+    //-------------------------------------------------------------------------------------------------
 
     void BindDrawPipeline(
         RT::CommandRecordState & drawPass,
@@ -168,13 +185,13 @@ namespace MFA::RenderFrontend
 
     void BindVertexBuffer(
         RT::CommandRecordState const & drawPass,
-        RT::BufferGroup const & vertexBuffer,
+        RT::BufferAndMemory const & vertexBuffer,
         VkDeviceSize offset = 0
     );
 
     void BindIndexBuffer(
         RT::CommandRecordState const & drawPass,
-        RT::BufferGroup const & indexBuffer,
+        RT::BufferAndMemory const & indexBuffer,
         VkDeviceSize offset = 0,
         VkIndexType indexType = VK_INDEX_TYPE_UINT32
     );
@@ -349,6 +366,13 @@ namespace MFA::RenderFrontend
         VkImageMemoryBarrier const & memoryBarrier
     );
 
+    void PipelineBarrier(
+        VkCommandBuffer commandBuffer,
+        VkPipelineStageFlags sourceStageMask,
+        VkPipelineStageFlags destinationStateMask,
+        VkBufferMemoryBarrier const & memoryBarrier
+    );
+
     void SubmitQueue(
         VkCommandBuffer commandBuffer,
         VkSemaphore imageAvailabilitySemaphore,
@@ -379,6 +403,8 @@ namespace MFA::RenderFrontend
     // Not recommended
     void WaitForPresentQueue();
 
+    //------------------------------------------QueryPool----------------------------------------------
+
     [[nodiscard]]
     VkQueryPool CreateQueryPool(VkQueryPoolCreateInfo const & createInfo);
 
@@ -395,6 +421,15 @@ namespace MFA::RenderFrontend
         uint32_t samplesOffset = 0
     );
 
+    void ResetQueryPool(
+        RT::CommandRecordState const & recordState,
+        VkQueryPool queryPool,
+        uint32_t queryCount,
+        uint32_t firstQueryIndex = 0
+    );
+
+    //-------------------------------------------------------------------------------------------------
+
     VkCommandBuffer GetGraphicCommandBuffer(RT::CommandRecordState const & drawPass);
 
     [[nodiscard]]
@@ -409,13 +444,6 @@ namespace MFA::RenderFrontend
 
     [[nodiscard]]
     VkSemaphore getImageAvailabilitySemaphore(RT::CommandRecordState const & drawPass);
-
-    void ResetQueryPool(
-        RT::CommandRecordState const & recordState,
-        VkQueryPool queryPool,
-        uint32_t queryCount,
-        uint32_t firstQueryIndex = 0
-    );
 
     [[nodiscard]]
     VkDescriptorPool CreateDescriptorPool(uint32_t maxSets);

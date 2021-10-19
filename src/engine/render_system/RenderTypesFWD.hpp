@@ -5,7 +5,7 @@ namespace MFA {
 
 namespace RenderTypes {
 
-struct BufferGroup;
+struct BufferAndMemory;
 
 struct SamplerGroup;
 
@@ -23,7 +23,9 @@ struct PipelineGroup;
 
 struct CommandRecordState;
 
-struct UniformBufferGroup;
+struct UniformBufferCollection;
+
+struct StorageBufferCollection;
 
 struct SwapChainGroup;
 

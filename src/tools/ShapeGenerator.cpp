@@ -89,9 +89,7 @@ namespace MFA::ShapeGenerator {
         
         for (uint32_t index = 0; index < verticesCount; ++index) {
             auto & vertex = meshVertices[index];
-
-            vertex.uniqueId = index;
-
+            
             // Positions
             Matrix::CopyGlmToCells(positions[index], vertex.position);
 
@@ -198,7 +196,6 @@ namespace MFA::ShapeGenerator {
         
         for (uint32_t index = 0; index < verticesCount; ++index) {
             auto & vertex = meshVertices[index];
-            vertex.uniqueId = index;
             // Positions
             Matrix::CopyGlmToCells(positions[index], vertex.position);
             // UVs We assign uvs for all materials in case a texture get assigned to shape
@@ -275,7 +272,6 @@ namespace MFA::ShapeGenerator {
         
         for (uint32_t index = 0; index < verticesCount; ++index) {
             auto & vertex = meshVertices[index];
-            vertex.uniqueId = index;
             // Positions
             Matrix::CopyGlmToCells(positions[index], vertex.position);
         }

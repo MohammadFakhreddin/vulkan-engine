@@ -15,7 +15,6 @@ public:
 
     void AddCombinedImageSampler(VkDescriptorImageInfo const & imageInfo, uint32_t offset = 0);
 
-    
     void AddCombinedImageSampler(
         VkDescriptorImageInfo * imageInfoList, 
         uint32_t imageInfoCount, 
@@ -25,6 +24,8 @@ public:
     void AddSampler(VkDescriptorImageInfo const & samplerInfo, uint32_t offset = 0);
     
     void AddImage(VkDescriptorImageInfo const * imageInfoList, uint32_t imageInfoCount, uint32_t offset = 0);
+
+    void AddStorageBuffer(VkDescriptorBufferInfo const & bufferInfo, uint32_t offset = 0);
 
     void UpdateDescriptorSets();
 

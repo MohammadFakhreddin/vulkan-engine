@@ -81,7 +81,7 @@ namespace MFA
                 node.skin = meshNode.skin > -1 ? &mSkins[meshNode.skin] : nullptr;
 
                 Matrix::CopyCellsToGlm(meshNode.transform, node.currentTransform);
-                Matrix::CopyCellsToGlm(meshNode.transform, node.previousTransform);
+                Matrix::CopyCellsToGlm(meshNode.transform, node.previousTransform);     // This variable is unused
             }
         }
 
@@ -136,7 +136,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::UniformBufferGroup const * DrawableVariant::GetUniformBuffer(char const * name)
+    RT::UniformBufferCollection const * DrawableVariant::GetUniformBuffer(char const * name)
     {
         auto const findResult = mUniformBuffers.find(name);
         if (findResult != mUniformBuffers.end())
@@ -149,7 +149,7 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     [[nodiscard]]
-    RT::UniformBufferGroup const & DrawableVariant::GetSkinJointsBuffer() const noexcept
+    RT::UniformBufferCollection const & DrawableVariant::GetSkinJointsBuffer() const noexcept
     {
         return mSkinsJointsBuffer;
     }
@@ -240,6 +240,11 @@ namespace MFA
 
         mRendererComponent->NotifyVariantDestroyed();
 
+        if (mStorageBuffer.isValid())
+        {
+            RF::DestroyStorageBuffer(mStorageBuffer);
+        }
+
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -308,6 +313,27 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    RT::StorageBufferCollection const & DrawableVariant::CreateStorageBuffer(
+        uint32_t const size,
+        uint32_t const count
+    )
+    {
+        MFA_ASSERT(mStorageBuffer.isValid() == false);
+        mStorageBuffer = RF::CreateStorageBuffer(size, count);
+        MFA_ASSERT(mStorageBuffer.isValid() == true);
+        return mStorageBuffer;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    RT::StorageBufferCollection const & DrawableVariant::GetStorageBuffer() const
+    {
+        MFA_ASSERT(mStorageBuffer.isValid());
+        return mStorageBuffer;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void DrawableVariant::updateAnimation(float const deltaTimeInSec, bool isVisible)
     {
         using Animation = AS::Mesh::Animation;
@@ -329,14 +355,21 @@ namespace MFA
                     auto const & sampler = activeAnimation.samplers[channel.samplerIndex];
                     auto & node = mNodes[channel.nodeIndex];
 
-                    for (size_t i = 0; i < sampler.inputAndOutput.size() - 1; i++)
+                    // Just caching the input index to reduce required loop count
+                    auto & inputIndex = mAnimationInputIndex[channel.samplerIndex];
+                    if (inputIndex >= sampler.inputAndOutput.size() - 1)
+                    {
+                        inputIndex = 0;
+                    }
+
+                    for (size_t k = 0; k < sampler.inputAndOutput.size() - 1; k++)
                     {
                         MFA_ASSERT(sampler.interpolation == Animation::Interpolation::Linear);
 
-                        auto const & previousInput = sampler.inputAndOutput[i].input;
-                        auto const & previousOutput = sampler.inputAndOutput[i].output;
-                        auto const & nextInput = sampler.inputAndOutput[i + 1].input;
-                        auto const & nextOutput = sampler.inputAndOutput[i + 1].output;
+                        auto const & previousInput = sampler.inputAndOutput[inputIndex].input;
+                        auto const & previousOutput = sampler.inputAndOutput[inputIndex].output;
+                        auto const & nextInput = sampler.inputAndOutput[inputIndex + 1].input;
+                        auto const & nextOutput = sampler.inputAndOutput[inputIndex + 1].output;
                         // Get the input keyframe values for the current time stamp
                         if (mActiveAnimationTimeInSec >= previousInput && mActiveAnimationTimeInSec <= nextInput)
                         {
@@ -360,7 +393,7 @@ namespace MFA
                                 nextRotation.z = nextOutput[2];
                                 nextRotation.w = nextOutput[3];
 
-                                node.currentRotation = glm::normalize(glm::slerp(previousRotation, nextRotation, fraction));
+                                node.currentRotation = glm::slerp(previousRotation, nextRotation, fraction);
                             }
                             else if (channel.path == Animation::Path::Scale)
                             {
@@ -374,6 +407,13 @@ namespace MFA
                             node.isCachedDataValid = false;
 
                             break;
+                        } else
+                        {
+                            inputIndex += 1;
+                            if (inputIndex >= sampler.inputAndOutput.size() - 1)
+                            {
+                                inputIndex = 0;
+                            }
                         }
                     }
                 }
@@ -443,7 +483,7 @@ namespace MFA
                             nextRotation.z = nextOutput[2];
                             nextRotation.w = nextOutput[3];
 
-                            node.previousRotation = glm::normalize(glm::slerp(previousRotation, nextRotation, fraction));
+                            node.previousRotation = glm::slerp(previousRotation, nextRotation, fraction);
                         }
                         else if (channel.path == Animation::Path::Scale)
                         {
@@ -575,7 +615,7 @@ namespace MFA
         {
             auto const fraction = (mAnimationTransitionDurationInSec - mAnimationRemainingTransitionDurationInSec) / mAnimationTransitionDurationInSec;
             translate = glm::mix(node.previousTranslate, translate, fraction);
-            rotation = glm::normalize(glm::slerp(node.previousRotation, rotation, fraction));
+            rotation = glm::slerp(node.previousRotation, rotation, fraction);
             scale = glm::mix(node.previousScale, scale, fraction);
         }
         currentTransform = glm::translate(currentTransform, translate);
@@ -676,13 +716,13 @@ namespace MFA
         VkDescriptorSetLayout descriptorSetLayout
     )
     {
-        MFA_ASSERT(mIsDescriptorSetGroupValid == false);
+        MFA_ASSERT(mDescriptorSetGroup.IsValid() == false);
         mDescriptorSetGroup = RF::CreateDescriptorSets(
             descriptorPool,
             descriptorSetCount,
             descriptorSetLayout
         );
-        mIsDescriptorSetGroupValid = true;
+        MFA_ASSERT(mDescriptorSetGroup.IsValid() == true);
         return mDescriptorSetGroup;
     }
 
@@ -690,7 +730,7 @@ namespace MFA
 
     RT::DescriptorSetGroup const & DrawableVariant::GetDescriptorSetGroup() const
     {
-        MFA_ASSERT(mIsDescriptorSetGroupValid == true);
+        MFA_ASSERT(mDescriptorSetGroup.IsValid() == true);
         return mDescriptorSetGroup;
     }
 

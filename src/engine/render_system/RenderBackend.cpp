@@ -607,7 +607,7 @@ void TransferImageLayout(
 
 //-------------------------------------------------------------------------------------------------
 
-RT::BufferGroup CreateBuffer(
+RT::BufferAndMemory CreateBuffer(
     VkDevice device,
     VkPhysicalDevice physicalDevice,
     VkDeviceSize const size,
@@ -618,7 +618,7 @@ RT::BufferGroup CreateBuffer(
     MFA_ASSERT(device != nullptr);
     MFA_ASSERT(physicalDevice != nullptr);
 
-    RT::BufferGroup bufferGroup{};
+    RT::BufferAndMemory bufferGroup{};
 
     VkBufferCreateInfo buffer_info{};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -692,7 +692,7 @@ void CopyBuffer(
 
 void DestroyBuffer(
     VkDevice device,
-    RT::BufferGroup & bufferGroup
+    RT::BufferAndMemory & bufferGroup
 )
 {
     MFA_ASSERT(device != nullptr);
@@ -2090,7 +2090,7 @@ VkShaderStageFlagBits ConvertAssetShaderStageToGpu(AssetSystem::ShaderStage cons
 
 //-------------------------------------------------------------------------------------------------
 
-RT::BufferGroup CreateVertexBuffer(
+RT::BufferAndMemory CreateVertexBuffer(
     VkDevice device,
     VkPhysicalDevice physicalDevice,
     VkCommandPool commandPool,
@@ -2139,7 +2139,7 @@ RT::BufferGroup CreateVertexBuffer(
 
 void DestroyVertexBuffer(
     VkDevice device,
-    RT::BufferGroup & vertexBufferGroup
+    RT::BufferAndMemory & vertexBufferGroup
 )
 {
     DestroyBuffer(device, vertexBufferGroup);
@@ -2147,7 +2147,7 @@ void DestroyVertexBuffer(
 
 //-------------------------------------------------------------------------------------------------
 
-RT::BufferGroup CreateIndexBuffer(
+RT::BufferAndMemory CreateIndexBuffer(
     VkDevice device,
     VkPhysicalDevice physicalDevice,
     VkCommandPool commandPool,
@@ -2196,7 +2196,7 @@ RT::BufferGroup CreateIndexBuffer(
 
 void DestroyIndexBuffer(
     VkDevice device,
-    RT::BufferGroup & indexBufferGroup
+    RT::BufferAndMemory & indexBufferGroup
 )
 {
     DestroyBuffer(device, indexBufferGroup);
@@ -2209,7 +2209,7 @@ void CreateUniformBuffer(
     VkPhysicalDevice physicalDevice,
     uint32_t const buffersCount,
     VkDeviceSize const buffersSize,
-    RT::BufferGroup * outUniformBuffers
+    RT::BufferAndMemory * outUniformBuffers
 )
 {
     MFA_ASSERT(outUniformBuffers != nullptr);
@@ -2229,7 +2229,7 @@ void CreateUniformBuffer(
 
 void UpdateBufferGroup(
     VkDevice device,
-    RT::BufferGroup const & bufferGroup,
+    RT::BufferAndMemory const & bufferGroup,
     CBlob const data
 )
 {
@@ -2238,12 +2238,12 @@ void UpdateBufferGroup(
 
 //-------------------------------------------------------------------------------------------------
 
-void DestroyBufferGroup(
+void DestroyBufferAndMemory(
     VkDevice device,
-    RT::BufferGroup & bufferGroup
+    RT::BufferAndMemory & bufferAndMemory
 )
 {
-    DestroyBuffer(device, bufferGroup);
+    DestroyBuffer(device, bufferAndMemory);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2253,7 +2253,7 @@ void CreateStorageBuffer(
     VkPhysicalDevice physicalDevice,
     uint32_t const buffersCount,
     VkDeviceSize const buffersSize,
-    RT::BufferGroup * outStorageBuffer
+    RT::BufferAndMemory * outStorageBuffer
 )
 {
     MFA_ASSERT(outStorageBuffer != nullptr);
@@ -2277,7 +2277,7 @@ VkDescriptorPool CreateDescriptorPool(
 )
 {
     std::vector<VkDescriptorPoolSize> poolSizes{};
-    // TODO Check if both of these variables must have same value as maxSets
+    // TODO Check if both of these variables must have same value as maxSets // Maybe I have to ask each of separately
     {// Uniform buffers
         VkDescriptorPoolSize poolSize;
         poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -2299,6 +2299,12 @@ VkDescriptorPool CreateDescriptorPool(
     {// Sampler
         VkDescriptorPoolSize poolSize;
         poolSize.type = VK_DESCRIPTOR_TYPE_SAMPLER;
+        poolSize.descriptorCount = maxSets;
+        poolSizes.emplace_back(poolSize);
+    }
+    {// Storage buffer
+        VkDescriptorPoolSize poolSize;
+        poolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         poolSize.descriptorCount = maxSets;
         poolSizes.emplace_back(poolSize);
     }
@@ -2582,7 +2588,7 @@ VkResult AcquireNextImage(
 
 void BindVertexBuffer(
     VkCommandBuffer commandBuffer,
-    RT::BufferGroup const & vertexBuffer,
+    RT::BufferAndMemory const & vertexBuffer,
     VkDeviceSize offset
 )
 {
@@ -2599,7 +2605,7 @@ void BindVertexBuffer(
 
 void BindIndexBuffer(
     VkCommandBuffer commandBuffer,
-    RT::BufferGroup const & indexBuffer,
+    RT::BufferAndMemory const & indexBuffer,
     VkDeviceSize offset,
     VkIndexType indexType
 )
@@ -2796,6 +2802,29 @@ void PipelineBarrier(
         destinationStateMask,
         0, 0, nullptr, 0, nullptr, 1,
         &memoryBarrier
+    );
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void PipelineBarrier(
+    VkCommandBuffer commandBuffer,
+    VkPipelineStageFlags sourceStageMask,
+    VkPipelineStageFlags destinationStateMask,
+    VkBufferMemoryBarrier const & bufferMemoryBarrier
+)
+{
+    vkCmdPipelineBarrier(
+        commandBuffer,
+        sourceStageMask,
+        destinationStateMask,
+        0,
+        0,
+        nullptr,
+        1,
+        &bufferMemoryBarrier,
+        0,
+        nullptr
     );
 }
 

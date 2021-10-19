@@ -188,7 +188,7 @@ void Demo3rdPersonScene::Init()
 
             entity->AddComponent<ColorComponent>(glm::vec3(0.0f, 0.0f, 1.0f));
 
-            entity->SetActive(true);
+            entity->SetActive(false);
 
             EntitySystem::InitEntity(entity);
         }

@@ -41,7 +41,7 @@ public:
     [[nodiscard]]
     RT::GpuModel const & GetGpuModel() const;
 
-    [[nodiscard]] RT::UniformBufferGroup const & GetPrimitivesBuffer() const noexcept;
+    [[nodiscard]] RT::UniformBufferCollection const & GetPrimitivesBuffer() const noexcept;
 
     [[nodiscard]]
     uint32_t GetPrimitiveCount() const noexcept {
@@ -67,7 +67,7 @@ private:
 
     std::string mName {};
 
-    RT::UniformBufferGroup mPrimitivesBuffer;
+    RT::UniformBufferCollection mPrimitivesBuffer;
 
     RT::GpuModel const & mGpuModel;
     

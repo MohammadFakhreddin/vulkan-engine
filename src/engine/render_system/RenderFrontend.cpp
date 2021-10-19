@@ -436,19 +436,6 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    //// TODO Not a good overload!
-    //RT::DescriptorSetGroup CreateDescriptorSets(VkDescriptorSetLayout descriptorSetLayout)
-    //{
-    //    return RB::CreateDescriptorSet(
-    //        state->logicalDevice.device,
-    //        state->descriptorPool,
-    //        descriptorSetLayout,
-    //        state->swapChainImageCount
-    //    );
-    //}
-
-    //-------------------------------------------------------------------------------------------------
-
     RT::DescriptorSetGroup CreateDescriptorSets(
         VkDescriptorPool descriptorPool,
         uint32_t const descriptorSetCount,
@@ -466,10 +453,10 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::UniformBufferGroup CreateUniformBuffer(size_t const bufferSize, uint32_t const count)
+    RT::UniformBufferCollection CreateUniformBuffer(size_t const bufferSize, uint32_t const count)
     {
 
-        std::vector<RT::BufferGroup> buffers(count);
+        std::vector<RT::BufferAndMemory> buffers(count);
         RB::CreateUniformBuffer(
             state->logicalDevice.device,
             state->physicalDevice,
@@ -477,7 +464,7 @@ namespace MFA::RenderFrontend
             bufferSize,
             buffers.data()
         );
-        RT::UniformBufferGroup uniformBufferGroup{
+        RT::UniformBufferCollection uniformBufferGroup{
             .buffers = buffers,
             .bufferSize = bufferSize,
         };
@@ -487,24 +474,24 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     void UpdateUniformBuffer(
-        RT::BufferGroup const & uniformBuffer,
+        RT::BufferAndMemory const & buffer,
         CBlob const data
     )
     {
         RB::UpdateBufferGroup(
             state->logicalDevice.device,
-            uniformBuffer,
+            buffer,
             data
         );
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void DestroyUniformBuffer(RT::UniformBufferGroup & uniformBuffer)
+    void DestroyUniformBuffer(RT::UniformBufferCollection & uniformBuffer)
     {
         for (auto & bufferGroup : uniformBuffer.buffers)
         {
-            RB::DestroyBufferGroup(
+            RB::DestroyBufferAndMemory(
                 state->logicalDevice.device,
                 bufferGroup
             );
@@ -513,7 +500,53 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::BufferGroup CreateVertexBuffer(CBlob const verticesBlob)
+    RT::StorageBufferCollection CreateStorageBuffer(size_t const bufferSize, uint32_t const count)
+    {
+        std::vector<RT::BufferAndMemory> buffers(count);
+        
+        RB::CreateStorageBuffer(
+            state->logicalDevice.device,
+            state->physicalDevice,
+            count,
+            bufferSize,
+            buffers.data()
+        );
+
+        RT::StorageBufferCollection uniformBufferGroup{
+            .buffers = buffers,
+            .bufferSize = bufferSize,
+        };
+
+        return uniformBufferGroup;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void UpdateStorageBuffer(RT::BufferAndMemory const & buffer, CBlob data)
+    {
+        RB::UpdateBufferGroup(
+            state->logicalDevice.device,
+            buffer,
+            data
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void DestroyStorageBuffer(RT::StorageBufferCollection & storageBuffer)
+    {
+        for (auto & bufferAndMemory : storageBuffer.buffers)
+        {
+            RB::DestroyBufferAndMemory(
+                state->logicalDevice.device,
+                bufferAndMemory
+            );
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    RT::BufferAndMemory CreateVertexBuffer(CBlob const verticesBlob)
     {
         return RB::CreateVertexBuffer(
             state->logicalDevice.device,
@@ -526,7 +559,7 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::BufferGroup CreateIndexBuffer(CBlob const indicesBlob)
+    RT::BufferAndMemory CreateIndexBuffer(CBlob const indicesBlob)
     {
         return RB::CreateIndexBuffer(
             state->logicalDevice.device,
@@ -719,7 +752,7 @@ namespace MFA::RenderFrontend
 
     void BindVertexBuffer(
         RT::CommandRecordState const & drawPass,
-        RT::BufferGroup const & vertexBuffer,
+        RT::BufferAndMemory const & vertexBuffer,
         VkDeviceSize const offset
     )
     {
@@ -735,7 +768,7 @@ namespace MFA::RenderFrontend
 
     void BindIndexBuffer(
         RT::CommandRecordState const & drawPass,
-        RT::BufferGroup const & indexBuffer,
+        RT::BufferAndMemory const & indexBuffer,
         VkDeviceSize const offset,
         VkIndexType const indexType
     )
@@ -1250,6 +1283,23 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
+    void PipelineBarrier(
+        VkCommandBuffer commandBuffer,
+        VkPipelineStageFlags sourceStageMask,
+        VkPipelineStageFlags destinationStateMask,
+        VkBufferMemoryBarrier const & bufferMemoryBarrier
+    )
+    {
+        RB::PipelineBarrier(
+            commandBuffer,
+            sourceStageMask,
+            destinationStateMask,
+            bufferMemoryBarrier
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void SubmitQueue(
         VkCommandBuffer commandBuffer,
         VkSemaphore imageAvailabilitySemaphore,
@@ -1420,6 +1470,23 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
+    void ResetQueryPool(
+        RT::CommandRecordState const & recordState,
+        VkQueryPool queryPool,
+        uint32_t queryCount,
+        uint32_t firstQueryIndex
+    )
+    {
+        RB::ResetQueryPool(
+            GetGraphicCommandBuffer(recordState),
+            queryPool,
+            queryCount,
+            firstQueryIndex
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     VkCommandBuffer GetGraphicCommandBuffer(RT::CommandRecordState const & drawPass)
     {
         return state->graphicCommandBuffer[drawPass.frameIndex];
@@ -1508,23 +1575,6 @@ namespace MFA::RenderFrontend
     VkSemaphore getImageAvailabilitySemaphore(RT::CommandRecordState const & drawPass)
     {
         return state->syncObjects.imageAvailabilitySemaphores[drawPass.frameIndex];
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void ResetQueryPool(
-        RT::CommandRecordState const & recordState,
-        VkQueryPool queryPool,
-        uint32_t queryCount,
-        uint32_t firstQueryIndex
-    )
-    {
-        RB::ResetQueryPool(
-            GetGraphicCommandBuffer(recordState),
-            queryPool,
-            queryCount,
-            firstQueryIndex
-        );
     }
 
     //-------------------------------------------------------------------------------------------------

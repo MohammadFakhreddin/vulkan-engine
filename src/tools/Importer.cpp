@@ -1055,7 +1055,6 @@ static void GLTF_extractSubMeshes(
                 for (uint32_t i = 0; i < primitiveVertexCount; ++i) {
                     primitiveVertices.emplace_back();
                     auto & vertex = primitiveVertices.back();
-                    vertex.uniqueId = i;
                     if (hasPosition) {// Vertices
                         vertex.position[0] = positions[i * 3 + 0];
                         vertex.position[1] = positions[i * 3 + 1];

@@ -4,13 +4,13 @@
 
 //-------------------------------------------------------------------------------------------------
 
-bool MFA::RenderTypes::BufferGroup::isValid() const noexcept {
+bool MFA::RenderTypes::BufferAndMemory::isValid() const noexcept {
     return MFA_VK_VALID(buffer) && MFA_VK_VALID(memory);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::RenderTypes::BufferGroup::revoke() {
+void MFA::RenderTypes::BufferAndMemory::revoke() {
     MFA_VK_MAKE_NULL(buffer);
     MFA_VK_MAKE_NULL(memory);
 }
@@ -109,7 +109,22 @@ void MFA::RenderTypes::PipelineGroup::revoke() {
 
 //-------------------------------------------------------------------------------------------------
 
-bool MFA::RenderTypes::UniformBufferGroup::isValid() const noexcept {
+bool MFA::RenderTypes::UniformBufferCollection::isValid() const noexcept {
+    if(bufferSize <= 0 || buffers.empty() == true) {
+        return false;
+    }
+    for(auto const & buffer : buffers) {
+        if(buffer.isValid() == false) {
+            return false;
+        }
+    }
+    return true;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+bool MFA::RenderTypes::StorageBufferCollection::isValid() const noexcept
+{
     if(bufferSize <= 0 || buffers.empty() == true) {
         return false;
     }

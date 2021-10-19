@@ -110,6 +110,23 @@ void DescriptorSetSchema::AddImage(
 
 //-------------------------------------------------------------------------------------------------
 
+void DescriptorSetSchema::AddStorageBuffer(VkDescriptorBufferInfo const & bufferInfo, uint32_t offset)
+{
+    VkWriteDescriptorSet writeDescriptorSet {
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .dstSet = mDescriptorSet,
+        .dstBinding = static_cast<uint32_t>(mWriteInfo.size()) + offset,
+        .dstArrayElement = 0,
+        .descriptorCount = 1,
+        .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+        .pBufferInfo = &bufferInfo
+    };
+
+    mWriteInfo.emplace_back(writeDescriptorSet);
+}
+
+//-------------------------------------------------------------------------------------------------
+
 void DescriptorSetSchema::UpdateDescriptorSets() {
     isActive = false;
     RF::UpdateDescriptorSets(
