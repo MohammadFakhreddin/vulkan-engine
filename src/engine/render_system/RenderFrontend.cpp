@@ -208,6 +208,7 @@ namespace MFA::RenderFrontend
             state->vk_instance,
             DebugCallback
         );
+        MFA_LOG_INFO("Validation layers are enabled")
 #endif
 
         state->surface = RB::CreateWindowSurface(state->window, state->vk_instance);

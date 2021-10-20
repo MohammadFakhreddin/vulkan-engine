@@ -18,8 +18,6 @@ void MFA::DepthPrePass::internalInit()
     auto * displayRenderPass = RF::GetDisplayRenderPass();
     MFA_ASSERT(displayRenderPass != nullptr);
 
-    mDepthImages = &displayRenderPass->GetDepthImages();
-
     auto surfaceCapabilities = RF::GetSurfaceCapabilities();
     auto const swapChainExtent = VkExtent2D {
         .width = surfaceCapabilities.currentExtent.width,
@@ -80,7 +78,6 @@ void MFA::DepthPrePass::internalEndRenderPass(RT::CommandRecordState & drawPass)
 
 void MFA::DepthPrePass::internalResize()
 {
-    // Color image
     auto surfaceCapabilities = RF::GetSurfaceCapabilities();
     auto const swapChainExtend = VkExtent2D{
         .width = surfaceCapabilities.currentExtent.width,
@@ -101,7 +98,7 @@ void MFA::DepthPrePass::createRenderPass()
 {
 
     VkAttachmentDescription const depthAttachment{
-        .format = (*mDepthImages)[0].imageFormat,
+        .format = RF::GetDisplayRenderPass()->GetDepthImages()[0].imageFormat,
         .samples = RF::GetMaxSamplesCount(),
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -171,8 +168,7 @@ void MFA::DepthPrePass::createFrameBuffers(VkExtent2D const & extent)
     for (int i = 0; i < static_cast<int>(mFrameBuffers.size()); ++i)
     {
         std::vector<VkImageView> const attachments = {
-            //mColorImageGroup[i].imageView,
-            (*mDepthImages)[i].imageView
+            RF::GetDisplayRenderPass()->GetDepthImages()[i].imageView
         };
         mFrameBuffers[i] = RF::CreateFrameBuffer(
             mRenderPass,

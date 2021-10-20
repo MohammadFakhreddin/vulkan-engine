@@ -44,8 +44,6 @@ namespace MFA
         VkRenderPass mRenderPass {};
         std::vector<VkFramebuffer> mFrameBuffers {};
         
-        std::vector<RT::DepthImageGroup> const * mDepthImages = nullptr;
-
     };
 
 }

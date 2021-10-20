@@ -82,8 +82,15 @@ enum class Platform {
         #define MFA_RELEASE
     #endif
 #else
-    #define NDEBUG
-    #define MFA_RELEASE
+    #ifndef NDEBUG
+        #define NDEBUG
+    #endif
+    #ifdef _DEBUG
+        #undef _DEBUG
+    #endif
+    #if !defined(MFA_RELEASE)
+        #define MFA_RELEASE
+    #endif
 #endif
 
 using ScreenSize = int32_t;

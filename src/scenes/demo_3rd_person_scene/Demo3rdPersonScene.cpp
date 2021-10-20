@@ -158,7 +158,7 @@ void Demo3rdPersonScene::Init()
 
                     EntitySystem::InitEntity(entity);
 
-                    entity->SetActive(true);
+                    entity->SetActive(false);
                 }
             }
         }
@@ -188,7 +188,7 @@ void Demo3rdPersonScene::Init()
 
             entity->AddComponent<ColorComponent>(glm::vec3(0.0f, 0.0f, 1.0f));
 
-            entity->SetActive(false);
+            entity->SetActive(true);
 
             EntitySystem::InitEntity(entity);
         }
@@ -418,7 +418,10 @@ void Demo3rdPersonScene::OnResize()
     auto * camera = GetActiveCamera();
     MFA_ASSERT(camera != nullptr);
     camera->OnResize();
+
     updateProjectionBuffer();
+    mPbrPipeline.OnResize();
+    mDebugRenderPipeline.OnResize();
 }
 
 //-------------------------------------------------------------------------------------------------

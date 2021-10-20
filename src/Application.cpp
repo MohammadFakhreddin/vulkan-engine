@@ -90,24 +90,23 @@ void Application::run() {
 #ifdef __DESKTOP__
     Init();
     {// Main loop
-        bool quit = false;
         //Event handler
         MSDL::SDL_Event e;
         //While application is running
         uint32_t deltaTimeInMs = 0;
-        while (!quit)
+        while (true)
         {
             uint32_t const start_time = MSDL::SDL_GetTicks();
-            RenderFrame(static_cast<float>(deltaTimeInMs) / 1000.0f);
             //Handle events
             if (MSDL::SDL_PollEvent(&e) != 0)
             {
                 //User requests quit
                 if (e.type == MSDL::SDL_QUIT)
                 {
-                    quit = true;
+                    break;
                 }
             }
+            RenderFrame(static_cast<float>(deltaTimeInMs) / 1000.0f);
             deltaTimeInMs = MSDL::SDL_GetTicks() - start_time;
             if(TargetFpsDeltaTimeInMs > deltaTimeInMs){
                 MSDL::SDL_Delay( TargetFpsDeltaTimeInMs - deltaTimeInMs);
@@ -151,8 +150,8 @@ void Application::run() {
 
 void Application::RenderFrame(float const deltaTimeInSec) {
     IM::OnNewFrame(deltaTimeInSec);
-    RF::OnNewFrame(deltaTimeInSec);
     SceneManager::OnNewFrame(deltaTimeInSec);
+    RF::OnNewFrame(deltaTimeInSec);
 }
 
 #ifdef __ANDROID__
