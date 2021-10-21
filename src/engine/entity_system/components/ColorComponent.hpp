@@ -2,6 +2,8 @@
 
 #include "engine/entity_system/Component.hpp"
 
+#include <vec3.hpp>
+
 namespace MFA {
 
 class ColorComponent final : public Component
@@ -25,26 +27,16 @@ public:
 
     explicit ColorComponent(glm::vec3 const & color) : mColor(color) {}
 
-    void SetColor(float color[3])
-    {
-        Matrix::CopyCellsToGlm(color, mColor);
-    }
+    void SetColor(float color[3]);
 
-    void SetColor(glm::vec3 const & color)
-    {
-        mColor = color;
-    }
+    void SetColor(glm::vec3 const & color);
 
-    void GetColor(float outColor[3]) const
-    {
-        Matrix::CopyGlmToCells(mColor, outColor);
-    }
+    void GetColor(float outColor[3]) const;
 
     [[nodiscard]]
-    glm::vec3 const & GetColor() const
-    {
-        return mColor;
-    }
+    glm::vec3 const & GetColor() const;
+
+    void OnUI() override;
 
 private:
 

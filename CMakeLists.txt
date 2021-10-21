@@ -120,6 +120,7 @@ list(
     "src/engine/entity_system/components/SphereBoundingVolumeComponent.cpp"
 
     "src/engine/entity_system/components/ColorComponent.hpp"
+    "src/engine/entity_system/components/ColorComponent.cpp"
     
 
     # Job system

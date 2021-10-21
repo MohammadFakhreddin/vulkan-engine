@@ -62,6 +62,8 @@ namespace MFA
 
         bool UnRegisterChangeListener(Signal<>::ListenerId listenerId);
 
+        void OnUI() override;
+
     private:
 
         void computeTransform();

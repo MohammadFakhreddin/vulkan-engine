@@ -1,6 +1,7 @@
 #include "Component.hpp"
 
 #include "Entity.hpp"
+#include "engine/ui_system/UISystem.hpp"
 
 //-------------------------------------------------------------------------------------------------
 
@@ -55,5 +56,14 @@ bool MFA::Component::IsActive() const
 //-------------------------------------------------------------------------------------------------
 
 void MFA::Component::Update(float deltaTimeInSec) {}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::Component::OnUI()
+{
+    bool isActive = mIsActive;
+    UI::Checkbox("IsActive", &isActive);
+    SetActive(isActive);
+}
 
 //-------------------------------------------------------------------------------------------------

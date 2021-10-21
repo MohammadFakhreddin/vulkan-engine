@@ -5,6 +5,7 @@
 #include "engine/render_system/pipelines/BasePipeline.hpp"
 #include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
+#include "engine/ui_system/UISystem.hpp"
 
 namespace MFA
 {
@@ -49,6 +50,17 @@ namespace MFA
     void MeshRendererComponent::NotifyVariantDestroyed()
     {
         mVariant = nullptr;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void MeshRendererComponent::OnUI()
+    {
+        if (UI::TreeNode("MeshRenderer"))
+        {
+            RendererComponent::OnUI();
+            UI::TreePop();
+        }
     }
 
     //-------------------------------------------------------------------------------------------------

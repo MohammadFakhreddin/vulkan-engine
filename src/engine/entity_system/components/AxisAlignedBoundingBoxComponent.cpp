@@ -6,6 +6,7 @@
 #include "engine/render_system/drawable_essence/DrawableEssence.hpp"
 #include "engine/BedrockMatrix.hpp"
 #include "engine/camera/CameraComponent.hpp"
+#include "engine/ui_system/UISystem.hpp"
 
 namespace MFA
 {
@@ -47,11 +48,6 @@ namespace MFA
             auto const & mesh = essence->GetGpuModel().model.mesh;
             MFA_ASSERT(mesh.HasPositionMinMax());
 
-            /*::memcpy(&mPositionMax, mesh.GetPositionMax(), 3 * sizeof(float));
-            ::memcpy(&mPositionMin, mesh.GetPositionMin(), 3 * sizeof(float));
-            mPositionMin[3] = 1.0f;
-            mPositionMax[3] = 1.0f;*/
-
             auto * positionMax = mesh.GetPositionMax();
             auto * positionMin = mesh.GetPositionMin();
 
@@ -76,6 +72,18 @@ namespace MFA
         };
 
         return result;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void AxisAlignedBoundingBoxComponent::OnUI()
+    {
+        if (UI::TreeNode("AxisAlignedBoundingBox"))
+        {
+            BoundingVolumeComponent::OnUI();
+            UI::InputFloat3("Center", mCenter.data.data);
+            UI::InputFloat3("Extend", mCenter.data.data);
+        }
     }
 
     //-------------------------------------------------------------------------------------------------

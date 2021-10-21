@@ -6,6 +6,7 @@
 #include "TransformComponent.hpp"
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/EntitySystem.hpp"
+#include "engine/ui_system/UISystem.hpp"
 
 namespace MFA
 {
@@ -66,6 +67,17 @@ namespace MFA
     void BoundingVolumeRendererComponent::NotifyVariantDestroyed()
     {
         mVariant = nullptr;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void BoundingVolumeRendererComponent::OnUI()
+    {
+        if (UI::TreeNode("BoundingVolumeRenderer"))
+        {
+            RendererComponent::OnUI();
+            UI::TreePop();
+        }
     }
 
     //-------------------------------------------------------------------------------------------------

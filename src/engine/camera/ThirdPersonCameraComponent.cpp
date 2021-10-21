@@ -192,9 +192,7 @@ namespace MFA
 
     void ThirdPersonCameraComponent::OnUI()
     {
-        UI::BeginWindow(GetEntity()->GetName().c_str());
-        UI::InputFloat3("Position", reinterpret_cast<float *>(&mPosition));
-        UI::InputFloat3("EulerAngles", reinterpret_cast<float *>(&mEulerAngles));
+        UI::BeginWindow("ThirdPersonCamera");
         CameraComponent::OnUI();
         UI::EndWindow();
     }

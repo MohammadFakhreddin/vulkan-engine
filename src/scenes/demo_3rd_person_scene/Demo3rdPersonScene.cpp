@@ -81,117 +81,117 @@ void Demo3rdPersonScene::Init()
 
         EntitySystem::InitEntity(entity);
     }
+    // TODO We need prefab system!
     {// Soldier
         auto cpuModel = Importer::ImportGLTF(Path::Asset("models/warcraft_3_alliance_footmanfanmade/scene.gltf").c_str());
         mSoldierGpuModel = RF::CreateGpuModel(cpuModel);
         mPbrPipeline.CreateDrawableEssence("Soldier", mSoldierGpuModel);
+    }
+    {// Playable character
+        auto * entity = EntitySystem::CreateEntity("Playable soldier", GetRootEntity());
+        MFA_ASSERT(entity != nullptr);
 
-        {// Playable character
-            auto * entity = EntitySystem::CreateEntity("Playable soldier", GetRootEntity());
-            MFA_ASSERT(entity != nullptr);
+        mPlayerTransform = entity->AddComponent<TransformComponent>();
+        MFA_ASSERT(mPlayerTransform != nullptr);
 
-            mPlayerTransform = entity->AddComponent<TransformComponent>();
-            MFA_ASSERT(mPlayerTransform != nullptr);
+        float position[3]{ 0.0f, 2.0f, -5.0f };
+        float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
+        float scale[3]{ 1.0f, 1.0f, 1.0f };
+        mPlayerTransform->UpdateTransform(position, eulerAngles, scale);
 
-            float position[3]{ 0.0f, 2.0f, -5.0f };
-            float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
-            float scale[3]{ 1.0f, 1.0f, 1.0f };
-            mPlayerTransform->UpdateTransform(position, eulerAngles, scale);
+        mPlayerMeshRenderer = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "Soldier");
+        MFA_ASSERT(mPlayerMeshRenderer != nullptr);
+        mPlayerMeshRenderer->SetActive(true);
 
-            mPlayerMeshRenderer = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "Soldier");
-            MFA_ASSERT(mPlayerMeshRenderer != nullptr);
-            mPlayerMeshRenderer->SetActive(true);
+        entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
 
-            entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
+        auto * colorComponent = entity->AddComponent<ColorComponent>();
+        colorComponent->SetColor(glm::vec3{ 1.0f, 0.0f, 0.0f });
 
-            auto * colorComponent = entity->AddComponent<ColorComponent>();
-            colorComponent->SetColor(glm::vec3{ 1.0f, 0.0f, 0.0f });
+        auto * debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
+        debugRenderComponent->SetActive(false);
 
-            auto * debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
-            debugRenderComponent->SetActive(false);
+        mThirdPersonCamera = entity->AddComponent<ThirdPersonCameraComponent>(
+            FOV,
+            Z_NEAR,
+            Z_FAR
+        );
+        MFA_ASSERT(mThirdPersonCamera != nullptr);
+        float eulerAngle[3]{ -15.0f, 0.0f, 0.0f };
+        mThirdPersonCamera->SetDistanceAndRotation(3.0f, eulerAngle);
 
-            mThirdPersonCamera = entity->AddComponent<ThirdPersonCameraComponent>(
-                FOV,
-                Z_NEAR,
-                Z_FAR
-            );
-            MFA_ASSERT(mThirdPersonCamera != nullptr);
-            float eulerAngle[3]{ -15.0f, 0.0f, 0.0f };
-            mThirdPersonCamera->SetDistanceAndRotation(3.0f, eulerAngle);
+        SetActiveCamera(mThirdPersonCamera);
 
-            SetActiveCamera(mThirdPersonCamera);
-
-            EntitySystem::InitEntity(entity);
-        }
-        {// NPCs
-            for (uint32_t i = 0; i < 33; ++i)
+        EntitySystem::InitEntity(entity);
+    }
+    {// NPCs
+        for (uint32_t i = 0; i < 33; ++i)
+        {
+            for (uint32_t j = 0; j < 33; ++j)
             {
-                for (uint32_t j = 0; j < 33; ++j)
-                {
-                    auto * entity = EntitySystem::CreateEntity("Random soldier", GetRootEntity());
-                    MFA_ASSERT(entity != nullptr);
+                auto * entity = EntitySystem::CreateEntity("Random soldier", GetRootEntity());
+                MFA_ASSERT(entity != nullptr);
 
-                    auto * transformComponent = entity->AddComponent<TransformComponent>();
-                    MFA_ASSERT(transformComponent != nullptr);
+                auto * transformComponent = entity->AddComponent<TransformComponent>();
+                MFA_ASSERT(transformComponent != nullptr);
 
-                    float position[3]{ static_cast<float>(i) - 15.0f, 2.0f, static_cast<float>(j) - 30.0f };
-                    float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
-                    float scale[3]{ 1.0f, 1.0f, 1.0f };
-                    transformComponent->UpdateTransform(position, eulerAngles, scale);
+                float position[3]{ static_cast<float>(i) - 15.0f, 2.0f, static_cast<float>(j) - 30.0f };
+                float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
+                float scale[3]{ 1.0f, 1.0f, 1.0f };
+                transformComponent->UpdateTransform(position, eulerAngles, scale);
 
-                    auto * meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "Soldier");
-                    MFA_ASSERT(meshRendererComponent != nullptr);
+                auto * meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "Soldier");
+                MFA_ASSERT(meshRendererComponent != nullptr);
 
-                    meshRendererComponent->GetVariant()->SetActiveAnimation(
-                        "SwordAndShieldIdle",
-                        { .startTimeOffsetInSec = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX)) * 10 }
-                    );
-                    meshRendererComponent->SetActive(true);
+                meshRendererComponent->GetVariant()->SetActiveAnimation(
+                    "SwordAndShieldIdle",
+                    { .startTimeOffsetInSec = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX)) * 10 }
+                );
+                meshRendererComponent->SetActive(true);
 
-                    entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
+                entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
 
-                    auto * colorComponent = entity->AddComponent<ColorComponent>();
-                    colorComponent->SetColor(glm::vec3{ 0.0f, 0.0f, 1.0f });
+                auto * colorComponent = entity->AddComponent<ColorComponent>();
+                colorComponent->SetColor(glm::vec3{ 0.0f, 0.0f, 1.0f });
 
-                    auto * debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
-                    debugRenderComponent->SetActive(false);
+                auto * debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
+                debugRenderComponent->SetActive(false);
 
-                    EntitySystem::InitEntity(entity);
+                EntitySystem::InitEntity(entity);
 
-                    entity->SetActive(false);
-                }
+                entity->SetActive(false);
             }
         }
-        {// Map
-            auto cpuModel = Importer::ImportGLTF(Path::Asset("models/sponza/sponza.gltf").c_str());
-            mMapModel = RF::CreateGpuModel(cpuModel);
-            mPbrPipeline.CreateDrawableEssence("SponzaMap", mMapModel);
+    }
+    {// Map
+        auto cpuModel = Importer::ImportGLTF(Path::Asset("models/sponza/sponza.gltf").c_str());
+        mMapModel = RF::CreateGpuModel(cpuModel);
+        mPbrPipeline.CreateDrawableEssence("SponzaMap", mMapModel);
 
-            auto * entity = EntitySystem::CreateEntity("Sponza scene", GetRootEntity());
-            MFA_ASSERT(entity != nullptr);
+        auto * entity = EntitySystem::CreateEntity("Sponza scene", GetRootEntity());
+        MFA_ASSERT(entity != nullptr);
 
-            auto * transformComponent = entity->AddComponent<TransformComponent>();
-            MFA_ASSERT(transformComponent != nullptr);
+        auto * transformComponent = entity->AddComponent<TransformComponent>();
+        MFA_ASSERT(transformComponent != nullptr);
 
-            float position[3]{ 0.4f, 2.0f, -6.0f };
-            float eulerAngle[3]{ 180.0f, -90.0f, 0.0f };
-            float scale[3]{ 1.0f, 1.0f, 1.0f };
-            transformComponent->UpdateTransform(position, eulerAngle, scale);
+        float position[3]{ 0.4f, 2.0f, -6.0f };
+        float eulerAngle[3]{ 180.0f, -90.0f, 0.0f };
+        float scale[3]{ 1.0f, 1.0f, 1.0f };
+        transformComponent->UpdateTransform(position, eulerAngle, scale);
 
-            auto * meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "SponzaMap");
-            MFA_ASSERT(meshRendererComponent != nullptr);
+        auto * meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "SponzaMap");
+        MFA_ASSERT(meshRendererComponent != nullptr);
 
-            entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 5.0f, 0.0f), glm::vec3(15.0f, 6.0f, 9.0f));
+        entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 5.0f, 0.0f), glm::vec3(15.0f, 6.0f, 9.0f));
 
-            auto * debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
-            debugRenderComponent->SetActive(false);
+        auto * debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
+        debugRenderComponent->SetActive(false);
 
-            entity->AddComponent<ColorComponent>(glm::vec3(0.0f, 0.0f, 1.0f));
+        entity->AddComponent<ColorComponent>(glm::vec3(0.0f, 0.0f, 1.0f));
 
-            entity->SetActive(true);
+        entity->SetActive(true);
 
-            EntitySystem::InitEntity(entity);
-        }
+        EntitySystem::InitEntity(entity);
     }
     mUIRecordId = UI::Register([this]()->void { onUI(); });
     updateProjectionBuffer();

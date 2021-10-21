@@ -1,6 +1,7 @@
 #include "EntitySystem.hpp"
 
 #include "Entity.hpp"
+#include "engine/ui_system/UISystem.hpp"
 
 #include <vector>
 #include <memory>
@@ -19,8 +20,10 @@ struct EntityRef {
 };
 
 struct State {
-    std::vector<EntityRef> EntitiesRefsList {};
-    Signal<float> UpdateSignal {};
+    std::vector<EntityRef> entitiesRefsList {};
+    Signal<float> updateSignal {};
+    int uiListenerId = 0;
+    // TODO List of lights!
 };
 State * state = nullptr;
 
@@ -28,24 +31,44 @@ State * state = nullptr;
 
 void Init()
 {
-    state = new State();   
+    state = new State();
+    state->uiListenerId = UISystem::Register([]()->void{
+        OnUI();
+    });
 }
 
 //-------------------------------------------------------------------------------------------------
 
 void OnNewFrame(float deltaTimeInSec)
 {
-    state->UpdateSignal.Emit(deltaTimeInSec);
+    state->updateSignal.Emit(deltaTimeInSec);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void OnUI()
+{
+    UI::BeginWindow("Entity System");
+    UI::Text("Entities:");
+    for (auto const & entityRef : state->entitiesRefsList)
+    {
+        if (entityRef.Ptr->HasParent() == false)
+        {
+            entityRef.Ptr->OnUI();
+        }
+    }
+    UI::EndWindow();
 }
 
 //-------------------------------------------------------------------------------------------------
 
 void Shutdown()
 {
-    for (auto const & entityRef : state->EntitiesRefsList)
+    for (auto const & entityRef : state->entitiesRefsList)
     {
         entityRef.Ptr->Shutdown();
     }
+    UISystem::UnRegister(state->uiListenerId);
     delete state;
 }
 
@@ -53,24 +76,24 @@ void Shutdown()
 
 int SubscribeForUpdateEvent(std::function<void(float)> const & listener)
 {
-    return state->UpdateSignal.Register(listener);
+    return state->updateSignal.Register(listener);
 }
 
 //-------------------------------------------------------------------------------------------------
 
 bool UnSubscribeFromUpdateEvent(int const listenerId)
 {
-    return state->UpdateSignal.UnRegister(listenerId);
+    return state->updateSignal.UnRegister(listenerId);
 }
 
 //-------------------------------------------------------------------------------------------------
 
 Entity * CreateEntity(char const * name, Entity * parent)
 {
-    state->EntitiesRefsList.emplace_back(EntityRef {
+    state->entitiesRefsList.emplace_back(EntityRef {
         .Ptr = std::make_unique<Entity>(name, parent)
     });
-    return state->EntitiesRefsList.back().Ptr.get();
+    return state->entitiesRefsList.back().Ptr.get();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -80,7 +103,7 @@ void InitEntity(Entity * entity)
     MFA_ASSERT(entity != nullptr);
     entity->Init();
     if (entity->NeedUpdateEvent()) {
-        entity->mUpdateListenerId = state->UpdateSignal.Register([entity](float const deltaTime) -> void {
+        entity->mUpdateListenerId = state->updateSignal.Register([entity](float const deltaTime) -> void {
             entity->Update(deltaTime);
         });
     }
@@ -94,7 +117,7 @@ bool DestroyEntity(Entity * entity, bool const shouldNotifyParent)
     entity->Shutdown(shouldNotifyParent);
     if (entity->NeedUpdateEvent())
     {
-        state->UpdateSignal.UnRegister(entity->mUpdateListenerId);
+        state->updateSignal.UnRegister(entity->mUpdateListenerId);
     }
     for (auto * childEntity : entity->GetChildEntities())
     {
@@ -102,12 +125,12 @@ bool DestroyEntity(Entity * entity, bool const shouldNotifyParent)
         DestroyEntity(childEntity, false);
     }
 
-    for (int i = static_cast<int>(state->EntitiesRefsList.size()) - 1; i >= 0; --i)
+    for (int i = static_cast<int>(state->entitiesRefsList.size()) - 1; i >= 0; --i)
     {
-        if (state->EntitiesRefsList[i].Ptr.get() == entity)
+        if (state->entitiesRefsList[i].Ptr.get() == entity)
         {
-            state->EntitiesRefsList[i] = std::move(state->EntitiesRefsList.back());
-            state->EntitiesRefsList.pop_back();
+            state->entitiesRefsList[i] = std::move(state->entitiesRefsList.back());
+            state->entitiesRefsList.pop_back();
             return true;
         }
     }

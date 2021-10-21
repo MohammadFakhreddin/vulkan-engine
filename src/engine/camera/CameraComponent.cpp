@@ -12,7 +12,10 @@ namespace MFA
     void CameraComponent::OnUI()
     {
 
-        glm::vec3 eulerAngles = mEulerAngles;
+        glm::vec3 & eulerAngles = mEulerAngles;
+        UI::InputFloat3("EulerAngles", eulerAngles.data.data);
+
+        UI::InputFloat3("Position", mPosition.data.data);
 
         auto rotationMatrix = glm::identity<glm::mat4>();
         Matrix::Rotate(rotationMatrix, eulerAngles);
@@ -29,27 +32,27 @@ namespace MFA
         upDirection = upDirection * rotationMatrix;
         upDirection = glm::normalize(upDirection);
 
-        UI::InputFloat3("ForwardPlane", reinterpret_cast<float *>(&forwardDirection));
-        UI::InputFloat3("RightPlane", reinterpret_cast<float *>(&rightDirection));
-        UI::InputFloat3("UpPlane", reinterpret_cast<float *>(&upDirection));
+        UI::InputFloat3("ForwardPlane", forwardDirection.data.m128_f32);
+        UI::InputFloat3("RightPlane", rightDirection.data.m128_f32);
+        UI::InputFloat3("UpPlane", upDirection.data.m128_f32);
 
-        UI::InputFloat3("NearPlanePosition", reinterpret_cast<float *>(&mNearPlane.position));
-        UI::InputFloat3("NearPlaneDirection", reinterpret_cast<float *>(&mNearPlane.direction));
+        UI::InputFloat3("NearPlanePosition", mNearPlane.position.data.data);
+        UI::InputFloat3("NearPlaneDirection", mNearPlane.direction.data.data);
 
-        UI::InputFloat3("FarPlanePosition", reinterpret_cast<float *>(&mFarPlane.position));
-        UI::InputFloat3("FarPlaneDirection", reinterpret_cast<float *>(&mFarPlane.direction));
+        UI::InputFloat3("FarPlanePosition", mFarPlane.position.data.data);
+        UI::InputFloat3("FarPlaneDirection", mFarPlane.direction.data.data);
 
-        UI::InputFloat3("LeftPlanePosition", reinterpret_cast<float *>(&mLeftPlane.position));
-        UI::InputFloat3("LeftPlaneDirection", reinterpret_cast<float *>(&mLeftPlane.direction));
+        UI::InputFloat3("LeftPlanePosition", mLeftPlane.position.data.data);
+        UI::InputFloat3("LeftPlaneDirection", mLeftPlane.direction.data.data);
 
-        UI::InputFloat3("RightPlanePosition", reinterpret_cast<float *>(&mRightPlane.position));
-        UI::InputFloat3("RightPlaneDirection", reinterpret_cast<float *>(&mRightPlane.direction));
+        UI::InputFloat3("RightPlanePosition", mRightPlane.position.data.data);
+        UI::InputFloat3("RightPlaneDirection", mRightPlane.direction.data.data);
 
-        UI::InputFloat3("TopPlanePosition", reinterpret_cast<float *>(&mTopPlane.position));
-        UI::InputFloat3("TopPlaneDirection", reinterpret_cast<float *>(&mTopPlane.direction));
+        UI::InputFloat3("TopPlanePosition", mTopPlane.position.data.data);
+        UI::InputFloat3("TopPlaneDirection", mTopPlane.direction.data.data);
 
-        UI::InputFloat3("BottomPlanePosition", reinterpret_cast<float *>(&mBottomPlane.position));
-        UI::InputFloat3("BottomPlaneDirection", reinterpret_cast<float *>(&mBottomPlane.direction));
+        UI::InputFloat3("BottomPlanePosition", mBottomPlane.position.data.data);
+        UI::InputFloat3("BottomPlaneDirection", mBottomPlane.direction.data.data);
 
     }
 
@@ -100,12 +103,11 @@ namespace MFA
     {
         Component::Update(deltaTimeInSec);
 
-        glm::vec3 eulerAngles = mEulerAngles;//{180.0f + mEulerAngles[0], 180.0f + mEulerAngles[1], 180.0f + mEulerAngles[2]};
+        glm::vec3 eulerAngles = mEulerAngles;
 
         auto rotationMatrix = glm::identity<glm::mat4>();
         Matrix::Rotate(rotationMatrix, eulerAngles);
-        //auto rotationMatrix = GetTransform();
-
+        
         auto forwardDirection = -ForwardVector;
         forwardDirection = forwardDirection * rotationMatrix;
         forwardDirection = glm::normalize(forwardDirection);
@@ -153,31 +155,6 @@ namespace MFA
             frontFarDistanceVector + static_cast<glm::vec3>(upDirection * halfVSide),
             static_cast<glm::vec3>(rightDirection)
         ));
-
-        //MFA_ASSERT(mNearPlane.IsInFrontOfPlane((mFarPlane.position)));
-        //MFA_ASSERT(mFarPlane.IsInFrontOfPlane((mFarPlane.position)));
-        //MFA_ASSERT(mRightPlane.IsInFrontOfPlane((mFarPlane.position)));
-        //MFA_ASSERT(mLeftPlane.IsInFrontOfPlane((mFarPlane.position)));
-        //MFA_ASSERT(mTopPlane.IsInFrontOfPlane((mFarPlane.position)));
-        //MFA_ASSERT(mBottomPlane.IsInFrontOfPlane((mFarPlane.position)));
-
-        /*MFA_ASSERT(IsPointInsideFrustum(mNearPlane.position));
-        MFA_ASSERT(IsPointInsideFrustum(mFarPlane.position));
-        MFA_ASSERT(IsPointInsideFrustum(mRightPlane.position));
-        MFA_ASSERT(IsPointInsideFrustum(mLeftPlane.position));
-        MFA_ASSERT(IsPointInsideFrustum(mTopPlane.position));
-        MFA_ASSERT(IsPointInsideFrustum(mBottomPlane.position));
-        */
-        //frustum.nearFace = { cam.Position + zNear * cam.Front, cam.Front };
-        //frustum.farFace = { cam.Position + frontMultFar, -cam.Front };
-        //frustum.rightFace = { cam.Position,
-        //                        glm::cross(cam.Up,frontMultFar + cam.Right * halfHSide) };
-        //frustum.leftFace = { cam.Position,
-        //                        glm::cross(frontMultFar - cam.Right * halfHSide, cam.Up) };
-        //frustum.topFace = { cam.Position,
-        //                        glm::cross(cam.Right, frontMultFar - cam.Up * halfVSide) };
-        //frustum.bottomFace = { cam.Position,
-        //                        glm::cross(frontMultFar + cam.Up * halfVSide, cam.Right) };
     }
 
     //-------------------------------------------------------------------------------------------------

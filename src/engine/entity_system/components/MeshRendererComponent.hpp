@@ -34,6 +34,8 @@ namespace MFA
         
         void NotifyVariantDestroyed() override;
 
+        void OnUI() override;
+
     private:
 
         BasePipeline * mPipeline = nullptr;

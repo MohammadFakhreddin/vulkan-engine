@@ -41,7 +41,6 @@ namespace MFA {
         };
         [[nodiscard]]
         virtual DEBUG_CenterAndRadius DEBUG_GetCenterAndRadius() = 0;
-
         
     protected:
 

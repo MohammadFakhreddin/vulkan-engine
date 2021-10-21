@@ -101,6 +101,11 @@ public:
     [[nodiscard]]
     std::vector<Entity *> const & GetChildEntities() const;
 
+    void OnUI();
+
+    [[nodiscard]]
+    bool HasParent() const;
+
 private:
 
     void notifyANewChildAdded(Entity * entity);

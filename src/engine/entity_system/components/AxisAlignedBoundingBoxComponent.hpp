@@ -33,6 +33,8 @@ namespace MFA
         [[nodiscard]]
         DEBUG_CenterAndRadius DEBUG_GetCenterAndRadius() override;
 
+        void OnUI() override;
+
     protected:
 
         bool IsInsideCameraFrustum(CameraComponent const * camera) override;

@@ -1,188 +1,226 @@
 #include "Entity.hpp"
 
-namespace MFA {
+#include "engine/ui_system/UISystem.hpp"
 
-//-------------------------------------------------------------------------------------------------
-
-Entity::Entity(
-    char const * name,
-    Entity * parent
-)
-    : mName(name)
-    , mParent(parent)
+namespace MFA
 {
-}
 
-//-------------------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------------
 
-Entity::~Entity() = default;
+    Entity::Entity(
+        char const * name,
+        Entity * parent
+    )
+        : mName(name)
+        , mParent(parent)
+    {}
 
-//-------------------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------------
 
-void Entity::Init()
-{
-    if (mIsInitialized)
+    Entity::~Entity() = default;
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Entity::Init()
     {
-        return;
+        if (mIsInitialized)
+        {
+            return;
+        }
+        mIsInitialized = true;
+
+        if (mParent != nullptr)
+        {
+            mParent->notifyANewChildAdded(this);
+        }
+        mInitSignal.Emit();
     }
-    mIsInitialized = true;
 
-    if (mParent != nullptr)
+    //-------------------------------------------------------------------------------------------------
+    // TODO Support for priority between components
+    void Entity::Update(float deltaTimeInSec) const
     {
-        mParent->notifyANewChildAdded(this);
+        if (mIsActive == false)
+        {
+            return;
+        }
+        mUpdateSignal.Emit(deltaTimeInSec);
     }
-    mInitSignal.Emit();
-}
 
-//-------------------------------------------------------------------------------------------------
-// TODO Support for priority between components
-void Entity::Update(float deltaTimeInSec) const
-{
-    if (mIsActive == false)
+    //-------------------------------------------------------------------------------------------------
+
+    void Entity::Shutdown(bool shouldNotifyParent)
     {
-        return;
+        if (mIsInitialized == false)
+        {
+            return;
+        }
+        mIsInitialized = false;
+
+        mShutdownSignal.Emit();
+
+        if (shouldNotifyParent && mParent != nullptr)
+        {
+            mParent->notifyAChildRemoved(this);
+        }
+        //for (auto * childEntity : mChildEntities)
+        //{
+        //    if (childEntity != nullptr)
+        //    {
+        //        childEntity->Shutdown();
+        //    }
+        //}
     }
-    mUpdateSignal.Emit(deltaTimeInSec);
-}
 
-//-------------------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------------
 
-void Entity::Shutdown(bool shouldNotifyParent)
-{
-    if (mIsInitialized == false)
+    std::string const & Entity::GetName() const noexcept
     {
-        return;
+        return mName;
     }
-    mIsInitialized = false;
 
-    mShutdownSignal.Emit();
+    //-------------------------------------------------------------------------------------------------
 
-    if (shouldNotifyParent && mParent != nullptr)
+    void Entity::SetName(char const * name)
     {
-        mParent->notifyAChildRemoved(this);
+        MFA_ASSERT(name != nullptr && strlen(name) > 0);
+        mName = name;
     }
-    //for (auto * childEntity : mChildEntities)
-    //{
-    //    if (childEntity != nullptr)
-    //    {
-    //        childEntity->Shutdown();
-    //    }
-    //}
-}
 
-//-------------------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------------
 
-std::string const & Entity::GetName() const noexcept
-{
-    return mName;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void Entity::SetName(char const * name)
-{
-    MFA_ASSERT(name != nullptr && strlen(name) > 0);
-    mName = name;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-bool Entity::IsActive() const noexcept
-{
-    if (mIsActive == false)
+    bool Entity::IsActive() const noexcept
     {
-        return false;
-    }
-    Entity * parent = mParent;
-    while (parent != nullptr)
-    {
-        if (parent->IsActive() == false)
+        if (mIsActive == false)
         {
             return false;
         }
-        parent = mParent->GetParent();
-    }
-    return true;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void Entity::SetActive(bool const active)
-{
-    mIsActive = active;
-    // TODO We can register/unregister from entity system update event
-}
-
-//-------------------------------------------------------------------------------------------------
-
-std::vector<Entity *> const & Entity::GetChildEntities() const
-{
-    return mChildEntities;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void Entity::notifyANewChildAdded(Entity * entity)
-{
-    MFA_ASSERT(entity != nullptr);
-    MFA_ASSERT(findChild(entity) < 0);
-    mChildEntities.emplace_back(entity);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void Entity::notifyAChildRemoved(Entity * entity)
-{
-    auto const childIndex = findChild(entity);
-    if (MFA_VERIFY(childIndex >= 0))
-    {
-        mChildEntities[childIndex] = mChildEntities.back();
-        mChildEntities.pop_back();
-    }
-}
-
-//-------------------------------------------------------------------------------------------------
-
-int Entity::findChild(Entity * entity)
-{
-    MFA_ASSERT(entity != nullptr);
-    for (int i = 0; i < static_cast<int>(mChildEntities.size()); ++i)
-    {
-        if (mChildEntities[i] == entity)
+        Entity * parent = mParent;
+        while (parent != nullptr)
         {
-            return i;
+            if (parent->IsActive() == false)
+            {
+                return false;
+            }
+            parent = mParent->GetParent();
+        }
+        return true;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Entity::SetActive(bool const active)
+    {
+        mIsActive = active;
+        // TODO We can register/unregister from entity system update event
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::vector<Entity *> const & Entity::GetChildEntities() const
+    {
+        return mChildEntities;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Entity::OnUI()
+    {
+        if (UI::TreeNode(mName.c_str()))
+        {
+            UI::Checkbox("IsActive", &mIsActive);
+            if (UI::TreeNode("Components"))
+            {
+                for (auto const & keyValues : mComponents)
+                {
+                    keyValues.second->OnUI();
+                }
+                UI::TreePop();
+            }
+            if (UI::TreeNode("Children"))
+            {
+                for (auto * childEntity : mChildEntities)
+                {
+                    childEntity->OnUI();
+                }
+                UI::TreePop();
+            }
+            UI::TreePop();
         }
     }
-    return -1;
-}
 
-//-------------------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------------
 
-void Entity::linkComponent(Component * component)
-{
-    // Linked entity
-    component->mEntity = this;
-    // Init event
-    if ((component->RequiredEvents() & Component::EventTypes::InitEvent) > 0)
+    bool Entity::HasParent() const
     {
-        component->mInitEventId = mInitSignal.Register([component]()->void{component->Init();});
+        return mParent != nullptr;
     }
-    // Update event
-    if ((component->RequiredEvents() & Component::EventTypes::UpdateEvent) > 0)
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Entity::notifyANewChildAdded(Entity * entity)
     {
-        component->mUpdateEventId = mUpdateSignal.Register([component](float const deltaTimeInSec)->void{
+        MFA_ASSERT(entity != nullptr);
+        MFA_ASSERT(findChild(entity) < 0);
+        mChildEntities.emplace_back(entity);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Entity::notifyAChildRemoved(Entity * entity)
+    {
+        auto const childIndex = findChild(entity);
+        if (MFA_VERIFY(childIndex >= 0))
+        {
+            mChildEntities[childIndex] = mChildEntities.back();
+            mChildEntities.pop_back();
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    int Entity::findChild(Entity * entity)
+    {
+        MFA_ASSERT(entity != nullptr);
+        for (int i = 0; i < static_cast<int>(mChildEntities.size()); ++i)
+        {
+            if (mChildEntities[i] == entity)
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Entity::linkComponent(Component * component)
+    {
+        // Linked entity
+        component->mEntity = this;
+        // Init event
+        if ((component->RequiredEvents() & Component::EventTypes::InitEvent) > 0)
+        {
+            component->mInitEventId = mInitSignal.Register([component]()->void { component->Init(); });
+        }
+        // Update event
+        if ((component->RequiredEvents() & Component::EventTypes::UpdateEvent) > 0)
+        {
+            component->mUpdateEventId = mUpdateSignal.Register([component](float const deltaTimeInSec)->void
+    {
             component->Update(deltaTimeInSec);
-        });
-    }
-    // Shutdown event
-    if ((component->RequiredEvents() & Component::EventTypes::ShutdownEvent) > 0)
+            });
+        }
+        // Shutdown event
+        if ((component->RequiredEvents() & Component::EventTypes::ShutdownEvent) > 0)
+        {
+            component->mShutdownEventId = mShutdownSignal.Register([component]()->void
     {
-        component->mShutdownEventId = mShutdownSignal.Register([component]()->void{
-            component->Shutdown(); 
-        });
+            component->Shutdown();
+            });
+        }
     }
-}
 
-//-------------------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------------------
 
 }

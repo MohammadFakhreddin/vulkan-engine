@@ -77,6 +77,8 @@ public:
         return mEntity;
     }
 
+    virtual void OnUI();
+
 protected:
 
     explicit Component();
