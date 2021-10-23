@@ -41,18 +41,7 @@ namespace MFA
 
         void Init() override;
 
-        void Update(float deltaTimeInSec) override;
-
-        void GetTransform(float outTransformMatrix[16]) override;
-
-        [[nodiscard]]
-        glm::mat4 const & GetTransform() const override;
-
-        void ForcePosition(float position[3]) override;
-
-        void ForceRotation(float eulerAngles[3]) override;
-
-        void GetPosition(float outPosition[3]) const override;
+        void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState) override;
 
         void OnUI() override;
 

@@ -38,18 +38,18 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
     // TODO Support for priority between components
-    void Entity::Update(float deltaTimeInSec) const
+    void Entity::Update(float deltaTimeInSec, RT::CommandRecordState const & recordState) const
     {
         if (mIsActive == false)
         {
             return;
         }
-        mUpdateSignal.Emit(deltaTimeInSec);
+        mUpdateSignal.Emit(deltaTimeInSec, recordState);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void Entity::Shutdown(bool shouldNotifyParent)
+    void Entity::Shutdown(bool const shouldNotifyParent)
     {
         if (mIsInitialized == false)
         {
@@ -63,13 +63,6 @@ namespace MFA
         {
             mParent->notifyAChildRemoved(this);
         }
-        //for (auto * childEntity : mChildEntities)
-        //{
-        //    if (childEntity != nullptr)
-        //    {
-        //        childEntity->Shutdown();
-        //    }
-        //}
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -91,27 +84,19 @@ namespace MFA
 
     bool Entity::IsActive() const noexcept
     {
-        if (mIsActive == false)
-        {
-            return false;
-        }
-        Entity * parent = mParent;
-        while (parent != nullptr)
-        {
-            if (parent->IsActive() == false)
-            {
-                return false;
-            }
-            parent = mParent->GetParent();
-        }
-        return true;
+        return mIsActive && mIsParentActive;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void Entity::SetActive(bool const active)
+    void Entity::SetActive(bool const isActive)
     {
-        mIsActive = active;
+        if (isActive == mIsActive)
+        {
+            return;
+        }
+        mIsActive = isActive;
+        mActivationStatusChangeSignal.Emit(mIsActive);
         // TODO We can register/unregister from entity system update event
     }
 
@@ -128,7 +113,9 @@ namespace MFA
     {
         if (UI::TreeNode(mName.c_str()))
         {
-            UI::Checkbox("IsActive", &mIsActive);
+            bool isActive = mIsActive;
+            UI::Checkbox("IsActive", &isActive);
+            SetActive(isActive);
             if (UI::TreeNode("Components"))
             {
                 for (auto const & keyValues : mComponents)
@@ -158,10 +145,22 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    void Entity::OnParentActivationStatusChanged(bool const isActive)
+    {
+        mIsParentActive = isActive;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void Entity::notifyANewChildAdded(Entity * entity)
     {
         MFA_ASSERT(entity != nullptr);
         MFA_ASSERT(findChild(entity) < 0);
+        entity->mIsParentActive = IsActive();
+        entity->mParentActivationStatusChangeListenerId = mActivationStatusChangeSignal.Register([entity](bool isActive)->void
+ {
+     entity->OnParentActivationStatusChanged(isActive);
+        });
         mChildEntities.emplace_back(entity);
     }
 
@@ -169,6 +168,7 @@ namespace MFA
 
     void Entity::notifyAChildRemoved(Entity * entity)
     {
+        mActivationStatusChangeSignal.UnRegister(entity->mParentActivationStatusChangeListenerId);
         auto const childIndex = findChild(entity);
         if (MFA_VERIFY(childIndex >= 0))
         {
@@ -206,9 +206,11 @@ namespace MFA
         // Update event
         if ((component->RequiredEvents() & Component::EventTypes::UpdateEvent) > 0)
         {
-            component->mUpdateEventId = mUpdateSignal.Register([component](float const deltaTimeInSec)->void
-    {
-            component->Update(deltaTimeInSec);
+            component->mUpdateEventId = mUpdateSignal.Register([component](
+                float const deltaTimeInSec,
+                RT::CommandRecordState const & recordState)->void
+            {
+                component->Update(deltaTimeInSec, recordState);
             });
         }
         // Shutdown event
@@ -216,7 +218,7 @@ namespace MFA
         {
             component->mShutdownEventId = mShutdownSignal.Register([component]()->void
     {
-            component->Shutdown();
+        component->Shutdown();
             });
         }
     }

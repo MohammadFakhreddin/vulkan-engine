@@ -10,11 +10,13 @@ struct VSOut {
     float4 position : SV_POSITION;
 };
 
-struct DisplayViewProjectionData {
+struct CameraData {
     float4x4 viewProjection;
+    float3 cameraPosition;
+    float projectFarToNearDistance;
 };
 
-ConstantBuffer <DisplayViewProjectionData> viewProjectionBuffer: register(b0, space0);
+ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
 
 struct SkinJoints {
     float4x4 joints[];
@@ -67,7 +69,7 @@ VSOut main(VSIn input) {
     // Position
     float4 tempPosition = float4(input.position, 1.0f); // w is 1 because position is a coordinate
     float4 worldPosition = mul(skinModelMat, tempPosition);;
-    output.position = mul(viewProjectionBuffer.viewProjection, worldPosition);
+    output.position = mul(cameraBuffer.viewProjection, worldPosition);
 
     return output;
 }

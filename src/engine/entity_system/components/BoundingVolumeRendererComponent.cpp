@@ -39,9 +39,12 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BoundingVolumeRendererComponent::Update(float const deltaTimeInSec)
+    void BoundingVolumeRendererComponent::Update(
+        float const deltaTimeInSec,
+        RT::CommandRecordState const & recordState
+    )
     {
-        Component::Update(deltaTimeInSec);
+        Component::Update(deltaTimeInSec, recordState);
 
         auto const centerAndRadius = mBoundingVolumeComponent->DEBUG_GetCenterAndRadius();
         mChildTransformComponent->UpdateTransform(

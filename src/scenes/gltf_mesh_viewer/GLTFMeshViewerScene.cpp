@@ -134,10 +134,6 @@ void GLTFMeshViewerScene::Init() {
     
     mPbrPipeline.Init(&mSamplerGroup, &mErrorTexture, Z_NEAR, Z_FAR);
 
-    // Updating perspective mat once for entire application
-    // Perspective
-    updateProjectionBuffer();
-
     {// Point light
         auto cpuModel = MFA::ShapeGenerator::Sphere();
         mPointLightModel = RF::CreateGpuModel(cpuModel);
@@ -208,32 +204,20 @@ void GLTFMeshViewerScene::OnPreRender(float const deltaTimeInSec, MFA::RT::Comma
     
     {// LightViewBuffer
         mPbrPipeline.UpdateLightPosition(mLightPosition);
-
-        float cameraPosition[3];
-        mCamera->GetPosition(cameraPosition);
-        mPbrPipeline.UpdateCameraPosition(cameraPosition);
-
         mPbrPipeline.UpdateLightColor(mLightColor);
 
         mPointLightTransform->UpdatePosition(mLightPosition);
         mPointLightColor->SetColor(mLightColor);
     }
 
-    {// Updating PBR-Pipeline
-        // Model
-        float scale[3] {mModelScale, mModelScale, mModelScale};
-        selectedModel.transformComponent->UpdateTransform(
-            mModelPosition,
-            mModelRotation,
-            scale
-        );
-
-        // View
-        float viewData [16];
-        mCamera->GetTransform(viewData);
-        mPointLightPipeline.UpdateCameraView(viewData);
-        mPbrPipeline.UpdateCameraView(viewData);
-    }
+    // Model
+    float scale[3] {mModelScale, mModelScale, mModelScale};
+    selectedModel.transformComponent->UpdateTransform(
+        mModelPosition,
+        mModelRotation,
+        scale
+    );
+    
 
     mPbrPipeline.PreRender(drawPass, deltaTimeInSec);
     mPointLightPipeline.PreRender(drawPass, deltaTimeInSec);
@@ -365,11 +349,6 @@ void GLTFMeshViewerScene::Shutdown() {
 
     UI::UnRegister(mUIRegisterId);
 
-    //{// Disabling ui for current model
-    //    auto * selectedDrawable = mModelsRenderData[mSelectedModelIndex].variant;
-    //    MFA_ASSERT(selectedDrawable != nullptr);
-    //    selectedDrawable->SetActive(false);
-    //}
     mPbrPipeline.Shutdown();
     mPointLightPipeline.Shutdown();
     RF::DestroySampler(mSamplerGroup);
@@ -381,8 +360,7 @@ void GLTFMeshViewerScene::Shutdown() {
 //-------------------------------------------------------------------------------------------------
 
 void GLTFMeshViewerScene::OnResize() {
-    mCamera->OnResize();
-    updateProjectionBuffer();
+    mCamera->OnResize();    // TODO Maybe we should have resize event inside entity system as well
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -430,15 +408,6 @@ void GLTFMeshViewerScene::destroyModels() {
     MFA_ASSERT(mPointLightModel.valid);
     RF::DestroyGpuModel(mPointLightModel);
     Importer::FreeModel(mPointLightModel.model);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void GLTFMeshViewerScene::updateProjectionBuffer() {
-    float projectionData [16];
-    mCamera->GetProjection(projectionData);          // TODO It can return
-    mPbrPipeline.UpdateCameraProjection(projectionData);
-    mPointLightPipeline.UpdateCameraProjection(projectionData);
 }
 
 //-------------------------------------------------------------------------------------------------

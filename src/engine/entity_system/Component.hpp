@@ -1,5 +1,7 @@
 #pragma once
 
+#include "engine/render_system/RenderTypesFWD.hpp"
+
 #include <cstdint>
 
 namespace MFA
@@ -62,7 +64,7 @@ public:
     
     virtual void Init();
 
-    virtual void Update(float deltaTimeInSec);
+    virtual void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState);
     
     virtual void Shutdown();
 

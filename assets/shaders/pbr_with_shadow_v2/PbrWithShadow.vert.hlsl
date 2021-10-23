@@ -30,12 +30,13 @@ struct VSOut {
     float2 emissiveTexCoord: TEXCOORD5;
 };
 
-// TODO We can combine view and projection
-struct DisplayViewProjectionData {
+struct CameraData {
     float4x4 viewProjection;
+    float3 cameraPosition;
+    float projectFarToNearDistance;
 };
 
-ConstantBuffer <DisplayViewProjectionData> viewProjectionBuffer: register(b0, space0);
+ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
 
 struct SkinJoints {
     float4x4 joints[];
@@ -87,7 +88,7 @@ VSOut main(VSIn input) {
     // Position
     float4 worldPos = mul(skinModelMat, float4(input.position, 1.0f)); // w is 1 because position is a coordinate
     
-    output.position = mul(viewProjectionBuffer.viewProjection, worldPos);
+    output.position = mul(cameraBuffer.viewProjection, worldPos);
     
     output.worldPos = worldPos.xyz;
 

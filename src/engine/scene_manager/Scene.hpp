@@ -21,13 +21,15 @@ public:
     Scene (Scene && rhs) noexcept = delete;
     Scene & operator = (Scene const &) noexcept = delete;
 
-    virtual void OnPreRender(float deltaTimeInSec, RT::CommandRecordState & drawPass) {}
-    virtual void OnRender(float deltaTimeInSec, RT::CommandRecordState & drawPass) = 0;
+    virtual void OnPreRender(float deltaTimeInSec, RT::CommandRecordState & recordState);
+    virtual void OnRender(float deltaTimeInSec, RT::CommandRecordState & drawPass) {}
     virtual void OnPostRender(float deltaTimeInSec, RT::CommandRecordState & drawPass) {}
 
     virtual void OnResize() = 0;
     virtual void Init();   
     virtual void Shutdown();
+
+    // TODO List of light and camera => Question : Any light or active ones ?
 
     void SetActiveCamera(CameraComponent * camera);
 
@@ -37,12 +39,17 @@ public:
     [[nodiscard]]
     Entity * GetRootEntity() const;
 
+    [[nodiscard]]
+    RT::UniformBufferCollection * GetCameraBufferCollection() const;
+
 private:
 
     CameraComponent * mActiveCamera = nullptr;
-
+    std::unique_ptr<RT::UniformBufferCollection> mCameraBufferCollection {};
+    
     // Scene root entity
-    Entity * mRootEntity = nullptr;     
+    Entity * mRootEntity = nullptr;
+
 
     // TODO We need light container class
     //std::vector<PointLightComponent *> mPointLights {};

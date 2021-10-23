@@ -55,15 +55,16 @@ struct LightBuffer {
 
 ConstantBuffer <LightBuffer> lightBuffer : register (b2, space0);
 
-struct CameraBuffer {
+struct CameraData {
+    float4x4 viewProjection;
     float3 cameraPosition;
     float projectFarToNearDistance;
 };
 
-ConstantBuffer <CameraBuffer> cameraBuffer : register (b3, space0);
+ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
 
-sampler shadowMapSampler : register(s4, space0);
-TextureCube shadowMapTexture : register(t4, space0);
+sampler shadowMapSampler : register(s3, space0);
+TextureCube shadowMapTexture : register(t3, space0);
 
 sampler textureSampler : register(s1, space1);
 

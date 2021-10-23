@@ -101,13 +101,13 @@ void OnNewFrame(float const deltaTimeInSec) {
         state->LastActiveScene = state->ActiveScene;
     }
 
-    EntitySystem::OnNewFrame(deltaTimeInSec);
-    
     // Start of graphic record
     auto drawPass = RF::StartGraphicCommandBufferRecording();
     if (drawPass.isValid == false) {
         return;
     }
+
+    EntitySystem::OnNewFrame(deltaTimeInSec, drawPass);
 
     // Pre render
     if(state->ActiveScene >= 0) {

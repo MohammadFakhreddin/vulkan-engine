@@ -4,12 +4,15 @@
 #include "engine/BedrockMatrix.hpp"
 #include "tools/Importer.hpp"
 #include "engine/BedrockPath.hpp"
+#include "engine/camera/CameraComponent.hpp"
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 #include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/components/ColorComponent.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
+#include "engine/scene_manager/Scene.hpp"
+#include "engine/scene_manager/SceneManager.hpp"
 
 namespace MFA
 {
@@ -42,7 +45,6 @@ namespace MFA
 
         BasePipeline::Init();
 
-        createUniformBuffers();
         createDescriptorSetLayout();
         createPipeline();
         createDescriptorSets();
@@ -61,8 +63,7 @@ namespace MFA
 
         RF::DestroyPipelineGroup(mDrawPipeline);
         destroyDescriptorSetLayout();
-        destroyUniformBuffers();
-
+       
         BasePipeline::Shutdown();
     }
 
@@ -71,7 +72,6 @@ namespace MFA
     void DebugRendererPipeline::PreRender(RT::CommandRecordState & drawPass, float const deltaTime)
     {
         BasePipeline::PreRender(drawPass, deltaTime);
-        updateViewProjectionBuffer(drawPass);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -116,65 +116,6 @@ namespace MFA
                 }
             }
         }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void DebugRendererPipeline::UpdateCameraView(float cameraTransform[16])
-    {
-        if (Matrix::IsEqual(mCameraTransform, cameraTransform) == false)
-        {
-            Matrix::CopyCellsToGlm(cameraTransform, mCameraTransform);
-            mViewProjectionBufferDirtyCounter = RF::GetMaxFramesPerFlight();
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void DebugRendererPipeline::UpdateCameraProjection(float cameraProjection[16])
-    {
-        if (Matrix::IsEqual(mCameraProjection, cameraProjection) == false)
-        {
-            Matrix::CopyCellsToGlm(cameraProjection, mCameraProjection);
-            mViewProjectionBufferDirtyCounter = RF::GetMaxFramesPerFlight();
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void DebugRendererPipeline::updateViewProjectionBuffer(RT::CommandRecordState const & drawPass)
-    {
-        if (mViewProjectionBufferDirtyCounter <= 0)
-        {
-            return;
-        }
-        if (mViewProjectionBufferDirtyCounter == RF::GetMaxFramesPerFlight())
-        {
-            glm::mat4 const viewProjection = mCameraProjection * mCameraTransform;
-            Matrix::CopyGlmToCells(viewProjection, mViewProjectionData.viewProjection);
-        }
-        --mViewProjectionBufferDirtyCounter;
-        MFA_ASSERT(mViewProjectionBufferDirtyCounter >= 0);
-
-        RF::UpdateUniformBuffer(mViewProjectionBuffers.buffers[drawPass.frameIndex], CBlobAliasOf(mViewProjectionData));
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void DebugRendererPipeline::createUniformBuffers()
-    {
-        mViewProjectionBuffers = RF::CreateUniformBuffer(sizeof(ViewProjectionData), RF::GetMaxFramesPerFlight());
-        for (uint32_t i = 0; i < RF::GetMaxFramesPerFlight(); ++i)
-        {
-            RF::UpdateUniformBuffer(mViewProjectionBuffers.buffers[i], CBlobAliasOf(mViewProjectionData));
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void DebugRendererPipeline::destroyUniformBuffers()
-    {
-        RF::DestroyUniformBuffer(mViewProjectionBuffers);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -297,6 +238,11 @@ namespace MFA
             mDescriptorSetLayout
         );
 
+        // Idea: Maybe we can have active camera buffer inside scene manager
+        auto * activeScene = SceneManager::GetActiveScene();
+        MFA_ASSERT(activeScene != nullptr);
+        auto const * cameraBufferCollection = activeScene->GetCameraBufferCollection();
+        
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
 
@@ -311,9 +257,9 @@ namespace MFA
 
             // ViewProjectionTransform
             VkDescriptorBufferInfo bufferInfo{
-                .buffer = mViewProjectionBuffers.buffers[frameIndex].buffer,
+                .buffer = cameraBufferCollection->buffers[frameIndex].buffer,
                 .offset = 0,
-                .range = mViewProjectionBuffers.bufferSize,
+                .range = cameraBufferCollection->bufferSize,
             };
             descriptorSetSchema.AddUniformBuffer(bufferInfo);
 

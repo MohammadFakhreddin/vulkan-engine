@@ -3,8 +3,6 @@
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
 
-#include <glm/glm.hpp>
-
 namespace MFA {
     
 class DebugRendererPipeline final : public BasePipeline {
@@ -15,10 +13,6 @@ public:
         float baseColorFactor[3];
     };
     static_assert(sizeof(PushConstants) == 76);
-
-    struct ViewProjectionData {
-        alignas(64) float viewProjection[16];
-    };
 
     DebugRendererPipeline();
     ~DebugRendererPipeline() override;
@@ -36,10 +30,6 @@ public:
 
     void Render(RT::CommandRecordState & drawPass, float deltaTime) override;
     
-    void UpdateCameraView(float cameraTransform[16]);
-
-    void UpdateCameraProjection(float cameraProjection[16]);
-
     void OnResize() override {}
 
 private:
@@ -56,25 +46,13 @@ private:
 
     void createDescriptorSets();
 
-    void updateViewProjectionBuffer(RT::CommandRecordState const & drawPass);
-
-    void createUniformBuffers();
-
-    void destroyUniformBuffers();
-
     bool mIsInitialized = false;
 
     VkDescriptorSetLayout mDescriptorSetLayout {};
     RT::PipelineGroup mDrawPipeline {};
 
     RT::DescriptorSetGroup mDescriptorSetGroup {};
-
-    RT::UniformBufferCollection mViewProjectionBuffers {};
-
-    glm::mat4 mCameraTransform {};
-    glm::mat4 mCameraProjection {};
-    ViewProjectionData mViewProjectionData {};
-    uint32_t mViewProjectionBufferDirtyCounter = 0;
+    
 };
 
 }

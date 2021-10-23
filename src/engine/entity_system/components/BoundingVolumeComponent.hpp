@@ -27,7 +27,7 @@ namespace MFA {
 
         void Init() override;
 
-        void Update(float deltaTimeInSec) override;
+        void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState) override;
 
         [[nodiscard]]
         bool IsInFrustum() const;

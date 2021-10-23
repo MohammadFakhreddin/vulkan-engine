@@ -29,7 +29,7 @@ Demo3rdPersonScene::Demo3rdPersonScene()
 Demo3rdPersonScene::~Demo3rdPersonScene() = default;
 
 //-------------------------------------------------------------------------------------------------
-// TODO Make piplines global that start at beginning of application
+// TODO Make pipelines global that start at beginning of application or not ?
 void Demo3rdPersonScene::Init()
 {
     Scene::Init();
@@ -194,14 +194,14 @@ void Demo3rdPersonScene::Init()
         EntitySystem::InitEntity(entity);
     }
     mUIRecordId = UI::Register([this]()->void { onUI(); });
-    updateProjectionBuffer();
-
 }
 
 //-------------------------------------------------------------------------------------------------
 
 void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::CommandRecordState & drawPass)
 {
+    Scene::OnPreRender(deltaTimeInSec, drawPass);
+
     mDebugRenderPipeline.PreRender(drawPass, deltaTimeInSec);
     mPbrPipeline.PreRender(drawPass, deltaTimeInSec);
 }
@@ -210,6 +210,8 @@ void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::Comman
 
 void Demo3rdPersonScene::OnRender(float const deltaTimeInSec, MFA::RT::CommandRecordState & drawPass)
 {
+    Scene::OnRender(deltaTimeInSec, drawPass);
+
     mDebugRenderPipeline.Render(drawPass, deltaTimeInSec);
     mPbrPipeline.Render(drawPass, deltaTimeInSec);
 }
@@ -218,6 +220,8 @@ void Demo3rdPersonScene::OnRender(float const deltaTimeInSec, MFA::RT::CommandRe
 
 void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, MFA::RT::CommandRecordState & drawPass)
 {
+    Scene::OnPostRender(deltaTimeInSec, drawPass);
+
     mDebugRenderPipeline.PostRender(drawPass, deltaTimeInSec);
     mPbrPipeline.PostRender(drawPass, deltaTimeInSec);
 
@@ -355,21 +359,6 @@ void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, MFA::RT::Comma
 
         }
     }
-
-    // TODO Pipelines should get info of active camera by themselves
-    {// Read camera View to update pipeline buffer
-        auto * activeCamera = GetActiveCamera();
-
-        float viewData[16];
-        activeCamera->GetTransform(viewData);
-        mPbrPipeline.UpdateCameraView(viewData);
-        mDebugRenderPipeline.UpdateCameraView(viewData);
-
-        float cameraPosition[3];
-        activeCamera->GetPosition(cameraPosition);
-        mPbrPipeline.UpdateCameraPosition(cameraPosition);
-
-    }
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -419,22 +408,8 @@ void Demo3rdPersonScene::OnResize()
     MFA_ASSERT(camera != nullptr);
     camera->OnResize();
 
-    updateProjectionBuffer();
     mPbrPipeline.OnResize();
     mDebugRenderPipeline.OnResize();
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void Demo3rdPersonScene::updateProjectionBuffer()
-{
-    auto * camera = GetActiveCamera();
-    MFA_ASSERT(camera != nullptr);
-
-    float projectionData[16];
-    camera->GetProjection(projectionData);
-    mPbrPipeline.UpdateCameraProjection(projectionData);
-    mDebugRenderPipeline.UpdateCameraProjection(projectionData);
 }
 
 //-------------------------------------------------------------------------------------------------

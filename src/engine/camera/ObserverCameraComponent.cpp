@@ -38,10 +38,13 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ObserverCameraComponent::Update(float const deltaTimeInSec)
+    void ObserverCameraComponent::Update(
+        float deltaTimeInSec,
+        RT::CommandRecordState const & recordState
+    )
     {
 
-        CameraComponent::Update(deltaTimeInSec);
+        CameraComponent::Update(deltaTimeInSec, recordState);
 
         if (mIsTransformDirty)
         {
@@ -117,52 +120,7 @@ namespace MFA
         }
         updateTransform();
     }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void ObserverCameraComponent::GetTransform(float outTransformMatrix[16])
-    {
-        Matrix::CopyGlmToCells(mTransformMatrix, outTransformMatrix);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    glm::mat4 const & ObserverCameraComponent::GetTransform() const
-    {
-        return mTransformMatrix;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void ObserverCameraComponent::ForcePosition(float position[3])
-    {
-        if (Matrix::IsEqual(mPosition, position) == false)
-        {
-            Matrix::CopyCellsToGlm(position, mPosition);
-            updateTransform();
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void ObserverCameraComponent::ForceRotation(float eulerAngles[3])
-    {
-        if (Matrix::IsEqual(mEulerAngles, eulerAngles) == false)
-        {
-            Matrix::CopyCellsToGlm(eulerAngles, mEulerAngles);
-            updateTransform();
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void ObserverCameraComponent::GetPosition(float outPosition[3]) const
-    {
-        outPosition[0] = -1 * mPosition[0];
-        outPosition[1] = -1 * mPosition[1];
-        outPosition[2] = -1 * mPosition[2];
-    }
-
+    
     //-------------------------------------------------------------------------------------------------
 
     void ObserverCameraComponent::OnUI()

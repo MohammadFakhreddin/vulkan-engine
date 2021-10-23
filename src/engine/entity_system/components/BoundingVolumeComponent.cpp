@@ -13,9 +13,9 @@ void MFA::BoundingVolumeComponent::Init()
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::BoundingVolumeComponent::Update(float const deltaTimeInSec)
+void MFA::BoundingVolumeComponent::Update(float const deltaTimeInSec, RT::CommandRecordState const & recordState)
 {
-    Component::Update(deltaTimeInSec);
+    Component::Update(deltaTimeInSec, recordState);
 
     mIsInFrustum = IsInsideCameraFrustum(SceneManager::GetActiveScene()->GetActiveCamera());
 }

@@ -53,12 +53,6 @@ namespace MFA
             int placeholder0[2];
         };
 
-        struct DisplayViewProjectionData
-        {
-            alignas(64) float projection[16];
-        };
-        static_assert(sizeof(DisplayViewProjectionData) == 64);
-
         struct ShadowViewProjectionData
         {
             float viewMatrices[6][16];
@@ -71,12 +65,6 @@ namespace MFA
             float placeholder0;
             float lightColor[3];
             float placeholder1;
-        };
-
-        struct CameraData
-        {
-            float cameraPosition[3];
-            float projectFarToNearDistance;
         };
 
         explicit PBRWithShadowPipelineV2();
@@ -105,13 +93,7 @@ namespace MFA
 
         void OnResize() override;
 
-        void UpdateCameraView(const float view[16]);
-
-        void UpdateCameraProjection(const float projection[16]);
-
         void UpdateLightPosition(const float lightPosition[3]);
-
-        void UpdateCameraPosition(const float cameraPosition[3]);
 
         void UpdateLightColor(const float lightColor[3]);
 
@@ -153,14 +135,10 @@ namespace MFA
 
         void updateLightBuffer(RT::CommandRecordState const & drawPass);
 
-        void updateCameraBuffer(RT::CommandRecordState const & drawPass);
-
         void updateShadowViewProjectionBuffer(RT::CommandRecordState const & drawPass);
 
         void updateShadowViewProjectionData();
-
-        void updateDisplayViewProjectionBuffer(RT::CommandRecordState const & drawPass);
-
+        
         void retrieveOcclusionQueryResult(RT::CommandRecordState const & recordState);
 
         void performDepthPrePass(RT::CommandRecordState & recordState);
@@ -192,9 +170,7 @@ namespace MFA
         std::unique_ptr<OcclusionRenderPass> mOcclusionRenderPass;
 
 
-        RT::UniformBufferCollection mDisplayViewProjectionBuffer{};
         RT::UniformBufferCollection mLightBuffer{};
-        RT::UniformBufferCollection mCameraBuffer{};
         RT::UniformBufferCollection mShadowViewProjectionBuffer{};
 
         float mLightPosition[3]{};
@@ -209,13 +185,7 @@ namespace MFA
 
         ShadowViewProjectionData mShadowViewProjectionData{};
 
-        float mDisplayProjection[16]{};
-
-        float mDisplayView[16]{};
-
-        uint32_t mDisplayViewProjectionUpdateCounter = 0;
         uint32_t mLightBufferUpdateCounter = 0;
-        uint32_t mCameraBufferUpdateCounter = 0;
         uint32_t mShadowViewProjectionUpdateCounter = 0;
 
         struct OcclusionQueryData

@@ -17,11 +17,12 @@ struct LightBuffer {
 ConstantBuffer <LightBuffer> lightBuffer : register (b2, space0);
 
 struct CameraBuffer {
+    float4x4 viewProjection;
     float3 cameraPosition;
     float projectFarToNearDistance;
 };
 
-ConstantBuffer <CameraBuffer> cameraBuffer : register (b3, space0);
+ConstantBuffer <CameraBuffer> cameraBuffer : register (b0, space0);
 
 PSOut main(PSIn input) {
 

@@ -119,6 +119,12 @@ namespace MFA::RenderFrontend
     RT::UniformBufferCollection CreateUniformBuffer(size_t bufferSize, uint32_t count);
 
     void UpdateUniformBuffer(
+        RT::CommandRecordState const & recordState,
+        RT::UniformBufferCollection const & bufferCollection,
+        CBlob data
+    );
+
+    void UpdateUniformBuffer(
         RT::BufferAndMemory const & buffer,
         CBlob data
     );

@@ -82,7 +82,8 @@ namespace MFA
         {
             BoundingVolumeComponent::OnUI();
             UI::InputFloat3("Center", mCenter.data.data);
-            UI::InputFloat3("Extend", mCenter.data.data);
+            UI::InputFloat3("Extend", mExtend.data.data);
+            UI::TreePop();
         }
     }
 

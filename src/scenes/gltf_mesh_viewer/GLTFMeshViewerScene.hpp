@@ -84,8 +84,6 @@ private:
 
     void destroyModels();
 
-    void updateProjectionBuffer();
-    
     static constexpr float Z_NEAR = 0.1f;
     static constexpr float Z_FAR = 3000.0f;
 

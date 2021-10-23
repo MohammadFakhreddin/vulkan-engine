@@ -5,6 +5,7 @@
 #include "Component.hpp"
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockSignal.hpp"
+#include "engine/render_system/RenderTypesFWD.hpp"
 
 #include <memory>
 #include <unordered_map>
@@ -44,7 +45,7 @@ public:
 
     void Init();
 
-    void Update(float deltaTimeInSec) const;
+    void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState) const;
     
     void Shutdown(bool shouldNotifyParent = true);
 
@@ -96,7 +97,7 @@ public:
     [[nodiscard]]
     bool IsActive() const noexcept;
 
-    void SetActive(bool active);
+    void SetActive(bool isActive);
 
     [[nodiscard]]
     std::vector<Entity *> const & GetChildEntities() const;
@@ -105,6 +106,8 @@ public:
 
     [[nodiscard]]
     bool HasParent() const;
+
+    void OnParentActivationStatusChanged(bool isActive);
 
 private:
 
@@ -122,12 +125,16 @@ private:
     std::unordered_map<Component::ClassType, std::unique_ptr<Component>> mComponents {};
 
     Signal<> mInitSignal {};
-    Signal<float> mUpdateSignal {};
+    Signal<float, RT::CommandRecordState const &> mUpdateSignal {};
     Signal<> mShutdownSignal {};
+    Signal<bool> mActivationStatusChangeSignal {};
 
     bool mIsActive = true;
+    bool mIsParentActive = true;    // It should be true by default because not everyone have parent
 
     int mUpdateListenerId = 0;
+
+    int mParentActivationStatusChangeListenerId = 0;
 
     std::vector<Entity *> mChildEntities {};
 

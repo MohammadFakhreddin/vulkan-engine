@@ -48,24 +48,19 @@ namespace MFA
         mTransformComponent = GetEntity()->GetComponent<TransformComponent>();
         MFA_ASSERT(mTransformComponent != nullptr);
 
+        // TODO: Should camera use transform component for its stored values ?
         mTransformChangeListenerId = mTransformComponent->RegisterChangeListener([this]()->void
-    {
+        {
             mIsTransformDirty = true;
         });
 
-        OnResize();
-        updateTransform();
-
         IM::WarpMouseAtEdges(true);
-
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void ThirdPersonCameraComponent::Update(float const deltaTimeInSec)
+    void ThirdPersonCameraComponent::Update(float deltaTimeInSec, RT::CommandRecordState const & recordState)
     {
-        CameraComponent::Update(deltaTimeInSec);
-
         // Checking if rotation is changed
         auto const mouseDeltaX = IM::GetMouseDeltaX();
         auto const mouseDeltaY = IM::GetMouseDeltaY();
@@ -102,9 +97,10 @@ namespace MFA
             mPosition[0] = -variantPosition[0] - forwardDirection[0];
             mPosition[1] = -variantPosition[1] - forwardDirection[1] + 1.0f;
             mPosition[2] = -variantPosition[2] - forwardDirection[2];
-
-            updateTransform();
         }
+
+        CameraComponent::Update(deltaTimeInSec, recordState);
+
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -113,79 +109,6 @@ namespace MFA
     {
         CameraComponent::Shutdown();
         mTransformComponent->UnRegisterChangeListener(mTransformChangeListenerId);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void ThirdPersonCameraComponent::GetTransform(float outTransformMatrix[16])
-    {
-        Matrix::CopyGlmToCells(mTransform, outTransformMatrix);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    glm::mat4 const & ThirdPersonCameraComponent::GetTransform() const
-    {
-        return mTransform;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void ThirdPersonCameraComponent::ForcePosition(float position[3])
-    {
-        if (Matrix::IsEqual(mPosition, position) == false)
-        {
-            Matrix::CopyCellsToGlm(position, mPosition);
-            mIsTransformDirty = true;
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void ThirdPersonCameraComponent::ForceRotation(float eulerAngles[3])
-    {
-        if (Matrix::IsEqual(mPosition, eulerAngles) == false)
-        {
-            Matrix::CopyCellsToGlm(eulerAngles, mEulerAngles);
-            mIsTransformDirty = true;
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void ThirdPersonCameraComponent::GetPosition(float outPosition[3]) const
-    {
-        outPosition[0] = -1 * mPosition[0];
-        outPosition[1] = -1 * mPosition[1];
-        outPosition[2] = -1 * mPosition[2];
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void ThirdPersonCameraComponent::GetRotation(float outEulerAngles[3]) const
-    {
-        outEulerAngles[0] = mEulerAngles[0];
-        outEulerAngles[1] = mEulerAngles[1];
-        outEulerAngles[2] = mEulerAngles[2];
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void ThirdPersonCameraComponent::updateTransform()
-    {
-
-        MFA_ASSERT(mIsTransformDirty == true);
-
-        auto rotationMatrix = glm::identity<glm::mat4>();
-        Matrix::Rotate(rotationMatrix, mEulerAngles);
-
-        auto translateMatrix = glm::identity<glm::mat4>();
-        Matrix::Translate(translateMatrix, mPosition);
-
-        mTransform = rotationMatrix * translateMatrix;
-
-        mIsTransformDirty = false;
-
     }
 
     //-------------------------------------------------------------------------------------------------

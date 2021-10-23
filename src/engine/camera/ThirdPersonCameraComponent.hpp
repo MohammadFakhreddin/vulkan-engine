@@ -42,37 +42,19 @@ public:
 
     void Init() override;
 
-    void Update(float deltaTimeInSec) override;
+    void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState) override;
 
     void Shutdown() override;
-
-    void GetTransform(float outTransformMatrix[16]) override;
-
-    [[nodiscard]]
-    glm::mat4 const & GetTransform() const override;
-
-    void ForcePosition(float position[3]) override;
-
-    void ForceRotation(float eulerAngles[3]) override;
-
-    void GetPosition(float outPosition[3]) const override;
-
-    void GetRotation(float outEulerAngles[3]) const;
 
     void OnUI() override;
 
 private:
 
-    void updateTransform();
-
     TransformComponent * mTransformComponent = nullptr;
     int mTransformChangeListenerId = 0;
 
     float mDistance = 3.0f;
-    glm::mat4 mTransform {1};
     
-    bool mIsTransformDirty = true;
-
     float mRotationSpeed;
 
 };

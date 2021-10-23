@@ -62,8 +62,8 @@ namespace MFA::RenderFrontend
         uint32_t swapChainImageCount = 0;
         DisplayRenderPass displayRenderPass{};
         int nextEventListenerId = 0;
-        std::vector<VkCommandBuffer> graphicCommandBuffer {};
-        RT::SyncObjects syncObjects {};
+        std::vector<VkCommandBuffer> graphicCommandBuffer{};
+        RT::SyncObjects syncObjects{};
         uint8_t currentFrame = 0;
 #ifdef __DESKTOP__
         // CreateWindow
@@ -475,6 +475,17 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     void UpdateUniformBuffer(
+        RT::CommandRecordState const & recordState,
+        RT::UniformBufferCollection const & bufferCollection,
+        CBlob const data
+    )
+    {
+        UpdateStorageBuffer(bufferCollection.buffers[recordState.frameIndex], data);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void UpdateUniformBuffer(
         RT::BufferAndMemory const & buffer,
         CBlob const data
     )
@@ -504,7 +515,7 @@ namespace MFA::RenderFrontend
     RT::StorageBufferCollection CreateStorageBuffer(size_t const bufferSize, uint32_t const count)
     {
         std::vector<RT::BufferAndMemory> buffers(count);
-        
+
         RB::CreateStorageBuffer(
             state->logicalDevice.device,
             state->physicalDevice,
@@ -744,7 +755,7 @@ namespace MFA::RenderFrontend
             static_cast<uint32_t>(frequency),
             1,
             &descriptorSetGroup.descriptorSets[drawPass.frameIndex],
-            0, 
+            0,
             nullptr
         );
     }
@@ -1430,7 +1441,7 @@ namespace MFA::RenderFrontend
     }
 
     //-------------------------------------------------------------------------------------------------
-    
+
     void BeginQuery(
         RT::CommandRecordState const & drawPass,
         VkQueryPool queryPool,

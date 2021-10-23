@@ -18,12 +18,8 @@ namespace MFA::SceneManager
 
     [[nodiscard]]
     Scene * GetActiveScene();
-    /*void SetActiveCamera(CameraComponent * camera);
-    void RemoveActiveCamera(CameraComponent * camera);
-
-    [[nodiscard]]
-    CameraComponent const * GetActiveCamera();*/
     // TODO Directional light
-    // TODO Active lights
-
+    // TODO Point lights
+    // TODO Sfx lights
+    // TODO Camera components
 }

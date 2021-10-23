@@ -34,9 +34,12 @@ void MFA::Component::SetActive(bool const isActive)
     {
         if (mIsActive)
         {
-            mUpdateEventId = GetEntity()->mUpdateSignal.Register([this](float const deltaTimeInSec)->void
+            mUpdateEventId = GetEntity()->mUpdateSignal.Register([this](
+                float const deltaTimeInSec,
+                RT::CommandRecordState const & recordState
+            )->void
                 {
-                    Update(deltaTimeInSec);
+                    Update(deltaTimeInSec, recordState);
                 }
             );
         } else
@@ -55,7 +58,7 @@ bool MFA::Component::IsActive() const
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::Component::Update(float deltaTimeInSec) {}
+void MFA::Component::Update(float deltaTimeInSec, RT::CommandRecordState const & recordState) {}
 
 //-------------------------------------------------------------------------------------------------
 

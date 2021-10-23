@@ -2,6 +2,7 @@
 
 #include "engine/BedrockMatrix.hpp"
 #include "engine/entity_system/Component.hpp"
+#include "engine/render_system/RenderTypes.hpp"
 
 namespace MFA {
 
@@ -12,16 +13,26 @@ public:
     inline static const glm::vec4 RightVector {1.0f, 0.0f, 0.0f, 0.0f};
     inline static const glm::vec4 UpVector {0.0f, 1.0f, 0.0f, 0.0f};
 
+    struct CameraBufferData
+    {
+        float viewProjection[16];
+        float cameraPosition[3];
+        float projectFarToNearDistance;
+        
+    };
+    static_assert(sizeof(CameraBufferData) == 80);
+
     struct Plane
     {
         glm::vec3 direction;
         glm::vec3 position;
 
+        [[nodiscard]]
         bool IsInFrontOfPlane(glm::vec3 const & point, glm::vec3 const & extend) const;
 
     };
     
-    virtual ~CameraComponent() override = default;
+    ~CameraComponent() override = default;
 
     static uint8_t GetClassType(ClassType outComponentTypes[3])
     {
@@ -38,34 +49,39 @@ public:
         return EventTypes::InitEvent | EventTypes::UpdateEvent | EventTypes::ShutdownEvent;
     }
 
-    void Update(float deltaTimeInSec) override;
+    void Init() override;
+
+    void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState) override;
 
     void OnResize();
 
-    virtual void GetProjection(float outProjectionMatrix[16]);
+    void Shutdown() override;
 
-    [[nodiscard]]
-    virtual glm::mat4 const & GetProjection() const;
+    void ForcePosition(float position[3]);
 
-    virtual void GetTransform(float outTransformMatrix[16]) = 0;
+    void ForceRotation(float eulerAngles[3]);
 
-    [[nodiscard]]
-    virtual glm::mat4 const & GetTransform() const = 0;
+    void GetPosition(float outPosition[3]) const;
 
-    virtual void ForcePosition(float position[3]) = 0;
+    void GetRotation(float outEulerAngles[3]) const;
 
-    virtual void ForceRotation(float eulerAngles[3]) = 0;
-
-    virtual void OnUI();
-
-    virtual void GetPosition(float position[3]) const = 0;
+    void OnUI() override;
 
     [[nodiscard]]
     bool IsPointInsideFrustum(glm::vec3 const & point, glm::vec3 const & extend) const;
 
+    [[nodiscard]]
+    CameraBufferData const & GetCameraData() const;
+
+    bool IsCameraDataDirty();
+
 protected:
 
     explicit CameraComponent(float fieldOfView, float nearDistance, float farDistance);
+
+    void updateViewTransformMatrix();
+
+    void updateCameraBufferData();
 
     float const mFieldOfView;
     float const mNearDistance;
@@ -73,6 +89,8 @@ protected:
     float mAspectRatio = 0.0f;
 
     glm::mat4 mProjectionMatrix {};
+    glm::mat4 mViewMatrix {};
+    bool mIsTransformDirty = true;
 
     Plane mNearPlane {};
     Plane mFarPlane {};
@@ -83,7 +101,10 @@ protected:
 
     glm::vec3 mPosition {};
     glm::vec3 mEulerAngles {};
-    
+
+    uint32_t mCameraBufferUpdateCounter = 0;
+
+    CameraBufferData mCameraBufferData {};
 
 };
 

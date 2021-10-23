@@ -2,9 +2,13 @@
 
 #include "Entity.hpp"
 #include "engine/ui_system/UISystem.hpp"
+#include "engine/render_system/RenderTypes.hpp"
 
 #include <vector>
 #include <memory>
+
+#include "engine/scene_manager/Scene.hpp"
+#include "engine/scene_manager/SceneManager.hpp"
 
 // TODO This class will need optimization in future
 
@@ -21,9 +25,8 @@ struct EntityRef {
 
 struct State {
     std::vector<EntityRef> entitiesRefsList {};
-    Signal<float> updateSignal {};
+    Signal<float, RT::CommandRecordState const &> updateSignal {};
     int uiListenerId = 0;
-    // TODO List of lights!
 };
 State * state = nullptr;
 
@@ -39,9 +42,9 @@ void Init()
 
 //-------------------------------------------------------------------------------------------------
 
-void OnNewFrame(float deltaTimeInSec)
+void OnNewFrame(float deltaTimeInSec, RT::CommandRecordState const & recordState)
 {
-    state->updateSignal.Emit(deltaTimeInSec);
+    state->updateSignal.Emit(deltaTimeInSec, recordState);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -50,13 +53,19 @@ void OnUI()
 {
     UI::BeginWindow("Entity System");
     UI::Text("Entities:");
-    for (auto const & entityRef : state->entitiesRefsList)
+    auto * activeScene = SceneManager::GetActiveScene();
+    if (activeScene != nullptr)
+    {
+        auto * rootEntity = activeScene->GetRootEntity();
+        rootEntity->OnUI();
+    }
+    /* for (auto const & entityRef : state->entitiesRefsList)
     {
         if (entityRef.Ptr->HasParent() == false)
         {
             entityRef.Ptr->OnUI();
         }
-    }
+    }*/
     UI::EndWindow();
 }
 
@@ -74,7 +83,7 @@ void Shutdown()
 
 //-------------------------------------------------------------------------------------------------
 
-int SubscribeForUpdateEvent(std::function<void(float)> const & listener)
+int SubscribeForUpdateEvent(std::function<void(float, RT::CommandRecordState const & commandRecord)> const & listener)
 {
     return state->updateSignal.Register(listener);
 }
@@ -103,8 +112,11 @@ void InitEntity(Entity * entity)
     MFA_ASSERT(entity != nullptr);
     entity->Init();
     if (entity->NeedUpdateEvent()) {
-        entity->mUpdateListenerId = state->updateSignal.Register([entity](float const deltaTime) -> void {
-            entity->Update(deltaTime);
+        entity->mUpdateListenerId = state->updateSignal.Register([entity](
+            float const deltaTime,
+            RT::CommandRecordState const & recordState
+        ) -> void {
+            entity->Update(deltaTime, recordState);
         });
     }
 }

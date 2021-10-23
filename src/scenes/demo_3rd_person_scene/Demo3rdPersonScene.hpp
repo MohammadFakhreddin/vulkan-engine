@@ -34,8 +34,6 @@ public:
 
 private:
 
-    void updateProjectionBuffer();
-
     void onUI() const;
 
     static constexpr float Z_NEAR = 0.1f;

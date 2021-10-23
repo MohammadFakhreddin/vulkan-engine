@@ -11,6 +11,7 @@ namespace MFA
 
     void CameraComponent::OnUI()
     {
+        Component::OnUI();
 
         glm::vec3 & eulerAngles = mEulerAngles;
         UI::InputFloat3("EulerAngles", eulerAngles.data.data);
@@ -71,6 +72,25 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    CameraComponent::CameraBufferData const & CameraComponent::GetCameraData() const
+    {
+        return mCameraBufferData;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool CameraComponent::IsCameraDataDirty()
+    {
+        auto const isDirty = mCameraBufferUpdateCounter > 0;
+        if (isDirty)
+        {
+            --mCameraBufferUpdateCounter;
+        }
+        return isDirty;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     bool CameraComponent::Plane::IsInFrontOfPlane(glm::vec3 const & point, glm::vec3 const & extend) const
     {
         // Compute the projection interval radius of b onto L(t) = b.c + t * p.n
@@ -95,13 +115,24 @@ namespace MFA
         , mFarDistance(farDistance)
     {
         OnResize();
+
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void CameraComponent::Update(float const deltaTimeInSec)
+    void CameraComponent::Init()
     {
-        Component::Update(deltaTimeInSec);
+        Component::Init();
+        mCameraBufferUpdateCounter = RF::GetMaxFramesPerFlight();
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void CameraComponent::Update(float const deltaTimeInSec, RT::CommandRecordState const & recordState)
+    {
+        Component::Update(deltaTimeInSec, recordState);
+
+        updateViewTransformMatrix();
 
         glm::vec3 eulerAngles = mEulerAngles;
 
@@ -177,6 +208,8 @@ namespace MFA
             mFarDistance
         );
 
+        updateCameraBufferData();
+
         // TODO We should handle orientation change on android/IOS (UI shader might need a change)
         // https://android-developers.googleblog.com/2020/02/handling-device-orientation-efficiently.html
         //#ifdef __ANDROID__
@@ -199,18 +232,89 @@ namespace MFA
         //    glm::mat4::ConvertGmToCells(projectionMatrix, mProjectionMatrix.cells);
         //#endif
     }
+
     //-------------------------------------------------------------------------------------------------
 
-    void CameraComponent::GetProjection(float outProjection[16])
+    void CameraComponent::Shutdown()
     {
-        Matrix::CopyGlmToCells(mProjectionMatrix, outProjection);
+        Component::Shutdown();
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    glm::mat4 const & CameraComponent::GetProjection() const
+    void CameraComponent::ForcePosition(float position[3])
     {
-        return mProjectionMatrix;
+        if (Matrix::IsEqual(mPosition, position) == false)
+        {
+            Matrix::CopyCellsToGlm(position, mPosition);
+            mIsTransformDirty = true;
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void CameraComponent::ForceRotation(float eulerAngles[3])
+    {
+        if (Matrix::IsEqual(mPosition, eulerAngles) == false)
+        {
+            Matrix::CopyCellsToGlm(eulerAngles, mEulerAngles);
+            mIsTransformDirty = true;
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void CameraComponent::GetPosition(float outPosition[3]) const
+    {
+        outPosition[0] = -1 * mPosition[0];
+        outPosition[1] = -1 * mPosition[1];
+        outPosition[2] = -1 * mPosition[2];
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void CameraComponent::GetRotation(float outEulerAngles[3]) const
+    {
+        outEulerAngles[0] = mEulerAngles[0];
+        outEulerAngles[1] = mEulerAngles[1];
+        outEulerAngles[2] = mEulerAngles[2];
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void CameraComponent::updateViewTransformMatrix()
+    {
+
+        if (mIsTransformDirty == false)
+        {
+            return;
+        }
+        
+        auto rotationMatrix = glm::identity<glm::mat4>();
+        Matrix::Rotate(rotationMatrix, mEulerAngles);
+
+        auto translateMatrix = glm::identity<glm::mat4>();
+        Matrix::Translate(translateMatrix, mPosition);
+
+        mViewMatrix = rotationMatrix * translateMatrix;
+
+        updateCameraBufferData();
+    
+        mIsTransformDirty = false;
+
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void CameraComponent::updateCameraBufferData()
+    {
+        auto const viewProjectionMatrix = mProjectionMatrix * mViewMatrix;
+
+        GetPosition(mCameraBufferData.cameraPosition);
+        Matrix::CopyGlmToCells(viewProjectionMatrix, mCameraBufferData.viewProjection);
+        mCameraBufferData.projectFarToNearDistance = abs(mFarDistance - mNearDistance);
+
+        mCameraBufferUpdateCounter = RF::GetMaxFramesPerFlight();
     }
 
     //-------------------------------------------------------------------------------------------------

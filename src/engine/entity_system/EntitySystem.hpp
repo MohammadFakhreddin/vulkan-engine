@@ -1,5 +1,7 @@
 #pragma once
 
+#include "engine/render_system/RenderTypesFWD.hpp"
+
 namespace MFA
 {
     class Entity;
@@ -9,7 +11,7 @@ namespace MFA::EntitySystem {
 
     void Init();
 
-    void OnNewFrame(float deltaTimeInSec);
+    void OnNewFrame(float deltaTimeInSec, RT::CommandRecordState const & recordState);
 
     void OnUI();
 

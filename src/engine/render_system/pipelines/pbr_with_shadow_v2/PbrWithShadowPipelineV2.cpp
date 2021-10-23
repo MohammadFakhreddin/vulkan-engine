@@ -5,6 +5,7 @@
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "tools/Importer.hpp"
 #include "engine/BedrockMatrix.hpp"
+#include "engine/camera/CameraComponent.hpp"
 #include "engine/render_system/drawable_essence/DrawableEssence.hpp"
 #include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 #include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
@@ -12,6 +13,8 @@
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/render_passes/depth_pre_pass/DepthPrePass.hpp"
 #include "engine/render_system/render_passes/occlusion_render_pass/OcclusionRenderPass.hpp"
+#include "engine/scene_manager/Scene.hpp"
+#include "engine/scene_manager/SceneManager.hpp"
 
 namespace MFA
 {
@@ -102,10 +105,8 @@ namespace MFA
         for (uint32_t i = 0; i < RF::GetMaxFramesPerFlight(); ++i)
         {
             drawPass.frameIndex = i;
-            updateCameraBuffer(drawPass);
             updateLightBuffer(drawPass);
             updateShadowViewProjectionBuffer(drawPass);
-            updateDisplayViewProjectionBuffer(drawPass);
         }
 
         mOcclusionQueryDataList.resize(RF::GetMaxFramesPerFlight());
@@ -163,20 +164,10 @@ namespace MFA
 
         BasePipeline::PreRender(recordState, deltaTime);
 
-        if (mDisplayViewProjectionUpdateCounter > 0)
-        {
-            updateDisplayViewProjectionBuffer(recordState);
-            --mDisplayViewProjectionUpdateCounter;
-        }
         if (mLightBufferUpdateCounter > 0)
         {
             updateLightBuffer(recordState);
             --mLightBufferUpdateCounter;
-        }
-        if (mCameraBufferUpdateCounter > 0)
-        {
-            updateCameraBuffer(recordState);
-            --mCameraBufferUpdateCounter;
         }
         if (mShadowViewProjectionUpdateCounter > 0)
         {
@@ -242,6 +233,10 @@ namespace MFA
             mPerFrameDescriptorSetLayout
         );
 
+        auto * activeScene = SceneManager::GetActiveScene();
+        MFA_ASSERT(activeScene != nullptr);
+        auto const * cameraBufferCollection = activeScene->GetCameraBufferCollection();
+        
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
 
@@ -256,9 +251,9 @@ namespace MFA
 
             // DisplayViewProjection
             VkDescriptorBufferInfo viewProjectionBufferInfo{
-                .buffer = mDisplayViewProjectionBuffer.buffers[frameIndex].buffer,
+                .buffer = cameraBufferCollection->buffers[frameIndex].buffer,
                 .offset = 0,
-                .range = mDisplayViewProjectionBuffer.bufferSize,
+                .range = cameraBufferCollection->bufferSize,
             };
             descriptorSetSchema.AddUniformBuffer(viewProjectionBufferInfo);
 
@@ -281,14 +276,6 @@ namespace MFA
                 .range = mLightBuffer.bufferSize,
             };
             descriptorSetSchema.AddUniformBuffer(lightViewBufferInfo);
-
-            // CameraBuffer
-            VkDescriptorBufferInfo cameraBufferInfo{
-                .buffer = mCameraBuffer.buffers[frameIndex].buffer,
-                .offset = 0,
-                .range = mCameraBuffer.bufferSize
-            };
-            descriptorSetSchema.AddUniformBuffer(cameraBufferInfo);
 
             // ShadowMap
             VkDescriptorImageInfo shadowMapImageInfo{
@@ -422,28 +409,6 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::UpdateCameraView(const float view[16])
-    {
-        if (IsEqual<16>(mDisplayView, view) == false)
-        {
-            Copy<16>(mDisplayView, view);
-            mDisplayViewProjectionUpdateCounter = RF::GetMaxFramesPerFlight();
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void PBRWithShadowPipelineV2::UpdateCameraProjection(const float projection[16])
-    {
-        if (IsEqual<16>(mDisplayProjection, projection) == false)
-        {
-            Copy<16>(mDisplayProjection, projection);
-            mDisplayViewProjectionUpdateCounter = RF::GetMaxFramesPerFlight();
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
     void PBRWithShadowPipelineV2::UpdateLightPosition(const float lightPosition[3])
     {
         if (IsEqual<3>(mLightPosition, lightPosition) == false)
@@ -456,17 +421,6 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-
-    void PBRWithShadowPipelineV2::UpdateCameraPosition(const float cameraPosition[3])
-    {
-        if (IsEqual<3>(mCameraPosition, cameraPosition) == false)
-        {
-            Copy<3>(mCameraPosition, cameraPosition);
-            mCameraBufferUpdateCounter = RF::GetMaxFramesPerFlight();
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
     // TODO Track lights from light components!
     void PBRWithShadowPipelineV2::UpdateLightColor(const float lightColor[3])
     {
@@ -475,19 +429,6 @@ namespace MFA
             Copy<3>(mLightColor, lightColor);
             mLightBufferUpdateCounter = RF::GetMaxFramesPerFlight();
         }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void PBRWithShadowPipelineV2::updateDisplayViewProjectionBuffer(RT::CommandRecordState const & drawPass)
-    {
-
-        auto const viewProjectionMatrix = Matrix::CopyCellsToMat4(mDisplayProjection) * Matrix::CopyCellsToMat4(mDisplayView);
-
-        RF::UpdateUniformBuffer(
-            mDisplayViewProjectionBuffer.buffers[drawPass.frameIndex],
-            CBlobAliasOf(viewProjectionMatrix)
-        );
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -800,17 +741,6 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::updateCameraBuffer(RT::CommandRecordState const & drawPass)
-    {
-        CameraData cameraData{
-            .projectFarToNearDistance = mProjectionFarToNearDistance
-        };
-        Copy<3>(cameraData.cameraPosition, mCameraPosition);
-        RF::UpdateUniformBuffer(mCameraBuffer.buffers[drawPass.frameIndex], CBlobAliasOf(cameraData));
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
     void PBRWithShadowPipelineV2::updateShadowViewProjectionData()
     {
         auto const lightPositionVector = glm::vec3(mLightPosition[0], mLightPosition[1], mLightPosition[2]);
@@ -889,14 +819,14 @@ namespace MFA
         // Vertex shader
         /////////////////////////////////////////////////////////////////
 
-        // DisplayViewProjection
-        VkDescriptorSetLayoutBinding displayViewProjectionLayoutBinding{
+        // CameraBuffer
+        VkDescriptorSetLayoutBinding cameraBufferLayoutBinding{
             .binding = static_cast<uint32_t>(bindings.size()),
             .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             .descriptorCount = 1,
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         };
-        bindings.emplace_back(displayViewProjectionLayoutBinding);
+        bindings.emplace_back(cameraBufferLayoutBinding);
 
         // ShadowViewProjection
         VkDescriptorSetLayoutBinding shadowViewProjectionLayoutBinding{
@@ -919,15 +849,6 @@ namespace MFA
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         };
         bindings.emplace_back(lightViewLayoutBinding);
-
-        // CameraBuffer
-        VkDescriptorSetLayoutBinding cameraLayoutBinding{
-            .binding = static_cast<uint32_t>(bindings.size()),
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1,
-            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-        };
-        bindings.emplace_back(cameraLayoutBinding);
 
         // ShadowMap
         VkDescriptorSetLayoutBinding shadowLayoutBinding{
@@ -1487,10 +1408,7 @@ namespace MFA
     void PBRWithShadowPipelineV2::createUniformBuffers()
     {
         mErrorBuffer = RF::CreateUniformBuffer(sizeof(DrawableVariant::JointTransformData), 1);
-
-        mDisplayViewProjectionBuffer = RF::CreateUniformBuffer(sizeof(DisplayViewProjectionData), RF::GetMaxFramesPerFlight());
         mLightBuffer = RF::CreateUniformBuffer(sizeof(LightData), RF::GetMaxFramesPerFlight());
-        mCameraBuffer = RF::CreateUniformBuffer(sizeof(CameraData), RF::GetMaxFramesPerFlight());
         mShadowViewProjectionBuffer = RF::CreateUniformBuffer(sizeof(ShadowViewProjectionData), RF::GetMaxFramesPerFlight());
 
     }
@@ -1501,9 +1419,7 @@ namespace MFA
     {
         RF::DestroyUniformBuffer(mErrorBuffer);
 
-        RF::DestroyUniformBuffer(mDisplayViewProjectionBuffer);
         RF::DestroyUniformBuffer(mLightBuffer);
-        RF::DestroyUniformBuffer(mCameraBuffer);
         RF::DestroyUniformBuffer(mShadowViewProjectionBuffer);
     }
 

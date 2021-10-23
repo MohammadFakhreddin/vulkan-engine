@@ -5,7 +5,7 @@
 namespace MFA {
 
 class TransformComponent;
-
+// TODO This component is not needed but a no bounding volume component can be useful
 class SphereBoundingVolumeComponent final : public BoundingVolumeComponent
 {
 public:
