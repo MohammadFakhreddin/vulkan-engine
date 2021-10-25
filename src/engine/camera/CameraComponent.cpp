@@ -114,8 +114,7 @@ namespace MFA
         , mNearDistance(nearDistance)
         , mFarDistance(farDistance)
     {
-        OnResize();
-
+        onResize();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -124,6 +123,7 @@ namespace MFA
     {
         Component::Init();
         mCameraBufferUpdateCounter = RF::GetMaxFramesPerFlight();
+        mResizeEventListenerId = RF::AddResizeEventListener([this]()->void{ onResize(); });
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -187,57 +187,13 @@ namespace MFA
             static_cast<glm::vec3>(rightDirection)
         ));
     }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CameraComponent::OnResize()
-    {
-        int32_t width;
-        int32_t height;
-        RF::GetDrawableSize(width, height);
-        MFA_ASSERT(width > 0);
-        MFA_ASSERT(height > 0);
-
-        mAspectRatio = static_cast<float>(width) / static_cast<float>(height);
-
-        Matrix::PreparePerspectiveProjectionMatrix(
-            mProjectionMatrix,
-            mAspectRatio,
-            mFieldOfView,
-            mNearDistance,
-            mFarDistance
-        );
-
-        updateCameraBufferData();
-
-        // TODO We should handle orientation change on android/IOS (UI shader might need a change)
-        // https://android-developers.googleblog.com/2020/02/handling-device-orientation-efficiently.html
-        //#ifdef __ANDROID__
-        //    // For mobile
-        //    glm::mat4 projectionMatrix;
-        //    glm::mat4::ConvertMatrixToGlm(mProjectionMatrix, projectionMatrix);
-        //
-        //    static constexpr glm::vec3 rotationAxis = glm::vec3(0.0f, 0.0f, 1.0f);
-        //    // TODO Should we cache it or it is not important ?
-        //    auto const capabilities = RF::GetSurfaceCapabilities();
-        //
-        //    if (capabilities.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR) {
-        //        projectionMatrix = glm::rotate(projectionMatrix, glm::radians(90.0f), rotationAxis);
-        //    } else if (capabilities.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR) {
-        //        projectionMatrix = glm::rotate(projectionMatrix, glm::radians(270.0f), rotationAxis);
-        //    } else if (capabilities.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR) {
-        //        projectionMatrix = glm::rotate(projectionMatrix, glm::radians(180.0f), rotationAxis);
-        //    }
-        //
-        //    glm::mat4::ConvertGmToCells(projectionMatrix, mProjectionMatrix.cells);
-        //#endif
-    }
-
+    
     //-------------------------------------------------------------------------------------------------
 
     void CameraComponent::Shutdown()
     {
         Component::Shutdown();
+        RF::RemoveResizeEventListener(mResizeEventListenerId);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -315,6 +271,51 @@ namespace MFA
         mCameraBufferData.projectFarToNearDistance = abs(mFarDistance - mNearDistance);
 
         mCameraBufferUpdateCounter = RF::GetMaxFramesPerFlight();
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void CameraComponent::onResize()
+    {
+        int32_t width;
+        int32_t height;
+        RF::GetDrawableSize(width, height);
+        MFA_ASSERT(width > 0);
+        MFA_ASSERT(height > 0);
+
+        mAspectRatio = static_cast<float>(width) / static_cast<float>(height);
+
+        Matrix::PreparePerspectiveProjectionMatrix(
+            mProjectionMatrix,
+            mAspectRatio,
+            mFieldOfView,
+            mNearDistance,
+            mFarDistance
+        );
+
+        updateCameraBufferData();
+
+        // TODO We should handle orientation change on android/IOS (UI shader might need a change)
+        // https://android-developers.googleblog.com/2020/02/handling-device-orientation-efficiently.html
+        //#ifdef __ANDROID__
+        //    // For mobile
+        //    glm::mat4 projectionMatrix;
+        //    glm::mat4::ConvertMatrixToGlm(mProjectionMatrix, projectionMatrix);
+        //
+        //    static constexpr glm::vec3 rotationAxis = glm::vec3(0.0f, 0.0f, 1.0f);
+        //    // TODO Should we cache it or it is not important ?
+        //    auto const capabilities = RF::GetSurfaceCapabilities();
+        //
+        //    if (capabilities.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR) {
+        //        projectionMatrix = glm::rotate(projectionMatrix, glm::radians(90.0f), rotationAxis);
+        //    } else if (capabilities.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR) {
+        //        projectionMatrix = glm::rotate(projectionMatrix, glm::radians(270.0f), rotationAxis);
+        //    } else if (capabilities.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR) {
+        //        projectionMatrix = glm::rotate(projectionMatrix, glm::radians(180.0f), rotationAxis);
+        //    }
+        //
+        //    glm::mat4::ConvertGmToCells(projectionMatrix, mProjectionMatrix.cells);
+        //#endif
     }
 
     //-------------------------------------------------------------------------------------------------

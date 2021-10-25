@@ -157,9 +157,9 @@ namespace MFA
         MFA_ASSERT(entity != nullptr);
         MFA_ASSERT(findChild(entity) < 0);
         entity->mIsParentActive = IsActive();
-        entity->mParentActivationStatusChangeListenerId = mActivationStatusChangeSignal.Register([entity](bool isActive)->void
- {
-     entity->OnParentActivationStatusChanged(isActive);
+        entity->mParentActivationStatusChangeListenerId = mActivationStatusChangeSignal.Register([entity](bool const isActive)->void
+        {
+            entity->OnParentActivationStatusChanged(isActive);
         });
         mChildEntities.emplace_back(entity);
     }
@@ -217,8 +217,8 @@ namespace MFA
         if ((component->RequiredEvents() & Component::EventTypes::ShutdownEvent) > 0)
         {
             component->mShutdownEventId = mShutdownSignal.Register([component]()->void
-    {
-        component->Shutdown();
+            {
+                component->Shutdown();
             });
         }
     }

@@ -53,19 +53,12 @@ void OnUI()
 {
     UI::BeginWindow("Entity System");
     UI::Text("Entities:");
-    auto * activeScene = SceneManager::GetActiveScene();
-    if (activeScene != nullptr)
+    auto const & activeScene = SceneManager::GetActiveScene();
+    if (auto const activeScenePtr = activeScene.lock())
     {
-        auto * rootEntity = activeScene->GetRootEntity();
+        auto * rootEntity = activeScenePtr->GetRootEntity();
         rootEntity->OnUI();
     }
-    /* for (auto const & entityRef : state->entitiesRefsList)
-    {
-        if (entityRef.Ptr->HasParent() == false)
-        {
-            entityRef.Ptr->OnUI();
-        }
-    }*/
     UI::EndWindow();
 }
 

@@ -17,7 +17,7 @@ private:
     struct EssenceAndItsVariants {
 
         DrawableEssence essence;
-        std::vector<std::unique_ptr<DrawableVariant>> variants {};
+        std::vector<std::shared_ptr<DrawableVariant>> variants {};
 
         explicit EssenceAndItsVariants(
             char const * name,
@@ -56,7 +56,7 @@ public:
         RT::GpuModel const & gpuModel
     );
 
-    virtual DrawableVariant * CreateDrawableVariant(char const * essenceName);
+    virtual std::weak_ptr<DrawableVariant> CreateDrawableVariant(char const * essenceName);
 
     void RemoveDrawableVariant(DrawableVariant * variant);
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 namespace MFA
 {
     class Scene;
@@ -11,13 +13,13 @@ namespace MFA::SceneManager
 
     void Init();
     void Shutdown();
-    void RegisterNew(Scene * scene, char const * name);
+    void RegisterScene(std::weak_ptr<Scene> const & scene, char const * name);
     void SetActiveScene(char const * name);
     void OnNewFrame(float deltaTimeInSec);
     void OnResize();
 
     [[nodiscard]]
-    Scene * GetActiveScene();
+    std::weak_ptr<Scene> const & GetActiveScene();
     // TODO Directional light
     // TODO Point lights
     // TODO Sfx lights

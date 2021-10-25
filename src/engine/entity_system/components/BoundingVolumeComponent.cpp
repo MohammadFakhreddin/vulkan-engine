@@ -17,7 +17,17 @@ void MFA::BoundingVolumeComponent::Update(float const deltaTimeInSec, RT::Comman
 {
     Component::Update(deltaTimeInSec, recordState);
 
-    mIsInFrustum = IsInsideCameraFrustum(SceneManager::GetActiveScene()->GetActiveCamera());
+    auto const activeScene = SceneManager::GetActiveScene().lock();
+    if (activeScene == nullptr)
+    {
+        return;
+    }
+    auto const activeCamera = activeScene->GetActiveCamera().lock();
+    if (activeCamera == nullptr)
+    {
+        return;
+    }
+    mIsInFrustum = IsInsideCameraFrustum(activeCamera.get());
 }
 
 //-------------------------------------------------------------------------------------------------

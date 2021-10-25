@@ -97,7 +97,7 @@ namespace MFA
 
         void UpdateLightColor(const float lightColor[3]);
 
-        DrawableVariant * CreateDrawableVariant(char const * essenceName) override;
+        std::weak_ptr<DrawableVariant> CreateDrawableVariant(char const * essenceName) override;
 
     protected:
 

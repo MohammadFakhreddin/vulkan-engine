@@ -15,11 +15,8 @@ namespace MFA
     {
     public:
 
-        static uint8_t GetClassType(ClassType outComponentTypes[3])
-        {
-            outComponentTypes[0] = ClassType::AxisAlignedBoundingBoxes;
-            return 1;
-        }
+        MFA_COMPONENT_PROPS(AxisAlignedBoundingBoxComponent)
+        MFA_COMPONENT_CLASS_TYPE_1(ClassType::AxisAlignedBoundingBoxes)
         
         explicit AxisAlignedBoundingBoxComponent(
             glm::vec3 const & center,
@@ -46,7 +43,7 @@ namespace MFA
         glm::vec3 mCenter {};
         glm::vec3 mExtend {};
 
-        TransformComponent * mTransformComponent = nullptr;
+        std::weak_ptr<TransformComponent> mTransformComponent {};
 
     
     };

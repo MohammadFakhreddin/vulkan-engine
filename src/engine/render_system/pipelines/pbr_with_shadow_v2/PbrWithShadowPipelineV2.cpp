@@ -206,12 +206,12 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    DrawableVariant * PBRWithShadowPipelineV2::CreateDrawableVariant(char const * essenceName)
+    std::weak_ptr<DrawableVariant> PBRWithShadowPipelineV2::CreateDrawableVariant(char const * essenceName)
     {
-        auto * variant = BasePipeline::CreateDrawableVariant(essenceName);
+        auto const variant = BasePipeline::CreateDrawableVariant(essenceName).lock();
         MFA_ASSERT(variant != nullptr);
 
-        createVariantDescriptorSets(variant);
+        createVariantDescriptorSets(variant.get());
 
         return variant;
     }
@@ -233,7 +233,7 @@ namespace MFA
             mPerFrameDescriptorSetLayout
         );
 
-        auto * activeScene = SceneManager::GetActiveScene();
+        auto const activeScene = SceneManager::GetActiveScene().lock();
         MFA_ASSERT(activeScene != nullptr);
         auto const * cameraBufferCollection = activeScene->GetCameraBufferCollection();
         

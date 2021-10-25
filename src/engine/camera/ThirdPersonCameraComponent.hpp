@@ -12,6 +12,10 @@ class TransformComponent;
 
 class ThirdPersonCameraComponent final : public CameraComponent {
 public:
+
+    MFA_COMPONENT_PROPS(ThirdPersonCameraComponent)
+    MFA_COMPONENT_CLASS_TYPE_1(ClassType::ThirdPersonCamera)
+
     // ThirdPerson camera must act like a child to variant
     explicit ThirdPersonCameraComponent(
         float fieldOfView,
@@ -28,13 +32,6 @@ public:
 
     ~ThirdPersonCameraComponent() override = default;
 
-    static uint8_t GetClassType(ClassType outComponentTypes[3])
-    {
-        // TODO It should be reverse CameraComponent must return all its child 
-        outComponentTypes[0] = ClassType::ThirdPersonCamera;
-        return 1;
-    }
-
     void SetDistanceAndRotation(
         float distance, 
         float eulerAngles[3]
@@ -50,7 +47,7 @@ public:
 
 private:
 
-    TransformComponent * mTransformComponent = nullptr;
+    std::weak_ptr<TransformComponent> mTransformComponent {};
     int mTransformChangeListenerId = 0;
 
     float mDistance = 3.0f;

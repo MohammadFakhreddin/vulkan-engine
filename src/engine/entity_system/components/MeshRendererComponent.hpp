@@ -11,18 +11,10 @@ namespace MFA
     {
     public:
 
-        [[nodiscard]]
-        EventType RequiredEvents() const override
-        {
-            return EventTypes::InitEvent | EventTypes::ShutdownEvent;
-        }
-
-        static uint8_t GetClassType(ClassType outComponentTypes[3])
-        {
-            outComponentTypes[0] = ClassType::MeshRendererComponent;
-            return 1;
-        }
-        
+        MFA_COMPONENT_PROPS(MeshRendererComponent)
+        MFA_COMPONENT_CLASS_TYPE_1(ClassType::MeshRendererComponent)
+        MFA_COMPONENT_REQUIRED_EVENTS(EventTypes::InitEvent | EventTypes::ShutdownEvent)
+    
         explicit MeshRendererComponent(BasePipeline & pipeline, char const * essenceName);
         
         void Init() override;
@@ -30,16 +22,14 @@ namespace MFA
         void Shutdown() override;
 
         [[nodiscard]]
-        DrawableVariant * GetVariant() const;
-        
-        void NotifyVariantDestroyed() override;
-
+        std::weak_ptr<DrawableVariant> const & GetVariant() const;
+       
         void OnUI() override;
 
     private:
 
         BasePipeline * mPipeline = nullptr;
-        DrawableVariant * mVariant = nullptr;
+        std::weak_ptr<DrawableVariant> mVariant {};
 
     };
 

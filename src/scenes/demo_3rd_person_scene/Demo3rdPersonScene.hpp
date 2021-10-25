@@ -1,12 +1,16 @@
 #pragma once
 
 #include "engine/scene_manager/Scene.hpp"
-#include "engine/camera/ThirdPersonCameraComponent.hpp"
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/BedrockPlatforms.hpp"
-#include "engine/entity_system/components/MeshRendererComponent.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
 #include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
+
+namespace MFA
+{
+    class MeshRendererComponent;
+    class ThirdPersonCameraComponent;
+}
 
 class Demo3rdPersonScene final : public MFA::Scene {
 public:
@@ -50,12 +54,12 @@ private:
 
     MFA::RT::GpuModel mSoldierGpuModel {};
     
-    MFA::TransformComponent * mPlayerTransform = nullptr;
-    MFA::MeshRendererComponent * mPlayerMeshRenderer = nullptr;
+    std::weak_ptr<MFA::TransformComponent> mPlayerTransform {};
+    std::weak_ptr<MFA::MeshRendererComponent> mPlayerMeshRenderer {};
 
     MFA::RT::GpuModel mMapModel {};
 
-    MFA::ThirdPersonCameraComponent * mThirdPersonCamera = nullptr;
+    std::weak_ptr<MFA::ThirdPersonCameraComponent> mThirdPersonCamera {};
 
     MFA::RT::SamplerGroup mSampler {};
 

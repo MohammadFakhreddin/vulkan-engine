@@ -19,7 +19,7 @@ void MFA::SphereBoundingVolumeComponent::Init()
     BoundingVolumeComponent::Init();
 
     mTransformComponent = GetEntity()->GetComponent<TransformComponent>();
-    MFA_ASSERT(mTransformComponent != nullptr);
+    MFA_ASSERT(mTransformComponent.expired() == false);
 
 }
 

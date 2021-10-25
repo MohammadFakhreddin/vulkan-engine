@@ -14,17 +14,9 @@ namespace MFA
     {
     public:
 
-        [[nodiscard]]
-        EventType RequiredEvents() const override
-        {
-            return EventTypes::InitEvent | EventTypes::ShutdownEvent | EventTypes::UpdateEvent;
-        }
-
-        static uint8_t GetClassType(ClassType outComponentTypes[3])
-        {
-            outComponentTypes[0] = ClassType::BoundingVolumeRendererComponent;
-            return 1;
-        }
+        MFA_COMPONENT_PROPS(BoundingVolumeRendererComponent)
+        MFA_COMPONENT_CLASS_TYPE_1(ClassType::BoundingVolumeRendererComponent)
+        MFA_COMPONENT_REQUIRED_EVENTS(EventTypes::InitEvent | EventTypes::ShutdownEvent | EventTypes::UpdateEvent)
 
         explicit BoundingVolumeRendererComponent(DebugRendererPipeline & pipeline);
 
@@ -34,18 +26,16 @@ namespace MFA
 
         void Shutdown() override;
         
-        void NotifyVariantDestroyed() override;
-
         void OnUI() override;
 
     private:
 
         DebugRendererPipeline * mPipeline = nullptr;
-        DrawableVariant * mVariant = nullptr;
+        std::weak_ptr<DrawableVariant> mVariant {};
 
-        BoundingVolumeComponent * mBoundingVolumeComponent = nullptr;
+        std::weak_ptr<BoundingVolumeComponent> mBoundingVolumeComponent {};
         
-        TransformComponent * mChildTransformComponent = nullptr;
+        std::weak_ptr<TransformComponent> mChildTransformComponent {};
 
     };
 

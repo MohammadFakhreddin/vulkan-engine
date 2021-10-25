@@ -86,7 +86,12 @@ public:
 
     void SetActiveAnimation(char const * animationName, AnimationParams const & params = AnimationParams {});
     
-    void Init(RendererComponent * rendererComponent, TransformComponent * transformComponent);
+    void Init(
+        Entity * entity,
+        std::weak_ptr<RendererComponent> const & rendererComponent,
+        std::weak_ptr<TransformComponent> const & transformComponent,
+        std::weak_ptr<BoundingVolumeComponent> const & boundingVolumeComponent
+    );
 
     void Update(float deltaTimeInSec, RT::CommandRecordState const & drawPass);
 
@@ -131,6 +136,12 @@ public:
     Entity * GetEntity() const;
 
     [[nodiscard]]
+    bool IsVisible() const
+    {
+        return mIsOccluded == false && mIsInFrustum == true;
+    }
+
+    [[nodiscard]]
     bool IsOccluded() const
     {
         return mIsOccluded;
@@ -139,6 +150,12 @@ public:
     void SetIsOccluded(bool const isOccluded)
     {
         mIsOccluded = isOccluded;
+    }
+
+    [[nodiscard]]
+    bool IsInFrustum()
+    {
+        return mIsInFrustum;
     }
 
     RT::StorageBufferCollection const & CreateStorageBuffer(uint32_t size, uint32_t count);
@@ -218,17 +235,21 @@ private:
 
     Entity * mEntity = nullptr;
 
-    RendererComponent * mRendererComponent = nullptr;
+    std::weak_ptr<RendererComponent> mRendererComponent {};
 
-    BoundingVolumeComponent * mBoundingVolumeComponent = nullptr;
+    std::weak_ptr<BoundingVolumeComponent> mBoundingVolumeComponent {};
 
     bool mIsModelTransformChanged = true;
-    TransformComponent * mTransformComponent = nullptr;
+
+    std::weak_ptr<TransformComponent> mTransformComponent {};
+
     int mTransformListenerId = 0;
 
     bool mIsSkinJointsChanged = true;
 
     bool mIsOccluded = false;
+
+    bool mIsInFrustum = true;
 
     int bufferDirtyCounter = 0;
 

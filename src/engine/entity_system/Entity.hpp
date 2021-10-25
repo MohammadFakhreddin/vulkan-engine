@@ -1,12 +1,10 @@
 #pragma once
 
-#include <functional>
-
 #include "Component.hpp"
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockSignal.hpp"
-#include "engine/render_system/RenderTypesFWD.hpp"
 
+#include <functional>
 #include <memory>
 #include <unordered_map>
 #include <utility>
@@ -50,25 +48,25 @@ public:
     void Shutdown(bool shouldNotifyParent = true);
 
     template<typename ComponentClass, typename ... ArgsT>
-    ComponentClass * AddComponent(ArgsT && ... args) {
-        MFA_ASSERT(GetComponent<ComponentClass>() == nullptr);
+    std::weak_ptr<ComponentClass> AddComponent(ArgsT && ... args) {
+        MFA_ASSERT(GetComponent<ComponentClass>().expired() == true);
 
         Component::ClassType classTypes[3] {};
         uint8_t const typesCount = ComponentClass::GetClassType(classTypes);
         if (MFA_VERIFY(typesCount > 0)) {
-            mComponents[classTypes[0]] = std::make_unique<ComponentClass>(std::forward<ArgsT>(args)...);
-
-            auto * component = mComponents[classTypes[0]].get();
-            linkComponent(component);
-            return dynamic_cast<ComponentClass *>(component);
+            auto sharedPtr = std::make_shared<ComponentClass>(std::forward<ArgsT>(args)...);
+            mComponents[classTypes[0]] = sharedPtr;
+            sharedPtr->mSelfPtr = sharedPtr;
+            linkComponent(sharedPtr.get());
+            return std::weak_ptr<ComponentClass>(sharedPtr);
         }
 
-        return nullptr;
+        return std::weak_ptr<ComponentClass>();
     }
 
     template<typename ComponentClass>
     [[nodiscard]]
-    ComponentClass * GetComponent() {
+    std::weak_ptr<ComponentClass> GetComponent() {
 
         Component::ClassType classTypes[3] {};
         uint8_t const typesCount = ComponentClass::GetClassType(classTypes);
@@ -78,10 +76,10 @@ public:
             auto findResult = mComponents.find(classTypes[i]);
             if (findResult != mComponents.end())
             {
-                return dynamic_cast<ComponentClass *>(findResult->second.get());        
+                return std::static_pointer_cast<ComponentClass>(findResult->second);        
             }
         }
-        return nullptr;
+        return std::weak_ptr<ComponentClass>();
     }
 
     [[nodiscard]]
@@ -122,7 +120,7 @@ private:
     std::string mName {};
     Entity * mParent = nullptr;
 
-    std::unordered_map<Component::ClassType, std::unique_ptr<Component>> mComponents {};
+    std::unordered_map<Component::ClassType, std::shared_ptr<Component>> mComponents {};
 
     Signal<> mInitSignal {};
     Signal<float, RT::CommandRecordState const &> mUpdateSignal {};
@@ -139,7 +137,7 @@ private:
     std::vector<Entity *> mChildEntities {};
 
     bool mIsInitialized = false;
-
+    
 };
 
 }

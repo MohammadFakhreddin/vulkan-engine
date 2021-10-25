@@ -18,9 +18,9 @@ namespace MFA
         if (parentEntity != nullptr)
         {
             mParentTransform = parentEntity->GetComponent<TransformComponent>();
-            if (mParentTransform != nullptr)
+            if (auto const parentTransformPtr = mParentTransform.lock())
             {
-                mParentTransformChangeListenerId = mParentTransform->RegisterChangeListener([this]()-> void
+                mParentTransformChangeListenerId = parentTransformPtr->RegisterChangeListener([this]()-> void
                     {
                         computeTransform();
                     }
@@ -35,9 +35,9 @@ namespace MFA
     void TransformComponent::Shutdown()
     {
         Component::Shutdown();
-        if (mParentTransform != nullptr)
+        if (auto const parentTransformPtr = mParentTransform.lock())
         {
-            mParentTransform->UnRegisterChangeListener(mParentTransformChangeListenerId);
+            parentTransformPtr->UnRegisterChangeListener(mParentTransformChangeListenerId);
         }
     }
 
@@ -241,9 +241,9 @@ namespace MFA
         Matrix::Rotate(rotationMatrix, mRotation);
 
         auto parentTransform = glm::identity<glm::mat4>();
-        if (mParentTransform != nullptr)
+        if (auto const ptr = mParentTransform.lock())
         {
-            parentTransform = mParentTransform->GetTransform();
+            parentTransform = ptr->GetTransform();
         }
 
         mTransform = parentTransform * translateMatrix * scaleMatrix * rotationMatrix;

@@ -60,11 +60,11 @@ void Application::Init() {
     
     SceneManager::Init();
 
-    mThirdPersonDemoScene = std::make_unique<Demo3rdPersonScene>();
-    mGltfMeshViewerScene = std::make_unique<GLTFMeshViewerScene>();
+    mThirdPersonDemoScene = std::make_shared<Demo3rdPersonScene>();
+    mGltfMeshViewerScene = std::make_shared<GLTFMeshViewerScene>();
 
-    SceneManager::RegisterNew(mThirdPersonDemoScene.get(), "ThirdPersonDemoScene");
-    SceneManager::RegisterNew(mGltfMeshViewerScene.get(), "GLTFMeshViewerScene");
+    SceneManager::RegisterScene(mThirdPersonDemoScene, "ThirdPersonDemoScene");
+    SceneManager::RegisterScene(mGltfMeshViewerScene, "GLTFMeshViewerScene");
     
     SceneManager::SetActiveScene("ThirdPersonDemoScene");
 

@@ -39,6 +39,7 @@ namespace MFA
             {
                 for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mVariantsRef.size()); i += availableThreadCount)
                 {
+                    MFA_ASSERT(mVariantsRef[i] != nullptr);
                     mVariantsRef[i]->Update(deltaTime, drawPass);
                 }
             });
@@ -73,7 +74,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    DrawableVariant * BasePipeline::CreateDrawableVariant(char const * essenceName)
+    std::weak_ptr<DrawableVariant> BasePipeline::CreateDrawableVariant(char const * essenceName)
     {
         MFA_ASSERT(essenceName != nullptr);
         MFA_ASSERT(strlen(essenceName) > 0);
@@ -81,13 +82,17 @@ namespace MFA
         auto const findResult = mEssenceAndVariantsMap.find(essenceName);
         MFA_ASSERT(findResult != mEssenceAndVariantsMap.end());
 
-        auto & variants = findResult->second->variants;
+        auto & variantsList = findResult->second->variants;
 
-        variants.emplace_back(std::make_unique<DrawableVariant>(findResult->second->essence));
+        auto const variantSharedPtr = std::make_shared<DrawableVariant>(findResult->second->essence);
 
-        mVariantsRef.emplace_back(variants.back().get());
+        variantsList.emplace_back(variantSharedPtr);
 
-        return variants.back().get();
+        std::weak_ptr variantWeakPtr = variantSharedPtr; 
+
+        mVariantsRef.emplace_back(variantSharedPtr.get());
+
+        return variantWeakPtr;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -102,6 +107,7 @@ namespace MFA
         bool foundInVariantsRef = false;
         for (int i = static_cast<int>(mVariantsRef.size()) - 1; i >= 0; --i)
         {
+            MFA_ASSERT(mVariantsRef[i] != nullptr);
             if (mVariantsRef[i] == variant)
             {
                 mVariantsRef.erase(mVariantsRef.begin() + i);
@@ -118,7 +124,8 @@ namespace MFA
             {
                 variant->Shutdown();
 
-                variants[i].swap(variants.back());
+                variants[i].reset();
+                variants[i] = variants.back();
                 variants.pop_back();
                 return;
             }

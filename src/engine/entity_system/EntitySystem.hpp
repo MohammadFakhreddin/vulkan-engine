@@ -15,6 +15,8 @@ namespace MFA::EntitySystem {
 
     void OnUI();
 
+    void OnResize();
+
     void Shutdown();
 
     Entity * CreateEntity(char const * name, Entity * parent = nullptr);

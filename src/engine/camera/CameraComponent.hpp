@@ -9,6 +9,9 @@ namespace MFA {
 class CameraComponent : public Component {
 public:
 
+    MFA_COMPONENT_CLASS_TYPE_3(ClassType::CameraComponent, ClassType::ObserverCameraComponent, ClassType::ThirdPersonCamera)
+    MFA_COMPONENT_REQUIRED_EVENTS(EventTypes::InitEvent | EventTypes::UpdateEvent | EventTypes::ShutdownEvent)
+
     inline static const glm::vec4 ForwardVector {0.0f, 0.0f, 1.0f, 0.0f};
     inline static const glm::vec4 RightVector {1.0f, 0.0f, 0.0f, 0.0f};
     inline static const glm::vec4 UpVector {0.0f, 1.0f, 0.0f, 0.0f};
@@ -34,26 +37,9 @@ public:
     
     ~CameraComponent() override = default;
 
-    static uint8_t GetClassType(ClassType outComponentTypes[3])
-    {
-        // TODO It should be reverse CameraComponent must return all its child 
-        outComponentTypes[0] = ClassType::CameraComponent;
-        outComponentTypes[1] = ClassType::ObserverCameraComponent;
-        outComponentTypes[2] = ClassType::ThirdPersonCamera;
-        return 3;
-    }
-
-    [[nodiscard]]
-    EventType RequiredEvents() const override
-    {
-        return EventTypes::InitEvent | EventTypes::UpdateEvent | EventTypes::ShutdownEvent;
-    }
-
     void Init() override;
 
     void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState) override;
-
-    void OnResize();
 
     void Shutdown() override;
 
@@ -83,6 +69,12 @@ protected:
 
     void updateCameraBufferData();
 
+private:
+
+    void onResize();
+
+protected:
+
     float const mFieldOfView;
     float const mNearDistance;
     float const mFarDistance;
@@ -105,6 +97,8 @@ protected:
     uint32_t mCameraBufferUpdateCounter = 0;
 
     CameraBufferData mCameraBufferData {};
+
+    int mResizeEventListenerId = 0;
 
 };
 

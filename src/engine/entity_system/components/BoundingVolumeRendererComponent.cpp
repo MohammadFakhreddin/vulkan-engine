@@ -18,7 +18,7 @@ namespace MFA
         , mVariant(mPipeline->CreateDrawableVariant("Cube"))
     {
         MFA_ASSERT(mPipeline != nullptr);
-        MFA_ASSERT(mVariant != nullptr);
+        MFA_ASSERT(mVariant.expired() == false);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -29,12 +29,16 @@ namespace MFA
 
         mBoundingVolumeComponent = GetEntity()->GetComponent<BoundingVolumeComponent>();
 
-        auto * entity = EntitySystem::CreateEntity("Child", GetEntity());
-        mChildTransformComponent = entity->AddComponent<TransformComponent>();
-        MFA_ASSERT(mChildTransformComponent != nullptr);
-        EntitySystem::InitEntity(entity);
+        auto * childEntity = EntitySystem::CreateEntity("Child", GetEntity());
 
-        mVariant->Init(this, mChildTransformComponent);
+        mChildTransformComponent = childEntity->AddComponent<TransformComponent>();
+        MFA_ASSERT(mChildTransformComponent.expired() == false);
+
+        EntitySystem::InitEntity(childEntity);
+
+        auto * entity = GetEntity();
+
+        mVariant.lock()->Init(entity, SelfPtr(), mChildTransformComponent, mBoundingVolumeComponent);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -46,10 +50,21 @@ namespace MFA
     {
         Component::Update(deltaTimeInSec, recordState);
 
-        auto const centerAndRadius = mBoundingVolumeComponent->DEBUG_GetCenterAndRadius();
-        mChildTransformComponent->UpdateTransform(
+        auto const boundingVolumePtr = mBoundingVolumeComponent.lock();
+        if (boundingVolumePtr == nullptr)
+        {
+            return;
+        }
+        auto const childTransformPtr = mChildTransformComponent.lock();
+        if (childTransformPtr == nullptr)
+        {
+            return;
+        }
+
+        auto const centerAndRadius = boundingVolumePtr->DEBUG_GetCenterAndRadius();
+        childTransformPtr->UpdateTransform(
             centerAndRadius.center,
-            mChildTransformComponent->GetRotation(),
+            childTransformPtr->GetRotation(),
             glm::vec3(centerAndRadius.extend.x, centerAndRadius.extend.y, centerAndRadius.extend.z)
         );
     }
@@ -59,17 +74,10 @@ namespace MFA
     void BoundingVolumeRendererComponent::Shutdown()
     {
         Component::Shutdown();
-        if (mVariant != nullptr)
+        if (auto const variantPtr = mVariant.lock())
         {
-            mPipeline->RemoveDrawableVariant(mVariant);
+            mPipeline->RemoveDrawableVariant(variantPtr.get());
         }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void BoundingVolumeRendererComponent::NotifyVariantDestroyed()
-    {
-        mVariant = nullptr;
     }
 
     //-------------------------------------------------------------------------------------------------

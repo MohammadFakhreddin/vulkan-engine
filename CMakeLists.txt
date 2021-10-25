@@ -121,8 +121,12 @@ list(
 
     "src/engine/entity_system/components/ColorComponent.hpp"
     "src/engine/entity_system/components/ColorComponent.cpp"
-    
 
+    "src/engine/entity_system/components/PointLightComponent.hpp"
+    "src/engine/entity_system/components/PointLightComponent.cpp"
+    "src/engine/entity_system/components/DirectionalLightComponent.hpp"
+    "src/engine/entity_system/components/DirectionalLightComponent.cpp"
+    
     # Job system
     "src/engine/job_system/ThreadPool.hpp"
     "src/engine/job_system/ThreadPool.cpp"

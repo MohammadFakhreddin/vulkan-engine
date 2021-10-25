@@ -14,6 +14,7 @@
 #include "engine/entity_system/components/SphereBoundingVolumeComponent.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
 #include "engine/ui_system/UISystem.hpp"
+#include "engine/entity_system/components/PointLightComponent.hpp"
 
 using namespace MFA;
 
@@ -126,7 +127,9 @@ void GLTFMeshViewerScene::Init() {
             Z_NEAR,
             Z_FAR
         );
-        MFA_ASSERT(mCamera != nullptr);
+
+        MFA_ASSERT(mCamera.expired() == false);
+
         EntitySystem::InitEntity(entity);
 
         SetActiveCamera(mCamera);
@@ -141,21 +144,22 @@ void GLTFMeshViewerScene::Init() {
 
         auto * entity = EntitySystem::CreateEntity("PointLight", GetRootEntity());
 
-        auto * colorComponent = entity->AddComponent<ColorComponent>();
-        MFA_ASSERT(colorComponent != nullptr);
-        colorComponent->SetColor(mLightColor);
-
+        auto const colorComponent = entity->AddComponent<ColorComponent>();
+        MFA_ASSERT(colorComponent.expired() == false);
         mPointLightColor = colorComponent;
 
-        auto * transformComponent = entity->AddComponent<TransformComponent>();
-        MFA_ASSERT(transformComponent != nullptr);
-        transformComponent->UpdatePosition(mLightPosition);
-        transformComponent->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
+        auto const transformComponent = entity->AddComponent<TransformComponent>();
+        MFA_ASSERT(transformComponent.expired() == false);
+        if (auto const ptr = transformComponent.lock())
+        {
+            ptr->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
+        }
+
+        entity->AddComponent<PointLightComponent>(0.1f);
 
         mPointLightTransform = transformComponent;
 
-        auto * meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPointLightPipeline, "Sphere");
-        MFA_ASSERT(meshRendererComponent != nullptr);
+        entity->AddComponent<MeshRendererComponent>(mPointLightPipeline, "Sphere");
 
         entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
 
@@ -185,39 +189,37 @@ void GLTFMeshViewerScene::OnPreRender(float const deltaTimeInSec, MFA::RT::Comma
         }
 
         mPreviousModelSelectedIndex = mSelectedModelIndex;
-        // Model
-        MFA::Copy<3>(mModelRotation, selectedModel.initialParams.model.rotationEulerAngle);
-        MFA::Copy<3>(mModelPosition, selectedModel.initialParams.model.translate);
-        mModelScale = selectedModel.initialParams.model.scale;
-        MFA::Copy<3>(mModelTranslateMin, selectedModel.initialParams.model.translateMin);
-        MFA::Copy<3>(mModelTranslateMax, selectedModel.initialParams.model.translateMax);
-        
-        // Light
-        MFA::Copy<3>(mLightPosition, selectedModel.initialParams.light.position);
-        MFA::Copy<3>(mLightColor, selectedModel.initialParams.light.color);
-        MFA::Copy<3>(mLightTranslateMin, selectedModel.initialParams.light.translateMin);
-        MFA::Copy<3>(mLightTranslateMax, selectedModel.initialParams.light.translateMax);
-        
-        mCamera->ForcePosition(selectedModel.initialParams.camera.position);
-        mCamera->ForceRotation(selectedModel.initialParams.camera.eulerAngles);
-    }
-    
-    {// LightViewBuffer
-        mPbrPipeline.UpdateLightPosition(mLightPosition);
-        mPbrPipeline.UpdateLightColor(mLightColor);
+       
+        if (auto const ptr = selectedModel.transformComponent.lock())
+        {
+            float scale[3]{
+                selectedModel.initialParams.model.scale,
+                selectedModel.initialParams.model.scale,
+                selectedModel.initialParams.model.scale
+            };
+            ptr->UpdateTransform(
+                selectedModel.initialParams.model.translate,
+                selectedModel.initialParams.model.rotationEulerAngle,
+                scale
+            );
+        }
 
-        mPointLightTransform->UpdatePosition(mLightPosition);
-        mPointLightColor->SetColor(mLightColor);
-    }
+        if (auto const ptr = mPointLightTransform.lock())
+        {
+            ptr->UpdatePosition(selectedModel.initialParams.light.position);
+        }
 
-    // Model
-    float scale[3] {mModelScale, mModelScale, mModelScale};
-    selectedModel.transformComponent->UpdateTransform(
-        mModelPosition,
-        mModelRotation,
-        scale
-    );
-    
+        if (auto const ptr = mPointLightColor.lock())
+        {
+            ptr->SetColor(selectedModel.initialParams.light.color);
+        }
+
+        if (auto const ptr = mCamera.lock())
+        {
+            ptr->ForcePosition(selectedModel.initialParams.camera.position);
+            ptr->ForceRotation(selectedModel.initialParams.camera.eulerAngles);
+        }
+    }
 
     mPbrPipeline.PreRender(drawPass, deltaTimeInSec);
     mPointLightPipeline.PreRender(drawPass, deltaTimeInSec);
@@ -249,97 +251,10 @@ void GLTFMeshViewerScene::OnPostRender(float const deltaTimeInSec, MFA::RT::Comm
 void GLTFMeshViewerScene::OnUI() {
     static constexpr float ItemWidth = 500;
     UI::BeginWindow("Scene Subsystem");
-    UI::Spacing();
-    UI::Checkbox("Object viewer window", &mIsObjectViewerWindowVisible);
-    UI::Spacing();
-    UI::Checkbox("Light window", &mIsLightWindowVisible);
-    UI::Spacing();
-    UI::Checkbox("Camera window", &mIsCameraWindowVisible);
-    UI::Spacing();
-    UI::Checkbox("Active model", &mIsDrawableVariantWindowVisible);
-    UI::Spacing(); UI::Spacing();
     UI::Button("Reset values", [this]()->void{
         mPreviousModelSelectedIndex = -1;
     });
     UI::EndWindow();
-
-    if (mIsObjectViewerWindowVisible) {
-        UI::BeginWindow("Object viewer");
-        UI::Spacing();
-        UI::SetNextItemWidth(ItemWidth);
-        // TODO Bad for performance, Find a better name
-        std::vector<char const *> modelNames {};
-        if(false == mModelsRenderData.empty()) {
-            for(auto const & renderData : mModelsRenderData) {
-                modelNames.emplace_back(renderData.displayName.c_str());
-            }
-        }
-        UI::Combo(
-            "Object selector",
-            &mSelectedModelIndex,
-            modelNames.data(), 
-            static_cast<int32_t>(modelNames.size())
-        );
-        UI::Spacing();
-        UI::SetNextItemWidth(ItemWidth);
-        UI::SliderFloat("XDegree", &mModelRotation[0], -360.0f, 360.0f);
-        UI::Spacing();
-        UI::SetNextItemWidth(ItemWidth);
-        UI::SliderFloat("YDegree", &mModelRotation[1], -360.0f, 360.0f);
-        UI::Spacing();
-        UI::SetNextItemWidth(ItemWidth);
-        UI::SliderFloat("ZDegree", &mModelRotation[2], -360.0f, 360.0f);
-        UI::Spacing();
-        UI::SetNextItemWidth(ItemWidth);
-        UI::SliderFloat("Scale", &mModelScale, 0.0f, 1.0f);
-        UI::Spacing();
-        UI::SetNextItemWidth(ItemWidth);
-        UI::SliderFloat("XDistance", &mModelPosition[0], mModelTranslateMin[0], mModelTranslateMax[0]);
-        UI::Spacing();
-        UI::SetNextItemWidth(ItemWidth);
-        UI::SliderFloat("YDistance", &mModelPosition[1], mModelTranslateMin[1], mModelTranslateMax[1]);
-        UI::Spacing();
-        UI::SetNextItemWidth(ItemWidth);
-        UI::SliderFloat("ZDistance", &mModelPosition[2], mModelTranslateMin[2], mModelTranslateMax[2]);
-        UI::Spacing();
-        UI::EndWindow();
-    }
-
-    if (mIsLightWindowVisible) {
-        UI::BeginWindow("Light");
-        UI::SetNextItemWidth(ItemWidth);
-        UI::Checkbox("Visible", &mIsLightVisible);
-        UI::SetNextItemWidth(ItemWidth);
-        UI::SliderFloat("PositionX", &mLightPosition[0], mLightTranslateMin[0], mLightTranslateMax[0]);
-        UI::SetNextItemWidth(ItemWidth);
-        UI::SliderFloat("PositionY", &mLightPosition[1], mLightTranslateMin[1], mLightTranslateMax[1]);
-        UI::SetNextItemWidth(ItemWidth);
-        UI::SliderFloat("PositionZ", &mLightPosition[2], mLightTranslateMin[2], mLightTranslateMax[2]);
-        UI::SetNextItemWidth(ItemWidth);
-        UI::SliderFloat("ColorR", &mLightColor[0], 0.0f, 400.0f);
-        UI::SetNextItemWidth(ItemWidth);
-        UI::SliderFloat("ColorG", &mLightColor[1], 0.0f, 400.0f);
-        UI::SetNextItemWidth(ItemWidth);
-        UI::SliderFloat("ColorB", &mLightColor[2], 0.0f, 400.0f);
-        UI::EndWindow();
-    }
-
-    if (mIsDrawableVariantWindowVisible) {
-        const auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
-        if (selectedModel.isLoaded) {
-            // TODO We should not expose variant
-            auto * variant = selectedModel.meshRendererComponent->GetVariant();
-            if (variant != nullptr) {
-                variant->OnUI();
-            }
-        }
-    }
-
-    if (mIsCameraWindowVisible) {
-        mCamera->OnUI();
-    }
-
-    // TODO Node tree
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -360,7 +275,8 @@ void GLTFMeshViewerScene::Shutdown() {
 //-------------------------------------------------------------------------------------------------
 
 void GLTFMeshViewerScene::OnResize() {
-    mCamera->OnResize();    // TODO Maybe we should have resize event inside entity system as well
+    mPointLightPipeline.OnResize();
+    mPbrPipeline.OnResize();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -375,13 +291,13 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
     renderRequiredData.entity = entity;
 
     renderRequiredData.transformComponent = entity->AddComponent<TransformComponent>();
-    MFA_ASSERT(renderRequiredData.transformComponent != nullptr);
+    MFA_ASSERT(renderRequiredData.transformComponent.expired() == false);
 
     renderRequiredData.meshRendererComponent = entity->AddComponent<MeshRendererComponent>(
         mPbrPipeline,
         renderRequiredData.displayName.c_str()
     );
-    MFA_ASSERT(renderRequiredData.meshRendererComponent != nullptr);
+    MFA_ASSERT(renderRequiredData.meshRendererComponent.expired() == false);
 
     entity->AddComponent<AxisAlignedBoundingBoxComponent>();
 

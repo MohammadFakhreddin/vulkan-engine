@@ -8,6 +8,7 @@ class CameraComponent;
 class Scene;
 class DisplayRenderPass;
 class PointLightComponent;
+class DirectionalLightComponent;
 class SpotLightComponent;
 class Entity;
 
@@ -31,10 +32,10 @@ public:
 
     // TODO List of light and camera => Question : Any light or active ones ?
 
-    void SetActiveCamera(CameraComponent * camera);
+    void SetActiveCamera(std::weak_ptr<CameraComponent> const & camera);
 
     [[nodiscard]]
-    CameraComponent * GetActiveCamera() const;
+    std::weak_ptr<CameraComponent> const & GetActiveCamera() const;
 
     [[nodiscard]]
     Entity * GetRootEntity() const;
@@ -42,18 +43,19 @@ public:
     [[nodiscard]]
     RT::UniformBufferCollection * GetCameraBufferCollection() const;
 
+    void RegisterPointLight(std::weak_ptr<PointLightComponent> const & pointLight);
+
 private:
 
-    CameraComponent * mActiveCamera = nullptr;
+    std::weak_ptr<CameraComponent> mActiveCamera {};
     std::unique_ptr<RT::UniformBufferCollection> mCameraBufferCollection {};
-    
+    std::unique_ptr<RT::UniformBufferCollection> mPointLightsBufferCollection {};
     // Scene root entity
     Entity * mRootEntity = nullptr;
 
-
     // TODO We need light container class
-    //std::vector<PointLightComponent *> mPointLights {};
-    //std::vector<SpotLightComponent *> mSpotLights {};
+    std::vector<std::weak_ptr<PointLightComponent>> mPointLights {};
+    std::vector<std::weak_ptr<DirectionalLightComponent>> mDirectionalLights {};
     
 };
 

@@ -156,7 +156,12 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DrawableVariant::Init(RendererComponent * rendererComponent, TransformComponent * transformComponent)
+    void DrawableVariant::Init(
+        Entity * entity,
+        std::weak_ptr<RendererComponent> const & rendererComponent,
+        std::weak_ptr<TransformComponent> const & transformComponent,
+        std::weak_ptr<BoundingVolumeComponent> const & boundingVolumeComponent
+    )
     {
         if (mIsInitialized)
         {
@@ -164,23 +169,23 @@ namespace MFA
         }
         mIsInitialized = true;
 
-        MFA_ASSERT(rendererComponent != nullptr);
+        MFA_ASSERT(entity != nullptr);
+        mEntity = entity;
+
+        MFA_ASSERT(rendererComponent.expired() == false);
         mRendererComponent = rendererComponent;
 
-        mEntity = mRendererComponent->GetEntity();
-        MFA_ASSERT(mEntity != nullptr);
-
-        MFA_ASSERT(transformComponent != nullptr);
+        MFA_ASSERT(transformComponent.expired() == false);
         mTransformComponent = transformComponent;
 
-        mTransformListenerId = mTransformComponent->RegisterChangeListener([this]()->void
+        mTransformListenerId = mTransformComponent.lock()->RegisterChangeListener([this]()->void
             {
                 mIsModelTransformChanged = true;
             }
         );
 
-        mBoundingVolumeComponent = mEntity->GetComponent<BoundingVolumeComponent>();
-        MFA_ASSERT(mBoundingVolumeComponent != nullptr);
+        MFA_ASSERT(boundingVolumeComponent.expired() == false);
+        mBoundingVolumeComponent = boundingVolumeComponent;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -193,21 +198,21 @@ namespace MFA
         }
 
         // Check if object is visible in frustum
-        bool const isVisible = mBoundingVolumeComponent->IsInFrustum();
-
-        // If object is not visible we only need to update animation time
-
-        updateAnimation(deltaTimeInSec, isVisible);
-        if (isVisible == true)
+        if (auto const ptr = mBoundingVolumeComponent.lock())
         {
-            computeNodesGlobalTransform();
-            if (IsOccluded() == false)
-            {
-                updateAllSkinsJoints();
-            }
-            mIsModelTransformChanged = false;
+            mIsInFrustum = ptr->IsInFrustum();
         }
 
+        // If object is not visible we only need to update animation time and we can avoid updating skin joints
+        auto const isVisible = IsVisible();
+        updateAnimation(deltaTimeInSec, isVisible);
+        computeNodesGlobalTransform();
+        if (isVisible)
+        {
+            updateAllSkinsJoints();
+        }
+        mIsModelTransformChanged = false;
+        
         // We update buffers after all of computations
 
         if (mSkinsJointsBuffer.bufferSize > 0 && mIsSkinJointsChanged == true)
@@ -236,9 +241,10 @@ namespace MFA
         }
         mIsInitialized = false;
 
-        mTransformComponent->UnRegisterChangeListener(mTransformListenerId);
-
-        mRendererComponent->NotifyVariantDestroyed();
+        if (auto const ptr = mTransformComponent.lock())
+        {
+            ptr->UnRegisterChangeListener(mTransformListenerId);
+        }
 
         if (mStorageBuffer.isValid())
         {
@@ -271,8 +277,7 @@ namespace MFA
 
     bool DrawableVariant::IsInFrustum() const
     {
-        MFA_ASSERT(mBoundingVolumeComponent != nullptr);
-        return mBoundingVolumeComponent->IsInFrustum();
+        return mIsInFrustum;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -655,7 +660,10 @@ namespace MFA
 
         if ((isChanged || mIsModelTransformChanged) && node.meshNode->hasSubMesh())
         {
-            node.cachedModelTransform = mTransformComponent->GetTransform() * node.cachedGlobalTransform;
+            if (auto const transformComponentPtr = mTransformComponent.lock())
+            {
+                node.cachedModelTransform = transformComponentPtr->GetTransform() * node.cachedGlobalTransform;
+            }
         }
         if (isChanged && node.meshNode->hasSubMesh() && node.meshNode->skin > -1)
         {
@@ -675,15 +683,12 @@ namespace MFA
 
     void DrawableVariant::OnUI()
     {
-        auto & mesh = mEssence->GetGpuModel().model.mesh;
-
-        std::vector<char const *> animationsList{ mesh.GetAnimationsCount() };
+        std::vector<char const *> animationsList{ mMesh->GetAnimationsCount() };
         for (size_t i = 0; i < animationsList.size(); ++i)
         {
             animationsList[i] = mMesh->GetAnimationByIndex(static_cast<uint32_t>(i)).name.c_str();
         }
 
-        UI::BeginWindow(mTransformComponent->GetEntity()->GetName().data());
         UI::Combo(
             "Active animation",
             &mUISelectedAnimationIndex,
@@ -691,7 +696,6 @@ namespace MFA
             static_cast<int32_t>(animationsList.size())
         );
         SetActiveAnimationIndex(mUISelectedAnimationIndex);
-        UI::EndWindow();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -738,7 +742,11 @@ namespace MFA
 
     bool DrawableVariant::IsActive() const noexcept
     {
-        return mRendererComponent->IsActive();
+        if (auto const ptr = mRendererComponent.lock())
+        {
+            return ptr->IsActive();
+        }
+        return false;
     }
 
     //-------------------------------------------------------------------------------------------------

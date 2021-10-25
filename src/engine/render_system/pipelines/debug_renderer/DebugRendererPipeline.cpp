@@ -99,8 +99,12 @@ namespace MFA
             {
                 if (variant->IsActive())
                 {
-                    variant->GetEntity()->GetComponent<ColorComponent>()->GetColor(pushConstants.baseColorFactor);
-
+                    auto colorComponent = variant->GetEntity()->GetComponent<ColorComponent>().lock();
+                    if (colorComponent != nullptr)
+                    {
+                        colorComponent->GetColor(pushConstants.baseColorFactor);
+                    }
+                    
                     variant->Draw(drawPass, [&drawPass, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
                         {
                             Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.model);
@@ -239,7 +243,7 @@ namespace MFA
         );
 
         // Idea: Maybe we can have active camera buffer inside scene manager
-        auto * activeScene = SceneManager::GetActiveScene();
+        auto const activeScene = SceneManager::GetActiveScene().lock();
         MFA_ASSERT(activeScene != nullptr);
         auto const * cameraBufferCollection = activeScene->GetCameraBufferCollection();
         

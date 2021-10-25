@@ -31,8 +31,6 @@ namespace MFA
     {
         CameraComponent::Init();
 
-        updateTransform();
-        OnResize();
         IM::WarpMouseAtEdges(false);
     }
 
@@ -45,11 +43,6 @@ namespace MFA
     {
 
         CameraComponent::Update(deltaTimeInSec, recordState);
-
-        if (mIsTransformDirty)
-        {
-            updateTransform();
-        }
 
         bool mRotationIsChanged = false;
         if (InputManager::IsLeftMouseDown() == true && UISystem::HasFocus() == false)
@@ -118,7 +111,8 @@ namespace MFA
             mPosition[1] = mPosition[1] + rightDirection[1] * moveDistance * rightMove;
             mPosition[2] = mPosition[2] + rightDirection[2] * moveDistance * rightMove;
         }
-        updateTransform();
+
+        mIsTransformDirty = true;
     }
     
     //-------------------------------------------------------------------------------------------------
@@ -128,21 +122,6 @@ namespace MFA
         UI::BeginWindow("ObserverCamera");
         CameraComponent::OnUI();
         UI::EndWindow();
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void ObserverCameraComponent::updateTransform()
-    {
-        auto rotationMatrix = glm::identity<glm::mat4>();
-        Matrix::Rotate(rotationMatrix, mEulerAngles);
-
-        auto translateMatrix = glm::identity<glm::mat4>();
-        Matrix::Translate(translateMatrix, mPosition);
-
-        mTransformMatrix = rotationMatrix * translateMatrix;
-
-        mIsTransformDirty = false;
     }
 
     //-------------------------------------------------------------------------------------------------

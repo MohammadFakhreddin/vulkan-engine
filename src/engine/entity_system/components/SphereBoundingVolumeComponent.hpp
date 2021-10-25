@@ -10,11 +10,8 @@ class SphereBoundingVolumeComponent final : public BoundingVolumeComponent
 {
 public:
 
-    static uint8_t GetClassType(ClassType outComponentTypes[3])
-    {
-        outComponentTypes[0] = ClassType::SphereBoundingVolumeComponent;
-        return 1;
-    }
+    MFA_COMPONENT_PROPS(SphereBoundingVolumeComponent)
+    MFA_COMPONENT_CLASS_TYPE_1(ClassType::SphereBoundingVolumeComponent)
 
     explicit SphereBoundingVolumeComponent(float radius);
 
@@ -29,7 +26,7 @@ protected:
 private:
 
     float mRadius = 0.0f;
-    TransformComponent * mTransformComponent {};
+    std::weak_ptr<TransformComponent> mTransformComponent {};
 
 };
 

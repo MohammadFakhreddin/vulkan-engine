@@ -46,10 +46,10 @@ namespace MFA
         CameraComponent::Init();
 
         mTransformComponent = GetEntity()->GetComponent<TransformComponent>();
-        MFA_ASSERT(mTransformComponent != nullptr);
+        MFA_ASSERT(mTransformComponent.expired() == false);
 
         // TODO: Should camera use transform component for its stored values ?
-        mTransformChangeListenerId = mTransformComponent->RegisterChangeListener([this]()->void
+        mTransformChangeListenerId = mTransformComponent.lock()->RegisterChangeListener([this]()->void
         {
             mIsTransformDirty = true;
         });
@@ -81,22 +81,23 @@ namespace MFA
 
         if (mIsTransformDirty)
         {
-            float variantPosition[3];
-            mTransformComponent->GetPosition(variantPosition);
+            if (auto const transformComponentPtr = mTransformComponent.lock()) {
+                auto const variantPosition = transformComponentPtr->GetPosition();
 
-            auto rotationMatrix = glm::identity<glm::mat4>();
-            Matrix::Rotate(rotationMatrix, mEulerAngles);
+                auto rotationMatrix = glm::identity<glm::mat4>();
+                Matrix::Rotate(rotationMatrix, mEulerAngles);
 
-            glm::vec4 forwardDirection = ForwardVector;
+                glm::vec4 forwardDirection = ForwardVector;
 
-            forwardDirection = forwardDirection * rotationMatrix;
-            forwardDirection = glm::normalize(forwardDirection);
+                forwardDirection = forwardDirection * rotationMatrix;
+                forwardDirection = glm::normalize(forwardDirection);
 
-            forwardDirection *= mDistance;
+                forwardDirection *= mDistance;
 
-            mPosition[0] = -variantPosition[0] - forwardDirection[0];
-            mPosition[1] = -variantPosition[1] - forwardDirection[1] + 1.0f;
-            mPosition[2] = -variantPosition[2] - forwardDirection[2];
+                mPosition[0] = -variantPosition[0] - forwardDirection[0];
+                mPosition[1] = -variantPosition[1] - forwardDirection[1] + 1.0f;
+                mPosition[2] = -variantPosition[2] - forwardDirection[2];
+            }
         }
 
         CameraComponent::Update(deltaTimeInSec, recordState);
@@ -108,7 +109,10 @@ namespace MFA
     void ThirdPersonCameraComponent::Shutdown()
     {
         CameraComponent::Shutdown();
-        mTransformComponent->UnRegisterChangeListener(mTransformChangeListenerId);
+        if (auto const ptr = mTransformComponent.lock())
+        {
+            ptr->UnRegisterChangeListener(mTransformChangeListenerId);
+        }
     }
 
     //-------------------------------------------------------------------------------------------------

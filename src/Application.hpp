@@ -36,9 +36,9 @@ private:
 
     bool mIsInitialized = false;
 
-    std::unique_ptr<Demo3rdPersonScene> mThirdPersonDemoScene;
+    std::shared_ptr<Demo3rdPersonScene> mThirdPersonDemoScene;
 
-    std::unique_ptr<GLTFMeshViewerScene> mGltfMeshViewerScene;
+    std::shared_ptr<GLTFMeshViewerScene> mGltfMeshViewerScene;
 
 #ifdef __ANDROID__
     android_app * mAndroidApp = nullptr;

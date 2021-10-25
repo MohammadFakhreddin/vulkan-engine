@@ -12,17 +12,9 @@ namespace MFA
     {
     public:
 
-        [[nodiscard]]
-        EventType RequiredEvents() const override
-        {
-            return EventTypes::InitEvent | EventTypes::ShutdownEvent;
-        }
-
-        static uint8_t GetClassType(ClassType outComponentTypes[3])
-        {
-            outComponentTypes[0] = ClassType::TransformComponent;
-            return 1;
-        }
+        MFA_COMPONENT_PROPS(TransformComponent)
+        MFA_COMPONENT_CLASS_TYPE_1(ClassType::TransformComponent)
+        MFA_COMPONENT_REQUIRED_EVENTS(EventTypes::InitEvent | EventTypes::ShutdownEvent)
     
         void Init() override;
 
@@ -76,7 +68,7 @@ namespace MFA
 
         glm::mat4 mTransform = glm::identity<glm::mat4>();
 
-        TransformComponent * mParentTransform = nullptr;
+        std::weak_ptr<TransformComponent> mParentTransform {};
 
         Signal<>::ListenerId mParentTransformChangeListenerId {};
     };

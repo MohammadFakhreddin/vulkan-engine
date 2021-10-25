@@ -13,13 +13,18 @@ namespace MFA
 
     void Scene::OnPreRender(float deltaTimeInSec, RT::CommandRecordState & recordState)
     {
-        if (mActiveCamera != nullptr && mActiveCamera->IsCameraDataDirty())
+        if (auto const cameraPtr = mActiveCamera.lock())
         {
-            RF::UpdateUniformBuffer(
-                mCameraBufferCollection->buffers[recordState.frameIndex],
-                CBlobAliasOf(mActiveCamera->GetCameraData())
-            );
+            if (cameraPtr->IsCameraDataDirty())
+            {
+                RF::UpdateUniformBuffer(
+                    mCameraBufferCollection->buffers[recordState.frameIndex],
+                    CBlobAliasOf(cameraPtr->GetCameraData())
+                );
+            }
         }
+
+        // Maybe we can search for active camera if nothing was found
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -56,17 +61,16 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void Scene::SetActiveCamera(CameraComponent * camera)
+    void Scene::SetActiveCamera(std::weak_ptr<CameraComponent> const & camera)
     {
-        MFA_ASSERT(camera != nullptr);
+        MFA_ASSERT(camera.expired() == false);
         mActiveCamera = camera;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    CameraComponent * Scene::GetActiveCamera() const
+    std::weak_ptr<CameraComponent> const & Scene::GetActiveCamera() const
     {
-        MFA_ASSERT(mActiveCamera != nullptr);
         return mActiveCamera;
     }
 
@@ -83,6 +87,13 @@ namespace MFA
     RT::UniformBufferCollection * Scene::GetCameraBufferCollection() const
     {
         return mCameraBufferCollection.get();
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Scene::RegisterPointLight(std::weak_ptr<PointLightComponent> const & pointLight)
+    {
+        mPointLights.emplace_back(pointLight);
     }
 
     //-------------------------------------------------------------------------------------------------

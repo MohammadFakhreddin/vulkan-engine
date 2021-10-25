@@ -48,8 +48,8 @@ private:
         std::string displayName {};
         std::string address {};
         MFA::Entity * entity = nullptr;
-        MFA::MeshRendererComponent * meshRendererComponent = nullptr;
-        MFA::TransformComponent * transformComponent = nullptr;
+        std::weak_ptr<MFA::MeshRendererComponent> meshRendererComponent {};
+        std::weak_ptr<MFA::TransformComponent> transformComponent {};
         struct InitialParams {
             struct Model {
                 float rotationEulerAngle[3] {};
@@ -99,13 +99,6 @@ private:
         alignas(4) int hasEmissiveTexture;
     }; 
 
-    float mModelRotation[3] {45.0f, 45.0f, 45.0f};
-    float mModelScale = 1.0f;
-    float mModelPosition[3] {0.0f, 0.0f, -6.0f};
-
-    float mLightPosition[3] {0.0f, 0.0f, -2.0f};
-    float mLightColor[3] {};
-
     std::vector<ModelRenderRequiredData> mModelsRenderData {};
     int32_t mSelectedModelIndex = 2;
     int32_t mPreviousModelSelectedIndex = -1;
@@ -127,13 +120,8 @@ private:
 
     MFA::RT::GpuModel mPointLightModel {};
 
-    MFA::TransformComponent * mPointLightTransform = nullptr;
-    MFA::ColorComponent * mPointLightColor = nullptr;
-    
-    bool mIsObjectViewerWindowVisible = false;
-    bool mIsLightWindowVisible = false;
-    bool mIsCameraWindowVisible = false;
-    bool mIsDrawableVariantWindowVisible = false;
+    std::weak_ptr<MFA::TransformComponent> mPointLightTransform {};
+    std::weak_ptr<MFA::ColorComponent> mPointLightColor {};
 
 #ifdef __DESKTOP__
     static constexpr float FOV = 80;
@@ -143,7 +131,7 @@ private:
 #error Os is not handled
 #endif
 
-    MFA::ObserverCameraComponent * mCamera = nullptr;
+    std::weak_ptr<MFA::ObserverCameraComponent> mCamera {};
 
     int mUIRegisterId = 0;
 

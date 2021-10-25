@@ -10,15 +10,16 @@
 namespace MFA::SceneManager {
 
 struct RegisteredScene {
-    Scene * scene = nullptr;
+    std::weak_ptr<Scene> scene {};
     std::string name {};        
 };
 
 struct State
 {
     std::vector<RegisteredScene> RegisteredScenes {};
-    int32_t ActiveScene = -1;
-    int32_t LastActiveScene = -1;
+    int32_t ActiveSceneIndex = -1;
+    int32_t LastActiveSceneIndex = -1;
+    std::weak_ptr<Scene> ActiveScene {};
 
     DisplayRenderPass * DisplayRenderPass {};
     
@@ -40,12 +41,16 @@ void Init() {
 
     UI::Register([]()->void {OnUI();});
     state->ResizeListenerId = RF::AddResizeEventListener([]()->void {OnResize();});
-    if(state->ActiveScene < 0 && false == state->RegisteredScenes.empty()) {
-        state->ActiveScene = 0;
+    if(state->ActiveSceneIndex < 0 && false == state->RegisteredScenes.empty()) {
+        state->ActiveSceneIndex = 0;
     }
-    if(state->ActiveScene >= 0) {
-        state->RegisteredScenes[state->ActiveScene].scene->Init();
-        state->LastActiveScene = state->ActiveScene;
+    if(state->ActiveSceneIndex >= 0) {
+        state->ActiveScene = state->RegisteredScenes[state->ActiveSceneIndex].scene;
+        if (auto const ptr = state->ActiveScene.lock())
+        {
+            ptr->Init();
+        }
+        state->LastActiveSceneIndex = state->ActiveSceneIndex;
     }
     state->DisplayRenderPass = RF::GetDisplayRenderPass();
 }
@@ -54,11 +59,12 @@ void Init() {
 
 void Shutdown() {
     RF::RemoveResizeEventListener(state->ResizeListenerId);
-    if(state->ActiveScene >= 0) {
-        state->RegisteredScenes[state->ActiveScene].scene->Shutdown();
+    if (auto const ptr = state->ActiveScene.lock())
+    {
+        ptr->Shutdown();
     }
-    state->ActiveScene = -1;
-    state->LastActiveScene = -1;
+    state->ActiveSceneIndex = -1;
+    state->LastActiveSceneIndex = -1;
     state->RegisteredScenes.resize(0);
 
     delete state;
@@ -66,8 +72,8 @@ void Shutdown() {
 
 //-------------------------------------------------------------------------------------------------
 
-void RegisterNew(Scene * scene, char const * name) {
-    MFA_ASSERT(scene != nullptr);
+void RegisterScene(std::weak_ptr<Scene> const & scene, char const * name) {
+    MFA_ASSERT(scene.expired() == false);
     MFA_ASSERT(name != nullptr);
     state->RegisteredScenes.emplace_back(RegisteredScene {scene, name});
 }
@@ -78,7 +84,9 @@ void SetActiveScene(char const * name) {
     MFA_ASSERT(name != nullptr);
     for (int32_t i = 0; i < static_cast<int32_t>(state->RegisteredScenes.size()); ++i) {
         if (0 == strcmp(state->RegisteredScenes[i].name.c_str(), name)) {
-            state->ActiveScene = i;
+            state->ActiveSceneIndex = i;
+            state->ActiveScene = state->RegisteredScenes[i].scene;
+            MFA_ASSERT(state->ActiveScene.expired() == false);
         }
     }
 }
@@ -92,13 +100,19 @@ void OnNewFrame(float const deltaTimeInSec) {
 
     // TODO We might need a logic step here as well
 
-    if(state->ActiveScene != state->LastActiveScene) {
+    if(state->ActiveSceneIndex != state->LastActiveSceneIndex) {
         RF::DeviceWaitIdle();
-        if(state->LastActiveScene >= 0) {
-            state->RegisteredScenes[state->LastActiveScene].scene->Shutdown();
+        if (state->LastActiveSceneIndex >= 0)
+        {
+            if(auto const ptr = state->RegisteredScenes[state->LastActiveSceneIndex].scene.lock()) {
+                ptr->Shutdown();
+            }
         }
-        state->RegisteredScenes[state->ActiveScene].scene->Init();
-        state->LastActiveScene = state->ActiveScene;
+        if (auto const ptr = state->ActiveScene.lock())
+        {
+            ptr->Init();
+        }
+        state->LastActiveSceneIndex = state->ActiveSceneIndex;
     }
 
     // Start of graphic record
@@ -109,9 +123,10 @@ void OnNewFrame(float const deltaTimeInSec) {
 
     EntitySystem::OnNewFrame(deltaTimeInSec, drawPass);
 
+    auto const activeScenePtr = state->ActiveScene.lock();
     // Pre render
-    if(state->ActiveScene >= 0) {
-        state->RegisteredScenes[state->ActiveScene].scene->OnPreRender(
+    if(activeScenePtr) {
+        activeScenePtr->OnPreRender(
             deltaTimeInSec, 
             drawPass
         );
@@ -120,8 +135,8 @@ void OnNewFrame(float const deltaTimeInSec) {
     state->DisplayRenderPass->BeginRenderPass(drawPass); // Draw pass being invalid means that RF cannot render anything
 
     // Render
-    if(state->ActiveScene >= 0) {
-        state->RegisteredScenes[state->ActiveScene].scene->OnRender(
+    if(activeScenePtr) {
+        activeScenePtr->OnRender(
             deltaTimeInSec,
             drawPass
         );
@@ -131,8 +146,8 @@ void OnNewFrame(float const deltaTimeInSec) {
     state->DisplayRenderPass->EndRenderPass(drawPass);
 
     // Post render 
-    if(state->ActiveScene >= 0) {
-        state->RegisteredScenes[state->ActiveScene].scene->OnPostRender(
+    if(activeScenePtr) {
+        activeScenePtr->OnPostRender(
             deltaTimeInSec, 
             drawPass
         );
@@ -146,19 +161,16 @@ void OnNewFrame(float const deltaTimeInSec) {
 //-------------------------------------------------------------------------------------------------
 
 void OnResize() {
-    if (state->ActiveScene >= 0) {
-        state->RegisteredScenes[state->ActiveScene].scene->OnResize();
+    if (auto const ptr = state->ActiveScene.lock()) {
+        ptr->OnResize();
     }
 }
 
 //-------------------------------------------------------------------------------------------------
 
-Scene * GetActiveScene()
+std::weak_ptr<Scene> const & GetActiveScene()
 {
-    if (state->ActiveScene >= 0) {
-        return state->RegisteredScenes[state->ActiveScene].scene;
-    }
-    return nullptr;
+    return state->ActiveScene;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -179,7 +191,7 @@ static void OnUI() {
     }
     UI::Combo(
         "Active scene", 
-        &state->ActiveScene,
+        &state->ActiveSceneIndex,
         scene_names.data(), 
         static_cast<int32_t>(scene_names.size())
     );

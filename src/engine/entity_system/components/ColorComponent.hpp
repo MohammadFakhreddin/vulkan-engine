@@ -11,17 +11,9 @@ class ColorComponent final : public Component
 
 public:
 
-    static uint8_t GetClassType(ClassType outComponentTypes[3])
-    {
-        outComponentTypes[0] = ClassType::ColorComponent;
-        return 1;
-    }
-
-    [[nodiscard]]
-    EventType RequiredEvents() const override
-    {
-        return EventTypes::EmptyEvent;
-    }
+    MFA_COMPONENT_PROPS(ColorComponent)
+    MFA_COMPONENT_CLASS_TYPE_1(ClassType::ColorComponent)
+    MFA_COMPONENT_REQUIRED_EVENTS(EventTypes::EmptyEvent)
 
     explicit ColorComponent() = default;
 

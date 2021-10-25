@@ -12,6 +12,9 @@ namespace MFA
     {
     public:
 
+        MFA_COMPONENT_PROPS(ObserverCameraComponent)
+        MFA_COMPONENT_CLASS_TYPE_1(ClassType::ObserverCameraComponent)
+
         explicit ObserverCameraComponent(
             float fieldOfView,
             float nearDistance,
@@ -33,12 +36,6 @@ namespace MFA
         ObserverCameraComponent & operator = (ObserverCameraComponent const &) noexcept = delete;
         ObserverCameraComponent & operator = (ObserverCameraComponent &&) noexcept = delete;
 
-        static uint8_t GetClassType(ClassType outComponentTypes[3])
-        {
-            outComponentTypes[0] = ClassType::ObserverCameraComponent;
-            return 1;
-        }
-
         void Init() override;
 
         void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState) override;
@@ -47,14 +44,9 @@ namespace MFA
 
     private:
 
-        void updateTransform();
-
         float const mMoveSpeed;
         float const mRotationSpeed;
 
-        glm::mat4 mTransformMatrix{};
-
-        bool mIsTransformDirty = false;
     };
 
 };
