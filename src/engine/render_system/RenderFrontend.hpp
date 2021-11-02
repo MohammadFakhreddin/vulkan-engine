@@ -107,6 +107,9 @@ namespace MFA::RenderFrontend
 
     void DeviceWaitIdle();
 
+    [[nodiscard]]
+    VkFormat GetDepthFormat();
+
     //---------------------------------------------Shader------------------------------------------------
 
     [[nodiscard]]

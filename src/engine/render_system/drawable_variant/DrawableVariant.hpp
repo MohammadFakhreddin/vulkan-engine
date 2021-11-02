@@ -138,7 +138,7 @@ public:
     [[nodiscard]]
     bool IsVisible() const
     {
-        return mIsOccluded == false && mIsInFrustum == true;
+        return IsActive() && mIsOccluded == false && mIsInFrustum == true;
     }
 
     [[nodiscard]]

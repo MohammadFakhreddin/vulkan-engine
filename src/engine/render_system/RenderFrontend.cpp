@@ -65,6 +65,7 @@ namespace MFA::RenderFrontend
         std::vector<VkCommandBuffer> graphicCommandBuffer{};
         RT::SyncObjects syncObjects{};
         uint8_t currentFrame = 0;
+        VkFormat depthFormat {};
 #ifdef __DESKTOP__
         // CreateWindow
         MSDL::SDL_Window * window = nullptr;
@@ -273,6 +274,8 @@ namespace MFA::RenderFrontend
             RF::GetMaxFramesPerFlight(),
             state->swapChainImageCount
         );
+
+        state->depthFormat = RB::FindDepthFormat(state->physicalDevice);
 
         state->displayRenderPass.Init();
 
@@ -686,6 +689,13 @@ namespace MFA::RenderFrontend
     void DeviceWaitIdle()
     {
         RB::DeviceWaitIdle(state->logicalDevice.device);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    VkFormat GetDepthFormat()
+    {
+        return state->depthFormat;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -1132,6 +1142,7 @@ namespace MFA::RenderFrontend
             state->physicalDevice,
             state->logicalDevice.device,
             imageSize,
+            state->depthFormat,
             options
         );
     }

@@ -152,12 +152,16 @@ list(
     "src/engine/render_system/render_passes/RenderPass.cpp"
     "src/engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
     "src/engine/render_system/render_passes/display_render_pass/DisplayRenderPass.cpp"
-    "src/engine/render_system/render_passes/shadow_render_pass_v2/ShadowRenderPassV2.hpp"
-    "src/engine/render_system/render_passes/shadow_render_pass_v2/ShadowRenderPassV2.cpp"
+    "src/engine/render_system/render_passes/point_light_shadow_render_pass/PointLightShadowRenderPass.hpp"
+    "src/engine/render_system/render_passes/point_light_shadow_render_pass/PointLightShadowRenderPass.cpp"
     "src/engine/render_system/render_passes/depth_pre_pass/DepthPrePass.hpp"
     "src/engine/render_system/render_passes/depth_pre_pass/DepthPrePass.cpp"
     "src/engine/render_system/render_passes/occlusion_render_pass/OcclusionRenderPass.hpp"
     "src/engine/render_system/render_passes/occlusion_render_pass/OcclusionRenderPass.cpp"
+
+    # RenderTarget
+    "src/engine/render_system/render_targets/point_light_shadow_render_target/PointLightShadowRenderTarget.hpp"
+    "src/engine/render_system/render_targets/point_light_shadow_render_target/PointLightShadowRenderTarget.cpp"
 
     # Pipeline
     "src/engine/render_system/pipelines/BasePipeline.hpp"

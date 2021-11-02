@@ -314,7 +314,7 @@ namespace MFA
             .format = mSwapChainImages.swapChainFormat,
             .samples = RF::GetMaxSamplesCount(),
             .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-            .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
             .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
             .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -333,7 +333,7 @@ namespace MFA
         };
 
         VkAttachmentDescription const depthAttachment{
-            .format = mDepthImageGroupList[0].imageFormat,
+            .format = RF::GetDepthFormat(),
             .samples = RF::GetMaxSamplesCount(),
             .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,

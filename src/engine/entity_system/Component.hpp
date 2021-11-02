@@ -79,7 +79,7 @@ public:
         return EventTypes::EmptyEvent;
     }
 
-    enum class ClassType
+    enum class ClassType : uint8_t
     {
         Invalid,
 

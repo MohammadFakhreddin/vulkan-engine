@@ -46,15 +46,6 @@ struct PrimitiveInfoBuffer {
 
 ConstantBuffer <PrimitiveInfoBuffer> smBuff : register (b0, space1);
 
-struct LightBuffer {
-    float3 lightPosition; //TODO We will have multiple lights and visibility info
-    float placeholder0;
-    float3 lightColor;
-    float placeholder1;
-};
-
-ConstantBuffer <LightBuffer> lightBuffer : register (b2, space0);
-
 struct CameraData {
     float4x4 viewProjection;
     float3 cameraPosition;
@@ -63,12 +54,36 @@ struct CameraData {
 
 ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
 
-sampler shadowMapSampler : register(s3, space0);
-TextureCube shadowMapTexture : register(t3, space0);
+struct PointLight
+{
+    float3 position;
+    float placeholder0;
+    float3 color;
+    float maxSquareDistance;
+    float linearAttenuation;
+    float quadraticAttenuation;
+    float2 placeholder1;     
+    float4x4 viewProjectionMatrices[6];
+};
 
-sampler textureSampler : register(s1, space1);
+#define MAX_POINT_LIGHT_COUNT 10
 
-Texture2D textures[64] : register(t2, space1);
+struct PointLightsBufferData
+{
+    uint count;
+    float constantAttenuation;
+    float2 placeholder;
+
+    PointLight items [MAX_POINT_LIGHT_COUNT];                                       // Max light
+};
+
+ConstantBuffer <PointLightsBufferData> pointLightsBuffer: register(b1, space0);
+
+sampler textureSampler : register(s2, space0);
+
+TextureCube shadowMapTextures[MAX_POINT_LIGHT_COUNT] : register(t3, space0);       // Max light
+
+Texture2D textures[64] : register(t1, space1);
 
 struct PushConsts
 {
@@ -87,10 +102,10 @@ const float PI = 3.14159265359;
 
 // TODO Each light source should have its own attenuation, TODO Get this values from cpp code (From I was doing things wrong website)
 // Fow now I assume we have a light source with r = 1.0f
-const float lightSphereRadius = 1.0f;
-const float constantAttenuation = 1.0f;
-const float linearAttenuation = 2.0f / lightSphereRadius;
-const float quadraticAttenuation = 1.0f / (lightSphereRadius * lightSphereRadius);
+// const float lightSphereRadius = 1.0f;
+// const float constantAttenuation = 1.0f;
+// const float linearAttenuation = 2.0f / lightSphereRadius;
+// const float quadraticAttenuation = 1.0f / (lightSphereRadius * lightSphereRadius);
 
 const float alphaMaskCutoff = 0.1f;
 
@@ -146,7 +161,12 @@ float3 BRDF(
     float metallic,
     float roughness,
     float3 baseColor,
-    float3 worldPos
+    float3 worldPos,
+    float constantAttenuation,
+    float linearAttenuation,
+    float quadraticAttenuation,
+    float lightVectorLength,
+    float3 lightColor
 )
 {
     // Precalculate vectors and dot products
@@ -158,7 +178,7 @@ float3 BRDF(
 
     float3 color = float3(0, 0, 0);
 
-    float distance = length(lightBuffer.lightPosition - worldPos);
+    float distance = lightVectorLength;//length(lightBuffer.lightPosition - worldPos);
     // TODO Consider using more advanced attenuation https://github.com/lettier/3d-game-shaders-for-beginners/blob/master/sections/lighting.md
     // float attenuation =
     //     1
@@ -176,7 +196,7 @@ float3 BRDF(
             + linearAttenuation * distance
             + quadraticAttenuation * distance * distance
         );
-    float3 radiance = lightBuffer.lightColor * attenuation;        
+    float3 radiance = lightColor * attenuation;        
     
     // cook-torrance brdf
     float NDF = D_GGX(dotNH, roughness);        
@@ -214,11 +234,11 @@ float3 calculateNormal(PSIn input, int normalTextureIndex)
     return pixelNormal;
 };
 
-float shadowCalculation(float3 lightVector, float viewDistance)
+float shadowCalculation(float3 lightNormalVector, float lightDistance, float viewDistance, TextureCube shadowMapTexture)
 {
     // get vector between fragment position and light position
     // Because we sampled the shadow cubemap from light to each position now we need to reverse the worldPosition to light vector
-    float3 lightToFrag = -1 * lightVector;
+    float3 lightToFrag = -1 * lightNormalVector;
     
     // // Old way
     // // use the light to fragment vector to sample from the depth map    
@@ -254,13 +274,13 @@ float shadowCalculation(float3 lightVector, float viewDistance)
     sampleOffsetDirections[19] = float3(0,  1,  -1);
     
     float shadow = 0.0f;
-    float currentDepth = length(lightToFrag);
+    float currentDepth = lightDistance;
     float diskRadius = (1.0f + (viewDistance / cameraBuffer.projectFarToNearDistance)) / 75.0f;  
     for(int i = 0; i < shadowSamples; ++i)
     {
-        float closestDepth = shadowMapTexture.Sample(shadowMapSampler, lightToFrag + sampleOffsetDirections[i] * diskRadius).r;
+        float closestDepth = shadowMapTexture.Sample(textureSampler, lightToFrag + sampleOffsetDirections[i] * diskRadius).r;
         closestDepth *= cameraBuffer.projectFarToNearDistance;
-        if(currentDepth - shadowBias > closestDepth) {
+        if(currentDepth - shadowBias > closestDepth) {      // Maybe we could have stored the square of closest depth instead
             shadow += shadowPerSample;
         }
     }
@@ -293,19 +313,52 @@ PSOut main(PSIn input) {
         roughness = primitiveInfo.roughnessFactor;
     }
 
-	float3 normal = calculateNormal(input, primitiveInfo.normalTextureIndex);
+	float3 surfaceNormal = calculateNormal(input, primitiveInfo.normalTextureIndex);
 
-	float3 N = normalize(normal.xyz);
+	float3 normalizedSurfaceNormal = normalize(surfaceNormal.xyz);
     
-	float3 V = normalize(cameraBuffer.cameraPosition - input.worldPos);
+    float3 viewVector = cameraBuffer.cameraPosition - input.worldPos;
+	float3 normalizedViewVector = normalize(viewVector);
+    float viewVectorLength = length(viewVector);
     
     // Specular contribution
 	float3 Lo = float3(0.0, 0.0, 0.0);
-	for (int i = 0; i < 1; i++) {   // Light count
-		float3 L = lightBuffer.lightPosition.xyz - input.worldPos;
-        float shadow = shadowCalculation(L, length(cameraBuffer.cameraPosition - input.worldPos));
-        if (shadow < 1.0f) {
-    	    Lo += BRDF(normalize(L), V, N, metallic, roughness, baseColor.rgb, input.worldPos) * (1.0 - shadow);
+	for (int i = 0; i < pointLightsBuffer.count; i++) {   // Light count
+		PointLight pointLight = pointLightsBuffer.items[i];
+        float3 lightDistanceVector = pointLight.position.xyz - input.worldPos;
+        float lightVectorSquareLength = lightDistanceVector.x * lightDistanceVector.x + 
+            lightDistanceVector.y * lightDistanceVector.y + 
+            lightDistanceVector.z * lightDistanceVector.z;
+        if (lightVectorSquareLength <= pointLight.maxSquareDistance)
+        {
+            float lightVectorLength = sqrt(lightVectorSquareLength);
+            float3 normalizedLightVector = float3(
+                lightDistanceVector.x / lightVectorLength, 
+                lightDistanceVector.y / lightVectorLength, 
+                lightDistanceVector.z / lightVectorLength
+            );
+            float shadow = shadowCalculation(
+                normalizedLightVector, 
+                lightVectorLength, 
+                viewVectorLength, 
+                shadowMapTextures[i]
+            );
+            if (shadow < 1.0f) {
+                Lo += BRDF(
+                    normalizedLightVector, 
+                    normalizedViewVector, 
+                    normalizedSurfaceNormal, 
+                    metallic, 
+                    roughness, 
+                    baseColor.rgb, 
+                    input.worldPos,
+                    pointLightsBuffer.constantAttenuation,
+                    pointLight.linearAttenuation,
+                    pointLight.quadraticAttenuation,
+                    lightVectorLength,
+                    pointLight.color
+                ) * (1.0 - shadow);
+            }
         }
 	};
 

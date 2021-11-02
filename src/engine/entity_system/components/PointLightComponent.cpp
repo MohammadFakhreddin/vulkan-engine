@@ -1,14 +1,31 @@
 #include "PointLightComponent.hpp"
 
+#include "engine/BedrockMatrix.hpp"
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/entity_system/components/MeshRendererComponent.hpp"
 
+#include <utility>
+
 //-------------------------------------------------------------------------------------------------
 
-MFA::PointLightComponent::PointLightComponent(float const radius)
+MFA::PointLightComponent::PointLightComponent(
+    float const radius,
+    float const maxDistance,
+    float const projectionNearDistance,
+    float const projectionFarDistance,
+    std::weak_ptr<DrawableVariant> attachedVariant
+)
     : mRadius(radius)
-{}
+    , mMaxDistance(maxDistance)
+    , mProjectionNearDistance(projectionNearDistance)
+    , mProjectionFarDistance(projectionFarDistance)
+    , mMaxSquareDistance(maxDistance * maxDistance)
+    , mLinearAttenuation(1.0f / radius)
+    , mQuadraticAttenuation(1.0f / (radius * radius))
+    , mDrawableVariant(std::move(attachedVariant))
+{
+}
 
 //-------------------------------------------------------------------------------------------------
 
@@ -17,8 +34,12 @@ void MFA::PointLightComponent::Init()
     // Finding component references
     mColorComponent = GetEntity()->GetComponent<ColorComponent>();
     MFA_ASSERT(mColorComponent.expired() == false);
+
     mTransformComponent = GetEntity()->GetComponent<TransformComponent>();
     MFA_ASSERT(mTransformComponent.expired() == false);
+    mTransformChangeListenerId = mTransformComponent.lock()->RegisterChangeListener([this]()->void {
+        computeViewProjectionMatrices();    
+    });
 
     // Registering point light to active scene
     auto const & activeScene = SceneManager::GetActiveScene();
@@ -27,19 +48,38 @@ void MFA::PointLightComponent::Init()
     {
         ptr->RegisterPointLight(SelfPtr());
     }
+
+    // We cannot just auto search, Instead we will ask the attached for attached variant explicitly
+    //// Trying to find mesh renderer component
+    //auto * entity = GetEntity();
+    //while (entity != nullptr)
+    //{
+    //    // We only search for meshRendererComponent
+    //    auto meshRendererComponent = entity->GetComponent<MeshRendererComponent>().lock();
+    //    if (meshRendererComponent != nullptr)
+    //    {
+    //        mDrawableVariant = meshRendererComponent->GetVariant();
+    //        MFA_ASSERT(mDrawableVariant.expired() == false);
+    //        break;
+    //    }
+    //    entity = entity->GetParent();
+    //}
+
+    computeProjection();
+    computeViewProjectionMatrices();
     
-    // Trying to find mesh renderer component
-    auto * entity = GetEntity();
-    while (entity != nullptr)
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::PointLightComponent::Shutdown()
+{
+    Component::Shutdown();
+
+    if (auto const ptr = mTransformComponent.lock())
     {
-        mMeshRendererComponent = entity->GetComponent<MeshRendererComponent>();
-        if (mMeshRendererComponent.expired())
-        {
-            break;
-        }
-        entity = entity->GetParent();
+        ptr->UnRegisterChangeListener(mTransformChangeListenerId);
     }
-    
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -64,6 +104,7 @@ glm::vec3 MFA::PointLightComponent::GetPosition() const
     return {};
 }
 
+//-------------------------------------------------------------------------------------------------
 
 float MFA::PointLightComponent::GetRadius() const
 {
@@ -72,3 +113,137 @@ float MFA::PointLightComponent::GetRadius() const
 
 //-------------------------------------------------------------------------------------------------
 
+bool MFA::PointLightComponent::IsVisible() const
+{
+    if (auto const ptr = mDrawableVariant.lock())
+    {
+        return ptr->IsVisible();
+    }
+    return true;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::PointLightComponent::GetShadowViewProjectionMatrices(float outData[6][16]) const
+{
+    MFA_ASSERT(outData != nullptr);
+    memcpy(
+        outData,
+        mShadowViewProjectionMatrices,
+        sizeof(mShadowViewProjectionMatrices)
+    );
+}
+
+//-------------------------------------------------------------------------------------------------
+
+float MFA::PointLightComponent::GetMaxDistance() const
+{
+    return mMaxDistance;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+float MFA::PointLightComponent::GetMaxSquareDistance() const
+{
+    return mMaxSquareDistance;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+float MFA::PointLightComponent::GetLinearAttenuation() const
+{
+    return mLinearAttenuation;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+float MFA::PointLightComponent::GetQuadraticAttenuation() const
+{
+    return mQuadraticAttenuation;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::PointLightComponent::computeProjection()
+{
+    static constexpr float FOV = 90.0f;          // We are cube so FOV must be exact 90 degree
+    static_assert(Scene::SHADOW_WIDTH == Scene::SHADOW_HEIGHT);
+    static constexpr float ratio = 1;
+        
+    Matrix::PreparePerspectiveProjectionMatrix(
+        mShadowProjectionMatrix,
+        ratio,
+        FOV,
+        mProjectionNearDistance,
+        mProjectionFarDistance
+    );
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::PointLightComponent::computeViewProjectionMatrices()
+{
+    auto const transformComponentPtr = mTransformComponent.lock();
+    if (transformComponentPtr == nullptr)
+    {
+        return;
+    }
+
+    auto const lightPositionVector = transformComponentPtr->GetPosition();
+
+    Matrix::CopyGlmToCells(
+        mShadowProjectionMatrix * glm::lookAt(
+            lightPositionVector,
+            lightPositionVector + glm::vec3(1.0, 0.0, 0.0),
+            glm::vec3(0.0, -1.0, 0.0)
+        ),
+        mShadowViewProjectionMatrices[0]
+    );
+
+    Matrix::CopyGlmToCells(
+        mShadowProjectionMatrix * glm::lookAt(
+            lightPositionVector,
+            lightPositionVector + glm::vec3(-1.0, 0.0, 0.0),
+            glm::vec3(0.0, -1.0, 0.0)
+        ),
+        mShadowViewProjectionMatrices[1]
+    );
+
+    Matrix::CopyGlmToCells(
+        mShadowProjectionMatrix * glm::lookAt(
+            lightPositionVector,
+            lightPositionVector + glm::vec3(0.0, 1.0, 0.0),
+            glm::vec3(0.0, 0.0, 1.0)
+        ),
+        mShadowViewProjectionMatrices[2]
+    );
+
+    Matrix::CopyGlmToCells(
+        mShadowProjectionMatrix * glm::lookAt(
+            lightPositionVector,
+            lightPositionVector + glm::vec3(0.0, -1.0, 0.0),
+            glm::vec3(0.0, 0.0, -1.0)
+        ),
+        mShadowViewProjectionMatrices[3]
+    );
+
+    Matrix::CopyGlmToCells(
+        mShadowProjectionMatrix * glm::lookAt(
+            lightPositionVector,
+            lightPositionVector + glm::vec3(0.0, 0.0, 1.0),
+            glm::vec3(0.0, -1.0, 0.0)
+        ),
+        mShadowViewProjectionMatrices[4]
+    );
+
+    Matrix::CopyGlmToCells(
+        mShadowProjectionMatrix * glm::lookAt(
+            lightPositionVector,
+            lightPositionVector + glm::vec3(0.0, 0.0, -1.0),
+            glm::vec3(0.0, -1.0, 0.0)
+        ),
+        mShadowViewProjectionMatrices[5]
+    );
+}
+
+//-------------------------------------------------------------------------------------------------

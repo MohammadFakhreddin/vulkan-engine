@@ -155,7 +155,7 @@ void GLTFMeshViewerScene::Init() {
             ptr->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
         }
 
-        entity->AddComponent<PointLightComponent>(0.1f);
+        entity->AddComponent<PointLightComponent>(0.1f, 10.0f, Z_NEAR, Z_FAR);
 
         mPointLightTransform = transformComponent;
 
@@ -251,6 +251,21 @@ void GLTFMeshViewerScene::OnPostRender(float const deltaTimeInSec, MFA::RT::Comm
 void GLTFMeshViewerScene::OnUI() {
     static constexpr float ItemWidth = 500;
     UI::BeginWindow("Scene Subsystem");
+    UI::SetNextItemWidth(ItemWidth);
+    // TODO Bad for performance, Find a better name
+    std::vector<char const *> modelNames {};
+    if(false == mModelsRenderData.empty()) {
+        for(auto const & renderData : mModelsRenderData) {
+            modelNames.emplace_back(renderData.displayName.c_str());
+        }
+    }
+    UI::Combo(
+        "Object selector",
+        &mSelectedModelIndex,
+        modelNames.data(), 
+        static_cast<int32_t>(modelNames.size())
+    );
+    UI::SetNextItemWidth(ItemWidth);
     UI::Button("Reset values", [this]()->void{
         mPreviousModelSelectedIndex = -1;
     });

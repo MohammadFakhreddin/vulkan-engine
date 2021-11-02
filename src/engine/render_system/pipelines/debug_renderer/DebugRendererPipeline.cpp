@@ -245,7 +245,8 @@ namespace MFA
         // Idea: Maybe we can have active camera buffer inside scene manager
         auto const activeScene = SceneManager::GetActiveScene().lock();
         MFA_ASSERT(activeScene != nullptr);
-        auto const * cameraBufferCollection = activeScene->GetCameraBufferCollection();
+
+        auto const & cameraBufferCollection = activeScene->GetCameraBufferCollection();
         
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
@@ -261,9 +262,9 @@ namespace MFA
 
             // ViewProjectionTransform
             VkDescriptorBufferInfo bufferInfo{
-                .buffer = cameraBufferCollection->buffers[frameIndex].buffer,
+                .buffer = cameraBufferCollection.buffers[frameIndex].buffer,
                 .offset = 0,
-                .range = cameraBufferCollection->bufferSize,
+                .range = cameraBufferCollection.bufferSize,
             };
             descriptorSetSchema.AddUniformBuffer(bufferInfo);
 

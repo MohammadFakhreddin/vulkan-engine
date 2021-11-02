@@ -300,6 +300,7 @@ namespace MFA::RenderBackend
         VkPhysicalDevice physicalDevice,
         VkDevice device,
         VkExtent2D imageExtent,
+        VkFormat depthFormat,
         RT::CreateDepthImageOptions const & options
     );
 

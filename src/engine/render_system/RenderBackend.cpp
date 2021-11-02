@@ -274,7 +274,9 @@ namespace MFA::RenderBackend
 #else
 #error Os not handled
 #endif
+#ifdef MFA_DEBUG
     instanceExtensions.emplace_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+#endif
     //    // TODO We should enumarate layers before using them (Both desktop and android)
     //    {// Checking for extension support
     //        uint32_t vk_supported_extension_count = 0;
@@ -311,7 +313,7 @@ namespace MFA::RenderBackend
     VK_Check(vkCreateInstance(&instanceInfo, nullptr, &instance));
     MFA_ASSERT(instance != nullptr);
     return instance;
-    }
+}
 
 //-------------------------------------------------------------------------------------------------
 
@@ -1049,6 +1051,9 @@ RT::LogicalDevice CreateLogicalDevice(
 #if defined(__PLATFORM_MAC__)// TODO We should query instead
     enabledExtensionNames.emplace_back("VK_KHR_portability_subset");
 #endif
+#ifdef MFA_DEBUG
+    enabledExtensionNames.emplace_back(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME);
+#endif
     deviceCreateInfo.ppEnabledExtensionNames = enabledExtensionNames.data();
     deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensionNames.size());
     // Necessary for shader (for some reason)
@@ -1557,12 +1562,12 @@ RT::DepthImageGroup CreateDepthImage(
     VkPhysicalDevice physicalDevice,
     VkDevice device,
     VkExtent2D const imageExtent,
+    VkFormat depthFormat,
     RT::CreateDepthImageOptions const & options
 
 )
 {
     RT::DepthImageGroup depthImageGroup{};
-    auto const depthFormat = FindDepthFormat(physicalDevice);
     depthImageGroup.imageFormat = depthFormat;
     depthImageGroup.imageGroup = CreateImage(
         device,

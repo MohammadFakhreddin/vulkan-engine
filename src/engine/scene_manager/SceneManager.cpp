@@ -108,6 +108,7 @@ void OnNewFrame(float const deltaTimeInSec) {
                 ptr->Shutdown();
             }
         }
+        state->ActiveScene = state->RegisteredScenes[state->ActiveSceneIndex].scene;
         if (auto const ptr = state->ActiveScene.lock())
         {
             ptr->Init();

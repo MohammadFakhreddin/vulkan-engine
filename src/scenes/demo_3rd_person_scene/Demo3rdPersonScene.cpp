@@ -40,16 +40,13 @@ void Demo3rdPersonScene::Init()
         auto cpuTexture = Importer::CreateErrorTexture();
         mErrorTexture = RF::CreateTexture(cpuTexture);
     }
-    {// Sampler
-        mSampler = RF::CreateSampler(RT::CreateSamplerParams{});
-    }
-    {// Pbr pipeline
-        mPbrPipeline.Init(&mSampler, &mErrorTexture, Z_NEAR, Z_FAR);
 
-        mPbrPipeline.UpdateLightPosition(mLightPosition);
-        mPbrPipeline.UpdateLightColor(mLightColor);
-    }
+    // Sampler
+    mSampler = RF::CreateSampler(RT::CreateSamplerParams{});
 
+    // Pbr pipeline
+    mPbrPipeline.Init(&mSampler, &mErrorTexture, Z_NEAR, Z_FAR);
+    
     {// Debug renderer pipeline
         mDebugRenderPipeline.Init();
 
@@ -62,34 +59,6 @@ void Demo3rdPersonScene::Init()
         mDebugRenderPipeline.CreateDrawableEssence("Cube", mCubeModel);
     }
 
-    {// PointLight
-
-        auto * entity = EntitySystem::CreateEntity("PointLight", GetRootEntity());
-        MFA_ASSERT(entity != nullptr);
-
-        auto const colorComponent = entity->AddComponent<ColorComponent>();
-        MFA_ASSERT(colorComponent.expired() == false);
-        if (auto const ptr = colorComponent.lock())
-        {
-            ptr->SetColor(mLightColor);
-        }
-
-        auto const transformComponent = entity->AddComponent<TransformComponent>();
-        MFA_ASSERT(transformComponent.expired() == false);
-        if (auto const ptr = transformComponent.lock())
-        {
-            ptr->UpdatePosition(mLightPosition);
-            ptr->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
-        }
-
-        entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, "Sphere");
-        
-        entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
-
-        entity->AddComponent<PointLightComponent>(0.1f);
-
-        EntitySystem::InitEntity(entity);
-    }
     // TODO We need prefab system!
     {// Soldier
         auto cpuModel = Importer::ImportGLTF(Path::Asset("models/warcraft_3_alliance_footmanfanmade/scene.gltf").c_str());
@@ -138,9 +107,9 @@ void Demo3rdPersonScene::Init()
         EntitySystem::InitEntity(entity);
     }
     {// NPCs
-        for (uint32_t i = 0; i < 33; ++i)
+        for (uint32_t i = 0; i < 10/*33*/; ++i)
         {
-            for (uint32_t j = 0; j < 33; ++j)
+            for (uint32_t j = 0; j < 10/*33*/; ++j)
             {
                 auto * entity = EntitySystem::CreateEntity("Random soldier", GetRootEntity());
                 MFA_ASSERT(entity != nullptr);
@@ -172,10 +141,13 @@ void Demo3rdPersonScene::Init()
                 
                 EntitySystem::InitEntity(entity);
 
-                entity->SetActive(true);
+                entity->SetActive(false);
             }
         }
     }
+
+    std::weak_ptr<DrawableVariant> mapVariant {};
+
     {// Map
         auto cpuModel = Importer::ImportGLTF(Path::Asset("models/sponza/sponza.gltf").c_str());
         mMapModel = RF::CreateGpuModel(cpuModel);
@@ -195,8 +167,9 @@ void Demo3rdPersonScene::Init()
             ptr->UpdateTransform(position, eulerAngle, scale);
         }
 
-        entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "SponzaMap");
-        
+        auto const meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "SponzaMap").lock();
+        mapVariant = meshRendererComponent->GetVariant();
+
         entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 5.0f, 0.0f), glm::vec3(15.0f, 6.0f, 9.0f));
 
         auto const debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
@@ -211,6 +184,31 @@ void Demo3rdPersonScene::Init()
 
         EntitySystem::InitEntity(entity);
     }
+
+    {// PointLight
+
+        auto * entity = EntitySystem::CreateEntity("PointLight", GetRootEntity());
+        MFA_ASSERT(entity != nullptr);
+
+        auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
+        MFA_ASSERT(colorComponent != nullptr);
+        colorComponent->SetColor(mLightColor);
+        
+        auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
+        MFA_ASSERT(transformComponent != nullptr);
+        transformComponent->UpdatePosition(mLightPosition);
+        transformComponent->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
+        
+        entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, "Sphere");
+        
+        entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
+
+        // TODO We can read radius from transform component instead
+        entity->AddComponent<PointLightComponent>(1.0f, 10.0f, Z_NEAR, Z_FAR, mapVariant);
+
+        EntitySystem::InitEntity(entity);
+    }
+
     mUIRecordId = UI::Register([this]()->void { onUI(); });
 }
 

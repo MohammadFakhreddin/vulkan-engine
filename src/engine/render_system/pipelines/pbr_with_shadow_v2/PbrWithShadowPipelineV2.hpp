@@ -3,15 +3,12 @@
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
 
-#include "glm/glm.hpp"
-
 // Optimize this file using https://simoncoenen.com/blog/programming/graphics/DoomEternalStudy
 
 namespace MFA
 {
-
+    class PointLightShadowRenderPass;
     class OcclusionRenderPass;
-    class ShadowRenderPassV2;
     class DrawableVariant;
     class DepthPrePass;
 
@@ -27,13 +24,14 @@ namespace MFA
             int placeholder0[3];
         };
 
-        struct ShadowPassVertexStagePushConstants
+        struct PointLightShadowPassPushConstants
         {
             float modelTransform[16];
             float inverseNodeTransform[16];
             int faceIndex;
             int skinIndex;
-            int placeholder0[2];
+            uint32_t lightIndex;
+            int placeholder0;
         };
 
         struct DepthPrePassVertexStagePushConstants
@@ -51,20 +49,6 @@ namespace MFA
             int skinIndex;
             uint32_t primitiveIndex;      // Unique id
             int placeholder0[2];
-        };
-
-        struct ShadowViewProjectionData
-        {
-            float viewMatrices[6][16];
-        };
-        static_assert(sizeof(ShadowViewProjectionData) == 6 * 64);
-
-        struct LightData
-        {
-            float lightPosition[3]; //TODO We will have multiple lights and visibility info
-            float placeholder0;
-            float lightColor[3];
-            float placeholder1;
         };
 
         explicit PBRWithShadowPipelineV2();
@@ -92,11 +76,7 @@ namespace MFA
         void PostRender(RT::CommandRecordState & drawPass, float deltaTime) override;
 
         void OnResize() override;
-
-        void UpdateLightPosition(const float lightPosition[3]);
-
-        void UpdateLightColor(const float lightColor[3]);
-
+        
         std::weak_ptr<DrawableVariant> CreateDrawableVariant(char const * essenceName) override;
 
     protected:
@@ -125,6 +105,10 @@ namespace MFA
 
         void createDepthPassPipeline();
 
+        void createOcclusionQueryPool();
+
+        void destroyOcclusionQueryPool();
+
         void createOcclusionQueryPipeline();
 
         void destroyPipeline();
@@ -133,24 +117,15 @@ namespace MFA
 
         void destroyUniformBuffers();
 
-        void updateLightBuffer(RT::CommandRecordState const & drawPass);
-
-        void updateShadowViewProjectionBuffer(RT::CommandRecordState const & drawPass);
-
-        void updateShadowViewProjectionData();
-        
         void retrieveOcclusionQueryResult(RT::CommandRecordState const & recordState);
 
         void performDepthPrePass(RT::CommandRecordState & recordState);
 
-        void performShadowPass(RT::CommandRecordState & recordState);
+        void performPointLightShadowPass(RT::CommandRecordState & recordState);
 
         void performOcclusionQueryPass(RT::CommandRecordState & recordState);
 
         void performDisplayPass(RT::CommandRecordState & recordState);
-
-        static constexpr float SHADOW_WIDTH = 1024;
-        static constexpr float SHADOW_HEIGHT = 1024;
 
         bool mIsInitialized = false;
 
@@ -159,35 +134,22 @@ namespace MFA
         RT::UniformBufferCollection mErrorBuffer{};
 
         RT::PipelineGroup mDisplayPassPipeline{};
-        RT::PipelineGroup mShadowPassPipeline{};
+        RT::PipelineGroup mPointLightShadowPipeline{};
         RT::PipelineGroup mDepthPassPipeline{};
         RT::PipelineGroup mOcclusionQueryPipeline{};
 
-        std::unique_ptr<ShadowRenderPassV2> mShadowRenderPass;
-
+        struct PointLightShadowRenderTargets;
+        std::unique_ptr<PointLightShadowRenderTargets> mPointLightShadowRenderTargets;
+        std::unique_ptr<PointLightShadowRenderPass> mPointLightShadowRenderPass;
+        
         std::unique_ptr<DepthPrePass> mDepthPrePass;
 
         std::unique_ptr<OcclusionRenderPass> mOcclusionRenderPass;
 
-
-        RT::UniformBufferCollection mLightBuffer{};
-        RT::UniformBufferCollection mShadowViewProjectionBuffer{};
-
-        float mLightPosition[3]{};
-        float mCameraPosition[3]{};
-        float mLightColor[3]{};
-
         float mProjectionNear = 0.0f;
         float mProjectionFar = 0.0f;
         float mProjectionFarToNearDistance = 0.0f;
-
-        glm::mat4 mShadowProjection{};
-
-        ShadowViewProjectionData mShadowViewProjectionData{};
-
-        uint32_t mLightBufferUpdateCounter = 0;
-        uint32_t mShadowViewProjectionUpdateCounter = 0;
-
+        
         struct OcclusionQueryData
         {
             std::vector<DrawableVariant *> Variants{};

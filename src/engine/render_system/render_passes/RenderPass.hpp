@@ -39,7 +39,7 @@ protected:
 
     virtual void internalEndRenderPass(RT::CommandRecordState & drawPass) = 0;
 
-    virtual void internalResize() = 0;
+    virtual void internalResize() {};
 
     [[nodiscard]]
     bool getIsRenderPassActive() const {

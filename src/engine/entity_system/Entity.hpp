@@ -120,6 +120,7 @@ private:
     std::string mName {};
     Entity * mParent = nullptr;
 
+    // Idea: Maybe We can have an array instead
     std::unordered_map<Component::ClassType, std::shared_ptr<Component>> mComponents {};
 
     Signal<> mInitSignal {};
