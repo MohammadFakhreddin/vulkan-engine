@@ -4,6 +4,7 @@
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/entity_system/components/MeshRendererComponent.hpp"
+#include "engine/ui_system/UISystem.hpp"
 
 #include <utility>
 
@@ -21,8 +22,6 @@ MFA::PointLightComponent::PointLightComponent(
     , mProjectionNearDistance(projectionNearDistance)
     , mProjectionFarDistance(projectionFarDistance)
     , mMaxSquareDistance(maxDistance * maxDistance)
-    , mLinearAttenuation(1.0f / radius)
-    , mQuadraticAttenuation(1.0f / (radius * radius))
     , mDrawableVariant(std::move(attachedVariant))
 {
 }
@@ -67,7 +66,7 @@ void MFA::PointLightComponent::Init()
 
     computeProjection();
     computeViewProjectionMatrices();
-    
+    computeAttenuation();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -109,6 +108,34 @@ glm::vec3 MFA::PointLightComponent::GetPosition() const
 float MFA::PointLightComponent::GetRadius() const
 {
     return mRadius;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::PointLightComponent::OnUI()
+{
+    if (UI::TreeNode("Transform"))
+    {
+        Component::OnUI();
+
+        float radius = mRadius;
+        UI::InputFloat("Radius", &radius);
+        if (radius != mRadius)
+        {
+            mRadius = radius;
+            computeAttenuation();
+        }
+
+        float maxDistance = mMaxDistance;
+        UI::InputFloat("MaxDistance", &maxDistance);
+        if (maxDistance != mMaxDistance)
+        {
+            mMaxDistance = maxDistance;
+            mMaxSquareDistance = maxDistance * maxDistance;
+        }
+
+        UI::TreePop();
+    }
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -177,6 +204,14 @@ void MFA::PointLightComponent::computeProjection()
         mProjectionNearDistance,
         mProjectionFarDistance
     );
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::PointLightComponent::computeAttenuation()
+{
+    mLinearAttenuation = 1.0f / mRadius;
+    mQuadraticAttenuation = 1.0f / (mRadius * mRadius);
 }
 
 //-------------------------------------------------------------------------------------------------

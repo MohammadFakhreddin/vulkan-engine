@@ -42,8 +42,8 @@ namespace MFA {
         [[nodiscard]]
         float GetRadius() const;
 
-        void OnUI() override {} // Nothing to edit in this class
-
+        void OnUI() override;
+        
         [[nodiscard]]
         bool IsVisible() const;
 
@@ -66,6 +66,8 @@ namespace MFA {
         // We only need to compute projection once
         void computeProjection();
 
+        void computeAttenuation();
+
         /*
         We have to compute viewProjection every time that transform position changes
         Future idea: We can mark as dirty and do the computation only when we are visible
@@ -75,14 +77,14 @@ namespace MFA {
         std::weak_ptr<ColorComponent> mColorComponent {};
         std::weak_ptr<TransformComponent> mTransformComponent {};
 
-        float const mRadius;                                    // Radius is used for light attenuation
-        float const mMaxDistance;                               // Max distance that light should support. Used for optimization
-        float const mProjectionNearDistance;                    // Used for shadow projection
-        float const mProjectionFarDistance;                     // Used for shadow projection
+        float mRadius = 0.0f;                                       // Radius is used for light attenuation
+        float mMaxDistance = 0.0f;                                  // Max distance that light should support. Used for optimization
+        float const mProjectionNearDistance;                        // Used for shadow projection
+        float const mProjectionFarDistance;                         // Used for shadow projection
 
-        float const mMaxSquareDistance;
-        float const mLinearAttenuation;
-        float const mQuadraticAttenuation;
+        float mMaxSquareDistance = 0.0f;
+        float mLinearAttenuation = 0.0f;
+        float mQuadraticAttenuation = 0.0f;
 
         std::weak_ptr<DrawableVariant> mDrawableVariant {};     // Used for visibility check
 

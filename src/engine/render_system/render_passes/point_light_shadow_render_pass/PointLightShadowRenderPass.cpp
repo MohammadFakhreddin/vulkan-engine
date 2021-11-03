@@ -246,10 +246,10 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PointLightShadowRenderPass::internalEndRenderPass(RT::CommandRecordState & drawPass)
+    void PointLightShadowRenderPass::internalEndRenderPass(RT::CommandRecordState & recordState)
     {
         MFA_ASSERT(mFaceIndex >= 0 && mFaceIndex < 6);
-        RF::EndRenderPass(RF::GetGraphicCommandBuffer(drawPass));
+        RF::EndRenderPass(RF::GetGraphicCommandBuffer(recordState));
 
         {// Depth image barrier
             VkImageSubresourceRange const subResourceRange{
@@ -268,12 +268,12 @@ namespace MFA
                 .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                 .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                 .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                .image = mAttachedRenderTarget->GetDepthImage(drawPass).imageGroup.image,
+                .image = mAttachedRenderTarget->GetDepthImage(recordState).imageGroup.image,
                 .subresourceRange = subResourceRange
             };
 
             RF::PipelineBarrier(
-                RF::GetGraphicCommandBuffer(drawPass),
+                RF::GetGraphicCommandBuffer(recordState),
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                 pipelineBarrier
@@ -308,9 +308,9 @@ namespace MFA
                 }
             };
             RB::CopyImage(
-                RF::GetGraphicCommandBuffer(drawPass),
-                mAttachedRenderTarget->GetDepthImage(drawPass).imageGroup.image,
-                mAttachedRenderTarget->GetDepthCubeMap(drawPass).imageGroup.image,
+                RF::GetGraphicCommandBuffer(recordState),
+                mAttachedRenderTarget->GetDepthImage(recordState).imageGroup.image,
+                mAttachedRenderTarget->GetDepthCubeMap(recordState).imageGroup.image,
                 copyRegion
             );
         }

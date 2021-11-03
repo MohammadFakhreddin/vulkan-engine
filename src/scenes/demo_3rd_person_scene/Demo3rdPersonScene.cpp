@@ -203,8 +203,8 @@ void Demo3rdPersonScene::Init()
         
         entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
 
-        // TODO We can read radius from transform component instead
-        entity->AddComponent<PointLightComponent>(1.0f, 10.0f, Z_NEAR, Z_FAR, mapVariant);
+        // TODO Maybe we can read radius from transform component instead
+        entity->AddComponent<PointLightComponent>(1.0f, 100.0f, Z_NEAR, Z_FAR, mapVariant);
 
         EntitySystem::InitEntity(entity);
     }

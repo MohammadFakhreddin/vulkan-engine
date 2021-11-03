@@ -40,7 +40,7 @@ protected:
 
     void internalBeginRenderPass(RT::CommandRecordState & recordState) override;
 
-    void internalEndRenderPass(RT::CommandRecordState & drawPass) override;
+    void internalEndRenderPass(RT::CommandRecordState & recordState) override;
 
 private:
 

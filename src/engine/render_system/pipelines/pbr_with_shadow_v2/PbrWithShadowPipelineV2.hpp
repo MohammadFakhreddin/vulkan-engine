@@ -18,37 +18,43 @@ namespace MFA
 
         struct OcclusionPassVertexStagePushConstants
         {
-            float modelTransform[16];
-            float inverseNodeTransform[16];
-            int skinIndex;
-            int placeholder0[3];
+            alignas(64) float modelTransform[16] {};
+            alignas(64) float inverseNodeTransform[16] {};
+            alignas(4) int skinIndex = 0;
+            alignas(4) int placeholder0 = 0;
+            alignas(4) int placeholder1 = 0;
+            alignas(4) int placeholder2 = 0;
+
         };
 
         struct PointLightShadowPassPushConstants
         {
-            float modelTransform[16];
-            float inverseNodeTransform[16];
-            int faceIndex;
-            int skinIndex;
-            uint32_t lightIndex;
-            int placeholder0;
+            alignas(64) float modelTransform[16] {};
+            alignas(64) float inverseNodeTransform[16] {};
+            alignas(4) int faceIndex = 0;
+            alignas(4) int skinIndex = 0;
+            alignas(4) uint32_t lightIndex = 0;
+            alignas(4) int placeholder0 = 0;
         };
 
         struct DepthPrePassVertexStagePushConstants
         {
-            float modelTransform[16];
-            float inverseNodeTransform[16];
-            int skinIndex;
-            int placeholder0[3];
+            alignas(64) float modelTransform[16] {};
+            alignas(64) float inverseNodeTransform[16] {};
+            alignas(4) int skinIndex = 0;
+            alignas(4) int placeholder0 = 0;
+            alignas(4) int placeholder1 = 0;
+            alignas(4) int placeholder2 = 0;
         };
 
         struct DisplayPassAllStagesPushConstants
         {
-            float modelTransform[16];
-            float inverseNodeTransform[16];
-            int skinIndex;
-            uint32_t primitiveIndex;      // Unique id
-            int placeholder0[2];
+            alignas(64) float modelTransform[16] {};
+            alignas(64) float inverseNodeTransform[16] {};
+            alignas(4) int skinIndex = 0;
+            alignas(4) uint32_t primitiveIndex = 0;      // Unique id
+            alignas(4) int placeholder0 = 0;
+            alignas(4) int placeholder1 = 0;
         };
 
         explicit PBRWithShadowPipelineV2();
