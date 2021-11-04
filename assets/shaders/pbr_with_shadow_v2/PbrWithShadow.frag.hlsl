@@ -112,9 +112,30 @@ const float alphaMaskCutoff = 0.1f;
 const float ambientOcclusion = 0.008f;
 
 const float shadowBias = 0.05;
-const int shadowSamples = 20;
-const float shadowPerSample = 1.0f / float(shadowSamples);
-
+const int ShadowSamplesCount = 20;
+const float shadowPerSample = 1.0f / float(ShadowSamplesCount);
+const float3 SampleOffsetDirections[20] = {
+    float3(1,  1,  1),
+    float3(1,  -1,  1),
+    float3(-1,  -1,  1),
+    float3(-1,  1,  1),
+    float3(1,  1,  -1),
+    float3(1,  -1,  -1),
+    float3(-1,  -1,  -1),
+    float3(-1,  1,  -1),
+    float3(1,  1,  0),
+    float3(1,  -1,  0),
+    float3(-1,  -1,  0),
+    float3(-1,  1,  0),
+    float3(1,  0,  1),
+    float3(-1,  0,  1),
+    float3(1,  0,  -1),
+    float3(-1,  0,  -1),
+    float3(0,  1,  1),
+    float3(0,  -1,  1),
+    float3(0,  -1,  -1),
+    float3(0,  1,  -1)
+};
 // This function computes ratio between amount of light that reflect and refracts
 // Reflection contrbutes to specular while refraction contributes to diffuse light
 /*
@@ -234,57 +255,37 @@ float3 calculateNormal(PSIn input, int normalTextureIndex)
     return pixelNormal;
 };
 
-float shadowCalculation(float3 lightNormalVector, float lightDistance, float viewDistance, TextureCube shadowMapTexture)
+// Normalized light vector will cause incorrect sampling!
+float shadowCalculation(float3 lightVector, float lightDistance, float viewDistance, TextureCube shadowMapTexture)
 {
     // get vector between fragment position and light position
     // Because we sampled the shadow cubemap from light to each position now we need to reverse the worldPosition to light vector
-    float3 lightToFrag = -1 * lightNormalVector;
+    float3 lightToFrag = -1 * lightVector;
     
-    // // Old way
+    /*
+    // Old way
     // use the light to fragment vector to sample from the depth map    
     float closestDepth = shadowMapTexture.Sample(textureSampler, lightToFrag).r;
     // it is currently in linear range between [0,1]. Re-transform back to original value
     closestDepth *= cameraBuffer.projectFarToNearDistance;
     // now get current linear depth as the length between the fragment and light position
-    float currentDepth = length(lightToFrag);
+    float currentDepth = lightDistance;
     // now test for shadows
     float shadow = currentDepth -  shadowBias > closestDepth ? 1.0 : 0.0;
-
+    */
     // With PCF
-    // // TODO We can make this array an buffer
-    // float3 sampleOffsetDirections[20];
-    // sampleOffsetDirections[0] = float3(1,  1,  1);
-    // sampleOffsetDirections[1] = float3(1,  -1,  1);
-    // sampleOffsetDirections[2] = float3(-1,  -1,  1);
-    // sampleOffsetDirections[3] = float3(-1,  1,  1);
-    // sampleOffsetDirections[4] = float3(1,  1,  -1);
-    // sampleOffsetDirections[5] = float3(1,  -1,  -1);
-    // sampleOffsetDirections[6] = float3(-1,  -1,  -1);
-    // sampleOffsetDirections[7] = float3(-1,  1,  -1);
-    // sampleOffsetDirections[8] = float3(1,  1,  0);
-    // sampleOffsetDirections[9] = float3(1,  -1,  0);
-    // sampleOffsetDirections[10] = float3(-1,  -1,  0);
-    // sampleOffsetDirections[11] = float3(-1,  1,  0);
-    // sampleOffsetDirections[12] = float3(1,  0,  1);
-    // sampleOffsetDirections[13] = float3(-1,  0,  1);
-    // sampleOffsetDirections[14] = float3(1,  0,  -1);
-    // sampleOffsetDirections[15] = float3(-1,  0,  -1);
-    // sampleOffsetDirections[16] = float3(0,  1,  1);
-    // sampleOffsetDirections[17] = float3(0,  -1,  1);
-    // sampleOffsetDirections[18] = float3(0,  -1,  -1);
-    // sampleOffsetDirections[19] = float3(0,  1,  -1);
     
-    // float shadow = 0.0f;
-    // float currentDepth = lightDistance;
-    // float diskRadius = (1.0f + (viewDistance / cameraBuffer.projectFarToNearDistance)) / 75.0f;  
-    // for(int i = 0; i < shadowSamples; ++i)
-    // {
-    //     float closestDepth = shadowMapTexture.Sample(textureSampler, lightToFrag + sampleOffsetDirections[i] * diskRadius).r;
-    //     closestDepth *= cameraBuffer.projectFarToNearDistance;
-    //     if(currentDepth - shadowBias > closestDepth) {      // Maybe we could have stored the square of closest depth instead
-    //         shadow += shadowPerSample;
-    //     }
-    // }
+    float shadow = 0.0f;
+    float currentDepth = lightDistance;
+    float diskRadius = (1.0f + (viewDistance / cameraBuffer.projectFarToNearDistance)) / 75.0f;  
+    for(int i = 0; i < ShadowSamplesCount; ++i)
+    {
+        float closestDepth = shadowMapTexture.Sample(textureSampler, lightToFrag + SampleOffsetDirections[i] * diskRadius).r;
+        closestDepth *= cameraBuffer.projectFarToNearDistance;
+        if(currentDepth - shadowBias > closestDepth) {      // Maybe we could have stored the square of closest depth instead
+            shadow += shadowPerSample;
+        }
+    }
 
     return shadow;
 }
@@ -339,7 +340,7 @@ PSOut main(PSIn input) {
                 lightDistanceVector.z / lightVectorLength
             );
             float shadow = shadowCalculation(
-                normalizedLightVector, 
+                lightDistanceVector, 
                 lightVectorLength, 
                 viewVectorLength, 
                 shadowMapTextures[i]

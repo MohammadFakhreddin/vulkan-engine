@@ -106,45 +106,45 @@ void Demo3rdPersonScene::Init()
 
         EntitySystem::InitEntity(entity);
     }
-    {// NPCs
-        for (uint32_t i = 0; i < 10/*33*/; ++i)
-        {
-            for (uint32_t j = 0; j < 10/*33*/; ++j)
-            {
-                auto * entity = EntitySystem::CreateEntity("Random soldier", GetRootEntity());
-                MFA_ASSERT(entity != nullptr);
+    //{// NPCs
+    //    for (uint32_t i = 0; i < 10/*33*/; ++i)
+    //    {
+    //        for (uint32_t j = 0; j < 10/*33*/; ++j)
+    //        {
+    //            auto * entity = EntitySystem::CreateEntity("Random soldier", GetRootEntity());
+    //            MFA_ASSERT(entity != nullptr);
 
-                auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
-                MFA_ASSERT(transformComponent != nullptr);
-                float position[3]{ static_cast<float>(i) - 15.0f, 2.0f, static_cast<float>(j) - 30.0f };
-                float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
-                float scale[3]{ 1.0f, 1.0f, 1.0f };
-                transformComponent->UpdateTransform(position, eulerAngles, scale);
-                
-                auto const meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "Soldier").lock();
-                MFA_ASSERT(meshRendererComponent != nullptr);
-                meshRendererComponent->GetVariant().lock()->SetActiveAnimation(
-                    "SwordAndShieldIdle",
-                    { .startTimeOffsetInSec = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX)) * 10 }
-                );
-                meshRendererComponent->SetActive(true);
-                
-                entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
+    //            auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
+    //            MFA_ASSERT(transformComponent != nullptr);
+    //            float position[3]{ static_cast<float>(i) - 15.0f, 2.0f, static_cast<float>(j) - 30.0f };
+    //            float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
+    //            float scale[3]{ 1.0f, 1.0f, 1.0f };
+    //            transformComponent->UpdateTransform(position, eulerAngles, scale);
+    //            
+    //            auto const meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "Soldier").lock();
+    //            MFA_ASSERT(meshRendererComponent != nullptr);
+    //            meshRendererComponent->GetVariant().lock()->SetActiveAnimation(
+    //                "SwordAndShieldIdle",
+    //                { .startTimeOffsetInSec = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX)) * 10 }
+    //            );
+    //            meshRendererComponent->SetActive(true);
+    //            
+    //            entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
 
-                auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
-                MFA_ASSERT(colorComponent != nullptr);
-                colorComponent->SetColor(glm::vec3{ 0.0f, 0.0f, 1.0f });
-                
-                auto const debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline).lock();
-                MFA_ASSERT(debugRenderComponent != nullptr);
-                debugRenderComponent->SetActive(false);
-                
-                EntitySystem::InitEntity(entity);
+    //            auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
+    //            MFA_ASSERT(colorComponent != nullptr);
+    //            colorComponent->SetColor(glm::vec3{ 0.0f, 0.0f, 1.0f });
+    //            
+    //            auto const debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline).lock();
+    //            MFA_ASSERT(debugRenderComponent != nullptr);
+    //            debugRenderComponent->SetActive(false);
+    //            
+    //            EntitySystem::InitEntity(entity);
 
-                entity->SetActive(false);
-            }
-        }
-    }
+    //            entity->SetActive(false);
+    //        }
+    //    }
+    //}
 
     std::weak_ptr<DrawableVariant> mapVariant {};
 
