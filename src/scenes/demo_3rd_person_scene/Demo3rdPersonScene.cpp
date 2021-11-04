@@ -185,28 +185,38 @@ void Demo3rdPersonScene::Init()
         EntitySystem::InitEntity(entity);
     }
 
-    {// PointLight
+    {// PointLight1
+        for (int i = 0; i < Scene::MAX_VISIBLE_POINT_LIGHT_COUNT / 2; ++i)
+        {
+            auto * entity = EntitySystem::CreateEntity("PointLight", GetRootEntity());
+            MFA_ASSERT(entity != nullptr);
 
-        auto * entity = EntitySystem::CreateEntity("PointLight", GetRootEntity());
-        MFA_ASSERT(entity != nullptr);
+            float lightPosition[3] {1.0f, 0.0f, -3.0f - i};
+            float lightScale = 10.0f;
+            float lightColor[3] {
+                (252.0f/256.0f) * lightScale,
+                (212.0f/256.0f) * lightScale,
+                (64.0f/256.0f) * lightScale
+            };
 
-        auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
-        MFA_ASSERT(colorComponent != nullptr);
-        colorComponent->SetColor(mLightColor);
-        
-        auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
-        MFA_ASSERT(transformComponent != nullptr);
-        transformComponent->UpdatePosition(mLightPosition);
-        transformComponent->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
-        
-        entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, "Sphere");
-        
-        entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
+            auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
+            MFA_ASSERT(colorComponent != nullptr);
+            colorComponent->SetColor(lightColor);
+            
+            auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
+            MFA_ASSERT(transformComponent != nullptr);
+            transformComponent->UpdatePosition(lightPosition);
+            transformComponent->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
+            
+            entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, "Sphere");
+            
+            entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
 
-        // TODO Maybe we can read radius from transform component instead
-        entity->AddComponent<PointLightComponent>(1.0f, 100.0f, Z_NEAR, Z_FAR, mapVariant);
+            // TODO Maybe we can read radius from transform component instead
+            entity->AddComponent<PointLightComponent>(1.0f, 100.0f, Z_NEAR, Z_FAR, mapVariant);
 
-        EntitySystem::InitEntity(entity);
+            EntitySystem::InitEntity(entity);
+        }
     }
 
     mUIRecordId = UI::Register([this]()->void { onUI(); });

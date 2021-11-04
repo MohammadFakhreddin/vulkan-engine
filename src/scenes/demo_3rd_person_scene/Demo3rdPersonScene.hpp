@@ -65,15 +65,6 @@ private:
 
     MFA::PBRWithShadowPipelineV2 mPbrPipeline {};
     MFA::DebugRendererPipeline mDebugRenderPipeline {};
-    
-    float mLightPosition[3] {1.0f, 0.0f, -3.0f};
-
-    static constexpr float LightScale = 100.0f;
-    float mLightColor[3] {
-        (252.0f/256.0f) * LightScale,
-        (212.0f/256.0f) * LightScale,
-        (64.0f/256.0f) * LightScale
-    };
 
     MFA::RT::GpuModel mSphereModel {};
     MFA::RT::GpuModel mCubeModel {};
