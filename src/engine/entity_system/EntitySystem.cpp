@@ -18,7 +18,7 @@ namespace MFA::EntitySystem {
 
 struct EntityRef {
     std::unique_ptr<Entity> Ptr {};
-    //EntityHandle Handle {ENTITY_HANDLE_INVALID};
+    //EntityHandle Handle {ENTITY_HANDLE_INVALID};      // We need entityHandle to distinguish entities and be able to remove entities by that
     //bool IsAlive = false;
     //uint32_t NextFreeRef = 0.0f;
 };

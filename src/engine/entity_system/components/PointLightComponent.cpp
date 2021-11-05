@@ -114,7 +114,7 @@ float MFA::PointLightComponent::GetRadius() const
 
 void MFA::PointLightComponent::OnUI()
 {
-    if (UI::TreeNode("Transform"))
+    if (UI::TreeNode("PointLight"))
     {
         Component::OnUI();
 
@@ -142,6 +142,10 @@ void MFA::PointLightComponent::OnUI()
 
 bool MFA::PointLightComponent::IsVisible() const
 {
+    if (IsActive() == false)
+    {
+        return false;
+    }
     if (auto const ptr = mDrawableVariant.lock())
     {
         return ptr->IsVisible();
