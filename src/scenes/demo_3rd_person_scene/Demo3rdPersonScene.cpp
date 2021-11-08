@@ -224,7 +224,7 @@ void Demo3rdPersonScene::Init()
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::CommandRecordState & drawPass)
+void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, RT::CommandRecordState & drawPass)
 {
     Scene::OnPreRender(deltaTimeInSec, drawPass);
 
@@ -234,7 +234,7 @@ void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, MFA::RT::Comman
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::OnRender(float const deltaTimeInSec, MFA::RT::CommandRecordState & drawPass)
+void Demo3rdPersonScene::OnRender(float const deltaTimeInSec, RT::CommandRecordState & drawPass)
 {
     Scene::OnRender(deltaTimeInSec, drawPass);
 

@@ -113,7 +113,7 @@ private:
     DirectionalLightData mDirectionalLightData {};
     RT::UniformBufferCollection mDirectionalLightBufferCollection {};
 
-    // TODO SFX light
+    // TODO Spot light
 };
 
 
