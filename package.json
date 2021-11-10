@@ -15,8 +15,9 @@
         "pbr-with-shadow-vert-v2": "glslc -g -fshader-stage=vert assets/shaders/pbr_with_shadow_v2/PbrWithShadow.vert.hlsl  -o assets/shaders/pbr_with_shadow_v2/PbrWithShadow.vert.spv",
         "pbr-with-shadow-frag-v2": "glslc -g -fshader-stage=frag assets/shaders/pbr_with_shadow_v2/PbrWithShadow.frag.hlsl  -o assets/shaders/pbr_with_shadow_v2/PbrWithShadow.frag.spv",
         
-        "offscreen-shadow-vert-v2": "glslc -g -fshader-stage=vert assets/shaders/shadow/OffscreenShadow.vert.hlsl  -o assets/shaders/shadow/OffscreenShadow.vert.spv",
-        "offscreen-shadow-frag-v2": "glslc -g -fshader-stage=frag assets/shaders/shadow/OffscreenShadow.frag.hlsl  -o assets/shaders/shadow/OffscreenShadow.frag.spv",
+        "point-light-shadow-vert": "glslc -g -fshader-stage=vert assets/shaders/point_light_shadow/PointLightShadow.vert.hlsl  -o assets/shaders/point_light_shadow/PointLightShadow.vert.spv",
+        "point-light-shadow-frag": "glslc -g -fshader-stage=frag assets/shaders/point_light_shadow/PointLightShadow.frag.hlsl  -o assets/shaders/point_light_shadow/PointLightShadow.frag.spv",
+        "point-light-shadow-geom": "glslc -g -fshader-stage=geom assets/shaders/point_light_shadow/PointLightShadow.geom.hlsl  -o assets/shaders/point_light_shadow/PointLightShadow.geom.spv",
         
         "depth-pre-pass-vert": "glslc -g -fshader-stage=vert assets/shaders/depth_pre_pass/DepthPrePass.vert.hlsl  -o assets/shaders/depth_pre_pass/DepthPrePass.vert.spv",
         "depth-pre-pass-frag": "glslc -g -fshader-stage=frag assets/shaders/depth_pre_pass/DepthPrePass.frag.hlsl  -o assets/shaders/depth_pre_pass/DepthPrePass.frag.spv",

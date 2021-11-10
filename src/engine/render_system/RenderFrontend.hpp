@@ -324,7 +324,7 @@ namespace MFA::RenderFrontend
         VkRenderPass renderPass,
         VkImageView const * attachments,
         uint32_t attachmentsCount,
-        VkExtent2D frameBufferExtent,
+        VkExtent2D const & frameBufferExtent,
         uint32_t layersCount
     );
 
@@ -372,7 +372,8 @@ namespace MFA::RenderFrontend
         VkCommandBuffer commandBuffer,
         VkPipelineStageFlags sourceStageMask,
         VkPipelineStageFlags destinationStateMask,
-        VkImageMemoryBarrier const & memoryBarrier
+        uint32_t barrierCount,
+        VkImageMemoryBarrier const * memoryBarriers
     );
 
     void PipelineBarrier(
@@ -465,3 +466,17 @@ namespace MFA
 {
     namespace RF = RenderFrontend;
 };
+
+#define RF_CREATE_SHADER(path, stage)                                                           \
+auto cpu##stage##Shader = Importer::ImportShaderFromSPV(                                        \
+    Path::Asset(path).c_str(),                                                                  \
+    AssetSystem::Shader::Stage::stage,                                                          \
+    "main"                                                                                      \
+);                                                                                              \
+auto gpu##stage##Shader = RF::CreateShader(cpu##stage##Shader);                                  \
+MFA_ASSERT(cpu##stage##Shader.isValid());                                                       \
+MFA_ASSERT(gpu##stage##Shader.valid());                                                         \
+MFA_DEFER{                                                                                      \
+    RF::DestroyShader(gpu##stage##Shader);                                                      \
+    Importer::FreeShader(cpu##stage##Shader);                                                   \
+};                                                                                              \

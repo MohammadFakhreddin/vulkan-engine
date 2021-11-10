@@ -43,24 +43,25 @@ void MFA::DepthPrePass::internalShutdown()
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DepthPrePass::internalBeginRenderPass(RT::CommandRecordState & drawPass)
+void MFA::DepthPrePass::BeginRenderPass(RT::CommandRecordState & recordState)
 {
+    RenderPass::BeginRenderPass(recordState);
     auto surfaceCapabilities = RF::GetSurfaceCapabilities();
     auto const swapChainExtend = VkExtent2D{
         .width = surfaceCapabilities.currentExtent.width,
         .height = surfaceCapabilities.currentExtent.height
     };
 
-    RF::AssignViewportAndScissorToCommandBuffer(RF::GetGraphicCommandBuffer(drawPass), swapChainExtend);
+    RF::AssignViewportAndScissorToCommandBuffer(RF::GetGraphicCommandBuffer(recordState), swapChainExtend);
 
     std::vector<VkClearValue> clearValues{};
     clearValues.resize(1);
     clearValues[0].depthStencil = { .depth = 1.0f, .stencil = 0 };
 
     RF::BeginRenderPass(
-        RF::GetGraphicCommandBuffer(drawPass),
+        RF::GetGraphicCommandBuffer(recordState),
         mRenderPass,
-        getFrameBuffer(drawPass),
+        getFrameBuffer(recordState),
         swapChainExtend,
         static_cast<uint32_t>(clearValues.size()),
         clearValues.data()
@@ -69,14 +70,15 @@ void MFA::DepthPrePass::internalBeginRenderPass(RT::CommandRecordState & drawPas
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DepthPrePass::internalEndRenderPass(RT::CommandRecordState & drawPass)
+void MFA::DepthPrePass::EndRenderPass(RT::CommandRecordState & recordState)
 {
-    RF::EndRenderPass(RF::GetGraphicCommandBuffer(drawPass));
+    RenderPass::EndRenderPass(recordState);
+    RF::EndRenderPass(RF::GetGraphicCommandBuffer(recordState));
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DepthPrePass::internalResize()
+void MFA::DepthPrePass::OnResize()
 {
     auto surfaceCapabilities = RF::GetSurfaceCapabilities();
     auto const swapChainExtend = VkExtent2D{

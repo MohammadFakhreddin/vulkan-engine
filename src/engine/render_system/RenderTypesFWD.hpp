@@ -1,60 +1,61 @@
 #pragma once
 #include <functional>
 
-namespace MFA {
+namespace MFA
+{
 
-namespace RenderTypes {
+    namespace RenderTypes
+    {
 
-struct BufferAndMemory;
+        struct BufferAndMemory;
 
-struct SamplerGroup;
+        struct SamplerGroup;
 
-struct MeshBuffers;
+        struct MeshBuffers;
 
-struct ImageGroup;
+        struct ImageGroup;
 
-class GpuTexture;
+        class GpuTexture;
 
-struct GpuModel;
+        struct GpuModel;
 
-class GpuShader;
+        class GpuShader;
 
-struct PipelineGroup;
+        struct PipelineGroup;
 
-struct CommandRecordState;
+        struct CommandRecordState;
 
-struct UniformBufferCollection;
+        struct UniformBufferCollection;
 
-struct StorageBufferCollection;
+        struct StorageBufferCollection;
 
-struct SwapChainGroup;
+        struct SwapChainGroup;
 
-struct DepthImageGroup;
+        struct DepthImageGroup;
 
-struct ColorImageGroup;
+        struct ColorImageGroup;
 
-struct DescriptorSetGroup;
+        struct DescriptorSetGroup;
 
-struct LogicalDevice;
+        struct LogicalDevice;
 
-struct SyncObjects;
+        struct SyncObjects;
 
-struct CreateGraphicPipelineOptions;
+        struct CreateGraphicPipelineOptions;
 
-struct CreateSamplerParams;
+        struct CreateSamplerParams;
 
-struct CreateColorImageOptions;
+        struct CreateColorImageOptions;
 
-struct CreateDepthImageOptions;
+        struct CreateDepthImageOptions;
 
-using ResizeEventListenerId = int;
-using ResizeEventListener = std::function<void()>;
+        using ResizeEventListenerId = int;
+        using ResizeEventListener = std::function<void()>;
 
-using DrawableVariantId = uint32_t;
-    
+        using DrawableVariantId = uint32_t;
 
-};
+    };
 
-namespace RT = RenderTypes;
+    namespace RT = RenderTypes;
 
 };

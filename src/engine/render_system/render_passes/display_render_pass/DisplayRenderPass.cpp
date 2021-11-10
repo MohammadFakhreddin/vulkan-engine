@@ -87,8 +87,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DisplayRenderPass::internalBeginRenderPass(RT::CommandRecordState & drawPass)
+    void DisplayRenderPass::BeginRenderPass(RT::CommandRecordState & recordState)
     {
+        RenderPass::BeginRenderPass(recordState);
         // If present queue family and graphics queue family are different, then a barrier is necessary
         // The barrier is also needed initially to transition the image to the present layout
         VkImageMemoryBarrier presentToDrawBarrier = {};
@@ -112,7 +113,7 @@ namespace MFA
             presentToDrawBarrier.dstQueueFamilyIndex = graphicQueueFamily;
         }
 
-        presentToDrawBarrier.image = mSwapChainImages.swapChainImages[drawPass.imageIndex];
+        presentToDrawBarrier.image = mSwapChainImages.swapChainImages[recordState.imageIndex];
 
         VkImageSubresourceRange const subResourceRange{
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -125,10 +126,11 @@ namespace MFA
         presentToDrawBarrier.subresourceRange = subResourceRange;
 
         RF::PipelineBarrier(
-            RF::GetGraphicCommandBuffer(drawPass),
+            RF::GetGraphicCommandBuffer(recordState),
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            presentToDrawBarrier
+            1,
+            &presentToDrawBarrier
         );
 
         auto surfaceCapabilities = RF::GetSurfaceCapabilities();
@@ -137,7 +139,7 @@ namespace MFA
             .height = surfaceCapabilities.currentExtent.height
         };
 
-        RF::AssignViewportAndScissorToCommandBuffer(RF::GetGraphicCommandBuffer(drawPass), swapChainExtend);
+        RF::AssignViewportAndScissorToCommandBuffer(RF::GetGraphicCommandBuffer(recordState), swapChainExtend);
 
         std::vector<VkClearValue> clearValues{};
         clearValues.resize(3);
@@ -146,9 +148,9 @@ namespace MFA
         clearValues[2].depthStencil = { .depth = 1.0f, .stencil = 0 };
 
         RF::BeginRenderPass(
-            RF::GetGraphicCommandBuffer(drawPass),
+            RF::GetGraphicCommandBuffer(recordState),
             mVkDisplayRenderPass,
-            getDisplayFrameBuffer(drawPass),
+            getDisplayFrameBuffer(recordState),
             swapChainExtend,
             static_cast<uint32_t>(clearValues.size()),
             clearValues.data()
@@ -157,14 +159,15 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DisplayRenderPass::internalEndRenderPass(RT::CommandRecordState & drawPass)
+    void DisplayRenderPass::EndRenderPass(RT::CommandRecordState & recordState)
     {
+        RenderPass::EndRenderPass(recordState);
         if (RF::IsWindowVisible() == false)
         {
             return;
         }
 
-        RF::EndRenderPass(RF::GetGraphicCommandBuffer(drawPass));
+        RF::EndRenderPass(RF::GetGraphicCommandBuffer(recordState));
 
         auto const presentQueueFamily = RF::GetPresentQueueFamily();
         auto const graphicQueueFamily = RF::GetGraphicQueueFamily();
@@ -189,21 +192,22 @@ namespace MFA
             drawToPresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
             drawToPresentBarrier.srcQueueFamilyIndex = graphicQueueFamily;
             drawToPresentBarrier.dstQueueFamilyIndex = presentQueueFamily;
-            drawToPresentBarrier.image = GetSwapChainImage(drawPass);
+            drawToPresentBarrier.image = GetSwapChainImage(recordState);
             drawToPresentBarrier.subresourceRange = subResourceRange;
 
             RF::PipelineBarrier(
-                RF::GetGraphicCommandBuffer(drawPass),
+                RF::GetGraphicCommandBuffer(recordState),
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                 VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                drawToPresentBarrier
+                1,
+                &drawToPresentBarrier
             );
         }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void DisplayRenderPass::internalResize()
+    void DisplayRenderPass::OnResize()
     {
 
         auto surfaceCapabilities = RF::GetSurfaceCapabilities();

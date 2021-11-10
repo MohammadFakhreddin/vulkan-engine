@@ -48,22 +48,6 @@ void MFA::PointLightComponent::Init()
         ptr->RegisterPointLight(SelfPtr());
     }
 
-    // We cannot just auto search, Instead we will ask the attached for attached variant explicitly
-    //// Trying to find mesh renderer component
-    //auto * entity = GetEntity();
-    //while (entity != nullptr)
-    //{
-    //    // We only search for meshRendererComponent
-    //    auto meshRendererComponent = entity->GetComponent<MeshRendererComponent>().lock();
-    //    if (meshRendererComponent != nullptr)
-    //    {
-    //        mDrawableVariant = meshRendererComponent->GetVariant();
-    //        MFA_ASSERT(mDrawableVariant.expired() == false);
-    //        break;
-    //    }
-    //    entity = entity->GetParent();
-    //}
-
     computeProjection();
     computeViewProjectionMatrices();
     computeAttenuation();

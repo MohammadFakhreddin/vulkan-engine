@@ -245,7 +245,7 @@ namespace MFA::RenderBackend
         // The version of the engine
         .engineVersion = EngineVersion,
         // The version of Vulkan we're using for this application
-        .apiVersion = VK_API_VERSION_1_0,
+        .apiVersion = VK_API_VERSION_1_1,   // TODO Make api version 1.0 for iphone
     };
     std::vector<char const *> instanceExtensions{};
 
@@ -275,7 +275,10 @@ namespace MFA::RenderBackend
 #error Os not handled
 #endif
 #ifdef MFA_DEBUG
+    instanceExtensions.emplace_back(VK_KHR_EXTERNAL_FENCE_CAPABILITIES_EXTENSION_NAME);
+    instanceExtensions.emplace_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
     instanceExtensions.emplace_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+    instanceExtensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
     //    // TODO We should enumarate layers before using them (Both desktop and android)
     //    {// Checking for extension support
@@ -2798,15 +2801,18 @@ void PipelineBarrier(
     VkCommandBuffer commandBuffer,
     VkPipelineStageFlags sourceStageMask,
     VkPipelineStageFlags destinationStateMask,
-    VkImageMemoryBarrier const & memoryBarrier
+    uint32_t const imageMemoryBarrierCount,
+    VkImageMemoryBarrier const * imageMemoryBarriers
 )
 {
     vkCmdPipelineBarrier(
         commandBuffer,
         sourceStageMask,
         destinationStateMask,
-        0, 0, nullptr, 0, nullptr, 1,
-        &memoryBarrier
+        0,
+        0, nullptr,
+        0, nullptr,
+        imageMemoryBarrierCount, imageMemoryBarriers
     );
 }
 

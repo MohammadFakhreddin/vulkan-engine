@@ -7,7 +7,7 @@ struct VSIn {
 };
 
 struct VSOut {
-    float4 position : SV_POSITION;
+    float4 position: SV_POSITION;
     float4 worldPosition : POSITION0;
 };
 
@@ -17,40 +17,22 @@ struct SkinJoints {
 
 ConstantBuffer <SkinJoints> skinJointsBuffer: register(b0, space2); 
 
-struct PointLight
-{
-    float3 position;
-    float placeholder0;
-    float3 color;
-    float maxSquareDistance;
-    float linearAttenuation;
-    float quadraticAttenuation;
-    float2 placeholder1;     
-    float4x4 viewProjectionMatrices[6];
+struct CameraBuffer {
+    float4x4 viewProjection;
+    float3 cameraPosition;
+    float projectFarToNearDistance;
 };
 
-#define MAX_POINT_LIGHT_COUNT 10
+ConstantBuffer <CameraBuffer> cameraBuffer : register (b0, space0);
 
-struct PointLightsBufferData
-{
-    uint count;
-    float constantAttenuation;
-    float2 placeholder;
-
-    PointLight items [MAX_POINT_LIGHT_COUNT];                                       // Max light
-};
-
-ConstantBuffer <PointLightsBufferData> pointLightsBuffer: register(b1, space0);
-
-// Maybe we can have a separate file for this data type
 struct PushConsts
 {   
     float4x4 model;
     float4x4 inverseNodeTransform;
-    int faceIndex;
     int skinIndex;
     uint lightIndex;
     int placeholder0;
+    int placeholder1;
 };
 
 [[vk::push_constant]]
@@ -91,7 +73,6 @@ VSOut main(VSIn input) {
     float4 tempPosition = float4(input.position, 1.0f); // w is 1 because position is a coordinate
     float4 worldPosition = mul(skinModelMat, tempPosition);;
     output.worldPosition = worldPosition;
-    output.position = mul(pointLightsBuffer.items[pushConsts.lightIndex].viewProjectionMatrices[pushConsts.faceIndex], worldPosition);
-
+    output.position = mul(cameraBuffer.viewProjection, worldPosition);
     return output;
 }

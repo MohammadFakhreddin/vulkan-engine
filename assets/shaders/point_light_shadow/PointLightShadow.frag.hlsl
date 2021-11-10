@@ -37,10 +37,10 @@ struct PushConsts
 {   
     float4x4 model;
     float4x4 inverseNodeTransform;
-    int faceIndex;
     int skinIndex;
     uint lightIndex;
     int placeholder0;
+    int placeholder1;
 };
 
 [[vk::push_constant]]

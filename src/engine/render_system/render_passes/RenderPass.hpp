@@ -21,26 +21,20 @@ public:
 
     void Shutdown();
 
-    void BeginRenderPass(RT::CommandRecordState & drawPass);
-
-    void EndRenderPass(RT::CommandRecordState & drawPass);
-
-    void OnResize();
+    virtual void OnResize();
 
     virtual VkRenderPass GetVkRenderPass() = 0;
 
 protected:
 
+    void BeginRenderPass(RT::CommandRecordState & drawPass);
+
+    void EndRenderPass(RT::CommandRecordState & drawPass);
+
     virtual void internalInit() = 0;
 
     virtual void internalShutdown() = 0;
-
-    virtual void internalBeginRenderPass(RT::CommandRecordState & drawPass) = 0;
-
-    virtual void internalEndRenderPass(RT::CommandRecordState & drawPass) = 0;
-
-    virtual void internalResize() {};
-
+    
     [[nodiscard]]
     bool getIsRenderPassActive() const {
         return mIsRenderPassActive;

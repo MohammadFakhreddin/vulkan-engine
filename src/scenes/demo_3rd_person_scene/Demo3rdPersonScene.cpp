@@ -186,7 +186,7 @@ void Demo3rdPersonScene::Init()
     }
 
     {// PointLight1
-        for (int i = 0; i < Scene::MAX_VISIBLE_POINT_LIGHT_COUNT / 2; ++i)
+        for (int i = 0; i < MAX_VISIBLE_POINT_LIGHT_COUNT / 2.0f; ++i)
         {
             auto * entity = EntitySystem::CreateEntity(("PointLight" + std::to_string(i)).c_str(), GetRootEntity());
             MFA_ASSERT(entity != nullptr);

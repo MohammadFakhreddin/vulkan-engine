@@ -47,23 +47,25 @@ void MFA::OcclusionRenderPass::internalShutdown()
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::OcclusionRenderPass::internalBeginRenderPass(RT::CommandRecordState & drawPass)
+void MFA::OcclusionRenderPass::BeginRenderPass(RT::CommandRecordState & recordState)
 {
+    RenderPass::BeginRenderPass(recordState);
+
     auto const extent = VkExtent2D {
         .width = mImageWidth,
         .height = mImageHeight
     };
 
-    RF::AssignViewportAndScissorToCommandBuffer(RF::GetGraphicCommandBuffer(drawPass), extent);
+    RF::AssignViewportAndScissorToCommandBuffer(RF::GetGraphicCommandBuffer(recordState), extent);
 
     std::vector<VkClearValue> clearValues{};
     clearValues.resize(1);
     clearValues[0].depthStencil = { .depth = 1.0f, .stencil = 0 };
 
     RF::BeginRenderPass(
-        RF::GetGraphicCommandBuffer(drawPass),
+        RF::GetGraphicCommandBuffer(recordState),
         mRenderPass,
-        getFrameBuffer(drawPass),
+        getFrameBuffer(recordState),
         extent,
         static_cast<uint32_t>(clearValues.size()),
         clearValues.data()
@@ -72,14 +74,15 @@ void MFA::OcclusionRenderPass::internalBeginRenderPass(RT::CommandRecordState & 
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::OcclusionRenderPass::internalEndRenderPass(RT::CommandRecordState & drawPass)
+void MFA::OcclusionRenderPass::EndRenderPass(RT::CommandRecordState & recordState)
 {
-    RF::EndRenderPass(RF::GetGraphicCommandBuffer(drawPass));
+    RenderPass::EndRenderPass(recordState);
+    RF::EndRenderPass(RF::GetGraphicCommandBuffer(recordState));
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::OcclusionRenderPass::internalResize()
+void MFA::OcclusionRenderPass::OnResize()
 {
     auto const capabilities = RF::GetSurfaceCapabilities();
     mImageWidth = capabilities.currentExtent.width;

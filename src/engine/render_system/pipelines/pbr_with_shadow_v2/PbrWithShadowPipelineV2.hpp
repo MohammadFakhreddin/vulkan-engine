@@ -31,10 +31,10 @@ namespace MFA
         {
             alignas(64) float modelTransform[16] {};
             alignas(64) float inverseNodeTransform[16] {};
-            alignas(4) int faceIndex = 0;
             alignas(4) int skinIndex = 0;
             alignas(4) uint32_t lightIndex = 0;
             alignas(4) int placeholder0 = 0;
+            alignas(4) int placeholder1 = 0;
         };
 
         struct DepthPrePassVertexStagePushConstants

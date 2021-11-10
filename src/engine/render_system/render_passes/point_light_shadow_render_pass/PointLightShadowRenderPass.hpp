@@ -4,7 +4,7 @@
 
 namespace MFA {
 
-class PointLightShadowRenderTarget;
+class PointLightShadowResourceCollection;
 class DisplayRenderPass;
 
 class PointLightShadowRenderPass final : public RenderPass {
@@ -21,36 +21,47 @@ public:
 
     VkRenderPass GetVkRenderPass() override;
 
-    void PrepareRenderTargetForTransferDestination(
-        RT::CommandRecordState const & drawPass,
-        PointLightShadowRenderTarget * renderTarget
+    // Appends required data for barrier to execute
+    //void PrepareRenderTargetForShading(
+    //    RT::CommandRecordState const & recordState,
+    //    PointLightShadowResourceCollection * renderTarget,
+    //    std::vector<VkImageMemoryBarrier> & outPipelineBarriers
+    //) const;
+    
+    // Appends required data for barrier to execute
+    void PrepareUsedRenderTargetForSampling(
+        RT::CommandRecordState const & recordState,
+        PointLightShadowResourceCollection * renderTarget,
+        std::vector<VkImageMemoryBarrier> & outPipelineBarriers
+    ) const;
+
+    // Appends required data for barrier to execute
+    void PrepareUnUsedRenderTargetForSampling(
+        RT::CommandRecordState const & recordState,
+        PointLightShadowResourceCollection * renderTarget,
+        std::vector<VkImageMemoryBarrier> & outPipelineBarriers
+    ) const;
+
+    // Appends required data for barrier to execute
+    void BeginRenderPass(
+        RT::CommandRecordState& recordState,
+        const PointLightShadowResourceCollection& renderTarget
     );
 
-    void PrepareRenderTargetForSampling(RT::CommandRecordState const & recordPass);
-
-    void PrepareRenderTargetForSampling(RT::CommandRecordState const & recordState, PointLightShadowRenderTarget * renderTarget) const;
-
-    void SetNextPassParams(int faceIndex);
+    void EndRenderPass(RT::CommandRecordState & drawPass);
 
 protected:
 
     void internalInit() override;
 
     void internalShutdown() override;
-
-    void internalBeginRenderPass(RT::CommandRecordState & recordState) override;
-
-    void internalEndRenderPass(RT::CommandRecordState & recordState) override;
-
+    
 private:
 
     void createRenderPass();
 
     VkRenderPass mVkRenderPass {};
 
-    int mFaceIndex = -1;
-
-    PointLightShadowRenderTarget * mAttachedRenderTarget = nullptr;
 };
 
 }

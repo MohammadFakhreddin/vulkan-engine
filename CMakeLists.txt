@@ -159,9 +159,9 @@ list(
     "src/engine/render_system/render_passes/occlusion_render_pass/OcclusionRenderPass.hpp"
     "src/engine/render_system/render_passes/occlusion_render_pass/OcclusionRenderPass.cpp"
 
-    # RenderTarget
-    "src/engine/render_system/render_targets/point_light_shadow_render_target/PointLightShadowRenderTarget.hpp"
-    "src/engine/render_system/render_targets/point_light_shadow_render_target/PointLightShadowRenderTarget.cpp"
+    # RenderResources
+    "src/engine/render_system/render_resources/point_light_shadow_resource_collection/PointLightShadowResourceCollection.hpp"
+    "src/engine/render_system/render_resources/point_light_shadow_resource_collection/PointLightShadowResourceCollection.cpp"
 
     # Pipeline
     "src/engine/render_system/pipelines/BasePipeline.hpp"

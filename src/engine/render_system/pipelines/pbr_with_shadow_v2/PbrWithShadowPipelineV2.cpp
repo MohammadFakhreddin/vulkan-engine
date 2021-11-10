@@ -12,7 +12,7 @@
 #include "engine/render_system/render_passes/depth_pre_pass/DepthPrePass.hpp"
 #include "engine/render_system/render_passes/occlusion_render_pass/OcclusionRenderPass.hpp"
 #include "engine/render_system/render_passes/point_light_shadow_render_pass/PointLightShadowRenderPass.hpp"
-#include "engine/render_system/render_targets/point_light_shadow_render_target/PointLightShadowRenderTarget.hpp"
+#include "engine/render_system/render_resources/point_light_shadow_resource_collection/PointLightShadowResourceCollection.hpp"
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 
@@ -43,7 +43,7 @@ namespace MFA
             }
         }
 
-        PointLightShadowRenderTarget RenderTargets[Count] {};
+        PointLightShadowResourceCollection RenderTargets[Count] {};
         PointLightShadowRenderPass & RenderPass;
 
     };
@@ -162,9 +162,9 @@ namespace MFA
 
         performDepthPrePass(recordState);
 
-        performPointLightShadowPass(recordState);
-
         performOcclusionQueryPass(recordState);
+
+        performPointLightShadowPass(recordState);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -270,7 +270,7 @@ namespace MFA
             {
                 pointLightShadowImageInfos.emplace_back(VkDescriptorImageInfo{
                     .sampler = nullptr,
-                    .imageView = renderTarget.GetDepthCubeMap(frameIndex).imageView,
+                    .imageView = renderTarget.GetShadowCubeMap(frameIndex).imageView,
                     .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
                 });
             }
@@ -420,7 +420,7 @@ namespace MFA
                     occlusionCount++;
                 }
             }
-            MFA_LOG_INFO("Occluded objects: %d", static_cast<int>(occlusionCount));
+            //MFA_LOG_INFO("Occluded objects: %d", static_cast<int>(occlusionCount));
 
             occlusionQueryData.Variants.clear();
         }
@@ -506,72 +506,128 @@ namespace MFA
         {
             return;
         }
-        
+
+        //{// Shading barrier
+        //    std::vector<VkImageMemoryBarrier> barrier {};
+        //    for (uint32_t lightIndex = 0; lightIndex < activeScene->GetPointLightCount(); ++lightIndex)
+        //    {
+        //        mPointLightShadowRenderPass->PrepareRenderTargetForShading(
+        //            recordState,
+        //            &mPointLightShadowRenderTargets->RenderTargets[lightIndex],
+        //            barrier
+        //        );
+        //    }
+        //    RF::PipelineBarrier(
+        //        RF::GetGraphicCommandBuffer(recordState),
+        //        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        //        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        //        static_cast<uint32_t>(barrier.size()),
+        //        barrier.data()
+        //    );
+        //}
+        // TODO We can do everything in 1 pass no matter the light count by having layers on frame buffer
+        // Geometry shader has so many advantages for shadow like preventing skinning for multiple times
         for (uint32_t lightIndex = 0; lightIndex < activeScene->GetPointLightCount(); ++lightIndex)
         {
             pushConstants.lightIndex = lightIndex;
-            mPointLightShadowRenderPass->PrepareRenderTargetForTransferDestination(
-                recordState,
-                &mPointLightShadowRenderTargets->RenderTargets[lightIndex]
-            );
 
-            for (int faceIndex = 0; faceIndex < 6; ++faceIndex)
+            auto & renderTarget = mPointLightShadowRenderTargets->RenderTargets[lightIndex];
+
+            mPointLightShadowRenderPass->BeginRenderPass(recordState, renderTarget);
+            for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
             {
-                pushConstants.faceIndex = faceIndex;
+                auto & essence = essenceAndVariantList.second->essence;
+                auto & variantsList = essenceAndVariantList.second->variants;
+                RF::BindVertexBuffer(recordState, essence.GetGpuModel().meshBuffers.verticesBuffer);
+                RF::BindIndexBuffer(recordState, essence.GetGpuModel().meshBuffers.indicesBuffer);
 
-                mPointLightShadowRenderPass->SetNextPassParams(faceIndex);
-                mPointLightShadowRenderPass->BeginRenderPass(recordState);
-                for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
+                RF::BindDescriptorSet(
+                    recordState,
+                    RenderFrontend::DescriptorSetType::PerEssence,
+                    essence.GetDescriptorSetGroup()
+                );
+
+                for (auto const & variant : variantsList)
                 {
-                    auto & essence = essenceAndVariantList.second->essence;
-                    auto & variantsList = essenceAndVariantList.second->variants;
-                    RF::BindVertexBuffer(recordState, essence.GetGpuModel().meshBuffers.verticesBuffer);
-                    RF::BindIndexBuffer(recordState, essence.GetGpuModel().meshBuffers.indicesBuffer);
-
-                    RF::BindDescriptorSet(
-                        recordState,
-                        RenderFrontend::DescriptorSetType::PerEssence,
-                        essence.GetDescriptorSetGroup()
-                    );
-
-                    for (auto const & variant : variantsList)
+                    // TODO We can have a isVisible class
+                    if (variant->IsActive() && variant->IsInFrustum() && variant->IsOccluded() == false)
                     {
-                        // TODO We can have a isVisible class
-                        if (variant->IsActive() && variant->IsInFrustum() && variant->IsOccluded() == false)
+                        RF::BindDescriptorSet(
+                            recordState,
+                            RenderFrontend::DescriptorSetType::PerVariant,
+                            variant->GetDescriptorSetGroup()
+                        );
+
+                        variant->Draw(recordState, [&recordState, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
                         {
-                            RF::BindDescriptorSet(
+                            // Vertex push constants
+                            pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
+                            Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
+                            Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
+
+                            RF::PushConstants(
                                 recordState,
-                                RenderFrontend::DescriptorSetType::PerVariant,
-                                variant->GetDescriptorSetGroup()
+                                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                                0,
+                                CBlobAliasOf(pushConstants)
                             );
-
-                            variant->Draw(recordState, [&recordState, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
-                            {
-                                // Vertex push constants
-                                pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
-                                Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
-                                Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
-
-                                RF::PushConstants(
-                                    recordState,
-                                    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-                                    0,
-                                    CBlobAliasOf(pushConstants)
-                                );
-                            });
-                        }
+                        });
                     }
                 }
-                mPointLightShadowRenderPass->EndRenderPass(recordState);
             }
-
-            mPointLightShadowRenderPass->PrepareRenderTargetForSampling(recordState);
+            mPointLightShadowRenderPass->EndRenderPass(recordState);
         }
-        for (uint32_t lightIndex = activeScene->GetPointLightCount(); lightIndex < Scene::MAX_VISIBLE_POINT_LIGHT_COUNT; ++lightIndex)
-        {
-            mPointLightShadowRenderPass->PrepareRenderTargetForSampling(
-                recordState,
-                &mPointLightShadowRenderTargets->RenderTargets[lightIndex]
+        //{// Copy barriers
+        //    std::vector<VkImageMemoryBarrier> barrier {};
+        //    for (uint32_t lightIndex = 0; lightIndex < activeScene->GetPointLightCount(); ++lightIndex)
+        //    {
+        //        mPointLightShadowRenderPass->PrepareRenderTargetForImageTransfer(
+        //            recordState,
+        //            &mPointLightShadowRenderTargets->RenderTargets[lightIndex],
+        //            barrier
+        //        );
+        //    }
+        //    RF::PipelineBarrier(
+        //        RF::GetGraphicCommandBuffer(recordState),
+        //        VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+        //        VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+        //        static_cast<uint32_t>(barrier.size()),
+        //        barrier.data()
+        //    );
+        //}
+        //{// Copying into cubemap faces (Will be replaced with geometry shader
+        //    for (uint32_t lightIndex = 0; lightIndex < activeScene->GetPointLightCount(); ++lightIndex)
+        //    {
+        //        mPointLightShadowRenderPass->CopyColorAttachmentIntoCubeMap(
+        //            recordState,
+        //            &mPointLightShadowRenderTargets->RenderTargets[lightIndex]
+        //        );
+        //    }
+        //}
+        {// Sampling barriers
+            std::vector<VkImageMemoryBarrier> barrier {};
+            for (uint32_t lightIndex = 0; lightIndex < activeScene->GetPointLightCount(); ++lightIndex)
+            {
+                mPointLightShadowRenderPass->PrepareUsedRenderTargetForSampling(
+                    recordState,
+                    &mPointLightShadowRenderTargets->RenderTargets[lightIndex],
+                    barrier
+                );
+            }
+            for (uint32_t lightIndex = activeScene->GetPointLightCount(); lightIndex < Scene::MAX_VISIBLE_POINT_LIGHT_COUNT; ++lightIndex)
+            {
+                mPointLightShadowRenderPass->PrepareUnUsedRenderTargetForSampling(
+                    recordState,
+                    &mPointLightShadowRenderTargets->RenderTargets[lightIndex],
+                    barrier
+                );
+            }
+            RF::PipelineBarrier(
+                RF::GetGraphicCommandBuffer(recordState),
+                VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                static_cast<uint32_t>(barrier.size()),
+                barrier.data()
             );
         }
     }
@@ -738,7 +794,7 @@ namespace MFA
             .binding = static_cast<uint32_t>(bindings.size()),
             .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             .descriptorCount = 1,
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         };
         bindings.emplace_back(lightViewLayoutBinding);
 
@@ -998,34 +1054,11 @@ namespace MFA
     void PBRWithShadowPipelineV2::createShadowPassPipeline()
     {
         // Vertex shader
-        auto cpuVertexShader = Importer::ImportShaderFromSPV(
-            Path::Asset("shaders/shadow/OffScreenShadow.vert.spv").c_str(),
-            AssetSystem::Shader::Stage::Vertex,
-            "main"
-        );
-        MFA_ASSERT(cpuVertexShader.isValid());
-        auto gpuVertexShader = RF::CreateShader(cpuVertexShader);
-        MFA_ASSERT(gpuVertexShader.valid());
-        MFA_DEFER{
-            RF::DestroyShader(gpuVertexShader);
-            Importer::FreeShader(cpuVertexShader);
-        };
+        RF_CREATE_SHADER("shaders/point_light_shadow/PointLightShadow.vert.spv", Vertex)
+        RF_CREATE_SHADER("shaders/point_light_shadow/PointLightShadow.geom.spv", Geometry)
+        RF_CREATE_SHADER("shaders/point_light_shadow/PointLightShadow.frag.spv", Fragment)
 
-        // Fragment shader
-        auto cpuFragmentShader = Importer::ImportShaderFromSPV(
-            Path::Asset("shaders/shadow/OffScreenShadow.frag.spv").c_str(),
-            AssetSystem::Shader::Stage::Fragment,
-            "main"
-        );
-        auto gpuFragmentShader = RF::CreateShader(cpuFragmentShader);
-        MFA_ASSERT(cpuFragmentShader.isValid());
-        MFA_ASSERT(gpuFragmentShader.valid());
-        MFA_DEFER{
-            RF::DestroyShader(gpuFragmentShader);
-            Importer::FreeShader(cpuFragmentShader);
-        };
-
-        std::vector<RT::GpuShader const *> shaders{ &gpuVertexShader, &gpuFragmentShader };
+        std::vector<RT::GpuShader const *> shaders{ &gpuVertexShader, &gpuGeometryShader, &gpuFragmentShader };
 
         VkVertexInputBindingDescription vertexInputBindingDescription{};
         vertexInputBindingDescription.binding = 0;
@@ -1070,14 +1103,14 @@ namespace MFA
 
         std::vector<VkPushConstantRange> pushConstantRanges{};
         VkPushConstantRange pushConstantRange{
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
             .offset = 0,
             .size = sizeof(PointLightShadowPassPushConstants),
         };
         pushConstantRanges.emplace_back(pushConstantRange);
 
         RT::CreateGraphicPipelineOptions graphicPipelineOptions{};
-        graphicPipelineOptions.cullMode = VK_CULL_MODE_NONE;
+        graphicPipelineOptions.cullMode = VK_CULL_MODE_BACK_BIT;
         graphicPipelineOptions.pushConstantRanges = pushConstantRanges.data();
         // TODO Probably we need to make pushConstantsRangeCount uint32_t
         graphicPipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());

@@ -234,7 +234,7 @@ namespace MFA::RenderFrontend
         state->surfaceCapabilities = computeSurfaceCapabilities();
 
         state->swapChainImageCount = RB::ComputeSwapChainImagesCount(state->surfaceCapabilities);
-        state->maxFramesPerFlight = 2;//state->swapChainImageCount;
+        state->maxFramesPerFlight = state->swapChainImageCount;
 
         state->screenWidth = static_cast<ScreenWidth>(state->surfaceCapabilities.currentExtent.width);
         state->screenHeight = static_cast<ScreenHeight>(state->surfaceCapabilities.currentExtent.height);
@@ -1159,9 +1159,9 @@ namespace MFA::RenderFrontend
     VkFramebuffer CreateFrameBuffer(
         VkRenderPass renderPass,
         VkImageView const * attachments,
-        uint32_t attachmentsCount,
-        VkExtent2D frameBufferExtent,
-        uint32_t layersCount
+        uint32_t const attachmentsCount,
+        VkExtent2D const & frameBufferExtent,
+        uint32_t const layersCount
     )
     {
         return RB::CreateFrameBuffers(
@@ -1293,14 +1293,16 @@ namespace MFA::RenderFrontend
         VkCommandBuffer commandBuffer,
         VkPipelineStageFlags sourceStageMask,
         VkPipelineStageFlags destinationStateMask,
-        VkImageMemoryBarrier const & memoryBarrier
+        uint32_t barrierCount,
+        VkImageMemoryBarrier const * memoryBarriers
     )
     {
         RB::PipelineBarrier(
             commandBuffer,
             sourceStageMask,
             destinationStateMask,
-            memoryBarrier
+            barrierCount,
+            memoryBarriers
         );
     }
 
