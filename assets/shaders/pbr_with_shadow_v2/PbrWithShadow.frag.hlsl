@@ -66,7 +66,7 @@ struct PointLight
     float4x4 viewProjectionMatrices[6];
 };
 
-#define MAX_POINT_LIGHT_COUNT 10
+#define MAX_POINT_LIGHT_COUNT 5
 
 struct PointLightsBufferData
 {

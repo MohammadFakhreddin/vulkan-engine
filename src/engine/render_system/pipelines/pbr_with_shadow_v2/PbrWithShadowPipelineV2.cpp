@@ -803,32 +803,10 @@ namespace MFA
     void PBRWithShadowPipelineV2::createDisplayPassPipeline()
     {
         // Vertex shader
-        auto cpuVertexShader = Importer::ImportShaderFromSPV(
-            Path::Asset("shaders/pbr_with_shadow_v2/PbrWithShadow.vert.spv").c_str(),
-            AssetSystem::Shader::Stage::Vertex,
-            "main"
-        );
-        MFA_ASSERT(cpuVertexShader.isValid());
-        auto gpuVertexShader = RF::CreateShader(cpuVertexShader);
-        MFA_ASSERT(gpuVertexShader.valid());
-        MFA_DEFER{
-            RF::DestroyShader(gpuVertexShader);
-            Importer::FreeShader(cpuVertexShader);
-        };
+        RF_CREATE_SHADER("shaders/pbr_with_shadow_v2/PbrWithShadow.vert.spv", Vertex)
 
         // Fragment shader
-        auto cpuFragmentShader = Importer::ImportShaderFromSPV(
-            Path::Asset("shaders/pbr_with_shadow_v2/PbrWithShadow.frag.spv").c_str(),
-            AssetSystem::Shader::Stage::Fragment,
-            "main"
-        );
-        auto gpuFragmentShader = RF::CreateShader(cpuFragmentShader);
-        MFA_ASSERT(cpuFragmentShader.isValid());
-        MFA_ASSERT(gpuFragmentShader.valid());
-        MFA_DEFER{
-            RF::DestroyShader(gpuFragmentShader);
-            Importer::FreeShader(cpuFragmentShader);
-        };
+        RF_CREATE_SHADER("shaders/pbr_with_shadow_v2/PbrWithShadow.frag.spv", Fragment);
 
         std::vector<RT::GpuShader const *> shaders{ &gpuVertexShader, &gpuFragmentShader };
 
@@ -1037,18 +1015,7 @@ namespace MFA
     void PBRWithShadowPipelineV2::createDepthPassPipeline()
     {
         // Vertex shader
-        auto cpuVertexShader = Importer::ImportShaderFromSPV(
-            Path::Asset("shaders/depth_pre_pass/DepthPrePass.vert.spv").c_str(),
-            AssetSystem::Shader::Stage::Vertex,
-            "main"
-        );
-        MFA_ASSERT(cpuVertexShader.isValid());
-        auto gpuVertexShader = RF::CreateShader(cpuVertexShader);
-        MFA_ASSERT(gpuVertexShader.valid());
-        MFA_DEFER{
-            RF::DestroyShader(gpuVertexShader);
-            Importer::FreeShader(cpuVertexShader);
-        };
+        RF_CREATE_SHADER("shaders/depth_pre_pass/DepthPrePass.vert.spv", Vertex)
 
         std::vector<RT::GpuShader const *> shaders{ &gpuVertexShader};
 

@@ -57,7 +57,6 @@ cbuffer {
 [maxvertexcount(MAX_VERTEX_COUNT)]                           // Number of generated vertices
 void main(triangle GSInput input[3], /*uint InvocationID : SV_GSInstanceID,*/ inout TriangleStream<GSOutput> outStream)
 {
-    // TODO Maybe we could do process for all lights here as well
     for (int lightIndex = 0; lightIndex < pointLightsBuffer.count; ++lightIndex)
     {
         for(int faceIndex = 0; faceIndex < 6; ++faceIndex)

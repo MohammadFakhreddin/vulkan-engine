@@ -115,3 +115,4 @@ android/local.properties
 .cxx
 
 !ios.toolchain.cmake
+.VSCodeCounter/*
