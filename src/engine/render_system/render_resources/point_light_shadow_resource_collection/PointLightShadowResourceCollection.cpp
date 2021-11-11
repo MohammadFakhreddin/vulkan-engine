@@ -82,9 +82,9 @@ void MFA::PointLightShadowResourceCollection::createShadowCubeMap(VkExtent2D con
         shadowCubeMap = RF::CreateDepthImage(
             shadowExtent,
             RT::CreateDepthImageOptions{
-                .layerCount = 6, // * light count
+                .layerCount = 6 * Scene::MAX_VISIBLE_POINT_LIGHT_COUNT,
                 .usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                .viewType = VK_IMAGE_VIEW_TYPE_CUBE,
+                .viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY,
                 .imageCreateFlags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
             }
         );
@@ -129,7 +129,7 @@ void MFA::PointLightShadowResourceCollection::createFrameBuffer(VkExtent2D const
             attachments.data(),
             static_cast<uint32_t>(attachments.size()),
             shadowExtent,
-            6   // * lightCount
+            6 * Scene::MAX_VISIBLE_POINT_LIGHT_COUNT
         );
     }
 }

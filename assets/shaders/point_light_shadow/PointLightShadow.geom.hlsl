@@ -1,6 +1,5 @@
-struct VSOutput
+struct GSInput
 {
-    float4 position: SV_POSITION;
     float4 worldPosition : POSITION0;
 };
 
@@ -8,6 +7,7 @@ struct GSOutput
 {
     float4 position: SV_POSITION;
     float4 worldPosition : POSITION0;
+    int lightIndex;
 	int Layer : SV_RenderTargetArrayIndex;
 };
 
@@ -24,7 +24,7 @@ struct PointLight
     float4x4 viewProjectionMatrices[6];
 };
 
-#define MAX_POINT_LIGHT_COUNT 10
+#define MAX_POINT_LIGHT_COUNT 5
 
 struct PointLightsBufferData
 {
@@ -42,9 +42,9 @@ struct PushConsts
     float4x4 model;
     float4x4 inverseNodeTransform;
     int skinIndex;
-    uint lightIndex;
     int placeholder0;
     int placeholder1;
+    int placeholder2;
 };
 
 [[vk::push_constant]]
@@ -52,20 +52,26 @@ cbuffer {
     PushConsts pushConsts;
 };
 
-[maxvertexcount(18)]                        // Number of generated vertices
-void main(triangle VSOutput input[3], /*uint InvocationID : SV_GSInstanceID,*/ inout TriangleStream<GSOutput> outStream)
+#define MAX_VERTEX_COUNT 90 // 3 * CubeFaces * MaxPointLight
+
+[maxvertexcount(MAX_VERTEX_COUNT)]                           // Number of generated vertices
+void main(triangle GSInput input[3], /*uint InvocationID : SV_GSInstanceID,*/ inout TriangleStream<GSOutput> outStream)
 {
     // TODO Maybe we could do process for all lights here as well
-    for(int faceIndex = 0; faceIndex < 6; ++faceIndex)
+    for (int lightIndex = 0; lightIndex < pointLightsBuffer.count; ++lightIndex)
     {
-        for(int i = 0; i < 3; ++i)          // for each triangle vertex
+        for(int faceIndex = 0; faceIndex < 6; ++faceIndex)
         {
-            GSOutput output = (GSOutput)0;
-            output.worldPosition = input[i].worldPosition;
-            output.position = mul(pointLightsBuffer.items[pushConsts.lightIndex].viewProjectionMatrices[faceIndex], input[i].worldPosition);
-            output.Layer = faceIndex;            // Specifies which face of cube we render on.
-            outStream.Append(output);;      // Emit vertex
+            for(int i = 0; i < 3; ++i)          // for each triangle vertex
+            {
+                GSOutput output = (GSOutput)0;
+                output.worldPosition = input[i].worldPosition;
+                output.position = mul(pointLightsBuffer.items[lightIndex].viewProjectionMatrices[faceIndex], input[i].worldPosition);
+                output.lightIndex = lightIndex;
+                output.Layer = lightIndex * 6 + faceIndex;       // Specifies which layer of cube array we render on.
+                outStream.Append(output);       // Emit vertex
+            }
+            outStream.RestartStrip();           // End primitive
         }
-        outStream.RestartStrip();           // End primitive
     }
 }

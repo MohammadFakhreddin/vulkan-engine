@@ -203,7 +203,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PointLightShadowRenderPass::PrepareUsedRenderTargetForSampling(
+    void PointLightShadowRenderPass::PrepareRenderTargetForSampling(
         RT::CommandRecordState const & recordState,
         PointLightShadowResourceCollection * renderTarget,
         std::vector<VkImageMemoryBarrier> & outPipelineBarriers
@@ -217,7 +217,7 @@ namespace MFA
             .baseMipLevel = 0,
             .levelCount = 1,
             .baseArrayLayer = 0,
-            .layerCount = 6,
+            .layerCount = 6 * Scene::MAX_VISIBLE_POINT_LIGHT_COUNT,
         };
 
         VkImageMemoryBarrier const pipelineBarrier{
@@ -237,35 +237,35 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PointLightShadowRenderPass::PrepareUnUsedRenderTargetForSampling(
-        RT::CommandRecordState const & recordState,
-        PointLightShadowResourceCollection * renderTarget,
-        std::vector<VkImageMemoryBarrier> & outPipelineBarriers
-    ) const
-    {
-        MFA_ASSERT(renderTarget != nullptr);
-        VkImageSubresourceRange const subResourceRange{
-            .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-            .baseMipLevel = 0,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 6,
-        };
+    //void PointLightShadowRenderPass::PrepareUnUsedRenderTargetForSampling(
+    //    RT::CommandRecordState const & recordState,
+    //    PointLightShadowResourceCollection * renderTarget,
+    //    std::vector<VkImageMemoryBarrier> & outPipelineBarriers
+    //) const
+    //{
+    //    MFA_ASSERT(renderTarget != nullptr);
+    //    VkImageSubresourceRange const subResourceRange{
+    //        .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+    //        .baseMipLevel = 0,
+    //        .levelCount = 1,
+    //        .baseArrayLayer = 0,
+    //        .layerCount = 6 * Scene::MAX_VISIBLE_POINT_LIGHT_COUNT,
+    //    };
 
-        VkImageMemoryBarrier const pipelineBarrier{
-            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-            .srcAccessMask = 0,
-            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = renderTarget->GetShadowCubeMap(recordState).imageGroup.image,
-            .subresourceRange = subResourceRange
-        };
+    //    VkImageMemoryBarrier const pipelineBarrier{
+    //        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+    //        .srcAccessMask = 0,
+    //        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+    //        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    //        .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    //        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    //        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    //        .image = renderTarget->GetShadowCubeMap(recordState).imageGroup.image,
+    //        .subresourceRange = subResourceRange
+    //    };
 
-        outPipelineBarriers.emplace_back(pipelineBarrier);
-    }
+    //    outPipelineBarriers.emplace_back(pipelineBarrier);
+    //}
 
     //-------------------------------------------------------------------------------------------------
     // RenderTarget = FrameBuffer + RenderPass! Fix the naming
@@ -337,7 +337,7 @@ namespace MFA
         std::vector<VkSubpassDescription> subPasses{
             VkSubpassDescription {
                 .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-                .colorAttachmentCount = 0,//1,
+                .colorAttachmentCount = 0,
                 .pDepthStencilAttachment = &depthReference,
             }
         };

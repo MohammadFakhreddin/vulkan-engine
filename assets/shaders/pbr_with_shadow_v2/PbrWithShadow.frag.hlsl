@@ -66,7 +66,7 @@ struct PointLight
     float4x4 viewProjectionMatrices[6];
 };
 
-#define MAX_POINT_LIGHT_COUNT 5
+#define MAX_POINT_LIGHT_COUNT 10
 
 struct PointLightsBufferData
 {
@@ -74,14 +74,14 @@ struct PointLightsBufferData
     float constantAttenuation;
     float2 placeholder;
 
-    PointLight items [MAX_POINT_LIGHT_COUNT];                                       // Max light
+    PointLight items [MAX_POINT_LIGHT_COUNT];
 };
 
 ConstantBuffer <PointLightsBufferData> pointLightsBuffer: register(b1, space0);
 
 sampler textureSampler : register(s2, space0);
 
-TextureCube shadowMapTextures[MAX_POINT_LIGHT_COUNT] : register(t3, space0);       // Max light
+TextureCubeArray shadowMapTextures : register(t3, space0);
 
 Texture2D textures[64] : register(t1, space1);
 
@@ -256,8 +256,9 @@ float3 calculateNormal(PSIn input, int normalTextureIndex)
 };
 
 // Normalized light vector will cause incorrect sampling!
-float shadowCalculation(float3 lightVector, float lightDistance, float viewDistance, TextureCube shadowMapTexture)
+float shadowCalculation(float3 lightVector, float lightDistance, float viewDistance, int lightIndex)
 {
+    // UNITY_SAMPLE_TEXCUBEARRAY(_MainTex, float4(i.uv, _SliceIndex));
     // get vector between fragment position and light position
     // Because we sampled the shadow cubemap from light to each position now we need to reverse the worldPosition to light vector
     float3 lightToFrag = -1 * lightVector;
@@ -280,7 +281,8 @@ float shadowCalculation(float3 lightVector, float lightDistance, float viewDista
     float diskRadius = (1.0f + (viewDistance / cameraBuffer.projectFarToNearDistance)) / 75.0f;  
     for(int i = 0; i < ShadowSamplesCount; ++i)
     {
-        float closestDepth = shadowMapTexture.Sample(textureSampler, lightToFrag + SampleOffsetDirections[i] * diskRadius).r;
+        float3 uv = lightToFrag + SampleOffsetDirections[i] * diskRadius;
+        float closestDepth = shadowMapTextures.Sample(textureSampler, float4(uv.x, uv.y, uv.z, lightIndex)).r;
         closestDepth *= cameraBuffer.projectFarToNearDistance;
         if(currentDepth - shadowBias > closestDepth) {      // Maybe we could have stored the square of closest depth instead
             shadow += shadowPerSample;
@@ -325,8 +327,8 @@ PSOut main(PSIn input) {
     
     // Specular contribution
 	float3 Lo = float3(0.0, 0.0, 0.0);
-	for (int i = 0; i < pointLightsBuffer.count; i++) {   // Light count
-		PointLight pointLight = pointLightsBuffer.items[i];
+	for (int lightIndex = 0; lightIndex < pointLightsBuffer.count; lightIndex++) {   // Light count
+		PointLight pointLight = pointLightsBuffer.items[lightIndex];
         float3 lightDistanceVector = pointLight.position.xyz - input.worldPos;
         float lightVectorSquareLength = lightDistanceVector.x * lightDistanceVector.x + 
             lightDistanceVector.y * lightDistanceVector.y + 
@@ -343,7 +345,7 @@ PSOut main(PSIn input) {
                 lightDistanceVector, 
                 lightVectorLength, 
                 viewVectorLength, 
-                shadowMapTextures[i]
+                lightIndex
             );
             if (shadow < 1.0f) {
                 Lo += BRDF(

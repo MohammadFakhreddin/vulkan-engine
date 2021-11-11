@@ -7,7 +7,6 @@ struct VSIn {
 };
 
 struct VSOut {
-    float4 position: SV_POSITION;
     float4 worldPosition : POSITION0;
 };
 
@@ -24,15 +23,14 @@ struct CameraBuffer {
 };
 
 ConstantBuffer <CameraBuffer> cameraBuffer : register (b0, space0);
-
 struct PushConsts
 {   
     float4x4 model;
     float4x4 inverseNodeTransform;
     int skinIndex;
-    uint lightIndex;
     int placeholder0;
     int placeholder1;
+    int placeholder2;
 };
 
 [[vk::push_constant]]
@@ -73,6 +71,5 @@ VSOut main(VSIn input) {
     float4 tempPosition = float4(input.position, 1.0f); // w is 1 because position is a coordinate
     float4 worldPosition = mul(skinModelMat, tempPosition);;
     output.worldPosition = worldPosition;
-    output.position = mul(cameraBuffer.viewProjection, worldPosition);
     return output;
 }

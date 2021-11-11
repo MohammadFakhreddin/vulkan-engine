@@ -116,7 +116,7 @@ void Demo3rdPersonScene::Init()
 
     //            auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
     //            MFA_ASSERT(transformComponent != nullptr);
-    //            float position[3]{ static_cast<float>(i) - 15.0f, 2.0f, static_cast<float>(j) - 30.0f };
+    //            float position[3]{ static_cast<float>(i) - 5.0f, 2.0f, static_cast<float>(j) - 10.0f };
     //            float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
     //            float scale[3]{ 1.0f, 1.0f, 1.0f };
     //            transformComponent->UpdateTransform(position, eulerAngles, scale);
@@ -141,7 +141,7 @@ void Demo3rdPersonScene::Init()
     //            
     //            EntitySystem::InitEntity(entity);
 
-    //            entity->SetActive(false);
+    //            entity->SetActive(true);
     //        }
     //    }
     //}
@@ -186,7 +186,7 @@ void Demo3rdPersonScene::Init()
     }
 
     {// PointLight1
-        for (int i = 0; i < MAX_VISIBLE_POINT_LIGHT_COUNT / 2.0f; ++i)
+        for (int i = 0; i < MAX_VISIBLE_POINT_LIGHT_COUNT; ++i)
         {
             auto * entity = EntitySystem::CreateEntity(("PointLight" + std::to_string(i)).c_str(), GetRootEntity());
             MFA_ASSERT(entity != nullptr);

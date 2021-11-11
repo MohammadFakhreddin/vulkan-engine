@@ -15,7 +15,7 @@ class Entity;
 class Scene {
 public:
 
-    static constexpr int MAX_VISIBLE_POINT_LIGHT_COUNT = 10;        // It can be more but currently 10 is more than enough for me
+    static constexpr int MAX_VISIBLE_POINT_LIGHT_COUNT = 5;        // It can be more but currently 10 is more than enough for me
     static constexpr int MAX_DIRECTIONAL_LIGHT_COUNT = 3;
     static constexpr uint32_t SHADOW_WIDTH = 2048;
     static constexpr uint32_t SHADOW_HEIGHT = 2048;

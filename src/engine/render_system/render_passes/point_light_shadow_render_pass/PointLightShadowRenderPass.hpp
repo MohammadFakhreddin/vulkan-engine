@@ -20,27 +20,20 @@ public:
     PointLightShadowRenderPass & operator = (PointLightShadowRenderPass &&) noexcept = delete;
 
     VkRenderPass GetVkRenderPass() override;
+    
+    // Appends required data for barrier to execute
+    void PrepareRenderTargetForSampling(
+        RT::CommandRecordState const & recordState,
+        PointLightShadowResourceCollection * renderTarget,
+        std::vector<VkImageMemoryBarrier> & outPipelineBarriers
+    ) const;
 
     // Appends required data for barrier to execute
-    //void PrepareRenderTargetForShading(
+    //void PrepareUnUsedRenderTargetForSampling(
     //    RT::CommandRecordState const & recordState,
     //    PointLightShadowResourceCollection * renderTarget,
     //    std::vector<VkImageMemoryBarrier> & outPipelineBarriers
     //) const;
-    
-    // Appends required data for barrier to execute
-    void PrepareUsedRenderTargetForSampling(
-        RT::CommandRecordState const & recordState,
-        PointLightShadowResourceCollection * renderTarget,
-        std::vector<VkImageMemoryBarrier> & outPipelineBarriers
-    ) const;
-
-    // Appends required data for barrier to execute
-    void PrepareUnUsedRenderTargetForSampling(
-        RT::CommandRecordState const & recordState,
-        PointLightShadowResourceCollection * renderTarget,
-        std::vector<VkImageMemoryBarrier> & outPipelineBarriers
-    ) const;
 
     // Appends required data for barrier to execute
     void BeginRenderPass(
