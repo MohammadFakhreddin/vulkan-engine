@@ -34,9 +34,7 @@ public:
     virtual void OnResize() = 0;
     virtual void Init();   
     virtual void Shutdown();
-
-    // TODO List of light and camera => Question : Any light or active ones ?
-
+    
     void SetActiveCamera(std::weak_ptr<CameraComponent> const & camera);
 
     [[nodiscard]]
@@ -50,8 +48,13 @@ public:
 
     void RegisterPointLight(std::weak_ptr<PointLightComponent> const & pointLight);
 
+    void RegisterDirectionalLight(std::weak_ptr<DirectionalLightComponent> const & directionalLight);
+
     [[nodiscard]]
     RT::UniformBufferCollection const & GetPointLightsBufferCollection() const;
+
+    [[nodiscard]]
+    RT::UniformBufferCollection const & GetDirectionalLightBufferCollection() const;
 
     [[nodiscard]]
     uint32_t GetPointLightCount() const;
@@ -61,15 +64,22 @@ private:
     void prepareCameraBuffer();
 
     void preparePointLightsBuffer();
-    
+
+    void prepareDirectionalLightsBuffer();
+
+    void updateCameraBuffer(RT::CommandRecordState const & recordState);
+
+    void updatePointLightsBuffer(RT::CommandRecordState const & recordState);
+
+    void updateDirectionalLightsBuffer(RT::CommandRecordState const & recordState);
+
     std::weak_ptr<CameraComponent> mActiveCamera {};
 
     // Scene root entity
     Entity * mRootEntity = nullptr;
 
-    // TODO We need light container class
-    std::vector<std::weak_ptr<PointLightComponent>> mPointLights {};
-    std::vector<std::weak_ptr<DirectionalLightComponent>> mDirectionalLights {};
+    std::vector<std::weak_ptr<PointLightComponent>> mPointLightComponents {};
+    std::vector<std::weak_ptr<DirectionalLightComponent>> mDirectionalLightComponents {};
 
     // Buffers 
     RT::UniformBufferCollection mCameraBufferCollection {};
@@ -96,18 +106,19 @@ private:
     PointLightsBufferData mPointLightData {};
     RT::UniformBufferCollection mPointLightsBufferCollection {};
 
-    // Directional light (TODO)
+    // Directional light
+    struct DirectionalLight
+    {
+        float direction[3] {};
+        float placeholder0 = 0.0f;
+        float color[3] {};
+        float placeholder1 = 0.0f;
+        float viewProjectionMatrix[16] {};
+    };
     struct DirectionalLightData
     {
         uint32_t count = 0;
         uint32_t placeholder[3] {};
-        struct DirectionalLight
-        {
-            float direction[3] {};
-            float placeholder0 = 0.0f;
-            float color[3] {};
-            float placeholder1 = 0.0f;
-        };
         DirectionalLight items [MAX_DIRECTIONAL_LIGHT_COUNT] {};
     };
     DirectionalLightData mDirectionalLightData {};

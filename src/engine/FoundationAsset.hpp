@@ -2,8 +2,9 @@
 
 #include "BedrockCommon.hpp"
 
+#include <glm/mat4x4.hpp>
+
 #include <string>
-#include <glm/glm.hpp>
 #include <vector>
 
 // TODO Separate this file into multiple files

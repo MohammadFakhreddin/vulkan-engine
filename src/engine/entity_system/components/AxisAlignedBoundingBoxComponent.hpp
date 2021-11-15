@@ -1,9 +1,6 @@
 #pragma once
 
-
 #include "BoundingVolumeComponent.hpp"
-
-#include <glm/glm.hpp>
 
 namespace MFA
 {

@@ -156,6 +156,41 @@ namespace MFA::Matrix
 
     //-------------------------------------------------------------------------------------------------
 
+    bool IsEqual(glm::mat4 const & matrixA, glm::mat4 const & matrixB)
+    {
+        return ::memcmp(&matrixA, &matrixB, 16 * sizeof(float)) == 0;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool IsEqual(glm::vec2 const & vectorA, glm::vec2 const & vectorB)
+    {
+        return ::memcmp(&vectorA, &vectorB, 2 * sizeof(float)) == 0;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool IsEqual(glm::vec3 const & vectorA, glm::vec3 const & vectorB)
+    {
+        return ::memcmp(&vectorA, &vectorB, 3 * sizeof(float)) == 0;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool IsEqual(glm::quat const & quatA, glm::quat const & quatB)
+    {
+        return ::memcmp(&quatA, &quatB, 4 * sizeof(float)) == 0;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool IsEqual(glm::vec4 const & vectorA, glm::vec4 const & vectorB)
+    {
+        return ::memcmp(&vectorA, &vectorB, 4 * sizeof(float)) == 0;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     glm::quat ToQuat(const float x, const float y, const float z)
     {
         return glm::quat(glm::vec3(

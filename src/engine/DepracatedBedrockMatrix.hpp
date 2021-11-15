@@ -15,8 +15,7 @@
 #undef near
 #endif
 
-#include <glm/glm.hpp>
-#include <glm/gtx/quaternion.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 // Note: This class is column major from now on
 namespace MFA__DEPRACATED {

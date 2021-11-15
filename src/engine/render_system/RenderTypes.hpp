@@ -275,6 +275,10 @@ namespace MFA
 
         //static constexpr VkFormat ShadowFormat = VK_FORMAT_R32_SFLOAT;
 
+        inline static const glm::vec4 ForwardVector {0.0f, 0.0f, 1.0f, 0.0f};
+        inline static const glm::vec4 RightVector {1.0f, 0.0f, 0.0f, 0.0f};
+        inline static const glm::vec4 UpVector {0.0f, 1.0f, 0.0f, 0.0f};
+
     };
 
     namespace RT = RenderTypes;

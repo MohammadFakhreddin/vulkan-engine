@@ -6,6 +6,7 @@
 #include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockMath.hpp"
+#include "engine/BedrockMatrix.hpp"
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
 
@@ -87,7 +88,7 @@ namespace MFA
                 auto rotationMatrix = glm::identity<glm::mat4>();
                 Matrix::Rotate(rotationMatrix, mEulerAngles);
 
-                glm::vec4 forwardDirection = ForwardVector;
+                glm::vec4 forwardDirection = RT::ForwardVector;
 
                 forwardDirection = forwardDirection * rotationMatrix;
                 forwardDirection = glm::normalize(forwardDirection);

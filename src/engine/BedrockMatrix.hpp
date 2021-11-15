@@ -1,7 +1,6 @@
 #pragma once
 
-#include <glm/glm.hpp>
-#include <glm/gtx/quaternion.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 namespace MFA::Matrix 
 {
@@ -40,6 +39,16 @@ namespace MFA::Matrix
     bool IsEqual(glm::quat const & quat, float const * cells);
 
     bool IsEqual(glm::vec4 const & vector, float const * cells);
+
+    bool IsEqual(glm::mat4 const & matrixA, glm::mat4 const & matrixB);
+
+    bool IsEqual(glm::vec2 const & vectorA, glm::vec2 const & vectorB);
+
+    bool IsEqual(glm::vec3 const & vectorA, glm::vec3 const & vectorB);
+
+    bool IsEqual(glm::quat const & quatA, glm::quat const & quatB);
+
+    bool IsEqual(glm::vec4 const & vectorA, glm::vec4 const & vectorB);
 
 
     [[nodiscard]]

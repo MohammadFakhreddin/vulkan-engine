@@ -193,7 +193,8 @@ namespace MFA
         MFA_ASSERT(activeScene != nullptr);
 
         auto const & cameraBufferCollection = activeScene->GetCameraBufferCollection();
-        auto const & lightBufferCollection = activeScene->GetPointLightsBufferCollection();
+        auto const & directionalLightBufferCollection = activeScene->GetDirectionalLightBufferCollection();
+        auto const & pointLightBufferCollection = activeScene->GetPointLightsBufferCollection();
         
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
@@ -203,10 +204,6 @@ namespace MFA
 
             DescriptorSetSchema descriptorSetSchema{ descriptorSet };
 
-            /////////////////////////////////////////////////////////////////
-            // Vertex shader
-            /////////////////////////////////////////////////////////////////
-
             // DisplayViewProjection
             VkDescriptorBufferInfo viewProjectionBufferInfo{
                 .buffer = cameraBufferCollection.buffers[frameIndex].buffer,
@@ -215,17 +212,19 @@ namespace MFA
             };
             descriptorSetSchema.AddUniformBuffer(viewProjectionBufferInfo);
 
-            /////////////////////////////////////////////////////////////////
-            // Fragment shader
-            /////////////////////////////////////////////////////////////////
-
-            // LightBuffer
-            VkDescriptorBufferInfo lightViewBufferInfo{
-                .buffer = lightBufferCollection.buffers[frameIndex].buffer,
+            // DirectionalLightBuffer
+            descriptorSetSchema.AddUniformBuffer(VkDescriptorBufferInfo {
+                .buffer = directionalLightBufferCollection.buffers[frameIndex].buffer,
                 .offset = 0,
-                .range = lightBufferCollection.bufferSize,
-            };
-            descriptorSetSchema.AddUniformBuffer(lightViewBufferInfo);
+                .range = directionalLightBufferCollection.bufferSize,
+            });
+
+            // PointLightBuffer
+            descriptorSetSchema.AddUniformBuffer(VkDescriptorBufferInfo {
+                .buffer = pointLightBufferCollection.buffers[frameIndex].buffer,
+                .offset = 0,
+                .range = pointLightBufferCollection.bufferSize,
+            });
 
             // Sampler
             VkDescriptorImageInfo texturesSamplerInfo{
@@ -675,10 +674,6 @@ namespace MFA
     {
         std::vector<VkDescriptorSetLayoutBinding> bindings{};
 
-        /////////////////////////////////////////////////////////////////
-        // Vertex shader
-        /////////////////////////////////////////////////////////////////
-
         // CameraBuffer
         VkDescriptorSetLayoutBinding cameraBufferLayoutBinding{
             .binding = static_cast<uint32_t>(bindings.size()),
@@ -688,36 +683,37 @@ namespace MFA
         };
         bindings.emplace_back(cameraBufferLayoutBinding);
 
-        /////////////////////////////////////////////////////////////////
-        // Fragment shader
-        /////////////////////////////////////////////////////////////////
-
-        // LightBuffer
-        VkDescriptorSetLayoutBinding lightViewLayoutBinding{
+        // DirectionalLightBuffer
+        bindings.emplace_back(VkDescriptorSetLayoutBinding {
             .binding = static_cast<uint32_t>(bindings.size()),
             .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-        };
-        bindings.emplace_back(lightViewLayoutBinding);
+        });
 
-        // Sampler
-        VkDescriptorSetLayoutBinding samplerLayoutBinding{
+        // PointLightBuffer;
+        bindings.emplace_back(VkDescriptorSetLayoutBinding {
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        });
+
+        // Sampler;
+        bindings.emplace_back(VkDescriptorSetLayoutBinding {
             .binding = static_cast<uint32_t>(bindings.size()),
             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-        };
-        bindings.emplace_back(samplerLayoutBinding);
+        });
         
         // PointLightShadowMap
-        VkDescriptorSetLayoutBinding pointLightShadowLayoutBinding{
+        bindings.emplace_back(VkDescriptorSetLayoutBinding {
             .binding = static_cast<uint32_t>(bindings.size()),
             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-        };
-        bindings.emplace_back(pointLightShadowLayoutBinding);
+        });
 
         mPerFrameDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
@@ -734,25 +730,23 @@ namespace MFA
         /////////////////////////////////////////////////////////////////
         // Fragment shader
         /////////////////////////////////////////////////////////////////
-        {// Primitive
-            VkDescriptorSetLayoutBinding layoutBinding{
-                .binding = static_cast<uint32_t>(bindings.size()),
-                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                .descriptorCount = 1,
-                .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-            };
-            bindings.emplace_back(layoutBinding);
-        }
-        {// Textures
-            VkDescriptorSetLayoutBinding layoutBinding{
-                .binding = static_cast<uint32_t>(bindings.size()),
-                .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                .descriptorCount = 64,
-                .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-            };
-            bindings.emplace_back(layoutBinding);
-        }
 
+        // Primitive
+        bindings.emplace_back(VkDescriptorSetLayoutBinding {
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+        });
+
+        // Textures
+        bindings.emplace_back(VkDescriptorSetLayoutBinding {
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            .descriptorCount = 64,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+        });
+        
         mPerEssenceDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
             bindings.data()
@@ -769,15 +763,14 @@ namespace MFA
         // Vertex shader
         /////////////////////////////////////////////////////////////////
 
-        {// SkinJoints
-            VkDescriptorSetLayoutBinding layoutBinding{};
-            layoutBinding.binding = static_cast<uint32_t>(bindings.size());
-            layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            layoutBinding.descriptorCount = 1;
-            layoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-            bindings.emplace_back(layoutBinding);
-        }
-
+        // SkinJoints
+        bindings.emplace_back(VkDescriptorSetLayoutBinding {
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+        });
+        
         mPerVariantDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
             bindings.data()

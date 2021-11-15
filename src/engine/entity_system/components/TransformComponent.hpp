@@ -3,7 +3,7 @@
 #include "engine/entity_system/Component.hpp"
 #include "engine/BedrockSignal.hpp"
 
-#include <ext/matrix_transform.hpp>
+#include <mat4x4.hpp>
 
 namespace MFA
 {
@@ -15,7 +15,9 @@ namespace MFA
         MFA_COMPONENT_PROPS(TransformComponent)
         MFA_COMPONENT_CLASS_TYPE_1(ClassType::TransformComponent)
         MFA_COMPONENT_REQUIRED_EVENTS(EventTypes::InitEvent | EventTypes::ShutdownEvent)
-    
+
+        explicit TransformComponent();
+
         void Init() override;
 
         void Shutdown() override;
@@ -66,7 +68,7 @@ namespace MFA
         glm::vec3 mRotation { 0.0f, 0.0f, 0.0f };          // In euler angle // TODO Use Quaternion instead! Soon! ToQuat is heavy
         glm::vec3 mScale { 1.0f, 1.0f, 1.0f };
 
-        glm::mat4 mTransform = glm::identity<glm::mat4>();
+        glm::mat4 mTransform;
 
         std::weak_ptr<TransformComponent> mParentTransform {};
 

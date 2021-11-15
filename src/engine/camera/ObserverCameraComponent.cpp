@@ -1,6 +1,7 @@
 #include "ObserverCameraComponent.hpp"
 
 #include "engine/BedrockMath.hpp"
+#include "engine/BedrockMatrix.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/InputManager.hpp"
 #include "engine/entity_system/Entity.hpp"
@@ -84,16 +85,11 @@ namespace MFA
         auto rotationMatrix = glm::identity<glm::mat4>();
         Matrix::Rotate(rotationMatrix, mEulerAngles);
 
-        auto forwardDirection = ForwardVector;
+        auto forwardDirection = RT::ForwardVector;
         forwardDirection = forwardDirection * rotationMatrix;
         forwardDirection = glm::normalize(forwardDirection);
 
-        auto rightDirection = glm::vec4(
-            RightVector[0],
-            RightVector[1],
-            RightVector[2],
-            RightVector[3]
-        );
+        auto rightDirection = RT::RightVector;
         rightDirection = rightDirection * rotationMatrix;
         rightDirection = glm::normalize(rightDirection);
 

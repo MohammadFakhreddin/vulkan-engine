@@ -1,6 +1,5 @@
 #pragma once
 
-#include "engine/BedrockMatrix.hpp"
 #include "engine/entity_system/Component.hpp"
 #include "engine/render_system/RenderTypes.hpp"
 
@@ -11,10 +10,6 @@ public:
 
     MFA_COMPONENT_CLASS_TYPE_3(ClassType::CameraComponent, ClassType::ObserverCameraComponent, ClassType::ThirdPersonCamera)
     MFA_COMPONENT_REQUIRED_EVENTS(EventTypes::InitEvent | EventTypes::UpdateEvent | EventTypes::ShutdownEvent)
-
-    inline static const glm::vec4 ForwardVector {0.0f, 0.0f, 1.0f, 0.0f};
-    inline static const glm::vec4 RightVector {1.0f, 0.0f, 0.0f, 0.0f};
-    inline static const glm::vec4 UpVector {0.0f, 1.0f, 0.0f, 0.0f};
 
     struct CameraBufferData
     {
@@ -91,6 +86,7 @@ protected:
     Plane mTopPlane {};
     Plane mBottomPlane {};
 
+    // TODO We could have used transform component instead
     glm::vec3 mPosition {};
     glm::vec3 mEulerAngles {};
 

@@ -6,6 +6,7 @@
 #include "engine/entity_system/Entity.hpp"
 
 #include <vec3.hpp>
+#include <mat4x4.hpp>
 
 namespace MFA {
 
@@ -19,7 +20,7 @@ namespace MFA {
 
         MFA_COMPONENT_PROPS(PointLightComponent)
         MFA_COMPONENT_CLASS_TYPE_1(ClassType::PointLightComponent)
-        MFA_COMPONENT_REQUIRED_EVENTS(EventTypes::InitEvent)
+        MFA_COMPONENT_REQUIRED_EVENTS(EventTypes::InitEvent | EventTypes::ShutdownEvent)
 
         explicit PointLightComponent(
             float radius,

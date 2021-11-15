@@ -4,8 +4,7 @@
 #include "engine/BedrockCommon.hpp"
 #include "engine/FoundationAsset.hpp"
 
-#include <glm/glm.hpp>
-#include <glm/gtx/quaternion.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 #include <functional>
 #include <memory>

@@ -41,13 +41,10 @@ void MFA::PointLightComponent::Init()
     });
 
     // Registering point light to active scene
-    auto const & activeScene = SceneManager::GetActiveScene();
-    MFA_ASSERT(activeScene.expired() == false);
-    if (auto const ptr = activeScene.lock())
-    {
-        ptr->RegisterPointLight(SelfPtr());
-    }
-
+    auto const activeScene = SceneManager::GetActiveScene().lock();
+    MFA_ASSERT(activeScene != nullptr);
+    activeScene->RegisterPointLight(SelfPtr());
+    
     computeProjection();
     computeViewProjectionMatrices();
     computeAttenuation();

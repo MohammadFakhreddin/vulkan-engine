@@ -13,7 +13,7 @@
 #include "engine/entity_system/components/BoundingVolumeComponent.hpp"
 #include "engine/entity_system/components/MeshRendererComponent.hpp"
 
-#include <ext/matrix_transform.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 #include <string>
 

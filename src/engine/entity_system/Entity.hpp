@@ -4,7 +4,6 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockSignal.hpp"
 
-#include <functional>
 #include <memory>
 #include <unordered_map>
 #include <utility>
@@ -120,8 +119,11 @@ private:
     std::string mName {};
     Entity * mParent = nullptr;
 
-    // Idea: Maybe We can have an array instead
+    // TODO: Use array instead because it is much more light weight
+    //std::shared_ptr<Component> mComponents [static_cast<int>(Component::ClassType::Count)]{};
+
     std::unordered_map<Component::ClassType, std::shared_ptr<Component>> mComponents {};
+
 
     Signal<> mInitSignal {};
     Signal<float, RT::CommandRecordState const &> mUpdateSignal {};

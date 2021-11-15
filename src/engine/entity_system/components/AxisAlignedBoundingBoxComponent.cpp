@@ -103,17 +103,17 @@ namespace MFA
         const glm::vec3 globalCenter{ transformComponentPtr->GetTransform() * glm::vec4(mCenter, 1.f) };
 
         // Scaled orientation
-        auto forwardDirection = CameraComponent::ForwardVector;
+        auto forwardDirection = RT::ForwardVector;
         forwardDirection = transformComponentPtr->GetTransform() * forwardDirection;
         forwardDirection = glm::normalize(forwardDirection);
         forwardDirection *= mExtend.z;
 
-        auto rightDirection = CameraComponent::RightVector;
+        auto rightDirection = RT::RightVector;
         rightDirection = transformComponentPtr->GetTransform() * rightDirection;
         rightDirection = glm::normalize(rightDirection);
         rightDirection *= mExtend.x;
 
-        auto upDirection = CameraComponent::UpVector;
+        auto upDirection = RT::UpVector;
         upDirection = transformComponentPtr->GetTransform() * upDirection;
         upDirection = glm::normalize(upDirection);
         upDirection *= mExtend.y;

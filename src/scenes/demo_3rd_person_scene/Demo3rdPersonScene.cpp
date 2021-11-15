@@ -17,6 +17,8 @@
 #include "engine/entity_system/components/SphereBoundingVolumeComponent.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
 #include "engine/entity_system/components/PointLightComponent.hpp"
+#include "engine/entity_system/components/DirectionalLightComponent.hpp"
+#include "engine/BedrockMatrix.hpp"
 
 using namespace MFA;
 
@@ -35,7 +37,7 @@ Demo3rdPersonScene::~Demo3rdPersonScene() = default;
 void Demo3rdPersonScene::Init()
 {
     Scene::Init();
-    // TODO Add directional light!
+
     {// Error texture
         auto cpuTexture = Importer::CreateErrorTexture();
         mErrorTexture = RF::CreateTexture(cpuTexture);
@@ -106,45 +108,45 @@ void Demo3rdPersonScene::Init()
 
         EntitySystem::InitEntity(entity);
     }
-    {// NPCs
-        for (uint32_t i = 0; i < 10/*33*/; ++i)
-        {
-            for (uint32_t j = 0; j < 10/*33*/; ++j)
-            {
-                auto * entity = EntitySystem::CreateEntity("Random soldier", GetRootEntity());
-                MFA_ASSERT(entity != nullptr);
+    //{// NPCs
+    //    for (uint32_t i = 0; i < 10/*33*/; ++i)
+    //    {
+    //        for (uint32_t j = 0; j < 10/*33*/; ++j)
+    //        {
+    //            auto * entity = EntitySystem::CreateEntity("Random soldier", GetRootEntity());
+    //            MFA_ASSERT(entity != nullptr);
 
-                auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
-                MFA_ASSERT(transformComponent != nullptr);
-                float position[3]{ static_cast<float>(i) - 5.0f, 2.0f, static_cast<float>(j) - 10.0f };
-                float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
-                float scale[3]{ 1.0f, 1.0f, 1.0f };
-                transformComponent->UpdateTransform(position, eulerAngles, scale);
-                
-                auto const meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "Soldier").lock();
-                MFA_ASSERT(meshRendererComponent != nullptr);
-                meshRendererComponent->GetVariant().lock()->SetActiveAnimation(
-                    "SwordAndShieldIdle",
-                    { .startTimeOffsetInSec = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX)) * 10 }
-                );
-                meshRendererComponent->SetActive(true);
-                
-                entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
+    //            auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
+    //            MFA_ASSERT(transformComponent != nullptr);
+    //            float position[3]{ static_cast<float>(i) - 5.0f, 2.0f, static_cast<float>(j) - 10.0f };
+    //            float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
+    //            float scale[3]{ 1.0f, 1.0f, 1.0f };
+    //            transformComponent->UpdateTransform(position, eulerAngles, scale);
+    //            
+    //            auto const meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "Soldier").lock();
+    //            MFA_ASSERT(meshRendererComponent != nullptr);
+    //            meshRendererComponent->GetVariant().lock()->SetActiveAnimation(
+    //                "SwordAndShieldIdle",
+    //                { .startTimeOffsetInSec = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX)) * 10 }
+    //            );
+    //            meshRendererComponent->SetActive(true);
+    //            
+    //            entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
 
-                auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
-                MFA_ASSERT(colorComponent != nullptr);
-                colorComponent->SetColor(glm::vec3{ 0.0f, 0.0f, 1.0f });
-                
-                auto const debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline).lock();
-                MFA_ASSERT(debugRenderComponent != nullptr);
-                debugRenderComponent->SetActive(false);
-                
-                EntitySystem::InitEntity(entity);
+    //            auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
+    //            MFA_ASSERT(colorComponent != nullptr);
+    //            colorComponent->SetColor(glm::vec3{ 0.0f, 0.0f, 1.0f });
+    //            
+    //            auto const debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline).lock();
+    //            MFA_ASSERT(debugRenderComponent != nullptr);
+    //            debugRenderComponent->SetActive(false);
+    //            
+    //            EntitySystem::InitEntity(entity);
 
-                entity->SetActive(true);
-            }
-        }
-    }
+    //            entity->SetActive(true);
+    //        }
+    //    }
+    //}
 
     std::weak_ptr<DrawableVariant> mapVariant {};
 
@@ -185,13 +187,13 @@ void Demo3rdPersonScene::Init()
         EntitySystem::InitEntity(entity);
     }
 
-    {// PointLight1
+    {// PointLight
         for (int i = 0; i < 2; ++i)
         {
             auto * entity = EntitySystem::CreateEntity(("PointLight" + std::to_string(i)).c_str(), GetRootEntity());
             MFA_ASSERT(entity != nullptr);
 
-            float lightPosition[3] {1.0f, 0.0f, -3.0f - i};
+            float lightPosition[3] {1.0f, 0.0f, -3.0f - static_cast<float>(i)};
             float lightScale = 10.0f;
             float lightColor[3] {
                 (252.0f/256.0f) * lightScale,
@@ -217,6 +219,27 @@ void Demo3rdPersonScene::Init()
 
             EntitySystem::InitEntity(entity);
         }
+    }
+
+    {// Directional light
+        auto * entity = EntitySystem::CreateEntity("Directional light", GetRootEntity());
+        MFA_ASSERT(entity != nullptr);
+
+        auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
+        MFA_ASSERT(colorComponent != nullptr);
+        float lightColor[3] {
+            252.0f/256.0f,
+            212.0f/256.0f,
+            64.0f/256.0f
+        };
+        colorComponent->SetColor(lightColor);
+
+        auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
+        MFA_ASSERT(transformComponent != nullptr);
+        
+        entity->AddComponent<DirectionalLightComponent>(Z_NEAR, Z_FAR);
+
+        EntitySystem::InitEntity(entity);
     }
 
     mUIRecordId = UI::Register([this]()->void { onUI(); });
@@ -358,10 +381,10 @@ void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, MFA::RT::Comma
             Matrix::Rotate(rotationMatrix, nextAngles);
 
             glm::vec4 forwardDirection(
-                CameraComponent::ForwardVector[0],
-                CameraComponent::ForwardVector[1],
-                CameraComponent::ForwardVector[2],
-                CameraComponent::ForwardVector[3]
+                RT::ForwardVector[0],
+                RT::ForwardVector[1],
+                RT::ForwardVector[2],
+                RT::ForwardVector[3]
             );
             forwardDirection = forwardDirection * rotationMatrix;
             forwardDirection = glm::normalize(forwardDirection);

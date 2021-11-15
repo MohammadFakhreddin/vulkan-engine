@@ -99,7 +99,8 @@ public:
         ThirdPersonCamera,
 
         PointLightComponent,
-        DirectionalLightComponent
+        DirectionalLightComponent,
+        Count
     };
 
     static uint8_t GetClassType(ClassType outComponentTypes[3])

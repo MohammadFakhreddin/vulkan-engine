@@ -31,7 +31,7 @@ struct PointLightsBufferData
     PointLight items [MAX_POINT_LIGHT_COUNT];                                       // Max light
 };
 
-ConstantBuffer <PointLightsBufferData> pointLightsBuffer: register(b1, space0);
+ConstantBuffer <PointLightsBufferData> pointLightsBuffer: register(b2, space0);
 
 // Maybe we can have a separate file for this data type
 struct PushConsts

@@ -10,6 +10,13 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    TransformComponent::TransformComponent()
+        : mTransform(glm::identity<glm::mat4>())
+    {
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void TransformComponent::Init()
     {
         Component::Init();

@@ -55,6 +55,9 @@ endif()
 
 include_directories(libs/include/glm)
 
+# Vulkan uses 0 to 1 depth instead of -1 to 1 in opengl
+add_definitions(-DGLM_FORCE_DEPTH_ZERO_TO_ONE)
+
 # Note: Linux On MacOS 10.14 with clang++ compiler, I get executable with SIMD right away.
 # On Ubuntu 16.04 with g++ compiler, I will have to use the compiler flag -mavx2 to generate a SIMD executable. 
 # There are other compiler options for other SIMD instructions here. Without the compiler flag, I still get a serial executable.
@@ -65,13 +68,13 @@ if (LINUX)
 endif ()
 
 #-----------------------------------------------------------------------
-# Engine
+# Bedrock
 #-----------------------------------------------------------------------
 
-set(ENGINE_SOURCES)
+set(BEDROCK_SOURCES)
 
 list(
-    APPEND ENGINE_SOURCES
+    APPEND BEDROCK_SOURCES
 
     # Bedrock
     "src/engine/BedrockAssert.cpp"
@@ -90,6 +93,89 @@ list(
     "src/engine/BedrockPath.hpp"
     "src/engine/BedrockPath.cpp"
     "src/engine/BedrockSignal.hpp"
+)
+
+add_library("Bedrock"
+    ${BEDROCK_SOURCES}
+)
+
+target_include_directories(
+    "Bedrock" PUBLIC 
+    "src" 
+    "${CMAKE_SOURCE_DIR}/libs/include"
+)
+
+#-----------------------------------------------------------------------
+# Renderer
+#-----------------------------------------------------------------------
+
+set(RENDERER_SOURCES)
+
+list(
+    APPEND RENDERER_SOURCES
+)
+
+add_library("Renderer"
+    ${RENDERER_SOURCES}
+
+    # RenderSystem
+    "src/engine/render_system/RenderTypes.hpp"
+    "src/engine/render_system/RenderTypesFWD.hpp"
+    "src/engine/render_system/RenderTypes.cpp"
+    "src/engine/render_system/drawable_essence/DrawableEssence.hpp"
+    "src/engine/render_system/drawable_essence/DrawableEssence.cpp"
+    "src/engine/render_system/drawable_variant/DrawableVariant.hpp"
+    "src/engine/render_system/drawable_variant/DrawableVariant.cpp"
+    "src/engine/render_system/RenderBackend.hpp"
+    "src/engine/render_system/RenderBackend.cpp"
+    "src/engine/render_system/RenderFrontend.hpp"
+    "src/engine/render_system/RenderFrontend.cpp"
+
+    # RenderPass
+    "src/engine/render_system/render_passes/RenderPass.hpp"
+    "src/engine/render_system/render_passes/RenderPass.cpp"
+    "src/engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
+    "src/engine/render_system/render_passes/display_render_pass/DisplayRenderPass.cpp"
+    "src/engine/render_system/render_passes/point_light_shadow_render_pass/PointLightShadowRenderPass.hpp"
+    "src/engine/render_system/render_passes/point_light_shadow_render_pass/PointLightShadowRenderPass.cpp"
+    "src/engine/render_system/render_passes/depth_pre_pass/DepthPrePass.hpp"
+    "src/engine/render_system/render_passes/depth_pre_pass/DepthPrePass.cpp"
+    "src/engine/render_system/render_passes/occlusion_render_pass/OcclusionRenderPass.hpp"
+    "src/engine/render_system/render_passes/occlusion_render_pass/OcclusionRenderPass.cpp"
+
+    # RenderResources
+    "src/engine/render_system/render_resources/point_light_shadow_resource_collection/PointLightShadowResourceCollection.hpp"
+    "src/engine/render_system/render_resources/point_light_shadow_resource_collection/PointLightShadowResourceCollection.cpp"
+
+    # Pipeline
+    "src/engine/render_system/pipelines/BasePipeline.hpp"
+    "src/engine/render_system/pipelines/BasePipeline.cpp"
+    "src/engine/render_system/pipelines/DescriptorSetSchema.hpp"
+    "src/engine/render_system/pipelines/DescriptorSetSchema.cpp"
+    "src/engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
+    "src/engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.cpp"
+    "src/engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
+    "src/engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.cpp"
+)
+
+target_include_directories(
+    "Renderer" PUBLIC 
+    "src" 
+    "${CMAKE_SOURCE_DIR}/libs/include"
+)
+
+#-----------------------------------------------------------------------
+# Entity system
+#-----------------------------------------------------------------------
+
+set(ENTITY_SYSTEM_SOURCES)
+
+list(
+    APPEND ENTITY_SYSTEM_SOURCES
+)
+
+add_library("EntitySystem"
+    ${ENTITY_SYSTEM_SOURCES}
 
     # Entity system
     "src/engine/entity_system/EntitySystem.hpp"
@@ -126,6 +212,22 @@ list(
     "src/engine/entity_system/components/PointLightComponent.cpp"
     "src/engine/entity_system/components/DirectionalLightComponent.hpp"
     "src/engine/entity_system/components/DirectionalLightComponent.cpp"
+)
+
+target_include_directories(
+    "EntitySystem" PUBLIC 
+    "src" 
+    "${CMAKE_SOURCE_DIR}/libs/include"
+)
+
+#-----------------------------------------------------------------------
+# Engine
+#-----------------------------------------------------------------------
+
+set(ENGINE_SOURCES)
+
+list(
+    APPEND ENGINE_SOURCES
     
     # Job system
     "src/engine/job_system/ThreadPool.hpp"
@@ -133,47 +235,6 @@ list(
     "src/engine/job_system/ThreadSafeQueue.hpp"
     "src/engine/job_system/JobSystem.hpp"
     "src/engine/job_system/JobSystem.cpp"
-    
-    # RenderSystem
-    "src/engine/render_system/RenderTypes.hpp"
-    "src/engine/render_system/RenderTypesFWD.hpp"
-    "src/engine/render_system/RenderTypes.cpp"
-    "src/engine/render_system/drawable_essence/DrawableEssence.hpp"
-    "src/engine/render_system/drawable_essence/DrawableEssence.cpp"
-    "src/engine/render_system/drawable_variant/DrawableVariant.hpp"
-    "src/engine/render_system/drawable_variant/DrawableVariant.cpp"
-    "src/engine/render_system/RenderBackend.hpp"
-    "src/engine/render_system/RenderBackend.cpp"
-    "src/engine/render_system/RenderFrontend.hpp"
-    "src/engine/render_system/RenderFrontend.cpp"
-
-    # RenderPass
-    "src/engine/render_system/render_passes/RenderPass.hpp"
-    "src/engine/render_system/render_passes/RenderPass.cpp"
-    "src/engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
-    "src/engine/render_system/render_passes/display_render_pass/DisplayRenderPass.cpp"
-    "src/engine/render_system/render_passes/point_light_shadow_render_pass/PointLightShadowRenderPass.hpp"
-    "src/engine/render_system/render_passes/point_light_shadow_render_pass/PointLightShadowRenderPass.cpp"
-    "src/engine/render_system/render_passes/depth_pre_pass/DepthPrePass.hpp"
-    "src/engine/render_system/render_passes/depth_pre_pass/DepthPrePass.cpp"
-    "src/engine/render_system/render_passes/occlusion_render_pass/OcclusionRenderPass.hpp"
-    "src/engine/render_system/render_passes/occlusion_render_pass/OcclusionRenderPass.cpp"
-
-    # RenderResources
-    "src/engine/render_system/render_resources/point_light_shadow_resource_collection/PointLightShadowResourceCollection.hpp"
-    "src/engine/render_system/render_resources/point_light_shadow_resource_collection/PointLightShadowResourceCollection.cpp"
-
-    # Pipeline
-    "src/engine/render_system/pipelines/BasePipeline.hpp"
-    "src/engine/render_system/pipelines/BasePipeline.cpp"
-    "src/engine/render_system/pipelines/DescriptorSetSchema.hpp"
-    "src/engine/render_system/pipelines/DescriptorSetSchema.cpp"
-
-    "src/engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
-    "src/engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.cpp"
-    
-    "src/engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
-    "src/engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.cpp"
 
     # AssetSystem
     "src/engine/FoundationAsset.hpp"
@@ -401,9 +462,9 @@ if (WINDOWS)
 
     add_executable(${PROJECT_NAME} ${WIN_SOURCE})
 
-    add_dependencies(${PROJECT_NAME} "Scenes" "Tools" "Engine" "Libs")
+    add_dependencies(${PROJECT_NAME} "Scenes" "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
 
-    target_link_libraries(${PROJECT_NAME} ${COMPILED_LIBS} "Scenes" "Tools" "Engine" "Libs")
+    target_link_libraries(${PROJECT_NAME} ${COMPILED_LIBS} "Scenes" "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
 
     target_include_directories(
         ${PROJECT_NAME} PUBLIC 
@@ -428,9 +489,9 @@ if (WINDOWS)
         ${UNIT_TEST_SOURCE}
     )
 
-    add_dependencies(${UNIT_TEST_NAME} "Scenes" "Tools" "Engine" "Libs")
+    add_dependencies(${UNIT_TEST_NAME} "Scenes" "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
 
-    target_link_libraries(${UNIT_TEST_NAME} ${COMPILED_LIBS} "Scenes" "Tools" "Engine" "Libs")
+    target_link_libraries(${UNIT_TEST_NAME} ${COMPILED_LIBS} "Scenes" "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
 
     target_include_directories(
         ${UNIT_TEST_NAME} PUBLIC 
@@ -459,11 +520,11 @@ elseif(LINUX)
 
     add_executable(${PROJECT_NAME} ${LINUX_SOURCE})
 
-    add_dependencies(${PROJECT_NAME} "Scenes" "Tools" "Engine" "Libs")
+    add_dependencies(${PROJECT_NAME} "Scenes" "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
 
     target_link_directories(${PROJECT_NAME} PUBLIC "${CMAKE_SOURCE_DIR}/libs/linux/sdl/")
 
-    target_link_libraries(${PROJECT_NAME} SDL2 "Scenes" "Tools" "Engine" "Libs")
+    target_link_libraries(${PROJECT_NAME} SDL2 "Scenes" "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
 
     target_include_directories(
         ${PROJECT_NAME} PUBLIC 
@@ -490,11 +551,11 @@ elseif(MACOSX)
 
     add_executable(${PROJECT_NAME} ${MAC_SOURCE})
 
-    add_dependencies(${PROJECT_NAME} "Scenes" "Tools" "Engine" "Libs")
+    add_dependencies(${PROJECT_NAME} "Scenes" "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
 
     target_link_directories(${PROJECT_NAME} PUBLIC "${CMAKE_SOURCE_DIR}/libs/mac/sdl/")
 
-    target_link_libraries(${PROJECT_NAME} SDL2 "Scenes" "Tools" "Engine" "Libs")
+    target_link_libraries(${PROJECT_NAME} SDL2 "Scenes" "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
 
     target_link_libraries(${PROJECT_NAME}
         "-framework CoreGraphics"
@@ -557,9 +618,9 @@ elseif(IPHONE)
     
     add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${IPHONE_SOURCE})
 
-    add_dependencies(${PROJECT_NAME} "Scenes" "Tools" "Engine" "Libs")
+    add_dependencies(${PROJECT_NAME} "Scenes" "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
 
-    target_link_libraries(${PROJECT_NAME} "Scenes" "Tools" "Engine" "Libs")
+    target_link_libraries(${PROJECT_NAME} "Scenes" "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
 
     # TODO I think we should use .dylib instead
     target_link_libraries(${PROJECT_NAME}

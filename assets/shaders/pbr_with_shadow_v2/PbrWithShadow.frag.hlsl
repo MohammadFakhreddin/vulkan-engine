@@ -54,6 +54,25 @@ struct CameraData {
 
 ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
 
+#define MAX_DIRECTIONAL_LIGHT_COUNT 3
+
+struct DirectionalLight
+{
+    float3 direction;
+    float placeholder0;
+    float3 color;
+    float placeholder1;
+    float4x4 viewProjectionMatrix;
+};
+struct DirectionalLightBufferData
+{
+    uint count;
+    uint3 placeholder;
+    DirectionalLight items [MAX_DIRECTIONAL_LIGHT_COUNT];
+};
+
+ConstantBuffer <DirectionalLightBufferData> directionalLightBuffer: register(b1, space0);
+
 struct PointLight
 {
     float3 position;
@@ -77,11 +96,11 @@ struct PointLightsBufferData
     PointLight items [MAX_POINT_LIGHT_COUNT];
 };
 
-ConstantBuffer <PointLightsBufferData> pointLightsBuffer: register(b1, space0);
+ConstantBuffer <PointLightsBufferData> pointLightsBuffer: register(b2, space0);
 
-sampler textureSampler : register(s2, space0);
+sampler textureSampler : register(s3, space0);
 
-TextureCubeArray shadowMapTextures : register(t3, space0);
+TextureCubeArray shadowMapTextures : register(t4, space0);
 
 Texture2D textures[64] : register(t1, space1);
 
@@ -256,7 +275,7 @@ float3 calculateNormal(PSIn input, int normalTextureIndex)
 };
 
 // Normalized light vector will cause incorrect sampling!
-float shadowCalculation(float3 lightVector, float lightDistance, float viewDistance, int lightIndex)
+float pointLightShadowCalculation(float3 lightVector, float lightDistance, float viewDistance, int lightIndex)
 {
     // UNITY_SAMPLE_TEXCUBEARRAY(_MainTex, float4(i.uv, _SliceIndex));
     // get vector between fragment position and light position
@@ -291,6 +310,7 @@ float shadowCalculation(float3 lightVector, float lightDistance, float viewDista
 
     return shadow;
 }
+
 // TODO Strength in ambient occulusion and Scale for normals
 PSOut main(PSIn input) {
     PrimitiveInfo primitiveInfo = smBuff.primitiveInfo[pushConsts.primitiveIndex];
@@ -327,7 +347,29 @@ PSOut main(PSIn input) {
     
     // Specular contribution
 	float3 Lo = float3(0.0, 0.0, 0.0);
-	for (int lightIndex = 0; lightIndex < pointLightsBuffer.count; lightIndex++) {   // Light count
+    int lightIndex = 0;
+    for (lightIndex = 0; lightIndex < directionalLightBuffer.count; lightIndex++)
+    {
+        DirectionalLight directionalLight = directionalLightBuffer.items[lightIndex];
+        float3 lightVector = directionalLight.direction;
+
+        Lo += BRDF(
+            lightVector, 
+            normalizedViewVector, 
+            normalizedSurfaceNormal, 
+            metallic, 
+            roughness, 
+            baseColor.rgb, 
+            input.worldPos,
+            1.0f,
+            0.0f,
+            0.0f,
+            1.0f,
+            directionalLight.color
+        );
+    }
+	for (lightIndex = 0; lightIndex < pointLightsBuffer.count; lightIndex++)        // Point light count
+    {   
 		PointLight pointLight = pointLightsBuffer.items[lightIndex];
         float3 lightDistanceVector = pointLight.position.xyz - input.worldPos;
         float lightVectorSquareLength = lightDistanceVector.x * lightDistanceVector.x + 
@@ -341,7 +383,7 @@ PSOut main(PSIn input) {
                 lightDistanceVector.y / lightVectorLength, 
                 lightDistanceVector.z / lightVectorLength
             );
-            float shadow = shadowCalculation(
+            float shadow = pointLightShadowCalculation(
                 lightDistanceVector, 
                 lightVectorLength, 
                 viewVectorLength, 
