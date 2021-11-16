@@ -472,6 +472,8 @@ AS::Mesh ImportObj(char const * path) {
     return mesh;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 template<typename ItemType>
 static void GLTF_extractDataFromBuffer(
     tinygltf::Model & gltfModel,
@@ -512,6 +514,37 @@ static void GLTF_extractDataAndTypeFromBuffer(
     );
     outDataCount = static_cast<uint32_t>(accessor.count);
 }
+
+//-------------------------------------------------------------------------------------------------
+
+static bool GLTF_extractPrimitiveDataAndTypeFromBuffer(
+    tinygltf::Model const & gltfModel,
+    tinygltf::Primitive & primitive,
+    char const * fieldKey,
+    int & outType,
+    int & outComponentType,
+    void const * & outData,
+    uint32_t & outDataCount
+) {
+    bool success = false;
+    if(primitive.attributes.find(fieldKey) != primitive.attributes.end()){// Positions
+        success = true;
+        MFA_REQUIRE(static_cast<size_t>(primitive.attributes[fieldKey]) < gltfModel.accessors.size());
+        auto const & accessor = gltfModel.accessors[primitive.attributes[fieldKey]];
+        outType = accessor.type;
+        outComponentType = accessor.componentType;
+        auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
+        MFA_REQUIRE(bufferView.buffer < gltfModel.buffers.size());
+        auto const & buffer = gltfModel.buffers[bufferView.buffer];
+        outData = reinterpret_cast<void const *>(
+            &buffer.data[bufferView.byteOffset + accessor.byteOffset]
+        );
+        outDataCount = static_cast<uint32_t>(accessor.count);
+    }
+    return success;
+}
+
+//-------------------------------------------------------------------------------------------------
 
 template<typename ItemType>
 static bool GLTF_extractPrimitiveDataFromBuffer(
@@ -554,6 +587,8 @@ static bool GLTF_extractPrimitiveDataFromBuffer(
     }
     return success;
 }
+
+//-------------------------------------------------------------------------------------------------
 
 template<typename ItemType>
 static bool GLTF_extractPrimitiveDataFromBuffer(
@@ -982,33 +1017,92 @@ static void GLTF_extractSubMeshes(
                     );
                     MFA_ASSERT(result == false || tangentValuesCount == primitiveVertexCount);                           
                 }
-                uint16_t const * jointValues = nullptr;
-                uint32_t jointValuesCount = 0;
+                uint32_t jointItemCount = 0;
+                std::vector<uint16_t> jointValues {};
+                int jointAccessorType = 0;
                 {// Joints
-                    GLTF_extractPrimitiveDataFromBuffer(
+                    void const * rawJointValues = nullptr;
+                    int componentType = 0;
+                    uint32_t jointValuesCount = 0;
+                    GLTF_extractPrimitiveDataAndTypeFromBuffer(
                         gltfModel,
                         gltfPrimitive,
                         "JOINTS_0",
-                        4,
-                        TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT,
-                        jointValues,
+                        jointAccessorType,
+                        componentType,
+                        rawJointValues,
                         jointValuesCount
                     );
+                    jointItemCount = jointValuesCount * jointAccessorType;
+                    jointValues.resize(jointItemCount);
+                    switch (componentType)
+                    {
+                        case 0:
+                        break;
+                        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                        {
+                            auto const * shortJointValues = static_cast<uint16_t const *>(rawJointValues);
+                            for (uint32_t i = 0; i < jointItemCount; ++i)
+                            {
+                                jointValues[i] = shortJointValues[i];
+                            }
+                        }
+                        break;
+                        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                        {
+                            auto const * byteJointValues = static_cast<uint8_t const *>(rawJointValues);
+                            for (uint32_t i = 0; i < jointItemCount; ++i)
+                            {
+                                jointValues[i] = byteJointValues[i];
+                            }
+                        }
+                        break;
+                        default:
+                            MFA_CRASH("Unhandled type");
+                    }
+                    MFA_ASSERT((jointAccessorType > 0 || jointItemCount == 0));
                 }
-                float const * weightValues = nullptr;
-                uint32_t weightValuesCount = 0;
+                std::vector<float> weightValues {};
                 {// Weights
-                    GLTF_extractPrimitiveDataFromBuffer(
+                    int componentType = 0;
+                    int accessorType = 0;
+                    uint32_t rawValuesCount = 0;
+                    void const * rawValues = nullptr;
+                    
+                    GLTF_extractPrimitiveDataAndTypeFromBuffer(
                         gltfModel,
                         gltfPrimitive,
                         "WEIGHTS_0",
-                        4,
-                        TINYGLTF_COMPONENT_TYPE_FLOAT,
-                        weightValues,
-                        weightValuesCount
+                        accessorType,
+                        componentType,
+                        rawValues,
+                        rawValuesCount
                     );
+
+                    auto itemCount = rawValuesCount * accessorType;
+
+                    MFA_ASSERT(itemCount == jointItemCount);
+                    MFA_ASSERT(accessorType == jointAccessorType);
+
+                    weightValues.resize(itemCount);
+                    switch (componentType)
+                    {
+                        case 0:
+                        break;
+                        case TINYGLTF_COMPONENT_TYPE_FLOAT:
+                        {
+                            auto const * floatWeightValues = static_cast<float const *>(rawValues);
+                            for (uint32_t i = 0; i < jointItemCount; ++i)
+                            {
+                                weightValues[i] = floatWeightValues[i];
+                            }
+                        }
+                        break;
+                        default:
+                            MFA_CRASH("Unhandled type");
+                    }
+                    MFA_ASSERT((accessorType > 0 || itemCount == 0));
                 }
-                MFA_ASSERT(weightValuesCount == jointValuesCount);
                 // TODO Start from here, Assign weight and joint
                 float const * colors = nullptr;
                 float colorsMinValue [3] {0};
@@ -1051,7 +1145,7 @@ static void GLTF_extractSubMeshes(
                 bool hasEmissiveTexture = emissionUVs != nullptr;
                 MFA_ASSERT(emissionUVs != nullptr == emissiveTextureIndex >= 0);
                 bool hasTangentValue = tangentValues != nullptr;
-                bool hasSkin = jointValues != nullptr && weightValues != nullptr;
+                bool hasSkin = jointItemCount > 0;
                 for (uint32_t i = 0; i < primitiveVertexCount; ++i) {
                     primitiveVertices.emplace_back();
                     auto & vertex = primitiveVertices.back();
@@ -1148,15 +1242,16 @@ static void GLTF_extractSubMeshes(
 
                     // Joint and weight
                     if (hasSkin) {
-                        vertex.jointIndices[0] = jointValues[i * 4 + 0];
-                        vertex.jointIndices[1] = jointValues[i * 4 + 1];
-                        vertex.jointIndices[2] = jointValues[i * 4 + 2];
-                        vertex.jointIndices[3] = jointValues[i * 4 + 3];
-
-                        vertex.jointWeights[0] = weightValues[i * 4 + 0];
-                        vertex.jointWeights[1] = weightValues[i * 4 + 1];
-                        vertex.jointWeights[2] = weightValues[i * 4 + 2];
-                        vertex.jointWeights[3] = weightValues[i * 4 + 3];
+                        for (int j = 0; j < jointAccessorType; j++)
+                        {
+                            vertex.jointIndices[j] = jointValues[i * jointAccessorType + j];
+                            vertex.jointWeights[j] = weightValues[i * jointAccessorType + j];
+                        }
+                        for (int j = jointAccessorType; j < 4; j++)
+                        {
+                            vertex.jointIndices[j] = 0;
+                            vertex.jointWeights[j] = 0;
+                        }
                     }
                 }
 

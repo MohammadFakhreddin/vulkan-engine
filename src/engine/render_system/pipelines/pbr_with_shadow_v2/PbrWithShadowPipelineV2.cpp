@@ -386,7 +386,7 @@ namespace MFA
                     occlusionCount++;
                 }
             }
-            //MFA_LOG_INFO("Occluded objects: %d", static_cast<int>(occlusionCount));
+            MFA_LOG_INFO("Occluded objects: %d", static_cast<int>(occlusionCount));
 
             occlusionQueryData.Variants.clear();
         }
@@ -422,7 +422,7 @@ namespace MFA
 
             for (auto const & variant : variantsList)
             {
-                if (variant->IsActive() && variant->IsInFrustum() && variant->IsOccluded() == false)
+                if (variant->IsVisible())
                 {
 
                     RF::BindDescriptorSet(
@@ -489,8 +489,7 @@ namespace MFA
 
             for (auto const & variant : variantsList)
             {
-                // TODO We can have a isVisible class
-                if (variant->IsActive() && variant->IsInFrustum() && variant->IsOccluded() == false)
+                if (variant->IsVisible())
                 {
                     RF::BindDescriptorSet(
                         recordState,
@@ -640,7 +639,7 @@ namespace MFA
 
             for (auto const & variant : variantsList)
             {
-                if (variant->IsActive() && variant->IsInFrustum() && variant->IsOccluded() == false)
+                if (variant->IsVisible())
                 {
 
                     RF::BindDescriptorSet(

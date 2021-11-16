@@ -120,9 +120,11 @@ namespace MFA
 
     void ThirdPersonCameraComponent::OnUI()
     {
-        UI::BeginWindow("ThirdPersonCamera");
-        CameraComponent::OnUI();
-        UI::EndWindow();
+        if(UI::TreeNode("ThirdPersonCamera"))
+        {
+            CameraComponent::OnUI();
+            UI::TreePop();            
+        }
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -4,7 +4,6 @@
 #include "engine/BedrockMatrix.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/InputManager.hpp"
-#include "engine/entity_system/Entity.hpp"
 #include "engine/ui_system/UISystem.hpp"
 
 #include "glm/gtx/quaternion.hpp"
@@ -115,9 +114,11 @@ namespace MFA
 
     void ObserverCameraComponent::OnUI()
     {
-        UI::BeginWindow("ObserverCamera");
-        CameraComponent::OnUI();
-        UI::EndWindow();
+        if(UI::TreeNode("ObserverCamera"))
+        {
+            CameraComponent::OnUI();
+            UI::TreePop();            
+        }
     }
 
     //-------------------------------------------------------------------------------------------------

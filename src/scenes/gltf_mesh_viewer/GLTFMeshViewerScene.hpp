@@ -26,11 +26,11 @@ public:
 
     void Init() override;
 
-    void OnPreRender(float deltaTimeInSec, MFA::RT::CommandRecordState & drawPass) override;
+    void OnPreRender(float deltaTimeInSec, MFA::RT::CommandRecordState & recordState) override;
 
-    void OnRender(float deltaTimeInSec, MFA::RT::CommandRecordState & drawPass) override;
+    void OnRender(float deltaTimeInSec, MFA::RT::CommandRecordState & recordState) override;
 
-    void OnPostRender(float deltaTimeInSec, MFA::RT::CommandRecordState & drawPass) override;
+    void OnPostRender(float deltaTimeInSec, MFA::RT::CommandRecordState & recordState) override;
 
     void OnUI();
 
@@ -100,7 +100,7 @@ private:
     }; 
 
     std::vector<ModelRenderRequiredData> mModelsRenderData {};
-    int32_t mSelectedModelIndex = 2;
+    int32_t mSelectedModelIndex = 0;
     int32_t mPreviousModelSelectedIndex = -1;
 
     MFA::RT::SamplerGroup mSamplerGroup {};

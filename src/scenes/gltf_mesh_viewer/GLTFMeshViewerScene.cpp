@@ -33,6 +33,17 @@ void GLTFMeshViewerScene::Init() {
         mErrorTexture = RF::CreateTexture(cpu_texture);
     }
     {// Models
+        //{
+        //    ModelRenderRequiredData params {};
+        //    params.displayName = "Gunner";
+        //    Path::Asset("models/jade/gunner.gltf", params.address);
+        //    MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {0.0f, 0.0f, -180.0f});
+        //    MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.0f, -7.0f});        
+        //    MFA::Copy<3>(params.initialParams.light.position, {0.0f, -2.0f, -2.0f});
+        //    MFA::Copy<3>(params.initialParams.camera.position, {0.104f, 1.286f, 4.952f});
+        //    MFA::Copy<3>(params.initialParams.camera.eulerAngles, {-12.0f, 3.0f, 0.0f});
+        //    mModelsRenderData.emplace_back(params);
+        //}
         {
             ModelRenderRequiredData params {};
             params.displayName = "CesiumMan";
@@ -155,7 +166,7 @@ void GLTFMeshViewerScene::Init() {
             ptr->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
         }
 
-        entity->AddComponent<PointLightComponent>(0.1f, 10.0f, Z_NEAR, Z_FAR);
+        entity->AddComponent<PointLightComponent>(0.5f, 1000.0f, Z_NEAR, Z_FAR);
 
         mPointLightTransform = transformComponent;
 
@@ -169,7 +180,9 @@ void GLTFMeshViewerScene::Init() {
     mUIRegisterId = UI::Register([this]()->void {OnUI();});
 }
 
-void GLTFMeshViewerScene::OnPreRender(float const deltaTimeInSec, MFA::RT::CommandRecordState & drawPass) {
+void GLTFMeshViewerScene::OnPreRender(float const deltaTimeInSec, RT::CommandRecordState & recordState) {
+    Scene::OnPreRender(deltaTimeInSec, recordState);
+
     auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
 
     if (selectedModel.isLoaded == false) {
@@ -221,28 +234,32 @@ void GLTFMeshViewerScene::OnPreRender(float const deltaTimeInSec, MFA::RT::Comma
         }
     }
 
-    mPbrPipeline.PreRender(drawPass, deltaTimeInSec);
-    mPointLightPipeline.PreRender(drawPass, deltaTimeInSec);
+    mPbrPipeline.PreRender(recordState, deltaTimeInSec);
+    mPointLightPipeline.PreRender(recordState, deltaTimeInSec);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void GLTFMeshViewerScene::OnRender(float const deltaTimeInSec, MFA::RT::CommandRecordState & drawPass) {
+void GLTFMeshViewerScene::OnRender(float const deltaTimeInSec, RT::CommandRecordState & recordState) {
+    Scene::OnRender(deltaTimeInSec, recordState);
+
     MFA_ASSERT(mSelectedModelIndex >= 0 && mSelectedModelIndex < static_cast<int32_t>(mModelsRenderData.size()));
 
     // TODO Pipeline should be able to share buffers such as projection buffer to enable us to update them once -> Solution: Store camera buffers inside camera
-    mPbrPipeline.Render(drawPass, deltaTimeInSec);
+    mPbrPipeline.Render(recordState, deltaTimeInSec);
     if (mIsLightVisible) {
-        mPointLightPipeline.Render(drawPass, deltaTimeInSec);
+        mPointLightPipeline.Render(recordState, deltaTimeInSec);
     }
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void GLTFMeshViewerScene::OnPostRender(float const deltaTimeInSec, MFA::RT::CommandRecordState & drawPass)
+void GLTFMeshViewerScene::OnPostRender(float const deltaTimeInSec, RT::CommandRecordState & recordState)
 {
-    mPointLightPipeline.PostRender(drawPass, deltaTimeInSec);
-    mPbrPipeline.PostRender(drawPass, deltaTimeInSec);
+    Scene::OnPostRender(deltaTimeInSec, recordState);
+
+    mPointLightPipeline.PostRender(recordState, deltaTimeInSec);
+    mPbrPipeline.PostRender(recordState, deltaTimeInSec);
 
 }
 
@@ -301,7 +318,7 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
     renderRequiredData.gpuModel = RF::CreateGpuModel(cpuModel);
     mPbrPipeline.CreateDrawableEssence(renderRequiredData.displayName.c_str(), renderRequiredData.gpuModel);
 
-    auto * entity = EntitySystem::CreateEntity("Instance", GetRootEntity());
+    auto * entity = EntitySystem::CreateEntity(renderRequiredData.displayName.c_str(), GetRootEntity());
     MFA_ASSERT(entity != nullptr);
     renderRequiredData.entity = entity;
 
@@ -314,8 +331,11 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
     );
     MFA_ASSERT(renderRequiredData.meshRendererComponent.expired() == false);
 
-    entity->AddComponent<AxisAlignedBoundingBoxComponent>();
-
+    entity->AddComponent<AxisAlignedBoundingBoxComponent>(
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(100.0f, 100.0f, 100.0f)
+    );
+    
     EntitySystem::InitEntity(entity);
         
     renderRequiredData.isLoaded = true;
