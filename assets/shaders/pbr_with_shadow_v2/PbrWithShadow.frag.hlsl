@@ -1,3 +1,11 @@
+#include "../ComputeDirectionalLightShadow.hlsl"
+#include "../ComputePointLightShadow.hlsl"
+#include "../PointLightBuffer.hlsl"
+#include "../CameraBuffer.hlsl"
+#include "../TextureSampler.hlsl"
+#include "../PrimitiveInfoBuffer.hlsl"
+#include "../DirectionalLightBuffer.hlsl"
+
 struct PSIn {
     float4 position : SV_POSITION;
     float3 worldPos: POSITION0;
@@ -12,95 +20,22 @@ struct PSIn {
 
     float2 emissiveTexCoord: TEXCOORD5;
 
+    // float4 directionLightPosition[3];
 };
 
 struct PSOut {
     float4 color:SV_Target0;
 };
 
-struct PrimitiveInfo {
-    float4 baseColorFactor: COLOR0;
-    float3 emissiveFactor: COLOR3;
-    float placeholder0;
-    
-    int baseColorTextureIndex;
-    
-    float metallicFactor: COLOR1;
-    float roughnessFactor: COLOR2;
-    int metallicRoughnessTextureIndex;
+CAMERA_BUFFER(cameraBuffer)
 
-    int normalTextureIndex;  
+TEXTURE_SAMPLER(textureSampler)
 
-    int emissiveTextureIndex;
-    
-    // TODO Occlusion texture
-    
-    int hasSkin;    // TODO Move hasSkin to vertex
+PRIMITIVE_INFO(primitiveInfoBuffer)
 
-    int placeholder1;
-};
+DIRECTIONAL_LIGHT(directionalLightBuffer)
 
-struct PrimitiveInfoBuffer {
-    PrimitiveInfo primitiveInfo[];
-};
-
-ConstantBuffer <PrimitiveInfoBuffer> smBuff : register (b0, space1);
-
-struct CameraData {
-    float4x4 viewProjection;
-    float3 cameraPosition;
-    float projectFarToNearDistance;
-};
-
-ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
-
-#define MAX_DIRECTIONAL_LIGHT_COUNT 3
-
-struct DirectionalLight
-{
-    float3 direction;
-    float placeholder0;
-    float3 color;
-    float placeholder1;
-    float4x4 viewProjectionMatrix;
-};
-struct DirectionalLightBufferData
-{
-    uint count;
-    uint3 placeholder;
-    DirectionalLight items [MAX_DIRECTIONAL_LIGHT_COUNT];
-};
-
-ConstantBuffer <DirectionalLightBufferData> directionalLightBuffer: register(b1, space0);
-
-struct PointLight
-{
-    float3 position;
-    float placeholder0;
-    float3 color;
-    float maxSquareDistance;
-    float linearAttenuation;
-    float quadraticAttenuation;
-    float2 placeholder1;     
-    float4x4 viewProjectionMatrices[6];
-};
-
-#define MAX_POINT_LIGHT_COUNT 5
-
-struct PointLightsBufferData
-{
-    uint count;
-    float constantAttenuation;
-    float2 placeholder;
-
-    PointLight items [MAX_POINT_LIGHT_COUNT];
-};
-
-ConstantBuffer <PointLightsBufferData> pointLightsBuffer: register(b2, space0);
-
-sampler textureSampler : register(s3, space0);
-
-TextureCubeArray shadowMapTextures : register(t4, space0);
+POINT_LIGHT(pointLightsBuffer)
 
 Texture2D textures[64] : register(t1, space1);
 
@@ -130,31 +65,6 @@ const float alphaMaskCutoff = 0.1f;
 
 const float ambientOcclusion = 0.008f;
 
-const float shadowBias = 0.05;
-const int ShadowSamplesCount = 20;
-const float shadowPerSample = 1.0f / float(ShadowSamplesCount);
-const float3 SampleOffsetDirections[20] = {
-    float3(1,  1,  1),
-    float3(1,  -1,  1),
-    float3(-1,  -1,  1),
-    float3(-1,  1,  1),
-    float3(1,  1,  -1),
-    float3(1,  -1,  -1),
-    float3(-1,  -1,  -1),
-    float3(-1,  1,  -1),
-    float3(1,  1,  0),
-    float3(1,  -1,  0),
-    float3(-1,  -1,  0),
-    float3(-1,  1,  0),
-    float3(1,  0,  1),
-    float3(-1,  0,  1),
-    float3(1,  0,  -1),
-    float3(-1,  0,  -1),
-    float3(0,  1,  1),
-    float3(0,  -1,  1),
-    float3(0,  -1,  -1),
-    float3(0,  1,  -1)
-};
 // This function computes ratio between amount of light that reflect and refracts
 // Reflection contrbutes to specular while refraction contributes to diffuse light
 /*
@@ -274,46 +184,10 @@ float3 calculateNormal(PSIn input, int normalTextureIndex)
     return pixelNormal;
 };
 
-// Normalized light vector will cause incorrect sampling!
-float pointLightShadowCalculation(float3 lightVector, float lightDistance, float viewDistance, int lightIndex)
-{
-    // UNITY_SAMPLE_TEXCUBEARRAY(_MainTex, float4(i.uv, _SliceIndex));
-    // get vector between fragment position and light position
-    // Because we sampled the shadow cubemap from light to each position now we need to reverse the worldPosition to light vector
-    float3 lightToFrag = -1 * lightVector;
-    
-    /*
-    // Old way
-    // use the light to fragment vector to sample from the depth map    
-    float closestDepth = shadowMapTexture.Sample(textureSampler, lightToFrag).r;
-    // it is currently in linear range between [0,1]. Re-transform back to original value
-    closestDepth *= cameraBuffer.projectFarToNearDistance;
-    // now get current linear depth as the length between the fragment and light position
-    float currentDepth = lightDistance;
-    // now test for shadows
-    float shadow = currentDepth -  shadowBias > closestDepth ? 1.0 : 0.0;
-    */
-    // With PCF
-    
-    float shadow = 0.0f;
-    float currentDepth = lightDistance;
-    float diskRadius = (1.0f + (viewDistance / cameraBuffer.projectFarToNearDistance)) / 75.0f;  
-    for(int i = 0; i < ShadowSamplesCount; ++i)
-    {
-        float3 uv = lightToFrag + SampleOffsetDirections[i] * diskRadius;
-        float closestDepth = shadowMapTextures.Sample(textureSampler, float4(uv.x, uv.y, uv.z, lightIndex)).r;
-        closestDepth *= cameraBuffer.projectFarToNearDistance;
-        if(currentDepth - shadowBias > closestDepth) {      // Maybe we could have stored the square of closest depth instead
-            shadow += shadowPerSample;
-        }
-    }
-
-    return shadow;
-}
 
 // TODO Strength in ambient occulusion and Scale for normals
 PSOut main(PSIn input) {
-    PrimitiveInfo primitiveInfo = smBuff.primitiveInfo[pushConsts.primitiveIndex];
+    PrimitiveInfo primitiveInfo = primitiveInfoBuffer.primitiveInfo[pushConsts.primitiveIndex];
 
     float4 baseColor = primitiveInfo.baseColorTextureIndex >= 0
         ? pow(textures[primitiveInfo.baseColorTextureIndex].Sample(textureSampler, input.baseColorTexCoord).rgba, 2.2f)

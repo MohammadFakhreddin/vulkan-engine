@@ -1,3 +1,7 @@
+#include "../DirectionalLightBuffer.hlsl"
+#include "../SkinJointsBuffer.hlsl"
+#include "../CameraBuffer.hlsl"
+
 struct VSIn {
     float3 position : POSITION0;
     
@@ -28,21 +32,13 @@ struct VSOut {
     float3 worldBiTangent : TEXCOORD4;
 
     float2 emissiveTexCoord: TEXCOORD5;
+
+    // float4 directionLightPosition[3];
 };
 
-struct CameraData {
-    float4x4 viewProjection;
-    float3 cameraPosition;
-    float projectFarToNearDistance;
-};
-
-ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
-
-struct SkinJoints {
-    float4x4 joints[];
-};
-
-ConstantBuffer <SkinJoints> skinJointsBuffer: register(b0, space2); 
+CAMERA_BUFFER(cameraBuffer)
+DIRECTIONAL_LIGHT(directionalLightBuffer)
+SKIN_JOINTS_BUFFER(skinJointsBuffer)
 
 struct PushConsts
 {
@@ -91,6 +87,11 @@ VSOut main(VSIn input) {
     output.position = mul(cameraBuffer.viewProjection, worldPos);
     
     output.worldPos = worldPos.xyz;
+
+    // for (int i = 0; i < directionalLightBuffer.count; ++i)
+    // {
+    //     output.directionLightPosition[i] = directionalLightBuffer.items[i].viewProjectionMatrix;
+    // }
 
     // BaseColor
     output.baseColorTexCoord = input.baseColorTexCoord;

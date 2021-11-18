@@ -506,7 +506,7 @@ namespace MFA
 
                         RF::PushConstants(
                             recordState,
-                            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                            VK_SHADER_STAGE_VERTEX_BIT,
                             0,
                             CBlobAliasOf(pushConstants)
                         );
@@ -976,7 +976,7 @@ namespace MFA
 
         std::vector<VkPushConstantRange> pushConstantRanges{};
         VkPushConstantRange pushConstantRange{
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
             .offset = 0,
             .size = sizeof(PointLightShadowPassPushConstants),
         };

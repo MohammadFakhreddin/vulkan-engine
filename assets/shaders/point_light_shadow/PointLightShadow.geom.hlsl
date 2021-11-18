@@ -1,3 +1,5 @@
+#include "../PointLightBuffer.hlsl"
+
 struct GSInput
 {
     float4 worldPosition : POSITION0;
@@ -11,46 +13,7 @@ struct GSOutput
 	int Layer : SV_RenderTargetArrayIndex;
 };
 
-// Maybe we can have a separate file for this data type
-struct PointLight
-{
-    float3 position;
-    float placeholder0;
-    float3 color;
-    float maxSquareDistance;
-    float linearAttenuation;
-    float quadraticAttenuation;
-    float2 placeholder1;     
-    float4x4 viewProjectionMatrices[6];
-};
-
-#define MAX_POINT_LIGHT_COUNT 5
-
-struct PointLightsBufferData
-{
-    uint count;
-    float constantAttenuation;
-    float2 placeholder;
-
-    PointLight items [MAX_POINT_LIGHT_COUNT];                                       // Max light
-};
-
-ConstantBuffer <PointLightsBufferData> pointLightsBuffer: register(b2, space0);
-
-struct PushConsts
-{   
-    float4x4 model;
-    float4x4 inverseNodeTransform;
-    int skinIndex;
-    int placeholder0;
-    int placeholder1;
-    int placeholder2;
-};
-
-[[vk::push_constant]]
-cbuffer {
-    PushConsts pushConsts;
-};
+POINT_LIGHT(pointLightsBuffer)
 
 #define MAX_VERTEX_COUNT 90 // 3 * CubeFaces * MaxPointLight
 

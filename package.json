@@ -1,13 +1,5 @@
 {
     "scripts": {
-        "pbr-vert": "glslc -g -fshader-stage=vert assets/shaders/pbr_model/PbrModel.vert.hlsl  -o assets/shaders/pbr_model/PbrModel.vert.spv",
-        "pbr-frag": "glslc -g -fshader-stage=frag assets/shaders/pbr_model/PbrModel.frag.hlsl  -o assets/shaders/pbr_model/PbrModel.frag.spv",
-
-        "pbr-with-shadow-vert": "glslc -g -fshader-stage=vert assets/shaders/pbr_with_shadow/PbrWithShadow.vert.hlsl  -o assets/shaders/pbr_with_shadow/PbrWithShadow.vert.spv",
-        "pbr-with-shadow-frag": "glslc -g -fshader-stage=frag assets/shaders/pbr_with_shadow/PbrWithShadow.frag.hlsl  -o assets/shaders/pbr_with_shadow/PbrWithShadow.frag.spv",
-        "offscreen-shadow-vert": "glslc -g -fshader-stage=vert assets/shaders/pbr_with_shadow/OffscreenShadow.vert.hlsl  -o assets/shaders/pbr_with_shadow/OffscreenShadow.vert.spv",
-        "offscreen-shadow-geom": "glslc -g -fshader-stage=geom assets/shaders/pbr_with_shadow/OffscreenShadow.geom.hlsl  -o assets/shaders/pbr_with_shadow/OffscreenShadow.geom.spv",
-        "offscreen-shadow-frag": "glslc -g -fshader-stage=frag assets/shaders/pbr_with_shadow/OffscreenShadow.frag.hlsl  -o assets/shaders/pbr_with_shadow/OffscreenShadow.frag.spv",
         
         "occlusion-vert": "glslc -g -fshader-stage=vert assets/shaders/occlusion_query/Occlusion.vert.hlsl  -o assets/shaders/occlusion_query/Occlusion.vert.spv",
         "occlusion-frag": "glslc -g -fshader-stage=frag assets/shaders/occlusion_query/Occlusion.frag.hlsl  -o assets/shaders/occlusion_query/Occlusion.frag.spv",
@@ -19,15 +11,28 @@
         "point-light-shadow-frag": "glslc -g -fshader-stage=frag assets/shaders/point_light_shadow/PointLightShadow.frag.hlsl  -o assets/shaders/point_light_shadow/PointLightShadow.frag.spv",
         "point-light-shadow-geom": "glslc -g -fshader-stage=geom assets/shaders/point_light_shadow/PointLightShadow.geom.hlsl  -o assets/shaders/point_light_shadow/PointLightShadow.geom.spv",
         
+        "directional-light-shadow-vert": "glslc -g -fshader-stage=vert assets/shaders/directional_light_shadow/DirectionalLightShadow.vert.hlsl  -o assets/shaders/directional_light_shadow/DirectionalLightShadow.vert.spv",
+        "directional-light-shadow-geom": "glslc -g -fshader-stage=geom assets/shaders/directional_light_shadow/DirectionalLightShadow.geom.hlsl  -o assets/shaders/directional_light_shadow/DirectionalLightShadow.geom.spv",
+        
         "depth-pre-pass-vert": "glslc -g -fshader-stage=vert assets/shaders/depth_pre_pass/DepthPrePass.vert.hlsl  -o assets/shaders/depth_pre_pass/DepthPrePass.vert.spv",
         "depth-pre-pass-frag": "glslc -g -fshader-stage=frag assets/shaders/depth_pre_pass/DepthPrePass.frag.hlsl  -o assets/shaders/depth_pre_pass/DepthPrePass.frag.spv",
         
-        "point-light-vert": "glslc -g -fshader-stage=vert assets/shaders/debug_renderer/DebugRenderer.vert.hlsl  -o assets/shaders/debug_renderer/DebugRenderer.vert.spv",
-        "point-light-frag": "glslc -g -fshader-stage=frag assets/shaders/debug_renderer/DebugRenderer.frag.hlsl  -o assets/shaders/debug_renderer/DebugRenderer.frag.spv",
-
+        "debug-renderer-vert": "glslc -g -fshader-stage=vert assets/shaders/debug_renderer/DebugRenderer.vert.hlsl  -o assets/shaders/debug_renderer/DebugRenderer.vert.spv",
+        "debug-renderer-frag": "glslc -g -fshader-stage=frag assets/shaders/debug_renderer/DebugRenderer.frag.hlsl  -o assets/shaders/debug_renderer/DebugRenderer.frag.spv",
 
         "cmake-mac": "cd build64 && cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=./ios.toolchain.cmake -DPLATFORM=MAC && cd ..",
         "cmake-ios": "cd buildIOS && cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=./ios.toolchain.cmake -DPLATFORM=OS64COMBINED && cd ..",
         "cmake-windows": "cd build64 && cmake .. || cd .."
+    },
+    "depracated": {
+        "pbr-vert": "glslc -g -fshader-stage=vert assets/shaders/pbr_model/PbrModel.vert.hlsl  -o assets/shaders/pbr_model/PbrModel.vert.spv",
+        "pbr-frag": "glslc -g -fshader-stage=frag assets/shaders/pbr_model/PbrModel.frag.hlsl  -o assets/shaders/pbr_model/PbrModel.frag.spv",
+
+        "pbr-with-shadow-vert": "glslc -g -fshader-stage=vert assets/shaders/pbr_with_shadow/PbrWithShadow.vert.hlsl  -o assets/shaders/pbr_with_shadow/PbrWithShadow.vert.spv",
+        "pbr-with-shadow-frag": "glslc -g -fshader-stage=frag assets/shaders/pbr_with_shadow/PbrWithShadow.frag.hlsl  -o assets/shaders/pbr_with_shadow/PbrWithShadow.frag.spv",
+        "offscreen-shadow-vert": "glslc -g -fshader-stage=vert assets/shaders/pbr_with_shadow/OffscreenShadow.vert.hlsl  -o assets/shaders/pbr_with_shadow/OffscreenShadow.vert.spv",
+        "offscreen-shadow-geom": "glslc -g -fshader-stage=geom assets/shaders/pbr_with_shadow/OffscreenShadow.geom.hlsl  -o assets/shaders/pbr_with_shadow/OffscreenShadow.geom.spv",
+        "offscreen-shadow-frag": "glslc -g -fshader-stage=frag assets/shaders/pbr_with_shadow/OffscreenShadow.frag.hlsl  -o assets/shaders/pbr_with_shadow/OffscreenShadow.frag.spv",
+        
     }
 }
