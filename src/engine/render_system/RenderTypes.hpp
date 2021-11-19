@@ -262,6 +262,7 @@ namespace MFA
             VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D;
             VkImageCreateFlags imageCreateFlags = 0;
             VkSampleCountFlagBits samplesCount = VK_SAMPLE_COUNT_1_BIT;
+            VkImageType imageType = VK_IMAGE_TYPE_2D;
         };
 
         struct CreateDepthImageOptions
@@ -271,6 +272,7 @@ namespace MFA
             VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D;
             VkImageCreateFlags imageCreateFlags = 0;
             VkSampleCountFlagBits samplesCount = VK_SAMPLE_COUNT_1_BIT;
+            VkImageType imageType = VK_IMAGE_TYPE_2D;
         };
 
         //static constexpr VkFormat ShadowFormat = VK_FORMAT_R32_SFLOAT;

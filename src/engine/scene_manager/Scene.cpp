@@ -90,14 +90,14 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::UniformBufferCollection const & Scene::GetPointLightsBufferCollection() const
+    RT::UniformBufferCollection const & Scene::GetPointLightsBuffers() const
     {
         return mPointLightsBufferCollection;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::UniformBufferCollection const & Scene::GetDirectionalLightBufferCollection() const
+    RT::UniformBufferCollection const & Scene::GetDirectionalLightBuffers() const
     {
         return mDirectionalLightBufferCollection;
     }
@@ -201,7 +201,7 @@ namespace MFA
             MFA_ASSERT(ptr != nullptr);
             if (ptr->IsVisible())
             {
-                MFA_ASSERT(mPointLightData.count < MAX_VISIBLE_POINT_LIGHT_COUNT);
+                MFA_ASSERT(mPointLightData.count < MAX_POINT_LIGHT_COUNT);
                 auto & item = mPointLightData.items[mPointLightData.count];
 
                 //Future optimization: if (item.id != ptr->GetUniqueId() || ptr->IsDataDirty() == true){

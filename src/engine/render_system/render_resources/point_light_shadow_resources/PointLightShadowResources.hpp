@@ -7,7 +7,7 @@
 namespace MFA
 {
 
-    class PointLightShadowResourceCollection
+    class PointLightShadowResources
     {
     public:
 
@@ -20,13 +20,7 @@ namespace MFA
 
         [[nodiscard]]
         RT::DepthImageGroup const & GetShadowCubeMap(uint32_t frameIndex) const;
-
-        //[[nodiscard]]
-        //RT::DepthImageGroup const & GetDepthAttachmentImage(RT::CommandRecordState const & recordState) const;
-
-        //[[nodiscard]]
-        //RT::DepthImageGroup const & GetDepthAttachmentImage(uint32_t frameIndex) const;
-
+        
         [[nodiscard]]
         VkFramebuffer GetFrameBuffer(RT::CommandRecordState const & drawPass) const;
 
@@ -39,8 +33,6 @@ namespace MFA
 
         void createShadowCubeMap(VkExtent2D const & shadowExtent);
         
-        //void createDepthAttachmentImage(VkExtent2D const & shadowExtent);
-
         void createFrameBuffer(VkExtent2D const & shadowExtent, VkRenderPass renderPass);
 
         std::vector<VkFramebuffer> mFrameBuffers{};

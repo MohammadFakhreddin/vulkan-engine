@@ -5,35 +5,33 @@
 namespace MFA
 {
 
-    class PointLightShadowResources;
-    class DisplayRenderPass;
+    class DirectionalLightShadowResources;
 
-    class PointLightShadowRenderPass final : public RenderPass
+    class DirectionalLightShadowRenderPass final : public RenderPass
     {
     public:
+        DirectionalLightShadowRenderPass();
 
-        PointLightShadowRenderPass();
+        ~DirectionalLightShadowRenderPass() override;
 
-        ~PointLightShadowRenderPass() override;
-
-        PointLightShadowRenderPass(PointLightShadowRenderPass const &) noexcept = delete;
-        PointLightShadowRenderPass(PointLightShadowRenderPass &&) noexcept = delete;
-        PointLightShadowRenderPass & operator = (PointLightShadowRenderPass const &) noexcept = delete;
-        PointLightShadowRenderPass & operator = (PointLightShadowRenderPass &&) noexcept = delete;
+        DirectionalLightShadowRenderPass(DirectionalLightShadowRenderPass const &) noexcept = delete;
+        DirectionalLightShadowRenderPass(DirectionalLightShadowRenderPass &&) noexcept = delete;
+        DirectionalLightShadowRenderPass & operator = (DirectionalLightShadowRenderPass const &) noexcept = delete;
+        DirectionalLightShadowRenderPass & operator = (DirectionalLightShadowRenderPass &&) noexcept = delete;
 
         VkRenderPass GetVkRenderPass() override;
 
         // Appends required data for barrier to execute
         void PrepareRenderTargetForSampling(
             RT::CommandRecordState const & recordState,
-            PointLightShadowResources * renderTarget,
+            DirectionalLightShadowResources * renderTarget,
             std::vector<VkImageMemoryBarrier> & outPipelineBarriers
         ) const;
 
         // Appends required data for barrier to execute
         void BeginRenderPass(
             RT::CommandRecordState & recordState,
-            const PointLightShadowResources & renderTarget
+            const DirectionalLightShadowResources & renderTarget
         );
 
         void EndRenderPass(RT::CommandRecordState & recordState);
@@ -51,5 +49,4 @@ namespace MFA
         VkRenderPass mVkRenderPass{};
 
     };
-
 }

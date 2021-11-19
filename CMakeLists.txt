@@ -142,10 +142,14 @@ add_library("Renderer"
     "src/engine/render_system/render_passes/depth_pre_pass/DepthPrePass.cpp"
     "src/engine/render_system/render_passes/occlusion_render_pass/OcclusionRenderPass.hpp"
     "src/engine/render_system/render_passes/occlusion_render_pass/OcclusionRenderPass.cpp"
+    "src/engine/render_system/render_passes/directional_light_shadow_render_pass/DirectionalLightShadowRenderPass.hpp"
+    "src/engine/render_system/render_passes/directional_light_shadow_render_pass/DirectionalLightShadowRenderPass.cpp"
 
     # RenderResources
-    "src/engine/render_system/render_resources/point_light_shadow_resource_collection/PointLightShadowResourceCollection.hpp"
-    "src/engine/render_system/render_resources/point_light_shadow_resource_collection/PointLightShadowResourceCollection.cpp"
+    "src/engine/render_system/render_resources/point_light_shadow_resources/PointLightShadowResources.hpp"
+    "src/engine/render_system/render_resources/point_light_shadow_resources/PointLightShadowResources.cpp"
+    "src/engine/render_system/render_resources/directional_light_shadow_resources/DirectionalLightShadowResources.hpp"
+    "src/engine/render_system/render_resources/directional_light_shadow_resources/DirectionalLightShadowResources.cpp"
 
     # Pipeline
     "src/engine/render_system/pipelines/BasePipeline.hpp"

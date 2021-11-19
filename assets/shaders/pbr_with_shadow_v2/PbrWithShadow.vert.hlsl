@@ -33,7 +33,7 @@ struct VSOut {
 
     float2 emissiveTexCoord: TEXCOORD5;
 
-    // float4 directionLightPosition[3];
+    float4 directionLightPosition[3];
 };
 
 CAMERA_BUFFER(cameraBuffer)
@@ -88,10 +88,10 @@ VSOut main(VSIn input) {
     
     output.worldPos = worldPos.xyz;
 
-    // for (int i = 0; i < directionalLightBuffer.count; ++i)
-    // {
-    //     output.directionLightPosition[i] = directionalLightBuffer.items[i].viewProjectionMatrix;
-    // }
+    for (int i = 0; i < directionalLightBuffer.count; ++i)
+    {
+        output.directionLightPosition[i] = mul(directionalLightBuffer.items[i].viewProjectionMatrix, worldPos);
+    }
 
     // BaseColor
     output.baseColorTexCoord = input.baseColorTexCoord;

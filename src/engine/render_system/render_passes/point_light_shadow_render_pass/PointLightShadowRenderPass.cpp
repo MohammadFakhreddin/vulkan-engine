@@ -5,7 +5,7 @@
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/RenderBackend.hpp"
-#include "engine/render_system/render_resources/point_light_shadow_resource_collection/PointLightShadowResourceCollection.hpp"
+#include "engine/render_system/render_resources/point_light_shadow_resources/PointLightShadowResources.hpp"
 #include "engine/scene_manager/Scene.hpp"
 
 namespace MFA
@@ -205,7 +205,7 @@ namespace MFA
 
     void PointLightShadowRenderPass::PrepareRenderTargetForSampling(
         RT::CommandRecordState const & recordState,
-        PointLightShadowResourceCollection * renderTarget,
+        PointLightShadowResources * renderTarget,
         std::vector<VkImageMemoryBarrier> & outPipelineBarriers
     ) const
     {
@@ -217,7 +217,7 @@ namespace MFA
             .baseMipLevel = 0,
             .levelCount = 1,
             .baseArrayLayer = 0,
-            .layerCount = 6 * Scene::MAX_VISIBLE_POINT_LIGHT_COUNT,
+            .layerCount = 6 * Scene::MAX_POINT_LIGHT_COUNT,
         };
 
         VkImageMemoryBarrier const pipelineBarrier{
@@ -271,7 +271,7 @@ namespace MFA
     // RenderTarget = FrameBuffer + RenderPass! Fix the naming
     void PointLightShadowRenderPass::BeginRenderPass(
         RT::CommandRecordState & recordState,
-        PointLightShadowResourceCollection const & renderTarget
+        PointLightShadowResources const & renderTarget
     )
     {
 
@@ -279,8 +279,8 @@ namespace MFA
 
         // Shadow map generation
         auto const shadowExtend = VkExtent2D{
-            .width = Scene::SHADOW_WIDTH,
-            .height = Scene::SHADOW_HEIGHT
+            .width = Scene::POINT_LIGHT_SHADOW_WIDTH,
+            .height = Scene::POINT_LIGHT_SHADOW_HEIGHT
         };
 
         auto * commandBuffer = RF::GetGraphicCommandBuffer(recordState);
@@ -322,7 +322,7 @@ namespace MFA
             .format = RF::GetDepthFormat(),
             .samples = VK_SAMPLE_COUNT_1_BIT,
             .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-            .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
             .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
             .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,

@@ -179,7 +179,7 @@ float MFA::PointLightComponent::GetQuadraticAttenuation() const
 void MFA::PointLightComponent::computeProjection()
 {
     static constexpr float FOV = 90.0f;          // We are cube so FOV must be exact 90 degree
-    static_assert(Scene::SHADOW_WIDTH == Scene::SHADOW_HEIGHT);
+    static_assert(Scene::POINT_LIGHT_SHADOW_WIDTH == Scene::POINT_LIGHT_SHADOW_HEIGHT);
     static constexpr float ratio = 1;
         
     Matrix::PreparePerspectiveProjectionMatrix(

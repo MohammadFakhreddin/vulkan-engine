@@ -173,6 +173,7 @@ namespace MFA::RenderBackend
         RT::BufferAndMemory & bufferGroup
     );
 
+    // TODO Too many parameters. Create struct instead
     [[nodiscard]]
     RT::ImageGroup CreateImage(
         VkDevice device,
@@ -180,14 +181,15 @@ namespace MFA::RenderBackend
         uint32_t width,
         uint32_t height,
         uint32_t depth,
-        uint8_t mip_levels,
-        uint16_t slice_count,
+        uint8_t mipLevels,
+        uint16_t sliceCount,
         VkFormat format,
         VkImageTiling tiling,
         VkImageUsageFlags usage,
         VkSampleCountFlagBits samplesCount,
         VkMemoryPropertyFlags properties,
-        VkImageCreateFlags imageCreateFlags = 0
+        VkImageCreateFlags imageCreateFlags = 0,
+        VkImageType imageType = VK_IMAGE_TYPE_2D
     );
 
     void DestroyImage(

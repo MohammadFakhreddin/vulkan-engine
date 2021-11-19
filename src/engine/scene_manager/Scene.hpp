@@ -15,10 +15,14 @@ class Entity;
 class Scene {
 public:
 
-    static constexpr int MAX_VISIBLE_POINT_LIGHT_COUNT = 5;        // It can be more but currently 10 is more than enough for me
+    static constexpr int MAX_POINT_LIGHT_COUNT = 5;        // It can be more but currently 10 is more than enough for me
     static constexpr int MAX_DIRECTIONAL_LIGHT_COUNT = 3;
-    static constexpr uint32_t SHADOW_WIDTH = 2048;
-    static constexpr uint32_t SHADOW_HEIGHT = 2048;
+
+    static constexpr uint32_t POINT_LIGHT_SHADOW_WIDTH = 1024;          
+    static constexpr uint32_t POINT_LIGHT_SHADOW_HEIGHT = 1024;
+
+    static constexpr uint32_t DIRECTIONAL_LIGHT_SHADOW_WIDTH = 2048;
+    static constexpr uint32_t DIRECTIONAL_LIGHT_SHADOW_HEIGHT = 2048;
 
     explicit Scene() = default;
     virtual ~Scene() = default;
@@ -51,10 +55,10 @@ public:
     void RegisterDirectionalLight(std::weak_ptr<DirectionalLightComponent> const & directionalLight);
 
     [[nodiscard]]
-    RT::UniformBufferCollection const & GetPointLightsBufferCollection() const;
+    RT::UniformBufferCollection const & GetPointLightsBuffers() const;
 
     [[nodiscard]]
-    RT::UniformBufferCollection const & GetDirectionalLightBufferCollection() const;
+    RT::UniformBufferCollection const & GetDirectionalLightBuffers() const;
 
     [[nodiscard]]
     uint32_t GetPointLightCount() const;
@@ -101,7 +105,7 @@ private:
         uint32_t count = 0;
         float constantAttenuation = 1.0f;
         float placeholder[2] {};
-        PointLight items [MAX_VISIBLE_POINT_LIGHT_COUNT] {};
+        PointLight items [MAX_POINT_LIGHT_COUNT] {};
     };
     PointLightsBufferData mPointLightData {};
     RT::UniformBufferCollection mPointLightsBufferCollection {};

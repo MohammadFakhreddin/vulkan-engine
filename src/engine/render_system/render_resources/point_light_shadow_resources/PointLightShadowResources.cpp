@@ -1,15 +1,15 @@
-#include "PointLightShadowResourceCollection.hpp"
+#include "PointLightShadowResources.hpp"
 
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/scene_manager/Scene.hpp"
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::PointLightShadowResourceCollection::Init(VkRenderPass renderPass)
+void MFA::PointLightShadowResources::Init(VkRenderPass renderPass)
 {
     static constexpr auto shadowExtend = VkExtent2D{
-        .width = Scene::SHADOW_WIDTH,
-        .height = Scene::SHADOW_HEIGHT
+        .width = Scene::POINT_LIGHT_SHADOW_WIDTH,
+        .height = Scene::POINT_LIGHT_SHADOW_HEIGHT
     };
     createShadowCubeMap(shadowExtend);
     createFrameBuffer(shadowExtend, renderPass);
@@ -17,7 +17,7 @@ void MFA::PointLightShadowResourceCollection::Init(VkRenderPass renderPass)
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::PointLightShadowResourceCollection::Shutdown()
+void MFA::PointLightShadowResources::Shutdown()
 {
     RF::DestroyFrameBuffers(static_cast<uint32_t>(mFrameBuffers.size()), mFrameBuffers.data());
     mFrameBuffers.clear();
@@ -31,49 +31,35 @@ void MFA::PointLightShadowResourceCollection::Shutdown()
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RT::DepthImageGroup const & MFA::PointLightShadowResourceCollection::GetShadowCubeMap(RT::CommandRecordState const & recordState) const
+MFA::RT::DepthImageGroup const & MFA::PointLightShadowResources::GetShadowCubeMap(RT::CommandRecordState const & recordState) const
 {
     return GetShadowCubeMap(recordState.frameIndex);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RT::DepthImageGroup const & MFA::PointLightShadowResourceCollection::GetShadowCubeMap(uint32_t const frameIndex) const
+MFA::RT::DepthImageGroup const & MFA::PointLightShadowResources::GetShadowCubeMap(uint32_t const frameIndex) const
 {
     return mShadowCubeMapList[frameIndex];
 }
 
 //-------------------------------------------------------------------------------------------------
 
-//MFA::RenderTypes::DepthImageGroup const & MFA::PointLightShadowResourceCollection::GetDepthAttachmentImage(RT::CommandRecordState const & recordState) const
-//{
-//    return GetDepthAttachmentImage(recordState.frameIndex);
-//}
-
-//-------------------------------------------------------------------------------------------------
-
-//MFA::RenderTypes::DepthImageGroup const & MFA::PointLightShadowResourceCollection::GetDepthAttachmentImage(uint32_t const frameIndex) const
-//{
-//    return mDepthAttachmentImageList[frameIndex];
-//}
-
-//-------------------------------------------------------------------------------------------------
-
-VkFramebuffer MFA::PointLightShadowResourceCollection::GetFrameBuffer(RT::CommandRecordState const & drawPass) const
+VkFramebuffer MFA::PointLightShadowResources::GetFrameBuffer(RT::CommandRecordState const & drawPass) const
 {
     return GetFrameBuffer(drawPass.frameIndex);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-VkFramebuffer MFA::PointLightShadowResourceCollection::GetFrameBuffer(uint32_t const frameIndex) const
+VkFramebuffer MFA::PointLightShadowResources::GetFrameBuffer(uint32_t const frameIndex) const
 {
     return mFrameBuffers[frameIndex];
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::PointLightShadowResourceCollection::createShadowCubeMap(VkExtent2D const & shadowExtent)
+void MFA::PointLightShadowResources::createShadowCubeMap(VkExtent2D const & shadowExtent)
 {
     mShadowCubeMapList.resize(RF::GetMaxFramesPerFlight());
     for (auto & shadowCubeMap : mShadowCubeMapList)
@@ -82,7 +68,7 @@ void MFA::PointLightShadowResourceCollection::createShadowCubeMap(VkExtent2D con
         shadowCubeMap = RF::CreateDepthImage(
             shadowExtent,
             RT::CreateDepthImageOptions{
-                .layerCount = 6 * Scene::MAX_VISIBLE_POINT_LIGHT_COUNT,
+                .layerCount = 6 * Scene::MAX_POINT_LIGHT_COUNT,
                 .usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 .viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY,
                 .imageCreateFlags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
@@ -93,23 +79,7 @@ void MFA::PointLightShadowResourceCollection::createShadowCubeMap(VkExtent2D con
 
 //-------------------------------------------------------------------------------------------------
 
-//void MFA::PointLightShadowResourceCollection::createDepthAttachmentImage(VkExtent2D const & shadowExtent)
-//{
-//    mDepthAttachmentImageList.resize(RF::GetMaxFramesPerFlight());
-//    for (auto & depthImage : mDepthAttachmentImageList)
-//    {
-//        depthImage = RF::CreateDepthImage(shadowExtent, RT::CreateDepthImageOptions{
-//            .layerCount = 6,
-//            .usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-//            .viewType = VK_IMAGE_VIEW_TYPE_CUBE,
-//            .imageCreateFlags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
-//        });
-//    }
-//}
-
-//-------------------------------------------------------------------------------------------------
-
-void MFA::PointLightShadowResourceCollection::createFrameBuffer(VkExtent2D const & shadowExtent, VkRenderPass renderPass)
+void MFA::PointLightShadowResources::createFrameBuffer(VkExtent2D const & shadowExtent, VkRenderPass renderPass)
 {
     // Note: This comment is useful though does not match 100% with my code
     // Create a layered depth attachment for rendering the depth maps from the lights' point of view
@@ -129,7 +99,7 @@ void MFA::PointLightShadowResourceCollection::createFrameBuffer(VkExtent2D const
             attachments.data(),
             static_cast<uint32_t>(attachments.size()),
             shadowExtent,
-            6 * Scene::MAX_VISIBLE_POINT_LIGHT_COUNT
+            6 * Scene::MAX_POINT_LIGHT_COUNT
         );
     }
 }

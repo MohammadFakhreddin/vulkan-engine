@@ -711,30 +711,31 @@ void DestroyBuffer(
 
 RT::ImageGroup CreateImage(
     VkDevice device,
-    VkPhysicalDevice physical_device,
+    VkPhysicalDevice physicalDevice,
     uint32_t const width,
     uint32_t const height,
     uint32_t const depth,
-    uint8_t const mip_levels,
-    uint16_t const slice_count,
+    uint8_t const mipLevels,
+    uint16_t const sliceCount,
     VkFormat const format,
     VkImageTiling const tiling,
     VkImageUsageFlags const usage,
     VkSampleCountFlagBits const samplesCount,
     VkMemoryPropertyFlags const properties,
-    VkImageCreateFlags const imageCreateFlags
+    VkImageCreateFlags const imageCreateFlags,
+    VkImageType const imageType
 )
 {
     RT::ImageGroup imageGroup{};
 
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageInfo.imageType = imageType;
     imageInfo.extent.width = width;
     imageInfo.extent.height = height;
     imageInfo.extent.depth = depth;
-    imageInfo.mipLevels = mip_levels;
-    imageInfo.arrayLayers = slice_count;
+    imageInfo.mipLevels = mipLevels;
+    imageInfo.arrayLayers = sliceCount;
     imageInfo.format = format;
     imageInfo.tiling = tiling;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -752,7 +753,7 @@ RT::ImageGroup CreateImage(
     allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocate_info.allocationSize = memory_requirements.size;
     allocate_info.memoryTypeIndex = FindMemoryType(
-        &physical_device,
+        &physicalDevice,
         memory_requirements.memoryTypeBits,
         properties
     );
@@ -1585,7 +1586,8 @@ RT::DepthImageGroup CreateDepthImage(
         options.usageFlags,
         options.samplesCount,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        options.imageCreateFlags
+        options.imageCreateFlags,
+        options.imageType
     );
     MFA_ASSERT(depthImageGroup.imageGroup.image);
     MFA_ASSERT(depthImageGroup.imageGroup.memory);
@@ -1636,7 +1638,8 @@ RT::ColorImageGroup CreateColorImage(
         options.usageFlags,
         options.samplesCount,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        options.imageCreateFlags
+        options.imageCreateFlags,
+        options.imageType
     );
     MFA_ASSERT(colorImageGroup.imageGroup.image);
     MFA_ASSERT(colorImageGroup.imageGroup.memory);

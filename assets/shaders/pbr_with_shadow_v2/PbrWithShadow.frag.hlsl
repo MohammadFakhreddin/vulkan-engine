@@ -20,7 +20,7 @@ struct PSIn {
 
     float2 emissiveTexCoord: TEXCOORD5;
 
-    // float4 directionLightPosition[3];
+    float4 directionLightPosition[3];
 };
 
 struct PSOut {
@@ -212,12 +212,9 @@ PSOut main(PSIn input) {
     }
 
 	float3 surfaceNormal = calculateNormal(input, primitiveInfo.normalTextureIndex);
-
 	float3 normalizedSurfaceNormal = normalize(surfaceNormal.xyz);
-    
     float3 viewVector = cameraBuffer.cameraPosition - input.worldPos;
 	float3 normalizedViewVector = normalize(viewVector);
-    float viewVectorLength = length(viewVector);
     
     // Specular contribution
 	float3 Lo = float3(0.0, 0.0, 0.0);
@@ -226,22 +223,32 @@ PSOut main(PSIn input) {
     {
         DirectionalLight directionalLight = directionalLightBuffer.items[lightIndex];
         float3 lightVector = directionalLight.direction;
-
-        Lo += BRDF(
-            lightVector, 
-            normalizedViewVector, 
-            normalizedSurfaceNormal, 
-            metallic, 
-            roughness, 
-            baseColor.rgb, 
-            input.worldPos,
-            1.0f,
-            0.0f,
-            0.0f,
-            1.0f,
-            directionalLight.color
+        
+        float shadow = directionalLightShadowCalculation(
+            input.directionLightPosition[lightIndex], 
+            lightIndex
         );
+        if (shadow < 1.0f)
+        {
+            Lo += BRDF(
+                lightVector, 
+                normalizedViewVector, 
+                normalizedSurfaceNormal, 
+                metallic, 
+                roughness, 
+                baseColor.rgb, 
+                input.worldPos,
+                1.0f,
+                0.0f,
+                0.0f,
+                1.0f,
+                directionalLight.color
+            ) * (1.0f - shadow);
+        }
     }
+
+    float viewVectorLength = length(viewVector);
+
 	for (lightIndex = 0; lightIndex < pointLightsBuffer.count; lightIndex++)        // Point light count
     {   
 		PointLight pointLight = pointLightsBuffer.items[lightIndex];

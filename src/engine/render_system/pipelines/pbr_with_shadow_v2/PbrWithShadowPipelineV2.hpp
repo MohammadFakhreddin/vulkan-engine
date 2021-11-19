@@ -7,11 +7,13 @@
 
 namespace MFA
 {
+    class DirectionalLightShadowResources;
+    class DirectionalLightShadowRenderPass;
     class PointLightShadowRenderPass;
     class OcclusionRenderPass;
     class DrawableVariant;
     class DepthPrePass;
-    class PointLightShadowResourceCollection;
+    class PointLightShadowResources;
 
     class PBRWithShadowPipelineV2 final : public BasePipeline
     {
@@ -26,6 +28,16 @@ namespace MFA
             alignas(4) int placeholder1 = 0;
             alignas(4) int placeholder2 = 0;
 
+        };
+        
+        struct DirectionalLightPushConstants
+        {   
+            alignas(64) float model[16] {};
+            alignas(64) float inverseNodeTransform[16] {};
+            alignas(4) int skinIndex = 0;
+            alignas(4) int placeholder0 = 0;
+            alignas(4) int placeholder1 = 0;
+            alignas(4) int placeholder2 = 0;
         };
 
         struct PointLightShadowPassPushConstants
@@ -78,7 +90,7 @@ namespace MFA
 
         void PreRender(RT::CommandRecordState & recordState, float deltaTime) override;
 
-        void Render(RT::CommandRecordState & drawPass, float deltaTime) override;
+        void Render(RT::CommandRecordState & recordState, float deltaTime) override;
 
         void PostRender(RT::CommandRecordState & drawPass, float deltaTime) override;
 
@@ -108,7 +120,9 @@ namespace MFA
 
         void createDisplayPassPipeline();
 
-        void createShadowPassPipeline();
+        void createDirectionalLightShadowPassPipeline();
+
+        void createPointLightShadowPassPipeline();
 
         void createDepthPassPipeline();
 
@@ -128,6 +142,8 @@ namespace MFA
 
         void performDepthPrePass(RT::CommandRecordState & recordState);
 
+        void performDirectionalLightShadowPass(RT::CommandRecordState & recordState);
+
         void performPointLightShadowPass(RT::CommandRecordState & recordState);
 
         void performOcclusionQueryPass(RT::CommandRecordState & recordState);
@@ -141,15 +157,19 @@ namespace MFA
         RT::UniformBufferCollection mErrorBuffer{};
 
         RT::PipelineGroup mDisplayPassPipeline{};
-        RT::PipelineGroup mPointLightShadowPipeline{};
-        RT::PipelineGroup mDepthPassPipeline{};
-        RT::PipelineGroup mOcclusionQueryPipeline{};
-
+        
+        RT::PipelineGroup mPointLightShadowPipeline {};
         std::unique_ptr<PointLightShadowRenderPass> mPointLightShadowRenderPass;
-        std::unique_ptr<PointLightShadowResourceCollection> mPointLightResources {};
+        std::unique_ptr<PointLightShadowResources> mPointLightShadowResources {};
 
+        RT::PipelineGroup mDirectionalLightShadowPipeline {};
+        std::unique_ptr<DirectionalLightShadowRenderPass> mDirectionalLightShadowRenderPass;
+        std::unique_ptr<DirectionalLightShadowResources> mDirectionalLightShadowResources;
+
+        RT::PipelineGroup mDepthPassPipeline{};
         std::unique_ptr<DepthPrePass> mDepthPrePass;
 
+        RT::PipelineGroup mOcclusionQueryPipeline{};
         std::unique_ptr<OcclusionRenderPass> mOcclusionRenderPass;
 
         float mProjectionNear = 0.0f;

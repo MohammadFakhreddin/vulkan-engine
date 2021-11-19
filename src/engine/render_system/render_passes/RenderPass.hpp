@@ -29,7 +29,7 @@ protected:
 
     void BeginRenderPass(RT::CommandRecordState & drawPass);
 
-    void EndRenderPass(RT::CommandRecordState & drawPass);
+    virtual void EndRenderPass(RT::CommandRecordState & drawPass);
 
     virtual void internalInit() = 0;
 
