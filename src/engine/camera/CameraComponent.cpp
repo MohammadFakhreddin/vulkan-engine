@@ -3,6 +3,7 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockMatrix.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
+#include "engine/scene_manager/Scene.hpp"
 #include "engine/ui_system/UISystem.hpp"
 
 namespace MFA
@@ -293,6 +294,29 @@ namespace MFA
             mNearDistance,
             mFarDistance
         );
+
+        //static constexpr float Z_NEAR = 0.1f;
+        //static constexpr float Z_FAR = 3000.0f;
+
+        //int32_t const width = Scene::DIRECTIONAL_LIGHT_SHADOW_WIDTH / 100;
+        //int32_t const height = Scene::DIRECTIONAL_LIGHT_SHADOW_HEIGHT / 100;
+
+        //float const halfWidth = static_cast<float>(width) / 2.0f;
+        //float const halfHeight = static_cast<float>(height) / 2.0f;
+        //float const left = -halfWidth;
+        //float const right = halfWidth;
+        //float const top = -halfHeight;
+        //float const bottom = +halfHeight;
+
+        //Matrix::PrepareOrthographicProjectionMatrix(
+        //    mProjectionMatrix,
+        //    left,
+        //    right,
+        //    bottom,
+        //    top,
+        //    Z_NEAR,
+        //    Z_FAR
+        //);
 
         updateCameraBufferData();
 

@@ -24,11 +24,12 @@ namespace MFA
         VkRenderPass GetVkRenderPass() override;
 
         // Appends required data for barrier to execute
-        void PrepareRenderTargetForSampling(
+        static void PrepareRenderTargetForSampling(
             RT::CommandRecordState const & recordState,
             PointLightShadowResources * renderTarget,
+            bool isUsed,
             std::vector<VkImageMemoryBarrier> & outPipelineBarriers
-        ) const;
+        );
 
         // Appends required data for barrier to execute
         void BeginRenderPass(

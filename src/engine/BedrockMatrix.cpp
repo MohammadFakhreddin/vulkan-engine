@@ -321,4 +321,37 @@ namespace MFA::Matrix
 
     //-------------------------------------------------------------------------------------------------
 
+    void PrepareOrthographicProjectionMatrix(
+        glm::mat4 & outMatrix,
+        float const leftPlane,
+        float const rightPlane,
+        float const bottomPlane,
+        float const topPlane,
+        float const nearPlane,
+        float const farPlane
+    )
+    {
+        outMatrix[0][0] =  2.0f / (rightPlane - leftPlane);
+        MFA_ASSERT(outMatrix[0][1] == 0.0f);
+        MFA_ASSERT(outMatrix[0][2] == 0.0f);
+        MFA_ASSERT(outMatrix[0][3] == 0.0f);
+
+        MFA_ASSERT(outMatrix[1][0] == 0.0f);
+        outMatrix[1][1] = 2.0f / (bottomPlane - topPlane);
+        MFA_ASSERT(outMatrix[1][2] == 0.0f);
+        MFA_ASSERT(outMatrix[1][3] == 0.0f);
+
+        MFA_ASSERT(outMatrix[2][0] == 0.0f);
+        MFA_ASSERT(outMatrix[2][1] == 0.0f);
+        outMatrix[2][2] = 1.0f / (nearPlane - farPlane);
+        MFA_ASSERT(outMatrix[2][3] == 0.0f);
+
+        outMatrix[3][0] = -(rightPlane + leftPlane) / (rightPlane - leftPlane);
+        outMatrix[3][1] = -(bottomPlane + topPlane) / (bottomPlane - topPlane);
+        outMatrix[3][2] = nearPlane / (nearPlane - farPlane);
+        outMatrix[3][3] = 1.0f;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
 }

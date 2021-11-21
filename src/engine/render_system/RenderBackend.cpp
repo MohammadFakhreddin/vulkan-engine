@@ -1118,9 +1118,9 @@ VkSampler CreateSampler(
     sampler_info.magFilter = VK_FILTER_LINEAR;
     sampler_info.minFilter = VK_FILTER_LINEAR;
     // TODO Important, Get this parameter from outside
-    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.addressModeU = params.addressModeU;
+    sampler_info.addressModeV = params.addressModeV;
+    sampler_info.addressModeW = params.addressModeW;
 #if defined(__DESKTOP__) || defined(__IOS__)
     sampler_info.anisotropyEnable = params.anisotropyEnabled;
 #elif defined(__ANDROID__)

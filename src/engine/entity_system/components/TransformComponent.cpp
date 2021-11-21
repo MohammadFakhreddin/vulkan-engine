@@ -115,6 +115,17 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    void TransformComponent::UpdateRotation(glm::vec3 const & rotation)
+    {
+        if (Matrix::IsEqual(mRotation, rotation) == false)
+        {
+            mRotation = rotation;
+            computeTransform();
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void TransformComponent::UpdateRotation(float rotation[3])
     {
         if (Matrix::IsEqual(mRotation, rotation) == false)

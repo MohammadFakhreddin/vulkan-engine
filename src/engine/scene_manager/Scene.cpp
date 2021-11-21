@@ -111,6 +111,13 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    uint32_t Scene::GetDirectionalLightCount() const
+    {
+        return mDirectionalLightData.count;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void Scene::prepareCameraBuffer()
     {
         mCameraBufferCollection = RF::CreateUniformBuffer(

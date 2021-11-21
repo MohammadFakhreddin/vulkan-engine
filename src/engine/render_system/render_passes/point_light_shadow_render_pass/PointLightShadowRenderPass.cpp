@@ -206,8 +206,9 @@ namespace MFA
     void PointLightShadowRenderPass::PrepareRenderTargetForSampling(
         RT::CommandRecordState const & recordState,
         PointLightShadowResources * renderTarget,
+        bool const isUsed,
         std::vector<VkImageMemoryBarrier> & outPipelineBarriers
-    ) const
+    )
     {
         MFA_ASSERT(renderTarget != nullptr);
 
@@ -224,7 +225,7 @@ namespace MFA
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
             .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
             .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
-            .oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            .oldLayout = isUsed ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED,
             .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,

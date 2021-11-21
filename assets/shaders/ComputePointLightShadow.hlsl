@@ -46,6 +46,10 @@ float pointLightShadowCalculation(
     int lightIndex
 )
 {
+
+    // TODO Use this formula for shadow bias
+    //float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);  
+
     // UNITY_SAMPLE_TEXCUBEARRAY(_MainTex, float4(i.uv, _SliceIndex));
     // get vector between fragment position and light position
     // Because we sampled the shadow cubemap from light to each position now we need to reverse the worldPosition to light vector

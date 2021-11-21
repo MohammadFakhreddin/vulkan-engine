@@ -23,7 +23,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    PBRWithShadowPipelineV2::PBRWithShadowPipelineV2()
+    PBRWithShadowPipelineV2::PBRWithShadowPipelineV2(Scene * attachedScene)
         : BasePipeline(10000)
         , mPointLightShadowRenderPass(std::make_unique<PointLightShadowRenderPass>())
         , mPointLightShadowResources(std::make_unique<PointLightShadowResources>())
@@ -31,6 +31,7 @@ namespace MFA
         , mDirectionalLightShadowResources(std::make_unique<DirectionalLightShadowResources>())
         , mDepthPrePass(std::make_unique<DepthPrePass>())
         , mOcclusionRenderPass(std::make_unique<OcclusionRenderPass>())
+        , mAttachedScene(attachedScene)
     {
     }
 
@@ -161,11 +162,13 @@ namespace MFA
             mPointLightShadowRenderPass->PrepareRenderTargetForSampling(
                 recordState,
                 mPointLightShadowResources.get(),
+                mAttachedScene->GetPointLightCount() > 0,
                 barrier
             );
             mDirectionalLightShadowRenderPass->PrepareRenderTargetForSampling(
                 recordState,
                 mDirectionalLightShadowResources.get(),
+                mAttachedScene->GetDirectionalLightCount() > 0,
                 barrier
             );
             RF::PipelineBarrier(
@@ -230,12 +233,9 @@ namespace MFA
             mPerFrameDescriptorSetLayout
         );
 
-        auto const activeScene = SceneManager::GetActiveScene().lock();
-        MFA_ASSERT(activeScene != nullptr);
-
-        auto const & cameraBufferCollection = activeScene->GetCameraBufferCollection();
-        auto const & directionalLightBuffers = activeScene->GetDirectionalLightBuffers();
-        auto const & pointLightBuffers = activeScene->GetPointLightsBuffers();
+        auto const & cameraBufferCollection = mAttachedScene->GetCameraBufferCollection();
+        auto const & directionalLightBuffers = mAttachedScene->GetDirectionalLightBuffers();
+        auto const & pointLightBuffers = mAttachedScene->GetPointLightsBuffers();
         
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
@@ -506,6 +506,11 @@ namespace MFA
     
     void PBRWithShadowPipelineV2::performDirectionalLightShadowPass(RT::CommandRecordState & recordState)
     {
+        if (mAttachedScene->GetDirectionalLightCount() <= 0)
+        {
+            return;
+        }
+
         RF::BindDrawPipeline(recordState, mDirectionalLightShadowPipeline);
         RF::BindDescriptorSet(
             recordState,
@@ -564,6 +569,11 @@ namespace MFA
 
     void PBRWithShadowPipelineV2::performPointLightShadowPass(RT::CommandRecordState & recordState)
     {
+        if (mAttachedScene->GetPointLightCount() <= 0)
+        {
+            return;
+        }
+
         RF::BindDrawPipeline(recordState, mPointLightShadowPipeline);
         RF::BindDescriptorSet(
             recordState,
@@ -891,7 +901,7 @@ namespace MFA
         RF_CREATE_SHADER("shaders/pbr_with_shadow_v2/PbrWithShadow.vert.spv", Vertex)
 
         // Fragment shader
-        RF_CREATE_SHADER("shaders/pbr_with_shadow_v2/PbrWithShadow.frag.spv", Fragment);
+        RF_CREATE_SHADER("shaders/pbr_with_shadow_v2/PbrWithShadow.frag.spv", Fragment)
 
         std::vector<RT::GpuShader const *> shaders{ &gpuVertexShader, &gpuFragmentShader };
 
@@ -1075,7 +1085,7 @@ namespace MFA
         pushConstantRanges.emplace_back(pushConstantRange);
 
         RT::CreateGraphicPipelineOptions graphicPipelineOptions{};
-        graphicPipelineOptions.cullMode = VK_CULL_MODE_FRONT_BIT;
+        graphicPipelineOptions.cullMode = VK_CULL_MODE_BACK_BIT;                // TODO Find a good fit!
         graphicPipelineOptions.pushConstantRanges = pushConstantRanges.data();
         // TODO Probably we need to make pushConstantsRangeCount uint32_t
         graphicPipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
@@ -1285,18 +1295,7 @@ namespace MFA
     void PBRWithShadowPipelineV2::createOcclusionQueryPipeline()
     {
         // Vertex shader
-        auto cpuVertexShader = Importer::ImportShaderFromSPV(
-            Path::Asset("shaders/occlusion_query/Occlusion.vert.spv").c_str(),
-            AssetSystem::Shader::Stage::Vertex,
-            "main"
-        );
-        MFA_ASSERT(cpuVertexShader.isValid());
-        auto gpuVertexShader = RF::CreateShader(cpuVertexShader);
-        MFA_ASSERT(gpuVertexShader.valid());
-        MFA_DEFER{
-            RF::DestroyShader(gpuVertexShader);
-            Importer::FreeShader(cpuVertexShader);
-        };
+        RF_CREATE_SHADER("shaders/occlusion_query/Occlusion.vert.spv", Vertex)
 
         std::vector<RT::GpuShader const *> shaders{ &gpuVertexShader };
 

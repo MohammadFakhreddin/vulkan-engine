@@ -63,6 +63,9 @@ public:
     [[nodiscard]]
     uint32_t GetPointLightCount() const;
 
+    [[nodiscard]]
+    uint32_t GetDirectionalLightCount() const;
+
 private:
 
     void prepareCameraBuffer();

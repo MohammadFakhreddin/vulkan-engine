@@ -11,14 +11,7 @@
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::DirectionalLightComponent::DirectionalLightComponent(
-    float const zNear,
-    float const zFar
-)
-    : mZNear(zNear)
-    , mZFar(zFar)
-{
-}
+MFA::DirectionalLightComponent::DirectionalLightComponent() {}
 
 //-------------------------------------------------------------------------------------------------
 
@@ -85,20 +78,30 @@ void MFA::DirectionalLightComponent::GetColor(float outColor[3]) const
 
 void MFA::DirectionalLightComponent::computeShadowProjection()
 {
-    int32_t width;
-    int32_t height;
-    RF::GetDrawableSize(width, height);
-    MFA_ASSERT(width > 0);
-    MFA_ASSERT(height > 0);
 
+    static constexpr float Z_NEAR = -1000.0f;
+    static constexpr float Z_FAR = 1000.0f;
+
+    int32_t const width = Scene::DIRECTIONAL_LIGHT_SHADOW_WIDTH / 50;
+    int32_t const height = Scene::DIRECTIONAL_LIGHT_SHADOW_HEIGHT / 50;
+    
     float const halfWidth = static_cast<float>(width) / 2.0f;
     float const halfHeight = static_cast<float>(height) / 2.0f;
     float const left = -halfWidth;
-    float const right = halfWidth;
+    float const right = +halfWidth;
     float const top = -halfHeight;
-    float const bottom = halfHeight;
+    float const bottom = +halfHeight;
 
-    mShadowProjectionMatrix = glm::ortho(left, right, bottom, top, mZNear, mZFar);
+    /*Matrix::PrepareOrthographicProjectionMatrix(
+        mShadowProjectionMatrix,
+        left,
+        right,
+        bottom,
+        top,
+        Z_NEAR,
+        Z_FAR
+    );*/
+    mShadowProjectionMatrix = glm::ortho(left, right, bottom, top, Z_NEAR, Z_FAR);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -113,11 +116,27 @@ void MFA::DirectionalLightComponent::computeDirectionAndShadowViewProjection()
 
     auto const rotation = transformComponent->GetRotation();
 
-    glm::mat4 shadowViewMatrix = glm::identity<glm::mat4>();
-    Matrix::Rotate(shadowViewMatrix, rotation);
+    glm::mat4 directionRotationMatrix = glm::identity<glm::mat4>();
+    Matrix::Rotate(directionRotationMatrix, rotation);
 
-    mDirection = shadowViewMatrix * RT::ForwardVector;
+    mDirection = directionRotationMatrix * RT::ForwardVector;
+
+    auto frustumCenter = glm::vec3(0,0,0);
+    auto const shadowViewMatrix = glm::lookAt(
+        mDirection - frustumCenter,
+        frustumCenter,
+        glm::vec3(0,1,0)
+    );
+   /* {
+        auto const reverseRotation = glm::vec3(
+            180.0f - rotation.x,
+            180.0f - rotation.y,
+            180.0f - rotation.z
+        );
+        glm::mat4 shadowViewMatrix = glm::identity<glm::mat4>();
+        Matrix::Rotate(shadowViewMatrix, reverseRotation);*/
     mShadowViewProjectionMatrix = mShadowProjectionMatrix * shadowViewMatrix;
+    //}
 }
 
 //-------------------------------------------------------------------------------------------------

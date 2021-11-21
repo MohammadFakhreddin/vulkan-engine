@@ -228,6 +228,12 @@ PSOut main(PSIn input) {
             input.directionLightPosition[lightIndex], 
             lightIndex
         );
+
+        // // Temp code
+        // PSOut output;
+        // output.color = float4(shadow, 0, 0, 1);
+        // return output;
+
         if (shadow < 1.0f)
         {
             Lo += BRDF(

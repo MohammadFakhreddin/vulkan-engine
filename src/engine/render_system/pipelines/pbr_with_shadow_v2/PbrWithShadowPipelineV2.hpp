@@ -7,6 +7,7 @@
 
 namespace MFA
 {
+    class Scene;
     class DirectionalLightShadowResources;
     class DirectionalLightShadowRenderPass;
     class PointLightShadowRenderPass;
@@ -70,7 +71,7 @@ namespace MFA
             alignas(4) int placeholder1 = 0;
         };
 
-        explicit PBRWithShadowPipelineV2();
+        explicit PBRWithShadowPipelineV2(Scene * attachedScene);
 
         ~PBRWithShadowPipelineV2() override;
 
@@ -191,6 +192,8 @@ namespace MFA
         std::vector<VkDescriptorSetLayout> mDescriptorSetLayouts{};
 
         RT::DescriptorSetGroup mPerFrameDescriptorSetGroup{};
+
+        Scene * mAttachedScene = nullptr;
 
     };
 

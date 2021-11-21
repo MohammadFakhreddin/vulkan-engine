@@ -105,7 +105,7 @@ private:
 
     MFA::RT::SamplerGroup mSamplerGroup {};
 
-    MFA::PBRWithShadowPipelineV2 mPbrPipeline {};
+    MFA::PBRWithShadowPipelineV2 mPbrPipeline {this};
     MFA::DebugRendererPipeline mPointLightPipeline {};
 
     MFA::RT::GpuTexture mErrorTexture {};

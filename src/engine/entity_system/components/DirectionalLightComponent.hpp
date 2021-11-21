@@ -17,10 +17,7 @@ namespace MFA
         MFA_COMPONENT_CLASS_TYPE_1(ClassType::DirectionalLightComponent)
         MFA_COMPONENT_REQUIRED_EVENTS(EventTypes::InitEvent | EventTypes::ShutdownEvent)
 
-        explicit DirectionalLightComponent(
-            float zNear,
-            float zFar
-        );
+        explicit DirectionalLightComponent();
 
         void Init() override;
 
@@ -37,9 +34,6 @@ namespace MFA
         void computeShadowProjection();
         void computeDirectionAndShadowViewProjection();
         
-        float const mZNear = 0.0f;
-        float const mZFar = 0.0f;
-
         glm::vec3 mDirection {};
 
         glm::mat4 mShadowProjectionMatrix {};

@@ -85,4 +85,14 @@ namespace MFA::Matrix
         float farPlane 
     );
 
+    void PrepareOrthographicProjectionMatrix(
+        glm::mat4 & outMatrix,
+        float leftPlane,
+        float rightPlane,
+        float bottomPlane,
+        float topPlane,
+        float nearPlane,
+        float farPlane
+    );
+
 }

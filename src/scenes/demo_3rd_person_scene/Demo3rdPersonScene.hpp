@@ -63,7 +63,7 @@ private:
 
     MFA::RT::SamplerGroup mSampler {};
 
-    MFA::PBRWithShadowPipelineV2 mPbrPipeline {};
+    MFA::PBRWithShadowPipelineV2 mPbrPipeline {this};
     MFA::DebugRendererPipeline mDebugRenderPipeline {};
 
     MFA::RT::GpuModel mSphereModel {};

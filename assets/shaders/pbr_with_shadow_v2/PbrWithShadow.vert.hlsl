@@ -90,7 +90,7 @@ VSOut main(VSIn input) {
 
     for (int i = 0; i < directionalLightBuffer.count; ++i)
     {
-        output.directionLightPosition[i] = mul(directionalLightBuffer.items[i].viewProjectionMatrix, worldPos);
+        output.directionLightPosition[i] = mul(directionalLightBuffer.items[i].viewProjectionMatrix, float4(worldPos.xyz, 1.0f));
     }
 
     // BaseColor

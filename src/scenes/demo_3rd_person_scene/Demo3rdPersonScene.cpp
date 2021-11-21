@@ -217,6 +217,7 @@ void Demo3rdPersonScene::Init()
             // TODO Maybe we can read radius from transform component instead
             entity->AddComponent<PointLightComponent>(1.0f, 100.0f, Z_NEAR, Z_FAR, mapVariant);
 
+            entity->SetActive(false);
             EntitySystem::InitEntity(entity);
         }
     }
@@ -236,9 +237,12 @@ void Demo3rdPersonScene::Init()
 
         auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
         MFA_ASSERT(transformComponent != nullptr);
-        
-        entity->AddComponent<DirectionalLightComponent>(Z_NEAR, Z_FAR);
 
+        transformComponent->UpdateRotation(glm::vec3(80.0f, 0.0f, 0.0f));
+        
+        entity->AddComponent<DirectionalLightComponent>();
+
+        entity->SetActive(true);
         EntitySystem::InitEntity(entity);
     }
 
