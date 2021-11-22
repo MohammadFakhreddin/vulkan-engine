@@ -6,7 +6,7 @@
 
 const float DIR_ShadowBias = 0.00005;
 
-#define DIR_SHADOW_TEXTURE_SIZE 2048.0f
+#define DIR_SHADOW_TEXTURE_SIZE (1024.0f * 10.0f)
 #define DIR_SHADOW_PER_SAMPLE 0.0204f //1.0f / 49.0f;
 
 TEXTURE_SAMPLER(DIR_shadowSampler)
@@ -27,9 +27,16 @@ float directionalLightShadowCalculation(float4 directionLightPosition, int light
 
     float currentDepth = projCoords.z;                      // Depth is alreay between 0 to 1 
 
-    if (currentDepth > 1 || currentDepth < 0 )
+    if (
+        projCoords.x < 0 || 
+        projCoords.x > 1 || 
+        projCoords.y < 0 || 
+        projCoords.y > 1 || 
+        currentDepth > 1 || 
+        currentDepth < 0
+    )
     {
-        return 1.0f;
+        return 0.0f;
     }
 
     // Without pcf

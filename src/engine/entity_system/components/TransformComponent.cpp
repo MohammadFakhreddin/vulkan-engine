@@ -104,6 +104,17 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    void TransformComponent::UpdatePosition(glm::vec3 const & position)
+    {
+        if (Matrix::IsEqual(mPosition, position) == false)
+        {
+            mPosition = position;
+            computeTransform();
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void TransformComponent::UpdatePosition(float position[3])
     {
         if (Matrix::IsEqual(mPosition, position) == false)

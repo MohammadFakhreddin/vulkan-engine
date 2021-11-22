@@ -40,8 +40,8 @@ namespace MFA
         MFA_ASSERT(deleteResult == true);
 
         RF::DestroyUniformBuffer(mCameraBufferCollection);
-        RF::DestroyUniformBuffer(mPointLightsBufferCollection);
-        RF::DestroyUniformBuffer(mDirectionalLightBufferCollection);
+        RF::DestroyUniformBuffer(mPointLightsBuffers);
+        RF::DestroyUniformBuffer(mDirectionalLightBuffers);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -92,14 +92,14 @@ namespace MFA
 
     RT::UniformBufferCollection const & Scene::GetPointLightsBuffers() const
     {
-        return mPointLightsBufferCollection;
+        return mPointLightsBuffers;
     }
 
     //-------------------------------------------------------------------------------------------------
 
     RT::UniformBufferCollection const & Scene::GetDirectionalLightBuffers() const
     {
-        return mDirectionalLightBufferCollection;
+        return mDirectionalLightBuffers;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -140,7 +140,7 @@ namespace MFA
 
     void Scene::preparePointLightsBuffer()
     {
-        mPointLightsBufferCollection = RT::UniformBufferCollection(RF::CreateUniformBuffer(
+        mPointLightsBuffers = RT::UniformBufferCollection(RF::CreateUniformBuffer(
             sizeof(PointLightsBufferData),
             RF::GetMaxFramesPerFlight()
         ));
@@ -148,7 +148,7 @@ namespace MFA
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
             RF::UpdateUniformBuffer(
-                mPointLightsBufferCollection.buffers[frameIndex],
+                mPointLightsBuffers.buffers[frameIndex],
                 CBlobAliasOf(mPointLightData)
             );
         }
@@ -158,7 +158,7 @@ namespace MFA
 
     void Scene::prepareDirectionalLightsBuffer()
     {
-        mDirectionalLightBufferCollection = RT::UniformBufferCollection(RF::CreateUniformBuffer(
+        mDirectionalLightBuffers = RT::UniformBufferCollection(RF::CreateUniformBuffer(
             sizeof(DirectionalLightData),
             RF::GetMaxFramesPerFlight()
         ));
@@ -166,7 +166,7 @@ namespace MFA
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
             RF::UpdateUniformBuffer(
-                mDirectionalLightBufferCollection.buffers[frameIndex],
+                mDirectionalLightBuffers.buffers[frameIndex],
                 CBlobAliasOf(mDirectionalLightData)
             );
         }
@@ -225,7 +225,7 @@ namespace MFA
 
         RF::UpdateUniformBuffer(
             recordState,
-            mPointLightsBufferCollection,
+            mPointLightsBuffers,
             CBlobAliasOf(mPointLightData)
         );
     }
@@ -263,7 +263,7 @@ namespace MFA
 
         RF::UpdateUniformBuffer(
             recordState,
-            mDirectionalLightBufferCollection,
+            mDirectionalLightBuffers,
             CBlobAliasOf(mDirectionalLightData)
         );
     }

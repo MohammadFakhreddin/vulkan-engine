@@ -193,8 +193,40 @@ void Demo3rdPersonScene::Init()
             auto * entity = EntitySystem::CreateEntity(("PointLight" + std::to_string(i)).c_str(), GetRootEntity());
             MFA_ASSERT(entity != nullptr);
 
-            float lightPosition[3] {1.0f, 0.0f, -3.0f - static_cast<float>(i)};
-            float lightScale = 10.0f;
+            float lightPosition[3] {3.7f, 0.0f, -3.0f - static_cast<float>(i)};
+            float lightScale = 5.0f;
+            float lightColor[3] {
+                (252.0f/256.0f) * lightScale,
+                (212.0f/256.0f) * lightScale,
+                (64.0f/256.0f) * lightScale
+            };
+
+            auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
+            MFA_ASSERT(colorComponent != nullptr);
+            colorComponent->SetColor(lightColor);
+            
+            auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
+            MFA_ASSERT(transformComponent != nullptr);
+            transformComponent->UpdatePosition(lightPosition);
+            transformComponent->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
+            
+            entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, "Sphere");
+            
+            entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
+
+            // TODO Maybe we can read radius from transform component instead
+            entity->AddComponent<PointLightComponent>(1.0f, 100.0f, Z_NEAR, Z_FAR, mapVariant);
+
+            entity->SetActive(true);
+            EntitySystem::InitEntity(entity);
+        }
+        for (int i = 2; i < 4; ++i)
+        {
+            auto * entity = EntitySystem::CreateEntity(("PointLight" + std::to_string(i)).c_str(), GetRootEntity());
+            MFA_ASSERT(entity != nullptr);
+
+            float lightPosition[3] {-2.7f, 0.0f, -3.0f - static_cast<float>(i)};
+            float lightScale = 5.0f;
             float lightColor[3] {
                 (252.0f/256.0f) * lightScale,
                 (212.0f/256.0f) * lightScale,
@@ -228,10 +260,11 @@ void Demo3rdPersonScene::Init()
 
         auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
         MFA_ASSERT(colorComponent != nullptr);
+        float lightScale = 5.0f;
         float lightColor[3] {
-            252.0f/256.0f,
-            212.0f/256.0f,
-            64.0f/256.0f
+            (252.0f/256.0f) * lightScale,
+            (212.0f/256.0f) * lightScale,
+            (64.0f/256.0f) * lightScale
         };
         colorComponent->SetColor(lightColor);
 
@@ -244,6 +277,8 @@ void Demo3rdPersonScene::Init()
 
         entity->SetActive(true);
         EntitySystem::InitEntity(entity);
+
+        mDirectionalLightTransform = transformComponent;
     }
 
     mUIRecordId = UI::Register([this]()->void { onUI(); });
@@ -251,34 +286,41 @@ void Demo3rdPersonScene::Init()
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, RT::CommandRecordState & drawPass)
+void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, RT::CommandRecordState & recordState)
 {
-    Scene::OnPreRender(deltaTimeInSec, drawPass);
+    Scene::OnPreRender(deltaTimeInSec, recordState);
 
-    mDebugRenderPipeline.PreRender(drawPass, deltaTimeInSec);
-    mPbrPipeline.PreRender(drawPass, deltaTimeInSec);
+    mDebugRenderPipeline.PreRender(recordState, deltaTimeInSec);
+    mPbrPipeline.PreRender(recordState, deltaTimeInSec);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::OnRender(float const deltaTimeInSec, RT::CommandRecordState & drawPass)
+void Demo3rdPersonScene::OnRender(float const deltaTimeInSec, RT::CommandRecordState & recordState)
 {
-    Scene::OnRender(deltaTimeInSec, drawPass);
+    Scene::OnRender(deltaTimeInSec, recordState);
 
-    mDebugRenderPipeline.Render(drawPass, deltaTimeInSec);
-    mPbrPipeline.Render(drawPass, deltaTimeInSec);
+    mDebugRenderPipeline.Render(recordState, deltaTimeInSec);
+    mPbrPipeline.Render(recordState, deltaTimeInSec);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, MFA::RT::CommandRecordState & drawPass)
+void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, RT::CommandRecordState & recordState)
 {
-    Scene::OnPostRender(deltaTimeInSec, drawPass);
+    Scene::OnPostRender(deltaTimeInSec, recordState);
 
-    mDebugRenderPipeline.PostRender(drawPass, deltaTimeInSec);
-    mPbrPipeline.PostRender(drawPass, deltaTimeInSec);
+    //if (auto transform = mDirectionalLightTransform.lock())
+    //{
+    //    auto rotation = transform->GetRotation();
+    //    rotation.x += 10 * deltaTimeInSec;
+    //    transform->UpdateRotation(rotation);
+    //}
 
-    if (auto const playerTransformPtr = mPlayerTransform.lock())
+    mDebugRenderPipeline.PostRender(recordState, deltaTimeInSec);
+    mPbrPipeline.PostRender(recordState, deltaTimeInSec);
+
+    if (auto const playerTransform = mPlayerTransform.lock())
     {// Soldier
         static constexpr float SoldierSpeed = 4.0f;
         auto const inputForwardMove = IM::GetForwardMove();
@@ -286,11 +328,11 @@ void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, MFA::RT::Comma
         if (inputForwardMove != 0.0f || inputRightMove != 0.0f)
         {
             float position[3]{};
-            playerTransformPtr->GetPosition(position);
+            playerTransform->GetPosition(position);
             float scale[3]{};
-            playerTransformPtr->GetScale(scale);
+            playerTransform->GetScale(scale);
             float targetEulerAngles[3]{};
-            playerTransformPtr->GetRotation(targetEulerAngles);
+            playerTransform->GetRotation(targetEulerAngles);
 
             float cameraEulerAngles[3];
             MFA_ASSERT(mThirdPersonCamera.expired() == false);
@@ -363,7 +405,7 @@ void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, MFA::RT::Comma
             targetEulerAngles[1] += extraAngleValue;
 
             float currentEulerAngles[3];
-            playerTransformPtr->GetRotation(currentEulerAngles);
+            playerTransform->GetRotation(currentEulerAngles);
 
             auto const targetQuat = Matrix::ToQuat(currentEulerAngles[0], targetEulerAngles[1], currentEulerAngles[2]);
 
@@ -398,7 +440,7 @@ void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, MFA::RT::Comma
             position[1] += forwardDirection[1];
             position[2] += forwardDirection[2];
 
-            playerTransformPtr->UpdateTransform(
+            playerTransform->UpdateTransform(
                 position,
                 nextAngles,
                 scale
@@ -422,6 +464,11 @@ void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, MFA::RT::Comma
                     variant->SetActiveAnimation("Idle", { .transitionDuration = 0.3f });
                 }
             }
+        }
+
+        if (auto lightTransform = mDirectionalLightTransform.lock())
+        {
+            lightTransform->UpdatePosition(playerTransform->GetPosition());
         }
     }
 }

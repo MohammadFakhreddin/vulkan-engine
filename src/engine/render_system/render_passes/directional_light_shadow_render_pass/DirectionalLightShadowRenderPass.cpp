@@ -66,8 +66,8 @@ void MFA::DirectionalLightShadowRenderPass::BeginRenderPass(
 
     // Shadow map generation
     auto const shadowExtend = VkExtent2D{
-        .width = Scene::DIRECTIONAL_LIGHT_SHADOW_WIDTH,
-        .height = Scene::DIRECTIONAL_LIGHT_SHADOW_HEIGHT
+        .width = Scene::DIRECTIONAL_LIGHT_SHADOW_TEXTURE_WIDTH,
+        .height = Scene::DIRECTIONAL_LIGHT_SHADOW_TEXTURE_HEIGHT
     };
 
     auto * commandBuffer = RF::GetGraphicCommandBuffer(recordState);

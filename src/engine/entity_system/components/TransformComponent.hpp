@@ -26,6 +26,8 @@ namespace MFA
 
         void UpdateTransform(glm::vec3 const & position, glm::vec3 const & rotation, glm::vec3 const & scale);
 
+        void UpdatePosition(glm::vec3 const & position);
+
         void UpdatePosition(float position[3]);
 
         void UpdateRotation(glm::vec3 const & rotation);

@@ -82,8 +82,8 @@ void MFA::DirectionalLightComponent::computeShadowProjection()
     static constexpr float Z_NEAR = -1000.0f;
     static constexpr float Z_FAR = 1000.0f;
 
-    int32_t const width = Scene::DIRECTIONAL_LIGHT_SHADOW_WIDTH / 50;
-    int32_t const height = Scene::DIRECTIONAL_LIGHT_SHADOW_HEIGHT / 50;
+    int32_t const width = Scene::DIRECTIONAL_LIGHT_PROJECTION_WIDTH;
+    int32_t const height = Scene::DIRECTIONAL_LIGHT_PROJECTION_HEIGHT;
     
     float const halfWidth = static_cast<float>(width) / 2.0f;
     float const halfHeight = static_cast<float>(height) / 2.0f;
@@ -122,9 +122,9 @@ void MFA::DirectionalLightComponent::computeDirectionAndShadowViewProjection()
 
     mDirection = directionRotationMatrix * RT::ForwardVector;
 
-    auto const frustumCenter = glm::vec3(0.0f, 0.0f, 0.0f);
+    auto const frustumCenter = transformComponent->GetPosition();
     auto const shadowViewMatrix = glm::lookAt(
-        mDirection - frustumCenter,
+        mDirection + frustumCenter,
         frustumCenter,
         glm::vec3(0,1,0)
     );

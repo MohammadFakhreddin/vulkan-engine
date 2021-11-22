@@ -26,11 +26,11 @@ public:
 
     void Init() override;
 
-    void OnPreRender(float deltaTimeInSec, MFA::RT::CommandRecordState & drawPass) override;
+    void OnPreRender(float deltaTimeInSec, MFA::RT::CommandRecordState & recordState) override;
 
-    void OnRender(float deltaTimeInSec, MFA::RT::CommandRecordState & drawPass) override;
+    void OnRender(float deltaTimeInSec, MFA::RT::CommandRecordState & recordState) override;
 
-    void OnPostRender(float deltaTimeInSec, MFA::RT::CommandRecordState & drawPass) override;
+    void OnPostRender(float deltaTimeInSec, MFA::RT::CommandRecordState & recordState) override;
 
     void Shutdown() override;
 
@@ -68,6 +68,8 @@ private:
 
     MFA::RT::GpuModel mSphereModel {};
     MFA::RT::GpuModel mCubeModel {};
+
+    std::weak_ptr<MFA::TransformComponent> mDirectionalLightTransform {};
     
     int mUIRecordId = 0;
 

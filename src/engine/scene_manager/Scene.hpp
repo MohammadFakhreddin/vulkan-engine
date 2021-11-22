@@ -21,8 +21,10 @@ public:
     static constexpr uint32_t POINT_LIGHT_SHADOW_WIDTH = 1024;          
     static constexpr uint32_t POINT_LIGHT_SHADOW_HEIGHT = 1024;
 
-    static constexpr uint32_t DIRECTIONAL_LIGHT_SHADOW_WIDTH = 1024 * 2;
-    static constexpr uint32_t DIRECTIONAL_LIGHT_SHADOW_HEIGHT = 1024 * 2;
+    static constexpr uint32_t DIRECTIONAL_LIGHT_SHADOW_TEXTURE_WIDTH = 1024 * 10;
+    static constexpr uint32_t DIRECTIONAL_LIGHT_SHADOW_TEXTURE_HEIGHT = 1024 * 10;
+    static constexpr uint32_t DIRECTIONAL_LIGHT_PROJECTION_WIDTH = DIRECTIONAL_LIGHT_SHADOW_TEXTURE_WIDTH / 200;
+    static constexpr uint32_t DIRECTIONAL_LIGHT_PROJECTION_HEIGHT = DIRECTIONAL_LIGHT_SHADOW_TEXTURE_HEIGHT / 200;
 
     explicit Scene() = default;
     virtual ~Scene() = default;
@@ -111,8 +113,9 @@ private:
         PointLight items [MAX_POINT_LIGHT_COUNT] {};
     };
     PointLightsBufferData mPointLightData {};
-    RT::UniformBufferCollection mPointLightsBufferCollection {};
+    RT::UniformBufferCollection mPointLightsBuffers {};
 
+    // https://stackoverflow.com/questions/9486364/why-cant-c-compilers-rearrange-struct-members-to-eliminate-alignment-padding
     // Directional light
     struct DirectionalLight
     {
@@ -125,11 +128,13 @@ private:
     struct DirectionalLightData
     {
         uint32_t count = 0;
-        uint32_t placeholder[3] {};
+        float placeholder0 = 0.0f;
+        float placeholder1 = 0.0f;
+        float placeholder2 = 0.0f;
         DirectionalLight items [MAX_DIRECTIONAL_LIGHT_COUNT] {};
     };
     DirectionalLightData mDirectionalLightData {};
-    RT::UniformBufferCollection mDirectionalLightBufferCollection {};
+    RT::UniformBufferCollection mDirectionalLightBuffers {};
 
     // TODO Spot light
 };

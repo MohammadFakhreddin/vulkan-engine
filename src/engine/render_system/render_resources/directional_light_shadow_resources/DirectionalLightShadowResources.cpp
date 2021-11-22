@@ -8,8 +8,8 @@
 void MFA::DirectionalLightShadowResources::Init(VkRenderPass renderPass)
 {
     static constexpr auto shadowExtend = VkExtent2D{
-        .width = Scene::DIRECTIONAL_LIGHT_SHADOW_WIDTH,
-        .height = Scene::DIRECTIONAL_LIGHT_SHADOW_HEIGHT
+        .width = Scene::DIRECTIONAL_LIGHT_SHADOW_TEXTURE_WIDTH,
+        .height = Scene::DIRECTIONAL_LIGHT_SHADOW_TEXTURE_HEIGHT
     };
     createShadowMap(shadowExtend);
     createFrameBuffer(shadowExtend, renderPass);
