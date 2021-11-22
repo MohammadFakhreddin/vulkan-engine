@@ -114,6 +114,7 @@ void MFA::DirectionalLightComponent::computeDirectionAndShadowViewProjection()
         return;
     }
 
+    // Way 1
     auto const rotation = transformComponent->GetRotation();
 
     glm::mat4 directionRotationMatrix = glm::identity<glm::mat4>();
@@ -121,22 +122,14 @@ void MFA::DirectionalLightComponent::computeDirectionAndShadowViewProjection()
 
     mDirection = directionRotationMatrix * RT::ForwardVector;
 
-    auto frustumCenter = glm::vec3(0,0,0);
+    auto const frustumCenter = glm::vec3(0.0f, 0.0f, 0.0f);
     auto const shadowViewMatrix = glm::lookAt(
         mDirection - frustumCenter,
         frustumCenter,
         glm::vec3(0,1,0)
     );
-   /* {
-        auto const reverseRotation = glm::vec3(
-            180.0f - rotation.x,
-            180.0f - rotation.y,
-            180.0f - rotation.z
-        );
-        glm::mat4 shadowViewMatrix = glm::identity<glm::mat4>();
-        Matrix::Rotate(shadowViewMatrix, reverseRotation);*/
     mShadowViewProjectionMatrix = mShadowProjectionMatrix * shadowViewMatrix;
-    //}
+
 }
 
 //-------------------------------------------------------------------------------------------------

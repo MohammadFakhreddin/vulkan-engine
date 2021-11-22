@@ -1085,7 +1085,7 @@ namespace MFA
         pushConstantRanges.emplace_back(pushConstantRange);
 
         RT::CreateGraphicPipelineOptions graphicPipelineOptions{};
-        graphicPipelineOptions.cullMode = VK_CULL_MODE_BACK_BIT;                // TODO Find a good fit!
+        graphicPipelineOptions.cullMode = VK_CULL_MODE_FRONT_BIT;                // TODO Find a good fit!
         graphicPipelineOptions.pushConstantRanges = pushConstantRanges.data();
         // TODO Probably we need to make pushConstantsRangeCount uint32_t
         graphicPipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());

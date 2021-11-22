@@ -217,7 +217,7 @@ void Demo3rdPersonScene::Init()
             // TODO Maybe we can read radius from transform component instead
             entity->AddComponent<PointLightComponent>(1.0f, 100.0f, Z_NEAR, Z_FAR, mapVariant);
 
-            entity->SetActive(false);
+            entity->SetActive(true);
             EntitySystem::InitEntity(entity);
         }
     }

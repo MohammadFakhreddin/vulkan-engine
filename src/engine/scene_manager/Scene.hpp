@@ -21,8 +21,8 @@ public:
     static constexpr uint32_t POINT_LIGHT_SHADOW_WIDTH = 1024;          
     static constexpr uint32_t POINT_LIGHT_SHADOW_HEIGHT = 1024;
 
-    static constexpr uint32_t DIRECTIONAL_LIGHT_SHADOW_WIDTH = 2048;
-    static constexpr uint32_t DIRECTIONAL_LIGHT_SHADOW_HEIGHT = 2048;
+    static constexpr uint32_t DIRECTIONAL_LIGHT_SHADOW_WIDTH = 1024 * 2;
+    static constexpr uint32_t DIRECTIONAL_LIGHT_SHADOW_HEIGHT = 1024 * 2;
 
     explicit Scene() = default;
     virtual ~Scene() = default;
