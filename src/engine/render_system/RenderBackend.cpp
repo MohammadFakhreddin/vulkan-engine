@@ -40,7 +40,7 @@ namespace MFA::RenderBackend
     {
         if (result != VK_SUCCESS)
         {
-            MFA_CRASH("Vulkan command failed with code:" + std::to_string(result));
+            MFA_CRASH(("Vulkan command failed with code:" + std::to_string(result)));
         }
     }
 
@@ -1055,9 +1055,7 @@ RT::LogicalDevice CreateLogicalDevice(
 #if defined(__PLATFORM_MAC__)// TODO We should query instead
     enabledExtensionNames.emplace_back("VK_KHR_portability_subset");
 #endif
-#ifdef MFA_DEBUG
     enabledExtensionNames.emplace_back(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME);
-#endif
     deviceCreateInfo.ppEnabledExtensionNames = enabledExtensionNames.data();
     deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensionNames.size());
     // Necessary for shader (for some reason)

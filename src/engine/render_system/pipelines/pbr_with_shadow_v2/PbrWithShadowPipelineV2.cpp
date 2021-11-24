@@ -100,7 +100,7 @@ namespace MFA
         createDepthPassPipeline();
         createOcclusionQueryPipeline();
 
-        createFrameDescriptorSets();
+        createPerFrameDescriptorSets();
 
         createOcclusionQueryPool();
     }
@@ -225,7 +225,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createFrameDescriptorSets()
+    void PBRWithShadowPipelineV2::createPerFrameDescriptorSets()
     {
         mPerFrameDescriptorSetGroup = RF::CreateDescriptorSets(
             mDescriptorPool,
@@ -244,7 +244,7 @@ namespace MFA
             MFA_VK_VALID_ASSERT(descriptorSet);
 
             DescriptorSetSchema descriptorSetSchema{ descriptorSet };
-
+            // Important note: Keep reference of all descriptor buffer infos until updateDescriptorSets is called
             // DisplayViewProjection
             VkDescriptorBufferInfo viewProjectionBufferInfo{
                 .buffer = cameraBufferCollection.buffers[frameIndex].buffer,
@@ -254,18 +254,20 @@ namespace MFA
             descriptorSetSchema.AddUniformBuffer(viewProjectionBufferInfo);
 
             // DirectionalLightBuffer
-            descriptorSetSchema.AddUniformBuffer(VkDescriptorBufferInfo {
+            VkDescriptorBufferInfo directionalLightBufferInfo {
                 .buffer = directionalLightBuffers.buffers[frameIndex].buffer,
                 .offset = 0,
                 .range = directionalLightBuffers.bufferSize,
-            });
+            };
+            descriptorSetSchema.AddUniformBuffer(directionalLightBufferInfo);
 
             // PointLightBuffer
-            descriptorSetSchema.AddUniformBuffer(VkDescriptorBufferInfo {
+            VkDescriptorBufferInfo pointLightBufferInfo {
                 .buffer = pointLightBuffers.buffers[frameIndex].buffer,
                 .offset = 0,
                 .range = pointLightBuffers.bufferSize,
-            });
+            };
+            descriptorSetSchema.AddUniformBuffer(pointLightBufferInfo);
 
             // Sampler
             VkDescriptorImageInfo texturesSamplerInfo{
@@ -793,7 +795,7 @@ namespace MFA
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         });
 
-        // Sampler;
+        // Sampler
         bindings.emplace_back(VkDescriptorSetLayoutBinding {
             .binding = static_cast<uint32_t>(bindings.size()),
             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,

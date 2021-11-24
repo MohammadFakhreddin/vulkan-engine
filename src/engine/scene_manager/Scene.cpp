@@ -19,8 +19,8 @@ namespace MFA
         mRootEntity = EntitySystem::CreateEntity("SceneRoot", nullptr);
 
         prepareCameraBuffer();
-        preparePointLightsBuffer();
         prepareDirectionalLightsBuffer();
+        preparePointLightsBuffer();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -28,8 +28,8 @@ namespace MFA
     void Scene::OnPreRender(float deltaTimeInSec, RT::CommandRecordState & recordState)
     {
         updateCameraBuffer(recordState);
-        updatePointLightsBuffer(recordState);
         updateDirectionalLightsBuffer(recordState);
+        updatePointLightsBuffer(recordState);
     }
 
     //-------------------------------------------------------------------------------------------------

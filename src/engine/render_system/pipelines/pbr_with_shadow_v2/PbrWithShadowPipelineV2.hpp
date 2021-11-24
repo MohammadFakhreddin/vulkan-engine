@@ -105,7 +105,7 @@ namespace MFA
 
     private:
 
-        void createFrameDescriptorSets();
+        void createPerFrameDescriptorSets();
 
         void createEssenceDescriptorSets(DrawableEssence & essence) const;
 
