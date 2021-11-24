@@ -266,7 +266,7 @@ namespace MFA
                 .offset = 0,
                 .range = cameraBufferCollection.bufferSize,
             };
-            descriptorSetSchema.AddUniformBuffer(bufferInfo);
+            descriptorSetSchema.AddUniformBuffer(&bufferInfo);
 
             descriptorSetSchema.UpdateDescriptorSets();
         }

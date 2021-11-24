@@ -251,7 +251,7 @@ namespace MFA
                 .offset = 0,
                 .range = cameraBufferCollection.bufferSize,
             };
-            descriptorSetSchema.AddUniformBuffer(viewProjectionBufferInfo);
+            descriptorSetSchema.AddUniformBuffer(&viewProjectionBufferInfo);
 
             // DirectionalLightBuffer
             VkDescriptorBufferInfo directionalLightBufferInfo {
@@ -259,7 +259,7 @@ namespace MFA
                 .offset = 0,
                 .range = directionalLightBuffers.bufferSize,
             };
-            descriptorSetSchema.AddUniformBuffer(directionalLightBufferInfo);
+            descriptorSetSchema.AddUniformBuffer(&directionalLightBufferInfo);
 
             // PointLightBuffer
             VkDescriptorBufferInfo pointLightBufferInfo {
@@ -267,7 +267,7 @@ namespace MFA
                 .offset = 0,
                 .range = pointLightBuffers.bufferSize,
             };
-            descriptorSetSchema.AddUniformBuffer(pointLightBufferInfo);
+            descriptorSetSchema.AddUniformBuffer(&pointLightBufferInfo);
 
             // Sampler
             VkDescriptorImageInfo texturesSamplerInfo{
@@ -275,7 +275,7 @@ namespace MFA
                 .imageView = nullptr,
                 .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             };
-            descriptorSetSchema.AddSampler(texturesSamplerInfo);
+            descriptorSetSchema.AddSampler(&texturesSamplerInfo);
 
             // DirectionalLightShadowMap
             auto directionalLightShadowMap = VkDescriptorImageInfo {
@@ -332,7 +332,7 @@ namespace MFA
                 .offset = 0,
                 .range = primitiveBuffer.bufferSize,
             };
-            descriptorSetSchema.AddUniformBuffer(primitiveBufferInfo);
+            descriptorSetSchema.AddUniformBuffer(&primitiveBufferInfo);
 
             // TODO Each one need their own sampler
             // Textures
@@ -403,7 +403,7 @@ namespace MFA
                 .offset = 0,
                 .range = skinJointsBufferSize,
             };
-            descriptorSetSchema.AddUniformBuffer(skinTransformBufferInfo);
+            descriptorSetSchema.AddUniformBuffer(&skinTransformBufferInfo);
 
             descriptorSetSchema.UpdateDescriptorSets();
         }

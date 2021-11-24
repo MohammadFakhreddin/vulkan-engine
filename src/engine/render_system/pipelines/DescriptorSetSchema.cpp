@@ -16,7 +16,7 @@ DescriptorSetSchema::DescriptorSetSchema(VkDescriptorSet descriptorSet)
 
 //-------------------------------------------------------------------------------------------------
 
-void DescriptorSetSchema::AddUniformBuffer(VkDescriptorBufferInfo const & bufferInfo, uint32_t const offset) {
+void DescriptorSetSchema::AddUniformBuffer(VkDescriptorBufferInfo const * bufferInfo, uint32_t const offset) {
     MFA_ASSERT(isActive);
 
     VkWriteDescriptorSet writeDescriptorSet {
@@ -26,7 +26,7 @@ void DescriptorSetSchema::AddUniformBuffer(VkDescriptorBufferInfo const & buffer
         .dstArrayElement = 0,
         .descriptorCount = 1,
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        .pBufferInfo = &bufferInfo,
+        .pBufferInfo = bufferInfo,
     };
 
     mWriteInfo.emplace_back(writeDescriptorSet);
@@ -34,7 +34,7 @@ void DescriptorSetSchema::AddUniformBuffer(VkDescriptorBufferInfo const & buffer
 
 //-------------------------------------------------------------------------------------------------
 
-void DescriptorSetSchema::AddCombinedImageSampler(VkDescriptorImageInfo const & imageInfo, uint32_t const offset) {
+void DescriptorSetSchema::AddCombinedImageSampler(VkDescriptorImageInfo const * imageInfo, uint32_t const offset) {
     MFA_ASSERT(isActive);
 
     VkWriteDescriptorSet writeDescriptorSet {
@@ -44,7 +44,7 @@ void DescriptorSetSchema::AddCombinedImageSampler(VkDescriptorImageInfo const & 
         .dstArrayElement = 0,
         .descriptorCount = 1,
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .pImageInfo = &imageInfo,
+        .pImageInfo = imageInfo,
     };
 
     mWriteInfo.emplace_back(writeDescriptorSet);
@@ -54,8 +54,8 @@ void DescriptorSetSchema::AddCombinedImageSampler(VkDescriptorImageInfo const & 
 
 void DescriptorSetSchema::AddCombinedImageSampler(
     VkDescriptorImageInfo * imageInfoList, 
-    uint32_t imageInfoCount, 
-    uint32_t offset
+    uint32_t const imageInfoCount, 
+    uint32_t const offset
 ) {
     MFA_ASSERT(isActive);
 
@@ -74,7 +74,7 @@ void DescriptorSetSchema::AddCombinedImageSampler(
 
 //-------------------------------------------------------------------------------------------------
 
-void DescriptorSetSchema::AddSampler(VkDescriptorImageInfo const & samplerInfo, uint32_t const offset) {
+void DescriptorSetSchema::AddSampler(VkDescriptorImageInfo const * samplerInfo, uint32_t const offset) {
     VkWriteDescriptorSet writeDescriptorSet {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
         .dstSet = mDescriptorSet,
@@ -82,7 +82,7 @@ void DescriptorSetSchema::AddSampler(VkDescriptorImageInfo const & samplerInfo, 
         .dstArrayElement = 0,
         .descriptorCount = 1,
         .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
-        .pImageInfo = &samplerInfo,
+        .pImageInfo = samplerInfo,
     };
 
     mWriteInfo.emplace_back(writeDescriptorSet);
