@@ -447,7 +447,7 @@ namespace MFA
 
     void PBRWithShadowPipelineV2::performDepthPrePass(RT::CommandRecordState & recordState)
     {
-        DepthPrePassVertexStagePushConstants pushConstants{};
+        DepthPrePassPushConstants pushConstants{};
 
         RF::BindDrawPipeline(recordState, mDepthPassPipeline);
         RF::BindDescriptorSet(
@@ -486,12 +486,13 @@ namespace MFA
                         {
                             // Vertex push constants
                             pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
+                            pushConstants.primitiveIndex = primitive.uniqueId;
                             Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
                             Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
 
                             RF::PushConstants(
                                 recordState,
-                                AS::ShaderStage::Vertex,
+                                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                                 0,
                                 CBlobAliasOf(pushConstants)
                             );
@@ -521,7 +522,7 @@ namespace MFA
         );
 
         // Vertex push constants
-        DirectionalLightPushConstants pushConstants {};
+        DirectionalLightShadowPassPushConstants pushConstants {};
 
         mDirectionalLightShadowRenderPass->BeginRenderPass(recordState, *mDirectionalLightShadowResources);
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
@@ -631,7 +632,7 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-
+    // We have separate pass for occlusion. Because of not having order of drawing, we need the depth pre pass instead.
     void PBRWithShadowPipelineV2::performOcclusionQueryPass(RT::CommandRecordState & recordState)
     {
         auto & occlusionQueryData = mOcclusionQueryDataList[recordState.frameIndex];
@@ -651,7 +652,7 @@ namespace MFA
 
         mOcclusionRenderPass->BeginRenderPass(recordState);
 
-        OcclusionPassVertexStagePushConstants pushConstants{};
+        OcclusionPassPushConstants pushConstants{};
 
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
@@ -686,10 +687,11 @@ namespace MFA
                             Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
                             Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
                             pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
+                            pushConstants.primitiveIndex = primitive.uniqueId;
 
                             RF::PushConstants(
                                 recordState,
-                                AS::ShaderStage::Vertex,
+                                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                                 0,
                                 CBlobAliasOf(pushConstants)
                             );
@@ -717,7 +719,7 @@ namespace MFA
             mPerFrameDescriptorSetGroup
         );
 
-        DisplayPassAllStagesPushConstants pushConstants{};
+        DisplayPassPushConstants pushConstants{};
 
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
@@ -1004,7 +1006,7 @@ namespace MFA
         mPushConstantRanges.emplace_back(VkPushConstantRange{
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
             .offset = 0,
-            .size = sizeof(DisplayPassAllStagesPushConstants),
+            .size = sizeof(DisplayPassPushConstants),
         });
 
         RT::CreateGraphicPipelineOptions options{};
@@ -1012,7 +1014,7 @@ namespace MFA
         options.pushConstantRanges = mPushConstantRanges.data();
         options.pushConstantsRangeCount = static_cast<uint8_t>(mPushConstantRanges.size());
         options.cullMode = VK_CULL_MODE_BACK_BIT;
-        options.depthStencil.depthCompareOp = VK_COMPARE_OP_EQUAL;
+        options.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;          // It must be less or equal because transparent and transluent objects are discarded in depth prepass and occlusion pass
 
         mDisplayPassPipeline = RF::CreatePipeline(
             RF::GetDisplayRenderPass()->GetVkRenderPass(),
@@ -1082,7 +1084,7 @@ namespace MFA
         VkPushConstantRange pushConstantRange{
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
             .offset = 0,
-            .size = sizeof(DirectionalLightPushConstants),
+            .size = sizeof(DirectionalLightShadowPassPushConstants),
         };
         pushConstantRanges.emplace_back(pushConstantRange);
 
@@ -1192,8 +1194,9 @@ namespace MFA
     {
         // Vertex shader
         RF_CREATE_SHADER("shaders/depth_pre_pass/DepthPrePass.vert.spv", Vertex)
+        RF_CREATE_SHADER("shaders/depth_pre_pass/DepthPrePass.frag.spv", Fragment)
 
-        std::vector<RT::GpuShader const *> shaders{ &gpuVertexShader};
+        std::vector<RT::GpuShader const *> shaders{ &gpuVertexShader, &gpuFragmentShader };
 
         VkVertexInputBindingDescription vertexInputBindingDescription{};
         vertexInputBindingDescription.binding = 0;
@@ -1208,6 +1211,14 @@ namespace MFA
             .binding = 0,
             .format = VK_FORMAT_R32G32B32_SFLOAT,
             .offset = offsetof(AS::MeshVertex, position),
+        });
+
+        // BaseColorUV
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = offsetof(AS::MeshVertex, baseColorUV),
         });
 
         // HasSkin
@@ -1237,9 +1248,9 @@ namespace MFA
         std::vector<VkPushConstantRange> pushConstantRanges{};
         // Push constants  
         VkPushConstantRange pushConstantRange{
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
             .offset = 0,
-            .size = sizeof(DepthPrePassVertexStagePushConstants),
+            .size = sizeof(DepthPrePassPushConstants),
         };
         pushConstantRanges.emplace_back(pushConstantRange);
 
@@ -1296,10 +1307,10 @@ namespace MFA
 
     void PBRWithShadowPipelineV2::createOcclusionQueryPipeline()
     {
-        // Vertex shader
         RF_CREATE_SHADER("shaders/occlusion_query/Occlusion.vert.spv", Vertex)
+        RF_CREATE_SHADER("shaders/occlusion_query/Occlusion.frag.spv", Fragment)
 
-        std::vector<RT::GpuShader const *> shaders{ &gpuVertexShader };
+        std::vector<RT::GpuShader const *> shaders{ &gpuVertexShader, &gpuFragmentShader };
 
         VkVertexInputBindingDescription vertexInputBindingDescription{};
         vertexInputBindingDescription.binding = 0;
@@ -1314,6 +1325,14 @@ namespace MFA
             .binding = 0,
             .format = VK_FORMAT_R32G32B32_SFLOAT,
             .offset = offsetof(AS::MeshVertex, position),
+        });
+
+        // BaseColorUV
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = offsetof(AS::MeshVertex, baseColorUV),
         });
 
         // HasSkin
@@ -1343,9 +1362,9 @@ namespace MFA
         std::vector<VkPushConstantRange> pushConstantRanges{};
         // Model data  
         VkPushConstantRange pushConstantRange{
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
             .offset = 0,
-            .size = sizeof(OcclusionPassVertexStagePushConstants),
+            .size = sizeof(OcclusionPassPushConstants),
         };
         pushConstantRanges.emplace_back(pushConstantRange);
 

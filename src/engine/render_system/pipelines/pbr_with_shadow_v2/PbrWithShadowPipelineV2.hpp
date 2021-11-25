@@ -20,18 +20,18 @@ namespace MFA
     {
     public:
 
-        struct OcclusionPassVertexStagePushConstants
+        struct OcclusionPassPushConstants
         {
             alignas(64) float modelTransform[16] {};
             alignas(64) float inverseNodeTransform[16] {};
             alignas(4) int skinIndex = 0;
-            alignas(4) int placeholder0 = 0;
+            alignas(4) uint32_t primitiveIndex = 0;      // Unique id
             alignas(4) int placeholder1 = 0;
             alignas(4) int placeholder2 = 0;
 
         };
         
-        struct DirectionalLightPushConstants
+        struct DirectionalLightShadowPassPushConstants
         {   
             alignas(64) float model[16] {};
             alignas(64) float inverseNodeTransform[16] {};
@@ -51,17 +51,17 @@ namespace MFA
             alignas(4) int placeholder2 = 0;
         };
 
-        struct DepthPrePassVertexStagePushConstants
+        struct DepthPrePassPushConstants
         {
             alignas(64) float modelTransform[16] {};
             alignas(64) float inverseNodeTransform[16] {};
             alignas(4) int skinIndex = 0;
+            alignas(4) uint32_t primitiveIndex = 0;      // Unique id
             alignas(4) int placeholder0 = 0;
             alignas(4) int placeholder1 = 0;
-            alignas(4) int placeholder2 = 0;
         };
 
-        struct DisplayPassAllStagesPushConstants
+        struct DisplayPassPushConstants
         {
             alignas(64) float modelTransform[16] {};
             alignas(64) float inverseNodeTransform[16] {};

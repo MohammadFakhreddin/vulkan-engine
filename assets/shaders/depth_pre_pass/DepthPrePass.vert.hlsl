@@ -3,24 +3,26 @@
 
 struct VSIn {
     float3 position : POSITION0;
-
+    float2 baseColorTexCoord : TEXCOORD0;
     int hasSkin;
     int4 jointIndices;
-    float4 jointWeights; 
+    float4 jointWeights;
 };
 
 struct VSOut {
     float4 position : SV_POSITION;
+    float2 baseColorTexCoord : TEXCOORD0;
 };
 
 SKIN_JOINTS_BUFFER(skinJointsBuffer)
 CAMERA_BUFFER(cameraBuffer)
 
 struct PushConsts
-{   
+{
     float4x4 model;
     float4x4 inverseNodeTransform;
-    int skinIndex;
+	int skinIndex;
+    uint primitiveIndex;
 };
 
 [[vk::push_constant]]
@@ -61,6 +63,8 @@ VSOut main(VSIn input) {
     float4 tempPosition = float4(input.position, 1.0f); // w is 1 because position is a coordinate
     float4 worldPosition = mul(skinModelMat, tempPosition);;
     output.position = mul(cameraBuffer.viewProjection, worldPosition);
+
+    output.baseColorTexCoord = input.baseColorTexCoord;
 
     return output;
 }

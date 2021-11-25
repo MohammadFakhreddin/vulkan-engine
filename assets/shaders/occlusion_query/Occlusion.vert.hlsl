@@ -3,7 +3,7 @@
 
 struct VSIn {    
     float3 position : POSITION0;
-
+    float2 baseColorTexCoord : TEXCOORD0;
     int hasSkin;
     int4 jointIndices;
     float4 jointWeights; 
@@ -11,6 +11,7 @@ struct VSIn {
 
 struct VSOut {
     float4 position : SV_POSITION;
+    float2 baseColorTexCoord : TEXCOORD0;
 };
 
 SKIN_JOINTS_BUFFER(skinJointsBuffer)
@@ -61,6 +62,6 @@ VSOut main(VSIn input) {
     float4 tempPosition = float4(input.position, 1.0f); // w is 1 because position is a coordinate
     float4 worldPosition = mul(skinModelMat, tempPosition);;
     output.position = mul(cameraBuffer.viewProjection, worldPosition);
-
+    output.baseColorTexCoord = input.baseColorTexCoord;
     return output;
 }

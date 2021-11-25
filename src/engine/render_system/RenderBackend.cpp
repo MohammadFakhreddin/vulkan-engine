@@ -1127,7 +1127,7 @@ VkSampler CreateSampler(
 #error Os not handled
 #endif
     sampler_info.maxAnisotropy = params.maxAnisotropy;
-    sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    sampler_info.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
     sampler_info.unnormalizedCoordinates = VK_FALSE;
     /*
      *TODO Issue for mac:

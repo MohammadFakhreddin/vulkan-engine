@@ -5,6 +5,7 @@
 #include "../TextureSampler.hlsl"
 #include "../PrimitiveInfoBuffer.hlsl"
 #include "../DirectionalLightBuffer.hlsl"
+#include "../TexturesBuffer.hlsl"
 
 struct PSIn {
     float4 position : SV_POSITION;
@@ -37,7 +38,7 @@ DIRECTIONAL_LIGHT(directionalLightBuffer)
 
 POINT_LIGHT(pointLightsBuffer)
 
-Texture2D textures[64] : register(t1, space1);
+TEXTURES_BUFFER(textures)
 
 struct PushConsts
 {
@@ -61,6 +62,7 @@ const float PI = 3.14159265359;
 // const float linearAttenuation = 2.0f / lightSphereRadius;
 // const float quadraticAttenuation = 1.0f / (lightSphereRadius * lightSphereRadius);
 
+// TODO We should read alphaMaskCutoff from material
 const float alphaMaskCutoff = 0.1f;
 
 const float ambientOcclusion = 0.008f;
@@ -189,8 +191,9 @@ float3 calculateNormal(PSIn input, int normalTextureIndex)
 PSOut main(PSIn input) {
     PrimitiveInfo primitiveInfo = primitiveInfoBuffer.primitiveInfo[pushConsts.primitiveIndex];
 
+    // TODO Why do we have pow here ?
     float4 baseColor = primitiveInfo.baseColorTextureIndex >= 0
-        ? pow(textures[primitiveInfo.baseColorTextureIndex].Sample(textureSampler, input.baseColorTexCoord).rgba, 2.2f)
+        ? pow(textures[primitiveInfo.baseColorTextureIndex].Sample(textureSampler, input.baseColorTexCoord).rgba, 2.2f) 
         : primitiveInfo.baseColorFactor.rgba;
 
     // Alpha mask
@@ -228,11 +231,6 @@ PSOut main(PSIn input) {
             input.directionLightPosition[lightIndex], 
             lightIndex
         );
-
-        // // Temp code
-        // PSOut output;
-        // output.color = float4(shadow, 0, 0, 1);
-        // return output;
 
         if (shadow < 1.0f)
         {
