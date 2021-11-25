@@ -18,6 +18,8 @@ namespace MFA::SceneManager
     void OnNewFrame(float deltaTimeInSec);
     void OnResize();
 
+    void OnUI();            // Can be called optionally for general info about the scenes
+
     [[nodiscard]]
     std::weak_ptr<Scene> const & GetActiveScene();
     // TODO Directional light

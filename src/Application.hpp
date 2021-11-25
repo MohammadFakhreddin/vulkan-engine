@@ -2,11 +2,6 @@
 
 #include "engine/BedrockPlatforms.hpp"
 
-#include <memory>
-
-class GLTFMeshViewerScene;
-class Demo3rdPersonScene;
-
 #ifdef __ANDROID__
 struct android_app;
 #endif
@@ -14,7 +9,7 @@ struct android_app;
 class Application {
 public:
     Application();
-    ~Application();
+    virtual ~Application();
 
     Application & operator= (Application && rhs) noexcept = delete;
     Application (Application const &) noexcept = delete;
@@ -32,13 +27,16 @@ public:
 #endif
     void run();
     void RenderFrame(float deltaTimeInSec);
+
+protected:
+
+    virtual void internalInit() {};
+    virtual void internalShutdown() {};
+    virtual void internalRenderFrame(float deltaTimeInSec) {};
+
 private:
 
     bool mIsInitialized = false;
-
-    std::shared_ptr<Demo3rdPersonScene> mThirdPersonDemoScene;
-
-    std::shared_ptr<GLTFMeshViewerScene> mGltfMeshViewerScene;
 
 #ifdef __ANDROID__
     android_app * mAndroidApp = nullptr;

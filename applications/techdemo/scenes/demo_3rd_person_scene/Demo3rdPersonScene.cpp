@@ -271,7 +271,7 @@ void Demo3rdPersonScene::Init()
         auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
         MFA_ASSERT(transformComponent != nullptr);
 
-        transformComponent->UpdateRotation(glm::vec3(80.0f, 0.0f, 0.0f));
+        transformComponent->UpdateRotation(glm::vec3(90.0f, 0.0f, 0.0f));
         
         entity->AddComponent<DirectionalLightComponent>();
 
@@ -466,10 +466,10 @@ void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, RT::CommandRec
             }
         }
 
-        if (auto lightTransform = mDirectionalLightTransform.lock())
-        {
-            lightTransform->UpdatePosition(playerTransform->GetPosition());
-        }
+        //if (auto lightTransform = mDirectionalLightTransform.lock())
+        //{
+        //    lightTransform->UpdatePosition(playerTransform->GetPosition());
+        //}
     }
 }
 

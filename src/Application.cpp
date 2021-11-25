@@ -3,8 +3,6 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/InputManager.hpp"
 #include "engine/entity_system/EntitySystem.hpp"
-#include "scenes/gltf_mesh_viewer/GLTFMeshViewerScene.hpp"
-#include "scenes/demo_3rd_person_scene/Demo3rdPersonScene.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/ui_system/UISystem.hpp"
 #include "engine/job_system/JobSystem.hpp"
@@ -21,13 +19,15 @@
 
 using namespace MFA;
 
+//-------------------------------------------------------------------------------------------------
 
-Application::Application()
-    : mThirdPersonDemoScene(nullptr)
-    , mGltfMeshViewerScene(nullptr)
-{}
+Application::Application() = default;
+
+//-------------------------------------------------------------------------------------------------
 
 Application::~Application() = default;
+
+//-------------------------------------------------------------------------------------------------
 
 void Application::Init() {
     {// Initializing render frontend
@@ -60,21 +60,20 @@ void Application::Init() {
     
     SceneManager::Init();
 
-    mThirdPersonDemoScene = std::make_shared<Demo3rdPersonScene>();
-    mGltfMeshViewerScene = std::make_shared<GLTFMeshViewerScene>();
-
-    SceneManager::RegisterScene(mThirdPersonDemoScene, "ThirdPersonDemoScene");
-    SceneManager::RegisterScene(mGltfMeshViewerScene, "GLTFMeshViewerScene");
+    internalInit();
     
-    SceneManager::SetActiveScene("ThirdPersonDemoScene");
-
     mIsInitialized = true;
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void Application::Shutdown() {
     MFA_ASSERT(mIsInitialized == true);
 
     RF::DeviceWaitIdle();
+
+    internalShutdown();
+
     SceneManager::Shutdown();
     EntitySystem::Shutdown();
     JS::Shutdown();
@@ -86,7 +85,7 @@ void Application::Shutdown() {
 }
 
 void Application::run() {
-    static constexpr uint32_t TargetFpsDeltaTimeInMs = 1000 / 1000;
+    static constexpr uint32_t TargetFpsDeltaTimeInMs = 1000 / 500;
 #ifdef __DESKTOP__
     Init();
     {// Main loop
@@ -149,6 +148,7 @@ void Application::run() {
 }
 
 void Application::RenderFrame(float const deltaTimeInSec) {
+    internalRenderFrame(deltaTimeInSec);
     IM::OnNewFrame(deltaTimeInSec);
     SceneManager::OnNewFrame(deltaTimeInSec);
     RF::OnNewFrame(deltaTimeInSec);

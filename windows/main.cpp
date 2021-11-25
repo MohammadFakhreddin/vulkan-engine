@@ -15,10 +15,17 @@
 #define TINYKTX_IMPLEMENTATION 
 #include "../src/libs/tiny_ktx/tinyktx.h"
 
-#include "../src/Application.hpp"
+#ifdef TECHDEMO
+#include "TechDemoApplication.hpp"
+using TargetApplication = TechDemoApplication;
+#endif
+#ifdef PREFAB_EDITOR
+#include "PrefabEditorApplication.hpp"
+using TargetApplication = PrefabEditorApplication;
+#endif
 
 int main(int argc, char* argv[]){
-    Application app;
+    TargetApplication app {};
     app.run();
     return 0;
 }

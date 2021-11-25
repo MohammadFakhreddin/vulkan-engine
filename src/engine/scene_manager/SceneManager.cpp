@@ -26,20 +26,15 @@ struct State
     int UI_RecordListenerId = 0;
 
     RT::ResizeEventListenerId ResizeListenerId = 0;
-    
     float CurrentFps = 0.0f;
-
 };
 static State * state = nullptr;
-
-static void OnUI();
 
 //-------------------------------------------------------------------------------------------------
 
 void Init() {
     state = new State();
 
-    UI::Register([]()->void {OnUI();});
     state->ResizeListenerId = RF::AddResizeEventListener([]()->void {OnResize();});
     if(state->ActiveSceneIndex < 0 && false == state->RegisteredScenes.empty()) {
         state->ActiveSceneIndex = 0;
@@ -176,7 +171,7 @@ std::weak_ptr<Scene> const & GetActiveScene()
 
 //-------------------------------------------------------------------------------------------------
 
-static void OnUI() {
+void OnUI() {
     UI::BeginWindow("Scene Subsystem");
     
     UI::SetNextItemWidth(300.0f);

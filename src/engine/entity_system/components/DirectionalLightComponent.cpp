@@ -78,10 +78,6 @@ void MFA::DirectionalLightComponent::GetColor(float outColor[3]) const
 
 void MFA::DirectionalLightComponent::computeShadowProjection()
 {
-
-    static constexpr float Z_NEAR = -1000.0f;
-    static constexpr float Z_FAR = 1000.0f;
-
     int32_t const width = Scene::DIRECTIONAL_LIGHT_PROJECTION_WIDTH;
     int32_t const height = Scene::DIRECTIONAL_LIGHT_PROJECTION_HEIGHT;
     
@@ -121,11 +117,10 @@ void MFA::DirectionalLightComponent::computeDirectionAndShadowViewProjection()
     Matrix::Rotate(directionRotationMatrix, rotation);
 
     mDirection = directionRotationMatrix * RT::ForwardVector;
-
-    auto const frustumCenter = transformComponent->GetPosition();
+    
     auto const shadowViewMatrix = glm::lookAt(
-        mDirection + frustumCenter,
-        frustumCenter,
+        mDirection,
+        glm::vec3(0.0f, 0.0f, 0.0f),
         glm::vec3(0,1,0)
     );
     mShadowViewProjectionMatrix = mShadowProjectionMatrix * shadowViewMatrix;

@@ -31,6 +31,9 @@ namespace MFA
         
     private:
 
+        static constexpr float Z_NEAR = -1000.0f;
+        static constexpr float Z_FAR = 1000.0f;
+
         void computeShadowProjection();
         void computeDirectionAndShadowViewProjection();
         
