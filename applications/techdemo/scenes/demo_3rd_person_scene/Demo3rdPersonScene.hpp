@@ -68,8 +68,6 @@ private:
 
     MFA::RT::GpuModel mSphereModel {};
     MFA::RT::GpuModel mCubeModel {};
-
-    std::weak_ptr<MFA::TransformComponent> mDirectionalLightTransform {};
     
     int mUIRecordId = 0;
 

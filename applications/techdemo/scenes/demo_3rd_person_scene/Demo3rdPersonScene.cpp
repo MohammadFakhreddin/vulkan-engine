@@ -277,8 +277,6 @@ void Demo3rdPersonScene::Init()
 
         entity->SetActive(true);
         EntitySystem::InitEntity(entity);
-
-        mDirectionalLightTransform = transformComponent;
     }
 
     mUIRecordId = UI::Register([this]()->void { onUI(); });
@@ -309,13 +307,6 @@ void Demo3rdPersonScene::OnRender(float const deltaTimeInSec, RT::CommandRecordS
 void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, RT::CommandRecordState & recordState)
 {
     Scene::OnPostRender(deltaTimeInSec, recordState);
-
-    //if (auto transform = mDirectionalLightTransform.lock())
-    //{
-    //    auto rotation = transform->GetRotation();
-    //    rotation.x += 10 * deltaTimeInSec;
-    //    transform->UpdateRotation(rotation);
-    //}
 
     mDebugRenderPipeline.PostRender(recordState, deltaTimeInSec);
     mPbrPipeline.PostRender(recordState, deltaTimeInSec);
@@ -465,11 +456,6 @@ void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, RT::CommandRec
                 }
             }
         }
-
-        //if (auto lightTransform = mDirectionalLightTransform.lock())
-        //{
-        //    lightTransform->UpdatePosition(playerTransform->GetPosition());
-        //}
     }
 }
 
