@@ -263,6 +263,8 @@ public:
         uint64_t verticesOffset = 0;                // From start of buffer
         uint64_t indicesOffset = 0;
         uint32_t indicesStartingIndex = 0;          // From start of buffer
+        // TODO Seperate material
+        // TOOD Add "occlusion" and "alpha cutoff", "double sided" and "render mode"
         int16_t baseColorTextureIndex = 0;
         int16_t metallicRoughnessTextureIndex = 0;
         int16_t roughnessTextureIndex = 0;

@@ -1,5 +1,6 @@
 #include "TechDemoApplication.hpp"
 
+#include "engine/entity_system/EntitySystem.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 #include "scenes/demo_3rd_person_scene/Demo3rdPersonScene.hpp"
 #include "scenes/gltf_mesh_viewer/GLTFMeshViewerScene.hpp"
@@ -11,6 +12,8 @@ using namespace MFA;
 
 TechDemoApplication::TechDemoApplication()
     : Application()
+    , mThirdPersonDemoScene(nullptr)
+    , mGltfMeshViewerScene(nullptr)
 {}
 
 //-------------------------------------------------------------------------------------------------
@@ -37,6 +40,7 @@ void TechDemoApplication::internalInit()
 
 void TechDemoApplication::OnUI() {
     SceneManager::OnUI();
+    EntitySystem::OnUI();
 }
 
 //-------------------------------------------------------------------------------------------------

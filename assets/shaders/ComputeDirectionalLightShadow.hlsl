@@ -6,7 +6,7 @@
 
 const float DIR_ShadowBias = 0.00005;
 
-#define DIR_SHADOW_TEXTURE_SIZE (1024.0f * 5.0f)
+#define DIR_SHADOW_TEXTURE_SIZE (1024.0f * 10.0f)
 #define DIR_SHADOW_PER_SAMPLE 0.0204f //1.0f / 49.0f;
 
 TEXTURE_SAMPLER(DIR_shadowSampler)

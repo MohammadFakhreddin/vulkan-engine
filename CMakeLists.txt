@@ -351,6 +351,8 @@ set(PREFAB_EDITOR_SOURCES)
 list(APPEND PREFAB_EDITOR_SOURCES
     "applications/prefab_editor/PrefabEditorApplication.hpp"
     "applications/prefab_editor/PrefabEditorApplication.cpp"
+    "applications/prefab_editor/scenes/PrefabEditorScene.hpp"
+    "applications/prefab_editor/scenes/PrefabEditorScene.cpp"
 )
 
 #-----------------------------------------------------------------------

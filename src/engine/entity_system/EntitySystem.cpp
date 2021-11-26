@@ -26,7 +26,6 @@ struct EntityRef {
 struct State {
     std::vector<EntityRef> entitiesRefsList {};
     Signal<float, RT::CommandRecordState const &> updateSignal {};
-    int uiListenerId = 0;
 };
 State * state = nullptr;
 
@@ -35,9 +34,6 @@ State * state = nullptr;
 void Init()
 {
     state = new State();
-    state->uiListenerId = UISystem::Register([]()->void{
-        OnUI();
-    });
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -70,7 +66,6 @@ void Shutdown()
     {
         entityRef.Ptr->Shutdown();
     }
-    UISystem::UnRegister(state->uiListenerId);
     delete state;
 }
 
