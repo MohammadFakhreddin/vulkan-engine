@@ -19,7 +19,7 @@ namespace MFA {
     public:
 
         MFA_COMPONENT_PROPS(PointLightComponent)
-        MFA_COMPONENT_CLASS_TYPE_1(ClassType::PointLightComponent)
+        MFA_COMPONENT_CLASS_TYPE(ClassType::PointLightComponent)
         MFA_COMPONENT_REQUIRED_EVENTS(EventTypes::InitEvent | EventTypes::ShutdownEvent)
 
         explicit PointLightComponent(

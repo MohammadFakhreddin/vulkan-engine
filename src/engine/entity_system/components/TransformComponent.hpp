@@ -13,7 +13,7 @@ namespace MFA
     public:
 
         MFA_COMPONENT_PROPS(TransformComponent)
-        MFA_COMPONENT_CLASS_TYPE_1(ClassType::TransformComponent)
+        MFA_COMPONENT_CLASS_TYPE(ClassType::TransformComponent)
         MFA_COMPONENT_REQUIRED_EVENTS(EventTypes::InitEvent | EventTypes::ShutdownEvent)
 
         explicit TransformComponent();

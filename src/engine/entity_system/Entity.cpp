@@ -118,9 +118,9 @@ namespace MFA
             SetActive(isActive);
             if (UI::TreeNode("Components"))
             {
-                for (auto const & keyValues : mComponents)
+                for (auto const & component : mComponents)
                 {
-                    keyValues.second->OnUI();
+                    component->OnUI();
                 }
                 UI::TreePop();
             }

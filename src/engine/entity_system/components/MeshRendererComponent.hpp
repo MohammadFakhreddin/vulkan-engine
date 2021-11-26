@@ -12,7 +12,7 @@ namespace MFA
     public:
 
         MFA_COMPONENT_PROPS(MeshRendererComponent)
-        MFA_COMPONENT_CLASS_TYPE_1(ClassType::MeshRendererComponent)
+        MFA_COMPONENT_CLASS_TYPE(ClassType::MeshRendererComponent)
         MFA_COMPONENT_REQUIRED_EVENTS(EventTypes::InitEvent | EventTypes::ShutdownEvent)
     
         explicit MeshRendererComponent(BasePipeline & pipeline, char const * essenceName);

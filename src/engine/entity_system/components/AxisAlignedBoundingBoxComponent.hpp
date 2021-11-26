@@ -13,7 +13,7 @@ namespace MFA
     public:
 
         MFA_COMPONENT_PROPS(AxisAlignedBoundingBoxComponent)
-        MFA_COMPONENT_CLASS_TYPE_1(ClassType::AxisAlignedBoundingBoxes)
+        MFA_COMPONENT_CLASS_TYPE(ClassType::BoundingVolumeComponent)
         
         explicit AxisAlignedBoundingBoxComponent(
             glm::vec3 const & center,

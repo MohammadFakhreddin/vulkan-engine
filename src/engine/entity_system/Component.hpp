@@ -14,32 +14,40 @@ std::weak_ptr<ComponentType> SelfPtr()                              \
     return std::static_pointer_cast<ComponentType>(mSelfPtr.lock());\
 }                                                                   \
 
-#define MFA_COMPONENT_CLASS_TYPE_1(type1)                           \
+#define MFA_COMPONENT_CLASS_TYPE(...)                               \
 public:                                                             \
-static uint8_t GetClassType(ClassType outComponentTypes[3])         \
+static std::vector<ClassType> const & GetClassType()                \
 {                                                                   \
-    outComponentTypes[0] = type1;                                   \
-    return 1;                                                       \
+    static const std::vector<ClassType> mClassTypes {__VA_ARGS__};  \
+    return mClassTypes;                                             \
 }                                                                   \
 
-#define MFA_COMPONENT_CLASS_TYPE_2(type1, type2)                    \
-public:                                                             \
-static uint8_t GetClassType(ClassType outComponentTypes[3])         \
-{                                                                   \
-    outComponentTypes[0] = type1;                                   \
-    outComponentTypes[1] = type2;                                   \
-    return 2;                                                       \
-}                                                                   \
-
-#define MFA_COMPONENT_CLASS_TYPE_3(type1, type2, type3)             \
-public:                                                             \
-static uint8_t GetClassType(ClassType outComponentTypes[3])         \
-{                                                                   \
-    outComponentTypes[0] = type1;                                   \
-    outComponentTypes[1] = type2;                                   \
-    outComponentTypes[2] = type3;                                   \
-    return 3;                                                       \
-}                                                                   \
+//#define MFA_COMPONENT_CLASS_TYPE_1(type1)                           \
+//public:                                                             \
+//static uint8_t GetClassType(ClassType outComponentTypes[3])         \
+//{                                                                   \
+//    outComponentTypes[0] = type1;                                   \
+//    return 1;                                                       \
+//}                                                                   \
+//
+//#define MFA_COMPONENT_CLASS_TYPE_2(type1, type2)                    \
+//public:                                                             \
+//static uint8_t GetClassType(ClassType outComponentTypes[3])         \
+//{                                                                   \
+//    outComponentTypes[0] = type1;                                   \
+//    outComponentTypes[1] = type2;                                   \
+//    return 2;                                                       \
+//}                                                                   \
+//
+//#define MFA_COMPONENT_CLASS_TYPE_3(type1, type2, type3)             \
+//public:                                                             \
+//static uint8_t GetClassType(ClassType outComponentTypes[3])         \
+//{                                                                   \
+//    outComponentTypes[0] = type1;                                   \
+//    outComponentTypes[1] = type2;                                   \
+//    outComponentTypes[2] = type3;                                   \
+//    return 3;                                                       \
+//}                                                                   \
 
 #define MFA_COMPONENT_REQUIRED_EVENTS(eventTypes)                   \
 public:                                                             \
@@ -86,28 +94,27 @@ public:
         TransformComponent,
 
         MeshRendererComponent,
+
         BoundingVolumeRendererComponent,
 
         BoundingVolumeComponent,
-        SphereBoundingVolumeComponent,
-        AxisAlignedBoundingBoxes,
+        //SphereBoundingVolumeComponent,
+        //AxisAlignedBoundingBoxes,
 
         ColorComponent,
 
         CameraComponent,
-        ObserverCameraComponent,
-        ThirdPersonCamera,
+        //ObserverCameraComponent,
+        //ThirdPersonCamera,
 
         PointLightComponent,
         DirectionalLightComponent,
+
         Count
     };
 
-    static uint8_t GetClassType(ClassType outComponentTypes[3])
-    {
-        return 0;
-    }
-    
+    static std::vector<ClassType> const & GetClassType();
+
     virtual void Init();
 
     virtual void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState);

@@ -8,7 +8,7 @@ namespace MFA {
 class CameraComponent : public Component {
 public:
 
-    MFA_COMPONENT_CLASS_TYPE_3(ClassType::CameraComponent, ClassType::ObserverCameraComponent, ClassType::ThirdPersonCamera)
+    MFA_COMPONENT_CLASS_TYPE(ClassType::CameraComponent)
     MFA_COMPONENT_REQUIRED_EVENTS(EventTypes::InitEvent | EventTypes::UpdateEvent | EventTypes::ShutdownEvent)
 
     struct CameraBufferData

@@ -12,7 +12,7 @@ class ColorComponent final : public Component
 public:
 
     MFA_COMPONENT_PROPS(ColorComponent)
-    MFA_COMPONENT_CLASS_TYPE_1(ClassType::ColorComponent)
+    MFA_COMPONENT_CLASS_TYPE(ClassType::ColorComponent)
     MFA_COMPONENT_REQUIRED_EVENTS(EventTypes::EmptyEvent)
 
     explicit ColorComponent() = default;

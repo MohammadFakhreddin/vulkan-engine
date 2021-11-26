@@ -14,7 +14,7 @@ class ThirdPersonCameraComponent final : public CameraComponent {
 public:
 
     MFA_COMPONENT_PROPS(ThirdPersonCameraComponent)
-    MFA_COMPONENT_CLASS_TYPE_1(ClassType::ThirdPersonCamera)
+    MFA_COMPONENT_CLASS_TYPE(ClassType::CameraComponent)
 
     // ThirdPerson camera must act like a child to variant
     explicit ThirdPersonCameraComponent(

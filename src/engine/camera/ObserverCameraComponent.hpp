@@ -13,8 +13,7 @@ namespace MFA
     public:
 
         MFA_COMPONENT_PROPS(ObserverCameraComponent)
-        MFA_COMPONENT_CLASS_TYPE_1(ClassType::ObserverCameraComponent)
-
+        
         explicit ObserverCameraComponent(
             float fieldOfView,
             float nearDistance,

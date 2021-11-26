@@ -11,7 +11,7 @@ namespace MFA {
     {
     public:
 
-        MFA_COMPONENT_CLASS_TYPE_3(ClassType::BoundingVolumeComponent, ClassType::SphereBoundingVolumeComponent, ClassType::AxisAlignedBoundingBoxes)
+        MFA_COMPONENT_CLASS_TYPE(ClassType::BoundingVolumeComponent)
         MFA_COMPONENT_REQUIRED_EVENTS(EventTypes::UpdateEvent | EventTypes::InitEvent)
 
         void Init() override;

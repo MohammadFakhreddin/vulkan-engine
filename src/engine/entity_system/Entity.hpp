@@ -5,7 +5,6 @@
 #include "engine/BedrockSignal.hpp"
 
 #include <memory>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -50,11 +49,11 @@ public:
     std::weak_ptr<ComponentClass> AddComponent(ArgsT && ... args) {
         MFA_ASSERT(GetComponent<ComponentClass>().expired() == true);
 
-        Component::ClassType classTypes[3] {};
-        uint8_t const typesCount = ComponentClass::GetClassType(classTypes);
-        if (MFA_VERIFY(typesCount > 0)) {
+        auto const & classTypes = ComponentClass::GetClassType();
+        if (MFA_VERIFY(classTypes.empty() == false)) {
             auto sharedPtr = std::make_shared<ComponentClass>(std::forward<ArgsT>(args)...);
-            mComponents[classTypes[0]] = sharedPtr;
+            MFA_ASSERT(mComponents[static_cast<int>(classTypes[0])] == nullptr);
+            mComponents[static_cast<int>(classTypes[0])] = sharedPtr;
             sharedPtr->mSelfPtr = sharedPtr;
             linkComponent(sharedPtr.get());
             return std::weak_ptr<ComponentClass>(sharedPtr);
@@ -67,15 +66,14 @@ public:
     [[nodiscard]]
     std::weak_ptr<ComponentClass> GetComponent() {
 
-        Component::ClassType classTypes[3] {};
-        uint8_t const typesCount = ComponentClass::GetClassType(classTypes);
-
-        for (uint8_t i = 0; i < typesCount; ++i)
+        auto const & classTypes = ComponentClass::GetClassType();
+        MFA_ASSERT(classTypes.empty() == false);
+        for (auto & classType : classTypes)
         {
-            auto findResult = mComponents.find(classTypes[i]);
-            if (findResult != mComponents.end())
+            auto & component = mComponents[static_cast<int>(classType)];
+            if (component != nullptr)
             {
-                return std::static_pointer_cast<ComponentClass>(findResult->second);        
+                return std::static_pointer_cast<ComponentClass>(component);        
             }
         }
         return std::weak_ptr<ComponentClass>();
@@ -119,11 +117,7 @@ private:
     std::string mName {};
     Entity * mParent = nullptr;
 
-    // TODO: Use array instead because it is much more light weight
-    //std::shared_ptr<Component> mComponents [static_cast<int>(Component::ClassType::Count)]{};
-
-    std::unordered_map<Component::ClassType, std::shared_ptr<Component>> mComponents {};
-
+    std::shared_ptr<Component> mComponents [static_cast<int>(Component::ClassType::Count)]{};
 
     Signal<> mInitSignal {};
     Signal<float, RT::CommandRecordState const &> mUpdateSignal {};
