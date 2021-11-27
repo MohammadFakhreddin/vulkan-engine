@@ -146,7 +146,7 @@ void GLTFMeshViewerScene::Init() {
         SetActiveCamera(mCamera);
     }
     
-    mPbrPipeline.Init(&mSamplerGroup, &mErrorTexture, Z_NEAR, Z_FAR);
+    mPbrPipeline.Init(&mSamplerGroup, &mErrorTexture);
 
     {// Point light
         auto cpuModel = MFA::ShapeGenerator::Sphere();

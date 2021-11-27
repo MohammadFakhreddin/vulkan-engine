@@ -13,14 +13,6 @@ MFA::Component::~Component() = default;
 
 //-------------------------------------------------------------------------------------------------
 
-std::vector<MFA::Component::ClassType> const & MFA::Component::GetClassType()
-{
-    MFA_ASSERT(false);
-    return {};
-}
-
-//-------------------------------------------------------------------------------------------------
-
 void MFA::Component::Init() {}
 
 //-------------------------------------------------------------------------------------------------
@@ -75,6 +67,8 @@ void MFA::Component::OnUI()
     bool isActive = mIsActive;
     UI::Checkbox("IsActive", &isActive);
     SetActive(isActive);
+
+    EditorSignal.Emit(this, GetEntity());
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -47,7 +47,7 @@ void Demo3rdPersonScene::Init()
     mSampler = RF::CreateSampler(RT::CreateSamplerParams{});
 
     // Pbr pipeline
-    mPbrPipeline.Init(&mSampler, &mErrorTexture, Z_NEAR, Z_FAR);
+    mPbrPipeline.Init(&mSampler, &mErrorTexture);
     
     {// Debug renderer pipeline
         mDebugRenderPipeline.Init();

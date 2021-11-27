@@ -353,6 +353,8 @@ list(APPEND PREFAB_EDITOR_SOURCES
     "applications/prefab_editor/PrefabEditorApplication.cpp"
     "applications/prefab_editor/scenes/PrefabEditorScene.hpp"
     "applications/prefab_editor/scenes/PrefabEditorScene.cpp"
+    "applications/prefab_editor/WindowsApi.hpp"
+    "applications/prefab_editor/WindowsApi.cpp"
 )
 
 #-----------------------------------------------------------------------
@@ -379,6 +381,8 @@ list(
     "src/libs/imgui/imgui_widgets.cpp"
     "src/libs/imgui/imgui.cpp"
     "src/libs/imgui/imgui.h"
+    "src/libs/imgui/imgui_stdlib.cpp"
+    "src/libs/imgui/imgui_stdlib.h"
     "src/libs/imgui/imstb_rectpack.h"
     "src/libs/imgui/imstb_textedit.h"
     "src/libs/imgui/imstb_truetype.h"

@@ -13,128 +13,156 @@
 namespace MFA::EntitySystem
 {
     void InitEntity(Entity * entity);
+    void UpdateEntity(Entity * entity);
     bool DestroyEntity(Entity * entity, bool shouldNotifyParent);
 }
 
-namespace MFA {
+namespace MFA
+{
 
-class Entity {
-public:
-    friend void EntitySystem::InitEntity(Entity * entity);
-    friend bool EntitySystem::DestroyEntity(Entity * entity, bool shouldNotifyParent);
-    friend Component;
-
-    explicit Entity(char const * name, Entity * parent = nullptr);
-
-    ~Entity();
-
-    Entity (Entity const &) noexcept = delete;
-    Entity (Entity &&) noexcept = delete;
-    Entity & operator = (Entity const &) noexcept = delete;
-    Entity & operator = (Entity && rhs) noexcept = delete;
-
-    [[nodiscard]]
-    bool NeedUpdateEvent() const noexcept
+    class Entity
     {
-        return mUpdateSignal.IsEmpty() == false;
-    }
+    public:
+        friend void EntitySystem::InitEntity(Entity * entity);
+        friend void EntitySystem::UpdateEntity(Entity * entity);
+        friend bool EntitySystem::DestroyEntity(Entity * entity, bool shouldNotifyParent);
+        friend Component;
 
-    void Init();
+        explicit Entity(char const * name, Entity * parent = nullptr);
 
-    void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState) const;
-    
-    void Shutdown(bool shouldNotifyParent = true);
+        ~Entity();
 
-    template<typename ComponentClass, typename ... ArgsT>
-    std::weak_ptr<ComponentClass> AddComponent(ArgsT && ... args) {
-        MFA_ASSERT(GetComponent<ComponentClass>().expired() == true);
+        Entity(Entity const &) noexcept = delete;
+        Entity(Entity &&) noexcept = delete;
+        Entity & operator = (Entity const &) noexcept = delete;
+        Entity & operator = (Entity && rhs) noexcept = delete;
 
-        auto const & classTypes = ComponentClass::GetClassType();
-        if (MFA_VERIFY(classTypes.empty() == false)) {
+        [[nodiscard]]
+        bool NeedUpdateEvent() const noexcept
+        {
+            return mUpdateSignal.IsEmpty() == false;
+        }
+
+        void Init();
+
+        void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState) const;
+
+        void Shutdown(bool shouldNotifyParent = true);
+
+        template<typename ComponentClass, typename ... ArgsT>
+        std::weak_ptr<ComponentClass> AddComponent(ArgsT && ... args)
+        {
+            MFA_ASSERT(GetComponent<ComponentClass>().expired() == true);
+
             auto sharedPtr = std::make_shared<ComponentClass>(std::forward<ArgsT>(args)...);
-            MFA_ASSERT(mComponents[static_cast<int>(classTypes[0])] == nullptr);
-            mComponents[static_cast<int>(classTypes[0])] = sharedPtr;
+            MFA_ASSERT(mComponents[ComponentClass::Type] == nullptr);
+            mComponents[ComponentClass::Type] = sharedPtr;
             sharedPtr->mSelfPtr = sharedPtr;
             linkComponent(sharedPtr.get());
             return std::weak_ptr<ComponentClass>(sharedPtr);
         }
 
-        return std::weak_ptr<ComponentClass>();
-    }
-
-    template<typename ComponentClass>
-    [[nodiscard]]
-    std::weak_ptr<ComponentClass> GetComponent() {
-
-        auto const & classTypes = ComponentClass::GetClassType();
-        MFA_ASSERT(classTypes.empty() == false);
-        for (auto & classType : classTypes)
+        template<typename ComponentClass>
+        void RemoveComponent(ComponentClass * component)
         {
-            auto & component = mComponents[static_cast<int>(classType)];
+            MFA_ASSERT(component != nullptr);
+            MFA_ASSERT(component->mEntity == this);
+            // Init event
+            if ((component->RequiredEvents() & Component::EventTypes::InitEvent) > 0)
+            {
+                mInitSignal.UnRegister(component->mInitEventId);
+            }
+            // Update event
+            if ((component->RequiredEvents() & Component::EventTypes::UpdateEvent) > 0)
+            {
+                mUpdateSignal.UnRegister(component->mUpdateEventId);
+            }
+            // Shutdown event
+            if ((component->RequiredEvents() & Component::EventTypes::ShutdownEvent) > 0)
+            {
+                mShutdownSignal.UnRegister(component->mShutdownEventId);
+            }
+
+            auto & findResult = mComponents[component->GetType()];
+            MFA_ASSERT(findResult != nullptr);
+            findResult = nullptr;
+        }
+
+        template<typename ComponentClass>
+        [[nodiscard]]
+        std::weak_ptr<ComponentClass> GetComponent()
+        {
+            auto & component = mComponents[ComponentClass::Type];
             if (component != nullptr)
             {
-                return std::static_pointer_cast<ComponentClass>(component);        
+                return std::static_pointer_cast<ComponentClass>(component);
             }
+            return std::weak_ptr<ComponentClass>();
         }
-        return std::weak_ptr<ComponentClass>();
-    }
 
-    [[nodiscard]]
-    Entity * GetParent() const noexcept {
-        return mParent;
-    }
+        [[nodiscard]]
+        Entity * GetParent() const noexcept
+        {
+            return mParent;
+        }
 
-    [[nodiscard]]
-    std::string const & GetName() const noexcept;
+        [[nodiscard]]
+        std::string const & GetName() const noexcept;
 
-    void SetName(char const * name);
+        void SetName(char const * name);
 
-    [[nodiscard]]
-    bool IsActive() const noexcept;
+        [[nodiscard]]
+        bool IsActive() const noexcept;
 
-    void SetActive(bool isActive);
+        void SetActive(bool isActive);
 
-    [[nodiscard]]
-    std::vector<Entity *> const & GetChildEntities() const;
+        [[nodiscard]]
+        std::vector<Entity *> const & GetChildEntities() const;
 
-    void OnUI();
+        void OnUI();
 
-    [[nodiscard]]
-    bool HasParent() const;
+        [[nodiscard]]
+        bool HasParent() const;
 
-    void OnParentActivationStatusChanged(bool isActive);
+        void OnParentActivationStatusChanged(bool isActive);
 
-private:
+    private:
 
-    void notifyANewChildAdded(Entity * entity);
+        void notifyANewChildAdded(Entity * entity);
 
-    void notifyAChildRemoved(Entity * entity);
+        void notifyAChildRemoved(Entity * entity);
 
-    int findChild(Entity * entity);
+        int findChild(Entity * entity);
 
-    void linkComponent(Component * component);
+        void linkComponent(Component * component);
 
-    std::string mName {};
-    Entity * mParent = nullptr;
+        std::string mName{};
+        Entity * mParent = nullptr;
 
-    std::shared_ptr<Component> mComponents [static_cast<int>(Component::ClassType::Count)]{};
+        std::shared_ptr<Component> mComponents[static_cast<int>(Component::ClassType::Count)]{};
 
-    Signal<> mInitSignal {};
-    Signal<float, RT::CommandRecordState const &> mUpdateSignal {};
-    Signal<> mShutdownSignal {};
-    Signal<bool> mActivationStatusChangeSignal {};
+        Signal<> mInitSignal{};
+        Signal<float, RT::CommandRecordState const &> mUpdateSignal{};
+        Signal<> mShutdownSignal{};
+        Signal<bool> mActivationStatusChangeSignal{};
 
-    bool mIsActive = true;
-    bool mIsParentActive = true;    // It should be true by default because not everyone have parent
+    public:
 
-    int mUpdateListenerId = 0;
+        Signal<Entity *> EditorSignal{};
 
-    int mParentActivationStatusChangeListenerId = 0;
+    private:
 
-    std::vector<Entity *> mChildEntities {};
+        bool mIsActive = true;
+        bool mIsParentActive = true;    // It should be true by default because not everyone have parent
 
-    bool mIsInitialized = false;
-    
-};
+        int mUpdateListenerId = -1;
+
+        int mParentActivationStatusChangeListenerId = 0;
+
+        std::vector<Entity *> mChildEntities{};
+
+        bool mIsInitialized = false;
+
+    };
 
 }

@@ -10,6 +10,7 @@
 #include "engine/BedrockSignal.hpp"
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "libs/imgui/imgui.h"
+#include "libs/imgui/imgui_stdlib.h"
 
 #ifdef __DESKTOP__
 #include "libs/sdl/SDL.hpp"
@@ -783,18 +784,47 @@ namespace MFA::UISystem
     //-------------------------------------------------------------------------------------------------
 
     // TODO Maybe we could cache unchanged vertices
-    void Combo(
+    bool Combo(
         char const * label,
         int32_t * selectedItemIndex,
         char const ** items,
         int32_t const itemsCount
     )
     {
-        ImGui::Combo(
+        return ImGui::Combo(
             label,
             selectedItemIndex,
             items,
             itemsCount
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+    // Based on https://eliasdaler.github.io/using-imgui-with-sfml-pt2/
+    static auto vector_getter = [](void * vec, int idx, const char ** out_text)
+    {
+        auto & vector = *static_cast<std::vector<std::string>*>(vec);
+        if (idx < 0 || idx >= static_cast<int>(vector.size())) { return false; }
+        *out_text = vector.at(idx).c_str();
+        return true;
+    };
+
+    bool Combo(
+        const char * label,
+        int * selectedItemIndex,
+        std::vector<std::string> & values
+    )
+    {
+        if (values.empty())
+        {
+            return false;
+        }
+        return ImGui::Combo(
+            label,
+            selectedItemIndex,
+            vector_getter,
+            &values,
+            static_cast<int>(values.size())
         );
     }
 
@@ -855,6 +885,13 @@ namespace MFA::UISystem
             MFA_ASSERT(onPress != nullptr);
             onPress();
         }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void InputText(char const * label, std::string & outValue)
+    {
+        ImGui::InputText(label, &outValue);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -927,7 +964,7 @@ namespace MFA::UISystem
     void SetAndroidApp(android_app * pApp)
     {
         androidApp = pApp;
-    }
+}
 #endif
 
     //-------------------------------------------------------------------------------------------------

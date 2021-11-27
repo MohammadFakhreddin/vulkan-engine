@@ -51,10 +51,13 @@ public:
         float deltaTime
     );
 
-    virtual void CreateDrawableEssence(
+    void CreateDrawableEssence(
         char const * essenceName, 
         RT::GpuModel const & gpuModel
     );
+
+    // Editor only function
+    void DestroyDrawableEssence(char const * essenceName);
 
     virtual std::weak_ptr<DrawableVariant> CreateDrawableVariant(char const * essenceName);
 

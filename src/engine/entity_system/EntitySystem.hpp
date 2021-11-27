@@ -23,6 +23,8 @@ namespace MFA::EntitySystem {
 
     void InitEntity(Entity * entity);
 
+    void UpdateEntity(Entity * entity);
+
     bool DestroyEntity(Entity * entity, bool shouldNotifyParent = true);
 
 }

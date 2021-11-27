@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/render_system/RenderTypesFWD.hpp"
+#include "engine/BedrockSignal.hpp"
 
 #include <cstdint>
 
@@ -14,40 +15,15 @@ std::weak_ptr<ComponentType> SelfPtr()                              \
     return std::static_pointer_cast<ComponentType>(mSelfPtr.lock());\
 }                                                                   \
 
-#define MFA_COMPONENT_CLASS_TYPE(...)                               \
+#define MFA_COMPONENT_CLASS_TYPE(classType)                         \
 public:                                                             \
-static std::vector<ClassType> const & GetClassType()                \
+static constexpr int Type = static_cast<int>(classType);            \
+                                                                    \
+[[nodiscard]]                                                       \
+int GetType() override                                              \
 {                                                                   \
-    static const std::vector<ClassType> mClassTypes {__VA_ARGS__};  \
-    return mClassTypes;                                             \
+    return Type;                                                    \
 }                                                                   \
-
-//#define MFA_COMPONENT_CLASS_TYPE_1(type1)                           \
-//public:                                                             \
-//static uint8_t GetClassType(ClassType outComponentTypes[3])         \
-//{                                                                   \
-//    outComponentTypes[0] = type1;                                   \
-//    return 1;                                                       \
-//}                                                                   \
-//
-//#define MFA_COMPONENT_CLASS_TYPE_2(type1, type2)                    \
-//public:                                                             \
-//static uint8_t GetClassType(ClassType outComponentTypes[3])         \
-//{                                                                   \
-//    outComponentTypes[0] = type1;                                   \
-//    outComponentTypes[1] = type2;                                   \
-//    return 2;                                                       \
-//}                                                                   \
-//
-//#define MFA_COMPONENT_CLASS_TYPE_3(type1, type2, type3)             \
-//public:                                                             \
-//static uint8_t GetClassType(ClassType outComponentTypes[3])         \
-//{                                                                   \
-//    outComponentTypes[0] = type1;                                   \
-//    outComponentTypes[1] = type2;                                   \
-//    outComponentTypes[2] = type3;                                   \
-//    return 3;                                                       \
-//}                                                                   \
 
 #define MFA_COMPONENT_REQUIRED_EVENTS(eventTypes)                   \
 public:                                                             \
@@ -113,7 +89,7 @@ public:
         Count
     };
 
-    static std::vector<ClassType> const & GetClassType();
+    virtual int GetType() = 0;
 
     virtual void Init();
 
@@ -133,6 +109,8 @@ public:
     }
 
     virtual void OnUI();
+
+    Signal<Component *, Entity *> EditorSignal {};
 
 protected:
 

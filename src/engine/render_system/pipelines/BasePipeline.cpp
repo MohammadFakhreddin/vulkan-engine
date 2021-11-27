@@ -20,8 +20,7 @@ namespace MFA
 
     BasePipeline::BasePipeline(uint32_t const maxSets)
         : mMaxSets(maxSets)
-    {
-    }
+    {}
 
     //-------------------------------------------------------------------------------------------------
 
@@ -59,7 +58,10 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::CreateDrawableEssence(char const * essenceName, RT::GpuModel const & gpuModel)
+    void BasePipeline::CreateDrawableEssence(
+        char const * essenceName,
+        RT::GpuModel const & gpuModel
+    )
     {
         MFA_ASSERT(essenceName != nullptr);
         MFA_ASSERT(strlen(essenceName) > 0);
@@ -70,6 +72,24 @@ namespace MFA
         internalCreateDrawableEssence(essenceAndVariants->essence);
 
         mEssenceAndVariantsMap[essenceName] = std::move(essenceAndVariants);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void BasePipeline::DestroyDrawableEssence(char const * essenceName)
+    {
+        MFA_ASSERT(essenceName != nullptr);
+        MFA_ASSERT(strlen(essenceName) > 0);
+        auto const findResult = mEssenceAndVariantsMap.find(essenceName);
+        if (MFA_VERIFY(findResult != mEssenceAndVariantsMap.end()) == false)
+        {
+            return;
+        }
+        for (auto & variant : findResult->second->variants)
+        {
+            RemoveDrawableVariant(variant.get());
+        }
+        mEssenceAndVariantsMap.erase(findResult);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -88,7 +108,7 @@ namespace MFA
 
         variantsList.emplace_back(variantSharedPtr);
 
-        std::weak_ptr variantWeakPtr = variantSharedPtr; 
+        std::weak_ptr variantWeakPtr = variantSharedPtr;
 
         mVariantsRef.emplace_back(variantSharedPtr.get());
 

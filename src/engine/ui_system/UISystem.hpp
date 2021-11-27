@@ -1,7 +1,5 @@
 #pragma once
 
-#include <vec3.hpp>
-
 #include "engine/render_system/RenderTypesFWD.hpp"
 
 class UIRecordObject;
@@ -37,11 +35,17 @@ namespace MFA::UISystem
 
     void InputFloat4(char const * label, float * value);
 
-    void Combo(
+    bool Combo(
         char const * label,
         int32_t * selectedItemIndex,
         char const ** items,
         int32_t itemsCount
+    );
+
+    bool Combo(
+        const char * label,
+        int * selectedItemIndex,
+        std::vector<std::string> & values
     );
 
     void SliderInt(
@@ -68,6 +72,11 @@ namespace MFA::UISystem
     void Button(
         char const * label,
         std::function<void()> const & onPress
+    );
+
+    void InputText(
+        char const * label,
+        std::string & outValue
     );
 
     [[nodiscard]]

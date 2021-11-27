@@ -120,7 +120,10 @@ namespace MFA
             {
                 for (auto const & component : mComponents)
                 {
-                    component->OnUI();
+                    if (component != nullptr)
+                    {
+                        component->OnUI();
+                    }
                 }
                 UI::TreePop();
             }
@@ -132,6 +135,7 @@ namespace MFA
                 }
                 UI::TreePop();
             }
+            EditorSignal.Emit(this);
             UI::TreePop();
         }
     }

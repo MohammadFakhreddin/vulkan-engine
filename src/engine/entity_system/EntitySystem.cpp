@@ -99,6 +99,14 @@ void InitEntity(Entity * entity)
 {
     MFA_ASSERT(entity != nullptr);
     entity->Init();
+    UpdateEntity(entity);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void UpdateEntity(Entity * entity)
+{
+    MFA_ASSERT(entity != nullptr);
     if (entity->NeedUpdateEvent()) {
         entity->mUpdateListenerId = state->updateSignal.Register([entity](
             float const deltaTime,
@@ -106,6 +114,10 @@ void InitEntity(Entity * entity)
         ) -> void {
             entity->Update(deltaTime, recordState);
         });
+    }
+    else
+    {
+        state->updateSignal.UnRegister(entity->mUpdateListenerId);
     }
 }
 

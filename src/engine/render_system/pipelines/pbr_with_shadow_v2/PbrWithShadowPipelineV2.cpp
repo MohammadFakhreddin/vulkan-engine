@@ -47,12 +47,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::Init(
-        RT::SamplerGroup * samplerGroup,
-        RT::GpuTexture * errorTexture,
-        float const projectionNear,
-        float const projectionFar
-    )
+    void PBRWithShadowPipelineV2::Init(RT::SamplerGroup * samplerGroup, RT::GpuTexture * errorTexture)
     {
         if (mIsInitialized == true)
         {
@@ -67,11 +62,6 @@ namespace MFA
         mSamplerGroup = samplerGroup;
         MFA_ASSERT(errorTexture != nullptr);
         mErrorTexture = errorTexture;
-
-        mProjectionFar = projectionFar;
-        mProjectionNear = projectionNear;
-        mProjectionFarToNearDistance = projectionFar - projectionNear;
-        MFA_ASSERT(mProjectionFarToNearDistance > 0.0f);
 
         createUniformBuffers();
 

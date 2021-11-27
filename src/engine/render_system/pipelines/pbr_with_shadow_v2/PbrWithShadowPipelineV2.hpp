@@ -80,12 +80,7 @@ namespace MFA
         PBRWithShadowPipelineV2 & operator = (PBRWithShadowPipelineV2 const &) noexcept = delete;
         PBRWithShadowPipelineV2 & operator = (PBRWithShadowPipelineV2 &&) noexcept = delete;
 
-        void Init(
-            RT::SamplerGroup * samplerGroup,
-            RT::GpuTexture * errorTexture,
-            float projectionNear,
-            float projectionFar
-        );
+        void Init(RT::SamplerGroup * samplerGroup, RT::GpuTexture * errorTexture);
 
         void Shutdown() override;
 
@@ -173,10 +168,6 @@ namespace MFA
         RT::PipelineGroup mOcclusionQueryPipeline{};
         std::unique_ptr<OcclusionRenderPass> mOcclusionRenderPass;
 
-        float mProjectionNear = 0.0f;
-        float mProjectionFar = 0.0f;
-        float mProjectionFarToNearDistance = 0.0f;
-        
         struct OcclusionQueryData
         {
             std::vector<DrawableVariant *> Variants{};
