@@ -452,6 +452,11 @@ namespace MFA
             auto & essence = essenceAndVariantList.second->essence;
             auto & variantsList = essenceAndVariantList.second->variants;
 
+            if (variantsList.empty())
+            {
+                continue;
+            }
+
             RF::BindVertexBuffer(recordState, essence.GetGpuModel().meshBuffers.verticesBuffer);
             RF::BindIndexBuffer(recordState, essence.GetGpuModel().meshBuffers.indicesBuffer);
 
@@ -519,6 +524,12 @@ namespace MFA
         {
             auto & essence = essenceAndVariantList.second->essence;
             auto & variantsList = essenceAndVariantList.second->variants;
+
+            if (variantsList.empty())
+            {
+                continue;
+            }
+
             RF::BindVertexBuffer(recordState, essence.GetGpuModel().meshBuffers.verticesBuffer);
             RF::BindIndexBuffer(recordState, essence.GetGpuModel().meshBuffers.indicesBuffer);
 
@@ -582,6 +593,12 @@ namespace MFA
         {
             auto & essence = essenceAndVariantList.second->essence;
             auto & variantsList = essenceAndVariantList.second->variants;
+
+            if (variantsList.empty())
+            {
+                continue;
+            }
+
             RF::BindVertexBuffer(recordState, essence.GetGpuModel().meshBuffers.verticesBuffer);
             RF::BindIndexBuffer(recordState, essence.GetGpuModel().meshBuffers.indicesBuffer);
 
@@ -649,6 +666,11 @@ namespace MFA
             auto & essence = essenceAndVariantList.second->essence;
             auto & variantsList = essenceAndVariantList.second->variants;
 
+            if (variantsList.empty())
+            {
+                continue;
+            }
+
             RF::BindVertexBuffer(recordState, essence.GetGpuModel().meshBuffers.verticesBuffer);
             RF::BindIndexBuffer(recordState, essence.GetGpuModel().meshBuffers.indicesBuffer);
 
@@ -715,6 +737,11 @@ namespace MFA
         {
             auto & essence = essenceAndVariantList.second->essence;
             auto & variantsList = essenceAndVariantList.second->variants;
+
+            if (variantsList.empty())
+            {
+                continue;
+            }
 
             RF::BindVertexBuffer(recordState, essence.GetGpuModel().meshBuffers.verticesBuffer);
             RF::BindIndexBuffer(recordState, essence.GetGpuModel().meshBuffers.indicesBuffer);

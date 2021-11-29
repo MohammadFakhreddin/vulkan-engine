@@ -69,18 +69,13 @@ void PrefabEditorScene::Init()
         EntitySystem::InitEntity(entity);
     }
 
-    {// Creating prefab
-        mPrefabEntity = EntitySystem::CreateEntity("PrefabInstance", GetRootEntity());
-        MFA_ASSERT(mPrefabEntity != nullptr);
-        mPrefabEntity->EditorSignal.Register(this, &PrefabEditorScene::entityUI);
-        EntitySystem::InitEntity(mPrefabEntity);
-    }
+    mPrefabRootEntity = createPrefabEntity("PrefabRoot", GetRootEntity());
 }
 
 //-------------------------------------------------------------------------------------------------
 
 void PrefabEditorScene::OnPreRender(
-    float deltaTimeInSec,
+    float const deltaTimeInSec,
     RT::CommandRecordState & recordState
 )
 {
@@ -134,7 +129,10 @@ void PrefabEditorScene::Shutdown()
         Importer::FreeModel(mCubeModel.model);
     }
 
-    destroyPrefabModelAndEssence();
+    for (int i = static_cast<int>(mLoadedAssets.size()) - 1; i >= 0; --i)
+    {
+        destroyAsset(i);
+    }
 
     mPbrPipeline.Shutdown();
     mDebugRenderPipeline.Shutdown();
@@ -154,41 +152,86 @@ void PrefabEditorScene::OnResize()
 
 void PrefabEditorScene::onUI()
 {
-    UI::BeginWindow("Menu");
+    UI::BeginWindow("Save and load panel");
     UI::InputText("Prefab name", mPrefabName);
     UI::EndWindow();
+    essencesWindow();
     EntitySystem::OnUI();
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void PrefabEditorScene::essencesWindow()
+{
+    UI::BeginWindow("Essences");
+    if (UI::TreeNode("Available essences"))
+    {
+        for (auto const & asset : mLoadedAssets)
+        {
+            if (UI::TreeNode(asset.essenceName.c_str()))
+            {
+                UI::Text(asset.fileAddress.c_str());
+                UI::TreePop();
+            }
+        }
+        UI::TreePop();
+    }
+    if (UI::TreeNode("Create new essence"))
+    {
+        UI::InputText("Essence name", mInputTextEssenceName);
+        UI::Button("Create", [this]()->void{
+            std::string fileAddress;
+            if (WinApi::TryToPickFile(fileAddress) == false)
+            {
+                MFA_LOG_INFO("No valid file address picked!");
+                return;
+            }
+            if (loadSelectedAsset(fileAddress) == false) {
+                return;
+            }
+        });
+        UI::TreePop();
+    }
+    UI::EndWindow();
 }
 
 //-------------------------------------------------------------------------------------------------
 
 bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress)
 {
-    destroyPrefabModelAndEssence();
     MFA_LOG_INFO("Trying to load file with address %s", fileAddress.c_str());
     MFA_ASSERT(fileAddress.empty() == false);
+
     auto cpuModel = Importer::ImportGLTF(fileAddress.c_str());
-    mPrefabGpuModel = RF::CreateGpuModel(cpuModel);
-    if (mPrefabGpuModel.valid == false)
+
+    auto gpuModel = RF::CreateGpuModel(cpuModel);
+    if (gpuModel.valid == false)
     {
         MFA_LOG_WARN("Gltf model is invalid. Failed to create gpu model");
         return false;
     }
-    mPbrPipeline.CreateDrawableEssence(PREFAB_ESSENCE, mPrefabGpuModel);
+
+    mLoadedAssets.emplace_back(Asset {
+        .fileAddress = fileAddress,
+        .essenceName = mInputTextEssenceName,
+        .gpuModel = gpuModel    // TODO We need shared_ptr + weak_ptr
+    });
+
+    mPbrPipeline.CreateDrawableEssence(mInputTextEssenceName.c_str(), mLoadedAssets.back().gpuModel);
+
+    mInputTextEssenceName = "";
+
     return true;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void PrefabEditorScene::destroyPrefabModelAndEssence()
+void PrefabEditorScene::destroyAsset(int const assetIndex)
 {
-    if (mPrefabGpuModel.valid == false)
-    {
-        return;
-    }
-    RF::DeviceWaitIdle();
-    mPbrPipeline.DestroyDrawableEssence(PREFAB_ESSENCE);
-    RF::DestroyGpuModel(mPrefabGpuModel);
+    auto & asset = mLoadedAssets[assetIndex];
+    mPbrPipeline.DestroyDrawableEssence(asset.essenceName.c_str());
+    RF::DestroyGpuModel(asset.gpuModel);
+    mLoadedAssets.erase(mLoadedAssets.begin() + assetIndex);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -203,7 +246,26 @@ void PrefabEditorScene::entityUI(Entity * entity)
             &mSelectedComponentIndex,
             mAvailableComponents
         );
-        UI::Button("Add component", [this]()->void
+        switch(mSelectedComponentIndex)
+        {
+            case 2: // MeshRendererComponent
+            {
+                std::vector<std::string> essenceNames {};
+                for (auto & asset : mLoadedAssets)
+                {
+                    essenceNames.emplace_back(asset.essenceName);
+                }
+                UI::Combo(
+                    "Essence",
+                    &mSelectedEssenceIndex,
+                    essenceNames
+                );
+            }
+            break;
+            default:
+            break;
+        }
+        UI::Button("Add component", [this, entity]()->void
         {
             if (mSelectedComponentIndex <= 0)
             {
@@ -218,56 +280,50 @@ void PrefabEditorScene::entityUI(Entity * entity)
             {
                 case 1:     // TransformComponent
                 {
-                    newComponent = mPrefabEntity->AddComponent<TransformComponent>().lock();
+                    newComponent = entity->AddComponent<TransformComponent>().lock();
                 }
                 break;
                 case 2:     // MeshRendererComponent
                 {
-                    if (mPrefabEntity->GetComponent<BoundingVolumeComponent>().expired())
+                    if (entity->GetComponent<BoundingVolumeComponent>().expired())
                     {
                         MFA_LOG_WARN("For creating MeshRenderer, BoundingVolumeComponent must exists first!");
                         return;
                     }
-                    if (mPrefabEntity->GetComponent<TransformComponent>().expired())
+                    if (entity->GetComponent<TransformComponent>().expired())
                     {
                         MFA_LOG_WARN("For creating MeshRenderer, TransformComponent must exists first!");
                         return;
                     }
-                    std::string fileAddress = "";
-                    if (WinApi::TryToPickFile(fileAddress) == false)
-                    {
-                        MFA_LOG_INFO("No valid file address picked!");
-                        return;
-                    }
-                    if (loadSelectedAsset(fileAddress) == false) {
-                        return;
-                    }
-                    newComponent = mPrefabEntity->AddComponent<MeshRendererComponent>(mPbrPipeline, PREFAB_ESSENCE).lock();
+                    newComponent = entity->AddComponent<MeshRendererComponent>(
+                        mPbrPipeline,
+                        mLoadedAssets[mSelectedEssenceIndex].essenceName.c_str()
+                    ).lock();
                 }
                 break;
                 case 3:     // BoundingVolumeRendererComponent
                 {
-                    if (mPrefabEntity->GetComponent<BoundingVolumeComponent>().expired())
+                    if (entity->GetComponent<BoundingVolumeComponent>().expired())
                     {
                         MFA_LOG_WARN("For creating BoundingVolumeRendererComponent, BoundingVolumeComponent must exists first!");
                         return;
                     }
-                    if (mPrefabEntity->GetComponent<ColorComponent>().expired())
+                    if (entity->GetComponent<ColorComponent>().expired())
                     {
                         MFA_LOG_WARN("For creating BoundingVolumeRendererComponent, ColorComponent must exists first!");
                         return;
                     }
-                    newComponent = mPrefabEntity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline).lock();
+                    newComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline).lock();
                 }
                 break;
                 case 4:     // SphereBoundingVolumeComponent
                 {
-                    newComponent = mPrefabEntity->AddComponent<SphereBoundingVolumeComponent>(1.0f).lock();
+                    newComponent = entity->AddComponent<SphereBoundingVolumeComponent>(1.0f).lock();
                 }
                 break;
                 case 5:     // AxisAlignedBoundingBoxes
                 {
-                    newComponent = mPrefabEntity->AddComponent<AxisAlignedBoundingBoxComponent>(
+                    newComponent = entity->AddComponent<AxisAlignedBoundingBoxComponent>(
                         glm::vec3(0.0f, 0.0f, 0.0f),
                         glm::vec3(1.0f, 1.0f, 1.0f)
                     ).lock();
@@ -275,7 +331,7 @@ void PrefabEditorScene::entityUI(Entity * entity)
                 break;
                 case 6:     // ColorComponent
                 {
-                    newComponent = mPrefabEntity->AddComponent<ColorComponent>(glm::vec3(1.0f, 0.0f, 0.0f)).lock();
+                    newComponent = entity->AddComponent<ColorComponent>(glm::vec3(1.0f, 0.0f, 0.0f)).lock();
                 }
                 break;
                 case 7:     // ObserverCameraComponent
@@ -290,17 +346,17 @@ void PrefabEditorScene::entityUI(Entity * entity)
                 break;
                 case 9:     // PointLightComponent
                 {
-                    if (mPrefabEntity->GetComponent<ColorComponent>().expired())
+                    if (entity->GetComponent<ColorComponent>().expired())
                     {
                         MFA_LOG_WARN("For creating a PointLightComponent, the ColorComponent must exists first!");
                         return;
                     }
-                    if (mPrefabEntity->GetComponent<TransformComponent>().expired())
+                    if (entity->GetComponent<TransformComponent>().expired())
                     {
                         MFA_LOG_WARN("For creating a PointLightComponent, the TransformComponent must exists first!");
                         return;
                     }
-                    newComponent = mPrefabEntity->AddComponent<PointLightComponent>(
+                    newComponent = entity->AddComponent<PointLightComponent>(
                         1.0f,
                         100.0f,
                         Z_NEAR,
@@ -311,30 +367,50 @@ void PrefabEditorScene::entityUI(Entity * entity)
                 break;
                 case 10:    // DirectionalLightComponent
                 {
-                    if (mPrefabEntity->GetComponent<ColorComponent>().expired())
+                    if (entity->GetComponent<ColorComponent>().expired())
                     {
                         MFA_LOG_WARN("For creating a DirectionalLightComponent, the ColorComponent must exists first!");
                         return;
                     }
-                    if (mPrefabEntity->GetComponent<TransformComponent>().expired())
+                    if (entity->GetComponent<TransformComponent>().expired())
                     {
                         MFA_LOG_WARN("For creating a DirectionalLightComponent, the TransformComponent must exists first!");
                         return;
                     }
-                    newComponent = mPrefabEntity->AddComponent<DirectionalLightComponent>().lock();
+                    newComponent = entity->AddComponent<DirectionalLightComponent>().lock();
                 }
                 break;
                 default:
                     MFA_LOG_WARN("Unhandled component type detected! %d", mSelectedComponentIndex);
             }
 
+            if (newComponent == nullptr)
+            {
+                return;
+            }
             newComponent->Init();
-            EntitySystem::UpdateEntity(mPrefabEntity);
+            EntitySystem::UpdateEntity(entity);
 
             newComponent->EditorSignal.Register(this, &PrefabEditorScene::componentUI);
             
             mSelectedComponentIndex = 0;
         });
+        if (UI::TreeNode("Add child"))
+        {
+            UI::InputText("ChildName", mInputChildEntityName);
+            UI::Button("Add", [entity, this]()->void{
+                createPrefabEntity(mInputChildEntityName.c_str(), entity);
+                mInputChildEntityName = "";
+            });
+            UI::TreePop();
+        }
+        if (UI::TreeNode("Remove entity"))
+        {
+            UI::Button("Remove", [entity, this]()->void{
+               EntitySystem::DestroyEntity(entity); 
+            });
+            UI::TreePop();
+        }
         UI::TreePop();
     }
 }
@@ -349,6 +425,22 @@ void PrefabEditorScene::componentUI(Component * component, Entity * entity)
         entity->RemoveComponent(component);
         EntitySystem::UpdateEntity(entity);
     });
+}
+
+//-------------------------------------------------------------------------------------------------
+
+Entity *  PrefabEditorScene::createPrefabEntity(char const * name, Entity * parent)
+{
+    auto * entity = EntitySystem::CreateEntity(name, parent);
+    MFA_ASSERT(entity != nullptr);
+    entity->EditorSignal.Register(this, &PrefabEditorScene::entityUI);
+
+    auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
+    transformComponent->EditorSignal.Register(this, &PrefabEditorScene::componentUI);
+
+    EntitySystem::InitEntity(entity);
+
+    return entity;
 }
 
 //-------------------------------------------------------------------------------------------------

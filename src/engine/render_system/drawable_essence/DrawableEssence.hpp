@@ -69,7 +69,7 @@ private:
 
     RT::UniformBufferCollection mPrimitivesBuffer;
 
-    RT::GpuModel const & mGpuModel;
+    RT::GpuModel const & mGpuModel;         // TODO: It should be shared ptr instead
     
     uint32_t mPrimitiveCount = 0;
 

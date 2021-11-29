@@ -32,27 +32,28 @@ public:
     void OnResize() override;
 
 private:
-
     void onUI();
 
+    void essencesWindow();
+    
     bool loadSelectedAsset(std::string const & fileAddress);
 
-    void destroyPrefabModelAndEssence();
+    void destroyAsset(int assetIndex);
 
     void entityUI(MFA::Entity * entity);
 
     void componentUI(MFA::Component * component, MFA::Entity * entity);
 
+    MFA::Entity * createPrefabEntity(char const * name, MFA::Entity * parent);
+
     static constexpr float Z_NEAR = 0.1f;
     static constexpr float Z_FAR = 3000.0f;
     static constexpr float FOV = 80;
-    static constexpr char const * PREFAB_ESSENCE = "PrefabEssence";
-
+    
     MFA::RT::GpuTexture mErrorTexture{};
 
     std::string mPrefabName = "";
-    MFA::RT::GpuModel mPrefabGpuModel {};
-    MFA::Entity * mPrefabEntity = nullptr;
+    MFA::Entity * mPrefabRootEntity = nullptr;
 
     MFA::RT::SamplerGroup mSampler{};
 
@@ -64,7 +65,14 @@ private:
 
     int mUIRecordId = 0;
 
-    int mSelectedComponentIndex = 0;
+    struct Asset
+    {
+        std::string fileAddress {};
+        std::string essenceName {};
+        MFA::RT::GpuModel gpuModel {};
+    };
+    std::vector<Asset> mLoadedAssets {};
+
     std::vector<std::string> mAvailableComponents {
         "Invalid",
         "TransformComponent",
@@ -78,5 +86,11 @@ private:
         "PointLightComponent",
         "DirectionalLightComponent"
     };
+
+    // Input variables
+    std::string mInputTextEssenceName = "";
+    int mSelectedComponentIndex = 0;
+    int mSelectedEssenceIndex = 0;
+    std::string mInputChildEntityName = "";
 
 };

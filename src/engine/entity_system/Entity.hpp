@@ -52,10 +52,12 @@ namespace MFA
         template<typename ComponentClass, typename ... ArgsT>
         std::weak_ptr<ComponentClass> AddComponent(ArgsT && ... args)
         {
-            MFA_ASSERT(GetComponent<ComponentClass>().expired() == true);
-
+            if (mComponents[ComponentClass::Type] != nullptr)
+            {
+                MFA_LOG_WARN("Component with type %d alreay exists", ComponentClass::Type);
+                return {};
+            }
             auto sharedPtr = std::make_shared<ComponentClass>(std::forward<ArgsT>(args)...);
-            MFA_ASSERT(mComponents[ComponentClass::Type] == nullptr);
             mComponents[ComponentClass::Type] = sharedPtr;
             sharedPtr->mSelfPtr = sharedPtr;
             linkComponent(sharedPtr.get());
