@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <Windows.h>
 #include <shobjidl.h>
+#include <vector>
 
 bool WinApi::TryToPickFile(std::string & outFileAddress)
 {
@@ -21,11 +22,17 @@ bool WinApi::TryToPickFile(std::string & outFileAddress)
             reinterpret_cast<void **>(&pFileOpen)
         );
 
-        COMDLG_FILTERSPEC const acceptedFileType{
-            L"Gltf files",
-            L"*.gltf"
+        std::vector<COMDLG_FILTERSPEC> const acceptedFileTypes{
+            {
+                L"Gltf files",
+                L"*.gltf"
+            },
+            {
+                L"Glb files",
+                L"*.glb"
+            }
         };
-        pFileOpen->SetFileTypes(1, &acceptedFileType);
+        pFileOpen->SetFileTypes(static_cast<UINT>(acceptedFileTypes.size()), acceptedFileTypes.data());
 
         if (SUCCEEDED(hr))
         {

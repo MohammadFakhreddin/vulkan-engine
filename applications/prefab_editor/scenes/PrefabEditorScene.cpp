@@ -27,7 +27,7 @@ PrefabEditorScene::PrefabEditorScene() = default;
 PrefabEditorScene::~PrefabEditorScene() = default;
 
 //-------------------------------------------------------------------------------------------------
-
+// TODO Start from here. Write data in json and load it again
 void PrefabEditorScene::Init()
 {
     Scene::Init();
@@ -57,13 +57,29 @@ void PrefabEditorScene::Init()
 
     mUIRecordId = UI::Register([this]()->void { onUI(); });
 
-    {// Creating observer camera
+    {// Creating observer camera and directional light
         auto * entity = EntitySystem::CreateEntity("CameraEntity", GetRootEntity());
         MFA_ASSERT(entity != nullptr);
 
         auto observerCamera = entity->AddComponent<ObserverCameraComponent>(FOV, Z_NEAR, Z_FAR).lock();
         MFA_ASSERT(observerCamera != nullptr);
         SetActiveCamera(observerCamera);
+
+        entity->AddComponent<DirectionalLightComponent>();
+
+        auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
+        MFA_ASSERT(colorComponent != nullptr);
+        float lightScale = 5.0f;
+        float lightColor[3] {
+            (252.0f/256.0f) * lightScale,
+            (212.0f/256.0f) * lightScale,
+            (64.0f/256.0f) * lightScale
+        };
+        colorComponent->SetColor(lightColor);
+
+        auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
+        MFA_ASSERT(transformComponent != nullptr);
+        transformComponent->UpdateRotation(glm::vec3(90.0f, 0.0f, 0.0f));
 
         entity->EditorSignal.Register(this, &PrefabEditorScene::entityUI);
         EntitySystem::InitEntity(entity);
@@ -367,7 +383,8 @@ void PrefabEditorScene::entityUI(Entity * entity)
                 break;
                 case 10:    // DirectionalLightComponent
                 {
-                    if (entity->GetComponent<ColorComponent>().expired())
+                    MFA_LOG_WARN("Defining directional light is not recomended");
+ /*                   if (entity->GetComponent<ColorComponent>().expired())
                     {
                         MFA_LOG_WARN("For creating a DirectionalLightComponent, the ColorComponent must exists first!");
                         return;
@@ -377,7 +394,7 @@ void PrefabEditorScene::entityUI(Entity * entity)
                         MFA_LOG_WARN("For creating a DirectionalLightComponent, the TransformComponent must exists first!");
                         return;
                     }
-                    newComponent = entity->AddComponent<DirectionalLightComponent>().lock();
+                    newComponent = entity->AddComponent<DirectionalLightComponent>().lock();*/
                 }
                 break;
                 default:

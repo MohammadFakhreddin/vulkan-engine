@@ -52,7 +52,7 @@ private:
     
     MFA::RT::GpuTexture mErrorTexture{};
 
-    std::string mPrefabName = "";
+    std::string mPrefabName {};
     MFA::Entity * mPrefabRootEntity = nullptr;
 
     MFA::RT::SamplerGroup mSampler{};
