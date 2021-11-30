@@ -71,9 +71,9 @@ void PrefabEditorScene::Init()
         MFA_ASSERT(colorComponent != nullptr);
         float lightScale = 5.0f;
         float lightColor[3] {
-            (252.0f/256.0f) * lightScale,
-            (212.0f/256.0f) * lightScale,
-            (64.0f/256.0f) * lightScale
+            1.0f * lightScale,
+            1.0f * lightScale,
+            1.0f * lightScale
         };
         colorComponent->SetColor(lightColor);
 
