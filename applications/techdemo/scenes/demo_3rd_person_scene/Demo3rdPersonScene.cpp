@@ -19,6 +19,7 @@
 #include "engine/entity_system/components/PointLightComponent.hpp"
 #include "engine/entity_system/components/DirectionalLightComponent.hpp"
 #include "engine/BedrockMatrix.hpp"
+#include "engine/resource_manager/ResourceManager.hpp"
 
 using namespace MFA;
 
@@ -49,24 +50,20 @@ void Demo3rdPersonScene::Init()
     // Pbr pipeline
     mPbrPipeline.Init(&mSampler, &mErrorTexture);
     
-    {// Debug renderer pipeline
-        mDebugRenderPipeline.Init();
+    // Debug renderer pipeline
+    mDebugRenderPipeline.Init();
 
-        auto sphereCpuModel = MFA::ShapeGenerator::Sphere();
-        mSphereModel = RF::CreateGpuModel(sphereCpuModel);
-        mDebugRenderPipeline.CreateDrawableEssence("Sphere", mSphereModel);
+    auto sphereCpuModel = ShapeGenerator::Sphere();
+    mSphereModel = ResourceManager::Assign(sphereCpuModel, "Sphere");
+    mDebugRenderPipeline.CreateDrawableEssence(mSphereModel);
 
-        auto cubeCpuModel = ShapeGenerator::Cube();
-        mCubeModel = RF::CreateGpuModel(cubeCpuModel);
-        mDebugRenderPipeline.CreateDrawableEssence("Cube", mCubeModel);
-    }
-
-    // TODO We need prefab system!
-    {// Soldier
-        auto cpuModel = Importer::ImportGLTF(Path::Asset("models/warcraft_3_alliance_footmanfanmade/scene.gltf").c_str());
-        mSoldierGpuModel = RF::CreateGpuModel(cpuModel);
-        mPbrPipeline.CreateDrawableEssence("Soldier", mSoldierGpuModel);
-    }
+    auto cubeCpuModel = ShapeGenerator::Cube();
+    mCubeModel = ResourceManager::Assign(cubeCpuModel, "Cube");
+    mDebugRenderPipeline.CreateDrawableEssence(mCubeModel);
+    
+    // Soldier
+    mSoldierGpuModel = ResourceManager::Acquire(Path::Asset("models/warcraft_3_alliance_footmanfanmade/scene.gltf").c_str());
+    mPbrPipeline.CreateDrawableEssence(mSoldierGpuModel);
     {// Playable character
         auto * entity = EntitySystem::CreateEntity("Playable soldier", GetRootEntity());
         MFA_ASSERT(entity != nullptr);
@@ -81,7 +78,7 @@ void Demo3rdPersonScene::Init()
             ptr->UpdateTransform(position, eulerAngles, scale);
         }
 
-        mPlayerMeshRenderer = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "Soldier");
+        mPlayerMeshRenderer = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, mSoldierGpuModel->id);
         MFA_ASSERT(mPlayerMeshRenderer.expired() == false);
         mPlayerMeshRenderer.lock()->SetActive(true);
 
@@ -148,12 +145,11 @@ void Demo3rdPersonScene::Init()
     //    }
     //}
 
-    std::weak_ptr<DrawableVariant> mapVariant {};
+    std::weak_ptr<MeshRendererComponent> sponzaMeshRenderer {};
 
     {// Map
-        auto cpuModel = Importer::ImportGLTF(Path::Asset("models/sponza/sponza.gltf").c_str());
-        mMapModel = RF::CreateGpuModel(cpuModel);
-        mPbrPipeline.CreateDrawableEssence("SponzaMap", mMapModel);
+        mMapModel = ResourceManager::Acquire(Path::Asset("models/sponza/sponza.gltf").c_str());
+        mPbrPipeline.CreateDrawableEssence(mMapModel);
 
         auto * entity = EntitySystem::CreateEntity("Sponza scene", GetRootEntity());
         MFA_ASSERT(entity != nullptr);
@@ -169,8 +165,8 @@ void Demo3rdPersonScene::Init()
             ptr->UpdateTransform(position, eulerAngle, scale);
         }
 
-        auto const meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "SponzaMap").lock();
-        mapVariant = meshRendererComponent->GetVariant();
+        auto const meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, mMapModel->id).lock();
+        sponzaMeshRenderer = meshRendererComponent;
 
         entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 5.0f, 0.0f), glm::vec3(15.0f, 6.0f, 9.0f));
 
@@ -210,12 +206,12 @@ void Demo3rdPersonScene::Init()
             transformComponent->UpdatePosition(lightPosition);
             transformComponent->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
             
-            entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, "Sphere");
+            entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, mSphereModel->id);
             
             entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
 
             // TODO Maybe we can read radius from transform component instead
-            entity->AddComponent<PointLightComponent>(1.0f, 100.0f, Z_NEAR, Z_FAR, mapVariant);
+            entity->AddComponent<PointLightComponent>(1.0f, 100.0f, Z_NEAR, Z_FAR, sponzaMeshRenderer);
 
             entity->SetActive(true);
             EntitySystem::InitEntity(entity);
@@ -242,12 +238,12 @@ void Demo3rdPersonScene::Init()
             transformComponent->UpdatePosition(lightPosition);
             transformComponent->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
             
-            entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, "Sphere");
+            entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, mSphereModel->id);
             
             entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
 
             // TODO Maybe we can read radius from transform component instead
-            entity->AddComponent<PointLightComponent>(1.0f, 100.0f, Z_NEAR, Z_FAR, mapVariant);
+            entity->AddComponent<PointLightComponent>(1.0f, 100.0f, Z_NEAR, Z_FAR, sponzaMeshRenderer);
 
             entity->SetActive(true);
             EntitySystem::InitEntity(entity);
@@ -270,7 +266,6 @@ void Demo3rdPersonScene::Init()
 
         auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
         MFA_ASSERT(transformComponent != nullptr);
-
         transformComponent->UpdateRotation(glm::vec3(90.0f, 0.0f, 0.0f));
         
         entity->AddComponent<DirectionalLightComponent>();
@@ -439,7 +434,7 @@ void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, RT::CommandRec
             // TODO What should we do for animations ?
             if (auto const meshRendererPtr = mPlayerMeshRenderer.lock())
             {
-                if (auto variant = meshRendererPtr->GetVariant().lock())
+                if (auto variant = meshRendererPtr->GetVariant())
                 {
                     variant->SetActiveAnimation("SwordAndShieldRun", { .transitionDuration = 0.3f });
                 }
@@ -449,7 +444,7 @@ void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, RT::CommandRec
         {
             if (auto const meshRendererPtr = mPlayerMeshRenderer.lock())
             {
-                if (auto variant = meshRendererPtr->GetVariant().lock())
+                if (auto * variant = meshRendererPtr->GetVariant())
                 {
                     //mSoldierVariant->SetActiveAnimation("SwordAndShieldIdle");
                     variant->SetActiveAnimation("Idle", { .transitionDuration = 0.3f });
@@ -466,36 +461,12 @@ void Demo3rdPersonScene::Shutdown()
     Scene::Shutdown();
 
     UI::UnRegister(mUIRecordId);
-
-    {// Soldier
-        RF::DestroyGpuModel(mSoldierGpuModel);
-        Importer::FreeModel(mSoldierGpuModel.model);
-    }
-    {// Map
-        // TODO: I think we can destroy cpu model after uploading to gpu
-        RF::DestroyGpuModel(mMapModel);
-        Importer::FreeModel(mMapModel.model);
-    }
-    {// Sphere
-        RF::DestroyGpuModel(mSphereModel);
-        Importer::FreeModel(mSphereModel.model);
-    }
-    {// Cube
-        RF::DestroyGpuModel(mCubeModel);
-        Importer::FreeModel(mCubeModel.model);
-    }
-    {// Pbr pipeline
-        mPbrPipeline.Shutdown();
-    }
-    {// Point light
-        mDebugRenderPipeline.Shutdown();
-    }
-    {// Sampler
-        RF::DestroySampler(mSampler);
-    }
-    {// Error texture
-        RF::DestroyTexture(mErrorTexture);
-    }
+    // TODO Use resource manager for sampler and error texture
+    // Sampler
+    RF::DestroySampler(mSampler);
+    // Error texture
+    RF::DestroyTexture(mErrorTexture);
+    
 }
 
 //-------------------------------------------------------------------------------------------------

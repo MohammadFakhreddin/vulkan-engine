@@ -42,10 +42,12 @@ namespace MFA
             auto const meshRendererComponent = GetEntity()->GetComponent<MeshRendererComponent>().lock();
             MFA_ASSERT(meshRendererComponent != nullptr);
 
-            auto * essence = meshRendererComponent->GetVariant().lock()->GetEssence();
+            auto * essence = meshRendererComponent->GetVariant()->GetEssence();
             MFA_ASSERT(essence != nullptr);
+            auto * gpuModel = essence->GetGpuModel();
+            MFA_ASSERT(gpuModel != nullptr);
 
-            auto const & mesh = essence->GetGpuModel().model.mesh;
+            auto const & mesh = gpuModel->model.mesh;
             MFA_ASSERT(mesh.HasPositionMinMax());
 
             auto * positionMax = mesh.GetPositionMax();

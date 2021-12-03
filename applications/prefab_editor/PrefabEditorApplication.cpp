@@ -22,8 +22,10 @@ void PrefabEditorApplication::internalInit()
 {
     Application::internalInit();
 
-    mPrefabEditorScene = std::make_shared<PrefabEditorScene>();
-    SceneManager::RegisterScene(mPrefabEditorScene, "PrefabEditorScene");
+    SceneManager::RegisterScene("PrefabEditorScene", [this](){
+        return std::make_shared<PrefabEditorScene>();
+    });
+
     SceneManager::SetActiveScene("PrefabEditorScene");
 }
 

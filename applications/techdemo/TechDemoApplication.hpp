@@ -2,11 +2,6 @@
 
 #include "Application.hpp"
 
-#include <memory>
-
-class GLTFMeshViewerScene;
-class Demo3rdPersonScene;
-
 class TechDemoApplication final : public Application
 {
 public:
@@ -21,8 +16,5 @@ protected:
     void internalInit() override;    
 
 private:
-
-    std::shared_ptr<Demo3rdPersonScene> mThirdPersonDemoScene;
-    std::shared_ptr<GLTFMeshViewerScene> mGltfMeshViewerScene;
 
 };

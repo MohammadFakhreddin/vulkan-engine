@@ -10,8 +10,11 @@ class SphereBoundingVolumeComponent final : public BoundingVolumeComponent
 {
 public:
 
-    MFA_COMPONENT_PROPS(SphereBoundingVolumeComponent)
-    MFA_COMPONENT_CLASS_TYPE(ClassType::BoundingVolumeComponent)
+    MFA_COMPONENT_PROPS(
+        SphereBoundingVolumeComponent,
+        FamilyType::BoundingVolumeComponent,
+        EventTypes::UpdateEvent | EventTypes::InitEvent
+    )
 
     explicit SphereBoundingVolumeComponent(float radius);
 

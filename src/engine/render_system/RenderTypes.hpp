@@ -89,14 +89,21 @@ namespace MFA
             AS::Texture mCpuTexture{};
         };
 
-
         struct GpuModel
         {
+            GpuModelId id = 0;
             bool valid = false;
             MeshBuffers meshBuffers{};
             std::vector<GpuTexture> textures{};
             AssetSystem::Model model{};
-            // TODO Samplers
+
+            explicit GpuModel();
+            ~GpuModel();
+
+            GpuModel (GpuModel const &) noexcept = delete;
+            GpuModel (GpuModel &&) noexcept = delete;
+            GpuModel & operator= (GpuModel const & rhs) noexcept = delete;
+            GpuModel & operator= (GpuModel && rhs) noexcept = delete;
         };
 
         class GpuShader

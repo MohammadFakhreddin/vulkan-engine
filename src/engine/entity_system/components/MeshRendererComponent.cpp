@@ -10,16 +10,20 @@
 
 namespace MFA
 {
+    //-------------------------------------------------------------------------------------------------
+
+    MeshRendererComponent::MeshRendererComponent(BasePipeline & pipeline, RT::GpuModelId const id)
+        : RendererComponent(pipeline, pipeline.CreateDrawableVariant(id))
+    {
+        MFA_ASSERT(mPipeline != nullptr);
+        MFA_ASSERT(mVariant != nullptr);
+    }
 
     //-------------------------------------------------------------------------------------------------
 
-    MeshRendererComponent::MeshRendererComponent(BasePipeline & pipeline, char const * essenceName)
-        : mPipeline(&pipeline)
-        , mVariant(mPipeline->CreateDrawableVariant(essenceName))
-    {
-        MFA_ASSERT(mPipeline != nullptr);
-        MFA_ASSERT(mVariant.expired() == false);
-    }
+    MeshRendererComponent::MeshRendererComponent(BasePipeline & pipeline, RT::GpuModel const & gpuModel)
+        : MeshRendererComponent(pipeline, gpuModel.id)
+    {}
 
     //-------------------------------------------------------------------------------------------------
 
@@ -30,7 +34,7 @@ namespace MFA
         auto * entity = GetEntity();
         MFA_ASSERT(entity != nullptr);
 
-        mVariant.lock()->Init(
+        mVariant->Init(
             GetEntity(),
             SelfPtr(),
             entity->GetComponent<TransformComponent>(),
@@ -40,17 +44,14 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void MeshRendererComponent::Shutdown()
+    DrawableVariant const * MeshRendererComponent::GetVariant() const
     {
-        if (auto const ptr = mVariant.lock())
-        {
-            mPipeline->RemoveDrawableVariant(ptr.get());
-        }
+        return mVariant;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    std::weak_ptr<DrawableVariant> const & MeshRendererComponent::GetVariant() const
+    DrawableVariant * MeshRendererComponent::GetVariant()
     {
         return mVariant;
     }
@@ -62,10 +63,7 @@ namespace MFA
         if (UI::TreeNode("MeshRenderer"))
         {
             RendererComponent::OnUI();
-            if (auto const ptr = mVariant.lock())
-            {
-                ptr->OnUI();
-            }
+            mVariant->OnUI();
             UI::TreePop();
         }
     }

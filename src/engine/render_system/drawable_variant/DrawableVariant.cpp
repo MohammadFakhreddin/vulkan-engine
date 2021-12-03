@@ -29,24 +29,21 @@ namespace MFA
     DrawableVariant::DrawableVariant(DrawableEssence const & essence)
         : mId(NextInstanceId)
         , mEssence(&essence)
+        , mMesh(mEssence->GetGpuModel()->model.mesh)
     {
         NextInstanceId += 1;
 
-        //SetActive(true);
-        //mName = mEssence->GetName() + " Clone(" + std::to_string(mId) + ")";
-        mMesh = &mEssence->GetGpuModel().model.mesh;
-        MFA_ASSERT(mMesh != nullptr);
-        MFA_ASSERT(mMesh->IsValid());
+        MFA_ASSERT(mMesh.IsValid());
 
         // Skins
-        mSkins.resize(mMesh->GetSkinsCount());
+        mSkins.resize(mMesh.GetSkinsCount());
 
         {// Nodes
-            uint32_t const nodesCount = mMesh->GetNodesCount();
+            uint32_t const nodesCount = mMesh.GetNodesCount();
             mNodes.resize(nodesCount);
             for (uint32_t i = 0; i < nodesCount; ++i)
             {
-                auto & meshNode = mMesh->GetNodeByIndex(i);
+                auto & meshNode = mMesh.GetNodeByIndex(i);
                 auto & node = mNodes[i];
 
                 node.meshNode = &meshNode;
@@ -88,9 +85,9 @@ namespace MFA
         {// Creating cachedSkinJoints array
             {
                 uint32_t totalJointsCount = 0;
-                for (uint32_t i = 0; i < mMesh->GetSkinsCount(); ++i)
+                for (uint32_t i = 0; i < mMesh.GetSkinsCount(); ++i)
                 {
-                    auto & skin = mMesh->GetSkinByIndex(i);
+                    auto & skin = mMesh.GetSkinByIndex(i);
                     auto const jointsCount = static_cast<uint32_t>(skin.joints.size());
                     totalJointsCount += jointsCount;
                 }
@@ -104,11 +101,11 @@ namespace MFA
                 }
             }
             {
-                mCachedSkinsJoints.resize(mMesh->GetSkinsCount());
+                mCachedSkinsJoints.resize(mMesh.GetSkinsCount());
                 uint32_t startingJointIndex = 0;
-                for (uint32_t i = 0; i < mMesh->GetSkinsCount(); ++i)
+                for (uint32_t i = 0; i < mMesh.GetSkinsCount(); ++i)
                 {
-                    auto & skin = mMesh->GetSkinByIndex(i);
+                    auto & skin = mMesh.GetSkinByIndex(i);
                     auto const jointsCount = static_cast<uint32_t>(skin.joints.size());
                     mCachedSkinsJoints[i] = reinterpret_cast<JointTransformData *>(mCachedSkinsJointsBlob.ptr + startingJointIndex * sizeof(JointTransformData));
                     mSkins[i].skinStartingIndex = static_cast<int>(startingJointIndex);
@@ -241,6 +238,11 @@ namespace MFA
         }
         mIsInitialized = false;
 
+        if (auto const ptr = mRendererComponent.lock())
+        {
+            ptr->NotifyVariantDestroyed();
+        }
+
         if (auto const ptr = mTransformComponent.lock())
         {
             ptr->UnRegisterChangeListener(mTransformListenerId);
@@ -301,7 +303,7 @@ namespace MFA
         mAnimationTransitionDurationInSec = params.transitionDuration;
         mAnimationRemainingTransitionDurationInSec = params.transitionDuration;
         mPreviousAnimationTimeInSec = mActiveAnimationTimeInSec;
-        mActiveAnimationTimeInSec = params.startTimeOffsetInSec + mEssence->GetGpuModel().model.mesh.GetAnimationByIndex(mActiveAnimationIndex).startTime;
+        mActiveAnimationTimeInSec = params.startTimeOffsetInSec + mMesh.GetAnimationByIndex(mActiveAnimationIndex).startTime;
         mActiveAnimationParams = params;
     }
 
@@ -343,15 +345,13 @@ namespace MFA
     {
         using Animation = AS::Mesh::Animation;
 
-        auto & mesh = mEssence->GetGpuModel().model.mesh;
-
-        if (mesh.GetAnimationsCount() <= 0)
+        if (mMesh.GetAnimationsCount() <= 0)
         {
             return;
         }
 
         {// Active animation
-            auto const & activeAnimation = mMesh->GetAnimationByIndex(mActiveAnimationIndex);
+            auto const & activeAnimation = mMesh.GetAnimationByIndex(mActiveAnimationIndex);
 
             if (isVisible)
             {
@@ -446,7 +446,7 @@ namespace MFA
                 return;
             }
 
-            auto const & previousAnimation = mMesh->GetAnimationByIndex(mPreviousAnimationIndex);
+            auto const & previousAnimation = mMesh.GetAnimationByIndex(mPreviousAnimationIndex);
 
             for (auto const & channel : previousAnimation.channels)
             {
@@ -514,13 +514,11 @@ namespace MFA
 
     void DrawableVariant::computeNodesGlobalTransform()
     {
-        auto const & mesh = mEssence->GetGpuModel().model.mesh;
-
-        auto const rootNodesCount = mMesh->GetRootNodesCount();
+        auto const rootNodesCount = mMesh.GetRootNodesCount();
 
         for (uint32_t i = 0; i < rootNodesCount; ++i)
         {
-            auto & node = mNodes[mesh.GetIndexOfRootNode(i)];
+            auto & node = mNodes[mMesh.GetIndexOfRootNode(i)];
             computeNodeGlobalTransform(node, nullptr, false);
         }
     }
@@ -529,10 +527,10 @@ namespace MFA
 
     void DrawableVariant::updateAllSkinsJoints()
     {
-        auto const skinsCount = mMesh->GetSkinsCount();
+        auto const skinsCount = mMesh.GetSkinsCount();
         if (skinsCount > 0)
         {
-            auto const * skins = mMesh->GetSkinData();
+            auto const * skins = mMesh.GetSkinData();
             MFA_ASSERT(skins != nullptr);
 
             for (uint32_t i = 0; i < skinsCount; ++i)
@@ -572,12 +570,10 @@ namespace MFA
         // TODO We can reduce nodes count for better performance when importing
         if (node.meshNode->hasSubMesh())
         {
-            auto const & mesh = mEssence->GetGpuModel().model.mesh;
-            MFA_ASSERT(static_cast<int>(mesh.GetSubMeshCount()) > node.meshNode->subMeshIndex);
-
+            MFA_ASSERT(static_cast<int>(mMesh.GetSubMeshCount()) > node.meshNode->subMeshIndex);
             drawSubMesh(
                 drawPass,
-                mMesh->GetSubMeshByIndex(node.meshNode->subMeshIndex),
+                mMesh.GetSubMeshByIndex(node.meshNode->subMeshIndex),
                 node,
                 bindFunction
             );
@@ -683,10 +679,10 @@ namespace MFA
 
     void DrawableVariant::OnUI()
     {
-        std::vector<char const *> animationsList{ mMesh->GetAnimationsCount() };
+        std::vector<char const *> animationsList{ mMesh.GetAnimationsCount() };
         for (size_t i = 0; i < animationsList.size(); ++i)
         {
-            animationsList[i] = mMesh->GetAnimationByIndex(static_cast<uint32_t>(i)).name.c_str();
+            animationsList[i] = mMesh.GetAnimationByIndex(static_cast<uint32_t>(i)).name.c_str();
         }
 
         UI::Combo(

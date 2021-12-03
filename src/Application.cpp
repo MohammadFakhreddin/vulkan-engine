@@ -7,6 +7,7 @@
 #include "engine/ui_system/UISystem.hpp"
 #include "engine/job_system/JobSystem.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
+#include "engine/resource_manager/ResourceManager.hpp"
 
 #ifdef __ANDROID__
 #include <android_native_app_glue.h>
@@ -30,6 +31,8 @@ Application::~Application() = default;
 //-------------------------------------------------------------------------------------------------
 
 void Application::Init() {
+
+    RC::Init();
     {// Initializing render frontend
         RF::InitParams params{};
         params.applicationName = "MfaEngine";
@@ -80,6 +83,7 @@ void Application::Shutdown() {
     IM::Shutdown();
     UI::Shutdown();
     RF::Shutdown();
+    RC::Shutdown();
 
     mIsInitialized = false;
 }

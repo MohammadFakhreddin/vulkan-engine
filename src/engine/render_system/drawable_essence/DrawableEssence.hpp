@@ -26,7 +26,7 @@ public:
         int placeholder1;
     };
 
-    explicit DrawableEssence(char const * name, RT::GpuModel const & model_);
+    explicit DrawableEssence(std::shared_ptr<RT::GpuModel> const & gpuModel);
 
     ~DrawableEssence();
     
@@ -39,17 +39,15 @@ public:
     DrawableEssence & operator = (DrawableEssence const &) noexcept = delete;
 
     [[nodiscard]]
-    RT::GpuModel const & GetGpuModel() const;
+    RT::GpuModelId GetId() const;
+
+    [[nodiscard]]
+    RT::GpuModel * GetGpuModel() const;
 
     [[nodiscard]] RT::UniformBufferCollection const & GetPrimitivesBuffer() const noexcept;
 
     [[nodiscard]]
-    uint32_t GetPrimitiveCount() const noexcept {
-        return mPrimitiveCount;
-    }
-
-    [[nodiscard]]
-    std::string const & GetName() const noexcept;
+    uint32_t GetPrimitiveCount() const noexcept;
 
     [[nodiscard]]
     int GetAnimationIndex(char const * name) const noexcept;
@@ -63,13 +61,16 @@ public:
     [[nodiscard]]
     RT::DescriptorSetGroup const & GetDescriptorSetGroup() const;
 
-private:
+    void BindVertexBuffer(RT::CommandRecordState const & recordState) const;
+    void BindIndexBuffer(RT::CommandRecordState const & recordState) const;
+    void BindDescriptorSetGroup(RT::CommandRecordState const & recordState) const;
+    void BindAllRenderRequiredData(RT::CommandRecordState const & recordState) const;
 
-    std::string mName {};
+private:
 
     RT::UniformBufferCollection mPrimitivesBuffer;
 
-    RT::GpuModel const & mGpuModel;         // TODO: It should be shared ptr instead
+    std::shared_ptr<RT::GpuModel> const mGpuModel;
     
     uint32_t mPrimitiveCount = 0;
 

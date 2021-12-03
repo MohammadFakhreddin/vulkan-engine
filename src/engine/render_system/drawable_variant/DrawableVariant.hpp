@@ -197,9 +197,10 @@ private:
 private:
 
     static RT::DrawableVariantId NextInstanceId;
-    RT::DrawableVariantId mId = 0;
 
-    DrawableEssence const * mEssence = nullptr;
+    RT::DrawableVariantId mId;
+    DrawableEssence const * mEssence;
+    AS::Mesh const & mMesh; 
     
     RT::UniformBufferCollection mSkinsJointsBuffer {};
     
@@ -229,8 +230,6 @@ private:
     bool mIsAnimationFinished = false;
 
     bool mIsInitialized = false;
-
-    AS::Mesh const * mMesh = nullptr; 
 
     Entity * mEntity = nullptr;
 

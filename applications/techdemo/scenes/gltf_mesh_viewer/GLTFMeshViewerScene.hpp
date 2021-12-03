@@ -44,7 +44,7 @@ private:
     
     struct ModelRenderRequiredData {
         bool isLoaded = false;
-        MFA::RT::GpuModel gpuModel {};
+        std::shared_ptr<MFA::RT::GpuModel> gpuModel {};
         std::string displayName {};
         std::string address {};
         MFA::Entity * entity = nullptr;
@@ -82,8 +82,6 @@ private:
 
     void createModel(ModelRenderRequiredData & renderRequiredData);
 
-    void destroyModels();
-
     static constexpr float Z_NEAR = 0.1f;
     static constexpr float Z_FAR = 3000.0f;
 
@@ -118,7 +116,7 @@ private:
 
     bool mIsLightVisible = true;
 
-    MFA::RT::GpuModel mPointLightModel {};
+    std::shared_ptr<MFA::RT::GpuModel> mPointLightModel {};
 
     std::weak_ptr<MFA::TransformComponent> mPointLightTransform {};
     std::weak_ptr<MFA::ColorComponent> mPointLightColor {};

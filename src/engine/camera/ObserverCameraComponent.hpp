@@ -12,7 +12,11 @@ namespace MFA
     {
     public:
 
-        MFA_COMPONENT_PROPS(ObserverCameraComponent)
+        MFA_COMPONENT_PROPS(
+            ObserverCameraComponent,
+            FamilyType::CameraComponent,
+            EventTypes::InitEvent | EventTypes::UpdateEvent | EventTypes::ShutdownEvent
+        )
         
         explicit ObserverCameraComponent(
             float fieldOfView,

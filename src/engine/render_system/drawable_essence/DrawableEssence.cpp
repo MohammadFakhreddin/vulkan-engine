@@ -4,19 +4,19 @@
 #include "engine/BedrockMemory.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/drawable_variant/DrawableVariant.hpp"
+#include "engine/render_system/RenderTypesFWD.hpp"
 
 //-------------------------------------------------------------------------------------------------
 
 // We need other overrides for easier use as well
-MFA::DrawableEssence::DrawableEssence(char const * name, RT::GpuModel const & model_)
-    : mName(name)
-    , mGpuModel(model_)
+MFA::DrawableEssence::DrawableEssence(std::shared_ptr<RT::GpuModel> const & gpuModel)
+    : mGpuModel(gpuModel)
 {
-    MFA_ASSERT(mName.empty() == false);
-    MFA_ASSERT(mGpuModel.valid);
-    MFA_ASSERT(mGpuModel.model.mesh.IsValid());
+    MFA_ASSERT(mGpuModel != nullptr);
+    MFA_ASSERT(mGpuModel->valid);
+    MFA_ASSERT(mGpuModel->model.mesh.IsValid());
     
-    auto & mesh = mGpuModel.model.mesh;
+    auto & mesh = mGpuModel->model.mesh;
 
     {// PrimitiveCount
         mPrimitiveCount = 0;
@@ -78,8 +78,15 @@ MFA::DrawableEssence::~DrawableEssence() {
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RT::GpuModel const & MFA::DrawableEssence::GetGpuModel() const {
-    return mGpuModel;
+MFA::RenderTypes::GpuModelId MFA::DrawableEssence::GetId() const
+{
+    return mGpuModel->id;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RT::GpuModel * MFA::DrawableEssence::GetGpuModel() const {
+    return mGpuModel.get();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -90,8 +97,9 @@ MFA::RT::UniformBufferCollection const & MFA::DrawableEssence::GetPrimitivesBuff
 
 //-------------------------------------------------------------------------------------------------
 
-std::string const & MFA::DrawableEssence::GetName() const noexcept {
-    return mName;
+uint32_t MFA::DrawableEssence::GetPrimitiveCount() const noexcept
+{
+    return mPrimitiveCount;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -108,9 +116,9 @@ int MFA::DrawableEssence::GetAnimationIndex(char const * name) const noexcept {
 
   
 MFA::RT::DescriptorSetGroup const & MFA::DrawableEssence::CreateDescriptorSetGroup(
-    VkDescriptorPool descriptorPool,
+    VkDescriptorPool const descriptorPool,
     uint32_t const descriptorSetCount,
-    VkDescriptorSetLayout descriptorSetLayout
+    VkDescriptorSetLayout const descriptorSetLayout
 )
 {
     MFA_ASSERT(mIsDescriptorSetGroupValid == false);
@@ -129,6 +137,40 @@ MFA::RT::DescriptorSetGroup const & MFA::DrawableEssence::GetDescriptorSetGroup(
 {
     MFA_ASSERT(mIsDescriptorSetGroupValid == true);
     return mDescriptorSetGroup;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::DrawableEssence::BindVertexBuffer(RT::CommandRecordState const & recordState) const
+{
+    RF::BindVertexBuffer(recordState, mGpuModel->meshBuffers.verticesBuffer);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::DrawableEssence::BindIndexBuffer(RT::CommandRecordState const & recordState) const
+{
+    RF::BindIndexBuffer(recordState, mGpuModel->meshBuffers.indicesBuffer);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::DrawableEssence::BindDescriptorSetGroup(RT::CommandRecordState const & recordState) const
+{
+    RF::BindDescriptorSet(
+        recordState,
+        RenderFrontend::DescriptorSetType::PerEssence,
+        mDescriptorSetGroup
+    );
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::DrawableEssence::BindAllRenderRequiredData(RT::CommandRecordState const & recordState) const
+{
+    BindDescriptorSetGroup(recordState);
+    BindVertexBuffer(recordState);
+    BindIndexBuffer(recordState);
 }
 
 //-------------------------------------------------------------------------------------------------

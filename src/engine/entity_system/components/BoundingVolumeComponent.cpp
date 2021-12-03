@@ -17,7 +17,7 @@ void MFA::BoundingVolumeComponent::Update(float const deltaTimeInSec, RT::Comman
 {
     Component::Update(deltaTimeInSec, recordState);
 
-    auto const activeScene = SceneManager::GetActiveScene().lock();
+    auto const activeScene = SceneManager::GetActiveScene();
     if (activeScene == nullptr)
     {
         return;

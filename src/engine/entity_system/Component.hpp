@@ -8,30 +8,34 @@
 namespace MFA
 {
 
-#define MFA_COMPONENT_PROPS(ComponentType)                          \
-public:                                                             \
-std::weak_ptr<ComponentType> SelfPtr()                              \
-{                                                                   \
-    return std::static_pointer_cast<ComponentType>(mSelfPtr.lock());\
-}                                                                   \
-
-#define MFA_COMPONENT_CLASS_TYPE(classType)                         \
-public:                                                             \
-static constexpr int Type = static_cast<int>(classType);            \
-                                                                    \
-[[nodiscard]]                                                       \
-int GetType() override                                              \
-{                                                                   \
-    return Type;                                                    \
-}                                                                   \
-
-#define MFA_COMPONENT_REQUIRED_EVENTS(eventTypes)                   \
-public:                                                             \
-[[nodiscard]]                                                       \
-EventType RequiredEvents() const override                           \
-{                                                                   \
-    return eventTypes;                                              \
-}                                                                   \
+#define MFA_COMPONENT_PROPS(componentName, familyType, eventTypes)      \
+public:                                                                 \
+                                                                        \
+static constexpr char const * ComponentName = #componentName;           \
+static constexpr int FamilyType = static_cast<int>(familyType);         \
+                                                                        \
+std::weak_ptr<componentName> SelfPtr() const                            \
+{                                                                       \
+    return std::static_pointer_cast<componentName>(mSelfPtr.lock());    \
+}                                                                       \
+                                                                        \
+[[nodiscard]]                                                           \
+char const * GetComponentName() override                                \
+{                                                                       \
+    return ComponentName;                                               \
+}                                                                       \
+                                                                        \
+[[nodiscard]]                                                           \
+int GetFamilyType() override                                            \
+{                                                                       \
+    return FamilyType;                                                  \
+}                                                                       \
+                                                                        \
+[[nodiscard]]                                                           \
+EventType RequiredEvents() const override                               \
+{                                                                       \
+    return eventTypes;                                                  \
+}                                                                       \
 
 class Entity;
 
@@ -63,7 +67,7 @@ public:
         return EventTypes::EmptyEvent;
     }
 
-    enum class ClassType : uint8_t
+    enum class FamilyType : uint8_t
     {
         Invalid,
 
@@ -89,7 +93,9 @@ public:
         Count
     };
 
-    virtual int GetType() = 0;
+    virtual char const * GetComponentName() = 0;
+
+    virtual int GetFamilyType() = 0;
 
     virtual void Init();
 

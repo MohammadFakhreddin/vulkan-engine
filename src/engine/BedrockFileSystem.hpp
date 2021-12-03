@@ -111,3 +111,8 @@ bool Android_Tell(AndroidAssetHandle * file, int64_t & outLocation);
 
 
 }; // MFA::FileSystem
+
+namespace MFA
+{
+    namespace FS = FileSystem;
+}

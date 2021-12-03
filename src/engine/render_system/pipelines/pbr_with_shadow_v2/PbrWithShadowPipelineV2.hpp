@@ -92,7 +92,7 @@ namespace MFA
 
         void OnResize() override;
         
-        std::weak_ptr<DrawableVariant> CreateDrawableVariant(char const * essenceName) override;
+        DrawableVariant * CreateDrawableVariant(RT::GpuModelId id) override;
 
     protected:
 
@@ -170,7 +170,7 @@ namespace MFA
 
         struct OcclusionQueryData
         {
-            std::vector<DrawableVariant *> Variants{};
+            std::vector<std::weak_ptr<DrawableVariant>> Variants {};
             std::vector<uint64_t> Results{};
             VkQueryPool Pool{};
         };

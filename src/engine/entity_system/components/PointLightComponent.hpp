@@ -3,14 +3,13 @@
 #include "ColorComponent.hpp"
 #include "TransformComponent.hpp"
 #include "engine/entity_system/Component.hpp"
-#include "engine/entity_system/Entity.hpp"
 
 #include <vec3.hpp>
 #include <mat4x4.hpp>
 
 namespace MFA {
 
-    class DrawableVariant;
+    class MeshRendererComponent;
     class ColorComponent;
     class TransformComponent;
 
@@ -18,16 +17,18 @@ namespace MFA {
     {
     public:
 
-        MFA_COMPONENT_PROPS(PointLightComponent)
-        MFA_COMPONENT_CLASS_TYPE(ClassType::PointLightComponent)
-        MFA_COMPONENT_REQUIRED_EVENTS(EventTypes::InitEvent | EventTypes::ShutdownEvent)
+        MFA_COMPONENT_PROPS(
+            PointLightComponent,
+            FamilyType::PointLightComponent,
+            EventTypes::InitEvent | EventTypes::ShutdownEvent
+        )
 
         explicit PointLightComponent(
             float radius,
             float maxDistance,
             float projectionNearDistance,
             float projectionFarDistance,
-            std::weak_ptr<DrawableVariant> attachedVariant = {}         // Optional: Use this parameter only if you want the light to be visible if a certain mesh is visible
+            std::weak_ptr<MeshRendererComponent> attachedMesh = {}         // Optional: Use this parameter only if you want the light to be visible if a certain mesh is visible
         );
 
         void Init() override;
@@ -87,7 +88,7 @@ namespace MFA {
         float mLinearAttenuation = 0.0f;
         float mQuadraticAttenuation = 0.0f;
 
-        std::weak_ptr<DrawableVariant> mDrawableVariant {};     // Used for visibility check
+        std::weak_ptr<MeshRendererComponent> mAttachedMesh {};     // Used for visibility check
 
         glm::mat4 mShadowProjectionMatrix {};
 

@@ -10,11 +10,17 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    BasePipeline::EssenceAndItsVariants::EssenceAndItsVariants(
-        char const * name,
-        RT::GpuModel const & model_
-    ) : essence(name, model_)
+    BasePipeline::EssenceAndVariants::EssenceAndVariants() = default;
+
+    //-------------------------------------------------------------------------------------------------
+
+    BasePipeline::EssenceAndVariants::EssenceAndVariants(std::shared_ptr<RT::GpuModel> const & gpuModel)
+        : Essence(std::make_unique<DrawableEssence>(gpuModel))
     {}
+
+    //-------------------------------------------------------------------------------------------------
+
+    BasePipeline::EssenceAndVariants::~EssenceAndVariants() = default;
 
     //-------------------------------------------------------------------------------------------------
 
@@ -36,10 +42,10 @@ namespace MFA
         {
             JS::AssignTask(threadNumber, [this, &drawPass, deltaTime, threadNumber, availableThreadCount]()->void
             {
-                for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mVariantsRef.size()); i += availableThreadCount)
+                for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mAllVariantsList.size()); i += availableThreadCount)
                 {
-                    MFA_ASSERT(mVariantsRef[i] != nullptr);
-                    mVariantsRef[i]->Update(deltaTime, drawPass);
+                    MFA_ASSERT(mAllVariantsList[i] != nullptr);
+                    mAllVariantsList[i]->Update(deltaTime, drawPass);
                 }
             });
         }
@@ -58,96 +64,105 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::CreateDrawableEssence(
-        char const * essenceName,
-        RT::GpuModel const & gpuModel
-    )
+    void BasePipeline::CreateDrawableEssence(std::shared_ptr<RT::GpuModel> const & gpuModel)
     {
-        MFA_ASSERT(essenceName != nullptr);
-        MFA_ASSERT(strlen(essenceName) > 0);
-        MFA_ASSERT(mEssenceAndVariantsMap.find(essenceName) == mEssenceAndVariantsMap.end());
+        if(MFA_VERIFY(mEssenceAndVariantsMap.find(gpuModel->id) == mEssenceAndVariantsMap.end()) == false)
+        {
+            return;
+        }
 
-        auto essenceAndVariants = std::make_unique<EssenceAndItsVariants>(essenceName, gpuModel);
-
-        internalCreateDrawableEssence(essenceAndVariants->essence);
-
-        mEssenceAndVariantsMap[essenceName] = std::move(essenceAndVariants);
+        EssenceAndVariants essenceAndVariants {gpuModel};
+        internalCreateDrawableEssence(*essenceAndVariants.Essence);
+        mEssenceAndVariantsMap[gpuModel->id] = std::move(essenceAndVariants);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::DestroyDrawableEssence(char const * essenceName)
+    void BasePipeline::DestroyDrawableEssence(RT::GpuModelId const id)
     {
-        MFA_ASSERT(essenceName != nullptr);
-        MFA_ASSERT(strlen(essenceName) > 0);
-        auto const findResult = mEssenceAndVariantsMap.find(essenceName);
+        auto const findResult = mEssenceAndVariantsMap.find(id);
         if (MFA_VERIFY(findResult != mEssenceAndVariantsMap.end()) == false)
         {
             return;
         }
-        for (auto & variant : findResult->second->variants)
+        for (auto & variant : findResult->second.Variants)
         {
-            RemoveDrawableVariant(variant.get());
+            RemoveDrawableVariant(*variant);
         }
         mEssenceAndVariantsMap.erase(findResult);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    std::weak_ptr<DrawableVariant> BasePipeline::CreateDrawableVariant(char const * essenceName)
+    void BasePipeline::DestroyDrawableEssence(RT::GpuModel const & gpuModel)
     {
-        MFA_ASSERT(essenceName != nullptr);
-        MFA_ASSERT(strlen(essenceName) > 0);
-
-        auto const findResult = mEssenceAndVariantsMap.find(essenceName);
-        MFA_ASSERT(findResult != mEssenceAndVariantsMap.end());
-
-        auto & variantsList = findResult->second->variants;
-
-        auto const variantSharedPtr = std::make_shared<DrawableVariant>(findResult->second->essence);
-
-        variantsList.emplace_back(variantSharedPtr);
-
-        std::weak_ptr variantWeakPtr = variantSharedPtr;
-
-        mVariantsRef.emplace_back(variantSharedPtr.get());
-
-        return variantWeakPtr;
+        MFA_ASSERT(gpuModel.valid);
+        DestroyDrawableEssence(gpuModel.id);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::RemoveDrawableVariant(DrawableVariant * variant)
+    DrawableVariant * BasePipeline::CreateDrawableVariant(RT::GpuModel const & gpuModel)
     {
-        MFA_ASSERT(variant != nullptr);
+        MFA_ASSERT(gpuModel.valid);
+        return CreateDrawableVariant(gpuModel.id);
+    }
 
-        auto const findResult = mEssenceAndVariantsMap.find(variant->GetEssence()->GetName());
+    //-------------------------------------------------------------------------------------------------
+
+    DrawableVariant * BasePipeline::CreateDrawableVariant(RT::GpuModelId const id)
+    {
+        auto const findResult = mEssenceAndVariantsMap.find(id);
         MFA_ASSERT(findResult != mEssenceAndVariantsMap.end());
 
-        bool foundInVariantsRef = false;
-        for (int i = static_cast<int>(mVariantsRef.size()) - 1; i >= 0; --i)
-        {
-            MFA_ASSERT(mVariantsRef[i] != nullptr);
-            if (mVariantsRef[i] == variant)
+        auto & variantsList = findResult->second.Variants;
+        variantsList.emplace_back(std::make_unique<DrawableVariant>(*findResult->second.Essence));
+
+        auto * newVariant = variantsList.back().get();
+        MFA_ASSERT(newVariant != nullptr);
+
+        mAllVariantsList.emplace_back(newVariant);
+        return newVariant;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void BasePipeline::RemoveDrawableVariant(DrawableVariant & variant)
+    {
+        {// Removing from all variants list
+            bool foundInAllVariantsList = false;
+            for (int i = static_cast<int>(mAllVariantsList.size()) - 1; i >= 0; --i)
             {
-                mVariantsRef.erase(mVariantsRef.begin() + i);
-                foundInVariantsRef = true;
-                break;
+                MFA_ASSERT(mAllVariantsList[i] != nullptr);
+                if (mAllVariantsList[i]->GetId() == variant.GetId())
+                {
+                    std::iter_swap(
+                        mAllVariantsList.begin() + i,
+                        mAllVariantsList.begin() +
+                            static_cast<int>(mAllVariantsList.size()) - 1
+                    );
+                    mAllVariantsList.pop_back();
+
+                    foundInAllVariantsList = true;
+                    break;
+                }
             }
+            MFA_ASSERT(foundInAllVariantsList == true);
         }
-        MFA_ASSERT(foundInVariantsRef == true);
 
-        auto & variants = findResult->second->variants;
-        for (int i = static_cast<int>(variants.size()) - 1; i >= 0; --i)
-        {
-            if (variants[i].get() == variant)
+        {// Removing from essence and variants' list
+            auto const findResult = mEssenceAndVariantsMap.find(variant.GetEssence()->GetId());
+            MFA_ASSERT(findResult != mEssenceAndVariantsMap.end());
+            auto & variants = findResult->second.Variants;
+            for (int i = static_cast<int>(variants.size()) - 1; i >= 0; --i)
             {
-                variant->Shutdown();
-
-                variants[i].reset();
-                variants[i] = variants.back();
-                variants.pop_back();
-                return;
+                if (variants[i]->GetId() == variant.GetId())
+                {
+                    variant.Shutdown();
+                    variants[i] = variants.back();
+                    variants.pop_back();
+                    return;
+                }
             }
         }
 
@@ -167,7 +182,7 @@ namespace MFA
     {
         for (auto const & item : mEssenceAndVariantsMap)
         {
-            for (auto const & variant : item.second->variants)
+            for (auto & variant : item.second.Variants)
             {
                 variant->Shutdown();
             }

@@ -10,11 +10,7 @@ using namespace MFA;
 
 //-------------------------------------------------------------------------------------------------
 
-TechDemoApplication::TechDemoApplication()
-    : Application()
-    , mThirdPersonDemoScene(nullptr)
-    , mGltfMeshViewerScene(nullptr)
-{}
+TechDemoApplication::TechDemoApplication() = default;
 
 //-------------------------------------------------------------------------------------------------
 
@@ -24,11 +20,13 @@ TechDemoApplication::~TechDemoApplication() = default;
 
 void TechDemoApplication::internalInit()
 {
-    mThirdPersonDemoScene = std::make_shared<Demo3rdPersonScene>();
-    mGltfMeshViewerScene = std::make_shared<GLTFMeshViewerScene>();
+    SceneManager::RegisterScene("ThirdPersonDemoScene", []()->std::shared_ptr<Demo3rdPersonScene>{
+        return std::make_shared<Demo3rdPersonScene>();
+    });
 
-    SceneManager::RegisterScene(mThirdPersonDemoScene, "ThirdPersonDemoScene");
-    SceneManager::RegisterScene(mGltfMeshViewerScene, "GLTFMeshViewerScene");
+    SceneManager::RegisterScene("GLTFMeshViewerScene", []()->std::shared_ptr<GLTFMeshViewerScene>{
+        return std::make_shared<GLTFMeshViewerScene>();
+    });
     
     SceneManager::SetActiveScene("ThirdPersonDemoScene");
 

@@ -3,12 +3,11 @@
 #include "Entity.hpp"
 #include "engine/ui_system/UISystem.hpp"
 #include "engine/render_system/RenderTypes.hpp"
+#include "engine/scene_manager/Scene.hpp"
+#include "engine/scene_manager/SceneManager.hpp"
 
 #include <vector>
 #include <memory>
-
-#include "engine/scene_manager/Scene.hpp"
-#include "engine/scene_manager/SceneManager.hpp"
 
 // TODO This class will need optimization in future
 
@@ -49,12 +48,14 @@ void OnUI()
 {
     UI::BeginWindow("Entity System");
     UI::Text("Entities:");
-    auto const & activeScene = SceneManager::GetActiveScene();
-    if (auto const activeScenePtr = activeScene.lock())
+
+    auto const * activeScene = SceneManager::GetActiveScene();
+    if (activeScene != nullptr)
     {
-        auto * rootEntity = activeScenePtr->GetRootEntity();
+        auto * rootEntity = activeScene->GetRootEntity();
         rootEntity->OnUI();
     }
+
     UI::EndWindow();
 }
 
@@ -71,17 +72,17 @@ void Shutdown()
 
 //-------------------------------------------------------------------------------------------------
 
-int SubscribeForUpdateEvent(std::function<void(float, RT::CommandRecordState const & commandRecord)> const & listener)
-{
-    return state->updateSignal.Register(listener);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-bool UnSubscribeFromUpdateEvent(int const listenerId)
-{
-    return state->updateSignal.UnRegister(listenerId);
-}
+//int SubscribeForUpdateEvent(UpdateFunction const & listener)
+//{
+//    return state->updateSignal.Register(listener);
+//}
+//
+////-------------------------------------------------------------------------------------------------
+//
+//bool UnSubscribeFromUpdateEvent(int const listenerId)
+//{
+//    return state->updateSignal.UnRegister(listenerId);
+//}
 
 //-------------------------------------------------------------------------------------------------
 
@@ -107,6 +108,7 @@ void InitEntity(Entity * entity)
 void UpdateEntity(Entity * entity)
 {
     MFA_ASSERT(entity != nullptr);
+    MFA_ASSERT(entity->mIsInitialized == true);
     if (entity->NeedUpdateEvent()) {
         entity->mUpdateListenerId = state->updateSignal.Register([entity](
             float const deltaTime,

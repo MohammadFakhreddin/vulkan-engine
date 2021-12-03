@@ -11,26 +11,25 @@ namespace MFA
     {
     public:
 
-        MFA_COMPONENT_PROPS(MeshRendererComponent)
-        MFA_COMPONENT_CLASS_TYPE(ClassType::MeshRendererComponent)
-        MFA_COMPONENT_REQUIRED_EVENTS(EventTypes::InitEvent | EventTypes::ShutdownEvent)
-    
-        explicit MeshRendererComponent(BasePipeline & pipeline, char const * essenceName);
-        
+        MFA_COMPONENT_PROPS(
+            MeshRendererComponent,
+            FamilyType::MeshRendererComponent,
+            EventTypes::InitEvent | EventTypes::ShutdownEvent
+        )
+
+        explicit MeshRendererComponent(BasePipeline & pipeline, RT::GpuModelId id);
+        explicit MeshRendererComponent(BasePipeline & pipeline, RT::GpuModel const & gpuModel);
+
         void Init() override;
 
-        void Shutdown() override;
+        [[nodiscard]]
+        DrawableVariant const * GetVariant() const;
 
         [[nodiscard]]
-        std::weak_ptr<DrawableVariant> const & GetVariant() const;
-       
+        DrawableVariant * GetVariant();
+
         void OnUI() override;
-
-    private:
-
-        BasePipeline * mPipeline = nullptr;
-        std::weak_ptr<DrawableVariant> mVariant {};
-
+    
     };
 
 }

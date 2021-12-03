@@ -15,6 +15,7 @@
 #include "engine/entity_system/components/TransformComponent.hpp"
 #include "engine/ui_system/UISystem.hpp"
 #include "engine/entity_system/components/PointLightComponent.hpp"
+#include "engine/resource_manager/ResourceManager.hpp"
 
 using namespace MFA;
 
@@ -57,7 +58,7 @@ void GLTFMeshViewerScene::Init() {
         }
         {
             ModelRenderRequiredData params {};
-            params.gpuModel = {};
+            params.gpuModel = nullptr;
             params.displayName = "War-craft soldier";
             Path::Asset("models/warcraft_3_alliance_footmanfanmade/scene.gltf", params.address);
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {0.0f, -5.926f, -180.0f});
@@ -149,9 +150,9 @@ void GLTFMeshViewerScene::Init() {
     mPbrPipeline.Init(&mSamplerGroup, &mErrorTexture);
 
     {// Point light
-        auto cpuModel = MFA::ShapeGenerator::Sphere();
-        mPointLightModel = RF::CreateGpuModel(cpuModel);
-        mPointLightPipeline.CreateDrawableEssence("Sphere", mPointLightModel);
+        auto cpuModel = ShapeGenerator::Sphere();
+        mPointLightModel = RC::Assign(cpuModel, "Sphere");
+        mPointLightPipeline.CreateDrawableEssence(mPointLightModel);
 
         auto * entity = EntitySystem::CreateEntity("PointLight", GetRootEntity());
 
@@ -170,7 +171,7 @@ void GLTFMeshViewerScene::Init() {
 
         mPointLightTransform = transformComponent;
 
-        entity->AddComponent<MeshRendererComponent>(mPointLightPipeline, "Sphere");
+        entity->AddComponent<MeshRendererComponent>(mPointLightPipeline, mPointLightModel->id);
 
         entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
 
@@ -296,10 +297,7 @@ void GLTFMeshViewerScene::Shutdown() {
 
     UI::UnRegister(mUIRegisterId);
 
-    mPbrPipeline.Shutdown();
-    mPointLightPipeline.Shutdown();
     RF::DestroySampler(mSamplerGroup);
-    destroyModels();
     RF::DestroyTexture(mErrorTexture);
     Importer::FreeTexture(mErrorTexture.cpuTexture());
 }
@@ -314,9 +312,8 @@ void GLTFMeshViewerScene::OnResize() {
 //-------------------------------------------------------------------------------------------------
 
 void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredData) {
-    auto cpuModel = Importer::ImportGLTF(renderRequiredData.address.c_str());
-    renderRequiredData.gpuModel = RF::CreateGpuModel(cpuModel);
-    mPbrPipeline.CreateDrawableEssence(renderRequiredData.displayName.c_str(), renderRequiredData.gpuModel);
+    renderRequiredData.gpuModel = ResourceManager::Acquire(Path::Asset(renderRequiredData.address.c_str()).c_str());
+    mPbrPipeline.CreateDrawableEssence(renderRequiredData.gpuModel);
 
     auto * entity = EntitySystem::CreateEntity(renderRequiredData.displayName.c_str(), GetRootEntity());
     MFA_ASSERT(entity != nullptr);
@@ -327,7 +324,7 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
 
     renderRequiredData.meshRendererComponent = entity->AddComponent<MeshRendererComponent>(
         mPbrPipeline,
-        renderRequiredData.displayName.c_str()
+        renderRequiredData.gpuModel->id
     );
     MFA_ASSERT(renderRequiredData.meshRendererComponent.expired() == false);
 
@@ -339,26 +336,6 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
     EntitySystem::InitEntity(entity);
         
     renderRequiredData.isLoaded = true;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void GLTFMeshViewerScene::destroyModels() {
-    // Gpu model
-    if (mModelsRenderData.empty() == false) {
-        for (auto & group : mModelsRenderData) {
-            if (group.isLoaded) {
-                RF::DestroyGpuModel(group.gpuModel);
-                Importer::FreeModel(group.gpuModel.model);
-                group.isLoaded = false;
-            }
-        }
-    }
-
-    // Point light
-    MFA_ASSERT(mPointLightModel.valid);
-    RF::DestroyGpuModel(mPointLightModel);
-    Importer::FreeModel(mPointLightModel.model);
 }
 
 //-------------------------------------------------------------------------------------------------

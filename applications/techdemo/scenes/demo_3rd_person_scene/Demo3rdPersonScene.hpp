@@ -52,12 +52,12 @@ private:
 
     MFA::RT::GpuTexture mErrorTexture {};
 
-    MFA::RT::GpuModel mSoldierGpuModel {};
+    std::shared_ptr<MFA::RT::GpuModel> mSoldierGpuModel {};
     
     std::weak_ptr<MFA::TransformComponent> mPlayerTransform {};
     std::weak_ptr<MFA::MeshRendererComponent> mPlayerMeshRenderer {};
 
-    MFA::RT::GpuModel mMapModel {};
+    std::shared_ptr<MFA::RT::GpuModel> mMapModel {};
 
     std::weak_ptr<MFA::ThirdPersonCameraComponent> mThirdPersonCamera {};
 
@@ -66,8 +66,9 @@ private:
     MFA::PBRWithShadowPipelineV2 mPbrPipeline {this};
     MFA::DebugRendererPipeline mDebugRenderPipeline {};
 
-    MFA::RT::GpuModel mSphereModel {};
-    MFA::RT::GpuModel mCubeModel {};
+    // TODO We need these shape to get initialized on demand
+    std::shared_ptr<MFA::RT::GpuModel> mSphereModel {};
+    std::shared_ptr<MFA::RT::GpuModel> mCubeModel {};
     
     int mUIRecordId = 0;
 

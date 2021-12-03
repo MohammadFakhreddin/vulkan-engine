@@ -197,6 +197,7 @@ add_library("EntitySystem"
     "src/engine/entity_system/components/ColliderComponent.cpp"
 
     "src/engine/entity_system/components/RendererComponent.hpp"
+    "src/engine/entity_system/components/RendererComponent.cpp"
     "src/engine/entity_system/components/MeshRendererComponent.hpp"
     "src/engine/entity_system/components/MeshRendererComponent.cpp"
     "src/engine/entity_system/components/BoundingVolumeRendererComponent.hpp"
@@ -269,6 +270,10 @@ list(
     # Application
     "src/Application.hpp"
     "src/Application.cpp"
+
+    # ResourceManager
+    "src/engine/resource_manager/ResourceManager.hpp"
+    "src/engine/resource_manager/ResourceManager.cpp"
 )
 
 add_library("Engine"
@@ -299,6 +304,10 @@ list(
     "src/tools/Importer.hpp"
     "src/tools/ShapeGenerator.cpp"
     "src/tools/ShapeGenerator.hpp"
+    "src/tools/Prefab.cpp"
+    "src/tools/Prefab.hpp"
+    "src/tools/PrefabFileStorage.cpp"
+    "src/tools/PrefabFileStorage.hpp"
 )
 
 add_library("Tools"
@@ -397,6 +406,9 @@ list(
     "src/libs/tiny_obj_loader/tiny_obj_loader.h"
     #Ktx
     "src/libs/tiny_ktx/tinyktx.h"
+    #nlohmann
+    "src/libs/nlohmann/json_fwd.hpp"
+    "src/libs/nlohmann/json.hpp"
 )
 
 if (NOT ANDROID)

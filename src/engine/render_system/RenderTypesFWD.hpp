@@ -54,6 +54,8 @@ namespace MFA
 
         using DrawableVariantId = uint32_t;
 
+        using GpuModelId = uint32_t;
+
     };
 
     namespace RT = RenderTypes;

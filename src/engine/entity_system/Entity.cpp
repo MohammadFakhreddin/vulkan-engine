@@ -1,5 +1,6 @@
 #include "Entity.hpp"
 
+#include "EntitySystem.hpp"
 #include "engine/ui_system/UISystem.hpp"
 
 namespace MFA
@@ -38,7 +39,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
     // TODO Support for priority between components
-    void Entity::Update(float deltaTimeInSec, RT::CommandRecordState const & recordState) const
+    void Entity::Update(float const deltaTimeInSec, RT::CommandRecordState const & recordState) const
     {
         if (mIsActive == false)
         {
@@ -98,6 +99,7 @@ namespace MFA
         mIsActive = isActive;
         mActivationStatusChangeSignal.Emit(mIsActive);
         // TODO We can register/unregister from entity system update event
+        onActivationStatusChanged();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -151,7 +153,12 @@ namespace MFA
 
     void Entity::OnParentActivationStatusChanged(bool const isActive)
     {
+        if (mIsParentActive == isActive)
+        {
+            return;
+        }
         mIsParentActive = isActive;
+        onActivationStatusChanged();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -225,6 +232,17 @@ namespace MFA
                 component->Shutdown();
             });
         }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Entity::onActivationStatusChanged()
+    {
+        if (mIsInitialized == false)
+        {
+            return;
+        }
+        EntitySystem::UpdateEntity(this);
     }
 
     //-------------------------------------------------------------------------------------------------

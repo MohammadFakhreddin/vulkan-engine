@@ -8,9 +8,6 @@ namespace MFA {
 class CameraComponent : public Component {
 public:
 
-    MFA_COMPONENT_CLASS_TYPE(ClassType::CameraComponent)
-    MFA_COMPONENT_REQUIRED_EVENTS(EventTypes::InitEvent | EventTypes::UpdateEvent | EventTypes::ShutdownEvent)
-
     struct CameraBufferData
     {
         float viewProjection[16];

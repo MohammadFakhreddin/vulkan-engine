@@ -15,6 +15,7 @@
 #include "engine/entity_system/components/PointLightComponent.hpp"
 #include "engine/entity_system/components/DirectionalLightComponent.hpp"
 #include "engine/camera/ObserverCameraComponent.hpp"
+#include "engine/resource_manager/ResourceManager.hpp"
 
 using namespace MFA;
 
@@ -47,12 +48,12 @@ void PrefabEditorScene::Init()
         mDebugRenderPipeline.Init();
 
         auto sphereCpuModel = ShapeGenerator::Sphere();
-        mSphereModel = RF::CreateGpuModel(sphereCpuModel);
-        mDebugRenderPipeline.CreateDrawableEssence("Sphere", mSphereModel);
+        mSphereModel = RC::Assign(sphereCpuModel, "Sphere");
+        mDebugRenderPipeline.CreateDrawableEssence(mSphereModel);
 
         auto cubeCpuModel = ShapeGenerator::Cube();
-        mCubeModel = RF::CreateGpuModel(cubeCpuModel);
-        mDebugRenderPipeline.CreateDrawableEssence("Cube", mCubeModel);
+        mCubeModel = RC::Assign(cubeCpuModel, "Cube");
+        mDebugRenderPipeline.CreateDrawableEssence(mCubeModel);
     }
 
     mUIRecordId = UI::Register([this]()->void { onUI(); });
@@ -136,22 +137,18 @@ void PrefabEditorScene::Shutdown()
 
     UI::UnRegister(mUIRecordId);
 
-    {// Sphere
-        RF::DestroyGpuModel(mSphereModel);
-        Importer::FreeModel(mSphereModel.model);
-    }
-    {// Cube
-        RF::DestroyGpuModel(mCubeModel);
-        Importer::FreeModel(mCubeModel.model);
-    }
-
-    for (int i = static_cast<int>(mLoadedAssets.size()) - 1; i >= 0; --i)
+    /*for (int i = static_cast<int>(mLoadedAssets.size()) - 1; i >= 0; --i)
     {
         destroyAsset(i);
-    }
+    }*/
 
-    mPbrPipeline.Shutdown();
-    mDebugRenderPipeline.Shutdown();
+    //mCubeModel.reset();
+    //mSphereModel.reset();
+
+    //mPbrPipeline.Shutdown();
+    //mDebugRenderPipeline.Shutdown();
+    //mLoadedAssets.clear();
+
     RF::DestroySampler(mSampler);
     RF::DestroyTexture(mErrorTexture);
 }
@@ -168,9 +165,7 @@ void PrefabEditorScene::OnResize()
 
 void PrefabEditorScene::onUI()
 {
-    UI::BeginWindow("Save and load panel");
-    UI::InputText("Prefab name", mPrefabName);
-    UI::EndWindow();
+    saveAndLoadWindow();
     essencesWindow();
     EntitySystem::OnUI();
 }
@@ -213,15 +208,30 @@ void PrefabEditorScene::essencesWindow()
 
 //-------------------------------------------------------------------------------------------------
 
+void PrefabEditorScene::saveAndLoadWindow()
+{
+    UI::BeginWindow("Save and load panel");
+    UI::InputText("Prefab name", mPrefabName);
+    if (UI::TreeNode("Save"))
+    {
+        UI::TreePop();    
+    }
+    if (UI::TreeNode("Load"))
+    {
+        UI::TreePop();
+    }
+    UI::EndWindow();
+}
+
+//-------------------------------------------------------------------------------------------------
+
 bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress)
 {
     MFA_LOG_INFO("Trying to load file with address %s", fileAddress.c_str());
     MFA_ASSERT(fileAddress.empty() == false);
 
-    auto cpuModel = Importer::ImportGLTF(fileAddress.c_str());
-
-    auto gpuModel = RF::CreateGpuModel(cpuModel);
-    if (gpuModel.valid == false)
+    auto gpuModel = ResourceManager::Acquire(fileAddress.c_str());
+    if (gpuModel->valid == false)
     {
         MFA_LOG_WARN("Gltf model is invalid. Failed to create gpu model");
         return false;
@@ -233,7 +243,7 @@ bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress)
         .gpuModel = gpuModel    // TODO We need shared_ptr + weak_ptr
     });
 
-    mPbrPipeline.CreateDrawableEssence(mInputTextEssenceName.c_str(), mLoadedAssets.back().gpuModel);
+    mPbrPipeline.CreateDrawableEssence(gpuModel);
 
     mInputTextEssenceName = "";
 
@@ -245,8 +255,8 @@ bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress)
 void PrefabEditorScene::destroyAsset(int const assetIndex)
 {
     auto & asset = mLoadedAssets[assetIndex];
-    mPbrPipeline.DestroyDrawableEssence(asset.essenceName.c_str());
-    RF::DestroyGpuModel(asset.gpuModel);
+    mPbrPipeline.DestroyDrawableEssence(*asset.gpuModel);
+    asset.gpuModel.reset();
     mLoadedAssets.erase(mLoadedAssets.begin() + assetIndex);
 }
 
@@ -313,7 +323,7 @@ void PrefabEditorScene::entityUI(Entity * entity)
                     }
                     newComponent = entity->AddComponent<MeshRendererComponent>(
                         mPbrPipeline,
-                        mLoadedAssets[mSelectedEssenceIndex].essenceName.c_str()
+                        mLoadedAssets[mSelectedEssenceIndex].gpuModel->id
                     ).lock();
                 }
                 break;
@@ -446,7 +456,7 @@ void PrefabEditorScene::componentUI(Component * component, Entity * entity)
 
 //-------------------------------------------------------------------------------------------------
 
-Entity *  PrefabEditorScene::createPrefabEntity(char const * name, Entity * parent)
+Entity * PrefabEditorScene::createPrefabEntity(char const * name, Entity * parent)
 {
     auto * entity = EntitySystem::CreateEntity(name, parent);
     MFA_ASSERT(entity != nullptr);

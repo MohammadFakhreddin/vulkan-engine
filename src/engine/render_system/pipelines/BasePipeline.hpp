@@ -4,7 +4,6 @@
 #include "engine/render_system/drawable_essence/DrawableEssence.hpp"
 #include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 
-#include <string>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -14,15 +13,14 @@ namespace MFA {
 class BasePipeline {
 private:
 
-    struct EssenceAndItsVariants {
+    struct EssenceAndVariants {
 
-        DrawableEssence essence;
-        std::vector<std::shared_ptr<DrawableVariant>> variants {};
+        std::shared_ptr<DrawableEssence> Essence;
+        std::vector<std::shared_ptr<DrawableVariant>> Variants {};
 
-        explicit EssenceAndItsVariants(
-            char const * name,
-            RT::GpuModel const & model_
-        );
+        explicit EssenceAndVariants();
+        explicit EssenceAndVariants(std::shared_ptr<RT::GpuModel> const & gpuModel);
+        ~EssenceAndVariants();
     };
 
 public:
@@ -51,17 +49,18 @@ public:
         float deltaTime
     );
 
-    void CreateDrawableEssence(
-        char const * essenceName, 
-        RT::GpuModel const & gpuModel
-    );
+    void CreateDrawableEssence(std::shared_ptr<RT::GpuModel> const & gpuModel);
 
     // Editor only function
-    void DestroyDrawableEssence(char const * essenceName);
+    void DestroyDrawableEssence(RT::GpuModelId id);
 
-    virtual std::weak_ptr<DrawableVariant> CreateDrawableVariant(char const * essenceName);
+    void DestroyDrawableEssence(RT::GpuModel const & gpuModel);
 
-    void RemoveDrawableVariant(DrawableVariant * variant);
+    virtual DrawableVariant * CreateDrawableVariant(RT::GpuModel const & gpuModel);
+
+    virtual DrawableVariant * CreateDrawableVariant(RT::GpuModelId id);
+
+    void RemoveDrawableVariant(DrawableVariant & variant);
 
     virtual void OnResize() = 0;
 
@@ -73,12 +72,9 @@ protected:
 
     virtual void internalCreateDrawableEssence(DrawableEssence & essence) {}
 
-    std::unordered_map<std::string, std::unique_ptr<EssenceAndItsVariants>> mEssenceAndVariantsMap;
-
-    std::vector<DrawableVariant *> mVariantsRef {};
-
+    std::unordered_map<RT::GpuModelId, EssenceAndVariants> mEssenceAndVariantsMap;
+    std::vector<DrawableVariant *> mAllVariantsList {};
     VkDescriptorPool mDescriptorPool {};
-
     uint32_t mMaxSets;
 
 };

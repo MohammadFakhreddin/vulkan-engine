@@ -8,6 +8,8 @@
 
 #include <utility>
 
+#include "engine/entity_system/Entity.hpp"
+
 //-------------------------------------------------------------------------------------------------
 
 MFA::PointLightComponent::PointLightComponent(
@@ -15,14 +17,14 @@ MFA::PointLightComponent::PointLightComponent(
     float const maxDistance,
     float const projectionNearDistance,
     float const projectionFarDistance,
-    std::weak_ptr<DrawableVariant> attachedVariant
+    std::weak_ptr<MeshRendererComponent> attachedVariant
 )
     : mRadius(radius)
     , mMaxDistance(maxDistance)
     , mProjectionNearDistance(projectionNearDistance)
     , mProjectionFarDistance(projectionFarDistance)
     , mMaxSquareDistance(maxDistance * maxDistance)
-    , mDrawableVariant(std::move(attachedVariant))
+    , mAttachedMesh(std::move(attachedVariant))
 {
 }
 
@@ -41,7 +43,7 @@ void MFA::PointLightComponent::Init()
     });
 
     // Registering point light to active scene
-    auto const activeScene = SceneManager::GetActiveScene().lock();
+    auto const activeScene = SceneManager::GetActiveScene();
     MFA_ASSERT(activeScene != nullptr);
     activeScene->RegisterPointLight(SelfPtr());
     
@@ -127,9 +129,9 @@ bool MFA::PointLightComponent::IsVisible() const
     {
         return false;
     }
-    if (auto const ptr = mDrawableVariant.lock())
+    if (auto const ptr = mAttachedMesh.lock())
     {
-        return ptr->IsVisible();
+        return ptr->GetVariant()->IsVisible();
     }
     return true;
 }

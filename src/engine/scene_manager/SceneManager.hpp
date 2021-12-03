@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <memory>
 
 namespace MFA
@@ -11,9 +12,22 @@ namespace MFA
 namespace MFA::SceneManager
 {
 
+    using CreateSceneFunction = std::function<std::shared_ptr<Scene>()>;
+
     void Init();
     void Shutdown();
-    void RegisterScene(std::weak_ptr<Scene> const & scene, char const * name);
+
+    struct RegisterSceneOptions
+    {
+        bool keepAlive = false;
+    };
+    void RegisterScene(
+        char const * name,
+        CreateSceneFunction const & createSceneFunction,
+        RegisterSceneOptions const & options = {}
+    );
+
+    void SetActiveScene(int nextSceneIndex);
     void SetActiveScene(char const * name);
     void OnNewFrame(float deltaTimeInSec);
     void OnResize();
@@ -21,7 +35,7 @@ namespace MFA::SceneManager
     void OnUI();            // Can be called optionally for general info about the scenes
 
     [[nodiscard]]
-    std::weak_ptr<Scene> const & GetActiveScene();
+    Scene * GetActiveScene();
     // TODO Directional light
     // TODO Point lights
     // TODO Sfx lights

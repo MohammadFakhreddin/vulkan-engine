@@ -7,6 +7,7 @@
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/EntitySystem.hpp"
 #include "engine/ui_system/UISystem.hpp"
+#include "engine/resource_manager/ResourceManager.hpp"
 
 namespace MFA
 {
@@ -14,18 +15,17 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     BoundingVolumeRendererComponent::BoundingVolumeRendererComponent(DebugRendererPipeline & pipeline)
-        : mPipeline(&pipeline)
-        , mVariant(mPipeline->CreateDrawableVariant("Cube"))
-    {
-        MFA_ASSERT(mPipeline != nullptr);
-        MFA_ASSERT(mVariant.expired() == false);
-    }
+        : RendererComponent(
+            pipeline,
+            pipeline.CreateDrawableVariant(*RC::Acquire("Cube", false))
+        )
+    {}
 
     //-------------------------------------------------------------------------------------------------
 
     void BoundingVolumeRendererComponent::Init()
     {
-        Component::Init();
+        RendererComponent::Init();
 
         mBoundingVolumeComponent = GetEntity()->GetComponent<BoundingVolumeComponent>();
 
@@ -38,7 +38,7 @@ namespace MFA
 
         auto * entity = GetEntity();
 
-        mVariant.lock()->Init(entity, SelfPtr(), mChildTransformComponent, mBoundingVolumeComponent);
+        mVariant->Init(entity, SelfPtr(), mChildTransformComponent, mBoundingVolumeComponent);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -48,7 +48,7 @@ namespace MFA
         RT::CommandRecordState const & recordState
     )
     {
-        Component::Update(deltaTimeInSec, recordState);
+        RendererComponent::Update(deltaTimeInSec, recordState);
 
         auto const boundingVolumePtr = mBoundingVolumeComponent.lock();
         if (boundingVolumePtr == nullptr)
@@ -67,17 +67,6 @@ namespace MFA
             childTransformPtr->GetRotation(),
             glm::vec3(centerAndRadius.extend.x, centerAndRadius.extend.y, centerAndRadius.extend.z)
         );
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void BoundingVolumeRendererComponent::Shutdown()
-    {
-        Component::Shutdown();
-        if (auto const variantPtr = mVariant.lock())
-        {
-            mPipeline->RemoveDrawableVariant(variantPtr.get());
-        }
     }
 
     //-------------------------------------------------------------------------------------------------

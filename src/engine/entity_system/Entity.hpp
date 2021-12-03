@@ -40,7 +40,7 @@ namespace MFA
         [[nodiscard]]
         bool NeedUpdateEvent() const noexcept
         {
-            return mUpdateSignal.IsEmpty() == false;
+            return mUpdateSignal.IsEmpty() == false && IsActive();
         }
 
         void Init();
@@ -52,13 +52,13 @@ namespace MFA
         template<typename ComponentClass, typename ... ArgsT>
         std::weak_ptr<ComponentClass> AddComponent(ArgsT && ... args)
         {
-            if (mComponents[ComponentClass::Type] != nullptr)
+            if (mComponents[ComponentClass::FamilyType] != nullptr)
             {
-                MFA_LOG_WARN("Component with type %d alreay exists", ComponentClass::Type);
+                MFA_LOG_WARN("Component with type %d alreay exists", ComponentClass::FamilyType);
                 return {};
             }
             auto sharedPtr = std::make_shared<ComponentClass>(std::forward<ArgsT>(args)...);
-            mComponents[ComponentClass::Type] = sharedPtr;
+            mComponents[ComponentClass::FamilyType] = sharedPtr;
             sharedPtr->mSelfPtr = sharedPtr;
             linkComponent(sharedPtr.get());
             return std::weak_ptr<ComponentClass>(sharedPtr);
@@ -85,7 +85,7 @@ namespace MFA
                 mShutdownSignal.UnRegister(component->mShutdownEventId);
             }
 
-            auto & findResult = mComponents[component->GetType()];
+            auto & findResult = mComponents[component->GetFamilyType()];
             MFA_ASSERT(findResult != nullptr);
             findResult = nullptr;
         }
@@ -94,7 +94,7 @@ namespace MFA
         [[nodiscard]]
         std::weak_ptr<ComponentClass> GetComponent()
         {
-            auto & component = mComponents[ComponentClass::Type];
+            auto & component = mComponents[ComponentClass::FamilyType];
             if (component != nullptr)
             {
                 return std::static_pointer_cast<ComponentClass>(component);
@@ -138,10 +138,12 @@ namespace MFA
 
         void linkComponent(Component * component);
 
+        void onActivationStatusChanged();
+
         std::string mName{};
         Entity * mParent = nullptr;
 
-        std::shared_ptr<Component> mComponents[static_cast<int>(Component::ClassType::Count)]{};
+        std::shared_ptr<Component> mComponents[static_cast<int>(Component::FamilyType::Count)]{};
 
         Signal<> mInitSignal{};
         Signal<float, RT::CommandRecordState const &> mUpdateSignal{};

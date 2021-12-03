@@ -1,6 +1,8 @@
 #include "RenderTypes.hpp"
 
 #include "engine/BedrockAssert.hpp"
+#include "tools/Importer.hpp"
+#include "engine/render_system/RenderFrontend.hpp"
 
 //-------------------------------------------------------------------------------------------------
 
@@ -70,6 +72,18 @@ bool MFA::RenderTypes::GpuTexture::isValid() const {
 void MFA::RenderTypes::GpuTexture::revoke() {
     mImageGroup.revoke();
     MFA_VK_MAKE_NULL(mImageView);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RenderTypes::GpuModel::GpuModel() = default;
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RenderTypes::GpuModel::~GpuModel()
+{
+    RF::DestroyGpuModel(*this);
+    Importer::FreeModel(model);
 }
 
 //-------------------------------------------------------------------------------------------------

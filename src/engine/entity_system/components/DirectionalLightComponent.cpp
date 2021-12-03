@@ -33,7 +33,7 @@ void MFA::DirectionalLightComponent::Init()
     });
 
     // Registering directional light to active scene
-    auto const activeScene = SceneManager::GetActiveScene().lock();
+    auto const activeScene = SceneManager::GetActiveScene();
     MFA_ASSERT(activeScene != nullptr);
     activeScene->RegisterDirectionalLight(SelfPtr());
 }

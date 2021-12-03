@@ -13,9 +13,11 @@ namespace MFA
     {
     public:
 
-        MFA_COMPONENT_PROPS(DirectionalLightComponent)
-        MFA_COMPONENT_CLASS_TYPE(ClassType::DirectionalLightComponent)
-        MFA_COMPONENT_REQUIRED_EVENTS(EventTypes::InitEvent | EventTypes::ShutdownEvent)
+        MFA_COMPONENT_PROPS(
+            DirectionalLightComponent,
+            FamilyType::DirectionalLightComponent,
+            EventTypes::InitEvent | EventTypes::ShutdownEvent
+        )
 
         explicit DirectionalLightComponent();
 

@@ -101,7 +101,7 @@ namespace MFA::RenderFrontend
     void DestroySampler(RT::SamplerGroup & samplerGroup);
 
     [[nodiscard]]
-    RT::GpuModel CreateGpuModel(AS::Model & modelAsset);
+    std::shared_ptr<RT::GpuModel> CreateGpuModel(AssetSystem::Model & modelAsset, RT::GpuModelId uniqueId);
 
     void DestroyGpuModel(RT::GpuModel & gpuModel);
 

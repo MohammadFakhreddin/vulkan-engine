@@ -90,12 +90,13 @@ namespace MFA
 
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto & essence = essenceAndVariantList.second->essence;
-            auto & variantsList = essenceAndVariantList.second->variants;
-            RF::BindVertexBuffer(drawPass, essence.GetGpuModel().meshBuffers.verticesBuffer);
-            RF::BindIndexBuffer(drawPass, essence.GetGpuModel().meshBuffers.indicesBuffer);
+            auto & essence = essenceAndVariantList.second.Essence;
+            auto & variantsList = essenceAndVariantList.second.Variants;
 
-            for (auto const & variant : variantsList)
+            essence->BindVertexBuffer(drawPass);
+            essence->BindIndexBuffer(drawPass);
+            
+            for (auto & variant : variantsList)
             {
                 if (variant->IsActive())
                 {
@@ -243,7 +244,7 @@ namespace MFA
         );
 
         // Idea: Maybe we can have active camera buffer inside scene manager
-        auto const activeScene = SceneManager::GetActiveScene().lock();
+        auto const activeScene = SceneManager::GetActiveScene();
         MFA_ASSERT(activeScene != nullptr);
 
         auto const & cameraBufferCollection = activeScene->GetCameraBufferCollection();

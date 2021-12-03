@@ -650,19 +650,24 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::GpuModel CreateGpuModel(AssetSystem::Model & modelAsset)
+    std::shared_ptr<RT::GpuModel> CreateGpuModel(
+        AssetSystem::Model & modelAsset,
+        RT::GpuModelId const uniqueId
+    )
     {
-        RT::GpuModel gpuModel{
-            .valid = true,
-            .meshBuffers = CreateMeshBuffers(modelAsset.mesh),
-            .model = modelAsset,
-        };
+        MFA_ASSERT(modelAsset.mesh.IsValid());
+        auto const gpuModel = std::make_shared<RT::GpuModel>();
+        gpuModel->id = uniqueId;
+        gpuModel->valid = true;
+        gpuModel->meshBuffers = CreateMeshBuffers(modelAsset.mesh);
+        gpuModel->model = modelAsset;
         if (modelAsset.textures.empty() == false)
         {
-            for (auto & texture_asset : modelAsset.textures)
+            for (auto & textureAsset : modelAsset.textures)
             {
-                gpuModel.textures.emplace_back(CreateTexture(texture_asset));
-                MFA_ASSERT(gpuModel.textures.back().isValid());
+                MFA_ASSERT(textureAsset.isValid());
+                gpuModel->textures.emplace_back(CreateTexture(textureAsset));
+                MFA_ASSERT(gpuModel->textures.back().isValid());
             }
         }
         return gpuModel;

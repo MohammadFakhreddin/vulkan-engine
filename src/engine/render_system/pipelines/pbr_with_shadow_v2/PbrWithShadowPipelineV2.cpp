@@ -196,12 +196,12 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    std::weak_ptr<DrawableVariant> PBRWithShadowPipelineV2::CreateDrawableVariant(char const * essenceName)
+    DrawableVariant * PBRWithShadowPipelineV2::CreateDrawableVariant(RT::GpuModelId const id)
     {
-        auto const variant = BasePipeline::CreateDrawableVariant(essenceName).lock();
+        auto * variant = BasePipeline::CreateDrawableVariant(id);
         MFA_ASSERT(variant != nullptr);
 
-        createVariantDescriptorSets(variant.get());
+        createVariantDescriptorSets(variant);
 
         return variant;
     }
@@ -294,7 +294,7 @@ namespace MFA
 
     void PBRWithShadowPipelineV2::createEssenceDescriptorSets(DrawableEssence & essence) const
     {
-        auto const & textures = essence.GetGpuModel().textures;
+        auto const & textures = essence.GetGpuModel()->textures;
 
         auto const descriptorSetGroup = essence.CreateDescriptorSetGroup(
             mDescriptorPool,
@@ -421,7 +421,10 @@ namespace MFA
             uint32_t occlusionCount = 0;
             for (uint32_t i = 0; i < static_cast<uint32_t>(occlusionQueryData.Results.size()); ++i)
             {
-                occlusionQueryData.Variants[i]->SetIsOccluded(occlusionQueryData.Results[i] == 0);
+                if (auto const variant = occlusionQueryData.Variants[i].lock())
+                {
+                    variant->SetIsOccluded(occlusionQueryData.Results[i] == 0);
+                }
                 if (occlusionQueryData.Results[i] == 0)
                 {
                     occlusionCount++;
@@ -449,24 +452,17 @@ namespace MFA
         mDepthPrePass->BeginRenderPass(recordState);
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto & essence = essenceAndVariantList.second->essence;
-            auto & variantsList = essenceAndVariantList.second->variants;
+            auto & essence = essenceAndVariantList.second.Essence;
+            auto & variantsList = essenceAndVariantList.second.Variants;
 
             if (variantsList.empty())
             {
                 continue;
             }
 
-            RF::BindVertexBuffer(recordState, essence.GetGpuModel().meshBuffers.verticesBuffer);
-            RF::BindIndexBuffer(recordState, essence.GetGpuModel().meshBuffers.indicesBuffer);
+            essence->BindAllRenderRequiredData(recordState);
 
-            RF::BindDescriptorSet(
-                recordState,
-                RenderFrontend::DescriptorSetType::PerEssence,
-                essence.GetDescriptorSetGroup()
-            );
-
-            for (auto const & variant : variantsList)
+            for (auto & variant : variantsList)
             {
                 if (variant->IsVisible())
                 {
@@ -522,24 +518,17 @@ namespace MFA
         mDirectionalLightShadowRenderPass->BeginRenderPass(recordState, *mDirectionalLightShadowResources);
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto & essence = essenceAndVariantList.second->essence;
-            auto & variantsList = essenceAndVariantList.second->variants;
+            auto & essence = essenceAndVariantList.second.Essence;
+            auto & variantsList = essenceAndVariantList.second.Variants;
 
             if (variantsList.empty())
             {
                 continue;
             }
 
-            RF::BindVertexBuffer(recordState, essence.GetGpuModel().meshBuffers.verticesBuffer);
-            RF::BindIndexBuffer(recordState, essence.GetGpuModel().meshBuffers.indicesBuffer);
+            essence->BindAllRenderRequiredData(recordState);
 
-            RF::BindDescriptorSet(
-                recordState,
-                RenderFrontend::DescriptorSetType::PerEssence,
-                essence.GetDescriptorSetGroup()
-            );
-
-            for (auto const & variant : variantsList)
+            for (auto & variant : variantsList)
             {
                 if (variant->IsVisible())
                 {
@@ -591,24 +580,17 @@ namespace MFA
         mPointLightShadowRenderPass->BeginRenderPass(recordState, *mPointLightShadowResources);
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto & essence = essenceAndVariantList.second->essence;
-            auto & variantsList = essenceAndVariantList.second->variants;
+            auto & essence = essenceAndVariantList.second.Essence;
+            auto & variantsList = essenceAndVariantList.second.Variants;
 
             if (variantsList.empty())
             {
                 continue;
             }
 
-            RF::BindVertexBuffer(recordState, essence.GetGpuModel().meshBuffers.verticesBuffer);
-            RF::BindIndexBuffer(recordState, essence.GetGpuModel().meshBuffers.indicesBuffer);
+            essence->BindAllRenderRequiredData(recordState);
 
-            RF::BindDescriptorSet(
-                recordState,
-                RenderFrontend::DescriptorSetType::PerEssence,
-                essence.GetDescriptorSetGroup()
-            );
-
-            for (auto const & variant : variantsList)
+            for (auto & variant : variantsList)
             {
                 if (variant->IsVisible())
                 {
@@ -663,24 +645,17 @@ namespace MFA
 
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto & essence = essenceAndVariantList.second->essence;
-            auto & variantsList = essenceAndVariantList.second->variants;
+            auto & essence = essenceAndVariantList.second.Essence;
+            auto & variantsList = essenceAndVariantList.second.Variants;
 
             if (variantsList.empty())
             {
                 continue;
             }
 
-            RF::BindVertexBuffer(recordState, essence.GetGpuModel().meshBuffers.verticesBuffer);
-            RF::BindIndexBuffer(recordState, essence.GetGpuModel().meshBuffers.indicesBuffer);
+            essence->BindAllRenderRequiredData(recordState);
 
-            RF::BindDescriptorSet(
-                recordState,
-                RenderFrontend::DescriptorSetType::PerEssence,
-                essence.GetDescriptorSetGroup()
-            );
-
-            for (auto const & variant : variantsList)
+            for (auto & variant : variantsList)
             {
                 if (variant->IsActive() && variant->IsInFrustum())
                 {
@@ -712,7 +687,8 @@ namespace MFA
 
                     RF::EndQuery(recordState, occlusionQueryData.Pool, static_cast<uint32_t>(occlusionQueryData.Variants.size()));
 
-                    occlusionQueryData.Variants.emplace_back(variant.get());
+                    // What if the variant is destroyed in next frame?
+                    occlusionQueryData.Variants.emplace_back(variant);
                 }
             }
         }
@@ -735,25 +711,17 @@ namespace MFA
 
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto & essence = essenceAndVariantList.second->essence;
-            auto & variantsList = essenceAndVariantList.second->variants;
+            auto & essence = essenceAndVariantList.second.Essence;
+            auto & variantsList = essenceAndVariantList.second.Variants;
 
             if (variantsList.empty())
             {
                 continue;
             }
 
-            RF::BindVertexBuffer(recordState, essence.GetGpuModel().meshBuffers.verticesBuffer);
-            RF::BindIndexBuffer(recordState, essence.GetGpuModel().meshBuffers.indicesBuffer);
+            essence->BindAllRenderRequiredData(recordState);
 
-            RF::BindDescriptorSet(
-                recordState,
-                RenderFrontend::DescriptorSetType::PerEssence,
-                essence.GetDescriptorSetGroup()
-            );
-
-
-            for (auto const & variant : variantsList)
+            for (auto & variant : variantsList)
             {
                 if (variant->IsVisible())
                 {

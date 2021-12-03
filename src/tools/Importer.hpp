@@ -96,8 +96,9 @@ struct RawFile {
 };
 
 [[nodiscard]]
-RawFile ReadRawFile(char const * path);
+RawFile ReadRawFile(char const * path);         // We should use resource manager here
 
 bool FreeRawFile (RawFile * rawFile);
+
 
 }

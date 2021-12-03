@@ -12,10 +12,12 @@ namespace MFA
     {
     public:
 
-        MFA_COMPONENT_PROPS(TransformComponent)
-        MFA_COMPONENT_CLASS_TYPE(ClassType::TransformComponent)
-        MFA_COMPONENT_REQUIRED_EVENTS(EventTypes::InitEvent | EventTypes::ShutdownEvent)
-
+        MFA_COMPONENT_PROPS(
+            TransformComponent,
+            FamilyType::TransformComponent,
+            EventTypes::InitEvent | EventTypes::ShutdownEvent
+        )
+        
         explicit TransformComponent();
 
         void Init() override;

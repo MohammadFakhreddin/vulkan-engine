@@ -14,10 +14,12 @@ namespace MFA::EntitySystem {
     void OnNewFrame(float deltaTimeInSec, RT::CommandRecordState const & recordState);
 
     void OnUI();
-
-    void OnResize();
-
+    
     void Shutdown();
+
+    //using UpdateFunction = std::function<void(float, RT::CommandRecordState const & commandRecord)>;
+    //int SubscribeForUpdateEvent(UpdateFunction const & listener);
+    //bool UnSubscribeFromUpdateEvent(int listenerId);
 
     Entity * CreateEntity(char const * name, Entity * parent = nullptr);
 

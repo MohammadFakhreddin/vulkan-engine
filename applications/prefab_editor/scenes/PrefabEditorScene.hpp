@@ -32,10 +32,13 @@ public:
     void OnResize() override;
 
 private:
+
     void onUI();
 
     void essencesWindow();
-    
+
+    void saveAndLoadWindow();
+
     bool loadSelectedAsset(std::string const & fileAddress);
 
     void destroyAsset(int assetIndex);
@@ -60,8 +63,8 @@ private:
     MFA::PBRWithShadowPipelineV2 mPbrPipeline{ this };
     MFA::DebugRendererPipeline mDebugRenderPipeline{};
 
-    MFA::RT::GpuModel mSphereModel {};
-    MFA::RT::GpuModel mCubeModel {};
+    std::shared_ptr<MFA::RT::GpuModel> mSphereModel {};
+    std::shared_ptr<MFA::RT::GpuModel> mCubeModel {};
 
     int mUIRecordId = 0;
 
@@ -69,7 +72,7 @@ private:
     {
         std::string fileAddress {};
         std::string essenceName {};
-        MFA::RT::GpuModel gpuModel {};
+        std::shared_ptr<MFA::RT::GpuModel> gpuModel {};
     };
     std::vector<Asset> mLoadedAssets {};
 
