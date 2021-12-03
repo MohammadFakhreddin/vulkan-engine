@@ -11,7 +11,7 @@ namespace MFA
 #define MFA_COMPONENT_PROPS(componentName, familyType, eventTypes)      \
 public:                                                                 \
                                                                         \
-static constexpr char const * ComponentName = #componentName;           \
+static constexpr char const * Name = #componentName;                    \
 static constexpr int FamilyType = static_cast<int>(familyType);         \
                                                                         \
 std::weak_ptr<componentName> SelfPtr() const                            \
@@ -20,9 +20,9 @@ std::weak_ptr<componentName> SelfPtr() const                            \
 }                                                                       \
                                                                         \
 [[nodiscard]]                                                           \
-char const * GetComponentName() override                                \
+char const * GetName() override                                         \
 {                                                                       \
-    return ComponentName;                                               \
+    return Name;                                                        \
 }                                                                       \
                                                                         \
 [[nodiscard]]                                                           \
@@ -93,7 +93,7 @@ public:
         Count
     };
 
-    virtual char const * GetComponentName() = 0;
+    virtual char const * GetName() = 0;
 
     virtual int GetFamilyType() = 0;
 

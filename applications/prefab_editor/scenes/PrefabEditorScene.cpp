@@ -15,6 +15,7 @@
 #include "engine/entity_system/components/PointLightComponent.hpp"
 #include "engine/entity_system/components/DirectionalLightComponent.hpp"
 #include "engine/camera/ObserverCameraComponent.hpp"
+#include "engine/camera/ThirdPersonCameraComponent.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
 
 using namespace MFA;
@@ -32,6 +33,18 @@ PrefabEditorScene::~PrefabEditorScene() = default;
 void PrefabEditorScene::Init()
 {
     Scene::Init();
+
+    // Available components
+    mAvailableComponents.emplace_back(TransformComponent::Name);
+    mAvailableComponents.emplace_back(MeshRendererComponent::Name);
+    mAvailableComponents.emplace_back(BoundingVolumeRendererComponent::Name);
+    mAvailableComponents.emplace_back(SphereBoundingVolumeComponent::Name);
+    mAvailableComponents.emplace_back(AxisAlignedBoundingBoxComponent::Name);
+    mAvailableComponents.emplace_back(ColorComponent::Name);
+    mAvailableComponents.emplace_back(ObserverCameraComponent::Name);
+    mAvailableComponents.emplace_back(ThirdPersonCameraComponent::Name);
+    mAvailableComponents.emplace_back(PointLightComponent::Name);
+    mAvailableComponents.emplace_back(DirectionalLightComponent::Name);
 
     {// Error texture
         auto cpuTexture = Importer::CreateErrorTexture();
@@ -298,117 +311,107 @@ void PrefabEditorScene::entityUI(Entity * entity)
                 return;
             }
 
-            // TODO Check if component already exists
+            // TODO I need a dependency graph for both create and remove
 
             std::shared_ptr<Component> newComponent {};
 
-            switch (mSelectedComponentIndex)
+            auto const newComponentName = mAvailableComponents[mSelectedComponentIndex];
+            if (newComponentName == TransformComponent::Name)
             {
-                case 1:     // TransformComponent
+                newComponent = entity->AddComponent<TransformComponent>().lock();
+            }
+            else if (newComponentName == MeshRendererComponent::Name)
+            {
+                if (entity->GetComponent<BoundingVolumeComponent>().expired())
                 {
-                    newComponent = entity->AddComponent<TransformComponent>().lock();
+                    MFA_LOG_WARN("For creating MeshRenderer, BoundingVolumeComponent must exists first!");
+                    return;
                 }
-                break;
-                case 2:     // MeshRendererComponent
+                if (entity->GetComponent<TransformComponent>().expired())
                 {
-                    if (entity->GetComponent<BoundingVolumeComponent>().expired())
-                    {
-                        MFA_LOG_WARN("For creating MeshRenderer, BoundingVolumeComponent must exists first!");
-                        return;
-                    }
-                    if (entity->GetComponent<TransformComponent>().expired())
-                    {
-                        MFA_LOG_WARN("For creating MeshRenderer, TransformComponent must exists first!");
-                        return;
-                    }
-                    newComponent = entity->AddComponent<MeshRendererComponent>(
-                        mPbrPipeline,
-                        mLoadedAssets[mSelectedEssenceIndex].gpuModel->id
-                    ).lock();
+                    MFA_LOG_WARN("For creating MeshRenderer, TransformComponent must exists first!");
+                    return;
                 }
-                break;
-                case 3:     // BoundingVolumeRendererComponent
+                newComponent = entity->AddComponent<MeshRendererComponent>(
+                    mPbrPipeline,
+                    mLoadedAssets[mSelectedEssenceIndex].gpuModel->id
+                ).lock();
+            }
+            else if (newComponentName == BoundingVolumeRendererComponent::Name)
+            {
+                if (entity->GetComponent<BoundingVolumeComponent>().expired())
                 {
-                    if (entity->GetComponent<BoundingVolumeComponent>().expired())
-                    {
-                        MFA_LOG_WARN("For creating BoundingVolumeRendererComponent, BoundingVolumeComponent must exists first!");
-                        return;
-                    }
-                    if (entity->GetComponent<ColorComponent>().expired())
-                    {
-                        MFA_LOG_WARN("For creating BoundingVolumeRendererComponent, ColorComponent must exists first!");
-                        return;
-                    }
-                    newComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline).lock();
+                    MFA_LOG_WARN("For creating BoundingVolumeRendererComponent, BoundingVolumeComponent must exists first!");
+                    return;
                 }
-                break;
-                case 4:     // SphereBoundingVolumeComponent
+                if (entity->GetComponent<ColorComponent>().expired())
                 {
-                    newComponent = entity->AddComponent<SphereBoundingVolumeComponent>(1.0f).lock();
+                    MFA_LOG_WARN("For creating BoundingVolumeRendererComponent, ColorComponent must exists first!");
+                    return;
                 }
-                break;
-                case 5:     // AxisAlignedBoundingBoxes
+                newComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline).lock();
+            }
+            else if (newComponentName == SphereBoundingVolumeComponent::Name)
+            {
+                newComponent = entity->AddComponent<SphereBoundingVolumeComponent>(1.0f).lock();
+            }
+            else if (newComponentName == AxisAlignedBoundingBoxComponent::Name)
+            {
+                newComponent = entity->AddComponent<AxisAlignedBoundingBoxComponent>(
+                    glm::vec3(0.0f, 0.0f, 0.0f),
+                    glm::vec3(1.0f, 1.0f, 1.0f)
+                ).lock();
+            }
+            else if (newComponentName == ColorComponent::Name)
+            {
+                newComponent = entity->AddComponent<ColorComponent>(glm::vec3(1.0f, 0.0f, 0.0f)).lock();
+            }
+            else if (newComponentName == ObserverCameraComponent::Name)
+            {   // I should delete options of creating components that creating them is unhelpful
+                MFA_LOG_WARN("ObserverCameraComponent will not be supported");
+            }
+            else if (newComponentName == ThirdPersonCameraComponent::Name)
+            {
+                MFA_LOG_WARN("ThirdPersonCamera is not supported yet");
+            }
+            else if (newComponentName == PointLightComponent::Name)
+            {
+                if (entity->GetComponent<ColorComponent>().expired())
                 {
-                    newComponent = entity->AddComponent<AxisAlignedBoundingBoxComponent>(
-                        glm::vec3(0.0f, 0.0f, 0.0f),
-                        glm::vec3(1.0f, 1.0f, 1.0f)
-                    ).lock();
+                    MFA_LOG_WARN("For creating a PointLightComponent, the ColorComponent must exists first!");
+                    return;
                 }
-                break;
-                case 6:     // ColorComponent
+                if (entity->GetComponent<TransformComponent>().expired())
                 {
-                    newComponent = entity->AddComponent<ColorComponent>(glm::vec3(1.0f, 0.0f, 0.0f)).lock();
+                    MFA_LOG_WARN("For creating a PointLightComponent, the TransformComponent must exists first!");
+                    return;
                 }
-                break;
-                case 7:     // ObserverCameraComponent
+                newComponent = entity->AddComponent<PointLightComponent>(
+                    1.0f,
+                    100.0f,
+                    Z_NEAR,
+                    Z_FAR
+                ).lock();
+                // What should we do for attached variant? I think it is not possible at the moment
+            }
+            else if (newComponentName == DirectionalLightComponent::Name)
+            {
+                MFA_LOG_WARN("Defining directional light is not recomended");
+                /* if (entity->GetComponent<ColorComponent>().expired())
                 {
-                    MFA_LOG_WARN("ObserverCameraComponent is not supported yet");
+                    MFA_LOG_WARN("For creating a DirectionalLightComponent, the ColorComponent must exists first!");
+                    return;
                 }
-                break;
-                case 8:     // ThirdPersonCamera
+                if (entity->GetComponent<TransformComponent>().expired())
                 {
-                    MFA_LOG_WARN("ThirdPersonCamera is not supported yet");
+                    MFA_LOG_WARN("For creating a DirectionalLightComponent, the TransformComponent must exists first!");
+                    return;
                 }
-                break;
-                case 9:     // PointLightComponent
-                {
-                    if (entity->GetComponent<ColorComponent>().expired())
-                    {
-                        MFA_LOG_WARN("For creating a PointLightComponent, the ColorComponent must exists first!");
-                        return;
-                    }
-                    if (entity->GetComponent<TransformComponent>().expired())
-                    {
-                        MFA_LOG_WARN("For creating a PointLightComponent, the TransformComponent must exists first!");
-                        return;
-                    }
-                    newComponent = entity->AddComponent<PointLightComponent>(
-                        1.0f,
-                        100.0f,
-                        Z_NEAR,
-                        Z_FAR
-                    ).lock();
-                    // What should we do for attached variant? I think it is not possible at the moment
-                }
-                break;
-                case 10:    // DirectionalLightComponent
-                {
-                    MFA_LOG_WARN("Defining directional light is not recomended");
- /*                   if (entity->GetComponent<ColorComponent>().expired())
-                    {
-                        MFA_LOG_WARN("For creating a DirectionalLightComponent, the ColorComponent must exists first!");
-                        return;
-                    }
-                    if (entity->GetComponent<TransformComponent>().expired())
-                    {
-                        MFA_LOG_WARN("For creating a DirectionalLightComponent, the TransformComponent must exists first!");
-                        return;
-                    }
-                    newComponent = entity->AddComponent<DirectionalLightComponent>().lock();*/
-                }
-                break;
-                default:
-                    MFA_LOG_WARN("Unhandled component type detected! %d", mSelectedComponentIndex);
+                newComponent = entity->AddComponent<DirectionalLightComponent>().lock();*/
+            }
+            else
+            {
+                MFA_LOG_WARN("Unhandled component type detected! %d", mSelectedComponentIndex);
             }
 
             if (newComponent == nullptr)

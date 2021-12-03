@@ -76,19 +76,7 @@ private:
     };
     std::vector<Asset> mLoadedAssets {};
 
-    std::vector<std::string> mAvailableComponents {
-        "Invalid",
-        "TransformComponent",
-        "MeshRendererComponent",
-        "BoundingVolumeRendererComponent",
-        "SphereBoundingVolumeComponent",
-        "AxisAlignedBoundingBoxes",
-        "ColorComponent",
-        "ObserverCameraComponent",
-        "ThirdPersonCamera",
-        "PointLightComponent",
-        "DirectionalLightComponent"
-    };
+    std::vector<std::string> mAvailableComponents {"Invalid"};
 
     // Input variables
     std::string mInputTextEssenceName = "";
