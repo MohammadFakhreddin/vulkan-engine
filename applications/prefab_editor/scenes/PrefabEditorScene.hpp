@@ -47,6 +47,10 @@ private:
 
     void componentUI(MFA::Component * component, MFA::Entity * entity);
 
+    void prepareDependencyLists();
+
+    void prepareCreateComponentInstructionMap();
+
     MFA::Entity * createPrefabEntity(char const * name, MFA::Entity * parent);
 
     static constexpr float Z_NEAR = 0.1f;
@@ -77,11 +81,20 @@ private:
     std::vector<Asset> mLoadedAssets {};
 
     std::vector<std::string> mAvailableComponents {"Invalid"};
+    std::unordered_map<int, std::vector<int>> mComponentDependencies {};
+    std::unordered_map<int, std::vector<int>> mComponentsDependents {};
+
+    struct CreateComponentInstruction
+    {
+        int familyType = -1;
+        std::function<std::shared_ptr<MFA::Component>(MFA::Entity * entity)> function {};
+    };
+    std::unordered_map<std::string, CreateComponentInstruction> mCreateComponentInstructionMap {};
 
     // Input variables
-    std::string mInputTextEssenceName = "";
+    std::string mInputTextEssenceName {};
     int mSelectedComponentIndex = 0;
     int mSelectedEssenceIndex = 0;
-    std::string mInputChildEntityName = "";
+    std::string mInputChildEntityName {};
 
 };

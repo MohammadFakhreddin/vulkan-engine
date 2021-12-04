@@ -12,7 +12,7 @@ namespace MFA
 {
 
     //-------------------------------------------------------------------------------------------------
-
+    // TODO We should read position from transform component
     ObserverCameraComponent::ObserverCameraComponent(
         float const fieldOfView,
         float const nearDistance,

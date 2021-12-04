@@ -15,7 +15,6 @@
 #include "engine/entity_system/components/PointLightComponent.hpp"
 #include "engine/entity_system/components/DirectionalLightComponent.hpp"
 #include "engine/camera/ObserverCameraComponent.hpp"
-#include "engine/camera/ThirdPersonCameraComponent.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
 
 using namespace MFA;
@@ -34,17 +33,8 @@ void PrefabEditorScene::Init()
 {
     Scene::Init();
 
-    // Available components
-    mAvailableComponents.emplace_back(TransformComponent::Name);
-    mAvailableComponents.emplace_back(MeshRendererComponent::Name);
-    mAvailableComponents.emplace_back(BoundingVolumeRendererComponent::Name);
-    mAvailableComponents.emplace_back(SphereBoundingVolumeComponent::Name);
-    mAvailableComponents.emplace_back(AxisAlignedBoundingBoxComponent::Name);
-    mAvailableComponents.emplace_back(ColorComponent::Name);
-    mAvailableComponents.emplace_back(ObserverCameraComponent::Name);
-    mAvailableComponents.emplace_back(ThirdPersonCameraComponent::Name);
-    mAvailableComponents.emplace_back(PointLightComponent::Name);
-    mAvailableComponents.emplace_back(DirectionalLightComponent::Name);
+    prepareDependencyLists();
+    prepareCreateComponentInstructionMap();
 
     {// Error texture
         auto cpuTexture = Importer::CreateErrorTexture();
@@ -84,7 +74,7 @@ void PrefabEditorScene::Init()
         auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
         MFA_ASSERT(colorComponent != nullptr);
         float lightScale = 5.0f;
-        float lightColor[3] {
+        float lightColor[3]{
             1.0f * lightScale,
             1.0f * lightScale,
             1.0f * lightScale
@@ -203,14 +193,16 @@ void PrefabEditorScene::essencesWindow()
     if (UI::TreeNode("Create new essence"))
     {
         UI::InputText("Essence name", mInputTextEssenceName);
-        UI::Button("Create", [this]()->void{
+        UI::Button("Create", [this]()->void
+        {
             std::string fileAddress;
             if (WinApi::TryToPickFile(fileAddress) == false)
             {
                 MFA_LOG_INFO("No valid file address picked!");
                 return;
             }
-            if (loadSelectedAsset(fileAddress) == false) {
+            if (loadSelectedAsset(fileAddress) == false)
+            {
                 return;
             }
         });
@@ -227,7 +219,7 @@ void PrefabEditorScene::saveAndLoadWindow()
     UI::InputText("Prefab name", mPrefabName);
     if (UI::TreeNode("Save"))
     {
-        UI::TreePop();    
+        UI::TreePop();
     }
     if (UI::TreeNode("Load"))
     {
@@ -250,7 +242,7 @@ bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress)
         return false;
     }
 
-    mLoadedAssets.emplace_back(Asset {
+    mLoadedAssets.emplace_back(Asset{
         .fileAddress = fileAddress,
         .essenceName = mInputTextEssenceName,
         .gpuModel = gpuModel    // TODO We need shared_ptr + weak_ptr
@@ -285,23 +277,23 @@ void PrefabEditorScene::entityUI(Entity * entity)
             &mSelectedComponentIndex,
             mAvailableComponents
         );
-        switch(mSelectedComponentIndex)
+        switch (mSelectedComponentIndex)
         {
-            case 2: // MeshRendererComponent
+        case 2: // MeshRendererComponent
+        {
+            std::vector<std::string> essenceNames{};
+            for (auto & asset : mLoadedAssets)
             {
-                std::vector<std::string> essenceNames {};
-                for (auto & asset : mLoadedAssets)
-                {
-                    essenceNames.emplace_back(asset.essenceName);
-                }
-                UI::Combo(
-                    "Essence",
-                    &mSelectedEssenceIndex,
-                    essenceNames
-                );
+                essenceNames.emplace_back(asset.essenceName);
             }
-            break;
-            default:
+            UI::Combo(
+                "Essence",
+                &mSelectedEssenceIndex,
+                essenceNames
+            );
+        }
+        break;
+        default:
             break;
         }
         UI::Button("Add component", [this, entity]()->void
@@ -310,108 +302,40 @@ void PrefabEditorScene::entityUI(Entity * entity)
             {
                 return;
             }
-
-            // TODO I need a dependency graph for both create and remove
-
-            std::shared_ptr<Component> newComponent {};
+            MFA_DEFER{
+                mSelectedComponentIndex = 0;
+            };
 
             auto const newComponentName = mAvailableComponents[mSelectedComponentIndex];
-            if (newComponentName == TransformComponent::Name)
+
+            auto const checkForDependencies = [this, entity, &newComponentName](int const familyType)->bool
             {
-                newComponent = entity->AddComponent<TransformComponent>().lock();
-            }
-            else if (newComponentName == MeshRendererComponent::Name)
-            {
-                if (entity->GetComponent<BoundingVolumeComponent>().expired())
+                auto const findResult = mComponentDependencies.find(familyType);
+                MFA_ASSERT(findResult != mComponentDependencies.end());
+                for (auto const familyId : findResult->second)
                 {
-                    MFA_LOG_WARN("For creating MeshRenderer, BoundingVolumeComponent must exists first!");
-                    return;
+                    auto dependencyComponent = entity->GetComponent(familyId).lock();
+                    if (dependencyComponent == nullptr)
+                    {
+                        MFA_LOG_WARN(
+                            "Cannot create component with name %s because a dependancy does not exists"
+                            , newComponentName.c_str()
+                        );
+                        return false;
+                    }
                 }
-                if (entity->GetComponent<TransformComponent>().expired())
+                return true;
+            };
+
+            std::shared_ptr<Component> newComponent{};
+
+            auto const findCreateInstructionResult = mCreateComponentInstructionMap.find(newComponentName);
+            if (findCreateInstructionResult != mCreateComponentInstructionMap.end())
+            {
+                if (checkForDependencies(findCreateInstructionResult->second.familyType))
                 {
-                    MFA_LOG_WARN("For creating MeshRenderer, TransformComponent must exists first!");
-                    return;
+                    newComponent = findCreateInstructionResult->second.function(entity);
                 }
-                newComponent = entity->AddComponent<MeshRendererComponent>(
-                    mPbrPipeline,
-                    mLoadedAssets[mSelectedEssenceIndex].gpuModel->id
-                ).lock();
-            }
-            else if (newComponentName == BoundingVolumeRendererComponent::Name)
-            {
-                if (entity->GetComponent<BoundingVolumeComponent>().expired())
-                {
-                    MFA_LOG_WARN("For creating BoundingVolumeRendererComponent, BoundingVolumeComponent must exists first!");
-                    return;
-                }
-                if (entity->GetComponent<ColorComponent>().expired())
-                {
-                    MFA_LOG_WARN("For creating BoundingVolumeRendererComponent, ColorComponent must exists first!");
-                    return;
-                }
-                newComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline).lock();
-            }
-            else if (newComponentName == SphereBoundingVolumeComponent::Name)
-            {
-                newComponent = entity->AddComponent<SphereBoundingVolumeComponent>(1.0f).lock();
-            }
-            else if (newComponentName == AxisAlignedBoundingBoxComponent::Name)
-            {
-                newComponent = entity->AddComponent<AxisAlignedBoundingBoxComponent>(
-                    glm::vec3(0.0f, 0.0f, 0.0f),
-                    glm::vec3(1.0f, 1.0f, 1.0f)
-                ).lock();
-            }
-            else if (newComponentName == ColorComponent::Name)
-            {
-                newComponent = entity->AddComponent<ColorComponent>(glm::vec3(1.0f, 0.0f, 0.0f)).lock();
-            }
-            else if (newComponentName == ObserverCameraComponent::Name)
-            {   // I should delete options of creating components that creating them is unhelpful
-                MFA_LOG_WARN("ObserverCameraComponent will not be supported");
-            }
-            else if (newComponentName == ThirdPersonCameraComponent::Name)
-            {
-                MFA_LOG_WARN("ThirdPersonCamera is not supported yet");
-            }
-            else if (newComponentName == PointLightComponent::Name)
-            {
-                if (entity->GetComponent<ColorComponent>().expired())
-                {
-                    MFA_LOG_WARN("For creating a PointLightComponent, the ColorComponent must exists first!");
-                    return;
-                }
-                if (entity->GetComponent<TransformComponent>().expired())
-                {
-                    MFA_LOG_WARN("For creating a PointLightComponent, the TransformComponent must exists first!");
-                    return;
-                }
-                newComponent = entity->AddComponent<PointLightComponent>(
-                    1.0f,
-                    100.0f,
-                    Z_NEAR,
-                    Z_FAR
-                ).lock();
-                // What should we do for attached variant? I think it is not possible at the moment
-            }
-            else if (newComponentName == DirectionalLightComponent::Name)
-            {
-                MFA_LOG_WARN("Defining directional light is not recomended");
-                /* if (entity->GetComponent<ColorComponent>().expired())
-                {
-                    MFA_LOG_WARN("For creating a DirectionalLightComponent, the ColorComponent must exists first!");
-                    return;
-                }
-                if (entity->GetComponent<TransformComponent>().expired())
-                {
-                    MFA_LOG_WARN("For creating a DirectionalLightComponent, the TransformComponent must exists first!");
-                    return;
-                }
-                newComponent = entity->AddComponent<DirectionalLightComponent>().lock();*/
-            }
-            else
-            {
-                MFA_LOG_WARN("Unhandled component type detected! %d", mSelectedComponentIndex);
             }
 
             if (newComponent == nullptr)
@@ -422,13 +346,12 @@ void PrefabEditorScene::entityUI(Entity * entity)
             EntitySystem::UpdateEntity(entity);
 
             newComponent->EditorSignal.Register(this, &PrefabEditorScene::componentUI);
-            
-            mSelectedComponentIndex = 0;
         });
         if (UI::TreeNode("Add child"))
         {
             UI::InputText("ChildName", mInputChildEntityName);
-            UI::Button("Add", [entity, this]()->void{
+            UI::Button("Add", [entity, this]()->void
+            {
                 createPrefabEntity(mInputChildEntityName.c_str(), entity);
                 mInputChildEntityName = "";
             });
@@ -436,8 +359,9 @@ void PrefabEditorScene::entityUI(Entity * entity)
         }
         if (UI::TreeNode("Remove entity"))
         {
-            UI::Button("Remove", [entity, this]()->void{
-               EntitySystem::DestroyEntity(entity); 
+            UI::Button("Remove", [entity, this]()->void
+            {
+                EntitySystem::DestroyEntity(entity);
             });
             UI::TreePop();
         }
@@ -451,9 +375,149 @@ void PrefabEditorScene::componentUI(Component * component, Entity * entity)
 {
     MFA_ASSERT(component != nullptr);
     MFA_ASSERT(entity != nullptr);
-    UI::Button("Remove component", [this, entity, component]()->void{
+    UI::Button("Remove component", [this, entity, component]()
+    {
+        if (TransformComponent::Name == component->GetName())
+        {
+            MFA_LOG_WARN("Transform components cannot be removed");
+            return;
+        }
+
+        auto const findResult = mComponentsDependents.find(component->GetFamilyType());
+        MFA_ASSERT(findResult != mComponentsDependents.end());
+        for (auto const familyId : findResult->second)
+        {
+            auto dependentComponent = entity->GetComponent(familyId).lock();
+            if (dependentComponent != nullptr)
+            {
+                MFA_LOG_WARN(
+                    "Cannot delete component with name %s because a dependant component with name %s exists"
+                    , component->GetName()
+                    , dependentComponent->GetName()
+                );
+                return;
+            }
+        }
+
         entity->RemoveComponent(component);
         EntitySystem::UpdateEntity(entity);
+    });
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void PrefabEditorScene::prepareDependencyLists()
+{
+    // Available components
+    mAvailableComponents.emplace_back(TransformComponent::Name);
+    mAvailableComponents.emplace_back(MeshRendererComponent::Name);
+    mAvailableComponents.emplace_back(BoundingVolumeRendererComponent::Name);
+    mAvailableComponents.emplace_back(SphereBoundingVolumeComponent::Name);
+    mAvailableComponents.emplace_back(AxisAlignedBoundingBoxComponent::Name);
+    mAvailableComponents.emplace_back(ColorComponent::Name);
+    mAvailableComponents.emplace_back(PointLightComponent::Name);
+
+    // CreateComponentsRequirements
+    mComponentDependencies[TransformComponent::FamilyType] = {};
+    mComponentDependencies[MeshRendererComponent::FamilyType] = {
+        TransformComponent::FamilyType,
+        BoundingVolumeComponent::FamilyType
+    };
+    mComponentDependencies[BoundingVolumeRendererComponent::FamilyType] = {
+        ColorComponent::FamilyType,
+        BoundingVolumeComponent::FamilyType
+    };
+    mComponentDependencies[BoundingVolumeComponent::FamilyType] = {};
+    mComponentDependencies[ColorComponent::FamilyType] = {};
+    mComponentDependencies[PointLightComponent::FamilyType] = {
+        TransformComponent::FamilyType,
+        ColorComponent::FamilyType
+    };
+
+    // DeleteComponentsRequirements
+    auto const exists = [](std::vector<int> const & list, int const target)->bool
+    {
+        for (auto const item : list)
+        {
+            if (item == target)
+            {
+                return true;
+            }
+        }
+        return false;
+    };
+    for (auto & pair : mComponentDependencies)
+    {
+        auto const dependentComponent = pair.first;
+        for (auto const dependencyComponent : pair.second)
+        {
+            auto & deleteComponentRequirement = mComponentsDependents[dependencyComponent];
+            if (exists(deleteComponentRequirement, dependentComponent) == false)
+            {
+                deleteComponentRequirement.emplace_back(dependentComponent);
+            }
+        }
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+
+#define INSERT_INTO_CREATE_COMPONENT_MAP(component, createFunction)             \
+mCreateComponentInstructionMap[component::Name] = CreateComponentInstruction {  \
+    .familyType = component::FamilyType,                                        \
+    .function = (createFunction),                                               \
+}                                                                               \
+
+void PrefabEditorScene::prepareCreateComponentInstructionMap()
+{
+    INSERT_INTO_CREATE_COMPONENT_MAP(TransformComponent, [](Entity * entity)
+    {
+        return entity->AddComponent<TransformComponent>().lock();
+    });
+
+    INSERT_INTO_CREATE_COMPONENT_MAP(MeshRendererComponent, [this](Entity * entity)->std::shared_ptr<MeshRendererComponent>
+    {
+        if (mSelectedEssenceIndex < 0 || mSelectedEssenceIndex >= static_cast<int>(mLoadedAssets.size()))
+        {
+            return nullptr;
+        }
+        return entity->AddComponent<MeshRendererComponent>(
+            mPbrPipeline,
+            mLoadedAssets[mSelectedEssenceIndex].gpuModel->id
+        ).lock();
+    });
+
+    INSERT_INTO_CREATE_COMPONENT_MAP(BoundingVolumeRendererComponent, [this](Entity * entity)
+    {
+        return  entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline).lock();
+    });
+
+    INSERT_INTO_CREATE_COMPONENT_MAP(SphereBoundingVolumeComponent, [](Entity * entity)
+    {
+        return entity->AddComponent<SphereBoundingVolumeComponent>(1.0f).lock();
+    });
+
+    INSERT_INTO_CREATE_COMPONENT_MAP(AxisAlignedBoundingBoxComponent, [](Entity * entity)
+    {
+        return entity->AddComponent<AxisAlignedBoundingBoxComponent>(
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::vec3(1.0f, 1.0f, 1.0f)
+        ).lock();
+    });
+
+    INSERT_INTO_CREATE_COMPONENT_MAP(ColorComponent, [](Entity * entity)
+    {
+        return entity->AddComponent<ColorComponent>(glm::vec3(1.0f, 0.0f, 0.0f)).lock();
+    });
+
+    INSERT_INTO_CREATE_COMPONENT_MAP(PointLightComponent, [](Entity * entity)
+    {
+        return entity->AddComponent<PointLightComponent>(
+            1.0f,
+            100.0f,
+            Z_NEAR,
+            Z_FAR
+        ).lock();
     });
 }
 

@@ -103,6 +103,12 @@ namespace MFA
         }
 
         [[nodiscard]]
+        std::weak_ptr<Component> GetComponent(int const familyType) const
+        {
+            return mComponents[familyType];
+        }
+
+        [[nodiscard]]
         Entity * GetParent() const noexcept
         {
             return mParent;
