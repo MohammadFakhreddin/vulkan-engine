@@ -6,10 +6,10 @@ namespace MFA::ShapeGenerator {
     /*
      * Generates sphere with radius of 1, Compatible with texture materials
      */
-    AssetSystem::Model Sphere();
+    std::shared_ptr<AS::Model> Sphere();
 
-    AssetSystem::Model Sheet();
+    std::shared_ptr<AS::Model> Sheet();
 
-    AssetSystem::Model Cube();
+    std::shared_ptr<AS::Model> Cube();
 
 }

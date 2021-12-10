@@ -147,7 +147,7 @@ void GLTFMeshViewerScene::Init() {
         SetActiveCamera(mCamera);
     }
     
-    mPbrPipeline.Init(&mSamplerGroup, &mErrorTexture);
+    mPbrPipeline.Init(mSamplerGroup, mErrorTexture);
 
     {// Point light
         auto cpuModel = ShapeGenerator::Sphere();
@@ -294,12 +294,7 @@ void GLTFMeshViewerScene::OnUI() {
 
 void GLTFMeshViewerScene::Shutdown() {
     Scene::Shutdown();
-
     UI::UnRegister(mUIRegisterId);
-
-    RF::DestroySampler(mSamplerGroup);
-    RF::DestroyTexture(mErrorTexture);
-    Importer::FreeTexture(mErrorTexture.cpuTexture());
 }
 
 //-------------------------------------------------------------------------------------------------

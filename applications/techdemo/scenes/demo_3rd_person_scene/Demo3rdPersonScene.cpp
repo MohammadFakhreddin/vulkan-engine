@@ -1,6 +1,7 @@
 #include "Demo3rdPersonScene.hpp"
 
 #include "engine/BedrockAssert.hpp"
+#include "engine/BedrockMath.hpp"
 #include "engine/BedrockPath.hpp"
 #include "tools/Importer.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
@@ -48,7 +49,7 @@ void Demo3rdPersonScene::Init()
     mSampler = RF::CreateSampler(RT::CreateSamplerParams{});
 
     // Pbr pipeline
-    mPbrPipeline.Init(&mSampler, &mErrorTexture);
+    mPbrPipeline.Init(mSampler, mErrorTexture);
     
     // Debug renderer pipeline
     mDebugRenderPipeline.Init();
@@ -413,10 +414,10 @@ void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, RT::CommandRec
             Matrix::Rotate(rotationMatrix, nextAngles);
 
             glm::vec4 forwardDirection(
-                RT::ForwardVector[0],
-                RT::ForwardVector[1],
-                RT::ForwardVector[2],
-                RT::ForwardVector[3]
+                Math::ForwardVector[0],
+                Math::ForwardVector[1],
+                Math::ForwardVector[2],
+                Math::ForwardVector[3]
             );
             forwardDirection = forwardDirection * rotationMatrix;
             forwardDirection = glm::normalize(forwardDirection);
@@ -463,9 +464,9 @@ void Demo3rdPersonScene::Shutdown()
     UI::UnRegister(mUIRecordId);
     // TODO Use resource manager for sampler and error texture
     // Sampler
-    RF::DestroySampler(mSampler);
+    //RF::DestroySampler(mSampler);
     // Error texture
-    RF::DestroyTexture(mErrorTexture);
+    //RF::DestroyTexture(mErrorTexture);
     
 }
 

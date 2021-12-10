@@ -135,16 +135,16 @@ namespace MFA::UISystem
 
     struct State
     {
-        RT::SamplerGroup fontSampler{};
+        std::shared_ptr<RT::SamplerGroup> fontSampler{};
         VkDescriptorSetLayout descriptorSetLayout{};
-        RT::GpuShader vertexShader{};
-        RT::GpuShader fragmentShader{};
+        std::shared_ptr<RT::GpuShader> vertexShader{};
+        std::shared_ptr<RT::GpuShader> fragmentShader{};
         VkDescriptorPool descriptorPool{};
         RT::DescriptorSetGroup descriptorSetGroup{};
         RT::PipelineGroup drawPipeline{};
-        RT::GpuTexture fontTexture{};
-        std::vector<RT::MeshBuffers> meshBuffers{};
-        std::vector<bool> meshBuffersValidationStatus{};
+        std::shared_ptr<RT::GpuTexture> fontTexture{};
+        std::vector<std::shared_ptr<RT::MeshBuffers>> meshBuffers{};
+        //std::vector<bool> meshBuffersValidationStatus{};
         bool hasFocus = false;
         Signal<> UIRecordSignal{};
 #if defined(__ANDROID__) || defined(__IOS__)
@@ -219,25 +219,27 @@ namespace MFA::UISystem
         state = new State();
         auto const swapChainImagesCount = RF::GetSwapChainImagesCount();
         state->meshBuffers.resize(swapChainImagesCount);
-        state->meshBuffersValidationStatus.resize(swapChainImagesCount);
+        //state->meshBuffersValidationStatus.resize(swapChainImagesCount);
         // Setup Dear ImGui context
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
 
-        {// FontSampler
-            RT::CreateSamplerParams params{};
-            params.minLod = -1000;
-            params.maxLod = 1000;
-            params.maxAnisotropy = 1.0f;
-            state->fontSampler = RF::CreateSampler(params);
-        }
-
+        // FontSampler
+        state->fontSampler = RF::CreateSampler(RT::CreateSamplerParams {
+            .minLod = -1000,
+            .maxLod = 1000,
+            .maxAnisotropy = 1.0f,
+        });
+        
         {// Descriptor set layout
-            std::vector<VkDescriptorSetLayoutBinding> binding{ 1 };
-            binding[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            binding[0].descriptorCount = 1;
-            binding[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-            binding[0].pImmutableSamplers = &state->fontSampler.sampler;
+            std::vector<VkDescriptorSetLayoutBinding> binding{
+                VkDescriptorSetLayoutBinding{
+                    .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    .descriptorCount = 1,
+                    .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+                    .pImmutableSamplers = &state->fontSampler->sampler,
+                }
+            };
             state->descriptorSetLayout = RF::CreateDescriptorSetLayout(
                 static_cast<uint8_t>(binding.size()),
                 binding.data()
@@ -283,7 +285,7 @@ namespace MFA::UISystem
             pushConstantRanges.emplace_back(pushConstantRange);
 
             //state->vertexShader, state->fragmentShader
-            std::vector<RT::GpuShader const *> shaderStages{ &state->vertexShader, &state->fragmentShader };
+            std::vector<RT::GpuShader const *> shaderStages{ state->vertexShader.get(), state->fragmentShader.get() };
 
             VkVertexInputBindingDescription vertex_binding_description{};
             vertex_binding_description.stride = sizeof(ImDrawVert);
@@ -431,8 +433,8 @@ namespace MFA::UISystem
         for (auto & descriptorSet : state->descriptorSetGroup.descriptorSets)
         {
             auto const imageInfo = VkDescriptorImageInfo{
-                .sampler = state->fontSampler.sampler,
-                .imageView = state->fontTexture.imageView(),
+                .sampler = state->fontSampler->sampler,
+                .imageView = state->fontTexture->imageView->imageView,
                 .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             };
             auto writeDescriptorSet = VkWriteDescriptorSet{
@@ -583,13 +585,11 @@ namespace MFA::UISystem
                 // Create or resize the vertex/index buffers
                 size_t const vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
                 size_t const index_size = draw_data->TotalIdxCount * sizeof(ImDrawIdx);
-                auto vertex_data = MFA::Memory::Alloc(vertex_size);
-                MFA_DEFER{ MFA::Memory::Free(vertex_data); };
-                auto index_data = MFA::Memory::Alloc(index_size);
-                MFA_DEFER{ MFA::Memory::Free(index_data); };
+                auto const vertexData = Memory::Alloc(vertex_size);
+                auto const indexData = Memory::Alloc(index_size);
                 {
-                    auto * vertex_ptr = reinterpret_cast<ImDrawVert *>(vertex_data.ptr);
-                    auto * index_ptr = reinterpret_cast<ImDrawIdx *>(index_data.ptr);
+                    auto * vertex_ptr = reinterpret_cast<ImDrawVert *>(vertexData->memory.ptr);
+                    auto * index_ptr = reinterpret_cast<ImDrawIdx *>(indexData->memory.ptr);
                     for (int n = 0; n < draw_data->CmdListsCount; n++)
                     {
                         const ImDrawList * cmd_list = draw_data->CmdLists[n];
@@ -600,38 +600,44 @@ namespace MFA::UISystem
                     }
                 }
                 // TODO Write function to get mesh buffer and its status
-                if (state->meshBuffersValidationStatus[drawPass.frameIndex])
-                {
-                    RF::DestroyMeshBuffers(state->meshBuffers[drawPass.frameIndex]);
-                    state->meshBuffersValidationStatus[drawPass.frameIndex] = false;
-                }
-                state->meshBuffers[drawPass.frameIndex].verticesBuffer = RF::CreateVertexBuffer(CBlob{ vertex_data.ptr, vertex_data.len });
-                state->meshBuffers[drawPass.frameIndex].indicesBuffer = RF::CreateIndexBuffer(CBlob{ index_data.ptr, index_data.len });
-                state->meshBuffersValidationStatus[drawPass.frameIndex] = true;
+                //if (state->meshBuffersValidationStatus[drawPass.frameIndex])
+                //{
+                //    RF::DestroyMeshBuffers(state->meshBuffers[drawPass.frameIndex]);
+                //    state->meshBuffersValidationStatus[drawPass.frameIndex] = false;
+                //}
+                auto & meshBuffer = state->meshBuffers[drawPass.frameIndex];
+                meshBuffer = std::make_shared<RT::MeshBuffers>(
+                    RF::CreateVertexBuffer(vertexData->memory),
+                    RF::CreateIndexBuffer(indexData->memory)
+                );
+                //state->meshBuffers[drawPass.frameIndex].verticesBuffer = RF::CreateVertexBuffer(CBlob{ vertexData.ptr, vertexData.len });
+                //state->meshBuffers[drawPass.frameIndex].indicesBuffer = RF::CreateIndexBuffer(CBlob{ indexData.ptr, indexData.len });
+                //state->meshBuffersValidationStatus[drawPass.frameIndex] = true;
 
 
                 RF::BindIndexBuffer(
                     drawPass,
-                    state->meshBuffers[drawPass.frameIndex].indicesBuffer,
+                    *meshBuffer->indicesBuffer,
                     0,
                     sizeof(ImDrawIdx) == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32
                 );
                 RF::BindVertexBuffer(
                     drawPass,
-                    state->meshBuffers[drawPass.frameIndex].verticesBuffer
+                    *meshBuffer->verticesBuffer
                 );
-                // Setup viewport:
-                {
-                    VkViewport viewport;
-                    viewport.x = 0;
-                    viewport.y = 0;
-                    viewport.width = frameBufferWidth;
-                    viewport.height = frameBufferHeight;
-                    viewport.minDepth = 0.0f;
-                    viewport.maxDepth = 1.0f;
-                    RF::SetViewport(drawPass, viewport);
-                }
 
+                // Setup viewport:
+                VkViewport const viewport
+                {
+                    .x = 0,
+                    .y = 0,
+                    .width = frameBufferWidth,
+                    .height = frameBufferHeight,
+                    .minDepth = 0.0f,
+                    .maxDepth = 1.0f,
+                };
+                RF::SetViewport(drawPass, viewport);
+                
                 // Setup scale and translation:
                 // Our visible imgui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
                 {
@@ -905,29 +911,29 @@ namespace MFA::UISystem
 
     void Shutdown()
     {
-        MFA_ASSERT(state->meshBuffers.size() == state->meshBuffersValidationStatus.size());
-        for (auto i = 0; i < state->meshBuffersValidationStatus.size(); i++)
-        {
-            if (true == state->meshBuffersValidationStatus[i])
-            {
-                RF::DestroyMeshBuffers(state->meshBuffers[i]);
-                state->meshBuffersValidationStatus[i] = false;
-            }
-        }
-        RF::DestroyTexture(state->fontTexture);
-        Importer::FreeTexture(state->fontTexture.cpuTexture());
+        //MFA_ASSERT(state->meshBuffers.size() == state->meshBuffersValidationStatus.size());
+        //for (auto i = 0; i < state->meshBuffersValidationStatus.size(); i++)
+        //{
+        //    if (true == state->meshBuffersValidationStatus[i])
+        //    {
+        //        RF::DestroyMeshBuffers(state->meshBuffers[i]);
+        //        state->meshBuffersValidationStatus[i] = false;
+        //    }
+        //}
+        //RF::DestroyTexture(state->fontTexture);
+        //Importer::FreeTexture(state->fontTexture.cpuTexture());
 
         RF::DestroyDescriptorPool(state->descriptorPool);
 
         RF::DestroyPipelineGroup(state->drawPipeline);
-        // TODO We can remove shader after creating pipeline
-        RF::DestroyShader(state->fragmentShader);
-        Importer::FreeShader(state->fragmentShader.cpuShader());
-        RF::DestroyShader(state->vertexShader);
-        Importer::FreeShader(state->vertexShader.cpuShader());
+        // TODO We can remove shader after creating pipelines
+        //RF::DestroyShader(state->fragmentShader);
+        //Importer::FreeShader(state->fragmentShader.cpuShader());
+        //RF::DestroyShader(state->vertexShader);
+        //Importer::FreeShader(state->vertexShader.cpuShader());
 
         RF::DestroyDescriptorSetLayout(state->descriptorSetLayout);
-        RF::DestroySampler(state->fontSampler);
+        //RF::DestroySampler(state->fontSampler);
 
 #ifdef __DESKTOP__
         RF::RemoveEventWatch(state->eventWatchId);

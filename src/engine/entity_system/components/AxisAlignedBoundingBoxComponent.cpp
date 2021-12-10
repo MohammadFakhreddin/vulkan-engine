@@ -1,6 +1,7 @@
 #include "AxisAlignedBoundingBoxComponent.hpp"
 
 #include "MeshRendererComponent.hpp"
+#include "engine/BedrockMath.hpp"
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
 #include "engine/render_system/drawable_essence/DrawableEssence.hpp"
@@ -47,11 +48,11 @@ namespace MFA
             auto * gpuModel = essence->GetGpuModel();
             MFA_ASSERT(gpuModel != nullptr);
 
-            auto const & mesh = gpuModel->model.mesh;
-            MFA_ASSERT(mesh.HasPositionMinMax());
+            auto const & mesh = gpuModel->model->mesh;
+            MFA_ASSERT(mesh->HasPositionMinMax());
 
-            auto * positionMax = mesh.GetPositionMax();
-            auto * positionMin = mesh.GetPositionMin();
+            auto * positionMax = mesh->GetPositionMax();
+            auto * positionMin = mesh->GetPositionMin();
 
             mExtend.x = abs(positionMax[0] - positionMin[0]);
             mExtend.y = abs(positionMax[1] - positionMin[1]);
@@ -105,17 +106,17 @@ namespace MFA
         const glm::vec3 globalCenter{ transformComponentPtr->GetTransform() * glm::vec4(mCenter, 1.f) };
 
         // Scaled orientation
-        auto forwardDirection = RT::ForwardVector;
+        auto forwardDirection = Math::ForwardVector;
         forwardDirection = transformComponentPtr->GetTransform() * forwardDirection;
         forwardDirection = glm::normalize(forwardDirection);
         forwardDirection *= mExtend.z;
 
-        auto rightDirection = RT::RightVector;
+        auto rightDirection = Math::RightVector;
         rightDirection = transformComponentPtr->GetTransform() * rightDirection;
         rightDirection = glm::normalize(rightDirection);
         rightDirection *= mExtend.x;
 
-        auto upDirection = RT::UpVector;
+        auto upDirection = Math::UpVector;
         upDirection = transformComponentPtr->GetTransform() * upDirection;
         upDirection = glm::normalize(upDirection);
         upDirection *= mExtend.y;

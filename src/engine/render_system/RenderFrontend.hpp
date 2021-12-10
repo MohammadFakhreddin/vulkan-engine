@@ -67,10 +67,7 @@ namespace MFA::RenderFrontend
     );
 
     void DestroyPipelineGroup(RT::PipelineGroup & drawPipeline);
-
-    //[[nodiscard]]
-    //RT::DescriptorSetGroup CreateDescriptorSets(VkDescriptorSetLayout descriptorSetLayout);
-
+    
     [[nodiscard]]
     RT::DescriptorSetGroup CreateDescriptorSets(
         VkDescriptorPool descriptorPool,
@@ -79,51 +76,54 @@ namespace MFA::RenderFrontend
     );
 
     [[nodiscard]]
-    RT::BufferAndMemory CreateVertexBuffer(CBlob verticesBlob);
+    std::shared_ptr<RT::BufferAndMemory> CreateVertexBuffer(CBlob verticesBlob);
 
     [[nodiscard]]
-    RT::BufferAndMemory CreateIndexBuffer(CBlob indicesBlob);
+    std::shared_ptr<RT::BufferAndMemory> CreateIndexBuffer(CBlob indicesBlob);
 
     [[nodiscard]]
-    RT::MeshBuffers CreateMeshBuffers(AssetSystem::Mesh const & mesh);
-
-    void DestroyMeshBuffers(RT::MeshBuffers & meshBuffers);
-
+    std::shared_ptr<RT::MeshBuffers> CreateMeshBuffers(AssetSystem::Mesh const & mesh);
+    
     [[nodiscard]]
-    RT::GpuTexture CreateTexture(AS::Texture & texture);
+    std::shared_ptr<RT::GpuTexture> CreateTexture(std::shared_ptr<AS::Texture> & texture);
+    
+    void DestroyImage(RT::ImageGroup const & imageGroup);
 
-    void DestroyTexture(RT::GpuTexture & gpuTexture);
+    void DestroyImageView(RT::ImageViewGroup const & imageViewGroup);
 
     // TODO We should ask for options here
     [[nodiscard]]
-    RT::SamplerGroup CreateSampler(RT::CreateSamplerParams const & samplerParams);
+    std::shared_ptr<RT::SamplerGroup> CreateSampler(RT::CreateSamplerParams const & samplerParams);
 
-    void DestroySampler(RT::SamplerGroup & samplerGroup);
+    void DestroySampler(RT::SamplerGroup const& samplerGroup);
 
     [[nodiscard]]
-    std::shared_ptr<RT::GpuModel> CreateGpuModel(AssetSystem::Model & modelAsset, RT::GpuModelId uniqueId);
-
-    void DestroyGpuModel(RT::GpuModel & gpuModel);
+    std::shared_ptr<RT::GpuModel> CreateGpuModel(
+        std::shared_ptr<AssetSystem::Model> modelAsset,
+        RT::GpuModelId uniqueId
+    );
 
     void DeviceWaitIdle();
 
     [[nodiscard]]
     VkFormat GetDepthFormat();
 
+    void DestroyBuffer(RT::BufferAndMemory const& bufferGroup);
+
     //---------------------------------------------Shader------------------------------------------------
 
     [[nodiscard]]
-    RT::GpuShader CreateShader(AS::Shader const & shader);
+    std::shared_ptr<RT::GpuShader> CreateShader(std::shared_ptr<AS::Shader> const & shader);
 
-    void DestroyShader(RT::GpuShader & gpuShader);
+    void DestroyShader(RT::GpuShader const& gpuShader);
 
     //-------------------------------------------UniformBuffer--------------------------------------------
 
-    RT::UniformBufferCollection CreateUniformBuffer(size_t bufferSize, uint32_t count);
+    std::shared_ptr<RT::UniformBufferGroup> CreateUniformBuffer(size_t bufferSize, uint32_t count);
 
     void UpdateUniformBuffer(
         RT::CommandRecordState const & recordState,
-        RT::UniformBufferCollection const & bufferCollection,
+        RT::UniformBufferGroup const & bufferCollection,
         CBlob data
     );
 
@@ -132,18 +132,18 @@ namespace MFA::RenderFrontend
         CBlob data
     );
 
-    void DestroyUniformBuffer(RT::UniformBufferCollection & uniformBuffer);
+    //void DestroyUniformBuffer(RT::UniformBufferCollection & uniformBuffer);
 
     //-------------------------------------------StorageBuffer--------------------------------------------
 
-    RT::StorageBufferCollection CreateStorageBuffer(size_t bufferSize, uint32_t count);
+    std::shared_ptr<RT::StorageBufferCollection> CreateStorageBuffer(size_t bufferSize, uint32_t count);
 
     void UpdateStorageBuffer(
         RT::BufferAndMemory const & buffer,
         CBlob data
     );
     
-    void DestroyStorageBuffer(RT::StorageBufferCollection & storageBuffer);
+    //void DestroyStorageBuffer(RT::StorageBufferCollection & storageBuffer);
 
     //-------------------------------------------------------------------------------------------------
 
@@ -283,20 +283,17 @@ namespace MFA::RenderFrontend
 
 
     [[nodiscard]]
-    RT::SwapChainGroup CreateSwapChain(VkSwapchainKHR oldSwapChain = VkSwapchainKHR{});
+    std::shared_ptr<RT::SwapChainGroup> CreateSwapChain(VkSwapchainKHR oldSwapChain = VkSwapchainKHR{});
 
     void DestroySwapChain(RT::SwapChainGroup const & swapChainGroup);
 
 
     [[nodiscard]]
-    RT::ColorImageGroup CreateColorImage(
+    std::shared_ptr<RT::ColorImageGroup> CreateColorImage(
         VkExtent2D const & imageExtent,
         VkFormat imageFormat,
         RT::CreateColorImageOptions const & options
     );
-
-    void DestroyColorImage(RT::ColorImageGroup const & colorImageGroup);
-
 
     [[nodiscard]]
     VkRenderPass CreateRenderPass(
@@ -310,14 +307,10 @@ namespace MFA::RenderFrontend
 
     void DestroyRenderPass(VkRenderPass renderPass);
 
-    RT::DepthImageGroup CreateDepthImage(
+    std::shared_ptr<RT::DepthImageGroup> CreateDepthImage(
         VkExtent2D const & imageSize,
         RT::CreateDepthImageOptions const & options
     );
-
-    void DestroyDepthImage(RT::DepthImageGroup const & depthImage);
-
-    // TODO We can gather all renderTypes in one file
 
     [[nodiscard]]
     VkFramebuffer CreateFrameBuffer(
@@ -473,10 +466,4 @@ auto cpu##stage##Shader = Importer::ImportShaderFromSPV(                        
     AssetSystem::Shader::Stage::stage,                                                          \
     "main"                                                                                      \
 );                                                                                              \
-auto gpu##stage##Shader = RF::CreateShader(cpu##stage##Shader);                                  \
-MFA_ASSERT(cpu##stage##Shader.isValid());                                                       \
-MFA_ASSERT(gpu##stage##Shader.valid());                                                         \
-MFA_DEFER{                                                                                      \
-    RF::DestroyShader(gpu##stage##Shader);                                                      \
-    Importer::FreeShader(cpu##stage##Shader);                                                   \
-};                                                                                              \
+auto gpu##stage##Shader = RF::CreateShader(cpu##stage##Shader);                                 \

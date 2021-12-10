@@ -57,12 +57,12 @@ private:
     static constexpr float Z_FAR = 3000.0f;
     static constexpr float FOV = 80;
     
-    MFA::RT::GpuTexture mErrorTexture{};
+    std::shared_ptr<MFA::RT::GpuTexture> mErrorTexture{};
 
     std::string mPrefabName {};
     MFA::Entity * mPrefabRootEntity = nullptr;
 
-    MFA::RT::SamplerGroup mSampler{};
+    std::shared_ptr<MFA::RT::SamplerGroup> mSampler{};
 
     MFA::PBRWithShadowPipelineV2 mPbrPipeline{ this };
     MFA::DebugRendererPipeline mDebugRenderPipeline{};

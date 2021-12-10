@@ -96,7 +96,6 @@ namespace MFA
 
     void BasePipeline::DestroyDrawableEssence(RT::GpuModel const & gpuModel)
     {
-        MFA_ASSERT(gpuModel.valid);
         DestroyDrawableEssence(gpuModel.id);
     }
 
@@ -104,7 +103,6 @@ namespace MFA
 
     DrawableVariant * BasePipeline::CreateDrawableVariant(RT::GpuModel const & gpuModel)
     {
-        MFA_ASSERT(gpuModel.valid);
         return CreateDrawableVariant(gpuModel.id);
     }
 

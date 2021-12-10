@@ -1,7 +1,9 @@
 #pragma once
 
 #include "engine/entity_system/Component.hpp"
-#include "engine/render_system/RenderTypes.hpp"
+
+#include <glm/vec3.hpp>
+#include <glm/mat4x4.hpp>
 
 namespace MFA {
 

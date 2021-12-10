@@ -28,7 +28,7 @@ namespace MFA
         RT::SwapChainGroup const & GetSwapChainImages() const;
 
         [[nodiscard]]
-        std::vector<RT::DepthImageGroup> const & GetDepthImages() const;
+        std::vector<std::shared_ptr<RT::DepthImageGroup>> const & GetDepthImages() const;
 
         void BeginRenderPass(RT::CommandRecordState & recordState);
 
@@ -53,10 +53,10 @@ namespace MFA
 
         VkRenderPass mVkDisplayRenderPass{};
         uint32_t mSwapChainImagesCount = 0;
-        RT::SwapChainGroup mSwapChainImages{};
+        std::shared_ptr<RT::SwapChainGroup> mSwapChainImages{};
         std::vector<VkFramebuffer> mDisplayFrameBuffers{};
-        std::vector<RT::ColorImageGroup> mMSAAImageGroupList{};
-        std::vector<RT::DepthImageGroup> mDepthImageGroupList{};
+        std::vector<std::shared_ptr<RT::ColorImageGroup>> mMSAAImageGroupList{};
+        std::vector<std::shared_ptr<RT::DepthImageGroup>> mDepthImageGroupList{};
     
     };
 

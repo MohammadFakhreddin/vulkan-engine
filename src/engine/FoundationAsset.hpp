@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "BedrockMemory.hpp"
+
 // TODO Separate this file into multiple files
 
 namespace MFA::AssetSystem {
@@ -123,7 +125,16 @@ public:
 
     };
     static_assert(ArrayCount(FormatTable) == static_cast<unsigned>(Format::Count));
+
 public:
+
+    explicit Texture();
+    ~Texture() override;
+
+    Texture(Texture const &) noexcept = delete;
+    Texture(Texture &&) noexcept = delete;
+    Texture & operator= (Texture const & rhs) noexcept = delete;
+    Texture & operator= (Texture && rhs) noexcept = delete;
 
     static uint8_t ComputeMipCount(Dimensions const & dimensions);
 
@@ -161,12 +172,13 @@ public:
         uint8_t mipCount
     );
 
+    // TODO Constructor might have been enough
     void initForWrite(
         Format format,
         uint16_t slices,
         uint16_t depth,
         SamplerConfig const * sampler,
-        Blob const & buffer
+        std::shared_ptr<SmartBlob> buffer
     );
 
     void addMipmap(
@@ -179,10 +191,7 @@ public:
 
     [[nodiscard]]
     bool isValid() const;
-
-    [[nodiscard]]
-    Blob revokeBuffer();
-
+    
     [[nodiscard]]
     CBlob GetBuffer() const noexcept;
 
@@ -218,7 +227,7 @@ private:
     uint16_t mDepth = 0;
     SamplerConfig mSampler {};
     std::vector<MipmapInfo> mMipmapInfos {};
-    Blob mBuffer {};
+    std::shared_ptr<SmartBlob> mBuffer {};
     uint64_t mCurrentOffset = 0;
     int mPreviousMipWidth = -1;
     int mPreviousMipHeight = -1;
@@ -385,11 +394,20 @@ public:
         float animationDuration {};         // We should track currentTime somewhere else
     };
 
+    explicit Mesh();
+    ~Mesh() override;
+
+    Mesh(Mesh const &) noexcept = delete;
+    Mesh(Mesh &&) noexcept = delete;
+    Mesh & operator= (Mesh const & rhs) noexcept = delete;
+    Mesh & operator= (Mesh && rhs) noexcept = delete;
+
+
     void InitForWrite(
         uint32_t vertexCount,
         uint32_t indexCount,
-        const Blob & vertexBuffer,
-        const Blob & indexBuffer
+        std::shared_ptr<SmartBlob> vertexBuffer,
+        std::shared_ptr<SmartBlob> indexBuffer
     );
 
     void FinalizeData();
@@ -497,8 +515,6 @@ public:
     [[nodiscard]]
     Node const & GetRootNodeByIndex(uint32_t index) const;
 
-    void RevokeBuffers(Blob & outVertexBuffer, Blob & outIndexBuffer);
-
     [[nodiscard]]
     bool HasPositionMinMax() const
     {
@@ -532,10 +548,10 @@ private:
     std::vector<uint32_t> mRootNodes {};         // Nodes that have no parent
 
     uint32_t mVertexCount {};
-    Blob mVertexBuffer {};
+    std::shared_ptr<SmartBlob> mVertexBuffer {};
 
     uint32_t mIndexCount {};
-    Blob mIndexBuffer {};
+    std::shared_ptr<SmartBlob> mIndexBuffer {};
 
     uint64_t mNextVertexOffset {};
     uint64_t mNextIndexOffset {};
@@ -576,49 +592,38 @@ public:
         Fragment,
     };
 
+    explicit Shader();
+    ~Shader() override;
+
+    Shader(Shader const &) noexcept = delete;
+    Shader(Shader &&) noexcept = delete;
+    Shader & operator= (Shader const & rhs) noexcept = delete;
+    Shader & operator= (Shader && rhs) noexcept = delete;
+
     [[nodiscard]]
-    bool isValid() const {
-        return mEntryPoint.empty() == false && 
-            Stage::Invalid != mStage && 
-            mCompiledShaderCode.ptr != nullptr && 
-            mCompiledShaderCode.len > 0;
-    }
+    bool isValid() const;
 
     void init(
         char const * entryPoint,
-        Stage const stage,
-        Blob const & compiledShaderCode
-    ) {
-        mEntryPoint = entryPoint;
-        mStage = stage;
-        mCompiledShaderCode = compiledShaderCode;
-    }
-
-    Blob revokeData() {
-        auto const buffer = mCompiledShaderCode;
-        mCompiledShaderCode = {};
-        return buffer;
-    }
+        Stage stage,
+        std::shared_ptr<SmartBlob> compiledShaderCode
+    );
 
     [[nodiscard]]
-    CBlob getCompiledShaderCode() const noexcept {
-        return mCompiledShaderCode;
-    }
+    CBlob getCompiledShaderCode() const noexcept;
 
     [[nodiscard]]
-    char const * getEntryPoint() const noexcept {
-        return mEntryPoint.c_str();
-    }
+    char const * getEntryPoint() const noexcept;
 
     [[nodiscard]]
-    Stage getStage() const noexcept {
-        return mStage;
-    }
+    Stage getStage() const noexcept;
 
 private:
+
     std::string mEntryPoint {};     // Ex: main
     Stage mStage = Stage::Invalid;
-    Blob mCompiledShaderCode;
+    std::shared_ptr<SmartBlob> mCompiledShaderCode = nullptr;
+
 };
 
 using ShaderStage = Shader::Stage;
@@ -626,8 +631,20 @@ using ShaderStage = Shader::Stage;
 //----------------------------------ModelAsset------------------------------------
 
 struct Model {
-    std::vector<Texture> textures {};
-    Mesh mesh {};
+    std::shared_ptr<Mesh> mesh {};
+    std::vector<std::shared_ptr<Texture>> textures {};
+
+    explicit Model();
+    explicit Model(
+        std::shared_ptr<Mesh> mesh_,
+        std::vector<std::shared_ptr<Texture>> textures_
+    );
+    ~Model();
+
+    Model(Model const &) noexcept = delete;
+    Model(Model &&) noexcept = delete;
+    Model & operator= (Model const & rhs) noexcept = delete;
+    Model & operator= (Model && rhs) noexcept = delete;
 };
 
 };  // MFA::Asset

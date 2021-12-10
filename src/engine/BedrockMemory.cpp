@@ -6,20 +6,32 @@
 
 namespace MFA::Memory {
 
-Blob Alloc (size_t const size) {
-    return {static_cast<uint8_t *>(::malloc(size)), size};
+std::shared_ptr<SmartBlob> Alloc (size_t const size) {
+    return std::make_shared<SmartBlob>(Blob {
+        static_cast<uint8_t *>(::malloc(size)),
+        size
+    });
 }
 
-void Free (Blob const & mem) {
+static void Free (Blob const & mem) {
     if (mem.ptr != nullptr) {
         ::free(mem.ptr);
     }
 }
+//
+//void PtrFree (void * ptr) {
+//    if (ptr != nullptr) {
+//        ::free(ptr);
+//    }
+//}
 
-void PtrFree (void * ptr) {
-    if (ptr != nullptr) {
-        ::free(ptr);
-    }
 }
 
+MFA::SmartBlob::SmartBlob(Blob memory_)
+    : memory(memory_)
+{}
+
+MFA::SmartBlob::~SmartBlob()
+{
+    Memory::Free(memory);
 }

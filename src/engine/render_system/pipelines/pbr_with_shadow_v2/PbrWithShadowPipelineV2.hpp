@@ -80,7 +80,10 @@ namespace MFA
         PBRWithShadowPipelineV2 & operator = (PBRWithShadowPipelineV2 const &) noexcept = delete;
         PBRWithShadowPipelineV2 & operator = (PBRWithShadowPipelineV2 &&) noexcept = delete;
 
-        void Init(RT::SamplerGroup * samplerGroup, RT::GpuTexture * errorTexture);
+        void Init(
+            std::shared_ptr<RT::SamplerGroup> samplerGroup,
+            std::shared_ptr<RT::GpuTexture> errorTexture
+        );
 
         void Shutdown() override;
 
@@ -132,8 +135,6 @@ namespace MFA
 
         void createUniformBuffers();
 
-        void destroyUniformBuffers();
-
         void retrieveOcclusionQueryResult(RT::CommandRecordState const & recordState);
 
         void performDepthPrePass(RT::CommandRecordState & recordState);
@@ -148,9 +149,9 @@ namespace MFA
 
         bool mIsInitialized = false;
 
-        RT::SamplerGroup * mSamplerGroup = nullptr; // TODO Each gltf subMesh has its own settings
-        RT::GpuTexture * mErrorTexture = nullptr;
-        RT::UniformBufferCollection mErrorBuffer{};
+        std::shared_ptr<RT::SamplerGroup> mSamplerGroup = nullptr; // TODO Each gltf subMesh has its own settings
+        std::shared_ptr<RT::GpuTexture> mErrorTexture = nullptr;
+        std::shared_ptr<RT::UniformBufferGroup> mErrorBuffer{};
 
         RT::PipelineGroup mDisplayPassPipeline{};
         

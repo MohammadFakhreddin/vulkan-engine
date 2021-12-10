@@ -92,7 +92,10 @@ namespace MFA::SceneManager
     {
         RF::RemoveResizeEventListener(state->ResizeListenerId);
 
-        state->ActiveScene->Shutdown();
+        if (state->ActiveScene != nullptr)
+        {
+            state->ActiveScene->Shutdown();
+        }
         state->ActiveSceneIndex = -1;
         state->NextActiveSceneIndex = -1;
         state->RegisteredScenes.clear();

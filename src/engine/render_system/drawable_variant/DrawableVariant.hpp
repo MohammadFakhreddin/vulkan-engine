@@ -100,10 +100,10 @@ public:
     void Draw(RT::CommandRecordState const & drawPass, BindDescriptorSetFunction const & bindFunction);
     
     [[nodiscard]]
-    RT::UniformBufferCollection const * GetUniformBuffer(char const * name);
+    RT::UniformBufferGroup const * GetUniformBuffer(char const * name);
     
     [[nodiscard]] 
-    RT::UniformBufferCollection const & GetSkinJointsBuffer() const noexcept;
+    RT::UniformBufferGroup const * GetSkinJointsBuffer() const noexcept;
 
     [[nodiscard]]
     DrawableEssence const * GetEssence() const noexcept;
@@ -202,9 +202,9 @@ private:
     DrawableEssence const * mEssence;
     AS::Mesh const & mMesh; 
     
-    RT::UniformBufferCollection mSkinsJointsBuffer {};
+    std::shared_ptr<RT::UniformBufferGroup> mSkinsJointsBuffer {};
     
-    std::unordered_map<std::string, RT::UniformBufferCollection> mUniformBuffers {};
+    std::unordered_map<std::string, RT::UniformBufferGroup> mUniformBuffers {};
 
     int mActiveAnimationIndex = 0;
     int mPreviousAnimationIndex = -1;
@@ -215,7 +215,7 @@ private:
 
     int mUISelectedAnimationIndex = 0;
 
-    Blob mCachedSkinsJointsBlob {};
+    std::shared_ptr<SmartBlob> mCachedSkinsJointsBlob {};
     std::vector<JointTransformData *> mCachedSkinsJoints {};
 
     std::vector<Skin> mSkins {};
@@ -223,7 +223,7 @@ private:
     
     RT::DescriptorSetGroup mDescriptorSetGroup {};
     
-    RT::StorageBufferCollection mStorageBuffer {};
+    std::shared_ptr<RT::StorageBufferCollection> mStorageBuffer {};
 
     AnimationParams mActiveAnimationParams {};
 

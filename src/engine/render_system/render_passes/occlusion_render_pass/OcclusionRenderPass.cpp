@@ -107,7 +107,7 @@ void MFA::OcclusionRenderPass::createRenderPass()
 {
 
     VkAttachmentDescription const depthAttachment{
-        .format = RF::GetDisplayRenderPass()->GetDepthImages()[0].imageFormat,
+        .format = RF::GetDisplayRenderPass()->GetDepthImages()[0]->imageFormat,
         .samples = RF::GetMaxSamplesCount(),
         .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
         .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -177,9 +177,7 @@ void MFA::OcclusionRenderPass::createFrameBuffers(VkExtent2D const & extent)
     auto & depthImages = RF::GetDisplayRenderPass()->GetDepthImages();
     for (int i = 0; i < static_cast<int>(mFrameBuffers.size()); ++i)
     {
-        std::vector<VkImageView> const attachments = {
-            depthImages[i].imageView
-        };
+        std::vector<VkImageView> const attachments {depthImages[i]->imageView->imageView};
         mFrameBuffers[i] = RF::CreateFrameBuffer(
             mRenderPass,
             attachments.data(),

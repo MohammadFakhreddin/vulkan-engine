@@ -1,6 +1,7 @@
 #include "CameraComponent.hpp"
 
 #include "engine/BedrockAssert.hpp"
+#include "engine/BedrockMath.hpp"
 #include "engine/BedrockMatrix.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/scene_manager/Scene.hpp"
@@ -23,15 +24,15 @@ namespace MFA
         auto rotationMatrix = glm::identity<glm::mat4>();
         Matrix::Rotate(rotationMatrix, eulerAngles);
 
-        auto forwardDirection = -RT::ForwardVector;
+        auto forwardDirection = -Math::ForwardVector;
         forwardDirection = forwardDirection * rotationMatrix;
         forwardDirection = glm::normalize(forwardDirection);
 
-        auto rightDirection = RT::RightVector;
+        auto rightDirection = Math::RightVector;
         rightDirection = rightDirection * rotationMatrix;
         rightDirection = glm::normalize(rightDirection);
 
-        auto upDirection = -RT::UpVector;
+        auto upDirection = -Math::UpVector;
         upDirection = upDirection * rotationMatrix;
         upDirection = glm::normalize(upDirection);
 
@@ -141,15 +142,15 @@ namespace MFA
         auto rotationMatrix = glm::identity<glm::mat4>();
         Matrix::Rotate(rotationMatrix, eulerAngles);
         
-        auto forwardDirection = -RT::ForwardVector;
+        auto forwardDirection = -Math::ForwardVector;
         forwardDirection = forwardDirection * rotationMatrix;
         forwardDirection = glm::normalize(forwardDirection);
 
-        auto rightDirection = RT::RightVector;
+        auto rightDirection = Math::RightVector;
         rightDirection = rightDirection * rotationMatrix;
         rightDirection = glm::normalize(rightDirection);
 
-        auto upDirection = -RT::UpVector;
+        auto upDirection = -Math::UpVector;
         upDirection = upDirection * rotationMatrix;
         upDirection = glm::normalize(upDirection);
 

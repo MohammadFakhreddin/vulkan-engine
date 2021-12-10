@@ -101,12 +101,12 @@ private:
     int32_t mSelectedModelIndex = 0;
     int32_t mPreviousModelSelectedIndex = -1;
 
-    MFA::RT::SamplerGroup mSamplerGroup {};
+    std::shared_ptr<MFA::RT::SamplerGroup> mSamplerGroup {};
 
     MFA::PBRWithShadowPipelineV2 mPbrPipeline {this};
     MFA::DebugRendererPipeline mPointLightPipeline {};
 
-    MFA::RT::GpuTexture mErrorTexture {};
+    std::shared_ptr<MFA::RT::GpuTexture> mErrorTexture {};
 
     float mModelTranslateMin[3] {-100.0f, -100.0f, -100.0f};
     float mModelTranslateMax[3] {100.0f, 100.0f, 100.0f};

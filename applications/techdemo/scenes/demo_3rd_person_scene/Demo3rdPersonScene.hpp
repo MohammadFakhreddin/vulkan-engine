@@ -50,7 +50,7 @@ private:
 #error Os is not handled
 #endif
 
-    MFA::RT::GpuTexture mErrorTexture {};
+    std::shared_ptr<MFA::RT::GpuTexture> mErrorTexture {};
 
     std::shared_ptr<MFA::RT::GpuModel> mSoldierGpuModel {};
     
@@ -61,7 +61,7 @@ private:
 
     std::weak_ptr<MFA::ThirdPersonCameraComponent> mThirdPersonCamera {};
 
-    MFA::RT::SamplerGroup mSampler {};
+    std::shared_ptr<MFA::RT::SamplerGroup> mSampler {};
 
     MFA::PBRWithShadowPipelineV2 mPbrPipeline {this};
     MFA::DebugRendererPipeline mDebugRenderPipeline {};

@@ -15,17 +15,19 @@ namespace MFA
 
         struct ImageGroup;
 
-        class GpuTexture;
+        struct ImageViewGroup;
+
+        struct GpuTexture;
 
         struct GpuModel;
 
-        class GpuShader;
+        struct GpuShader;
 
         struct PipelineGroup;
 
         struct CommandRecordState;
 
-        struct UniformBufferCollection;
+        struct UniformBufferGroup;
 
         struct StorageBufferCollection;
 
@@ -55,6 +57,8 @@ namespace MFA
         using DrawableVariantId = uint32_t;
 
         using GpuModelId = uint32_t;
+
+        struct UniformBufferGroup;
 
     };
 

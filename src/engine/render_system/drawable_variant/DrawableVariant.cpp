@@ -29,7 +29,7 @@ namespace MFA
     DrawableVariant::DrawableVariant(DrawableEssence const & essence)
         : mId(NextInstanceId)
         , mEssence(&essence)
-        , mMesh(mEssence->GetGpuModel()->model.mesh)
+        , mMesh(*mEssence->GetGpuModel()->model->mesh)
     {
         NextInstanceId += 1;
 
@@ -95,7 +95,7 @@ namespace MFA
                 {
                     mCachedSkinsJointsBlob = Memory::Alloc(sizeof(JointTransformData) * totalJointsCount);
                     mSkinsJointsBuffer = RF::CreateUniformBuffer(
-                        mCachedSkinsJointsBlob.len,
+                        mCachedSkinsJointsBlob->memory.len,
                         RF::GetMaxFramesPerFlight()
                     );
                 }
@@ -107,7 +107,7 @@ namespace MFA
                 {
                     auto & skin = mMesh.GetSkinByIndex(i);
                     auto const jointsCount = static_cast<uint32_t>(skin.joints.size());
-                    mCachedSkinsJoints[i] = reinterpret_cast<JointTransformData *>(mCachedSkinsJointsBlob.ptr + startingJointIndex * sizeof(JointTransformData));
+                    mCachedSkinsJoints[i] = reinterpret_cast<JointTransformData *>(mCachedSkinsJointsBlob->memory.ptr + startingJointIndex * sizeof(JointTransformData));
                     mSkins[i].skinStartingIndex = static_cast<int>(startingJointIndex);
                     startingJointIndex += jointsCount;
                 }
@@ -119,21 +119,15 @@ namespace MFA
 
     DrawableVariant::~DrawableVariant()
     {
-        MFA_ASSERT(mIsInitialized == false);
-
-        if (mCachedSkinsJointsBlob.len > 0)
+        if (mIsInitialized == true)
         {
-            Memory::Free(mCachedSkinsJointsBlob);
-        }
-        if (mSkinsJointsBuffer.bufferSize > 0)
-        {
-            RF::DestroyUniformBuffer(mSkinsJointsBuffer);
+            Shutdown();
         }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::UniformBufferCollection const * DrawableVariant::GetUniformBuffer(char const * name)
+    RT::UniformBufferGroup const * DrawableVariant::GetUniformBuffer(char const * name)
     {
         auto const findResult = mUniformBuffers.find(name);
         if (findResult != mUniformBuffers.end())
@@ -146,9 +140,9 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     [[nodiscard]]
-    RT::UniformBufferCollection const & DrawableVariant::GetSkinJointsBuffer() const noexcept
+    RT::UniformBufferGroup const * DrawableVariant::GetSkinJointsBuffer() const noexcept
     {
-        return mSkinsJointsBuffer;
+        return mSkinsJointsBuffer.get();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -212,7 +206,7 @@ namespace MFA
         
         // We update buffers after all of computations
 
-        if (mSkinsJointsBuffer.bufferSize > 0 && mIsSkinJointsChanged == true)
+        if (mSkinsJointsBuffer != nullptr && mIsSkinJointsChanged == true)
         {
             bufferDirtyCounter = 2;
 
@@ -221,8 +215,8 @@ namespace MFA
         if (bufferDirtyCounter > 0)
         {
             RF::UpdateUniformBuffer(
-               mSkinsJointsBuffer.buffers[drawPass.frameIndex],
-               mCachedSkinsJointsBlob
+               *mSkinsJointsBuffer->buffers[drawPass.frameIndex],
+               mCachedSkinsJointsBlob->memory
             );
             bufferDirtyCounter -= 1;
         }
@@ -247,12 +241,6 @@ namespace MFA
         {
             ptr->UnRegisterChangeListener(mTransformListenerId);
         }
-
-        if (mStorageBuffer.isValid())
-        {
-            RF::DestroyStorageBuffer(mStorageBuffer);
-        }
-
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -325,18 +313,15 @@ namespace MFA
         uint32_t const count
     )
     {
-        MFA_ASSERT(mStorageBuffer.isValid() == false);
         mStorageBuffer = RF::CreateStorageBuffer(size, count);
-        MFA_ASSERT(mStorageBuffer.isValid() == true);
-        return mStorageBuffer;
+        return *mStorageBuffer;
     }
 
     //-------------------------------------------------------------------------------------------------
 
     RT::StorageBufferCollection const & DrawableVariant::GetStorageBuffer() const
     {
-        MFA_ASSERT(mStorageBuffer.isValid());
-        return mStorageBuffer;
+        return *mStorageBuffer;
     }
 
     //-------------------------------------------------------------------------------------------------

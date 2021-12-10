@@ -45,16 +45,16 @@ void PrefabEditorScene::Init()
     mSampler = RF::CreateSampler(RT::CreateSamplerParams{});
 
     // Pbr pipeline
-    mPbrPipeline.Init(&mSampler, &mErrorTexture);
+    mPbrPipeline.Init(mSampler, mErrorTexture);
 
     {// Debug renderer pipeline
         mDebugRenderPipeline.Init();
 
-        auto sphereCpuModel = ShapeGenerator::Sphere();
+        auto const sphereCpuModel = ShapeGenerator::Sphere();
         mSphereModel = RC::Assign(sphereCpuModel, "Sphere");
         mDebugRenderPipeline.CreateDrawableEssence(mSphereModel);
 
-        auto cubeCpuModel = ShapeGenerator::Cube();
+        auto const cubeCpuModel = ShapeGenerator::Cube();
         mCubeModel = RC::Assign(cubeCpuModel, "Cube");
         mDebugRenderPipeline.CreateDrawableEssence(mCubeModel);
     }
@@ -152,8 +152,8 @@ void PrefabEditorScene::Shutdown()
     //mDebugRenderPipeline.Shutdown();
     //mLoadedAssets.clear();
 
-    RF::DestroySampler(mSampler);
-    RF::DestroyTexture(mErrorTexture);
+    //RF::DestroySampler(mSampler);
+    //RF::DestroyTexture(mErrorTexture);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -236,7 +236,7 @@ bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress)
     MFA_ASSERT(fileAddress.empty() == false);
 
     auto gpuModel = ResourceManager::Acquire(fileAddress.c_str());
-    if (gpuModel->valid == false)
+    if (gpuModel == nullptr)
     {
         MFA_LOG_WARN("Gltf model is invalid. Failed to create gpu model");
         return false;

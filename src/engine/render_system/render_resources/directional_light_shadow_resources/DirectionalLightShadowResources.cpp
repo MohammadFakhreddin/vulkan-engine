@@ -22,25 +22,25 @@ void MFA::DirectionalLightShadowResources::Shutdown()
     RF::DestroyFrameBuffers(static_cast<uint32_t>(mFrameBuffers.size()), mFrameBuffers.data());
     mFrameBuffers.clear();
 
-    for (auto & shadowMap : mShadowMaps)
-    {
-        RF::DestroyDepthImage(shadowMap);
-    }
-    mShadowMaps.clear();
+    //for (auto & shadowMap : mShadowMaps)
+    //{
+        //RF::DestroyDepthImage(shadowMap);
+    //}
+    //mShadowMaps.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RenderTypes::DepthImageGroup const & MFA::DirectionalLightShadowResources::GetShadowMap(RT::CommandRecordState const & recordState) const
+MFA::RT::DepthImageGroup const & MFA::DirectionalLightShadowResources::GetShadowMap(RT::CommandRecordState const & recordState) const
 {
     return GetShadowMap(recordState.frameIndex);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RenderTypes::DepthImageGroup const & MFA::DirectionalLightShadowResources::GetShadowMap(uint32_t const frameIndex) const
+MFA::RT::DepthImageGroup const & MFA::DirectionalLightShadowResources::GetShadowMap(uint32_t const frameIndex) const
 {
-    return mShadowMaps[frameIndex];
+    return *mShadowMaps[frameIndex];
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -84,9 +84,7 @@ void MFA::DirectionalLightShadowResources::createFrameBuffer(VkExtent2D const & 
     mFrameBuffers.resize(RF::GetMaxFramesPerFlight());  // Per face index
     for (uint32_t i = 0; i < static_cast<uint32_t>(mFrameBuffers.size()); ++i)
     {
-        std::vector<VkImageView> const attachments = {
-            mShadowMaps[i].imageView,
-        };
+        std::vector<VkImageView> const attachments {mShadowMaps[i]->imageView->imageView};
 
         mFrameBuffers[i] = RF::CreateFrameBuffer(
             renderPass,

@@ -26,7 +26,7 @@ public:
         int placeholder1;
     };
 
-    explicit DrawableEssence(std::shared_ptr<RT::GpuModel> const & gpuModel);
+    explicit DrawableEssence(std::shared_ptr<RT::GpuModel> gpuModel);
 
     ~DrawableEssence();
     
@@ -44,7 +44,7 @@ public:
     [[nodiscard]]
     RT::GpuModel * GetGpuModel() const;
 
-    [[nodiscard]] RT::UniformBufferCollection const & GetPrimitivesBuffer() const noexcept;
+    [[nodiscard]] RT::UniformBufferGroup const & GetPrimitivesBuffer() const noexcept;
 
     [[nodiscard]]
     uint32_t GetPrimitiveCount() const noexcept;
@@ -68,7 +68,7 @@ public:
 
 private:
 
-    RT::UniformBufferCollection mPrimitivesBuffer;
+    std::shared_ptr<RT::UniformBufferGroup> mPrimitivesBuffer = nullptr;
 
     std::shared_ptr<RT::GpuModel> const mGpuModel;
     

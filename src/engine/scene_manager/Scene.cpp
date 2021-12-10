@@ -38,10 +38,6 @@ namespace MFA
     {
         auto const deleteResult = EntitySystem::DestroyEntity(mRootEntity);
         MFA_ASSERT(deleteResult == true);
-
-        RF::DestroyUniformBuffer(mCameraBufferCollection);
-        RF::DestroyUniformBuffer(mPointLightsBuffers);
-        RF::DestroyUniformBuffer(mDirectionalLightBuffers);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -69,9 +65,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::UniformBufferCollection const & Scene::GetCameraBufferCollection() const
+    RT::UniformBufferGroup const & Scene::GetCameraBufferCollection() const
     {
-        return mCameraBufferCollection;
+        return *mCameraBuffer;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -90,16 +86,16 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::UniformBufferCollection const & Scene::GetPointLightsBuffers() const
+    RT::UniformBufferGroup const & Scene::GetPointLightsBuffers() const
     {
-        return mPointLightsBuffers;
+        return *mPointLightsBuffers;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::UniformBufferCollection const & Scene::GetDirectionalLightBuffers() const
+    RT::UniformBufferGroup const & Scene::GetDirectionalLightBuffers() const
     {
-        return mDirectionalLightBuffers;
+        return *mDirectionalLightBuffers;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -120,7 +116,7 @@ namespace MFA
 
     void Scene::prepareCameraBuffer()
     {
-        mCameraBufferCollection = RF::CreateUniformBuffer(
+        mCameraBuffer = RF::CreateUniformBuffer(
             sizeof(CameraComponent::CameraBufferData),
             RF::GetMaxFramesPerFlight()
         );
@@ -130,7 +126,7 @@ namespace MFA
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
             RF::UpdateUniformBuffer(
-                mCameraBufferCollection.buffers[frameIndex],
+                *mCameraBuffer->buffers[frameIndex],
                 CBlobAliasOf(cameraBufferData)
             );
         }
@@ -140,15 +136,15 @@ namespace MFA
 
     void Scene::preparePointLightsBuffer()
     {
-        mPointLightsBuffers = RT::UniformBufferCollection(RF::CreateUniformBuffer(
+        mPointLightsBuffers = RF::CreateUniformBuffer(
             sizeof(PointLightsBufferData),
             RF::GetMaxFramesPerFlight()
-        ));
+        );
 
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
             RF::UpdateUniformBuffer(
-                mPointLightsBuffers.buffers[frameIndex],
+                *mPointLightsBuffers->buffers[frameIndex],
                 CBlobAliasOf(mPointLightData)
             );
         }
@@ -158,15 +154,15 @@ namespace MFA
 
     void Scene::prepareDirectionalLightsBuffer()
     {
-        mDirectionalLightBuffers = RT::UniformBufferCollection(RF::CreateUniformBuffer(
+        mDirectionalLightBuffers = RF::CreateUniformBuffer(
             sizeof(DirectionalLightData),
             RF::GetMaxFramesPerFlight()
-        ));
+        );
 
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
             RF::UpdateUniformBuffer(
-                mDirectionalLightBuffers.buffers[frameIndex],
+                *mDirectionalLightBuffers->buffers[frameIndex],
                 CBlobAliasOf(mDirectionalLightData)
             );
         }
@@ -181,7 +177,7 @@ namespace MFA
             if (cameraPtr->IsCameraDataDirty())
             {
                 RF::UpdateUniformBuffer(
-                    mCameraBufferCollection.buffers[recordState.frameIndex],
+                    *mCameraBuffer->buffers[recordState.frameIndex],
                     CBlobAliasOf(cameraPtr->GetCameraData())
                 );
             }
@@ -225,7 +221,7 @@ namespace MFA
 
         RF::UpdateUniformBuffer(
             recordState,
-            mPointLightsBuffers,
+            *mPointLightsBuffers,
             CBlobAliasOf(mPointLightData)
         );
     }
@@ -263,7 +259,7 @@ namespace MFA
 
         RF::UpdateUniformBuffer(
             recordState,
-            mDirectionalLightBuffers,
+            *mDirectionalLightBuffers,
             CBlobAliasOf(mDirectionalLightData)
         );
     }

@@ -244,6 +244,7 @@ list(
     # AssetSystem
     "src/engine/FoundationAsset.hpp"
     "src/engine/FoundationAsset.cpp"
+    "src/engine/FoundationAssetFWD.hpp"
     
     # UI System
     "src/engine/ui_system/UISystem.hpp"

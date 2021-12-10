@@ -3,7 +3,7 @@
 #include "../engine/FoundationAsset.hpp"
 
 namespace MFA::Importer {
-//TODO:// After implementing Resource system return handle instead
+
 //------------------------------Assets-------------------------------------
 
 struct ImportTextureOptions {
@@ -14,16 +14,16 @@ struct ImportTextureOptions {
 };
 
 [[nodiscard]]
-AS::Texture ImportUncompressedImage(
+std::shared_ptr<AS::Texture> ImportUncompressedImage(
     char const * path, 
     ImportTextureOptions const & options = {}
 );
 
 [[nodiscard]]
-AS::Texture CreateErrorTexture();
+std::shared_ptr<AS::Texture> CreateErrorTexture();
 
 [[nodiscard]]
-AS::Texture ImportInMemoryTexture(
+std::shared_ptr<AS::Texture> ImportInMemoryTexture(
     CBlob originalImagePixels,
     int32_t width,
     int32_t height,
@@ -34,7 +34,7 @@ AS::Texture ImportInMemoryTexture(
     ImportTextureOptions const & options = {}
 );
 
-AS::Texture ImportKTXImage(
+std::shared_ptr<AS::Texture> ImportKTXImage(
     char const * path,
     ImportTextureOptions const & options = {}
 );
@@ -47,58 +47,45 @@ AS::Texture ImportDDSFile(char const * path);
 
 
 [[nodiscard]]
-AS::Texture ImportImage(char const * path, ImportTextureOptions const & options = {});
+std::shared_ptr<AS::Texture> ImportImage(char const * path, ImportTextureOptions const & options = {});
 /*
  * Due to lack of material support, OBJ files are not very useful (Deprecated)
  */
 [[nodiscard]]
-AS::Mesh ImportObj(char const * path);
+std::shared_ptr<AS::Mesh> ImportObj(char const * path);
 
 [[nodiscard]]
-AS::Model ImportGLTF(char const * path);
+std::shared_ptr<AS::Model> ImportGLTF(char const * path);
 
 [[nodiscard]]
-AS::Shader ImportShaderFromHLSL(char const * path);
+std::shared_ptr<AS::Shader> ImportShaderFromHLSL(char const * path);
 
 [[nodiscard]]
-AS::Shader ImportShaderFromSPV(
+std::shared_ptr<AS::Shader> ImportShaderFromSPV(
     char const * path,
     AS::ShaderStage stage,
     char const * entryPoint
 );
 
 [[nodiscard]]
-AS::Shader ImportShaderFromSPV(
+std::shared_ptr<AS::Shader> ImportShaderFromSPV(
     CBlob dataMemory,
     AS::ShaderStage const stage,
     char const * entryPoint
 );
 
-// Temporary function for freeing imported assets, Will be replaced with RCMGMT system in future
-bool FreeModel(AS::Model & model);
-
-// Temporary function for freeing imported assets, Will be replaced with RCMGMT system in future
-bool FreeTexture(AS::Texture & texture);
-
-bool FreeShader(AS::Shader & shader);
-
-// Calling this function is not required because meshed does not allocate dynamic memory
-bool FreeMesh(AS::Mesh & mesh);
-
 //------------------------------RawFile------------------------------------
 
 struct RawFile {
-    Blob data;
+    std::shared_ptr<SmartBlob> data = nullptr;
     [[nodiscard]]
     bool valid() const {
-        return data.ptr != nullptr;
+        return data->memory.ptr != nullptr;
     }
 };
 
 [[nodiscard]]
 RawFile ReadRawFile(char const * path);         // We should use resource manager here
-
-bool FreeRawFile (RawFile * rawFile);
 
 
 }

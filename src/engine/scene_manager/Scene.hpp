@@ -50,17 +50,17 @@ public:
     Entity * GetRootEntity() const;
 
     [[nodiscard]]
-    RT::UniformBufferCollection const & GetCameraBufferCollection() const;
+    RT::UniformBufferGroup const & GetCameraBufferCollection() const;
 
     void RegisterPointLight(std::weak_ptr<PointLightComponent> const & pointLight);
 
     void RegisterDirectionalLight(std::weak_ptr<DirectionalLightComponent> const & directionalLight);
 
     [[nodiscard]]
-    RT::UniformBufferCollection const & GetPointLightsBuffers() const;
+    RT::UniformBufferGroup const & GetPointLightsBuffers() const;
 
     [[nodiscard]]
-    RT::UniformBufferCollection const & GetDirectionalLightBuffers() const;
+    RT::UniformBufferGroup const & GetDirectionalLightBuffers() const;
 
     [[nodiscard]]
     uint32_t GetPointLightCount() const;
@@ -91,7 +91,7 @@ private:
     std::vector<std::weak_ptr<DirectionalLightComponent>> mDirectionalLightComponents {};
 
     // Buffers 
-    RT::UniformBufferCollection mCameraBufferCollection {};
+    std::shared_ptr<RT::UniformBufferGroup> mCameraBuffer {};
 
     // Point light
     struct PointLight
@@ -113,7 +113,7 @@ private:
         PointLight items [MAX_POINT_LIGHT_COUNT] {};
     };
     PointLightsBufferData mPointLightData {};
-    RT::UniformBufferCollection mPointLightsBuffers {};
+    std::shared_ptr<RT::UniformBufferGroup> mPointLightsBuffers {};
 
     // https://stackoverflow.com/questions/9486364/why-cant-c-compilers-rearrange-struct-members-to-eliminate-alignment-padding
     // Directional light
@@ -134,7 +134,7 @@ private:
         DirectionalLight items [MAX_DIRECTIONAL_LIGHT_COUNT] {};
     };
     DirectionalLightData mDirectionalLightData {};
-    RT::UniformBufferCollection mDirectionalLightBuffers {};
+    std::shared_ptr<RT::UniformBufferGroup> mDirectionalLightBuffers {};
 
     // TODO Spot light
 };

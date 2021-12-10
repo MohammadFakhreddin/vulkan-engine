@@ -36,7 +36,7 @@ namespace MFA
         void createFrameBuffer(VkExtent2D const & shadowExtent, VkRenderPass renderPass);
 
         std::vector<VkFramebuffer> mFrameBuffers{};
-        std::vector<RT::DepthImageGroup> mShadowCubeMapList{};
+        std::vector<std::shared_ptr<RT::DepthImageGroup>> mShadowCubeMapList{};
     
     };
 

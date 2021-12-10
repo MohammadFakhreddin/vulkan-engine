@@ -96,7 +96,7 @@ namespace MFA::RenderBackend
     );
 
     [[nodiscard]]
-    VkImageView CreateImageView(
+    std::shared_ptr<RT::ImageViewGroup> CreateImageView(
         VkDevice device,
         VkImage const & image,
         VkFormat format,
@@ -108,7 +108,7 @@ namespace MFA::RenderBackend
 
     void DestroyImageView(
         VkDevice device,
-        VkImageView imageView
+        RT::ImageViewGroup const & imageView
     );
 
     [[nodiscard]]
@@ -145,7 +145,7 @@ namespace MFA::RenderBackend
     );
 
     [[nodiscard]]
-    RT::BufferAndMemory CreateBuffer(
+    std::shared_ptr<RT::BufferAndMemory> CreateBuffer(
         VkDevice device,
         VkPhysicalDevice physicalDevice,
         VkDeviceSize size,
@@ -170,12 +170,12 @@ namespace MFA::RenderBackend
 
     void DestroyBuffer(
         VkDevice device,
-        RT::BufferAndMemory & bufferGroup
+        const RT::BufferAndMemory& bufferGroup
     );
 
     // TODO Too many parameters. Create struct instead
     [[nodiscard]]
-    RT::ImageGroup CreateImage(
+    std::shared_ptr<RT::ImageGroup> CreateImage(
         VkDevice device,
         VkPhysicalDevice physical_device,
         uint32_t width,
@@ -198,15 +198,15 @@ namespace MFA::RenderBackend
     );
 
     [[nodiscard]]
-    RT::GpuTexture CreateTexture(
-        AS::Texture & cpuTexture,
+    std::shared_ptr<RT::GpuTexture> CreateTexture(
+        std::shared_ptr<AS::Texture> const & cpuTexture,
         VkDevice device,
         VkPhysicalDevice physicalDevice,
         VkQueue graphicQueue,
         VkCommandPool commandPool
     );
 
-    bool DestroyTexture(VkDevice device, RT::GpuTexture & gpuTexture);
+    void DestroyTexture(VkDevice device, RT::GpuTexture & gpuTexture);
 
     [[nodiscard]]
     VkFormat ConvertCpuTextureFormatToGpu(AS::TextureFormat cpuFormat);
@@ -237,12 +237,12 @@ namespace MFA::RenderBackend
     );
 
     [[nodiscard]]
-    VkSampler CreateSampler(
+    std::shared_ptr<RT::SamplerGroup> CreateSampler(
         VkDevice device,
         RT::CreateSamplerParams const & params
     );
 
-    void DestroySampler(VkDevice device, VkSampler sampler);
+    void DestroySampler(VkDevice device, RT::SamplerGroup const & sampler);
 
     [[nodiscard]]
     VkDebugReportCallbackEXT SetDebugCallback(
@@ -287,7 +287,7 @@ namespace MFA::RenderBackend
     );
 
     [[nodiscard]]
-    RT::SwapChainGroup CreateSwapChain(
+    std::shared_ptr<RT::SwapChainGroup> CreateSwapChain(
         VkDevice device,
         VkPhysicalDevice physicalDevice,
         VkSurfaceKHR windowSurface,
@@ -298,27 +298,23 @@ namespace MFA::RenderBackend
     void DestroySwapChain(VkDevice device, RT::SwapChainGroup const & swapChainGroup);
 
     [[nodiscard]]
-    RT::DepthImageGroup CreateDepthImage(
+    std::shared_ptr<RT::DepthImageGroup> CreateDepthImage(
         VkPhysicalDevice physicalDevice,
         VkDevice device,
         VkExtent2D imageExtent,
         VkFormat depthFormat,
         RT::CreateDepthImageOptions const & options
     );
-
-    void DestroyDepthImage(VkDevice device, RT::DepthImageGroup const & depthImageGroup);
-
+    
     [[nodiscard]]
-    RT::ColorImageGroup CreateColorImage(
+    std::shared_ptr<RT::ColorImageGroup> CreateColorImage(
         VkPhysicalDevice physicalDevice,
         VkDevice device,
         VkExtent2D const & imageExtent,
         VkFormat imageFormat,
         RT::CreateColorImageOptions const & options
     );
-
-    void DestroyColorImage(VkDevice device, RT::ColorImageGroup const & colorImageGroup);
-
+    
     // TODO Ask for options
     [[nodiscard]]
     VkRenderPass CreateRenderPass(
@@ -354,9 +350,12 @@ namespace MFA::RenderBackend
     );
 
     [[nodiscard]]
-    RT::GpuShader CreateShader(VkDevice device, AS::Shader const & cpuShader);
+    std::shared_ptr<RT::GpuShader> CreateShader(
+        VkDevice device,
+        std::shared_ptr<AS::Shader> const & cpuShader
+    );
 
-    bool DestroyShader(VkDevice device, RT::GpuShader & gpuShader);
+    void DestroyShader(VkDevice device, RT::GpuShader const & gpuShader);
 
     // Note Shaders can be removed after creating graphic pipeline
     [[nodiscard]]
@@ -397,7 +396,7 @@ namespace MFA::RenderBackend
     VkShaderStageFlagBits ConvertAssetShaderStageToGpu(AssetSystem::ShaderStage stage);
 
     [[nodiscard]]
-    RT::BufferAndMemory CreateVertexBuffer(
+    std::shared_ptr<RT::BufferAndMemory> CreateVertexBuffer(
         VkDevice device,
         VkPhysicalDevice physicalDevice,
         VkCommandPool commandPool,
@@ -411,7 +410,7 @@ namespace MFA::RenderBackend
     );
 
     [[nodiscard]]
-    RT::BufferAndMemory CreateIndexBuffer(
+    std::shared_ptr<RT::BufferAndMemory> CreateIndexBuffer(
         VkDevice device,
         VkPhysicalDevice physicalDevice,
         VkCommandPool commandPool,
@@ -421,7 +420,7 @@ namespace MFA::RenderBackend
 
     void DestroyIndexBuffer(
         VkDevice device,
-        RT::BufferAndMemory & indexBufferGroup
+        RT::BufferAndMemory const& indexBufferGroup
     );
 
     void CreateUniformBuffer(
@@ -429,7 +428,7 @@ namespace MFA::RenderBackend
         VkPhysicalDevice physicalDevice,
         uint32_t buffersCount,
         VkDeviceSize buffersSize,
-        RT::BufferAndMemory * outUniformBuffers
+        std::shared_ptr<RT::BufferAndMemory> * outBuffers
     );
 
     void UpdateBufferGroup(
@@ -440,7 +439,7 @@ namespace MFA::RenderBackend
 
     void DestroyBufferAndMemory(
         VkDevice device,
-        RT::BufferAndMemory & bufferAndMemory
+        RT::BufferAndMemory const& bufferAndMemory
     );
 
     void CreateStorageBuffer(
@@ -448,7 +447,7 @@ namespace MFA::RenderBackend
         VkPhysicalDevice physicalDevice,
         uint32_t buffersCount,
         VkDeviceSize buffersSize,
-        RT::BufferAndMemory * outStorageBuffer
+        std::shared_ptr<RT::BufferAndMemory> * outStorageBuffer
     );
 
     [[nodiscard]]
@@ -473,7 +472,6 @@ namespace MFA::RenderBackend
         VkWriteDescriptorSet * schemas = nullptr
     );
 
-    // TODO Consider creating an easier interface
     void UpdateDescriptorSets(
         VkDevice device,
         uint8_t descriptorSetCount,

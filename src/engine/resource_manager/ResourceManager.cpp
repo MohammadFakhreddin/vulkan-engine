@@ -3,6 +3,7 @@
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/BedrockFileSystem.hpp"
 #include "engine/BedrockAssert.hpp"
+#include "engine/BedrockMemory.hpp"
 #include "tools/Importer.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 
@@ -38,14 +39,13 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    static std::shared_ptr<RT::GpuModel> createGpuModel(AssetSystem::Model & cpuModel, char const * name)
+    static std::shared_ptr<RT::GpuModel> createGpuModel(std::shared_ptr<AS::Model> cpuModel, char const * name)
     {
         MFA_ASSERT(name != nullptr);
         MFA_ASSERT(strlen(name) > 0);
 
-        MFA_ASSERT(cpuModel.mesh.IsValid());
-        auto gpuModel = RF::CreateGpuModel(cpuModel, state->nextId++);
-        MFA_ASSERT(gpuModel->valid);
+        MFA_ASSERT(cpuModel->mesh->IsValid());
+        auto gpuModel = RF::CreateGpuModel(std::move(cpuModel), state->nextId++);
         state->availableGpuModels[name] = gpuModel;
         return gpuModel;
     }
@@ -72,7 +72,10 @@ namespace MFA
         if (extension == ".gltf" || extension == ".glb")
         {
             auto cpuModel = Importer::ImportGLTF(fileAddress);
-            return createGpuModel(cpuModel, fileAddress);
+            if (cpuModel != nullptr)
+            {
+                return createGpuModel(cpuModel, fileAddress);
+            }
         }
 
         MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
@@ -81,7 +84,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<RT::GpuModel> ResourceManager::Assign(AssetSystem::Model & cpuModel, char const * name)
+    std::shared_ptr<RT::GpuModel> ResourceManager::Assign(std::shared_ptr<AssetSystem::Model> cpuModel, char const * name)
     {
         auto const findResult = state->availableGpuModels.find(name);
         if (
@@ -93,8 +96,77 @@ namespace MFA
             return nullptr;
         }
 
-        return createGpuModel(cpuModel, name);
+        return createGpuModel(std::move(cpuModel), name);
     }
+
+    //-------------------------------------------------------------------------------------------------
+
+    //bool ResourceManager::FreeModel(AS::Model & model)
+    //{
+    //    bool success = false;
+    //    bool freeResult = false;
+    //    // Mesh
+    //    freeResult = FreeMesh(model.mesh);
+    //    MFA_ASSERT(freeResult);
+    //    // Textures
+    //    if (false == model.textures.empty())
+    //    {
+    //        for (auto & texture : model.textures)
+    //        {
+    //            freeResult = FreeTexture(texture);
+    //            MFA_ASSERT(freeResult);
+    //        }
+    //    }
+    //    success = true;
+    //    return success;
+    //}
+
+    ////-------------------------------------------------------------------------------------------------
+
+    //bool ResourceManager::FreeTexture(AS::Texture & texture)
+    //{
+    //    bool success = false;
+    //    MFA_ASSERT(texture.isValid());
+    //    if (texture.isValid())
+    //    {
+    //        // TODO This is RCMGMT task
+    //        Memory::Free(texture.revokeBuffer());
+    //        success = true;
+    //    }
+    //    return success;
+    //}
+
+    ////-------------------------------------------------------------------------------------------------
+
+    //bool ResourceManager::FreeShader(AS::Shader & shader)
+    //{
+    //    bool success = false;
+    //    MFA_ASSERT(shader.isValid());
+    //    if (shader.isValid())
+    //    {
+    //        Memory::Free(shader.revokeData());
+    //        success = true;
+    //    }
+    //    return success;
+    //}
+
+    ////-------------------------------------------------------------------------------------------------
+
+    //bool ResourceManager::FreeMesh(AS::Mesh & mesh)
+    //{
+    //    bool success = false;
+    //    MFA_ASSERT(mesh.IsValid());
+    //    if (mesh.IsValid())
+    //    {
+    //        Blob vertexBuffer{};
+    //        Blob indexBuffer{};
+    //        mesh.RevokeBuffers(vertexBuffer, indexBuffer);
+    //        Memory::Free(vertexBuffer);
+    //        Memory::Free(indexBuffer);
+    //        success = true;
+    //    }
+    //    return success;
+    //}
 
     //-------------------------------------------------------------------------------------------------
 

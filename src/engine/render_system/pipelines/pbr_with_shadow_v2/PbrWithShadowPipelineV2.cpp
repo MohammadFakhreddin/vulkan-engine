@@ -47,7 +47,10 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::Init(RT::SamplerGroup * samplerGroup, RT::GpuTexture * errorTexture)
+    void PBRWithShadowPipelineV2::Init(
+        std::shared_ptr<RT::SamplerGroup> samplerGroup,
+        std::shared_ptr<RT::GpuTexture> errorTexture
+    )
     {
         if (mIsInitialized == true)
         {
@@ -59,9 +62,9 @@ namespace MFA
         BasePipeline::Init();
 
         MFA_ASSERT(samplerGroup != nullptr);
-        mSamplerGroup = samplerGroup;
+        mSamplerGroup = std::move(samplerGroup);
         MFA_ASSERT(errorTexture != nullptr);
-        mErrorTexture = errorTexture;
+        mErrorTexture = std::move(errorTexture);
 
         createUniformBuffers();
 
@@ -123,8 +126,7 @@ namespace MFA
         
         destroyPipeline();
         destroyDescriptorSetLayout();
-        destroyUniformBuffers();
-
+        
         BasePipeline::Shutdown();
 
     }
@@ -237,7 +239,7 @@ namespace MFA
             // Important note: Keep reference of all descriptor buffer infos until updateDescriptorSets is called
             // DisplayViewProjection
             VkDescriptorBufferInfo viewProjectionBufferInfo{
-                .buffer = cameraBufferCollection.buffers[frameIndex].buffer,
+                .buffer = cameraBufferCollection.buffers[frameIndex]->buffer,
                 .offset = 0,
                 .range = cameraBufferCollection.bufferSize,
             };
@@ -245,7 +247,7 @@ namespace MFA
 
             // DirectionalLightBuffer
             VkDescriptorBufferInfo directionalLightBufferInfo {
-                .buffer = directionalLightBuffers.buffers[frameIndex].buffer,
+                .buffer = directionalLightBuffers.buffers[frameIndex]->buffer,
                 .offset = 0,
                 .range = directionalLightBuffers.bufferSize,
             };
@@ -253,7 +255,7 @@ namespace MFA
 
             // PointLightBuffer
             VkDescriptorBufferInfo pointLightBufferInfo {
-                .buffer = pointLightBuffers.buffers[frameIndex].buffer,
+                .buffer = pointLightBuffers.buffers[frameIndex]->buffer,
                 .offset = 0,
                 .range = pointLightBuffers.bufferSize,
             };
@@ -270,7 +272,7 @@ namespace MFA
             // DirectionalLightShadowMap
             auto directionalLightShadowMap = VkDescriptorImageInfo {
                 .sampler = nullptr,
-                .imageView = mDirectionalLightShadowResources->GetShadowMap(frameIndex).imageView,
+                .imageView = mDirectionalLightShadowResources->GetShadowMap(frameIndex).imageView->imageView,
                 .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             };
             descriptorSetSchema.AddImage(&directionalLightShadowMap, 1);
@@ -278,7 +280,7 @@ namespace MFA
             // PointLightShadowMap
             auto pointLightShadowCubeMapArray = VkDescriptorImageInfo {
                 .sampler = nullptr,
-                .imageView = mPointLightShadowResources->GetShadowCubeMap(frameIndex).imageView,
+                .imageView = mPointLightShadowResources->GetShadowCubeMap(frameIndex).imageView->imageView,
                 .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             };
             descriptorSetSchema.AddImage(
@@ -318,7 +320,7 @@ namespace MFA
 
             // Primitives
             VkDescriptorBufferInfo primitiveBufferInfo{
-                .buffer = primitiveBuffer.buffers[0].buffer,
+                .buffer = primitiveBuffer.buffers[0]->buffer,
                 .offset = 0,
                 .range = primitiveBuffer.bufferSize,
             };
@@ -333,7 +335,7 @@ namespace MFA
             {
                 imageInfos.emplace_back(VkDescriptorImageInfo{
                     .sampler = nullptr,
-                    .imageView = texture.imageView(),
+                    .imageView = texture->imageView->imageView,
                     .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
                 });
             }
@@ -341,7 +343,7 @@ namespace MFA
             {
                 imageInfos.emplace_back(VkDescriptorImageInfo{
                     .sampler = nullptr,
-                    .imageView = mErrorTexture->imageView(),
+                    .imageView = mErrorTexture->imageView->imageView,
                     .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
                 });
             }
@@ -366,7 +368,7 @@ namespace MFA
             RF::GetMaxFramesPerFlight(),
             mPerVariantDescriptorSetLayout
         );
-        auto const & actualSkinJointsBuffer = variant->GetSkinJointsBuffer();
+        auto const * storedSkinJointsBuffer = variant->GetSkinJointsBuffer();
 
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
@@ -381,12 +383,12 @@ namespace MFA
             /////////////////////////////////////////////////////////////////
 
             // SkinJoints
-            VkBuffer skinJointsBuffer = mErrorBuffer.buffers[0].buffer;
-            size_t skinJointsBufferSize = mErrorBuffer.bufferSize;
-            if (actualSkinJointsBuffer.bufferSize > 0)
+            VkBuffer skinJointsBuffer = mErrorBuffer->buffers[0]->buffer;
+            size_t skinJointsBufferSize = mErrorBuffer->bufferSize;
+            if (storedSkinJointsBuffer != nullptr && storedSkinJointsBuffer->bufferSize > 0)
             {
-                skinJointsBuffer = actualSkinJointsBuffer.buffers[frameIndex].buffer;
-                skinJointsBufferSize = actualSkinJointsBuffer.bufferSize;
+                skinJointsBuffer = storedSkinJointsBuffer->buffers[frameIndex]->buffer;
+                skinJointsBufferSize = storedSkinJointsBuffer->bufferSize;
             }
             VkDescriptorBufferInfo skinTransformBufferInfo{
                 .buffer = skinJointsBuffer,
@@ -892,7 +894,7 @@ namespace MFA
         // Fragment shader
         RF_CREATE_SHADER("shaders/pbr_with_shadow_v2/PbrWithShadow.frag.spv", Fragment)
 
-        std::vector<RT::GpuShader const *> shaders{ &gpuVertexShader, &gpuFragmentShader };
+        std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuFragmentShader.get() };
 
         VkVertexInputBindingDescription vertexInputBindingDescription{};
         vertexInputBindingDescription.binding = 0;
@@ -1022,7 +1024,7 @@ namespace MFA
         RF_CREATE_SHADER("shaders/directional_light_shadow/DirectionalLightShadow.vert.spv", Vertex)
         RF_CREATE_SHADER("shaders/directional_light_shadow/DirectionalLightShadow.geom.spv", Geometry)
         
-        std::vector<RT::GpuShader const *> shaders{ &gpuVertexShader, &gpuGeometryShader };
+        std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuGeometryShader.get() };
 
         VkVertexInputBindingDescription vertexInputBindingDescription{};
         vertexInputBindingDescription.binding = 0;
@@ -1102,7 +1104,11 @@ namespace MFA
         RF_CREATE_SHADER("shaders/point_light_shadow/PointLightShadow.geom.spv", Geometry)
         RF_CREATE_SHADER("shaders/point_light_shadow/PointLightShadow.frag.spv", Fragment)
 
-        std::vector<RT::GpuShader const *> shaders{ &gpuVertexShader, &gpuGeometryShader, &gpuFragmentShader };
+        std::vector<RT::GpuShader const *> shaders {
+            gpuVertexShader.get(),
+            gpuGeometryShader.get(),
+            gpuFragmentShader.get()
+        };
 
         VkVertexInputBindingDescription vertexInputBindingDescription{};
         vertexInputBindingDescription.binding = 0;
@@ -1181,7 +1187,7 @@ namespace MFA
         RF_CREATE_SHADER("shaders/depth_pre_pass/DepthPrePass.vert.spv", Vertex)
         RF_CREATE_SHADER("shaders/depth_pre_pass/DepthPrePass.frag.spv", Fragment)
 
-        std::vector<RT::GpuShader const *> shaders{ &gpuVertexShader, &gpuFragmentShader };
+        std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuFragmentShader.get() };
 
         VkVertexInputBindingDescription vertexInputBindingDescription{};
         vertexInputBindingDescription.binding = 0;
@@ -1295,7 +1301,7 @@ namespace MFA
         RF_CREATE_SHADER("shaders/occlusion_query/Occlusion.vert.spv", Vertex)
         RF_CREATE_SHADER("shaders/occlusion_query/Occlusion.frag.spv", Fragment)
 
-        std::vector<RT::GpuShader const *> shaders{ &gpuVertexShader, &gpuFragmentShader };
+        std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuFragmentShader.get() };
 
         VkVertexInputBindingDescription vertexInputBindingDescription{};
         vertexInputBindingDescription.binding = 0;
@@ -1400,13 +1406,6 @@ namespace MFA
     void PBRWithShadowPipelineV2::createUniformBuffers()
     {
         mErrorBuffer = RF::CreateUniformBuffer(sizeof(DrawableVariant::JointTransformData), 1);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void PBRWithShadowPipelineV2::destroyUniformBuffers()
-    {
-        RF::DestroyUniformBuffer(mErrorBuffer);
     }
 
     //-------------------------------------------------------------------------------------------------

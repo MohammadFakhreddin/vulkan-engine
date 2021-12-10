@@ -9,9 +9,7 @@ namespace MFA::ShapeGenerator {
 
     namespace AS = AssetSystem;
 
-    AssetSystem::Model Sphere() {
-        AssetSystem::Model model {};
-
+    std::shared_ptr<AS::Model> Sphere() {
         std::vector<glm::vec3> positions {};
         std::vector<glm::vec2> uvs {};
         std::vector<glm::vec3> normals {};
@@ -78,7 +76,8 @@ namespace MFA::ShapeGenerator {
         auto const indicesCount = static_cast<uint32_t>(meshIndices.size());
         auto const verticesCount = static_cast<uint32_t>(positions.size());
 
-        model.mesh.InitForWrite(
+        auto mesh = std::make_shared<AS::Mesh>();
+        mesh->InitForWrite(
             verticesCount, 
             indicesCount, 
             Memory::Alloc(sizeof(AS::MeshVertex) * verticesCount), 
@@ -117,12 +116,12 @@ namespace MFA::ShapeGenerator {
 
         }
 
-        auto const subMeshIndex = model.mesh.InsertSubMesh();
+        auto const subMeshIndex = mesh->InsertSubMesh();
 
         AS::Mesh::Primitive primitive {};
         primitive.hasNormalBuffer = true;
 
-        model.mesh.InsertPrimitive(
+        mesh->InsertPrimitive(
             subMeshIndex,
             primitive,
             verticesCount,
@@ -136,23 +135,28 @@ namespace MFA::ShapeGenerator {
             .scale = {1, 1, 1}
         };
         
-        model.mesh.InsertNode(node);
+        mesh->InsertNode(node);
 
-        model.mesh.FinalizeData();
+        mesh->FinalizeData();
 
-        if(model.mesh.IsValid() == false) {
-            Blob verticesBuffer {};
-            Blob indicesBuffer {};
-            model.mesh.RevokeBuffers(verticesBuffer, indicesBuffer);
-            Memory::Free(verticesBuffer);
-            Memory::Free(indicesBuffer);
-        }
+        //if(model->mesh->IsValid() == false) {
+        //    Blob verticesBuffer {};
+        //    Blob indicesBuffer {};
+        //    model->mesh.RevokeBuffers(verticesBuffer, indicesBuffer);
+        //    Memory::Free(verticesBuffer);
+        //    Memory::Free(indicesBuffer);
+        //}
 
-        return model;
+        std::vector<std::shared_ptr<AS::Texture>> textures {};
+
+        return std::make_shared<AS::Model>(
+            mesh,
+            textures
+        );
     }
 
-    AssetSystem::Model Sheet() {
-        AssetSystem::Model model {};
+    std::shared_ptr<AS::Model> Sheet() {
+        std::shared_ptr<AS::Model> model {};
 
         std::vector<glm::vec3> positions {};
         std::vector<glm::vec2> uvs {};
@@ -185,7 +189,7 @@ namespace MFA::ShapeGenerator {
         auto const indicesCount = static_cast<uint16_t>(meshIndices.size());
         auto const verticesCount = static_cast<uint16_t>(positions.size());
 
-        model.mesh.InitForWrite(
+        model->mesh->InitForWrite(
             verticesCount, 
             indicesCount, 
             Memory::Alloc(sizeof(AS::MeshVertex) * verticesCount), 
@@ -203,11 +207,11 @@ namespace MFA::ShapeGenerator {
             Matrix::CopyGlmToCells(uvs[index], vertex.baseColorUV);
         }
 
-        auto const subMeshIndex = model.mesh.InsertSubMesh();
+        auto const subMeshIndex = model->mesh->InsertSubMesh();
 
         AS::Mesh::Primitive primitive {};
         primitive.hasBaseColorTexture = true;
-        model.mesh.InsertPrimitive(
+        model->mesh->InsertPrimitive(
             subMeshIndex,
             primitive,
             verticesCount,
@@ -218,22 +222,22 @@ namespace MFA::ShapeGenerator {
 
         auto node = AS::MeshNode {};
         Matrix::CopyGlmToCells(glm::identity<glm::mat4>(), node.transform);
-        model.mesh.InsertNode(node);
+        model->mesh->InsertNode(node);
 
-        model.mesh.FinalizeData();
+        model->mesh->FinalizeData();
 
-        if(model.mesh.IsValid() == false) {
-            Blob verticesBuffer {};
-            Blob indicesBuffer {};
-            model.mesh.RevokeBuffers(verticesBuffer, indicesBuffer);
-            Memory::Free(verticesBuffer);
-            Memory::Free(indicesBuffer);
-        }
+        //if(model->mesh->IsValid() == false) {
+        //    Blob verticesBuffer {};
+        //    Blob indicesBuffer {};
+        //    model->mesh->RevokeBuffers(verticesBuffer, indicesBuffer);
+        //    Memory::Free(verticesBuffer);
+        //    Memory::Free(indicesBuffer);
+        //}
 
         return model;
     }
 
-    AssetSystem::Model Cube()
+    std::shared_ptr<AS::Model> Cube()
     {
 
         std::vector<glm::vec3> const positions {
@@ -259,9 +263,9 @@ namespace MFA::ShapeGenerator {
         auto const indicesCount = static_cast<uint16_t>(meshIndices.size());
         auto const verticesCount = static_cast<uint16_t>(positions.size());
 
-        AssetSystem::Model model {};
-
-        model.mesh.InitForWrite(
+        auto const mesh = std::make_shared<AS::Mesh>();
+        MFA_ASSERT(mesh != nullptr);
+        mesh->InitForWrite(
             verticesCount, 
             indicesCount, 
             Memory::Alloc(sizeof(AS::MeshVertex) * verticesCount), 
@@ -276,11 +280,11 @@ namespace MFA::ShapeGenerator {
             Matrix::CopyGlmToCells(positions[index], vertex.position);
         }
 
-        auto const subMeshIndex = model.mesh.InsertSubMesh();
+        auto const subMeshIndex = mesh->InsertSubMesh();
 
         AS::Mesh::Primitive primitive {};
         primitive.hasBaseColorTexture = true;
-        model.mesh.InsertPrimitive(
+        mesh->InsertPrimitive(
             subMeshIndex,
             primitive,
             verticesCount,
@@ -292,19 +296,22 @@ namespace MFA::ShapeGenerator {
         AS::MeshNode node {};
         node.subMeshIndex = 0;
         Matrix::CopyGlmToCells(glm::identity<glm::mat4>(), node.transform);
-        model.mesh.InsertNode(node);
+        mesh->InsertNode(node);
 
-        model.mesh.FinalizeData();
+        mesh->FinalizeData();
 
-        if(model.mesh.IsValid() == false) {
-            Blob verticesBuffer {};
-            Blob indicesBuffer {};
-            model.mesh.RevokeBuffers(verticesBuffer, indicesBuffer);
-            Memory::Free(verticesBuffer);
-            Memory::Free(indicesBuffer);
-        }
+        //if(model->mesh.IsValid() == false) {
+        //    Blob verticesBuffer {};
+        //    Blob indicesBuffer {};
+        //    model->mesh.RevokeBuffers(verticesBuffer, indicesBuffer);
+        //    Memory::Free(verticesBuffer);
+        //    Memory::Free(indicesBuffer);
+        //}
 
-        return model;
+        return std::make_shared<AS::Model>(
+            mesh,
+            std::vector<std::shared_ptr<AS::Texture>>{}
+        );
 
     }
 

@@ -4,150 +4,234 @@
 #include "tools/Importer.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 
-//-------------------------------------------------------------------------------------------------
-
-bool MFA::RenderTypes::BufferAndMemory::isValid() const noexcept {
-    return MFA_VK_VALID(buffer) && MFA_VK_VALID(memory);
-}
+#include <utility>
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::RenderTypes::BufferAndMemory::revoke() {
-    MFA_VK_MAKE_NULL(buffer);
-    MFA_VK_MAKE_NULL(memory);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-bool MFA::RenderTypes::SamplerGroup::isValid() const noexcept {
-    return MFA_VK_VALID(sampler);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void MFA::RenderTypes::SamplerGroup::revoke() {
-    MFA_ASSERT(isValid());
-    MFA_VK_MAKE_NULL(sampler);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-bool MFA::RenderTypes::ImageGroup::isValid() const noexcept {
-    return MFA_VK_VALID(image) && MFA_VK_VALID(memory);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void MFA::RenderTypes::ImageGroup::revoke() {
-    MFA_VK_MAKE_NULL(image);
-    MFA_VK_MAKE_NULL(memory);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-MFA::RenderTypes::GpuTexture::GpuTexture(
-    ImageGroup && imageGroup, 
-    VkImageView imageView, 
-    AS::Texture && cpuTexture
+MFA::RT::BufferAndMemory::BufferAndMemory(
+    VkBuffer buffer_,
+    VkDeviceMemory memory_
 )
-    : mImageGroup(imageGroup)
-    , mImageView(imageView)
-    , mCpuTexture(cpuTexture)
+    : buffer(buffer_)
+    , memory(memory_)
 {}
 
 //-------------------------------------------------------------------------------------------------
 
-bool MFA::RenderTypes::GpuTexture::isValid() const {
-    if (mCpuTexture.isValid() == false) {
-        return false;
-    }
-    if (mImageGroup.isValid() == false) {
-        return false;
-    }
-    return MFA_VK_VALID(mImageView);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void MFA::RenderTypes::GpuTexture::revoke() {
-    mImageGroup.revoke();
-    MFA_VK_MAKE_NULL(mImageView);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-MFA::RenderTypes::GpuModel::GpuModel() = default;
-
-//-------------------------------------------------------------------------------------------------
-
-MFA::RenderTypes::GpuModel::~GpuModel()
+MFA::RT::BufferAndMemory::~BufferAndMemory()
 {
-    RF::DestroyGpuModel(*this);
-    Importer::FreeModel(model);
+    RF::DestroyBuffer(*this);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RenderTypes::GpuShader::GpuShader(
-    VkShaderModule shaderModule, 
-    AS::Shader cpuShader
+MFA::RT::SamplerGroup::SamplerGroup(VkSampler sampler_)
+    : sampler(sampler_)
+{}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RT::SamplerGroup::~SamplerGroup()
+{
+    RF::DestroySampler(*this);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RT::MeshBuffers::MeshBuffers(
+    std::shared_ptr<BufferAndMemory> verticesBuffer_,
+    std::shared_ptr<BufferAndMemory> indicesBuffer_
 )
-    : mShaderModule(shaderModule)
-    , mCpuShader(std::move(cpuShader)) {}
+    : verticesBuffer(std::move(verticesBuffer_))
+    , indicesBuffer(std::move(indicesBuffer_))
+{}
 
 //-------------------------------------------------------------------------------------------------
 
-bool MFA::RenderTypes::GpuShader::valid() const {
-    return MFA_VK_VALID(mShaderModule);
+MFA::RT::MeshBuffers::~MeshBuffers() = default;
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RT::ImageGroup::ImageGroup(
+    VkImage const image_,
+    VkDeviceMemory const memory_
+)
+    : image(image_)
+    , memory(memory_)
+{}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RT::ImageGroup::~ImageGroup()
+{
+    RF::DestroyImage(*this);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::RenderTypes::GpuShader::revoke() {
-    MFA_VK_MAKE_NULL(mShaderModule);
+MFA::RT::ImageViewGroup::ImageViewGroup(VkImageView imageView_)
+    : imageView(imageView_)
+{
+    MFA_VK_VALID_ASSERT(imageView);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-bool MFA::RenderTypes::PipelineGroup::isValid() const noexcept {
+MFA::RT::ImageViewGroup::~ImageViewGroup()
+{
+    RF::DestroyImageView(*this);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RT::GpuTexture::GpuTexture(
+    std::shared_ptr<ImageGroup> imageGroup,
+    std::shared_ptr<ImageViewGroup> imageView,
+    std::shared_ptr<AS::Texture> cpuTexture
+)
+    : imageGroup(std::move(imageGroup))
+    , imageView(std::move(imageView))
+    , cpuTexture(std::move(cpuTexture))
+{}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RT::GpuTexture::~GpuTexture() = default;
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RT::GpuModel::GpuModel(
+    GpuModelId const id_,
+    std::shared_ptr<MeshBuffers> meshBuffers_,
+    std::vector<std::shared_ptr<GpuTexture>> textures_,
+    std::shared_ptr<AS::Model> model_
+)
+    : id(id_)
+    , meshBuffers(std::move(meshBuffers_))
+    , textures(std::move(textures_))
+    , model(std::move(model_))
+{}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RT::GpuModel::~GpuModel() = default;
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RT::GpuShader::GpuShader(
+    VkShaderModule const & shaderModule,
+    VkShaderStageFlagBits const stageFlags,
+    std::string entryPointName
+)
+    : shaderModule(shaderModule)
+    , stageFlags(stageFlags)
+    , entryPointName(std::move(entryPointName))
+{
+    MFA_ASSERT(shaderModule != nullptr);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RT::GpuShader::~GpuShader()
+{
+    RF::DestroyShader(*this);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+bool MFA::RT::PipelineGroup::isValid() const noexcept
+{
     return MFA_VK_VALID(pipelineLayout)
-    && MFA_VK_VALID(graphicPipeline);
+        && MFA_VK_VALID(graphicPipeline);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::RenderTypes::PipelineGroup::revoke() {
+void MFA::RT::PipelineGroup::revoke()
+{
     MFA_VK_MAKE_NULL(pipelineLayout);
     MFA_VK_MAKE_NULL(graphicPipeline);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-bool MFA::RenderTypes::UniformBufferCollection::isValid() const noexcept {
-    if(bufferSize <= 0 || buffers.empty() == true) {
-        return false;
-    }
-    for(auto const & buffer : buffers) {
-        if(buffer.isValid() == false) {
-            return false;
-        }
-    }
-    return true;
+MFA::RT::UniformBufferGroup::UniformBufferGroup(
+    std::vector<std::shared_ptr<BufferAndMemory>> buffers_,
+    size_t const bufferSize_
+)
+    : buffers(std::move(buffers_))
+    , bufferSize(bufferSize_)
+{}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RT::UniformBufferGroup::~UniformBufferGroup() = default;
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RT::StorageBufferCollection::StorageBufferCollection(
+    std::vector<std::shared_ptr<BufferAndMemory>> buffers_,
+    size_t const bufferSize_
+)
+    : buffers(std::move(buffers_))
+    , bufferSize(bufferSize_)
+{}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RT::StorageBufferCollection::~StorageBufferCollection() = default;
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RT::SwapChainGroup::SwapChainGroup(
+    VkSwapchainKHR swapChain_,
+    VkFormat swapChainFormat_,
+    std::vector<VkImage> const & swapChainImages_,
+    std::vector<std::shared_ptr<ImageViewGroup>> const & swapChainImageViews_
+)
+    : swapChain(swapChain_)
+    , swapChainFormat(swapChainFormat_)
+    , swapChainImages(swapChainImages_)
+    , swapChainImageViews(swapChainImageViews_)
+{}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RT::SwapChainGroup::~SwapChainGroup()
+{
+    RF::DestroySwapChain(*this);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-bool MFA::RenderTypes::StorageBufferCollection::isValid() const noexcept
-{
-    if(bufferSize <= 0 || buffers.empty() == true) {
-        return false;
-    }
-    for(auto const & buffer : buffers) {
-        if(buffer.isValid() == false) {
-            return false;
-        }
-    }
-    return true;
-}
+MFA::RT::DepthImageGroup::DepthImageGroup(
+    std::shared_ptr<ImageGroup> imageGroup_,
+    std::shared_ptr<ImageViewGroup> imageView_,
+    VkFormat imageFormat_
+)
+    : imageGroup(std::move(imageGroup_))
+    , imageView(std::move(imageView_))
+    , imageFormat(imageFormat_)
+{}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RT::DepthImageGroup::~DepthImageGroup() = default;
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RT::ColorImageGroup::ColorImageGroup(
+    std::shared_ptr<ImageGroup> imageGroup_,
+    std::shared_ptr<ImageViewGroup> imageView_,
+    VkFormat imageFormat_
+)
+    : imageGroup(std::move(imageGroup_))
+    , imageView(std::move(imageView_))
+    , imageFormat(imageFormat_)
+{}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RT::ColorImageGroup::~ColorImageGroup() = default;
 
 //-------------------------------------------------------------------------------------------------

@@ -3,6 +3,7 @@
 #include "ColorComponent.hpp"
 #include "TransformComponent.hpp"
 #include "engine/BedrockAssert.hpp"
+#include "engine/BedrockMath.hpp"
 #include "engine/BedrockMatrix.hpp"
 #include "engine/entity_system/Entity.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
@@ -116,7 +117,7 @@ void MFA::DirectionalLightComponent::computeDirectionAndShadowViewProjection()
     glm::mat4 directionRotationMatrix = glm::identity<glm::mat4>();
     Matrix::Rotate(directionRotationMatrix, rotation);
 
-    mDirection = directionRotationMatrix * RT::ForwardVector;
+    mDirection = directionRotationMatrix * Math::ForwardVector;
     
     auto const shadowViewMatrix = glm::lookAt(
         mDirection,

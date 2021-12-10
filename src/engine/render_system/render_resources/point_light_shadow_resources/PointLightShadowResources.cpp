@@ -21,12 +21,11 @@ void MFA::PointLightShadowResources::Shutdown()
 {
     RF::DestroyFrameBuffers(static_cast<uint32_t>(mFrameBuffers.size()), mFrameBuffers.data());
     mFrameBuffers.clear();
-
-    for (auto & shadowCubeMap : mShadowCubeMapList)
-    {
-        RF::DestroyDepthImage(shadowCubeMap);
-    }
-    mShadowCubeMapList.clear();
+    //for (auto & shadowCubeMap : mShadowCubeMapList)
+    //{
+    //    RF::DestroyDepthImage(shadowCubeMap);
+    //}
+    //mShadowCubeMapList.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -40,7 +39,7 @@ MFA::RT::DepthImageGroup const & MFA::PointLightShadowResources::GetShadowCubeMa
 
 MFA::RT::DepthImageGroup const & MFA::PointLightShadowResources::GetShadowCubeMap(uint32_t const frameIndex) const
 {
-    return mShadowCubeMapList[frameIndex];
+    return *mShadowCubeMapList[frameIndex];
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -90,9 +89,7 @@ void MFA::PointLightShadowResources::createFrameBuffer(VkExtent2D const & shadow
     mFrameBuffers.resize(RF::GetMaxFramesPerFlight());  // Per face index
     for (uint32_t i = 0; i < static_cast<uint32_t>(mFrameBuffers.size()); ++i)
     {
-        std::vector<VkImageView> const attachments = {
-            mShadowCubeMapList[i].imageView,
-        };
+        std::vector<VkImageView> const attachments {mShadowCubeMapList[i]->imageView->imageView,};
 
         mFrameBuffers[i] = RF::CreateFrameBuffer(
             renderPass,

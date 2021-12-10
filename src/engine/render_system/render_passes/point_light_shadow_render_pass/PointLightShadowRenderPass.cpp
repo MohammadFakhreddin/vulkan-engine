@@ -229,7 +229,7 @@ namespace MFA
             .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = renderTarget->GetShadowCubeMap(recordState).imageGroup.image,
+            .image = renderTarget->GetShadowCubeMap(recordState).imageGroup->image,
             .subresourceRange = subResourceRange
         };
 

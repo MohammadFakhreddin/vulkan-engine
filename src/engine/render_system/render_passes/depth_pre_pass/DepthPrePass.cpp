@@ -100,7 +100,7 @@ void MFA::DepthPrePass::createRenderPass()
 {
 
     VkAttachmentDescription const depthAttachment{
-        .format = RF::GetDisplayRenderPass()->GetDepthImages()[0].imageFormat,
+        .format = RF::GetDisplayRenderPass()->GetDepthImages()[0]->imageFormat,
         .samples = RF::GetMaxSamplesCount(),
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -169,9 +169,7 @@ void MFA::DepthPrePass::createFrameBuffers(VkExtent2D const & extent)
     mFrameBuffers.resize(RF::GetSwapChainImagesCount());
     for (int i = 0; i < static_cast<int>(mFrameBuffers.size()); ++i)
     {
-        std::vector<VkImageView> const attachments = {
-            RF::GetDisplayRenderPass()->GetDepthImages()[i].imageView
-        };
+        std::vector<VkImageView> const attachments = {RF::GetDisplayRenderPass()->GetDepthImages()[i]->imageView->imageView};
         mFrameBuffers[i] = RF::CreateFrameBuffer(
             mRenderPass,
             attachments.data(),

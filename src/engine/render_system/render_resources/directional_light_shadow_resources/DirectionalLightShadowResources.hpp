@@ -2,9 +2,10 @@
 
 #include "engine/render_system/RenderTypes.hpp"
 
-namespace MFA 
+namespace MFA
 {
-    class DirectionalLightShadowResources {
+    class DirectionalLightShadowResources
+    {
     public:
 
         void Init(VkRenderPass renderPass);
@@ -16,7 +17,7 @@ namespace MFA
 
         [[nodiscard]]
         RT::DepthImageGroup const & GetShadowMap(uint32_t frameIndex) const;
-        
+
         [[nodiscard]]
         VkFramebuffer GetFrameBuffer(RT::CommandRecordState const & drawPass) const;
 
@@ -28,10 +29,10 @@ namespace MFA
         static constexpr uint32_t CubeFaceCount = 6;
 
         void createShadowMap(VkExtent2D const & shadowExtent);
-        
+
         void createFrameBuffer(VkExtent2D const & shadowExtent, VkRenderPass renderPass);
 
         std::vector<VkFramebuffer> mFrameBuffers{};
-        std::vector<RT::DepthImageGroup> mShadowMaps{};
+        std::vector<std::shared_ptr<RT::DepthImageGroup>> mShadowMaps{};
     };
 }

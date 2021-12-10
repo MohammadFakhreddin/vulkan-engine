@@ -2,7 +2,7 @@
 
 #include "engine/render_system/RenderTypesFWD.hpp"
 #include "engine/BedrockPlatforms.hpp"
-#include "engine/FoundationAsset.hpp"
+#include "engine/FoundationAssetFWD.hpp"
 
 #ifdef __ANDROID__
 #include "vulkan_wrapper.h"
@@ -21,118 +21,146 @@ namespace MFA
 
         struct BufferAndMemory
         {
-            VkBuffer buffer{};
-            VkDeviceMemory memory{};
-            [[nodiscard]]
-            bool isValid() const noexcept;
-            void revoke();
+            const VkBuffer buffer;
+            const VkDeviceMemory memory;
+
+            explicit BufferAndMemory(
+                VkBuffer buffer_,
+                VkDeviceMemory memory_
+            );
+            ~BufferAndMemory();
+
+            BufferAndMemory(BufferAndMemory const &) noexcept = delete;
+            BufferAndMemory(BufferAndMemory &&) noexcept = delete;
+            BufferAndMemory & operator= (BufferAndMemory const & rhs) noexcept = delete;
+            BufferAndMemory & operator= (BufferAndMemory && rhs) noexcept = delete;
+
         };
 
         struct SamplerGroup
         {
-            VkSampler sampler;
-            [[nodiscard]]
-            bool isValid() const noexcept;
-            void revoke();
+            VkSampler const sampler;
+
+            explicit SamplerGroup(VkSampler sampler_);
+            ~SamplerGroup();
+
+            SamplerGroup(SamplerGroup const &) noexcept = delete;
+            SamplerGroup(SamplerGroup &&) noexcept = delete;
+            SamplerGroup & operator= (SamplerGroup const & rhs) noexcept = delete;
+            SamplerGroup & operator= (SamplerGroup && rhs) noexcept = delete;
+        
         };
 
         struct MeshBuffers
         {
-            BufferAndMemory verticesBuffer{};
-            BufferAndMemory indicesBuffer{};
+            std::shared_ptr<BufferAndMemory> const verticesBuffer;
+            std::shared_ptr<BufferAndMemory> const indicesBuffer;
+
+            explicit MeshBuffers(
+                std::shared_ptr<BufferAndMemory> verticesBuffer_,
+                std::shared_ptr<BufferAndMemory> indicesBuffer_
+            );
+            ~MeshBuffers();
+
+            MeshBuffers(MeshBuffers const &) noexcept = delete;
+            MeshBuffers(MeshBuffers &&) noexcept = delete;
+            MeshBuffers & operator= (MeshBuffers const & rhs) noexcept = delete;
+            MeshBuffers & operator= (MeshBuffers && rhs) noexcept = delete;
+        
         };
 
         struct ImageGroup
         {
-            VkImage image{};
-            VkDeviceMemory memory{};
-            [[nodiscard]]
-            bool isValid() const noexcept;
-            void revoke();
+            VkImage const image;
+            VkDeviceMemory const memory;
+
+            explicit ImageGroup(
+                VkImage image_,
+                VkDeviceMemory memory_
+            );
+            ~ImageGroup();
+
+            ImageGroup(ImageGroup const &) noexcept = delete;
+            ImageGroup(ImageGroup &&) noexcept = delete;
+            ImageGroup & operator= (ImageGroup const & rhs) noexcept = delete;
+            ImageGroup & operator= (ImageGroup && rhs) noexcept = delete;
         };
 
-        class GpuTexture
+        struct ImageViewGroup
         {
-        public:
+            VkImageView const imageView;
 
+            explicit ImageViewGroup(VkImageView imageView_);
+            ~ImageViewGroup();
+
+            ImageViewGroup(ImageViewGroup const &) noexcept = delete;
+            ImageViewGroup(ImageViewGroup &&) noexcept = delete;
+            ImageViewGroup & operator= (ImageViewGroup const & rhs) noexcept = delete;
+            ImageViewGroup & operator= (ImageViewGroup && rhs) noexcept = delete;
+
+        };
+
+        struct GpuTexture
+        {
             explicit GpuTexture() = default;
 
             explicit GpuTexture(
-                ImageGroup && imageGroup,
-                VkImageView imageView,
-                AS::Texture && cpuTexture
+                std::shared_ptr<ImageGroup> imageGroup,
+                std::shared_ptr<ImageViewGroup> imageView,
+                std::shared_ptr<AS::Texture> cpuTexture
             );
+            ~GpuTexture();
 
-            [[nodiscard]]
-            AS::Texture const & cpuTexture() const { return mCpuTexture; }
+            GpuTexture(GpuTexture const &) noexcept = delete;
+            GpuTexture(GpuTexture &&) noexcept = delete;
+            GpuTexture & operator= (GpuTexture const & rhs) noexcept = delete;
+            GpuTexture & operator= (GpuTexture && rhs) noexcept = delete;
 
-            [[nodiscard]]
-            AS::Texture & cpuTexture() { return mCpuTexture; }
-
-            [[nodiscard]]
-            bool isValid() const;
-
-            void revoke();
-
-            [[nodiscard]]
-            VkImage const & image() const { return mImageGroup.image; }
-
-            [[nodiscard]]
-            VkImageView imageView() const { return mImageView; }
-
-            [[nodiscard]]
-            ImageGroup const & imageGroup() const { return mImageGroup; };
-
-        private:
-            ImageGroup mImageGroup{};
-            VkImageView mImageView{};
-            AS::Texture mCpuTexture{};
+            std::shared_ptr<ImageGroup> const imageGroup{};
+            std::shared_ptr<ImageViewGroup> const imageView{};
+            // TODO Maybe we do not need the cpu textures after creating gpu one. Investigate!
+            std::shared_ptr<AS::Texture> const cpuTexture{};     
         };
 
         struct GpuModel
         {
-            GpuModelId id = 0;
-            bool valid = false;
-            MeshBuffers meshBuffers{};
-            std::vector<GpuTexture> textures{};
-            AssetSystem::Model model{};
+            GpuModelId const id;
+            std::shared_ptr<MeshBuffers> const meshBuffers;
+            std::vector<std::shared_ptr<GpuTexture>> const textures;
+            std::shared_ptr<AS::Model> const model;
 
-            explicit GpuModel();
+            explicit GpuModel(
+                GpuModelId id_,
+                std::shared_ptr<MeshBuffers> meshBuffers_,
+                std::vector<std::shared_ptr<GpuTexture>> textures_,
+                std::shared_ptr<AS::Model> model_
+            );
             ~GpuModel();
 
-            GpuModel (GpuModel const &) noexcept = delete;
-            GpuModel (GpuModel &&) noexcept = delete;
+            GpuModel(GpuModel const &) noexcept = delete;
+            GpuModel(GpuModel &&) noexcept = delete;
             GpuModel & operator= (GpuModel const & rhs) noexcept = delete;
             GpuModel & operator= (GpuModel && rhs) noexcept = delete;
         };
 
-        class GpuShader
+        struct GpuShader
         {
-        public:
+        
+            explicit GpuShader(
+                VkShaderModule const & shaderModule,
+                VkShaderStageFlagBits stageFlags,
+                std::string entryPointName
+            );
+            ~GpuShader();
 
-            explicit GpuShader() = default;
-
-            explicit GpuShader(VkShaderModule shaderModule, AS::Shader cpuShader);
-
-            [[nodiscard]]
-            AS::Shader & cpuShader() { return mCpuShader; }
-
-            [[nodiscard]]
-            AS::Shader const & cpuShader() const { return mCpuShader; }
-
-            [[nodiscard]]
-            bool valid() const;
-
-            [[nodiscard]]
-            VkShaderModule shaderModule() const { return mShaderModule; }
-
-            void revoke();
-
-        private:
-
-            VkShaderModule mShaderModule{};
-
-            AS::Shader mCpuShader{};
+            GpuShader(GpuShader const &) noexcept = delete;
+            GpuShader(GpuShader &&) noexcept = delete;
+            GpuShader & operator= (GpuShader const & rhs) noexcept = delete;
+            GpuShader & operator= (GpuShader && rhs) noexcept = delete;
+            
+            VkShaderModule const shaderModule;
+            VkShaderStageFlagBits const stageFlags;
+            std::string const entryPointName;
 
         };
 
@@ -149,49 +177,104 @@ namespace MFA
 
         struct CommandRecordState
         {
-            uint32_t imageIndex;
-            uint32_t frameIndex;
+            uint32_t imageIndex = 0;
+            uint32_t frameIndex = 0;
             bool isValid = false;
-            PipelineGroup * pipeline;
-            RenderPass * renderPass;
+            PipelineGroup * pipeline = nullptr;
+            RenderPass * renderPass = nullptr;
         };
 
-        struct UniformBufferCollection
+        struct UniformBufferGroup
         {
-            std::vector<BufferAndMemory> buffers;
-            size_t bufferSize;
-            [[nodiscard]]
-            bool isValid() const noexcept;
+            explicit UniformBufferGroup(
+                std::vector<std::shared_ptr<BufferAndMemory>> buffers_,
+                size_t bufferSize_
+            );
+            ~UniformBufferGroup();
+
+            UniformBufferGroup(UniformBufferGroup const &) noexcept = delete;
+            UniformBufferGroup(UniformBufferGroup &&) noexcept = delete;
+            UniformBufferGroup & operator= (UniformBufferGroup const & rhs) noexcept = delete;
+            UniformBufferGroup & operator= (UniformBufferGroup && rhs) noexcept = delete;
+
+            std::vector<std::shared_ptr<BufferAndMemory>> const buffers;
+            size_t const bufferSize;
         };
 
         struct StorageBufferCollection
         {
-            std::vector<BufferAndMemory> buffers;
-            size_t bufferSize;
-            [[nodiscard]]
-            bool isValid() const noexcept;
+            explicit StorageBufferCollection(
+                std::vector<std::shared_ptr<BufferAndMemory>> buffers_,
+                size_t bufferSize_
+            );
+            ~StorageBufferCollection();
+
+            StorageBufferCollection(StorageBufferCollection const &) noexcept = delete;
+            StorageBufferCollection(StorageBufferCollection &&) noexcept = delete;
+            StorageBufferCollection & operator= (StorageBufferCollection const & rhs) noexcept = delete;
+            StorageBufferCollection & operator= (StorageBufferCollection && rhs) noexcept = delete;
+
+            std::vector<std::shared_ptr<BufferAndMemory>> const buffers;
+            size_t const bufferSize;
         };
 
         struct SwapChainGroup
         {
-            VkSwapchainKHR swapChain{};
-            VkFormat swapChainFormat{};
-            std::vector<VkImage> swapChainImages{};
-            std::vector<VkImageView> swapChainImageViews{};
+            explicit SwapChainGroup(
+                VkSwapchainKHR swapChain_,
+                VkFormat swapChainFormat_,
+                std::vector<VkImage> const & swapChainImages_,
+                std::vector<std::shared_ptr<ImageViewGroup>> const & swapChainImageViews_
+            );
+            ~SwapChainGroup();
+
+            SwapChainGroup(SwapChainGroup const &) noexcept = delete;
+            SwapChainGroup(SwapChainGroup &&) noexcept = delete;
+            SwapChainGroup & operator= (SwapChainGroup const & rhs) noexcept = delete;
+            SwapChainGroup & operator= (SwapChainGroup && rhs) noexcept = delete;
+
+            VkSwapchainKHR const swapChain;
+            VkFormat const swapChainFormat;
+            std::vector<VkImage> swapChainImages;
+            std::vector<std::shared_ptr<ImageViewGroup>> swapChainImageViews;
         };
 
         struct DepthImageGroup
         {
-            ImageGroup imageGroup{};
-            VkImageView imageView{};
-            VkFormat imageFormat{};
+            explicit DepthImageGroup(
+                std::shared_ptr<ImageGroup> imageGroup_,
+                std::shared_ptr<ImageViewGroup> imageView_,
+                VkFormat imageFormat_
+            );
+            ~DepthImageGroup();
+
+            DepthImageGroup(DepthImageGroup const &) noexcept = delete;
+            DepthImageGroup(DepthImageGroup &&) noexcept = delete;
+            DepthImageGroup & operator= (DepthImageGroup const & rhs) noexcept = delete;
+            DepthImageGroup & operator= (DepthImageGroup && rhs) noexcept = delete;
+
+            std::shared_ptr<ImageGroup> const imageGroup;
+            std::shared_ptr<ImageViewGroup> const imageView;
+            VkFormat const imageFormat;
         };
 
         struct ColorImageGroup
         {
-            ImageGroup imageGroup{};
-            VkImageView imageView{};
-            VkFormat imageFormat{};
+            explicit ColorImageGroup(
+                std::shared_ptr<ImageGroup> imageGroup_,
+                std::shared_ptr<ImageViewGroup> imageView_,
+                VkFormat imageFormat_
+            );
+            ~ColorImageGroup();
+
+            ColorImageGroup(ColorImageGroup const &) noexcept = delete;
+            ColorImageGroup(ColorImageGroup &&) noexcept = delete;
+            ColorImageGroup & operator= (ColorImageGroup const & rhs) noexcept = delete;
+            ColorImageGroup & operator= (ColorImageGroup && rhs) noexcept = delete;
+
+            std::shared_ptr<ImageGroup> const imageGroup;
+            std::shared_ptr<ImageViewGroup> const imageView;
+            VkFormat const imageFormat;
         };
 
         struct DescriptorSetGroup
@@ -284,12 +367,6 @@ namespace MFA
             VkSampleCountFlagBits samplesCount = VK_SAMPLE_COUNT_1_BIT;
             VkImageType imageType = VK_IMAGE_TYPE_2D;
         };
-
-        //static constexpr VkFormat ShadowFormat = VK_FORMAT_R32_SFLOAT;
-        // TODO Is this project left handed ?
-        inline static const glm::vec4 ForwardVector {0.0f, 0.0f, 1.0f, 0.0f};
-        inline static const glm::vec4 RightVector {1.0f, 0.0f, 0.0f, 0.0f};
-        inline static const glm::vec4 UpVector {0.0f, 1.0f, 0.0f, 0.0f};
 
     };
 

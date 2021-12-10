@@ -33,7 +33,7 @@ namespace MFA
         {
             mMSAAImageGroupList[i] = RF::CreateColorImage(
                 swapChainExtent,
-                mSwapChainImages.swapChainFormat,
+                mSwapChainImages->swapChainFormat,
                 RT::CreateColorImageOptions{
                     .samplesCount = RF::GetMaxSamplesCount()
                 }
@@ -61,6 +61,9 @@ namespace MFA
 
     void DisplayRenderPass::internalShutdown()
     {
+        mSwapChainImages.reset();
+        mMSAAImageGroupList.clear();
+        mDepthImageGroupList.clear();
 
         RF::DestroyFrameBuffers(
             static_cast<uint32_t>(mDisplayFrameBuffers.size()),
@@ -68,21 +71,6 @@ namespace MFA
         );
 
         RF::DestroyRenderPass(mVkDisplayRenderPass);
-
-        
-        for (auto & depthImage : mDepthImageGroupList)
-        {
-            RF::DestroyDepthImage(depthImage);
-        }
-        mDepthImageGroupList.clear();
-
-        RF::DestroySwapChain(mSwapChainImages);
-
-        for (auto & msaaImage : mMSAAImageGroupList)
-        {
-            RF::DestroyColorImage(msaaImage);
-        }
-        mMSAAImageGroupList.clear();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -113,7 +101,7 @@ namespace MFA
             presentToDrawBarrier.dstQueueFamilyIndex = graphicQueueFamily;
         }
 
-        presentToDrawBarrier.image = mSwapChainImages.swapChainImages[recordState.imageIndex];
+        presentToDrawBarrier.image = mSwapChainImages->swapChainImages[recordState.imageIndex];
 
         VkImageSubresourceRange const subResourceRange{
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -224,7 +212,7 @@ namespace MFA
         // Depth image
         for (uint32_t i = 0; i < mSwapChainImagesCount; ++i)
         {
-            RF::DestroyDepthImage(mDepthImageGroupList[i]);
+            //RF::DestroyDepthImage(mDepthImageGroupList[i]);
             mDepthImageGroupList[i] = RF::CreateDepthImage(swapChainExtent2D, RT::CreateDepthImageOptions{
                 .samplesCount = RF::GetMaxSamplesCount()
             });
@@ -233,10 +221,10 @@ namespace MFA
         // MSAA image
         for (uint32_t i = 0; i < mSwapChainImagesCount; ++i)
         {
-            RF::DestroyColorImage(mMSAAImageGroupList[i]);
+            //RF::DestroyColorImage(mMSAAImageGroupList[i]);
             mMSAAImageGroupList[i] = RF::CreateColorImage(
                 swapChainExtent2D,
-                mSwapChainImages.swapChainFormat,
+                mSwapChainImages->swapChainFormat,
                 RT::CreateColorImageOptions{
                     .samplesCount = RF::GetMaxSamplesCount()
                 }
@@ -245,8 +233,8 @@ namespace MFA
 
         // Swap-chain
         auto const oldSwapChainImages = mSwapChainImages;
-        mSwapChainImages = RF::CreateSwapChain(oldSwapChainImages.swapChain);
-        RF::DestroySwapChain(oldSwapChainImages);
+        mSwapChainImages = RF::CreateSwapChain(oldSwapChainImages->swapChain);
+        //RF::DestroySwapChain(oldSwapChainImages);
 
         // Display frame-buffer
         RF::DestroyFrameBuffers(
@@ -261,19 +249,19 @@ namespace MFA
 
     VkImage DisplayRenderPass::GetSwapChainImage(RT::CommandRecordState const & drawPass)
     {
-        return mSwapChainImages.swapChainImages[drawPass.imageIndex];
+        return mSwapChainImages->swapChainImages[drawPass.imageIndex];
     }
 
     //-------------------------------------------------------------------------------------------------
 
     RT::SwapChainGroup const & DisplayRenderPass::GetSwapChainImages() const
     {
-        return mSwapChainImages;
+        return *mSwapChainImages;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    std::vector<RT::DepthImageGroup> const & DisplayRenderPass::GetDepthImages() const
+    std::vector<std::shared_ptr<RT::DepthImageGroup>> const & DisplayRenderPass::GetDepthImages() const
     {
         return mDepthImageGroupList;
     }
@@ -293,10 +281,10 @@ namespace MFA
         mDisplayFrameBuffers.resize(mSwapChainImagesCount);
         for (int i = 0; i < static_cast<int>(mDisplayFrameBuffers.size()); ++i)
         {
-            std::vector<VkImageView> const attachments = {
-                mMSAAImageGroupList[i].imageView,
-                mSwapChainImages.swapChainImageViews[i],
-                mDepthImageGroupList[i].imageView
+            std::vector<VkImageView> const attachments {
+                mMSAAImageGroupList[i]->imageView->imageView,
+                mSwapChainImages->swapChainImageViews[i]->imageView,
+                mDepthImageGroupList[i]->imageView->imageView
             };
             mDisplayFrameBuffers[i] = RF::CreateFrameBuffer(
                 mVkDisplayRenderPass,
@@ -315,7 +303,7 @@ namespace MFA
 
         // Multisampled attachment that we render to
         VkAttachmentDescription const msaaAttachment{
-            .format = mSwapChainImages.swapChainFormat,
+            .format = mSwapChainImages->swapChainFormat,
             .samples = RF::GetMaxSamplesCount(),
             .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -326,7 +314,7 @@ namespace MFA
         };
 
         VkAttachmentDescription const swapChainAttachment{
-            .format = mSwapChainImages.swapChainFormat,
+            .format = mSwapChainImages->swapChainFormat,
             .samples = VK_SAMPLE_COUNT_1_BIT,
             .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,

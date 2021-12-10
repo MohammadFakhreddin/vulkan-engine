@@ -158,39 +158,18 @@ namespace MFA
     void DebugRendererPipeline::createPipeline()
     {
         // Vertex shader
-        auto cpuVertexShader = Importer::ImportShaderFromSPV(
-            Path::Asset("shaders/debug_renderer/DebugRenderer.vert.spv").c_str(),
-            AssetSystem::Shader::Stage::Vertex,
-            "main"
-        );
-        MFA_ASSERT(cpuVertexShader.isValid());
-        auto gpuVertexShader = RF::CreateShader(cpuVertexShader);
-        MFA_ASSERT(gpuVertexShader.valid());
-        MFA_DEFER{
-            RF::DestroyShader(gpuVertexShader);
-            Importer::FreeShader(cpuVertexShader);
-        };
+        RF_CREATE_SHADER("shaders/debug_renderer/DebugRenderer.vert.spv", Vertex)
 
         // Fragment shader
-        auto cpuFragmentShader = Importer::ImportShaderFromSPV(
-            Path::Asset("shaders/debug_renderer/DebugRenderer.frag.spv").c_str(),
-            AssetSystem::Shader::Stage::Fragment,
-            "main"
-        );
-        auto gpuFragmentShader = RF::CreateShader(cpuFragmentShader);
-        MFA_ASSERT(cpuFragmentShader.isValid());
-        MFA_ASSERT(gpuFragmentShader.valid());
-        MFA_DEFER{
-            RF::DestroyShader(gpuFragmentShader);
-            Importer::FreeShader(cpuFragmentShader);
+        RF_CREATE_SHADER("shaders/debug_renderer/DebugRenderer.frag.spv", Fragment)
+
+        std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuFragmentShader.get() };
+
+        VkVertexInputBindingDescription const bindingDescription{
+            .binding = 0,
+            .stride = sizeof(AS::MeshVertex),
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
         };
-
-        std::vector<RT::GpuShader const *> shaders{ &gpuVertexShader, &gpuFragmentShader };
-
-        VkVertexInputBindingDescription bindingDescription{};
-        bindingDescription.binding = 0;
-        bindingDescription.stride = sizeof(AS::MeshVertex);
-        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
         {// Position
@@ -263,7 +242,7 @@ namespace MFA
 
             // ViewProjectionTransform
             VkDescriptorBufferInfo bufferInfo{
-                .buffer = cameraBufferCollection.buffers[frameIndex].buffer,
+                .buffer = cameraBufferCollection.buffers[frameIndex]->buffer,
                 .offset = 0,
                 .range = cameraBufferCollection.bufferSize,
             };

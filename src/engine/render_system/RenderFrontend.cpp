@@ -65,7 +65,7 @@ namespace MFA::RenderFrontend
         std::vector<VkCommandBuffer> graphicCommandBuffer{};
         RT::SyncObjects syncObjects{};
         uint8_t currentFrame = 0;
-        VkFormat depthFormat {};
+        VkFormat depthFormat{};
 #ifdef __DESKTOP__
         // CreateWindow
         MSDL::SDL_Window * window = nullptr;
@@ -319,7 +319,7 @@ namespace MFA::RenderFrontend
 #endif
 
         state->displayRenderPass.Shutdown();
-
+        
         DestroySyncObjects(state->syncObjects);
 
         DestroyGraphicCommandBuffer(
@@ -457,10 +457,12 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::UniformBufferCollection CreateUniformBuffer(size_t const bufferSize, uint32_t const count)
+    std::shared_ptr<RT::UniformBufferGroup> CreateUniformBuffer(
+        size_t const bufferSize,
+        uint32_t const count
+    )
     {
-
-        std::vector<RT::BufferAndMemory> buffers(count);
+        std::vector<std::shared_ptr<RT::BufferAndMemory>> buffers(count);
         RB::CreateUniformBuffer(
             state->logicalDevice.device,
             state->physicalDevice,
@@ -468,10 +470,10 @@ namespace MFA::RenderFrontend
             bufferSize,
             buffers.data()
         );
-        RT::UniformBufferCollection uniformBufferGroup{
-            .buffers = buffers,
-            .bufferSize = bufferSize,
-        };
+        auto uniformBufferGroup = std::make_shared<RT::UniformBufferGroup>(
+           std::move(buffers),
+            bufferSize
+        );
         return uniformBufferGroup;
     }
 
@@ -479,11 +481,11 @@ namespace MFA::RenderFrontend
 
     void UpdateUniformBuffer(
         RT::CommandRecordState const & recordState,
-        RT::UniformBufferCollection const & bufferCollection,
+        RT::UniformBufferGroup const & bufferCollection,
         CBlob const data
     )
     {
-        UpdateStorageBuffer(bufferCollection.buffers[recordState.frameIndex], data);
+        UpdateStorageBuffer(*bufferCollection.buffers[recordState.frameIndex], data);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -502,22 +504,12 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    void DestroyUniformBuffer(RT::UniformBufferCollection & uniformBuffer)
+    std::shared_ptr<RT::StorageBufferCollection> CreateStorageBuffer(
+        size_t const bufferSize,
+        uint32_t const count
+    )
     {
-        for (auto & bufferGroup : uniformBuffer.buffers)
-        {
-            RB::DestroyBufferAndMemory(
-                state->logicalDevice.device,
-                bufferGroup
-            );
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    RT::StorageBufferCollection CreateStorageBuffer(size_t const bufferSize, uint32_t const count)
-    {
-        std::vector<RT::BufferAndMemory> buffers(count);
+        std::vector<std::shared_ptr<RT::BufferAndMemory>> buffers(count);
 
         RB::CreateStorageBuffer(
             state->logicalDevice.device,
@@ -527,10 +519,10 @@ namespace MFA::RenderFrontend
             buffers.data()
         );
 
-        RT::StorageBufferCollection uniformBufferGroup{
-            .buffers = buffers,
-            .bufferSize = bufferSize,
-        };
+        auto uniformBufferGroup = std::make_shared<RT::StorageBufferCollection>(
+            std::move(buffers),
+            bufferSize
+        );
 
         return uniformBufferGroup;
     }
@@ -548,20 +540,7 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    void DestroyStorageBuffer(RT::StorageBufferCollection & storageBuffer)
-    {
-        for (auto & bufferAndMemory : storageBuffer.buffers)
-        {
-            RB::DestroyBufferAndMemory(
-                state->logicalDevice.device,
-                bufferAndMemory
-            );
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    RT::BufferAndMemory CreateVertexBuffer(CBlob const verticesBlob)
+    std::shared_ptr<RT::BufferAndMemory> CreateVertexBuffer(CBlob const verticesBlob)
     {
         return RB::CreateVertexBuffer(
             state->logicalDevice.device,
@@ -574,7 +553,7 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::BufferAndMemory CreateIndexBuffer(CBlob const indicesBlob)
+    std::shared_ptr<RT::BufferAndMemory> CreateIndexBuffer(CBlob const indicesBlob)
     {
         return RB::CreateIndexBuffer(
             state->logicalDevice.device,
@@ -587,26 +566,18 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::MeshBuffers CreateMeshBuffers(AssetSystem::Mesh const & mesh)
+    std::shared_ptr<RT::MeshBuffers> CreateMeshBuffers(AssetSystem::Mesh const & mesh)
     {
         MFA_ASSERT(mesh.IsValid());
-        RT::MeshBuffers buffers{};
-        buffers.verticesBuffer = CreateVertexBuffer(mesh.GetVerticesBuffer());
-        buffers.indicesBuffer = CreateIndexBuffer(mesh.GetIndicesBuffer());
-        return buffers;
+        return std::make_shared<RT::MeshBuffers>(
+            CreateVertexBuffer(mesh.GetVerticesBuffer()),
+            CreateIndexBuffer(mesh.GetIndicesBuffer())
+        );
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void DestroyMeshBuffers(RT::MeshBuffers & meshBuffers)
-    {
-        RB::DestroyVertexBuffer(state->logicalDevice.device, meshBuffers.verticesBuffer);
-        RB::DestroyIndexBuffer(state->logicalDevice.device, meshBuffers.indicesBuffer);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    RT::GpuTexture CreateTexture(AssetSystem::Texture & texture)
+    std::shared_ptr<RT::GpuTexture> CreateTexture(std::shared_ptr<AS::Texture> & texture)
     {
         auto gpuTexture = RB::CreateTexture(
             texture,
@@ -615,81 +586,86 @@ namespace MFA::RenderFrontend
             state->graphicQueue,
             state->graphicCommandPool
         );
-        MFA_ASSERT(gpuTexture.isValid());
+        MFA_ASSERT(gpuTexture != nullptr);
         return gpuTexture;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void DestroyTexture(RT::GpuTexture & gpuTexture)
+    void DestroyImage(RT::ImageGroup const & imageGroup)
     {
-        RB::DestroyTexture(state->logicalDevice.device, gpuTexture);
+        RB::DestroyImage(
+            state->logicalDevice.device,
+            imageGroup
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void DestroyImageView(RT::ImageViewGroup const & imageViewGroup)
+    {
+        RB::DestroyImageView(
+            state->logicalDevice.device,
+            imageViewGroup
+        );
     }
 
     //-------------------------------------------------------------------------------------------------
 
     // TODO Ask for options
-    RT::SamplerGroup CreateSampler(RT::CreateSamplerParams const & samplerParams)
+    std::shared_ptr<RT::SamplerGroup> CreateSampler(RT::CreateSamplerParams const & samplerParams)
     {
-        auto sampler = RB::CreateSampler(state->logicalDevice.device, samplerParams);
-        MFA_VK_VALID_ASSERT(sampler);
-        RT::SamplerGroup const samplerGroup{
-            .sampler = sampler
-        };
-        MFA_ASSERT(samplerGroup.isValid());
-        return samplerGroup;
+        return RB::CreateSampler(state->logicalDevice.device, samplerParams);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void DestroySampler(RT::SamplerGroup & samplerGroup)
+    void DestroySampler(RT::SamplerGroup const & samplerGroup)
     {
-        RB::DestroySampler(state->logicalDevice.device, samplerGroup.sampler);
-        samplerGroup.revoke();
+        RB::DestroySampler(state->logicalDevice.device, samplerGroup);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     std::shared_ptr<RT::GpuModel> CreateGpuModel(
-        AssetSystem::Model & modelAsset,
+        std::shared_ptr<AssetSystem::Model> modelAsset,
         RT::GpuModelId const uniqueId
     )
     {
-        MFA_ASSERT(modelAsset.mesh.IsValid());
-        auto const gpuModel = std::make_shared<RT::GpuModel>();
-        gpuModel->id = uniqueId;
-        gpuModel->valid = true;
-        gpuModel->meshBuffers = CreateMeshBuffers(modelAsset.mesh);
-        gpuModel->model = modelAsset;
-        if (modelAsset.textures.empty() == false)
+        MFA_ASSERT(modelAsset->mesh->IsValid());
+        auto meshBuffers = CreateMeshBuffers(*modelAsset->mesh);
+        std::vector<std::shared_ptr<RT::GpuTexture>> textures{};
+        for (auto & textureAsset : modelAsset->textures)
         {
-            for (auto & textureAsset : modelAsset.textures)
-            {
-                MFA_ASSERT(textureAsset.isValid());
-                gpuModel->textures.emplace_back(CreateTexture(textureAsset));
-                MFA_ASSERT(gpuModel->textures.back().isValid());
-            }
+            MFA_ASSERT(textureAsset->isValid());
+            textures.emplace_back(CreateTexture(textureAsset));
         }
-        return gpuModel;
+        return std::make_shared<RT::GpuModel>(
+            uniqueId,
+            std::move(meshBuffers),
+            std::move(textures),
+            std::move(modelAsset)
+        );
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void DestroyGpuModel(RT::GpuModel & gpuModel)
-    {
-        MFA_ASSERT(gpuModel.valid);
-        gpuModel.valid = false;
-        DestroyMeshBuffers(gpuModel.meshBuffers);
-        if (false == gpuModel.textures.empty())
+    //void DestroyGpuModel(RT::GpuModel & gpuModel)
+    //{
+        //MFA_ASSERT(gpuModel.valid);
+        //gpuModel.valid = false;
+        //DestroyMeshBuffers(gpuModel.meshBuffers);
+        // Due to textures being shared ptr from now on it can destroy itself!
+        /*if (false == gpuModel.textures.empty())
         {
             for (auto & gpuTexture : gpuModel.textures)
             {
-                DestroyTexture(gpuTexture);
+                DestroyTexture(*gpuTexture);
             }
-        }
-    }
+        }*/
+        //}
 
-    //-------------------------------------------------------------------------------------------------
+        //-------------------------------------------------------------------------------------------------
 
     void DeviceWaitIdle()
     {
@@ -701,6 +677,13 @@ namespace MFA::RenderFrontend
     VkFormat GetDepthFormat()
     {
         return state->depthFormat;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void DestroyBuffer(RT::BufferAndMemory const & bufferGroup)
+    {
+        RB::DestroyBuffer(state->logicalDevice.device, bufferGroup);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -879,7 +862,7 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     [[nodiscard]]
-    RT::GpuShader CreateShader(AssetSystem::Shader const & shader)
+    std::shared_ptr<RT::GpuShader> CreateShader(std::shared_ptr<AS::Shader> const & shader)
     {
         return RB::CreateShader(
             state->logicalDevice.device,
@@ -889,7 +872,7 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    void DestroyShader(RT::GpuShader & gpuShader)
+    void DestroyShader(RT::GpuShader const& gpuShader)
     {
         RB::DestroyShader(state->logicalDevice.device, gpuShader);
     }
@@ -1064,7 +1047,7 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::SwapChainGroup CreateSwapChain(VkSwapchainKHR oldSwapChain)
+    std::shared_ptr<RT::SwapChainGroup> CreateSwapChain(VkSwapchainKHR oldSwapChain)
     {
         return RB::CreateSwapChain(
             state->logicalDevice.device,
@@ -1084,9 +1067,9 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::ColorImageGroup CreateColorImage(
+    std::shared_ptr<RT::ColorImageGroup> CreateColorImage(
         VkExtent2D const & imageExtent,
-        VkFormat imageFormat,
+        VkFormat const imageFormat,
         RT::CreateColorImageOptions const & options
     )
     {
@@ -1097,13 +1080,6 @@ namespace MFA::RenderFrontend
             imageFormat,
             options
         );
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void DestroyColorImage(RT::ColorImageGroup const & colorImageGroup)
-    {
-        RB::DestroyColorImage(state->logicalDevice.device, colorImageGroup);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -1138,7 +1114,7 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     [[nodiscard]]
-    RT::DepthImageGroup CreateDepthImage(
+    std::shared_ptr<RT::DepthImageGroup> CreateDepthImage(
         VkExtent2D const & imageSize,
         RT::CreateDepthImageOptions const & options
     )
@@ -1150,13 +1126,6 @@ namespace MFA::RenderFrontend
             state->depthFormat,
             options
         );
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void DestroyDepthImage(RT::DepthImageGroup const & depthImage)
-    {
-        RB::DestroyDepthImage(state->logicalDevice.device, depthImage);
     }
 
     //-------------------------------------------------------------------------------------------------
