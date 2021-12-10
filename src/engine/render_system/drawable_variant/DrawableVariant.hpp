@@ -1,7 +1,6 @@
 #pragma once
 
 #include "engine/render_system/RenderTypes.hpp"
-#include "engine/BedrockCommon.hpp"
 #include "engine/FoundationAsset.hpp"
 
 #include <glm/gtc/quaternion.hpp>

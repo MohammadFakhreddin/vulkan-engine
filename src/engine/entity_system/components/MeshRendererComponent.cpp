@@ -70,4 +70,12 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    void MeshRendererComponent::Clone(Entity * entity) const
+    {
+        MFA_ASSERT(entity != nullptr);
+        entity->AddComponent<MeshRendererComponent>(*mPipeline, mVariant->GetEssence()->GetGpuModel()->id);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
 }

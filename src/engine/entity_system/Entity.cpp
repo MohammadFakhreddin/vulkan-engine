@@ -29,7 +29,7 @@ namespace MFA
             return;
         }
         mIsInitialized = true;
-
+        
         if (mParent != nullptr)
         {
             mParent->notifyANewChildAdded(this);
@@ -159,6 +159,30 @@ namespace MFA
         }
         mIsParentActive = isActive;
         onActivationStatusChanged();
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    Entity * Entity::Clone(char const * name, Entity * parent) const
+    {
+        MFA_ASSERT(name != nullptr);
+        MFA_ASSERT(strlen(name) > 0);
+        auto * entity = EntitySystem::CreateEntity(name, parent);
+        for (auto & component : mComponents)
+        {
+            if (component != nullptr)
+            {
+                component->Clone(entity);
+            }
+        }
+        for (auto & child : mChildEntities)
+        {
+            child->Clone(child->GetName().c_str(), entity);
+        }
+
+        EntitySystem::InitEntity(entity);
+
+        return entity;
     }
 
     //-------------------------------------------------------------------------------------------------

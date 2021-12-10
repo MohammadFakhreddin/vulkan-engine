@@ -29,6 +29,8 @@ namespace MFA
         DrawableVariant * GetVariant();
 
         void OnUI() override;
+
+        void Clone(Entity * entity) const override;
     
     };
 

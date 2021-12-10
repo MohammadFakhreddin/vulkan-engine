@@ -30,6 +30,8 @@ namespace MFA
         void GetDirection(float outDirection[3]) const;
 
         void GetColor(float outColor[3]) const;
+
+        void Clone(Entity * entity) const override;
         
     private:
 

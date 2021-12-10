@@ -116,6 +116,8 @@ public:
 
     virtual void OnUI();
 
+    virtual void Clone(Entity * entity) const = 0;
+
     Signal<Component *, Entity *> EditorSignal {};
 
 protected:

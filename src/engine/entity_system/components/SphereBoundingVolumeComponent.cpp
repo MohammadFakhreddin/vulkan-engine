@@ -32,6 +32,14 @@ MFA::BoundingVolumeComponent::DEBUG_CenterAndRadius MFA::SphereBoundingVolumeCom
 
 //-------------------------------------------------------------------------------------------------
 
+void MFA::SphereBoundingVolumeComponent::Clone(Entity * entity) const
+{
+    MFA_ASSERT(entity != nullptr);
+    entity->AddComponent<SphereBoundingVolumeComponent>(mRadius);
+}
+
+//-------------------------------------------------------------------------------------------------
+
 bool MFA::SphereBoundingVolumeComponent::IsInsideCameraFrustum(CameraComponent const * camera)
 {
     MFA_ASSERT(camera != nullptr);

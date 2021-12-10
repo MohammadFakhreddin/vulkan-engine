@@ -1548,11 +1548,6 @@ void DestroySwapChain(VkDevice device, RT::SwapChainGroup const & swapChainGroup
     MFA_ASSERT(swapChainGroup.swapChainImages.empty() == false);
     MFA_ASSERT(swapChainGroup.swapChainImages.size() == swapChainGroup.swapChainImageViews.size());
     vkDestroySwapchainKHR(device, swapChainGroup.swapChain, nullptr);
-    // This part is commented because RT::ImageView will destroy it when its destructor is called
-    /*for (auto const & imageView : swapChainGroup.swapChainImageViews)
-    {
-        vkDestroyImageView(device, imageView->imageView, nullptr);
-    }*/
 }
 
 //-------------------------------------------------------------------------------------------------

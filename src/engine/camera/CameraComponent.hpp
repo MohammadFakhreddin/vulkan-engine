@@ -55,6 +55,8 @@ public:
 
     bool IsCameraDataDirty();
 
+    void Clone(Entity * entity) const override;
+
 protected:
 
     explicit CameraComponent(float fieldOfView, float nearDistance, float farDistance);

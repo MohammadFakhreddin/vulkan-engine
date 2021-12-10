@@ -55,16 +55,16 @@ namespace MFA
         {
             return;
         }
-        auto const childTransformPtr = mChildTransformComponent.lock();
-        if (childTransformPtr == nullptr)
+        auto const childTransform = mChildTransformComponent.lock();
+        if (childTransform == nullptr)
         {
             return;
         }
 
         auto const centerAndRadius = boundingVolumePtr->DEBUG_GetCenterAndRadius();
-        childTransformPtr->UpdateTransform(
+        childTransform->UpdateTransform(
             centerAndRadius.center,
-            childTransformPtr->GetRotation(),
+            childTransform->GetRotation(),
             glm::vec3(centerAndRadius.extend.x, centerAndRadius.extend.y, centerAndRadius.extend.z)
         );
     }
@@ -78,6 +78,15 @@ namespace MFA
             RendererComponent::OnUI();
             UI::TreePop();
         }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void BoundingVolumeRendererComponent::Clone(Entity * entity) const
+    {
+        auto * pipeline = dynamic_cast<DebugRendererPipeline *>(mPipeline);
+        MFA_ASSERT(pipeline != nullptr);
+        entity->AddComponent<BoundingVolumeRendererComponent>(*pipeline);
     }
 
     //-------------------------------------------------------------------------------------------------

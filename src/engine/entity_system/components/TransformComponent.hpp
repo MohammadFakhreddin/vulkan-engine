@@ -19,6 +19,11 @@ namespace MFA
         )
         
         explicit TransformComponent();
+        explicit TransformComponent(
+            glm::vec3 const & position_,
+            glm::vec3 const & rotation_,          // In euler angle
+            glm::vec3 const & scale_
+        );
 
         void Init() override;
 
@@ -63,6 +68,8 @@ namespace MFA
         bool UnRegisterChangeListener(Signal<>::ListenerId listenerId);
 
         void OnUI() override;
+
+        void Clone(Entity * entity) const override;
 
     private:
 

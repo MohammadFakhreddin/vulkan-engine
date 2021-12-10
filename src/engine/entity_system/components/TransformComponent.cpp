@@ -17,6 +17,18 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    TransformComponent::TransformComponent(
+        glm::vec3 const & position_,
+        glm::vec3 const & rotation_,          // In euler angle
+        glm::vec3 const & scale_
+    )
+        : mPosition(position_)
+        , mRotation(rotation_)
+        , mScale(scale_)
+    {}
+
+    //-------------------------------------------------------------------------------------------------
+
     void TransformComponent::Init()
     {
         Component::Init();
@@ -249,6 +261,17 @@ namespace MFA
 
             UI::TreePop();
         }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void TransformComponent::Clone(Entity * entity) const
+    {
+        entity->AddComponent<TransformComponent>(
+            mPosition,
+            mRotation,
+            mScale
+        );
     }
 
     //-------------------------------------------------------------------------------------------------

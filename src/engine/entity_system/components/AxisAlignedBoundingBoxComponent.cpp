@@ -92,6 +92,17 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    void AxisAlignedBoundingBoxComponent::Clone(Entity * entity) const
+    {
+        MFA_ASSERT(entity != nullptr);
+        entity->AddComponent<AxisAlignedBoundingBoxComponent>(
+            mCenter,
+            mExtend
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     bool AxisAlignedBoundingBoxComponent::IsInsideCameraFrustum(CameraComponent const * camera)
     {
         MFA_ASSERT(camera != nullptr);

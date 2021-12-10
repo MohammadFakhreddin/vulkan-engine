@@ -5,10 +5,9 @@
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/entity_system/components/MeshRendererComponent.hpp"
 #include "engine/ui_system/UISystem.hpp"
+#include "engine/entity_system/Entity.hpp"
 
 #include <utility>
-
-#include "engine/entity_system/Entity.hpp"
 
 //-------------------------------------------------------------------------------------------------
 
@@ -17,14 +16,14 @@ MFA::PointLightComponent::PointLightComponent(
     float const maxDistance,
     float const projectionNearDistance,
     float const projectionFarDistance,
-    std::weak_ptr<MeshRendererComponent> attachedVariant
+    std::weak_ptr<MeshRendererComponent> attachedMesh
 )
     : mRadius(radius)
     , mMaxDistance(maxDistance)
     , mProjectionNearDistance(projectionNearDistance)
     , mProjectionFarDistance(projectionFarDistance)
     , mMaxSquareDistance(maxDistance * maxDistance)
-    , mAttachedMesh(std::move(attachedVariant))
+    , mAttachedMesh(std::move(attachedMesh))
 {
 }
 
@@ -174,6 +173,22 @@ float MFA::PointLightComponent::GetLinearAttenuation() const
 float MFA::PointLightComponent::GetQuadraticAttenuation() const
 {
     return mQuadraticAttenuation;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::PointLightComponent::Clone(Entity * entity) const
+{
+    // We do not currently support attached mesh. Maybe we should give up on it
+    MFA_ASSERT(mAttachedMesh.expired() == true);
+    MFA_ASSERT(entity != nullptr);
+    entity->AddComponent<PointLightComponent>(
+        mRadius,
+        mMaxDistance,
+        mProjectionNearDistance,
+        mProjectionFarDistance,
+        std::shared_ptr<MeshRendererComponent> {}
+    );
 }
 
 //-------------------------------------------------------------------------------------------------

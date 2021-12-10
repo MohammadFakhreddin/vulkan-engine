@@ -32,6 +32,8 @@ public:
 
     void OnUI() override;
 
+    void Clone(Entity * entity) const override;
+
 private:
 
     glm::vec3 mColor {};

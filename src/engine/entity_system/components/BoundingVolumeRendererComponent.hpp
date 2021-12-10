@@ -28,6 +28,8 @@ namespace MFA
 
         void OnUI() override;
 
+        void Clone(Entity * entity) const override;
+
     private:
 
         std::weak_ptr<BoundingVolumeComponent> mBoundingVolumeComponent {};

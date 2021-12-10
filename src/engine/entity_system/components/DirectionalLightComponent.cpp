@@ -12,7 +12,7 @@
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::DirectionalLightComponent::DirectionalLightComponent() {}
+MFA::DirectionalLightComponent::DirectionalLightComponent() = default;
 
 //-------------------------------------------------------------------------------------------------
 
@@ -77,6 +77,14 @@ void MFA::DirectionalLightComponent::GetColor(float outColor[3]) const
 
 //-------------------------------------------------------------------------------------------------
 
+void MFA::DirectionalLightComponent::Clone(Entity * entity) const
+{
+    MFA_ASSERT(entity != nullptr);
+    entity->AddComponent<DirectionalLightComponent>();
+}
+
+//-------------------------------------------------------------------------------------------------
+
 void MFA::DirectionalLightComponent::computeShadowProjection()
 {
     int32_t const width = Scene::DIRECTIONAL_LIGHT_PROJECTION_WIDTH;
@@ -114,7 +122,7 @@ void MFA::DirectionalLightComponent::computeDirectionAndShadowViewProjection()
     // Way 1
     auto const rotation = transformComponent->GetRotation();
 
-    glm::mat4 directionRotationMatrix = glm::identity<glm::mat4>();
+    auto directionRotationMatrix = glm::identity<glm::mat4>();
     Matrix::Rotate(directionRotationMatrix, rotation);
 
     mDirection = directionRotationMatrix * Math::ForwardVector;

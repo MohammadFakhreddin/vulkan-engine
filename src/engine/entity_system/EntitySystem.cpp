@@ -72,20 +72,6 @@ void Shutdown()
 
 //-------------------------------------------------------------------------------------------------
 
-//int SubscribeForUpdateEvent(UpdateFunction const & listener)
-//{
-//    return state->updateSignal.Register(listener);
-//}
-//
-////-------------------------------------------------------------------------------------------------
-//
-//bool UnSubscribeFromUpdateEvent(int const listenerId)
-//{
-//    return state->updateSignal.UnRegister(listenerId);
-//}
-
-//-------------------------------------------------------------------------------------------------
-
 Entity * CreateEntity(char const * name, Entity * parent)
 {
     state->entitiesRefsList.emplace_back(EntityRef {

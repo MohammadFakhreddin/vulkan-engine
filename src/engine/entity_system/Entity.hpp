@@ -64,6 +64,13 @@ namespace MFA
             return std::weak_ptr<ComponentClass>(sharedPtr);
         }
 
+        void AddComponent(std::shared_ptr<Component> const & component)
+        {
+            mComponents[component->GetFamilyType()] = component;
+            component->mSelfPtr = component;
+            linkComponent(component.get());
+        }
+
         template<typename ComponentClass>
         void RemoveComponent(ComponentClass * component)
         {
@@ -133,6 +140,8 @@ namespace MFA
         bool HasParent() const;
 
         void OnParentActivationStatusChanged(bool isActive);
+
+        Entity * Clone(char const * name, Entity * parent = nullptr) const;
 
     private:
 

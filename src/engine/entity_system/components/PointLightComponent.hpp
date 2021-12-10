@@ -63,6 +63,8 @@ namespace MFA {
         [[nodiscard]]
         float GetQuadraticAttenuation() const;
 
+        void Clone(Entity * entity) const override;
+
     private:
 
         // We only need to compute projection once

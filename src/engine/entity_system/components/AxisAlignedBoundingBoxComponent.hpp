@@ -32,6 +32,8 @@ namespace MFA
 
         void OnUI() override;
 
+        void Clone(Entity * entity) const override;
+
     protected:
 
         bool IsInsideCameraFrustum(CameraComponent const * camera) override;

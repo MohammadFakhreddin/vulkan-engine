@@ -80,7 +80,6 @@ private:
 
     RT::DescriptorSetGroup mDescriptorSetGroup {};
     bool mIsDescriptorSetGroupValid = false;
-    
 };
 
 }

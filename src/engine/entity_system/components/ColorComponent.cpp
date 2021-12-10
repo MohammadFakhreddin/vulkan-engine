@@ -1,6 +1,7 @@
 #include "ColorComponent.hpp"
 
 #include "engine/BedrockMatrix.hpp"
+#include "engine/entity_system/Entity.hpp"
 #include "engine/ui_system/UISystem.hpp"
 
 //-------------------------------------------------------------------------------------------------
@@ -41,6 +42,14 @@ void MFA::ColorComponent::OnUI()
         UI::InputFloat3("Color", mColor.data.data);
         UI::TreePop();
     }
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::ColorComponent::Clone(Entity * entity) const
+{
+    MFA_ASSERT(entity != nullptr);
+    entity->AddComponent<ColorComponent>(mColor);
 }
 
 //-------------------------------------------------------------------------------------------------
