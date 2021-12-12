@@ -4,6 +4,16 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/entity_system/Entity.hpp"
 
+#include "libs/nlohmann/json.hpp"
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::SphereBoundingVolumeComponent::SphereBoundingVolumeComponent() = default;
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::SphereBoundingVolumeComponent::~SphereBoundingVolumeComponent() = default;
+
 //-------------------------------------------------------------------------------------------------
 
 MFA::SphereBoundingVolumeComponent::SphereBoundingVolumeComponent(float const radius)
@@ -36,6 +46,20 @@ void MFA::SphereBoundingVolumeComponent::Clone(Entity * entity) const
 {
     MFA_ASSERT(entity != nullptr);
     entity->AddComponent<SphereBoundingVolumeComponent>(mRadius);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::SphereBoundingVolumeComponent::Serialize(nlohmann::json & jsonObject) const
+{
+    jsonObject["radius"] = mRadius;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::SphereBoundingVolumeComponent::Deserialize(nlohmann::json const & jsonObject)
+{
+    mRadius = jsonObject["radius"];
 }
 
 //-------------------------------------------------------------------------------------------------

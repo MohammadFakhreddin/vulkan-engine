@@ -72,13 +72,9 @@ namespace MFA
         };
 
         explicit PBRWithShadowPipelineV2(Scene * attachedScene);
-
         ~PBRWithShadowPipelineV2() override;
 
-        PBRWithShadowPipelineV2(PBRWithShadowPipelineV2 const &) noexcept = delete;
-        PBRWithShadowPipelineV2(PBRWithShadowPipelineV2 &&) noexcept = delete;
-        PBRWithShadowPipelineV2 & operator = (PBRWithShadowPipelineV2 const &) noexcept = delete;
-        PBRWithShadowPipelineV2 & operator = (PBRWithShadowPipelineV2 &&) noexcept = delete;
+        PIPELINE_PROPS(PBRWithShadowPipelineV2);
 
         void Init(
             std::shared_ptr<RT::SamplerGroup> samplerGroup,

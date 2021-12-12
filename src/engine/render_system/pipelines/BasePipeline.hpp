@@ -8,6 +8,17 @@
 #include <unordered_map>
 #include <vector>
 
+#define PIPELINE_PROPS(className)                                       \
+static constexpr char const * Name = #className;                        \
+char const * GetName() const override {                                 \
+    return Name;                                                        \
+}                                                                       \
+                                                                        \
+className (className const &) noexcept = delete;                        \
+className (className &&) noexcept = delete;                             \
+className & operator = (className const &) noexcept = delete;           \
+className & operator = (className &&) noexcept = delete;                \
+
 namespace MFA {
 
 class BasePipeline {
@@ -49,7 +60,7 @@ public:
         float deltaTime
     );
 
-    void CreateDrawableEssence(std::shared_ptr<RT::GpuModel> const & gpuModel);
+    bool CreateEssenceIfNotExists(std::shared_ptr<RT::GpuModel> const & gpuModel);
 
     // Editor only function
     void DestroyDrawableEssence(RT::GpuModelId id);
@@ -63,6 +74,8 @@ public:
     void RemoveDrawableVariant(DrawableVariant & variant);
 
     virtual void OnResize() = 0;
+
+    virtual char const * GetName() const = 0;
 
 protected:
 

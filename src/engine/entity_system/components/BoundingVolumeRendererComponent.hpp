@@ -19,7 +19,9 @@ namespace MFA
             FamilyType::BoundingVolumeRendererComponent,
             EventTypes::InitEvent | EventTypes::ShutdownEvent | EventTypes::UpdateEvent
         )
-        
+
+        explicit BoundingVolumeRendererComponent();
+        ~BoundingVolumeRendererComponent() override;
         explicit BoundingVolumeRendererComponent(DebugRendererPipeline & pipeline);
 
         void Init() override;

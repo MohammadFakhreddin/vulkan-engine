@@ -3,6 +3,8 @@
 #include "engine/render_system/RenderTypesFWD.hpp"
 #include "engine/BedrockSignal.hpp"
 
+#include "libs/nlohmann/json_fwd.hpp"
+
 #include <cstdint>
 
 namespace MFA
@@ -36,6 +38,11 @@ EventType RequiredEvents() const override                               \
 {                                                                       \
     return eventTypes;                                                  \
 }                                                                       \
+                                                                        \
+componentName (componentName const &) noexcept = delete;                \
+componentName (componentName &&) noexcept = delete;                     \
+componentName & operator = (componentName const &) noexcept = delete;   \
+componentName & operator = (componentName && rhs) noexcept = delete;    \
 
 class Entity;
 
@@ -117,6 +124,10 @@ public:
     virtual void OnUI();
 
     virtual void Clone(Entity * entity) const = 0;
+
+    virtual void Serialize(nlohmann::json & jsonObject) const = 0;
+
+    virtual void Deserialize(nlohmann::json const & jsonObject) = 0;
 
     Signal<Component *, Entity *> EditorSignal {};
 

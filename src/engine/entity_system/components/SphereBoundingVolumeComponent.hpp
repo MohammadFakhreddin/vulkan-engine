@@ -16,13 +16,20 @@ public:
         EventTypes::UpdateEvent | EventTypes::InitEvent
     )
 
-    explicit SphereBoundingVolumeComponent(float radius);
+    explicit SphereBoundingVolumeComponent();
+    ~SphereBoundingVolumeComponent() override;
 
+    explicit SphereBoundingVolumeComponent(float radius);
+    
     void Init() override;
 
     DEBUG_CenterAndRadius DEBUG_GetCenterAndRadius() override;
 
     void Clone(Entity * entity) const override;
+
+    void Serialize(nlohmann::json & jsonObject) const override;
+
+    void Deserialize(nlohmann::json const & jsonObject) override;
 
 protected:
 

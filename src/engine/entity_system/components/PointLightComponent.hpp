@@ -23,6 +23,7 @@ namespace MFA {
             EventTypes::InitEvent | EventTypes::ShutdownEvent
         )
 
+        explicit PointLightComponent();
         explicit PointLightComponent(
             float radius,
             float maxDistance,
@@ -30,6 +31,8 @@ namespace MFA {
             float projectionFarDistance,
             std::weak_ptr<MeshRendererComponent> attachedMesh = {}         // Optional: Use this parameter only if you want the light to be visible if a certain mesh is visible
         );
+
+        ~PointLightComponent() override;
 
         void Init() override;
 
@@ -65,6 +68,10 @@ namespace MFA {
 
         void Clone(Entity * entity) const override;
 
+        void Serialize(nlohmann::json & jsonObject) const override;
+
+        void Deserialize(nlohmann::json const & jsonObject) override;
+
     private:
 
         // We only need to compute projection once
@@ -83,8 +90,8 @@ namespace MFA {
 
         float mRadius = 0.0f;                                       // Radius is used for light attenuation
         float mMaxDistance = 0.0f;                                  // Max distance that light should support. Used for optimization
-        float const mProjectionNearDistance;                        // Used for shadow projection
-        float const mProjectionFarDistance;                         // Used for shadow projection
+        float mProjectionNearDistance = 0.0f;                       // Used for shadow projection
+        float mProjectionFarDistance = 0.0f;                        // Used for shadow projection
 
         float mMaxSquareDistance = 0.0f;
         float mLinearAttenuation = 0.0f;
@@ -94,7 +101,7 @@ namespace MFA {
 
         glm::mat4 mShadowProjectionMatrix {};
 
-        float mShadowViewProjectionMatrices[6][16] {};          // For shadow computation
+        float mShadowViewProjectionMatrices[6][16] {};             // For shadow computation
 
         int mTransformChangeListenerId = 0;
 

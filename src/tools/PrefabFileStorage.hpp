@@ -1,21 +1,27 @@
 #pragma once
 
-class Entity;
+#include <string>
 
+namespace MFA
+{
+    class Prefab;
+    class Entity;
+}
+
+// TODO We can move these functions into prefab
 namespace MFA::PrefabFileStorage
 {
-    // TODO I'm still not sure about this file. I might remove it
     struct SerializeParams
     {
-        char const * saveAddress;
-        char const * prefabName;
-        Entity * rootEntity;
+        std::string saveAddress {};
+        Prefab * prefab = nullptr;
     };
     void Serialize(SerializeParams const & params);
 
     struct DeserializeParams
     {
-        char const * fileAddress;           // I think we should use fileAddress for essence name otherwise their uniqueness will be a problem
+        std::string fileAddress {};           // I think we should use fileAddress for essence name otherwise their uniqueness will be a problem
+        Prefab * prefab = nullptr;
     };
     void Deserialize(DeserializeParams const & params);
 

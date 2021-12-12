@@ -1,13 +1,46 @@
 #include "PrefabFileStorage.hpp"
 
-//-------------------------------------------------------------------------------------------------
+#include "Prefab.hpp"
+#include "engine/BedrockAssert.hpp"
+#include "engine/entity_system/Entity.hpp"
 
-void MFA::PrefabFileStorage::Serialize(SerializeParams const & params)
-{}
+#include "libs/nlohmann/json.hpp"
 
-//-------------------------------------------------------------------------------------------------
+#include <fstream>
 
-void MFA::PrefabFileStorage::Deserialize(DeserializeParams const & params)
-{}
+namespace MFA
+{
+    //-------------------------------------------------------------------------------------------------
 
-//-------------------------------------------------------------------------------------------------
+    void PrefabFileStorage::Serialize(SerializeParams const & params)
+    {
+        auto * prefab = params.prefab;
+        MFA_ASSERT(prefab != nullptr);
+        auto * entity = prefab->GetEntity();
+        MFA_ASSERT(entity != nullptr);
+
+        nlohmann::json json {};
+        entity->Serialize(json["entity"]);
+
+        std::ofstream file(params.saveAddress);
+        file << json;
+        file.close();
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PrefabFileStorage::Deserialize(DeserializeParams const & params)
+    {
+        std::ifstream ifs(params.fileAddress);
+        nlohmann::json jf = nlohmann::json::parse(ifs);
+
+        //auto entity = std::make_unique<Entity>("Invalid name", nullptr);
+        params.prefab->GetEntity()->Deserialize(jf["entity"]);
+
+        //std::shared_ptr<Prefab> prefab = std::make_shared<Prefab>(std::move(entity));
+
+        //return prefab;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+}

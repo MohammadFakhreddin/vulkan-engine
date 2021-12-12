@@ -1,7 +1,6 @@
 #include "RenderTypes.hpp"
 
 #include "engine/BedrockAssert.hpp"
-#include "tools/Importer.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 
 #include <utility>
@@ -53,8 +52,8 @@ MFA::RT::MeshBuffers::~MeshBuffers() = default;
 //-------------------------------------------------------------------------------------------------
 
 MFA::RT::ImageGroup::ImageGroup(
-    VkImage const image_,
-    VkDeviceMemory const memory_
+    const VkImage image_,
+    const VkDeviceMemory memory_
 )
     : image(image_)
     , memory(memory_)
@@ -102,11 +101,13 @@ MFA::RT::GpuTexture::~GpuTexture() = default;
 
 MFA::RT::GpuModel::GpuModel(
     GpuModelId const id_,
+    std::string address_,
     std::shared_ptr<MeshBuffers> meshBuffers_,
     std::vector<std::shared_ptr<GpuTexture>> textures_,
     std::shared_ptr<AS::Model> model_
 )
     : id(id_)
+    , address(std::move(address_))
     , meshBuffers(std::move(meshBuffers_))
     , textures(std::move(textures_))
     , model(std::move(model_))

@@ -8,9 +8,20 @@
 #include "engine/entity_system/EntitySystem.hpp"
 #include "engine/entity_system/components/DirectionalLightComponent.hpp"
 #include "engine/entity_system/components/PointLightComponent.hpp"
+#include "engine/render_system/pipelines/BasePipeline.hpp"
 
 namespace MFA
 {
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Scene::OnResize()
+    {
+        for (auto * pipeline : mActivePipelines)
+        {
+            pipeline->OnResize();
+        }
+    }
 
     //-------------------------------------------------------------------------------------------------
 
@@ -114,6 +125,27 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    void Scene::RegisterPipeline(BasePipeline * pipeline)
+    {
+        mActivePipelines.emplace_back(pipeline);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    BasePipeline * Scene::GetPipelineByName(std::string const & name) const
+    {
+        for (auto * pipeline : mActivePipelines)
+        {
+            if (pipeline->GetName() == name)
+            {
+                return pipeline;
+            }
+        }
+        return nullptr;
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
     void Scene::prepareCameraBuffer()
     {
         mCameraBuffer = RF::CreateUniformBuffer(
@@ -170,7 +202,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void Scene::updateCameraBuffer(RT::CommandRecordState const & recordState)
+    void Scene::updateCameraBuffer(RT::CommandRecordState const & recordState) const
     {
         if (auto const cameraPtr = mActiveCamera.lock())
         {

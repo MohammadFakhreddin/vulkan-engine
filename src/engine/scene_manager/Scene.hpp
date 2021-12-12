@@ -3,8 +3,9 @@
 #include "engine/render_system/RenderTypes.hpp"
 
 namespace MFA {
+    class BasePipeline;
 
-class CameraComponent;
+    class CameraComponent;
 class Scene;
 class DisplayRenderPass;
 class PointLightComponent;
@@ -37,7 +38,7 @@ public:
     virtual void OnRender(float deltaTimeInSec, RT::CommandRecordState & drawPass) {}
     virtual void OnPostRender(float deltaTimeInSec, RT::CommandRecordState & drawPass) {}
 
-    virtual void OnResize() = 0;
+    virtual void OnResize();;
     virtual void Init();   
     virtual void Shutdown();
     
@@ -68,6 +69,11 @@ public:
     [[nodiscard]]
     uint32_t GetDirectionalLightCount() const;
 
+    void RegisterPipeline(BasePipeline * pipeline);
+
+    [[nodiscard]]
+    BasePipeline * GetPipelineByName(std::string const & name) const;
+
 private:
 
     void prepareCameraBuffer();
@@ -76,7 +82,7 @@ private:
 
     void prepareDirectionalLightsBuffer();
 
-    void updateCameraBuffer(RT::CommandRecordState const & recordState);
+    void updateCameraBuffer(RT::CommandRecordState const & recordState) const;
 
     void updatePointLightsBuffer(RT::CommandRecordState const & recordState);
 
@@ -137,6 +143,9 @@ private:
     std::shared_ptr<RT::UniformBufferGroup> mDirectionalLightBuffers {};
 
     // TODO Spot light
+
+    // TODO Maybe we can have pipeline shared between entire application
+    std::vector<BasePipeline *> mActivePipelines {};
 };
 
 

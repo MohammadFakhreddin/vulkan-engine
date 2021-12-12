@@ -14,7 +14,13 @@ namespace MFA {
 
         void Shutdown() override;
 
+        void Serialize(nlohmann::json & jsonObject) const override;
+
+        void Deserialize(nlohmann::json const & jsonObject) override;
+
     protected:
+
+        explicit RendererComponent() = default;
 
         explicit RendererComponent(BasePipeline & pipeline, DrawableVariant * drawableVariant);
 

@@ -3,7 +3,6 @@
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/BedrockFileSystem.hpp"
 #include "engine/BedrockAssert.hpp"
-#include "engine/BedrockMemory.hpp"
 #include "tools/Importer.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 
@@ -45,7 +44,7 @@ namespace MFA
         MFA_ASSERT(strlen(name) > 0);
 
         MFA_ASSERT(cpuModel->mesh->IsValid());
-        auto gpuModel = RF::CreateGpuModel(std::move(cpuModel), state->nextId++);
+        auto gpuModel = RF::CreateGpuModel(std::move(cpuModel), state->nextId++, name);
         state->availableGpuModels[name] = gpuModel;
         return gpuModel;
     }
@@ -71,7 +70,7 @@ namespace MFA
         auto const extension = FS::ExtractExtensionFromPath(fileAddress);
         if (extension == ".gltf" || extension == ".glb")
         {
-            auto cpuModel = Importer::ImportGLTF(fileAddress);
+            auto const cpuModel = Importer::ImportGLTF(fileAddress);
             if (cpuModel != nullptr)
             {
                 return createGpuModel(cpuModel, fileAddress);

@@ -71,6 +71,10 @@ namespace MFA
 
         void Clone(Entity * entity) const override;
 
+        void Serialize(nlohmann::json & jsonObject) const override;
+
+        void Deserialize(nlohmann::json const & jsonObject) override;
+
     private:
 
         void computeTransform();

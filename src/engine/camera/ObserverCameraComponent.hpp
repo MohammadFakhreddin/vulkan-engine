@@ -33,12 +33,7 @@ namespace MFA
         );
 
         ~ObserverCameraComponent() override = default;
-
-        ObserverCameraComponent(ObserverCameraComponent const &) noexcept = delete;
-        ObserverCameraComponent(ObserverCameraComponent &&) noexcept = delete;
-        ObserverCameraComponent & operator = (ObserverCameraComponent const &) noexcept = delete;
-        ObserverCameraComponent & operator = (ObserverCameraComponent &&) noexcept = delete;
-
+        
         void Init() override;
 
         void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState) override;

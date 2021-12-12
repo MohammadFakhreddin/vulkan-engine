@@ -101,6 +101,20 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    void CameraComponent::Deserialize(nlohmann::json const & jsonObject)
+    {
+        MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");   
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void CameraComponent::Serialize(nlohmann::json & jsonObject) const
+    {
+        MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");   
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     bool CameraComponent::Plane::IsInFrontOfPlane(glm::vec3 const & point, glm::vec3 const & extend) const
     {
         // Compute the projection interval radius of b onto L(t) = b.c + t * p.n

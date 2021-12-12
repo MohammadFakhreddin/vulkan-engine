@@ -6,6 +6,14 @@
 
 //-------------------------------------------------------------------------------------------------
 
+MFA::BoundingVolumeComponent::BoundingVolumeComponent() = default;
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::BoundingVolumeComponent::~BoundingVolumeComponent() = default;
+
+//-------------------------------------------------------------------------------------------------
+
 void MFA::BoundingVolumeComponent::Init()
 {
     Component::Init();

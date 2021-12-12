@@ -7,18 +7,28 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    Prefab::Prefab() = default;
+
+    //-------------------------------------------------------------------------------------------------
+
     Prefab::Prefab(Entity * preBuiltEntity)
         : mOwnedEntity(nullptr)
-        , mEntity(nullptr)
+        , mEntity(preBuiltEntity)
     {
         MFA_ASSERT(preBuiltEntity != nullptr);
-        mEntity = preBuiltEntity;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    Prefab::~Prefab() = default;
+    Prefab::Prefab(std::unique_ptr<Entity> && ownedEntity)
+        : mOwnedEntity(std::move(ownedEntity))
+        , mEntity(mOwnedEntity.get())
+    {}
 
+    //-------------------------------------------------------------------------------------------------
+
+    Prefab::~Prefab() = default;
+    
     //-------------------------------------------------------------------------------------------------
 
     Entity * Prefab::Clone(Entity * parent, CloneEntityOptions const & options)
@@ -31,6 +41,22 @@ namespace MFA
         auto * entity = mEntity->Clone(name.c_str(), parent);
         EntitySystem::InitEntity(entity);
         return entity;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    Entity * Prefab::GetEntity() const
+    {
+        return mEntity;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Prefab::AssignPreBuiltEntity(Entity * preBuiltEntity)
+    {
+        MFA_ASSERT(preBuiltEntity != nullptr);
+        mOwnedEntity.reset();
+        mEntity = preBuiltEntity;
     }
 
     //-------------------------------------------------------------------------------------------------

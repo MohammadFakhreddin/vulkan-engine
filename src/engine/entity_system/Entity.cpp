@@ -1,7 +1,16 @@
 #include "Entity.hpp"
 
 #include "EntitySystem.hpp"
+#include "components/AxisAlignedBoundingBoxComponent.hpp"
+#include "components/BoundingVolumeRendererComponent.hpp"
+#include "components/ColorComponent.hpp"
+#include "components/MeshRendererComponent.hpp"
+#include "components/PointLightComponent.hpp"
+#include "components/SphereBoundingVolumeComponent.hpp"
+#include "components/TransformComponent.hpp"
 #include "engine/ui_system/UISystem.hpp"
+
+#include "libs/nlohmann/json.hpp"
 
 namespace MFA
 {
@@ -29,7 +38,7 @@ namespace MFA
             return;
         }
         mIsInitialized = true;
-        
+
         if (mParent != nullptr)
         {
             mParent->notifyANewChildAdded(this);
@@ -98,7 +107,6 @@ namespace MFA
         }
         mIsActive = isActive;
         mActivationStatusChangeSignal.Emit(mIsActive);
-        // TODO We can register/unregister from entity system update event
         onActivationStatusChanged();
     }
 
@@ -183,6 +191,103 @@ namespace MFA
         EntitySystem::InitEntity(entity);
 
         return entity;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Entity::Serialize(nlohmann::json & jsonObject)
+    {
+        jsonObject["name"] = mName.c_str();
+        for (auto const & component : mComponents)
+        {
+            if (component != nullptr)
+            {
+                nlohmann::json componentJson{};
+                componentJson["name"] = component->GetName();
+                componentJson["familyType"] = component->GetFamilyType();
+
+                nlohmann::json componentData{};
+                component->Serialize(componentData);
+                componentJson["data"] = componentData;
+
+                jsonObject["components"].emplace_back(componentJson);
+
+            }
+        }
+        for (auto const & child : mChildEntities)
+        {
+            nlohmann::json childEntityJson{};
+            child->Serialize(childEntityJson);
+            jsonObject["children"].emplace_back(childEntityJson);
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Entity::Deserialize(nlohmann::json const & jsonObject)
+    {
+        mName = jsonObject["name"];
+        auto const & rawComponents = jsonObject["components"];
+        for (auto const & rawComponent : rawComponents)
+        {
+            std::string const name = rawComponent["name"];
+            int const familyType = rawComponent["familyType"];
+
+            auto rawComponentData = rawComponent["data"];
+
+            std::shared_ptr<Component> component = nullptr;
+
+            if (strcmp(name.c_str(), TransformComponent::Name) == 0)
+            {
+                component = AddComponent<TransformComponent>().lock();
+            }
+            else if (strcmp(name.c_str(), MeshRendererComponent::Name) == 0)
+            {
+                component = AddComponent<MeshRendererComponent>().lock();
+            }
+            else if (strcmp(name.c_str(), BoundingVolumeRendererComponent::Name) == 0)
+            {
+                component = AddComponent<BoundingVolumeRendererComponent>().lock();
+            }
+            else if (strcmp(name.c_str(), SphereBoundingVolumeComponent::Name) == 0)
+            {
+                component = AddComponent<SphereBoundingVolumeComponent>().lock();
+            }
+            else if (strcmp(name.c_str(), AxisAlignedBoundingBoxComponent::Name) == 0)
+            {
+                component = AddComponent<AxisAlignedBoundingBoxComponent>().lock();
+            }
+            else if (strcmp(name.c_str(), ColorComponent::Name) == 0)
+            {
+                component = AddComponent<ColorComponent>().lock();
+            }
+            else if (strcmp(name.c_str(), PointLightComponent::Name) == 0)
+            {
+                component = AddComponent<PointLightComponent>().lock();
+            }
+
+            if (MFA_VERIFY(component != nullptr))
+            {
+                component->Deserialize(rawComponentData);
+            }
+        }
+
+        EntitySystem::InitEntity(this);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::vector<Component *> Entity::GetComponents()
+    {
+        std::vector<Component *> result {};
+        for (auto & component : mComponents)
+        {
+            if (component != nullptr)
+            {
+                result.emplace_back(component.get());
+            }
+        }
+        return result;
     }
 
     //-------------------------------------------------------------------------------------------------

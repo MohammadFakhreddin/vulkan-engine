@@ -100,7 +100,8 @@ namespace MFA::RenderFrontend
     [[nodiscard]]
     std::shared_ptr<RT::GpuModel> CreateGpuModel(
         std::shared_ptr<AssetSystem::Model> modelAsset,
-        RT::GpuModelId uniqueId
+        RT::GpuModelId uniqueId,
+        char const * address
     );
 
     void DeviceWaitIdle();

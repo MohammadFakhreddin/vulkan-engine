@@ -35,9 +35,7 @@ public:
     void OnUI();
 
     void Shutdown() override;
-
-    void OnResize() override;
-
+    
 private:
 
     static constexpr float LightScale = 100.0f;
@@ -104,7 +102,7 @@ private:
     std::shared_ptr<MFA::RT::SamplerGroup> mSamplerGroup {};
 
     MFA::PBRWithShadowPipelineV2 mPbrPipeline {this};
-    MFA::DebugRendererPipeline mPointLightPipeline {};
+    MFA::DebugRendererPipeline mDebugRenderPipeline {};
 
     std::shared_ptr<MFA::RT::GpuTexture> mErrorTexture {};
 

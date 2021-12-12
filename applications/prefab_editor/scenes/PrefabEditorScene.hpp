@@ -5,6 +5,7 @@
 #include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
 #include "engine/scene_manager/Scene.hpp"
+#include "tools/Prefab.hpp"
 
 class PrefabEditorScene final : public MFA::Scene
 {
@@ -50,8 +51,10 @@ private:
     void prepareDependencyLists();
 
     void prepareCreateComponentInstructionMap();
+    
+    void bindEditorSignalToEntity(MFA::Entity * entity);
 
-    MFA::Entity * createPrefabEntity(char const * name, MFA::Entity * parent);
+    MFA::Entity * createPrefabEntity(char const * name, MFA::Entity * parent, bool createTransform = true);
 
     static constexpr float Z_NEAR = 0.1f;
     static constexpr float Z_FAR = 3000.0f;
@@ -96,5 +99,7 @@ private:
     int mSelectedComponentIndex = 0;
     int mSelectedEssenceIndex = 0;
     std::string mInputChildEntityName {};
+
+    MFA::Prefab mPrefab {};
 
 };

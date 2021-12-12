@@ -20,6 +20,7 @@ namespace MFA
         )
 
         explicit DirectionalLightComponent();
+        ~DirectionalLightComponent() override;
 
         void Init() override;
 
@@ -32,7 +33,11 @@ namespace MFA
         void GetColor(float outColor[3]) const;
 
         void Clone(Entity * entity) const override;
-        
+
+        void Serialize(nlohmann::json & jsonObject) const override;
+
+        void Deserialize(nlohmann::json const & jsonObject) override;
+   
     private:
 
         static constexpr float Z_NEAR = -1000.0f;
@@ -40,7 +45,9 @@ namespace MFA
 
         void computeShadowProjection();
         void computeDirectionAndShadowViewProjection();
-        
+
+    private:
+
         glm::vec3 mDirection {};
 
         glm::mat4 mShadowProjectionMatrix {};

@@ -2,7 +2,6 @@
 
 #include "engine/BedrockAssert.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 #include "tools/Importer.hpp"
 #include "tools/ShapeGenerator.hpp"
 #include "engine/BedrockPath.hpp"
@@ -129,7 +128,7 @@ void GLTFMeshViewerScene::Init() {
     // TODO We should use gltf sampler info here
     mSamplerGroup = RF::CreateSampler(MFA::RT::CreateSamplerParams {});
     
-    mPointLightPipeline.Init();
+    mDebugRenderPipeline.Init();
 
     {// Camera
         auto * entity = EntitySystem::CreateEntity("Camera", GetRootEntity());
@@ -152,7 +151,7 @@ void GLTFMeshViewerScene::Init() {
     {// Point light
         auto cpuModel = ShapeGenerator::Sphere();
         mPointLightModel = RC::Assign(cpuModel, "Sphere");
-        mPointLightPipeline.CreateDrawableEssence(mPointLightModel);
+        mDebugRenderPipeline.CreateEssenceIfNotExists(mPointLightModel);
 
         auto * entity = EntitySystem::CreateEntity("PointLight", GetRootEntity());
 
@@ -171,7 +170,7 @@ void GLTFMeshViewerScene::Init() {
 
         mPointLightTransform = transformComponent;
 
-        entity->AddComponent<MeshRendererComponent>(mPointLightPipeline, mPointLightModel->id);
+        entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, mPointLightModel->id);
 
         entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
 
@@ -179,6 +178,9 @@ void GLTFMeshViewerScene::Init() {
     }
 
     mUIRegisterId = UI::Register([this]()->void {OnUI();});
+
+    RegisterPipeline(&mPbrPipeline);
+    RegisterPipeline(&mDebugRenderPipeline);
 }
 
 void GLTFMeshViewerScene::OnPreRender(float const deltaTimeInSec, RT::CommandRecordState & recordState) {
@@ -236,7 +238,7 @@ void GLTFMeshViewerScene::OnPreRender(float const deltaTimeInSec, RT::CommandRec
     }
 
     mPbrPipeline.PreRender(recordState, deltaTimeInSec);
-    mPointLightPipeline.PreRender(recordState, deltaTimeInSec);
+    mDebugRenderPipeline.PreRender(recordState, deltaTimeInSec);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -249,7 +251,7 @@ void GLTFMeshViewerScene::OnRender(float const deltaTimeInSec, RT::CommandRecord
     // TODO Pipeline should be able to share buffers such as projection buffer to enable us to update them once -> Solution: Store camera buffers inside camera
     mPbrPipeline.Render(recordState, deltaTimeInSec);
     if (mIsLightVisible) {
-        mPointLightPipeline.Render(recordState, deltaTimeInSec);
+        mDebugRenderPipeline.Render(recordState, deltaTimeInSec);
     }
 }
 
@@ -259,7 +261,7 @@ void GLTFMeshViewerScene::OnPostRender(float const deltaTimeInSec, RT::CommandRe
 {
     Scene::OnPostRender(deltaTimeInSec, recordState);
 
-    mPointLightPipeline.PostRender(recordState, deltaTimeInSec);
+    mDebugRenderPipeline.PostRender(recordState, deltaTimeInSec);
     mPbrPipeline.PostRender(recordState, deltaTimeInSec);
 
 }
@@ -299,16 +301,9 @@ void GLTFMeshViewerScene::Shutdown() {
 
 //-------------------------------------------------------------------------------------------------
 
-void GLTFMeshViewerScene::OnResize() {
-    mPointLightPipeline.OnResize();
-    mPbrPipeline.OnResize();
-}
-
-//-------------------------------------------------------------------------------------------------
-
 void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredData) {
     renderRequiredData.gpuModel = ResourceManager::Acquire(Path::Asset(renderRequiredData.address.c_str()).c_str());
-    mPbrPipeline.CreateDrawableEssence(renderRequiredData.gpuModel);
+    mPbrPipeline.CreateEssenceIfNotExists(renderRequiredData.gpuModel);
 
     auto * entity = EntitySystem::CreateEntity(renderRequiredData.displayName.c_str(), GetRootEntity());
     MFA_ASSERT(entity != nullptr);

@@ -17,6 +17,8 @@ namespace MFA {
             EventTypes::UpdateEvent | EventTypes::InitEvent
         )
 
+        explicit BoundingVolumeComponent();
+        ~BoundingVolumeComponent() override;
 
         void Init() override;
 

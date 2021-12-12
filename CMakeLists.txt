@@ -305,10 +305,12 @@ list(
     "src/tools/Importer.hpp"
     "src/tools/ShapeGenerator.cpp"
     "src/tools/ShapeGenerator.hpp"
-    "src/tools/Prefab.cpp"
+    "src/tools/Prefab.cpp"          # Maybe we should move prefab to engine
     "src/tools/Prefab.hpp"
     "src/tools/PrefabFileStorage.cpp"
     "src/tools/PrefabFileStorage.hpp"
+    "src/tools/JsonUtils.hpp"
+    "src/tools/JsonUtils.cpp"
 )
 
 add_library("Tools"
@@ -401,7 +403,6 @@ list(
     "src/libs/stb_image/stb_image_write.h"
     "src/libs/stb_image/stb_image.h"
     #TinyGltfLoader
-    "src/libs/tiny_gltf_loader/json.hpp"
     "src/libs/tiny_gltf_loader/tiny_gltf_loader.h"
     #TinyObjLoader
     "src/libs/tiny_obj_loader/tiny_obj_loader.h"

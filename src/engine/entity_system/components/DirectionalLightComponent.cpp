@@ -16,6 +16,10 @@ MFA::DirectionalLightComponent::DirectionalLightComponent() = default;
 
 //-------------------------------------------------------------------------------------------------
 
+MFA::DirectionalLightComponent::~DirectionalLightComponent() = default;
+
+//-------------------------------------------------------------------------------------------------
+
 void MFA::DirectionalLightComponent::Init()
 {
     Component::Init();
@@ -82,6 +86,16 @@ void MFA::DirectionalLightComponent::Clone(Entity * entity) const
     MFA_ASSERT(entity != nullptr);
     entity->AddComponent<DirectionalLightComponent>();
 }
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::DirectionalLightComponent::Serialize(nlohmann::json & jsonObject) const
+{}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::DirectionalLightComponent::Deserialize(nlohmann::json const & jsonObject)
+{}
 
 //-------------------------------------------------------------------------------------------------
 

@@ -4,6 +4,7 @@
 #include "engine/BedrockMatrix.hpp"
 #include "engine/entity_system/Entity.hpp"
 #include "engine/ui_system/UISystem.hpp"
+#include "tools/JsonUtils.hpp"
 
 namespace MFA
 {
@@ -272,6 +273,24 @@ namespace MFA
             mRotation,
             mScale
         );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void TransformComponent::Serialize(nlohmann::json & jsonObject) const
+    {
+        JsonUtils::SerializeVec3(jsonObject, "position", mPosition);
+        JsonUtils::SerializeVec3(jsonObject, "rotation", mRotation);
+        JsonUtils::SerializeVec3(jsonObject, "scale", mScale);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void TransformComponent::Deserialize(nlohmann::json const & jsonObject)
+    {
+        JsonUtils::DeserializeVec3(jsonObject, "position", mPosition);
+        JsonUtils::DeserializeVec3(jsonObject, "rotation", mRotation);
+        JsonUtils::DeserializeVec3(jsonObject, "scale", mScale);
     }
 
     //-------------------------------------------------------------------------------------------------

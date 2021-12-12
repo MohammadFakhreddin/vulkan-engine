@@ -125,12 +125,14 @@ namespace MFA
         struct GpuModel
         {
             GpuModelId const id;
+            std::string const address;
             std::shared_ptr<MeshBuffers> const meshBuffers;
             std::vector<std::shared_ptr<GpuTexture>> const textures;
             std::shared_ptr<AS::Model> const model;
 
             explicit GpuModel(
                 GpuModelId id_,
+                std::string address_,
                 std::shared_ptr<MeshBuffers> meshBuffers_,
                 std::vector<std::shared_ptr<GpuTexture>> textures_,
                 std::shared_ptr<AS::Model> model_

@@ -14,11 +14,18 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    BoundingVolumeRendererComponent::BoundingVolumeRendererComponent() = default;
+
+    //-------------------------------------------------------------------------------------------------
+
+    BoundingVolumeRendererComponent::~BoundingVolumeRendererComponent() = default;
+
+    //-------------------------------------------------------------------------------------------------
+
     BoundingVolumeRendererComponent::BoundingVolumeRendererComponent(DebugRendererPipeline & pipeline)
         : RendererComponent(
             pipeline,
-            pipeline.CreateDrawableVariant(*RC::Acquire("Cube", false))
-        )
+            pipeline.CreateDrawableVariant(*RC::Acquire("Cube", false)))
     {}
 
     //-------------------------------------------------------------------------------------------------

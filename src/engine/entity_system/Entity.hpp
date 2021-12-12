@@ -4,6 +4,8 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockSignal.hpp"
 
+#include "libs/nlohmann/json_fwd.hpp"
+
 #include <memory>
 #include <utility>
 #include <vector>
@@ -142,6 +144,12 @@ namespace MFA
         void OnParentActivationStatusChanged(bool isActive);
 
         Entity * Clone(char const * name, Entity * parent = nullptr) const;
+
+        void Serialize(nlohmann::json & jsonObject);
+
+        void Deserialize(nlohmann::json const & jsonObject);
+
+        std::vector<Component *> GetComponents();
 
     private:
 

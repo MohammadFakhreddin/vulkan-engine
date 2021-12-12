@@ -11,7 +11,9 @@ namespace MFA
     {
     public:
 
+        explicit Prefab();
         explicit Prefab(Entity * preBuiltEntity);
+        explicit Prefab(std::unique_ptr<Entity> && ownedEntity);
         ~Prefab();
 
         struct CloneEntityOptions
@@ -24,6 +26,11 @@ namespace MFA
         Prefab(Prefab &&) noexcept = delete;
         Prefab & operator = (Prefab const &) noexcept = delete;
         Prefab & operator = (Prefab && rhs) noexcept = delete;
+
+        [[nodiscard]]
+        Entity * GetEntity() const;
+
+        void AssignPreBuiltEntity(Entity * preBuiltEntity);
 
     private:
 

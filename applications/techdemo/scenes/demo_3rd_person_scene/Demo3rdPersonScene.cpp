@@ -56,15 +56,15 @@ void Demo3rdPersonScene::Init()
 
     auto sphereCpuModel = ShapeGenerator::Sphere();
     mSphereModel = ResourceManager::Assign(sphereCpuModel, "Sphere");
-    mDebugRenderPipeline.CreateDrawableEssence(mSphereModel);
+    mDebugRenderPipeline.CreateEssenceIfNotExists(mSphereModel);
 
     auto cubeCpuModel = ShapeGenerator::Cube();
     mCubeModel = ResourceManager::Assign(cubeCpuModel, "Cube");
-    mDebugRenderPipeline.CreateDrawableEssence(mCubeModel);
+    mDebugRenderPipeline.CreateEssenceIfNotExists(mCubeModel);
     
     // Soldier
     mSoldierGpuModel = ResourceManager::Acquire(Path::Asset("models/warcraft_3_alliance_footmanfanmade/scene.gltf").c_str());
-    mPbrPipeline.CreateDrawableEssence(mSoldierGpuModel);
+    mPbrPipeline.CreateEssenceIfNotExists(mSoldierGpuModel);
     {// Playable character
         auto * entity = EntitySystem::CreateEntity("Playable soldier", GetRootEntity());
         MFA_ASSERT(entity != nullptr);
@@ -150,7 +150,7 @@ void Demo3rdPersonScene::Init()
 
     {// Map
         mMapModel = ResourceManager::Acquire(Path::Asset("models/sponza/sponza.gltf").c_str());
-        mPbrPipeline.CreateDrawableEssence(mMapModel);
+        mPbrPipeline.CreateEssenceIfNotExists(mMapModel);
 
         auto * entity = EntitySystem::CreateEntity("Sponza scene", GetRootEntity());
         MFA_ASSERT(entity != nullptr);
@@ -276,6 +276,9 @@ void Demo3rdPersonScene::Init()
     }
 
     mUIRecordId = UI::Register([this]()->void { onUI(); });
+
+    RegisterPipeline(&mDebugRenderPipeline);
+    RegisterPipeline(&mPbrPipeline);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -468,14 +471,6 @@ void Demo3rdPersonScene::Shutdown()
     // Error texture
     //RF::DestroyTexture(mErrorTexture);
     
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void Demo3rdPersonScene::OnResize()
-{
-    mPbrPipeline.OnResize();
-    mDebugRenderPipeline.OnResize();
 }
 
 //-------------------------------------------------------------------------------------------------

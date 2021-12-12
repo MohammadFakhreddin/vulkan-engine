@@ -17,6 +17,7 @@ namespace MFA
             EventTypes::InitEvent | EventTypes::ShutdownEvent
         )
 
+        explicit MeshRendererComponent() = default;
         explicit MeshRendererComponent(BasePipeline & pipeline, RT::GpuModelId id);
         explicit MeshRendererComponent(BasePipeline & pipeline, RT::GpuModel const & gpuModel);
 
@@ -31,7 +32,7 @@ namespace MFA
         void OnUI() override;
 
         void Clone(Entity * entity) const override;
-    
+ 
     };
 
 }

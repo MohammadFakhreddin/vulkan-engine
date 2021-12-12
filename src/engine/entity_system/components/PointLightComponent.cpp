@@ -9,6 +9,12 @@
 
 #include <utility>
 
+#include "libs/nlohmann/json.hpp"
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::PointLightComponent::PointLightComponent() = default;
+
 //-------------------------------------------------------------------------------------------------
 
 MFA::PointLightComponent::PointLightComponent(
@@ -26,6 +32,10 @@ MFA::PointLightComponent::PointLightComponent(
     , mAttachedMesh(std::move(attachedMesh))
 {
 }
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::PointLightComponent::~PointLightComponent() = default;
 
 //-------------------------------------------------------------------------------------------------
 
@@ -189,6 +199,26 @@ void MFA::PointLightComponent::Clone(Entity * entity) const
         mProjectionFarDistance,
         std::shared_ptr<MeshRendererComponent> {}
     );
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::PointLightComponent::Serialize(nlohmann::json & jsonObject) const
+{
+    jsonObject["Radius"] = mRadius;
+    jsonObject["MaxDistance"] = mMaxDistance;
+    jsonObject["ProjectionNearDistance"] = mProjectionNearDistance;
+    jsonObject["ProjectionFarDistance"] = mProjectionFarDistance;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::PointLightComponent::Deserialize(nlohmann::json const & jsonObject)
+{
+    mRadius = jsonObject["Radius"];
+    mMaxDistance = jsonObject["MaxDistance"];
+    mProjectionNearDistance = jsonObject["ProjectionNearDistance"];
+    mProjectionFarDistance = jsonObject["ProjectionFarDistance"];
 }
 
 //-------------------------------------------------------------------------------------------------

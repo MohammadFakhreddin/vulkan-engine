@@ -629,7 +629,8 @@ namespace MFA::RenderFrontend
 
     std::shared_ptr<RT::GpuModel> CreateGpuModel(
         std::shared_ptr<AssetSystem::Model> modelAsset,
-        RT::GpuModelId const uniqueId
+        RT::GpuModelId const uniqueId,
+        char const * address
     )
     {
         MFA_ASSERT(modelAsset->mesh->IsValid());
@@ -642,6 +643,7 @@ namespace MFA::RenderFrontend
         }
         return std::make_shared<RT::GpuModel>(
             uniqueId,
+            address,
             std::move(meshBuffers),
             std::move(textures),
             std::move(modelAsset)

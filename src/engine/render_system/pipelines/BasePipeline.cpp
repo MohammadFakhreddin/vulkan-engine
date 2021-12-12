@@ -64,16 +64,18 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::CreateDrawableEssence(std::shared_ptr<RT::GpuModel> const & gpuModel)
+    bool BasePipeline::CreateEssenceIfNotExists(std::shared_ptr<RT::GpuModel> const & gpuModel)
     {
-        if(MFA_VERIFY(mEssenceAndVariantsMap.find(gpuModel->id) == mEssenceAndVariantsMap.end()) == false)
+        if(mEssenceAndVariantsMap.find(gpuModel->id) != mEssenceAndVariantsMap.end())
         {
-            return;
+            return false;
         }
 
-        EssenceAndVariants essenceAndVariants {gpuModel};
+        EssenceAndVariants const essenceAndVariants {gpuModel};
         internalCreateDrawableEssence(*essenceAndVariants.Essence);
-        mEssenceAndVariantsMap[gpuModel->id] = std::move(essenceAndVariants);
+        mEssenceAndVariantsMap[gpuModel->id] = essenceAndVariants;
+
+        return true;
     }
 
     //-------------------------------------------------------------------------------------------------

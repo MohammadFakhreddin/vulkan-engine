@@ -17,10 +17,7 @@ public:
     DebugRendererPipeline();
     ~DebugRendererPipeline() override;
 
-    DebugRendererPipeline (DebugRendererPipeline const &) noexcept = delete;
-    DebugRendererPipeline (DebugRendererPipeline &&) noexcept = delete;
-    DebugRendererPipeline & operator = (DebugRendererPipeline const &) noexcept = delete;
-    DebugRendererPipeline & operator = (DebugRendererPipeline &&) noexcept = delete;
+    PIPELINE_PROPS(DebugRendererPipeline);
 
     void Init() override;
 
@@ -31,6 +28,8 @@ public:
     void Render(RT::CommandRecordState & drawPass, float deltaTime) override;
     
     void OnResize() override {}
+
+
 
 private:
 

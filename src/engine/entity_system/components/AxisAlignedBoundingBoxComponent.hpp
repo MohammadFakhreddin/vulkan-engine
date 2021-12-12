@@ -34,6 +34,10 @@ namespace MFA
 
         void Clone(Entity * entity) const override;
 
+        void Deserialize(nlohmann::json const & jsonObject) override;
+
+        void Serialize(nlohmann::json & jsonObject) const override;
+
     protected:
 
         bool IsInsideCameraFrustum(CameraComponent const * camera) override;

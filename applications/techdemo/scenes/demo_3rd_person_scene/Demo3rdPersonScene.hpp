@@ -33,9 +33,7 @@ public:
     void OnPostRender(float deltaTimeInSec, MFA::RT::CommandRecordState & recordState) override;
 
     void Shutdown() override;
-
-    void OnResize() override;
-
+    
 private:
 
     void onUI() const;

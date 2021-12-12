@@ -1,6 +1,7 @@
 #include "PrefabEditorScene.hpp"
 
 #include "WindowsApi.hpp"
+#include "engine/BedrockFileSystem.hpp"
 #include "tools/Importer.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "tools/ShapeGenerator.hpp"
@@ -16,6 +17,7 @@
 #include "engine/entity_system/components/DirectionalLightComponent.hpp"
 #include "engine/camera/ObserverCameraComponent.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
+#include "tools/PrefabFileStorage.hpp"
 
 using namespace MFA;
 
@@ -28,7 +30,7 @@ PrefabEditorScene::PrefabEditorScene() = default;
 PrefabEditorScene::~PrefabEditorScene() = default;
 
 //-------------------------------------------------------------------------------------------------
-// TODO Start from here. Write data in json and load it again
+
 void PrefabEditorScene::Init()
 {
     Scene::Init();
@@ -52,11 +54,11 @@ void PrefabEditorScene::Init()
 
         auto const sphereCpuModel = ShapeGenerator::Sphere();
         mSphereModel = RC::Assign(sphereCpuModel, "Sphere");
-        mDebugRenderPipeline.CreateDrawableEssence(mSphereModel);
+        mDebugRenderPipeline.CreateEssenceIfNotExists(mSphereModel);
 
         auto const cubeCpuModel = ShapeGenerator::Cube();
         mCubeModel = RC::Assign(cubeCpuModel, "Cube");
-        mDebugRenderPipeline.CreateDrawableEssence(mCubeModel);
+        mDebugRenderPipeline.CreateEssenceIfNotExists(mCubeModel);
     }
 
     mUIRecordId = UI::Register([this]()->void { onUI(); });
@@ -65,7 +67,7 @@ void PrefabEditorScene::Init()
         auto * entity = EntitySystem::CreateEntity("CameraEntity", GetRootEntity());
         MFA_ASSERT(entity != nullptr);
 
-        auto observerCamera = entity->AddComponent<ObserverCameraComponent>(FOV, Z_NEAR, Z_FAR).lock();
+        auto const observerCamera = entity->AddComponent<ObserverCameraComponent>(FOV, Z_NEAR, Z_FAR).lock();
         MFA_ASSERT(observerCamera != nullptr);
         SetActiveCamera(observerCamera);
 
@@ -73,7 +75,7 @@ void PrefabEditorScene::Init()
 
         auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
         MFA_ASSERT(colorComponent != nullptr);
-        float lightScale = 5.0f;
+        float const lightScale = 5.0f;
         float lightColor[3]{
             1.0f * lightScale,
             1.0f * lightScale,
@@ -90,6 +92,11 @@ void PrefabEditorScene::Init()
     }
 
     mPrefabRootEntity = createPrefabEntity("PrefabRoot", GetRootEntity());
+
+    mPrefab.AssignPreBuiltEntity(mPrefabRootEntity);
+
+    RegisterPipeline(&mDebugRenderPipeline);
+    RegisterPipeline(&mPbrPipeline);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -137,23 +144,7 @@ void PrefabEditorScene::OnPostRender(
 void PrefabEditorScene::Shutdown()
 {
     Scene::Shutdown();
-
     UI::UnRegister(mUIRecordId);
-
-    /*for (int i = static_cast<int>(mLoadedAssets.size()) - 1; i >= 0; --i)
-    {
-        destroyAsset(i);
-    }*/
-
-    //mCubeModel.reset();
-    //mSphereModel.reset();
-
-    //mPbrPipeline.Shutdown();
-    //mDebugRenderPipeline.Shutdown();
-    //mLoadedAssets.clear();
-
-    //RF::DestroySampler(mSampler);
-    //RF::DestroyTexture(mErrorTexture);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -195,8 +186,18 @@ void PrefabEditorScene::essencesWindow()
         UI::InputText("Essence name", mInputTextEssenceName);
         UI::Button("Create", [this]()->void
         {
+            static std::vector<WinApi::Extension> extensions{
+                WinApi::Extension {
+                    .name = "Gltf files",
+                    .value = "*.gltf"
+                },
+                WinApi::Extension {
+                    .name = "Glb files",
+                    .value = "*.glb"
+                }
+            };
             std::string fileAddress;
-            if (WinApi::TryToPickFile(fileAddress) == false)
+            if (WinApi::TryToPickFile(extensions, fileAddress) == false)
             {
                 MFA_LOG_INFO("No valid file address picked!");
                 return;
@@ -217,14 +218,62 @@ void PrefabEditorScene::saveAndLoadWindow()
 {
     UI::BeginWindow("Save and load panel");
     UI::InputText("Prefab name", mPrefabName);
-    if (UI::TreeNode("Save"))
+    UI::Button("Save", [this]()->void
     {
-        UI::TreePop();
-    }
-    if (UI::TreeNode("Load"))
+        static const std::vector<WinApi::Extension> extensions{
+            WinApi::Extension {
+                .name = "Json",
+                .value = "*.json"
+            }
+        };
+
+        std::string filePath{};
+        auto const success = WinApi::SaveAs(extensions, filePath);
+        if (success)
+        {
+            auto const extension = FileSystem::ExtractExtensionFromPath(filePath.c_str());
+            if (extension == "")
+            {
+                filePath += ".json";
+            }
+
+            printf("Save address is %s", filePath.c_str());
+            PrefabFileStorage::Serialize(PrefabFileStorage::SerializeParams{
+                .saveAddress = filePath,
+                .prefab = &mPrefab
+            });
+        }
+    });
+    UI::Button("Load", [this]()->void
     {
-        UI::TreePop();
-    }
+        EntitySystem::DestroyEntity(mPrefabRootEntity);
+
+        auto * entity = EntitySystem::CreateEntity("RootEntity", GetRootEntity());
+        MFA_ASSERT(entity != nullptr);
+        entity->EditorSignal.Register(this, &PrefabEditorScene::entityUI);
+
+        mPrefab.AssignPreBuiltEntity(mPrefabRootEntity);
+
+        static const std::vector<WinApi::Extension> extensions{
+            WinApi::Extension {
+                .name = "Json",
+                .value = "*.json"
+            }
+        };
+
+        std::string filePath{};
+        auto const success = WinApi::TryToPickFile(extensions, filePath);
+        if (success)
+        {
+            PrefabFileStorage::Deserialize(PrefabFileStorage::DeserializeParams{
+                .fileAddress = filePath,
+                .prefab = &mPrefab
+            });
+
+            bindEditorSignalToEntity(mPrefabRootEntity);
+        }
+    });
+
     UI::EndWindow();
 }
 
@@ -248,7 +297,7 @@ bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress)
         .gpuModel = gpuModel    // TODO We need shared_ptr + weak_ptr
     });
 
-    mPbrPipeline.CreateDrawableEssence(gpuModel);
+    mPbrPipeline.CreateEssenceIfNotExists(gpuModel);
 
     mInputTextEssenceName = "";
 
@@ -523,18 +572,33 @@ void PrefabEditorScene::prepareCreateComponentInstructionMap()
 
 //-------------------------------------------------------------------------------------------------
 
-Entity * PrefabEditorScene::createPrefabEntity(char const * name, Entity * parent)
+Entity * PrefabEditorScene::createPrefabEntity(char const * name, Entity * parent, bool const createTransform)
 {
     auto * entity = EntitySystem::CreateEntity(name, parent);
     MFA_ASSERT(entity != nullptr);
     entity->EditorSignal.Register(this, &PrefabEditorScene::entityUI);
 
-    auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
-    transformComponent->EditorSignal.Register(this, &PrefabEditorScene::componentUI);
+    if (createTransform)
+    {
+        entity->AddComponent<TransformComponent>();
+    }
+
+    bindEditorSignalToEntity(entity);
 
     EntitySystem::InitEntity(entity);
 
     return entity;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void PrefabEditorScene::bindEditorSignalToEntity(Entity * entity)
+{
+    MFA_ASSERT(entity != nullptr);
+    for (auto * component : entity->GetComponents())
+    {
+        component->EditorSignal.Register(this, &PrefabEditorScene::componentUI);
+    }
 }
 
 //-------------------------------------------------------------------------------------------------
