@@ -71,6 +71,7 @@ private:
     
     int mUIRecordId = 0;
 
-    MFA::Prefab mSoldierPrefab {};
+    MFA::Prefab mSoldierPrefab;
+    MFA::Prefab mSponzaPrefab;
 
 };

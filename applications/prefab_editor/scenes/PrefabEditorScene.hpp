@@ -70,9 +70,6 @@ private:
     MFA::PBRWithShadowPipelineV2 mPbrPipeline{ this };
     MFA::DebugRendererPipeline mDebugRenderPipeline{};
 
-    std::shared_ptr<MFA::RT::GpuModel> mSphereModel {};
-    std::shared_ptr<MFA::RT::GpuModel> mCubeModel {};
-
     int mUIRecordId = 0;
 
     struct Asset
@@ -98,8 +95,9 @@ private:
     std::string mInputTextEssenceName {};
     int mSelectedComponentIndex = 0;
     int mSelectedEssenceIndex = 0;
+    int mSelectedPipeline = 0;
     std::string mInputChildEntityName {};
 
-    MFA::Prefab mPrefab {};
+    MFA::Prefab mPrefab;
 
 };

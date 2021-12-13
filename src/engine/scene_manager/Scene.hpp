@@ -74,6 +74,9 @@ public:
     [[nodiscard]]
     BasePipeline * GetPipelineByName(std::string const & name) const;
 
+    [[nodiscard]]
+    std::vector<BasePipeline *> GetPipelines() const;
+
 private:
 
     void prepareCameraBuffer();

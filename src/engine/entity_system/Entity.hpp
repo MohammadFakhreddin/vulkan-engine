@@ -14,7 +14,7 @@
 
 namespace MFA::EntitySystem
 {
-    void InitEntity(Entity * entity);
+    void InitEntity(Entity * entity, bool triggerSignals);
     void UpdateEntity(Entity * entity);
     bool DestroyEntity(Entity * entity, bool shouldNotifyParent);
 }
@@ -25,12 +25,20 @@ namespace MFA
     class Entity
     {
     public:
-        friend void EntitySystem::InitEntity(Entity * entity);
+        friend void EntitySystem::InitEntity(Entity * entity, bool triggerSignals);
         friend void EntitySystem::UpdateEntity(Entity * entity);
         friend bool EntitySystem::DestroyEntity(Entity * entity, bool shouldNotifyParent);
         friend Component;
 
-        explicit Entity(char const * name, Entity * parent = nullptr);
+        struct CreateEntityParams
+        {
+            bool serializable = true;
+        };
+        explicit Entity(
+            char const * name,
+            Entity * parent = nullptr,
+            CreateEntityParams const & params = {}
+        );
 
         ~Entity();
 
@@ -45,7 +53,7 @@ namespace MFA
             return mUpdateSignal.IsEmpty() == false && IsActive();
         }
 
-        void Init();
+        void Init(bool triggerInitSignal = true);
 
         void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState) const;
 
@@ -57,7 +65,7 @@ namespace MFA
             if (mComponents[ComponentClass::FamilyType] != nullptr)
             {
                 MFA_LOG_WARN("Component with type %d alreay exists", ComponentClass::FamilyType);
-                return {};
+                return GetComponent<ComponentClass>();
             }
             auto sharedPtr = std::make_shared<ComponentClass>(std::forward<ArgsT>(args)...);
             mComponents[ComponentClass::FamilyType] = sharedPtr;
@@ -68,6 +76,7 @@ namespace MFA
 
         void AddComponent(std::shared_ptr<Component> const & component)
         {
+            MFA_ASSERT(mComponents[component->GetFamilyType()] == nullptr);
             mComponents[component->GetFamilyType()] = component;
             component->mSelfPtr = component;
             linkComponent(component.get());
@@ -147,9 +156,12 @@ namespace MFA
 
         void Serialize(nlohmann::json & jsonObject);
 
-        void Deserialize(nlohmann::json const & jsonObject);
+        void Deserialize(nlohmann::json const & jsonObject, bool initialize);
 
         std::vector<Component *> GetComponents();
+
+        [[nodiscard]]
+        bool IsSerializable() const;
 
     private:
 
@@ -189,6 +201,8 @@ namespace MFA
         std::vector<Entity *> mChildEntities{};
 
         bool mIsInitialized = false;
+
+        bool mSerializable = true;
 
     };
 

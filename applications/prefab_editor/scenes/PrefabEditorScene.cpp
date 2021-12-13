@@ -23,7 +23,9 @@ using namespace MFA;
 
 //-------------------------------------------------------------------------------------------------
 
-PrefabEditorScene::PrefabEditorScene() = default;
+PrefabEditorScene::PrefabEditorScene()
+    : mPrefab(EntitySystem::CreateEntity("Prefab", nullptr))
+{};
 
 //-------------------------------------------------------------------------------------------------
 
@@ -53,12 +55,24 @@ void PrefabEditorScene::Init()
         mDebugRenderPipeline.Init();
 
         auto const sphereCpuModel = ShapeGenerator::Sphere();
-        mSphereModel = RC::Assign(sphereCpuModel, "Sphere");
-        mDebugRenderPipeline.CreateEssenceIfNotExists(mSphereModel);
+        auto sphereModel = RC::Assign(sphereCpuModel, "Sphere");
+        mDebugRenderPipeline.CreateEssenceIfNotExists(sphereModel);
+
+        mLoadedAssets.emplace_back(Asset {
+            .fileAddress = "",
+            .essenceName = "Sphere",
+            .gpuModel = std::move(sphereModel)
+        });
 
         auto const cubeCpuModel = ShapeGenerator::Cube();
-        mCubeModel = RC::Assign(cubeCpuModel, "Cube");
-        mDebugRenderPipeline.CreateEssenceIfNotExists(mCubeModel);
+        auto cubeModel = RC::Assign(cubeCpuModel, "Cube");
+        mDebugRenderPipeline.CreateEssenceIfNotExists(cubeModel);
+
+        mLoadedAssets.emplace_back(Asset {
+            .fileAddress = "",
+            .essenceName = "Cube",
+            .gpuModel = std::move(cubeModel)
+        });
     }
 
     mUIRecordId = UI::Register([this]()->void { onUI(); });
@@ -231,7 +245,7 @@ void PrefabEditorScene::saveAndLoadWindow()
         if (success)
         {
             auto const extension = FileSystem::ExtractExtensionFromPath(filePath.c_str());
-            if (extension == "")
+            if (extension.empty())
             {
                 filePath += ".json";
             }
@@ -260,13 +274,13 @@ void PrefabEditorScene::saveAndLoadWindow()
 
             mPrefabRootEntity = EntitySystem::CreateEntity("RootEntity", GetRootEntity());
             MFA_ASSERT(mPrefabRootEntity != nullptr);
-            mPrefabRootEntity->EditorSignal.Register(this, &PrefabEditorScene::entityUI);
 
             mPrefab.AssignPreBuiltEntity(mPrefabRootEntity);
 
             PrefabFileStorage::Deserialize(PrefabFileStorage::DeserializeParams{
                 .fileAddress = filePath,
-                .prefab = &mPrefab
+                .prefab = &mPrefab,
+                .initializeEntity = true
             });
 
             bindEditorSignalToEntity(mPrefabRootEntity);
@@ -329,6 +343,17 @@ void PrefabEditorScene::entityUI(Entity * entity)
         {
         case 2: // MeshRendererComponent
         {
+            std::vector<std::string> pipelineNames{};
+            for (auto const * pipeline : GetPipelines())
+            {
+                pipelineNames.emplace_back(pipeline->GetName());
+            }
+            UI::Combo(
+                "Pipeline",
+                &mSelectedPipeline,
+                pipelineNames
+            );
+
             std::vector<std::string> essenceNames{};
             for (auto & asset : mLoadedAssets)
             {
@@ -529,8 +554,12 @@ void PrefabEditorScene::prepareCreateComponentInstructionMap()
         {
             return nullptr;
         }
+        if (mSelectedPipeline < 0 || mSelectedPipeline >= static_cast<int>(GetPipelines().size()))
+        {
+            return nullptr;
+        }
         return entity->AddComponent<MeshRendererComponent>(
-            mPbrPipeline,
+            *GetPipelines()[mSelectedPipeline],
             mLoadedAssets[mSelectedEssenceIndex].gpuModel->id
         ).lock();
     });
@@ -575,8 +604,7 @@ Entity * PrefabEditorScene::createPrefabEntity(char const * name, Entity * paren
 {
     auto * entity = EntitySystem::CreateEntity(name, parent);
     MFA_ASSERT(entity != nullptr);
-    entity->EditorSignal.Register(this, &PrefabEditorScene::entityUI);
-
+    
     if (createTransform)
     {
         entity->AddComponent<TransformComponent>();
@@ -594,9 +622,17 @@ Entity * PrefabEditorScene::createPrefabEntity(char const * name, Entity * paren
 void PrefabEditorScene::bindEditorSignalToEntity(Entity * entity)
 {
     MFA_ASSERT(entity != nullptr);
+    entity->EditorSignal.Register(this, &PrefabEditorScene::entityUI);
+
     for (auto * component : entity->GetComponents())
     {
+        MFA_ASSERT(component != nullptr);
         component->EditorSignal.Register(this, &PrefabEditorScene::componentUI);
+    }
+    for (auto * child : entity->GetChildEntities())
+    {
+        MFA_ASSERT(child != nullptr);
+        bindEditorSignalToEntity(child);
     }
 }
 

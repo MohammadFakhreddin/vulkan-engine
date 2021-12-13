@@ -21,9 +21,17 @@ namespace MFA::EntitySystem {
     //int SubscribeForUpdateEvent(UpdateFunction const & listener);
     //bool UnSubscribeFromUpdateEvent(int listenerId);
 
-    Entity * CreateEntity(char const * name, Entity * parent = nullptr);
+    struct CreateEntityParams
+    {
+        bool serializable = true;   
+    };
+    Entity * CreateEntity(
+        char const * name,
+        Entity * parent = nullptr,
+        CreateEntityParams const & params = {}
+    );
 
-    void InitEntity(Entity * entity);
+    void InitEntity(Entity * entity, bool triggerSignals = true);
 
     void UpdateEntity(Entity * entity);
 

@@ -36,14 +36,20 @@ namespace MFA
 
         mBoundingVolumeComponent = GetEntity()->GetComponent<BoundingVolumeComponent>();
 
-        auto * childEntity = EntitySystem::CreateEntity("BoundingVolumeMeshRendererChild", GetEntity());
+        auto * entity = GetEntity();
+
+        auto * childEntity = EntitySystem::CreateEntity(
+            "BoundingVolumeMeshRendererChild",
+            entity,
+            EntitySystem::CreateEntityParams {
+                .serializable = false
+            }
+        );
 
         mChildTransformComponent = childEntity->AddComponent<TransformComponent>();
         MFA_ASSERT(mChildTransformComponent.expired() == false);
 
         EntitySystem::InitEntity(childEntity);
-
-        auto * entity = GetEntity();
 
         mVariant->Init(entity, SelfPtr(), mChildTransformComponent, mBoundingVolumeComponent);
     }

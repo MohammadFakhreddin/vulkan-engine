@@ -36,7 +36,7 @@ namespace MFA
 
         auto * entity = params.prefab->GetEntity();
         MFA_ASSERT(entity != nullptr);
-        entity->Deserialize(jf["entity"]);
+        entity->Deserialize(jf["entity"], params.initializeEntity);
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -19,10 +19,12 @@ namespace MFA
 
     Entity::Entity(
         char const * name,
-        Entity * parent
+        Entity * parent,
+        CreateEntityParams const & params
     )
         : mName(name)
         , mParent(parent)
+        , mSerializable(params.serializable)
     {}
 
     //-------------------------------------------------------------------------------------------------
@@ -31,7 +33,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void Entity::Init()
+    void Entity::Init(bool const triggerInitSignal)
     {
         if (mIsInitialized)
         {
@@ -43,7 +45,11 @@ namespace MFA
         {
             mParent->notifyANewChildAdded(this);
         }
-        mInitSignal.Emit();
+
+        if (triggerInitSignal == true)
+        {
+            mInitSignal.Emit();
+        }
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -197,6 +203,7 @@ namespace MFA
 
     void Entity::Serialize(nlohmann::json & jsonObject)
     {
+        MFA_ASSERT(mSerializable == true);
         jsonObject["name"] = mName.c_str();
         for (auto const & component : mComponents)
         {
@@ -214,20 +221,24 @@ namespace MFA
 
             }
         }
+
         for (auto const & child : mChildEntities)
         {
-            nlohmann::json childEntityJson{};
-            child->Serialize(childEntityJson);
-            jsonObject["children"].emplace_back(childEntityJson);
+            if (child->IsSerializable())
+            {
+                nlohmann::json childEntityJson{};
+                child->Serialize(childEntityJson);
+                jsonObject["children"].emplace_back(childEntityJson);
+            }
         }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void Entity::Deserialize(nlohmann::json const & jsonObject)
+    void Entity::Deserialize(nlohmann::json const & jsonObject, bool const initialize)
     {
         mName = jsonObject["name"];
-        auto const & rawComponents = jsonObject["components"];
+        auto const & rawComponents = jsonObject.value<std::vector<nlohmann::json>>("components", {});
         for (auto const & rawComponent : rawComponents)
         {
             std::string const name = rawComponent["name"];
@@ -272,8 +283,15 @@ namespace MFA
             }
         }
 
-        // We do not need to init entity
-        //EntitySystem::InitEntity(this);
+        auto const & rawChildren = jsonObject.value<std::vector<nlohmann::json>>("children", {});
+
+        for (auto const & rawChild : rawChildren)
+        {
+            auto * entity = EntitySystem::CreateEntity("prefab-child", this);
+            entity->Deserialize(rawChild, initialize);
+        }
+
+        EntitySystem::InitEntity(this, initialize);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -289,6 +307,13 @@ namespace MFA
             }
         }
         return result;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool Entity::IsSerializable() const
+    {
+        return mSerializable;
     }
 
     //-------------------------------------------------------------------------------------------------

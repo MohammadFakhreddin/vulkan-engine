@@ -22,6 +22,7 @@ namespace MFA::PrefabFileStorage
     {
         std::string fileAddress {};           // I think we should use fileAddress for essence name otherwise their uniqueness will be a problem
         Prefab * prefab = nullptr;
+        bool initializeEntity = false;
     };
     void Deserialize(DeserializeParams const & params);
 

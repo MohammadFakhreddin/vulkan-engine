@@ -1,6 +1,5 @@
 #pragma once
 
-#include <memory>
 #include <string>
 
 namespace MFA
@@ -11,9 +10,7 @@ namespace MFA
     {
     public:
 
-        explicit Prefab();
         explicit Prefab(Entity * preBuiltEntity);
-        explicit Prefab(std::unique_ptr<Entity> && ownedEntity);
         ~Prefab();
 
         struct CloneEntityOptions
@@ -34,8 +31,7 @@ namespace MFA
 
     private:
 
-        std::unique_ptr<Entity> mOwnedEntity;
-        Entity * mEntity;                       // I can be owned or prebuilt
+        Entity * mEntity = nullptr;                       // I can be owned or prebuilt
 
         int cloneCount = 0;
 

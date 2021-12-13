@@ -72,21 +72,34 @@ void Shutdown()
 
 //-------------------------------------------------------------------------------------------------
 
-Entity * CreateEntity(char const * name, Entity * parent)
+Entity * CreateEntity(
+    char const * name,
+    Entity * parent,
+    CreateEntityParams const & params
+)
 {
     state->entitiesRefsList.emplace_back(EntityRef {
-        .Ptr = std::make_unique<Entity>(name, parent)
+        .Ptr = std::make_unique<Entity>(
+            name,
+            parent,
+            Entity::CreateEntityParams {
+                .serializable = params.serializable
+            }
+        )
     });
     return state->entitiesRefsList.back().Ptr.get();
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void InitEntity(Entity * entity)
+void InitEntity(Entity * entity, bool const triggerSignals)
 {
     MFA_ASSERT(entity != nullptr);
-    entity->Init();
-    UpdateEntity(entity);
+    entity->Init(triggerSignals);
+    if (triggerSignals)
+    {
+        UpdateEntity(entity);
+    }
 }
 
 //-------------------------------------------------------------------------------------------------

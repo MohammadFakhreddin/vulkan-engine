@@ -29,6 +29,8 @@ using namespace MFA;
 
 Demo3rdPersonScene::Demo3rdPersonScene()
     : Scene()
+    , mSoldierPrefab(EntitySystem::CreateEntity("SolderPrefab", nullptr))
+    , mSponzaPrefab(EntitySystem::CreateEntity("SponzaPrefab", nullptr))
 {}
 
 //-------------------------------------------------------------------------------------------------
@@ -49,11 +51,11 @@ void Demo3rdPersonScene::Init()
     }
 
     auto sphereCpuModel = ShapeGenerator::Sphere();
-    mSphereModel = ResourceManager::Assign(sphereCpuModel, "Sphere");
+    mSphereModel = ResourceManager::Assign(std::move(sphereCpuModel), "Sphere");
     mDebugRenderPipeline.CreateEssenceIfNotExists(mSphereModel);
 
     auto cubeCpuModel = ShapeGenerator::Cube();
-    mCubeModel = ResourceManager::Assign(cubeCpuModel, "Cube");
+    mCubeModel = ResourceManager::Assign(std::move(cubeCpuModel), "Cube");
     mDebugRenderPipeline.CreateEssenceIfNotExists(mCubeModel);
 
     mDebugRenderPipeline.Init();
@@ -65,6 +67,11 @@ void Demo3rdPersonScene::Init()
     PrefabFileStorage::Deserialize(PrefabFileStorage::DeserializeParams {
         .fileAddress = Path::Asset("prefabs/soldier.json"),
         .prefab = &mSoldierPrefab
+    });
+
+    PrefabFileStorage::Deserialize(PrefabFileStorage::DeserializeParams {
+        .fileAddress = Path::Asset("prefabs/sponza.json"),
+        .prefab = &mSponzaPrefab
     });
 
     // Soldier
@@ -177,110 +184,121 @@ void Demo3rdPersonScene::Init()
     //    }
     //}
 
-    std::weak_ptr<MeshRendererComponent> sponzaMeshRenderer {};
+    //std::weak_ptr<MeshRendererComponent> sponzaMeshRenderer {};
+
+    //{// Map
+    //    mMapModel = ResourceManager::Acquire(Path::Asset("models/sponza/sponza.gltf").c_str());
+    //    mPbrPipeline.CreateEssenceIfNotExists(mMapModel);
+
+    //    auto * entity = EntitySystem::CreateEntity("Sponza scene", GetRootEntity());
+    //    MFA_ASSERT(entity != nullptr);
+
+    //    auto const transformComponent = entity->AddComponent<TransformComponent>();
+    //    MFA_ASSERT(transformComponent.expired() == false);
+
+    //    if (auto const ptr = transformComponent.lock())
+    //    {
+    //        float position[3]{ 0.4f, 2.0f, -6.0f };
+    //        float eulerAngle[3]{ 180.0f, -90.0f, 0.0f };
+    //        float scale[3]{ 1.0f, 1.0f, 1.0f };
+    //        ptr->UpdateTransform(position, eulerAngle, scale);
+    //    }
+
+    //    auto const meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, mMapModel->id).lock();
+    //    sponzaMeshRenderer = meshRendererComponent;
+
+    //    entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 5.0f, 0.0f), glm::vec3(15.0f, 6.0f, 9.0f));
+
+    //    auto const debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
+    //    if (auto const ptr = debugRenderComponent.lock())
+    //    {
+    //        ptr->SetActive(false);
+    //    }
+
+    //    entity->AddComponent<ColorComponent>(glm::vec3(0.0f, 0.0f, 1.0f));
+
+    //    entity->SetActive(true);
+
+    //    EntitySystem::InitEntity(entity);
+    //}
 
     {// Map
-        mMapModel = ResourceManager::Acquire(Path::Asset("models/sponza/sponza.gltf").c_str());
-        mPbrPipeline.CreateEssenceIfNotExists(mMapModel);
-
-        auto * entity = EntitySystem::CreateEntity("Sponza scene", GetRootEntity());
-        MFA_ASSERT(entity != nullptr);
-
-        auto const transformComponent = entity->AddComponent<TransformComponent>();
-        MFA_ASSERT(transformComponent.expired() == false);
-
-        if (auto const ptr = transformComponent.lock())
+        auto * entity = mSponzaPrefab.Clone(GetRootEntity(), Prefab::CloneEntityOptions {.name = "Sponza"});
+        if (auto const ptr = entity->GetComponent<TransformComponent>().lock())
         {
             float position[3]{ 0.4f, 2.0f, -6.0f };
             float eulerAngle[3]{ 180.0f, -90.0f, 0.0f };
             float scale[3]{ 1.0f, 1.0f, 1.0f };
             ptr->UpdateTransform(position, eulerAngle, scale);
         }
+    }   
 
-        auto const meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, mMapModel->id).lock();
-        sponzaMeshRenderer = meshRendererComponent;
+    //{// PointLight
+    //    for (int i = 0; i < 2; ++i)
+    //    {
+    //        auto * entity = EntitySystem::CreateEntity(("PointLight" + std::to_string(i)).c_str(), GetRootEntity());
+    //        MFA_ASSERT(entity != nullptr);
 
-        entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 5.0f, 0.0f), glm::vec3(15.0f, 6.0f, 9.0f));
+    //        float lightPosition[3] {3.7f, 0.0f, -3.0f - static_cast<float>(i)};
+    //        float lightScale = 5.0f;
+    //        float lightColor[3] {
+    //            (252.0f/256.0f) * lightScale,
+    //            (212.0f/256.0f) * lightScale,
+    //            (64.0f/256.0f) * lightScale
+    //        };
 
-        auto const debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
-        if (auto const ptr = debugRenderComponent.lock())
-        {
-            ptr->SetActive(false);
-        }
+    //        auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
+    //        MFA_ASSERT(colorComponent != nullptr);
+    //        colorComponent->SetColor(lightColor);
+    //        
+    //        auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
+    //        MFA_ASSERT(transformComponent != nullptr);
+    //        transformComponent->UpdatePosition(lightPosition);
+    //        transformComponent->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
+    //        
+    //        entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, mSphereModel->id);
+    //        
+    //        entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
 
-        entity->AddComponent<ColorComponent>(glm::vec3(0.0f, 0.0f, 1.0f));
+    //        // TODO Maybe we can read radius from transform component instead
+    //        entity->AddComponent<PointLightComponent>(1.0f, 100.0f, Z_NEAR, Z_FAR, sponzaMeshRenderer);
 
-        entity->SetActive(true);
+    //        entity->SetActive(true);
+    //        EntitySystem::InitEntity(entity);
+    //    }
+    //    for (int i = 2; i < 4; ++i)
+    //    {
+    //        auto * entity = EntitySystem::CreateEntity(("PointLight" + std::to_string(i)).c_str(), GetRootEntity());
+    //        MFA_ASSERT(entity != nullptr);
 
-        EntitySystem::InitEntity(entity);
-    }
+    //        float lightPosition[3] {-2.7f, 0.0f, -3.0f - static_cast<float>(i)};
+    //        float lightScale = 5.0f;
+    //        float lightColor[3] {
+    //            (252.0f/256.0f) * lightScale,
+    //            (212.0f/256.0f) * lightScale,
+    //            (64.0f/256.0f) * lightScale
+    //        };
 
-    {// PointLight
-        for (int i = 0; i < 2; ++i)
-        {
-            auto * entity = EntitySystem::CreateEntity(("PointLight" + std::to_string(i)).c_str(), GetRootEntity());
-            MFA_ASSERT(entity != nullptr);
+    //        auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
+    //        MFA_ASSERT(colorComponent != nullptr);
+    //        colorComponent->SetColor(lightColor);
+    //        
+    //        auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
+    //        MFA_ASSERT(transformComponent != nullptr);
+    //        transformComponent->UpdatePosition(lightPosition);
+    //        transformComponent->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
+    //        
+    //        entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, mSphereModel->id);
+    //        
+    //        entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
 
-            float lightPosition[3] {3.7f, 0.0f, -3.0f - static_cast<float>(i)};
-            float lightScale = 5.0f;
-            float lightColor[3] {
-                (252.0f/256.0f) * lightScale,
-                (212.0f/256.0f) * lightScale,
-                (64.0f/256.0f) * lightScale
-            };
+    //        // TODO Maybe we can read radius from transform component instead
+    //        entity->AddComponent<PointLightComponent>(1.0f, 100.0f, Z_NEAR, Z_FAR, sponzaMeshRenderer);
 
-            auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
-            MFA_ASSERT(colorComponent != nullptr);
-            colorComponent->SetColor(lightColor);
-            
-            auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
-            MFA_ASSERT(transformComponent != nullptr);
-            transformComponent->UpdatePosition(lightPosition);
-            transformComponent->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
-            
-            entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, mSphereModel->id);
-            
-            entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
-
-            // TODO Maybe we can read radius from transform component instead
-            entity->AddComponent<PointLightComponent>(1.0f, 100.0f, Z_NEAR, Z_FAR, sponzaMeshRenderer);
-
-            entity->SetActive(true);
-            EntitySystem::InitEntity(entity);
-        }
-        for (int i = 2; i < 4; ++i)
-        {
-            auto * entity = EntitySystem::CreateEntity(("PointLight" + std::to_string(i)).c_str(), GetRootEntity());
-            MFA_ASSERT(entity != nullptr);
-
-            float lightPosition[3] {-2.7f, 0.0f, -3.0f - static_cast<float>(i)};
-            float lightScale = 5.0f;
-            float lightColor[3] {
-                (252.0f/256.0f) * lightScale,
-                (212.0f/256.0f) * lightScale,
-                (64.0f/256.0f) * lightScale
-            };
-
-            auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
-            MFA_ASSERT(colorComponent != nullptr);
-            colorComponent->SetColor(lightColor);
-            
-            auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
-            MFA_ASSERT(transformComponent != nullptr);
-            transformComponent->UpdatePosition(lightPosition);
-            transformComponent->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
-            
-            entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, mSphereModel->id);
-            
-            entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
-
-            // TODO Maybe we can read radius from transform component instead
-            entity->AddComponent<PointLightComponent>(1.0f, 100.0f, Z_NEAR, Z_FAR, sponzaMeshRenderer);
-
-            entity->SetActive(true);
-            EntitySystem::InitEntity(entity);
-        }
-    }
+    //        entity->SetActive(true);
+    //        EntitySystem::InitEntity(entity);
+    //    }
+    //}
 
     {// Directional light
         auto * entity = EntitySystem::CreateEntity("Directional light", GetRootEntity());

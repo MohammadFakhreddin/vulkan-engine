@@ -143,7 +143,14 @@ namespace MFA
         }
         return nullptr;
     }
-    
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::vector<BasePipeline *> Scene::GetPipelines() const
+    {
+        return mActivePipelines;
+    }
+
     //-------------------------------------------------------------------------------------------------
 
     void Scene::prepareCameraBuffer()
