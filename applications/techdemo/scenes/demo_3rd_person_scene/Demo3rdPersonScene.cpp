@@ -21,6 +21,7 @@
 #include "engine/entity_system/components/DirectionalLightComponent.hpp"
 #include "engine/BedrockMatrix.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
+#include "tools/PrefabFileStorage.hpp"
 
 using namespace MFA;
 
@@ -40,19 +41,12 @@ void Demo3rdPersonScene::Init()
 {
     Scene::Init();
 
+    mSampler = RF::CreateSampler(RT::CreateSamplerParams{});
+
     {// Error texture
         auto cpuTexture = Importer::CreateErrorTexture();
         mErrorTexture = RF::CreateTexture(cpuTexture);
     }
-
-    // Sampler
-    mSampler = RF::CreateSampler(RT::CreateSamplerParams{});
-
-    // Pbr pipeline
-    mPbrPipeline.Init(mSampler, mErrorTexture);
-    
-    // Debug renderer pipeline
-    mDebugRenderPipeline.Init();
 
     auto sphereCpuModel = ShapeGenerator::Sphere();
     mSphereModel = ResourceManager::Assign(sphereCpuModel, "Sphere");
@@ -61,50 +55,87 @@ void Demo3rdPersonScene::Init()
     auto cubeCpuModel = ShapeGenerator::Cube();
     mCubeModel = ResourceManager::Assign(cubeCpuModel, "Cube");
     mDebugRenderPipeline.CreateEssenceIfNotExists(mCubeModel);
-    
-    // Soldier
-    mSoldierGpuModel = ResourceManager::Acquire(Path::Asset("models/warcraft_3_alliance_footmanfanmade/scene.gltf").c_str());
-    mPbrPipeline.CreateEssenceIfNotExists(mSoldierGpuModel);
-    {// Playable character
-        auto * entity = EntitySystem::CreateEntity("Playable soldier", GetRootEntity());
-        MFA_ASSERT(entity != nullptr);
 
-        mPlayerTransform = entity->AddComponent<TransformComponent>();
-        MFA_ASSERT(mPlayerTransform.expired() == false);
-        if (auto const ptr = mPlayerTransform.lock())
-        {
+    mDebugRenderPipeline.Init();
+    mPbrPipeline.Init(mSampler, mErrorTexture);
+    RegisterPipeline(&mDebugRenderPipeline);
+    RegisterPipeline(&mPbrPipeline);
+
+    
+    PrefabFileStorage::Deserialize(PrefabFileStorage::DeserializeParams {
+        .fileAddress = Path::Asset("prefabs/soldier.json"),
+        .prefab = &mSoldierPrefab
+    });
+
+    // Soldier
+    //mSoldierGpuModel = ResourceManager::Acquire(Path::Asset("models/warcraft_3_alliance_footmanfanmade/scene.gltf").c_str());
+    //mPbrPipeline.CreateEssenceIfNotExists(mSoldierGpuModel);
+    //{// Playable character
+    //    auto * entity = EntitySystem::CreateEntity("Playable soldier", GetRootEntity());
+    //    MFA_ASSERT(entity != nullptr);
+
+    //    mPlayerTransform = entity->AddComponent<TransformComponent>();
+    //    MFA_ASSERT(mPlayerTransform.expired() == false);
+    //    if (auto const ptr = mPlayerTransform.lock())
+    //    {
+    //        float position[3]{ 0.0f, 2.0f, -5.0f };
+    //        float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
+    //        float scale[3]{ 1.0f, 1.0f, 1.0f };
+    //        ptr->UpdateTransform(position, eulerAngles, scale);
+    //    }
+
+    //    mPlayerMeshRenderer = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, mSoldierGpuModel->id);
+    //    MFA_ASSERT(mPlayerMeshRenderer.expired() == false);
+    //    mPlayerMeshRenderer.lock()->SetActive(true);
+
+    //    entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
+
+    //    auto colorComponent = entity->AddComponent<ColorComponent>();
+    //    MFA_ASSERT(colorComponent.expired() == false);
+    //    colorComponent.lock()->SetColor(glm::vec3{ 1.0f, 0.0f, 0.0f });
+
+    //    auto debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
+    //    MFA_ASSERT(debugRenderComponent.expired() == false);
+    //    debugRenderComponent.lock()->SetActive(false);
+
+    //    mThirdPersonCamera = entity->AddComponent<ThirdPersonCameraComponent>(
+    //        FOV,
+    //        Z_NEAR,
+    //        Z_FAR
+    //    );
+    //    MFA_ASSERT(mThirdPersonCamera.expired() == false);
+    //    float eulerAngle[3]{ -15.0f, 0.0f, 0.0f };
+    //    mThirdPersonCamera.lock()->SetDistanceAndRotation(3.0f, eulerAngle);
+
+    //    SetActiveCamera(mThirdPersonCamera);
+
+    //    EntitySystem::InitEntity(entity);
+    //}
+    {// Playable soldier
+        auto * entity = mSoldierPrefab.Clone(GetRootEntity(), Prefab::CloneEntityOptions {.name = "Playable soldier"});
+        {// Transform
             float position[3]{ 0.0f, 2.0f, -5.0f };
             float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
             float scale[3]{ 1.0f, 1.0f, 1.0f };
-            ptr->UpdateTransform(position, eulerAngles, scale);
+            mPlayerTransform = entity->GetComponent<TransformComponent>();
+            mPlayerTransform.lock()->UpdateTransform(
+                position,
+                eulerAngles,
+                scale
+            );
         }
+        {// Camera
+            auto const thirdPersonCamera = entity->AddComponent<ThirdPersonCameraComponent>(FOV, Z_NEAR, Z_FAR).lock();
+            float eulerAngle[3]{ -15.0f, 0.0f, 0.0f };
+            thirdPersonCamera->SetDistanceAndRotation(3.0f, eulerAngle);
 
-        mPlayerMeshRenderer = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, mSoldierGpuModel->id);
-        MFA_ASSERT(mPlayerMeshRenderer.expired() == false);
-        mPlayerMeshRenderer.lock()->SetActive(true);
+            thirdPersonCamera->Init();
+            EntitySystem::UpdateEntity(entity);
 
-        entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
-
-        auto colorComponent = entity->AddComponent<ColorComponent>();
-        MFA_ASSERT(colorComponent.expired() == false);
-        colorComponent.lock()->SetColor(glm::vec3{ 1.0f, 0.0f, 0.0f });
-
-        auto debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
-        MFA_ASSERT(debugRenderComponent.expired() == false);
-        debugRenderComponent.lock()->SetActive(false);
-
-        mThirdPersonCamera = entity->AddComponent<ThirdPersonCameraComponent>(
-            FOV,
-            Z_NEAR,
-            Z_FAR
-        );
-        MFA_ASSERT(mThirdPersonCamera.expired() == false);
-        float eulerAngle[3]{ -15.0f, 0.0f, 0.0f };
-        mThirdPersonCamera.lock()->SetDistanceAndRotation(3.0f, eulerAngle);
-
-        SetActiveCamera(mThirdPersonCamera);
-
-        EntitySystem::InitEntity(entity);
+            mThirdPersonCamera = thirdPersonCamera;
+            SetActiveCamera(mThirdPersonCamera);
+        }
+        mPlayerMeshRenderer = entity->GetComponent<MeshRendererComponent>();
     }
     //{// NPCs
     //    for (uint32_t i = 0; i < 10/*33*/; ++i)
@@ -276,9 +307,6 @@ void Demo3rdPersonScene::Init()
     }
 
     mUIRecordId = UI::Register([this]()->void { onUI(); });
-
-    RegisterPipeline(&mDebugRenderPipeline);
-    RegisterPipeline(&mPbrPipeline);
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -5,6 +5,7 @@
 #include "engine/BedrockPlatforms.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
 #include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
+#include "tools/Prefab.hpp"
 
 namespace MFA
 {
@@ -50,7 +51,7 @@ private:
 
     std::shared_ptr<MFA::RT::GpuTexture> mErrorTexture {};
 
-    std::shared_ptr<MFA::RT::GpuModel> mSoldierGpuModel {};
+    //std::shared_ptr<MFA::RT::GpuModel> mSoldierGpuModel {};
     
     std::weak_ptr<MFA::TransformComponent> mPlayerTransform {};
     std::weak_ptr<MFA::MeshRendererComponent> mPlayerMeshRenderer {};
@@ -69,5 +70,7 @@ private:
     std::shared_ptr<MFA::RT::GpuModel> mCubeModel {};
     
     int mUIRecordId = 0;
+
+    MFA::Prefab mSoldierPrefab {};
 
 };

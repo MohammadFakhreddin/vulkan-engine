@@ -217,7 +217,6 @@ void PrefabEditorScene::essencesWindow()
 void PrefabEditorScene::saveAndLoadWindow()
 {
     UI::BeginWindow("Save and load panel");
-    UI::InputText("Prefab name", mPrefabName);
     UI::Button("Save", [this]()->void
     {
         static const std::vector<WinApi::Extension> extensions{
@@ -246,14 +245,6 @@ void PrefabEditorScene::saveAndLoadWindow()
     });
     UI::Button("Load", [this]()->void
     {
-        EntitySystem::DestroyEntity(mPrefabRootEntity);
-
-        auto * entity = EntitySystem::CreateEntity("RootEntity", GetRootEntity());
-        MFA_ASSERT(entity != nullptr);
-        entity->EditorSignal.Register(this, &PrefabEditorScene::entityUI);
-
-        mPrefab.AssignPreBuiltEntity(mPrefabRootEntity);
-
         static const std::vector<WinApi::Extension> extensions{
             WinApi::Extension {
                 .name = "Json",
@@ -265,6 +256,14 @@ void PrefabEditorScene::saveAndLoadWindow()
         auto const success = WinApi::TryToPickFile(extensions, filePath);
         if (success)
         {
+            EntitySystem::DestroyEntity(mPrefabRootEntity);
+
+            mPrefabRootEntity = EntitySystem::CreateEntity("RootEntity", GetRootEntity());
+            MFA_ASSERT(mPrefabRootEntity != nullptr);
+            mPrefabRootEntity->EditorSignal.Register(this, &PrefabEditorScene::entityUI);
+
+            mPrefab.AssignPreBuiltEntity(mPrefabRootEntity);
+
             PrefabFileStorage::Deserialize(PrefabFileStorage::DeserializeParams{
                 .fileAddress = filePath,
                 .prefab = &mPrefab

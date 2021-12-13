@@ -34,12 +34,9 @@ namespace MFA
         std::ifstream ifs(params.fileAddress);
         nlohmann::json jf = nlohmann::json::parse(ifs);
 
-        //auto entity = std::make_unique<Entity>("Invalid name", nullptr);
-        params.prefab->GetEntity()->Deserialize(jf["entity"]);
-
-        //std::shared_ptr<Prefab> prefab = std::make_shared<Prefab>(std::move(entity));
-
-        //return prefab;
+        auto * entity = params.prefab->GetEntity();
+        MFA_ASSERT(entity != nullptr);
+        entity->Deserialize(jf["entity"]);
     }
 
     //-------------------------------------------------------------------------------------------------

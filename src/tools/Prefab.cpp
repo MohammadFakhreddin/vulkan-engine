@@ -7,7 +7,11 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    Prefab::Prefab() = default;
+    Prefab::Prefab()
+        : mOwnedEntity(std::make_unique<Entity>("PrefabEntity", nullptr))
+        , mEntity(mOwnedEntity.get())
+    {
+    }
 
     //-------------------------------------------------------------------------------------------------
 
@@ -36,7 +40,7 @@ namespace MFA
         MFA_ASSERT(mEntity != nullptr);
         std::string const name = options.name.empty()
             ? std::format("%s Clone(%d)", mEntity->GetName().c_str(), cloneCount++)
-            : mEntity->GetName();
+            : options.name;
 
         auto * entity = mEntity->Clone(name.c_str(), parent);
         EntitySystem::InitEntity(entity);

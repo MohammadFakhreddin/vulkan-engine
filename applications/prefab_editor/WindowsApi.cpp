@@ -56,16 +56,16 @@ bool WinApi::TryToPickFile(
 
         std::vector<COMDLG_FILTERSPEC> acceptedFileTypes{};
 
-        std::vector<std::wstring> wStrings {};
+        std::vector<std::wstring> wStrings (extensions.size() * 2);
 
-        for (auto & extension : extensions)
+        for (int i = 0; i < static_cast<int>(extensions.size()); ++i)
         {
             acceptedFileTypes.emplace_back();
-        
-            wStrings.emplace_back(s2ws(extension.name));
-            acceptedFileTypes.back().pszName = wStrings.back().c_str();
-            wStrings.emplace_back(s2ws(extension.value));
-            acceptedFileTypes.back().pszSpec = wStrings.back().c_str();
+
+            wStrings[i * 2] = s2ws(extensions[i].name);
+            acceptedFileTypes.back().pszName = wStrings[i * 2].data();
+            wStrings[i * 2 + 1] = s2ws(extensions[i].value);
+            acceptedFileTypes.back().pszSpec = wStrings[i * 2  + 1].data();
         }
 
         pFileOpen->SetFileTypes(static_cast<UINT>(acceptedFileTypes.size()), acceptedFileTypes.data());
@@ -139,19 +139,17 @@ bool WinApi::SaveAs(
         };*/
 
         std::vector<COMDLG_FILTERSPEC> acceptedFileTypes{};
-        
-        std::vector<std::wstring> wStrings {};
 
-        for (auto & extension : extensions)
+        std::vector<std::wstring> wStrings (extensions.size() * 2);
+
+        for (int i = 0; i < static_cast<int>(extensions.size()); ++i)
         {
-            COMDLG_FILTERSPEC acceptedFileType {};
+            acceptedFileTypes.emplace_back();
 
-            wStrings.emplace_back(s2ws(extension.name));
-            acceptedFileType.pszName = wStrings.back().c_str();
-            wStrings.emplace_back(s2ws(extension.value));
-            acceptedFileType.pszSpec = wStrings.back().c_str();
-            
-            acceptedFileTypes.emplace_back(acceptedFileType);
+            wStrings[i * 2] = s2ws(extensions[i].name);
+            acceptedFileTypes.back().pszName = wStrings[i * 2].data();
+            wStrings[i * 2 + 1] = s2ws(extensions[i].value);
+            acceptedFileTypes.back().pszSpec = wStrings[i * 2  + 1].data();
         }
 
         pFileOpen->SetFileTypes(static_cast<UINT>(acceptedFileTypes.size()), acceptedFileTypes.data());

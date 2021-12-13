@@ -272,7 +272,8 @@ namespace MFA
             }
         }
 
-        EntitySystem::InitEntity(this);
+        // We do not need to init entity
+        //EntitySystem::InitEntity(this);
     }
 
     //-------------------------------------------------------------------------------------------------
