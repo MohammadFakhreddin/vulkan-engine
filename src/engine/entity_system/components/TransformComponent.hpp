@@ -50,6 +50,9 @@ namespace MFA
 
         void GetPosition(float outPosition[3]) const;
 
+        [[nodiscard]]
+        glm::vec3 GetAbsolutePosition() const;
+
         void GetRotation(float outRotation[3]) const;
 
         void GetScale(float outScale[3]) const;

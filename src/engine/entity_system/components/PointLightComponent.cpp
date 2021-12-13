@@ -90,7 +90,7 @@ glm::vec3 MFA::PointLightComponent::GetPosition() const
 {
     if (auto const ptr = mTransformComponent.lock())
     {
-        return ptr->GetPosition();
+        return ptr->GetAbsolutePosition();
     }
     return {};
 }
@@ -256,7 +256,7 @@ void MFA::PointLightComponent::computeViewProjectionMatrices()
         return;
     }
 
-    auto const lightPositionVector = transformComponentPtr->GetPosition();
+    auto const lightPositionVector = transformComponentPtr->GetAbsolutePosition();
 
     Matrix::CopyGlmToCells(
         mShadowProjectionMatrix * glm::lookAt(

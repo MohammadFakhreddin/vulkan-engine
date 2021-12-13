@@ -195,6 +195,21 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    glm::vec3 TransformComponent::GetAbsolutePosition() const
+    {
+        // TODO Cache positions
+        glm::vec3 position {};
+
+        glm::vec4 const & lastCol = mTransform[3];
+        position.x = lastCol.x;
+        position.y = lastCol.y;
+        position.z = lastCol.z;
+
+        return position;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void TransformComponent::GetRotation(float outRotation[3]) const
     {
         Matrix::CopyGlmToCells(mRotation, outRotation);
