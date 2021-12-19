@@ -5,6 +5,7 @@
 #include "engine/BedrockAssert.hpp"
 #include "tools/Importer.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
+#include "engine/BedrockPath.hpp"
 
 namespace MFA
 {
@@ -70,10 +71,15 @@ namespace MFA
         auto const extension = FS::ExtractExtensionFromPath(fileAddress);
         if (extension == ".gltf" || extension == ".glb")
         {
-            auto const cpuModel = Importer::ImportGLTF(fileAddress);
+            auto const cpuModel = Importer::ImportGLTF(Path::ForReadWrite(fileAddress).c_str());
             if (cpuModel != nullptr)
             {
-                return createGpuModel(cpuModel, fileAddress);
+                std::string relativePath {};
+                if (Path::RelativeToAssetFolder(fileAddress, relativePath) == false)
+                {
+                    relativePath = fileAddress;
+                }
+                return createGpuModel(cpuModel, relativePath.c_str());
             }
         }
 
@@ -97,75 +103,6 @@ namespace MFA
 
         return createGpuModel(std::move(cpuModel), name);
     }
-
-    //-------------------------------------------------------------------------------------------------
-
-    //bool ResourceManager::FreeModel(AS::Model & model)
-    //{
-    //    bool success = false;
-    //    bool freeResult = false;
-    //    // Mesh
-    //    freeResult = FreeMesh(model.mesh);
-    //    MFA_ASSERT(freeResult);
-    //    // Textures
-    //    if (false == model.textures.empty())
-    //    {
-    //        for (auto & texture : model.textures)
-    //        {
-    //            freeResult = FreeTexture(texture);
-    //            MFA_ASSERT(freeResult);
-    //        }
-    //    }
-    //    success = true;
-    //    return success;
-    //}
-
-    ////-------------------------------------------------------------------------------------------------
-
-    //bool ResourceManager::FreeTexture(AS::Texture & texture)
-    //{
-    //    bool success = false;
-    //    MFA_ASSERT(texture.isValid());
-    //    if (texture.isValid())
-    //    {
-    //        // TODO This is RCMGMT task
-    //        Memory::Free(texture.revokeBuffer());
-    //        success = true;
-    //    }
-    //    return success;
-    //}
-
-    ////-------------------------------------------------------------------------------------------------
-
-    //bool ResourceManager::FreeShader(AS::Shader & shader)
-    //{
-    //    bool success = false;
-    //    MFA_ASSERT(shader.isValid());
-    //    if (shader.isValid())
-    //    {
-    //        Memory::Free(shader.revokeData());
-    //        success = true;
-    //    }
-    //    return success;
-    //}
-
-    ////-------------------------------------------------------------------------------------------------
-
-    //bool ResourceManager::FreeMesh(AS::Mesh & mesh)
-    //{
-    //    bool success = false;
-    //    MFA_ASSERT(mesh.IsValid());
-    //    if (mesh.IsValid())
-    //    {
-    //        Blob vertexBuffer{};
-    //        Blob indexBuffer{};
-    //        mesh.RevokeBuffers(vertexBuffer, indexBuffer);
-    //        Memory::Free(vertexBuffer);
-    //        Memory::Free(indexBuffer);
-    //        success = true;
-    //    }
-    //    return success;
-    //}
 
     //-------------------------------------------------------------------------------------------------
 

@@ -463,7 +463,7 @@ namespace MFA
 
 #define RF_CREATE_SHADER(path, stage)                                                           \
 auto cpu##stage##Shader = Importer::ImportShaderFromSPV(                                        \
-    Path::Asset(path).c_str(),                                                                  \
+    Path::ForReadWrite(path).c_str(),                                                           \
     AssetSystem::Shader::Stage::stage,                                                          \
     "main"                                                                                      \
 );                                                                                              \

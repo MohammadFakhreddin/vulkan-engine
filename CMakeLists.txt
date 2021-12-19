@@ -443,6 +443,7 @@ list(
     "unit_tests/rlutil.h"
     "unit_tests/testMain.cpp"
     "unit_tests/engine/testBedrockMatrix.cpp"
+    "unit_tests/engine/testPath.cpp"
 )
 
 set(TECHDEMO "TechDemo")
@@ -560,16 +561,23 @@ if (WINDOWS)
 # Windows unit tests
 #-----------------------------------------------------------------------
 
-    link_to_target(${UNIT_TEST_NAME} ${UNIT_TEST_SOURCE} "unit_tests")
-
-    target_compile_definitions(${UNIT_TEST_NAME} PRIVATE UNIT_TEST)
+    unset(link_to_target_sources)
+    list(APPEND link_to_target_sources ${UNIT_TEST_SOURCE})
+    unset(link_to_target_directories)
+    list(APPEND link_to_target_directories 
+        ${WIN_INCLUDE_DIRECTORIES}
+        "unit_tests"
+    )
+    link_to_target(${UNIT_TEST_NAME})
 
     add_custom_command(
-        TARGET ${UNIT_TEST_NAME} POST_BUILD        # Adds a post-build event to MyTest
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
+        TARGET ${UNIT_TEST_NAME} POST_BUILD              # Adds a post-build event to MyTest
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different   # which executes "cmake - E copy_if_different..."
         ${DLLS}      # <--this is in-file
         ${CMAKE_BINARY_DIR}
     )
+
+    target_compile_definitions(${UNIT_TEST_NAME} PRIVATE UNIT_TEST)
 
 elseif(LINUX)
     # TODO Use link to target function

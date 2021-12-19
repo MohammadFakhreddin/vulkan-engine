@@ -213,12 +213,12 @@ void PrefabEditorScene::essencesWindow()
             std::string fileAddress;
             if (WinApi::TryToPickFile(extensions, fileAddress) == false)
             {
-                MFA_LOG_INFO("No valid file address picked!");
+                MFA_LOG_WARN("No valid file address picked!");
                 return;
             }
             if (loadSelectedAsset(fileAddress) == false)
             {
-                return;
+                MFA_LOG_WARN("Loading asset failed");
             }
         });
         UI::TreePop();

@@ -670,6 +670,7 @@ namespace MFA
 
                     RF::BeginQuery(recordState, occlusionQueryData.Pool, static_cast<uint32_t>(occlusionQueryData.Variants.size()));
 
+                    // TODO Draw a placeholder cube instead of complex geometry
                     variant->Draw(recordState, [&recordState, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
                         {
                             // Vertex push constants

@@ -4,15 +4,24 @@
 
 #include <string>
 
-namespace MFA::Path {
+namespace MFA::Path
+{
+    void Init();
 
-[[nodiscard]]
-std::string Asset(char const * address);
+    void Shutdown();
 
-void Asset(char const * address, std::string & outPath);
+
+    [[nodiscard]]
+    std::string ForReadWrite(char const * address);
+
+    void ForReadWrite(char const * address, std::string & outPath);
+
+
+    bool RelativeToAssetFolder(char const * address, std::string & outRelativePath);
+
 
 #if defined(__IOS__) || defined(__PLATFORM_MAC__)
-std::string GetAssetPath();
+    std::string GetAssetPath();
 #endif
 
 }

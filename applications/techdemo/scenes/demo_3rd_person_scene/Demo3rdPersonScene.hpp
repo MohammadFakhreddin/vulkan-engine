@@ -37,7 +37,7 @@ public:
     
 private:
 
-    void onUI() const;
+    void onUI();
 
     static constexpr float Z_NEAR = 0.1f;
     static constexpr float Z_FAR = 3000.0f;
@@ -73,5 +73,7 @@ private:
 
     MFA::Prefab mSoldierPrefab;
     MFA::Prefab mSponzaPrefab;
+
+    bool mEnableDebugPipeline = false;
 
 };

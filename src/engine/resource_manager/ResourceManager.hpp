@@ -16,17 +16,6 @@ namespace MFA::ResourceManager
     // For shapes like sphere,cube, etc
     std::shared_ptr<RT::GpuModel> Assign(std::shared_ptr<AS::Model> cpuModel, char const * name);
 
-    // Temporary function for freeing imported assets, Will be replaced with RCMGMT system in future
-    //bool FreeModel(AS::Model & model);
-
-    // Temporary function for freeing imported assets, Will be replaced with RCMGMT system in future
-    //bool FreeTexture(AS::Texture & texture);
-
-    //bool FreeShader(AS::Shader & shader);
-
-    // Calling this function is not required because meshed does not allocate dynamic memory
-    //bool FreeMesh(AS::Mesh & mesh);
-
 }
 
 

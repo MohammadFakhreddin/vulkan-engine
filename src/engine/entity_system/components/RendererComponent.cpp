@@ -4,6 +4,8 @@
 #include "engine/resource_manager/ResourceManager.hpp"
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
+#include "engine/BedrockPath.hpp"
+
 #include "libs/nlohmann/json.hpp"
 
 //-------------------------------------------------------------------------------------------------

@@ -11,13 +11,9 @@
 #include "engine/entity_system/Entity.hpp"
 #include "engine/ui_system/UISystem.hpp"
 #include "engine/entity_system/EntitySystem.hpp"
-#include "engine/entity_system/components/AxisAlignedBoundingBoxComponent.hpp"
-#include "engine/entity_system/components/BoundingVolumeRendererComponent.hpp"
 #include "engine/entity_system/components/ColorComponent.hpp"
 #include "engine/entity_system/components/MeshRendererComponent.hpp"
-#include "engine/entity_system/components/SphereBoundingVolumeComponent.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
-#include "engine/entity_system/components/PointLightComponent.hpp"
 #include "engine/entity_system/components/DirectionalLightComponent.hpp"
 #include "engine/BedrockMatrix.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
@@ -65,59 +61,15 @@ void Demo3rdPersonScene::Init()
 
     
     PrefabFileStorage::Deserialize(PrefabFileStorage::DeserializeParams {
-        .fileAddress = Path::Asset("prefabs/soldier.json"),
+        .fileAddress = Path::ForReadWrite("prefabs/soldier.json"),
         .prefab = &mSoldierPrefab
     });
 
     PrefabFileStorage::Deserialize(PrefabFileStorage::DeserializeParams {
-        .fileAddress = Path::Asset("prefabs/sponza.json"),
+        .fileAddress = Path::ForReadWrite("prefabs/sponza3.json"),
         .prefab = &mSponzaPrefab
     });
 
-    // Soldier
-    //mSoldierGpuModel = ResourceManager::Acquire(Path::Asset("models/warcraft_3_alliance_footmanfanmade/scene.gltf").c_str());
-    //mPbrPipeline.CreateEssenceIfNotExists(mSoldierGpuModel);
-    //{// Playable character
-    //    auto * entity = EntitySystem::CreateEntity("Playable soldier", GetRootEntity());
-    //    MFA_ASSERT(entity != nullptr);
-
-    //    mPlayerTransform = entity->AddComponent<TransformComponent>();
-    //    MFA_ASSERT(mPlayerTransform.expired() == false);
-    //    if (auto const ptr = mPlayerTransform.lock())
-    //    {
-    //        float position[3]{ 0.0f, 2.0f, -5.0f };
-    //        float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
-    //        float scale[3]{ 1.0f, 1.0f, 1.0f };
-    //        ptr->UpdateTransform(position, eulerAngles, scale);
-    //    }
-
-    //    mPlayerMeshRenderer = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, mSoldierGpuModel->id);
-    //    MFA_ASSERT(mPlayerMeshRenderer.expired() == false);
-    //    mPlayerMeshRenderer.lock()->SetActive(true);
-
-    //    entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
-
-    //    auto colorComponent = entity->AddComponent<ColorComponent>();
-    //    MFA_ASSERT(colorComponent.expired() == false);
-    //    colorComponent.lock()->SetColor(glm::vec3{ 1.0f, 0.0f, 0.0f });
-
-    //    auto debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
-    //    MFA_ASSERT(debugRenderComponent.expired() == false);
-    //    debugRenderComponent.lock()->SetActive(false);
-
-    //    mThirdPersonCamera = entity->AddComponent<ThirdPersonCameraComponent>(
-    //        FOV,
-    //        Z_NEAR,
-    //        Z_FAR
-    //    );
-    //    MFA_ASSERT(mThirdPersonCamera.expired() == false);
-    //    float eulerAngle[3]{ -15.0f, 0.0f, 0.0f };
-    //    mThirdPersonCamera.lock()->SetDistanceAndRotation(3.0f, eulerAngle);
-
-    //    SetActiveCamera(mThirdPersonCamera);
-
-    //    EntitySystem::InitEntity(entity);
-    //}
     {// Playable soldier
         auto * entity = mSoldierPrefab.Clone(GetRootEntity(), Prefab::CloneEntityOptions {.name = "Playable soldier"});
         {// Transform
@@ -144,83 +96,6 @@ void Demo3rdPersonScene::Init()
         }
         mPlayerMeshRenderer = entity->GetComponent<MeshRendererComponent>();
     }
-    //{// NPCs
-    //    for (uint32_t i = 0; i < 10/*33*/; ++i)
-    //    {
-    //        for (uint32_t j = 0; j < 10/*33*/; ++j)
-    //        {
-    //            auto * entity = EntitySystem::CreateEntity("Random soldier", GetRootEntity());
-    //            MFA_ASSERT(entity != nullptr);
-
-    //            auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
-    //            MFA_ASSERT(transformComponent != nullptr);
-    //            float position[3]{ static_cast<float>(i) - 5.0f, 2.0f, static_cast<float>(j) - 10.0f };
-    //            float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
-    //            float scale[3]{ 1.0f, 1.0f, 1.0f };
-    //            transformComponent->UpdateTransform(position, eulerAngles, scale);
-    //            
-    //            auto const meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, "Soldier").lock();
-    //            MFA_ASSERT(meshRendererComponent != nullptr);
-    //            meshRendererComponent->GetVariant().lock()->SetActiveAnimation(
-    //                "SwordAndShieldIdle",
-    //                { .startTimeOffsetInSec = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX)) * 10 }
-    //            );
-    //            meshRendererComponent->SetActive(true);
-    //            
-    //            entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f));
-
-    //            auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
-    //            MFA_ASSERT(colorComponent != nullptr);
-    //            colorComponent->SetColor(glm::vec3{ 0.0f, 0.0f, 1.0f });
-    //            
-    //            auto const debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline).lock();
-    //            MFA_ASSERT(debugRenderComponent != nullptr);
-    //            debugRenderComponent->SetActive(false);
-    //            
-    //            EntitySystem::InitEntity(entity);
-
-    //            entity->SetActive(true);
-    //        }
-    //    }
-    //}
-
-    //std::weak_ptr<MeshRendererComponent> sponzaMeshRenderer {};
-
-    //{// Map
-    //    mMapModel = ResourceManager::Acquire(Path::Asset("models/sponza/sponza.gltf").c_str());
-    //    mPbrPipeline.CreateEssenceIfNotExists(mMapModel);
-
-    //    auto * entity = EntitySystem::CreateEntity("Sponza scene", GetRootEntity());
-    //    MFA_ASSERT(entity != nullptr);
-
-    //    auto const transformComponent = entity->AddComponent<TransformComponent>();
-    //    MFA_ASSERT(transformComponent.expired() == false);
-
-    //    if (auto const ptr = transformComponent.lock())
-    //    {
-    //        float position[3]{ 0.4f, 2.0f, -6.0f };
-    //        float eulerAngle[3]{ 180.0f, -90.0f, 0.0f };
-    //        float scale[3]{ 1.0f, 1.0f, 1.0f };
-    //        ptr->UpdateTransform(position, eulerAngle, scale);
-    //    }
-
-    //    auto const meshRendererComponent = entity->AddComponent<MeshRendererComponent>(mPbrPipeline, mMapModel->id).lock();
-    //    sponzaMeshRenderer = meshRendererComponent;
-
-    //    entity->AddComponent<AxisAlignedBoundingBoxComponent>(glm::vec3(0.0f, 5.0f, 0.0f), glm::vec3(15.0f, 6.0f, 9.0f));
-
-    //    auto const debugRenderComponent = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline);
-    //    if (auto const ptr = debugRenderComponent.lock())
-    //    {
-    //        ptr->SetActive(false);
-    //    }
-
-    //    entity->AddComponent<ColorComponent>(glm::vec3(0.0f, 0.0f, 1.0f));
-
-    //    entity->SetActive(true);
-
-    //    EntitySystem::InitEntity(entity);
-    //}
 
     {// Map
         auto * entity = mSponzaPrefab.Clone(GetRootEntity(), Prefab::CloneEntityOptions {.name = "Sponza"});
@@ -231,82 +106,15 @@ void Demo3rdPersonScene::Init()
             float scale[3]{ 1.0f, 1.0f, 1.0f };
             ptr->UpdateTransform(position, eulerAngle, scale);
         }
-    }   
-
-    //{// PointLight
-    //    for (int i = 0; i < 2; ++i)
-    //    {
-    //        auto * entity = EntitySystem::CreateEntity(("PointLight" + std::to_string(i)).c_str(), GetRootEntity());
-    //        MFA_ASSERT(entity != nullptr);
-
-    //        float lightPosition[3] {3.7f, 0.0f, -3.0f - static_cast<float>(i)};
-    //        float lightScale = 5.0f;
-    //        float lightColor[3] {
-    //            (252.0f/256.0f) * lightScale,
-    //            (212.0f/256.0f) * lightScale,
-    //            (64.0f/256.0f) * lightScale
-    //        };
-
-    //        auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
-    //        MFA_ASSERT(colorComponent != nullptr);
-    //        colorComponent->SetColor(lightColor);
-    //        
-    //        auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
-    //        MFA_ASSERT(transformComponent != nullptr);
-    //        transformComponent->UpdatePosition(lightPosition);
-    //        transformComponent->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
-    //        
-    //        entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, mSphereModel->id);
-    //        
-    //        entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
-
-    //        // TODO Maybe we can read radius from transform component instead
-    //        entity->AddComponent<PointLightComponent>(1.0f, 100.0f, Z_NEAR, Z_FAR, sponzaMeshRenderer);
-
-    //        entity->SetActive(true);
-    //        EntitySystem::InitEntity(entity);
-    //    }
-    //    for (int i = 2; i < 4; ++i)
-    //    {
-    //        auto * entity = EntitySystem::CreateEntity(("PointLight" + std::to_string(i)).c_str(), GetRootEntity());
-    //        MFA_ASSERT(entity != nullptr);
-
-    //        float lightPosition[3] {-2.7f, 0.0f, -3.0f - static_cast<float>(i)};
-    //        float lightScale = 5.0f;
-    //        float lightColor[3] {
-    //            (252.0f/256.0f) * lightScale,
-    //            (212.0f/256.0f) * lightScale,
-    //            (64.0f/256.0f) * lightScale
-    //        };
-
-    //        auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
-    //        MFA_ASSERT(colorComponent != nullptr);
-    //        colorComponent->SetColor(lightColor);
-    //        
-    //        auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
-    //        MFA_ASSERT(transformComponent != nullptr);
-    //        transformComponent->UpdatePosition(lightPosition);
-    //        transformComponent->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
-    //        
-    //        entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, mSphereModel->id);
-    //        
-    //        entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
-
-    //        // TODO Maybe we can read radius from transform component instead
-    //        entity->AddComponent<PointLightComponent>(1.0f, 100.0f, Z_NEAR, Z_FAR, sponzaMeshRenderer);
-
-    //        entity->SetActive(true);
-    //        EntitySystem::InitEntity(entity);
-    //    }
-    //}
-
+    }
+    
     {// Directional light
         auto * entity = EntitySystem::CreateEntity("Directional light", GetRootEntity());
         MFA_ASSERT(entity != nullptr);
 
         auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
         MFA_ASSERT(colorComponent != nullptr);
-        float lightScale = 5.0f;
+        float const lightScale = 5.0f;
         float lightColor[3] {
             (252.0f/256.0f) * lightScale,
             (212.0f/256.0f) * lightScale,
@@ -333,8 +141,11 @@ void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, RT::CommandReco
 {
     Scene::OnPreRender(deltaTimeInSec, recordState);
 
-    mDebugRenderPipeline.PreRender(recordState, deltaTimeInSec);
     mPbrPipeline.PreRender(recordState, deltaTimeInSec);
+    if (mEnableDebugPipeline)
+    {
+        mDebugRenderPipeline.PreRender(recordState, deltaTimeInSec);
+    }
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -343,8 +154,11 @@ void Demo3rdPersonScene::OnRender(float const deltaTimeInSec, RT::CommandRecordS
 {
     Scene::OnRender(deltaTimeInSec, recordState);
 
-    mDebugRenderPipeline.Render(recordState, deltaTimeInSec);
     mPbrPipeline.Render(recordState, deltaTimeInSec);
+    if (mEnableDebugPipeline)
+    {
+        mDebugRenderPipeline.Render(recordState, deltaTimeInSec);
+    }
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -353,8 +167,11 @@ void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, RT::CommandRec
 {
     Scene::OnPostRender(deltaTimeInSec, recordState);
 
-    mDebugRenderPipeline.PostRender(recordState, deltaTimeInSec);
     mPbrPipeline.PostRender(recordState, deltaTimeInSec);
+    if (mEnableDebugPipeline)
+    {
+        mDebugRenderPipeline.PostRender(recordState, deltaTimeInSec);
+    }
 
     if (auto const playerTransform = mPlayerTransform.lock())
     {// Soldier
@@ -511,18 +328,16 @@ void Demo3rdPersonScene::Shutdown()
     Scene::Shutdown();
 
     UI::UnRegister(mUIRecordId);
-    // TODO Use resource manager for sampler and error texture
-    // Sampler
-    //RF::DestroySampler(mSampler);
-    // Error texture
-    //RF::DestroyTexture(mErrorTexture);
     
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::onUI() const
+void Demo3rdPersonScene::onUI()
 {
+    UI::BeginWindow("3rd person scene");
+    UI::Checkbox("Debug pipeline", &mEnableDebugPipeline);
+    UI::EndWindow();
 }
 
 //-------------------------------------------------------------------------------------------------

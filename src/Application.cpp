@@ -1,6 +1,7 @@
 #include "Application.hpp"
 
 #include "engine/BedrockAssert.hpp"
+#include "engine/BedrockPath.hpp"
 #include "engine/InputManager.hpp"
 #include "engine/entity_system/EntitySystem.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
@@ -32,6 +33,7 @@ Application::~Application() = default;
 
 void Application::Init() {
 
+    Path::Init();
     RC::Init();
     {// Initializing render frontend
         RF::InitParams params{};
@@ -84,6 +86,7 @@ void Application::Shutdown() {
     UI::Shutdown();
     RF::Shutdown();
     RC::Shutdown();
+    Path::Shutdown();
 
     mIsInitialized = false;
 }

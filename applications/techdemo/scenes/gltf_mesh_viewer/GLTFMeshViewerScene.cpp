@@ -47,7 +47,7 @@ void GLTFMeshViewerScene::Init() {
         {
             ModelRenderRequiredData params {};
             params.displayName = "CesiumMan";
-            Path::Asset("models/CesiumMan/glTF/CesiumMan.gltf", params.address);
+            Path::ForReadWrite("models/CesiumMan/glTF/CesiumMan.gltf", params.address);
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {0.0f, 0.0f, -180.0f});
             MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.0f, -7.0f});        
             MFA::Copy<3>(params.initialParams.light.position, {0.0f, -2.0f, -2.0f});
@@ -59,7 +59,7 @@ void GLTFMeshViewerScene::Init() {
             ModelRenderRequiredData params {};
             params.gpuModel = nullptr;
             params.displayName = "War-craft soldier";
-            Path::Asset("models/warcraft_3_alliance_footmanfanmade/scene.gltf", params.address);
+            Path::ForReadWrite("models/warcraft_3_alliance_footmanfanmade/scene.gltf", params.address);
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {0.0f, -5.926f, -180.0f});
             MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.9f, -2.0f});
             MFA::Copy<3>(params.initialParams.light.position, {0.0f, -2.0f, 0.0f});
@@ -68,7 +68,7 @@ void GLTFMeshViewerScene::Init() {
         {
             ModelRenderRequiredData params {};
             params.displayName = "SponzaScene";
-            Path::Asset("models/sponza/sponza.gltf", params.address);
+            Path::ForReadWrite("models/sponza/sponza.gltf", params.address);
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {180.0f, -90.0f, 0.0f});
             MFA::Copy<3>(params.initialParams.model.translate, {0.4f, 2.0f, -6.0f});
             MFA::Copy<3>(params.initialParams.light.translateMin, {-50.0f, -50.0f, -50.0f});
@@ -78,7 +78,7 @@ void GLTFMeshViewerScene::Init() {
         {
             ModelRenderRequiredData params {};
             params.displayName = "Mira";
-            Path::Asset("models/mira/scene.gltf", params.address);
+            Path::ForReadWrite("models/mira/scene.gltf", params.address);
             params.initialParams.model.scale = 0.005f;
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {180.0f, 180.0f, 0.0f});
             MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.9f, -2.0f});
@@ -91,7 +91,7 @@ void GLTFMeshViewerScene::Init() {
         {
             ModelRenderRequiredData params {};
             params.displayName = "Car";
-            Path::Asset("models/free_zuk_3d_model/scene.gltf", params.address);
+            Path::ForReadWrite("models/free_zuk_3d_model/scene.gltf", params.address);
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {-19.0f, -32.0f, 177.0f});
             MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.0f, -2.0f});
             mModelsRenderData.emplace_back(params);
@@ -99,7 +99,7 @@ void GLTFMeshViewerScene::Init() {
         {
             ModelRenderRequiredData params {};
             params.displayName = "Cyberpunk lady";
-            Path::Asset("models/female_full-body_cyberpunk_themed_avatar/scene.gltf", params.address);
+            Path::ForReadWrite("models/female_full-body_cyberpunk_themed_avatar/scene.gltf", params.address);
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {-3.0f, 340.0f, 180.0f});
             MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.8f, -3.0f});
             mModelsRenderData.emplace_back(params);
@@ -107,7 +107,7 @@ void GLTFMeshViewerScene::Init() {
         {
             ModelRenderRequiredData params {};
             params.displayName = "Mandalorian";
-            Path::Asset("models/fortnite_the_mandalorianbaby_yoda/scene.gltf", params.address);
+            Path::ForReadWrite("models/fortnite_the_mandalorianbaby_yoda/scene.gltf", params.address);
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {180.0f, 180.0f, 0.0f});
             params.initialParams.model.scale = 0.010f;
             MFA::Copy<3>(params.initialParams.model.translate, {0.0f, -0.5f, -2.0f});
@@ -117,7 +117,7 @@ void GLTFMeshViewerScene::Init() {
         {
             ModelRenderRequiredData params {};
             params.displayName = "Flight helmet";
-            Path::Asset("models/FlightHelmet/glTF/FlightHelmet.gltf", params.address);
+            Path::ForReadWrite("models/FlightHelmet/glTF/FlightHelmet.gltf", params.address);
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {180.0f, 180.0f, 0.0f});
             MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.0f, -1.0f});
             MFA::Copy<3>(params.initialParams.light.position, {0.0f, 0.0f, 2.469f});
@@ -302,7 +302,7 @@ void GLTFMeshViewerScene::Shutdown() {
 //-------------------------------------------------------------------------------------------------
 
 void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredData) {
-    renderRequiredData.gpuModel = ResourceManager::Acquire(Path::Asset(renderRequiredData.address.c_str()).c_str());
+    renderRequiredData.gpuModel = ResourceManager::Acquire(renderRequiredData.address.c_str());
     mPbrPipeline.CreateEssenceIfNotExists(renderRequiredData.gpuModel);
 
     auto * entity = EntitySystem::CreateEntity(renderRequiredData.displayName.c_str(), GetRootEntity());
