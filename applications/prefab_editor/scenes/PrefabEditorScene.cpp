@@ -18,6 +18,7 @@
 #include "engine/camera/ObserverCameraComponent.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
 #include "tools/PrefabFileStorage.hpp"
+#include "engine/BedrockPath.hpp"
 
 using namespace MFA;
 
@@ -214,6 +215,12 @@ void PrefabEditorScene::essencesWindow()
             if (WinApi::TryToPickFile(extensions, fileAddress) == false)
             {
                 MFA_LOG_WARN("No valid file address picked!");
+                return;
+            }
+            bool const success = Path::RelativeToAssetFolder(fileAddress.c_str(), fileAddress);
+            if (success == false)
+            {
+                MFA_LOG_WARN("All assets and prefabs must be placed in asset folder for portability\n");
                 return;
             }
             if (loadSelectedAsset(fileAddress) == false)
