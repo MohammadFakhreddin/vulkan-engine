@@ -246,6 +246,7 @@ public:
     using UV = float[2];
     using Color = uint8_t[3];
     using Tangent = float[4]; // XYZW vertex tangents where the w component is a sign value (-1 or +1) indicating handedness of the tangent basis. I need to change XYZ order if handness is different from mine
+    using TextureIndex = int16_t;
 
     using Index = uint32_t;
     struct Vertex {
@@ -255,6 +256,7 @@ public:
         UV metallicUV {};
         UV roughnessUV {};
         UV emissionUV {};
+        UV occlusionUV {};
         Color color {};
         Normal normalValue {};
         Tangent tangentValue {};
@@ -272,17 +274,19 @@ public:
         uint64_t verticesOffset = 0;                // From start of buffer
         uint64_t indicesOffset = 0;
         uint32_t indicesStartingIndex = 0;          // From start of buffer
-        // TODO Seperate material
+        // TODO Separate material
         // TOOD Add "occlusion" and "alpha cutoff", "double sided" and "render mode"
-        int16_t baseColorTextureIndex = 0;
-        int16_t metallicRoughnessTextureIndex = 0;
-        int16_t roughnessTextureIndex = 0;
-        int16_t normalTextureIndex = 0;
-        int16_t emissiveTextureIndex = 0;
+        TextureIndex baseColorTextureIndex = 0;
+        TextureIndex metallicRoughnessTextureIndex = 0;
+        TextureIndex roughnessTextureIndex = 0;
+        TextureIndex normalTextureIndex = 0;
+        TextureIndex emissiveTextureIndex = 0;
+        TextureIndex occlusionTextureIndex = 0;     // Indicates darker area of texture 
         float baseColorFactor[4] {};
-        float metallicFactor = 0;              // Metallic color is stored inside blue
-        float roughnessFactor = 0;             // Roughness color is stored inside green
+        float metallicFactor = 0;                   // Metallic color is stored inside blue
+        float roughnessFactor = 0;                  // Roughness color is stored inside green
         float emissiveFactor[3] {};
+        //float occlusionStrengthFactor = 0;        // I couldn't find field in tinygltf     
         bool hasBaseColorTexture = false;
         bool hasMetallicTexture = false;
         bool hasRoughnessTexture = false;
@@ -293,6 +297,18 @@ public:
         bool hasNormalTexture = false;
         bool hasTangentBuffer = false;
         bool hasSkin = false;
+
+        // TODO Use these render variables to render objects in correct order.
+        // Also we might have opportunity not to order translucent primitives in depth pre pass and shadow passes
+        enum class AlphaMode
+        {
+            Opaque,
+            Mask,
+            Blend
+        };
+        AlphaMode alphaMode = AlphaMode::Opaque;
+        float alphaCutoff = 0.0f;
+        bool doubleSided = false;
 
         bool hasPositionMinMax = false;
 

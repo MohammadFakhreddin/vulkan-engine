@@ -798,6 +798,46 @@ namespace MFA::Importer
         //MFA_CRASH("Image not found: %s", gltf_name);
     }
 
+    
+    //-------------------------------------------------------------------------------------------------
+
+    #define extractTextureAndUV_Index(gltfModel, textureInfo, textureRefs, outTextureIndex, outUV_Index)    \
+    if (textureInfo.index >= 0)                                                                             \
+    {                                                                                                       \
+        auto const & emissive_texture = gltfModel.textures[textureInfo.index];                              \
+        auto const & image = gltfModel.images[emissive_texture.source];                                     \
+        outTextureIndex = GLTF_findTextureByName(image.uri.c_str(), textureRefs);                           \
+        if (outTextureIndex >= 0)                                                                           \
+        {                                                                                                   \
+            outUV_Index = static_cast<uint16_t>(textureInfo.texCoord);                                      \
+        }                                                                                                   \
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    static void copyDataIntoVertexMember(
+        float * vertexMember,
+        uint8_t const componentCount,
+        float const * items,
+        uint32_t const dataIndex,
+        bool const hasMinMax,
+        float const * minValue,
+        float const * maxValue
+    )
+    {
+        Copy(vertexMember, &items[dataIndex * componentCount], componentCount);
+#ifdef MFA_DEBUG
+        if (hasMinMax)
+        {
+            for (int i = 0; i < componentCount; ++i)
+            {
+                MFA_ASSERT(vertexMember[i] >= minValue[i]);
+                MFA_ASSERT(vertexMember[i] <= maxValue[i]);
+            }
+        }
+#endif
+    }
+
     //-------------------------------------------------------------------------------------------------
 
     static void GLTF_extractSubMeshes(
@@ -862,55 +902,69 @@ namespace MFA::Importer
                     int32_t normalUvIndex = -1;
                     int16_t emissiveTextureIndex = -1;
                     int32_t emissiveUvIndex = -1;
+                    int16_t occlusionTextureIndex = -1;
+                    int32_t occlusionUV_Index = -1;
                     float baseColorFactor[4]{};
                     float metallicFactor = 0;
                     float roughnessFactor = 0;
                     float emissiveFactor[3]{};
+                    bool doubleSided = false;
+                    float alphaCutoff = 0.0f;
+
+                    using AlphaMode = AS::Mesh::Primitive::AlphaMode;
+                    AlphaMode alphaMode = AlphaMode::Opaque;
+
                     uint32_t uniqueId = primitiveUniqueId;
                     primitiveUniqueId++;
                     if (gltfPrimitive.material >= 0)
                     {// Material
                         auto const & material = gltfModel.materials[gltfPrimitive.material];
-                        if (material.pbrMetallicRoughness.baseColorTexture.index >= 0)
-                        {// Base color texture
-                            auto const & base_color_gltf_texture = gltfModel.textures[material.pbrMetallicRoughness.baseColorTexture.index];
-                            auto const & image = gltfModel.images[base_color_gltf_texture.source];
-                            baseColorTextureIndex = GLTF_findTextureByName(image.uri.c_str(), textureRefs);
-                            if (baseColorTextureIndex >= 0)
-                            {
-                                baseColorUvIndex = static_cast<uint16_t>(material.pbrMetallicRoughness.baseColorTexture.texCoord);
-                            }
-                        }
-                        if (material.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0)
-                        {// Metallic-roughness texture
-                            auto const & metallic_roughness_texture = gltfModel.textures[material.pbrMetallicRoughness.metallicRoughnessTexture.index];
-                            auto const & image = gltfModel.images[metallic_roughness_texture.source];
-                            metallicRoughnessTextureIndex = GLTF_findTextureByName(image.uri.c_str(), textureRefs);
-                            if (metallicRoughnessTextureIndex >= 0)
-                            {
-                                metallicRoughnessUvIndex = static_cast<uint16_t>(material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord);
-                            }
-                        }
-                        if (material.normalTexture.index >= 0)
-                        {// Normal texture
-                            auto const & normal_texture = gltfModel.textures[material.normalTexture.index];
-                            auto const & image = gltfModel.images[normal_texture.source];
-                            normalTextureIndex = GLTF_findTextureByName(image.uri.c_str(), textureRefs);
-                            if (normalTextureIndex >= 0)
-                            {
-                                normalUvIndex = static_cast<uint16_t>(material.normalTexture.texCoord);
-                            }
-                        }
-                        if (material.emissiveTexture.index >= 0)
-                        {// Emissive texture
-                            auto const & emissive_texture = gltfModel.textures[material.emissiveTexture.index];
-                            auto const & image = gltfModel.images[emissive_texture.source];
-                            emissiveTextureIndex = GLTF_findTextureByName(image.uri.c_str(), textureRefs);
-                            if (emissiveTextureIndex >= 0)
-                            {
-                                emissiveUvIndex = static_cast<uint16_t>(material.emissiveTexture.texCoord);
-                            }
-                        }
+
+                        // Base color texture
+                        extractTextureAndUV_Index(
+                            gltfModel,
+                            material.pbrMetallicRoughness.baseColorTexture,
+                            textureRefs,
+                            baseColorTextureIndex,
+                            baseColorUvIndex
+                        );
+
+                        // Metallic-roughness texture
+                        extractTextureAndUV_Index(
+                            gltfModel,
+                            material.pbrMetallicRoughness.metallicRoughnessTexture,
+                            textureRefs,
+                            metallicRoughnessTextureIndex,
+                            metallicRoughnessUvIndex
+                        );
+
+                        // Normal texture
+                        extractTextureAndUV_Index(
+                            gltfModel,
+                            material.normalTexture,
+                            textureRefs,
+                            normalTextureIndex,
+                            normalUvIndex
+                        )
+
+                        // Emissive texture
+                        extractTextureAndUV_Index(
+                            gltfModel,
+                            material.emissiveTexture,
+                            textureRefs,
+                            emissiveTextureIndex,
+                            emissiveUvIndex
+                        )
+
+                        // Occlusion texture
+                        extractTextureAndUV_Index(
+                            gltfModel,
+                            material.occlusionTexture,
+                            textureRefs,
+                            occlusionTextureIndex,
+                            occlusionUV_Index
+                        )
+
                         {// BaseColorFactor
                             baseColorFactor[0] = static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[0]);
                             baseColorFactor[1] = static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[1]);
@@ -924,6 +978,24 @@ namespace MFA::Importer
                             emissiveFactor[1] = static_cast<float>(material.emissiveFactor[1]);
                             emissiveFactor[2] = static_cast<float>(material.emissiveFactor[2]);
                         }
+
+                        alphaCutoff = static_cast<float>(material.alphaCutoff);
+                        alphaMode = [&material]()->AlphaMode {
+                            if (material.alphaMode == "OPAQUE")
+                            {
+                                return AlphaMode::Opaque;
+                            }
+                            if (material.alphaMode == "BLEND")
+                            {
+                                return AlphaMode::Blend;
+                            }
+                            if (material.alphaMode == "MASK")
+                            {
+                                return AlphaMode::Mask;  
+                            }
+                            MFA_LOG_ERROR("Unhandled format detected: %s", material.alphaMode.c_str());
+                        }();
+                        doubleSided = material.doubleSided;
                     }
                     uint32_t primitiveIndicesCount = 0;
                     {// Indices
@@ -973,6 +1045,7 @@ namespace MFA::Importer
                             MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
                         }
                     }
+
                     float const * positions = nullptr;
                     uint32_t primitiveVertexCount = 0;
                     float positionsMinValue[3]{};
@@ -994,9 +1067,9 @@ namespace MFA::Importer
                         MFA_ASSERT(result);
                     }
 
-                    float const * baseColorUvs = nullptr;
-                    float baseColorUvMin[2]{};
-                    float baseColorUvMax[2]{};
+                    float const * baseColorUVs = nullptr;
+                    float baseColorUV_Min[2]{};
+                    float baseColorUV_Max[2]{};
                     bool hasBaseColorUvMinMax = false;
                     if (baseColorUvIndex >= 0)
                     {// BaseColor
@@ -1008,15 +1081,16 @@ namespace MFA::Importer
                             texture_coordinate_key_name.c_str(),
                             2,
                             TINYGLTF_COMPONENT_TYPE_FLOAT,
-                            baseColorUvs,
+                            baseColorUVs,
                             baseColorUvsCount,
                             hasBaseColorUvMinMax,
-                            baseColorUvMin,
-                            baseColorUvMax
+                            baseColorUV_Min,
+                            baseColorUV_Max
                         );
                         MFA_ASSERT(result == true);
                         MFA_ASSERT(baseColorUvsCount == primitiveVertexCount);
                     }
+
                     float const * metallicRoughnessUvs = nullptr;
                     float metallicRoughnessUVMin[2]{};
                     float metallicRoughnessUVMax[2]{};
@@ -1040,33 +1114,58 @@ namespace MFA::Importer
                         MFA_ASSERT(result == true);
                         MFA_ASSERT(metallicRoughnessUvsCount == primitiveVertexCount);
                     }
-                    // TODO Occlusion texture
+
                     float const * emissionUVs = nullptr;
-                    float emission_uv_min[2]{};
-                    float emission_uv_max[2]{};
+                    float emissionUV_Min[2]{};
+                    float emissionUV_Max[2]{};
                     bool hasEmissionUvMinMax = false;
                     if (emissiveUvIndex >= 0)
                     {// Emission uvs
-                        std::string texture_coordinate_key_name = generateUvKeyword(emissiveUvIndex);
+                        std::string textureCoordinateKeyName = generateUvKeyword(emissiveUvIndex);
                         uint32_t emissionUvCount = 0;
                         auto const result = GLTF_extractPrimitiveDataFromBuffer(
                             gltfModel,
                             gltfPrimitive,
-                            texture_coordinate_key_name.c_str(),
+                            textureCoordinateKeyName.c_str(),
                             2,
                             TINYGLTF_COMPONENT_TYPE_FLOAT,
                             emissionUVs,
                             emissionUvCount,
                             hasEmissionUvMinMax,
-                            emission_uv_min,
-                            emission_uv_max
+                            emissionUV_Min,
+                            emissionUV_Max
                         );
                         MFA_ASSERT(result == true);
                         MFA_ASSERT(emissionUvCount == primitiveVertexCount);
                     }
+
+                    float const * occlusionUVs = nullptr;
+                    float occlusionUV_Min[2] {};
+                    float occlusionUV_Max[2] {};
+                    bool hasOcclusionUV_MinMax = false;
+                    if (occlusionUV_Index >= 0)
+                    {// Occlusion uvs
+                        std::string textureCoordinateKeyName = generateUvKeyword(occlusionUV_Index);
+                        uint32_t occlusionUV_Count = 0;
+                        auto const result = GLTF_extractPrimitiveDataFromBuffer(
+                            gltfModel,
+                            gltfPrimitive,
+                            textureCoordinateKeyName.c_str(),
+                            2,
+                            TINYGLTF_COMPONENT_TYPE_FLOAT,
+                            occlusionUVs,
+                            occlusionUV_Count,
+                            hasOcclusionUV_MinMax,
+                            occlusionUV_Min,
+                            occlusionUV_Max
+                        );
+                        MFA_ASSERT(result == true);
+                        MFA_ASSERT(occlusionUV_Count == primitiveVertexCount);
+                    }
+
                     float const * normalsUVs = nullptr;
-                    float normals_uv_min[2]{};
-                    float normals_uv_max[2]{};
+                    float normalsUV_Min[2]{};
+                    float normalsUV_Max[2]{};
                     bool hasNormalUvMinMax = false;
                     if (normalUvIndex >= 0)
                     {// Normal uvs
@@ -1081,8 +1180,8 @@ namespace MFA::Importer
                             normalsUVs,
                             normalUvsCount,
                             hasNormalUvMinMax,
-                            normals_uv_min,
-                            normals_uv_max
+                            normalsUV_Min,
+                            normalsUV_Max
                         );
                         MFA_ASSERT(result == true);
                         MFA_ASSERT(normalUvsCount == primitiveVertexCount);
@@ -1091,7 +1190,7 @@ namespace MFA::Importer
                     float normalsValuesMin[3]{};
                     float normalsValuesMax[3]{};
                     bool hasNormalValueMinMax = false;
-                    {// Normal uvs
+                    {// Normal values
                         uint32_t normalValuesCount = 0;
                         auto const result = GLTF_extractPrimitiveDataFromBuffer(
                             gltfModel,
@@ -1107,6 +1206,7 @@ namespace MFA::Importer
                         );
                         MFA_ASSERT(result == false || normalValuesCount == primitiveVertexCount);
                     }
+
                     float const * tangentValues = nullptr;
                     float tangentsValuesMin[4]{};
                     float tangentsValuesMax[4]{};
@@ -1127,6 +1227,8 @@ namespace MFA::Importer
                         );
                         MFA_ASSERT(result == false || tangentValuesCount == primitiveVertexCount);
                     }
+
+
                     uint32_t jointItemCount = 0;
                     std::vector<uint16_t> jointValues{};
                     int jointAccessorType = 0;
@@ -1246,8 +1348,8 @@ namespace MFA::Importer
 
                     bool hasPosition = positions != nullptr;
                     MFA_ASSERT(hasPosition == true);
-                    bool hasBaseColorTexture = baseColorUvs != nullptr;
-                    MFA_ASSERT(baseColorUvs != nullptr == baseColorTextureIndex >= 0);
+                    bool hasBaseColorTexture = baseColorUVs != nullptr;
+                    MFA_ASSERT(baseColorUVs != nullptr == baseColorTextureIndex >= 0);
                     bool hasNormalValue = normalValues != nullptr;
                     MFA_ASSERT(hasNormalValue == true);
                     bool hasNormalTexture = normalsUVs != nullptr;
@@ -1256,96 +1358,109 @@ namespace MFA::Importer
                     MFA_ASSERT(metallicRoughnessUvs != nullptr == metallicRoughnessTextureIndex >= 0);
                     bool hasEmissiveTexture = emissionUVs != nullptr;
                     MFA_ASSERT(emissionUVs != nullptr == emissiveTextureIndex >= 0);
+                    bool hasOcclusionTexture = occlusionUVs != nullptr;
+                    MFA_ASSERT((occlusionUVs != nullptr) == (occlusionTextureIndex >= 0));
                     bool hasTangentValue = tangentValues != nullptr;
                     bool hasSkin = jointItemCount > 0;
                     for (uint32_t i = 0; i < primitiveVertexCount; ++i)
                     {
                         primitiveVertices.emplace_back();
                         auto & vertex = primitiveVertices.back();
+
+                        // Positions
                         if (hasPosition)
-                        {// Vertices
-                            vertex.position[0] = positions[i * 3 + 0];
-                            vertex.position[1] = positions[i * 3 + 1];
-                            vertex.position[2] = positions[i * 3 + 2];
-                            if (hasPositionMinMax)
-                            {
-                                MFA_ASSERT(vertex.position[0] >= positionsMinValue[0]);
-                                MFA_ASSERT(vertex.position[0] <= positionsMaxValue[0]);
-                                MFA_ASSERT(vertex.position[1] >= positionsMinValue[1]);
-                                MFA_ASSERT(vertex.position[1] <= positionsMaxValue[1]);
-                                MFA_ASSERT(vertex.position[2] >= positionsMinValue[2]);
-                                MFA_ASSERT(vertex.position[2] <= positionsMaxValue[2]);
-                            }
+                        {
+                            copyDataIntoVertexMember(
+                                vertex.position,
+                                3,
+                                positions,
+                                i,
+                                hasPositionMinMax,
+                                positionsMinValue,
+                                positionsMaxValue
+                            );
                         }
+
+                        // Normal values
                         if (hasNormalValue)
-                        {// Normal values
-                            vertex.normalValue[0] = normalValues[i * 3 + 0];
-                            vertex.normalValue[1] = normalValues[i * 3 + 1];
-                            vertex.normalValue[2] = normalValues[i * 3 + 2];
-                            if (hasNormalValueMinMax)
-                            {
-                                MFA_ASSERT(vertex.normalValue[0] >= normalsValuesMin[0]);
-                                MFA_ASSERT(vertex.normalValue[0] <= normalsValuesMax[0]);
-                                MFA_ASSERT(vertex.normalValue[1] >= normalsValuesMin[1]);
-                                MFA_ASSERT(vertex.normalValue[1] <= normalsValuesMax[1]);
-                                MFA_ASSERT(vertex.normalValue[2] >= normalsValuesMin[2]);
-                                MFA_ASSERT(vertex.normalValue[2] <= normalsValuesMax[2]);
-                            }
+                        {
+                            copyDataIntoVertexMember(
+                                vertex.normalValue,
+                                3,
+                                normalValues,
+                                i,
+                                hasNormalValueMinMax,
+                                normalsValuesMin,
+                                normalsValuesMax
+                            );
                         }
+
+                        // Normal uvs
                         if (hasNormalTexture)
-                        {// Normal uvs
-                            vertex.normalMapUV[0] = normalsUVs[i * 2 + 0];
-                            vertex.normalMapUV[1] = normalsUVs[i * 2 + 1];
-                            if (hasNormalUvMinMax)
-                            {
-                                MFA_ASSERT(vertex.normalMapUV[0] >= normals_uv_min[0]);
-                                MFA_ASSERT(vertex.normalMapUV[0] <= normals_uv_max[0]);
-                                MFA_ASSERT(vertex.normalMapUV[1] >= normals_uv_min[1]);
-                                MFA_ASSERT(vertex.normalMapUV[1] <= normals_uv_max[1]);
-                            }
+                        {
+                            copyDataIntoVertexMember(
+                                vertex.normalMapUV,
+                                2,
+                                normalsUVs,
+                                i,
+                                hasNormalUvMinMax,
+                                normalsUV_Min,
+                                normalsUV_Max
+                            );
                         }
+
                         if (hasTangentValue)
                         {// Tangent
-                            vertex.tangentValue[0] = tangentValues[i * 4 + 0];
-                            vertex.tangentValue[1] = tangentValues[i * 4 + 1];
-                            vertex.tangentValue[2] = tangentValues[i * 4 + 2];
-                            vertex.tangentValue[3] = tangentValues[i * 4 + 3];
-                            if (hasTangentsValuesMinMax)
-                            {
-                                MFA_ASSERT(vertex.tangentValue[0] >= tangentsValuesMin[0]);
-                                MFA_ASSERT(vertex.tangentValue[0] <= tangentsValuesMax[0]);
-                                MFA_ASSERT(vertex.tangentValue[1] >= tangentsValuesMin[1]);
-                                MFA_ASSERT(vertex.tangentValue[1] <= tangentsValuesMax[1]);
-                                MFA_ASSERT(vertex.tangentValue[2] >= tangentsValuesMin[2]);
-                                MFA_ASSERT(vertex.tangentValue[2] <= tangentsValuesMax[2]);
-                                MFA_ASSERT(vertex.tangentValue[3] >= tangentsValuesMin[3]);
-                                MFA_ASSERT(vertex.tangentValue[3] <= tangentsValuesMax[3]);
-                            }
+                            copyDataIntoVertexMember(
+                                vertex.tangentValue,
+                                4,
+                                tangentValues,
+                                i,
+                                hasTangentsValuesMinMax,
+                                tangentsValuesMin,
+                                tangentsValuesMax
+                            );
                         }
+
                         if (hasEmissiveTexture)
                         {// Emissive
-                            vertex.emissionUV[0] = emissionUVs[i * 2 + 0];
-                            vertex.emissionUV[1] = emissionUVs[i * 2 + 1];
-                            if (hasEmissionUvMinMax)
-                            {
-                                MFA_ASSERT(vertex.emissionUV[0] >= emission_uv_min[0]);
-                                MFA_ASSERT(vertex.emissionUV[0] <= emission_uv_max[0]);
-                                MFA_ASSERT(vertex.emissionUV[1] >= emission_uv_min[1]);
-                                MFA_ASSERT(vertex.emissionUV[1] <= emission_uv_max[1]);
-                            }
+                            copyDataIntoVertexMember(
+                                vertex.emissionUV,
+                                2,
+                                emissionUVs,
+                                i,
+                                hasEmissionUvMinMax,
+                                emissionUV_Min,
+                                emissionUV_Max
+                            );
                         }
+
                         if (hasBaseColorTexture)
                         {// BaseColor
-                            vertex.baseColorUV[0] = baseColorUvs[i * 2 + 0];
-                            vertex.baseColorUV[1] = baseColorUvs[i * 2 + 1];
-                            if (hasBaseColorUvMinMax)
-                            {
-                                MFA_ASSERT(vertex.baseColorUV[0] >= baseColorUvMin[0]);
-                                MFA_ASSERT(vertex.baseColorUV[0] <= baseColorUvMax[0]);
-                                MFA_ASSERT(vertex.baseColorUV[1] >= baseColorUvMin[1]);
-                                MFA_ASSERT(vertex.baseColorUV[1] <= baseColorUvMax[1]);
-                            }
+                            copyDataIntoVertexMember(
+                                vertex.baseColorUV,
+                                2,
+                                baseColorUVs,
+                                i,
+                                hasEmissionUvMinMax,
+                                baseColorUV_Min,
+                                baseColorUV_Max
+                            );
                         }
+
+                        if (hasOcclusionTexture)
+                        {// Occlusion
+                            copyDataIntoVertexMember(
+                                vertex.occlusionUV,
+                                2,
+                                occlusionUVs,
+                                i,
+                                hasOcclusionUV_MinMax,
+                                occlusionUV_Min,
+                                occlusionUV_Max
+                            );
+                        }
+
                         if (hasCombinedMetallicRoughness)
                         {// MetallicRoughness
                             vertex.roughnessUV[0] = metallicRoughnessUvs[i * 2 + 0];
@@ -1390,10 +1505,12 @@ namespace MFA::Importer
                         primitive.metallicRoughnessTextureIndex = metallicRoughnessTextureIndex;
                         primitive.normalTextureIndex = normalTextureIndex;
                         primitive.emissiveTextureIndex = emissiveTextureIndex;
+                        primitive.occlusionTextureIndex = occlusionTextureIndex;
                         Copy<4>(primitive.baseColorFactor, baseColorFactor);
                         primitive.metallicFactor = metallicFactor;
                         primitive.roughnessFactor = roughnessFactor;
                         Copy<3>(primitive.emissiveFactor, emissiveFactor);
+                        //primitive.occlusionStrengthFactor = occlusion
                         primitive.hasBaseColorTexture = hasBaseColorTexture;
                         primitive.hasEmissiveTexture = hasEmissiveTexture;
                         primitive.hasMetallicRoughnessTexture = hasCombinedMetallicRoughness;

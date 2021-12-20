@@ -125,6 +125,12 @@ namespace MFA
         memcpy(dst, items.begin(), Count * sizeof(T));
     }
 
+    template<typename T>
+    constexpr void Copy(T * dst, T const * src, uint32_t count)
+    {
+        memcpy(dst, src, count * sizeof(T));
+    }
+
     template<uint32_t Count, typename T>
     constexpr bool IsEqual(T const * memory1, T const * memory2)
     {

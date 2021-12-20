@@ -201,7 +201,7 @@ void PrefabEditorScene::essencesWindow()
         UI::InputText("Essence name", mInputTextEssenceName);
         UI::Button("Create", [this]()->void
         {
-            static std::vector<WinApi::Extension> extensions{
+            std::vector<WinApi::Extension> const extensions{
                 WinApi::Extension {
                     .name = "Gltf files",
                     .value = "*.gltf"
@@ -240,7 +240,7 @@ void PrefabEditorScene::saveAndLoadWindow()
     UI::BeginWindow("Save and load panel");
     UI::Button("Save", [this]()->void
     {
-        static const std::vector<WinApi::Extension> extensions{
+        std::vector<WinApi::Extension> const extensions{
             WinApi::Extension {
                 .name = "Json",
                 .value = "*.json"
@@ -266,7 +266,7 @@ void PrefabEditorScene::saveAndLoadWindow()
     });
     UI::Button("Load", [this]()->void
     {
-        static const std::vector<WinApi::Extension> extensions{
+        std::vector<WinApi::Extension> const extensions{
             WinApi::Extension {
                 .name = "Json",
                 .value = "*.json"
