@@ -8,6 +8,8 @@
 #include "engine/entity_system/EntitySystem.hpp"
 #include "engine/ui_system/UISystem.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
+#include "engine/scene_manager/Scene.hpp"
+#include "engine/scene_manager/SceneManager.hpp"
 
 namespace MFA
 {
@@ -38,20 +40,21 @@ namespace MFA
 
         auto * entity = GetEntity();
 
+        static int RendererEntityId = 0;
         auto * childEntity = EntitySystem::CreateEntity(
-            "BoundingVolumeMeshRendererChild",
-            entity,
+            std::string("BoundingVolumeMeshRenderer" + std::to_string(RendererEntityId++)).c_str(),
+            SceneManager::GetActiveScene()->GetRootEntity(),
             EntitySystem::CreateEntityParams {
                 .serializable = false
             }
         );
 
-        mChildTransformComponent = childEntity->AddComponent<TransformComponent>();
-        MFA_ASSERT(mChildTransformComponent.expired() == false);
+        mRendererTransformComponent = childEntity->AddComponent<TransformComponent>();
+        MFA_ASSERT(mRendererTransformComponent.expired() == false);
 
         EntitySystem::InitEntity(childEntity);
 
-        mVariant->Init(entity, SelfPtr(), mChildTransformComponent, mBoundingVolumeComponent);
+        mVariant->Init(entity, SelfPtr(), mRendererTransformComponent, mBoundingVolumeComponent);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -63,23 +66,35 @@ namespace MFA
     {
         RendererComponent::Update(deltaTimeInSec, recordState);
 
-        auto const boundingVolumePtr = mBoundingVolumeComponent.lock();
-        if (boundingVolumePtr == nullptr)
-        {
-            return;
-        }
-        auto const childTransform = mChildTransformComponent.lock();
-        if (childTransform == nullptr)
+        auto const boundingVolumeComponent = mBoundingVolumeComponent.lock();
+        if (boundingVolumeComponent == nullptr)
         {
             return;
         }
 
-        auto const centerAndRadius = boundingVolumePtr->DEBUG_GetCenterAndRadius();
-        childTransform->UpdateTransform(
-            centerAndRadius.center,
-            childTransform->GetRotation(),
-            glm::vec3(centerAndRadius.extend.x, centerAndRadius.extend.y, centerAndRadius.extend.z)
+        auto const rendererTransformComponent = mRendererTransformComponent.lock();
+        if (rendererTransformComponent == nullptr)
+        {
+            return;
+        }
+
+        auto const & bvWorldPosition = boundingVolumeComponent->GetWorldPosition();
+        auto const & bvExtend = boundingVolumeComponent->GetExtend();
+
+        rendererTransformComponent->UpdateTransform(
+            bvWorldPosition,
+            rendererTransformComponent->GetRotation(),
+            bvExtend
         );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void BoundingVolumeRendererComponent::Shutdown()
+    {
+        RendererComponent::Shutdown();
+
+
     }
 
     //-------------------------------------------------------------------------------------------------

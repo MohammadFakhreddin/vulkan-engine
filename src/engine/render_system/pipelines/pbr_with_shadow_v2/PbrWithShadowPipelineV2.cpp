@@ -594,6 +594,7 @@ namespace MFA
 
             for (auto & variant : variantsList)
             {
+                // TODO We should do this pass on objects that are visible from point light's point of view
                 if (variant->IsVisible())
                 {
                     RF::BindDescriptorSet(
@@ -920,7 +921,7 @@ namespace MFA
             .offset = offsetof(AS::MeshVertex, baseColorUV)
         });
 
-        {// Metallic/Roughness
+        {// Metallic/RoughnessUV
             VkVertexInputAttributeDescription attributeDescription{};
             attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
             attributeDescription.binding = 0;
@@ -964,6 +965,13 @@ namespace MFA
             attributeDescription.offset = offsetof(AS::MeshVertex, emissionUV);
             inputAttributeDescriptions.emplace_back(attributeDescription);
         }
+        // OcclusionUV
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = offsetof(AS::MeshVertex, occlusionUV), // Metallic and roughness have same uv for gltf files  
+        });
         {// HasSkin
             VkVertexInputAttributeDescription attributeDescription{};
             attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());

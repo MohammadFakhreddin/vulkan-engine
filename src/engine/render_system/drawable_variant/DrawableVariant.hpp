@@ -134,27 +134,15 @@ public:
     Entity * GetEntity() const;
 
     [[nodiscard]]
-    bool IsVisible() const
-    {
-        return IsActive() && mIsOccluded == false && mIsInFrustum == true;
-    }
+    bool IsVisible() const;
 
     [[nodiscard]]
-    bool IsOccluded() const
-    {
-        return mIsOccluded;
-    }
+    bool IsOccluded() const;
 
-    void SetIsOccluded(bool const isOccluded)
-    {
-        mIsOccluded = isOccluded;
-    }
+    void SetIsOccluded(bool const isOccluded);
 
     [[nodiscard]]
-    bool IsInFrustum()
-    {
-        return mIsInFrustum;
-    }
+    bool IsInFrustum();
 
     RT::StorageBufferCollection const & CreateStorageBuffer(uint32_t size, uint32_t count);
 

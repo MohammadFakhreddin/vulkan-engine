@@ -28,6 +28,8 @@ namespace MFA
 
         void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState) override;
 
+        void Shutdown() override;
+
         void OnUI() override;
 
         void Clone(Entity * entity) const override;
@@ -35,8 +37,8 @@ namespace MFA
     private:
 
         std::weak_ptr<BoundingVolumeComponent> mBoundingVolumeComponent {};
-        std::weak_ptr<TransformComponent> mChildTransformComponent {};
-
+        std::weak_ptr<TransformComponent> mRendererTransformComponent {};
+    
     };
 
 }

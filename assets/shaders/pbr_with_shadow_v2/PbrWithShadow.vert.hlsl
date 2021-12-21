@@ -13,6 +13,7 @@ struct VSIn {
     float3 normal: NORMAL0;
 
     float2 emissiveTexCoord: TEXCOORD4;
+    float2 occlusionTexCoord: TEXCOORD5;
 
     int hasSkin;
     int4 jointIndices;
@@ -32,6 +33,7 @@ struct VSOut {
     float3 worldBiTangent : TEXCOORD4;
 
     float2 emissiveTexCoord: TEXCOORD5;
+    float2 occlusionTexCoord: TEXCOORD5;
 
     float4 directionLightPosition[3];
 };
@@ -118,6 +120,7 @@ VSOut main(VSIn input) {
     output.worldBiTangent = worldBiTangent;
 
     output.emissiveTexCoord = input.emissiveTexCoord;
+    output.occlusionTexCoord = input.occlusionTexCoord;
 
     return output;
 }

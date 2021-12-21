@@ -23,7 +23,17 @@ public:
     
     void Init() override;
 
-    DEBUG_CenterAndRadius DEBUG_GetCenterAndRadius() override;
+    [[nodiscard]]
+    glm::vec3 const & GetExtend() override;
+
+    [[nodiscard]]
+    glm::vec3 const & GetLocalPosition() override;
+
+    [[nodiscard]]
+    float GetRadius() override;
+
+    [[nodiscard]]
+    glm::vec4 const & GetWorldPosition() override;
 
     void Clone(Entity * entity) const override;
 

@@ -7,6 +7,8 @@
 #include <vec3.hpp>
 #include <mat4x4.hpp>
 
+#include "AxisAlignedBoundingBoxComponent.hpp"
+
 namespace MFA {
 
     class MeshRendererComponent;
@@ -51,6 +53,8 @@ namespace MFA {
         
         [[nodiscard]]
         bool IsVisible() const;
+
+        bool IsMeshVisibleFromCameraPointOfView(AABB * aabbComponent);
 
         void GetShadowViewProjectionMatrices(float outData[6][16]) const;
 

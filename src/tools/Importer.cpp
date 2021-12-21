@@ -1522,6 +1522,10 @@ namespace MFA::Importer
                         Copy<3>(primitive.positionMin, positionsMinValue);
                         Copy<3>(primitive.positionMax, positionsMaxValue);
 
+                        primitive.alphaMode = alphaMode;
+                        primitive.alphaCutoff = alphaCutoff;
+                        primitive.doubleSided = doubleSided;
+
                         outResultModel.mesh->InsertPrimitive(
                             meshIndex,
                             primitive,

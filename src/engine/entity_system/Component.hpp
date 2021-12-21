@@ -46,7 +46,7 @@ componentName & operator = (componentName && rhs) noexcept = delete;    \
 
 class Entity;
 
-class Component
+class Component // TODO Remove self ptr and use "public std::enable_shared_from_this" instead
 {
 public:
 

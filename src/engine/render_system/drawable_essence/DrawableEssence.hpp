@@ -23,7 +23,7 @@ public:
         int normalTextureIndex;
         int emissiveTextureIndex;
         int hasSkin;
-        int placeholder1;
+        int occlusionTextureIndex;
     };
 
     explicit DrawableEssence(std::shared_ptr<RT::GpuModel> gpuModel);

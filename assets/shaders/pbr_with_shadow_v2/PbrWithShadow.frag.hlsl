@@ -20,6 +20,7 @@ struct PSIn {
     float3 worldBiTangent : TEXCOORD4;
 
     float2 emissiveTexCoord: TEXCOORD5;
+    float2 occlusionTexCoord: TEXCOORD5;
 
     float4 directionLightPosition[3];
 };
@@ -292,6 +293,15 @@ PSOut main(PSIn input) {
             }
         }
 	};
+
+    if (primitiveInfo.occlusionTextureIndex >= 0) {
+        float occlusionFactor = textures[primitiveInfo.occlusionTextureIndex].Sample(
+            textureSampler, 
+            input.occlusionTexCoord
+        ).r;
+        Lo *= occlusionFactor;
+    }
+    // TODO Apply occlusion texture here!
 
     // Combine with ambient
     float3 color = float3(0.0, 0.0, 0.0);

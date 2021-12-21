@@ -1,8 +1,9 @@
 #pragma once
 
-#include <vec3.hpp>
-
 #include "engine/entity_system/Component.hpp"
+
+#include <vec3.hpp>
+#include <vec4.hpp>
 
 namespace MFA {
     class CameraComponent;
@@ -27,15 +28,17 @@ namespace MFA {
         [[nodiscard]]
         bool IsInFrustum() const;
 
-        struct DEBUG_CenterAndRadius
-        {
-            glm::vec3 center {};
-            glm::vec3 extend {};
-            glm::vec3 positionMin {};
-            glm::vec3 positionMax {};
-        };
         [[nodiscard]]
-        virtual DEBUG_CenterAndRadius DEBUG_GetCenterAndRadius() = 0;
+        virtual glm::vec3 const & GetLocalPosition() = 0;
+
+        [[nodiscard]]
+        virtual glm::vec3 const & GetExtend() = 0;
+
+        [[nodiscard]]
+        virtual float GetRadius() = 0;
+
+        virtual glm::vec4 const & GetWorldPosition() = 0;
+
         
     protected:
 

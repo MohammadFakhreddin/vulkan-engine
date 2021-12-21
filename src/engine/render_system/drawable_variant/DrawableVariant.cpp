@@ -279,6 +279,34 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    bool DrawableVariant::IsVisible() const
+    {
+        return IsActive() && mIsOccluded == false && mIsInFrustum == true;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool DrawableVariant::IsOccluded() const
+    {
+        return mIsOccluded;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void DrawableVariant::SetIsOccluded(bool const isOccluded)
+    {
+        mIsOccluded = isOccluded;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool DrawableVariant::IsInFrustum()
+    {
+        return mIsInFrustum;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void DrawableVariant::SetActiveAnimationIndex(int const nextAnimationIndex, AnimationParams const & params)
     {
         if (nextAnimationIndex == mActiveAnimationIndex)

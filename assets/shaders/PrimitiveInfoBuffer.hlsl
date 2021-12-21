@@ -1,6 +1,6 @@
 #ifndef PRIMITIVE_INFO_BUFFER_HLSL
 #define PRIMITIVE_INFO_BUFFER_HLSL
-// TODO Occlusion texture
+
 // TODO Move hasSkin to vertex
 struct PrimitiveInfo {                                                  
     float4 baseColorFactor: COLOR0;                                     
@@ -19,7 +19,7 @@ struct PrimitiveInfo {
                                                                         
     int hasSkin;                                                        
                                                                         
-    int placeholder1;                                                   
+    int occlusionTextureIndex;                                                   
 };                                                                      
                                                                         
 struct PrimitiveInfoBuffer {                                            
