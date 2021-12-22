@@ -29,8 +29,6 @@ namespace MFA {
         explicit PointLightComponent(
             float radius,
             float maxDistance,
-            float projectionNearDistance,
-            float projectionFarDistance,
             std::weak_ptr<MeshRendererComponent> attachedMesh = {}         // Optional: Use this parameter only if you want the light to be visible if a certain mesh is visible
         );
 
@@ -54,7 +52,7 @@ namespace MFA {
         [[nodiscard]]
         bool IsVisible() const;
 
-        bool IsMeshVisibleFromCameraPointOfView(AABB * aabbComponent);
+        bool IsBoundingVolumeInRange(BoundingVolumeComponent * bvComponent) const;
 
         void GetShadowViewProjectionMatrices(float outData[6][16]) const;
 

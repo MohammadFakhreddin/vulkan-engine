@@ -20,14 +20,12 @@ MFA::PointLightComponent::PointLightComponent() = default;
 MFA::PointLightComponent::PointLightComponent(
     float const radius,
     float const maxDistance,
-    float const projectionNearDistance,
-    float const projectionFarDistance,
     std::weak_ptr<MeshRendererComponent> attachedMesh
 )
     : mRadius(radius)
     , mMaxDistance(maxDistance)
-    , mProjectionNearDistance(projectionNearDistance)
-    , mProjectionFarDistance(projectionFarDistance)
+    , mProjectionNearDistance(0)
+    , mProjectionFarDistance(maxDistance)
     , mMaxSquareDistance(maxDistance * maxDistance)
     , mAttachedMesh(std::move(attachedMesh))
 {
@@ -90,7 +88,7 @@ glm::vec3 MFA::PointLightComponent::GetPosition() const
 {
     if (auto const ptr = mTransformComponent.lock())
     {
-        return ptr->GetAbsolutePosition();
+        return ptr->GetWorldPosition();
     }
     return {};
 }
@@ -115,6 +113,8 @@ void MFA::PointLightComponent::OnUI()
         if (radius != mRadius)
         {
             mRadius = radius;
+            mProjectionNearDistance = 0.0f;
+            mProjectionFarDistance = mMaxDistance;
             computeAttenuation();
         }
 
@@ -143,6 +143,30 @@ bool MFA::PointLightComponent::IsVisible() const
         return ptr->GetVariant()->IsVisible();
     }
     return true;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+bool MFA::PointLightComponent::IsBoundingVolumeInRange(BoundingVolumeComponent * bvComponent) const
+{
+    auto const transformComponent = mTransformComponent.lock();
+    if (transformComponent == nullptr)
+    {
+        return false;
+    }
+
+    auto const & lightWP = transformComponent->GetWorldPosition();
+
+    auto const & bvWP = bvComponent->GetWorldPosition();
+    auto const bvRadius = bvComponent->GetRadius();
+
+    auto const xDiff = bvWP.x - lightWP.x;
+    auto const yDiff = bvWP.y - lightWP.y;
+    auto const zDiff = bvWP.z - lightWP.z;
+
+    float const squareDistance = ((xDiff * xDiff) + (yDiff * yDiff) + (zDiff * zDiff)) - (bvRadius * bvRadius);
+
+    return squareDistance <= mMaxSquareDistance;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -195,8 +219,6 @@ void MFA::PointLightComponent::Clone(Entity * entity) const
     entity->AddComponent<PointLightComponent>(
         mRadius,
         mMaxDistance,
-        mProjectionNearDistance,
-        mProjectionFarDistance,
         std::shared_ptr<MeshRendererComponent> {}
     );
 }
@@ -219,6 +241,8 @@ void MFA::PointLightComponent::Deserialize(nlohmann::json const & jsonObject)
     mMaxDistance = jsonObject["MaxDistance"];
     mProjectionNearDistance = jsonObject["ProjectionNearDistance"];
     mProjectionFarDistance = jsonObject["ProjectionFarDistance"];
+
+    mMaxSquareDistance = mMaxDistance * mMaxDistance;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -256,12 +280,12 @@ void MFA::PointLightComponent::computeViewProjectionMatrices()
         return;
     }
 
-    auto const lightPositionVector = transformComponentPtr->GetAbsolutePosition();
+    glm::vec3 const lightWP = transformComponentPtr->GetWorldPosition();
 
     Matrix::CopyGlmToCells(
         mShadowProjectionMatrix * glm::lookAt(
-            lightPositionVector,
-            lightPositionVector + glm::vec3(1.0, 0.0, 0.0),
+            lightWP,
+            lightWP + glm::vec3(1.0, 0.0, 0.0),
             glm::vec3(0.0, -1.0, 0.0)
         ),
         mShadowViewProjectionMatrices[0]
@@ -269,8 +293,8 @@ void MFA::PointLightComponent::computeViewProjectionMatrices()
 
     Matrix::CopyGlmToCells(
         mShadowProjectionMatrix * glm::lookAt(
-            lightPositionVector,
-            lightPositionVector + glm::vec3(-1.0, 0.0, 0.0),
+            lightWP,
+            lightWP + glm::vec3(-1.0, 0.0, 0.0),
             glm::vec3(0.0, -1.0, 0.0)
         ),
         mShadowViewProjectionMatrices[1]
@@ -278,8 +302,8 @@ void MFA::PointLightComponent::computeViewProjectionMatrices()
 
     Matrix::CopyGlmToCells(
         mShadowProjectionMatrix * glm::lookAt(
-            lightPositionVector,
-            lightPositionVector + glm::vec3(0.0, 1.0, 0.0),
+            lightWP,
+            lightWP + glm::vec3(0.0, 1.0, 0.0),
             glm::vec3(0.0, 0.0, 1.0)
         ),
         mShadowViewProjectionMatrices[2]
@@ -287,8 +311,8 @@ void MFA::PointLightComponent::computeViewProjectionMatrices()
 
     Matrix::CopyGlmToCells(
         mShadowProjectionMatrix * glm::lookAt(
-            lightPositionVector,
-            lightPositionVector + glm::vec3(0.0, -1.0, 0.0),
+            lightWP,
+            lightWP + glm::vec3(0.0, -1.0, 0.0),
             glm::vec3(0.0, 0.0, -1.0)
         ),
         mShadowViewProjectionMatrices[3]
@@ -296,8 +320,8 @@ void MFA::PointLightComponent::computeViewProjectionMatrices()
 
     Matrix::CopyGlmToCells(
         mShadowProjectionMatrix * glm::lookAt(
-            lightPositionVector,
-            lightPositionVector + glm::vec3(0.0, 0.0, 1.0),
+            lightWP,
+            lightWP + glm::vec3(0.0, 0.0, 1.0),
             glm::vec3(0.0, -1.0, 0.0)
         ),
         mShadowViewProjectionMatrices[4]
@@ -305,8 +329,8 @@ void MFA::PointLightComponent::computeViewProjectionMatrices()
 
     Matrix::CopyGlmToCells(
         mShadowProjectionMatrix * glm::lookAt(
-            lightPositionVector,
-            lightPositionVector + glm::vec3(0.0, 0.0, -1.0),
+            lightWP,
+            lightWP + glm::vec3(0.0, 0.0, -1.0),
             glm::vec3(0.0, -1.0, 0.0)
         ),
         mShadowViewProjectionMatrices[5]

@@ -23,7 +23,7 @@ namespace MFA
         glm::vec3 const & rotation_,          // In euler angle
         glm::vec3 const & scale_
     )
-        : mPosition(position_)
+        : mLocalPosition(position_)
         , mRotation(rotation_)
         , mScale(scale_)
     {}
@@ -66,9 +66,9 @@ namespace MFA
     void TransformComponent::UpdateTransform(float position[3], float rotation[3], float scale[3])
     {
         bool hasChanged = false;
-        if (Matrix::IsEqual(mPosition, position) == false)
+        if (Matrix::IsEqual(mLocalPosition, position) == false)
         {
-            Matrix::CopyCellsToGlm(position, mPosition);
+            Matrix::CopyCellsToGlm(position, mLocalPosition);
             hasChanged = true;
         }
         if (Matrix::IsEqual(mRotation, rotation) == false)
@@ -94,9 +94,9 @@ namespace MFA
     )
     {
         bool hasChanged = false;
-        if (mPosition != position)
+        if (mLocalPosition != position)
         {
-            mPosition = position;
+            mLocalPosition = position;
             hasChanged = true;
         }
         if (mRotation != rotation)
@@ -119,9 +119,9 @@ namespace MFA
 
     void TransformComponent::UpdatePosition(glm::vec3 const & position)
     {
-        if (Matrix::IsEqual(mPosition, position) == false)
+        if (Matrix::IsEqual(mLocalPosition, position) == false)
         {
-            mPosition = position;
+            mLocalPosition = position;
             computeTransform();
         }
     }
@@ -130,9 +130,9 @@ namespace MFA
 
     void TransformComponent::UpdatePosition(float position[3])
     {
-        if (Matrix::IsEqual(mPosition, position) == false)
+        if (Matrix::IsEqual(mLocalPosition, position) == false)
         {
-            Matrix::CopyCellsToGlm(position, mPosition);
+            Matrix::CopyCellsToGlm(position, mLocalPosition);
             computeTransform();
         }
     }
@@ -188,24 +188,16 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::GetPosition(float outPosition[3]) const
+    void TransformComponent::GetLocalPosition(float outPosition[3]) const
     {
-        Matrix::CopyGlmToCells(mPosition, outPosition);
+        Matrix::CopyGlmToCells(mLocalPosition, outPosition);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    glm::vec3 TransformComponent::GetAbsolutePosition() const
+    glm::vec4 const & TransformComponent::GetWorldPosition() const
     {
-        // TODO Cache positions
-        glm::vec3 position {};
-
-        glm::vec4 const & lastCol = mTransform[3];
-        position.x = lastCol.x;
-        position.y = lastCol.y;
-        position.z = lastCol.z;
-
-        return position;
+        return mWorldPosition;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -224,9 +216,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    glm::vec3 const & TransformComponent::GetPosition() const
+    glm::vec3 const & TransformComponent::GetLocalPosition() const
     {
-        return mPosition;
+        return mLocalPosition;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -265,7 +257,7 @@ namespace MFA
         {
             Component::OnUI();
 
-            glm::vec3 position = mPosition;
+            glm::vec3 position = mLocalPosition;
             glm::vec3 scale = mScale;
             glm::vec3 rotation = mRotation;
 
@@ -284,7 +276,7 @@ namespace MFA
     void TransformComponent::Clone(Entity * entity) const
     {
         entity->AddComponent<TransformComponent>(
-            mPosition,
+            mLocalPosition,
             mRotation,
             mScale
         );
@@ -294,7 +286,7 @@ namespace MFA
 
     void TransformComponent::Serialize(nlohmann::json & jsonObject) const
     {
-        JsonUtils::SerializeVec3(jsonObject, "position", mPosition);
+        JsonUtils::SerializeVec3(jsonObject, "position", mLocalPosition);
         JsonUtils::SerializeVec3(jsonObject, "rotation", mRotation);
         JsonUtils::SerializeVec3(jsonObject, "scale", mScale);
     }
@@ -303,7 +295,7 @@ namespace MFA
 
     void TransformComponent::Deserialize(nlohmann::json const & jsonObject)
     {
-        JsonUtils::DeserializeVec3(jsonObject, "position", mPosition);
+        JsonUtils::DeserializeVec3(jsonObject, "position", mLocalPosition);
         JsonUtils::DeserializeVec3(jsonObject, "rotation", mRotation);
         JsonUtils::DeserializeVec3(jsonObject, "scale", mScale);
     }
@@ -316,7 +308,7 @@ namespace MFA
 
         // Position
         auto translateMatrix = glm::identity<glm::mat4>();
-        Matrix::Translate(translateMatrix, mPosition);
+        Matrix::Translate(translateMatrix, mLocalPosition);
 
         // Scale
         auto scaleMatrix = glm::identity<glm::mat4>();
@@ -333,6 +325,8 @@ namespace MFA
         }
 
         mTransform = parentTransform * translateMatrix * scaleMatrix * rotationMatrix;
+
+        mWorldPosition = mTransform * glm::vec4 {0 , 0, 0, 1.0f};
 
         // We notify any class that need to listen to transform component
         mTransformChangeSignal.Emit();

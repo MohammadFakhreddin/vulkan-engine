@@ -166,7 +166,7 @@ void GLTFMeshViewerScene::Init() {
             ptr->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
         }
 
-        entity->AddComponent<PointLightComponent>(0.5f, 1000.0f, Z_NEAR, Z_FAR);
+        entity->AddComponent<PointLightComponent>(0.5f, 1000.0f);
 
         mPointLightTransform = transformComponent;
 

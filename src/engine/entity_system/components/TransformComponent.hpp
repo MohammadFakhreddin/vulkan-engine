@@ -48,17 +48,17 @@ namespace MFA
         [[nodiscard]]
         glm::mat4 const & GetTransform() const noexcept;
 
-        void GetPosition(float outPosition[3]) const;
+        void GetLocalPosition(float outPosition[3]) const;
 
         [[nodiscard]]
-        glm::vec3 GetAbsolutePosition() const;
+        glm::vec4 const & GetWorldPosition() const;
 
         void GetRotation(float outRotation[3]) const;
 
         void GetScale(float outScale[3]) const;
 
         [[nodiscard]]
-        glm::vec3 const & GetPosition() const;
+        glm::vec3 const & GetLocalPosition() const;
 
         [[nodiscard]]
         glm::vec3 const & GetRotation() const;
@@ -84,9 +84,11 @@ namespace MFA
 
         Signal<> mTransformChangeSignal {};
 
-        glm::vec3 mPosition { 0.0f, 0.0f, 0.0f };
+        glm::vec3 mLocalPosition { 0.0f, 0.0f, 0.0f };
         glm::vec3 mRotation { 0.0f, 0.0f, 0.0f };          // In euler angle // TODO Use Quaternion instead! Soon! ToQuat is heavy
         glm::vec3 mScale { 1.0f, 1.0f, 1.0f };
+
+        glm::vec4 mWorldPosition {};
 
         glm::mat4 mTransform;
 

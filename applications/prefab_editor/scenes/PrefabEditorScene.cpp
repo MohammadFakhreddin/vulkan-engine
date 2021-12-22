@@ -598,9 +598,7 @@ void PrefabEditorScene::prepareCreateComponentInstructionMap()
     {
         return entity->AddComponent<PointLightComponent>(
             1.0f,
-            100.0f,
-            Z_NEAR,
-            Z_FAR
+            100.0f
         ).lock();
     });
 }

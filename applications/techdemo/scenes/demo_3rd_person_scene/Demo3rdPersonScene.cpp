@@ -181,7 +181,7 @@ void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, RT::CommandRec
         if (inputForwardMove != 0.0f || inputRightMove != 0.0f)
         {
             float position[3]{};
-            playerTransform->GetPosition(position);
+            playerTransform->GetLocalPosition(position);
             float scale[3]{};
             playerTransform->GetScale(scale);
             float targetEulerAngles[3]{};
