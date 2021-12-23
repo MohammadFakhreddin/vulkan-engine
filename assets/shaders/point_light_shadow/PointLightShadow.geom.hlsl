@@ -41,7 +41,7 @@ void main(triangle GSInput input[3], /*uint InvocationID : SV_GSInstanceID,*/ in
             GSOutput output = (GSOutput)0;
             output.worldPosition = input[i].worldPosition;
             output.position = mul(pointLightsBuffer.items[pushConsts.lightIndex].viewProjectionMatrices[faceIndex], input[i].worldPosition);
-            output.Layer = faceIndex;       // Specifies which layer of cube array we render on.
+            output.Layer = pushConsts.lightIndex * 6 + faceIndex;       // Specifies which layer of cube array we render on.
             outStream.Append(output);       // Emit vertex
         }
         outStream.RestartStrip();           // End primitive

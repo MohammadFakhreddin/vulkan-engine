@@ -103,7 +103,7 @@ namespace MFA
 
         void createEssenceDescriptorSets(DrawableEssence & essence) const;
 
-        void createVariantDescriptorSets(DrawableVariant * variant);
+        void createVariantDescriptorSets(DrawableVariant * variant) const;
 
         void createPerFrameDescriptorSetLayout();
 

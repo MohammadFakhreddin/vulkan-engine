@@ -360,7 +360,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createVariantDescriptorSets(DrawableVariant * variant)
+    void PBRWithShadowPipelineV2::createVariantDescriptorSets(DrawableVariant * variant) const
     {
         MFA_ASSERT(variant != nullptr);
 
@@ -587,7 +587,7 @@ namespace MFA
         
         for (uint32_t lightIndex = 0; lightIndex < pointLightCount; ++lightIndex)
         {
-            pushConstants.lightIndex = lightIndex;
+            pushConstants.lightIndex = static_cast<int>(lightIndex);
 
             auto * pointLight = pointLights[lightIndex];
             MFA_ASSERT(pointLight != nullptr);

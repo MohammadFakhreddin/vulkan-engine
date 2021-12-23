@@ -11,6 +11,8 @@
 
 #include "libs/nlohmann/json.hpp"
 
+static constexpr float ProjectionNearDistance = 0.001f;
+
 //-------------------------------------------------------------------------------------------------
 
 MFA::PointLightComponent::PointLightComponent() = default;
@@ -24,7 +26,7 @@ MFA::PointLightComponent::PointLightComponent(
 )
     : mRadius(radius)
     , mMaxDistance(maxDistance)
-    , mProjectionNearDistance(0)
+    , mProjectionNearDistance(ProjectionNearDistance)
     , mProjectionFarDistance(maxDistance)
     , mMaxSquareDistance(maxDistance * maxDistance)
     , mAttachedMesh(std::move(attachedMesh))
@@ -113,8 +115,6 @@ void MFA::PointLightComponent::OnUI()
         if (radius != mRadius)
         {
             mRadius = radius;
-            mProjectionNearDistance = 0.0f;
-            mProjectionFarDistance = mMaxDistance;
             computeAttenuation();
         }
 
@@ -124,6 +124,10 @@ void MFA::PointLightComponent::OnUI()
         {
             mMaxDistance = maxDistance;
             mMaxSquareDistance = maxDistance * maxDistance;
+
+            mProjectionFarDistance = mMaxDistance;
+
+            computeProjection();
         }
 
         UI::TreePop();
