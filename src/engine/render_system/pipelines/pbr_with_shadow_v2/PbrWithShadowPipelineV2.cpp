@@ -5,6 +5,7 @@
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "tools/Importer.hpp"
 #include "engine/BedrockMatrix.hpp"
+#include "engine/entity_system/components/PointLightComponent.hpp"
 #include "engine/render_system/drawable_essence/DrawableEssence.hpp"
 #include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 #include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
@@ -564,7 +565,8 @@ namespace MFA
 
     void PBRWithShadowPipelineV2::performPointLightShadowPass(RT::CommandRecordState & recordState)
     {
-        if (mAttachedScene->GetPointLightCount() <= 0)
+        auto const pointLightCount = mAttachedScene->GetPointLightCount();
+        if (pointLightCount <= 0)
         {
             return;
         }
@@ -576,27 +578,44 @@ namespace MFA
             mPerFrameDescriptorSetGroup
         );
 
+        auto const pointLights = mAttachedScene->GetPointLights();
+
         // Vertex push constants
         PointLightShadowPassPushConstants pushConstants {};
 
         mPointLightShadowRenderPass->BeginRenderPass(recordState, *mPointLightShadowResources);
-        for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
+        
+        for (uint32_t lightIndex = 0; lightIndex < pointLightCount; ++lightIndex)
         {
-            auto & essence = essenceAndVariantList.second.Essence;
-            auto & variantsList = essenceAndVariantList.second.Variants;
+            pushConstants.lightIndex = lightIndex;
 
-            if (variantsList.empty())
+            auto * pointLight = pointLights[lightIndex];
+            MFA_ASSERT(pointLight != nullptr);
+
+            for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
             {
-                continue;
-            }
+                auto & essence = essenceAndVariantList.second.Essence;
+                auto & variantsList = essenceAndVariantList.second.Variants;
 
-            essence->BindAllRenderRequiredData(recordState);
-
-            for (auto & variant : variantsList)
-            {
-                // TODO We should do this pass on objects that are visible from point light's point of view
-                if (variant->IsVisible())
+                if (variantsList.empty())
                 {
+                    continue;
+                }
+
+                essence->BindAllRenderRequiredData(recordState);
+
+                for (auto & variant : variantsList)
+                {
+                    auto const * bvComponent = variant->GetBoundingVolume();
+                    if (bvComponent == nullptr)
+                    {
+                        continue;
+                    }
+                    // We only render variants that are within pointLight's visible range
+                    if (pointLight->IsBoundingVolumeInRange(bvComponent) == false)
+                    {
+                        continue;
+                    }
                     RF::BindDescriptorSet(
                         recordState,
                         RenderFrontend::DescriptorSetType::PerVariant,
@@ -612,7 +631,7 @@ namespace MFA
 
                         RF::PushConstants(
                             recordState,
-                            VK_SHADER_STAGE_VERTEX_BIT,
+                            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                             0,
                             CBlobAliasOf(pushConstants)
                         );
@@ -1162,7 +1181,7 @@ namespace MFA
 
         std::vector<VkPushConstantRange> pushConstantRanges{};
         VkPushConstantRange pushConstantRange{
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
             .offset = 0,
             .size = sizeof(PointLightShadowPassPushConstants),
         };

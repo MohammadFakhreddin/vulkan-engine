@@ -35,28 +35,28 @@ void MFA::SphereBoundingVolumeComponent::Init()
 
 //-------------------------------------------------------------------------------------------------
 
-glm::vec3 const & MFA::SphereBoundingVolumeComponent::GetExtend()
+glm::vec3 const & MFA::SphereBoundingVolumeComponent::GetExtend() const
 {
     MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
 }
 
 //-------------------------------------------------------------------------------------------------
 
-glm::vec3 const & MFA::SphereBoundingVolumeComponent::GetLocalPosition()
+glm::vec3 const & MFA::SphereBoundingVolumeComponent::GetLocalPosition() const
 {
     MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
 }
 
 //-------------------------------------------------------------------------------------------------
 
-float MFA::SphereBoundingVolumeComponent::GetRadius()
+float MFA::SphereBoundingVolumeComponent::GetRadius() const
 {
     MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
 }
 
 //-------------------------------------------------------------------------------------------------
 
-glm::vec4 const & MFA::SphereBoundingVolumeComponent::GetWorldPosition()
+glm::vec4 const & MFA::SphereBoundingVolumeComponent::GetWorldPosition() const
 {
     MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
 }

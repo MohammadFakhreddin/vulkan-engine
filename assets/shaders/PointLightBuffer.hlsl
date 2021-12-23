@@ -1,7 +1,7 @@
 #ifndef POINT_LIGHT_BUFFER_HLSL
 #define POINT_LIGHT_BUFFER_HLSL
 
-#define MAX_POINT_LIGHT_COUNT 5
+#define MAX_POINT_LIGHT_COUNT 10
 
 struct PointLight                                                                       
 {                                                                                       

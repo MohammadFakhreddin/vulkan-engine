@@ -52,7 +52,7 @@ namespace MFA {
         [[nodiscard]]
         bool IsVisible() const;
 
-        bool IsBoundingVolumeInRange(BoundingVolumeComponent * bvComponent) const;
+        bool IsBoundingVolumeInRange(BoundingVolumeComponent const * bvComponent) const;
 
         void GetShadowViewProjectionMatrices(float outData[6][16]) const;
 

@@ -29,15 +29,16 @@ namespace MFA {
         bool IsInFrustum() const;
 
         [[nodiscard]]
-        virtual glm::vec3 const & GetLocalPosition() = 0;
+        virtual glm::vec3 const & GetLocalPosition() const = 0;
 
         [[nodiscard]]
-        virtual glm::vec3 const & GetExtend() = 0;
+        virtual glm::vec3 const & GetExtend() const = 0;
 
         [[nodiscard]]
-        virtual float GetRadius() = 0;
+        virtual float GetRadius() const = 0;
 
-        virtual glm::vec4 const & GetWorldPosition() = 0;
+        [[nodiscard]]
+        virtual glm::vec4 const & GetWorldPosition() const = 0;
 
         
     protected:

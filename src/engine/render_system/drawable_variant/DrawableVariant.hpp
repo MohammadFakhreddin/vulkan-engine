@@ -149,6 +149,9 @@ public:
     [[nodiscard]]
     RT::StorageBufferCollection const & GetStorageBuffer() const;
 
+    [[nodiscard]]
+    BoundingVolumeComponent * GetBoundingVolume() const;
+
 private:
 
     void updateAnimation(float deltaTimeInSec, bool isVisible);

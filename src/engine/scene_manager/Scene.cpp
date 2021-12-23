@@ -153,6 +153,21 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    std::vector<PointLightComponent *> Scene::GetPointLights() const
+    {
+        std::vector<PointLightComponent *> pointLights {};
+        for (auto & pointLightComponent : mPointLightComponents)
+        {
+            if (auto ptr = pointLightComponent.lock())
+            {
+                pointLights.emplace_back(ptr.get());
+            }
+        }
+        return pointLights;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void Scene::prepareCameraBuffer()
     {
         mCameraBuffer = RF::CreateUniformBuffer(

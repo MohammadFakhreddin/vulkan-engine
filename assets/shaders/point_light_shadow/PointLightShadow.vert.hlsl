@@ -21,7 +21,7 @@ struct PushConsts
     float4x4 model;
     float4x4 inverseNodeTransform;
     int skinIndex;
-    int placeholder0;
+    int lightIndex;
     int placeholder1;
     int placeholder2;
 };

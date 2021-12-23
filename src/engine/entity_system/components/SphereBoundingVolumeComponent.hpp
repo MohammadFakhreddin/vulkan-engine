@@ -24,16 +24,16 @@ public:
     void Init() override;
 
     [[nodiscard]]
-    glm::vec3 const & GetExtend() override;
+    glm::vec3 const & GetExtend() const override;
 
     [[nodiscard]]
-    glm::vec3 const & GetLocalPosition() override;
+    glm::vec3 const & GetLocalPosition() const override;
 
     [[nodiscard]]
-    float GetRadius() override;
+    float GetRadius() const override;
 
     [[nodiscard]]
-    glm::vec4 const & GetWorldPosition() override;
+    glm::vec4 const & GetWorldPosition() const override;
 
     void Clone(Entity * entity) const override;
 

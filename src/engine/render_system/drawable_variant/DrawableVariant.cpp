@@ -354,6 +354,13 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    BoundingVolumeComponent * DrawableVariant::GetBoundingVolume() const
+    {
+        return mBoundingVolumeComponent.lock().get();
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void DrawableVariant::updateAnimation(float const deltaTimeInSec, bool isVisible)
     {
         using Animation = AS::Mesh::Animation;

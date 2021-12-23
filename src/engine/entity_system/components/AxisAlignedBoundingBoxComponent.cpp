@@ -140,28 +140,28 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    glm::vec3 const & AxisAlignedBoundingBoxComponent::GetExtend()
+    glm::vec3 const & AxisAlignedBoundingBoxComponent::GetExtend() const
     {
         return mExtend;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    glm::vec3 const & AxisAlignedBoundingBoxComponent::GetLocalPosition()
+    glm::vec3 const & AxisAlignedBoundingBoxComponent::GetLocalPosition() const
     {
         return mLocalPosition;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    float AxisAlignedBoundingBoxComponent::GetRadius()
+    float AxisAlignedBoundingBoxComponent::GetRadius() const
     {
         return mRadius;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    glm::vec4 const & AxisAlignedBoundingBoxComponent::GetWorldPosition()
+    glm::vec4 const & AxisAlignedBoundingBoxComponent::GetWorldPosition() const
     {
         return mWorldPosition;
     }

@@ -147,7 +147,7 @@ bool MFA::PointLightComponent::IsVisible() const
 
 //-------------------------------------------------------------------------------------------------
 
-bool MFA::PointLightComponent::IsBoundingVolumeInRange(BoundingVolumeComponent * bvComponent) const
+bool MFA::PointLightComponent::IsBoundingVolumeInRange(BoundingVolumeComponent const * bvComponent) const
 {
     auto const transformComponent = mTransformComponent.lock();
     if (transformComponent == nullptr)
