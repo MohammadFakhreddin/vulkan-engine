@@ -3,7 +3,6 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockMemory.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 #include "engine/render_system/RenderTypesFWD.hpp"
 
 #include <utility>
@@ -45,12 +44,15 @@ MFA::DrawableEssence::DrawableEssence(std::shared_ptr<RT::GpuModel> gpuModel)
                     primitiveInfo.normalTextureIndex = primitive.hasNormalTexture ? primitive.normalTextureIndex : -1;
                     primitiveInfo.emissiveTextureIndex = primitive.hasEmissiveTexture ? primitive.emissiveTextureIndex : -1;
                     primitiveInfo.hasSkin = primitive.hasSkin ? 1 : 0;
-                    // TODO Occlusion
+                    primitiveInfo.occlusionTextureIndex = primitive.hasOcclusionTexture ? primitive.occlusionTextureIndex : -1;
 
                     ::memcpy(primitiveInfo.baseColorFactor, primitive.baseColorFactor, sizeof(primitiveInfo.baseColorFactor));
                     static_assert(sizeof(primitiveInfo.baseColorFactor) == sizeof(primitive.baseColorFactor));
                     ::memcpy(primitiveInfo.emissiveFactor, primitive.emissiveFactor, sizeof(primitiveInfo.emissiveFactor));
                     static_assert(sizeof(primitiveInfo.emissiveFactor) == sizeof(primitive.emissiveFactor));
+
+                    primitiveInfo.alphaMode = static_cast<int>(primitive.alphaMode);
+                    primitiveInfo.alphaCutoff = primitive.alphaCutoff;
                 }
             }
 

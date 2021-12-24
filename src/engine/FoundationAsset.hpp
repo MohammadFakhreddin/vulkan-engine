@@ -1,13 +1,12 @@
 #pragma once
 
+#include "BedrockMemory.hpp"
 #include "BedrockCommon.hpp"
 
 #include <glm/mat4x4.hpp>
 
 #include <string>
 #include <vector>
-
-#include "BedrockMemory.hpp"
 
 // TODO Separate this file into multiple files
 
@@ -300,15 +299,15 @@ public:
 
         // TODO Use these render variables to render objects in correct order.
         // Also we might have opportunity not to order translucent primitives in depth pre pass and shadow passes
-        enum class AlphaMode
+        enum class AlphaMode : uint8_t
         {
-            Opaque,
-            Mask,
-            Blend
+            Opaque = 0,
+            Mask = 1,
+            Blend = 2
         };
         AlphaMode alphaMode = AlphaMode::Opaque;
         float alphaCutoff = 0.0f;
-        bool doubleSided = false;
+        bool doubleSided = false;                   // TODO How are we supposed to render double sided objects ?
 
         bool hasPositionMinMax = false;
 
@@ -327,6 +326,9 @@ public:
     
     struct SubMesh {
         std::vector<Primitive> primitives {};
+        std::vector<Primitive *> blendPrimitives {};
+        std::vector<Primitive *> maskPrimitives {};
+        std::vector<Primitive *> opaquePrimitives {};
 
         bool hasPositionMinMax = false;
 
@@ -341,6 +343,9 @@ public:
             std::numeric_limits<float>::min(),
             std::numeric_limits<float>::min()
         };
+        
+        [[nodiscard]]
+        std::vector<Primitive *> const & findPrimitives(Primitive::AlphaMode alphaMode) const;
     };
     
     struct Node {
@@ -597,6 +602,7 @@ using MeshVertex = Mesh::Vertex;
 using MeshIndex = Mesh::Index;
 using MeshSkin = Mesh::Skin;
 using MeshAnimation = Mesh::Animation;
+using AlphaMode = Mesh::Primitive::AlphaMode;
 
 //--------------------------------ShaderAsset--------------------------------------
 class Shader final : public Base {

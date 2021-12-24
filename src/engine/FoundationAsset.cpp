@@ -244,6 +244,25 @@ namespace MFA::AssetSystem
 
     //-------------------------------------------------------------------------------------------------
 
+    std::vector<Mesh::Primitive *> const & SubMesh::findPrimitives(Primitive::AlphaMode alphaMode) const
+    {
+        switch (alphaMode)
+        {
+            case Primitive::AlphaMode::Blend:
+                return blendPrimitives;
+            case Primitive::AlphaMode::Mask:
+                return maskPrimitives;
+            case Primitive::AlphaMode::Opaque:
+                return opaquePrimitives;
+            default:
+                break;
+        }
+        MFA_LOG_ERROR("Alpha mode is not supported %d", static_cast<int>(alphaMode));
+        return {};
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     Mesh::Mesh() = default;
     Mesh::~Mesh() = default;
 
@@ -301,7 +320,7 @@ namespace MFA::AssetSystem
         }
 
         // Creating position min max for entire mesh based on subMeshes
-        for (auto const & subMesh : mSubMeshes)
+        for (auto & subMesh : mSubMeshes)
         {
             if (subMesh.hasPositionMinMax)
             {
@@ -333,6 +352,24 @@ namespace MFA::AssetSystem
                 if (subMesh.positionMax[2] > mPositionMax[2])
                 {
                     mPositionMax[2] = subMesh.positionMax[2];
+                }
+            }
+            for (auto & primitive : subMesh.primitives)
+            {
+                switch (primitive.alphaMode)
+                {
+                    case Primitive::AlphaMode::Opaque:
+                        subMesh.opaquePrimitives.emplace_back(&primitive);
+                    break;
+                    case Primitive::AlphaMode::Blend:
+                        subMesh.blendPrimitives.emplace_back(&primitive);
+                    break;
+                    case Primitive::AlphaMode::Mask:
+                        subMesh.maskPrimitives.emplace_back(&primitive);
+                    break;
+                    default:
+                    MFA_LOG_ERROR("Unhandled primitive alpha mode detected %d", static_cast<int>(primitive.alphaMode));
+                    break;
                 }
             }
         }

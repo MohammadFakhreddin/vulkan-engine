@@ -27,14 +27,14 @@ TEXTURES_BUFFER(textures)
 PRIMITIVE_INFO(primitiveInfoBuffer)
 
 void main(PSIn input) {
-    PrimitiveInfo primitiveInfo = primitiveInfoBuffer.primitiveInfo[pushConsts.primitiveIndex];
+    // PrimitiveInfo primitiveInfo = primitiveInfoBuffer.primitiveInfo[pushConsts.primitiveIndex];
+    // if (primitiveInfo.alphaMode == 1) {
+    //     float4 baseColor = primitiveInfo.baseColorTextureIndex >= 0
+    //         ? textures[primitiveInfo.baseColorTextureIndex].Sample(textureSampler, input.baseColorTexCoord).rgba
+    //         : primitiveInfo.baseColorFactor.rgba;
 
-    float4 baseColor = primitiveInfo.baseColorTextureIndex >= 0
-        ? textures[primitiveInfo.baseColorTextureIndex].Sample(textureSampler, input.baseColorTexCoord).rgba
-        : primitiveInfo.baseColorFactor.rgba;
-
-    if (baseColor.a < 1.0f)
-    {
-        discard;
-    }
+    //     if (baseColor.a < 1.0) {
+    //         discard;
+    //     }
+    // }
 }

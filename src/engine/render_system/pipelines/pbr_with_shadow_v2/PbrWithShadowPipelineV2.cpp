@@ -421,19 +421,39 @@ namespace MFA
                 occlusionQueryData.Results.data()
             );
 
+            for (uint32_t i = 0; i < static_cast<uint32_t>(occlusionQueryData.Results.size()); ++i)
+            {
+                if (auto const variant = occlusionQueryData.Variants[i].lock())
+                {
+                    variant->SetIsOccluded(true);
+                }
+            }
+
+            for (uint32_t i = 0; i < static_cast<uint32_t>(occlusionQueryData.Results.size()); ++i)
+            {
+                if (auto const variant = occlusionQueryData.Variants[i].lock())
+                {
+                    if (occlusionQueryData.Results[i] > 0)
+                    {
+                        variant->SetIsOccluded(false);
+                    }
+                }
+            }
+
+#ifdef MFA_DEBUG
             uint32_t occlusionCount = 0;
             for (uint32_t i = 0; i < static_cast<uint32_t>(occlusionQueryData.Results.size()); ++i)
             {
                 if (auto const variant = occlusionQueryData.Variants[i].lock())
                 {
-                    variant->SetIsOccluded(occlusionQueryData.Results[i] == 0);
-                }
-                if (occlusionQueryData.Results[i] == 0)
-                {
-                    occlusionCount++;
+                    if (variant->IsOccluded())
+                    {
+                        occlusionCount++;
+                    }
                 }
             }
             MFA_LOG_INFO("Occluded objects: %d", static_cast<int>(occlusionCount));
+#endif
 
             occlusionQueryData.Variants.clear();
         }
@@ -443,8 +463,6 @@ namespace MFA
 
     void PBRWithShadowPipelineV2::performDepthPrePass(RT::CommandRecordState & recordState)
     {
-        DepthPrePassPushConstants pushConstants{};
-
         RF::BindDrawPipeline(recordState, mDepthPassPipeline);
         RF::BindDescriptorSet(
             recordState,
@@ -453,6 +471,16 @@ namespace MFA
         );
 
         mDepthPrePass->BeginRenderPass(recordState);
+        renderForDepthPrePass(recordState, AlphaMode::Opaque);
+        mDepthPrePass->EndRenderPass(recordState);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::renderForDepthPrePass(RT::CommandRecordState const & recordState, AlphaMode const alphaMode) const
+    {
+        DepthPrePassPushConstants pushConstants{};
+
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
             auto & essence = essenceAndVariantList.second.Essence;
@@ -476,7 +504,12 @@ namespace MFA
                         variant->GetDescriptorSetGroup()
                     );
 
-                    variant->Draw(recordState, [&recordState, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
+                    variant->Draw(
+                        recordState,
+                        [&recordState, &pushConstants](
+                            AS::MeshPrimitive const & primitive,
+                            DrawableVariant::Node const & node
+                        )-> void
                         {
                             // Vertex push constants
                             pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
@@ -490,13 +523,13 @@ namespace MFA
                                 0,
                                 CBlobAliasOf(pushConstants)
                             );
-                        }
+                        },
+                        alphaMode
                     );
 
                 }
             }
         }
-        mDepthPrePass->EndRenderPass(recordState);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -515,10 +548,19 @@ namespace MFA
             mPerFrameDescriptorSetGroup
         );
 
-        // Vertex push constants
+        mDirectionalLightShadowRenderPass->BeginRenderPass(recordState, *mDirectionalLightShadowResources);
+        renderForDirectionalLightShadowPass(recordState, AlphaMode::Opaque);
+        renderForDirectionalLightShadowPass(recordState, AlphaMode::Mask);
+        renderForDirectionalLightShadowPass(recordState, AlphaMode::Blend);
+        mDirectionalLightShadowRenderPass->EndRenderPass(recordState);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::renderForDirectionalLightShadowPass(RT::CommandRecordState const & recordState, AlphaMode const alphaMode) const
+    {
         DirectionalLightShadowPassPushConstants pushConstants {};
 
-        mDirectionalLightShadowRenderPass->BeginRenderPass(recordState, *mDirectionalLightShadowResources);
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
             auto & essence = essenceAndVariantList.second.Essence;
@@ -533,7 +575,8 @@ namespace MFA
 
             for (auto & variant : variantsList)
             {
-                if (variant->IsVisible())
+                // TODO We need a wider frustum for shadows
+                if (variant->IsActive())
                 {
                     RF::BindDescriptorSet(
                         recordState,
@@ -554,11 +597,10 @@ namespace MFA
                             0,
                             CBlobAliasOf(pushConstants)
                         );
-                    });
+                    }, alphaMode);
                 }
             }
         }
-        mDirectionalLightShadowRenderPass->EndRenderPass(recordState);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -578,13 +620,24 @@ namespace MFA
             mPerFrameDescriptorSetGroup
         );
 
-        auto const pointLights = mAttachedScene->GetPointLights();
+        mPointLightShadowRenderPass->BeginRenderPass(recordState, *mPointLightShadowResources);
+        renderForPointLightShadowPass(recordState, AlphaMode::Opaque);
+        renderForPointLightShadowPass(recordState, AlphaMode::Mask);
+        renderForPointLightShadowPass(recordState, AlphaMode::Blend);
+        mPointLightShadowRenderPass->EndRenderPass(recordState);
+    }
 
-        // Vertex push constants
+    //-------------------------------------------------------------------------------------------------
+    
+    void PBRWithShadowPipelineV2::renderForPointLightShadowPass(RT::CommandRecordState const & recordState, AlphaMode const alphaMode) const
+    {
+        auto const pointLightCount = mAttachedScene->GetPointLightCount();
+        MFA_ASSERT(pointLightCount > 0);
+        auto const pointLights = mAttachedScene->GetPointLights();
+        MFA_ASSERT(pointLights.size() == pointLightCount);
+
         PointLightShadowPassPushConstants pushConstants {};
 
-        mPointLightShadowRenderPass->BeginRenderPass(recordState, *mPointLightShadowResources);
-        
         for (uint32_t lightIndex = 0; lightIndex < pointLightCount; ++lightIndex)
         {
             pushConstants.lightIndex = static_cast<int>(lightIndex);
@@ -635,22 +688,19 @@ namespace MFA
                             0,
                             CBlobAliasOf(pushConstants)
                         );
-                    });
+                    }, alphaMode);
                 }
             }
         }
-        mPointLightShadowRenderPass->EndRenderPass(recordState);
     }
 
     //-------------------------------------------------------------------------------------------------
-    // We have separate pass for occlusion. Because of not having order of drawing, we need the depth pre pass instead.
+
     void PBRWithShadowPipelineV2::performOcclusionQueryPass(RT::CommandRecordState & recordState)
     {
-        auto & occlusionQueryData = mOcclusionQueryDataList[recordState.frameIndex];
-
         RF::ResetQueryPool(
             recordState,
-            occlusionQueryData.Pool,
+            mOcclusionQueryDataList[recordState.frameIndex].Pool,
             10000
         );
 
@@ -662,6 +712,17 @@ namespace MFA
         );
 
         mOcclusionRenderPass->BeginRenderPass(recordState);
+        renderForOcclusionQueryPass(recordState, AlphaMode::Opaque);
+        renderForOcclusionQueryPass(recordState, AlphaMode::Mask);
+        renderForOcclusionQueryPass(recordState, AlphaMode::Blend); 
+        mOcclusionRenderPass->EndRenderPass(recordState);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+    
+    void PBRWithShadowPipelineV2::renderForOcclusionQueryPass(RT::CommandRecordState const & recordState, AlphaMode const alphaMode)
+    {
+        auto & occlusionQueryData = mOcclusionQueryDataList[recordState.frameIndex];
 
         OcclusionPassPushConstants pushConstants{};
 
@@ -706,7 +767,7 @@ namespace MFA
                                 CBlobAliasOf(pushConstants)
                             );
                         }
-                    );
+                    , alphaMode);
 
                     RF::EndQuery(recordState, occlusionQueryData.Pool, static_cast<uint32_t>(occlusionQueryData.Variants.size()));
 
@@ -715,8 +776,6 @@ namespace MFA
                 }
             }
         }
-
-        mOcclusionRenderPass->EndRenderPass(recordState);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -729,7 +788,15 @@ namespace MFA
             RenderFrontend::DescriptorSetType::PerFrame,
             mPerFrameDescriptorSetGroup
         );
+        renderForDisplayPass(recordState, AlphaMode::Opaque);
+        renderForDisplayPass(recordState, AlphaMode::Mask);
+        renderForDisplayPass(recordState, AlphaMode::Blend);
+    }
 
+    //-------------------------------------------------------------------------------------------------
+    
+    void PBRWithShadowPipelineV2::renderForDisplayPass(RT::CommandRecordState const & recordState, AlphaMode alphaMode) const
+    {
         DisplayPassPushConstants pushConstants{};
 
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
@@ -769,13 +836,14 @@ namespace MFA
                                 CBlobAliasOf(pushConstants)
                             );
                         }
-                    );
+                    , alphaMode);
                 }
             }
         }
     }
 
     //-------------------------------------------------------------------------------------------------
+
     void PBRWithShadowPipelineV2::createPerFrameDescriptorSetLayout()
     {
         std::vector<VkDescriptorSetLayoutBinding> bindings{};

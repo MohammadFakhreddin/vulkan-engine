@@ -3,6 +3,7 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
+#include "engine/render_system/RenderBackend.hpp"
 
 //-------------------------------------------------------------------------------------------------
 
@@ -28,6 +29,8 @@ void MFA::OcclusionRenderPass::internalInit()
         .height = mImageHeight
     };
 
+    createDepthImage(extent);
+
     createRenderPass();
 
     createFrameBuffers(extent);
@@ -49,12 +52,14 @@ void MFA::OcclusionRenderPass::internalShutdown()
 
 void MFA::OcclusionRenderPass::BeginRenderPass(RT::CommandRecordState & recordState)
 {
-    RenderPass::BeginRenderPass(recordState);
-
     auto const extent = VkExtent2D {
         .width = mImageWidth,
         .height = mImageHeight
     };
+
+    copyDisplayPassDepthBuffer(recordState, extent);
+
+    RenderPass::BeginRenderPass(recordState);
 
     RF::AssignViewportAndScissorToCommandBuffer(RF::GetGraphicCommandBuffer(recordState), extent);
 
@@ -93,6 +98,8 @@ void MFA::OcclusionRenderPass::OnResize()
         .height = mImageHeight
     };
 
+    createDepthImage(extent);
+
     // Depth frame-buffer
     RF::DestroyFrameBuffers(
         static_cast<uint32_t>(mFrameBuffers.size()),
@@ -107,12 +114,12 @@ void MFA::OcclusionRenderPass::createRenderPass()
 {
 
     VkAttachmentDescription const depthAttachment{
-        .format = RF::GetDisplayRenderPass()->GetDepthImages()[0]->imageFormat,
+        .format = mDepthImageGroupList[0]->imageFormat,
         .samples = RF::GetMaxSamplesCount(),
         .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
         .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
         .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
         .initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
@@ -133,29 +140,6 @@ void MFA::OcclusionRenderPass::createRenderPass()
         }
     };
 
-    // TODO Fill dependencies correctly
-    // Subpass dependencies for layout transitions
-    std::vector<VkSubpassDependency> dependencies{
-        VkSubpassDependency {
-            .srcSubpass = VK_SUBPASS_EXTERNAL,
-            .dstSubpass = 0,
-            .srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-            .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            .srcAccessMask = VK_ACCESS_MEMORY_READ_BIT,
-            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-            .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
-        },
-        VkSubpassDependency {
-            .srcSubpass = 0,
-            .dstSubpass = VK_SUBPASS_EXTERNAL,
-            .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            .dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-            .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-            .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
-            .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
-        }
-    };
-
     std::vector<VkAttachmentDescription> attachments{ depthAttachment };
 
     mRenderPass = RF::CreateRenderPass(
@@ -163,8 +147,8 @@ void MFA::OcclusionRenderPass::createRenderPass()
         static_cast<uint32_t>(attachments.size()),
         subPassDescription.data(),
         static_cast<uint32_t>(subPassDescription.size()),
-        dependencies.data(),
-        static_cast<uint32_t>(dependencies.size())
+        nullptr,
+        0
     );
 }
 
@@ -174,10 +158,10 @@ void MFA::OcclusionRenderPass::createFrameBuffers(VkExtent2D const & extent)
 {
     mFrameBuffers.clear();
     mFrameBuffers.resize(RF::GetSwapChainImagesCount());
-    auto & depthImages = RF::GetDisplayRenderPass()->GetDepthImages();
+
     for (int i = 0; i < static_cast<int>(mFrameBuffers.size()); ++i)
     {
-        std::vector<VkImageView> const attachments {depthImages[i]->imageView->imageView};
+        std::vector<VkImageView> const attachments {mDepthImageGroupList[i]->imageView->imageView};
         mFrameBuffers[i] = RF::CreateFrameBuffer(
             mRenderPass,
             attachments.data(),
@@ -190,7 +174,154 @@ void MFA::OcclusionRenderPass::createFrameBuffers(VkExtent2D const & extent)
 
 //-------------------------------------------------------------------------------------------------
 
-VkFramebuffer MFA::OcclusionRenderPass::getFrameBuffer(RT::CommandRecordState const & drawPass)
+void MFA::OcclusionRenderPass::createDepthImage(VkExtent2D const & extent)
+{
+    mDepthImageGroupList.resize(RF::GetSwapChainImagesCount());
+    for (auto & depthImage : mDepthImageGroupList)
+    {
+        depthImage = RF::CreateDepthImage(
+            extent,
+            RT::CreateDepthImageOptions{
+                .usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                .samplesCount = RF::GetMaxSamplesCount()
+            }
+        );
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::OcclusionRenderPass::copyDisplayPassDepthBuffer(
+    RT::CommandRecordState const & recordState,
+    VkExtent2D const & extent2D
+) const
+{
+    auto const & displayPassDepthImage = RF::GetDisplayRenderPass()->GetDepthImages()[recordState.frameIndex]->imageGroup->image;
+    auto const & occlusionPassDepthImage = mDepthImageGroupList[recordState.frameIndex]->imageGroup->image;
+
+    {// Preparing images for copy
+        std::vector<VkImageMemoryBarrier> memoryBarriers {};
+
+        // Making color image ready for color attachment
+        VkImageSubresourceRange const subResourceRange{
+            .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        };
+
+        memoryBarriers.emplace_back(VkImageMemoryBarrier {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            .srcAccessMask = 0,
+            .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT,
+            .oldLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = displayPassDepthImage,
+            .subresourceRange = subResourceRange
+        });
+
+        memoryBarriers.emplace_back(VkImageMemoryBarrier {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            .srcAccessMask = 0,
+            .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = occlusionPassDepthImage,
+            .subresourceRange = subResourceRange
+        });
+
+        RF::PipelineBarrier(
+            RF::GetGraphicCommandBuffer(recordState),
+            VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+            VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+            static_cast<uint32_t>(memoryBarriers.size()),
+            memoryBarriers.data()
+        );
+    }
+    {// Copy
+        // Copy region for transfer from frame buffer to cube face
+        VkImageCopy const copyRegion{
+            .srcSubresource = {
+                .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+                .mipLevel = 0,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+            .srcOffset = { 0, 0, 0 },
+            .dstSubresource {
+                .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+                .mipLevel = 0,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+            .dstOffset = { 0, 0, 0 },
+            .extent {
+                .width = extent2D.width,
+                .height = extent2D.height,
+                .depth = 1,
+            }
+        };
+        RB::CopyImage(
+            RF::GetGraphicCommandBuffer(recordState),
+            displayPassDepthImage,
+            occlusionPassDepthImage,
+            copyRegion
+        );
+    }
+    {// Restoring images to their original state
+        std::vector<VkImageMemoryBarrier> memoryBarriers {};
+
+        // Making color image ready for color attachment
+        VkImageSubresourceRange const subResourceRange{
+            .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        };
+
+        memoryBarriers.emplace_back(VkImageMemoryBarrier {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            .srcAccessMask = 0,
+            .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            .newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = displayPassDepthImage,
+            .subresourceRange = subResourceRange
+        });
+
+        memoryBarriers.emplace_back(VkImageMemoryBarrier {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            .srcAccessMask = 0,
+            .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = occlusionPassDepthImage,
+            .subresourceRange = subResourceRange
+        });
+
+        RF::PipelineBarrier(
+            RF::GetGraphicCommandBuffer(recordState),
+            VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+            VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+            static_cast<uint32_t>(memoryBarriers.size()),
+            memoryBarriers.data()
+        );
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+
+VkFramebuffer MFA::OcclusionRenderPass::getFrameBuffer(RT::CommandRecordState const & drawPass) const
 {
     return mFrameBuffers[drawPass.imageIndex];
 }

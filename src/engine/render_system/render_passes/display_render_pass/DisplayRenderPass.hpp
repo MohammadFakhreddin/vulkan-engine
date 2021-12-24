@@ -51,6 +51,8 @@ namespace MFA
 
         void createDisplayRenderPass();
 
+        void createDepthImages(VkExtent2D const & extent2D);
+
         VkRenderPass mVkDisplayRenderPass{};
         uint32_t mSwapChainImagesCount = 0;
         std::shared_ptr<RT::SwapChainGroup> mSwapChainImages{};

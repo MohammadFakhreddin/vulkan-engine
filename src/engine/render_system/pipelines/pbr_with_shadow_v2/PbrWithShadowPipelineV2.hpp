@@ -99,6 +99,8 @@ namespace MFA
 
     private:
 
+        using AlphaMode = AS::Mesh::Primitive::AlphaMode;
+
         void createPerFrameDescriptorSets();
 
         void createEssenceDescriptorSets(DrawableEssence & essence) const;
@@ -135,13 +137,23 @@ namespace MFA
 
         void performDepthPrePass(RT::CommandRecordState & recordState);
 
+        void renderForDepthPrePass(RT::CommandRecordState const & recordState, AlphaMode alphaMode) const;
+
         void performDirectionalLightShadowPass(RT::CommandRecordState & recordState);
+
+        void renderForDirectionalLightShadowPass(RT::CommandRecordState const & recordState, AlphaMode alphaMode) const;
 
         void performPointLightShadowPass(RT::CommandRecordState & recordState);
 
+        void renderForPointLightShadowPass(RT::CommandRecordState const & recordState, AlphaMode alphaMode) const;
+
         void performOcclusionQueryPass(RT::CommandRecordState & recordState);
 
+        void renderForOcclusionQueryPass(RT::CommandRecordState const & recordState, AlphaMode alphaMode);
+
         void performDisplayPass(RT::CommandRecordState & recordState);
+
+        void renderForDisplayPass(RT::CommandRecordState const & recordState, AlphaMode alphaMode) const;
 
         bool mIsInitialized = false;
 

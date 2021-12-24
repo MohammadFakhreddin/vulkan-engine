@@ -63,9 +63,6 @@ const float PI = 3.14159265359;
 // const float linearAttenuation = 2.0f / lightSphereRadius;
 // const float quadraticAttenuation = 1.0f / (lightSphereRadius * lightSphereRadius);
 
-// TODO We should read alphaMaskCutoff from material
-const float alphaMaskCutoff = 0.1f;
-
 const float ambientOcclusion = 0.008f;
 
 // This function computes ratio between amount of light that reflect and refracts
@@ -198,7 +195,7 @@ PSOut main(PSIn input) {
         : primitiveInfo.baseColorFactor.rgba;
 
     // Alpha mask
-    if (baseColor.a < alphaMaskCutoff) {
+    if (primitiveInfo.alphaMode == 1 && baseColor.a < primitiveInfo.alphaCutoff) {
         discard;
     }
 	

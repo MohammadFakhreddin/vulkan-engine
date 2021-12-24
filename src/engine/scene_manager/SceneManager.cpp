@@ -156,20 +156,6 @@ namespace MFA::SceneManager
 
         // TODO We might need a logic step here as well
 
-        //if(state->ActiveSceneIndex != state->LastActiveSceneIndex) {
-        //    RF::DeviceWaitIdle();
-        //    if (state->LastActiveSceneIndex >= 0)
-        //    {
-        //        auto const ptr = state->RegisteredScenes[state->LastActiveSceneIndex];
-        //        ptr->Shutdown();
-        //    }
-        //    state->ActiveScene = state->RegisteredScenes[state->ActiveSceneIndex].scene;
-        //    if (auto const ptr = state->ActiveScene.lock())
-        //    {
-        //        ptr->Init();
-        //    }
-        //    state->LastActiveSceneIndex = state->ActiveSceneIndex;
-        //}
         if (state->NextActiveSceneIndex != -1)
         {
             startNextActiveScene();

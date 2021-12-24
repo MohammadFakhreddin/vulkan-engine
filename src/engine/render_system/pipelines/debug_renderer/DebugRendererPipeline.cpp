@@ -117,7 +117,7 @@ namespace MFA
                                 CBlobAliasOf(pushConstants)
                             );
                         }
-                    );
+                    , AS::AlphaMode::Opaque);
                 }
             }
         }

@@ -464,17 +464,6 @@ namespace MFA::Importer
 
                     auto const subMeshIndex = mesh->InsertSubMesh();
 
-                    //MFA_DEFER{
-                    //    if (mesh->IsValid() == false)
-                    //    {
-                    //        Blob vertexBuffer {};
-                    //        Blob indexBuffer {};
-                    //        mesh->RevokeBuffers(vertexBuffer, indexBuffer);
-                    //        Memory::Free(vertexBuffer);
-                    //        Memory::Free(indexBuffer);
-                    //    }
-                    //};
-
                     std::vector<AS::Mesh::Vertex> vertices(vertexCount);
                     std::vector<AS::Mesh::Index> indices(indexCount);
                     for (

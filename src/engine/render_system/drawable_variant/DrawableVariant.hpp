@@ -25,10 +25,10 @@ struct AnimationParams {
     float startTimeOffsetInSec = 0.0f;
 };
 
-// TODO: We need bounding sphere to check for visibility
-
 class DrawableVariant {
 public:
+
+    using AlphaMode = AS::AlphaMode;
     
     struct JointTransformData {
         glm::mat4 model;
@@ -96,7 +96,11 @@ public:
     void Shutdown();
 
     using BindDescriptorSetFunction = std::function<void(AS::MeshPrimitive const & primitive, Node const & node)>;
-    void Draw(RT::CommandRecordState const & drawPass, BindDescriptorSetFunction const & bindFunction);
+    void Draw(
+        RT::CommandRecordState const & drawPass,
+        BindDescriptorSetFunction const & bindFunction,
+        AlphaMode alphaMode
+    );
     
     [[nodiscard]]
     RT::UniformBufferGroup const * GetUniformBuffer(char const * name);
@@ -165,14 +169,16 @@ private:
     void drawNode(
         RT::CommandRecordState const & drawPass,
         Node const & node,
-        BindDescriptorSetFunction const & bindFunction
+        BindDescriptorSetFunction const & bindFunction,
+        AlphaMode alphaMode
     );
 
     void drawSubMesh(
         RT::CommandRecordState const & drawPass,
         AS::Mesh::SubMesh const & subMesh,
         Node const & node,
-        BindDescriptorSetFunction const & bindFunction
+        BindDescriptorSetFunction const & bindFunction,
+        AlphaMode alphaMode
     );
 
     [[nodiscard]]

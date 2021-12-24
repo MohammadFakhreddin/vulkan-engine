@@ -40,16 +40,7 @@ namespace MFA
             );
         }
 
-        mDepthImageGroupList.resize(mSwapChainImagesCount);
-        for (uint32_t i = 0; i < mSwapChainImagesCount; ++i)
-        {
-            mDepthImageGroupList[i] = RF::CreateDepthImage(
-                swapChainExtent,
-                RT::CreateDepthImageOptions{
-                    .samplesCount = RF::GetMaxSamplesCount()
-                }
-            );
-        }
+        createDepthImages(swapChainExtent);
 
         createDisplayRenderPass();
 
@@ -204,26 +195,15 @@ namespace MFA
             .height = surfaceCapabilities.currentExtent.height
         };
 
-        auto const swapChainExtent2D = VkExtent2D{
-            .width = swapChainExtend.width,
-            .height = swapChainExtend.height
-        };
-
         // Depth image
-        for (uint32_t i = 0; i < mSwapChainImagesCount; ++i)
-        {
-            //RF::DestroyDepthImage(mDepthImageGroupList[i]);
-            mDepthImageGroupList[i] = RF::CreateDepthImage(swapChainExtent2D, RT::CreateDepthImageOptions{
-                .samplesCount = RF::GetMaxSamplesCount()
-            });
-        }
+        createDepthImages(swapChainExtend);
 
         // MSAA image
         for (uint32_t i = 0; i < mSwapChainImagesCount; ++i)
         {
             //RF::DestroyColorImage(mMSAAImageGroupList[i]);
             mMSAAImageGroupList[i] = RF::CreateColorImage(
-                swapChainExtent2D,
+                swapChainExtend,
                 mSwapChainImages->swapChainFormat,
                 RT::CreateColorImageOptions{
                     .samplesCount = RF::GetMaxSamplesCount()
@@ -241,7 +221,7 @@ namespace MFA
             static_cast<uint32_t>(mDisplayFrameBuffers.size()),
             mDisplayFrameBuffers.data()
         );
-        createDisplayFrameBuffers(swapChainExtent2D);
+        createDisplayFrameBuffers(swapChainExtend);
 
     }
 
@@ -301,7 +281,7 @@ namespace MFA
     void DisplayRenderPass::createDisplayRenderPass()
     {
 
-        // Multisampled attachment that we render to
+        // Multi-sampled attachment that we render to
         VkAttachmentDescription const msaaAttachment{
             .format = mSwapChainImages->swapChainFormat,
             .samples = RF::GetMaxSamplesCount(),
@@ -364,28 +344,6 @@ namespace MFA
             }
         };
 
-        // Subpass dependencies for layout transitions
-        std::vector<VkSubpassDependency> dependencies{
-            VkSubpassDependency {
-                .srcSubpass = VK_SUBPASS_EXTERNAL,
-                .dstSubpass = 0,
-                .srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                .srcAccessMask = VK_ACCESS_MEMORY_READ_BIT,
-                .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
-            },
-            VkSubpassDependency {
-                .srcSubpass = 0,
-                .dstSubpass = VK_SUBPASS_EXTERNAL,
-                .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                .dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
-                .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
-            }
-        };
-
         std::vector<VkAttachmentDescription> attachments = { msaaAttachment, swapChainAttachment, depthAttachment };
 
         mVkDisplayRenderPass = RF::CreateRenderPass(
@@ -393,9 +351,26 @@ namespace MFA
             static_cast<uint32_t>(attachments.size()),
             subPassDescription.data(),
             static_cast<uint32_t>(subPassDescription.size()),
-            dependencies.data(),
-            static_cast<uint32_t>(dependencies.size())
+            nullptr,
+            0
         );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void DisplayRenderPass::createDepthImages(VkExtent2D const & extent2D)
+    {
+        mDepthImageGroupList.resize(mSwapChainImagesCount);
+        for (auto & depthImage : mDepthImageGroupList)
+        {
+            depthImage = RF::CreateDepthImage(
+                extent2D,
+                RT::CreateDepthImageOptions{
+                    .usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                    .samplesCount = RF::GetMaxSamplesCount()
+                }
+            );
+        }
     }
 
     //-------------------------------------------------------------------------------------------------

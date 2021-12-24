@@ -247,12 +247,13 @@ namespace MFA
 
     void DrawableVariant::Draw(
         RT::CommandRecordState const & drawPass,
-        BindDescriptorSetFunction const & bindFunction
+        BindDescriptorSetFunction const & bindFunction,
+        AlphaMode alphaMode
     )
     {
         for (auto & node : mNodes)
         {
-            drawNode(drawPass, node, bindFunction);
+            drawNode(drawPass, node, bindFunction, alphaMode);
         }
     }
 
@@ -584,10 +585,12 @@ namespace MFA
     void DrawableVariant::drawNode(
         RT::CommandRecordState const & drawPass,
         Node const & node,
-        BindDescriptorSetFunction const & bindFunction
+        BindDescriptorSetFunction const & bindFunction,
+        AlphaMode alphaMode
     )
     {
         // TODO We can reduce nodes count for better performance when importing
+        // Question: Why can't we just render sub-meshes ?
         if (node.meshNode->hasSubMesh())
         {
             MFA_ASSERT(static_cast<int>(mMesh.GetSubMeshCount()) > node.meshNode->subMeshIndex);
@@ -595,7 +598,8 @@ namespace MFA
                 drawPass,
                 mMesh.GetSubMeshByIndex(node.meshNode->subMeshIndex),
                 node,
-                bindFunction
+                bindFunction,
+                alphaMode
             );
         }
     }
@@ -606,19 +610,21 @@ namespace MFA
         RT::CommandRecordState const & drawPass,
         AssetSystem::Mesh::SubMesh const & subMesh,
         Node const & node,
-        BindDescriptorSetFunction const & bindFunction
+        BindDescriptorSetFunction const & bindFunction,
+        AlphaMode const alphaMode
     )
     {
-        if (subMesh.primitives.empty() == false)
+        auto const & primitives = subMesh.findPrimitives(alphaMode);
+        if (primitives.empty() == false)
         {
-            for (auto const & primitive : subMesh.primitives)
+            for (auto const * primitive : primitives)
             {
-                bindFunction(primitive, node);
+                bindFunction(*primitive, node);
                 RF::DrawIndexed(
                     drawPass,
-                    primitive.indicesCount,
+                    primitive->indicesCount,
                     1,
-                    primitive.indicesStartingIndex
+                    primitive->indicesStartingIndex
                 );
             }
         }

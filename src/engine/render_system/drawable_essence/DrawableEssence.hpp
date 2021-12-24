@@ -13,7 +13,7 @@ public:
         alignas(16) float baseColorFactor[4];
 
         float emissiveFactor[3];
-        int placeholder0;
+        float placeholder0;
 
         int baseColorTextureIndex;
         float metallicFactor;
@@ -24,6 +24,11 @@ public:
         int emissiveTextureIndex;
         int hasSkin;
         int occlusionTextureIndex;
+
+        int alphaMode;
+        float alphaCutoff;
+        float placeholder1;
+        float placeholder2;
     };
 
     explicit DrawableEssence(std::shared_ptr<RT::GpuModel> gpuModel);
