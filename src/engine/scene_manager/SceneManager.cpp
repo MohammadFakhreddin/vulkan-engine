@@ -162,47 +162,47 @@ namespace MFA::SceneManager
         }
 
         // Start of graphic record
-        auto drawPass = RF::StartGraphicCommandBufferRecording();
-        if (drawPass.isValid == false)
+        auto recordState = RF::StartGraphicCommandBufferRecording();
+        if (recordState.isValid == false)
         {
             return;
         }
 
-        EntitySystem::OnNewFrame(deltaTimeInSec, drawPass);
+        EntitySystem::OnNewFrame(deltaTimeInSec, recordState);
 
         // Pre render
         if (state->ActiveScene)
         {
             state->ActiveScene->OnPreRender(
                 deltaTimeInSec,
-                drawPass
+                recordState
             );
         }
 
-        state->DisplayRenderPass->BeginRenderPass(drawPass); // Draw pass being invalid means that RF cannot render anything
+        state->DisplayRenderPass->BeginRenderPass(recordState); // Draw pass being invalid means that RF cannot render anything
 
         // Render
         if (state->ActiveScene)
         {
             state->ActiveScene->OnRender(
                 deltaTimeInSec,
-                drawPass
+                recordState
             );
         }
-        UI::OnNewFrame(deltaTimeInSec, drawPass);
+        UI::OnNewFrame(deltaTimeInSec, recordState);
 
-        state->DisplayRenderPass->EndRenderPass(drawPass);
+        state->DisplayRenderPass->EndRenderPass(recordState);
 
         // Post render 
         if (state->ActiveScene)
         {
             state->ActiveScene->OnPostRender(
                 deltaTimeInSec,
-                drawPass
+                recordState
             );
         }
 
-        RF::EndGraphicCommandBufferRecording(drawPass);
+        RF::EndGraphicCommandBufferRecording(recordState);
         // End of graphic record
 
     }

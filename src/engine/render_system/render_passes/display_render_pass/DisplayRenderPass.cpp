@@ -46,6 +46,10 @@ namespace MFA
 
         createDisplayFrameBuffers(swapChainExtent);
 
+        createDepthImageBarrier();
+
+        createPresentToDrawBarrier();
+
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -69,48 +73,9 @@ namespace MFA
     void DisplayRenderPass::BeginRenderPass(RT::CommandRecordState & recordState)
     {
         RenderPass::BeginRenderPass(recordState);
-        // If present queue family and graphics queue family are different, then a barrier is necessary
-        // The barrier is also needed initially to transition the image to the present layout
-        VkImageMemoryBarrier presentToDrawBarrier = {};
-        presentToDrawBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        presentToDrawBarrier.srcAccessMask = 0;
-        presentToDrawBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        presentToDrawBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        presentToDrawBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-        auto const presentQueueFamily = RF::GetPresentQueueFamily();
-        auto const graphicQueueFamily = RF::GetGraphicQueueFamily();
-
-        if (presentQueueFamily != graphicQueueFamily)
-        {
-            presentToDrawBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            presentToDrawBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        }
-        else
-        {
-            presentToDrawBarrier.srcQueueFamilyIndex = presentQueueFamily;
-            presentToDrawBarrier.dstQueueFamilyIndex = graphicQueueFamily;
-        }
-
-        presentToDrawBarrier.image = mSwapChainImages->swapChainImages[recordState.imageIndex];
-
-        VkImageSubresourceRange const subResourceRange{
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseMipLevel = 0,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-        };
-
-        presentToDrawBarrier.subresourceRange = subResourceRange;
-
-        RF::PipelineBarrier(
-            RF::GetGraphicCommandBuffer(recordState),
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            1,
-            &presentToDrawBarrier
-        );
+        usePresentToDrawBarrier(recordState);
+        useDepthImageBarrier(recordState);
 
         auto surfaceCapabilities = RF::GetSurfaceCapabilities();
         auto const swapChainExtend = VkExtent2D{
@@ -227,6 +192,13 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    void DisplayRenderPass::NotifyDepthImageLayoutIsSet()
+    {
+        mIsDepthImageLayoutUndefined = false;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     VkImage DisplayRenderPass::GetSwapChainImage(RT::CommandRecordState const & drawPass)
     {
         return mSwapChainImages->swapChainImages[drawPass.imageIndex];
@@ -261,7 +233,7 @@ namespace MFA
         mDisplayFrameBuffers.resize(mSwapChainImagesCount);
         for (int i = 0; i < static_cast<int>(mDisplayFrameBuffers.size()); ++i)
         {
-            std::vector<VkImageView> const attachments {
+            std::vector<VkImageView> const attachments{
                 mMSAAImageGroupList[i]->imageView->imageView,
                 mSwapChainImages->swapChainImageViews[i]->imageView,
                 mDepthImageGroupList[i]->imageView->imageView
@@ -370,6 +342,105 @@ namespace MFA
                     .samplesCount = RF::GetMaxSamplesCount()
                 }
             );
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void DisplayRenderPass::createPresentToDrawBarrier()
+    {
+        // If present queue family and graphics queue family are different, then a barrier is necessary
+        // The barrier is also needed initially to transition the image to the present layout
+        VkImageMemoryBarrier presentToDrawBarrier = {};
+        presentToDrawBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        presentToDrawBarrier.srcAccessMask = 0;
+        presentToDrawBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        presentToDrawBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        presentToDrawBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+        auto const presentQueueFamily = RF::GetPresentQueueFamily();
+        auto const graphicQueueFamily = RF::GetGraphicQueueFamily();
+
+        if (presentQueueFamily != graphicQueueFamily)
+        {
+            presentToDrawBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            presentToDrawBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        }
+        else
+        {
+            presentToDrawBarrier.srcQueueFamilyIndex = presentQueueFamily;
+            presentToDrawBarrier.dstQueueFamilyIndex = graphicQueueFamily;
+        }
+
+        VkImageSubresourceRange const subResourceRange{
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        };
+
+        presentToDrawBarrier.subresourceRange = subResourceRange;
+
+        mPresentToDrawBarrier = presentToDrawBarrier;
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void DisplayRenderPass::createDepthImageBarrier()
+    {
+        VkImageSubresourceRange const subResourceRange{
+            .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        };
+        mDepthImageBarrier = VkImageMemoryBarrier {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            .srcAccessMask = 0,
+            .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .subresourceRange = subResourceRange
+        };
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void DisplayRenderPass::usePresentToDrawBarrier(RT::CommandRecordState const & recordState)
+    {
+        mPresentToDrawBarrier.image = mSwapChainImages->swapChainImages[recordState.imageIndex];
+
+        RF::PipelineBarrier(
+            RF::GetGraphicCommandBuffer(recordState),
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            1,
+            &mPresentToDrawBarrier
+        );
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void DisplayRenderPass::useDepthImageBarrier(RT::CommandRecordState const & recordState)
+    {
+        if (mIsDepthImageLayoutUndefined == true)
+        {
+            mDepthImageBarrier.image = mDepthImageGroupList[recordState.imageIndex]->imageGroup->image;
+
+            RF::PipelineBarrier(
+                RF::GetGraphicCommandBuffer(recordState),
+                VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+                VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+                1,
+                &mDepthImageBarrier
+            );
+        } else
+        {
+            mIsDepthImageLayoutUndefined = true;
         }
     }
 

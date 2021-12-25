@@ -39,11 +39,13 @@ namespace MFA
         void createFrameBuffers(VkExtent2D const & extent);
 
         [[nodiscard]]
-        VkFramebuffer getFrameBuffer(RT::CommandRecordState const & drawPass);
+        VkFramebuffer getFrameBuffer(RT::CommandRecordState const & drawPass) const;
 
         VkRenderPass mRenderPass {};
         std::vector<VkFramebuffer> mFrameBuffers {};
-        
+
+        DisplayRenderPass * mDisplayRenderPass = nullptr;
+
     };
 
 }

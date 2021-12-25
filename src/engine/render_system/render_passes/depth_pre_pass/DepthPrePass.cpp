@@ -15,8 +15,8 @@ VkRenderPass MFA::DepthPrePass::GetVkRenderPass()
 
 void MFA::DepthPrePass::internalInit()
 {
-    auto * displayRenderPass = RF::GetDisplayRenderPass();
-    MFA_ASSERT(displayRenderPass != nullptr);
+    mDisplayRenderPass = RF::GetDisplayRenderPass();
+    MFA_ASSERT(mDisplayRenderPass != nullptr);
 
     auto surfaceCapabilities = RF::GetSurfaceCapabilities();
     auto const swapChainExtent = VkExtent2D {
@@ -46,6 +46,9 @@ void MFA::DepthPrePass::internalShutdown()
 void MFA::DepthPrePass::BeginRenderPass(RT::CommandRecordState & recordState)
 {
     RenderPass::BeginRenderPass(recordState);
+
+    RF::GetDisplayRenderPass()->NotifyDepthImageLayoutIsSet();
+
     auto surfaceCapabilities = RF::GetSurfaceCapabilities();
     auto const swapChainExtend = VkExtent2D{
         .width = surfaceCapabilities.currentExtent.width,
@@ -66,6 +69,7 @@ void MFA::DepthPrePass::BeginRenderPass(RT::CommandRecordState & recordState)
         static_cast<uint32_t>(clearValues.size()),
         clearValues.data()
     );
+
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -100,7 +104,7 @@ void MFA::DepthPrePass::createRenderPass()
 {
 
     VkAttachmentDescription const depthAttachment{
-        .format = RF::GetDisplayRenderPass()->GetDepthImages()[0]->imageFormat,
+        .format = mDisplayRenderPass->GetDepthImages()[0]->imageFormat,
         .samples = RF::GetMaxSamplesCount(),
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -169,7 +173,7 @@ void MFA::DepthPrePass::createFrameBuffers(VkExtent2D const & extent)
     mFrameBuffers.resize(RF::GetSwapChainImagesCount());
     for (int i = 0; i < static_cast<int>(mFrameBuffers.size()); ++i)
     {
-        std::vector<VkImageView> const attachments = {RF::GetDisplayRenderPass()->GetDepthImages()[i]->imageView->imageView};
+        std::vector<VkImageView> const attachments = {mDisplayRenderPass->GetDepthImages()[i]->imageView->imageView};
         mFrameBuffers[i] = RF::CreateFrameBuffer(
             mRenderPass,
             attachments.data(),
@@ -182,7 +186,7 @@ void MFA::DepthPrePass::createFrameBuffers(VkExtent2D const & extent)
 
 //-------------------------------------------------------------------------------------------------
 
-VkFramebuffer MFA::DepthPrePass::getFrameBuffer(RT::CommandRecordState const & drawPass)
+VkFramebuffer MFA::DepthPrePass::getFrameBuffer(RT::CommandRecordState const & drawPass) const
 {
     return mFrameBuffers[drawPass.imageIndex];
 }

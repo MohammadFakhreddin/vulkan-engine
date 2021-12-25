@@ -196,13 +196,12 @@ void MFA::OcclusionRenderPass::copyDisplayPassDepthBuffer(
     VkExtent2D const & extent2D
 ) const
 {
-    auto const & displayPassDepthImage = RF::GetDisplayRenderPass()->GetDepthImages()[recordState.frameIndex]->imageGroup->image;
-    auto const & occlusionPassDepthImage = mDepthImageGroupList[recordState.frameIndex]->imageGroup->image;
+    auto const & displayPassDepthImage = RF::GetDisplayRenderPass()->GetDepthImages()[recordState.imageIndex]->imageGroup->image;
+    auto const & occlusionPassDepthImage = mDepthImageGroupList[recordState.imageIndex]->imageGroup->image;
 
     {// Preparing images for copy
         std::vector<VkImageMemoryBarrier> memoryBarriers {};
 
-        // Making color image ready for color attachment
         VkImageSubresourceRange const subResourceRange{
             .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
             .baseMipLevel = 0,
@@ -276,7 +275,6 @@ void MFA::OcclusionRenderPass::copyDisplayPassDepthBuffer(
     {// Restoring images to their original state
         std::vector<VkImageMemoryBarrier> memoryBarriers {};
 
-        // Making color image ready for color attachment
         VkImageSubresourceRange const subResourceRange{
             .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
             .baseMipLevel = 0,

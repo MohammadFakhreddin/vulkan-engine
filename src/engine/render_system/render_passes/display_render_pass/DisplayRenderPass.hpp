@@ -30,11 +30,13 @@ namespace MFA
         [[nodiscard]]
         std::vector<std::shared_ptr<RT::DepthImageGroup>> const & GetDepthImages() const;
 
-        void BeginRenderPass(RT::CommandRecordState & recordState);
+        void BeginRenderPass(RT::CommandRecordState & recordState) override;
 
-        void EndRenderPass(RT::CommandRecordState & recordState);
+        void EndRenderPass(RT::CommandRecordState & recordState) override;
 
         void OnResize() override;
+
+        void NotifyDepthImageLayoutIsSet();
 
     protected:
 
@@ -53,13 +55,24 @@ namespace MFA
 
         void createDepthImages(VkExtent2D const & extent2D);
 
+        void createPresentToDrawBarrier();
+        void createDepthImageBarrier();
+
+        void usePresentToDrawBarrier(RT::CommandRecordState const & recordState);
+        void useDepthImageBarrier(RT::CommandRecordState const & recordState);
+
         VkRenderPass mVkDisplayRenderPass{};
         uint32_t mSwapChainImagesCount = 0;
         std::shared_ptr<RT::SwapChainGroup> mSwapChainImages{};
         std::vector<VkFramebuffer> mDisplayFrameBuffers{};
         std::vector<std::shared_ptr<RT::ColorImageGroup>> mMSAAImageGroupList{};
         std::vector<std::shared_ptr<RT::DepthImageGroup>> mDepthImageGroupList{};
-    
+
+        bool mIsDepthImageLayoutUndefined = true;
+
+        VkImageMemoryBarrier mPresentToDrawBarrier  {};
+        VkImageMemoryBarrier mDepthImageBarrier {};
+
     };
 
 }

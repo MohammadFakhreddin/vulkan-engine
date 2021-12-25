@@ -341,6 +341,9 @@ list(
     "applications/techdemo/scenes/demo_3rd_person_scene/Demo3rdPersonScene.hpp"
     "applications/techdemo/scenes/demo_3rd_person_scene/Demo3rdPersonScene.cpp"
     
+    "applications/techdemo/scenes/particle_fire_scene/ParticleFireScene.hpp"
+    "applications/techdemo/scenes/particle_fire_scene/ParticleFireScene.cpp"
+
     # "src/scenes/pbr_scene/PBRScene.cpp"
     # "src/scenes/pbr_scene/PBRScene.hpp"
     

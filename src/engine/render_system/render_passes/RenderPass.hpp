@@ -27,7 +27,7 @@ public:
 
 protected:
 
-    void BeginRenderPass(RT::CommandRecordState & drawPass);
+    virtual void BeginRenderPass(RT::CommandRecordState & drawPass);
 
     virtual void EndRenderPass(RT::CommandRecordState & drawPass);
 
