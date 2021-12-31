@@ -16,6 +16,7 @@
 #include "engine/entity_system/components/TransformComponent.hpp"
 #include "engine/entity_system/components/DirectionalLightComponent.hpp"
 #include "engine/BedrockMatrix.hpp"
+#include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
 #include "tools/PrefabFileStorage.hpp"
 
@@ -46,13 +47,17 @@ void Demo3rdPersonScene::Init()
         mErrorTexture = RF::CreateTexture(cpuTexture);
     }
 
-    auto sphereCpuModel = ShapeGenerator::Sphere();
-    mSphereModel = ResourceManager::Assign(std::move(sphereCpuModel), "Sphere");
-    mDebugRenderPipeline.CreateEssenceIfNotExists(mSphereModel);
+    auto const sphereCpuModel = ShapeGenerator::Sphere();
+    RC::Assign(sphereCpuModel, "Sphere");
+    auto const sphereGpuModel = RC::AcquireForGpu("Sphere", false);
 
-    auto cubeCpuModel = ShapeGenerator::Cube();
-    mCubeModel = ResourceManager::Assign(std::move(cubeCpuModel), "Cube");
-    mDebugRenderPipeline.CreateEssenceIfNotExists(mCubeModel);
+    mDebugRenderPipeline.CreateEssenceIfNotExists(sphereGpuModel, sphereCpuModel->mesh);
+
+    auto const cubeCpuModel = ShapeGenerator::Cube();
+    RC::Assign(cubeCpuModel, "Cube");
+    auto const cubeGpuModel = RC::AcquireForGpu("Cube", false);
+
+    mDebugRenderPipeline.CreateEssenceIfNotExists(cubeGpuModel, cubeCpuModel->mesh);
 
     mDebugRenderPipeline.Init();
     mPbrPipeline.Init(mSampler, mErrorTexture);
@@ -88,7 +93,7 @@ void Demo3rdPersonScene::Init()
             float eulerAngle[3]{ -15.0f, 0.0f, 0.0f };
             thirdPersonCamera->SetDistanceAndRotation(3.0f, eulerAngle);
 
-            thirdPersonCamera->Init();
+            thirdPersonCamera->init();
             EntitySystem::UpdateEntity(entity);
 
             mThirdPersonCamera = thirdPersonCamera;
@@ -301,7 +306,7 @@ void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, RT::CommandRec
             // TODO What should we do for animations ?
             if (auto const meshRendererPtr = mPlayerMeshRenderer.lock())
             {
-                if (auto variant = meshRendererPtr->GetVariant())
+                if (auto * variant = static_cast<DrawableVariant *>(meshRendererPtr->getVariant()))
                 {
                     variant->SetActiveAnimation("SwordAndShieldRun", { .transitionDuration = 0.3f });
                 }
@@ -311,7 +316,7 @@ void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, RT::CommandRec
         {
             if (auto const meshRendererPtr = mPlayerMeshRenderer.lock())
             {
-                if (auto * variant = meshRendererPtr->GetVariant())
+                if (auto * variant = static_cast<DrawableVariant *>(meshRendererPtr->getVariant()))
                 {
                     //mSoldierVariant->SetActiveAnimation("SwordAndShieldIdle");
                     variant->SetActiveAnimation("Idle", { .transitionDuration = 0.3f });

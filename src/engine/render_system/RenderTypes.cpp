@@ -103,14 +103,12 @@ MFA::RT::GpuModel::GpuModel(
     GpuModelId const id_,
     std::string address_,
     std::shared_ptr<MeshBuffers> meshBuffers_,
-    std::vector<std::shared_ptr<GpuTexture>> textures_,
-    std::shared_ptr<AS::Model> model_
+    std::vector<std::shared_ptr<GpuTexture>> textures_
 )
     : id(id_)
     , address(std::move(address_))
     , meshBuffers(std::move(meshBuffers_))
     , textures(std::move(textures_))
-    , model(std::move(model_))
 {}
 
 //-------------------------------------------------------------------------------------------------

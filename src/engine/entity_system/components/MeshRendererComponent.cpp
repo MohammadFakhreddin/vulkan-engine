@@ -13,7 +13,7 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     MeshRendererComponent::MeshRendererComponent(BasePipeline & pipeline, RT::GpuModelId const id)
-        : RendererComponent(pipeline, pipeline.CreateDrawableVariant(id))
+        : RendererComponent(pipeline, pipeline.CreateVariant(id))
     {
         MFA_ASSERT(mPipeline != nullptr);
         MFA_ASSERT(mVariant != nullptr);
@@ -27,16 +27,19 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void MeshRendererComponent::Init()
+    void MeshRendererComponent::init()
     {
-        Component::Init();
+        Component::init();
 
         auto * entity = GetEntity();
         MFA_ASSERT(entity != nullptr);
 
-        mVariant->Init(
+        mDrawableVariant = dynamic_cast<DrawableVariant *>(mVariant);
+        MFA_ASSERT(mDrawableVariant != nullptr);
+
+        mDrawableVariant->Init(
             GetEntity(),
-            SelfPtr(),
+            selfPtr(),
             entity->GetComponent<TransformComponent>(),
             entity->GetComponent<BoundingVolumeComponent>()
         );
@@ -44,33 +47,33 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    DrawableVariant const * MeshRendererComponent::GetVariant() const
+    DrawableVariant const * MeshRendererComponent::getDrawableVariant() const
     {
-        return mVariant;
+        return mDrawableVariant;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    DrawableVariant * MeshRendererComponent::GetVariant()
+    DrawableVariant * MeshRendererComponent::getDrawableVariant()
     {
-        return mVariant;
+        return mDrawableVariant;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void MeshRendererComponent::OnUI()
+    void MeshRendererComponent::onUI()
     {
         if (UI::TreeNode("MeshRenderer"))
         {
-            RendererComponent::OnUI();
-            mVariant->OnUI();
+            RendererComponent::onUI();
+            mDrawableVariant->OnUI();
             UI::TreePop();
         }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void MeshRendererComponent::Clone(Entity * entity) const
+    void MeshRendererComponent::clone(Entity * entity) const
     {
         MFA_ASSERT(entity != nullptr);
         entity->AddComponent<MeshRendererComponent>(*mPipeline, mVariant->GetEssence()->GetGpuModel()->id);

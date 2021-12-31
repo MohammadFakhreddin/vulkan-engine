@@ -24,9 +24,9 @@ MFA::SphereBoundingVolumeComponent::SphereBoundingVolumeComponent(float const ra
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::SphereBoundingVolumeComponent::Init()
+void MFA::SphereBoundingVolumeComponent::init()
 {
-    BoundingVolumeComponent::Init();
+    BoundingVolumeComponent::init();
 
     mTransformComponent = GetEntity()->GetComponent<TransformComponent>();
     MFA_ASSERT(mTransformComponent.expired() == false);
@@ -63,7 +63,7 @@ glm::vec4 const & MFA::SphereBoundingVolumeComponent::GetWorldPosition() const
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::SphereBoundingVolumeComponent::Clone(Entity * entity) const
+void MFA::SphereBoundingVolumeComponent::clone(Entity * entity) const
 {
     MFA_ASSERT(entity != nullptr);
     entity->AddComponent<SphereBoundingVolumeComponent>(mRadius);
@@ -71,14 +71,14 @@ void MFA::SphereBoundingVolumeComponent::Clone(Entity * entity) const
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::SphereBoundingVolumeComponent::Serialize(nlohmann::json & jsonObject) const
+void MFA::SphereBoundingVolumeComponent::serialize(nlohmann::json & jsonObject) const
 {
     jsonObject["radius"] = mRadius;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::SphereBoundingVolumeComponent::Deserialize(nlohmann::json const & jsonObject)
+void MFA::SphereBoundingVolumeComponent::deserialize(nlohmann::json const & jsonObject)
 {
     mRadius = jsonObject["radius"];
 }

@@ -1,27 +1,28 @@
 #include "DrawableEssence.hpp"
 
 #include "engine/BedrockAssert.hpp"
-#include "engine/BedrockMemory.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/render_system/RenderTypesFWD.hpp"
 
 #include <utility>
 
 //-------------------------------------------------------------------------------------------------
 
 // We need other overrides for easier use as well
-MFA::DrawableEssence::DrawableEssence(std::shared_ptr<RT::GpuModel> gpuModel)
-    : mGpuModel(std::move(gpuModel))
+MFA::DrawableEssence::DrawableEssence(
+    std::shared_ptr<RT::GpuModel> const & gpuModel,
+    std::shared_ptr<AS::Mesh> const & cpuMesh
+)
+    : Essence(gpuModel)
 {
     MFA_ASSERT(mGpuModel != nullptr);
 
-    auto const & mesh = mGpuModel->model->mesh;
-    MFA_ASSERT(mesh != nullptr);
+    mCpuMesh = cpuMesh;
+    MFA_ASSERT(mCpuMesh != nullptr);
 
     {// PrimitiveCount
         mPrimitiveCount = 0;
-        for (uint32_t i = 0; i < mesh->GetSubMeshCount(); ++i) {
-            auto const & subMesh = mesh->GetSubMeshByIndex(i);
+        for (uint32_t i = 0; i < mCpuMesh->GetSubMeshCount(); ++i) {
+            auto const & subMesh = mCpuMesh->GetSubMeshByIndex(i);
             mPrimitiveCount += static_cast<uint32_t>(subMesh.primitives.size());
         }
         if (mPrimitiveCount > 0) {
@@ -31,8 +32,8 @@ MFA::DrawableEssence::DrawableEssence(std::shared_ptr<RT::GpuModel> gpuModel)
             auto const primitiveData = Memory::Alloc(bufferSize);
             
             auto * primitivesArray = primitiveData->memory.as<PrimitiveInfo>();
-            for (uint32_t i = 0; i < mesh->GetSubMeshCount(); ++i) {
-                auto const & subMesh = mesh->GetSubMeshByIndex(i);
+            for (uint32_t i = 0; i < mCpuMesh->GetSubMeshCount(); ++i) {
+                auto const & subMesh = mCpuMesh->GetSubMeshByIndex(i);
                 for (auto const & primitive : subMesh.primitives) {
 
                     // Copy primitive into primitive info
@@ -60,9 +61,9 @@ MFA::DrawableEssence::DrawableEssence(std::shared_ptr<RT::GpuModel> gpuModel)
         }
     }
     {// Animations
-        auto const animationCount = mesh->GetAnimationsCount();
+        auto const animationCount = mCpuMesh->GetAnimationsCount();
         for (uint32_t i = 0; i < animationCount; ++i) {
-            auto const & animation = mesh->GetAnimationByIndex(i);
+            auto const & animation = mCpuMesh->GetAnimationByIndex(i);
             MFA_ASSERT(mAnimationNameLookupTable.find(animation.name) == mAnimationNameLookupTable.end());
             mAnimationNameLookupTable[animation.name] = static_cast<int>(i);
         }
@@ -75,33 +76,20 @@ MFA::DrawableEssence::~DrawableEssence() = default;
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RenderTypes::GpuModelId MFA::DrawableEssence::GetId() const
-{
-    return mGpuModel->id;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-MFA::RT::GpuModel * MFA::DrawableEssence::GetGpuModel() const {
-    return mGpuModel.get();
-}
-
-//-------------------------------------------------------------------------------------------------
-
-MFA::RT::UniformBufferGroup const & MFA::DrawableEssence::GetPrimitivesBuffer() const noexcept {
+MFA::RT::UniformBufferGroup const & MFA::DrawableEssence::getPrimitivesBuffer() const noexcept {
     return *mPrimitivesBuffer;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-uint32_t MFA::DrawableEssence::GetPrimitiveCount() const noexcept
+uint32_t MFA::DrawableEssence::getPrimitiveCount() const noexcept
 {
     return mPrimitiveCount;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-int MFA::DrawableEssence::GetAnimationIndex(char const * name) const noexcept {
+int MFA::DrawableEssence::getAnimationIndex(char const * name) const noexcept {
     auto const findResult = mAnimationNameLookupTable.find(name);
     if (findResult != mAnimationNameLookupTable.end()) {
         return findResult->second;
@@ -111,63 +99,9 @@ int MFA::DrawableEssence::GetAnimationIndex(char const * name) const noexcept {
 
 //-------------------------------------------------------------------------------------------------
 
-  
-MFA::RT::DescriptorSetGroup const & MFA::DrawableEssence::CreateDescriptorSetGroup(
-    const VkDescriptorPool descriptorPool,
-    uint32_t const descriptorSetCount,
-    const VkDescriptorSetLayout descriptorSetLayout
-)
+MFA::AssetSystem::Mesh const * MFA::DrawableEssence::getCpuMesh() const
 {
-    MFA_ASSERT(mIsDescriptorSetGroupValid == false);
-    mDescriptorSetGroup = RF::CreateDescriptorSets(
-        descriptorPool,
-        descriptorSetCount,
-        descriptorSetLayout
-    );
-    mIsDescriptorSetGroupValid = true;
-    return mDescriptorSetGroup;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-MFA::RT::DescriptorSetGroup const & MFA::DrawableEssence::GetDescriptorSetGroup() const
-{
-    MFA_ASSERT(mIsDescriptorSetGroupValid == true);
-    return mDescriptorSetGroup;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void MFA::DrawableEssence::BindVertexBuffer(RT::CommandRecordState const & recordState) const
-{
-    RF::BindVertexBuffer(recordState, *mGpuModel->meshBuffers->verticesBuffer);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void MFA::DrawableEssence::BindIndexBuffer(RT::CommandRecordState const & recordState) const
-{
-    RF::BindIndexBuffer(recordState, *mGpuModel->meshBuffers->indicesBuffer);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void MFA::DrawableEssence::BindDescriptorSetGroup(RT::CommandRecordState const & recordState) const
-{
-    RF::BindDescriptorSet(
-        recordState,
-        RenderFrontend::DescriptorSetType::PerEssence,
-        mDescriptorSetGroup
-    );
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void MFA::DrawableEssence::BindAllRenderRequiredData(RT::CommandRecordState const & recordState) const
-{
-    BindDescriptorSetGroup(recordState);
-    BindVertexBuffer(recordState);
-    BindIndexBuffer(recordState);
+    return mCpuMesh.get();
 }
 
 //-------------------------------------------------------------------------------------------------

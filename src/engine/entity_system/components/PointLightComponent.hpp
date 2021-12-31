@@ -21,7 +21,7 @@ namespace MFA {
 
         MFA_COMPONENT_PROPS(
             PointLightComponent,
-            FamilyType::PointLightComponent,
+            FamilyType::PointLight,
             EventTypes::InitEvent | EventTypes::ShutdownEvent
         )
 
@@ -34,9 +34,9 @@ namespace MFA {
 
         ~PointLightComponent() override;
 
-        void Init() override;
+        void init() override;
 
-        void Shutdown() override;
+        void shutdown() override;
 
         [[nodiscard]]
         glm::vec3 GetLightColor() const;
@@ -47,7 +47,7 @@ namespace MFA {
         [[nodiscard]]
         float GetRadius() const;
 
-        void OnUI() override;
+        void onUI() override;
         
         [[nodiscard]]
         bool IsVisible() const;
@@ -68,11 +68,11 @@ namespace MFA {
         [[nodiscard]]
         float GetQuadraticAttenuation() const;
 
-        void Clone(Entity * entity) const override;
+        void clone(Entity * entity) const override;
 
-        void Serialize(nlohmann::json & jsonObject) const override;
+        void serialize(nlohmann::json & jsonObject) const override;
 
-        void Deserialize(nlohmann::json const & jsonObject) override;
+        void deserialize(nlohmann::json const & jsonObject) override;
 
     private:
 

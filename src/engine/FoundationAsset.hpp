@@ -569,7 +569,7 @@ private:
     std::vector<uint32_t> mRootNodes {};         // Nodes that have no parent
 
     uint32_t mVertexCount {};
-    std::shared_ptr<SmartBlob> mVertexBuffer {};
+    std::shared_ptr<SmartBlob> mVertexBuffer {}; // TODO: We should separate vertexBuffer and index buffer because most of the time we need them only to create gpu buffers
 
     uint32_t mIndexCount {};
     std::shared_ptr<SmartBlob> mIndexBuffer {};

@@ -28,7 +28,10 @@ struct PrimitiveInfoBuffer {
     PrimitiveInfo primitiveInfo[];                                      
 };
 
-#define PRIMITIVE_INFO(bufferName)                                      \
-ConstantBuffer <PrimitiveInfoBuffer> bufferName : register (b0, space1);\
+#define PRIMITIVE_INFO(bufferName)                                          \
+ConstantBuffer <PrimitiveInfoBuffer> bufferName : register (b0, space1);    \
+
+#define PRIMITIVE_INFO_CUSTOM_BINDING(bufferName, binding, space)           \
+ConstantBuffer <PrimitiveInfoBuffer> bufferName : register (b0, space1);    \
 
 #endif

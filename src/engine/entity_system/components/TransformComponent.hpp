@@ -14,7 +14,7 @@ namespace MFA
 
         MFA_COMPONENT_PROPS(
             TransformComponent,
-            FamilyType::TransformComponent,
+            FamilyType::Transform,
             EventTypes::InitEvent | EventTypes::ShutdownEvent
         )
         
@@ -25,9 +25,9 @@ namespace MFA
             glm::vec3 const & scale_
         );
 
-        void Init() override;
+        void init() override;
 
-        void Shutdown() override;
+        void shutdown() override;
 
         void UpdateTransform(float position[3], float rotation[3], float scale[3]);
 
@@ -70,13 +70,13 @@ namespace MFA
 
         bool UnRegisterChangeListener(Signal<>::ListenerId listenerId);
 
-        void OnUI() override;
+        void onUI() override;
 
-        void Clone(Entity * entity) const override;
+        void clone(Entity * entity) const override;
 
-        void Serialize(nlohmann::json & jsonObject) const override;
+        void serialize(nlohmann::json & jsonObject) const override;
 
-        void Deserialize(nlohmann::json const & jsonObject) override;
+        void deserialize(nlohmann::json const & jsonObject) override;
 
     private:
 

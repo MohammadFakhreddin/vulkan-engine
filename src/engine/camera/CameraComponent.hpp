@@ -31,11 +31,11 @@ public:
     
     ~CameraComponent() override = default;
 
-    void Init() override;
+    void init() override;
 
     void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState) override;
 
-    void Shutdown() override;
+    void shutdown() override;
 
     void ForcePosition(float position[3]);
 
@@ -45,7 +45,7 @@ public:
 
     void GetRotation(float outEulerAngles[3]) const;
 
-    void OnUI() override;
+    void onUI() override;
 
     [[nodiscard]]
     bool IsPointInsideFrustum(glm::vec3 const & point, glm::vec3 const & extend) const;
@@ -55,11 +55,11 @@ public:
 
     bool IsCameraDataDirty();
 
-    void Clone(Entity * entity) const override;
+    void clone(Entity * entity) const override;
 
-    void Deserialize(nlohmann::json const & jsonObject) override;
+    void deserialize(nlohmann::json const & jsonObject) override;
 
-    void Serialize(nlohmann::json & jsonObject) const override;
+    void serialize(nlohmann::json & jsonObject) const override;
 
 protected:
 

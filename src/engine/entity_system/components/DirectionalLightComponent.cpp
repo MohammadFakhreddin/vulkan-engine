@@ -20,9 +20,9 @@ MFA::DirectionalLightComponent::~DirectionalLightComponent() = default;
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DirectionalLightComponent::Init()
+void MFA::DirectionalLightComponent::init()
 {
-    Component::Init();
+    Component::init();
 
     mTransformComponentRef = GetEntity()->GetComponent<TransformComponent>();
     MFA_ASSERT(mTransformComponentRef.expired() == false);
@@ -40,14 +40,14 @@ void MFA::DirectionalLightComponent::Init()
     // Registering directional light to active scene
     auto const activeScene = SceneManager::GetActiveScene();
     MFA_ASSERT(activeScene != nullptr);
-    activeScene->RegisterDirectionalLight(SelfPtr());
+    activeScene->RegisterDirectionalLight(selfPtr());
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DirectionalLightComponent::Shutdown()
+void MFA::DirectionalLightComponent::shutdown()
 {
-    Component::Shutdown();
+    Component::shutdown();
     if (auto const mTransformComponent = mTransformComponentRef.lock())
     {
         mTransformComponent->UnRegisterChangeListener(mTransformChangeListenerId);
@@ -81,7 +81,7 @@ void MFA::DirectionalLightComponent::GetColor(float outColor[3]) const
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DirectionalLightComponent::Clone(Entity * entity) const
+void MFA::DirectionalLightComponent::clone(Entity * entity) const
 {
     MFA_ASSERT(entity != nullptr);
     entity->AddComponent<DirectionalLightComponent>();
@@ -89,12 +89,12 @@ void MFA::DirectionalLightComponent::Clone(Entity * entity) const
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DirectionalLightComponent::Serialize(nlohmann::json & jsonObject) const
+void MFA::DirectionalLightComponent::serialize(nlohmann::json & jsonObject) const
 {}
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DirectionalLightComponent::Deserialize(nlohmann::json const & jsonObject)
+void MFA::DirectionalLightComponent::deserialize(nlohmann::json const & jsonObject)
 {}
 
 //-------------------------------------------------------------------------------------------------

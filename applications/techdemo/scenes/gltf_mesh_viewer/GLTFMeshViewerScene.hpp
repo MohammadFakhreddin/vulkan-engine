@@ -114,8 +114,6 @@ private:
 
     bool mIsLightVisible = true;
 
-    std::shared_ptr<MFA::RT::GpuModel> mPointLightModel {};
-
     std::weak_ptr<MFA::TransformComponent> mPointLightTransform {};
     std::weak_ptr<MFA::ColorComponent> mPointLightColor {};
 

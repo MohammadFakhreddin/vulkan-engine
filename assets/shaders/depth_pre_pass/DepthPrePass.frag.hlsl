@@ -12,7 +12,7 @@ struct PushConsts
     float4x4 model;
     float4x4 inverseNodeTransform;
 	int skinIndex;
-    uint primitiveIndex;
+    uint primitiveIndex;                // TODO Remove primitive index
 };
 
 [[vk::push_constant]]

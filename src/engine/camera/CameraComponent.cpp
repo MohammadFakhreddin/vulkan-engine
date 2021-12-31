@@ -12,9 +12,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void CameraComponent::OnUI()
+    void CameraComponent::onUI()
     {
-        Component::OnUI();
+        Component::onUI();
 
         glm::vec3 & eulerAngles = mEulerAngles;
         UI::InputFloat3("EulerAngles", eulerAngles.data.data);
@@ -94,21 +94,21 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void CameraComponent::Clone(Entity * entity) const
+    void CameraComponent::clone(Entity * entity) const
     {
         MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");   
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void CameraComponent::Deserialize(nlohmann::json const & jsonObject)
+    void CameraComponent::deserialize(nlohmann::json const & jsonObject)
     {
         MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");   
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void CameraComponent::Serialize(nlohmann::json & jsonObject) const
+    void CameraComponent::serialize(nlohmann::json & jsonObject) const
     {
         MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");   
     }
@@ -143,9 +143,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void CameraComponent::Init()
+    void CameraComponent::init()
     {
-        Component::Init();
+        Component::init();
         mCameraBufferUpdateCounter = RF::GetMaxFramesPerFlight();
         mResizeEventListenerId = RF::AddResizeEventListener([this]()->void{ onResize(); });
     }
@@ -214,9 +214,9 @@ namespace MFA
     
     //-------------------------------------------------------------------------------------------------
 
-    void CameraComponent::Shutdown()
+    void CameraComponent::shutdown()
     {
-        Component::Shutdown();
+        Component::shutdown();
         RF::RemoveResizeEventListener(mResizeEventListenerId);
     }
 

@@ -14,10 +14,10 @@ public:
     };
     static_assert(sizeof(PushConstants) == 76);
 
-    DebugRendererPipeline();
+    explicit DebugRendererPipeline();
     ~DebugRendererPipeline() override;
 
-    PIPELINE_PROPS(DebugRendererPipeline);
+    PIPELINE_PROPS(DebugRendererPipeline)
 
     void Init() override;
 
@@ -29,7 +29,14 @@ public:
     
     void OnResize() override {}
 
+protected:
 
+    std::shared_ptr<Essence> internalCreateEssence(
+        std::shared_ptr<RT::GpuModel> const & gpuModel,
+        std::shared_ptr<AS::Mesh> const & cpuMesh
+    ) override;
+
+    std::shared_ptr<Variant> internalCreateVariant(Essence * essence) override;
 
 private:
 
@@ -44,6 +51,8 @@ private:
     void createPipeline();
 
     void createDescriptorSets();
+
+private:
 
     bool mIsInitialized = false;
 

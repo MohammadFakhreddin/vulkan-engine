@@ -6,6 +6,7 @@
 
 namespace MFA
 {
+    class DrawableVariant;
 
     class MeshRendererComponent final : public RendererComponent
     {
@@ -13,7 +14,7 @@ namespace MFA
 
         MFA_COMPONENT_PROPS(
             MeshRendererComponent,
-            FamilyType::MeshRendererComponent,
+            FamilyType::MeshRenderer,
             EventTypes::InitEvent | EventTypes::ShutdownEvent
         )
 
@@ -21,17 +22,21 @@ namespace MFA
         explicit MeshRendererComponent(BasePipeline & pipeline, RT::GpuModelId id);
         explicit MeshRendererComponent(BasePipeline & pipeline, RT::GpuModel const & gpuModel);
 
-        void Init() override;
+        void init() override;
 
         [[nodiscard]]
-        DrawableVariant const * GetVariant() const;
+        DrawableVariant const * getDrawableVariant() const;
 
         [[nodiscard]]
-        DrawableVariant * GetVariant();
+        DrawableVariant * getDrawableVariant();
 
-        void OnUI() override;
+        void onUI() override;
 
-        void Clone(Entity * entity) const override;
+        void clone(Entity * entity) const override;
+
+    private:
+
+        DrawableVariant * mDrawableVariant = nullptr;
  
     };
 

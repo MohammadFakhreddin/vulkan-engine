@@ -17,8 +17,22 @@
 #include "engine/render_system/render_resources/directional_light_shadow_resources/DirectionalLightShadowResources.hpp"
 #include "engine/render_system/render_resources/point_light_shadow_resources/PointLightShadowResources.hpp"
 #include "engine/scene_manager/Scene.hpp"
-#include "engine/scene_manager/SceneManager.hpp"
+#include "engine/job_system/JobSystem.hpp"
 
+#define CAST_VARIANT(variant)  static_cast<DrawableVariant *>(variant.get())
+
+/*
+There are four C++ style casts:
+
+const_cast
+static_cast
+reinterpret_cast
+dynamic_cast
+As already mentioned, the first three are compile-time operations. There is no run-time penalty for using them.
+They are messages to the compiler that data that has been declared one way needs to be accessed a different way.
+"I said this was an int*, but let me access it as if it were a char* pointing to sizeof(int) chars" or "I said this data was read-only,
+and now I need to pass it to a function that won't modify it, but doesn't take the parameter as a const reference."
+*/
 namespace MFA
 {
 
@@ -133,7 +147,7 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-    // TODO We need storage buffer per vertex to store data // Use instance id inside shader instead of creating unique id for vertices
+
     void PBRWithShadowPipelineV2::PreRender(RT::CommandRecordState & recordState, float const deltaTime)
     {
         // TODO I should render bounding volume for objects and geometry for occluders.
@@ -141,6 +155,8 @@ namespace MFA
         retrieveOcclusionQueryResult(recordState);
 
         BasePipeline::PreRender(recordState, deltaTime);
+
+        updateVariants(deltaTime, recordState);
 
         performDepthPrePass(recordState);
 
@@ -177,6 +193,25 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    void PBRWithShadowPipelineV2::updateVariants(float deltaTimeInSec, RT::CommandRecordState const & recordState) const
+    {
+        // Multi-thread update of variant animation
+        auto const availableThreadCount = JS::GetNumberOfAvailableThreads();
+        for (uint32_t threadNumber = 0; threadNumber < availableThreadCount; ++threadNumber)
+        {
+            JS::AssignTask(threadNumber, [this, &recordState, deltaTimeInSec, threadNumber, availableThreadCount]()->void
+            {
+                for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mAllVariantsList.size()); i += availableThreadCount)
+                {
+                    mAllVariantsList[i]->Update(deltaTimeInSec, recordState);
+                }
+            });
+        }
+        JS::WaitForThreadsToFinish();
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void PBRWithShadowPipelineV2::Render(RT::CommandRecordState & recordState, float deltaTime)
     {
         performDisplayPass(recordState);
@@ -196,26 +231,28 @@ namespace MFA
         mDepthPrePass->OnResize();
         mOcclusionRenderPass->OnResize();
     }
-
+    
     //-------------------------------------------------------------------------------------------------
 
-    DrawableVariant * PBRWithShadowPipelineV2::CreateDrawableVariant(RT::GpuModelId const id)
+    std::shared_ptr<Essence> PBRWithShadowPipelineV2::internalCreateEssence(
+        std::shared_ptr<RT::GpuModel> const & gpuModel,
+        std::shared_ptr<AS::Mesh> const & cpuMesh
+    )
     {
-        auto * variant = BasePipeline::CreateDrawableVariant(id);
-        MFA_ASSERT(variant != nullptr);
+        auto essence = std::make_shared<DrawableEssence>(gpuModel, cpuMesh);
+        createEssenceDescriptorSets(*essence);
+        return essence;
+    }
 
-        createVariantDescriptorSets(variant);
-
+    std::shared_ptr<Variant> PBRWithShadowPipelineV2::internalCreateVariant(Essence * essence)
+    {
+        auto * drawableEssence = dynamic_cast<DrawableEssence *>(essence);
+        MFA_ASSERT(drawableEssence != nullptr);
+        auto variant = std::make_shared<DrawableVariant>(drawableEssence);
+        createVariantDescriptorSets(*variant);
         return variant;
     }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void PBRWithShadowPipelineV2::internalCreateDrawableEssence(DrawableEssence & essence)
-    {
-        createEssenceDescriptorSets(essence);
-    }
-
+    
     //-------------------------------------------------------------------------------------------------
 
     void PBRWithShadowPipelineV2::createPerFrameDescriptorSets()
@@ -226,7 +263,7 @@ namespace MFA
             mPerFrameDescriptorSetLayout
         );
 
-        auto const & cameraBufferCollection = mAttachedScene->GetCameraBufferCollection();
+        auto const & cameraBufferCollection = mAttachedScene->GetCameraBuffers();
         auto const & directionalLightBuffers = mAttachedScene->GetDirectionalLightBuffers();
         auto const & pointLightBuffers = mAttachedScene->GetPointLightsBuffers();
         
@@ -299,18 +336,18 @@ namespace MFA
     {
         auto const & textures = essence.GetGpuModel()->textures;
 
-        auto const descriptorSetGroup = essence.CreateDescriptorSetGroup(
+        auto const & descriptorSetGroup = essence.CreateDescriptorSetGroup(
             mDescriptorPool,
             RF::GetMaxFramesPerFlight(),
             mPerEssenceDescriptorSetLayout
         );
 
-        auto & primitiveBuffer = essence.GetPrimitivesBuffer();
+        auto & primitiveBuffer = essence.getPrimitivesBuffer();
 
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
 
-            auto const descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
+            auto const & descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
             MFA_VK_VALID_ASSERT(descriptorSet);
 
             DescriptorSetSchema descriptorSetSchema{ descriptorSet };
@@ -360,16 +397,14 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createVariantDescriptorSets(DrawableVariant * variant) const
+    void PBRWithShadowPipelineV2::createVariantDescriptorSets(DrawableVariant & variant) const
     {
-        MFA_ASSERT(variant != nullptr);
-
-        auto const descriptorSetGroup = variant->CreateDescriptorSetGroup(
+        auto const descriptorSetGroup = variant.CreateDescriptorSetGroup(
             mDescriptorPool,
             RF::GetMaxFramesPerFlight(),
             mPerVariantDescriptorSetLayout
         );
-        auto const * storedSkinJointsBuffer = variant->GetSkinJointsBuffer();
+        auto const * storedSkinJointsBuffer = variant.GetSkinJointsBuffer();
 
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
@@ -483,8 +518,8 @@ namespace MFA
 
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto & essence = essenceAndVariantList.second.Essence;
-            auto & variantsList = essenceAndVariantList.second.Variants;
+            auto & essence = essenceAndVariantList.second.essence;
+            auto & variantsList = essenceAndVariantList.second.variants;
 
             if (variantsList.empty())
             {
@@ -504,7 +539,7 @@ namespace MFA
                         variant->GetDescriptorSetGroup()
                     );
 
-                    variant->Draw(
+                    CAST_VARIANT(variant)->Draw(
                         recordState,
                         [&recordState, &pushConstants](
                             AS::MeshPrimitive const & primitive,
@@ -563,8 +598,8 @@ namespace MFA
 
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto & essence = essenceAndVariantList.second.Essence;
-            auto & variantsList = essenceAndVariantList.second.Variants;
+            auto & essence = essenceAndVariantList.second.essence;
+            auto & variantsList = essenceAndVariantList.second.variants;
 
             if (variantsList.empty())
             {
@@ -584,7 +619,7 @@ namespace MFA
                         variant->GetDescriptorSetGroup()
                     );
 
-                    variant->Draw(recordState, [&recordState, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
+                    CAST_VARIANT(variant)->Draw(recordState, [&recordState, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
                     {
                         // Vertex push constants
                         pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
@@ -647,8 +682,8 @@ namespace MFA
 
             for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
             {
-                auto & essence = essenceAndVariantList.second.Essence;
-                auto & variantsList = essenceAndVariantList.second.Variants;
+                auto & essence = essenceAndVariantList.second.essence;
+                auto & variantsList = essenceAndVariantList.second.variants;
 
                 if (variantsList.empty())
                 {
@@ -675,7 +710,7 @@ namespace MFA
                         variant->GetDescriptorSetGroup()
                     );
 
-                    variant->Draw(recordState, [&recordState, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
+                    CAST_VARIANT(variant)->Draw(recordState, [&recordState, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
                     {
                         // Vertex push constants
                         pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
@@ -728,8 +763,8 @@ namespace MFA
 
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto & essence = essenceAndVariantList.second.Essence;
-            auto & variantsList = essenceAndVariantList.second.Variants;
+            auto & essence = essenceAndVariantList.second.essence;
+            auto & variantsList = essenceAndVariantList.second.variants;
 
             if (variantsList.empty())
             {
@@ -752,7 +787,7 @@ namespace MFA
                     RF::BeginQuery(recordState, occlusionQueryData.Pool, static_cast<uint32_t>(occlusionQueryData.Variants.size()));
 
                     // TODO Draw a placeholder cube instead of complex geometry
-                    variant->Draw(recordState, [&recordState, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
+                    CAST_VARIANT(variant)->Draw(recordState, [&recordState, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
                         {
                             // Vertex push constants
                             Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
@@ -801,8 +836,8 @@ namespace MFA
 
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto & essence = essenceAndVariantList.second.Essence;
-            auto & variantsList = essenceAndVariantList.second.Variants;
+            auto & essence = essenceAndVariantList.second.essence;
+            auto & variantsList = essenceAndVariantList.second.variants;
 
             if (variantsList.empty())
             {
@@ -821,8 +856,8 @@ namespace MFA
                         RenderFrontend::DescriptorSetType::PerVariant,
                         variant->GetDescriptorSetGroup()
                     );
-
-                    variant->Draw(recordState, [&recordState, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
+                    
+                    CAST_VARIANT(variant)->Draw(recordState, [&recordState, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
                         {
                             // Push constants
                             pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;

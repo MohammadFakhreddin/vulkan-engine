@@ -2,253 +2,168 @@
 
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/FoundationAsset.hpp"
+#include "engine/render_system/variant/Variant.hpp"
 
 #include <glm/gtc/quaternion.hpp>
 
 #include <functional>
 #include <memory>
-#include <string>
-#include <unordered_map>
 
-namespace MFA {
+namespace MFA
+{
 
-class Component;
-class Entity;
-class BoundingVolumeComponent;
-class TransformComponent;
-class DrawableEssence;
-class RendererComponent;
+    class Component;
+    class Entity;
+    class BoundingVolumeComponent;
+    class TransformComponent;
+    class DrawableEssence;
+    class RendererComponent;
 
-struct AnimationParams {
-    float transitionDuration = 0.3f;
-    bool loop = true;
-    float startTimeOffsetInSec = 0.0f;
-};
-
-class DrawableVariant {
-public:
-
-    using AlphaMode = AS::AlphaMode;
-    
-    struct JointTransformData {
-        glm::mat4 model;
-    };
-    
-    struct Skin {
-        int skinStartingIndex;
-    };
-
-    struct Node {
-        AS::MeshNode const * meshNode = nullptr;
-
-        glm::quat currentRotation {};     // x, y, z, w
-        glm::vec3 currentScale {};
-        glm::vec3 currentTranslate {};
-        glm::mat4 currentTransform {};
-        
-        glm::quat previousRotation {};     // x, y, z, w
-        glm::vec3 previousScale {};
-        glm::vec3 previousTranslate {};
-        glm::mat4 previousTransform {};
-
-        bool isCachedDataValid = false;
-        bool isCachedGlobalTransformChanged = false;
-        glm::mat4 cachedLocalTransform {};
-        glm::mat4 cachedGlobalTransform {};
-        glm::mat4 cachedModelTransform {};
-        glm::mat4 cachedGlobalInverseTransform {};
-
-        Skin * skin = nullptr;
-    };
-    
-    explicit DrawableVariant(DrawableEssence const & essence);
-
-    ~DrawableVariant();
-
-    DrawableVariant (DrawableVariant const &) noexcept = delete;
-    DrawableVariant (DrawableVariant &&) noexcept = delete;
-    DrawableVariant & operator= (DrawableVariant const & rhs) noexcept = delete;
-    DrawableVariant & operator= (DrawableVariant && rhs) noexcept = delete;
-
-    bool operator== (DrawableVariant const & rhs) const noexcept
+    struct AnimationParams
     {
-        return mId == rhs.mId;
-    }
-    
-    [[nodiscard]]
-    int GetActiveAnimationIndex() const noexcept {
-        return mActiveAnimationIndex;
-    }
+        float transitionDuration = 0.3f;
+        bool loop = true;
+        float startTimeOffsetInSec = 0.0f;
+    };
 
-    void SetActiveAnimationIndex(int nextAnimationIndex, AnimationParams const & params = AnimationParams {});
+    class DrawableVariant final : public Variant
+    {
+    public:
 
-    void SetActiveAnimation(char const * animationName, AnimationParams const & params = AnimationParams {});
-    
-    void Init(
-        Entity * entity,
-        std::weak_ptr<RendererComponent> const & rendererComponent,
-        std::weak_ptr<TransformComponent> const & transformComponent,
-        std::weak_ptr<BoundingVolumeComponent> const & boundingVolumeComponent
-    );
+        using AlphaMode = AS::AlphaMode;
 
-    void Update(float deltaTimeInSec, RT::CommandRecordState const & drawPass);
+        struct JointTransformData
+        {
+            glm::mat4 model;
+        };
 
-    void Shutdown();
+        struct Skin
+        {
+            int skinStartingIndex;
+        };
 
-    using BindDescriptorSetFunction = std::function<void(AS::MeshPrimitive const & primitive, Node const & node)>;
-    void Draw(
-        RT::CommandRecordState const & drawPass,
-        BindDescriptorSetFunction const & bindFunction,
-        AlphaMode alphaMode
-    );
-    
-    [[nodiscard]]
-    RT::UniformBufferGroup const * GetUniformBuffer(char const * name);
-    
-    [[nodiscard]] 
-    RT::UniformBufferGroup const * GetSkinJointsBuffer() const noexcept;
+        struct Node
+        {
+            AS::MeshNode const * meshNode = nullptr;
 
-    [[nodiscard]]
-    DrawableEssence const * GetEssence() const noexcept;
+            glm::quat currentRotation{};     // x, y, z, w
+            glm::vec3 currentScale{};
+            glm::vec3 currentTranslate{};
+            glm::mat4 currentTransform{};
 
-    [[nodiscard]]
-    RT::DrawableVariantId GetId() const noexcept;
+            glm::quat previousRotation{};     // x, y, z, w
+            glm::vec3 previousScale{};
+            glm::vec3 previousTranslate{};
+            glm::mat4 previousTransform{};
 
-    RT::DescriptorSetGroup const & CreateDescriptorSetGroup(
-        VkDescriptorPool descriptorPool,
-        uint32_t descriptorSetCount,
-        VkDescriptorSetLayout descriptorSetLayout
-    );
+            bool isCachedDataValid = false;
+            bool isCachedGlobalTransformChanged = false;
+            glm::mat4 cachedLocalTransform{};
+            glm::mat4 cachedGlobalTransform{};
+            glm::mat4 cachedModelTransform{};
+            glm::mat4 cachedGlobalInverseTransform{};
 
-    [[nodiscard]]
-    RT::DescriptorSetGroup const & GetDescriptorSetGroup() const;
+            Skin * skin = nullptr;
+        };
 
-    [[nodiscard]]
-    bool IsActive() const noexcept;
+        explicit DrawableVariant(DrawableEssence const * essence);
+        ~DrawableVariant() override;
 
-    void OnUI();
+        DrawableVariant(DrawableVariant const &) noexcept = delete;
+        DrawableVariant(DrawableVariant &&) noexcept = delete;
+        DrawableVariant & operator= (DrawableVariant const & rhs) noexcept = delete;
+        DrawableVariant & operator= (DrawableVariant && rhs) noexcept = delete;
 
-    [[nodiscard]]
-    bool IsCurrentAnimationFinished() const;
+        [[nodiscard]]
+        int GetActiveAnimationIndex() const noexcept;
 
-    [[nodiscard]]
-    bool IsInFrustum() const;
+        void SetActiveAnimationIndex(int nextAnimationIndex, AnimationParams const & params = AnimationParams{});
 
-    [[nodiscard]]
-    Entity * GetEntity() const;
+        void SetActiveAnimation(char const * animationName, AnimationParams const & params = AnimationParams{});
 
-    [[nodiscard]]
-    bool IsVisible() const;
+        void Update(float deltaTimeInSec, RT::CommandRecordState const & drawPass) override;
 
-    [[nodiscard]]
-    bool IsOccluded() const;
+        using BindDescriptorSetFunction = std::function<void(AS::MeshPrimitive const & primitive, Node const & node)>;
+        void Draw(
+            RT::CommandRecordState const & drawPass,
+            BindDescriptorSetFunction const & bindFunction,
+            AlphaMode alphaMode
+        );
+        
+        [[nodiscard]]
+        RT::UniformBufferGroup const * GetSkinJointsBuffer() const noexcept;
 
-    void SetIsOccluded(bool const isOccluded);
+        void OnUI();
 
-    [[nodiscard]]
-    bool IsInFrustum();
+        [[nodiscard]]
+        bool IsCurrentAnimationFinished() const;
 
-    RT::StorageBufferCollection const & CreateStorageBuffer(uint32_t size, uint32_t count);
+    private:
 
-    [[nodiscard]]
-    RT::StorageBufferCollection const & GetStorageBuffer() const;
+        void updateAnimation(float deltaTimeInSec, bool isVisible);
 
-    [[nodiscard]]
-    BoundingVolumeComponent * GetBoundingVolume() const;
+        void computeNodesGlobalTransform();
 
-private:
+        void updateAllSkinsJoints();
 
-    void updateAnimation(float deltaTimeInSec, bool isVisible);
+        void updateSkinJoints(uint32_t skinIndex, AS::MeshSkin const & skin);
 
-    void computeNodesGlobalTransform();
+        void drawNode(
+            RT::CommandRecordState const & drawPass,
+            Node const & node,
+            BindDescriptorSetFunction const & bindFunction,
+            AlphaMode alphaMode
+        );
 
-    void updateAllSkinsJoints();
+        void drawSubMesh(
+            RT::CommandRecordState const & drawPass,
+            AS::Mesh::SubMesh const & subMesh,
+            Node const & node,
+            BindDescriptorSetFunction const & bindFunction,
+            AlphaMode alphaMode
+        );
 
-    void updateSkinJoints(uint32_t skinIndex, AS::MeshSkin const & skin);
-    
-    void drawNode(
-        RT::CommandRecordState const & drawPass,
-        Node const & node,
-        BindDescriptorSetFunction const & bindFunction,
-        AlphaMode alphaMode
-    );
+        [[nodiscard]]
+        glm::mat4 computeNodeLocalTransform(Node const & node) const;
 
-    void drawSubMesh(
-        RT::CommandRecordState const & drawPass,
-        AS::Mesh::SubMesh const & subMesh,
-        Node const & node,
-        BindDescriptorSetFunction const & bindFunction,
-        AlphaMode alphaMode
-    );
+        void computeNodeGlobalTransform(
+            Node & node,
+            Node const * parentNode,
+            bool isParentTransformChanged
+        );
 
-    [[nodiscard]]
-    glm::mat4 computeNodeLocalTransform(Node const & node) const;
+    private:
 
-    void computeNodeGlobalTransform(
-        Node & node,
-        Node const * parentNode,
-        bool isParentTransformChanged
-    );
+        DrawableEssence const * mDrawableEssence = nullptr;
+        AS::Mesh const * mMesh = nullptr;
 
-private:
+        std::shared_ptr<RT::UniformBufferGroup> mSkinsJointsBuffer{};
 
-    static RT::DrawableVariantId NextInstanceId;
+        int mActiveAnimationIndex = 0;
+        int mPreviousAnimationIndex = -1;
+        float mActiveAnimationTimeInSec = 0.0f;
+        float mPreviousAnimationTimeInSec = 0.0f;
+        float mAnimationTransitionDurationInSec = 0.0f;
+        float mAnimationRemainingTransitionDurationInSec = 0.0f;
 
-    RT::DrawableVariantId mId;
-    DrawableEssence const * mEssence;
-    AS::Mesh const & mMesh; 
-    
-    std::shared_ptr<RT::UniformBufferGroup> mSkinsJointsBuffer {};
-    
-    std::unordered_map<std::string, RT::UniformBufferGroup> mUniformBuffers {};
+        int mUISelectedAnimationIndex = 0;
 
-    int mActiveAnimationIndex = 0;
-    int mPreviousAnimationIndex = -1;
-    float mActiveAnimationTimeInSec = 0.0f;
-    float mPreviousAnimationTimeInSec = 0.0f;
-    float mAnimationTransitionDurationInSec = 0.0f;
-    float mAnimationRemainingTransitionDurationInSec = 0.0f;
+        std::shared_ptr<SmartBlob> mCachedSkinsJointsBlob{};
+        std::vector<JointTransformData *> mCachedSkinsJoints{};
 
-    int mUISelectedAnimationIndex = 0;
+        std::vector<Skin> mSkins{};
+        std::vector<Node> mNodes{};
+        
+        AnimationParams mActiveAnimationParams{};
 
-    std::shared_ptr<SmartBlob> mCachedSkinsJointsBlob {};
-    std::vector<JointTransformData *> mCachedSkinsJoints {};
+        bool mIsAnimationFinished = false;
 
-    std::vector<Skin> mSkins {};
-    std::vector<Node> mNodes {};
-    
-    RT::DescriptorSetGroup mDescriptorSetGroup {};
-    
-    std::shared_ptr<RT::StorageBufferCollection> mStorageBuffer {};
+        bool mIsSkinJointsChanged = true;
 
-    AnimationParams mActiveAnimationParams {};
+        int mBufferDirtyCounter = 0;
 
-    bool mIsAnimationFinished = false;
+        size_t mAnimationInputIndex[300]{};
 
-    bool mIsInitialized = false;
-
-    Entity * mEntity = nullptr;
-
-    std::weak_ptr<RendererComponent> mRendererComponent {};
-
-    std::weak_ptr<BoundingVolumeComponent> mBoundingVolumeComponent {};
-
-    bool mIsModelTransformChanged = true;
-
-    std::weak_ptr<TransformComponent> mTransformComponent {};
-
-    int mTransformListenerId = 0;
-
-    bool mIsSkinJointsChanged = true;
-
-    bool mIsOccluded = false;
-
-    bool mIsInFrustum = true;
-
-    int bufferDirtyCounter = 0;
-
-    size_t mAnimationInputIndex [300] {};
-
-};
+    };
 
 };

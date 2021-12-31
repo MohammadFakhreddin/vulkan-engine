@@ -10,6 +10,7 @@
 #include "engine/resource_manager/ResourceManager.hpp"
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
+#include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 
 namespace MFA
 {
@@ -27,14 +28,14 @@ namespace MFA
     BoundingVolumeRendererComponent::BoundingVolumeRendererComponent(DebugRendererPipeline & pipeline)
         : RendererComponent(
             pipeline,
-            pipeline.CreateDrawableVariant(*RC::Acquire("Cube", false)))
+            pipeline.CreateVariant(*RC::AcquireForGpu("Cube", false)))
     {}
 
     //-------------------------------------------------------------------------------------------------
 
-    void BoundingVolumeRendererComponent::Init()
+    void BoundingVolumeRendererComponent::init()
     {
-        RendererComponent::Init();
+        RendererComponent::init();
 
         mBoundingVolumeComponent = GetEntity()->GetComponent<BoundingVolumeComponent>();
 
@@ -54,7 +55,7 @@ namespace MFA
 
         EntitySystem::InitEntity(childEntity);
 
-        mVariant->Init(entity, SelfPtr(), mRendererTransformComponent, mBoundingVolumeComponent);
+        mVariant->Init(entity, selfPtr(), mRendererTransformComponent, mBoundingVolumeComponent);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -90,27 +91,27 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BoundingVolumeRendererComponent::Shutdown()
+    void BoundingVolumeRendererComponent::shutdown()
     {
-        RendererComponent::Shutdown();
+        RendererComponent::shutdown();
 
 
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void BoundingVolumeRendererComponent::OnUI()
+    void BoundingVolumeRendererComponent::onUI()
     {
         if (UI::TreeNode("BoundingVolumeRenderer"))
         {
-            RendererComponent::OnUI();
+            RendererComponent::onUI();
             UI::TreePop();
         }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void BoundingVolumeRendererComponent::Clone(Entity * entity) const
+    void BoundingVolumeRendererComponent::clone(Entity * entity) const
     {
         auto * pipeline = dynamic_cast<DebugRendererPipeline *>(mPipeline);
         MFA_ASSERT(pipeline != nullptr);

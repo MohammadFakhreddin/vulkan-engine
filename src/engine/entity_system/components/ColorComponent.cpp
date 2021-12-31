@@ -37,11 +37,11 @@ glm::vec3 const & MFA::ColorComponent::GetColor() const
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::ColorComponent::OnUI()
+void MFA::ColorComponent::onUI()
 {
     if (UI::TreeNode("Color"))
     {
-        Component::OnUI();
+        Component::onUI();
         UI::InputFloat3("Color", mColor.data.data);
         UI::TreePop();
     }
@@ -49,7 +49,7 @@ void MFA::ColorComponent::OnUI()
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::ColorComponent::Clone(Entity * entity) const
+void MFA::ColorComponent::clone(Entity * entity) const
 {
     MFA_ASSERT(entity != nullptr);
     entity->AddComponent<ColorComponent>(mColor);
@@ -57,14 +57,14 @@ void MFA::ColorComponent::Clone(Entity * entity) const
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::ColorComponent::Serialize(nlohmann::json & jsonObject) const
+void MFA::ColorComponent::serialize(nlohmann::json & jsonObject) const
 {
     JsonUtils::SerializeVec3(jsonObject, "color", mColor);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::ColorComponent::Deserialize(nlohmann::json const & jsonObject)
+void MFA::ColorComponent::deserialize(nlohmann::json const & jsonObject)
 {
     JsonUtils::DeserializeVec3(jsonObject, "color", mColor);
 }

@@ -11,10 +11,11 @@ namespace MFA::ResourceManager
     void Shutdown();
 
     // Note: No need to use Path
-    std::shared_ptr<RT::GpuModel> Acquire(char const * fileAddress, bool loadFileIfNotExists = true);
+    std::shared_ptr<RT::GpuModel> AcquireForGpu(char const * nameOrFileAddress, bool loadFileIfNotExists = true);
+    std::shared_ptr<AS::Model> AcquireForCpu(char const * nameOrFileAddress, bool loadFileIfNotExists = true);
 
     // For shapes like sphere,cube, etc
-    std::shared_ptr<RT::GpuModel> Assign(std::shared_ptr<AS::Model> cpuModel, char const * name);
+    bool Assign(std::shared_ptr<AS::Model> const & cpuModel, char const * name);
 
 }
 

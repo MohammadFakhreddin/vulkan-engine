@@ -27,9 +27,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ObserverCameraComponent::Init()
+    void ObserverCameraComponent::init()
     {
-        CameraComponent::Init();
+        CameraComponent::init();
 
         IM::WarpMouseAtEdges(false);
     }
@@ -112,11 +112,11 @@ namespace MFA
     
     //-------------------------------------------------------------------------------------------------
 
-    void ObserverCameraComponent::OnUI()
+    void ObserverCameraComponent::onUI()
     {
         if(UI::TreeNode("ObserverCamera"))
         {
-            CameraComponent::OnUI();
+            CameraComponent::onUI();
             UI::TreePop();            
         }
     }

@@ -76,7 +76,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::UniformBufferGroup const & Scene::GetCameraBufferCollection() const
+    RT::UniformBufferGroup const & Scene::GetCameraBuffers() const
     {
         return *mCameraBuffer;
     }

@@ -14,14 +14,14 @@ namespace MFA {
 
         MFA_COMPONENT_PROPS(
             BoundingVolumeComponent,
-            FamilyType::BoundingVolumeComponent,
+            FamilyType::BoundingVolume,
             EventTypes::UpdateEvent | EventTypes::InitEvent
         )
 
         explicit BoundingVolumeComponent();
         ~BoundingVolumeComponent() override;
 
-        void Init() override;
+        void init() override;
 
         void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState) override;
 

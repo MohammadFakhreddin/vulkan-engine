@@ -14,7 +14,7 @@ namespace MFA
 
         MFA_COMPONENT_PROPS(
             ObserverCameraComponent,
-            FamilyType::CameraComponent,
+            FamilyType::Camera,
             EventTypes::InitEvent | EventTypes::UpdateEvent | EventTypes::ShutdownEvent
         )
         
@@ -34,11 +34,11 @@ namespace MFA
 
         ~ObserverCameraComponent() override = default;
         
-        void Init() override;
+        void init() override;
 
         void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState) override;
 
-        void OnUI() override;
+        void onUI() override;
 
     private:
 

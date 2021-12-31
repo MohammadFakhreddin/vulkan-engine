@@ -65,10 +65,6 @@ private:
     MFA::PBRWithShadowPipelineV2 mPbrPipeline {this};
     MFA::DebugRendererPipeline mDebugRenderPipeline {};
 
-    // TODO We need these shape to get initialized on demand
-    std::shared_ptr<MFA::RT::GpuModel> mSphereModel {};
-    std::shared_ptr<MFA::RT::GpuModel> mCubeModel {};
-    
     int mUIRecordId = 0;
 
     MFA::Prefab mSoldierPrefab;

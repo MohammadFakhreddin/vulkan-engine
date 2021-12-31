@@ -14,7 +14,7 @@ namespace MFA
 
         MFA_COMPONENT_PROPS(
             AxisAlignedBoundingBoxComponent,
-            FamilyType::BoundingVolumeComponent,
+            FamilyType::BoundingVolume,
             EventTypes::InitEvent | EventTypes::ShutdownEvent | EventTypes::UpdateEvent
         )
         
@@ -27,17 +27,17 @@ namespace MFA
 
         ~AxisAlignedBoundingBoxComponent() override;
         
-        void Init() override;
+        void init() override;
 
-        void Shutdown() override;
+        void shutdown() override;
 
-        void OnUI() override;
+        void onUI() override;
 
-        void Clone(Entity * entity) const override;
+        void clone(Entity * entity) const override;
 
-        void Deserialize(nlohmann::json const & jsonObject) override;
+        void deserialize(nlohmann::json const & jsonObject) override;
 
-        void Serialize(nlohmann::json & jsonObject) const override;
+        void serialize(nlohmann::json & jsonObject) const override;
 
         [[nodiscard]]
         glm::vec3 const & GetExtend() const override;

@@ -628,7 +628,7 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     std::shared_ptr<RT::GpuModel> CreateGpuModel(
-        std::shared_ptr<AssetSystem::Model> modelAsset,
+        AssetSystem::Model * modelAsset,
         RT::GpuModelId const uniqueId,
         char const * address
     )
@@ -645,29 +645,11 @@ namespace MFA::RenderFrontend
             uniqueId,
             address,
             std::move(meshBuffers),
-            std::move(textures),
-            std::move(modelAsset)
+            std::move(textures)
         );
     }
 
     //-------------------------------------------------------------------------------------------------
-
-    //void DestroyGpuModel(RT::GpuModel & gpuModel)
-    //{
-        //MFA_ASSERT(gpuModel.valid);
-        //gpuModel.valid = false;
-        //DestroyMeshBuffers(gpuModel.meshBuffers);
-        // Due to textures being shared ptr from now on it can destroy itself!
-        /*if (false == gpuModel.textures.empty())
-        {
-            for (auto & gpuTexture : gpuModel.textures)
-            {
-                DestroyTexture(*gpuTexture);
-            }
-        }*/
-        //}
-
-        //-------------------------------------------------------------------------------------------------
 
     void DeviceWaitIdle()
     {

@@ -15,7 +15,7 @@ public:
 
     MFA_COMPONENT_PROPS(
         ThirdPersonCameraComponent,
-        FamilyType::CameraComponent,
+        FamilyType::Camera,
         EventTypes::InitEvent | EventTypes::UpdateEvent | EventTypes::ShutdownEvent
     )
     
@@ -40,13 +40,13 @@ public:
         float eulerAngles[3]
     );
 
-    void Init() override;
+    void init() override;
 
     void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState) override;
 
-    void Shutdown() override;
+    void shutdown() override;
 
-    void OnUI() override;
+    void onUI() override;
 
 private:
 

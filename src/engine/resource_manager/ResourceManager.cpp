@@ -15,6 +15,7 @@ namespace MFA
     struct State
     {
         std::unordered_map<std::string, std::weak_ptr<RT::GpuModel>> availableGpuModels{};
+        std::unordered_map<std::string, std::weak_ptr<AS::Model>> availableCpuModels{};
         RT::GpuModelId nextId = 0;
     };
     State * state = nullptr;
@@ -34,74 +35,109 @@ namespace MFA
         {
             pair.second.reset();
         }
+        for (auto & pair : state->availableCpuModels)
+        {
+            pair.second.reset();
+        }
         delete state;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    static std::shared_ptr<RT::GpuModel> createGpuModel(std::shared_ptr<AS::Model> cpuModel, char const * name)
+    static std::shared_ptr<RT::GpuModel> createGpuModel(AS::Model * cpuModel, char const * name)
     {
         MFA_ASSERT(name != nullptr);
         MFA_ASSERT(strlen(name) > 0);
-
+        MFA_ASSERT(state->availableGpuModels.contains(name) == false);
+        MFA_ASSERT(cpuModel != nullptr);
         MFA_ASSERT(cpuModel->mesh->IsValid());
-        auto gpuModel = RF::CreateGpuModel(std::move(cpuModel), state->nextId++, name);
+
+        auto gpuModel = RF::CreateGpuModel(cpuModel, state->nextId++, name);
         state->availableGpuModels[name] = gpuModel;
         return gpuModel;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<RT::GpuModel> ResourceManager::Acquire(char const * fileAddress, bool const loadFileIfNotExists)
+    std::shared_ptr<RT::GpuModel> ResourceManager::AcquireForGpu(char const * nameOrFileAddress, bool const loadFileIfNotExists)
     {
         std::shared_ptr<RT::GpuModel> gpuModel = nullptr;
 
-        auto const findResult = state->availableGpuModels.find(fileAddress);
+        auto const findResult = state->availableGpuModels.find(nameOrFileAddress);
         if (findResult != state->availableGpuModels.end())
         {
             gpuModel = findResult->second.lock();
         }
 
         // It means that file is already loaded and still exists
-        if (gpuModel != nullptr || loadFileIfNotExists == false)
+        if (gpuModel != nullptr )
         {
             return gpuModel;
         }
 
-        auto const extension = FS::ExtractExtensionFromPath(fileAddress);
-        if (extension == ".gltf" || extension == ".glb")
+        auto const cpuModel = AcquireForCpu(nameOrFileAddress, loadFileIfNotExists);
+        if (cpuModel == nullptr)
         {
-            auto const cpuModel = Importer::ImportGLTF(Path::ForReadWrite(fileAddress).c_str());
-            if (cpuModel != nullptr)
-            {
-                std::string relativePath {};
-                if (Path::RelativeToAssetFolder(fileAddress, relativePath) == false)
-                {
-                    relativePath = fileAddress;
-                }
-                return createGpuModel(cpuModel, relativePath.c_str());
-            }
+            return nullptr;
         }
 
-        MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
-        return nullptr;
+        std::string relativePath{};
+        if (Path::RelativeToAssetFolder(nameOrFileAddress, relativePath) == false)
+        {
+            relativePath = nameOrFileAddress;
+        }
+        return createGpuModel(cpuModel.get(), relativePath.c_str());
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<RT::GpuModel> ResourceManager::Assign(std::shared_ptr<AssetSystem::Model> cpuModel, char const * name)
+    std::shared_ptr<AS::Model> ResourceManager::AcquireForCpu(char const * nameOrFileAddress, bool const loadFileIfNotExists)
     {
-        auto const findResult = state->availableGpuModels.find(name);
+        std::shared_ptr<AS::Model> cpuModel = nullptr;
+
+        auto const findResult = state->availableCpuModels.find(nameOrFileAddress);
+        if (findResult != state->availableCpuModels.end())
+        {
+            cpuModel = findResult->second.lock();
+        }
+
+        if (cpuModel != nullptr || loadFileIfNotExists == false)
+        {
+            return cpuModel;
+        }
+
+        auto const extension = FS::ExtractExtensionFromPath(nameOrFileAddress);
+        if (extension == ".gltf" || extension == ".glb")
+        {
+            cpuModel = Importer::ImportGLTF(Path::ForReadWrite(nameOrFileAddress).c_str());
+        } else
+        {
+            MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+        }
+
+        state->availableCpuModels[nameOrFileAddress] = cpuModel;
+
+        return cpuModel;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool ResourceManager::Assign(std::shared_ptr<AssetSystem::Model> const & cpuModel, char const * name)
+    {
+        MFA_ASSERT(cpuModel != nullptr);
+
+        auto const findResult = state->availableCpuModels.find(name);
         if (
-            findResult != state->availableGpuModels.end() &&
+            findResult != state->availableCpuModels.end() &&
             findResult->second.expired() == false
         )
         {
             MFA_ASSERT(false);
-            return nullptr;
+            return false;
         }
 
-        return createGpuModel(std::move(cpuModel), name);
+        state->availableCpuModels[name] = cpuModel;
+        return true;
     }
 
     //-------------------------------------------------------------------------------------------------

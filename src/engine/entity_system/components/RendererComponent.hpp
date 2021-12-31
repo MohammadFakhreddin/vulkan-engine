@@ -4,28 +4,34 @@
 
 namespace MFA {
 
-    class DrawableVariant;
+    class Variant;
     class BasePipeline;
 
     class RendererComponent : public Component {
     public:
+    
+        void notifyVariantDestroyed();
 
-        void NotifyVariantDestroyed();
+        void shutdown() override;
 
-        void Shutdown() override;
+        void serialize(nlohmann::json & jsonObject) const override;
 
-        void Serialize(nlohmann::json & jsonObject) const override;
+        void deserialize(nlohmann::json const & jsonObject) override;
 
-        void Deserialize(nlohmann::json const & jsonObject) override;
+        [[nodiscard]]
+        Variant const * getVariant() const;
+
+        [[nodiscard]]
+        Variant * getVariant();
 
     protected:
 
-        explicit RendererComponent() = default;
+        explicit RendererComponent();
 
-        explicit RendererComponent(BasePipeline & pipeline, DrawableVariant * drawableVariant);
+        explicit RendererComponent(BasePipeline & pipeline, Variant * variant);
 
         BasePipeline * mPipeline = nullptr;
-        DrawableVariant * mVariant = nullptr;
+        Variant * mVariant = nullptr;
 
     };
     

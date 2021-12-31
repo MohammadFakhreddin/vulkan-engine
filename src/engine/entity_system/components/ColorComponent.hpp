@@ -13,7 +13,7 @@ public:
 
     MFA_COMPONENT_PROPS(
         ColorComponent,
-        FamilyType::ColorComponent,
+        FamilyType::Color,
         EventTypes::EmptyEvent
     )
 
@@ -30,13 +30,13 @@ public:
     [[nodiscard]]
     glm::vec3 const & GetColor() const;
 
-    void OnUI() override;
+    void onUI() override;
 
-    void Clone(Entity * entity) const override;
+    void clone(Entity * entity) const override;
 
-    void Serialize(nlohmann::json & jsonObject) const override;
+    void serialize(nlohmann::json & jsonObject) const override;
 
-    void Deserialize(nlohmann::json const & jsonObject) override;
+    void deserialize(nlohmann::json const & jsonObject) override;
 
 private:
 

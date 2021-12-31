@@ -10,8 +10,6 @@
 #include "engine/BedrockMatrix.hpp"
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
-#include "engine/entity_system/components/BoundingVolumeComponent.hpp"
-#include "engine/entity_system/components/MeshRendererComponent.hpp"
 
 #include <glm/gtx/quaternion.hpp>
 
@@ -22,28 +20,22 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::DrawableVariantId DrawableVariant::NextInstanceId = 0;
-
-    //-------------------------------------------------------------------------------------------------
-
-    DrawableVariant::DrawableVariant(DrawableEssence const & essence)
-        : mId(NextInstanceId)
-        , mEssence(&essence)
-        , mMesh(*mEssence->GetGpuModel()->model->mesh)
+    DrawableVariant::DrawableVariant(DrawableEssence const * essence)
+        : Variant(essence)
+        , mDrawableEssence(essence)
+        , mMesh(mDrawableEssence->getCpuMesh())
     {
-        NextInstanceId += 1;
-
-        MFA_ASSERT(mMesh.IsValid());
+        MFA_ASSERT(mMesh->IsValid());
 
         // Skins
-        mSkins.resize(mMesh.GetSkinsCount());
+        mSkins.resize(mMesh->GetSkinsCount());
 
         {// Nodes
-            uint32_t const nodesCount = mMesh.GetNodesCount();
+            uint32_t const nodesCount = mMesh->GetNodesCount();
             mNodes.resize(nodesCount);
             for (uint32_t i = 0; i < nodesCount; ++i)
             {
-                auto & meshNode = mMesh.GetNodeByIndex(i);
+                auto & meshNode = mMesh->GetNodeByIndex(i);
                 auto & node = mNodes[i];
 
                 node.meshNode = &meshNode;
@@ -85,9 +77,9 @@ namespace MFA
         {// Creating cachedSkinJoints array
             {
                 uint32_t totalJointsCount = 0;
-                for (uint32_t i = 0; i < mMesh.GetSkinsCount(); ++i)
+                for (uint32_t i = 0; i < mMesh->GetSkinsCount(); ++i)
                 {
-                    auto & skin = mMesh.GetSkinByIndex(i);
+                    auto & skin = mMesh->GetSkinByIndex(i);
                     auto const jointsCount = static_cast<uint32_t>(skin.joints.size());
                     totalJointsCount += jointsCount;
                 }
@@ -101,11 +93,11 @@ namespace MFA
                 }
             }
             {
-                mCachedSkinsJoints.resize(mMesh.GetSkinsCount());
+                mCachedSkinsJoints.resize(mMesh->GetSkinsCount());
                 uint32_t startingJointIndex = 0;
-                for (uint32_t i = 0; i < mMesh.GetSkinsCount(); ++i)
+                for (uint32_t i = 0; i < mMesh->GetSkinsCount(); ++i)
                 {
-                    auto & skin = mMesh.GetSkinByIndex(i);
+                    auto & skin = mMesh->GetSkinByIndex(i);
                     auto const jointsCount = static_cast<uint32_t>(skin.joints.size());
                     mCachedSkinsJoints[i] = reinterpret_cast<JointTransformData *>(mCachedSkinsJointsBlob->memory.ptr + startingJointIndex * sizeof(JointTransformData));
                     mSkins[i].skinStartingIndex = static_cast<int>(startingJointIndex);
@@ -117,25 +109,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    DrawableVariant::~DrawableVariant()
-    {
-        if (mIsInitialized == true)
-        {
-            Shutdown();
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    RT::UniformBufferGroup const * DrawableVariant::GetUniformBuffer(char const * name)
-    {
-        auto const findResult = mUniformBuffers.find(name);
-        if (findResult != mUniformBuffers.end())
-        {
-            return &findResult->second;
-        }
-        return nullptr;
-    }
+    DrawableVariant::~DrawableVariant() = default;
 
     //-------------------------------------------------------------------------------------------------
 
@@ -146,52 +120,12 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-
-    void DrawableVariant::Init(
-        Entity * entity,
-        std::weak_ptr<RendererComponent> const & rendererComponent,
-        std::weak_ptr<TransformComponent> const & transformComponent,
-        std::weak_ptr<BoundingVolumeComponent> const & boundingVolumeComponent
-    )
-    {
-        if (mIsInitialized)
-        {
-            return;
-        }
-        mIsInitialized = true;
-
-        MFA_ASSERT(entity != nullptr);
-        mEntity = entity;
-
-        MFA_ASSERT(rendererComponent.expired() == false);
-        mRendererComponent = rendererComponent;
-
-        MFA_ASSERT(transformComponent.expired() == false);
-        mTransformComponent = transformComponent;
-
-        mTransformListenerId = mTransformComponent.lock()->RegisterChangeListener([this]()->void
-            {
-                mIsModelTransformChanged = true;
-            }
-        );
-
-        MFA_ASSERT(boundingVolumeComponent.expired() == false);
-        mBoundingVolumeComponent = boundingVolumeComponent;
-    }
-
-    //-------------------------------------------------------------------------------------------------
     // TODO We should separate it into update buffer and update state phase
     void DrawableVariant::Update(float const deltaTimeInSec, RT::CommandRecordState const & drawPass)
     {
         if (IsActive() == false)
         {
             return;
-        }
-
-        // Check if object is visible in frustum
-        if (auto const ptr = mBoundingVolumeComponent.lock())
-        {
-            mIsInFrustum = ptr->IsInFrustum();
         }
 
         // If object is not visible we only need to update animation time and we can avoid updating skin joints
@@ -208,38 +142,17 @@ namespace MFA
 
         if (mSkinsJointsBuffer != nullptr && mIsSkinJointsChanged == true)
         {
-            bufferDirtyCounter = 2;
+            mBufferDirtyCounter = 2;
 
             mIsSkinJointsChanged = false;
         }
-        if (bufferDirtyCounter > 0)
+        if (mBufferDirtyCounter > 0)
         {
             RF::UpdateUniformBuffer(
                *mSkinsJointsBuffer->buffers[drawPass.frameIndex],
                mCachedSkinsJointsBlob->memory
             );
-            bufferDirtyCounter -= 1;
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void DrawableVariant::Shutdown()
-    {
-        if (mIsInitialized == false)
-        {
-            return;
-        }
-        mIsInitialized = false;
-
-        if (auto const ptr = mRendererComponent.lock())
-        {
-            ptr->NotifyVariantDestroyed();
-        }
-
-        if (auto const ptr = mTransformComponent.lock())
-        {
-            ptr->UnRegisterChangeListener(mTransformListenerId);
+            mBufferDirtyCounter -= 1;
         }
     }
 
@@ -248,7 +161,7 @@ namespace MFA
     void DrawableVariant::Draw(
         RT::CommandRecordState const & drawPass,
         BindDescriptorSetFunction const & bindFunction,
-        AlphaMode alphaMode
+        AlphaMode const alphaMode
     )
     {
         for (auto & node : mNodes)
@@ -263,47 +176,12 @@ namespace MFA
     {
         return mIsAnimationFinished;
     }
-
+    
     //-------------------------------------------------------------------------------------------------
 
-    bool DrawableVariant::IsInFrustum() const
+    int DrawableVariant::GetActiveAnimationIndex() const noexcept
     {
-        return mIsInFrustum;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    Entity * DrawableVariant::GetEntity() const
-    {
-        return mEntity;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool DrawableVariant::IsVisible() const
-    {
-        return IsActive() && mIsOccluded == false && mIsInFrustum == true;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool DrawableVariant::IsOccluded() const
-    {
-        return mIsOccluded;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void DrawableVariant::SetIsOccluded(bool const isOccluded)
-    {
-        mIsOccluded = isOccluded;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool DrawableVariant::IsInFrustum()
-    {
-        return mIsInFrustum;
+        return mActiveAnimationIndex;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -320,7 +198,7 @@ namespace MFA
         mAnimationTransitionDurationInSec = params.transitionDuration;
         mAnimationRemainingTransitionDurationInSec = params.transitionDuration;
         mPreviousAnimationTimeInSec = mActiveAnimationTimeInSec;
-        mActiveAnimationTimeInSec = params.startTimeOffsetInSec + mMesh.GetAnimationByIndex(mActiveAnimationIndex).startTime;
+        mActiveAnimationTimeInSec = params.startTimeOffsetInSec + mMesh->GetAnimationByIndex(mActiveAnimationIndex).startTime;
         mActiveAnimationParams = params;
     }
 
@@ -328,7 +206,7 @@ namespace MFA
 
     void DrawableVariant::SetActiveAnimation(char const * animationName, AnimationParams const & params)
     {
-        auto const index = mEssence->GetAnimationIndex(animationName);
+        auto const index = mDrawableEssence->getAnimationIndex(animationName);
         if (MFA_VERIFY(index >= 0))
         {
             SetActiveAnimationIndex(index, params);
@@ -337,42 +215,17 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::StorageBufferCollection const & DrawableVariant::CreateStorageBuffer(
-        uint32_t const size,
-        uint32_t const count
-    )
-    {
-        mStorageBuffer = RF::CreateStorageBuffer(size, count);
-        return *mStorageBuffer;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    RT::StorageBufferCollection const & DrawableVariant::GetStorageBuffer() const
-    {
-        return *mStorageBuffer;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    BoundingVolumeComponent * DrawableVariant::GetBoundingVolume() const
-    {
-        return mBoundingVolumeComponent.lock().get();
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
     void DrawableVariant::updateAnimation(float const deltaTimeInSec, bool isVisible)
     {
         using Animation = AS::Mesh::Animation;
 
-        if (mMesh.GetAnimationsCount() <= 0)
+        if (mMesh->GetAnimationsCount() <= 0)
         {
             return;
         }
 
         {// Active animation
-            auto const & activeAnimation = mMesh.GetAnimationByIndex(mActiveAnimationIndex);
+            auto const & activeAnimation = mMesh->GetAnimationByIndex(mActiveAnimationIndex);
 
             if (isVisible)
             {
@@ -467,7 +320,7 @@ namespace MFA
                 return;
             }
 
-            auto const & previousAnimation = mMesh.GetAnimationByIndex(mPreviousAnimationIndex);
+            auto const & previousAnimation = mMesh->GetAnimationByIndex(mPreviousAnimationIndex);
 
             for (auto const & channel : previousAnimation.channels)
             {
@@ -535,11 +388,11 @@ namespace MFA
 
     void DrawableVariant::computeNodesGlobalTransform()
     {
-        auto const rootNodesCount = mMesh.GetRootNodesCount();
+        auto const rootNodesCount = mMesh->GetRootNodesCount();
 
         for (uint32_t i = 0; i < rootNodesCount; ++i)
         {
-            auto & node = mNodes[mMesh.GetIndexOfRootNode(i)];
+            auto & node = mNodes[mMesh->GetIndexOfRootNode(i)];
             computeNodeGlobalTransform(node, nullptr, false);
         }
     }
@@ -548,10 +401,10 @@ namespace MFA
 
     void DrawableVariant::updateAllSkinsJoints()
     {
-        auto const skinsCount = mMesh.GetSkinsCount();
+        auto const skinsCount = mMesh->GetSkinsCount();
         if (skinsCount > 0)
         {
-            auto const * skins = mMesh.GetSkinData();
+            auto const * skins = mMesh->GetSkinData();
             MFA_ASSERT(skins != nullptr);
 
             for (uint32_t i = 0; i < skinsCount; ++i)
@@ -593,10 +446,10 @@ namespace MFA
         // Question: Why can't we just render sub-meshes ?
         if (node.meshNode->hasSubMesh())
         {
-            MFA_ASSERT(static_cast<int>(mMesh.GetSubMeshCount()) > node.meshNode->subMeshIndex);
+            MFA_ASSERT(static_cast<int>(mMesh->GetSubMeshCount()) > node.meshNode->subMeshIndex);
             drawSubMesh(
                 drawPass,
-                mMesh.GetSubMeshByIndex(node.meshNode->subMeshIndex),
+                mMesh->GetSubMeshByIndex(node.meshNode->subMeshIndex),
                 node,
                 bindFunction,
                 alphaMode
@@ -705,10 +558,10 @@ namespace MFA
 
     void DrawableVariant::OnUI()
     {
-        std::vector<char const *> animationsList{ mMesh.GetAnimationsCount() };
+        std::vector<char const *> animationsList{ mMesh->GetAnimationsCount() };
         for (size_t i = 0; i < animationsList.size(); ++i)
         {
-            animationsList[i] = mMesh.GetAnimationByIndex(static_cast<uint32_t>(i)).name.c_str();
+            animationsList[i] = mMesh->GetAnimationByIndex(static_cast<uint32_t>(i)).name.c_str();
         }
 
         UI::Combo(
@@ -719,58 +572,7 @@ namespace MFA
         );
         SetActiveAnimationIndex(mUISelectedAnimationIndex);
     }
-
-    //-------------------------------------------------------------------------------------------------
-
-    DrawableEssence const * DrawableVariant::GetEssence() const noexcept
-    {
-        return mEssence;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    RT::DrawableVariantId DrawableVariant::GetId() const noexcept
-    {
-        return mId;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    RT::DescriptorSetGroup const & DrawableVariant::CreateDescriptorSetGroup(
-        VkDescriptorPool descriptorPool,
-        uint32_t const descriptorSetCount,
-        VkDescriptorSetLayout descriptorSetLayout
-    )
-    {
-        MFA_ASSERT(mDescriptorSetGroup.IsValid() == false);
-        mDescriptorSetGroup = RF::CreateDescriptorSets(
-            descriptorPool,
-            descriptorSetCount,
-            descriptorSetLayout
-        );
-        MFA_ASSERT(mDescriptorSetGroup.IsValid() == true);
-        return mDescriptorSetGroup;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    RT::DescriptorSetGroup const & DrawableVariant::GetDescriptorSetGroup() const
-    {
-        MFA_ASSERT(mDescriptorSetGroup.IsValid() == true);
-        return mDescriptorSetGroup;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool DrawableVariant::IsActive() const noexcept
-    {
-        if (auto const ptr = mRendererComponent.lock())
-        {
-            return ptr->IsActive();
-        }
-        return false;
-    }
-
+    
     //-------------------------------------------------------------------------------------------------
 
 }

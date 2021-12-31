@@ -4,9 +4,11 @@
 
 #include <unordered_map>
 
-namespace MFA {
+#include "engine/render_system/essence/Essence.hpp"
 
-class DrawableEssence {
+namespace MFA {
+// TODO Maybe we should rename this to MeshEssence
+class DrawableEssence final : public Essence {
 public:
 
     struct PrimitiveInfo {
@@ -31,60 +33,37 @@ public:
         float placeholder2;
     };
 
-    explicit DrawableEssence(std::shared_ptr<RT::GpuModel> gpuModel);
-
-    ~DrawableEssence();
+    explicit DrawableEssence(
+        std::shared_ptr<RT::GpuModel> const & gpuModel,
+        std::shared_ptr<AS::Mesh> const & cpuMesh
+    );
+    ~DrawableEssence() override;
     
     DrawableEssence & operator= (DrawableEssence && rhs) noexcept = delete;
-
     DrawableEssence (DrawableEssence const &) noexcept = delete;
-
     DrawableEssence (DrawableEssence && rhs) noexcept = delete;
-
     DrawableEssence & operator = (DrawableEssence const &) noexcept = delete;
 
-    [[nodiscard]]
-    RT::GpuModelId GetId() const;
+    [[nodiscard]] RT::UniformBufferGroup const & getPrimitivesBuffer() const noexcept;
 
     [[nodiscard]]
-    RT::GpuModel * GetGpuModel() const;
-
-    [[nodiscard]] RT::UniformBufferGroup const & GetPrimitivesBuffer() const noexcept;
+    uint32_t getPrimitiveCount() const noexcept;
 
     [[nodiscard]]
-    uint32_t GetPrimitiveCount() const noexcept;
+    int getAnimationIndex(char const * name) const noexcept;
 
     [[nodiscard]]
-    int GetAnimationIndex(char const * name) const noexcept;
-
-    RT::DescriptorSetGroup const & CreateDescriptorSetGroup(
-        VkDescriptorPool descriptorPool,
-        uint32_t descriptorSetCount,
-        VkDescriptorSetLayout descriptorSetLayout
-    );
-
-    [[nodiscard]]
-    RT::DescriptorSetGroup const & GetDescriptorSetGroup() const;
-
-    void BindVertexBuffer(RT::CommandRecordState const & recordState) const;
-    void BindIndexBuffer(RT::CommandRecordState const & recordState) const;
-    void BindDescriptorSetGroup(RT::CommandRecordState const & recordState) const;
-    void BindAllRenderRequiredData(RT::CommandRecordState const & recordState) const;
+    AS::Mesh const * getCpuMesh() const;
 
 private:
 
     std::shared_ptr<RT::UniformBufferGroup> mPrimitivesBuffer = nullptr;
-
-    std::shared_ptr<RT::GpuModel> const mGpuModel;
-    
     uint32_t mPrimitiveCount = 0;
 
     std::unordered_map<std::string, int> mAnimationNameLookupTable {};
 
-    std::unordered_map<std::string, RT::DescriptorSetGroup> mDescriptorSetGroups {};
+    std::shared_ptr<AS::Mesh> mCpuMesh;
 
-    RT::DescriptorSetGroup mDescriptorSetGroup {};
-    bool mIsDescriptorSetGroupValid = false;
 };
 
 }

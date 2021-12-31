@@ -56,23 +56,31 @@ void PrefabEditorScene::Init()
         mDebugRenderPipeline.Init();
 
         auto const sphereCpuModel = ShapeGenerator::Sphere();
-        auto sphereModel = RC::Assign(sphereCpuModel, "Sphere");
-        mDebugRenderPipeline.CreateEssenceIfNotExists(sphereModel);
+        RC::Assign(sphereCpuModel, "Sphere");
+        auto const sphereGpuModel = RC::AcquireForGpu("Sphere");
+        mDebugRenderPipeline.CreateEssenceIfNotExists(
+            sphereGpuModel,
+            sphereCpuModel->mesh
+        );
 
         mLoadedAssets.emplace_back(Asset {
-            .fileAddress = "",
+            .fileAddress = "Sphere",
             .essenceName = "Sphere",
-            .gpuModel = std::move(sphereModel)
+            .gpuModelId = sphereGpuModel->id
         });
 
         auto const cubeCpuModel = ShapeGenerator::Cube();
-        auto cubeModel = RC::Assign(cubeCpuModel, "Cube");
-        mDebugRenderPipeline.CreateEssenceIfNotExists(cubeModel);
+        RC::Assign(cubeCpuModel, "Cube");
+        auto const cubeGpuModel = RC::AcquireForGpu("Sphere");
+        mDebugRenderPipeline.CreateEssenceIfNotExists(
+            cubeGpuModel,
+            cubeCpuModel->mesh
+        );
 
         mLoadedAssets.emplace_back(Asset {
-            .fileAddress = "",
+            .fileAddress = "Cube",
             .essenceName = "Cube",
-            .gpuModel = std::move(cubeModel)
+            .gpuModelId = cubeGpuModel->id
         });
     }
 
@@ -304,20 +312,27 @@ bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress)
     MFA_LOG_INFO("Trying to load file with address %s", fileAddress.c_str());
     MFA_ASSERT(fileAddress.empty() == false);
 
-    auto gpuModel = ResourceManager::Acquire(fileAddress.c_str());
+    auto const cpuModel = RC::AcquireForCpu(fileAddress.c_str());
+    if (cpuModel == nullptr)
+    {
+        MFA_LOG_WARN("Failed to load selected asset from file");
+        return false;
+    }
+
+    auto const gpuModel = ResourceManager::AcquireForGpu(fileAddress.c_str());
     if (gpuModel == nullptr)
     {
-        MFA_LOG_WARN("Gltf model is invalid. Failed to create gpu model");
+        MFA_LOG_WARN("Failed to create gpu model");
         return false;
     }
 
     mLoadedAssets.emplace_back(Asset{
         .fileAddress = fileAddress,
         .essenceName = mInputTextEssenceName,
-        .gpuModel = gpuModel    // TODO We need shared_ptr + weak_ptr
+        .gpuModelId = gpuModel->id
     });
 
-    mPbrPipeline.CreateEssenceIfNotExists(gpuModel);
+    mPbrPipeline.CreateEssenceIfNotExists(gpuModel, cpuModel->mesh);
 
     mInputTextEssenceName = "";
 
@@ -328,9 +343,9 @@ bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress)
 
 void PrefabEditorScene::destroyAsset(int const assetIndex)
 {
-    auto & asset = mLoadedAssets[assetIndex];
-    mPbrPipeline.DestroyDrawableEssence(*asset.gpuModel);
-    asset.gpuModel.reset();
+    auto const & asset = mLoadedAssets[assetIndex];
+    auto const gpuModel = RC::AcquireForGpu(asset.fileAddress.c_str());
+    mPbrPipeline.DestroyEssence(*gpuModel);
     mLoadedAssets.erase(mLoadedAssets.begin() + assetIndex);
 }
 
@@ -422,7 +437,7 @@ void PrefabEditorScene::entityUI(Entity * entity)
             {
                 return;
             }
-            newComponent->Init();
+            newComponent->init();
             EntitySystem::UpdateEntity(entity);
 
             newComponent->EditorSignal.Register(this, &PrefabEditorScene::componentUI);
@@ -457,13 +472,13 @@ void PrefabEditorScene::componentUI(Component * component, Entity * entity)
     MFA_ASSERT(entity != nullptr);
     UI::Button("Remove component", [this, entity, component]()
     {
-        if (TransformComponent::Name == component->GetName())
+        if (TransformComponent::Name == component->getName())
         {
             MFA_LOG_WARN("Transform components cannot be removed");
             return;
         }
 
-        auto const findResult = mComponentsDependents.find(component->GetFamilyType());
+        auto const findResult = mComponentsDependents.find(component->getFamily());
         MFA_ASSERT(findResult != mComponentsDependents.end());
         for (auto const familyId : findResult->second)
         {
@@ -472,8 +487,8 @@ void PrefabEditorScene::componentUI(Component * component, Entity * entity)
             {
                 MFA_LOG_WARN(
                     "Cannot delete component with name %s because a dependant component with name %s exists"
-                    , component->GetName()
-                    , dependentComponent->GetName()
+                    , component->getName()
+                    , dependentComponent->getName()
                 );
                 return;
             }
@@ -498,20 +513,20 @@ void PrefabEditorScene::prepareDependencyLists()
     mAvailableComponents.emplace_back(PointLightComponent::Name);
 
     // CreateComponentsRequirements
-    mComponentDependencies[TransformComponent::FamilyType] = {};
-    mComponentDependencies[MeshRendererComponent::FamilyType] = {
-        TransformComponent::FamilyType,
-        BoundingVolumeComponent::FamilyType
+    mComponentDependencies[TransformComponent::Family] = {};
+    mComponentDependencies[MeshRendererComponent::Family] = {
+        TransformComponent::Family,
+        BoundingVolumeComponent::Family
     };
-    mComponentDependencies[BoundingVolumeRendererComponent::FamilyType] = {
-        ColorComponent::FamilyType,
-        BoundingVolumeComponent::FamilyType
+    mComponentDependencies[BoundingVolumeRendererComponent::Family] = {
+        ColorComponent::Family,
+        BoundingVolumeComponent::Family
     };
-    mComponentDependencies[BoundingVolumeComponent::FamilyType] = {};
-    mComponentDependencies[ColorComponent::FamilyType] = {};
-    mComponentDependencies[PointLightComponent::FamilyType] = {
-        TransformComponent::FamilyType,
-        ColorComponent::FamilyType
+    mComponentDependencies[BoundingVolumeComponent::Family] = {};
+    mComponentDependencies[ColorComponent::Family] = {};
+    mComponentDependencies[PointLightComponent::Family] = {
+        TransformComponent::Family,
+        ColorComponent::Family
     };
 
     // DeleteComponentsRequirements
@@ -544,7 +559,7 @@ void PrefabEditorScene::prepareDependencyLists()
 
 #define INSERT_INTO_CREATE_COMPONENT_MAP(component, createFunction)             \
 mCreateComponentInstructionMap[component::Name] = CreateComponentInstruction {  \
-    .familyType = component::FamilyType,                                        \
+    .familyType = component::Family,                                        \
     .function = (createFunction),                                               \
 }                                                                               \
 
@@ -567,7 +582,7 @@ void PrefabEditorScene::prepareCreateComponentInstructionMap()
         }
         return entity->AddComponent<MeshRendererComponent>(
             *GetPipelines()[mSelectedPipeline],
-            mLoadedAssets[mSelectedEssenceIndex].gpuModel->id
+            mLoadedAssets[mSelectedEssenceIndex].gpuModelId
         ).lock();
     });
 

@@ -13,11 +13,11 @@ MFA::Component::~Component() = default;
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::Component::Init() {}
+void MFA::Component::init() {}
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::Component::Shutdown() {}
+void MFA::Component::shutdown() {}
 
 //-------------------------------------------------------------------------------------------------
 
@@ -30,7 +30,7 @@ void MFA::Component::SetActive(bool const isActive)
     mIsActive = isActive;
 
     // Update event
-    if ((RequiredEvents() & EventTypes::UpdateEvent) > 0)
+    if ((requiredEvents() & EventTypes::UpdateEvent) > 0)
     {
         if (mIsActive)
         {
@@ -62,7 +62,7 @@ void MFA::Component::Update(float deltaTimeInSec, RT::CommandRecordState const &
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::Component::OnUI()
+void MFA::Component::onUI()
 {
     bool isActive = mIsActive;
     UI::Checkbox("IsActive", &isActive);

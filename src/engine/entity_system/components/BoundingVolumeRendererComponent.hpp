@@ -16,7 +16,7 @@ namespace MFA
 
         MFA_COMPONENT_PROPS(
             BoundingVolumeRendererComponent,
-            FamilyType::BoundingVolumeRendererComponent,
+            FamilyType::BoundingVolumeRenderer,
             EventTypes::InitEvent | EventTypes::ShutdownEvent | EventTypes::UpdateEvent
         )
 
@@ -24,15 +24,15 @@ namespace MFA
         ~BoundingVolumeRendererComponent() override;
         explicit BoundingVolumeRendererComponent(DebugRendererPipeline & pipeline);
 
-        void Init() override;
+        void init() override;
 
         void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState) override;
 
-        void Shutdown() override;
+        void shutdown() override;
 
-        void OnUI() override;
+        void onUI() override;
 
-        void Clone(Entity * entity) const override;
+        void clone(Entity * entity) const override;
 
     private:
 

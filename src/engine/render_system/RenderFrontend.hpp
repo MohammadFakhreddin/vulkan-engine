@@ -67,7 +67,7 @@ namespace MFA::RenderFrontend
     );
 
     void DestroyPipelineGroup(RT::PipelineGroup & drawPipeline);
-    
+
     [[nodiscard]]
     RT::DescriptorSetGroup CreateDescriptorSets(
         VkDescriptorPool descriptorPool,
@@ -83,10 +83,10 @@ namespace MFA::RenderFrontend
 
     [[nodiscard]]
     std::shared_ptr<RT::MeshBuffers> CreateMeshBuffers(AssetSystem::Mesh const & mesh);
-    
+
     [[nodiscard]]
     std::shared_ptr<RT::GpuTexture> CreateTexture(std::shared_ptr<AS::Texture> & texture);
-    
+
     void DestroyImage(RT::ImageGroup const & imageGroup);
 
     void DestroyImageView(RT::ImageViewGroup const & imageViewGroup);
@@ -95,11 +95,11 @@ namespace MFA::RenderFrontend
     [[nodiscard]]
     std::shared_ptr<RT::SamplerGroup> CreateSampler(RT::CreateSamplerParams const & samplerParams);
 
-    void DestroySampler(RT::SamplerGroup const& samplerGroup);
+    void DestroySampler(RT::SamplerGroup const & samplerGroup);
 
     [[nodiscard]]
     std::shared_ptr<RT::GpuModel> CreateGpuModel(
-        std::shared_ptr<AssetSystem::Model> modelAsset,
+        AssetSystem::Model * modelAsset,
         RT::GpuModelId uniqueId,
         char const * address
     );
@@ -109,14 +109,14 @@ namespace MFA::RenderFrontend
     [[nodiscard]]
     VkFormat GetDepthFormat();
 
-    void DestroyBuffer(RT::BufferAndMemory const& bufferGroup);
+    void DestroyBuffer(RT::BufferAndMemory const & bufferGroup);
 
     //---------------------------------------------Shader------------------------------------------------
 
     [[nodiscard]]
     std::shared_ptr<RT::GpuShader> CreateShader(std::shared_ptr<AS::Shader> const & shader);
 
-    void DestroyShader(RT::GpuShader const& gpuShader);
+    void DestroyShader(RT::GpuShader const & gpuShader);
 
     //-------------------------------------------UniformBuffer--------------------------------------------
 
@@ -143,7 +143,7 @@ namespace MFA::RenderFrontend
         RT::BufferAndMemory const & buffer,
         CBlob data
     );
-    
+
     //void DestroyStorageBuffer(RT::StorageBufferCollection & storageBuffer);
 
     //-------------------------------------------------------------------------------------------------

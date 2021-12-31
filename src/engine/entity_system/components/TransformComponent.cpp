@@ -30,9 +30,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::Init()
+    void TransformComponent::init()
     {
-        Component::Init();
+        Component::init();
 
         auto * parentEntity = GetEntity()->GetParent();
         if (parentEntity != nullptr)
@@ -52,9 +52,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::Shutdown()
+    void TransformComponent::shutdown()
     {
-        Component::Shutdown();
+        Component::shutdown();
         if (auto const parentTransformPtr = mParentTransform.lock())
         {
             parentTransformPtr->UnRegisterChangeListener(mParentTransformChangeListenerId);
@@ -251,11 +251,11 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::OnUI()
+    void TransformComponent::onUI()
     {
         if (UI::TreeNode("Transform"))
         {
-            Component::OnUI();
+            Component::onUI();
 
             glm::vec3 position = mLocalPosition;
             glm::vec3 scale = mScale;
@@ -273,7 +273,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::Clone(Entity * entity) const
+    void TransformComponent::clone(Entity * entity) const
     {
         entity->AddComponent<TransformComponent>(
             mLocalPosition,
@@ -284,7 +284,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::Serialize(nlohmann::json & jsonObject) const
+    void TransformComponent::serialize(nlohmann::json & jsonObject) const
     {
         JsonUtils::SerializeVec3(jsonObject, "position", mLocalPosition);
         JsonUtils::SerializeVec3(jsonObject, "rotation", mRotation);
@@ -293,7 +293,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::Deserialize(nlohmann::json const & jsonObject)
+    void TransformComponent::deserialize(nlohmann::json const & jsonObject)
     {
         JsonUtils::DeserializeVec3(jsonObject, "position", mLocalPosition);
         JsonUtils::DeserializeVec3(jsonObject, "rotation", mRotation);

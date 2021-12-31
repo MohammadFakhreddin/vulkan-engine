@@ -42,9 +42,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ThirdPersonCameraComponent::Init()
+    void ThirdPersonCameraComponent::init()
     {
-        CameraComponent::Init();
+        CameraComponent::init();
 
         mTransformComponent = GetEntity()->GetComponent<TransformComponent>();
         MFA_ASSERT(mTransformComponent.expired() == false);
@@ -107,9 +107,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ThirdPersonCameraComponent::Shutdown()
+    void ThirdPersonCameraComponent::shutdown()
     {
-        CameraComponent::Shutdown();
+        CameraComponent::shutdown();
         if (auto const ptr = mTransformComponent.lock())
         {
             ptr->UnRegisterChangeListener(mTransformChangeListenerId);
@@ -118,11 +118,11 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ThirdPersonCameraComponent::OnUI()
+    void ThirdPersonCameraComponent::onUI()
     {
         if(UI::TreeNode("ThirdPersonCamera"))
         {
-            CameraComponent::OnUI();
+            CameraComponent::onUI();
             UI::TreePop();            
         }
     }

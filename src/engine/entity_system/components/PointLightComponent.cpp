@@ -39,7 +39,7 @@ MFA::PointLightComponent::~PointLightComponent() = default;
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::PointLightComponent::Init()
+void MFA::PointLightComponent::init()
 {
     // Finding component references
     mColorComponent = GetEntity()->GetComponent<ColorComponent>();
@@ -54,7 +54,7 @@ void MFA::PointLightComponent::Init()
     // Registering point light to active scene
     auto const activeScene = SceneManager::GetActiveScene();
     MFA_ASSERT(activeScene != nullptr);
-    activeScene->RegisterPointLight(SelfPtr());
+    activeScene->RegisterPointLight(selfPtr());
     
     computeProjection();
     computeViewProjectionMatrices();
@@ -63,9 +63,9 @@ void MFA::PointLightComponent::Init()
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::PointLightComponent::Shutdown()
+void MFA::PointLightComponent::shutdown()
 {
-    Component::Shutdown();
+    Component::shutdown();
 
     if (auto const ptr = mTransformComponent.lock())
     {
@@ -104,11 +104,11 @@ float MFA::PointLightComponent::GetRadius() const
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::PointLightComponent::OnUI()
+void MFA::PointLightComponent::onUI()
 {
     if (UI::TreeNode("PointLight"))
     {
-        Component::OnUI();
+        Component::onUI();
 
         float radius = mRadius;
         UI::InputFloat("Radius", &radius);
@@ -144,7 +144,7 @@ bool MFA::PointLightComponent::IsVisible() const
     }
     if (auto const ptr = mAttachedMesh.lock())
     {
-        return ptr->GetVariant()->IsVisible();
+        return ptr->getVariant()->IsVisible();
     }
     return true;
 }
@@ -215,7 +215,7 @@ float MFA::PointLightComponent::GetQuadraticAttenuation() const
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::PointLightComponent::Clone(Entity * entity) const
+void MFA::PointLightComponent::clone(Entity * entity) const
 {
     // We do not currently support attached mesh. Maybe we should give up on it
     MFA_ASSERT(mAttachedMesh.expired() == true);
@@ -229,7 +229,7 @@ void MFA::PointLightComponent::Clone(Entity * entity) const
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::PointLightComponent::Serialize(nlohmann::json & jsonObject) const
+void MFA::PointLightComponent::serialize(nlohmann::json & jsonObject) const
 {
     jsonObject["Radius"] = mRadius;
     jsonObject["MaxDistance"] = mMaxDistance;
@@ -239,7 +239,7 @@ void MFA::PointLightComponent::Serialize(nlohmann::json & jsonObject) const
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::PointLightComponent::Deserialize(nlohmann::json const & jsonObject)
+void MFA::PointLightComponent::deserialize(nlohmann::json const & jsonObject)
 {
     mRadius = jsonObject["Radius"];
     mMaxDistance = jsonObject["MaxDistance"];

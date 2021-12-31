@@ -54,7 +54,7 @@ namespace MFA
         using ResizeEventListenerId = int;
         using ResizeEventListener = std::function<void()>;
 
-        using DrawableVariantId = uint32_t;
+        using VariantId = uint32_t;
 
         using GpuModelId = uint32_t;
 

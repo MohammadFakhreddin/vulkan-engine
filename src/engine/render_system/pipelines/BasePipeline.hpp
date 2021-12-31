@@ -1,8 +1,8 @@
 #pragma once
 
 #include "engine/render_system/RenderTypesFWD.hpp"
-#include "engine/render_system/drawable_essence/DrawableEssence.hpp"
-#include "engine/render_system/drawable_variant/DrawableVariant.hpp"
+#include "engine/render_system/essence/Essence.hpp"
+#include "engine/render_system/variant/Variant.hpp"
 
 #include <memory>
 #include <unordered_map>
@@ -23,16 +23,6 @@ namespace MFA {
 
 class BasePipeline {
 private:
-
-    struct EssenceAndVariants {
-
-        std::shared_ptr<DrawableEssence> Essence;
-        std::vector<std::shared_ptr<DrawableVariant>> Variants {};
-
-        explicit EssenceAndVariants();
-        explicit EssenceAndVariants(std::shared_ptr<RT::GpuModel> const & gpuModel);
-        ~EssenceAndVariants();
-    };
 
 public:
 
@@ -60,18 +50,21 @@ public:
         float deltaTime
     );
 
-    bool CreateEssenceIfNotExists(std::shared_ptr<RT::GpuModel> const & gpuModel);
+    bool CreateEssenceIfNotExists(
+        std::shared_ptr<RT::GpuModel> const & gpuModel,
+        std::shared_ptr<AS::Mesh> const & cpuMesh
+    );
 
     // Editor only function
-    void DestroyDrawableEssence(RT::GpuModelId id);
+    void DestroyEssence(RT::GpuModelId id);
 
-    void DestroyDrawableEssence(RT::GpuModel const & gpuModel);
+    void DestroyEssence(RT::GpuModel const & gpuModel);
 
-    virtual DrawableVariant * CreateDrawableVariant(RT::GpuModel const & gpuModel);
+    virtual Variant * CreateVariant(RT::GpuModel const & gpuModel);
 
-    virtual DrawableVariant * CreateDrawableVariant(RT::GpuModelId id);
+    virtual Variant * CreateVariant(RT::GpuModelId id);
 
-    void RemoveDrawableVariant(DrawableVariant & variant);
+    void RemoveVariant(Variant & variant);
 
     virtual void OnResize() = 0;
 
@@ -83,10 +76,23 @@ protected:
 
     virtual void Shutdown();
 
-    virtual void internalCreateDrawableEssence(DrawableEssence & essence) {}
+    virtual std::shared_ptr<Essence> internalCreateEssence(
+        std::shared_ptr<RT::GpuModel> const & gpuModel,
+        std::shared_ptr<AS::Mesh> const & cpuMesh
+    ) = 0;
 
+    virtual std::shared_ptr<Variant> internalCreateVariant(Essence * essence) = 0;
+
+    struct EssenceAndVariants {
+
+        std::shared_ptr<Essence> essence;  
+        std::vector<std::shared_ptr<Variant>> variants {};
+
+        explicit EssenceAndVariants();
+        explicit EssenceAndVariants(std::shared_ptr<Essence> essence);
+    };
     std::unordered_map<RT::GpuModelId, EssenceAndVariants> mEssenceAndVariantsMap;
-    std::vector<DrawableVariant *> mAllVariantsList {};
+    std::vector<Variant *> mAllVariantsList {};
     VkDescriptorPool mDescriptorPool {};
     uint32_t mMaxSets;
 

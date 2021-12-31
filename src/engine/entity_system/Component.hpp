@@ -10,31 +10,31 @@
 namespace MFA
 {
 
-#define MFA_COMPONENT_PROPS(componentName, familyType, eventTypes)      \
+#define MFA_COMPONENT_PROPS(componentName, family, eventTypes)          \
 public:                                                                 \
                                                                         \
 static constexpr char const * Name = #componentName;                    \
-static constexpr int FamilyType = static_cast<int>(familyType);         \
+static constexpr int Family = static_cast<int>(family);                 \
                                                                         \
-std::weak_ptr<componentName> SelfPtr() const                            \
+std::weak_ptr<componentName> selfPtr()                                  \
 {                                                                       \
-    return std::static_pointer_cast<componentName>(mSelfPtr.lock());    \
+    return std::static_pointer_cast<componentName>(shared_from_this()); \
 }                                                                       \
                                                                         \
 [[nodiscard]]                                                           \
-char const * GetName() override                                         \
+char const * getName() override                                         \
 {                                                                       \
     return Name;                                                        \
 }                                                                       \
                                                                         \
 [[nodiscard]]                                                           \
-int GetFamilyType() override                                            \
+int getFamily() override                                                \
 {                                                                       \
-    return FamilyType;                                                  \
+    return Family;                                                      \
 }                                                                       \
                                                                         \
 [[nodiscard]]                                                           \
-EventType RequiredEvents() const override                               \
+EventType requiredEvents() const override                               \
 {                                                                       \
     return eventTypes;                                                  \
 }                                                                       \
@@ -46,7 +46,7 @@ componentName & operator = (componentName && rhs) noexcept = delete;    \
 
 class Entity;
 
-class Component // TODO Remove self ptr and use "public std::enable_shared_from_this" instead
+class Component : public std::enable_shared_from_this<Component>
 {
 public:
 
@@ -69,7 +69,7 @@ public:
     Component & operator = (Component && rhs) noexcept = delete;
 
     [[nodiscard]]
-    virtual EventType RequiredEvents() const
+    virtual EventType requiredEvents() const
     {
         return EventTypes::EmptyEvent;
     }
@@ -78,37 +78,36 @@ public:
     {
         Invalid,
 
-        TransformComponent,
+        Transform,
 
-        MeshRendererComponent,
-
-        BoundingVolumeRendererComponent,
-
-        BoundingVolumeComponent,
+        MeshRenderer,
+        BoundingVolumeRenderer,
+        
+        BoundingVolume,
         //SphereBoundingVolumeComponent,
         //AxisAlignedBoundingBoxes,
 
-        ColorComponent,
+        Color,
 
-        CameraComponent,
+        Camera,
         //ObserverCameraComponent,
         //ThirdPersonCamera,
 
-        PointLightComponent,
-        DirectionalLightComponent,
+        PointLight,
+        DirectionalLight,
 
         Count
     };
 
-    virtual char const * GetName() = 0;
+    virtual char const * getName() = 0;
 
-    virtual int GetFamilyType() = 0;
+    virtual int getFamily() = 0;
 
-    virtual void Init();
+    virtual void init();
 
     virtual void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState);
     
-    virtual void Shutdown();
+    virtual void shutdown();
 
     void SetActive(bool isActive);
 
@@ -121,22 +120,20 @@ public:
         return mEntity;
     }
 
-    virtual void OnUI();
+    virtual void onUI();
 
-    virtual void Clone(Entity * entity) const = 0;
+    virtual void clone(Entity * entity) const = 0;
 
-    virtual void Serialize(nlohmann::json & jsonObject) const = 0;
+    virtual void serialize(nlohmann::json & jsonObject) const = 0;
 
-    virtual void Deserialize(nlohmann::json const & jsonObject) = 0;
+    virtual void deserialize(nlohmann::json const & jsonObject) = 0;
 
     Signal<Component *, Entity *> EditorSignal {};
 
 protected:
 
     explicit Component();
-
-    std::weak_ptr<Component> mSelfPtr {};
-
+    
 private:
 
     Entity * mEntity = nullptr;

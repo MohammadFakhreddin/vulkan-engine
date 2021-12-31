@@ -51,7 +51,7 @@ public:
     Entity * GetRootEntity() const;
 
     [[nodiscard]]
-    RT::UniformBufferGroup const & GetCameraBufferCollection() const;
+    RT::UniformBufferGroup const & GetCameraBuffers() const;
 
     void RegisterPointLight(std::weak_ptr<PointLightComponent> const & pointLight);
 

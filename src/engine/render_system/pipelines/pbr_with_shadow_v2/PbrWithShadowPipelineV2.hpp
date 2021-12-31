@@ -1,5 +1,6 @@
 #pragma once
 
+#include "engine/FoundationAsset.hpp"
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
 
@@ -7,15 +8,16 @@
 
 namespace MFA
 {
+    class DrawableEssence;
     class Scene;
     class DirectionalLightShadowResources;
     class DirectionalLightShadowRenderPass;
     class PointLightShadowRenderPass;
+    class PointLightShadowResources;
     class OcclusionRenderPass;
     class DrawableVariant;
     class DepthPrePass;
-    class PointLightShadowResources;
-
+    
     class PBRWithShadowPipelineV2 final : public BasePipeline
     {
     public:
@@ -91,21 +93,26 @@ namespace MFA
 
         void OnResize() override;
         
-        DrawableVariant * CreateDrawableVariant(RT::GpuModelId id) override;
-
     protected:
 
-        void internalCreateDrawableEssence(DrawableEssence & essence) override;
+        std::shared_ptr<Essence> internalCreateEssence(
+            std::shared_ptr<RT::GpuModel> const & gpuModel,
+            std::shared_ptr<AS::Mesh> const & cpuMesh
+        ) override;
 
+        std::shared_ptr<Variant> internalCreateVariant(Essence * essence) override;
+        
     private:
 
         using AlphaMode = AS::Mesh::Primitive::AlphaMode;
+
+        void updateVariants(float deltaTimeInSec, RT::CommandRecordState const & recordState) const;
 
         void createPerFrameDescriptorSets();
 
         void createEssenceDescriptorSets(DrawableEssence & essence) const;
 
-        void createVariantDescriptorSets(DrawableVariant * variant) const;
+        void createVariantDescriptorSets(DrawableVariant & variant) const;
 
         void createPerFrameDescriptorSetLayout();
 
@@ -179,7 +186,7 @@ namespace MFA
 
         struct OcclusionQueryData
         {
-            std::vector<std::weak_ptr<DrawableVariant>> Variants {};
+            std::vector<std::weak_ptr<Variant>> Variants {};
             std::vector<uint64_t> Results{};
             VkQueryPool Pool{};
         };

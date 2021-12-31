@@ -4,19 +4,23 @@
 #include "engine/BedrockMatrix.hpp"
 #include "tools/Importer.hpp"
 #include "engine/BedrockPath.hpp"
-#include "engine/camera/CameraComponent.hpp"
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 #include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/components/ColorComponent.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
+#include "engine/render_system/drawable_essence/DrawableEssence.hpp"
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
+#include "engine/resource_manager/ResourceManager.hpp"
+
+// TODO We need DebugVariant instead
+#define CAST_VARIANT(variant)  static_cast<DrawableVariant *>(variant.get())
 
 namespace MFA
 {
-
+    
 
     DebugRendererPipeline::DebugRendererPipeline()
         : BasePipeline(10)
@@ -90,8 +94,8 @@ namespace MFA
 
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto & essence = essenceAndVariantList.second.Essence;
-            auto & variantsList = essenceAndVariantList.second.Variants;
+            auto & essence = essenceAndVariantList.second.essence;
+            auto & variantsList = essenceAndVariantList.second.variants;
 
             essence->BindVertexBuffer(drawPass);
             essence->BindIndexBuffer(drawPass);
@@ -105,8 +109,11 @@ namespace MFA
                     {
                         colorComponent->GetColor(pushConstants.baseColorFactor);
                     }
-                    
-                    variant->Draw(drawPass, [&drawPass, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
+
+                    // We do not need primitive for debug stuff
+                    CAST_VARIANT(variant)->Draw(
+                        drawPass,
+                        [&drawPass, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
                         {
                             Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.model);
 
@@ -125,18 +132,38 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    std::shared_ptr<Essence> DebugRendererPipeline::internalCreateEssence(
+        std::shared_ptr<RT::GpuModel> const & gpuModel,
+        std::shared_ptr<AS::Mesh> const & cpuMesh
+    )
+    {
+        return std::make_shared<DrawableEssence>(gpuModel, cpuMesh);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<Variant> DebugRendererPipeline::internalCreateVariant(Essence * essence)
+    {
+        auto * drawableEssence = dynamic_cast<DrawableEssence *>(essence);
+        MFA_ASSERT(drawableEssence != nullptr);
+        return std::make_shared<DrawableVariant>(drawableEssence);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void DebugRendererPipeline::createDescriptorSetLayout()
     {
         std::vector<VkDescriptorSetLayoutBinding> bindings{};
-        {// ModelViewProjection
-            VkDescriptorSetLayoutBinding layoutBinding{
-                .binding = static_cast<uint32_t>(bindings.size()),
-                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                .descriptorCount = 1,
-                .stageFlags = VK_SHADER_STAGE_VERTEX_BIT
-            };
-            bindings.emplace_back(layoutBinding);
-        }
+
+        // ModelViewProjection
+        VkDescriptorSetLayoutBinding layoutBinding{
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT
+        };
+        bindings.emplace_back(layoutBinding);
+
         MFA_VK_INVALID_ASSERT(mDescriptorSetLayout);
         mDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
@@ -226,7 +253,7 @@ namespace MFA
         auto const activeScene = SceneManager::GetActiveScene();
         MFA_ASSERT(activeScene != nullptr);
 
-        auto const & cameraBufferCollection = activeScene->GetCameraBufferCollection();
+        auto const & cameraBufferCollection = activeScene->GetCameraBuffers();
         
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {

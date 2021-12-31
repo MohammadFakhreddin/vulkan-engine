@@ -12,7 +12,7 @@ public:
 
     MFA_COMPONENT_PROPS(
         SphereBoundingVolumeComponent,
-        FamilyType::BoundingVolumeComponent,
+        FamilyType::BoundingVolume,
         EventTypes::UpdateEvent | EventTypes::InitEvent
     )
 
@@ -21,7 +21,7 @@ public:
 
     explicit SphereBoundingVolumeComponent(float radius);
     
-    void Init() override;
+    void init() override;
 
     [[nodiscard]]
     glm::vec3 const & GetExtend() const override;
@@ -35,11 +35,11 @@ public:
     [[nodiscard]]
     glm::vec4 const & GetWorldPosition() const override;
 
-    void Clone(Entity * entity) const override;
+    void clone(Entity * entity) const override;
 
-    void Serialize(nlohmann::json & jsonObject) const override;
+    void serialize(nlohmann::json & jsonObject) const override;
 
-    void Deserialize(nlohmann::json const & jsonObject) override;
+    void deserialize(nlohmann::json const & jsonObject) override;
 
 protected:
 

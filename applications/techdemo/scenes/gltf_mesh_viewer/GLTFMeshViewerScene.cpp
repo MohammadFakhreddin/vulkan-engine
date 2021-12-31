@@ -149,9 +149,15 @@ void GLTFMeshViewerScene::Init() {
     mPbrPipeline.Init(mSamplerGroup, mErrorTexture);
 
     {// Point light
-        auto cpuModel = ShapeGenerator::Sphere();
-        mPointLightModel = RC::Assign(cpuModel, "Sphere");
-        mDebugRenderPipeline.CreateEssenceIfNotExists(mPointLightModel);
+        auto assetSphereModel = ShapeGenerator::Sphere();
+        RC::Assign(assetSphereModel, "Sphere");
+
+        auto gpuSphereModel = RC::AcquireForGpu("Sphere", false);
+
+        mDebugRenderPipeline.CreateEssenceIfNotExists(
+            gpuSphereModel,
+            assetSphereModel->mesh
+        );
 
         auto * entity = EntitySystem::CreateEntity("PointLight", GetRootEntity());
 
@@ -170,7 +176,7 @@ void GLTFMeshViewerScene::Init() {
 
         mPointLightTransform = transformComponent;
 
-        entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, mPointLightModel->id);
+        entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, *gpuSphereModel);
 
         entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
 
@@ -302,8 +308,9 @@ void GLTFMeshViewerScene::Shutdown() {
 //-------------------------------------------------------------------------------------------------
 
 void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredData) {
-    renderRequiredData.gpuModel = ResourceManager::Acquire(renderRequiredData.address.c_str());
-    mPbrPipeline.CreateEssenceIfNotExists(renderRequiredData.gpuModel);
+    auto const cpuModel = RC::AcquireForCpu(renderRequiredData.address.c_str());
+    renderRequiredData.gpuModel = RC::AcquireForGpu(renderRequiredData.address.c_str());
+    mPbrPipeline.CreateEssenceIfNotExists(renderRequiredData.gpuModel, cpuModel->mesh);
 
     auto * entity = EntitySystem::CreateEntity(renderRequiredData.displayName.c_str(), GetRootEntity());
     MFA_ASSERT(entity != nullptr);

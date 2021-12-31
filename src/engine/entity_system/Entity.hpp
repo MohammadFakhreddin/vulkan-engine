@@ -62,23 +62,21 @@ namespace MFA
         template<typename ComponentClass, typename ... ArgsT>
         std::weak_ptr<ComponentClass> AddComponent(ArgsT && ... args)
         {
-            if (mComponents[ComponentClass::FamilyType] != nullptr)
+            if (mComponents[ComponentClass::Family] != nullptr)
             {
-                MFA_LOG_WARN("Component with type %d alreay exists", ComponentClass::FamilyType);
+                MFA_LOG_WARN("Component with type %d alreay exists", ComponentClass::Family);
                 return GetComponent<ComponentClass>();
             }
             auto sharedPtr = std::make_shared<ComponentClass>(std::forward<ArgsT>(args)...);
-            mComponents[ComponentClass::FamilyType] = sharedPtr;
-            sharedPtr->mSelfPtr = sharedPtr;
+            mComponents[ComponentClass::Family] = sharedPtr;
             linkComponent(sharedPtr.get());
             return std::weak_ptr<ComponentClass>(sharedPtr);
         }
 
         void AddComponent(std::shared_ptr<Component> const & component)
         {
-            MFA_ASSERT(mComponents[component->GetFamilyType()] == nullptr);
-            mComponents[component->GetFamilyType()] = component;
-            component->mSelfPtr = component;
+            MFA_ASSERT(mComponents[component->getFamily()] == nullptr);
+            mComponents[component->getFamily()] = component;
             linkComponent(component.get());
         }
 
@@ -88,22 +86,22 @@ namespace MFA
             MFA_ASSERT(component != nullptr);
             MFA_ASSERT(component->mEntity == this);
             // Init event
-            if ((component->RequiredEvents() & Component::EventTypes::InitEvent) > 0)
+            if ((component->requiredEvents() & Component::EventTypes::InitEvent) > 0)
             {
                 mInitSignal.UnRegister(component->mInitEventId);
             }
             // Update event
-            if ((component->RequiredEvents() & Component::EventTypes::UpdateEvent) > 0)
+            if ((component->requiredEvents() & Component::EventTypes::UpdateEvent) > 0)
             {
                 mUpdateSignal.UnRegister(component->mUpdateEventId);
             }
             // Shutdown event
-            if ((component->RequiredEvents() & Component::EventTypes::ShutdownEvent) > 0)
+            if ((component->requiredEvents() & Component::EventTypes::ShutdownEvent) > 0)
             {
                 mShutdownSignal.UnRegister(component->mShutdownEventId);
             }
 
-            auto & findResult = mComponents[component->GetFamilyType()];
+            auto & findResult = mComponents[component->getFamily()];
             MFA_ASSERT(findResult != nullptr);
             findResult = nullptr;
         }
@@ -112,7 +110,7 @@ namespace MFA
         [[nodiscard]]
         std::weak_ptr<ComponentClass> GetComponent()
         {
-            auto & component = mComponents[ComponentClass::FamilyType];
+            auto & component = mComponents[ComponentClass::Family];
             if (component != nullptr)
             {
                 return std::static_pointer_cast<ComponentClass>(component);

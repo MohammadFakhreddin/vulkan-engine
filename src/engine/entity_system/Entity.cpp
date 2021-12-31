@@ -138,7 +138,7 @@ namespace MFA
                 {
                     if (component != nullptr)
                     {
-                        component->OnUI();
+                        component->onUI();
                     }
                 }
                 UI::TreePop();
@@ -186,7 +186,7 @@ namespace MFA
         {
             if (component != nullptr)
             {
-                component->Clone(entity);
+                component->clone(entity);
             }
         }
         for (auto & child : mChildEntities)
@@ -210,11 +210,11 @@ namespace MFA
             if (component != nullptr)
             {
                 nlohmann::json componentJson{};
-                componentJson["name"] = component->GetName();
-                componentJson["familyType"] = component->GetFamilyType();
+                componentJson["name"] = component->getName();
+                componentJson["familyType"] = component->getFamily();
 
                 nlohmann::json componentData{};
-                component->Serialize(componentData);
+                component->serialize(componentData);
                 componentJson["data"] = componentData;
 
                 jsonObject["components"].emplace_back(componentJson);
@@ -279,7 +279,7 @@ namespace MFA
 
             if (MFA_VERIFY(component != nullptr))
             {
-                component->Deserialize(rawComponentData);
+                component->deserialize(rawComponentData);
             }
         }
 
@@ -365,12 +365,12 @@ namespace MFA
         // Linked entity
         component->mEntity = this;
         // Init event
-        if ((component->RequiredEvents() & Component::EventTypes::InitEvent) > 0)
+        if ((component->requiredEvents() & Component::EventTypes::InitEvent) > 0)
         {
-            component->mInitEventId = mInitSignal.Register([component]()->void { component->Init(); });
+            component->mInitEventId = mInitSignal.Register([component]()->void { component->init(); });
         }
         // Update event
-        if ((component->RequiredEvents() & Component::EventTypes::UpdateEvent) > 0)
+        if ((component->requiredEvents() & Component::EventTypes::UpdateEvent) > 0)
         {
             component->mUpdateEventId = mUpdateSignal.Register([component](
                 float const deltaTimeInSec,
@@ -380,11 +380,11 @@ namespace MFA
             });
         }
         // Shutdown event
-        if ((component->RequiredEvents() & Component::EventTypes::ShutdownEvent) > 0)
+        if ((component->requiredEvents() & Component::EventTypes::ShutdownEvent) > 0)
         {
             component->mShutdownEventId = mShutdownSignal.Register([component]()->void
             {
-                component->Shutdown();
+                component->shutdown();
             });
         }
     }

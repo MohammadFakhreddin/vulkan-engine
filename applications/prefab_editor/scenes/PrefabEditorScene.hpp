@@ -76,7 +76,7 @@ private:
     {
         std::string fileAddress {};
         std::string essenceName {};
-        std::shared_ptr<MFA::RT::GpuModel> gpuModel {};
+        MFA::RT::GpuModelId gpuModelId;
     };
     std::vector<Asset> mLoadedAssets {};
 

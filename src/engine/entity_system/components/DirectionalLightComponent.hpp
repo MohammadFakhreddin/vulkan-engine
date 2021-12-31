@@ -15,16 +15,16 @@ namespace MFA
 
         MFA_COMPONENT_PROPS(
             DirectionalLightComponent,
-            FamilyType::DirectionalLightComponent,
+            FamilyType::DirectionalLight,
             EventTypes::InitEvent | EventTypes::ShutdownEvent
         )
 
         explicit DirectionalLightComponent();
         ~DirectionalLightComponent() override;
 
-        void Init() override;
+        void init() override;
 
-        void Shutdown() override;
+        void shutdown() override;
         
         void GetShadowViewProjectionMatrix(float outViewProjectionMatrix[16]) const;
 
@@ -32,11 +32,11 @@ namespace MFA
 
         void GetColor(float outColor[3]) const;
 
-        void Clone(Entity * entity) const override;
+        void clone(Entity * entity) const override;
 
-        void Serialize(nlohmann::json & jsonObject) const override;
+        void serialize(nlohmann::json & jsonObject) const override;
 
-        void Deserialize(nlohmann::json const & jsonObject) override;
+        void deserialize(nlohmann::json const & jsonObject) override;
    
     private:
 

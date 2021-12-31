@@ -14,6 +14,9 @@
         "directional-light-shadow-vert": "glslc -g -fshader-stage=vert assets/shaders/directional_light_shadow/DirectionalLightShadow.vert.hlsl  -o assets/shaders/directional_light_shadow/DirectionalLightShadow.vert.spv",
         "directional-light-shadow-geom": "glslc -g -fshader-stage=geom assets/shaders/directional_light_shadow/DirectionalLightShadow.geom.hlsl  -o assets/shaders/directional_light_shadow/DirectionalLightShadow.geom.spv",
         
+        "particle--vert": "glslc -g -fshader-stage=vert assets/shaders/particle/Particle.vert.hlsl -o assets/shaders/particle/Particle.vert.spv",
+        "particle--frag": "glslc -g -fshader-stage=frag assets/shaders/particle/Particle.frag.hlsl -o assets/shaders/particle/Particle.frag.spv",
+
         "depth-pre-pass-vert": "glslc -g -fshader-stage=vert assets/shaders/depth_pre_pass/DepthPrePass.vert.hlsl  -o assets/shaders/depth_pre_pass/DepthPrePass.vert.spv",
         "depth-pre-pass-frag": "glslc -g -fshader-stage=frag assets/shaders/depth_pre_pass/DepthPrePass.frag.hlsl  -o assets/shaders/depth_pre_pass/DepthPrePass.frag.spv",
         
