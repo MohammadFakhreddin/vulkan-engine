@@ -1,14 +1,14 @@
 #pragma once
 
 #include "engine/render_system/RenderTypes.hpp"
+#include "engine/asset_system/Asset_PBR_Mesh.hpp"
+#include "engine/render_system/pipelines/EssenceBase.hpp"
 
 #include <unordered_map>
 
-#include "engine/render_system/essence/Essence.hpp"
-
 namespace MFA {
-// TODO Maybe we should rename this to MeshEssence
-class DrawableEssence final : public Essence {
+
+class PBR_Essence final : public EssenceBase {
 public:
 
     struct PrimitiveInfo {
@@ -33,16 +33,16 @@ public:
         float placeholder2;
     };
 
-    explicit DrawableEssence(
+    explicit PBR_Essence(
         std::shared_ptr<RT::GpuModel> const & gpuModel,
-        std::shared_ptr<AS::Mesh> const & cpuMesh
+        std::shared_ptr<AS::MeshBase> const & cpuMesh
     );
-    ~DrawableEssence() override;
+    ~PBR_Essence() override;
     
-    DrawableEssence & operator= (DrawableEssence && rhs) noexcept = delete;
-    DrawableEssence (DrawableEssence const &) noexcept = delete;
-    DrawableEssence (DrawableEssence && rhs) noexcept = delete;
-    DrawableEssence & operator = (DrawableEssence const &) noexcept = delete;
+    PBR_Essence & operator= (PBR_Essence && rhs) noexcept = delete;
+    PBR_Essence (PBR_Essence const &) noexcept = delete;
+    PBR_Essence (PBR_Essence && rhs) noexcept = delete;
+    PBR_Essence & operator = (PBR_Essence const &) noexcept = delete;
 
     [[nodiscard]] RT::UniformBufferGroup const & getPrimitivesBuffer() const noexcept;
 
@@ -53,7 +53,7 @@ public:
     int getAnimationIndex(char const * name) const noexcept;
 
     [[nodiscard]]
-    AS::Mesh const * getCpuMesh() const;
+    AS::PBR::MeshData const & getMeshData() const;
 
 private:
 
@@ -62,7 +62,7 @@ private:
 
     std::unordered_map<std::string, int> mAnimationNameLookupTable {};
 
-    std::shared_ptr<AS::Mesh> mCpuMesh;
+    AS::PBR::MeshData mMeshData {};
 
 };
 

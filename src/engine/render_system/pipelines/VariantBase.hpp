@@ -8,21 +8,21 @@ namespace MFA
     class RendererComponent;
     class TransformComponent;
     class BoundingVolumeComponent;
-    class Essence;
+    class EssenceBase;
 
-    class Variant
+    class VariantBase
     {
     public:
         
-        explicit Variant(Essence const * essence);
-        virtual ~Variant();
+        explicit VariantBase(EssenceBase const * essence);
+        virtual ~VariantBase();
 
-        Variant(Variant const &) noexcept = delete;
-        Variant(Variant &&) noexcept = delete;
-        Variant & operator= (Variant const & rhs) noexcept = delete;
-        Variant & operator= (Variant && rhs) noexcept = delete;
+        VariantBase(VariantBase const &) noexcept = delete;
+        VariantBase(VariantBase &&) noexcept = delete;
+        VariantBase & operator= (VariantBase const & rhs) noexcept = delete;
+        VariantBase & operator= (VariantBase && rhs) noexcept = delete;
 
-        bool operator== (Variant const & rhs) const noexcept;
+        bool operator== (VariantBase const & rhs) const noexcept;
 
         void Init(
             Entity * entity,
@@ -36,7 +36,7 @@ namespace MFA
         void Shutdown();
 
         [[nodiscard]]
-        Essence const * GetEssence() const noexcept;
+        EssenceBase const * GetEssence() const noexcept;
 
         [[nodiscard]]
         RT::VariantId GetId() const noexcept;
@@ -78,7 +78,7 @@ namespace MFA
 
         bool mIsInitialized = false;
         RT::VariantId mId = 0;
-        Essence const * mEssence = nullptr;
+        EssenceBase const * mEssence = nullptr;
         Entity * mEntity = nullptr;
 
         std::weak_ptr<RendererComponent> mRendererComponent{};

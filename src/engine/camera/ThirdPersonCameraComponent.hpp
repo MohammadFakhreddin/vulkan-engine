@@ -1,13 +1,11 @@
 #pragma once
 
-#include <fwd.hpp>
-
 #include "CameraComponent.hpp"
 #include "engine/BedrockPlatforms.hpp"
 
 namespace MFA {
 
-class DrawableVariant;
+class PBR_Variant;
 class TransformComponent;
 
 class ThirdPersonCameraComponent final : public CameraComponent {

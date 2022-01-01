@@ -4,18 +4,21 @@
 #include "engine/BedrockMath.hpp"
 #include "engine/BedrockMatrix.hpp"
 #include "engine/BedrockMemory.hpp"
+#include "engine/asset_system/Asset_PBR_Mesh.hpp"
 
 namespace MFA::ShapeGenerator {
 
-    namespace AS = AssetSystem;
-
     std::shared_ptr<AS::Model> Sphere() {
+
+        // TODO We should create debug mesh instead
+        using namespace AS::PBR;
+
         std::vector<glm::vec3> positions {};
         std::vector<glm::vec2> uvs {};
         std::vector<glm::vec3> normals {};
         std::vector<glm::vec4> tangents {};
 
-        std::vector<AS::MeshIndex> meshIndices;
+        std::vector<AS::Index> meshIndices {};
         
         static constexpr unsigned int X_SEGMENTS = 64;
         static constexpr unsigned int Y_SEGMENTS = 64;
@@ -76,15 +79,15 @@ namespace MFA::ShapeGenerator {
         auto const indicesCount = static_cast<uint32_t>(meshIndices.size());
         auto const verticesCount = static_cast<uint32_t>(positions.size());
 
-        auto mesh = std::make_shared<AS::Mesh>();
-        mesh->InitForWrite(
+        auto mesh = std::make_shared<Mesh>();
+        mesh->initForWrite(
             verticesCount, 
             indicesCount, 
-            Memory::Alloc(sizeof(AS::MeshVertex) * verticesCount), 
-            Memory::Alloc(sizeof(AS::MeshIndex) * indicesCount)
+            Memory::Alloc(sizeof(Vertex) * verticesCount), 
+            Memory::Alloc(sizeof(AS::Index) * indicesCount)
         );
 
-        std::vector<AS::MeshVertex> meshVertices (verticesCount);
+        std::vector<Vertex> meshVertices (verticesCount);
         
         for (uint32_t index = 0; index < verticesCount; ++index) {
             auto & vertex = meshVertices[index];
@@ -116,12 +119,12 @@ namespace MFA::ShapeGenerator {
 
         }
 
-        auto const subMeshIndex = mesh->InsertSubMesh();
+        auto const subMeshIndex = mesh->insertSubMesh();
 
-        AS::Mesh::Primitive primitive {};
+        Primitive primitive {};
         primitive.hasNormalBuffer = true;
 
-        mesh->InsertPrimitive(
+        mesh->insertPrimitive(
             subMeshIndex,
             primitive,
             verticesCount,
@@ -130,23 +133,15 @@ namespace MFA::ShapeGenerator {
             meshIndices.data()
         );
 
-        AS::MeshNode node {
+        Node node {
             .subMeshIndex = 0,
             .scale = {1, 1, 1}
         };
         
-        mesh->InsertNode(node);
+        mesh->insertNode(node);
 
-        mesh->FinalizeData();
-
-        //if(model->mesh->IsValid() == false) {
-        //    Blob verticesBuffer {};
-        //    Blob indicesBuffer {};
-        //    model->mesh.RevokeBuffers(verticesBuffer, indicesBuffer);
-        //    Memory::Free(verticesBuffer);
-        //    Memory::Free(indicesBuffer);
-        //}
-
+        mesh->finalizeData();
+        
         std::vector<std::shared_ptr<AS::Texture>> textures {};
 
         return std::make_shared<AS::Model>(
@@ -156,12 +151,13 @@ namespace MFA::ShapeGenerator {
     }
 
     std::shared_ptr<AS::Model> Sheet() {
-        std::shared_ptr<AS::Model> model {};
+        // TODO We should create debug mesh instead
+        using namespace AS::PBR;
 
         std::vector<glm::vec3> positions {};
         std::vector<glm::vec2> uvs {};
-        
-        std::vector<AS::MeshIndex> meshIndices;
+
+        std::vector<AS::Index> meshIndices;
 
         positions.emplace_back(0.0f, 0.0f, 0.0f);
         positions.emplace_back(1.0f, 0.0f, 0.0f);
@@ -189,14 +185,15 @@ namespace MFA::ShapeGenerator {
         auto const indicesCount = static_cast<uint16_t>(meshIndices.size());
         auto const verticesCount = static_cast<uint16_t>(positions.size());
 
-        model->mesh->InitForWrite(
+        auto mesh = std::make_shared<Mesh>();
+        mesh->initForWrite(
             verticesCount, 
             indicesCount, 
-            Memory::Alloc(sizeof(AS::MeshVertex) * verticesCount), 
-            Memory::Alloc(sizeof(AS::MeshIndex) * indicesCount)
+            Memory::Alloc(sizeof(Vertex) * verticesCount), 
+            Memory::Alloc(sizeof(AS::Index) * indicesCount)
         );
 
-        std::vector<AS::MeshVertex> meshVertices (verticesCount);
+        std::vector<Vertex> meshVertices (verticesCount);
         
         for (uint32_t index = 0; index < verticesCount; ++index) {
             auto & vertex = meshVertices[index];
@@ -207,11 +204,11 @@ namespace MFA::ShapeGenerator {
             Matrix::CopyGlmToCells(uvs[index], vertex.baseColorUV);
         }
 
-        auto const subMeshIndex = model->mesh->InsertSubMesh();
+        auto const subMeshIndex = mesh->insertSubMesh();
 
-        AS::Mesh::Primitive primitive {};
+        Primitive primitive {};
         primitive.hasBaseColorTexture = true;
-        model->mesh->InsertPrimitive(
+            mesh->insertPrimitive(
             subMeshIndex,
             primitive,
             verticesCount,
@@ -220,25 +217,22 @@ namespace MFA::ShapeGenerator {
             meshIndices.data()
         );
 
-        auto node = AS::MeshNode {};
+        Node node {};
         Matrix::CopyGlmToCells(glm::identity<glm::mat4>(), node.transform);
-        model->mesh->InsertNode(node);
+        mesh->insertNode(node);
 
-        model->mesh->FinalizeData();
-
-        //if(model->mesh->IsValid() == false) {
-        //    Blob verticesBuffer {};
-        //    Blob indicesBuffer {};
-        //    model->mesh->RevokeBuffers(verticesBuffer, indicesBuffer);
-        //    Memory::Free(verticesBuffer);
-        //    Memory::Free(indicesBuffer);
-        //}
-
-        return model;
+        mesh->finalizeData();
+        
+        return std::make_shared<AS::Model>(
+            mesh,
+            std::vector<std::shared_ptr<AS::Texture>>{}
+        );
     }
 
     std::shared_ptr<AS::Model> Cube()
     {
+        // TODO We should create debug mesh instead
+        using namespace AS::PBR;
 
         std::vector<glm::vec3> const positions {
             // front
@@ -253,7 +247,7 @@ namespace MFA::ShapeGenerator {
             glm::vec3(-1.0,  1.0, -1.0)
         };
 
-        std::vector<AS::MeshIndex> meshIndices {
+        std::vector<AS::Index> meshIndices {
             0, 1, 2, 3,
             0, 4, 5, 6,
             7, 4, 7, 3,
@@ -263,16 +257,16 @@ namespace MFA::ShapeGenerator {
         auto const indicesCount = static_cast<uint16_t>(meshIndices.size());
         auto const verticesCount = static_cast<uint16_t>(positions.size());
 
-        auto const mesh = std::make_shared<AS::Mesh>();
+        auto const mesh = std::make_shared<Mesh>();
         MFA_ASSERT(mesh != nullptr);
-        mesh->InitForWrite(
+        mesh->initForWrite(
             verticesCount, 
             indicesCount, 
-            Memory::Alloc(sizeof(AS::MeshVertex) * verticesCount), 
-            Memory::Alloc(sizeof(AS::MeshIndex) * indicesCount)
+            Memory::Alloc(sizeof(Vertex) * verticesCount), 
+            Memory::Alloc(sizeof(AS::Index) * indicesCount)
         );
 
-        std::vector<AS::MeshVertex> meshVertices (verticesCount);
+        std::vector<Vertex> meshVertices (verticesCount);
         
         for (uint32_t index = 0; index < verticesCount; ++index) {
             auto & vertex = meshVertices[index];
@@ -280,11 +274,11 @@ namespace MFA::ShapeGenerator {
             Matrix::CopyGlmToCells(positions[index], vertex.position);
         }
 
-        auto const subMeshIndex = mesh->InsertSubMesh();
+        auto const subMeshIndex = mesh->insertSubMesh();
 
-        AS::Mesh::Primitive primitive {};
+        Primitive primitive {};
         primitive.hasBaseColorTexture = true;
-        mesh->InsertPrimitive(
+        mesh->insertPrimitive(
             subMeshIndex,
             primitive,
             verticesCount,
@@ -293,20 +287,12 @@ namespace MFA::ShapeGenerator {
             meshIndices.data()
         );
 
-        AS::MeshNode node {};
+        Node node {};
         node.subMeshIndex = 0;
         Matrix::CopyGlmToCells(glm::identity<glm::mat4>(), node.transform);
-        mesh->InsertNode(node);
+        mesh->insertNode(node);
 
-        mesh->FinalizeData();
-
-        //if(model->mesh.IsValid() == false) {
-        //    Blob verticesBuffer {};
-        //    Blob indicesBuffer {};
-        //    model->mesh.RevokeBuffers(verticesBuffer, indicesBuffer);
-        //    Memory::Free(verticesBuffer);
-        //    Memory::Free(indicesBuffer);
-        //}
+        mesh->finalizeData();
 
         return std::make_shared<AS::Model>(
             mesh,

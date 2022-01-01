@@ -30,7 +30,7 @@ void GLTFMeshViewerScene::Init() {
     Scene::Init();
     {// Error texture
         auto cpu_texture = Importer::CreateErrorTexture();
-        mErrorTexture = RF::CreateTexture(cpu_texture);
+        mErrorTexture = RF::CreateTexture(*cpu_texture);
     }
     {// Models
         //{

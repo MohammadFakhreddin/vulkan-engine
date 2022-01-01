@@ -1,13 +1,13 @@
 #include "PbrWithShadowPipelineV2.hpp"
 
+#include "PBR_Essence.hpp"
+#include "PBR_Variant.hpp"
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockPath.hpp"
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "tools/Importer.hpp"
 #include "engine/BedrockMatrix.hpp"
 #include "engine/entity_system/components/PointLightComponent.hpp"
-#include "engine/render_system/drawable_essence/DrawableEssence.hpp"
-#include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 #include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/render_passes/depth_pre_pass/DepthPrePass.hpp"
@@ -19,7 +19,7 @@
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/job_system/JobSystem.hpp"
 
-#define CAST_VARIANT(variant)  static_cast<DrawableVariant *>(variant.get())
+#define CAST_VARIANT(variant)  static_cast<PBR_Variant *>(variant.get())
 
 /*
 There are four C++ style casts:
@@ -234,21 +234,21 @@ namespace MFA
     
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<Essence> PBRWithShadowPipelineV2::internalCreateEssence(
+    std::shared_ptr<EssenceBase> PBRWithShadowPipelineV2::internalCreateEssence(
         std::shared_ptr<RT::GpuModel> const & gpuModel,
-        std::shared_ptr<AS::Mesh> const & cpuMesh
+        std::shared_ptr<AS::MeshBase> const & cpuMesh
     )
     {
-        auto essence = std::make_shared<DrawableEssence>(gpuModel, cpuMesh);
+        auto essence = std::make_shared<PBR_Essence>(gpuModel, cpuMesh);
         createEssenceDescriptorSets(*essence);
         return essence;
     }
 
-    std::shared_ptr<Variant> PBRWithShadowPipelineV2::internalCreateVariant(Essence * essence)
+    std::shared_ptr<VariantBase> PBRWithShadowPipelineV2::internalCreateVariant(EssenceBase * essence)
     {
-        auto * drawableEssence = dynamic_cast<DrawableEssence *>(essence);
+        auto * drawableEssence = dynamic_cast<PBR_Essence *>(essence);
         MFA_ASSERT(drawableEssence != nullptr);
-        auto variant = std::make_shared<DrawableVariant>(drawableEssence);
+        auto variant = std::make_shared<PBR_Variant>(drawableEssence);
         createVariantDescriptorSets(*variant);
         return variant;
     }
@@ -332,7 +332,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createEssenceDescriptorSets(DrawableEssence & essence) const
+    void PBRWithShadowPipelineV2::createEssenceDescriptorSets(PBR_Essence & essence) const
     {
         auto const & textures = essence.GetGpuModel()->textures;
 
@@ -397,7 +397,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createVariantDescriptorSets(DrawableVariant & variant) const
+    void PBRWithShadowPipelineV2::createVariantDescriptorSets(PBR_Variant & variant) const
     {
         auto const descriptorSetGroup = variant.CreateDescriptorSetGroup(
             mDescriptorPool,
@@ -506,13 +506,13 @@ namespace MFA
         );
 
         mDepthPrePass->BeginRenderPass(recordState);
-        renderForDepthPrePass(recordState, AlphaMode::Opaque);
+        renderForDepthPrePass(recordState, AS::AlphaMode::Opaque);
         mDepthPrePass->EndRenderPass(recordState);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::renderForDepthPrePass(RT::CommandRecordState const & recordState, AlphaMode const alphaMode) const
+    void PBRWithShadowPipelineV2::renderForDepthPrePass(RT::CommandRecordState const & recordState, AS::AlphaMode const alphaMode) const
     {
         DepthPrePassPushConstants pushConstants{};
 
@@ -542,8 +542,8 @@ namespace MFA
                     CAST_VARIANT(variant)->Draw(
                         recordState,
                         [&recordState, &pushConstants](
-                            AS::MeshPrimitive const & primitive,
-                            DrawableVariant::Node const & node
+                            AS::PBR::Primitive const & primitive,
+                            PBR_Variant::Node const & node
                         )-> void
                         {
                             // Vertex push constants
@@ -584,15 +584,18 @@ namespace MFA
         );
 
         mDirectionalLightShadowRenderPass->BeginRenderPass(recordState, *mDirectionalLightShadowResources);
-        renderForDirectionalLightShadowPass(recordState, AlphaMode::Opaque);
-        renderForDirectionalLightShadowPass(recordState, AlphaMode::Mask);
-        renderForDirectionalLightShadowPass(recordState, AlphaMode::Blend);
+        renderForDirectionalLightShadowPass(recordState, AS::AlphaMode::Opaque);
+        renderForDirectionalLightShadowPass(recordState, AS::AlphaMode::Mask);
+        renderForDirectionalLightShadowPass(recordState, AS::AlphaMode::Blend);
         mDirectionalLightShadowRenderPass->EndRenderPass(recordState);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::renderForDirectionalLightShadowPass(RT::CommandRecordState const & recordState, AlphaMode const alphaMode) const
+    void PBRWithShadowPipelineV2::renderForDirectionalLightShadowPass(
+        RT::CommandRecordState const & recordState,
+        AS::AlphaMode const alphaMode
+    ) const
     {
         DirectionalLightShadowPassPushConstants pushConstants {};
 
@@ -619,7 +622,7 @@ namespace MFA
                         variant->GetDescriptorSetGroup()
                     );
 
-                    CAST_VARIANT(variant)->Draw(recordState, [&recordState, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
+                    CAST_VARIANT(variant)->Draw(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
                     {
                         // Vertex push constants
                         pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
@@ -656,15 +659,15 @@ namespace MFA
         );
 
         mPointLightShadowRenderPass->BeginRenderPass(recordState, *mPointLightShadowResources);
-        renderForPointLightShadowPass(recordState, AlphaMode::Opaque);
-        renderForPointLightShadowPass(recordState, AlphaMode::Mask);
-        renderForPointLightShadowPass(recordState, AlphaMode::Blend);
+        renderForPointLightShadowPass(recordState, AS::AlphaMode::Opaque);
+        renderForPointLightShadowPass(recordState, AS::AlphaMode::Mask);
+        renderForPointLightShadowPass(recordState, AS::AlphaMode::Blend);
         mPointLightShadowRenderPass->EndRenderPass(recordState);
     }
 
     //-------------------------------------------------------------------------------------------------
     
-    void PBRWithShadowPipelineV2::renderForPointLightShadowPass(RT::CommandRecordState const & recordState, AlphaMode const alphaMode) const
+    void PBRWithShadowPipelineV2::renderForPointLightShadowPass(RT::CommandRecordState const & recordState, AS::AlphaMode const alphaMode) const
     {
         auto const pointLightCount = mAttachedScene->GetPointLightCount();
         MFA_ASSERT(pointLightCount > 0);
@@ -710,7 +713,7 @@ namespace MFA
                         variant->GetDescriptorSetGroup()
                     );
 
-                    CAST_VARIANT(variant)->Draw(recordState, [&recordState, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
+                    CAST_VARIANT(variant)->Draw(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
                     {
                         // Vertex push constants
                         pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
@@ -747,15 +750,15 @@ namespace MFA
         );
 
         mOcclusionRenderPass->BeginRenderPass(recordState);
-        renderForOcclusionQueryPass(recordState, AlphaMode::Opaque);
-        renderForOcclusionQueryPass(recordState, AlphaMode::Mask);
-        renderForOcclusionQueryPass(recordState, AlphaMode::Blend); 
+        renderForOcclusionQueryPass(recordState, AS::AlphaMode::Opaque);
+        renderForOcclusionQueryPass(recordState, AS::AlphaMode::Mask);
+        renderForOcclusionQueryPass(recordState, AS::AlphaMode::Blend); 
         mOcclusionRenderPass->EndRenderPass(recordState);
     }
 
     //-------------------------------------------------------------------------------------------------
     
-    void PBRWithShadowPipelineV2::renderForOcclusionQueryPass(RT::CommandRecordState const & recordState, AlphaMode const alphaMode)
+    void PBRWithShadowPipelineV2::renderForOcclusionQueryPass(RT::CommandRecordState const & recordState, AS::AlphaMode const alphaMode)
     {
         auto & occlusionQueryData = mOcclusionQueryDataList[recordState.frameIndex];
 
@@ -787,7 +790,7 @@ namespace MFA
                     RF::BeginQuery(recordState, occlusionQueryData.Pool, static_cast<uint32_t>(occlusionQueryData.Variants.size()));
 
                     // TODO Draw a placeholder cube instead of complex geometry
-                    CAST_VARIANT(variant)->Draw(recordState, [&recordState, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
+                    CAST_VARIANT(variant)->Draw(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
                         {
                             // Vertex push constants
                             Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
@@ -823,14 +826,14 @@ namespace MFA
             RenderFrontend::DescriptorSetType::PerFrame,
             mPerFrameDescriptorSetGroup
         );
-        renderForDisplayPass(recordState, AlphaMode::Opaque);
-        renderForDisplayPass(recordState, AlphaMode::Mask);
-        renderForDisplayPass(recordState, AlphaMode::Blend);
+        renderForDisplayPass(recordState, AS::AlphaMode::Opaque);
+        renderForDisplayPass(recordState, AS::AlphaMode::Mask);
+        renderForDisplayPass(recordState, AS::AlphaMode::Blend);
     }
 
     //-------------------------------------------------------------------------------------------------
     
-    void PBRWithShadowPipelineV2::renderForDisplayPass(RT::CommandRecordState const & recordState, AlphaMode alphaMode) const
+    void PBRWithShadowPipelineV2::renderForDisplayPass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode) const
     {
         DisplayPassPushConstants pushConstants{};
 
@@ -857,7 +860,7 @@ namespace MFA
                         variant->GetDescriptorSetGroup()
                     );
                     
-                    CAST_VARIANT(variant)->Draw(recordState, [&recordState, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
+                    CAST_VARIANT(variant)->Draw(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
                         {
                             // Push constants
                             pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
@@ -1022,7 +1025,7 @@ namespace MFA
 
         VkVertexInputBindingDescription vertexInputBindingDescription{};
         vertexInputBindingDescription.binding = 0;
-        vertexInputBindingDescription.stride = sizeof(AS::MeshVertex);
+        vertexInputBindingDescription.stride = sizeof(AS::PBR::Vertex);
         vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
@@ -1032,7 +1035,7 @@ namespace MFA
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
             .format = VK_FORMAT_R32G32B32_SFLOAT,
-            .offset = offsetof(AS::MeshVertex, position)
+            .offset = offsetof(AS::PBR::Vertex, position)
         });
 
         // BaseColorUV
@@ -1040,7 +1043,7 @@ namespace MFA
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
             .format = VK_FORMAT_R32G32_SFLOAT,
-            .offset = offsetof(AS::MeshVertex, baseColorUV)
+            .offset = offsetof(AS::PBR::Vertex, baseColorUV)
         });
 
         {// Metallic/RoughnessUV
@@ -1048,7 +1051,7 @@ namespace MFA
             attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
             attributeDescription.binding = 0;
             attributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::MeshVertex, metallicUV); // Metallic and roughness have same uv for gltf files  
+            attributeDescription.offset = offsetof(AS::PBR::Vertex, metallicUV); // Metallic and roughness have same uv for gltf files  
 
             inputAttributeDescriptions.emplace_back(attributeDescription);
         }
@@ -1057,7 +1060,7 @@ namespace MFA
             attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
             attributeDescription.binding = 0;
             attributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::MeshVertex, normalMapUV);
+            attributeDescription.offset = offsetof(AS::PBR::Vertex, normalMapUV);
 
             inputAttributeDescriptions.emplace_back(attributeDescription);
         }
@@ -1066,7 +1069,7 @@ namespace MFA
             attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
             attributeDescription.binding = 0;
             attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::MeshVertex, tangentValue);
+            attributeDescription.offset = offsetof(AS::PBR::Vertex, tangentValue);
 
             inputAttributeDescriptions.emplace_back(attributeDescription);
         }
@@ -1075,7 +1078,7 @@ namespace MFA
             attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
             attributeDescription.binding = 0;
             attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::MeshVertex, normalValue);
+            attributeDescription.offset = offsetof(AS::PBR::Vertex, normalValue);
 
             inputAttributeDescriptions.emplace_back(attributeDescription);
         }
@@ -1084,7 +1087,7 @@ namespace MFA
             attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
             attributeDescription.binding = 0;
             attributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::MeshVertex, emissionUV);
+            attributeDescription.offset = offsetof(AS::PBR::Vertex, emissionUV);
             inputAttributeDescriptions.emplace_back(attributeDescription);
         }
         // OcclusionUV
@@ -1092,14 +1095,14 @@ namespace MFA
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
             .format = VK_FORMAT_R32G32_SFLOAT,
-            .offset = offsetof(AS::MeshVertex, occlusionUV), // Metallic and roughness have same uv for gltf files  
+            .offset = offsetof(AS::PBR::Vertex, occlusionUV), // Metallic and roughness have same uv for gltf files  
         });
         {// HasSkin
             VkVertexInputAttributeDescription attributeDescription{};
             attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
             attributeDescription.binding = 0;
             attributeDescription.format = VK_FORMAT_R32_SINT;
-            attributeDescription.offset = offsetof(AS::MeshVertex, hasSkin); // TODO We should use a primitiveInfo instead
+            attributeDescription.offset = offsetof(AS::PBR::Vertex, hasSkin); // TODO We should use a primitiveInfo instead
             inputAttributeDescriptions.emplace_back(attributeDescription);
         }
         {// JointIndices
@@ -1107,7 +1110,7 @@ namespace MFA
             attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
             attributeDescription.binding = 0;
             attributeDescription.format = VK_FORMAT_R32G32B32A32_SINT;
-            attributeDescription.offset = offsetof(AS::MeshVertex, jointIndices);
+            attributeDescription.offset = offsetof(AS::PBR::Vertex, jointIndices);
             inputAttributeDescriptions.emplace_back(attributeDescription);
         }
         {// JointWeights
@@ -1115,7 +1118,7 @@ namespace MFA
             attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
             attributeDescription.binding = 0;
             attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::MeshVertex, jointWeights);
+            attributeDescription.offset = offsetof(AS::PBR::Vertex, jointWeights);
             inputAttributeDescriptions.emplace_back(attributeDescription);
         }
         MFA_ASSERT(mDisplayPassPipeline.isValid() == false);
@@ -1159,7 +1162,7 @@ namespace MFA
 
         VkVertexInputBindingDescription vertexInputBindingDescription{};
         vertexInputBindingDescription.binding = 0;
-        vertexInputBindingDescription.stride = sizeof(AS::MeshVertex);
+        vertexInputBindingDescription.stride = sizeof(AS::PBR::Vertex);
         vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
@@ -1169,7 +1172,7 @@ namespace MFA
             attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
             attributeDescription.binding = 0;
             attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::MeshVertex, position);
+            attributeDescription.offset = offsetof(AS::PBR::Vertex, position);
 
             inputAttributeDescriptions.emplace_back(attributeDescription);
         }
@@ -1178,7 +1181,7 @@ namespace MFA
             attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
             attributeDescription.binding = 0;
             attributeDescription.format = VK_FORMAT_R32_SINT;
-            attributeDescription.offset = offsetof(AS::MeshVertex, hasSkin);
+            attributeDescription.offset = offsetof(AS::PBR::Vertex, hasSkin);
             inputAttributeDescriptions.emplace_back(attributeDescription);
         }
         {// JointIndices
@@ -1186,7 +1189,7 @@ namespace MFA
             attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
             attributeDescription.binding = 0;
             attributeDescription.format = VK_FORMAT_R32G32B32A32_SINT;
-            attributeDescription.offset = offsetof(AS::MeshVertex, jointIndices);
+            attributeDescription.offset = offsetof(AS::PBR::Vertex, jointIndices);
             inputAttributeDescriptions.emplace_back(attributeDescription);
         }
         {// JointWeights
@@ -1194,7 +1197,7 @@ namespace MFA
             attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
             attributeDescription.binding = 0;
             attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::MeshVertex, jointWeights);
+            attributeDescription.offset = offsetof(AS::PBR::Vertex, jointWeights);
             inputAttributeDescriptions.emplace_back(attributeDescription);
         }
 
@@ -1243,7 +1246,7 @@ namespace MFA
 
         VkVertexInputBindingDescription vertexInputBindingDescription{};
         vertexInputBindingDescription.binding = 0;
-        vertexInputBindingDescription.stride = sizeof(AS::MeshVertex);
+        vertexInputBindingDescription.stride = sizeof(AS::PBR::Vertex);
         vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
@@ -1253,7 +1256,7 @@ namespace MFA
             attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
             attributeDescription.binding = 0;
             attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::MeshVertex, position);
+            attributeDescription.offset = offsetof(AS::PBR::Vertex, position);
 
             inputAttributeDescriptions.emplace_back(attributeDescription);
         }
@@ -1262,7 +1265,7 @@ namespace MFA
             attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
             attributeDescription.binding = 0;
             attributeDescription.format = VK_FORMAT_R32_SINT;
-            attributeDescription.offset = offsetof(AS::MeshVertex, hasSkin); // TODO We should use a primitiveInfo instead
+            attributeDescription.offset = offsetof(AS::PBR::Vertex, hasSkin); // TODO We should use a primitiveInfo instead
             inputAttributeDescriptions.emplace_back(attributeDescription);
         }
         {// JointIndices
@@ -1270,7 +1273,7 @@ namespace MFA
             attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
             attributeDescription.binding = 0;
             attributeDescription.format = VK_FORMAT_R32G32B32A32_SINT;
-            attributeDescription.offset = offsetof(AS::MeshVertex, jointIndices);
+            attributeDescription.offset = offsetof(AS::PBR::Vertex, jointIndices);
             inputAttributeDescriptions.emplace_back(attributeDescription);
         }
         {// JointWeights
@@ -1278,7 +1281,7 @@ namespace MFA
             attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
             attributeDescription.binding = 0;
             attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::MeshVertex, jointWeights);
+            attributeDescription.offset = offsetof(AS::PBR::Vertex, jointWeights);
             inputAttributeDescriptions.emplace_back(attributeDescription);
         }
 
@@ -1322,7 +1325,7 @@ namespace MFA
 
         VkVertexInputBindingDescription vertexInputBindingDescription{};
         vertexInputBindingDescription.binding = 0;
-        vertexInputBindingDescription.stride = sizeof(AS::MeshVertex);
+        vertexInputBindingDescription.stride = sizeof(AS::PBR::Vertex);
         vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
@@ -1332,7 +1335,7 @@ namespace MFA
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
             .format = VK_FORMAT_R32G32B32_SFLOAT,
-            .offset = offsetof(AS::MeshVertex, position),
+            .offset = offsetof(AS::PBR::Vertex, position),
         });
 
         // BaseColorUV
@@ -1340,7 +1343,7 @@ namespace MFA
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
             .format = VK_FORMAT_R32G32_SFLOAT,
-            .offset = offsetof(AS::MeshVertex, baseColorUV),
+            .offset = offsetof(AS::PBR::Vertex, baseColorUV),
         });
 
         // HasSkin
@@ -1348,7 +1351,7 @@ namespace MFA
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
             .format = VK_FORMAT_R32_SINT,
-            .offset = offsetof(AS::MeshVertex, hasSkin), // TODO We should use a primitiveInfo instead
+            .offset = offsetof(AS::PBR::Vertex, hasSkin), // TODO We should use a primitiveInfo instead
         });
 
         // JointIndices
@@ -1356,7 +1359,7 @@ namespace MFA
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
             .format = VK_FORMAT_R32G32B32A32_SINT,
-            .offset = offsetof(AS::MeshVertex, jointIndices),
+            .offset = offsetof(AS::PBR::Vertex, jointIndices),
         });
 
         // JointWeights
@@ -1364,7 +1367,7 @@ namespace MFA
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
             .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-            .offset = offsetof(AS::MeshVertex, jointWeights),
+            .offset = offsetof(AS::PBR::Vertex, jointWeights),
         });
 
         std::vector<VkPushConstantRange> pushConstantRanges{};
@@ -1436,7 +1439,7 @@ namespace MFA
 
         VkVertexInputBindingDescription vertexInputBindingDescription{};
         vertexInputBindingDescription.binding = 0;
-        vertexInputBindingDescription.stride = sizeof(AS::MeshVertex);
+        vertexInputBindingDescription.stride = sizeof(AS::PBR::Vertex);
         vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
@@ -1446,7 +1449,7 @@ namespace MFA
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
             .format = VK_FORMAT_R32G32B32_SFLOAT,
-            .offset = offsetof(AS::MeshVertex, position),
+            .offset = offsetof(AS::PBR::Vertex, position),
         });
 
         // BaseColorUV
@@ -1454,7 +1457,7 @@ namespace MFA
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
             .format = VK_FORMAT_R32G32_SFLOAT,
-            .offset = offsetof(AS::MeshVertex, baseColorUV),
+            .offset = offsetof(AS::PBR::Vertex, baseColorUV),
         });
 
         // HasSkin
@@ -1462,7 +1465,7 @@ namespace MFA
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
             .format = VK_FORMAT_R32_SINT,
-            .offset = offsetof(AS::MeshVertex, hasSkin), // TODO We should use a primitiveInfo instead
+            .offset = offsetof(AS::PBR::Vertex, hasSkin), // TODO We should use a primitiveInfo instead
         });
 
         // JointIndices
@@ -1470,7 +1473,7 @@ namespace MFA
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
             .format = VK_FORMAT_R32G32B32A32_SINT,
-            .offset = offsetof(AS::MeshVertex, jointIndices),
+            .offset = offsetof(AS::PBR::Vertex, jointIndices),
         });
 
         // JointWeights
@@ -1478,7 +1481,7 @@ namespace MFA
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
             .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-            .offset = offsetof(AS::MeshVertex, jointWeights),
+            .offset = offsetof(AS::PBR::Vertex, jointWeights),
         });
 
         std::vector<VkPushConstantRange> pushConstantRanges{};
@@ -1536,7 +1539,7 @@ namespace MFA
 
     void PBRWithShadowPipelineV2::createUniformBuffers()
     {
-        mErrorBuffer = RF::CreateUniformBuffer(sizeof(DrawableVariant::JointTransformData), 1);
+        mErrorBuffer = RF::CreateUniformBuffer(sizeof(PBR_Variant::JointTransformData), 1);
     }
 
     //-------------------------------------------------------------------------------------------------

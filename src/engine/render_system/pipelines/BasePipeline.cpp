@@ -1,8 +1,11 @@
 #include "BasePipeline.hpp"
 
+#include "EssenceBase.hpp"
+#include "VariantBase.hpp"
 #include "engine/BedrockAssert.hpp"
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
+#include "engine/asset_system/AssetBaseMesh.hpp"
 
 namespace MFA
 {
@@ -13,7 +16,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    BasePipeline::EssenceAndVariants::EssenceAndVariants(std::shared_ptr<Essence> essence)
+    BasePipeline::EssenceAndVariants::EssenceAndVariants(std::shared_ptr<EssenceBase> essence)
         : essence(std::move(essence))
     {}
 
@@ -46,7 +49,7 @@ namespace MFA
 
     bool BasePipeline::CreateEssenceIfNotExists(
         std::shared_ptr<RT::GpuModel> const & gpuModel,
-        std::shared_ptr<AS::Mesh> const & cpuMesh
+        std::shared_ptr<AS::MeshBase> const & cpuMesh
     )
     {
         if(mEssenceAndVariantsMap.contains(gpuModel->id))
@@ -83,14 +86,14 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    Variant * BasePipeline::CreateVariant(RT::GpuModel const & gpuModel)
+    VariantBase * BasePipeline::CreateVariant(RT::GpuModel const & gpuModel)
     {
         return CreateVariant(gpuModel.id);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    Variant * BasePipeline::CreateVariant(RT::GpuModelId const id)
+    VariantBase * BasePipeline::CreateVariant(RT::GpuModelId const id)
     {
         auto const findResult = mEssenceAndVariantsMap.find(id);
         MFA_ASSERT(findResult != mEssenceAndVariantsMap.end());
@@ -107,7 +110,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::RemoveVariant(Variant & variant)
+    void BasePipeline::RemoveVariant(VariantBase & variant)
     {
         {// Removing from all variants list
             bool foundInAllVariantsList = false;

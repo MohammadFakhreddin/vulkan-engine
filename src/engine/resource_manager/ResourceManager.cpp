@@ -6,6 +6,7 @@
 #include "tools/Importer.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/BedrockPath.hpp"
+#include "engine/asset_system/AssetModel.hpp"
 
 namespace MFA
 {
@@ -50,7 +51,7 @@ namespace MFA
         MFA_ASSERT(strlen(name) > 0);
         MFA_ASSERT(state->availableGpuModels.contains(name) == false);
         MFA_ASSERT(cpuModel != nullptr);
-        MFA_ASSERT(cpuModel->mesh->IsValid());
+        MFA_ASSERT(cpuModel->mesh->isValid());
 
         auto gpuModel = RF::CreateGpuModel(cpuModel, state->nextId++, name);
         state->availableGpuModels[name] = gpuModel;

@@ -6,7 +6,7 @@
 
 namespace MFA
 {
-    class DrawableVariant;
+    class PBR_Variant;
 
     class MeshRendererComponent final : public RendererComponent
     {
@@ -25,10 +25,10 @@ namespace MFA
         void init() override;
 
         [[nodiscard]]
-        DrawableVariant const * getDrawableVariant() const;
+        PBR_Variant const * getDrawableVariant() const;
 
         [[nodiscard]]
-        DrawableVariant * getDrawableVariant();
+        PBR_Variant * getDrawableVariant();
 
         void onUI() override;
 
@@ -36,7 +36,7 @@ namespace MFA
 
     private:
 
-        DrawableVariant * mDrawableVariant = nullptr;
+        PBR_Variant * mPBR_Variant = nullptr;
  
     };
 

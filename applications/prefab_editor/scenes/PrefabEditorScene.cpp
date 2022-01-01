@@ -43,7 +43,7 @@ void PrefabEditorScene::Init()
 
     {// Error texture
         auto cpuTexture = Importer::CreateErrorTexture();
-        mErrorTexture = RF::CreateTexture(cpuTexture);
+        mErrorTexture = RF::CreateTexture(*cpuTexture);
     }
 
     // Sampler

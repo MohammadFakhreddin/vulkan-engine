@@ -6,6 +6,8 @@
 #include "engine/BedrockMath.hpp"
 #include "engine/BedrockMemory.hpp"
 #include "engine/render_system/RenderTypes.hpp"
+#include "engine/asset_system/AssetTexture.hpp"
+#include "engine/asset_system/AssetShader.hpp"
 
 #include "libs/sdl/SDL.hpp"
 
@@ -777,7 +779,7 @@ void DestroyImage(
 //-------------------------------------------------------------------------------------------------
 
 std::shared_ptr<RT::GpuTexture> CreateTexture(
-    std::shared_ptr<AS::Texture> const & cpuTexture,
+    AS::Texture const & cpuTexture,
     VkDevice device,
     VkPhysicalDevice physicalDevice,
     VkQueue graphicQueue,
@@ -788,15 +790,15 @@ std::shared_ptr<RT::GpuTexture> CreateTexture(
     MFA_ASSERT(physicalDevice != nullptr);
     MFA_ASSERT(graphicQueue != nullptr);
     MFA_VK_VALID_ASSERT(commandPool);
-    MFA_ASSERT(cpuTexture->isValid());
+    MFA_ASSERT(cpuTexture.isValid());
 
-    if (cpuTexture->isValid())
+    if (cpuTexture.isValid())
     {
-        auto const format = cpuTexture->GetFormat();
-        auto const mipCount = cpuTexture->GetMipCount();
-        auto const sliceCount = cpuTexture->GetSlices();
-        auto const & largestMipmapInfo = cpuTexture->GetMipmap(0);
-        auto const buffer = cpuTexture->GetBuffer();
+        auto const format = cpuTexture.GetFormat();
+        auto const mipCount = cpuTexture.GetMipCount();
+        auto const sliceCount = cpuTexture.GetSlices();
+        auto const & largestMipmapInfo = cpuTexture.GetMipmap(0);
+        auto const buffer = cpuTexture.GetBuffer();
         MFA_ASSERT(buffer.ptr != nullptr && buffer.len > 0);
         // Create upload buffer
         auto const uploadBufferGroup = CreateBuffer(
@@ -844,7 +846,7 @@ std::shared_ptr<RT::GpuTexture> CreateTexture(
             uploadBufferGroup->buffer,
             imageGroup->image,
             graphicQueue,
-            *cpuTexture
+            cpuTexture
         );
 
         TransferImageLayout(
@@ -870,8 +872,7 @@ std::shared_ptr<RT::GpuTexture> CreateTexture(
 
         std::shared_ptr<RT::GpuTexture> gpuTexture = std::make_shared<RT::GpuTexture>(
             std::move(imageGroup),
-            std::move(imageView),
-            cpuTexture
+            std::move(imageView)
         );
         return gpuTexture;
     }
@@ -1839,8 +1840,8 @@ RT::PipelineGroup CreatePipelineGroup(
     viewport_create_info.scissorCount = 1;
     // Do not move these objects into if conditions otherwise it will be removed for release mode
     // thus you may face strange validation error about min depth is not set
-    VkViewport viewport {};
-    VkRect2D scissor {};
+    VkViewport viewport{};
+    VkRect2D scissor{};
 
     if (true == options.useStaticViewportAndScissor)
     {
@@ -2190,7 +2191,7 @@ void CreateUniformBuffer(
     VkPhysicalDevice physicalDevice,
     uint32_t const buffersCount,
     VkDeviceSize const buffersSize,
-    std::shared_ptr<RT::BufferAndMemory> * outBuffers
+    std::shared_ptr<RT::BufferAndMemory> *outBuffers
 )
 {
     for (uint32_t index = 0; index < buffersCount; index++)
@@ -2233,7 +2234,7 @@ void CreateStorageBuffer(
     VkPhysicalDevice physicalDevice,
     uint32_t const buffersCount,
     VkDeviceSize const buffersSize,
-    std::shared_ptr<RT::BufferAndMemory> * outStorageBuffer
+    std::shared_ptr<RT::BufferAndMemory> *outStorageBuffer
 )
 {
     MFA_ASSERT(outStorageBuffer != nullptr);

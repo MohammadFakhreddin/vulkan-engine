@@ -1,14 +1,13 @@
 #include "ImageUtils.hpp"
 
-#include "../engine/FoundationAsset.hpp"
-#include "../engine/BedrockLog.hpp"
-#include "../engine/BedrockAssert.hpp"
-#include "../engine/BedrockMemory.hpp"
-#include "../tools/Importer.hpp"
-
-#include "../libs/stb_image/stb_image.h"
+#include "engine/BedrockLog.hpp"
+#include "engine/BedrockAssert.hpp"
+#include "engine/BedrockMemory.hpp"
+#include "tools/Importer.hpp"
 #include "engine/BedrockFileSystem.hpp"
 #include "engine/BedrockMath.hpp"
+
+#include "libs/stb_image/stb_image.h"
 #include "libs/stb_image/stb_image_resize.h"
 #include "libs/tiny_ktx/tinyktx.h"
 

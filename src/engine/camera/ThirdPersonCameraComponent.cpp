@@ -3,7 +3,6 @@
 #include "engine/InputManager.hpp"
 #include "engine/ui_system/UISystem.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockMath.hpp"
 #include "engine/BedrockMatrix.hpp"

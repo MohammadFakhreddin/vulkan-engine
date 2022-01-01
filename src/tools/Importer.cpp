@@ -8,11 +8,11 @@
 #include "engine/BedrockMatrix.hpp"
 #include "engine/job_system/ThreadSafeQueue.hpp"
 #include "engine/job_system/JobSystem.hpp"
+#include "engine/asset_system/Asset_PBR_Mesh.hpp"
 
 #include "libs/tiny_obj_loader/tiny_obj_loader.h"
 #include "libs/tiny_gltf_loader/tiny_gltf_loader.h"
 
-#include <glm/gtx/quaternion.hpp>
 
 namespace MFA::Importer
 {
@@ -342,11 +342,14 @@ namespace MFA::Importer
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<AS::Mesh> ImportObj(char const * path)
+    std::shared_ptr<AS::MeshBase> ImportObj(char const * path)
     {
+        using namespace AS::PBR;
+
         MFA_ASSERT(path != nullptr);
         MFA_ASSERT(strlen(path) > 0);
-        std::shared_ptr<AS::Mesh> mesh = std::make_shared<AS::Mesh>();
+
+        auto mesh = std::make_shared<Mesh>();
         ;
         if (FS::Exists(path))
         {
@@ -455,17 +458,17 @@ namespace MFA::Importer
                     auto const vertexCount = static_cast<uint32_t>(positions_count);
                     auto const indexCount = static_cast<uint32_t>(shapes[0].mesh.indices.size());
 
-                    mesh->InitForWrite(
+                    mesh->initForWrite(
                         vertexCount,
                         indexCount,
-                        Memory::Alloc(sizeof(AS::Mesh::Vertex) * vertexCount),
-                        Memory::Alloc(sizeof(AS::Mesh::Index) * indexCount)
+                        Memory::Alloc(sizeof(Vertex) * vertexCount),
+                        Memory::Alloc(sizeof(AS::Index) * indexCount)
                     );
 
-                    auto const subMeshIndex = mesh->InsertSubMesh();
+                    auto const subMeshIndex = mesh->insertSubMesh();
 
-                    std::vector<AS::Mesh::Vertex> vertices(vertexCount);
-                    std::vector<AS::Mesh::Index> indices(indexCount);
+                    std::vector<Vertex> vertices(vertexCount);
+                    std::vector<AS::Index> indices(indexCount);
                     for (
                         uintmax_t indicesIndex = 0;
                         indicesIndex < shapes[0].mesh.indices.size();
@@ -483,14 +486,14 @@ namespace MFA::Importer
                     }
 
                     {// Insert primitive
-                        AS::Mesh::Primitive primitive{};
+                        Primitive primitive{};
                         primitive.uniqueId = 0;
                         primitive.vertexCount = vertexCount;
                         primitive.indicesCount = indexCount;
                         primitive.baseColorTextureIndex = 0;
                         primitive.hasNormalBuffer = true;
 
-                        mesh->InsertPrimitive(
+                        mesh->insertPrimitive(
                             subMeshIndex,
                             primitive,
                             static_cast<uint32_t>(vertices.size()),
@@ -500,11 +503,11 @@ namespace MFA::Importer
                         );
                     }
 
-                    auto node = AS::MeshNode{};
+                    Node node {};
                     node.subMeshIndex = static_cast<int>(subMeshIndex);
                     Matrix::CopyGlmToCells(glm::identity<glm::mat4>(), node.transform);
-                    mesh->InsertNode(node);
-                    MFA_ASSERT(mesh->IsValid());
+                    mesh->insertNode(node);
+                    MFA_ASSERT(mesh->isValid());
 
                 }
                 else if (!error.empty() && error.substr(0, 4) != "WARN")
@@ -684,7 +687,7 @@ namespace MFA::Importer
         char const * path,
         tinygltf::Model const & gltfModel,
         std::vector<TextureRef> & outTextureRefs,
-        AS::Model & outResultModel
+        std::vector<std::shared_ptr<AS::Texture>> & outTextures
     )
     {
         std::string const directoryPath = FS::ExtractDirectoryFromPath(path);
@@ -756,10 +759,10 @@ namespace MFA::Importer
             {
                 TextureRef textureRef{
                     .gltf_name = item.gltfName,
-                    .index = static_cast<uint8_t>(outResultModel.textures.size()),
+                    .index = static_cast<uint8_t>(outTextures.size()),
                 };
                 outTextureRefs.emplace_back(textureRef);
-                outResultModel.textures.emplace_back(item.texture);
+                outTextures.emplace_back(item.texture);
             }
         }
 
@@ -829,12 +832,13 @@ namespace MFA::Importer
 
     //-------------------------------------------------------------------------------------------------
 
-    static void GLTF_extractSubMeshes(
+    static std::shared_ptr<AS::PBR::Mesh> GLTF_extractSubMeshes(
         tinygltf::Model & gltfModel,
-        std::vector<TextureRef> const & textureRefs,
-        AS::Model & outResultModel
+        std::vector<TextureRef> const & textureRefs
     )
     {
+        using namespace AS::PBR;
+
         auto const generateUvKeyword = [](int32_t const uvIndex) -> std::string
         {
             return "TEXCOORD_" + std::to_string(uvIndex);
@@ -862,20 +866,21 @@ namespace MFA::Importer
                 }
             }
         }
-        outResultModel.mesh = std::make_unique<AS::Mesh>();
-        outResultModel.mesh->InitForWrite(
+
+        auto mesh = std::make_shared<Mesh>();
+        mesh->initForWrite(
             totalVerticesCount,
             totalIndicesCount,
-            Memory::Alloc(sizeof(AS::MeshVertex) * totalVerticesCount),
-            Memory::Alloc(sizeof(AS::MeshIndex) * totalIndicesCount)
+            Memory::Alloc(sizeof(Vertex) * totalVerticesCount),
+            Memory::Alloc(sizeof(AS::Index) * totalIndicesCount)
         );
         // Step2: Fill subMeshes
         uint32_t primitiveUniqueId = 0;
-        std::vector<AS::Mesh::Vertex> primitiveVertices{};
-        std::vector<AS::MeshIndex> primitiveIndices{};
+        std::vector<Vertex> primitiveVertices{};
+        std::vector<AS::Index> primitiveIndices{};
         for (auto & gltfMesh : gltfModel.meshes)
         {
-            auto const meshIndex = outResultModel.mesh->InsertSubMesh();
+            auto const meshIndex = mesh->insertSubMesh();
             if (false == gltfMesh.primitives.empty())
             {
                 for (auto & gltfPrimitive : gltfMesh.primitives)
@@ -900,7 +905,7 @@ namespace MFA::Importer
                     bool doubleSided = false;
                     float alphaCutoff = 0.0f;
 
-                    using AlphaMode = AS::Mesh::Primitive::AlphaMode;
+                    using AlphaMode = AS::AlphaMode;
                     AlphaMode alphaMode = AlphaMode::Opaque;
 
                     uint32_t uniqueId = primitiveUniqueId;
@@ -1488,7 +1493,7 @@ namespace MFA::Importer
                     }
 
                     {// Creating new subMesh
-                        AS::MeshPrimitive primitive{};
+                        Primitive primitive{};
                         primitive.uniqueId = uniqueId;
                         primitive.baseColorTextureIndex = baseColorTextureIndex;
                         primitive.metallicRoughnessTextureIndex = metallicRoughnessTextureIndex;
@@ -1515,7 +1520,7 @@ namespace MFA::Importer
                         primitive.alphaCutoff = alphaCutoff;
                         primitive.doubleSided = doubleSided;
 
-                        outResultModel.mesh->InsertPrimitive(
+                        mesh->insertPrimitive(
                             meshIndex,
                             primitive,
                             static_cast<uint32_t>(primitiveVertices.size()),
@@ -1529,21 +1534,24 @@ namespace MFA::Importer
                 }
             }
         }
+        return mesh;
     }
 
     //-------------------------------------------------------------------------------------------------
 
     static void GLTF_extractNodes(
-        tinygltf::Model & gltfModel,
-        AS::Model & outResultModel
+        tinygltf::Model const & gltfModel,
+        AS::PBR::Mesh * mesh
     )
     {
+        using namespace AS::PBR;
         // Step3: Fill nodes
         if (false == gltfModel.nodes.empty())
         {
+            MFA_ASSERT(mesh != nullptr);
             for (auto const & gltfNode : gltfModel.nodes)
             {
-                AS::MeshNode node{};
+                Node node{};
                 node.subMeshIndex = gltfNode.mesh;
                 node.children = gltfNode.children;
                 node.skin = gltfNode.skin;
@@ -1577,7 +1585,7 @@ namespace MFA::Importer
                         node.transform[i] = static_cast<float>(gltfNode.matrix[i]);
                     }
                 }
-                outResultModel.mesh->InsertNode(node);
+                mesh->insertNode(node);
             }
         }
     }
@@ -1586,12 +1594,16 @@ namespace MFA::Importer
 
     static void GLTF_extractSkins(
         tinygltf::Model & gltfModel,
-        AS::Model & outResultModel
+        AS::PBR::Mesh * mesh
     )
     {
+        using namespace AS::PBR;
+
+        MFA_ASSERT(mesh != nullptr);
+
         for (auto const & gltfSkin : gltfModel.skins)
         {
-            AS::MeshSkin skin{};
+            Skin skin{};
 
             // Joints
             skin.joints.insert(skin.joints.end(), gltfSkin.joints.begin(), gltfSkin.joints.end());
@@ -1617,7 +1629,7 @@ namespace MFA::Importer
             MFA_ASSERT(skin.inverseBindMatrices.size() == skin.joints.size());
             skin.skeletonRootNode = gltfSkin.skeleton;
 
-            outResultModel.mesh->InsertSkin(skin);
+            mesh->insertSkin(skin);
         }
     }
 
@@ -1625,15 +1637,18 @@ namespace MFA::Importer
 
     static void GLTF_extractAnimations(
         tinygltf::Model & gltfModel,
-        AS::Model & outResultModel
+        AS::PBR::Mesh * mesh
     )
     {
-        using Sampler = AS::MeshAnimation::Sampler;
-        using Channel = AS::MeshAnimation::Channel;
-        using Interpolation = AssetSystem::Mesh::Animation::Interpolation;
-        using Path = AssetSystem::Mesh::Animation::Path;
-        using Channel = AssetSystem::Mesh::Animation::Channel;
+        using namespace AS::PBR;
 
+        using Sampler = Animation::Sampler;
+        using Channel = Animation::Channel;
+        using Interpolation = Animation::Interpolation;
+        using Path = Animation::Path;
+
+        MFA_ASSERT(mesh != nullptr);
+        
         auto const convertInterpolationToEnum = [](char const * value)-> Interpolation
         {
             if (strcmp("LINEAR", value) == 0)
@@ -1672,7 +1687,7 @@ namespace MFA::Importer
 
         for (auto const & gltfAnimation : gltfModel.animations)
         {
-            AS::MeshAnimation animation{};
+            Animation animation{};
             animation.name = gltfAnimation.name;
             // Samplers
             for (auto const & gltfSampler : gltfAnimation.samplers)
@@ -1772,7 +1787,7 @@ namespace MFA::Importer
                 animation.channels.emplace_back(channel);
             }
 
-            outResultModel.mesh->InsertAnimation(animation);
+            mesh->insertAnimation(animation);
         }
     }
 
@@ -1781,9 +1796,12 @@ namespace MFA::Importer
     // Based on sasha willems solution and a comment in github
     std::shared_ptr<AS::Model> ImportGLTF(char const * path)
     {
+        using namespace AS::PBR;
+
         MFA_ASSERT(path != nullptr);
         MFA_ASSERT(strlen(path) > 0);
-        auto resultModel = std::make_shared<AS::Model>();
+
+        std::shared_ptr<AS::Model> result = nullptr;
         if (path != nullptr)
         {
             namespace TG = tinygltf;
@@ -1829,6 +1847,12 @@ namespace MFA::Importer
             }
             if (success)
             {
+                std::shared_ptr<AS::PBR::Mesh> mesh {};
+                std::vector<std::shared_ptr<AS::Texture>> textures {};
+                /*result = std::make_shared<AS::Model>(
+                    std::make_shared<Mesh>(),
+                    std::vector<std::shared_ptr<AS::Texture>>{}
+                );*/
                 // TODO Camera
                 if (false == gltfModel.meshes.empty())
                 {
@@ -1838,25 +1862,30 @@ namespace MFA::Importer
                         path,
                         gltfModel,
                         textureRefs,
-                        *resultModel
+                        textures
                     );
-                    {// Reading samplers values from materials
+                    //{// Reading samplers values from materials
                         //auto const & sampler = model.samplers[base_color_gltf_texture.sampler];
                         //model_asset.textures[base_color_texture_index]  
-                    }
+                    //}
                     // SubMeshes
-                    GLTF_extractSubMeshes(gltfModel, textureRefs, *resultModel);
+                    mesh = GLTF_extractSubMeshes(gltfModel, textureRefs);
+                    if (mesh == nullptr)
+                    {
+                        return result;
+                    }
                 }
                 // Nodes
-                GLTF_extractNodes(gltfModel, *resultModel);
+                GLTF_extractNodes(gltfModel, mesh.get());
                 // Fill skin
-                GLTF_extractSkins(gltfModel, *resultModel);
+                GLTF_extractSkins(gltfModel, mesh.get());
                 // Animation
-                GLTF_extractAnimations(gltfModel, *resultModel);
-                resultModel->mesh->FinalizeData();
+                GLTF_extractAnimations(gltfModel, mesh.get());
+                mesh->finalizeData();
+                result = std::make_shared<AS::Model>(mesh, textures);
             }
         }
-        return resultModel;
+        return result;
     }
 
     //-------------------------------------------------------------------------------------------------

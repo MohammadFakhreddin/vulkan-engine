@@ -2,6 +2,7 @@
 
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
+#include "engine/asset_system/AssetTypes.hpp"
 
 namespace MFA {
     
@@ -31,12 +32,12 @@ public:
 
 protected:
 
-    std::shared_ptr<Essence> internalCreateEssence(
+    std::shared_ptr<EssenceBase> internalCreateEssence(
         std::shared_ptr<RT::GpuModel> const & gpuModel,
-        std::shared_ptr<AS::Mesh> const & cpuMesh
+        std::shared_ptr<AS::MeshBase> const & cpuMesh
     ) override;
 
-    std::shared_ptr<Variant> internalCreateVariant(Essence * essence) override;
+    std::shared_ptr<VariantBase> internalCreateVariant(EssenceBase * essence) override;
 
 private:
 

@@ -1,41 +1,40 @@
-#include "DrawableVariant.hpp"
+#include "PBR_Variant.hpp"
 
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/BedrockMemory.hpp"
-#include "engine/render_system/drawable_essence/DrawableEssence.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/FoundationAsset.hpp"
 #include "engine/ui_system/UISystem.hpp"
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockMatrix.hpp"
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
+#include "PBR_Essence.hpp"
 
-#include <glm/gtx/quaternion.hpp>
+//#include <glm/gtx/quaternion.hpp>
 
 #include <string>
 
 namespace MFA
 {
 
+    using namespace AS::PBR;
     //-------------------------------------------------------------------------------------------------
 
-    DrawableVariant::DrawableVariant(DrawableEssence const * essence)
-        : Variant(essence)
-        , mDrawableEssence(essence)
-        , mMesh(mDrawableEssence->getCpuMesh())
+    PBR_Variant::PBR_Variant(PBR_Essence const * essence)
+        : VariantBase(essence)
+        , mPBR_Essence(essence)
+        , mMeshData(mPBR_Essence->getMeshData())
     {
-        MFA_ASSERT(mMesh->IsValid());
+        MFA_ASSERT(mMeshData.isValid());
 
         // Skins
-        mSkins.resize(mMesh->GetSkinsCount());
+        mSkins.resize(mMeshData.skins.size());
 
         {// Nodes
-            uint32_t const nodesCount = mMesh->GetNodesCount();
-            mNodes.resize(nodesCount);
-            for (uint32_t i = 0; i < nodesCount; ++i)
+            mNodes.resize(mMeshData.nodes.size());
+            for (int i = 0; i < static_cast<int>(mNodes.size()); ++i)
             {
-                auto & meshNode = mMesh->GetNodeByIndex(i);
+                auto & meshNode = mMeshData.nodes[i];
                 auto & node = mNodes[i];
 
                 node.meshNode = &meshNode;
@@ -74,54 +73,53 @@ namespace MFA
             }
         }
 
-        {// Creating cachedSkinJoints array
+        // Creating cachedSkinJoints array
+        {
+            uint32_t totalJointsCount = 0;
+            for (uint32_t i = 0; i < static_cast<uint32_t>(mMeshData.skins.size()); ++i)
             {
-                uint32_t totalJointsCount = 0;
-                for (uint32_t i = 0; i < mMesh->GetSkinsCount(); ++i)
-                {
-                    auto & skin = mMesh->GetSkinByIndex(i);
-                    auto const jointsCount = static_cast<uint32_t>(skin.joints.size());
-                    totalJointsCount += jointsCount;
-                }
-                if (totalJointsCount > 0)
-                {
-                    mCachedSkinsJointsBlob = Memory::Alloc(sizeof(JointTransformData) * totalJointsCount);
-                    mSkinsJointsBuffer = RF::CreateUniformBuffer(
-                        mCachedSkinsJointsBlob->memory.len,
-                        RF::GetMaxFramesPerFlight()
-                    );
-                }
+                auto & skin = mMeshData.skins[i];
+                auto const jointsCount = static_cast<uint32_t>(skin.joints.size());
+                totalJointsCount += jointsCount;
             }
+            if (totalJointsCount > 0)
             {
-                mCachedSkinsJoints.resize(mMesh->GetSkinsCount());
-                uint32_t startingJointIndex = 0;
-                for (uint32_t i = 0; i < mMesh->GetSkinsCount(); ++i)
-                {
-                    auto & skin = mMesh->GetSkinByIndex(i);
-                    auto const jointsCount = static_cast<uint32_t>(skin.joints.size());
-                    mCachedSkinsJoints[i] = reinterpret_cast<JointTransformData *>(mCachedSkinsJointsBlob->memory.ptr + startingJointIndex * sizeof(JointTransformData));
-                    mSkins[i].skinStartingIndex = static_cast<int>(startingJointIndex);
-                    startingJointIndex += jointsCount;
-                }
+                mCachedSkinsJointsBlob = Memory::Alloc(sizeof(JointTransformData) * totalJointsCount);
+                mSkinsJointsBuffer = RF::CreateUniformBuffer(
+                    mCachedSkinsJointsBlob->memory.len,
+                    RF::GetMaxFramesPerFlight()
+                );
+            }
+        }
+        {
+            mCachedSkinsJoints.resize(mMeshData.skins.size());
+            uint32_t startingJointIndex = 0;
+            for (uint32_t i = 0; i < mMeshData.skins.size(); ++i)
+            {
+                auto & skin = mMeshData.skins[i];
+                auto const jointsCount = static_cast<uint32_t>(skin.joints.size());
+                mCachedSkinsJoints[i] = reinterpret_cast<JointTransformData *>(mCachedSkinsJointsBlob->memory.ptr + startingJointIndex * sizeof(JointTransformData));
+                mSkins[i].skinStartingIndex = static_cast<int>(startingJointIndex);
+                startingJointIndex += jointsCount;
             }
         }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    DrawableVariant::~DrawableVariant() = default;
+    PBR_Variant::~PBR_Variant() = default;
 
     //-------------------------------------------------------------------------------------------------
 
     [[nodiscard]]
-    RT::UniformBufferGroup const * DrawableVariant::GetSkinJointsBuffer() const noexcept
+    RT::UniformBufferGroup const * PBR_Variant::GetSkinJointsBuffer() const noexcept
     {
         return mSkinsJointsBuffer.get();
     }
 
     //-------------------------------------------------------------------------------------------------
     // TODO We should separate it into update buffer and update state phase
-    void DrawableVariant::Update(float const deltaTimeInSec, RT::CommandRecordState const & drawPass)
+    void PBR_Variant::Update(float const deltaTimeInSec, RT::CommandRecordState const & drawPass)
     {
         if (IsActive() == false)
         {
@@ -158,10 +156,10 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DrawableVariant::Draw(
+    void PBR_Variant::Draw(
         RT::CommandRecordState const & drawPass,
         BindDescriptorSetFunction const & bindFunction,
-        AlphaMode const alphaMode
+        AS::AlphaMode const alphaMode
     )
     {
         for (auto & node : mNodes)
@@ -172,21 +170,21 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    bool DrawableVariant::IsCurrentAnimationFinished() const
+    bool PBR_Variant::IsCurrentAnimationFinished() const
     {
         return mIsAnimationFinished;
     }
     
     //-------------------------------------------------------------------------------------------------
 
-    int DrawableVariant::GetActiveAnimationIndex() const noexcept
+    int PBR_Variant::GetActiveAnimationIndex() const noexcept
     {
         return mActiveAnimationIndex;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void DrawableVariant::SetActiveAnimationIndex(int const nextAnimationIndex, AnimationParams const & params)
+    void PBR_Variant::SetActiveAnimationIndex(int const nextAnimationIndex, AnimationParams const & params)
     {
         if (nextAnimationIndex == mActiveAnimationIndex)
         {
@@ -198,15 +196,15 @@ namespace MFA
         mAnimationTransitionDurationInSec = params.transitionDuration;
         mAnimationRemainingTransitionDurationInSec = params.transitionDuration;
         mPreviousAnimationTimeInSec = mActiveAnimationTimeInSec;
-        mActiveAnimationTimeInSec = params.startTimeOffsetInSec + mMesh->GetAnimationByIndex(mActiveAnimationIndex).startTime;
+        mActiveAnimationTimeInSec = params.startTimeOffsetInSec + mMeshData.animations[mActiveAnimationIndex].startTime;
         mActiveAnimationParams = params;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void DrawableVariant::SetActiveAnimation(char const * animationName, AnimationParams const & params)
+    void PBR_Variant::SetActiveAnimation(char const * animationName, AnimationParams const & params)
     {
-        auto const index = mDrawableEssence->getAnimationIndex(animationName);
+        auto const index = mPBR_Essence->getAnimationIndex(animationName);
         if (MFA_VERIFY(index >= 0))
         {
             SetActiveAnimationIndex(index, params);
@@ -215,17 +213,15 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DrawableVariant::updateAnimation(float const deltaTimeInSec, bool isVisible)
+    void PBR_Variant::updateAnimation(float const deltaTimeInSec, bool isVisible)
     {
-        using Animation = AS::Mesh::Animation;
-
-        if (mMesh->GetAnimationsCount() <= 0)
+        if (mMeshData.animations.empty())
         {
             return;
         }
 
         {// Active animation
-            auto const & activeAnimation = mMesh->GetAnimationByIndex(mActiveAnimationIndex);
+            auto const & activeAnimation = mMeshData.animations[mActiveAnimationIndex];
 
             if (isVisible)
             {
@@ -320,7 +316,7 @@ namespace MFA
                 return;
             }
 
-            auto const & previousAnimation = mMesh->GetAnimationByIndex(mPreviousAnimationIndex);
+            auto const & previousAnimation = mMeshData.animations[mPreviousAnimationIndex];
 
             for (auto const & channel : previousAnimation.channels)
             {
@@ -386,37 +382,30 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DrawableVariant::computeNodesGlobalTransform()
+    void PBR_Variant::computeNodesGlobalTransform()
     {
-        auto const rootNodesCount = mMesh->GetRootNodesCount();
-
-        for (uint32_t i = 0; i < rootNodesCount; ++i)
+        for (auto const & rootNodeIndex : mMeshData.rootNodes)
         {
-            auto & node = mNodes[mMesh->GetIndexOfRootNode(i)];
+            auto & node = mNodes[rootNodeIndex];
             computeNodeGlobalTransform(node, nullptr, false);
         }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void DrawableVariant::updateAllSkinsJoints()
+    void PBR_Variant::updateAllSkinsJoints()
     {
-        auto const skinsCount = mMesh->GetSkinsCount();
-        if (skinsCount > 0)
+        uint32_t index = 0;
+        for (auto const & skin : mMeshData.skins)
         {
-            auto const * skins = mMesh->GetSkinData();
-            MFA_ASSERT(skins != nullptr);
-
-            for (uint32_t i = 0; i < skinsCount; ++i)
-            {
-                updateSkinJoints(i, skins[i]);
-            }
+            updateSkinJoints(index, skin);
+            ++index;
         }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void DrawableVariant::updateSkinJoints(uint32_t const skinIndex, AS::MeshSkin const & skin)
+    void PBR_Variant::updateSkinJoints(uint32_t const skinIndex, AS::PBR::Skin const & skin)
     {
         // TODO We can do some caching here as well
         auto const & jointMatrices = mCachedSkinsJoints[skinIndex];
@@ -435,21 +424,21 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DrawableVariant::drawNode(
+    void PBR_Variant::drawNode(
         RT::CommandRecordState const & drawPass,
         Node const & node,
         BindDescriptorSetFunction const & bindFunction,
-        AlphaMode alphaMode
+        AS::AlphaMode alphaMode
     )
     {
         // TODO We can reduce nodes count for better performance when importing
         // Question: Why can't we just render sub-meshes ?
         if (node.meshNode->hasSubMesh())
         {
-            MFA_ASSERT(static_cast<int>(mMesh->GetSubMeshCount()) > node.meshNode->subMeshIndex);
+            MFA_ASSERT(static_cast<int>(mMeshData.subMeshes.size()) > node.meshNode->subMeshIndex);
             drawSubMesh(
                 drawPass,
-                mMesh->GetSubMeshByIndex(node.meshNode->subMeshIndex),
+                mMeshData.subMeshes[node.meshNode->subMeshIndex],
                 node,
                 bindFunction,
                 alphaMode
@@ -459,12 +448,12 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DrawableVariant::drawSubMesh(
+    void PBR_Variant::drawSubMesh(
         RT::CommandRecordState const & drawPass,
-        AssetSystem::Mesh::SubMesh const & subMesh,
+        AS::PBR::SubMesh const & subMesh,
         Node const & node,
         BindDescriptorSetFunction const & bindFunction,
-        AlphaMode const alphaMode
+        AS::AlphaMode const alphaMode
     )
     {
         auto const & primitives = subMesh.findPrimitives(alphaMode);
@@ -485,7 +474,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    glm::mat4 DrawableVariant::computeNodeLocalTransform(Node const & node) const
+    glm::mat4 PBR_Variant::computeNodeLocalTransform(Node const & node) const
     {
         glm::mat4 currentTransform{ 1 };
         auto translate = node.currentTranslate;
@@ -507,7 +496,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DrawableVariant::computeNodeGlobalTransform(Node & node, Node const * parentNode, bool const isParentTransformChanged)
+    void PBR_Variant::computeNodeGlobalTransform(Node & node, Node const * parentNode, bool const isParentTransformChanged)
     {
         MFA_ASSERT(parentNode == nullptr || parentNode->isCachedDataValid == true);
         MFA_ASSERT(parentNode != nullptr || isParentTransformChanged == false);
@@ -556,12 +545,12 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DrawableVariant::OnUI()
+    void PBR_Variant::OnUI()
     {
-        std::vector<char const *> animationsList{ mMesh->GetAnimationsCount() };
-        for (size_t i = 0; i < animationsList.size(); ++i)
+        std::vector<char const *> animationsList{ mMeshData.animations.size() };
+        for (uint32_t i = 0; i < static_cast<uint32_t>(animationsList.size()); ++i)
         {
-            animationsList[i] = mMesh->GetAnimationByIndex(static_cast<uint32_t>(i)).name.c_str();
+            animationsList[i] = mMeshData.animations[i].name.c_str();
         }
 
         UI::Combo(

@@ -7,7 +7,7 @@ namespace MFA
 
     class TransformComponent;
     class DebugRendererPipeline;
-    class DrawableVariant;
+    class PBR_Variant;
     class BoundingVolumeComponent;
 
     class BoundingVolumeRendererComponent final : public RendererComponent

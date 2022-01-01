@@ -9,9 +9,10 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockSignal.hpp"
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
+#include "engine/asset_system/AssetTypes.hpp"
+
 #include "libs/imgui/imgui.h"
 #include "libs/imgui/imgui_stdlib.h"
-
 #ifdef __DESKTOP__
 #include "libs/sdl/SDL.hpp"
 #endif
@@ -258,7 +259,7 @@ namespace MFA::UISystem
         {// Vertex shader
             auto const shader_asset = Importer::ImportShaderFromSPV(
                 CBlobAliasOf(vertex_shader_spv),
-                AssetSystem::Shader::Stage::Vertex,
+                AS::ShaderStage::Vertex,
                 "main"
             );
             state->vertexShader = RF::CreateShader(shader_asset);
@@ -268,7 +269,7 @@ namespace MFA::UISystem
         {// Fragment shader
             auto const shader_asset = Importer::ImportShaderFromSPV(
                 CBlobAliasOf(fragment_shader_spv),
-                AssetSystem::Shader::Stage::Fragment,
+                AS::ShaderStage::Fragment,
                 "main"
             );
             state->fragmentShader = RF::CreateShader(shader_asset);
@@ -382,7 +383,7 @@ namespace MFA::UISystem
             importTextureOptions.tryToGenerateMipmaps = false;
             importTextureOptions.preferSrgb = false;
 
-            auto texture_asset = Importer::ImportInMemoryTexture(
+            auto textureAsset = Importer::ImportInMemoryTexture(
                 CBlob{ pixels, image_size },
                 width,
                 height,
@@ -393,7 +394,7 @@ namespace MFA::UISystem
                 importTextureOptions
             );
             // TODO Support from in memory import of images inside importer
-            state->fontTexture = RF::CreateTexture(texture_asset);
+            state->fontTexture = RF::CreateTexture(*textureAsset);
 
 #ifdef __DESKTOP__
             // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array.
@@ -648,7 +649,7 @@ namespace MFA::UISystem
                     constants.translate[1] = -1.0f - draw_data->DisplayPos.y * constants.scale[1];
                     RF::PushConstants(
                         drawPass,
-                        AssetSystem::Shader::Stage::Vertex,
+                        AS::ShaderStage::Vertex,
                         0,
                         CBlobAliasOf(constants)
                     );

@@ -1,6 +1,13 @@
 #pragma once
 
-#include "../engine/FoundationAsset.hpp"
+#include "engine/BedrockCommon.hpp"
+#include "engine/asset_system/AssetTypes.hpp"
+#include "engine/asset_system/AssetTexture.hpp"
+#include "engine/asset_system/AssetBaseMesh.hpp"
+#include "engine/asset_system/AssetModel.hpp"
+#include "engine/asset_system/AssetShader.hpp"
+
+#include <memory>
 
 namespace MFA::Importer {
 
@@ -52,7 +59,7 @@ std::shared_ptr<AS::Texture> ImportImage(char const * path, ImportTextureOptions
  * Due to lack of material support, OBJ files are not very useful (Deprecated)
  */
 [[nodiscard]]
-std::shared_ptr<AS::Mesh> ImportObj(char const * path);
+std::shared_ptr<AS::MeshBase> ImportObj(char const * path);
 
 [[nodiscard]]
 std::shared_ptr<AS::Model> ImportGLTF(char const * path);

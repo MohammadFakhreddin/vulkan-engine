@@ -1,10 +1,13 @@
 #pragma once
 
 #include "engine/render_system/RenderTypes.hpp"
-#include "engine/FoundationAsset.hpp"
-#include "engine/render_system/variant/Variant.hpp"
+#include "engine/BedrockMemory.hpp"
+#include "engine/asset_system/AssetTypes.hpp"
+#include "engine/asset_system/Asset_PBR_Mesh.hpp"
+#include "engine/render_system/pipelines/VariantBase.hpp"
 
 #include <glm/gtc/quaternion.hpp>
+#include <glm/vec3.hpp>
 
 #include <functional>
 #include <memory>
@@ -16,7 +19,7 @@ namespace MFA
     class Entity;
     class BoundingVolumeComponent;
     class TransformComponent;
-    class DrawableEssence;
+    class PBR_Essence;
     class RendererComponent;
 
     struct AnimationParams
@@ -26,11 +29,9 @@ namespace MFA
         float startTimeOffsetInSec = 0.0f;
     };
 
-    class DrawableVariant final : public Variant
+    class PBR_Variant final : public VariantBase
     {
     public:
-
-        using AlphaMode = AS::AlphaMode;
 
         struct JointTransformData
         {
@@ -44,7 +45,7 @@ namespace MFA
 
         struct Node
         {
-            AS::MeshNode const * meshNode = nullptr;
+            AS::PBR::Node const * meshNode = nullptr;
 
             glm::quat currentRotation{};     // x, y, z, w
             glm::vec3 currentScale{};
@@ -66,13 +67,13 @@ namespace MFA
             Skin * skin = nullptr;
         };
 
-        explicit DrawableVariant(DrawableEssence const * essence);
-        ~DrawableVariant() override;
+        explicit PBR_Variant(PBR_Essence const * essence);
+        ~PBR_Variant() override;
 
-        DrawableVariant(DrawableVariant const &) noexcept = delete;
-        DrawableVariant(DrawableVariant &&) noexcept = delete;
-        DrawableVariant & operator= (DrawableVariant const & rhs) noexcept = delete;
-        DrawableVariant & operator= (DrawableVariant && rhs) noexcept = delete;
+        PBR_Variant(PBR_Variant const &) noexcept = delete;
+        PBR_Variant(PBR_Variant &&) noexcept = delete;
+        PBR_Variant & operator= (PBR_Variant const & rhs) noexcept = delete;
+        PBR_Variant & operator= (PBR_Variant && rhs) noexcept = delete;
 
         [[nodiscard]]
         int GetActiveAnimationIndex() const noexcept;
@@ -83,11 +84,11 @@ namespace MFA
 
         void Update(float deltaTimeInSec, RT::CommandRecordState const & drawPass) override;
 
-        using BindDescriptorSetFunction = std::function<void(AS::MeshPrimitive const & primitive, Node const & node)>;
+        using BindDescriptorSetFunction = std::function<void(AS::PBR::Primitive const & primitive, Node const & node)>;
         void Draw(
             RT::CommandRecordState const & drawPass,
             BindDescriptorSetFunction const & bindFunction,
-            AlphaMode alphaMode
+            AS::AlphaMode alphaMode
         );
         
         [[nodiscard]]
@@ -106,21 +107,21 @@ namespace MFA
 
         void updateAllSkinsJoints();
 
-        void updateSkinJoints(uint32_t skinIndex, AS::MeshSkin const & skin);
+        void updateSkinJoints(uint32_t skinIndex, AS::PBR::Skin const & skin);
 
         void drawNode(
             RT::CommandRecordState const & drawPass,
             Node const & node,
             BindDescriptorSetFunction const & bindFunction,
-            AlphaMode alphaMode
+            AS::AlphaMode alphaMode
         );
 
         void drawSubMesh(
             RT::CommandRecordState const & drawPass,
-            AS::Mesh::SubMesh const & subMesh,
+            AS::PBR::SubMesh const & subMesh,
             Node const & node,
             BindDescriptorSetFunction const & bindFunction,
-            AlphaMode alphaMode
+            AS::AlphaMode alphaMode
         );
 
         [[nodiscard]]
@@ -134,8 +135,8 @@ namespace MFA
 
     private:
 
-        DrawableEssence const * mDrawableEssence = nullptr;
-        AS::Mesh const * mMesh = nullptr;
+        PBR_Essence const * mPBR_Essence = nullptr;
+        AS::PBR::MeshData const & mMeshData;
 
         std::shared_ptr<RT::UniformBufferGroup> mSkinsJointsBuffer{};
 

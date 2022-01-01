@@ -1,21 +1,21 @@
 #pragma once
 
-#include "engine/FoundationAsset.hpp"
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
+#include "engine/asset_system/AssetTypes.hpp"
 
 // Optimize this file using https://simoncoenen.com/blog/programming/graphics/DoomEternalStudy
 
 namespace MFA
 {
-    class DrawableEssence;
+    class PBR_Essence;
     class Scene;
     class DirectionalLightShadowResources;
     class DirectionalLightShadowRenderPass;
     class PointLightShadowRenderPass;
     class PointLightShadowResources;
     class OcclusionRenderPass;
-    class DrawableVariant;
+    class PBR_Variant;
     class DepthPrePass;
     
     class PBRWithShadowPipelineV2 final : public BasePipeline
@@ -95,24 +95,22 @@ namespace MFA
         
     protected:
 
-        std::shared_ptr<Essence> internalCreateEssence(
+        std::shared_ptr<EssenceBase> internalCreateEssence(
             std::shared_ptr<RT::GpuModel> const & gpuModel,
-            std::shared_ptr<AS::Mesh> const & cpuMesh
+            std::shared_ptr<AS::MeshBase> const & cpuMesh
         ) override;
 
-        std::shared_ptr<Variant> internalCreateVariant(Essence * essence) override;
+        std::shared_ptr<VariantBase> internalCreateVariant(EssenceBase * essence) override;
         
     private:
-
-        using AlphaMode = AS::Mesh::Primitive::AlphaMode;
 
         void updateVariants(float deltaTimeInSec, RT::CommandRecordState const & recordState) const;
 
         void createPerFrameDescriptorSets();
 
-        void createEssenceDescriptorSets(DrawableEssence & essence) const;
+        void createEssenceDescriptorSets(PBR_Essence & essence) const;
 
-        void createVariantDescriptorSets(DrawableVariant & variant) const;
+        void createVariantDescriptorSets(PBR_Variant & variant) const;
 
         void createPerFrameDescriptorSetLayout();
 
@@ -144,23 +142,23 @@ namespace MFA
 
         void performDepthPrePass(RT::CommandRecordState & recordState);
 
-        void renderForDepthPrePass(RT::CommandRecordState const & recordState, AlphaMode alphaMode) const;
+        void renderForDepthPrePass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode) const;
 
         void performDirectionalLightShadowPass(RT::CommandRecordState & recordState);
 
-        void renderForDirectionalLightShadowPass(RT::CommandRecordState const & recordState, AlphaMode alphaMode) const;
+        void renderForDirectionalLightShadowPass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode) const;
 
         void performPointLightShadowPass(RT::CommandRecordState & recordState);
 
-        void renderForPointLightShadowPass(RT::CommandRecordState const & recordState, AlphaMode alphaMode) const;
+        void renderForPointLightShadowPass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode) const;
 
         void performOcclusionQueryPass(RT::CommandRecordState & recordState);
 
-        void renderForOcclusionQueryPass(RT::CommandRecordState const & recordState, AlphaMode alphaMode);
+        void renderForOcclusionQueryPass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode);
 
         void performDisplayPass(RT::CommandRecordState & recordState);
 
-        void renderForDisplayPass(RT::CommandRecordState const & recordState, AlphaMode alphaMode) const;
+        void renderForDisplayPass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode) const;
 
         bool mIsInitialized = false;
 
@@ -186,7 +184,7 @@ namespace MFA
 
         struct OcclusionQueryData
         {
-            std::vector<std::weak_ptr<Variant>> Variants {};
+            std::vector<std::weak_ptr<VariantBase>> Variants {};
             std::vector<uint64_t> Results{};
             VkQueryPool Pool{};
         };

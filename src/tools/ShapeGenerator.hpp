@@ -1,6 +1,8 @@
 #pragma once
 
-#include "./engine/FoundationAsset.hpp"
+#include "engine/asset_system/AssetModel.hpp"
+
+#include <memory>
 
 namespace MFA::ShapeGenerator {
     /*

@@ -5,7 +5,9 @@
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/BedrockPath.hpp"
-#include "engine/FoundationAsset.hpp"
+#include "engine/asset_system/AssetModel.hpp"
+#include "engine/render_system/pipelines/EssenceBase.hpp"
+#include "engine/render_system/pipelines/VariantBase.hpp"
 
 #include "libs/nlohmann/json.hpp"
 
@@ -56,14 +58,14 @@ void MFA::RendererComponent::deserialize(nlohmann::json const & jsonObject)
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::Variant const * MFA::RendererComponent::getVariant() const
+MFA::VariantBase const * MFA::RendererComponent::getVariant() const
 {
     return mVariant;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::Variant * MFA::RendererComponent::getVariant()
+MFA::VariantBase * MFA::RendererComponent::getVariant()
 {
     return mVariant;
 }
@@ -74,7 +76,7 @@ MFA::RendererComponent::RendererComponent() = default;
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RendererComponent::RendererComponent(BasePipeline & pipeline, Variant * variant)
+MFA::RendererComponent::RendererComponent(BasePipeline & pipeline, VariantBase * variant)
     : mPipeline(&pipeline)
     , mVariant(variant)
 {}

@@ -3,15 +3,12 @@
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/BedrockPlatforms.hpp"
+#include "engine/camera/ThirdPersonCameraComponent.hpp"
+#include "engine/entity_system/components/MeshRendererComponent.hpp"
+#include "engine/entity_system/components/TransformComponent.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
 #include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
 #include "tools/Prefab.hpp"
-
-namespace MFA
-{
-    class MeshRendererComponent;
-    class ThirdPersonCameraComponent;
-}
 
 class Demo3rdPersonScene final : public MFA::Scene {
 public:

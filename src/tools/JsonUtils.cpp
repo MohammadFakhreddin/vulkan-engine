@@ -2,8 +2,6 @@
 
 #include "libs/nlohmann/json.hpp"
 
-#include <glm/vec3.hpp>
-
 namespace MFA::JsonUtils 
 {
     //-------------------------------------------------------------------------------------------------

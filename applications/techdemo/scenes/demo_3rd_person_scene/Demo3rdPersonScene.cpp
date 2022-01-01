@@ -16,7 +16,7 @@
 #include "engine/entity_system/components/TransformComponent.hpp"
 #include "engine/entity_system/components/DirectionalLightComponent.hpp"
 #include "engine/BedrockMatrix.hpp"
-#include "engine/render_system/drawable_variant/DrawableVariant.hpp"
+#include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Variant.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
 #include "tools/PrefabFileStorage.hpp"
 
@@ -44,7 +44,7 @@ void Demo3rdPersonScene::Init()
 
     {// Error texture
         auto cpuTexture = Importer::CreateErrorTexture();
-        mErrorTexture = RF::CreateTexture(cpuTexture);
+        mErrorTexture = RF::CreateTexture(*cpuTexture);
     }
 
     auto const sphereCpuModel = ShapeGenerator::Sphere();
@@ -306,7 +306,7 @@ void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, RT::CommandRec
             // TODO What should we do for animations ?
             if (auto const meshRendererPtr = mPlayerMeshRenderer.lock())
             {
-                if (auto * variant = static_cast<DrawableVariant *>(meshRendererPtr->getVariant()))
+                if (auto * variant = static_cast<PBR_Variant *>(meshRendererPtr->getVariant()))
                 {
                     variant->SetActiveAnimation("SwordAndShieldRun", { .transitionDuration = 0.3f });
                 }
@@ -316,7 +316,7 @@ void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, RT::CommandRec
         {
             if (auto const meshRendererPtr = mPlayerMeshRenderer.lock())
             {
-                if (auto * variant = static_cast<DrawableVariant *>(meshRendererPtr->getVariant()))
+                if (auto * variant = static_cast<PBR_Variant *>(meshRendererPtr->getVariant()))
                 {
                     //mSoldierVariant->SetActiveAnimation("SwordAndShieldIdle");
                     variant->SetActiveAnimation("Idle", { .transitionDuration = 0.3f });

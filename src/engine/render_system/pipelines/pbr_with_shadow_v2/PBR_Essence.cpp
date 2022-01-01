@@ -1,28 +1,30 @@
-#include "DrawableEssence.hpp"
+#include "PBR_Essence.hpp"
 
 #include "engine/BedrockAssert.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
+#include "engine/asset_system/Asset_PBR_Mesh.hpp"
+#include "engine/BedrockMemory.hpp"
 
 #include <utility>
 
 //-------------------------------------------------------------------------------------------------
 
+using namespace MFA::AS::PBR;
+
 // We need other overrides for easier use as well
-MFA::DrawableEssence::DrawableEssence(
+MFA::PBR_Essence::PBR_Essence(
     std::shared_ptr<RT::GpuModel> const & gpuModel,
-    std::shared_ptr<AS::Mesh> const & cpuMesh
+    std::shared_ptr<AS::MeshBase> const & cpuMesh
 )
-    : Essence(gpuModel)
+    : EssenceBase(gpuModel)
 {
     MFA_ASSERT(mGpuModel != nullptr);
-
-    mCpuMesh = cpuMesh;
-    MFA_ASSERT(mCpuMesh != nullptr);
-
+    MFA_ASSERT(cpuMesh != nullptr);
+    mMeshData = static_cast<Mesh *>(cpuMesh.get())->getMeshData();
+    
     {// PrimitiveCount
         mPrimitiveCount = 0;
-        for (uint32_t i = 0; i < mCpuMesh->GetSubMeshCount(); ++i) {
-            auto const & subMesh = mCpuMesh->GetSubMeshByIndex(i);
+        for (auto const & subMesh : mMeshData.subMeshes) {
             mPrimitiveCount += static_cast<uint32_t>(subMesh.primitives.size());
         }
         if (mPrimitiveCount > 0) {
@@ -32,10 +34,8 @@ MFA::DrawableEssence::DrawableEssence(
             auto const primitiveData = Memory::Alloc(bufferSize);
             
             auto * primitivesArray = primitiveData->memory.as<PrimitiveInfo>();
-            for (uint32_t i = 0; i < mCpuMesh->GetSubMeshCount(); ++i) {
-                auto const & subMesh = mCpuMesh->GetSubMeshByIndex(i);
+            for (auto const & subMesh : mMeshData.subMeshes) {
                 for (auto const & primitive : subMesh.primitives) {
-
                     // Copy primitive into primitive info
                     PrimitiveInfo & primitiveInfo = primitivesArray[primitive.uniqueId];
                     primitiveInfo.baseColorTextureIndex = primitive.hasBaseColorTexture ? primitive.baseColorTextureIndex : -1;
@@ -61,35 +61,35 @@ MFA::DrawableEssence::DrawableEssence(
         }
     }
     {// Animations
-        auto const animationCount = mCpuMesh->GetAnimationsCount();
-        for (uint32_t i = 0; i < animationCount; ++i) {
-            auto const & animation = mCpuMesh->GetAnimationByIndex(i);
+        int animationIndex = 0;
+        for (auto const & animation : mMeshData.animations) {
             MFA_ASSERT(mAnimationNameLookupTable.find(animation.name) == mAnimationNameLookupTable.end());
-            mAnimationNameLookupTable[animation.name] = static_cast<int>(i);
+            mAnimationNameLookupTable[animation.name] = animationIndex;
+            ++animationIndex;
         }
     }
 }
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::DrawableEssence::~DrawableEssence() = default;
+MFA::PBR_Essence::~PBR_Essence() = default;
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RT::UniformBufferGroup const & MFA::DrawableEssence::getPrimitivesBuffer() const noexcept {
+MFA::RT::UniformBufferGroup const & MFA::PBR_Essence::getPrimitivesBuffer() const noexcept {
     return *mPrimitivesBuffer;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-uint32_t MFA::DrawableEssence::getPrimitiveCount() const noexcept
+uint32_t MFA::PBR_Essence::getPrimitiveCount() const noexcept
 {
     return mPrimitiveCount;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-int MFA::DrawableEssence::getAnimationIndex(char const * name) const noexcept {
+int MFA::PBR_Essence::getAnimationIndex(char const * name) const noexcept {
     auto const findResult = mAnimationNameLookupTable.find(name);
     if (findResult != mAnimationNameLookupTable.end()) {
         return findResult->second;
@@ -99,9 +99,9 @@ int MFA::DrawableEssence::getAnimationIndex(char const * name) const noexcept {
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::AssetSystem::Mesh const * MFA::DrawableEssence::getCpuMesh() const
+MeshData const & MFA::PBR_Essence::getMeshData() const
 {
-    return mCpuMesh.get();
+    return mMeshData;
 }
 
 //-------------------------------------------------------------------------------------------------

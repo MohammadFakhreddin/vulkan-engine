@@ -85,12 +85,10 @@ MFA::RT::ImageViewGroup::~ImageViewGroup()
 
 MFA::RT::GpuTexture::GpuTexture(
     std::shared_ptr<ImageGroup> imageGroup,
-    std::shared_ptr<ImageViewGroup> imageView,
-    std::shared_ptr<AS::Texture> cpuTexture
+    std::shared_ptr<ImageViewGroup> imageView
 )
     : imageGroup(std::move(imageGroup))
     , imageView(std::move(imageView))
-    , cpuTexture(std::move(cpuTexture))
 {}
 
 //-------------------------------------------------------------------------------------------------

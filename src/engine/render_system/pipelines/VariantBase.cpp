@@ -1,4 +1,4 @@
-#include "Variant.hpp"
+#include "VariantBase.hpp"
 
 #include "engine/BedrockAssert.hpp"
 #include "engine/entity_system/components/BoundingVolumeComponent.hpp"
@@ -8,7 +8,7 @@
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::Variant::Variant(Essence const * essence)
+MFA::VariantBase::VariantBase(EssenceBase const * essence)
     : mEssence(essence)
 {
     static int NextId = 0;
@@ -17,7 +17,7 @@ MFA::Variant::Variant(Essence const * essence)
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::Variant::~Variant()
+MFA::VariantBase::~VariantBase()
 {
     if (mIsInitialized == true)
     {
@@ -28,14 +28,14 @@ MFA::Variant::~Variant()
 
 //-------------------------------------------------------------------------------------------------
 
-bool MFA::Variant::operator==(Variant const & rhs) const noexcept
+bool MFA::VariantBase::operator==(VariantBase const & rhs) const noexcept
 {
     return mId == rhs.mId;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::Variant::Init(
+void MFA::VariantBase::Init(
     Entity * entity,
     std::weak_ptr<RendererComponent> const & rendererComponent,
     std::weak_ptr<TransformComponent> const & transformComponent,
@@ -69,7 +69,7 @@ void MFA::Variant::Init(
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::Variant::Shutdown()
+void MFA::VariantBase::Shutdown()
 {
     if (mIsInitialized == false)
     {
@@ -90,21 +90,21 @@ void MFA::Variant::Shutdown()
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::Essence const * MFA::Variant::GetEssence() const noexcept
+MFA::EssenceBase const * MFA::VariantBase::GetEssence() const noexcept
 {
     return mEssence;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RenderTypes::VariantId MFA::Variant::GetId() const noexcept
+MFA::RenderTypes::VariantId MFA::VariantBase::GetId() const noexcept
 {
     return mId;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RenderTypes::DescriptorSetGroup const & MFA::Variant::CreateDescriptorSetGroup(
+MFA::RenderTypes::DescriptorSetGroup const & MFA::VariantBase::CreateDescriptorSetGroup(
     VkDescriptorPool descriptorPool,
     uint32_t descriptorSetCount,
     VkDescriptorSetLayout descriptorSetLayout
@@ -122,7 +122,7 @@ MFA::RenderTypes::DescriptorSetGroup const & MFA::Variant::CreateDescriptorSetGr
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RenderTypes::DescriptorSetGroup const & MFA::Variant::GetDescriptorSetGroup() const
+MFA::RenderTypes::DescriptorSetGroup const & MFA::VariantBase::GetDescriptorSetGroup() const
 {
     MFA_ASSERT(mDescriptorSetGroup.IsValid() == true);
     return mDescriptorSetGroup;
@@ -130,7 +130,7 @@ MFA::RenderTypes::DescriptorSetGroup const & MFA::Variant::GetDescriptorSetGroup
 
 //-------------------------------------------------------------------------------------------------
 
-bool MFA::Variant::IsActive() const noexcept
+bool MFA::VariantBase::IsActive() const noexcept
 {
     if (auto const ptr = mRendererComponent.lock())
     {
@@ -141,7 +141,7 @@ bool MFA::Variant::IsActive() const noexcept
 
 //-------------------------------------------------------------------------------------------------
 
-bool MFA::Variant::IsInFrustum() const
+bool MFA::VariantBase::IsInFrustum() const
 {
     bool isInFrustum = true;
     if (auto const ptr = mBoundingVolumeComponent.lock())
@@ -153,35 +153,35 @@ bool MFA::Variant::IsInFrustum() const
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::Entity * MFA::Variant::GetEntity() const
+MFA::Entity * MFA::VariantBase::GetEntity() const
 {
     return mEntity;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-bool MFA::Variant::IsVisible() const
+bool MFA::VariantBase::IsVisible() const
 {
     return IsActive() && mIsOccluded == false && IsInFrustum();
 }
 
 //-------------------------------------------------------------------------------------------------
 
-bool MFA::Variant::IsOccluded() const
+bool MFA::VariantBase::IsOccluded() const
 {
     return mIsOccluded;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::Variant::SetIsOccluded(bool const isOccluded)
+void MFA::VariantBase::SetIsOccluded(bool const isOccluded)
 {
     mIsOccluded = isOccluded;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::BoundingVolumeComponent * MFA::Variant::GetBoundingVolume() const
+MFA::BoundingVolumeComponent * MFA::VariantBase::GetBoundingVolume() const
 {
     return mBoundingVolumeComponent.lock().get();
 }

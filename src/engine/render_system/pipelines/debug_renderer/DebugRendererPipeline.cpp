@@ -5,18 +5,19 @@
 #include "tools/Importer.hpp"
 #include "engine/BedrockPath.hpp"
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
-#include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 #include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/components/ColorComponent.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/render_system/drawable_essence/DrawableEssence.hpp"
+#include "engine/render_system/pipelines/EssenceBase.hpp"
+#include "engine/render_system/pipelines/VariantBase.hpp"
+#include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Essence.hpp"
+#include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Variant.hpp"
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
-#include "engine/resource_manager/ResourceManager.hpp"
 
 // TODO We need DebugVariant instead
-#define CAST_VARIANT(variant)  static_cast<DrawableVariant *>(variant.get())
+#define CAST_VARIANT(variant)  static_cast<PBR_Variant *>(variant.get())
 
 namespace MFA
 {
@@ -113,7 +114,7 @@ namespace MFA
                     // We do not need primitive for debug stuff
                     CAST_VARIANT(variant)->Draw(
                         drawPass,
-                        [&drawPass, &pushConstants](AS::MeshPrimitive const & primitive, DrawableVariant::Node const & node)-> void
+                        [&drawPass, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
                         {
                             Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.model);
 
@@ -132,21 +133,20 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<Essence> DebugRendererPipeline::internalCreateEssence(
+    std::shared_ptr<EssenceBase> DebugRendererPipeline::internalCreateEssence(
         std::shared_ptr<RT::GpuModel> const & gpuModel,
-        std::shared_ptr<AS::Mesh> const & cpuMesh
+        std::shared_ptr<AS::MeshBase> const & cpuMesh
     )
     {
-        return std::make_shared<DrawableEssence>(gpuModel, cpuMesh);
+        return std::make_shared<PBR_Essence>(gpuModel, cpuMesh);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<Variant> DebugRendererPipeline::internalCreateVariant(Essence * essence)
+    std::shared_ptr<VariantBase> DebugRendererPipeline::internalCreateVariant(EssenceBase * essence)
     {
-        auto * drawableEssence = dynamic_cast<DrawableEssence *>(essence);
-        MFA_ASSERT(drawableEssence != nullptr);
-        return std::make_shared<DrawableVariant>(drawableEssence);
+        MFA_ASSERT(essence != nullptr);
+        return std::make_shared<PBR_Variant>(static_cast<PBR_Essence *>(essence));
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -194,7 +194,7 @@ namespace MFA
 
         VkVertexInputBindingDescription const bindingDescription{
             .binding = 0,
-            .stride = sizeof(AS::MeshVertex),
+            .stride = sizeof(AS::PBR::Vertex),
             .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
         };
 
@@ -204,7 +204,7 @@ namespace MFA
             attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
             attributeDescription.binding = 0;
             attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::MeshVertex, position);
+            attributeDescription.offset = offsetof(AS::PBR::Vertex, position);
 
             inputAttributeDescriptions.emplace_back(attributeDescription);
         }

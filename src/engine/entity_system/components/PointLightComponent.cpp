@@ -6,10 +6,11 @@
 #include "engine/entity_system/components/MeshRendererComponent.hpp"
 #include "engine/ui_system/UISystem.hpp"
 #include "engine/entity_system/Entity.hpp"
-
-#include <utility>
+#include "engine/render_system/pipelines/VariantBase.hpp"
 
 #include "libs/nlohmann/json.hpp"
+
+#include <utility>
 
 static constexpr float ProjectionNearDistance = 0.001f;
 

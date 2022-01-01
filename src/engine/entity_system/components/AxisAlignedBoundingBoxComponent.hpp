@@ -5,7 +5,7 @@
 namespace MFA
 {
 
-    class DrawableEssence;
+    class PBR_Essence;
     class TransformComponent;
 
     class AxisAlignedBoundingBoxComponent final : public BoundingVolumeComponent

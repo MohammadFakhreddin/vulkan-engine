@@ -2,7 +2,7 @@
 
 #include "RenderTypes.hpp"
 #include "engine/BedrockPlatforms.hpp"
-#include "engine/FoundationAsset.hpp"
+#include "engine/asset_system/AssetTypes.hpp"
 
 #ifdef __DESKTOP__
 #include "libs/sdl/SDL.hpp"
@@ -10,11 +10,21 @@
 
 #include <functional>
 
+#include "engine/BedrockCommon.hpp"
+
 namespace MFA
 {
     class RenderPass;
     class DisplayRenderPass;
-};
+}
+
+namespace MFA::AssetSystem
+{
+    class Texture;
+    class MeshBase;
+    struct Model;
+    class Shader;
+}
 
 namespace MFA::RenderFrontend
 {
@@ -82,10 +92,10 @@ namespace MFA::RenderFrontend
     std::shared_ptr<RT::BufferAndMemory> CreateIndexBuffer(CBlob indicesBlob);
 
     [[nodiscard]]
-    std::shared_ptr<RT::MeshBuffers> CreateMeshBuffers(AssetSystem::Mesh const & mesh);
+    std::shared_ptr<RT::MeshBuffers> CreateMeshBuffers(AS::MeshBase const & mesh);
 
     [[nodiscard]]
-    std::shared_ptr<RT::GpuTexture> CreateTexture(std::shared_ptr<AS::Texture> & texture);
+    std::shared_ptr<RT::GpuTexture> CreateTexture(AS::Texture const & texture);
 
     void DestroyImage(RT::ImageGroup const & imageGroup);
 
@@ -99,7 +109,7 @@ namespace MFA::RenderFrontend
 
     [[nodiscard]]
     std::shared_ptr<RT::GpuModel> CreateGpuModel(
-        AssetSystem::Model * modelAsset,
+        AS::Model * modelAsset,
         RT::GpuModelId uniqueId,
         char const * address
     );

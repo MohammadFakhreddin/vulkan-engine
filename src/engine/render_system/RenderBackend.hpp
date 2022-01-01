@@ -2,7 +2,7 @@
 
 #include "RenderTypesFWD.hpp"
 #include "engine/BedrockCommon.hpp"
-#include "engine/FoundationAsset.hpp"
+#include "engine/asset_system/AssetTypes.hpp"
 
 #ifdef __ANDROID__
 #include "vulkan_wrapper.h"
@@ -17,6 +17,12 @@
 #ifdef __DESKTOP__
 #include "libs/sdl/SDL.hpp"
 #endif
+
+namespace MFA::AssetSystem
+{
+    class Texture;
+    class Shader;
+}
 
 // TODO Write description for all functions for learning purpose
 // Note: Not all functions can be called from outside
@@ -170,7 +176,7 @@ namespace MFA::RenderBackend
 
     void DestroyBuffer(
         VkDevice device,
-        const RT::BufferAndMemory& bufferGroup
+        const RT::BufferAndMemory & bufferGroup
     );
 
     // TODO Too many parameters. Create struct instead
@@ -199,7 +205,7 @@ namespace MFA::RenderBackend
 
     [[nodiscard]]
     std::shared_ptr<RT::GpuTexture> CreateTexture(
-        std::shared_ptr<AS::Texture> const & cpuTexture,
+        AS::Texture const & cpuTexture,
         VkDevice device,
         VkPhysicalDevice physicalDevice,
         VkQueue graphicQueue,
@@ -305,7 +311,7 @@ namespace MFA::RenderBackend
         VkFormat depthFormat,
         RT::CreateDepthImageOptions const & options
     );
-    
+
     [[nodiscard]]
     std::shared_ptr<RT::ColorImageGroup> CreateColorImage(
         VkPhysicalDevice physicalDevice,
@@ -314,7 +320,7 @@ namespace MFA::RenderBackend
         VkFormat imageFormat,
         RT::CreateColorImageOptions const & options
     );
-    
+
     // TODO Ask for options
     [[nodiscard]]
     VkRenderPass CreateRenderPass(
@@ -420,7 +426,7 @@ namespace MFA::RenderBackend
 
     void DestroyIndexBuffer(
         VkDevice device,
-        RT::BufferAndMemory const& indexBufferGroup
+        RT::BufferAndMemory const & indexBufferGroup
     );
 
     void CreateUniformBuffer(
@@ -439,7 +445,7 @@ namespace MFA::RenderBackend
 
     void DestroyBufferAndMemory(
         VkDevice device,
-        RT::BufferAndMemory const& bufferAndMemory
+        RT::BufferAndMemory const & bufferAndMemory
     );
 
     void CreateStorageBuffer(

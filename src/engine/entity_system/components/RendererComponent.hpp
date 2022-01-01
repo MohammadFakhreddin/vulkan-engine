@@ -4,7 +4,7 @@
 
 namespace MFA {
 
-    class Variant;
+    class VariantBase;
     class BasePipeline;
 
     class RendererComponent : public Component {
@@ -19,19 +19,19 @@ namespace MFA {
         void deserialize(nlohmann::json const & jsonObject) override;
 
         [[nodiscard]]
-        Variant const * getVariant() const;
+        VariantBase const * getVariant() const;
 
         [[nodiscard]]
-        Variant * getVariant();
+        VariantBase * getVariant();
 
     protected:
 
         explicit RendererComponent();
 
-        explicit RendererComponent(BasePipeline & pipeline, Variant * variant);
+        explicit RendererComponent(BasePipeline & pipeline, VariantBase * variant);
 
         BasePipeline * mPipeline = nullptr;
-        Variant * mVariant = nullptr;
+        VariantBase * mVariant = nullptr;
 
     };
     

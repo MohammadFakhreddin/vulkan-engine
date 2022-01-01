@@ -2,7 +2,6 @@
 
 #include "engine/render_system/RenderTypesFWD.hpp"
 #include "engine/BedrockPlatforms.hpp"
-#include "engine/FoundationAssetFWD.hpp"
 
 #ifdef __ANDROID__
 #include "vulkan_wrapper.h"
@@ -15,6 +14,11 @@ namespace MFA
 {
 
     class RenderPass;
+
+    namespace AssetSystem
+    {
+        class Texture;
+    }
 
     namespace RenderTypes
     {
@@ -106,8 +110,7 @@ namespace MFA
 
             explicit GpuTexture(
                 std::shared_ptr<ImageGroup> imageGroup,
-                std::shared_ptr<ImageViewGroup> imageView,
-                std::shared_ptr<AS::Texture> cpuTexture
+                std::shared_ptr<ImageViewGroup> imageView
             );
             ~GpuTexture();
 
@@ -118,8 +121,6 @@ namespace MFA
 
             std::shared_ptr<ImageGroup> const imageGroup{};
             std::shared_ptr<ImageViewGroup> const imageView{};
-            // TODO Maybe we do not need the cpu textures after creating gpu one. Investigate!
-            std::shared_ptr<AS::Texture> const cpuTexture{};     
         };
 
         struct GpuModel
@@ -326,12 +327,13 @@ namespace MFA
                 depthStencil.depthBoundsTestEnable = VK_FALSE;
                 depthStencil.stencilTestEnable = VK_FALSE;
 
+                colorBlendAttachments.colorWriteMask = 0xF;
                 colorBlendAttachments.blendEnable = VK_TRUE;
-                colorBlendAttachments.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-                colorBlendAttachments.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+                colorBlendAttachments.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+                colorBlendAttachments.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
                 colorBlendAttachments.colorBlendOp = VK_BLEND_OP_ADD;
                 colorBlendAttachments.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-                colorBlendAttachments.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+                colorBlendAttachments.dstAlphaBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
                 colorBlendAttachments.alphaBlendOp = VK_BLEND_OP_ADD;
                 colorBlendAttachments.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
             }

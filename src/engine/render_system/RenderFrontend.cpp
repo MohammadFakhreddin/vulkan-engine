@@ -6,6 +6,8 @@
 #include "engine/BedrockLog.hpp"
 #include "render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "engine/BedrockSignal.hpp"
+#include "engine/asset_system/AssetBaseMesh.hpp"
+#include "engine/asset_system/AssetModel.hpp"
 
 #ifdef __DESKTOP__
 #include "libs/sdl/SDL.hpp"
@@ -319,7 +321,7 @@ namespace MFA::RenderFrontend
 #endif
 
         state->displayRenderPass.Shutdown();
-        
+
         DestroySyncObjects(state->syncObjects);
 
         DestroyGraphicCommandBuffer(
@@ -566,18 +568,18 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<RT::MeshBuffers> CreateMeshBuffers(AssetSystem::Mesh const & mesh)
+    std::shared_ptr<RT::MeshBuffers> CreateMeshBuffers(AS::MeshBase const & mesh)
     {
-        MFA_ASSERT(mesh.IsValid());
+        MFA_ASSERT(mesh.isValid());
         return std::make_shared<RT::MeshBuffers>(
-            CreateVertexBuffer(mesh.GetVerticesBuffer()),
-            CreateIndexBuffer(mesh.GetIndicesBuffer())
+            CreateVertexBuffer(mesh.getVertexBuffer()->memory),
+            CreateIndexBuffer(mesh.getIndexBuffer()->memory)
         );
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<RT::GpuTexture> CreateTexture(std::shared_ptr<AS::Texture> & texture)
+    std::shared_ptr<RT::GpuTexture> CreateTexture(AS::Texture const & texture)
     {
         auto gpuTexture = RB::CreateTexture(
             texture,
@@ -628,18 +630,18 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     std::shared_ptr<RT::GpuModel> CreateGpuModel(
-        AssetSystem::Model * modelAsset,
+        AS::Model * modelAsset,
         RT::GpuModelId const uniqueId,
         char const * address
     )
     {
-        MFA_ASSERT(modelAsset->mesh->IsValid());
+        MFA_ASSERT(modelAsset->mesh->isValid());
         auto meshBuffers = CreateMeshBuffers(*modelAsset->mesh);
         std::vector<std::shared_ptr<RT::GpuTexture>> textures{};
         for (auto & textureAsset : modelAsset->textures)
         {
             MFA_ASSERT(textureAsset->isValid());
-            textures.emplace_back(CreateTexture(textureAsset));
+            textures.emplace_back(CreateTexture(*textureAsset));
         }
         return std::make_shared<RT::GpuModel>(
             uniqueId,
@@ -856,7 +858,7 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    void DestroyShader(RT::GpuShader const& gpuShader)
+    void DestroyShader(RT::GpuShader const & gpuShader)
     {
         RB::DestroyShader(state->logicalDevice.device, gpuShader);
     }

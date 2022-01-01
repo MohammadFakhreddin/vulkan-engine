@@ -6,11 +6,11 @@
 #include "TransformComponent.hpp"
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/EntitySystem.hpp"
+#include "engine/render_system/pipelines/VariantBase.hpp"
 #include "engine/ui_system/UISystem.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
-#include "engine/render_system/drawable_variant/DrawableVariant.hpp"
 
 namespace MFA
 {

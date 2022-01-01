@@ -7,17 +7,17 @@
 namespace MFA
 {
 
-class Essence
+class EssenceBase
 {
 public:
 
-    explicit Essence(std::shared_ptr<RT::GpuModel> gpuModel);
-    virtual ~Essence();
+    explicit EssenceBase(std::shared_ptr<RT::GpuModel> gpuModel);
+    virtual ~EssenceBase();
 
-    Essence & operator= (Essence && rhs) noexcept = delete;
-    Essence (Essence const &) noexcept = delete;
-    Essence (Essence && rhs) noexcept = delete;
-    Essence & operator = (Essence const &) noexcept = delete;
+    EssenceBase & operator= (EssenceBase && rhs) noexcept = delete;
+    EssenceBase (EssenceBase const &) noexcept = delete;
+    EssenceBase (EssenceBase && rhs) noexcept = delete;
+    EssenceBase & operator = (EssenceBase const &) noexcept = delete;
 
     [[nodiscard]]
     RT::GpuModelId GetId() const;

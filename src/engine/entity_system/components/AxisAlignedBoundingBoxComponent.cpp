@@ -4,14 +4,17 @@
 #include "engine/BedrockMath.hpp"
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
-#include "engine/render_system/drawable_essence/DrawableEssence.hpp"
 #include "engine/BedrockMatrix.hpp"
 #include "engine/FoundationAsset.hpp"
+#include "engine/asset_system/AssetModel.hpp"
 #include "engine/camera/CameraComponent.hpp"
 #include "engine/ui_system/UISystem.hpp"
 #include "tools/JsonUtils.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
 #include "engine/entity_system/components/RendererComponent.hpp"
+#include "engine/render_system/pipelines/EssenceBase.hpp"
+#include "engine/render_system/pipelines/VariantBase.hpp"
+#include "engine/asset_system/Asset_PBR_Mesh.hpp"
 
 namespace MFA
 {
@@ -65,10 +68,13 @@ namespace MFA
 
             auto const mesh = model->mesh;
             MFA_ASSERT(mesh != nullptr);
-            MFA_ASSERT(mesh->HasPositionMinMax());
 
-            auto * positionMax = mesh->GetPositionMax();
-            auto * positionMin = mesh->GetPositionMin();
+            auto const & meshData = static_cast<AS::PBR::Mesh *>(mesh.get())->getMeshData();
+            MFA_ASSERT(meshData.hasPositionMinMax);
+            auto * positionMax = meshData.positionMax;
+            auto * positionMin = meshData.positionMin;
+            MFA_ASSERT(positionMax != nullptr);
+            MFA_ASSERT(positionMin != nullptr);
 
             mExtend.x = abs(positionMax[0] - positionMin[0]);
             mExtend.y = abs(positionMax[1] - positionMin[1]);

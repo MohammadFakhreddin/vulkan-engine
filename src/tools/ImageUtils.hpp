@@ -1,13 +1,14 @@
 #pragma once
 
-#include "../engine/BedrockCommon.hpp"
-#include "../engine/FoundationAsset.hpp"
+#include "engine/BedrockCommon.hpp"
+#include "engine/BedrockMemory.hpp"
+#include "engine/asset_system/AssetTexture.hpp"
 
 struct TinyKtx_Context;
 
 namespace MFA::Utils
 {
-    using TextureFormat = AssetSystem::TextureFormat;
+    using TextureFormat = AS::TextureFormat;
     namespace UncompressedTexture
     {
 
@@ -282,7 +283,7 @@ namespace MFA::Utils
             uint8_t mipmap_count = 0;                       // Number of mipmaps
             uint8_t depth = 0;
             uint8_t dimension = 0;
-            TextureFormat format = AssetSystem::TextureFormat::INVALID;
+            TextureFormat format = AS::TextureFormat::INVALID;
             bool valid = false;
             std::shared_ptr<SmartBlob> asset{};
             Blob data_offset_in_asset{};
