@@ -253,11 +253,11 @@ namespace MFA::AssetSystem::PBR
         bool isValid() const override;
 
         [[nodiscard]]
-        MeshData const & getMeshData() const;
+        std::shared_ptr<MeshData> const & getMeshData() const;
 
     private:
 
-        MeshData mData {};
+        std::shared_ptr<MeshData> mData {};
 
         uint64_t mNextVertexOffset{};
         uint64_t mNextIndexOffset{};

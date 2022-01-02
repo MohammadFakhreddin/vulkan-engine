@@ -53,7 +53,7 @@ public:
     int getAnimationIndex(char const * name) const noexcept;
 
     [[nodiscard]]
-    AS::PBR::MeshData const & getMeshData() const;
+    AS::PBR::MeshData const * getMeshData() const;
 
 private:
 
@@ -62,7 +62,7 @@ private:
 
     std::unordered_map<std::string, int> mAnimationNameLookupTable {};
 
-    AS::PBR::MeshData mMeshData {};
+    std::shared_ptr<AS::PBR::MeshData> mMeshData {};
 
 };
 

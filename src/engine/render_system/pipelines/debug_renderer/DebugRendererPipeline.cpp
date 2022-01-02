@@ -215,7 +215,7 @@ namespace MFA
         pipelineOptions.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
         pipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
         pipelineOptions.cullMode = VK_CULL_MODE_NONE;
-
+        pipelineOptions.colorBlendAttachments.blendEnable = VK_FALSE;
         std::vector<VkPushConstantRange> pushConstantRanges{
             VkPushConstantRange {
                 .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT,

@@ -50,6 +50,9 @@ namespace MFA::AssetSystem::PBR
     {
         MeshBase::initForWrite(vertexCount, indexCount, vertexBuffer, indexBuffer);
 
+        mData = std::make_shared<MeshData>();
+
+        mNextStartingIndex = 0;
         mNextVertexOffset = 0;
         mNextIndexOffset = 0;
     }
@@ -64,64 +67,64 @@ namespace MFA::AssetSystem::PBR
         MFA_ASSERT(mNextIndexOffset == mIndexBuffer->memory.len);
         MFA_ASSERT(mNextVertexOffset == mVertexBuffer->memory.len);
 
-        MFA_ASSERT(mData.nodes.empty() == false);
-        MFA_ASSERT(mData.rootNodes.empty() == true);
+        MFA_ASSERT(mData->nodes.empty() == false);
+        MFA_ASSERT(mData->rootNodes.empty() == true);
 
         // Step one: Store parent index for each child
-        for (int i = 0; i < static_cast<int>(mData.nodes.size()); ++i)
+        for (int i = 0; i < static_cast<int>(mData->nodes.size()); ++i)
         {
-            auto const & currentNode = mData.nodes[i];
+            auto const & currentNode = mData->nodes[i];
             if (currentNode.children.empty() == false)
             {
                 for (auto const child : currentNode.children)
                 {
-                    mData.nodes[child].parent = i;
+                    mData->nodes[child].parent = i;
                 }
             }
         }
         // Step two: Cache parent nodes in a separate daa structure for faster access
-        for (uint32_t i = 0; i < static_cast<uint32_t>(mData.nodes.size()); ++i)
+        for (uint32_t i = 0; i < static_cast<uint32_t>(mData->nodes.size()); ++i)
         {
-            auto const & currentNode = mData.nodes[i];
+            auto const & currentNode = mData->nodes[i];
             if (currentNode.parent < 0)
             {
-                mData.rootNodes.emplace_back(i);
+                mData->rootNodes.emplace_back(i);
             }
         }
 
         // Creating position min max for entire mesh based on subMeshes
-        for (auto & subMesh : mData.subMeshes)
+        for (auto & subMesh : mData->subMeshes)
         {
             if (subMesh.hasPositionMinMax)
             {
-                mData.hasPositionMinMax = true;
+                mData->hasPositionMinMax = true;
 
                 // Position min
-                if (subMesh.positionMin[0] < mData.positionMin[0])
+                if (subMesh.positionMin[0] < mData->positionMin[0])
                 {
-                    mData.positionMin[0] = subMesh.positionMin[0];
+                    mData->positionMin[0] = subMesh.positionMin[0];
                 }
-                if (subMesh.positionMin[1] < mData.positionMin[1])
+                if (subMesh.positionMin[1] < mData->positionMin[1])
                 {
-                    mData.positionMin[1] = subMesh.positionMin[1];
+                    mData->positionMin[1] = subMesh.positionMin[1];
                 }
-                if (subMesh.positionMin[2] < mData.positionMin[2])
+                if (subMesh.positionMin[2] < mData->positionMin[2])
                 {
-                    mData.positionMin[2] = subMesh.positionMin[2];
+                    mData->positionMin[2] = subMesh.positionMin[2];
                 }
 
                 // Position max
-                if (subMesh.positionMax[0] > mData.positionMax[0])
+                if (subMesh.positionMax[0] > mData->positionMax[0])
                 {
-                    mData.positionMax[0] = subMesh.positionMax[0];
+                    mData->positionMax[0] = subMesh.positionMax[0];
                 }
-                if (subMesh.positionMax[1] > mData.positionMax[1])
+                if (subMesh.positionMax[1] > mData->positionMax[1])
                 {
-                    mData.positionMax[1] = subMesh.positionMax[1];
+                    mData->positionMax[1] = subMesh.positionMax[1];
                 }
-                if (subMesh.positionMax[2] > mData.positionMax[2])
+                if (subMesh.positionMax[2] > mData->positionMax[2])
                 {
-                    mData.positionMax[2] = subMesh.positionMax[2];
+                    mData->positionMax[2] = subMesh.positionMax[2];
                 }
             }
             for (auto & primitive : subMesh.primitives)
@@ -149,8 +152,8 @@ namespace MFA::AssetSystem::PBR
 
     uint32_t Mesh::insertSubMesh()
     {
-        mData.subMeshes.emplace_back();
-        return static_cast<uint32_t>(mData.subMeshes.size() - 1);
+        mData->subMeshes.emplace_back();
+        return static_cast<uint32_t>(mData->subMeshes.size() - 1);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -180,8 +183,8 @@ namespace MFA::AssetSystem::PBR
         ::memcpy(mVertexBuffer->memory.ptr + mNextVertexOffset, vertices, verticesSize);
         ::memcpy(mIndexBuffer->memory.ptr + mNextIndexOffset, indices, indicesSize);
 
-        MFA_ASSERT(subMeshIndex < mData.subMeshes.size());
-        auto & subMesh = mData.subMeshes[subMeshIndex];
+        MFA_ASSERT(subMeshIndex < mData->subMeshes.size());
+        auto & subMesh = mData->subMeshes[subMeshIndex];
 
         if (primitive.hasPositionMinMax)
         {
@@ -225,33 +228,33 @@ namespace MFA::AssetSystem::PBR
 
     void Mesh::insertNode(Node const & node)
     {
-        mData.nodes.emplace_back(node);
+        mData->nodes.emplace_back(node);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     void Mesh::insertSkin(Skin const & skin)
     {
-        mData.skins.emplace_back(skin);
+        mData->skins.emplace_back(skin);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     void Mesh::insertAnimation(Animation const & animation)
     {
-        mData.animations.emplace_back(animation);
+        mData->animations.emplace_back(animation);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     bool Mesh::isValid() const
     {
-        return mData.isValid() && MeshBase::isValid();
+        return mData->isValid() && MeshBase::isValid();
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    MeshData const & Mesh::getMeshData() const
+    std::shared_ptr<MeshData> const & Mesh::getMeshData() const
     {
         return mData;
     }

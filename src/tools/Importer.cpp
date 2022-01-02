@@ -26,9 +26,6 @@ namespace MFA::Importer
     {
         std::shared_ptr<AS::Texture> texture{};
         Utils::UncompressedTexture::Data imageData{};
-        //MFA_DEFER{
-        //    Utils::UncompressedTexture::Unload(&imageData);
-        //};
         auto const use_srgb = options.preferSrgb;
         auto const load_image_result = Utils::UncompressedTexture::Load(
             imageData,

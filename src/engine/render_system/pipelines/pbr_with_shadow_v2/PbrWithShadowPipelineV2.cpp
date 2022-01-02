@@ -859,7 +859,7 @@ namespace MFA
                         RenderFrontend::DescriptorSetType::PerVariant,
                         variant->GetDescriptorSetGroup()
                     );
-                    
+                    // TODO We can render all instances at once and have a large push constant for all of them
                     CAST_VARIANT(variant)->Draw(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
                         {
                             // Push constants

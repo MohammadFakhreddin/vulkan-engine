@@ -3,7 +3,6 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockLog.hpp"
 #include "engine/BedrockPlatforms.hpp"
-#include "engine/BedrockMath.hpp"
 #include "engine/BedrockMemory.hpp"
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/asset_system/AssetTexture.hpp"
@@ -156,15 +155,15 @@ namespace MFA::RenderBackend
         if (surfaceCapabilities.currentExtent.width <= 0)
         {
             VkExtent2D const swap_chain_extent = {
-                Math::Min(
-                    Math::Max(
+                std::min(
+                    std::max(
                         static_cast<uint32_t>(screenWidth),
                         surfaceCapabilities.minImageExtent.width
                     ),
                     surfaceCapabilities.maxImageExtent.width
                 ),
-                Math::Min(
-                    Math::Max(
+                std::min(
+                    std::max(
                         static_cast<uint32_t>(screenHeight),
                         surfaceCapabilities.minImageExtent.height
                     ),

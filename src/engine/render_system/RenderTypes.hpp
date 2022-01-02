@@ -322,20 +322,30 @@ namespace MFA
             {
                 depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
                 depthStencil.depthTestEnable = VK_TRUE;
-                depthStencil.depthWriteEnable = VK_TRUE;
+                depthStencil.depthWriteEnable = VK_TRUE;                // TODO Instead of using new buffer for occlusion I might be able to use this to disable writting to depth
                 depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
                 depthStencil.depthBoundsTestEnable = VK_FALSE;
                 depthStencil.stencilTestEnable = VK_FALSE;
 
-                colorBlendAttachments.colorWriteMask = 0xF;
+                // TODO Blend must be disabled by default
+                //colorBlendAttachments.blendEnable = VK_FALSE;
+
                 colorBlendAttachments.blendEnable = VK_TRUE;
-                colorBlendAttachments.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+                colorBlendAttachments.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+                colorBlendAttachments.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+                colorBlendAttachments.colorBlendOp = VK_BLEND_OP_ADD;
+                colorBlendAttachments.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+                colorBlendAttachments.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+                colorBlendAttachments.alphaBlendOp = VK_BLEND_OP_ADD;
+                colorBlendAttachments.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+                // TODO Try to use this blend instead
+                /*colorBlendAttachments.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
                 colorBlendAttachments.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
                 colorBlendAttachments.colorBlendOp = VK_BLEND_OP_ADD;
                 colorBlendAttachments.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
                 colorBlendAttachments.dstAlphaBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
                 colorBlendAttachments.alphaBlendOp = VK_BLEND_OP_ADD;
-                colorBlendAttachments.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+                colorBlendAttachments.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;*/
             }
         };
 

@@ -49,7 +49,6 @@ namespace MFA
     {
         MFA_ASSERT(name != nullptr);
         MFA_ASSERT(strlen(name) > 0);
-        MFA_ASSERT(state->availableGpuModels.contains(name) == false);
         MFA_ASSERT(cpuModel != nullptr);
         MFA_ASSERT(cpuModel->mesh->isValid());
 

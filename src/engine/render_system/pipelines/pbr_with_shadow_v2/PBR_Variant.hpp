@@ -136,7 +136,7 @@ namespace MFA
     private:
 
         PBR_Essence const * mPBR_Essence = nullptr;
-        AS::PBR::MeshData const & mMeshData;
+        AS::PBR::MeshData const * mMeshData = nullptr;
 
         std::shared_ptr<RT::UniformBufferGroup> mSkinsJointsBuffer{};
 

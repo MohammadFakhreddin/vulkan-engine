@@ -21,10 +21,11 @@ MFA::PBR_Essence::PBR_Essence(
     MFA_ASSERT(mGpuModel != nullptr);
     MFA_ASSERT(cpuMesh != nullptr);
     mMeshData = static_cast<Mesh *>(cpuMesh.get())->getMeshData();
-    
+    MFA_ASSERT(mMeshData != nullptr);
+
     {// PrimitiveCount
         mPrimitiveCount = 0;
-        for (auto const & subMesh : mMeshData.subMeshes) {
+        for (auto const & subMesh : mMeshData->subMeshes) {
             mPrimitiveCount += static_cast<uint32_t>(subMesh.primitives.size());
         }
         if (mPrimitiveCount > 0) {
@@ -34,7 +35,7 @@ MFA::PBR_Essence::PBR_Essence(
             auto const primitiveData = Memory::Alloc(bufferSize);
             
             auto * primitivesArray = primitiveData->memory.as<PrimitiveInfo>();
-            for (auto const & subMesh : mMeshData.subMeshes) {
+            for (auto const & subMesh : mMeshData->subMeshes) {
                 for (auto const & primitive : subMesh.primitives) {
                     // Copy primitive into primitive info
                     PrimitiveInfo & primitiveInfo = primitivesArray[primitive.uniqueId];
@@ -62,7 +63,7 @@ MFA::PBR_Essence::PBR_Essence(
     }
     {// Animations
         int animationIndex = 0;
-        for (auto const & animation : mMeshData.animations) {
+        for (auto const & animation : mMeshData->animations) {
             MFA_ASSERT(mAnimationNameLookupTable.find(animation.name) == mAnimationNameLookupTable.end());
             mAnimationNameLookupTable[animation.name] = animationIndex;
             ++animationIndex;
@@ -99,9 +100,9 @@ int MFA::PBR_Essence::getAnimationIndex(char const * name) const noexcept {
 
 //-------------------------------------------------------------------------------------------------
 
-MeshData const & MFA::PBR_Essence::getMeshData() const
+MeshData const * MFA::PBR_Essence::getMeshData() const
 {
-    return mMeshData;
+    return mMeshData.get();
 }
 
 //-------------------------------------------------------------------------------------------------

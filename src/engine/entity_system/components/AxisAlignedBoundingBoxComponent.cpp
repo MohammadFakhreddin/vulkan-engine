@@ -5,7 +5,6 @@
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
 #include "engine/BedrockMatrix.hpp"
-#include "engine/FoundationAsset.hpp"
 #include "engine/asset_system/AssetModel.hpp"
 #include "engine/camera/CameraComponent.hpp"
 #include "engine/ui_system/UISystem.hpp"
@@ -70,9 +69,9 @@ namespace MFA
             MFA_ASSERT(mesh != nullptr);
 
             auto const & meshData = static_cast<AS::PBR::Mesh *>(mesh.get())->getMeshData();
-            MFA_ASSERT(meshData.hasPositionMinMax);
-            auto * positionMax = meshData.positionMax;
-            auto * positionMin = meshData.positionMin;
+            MFA_ASSERT(meshData->hasPositionMinMax);
+            auto * positionMax = meshData->positionMax;
+            auto * positionMin = meshData->positionMin;
             MFA_ASSERT(positionMax != nullptr);
             MFA_ASSERT(positionMin != nullptr);
 

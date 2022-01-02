@@ -50,8 +50,8 @@ void Application::Init() {
         MFA_ASSERT(mIsInitialized == false);
 
         params.resizable = true;
-        params.screenWidth = screenWidth;//1920;
-        params.screenHeight = screenHeight;// 1080;
+        params.screenWidth = 1920;
+        params.screenHeight = 1080;
     #else
         #error Os not supported
     #endif

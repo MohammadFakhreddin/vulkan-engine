@@ -10,7 +10,7 @@
 #include "engine/entity_system/components/TransformComponent.hpp"
 #include "PBR_Essence.hpp"
 
-//#include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 #include <string>
 
@@ -25,16 +25,16 @@ namespace MFA
         , mPBR_Essence(essence)
         , mMeshData(mPBR_Essence->getMeshData())
     {
-        MFA_ASSERT(mMeshData.isValid());
+        MFA_ASSERT(mMeshData->isValid());
 
         // Skins
-        mSkins.resize(mMeshData.skins.size());
+        mSkins.resize(mMeshData->skins.size());
 
         {// Nodes
-            mNodes.resize(mMeshData.nodes.size());
+            mNodes.resize(mMeshData->nodes.size());
             for (int i = 0; i < static_cast<int>(mNodes.size()); ++i)
             {
-                auto & meshNode = mMeshData.nodes[i];
+                auto & meshNode = mMeshData->nodes[i];
                 auto & node = mNodes[i];
 
                 node.meshNode = &meshNode;
@@ -76,9 +76,9 @@ namespace MFA
         // Creating cachedSkinJoints array
         {
             uint32_t totalJointsCount = 0;
-            for (uint32_t i = 0; i < static_cast<uint32_t>(mMeshData.skins.size()); ++i)
+            for (uint32_t i = 0; i < static_cast<uint32_t>(mMeshData->skins.size()); ++i)
             {
-                auto & skin = mMeshData.skins[i];
+                auto & skin = mMeshData->skins[i];
                 auto const jointsCount = static_cast<uint32_t>(skin.joints.size());
                 totalJointsCount += jointsCount;
             }
@@ -92,11 +92,11 @@ namespace MFA
             }
         }
         {
-            mCachedSkinsJoints.resize(mMeshData.skins.size());
+            mCachedSkinsJoints.resize(mMeshData->skins.size());
             uint32_t startingJointIndex = 0;
-            for (uint32_t i = 0; i < mMeshData.skins.size(); ++i)
+            for (uint32_t i = 0; i < mMeshData->skins.size(); ++i)
             {
-                auto & skin = mMeshData.skins[i];
+                auto & skin = mMeshData->skins[i];
                 auto const jointsCount = static_cast<uint32_t>(skin.joints.size());
                 mCachedSkinsJoints[i] = reinterpret_cast<JointTransformData *>(mCachedSkinsJointsBlob->memory.ptr + startingJointIndex * sizeof(JointTransformData));
                 mSkins[i].skinStartingIndex = static_cast<int>(startingJointIndex);
@@ -196,7 +196,7 @@ namespace MFA
         mAnimationTransitionDurationInSec = params.transitionDuration;
         mAnimationRemainingTransitionDurationInSec = params.transitionDuration;
         mPreviousAnimationTimeInSec = mActiveAnimationTimeInSec;
-        mActiveAnimationTimeInSec = params.startTimeOffsetInSec + mMeshData.animations[mActiveAnimationIndex].startTime;
+        mActiveAnimationTimeInSec = params.startTimeOffsetInSec + mMeshData->animations[mActiveAnimationIndex].startTime;
         mActiveAnimationParams = params;
     }
 
@@ -215,13 +215,13 @@ namespace MFA
 
     void PBR_Variant::updateAnimation(float const deltaTimeInSec, bool isVisible)
     {
-        if (mMeshData.animations.empty())
+        if (mMeshData->animations.empty())
         {
             return;
         }
 
         {// Active animation
-            auto const & activeAnimation = mMeshData.animations[mActiveAnimationIndex];
+            auto const & activeAnimation = mMeshData->animations[mActiveAnimationIndex];
 
             if (isVisible)
             {
@@ -316,7 +316,7 @@ namespace MFA
                 return;
             }
 
-            auto const & previousAnimation = mMeshData.animations[mPreviousAnimationIndex];
+            auto const & previousAnimation = mMeshData->animations[mPreviousAnimationIndex];
 
             for (auto const & channel : previousAnimation.channels)
             {
@@ -384,7 +384,7 @@ namespace MFA
 
     void PBR_Variant::computeNodesGlobalTransform()
     {
-        for (auto const & rootNodeIndex : mMeshData.rootNodes)
+        for (auto const & rootNodeIndex : mMeshData->rootNodes)
         {
             auto & node = mNodes[rootNodeIndex];
             computeNodeGlobalTransform(node, nullptr, false);
@@ -396,7 +396,7 @@ namespace MFA
     void PBR_Variant::updateAllSkinsJoints()
     {
         uint32_t index = 0;
-        for (auto const & skin : mMeshData.skins)
+        for (auto const & skin : mMeshData->skins)
         {
             updateSkinJoints(index, skin);
             ++index;
@@ -435,10 +435,10 @@ namespace MFA
         // Question: Why can't we just render sub-meshes ?
         if (node.meshNode->hasSubMesh())
         {
-            MFA_ASSERT(static_cast<int>(mMeshData.subMeshes.size()) > node.meshNode->subMeshIndex);
+            MFA_ASSERT(static_cast<int>(mMeshData->subMeshes.size()) > node.meshNode->subMeshIndex);
             drawSubMesh(
                 drawPass,
-                mMeshData.subMeshes[node.meshNode->subMeshIndex],
+                mMeshData->subMeshes[node.meshNode->subMeshIndex],
                 node,
                 bindFunction,
                 alphaMode
@@ -547,10 +547,10 @@ namespace MFA
 
     void PBR_Variant::OnUI()
     {
-        std::vector<char const *> animationsList{ mMeshData.animations.size() };
+        std::vector<char const *> animationsList{ mMeshData->animations.size() };
         for (uint32_t i = 0; i < static_cast<uint32_t>(animationsList.size()); ++i)
         {
-            animationsList[i] = mMeshData.animations[i].name.c_str();
+            animationsList[i] = mMeshData->animations[i].name.c_str();
         }
 
         UI::Combo(
