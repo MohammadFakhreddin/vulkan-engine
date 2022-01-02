@@ -15,6 +15,7 @@
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Variant.hpp"
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
+#include "engine/job_system/JobSystem.hpp"
 
 // TODO We need DebugVariant instead
 #define CAST_VARIANT(variant)  static_cast<PBR_Variant *>(variant.get())
@@ -74,9 +75,24 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DebugRendererPipeline::PreRender(RT::CommandRecordState & drawPass, float const deltaTime)
+    void DebugRendererPipeline::PreRender(RT::CommandRecordState & recordState, float const deltaTimeInSec)
     {
-        BasePipeline::PreRender(drawPass, deltaTime);
+        BasePipeline::PreRender(recordState, deltaTimeInSec);
+
+        // Temporary: Will be replaced with debug variant soon
+        // Multi-thread update of variant animation
+        auto const availableThreadCount = JS::GetNumberOfAvailableThreads();
+        for (uint32_t threadNumber = 0; threadNumber < availableThreadCount; ++threadNumber)
+        {
+            JS::AssignTask(threadNumber, [this, &recordState, deltaTimeInSec, threadNumber, availableThreadCount]()->void
+            {
+                for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mAllVariantsList.size()); i += availableThreadCount)
+                {
+                    mAllVariantsList[i]->Update(deltaTimeInSec, recordState);
+                }
+            });
+        }
+        JS::WaitForThreadsToFinish();
     }
 
     //-------------------------------------------------------------------------------------------------

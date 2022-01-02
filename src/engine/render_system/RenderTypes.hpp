@@ -326,10 +326,7 @@ namespace MFA
                 depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
                 depthStencil.depthBoundsTestEnable = VK_FALSE;
                 depthStencil.stencilTestEnable = VK_FALSE;
-
-                // TODO Blend must be disabled by default
-                //colorBlendAttachments.blendEnable = VK_FALSE;
-
+                // TODO Maybe we can ask whether blend is enable or not
                 colorBlendAttachments.blendEnable = VK_TRUE;
                 colorBlendAttachments.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
                 colorBlendAttachments.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
@@ -338,14 +335,6 @@ namespace MFA
                 colorBlendAttachments.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
                 colorBlendAttachments.alphaBlendOp = VK_BLEND_OP_ADD;
                 colorBlendAttachments.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-                // TODO Try to use this blend instead
-                /*colorBlendAttachments.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-                colorBlendAttachments.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
-                colorBlendAttachments.colorBlendOp = VK_BLEND_OP_ADD;
-                colorBlendAttachments.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-                colorBlendAttachments.dstAlphaBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
-                colorBlendAttachments.alphaBlendOp = VK_BLEND_OP_ADD;
-                colorBlendAttachments.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;*/
             }
         };
 

@@ -24,7 +24,7 @@ public:
 
     void Shutdown() override;
 
-    void PreRender(RT::CommandRecordState & drawPass, float deltaTime) override;
+    void PreRender(RT::CommandRecordState & recordState, float deltaTimeInSec) override;
 
     void Render(RT::CommandRecordState & drawPass, float deltaTime) override;
     

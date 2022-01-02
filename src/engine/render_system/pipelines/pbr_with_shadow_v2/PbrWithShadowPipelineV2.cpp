@@ -1387,6 +1387,8 @@ namespace MFA
         graphicPipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
         graphicPipelineOptions.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
 
+        graphicPipelineOptions.colorBlendAttachments.blendEnable = VK_FALSE;
+
         MFA_ASSERT(mDepthPassPipeline.isValid() == false);
         mDepthPassPipeline = RF::CreatePipeline(
             mDepthPrePass->GetVkRenderPass(),
