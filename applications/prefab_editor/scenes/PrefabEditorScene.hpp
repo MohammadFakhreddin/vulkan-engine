@@ -76,7 +76,6 @@ private:
     {
         std::string fileAddress {};
         std::string essenceName {};
-        MFA::RT::GpuModelId gpuModelId;
     };
     std::vector<Asset> mLoadedAssets {};
 

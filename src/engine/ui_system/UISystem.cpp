@@ -7,6 +7,7 @@
 #include "engine/InputManager.hpp"
 #endif
 #include "engine/BedrockAssert.hpp"
+#include "engine/BedrockMatrix.hpp"
 #include "engine/BedrockSignal.hpp"
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "engine/asset_system/AssetTypes.hpp"
@@ -786,6 +787,18 @@ namespace MFA::UISystem
     void InputFloat4(char const * label, float * value)
     {
         ImGui::InputFloat3(label, value);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void InputFloat3(char const * label, glm::vec3 & value)
+    {
+        float tempValue[3] {value.x, value.y, value.z};
+        UI::InputFloat3(label, tempValue);
+        if (Matrix::IsEqual(value, tempValue) == false)
+        {
+            Matrix::CopyCellsToGlm(tempValue, value);
+        }
     }
 
     //-------------------------------------------------------------------------------------------------

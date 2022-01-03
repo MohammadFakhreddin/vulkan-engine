@@ -149,16 +149,6 @@ void GLTFMeshViewerScene::Init() {
     mPbrPipeline.Init(mSamplerGroup, mErrorTexture);
 
     {// Point light
-        auto assetSphereModel = ShapeGenerator::Sphere();
-        RC::Assign(assetSphereModel, "Sphere");
-
-        auto gpuSphereModel = RC::AcquireForGpu("Sphere", false);
-
-        mDebugRenderPipeline.CreateEssenceIfNotExists(
-            gpuSphereModel,
-            assetSphereModel->mesh
-        );
-
         auto * entity = EntitySystem::CreateEntity("PointLight", GetRootEntity());
 
         auto const colorComponent = entity->AddComponent<ColorComponent>();
@@ -176,7 +166,7 @@ void GLTFMeshViewerScene::Init() {
 
         mPointLightTransform = transformComponent;
 
-        entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, *gpuSphereModel);
+        entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, "Sphere");
 
         entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
 
@@ -310,7 +300,8 @@ void GLTFMeshViewerScene::Shutdown() {
 void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredData) {
     auto const cpuModel = RC::AcquireForCpu(renderRequiredData.address.c_str());
     renderRequiredData.gpuModel = RC::AcquireForGpu(renderRequiredData.address.c_str());
-    mPbrPipeline.CreateEssenceIfNotExists(renderRequiredData.gpuModel, cpuModel->mesh);
+    MFA_ASSERT(mPbrPipeline.EssenceExists(renderRequiredData.address) == false);
+    mPbrPipeline.CreateEssence(renderRequiredData.gpuModel, cpuModel->mesh);
 
     auto * entity = EntitySystem::CreateEntity(renderRequiredData.displayName.c_str(), GetRootEntity());
     MFA_ASSERT(entity != nullptr);
@@ -321,7 +312,7 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
 
     renderRequiredData.meshRendererComponent = entity->AddComponent<MeshRendererComponent>(
         mPbrPipeline,
-        renderRequiredData.gpuModel->id
+        renderRequiredData.gpuModel->address
     );
     MFA_ASSERT(renderRequiredData.meshRendererComponent.expired() == false);
 

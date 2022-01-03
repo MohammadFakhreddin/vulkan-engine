@@ -13,8 +13,8 @@ namespace MFA
 {
     //-------------------------------------------------------------------------------------------------
 
-    MeshRendererComponent::MeshRendererComponent(BasePipeline & pipeline, RT::GpuModelId const id)
-        : RendererComponent(pipeline, pipeline.CreateVariant(id))
+    MeshRendererComponent::MeshRendererComponent(BasePipeline & pipeline, std::string const & nameOrAddress)
+        : RendererComponent(pipeline, pipeline.CreateVariant(nameOrAddress))
     {
         MFA_ASSERT(mPipeline != nullptr);
         MFA_ASSERT(mVariant != nullptr);
@@ -23,7 +23,7 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     MeshRendererComponent::MeshRendererComponent(BasePipeline & pipeline, RT::GpuModel const & gpuModel)
-        : MeshRendererComponent(pipeline, gpuModel.id)
+        : MeshRendererComponent(pipeline, gpuModel.address)
     {}
 
     //-------------------------------------------------------------------------------------------------
@@ -82,7 +82,7 @@ namespace MFA
         MFA_ASSERT(essence != nullptr);
         auto const * gpuModel = essence->GetGpuModel();
         MFA_ASSERT(gpuModel != nullptr);
-        entity->AddComponent<MeshRendererComponent>(*mPipeline, gpuModel->id);
+        entity->AddComponent<MeshRendererComponent>(*mPipeline, *gpuModel);
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -7,6 +7,7 @@
 #include "tools/ShapeGenerator.hpp"
 #include "engine/ui_system/UISystem.hpp"
 #include "engine/entity_system/EntitySystem.hpp"
+#include "engine/camera/ObserverCameraComponent.hpp"
 #include "engine/entity_system/components/BoundingVolumeRendererComponent.hpp"
 #include "engine/entity_system/components/AxisAlignedBoundingBoxComponent.hpp"
 #include "engine/entity_system/components/ColorComponent.hpp"
@@ -15,7 +16,6 @@
 #include "engine/entity_system/components/TransformComponent.hpp"
 #include "engine/entity_system/components/PointLightComponent.hpp"
 #include "engine/entity_system/components/DirectionalLightComponent.hpp"
-#include "engine/camera/ObserverCameraComponent.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
 #include "tools/PrefabFileStorage.hpp"
 #include "engine/BedrockPath.hpp"
@@ -52,37 +52,8 @@ void PrefabEditorScene::Init()
     // Pbr pipeline
     mPbrPipeline.Init(mSampler, mErrorTexture);
 
-    {// Debug renderer pipeline
-        mDebugRenderPipeline.Init();
-
-        auto const sphereCpuModel = ShapeGenerator::Sphere();
-        RC::Assign(sphereCpuModel, "Sphere");
-        auto const sphereGpuModel = RC::AcquireForGpu("Sphere");
-        mDebugRenderPipeline.CreateEssenceIfNotExists(
-            sphereGpuModel,
-            sphereCpuModel->mesh
-        );
-
-        mLoadedAssets.emplace_back(Asset {
-            .fileAddress = "Sphere",
-            .essenceName = "Sphere",
-            .gpuModelId = sphereGpuModel->id
-        });
-
-        auto const cubeCpuModel = ShapeGenerator::Cube();
-        RC::Assign(cubeCpuModel, "Cube");
-        auto const cubeGpuModel = RC::AcquireForGpu("Sphere");
-        mDebugRenderPipeline.CreateEssenceIfNotExists(
-            cubeGpuModel,
-            cubeCpuModel->mesh
-        );
-
-        mLoadedAssets.emplace_back(Asset {
-            .fileAddress = "Cube",
-            .essenceName = "Cube",
-            .gpuModelId = cubeGpuModel->id
-        });
-    }
+    // Debug renderer pipeline
+    mDebugRenderPipeline.Init();
 
     mUIRecordId = UI::Register([this]()->void { onUI(); });
 
@@ -328,11 +299,13 @@ bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress)
 
     mLoadedAssets.emplace_back(Asset{
         .fileAddress = fileAddress,
-        .essenceName = mInputTextEssenceName,
-        .gpuModelId = gpuModel->id
+        .essenceName = mInputTextEssenceName
     });
 
-    mPbrPipeline.CreateEssenceIfNotExists(gpuModel, cpuModel->mesh);
+    if (mPbrPipeline.EssenceExists(gpuModel->address) == false)
+    {
+        mPbrPipeline.CreateEssence(gpuModel, cpuModel->mesh);
+    }
 
     mInputTextEssenceName = "";
 
@@ -582,7 +555,7 @@ void PrefabEditorScene::prepareCreateComponentInstructionMap()
         }
         return entity->AddComponent<MeshRendererComponent>(
             *GetPipelines()[mSelectedPipeline],
-            mLoadedAssets[mSelectedEssenceIndex].gpuModelId
+            mLoadedAssets[mSelectedEssenceIndex].fileAddress
         ).lock();
     });
 

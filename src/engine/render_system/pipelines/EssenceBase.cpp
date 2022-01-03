@@ -15,9 +15,9 @@ MFA::EssenceBase::~EssenceBase() = default;
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RenderTypes::GpuModelId MFA::EssenceBase::GetId() const
+std::string const & MFA::EssenceBase::GetNameOrAddress() const
 {
-    return mGpuModel->id;
+    return mGpuModel->address;
 }
 
 //-------------------------------------------------------------------------------------------------

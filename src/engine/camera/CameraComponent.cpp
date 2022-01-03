@@ -16,12 +16,10 @@ namespace MFA
     {
         Component::onUI();
 
-        glm::vec3 & eulerAngles = mEulerAngles;
-        UI::InputFloat3("EulerAngles", eulerAngles.data.data);
+        UI::InputFloat3("EulerAngles", mEulerAngles);
+        UI::InputFloat3("Position", mPosition);
 
-        UI::InputFloat3("Position", mPosition.data.data);
-
-        auto rotationMatrix = glm::identity<glm::mat4>();
+       /* auto rotationMatrix = glm::identity<glm::mat4>();
         Matrix::Rotate(rotationMatrix, eulerAngles);
 
         auto forwardDirection = -Math::ForwardVector;
@@ -56,7 +54,7 @@ namespace MFA
         UI::InputFloat3("TopPlaneDirection", mTopPlane.direction.data.data);
 
         UI::InputFloat3("BottomPlanePosition", mBottomPlane.position.data.data);
-        UI::InputFloat3("BottomPlaneDirection", mBottomPlane.direction.data.data);
+        UI::InputFloat3("BottomPlaneDirection", mBottomPlane.direction.data.data);*/
 
     }
 

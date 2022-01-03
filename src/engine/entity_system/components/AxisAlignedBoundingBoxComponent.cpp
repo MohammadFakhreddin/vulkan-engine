@@ -110,8 +110,8 @@ namespace MFA
             glm::vec3 localPosition = mLocalPosition;
             
             BoundingVolumeComponent::onUI();
-            UI::InputFloat3("Center", localPosition.data.data);
-            UI::InputFloat3("Extend", mExtend.data.data);
+            UI::InputFloat3("Center", localPosition);
+            UI::InputFloat3("Extend", mExtend);
             UI::TreePop();
 
             if (mLocalPosition != localPosition)

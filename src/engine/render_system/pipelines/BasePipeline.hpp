@@ -18,7 +18,8 @@ className (className &&) noexcept = delete;                             \
 className & operator = (className const &) noexcept = delete;           \
 className & operator = (className &&) noexcept = delete;                \
 
-namespace MFA {
+namespace MFA
+{
 
     class VariantBase;
     class EssenceBase;
@@ -28,82 +29,86 @@ namespace MFA {
         class MeshBase;
     }
 
-    class BasePipeline {
-private:
+    class BasePipeline
+    {
+    private:
 
-public:
+    public:
 
-    explicit BasePipeline(uint32_t maxSets);
+        explicit BasePipeline(uint32_t maxSets);
 
-    virtual ~BasePipeline();
+        virtual ~BasePipeline();
 
-    BasePipeline (BasePipeline const &) noexcept = delete;
-    BasePipeline (BasePipeline &&) noexcept = delete;
-    BasePipeline & operator = (BasePipeline const &) noexcept = delete;
-    BasePipeline & operator = (BasePipeline && rhs) noexcept = delete;
+        BasePipeline(BasePipeline const &) noexcept = delete;
+        BasePipeline(BasePipeline &&) noexcept = delete;
+        BasePipeline & operator = (BasePipeline const &) noexcept = delete;
+        BasePipeline & operator = (BasePipeline && rhs) noexcept = delete;
 
-    virtual void PreRender(
-        RT::CommandRecordState & drawPass,
-        float deltaTime
-    );
+        virtual void PreRender(
+            RT::CommandRecordState & drawPass,
+            float deltaTime
+        );
 
-    virtual void Render(        
-        RT::CommandRecordState & drawPass,
-        float deltaTime
-    );
+        virtual void Render(
+            RT::CommandRecordState & drawPass,
+            float deltaTime
+        );
 
-    virtual void PostRender(
-        RT::CommandRecordState & drawPass,
-        float deltaTime
-    );
+        virtual void PostRender(
+            RT::CommandRecordState & drawPass,
+            float deltaTime
+        );
 
-    bool CreateEssenceIfNotExists(
-        std::shared_ptr<RT::GpuModel> const & gpuModel,
-        std::shared_ptr<AssetSystem::MeshBase> const & cpuMesh
-    );
+        [[nodiscard]]
+        bool EssenceExists(std::string const & nameOrAddress) const;
 
-    // Editor only function
-    void DestroyEssence(RT::GpuModelId id);
+        bool CreateEssence(
+            std::shared_ptr<RT::GpuModel> const & gpuModel,
+            std::shared_ptr<AssetSystem::MeshBase> const & cpuMesh
+        );
 
-    void DestroyEssence(RT::GpuModel const & gpuModel);
+        // Editor only function
+        void DestroyEssence(std::string const & nameOrAddress);
 
-    virtual VariantBase * CreateVariant(RT::GpuModel const & gpuModel);
+        void DestroyEssence(RT::GpuModel const & gpuModel);
 
-    virtual VariantBase * CreateVariant(RT::GpuModelId id);
+        virtual VariantBase * CreateVariant(RT::GpuModel const & gpuModel);
 
-    void RemoveVariant(VariantBase & variant);
+        virtual VariantBase * CreateVariant(std::string const & nameOrAddress);
 
-    virtual void OnResize() = 0;
+        void RemoveVariant(VariantBase & variant);
 
-    [[nodiscard]]
-    virtual char const * GetName() const = 0;
+        virtual void OnResize() = 0;
 
-protected:
+        [[nodiscard]]
+        virtual char const * GetName() const = 0;
 
-    virtual void Init();
+    protected:
 
-    virtual void Shutdown();
+        virtual void Init();
 
-    virtual std::shared_ptr<EssenceBase> internalCreateEssence(
-        std::shared_ptr<RT::GpuModel> const & gpuModel,
-        std::shared_ptr<AssetSystem::MeshBase> const & cpuMesh
-    ) = 0;
+        virtual void Shutdown();
 
-    virtual std::shared_ptr<VariantBase> internalCreateVariant(EssenceBase * essence) = 0;
+        virtual std::shared_ptr<EssenceBase> internalCreateEssence(
+            std::shared_ptr<RT::GpuModel> const & gpuModel,
+            std::shared_ptr<AssetSystem::MeshBase> const & cpuMesh
+        ) = 0;
 
-    struct EssenceAndVariants {
+        virtual std::shared_ptr<VariantBase> internalCreateVariant(EssenceBase * essence) = 0;
 
-        std::shared_ptr<EssenceBase> essence;  
-        std::vector<std::shared_ptr<VariantBase>> variants;
+        struct EssenceAndVariants
+        {
+            std::shared_ptr<EssenceBase> essence;
+            std::vector<std::shared_ptr<VariantBase>> variants;
 
-        explicit EssenceAndVariants();
-        explicit EssenceAndVariants(std::shared_ptr<EssenceBase> essence);
+            explicit EssenceAndVariants();
+            explicit EssenceAndVariants(std::shared_ptr<EssenceBase> essence);
+        };
+        std::unordered_map<std::string, EssenceAndVariants> mEssenceAndVariantsMap;
+        std::vector<VariantBase *> mAllVariantsList{};
+        VkDescriptorPool mDescriptorPool{};
+        uint32_t mMaxSets;
+
     };
-    std::unordered_map<RT::GpuModelId, EssenceAndVariants> mEssenceAndVariantsMap;
-    std::vector<VariantBase *> mAllVariantsList {};
-    VkDescriptorPool mDescriptorPool {};
-    uint32_t mMaxSets;
-
-};
 
 }

@@ -20,7 +20,7 @@ public:
     EssenceBase & operator = (EssenceBase const &) noexcept = delete;
 
     [[nodiscard]]
-    RT::GpuModelId GetId() const;
+    std::string const & GetNameOrAddress() const;
 
     [[nodiscard]]
     RT::GpuModel * GetGpuModel() const;

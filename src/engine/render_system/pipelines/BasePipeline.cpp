@@ -47,25 +47,33 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    bool BasePipeline::CreateEssenceIfNotExists(
-        std::shared_ptr<RT::GpuModel> const & gpuModel,
-        std::shared_ptr<AS::MeshBase> const & cpuMesh
-    )
+    bool BasePipeline::EssenceExists(std::string const & nameOrAddress) const
     {
-        if(mEssenceAndVariantsMap.contains(gpuModel->id))
-        {
-            return false;
-        }
-        mEssenceAndVariantsMap[gpuModel->id] = EssenceAndVariants {internalCreateEssence(gpuModel, cpuMesh)};
-
-        return true;
+        return mEssenceAndVariantsMap.contains(nameOrAddress);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::DestroyEssence(RT::GpuModelId const id)
+    bool BasePipeline::CreateEssence(
+        std::shared_ptr<RT::GpuModel> const & gpuModel,
+        std::shared_ptr<AS::MeshBase> const & cpuMesh
+    )
     {
-        auto const findResult = mEssenceAndVariantsMap.find(id);
+        bool success = false;
+        if(MFA_VERIFY(mEssenceAndVariantsMap.contains(gpuModel->address) == false))
+        {
+            mEssenceAndVariantsMap[gpuModel->address] = EssenceAndVariants {internalCreateEssence(gpuModel, cpuMesh)};
+            success = true;
+        }
+        return success;
+    
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void BasePipeline::DestroyEssence(std::string const & nameOrAddress)
+    {
+        auto const findResult = mEssenceAndVariantsMap.find(nameOrAddress);
         if (MFA_VERIFY(findResult != mEssenceAndVariantsMap.end()) == false)
         {
             return;
@@ -81,22 +89,27 @@ namespace MFA
 
     void BasePipeline::DestroyEssence(RT::GpuModel const & gpuModel)
     {
-        DestroyEssence(gpuModel.id);
+        DestroyEssence(gpuModel.address);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     VariantBase * BasePipeline::CreateVariant(RT::GpuModel const & gpuModel)
     {
-        return CreateVariant(gpuModel.id);
+        return CreateVariant(gpuModel.address);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    VariantBase * BasePipeline::CreateVariant(RT::GpuModelId const id)
+    VariantBase * BasePipeline::CreateVariant(std::string const & nameOrAddress)
     {
-        auto const findResult = mEssenceAndVariantsMap.find(id);
-        MFA_ASSERT(findResult != mEssenceAndVariantsMap.end());
+        auto const findResult = mEssenceAndVariantsMap.find(nameOrAddress);
+        if(findResult == mEssenceAndVariantsMap.end())
+        {
+            // Note: Is it correct to acquire the missing essence from resource manager ?
+            MFA_LOG_ERROR("Cannot create variant. Essence with name %s does not exists", nameOrAddress.c_str());
+            return nullptr;
+        }
 
         auto & variantsList = findResult->second.variants;
         variantsList.emplace_back(internalCreateVariant(findResult->second.essence.get()));
@@ -112,43 +125,41 @@ namespace MFA
 
     void BasePipeline::RemoveVariant(VariantBase & variant)
     {
-        {// Removing from all variants list
-            bool foundInAllVariantsList = false;
-            for (int i = static_cast<int>(mAllVariantsList.size()) - 1; i >= 0; --i)
+        // Removing from all variants list
+        bool foundInAllVariantsList = false;
+        for (int i = static_cast<int>(mAllVariantsList.size()) - 1; i >= 0; --i)
+        {
+            MFA_ASSERT(mAllVariantsList[i] != nullptr);
+            if (mAllVariantsList[i]->GetId() == variant.GetId())
             {
-                MFA_ASSERT(mAllVariantsList[i] != nullptr);
-                if (mAllVariantsList[i]->GetId() == variant.GetId())
-                {
-                    std::iter_swap(
-                        mAllVariantsList.begin() + i,
-                        mAllVariantsList.begin() +
-                            static_cast<int>(mAllVariantsList.size()) - 1
-                    );
-                    mAllVariantsList.pop_back();
+                std::iter_swap(
+                    mAllVariantsList.begin() + i,
+                    mAllVariantsList.begin() +
+                        static_cast<int>(mAllVariantsList.size()) - 1
+                );
+                mAllVariantsList.pop_back();
 
-                    foundInAllVariantsList = true;
-                    break;
-                }
-            }
-            MFA_ASSERT(foundInAllVariantsList == true);
-        }
-
-        {// Removing from essence and variants' list
-            auto const findResult = mEssenceAndVariantsMap.find(variant.GetEssence()->GetId());
-            MFA_ASSERT(findResult != mEssenceAndVariantsMap.end());
-            auto & variants = findResult->second.variants;
-            for (int i = static_cast<int>(variants.size()) - 1; i >= 0; --i)
-            {
-                if (variants[i]->GetId() == variant.GetId())
-                {
-                    variant.Shutdown();
-                    variants[i] = variants.back();
-                    variants.pop_back();
-                    return;
-                }
+                foundInAllVariantsList = true;
+                break;
             }
         }
-
+        MFA_ASSERT(foundInAllVariantsList == true);
+        
+        // Removing from essence and variants' list
+        auto const findResult = mEssenceAndVariantsMap.find(variant.GetEssence()->GetNameOrAddress());
+        MFA_ASSERT(findResult != mEssenceAndVariantsMap.end());
+        auto & variants = findResult->second.variants;
+        for (int i = static_cast<int>(variants.size()) - 1; i >= 0; --i)
+        {
+            if (variants[i]->GetId() == variant.GetId())
+            {
+                variant.Shutdown();
+                variants[i] = variants.back();
+                variants.pop_back();
+                return;
+            }
+        }
+        
         MFA_ASSERT(false);
     }
 

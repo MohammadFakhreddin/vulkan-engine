@@ -1,4 +1,5 @@
 #pragma once
+
 #include "engine/scene_manager/Scene.hpp"
 
 class ParticleFireScene final : public MFA::Scene

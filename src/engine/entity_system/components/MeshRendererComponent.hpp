@@ -19,7 +19,7 @@ namespace MFA
         )
 
         explicit MeshRendererComponent() = default;
-        explicit MeshRendererComponent(BasePipeline & pipeline, RT::GpuModelId id);
+        explicit MeshRendererComponent(BasePipeline & pipeline, std::string const & nameOrAddress);
         explicit MeshRendererComponent(BasePipeline & pipeline, RT::GpuModel const & gpuModel);
 
         void init() override;

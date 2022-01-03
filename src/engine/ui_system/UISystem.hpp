@@ -2,6 +2,8 @@
 
 #include "engine/render_system/RenderTypesFWD.hpp"
 
+#include <glm/vec3.hpp>
+
 class UIRecordObject;
 
 namespace MFA::UISystem
@@ -34,6 +36,8 @@ namespace MFA::UISystem
     void InputFloat3(char const * label, float * value);
 
     void InputFloat4(char const * label, float * value);
+
+    void InputFloat3(char const * label, glm::vec3 & value);
 
     bool Combo(
         char const * label,

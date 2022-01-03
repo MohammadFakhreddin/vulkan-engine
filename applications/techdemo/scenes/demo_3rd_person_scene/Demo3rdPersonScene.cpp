@@ -43,21 +43,10 @@ void Demo3rdPersonScene::Init()
     mSampler = RF::CreateSampler(RT::CreateSamplerParams{});
 
     {// Error texture
-        auto cpuTexture = Importer::CreateErrorTexture();
+        // TODO RC must support importing texture and mesh as well
+        auto const cpuTexture = Importer::CreateErrorTexture();
         mErrorTexture = RF::CreateTexture(*cpuTexture);
     }
-
-    auto const sphereCpuModel = ShapeGenerator::Sphere();
-    RC::Assign(sphereCpuModel, "Sphere");
-    auto const sphereGpuModel = RC::AcquireForGpu("Sphere", false);
-
-    mDebugRenderPipeline.CreateEssenceIfNotExists(sphereGpuModel, sphereCpuModel->mesh);
-
-    auto const cubeCpuModel = ShapeGenerator::Cube();
-    RC::Assign(cubeCpuModel, "Cube");
-    auto const cubeGpuModel = RC::AcquireForGpu("Cube", false);
-
-    mDebugRenderPipeline.CreateEssenceIfNotExists(cubeGpuModel, cubeCpuModel->mesh);
 
     mDebugRenderPipeline.Init();
     mPbrPipeline.Init(mSampler, mErrorTexture);

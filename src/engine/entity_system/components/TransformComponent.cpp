@@ -261,9 +261,9 @@ namespace MFA
             glm::vec3 scale = mScale;
             glm::vec3 rotation = mRotation;
 
-            UI::InputFloat3("Position", position.data.data);
-            UI::InputFloat3("Scale", scale.data.data);
-            UI::InputFloat3("Rotation", rotation.data.data);
+            UI::InputFloat3("Position", position);
+            UI::InputFloat3("Scale", scale);
+            UI::InputFloat3("Rotation", rotation);
 
             UpdateTransform(position, rotation, scale);
 

@@ -7,6 +7,7 @@
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/BedrockPath.hpp"
 #include "engine/asset_system/AssetModel.hpp"
+#include "tools/ShapeGenerator.hpp"
 
 namespace MFA
 {
@@ -63,7 +64,13 @@ namespace MFA
     {
         std::shared_ptr<RT::GpuModel> gpuModel = nullptr;
 
-        auto const findResult = state->availableGpuModels.find(nameOrFileAddress);
+        std::string relativePath{};
+        if (Path::RelativeToAssetFolder(nameOrFileAddress, relativePath) == false)
+        {
+            relativePath = nameOrFileAddress;
+        }
+
+        auto const findResult = state->availableGpuModels.find(relativePath);
         if (findResult != state->availableGpuModels.end())
         {
             gpuModel = findResult->second.lock();
@@ -75,17 +82,12 @@ namespace MFA
             return gpuModel;
         }
 
-        auto const cpuModel = AcquireForCpu(nameOrFileAddress, loadFileIfNotExists);
+        auto const cpuModel = AcquireForCpu(relativePath.c_str(), loadFileIfNotExists);
         if (cpuModel == nullptr)
         {
             return nullptr;
         }
 
-        std::string relativePath{};
-        if (Path::RelativeToAssetFolder(nameOrFileAddress, relativePath) == false)
-        {
-            relativePath = nameOrFileAddress;
-        }
         return createGpuModel(cpuModel.get(), relativePath.c_str());
     }
 
@@ -95,7 +97,13 @@ namespace MFA
     {
         std::shared_ptr<AS::Model> cpuModel = nullptr;
 
-        auto const findResult = state->availableCpuModels.find(nameOrFileAddress);
+        std::string relativePath{};
+        if (Path::RelativeToAssetFolder(nameOrFileAddress, relativePath) == false)
+        {
+            relativePath = nameOrFileAddress;
+        }
+
+        auto const findResult = state->availableCpuModels.find(relativePath);
         if (findResult != state->availableCpuModels.end())
         {
             cpuModel = findResult->second.lock();
@@ -106,16 +114,22 @@ namespace MFA
             return cpuModel;
         }
 
-        auto const extension = FS::ExtractExtensionFromPath(nameOrFileAddress);
+        auto const extension = FS::ExtractExtensionFromPath(relativePath.c_str());
         if (extension == ".gltf" || extension == ".glb")
         {
-            cpuModel = Importer::ImportGLTF(Path::ForReadWrite(nameOrFileAddress).c_str());
+            cpuModel = Importer::ImportGLTF(Path::ForReadWrite(relativePath.c_str()).c_str());
+        } else if (strcmp("Cube", relativePath.c_str()) == 0)
+        {
+            cpuModel = ShapeGenerator::Cube();
+        } else if (strcmp("Sphere", relativePath.c_str()) == 0)
+        {
+            cpuModel = ShapeGenerator::Sphere();
         } else
         {
             MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
         }
 
-        state->availableCpuModels[nameOrFileAddress] = cpuModel;
+        state->availableCpuModels[relativePath] = cpuModel;
 
         return cpuModel;
     }

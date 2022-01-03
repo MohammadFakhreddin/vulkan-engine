@@ -16,6 +16,7 @@
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/job_system/JobSystem.hpp"
+#include "engine/resource_manager/ResourceManager.hpp"
 
 // TODO We need DebugVariant instead
 #define CAST_VARIANT(variant)  static_cast<PBR_Variant *>(variant.get())
@@ -54,6 +55,16 @@ namespace MFA
         createDescriptorSetLayout();
         createPipeline();
         createDescriptorSets();
+
+        std::vector<std::string> const modelNames {"Sphere", "Cube"};
+        for (auto const & modelName : modelNames)
+        {
+            auto const sphereCpuModel = RC::AcquireForCpu(modelName.c_str());
+            MFA_ASSERT(sphereCpuModel != nullptr);
+            auto const sphereGpuModel = RC::AcquireForGpu(modelName.c_str());
+            MFA_ASSERT(sphereGpuModel != nullptr);
+            CreateEssence(sphereGpuModel, sphereCpuModel->mesh);
+        }
     }
 
     //-------------------------------------------------------------------------------------------------
