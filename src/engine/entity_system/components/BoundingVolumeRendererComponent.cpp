@@ -55,7 +55,14 @@ namespace MFA
 
         EntitySystem::InitEntity(childEntity);
 
-        mVariant->Init(entity, selfPtr(), mRendererTransformComponent, mBoundingVolumeComponent);
+        auto const variant = mVariant.lock();
+        MFA_ASSERT(variant != nullptr);
+        variant->Init(
+            entity,
+            selfPtr(),
+            mRendererTransformComponent,
+            mBoundingVolumeComponent
+        );
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -94,8 +101,6 @@ namespace MFA
     void BoundingVolumeRendererComponent::shutdown()
     {
         RendererComponent::shutdown();
-
-
     }
 
     //-------------------------------------------------------------------------------------------------

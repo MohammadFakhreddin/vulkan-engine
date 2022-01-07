@@ -72,8 +72,7 @@ namespace MFA
             MFA_ASSERT(false);
             return;
         }
-        mIsInitialized = true;
-
+        
         BasePipeline::Init();
 
         MFA_ASSERT(samplerGroup != nullptr);
@@ -122,8 +121,7 @@ namespace MFA
             MFA_ASSERT(false);
             return;
         }
-        mIsInitialized = false;
-
+        
         destroyOcclusionQueryPool();
 
         mSamplerGroup = nullptr;
@@ -231,7 +229,18 @@ namespace MFA
         mDepthPrePass->OnResize();
         mOcclusionRenderPass->OnResize();
     }
-    
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::CreateEssenceWithoutModel(
+        std::shared_ptr<RT::GpuModel> const & gpuModel,
+        std::shared_ptr<AssetSystem::PBR::MeshData> const & meshData
+    ) const
+    {
+        auto const essence = std::make_shared<PBR_Essence>(gpuModel, meshData);
+        createEssenceDescriptorSets(*essence);
+    }
+
     //-------------------------------------------------------------------------------------------------
 
     std::shared_ptr<EssenceBase> PBRWithShadowPipelineV2::internalCreateEssence(
@@ -239,10 +248,13 @@ namespace MFA
         std::shared_ptr<AS::MeshBase> const & cpuMesh
     )
     {
-        auto essence = std::make_shared<PBR_Essence>(gpuModel, cpuMesh);
+        auto const meshData = static_cast<AS::PBR::Mesh *>(cpuMesh.get())->getMeshData();
+        auto essence = std::make_shared<PBR_Essence>(gpuModel, meshData);
         createEssenceDescriptorSets(*essence);
         return essence;
     }
+
+    //-------------------------------------------------------------------------------------------------
 
     std::shared_ptr<VariantBase> PBRWithShadowPipelineV2::internalCreateVariant(EssenceBase * essence)
     {

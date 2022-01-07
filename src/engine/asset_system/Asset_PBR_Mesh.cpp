@@ -150,7 +150,7 @@ namespace MFA::AssetSystem::PBR
 
     //-------------------------------------------------------------------------------------------------
 
-    uint32_t Mesh::insertSubMesh()
+    uint32_t Mesh::insertSubMesh() const
     {
         mData->subMeshes.emplace_back();
         return static_cast<uint32_t>(mData->subMeshes.size() - 1);

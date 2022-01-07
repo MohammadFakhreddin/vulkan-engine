@@ -72,9 +72,9 @@ namespace MFA
 
         void DestroyEssence(RT::GpuModel const & gpuModel);
 
-        virtual VariantBase * CreateVariant(RT::GpuModel const & gpuModel);
+        virtual std::weak_ptr<VariantBase> CreateVariant(RT::GpuModel const & gpuModel);
 
-        virtual VariantBase * CreateVariant(std::string const & nameOrAddress);
+        virtual std::weak_ptr<VariantBase> CreateVariant(std::string const & nameOrAddress);
 
         void RemoveVariant(VariantBase & variant);
 
@@ -96,6 +96,8 @@ namespace MFA
 
         virtual std::shared_ptr<VariantBase> internalCreateVariant(EssenceBase * essence) = 0;
 
+        bool addEssence(std::shared_ptr<EssenceBase> const & essence);
+
         struct EssenceAndVariants
         {
             std::shared_ptr<EssenceBase> essence;
@@ -108,6 +110,8 @@ namespace MFA
         std::vector<VariantBase *> mAllVariantsList{};
         VkDescriptorPool mDescriptorPool{};
         uint32_t mMaxSets;
+
+        bool mIsInitialized = false;
 
     };
 

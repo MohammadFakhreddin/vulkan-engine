@@ -34,10 +34,6 @@ namespace MFA
 
         void clone(Entity * entity) const override;
 
-    private:
-
-        PBR_Variant * mPBR_Variant = nullptr;
- 
     };
 
 }

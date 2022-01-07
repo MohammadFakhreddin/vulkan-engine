@@ -547,6 +547,8 @@ namespace MFA
 
     void PBR_Variant::OnUI()
     {
+        VariantBase::OnUI();
+
         std::vector<char const *> animationsList{ mMeshData->animations.size() };
         for (uint32_t i = 0; i < static_cast<uint32_t>(animationsList.size()); ++i)
         {

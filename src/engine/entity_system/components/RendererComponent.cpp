@@ -13,19 +13,12 @@
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::RendererComponent::notifyVariantDestroyed()
-{
-    mVariant = nullptr;
-}
-
-//-------------------------------------------------------------------------------------------------
-
 void MFA::RendererComponent::shutdown()
 {
     Component::shutdown();
-    if (mVariant != nullptr)
+    if (auto const variant = mVariant.lock())
     {
-        mPipeline->RemoveVariant(*mVariant);
+        mPipeline->RemoveVariant(*variant);
     }
 }
 
@@ -33,7 +26,13 @@ void MFA::RendererComponent::shutdown()
 
 void MFA::RendererComponent::serialize(nlohmann::json & jsonObject) const
 {
-    jsonObject["address"] = mVariant->GetEssence()->GetGpuModel()->address;
+    auto const variant = mVariant.lock();
+    MFA_ASSERT(variant != nullptr);
+    auto const * essence = variant->GetEssence();
+    MFA_ASSERT(essence != nullptr);
+    auto const * gpuModel = essence->GetGpuModel();
+    MFA_ASSERT(gpuModel != nullptr);
+    jsonObject["address"] = gpuModel->address;
     jsonObject["pipeline"] = mPipeline->GetName();
 }
 
@@ -61,21 +60,21 @@ void MFA::RendererComponent::deserialize(nlohmann::json const & jsonObject)
         mPipeline->CreateEssence(gpuModel, cpuModel->mesh);
     }
     mVariant = mPipeline->CreateVariant(relativePath);
-    MFA_ASSERT(mVariant != nullptr);
+    MFA_ASSERT(mVariant.expired() == false);
 }
 
 //-------------------------------------------------------------------------------------------------
 
 MFA::VariantBase const * MFA::RendererComponent::getVariant() const
 {
-    return mVariant;
+    return mVariant.lock().get();
 }
 
 //-------------------------------------------------------------------------------------------------
 
 MFA::VariantBase * MFA::RendererComponent::getVariant()
 {
-    return mVariant;
+    return mVariant.lock().get();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -84,7 +83,7 @@ MFA::RendererComponent::RendererComponent() = default;
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RendererComponent::RendererComponent(BasePipeline & pipeline, VariantBase * variant)
+MFA::RendererComponent::RendererComponent(BasePipeline & pipeline, std::weak_ptr<VariantBase> variant)
     : mPipeline(&pipeline)
     , mVariant(variant)
 {}

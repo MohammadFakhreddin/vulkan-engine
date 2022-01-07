@@ -17,7 +17,7 @@ namespace MFA
         : RendererComponent(pipeline, pipeline.CreateVariant(nameOrAddress))
     {
         MFA_ASSERT(mPipeline != nullptr);
-        MFA_ASSERT(mVariant != nullptr);
+        MFA_ASSERT(mVariant.expired() == false);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -35,10 +35,9 @@ namespace MFA
         auto * entity = GetEntity();
         MFA_ASSERT(entity != nullptr);
 
-        mPBR_Variant = dynamic_cast<PBR_Variant *>(mVariant);
-        MFA_ASSERT(mPBR_Variant != nullptr);
-
-        mPBR_Variant->Init(
+        auto const variant = mVariant.lock();
+        MFA_ASSERT(variant != nullptr);
+        variant->Init(
             GetEntity(),
             selfPtr(),
             entity->GetComponent<TransformComponent>(),
@@ -48,26 +47,15 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    PBR_Variant const * MeshRendererComponent::getDrawableVariant() const
-    {
-        return mPBR_Variant;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    PBR_Variant * MeshRendererComponent::getDrawableVariant()
-    {
-        return mPBR_Variant;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
     void MeshRendererComponent::onUI()
     {
         if (UI::TreeNode("MeshRenderer"))
         {
             RendererComponent::onUI();
-            mPBR_Variant->OnUI();
+            if (auto const variant = mVariant.lock())
+            {
+                variant->OnUI();
+            }
             UI::TreePop();
         }
     }
@@ -77,8 +65,9 @@ namespace MFA
     void MeshRendererComponent::clone(Entity * entity) const
     {
         MFA_ASSERT(entity != nullptr);
-        MFA_ASSERT(mVariant != nullptr);
-        auto const * essence = mVariant->GetEssence();
+        auto const variant = mVariant.lock();
+        MFA_ASSERT(variant != nullptr);
+        auto const * essence = variant->GetEssence();
         MFA_ASSERT(essence != nullptr);
         auto const * gpuModel = essence->GetGpuModel();
         MFA_ASSERT(gpuModel != nullptr);

@@ -70,6 +70,8 @@ namespace MFA
         [[nodiscard]]
         BoundingVolumeComponent * GetBoundingVolume() const;
 
+        virtual void OnUI() {}
+
     protected:
 
         virtual void internalInit() {}

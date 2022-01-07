@@ -10,8 +10,6 @@ namespace MFA {
     class RendererComponent : public Component {
     public:
     
-        void notifyVariantDestroyed();
-
         void shutdown() override;
 
         void serialize(nlohmann::json & jsonObject) const override;
@@ -28,10 +26,10 @@ namespace MFA {
 
         explicit RendererComponent();
 
-        explicit RendererComponent(BasePipeline & pipeline, VariantBase * variant);
+        explicit RendererComponent(BasePipeline & pipeline, std::weak_ptr<VariantBase> variant);
 
         BasePipeline * mPipeline = nullptr;
-        VariantBase * mVariant = nullptr;
+        std::weak_ptr<VariantBase> mVariant {};
 
     };
     

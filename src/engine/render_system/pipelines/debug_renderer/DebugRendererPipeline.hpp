@@ -30,6 +30,11 @@ public:
     
     void OnResize() override {}
 
+    bool CreateEssenceWithoutModel(
+        std::shared_ptr<RT::GpuModel> const & gpuModel,
+        uint32_t indicesCount
+    );
+
 protected:
 
     std::shared_ptr<EssenceBase> internalCreateEssence(
@@ -54,8 +59,6 @@ private:
     void createDescriptorSets();
 
 private:
-
-    bool mIsInitialized = false;
 
     VkDescriptorSetLayout mDescriptorSetLayout {};
     RT::PipelineGroup mDrawPipeline {};

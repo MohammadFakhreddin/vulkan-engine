@@ -120,10 +120,10 @@ namespace MFA
             cpuModel = Importer::ImportGLTF(Path::ForReadWrite(relativePath.c_str()).c_str());
         } else if (strcmp("Cube", relativePath.c_str()) == 0)
         {
-            cpuModel = ShapeGenerator::Cube();
+            cpuModel = ShapeGenerator::Debug::Cube();
         } else if (strcmp("Sphere", relativePath.c_str()) == 0)
         {
-            cpuModel = ShapeGenerator::Sphere();
+            cpuModel = ShapeGenerator::Debug::Sphere();
         } else
         {
             MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");

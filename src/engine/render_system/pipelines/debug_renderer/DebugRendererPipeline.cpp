@@ -11,19 +11,53 @@
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/pipelines/EssenceBase.hpp"
 #include "engine/render_system/pipelines/VariantBase.hpp"
-#include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Essence.hpp"
-#include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Variant.hpp"
+#include "engine/render_system/pipelines/debug_renderer/DebugEssence.hpp"
+#include "engine/render_system/pipelines/debug_renderer/DebugVariant.hpp"
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/job_system/JobSystem.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
+#include "engine/asset_system/AssetDebugMesh.hpp"
 
-// TODO We need DebugVariant instead
-#define CAST_VARIANT(variant)  static_cast<PBR_Variant *>(variant.get())
+// TODO Essences should be able to do instancing
+// Vertex input bindings
+// The instancing pipeline uses a vertex input state with two bindings
+//bindingDescriptions = {
+//	// Binding point 0: Mesh vertex layout description at per-vertex rate
+//	vks::initializers::vertexInputBindingDescription(VERTEX_BUFFER_BIND_ID, sizeof(vkglTF::Vertex), VK_VERTEX_INPUT_RATE_VERTEX),
+//	// Binding point 1: Instanced data at per-instance rate
+//	vks::initializers::vertexInputBindingDescription(INSTANCE_BUFFER_BIND_ID, sizeof(InstanceData), VK_VERTEX_INPUT_RATE_INSTANCE)
+//};
+
+// Vertex attribute bindings
+// Note that the shader declaration for per-vertex and per-instance attributes is the same, the different input rates are only stored in the bindings:
+// instanced.vert:
+//	layout (location = 0) in vec3 inPos;		Per-Vertex
+//	...
+//	layout (location = 4) in vec3 instancePos;	Per-Instance
+//attributeDescriptions = {
+//	// Per-vertex attributes
+//	// These are advanced for each vertex fetched by the vertex shader
+//	vks::initializers::vertexInputAttributeDescription(VERTEX_BUFFER_BIND_ID, 0, VK_FORMAT_R32G32B32_SFLOAT, 0),					// Location 0: Position
+//	vks::initializers::vertexInputAttributeDescription(VERTEX_BUFFER_BIND_ID, 1, VK_FORMAT_R32G32B32_SFLOAT, sizeof(float) * 3),	// Location 1: Normal
+//	vks::initializers::vertexInputAttributeDescription(VERTEX_BUFFER_BIND_ID, 2, VK_FORMAT_R32G32_SFLOAT, sizeof(float) * 6),		// Location 2: Texture coordinates
+//	vks::initializers::vertexInputAttributeDescription(VERTEX_BUFFER_BIND_ID, 3, VK_FORMAT_R32G32B32_SFLOAT, sizeof(float) * 8),	// Location 3: Color
+//	// Per-Instance attributes
+//	// These are fetched for each instance rendered
+//	vks::initializers::vertexInputAttributeDescription(INSTANCE_BUFFER_BIND_ID, 4, VK_FORMAT_R32G32B32_SFLOAT, 0),					// Location 4: Position
+//	vks::initializers::vertexInputAttributeDescription(INSTANCE_BUFFER_BIND_ID, 5, VK_FORMAT_R32G32B32_SFLOAT, sizeof(float) * 3),	// Location 5: Rotation
+//	vks::initializers::vertexInputAttributeDescription(INSTANCE_BUFFER_BIND_ID, 6, VK_FORMAT_R32_SFLOAT,sizeof(float) * 6),			// Location 6: Scale
+//	vks::initializers::vertexInputAttributeDescription(INSTANCE_BUFFER_BIND_ID, 7, VK_FORMAT_R32_SINT, sizeof(float) * 7),			// Location 7: Texture array layer index
+//};
+
+
+
+#define CAST_VARIANT(variant)  static_cast<DebugVariant *>(variant.get())
 
 namespace MFA
 {
     
+    using namespace AssetSystem::Debug;
 
     DebugRendererPipeline::DebugRendererPipeline()
         : BasePipeline(10)
@@ -48,8 +82,7 @@ namespace MFA
             MFA_ASSERT(false);
             return;
         }
-        mIsInitialized = true;
-
+        
         BasePipeline::Init();
 
         createDescriptorSetLayout();
@@ -59,11 +92,11 @@ namespace MFA
         std::vector<std::string> const modelNames {"Sphere", "Cube"};
         for (auto const & modelName : modelNames)
         {
-            auto const sphereCpuModel = RC::AcquireForCpu(modelName.c_str());
-            MFA_ASSERT(sphereCpuModel != nullptr);
-            auto const sphereGpuModel = RC::AcquireForGpu(modelName.c_str());
-            MFA_ASSERT(sphereGpuModel != nullptr);
-            CreateEssence(sphereGpuModel, sphereCpuModel->mesh);
+            auto const cpuModel = RC::AcquireForCpu(modelName.c_str());
+            MFA_ASSERT(cpuModel != nullptr);
+            auto const gpuModel = RC::AcquireForGpu(modelName.c_str());
+            MFA_ASSERT(gpuModel != nullptr);
+            CreateEssenceWithoutModel(gpuModel, cpuModel->mesh->getIndexCount());
         }
     }
 
@@ -76,8 +109,7 @@ namespace MFA
             MFA_ASSERT(false);
             return;
         }
-        mIsInitialized = false;
-
+        
         RF::DestroyPipelineGroup(mDrawPipeline);
         destroyDescriptorSetLayout();
        
@@ -132,30 +164,32 @@ namespace MFA
             {
                 if (variant->IsActive())
                 {
-                    auto colorComponent = variant->GetEntity()->GetComponent<ColorComponent>().lock();
-                    if (colorComponent != nullptr)
-                    {
-                        colorComponent->GetColor(pushConstants.baseColorFactor);
-                    }
+                    auto * debugVariant = CAST_VARIANT(variant);
+                    MFA_ASSERT(debugVariant != nullptr);
+                    debugVariant->getColor(pushConstants.baseColorFactor);
+                    debugVariant->getTransform(pushConstants.model);
 
-                    // We do not need primitive for debug stuff
-                    CAST_VARIANT(variant)->Draw(
+                    RF::PushConstants(
                         drawPass,
-                        [&drawPass, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
-                        {
-                            Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.model);
+                        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                        0,
+                        CBlobAliasOf(pushConstants)
+                    );
 
-                            RF::PushConstants(
-                                drawPass,
-                                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-                                0,
-                                CBlobAliasOf(pushConstants)
-                            );
-                        }
-                    , AS::AlphaMode::Opaque);
+                    CAST_VARIANT(variant)->Draw(drawPass);
                 }
             }
         }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool DebugRendererPipeline::CreateEssenceWithoutModel(
+        std::shared_ptr<RT::GpuModel> const & gpuModel,
+        uint32_t indicesCount
+    )
+    {
+        return addEssence(std::make_shared<DebugEssence>(gpuModel, indicesCount));
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -165,7 +199,7 @@ namespace MFA
         std::shared_ptr<AS::MeshBase> const & cpuMesh
     )
     {
-        return std::make_shared<PBR_Essence>(gpuModel, cpuMesh);
+        return std::make_shared<DebugEssence>(gpuModel, cpuMesh->getIndexCount());
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -173,7 +207,7 @@ namespace MFA
     std::shared_ptr<VariantBase> DebugRendererPipeline::internalCreateVariant(EssenceBase * essence)
     {
         MFA_ASSERT(essence != nullptr);
-        return std::make_shared<PBR_Variant>(static_cast<PBR_Essence *>(essence));
+        return std::make_shared<DebugVariant>(static_cast<DebugEssence *>(essence));
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -221,7 +255,7 @@ namespace MFA
 
         VkVertexInputBindingDescription const bindingDescription{
             .binding = 0,
-            .stride = sizeof(AS::PBR::Vertex),
+            .stride = sizeof(Vertex),
             .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
         };
 
@@ -231,7 +265,7 @@ namespace MFA
             attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
             attributeDescription.binding = 0;
             attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, position);
+            attributeDescription.offset = offsetof(Vertex, position);
 
             inputAttributeDescriptions.emplace_back(attributeDescription);
         }

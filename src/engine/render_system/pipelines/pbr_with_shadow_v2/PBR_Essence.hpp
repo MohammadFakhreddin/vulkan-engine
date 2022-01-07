@@ -35,7 +35,7 @@ public:
 
     explicit PBR_Essence(
         std::shared_ptr<RT::GpuModel> const & gpuModel,
-        std::shared_ptr<AS::MeshBase> const & cpuMesh
+        std::shared_ptr<AS::PBR::MeshData> const & meshData
     );
     ~PBR_Essence() override;
     

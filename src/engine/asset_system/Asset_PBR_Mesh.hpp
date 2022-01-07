@@ -17,7 +17,7 @@ namespace MFA::AssetSystem::PBR
         UV metallicUV{};
         UV roughnessUV{};
         UV emissionUV{};
-        UV occlusionUV{};
+        UV occlusionUV{}; 
         Color color{};
         Normal normalValue{};
         Tangent tangentValue{};
@@ -232,7 +232,7 @@ namespace MFA::AssetSystem::PBR
 
         // Returns mesh index
         [[nodiscard]]
-        uint32_t insertSubMesh();
+        uint32_t insertSubMesh() const;
 
         void insertPrimitive(
             uint32_t subMeshIndex,

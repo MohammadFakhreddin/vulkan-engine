@@ -57,7 +57,9 @@ namespace MFA
             auto const rendererComponent = GetEntity()->GetComponent<MeshRendererComponent>().lock();
             MFA_ASSERT(rendererComponent != nullptr);
 
-            auto * essence = rendererComponent->getVariant()->GetEssence();
+            auto * variant = rendererComponent->getVariant();
+            MFA_ASSERT(variant != nullptr);
+            auto * essence = variant->GetEssence();
             MFA_ASSERT(essence != nullptr);
             auto * gpuModel = essence->GetGpuModel();
             MFA_ASSERT(gpuModel != nullptr);

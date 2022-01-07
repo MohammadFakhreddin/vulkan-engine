@@ -65,6 +65,8 @@ void MFA::VariantBase::Init(
 
     MFA_ASSERT(boundingVolumeComponent.expired() == false);
     mBoundingVolumeComponent = boundingVolumeComponent;
+
+    internalInit();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -77,10 +79,7 @@ void MFA::VariantBase::Shutdown()
     }
     mIsInitialized = false;
 
-    if (auto const ptr = mRendererComponent.lock())
-    {
-        ptr->notifyVariantDestroyed();
-    }
+    internalShutdown();
 
     if (auto const ptr = mTransformComponent.lock())
     {

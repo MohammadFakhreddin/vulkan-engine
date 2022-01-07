@@ -8,6 +8,14 @@
 
 namespace MFA
 {
+    namespace AssetSystem
+    {
+        namespace PBR
+        {
+            struct MeshData;
+        }
+    }
+
     class PBR_Essence;
     class Scene;
     class DirectionalLightShadowResources;
@@ -92,12 +100,17 @@ namespace MFA
         void PostRender(RT::CommandRecordState & drawPass, float deltaTime) override;
 
         void OnResize() override;
+
+        void CreateEssenceWithoutModel(
+            std::shared_ptr<RT::GpuModel> const & gpuModel,
+            std::shared_ptr<AssetSystem::PBR::MeshData> const & meshData
+        ) const;
         
     protected:
 
         std::shared_ptr<EssenceBase> internalCreateEssence(
             std::shared_ptr<RT::GpuModel> const & gpuModel,
-            std::shared_ptr<AS::MeshBase> const & cpuMesh
+            std::shared_ptr<AssetSystem::MeshBase> const & cpuMesh
         ) override;
 
         std::shared_ptr<VariantBase> internalCreateVariant(EssenceBase * essence) override;
@@ -159,8 +172,6 @@ namespace MFA
         void performDisplayPass(RT::CommandRecordState & recordState);
 
         void renderForDisplayPass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode) const;
-
-        bool mIsInitialized = false;
 
         std::shared_ptr<RT::SamplerGroup> mSamplerGroup = nullptr; // TODO Each gltf subMesh has its own settings
         std::shared_ptr<RT::GpuTexture> mErrorTexture = nullptr;

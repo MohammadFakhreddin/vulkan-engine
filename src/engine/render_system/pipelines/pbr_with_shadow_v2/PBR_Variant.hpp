@@ -94,7 +94,7 @@ namespace MFA
         [[nodiscard]]
         RT::UniformBufferGroup const * GetSkinJointsBuffer() const noexcept;
 
-        void OnUI();
+        void OnUI() override;
 
         [[nodiscard]]
         bool IsCurrentAnimationFinished() const;

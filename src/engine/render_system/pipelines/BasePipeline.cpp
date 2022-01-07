@@ -59,20 +59,17 @@ namespace MFA
         std::shared_ptr<AS::MeshBase> const & cpuMesh
     )
     {
-        bool success = false;
-        if(MFA_VERIFY(mEssenceAndVariantsMap.contains(gpuModel->address) == false))
-        {
-            mEssenceAndVariantsMap[gpuModel->address] = EssenceAndVariants {internalCreateEssence(gpuModel, cpuMesh)};
-            success = true;
-        }
-        return success;
-    
+        return addEssence(internalCreateEssence(
+            gpuModel,
+            cpuMesh
+        ));
     }
 
     //-------------------------------------------------------------------------------------------------
 
     void BasePipeline::DestroyEssence(std::string const & nameOrAddress)
     {
+        MFA_ASSERT(mIsInitialized == true);
         auto const findResult = mEssenceAndVariantsMap.find(nameOrAddress);
         if (MFA_VERIFY(findResult != mEssenceAndVariantsMap.end()) == false)
         {
@@ -94,30 +91,31 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    VariantBase * BasePipeline::CreateVariant(RT::GpuModel const & gpuModel)
+    std::weak_ptr<VariantBase> BasePipeline::CreateVariant(RT::GpuModel const & gpuModel)
     {
         return CreateVariant(gpuModel.address);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    VariantBase * BasePipeline::CreateVariant(std::string const & nameOrAddress)
+    std::weak_ptr<VariantBase> BasePipeline::CreateVariant(std::string const & nameOrAddress)
     {
+        MFA_ASSERT(mIsInitialized == true);
         auto const findResult = mEssenceAndVariantsMap.find(nameOrAddress);
         if(findResult == mEssenceAndVariantsMap.end())
         {
             // Note: Is it correct to acquire the missing essence from resource manager ?
             MFA_LOG_ERROR("Cannot create variant. Essence with name %s does not exists", nameOrAddress.c_str());
-            return nullptr;
+            return {};
         }
 
         auto & variantsList = findResult->second.variants;
         variantsList.emplace_back(internalCreateVariant(findResult->second.essence.get()));
 
-        auto * newVariant = variantsList.back().get();
+        auto newVariant = variantsList.back();
         MFA_ASSERT(newVariant != nullptr);
 
-        mAllVariantsList.emplace_back(newVariant);
+        mAllVariantsList.emplace_back(newVariant.get());
         return newVariant;
     }
 
@@ -125,6 +123,7 @@ namespace MFA
 
     void BasePipeline::RemoveVariant(VariantBase & variant)
     {
+        MFA_ASSERT(mIsInitialized == true);
         // Removing from all variants list
         bool foundInAllVariantsList = false;
         for (int i = static_cast<int>(mAllVariantsList.size()) - 1; i >= 0; --i)
@@ -167,6 +166,8 @@ namespace MFA
 
     void BasePipeline::Init()
     {
+        MFA_ASSERT(mIsInitialized == false);
+        mIsInitialized = true;
         mDescriptorPool = RF::CreateDescriptorPool(mMaxSets);
     }
 
@@ -174,6 +175,8 @@ namespace MFA
 
     void BasePipeline::Shutdown()
     {
+        MFA_ASSERT(mIsInitialized == true);
+        mIsInitialized = false;
         for (auto const & item : mEssenceAndVariantsMap)
         {
             for (auto & variant : item.second.variants)
@@ -184,6 +187,22 @@ namespace MFA
         mEssenceAndVariantsMap.clear();
 
         RF::DestroyDescriptorPool(mDescriptorPool);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool BasePipeline::addEssence(std::shared_ptr<EssenceBase> const & essence)
+    {
+        MFA_ASSERT(mIsInitialized == true);
+        auto const & address = essence->GetGpuModel()->address;
+
+        bool success = false;
+        if(MFA_VERIFY(mEssenceAndVariantsMap.contains(address) == false))
+        {
+            mEssenceAndVariantsMap[address] = EssenceAndVariants(essence);
+            success = true;
+        }
+        return success;
     }
 
     //-------------------------------------------------------------------------------------------------
