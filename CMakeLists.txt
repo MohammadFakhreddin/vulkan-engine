@@ -156,20 +156,27 @@ add_library("Renderer"
     "src/engine/render_system/pipelines/EssenceBase.cpp"
     "src/engine/render_system/pipelines/DescriptorSetSchema.hpp"
     "src/engine/render_system/pipelines/DescriptorSetSchema.cpp"
+    # Debug
     "src/engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
     "src/engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.cpp"
     "src/engine/render_system/pipelines/debug_renderer/DebugEssence.hpp"
     "src/engine/render_system/pipelines/debug_renderer/DebugEssence.cpp"
     "src/engine/render_system/pipelines/debug_renderer/DebugVariant.hpp"
     "src/engine/render_system/pipelines/debug_renderer/DebugVariant.cpp"
+    # PBR
     "src/engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
     "src/engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.cpp"
     "src/engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Essence.hpp"
     "src/engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Essence.cpp"
     "src/engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Variant.hpp"
     "src/engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Variant.cpp"
+    # Particle
     "src/engine/render_system/pipelines/particle/ParticlePipeline.hpp"
     "src/engine/render_system/pipelines/particle/ParticlePipeline.cpp"
+    "src/engine/render_system/pipelines/particle/ParticleEssence.hpp"
+    "src/engine/render_system/pipelines/particle/ParticleEssence.cpp"
+    "src/engine/render_system/pipelines/particle/ParticleVariant.hpp"
+    "src/engine/render_system/pipelines/particle/ParticleVariant.cpp"
 )
 
 target_include_directories(
