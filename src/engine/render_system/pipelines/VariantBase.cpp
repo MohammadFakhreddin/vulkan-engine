@@ -106,7 +106,7 @@ MFA::RenderTypes::VariantId MFA::VariantBase::GetId() const noexcept
 MFA::RenderTypes::DescriptorSetGroup const & MFA::VariantBase::CreateDescriptorSetGroup(
     VkDescriptorPool descriptorPool,
     uint32_t descriptorSetCount,
-    VkDescriptorSetLayout descriptorSetLayout
+    RT::DescriptorSetLayoutGroup const & descriptorSetLayout
 )
 {
     MFA_ASSERT(mDescriptorSetGroup.IsValid() == false);

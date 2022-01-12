@@ -3,29 +3,32 @@
 #include <cstdint>
 #include <functional>
 
-namespace MFA::JobSystem {
+namespace MFA::JobSystem
+{
 
-using ThreadNumber = uint32_t;
-using Task = std::function<void()>;
+    using ThreadNumber = uint32_t;
+    using Task = std::function<void()>;
 
-void Init();
+    void Init();
 
-void AssignTaskToAllThreads(
-    Task const & task
-);
+    void AssignTaskToAllThreads(
+        Task const & task
+    );
 
-void AssignTask(
-    uint32_t threadNumber,
-    Task const & task
-);
+    void AssignTaskManually(
+        uint32_t threadNumber,
+        Task const & task
+    );
 
-[[nodiscard]]
-uint32_t GetNumberOfAvailableThreads();
+    void AutoAssignTask(Task const & task);
 
-void WaitForThreadsToFinish();
+    [[nodiscard]]
+    uint32_t GetNumberOfAvailableThreads();
 
-void Shutdown();
-    
+    void WaitForThreadsToFinish();
+
+    void Shutdown();
+
 }
 
 

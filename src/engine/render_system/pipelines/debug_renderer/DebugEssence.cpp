@@ -1,6 +1,7 @@
 #include "DebugEssence.hpp"
 
 #include "engine/BedrockAssert.hpp"
+#include "engine/render_system/RenderFrontend.hpp"
 
 namespace MFA
 {
@@ -22,6 +23,13 @@ namespace MFA
     uint32_t DebugEssence::getIndicesCount() const
     {
         return mIndicesCount;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void DebugEssence::bindVertexBuffer(RT::CommandRecordState const & recordState) const
+    {
+        RF::BindVertexBuffer(recordState, *mGpuModel->meshBuffers->verticesBuffer[0]);
     }
 
     //-------------------------------------------------------------------------------------------------

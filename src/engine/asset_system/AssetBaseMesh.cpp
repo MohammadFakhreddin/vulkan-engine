@@ -7,7 +7,9 @@ namespace MFA::AssetSystem
 {
     //-------------------------------------------------------------------------------------------------
 
-    MeshBase::MeshBase() = default;
+    MeshBase::MeshBase(uint32_t const vertexBufferCount_)
+        : requiredVertexBufferCount(vertexBufferCount_)
+    {}
 
     //-------------------------------------------------------------------------------------------------
 

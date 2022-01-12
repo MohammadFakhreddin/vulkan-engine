@@ -19,6 +19,8 @@ namespace MFA
         [[nodiscard]]
         uint32_t getIndicesCount() const;
 
+        void bindVertexBuffer(RT::CommandRecordState const & recordState) const override;
+
     private:
 
         uint32_t const mIndicesCount;

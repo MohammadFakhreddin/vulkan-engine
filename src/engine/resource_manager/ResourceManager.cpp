@@ -18,7 +18,6 @@ namespace MFA
     {
         std::unordered_map<std::string, std::weak_ptr<RT::GpuModel>> availableGpuModels{};
         std::unordered_map<std::string, std::weak_ptr<AS::Model>> availableCpuModels{};
-        RT::GpuModelId nextId = 0;
     };
     State * state = nullptr;
 
@@ -53,7 +52,7 @@ namespace MFA
         MFA_ASSERT(cpuModel != nullptr);
         MFA_ASSERT(cpuModel->mesh->isValid());
 
-        auto gpuModel = RF::CreateGpuModel(cpuModel, state->nextId++, name);
+        auto gpuModel = RF::CreateGpuModel(cpuModel, name);
         state->availableGpuModels[name] = gpuModel;
         return gpuModel;
     }

@@ -57,9 +57,13 @@ namespace MFA
 
         struct MeshBuffers
         {
-            std::shared_ptr<BufferAndMemory> const verticesBuffer;
+            std::vector<std::shared_ptr<BufferAndMemory>> const verticesBuffer;
             std::shared_ptr<BufferAndMemory> const indicesBuffer;
 
+            explicit MeshBuffers(
+                std::vector<std::shared_ptr<BufferAndMemory>> verticesBuffer_,
+                std::shared_ptr<BufferAndMemory> indicesBuffer_
+            );
             explicit MeshBuffers(
                 std::shared_ptr<BufferAndMemory> verticesBuffer_,
                 std::shared_ptr<BufferAndMemory> indicesBuffer_
@@ -125,13 +129,11 @@ namespace MFA
 
         struct GpuModel
         {
-            GpuModelId const id;
             std::string const address;
             std::shared_ptr<MeshBuffers> const meshBuffers;
             std::vector<std::shared_ptr<GpuTexture>> const textures;
             
             explicit GpuModel(
-                GpuModelId id_,
                 std::string address_,
                 std::shared_ptr<MeshBuffers> meshBuffers_,
                 std::vector<std::shared_ptr<GpuTexture>> textures_
@@ -276,6 +278,20 @@ namespace MFA
             std::shared_ptr<ImageGroup> const imageGroup;
             std::shared_ptr<ImageViewGroup> const imageView;
             VkFormat const imageFormat;
+        };
+
+        struct DescriptorSetLayoutGroup
+        {
+            explicit DescriptorSetLayoutGroup(VkDescriptorSetLayout descriptorSetLayout_);
+            ~DescriptorSetLayoutGroup();
+
+            DescriptorSetLayoutGroup(DescriptorSetLayoutGroup const &) noexcept = delete;
+            DescriptorSetLayoutGroup(DescriptorSetLayoutGroup &&) noexcept = delete;
+            DescriptorSetLayoutGroup & operator= (DescriptorSetLayoutGroup const & rhs) noexcept = delete;
+            DescriptorSetLayoutGroup & operator= (DescriptorSetLayoutGroup && rhs) noexcept = delete;
+
+            VkDescriptorSetLayout const descriptorSetLayout;
+
         };
 
         struct DescriptorSetGroup

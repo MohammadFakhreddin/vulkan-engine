@@ -1792,13 +1792,14 @@ RT::PipelineGroup CreatePipelineGroup(
     VkDevice device,
     uint8_t shaderStagesCount,
     RT::GpuShader const ** shaderStages,
-    VkVertexInputBindingDescription vertexBindingDescription,
+    uint32_t vertexBindingDescriptionCount,
+    VkVertexInputBindingDescription const * vertexBindingDescriptionData,
     uint32_t attributeDescriptionCount,
     VkVertexInputAttributeDescription * attributeDescriptionData,
     VkExtent2D swapChainExtent,
     VkRenderPass renderPass,
     uint32_t descriptorSetLayoutCount,
-    VkDescriptorSetLayout * descriptorSetLayouts,
+    VkDescriptorSetLayout const * descriptorSetLayouts,
     RT::CreateGraphicPipelineOptions const & options
 )
 {
@@ -1820,8 +1821,8 @@ RT::PipelineGroup CreatePipelineGroup(
     // Describe vertex input
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {};
     vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertex_input_state_create_info.vertexBindingDescriptionCount = 1;
-    vertex_input_state_create_info.pVertexBindingDescriptions = &vertexBindingDescription;
+    vertex_input_state_create_info.vertexBindingDescriptionCount = vertexBindingDescriptionCount;
+    vertex_input_state_create_info.pVertexBindingDescriptions = vertexBindingDescriptionData;
     vertex_input_state_create_info.vertexAttributeDescriptionCount = attributeDescriptionCount;
     vertex_input_state_create_info.pVertexAttributeDescriptions = attributeDescriptionData;
 
@@ -2022,7 +2023,7 @@ void DestroyPipelineGroup(VkDevice device, RT::PipelineGroup & graphicPipelineGr
 
 //-------------------------------------------------------------------------------------------------
 
-VkDescriptorSetLayout CreateDescriptorSetLayout(
+std::shared_ptr<RT::DescriptorSetLayoutGroup> CreateDescriptorSetLayout(
     VkDevice device,
     uint8_t const bindings_count,
     VkDescriptorSetLayoutBinding * bindings
@@ -2032,14 +2033,14 @@ VkDescriptorSetLayout CreateDescriptorSetLayout(
     descriptorLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     descriptorLayoutCreateInfo.bindingCount = static_cast<uint32_t>(bindings_count);
     descriptorLayoutCreateInfo.pBindings = bindings;
-    VkDescriptorSetLayout descriptor_set_layout{};
+    VkDescriptorSetLayout descriptorSetLayout{};
     VK_Check(vkCreateDescriptorSetLayout(
         device,
         &descriptorLayoutCreateInfo,
         nullptr,
-        &descriptor_set_layout
+        &descriptorSetLayout
     ));
-    return descriptor_set_layout;
+    return std::make_shared<RT::DescriptorSetLayoutGroup>(descriptorSetLayout);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -2207,7 +2208,7 @@ void CreateUniformBuffer(
 
 //-------------------------------------------------------------------------------------------------
 
-void UpdateBufferGroup(
+void UpdateBuffer(
     VkDevice device,
     RT::BufferAndMemory const & bufferGroup,
     CBlob const data
@@ -2569,6 +2570,7 @@ VkResult AcquireNextImage(
 void BindVertexBuffer(
     VkCommandBuffer commandBuffer,
     RT::BufferAndMemory const & vertexBuffer,
+    uint32_t firstBinding,
     VkDeviceSize offset
 )
 {

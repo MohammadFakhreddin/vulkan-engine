@@ -10,10 +10,6 @@ namespace MFA
     class ParticlePipeline final : public BasePipeline
     {
     public:
-        struct PushConstants
-        {
-            float model[16] {};
-        };
 
         explicit ParticlePipeline(Scene * attachedScene);
         ~ParticlePipeline() override;
@@ -27,9 +23,9 @@ namespace MFA
 
         void Shutdown() override;
 
-        void PreRender(RT::CommandRecordState & drawPass, float deltaTime) override;
+        void PreRender(RT::CommandRecordState & recordState, float deltaTimeInSec) override;
 
-        void Render(RT::CommandRecordState & drawPass, float deltaTime) override;
+        void Render(RT::CommandRecordState & recordState, float deltaTime) override;
         
         void OnResize() override {}
         
@@ -54,8 +50,8 @@ namespace MFA
 
         static constexpr int MAXIMUM_TEXTURE_PER_ESSENCE = 10;
         
-        VkDescriptorSetLayout mPerFrameDescriptorSetLayout {};
-        VkDescriptorSetLayout mPerEssenceDescriptorSetLayout {};
+        std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerFrameDescriptorSetLayout {};
+        std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerEssenceDescriptorSetLayout {};
 
         RT::DescriptorSetGroup mPerFrameDescriptorSetGroup {};
         Scene * mAttachedScene = nullptr;

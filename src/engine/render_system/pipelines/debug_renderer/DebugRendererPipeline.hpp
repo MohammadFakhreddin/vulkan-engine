@@ -52,15 +52,13 @@ private:
 
     void createDescriptorSetLayout();
 
-    void destroyDescriptorSetLayout();
-
     void createPipeline();
 
     void createDescriptorSets();
 
 private:
 
-    VkDescriptorSetLayout mDescriptorSetLayout {};
+    std::shared_ptr<RT::DescriptorSetLayoutGroup> mDescriptorSetLayout {};
     RT::PipelineGroup mDrawPipeline {};
 
     RT::DescriptorSetGroup mDescriptorSetGroup {};

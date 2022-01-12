@@ -138,7 +138,7 @@ namespace MFA::UISystem
     struct State
     {
         std::shared_ptr<RT::SamplerGroup> fontSampler{};
-        VkDescriptorSetLayout descriptorSetLayout{};
+        std::shared_ptr<RT::DescriptorSetLayoutGroup> descriptorSetLayout{};
         std::shared_ptr<RT::GpuShader> vertexShader{};
         std::shared_ptr<RT::GpuShader> fragmentShader{};
         VkDescriptorPool descriptorPool{};
@@ -254,7 +254,7 @@ namespace MFA::UISystem
         state->descriptorSetGroup = RF::CreateDescriptorSets(
             state->descriptorPool,
             RF::GetMaxFramesPerFlight(),
-            state->descriptorSetLayout
+            *state->descriptorSetLayout
         ); // Original number was 1 , Now it creates as many as swap_chain_image_count
 
         {// Vertex shader
@@ -340,8 +340,9 @@ namespace MFA::UISystem
                 static_cast<uint8_t>(shaderStages.size()),
                 shaderStages.data(),
                 1,
-                &state->descriptorSetLayout,
-                vertex_binding_description,
+                &state->descriptorSetLayout->descriptorSetLayout,
+                1, 
+                &vertex_binding_description,
                 static_cast<uint8_t>(inputAttributeDescription.size()),
                 inputAttributeDescription.data(),
                 pipelineOptions
@@ -569,7 +570,7 @@ namespace MFA::UISystem
 
         // Setup desired Vulkan state
         // Bind pipeline and descriptor sets:
-        RF::BindDrawPipeline(drawPass, state->drawPipeline);
+        RF::BindPipeline(drawPass, state->drawPipeline);
         RF::BindDescriptorSet(
             drawPass,
             RenderFrontend::DescriptorSetType::PerFrame,
@@ -625,7 +626,7 @@ namespace MFA::UISystem
                 );
                 RF::BindVertexBuffer(
                     drawPass,
-                    *meshBuffer->verticesBuffer
+                    *meshBuffer->verticesBuffer[0]
                 );
 
                 // Setup viewport:
@@ -701,8 +702,7 @@ namespace MFA::UISystem
                                 pcmd->ElemCount,
                                 1,
                                 pcmd->IdxOffset + global_idx_offset,
-                                pcmd->VtxOffset + global_vtx_offset,
-                                0
+                                pcmd->VtxOffset + global_vtx_offset
                             );
                         }
                     }
@@ -925,30 +925,8 @@ namespace MFA::UISystem
 
     void Shutdown()
     {
-        //MFA_ASSERT(state->meshBuffers.size() == state->meshBuffersValidationStatus.size());
-        //for (auto i = 0; i < state->meshBuffersValidationStatus.size(); i++)
-        //{
-        //    if (true == state->meshBuffersValidationStatus[i])
-        //    {
-        //        RF::DestroyMeshBuffers(state->meshBuffers[i]);
-        //        state->meshBuffersValidationStatus[i] = false;
-        //    }
-        //}
-        //RF::DestroyTexture(state->fontTexture);
-        //Importer::FreeTexture(state->fontTexture.cpuTexture());
-
         RF::DestroyDescriptorPool(state->descriptorPool);
-
         RF::DestroyPipelineGroup(state->drawPipeline);
-        // TODO We can remove shader after creating pipelines
-        //RF::DestroyShader(state->fragmentShader);
-        //Importer::FreeShader(state->fragmentShader.cpuShader());
-        //RF::DestroyShader(state->vertexShader);
-        //Importer::FreeShader(state->vertexShader.cpuShader());
-
-        RF::DestroyDescriptorSetLayout(state->descriptorSetLayout);
-        //RF::DestroySampler(state->fontSampler);
-
 #ifdef __DESKTOP__
         RF::RemoveEventWatch(state->eventWatchId);
 #endif

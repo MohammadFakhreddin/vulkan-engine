@@ -699,11 +699,9 @@ namespace MFA::Importer
         // Extracting textures
         if (false == gltfModel.textures.empty())
         {
-            JS::ThreadNumber nextThreadNumber = 0;
-            JS::ThreadNumber const availableThreads = JS::GetNumberOfAvailableThreads();
             for (auto const & texture : gltfModel.textures)
             {
-                JS::AssignTask(nextThreadNumber, [&texture, &gltfModel, &directoryPath, &resultTextureQueue]()->void
+                JS::AutoAssignTask([&texture, &gltfModel, &directoryPath, &resultTextureQueue]()->void
                 {
                     AS::SamplerConfig sampler{};
                     sampler.isValid = false;
@@ -738,11 +736,6 @@ namespace MFA::Importer
                     };
                     while (resultTextureQueue.TryToPush(item) == false);
                 });
-                ++nextThreadNumber;
-                if (nextThreadNumber >= availableThreads)
-                {
-                    nextThreadNumber = 0;
-                }
             }
 
             JS::WaitForThreadsToFinish();

@@ -146,7 +146,7 @@ namespace MFA
         }
         if (mBufferDirtyCounter > 0)
         {
-            RF::UpdateUniformBuffer(
+            RF::UpdateBuffer(
                *mSkinsJointsBuffer->buffers[drawPass.frameIndex],
                mCachedSkinsJointsBlob->memory
             );

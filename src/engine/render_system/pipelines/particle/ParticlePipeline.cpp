@@ -10,6 +10,10 @@
 #include "tools/Importer.hpp"
 #include "engine/asset_system/AssetParticleMesh.hpp"
 #include "engine/render_system/RenderTypes.hpp"
+#include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
+#include "engine/job_system/JobSystem.hpp"
+
+#define CAST_ESSENCE(essence) static_cast<ParticleEssence *>(essence)
 
 namespace MFA
 {
@@ -19,7 +23,7 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     ParticlePipeline::ParticlePipeline(Scene * attachedScene)
-        : BasePipeline(1000)                // TODO How many sets do we need ?
+        : BasePipeline(1000) // ! per essence                // TODO How many sets do we need ?
         , mAttachedScene(attachedScene)
     {}
 
@@ -78,16 +82,45 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ParticlePipeline::PreRender(RT::CommandRecordState & drawPass, float const deltaTime)
+    void ParticlePipeline::PreRender(
+        RT::CommandRecordState & recordState,
+        float const deltaTimeInSec
+    )
     {
-        BasePipeline::PreRender(drawPass, deltaTime);
+        BasePipeline::PreRender(recordState, deltaTimeInSec);
+
+        for (auto & essenceAndVariants : mEssenceAndVariantsMap)
+        {
+            JS::AutoAssignTask([&recordState, deltaTimeInSec, &essenceAndVariants]()->void{
+                auto * essence = essenceAndVariants.second.essence.get();
+                auto const & variants = essenceAndVariants.second.variants;
+                CAST_ESSENCE(essence)->update(recordState, deltaTimeInSec, variants);
+            });
+        }
+        JS::WaitForThreadsToFinish();
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void ParticlePipeline::Render(RT::CommandRecordState & drawPass, float const deltaTime)
+    void ParticlePipeline::Render(
+        RT::CommandRecordState & recordState,
+        float const deltaTime
+    )
     {
-        BasePipeline::Render(drawPass, deltaTime);
+        BasePipeline::Render(recordState, deltaTime);
+
+        RF::BindPipeline(recordState, mPipeline);
+
+        RF::BindDescriptorSet(
+            recordState,
+            RF::DescriptorSetType::PerFrame,
+            mPerFrameDescriptorSetGroup
+        );
+
+        for (auto * essence : mAllEssencesList)
+        {
+            CAST_ESSENCE(essence)->draw(recordState, deltaTime);
+        }
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -97,7 +130,13 @@ namespace MFA
       std::shared_ptr<AssetSystem::MeshBase> const & cpuMesh
     )
     {
-        return std::make_shared<ParticleEssence>(gpuModel, cpuMesh->getIndexCount());
+        MFA_ASSERT(gpuModel != nullptr);
+        MFA_ASSERT(cpuMesh != nullptr);
+        auto const particleMesh = static_pointer_cast<Mesh>(cpuMesh);
+        return std::make_shared<ParticleEssence>(
+            gpuModel,
+            particleMesh
+        );
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -164,7 +203,7 @@ namespace MFA
         mPerFrameDescriptorSetGroup = RF::CreateDescriptorSets(
             mDescriptorPool,
             RF::GetMaxFramesPerFlight(),
-            mPerFrameDescriptorSetLayout
+            mPerFrameDescriptorSetLayout->descriptorSetLayout
         );
 
         auto const & cameraBuffers = mAttachedScene->GetCameraBuffers();
@@ -193,12 +232,12 @@ namespace MFA
     void ParticlePipeline::createPerEssenceDescriptorSets(ParticleEssence * essence) const
     {
         MFA_ASSERT(essence != nullptr);
-        auto const & textures = essence->GetGpuModel()->textures;
+        auto const & textures = essence->getGpuModel()->textures;
 
-        auto const & descriptorSetGroup = essence->CreateDescriptorSetGroup(
+        auto const & descriptorSetGroup = essence->createDescriptorSetGroup(
             mDescriptorPool,
             RF::GetMaxFramesPerFlight(),
-            mPerEssenceDescriptorSetLayout
+            *mPerEssenceDescriptorSetLayout
         );
 
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
@@ -254,11 +293,19 @@ namespace MFA
 
         std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuFragmentShader.get() };
 
-        VkVertexInputBindingDescription vertexInputBindingDescription{
+        std::vector<VkVertexInputBindingDescription> vertexInputBindingDescriptions {};
+        vertexInputBindingDescriptions.emplace_back(VkVertexInputBindingDescription {
             .binding = 0,
             .stride = sizeof(Vertex),
             .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
-        };
+        });
+        vertexInputBindingDescriptions.emplace_back(VkVertexInputBindingDescription {
+            .binding = 1,
+            .stride = sizeof(PerInstanceData),
+            .inputRate = VK_VERTEX_INPUT_RATE_INSTANCE
+        });
+
+        // TODO We can add some instancing offset or other stuff
 
         // TODO We need something other than AS::MeshVertex here to save bandwidth
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
@@ -267,12 +314,62 @@ namespace MFA
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
-            .format = VK_FORMAT_R32G32B32_SFLOAT
+            .format = VK_FORMAT_R32G32B32_SFLOAT,
+            .offset = offsetof(Vertex, position)
         });
 
-        // TODO Complete pipeline
+        // Texture index
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32_SINT,
+            .offset = offsetof(Vertex, textureIndex)
+        });
 
+        // UV
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = offsetof(Vertex, uv)
+        });
+
+        // Color
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+            .offset = offsetof(Vertex, color)
+        });
+
+        MFA_ASSERT(mPipeline.isValid() == false);
+
+        RT::CreateGraphicPipelineOptions pipelineOptions{};
+        pipelineOptions.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+        pipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
+        pipelineOptions.cullMode = VK_CULL_MODE_NONE;
+        pipelineOptions.colorBlendAttachments.blendEnable = VK_TRUE;
+        
+        std::vector<VkDescriptorSetLayout> descriptorSetLayouts {
+            mPerFrameDescriptorSetLayout->descriptorSetLayout,
+            mPerEssenceDescriptorSetLayout->descriptorSetLayout,
+        };
+
+        mPipeline = RF::CreatePipeline(
+            RF::GetDisplayRenderPass()->GetVkRenderPass(),
+            static_cast<uint8_t>(shaders.size()),
+            shaders.data(),
+            static_cast<uint32_t>(descriptorSetLayouts.size()),
+            descriptorSetLayouts.data(),
+            static_cast<uint32_t>(vertexInputBindingDescriptions.size()),
+            vertexInputBindingDescriptions.data(),
+            static_cast<uint8_t>(inputAttributeDescriptions.size()),
+            inputAttributeDescriptions.data(),
+            pipelineOptions
+        );
     }
+
+    // TODO Use instancing to draw particles!
 
     //-------------------------------------------------------------------------------------------------
 

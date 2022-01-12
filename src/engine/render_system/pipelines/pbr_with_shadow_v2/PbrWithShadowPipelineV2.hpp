@@ -130,9 +130,7 @@ namespace MFA
         void createPerEssenceDescriptorSetLayout();
 
         void createPerVariantDescriptorSetLayout();
-
-        void destroyDescriptorSetLayout() const;
-
+        
         void createDisplayPassPipeline();
 
         void createDirectionalLightShadowPassPipeline();
@@ -201,9 +199,9 @@ namespace MFA
         };
         std::vector<OcclusionQueryData> mOcclusionQueryDataList{}; // We need one per frame
 
-        VkDescriptorSetLayout mPerFrameDescriptorSetLayout{};
-        VkDescriptorSetLayout mPerEssenceDescriptorSetLayout{};
-        VkDescriptorSetLayout mPerVariantDescriptorSetLayout{};
+        std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerFrameDescriptorSetLayout{};
+        std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerEssenceDescriptorSetLayout{};
+        std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerVariantDescriptorSetLayout{};
 
         std::vector<VkDescriptorSetLayout> mDescriptorSetLayouts{};
 

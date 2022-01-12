@@ -55,6 +55,8 @@ public:
     [[nodiscard]]
     AS::PBR::MeshData const * getMeshData() const;
 
+    void bindVertexBuffer(RT::CommandRecordState const & recordState) const override;
+
 private:
 
     std::shared_ptr<RT::UniformBufferGroup> mPrimitivesBuffer = nullptr;

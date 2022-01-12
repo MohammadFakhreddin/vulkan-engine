@@ -61,7 +61,7 @@ namespace MFA
             MFA_ASSERT(variant != nullptr);
             auto * essence = variant->GetEssence();
             MFA_ASSERT(essence != nullptr);
-            auto * gpuModel = essence->GetGpuModel();
+            auto * gpuModel = essence->getGpuModel();
             MFA_ASSERT(gpuModel != nullptr);
 
             auto const model = RC::AcquireForCpu(gpuModel->address.c_str());

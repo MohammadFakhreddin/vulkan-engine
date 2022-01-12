@@ -13,17 +13,24 @@ namespace MFA::AssetSystem::Particle
         Color color{};
     };
 
+    struct PerInstanceData
+    {
+        float model[16] {};
+    };
+
     class Mesh final : public MeshBase
     {
     public:
 
-        explicit Mesh();
+        explicit Mesh(uint32_t maxInstanceCount_);
         ~Mesh() override;
 
         Mesh(Mesh const &) noexcept = delete;
         Mesh(Mesh &&) noexcept = delete;
         Mesh & operator= (Mesh const & rhs) noexcept = delete;
         Mesh & operator= (Mesh && rhs) noexcept = delete;
+
+        uint32_t const maxInstanceCount;
 
     };
 

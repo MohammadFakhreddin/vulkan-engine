@@ -75,10 +75,26 @@ namespace MFA
         {
             return;
         }
+
+        // Removing essence variants
         for (auto & variant : findResult->second.variants)
         {
             RemoveVariant(*variant);
         }
+
+        // Removing essence from essenceList
+        bool foundEssenceInList = false;
+        for (uint32_t i = 0; i < static_cast<uint32_t>(mAllEssencesList.size()); ++i)
+        {
+            if (mAllEssencesList[i] == findResult->second.essence.get())
+            {
+                mAllEssencesList.erase(mAllEssencesList.begin() + i);
+                foundEssenceInList = true;
+                break;
+            }
+        }
+        MFA_ASSERT(foundEssenceInList == true);
+
         mEssenceAndVariantsMap.erase(findResult);
     }
 
@@ -145,7 +161,7 @@ namespace MFA
         MFA_ASSERT(foundInAllVariantsList == true);
         
         // Removing from essence and variants' list
-        auto const findResult = mEssenceAndVariantsMap.find(variant.GetEssence()->GetNameOrAddress());
+        auto const findResult = mEssenceAndVariantsMap.find(variant.GetEssence()->getNameOrAddress());
         MFA_ASSERT(findResult != mEssenceAndVariantsMap.end());
         auto & variants = findResult->second.variants;
         for (int i = static_cast<int>(variants.size()) - 1; i >= 0; --i)
@@ -194,12 +210,13 @@ namespace MFA
     bool BasePipeline::addEssence(std::shared_ptr<EssenceBase> const & essence)
     {
         MFA_ASSERT(mIsInitialized == true);
-        auto const & address = essence->GetGpuModel()->address;
+        auto const & address = essence->getGpuModel()->address;
 
         bool success = false;
         if(MFA_VERIFY(mEssenceAndVariantsMap.contains(address) == false))
         {
             mEssenceAndVariantsMap[address] = EssenceAndVariants(essence);
+            mAllEssencesList.emplace_back(essence.get());
             success = true;
         }
         return success;

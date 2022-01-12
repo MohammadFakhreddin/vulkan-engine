@@ -95,10 +95,10 @@ namespace MFA
         createPerEssenceDescriptorSetLayout();
         createPerVariantDescriptorSetLayout();
 
-        mDescriptorSetLayouts = {
-            mPerFrameDescriptorSetLayout,
-            mPerEssenceDescriptorSetLayout,
-            mPerVariantDescriptorSetLayout
+        mDescriptorSetLayouts = std::vector<VkDescriptorSetLayout>{
+            mPerFrameDescriptorSetLayout->descriptorSetLayout,
+            mPerEssenceDescriptorSetLayout->descriptorSetLayout,
+            mPerVariantDescriptorSetLayout->descriptorSetLayout
         };
 
         createDisplayPassPipeline();
@@ -138,8 +138,7 @@ namespace MFA
         mDirectionalLightShadowRenderPass->Shutdown();
         
         destroyPipeline();
-        destroyDescriptorSetLayout();
-        
+
         BasePipeline::Shutdown();
 
     }
@@ -197,7 +196,7 @@ namespace MFA
         auto const availableThreadCount = JS::GetNumberOfAvailableThreads();
         for (uint32_t threadNumber = 0; threadNumber < availableThreadCount; ++threadNumber)
         {
-            JS::AssignTask(threadNumber, [this, &recordState, deltaTimeInSec, threadNumber, availableThreadCount]()->void
+            JS::AssignTaskManually(threadNumber, [this, &recordState, deltaTimeInSec, threadNumber, availableThreadCount]()->void
             {
                 for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mAllVariantsList.size()); i += availableThreadCount)
                 {
@@ -272,7 +271,7 @@ namespace MFA
         mPerFrameDescriptorSetGroup = RF::CreateDescriptorSets(
             mDescriptorPool,
             RF::GetMaxFramesPerFlight(),
-            mPerFrameDescriptorSetLayout
+            *mPerFrameDescriptorSetLayout
         );
 
         auto const & cameraBufferCollection = mAttachedScene->GetCameraBuffers();
@@ -346,12 +345,12 @@ namespace MFA
 
     void PBRWithShadowPipelineV2::createEssenceDescriptorSets(PBR_Essence & essence) const
     {
-        auto const & textures = essence.GetGpuModel()->textures;
+        auto const & textures = essence.getGpuModel()->textures;
 
-        auto const & descriptorSetGroup = essence.CreateDescriptorSetGroup(
+        auto const & descriptorSetGroup = essence.createDescriptorSetGroup(
             mDescriptorPool,
             RF::GetMaxFramesPerFlight(),
-            mPerEssenceDescriptorSetLayout
+            *mPerEssenceDescriptorSetLayout
         );
 
         auto & primitiveBuffer = essence.getPrimitivesBuffer();
@@ -414,7 +413,7 @@ namespace MFA
         auto const descriptorSetGroup = variant.CreateDescriptorSetGroup(
             mDescriptorPool,
             RF::GetMaxFramesPerFlight(),
-            mPerVariantDescriptorSetLayout
+            *mPerVariantDescriptorSetLayout
         );
         auto const * storedSkinJointsBuffer = variant.GetSkinJointsBuffer();
 
@@ -510,7 +509,7 @@ namespace MFA
 
     void PBRWithShadowPipelineV2::performDepthPrePass(RT::CommandRecordState & recordState)
     {
-        RF::BindDrawPipeline(recordState, mDepthPassPipeline);
+        RF::BindPipeline(recordState, mDepthPassPipeline);
         RF::BindDescriptorSet(
             recordState,
             RenderFrontend::DescriptorSetType::PerFrame,
@@ -538,7 +537,7 @@ namespace MFA
                 continue;
             }
 
-            essence->BindAllRenderRequiredData(recordState);
+            essence->bindAllRenderRequiredData(recordState);
 
             for (auto & variant : variantsList)
             {
@@ -588,7 +587,7 @@ namespace MFA
             return;
         }
 
-        RF::BindDrawPipeline(recordState, mDirectionalLightShadowPipeline);
+        RF::BindPipeline(recordState, mDirectionalLightShadowPipeline);
         RF::BindDescriptorSet(
             recordState,
             RenderFrontend::DescriptorSetType::PerFrame,
@@ -621,7 +620,7 @@ namespace MFA
                 continue;
             }
 
-            essence->BindAllRenderRequiredData(recordState);
+            essence->bindAllRenderRequiredData(recordState);
 
             for (auto & variant : variantsList)
             {
@@ -663,7 +662,7 @@ namespace MFA
             return;
         }
 
-        RF::BindDrawPipeline(recordState, mPointLightShadowPipeline);
+        RF::BindPipeline(recordState, mPointLightShadowPipeline);
         RF::BindDescriptorSet(
             recordState,
             RenderFrontend::DescriptorSetType::PerFrame,
@@ -705,7 +704,7 @@ namespace MFA
                     continue;
                 }
 
-                essence->BindAllRenderRequiredData(recordState);
+                essence->bindAllRenderRequiredData(recordState);
 
                 for (auto & variant : variantsList)
                 {
@@ -754,7 +753,7 @@ namespace MFA
             10000
         );
 
-        RF::BindDrawPipeline(recordState, mOcclusionQueryPipeline);
+        RF::BindPipeline(recordState, mOcclusionQueryPipeline);
         RF::BindDescriptorSet(
             recordState,
             RenderFrontend::DescriptorSetType::PerFrame,
@@ -786,7 +785,7 @@ namespace MFA
                 continue;
             }
 
-            essence->BindAllRenderRequiredData(recordState);
+            essence->bindAllRenderRequiredData(recordState);
 
             for (auto & variant : variantsList)
             {
@@ -832,7 +831,7 @@ namespace MFA
 
     void PBRWithShadowPipelineV2::performDisplayPass(RT::CommandRecordState & recordState)
     {
-        RF::BindDrawPipeline(recordState, mDisplayPassPipeline);
+        RF::BindPipeline(recordState, mDisplayPassPipeline);
         RF::BindDescriptorSet(
             recordState,
             RenderFrontend::DescriptorSetType::PerFrame,
@@ -859,7 +858,7 @@ namespace MFA
                 continue;
             }
 
-            essence->BindAllRenderRequiredData(recordState);
+            essence->bindAllRenderRequiredData(recordState);
 
             for (auto & variant : variantsList)
             {
@@ -1011,20 +1010,6 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::destroyDescriptorSetLayout() const
-    {
-        MFA_VK_VALID_ASSERT(mPerFrameDescriptorSetLayout);
-        RF::DestroyDescriptorSetLayout(mPerFrameDescriptorSetLayout);
-
-        MFA_VK_VALID_ASSERT(mPerEssenceDescriptorSetLayout);
-        RF::DestroyDescriptorSetLayout(mPerEssenceDescriptorSetLayout);
-
-        MFA_VK_VALID_ASSERT(mPerVariantDescriptorSetLayout);
-        RF::DestroyDescriptorSetLayout(mPerVariantDescriptorSetLayout);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
     void PBRWithShadowPipelineV2::createDisplayPassPipeline()
     {
         // Vertex shader
@@ -1155,7 +1140,8 @@ namespace MFA
             shaders.data(),
             static_cast<uint32_t>(mDescriptorSetLayouts.size()),
             mDescriptorSetLayouts.data(),
-            vertexInputBindingDescription,
+            1,
+            &vertexInputBindingDescription,
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
             inputAttributeDescriptions.data(),
             options
@@ -1234,7 +1220,8 @@ namespace MFA
             shaders.data(),
             static_cast<uint32_t>(mDescriptorSetLayouts.size()),
             mDescriptorSetLayouts.data(),
-            vertexInputBindingDescription,
+            1,
+            &vertexInputBindingDescription,
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
             inputAttributeDescriptions.data(),
             graphicPipelineOptions
@@ -1318,7 +1305,8 @@ namespace MFA
             shaders.data(),
             static_cast<uint32_t>(mDescriptorSetLayouts.size()),
             mDescriptorSetLayouts.data(),
-            vertexInputBindingDescription,
+            1,
+            &vertexInputBindingDescription,
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
             inputAttributeDescriptions.data(),
             graphicPipelineOptions
@@ -1408,7 +1396,8 @@ namespace MFA
             shaders.data(),
             static_cast<uint32_t>(mDescriptorSetLayouts.size()),
             mDescriptorSetLayouts.data(),
-            vertexInputBindingDescription,
+            1,
+            &vertexInputBindingDescription,
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
             inputAttributeDescriptions.data(),
             graphicPipelineOptions
@@ -1522,7 +1511,8 @@ namespace MFA
             shaders.data(),
             static_cast<uint32_t>(mDescriptorSetLayouts.size()),
             mDescriptorSetLayouts.data(),
-            vertexInputBindingDescription,
+            1,
+            &vertexInputBindingDescription,
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
             inputAttributeDescriptions.data(),
             graphicPipelineOptions

@@ -38,11 +38,23 @@ MFA::RT::SamplerGroup::~SamplerGroup()
 //-------------------------------------------------------------------------------------------------
 
 MFA::RT::MeshBuffers::MeshBuffers(
-    std::shared_ptr<BufferAndMemory> verticesBuffer_,
+    std::vector<std::shared_ptr<BufferAndMemory>> verticesBuffer_,
     std::shared_ptr<BufferAndMemory> indicesBuffer_
 )
     : verticesBuffer(std::move(verticesBuffer_))
     , indicesBuffer(std::move(indicesBuffer_))
+{}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RenderTypes::MeshBuffers::MeshBuffers(
+    std::shared_ptr<BufferAndMemory> verticesBuffer_,
+    std::shared_ptr<BufferAndMemory> indicesBuffer_
+)
+    : MeshBuffers(
+        std::vector{ std::move(verticesBuffer_) },
+        std::move(indicesBuffer_)
+    )
 {}
 
 //-------------------------------------------------------------------------------------------------
@@ -98,13 +110,11 @@ MFA::RT::GpuTexture::~GpuTexture() = default;
 //-------------------------------------------------------------------------------------------------
 
 MFA::RT::GpuModel::GpuModel(
-    GpuModelId const id_,
     std::string address_,
     std::shared_ptr<MeshBuffers> meshBuffers_,
     std::vector<std::shared_ptr<GpuTexture>> textures_
 )
-    : id(id_)
-    , address(std::move(address_))
+    : address(std::move(address_))
     , meshBuffers(std::move(meshBuffers_))
     , textures(std::move(textures_))
 {}
@@ -230,5 +240,20 @@ MFA::RT::ColorImageGroup::ColorImageGroup(
 //-------------------------------------------------------------------------------------------------
 
 MFA::RT::ColorImageGroup::~ColorImageGroup() = default;
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RenderTypes::DescriptorSetLayoutGroup::DescriptorSetLayoutGroup(VkDescriptorSetLayout descriptorSetLayout_)
+    : descriptorSetLayout(descriptorSetLayout_)
+{
+    MFA_VK_VALID_ASSERT(descriptorSetLayout);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RenderTypes::DescriptorSetLayoutGroup::~DescriptorSetLayoutGroup()
+{
+    RF::DestroyDescriptorSetLayout(descriptorSetLayout);
+}
 
 //-------------------------------------------------------------------------------------------------

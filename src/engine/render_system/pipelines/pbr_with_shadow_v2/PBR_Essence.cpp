@@ -56,7 +56,7 @@ MFA::PBR_Essence::PBR_Essence(
                 }
             }
 
-            RF::UpdateUniformBuffer(*mPrimitivesBuffer->buffers[0], primitiveData->memory);
+            RF::UpdateBuffer(*mPrimitivesBuffer->buffers[0], primitiveData->memory);
         }
     }
     {// Animations
@@ -101,6 +101,13 @@ int MFA::PBR_Essence::getAnimationIndex(char const * name) const noexcept {
 MeshData const * MFA::PBR_Essence::getMeshData() const
 {
     return mMeshData.get();
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::PBR_Essence::bindVertexBuffer(RT::CommandRecordState const & recordState) const
+{
+    RF::BindVertexBuffer(recordState, *mGpuModel->meshBuffers->verticesBuffer[0]);
 }
 
 //-------------------------------------------------------------------------------------------------

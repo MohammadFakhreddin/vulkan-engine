@@ -1,5 +1,7 @@
 #include "RendererComponent.hpp"
 
+#include <utility>
+
 #include "engine/render_system/pipelines/BasePipeline.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
 #include "engine/scene_manager/Scene.hpp"
@@ -30,7 +32,7 @@ void MFA::RendererComponent::serialize(nlohmann::json & jsonObject) const
     MFA_ASSERT(variant != nullptr);
     auto const * essence = variant->GetEssence();
     MFA_ASSERT(essence != nullptr);
-    auto const * gpuModel = essence->GetGpuModel();
+    auto const * gpuModel = essence->getGpuModel();
     MFA_ASSERT(gpuModel != nullptr);
     jsonObject["address"] = gpuModel->address;
     jsonObject["pipeline"] = mPipeline->GetName();
@@ -85,7 +87,7 @@ MFA::RendererComponent::RendererComponent() = default;
 
 MFA::RendererComponent::RendererComponent(BasePipeline & pipeline, std::weak_ptr<VariantBase> variant)
     : mPipeline(&pipeline)
-    , mVariant(variant)
+    , mVariant(std::move(variant))
 {}
 
 //-------------------------------------------------------------------------------------------------

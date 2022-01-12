@@ -108,6 +108,7 @@ namespace MFA
         };
         std::unordered_map<std::string, EssenceAndVariants> mEssenceAndVariantsMap;
         std::vector<VariantBase *> mAllVariantsList{};
+        std::vector<EssenceBase *> mAllEssencesList{};
         VkDescriptorPool mDescriptorPool{};
         uint32_t mMaxSets;
 

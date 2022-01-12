@@ -4,7 +4,6 @@
 #include "engine/BedrockMatrix.hpp"
 #include "engine/asset_system/AssetParticleMesh.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
-#include "engine/render_system/RenderFrontend.hpp"
 
 namespace MFA
 {
@@ -14,7 +13,6 @@ namespace MFA
 
     ParticleVariant::ParticleVariant(ParticleEssence const * essence)
         : VariantBase(essence)
-        , mIndicesCount(essence->getIndicesCount())
     {}
 
     //-------------------------------------------------------------------------------------------------
@@ -31,13 +29,6 @@ namespace MFA
             return true;
         }
         return false;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void ParticleVariant::Draw(RT::CommandRecordState const & recordState) const
-    {
-        RF::DrawIndexed(recordState, mIndicesCount);
     }
 
     //-------------------------------------------------------------------------------------------------

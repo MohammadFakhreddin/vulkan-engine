@@ -44,7 +44,7 @@ namespace MFA
         RT::DescriptorSetGroup const & CreateDescriptorSetGroup(
             VkDescriptorPool descriptorPool,
             uint32_t descriptorSetCount,
-            VkDescriptorSetLayout descriptorSetLayout
+            RT::DescriptorSetLayoutGroup const & descriptorSetLayout
         );
 
         [[nodiscard]]

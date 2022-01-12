@@ -69,7 +69,7 @@ namespace MFA
         MFA_ASSERT(variant != nullptr);
         auto const * essence = variant->GetEssence();
         MFA_ASSERT(essence != nullptr);
-        auto const * gpuModel = essence->GetGpuModel();
+        auto const * gpuModel = essence->getGpuModel();
         MFA_ASSERT(gpuModel != nullptr);
         entity->AddComponent<MeshRendererComponent>(*mPipeline, *gpuModel);
     }

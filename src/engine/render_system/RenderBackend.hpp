@@ -369,13 +369,14 @@ namespace MFA::RenderBackend
         VkDevice device,
         uint8_t shaderStagesCount,
         RT::GpuShader const ** shaderStages,
-        VkVertexInputBindingDescription vertexBindingDescription,
+        uint32_t vertexBindingDescriptionCount,
+        VkVertexInputBindingDescription const * vertexBindingDescriptionData,
         uint32_t attributeDescriptionCount,
         VkVertexInputAttributeDescription * attributeDescriptionData,
         VkExtent2D swapChainExtent,
         VkRenderPass renderPass,
         uint32_t descriptorSetLayoutCount,
-        VkDescriptorSetLayout * descriptorSetLayouts,
+        VkDescriptorSetLayout const * descriptorSetLayouts,
         RT::CreateGraphicPipelineOptions const & options
     );
 
@@ -387,7 +388,7 @@ namespace MFA::RenderBackend
     void DestroyPipelineGroup(VkDevice device, RT::PipelineGroup & graphicPipelineGroup);
 
     [[nodiscard]]
-    VkDescriptorSetLayout CreateDescriptorSetLayout(
+    std::shared_ptr<RT::DescriptorSetLayoutGroup> CreateDescriptorSetLayout(
         VkDevice device,
         uint8_t bindings_count,
         VkDescriptorSetLayoutBinding * bindings
@@ -437,7 +438,7 @@ namespace MFA::RenderBackend
         std::shared_ptr<RT::BufferAndMemory> * outBuffers
     );
 
-    void UpdateBufferGroup(
+    void UpdateBuffer(
         VkDevice device,
         RT::BufferAndMemory const & bufferGroup,
         CBlob data
@@ -527,6 +528,7 @@ namespace MFA::RenderBackend
     void BindVertexBuffer(
         VkCommandBuffer commandBuffer,
         RT::BufferAndMemory const & vertexBuffer,
+        uint32_t firstBinding = 0,
         VkDeviceSize offset = 0
     );
 

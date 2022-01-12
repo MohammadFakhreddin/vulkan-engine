@@ -370,7 +370,7 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    VkDescriptorSetLayout CreateDescriptorSetLayout(
+    std::shared_ptr<RT::DescriptorSetLayoutGroup> CreateDescriptorSetLayout(
         uint8_t const bindingsCount,
         VkDescriptorSetLayoutBinding * bindings
     )
@@ -399,10 +399,11 @@ namespace MFA::RenderFrontend
         VkRenderPass vkRenderPass,
         uint8_t gpuShadersCount,
         RT::GpuShader const ** gpuShaders,
-        uint32_t descriptorLayoutsCount,
-        VkDescriptorSetLayout * descriptorSetLayouts,
-        VkVertexInputBindingDescription const & vertexBindingDescription,
-        uint32_t inputAttributeDescriptionCount,
+        uint32_t const descriptorLayoutsCount,
+        VkDescriptorSetLayout const * descriptorSetLayouts,
+        uint32_t const vertexBindingDescriptionCount,
+        VkVertexInputBindingDescription const * vertexBindingDescriptionData,
+        uint32_t const inputAttributeDescriptionCount,
         VkVertexInputAttributeDescription * inputAttributeDescriptionData,
         RT::CreateGraphicPipelineOptions const & options
     )
@@ -417,8 +418,9 @@ namespace MFA::RenderFrontend
             state->logicalDevice.device,
             gpuShadersCount,
             gpuShaders,
-            vertexBindingDescription,
-            static_cast<uint32_t>(inputAttributeDescriptionCount),
+            vertexBindingDescriptionCount,
+            vertexBindingDescriptionData,
+            inputAttributeDescriptionCount,
             inputAttributeDescriptionData,
             extent2D,
             vkRenderPass,
@@ -437,6 +439,22 @@ namespace MFA::RenderFrontend
         RB::DestroyPipelineGroup(
             state->logicalDevice.device,
             drawPipeline
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    RT::DescriptorSetGroup CreateDescriptorSets(
+        VkDescriptorPool descriptorPool,
+        uint32_t const descriptorSetCount,
+        RT::DescriptorSetLayoutGroup const & descriptorSetLayout
+    )
+    {
+        return RB::CreateDescriptorSet(
+            state->logicalDevice.device,
+            descriptorPool,
+            descriptorSetLayout.descriptorSetLayout,
+            descriptorSetCount
         );
     }
 
@@ -487,21 +505,7 @@ namespace MFA::RenderFrontend
         CBlob const data
     )
     {
-        UpdateStorageBuffer(*bufferCollection.buffers[recordState.frameIndex], data);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void UpdateUniformBuffer(
-        RT::BufferAndMemory const & buffer,
-        CBlob const data
-    )
-    {
-        RB::UpdateBufferGroup(
-            state->logicalDevice.device,
-            buffer,
-            data
-        );
+        UpdateBuffer(*bufferCollection.buffers[recordState.frameIndex], data);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -531,9 +535,9 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    void UpdateStorageBuffer(RT::BufferAndMemory const & buffer, CBlob data)
+    void UpdateBuffer(RT::BufferAndMemory const & buffer, CBlob data)
     {
-        RB::UpdateBufferGroup(
+        RB::UpdateBuffer(
             state->logicalDevice.device,
             buffer,
             data
@@ -571,8 +575,16 @@ namespace MFA::RenderFrontend
     std::shared_ptr<RT::MeshBuffers> CreateMeshBuffers(AS::MeshBase const & mesh)
     {
         MFA_ASSERT(mesh.isValid());
+
+        std::vector<std::shared_ptr<RT::BufferAndMemory>> vertexBuffers {};
+        MFA_ASSERT(mesh.requiredVertexBufferCount > 0);
+        for (uint32_t i = 0; i < mesh.requiredVertexBufferCount; ++i)
+        {
+            vertexBuffers.emplace_back(CreateVertexBuffer(mesh.getVertexBuffer()->memory));
+        }
+
         return std::make_shared<RT::MeshBuffers>(
-            CreateVertexBuffer(mesh.getVertexBuffer()->memory),
+            vertexBuffers,
             CreateIndexBuffer(mesh.getIndexBuffer()->memory)
         );
     }
@@ -630,8 +642,7 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     std::shared_ptr<RT::GpuModel> CreateGpuModel(
-        AS::Model * modelAsset,
-        RT::GpuModelId const uniqueId,
+        AS::Model const * modelAsset,
         char const * address
     )
     {
@@ -644,7 +655,6 @@ namespace MFA::RenderFrontend
             textures.emplace_back(CreateTexture(*textureAsset));
         }
         return std::make_shared<RT::GpuModel>(
-            uniqueId,
             address,
             std::move(meshBuffers),
             std::move(textures)
@@ -674,7 +684,7 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    void BindDrawPipeline(
+    void BindPipeline(
         RT::CommandRecordState & drawPass,
         RT::PipelineGroup & pipeline
     )
@@ -749,6 +759,7 @@ namespace MFA::RenderFrontend
     void BindVertexBuffer(
         RT::CommandRecordState const & drawPass,
         RT::BufferAndMemory const & vertexBuffer,
+        uint32_t const firstBinding,
         VkDeviceSize const offset
     )
     {
@@ -756,6 +767,7 @@ namespace MFA::RenderFrontend
         RB::BindVertexBuffer(
             GetGraphicCommandBuffer(drawPass),
             vertexBuffer,
+            firstBinding,
             offset
         );
     }

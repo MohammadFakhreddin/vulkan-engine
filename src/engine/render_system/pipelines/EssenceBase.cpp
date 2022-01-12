@@ -15,30 +15,30 @@ MFA::EssenceBase::~EssenceBase() = default;
 
 //-------------------------------------------------------------------------------------------------
 
-std::string const & MFA::EssenceBase::GetNameOrAddress() const
+std::string const & MFA::EssenceBase::getNameOrAddress() const
 {
     return mGpuModel->address;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RT::GpuModel * MFA::EssenceBase::GetGpuModel() const {
+MFA::RT::GpuModel * MFA::EssenceBase::getGpuModel() const {
     return mGpuModel.get();
 }
 
 //-------------------------------------------------------------------------------------------------
   
-MFA::RT::DescriptorSetGroup const & MFA::EssenceBase::CreateDescriptorSetGroup(
-    const VkDescriptorPool descriptorPool,
-    uint32_t const descriptorSetCount,
-    const VkDescriptorSetLayout descriptorSetLayout
+MFA::RT::DescriptorSetGroup const & MFA::EssenceBase::createDescriptorSetGroup(
+    VkDescriptorPool descriptorPool,
+    uint32_t descriptorSetCount,
+    RT::DescriptorSetLayoutGroup const & descriptorSetLayoutGroup
 )
 {
     MFA_ASSERT(mIsDescriptorSetGroupValid == false);
     mDescriptorSetGroup = RF::CreateDescriptorSets(
         descriptorPool,
         descriptorSetCount,
-        descriptorSetLayout
+        descriptorSetLayoutGroup
     );
     mIsDescriptorSetGroupValid = true;
     return mDescriptorSetGroup;
@@ -46,7 +46,7 @@ MFA::RT::DescriptorSetGroup const & MFA::EssenceBase::CreateDescriptorSetGroup(
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RT::DescriptorSetGroup const & MFA::EssenceBase::GetDescriptorSetGroup() const
+MFA::RT::DescriptorSetGroup const & MFA::EssenceBase::getDescriptorSetGroup() const
 {
     MFA_ASSERT(mIsDescriptorSetGroupValid == true);
     return mDescriptorSetGroup;
@@ -54,21 +54,14 @@ MFA::RT::DescriptorSetGroup const & MFA::EssenceBase::GetDescriptorSetGroup() co
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::EssenceBase::BindVertexBuffer(RT::CommandRecordState const & recordState) const
-{
-    RF::BindVertexBuffer(recordState, *mGpuModel->meshBuffers->verticesBuffer);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void MFA::EssenceBase::BindIndexBuffer(RT::CommandRecordState const & recordState) const
+void MFA::EssenceBase::bindIndexBuffer(RT::CommandRecordState const & recordState) const
 {
     RF::BindIndexBuffer(recordState, *mGpuModel->meshBuffers->indicesBuffer);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::EssenceBase::BindDescriptorSetGroup(RT::CommandRecordState const & recordState) const
+void MFA::EssenceBase::bindDescriptorSetGroup(RT::CommandRecordState const & recordState) const
 {
     RF::BindDescriptorSet(
         recordState,
@@ -79,11 +72,11 @@ void MFA::EssenceBase::BindDescriptorSetGroup(RT::CommandRecordState const & rec
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::EssenceBase::BindAllRenderRequiredData(RT::CommandRecordState const & recordState) const
+void MFA::EssenceBase::bindAllRenderRequiredData(RT::CommandRecordState const & recordState) const
 {
-    BindDescriptorSetGroup(recordState);
-    BindVertexBuffer(recordState);
-    BindIndexBuffer(recordState);
+    bindDescriptorSetGroup(recordState);
+    bindVertexBuffer(recordState);
+    bindIndexBuffer(recordState);
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -20,24 +20,25 @@ public:
     EssenceBase & operator = (EssenceBase const &) noexcept = delete;
 
     [[nodiscard]]
-    std::string const & GetNameOrAddress() const;
+    std::string const & getNameOrAddress() const;
 
     [[nodiscard]]
-    RT::GpuModel * GetGpuModel() const;
+    RT::GpuModel * getGpuModel() const;
 
-    RT::DescriptorSetGroup const & CreateDescriptorSetGroup(
+    RT::DescriptorSetGroup const & createDescriptorSetGroup(
         VkDescriptorPool descriptorPool,
         uint32_t descriptorSetCount,
-        VkDescriptorSetLayout descriptorSetLayout
+        RT::DescriptorSetLayoutGroup const & descriptorSetLayoutGroup
     );
 
     [[nodiscard]]
-    RT::DescriptorSetGroup const & GetDescriptorSetGroup() const;
+    RT::DescriptorSetGroup const & getDescriptorSetGroup() const;
 
-    void BindVertexBuffer(RT::CommandRecordState const & recordState) const;
-    void BindIndexBuffer(RT::CommandRecordState const & recordState) const;
-    void BindDescriptorSetGroup(RT::CommandRecordState const & recordState) const;
-    void BindAllRenderRequiredData(RT::CommandRecordState const & recordState) const;
+    virtual void bindVertexBuffer(RT::CommandRecordState const & recordState) const = 0;
+    void bindIndexBuffer(RT::CommandRecordState const & recordState) const;
+
+    void bindDescriptorSetGroup(RT::CommandRecordState const & recordState) const;
+    void bindAllRenderRequiredData(RT::CommandRecordState const & recordState) const;
 
 protected:
 

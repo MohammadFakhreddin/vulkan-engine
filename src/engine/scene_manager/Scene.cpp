@@ -179,7 +179,7 @@ namespace MFA
 
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
-            RF::UpdateUniformBuffer(
+            RF::UpdateBuffer(
                 *mCameraBuffer->buffers[frameIndex],
                 CBlobAliasOf(cameraBufferData)
             );
@@ -197,7 +197,7 @@ namespace MFA
 
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
-            RF::UpdateUniformBuffer(
+            RF::UpdateBuffer(
                 *mPointLightsBuffers->buffers[frameIndex],
                 CBlobAliasOf(mPointLightData)
             );
@@ -215,7 +215,7 @@ namespace MFA
 
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
-            RF::UpdateUniformBuffer(
+            RF::UpdateBuffer(
                 *mDirectionalLightBuffers->buffers[frameIndex],
                 CBlobAliasOf(mDirectionalLightData)
             );
@@ -230,7 +230,7 @@ namespace MFA
         {
             if (cameraPtr->IsCameraDataDirty())
             {
-                RF::UpdateUniformBuffer(
+                RF::UpdateBuffer(
                     *mCameraBuffer->buffers[recordState.frameIndex],
                     CBlobAliasOf(cameraPtr->GetCameraData())
                 );

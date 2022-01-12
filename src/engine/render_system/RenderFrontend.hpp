@@ -56,7 +56,7 @@ namespace MFA::RenderFrontend
     bool RemoveResizeEventListener(RT::ResizeEventListenerId listenerId);
 
     [[nodiscard]]
-    VkDescriptorSetLayout CreateDescriptorSetLayout(
+    std::shared_ptr<RT::DescriptorSetLayoutGroup> CreateDescriptorSetLayout(
         uint8_t bindingsCount,
         VkDescriptorSetLayoutBinding * bindings
     );
@@ -68,15 +68,25 @@ namespace MFA::RenderFrontend
         VkRenderPass vkRenderPass,
         uint8_t gpuShadersCount,
         RT::GpuShader const ** gpuShaders,
-        uint32_t descriptorLayoutsCount,
-        VkDescriptorSetLayout * descriptorSetLayouts,
-        VkVertexInputBindingDescription const & vertexBindingDescription,
-        uint32_t inputAttributeDescriptionCount,
+        uint32_t const descriptorLayoutsCount,
+        VkDescriptorSetLayout const * descriptorSetLayouts,
+        uint32_t const vertexBindingDescriptionCount,
+        VkVertexInputBindingDescription const * vertexBindingDescriptionData,
+        uint32_t const inputAttributeDescriptionCount,
         VkVertexInputAttributeDescription * inputAttributeDescriptionData,
         RT::CreateGraphicPipelineOptions const & options
     );
 
     void DestroyPipelineGroup(RT::PipelineGroup & drawPipeline);
+
+    //-------------------------------------------DescriptorSetGroup--------------------------------------------
+
+    [[nodiscard]]
+    RT::DescriptorSetGroup CreateDescriptorSets(
+        VkDescriptorPool descriptorPool,
+        uint32_t descriptorSetCount,
+        RT::DescriptorSetLayoutGroup const & descriptorSetLayoutGroup
+    );
 
     [[nodiscard]]
     RT::DescriptorSetGroup CreateDescriptorSets(
@@ -85,9 +95,11 @@ namespace MFA::RenderFrontend
         VkDescriptorSetLayout descriptorSetLayout
     );
 
+    //-----------------------------------------------------------------------------------------------------------
+
     [[nodiscard]]
     std::shared_ptr<RT::BufferAndMemory> CreateVertexBuffer(CBlob verticesBlob);
-
+    
     [[nodiscard]]
     std::shared_ptr<RT::BufferAndMemory> CreateIndexBuffer(CBlob indicesBlob);
 
@@ -109,8 +121,7 @@ namespace MFA::RenderFrontend
 
     [[nodiscard]]
     std::shared_ptr<RT::GpuModel> CreateGpuModel(
-        AS::Model * modelAsset,
-        RT::GpuModelId uniqueId,
+        AS::Model const * modelAsset,
         char const * address
     );
 
@@ -138,27 +149,18 @@ namespace MFA::RenderFrontend
         CBlob data
     );
 
-    void UpdateUniformBuffer(
-        RT::BufferAndMemory const & buffer,
-        CBlob data
-    );
-
-    //void DestroyUniformBuffer(RT::UniformBufferCollection & uniformBuffer);
-
     //-------------------------------------------StorageBuffer--------------------------------------------
 
     std::shared_ptr<RT::StorageBufferCollection> CreateStorageBuffer(size_t bufferSize, uint32_t count);
 
-    void UpdateStorageBuffer(
+    void UpdateBuffer(
         RT::BufferAndMemory const & buffer,
         CBlob data
     );
-
-    //void DestroyStorageBuffer(RT::StorageBufferCollection & storageBuffer);
-
+    
     //-------------------------------------------------------------------------------------------------
 
-    void BindDrawPipeline(
+    void BindPipeline(
         RT::CommandRecordState & drawPass,
         RT::PipelineGroup & pipeline
     );
@@ -206,6 +208,7 @@ namespace MFA::RenderFrontend
     void BindVertexBuffer(
         RT::CommandRecordState const & drawPass,
         RT::BufferAndMemory const & vertexBuffer,
+        uint32_t firstBinding = 0,
         VkDeviceSize offset = 0
     );
 

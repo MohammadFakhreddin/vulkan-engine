@@ -19,14 +19,8 @@ namespace MFA
         ParticleVariant & operator= (ParticleVariant && rhs) noexcept = delete;
 
         bool getTransform(float outTransform[16]) const;
-
-        void Draw(RT::CommandRecordState const & recordState) const;
-
+        
     protected:
-
-        void internalInit() override;
-
-    private:
-        uint32_t mIndicesCount = 0;
+    
     };
 }

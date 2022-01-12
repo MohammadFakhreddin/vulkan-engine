@@ -7,7 +7,6 @@
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
 #include "engine/entity_system/Entity.hpp"
-#include "engine/entity_system/components/ColorComponent.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/pipelines/EssenceBase.hpp"
 #include "engine/render_system/pipelines/VariantBase.hpp"
@@ -111,8 +110,7 @@ namespace MFA
         }
         
         RF::DestroyPipelineGroup(mDrawPipeline);
-        destroyDescriptorSetLayout();
-       
+        
         BasePipeline::Shutdown();
     }
 
@@ -127,7 +125,7 @@ namespace MFA
         auto const availableThreadCount = JS::GetNumberOfAvailableThreads();
         for (uint32_t threadNumber = 0; threadNumber < availableThreadCount; ++threadNumber)
         {
-            JS::AssignTask(threadNumber, [this, &recordState, deltaTimeInSec, threadNumber, availableThreadCount]()->void
+            JS::AssignTaskManually(threadNumber, [this, &recordState, deltaTimeInSec, threadNumber, availableThreadCount]()->void
             {
                 for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mAllVariantsList.size()); i += availableThreadCount)
                 {
@@ -142,7 +140,7 @@ namespace MFA
 
     void DebugRendererPipeline::Render(RT::CommandRecordState & drawPass, float deltaTime)
     {
-        RF::BindDrawPipeline(drawPass, mDrawPipeline);
+        RF::BindPipeline(drawPass, mDrawPipeline);
 
         RF::BindDescriptorSet(
             drawPass,
@@ -157,8 +155,8 @@ namespace MFA
             auto & essence = essenceAndVariantList.second.essence;
             auto & variantsList = essenceAndVariantList.second.variants;
 
-            essence->BindVertexBuffer(drawPass);
-            essence->BindIndexBuffer(drawPass);
+            essence->bindVertexBuffer(drawPass);
+            essence->bindIndexBuffer(drawPass);
             
             for (auto & variant : variantsList)
             {
@@ -234,15 +232,6 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DebugRendererPipeline::destroyDescriptorSetLayout()
-    {
-        MFA_VK_VALID_ASSERT(mDescriptorSetLayout);
-        RF::DestroyDescriptorSetLayout(mDescriptorSetLayout);
-        MFA_VK_MAKE_NULL(mDescriptorSetLayout);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
     void DebugRendererPipeline::createPipeline()
     {
         // Vertex shader
@@ -274,7 +263,7 @@ namespace MFA
         RT::CreateGraphicPipelineOptions pipelineOptions{};
         pipelineOptions.useStaticViewportAndScissor = false;
         pipelineOptions.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
-        pipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
+        pipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();            // TODO Find a way to set sample count to 1. We only need MSAA for pbr-pipeline
         pipelineOptions.cullMode = VK_CULL_MODE_NONE;
         pipelineOptions.colorBlendAttachments.blendEnable = VK_FALSE;
         std::vector<VkPushConstantRange> pushConstantRanges{
@@ -292,8 +281,9 @@ namespace MFA
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),
             1,
-            &mDescriptorSetLayout,
-            bindingDescription,
+            &mDescriptorSetLayout->descriptorSetLayout,
+            1,
+            &bindingDescription,
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
             inputAttributeDescriptions.data(),
             pipelineOptions
@@ -307,7 +297,7 @@ namespace MFA
         mDescriptorSetGroup = RF::CreateDescriptorSets(
             mDescriptorPool,
             RF::GetMaxFramesPerFlight(),
-            mDescriptorSetLayout
+            *mDescriptorSetLayout
         );
 
         // Idea: Maybe we can have active camera buffer inside scene manager

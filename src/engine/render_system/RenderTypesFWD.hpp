@@ -56,10 +56,10 @@ namespace MFA
         using ResizeEventListener = std::function<void()>;
 
         using VariantId = uint32_t;
-
-        using GpuModelId = uint32_t;
-
+        
         struct UniformBufferGroup;
+
+        struct DescriptorSetLayoutGroup;
 
     };
 
