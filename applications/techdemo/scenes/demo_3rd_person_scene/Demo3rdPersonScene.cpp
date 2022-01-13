@@ -5,7 +5,6 @@
 #include "engine/BedrockPath.hpp"
 #include "tools/Importer.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "tools/ShapeGenerator.hpp"
 #include "engine/InputManager.hpp"
 #include "engine/camera/ThirdPersonCameraComponent.hpp"
 #include "engine/entity_system/Entity.hpp"
@@ -17,7 +16,6 @@
 #include "engine/entity_system/components/DirectionalLightComponent.hpp"
 #include "engine/BedrockMatrix.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Variant.hpp"
-#include "engine/resource_manager/ResourceManager.hpp"
 #include "tools/PrefabFileStorage.hpp"
 
 using namespace MFA;

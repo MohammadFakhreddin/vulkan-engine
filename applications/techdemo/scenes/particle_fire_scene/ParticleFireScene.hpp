@@ -1,6 +1,8 @@
 #pragma once
 
+#include "engine/render_system/pipelines/particle/ParticlePipeline.hpp"
 #include "engine/scene_manager/Scene.hpp"
+#include "engine/render_system/RenderTypesFWD.hpp"
 
 class ParticleFireScene final : public MFA::Scene
 {
@@ -25,5 +27,10 @@ public:
     void Shutdown() override;
 
 private:
+
+    MFA::ParticlePipeline mParticlePipeline {this};
+
+    std::shared_ptr<MFA::RT::SamplerGroup> mSamplerGroup {};
+    std::shared_ptr<MFA::RT::GpuTexture> mErrorTexture {};
 
 };

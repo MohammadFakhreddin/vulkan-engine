@@ -168,7 +168,7 @@ namespace MFA
             mPointLightShadowRenderPass->PrepareRenderTargetForSampling(
                 recordState,
                 mPointLightShadowResources.get(),
-                mAttachedScene->GetPointLightCount() > 0,
+                mAttachedScene->getPointLightCount() > 0,
                 barrier
             );
             mDirectionalLightShadowRenderPass->PrepareRenderTargetForSampling(
@@ -656,7 +656,7 @@ namespace MFA
 
     void PBRWithShadowPipelineV2::performPointLightShadowPass(RT::CommandRecordState & recordState)
     {
-        auto const pointLightCount = mAttachedScene->GetPointLightCount();
+        auto const pointLightCount = mAttachedScene->getPointLightCount();
         if (pointLightCount <= 0)
         {
             return;
@@ -680,9 +680,9 @@ namespace MFA
     
     void PBRWithShadowPipelineV2::renderForPointLightShadowPass(RT::CommandRecordState const & recordState, AS::AlphaMode const alphaMode) const
     {
-        auto const pointLightCount = mAttachedScene->GetPointLightCount();
+        auto const pointLightCount = mAttachedScene->getPointLightCount();
         MFA_ASSERT(pointLightCount > 0);
-        auto const pointLights = mAttachedScene->GetPointLights();
+        auto const & pointLights = mAttachedScene->getActivePointLights();
         MFA_ASSERT(pointLights.size() == pointLightCount);
 
         PointLightShadowPassPushConstants pushConstants {};

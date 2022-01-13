@@ -64,7 +64,7 @@ public:
     RT::UniformBufferGroup const & GetDirectionalLightBuffers() const;
 
     [[nodiscard]]
-    uint32_t GetPointLightCount() const;
+    uint32_t getPointLightCount() const;
 
     [[nodiscard]]
     uint32_t GetDirectionalLightCount() const;
@@ -77,7 +77,8 @@ public:
     [[nodiscard]]
     std::vector<BasePipeline *> GetPipelines() const;
 
-    std::vector<PointLightComponent *> GetPointLights() const;
+    [[nodiscard]]
+    std::vector<PointLightComponent *> const & getActivePointLights() const;
 
 private:
 
@@ -124,6 +125,7 @@ private:
         PointLight items [MAX_POINT_LIGHT_COUNT] {};
     };
     PointLightsBufferData mPointLightData {};
+    std::vector<PointLightComponent *> mActivePointLights {};
     std::shared_ptr<RT::UniformBufferGroup> mPointLightsBuffers {};
 
     // https://stackoverflow.com/questions/9486364/why-cant-c-compilers-rearrange-struct-members-to-eliminate-alignment-padding

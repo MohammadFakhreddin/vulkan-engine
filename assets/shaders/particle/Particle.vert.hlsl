@@ -16,7 +16,10 @@ struct VSOut {
     int textureIndex;
     float2 uv : TEXCOORD0;
     float4 color : COLOR0;
+    [[vk::builtin("PointSize")]] float PSize : PSIZE;
 };
+
+#define POINT_SIZE 10;
 
 CAMERA_BUFFER_CUSTOM_BINDING(cameraBuffer, b0, space0)
 
@@ -28,6 +31,9 @@ VSOut main(VSIn input) {
     output.textureIndex = input.textureIndex;
     output.uv = input.uv;
     output.color = input.color;
+
+    // output.PSize = mul(cameraBuffer.viewProjection, POINT_SIZE);
+    output.PSize = POINT_SIZE;  // TODO We should apply view projection to point size
 
     return output;
 }

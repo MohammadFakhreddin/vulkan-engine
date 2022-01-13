@@ -295,15 +295,17 @@ namespace MFA::RenderFrontend
         state->screenWidth = static_cast<ScreenWidth>(state->surfaceCapabilities.currentExtent.width);
         state->screenHeight = static_cast<ScreenHeight>(state->surfaceCapabilities.currentExtent.height);
 
-        MFA_ASSERT(state->screenWidth > 0);
-        MFA_ASSERT(state->screenHeight > 0);
+        // Screen width and height can be equal to zero as well
+        //MFA_ASSERT(state->screenWidth >= 0);
+        //MFA_ASSERT(state->screenHeight >= 0);
 
         state->windowResized = false;
 
-        state->displayRenderPass.OnResize();
-
-        state->resizeEventSignal.Emit();
-
+        if (state->screenWidth > 0 && state->screenHeight > 0)
+        {
+            state->displayRenderPass.OnResize();
+            state->resizeEventSignal.Emit();
+        }
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -848,13 +850,22 @@ namespace MFA::RenderFrontend
 
     void OnNewFrame(float deltaTimeInSec)
     {
+#ifdef __DESKTOP__
+        auto const isWindowVisible = (GetWindowFlags() & MSDL::SDL_WINDOW_MINIMIZED) > 0 ? false : true;
+        if (state->isWindowVisible != isWindowVisible)
+        {
+            if (isWindowVisible)
+            {
+                OnResize();
+            }
+            state->isWindowVisible = isWindowVisible;
+        }
+#endif
         if (state->windowResized)
         {
             OnResize();
         }
-#ifdef __DESKTOP__
-        state->isWindowVisible = (GetWindowFlags() & MSDL::SDL_WINDOW_MINIMIZED) > 0 ? false : true;
-#endif
+
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -111,7 +111,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    uint32_t Scene::GetPointLightCount() const
+    uint32_t Scene::getPointLightCount() const
     {
         return mPointLightData.count;
     }
@@ -153,17 +153,19 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    std::vector<PointLightComponent *> Scene::GetPointLights() const
+    std::vector<PointLightComponent *> const & Scene::getActivePointLights() const
     {
-        std::vector<PointLightComponent *> pointLights {};
-        for (auto & pointLightComponent : mPointLightComponents)
-        {
-            if (auto ptr = pointLightComponent.lock())
-            {
-                pointLights.emplace_back(ptr.get());
-            }
-        }
-        return pointLights;
+        //std::vector<PointLightComponent *> pointLights {};
+        //for (auto & pointLightComponent : mPointLightComponents)
+        //{
+        //    auto ptr = pointLightComponent.lock();
+        //    if (ptr != nullptr && ptr->IsVisible())
+        //    {
+        //        pointLights.emplace_back(ptr.get());
+        //    }
+        //}
+        //return pointLights;
+        return mActivePointLights;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -252,6 +254,9 @@ namespace MFA
                 mPointLightComponents.pop_back();
             }
         }
+
+        mActivePointLights.clear();
+
         for (auto & pointLightComponent : mPointLightComponents)
         {
             auto const ptr = pointLightComponent.lock();
@@ -268,7 +273,8 @@ namespace MFA
                 item.maxSquareDistance = ptr->GetMaxSquareDistance();
                 item.linearAttenuation = ptr->GetLinearAttenuation();
                 item.quadraticAttenuation = ptr->GetQuadraticAttenuation();
-                
+
+                mActivePointLights.emplace_back(ptr.get());
                 ++mPointLightData.count;
             }
         }

@@ -44,13 +44,6 @@ namespace MFA
         std::shared_ptr<RT::GpuTexture> errorTexture
     )
     {
-        if (mIsInitialized == true)
-        {
-            MFA_ASSERT(false);
-            return;
-        }
-        mIsInitialized = true;
-
         BasePipeline::Init();
 
         MFA_ASSERT(samplerGroup != nullptr);
@@ -70,13 +63,6 @@ namespace MFA
 
     void ParticlePipeline::Shutdown()
     {
-        if (mIsInitialized == false)
-        {
-            MFA_ASSERT(false);
-            return;
-        }
-        mIsInitialized = false;
-
         BasePipeline::Shutdown();
     }
 
@@ -87,6 +73,11 @@ namespace MFA
         float const deltaTimeInSec
     )
     {
+        if (mEssenceAndVariantsMap.empty())
+        {
+            return;
+        }
+
         BasePipeline::PreRender(recordState, deltaTimeInSec);
 
         for (auto & essenceAndVariants : mEssenceAndVariantsMap)
@@ -107,6 +98,11 @@ namespace MFA
         float const deltaTime
     )
     {
+        if (mAllEssencesList.empty())
+        {
+            return;
+        }
+
         BasePipeline::Render(recordState, deltaTime);
 
         RF::BindPipeline(recordState, mPipeline);
