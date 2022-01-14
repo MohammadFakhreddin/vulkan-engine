@@ -1788,7 +1788,7 @@ void DestroyShader(VkDevice device, RT::GpuShader const & gpuShader)
 
 //-------------------------------------------------------------------------------------------------
 
-RT::PipelineGroup CreatePipelineGroup(
+std::shared_ptr<RT::PipelineGroup> CreatePipelineGroup(
     VkDevice device,
     uint8_t shaderStagesCount,
     RT::GpuShader const ** shaderStages,
@@ -1968,11 +1968,11 @@ RT::PipelineGroup CreatePipelineGroup(
 
     MFA_LOG_INFO("Created graphics pipeline");
 
-    RT::PipelineGroup pipelineGroup{
-        .pipelineLayout = pipelineLayout,
-        .graphicPipeline = pipeline,
-    };
-    MFA_ASSERT(pipelineGroup.isValid());
+    auto const pipelineGroup = std::make_shared<RT::PipelineGroup>(
+        pipelineLayout,
+        pipeline
+    );
+    MFA_ASSERT(pipelineGroup->isValid());
 
     return pipelineGroup;
 }
@@ -2012,13 +2012,12 @@ void AssignViewportAndScissorToCommandBuffer(
 
 //-------------------------------------------------------------------------------------------------
 
-void DestroyPipelineGroup(VkDevice device, RT::PipelineGroup & graphicPipelineGroup)
+void DestroyPipelineGroup(VkDevice device, RT::PipelineGroup & pipelineGroup)
 {
     MFA_ASSERT(device != nullptr);
-    MFA_ASSERT(graphicPipelineGroup.isValid());
-    vkDestroyPipeline(device, graphicPipelineGroup.graphicPipeline, nullptr);
-    vkDestroyPipelineLayout(device, graphicPipelineGroup.pipelineLayout, nullptr);
-    graphicPipelineGroup.revoke();
+    MFA_ASSERT(pipelineGroup.isValid());
+    vkDestroyPipeline(device, pipelineGroup.pipeline, nullptr);
+    vkDestroyPipelineLayout(device, pipelineGroup.pipelineLayout, nullptr);
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -144,22 +144,20 @@ namespace MFA
         void destroyOcclusionQueryPool();
 
         void createOcclusionQueryPipeline();
-
-        void destroyPipeline();
-
+        
         void createUniformBuffers();
 
         void retrieveOcclusionQueryResult(RT::CommandRecordState const & recordState);
 
-        void performDepthPrePass(RT::CommandRecordState & recordState);
+        void performDepthPrePass(RT::CommandRecordState & recordState) const;
 
         void renderForDepthPrePass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode) const;
 
-        void performDirectionalLightShadowPass(RT::CommandRecordState & recordState);
+        void performDirectionalLightShadowPass(RT::CommandRecordState & recordState) const;
 
         void renderForDirectionalLightShadowPass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode) const;
 
-        void performPointLightShadowPass(RT::CommandRecordState & recordState);
+        void performPointLightShadowPass(RT::CommandRecordState & recordState) const;
 
         void renderForPointLightShadowPass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode) const;
 
@@ -175,20 +173,20 @@ namespace MFA
         std::shared_ptr<RT::GpuTexture> mErrorTexture = nullptr;
         std::shared_ptr<RT::UniformBufferGroup> mErrorBuffer{};
 
-        RT::PipelineGroup mDisplayPassPipeline{};
+        std::shared_ptr<RT::PipelineGroup> mDisplayPassPipeline{};
         
-        RT::PipelineGroup mPointLightShadowPipeline {};
+        std::shared_ptr<RT::PipelineGroup> mPointLightShadowPipeline {};
         std::unique_ptr<PointLightShadowRenderPass> mPointLightShadowRenderPass;
         std::unique_ptr<PointLightShadowResources> mPointLightShadowResources {};
 
-        RT::PipelineGroup mDirectionalLightShadowPipeline {};
+        std::shared_ptr<RT::PipelineGroup> mDirectionalLightShadowPipeline {};
         std::unique_ptr<DirectionalLightShadowRenderPass> mDirectionalLightShadowRenderPass;
         std::unique_ptr<DirectionalLightShadowResources> mDirectionalLightShadowResources;
 
-        RT::PipelineGroup mDepthPassPipeline{};
+        std::shared_ptr<RT::PipelineGroup> mDepthPassPipeline{};
         std::unique_ptr<DepthPrePass> mDepthPrePass;
 
-        RT::PipelineGroup mOcclusionQueryPipeline{};
+        std::shared_ptr<RT::PipelineGroup> mOcclusionQueryPipeline{};
         std::unique_ptr<OcclusionRenderPass> mOcclusionRenderPass;
 
         struct OcclusionQueryData

@@ -51,7 +51,7 @@ namespace MFA
         void GetLocalPosition(float outPosition[3]) const;
 
         [[nodiscard]]
-        glm::vec4 const & GetWorldPosition() const;
+        glm::vec4 const & getWorldPosition() const;
 
         void GetRotation(float outRotation[3]) const;
 

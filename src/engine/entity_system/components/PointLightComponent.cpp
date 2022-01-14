@@ -91,7 +91,7 @@ glm::vec3 MFA::PointLightComponent::GetPosition() const
 {
     if (auto const ptr = mTransformComponent.lock())
     {
-        return ptr->GetWorldPosition();
+        return ptr->getWorldPosition();
     }
     return {};
 }
@@ -160,7 +160,7 @@ bool MFA::PointLightComponent::IsBoundingVolumeInRange(BoundingVolumeComponent c
         return false;
     }
 
-    auto const & lightWP = transformComponent->GetWorldPosition();
+    auto const & lightWP = transformComponent->getWorldPosition();
 
     auto const & bvWP = bvComponent->GetWorldPosition();
     auto const bvRadius = bvComponent->GetRadius();
@@ -285,7 +285,7 @@ void MFA::PointLightComponent::computeViewProjectionMatrices()
         return;
     }
 
-    glm::vec3 const lightWP = transformComponentPtr->GetWorldPosition();
+    glm::vec3 const lightWP = transformComponentPtr->getWorldPosition();
 
     Matrix::CopyGlmToCells(
         mShadowProjectionMatrix * glm::lookAt(

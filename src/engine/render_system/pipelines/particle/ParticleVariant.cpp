@@ -21,11 +21,12 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    bool ParticleVariant::getTransform(float outTransform[16]) const
+    bool ParticleVariant::getWorldPosition(float outWorldPosition[3]) const
     {
         if (auto const ptr = mTransformComponent.lock())
         {
-            Matrix::CopyGlmToCells(ptr->GetTransform(), outTransform);
+            auto const & worldPosition = ptr->getWorldPosition();
+            ::memcpy(outWorldPosition, &worldPosition, sizeof(float) * 3);
             return true;
         }
         return false;

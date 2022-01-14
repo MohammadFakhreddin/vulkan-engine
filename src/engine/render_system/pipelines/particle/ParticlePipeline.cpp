@@ -105,7 +105,7 @@ namespace MFA
 
         BasePipeline::Render(recordState, deltaTime);
 
-        RF::BindPipeline(recordState, mPipeline);
+        RF::BindPipeline(recordState, *mPipeline);
 
         RF::BindDescriptorSet(
             recordState,
@@ -300,10 +300,7 @@ namespace MFA
             .stride = sizeof(PerInstanceData),
             .inputRate = VK_VERTEX_INPUT_RATE_INSTANCE
         });
-
-        // TODO We can add some instancing offset or other stuff
-
-        // TODO We need something other than AS::MeshVertex here to save bandwidth
+        
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
 
         // Position
@@ -311,7 +308,7 @@ namespace MFA
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
             .format = VK_FORMAT_R32G32B32_SFLOAT,
-            .offset = offsetof(Vertex, position)
+            .offset = offsetof(Vertex, localPosition)
         });
 
         // Texture index
@@ -338,15 +335,20 @@ namespace MFA
             .offset = offsetof(Vertex, color)
         });
 
-        MFA_ASSERT(mPipeline.isValid() == false);
-
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 1,
+            .format =VK_FORMAT_R32G32B32A32_SFLOAT,
+            .offset = offsetof(PerInstanceData, instancePosition)
+        });
+        
         RT::CreateGraphicPipelineOptions pipelineOptions{};
         pipelineOptions.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
         pipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
         pipelineOptions.cullMode = VK_CULL_MODE_NONE;
         pipelineOptions.colorBlendAttachments.blendEnable = VK_TRUE;
         
-        std::vector<VkDescriptorSetLayout> descriptorSetLayouts {
+        std::vector<VkDescriptorSetLayout> const descriptorSetLayouts {
             mPerFrameDescriptorSetLayout->descriptorSetLayout,
             mPerEssenceDescriptorSetLayout->descriptorSetLayout,
         };

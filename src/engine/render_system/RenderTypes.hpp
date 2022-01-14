@@ -169,13 +169,22 @@ namespace MFA
 
         struct PipelineGroup
         {
-            VkPipelineLayout pipelineLayout{};
-            VkPipeline graphicPipeline{};
+            VkPipelineLayout const pipelineLayout;
+            VkPipeline const pipeline;
+
+            explicit PipelineGroup(
+                VkPipelineLayout pipelineLayout_,
+                VkPipeline pipeline_
+            );
+            ~PipelineGroup();
+
+            PipelineGroup(PipelineGroup const &) noexcept = delete;
+            PipelineGroup(PipelineGroup &&) noexcept = delete;
+            PipelineGroup & operator= (PipelineGroup const & rhs) noexcept = delete;
+            PipelineGroup & operator= (PipelineGroup && rhs) noexcept = delete;
 
             [[nodiscard]]
             bool isValid() const noexcept;
-
-            void revoke();
         };
 
         struct CommandRecordState

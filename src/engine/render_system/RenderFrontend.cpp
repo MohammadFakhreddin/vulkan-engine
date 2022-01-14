@@ -296,9 +296,6 @@ namespace MFA::RenderFrontend
         state->screenHeight = static_cast<ScreenHeight>(state->surfaceCapabilities.currentExtent.height);
 
         // Screen width and height can be equal to zero as well
-        //MFA_ASSERT(state->screenWidth >= 0);
-        //MFA_ASSERT(state->screenHeight >= 0);
-
         state->windowResized = false;
 
         if (state->screenWidth > 0 && state->screenHeight > 0)
@@ -397,7 +394,7 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     [[nodiscard]]
-    RT::PipelineGroup CreatePipeline(
+    std::shared_ptr<RT::PipelineGroup> CreatePipeline(
         VkRenderPass vkRenderPass,
         uint8_t gpuShadersCount,
         RT::GpuShader const ** gpuShaders,
@@ -416,7 +413,7 @@ namespace MFA::RenderFrontend
             .height = static_cast<uint32_t>(state->screenHeight),
         };
 
-        auto const pipelineGroup = RB::CreatePipelineGroup(
+        return RB::CreatePipelineGroup(
             state->logicalDevice.device,
             gpuShadersCount,
             gpuShaders,
@@ -430,8 +427,6 @@ namespace MFA::RenderFrontend
             descriptorSetLayouts,
             options
         );
-
-        return pipelineGroup;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -697,7 +692,7 @@ namespace MFA::RenderFrontend
         vkCmdBindPipeline(
             GetGraphicCommandBuffer(drawPass),
             VK_PIPELINE_BIND_POINT_GRAPHICS,
-            pipeline.graphicPipeline
+            pipeline.pipeline
         );
     }
 

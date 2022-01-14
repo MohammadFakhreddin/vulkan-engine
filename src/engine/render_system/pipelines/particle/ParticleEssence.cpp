@@ -98,7 +98,7 @@ namespace MFA
         );
         for (uint32_t i = 0; i < mNextDrawInstanceCount; ++i)
         {
-            CAST_VARIANT(variants[i])->getTransform(mInstancesData[i].model);
+            CAST_VARIANT(variants[i])->getWorldPosition(mInstancesData[i].instancePosition);
         }
     }
 

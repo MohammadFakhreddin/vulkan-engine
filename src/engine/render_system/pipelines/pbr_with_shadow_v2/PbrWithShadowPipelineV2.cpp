@@ -136,9 +136,7 @@ namespace MFA
 
         mDirectionalLightShadowResources->Shutdown();
         mDirectionalLightShadowRenderPass->Shutdown();
-        
-        destroyPipeline();
-
+     
         BasePipeline::Shutdown();
 
     }
@@ -507,9 +505,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::performDepthPrePass(RT::CommandRecordState & recordState)
+    void PBRWithShadowPipelineV2::performDepthPrePass(RT::CommandRecordState & recordState) const
     {
-        RF::BindPipeline(recordState, mDepthPassPipeline);
+        RF::BindPipeline(recordState, *mDepthPassPipeline);
         RF::BindDescriptorSet(
             recordState,
             RenderFrontend::DescriptorSetType::PerFrame,
@@ -580,14 +578,14 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
     
-    void PBRWithShadowPipelineV2::performDirectionalLightShadowPass(RT::CommandRecordState & recordState)
+    void PBRWithShadowPipelineV2::performDirectionalLightShadowPass(RT::CommandRecordState & recordState) const
     {
         if (mAttachedScene->GetDirectionalLightCount() <= 0)
         {
             return;
         }
 
-        RF::BindPipeline(recordState, mDirectionalLightShadowPipeline);
+        RF::BindPipeline(recordState, *mDirectionalLightShadowPipeline);
         RF::BindDescriptorSet(
             recordState,
             RenderFrontend::DescriptorSetType::PerFrame,
@@ -654,7 +652,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::performPointLightShadowPass(RT::CommandRecordState & recordState)
+    void PBRWithShadowPipelineV2::performPointLightShadowPass(RT::CommandRecordState & recordState) const
     {
         auto const pointLightCount = mAttachedScene->getPointLightCount();
         if (pointLightCount <= 0)
@@ -662,7 +660,7 @@ namespace MFA
             return;
         }
 
-        RF::BindPipeline(recordState, mPointLightShadowPipeline);
+        RF::BindPipeline(recordState, *mPointLightShadowPipeline);
         RF::BindDescriptorSet(
             recordState,
             RenderFrontend::DescriptorSetType::PerFrame,
@@ -753,7 +751,7 @@ namespace MFA
             10000
         );
 
-        RF::BindPipeline(recordState, mOcclusionQueryPipeline);
+        RF::BindPipeline(recordState, *mOcclusionQueryPipeline);
         RF::BindDescriptorSet(
             recordState,
             RenderFrontend::DescriptorSetType::PerFrame,
@@ -831,7 +829,7 @@ namespace MFA
 
     void PBRWithShadowPipelineV2::performDisplayPass(RT::CommandRecordState & recordState)
     {
-        RF::BindPipeline(recordState, mDisplayPassPipeline);
+        RF::BindPipeline(recordState, *mDisplayPassPipeline);
         RF::BindDescriptorSet(
             recordState,
             RenderFrontend::DescriptorSetType::PerFrame,
@@ -1118,8 +1116,7 @@ namespace MFA
             attributeDescription.offset = offsetof(AS::PBR::Vertex, jointWeights);
             inputAttributeDescriptions.emplace_back(attributeDescription);
         }
-        MFA_ASSERT(mDisplayPassPipeline.isValid() == false);
-
+        
         std::vector<VkPushConstantRange> mPushConstantRanges{};
         mPushConstantRanges.emplace_back(VkPushConstantRange{
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -1213,7 +1210,6 @@ namespace MFA
         // TODO Probably we need to make pushConstantsRangeCount uint32_t
         graphicPipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
 
-        MFA_ASSERT(mDirectionalLightShadowPipeline.isValid() == false);
         mDirectionalLightShadowPipeline = RF::CreatePipeline(
             mDirectionalLightShadowRenderPass->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
@@ -1298,7 +1294,6 @@ namespace MFA
         // TODO Probably we need to make pushConstantsRangeCount uint32_t
         graphicPipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
 
-        MFA_ASSERT(mPointLightShadowPipeline.isValid() == false);
         mPointLightShadowPipeline = RF::CreatePipeline(
             mPointLightShadowRenderPass->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
@@ -1389,7 +1384,6 @@ namespace MFA
 
         graphicPipelineOptions.colorBlendAttachments.blendEnable = VK_FALSE;
 
-        MFA_ASSERT(mDepthPassPipeline.isValid() == false);
         mDepthPassPipeline = RF::CreatePipeline(
             mDepthPrePass->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
@@ -1504,7 +1498,6 @@ namespace MFA
         graphicPipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
         graphicPipelineOptions.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 
-        MFA_ASSERT(mOcclusionQueryPipeline.isValid() == false);
         mOcclusionQueryPipeline = RF::CreatePipeline(
             mOcclusionRenderPass->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
@@ -1517,26 +1510,6 @@ namespace MFA
             inputAttributeDescriptions.data(),
             graphicPipelineOptions
         );
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void PBRWithShadowPipelineV2::destroyPipeline()
-    {
-        MFA_ASSERT(mDisplayPassPipeline.isValid());
-        RF::DestroyPipelineGroup(mDisplayPassPipeline);
-
-        MFA_ASSERT(mPointLightShadowPipeline.isValid());
-        RF::DestroyPipelineGroup(mPointLightShadowPipeline);
-
-        MFA_ASSERT(mDirectionalLightShadowPipeline.isValid());
-        RF::DestroyPipelineGroup(mDirectionalLightShadowPipeline);
-
-        MFA_ASSERT(mDepthPassPipeline.isValid());
-        RF::DestroyPipelineGroup(mDepthPassPipeline);
-
-        MFA_ASSERT(mOcclusionQueryPipeline.isValid());
-        RF::DestroyPipelineGroup(mOcclusionQueryPipeline);
     }
 
     //-------------------------------------------------------------------------------------------------

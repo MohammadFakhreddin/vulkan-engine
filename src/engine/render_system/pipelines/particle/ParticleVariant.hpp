@@ -18,7 +18,7 @@ namespace MFA
         ParticleVariant & operator= (ParticleVariant const & rhs) noexcept = delete;
         ParticleVariant & operator= (ParticleVariant && rhs) noexcept = delete;
 
-        bool getTransform(float outTransform[16]) const;
+        bool getWorldPosition(float outWorldPosition[3]) const;
         
     protected:
     

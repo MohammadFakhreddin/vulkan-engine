@@ -49,8 +49,6 @@
 //	vks::initializers::vertexInputAttributeDescription(INSTANCE_BUFFER_BIND_ID, 7, VK_FORMAT_R32_SINT, sizeof(float) * 7),			// Location 7: Texture array layer index
 //};
 
-
-
 #define CAST_VARIANT(variant)  static_cast<DebugVariant *>(variant.get())
 
 namespace MFA
@@ -76,12 +74,6 @@ namespace MFA
 
     void DebugRendererPipeline::Init()
     {
-        if (mIsInitialized == true)
-        {
-            MFA_ASSERT(false);
-            return;
-        }
-        
         BasePipeline::Init();
 
         createDescriptorSetLayout();
@@ -103,14 +95,6 @@ namespace MFA
 
     void DebugRendererPipeline::Shutdown()
     {
-        if (mIsInitialized == false)
-        {
-            MFA_ASSERT(false);
-            return;
-        }
-        
-        RF::DestroyPipelineGroup(mDrawPipeline);
-        
         BasePipeline::Shutdown();
     }
 
@@ -140,7 +124,7 @@ namespace MFA
 
     void DebugRendererPipeline::Render(RT::CommandRecordState & drawPass, float deltaTime)
     {
-        RF::BindPipeline(drawPass, mDrawPipeline);
+        RF::BindPipeline(drawPass, *mpipeline);
 
         RF::BindDescriptorSet(
             drawPass,
@@ -249,20 +233,18 @@ namespace MFA
         };
 
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
-        {// Position
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-            attributeDescription.offset = offsetof(Vertex, position);
-
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        MFA_ASSERT(mDrawPipeline.isValid() == false);
-
+        // Position
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32G32B32_SFLOAT,
+            .offset = offsetof(Vertex, position),
+        });
+        
         RT::CreateGraphicPipelineOptions pipelineOptions{};
         pipelineOptions.useStaticViewportAndScissor = false;
         pipelineOptions.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+        // TODO I think we should submit each pipeline . Each one should have independent depth buffer 
         pipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();            // TODO Find a way to set sample count to 1. We only need MSAA for pbr-pipeline
         pipelineOptions.cullMode = VK_CULL_MODE_NONE;
         pipelineOptions.colorBlendAttachments.blendEnable = VK_FALSE;
@@ -273,10 +255,11 @@ namespace MFA
                 .size = sizeof(PushConstants),
             }
         };
-        pipelineOptions.pushConstantsRangeCount = static_cast<uint32_t>(pushConstantRanges.size());
+        // TODO Make this vaiable uint32_t instead. There is no reason for saving memory here
+        pipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
         pipelineOptions.pushConstantRanges = pushConstantRanges.data();
 
-        mDrawPipeline = RF::CreatePipeline(
+        mpipeline = RF::CreatePipeline(
             RF::GetDisplayRenderPass()->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),

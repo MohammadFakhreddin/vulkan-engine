@@ -143,7 +143,7 @@ namespace MFA::UISystem
         std::shared_ptr<RT::GpuShader> fragmentShader{};
         VkDescriptorPool descriptorPool{};
         RT::DescriptorSetGroup descriptorSetGroup{};
-        RT::PipelineGroup drawPipeline{};
+        std::shared_ptr<RT::PipelineGroup> pipeline{};
         std::shared_ptr<RT::GpuTexture> fontTexture{};
         std::vector<std::shared_ptr<RT::MeshBuffers>> meshBuffers{};
         //std::vector<bool> meshBuffersValidationStatus{};
@@ -335,7 +335,7 @@ namespace MFA::UISystem
             // TODO I wish we could render ui without MaxSamplesCount
             pipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
 
-            state->drawPipeline = RF::CreatePipeline(
+            state->pipeline = RF::CreatePipeline(
                 RF::GetDisplayRenderPass()->GetVkRenderPass(),
                 static_cast<uint8_t>(shaderStages.size()),
                 shaderStages.data(),
@@ -570,7 +570,7 @@ namespace MFA::UISystem
 
         // Setup desired Vulkan state
         // Bind pipeline and descriptor sets:
-        RF::BindPipeline(drawPass, state->drawPipeline);
+        RF::BindPipeline(drawPass, *state->pipeline);
         RF::BindDescriptorSet(
             drawPass,
             RenderFrontend::DescriptorSetType::PerFrame,
@@ -926,7 +926,6 @@ namespace MFA::UISystem
     void Shutdown()
     {
         RF::DestroyDescriptorPool(state->descriptorPool);
-        RF::DestroyPipelineGroup(state->drawPipeline);
 #ifdef __DESKTOP__
         RF::RemoveEventWatch(state->eventWatchId);
 #endif

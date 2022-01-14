@@ -2,13 +2,13 @@
 
 struct VSIn {
     // Per vertex data
-    float3 position : SV_POSITION;
+    float3 localPosition : SV_POSITION;
     int textureIndex;
     float2 uv : TEXCOORD0;
     float4 color : COLOR0;
     // TODO Maybe alpha as well
     // Per instance data
-    float4x4 model;
+    float3 instancePosition: SV_POSITION;
 };
 
 struct VSOut {
@@ -27,7 +27,7 @@ VSOut main(VSIn input) {
     VSOut output;
 
     // Position
-    output.position = mul(cameraBuffer.viewProjection, mul(input.model, float4(input.position, 1.0f)));
+    output.position = mul(cameraBuffer.viewProjection, float4(input.instancePosition + input.localPosition, 1.0f));
     output.textureIndex = input.textureIndex;
     output.uv = input.uv;
     output.color = input.color;

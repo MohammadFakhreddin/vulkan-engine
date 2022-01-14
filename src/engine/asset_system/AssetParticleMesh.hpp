@@ -7,7 +7,7 @@ namespace MFA::AssetSystem::Particle
 {
     struct Vertex
     {
-        Position position{};
+        Position localPosition{};
         int textureIndex = -1;
         UV uv{};
         Color color{};
@@ -15,7 +15,7 @@ namespace MFA::AssetSystem::Particle
 
     struct PerInstanceData
     {
-        float model[16] {};
+        float instancePosition[3] {};
     };
 
     class Mesh final : public MeshBase

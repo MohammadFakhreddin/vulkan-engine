@@ -146,18 +146,29 @@ MFA::RT::GpuShader::~GpuShader()
 
 //-------------------------------------------------------------------------------------------------
 
-bool MFA::RT::PipelineGroup::isValid() const noexcept
+MFA::RenderTypes::PipelineGroup::PipelineGroup(
+    VkPipelineLayout pipelineLayout_,
+    VkPipeline pipeline_
+)
+    : pipelineLayout(pipelineLayout_)
+    , pipeline(pipeline_)
 {
-    return MFA_VK_VALID(pipelineLayout)
-        && MFA_VK_VALID(graphicPipeline);
+    MFA_ASSERT(isValid());
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::RT::PipelineGroup::revoke()
+MFA::RenderTypes::PipelineGroup::~PipelineGroup()
 {
-    MFA_VK_MAKE_NULL(pipelineLayout);
-    MFA_VK_MAKE_NULL(graphicPipeline);
+    RF::DestroyPipelineGroup(*this);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+bool MFA::RT::PipelineGroup::isValid() const noexcept
+{
+    return MFA_VK_VALID(pipelineLayout)
+        && MFA_VK_VALID(pipeline);
 }
 
 //-------------------------------------------------------------------------------------------------

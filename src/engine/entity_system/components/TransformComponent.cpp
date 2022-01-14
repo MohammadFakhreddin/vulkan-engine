@@ -195,7 +195,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    glm::vec4 const & TransformComponent::GetWorldPosition() const
+    glm::vec4 const & TransformComponent::getWorldPosition() const
     {
         return mWorldPosition;
     }

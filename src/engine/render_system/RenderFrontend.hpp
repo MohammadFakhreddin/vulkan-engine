@@ -64,15 +64,15 @@ namespace MFA::RenderFrontend
     void DestroyDescriptorSetLayout(VkDescriptorSetLayout descriptorSetLayout);
 
     [[nodiscard]]
-    RT::PipelineGroup CreatePipeline(
+    std::shared_ptr<RT::PipelineGroup> CreatePipeline(
         VkRenderPass vkRenderPass,
         uint8_t gpuShadersCount,
         RT::GpuShader const ** gpuShaders,
-        uint32_t const descriptorLayoutsCount,
+        uint32_t descriptorLayoutsCount,
         VkDescriptorSetLayout const * descriptorSetLayouts,
-        uint32_t const vertexBindingDescriptionCount,
+        uint32_t vertexBindingDescriptionCount,
         VkVertexInputBindingDescription const * vertexBindingDescriptionData,
-        uint32_t const inputAttributeDescriptionCount,
+        uint32_t inputAttributeDescriptionCount,
         VkVertexInputAttributeDescription * inputAttributeDescriptionData,
         RT::CreateGraphicPipelineOptions const & options
     );

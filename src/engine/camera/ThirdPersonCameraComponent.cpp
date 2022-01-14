@@ -82,7 +82,7 @@ namespace MFA
         if (mIsTransformDirty)
         {
             if (auto const transformComponentPtr = mTransformComponent.lock()) {
-                auto const variantPosition = transformComponentPtr->GetWorldPosition();
+                auto const variantPosition = transformComponentPtr->getWorldPosition();
 
                 auto rotationMatrix = glm::identity<glm::mat4>();
                 Matrix::Rotate(rotationMatrix, mEulerAngles);

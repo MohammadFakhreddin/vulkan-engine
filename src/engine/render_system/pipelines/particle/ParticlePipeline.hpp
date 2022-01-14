@@ -59,7 +59,7 @@ namespace MFA
         std::shared_ptr<RT::SamplerGroup> mSamplerGroup {};
         std::shared_ptr<RT::GpuTexture> mErrorTexture {};
 
-        RT::PipelineGroup mPipeline {};
+        std::shared_ptr<RT::PipelineGroup> mPipeline {};
     };
 
 }

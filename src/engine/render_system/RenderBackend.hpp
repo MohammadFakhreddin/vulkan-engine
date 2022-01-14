@@ -365,7 +365,7 @@ namespace MFA::RenderBackend
 
     // Note Shaders can be removed after creating graphic pipeline
     [[nodiscard]]
-    RT::PipelineGroup CreatePipelineGroup(
+    std::shared_ptr<RT::PipelineGroup> CreatePipelineGroup(
         VkDevice device,
         uint8_t shaderStagesCount,
         RT::GpuShader const ** shaderStages,
@@ -385,7 +385,7 @@ namespace MFA::RenderBackend
         VkCommandBuffer commandBuffer
     );
 
-    void DestroyPipelineGroup(VkDevice device, RT::PipelineGroup & graphicPipelineGroup);
+    void DestroyPipelineGroup(VkDevice device, RT::PipelineGroup & pipelineGroup);
 
     [[nodiscard]]
     std::shared_ptr<RT::DescriptorSetLayoutGroup> CreateDescriptorSetLayout(

@@ -91,7 +91,7 @@ void Application::Shutdown() {
 }
 
 void Application::run() {
-    static constexpr uint32_t TargetFpsDeltaTimeInMs = 1000 / 500;
+    //static constexpr uint32_t TargetFpsDeltaTimeInMs = 1000 / 500;
 #ifdef __DESKTOP__
     Init();
     {// Main loop
@@ -99,9 +99,10 @@ void Application::run() {
         MSDL::SDL_Event e;
         //While application is running
         uint32_t deltaTimeInMs = 0;
+
+        uint32_t startTime = MSDL::SDL_GetTicks();
         while (true)
         {
-            uint32_t const start_time = MSDL::SDL_GetTicks();
             //Handle events
             if (MSDL::SDL_PollEvent(&e) != 0)
             {
@@ -111,12 +112,13 @@ void Application::run() {
                     break;
                 }
             }
-            RenderFrame(static_cast<float>(deltaTimeInMs) / 1000.0f);
-            deltaTimeInMs = MSDL::SDL_GetTicks() - start_time;
-            if(TargetFpsDeltaTimeInMs > deltaTimeInMs){
+            RenderFrame(std::max(static_cast<float>(deltaTimeInMs), 1.0f) / 1000.0f);
+            deltaTimeInMs = MSDL::SDL_GetTicks() - startTime;
+            startTime = MSDL::SDL_GetTicks();
+            /*if(TargetFpsDeltaTimeInMs > deltaTimeInMs){
                 MSDL::SDL_Delay( TargetFpsDeltaTimeInMs - deltaTimeInMs);
             }
-            deltaTimeInMs = MSDL::SDL_GetTicks() - start_time;
+            deltaTimeInMs = MSDL::SDL_GetTicks() - start_time;*/
         }
     }
     Shutdown();
