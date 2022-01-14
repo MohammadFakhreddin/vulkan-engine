@@ -64,6 +64,20 @@ namespace MFA::AssetSystem
     using TextureIndex = int16_t;
     using Index = uint32_t;
 
+    struct SamplerConfig
+    {
+        bool isValid = false;
+        enum class SampleMode
+        {
+            Linear,
+            Nearest
+        };
+        SampleMode sampleMode = SampleMode::Linear;
+        uint32_t magFilter = 0;
+        uint32_t minFilter = 0;
+        uint32_t wrapS = 0;
+        uint32_t wrapT = 0;
+    };
 
 }
 

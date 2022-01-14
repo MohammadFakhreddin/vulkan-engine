@@ -18,6 +18,7 @@
 #include "engine/render_system/render_resources/point_light_shadow_resources/PointLightShadowResources.hpp"
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/job_system/JobSystem.hpp"
+#include "engine/asset_system/AssetShader.hpp"
 
 #define CAST_VARIANT(variant)  static_cast<PBR_Variant *>(variant.get())
 

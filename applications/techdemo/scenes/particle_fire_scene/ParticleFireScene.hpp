@@ -32,5 +32,6 @@ private:
 
     std::shared_ptr<MFA::RT::SamplerGroup> mSamplerGroup {};
     std::shared_ptr<MFA::RT::GpuTexture> mErrorTexture {};
+    std::shared_ptr<MFA::AssetSystem::Model> mFireModel {};
 
 };

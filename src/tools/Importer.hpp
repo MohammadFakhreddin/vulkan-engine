@@ -1,13 +1,23 @@
 #pragma once
 
-#include "engine/BedrockCommon.hpp"
 #include "engine/asset_system/AssetTypes.hpp"
-#include "engine/asset_system/AssetTexture.hpp"
-#include "engine/asset_system/AssetBaseMesh.hpp"
-#include "engine/asset_system/AssetModel.hpp"
-#include "engine/asset_system/AssetShader.hpp"
+#include "engine/BedrockCommon.hpp"
+#include "engine/BedrockMemory.hpp"
 
 #include <memory>
+
+namespace MFA
+{
+    struct SmartBlob;
+}
+
+namespace MFA::AssetSystem
+{
+    class Texture;
+    class MeshBase;
+    struct Model;
+    class Shader;
+}
 
 namespace MFA::Importer {
 
@@ -16,32 +26,32 @@ namespace MFA::Importer {
 struct ImportTextureOptions {
     bool tryToGenerateMipmaps = true;       // Generates mipmaps for uncompressed texture
     bool preferSrgb = false;                // Not tested and not recommended
-    AS::SamplerConfig * sampler = nullptr;  // For better sampling, you can specify specific options for sampler
+    AssetSystem::SamplerConfig * sampler = nullptr;  // For better sampling, you can specify specific options for sampler
     // TODO Usage flags
 };
 
 [[nodiscard]]
-std::shared_ptr<AS::Texture> ImportUncompressedImage(
+std::shared_ptr<AssetSystem::Texture> ImportUncompressedImage(
     char const * path, 
     ImportTextureOptions const & options = {}
 );
 
 [[nodiscard]]
-std::shared_ptr<AS::Texture> CreateErrorTexture();
+std::shared_ptr<AssetSystem::Texture> CreateErrorTexture();
 
 [[nodiscard]]
-std::shared_ptr<AS::Texture> ImportInMemoryTexture(
+std::shared_ptr<AssetSystem::Texture> ImportInMemoryTexture(
     CBlob originalImagePixels,
     int32_t width,
     int32_t height,
-    AS::TextureFormat format,
+    AssetSystem::TextureFormat format,
     uint32_t components,
     uint16_t depth = 1,
     uint16_t slices = 1,
     ImportTextureOptions const & options = {}
 );
 
-std::shared_ptr<AS::Texture> ImportKTXImage(
+std::shared_ptr<AssetSystem::Texture> ImportKTXImage(
     char const * path,
     ImportTextureOptions const & options = {}
 );
@@ -50,34 +60,34 @@ std::shared_ptr<AS::Texture> ImportKTXImage(
 
 // TODO
 [[nodiscard]]
-AS::Texture ImportDDSFile(char const * path);
+AssetSystem::Texture ImportDDSFile(char const * path);
 
 
 [[nodiscard]]
-std::shared_ptr<AS::Texture> ImportImage(char const * path, ImportTextureOptions const & options = {});
+std::shared_ptr<AssetSystem::Texture> ImportImage(char const * path, ImportTextureOptions const & options = {});
 /*
  * Due to lack of material support, OBJ files are not very useful (Deprecated)
  */
 [[nodiscard]]
-std::shared_ptr<AS::MeshBase> ImportObj(char const * path);
+std::shared_ptr<AssetSystem::MeshBase> ImportObj(char const * path);
 
 [[nodiscard]]
-std::shared_ptr<AS::Model> ImportGLTF(char const * path);
+std::shared_ptr<AssetSystem::Model> ImportGLTF(char const * path);
 
 [[nodiscard]]
-std::shared_ptr<AS::Shader> ImportShaderFromHLSL(char const * path);
+std::shared_ptr<AssetSystem::Shader> ImportShaderFromHLSL(char const * path);
 
 [[nodiscard]]
-std::shared_ptr<AS::Shader> ImportShaderFromSPV(
+std::shared_ptr<AssetSystem::Shader> ImportShaderFromSPV(
     char const * path,
-    AS::ShaderStage stage,
+    AssetSystem::ShaderStage stage,
     char const * entryPoint
 );
 
 [[nodiscard]]
-std::shared_ptr<AS::Shader> ImportShaderFromSPV(
+std::shared_ptr<AssetSystem::Shader> ImportShaderFromSPV(
     CBlob dataMemory,
-    AS::ShaderStage const stage,
+    AssetSystem::ShaderStage const stage,
     char const * entryPoint
 );
 

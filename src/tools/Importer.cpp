@@ -9,6 +9,12 @@
 #include "engine/job_system/ThreadSafeQueue.hpp"
 #include "engine/job_system/JobSystem.hpp"
 #include "engine/asset_system/Asset_PBR_Mesh.hpp"
+#include "engine/BedrockCommon.hpp"
+#include "engine/asset_system/AssetTypes.hpp"
+#include "engine/asset_system/AssetTexture.hpp"
+#include "engine/asset_system/AssetBaseMesh.hpp"
+#include "engine/asset_system/AssetModel.hpp"
+#include "engine/asset_system/AssetShader.hpp"
 
 #include "libs/tiny_obj_loader/tiny_obj_loader.h"
 #include "libs/tiny_gltf_loader/tiny_gltf_loader.h"

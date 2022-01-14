@@ -17,8 +17,9 @@
 #include "engine/job_system/JobSystem.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
 #include "engine/asset_system/AssetDebugMesh.hpp"
+#include "engine/asset_system/AssetModel.hpp"
+#include "engine/asset_system/AssetShader.hpp"
 
-// TODO Essences should be able to do instancing
 // Vertex input bindings
 // The instancing pipeline uses a vertex input state with two bindings
 //bindingDescriptions = {

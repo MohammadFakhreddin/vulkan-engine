@@ -4,6 +4,11 @@
 
 namespace MFA
 {
+    namespace AssetSystem
+    {
+        struct Model;
+    }
+
     class ParticleEssence;
     class Scene;
 
@@ -28,7 +33,9 @@ namespace MFA
         void Render(RT::CommandRecordState & recordState, float deltaTime) override;
         
         void OnResize() override {}
-        
+
+        std::shared_ptr<EssenceBase> CreateEssenceWithModel(std::shared_ptr<AssetSystem::Model> const & cpuModel);
+
     protected:
 
         std::shared_ptr<EssenceBase> internalCreateEssence(

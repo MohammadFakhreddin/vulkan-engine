@@ -31,21 +31,6 @@ namespace MFA::AssetSystem
             Dimensions dimension{};
         };
 
-        struct SamplerConfig
-        {
-            bool isValid = false;
-            enum class SampleMode
-            {
-                Linear,
-                Nearest
-            };
-            SampleMode sampleMode = SampleMode::Linear;
-            uint32_t magFilter = 0;
-            uint32_t minFilter = 0;
-            uint32_t wrapS = 0;
-            uint32_t wrapT = 0;
-        };
-
     private:
         struct InternalFormatTableType
         {
@@ -192,7 +177,6 @@ namespace MFA::AssetSystem
         int mPreviousMipHeight = -1;
     };
 
-    using SamplerConfig = Texture::SamplerConfig;
 }
 
 namespace MFA

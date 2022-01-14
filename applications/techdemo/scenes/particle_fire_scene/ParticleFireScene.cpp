@@ -3,6 +3,7 @@
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "tools/Importer.hpp"
+#include "engine/asset_system/AssetModel.hpp"
 
 using namespace MFA;
 
@@ -30,6 +31,10 @@ void ParticleFireScene::Init()
     mErrorTexture = RF::CreateTexture(*cpuErrorTexture);
     
     mParticlePipeline.Init(mSamplerGroup, mErrorTexture);
+
+    //mFireModel = std::make_shared<AS::Model>();
+
+    //mParticlePipeline.CreateEssenceWithModel(mFireModel);
 }
 
 //-------------------------------------------------------------------------------------------------

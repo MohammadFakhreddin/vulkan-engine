@@ -12,6 +12,7 @@
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "engine/job_system/JobSystem.hpp"
+#include "engine/asset_system/AssetShader.hpp"
 
 #define CAST_ESSENCE(essence) static_cast<ParticleEssence *>(essence)
 
@@ -117,6 +118,18 @@ namespace MFA
         {
             CAST_ESSENCE(essence)->draw(recordState, deltaTime);
         }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<EssenceBase> ParticlePipeline::CreateEssenceWithModel(
+        std::shared_ptr<AssetSystem::Model> const & cpuModel
+    )
+    {
+        MFA_ASSERT(cpuModel != nullptr);
+        auto essence = std::make_shared<ParticleEssence>(cpuModel);    
+        bool const success = addEssence(essence);
+        return success ? essence : nullptr;
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -3,14 +3,13 @@
 #include "RenderTypes.hpp"
 #include "engine/BedrockPlatforms.hpp"
 #include "engine/asset_system/AssetTypes.hpp"
+#include "engine/BedrockCommon.hpp"
 
 #ifdef __DESKTOP__
 #include "libs/sdl/SDL.hpp"
 #endif
 
 #include <functional>
-
-#include "engine/BedrockCommon.hpp"
 
 namespace MFA
 {
