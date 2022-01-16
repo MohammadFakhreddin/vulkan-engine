@@ -215,13 +215,6 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::PostRender(RT::CommandRecordState & drawPass, float deltaTime)
-    {
-        BasePipeline::PostRender(drawPass, deltaTime);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
     void PBRWithShadowPipelineV2::OnResize()
     {
         mDepthPrePass->OnResize();

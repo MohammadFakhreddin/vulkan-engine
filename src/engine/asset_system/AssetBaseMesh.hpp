@@ -16,7 +16,11 @@ namespace MFA::AssetSystem
 
     public:
 
-        explicit MeshBase(uint32_t vertexBufferCount_);
+        explicit MeshBase(
+            uint32_t vertexBufferCount_ = 1,
+            bool keepVertexStagingBuffer_ = false,
+            bool keepIndexStagingBuffer_ = false
+        );
         ~MeshBase() override;
 
         MeshBase(MeshBase const &) noexcept = delete;
@@ -50,6 +54,8 @@ namespace MFA::AssetSystem
 
         // Vertex buffer count required for gpu model
         uint32_t const requiredVertexBufferCount;
+        bool keepVertexStagingBuffer = false;
+        bool keepIndexStagingBuffer = false;
 
     protected:
 

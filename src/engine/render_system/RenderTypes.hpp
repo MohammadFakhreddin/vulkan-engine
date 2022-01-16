@@ -59,6 +59,7 @@ namespace MFA
         {
             std::vector<std::shared_ptr<BufferAndMemory>> const verticesBuffer;
             std::shared_ptr<BufferAndMemory> const indicesBuffer;
+            //TODO Start from here. We should keep staging buffer if the mesh requires it
 
             explicit MeshBuffers(
                 std::vector<std::shared_ptr<BufferAndMemory>> verticesBuffer_,
@@ -235,8 +236,8 @@ namespace MFA
             explicit SwapChainGroup(
                 VkSwapchainKHR swapChain_,
                 VkFormat swapChainFormat_,
-                std::vector<VkImage> const & swapChainImages_,
-                std::vector<std::shared_ptr<ImageViewGroup>> const & swapChainImageViews_
+                std::vector<VkImage> swapChainImages_,
+                std::vector<std::shared_ptr<ImageViewGroup>> swapChainImageViews_
             );
             ~SwapChainGroup();
 

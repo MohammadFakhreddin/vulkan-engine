@@ -7,10 +7,11 @@ namespace MFA::AssetSystem::Particle
 {
     struct Vertex
     {
-        Position localPosition{};
+        float localPosition[3]{};
         int textureIndex = -1;
-        UV uv{};
-        Color color{};
+        float uv [2]{};
+        float color [3]{};
+        float alpha = 1.0f;
     };
 
     struct PerInstanceData

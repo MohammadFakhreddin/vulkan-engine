@@ -15,7 +15,10 @@ namespace MFA
 
         using VariantsList = std::vector<std::shared_ptr<VariantBase>>;
 
-        explicit ParticleEssence(std::shared_ptr<AS::Model> const & cpuModel);
+        explicit ParticleEssence(
+            std::shared_ptr<AS::Model> const & cpuModel,
+            std::string const & name
+        );
         explicit ParticleEssence(
             std::shared_ptr<RT::GpuModel> gpuModel,
             std::shared_ptr<AS::Particle::Mesh> mesh

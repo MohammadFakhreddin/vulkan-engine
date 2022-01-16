@@ -10,7 +10,8 @@ namespace MFA::JobSystem
 
     struct State
     {
-        ThreadPool threadPool{};
+        ThreadPool threadPool {};
+        std::vector<Task> postRenderTasks {};
     };
     State * state = nullptr;
 
@@ -52,6 +53,14 @@ namespace MFA::JobSystem
 
     //-------------------------------------------------------------------------------------------------
 
+    void RunOnPostRender(Task const & task)
+    {
+        MFA_ASSERT(task != nullptr);
+        state->postRenderTasks.emplace_back(task);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     uint32_t GetNumberOfAvailableThreads()
     {
         return state->threadPool.GetNumberOfAvailableThreads();
@@ -70,6 +79,17 @@ namespace MFA::JobSystem
     {
         MFA_ASSERT(state != nullptr);
         delete state;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void OnPostRender()
+    {
+        for (auto & postRenderTask : state->postRenderTasks)
+        {
+            postRenderTask();
+        }
+        state->postRenderTasks.clear();
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -204,13 +204,13 @@ MFA::RT::StorageBufferCollection::~StorageBufferCollection() = default;
 MFA::RT::SwapChainGroup::SwapChainGroup(
     VkSwapchainKHR swapChain_,
     VkFormat swapChainFormat_,
-    std::vector<VkImage> const & swapChainImages_,
-    std::vector<std::shared_ptr<ImageViewGroup>> const & swapChainImageViews_
+    std::vector<VkImage> swapChainImages_,
+    std::vector<std::shared_ptr<ImageViewGroup>> swapChainImageViews_
 )
     : swapChain(swapChain_)
     , swapChainFormat(swapChainFormat_)
-    , swapChainImages(swapChainImages_)
-    , swapChainImageViews(swapChainImageViews_)
+    , swapChainImages(std::move(swapChainImages_))
+    , swapChainImageViews(std::move(swapChainImageViews_))
 {}
 
 //-------------------------------------------------------------------------------------------------

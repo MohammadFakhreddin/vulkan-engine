@@ -2,7 +2,8 @@ struct PSIn {
     float4 position : SV_POSITION;
     int textureIndex;
     float2 uv : TEXCOORD0;
-    float4 color : COLOR0;
+    float3 color : COLOR0;
+    float alpha : COLOR1;
 };
 
 struct PSOut {
@@ -18,6 +19,6 @@ PSOut main(PSIn input) {
     PSOut output;
     output.color = input.textureIndex >= 0 
         ? baseColorTexture[input.textureIndex].Sample(baseColorSampler, input.uv)
-        : input.color;
+        : float4(input.color, input.alpha);
     return output;
 }

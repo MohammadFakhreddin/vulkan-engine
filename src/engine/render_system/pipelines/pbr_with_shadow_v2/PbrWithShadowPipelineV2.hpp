@@ -97,8 +97,6 @@ namespace MFA
 
         void Render(RT::CommandRecordState & recordState, float deltaTime) override;
 
-        void PostRender(RT::CommandRecordState & drawPass, float deltaTime) override;
-
         void OnResize() override;
 
         void CreateEssenceWithoutModel(

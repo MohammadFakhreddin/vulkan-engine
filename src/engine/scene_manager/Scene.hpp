@@ -36,7 +36,7 @@ public:
 
     virtual void OnPreRender(float deltaTimeInSec, RT::CommandRecordState & recordState);
     virtual void OnRender(float deltaTimeInSec, RT::CommandRecordState & drawPass) {}
-    virtual void OnPostRender(float deltaTimeInSec, RT::CommandRecordState & drawPass) {}
+    virtual void OnPostRender(float deltaTimeInSec) {}
 
     virtual void OnResize();;
     virtual void Init();   

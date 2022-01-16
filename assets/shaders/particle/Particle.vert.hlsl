@@ -5,8 +5,8 @@ struct VSIn {
     float3 localPosition : SV_POSITION;
     int textureIndex;
     float2 uv : TEXCOORD0;
-    float4 color : COLOR0;
-    // TODO Maybe alpha as well
+    float3 color : COLOR0;
+    float alpha : COLOR1;
     // Per instance data
     float3 instancePosition: SV_POSITION;
 };
@@ -15,7 +15,8 @@ struct VSOut {
     float4 position : SV_POSITION;
     int textureIndex;
     float2 uv : TEXCOORD0;
-    float4 color : COLOR0;
+    float3 color : COLOR0;
+    float alpha : COLOR1;
     [[vk::builtin("PointSize")]] float PSize : PSIZE;
 };
 

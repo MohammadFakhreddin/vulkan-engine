@@ -47,8 +47,7 @@ namespace MFA
 
     void Scene::Shutdown()
     {
-        auto const deleteResult = EntitySystem::DestroyEntity(mRootEntity);
-        MFA_ASSERT(deleteResult == true);
+        EntitySystem::DestroyEntity(mRootEntity);
     }
 
     //-------------------------------------------------------------------------------------------------

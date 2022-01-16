@@ -288,7 +288,7 @@ namespace MFA::RenderFrontend
 
     static void OnResize()
     {
-        RB::DeviceWaitIdle(state->logicalDevice.device);
+        DeviceWaitIdle();
 
         state->surfaceCapabilities = computeSurfaceCapabilities();
 
@@ -310,7 +310,7 @@ namespace MFA::RenderFrontend
     bool Shutdown()
     {
         // Common part with resize
-        RB::DeviceWaitIdle(state->logicalDevice.device);
+        DeviceWaitIdle();
 
         MFA_ASSERT(state->resizeEventSignal.IsEmpty());
 
@@ -431,11 +431,11 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    void DestroyPipelineGroup(RT::PipelineGroup & drawPipeline)
+    void DestroyPipelineGroup(RT::PipelineGroup & recordState)
     {
         RB::DestroyPipelineGroup(
             state->logicalDevice.device,
-            drawPipeline
+            recordState
         );
     }
 
@@ -605,6 +605,7 @@ namespace MFA::RenderFrontend
 
     void DestroyImage(RT::ImageGroup const & imageGroup)
     {
+        DeviceWaitIdle();
         RB::DestroyImage(
             state->logicalDevice.device,
             imageGroup
@@ -615,6 +616,7 @@ namespace MFA::RenderFrontend
 
     void DestroyImageView(RT::ImageViewGroup const & imageViewGroup)
     {
+        DeviceWaitIdle();
         RB::DestroyImageView(
             state->logicalDevice.device,
             imageViewGroup
@@ -633,6 +635,7 @@ namespace MFA::RenderFrontend
 
     void DestroySampler(RT::SamplerGroup const & samplerGroup)
     {
+        DeviceWaitIdle();
         RB::DestroySampler(state->logicalDevice.device, samplerGroup);
     }
 
@@ -676,6 +679,7 @@ namespace MFA::RenderFrontend
 
     void DestroyBuffer(RT::BufferAndMemory const & bufferGroup)
     {
+        DeviceWaitIdle();
         RB::DestroyBuffer(state->logicalDevice.device, bufferGroup);
     }
 
@@ -1066,6 +1070,7 @@ namespace MFA::RenderFrontend
 
     void DestroySwapChain(RT::SwapChainGroup const & swapChainGroup)
     {
+        DeviceWaitIdle();
         RB::DestroySwapChain(state->logicalDevice.device, swapChainGroup);
     }
 
@@ -1112,6 +1117,7 @@ namespace MFA::RenderFrontend
 
     void DestroyRenderPass(VkRenderPass renderPass)
     {
+        DeviceWaitIdle();
         RB::DestroyRenderPass(state->logicalDevice.device, renderPass);
     }
 
@@ -1159,6 +1165,7 @@ namespace MFA::RenderFrontend
         VkFramebuffer * frameBuffers
     )
     {
+        DeviceWaitIdle();
         RB::DestroyFrameBuffers(
             state->logicalDevice.device,
             frameBuffersCount,
@@ -1393,6 +1400,7 @@ namespace MFA::RenderFrontend
 
     void DestroySyncObjects(RT::SyncObjects const & syncObjects)
     {
+        DeviceWaitIdle();
         RB::DestroySyncObjects(state->logicalDevice.device, syncObjects);
     }
 
@@ -1519,7 +1527,7 @@ namespace MFA::RenderFrontend
 
         // We ignore failed acquire of image because a resize will be triggered at end of pass
         RF::AcquireNextImage(
-            getImageAvailabilitySemaphore(drawPass),
+            GetImageAvailabilitySemaphore(drawPass),
             state->displayRenderPass.GetSwapChainImages(),
             drawPass.imageIndex
         );
@@ -1546,7 +1554,7 @@ namespace MFA::RenderFrontend
         // Wait for image to be available and draw
         RF::SubmitQueue(
             GetGraphicCommandBuffer(drawPass),
-            getImageAvailabilitySemaphore(drawPass),
+            GetImageAvailabilitySemaphore(drawPass),
             GetRenderFinishIndicatorSemaphore(drawPass),
             GetInFlightFence(drawPass)
         );
@@ -1575,7 +1583,7 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    VkSemaphore getImageAvailabilitySemaphore(RT::CommandRecordState const & drawPass)
+    VkSemaphore GetImageAvailabilitySemaphore(RT::CommandRecordState const & drawPass)
     {
         return state->syncObjects.imageAvailabilitySemaphores[drawPass.frameIndex];
     }

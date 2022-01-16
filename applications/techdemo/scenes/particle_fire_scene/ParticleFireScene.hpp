@@ -28,6 +28,12 @@ public:
 
 private:
 
+    void createFireEssence();
+
+    void createFireInstance();
+
+    void createCamera();
+
     MFA::ParticlePipeline mParticlePipeline {this};
 
     std::shared_ptr<MFA::RT::SamplerGroup> mSamplerGroup {};

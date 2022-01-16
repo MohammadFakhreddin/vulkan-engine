@@ -42,7 +42,7 @@ void PrefabEditorScene::Init()
     prepareCreateComponentInstructionMap();
 
     {// Error texture
-        auto cpuTexture = Importer::CreateErrorTexture();
+        auto const cpuTexture = Importer::CreateErrorTexture();
         mErrorTexture = RF::CreateTexture(*cpuTexture);
     }
 
@@ -121,16 +121,8 @@ void PrefabEditorScene::OnRender(
 
 //-------------------------------------------------------------------------------------------------
 
-void PrefabEditorScene::OnPostRender(
-    float const deltaTimeInSec,
-    RT::CommandRecordState & recordState
-)
+void PrefabEditorScene::OnPostRender(float const deltaTimeInSec)
 {
-    Scene::OnPostRender(deltaTimeInSec, recordState);
-
-    mDebugRenderPipeline.PostRender(recordState, deltaTimeInSec);
-    mPbrPipeline.PostRender(recordState, deltaTimeInSec);
-
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -219,58 +211,11 @@ void PrefabEditorScene::saveAndLoadWindow()
     UI::BeginWindow("Save and load panel");
     UI::Button("Save", [this]()->void
     {
-        std::vector<WinApi::Extension> const extensions{
-            WinApi::Extension {
-                .name = "Json",
-                .value = "*.json"
-            }
-        };
-
-        std::string filePath{};
-        auto const success = WinApi::SaveAs(extensions, filePath);
-        if (success)
-        {
-            auto const extension = FileSystem::ExtractExtensionFromPath(filePath.c_str());
-            if (extension.empty())
-            {
-                filePath += ".json";
-            }
-
-            printf("Save address is %s", filePath.c_str());
-            PrefabFileStorage::Serialize(PrefabFileStorage::SerializeParams{
-                .saveAddress = filePath,
-                .prefab = &mPrefab
-            });
-        }
+        savePrefab();
     });
     UI::Button("Load", [this]()->void
     {
-        std::vector<WinApi::Extension> const extensions{
-            WinApi::Extension {
-                .name = "Json",
-                .value = "*.json"
-            }
-        };
-
-        std::string filePath{};
-        auto const success = WinApi::TryToPickFile(extensions, filePath);
-        if (success)
-        {
-            EntitySystem::DestroyEntity(mPrefabRootEntity);
-
-            mPrefabRootEntity = EntitySystem::CreateEntity("RootEntity", GetRootEntity());
-            MFA_ASSERT(mPrefabRootEntity != nullptr);
-
-            mPrefab.AssignPreBuiltEntity(mPrefabRootEntity);
-
-            PrefabFileStorage::Deserialize(PrefabFileStorage::DeserializeParams{
-                .fileAddress = filePath,
-                .prefab = &mPrefab,
-                .initializeEntity = true
-            });
-
-            bindEditorSignalToEntity(mPrefabRootEntity);
-        }
+        loadPrefab();
     });
 
     UI::EndWindow();
@@ -626,6 +571,67 @@ void PrefabEditorScene::bindEditorSignalToEntity(Entity * entity)
     {
         MFA_ASSERT(child != nullptr);
         bindEditorSignalToEntity(child);
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void PrefabEditorScene::savePrefab()
+{
+    std::vector<WinApi::Extension> const extensions{
+        WinApi::Extension {
+            .name = "Json",
+            .value = "*.json"
+        }
+    };
+
+    std::string filePath{};
+    auto const success = WinApi::SaveAs(extensions, filePath);
+    if (success)
+    {
+        auto const extension = FileSystem::ExtractExtensionFromPath(filePath.c_str());
+        if (extension.empty())
+        {
+            filePath += ".json";
+        }
+
+        printf("Save address is %s", filePath.c_str());
+        PrefabFileStorage::Serialize(PrefabFileStorage::SerializeParams{
+            .saveAddress = filePath,
+            .prefab = &mPrefab
+        });
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void PrefabEditorScene::loadPrefab()
+{
+    std::vector<WinApi::Extension> const extensions{
+        WinApi::Extension {
+            .name = "Json",
+            .value = "*.json"
+        }
+    };
+
+    std::string filePath{};
+    auto const success = WinApi::TryToPickFile(extensions, filePath);
+    if (success)
+    {
+        EntitySystem::DestroyEntity(mPrefabRootEntity);
+
+        mPrefabRootEntity = EntitySystem::CreateEntity("RootEntity", GetRootEntity());
+        MFA_ASSERT(mPrefabRootEntity != nullptr);
+
+        mPrefab.AssignPreBuiltEntity(mPrefabRootEntity);
+
+        PrefabFileStorage::Deserialize(PrefabFileStorage::DeserializeParams{
+            .fileAddress = filePath,
+            .prefab = &mPrefab,
+            .initializeEntity = true
+        });
+
+        bindEditorSignalToEntity(mPrefabRootEntity);
     }
 }
 

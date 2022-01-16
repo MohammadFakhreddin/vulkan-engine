@@ -41,16 +41,16 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     void ParticlePipeline::Init(
-        std::shared_ptr<RT::SamplerGroup> samplerGroup,
-        std::shared_ptr<RT::GpuTexture> errorTexture
+        std::shared_ptr<RT::SamplerGroup> const & samplerGroup,
+        std::shared_ptr<RT::GpuTexture> const & errorTexture
     )
     {
         BasePipeline::Init();
 
         MFA_ASSERT(samplerGroup != nullptr);
-        mSamplerGroup = std::move(samplerGroup);
+        mSamplerGroup = samplerGroup;
         MFA_ASSERT(errorTexture != nullptr);
-        mErrorTexture = std::move(errorTexture);
+        mErrorTexture = errorTexture;
 
         createPerFrameDescriptorSetLayout();
         createPerEssenceDescriptorSetLayout();
@@ -123,11 +123,12 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     std::shared_ptr<EssenceBase> ParticlePipeline::CreateEssenceWithModel(
-        std::shared_ptr<AssetSystem::Model> const & cpuModel
+        std::shared_ptr<AssetSystem::Model> const & cpuModel,
+        std::string const & name
     )
     {
         MFA_ASSERT(cpuModel != nullptr);
-        auto essence = std::make_shared<ParticleEssence>(cpuModel);    
+        auto essence = std::make_shared<ParticleEssence>(cpuModel, name);    
         bool const success = addEssence(essence);
         return success ? essence : nullptr;
     }

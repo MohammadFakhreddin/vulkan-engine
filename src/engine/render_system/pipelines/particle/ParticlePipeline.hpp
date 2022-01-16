@@ -22,8 +22,8 @@ namespace MFA
         PIPELINE_PROPS(ParticlePipeline)
 
         void Init(
-            std::shared_ptr<RT::SamplerGroup> samplerGroup,
-            std::shared_ptr<RT::GpuTexture> errorTexture
+            std::shared_ptr<RT::SamplerGroup> const & samplerGroup,
+            std::shared_ptr<RT::GpuTexture> const & errorTexture
         );
 
         void Shutdown() override;
@@ -34,7 +34,10 @@ namespace MFA
         
         void OnResize() override {}
 
-        std::shared_ptr<EssenceBase> CreateEssenceWithModel(std::shared_ptr<AssetSystem::Model> const & cpuModel);
+        std::shared_ptr<EssenceBase> CreateEssenceWithModel(
+            std::shared_ptr<AssetSystem::Model> const & cpuModel,
+            std::string const & name
+        );
 
     protected:
 

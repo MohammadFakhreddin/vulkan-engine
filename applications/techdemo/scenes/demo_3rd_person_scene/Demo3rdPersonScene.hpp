@@ -28,7 +28,7 @@ public:
 
     void OnRender(float deltaTimeInSec, MFA::RT::CommandRecordState & recordState) override;
 
-    void OnPostRender(float deltaTimeInSec, MFA::RT::CommandRecordState & recordState) override;
+    void OnPostRender(float deltaTimeInSec) override;
 
     void Shutdown() override;
     

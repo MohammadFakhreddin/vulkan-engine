@@ -26,7 +26,7 @@ public:
 
     void OnRender(float deltaTimeInSec, MFA::RT::CommandRecordState & recordState) override;
 
-    void OnPostRender(float deltaTimeInSec, MFA::RT::CommandRecordState & recordState) override;
+    void OnPostRender(float deltaTimeInSec) override;
 
     void Shutdown() override;
 
@@ -55,6 +55,10 @@ private:
     void bindEditorSignalToEntity(MFA::Entity * entity);
 
     MFA::Entity * createPrefabEntity(char const * name, MFA::Entity * parent, bool createTransform = true);
+
+    void savePrefab();
+
+    void loadPrefab();
 
     static constexpr float Z_NEAR = 0.1f;
     static constexpr float Z_FAR = 3000.0f;

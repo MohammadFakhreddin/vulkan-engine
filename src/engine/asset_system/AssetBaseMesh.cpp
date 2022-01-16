@@ -7,8 +7,14 @@ namespace MFA::AssetSystem
 {
     //-------------------------------------------------------------------------------------------------
 
-    MeshBase::MeshBase(uint32_t const vertexBufferCount_)
+    MeshBase::MeshBase(
+        uint32_t const vertexBufferCount_,
+        bool const keepVertexStagingBuffer_,
+        bool const keepIndexStagingBuffer_
+    )
         : requiredVertexBufferCount(vertexBufferCount_)
+        , keepVertexStagingBuffer(keepVertexStagingBuffer_)
+        , keepIndexStagingBuffer(keepIndexStagingBuffer_)
     {}
 
     //-------------------------------------------------------------------------------------------------

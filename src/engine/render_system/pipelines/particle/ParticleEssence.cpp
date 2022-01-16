@@ -16,9 +16,12 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    ParticleEssence::ParticleEssence(std::shared_ptr<AS::Model> const & cpuModel)
+    ParticleEssence::ParticleEssence(
+        std::shared_ptr<AS::Model> const & cpuModel,
+        std::string const & name
+    )
         : ParticleEssence(
-            RF::CreateGpuModel(cpuModel.get(), "particle"),
+            RF::CreateGpuModel(cpuModel.get(), name.c_str()),
             static_pointer_cast<Mesh>(cpuModel->mesh))
     {}
     
@@ -92,7 +95,7 @@ namespace MFA
     void ParticleEssence::updateInstanceData(VariantsList const & variants)
     {
         MFA_ASSERT(variants.size() < mMesh->maxInstanceCount);
-        mNextDrawInstanceCount = std::max<uint32_t>(
+        mNextDrawInstanceCount = std::min<uint32_t>(
             static_cast<uint32_t>(variants.size()),
             mMesh->maxInstanceCount
         );
@@ -128,7 +131,7 @@ namespace MFA
     {
         RF::BindVertexBuffer(
             recordState,
-            *mGpuModel->meshBuffers->verticesBuffer[recordState.frameIndex],
+            *mInstancesBuffers[recordState.frameIndex],
             INSTANCE_BUFFER_BIND_ID
         );
     }

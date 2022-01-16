@@ -32,17 +32,12 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::PreRender(RT::CommandRecordState & drawPass, float deltaTime)
+    void BasePipeline::PreRender(RT::CommandRecordState & recordState, float deltaTime)
     {}
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::Render(RT::CommandRecordState & drawPass, float deltaTime)
-    {}
-
-    //-------------------------------------------------------------------------------------------------
-
-    void BasePipeline::PostRender(RT::CommandRecordState & drawPass, float deltaTime)
+    void BasePipeline::Render(RT::CommandRecordState & recordState, float deltaTime)
     {}
 
     //-------------------------------------------------------------------------------------------------

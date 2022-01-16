@@ -58,8 +58,19 @@ namespace MFA::Math
     template<typename genType>
     genType Epsilon()
     {
-        GLM_STATIC_ASSERT(std::numeric_limits<genType>::is_iec559, "'epsilon' only accepts floating-point inputs");
+        static_assert(std::numeric_limits<genType>::is_iec559, "'epsilon' only accepts floating-point inputs");
         return std::numeric_limits<genType>::epsilon();
+    }
+
+    template<typename T>
+    T Random(T min, T max)
+    {
+        float const fMin = static_cast<float>(min);
+        float const fMax = static_cast<float>(max);
+        // TODO Add seed an other stuff
+        float value = (static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX))
+            * (fMax - fMin) + fMin;
+        return static_cast<T>(value);
     }
 
 };

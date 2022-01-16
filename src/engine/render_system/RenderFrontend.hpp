@@ -76,7 +76,7 @@ namespace MFA::RenderFrontend
         RT::CreateGraphicPipelineOptions const & options
     );
 
-    void DestroyPipelineGroup(RT::PipelineGroup & drawPipeline);
+    void DestroyPipelineGroup(RT::PipelineGroup & recordState);
 
     //-------------------------------------------DescriptorSetGroup--------------------------------------------
 
@@ -459,7 +459,7 @@ namespace MFA::RenderFrontend
     VkSemaphore GetRenderFinishIndicatorSemaphore(RT::CommandRecordState const & drawPass);
 
     [[nodiscard]]
-    VkSemaphore getImageAvailabilitySemaphore(RT::CommandRecordState const & drawPass);
+    VkSemaphore GetImageAvailabilitySemaphore(RT::CommandRecordState const & drawPass);
 
     [[nodiscard]]
     VkDescriptorPool CreateDescriptorPool(uint32_t maxSets);

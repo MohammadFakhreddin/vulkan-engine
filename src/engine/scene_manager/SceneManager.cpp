@@ -6,6 +6,7 @@
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "engine/scene_manager/Scene.hpp"
+#include "engine/job_system/JobSystem.hpp"
 
 namespace MFA::SceneManager
 {
@@ -193,17 +194,16 @@ namespace MFA::SceneManager
 
         state->DisplayRenderPass->EndRenderPass(recordState);
 
+        RF::EndGraphicCommandBufferRecording(recordState);
+        // End of graphic record
+
         // Post render 
         if (state->ActiveScene)
         {
-            state->ActiveScene->OnPostRender(
-                deltaTimeInSec,
-                recordState
-            );
+            state->ActiveScene->OnPostRender(deltaTimeInSec);
         }
 
-        RF::EndGraphicCommandBufferRecording(recordState);
-        // End of graphic record
+        JS::OnPostRender();
 
     }
 

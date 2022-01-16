@@ -16,7 +16,7 @@ namespace MFA::EntitySystem
 {
     void InitEntity(Entity * entity, bool triggerSignals);
     void UpdateEntity(Entity * entity);
-    bool DestroyEntity(Entity * entity, bool shouldNotifyParent);
+    void destroyEntity(Entity * entity, bool shouldNotifyParent);
 }
 
 namespace MFA
@@ -27,7 +27,7 @@ namespace MFA
     public:
         friend void EntitySystem::InitEntity(Entity * entity, bool triggerSignals);
         friend void EntitySystem::UpdateEntity(Entity * entity);
-        friend bool EntitySystem::DestroyEntity(Entity * entity, bool shouldNotifyParent);
+        friend void EntitySystem::destroyEntity(Entity * entity, bool shouldNotifyParent);
         friend Component;
 
         struct CreateEntityParams

@@ -45,17 +45,12 @@ namespace MFA
         BasePipeline & operator = (BasePipeline && rhs) noexcept = delete;
 
         virtual void PreRender(
-            RT::CommandRecordState & drawPass,
+            RT::CommandRecordState & recordState,
             float deltaTime
         );
 
         virtual void Render(
-            RT::CommandRecordState & drawPass,
-            float deltaTime
-        );
-
-        virtual void PostRender(
-            RT::CommandRecordState & drawPass,
+            RT::CommandRecordState & recordState,
             float deltaTime
         );
 

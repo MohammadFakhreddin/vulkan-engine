@@ -155,16 +155,8 @@ void Demo3rdPersonScene::OnRender(float const deltaTimeInSec, RT::CommandRecordS
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec, RT::CommandRecordState & recordState)
+void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec)
 {
-    Scene::OnPostRender(deltaTimeInSec, recordState);
-
-    mPbrPipeline.PostRender(recordState, deltaTimeInSec);
-    if (mEnableDebugPipeline)
-    {
-        mDebugRenderPipeline.PostRender(recordState, deltaTimeInSec);
-    }
-
     if (auto const playerTransform = mPlayerTransform.lock())
     {// Soldier
         static constexpr float SoldierSpeed = 4.0f;

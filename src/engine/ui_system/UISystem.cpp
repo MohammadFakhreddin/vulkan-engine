@@ -609,6 +609,7 @@ namespace MFA::UISystem
                 //    state->meshBuffersValidationStatus[drawPass.frameIndex] = false;
                 //}
                 auto & meshBuffer = state->meshBuffers[drawPass.frameIndex];
+                // TODO Prevent buffer to create mesh buffer every frame 
                 meshBuffer = std::make_shared<RT::MeshBuffers>(
                     RF::CreateVertexBuffer(vertexData->memory),
                     RF::CreateIndexBuffer(indexData->memory)
