@@ -402,32 +402,33 @@ namespace MFA::RenderBackend
     [[nodiscard]]
     VkShaderStageFlagBits ConvertAssetShaderStageToGpu(AssetSystem::ShaderStage stage);
 
-    [[nodiscard]]
-    std::shared_ptr<RT::BufferAndMemory> CreateVertexBuffer(
+    void CreateVertexBuffer(
         VkDevice device,
         VkPhysicalDevice physicalDevice,
         VkCommandPool commandPool,
         VkQueue graphicQueue,
-        CBlob verticesBlob
+        CBlob const & verticesBlob,
+        std::shared_ptr<RT::BufferAndMemory> & outVertexBuffer,
+        std::shared_ptr<RT::BufferAndMemory> & inOutStagingBuffer
     );
 
-    void DestroyVertexBuffer(
+    void UpdateVertexBuffer(
         VkDevice device,
-        RT::BufferAndMemory & vertexBufferGroup
+        VkCommandPool commandPool,
+        VkQueue graphicQueue,
+        CBlob const & verticesBlob,
+        RT::BufferAndMemory const & vertexBuffer,
+        RT::BufferAndMemory const & stagingBuffer
     );
 
-    [[nodiscard]]
-    std::shared_ptr<RT::BufferAndMemory> CreateIndexBuffer(
+    void CreateIndexBuffer(
         VkDevice device,
         VkPhysicalDevice physicalDevice,
         VkCommandPool commandPool,
         VkQueue graphicQueue,
-        CBlob indicesBlob
-    );
-
-    void DestroyIndexBuffer(
-        VkDevice device,
-        RT::BufferAndMemory const & indexBufferGroup
+        CBlob const & indicesBlob,
+        std::shared_ptr<RT::BufferAndMemory> & outIndexBuffer,
+        std::shared_ptr<RT::BufferAndMemory> & inOutStagingIndexBuffer
     );
 
     void CreateUniformBuffer(
@@ -442,11 +443,6 @@ namespace MFA::RenderBackend
         VkDevice device,
         RT::BufferAndMemory const & bufferGroup,
         CBlob data
-    );
-
-    void DestroyBufferAndMemory(
-        VkDevice device,
-        RT::BufferAndMemory const & bufferAndMemory
     );
 
     void CreateStorageBuffer(

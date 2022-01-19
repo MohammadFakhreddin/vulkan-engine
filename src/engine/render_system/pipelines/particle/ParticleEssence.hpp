@@ -40,7 +40,7 @@ namespace MFA
         void draw(
             RT::CommandRecordState const & recordState,
             float deltaTime
-        );
+        ) const;
 
         void bindVertexBuffer(RT::CommandRecordState const & recordState) const override;
 
@@ -58,7 +58,9 @@ namespace MFA
 
         std::shared_ptr<SmartBlob> mInstanceDataMemory {};
         AS::Particle::PerInstanceData * mInstancesData = nullptr;
+
         std::vector<std::shared_ptr<RT::BufferAndMemory>> mInstancesBuffers {};
+        std::shared_ptr<RT::BufferAndMemory> mInstanceStageBuffer {};
 
         uint32_t mNextDrawInstanceCount = 0;
 

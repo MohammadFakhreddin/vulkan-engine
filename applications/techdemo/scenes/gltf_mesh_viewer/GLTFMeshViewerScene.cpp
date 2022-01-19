@@ -253,13 +253,9 @@ void GLTFMeshViewerScene::OnRender(float const deltaTimeInSec, RT::CommandRecord
 
 //-------------------------------------------------------------------------------------------------
 
-void GLTFMeshViewerScene::OnPostRender(float const deltaTimeInSec, RT::CommandRecordState & recordState)
+void GLTFMeshViewerScene::OnPostRender(float const deltaTimeInSec)
 {
-    Scene::OnPostRender(deltaTimeInSec, recordState);
-
-    mDebugRenderPipeline.PostRender(recordState, deltaTimeInSec);
-    mPbrPipeline.PostRender(recordState, deltaTimeInSec);
-
+    Scene::OnPostRender(deltaTimeInSec);
 }
 
 //-------------------------------------------------------------------------------------------------

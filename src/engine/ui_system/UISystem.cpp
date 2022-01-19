@@ -585,6 +585,7 @@ namespace MFA::UISystem
         {
             if (draw_data->TotalVtxCount > 0)
             {
+                // TODO We can create vertices for ui system in post render
                 // Create or resize the vertex/index buffers
                 size_t const vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
                 size_t const index_size = draw_data->TotalIdxCount * sizeof(ImDrawIdx);
@@ -602,23 +603,31 @@ namespace MFA::UISystem
                         index_ptr += cmd_list->IdxBuffer.Size;
                     }
                 }
-                // TODO Write function to get mesh buffer and its status
-                //if (state->meshBuffersValidationStatus[drawPass.frameIndex])
-                //{
-                //    RF::DestroyMeshBuffers(state->meshBuffers[drawPass.frameIndex]);
-                //    state->meshBuffersValidationStatus[drawPass.frameIndex] = false;
-                //}
+
                 auto & meshBuffer = state->meshBuffers[drawPass.frameIndex];
-                // TODO Prevent buffer to create mesh buffer every frame 
-                meshBuffer = std::make_shared<RT::MeshBuffers>(
-                    RF::CreateVertexBuffer(vertexData->memory),
-                    RF::CreateIndexBuffer(indexData->memory)
+                // TODO Prevent buffer to create mesh buffer every frame, Maybe we can update buffer instead when they have same size
+                std::shared_ptr<RT::BufferAndMemory> vertexBuffer = nullptr;
+                std::shared_ptr<RT::BufferAndMemory> vertexStageBuffer = nullptr;
+                std::shared_ptr<RT::BufferAndMemory> indexBuffer = nullptr;
+                std::shared_ptr<RT::BufferAndMemory> indexStageBuffer = nullptr;
+
+                RF::CreateVertexBuffer(
+                    vertexData->memory,
+                    vertexBuffer,
+                    vertexStageBuffer
                 );
-                //state->meshBuffers[drawPass.frameIndex].verticesBuffer = RF::CreateVertexBuffer(CBlob{ vertexData.ptr, vertexData.len });
-                //state->meshBuffers[drawPass.frameIndex].indicesBuffer = RF::CreateIndexBuffer(CBlob{ indexData.ptr, indexData.len });
-                //state->meshBuffersValidationStatus[drawPass.frameIndex] = true;
 
+                RF::CreateIndexBuffer(
+                    indexData->memory,
+                    indexBuffer,
+                    indexStageBuffer
+                );
 
+                meshBuffer = std::make_shared<RT::MeshBuffers>(
+                    vertexBuffer,
+                    indexBuffer
+                );
+                
                 RF::BindIndexBuffer(
                     drawPass,
                     *meshBuffer->indicesBuffer,

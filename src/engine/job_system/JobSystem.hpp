@@ -5,12 +5,11 @@
 
 namespace MFA::JobSystem
 {
-    // TODO Try to use std::async for multi-threading
     using ThreadNumber = uint32_t;
     using Task = std::function<void()>;
 
     void Init();
-
+    // TODO All jobs should return a ticket
     void AssignTaskToAllThreads(Task const & task);
 
     void AssignTaskManually(

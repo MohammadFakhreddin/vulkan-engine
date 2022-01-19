@@ -121,14 +121,15 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-
+    // TODO: We have duplicate code in these 2 function
     std::shared_ptr<EssenceBase> ParticlePipeline::CreateEssenceWithModel(
         std::shared_ptr<AssetSystem::Model> const & cpuModel,
         std::string const & name
     )
     {
         MFA_ASSERT(cpuModel != nullptr);
-        auto essence = std::make_shared<ParticleEssence>(cpuModel, name);    
+        auto essence = std::make_shared<ParticleEssence>(cpuModel, name);
+        createPerEssenceDescriptorSets(essence.get());
         bool const success = addEssence(essence);
         return success ? essence : nullptr;
     }
@@ -143,10 +144,12 @@ namespace MFA
         MFA_ASSERT(gpuModel != nullptr);
         MFA_ASSERT(cpuMesh != nullptr);
         auto const particleMesh = static_pointer_cast<Mesh>(cpuMesh);
-        return std::make_shared<ParticleEssence>(
+        auto const essence = std::make_shared<ParticleEssence>(
             gpuModel,
             particleMesh
         );
+        createPerEssenceDescriptorSets(essence.get());
+        return essence;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -232,6 +235,14 @@ namespace MFA
             };
             descriptorSetSchema.AddUniformBuffer(&descriptorBufferInfo);
 
+            // Sampler
+            VkDescriptorImageInfo texturesSamplerInfo{
+                .sampler = mSamplerGroup->sampler,
+                .imageView = nullptr,
+                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+            };
+            descriptorSetSchema.AddSampler(&texturesSamplerInfo);
+
             descriptorSetSchema.UpdateDescriptorSets();
         }
 
@@ -256,14 +267,6 @@ namespace MFA
             MFA_VK_VALID_ASSERT(descriptorSet);
 
             DescriptorSetSchema descriptorSetSchema{ descriptorSet };
-
-            // Sampler
-            VkDescriptorImageInfo texturesSamplerInfo{
-                .sampler = mSamplerGroup->sampler,
-                .imageView = nullptr,
-                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-            };
-            descriptorSetSchema.AddSampler(&texturesSamplerInfo);
 
             // Textures
             MFA_ASSERT(textures.size() < MAXIMUM_TEXTURE_PER_ESSENCE);

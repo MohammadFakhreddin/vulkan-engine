@@ -543,27 +543,57 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<RT::BufferAndMemory> CreateVertexBuffer(CBlob const verticesBlob)
+    void CreateVertexBuffer(
+        CBlob const & verticesBlob,
+        std::shared_ptr<RT::BufferAndMemory> & outVertexBuffer,
+        std::shared_ptr<RT::BufferAndMemory> & inOutStagingVertexBuffer
+    )
     {
-        return RB::CreateVertexBuffer(
+        RB::CreateVertexBuffer(
             state->logicalDevice.device,
             state->physicalDevice,
             state->graphicCommandPool,
             state->graphicQueue,
-            verticesBlob
+            verticesBlob,
+            outVertexBuffer,
+            inOutStagingVertexBuffer
         );
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<RT::BufferAndMemory> CreateIndexBuffer(CBlob const indicesBlob)
+    void UpdateVertexBuffer(
+        CBlob const & verticesBlob,
+        RT::BufferAndMemory const & vertexBuffer,
+        RT::BufferAndMemory const & stagingBuffer
+    )
     {
-        return RB::CreateIndexBuffer(
+        RB::UpdateVertexBuffer(
+            state->logicalDevice.device,
+            state->graphicCommandPool,
+            state->graphicQueue,
+            verticesBlob,
+            vertexBuffer,
+            stagingBuffer
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void CreateIndexBuffer(
+        CBlob const & indicesBlob,
+        std::shared_ptr<RT::BufferAndMemory> & outIndexBuffer,
+        std::shared_ptr<RT::BufferAndMemory> & inOutStagingIndexBuffer
+    )
+    {
+        RB::CreateIndexBuffer(
             state->logicalDevice.device,
             state->physicalDevice,
             state->graphicCommandPool,
             state->graphicQueue,
-            indicesBlob
+            indicesBlob,
+            outIndexBuffer,
+            inOutStagingIndexBuffer
         );
     }
 
@@ -575,14 +605,32 @@ namespace MFA::RenderFrontend
 
         std::vector<std::shared_ptr<RT::BufferAndMemory>> vertexBuffers {};
         MFA_ASSERT(mesh.requiredVertexBufferCount > 0);
+
+        std::shared_ptr<RT::BufferAndMemory> vertexStagingBuffer = nullptr;
         for (uint32_t i = 0; i < mesh.requiredVertexBufferCount; ++i)
         {
-            vertexBuffers.emplace_back(CreateVertexBuffer(mesh.getVertexBuffer()->memory));
+            vertexBuffers.emplace_back(std::shared_ptr<RT::BufferAndMemory> {});
+            CreateVertexBuffer(
+                mesh.getVertexBuffer()->memory,
+                vertexBuffers.back(),
+                vertexStagingBuffer
+            );
         }
+
+        std::shared_ptr<RT::BufferAndMemory> indexBuffer = nullptr;
+        std::shared_ptr<RT::BufferAndMemory> indexStagingBuffer = nullptr;
+
+        CreateIndexBuffer(
+            mesh.getIndexBuffer()->memory,
+            indexBuffer,
+            indexStagingBuffer
+        );
 
         return std::make_shared<RT::MeshBuffers>(
             vertexBuffers,
-            CreateIndexBuffer(mesh.getIndexBuffer()->memory)
+            indexBuffer,
+            mesh.keepVertexStagingBuffer ? vertexStagingBuffer : nullptr,
+            mesh.keepIndexStagingBuffer ? indexStagingBuffer : nullptr
         );
     }
 

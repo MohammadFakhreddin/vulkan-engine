@@ -59,11 +59,16 @@ namespace MFA
         {
             std::vector<std::shared_ptr<BufferAndMemory>> const verticesBuffer;
             std::shared_ptr<BufferAndMemory> const indicesBuffer;
-            //TODO Start from here. We should keep staging buffer if the mesh requires it
+
+            // Vertex and index stage buffer are mostly null.
+            std::shared_ptr<BufferAndMemory> const vertexStagingBuffer;
+            std::shared_ptr<BufferAndMemory> const indexStagingBuffer;
 
             explicit MeshBuffers(
                 std::vector<std::shared_ptr<BufferAndMemory>> verticesBuffer_,
-                std::shared_ptr<BufferAndMemory> indicesBuffer_
+                std::shared_ptr<BufferAndMemory> indicesBuffer_,
+                std::shared_ptr<BufferAndMemory> vertexStagingBuffer_,
+                std::shared_ptr<BufferAndMemory> indexStagingBuffer_
             );
             explicit MeshBuffers(
                 std::shared_ptr<BufferAndMemory> verticesBuffer_,

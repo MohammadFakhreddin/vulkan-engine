@@ -96,11 +96,23 @@ namespace MFA::RenderFrontend
 
     //-----------------------------------------------------------------------------------------------------------
 
-    [[nodiscard]]
-    std::shared_ptr<RT::BufferAndMemory> CreateVertexBuffer(CBlob verticesBlob);
-    
-    [[nodiscard]]
-    std::shared_ptr<RT::BufferAndMemory> CreateIndexBuffer(CBlob indicesBlob);
+    void CreateVertexBuffer(
+        CBlob const & verticesBlob,
+        std::shared_ptr<RT::BufferAndMemory> & outVertexBuffer,
+        std::shared_ptr<RT::BufferAndMemory> & inOutStagingVertexBuffer
+    );
+
+    void UpdateVertexBuffer(
+        CBlob const & verticesBlob,
+        RT::BufferAndMemory const & vertexBuffer,
+        RT::BufferAndMemory const & stagingBuffer
+    );
+
+    void CreateIndexBuffer(
+        CBlob const & indicesBlob,
+        std::shared_ptr<RT::BufferAndMemory> & outIndexBuffer,
+        std::shared_ptr<RT::BufferAndMemory> & inOutStagingIndexBuffer
+    );
 
     [[nodiscard]]
     std::shared_ptr<RT::MeshBuffers> CreateMeshBuffers(AS::MeshBase const & mesh);
@@ -112,7 +124,6 @@ namespace MFA::RenderFrontend
 
     void DestroyImageView(RT::ImageViewGroup const & imageViewGroup);
 
-    // TODO We should ask for options here
     [[nodiscard]]
     std::shared_ptr<RT::SamplerGroup> CreateSampler(RT::CreateSamplerParams const & samplerParams);
 

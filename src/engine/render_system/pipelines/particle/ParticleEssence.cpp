@@ -40,8 +40,13 @@ namespace MFA
         mInstancesBuffers.resize(RF::GetMaxFramesPerFlight());
         for (auto & instancesBuffer : mInstancesBuffers)
         {
-            instancesBuffer = RF::CreateVertexBuffer(mInstanceDataMemory->memory);
+            RF::CreateVertexBuffer(
+                mInstanceDataMemory->memory,
+                instancesBuffer,
+                mInstanceStageBuffer
+            );
         }
+        MFA_ASSERT(mInstanceStageBuffer != nullptr);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -66,10 +71,11 @@ namespace MFA
     void ParticleEssence::draw(
         RT::CommandRecordState const & recordState,
         float deltaTime
-    )
+    ) const
     {
         bindVertexBuffer(recordState);
         bindInstanceBuffer(recordState);
+        bindIndexBuffer(recordState);
         bindDescriptorSetGroup(recordState);
         // Draw
         RF::DrawIndexed(
@@ -109,9 +115,10 @@ namespace MFA
 
     void ParticleEssence::updateInstanceBuffer(RT::CommandRecordState const & recordState) const
     {
-        RF::UpdateBuffer(
+        RF::UpdateVertexBuffer(
+            mInstanceDataMemory->memory,
             *mInstancesBuffers[recordState.frameIndex],
-            mInstanceDataMemory->memory
+            *mInstanceStageBuffer
         );
     }
 
@@ -119,9 +126,10 @@ namespace MFA
 
     void ParticleEssence::updateVertexBuffer(RT::CommandRecordState const & recordState) const
     {
-        RF::UpdateBuffer(
-            *mInstancesBuffers[recordState.frameIndex],
-            mMesh->getVertexBuffer()->memory
+        RF::UpdateVertexBuffer(
+            mMesh->getVertexBuffer()->memory,
+            *mGpuModel->meshBuffers->verticesBuffer[recordState.frameIndex],
+            *mGpuModel->meshBuffers->vertexStagingBuffer
         );
     }
 

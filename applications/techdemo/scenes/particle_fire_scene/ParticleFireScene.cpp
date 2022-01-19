@@ -73,11 +73,9 @@ void ParticleFireScene::OnRender(float const deltaTimeInSec, MFA::RT::CommandRec
 
 //-------------------------------------------------------------------------------------------------
 
-void ParticleFireScene::OnPostRender(float const deltaTimeInSec, MFA::RT::CommandRecordState & recordState)
+void ParticleFireScene::OnPostRender(float const deltaTimeInSec)
 {
-    Scene::OnPostRender(deltaTimeInSec, recordState);
-
-    mParticlePipeline.PostRender(recordState, deltaTimeInSec);
+    Scene::OnPostRender(deltaTimeInSec);
 }
 
 //-------------------------------------------------------------------------------------------------

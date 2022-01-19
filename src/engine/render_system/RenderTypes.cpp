@@ -39,10 +39,14 @@ MFA::RT::SamplerGroup::~SamplerGroup()
 
 MFA::RT::MeshBuffers::MeshBuffers(
     std::vector<std::shared_ptr<BufferAndMemory>> verticesBuffer_,
-    std::shared_ptr<BufferAndMemory> indicesBuffer_
+    std::shared_ptr<BufferAndMemory> indicesBuffer_,
+    std::shared_ptr<BufferAndMemory> vertexStagingBuffer_,
+    std::shared_ptr<BufferAndMemory> indexStagingBuffer_
 )
     : verticesBuffer(std::move(verticesBuffer_))
     , indicesBuffer(std::move(indicesBuffer_))
+    , vertexStagingBuffer(std::move(vertexStagingBuffer_))
+    , indexStagingBuffer(std::move(indexStagingBuffer_))
 {}
 
 //-------------------------------------------------------------------------------------------------
@@ -53,7 +57,9 @@ MFA::RenderTypes::MeshBuffers::MeshBuffers(
 )
     : MeshBuffers(
         std::vector{ std::move(verticesBuffer_) },
-        std::move(indicesBuffer_)
+        std::move(indicesBuffer_),
+        nullptr,
+        nullptr
     )
 {}
 
