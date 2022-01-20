@@ -293,7 +293,7 @@ void GLTFMeshViewerScene::Shutdown() {
 
 //-------------------------------------------------------------------------------------------------
 
-bool GLTFMeshViewerScene::useDisplayPassDepthImageAsUndefined()
+bool GLTFMeshViewerScene::isDisplayPassDepthImageInitialLayoutUndefined()
 {
     return false;
 }
@@ -315,7 +315,7 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
 
     renderRequiredData.meshRendererComponent = entity->AddComponent<MeshRendererComponent>(
         mPbrPipeline,
-        renderRequiredData.gpuModel->address
+        renderRequiredData.gpuModel->nameOrAddress
     );
     MFA_ASSERT(renderRequiredData.meshRendererComponent.expired() == false);
 

@@ -83,7 +83,7 @@ namespace MFA
 
         explicit PBRWithShadowPipelineV2(Scene * attachedScene);
         ~PBRWithShadowPipelineV2() override;
-
+        
         PIPELINE_PROPS(PBRWithShadowPipelineV2);
 
         void Init(
@@ -103,7 +103,7 @@ namespace MFA
             std::shared_ptr<RT::GpuModel> const & gpuModel,
             std::shared_ptr<AssetSystem::PBR::MeshData> const & meshData
         ) const;
-        
+
     protected:
 
         std::shared_ptr<EssenceBase> internalCreateEssence(

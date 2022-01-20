@@ -37,7 +37,7 @@ public:
 
     void Shutdown() override;
 
-    bool useDisplayPassDepthImageAsUndefined() override;
+    bool isDisplayPassDepthImageInitialLayoutUndefined() override;
 
 private:
 

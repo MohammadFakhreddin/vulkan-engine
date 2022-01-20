@@ -32,6 +32,8 @@ public:
 
     void OnResize() override;
 
+    bool isDisplayPassDepthImageInitialLayoutUndefined() override;
+
 private:
 
     void onUI();
@@ -102,5 +104,7 @@ private:
     std::string mInputChildEntityName {};
 
     MFA::Prefab mPrefab;
+
+    bool shouldFreeEssencesWithNoVariant = false;
 
 };

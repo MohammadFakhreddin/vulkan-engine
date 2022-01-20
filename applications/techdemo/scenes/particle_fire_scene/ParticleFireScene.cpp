@@ -96,7 +96,7 @@ void ParticleFireScene::Shutdown()
 
 //-------------------------------------------------------------------------------------------------
 
-bool ParticleFireScene::useDisplayPassDepthImageAsUndefined()
+bool ParticleFireScene::isDisplayPassDepthImageInitialLayoutUndefined()
 {
     return true;
 }

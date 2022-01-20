@@ -120,7 +120,7 @@ MFA::RT::GpuModel::GpuModel(
     std::shared_ptr<MeshBuffers> meshBuffers_,
     std::vector<std::shared_ptr<GpuTexture>> textures_
 )
-    : address(std::move(address_))
+    : nameOrAddress(std::move(address_))
     , meshBuffers(std::move(meshBuffers_))
     , textures(std::move(textures_))
 {}

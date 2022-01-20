@@ -17,7 +17,7 @@ MFA::EssenceBase::~EssenceBase() = default;
 
 std::string const & MFA::EssenceBase::getNameOrAddress() const
 {
-    return mGpuModel->address;
+    return mGpuModel->nameOrAddress;
 }
 
 //-------------------------------------------------------------------------------------------------

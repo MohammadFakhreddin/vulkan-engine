@@ -34,7 +34,7 @@ void MFA::RendererComponent::serialize(nlohmann::json & jsonObject) const
     MFA_ASSERT(essence != nullptr);
     auto const * gpuModel = essence->getGpuModel();
     MFA_ASSERT(gpuModel != nullptr);
-    jsonObject["address"] = gpuModel->address;
+    jsonObject["address"] = gpuModel->nameOrAddress;
     jsonObject["pipeline"] = mPipeline->GetName();
 }
 

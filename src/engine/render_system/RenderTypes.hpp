@@ -135,7 +135,7 @@ namespace MFA
 
         struct GpuModel
         {
-            std::string const address;
+            std::string const nameOrAddress;
             std::shared_ptr<MeshBuffers> const meshBuffers;
             std::vector<std::shared_ptr<GpuTexture>> const textures;
             

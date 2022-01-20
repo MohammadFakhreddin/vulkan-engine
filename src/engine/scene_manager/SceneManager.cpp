@@ -67,7 +67,7 @@ namespace MFA::SceneManager
 
         state->NextActiveSceneIndex = -1;
 
-        state->DisplayRenderPass->UseDepthImageLayoutAsUndefined(state->ActiveScene->useDisplayPassDepthImageAsUndefined());
+        state->DisplayRenderPass->UseDepthImageLayoutAsUndefined(state->ActiveScene->isDisplayPassDepthImageInitialLayoutUndefined());
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -163,8 +163,6 @@ namespace MFA::SceneManager
             startNextActiveScene();
         }
 
-        EntitySystem::OnNewFrame(deltaTimeInSec);
-
         // Start of graphic record
         auto recordState = RF::StartGraphicCommandBufferRecording();
         if (recordState.isValid == false)
@@ -198,13 +196,14 @@ namespace MFA::SceneManager
         RF::EndGraphicCommandBufferRecording(recordState);
         // End of graphic record
 
+        // Note: Order is important
+        EntitySystem::OnNewFrame(deltaTimeInSec);
+
         // Post render 
         if (state->ActiveScene)
         {
             state->ActiveScene->OnPostRender(deltaTimeInSec);
         }
-        // TODO Remove JS::PostRender. Entity system should manage its tasks on its own
-        JS::OnPostRender();
 
     }
 

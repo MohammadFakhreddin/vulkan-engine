@@ -25,10 +25,14 @@ namespace MFA::EntitySystem
         //uint32_t NextFreeRef = 0.0f;
     };
 
+    using Task = std::function<void()>;
+
     struct State
     {
         std::vector<EntityRef> entitiesRefsList{};  // TODO Shouldn't we use map or something faster ?
         Signal<float> updateSignal{};
+
+        std::vector<Task> nextFrameTasks {};
     };
     State * state = nullptr;
 
@@ -41,8 +45,17 @@ namespace MFA::EntitySystem
 
     //-------------------------------------------------------------------------------------------------
 
-    void OnNewFrame(float deltaTimeInSec)
+    void OnNewFrame(float const deltaTimeInSec)
     {
+        // There is a chance that new task get added while doing this task so using foreach is not an wise option
+        for (int i = 0; i < static_cast<int>(state->nextFrameTasks.size()); ++i)  // NOLINT(modernize-loop-convert) 
+        {
+            auto & task = state->nextFrameTasks[i];
+            MFA_ASSERT(task != nullptr);
+            task();
+        }
+        state->nextFrameTasks.clear();
+
         state->updateSignal.Emit(deltaTimeInSec);
     }
 
@@ -158,7 +171,7 @@ namespace MFA::EntitySystem
 
     void DestroyEntity(Entity * entity)
     {
-        JS::RunOnPostRender([entity]()->void
+        state->nextFrameTasks.emplace_back([entity]()->void
         {
             destroyEntity(entity, true);
         });

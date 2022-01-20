@@ -81,7 +81,7 @@ namespace MFA
         [[nodiscard]]
         std::vector<PointLightComponent *> const & getActivePointLights() const;
 
-        virtual bool useDisplayPassDepthImageAsUndefined() = 0;
+        virtual bool isDisplayPassDepthImageInitialLayoutUndefined() = 0;
 
     private:
 

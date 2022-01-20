@@ -23,7 +23,7 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     MeshRendererComponent::MeshRendererComponent(BasePipeline & pipeline, RT::GpuModel const & gpuModel)
-        : MeshRendererComponent(pipeline, gpuModel.address)
+        : MeshRendererComponent(pipeline, gpuModel.nameOrAddress)
     {}
 
     //-------------------------------------------------------------------------------------------------

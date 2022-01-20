@@ -78,6 +78,8 @@ namespace MFA
         [[nodiscard]]
         virtual char const * GetName() const = 0;
 
+        void freeUnusedEssences();
+
     protected:
 
         virtual void Init();

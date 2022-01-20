@@ -98,6 +98,11 @@ namespace MFA
     void BoundingVolumeRendererComponent::shutdown()
     {
         RendererComponent::shutdown();
+
+        if (auto const ptr = mRendererTransformComponent.lock())
+        {
+            EntitySystem::DestroyEntity(ptr->GetEntity());
+        }
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -64,7 +64,7 @@ namespace MFA
             auto * gpuModel = essence->getGpuModel();
             MFA_ASSERT(gpuModel != nullptr);
 
-            auto const model = RC::AcquireForCpu(gpuModel->address.c_str());
+            auto const model = RC::AcquireForCpu(gpuModel->nameOrAddress.c_str());
             MFA_ASSERT(model != nullptr);
 
             auto const mesh = model->mesh;

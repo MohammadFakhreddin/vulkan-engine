@@ -123,6 +123,12 @@ void PrefabEditorScene::OnRender(
 
 void PrefabEditorScene::OnPostRender(float const deltaTimeInSec)
 {
+    if (shouldFreeEssencesWithNoVariant)
+    {
+        shouldFreeEssencesWithNoVariant = false;
+        mPbrPipeline.freeUnusedEssences();
+        mDebugRenderPipeline.freeUnusedEssences();
+    }
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -139,6 +145,13 @@ void PrefabEditorScene::OnResize()
 {
     mPbrPipeline.OnResize();
     mDebugRenderPipeline.OnResize();
+}
+
+//-------------------------------------------------------------------------------------------------
+
+bool PrefabEditorScene::isDisplayPassDepthImageInitialLayoutUndefined()
+{
+    return false;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -247,7 +260,7 @@ bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress)
         .essenceName = mInputTextEssenceName
     });
 
-    if (mPbrPipeline.EssenceExists(gpuModel->address) == false)
+    if (mPbrPipeline.EssenceExists(gpuModel->nameOrAddress) == false)
     {
         mPbrPipeline.CreateEssence(gpuModel, cpuModel->mesh);
     }
@@ -620,6 +633,8 @@ void PrefabEditorScene::loadPrefab()
     {
         EntitySystem::DestroyEntity(mPrefabRootEntity);
 
+        // TODO: We have to free essences as well
+
         mPrefabRootEntity = EntitySystem::CreateEntity("RootEntity", GetRootEntity());
         MFA_ASSERT(mPrefabRootEntity != nullptr);
 
@@ -632,6 +647,8 @@ void PrefabEditorScene::loadPrefab()
         });
 
         bindEditorSignalToEntity(mPrefabRootEntity);
+
+        shouldFreeEssencesWithNoVariant = true;
     }
 }
 

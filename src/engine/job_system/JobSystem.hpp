@@ -18,19 +18,14 @@ namespace MFA::JobSystem
     );
 
     void AutoAssignTask(Task const & task);
-
-    // Runs on main thread
-    void RunOnPostRender(Task const & task);
-
+    
     [[nodiscard]]
     uint32_t GetNumberOfAvailableThreads();
 
     void WaitForThreadsToFinish();
 
     void Shutdown();
-
-    void OnPostRender();
-
+    
 }
 
 

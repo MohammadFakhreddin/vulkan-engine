@@ -97,14 +97,14 @@ namespace MFA
 
     void BasePipeline::DestroyEssence(RT::GpuModel const & gpuModel)
     {
-        DestroyEssence(gpuModel.address);
+        DestroyEssence(gpuModel.nameOrAddress);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     std::weak_ptr<VariantBase> BasePipeline::CreateVariant(RT::GpuModel const & gpuModel)
     {
-        return CreateVariant(gpuModel.address);
+        return CreateVariant(gpuModel.nameOrAddress);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -175,6 +175,25 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    void BasePipeline::freeUnusedEssences()
+    {
+        RF::DeviceWaitIdle();
+        std::vector<std::string> unusedEssenceNames {};
+        for (auto & essenceAndVariants : mEssenceAndVariantsMap)
+        {
+            if (essenceAndVariants.second.variants.empty())
+            {
+                unusedEssenceNames.emplace_back(essenceAndVariants.second.essence->getGpuModel()->nameOrAddress);
+            }
+        }
+        for (auto const & nameOrAddress : unusedEssenceNames)
+        {
+            DestroyEssence(nameOrAddress);
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void BasePipeline::Init()
     {
         MFA_ASSERT(mIsInitialized == false);
@@ -205,7 +224,7 @@ namespace MFA
     bool BasePipeline::addEssence(std::shared_ptr<EssenceBase> const & essence)
     {
         MFA_ASSERT(mIsInitialized == true);
-        auto const & address = essence->getGpuModel()->address;
+        auto const & address = essence->getGpuModel()->nameOrAddress;
 
         bool success = false;
         if(MFA_VERIFY(mEssenceAndVariantsMap.contains(address) == false))
