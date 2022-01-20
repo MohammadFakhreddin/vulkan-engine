@@ -66,6 +66,8 @@ namespace MFA::SceneManager
         state->ActiveScene->Init();
 
         state->NextActiveSceneIndex = -1;
+
+        state->DisplayRenderPass->UseDepthImageLayoutAsUndefined(state->ActiveScene->useDisplayPassDepthImageAsUndefined());
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -73,6 +75,8 @@ namespace MFA::SceneManager
     void Init()
     {
         state = new State();
+
+        state->DisplayRenderPass = RF::GetDisplayRenderPass();
 
         state->ResizeListenerId = RF::AddResizeEventListener([]()->void { OnResize(); });
         if (state->ActiveSceneIndex < 0 && false == state->RegisteredScenes.empty())
@@ -84,7 +88,6 @@ namespace MFA::SceneManager
             state->NextActiveSceneIndex = state->ActiveSceneIndex;
             startNextActiveScene();
         }
-        state->DisplayRenderPass = RF::GetDisplayRenderPass();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -154,13 +157,13 @@ namespace MFA::SceneManager
         {
             state->CurrentFps = state->CurrentFps * 0.9f + (1.0f / deltaTimeInSec) * 0.1f;
         }
-
-        // TODO We might need a logic step here as well
-
+        
         if (state->NextActiveSceneIndex != -1)
         {
             startNextActiveScene();
         }
+
+        EntitySystem::OnNewFrame(deltaTimeInSec);
 
         // Start of graphic record
         auto recordState = RF::StartGraphicCommandBufferRecording();
@@ -168,8 +171,6 @@ namespace MFA::SceneManager
         {
             return;
         }
-
-        EntitySystem::OnNewFrame(deltaTimeInSec, recordState);
 
         // Pre render
         if (state->ActiveScene)
@@ -202,7 +203,7 @@ namespace MFA::SceneManager
         {
             state->ActiveScene->OnPostRender(deltaTimeInSec);
         }
-
+        // TODO Remove JS::PostRender. Entity system should manage its tasks on its own
         JS::OnPostRender();
 
     }

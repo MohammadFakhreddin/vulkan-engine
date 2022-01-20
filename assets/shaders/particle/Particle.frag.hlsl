@@ -17,8 +17,12 @@ Texture2D baseColorTexture[MAX_POSSIBLE_TEXTURE] : register(t0, space1);
 
 PSOut main(PSIn input) {
     PSOut output;
-    output.color = input.textureIndex >= 0 
+    
+    float3 color = input.textureIndex >= 0 
         ? baseColorTexture[input.textureIndex].Sample(baseColorSampler, input.uv)
-        : float4(input.color, input.alpha);
+        : input.color;
+
+    output.color = float4(input.color, input.alpha);
+
     return output;
 }

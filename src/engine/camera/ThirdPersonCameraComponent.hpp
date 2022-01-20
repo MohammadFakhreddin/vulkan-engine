@@ -40,7 +40,7 @@ public:
 
     void init() override;
 
-    void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState) override;
+    void Update(float deltaTimeInSec) override;
 
     void shutdown() override;
 

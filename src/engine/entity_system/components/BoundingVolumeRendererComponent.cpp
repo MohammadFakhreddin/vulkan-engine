@@ -18,11 +18,7 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     BoundingVolumeRendererComponent::BoundingVolumeRendererComponent() = default;
-
-    //-------------------------------------------------------------------------------------------------
-
-    BoundingVolumeRendererComponent::~BoundingVolumeRendererComponent() = default;
-
+ 
     //-------------------------------------------------------------------------------------------------
 
     BoundingVolumeRendererComponent::BoundingVolumeRendererComponent(DebugRendererPipeline & pipeline)
@@ -30,6 +26,10 @@ namespace MFA
             pipeline,
             pipeline.CreateVariant(*RC::AcquireForGpu("Cube", false)))
     {}
+
+    //-------------------------------------------------------------------------------------------------
+
+    BoundingVolumeRendererComponent::~BoundingVolumeRendererComponent() = default;
 
     //-------------------------------------------------------------------------------------------------
 
@@ -67,12 +67,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BoundingVolumeRendererComponent::Update(
-        float const deltaTimeInSec,
-        RT::CommandRecordState const & recordState
-    )
+    void BoundingVolumeRendererComponent::Update(float const deltaTimeInSec)
     {
-        RendererComponent::Update(deltaTimeInSec, recordState);
+        RendererComponent::Update(deltaTimeInSec);
 
         auto const boundingVolumeComponent = mBoundingVolumeComponent.lock();
         if (boundingVolumeComponent == nullptr)

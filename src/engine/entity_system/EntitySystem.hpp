@@ -11,7 +11,7 @@ namespace MFA::EntitySystem {
 
     void Init();
 
-    void OnNewFrame(float deltaTimeInSec, RT::CommandRecordState const & recordState);
+    void OnNewFrame(float deltaTimeInSec);
 
     void OnUI();
     

@@ -28,7 +28,7 @@ namespace MFA::EntitySystem
     struct State
     {
         std::vector<EntityRef> entitiesRefsList{};  // TODO Shouldn't we use map or something faster ?
-        Signal<float, RT::CommandRecordState const &> updateSignal{};
+        Signal<float> updateSignal{};
     };
     State * state = nullptr;
 
@@ -41,9 +41,9 @@ namespace MFA::EntitySystem
 
     //-------------------------------------------------------------------------------------------------
 
-    void OnNewFrame(float deltaTimeInSec, RT::CommandRecordState const & recordState)
+    void OnNewFrame(float deltaTimeInSec)
     {
-        state->updateSignal.Emit(deltaTimeInSec, recordState);
+        state->updateSignal.Emit(deltaTimeInSec);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -114,12 +114,9 @@ namespace MFA::EntitySystem
         MFA_ASSERT(entity->mIsInitialized == true);
         if (entity->NeedUpdateEvent())
         {
-            entity->mUpdateListenerId = state->updateSignal.Register([entity](
-                float const deltaTime,
-                RT::CommandRecordState const & recordState
-                ) -> void
-     {
-         entity->Update(deltaTime, recordState);
+            entity->mUpdateListenerId = state->updateSignal.Register([entity](float const deltaTime) -> void
+            {
+                entity->Update(deltaTime);
             });
         }
         else

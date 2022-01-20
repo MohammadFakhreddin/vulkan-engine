@@ -2190,6 +2190,12 @@ namespace MFA::RenderBackend
     }
 
     //-------------------------------------------------------------------------------------------------
+    /* About HOST_VISIBLE_BIT
+     * It might be useful for things that are only updated by the CPU once per frame,
+     * but used by the GPU many times per frame. If something, that is updated by the CPU,
+     * is only used once by the GPU, you might as well let the GPU fetch it from system memory.
+     * The alternate would be to have a CPU buffer and a GPU buffer and used a transfer command to move data from one to the other.
+     */
 
     void CreateUniformBuffer(
         VkDevice device,
@@ -2206,7 +2212,9 @@ namespace MFA::RenderBackend
                 physicalDevice,
                 buffersSize,
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+                // TODO: I believe that we should no use host visible bit for everything,
+                // Based on frequency we should decide where to have HOST_VISIBLE_Buffer or staging buffer
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT             
             );
         }
     }

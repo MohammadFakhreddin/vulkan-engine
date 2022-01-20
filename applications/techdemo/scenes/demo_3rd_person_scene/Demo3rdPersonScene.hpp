@@ -31,7 +31,9 @@ public:
     void OnPostRender(float deltaTimeInSec) override;
 
     void Shutdown() override;
-    
+
+    bool useDisplayPassDepthImageAsUndefined() override;
+
 private:
 
     void onUI();

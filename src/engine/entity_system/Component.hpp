@@ -105,7 +105,7 @@ public:
 
     virtual void init();
 
-    virtual void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState);
+    virtual void Update(float deltaTimeInSec);
     
     virtual void shutdown();
 

@@ -154,16 +154,6 @@ namespace MFA
 
     std::vector<PointLightComponent *> const & Scene::getActivePointLights() const
     {
-        //std::vector<PointLightComponent *> pointLights {};
-        //for (auto & pointLightComponent : mPointLightComponents)
-        //{
-        //    auto ptr = pointLightComponent.lock();
-        //    if (ptr != nullptr && ptr->IsVisible())
-        //    {
-        //        pointLights.emplace_back(ptr.get());
-        //    }
-        //}
-        //return pointLights;
         return mActivePointLights;
     }
 

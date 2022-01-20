@@ -256,7 +256,7 @@ namespace MFA
                 .size = sizeof(PushConstants),
             }
         };
-        // TODO Make this vaiable uint32_t instead. There is no reason for saving memory here
+        // TODO Make this variable uint32_t instead. There is no reason for saving memory here
         pipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
         pipelineOptions.pushConstantRanges = pushConstantRanges.data();
 

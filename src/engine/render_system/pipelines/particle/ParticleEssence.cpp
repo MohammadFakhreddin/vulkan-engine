@@ -37,6 +37,7 @@ namespace MFA
         , mInstanceDataMemory(Memory::Alloc(mMesh->maxInstanceCount * sizeof(PerInstanceData)))
         , mInstancesData(mInstanceDataMemory->memory.as<PerInstanceData>())
     {
+        // TODO Research about which one is better. Having stage buffer or making the vertex/instance buffer host visible
         mInstancesBuffers.resize(RF::GetMaxFramesPerFlight());
         for (auto & instancesBuffer : mInstancesBuffers)
         {

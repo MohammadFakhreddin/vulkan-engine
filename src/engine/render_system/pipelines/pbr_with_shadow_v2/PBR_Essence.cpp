@@ -55,7 +55,10 @@ MFA::PBR_Essence::PBR_Essence(
                     primitiveInfo.alphaCutoff = primitive.alphaCutoff;
                 }
             }
-
+            /*
+             *  TODO: Because we update primitive buffer once we should DEVICE_LOCAL buffer instead of HOST_VISIBLE
+             *  to improve efficiency for gpu read and save HOST_VISIBLE buffer
+            */
             RF::UpdateBuffer(*mPrimitivesBuffer->buffers[0], primitiveData->memory);
         }
     }

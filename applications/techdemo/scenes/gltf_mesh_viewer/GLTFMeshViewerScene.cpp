@@ -293,6 +293,13 @@ void GLTFMeshViewerScene::Shutdown() {
 
 //-------------------------------------------------------------------------------------------------
 
+bool GLTFMeshViewerScene::useDisplayPassDepthImageAsUndefined()
+{
+    return false;
+}
+
+//-------------------------------------------------------------------------------------------------
+
 void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredData) {
     auto const cpuModel = RC::AcquireForCpu(renderRequiredData.address.c_str());
     renderRequiredData.gpuModel = RC::AcquireForGpu(renderRequiredData.address.c_str());

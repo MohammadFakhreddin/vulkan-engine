@@ -21,9 +21,9 @@ void MFA::BoundingVolumeComponent::init()
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::BoundingVolumeComponent::Update(float const deltaTimeInSec, RT::CommandRecordState const & recordState)
+void MFA::BoundingVolumeComponent::Update(float const deltaTimeInSec)
 {
-    Component::Update(deltaTimeInSec, recordState);
+    Component::Update(deltaTimeInSec);
 
     auto const activeScene = SceneManager::GetActiveScene();
     if (activeScene == nullptr)

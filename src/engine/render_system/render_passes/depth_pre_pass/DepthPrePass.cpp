@@ -46,9 +46,7 @@ void MFA::DepthPrePass::internalShutdown()
 void MFA::DepthPrePass::BeginRenderPass(RT::CommandRecordState & recordState)
 {
     RenderPass::BeginRenderPass(recordState);
-
-    RF::GetDisplayRenderPass()->NotifyDepthImageLayoutIsSet();
-
+    
     auto surfaceCapabilities = RF::GetSurfaceCapabilities();
     auto const swapChainExtend = VkExtent2D{
         .width = surfaceCapabilities.currentExtent.width,

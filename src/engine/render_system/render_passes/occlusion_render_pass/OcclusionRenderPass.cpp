@@ -196,6 +196,7 @@ void MFA::OcclusionRenderPass::copyDisplayPassDepthBuffer(
     VkExtent2D const & extent2D
 ) const
 {
+    // TODO Try readonly depth buffer as well. Maybe we can avoid having extra depth buffer and copy process
     auto const & displayPassDepthImage = RF::GetDisplayRenderPass()->GetDepthImages()[recordState.imageIndex]->imageGroup->image;
     auto const & occlusionPassDepthImage = mDepthImageGroupList[recordState.imageIndex]->imageGroup->image;
 

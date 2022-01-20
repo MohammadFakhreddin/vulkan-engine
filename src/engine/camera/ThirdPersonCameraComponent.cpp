@@ -59,7 +59,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ThirdPersonCameraComponent::Update(float deltaTimeInSec, RT::CommandRecordState const & recordState)
+    void ThirdPersonCameraComponent::Update(float const deltaTimeInSec)
     {
         // Checking if rotation is changed
         auto const mouseDeltaX = IM::GetMouseDeltaX();
@@ -100,8 +100,7 @@ namespace MFA
             }
         }
 
-        CameraComponent::Update(deltaTimeInSec, recordState);
-
+        CameraComponent::Update(deltaTimeInSec);
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -8,6 +8,14 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    DisplayRenderPass::DisplayRenderPass() = default;
+
+    //-------------------------------------------------------------------------------------------------
+
+    DisplayRenderPass::~DisplayRenderPass() = default;
+
+    //-------------------------------------------------------------------------------------------------
+
     VkRenderPass DisplayRenderPass::GetVkRenderPass()
     {
         return mVkDisplayRenderPass;
@@ -46,8 +54,6 @@ namespace MFA
 
         createDisplayFrameBuffers(swapChainExtent);
 
-        createDepthImageBarrier();
-
         createPresentToDrawBarrier();
 
     }
@@ -75,8 +81,7 @@ namespace MFA
         RenderPass::BeginRenderPass(recordState);
 
         usePresentToDrawBarrier(recordState);
-        useDepthImageBarrier(recordState);
-
+        
         auto surfaceCapabilities = RF::GetSurfaceCapabilities();
         auto const swapChainExtend = VkExtent2D{
             .width = surfaceCapabilities.currentExtent.width,
@@ -153,7 +158,6 @@ namespace MFA
 
     void DisplayRenderPass::OnResize()
     {
-
         auto surfaceCapabilities = RF::GetSurfaceCapabilities();
         auto const swapChainExtend = VkExtent2D{
             .width = surfaceCapabilities.currentExtent.width,
@@ -166,7 +170,6 @@ namespace MFA
         // MSAA image
         for (uint32_t i = 0; i < mSwapChainImagesCount; ++i)
         {
-            //RF::DestroyColorImage(mMSAAImageGroupList[i]);
             mMSAAImageGroupList[i] = RF::CreateColorImage(
                 swapChainExtend,
                 mSwapChainImages->swapChainFormat,
@@ -179,7 +182,6 @@ namespace MFA
         // Swap-chain
         auto const oldSwapChainImages = mSwapChainImages;
         mSwapChainImages = RF::CreateSwapChain(oldSwapChainImages->swapChain);
-        //RF::DestroySwapChain(oldSwapChainImages);
 
         // Display frame-buffer
         RF::DestroyFrameBuffers(
@@ -192,9 +194,32 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DisplayRenderPass::NotifyDepthImageLayoutIsSet()
+    void DisplayRenderPass::UseDepthImageLayoutAsUndefined(bool setDepthImageLayoutAsUndefined)
     {
-        mIsDepthImageLayoutUndefined = false;
+        if (mIsDepthImageInitialLayoutUndefined == setDepthImageLayoutAsUndefined)
+        {
+            return;
+        }
+        mIsDepthImageInitialLayoutUndefined = setDepthImageLayoutAsUndefined;
+
+        RF::DeviceWaitIdle();
+
+        auto surfaceCapabilities = RF::GetSurfaceCapabilities();
+        auto const swapChainExtend = VkExtent2D{
+            .width = surfaceCapabilities.currentExtent.width,
+            .height = surfaceCapabilities.currentExtent.height
+        };
+
+        RF::DestroyRenderPass(mVkDisplayRenderPass);
+
+        createDisplayRenderPass();
+
+        RF::DestroyFrameBuffers(
+            static_cast<uint32_t>(mDisplayFrameBuffers.size()),
+            mDisplayFrameBuffers.data()
+        );
+
+        createDisplayFrameBuffers(swapChainExtend);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -220,7 +245,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    VkFramebuffer DisplayRenderPass::getDisplayFrameBuffer(RT::CommandRecordState const & drawPass)
+    VkFramebuffer DisplayRenderPass::getDisplayFrameBuffer(RT::CommandRecordState const & drawPass) const
     {
         return mDisplayFrameBuffers[drawPass.imageIndex];
     }
@@ -279,11 +304,15 @@ namespace MFA
         VkAttachmentDescription const depthAttachment{
             .format = RF::GetDepthFormat(),
             .samples = RF::GetMaxSamplesCount(),
-            .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+            .loadOp = mIsDepthImageInitialLayoutUndefined
+                ? VK_ATTACHMENT_LOAD_OP_CLEAR
+                : VK_ATTACHMENT_LOAD_OP_LOAD,
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
             .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            .initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            .initialLayout = mIsDepthImageInitialLayoutUndefined
+                ? VK_IMAGE_LAYOUT_UNDEFINED
+                : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
             .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         };
 
@@ -384,30 +413,30 @@ namespace MFA
 
         mPresentToDrawBarrier = presentToDrawBarrier;
     }
-    
+
     //-------------------------------------------------------------------------------------------------
 
-    void DisplayRenderPass::createDepthImageBarrier()
-    {
-        VkImageSubresourceRange const subResourceRange{
-            .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-            .baseMipLevel = 0,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1,
-        };
-        mDepthImageBarrier = VkImageMemoryBarrier {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-            .srcAccessMask = 0,
-            .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .subresourceRange = subResourceRange
-        };
-    }
-    
+    //void DisplayRenderPass::createDepthImageBarrier()
+    //{
+    //    VkImageSubresourceRange const subResourceRange{
+    //        .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+    //        .baseMipLevel = 0,
+    //        .levelCount = 1,
+    //        .baseArrayLayer = 0,
+    //        .layerCount = 1,
+    //    };
+    //    mDepthImageBarrier = VkImageMemoryBarrier{
+    //        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+    //        .srcAccessMask = 0,
+    //        .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+    //        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    //        .newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+    //        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    //        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    //        .subresourceRange = subResourceRange
+    //    };
+    //}
+
     //-------------------------------------------------------------------------------------------------
 
     void DisplayRenderPass::usePresentToDrawBarrier(RT::CommandRecordState const & recordState)
@@ -421,27 +450,6 @@ namespace MFA
             1,
             &mPresentToDrawBarrier
         );
-    }
-    
-    //-------------------------------------------------------------------------------------------------
-
-    void DisplayRenderPass::useDepthImageBarrier(RT::CommandRecordState const & recordState)
-    {
-        if (mIsDepthImageLayoutUndefined == true)
-        {
-            mDepthImageBarrier.image = mDepthImageGroupList[recordState.imageIndex]->imageGroup->image;
-
-            RF::PipelineBarrier(
-                RF::GetGraphicCommandBuffer(recordState),
-                VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-                VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
-                1,
-                &mDepthImageBarrier
-            );
-        } else
-        {
-            mIsDepthImageLayoutUndefined = true;
-        }
     }
 
     //-------------------------------------------------------------------------------------------------

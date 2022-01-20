@@ -317,6 +317,13 @@ void Demo3rdPersonScene::Shutdown()
 
 //-------------------------------------------------------------------------------------------------
 
+bool Demo3rdPersonScene::useDisplayPassDepthImageAsUndefined()
+{
+    return false;
+}
+
+//-------------------------------------------------------------------------------------------------
+
 void Demo3rdPersonScene::onUI()
 {
     UI::BeginWindow("3rd person scene");

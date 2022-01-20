@@ -36,13 +36,10 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ObserverCameraComponent::Update(
-        float deltaTimeInSec,
-        RT::CommandRecordState const & recordState
-    )
+    void ObserverCameraComponent::Update(float deltaTimeInSec)
     {
 
-        CameraComponent::Update(deltaTimeInSec, recordState);
+        CameraComponent::Update(deltaTimeInSec);
 
         bool mRotationIsChanged = false;
         if (InputManager::IsLeftMouseDown() == true && UISystem::HasFocus() == false)

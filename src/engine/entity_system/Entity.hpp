@@ -55,7 +55,7 @@ namespace MFA
 
         void Init(bool triggerInitSignal = true);
 
-        void Update(float deltaTimeInSec, RT::CommandRecordState const & recordState) const;
+        void Update(float deltaTimeInSec) const;
 
         void Shutdown(bool shouldNotifyParent = true);
 
@@ -179,7 +179,7 @@ namespace MFA
         std::shared_ptr<Component> mComponents[static_cast<int>(Component::FamilyType::Count)]{};
 
         Signal<> mInitSignal{};
-        Signal<float, RT::CommandRecordState const &> mUpdateSignal{};
+        Signal<float> mUpdateSignal{};
         Signal<> mShutdownSignal{};
         Signal<bool> mActivationStatusChangeSignal{};
 

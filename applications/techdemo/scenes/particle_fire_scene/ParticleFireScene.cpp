@@ -11,6 +11,7 @@
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/EntitySystem.hpp"
 #include "engine/entity_system/components/AxisAlignedBoundingBoxComponent.hpp"
+#include "engine/entity_system/components/BoundingVolumeRendererComponent.hpp"
 #include "engine/entity_system/components/ColorComponent.hpp"
 #include "engine/entity_system/components/MeshRendererComponent.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
@@ -44,6 +45,9 @@ void ParticleFireScene::Init()
     mErrorTexture = RF::CreateTexture(*cpuErrorTexture);
 
     mParticlePipeline.Init(mSamplerGroup, mErrorTexture);
+    mDebugPipeline.Init();
+    RegisterPipeline(&mParticlePipeline);
+    RegisterPipeline(&mDebugPipeline);
 
     createFireEssence();
 
@@ -60,6 +64,7 @@ void ParticleFireScene::OnPreRender(float const deltaTimeInSec, MFA::RT::Command
     Scene::OnPreRender(deltaTimeInSec, recordState);
 
     mParticlePipeline.PreRender(recordState, deltaTimeInSec);
+    mDebugPipeline.PreRender(recordState, deltaTimeInSec);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -69,6 +74,7 @@ void ParticleFireScene::OnRender(float const deltaTimeInSec, MFA::RT::CommandRec
     Scene::OnRender(deltaTimeInSec, recordState);
 
     mParticlePipeline.Render(recordState, deltaTimeInSec);
+    mDebugPipeline.Render(recordState, deltaTimeInSec);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -85,6 +91,14 @@ void ParticleFireScene::Shutdown()
     Scene::Shutdown();
 
     mParticlePipeline.Shutdown();
+    mDebugPipeline.Shutdown();
+}
+
+//-------------------------------------------------------------------------------------------------
+
+bool ParticleFireScene::useDisplayPassDepthImageAsUndefined()
+{
+    return true;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -92,8 +106,8 @@ void ParticleFireScene::Shutdown()
 void ParticleFireScene::createFireEssence()
 {
     auto fireMesh = std::make_shared<AS::Particle::Mesh>(100);
-    auto const verticesCount = 100;
-    auto const indicesCount = 100;
+    auto const verticesCount = 10000;
+    auto const indicesCount = 10000;
     auto const vertexBuffer = Memory::Alloc(verticesCount * sizeof(AS::Particle::Vertex));
     auto const indexBuffer = Memory::Alloc(indicesCount * sizeof(AS::Index));
     fireMesh->initForWrite(
@@ -106,7 +120,7 @@ void ParticleFireScene::createFireEssence()
     auto * vertexItems = vertexBuffer->memory.as<AS::Particle::Vertex>();
     auto * indexItems = indexBuffer->memory.as<AS::Index>();
 
-    static constexpr float radius = 10.0f;
+    static constexpr float radius = 1.0f;
 
     for (int i = 0; i < verticesCount; ++i)
     {
@@ -117,6 +131,9 @@ void ParticleFireScene::createFireEssence()
         vertex.localPosition[2] = Math::Random(-radius, radius);
 
         vertex.textureIndex = -1;
+
+        vertex.uv[0] = 0.0f;
+        vertex.uv[1] = 0.0f;
 
         vertex.color[0] = 1.0f;
         vertex.color[1] = 0.0f;
@@ -145,8 +162,10 @@ void ParticleFireScene::createFireInstance()
     entity->AddComponent<MeshRendererComponent>(mParticlePipeline, "Fire");
     entity->AddComponent<AxisAlignedBoundingBoxComponent>(
         glm::vec3{ 0.0f, 0.0f, 0.0f },
-        glm::vec3{ 10.0f, 10.0f, 10.0f }
+        glm::vec3{ 1.0f, 1.0f, 1.0f }
     );
+    entity->AddComponent<ColorComponent>(glm::vec3 {1.0f, 0.0f, 0.0f});
+    entity->AddComponent<BoundingVolumeRendererComponent>(mDebugPipeline);
 
     EntitySystem::InitEntity(entity);
 }
@@ -166,7 +185,7 @@ void ParticleFireScene::createCamera()
     MFA_ASSERT(observerCamera != nullptr);
     SetActiveCamera(observerCamera);
 
-    entity->AddComponent<DirectionalLightComponent>();
+   /* entity->AddComponent<DirectionalLightComponent>();
 
     auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
     MFA_ASSERT(colorComponent != nullptr);
@@ -180,7 +199,7 @@ void ParticleFireScene::createCamera()
 
     auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
     MFA_ASSERT(transformComponent != nullptr);
-    transformComponent->UpdateRotation(glm::vec3(90.0f, 0.0f, 0.0f));
+    transformComponent->UpdateRotation(glm::vec3(90.0f, 0.0f, 0.0f));*/
 
     EntitySystem::InitEntity(entity);
 }

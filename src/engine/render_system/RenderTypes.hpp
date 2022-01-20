@@ -60,7 +60,7 @@ namespace MFA
             std::vector<std::shared_ptr<BufferAndMemory>> const verticesBuffer;
             std::shared_ptr<BufferAndMemory> const indicesBuffer;
 
-            // Vertex and index stage buffer are mostly null.
+            // Vertex and index stage buffer are most of the times null.
             std::shared_ptr<BufferAndMemory> const vertexStagingBuffer;
             std::shared_ptr<BufferAndMemory> const indexStagingBuffer;
 

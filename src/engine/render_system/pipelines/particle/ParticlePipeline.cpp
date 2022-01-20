@@ -348,10 +348,19 @@ namespace MFA
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
-            .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+            .format = VK_FORMAT_R32G32B32_SFLOAT,
             .offset = offsetof(Vertex, color)
         });
 
+        // Alpha
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32_SFLOAT,
+            .offset = offsetof(Vertex, alpha)
+        });
+
+        // Instance position
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 1,
@@ -383,9 +392,7 @@ namespace MFA
             pipelineOptions
         );
     }
-
-    // TODO Use instancing to draw particles!
-
+    
     //-------------------------------------------------------------------------------------------------
 
 }

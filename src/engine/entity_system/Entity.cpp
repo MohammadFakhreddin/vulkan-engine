@@ -54,13 +54,13 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
     // TODO Support for priority between components
-    void Entity::Update(float const deltaTimeInSec, RT::CommandRecordState const & recordState) const
+    void Entity::Update(float const deltaTimeInSec) const
     {
         if (mIsActive == false)
         {
             return;
         }
-        mUpdateSignal.Emit(deltaTimeInSec, recordState);
+        mUpdateSignal.Emit(deltaTimeInSec);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -372,11 +372,9 @@ namespace MFA
         // Update event
         if ((component->requiredEvents() & Component::EventTypes::UpdateEvent) > 0)
         {
-            component->mUpdateEventId = mUpdateSignal.Register([component](
-                float const deltaTimeInSec,
-                RT::CommandRecordState const & recordState)->void
+            component->mUpdateEventId = mUpdateSignal.Register([component](float const deltaTimeInSec)->void
             {
-                component->Update(deltaTimeInSec, recordState);
+                component->Update(deltaTimeInSec);
             });
         }
         // Shutdown event

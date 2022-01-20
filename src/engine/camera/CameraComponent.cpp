@@ -150,9 +150,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void CameraComponent::Update(float const deltaTimeInSec, RT::CommandRecordState const & recordState)
+    void CameraComponent::Update(float const deltaTimeInSec)
     {
-        Component::Update(deltaTimeInSec, recordState);
+        Component::Update(deltaTimeInSec);
 
         updateViewTransformMatrix();
 

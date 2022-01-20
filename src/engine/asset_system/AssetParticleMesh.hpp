@@ -1,6 +1,5 @@
 #pragma once
 
-#include "AssetTypes.hpp"
 #include "AssetBaseMesh.hpp"
 
 namespace MFA::AssetSystem::Particle
