@@ -5,6 +5,17 @@
 #include "engine/render_system/RenderTypesFWD.hpp"
 #include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
 
+namespace MFA
+{
+    namespace AssetSystem
+    {
+        namespace Particle
+        {
+            struct Vertex;
+        }
+    }
+}
+
 class ParticleFireScene final : public MFA::Scene
 {
 public:
@@ -42,6 +53,10 @@ private:
 
     std::shared_ptr<MFA::RT::SamplerGroup> mSamplerGroup {};
     std::shared_ptr<MFA::RT::GpuTexture> mErrorTexture {};
-    std::shared_ptr<MFA::AssetSystem::Model> mFireModel {};
+    //std::shared_ptr<MFA::AssetSystem::Model> mFireModel {};
+
+    int mFireVerticesCount = 0;
+    MFA::AssetSystem::Particle::Vertex * mFireVertices = nullptr;
+
 
 };

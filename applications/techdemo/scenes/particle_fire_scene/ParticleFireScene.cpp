@@ -15,11 +15,11 @@
 #include "engine/entity_system/components/ColorComponent.hpp"
 #include "engine/entity_system/components/MeshRendererComponent.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
-#include "engine/entity_system/components/DirectionalLightComponent.hpp"
 
 using namespace MFA;
 
-// TODO For updating the gpu buffer we need an intermediate buffer or an host visible vertex buffer that is slower than first option
+static constexpr float ParticleLife = 2.0f;
+static constexpr float ParticleSpeed = 1.0f;
 
 //-------------------------------------------------------------------------------------------------
 
@@ -82,6 +82,28 @@ void ParticleFireScene::OnRender(float const deltaTimeInSec, MFA::RT::CommandRec
 void ParticleFireScene::OnPostRender(float const deltaTimeInSec)
 {
     Scene::OnPostRender(deltaTimeInSec);
+
+    //auto * vertexItems = mFireModel->mesh->getVertexBuffer()->memory.as<AS::Particle::Vertex>();
+    for (int i = 0; i < mFireVerticesCount; ++i)
+    {
+        auto & vertex = mFireVertices[i];
+
+
+        // Is UpVector reverse ?
+        auto const deltaPosition = -deltaTimeInSec * ParticleSpeed * Math::UpVector;
+        vertex.localPosition[0] += deltaPosition.x;
+        vertex.localPosition[1] += deltaPosition.y;
+        vertex.localPosition[2] += deltaPosition.z;
+
+        vertex.remainingLifeInSec -= deltaTimeInSec;
+        if (vertex.remainingLifeInSec <= 0)
+        {
+            Copy<3>(vertex.localPosition, vertex.initialLocalPosition);
+            vertex.remainingLifeInSec = ParticleLife;
+        }
+
+        vertex.alpha = vertex.remainingLifeInSec / ParticleLife;
+    }
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -130,6 +152,8 @@ void ParticleFireScene::createFireEssence()
         vertex.localPosition[1] = Math::Random(-radius, radius);
         vertex.localPosition[2] = Math::Random(-radius, radius);
 
+        Copy<3>(vertex.initialLocalPosition, vertex.localPosition);
+
         vertex.textureIndex = -1;
 
         vertex.uv[0] = 0.0f;
@@ -138,17 +162,24 @@ void ParticleFireScene::createFireEssence()
         vertex.color[0] = 1.0f;
         vertex.color[1] = 0.0f;
         vertex.color[2] = 0.0f;
-        vertex.alpha = 1.0f;
+        
+        vertex.remainingLifeInSec = Math::Random(0.01f, ParticleLife);
+
+        vertex.alpha = vertex.remainingLifeInSec / ParticleLife;
 
         indexItems[i] = i;
     }
 
-    mFireModel = std::make_shared<AS::Model>(
+    auto const fireModel = std::make_shared<AS::Model>(
         fireMesh,
         std::vector<std::shared_ptr<AS::Texture>>{}
     );
 
-    mParticlePipeline.CreateEssenceWithModel(mFireModel, "Fire");
+    mParticlePipeline.CreateEssenceWithModel(fireModel, "Fire");
+
+    mFireVerticesCount = verticesCount;
+    mFireVertices = vertexItems;
+    MFA_ASSERT(mFireVertices != nullptr);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -164,7 +195,7 @@ void ParticleFireScene::createFireInstance()
         glm::vec3{ 0.0f, 0.0f, 0.0f },
         glm::vec3{ 1.0f, 1.0f, 1.0f }
     );
-    entity->AddComponent<ColorComponent>(glm::vec3 {1.0f, 0.0f, 0.0f});
+    entity->AddComponent<ColorComponent>(glm::vec3{ 1.0f, 0.0f, 0.0f });
     entity->AddComponent<BoundingVolumeRendererComponent>(mDebugPipeline);
 
     EntitySystem::InitEntity(entity);
@@ -185,21 +216,21 @@ void ParticleFireScene::createCamera()
     MFA_ASSERT(observerCamera != nullptr);
     SetActiveCamera(observerCamera);
 
-   /* entity->AddComponent<DirectionalLightComponent>();
+    /* entity->AddComponent<DirectionalLightComponent>();
 
-    auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
-    MFA_ASSERT(colorComponent != nullptr);
-    float const lightScale = 5.0f;
-    float lightColor[3]{
-        1.0f * lightScale,
-        1.0f * lightScale,
-        1.0f * lightScale
-    };
-    colorComponent->SetColor(lightColor);
+     auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
+     MFA_ASSERT(colorComponent != nullptr);
+     float const lightScale = 5.0f;
+     float lightColor[3]{
+         1.0f * lightScale,
+         1.0f * lightScale,
+         1.0f * lightScale
+     };
+     colorComponent->SetColor(lightColor);
 
-    auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
-    MFA_ASSERT(transformComponent != nullptr);
-    transformComponent->UpdateRotation(glm::vec3(90.0f, 0.0f, 0.0f));*/
+     auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
+     MFA_ASSERT(transformComponent != nullptr);
+     transformComponent->UpdateRotation(glm::vec3(90.0f, 0.0f, 0.0f));*/
 
     EntitySystem::InitEntity(entity);
 }

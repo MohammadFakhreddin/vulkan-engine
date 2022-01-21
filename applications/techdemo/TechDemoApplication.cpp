@@ -33,7 +33,7 @@ void TechDemoApplication::internalInit()
         return std::make_shared<ParticleFireScene>();
     });
     
-    SceneManager::SetActiveScene("ThirdPersonDemoScene");
+    SceneManager::SetActiveScene("ParticleFireScene");
 
     UI::Register([]()->void {OnUI();});
     

@@ -11,6 +11,9 @@ namespace MFA::AssetSystem::Particle
         float uv [2]{};
         float color [3]{};
         float alpha = 1.0f;
+        // These variable currently used only on cpu and not on gpu
+        float remainingLifeInSec = 0.0f; 
+        float initialLocalPosition[3] {};
     };
 
     struct PerInstanceData
