@@ -199,6 +199,7 @@ add_library("EntitySystem"
     ${ENTITY_SYSTEM_SOURCES}
 
     # Entity system
+    "src/engine/entity_system/EntitySystemTypes.hpp"
     "src/engine/entity_system/EntitySystem.hpp"
     "src/engine/entity_system/EntitySystem.cpp"
     "src/engine/entity_system/EntityHandle.hpp"

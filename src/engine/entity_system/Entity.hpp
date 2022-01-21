@@ -3,6 +3,7 @@
 #include "Component.hpp"
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockSignal.hpp"
+#include "EntitySystemTypes.hpp"
 
 #include "libs/nlohmann/json_fwd.hpp"
 
@@ -16,7 +17,7 @@ namespace MFA::EntitySystem
 {
     void InitEntity(Entity * entity, bool triggerSignals);
     void UpdateEntity(Entity * entity);
-    void destroyEntity(Entity * entity, bool shouldNotifyParent);
+    void destroyEntity(EntityId const entityId, bool const shouldNotifyParent);
 }
 
 namespace MFA
@@ -27,7 +28,7 @@ namespace MFA
     public:
         friend void EntitySystem::InitEntity(Entity * entity, bool triggerSignals);
         friend void EntitySystem::UpdateEntity(Entity * entity);
-        friend void EntitySystem::destroyEntity(Entity * entity, bool shouldNotifyParent);
+        friend void EntitySystem::destroyEntity(EntityId const entityId, bool const shouldNotifyParent);
         friend Component;
 
         struct CreateEntityParams
@@ -35,6 +36,7 @@ namespace MFA
             bool serializable = true;
         };
         explicit Entity(
+            EntityId id,
             char const * name,
             Entity * parent = nullptr,
             CreateEntityParams const & params = {}
@@ -119,16 +121,13 @@ namespace MFA
         }
 
         [[nodiscard]]
-        std::weak_ptr<Component> GetComponent(int const familyType) const
-        {
-            return mComponents[familyType];
-        }
+        std::weak_ptr<Component> GetComponent(int const familyType) const;
 
         [[nodiscard]]
-        Entity * GetParent() const noexcept
-        {
-            return mParent;
-        }
+        EntityId getId() const noexcept;
+
+        [[nodiscard]]
+        Entity * GetParent() const noexcept;
 
         [[nodiscard]]
         std::string const & GetName() const noexcept;
@@ -173,8 +172,17 @@ namespace MFA
 
         void onActivationStatusChanged();
 
+    
+    public:
+
+        Signal<Entity *> EditorSignal{};
+
+    private:
+
+        EntityId const mId;
         std::string mName{};
         Entity * mParent = nullptr;
+        bool mSerializable = true;
 
         std::shared_ptr<Component> mComponents[static_cast<int>(Component::FamilyType::Count)]{};
 
@@ -183,11 +191,6 @@ namespace MFA
         Signal<> mShutdownSignal{};
         Signal<bool> mActivationStatusChangeSignal{};
 
-    public:
-
-        Signal<Entity *> EditorSignal{};
-
-    private:
 
         bool mIsActive = true;
         bool mIsParentActive = true;    // It should be true by default because not everyone have parent
@@ -199,9 +202,7 @@ namespace MFA
         std::vector<Entity *> mChildEntities{};
 
         bool mIsInitialized = false;
-
-        bool mSerializable = true;
-
+    
     };
 
 }

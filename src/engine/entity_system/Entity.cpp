@@ -15,14 +15,18 @@
 namespace MFA
 {
 
+    using namespace EntitySystem;
+
     //-------------------------------------------------------------------------------------------------
 
     Entity::Entity(
+        EntityId const id,
         char const * name,
         Entity * parent,
         CreateEntityParams const & params
     )
-        : mName(name)
+        : mId(id)
+        , mName(name)
         , mParent(parent)
         , mSerializable(params.serializable)
     {}
@@ -81,6 +85,27 @@ namespace MFA
         }
     }
 
+    //-------------------------------------------------------------------------------------------------
+
+    std::weak_ptr<Component> Entity::GetComponent(int const familyType) const
+    {
+        return mComponents[familyType];
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    EntityId Entity::getId() const noexcept
+    {
+        return mId;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    Entity * Entity::GetParent() const noexcept
+    {
+        return mParent;
+    }
+    
     //-------------------------------------------------------------------------------------------------
 
     std::string const & Entity::GetName() const noexcept

@@ -5,7 +5,7 @@
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
-#include "engine/job_system/JobSystem.hpp"
+#include "EntitySystemTypes.hpp"
 
 #include <vector>
 #include <memory>
@@ -14,12 +14,11 @@
 
 namespace MFA::EntitySystem
 {
-
     //constexpr int MAX_ENTITIES = 1024 * 5;
 
     struct EntityRef
     {
-        std::unique_ptr<Entity> Ptr{};
+        std::unique_ptr<Entity> ptr;
         //EntityHandle Handle {ENTITY_HANDLE_INVALID};      // We need entityHandle to distinguish entities and be able to remove entities by that
         //bool IsAlive = false;
         //uint32_t NextFreeRef = 0.0f;
@@ -82,7 +81,7 @@ namespace MFA::EntitySystem
     {
         for (auto const & entityRef : state->entitiesRefsList)
         {
-            entityRef.Ptr->Shutdown();
+            entityRef.ptr->Shutdown();
         }
         delete state;
     }
@@ -95,8 +94,12 @@ namespace MFA::EntitySystem
         CreateEntityParams const & params
     )
     {
+        static EntityId nextEntityId = 0;
+        // Checking if we have not reached maximum possible entity limit
+        MFA_ASSERT(nextEntityId < std::numeric_limits<EntityId>::max());
         state->entitiesRefsList.emplace_back(EntityRef{
-            .Ptr = std::make_unique<Entity>(
+            .ptr = std::make_unique<Entity>(
+                nextEntityId++,
                 name,
                 parent,
                 Entity::CreateEntityParams {
@@ -104,7 +107,7 @@ namespace MFA::EntitySystem
                 }
             )
         });
-        return state->entitiesRefsList.back().Ptr.get();
+        return state->entitiesRefsList.back().ptr.get();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -140,40 +143,45 @@ namespace MFA::EntitySystem
 
     //-------------------------------------------------------------------------------------------------
 
-    static void destroyEntity(Entity * entity, bool const shouldNotifyParent)
+    static void destroyEntity(EntityId const entityId, bool const shouldNotifyParent)
     {
-        MFA_ASSERT(entity != nullptr);
-        entity->Shutdown(shouldNotifyParent);
-        if (entity->NeedUpdateEvent())
-        {
-            state->updateSignal.UnRegister(entity->mUpdateListenerId);
-        }
-        for (auto * childEntity : entity->GetChildEntities())
-        {
-            MFA_ASSERT(childEntity != nullptr);
-            destroyEntity(childEntity, false);
-        }
-
         for (int i = static_cast<int>(state->entitiesRefsList.size()) - 1; i >= 0; --i)
         {
-            if (state->entitiesRefsList[i].Ptr.get() == entity)
+            if (state->entitiesRefsList[i].ptr->getId() == entityId)
             {
+                Entity * entity = state->entitiesRefsList[i].ptr.get();
+                MFA_ASSERT(entity != nullptr);
+                entity->Shutdown(shouldNotifyParent);
+                if (entity->NeedUpdateEvent())
+                {
+                    state->updateSignal.UnRegister(entity->mUpdateListenerId);
+                }
+                for (auto * childEntity : entity->GetChildEntities())
+                {
+                    MFA_ASSERT(childEntity != nullptr);
+                    destroyEntity(childEntity->getId(), false);
+                }
+
+
                 state->entitiesRefsList[i] = std::move(state->entitiesRefsList.back());
                 state->entitiesRefsList.pop_back();
                 return;
             }
         }
 
-        MFA_ASSERT(false);
+        MFA_LOG_WARN("Entity with id %d is not found", static_cast<int>(entityId));
     }
 
     //-------------------------------------------------------------------------------------------------
 
     void DestroyEntity(Entity * entity)
     {
-        state->nextFrameTasks.emplace_back([entity]()->void
+        MFA_ASSERT(entity != nullptr);
+
+        auto const entityId = entity->getId();
+        state->nextFrameTasks.emplace_back([entityId]()->void
         {
-            destroyEntity(entity, true);
+            destroyEntity(entityId, true);
         });
     }
 
