@@ -59,9 +59,13 @@ namespace MFA::Matrix
     [[nodiscard]]
     glm::vec3 ToEulerAngles(glm::quat const & quaternion);
 
-    void Rotate(glm::mat4 & transform, float eulerAngles[3]);
+    void RotateWithEulerAngle(glm::mat4 & inOutTransform, float eulerAngles[3]);
 
-    void Rotate(glm::mat4 & transform, glm::vec3 eulerAngles);
+    void RotateWithEulerAngle(glm::mat4 & inOutTransform, glm::vec3 eulerAngles);
+
+    void RotateWithRadians(glm::mat4 & inOutTransform, float radians[3]);
+
+    void RotateWithRadians(glm::mat4 & inOutTransform, glm::vec3 radians);
 
     void Scale(glm::mat4 & transform, float scale[3]);
 

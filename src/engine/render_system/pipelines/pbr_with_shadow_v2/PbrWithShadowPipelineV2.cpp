@@ -1123,6 +1123,7 @@ namespace MFA
         options.pushConstantRanges = mPushConstantRanges.data();
         options.pushConstantsRangeCount = static_cast<uint8_t>(mPushConstantRanges.size());
         options.cullMode = VK_CULL_MODE_BACK_BIT;
+        options.depthStencil.depthWriteEnable = VK_FALSE;
         options.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;          // It must be less or equal because transparent and transluent objects are discarded in depth prepass and occlusion pass
 
         mDisplayPassPipeline = RF::CreatePipeline(

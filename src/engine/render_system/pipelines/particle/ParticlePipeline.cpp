@@ -40,17 +40,19 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ParticlePipeline::Init(
-        std::shared_ptr<RT::SamplerGroup> const & samplerGroup,
-        std::shared_ptr<RT::GpuTexture> const & errorTexture
-    )
+    void ParticlePipeline::Init(std::shared_ptr<RT::GpuTexture> const & errorTexture)
     {
         BasePipeline::Init();
 
-        MFA_ASSERT(samplerGroup != nullptr);
-        mSamplerGroup = samplerGroup;
-        MFA_ASSERT(errorTexture != nullptr);
+        mSamplerGroup = RF::CreateSampler(RT::CreateSamplerParams {
+            .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+            .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+            .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER
+        });
+        MFA_ASSERT(mSamplerGroup != nullptr);
+        
         mErrorTexture = errorTexture;
+        MFA_ASSERT(mErrorTexture != nullptr);
 
         createPerFrameDescriptorSetLayout();
         createPerEssenceDescriptorSetLayout();
@@ -336,13 +338,13 @@ namespace MFA
             .offset = offsetof(Vertex, textureIndex)
         });
 
-        // UV
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
-            .format = VK_FORMAT_R32G32_SFLOAT,
-            .offset = offsetof(Vertex, uv)
-        });
+        //// UV
+        //inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
+        //    .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+        //    .binding = 0,
+        //    .format = VK_FORMAT_R32G32_SFLOAT,
+        //    .offset = offsetof(Vertex, uv)
+        //});
 
         // Color
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
@@ -360,6 +362,14 @@ namespace MFA
             .offset = offsetof(Vertex, alpha)
         });
 
+        // PointSize
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32_SFLOAT,
+            .offset = offsetof(Vertex, pointSize)
+        });
+
         // Instance position
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
@@ -373,7 +383,16 @@ namespace MFA
         pipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
         pipelineOptions.cullMode = VK_CULL_MODE_NONE;
         pipelineOptions.colorBlendAttachments.blendEnable = VK_TRUE;
-        
+        pipelineOptions.colorBlendAttachments.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+		pipelineOptions.colorBlendAttachments.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		pipelineOptions.colorBlendAttachments.colorBlendOp = VK_BLEND_OP_ADD;
+		pipelineOptions.colorBlendAttachments.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+		pipelineOptions.colorBlendAttachments.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+		pipelineOptions.colorBlendAttachments.alphaBlendOp = VK_BLEND_OP_ADD;
+		pipelineOptions.colorBlendAttachments.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+        pipelineOptions.depthStencil.depthWriteEnable = VK_FALSE;
+
         std::vector<VkDescriptorSetLayout> const descriptorSetLayouts {
             mPerFrameDescriptorSetLayout->descriptorSetLayout,
             mPerEssenceDescriptorSetLayout->descriptorSetLayout,
@@ -392,7 +411,7 @@ namespace MFA
             pipelineOptions
         );
     }
-    
+
     //-------------------------------------------------------------------------------------------------
 
 }

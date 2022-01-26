@@ -79,13 +79,13 @@ namespace MFA
         }
 
         auto rotationMatrix = glm::identity<glm::mat4>();
-        Matrix::Rotate(rotationMatrix, mEulerAngles);
+        Matrix::RotateWithEulerAngle(rotationMatrix, mEulerAngles);
 
-        auto forwardDirection = Math::ForwardVector;
+        auto forwardDirection = Math::ForwardVector4;
         forwardDirection = forwardDirection * rotationMatrix;
         forwardDirection = glm::normalize(forwardDirection);
 
-        auto rightDirection = Math::RightVector;
+        auto rightDirection = Math::RightVector4;
         rightDirection = rightDirection * rotationMatrix;
         rightDirection = glm::normalize(rightDirection);
 

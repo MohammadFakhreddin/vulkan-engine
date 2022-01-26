@@ -301,12 +301,12 @@ bool GLTFMeshViewerScene::isDisplayPassDepthImageInitialLayoutUndefined()
 //-------------------------------------------------------------------------------------------------
 
 void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredData) {
-    auto const cpuModel = RC::AcquireForCpu(renderRequiredData.address.c_str());
-    renderRequiredData.gpuModel = RC::AcquireForGpu(renderRequiredData.address.c_str());
+    auto const cpuModel = RC::AcquireCpuModel(renderRequiredData.address);
+    renderRequiredData.gpuModel = RC::AcquireGpuModel(renderRequiredData.address);
     MFA_ASSERT(mPbrPipeline.EssenceExists(renderRequiredData.address) == false);
     mPbrPipeline.CreateEssence(renderRequiredData.gpuModel, cpuModel->mesh);
 
-    auto * entity = EntitySystem::CreateEntity(renderRequiredData.displayName.c_str(), GetRootEntity());
+    auto * entity = EntitySystem::CreateEntity(renderRequiredData.displayName, GetRootEntity());
     MFA_ASSERT(entity != nullptr);
     renderRequiredData.entity = entity;
 

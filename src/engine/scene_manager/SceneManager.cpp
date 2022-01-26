@@ -44,10 +44,13 @@ namespace MFA::SceneManager
         RF::DeviceWaitIdle();
         MFA_ASSERT(state->NextActiveSceneIndex >= 0);
         MFA_ASSERT(state->NextActiveSceneIndex < static_cast<int>(state->RegisteredScenes.size()));
+
+        // TODO: We should help resource manager to keep files that are needed but also there is a risk to face out of memory
         if (state->ActiveScene != nullptr)
         {
             state->ActiveScene->Shutdown();
         }
+
         state->ActiveSceneIndex = state->NextActiveSceneIndex;
         auto & registeredScene = state->RegisteredScenes[state->ActiveSceneIndex];
         if (registeredScene.keepAlivePtr != nullptr)
@@ -68,6 +71,9 @@ namespace MFA::SceneManager
         state->NextActiveSceneIndex = -1;
 
         state->DisplayRenderPass->UseDepthImageLayoutAsUndefined(state->ActiveScene->isDisplayPassDepthImageInitialLayoutUndefined());
+
+
+        // TODO We should reuse particles instead of re-creating them!
     }
 
     //-------------------------------------------------------------------------------------------------

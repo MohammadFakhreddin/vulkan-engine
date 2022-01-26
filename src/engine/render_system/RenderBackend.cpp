@@ -1758,7 +1758,7 @@ namespace MFA::RenderBackend
         std::shared_ptr<RT::GpuShader> gpuShader = nullptr;
         if (cpuShader->isValid())
         {
-            auto const shaderCode = cpuShader->getCompiledShaderCode();
+            auto const & shaderCode = cpuShader->compiledShaderCode->memory;
 
             VkShaderModule shaderModule{};
 
@@ -1771,8 +1771,8 @@ namespace MFA::RenderBackend
             MFA_LOG_INFO("Creating shader module was successful");
             gpuShader = std::make_shared<RT::GpuShader>(
                 shaderModule,
-                ConvertAssetShaderStageToGpu(cpuShader->getStage()),
-                cpuShader->getEntryPoint()
+                ConvertAssetShaderStageToGpu(cpuShader->stage),
+                cpuShader->entryPoint
             );
         }
         return gpuShader;

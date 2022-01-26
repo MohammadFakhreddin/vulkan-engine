@@ -159,17 +159,17 @@ namespace MFA
         glm::vec3 eulerAngles = mEulerAngles;
 
         auto rotationMatrix = glm::identity<glm::mat4>();
-        Matrix::Rotate(rotationMatrix, eulerAngles);
+        Matrix::RotateWithEulerAngle(rotationMatrix, eulerAngles);
         
-        auto forwardDirection = -Math::ForwardVector;
+        auto forwardDirection = -Math::ForwardVector4;
         forwardDirection = forwardDirection * rotationMatrix;
         forwardDirection = glm::normalize(forwardDirection);
 
-        auto rightDirection = Math::RightVector;
+        auto rightDirection = Math::RightVector4;
         rightDirection = rightDirection * rotationMatrix;
         rightDirection = glm::normalize(rightDirection);
 
-        auto upDirection = -Math::UpVector;
+        auto upDirection = -Math::UpVector4;
         upDirection = upDirection * rotationMatrix;
         upDirection = glm::normalize(upDirection);
 
@@ -269,7 +269,7 @@ namespace MFA
         }
         
         auto rotationMatrix = glm::identity<glm::mat4>();
-        Matrix::Rotate(rotationMatrix, mEulerAngles);
+        Matrix::RotateWithEulerAngle(rotationMatrix, mEulerAngles);
 
         auto translateMatrix = glm::identity<glm::mat4>();
         Matrix::Translate(translateMatrix, mPosition);
@@ -301,11 +301,15 @@ namespace MFA
     {
         int32_t width;
         int32_t height;
+        // TODO I think we should use device capabilities instead
         RF::GetDrawableSize(width, height);
         MFA_ASSERT(width > 0);
         MFA_ASSERT(height > 0);
 
         mAspectRatio = static_cast<float>(width) / static_cast<float>(height);
+
+        mCameraBufferData.viewportDimension[0] = static_cast<float>(width);
+        mCameraBufferData.viewportDimension[1] = static_cast<float>(height);
 
         Matrix::PreparePerspectiveProjectionMatrix(
             mProjectionMatrix,

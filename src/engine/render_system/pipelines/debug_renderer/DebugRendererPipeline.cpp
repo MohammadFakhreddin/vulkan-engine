@@ -84,9 +84,9 @@ namespace MFA
         std::vector<std::string> const modelNames {"Sphere", "Cube"};
         for (auto const & modelName : modelNames)
         {
-            auto const cpuModel = RC::AcquireForCpu(modelName.c_str());
+            auto const cpuModel = RC::AcquireCpuModel(modelName);
             MFA_ASSERT(cpuModel != nullptr);
-            auto const gpuModel = RC::AcquireForGpu(modelName.c_str());
+            auto const gpuModel = RC::AcquireGpuModel(modelName);
             MFA_ASSERT(gpuModel != nullptr);
             CreateEssenceWithoutModel(gpuModel, cpuModel->mesh->getIndexCount());
         }

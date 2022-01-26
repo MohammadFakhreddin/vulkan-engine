@@ -89,7 +89,7 @@ namespace MFA::EntitySystem
     //-------------------------------------------------------------------------------------------------
 
     Entity * CreateEntity(
-        char const * name,
+        std::string const & name,
         Entity * parent,
         CreateEntityParams const & params
     )

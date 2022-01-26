@@ -241,14 +241,14 @@ bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress)
     MFA_LOG_INFO("Trying to load file with address %s", fileAddress.c_str());
     MFA_ASSERT(fileAddress.empty() == false);
 
-    auto const cpuModel = RC::AcquireForCpu(fileAddress.c_str());
+    auto const cpuModel = RC::AcquireCpuModel(fileAddress);
     if (cpuModel == nullptr)
     {
         MFA_LOG_WARN("Failed to load selected asset from file");
         return false;
     }
 
-    auto const gpuModel = ResourceManager::AcquireForGpu(fileAddress.c_str());
+    auto const gpuModel = ResourceManager::AcquireGpuModel(fileAddress);
     if (gpuModel == nullptr)
     {
         MFA_LOG_WARN("Failed to create gpu model");
@@ -275,7 +275,7 @@ bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress)
 void PrefabEditorScene::destroyAsset(int const assetIndex)
 {
     auto const & asset = mLoadedAssets[assetIndex];
-    auto const gpuModel = RC::AcquireForGpu(asset.fileAddress.c_str());
+    auto const gpuModel = RC::AcquireGpuModel(asset.fileAddress);
     mPbrPipeline.DestroyEssence(*gpuModel);
     mLoadedAssets.erase(mLoadedAssets.begin() + assetIndex);
 }

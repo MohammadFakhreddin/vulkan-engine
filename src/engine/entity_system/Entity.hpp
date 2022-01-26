@@ -37,7 +37,7 @@ namespace MFA
         };
         explicit Entity(
             EntityId id,
-            char const * name,
+            std::string name,
             Entity * parent = nullptr,
             CreateEntityParams const & params = {}
         );

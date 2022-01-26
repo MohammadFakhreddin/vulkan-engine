@@ -137,9 +137,9 @@ void MFA::DirectionalLightComponent::computeDirectionAndShadowViewProjection()
     auto const rotation = transformComponent->GetRotation();
 
     auto directionRotationMatrix = glm::identity<glm::mat4>();
-    Matrix::Rotate(directionRotationMatrix, rotation);
+    Matrix::RotateWithEulerAngle(directionRotationMatrix, rotation);
 
-    mDirection = directionRotationMatrix * Math::ForwardVector;
+    mDirection = directionRotationMatrix * Math::ForwardVector4;
     
     auto const shadowViewMatrix = glm::lookAt(
         mDirection,

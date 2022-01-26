@@ -15,10 +15,10 @@ public:
         float viewProjection[16];
         float cameraPosition[3];
         float projectFarToNearDistance;
-        
+        float viewportDimension[2];
+        float placeholder[2];
     };
-    static_assert(sizeof(CameraBufferData) == 80);
-
+    
     struct Plane
     {
         glm::vec3 direction;

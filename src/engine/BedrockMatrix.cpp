@@ -210,20 +210,44 @@ namespace MFA::Matrix
 
     //-------------------------------------------------------------------------------------------------
 
-    void Rotate(glm::mat4 & transform, float eulerAngles[3])
+    #define ROTATE_EULER_ANGLE(transform, angles)                                                  \
+    transform = glm::rotate(transform, glm::radians(angles[0]), glm::vec3(1.0f, 0.0f, 0.0f));      \
+    transform = glm::rotate(transform, glm::radians(angles[1]), glm::vec3(0.0f, 1.0f, 0.0f));      \
+    transform = glm::rotate(transform, glm::radians(angles[2]), glm::vec3(0.0f, 0.0f, 1.0f));      \
+
+    //-------------------------------------------------------------------------------------------------
+
+    void RotateWithEulerAngle(glm::mat4 & inOutTransform, float eulerAngles[3])
     {
-        transform = glm::rotate(transform, glm::radians(eulerAngles[0]), glm::vec3(1.0f, 0.0f, 0.0f));
-        transform = glm::rotate(transform, glm::radians(eulerAngles[1]), glm::vec3(0.0f, 1.0f, 0.0f));
-        transform = glm::rotate(transform, glm::radians(eulerAngles[2]), glm::vec3(0.0f, 0.0f, 1.0f));
+        ROTATE_EULER_ANGLE(inOutTransform, eulerAngles);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void Rotate(glm::mat4 & transform, glm::vec3 eulerAngles)
+    void RotateWithEulerAngle(glm::mat4 & inOutTransform, glm::vec3 eulerAngles)
     {
-        transform = glm::rotate(transform, glm::radians(eulerAngles[0]), glm::vec3(1.0f, 0.0f, 0.0f));
-        transform = glm::rotate(transform, glm::radians(eulerAngles[1]), glm::vec3(0.0f, 1.0f, 0.0f));
-        transform = glm::rotate(transform, glm::radians(eulerAngles[2]), glm::vec3(0.0f, 0.0f, 1.0f));
+        ROTATE_EULER_ANGLE(inOutTransform, eulerAngles);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    #define ROTATE_RADIANS(transform, radians)                                        \
+    transform = glm::rotate(transform, radians[0], glm::vec3(1.0f, 0.0f, 0.0f));      \
+    transform = glm::rotate(transform, radians[1], glm::vec3(0.0f, 1.0f, 0.0f));      \
+    transform = glm::rotate(transform, radians[2], glm::vec3(0.0f, 0.0f, 1.0f));      \
+
+    //-------------------------------------------------------------------------------------------------
+
+    void RotateWithRadians(glm::mat4 & inOutTransform, float radians[3])
+    {
+        ROTATE_RADIANS(inOutTransform, radians);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void RotateWithRadians(glm::mat4 & inOutTransform, glm::vec3 radians)
+    {
+        ROTATE_RADIANS(inOutTransform, radians);
     }
 
     //-------------------------------------------------------------------------------------------------

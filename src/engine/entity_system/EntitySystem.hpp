@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 namespace MFA
 {
     class Entity;
@@ -20,7 +22,7 @@ namespace MFA::EntitySystem {
         bool serializable = true;   
     };
     Entity * CreateEntity(
-        char const * name,
+        std::string const & name,
         Entity * parent = nullptr,
         CreateEntityParams const & params = {}
     );

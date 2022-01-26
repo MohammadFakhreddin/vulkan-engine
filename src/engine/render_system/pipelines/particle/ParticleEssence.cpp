@@ -101,7 +101,7 @@ namespace MFA
 
     void ParticleEssence::updateInstanceData(VariantsList const & variants)
     {
-        MFA_ASSERT(variants.size() < mMesh->maxInstanceCount);
+        MFA_ASSERT(variants.size() <= mMesh->maxInstanceCount);
         mNextDrawInstanceCount = std::min<uint32_t>(
             static_cast<uint32_t>(variants.size()),
             mMesh->maxInstanceCount

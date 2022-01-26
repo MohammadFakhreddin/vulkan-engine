@@ -85,9 +85,9 @@ namespace MFA
                 auto const variantPosition = transformComponentPtr->getWorldPosition();
 
                 auto rotationMatrix = glm::identity<glm::mat4>();
-                Matrix::Rotate(rotationMatrix, mEulerAngles);
+                Matrix::RotateWithEulerAngle(rotationMatrix, mEulerAngles);
 
-                glm::vec4 forwardDirection = Math::ForwardVector;
+                glm::vec4 forwardDirection = Math::ForwardVector4;
 
                 forwardDirection = forwardDirection * rotationMatrix;
                 forwardDirection = glm::normalize(forwardDirection);

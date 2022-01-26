@@ -21,12 +21,12 @@ namespace MFA
 
     Entity::Entity(
         EntityId const id,
-        char const * name,
+        std::string name,
         Entity * parent,
         CreateEntityParams const & params
     )
         : mId(id)
-        , mName(name)
+        , mName(std::move(name))
         , mParent(parent)
         , mSerializable(params.serializable)
     {}

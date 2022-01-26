@@ -6,47 +6,30 @@ namespace MFA::AssetSystem
 {
     //-------------------------------------------------------------------------------------------------
 
-    Shader::Shader() = default;
+    Shader::Shader(
+        std::string entryPoint_,
+        Stage const stage_,
+        std::shared_ptr<SmartBlob> compiledShaderCode_
+    )
+        : entryPoint(std::move(entryPoint_))
+        , stage(stage_)
+        , compiledShaderCode(std::move(compiledShaderCode_))
+    {}
+
+    //-------------------------------------------------------------------------------------------------
+
     Shader::~Shader() = default;
 
     //-------------------------------------------------------------------------------------------------
 
     bool Shader::isValid() const
     {
-        return mEntryPoint.empty() == false && 
-        Stage::Invalid != mStage && 
-        mCompiledShaderCode->memory.ptr != nullptr && 
-        mCompiledShaderCode->memory.len > 0;
+        return entryPoint.empty() == false &&
+            Stage::Invalid != stage &&
+            compiledShaderCode->memory.ptr != nullptr &&
+            compiledShaderCode->memory.len > 0;
     }
 
     //-------------------------------------------------------------------------------------------------
-
-    void Shader::init(char const * entryPoint, Stage const stage, std::shared_ptr<SmartBlob> compiledShaderCode)
-    {
-        mEntryPoint = entryPoint;
-        mStage = stage;
-        mCompiledShaderCode = std::move(compiledShaderCode);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    CBlob Shader::getCompiledShaderCode() const noexcept
-    {
-        return mCompiledShaderCode->memory;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    char const * Shader::getEntryPoint() const noexcept
-    {
-        return mEntryPoint.c_str();
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    Shader::Stage Shader::getStage() const noexcept
-    {
-        return mStage;
-    }
 
 }

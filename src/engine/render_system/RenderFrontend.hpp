@@ -132,7 +132,7 @@ namespace MFA::RenderFrontend
     [[nodiscard]]
     std::shared_ptr<RT::GpuModel> CreateGpuModel(
         AS::Model const * modelAsset,
-        char const * address
+        std::string const & address
     );
 
     void DeviceWaitIdle();
@@ -150,7 +150,7 @@ namespace MFA::RenderFrontend
     void DestroyShader(RT::GpuShader const & gpuShader);
 
     //-------------------------------------------UniformBuffer--------------------------------------------
-
+    // TODO We should ask for frequency so we can decide which memory type we should use + TODO: Add never/rare to frequency as well
     std::shared_ptr<RT::UniformBufferGroup> CreateUniformBuffer(size_t bufferSize, uint32_t count);
 
     void UpdateUniformBuffer(

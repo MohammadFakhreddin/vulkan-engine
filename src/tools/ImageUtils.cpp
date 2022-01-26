@@ -14,7 +14,7 @@
 namespace MFA::Utils::UncompressedTexture
 {
 
-    LoadResult Load(Data & outImageData, const char * path, bool const prefer_srgb)
+    LoadResult Load(Data & outImageData, std::string const & path, bool const prefer_srgb)
     {
         using namespace AssetSystem;
         LoadResult ret = LoadResult::Invalid;
@@ -223,7 +223,7 @@ namespace MFA::Utils::DDSTexture
         return mipmap_len;
     }
 
-    LoadResult Load(Data & out_image_data, char const * path)
+    LoadResult Load(Data & out_image_data, std::string const & path)
     {
         LoadResult ret = LoadResult::INVALID;
         auto * file = FileSystem::OpenFile(path, FileSystem::Usage::Read);
@@ -431,8 +431,6 @@ namespace MFA::Utils::DDSTexture
 namespace MFA::Utils::KTXTexture
 {
 
-    namespace FS = FileSystem;
-
     static void tinyktxCallbackError(void * user, char const * msg)
     {
         MFA_LOG_ERROR("Tiny_Ktx ERROR: %s", msg);
@@ -494,7 +492,7 @@ namespace MFA::Utils::KTXTexture
 #endif
     }
 
-    Data * Load(LoadResult & loadResult, const char * path)
+    Data * Load(LoadResult & loadResult, std::string const & path)
     {
 
         Data * data = nullptr;

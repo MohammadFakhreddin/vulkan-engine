@@ -40,7 +40,7 @@ namespace MFA::Utils
             // Format not supported
         };
 
-        LoadResult Load(Data & outImageData, const char * path, bool prefer_srgb);
+        LoadResult Load(Data & outImageData, std::string const & path, bool prefer_srgb);
 
         struct ResizeInputParams
         {
@@ -310,7 +310,7 @@ namespace MFA::Utils
             NotSupported_Format
         };
 
-        [[nodiscard]] LoadResult Load(Data & out_image_data, char const * path);
+        [[nodiscard]] LoadResult Load(Data & out_image_data, std::string const & path);
 
     } // DDSTexture
 
@@ -349,8 +349,8 @@ namespace MFA::Utils
             FileNotExists
             // Format not supported
         };
-
-        Data * Load(LoadResult & loadResult, const char * path);
+        // TODO Use shared ptr instead
+        Data * Load(LoadResult & loadResult, std::string const & path);
 
         CBlob GetMipBlob(Data * imageData, int mipIndex);
 

@@ -5,12 +5,15 @@
 #include "engine/render_system/RenderTypesFWD.hpp"
 #include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
 
+#include <vec3.hpp>
+
 namespace MFA
 {
     namespace AssetSystem
     {
         namespace Particle
         {
+            class Mesh;
             struct Vertex;
         }
     }
@@ -40,23 +43,27 @@ public:
 
     bool isDisplayPassDepthImageInitialLayoutUndefined() override;
 
+    void OnResize() override;
+
 private:
 
     void createFireEssence();
-
-    void createFireInstance();
+    std::shared_ptr<MFA::AssetSystem::Particle::Mesh> createFireMesh();
+    std::vector<std::shared_ptr<MFA::AssetSystem::Texture>> createFireTexture(); 
+    void createFireInstance(glm::vec3 const & position);
 
     void createCamera();
+
+    void computeFirePointSize();
 
     MFA::ParticlePipeline mParticlePipeline {this};
     MFA::DebugRendererPipeline mDebugPipeline {};
 
-    std::shared_ptr<MFA::RT::SamplerGroup> mSamplerGroup {};
     std::shared_ptr<MFA::RT::GpuTexture> mErrorTexture {};
-    //std::shared_ptr<MFA::AssetSystem::Model> mFireModel {};
-
+    
     int mFireVerticesCount = 0;
     MFA::AssetSystem::Particle::Vertex * mFireVertices = nullptr;
 
+    float firePointSize = 0.0f;
 
 };

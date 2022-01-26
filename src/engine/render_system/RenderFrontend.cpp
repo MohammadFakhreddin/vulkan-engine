@@ -691,7 +691,7 @@ namespace MFA::RenderFrontend
 
     std::shared_ptr<RT::GpuModel> CreateGpuModel(
         AS::Model const * modelAsset,
-        char const * address
+        std::string const & address
     )
     {
         MFA_ASSERT(modelAsset->mesh->isValid());

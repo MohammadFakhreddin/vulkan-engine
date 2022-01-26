@@ -15,8 +15,12 @@ namespace MFA::AssetSystem
     public:
 
         using Stage = ShaderStage;
-        
-        explicit Shader();
+
+        explicit Shader(
+            std::string entryPoint_,
+            Stage stage_,
+            std::shared_ptr<SmartBlob> compiledShaderCode_
+        );
         ~Shader() override;
 
         Shader(Shader const &) noexcept = delete;
@@ -27,26 +31,9 @@ namespace MFA::AssetSystem
         [[nodiscard]]
         bool isValid() const;
 
-        void init(
-            char const * entryPoint,
-            Stage stage,
-            std::shared_ptr<SmartBlob> compiledShaderCode
-        );
-
-        [[nodiscard]]
-        CBlob getCompiledShaderCode() const noexcept;
-
-        [[nodiscard]]
-        char const * getEntryPoint() const noexcept;
-
-        [[nodiscard]]
-        Stage getStage() const noexcept;
-
-    private:
-
-        std::string mEntryPoint{};     // Ex: main
-        Stage mStage = Stage::Invalid;
-        std::shared_ptr<SmartBlob> mCompiledShaderCode = nullptr;
+        std::string const entryPoint;     // Ex: main
+        Stage const stage;
+        std::shared_ptr<SmartBlob> const compiledShaderCode;
 
     };
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/vec4.hpp>
+#include <glm/vec3.hpp>
 
 namespace MFA::Math
 {
@@ -11,9 +12,13 @@ namespace MFA::Math
     static constexpr float PiFloat = PiTemplate<float>;
     static constexpr double PiDouble = PiTemplate<double>;
 
-    inline static const glm::vec4 ForwardVector{ 0.0f, 0.0f, 1.0f, 0.0f };
-    inline static const glm::vec4 RightVector{ 1.0f, 0.0f, 0.0f, 0.0f };
-    inline static const glm::vec4 UpVector{ 0.0f, 1.0f, 0.0f, 0.0f };
+    inline static const glm::vec4 ForwardVector4{ 0.0f, 0.0f, 1.0f, 0.0f };
+    inline static const glm::vec4 RightVector4{ 1.0f, 0.0f, 0.0f, 0.0f };
+    inline static const glm::vec4 UpVector4{ 0.0f, 1.0f, 0.0f, 0.0f };
+
+    inline static const glm::vec3 ForwardVector3{ 0.0f, 0.0f, 1.0f};
+    inline static const glm::vec3 RightVector3{ 1.0f, 0.0f, 0.0f};
+    inline static const glm::vec3 UpVector3{ 0.0f, 1.0f, 0.0f};
 
     template<typename A, typename B, typename C>
     A Clamp(const A & value, B min_value, C max_value)

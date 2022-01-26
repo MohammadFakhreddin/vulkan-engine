@@ -316,7 +316,7 @@ namespace MFA
 
         // Rotation
         auto rotationMatrix = glm::identity<glm::mat4>();
-        Matrix::Rotate(rotationMatrix, mRotation);
+        Matrix::RotateWithEulerAngle(rotationMatrix, mRotation);
 
         auto parentTransform = glm::identity<glm::mat4>();
         if (auto const ptr = mParentTransform.lock())

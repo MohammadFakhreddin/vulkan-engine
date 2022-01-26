@@ -11,11 +11,11 @@ namespace MFA::Path
     void Shutdown();
 
     [[nodiscard]]
-    std::string ForReadWrite(char const * address);
+    std::string ForReadWrite(std::string const & address);
 
-    void ForReadWrite(char const * address, std::string & outPath);
+    void ForReadWrite(std::string const & address, std::string & outPath);
 
-    bool RelativeToAssetFolder(char const * address, std::string & outRelativePath);
+    bool RelativeToAssetFolder(std::string const & address, std::string & outRelativePath);
 
 #if defined(__IOS__) || defined(__PLATFORM_MAC__)
     std::string GetAssetPath();

@@ -46,7 +46,7 @@ namespace MFA::Path
 
     //-------------------------------------------------------------------------------------------------
 
-    std::string ForReadWrite(char const * address)
+    std::string ForReadWrite(std::string const & address)
     {
         std::string result;
         ForReadWrite(address, result);
@@ -55,14 +55,14 @@ namespace MFA::Path
 
     //-------------------------------------------------------------------------------------------------
 
-    void ForReadWrite(char const * address, std::string & outPath)
+    void ForReadWrite(std::string const & address, std::string & outPath)
     {
         outPath = std::filesystem::path(state->assetsPath).append(address).string();
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    bool RelativeToAssetFolder(char const * address, std::string & outRelativePath)
+    bool RelativeToAssetFolder(std::string const & address, std::string & outRelativePath)
     {
         outRelativePath = std::filesystem::relative(address, state->assetsPath).string();
         return outRelativePath.empty() == false;

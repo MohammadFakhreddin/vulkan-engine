@@ -64,7 +64,7 @@ namespace MFA
             auto * gpuModel = essence->getGpuModel();
             MFA_ASSERT(gpuModel != nullptr);
 
-            auto const model = RC::AcquireForCpu(gpuModel->nameOrAddress.c_str());
+            auto const model = RC::AcquireCpuModel(gpuModel->nameOrAddress.c_str());
             MFA_ASSERT(model != nullptr);
 
             auto const mesh = model->mesh;
@@ -215,19 +215,19 @@ namespace MFA
         mWorldPosition = transform * glm::vec4(mLocalPosition, 1.f);
 
         // Scaled orientation
-        auto forwardDirection = Math::ForwardVector;
+        auto forwardDirection = Math::ForwardVector4;
         forwardDirection = transform * forwardDirection;
         forwardDirection = glm::normalize(forwardDirection);
         forwardDirection *= mExtend.z;
         mForwardVector = forwardDirection;
 
-        auto rightDirection = Math::RightVector;
+        auto rightDirection = Math::RightVector4;
         rightDirection = transform * rightDirection;
         rightDirection = glm::normalize(rightDirection);
         rightDirection *= mExtend.x;
         mRightVector = rightDirection;
 
-        auto upDirection = Math::UpVector;
+        auto upDirection = Math::UpVector4;
         upDirection = transform * upDirection;
         upDirection = glm::normalize(upDirection);
         upDirection *= mExtend.y;

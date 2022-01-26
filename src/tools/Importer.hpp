@@ -24,7 +24,8 @@ namespace MFA::Importer {
 //------------------------------Assets-------------------------------------
 
 struct ImportTextureOptions {
-    bool tryToGenerateMipmaps = true;       // Generates mipmaps for uncompressed texture
+    //I think I will remove this op
+    bool tryToGenerateMipmaps = false;      // Generates mipmaps for uncompressed texture
     bool preferSrgb = false;                // Not tested and not recommended
     AssetSystem::SamplerConfig * sampler = nullptr;  // For better sampling, you can specify specific options for sampler
     // TODO Usage flags
@@ -32,7 +33,7 @@ struct ImportTextureOptions {
 
 [[nodiscard]]
 std::shared_ptr<AssetSystem::Texture> ImportUncompressedImage(
-    char const * path, 
+    std::string const & path, 
     ImportTextureOptions const & options = {}
 );
 
@@ -52,7 +53,7 @@ std::shared_ptr<AssetSystem::Texture> ImportInMemoryTexture(
 );
 
 std::shared_ptr<AssetSystem::Texture> ImportKTXImage(
-    char const * path,
+    std::string const & path,
     ImportTextureOptions const & options = {}
 );
 
@@ -60,35 +61,35 @@ std::shared_ptr<AssetSystem::Texture> ImportKTXImage(
 
 // TODO
 [[nodiscard]]
-AssetSystem::Texture ImportDDSFile(char const * path);
+AssetSystem::Texture ImportDDSFile(std::string const & path);
 
 
 [[nodiscard]]
-std::shared_ptr<AssetSystem::Texture> ImportImage(char const * path, ImportTextureOptions const & options = {});
+std::shared_ptr<AssetSystem::Texture> ImportImage(std::string const & path, ImportTextureOptions const & options = {});
 /*
  * Due to lack of material support, OBJ files are not very useful (Deprecated)
  */
 [[nodiscard]]
-std::shared_ptr<AssetSystem::MeshBase> ImportObj(char const * path);
+std::shared_ptr<AssetSystem::MeshBase> ImportObj(std::string const & path);
 
 [[nodiscard]]
-std::shared_ptr<AssetSystem::Model> ImportGLTF(char const * path);
+std::shared_ptr<AssetSystem::Model> ImportGLTF(std::string const & path);
 
 [[nodiscard]]
-std::shared_ptr<AssetSystem::Shader> ImportShaderFromHLSL(char const * path);
+std::shared_ptr<AssetSystem::Shader> ImportShaderFromHLSL(std::string const & path);
 
 [[nodiscard]]
 std::shared_ptr<AssetSystem::Shader> ImportShaderFromSPV(
-    char const * path,
+    std::string const & path,
     AssetSystem::ShaderStage stage,
-    char const * entryPoint
+    std::string const & entryPoint
 );
 
 [[nodiscard]]
 std::shared_ptr<AssetSystem::Shader> ImportShaderFromSPV(
     CBlob dataMemory,
-    AssetSystem::ShaderStage const stage,
-    char const * entryPoint
+    AssetSystem::ShaderStage stage,
+    std::string const & entryPoint
 );
 
 //------------------------------RawFile------------------------------------
@@ -102,7 +103,7 @@ struct RawFile {
 };
 
 [[nodiscard]]
-RawFile ReadRawFile(char const * path);         // We should use resource manager here
+RawFile ReadRawFile(std::string const & path);         // We should use resource manager here
 
 
 }

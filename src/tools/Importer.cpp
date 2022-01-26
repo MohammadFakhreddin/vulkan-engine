@@ -26,7 +26,7 @@ namespace MFA::Importer
     //-------------------------------------------------------------------------------------------------
 
     std::shared_ptr<AS::Texture> ImportUncompressedImage(
-        char const * path,
+        std::string const & path,
         ImportTextureOptions const & options
     )
     {
@@ -170,7 +170,7 @@ namespace MFA::Importer
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<AS::Texture> ImportKTXImage(char const * path, ImportTextureOptions const & options)
+    std::shared_ptr<AS::Texture> ImportKTXImage(std::string const & path, ImportTextureOptions const & options)
     {
         using namespace Utils::KTXTexture;
 
@@ -229,7 +229,7 @@ namespace MFA::Importer
 
     //-------------------------------------------------------------------------------------------------
 
-    AS::Texture ImportDDSFile(char const * path)
+    AS::Texture ImportDDSFile(std::string const & path)
     {
         // TODO
         MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
@@ -237,12 +237,11 @@ namespace MFA::Importer
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<AS::Texture> ImportImage(char const * path, ImportTextureOptions const & options)
+    std::shared_ptr<AS::Texture> ImportImage(std::string const & path, ImportTextureOptions const & options)
     {
         std::shared_ptr<AS::Texture> texture{};
 
-        MFA_ASSERT(path != nullptr);
-        if (path != nullptr)
+        if (MFA_VERIFY(path.empty() == false))
         {
             auto const extension = FS::ExtractExtensionFromPath(path);
 
@@ -261,7 +260,7 @@ namespace MFA::Importer
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<AS::Shader> ImportShaderFromHLSL(char const * path)
+    std::shared_ptr<AS::Shader> ImportShaderFromHLSL(std::string const & path)
     {
         MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
     }
@@ -269,14 +268,13 @@ namespace MFA::Importer
     //-------------------------------------------------------------------------------------------------
 
     std::shared_ptr<AS::Shader> ImportShaderFromSPV(
-        char const * path,
+        std::string const & path,
         AS::ShaderStage const stage,
-        char const * entryPoint
+        std::string const & entryPoint
     )
     {
-        MFA_ASSERT(path != nullptr);
-        std::shared_ptr<AS::Shader> shader = std::make_shared<AS::Shader>();
-        if (path != nullptr)
+        std::shared_ptr<AS::Shader> shader = nullptr;
+        if (MFA_VERIFY(path.empty() == false))
         {
 #if defined(__DESKTOP__) || defined(__IOS__)
             auto * file = FS::OpenFile(path, FS::Usage::Read);
@@ -292,7 +290,7 @@ namespace MFA::Importer
 
                 if (readBytes == buffer->memory.len)
                 {
-                    shader->init(entryPoint, stage, buffer);
+                    shader = std::make_shared<AS::Shader>(entryPoint, stage, buffer);
                 }
             }
 #elif defined(__ANDROID__)
@@ -328,198 +326,200 @@ namespace MFA::Importer
     std::shared_ptr<AS::Shader> ImportShaderFromSPV(
         CBlob const dataMemory,
         AS::ShaderStage const stage,
-        char const * entryPoint
+        std::string const & entryPoint
     )
     {
         MFA_ASSERT(dataMemory.ptr != nullptr);
         MFA_ASSERT(dataMemory.len > 0);
-        auto shader = std::make_shared<AS::Shader>();
+        std::shared_ptr<AS::Shader> shader = nullptr;
         if (dataMemory.ptr != nullptr && dataMemory.len > 0)
         {
             auto const buffer = Memory::Alloc(dataMemory.len);
             ::memcpy(buffer->memory.ptr, dataMemory.ptr, buffer->memory.len);
-            shader->init(entryPoint, stage, buffer);
+            shader = std::make_shared<AS::Shader>(entryPoint, stage, buffer);
         }
         return shader;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<AS::MeshBase> ImportObj(char const * path)
+    std::shared_ptr<AS::MeshBase> ImportObj(std::string const & path)
     {
         using namespace AS::PBR;
 
-        MFA_ASSERT(path != nullptr);
-        MFA_ASSERT(strlen(path) > 0);
+        std::shared_ptr<Mesh> mesh = nullptr;
 
-        auto mesh = std::make_shared<Mesh>();
-        ;
-        if (FS::Exists(path))
+        if (MFA_VERIFY(path.empty() == false))
         {
-            auto * file = FS::OpenFile(path, FS::Usage::Read);
-            MFA_DEFER{ FS::CloseFile(file); };
-            if (FS::FileIsUsable(file))
+            if (FS::Exists(path))
             {
-                bool is_counter_clockwise = false;
-                {//Check if normal vectors are reverse
-                    auto firstLineBlob = Memory::Alloc(200);
-                    FS::Read(file, firstLineBlob->memory);
-                    std::string const firstLine = std::string(firstLineBlob->memory.as<char>());
-                    if (firstLine.find("ccw") != std::string::npos)
-                    {
-                        is_counter_clockwise = true;            // TODO: Variable not used! Why?
-                    }
-                }
+                mesh = std::make_shared<Mesh>();;
 
-                tinyobj::attrib_t attributes;
-                std::vector<tinyobj::shape_t> shapes;
-                std::vector<tinyobj::material_t> materials;
-                std::string error;
-                auto const load_obj_result = tinyobj::LoadObj(
-                    &attributes,
-                    &shapes,
-                    &materials,
-                    &error,
-                    path
-                );
-                // TODO Handle materials
-                if (load_obj_result)
+                auto * file = FS::OpenFile(path, FS::Usage::Read);
+                MFA_DEFER{ FS::CloseFile(file); };
+                if (FS::FileIsUsable(file))
                 {
-                    if (shapes.empty())
-                    {
-                        MFA_CRASH("Object has no shape");
-                    }
-                    if (0 != attributes.vertices.size() % 3)
-                    {
-                        MFA_CRASH("Vertices must be dividable by 3");
-                    }
-                    if (0 != attributes.texcoords.size() % 2)
-                    {
-                        MFA_CRASH("Attributes must be dividable by 3");
-                    }
-                    if (0 != shapes[0].mesh.indices.size() % 3)
-                    {
-                        MFA_CRASH("Indices must be dividable by 3");
-                    }
-                    auto positions_count = attributes.vertices.size() / 3;
-                    auto coords_count = attributes.texcoords.size() / 2;
-                    auto normalsCount = attributes.normals.size() / 3;
-                    if (positions_count != coords_count)
-                    {
-                        MFA_CRASH("Vertices and texture coordinates must have same size");
-                    }
-                    // TODO I think normals have issues
-                    struct Position
-                    {
-                        float value[3];
-                    };
-
-                    auto positionsBlob = Memory::Alloc(sizeof(Position) * positions_count);
-                    auto * positions = positionsBlob->memory.as<Position>();
-                    for (
-                        uintmax_t vertexIndex = 0;
-                        vertexIndex < positions_count;
-                        vertexIndex++
-                    )
-                    {
-                        positions[vertexIndex].value[0] = attributes.vertices[vertexIndex * 3 + 0];
-                        positions[vertexIndex].value[1] = attributes.vertices[vertexIndex * 3 + 1];
-                        positions[vertexIndex].value[2] = attributes.vertices[vertexIndex * 3 + 2];
+                    bool is_counter_clockwise = false;
+                    {//Check if normal vectors are reverse
+                        auto firstLineBlob = Memory::Alloc(200);
+                        FS::Read(file, firstLineBlob->memory);
+                        std::string const firstLine = std::string(firstLineBlob->memory.as<char>());
+                        if (firstLine.find("ccw") != std::string::npos)
+                        {
+                            is_counter_clockwise = true;            // TODO: Variable not used! Why?
+                        }
                     }
 
-                    struct TextureCoordinates
-                    {
-                        float value[2];
-                    };
-                    auto coordsBlob = Memory::Alloc(sizeof(TextureCoordinates) * coords_count);
-                    auto * coords = coordsBlob->memory.as<TextureCoordinates>();
-                    for (
-                        uintmax_t texIndex = 0;
-                        texIndex < coords_count;
-                        texIndex++
-                    )
-                    {
-                        coords[texIndex].value[0] = attributes.texcoords[texIndex * 2 + 0];
-                        coords[texIndex].value[1] = attributes.texcoords[texIndex * 2 + 1];
-                    }
-                    struct Normals
-                    {
-                        float value[3];
-                    };
-                    auto normalsBlob = Memory::Alloc(sizeof(Normals) * normalsCount);
-                    auto * normals = normalsBlob->memory.as<Normals>();
-                    for (
-                        uintmax_t normalIndex = 0;
-                        normalIndex < normalsCount;
-                        normalIndex++
-                    )
-                    {
-                        normals[normalIndex].value[0] = attributes.normals[normalIndex * 3 + 0];
-                        normals[normalIndex].value[1] = attributes.normals[normalIndex * 3 + 1];
-                        normals[normalIndex].value[2] = attributes.normals[normalIndex * 3 + 2];
-                    }
-                    auto const vertexCount = static_cast<uint32_t>(positions_count);
-                    auto const indexCount = static_cast<uint32_t>(shapes[0].mesh.indices.size());
-
-                    mesh->initForWrite(
-                        vertexCount,
-                        indexCount,
-                        Memory::Alloc(sizeof(Vertex) * vertexCount),
-                        Memory::Alloc(sizeof(AS::Index) * indexCount)
+                    tinyobj::attrib_t attributes;
+                    std::vector<tinyobj::shape_t> shapes;
+                    std::vector<tinyobj::material_t> materials;
+                    std::string error;
+                    auto const load_obj_result = tinyobj::LoadObj(
+                        &attributes,
+                        &shapes,
+                        &materials,
+                        &error,
+                        path.c_str()
                     );
-
-                    auto const subMeshIndex = mesh->insertSubMesh();
-
-                    std::vector<Vertex> vertices(vertexCount);
-                    std::vector<AS::Index> indices(indexCount);
-                    for (
-                        uintmax_t indicesIndex = 0;
-                        indicesIndex < shapes[0].mesh.indices.size();
-                        indicesIndex++
-                    )
+                    // TODO Handle materials
+                    if (load_obj_result)
                     {
-                        auto const vertexIndex = shapes[0].mesh.indices[indicesIndex].vertex_index;
-                        auto const uvIndex = shapes[0].mesh.indices[indicesIndex].texcoord_index;
-                        indices[indicesIndex] = shapes[0].mesh.indices[indicesIndex].vertex_index;
-                        ::memcpy(vertices[vertexIndex].position, positions[vertexIndex].value, sizeof(positions[vertexIndex].value));
-                        ::memcpy(vertices[vertexIndex].baseColorUV, coords[uvIndex].value, sizeof(coords[uvIndex].value));
-                        // TODO fill other uvs as well (If we used obj in anything serious enough)
-                        vertices[vertexIndex].baseColorUV[1] = 1.0f - vertices[vertexIndex].baseColorUV[1];
-                        ::memcpy(vertices[vertexIndex].normalValue, normals[vertexIndex].value, sizeof(normals[vertexIndex].value));
-                    }
+                        if (shapes.empty())
+                        {
+                            MFA_CRASH("Object has no shape");
+                        }
+                        if (0 != attributes.vertices.size() % 3)
+                        {
+                            MFA_CRASH("Vertices must be dividable by 3");
+                        }
+                        if (0 != attributes.texcoords.size() % 2)
+                        {
+                            MFA_CRASH("Attributes must be dividable by 3");
+                        }
+                        if (0 != shapes[0].mesh.indices.size() % 3)
+                        {
+                            MFA_CRASH("Indices must be dividable by 3");
+                        }
+                        auto positions_count = attributes.vertices.size() / 3;
+                        auto coords_count = attributes.texcoords.size() / 2;
+                        auto normalsCount = attributes.normals.size() / 3;
+                        if (positions_count != coords_count)
+                        {
+                            MFA_CRASH("Vertices and texture coordinates must have same size");
+                        }
+                        // TODO I think normals have issues
+                        struct Position
+                        {
+                            float value[3];
+                        };
 
-                    {// Insert primitive
-                        Primitive primitive{};
-                        primitive.uniqueId = 0;
-                        primitive.vertexCount = vertexCount;
-                        primitive.indicesCount = indexCount;
-                        primitive.baseColorTextureIndex = 0;
-                        primitive.hasNormalBuffer = true;
+                        auto positionsBlob = Memory::Alloc(sizeof(Position) * positions_count);
+                        auto * positions = positionsBlob->memory.as<Position>();
+                        for (
+                            uintmax_t vertexIndex = 0;
+                            vertexIndex < positions_count;
+                            vertexIndex++
+                        )
+                        {
+                            positions[vertexIndex].value[0] = attributes.vertices[vertexIndex * 3 + 0];
+                            positions[vertexIndex].value[1] = attributes.vertices[vertexIndex * 3 + 1];
+                            positions[vertexIndex].value[2] = attributes.vertices[vertexIndex * 3 + 2];
+                        }
 
-                        mesh->insertPrimitive(
-                            subMeshIndex,
-                            primitive,
-                            static_cast<uint32_t>(vertices.size()),
-                            vertices.data(),
-                            static_cast<uint32_t>(indices.size()),
-                            indices.data()
+                        struct TextureCoordinates
+                        {
+                            float value[2];
+                        };
+                        auto coordsBlob = Memory::Alloc(sizeof(TextureCoordinates) * coords_count);
+                        auto * coords = coordsBlob->memory.as<TextureCoordinates>();
+                        for (
+                            uintmax_t texIndex = 0;
+                            texIndex < coords_count;
+                            texIndex++
+                        )
+                        {
+                            coords[texIndex].value[0] = attributes.texcoords[texIndex * 2 + 0];
+                            coords[texIndex].value[1] = attributes.texcoords[texIndex * 2 + 1];
+                        }
+                        struct Normals
+                        {
+                            float value[3];
+                        };
+                        auto normalsBlob = Memory::Alloc(sizeof(Normals) * normalsCount);
+                        auto * normals = normalsBlob->memory.as<Normals>();
+                        for (
+                            uintmax_t normalIndex = 0;
+                            normalIndex < normalsCount;
+                            normalIndex++
+                        )
+                        {
+                            normals[normalIndex].value[0] = attributes.normals[normalIndex * 3 + 0];
+                            normals[normalIndex].value[1] = attributes.normals[normalIndex * 3 + 1];
+                            normals[normalIndex].value[2] = attributes.normals[normalIndex * 3 + 2];
+                        }
+                        auto const vertexCount = static_cast<uint32_t>(positions_count);
+                        auto const indexCount = static_cast<uint32_t>(shapes[0].mesh.indices.size());
+
+                        mesh->initForWrite(
+                            vertexCount,
+                            indexCount,
+                            Memory::Alloc(sizeof(Vertex) * vertexCount),
+                            Memory::Alloc(sizeof(AS::Index) * indexCount)
                         );
+
+                        auto const subMeshIndex = mesh->insertSubMesh();
+
+                        std::vector<Vertex> vertices(vertexCount);
+                        std::vector<AS::Index> indices(indexCount);
+                        for (
+                            uintmax_t indicesIndex = 0;
+                            indicesIndex < shapes[0].mesh.indices.size();
+                            indicesIndex++
+                        )
+                        {
+                            auto const vertexIndex = shapes[0].mesh.indices[indicesIndex].vertex_index;
+                            auto const uvIndex = shapes[0].mesh.indices[indicesIndex].texcoord_index;
+                            indices[indicesIndex] = shapes[0].mesh.indices[indicesIndex].vertex_index;
+                            ::memcpy(vertices[vertexIndex].position, positions[vertexIndex].value, sizeof(positions[vertexIndex].value));
+                            ::memcpy(vertices[vertexIndex].baseColorUV, coords[uvIndex].value, sizeof(coords[uvIndex].value));
+                            // TODO fill other uvs as well (If we used obj in anything serious enough)
+                            vertices[vertexIndex].baseColorUV[1] = 1.0f - vertices[vertexIndex].baseColorUV[1];
+                            ::memcpy(vertices[vertexIndex].normalValue, normals[vertexIndex].value, sizeof(normals[vertexIndex].value));
+                        }
+
+                        {// Insert primitive
+                            Primitive primitive{};
+                            primitive.uniqueId = 0;
+                            primitive.vertexCount = vertexCount;
+                            primitive.indicesCount = indexCount;
+                            primitive.baseColorTextureIndex = 0;
+                            primitive.hasNormalBuffer = true;
+
+                            mesh->insertPrimitive(
+                                subMeshIndex,
+                                primitive,
+                                static_cast<uint32_t>(vertices.size()),
+                                vertices.data(),
+                                static_cast<uint32_t>(indices.size()),
+                                indices.data()
+                            );
+                        }
+
+                        Node node{};
+                        node.subMeshIndex = static_cast<int>(subMeshIndex);
+                        Matrix::CopyGlmToCells(glm::identity<glm::mat4>(), node.transform);
+                        mesh->insertNode(node);
+                        MFA_ASSERT(mesh->isValid());
+
                     }
-
-                    Node node {};
-                    node.subMeshIndex = static_cast<int>(subMeshIndex);
-                    Matrix::CopyGlmToCells(glm::identity<glm::mat4>(), node.transform);
-                    mesh->insertNode(node);
-                    MFA_ASSERT(mesh->isValid());
-
-                }
-                else if (!error.empty() && error.substr(0, 4) != "WARN")
-                {
-                    MFA_CRASH("LoadObj returned error: %s, File: %s", error.c_str(), path);
-                }
-                else
-                {
-                    MFA_CRASH("LoadObj failed");
+                    else if (!error.empty() && error.substr(0, 4) != "WARN")
+                    {
+                        MFA_CRASH("LoadObj returned error: %s, File: %s", error.c_str(), path.c_str());
+                    }
+                    else
+                    {
+                        MFA_CRASH("LoadObj failed");
+                    }
                 }
             }
         }
@@ -584,11 +584,13 @@ namespace MFA::Importer
     )
     {
         bool success = false;
-        if (primitive.attributes.find(fieldKey) != primitive.attributes.end())
+        auto const findAttributeResult = primitive.attributes.find(fieldKey);
+        if (findAttributeResult != primitive.attributes.end())
         {// Positions
             success = true;
-            MFA_REQUIRE(static_cast<size_t>(primitive.attributes[fieldKey]) < gltfModel.accessors.size());
-            auto const & accessor = gltfModel.accessors[primitive.attributes[fieldKey]];
+            auto const attributeValue = findAttributeResult->second;
+            MFA_REQUIRE(static_cast<size_t>(attributeValue) < gltfModel.accessors.size());
+            auto const & accessor = gltfModel.accessors[attributeValue];
             outType = accessor.type;
             outComponentType = accessor.componentType;
             auto const & bufferView = gltfModel.bufferViews[accessor.bufferView];
@@ -687,7 +689,7 @@ namespace MFA::Importer
     };
 
     static void GLTF_extractTextures(
-        char const * path,
+        std::string const & path,
         tinygltf::Model const & gltfModel,
         std::vector<TextureRef> & outTextureRefs,
         std::vector<std::shared_ptr<AS::Texture>> & outTextures
@@ -786,10 +788,10 @@ namespace MFA::Importer
         //MFA_CRASH("Image not found: %s", gltf_name);
     }
 
-    
+
     //-------------------------------------------------------------------------------------------------
 
-    #define extractTextureAndUV_Index(gltfModel, textureInfo, textureRefs, outTextureIndex, outUV_Index)    \
+#define extractTextureAndUV_Index(gltfModel, textureInfo, textureRefs, outTextureIndex, outUV_Index)    \
     if (textureInfo.index >= 0)                                                                             \
     {                                                                                                       \
         auto const & emissive_texture = gltfModel.textures[textureInfo.index];                              \
@@ -800,7 +802,7 @@ namespace MFA::Importer
             outUV_Index = static_cast<uint16_t>(textureInfo.texCoord);                                      \
         }                                                                                                   \
     }
-    
+
     //-------------------------------------------------------------------------------------------------
 
     static void copyDataIntoVertexMember(
@@ -937,23 +939,23 @@ namespace MFA::Importer
                             normalUvIndex
                         )
 
-                        // Emissive texture
-                        extractTextureAndUV_Index(
-                            gltfModel,
-                            material.emissiveTexture,
-                            textureRefs,
-                            emissiveTextureIndex,
-                            emissiveUvIndex
-                        )
+                            // Emissive texture
+                            extractTextureAndUV_Index(
+                                gltfModel,
+                                material.emissiveTexture,
+                                textureRefs,
+                                emissiveTextureIndex,
+                                emissiveUvIndex
+                            )
 
-                        // Occlusion texture
-                        extractTextureAndUV_Index(
-                            gltfModel,
-                            material.occlusionTexture,
-                            textureRefs,
-                            occlusionTextureIndex,
-                            occlusionUV_Index
-                        )
+                            // Occlusion texture
+                            extractTextureAndUV_Index(
+                                gltfModel,
+                                material.occlusionTexture,
+                                textureRefs,
+                                occlusionTextureIndex,
+                                occlusionUV_Index
+                            )
 
                         {// BaseColorFactor
                             baseColorFactor[0] = static_cast<float>(material.pbrMetallicRoughness.baseColorFactor[0]);
@@ -970,7 +972,8 @@ namespace MFA::Importer
                         }
 
                         alphaCutoff = static_cast<float>(material.alphaCutoff);
-                        alphaMode = [&material]()->AlphaMode {
+                        alphaMode = [&material]()->AlphaMode
+                        {
                             if (material.alphaMode == "OPAQUE")
                             {
                                 return AlphaMode::Opaque;
@@ -981,7 +984,7 @@ namespace MFA::Importer
                             }
                             if (material.alphaMode == "MASK")
                             {
-                                return AlphaMode::Mask;  
+                                return AlphaMode::Mask;
                             }
                             MFA_LOG_ERROR("Unhandled format detected: %s", material.alphaMode.c_str());
                         }();
@@ -1130,8 +1133,8 @@ namespace MFA::Importer
                     }
 
                     float const * occlusionUVs = nullptr;
-                    float occlusionUV_Min[2] {};
-                    float occlusionUV_Max[2] {};
+                    float occlusionUV_Min[2]{};
+                    float occlusionUV_Max[2]{};
                     bool hasOcclusionUV_MinMax = false;
                     if (occlusionUV_Index >= 0)
                     {// Occlusion uvs
@@ -1644,7 +1647,7 @@ namespace MFA::Importer
         using Path = Animation::Path;
 
         MFA_ASSERT(mesh != nullptr);
-        
+
         auto const convertInterpolationToEnum = [](char const * value)-> Interpolation
         {
             if (strcmp("LINEAR", value) == 0)
@@ -1790,15 +1793,12 @@ namespace MFA::Importer
     //-------------------------------------------------------------------------------------------------
 
     // Based on sasha willems solution and a comment in github
-    std::shared_ptr<AS::Model> ImportGLTF(char const * path)
+    std::shared_ptr<AS::Model> ImportGLTF(std::string const & path)
     {
         using namespace AS::PBR;
 
-        MFA_ASSERT(path != nullptr);
-        MFA_ASSERT(strlen(path) > 0);
-
         std::shared_ptr<AS::Model> result = nullptr;
-        if (path != nullptr)
+        if (MFA_VERIFY(path.empty() == false))
         {
             namespace TG = tinygltf;
             TG::TinyGLTF loader{};
@@ -1843,8 +1843,8 @@ namespace MFA::Importer
             }
             if (success)
             {
-                std::shared_ptr<AS::PBR::Mesh> mesh {};
-                std::vector<std::shared_ptr<AS::Texture>> textures {};
+                std::shared_ptr<AS::PBR::Mesh> mesh{};
+                std::vector<std::shared_ptr<AS::Texture>> textures{};
                 /*result = std::make_shared<AS::Model>(
                     std::make_shared<Mesh>(),
                     std::vector<std::shared_ptr<AS::Texture>>{}
@@ -1886,11 +1886,10 @@ namespace MFA::Importer
 
     //-------------------------------------------------------------------------------------------------
 
-    RawFile ReadRawFile(char const * path)
+    RawFile ReadRawFile(std::string const & path)
     {
         RawFile rawFile{};
-        MFA_ASSERT(path != nullptr);
-        if (path != nullptr)
+        if (MFA_VERIFY(path.empty() == false))
         {
 #if defined(__DESKTOP__) || defined(__IOS__)
             auto * file = FS::OpenFile(path, FS::Usage::Read);
@@ -1930,8 +1929,8 @@ namespace MFA::Importer
 #endif
         }
         return rawFile;
-    }
+        }
 
     //-------------------------------------------------------------------------------------------------
 
-}
+    }

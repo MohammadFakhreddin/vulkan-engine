@@ -261,13 +261,13 @@ void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec)
             }
 
             auto rotationMatrix = glm::identity<glm::mat4>();
-            Matrix::Rotate(rotationMatrix, nextAngles);
+            Matrix::RotateWithEulerAngle(rotationMatrix, nextAngles);
 
             glm::vec4 forwardDirection(
-                Math::ForwardVector[0],
-                Math::ForwardVector[1],
-                Math::ForwardVector[2],
-                Math::ForwardVector[3]
+                Math::ForwardVector4[0],
+                Math::ForwardVector4[1],
+                Math::ForwardVector4[2],
+                Math::ForwardVector4[3]
             );
             forwardDirection = forwardDirection * rotationMatrix;
             forwardDirection = glm::normalize(forwardDirection);

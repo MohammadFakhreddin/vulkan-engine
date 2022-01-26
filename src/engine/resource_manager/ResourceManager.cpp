@@ -18,6 +18,9 @@ namespace MFA
     {
         std::unordered_map<std::string, std::weak_ptr<RT::GpuModel>> availableGpuModels{};
         std::unordered_map<std::string, std::weak_ptr<AS::Model>> availableCpuModels{};
+
+        std::unordered_map<std::string, std::weak_ptr<RT::GpuTexture>> availableGpuTextures {};
+        std::unordered_map<std::string, std::weak_ptr<AS::Texture>> availableCpuTextures {};
     };
     State * state = nullptr;
 
@@ -30,25 +33,26 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    #define CLEAR_MAP(map)                              \
+    for (auto & pair : state->availableGpuModels)       \
+    {                                                   \
+        pair.second.reset();                            \
+    }                                                   \
+
     void ResourceManager::Shutdown()
     {
-        for (auto & pair : state->availableGpuModels)
-        {
-            pair.second.reset();
-        }
-        for (auto & pair : state->availableCpuModels)
-        {
-            pair.second.reset();
-        }
+        CLEAR_MAP(state->availableGpuModels)
+        CLEAR_MAP(state->availableCpuModels)
+        CLEAR_MAP(state->availableGpuTextures)
+        CLEAR_MAP(state->availableCpuTextures)
         delete state;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    static std::shared_ptr<RT::GpuModel> createGpuModel(AS::Model * cpuModel, char const * name)
+    static std::shared_ptr<RT::GpuModel> createGpuModel(AS::Model * cpuModel, std::string const & name)
     {
-        MFA_ASSERT(name != nullptr);
-        MFA_ASSERT(strlen(name) > 0);
+        MFA_ASSERT(name.empty() == false);
         MFA_ASSERT(cpuModel != nullptr);
         MFA_ASSERT(cpuModel->mesh->isValid());
 
@@ -58,8 +62,8 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-
-    std::shared_ptr<RT::GpuModel> ResourceManager::AcquireForGpu(char const * nameOrFileAddress, bool const loadFileIfNotExists)
+    // TODO Use job system to make this process multi-threaded
+    std::shared_ptr<RT::GpuModel> ResourceManager::AcquireGpuModel(std::string const & nameOrFileAddress, bool const loadFileIfNotExists)
     {
         std::shared_ptr<RT::GpuModel> gpuModel = nullptr;
 
@@ -81,18 +85,18 @@ namespace MFA
             return gpuModel;
         }
 
-        auto const cpuModel = AcquireForCpu(relativePath.c_str(), loadFileIfNotExists);
+        auto const cpuModel = AcquireCpuModel(relativePath, loadFileIfNotExists);
         if (cpuModel == nullptr)
         {
             return nullptr;
         }
 
-        return createGpuModel(cpuModel.get(), relativePath.c_str());
+        return createGpuModel(cpuModel.get(), relativePath);
     }
 
     //-------------------------------------------------------------------------------------------------
-
-    std::shared_ptr<AS::Model> ResourceManager::AcquireForCpu(char const * nameOrFileAddress, bool const loadFileIfNotExists)
+    // TODO Use job system to make this process multi-threaded
+    std::shared_ptr<AS::Model> ResourceManager::AcquireCpuModel(std::string const & nameOrFileAddress, bool const loadFileIfNotExists)
     {
         std::shared_ptr<AS::Model> cpuModel = nullptr;
 
@@ -113,10 +117,10 @@ namespace MFA
             return cpuModel;
         }
 
-        auto const extension = FS::ExtractExtensionFromPath(relativePath.c_str());
+        auto const extension = FS::ExtractExtensionFromPath(relativePath);
         if (extension == ".gltf" || extension == ".glb")
         {
-            cpuModel = Importer::ImportGLTF(Path::ForReadWrite(relativePath.c_str()).c_str());
+            cpuModel = Importer::ImportGLTF(Path::ForReadWrite(relativePath));
         } else if (strcmp("Cube", relativePath.c_str()) == 0)
         {
             cpuModel = ShapeGenerator::Debug::Cube();
@@ -135,23 +139,118 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    bool ResourceManager::Assign(std::shared_ptr<AssetSystem::Model> const & cpuModel, char const * name)
+    static std::shared_ptr<RT::GpuTexture> createGpuTexture(AS::Texture * texture, std::string const & name)
     {
-        MFA_ASSERT(cpuModel != nullptr);
+        MFA_ASSERT(name.empty() == false);
+        MFA_ASSERT(texture != nullptr);
+        MFA_ASSERT(texture->isValid());
 
-        auto const findResult = state->availableCpuModels.find(name);
-        if (
-            findResult != state->availableCpuModels.end() &&
-            findResult->second.expired() == false
-        )
+        auto gpuTexture = RF::CreateTexture(*texture);
+        state->availableGpuTextures[name] = gpuTexture;
+        return gpuTexture;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<RT::GpuTexture> ResourceManager::AcquireGpuTexture(
+        std::string const & nameOrFileAddress,
+        bool const loadFileIfNotExists
+    )
+    {
+        std::shared_ptr<RT::GpuTexture> gpuTexture = nullptr;
+
+        std::string relativePath{};
+        if (Path::RelativeToAssetFolder(nameOrFileAddress, relativePath) == false)
         {
-            MFA_ASSERT(false);
-            return false;
+            relativePath = nameOrFileAddress;
         }
 
-        state->availableCpuModels[name] = cpuModel;
-        return true;
+        auto const findResult = state->availableGpuTextures.find(relativePath);
+        if (findResult != state->availableGpuTextures.end())
+        {
+            gpuTexture = findResult->second.lock();
+        }
+
+        // It means that file is already loaded and still exists
+        if (gpuTexture != nullptr )
+        {
+            return gpuTexture;
+        }
+
+        auto const cpuTexture = AcquireCpuTexture(relativePath, loadFileIfNotExists);
+        if (cpuTexture == nullptr)
+        {
+            return nullptr;
+        }
+
+        return createGpuTexture(cpuTexture.get(), nameOrFileAddress);
     }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<AssetSystem::Texture> ResourceManager::AcquireCpuTexture(
+        std::string const & nameOrFileAddress,
+        bool const loadFileIfNotExists
+    )
+    {
+        std::shared_ptr<AS::Texture> texture = nullptr;
+
+        std::string relativePath{};
+        if (Path::RelativeToAssetFolder(nameOrFileAddress, relativePath) == false)
+        {
+            relativePath = nameOrFileAddress;
+        }
+
+        auto const findResult = state->availableCpuTextures.find(relativePath);
+        if (findResult != state->availableCpuTextures.end())
+        {
+            texture = findResult->second.lock();
+        }
+
+        if (texture != nullptr || loadFileIfNotExists == false)
+        {
+            return texture;
+        }
+
+        auto const extension = FS::ExtractExtensionFromPath(relativePath);
+        if (extension == ".ktx")
+        {
+            texture = Importer::ImportKTXImage(Path::ForReadWrite(relativePath));
+        } else if (extension == ".png" || extension == ".jpg")
+        {
+            texture = Importer::ImportUncompressedImage(Path::ForReadWrite(relativePath));
+        } else if (nameOrFileAddress == "Error")
+        {
+            texture = Importer::CreateErrorTexture();
+        } else
+        {
+            MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+        }
+
+        state->availableCpuTextures[relativePath] = texture;
+
+        return texture;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    //bool ResourceManager::Assign(std::shared_ptr<AssetSystem::Model> const & cpuModel, std::string const & name)
+    //{
+    //    MFA_ASSERT(cpuModel != nullptr);
+
+    //    auto const findResult = state->availableCpuModels.find(name);
+    //    if (
+    //        findResult != state->availableCpuModels.end() &&
+    //        findResult->second.expired() == false
+    //    )
+    //    {
+    //        MFA_ASSERT(false);
+    //        return false;
+    //    }
+
+    //    state->availableCpuModels[name] = cpuModel;
+    //    return true;
+    //}
 
     //-------------------------------------------------------------------------------------------------
 

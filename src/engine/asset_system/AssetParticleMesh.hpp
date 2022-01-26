@@ -2,18 +2,23 @@
 
 #include "AssetBaseMesh.hpp"
 
+#include <vec3.hpp>
+
 namespace MFA::AssetSystem::Particle
 {
     struct Vertex
     {
-        float localPosition[3]{};
+        glm::vec3 localPosition{};
         int textureIndex = -1;
-        float uv [2]{};
+        //float uv [2]{};
         float color [3]{};
         float alpha = 1.0f;
+        float pointSize = 10.0f;
         // These variable currently used only on cpu and not on gpu
-        float remainingLifeInSec = 0.0f; 
-        float initialLocalPosition[3] {};
+        float remainingLifeInSec = 0.0f;
+        float totalLifeInSec = 0.0f;
+        glm::vec3 initialLocalPosition{};
+        float speed = 0.0f;
     };
 
     struct PerInstanceData
@@ -24,7 +29,9 @@ namespace MFA::AssetSystem::Particle
     class Mesh final : public MeshBase
     {
     public:
-
+        /*
+         *  @maxInstanceCount_ Maximum instance we are going to create from this model (Important for essence)
+         */
         explicit Mesh(uint32_t maxInstanceCount_);
         ~Mesh() override;
 

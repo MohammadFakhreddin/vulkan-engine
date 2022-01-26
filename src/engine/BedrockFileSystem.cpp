@@ -15,7 +15,7 @@ namespace MFA::FileSystem {
 class FileHandle {
 public:
 
-explicit FileHandle(char const * path, Usage const usage) {
+explicit FileHandle(std::string const & path, Usage const usage) {
     close();
     auto const * const mode = [=]{
         switch (usage)
@@ -33,7 +33,7 @@ explicit FileHandle(char const * path, Usage const usage) {
         errorCode = 1;
     }
     #else
-    auto errorCode = ::fopen_s(&mFile, path, mode);
+    auto errorCode = ::fopen_s(&mFile, path.c_str(), mode);
     #endif
     if(errorCode == 0) {
         if (mFile != nullptr && Usage::Append == usage) {
@@ -49,7 +49,7 @@ explicit FileHandle(char const * path, Usage const usage) {
             errorCode = 1;
         }
         #else
-        errorCode = ::fopen_s(&mFile, path, "w+b");
+        errorCode = ::fopen_s(&mFile, path.c_str(), "w+b");
         #endif
     }
     if(errorCode != 0) {
@@ -151,11 +151,11 @@ public:
     FILE * mFile = nullptr;
 };
 
-bool Exists(char const * path) {
+bool Exists(std::string const & path) {
     return std::filesystem::exists(path);
 }
 
-FileHandle * OpenFile(char const * path, Usage const usage) {
+FileHandle * OpenFile(std::string const & path, Usage const usage) {
     // TODO Use allocator system
     auto * file = new FileHandle {path, usage};
     return file;
@@ -199,13 +199,13 @@ FILE * GetCHandle(FileHandle * file) {
     return ret;
 }
 
-std::string ExtractDirectoryFromPath(char const * path)  {
-    MFA_ASSERT(path != nullptr);
+std::string ExtractDirectoryFromPath(std::string const & path)  {
+    MFA_ASSERT(path.empty() == false);
     return std::filesystem::path(path).parent_path().string();
 }
 
-std::string ExtractExtensionFromPath(char const * path) {
-    MFA_ASSERT(path != nullptr);
+std::string ExtractExtensionFromPath(std::string const & path) {
+    MFA_ASSERT(path.empty() == false);
     return std::filesystem::path(path).extension().string();
 }
 
@@ -225,7 +225,7 @@ void SetAndroidApp(android_app * androidApp) {
     mApp = androidApp;
 }
 
-AndroidAssetHandle::AndroidAssetHandle(char const * path) {
+AndroidAssetHandle::AndroidAssetHandle(std::string const & path) {
     close();
     mFile = AAssetManager_open(
         mApp->activity->assetManager,
@@ -311,7 +311,7 @@ bool AndroidAssetHandle::tell(int64_t & outLocation) const {
     return success;
 }
 
-AndroidAssetHandle * Android_OpenAsset(char const * path) {
+AndroidAssetHandle * Android_OpenAsset(std::string const & path) {
     // TODO Use allocator system
     auto * handle = new AndroidAssetHandle {path};
     return handle;

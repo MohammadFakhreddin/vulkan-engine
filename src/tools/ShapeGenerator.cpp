@@ -43,7 +43,7 @@ namespace MFA::ShapeGenerator
                     // As solution to compute tangent I decided to rotate normal by 90 degree (In any direction :)))
                     auto rotationMatrix = glm::identity<glm::mat4>();
                     float angle[3]{ 0.0f, 0.0f, 90.0f };
-                    Matrix::Rotate(rotationMatrix, angle);
+                    Matrix::RotateWithEulerAngle(rotationMatrix, angle);
 
                     glm::vec4 tangentMatrix{ xPos, yPos, zPos, 0.0f };
 

@@ -48,16 +48,16 @@ void MFA::RendererComponent::deserialize(nlohmann::json const & jsonObject)
     std::string const address = jsonObject["address"];
 
     std::string relativePath {};
-    if (Path::RelativeToAssetFolder(address.c_str(), relativePath) == false)
+    if (Path::RelativeToAssetFolder(address, relativePath) == false)
     {
         relativePath = address;
     }
 
     if (mPipeline->EssenceExists(relativePath) == false)
     {
-        auto const cpuModel = RC::AcquireForCpu(relativePath.c_str());       // TODO We need acquire mesh and acquire texture as separate functions
+        auto const cpuModel = RC::AcquireCpuModel(relativePath);       // TODO We need acquire mesh and acquire texture as separate functions
         MFA_ASSERT(cpuModel != nullptr);
-        auto const gpuModel = RC::AcquireForGpu(relativePath.c_str());
+        auto const gpuModel = RC::AcquireGpuModel(relativePath);
         MFA_ASSERT(gpuModel != nullptr);
         mPipeline->CreateEssence(gpuModel, cpuModel->mesh);
     }

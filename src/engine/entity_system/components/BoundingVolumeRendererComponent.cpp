@@ -24,7 +24,7 @@ namespace MFA
     BoundingVolumeRendererComponent::BoundingVolumeRendererComponent(DebugRendererPipeline & pipeline)
         : RendererComponent(
             pipeline,
-            pipeline.CreateVariant(*RC::AcquireForGpu("Cube", false)))
+            pipeline.CreateVariant(*RC::AcquireGpuModel("Cube", false)))
     {}
 
     //-------------------------------------------------------------------------------------------------
