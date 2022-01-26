@@ -3,8 +3,15 @@
 
 <br/>
 
+## Particle system
+<img src="examples/fire.gif"  height=500>
+
+<br>
+
 ## Character control
 <img src="examples/character-control.gif">
+
+<br>
 
 ## Shadow mapping
 <img src="examples/shadow-mapping.gif">
