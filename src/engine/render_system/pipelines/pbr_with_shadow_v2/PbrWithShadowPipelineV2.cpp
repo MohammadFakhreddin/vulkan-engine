@@ -1492,6 +1492,7 @@ namespace MFA
         // TODO Probably we need to make pushConstantsRangeCount uint32_t
         graphicPipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
         graphicPipelineOptions.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+        graphicPipelineOptions.depthStencil.depthWriteEnable = VK_FALSE;
 
         mOcclusionQueryPipeline = RF::CreatePipeline(
             mOcclusionRenderPass->GetVkRenderPass(),

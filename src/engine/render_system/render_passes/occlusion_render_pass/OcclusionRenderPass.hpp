@@ -13,9 +13,9 @@ namespace MFA
 
         VkRenderPass GetVkRenderPass() override;
 
-        void BeginRenderPass(RT::CommandRecordState & recordState);
+        void BeginRenderPass(RT::CommandRecordState & recordState) override;
 
-        void EndRenderPass(RT::CommandRecordState & recordState);
+        void EndRenderPass(RT::CommandRecordState & recordState) override;
 
         void OnResize() override;
 
@@ -31,12 +31,12 @@ namespace MFA
         
         void createFrameBuffers(VkExtent2D const & extent);
 
-        void createDepthImage(VkExtent2D const & extent);
+        //void createDepthImage(VkExtent2D const & extent);
         
-        void copyDisplayPassDepthBuffer(
+        /*void copyDisplayPassDepthBuffer(
             RT::CommandRecordState const & recordState,
             VkExtent2D const & extent2D
-        ) const;
+        ) const;*/
 
         [[nodiscard]]
         VkFramebuffer getFrameBuffer(RT::CommandRecordState const & drawPass) const;
@@ -44,7 +44,7 @@ namespace MFA
         uint32_t mImageWidth = 0;
         uint32_t mImageHeight = 0;
 
-        std::vector<std::shared_ptr<RT::DepthImageGroup>> mDepthImageGroupList {};
+        //std::vector<std::shared_ptr<RT::DepthImageGroup>> mDepthImageGroupList {};
         VkRenderPass mRenderPass {};
         std::vector<VkFramebuffer> mFrameBuffers {};
     };
