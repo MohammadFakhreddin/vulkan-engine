@@ -6,6 +6,7 @@
 
 namespace MFA::AssetSystem::Particle
 {
+    // TODO Add rotation
     struct Vertex
     {
         glm::vec3 localPosition{};

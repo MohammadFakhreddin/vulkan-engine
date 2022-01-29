@@ -28,8 +28,6 @@ void MFA::OcclusionRenderPass::internalInit()
         .height = mImageHeight
     };
 
-    //createDepthImage(extent);
-
     createRenderPass();
 
     createFrameBuffers(extent);
@@ -127,7 +125,6 @@ void MFA::OcclusionRenderPass::createRenderPass()
         .attachment = 0,
         .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
-
 
     // Note: this is a description of how the attachments of the render pass will be used in this sub pass
     // e.g. if they will be read in shaders and/or drawn to

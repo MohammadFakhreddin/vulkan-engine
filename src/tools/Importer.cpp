@@ -731,7 +731,7 @@ namespace MFA::Importer
                         textureOptions.sampler = &sampler;
                         std::string const image_path = directoryPath + "/" + image.uri;
                         assetSystemTexture = ImportImage(
-                            image_path.c_str(),
+                            image_path,
                             // TODO tryToGenerateMipmaps takes too long (We should create .asset files)
                             textureOptions
                         );

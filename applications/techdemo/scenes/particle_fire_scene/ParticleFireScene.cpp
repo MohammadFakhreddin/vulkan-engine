@@ -60,18 +60,7 @@ void ParticleFireScene::Init()
 
     createFireEssence();
 
-    static constexpr int FireCount = 1;
-    for (int x = 0; x < FireCount; ++x)
-    {
-        for (int z = 0; z < FireCount; ++z)
-        {
-            createFireInstance(glm::vec3 {
-                static_cast<float>(x) - (FireCount / 2.0f),
-                0.0f,
-                static_cast<float>(z) - (FireCount / 2.0f)
-            });
-        }
-    }
+    createFireInstance(glm::vec3 {0.0f, 0.0f, 0.0f});
 
     createCamera();
 
@@ -103,10 +92,10 @@ void ParticleFireScene::OnPostRender(float const deltaTimeInSec)
 {
     Scene::OnPostRender(deltaTimeInSec);
 
+    // TODO Try to use job system
     for (int i = 0; i < mFireVerticesCount; ++i)
     {
         auto & vertex = mFireVertices[i];
-
         // UpVector is reverse
         glm::vec3 const deltaPosition = -deltaTimeInSec * vertex.speed * Math::UpVector3;
         vertex.localPosition += deltaPosition;
@@ -214,9 +203,10 @@ std::shared_ptr<MFA::AssetSystem::Particle::Mesh> ParticleFireScene::createFireM
         vertex.remainingLifeInSec = Math::Random(ParticleMinLife, ParticleMaxLife);
         vertex.totalLifeInSec = vertex.remainingLifeInSec;
 
+        auto const lifePercentage = vertex.remainingLifeInSec / vertex.totalLifeInSec;
+        
         vertex.alpha = FireAlpha;
 
-        auto const lifePercentage = vertex.remainingLifeInSec / vertex.totalLifeInSec;
         vertex.pointSize = firePointSize * lifePercentage;
 
         indexItems[i] = i;
