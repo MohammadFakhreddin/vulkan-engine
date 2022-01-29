@@ -1,3 +1,7 @@
+#include "../DirectionalLightBuffer.hlsl"
+#include "../SkinJointsBuffer.hlsl"
+#include "../CameraBuffer.hlsl"
+
 struct VSIn {
     float3 position : POSITION0;
     
@@ -9,6 +13,7 @@ struct VSIn {
     float3 normal: NORMAL0;
 
     float2 emissiveTexCoord: TEXCOORD4;
+    float2 occlusionTexCoord: TEXCOORD5;
 
     int hasSkin;
     int4 jointIndices;
@@ -27,21 +32,15 @@ struct VSOut {
     float3 worldTangent: TEXCOORD3;
     float3 worldBiTangent : TEXCOORD4;
 
-    float2 emissiveTexCoord: TEXCOORD4;
+    float2 emissiveTexCoord: TEXCOORD5;
+    float2 occlusionTexCoord: TEXCOORD5;
+
+    float4 directionLightPosition[3];
 };
 
-// TODO We can combine view and projection
-struct ViewProjectionData {
-    float4x4 viewProjection;
-};
-
-ConstantBuffer <ViewProjectionData> viewProjectionBuffer: register(b0, space0);
-
-struct SkinJoints {
-    float4x4 joints[];
-};
-
-ConstantBuffer <SkinJoints> skinJointsBuffer: register(b1, space0); 
+CAMERA_BUFFER(cameraBuffer)
+DIRECTIONAL_LIGHT(directionalLightBuffer)
+SKIN_JOINTS_BUFFER(skinJointsBuffer)
 
 struct PushConsts
 {
@@ -65,10 +64,19 @@ VSOut main(VSIn input) {
     if (input.hasSkin == 1) {
         int skinIndex = pushConsts.skinIndex;
         float4x4 inverseNodeTransform = pushConsts.inverseNodeTransform;
-        skinMat = mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.x]), input.jointWeights.x)
-            + mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.y]), input.jointWeights.y) 
-            + mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.z]), input.jointWeights.z)
-            + mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.w]), input.jointWeights.w);
+        skinMat = 0;
+        if (input.jointWeights.x > 0) {
+            skinMat += mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.x]), input.jointWeights.x);
+            if (input.jointWeights.y > 0) {
+                skinMat += mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.y]), input.jointWeights.y);
+                if (input.jointWeights.z > 0) {
+                    skinMat += mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.z]), input.jointWeights.z);
+                    if (input.jointWeights.w > 0) {
+                        skinMat += mul(mul(inverseNodeTransform, skinJointsBuffer.joints[skinIndex + input.jointIndices.w]), input.jointWeights.w);
+                    }
+                }
+            }
+        }
     } else {
         skinMat = IdentityMat;
     }
@@ -78,9 +86,14 @@ VSOut main(VSIn input) {
     // Position
     float4 worldPos = mul(skinModelMat, float4(input.position, 1.0f)); // w is 1 because position is a coordinate
     
-    output.position = mul(viewProjectionBuffer.viewProjection, worldPos);
+    output.position = mul(cameraBuffer.viewProjection, worldPos);
     
     output.worldPos = worldPos.xyz;
+
+    for (int i = 0; i < directionalLightBuffer.count; ++i)
+    {
+        output.directionLightPosition[i] = mul(directionalLightBuffer.items[i].viewProjectionMatrix, float4(worldPos.xyz, 1.0f));
+    }
 
     // BaseColor
     output.baseColorTexCoord = input.baseColorTexCoord;
@@ -107,6 +120,7 @@ VSOut main(VSIn input) {
     output.worldBiTangent = worldBiTangent;
 
     output.emissiveTexCoord = input.emissiveTexCoord;
+    output.occlusionTexCoord = input.occlusionTexCoord;
 
     return output;
 }

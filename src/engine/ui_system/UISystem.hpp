@@ -1,80 +1,108 @@
 #pragma once
 
-#include "UIRecordObject.hpp"
-#include "engine/render_system/RenderFrontend.hpp"
+#include "engine/render_system/RenderTypesFWD.hpp"
+
+#include <glm/vec3.hpp>
 
 class UIRecordObject;
 
-namespace MFA::UISystem {
+namespace MFA::UISystem
+{
 
-namespace RF = MFA::RenderFrontend;
+    // TODO Support for custom font
+    void Init();
 
-// TODO Support for custom font
-void Init();
+    void OnNewFrame(
+        float deltaTimeInSec,
+        RT::CommandRecordState & drawPass
+    );
 
-void OnNewFrame(
-    float deltaTimeInSec, 
-    RF::DrawPass & drawPass
-);
+    void BeginWindow(char const * windowName);
 
-void BeginWindow(char const * windowName);
+    void EndWindow();
 
-void EndWindow();
+    int Register(std::function<void()> const & listener);
 
-void Register(UIRecordObject * recordObject);
+    bool UnRegister(int listenerId);
 
-void UnRegister(UIRecordObject * recordObject);
+    void SetNextItemWidth(float nextItemWidth);
 
-void SetNextItemWidth(float nextItemWidth);
+    void Text(char const * label);
 
-void InputFloat(char const * label, float * value);
+    void InputFloat(char const * label, float * value);
 
-void InputFloat2(char const * label, float value[2]);
+    void InputFloat2(char const * label, float * value);
 
-void InputFloat3(char const * label, float value[3]);
+    void InputFloat3(char const * label, float * value);
 
-void Combo(
-    char const * label,
-    int32_t * selectedItemIndex,
-    char const ** items,
-    int32_t itemsCount
-);
+    void InputFloat4(char const * label, float * value);
 
-void SliderInt(
-    char const * label,
-    int * value,
-    int minValue,
-    int maxValue
-);
+    void InputFloat3(char const * label, glm::vec3 & value);
 
-void SliderFloat(
-    char const * label,
-    float * value,
-    float minValue,
-    float maxValue
-);
+    bool Combo(
+        char const * label,
+        int32_t * selectedItemIndex,
+        char const ** items,
+        int32_t itemsCount
+    );
 
-void Checkbox(
-    char const * label,
-    bool * value
-);
+    bool Combo(
+        const char * label,
+        int * selectedItemIndex,
+        std::vector<std::string> & values
+    );
 
-void Spacing();
+    void SliderInt(
+        char const * label,
+        int * value,
+        int minValue,
+        int maxValue
+    );
 
-void Button(
-    char const * label, 
-    std::function<void()> const & onPress
-);
+    void SliderFloat(
+        char const * label,
+        float * value,
+        float minValue,
+        float maxValue
+    );
 
-[[nodiscard]]
-bool HasFocus();
+    void Checkbox(
+        char const * label,
+        bool * value
+    );
 
-void Shutdown();
+    void Spacing();
 
-bool IsItemActive();
+    void Button(
+        char const * label,
+        std::function<void()> const & onPress
+    );
+
+    void InputText(
+        char const * label,
+        std::string & outValue
+    );
+
+    [[nodiscard]]
+    bool HasFocus();
+
+    void Shutdown();
+
+    [[nodiscard]]
+    bool IsItemActive();
+
+    [[nodiscard]]
+    bool TreeNode(char const * name);
+
+    void TreePop();
 
 #ifdef __ANDROID__
-void SetAndroidApp(android_app *pApp);
+    void SetAndroidApp(android_app * pApp);
 #endif
 
+}
+
+namespace MFA
+{
+    namespace UI = UISystem;
 }

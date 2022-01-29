@@ -1,7 +1,21 @@
-# Vulkan engine :))
-### Features preview and some document coming soon!
+# MFA engine :))
+
+## Animation explanation
+<a href="./document/Animation.md">Read more about my animation implementation here</a>
 
 <br/>
+
+More document/tutorial will be added soon!
+
+## Particle system
+<img src="examples/fire.gif"  height=500>
+
+<br>
+
+## Character control
+<img src="examples/character-control.gif">
+
+<br>
 
 ## Shadow mapping
 <img src="examples/shadow-mapping.gif">

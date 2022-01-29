@@ -20,7 +20,7 @@ namespace MFA::InputManager {
 
     void Init();
 
-    void OnNewFrame();
+    void OnNewFrame(float deltaTimeInSec);
 
     void Shutdown();
 
@@ -56,4 +56,12 @@ namespace MFA::InputManager {
     void UpdateTouchState(bool isMouseDown, bool isTouchValueValid, MousePosition mouseX, MousePosition mouseY);
 #endif
 
+#ifdef __DESKTOP__
+    void WarpMouseAtEdges(bool warp);
+#endif
+
+}
+
+namespace MFA {
+    namespace IM = InputManager;
 }

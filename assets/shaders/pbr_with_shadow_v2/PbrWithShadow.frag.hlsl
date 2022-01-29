@@ -1,3 +1,12 @@
+#include "../ComputeDirectionalLightShadow.hlsl"
+#include "../ComputePointLightShadow.hlsl"
+#include "../PointLightBuffer.hlsl"
+#include "../CameraBuffer.hlsl"
+#include "../TextureSampler.hlsl"
+#include "../PrimitiveInfoBuffer.hlsl"
+#include "../DirectionalLightBuffer.hlsl"
+#include "../TexturesBuffer.hlsl"
+
 struct PSIn {
     float4 position : SV_POSITION;
     float3 worldPos: POSITION0;
@@ -11,55 +20,26 @@ struct PSIn {
     float3 worldBiTangent : TEXCOORD4;
 
     float2 emissiveTexCoord: TEXCOORD5;
+    float2 occlusionTexCoord: TEXCOORD5;
 
+    float4 directionLightPosition[3];
 };
 
 struct PSOut {
     float4 color:SV_Target0;
 };
 
-struct PrimitiveInfo {
-    float4 baseColorFactor: COLOR0;
-    float3 emissiveFactor: COLOR3;
-    float placeholder0;
-    
-    int baseColorTextureIndex;
-    
-    float metallicFactor: COLOR1;
-    float roughnessFactor: COLOR2;
-    int metallicRoughnessTextureIndex;
+CAMERA_BUFFER(cameraBuffer)
 
-    int normalTextureIndex;  
+TEXTURE_SAMPLER(textureSampler)
 
-    int emissiveTextureIndex;
-    
-    // TODO Occlusion texture
-    
-    int hasSkin;    // TODO Move hasSkin to vertex
+PRIMITIVE_INFO(primitiveInfoBuffer)
 
-    int placeholder1;
-};
+DIRECTIONAL_LIGHT(directionalLightBuffer)
 
-struct PrimitiveInfoBuffer {
-    PrimitiveInfo primitiveInfo[];
-};
+POINT_LIGHT(pointLightsBuffer)
 
-ConstantBuffer <PrimitiveInfoBuffer> smBuff : register (b2, space0);
-
-struct LightViewBuffer {
-    float3 lightPosition;
-    float3 camPos;              // It shouldn't be always 0, I might need to 
-    float3 lightColor;          // Light color can be from 0 to inf (Sun for example can exceed 1.0f)
-    float nearToFarPlaneDistance;
-};
-
-ConstantBuffer <LightViewBuffer> lvBuff : register (b3, space0);
-
-sampler shadowMapSampler : register(s4, space0);
-TextureCube shadowMapTexture : register(t4, space0);
-
-sampler samplers[64] : register(s5, space0);
-Texture2D textures[64] : register(t5, space0);
+TEXTURES_BUFFER(textures)
 
 struct PushConsts
 {
@@ -78,18 +58,12 @@ const float PI = 3.14159265359;
 
 // TODO Each light source should have its own attenuation, TODO Get this values from cpp code (From I was doing things wrong website)
 // Fow now I assume we have a light source with r = 1.0f
-const float lightSphereRadius = 1.0f;
-const float constantAttenuation = 1.0f;
-const float linearAttenuation = 2.0f / lightSphereRadius;
-const float quadraticAttenuation = 1.0f / (lightSphereRadius * lightSphereRadius);
+// const float lightSphereRadius = 1.0f;
+// const float constantAttenuation = 1.0f;
+// const float linearAttenuation = 2.0f / lightSphereRadius;
+// const float quadraticAttenuation = 1.0f / (lightSphereRadius * lightSphereRadius);
 
-const float alphaMaskCutoff = 0.001f;
-
-const float ambientOcclusion = 0.02f;
-
-const float shadowBias = 0.05;
-const int shadowSamples = 20;
-const float shadowPerSample = 1.0f / float(shadowSamples);
+const float ambientOcclusion = 0.008f;
 
 // This function computes ratio between amount of light that reflect and refracts
 // Reflection contrbutes to specular while refraction contributes to diffuse light
@@ -137,7 +111,12 @@ float3 BRDF(
     float metallic,
     float roughness,
     float3 baseColor,
-    float3 worldPos
+    float3 worldPos,
+    float constantAttenuation,
+    float linearAttenuation,
+    float quadraticAttenuation,
+    float lightVectorLength,
+    float3 lightColor
 )
 {
     // Precalculate vectors and dot products
@@ -149,7 +128,7 @@ float3 BRDF(
 
     float3 color = float3(0, 0, 0);
 
-    float distance = length(lvBuff.lightPosition - worldPos);
+    float distance = lightVectorLength;//length(lightBuffer.lightPosition - worldPos);
     // TODO Consider using more advanced attenuation https://github.com/lettier/3d-game-shaders-for-beginners/blob/master/sections/lighting.md
     // float attenuation =
     //     1
@@ -167,7 +146,7 @@ float3 BRDF(
             + linearAttenuation * distance
             + quadraticAttenuation * distance * distance
         );
-    float3 radiance = lvBuff.lightColor * attenuation;        
+    float3 radiance = lightColor * attenuation;        
     
     // cook-torrance brdf
     float NDF = D_GGX(dotNH, roughness);        
@@ -196,7 +175,7 @@ float3 calculateNormal(PSIn input, int normalTextureIndex)
     if (normalTextureIndex < 0) {
         pixelNormal = input.worldNormal;
     } else {
-        float3 tangentNormal = textures[normalTextureIndex].Sample(samplers[normalTextureIndex], input.normalTexCoord).rgb * 2.0 - 1.0;
+        float3 tangentNormal = textures[normalTextureIndex].Sample(textureSampler, input.normalTexCoord).rgb * 2.0 - 1.0;
         
         float3x3 TBN = transpose(float3x3(input.worldTangent, input.worldBiTangent, input.worldNormal));
         // float3x3 TBN = float3x3(input.worldTangent, input.worldBiTangent, input.worldNormal));
@@ -205,69 +184,18 @@ float3 calculateNormal(PSIn input, int normalTextureIndex)
     return pixelNormal;
 };
 
-float shadowCalculation(float3 lightVector, float viewDistance)
-{
-    // get vector between fragment position and light position
-    // Because we sampled the shadow cubemap from light to each position now we need to reverse the worldPosition to light vector
-    float3 lightToFrag = -1 * lightVector;
-    
-    // // Old way
-    // // use the light to fragment vector to sample from the depth map    
-    // float closestDepth = shadowMapTexture.Sample(shadowMapSampler, lightToFrag).r;
-    // // it is currently in linear range between [0,1]. Re-transform back to original value
-    // closestDepth *= lvBuff.nearToFarPlaneDistance;
-    // // now get current linear depth as the length between the fragment and light position
-    // float currentDepth = length(lightToFrag);
-    // // now test for shadows
-    // float shadow = currentDepth -  bias > closestDepth ? 1.0 : 0.0;
 
-    // TODO We can make this array an buffer
-    float3 sampleOffsetDirections[20];
-    sampleOffsetDirections[0] = float3(1,  1,  1);
-    sampleOffsetDirections[1] = float3(1,  -1,  1);
-    sampleOffsetDirections[2] = float3(-1,  -1,  1);
-    sampleOffsetDirections[3] = float3(-1,  1,  1);
-    sampleOffsetDirections[4] = float3(1,  1,  -1);
-    sampleOffsetDirections[5] = float3(1,  -1,  -1);
-    sampleOffsetDirections[6] = float3(-1,  -1,  -1);
-    sampleOffsetDirections[7] = float3(-1,  1,  -1);
-    sampleOffsetDirections[8] = float3(1,  1,  0);
-    sampleOffsetDirections[9] = float3(1,  -1,  0);
-    sampleOffsetDirections[10] = float3(-1,  -1,  0);
-    sampleOffsetDirections[11] = float3(-1,  1,  0);
-    sampleOffsetDirections[12] = float3(1,  0,  1);
-    sampleOffsetDirections[13] = float3(-1,  0,  1);
-    sampleOffsetDirections[14] = float3(1,  0,  -1);
-    sampleOffsetDirections[15] = float3(-1,  0,  -1);
-    sampleOffsetDirections[16] = float3(0,  1,  1);
-    sampleOffsetDirections[17] = float3(0,  -1,  1);
-    sampleOffsetDirections[18] = float3(0,  -1,  -1);
-    sampleOffsetDirections[19] = float3(0,  1,  -1);
-    
-    float shadow = 0.0f;
-    float currentDepth = length(lightToFrag);
-    float diskRadius = (1.0f + (viewDistance / lvBuff.nearToFarPlaneDistance)) / 75.0f;  
-    for(int i = 0; i < shadowSamples; ++i)
-    {
-        float closestDepth = shadowMapTexture.Sample(shadowMapSampler, lightToFrag + sampleOffsetDirections[i] * diskRadius).r;
-        closestDepth *= lvBuff.nearToFarPlaneDistance;
-        if(currentDepth - shadowBias > closestDepth) {
-            shadow += shadowPerSample;
-        }
-    }
-
-    return shadow;
-}
 // TODO Strength in ambient occulusion and Scale for normals
 PSOut main(PSIn input) {
-    PrimitiveInfo primitiveInfo = smBuff.primitiveInfo[pushConsts.primitiveIndex];
+    PrimitiveInfo primitiveInfo = primitiveInfoBuffer.primitiveInfo[pushConsts.primitiveIndex];
 
+    // TODO Why do we have pow here ?
     float4 baseColor = primitiveInfo.baseColorTextureIndex >= 0
-        ? pow(textures[primitiveInfo.baseColorTextureIndex].Sample(samplers[primitiveInfo.baseColorTextureIndex], input.baseColorTexCoord).rgba, 2.2f)
+        ? pow(textures[primitiveInfo.baseColorTextureIndex].Sample(textureSampler, input.baseColorTexCoord).rgba, 2.2f) 
         : primitiveInfo.baseColorFactor.rgba;
 
     // Alpha mask
-    if (baseColor.a < alphaMaskCutoff) {
+    if (primitiveInfo.alphaMode == 1 && baseColor.a < primitiveInfo.alphaCutoff) {
         discard;
     }
 	
@@ -276,7 +204,7 @@ PSOut main(PSIn input) {
     // TODO: Is usages of occlusion correct ?
     // TODO Handle occlusionTexture and its strength
     if (primitiveInfo.metallicRoughnessTextureIndex >= 0) {
-        float4 metallicRoughness = textures[primitiveInfo.metallicRoughnessTextureIndex].Sample(samplers[primitiveInfo.metallicRoughnessTextureIndex], input.metallicRoughnessTexCoord);
+        float4 metallicRoughness = textures[primitiveInfo.metallicRoughnessTextureIndex].Sample(textureSampler, input.metallicRoughnessTexCoord);
         metallic = metallicRoughness.b;
         roughness = metallicRoughness.g;
     } else {
@@ -284,25 +212,99 @@ PSOut main(PSIn input) {
         roughness = primitiveInfo.roughnessFactor;
     }
 
-	float3 normal = calculateNormal(input, primitiveInfo.normalTextureIndex);
-
-	float3 N = normalize(normal.xyz);
-    
-	float3 V = normalize(lvBuff.camPos - input.worldPos);
+	float3 surfaceNormal = calculateNormal(input, primitiveInfo.normalTextureIndex);
+	float3 normalizedSurfaceNormal = normalize(surfaceNormal.xyz);
+    float3 viewVector = cameraBuffer.cameraPosition - input.worldPos;
+	float3 normalizedViewVector = normalize(viewVector);
     
     // Specular contribution
 	float3 Lo = float3(0.0, 0.0, 0.0);
-	for (int i = 0; i < 1; i++) {   // Light count
-		float3 L = lvBuff.lightPosition.xyz - input.worldPos;
-        float shadow = shadowCalculation(L, length(lvBuff.camPos - input.worldPos));
-    	Lo += BRDF(normalize(L), V, N, metallic, roughness, baseColor.rgb, input.worldPos) * (1.0 - shadow);
+    int lightIndex = 0;
+    for (lightIndex = 0; lightIndex < directionalLightBuffer.count; lightIndex++)
+    {
+        DirectionalLight directionalLight = directionalLightBuffer.items[lightIndex];
+        float3 lightVector = directionalLight.direction;
+        
+        float shadow = directionalLightShadowCalculation(
+            input.directionLightPosition[lightIndex], 
+            lightIndex
+        );
+
+        if (shadow < 1.0f)
+        {
+            Lo += BRDF(
+                lightVector, 
+                normalizedViewVector, 
+                normalizedSurfaceNormal, 
+                metallic, 
+                roughness, 
+                baseColor.rgb, 
+                input.worldPos,
+                1.0f,
+                0.0f,
+                0.0f,
+                1.0f,
+                directionalLight.color
+            ) * (1.0f - shadow);
+        }
+    }
+
+    float viewVectorLength = length(viewVector);
+
+	for (lightIndex = 0; lightIndex < pointLightsBuffer.count; lightIndex++)        // Point light count
+    {   
+		PointLight pointLight = pointLightsBuffer.items[lightIndex];
+        float3 lightDistanceVector = pointLight.position.xyz - input.worldPos;
+        float lightVectorSquareLength = lightDistanceVector.x * lightDistanceVector.x + 
+            lightDistanceVector.y * lightDistanceVector.y + 
+            lightDistanceVector.z * lightDistanceVector.z;
+        if (lightVectorSquareLength <= pointLight.maxSquareDistance)
+        {
+            float lightVectorLength = sqrt(lightVectorSquareLength);
+            float3 normalizedLightVector = float3(
+                lightDistanceVector.x / lightVectorLength, 
+                lightDistanceVector.y / lightVectorLength, 
+                lightDistanceVector.z / lightVectorLength
+            );
+            float shadow = pointLightShadowCalculation(
+                lightDistanceVector, 
+                lightVectorLength, 
+                viewVectorLength, 
+                lightIndex
+            );
+            if (shadow < 1.0f) {
+                Lo += BRDF(
+                    normalizedLightVector, 
+                    normalizedViewVector, 
+                    normalizedSurfaceNormal, 
+                    metallic, 
+                    roughness, 
+                    baseColor.rgb, 
+                    input.worldPos,
+                    pointLightsBuffer.constantAttenuation,
+                    pointLight.linearAttenuation,
+                    pointLight.quadraticAttenuation,
+                    lightVectorLength,
+                    pointLight.color
+                ) * (1.0 - shadow);
+            }
+        }
 	};
+
+    if (primitiveInfo.occlusionTextureIndex >= 0) {
+        float occlusionFactor = textures[primitiveInfo.occlusionTextureIndex].Sample(
+            textureSampler, 
+            input.occlusionTexCoord
+        ).r;
+        Lo *= occlusionFactor;
+    }
+    // TODO Apply occlusion texture here!
 
     // Combine with ambient
     float3 color = float3(0.0, 0.0, 0.0);
     
     if (primitiveInfo.emissiveTextureIndex >= 0) {
-        float3 ao = textures[primitiveInfo.emissiveTextureIndex].Sample(samplers[primitiveInfo.emissiveTextureIndex], input.emissiveTexCoord);
+        float3 ao = textures[primitiveInfo.emissiveTextureIndex].Sample(textureSampler, input.emissiveTexCoord);
         color += float3(baseColor.r * ao.r, baseColor.g * ao.g, baseColor.b * ao.b) * primitiveInfo.emissiveFactor;
     } else {
         color += baseColor.rgb * primitiveInfo.emissiveFactor; // * 0.3
@@ -316,7 +318,7 @@ PSOut main(PSIn input) {
     color = pow(color, float3(1.0f/2.2f)); 
 
     PSOut output;
-    output.color = float4(color, 1.0);
+    output.color = float4(color, baseColor.a);
 	return output;
 
 

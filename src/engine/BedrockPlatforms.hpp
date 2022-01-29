@@ -82,13 +82,21 @@ enum class Platform {
         #define MFA_RELEASE
     #endif
 #else
-    #error Define exactly one of _DEBUG and NDEBUG
+    #ifndef NDEBUG
+        #define NDEBUG
+    #endif
+    #ifdef _DEBUG
+        #undef _DEBUG
+    #endif
+    #if !defined(MFA_RELEASE)
+        #define MFA_RELEASE
+    #endif
 #endif
 
 using ScreenSize = int32_t;
 struct ScreenInfo {
-  ScreenSize screen_width = 0;
-  ScreenSize screen_height = 0;
+  ScreenSize screenWidth = 0;
+  ScreenSize screenHeight = 0;
   bool valid = false;
 };
 ScreenInfo ComputeScreenSize();

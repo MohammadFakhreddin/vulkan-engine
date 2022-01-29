@@ -1,185 +1,210 @@
 #pragma once
 
-#include "engine/render_system/DrawableObject.hpp"
-#include "engine/render_system/RenderFrontend.hpp"
+#include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
+#include "engine/asset_system/AssetTypes.hpp"
 
 // Optimize this file using https://simoncoenen.com/blog/programming/graphics/DoomEternalStudy
 
-namespace MFA {
+namespace MFA
+{
+    namespace AssetSystem
+    {
+        namespace PBR
+        {
+            struct MeshData;
+        }
+    }
 
-namespace RB = RenderBackend;
-namespace RF = RenderFrontend;
+    class PBR_Essence;
+    class Scene;
+    class DirectionalLightShadowResources;
+    class DirectionalLightShadowRenderPass;
+    class PointLightShadowRenderPass;
+    class PointLightShadowResources;
+    class OcclusionRenderPass;
+    class PBR_Variant;
+    class DepthPrePass;
+    
+    class PBRWithShadowPipelineV2 final : public BasePipeline
+    {
+    public:
 
-class ShadowRenderPassV2;
+        struct OcclusionPassPushConstants
+        {
+            alignas(64) float modelTransform[16] {};
+            alignas(64) float inverseNodeTransform[16] {};
+            alignas(4) int skinIndex = 0;
+            alignas(4) uint32_t primitiveIndex = 0;      // Unique id
+            alignas(4) int placeholder1 = 0;
+            alignas(4) int placeholder2 = 0;
 
-class PBRWithShadowPipelineV2 final : public BasePipeline {
-public:
+        };
+        
+        struct DirectionalLightShadowPassPushConstants
+        {   
+            alignas(64) float model[16] {};
+            alignas(64) float inverseNodeTransform[16] {};
+            alignas(4) int skinIndex = 0;
+            alignas(4) int placeholder0 = 0;
+            alignas(4) int placeholder1 = 0;
+            alignas(4) int placeholder2 = 0;
+        };
 
-    struct DisplayViewProjectionData {
-        alignas(64) float projection[16];
+        struct PointLightShadowPassPushConstants
+        {
+            alignas(64) float modelTransform[16] {};
+            alignas(64) float inverseNodeTransform[16] {};
+            alignas(4) int skinIndex = 0;
+            alignas(4) int lightIndex = 0;
+            alignas(4) int placeholder1 = 0;
+            alignas(4) int placeholder2 = 0;
+        };
+
+        struct DepthPrePassPushConstants
+        {
+            alignas(64) float modelTransform[16] {};
+            alignas(64) float inverseNodeTransform[16] {};
+            alignas(4) int skinIndex = 0;
+            alignas(4) uint32_t primitiveIndex = 0;      // Unique id
+            alignas(4) int placeholder0 = 0;
+            alignas(4) int placeholder1 = 0;
+        };
+
+        struct DisplayPassPushConstants
+        {
+            alignas(64) float modelTransform[16] {};
+            alignas(64) float inverseNodeTransform[16] {};
+            alignas(4) int skinIndex = 0;
+            alignas(4) uint32_t primitiveIndex = 0;      // Unique id
+            alignas(4) int placeholder0 = 0;
+            alignas(4) int placeholder1 = 0;
+        };
+
+        explicit PBRWithShadowPipelineV2(Scene * attachedScene);
+        ~PBRWithShadowPipelineV2() override;
+        
+        PIPELINE_PROPS(PBRWithShadowPipelineV2);
+
+        void Init(
+            std::shared_ptr<RT::SamplerGroup> samplerGroup,
+            std::shared_ptr<RT::GpuTexture> errorTexture
+        );
+
+        void Shutdown() override;
+
+        void PreRender(RT::CommandRecordState & recordState, float deltaTime) override;
+
+        void Render(RT::CommandRecordState & recordState, float deltaTime) override;
+
+        void OnResize() override;
+
+        void CreateEssenceWithoutModel(
+            std::shared_ptr<RT::GpuModel> const & gpuModel,
+            std::shared_ptr<AssetSystem::PBR::MeshData> const & meshData
+        ) const;
+
+    protected:
+
+        std::shared_ptr<EssenceBase> internalCreateEssence(
+            std::shared_ptr<RT::GpuModel> const & gpuModel,
+            std::shared_ptr<AssetSystem::MeshBase> const & cpuMesh
+        ) override;
+
+        std::shared_ptr<VariantBase> internalCreateVariant(EssenceBase * essence) override;
+        
+    private:
+
+        void updateVariants(float deltaTimeInSec, RT::CommandRecordState const & recordState) const;
+
+        void createPerFrameDescriptorSets();
+
+        void createEssenceDescriptorSets(PBR_Essence & essence) const;
+
+        void createVariantDescriptorSets(PBR_Variant & variant) const;
+
+        void createPerFrameDescriptorSetLayout();
+
+        void createPerEssenceDescriptorSetLayout();
+
+        void createPerVariantDescriptorSetLayout();
+        
+        void createDisplayPassPipeline();
+
+        void createDirectionalLightShadowPassPipeline();
+
+        void createPointLightShadowPassPipeline();
+
+        void createDepthPassPipeline();
+
+        void createOcclusionQueryPool();
+
+        void destroyOcclusionQueryPool();
+
+        void createOcclusionQueryPipeline();
+        
+        void createUniformBuffers();
+
+        void retrieveOcclusionQueryResult(RT::CommandRecordState const & recordState);
+
+        void performDepthPrePass(RT::CommandRecordState & recordState) const;
+
+        void renderForDepthPrePass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode) const;
+
+        void performDirectionalLightShadowPass(RT::CommandRecordState & recordState) const;
+
+        void renderForDirectionalLightShadowPass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode) const;
+
+        void performPointLightShadowPass(RT::CommandRecordState & recordState) const;
+
+        void renderForPointLightShadowPass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode) const;
+
+        void performOcclusionQueryPass(RT::CommandRecordState & recordState);
+
+        void renderForOcclusionQueryPass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode);
+
+        void performDisplayPass(RT::CommandRecordState & recordState);
+
+        void renderForDisplayPass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode) const;
+
+        std::shared_ptr<RT::SamplerGroup> mSamplerGroup = nullptr; // TODO Each gltf subMesh has its own settings
+        std::shared_ptr<RT::GpuTexture> mErrorTexture = nullptr;
+        std::shared_ptr<RT::UniformBufferGroup> mErrorBuffer{};
+
+        std::shared_ptr<RT::PipelineGroup> mDisplayPassPipeline{};
+        
+        std::shared_ptr<RT::PipelineGroup> mPointLightShadowPipeline {};
+        std::unique_ptr<PointLightShadowRenderPass> mPointLightShadowRenderPass;
+        std::unique_ptr<PointLightShadowResources> mPointLightShadowResources {};
+
+        std::shared_ptr<RT::PipelineGroup> mDirectionalLightShadowPipeline {};
+        std::unique_ptr<DirectionalLightShadowRenderPass> mDirectionalLightShadowRenderPass;
+        std::unique_ptr<DirectionalLightShadowResources> mDirectionalLightShadowResources;
+
+        std::shared_ptr<RT::PipelineGroup> mDepthPassPipeline{};
+        std::unique_ptr<DepthPrePass> mDepthPrePass;
+
+        std::shared_ptr<RT::PipelineGroup> mOcclusionQueryPipeline{};
+        std::unique_ptr<OcclusionRenderPass> mOcclusionRenderPass;
+
+        struct OcclusionQueryData
+        {
+            std::vector<std::weak_ptr<VariantBase>> Variants {};
+            std::vector<uint64_t> Results{};
+            VkQueryPool Pool{};
+        };
+        std::vector<OcclusionQueryData> mOcclusionQueryDataList{}; // We need one per frame
+
+        std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerFrameDescriptorSetLayout{};
+        std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerEssenceDescriptorSetLayout{};
+        std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerVariantDescriptorSetLayout{};
+
+        std::vector<VkDescriptorSetLayout> mDescriptorSetLayouts{};
+
+        RT::DescriptorSetGroup mPerFrameDescriptorSetGroup{};
+
+        Scene * mAttachedScene = nullptr;
+
     };
-    static_assert(sizeof(DisplayViewProjectionData) == 64);
-
-    struct ShadowViewProjectionData {
-        float viewMatrices[6][16];
-    };
-
-    struct ShadowPassVertexStagePushConstants {
-        float modeTransform[16];
-        float inverseNodeTransform[16];
-        int faceIndex;
-        int skinIndex;
-        int placeholder0[2];
-    };
-    //static_assert(sizeof(ShadowPassVertexStagePushConstants) == 136);
-    struct DisplayPassAllStagesPushConstants {
-        float modeTransform[16];
-        float inverseNodeTransform[16];
-        int skinIndex;
-        uint32_t primitiveIndex;      // Unique id
-        int placeholder0[2];
-    };
-    //static_assert(sizeof(DisplayPassAllStagesPushConstants) == 136);
-
-    struct DisplayLightAndCameraData {
-        alignas(16) float lightPosition[3];
-        alignas(16) float cameraPosition[3];
-        alignas(16) float lightColor[3];
-        alignas(4) float projectFarToNearDistance;
-    };
-
-    struct ShadowLightData {
-        alignas(16) float lightPosition[4];
-        alignas(4) float projectionMatrixDistance;
-    };
-
-    explicit PBRWithShadowPipelineV2();
-
-    ~PBRWithShadowPipelineV2() override;
-
-    PBRWithShadowPipelineV2 (PBRWithShadowPipelineV2 const &) noexcept = delete;
-    PBRWithShadowPipelineV2 (PBRWithShadowPipelineV2 &&) noexcept = delete;
-    PBRWithShadowPipelineV2 & operator = (PBRWithShadowPipelineV2 const &) noexcept = delete;
-    PBRWithShadowPipelineV2 & operator = (PBRWithShadowPipelineV2 &&) noexcept = delete;
-
-    void Init(
-        RF::SamplerGroup * samplerGroup, 
-        RB::GpuTexture * errorTexture,
-        float projectionNear,
-        float projectionFar
-    );
-
-    void Shutdown();
-
-    void PreRender(RF::DrawPass & drawPass, float deltaTime, uint32_t idsCount, DrawableObjectId * ids) override;
-
-    void Render(RF::DrawPass & drawPass, float deltaTime, uint32_t idsCount, DrawableObjectId * ids) override;
-
-    void PostRender(RF::DrawPass & drawPass, float deltaTime, uint32_t idsCount, DrawableObjectId * ids) override;
-
-    void OnResize() override {}
-
-    DrawableObjectId AddGpuModel(RF::GpuModel & gpuModel) override;
-
-    bool RemoveGpuModel(DrawableObjectId drawableObjectId) override;
-
-    bool UpdateModel(
-        DrawableObjectId drawableObjectId, 
-        float modelTransform[16]
-    );
-
-    void UpdateCameraView(float view[16]);
-
-    void UpdateCameraProjection(float projection[16]);
-
-    void UpdateLightPosition(float lightPosition[3]);
-
-    void UpdateCameraPosition(float cameraPosition[3]);
-
-    void UpdateLightColor(float lightColor[3]);
-
-    DrawableObject * GetDrawableById(DrawableObjectId objectId);
-
-    void CreateDisplayPassDescriptorSets(DrawableObject * drawableObject);
-
-    void CreateShadowPassDescriptorSets(DrawableObject * drawableObject);
-
-private:
-
-    void createDisplayPassDescriptorSetLayout();
-
-    void createShadowPassDescriptorSetLayout();
-
-    void destroyDescriptorSetLayout() const;
-
-    void createDisplayPassPipeline();
-
-    void createShadowPassPipeline();
-
-    void destroyPipeline();
-
-    void createUniformBuffers();
-
-    void destroyUniformBuffers();
-
-    void updateDisplayLightBuffer(RF::DrawPass const & drawPass);
-
-    void updateShadowLightBuffer(RF::DrawPass const & drawPass);
-
-    void updateShadowViewProjectionBuffer(RF::DrawPass const & drawPass);
-    
-    void updateShadowViewProjectionData();
-    
-    void updateDisplayViewProjectionBuffer(RF::DrawPass const & drawPass);
-    
-    inline static constexpr float SHADOW_WIDTH = 1024;
-    inline static constexpr float SHADOW_HEIGHT = 1024;
-
-    bool mIsInitialized = false;
-
-    RF::SamplerGroup * mSamplerGroup = nullptr; // TODO Each gltf subMesh has its own settings
-    RB::GpuTexture * mErrorTexture = nullptr;
-    RF::UniformBufferGroup mErrorBuffer {};
-    
-    std::unordered_map<DrawableObjectId, std::unique_ptr<DrawableObject>> mDrawableObjects {};
-    
-    VkDescriptorSetLayout mDisplayPassDescriptorSetLayout {};
-    RF::DrawPipeline mDisplayPassPipeline {};
-    RF::UniformBufferGroup mDisplayLightAndCameraBuffer {};
-    RF::UniformBufferGroup mDisplayViewProjectionBuffer {};
-    
-    VkDescriptorSetLayout mShadowPassDescriptorSetLayout {};
-    RF::DrawPipeline mShadowPassPipeline {};
-    RF::UniformBufferGroup mShadowLightBuffer {};
-
-    std::unique_ptr<ShadowRenderPassV2> mShadowRenderPass;
-
-    RF::UniformBufferGroup mShadowViewProjectionBuffer {};
-    
-    float mLightPosition[3] {};
-    float mCameraPosition[3] {};
-    float mLightColor[3] {};
-
-    float mProjectionNear = 0.0f;
-    float mProjectionFar = 0.0f;
-    float mProjectionFarToNearDistance = 0.0f;
-
-    DrawableObjectId mNextDrawableObjectId = 0;
-
-    glm::mat4 mShadowProjection {};
-
-    ShadowViewProjectionData mShadowViewProjectionData {};
-    
-    float mDisplayProjection [16] {};
-    
-    float mDisplayView [16] {};
-    
-    uint32_t mDisplayViewProjectionNeedUpdate = 0;
-    uint32_t mDisplayLightNeedUpdate = 0;
-    uint32_t mShadowLightNeedUpdate = 0;
-    uint32_t mShadowViewProjectionNeedUpdate = 0;
-
-};
 
 };

@@ -1,38 +1,41 @@
 #include "Application.hpp"
 
+#include "engine/BedrockAssert.hpp"
+#include "engine/BedrockPath.hpp"
 #include "engine/InputManager.hpp"
-#include "scenes/gltf_mesh_viewer/GLTFMeshViewerScene.hpp"
+#include "engine/entity_system/EntitySystem.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/Scene.hpp"
-#include "engine/BedrockFileSystem.hpp"
+#include "engine/ui_system/UISystem.hpp"
+#include "engine/job_system/JobSystem.hpp"
+#include "engine/scene_manager/SceneManager.hpp"
+#include "engine/resource_manager/ResourceManager.hpp"
 
 #ifdef __ANDROID__
 #include <android_native_app_glue.h>
 #include <thread>
 #endif
 
-namespace RF = MFA::RenderFrontend;
-namespace UI = MFA::UISystem;
-namespace IM = MFA::InputManager;
-namespace FS = MFA::FileSystem;
 #ifdef __DESKTOP__
-namespace MSDL = MFA::MSDL;
+#include "libs/sdl/SDL.hpp"
 #endif
 
+using namespace MFA;
 
-Application::Application()
-    : mGltfMeshViewerScene(std::make_unique<GLTFMeshViewerScene>())
-{}
+//-------------------------------------------------------------------------------------------------
+
+Application::Application() = default;
+
+//-------------------------------------------------------------------------------------------------
 
 Application::~Application() = default;
 
+//-------------------------------------------------------------------------------------------------
+
 void Application::Init() {
-    static constexpr uint16_t SCREEN_WIDTH = 1200;//1920;
-    static constexpr uint16_t SCREEN_HEIGHT = 800;//1080;
 
-    MFA_ASSERT(mIsInitialized == false);
-
-    {
+    Path::Init();
+    RC::Init();
+    {// Initializing render frontend
         RF::InitParams params{};
         params.applicationName = "MfaEngine";
     #ifdef __ANDROID__
@@ -40,9 +43,15 @@ void Application::Init() {
     #elif defined(__IOS__)
         params.view = mView;
     #elif defined(__DESKTOP__)
+        auto const screenInfo = MFA::Platforms::ComputeScreenSize();
+        auto const screenWidth = screenInfo.screenWidth;
+        auto const screenHeight = screenInfo.screenHeight;
+
+        MFA_ASSERT(mIsInitialized == false);
+
         params.resizable = true;
-        params.screenWidth = SCREEN_WIDTH;
-        params.screenHeight = SCREEN_HEIGHT;
+        params.screenWidth = 1920;
+        params.screenHeight = 1080;
     #else
         #error Os not supported
     #endif
@@ -50,56 +59,66 @@ void Application::Init() {
     }
     UI::Init();
     IM::Init();
+    JS::Init();
+    EntitySystem::Init();
     
-    mSceneSubSystem.RegisterNew(mGltfMeshViewerScene.get(), "GLTFMeshViewerScene");
-    
-    mSceneSubSystem.SetActiveScene("GLTFMeshViewerScene");
-    mSceneSubSystem.Init();
+    SceneManager::Init();
 
+    internalInit();
+    
     mIsInitialized = true;
 }
+
+//-------------------------------------------------------------------------------------------------
 
 void Application::Shutdown() {
     MFA_ASSERT(mIsInitialized == true);
 
     RF::DeviceWaitIdle();
-    mSceneSubSystem.Shutdown();
+
+    internalShutdown();
+
+    SceneManager::Shutdown();
+    EntitySystem::Shutdown();
+    JS::Shutdown();
     IM::Shutdown();
     UI::Shutdown();
     RF::Shutdown();
+    RC::Shutdown();
+    Path::Shutdown();
 
     mIsInitialized = false;
 }
 
 void Application::run() {
-    static constexpr uint32_t TargetFpsDeltaTimeInMs = 1000 / 120;
-    static constexpr float TargetFpsDeltaTimeInSec = 1.0f / 120.0f;
+    //static constexpr uint32_t TargetFpsDeltaTimeInMs = 1000 / 500;
 #ifdef __DESKTOP__
     Init();
     {// Main loop
-        bool quit = false;
         //Event handler
         MSDL::SDL_Event e;
         //While application is running
         uint32_t deltaTimeInMs = 0;
-        while (!quit)
+
+        uint32_t startTime = MSDL::SDL_GetTicks();
+        while (true)
         {
-            uint32_t const start_time = MSDL::SDL_GetTicks();
-            RenderFrame(static_cast<float>(deltaTimeInMs) / 1000.0f);
             //Handle events
             if (MSDL::SDL_PollEvent(&e) != 0)
             {
                 //User requests quit
                 if (e.type == MSDL::SDL_QUIT)
                 {
-                    quit = true;
+                    break;
                 }
             }
-            deltaTimeInMs = MSDL::SDL_GetTicks() - start_time;
-            if(TargetFpsDeltaTimeInMs > deltaTimeInMs){
+            RenderFrame(std::max(static_cast<float>(deltaTimeInMs), 1.0f) / 1000.0f);
+            deltaTimeInMs = MSDL::SDL_GetTicks() - startTime;
+            startTime = MSDL::SDL_GetTicks();
+            /*if(TargetFpsDeltaTimeInMs > deltaTimeInMs){
                 MSDL::SDL_Delay( TargetFpsDeltaTimeInMs - deltaTimeInMs);
             }
-            deltaTimeInMs = MSDL::SDL_GetTicks() - start_time;
+            deltaTimeInMs = MSDL::SDL_GetTicks() - start_time;*/
         }
     }
     Shutdown();
@@ -136,9 +155,11 @@ void Application::run() {
 
 }
 
-void Application::RenderFrame(float deltaTimeInSec) {
-    IM::OnNewFrame();
-    mSceneSubSystem.OnNewFrame(deltaTimeInSec);
+void Application::RenderFrame(float const deltaTimeInSec) {
+    internalRenderFrame(deltaTimeInSec);
+    IM::OnNewFrame(deltaTimeInSec);
+    SceneManager::OnNewFrame(deltaTimeInSec);
+    RF::OnNewFrame(deltaTimeInSec);
 }
 
 #ifdef __ANDROID__

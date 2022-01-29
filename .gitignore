@@ -115,3 +115,7 @@ android/local.properties
 .cxx
 
 !ios.toolchain.cmake
+<<<<<<< HEAD
+=======
+.VSCodeCounter/*
+>>>>>>> master

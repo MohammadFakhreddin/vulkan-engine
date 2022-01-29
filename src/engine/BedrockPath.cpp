@@ -4,36 +4,70 @@
 
 #include <filesystem>
 
-namespace MFA::Path {
+namespace MFA::Path
+{
 
-std::string Asset(char const * address) {
-    std::string result;
-    Asset(address, result);
-    MFA_ASSERT(std::filesystem::exists(result));
-    return result;
-}
+    struct State
+    {
+        std::filesystem::path assetsPath {};
+    };
+    State * state = nullptr;
 
-void Asset(char const * address, std::string & outPath) {
+    //-------------------------------------------------------------------------------------------------
+
+    void Init()
+    {
+        state = new State();
+        
+        char addressBuffer[256]{};
+        int stringSize = 0;
+
 #if defined(__PLATFORM_MAC__)
-    char addressBuffer[256] {};
-    auto const stringSize = sprintf(addressBuffer, "%s/assets/%s", GetAssetPath().c_str(), address);
-    outPath.assign(addressBuffer, stringSize);
+        stringSize = sprintf(addressBuffer, "%s/assets/", GetAssetPath().c_str());
 #elif defined(__PLATFORM_WIN__)
-    char addressBuffer[256] {};
-    auto const stringSize = sprintf(addressBuffer, "../assets/%s", address);
-    outPath.assign(addressBuffer, stringSize);
+        stringSize = sprintf(addressBuffer, "../assets/");
 #elif defined(__ANDROID__)
-    char addressBuffer[256] {};
-    auto const stringSize = sprintf(addressBuffer, "%s", address);
-    outPath.assign(address, stringSize);
+        stringSize = sprintf(addressBuffer, "");
 #elif defined(__IOS__)
-    char addressBuffer[1024] {};
-    // TODO Check for correctness
-    auto const stringSize = sprintf(addressBuffer, "%s/assets/%s", GetAssetPath().c_str(), address);
-    outPath = std::string(addressBuffer, stringSize);
+        stringSize = sprintf(addressBuffer, "%s/assets/", GetAssetPath().c_str());
 #else
-#error "Platform not supported"
+        #error "Platform not supported"
 #endif
-}
+
+        state->assetsPath = std::filesystem::absolute(std::string(addressBuffer, stringSize));
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Shutdown()
+    {
+        delete state;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::string ForReadWrite(std::string const & address)
+    {
+        std::string result;
+        ForReadWrite(address, result);
+        return result;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ForReadWrite(std::string const & address, std::string & outPath)
+    {
+        outPath = std::filesystem::path(state->assetsPath).append(address).string();
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool RelativeToAssetFolder(std::string const & address, std::string & outRelativePath)
+    {
+        outRelativePath = std::filesystem::relative(address, state->assetsPath).string();
+        return outRelativePath.empty() == false;
+    }
+
+    //-------------------------------------------------------------------------------------------------
 
 }

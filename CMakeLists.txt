@@ -44,23 +44,37 @@ else()
 endif()
 
 message(STATUS "Build type is ${CMAKE_BUILD_TYPE}")
-if(${CMAKE_BUILD_TYPE} MATCHES Release)
-    add_definitions(-DNDEBUG)
-else()
-    add_definitions(-D_DEBUG)
+
+if (NOT WINDOWS) 
+    if(${CMAKE_BUILD_TYPE} MATCHES Release)
+        add_definitions(-DNDEBUG)
+    else()
+        add_definitions(-D_DEBUG)
+    endif()
 endif()
 
-# add_definitions (-DGLM_FORCE_LEFT_HANDED )
 include_directories(libs/include/glm)
 
+# Vulkan uses 0 to 1 depth instead of -1 to 1 in opengl
+add_definitions(-DGLM_FORCE_DEPTH_ZERO_TO_ONE)
+
+# Note: Linux On MacOS 10.14 with clang++ compiler, I get executable with SIMD right away.
+# On Ubuntu 16.04 with g++ compiler, I will have to use the compiler flag -mavx2 to generate a SIMD executable. 
+# There are other compiler options for other SIMD instructions here. Without the compiler flag, I still get a serial executable.
+# add_definitions(-DGLM_FORCE_DEFAULT_ALIGNED_GENTYPES)         // TODO Enable SIMD for glm
+# add_definitions(-DGLM_FORCE_INTRINSICS)
+if (LINUX)
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
+endif ()
+
 #-----------------------------------------------------------------------
-# Engine
+# Bedrock
 #-----------------------------------------------------------------------
 
-set(ENGINE_SOURCES)
+set(BEDROCK_SOURCES)
 
 list(
-    APPEND ENGINE_SOURCES
+    APPEND BEDROCK_SOURCES
 
     # Bedrock
     "src/engine/BedrockAssert.cpp"
@@ -71,16 +85,43 @@ list(
     "src/engine/BedrockLog.hpp"
     "src/engine/BedrockMath.hpp"
     "src/engine/BedrockMatrix.hpp"
+    "src/engine/BedrockMatrix.cpp"
     "src/engine/BedrockMemory.hpp"
     "src/engine/BedrockMemory.cpp"
     "src/engine/BedrockPlatforms.hpp"
     "src/engine/BedrockPlatforms.cpp"
     "src/engine/BedrockPath.hpp"
     "src/engine/BedrockPath.cpp"
+    "src/engine/BedrockSignal.hpp"
+)
+
+add_library("Bedrock"
+    ${BEDROCK_SOURCES}
+)
+
+target_include_directories(
+    "Bedrock" PUBLIC 
+    "src" 
+    "${CMAKE_SOURCE_DIR}/libs/include"
+)
+
+#-----------------------------------------------------------------------
+# Renderer
+#-----------------------------------------------------------------------
+
+set(RENDERER_SOURCES)
+
+list(
+    APPEND RENDERER_SOURCES
+)
+
+add_library("Renderer"
+    ${RENDERER_SOURCES}
 
     # RenderSystem
-    "src/engine/render_system/DrawableObject.hpp"
-    "src/engine/render_system/DrawableObject.cpp"
+    "src/engine/render_system/RenderTypes.hpp"
+    "src/engine/render_system/RenderTypesFWD.hpp"
+    "src/engine/render_system/RenderTypes.cpp"
     "src/engine/render_system/RenderBackend.hpp"
     "src/engine/render_system/RenderBackend.cpp"
     "src/engine/render_system/RenderFrontend.hpp"
@@ -89,40 +130,181 @@ list(
     # RenderPass
     "src/engine/render_system/render_passes/RenderPass.hpp"
     "src/engine/render_system/render_passes/RenderPass.cpp"
-    "src/engine/render_system/render_passes/DisplayRenderPass.hpp"
-    "src/engine/render_system/render_passes/DisplayRenderPass.cpp"
-    "src/engine/render_system/render_passes/ShadowRenderPass.hpp"
-    "src/engine/render_system/render_passes/ShadowRenderPass.cpp"
-    "src/engine/render_system/render_passes/ShadowRenderPassV2.hpp"
-    "src/engine/render_system/render_passes/ShadowRenderPassV2.cpp"
-    
+    "src/engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
+    "src/engine/render_system/render_passes/display_render_pass/DisplayRenderPass.cpp"
+    "src/engine/render_system/render_passes/point_light_shadow_render_pass/PointLightShadowRenderPass.hpp"
+    "src/engine/render_system/render_passes/point_light_shadow_render_pass/PointLightShadowRenderPass.cpp"
+    "src/engine/render_system/render_passes/depth_pre_pass/DepthPrePass.hpp"
+    "src/engine/render_system/render_passes/depth_pre_pass/DepthPrePass.cpp"
+    "src/engine/render_system/render_passes/occlusion_render_pass/OcclusionRenderPass.hpp"
+    "src/engine/render_system/render_passes/occlusion_render_pass/OcclusionRenderPass.cpp"
+    "src/engine/render_system/render_passes/directional_light_shadow_render_pass/DirectionalLightShadowRenderPass.hpp"
+    "src/engine/render_system/render_passes/directional_light_shadow_render_pass/DirectionalLightShadowRenderPass.cpp"
+
+    # RenderResources
+    "src/engine/render_system/render_resources/point_light_shadow_resources/PointLightShadowResources.hpp"
+    "src/engine/render_system/render_resources/point_light_shadow_resources/PointLightShadowResources.cpp"
+    "src/engine/render_system/render_resources/directional_light_shadow_resources/DirectionalLightShadowResources.hpp"
+    "src/engine/render_system/render_resources/directional_light_shadow_resources/DirectionalLightShadowResources.cpp"
+
     # Pipeline
     "src/engine/render_system/pipelines/BasePipeline.hpp"
-    # "src/engine/render_system/pipelines/pbr/PBRModelPipeline.hpp"
-    # "src/engine/render_system/pipelines/pbr/PBRModelPipeline.cpp"
-    "src/engine/render_system/pipelines/point_light/PointLightPipeline.hpp"
-    "src/engine/render_system/pipelines/point_light/PointLightPipeline.cpp"
-    # "src/engine/render_system/pipelines/pbr_with_shadow/PbrWithShadowPipeline.hpp"
-    # "src/engine/render_system/pipelines/pbr_with_shadow/PbrWithShadowPipeline.cpp"
+    "src/engine/render_system/pipelines/BasePipeline.cpp"
+    "src/engine/render_system/pipelines/VariantBase.hpp"
+    "src/engine/render_system/pipelines/VariantBase.cpp"
+    "src/engine/render_system/pipelines/EssenceBase.hpp"
+    "src/engine/render_system/pipelines/EssenceBase.cpp"
+    "src/engine/render_system/pipelines/DescriptorSetSchema.hpp"
+    "src/engine/render_system/pipelines/DescriptorSetSchema.cpp"
+    # Debug
+    "src/engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
+    "src/engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.cpp"
+    "src/engine/render_system/pipelines/debug_renderer/DebugEssence.hpp"
+    "src/engine/render_system/pipelines/debug_renderer/DebugEssence.cpp"
+    "src/engine/render_system/pipelines/debug_renderer/DebugVariant.hpp"
+    "src/engine/render_system/pipelines/debug_renderer/DebugVariant.cpp"
+    # PBR
     "src/engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
     "src/engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.cpp"
+    "src/engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Essence.hpp"
+    "src/engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Essence.cpp"
+    "src/engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Variant.hpp"
+    "src/engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Variant.cpp"
+    # Particle
+    "src/engine/render_system/pipelines/particle/ParticlePipeline.hpp"
+    "src/engine/render_system/pipelines/particle/ParticlePipeline.cpp"
+    "src/engine/render_system/pipelines/particle/ParticleEssence.hpp"
+    "src/engine/render_system/pipelines/particle/ParticleEssence.cpp"
+    "src/engine/render_system/pipelines/particle/ParticleVariant.hpp"
+    "src/engine/render_system/pipelines/particle/ParticleVariant.cpp"
+)
 
-    "src/engine/FoundationAsset.hpp"
-    "src/engine/FoundationAsset.cpp"
-    "src/engine/Scene.hpp"
-    "src/engine/Scene.cpp"
+target_include_directories(
+    "Renderer" PUBLIC 
+    "src" 
+    "${CMAKE_SOURCE_DIR}/libs/include"
+)
 
+#-----------------------------------------------------------------------
+# Entity system
+#-----------------------------------------------------------------------
+
+set(ENTITY_SYSTEM_SOURCES)
+
+list(
+    APPEND ENTITY_SYSTEM_SOURCES
+)
+
+add_library("EntitySystem"
+    ${ENTITY_SYSTEM_SOURCES}
+
+    # Entity system
+    "src/engine/entity_system/EntitySystemTypes.hpp"
+    "src/engine/entity_system/EntitySystem.hpp"
+    "src/engine/entity_system/EntitySystem.cpp"
+    "src/engine/entity_system/EntityHandle.hpp"
+    "src/engine/entity_system/Entity.hpp"
+    "src/engine/entity_system/Entity.cpp"
+    "src/engine/entity_system/Component.hpp"
+    "src/engine/entity_system/Component.cpp"
+
+    # Components
+    "src/engine/entity_system/components/TransformComponent.hpp"
+    "src/engine/entity_system/components/TransformComponent.cpp"
+    "src/engine/entity_system/components/ColliderComponent.hpp"
+    "src/engine/entity_system/components/ColliderComponent.cpp"
+
+    "src/engine/entity_system/components/RendererComponent.hpp"
+    "src/engine/entity_system/components/RendererComponent.cpp"
+    "src/engine/entity_system/components/MeshRendererComponent.hpp"
+    "src/engine/entity_system/components/MeshRendererComponent.cpp"
+    "src/engine/entity_system/components/BoundingVolumeRendererComponent.hpp"
+    "src/engine/entity_system/components/BoundingVolumeRendererComponent.cpp"
+    
+    "src/engine/entity_system/components/BoundingVolumeComponent.hpp"
+    "src/engine/entity_system/components/BoundingVolumeComponent.cpp"
+    "src/engine/entity_system/components/AxisAlignedBoundingBoxComponent.hpp"
+    "src/engine/entity_system/components/AxisAlignedBoundingBoxComponent.cpp"
+    "src/engine/entity_system/components/SphereBoundingVolumeComponent.hpp"
+    "src/engine/entity_system/components/SphereBoundingVolumeComponent.cpp"
+
+    "src/engine/entity_system/components/ColorComponent.hpp"
+    "src/engine/entity_system/components/ColorComponent.cpp"
+
+    "src/engine/entity_system/components/PointLightComponent.hpp"
+    "src/engine/entity_system/components/PointLightComponent.cpp"
+    "src/engine/entity_system/components/DirectionalLightComponent.hpp"
+    "src/engine/entity_system/components/DirectionalLightComponent.cpp"
+)
+
+target_include_directories(
+    "EntitySystem" PUBLIC 
+    "src" 
+    "${CMAKE_SOURCE_DIR}/libs/include"
+)
+
+#-----------------------------------------------------------------------
+# Engine
+#-----------------------------------------------------------------------
+
+set(ENGINE_SOURCES)
+
+list(
+    APPEND ENGINE_SOURCES
+    
+    # Job system
+    "src/engine/job_system/ThreadPool.hpp"
+    "src/engine/job_system/ThreadPool.cpp"
+    "src/engine/job_system/ThreadSafeQueue.hpp"
+    "src/engine/job_system/JobSystem.hpp"
+    "src/engine/job_system/JobSystem.cpp"
+    # AssetSystem
+    "src/engine/asset_system/AssetTypes.hpp"
+    "src/engine/asset_system/AssetBase.hpp"
+    "src/engine/asset_system/AssetBase.cpp"
+    "src/engine/asset_system/AssetBaseMesh.hpp"
+    "src/engine/asset_system/AssetBaseMesh.cpp"
+    "src/engine/asset_system/Asset_PBR_Mesh.hpp"
+    "src/engine/asset_system/Asset_PBR_Mesh.cpp"
+    "src/engine/asset_system/AssetDebugMesh.hpp"
+    "src/engine/asset_system/AssetDebugMesh.cpp"
+    "src/engine/asset_system/AssetParticleMesh.hpp"
+    "src/engine/asset_system/AssetParticleMesh.cpp"
+    "src/engine/asset_system/AssetShader.hpp"
+    "src/engine/asset_system/AssetShader.cpp"
+    "src/engine/asset_system/AssetTexture.hpp"
+    "src/engine/asset_system/AssetTexture.cpp"
+    "src/engine/asset_system/AssetModel.hpp"
+    "src/engine/asset_system/AssetModel.cpp"
     # UI System
-    "src/engine/ui_system/UIRecordObject.hpp"
-    "src/engine/ui_system/UIRecordObject.cpp"
     "src/engine/ui_system/UISystem.hpp"
     "src/engine/ui_system/UISystem.cpp"
 
-    "src/engine/camera/ICamera.h"
-    "src/engine/camera/FirstPersonCamera.hpp"
-    "src/engine/camera/FirstPersonCamera.cpp"
+    # Camera
+    "src/engine/camera/CameraComponent.hpp"
+    "src/engine/camera/CameraComponent.cpp"
+    "src/engine/camera/ObserverCameraComponent.hpp"
+    "src/engine/camera/ObserverCameraComponent.cpp"
+    "src/engine/camera/ThirdPersonCameraComponent.hpp"
+    "src/engine/camera/ThirdPersonCameraComponent.cpp"
+
+    # InputManager
     "src/engine/InputManager.hpp"
     "src/engine/InputManager.cpp"
+
+    # SceneManager
+    "src/engine/scene_manager/SceneManager.hpp"
+    "src/engine/scene_manager/SceneManager.cpp"
+    "src/engine/scene_manager/Scene.hpp"
+    "src/engine/scene_manager/Scene.cpp"
+    
+    # Application
+    "src/Application.hpp"
+    "src/Application.cpp"
+
+    # ResourceManager
+    "src/engine/resource_manager/ResourceManager.hpp"
+    "src/engine/resource_manager/ResourceManager.cpp"
 )
 
 add_library("Engine"
@@ -153,6 +335,12 @@ list(
     "src/tools/Importer.hpp"
     "src/tools/ShapeGenerator.cpp"
     "src/tools/ShapeGenerator.hpp"
+    "src/tools/Prefab.cpp"          # Maybe we should move prefab to engine
+    "src/tools/Prefab.hpp"
+    "src/tools/PrefabFileStorage.cpp"
+    "src/tools/PrefabFileStorage.hpp"
+    "src/tools/JsonUtils.hpp"
+    "src/tools/JsonUtils.cpp"
 )
 
 add_library("Tools"
@@ -166,17 +354,26 @@ target_include_directories(
 )
 
 #-----------------------------------------------------------------------
-# Scenes
+# Tech-demo sources
 #-----------------------------------------------------------------------
 
-set(SCENE_SOURCES)
+set(TECHDEMO_SOURCES)
 
 list(
-    APPEND SCENES_SOURCES
+    APPEND TECHDEMO_SOURCES
     
-    "src/scenes/gltf_mesh_viewer/GLTFMeshViewerScene.cpp"
-    "src/scenes/gltf_mesh_viewer/GLTFMeshViewerScene.hpp"
+    "applications/techdemo/TechDemoApplication.hpp"
+    "applications/techdemo/TechDemoApplication.cpp"
+
+    "applications/techdemo/scenes/gltf_mesh_viewer/GLTFMeshViewerScene.cpp"
+    "applications/techdemo/scenes/gltf_mesh_viewer/GLTFMeshViewerScene.hpp"
     
+    "applications/techdemo/scenes/demo_3rd_person_scene/Demo3rdPersonScene.hpp"
+    "applications/techdemo/scenes/demo_3rd_person_scene/Demo3rdPersonScene.cpp"
+    
+    "applications/techdemo/scenes/particle_fire_scene/ParticleFireScene.hpp"
+    "applications/techdemo/scenes/particle_fire_scene/ParticleFireScene.cpp"
+
     # "src/scenes/pbr_scene/PBRScene.cpp"
     # "src/scenes/pbr_scene/PBRScene.hpp"
     
@@ -190,14 +387,19 @@ list(
     # "src/scenes/omnidirectional_shadow_mapping/OmnidirectionalShadowMapping.cpp"
 )
 
-add_library("Scenes"
-    ${SCENES_SOURCES}
-)
+#-----------------------------------------------------------------------
+# Tech-demo sources
+#-----------------------------------------------------------------------
 
-target_include_directories(
-    "Scenes" PUBLIC 
-    "src" 
-    "${CMAKE_SOURCE_DIR}/libs/include"
+set(PREFAB_EDITOR_SOURCES)
+
+list(APPEND PREFAB_EDITOR_SOURCES
+    "applications/prefab_editor/PrefabEditorApplication.hpp"
+    "applications/prefab_editor/PrefabEditorApplication.cpp"
+    "applications/prefab_editor/scenes/PrefabEditorScene.hpp"
+    "applications/prefab_editor/scenes/PrefabEditorScene.cpp"
+    "applications/prefab_editor/WindowsApi.hpp"
+    "applications/prefab_editor/WindowsApi.cpp"
 )
 
 #-----------------------------------------------------------------------
@@ -224,6 +426,8 @@ list(
     "src/libs/imgui/imgui_widgets.cpp"
     "src/libs/imgui/imgui.cpp"
     "src/libs/imgui/imgui.h"
+    "src/libs/imgui/imgui_stdlib.cpp"
+    "src/libs/imgui/imgui_stdlib.h"
     "src/libs/imgui/imstb_rectpack.h"
     "src/libs/imgui/imstb_textedit.h"
     "src/libs/imgui/imstb_truetype.h"
@@ -232,12 +436,14 @@ list(
     "src/libs/stb_image/stb_image_write.h"
     "src/libs/stb_image/stb_image.h"
     #TinyGltfLoader
-    "src/libs/tiny_gltf_loader/json.hpp"
     "src/libs/tiny_gltf_loader/tiny_gltf_loader.h"
     #TinyObjLoader
     "src/libs/tiny_obj_loader/tiny_obj_loader.h"
     #Ktx
     "src/libs/tiny_ktx/tinyktx.h"
+    #nlohmann
+    "src/libs/nlohmann/json_fwd.hpp"
+    "src/libs/nlohmann/json.hpp"
 )
 
 if (NOT ANDROID)
@@ -270,11 +476,32 @@ list(
     "unit_tests/rlutil.h"
     "unit_tests/testMain.cpp"
     "unit_tests/engine/testBedrockMatrix.cpp"
+    "unit_tests/engine/testPath.cpp"
 )
+
+set(TECHDEMO "TechDemo")
+set(PREFAB_EDITOR "PrefabEditor")
 
 #-----------------------------------------------------------------------
 # OS specific
 #-----------------------------------------------------------------------
+
+list(
+    APPEND COMMON_INCLUDE_DIRECTORIES
+    "src" 
+    "${CMAKE_SOURCE_DIR}/libs/include"
+)
+
+
+set(link_to_target_sources)
+set(link_to_target_directories)
+function(link_to_target executable_name)
+    message(STATUS "Linking dependancies to ${executable_name} ")
+    add_executable(${executable_name} ${link_to_target_sources})
+    add_dependencies(${executable_name} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
+    target_link_libraries(${executable_name} ${COMPILED_LIBS} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
+    target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
+endfunction()
 
 if (WINDOWS)
 
@@ -282,13 +509,15 @@ if (WINDOWS)
 # Windows Executable
 #-----------------------------------------------------------------------
 
-    set(WIN_SOURCE)
-    
-    list(
-        APPEND WIN_SOURCE
+    set(WIN_SOURCES)
+    set(WIN_INCLUDE_DIRECTORIES)
+
+    list(APPEND WIN_SOURCES
         "windows/main.cpp"
-        "src/Application.hpp"
-        "src/Application.cpp"
+    )
+
+    list(APPEND WIN_INCLUDE_DIRECTORIES 
+        "windows"
     )
 
     file(GLOB VULKAN "${CMAKE_SOURCE_DIR}/libs/win/vulkan-1.lib")
@@ -318,54 +547,74 @@ if (WINDOWS)
         "${CMAKE_SOURCE_DIR}/libs/win/clang_rt.asan_dynamic-x86_64.dll"
     )
 
-    add_executable(${PROJECT_NAME} ${WIN_SOURCE})
-
-    add_dependencies(${PROJECT_NAME} "Scenes" "Tools" "Engine" "Libs")
-
-    target_link_libraries(${PROJECT_NAME} ${COMPILED_LIBS} "Scenes" "Tools" "Engine" "Libs")
-
-    target_include_directories(
-        ${PROJECT_NAME} PUBLIC 
-        "windows"
-        "src" 
-        "${CMAKE_SOURCE_DIR}/libs/include"
+    # Techdemo executable
+    
+    unset(link_to_target_sources)
+    list(APPEND link_to_target_sources 
+        ${WIN_SOURCES} 
+        ${TECHDEMO_SOURCES}
     )
+    unset(link_to_target_directories)
+    list(APPEND link_to_target_directories 
+        ${WIN_INCLUDE_DIRECTORIES}
+        "applications/techdemo"
+    )
+    link_to_target(${TECHDEMO})
 
     add_custom_command(
-        TARGET ${PROJECT_NAME} POST_BUILD        # Adds a post-build event to MyTest
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
+        TARGET ${TECHDEMO} POST_BUILD                   # Adds a post-build event to MyTest
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different   # which executes "cmake - E copy_if_different..."
+        ${DLLS}                                         # <--this is in-file
+        ${CMAKE_BINARY_DIR}
+    )
+
+    target_compile_definitions(${TECHDEMO} PRIVATE TECHDEMO)
+
+    # Prefab editor executable
+    
+    unset(link_to_target_sources)
+    list(APPEND link_to_target_sources ${WIN_SOURCES} ${PREFAB_EDITOR_SOURCES})
+    unset(link_to_target_directories)
+    list(APPEND link_to_target_directories 
+        ${WIN_INCLUDE_DIRECTORIES}
+        "applications/prefab_editor"
+    )
+    link_to_target(${PREFAB_EDITOR})
+
+    add_custom_command(
+        TARGET ${PREFAB_EDITOR} POST_BUILD              # Adds a post-build event to MyTest
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different   # which executes "cmake - E copy_if_different..."
         ${DLLS}      # <--this is in-file
         ${CMAKE_BINARY_DIR}
     )
+
+    target_compile_definitions(${PREFAB_EDITOR} PRIVATE PREFAB_EDITOR)
 
 #-----------------------------------------------------------------------
 # Windows unit tests
 #-----------------------------------------------------------------------
 
-    add_executable(
-        ${UNIT_TEST_NAME}
-        ${UNIT_TEST_SOURCE}
-    )
-
-    add_dependencies(${UNIT_TEST_NAME} "Scenes" "Tools" "Engine" "Libs")
-
-    target_link_libraries(${UNIT_TEST_NAME} ${COMPILED_LIBS} "Scenes" "Tools" "Engine" "Libs")
-
-    target_include_directories(
-        ${UNIT_TEST_NAME} PUBLIC 
+    unset(link_to_target_sources)
+    list(APPEND link_to_target_sources ${UNIT_TEST_SOURCE})
+    unset(link_to_target_directories)
+    list(APPEND link_to_target_directories 
+        ${WIN_INCLUDE_DIRECTORIES}
         "unit_tests"
-        "src" 
-        "${CMAKE_SOURCE_DIR}/libs/include"
     )
+    link_to_target(${UNIT_TEST_NAME})
 
     add_custom_command(
-        TARGET ${UNIT_TEST_NAME} POST_BUILD        # Adds a post-build event to MyTest
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different  # which executes "cmake - E copy_if_different..."
+        TARGET ${UNIT_TEST_NAME} POST_BUILD              # Adds a post-build event to MyTest
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different   # which executes "cmake - E copy_if_different..."
         ${DLLS}      # <--this is in-file
         ${CMAKE_BINARY_DIR}
     )
 
+    target_compile_definitions(${UNIT_TEST_NAME} PRIVATE UNIT_TEST)
+
 elseif(LINUX)
+    # TODO Use link to target function
+    message(STATUS "Building for linux")
 
     set(LINUX_SOURCE)
     
@@ -376,16 +625,16 @@ elseif(LINUX)
         "src/Application.cpp"
     )
 
-    add_executable(${PROJECT_NAME} ${LINUX_SOURCE})
+    add_executable(${TECHDEMO} ${LINUX_SOURCE})
 
-    add_dependencies(${PROJECT_NAME} "Scenes" "Tools" "Engine" "Libs")
+    add_dependencies(${TECHDEMO} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
 
-    target_link_directories(${PROJECT_NAME} PUBLIC "${CMAKE_SOURCE_DIR}/libs/linux/sdl/")
+    target_link_directories(${TECHDEMO} PUBLIC "${CMAKE_SOURCE_DIR}/libs/linux/sdl/")
 
-    target_link_libraries(${PROJECT_NAME} SDL2 "Scenes" "Tools" "Engine" "Libs")
+    target_link_libraries(${TECHDEMO} SDL2 "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
 
     target_include_directories(
-        ${PROJECT_NAME} PUBLIC 
+        ${TECHDEMO} PUBLIC 
         "linux"
         "src" 
         "${CMAKE_SOURCE_DIR}/libs/include"
@@ -396,6 +645,7 @@ elseif(MACOSX)
 #-----------------------------------------------------------------------
 # MACOSX Executable
 #-----------------------------------------------------------------------
+    # TODO Use link to target function
     message(STATUS "Building for macos")
 
     set(MAC_SOURCE)
@@ -407,48 +657,50 @@ elseif(MACOSX)
         "src/Application.cpp"
     )
 
-    add_executable(${PROJECT_NAME} ${MAC_SOURCE})
+    add_executable(${TECHDEMO} ${MAC_SOURCE})
 
-    add_dependencies(${PROJECT_NAME} "Scenes" "Tools" "Engine" "Libs")
+    add_dependencies(${TECHDEMO} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
 
-    target_link_directories(${PROJECT_NAME} PUBLIC "${CMAKE_SOURCE_DIR}/libs/mac/sdl/")
+    target_link_directories(${TECHDEMO} PUBLIC "${CMAKE_SOURCE_DIR}/libs/mac/sdl/")
 
-    target_link_libraries(${PROJECT_NAME} SDL2 "Scenes" "Tools" "Engine" "Libs")
+    target_link_libraries(${TECHDEMO} SDL2 "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
 
-    target_link_libraries(${PROJECT_NAME}
+    target_link_libraries(${TECHDEMO}
         "-framework CoreGraphics"
         "-framework Foundation"
     )
     
-    target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.2.141.dylib")
+    target_link_libraries(${TECHDEMO} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.2.141.dylib")
      
     target_include_directories(
-        ${PROJECT_NAME} PUBLIC 
+        ${TECHDEMO} PUBLIC 
         "mac"
         "src" 
         "${CMAKE_SOURCE_DIR}/libs/include"
     )
 
-    set_target_properties(${PROJECT_NAME} PROPERTIES
+    set_target_properties(${TECHDEMO} PROPERTIES
         MACOSX_BUNDLE TRUE
         MACOSX_FRAMEWORK_IDENTIFIER co.radx.MFaEngine
     )
 
     # Copying assets to correct place
     add_custom_command(
-        TARGET ${PROJECT_NAME} POST_BUILD        # Adds a post-build event to MyTest
+        TARGET ${TECHDEMO} POST_BUILD        # Adds a post-build event to MyTest
         COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Debug/MFaEngine.app/Contents/Resources/data/"
         COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Debug/MFaEngine.app/Contents/Resources/data/"
     )
 
     add_custom_command(
-        TARGET ${PROJECT_NAME} POST_BUILD        # Adds a post-build event to MyTest
+        TARGET ${TECHDEMO} POST_BUILD        # Adds a post-build event to MyTest
         COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Release/MFaEngine.app/Contents/Resources/data/"
         COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Release/MFaEngine.app/Contents/Resources/data/"
     )
 
+
 elseif(IPHONE)
 
+    # TODO Use link to target function
 #-----------------------------------------------------------------------
 # IPHONE Executable
 #-----------------------------------------------------------------------
@@ -473,14 +725,14 @@ elseif(IPHONE)
 
     set(MACOSX_BUNDLE_GUI_IDENTIFIER "co.radx.\${PRODUCT_NAME:identifier}")
     
-    add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${IPHONE_SOURCE})
+    add_executable(${TECHDEMO} MACOSX_BUNDLE ${IPHONE_SOURCE})
 
-    add_dependencies(${PROJECT_NAME} "Scenes" "Tools" "Engine" "Libs")
+    add_dependencies(${TECHDEMO} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
 
-    target_link_libraries(${PROJECT_NAME} "Scenes" "Tools" "Engine" "Libs")
+    target_link_libraries(${TECHDEMO} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
 
     # TODO I think we should use .dylib instead
-    target_link_libraries(${PROJECT_NAME}
+    target_link_libraries(${TECHDEMO}
         "-framework CoreGraphics"
         "-framework UIKit"
         "-framework Metal"
@@ -489,10 +741,10 @@ elseif(IPHONE)
         "${CMAKE_SOURCE_DIR}/libs/ios-arm64_x86_64-simulator/libMoltenVK.a"
     )
 
-    # target_link_libraries(${PROJECT_NAME} "${CMAKE_SOURCE_DIR}/libs/ios/libMoltenVK.dylib")
+    # target_link_libraries(${TECHDEMO} "${CMAKE_SOURCE_DIR}/libs/ios/libMoltenVK.dylib")
 
     target_include_directories(
-        ${PROJECT_NAME} PUBLIC 
+        ${TECHDEMO} PUBLIC 
         "ios"
         "src" 
         "${CMAKE_SOURCE_DIR}/libs/include"
@@ -532,7 +784,7 @@ elseif(ANDROID)
     add_library(app-glue STATIC ${APP_GLUE_DIR}/android_native_app_glue.c)
 
     add_library(
-        ${PROJECT_NAME} SHARED 
+        ${TECHDEMO} SHARED 
         ${ANDROID_SOURCES} 
         ${ENGINE_SOURCES} 
         ${LIBS_SOURCES}
@@ -559,12 +811,12 @@ elseif(ANDROID)
         endif()
     endfunction()
 
-    target_link_libraries(${PROJECT_NAME} app-glue log android)
-    target_compile_options(${PROJECT_NAME} PUBLIC -fsanitize=address -fno-omit-frame-pointer)
-    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS -fsanitize=address)
+    target_link_libraries(${TECHDEMO} app-glue log android)
+    target_compile_options(${TECHDEMO} PUBLIC -fsanitize=address -fno-omit-frame-pointer)
+    set_target_properties(${TECHDEMO} PROPERTIES LINK_FLAGS -fsanitize=address)
 
     target_include_directories(
-        ${PROJECT_NAME} PUBLIC 
+        ${TECHDEMO} PUBLIC 
         "src" 
         "${CMAKE_SOURCE_DIR}/libs/include"
     )
@@ -578,7 +830,7 @@ elseif(ANDROID)
     set(ASAN_DEST ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
     add_custom_command(
-            TARGET ${PROJECT_NAME} PRE_BUILD
+            TARGET ${TECHDEMO} PRE_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ASAN_SRC} ${ASAN_DEST}
     )
 

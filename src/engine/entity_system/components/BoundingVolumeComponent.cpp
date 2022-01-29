@@ -1,0 +1,56 @@
+#include "BoundingVolumeComponent.hpp"
+
+#include "engine/BedrockAssert.hpp"
+#include "engine/scene_manager/Scene.hpp"
+#include "engine/scene_manager/SceneManager.hpp"
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::BoundingVolumeComponent::BoundingVolumeComponent() = default;
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::BoundingVolumeComponent::~BoundingVolumeComponent() = default;
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::BoundingVolumeComponent::init()
+{
+    Component::init();
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::BoundingVolumeComponent::Update(float const deltaTimeInSec)
+{
+    Component::Update(deltaTimeInSec);
+
+    auto const activeScene = SceneManager::GetActiveScene();
+    if (activeScene == nullptr)
+    {
+        return;
+    }
+    auto const activeCamera = activeScene->GetActiveCamera().lock();
+    if (activeCamera == nullptr)
+    {
+        return;
+    }
+    mIsInFrustum = IsInsideCameraFrustum(activeCamera.get());
+}
+
+//-------------------------------------------------------------------------------------------------
+
+bool MFA::BoundingVolumeComponent::IsInFrustum() const
+{
+    return mIsInFrustum;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+bool MFA::BoundingVolumeComponent::IsInsideCameraFrustum(CameraComponent const * camera)
+{
+    MFA_ASSERT(camera != nullptr);
+    return true;
+}
+
+//-------------------------------------------------------------------------------------------------
