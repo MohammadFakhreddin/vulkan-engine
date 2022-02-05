@@ -8,7 +8,7 @@
 #include "components/PointLightComponent.hpp"
 #include "components/SphereBoundingVolumeComponent.hpp"
 #include "components/TransformComponent.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/ui_system/UI_System.hpp"
 
 #include "libs/nlohmann/json.hpp"
 

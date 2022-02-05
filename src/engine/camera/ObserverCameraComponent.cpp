@@ -4,7 +4,7 @@
 #include "engine/BedrockMatrix.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/InputManager.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/ui_system/UI_System.hpp"
 
 #include "glm/gtx/quaternion.hpp"
 
@@ -42,7 +42,7 @@ namespace MFA
         CameraComponent::Update(deltaTimeInSec);
 
         bool mRotationIsChanged = false;
-        if (InputManager::IsLeftMouseDown() == true && UISystem::HasFocus() == false)
+        if (InputManager::IsLeftMouseDown() == true && UI_System::HasFocus() == false)
         {
 
             auto const mouseDeltaX = IM::GetMouseDeltaX();

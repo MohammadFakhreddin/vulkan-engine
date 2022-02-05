@@ -1,4 +1,4 @@
-#include "UISystem.hpp"
+#include "UI_System.hpp"
 
 #include "engine/BedrockMemory.hpp"
 #include "tools/Importer.hpp"
@@ -18,7 +18,7 @@
 #include "libs/sdl/SDL.hpp"
 #endif
 
-namespace MFA::UISystem
+namespace MFA::UI_System
 {
 
 #if defined(__ANDROID__) || defined(__IOS__)
@@ -139,8 +139,6 @@ namespace MFA::UISystem
     {
         std::shared_ptr<RT::SamplerGroup> fontSampler{};
         std::shared_ptr<RT::DescriptorSetLayoutGroup> descriptorSetLayout{};
-        std::shared_ptr<RT::GpuShader> vertexShader{};
-        std::shared_ptr<RT::GpuShader> fragmentShader{};
         VkDescriptorPool descriptorPool{};
         RT::DescriptorSetGroup descriptorSetGroup{};
         std::shared_ptr<RT::PipelineGroup> pipeline{};
@@ -257,25 +255,21 @@ namespace MFA::UISystem
             *state->descriptorSetLayout
         ); // Original number was 1 , Now it creates as many as swap_chain_image_count
 
-        {// Vertex shader
-            auto const shader_asset = Importer::ImportShaderFromSPV(
-                CBlobAliasOf(vertex_shader_spv),
-                AS::ShaderStage::Vertex,
-                "main"
-            );
-            state->vertexShader = RF::CreateShader(shader_asset);
-            // TODO Implement them in shutdown as well
-        }
-
-        {// Fragment shader
-            auto const shader_asset = Importer::ImportShaderFromSPV(
-                CBlobAliasOf(fragment_shader_spv),
-                AS::ShaderStage::Fragment,
-                "main"
-            );
-            state->fragmentShader = RF::CreateShader(shader_asset);
-        }
-
+        // Vertex shader
+        auto vertexShader = RF::CreateShader(Importer::ImportShaderFromSPV(
+            CBlobAliasOf(vertex_shader_spv),
+            AS::ShaderStage::Vertex,
+            "main"
+        ));
+        // TODO Implement them in shutdown as well
+        
+        // Fragment shader
+        auto fragmentShader = RF::CreateShader(Importer::ImportShaderFromSPV(
+            CBlobAliasOf(fragment_shader_spv),
+            AS::ShaderStage::Fragment,
+            "main"
+        ));
+        
         {
             // Constants: we are using 'vec2 offset' and 'vec2 scale' instead of a full 3d projection matrix
             std::vector<VkPushConstantRange> pushConstantRanges{};
@@ -286,8 +280,10 @@ namespace MFA::UISystem
             pushConstantRange.size = 4 * sizeof(float);
             pushConstantRanges.emplace_back(pushConstantRange);
 
-            //state->vertexShader, state->fragmentShader
-            std::vector<RT::GpuShader const *> shaderStages{ state->vertexShader.get(), state->fragmentShader.get() };
+            std::vector<RT::GpuShader const *> shaderStages {
+                vertexShader.get(),
+                fragmentShader.get()
+            };
 
             VkVertexInputBindingDescription vertex_binding_description{};
             vertex_binding_description.stride = sizeof(ImDrawVert);
@@ -376,9 +372,9 @@ namespace MFA::UISystem
             MFA_ASSERT(pixels != nullptr);
             MFA_ASSERT(width > 0);
             MFA_ASSERT(height > 0);
-            uint8_t const components_count = 4;
-            uint8_t const depth = 1;
-            uint8_t const slices = 1;
+            size_t const components_count = 4;
+            size_t const depth = 1;
+            size_t const slices = 1;
             size_t const image_size = width * height * components_count * sizeof(uint8_t);
 
             Importer::ImportTextureOptions importTextureOptions{};
@@ -524,13 +520,13 @@ namespace MFA::UISystem
     }
 #endif
 
-    void OnNewFrame(
+    void Render(
         float const deltaTimeInSec,
         RT::CommandRecordState & drawPass
     )
     {
         ImGuiIO & io = ImGui::GetIO();
-        IM_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! It is generally built by the renderer backend. Missing call to renderer _NewFrame() function? e.g. ImGui_ImplOpenGL3_NewFrame().");
+        MFA_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! It is generally built by the renderer backend. Missing call to renderer _NewFrame() function? e.g. ImGui_ImplOpenGL3_NewFrame().");
 
         // Setup display size (every frame to accommodate for window resizing)
         int32_t window_width, window_height;
@@ -559,14 +555,6 @@ namespace MFA::UISystem
 #if defined(__DESKTOP__)
         UpdateMouseCursor();
 #endif
-        // Start the Dear ImGui frame
-        ImGui::NewFrame();
-
-        state->hasFocus = false;
-
-        state->UIRecordSignal.Emit();
-
-        ImGui::Render();
 
         // Setup desired Vulkan state
         // Bind pipeline and descriptor sets:
@@ -577,26 +565,31 @@ namespace MFA::UISystem
             state->descriptorSetGroup
         );
 
-        auto * draw_data = ImGui::GetDrawData();
+        auto const * drawData = ImGui::GetDrawData();
+        if (drawData == nullptr)
+        {
+            return;
+        }
+
         // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-        float const frameBufferWidth = draw_data->DisplaySize.x * draw_data->FramebufferScale.x;
-        float const frameBufferHeight = draw_data->DisplaySize.y * draw_data->FramebufferScale.y;
+        float const frameBufferWidth = drawData->DisplaySize.x * drawData->FramebufferScale.x;
+        float const frameBufferHeight = drawData->DisplaySize.y * drawData->FramebufferScale.y;
         if (frameBufferWidth > 0 && frameBufferHeight > 0)
         {
-            if (draw_data->TotalVtxCount > 0)
+            if (drawData->TotalVtxCount > 0)
             {
                 // TODO We can create vertices for ui system in post render
                 // Create or resize the vertex/index buffers
-                size_t const vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
-                size_t const index_size = draw_data->TotalIdxCount * sizeof(ImDrawIdx);
+                size_t const vertex_size = drawData->TotalVtxCount * sizeof(ImDrawVert);
+                size_t const index_size = drawData->TotalIdxCount * sizeof(ImDrawIdx);
                 auto const vertexData = Memory::Alloc(vertex_size);
                 auto const indexData = Memory::Alloc(index_size);
                 {
                     auto * vertex_ptr = reinterpret_cast<ImDrawVert *>(vertexData->memory.ptr);
                     auto * index_ptr = reinterpret_cast<ImDrawIdx *>(indexData->memory.ptr);
-                    for (int n = 0; n < draw_data->CmdListsCount; n++)
+                    for (int n = 0; n < drawData->CmdListsCount; n++)
                     {
-                        const ImDrawList * cmd_list = draw_data->CmdLists[n];
+                        const ImDrawList * cmd_list = drawData->CmdLists[n];
                         ::memcpy(vertex_ptr, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
                         ::memcpy(index_ptr, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
                         vertex_ptr += cmd_list->VtxBuffer.Size;
@@ -655,10 +648,10 @@ namespace MFA::UISystem
                 // Our visible imgui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
                 {
                     PushConstants constants{};
-                    constants.scale[0] = 2.0f / draw_data->DisplaySize.x;
-                    constants.scale[1] = 2.0f / draw_data->DisplaySize.y;
-                    constants.translate[0] = -1.0f - draw_data->DisplayPos.x * constants.scale[0];
-                    constants.translate[1] = -1.0f - draw_data->DisplayPos.y * constants.scale[1];
+                    constants.scale[0] = 2.0f / drawData->DisplaySize.x;
+                    constants.scale[1] = 2.0f / drawData->DisplaySize.y;
+                    constants.translate[0] = -1.0f - drawData->DisplayPos.x * constants.scale[0];
+                    constants.translate[1] = -1.0f - drawData->DisplayPos.y * constants.scale[1];
                     RF::PushConstants(
                         drawPass,
                         AS::ShaderStage::Vertex,
@@ -668,16 +661,16 @@ namespace MFA::UISystem
                 }
 
                 // Will project scissor/clipping rectangles into frame-buffer space
-                ImVec2 const clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
-                ImVec2 const clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+                ImVec2 const clip_off = drawData->DisplayPos;         // (0,0) unless using multi-viewports
+                ImVec2 const clip_scale = drawData->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
                 // Render command lists
                 // (Because we merged all buffers into a single one, we maintain our own offset into them)
                 int global_vtx_offset = 0;
                 int global_idx_offset = 0;
-                for (int n = 0; n < draw_data->CmdListsCount; n++)
+                for (int n = 0; n < drawData->CmdListsCount; n++)
                 {
-                    const ImDrawList * cmd_list = draw_data->CmdLists[n];
+                    const ImDrawList * cmd_list = drawData->CmdLists[n];
                     for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
                     {
                         const ImDrawCmd * pcmd = &cmd_list->CmdBuffer[cmd_i];
@@ -721,6 +714,16 @@ namespace MFA::UISystem
                 }
             }
         }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PostRender(float deltaTimeInSec)
+    {
+        ImGui::NewFrame();
+        state->hasFocus = false;
+        state->UIRecordSignal.Emit();
+        ImGui::Render();
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -278,8 +278,10 @@ list(
     "src/engine/asset_system/AssetModel.hpp"
     "src/engine/asset_system/AssetModel.cpp"
     # UI System
-    "src/engine/ui_system/UISystem.hpp"
-    "src/engine/ui_system/UISystem.cpp"
+    "src/engine/ui_system/UI_System.hpp"
+    "src/engine/ui_system/UI_System.cpp"
+    "src/engine/ui_system/UI_Pipeline.hpp"
+    "src/engine/ui_system/UI_Pipeline.cpp"
 
     # Camera
     "src/engine/camera/CameraComponent.hpp"

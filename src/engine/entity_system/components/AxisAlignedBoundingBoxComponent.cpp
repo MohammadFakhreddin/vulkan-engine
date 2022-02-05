@@ -7,7 +7,7 @@
 #include "engine/BedrockMatrix.hpp"
 #include "engine/asset_system/AssetModel.hpp"
 #include "engine/camera/CameraComponent.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/ui_system/UI_System.hpp"
 #include "tools/JsonUtils.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
 #include "engine/entity_system/components/RendererComponent.hpp"

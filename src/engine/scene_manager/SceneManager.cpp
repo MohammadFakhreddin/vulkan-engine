@@ -7,7 +7,7 @@
 #include "engine/entity_system/EntitySystem.hpp"
 #include "engine/entity_system/components/DirectionalLightComponent.hpp"
 #include "engine/entity_system/components/PointLightComponent.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/ui_system/UI_System.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
@@ -392,7 +392,7 @@ namespace MFA::SceneManager
 
         state->renderSignal.Emit(recordState, deltaTimeInSec);
         // TODO: UI System should contain a pipeline and register it instead
-        UI::OnNewFrame(deltaTimeInSec, recordState);
+        UI::Render(deltaTimeInSec, recordState);
 
         state->displayRenderPass->EndRenderPass(recordState);
 
@@ -404,6 +404,7 @@ namespace MFA::SceneManager
 
         // Post render
         state->postRenderSignal.Emit(deltaTimeInSec);
+        UI::PostRender(deltaTimeInSec);
 
     }
 

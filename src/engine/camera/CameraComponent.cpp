@@ -5,7 +5,7 @@
 #include "engine/BedrockMatrix.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/scene_manager/Scene.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/ui_system/UI_System.hpp"
 
 namespace MFA
 {

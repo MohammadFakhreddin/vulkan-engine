@@ -5,7 +5,7 @@
 #include "engine/InputManager.hpp"
 #include "engine/entity_system/EntitySystem.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/ui_system/UI_System.hpp"
 #include "engine/job_system/JobSystem.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"

@@ -1,7 +1,7 @@
 #include "EntitySystem.hpp"
 
 #include "Entity.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/ui_system/UI_System.hpp"
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/scene_manager/SceneManager.hpp"

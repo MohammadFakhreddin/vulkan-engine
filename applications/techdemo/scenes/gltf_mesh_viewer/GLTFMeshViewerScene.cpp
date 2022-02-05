@@ -12,7 +12,7 @@
 #include "engine/entity_system/components/MeshRendererComponent.hpp"
 #include "engine/entity_system/components/SphereBoundingVolumeComponent.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/ui_system/UI_System.hpp"
 #include "engine/entity_system/components/PointLightComponent.hpp"
 #include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
@@ -286,9 +286,10 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
 
     auto * pbrPipeline = SceneManager::GetPipeline<PBRWithShadowPipelineV2>();
     MFA_ASSERT(pbrPipeline != nullptr);
-    MFA_ASSERT(pbrPipeline->EssenceExists(renderRequiredData.address) == false);
-    pbrPipeline->CreateEssence(renderRequiredData.gpuModel, cpuModel->mesh);
-
+    if(pbrPipeline->EssenceExists(renderRequiredData.address) == false){
+        pbrPipeline->CreateEssence(renderRequiredData.gpuModel, cpuModel->mesh);
+    }
+    
     auto * entity = EntitySystem::CreateEntity(renderRequiredData.displayName, GetRootEntity());
     MFA_ASSERT(entity != nullptr);
     renderRequiredData.entity = entity;
@@ -308,7 +309,7 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
     );
     
     EntitySystem::InitEntity(entity);
-        
+
     renderRequiredData.isLoaded = true;
 }
 

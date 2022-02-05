@@ -4,7 +4,7 @@
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
 #include "scenes/demo_3rd_person_scene/Demo3rdPersonScene.hpp"
 #include "scenes/gltf_mesh_viewer/GLTFMeshViewerScene.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/ui_system/UI_System.hpp"
 #include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
 #include "engine/render_system/pipelines/particle/ParticlePipeline.hpp"
 #include "scenes/particle_fire_scene/ParticleFireScene.hpp"

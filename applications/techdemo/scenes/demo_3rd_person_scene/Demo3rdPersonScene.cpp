@@ -8,7 +8,7 @@
 #include "engine/InputManager.hpp"
 #include "engine/camera/ThirdPersonCameraComponent.hpp"
 #include "engine/entity_system/Entity.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/ui_system/UI_System.hpp"
 #include "engine/entity_system/EntitySystem.hpp"
 #include "engine/entity_system/components/ColorComponent.hpp"
 #include "engine/entity_system/components/MeshRendererComponent.hpp"

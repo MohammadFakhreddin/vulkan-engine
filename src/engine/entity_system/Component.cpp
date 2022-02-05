@@ -1,7 +1,7 @@
 #include "Component.hpp"
 
 #include "Entity.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/ui_system/UI_System.hpp"
 
 //-------------------------------------------------------------------------------------------------
 

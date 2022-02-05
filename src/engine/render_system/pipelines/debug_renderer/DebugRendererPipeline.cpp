@@ -166,6 +166,11 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    void DebugRendererPipeline::onResize()
+    {}
+
+    //-------------------------------------------------------------------------------------------------
+
     bool DebugRendererPipeline::createEssenceWithoutModel(
         std::shared_ptr<RT::GpuModel> const & gpuModel,
         uint32_t indicesCount

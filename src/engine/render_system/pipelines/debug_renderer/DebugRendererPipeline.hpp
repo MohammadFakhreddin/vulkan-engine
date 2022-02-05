@@ -28,7 +28,7 @@ public:
 
     void render(RT::CommandRecordState & drawPass, float deltaTime) override;
     
-    void onResize() override {}
+    void onResize() override;
 
     bool createEssenceWithoutModel(
         std::shared_ptr<RT::GpuModel> const & gpuModel,

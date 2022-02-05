@@ -4,18 +4,18 @@
 
 #include <glm/vec3.hpp>
 
-class UIRecordObject;
-
-namespace MFA::UISystem
+namespace MFA::UI_System
 {
 
     // TODO Support for custom font
     void Init();
 
-    void OnNewFrame(
+    void Render(
         float deltaTimeInSec,
         RT::CommandRecordState & drawPass
     );
+
+    void PostRender(float deltaTimeInSec);
 
     void BeginWindow(char const * windowName);
 
@@ -104,5 +104,5 @@ namespace MFA::UISystem
 
 namespace MFA
 {
-    namespace UI = UISystem;
+    namespace UI = UI_System;
 }

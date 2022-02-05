@@ -7,7 +7,7 @@
 #include "engine/entity_system/components/BoundingVolumeComponent.hpp"
 #include "engine/render_system/pipelines/EssenceBase.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Variant.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/ui_system/UI_System.hpp"
 
 namespace MFA
 {

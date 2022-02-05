@@ -3,7 +3,7 @@
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/BedrockMemory.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/ui_system/UI_System.hpp"
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockMatrix.hpp"
 #include "engine/entity_system/Entity.hpp"

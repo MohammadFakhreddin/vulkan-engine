@@ -5,7 +5,7 @@
 #include "tools/Importer.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "tools/ShapeGenerator.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/ui_system/UI_System.hpp"
 #include "engine/entity_system/EntitySystem.hpp"
 #include "engine/camera/ObserverCameraComponent.hpp"
 #include "engine/entity_system/components/BoundingVolumeRendererComponent.hpp"
