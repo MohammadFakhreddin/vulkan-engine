@@ -3,6 +3,7 @@
 #include "EssenceBase.hpp"
 #include "VariantBase.hpp"
 #include "engine/BedrockAssert.hpp"
+#include "engine/BedrockPath.hpp"
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/asset_system/AssetBaseMesh.hpp"
@@ -32,19 +33,21 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::PreRender(RT::CommandRecordState & recordState, float deltaTime)
+    void BasePipeline::preRender(RT::CommandRecordState & recordState, float deltaTime)
     {}
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::Render(RT::CommandRecordState & recordState, float deltaTime)
+    void BasePipeline::render(RT::CommandRecordState & recordState, float deltaTime)
     {}
 
     //-------------------------------------------------------------------------------------------------
 
     bool BasePipeline::EssenceExists(std::string const & nameOrAddress) const
     {
-        return mEssenceAndVariantsMap.contains(nameOrAddress);
+        std::string relativePath;
+        Path::RelativeToAssetFolder(nameOrAddress, relativePath);
+        return mEssenceAndVariantsMap.contains(relativePath);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -127,6 +130,10 @@ namespace MFA
         MFA_ASSERT(newVariant != nullptr);
 
         mAllVariantsList.emplace_back(newVariant.get());
+        if (mAllVariantsList.size() == 1)
+        {
+            SceneManager::UpdatePipeline(this);
+        }
         return newVariant;
     }
 
@@ -154,6 +161,11 @@ namespace MFA
             }
         }
         MFA_ASSERT(foundInAllVariantsList == true);
+
+        if (mAllVariantsList.empty())
+        {
+            SceneManager::UpdatePipeline(this);
+        }
         
         // Removing from essence and variants' list
         auto const findResult = mEssenceAndVariantsMap.find(variant.GetEssence()->getNameOrAddress());
@@ -194,7 +206,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::Init()
+    void BasePipeline::init()
     {
         MFA_ASSERT(mIsInitialized == false);
         mIsInitialized = true;
@@ -203,7 +215,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::Shutdown()
+    void BasePipeline::shutdown()
     {
         MFA_ASSERT(mIsInitialized == true);
         mIsInitialized = false;
@@ -217,6 +229,25 @@ namespace MFA
         mEssenceAndVariantsMap.clear();
 
         RF::DestroyDescriptorPool(mDescriptorPool);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void BasePipeline::changeActivationStatus(bool const enabled)
+    {
+        if (mIsActive == enabled)
+        {
+            return;
+        }
+        mIsActive = enabled;
+        SceneManager::UpdatePipeline(this);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool BasePipeline::isActive() const
+    {
+        return mIsActive;
     }
 
     //-------------------------------------------------------------------------------------------------

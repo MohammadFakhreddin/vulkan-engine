@@ -17,7 +17,7 @@ namespace MFA::EntitySystem
 {
     void InitEntity(Entity * entity, bool triggerSignals);
     void UpdateEntity(Entity * entity);
-    void destroyEntity(EntityId const entityId, bool const shouldNotifyParent);
+    static void destroyEntity(EntityId const entityId, bool const shouldNotifyParent);
 }
 
 namespace MFA
@@ -28,7 +28,7 @@ namespace MFA
     public:
         friend void EntitySystem::InitEntity(Entity * entity, bool triggerSignals);
         friend void EntitySystem::UpdateEntity(Entity * entity);
-        friend void EntitySystem::destroyEntity(EntityId const entityId, bool const shouldNotifyParent);
+        friend static void EntitySystem::destroyEntity(EntityId const entityId, bool const shouldNotifyParent);
         friend Component;
 
         struct CreateEntityParams
@@ -87,18 +87,21 @@ namespace MFA
         {
             MFA_ASSERT(component != nullptr);
             MFA_ASSERT(component->mEntity == this);
+
+            auto const requiredEvents = component->requiredEvents();
+
             // Init event
-            if ((component->requiredEvents() & Component::EventTypes::InitEvent) > 0)
+            if ((requiredEvents & Component::EventTypes::InitEvent) > 0)
             {
                 mInitSignal.UnRegister(component->mInitEventId);
             }
             // Update event
-            if ((component->requiredEvents() & Component::EventTypes::UpdateEvent) > 0)
+            if ((requiredEvents & Component::EventTypes::UpdateEvent) > 0)
             {
                 mUpdateSignal.UnRegister(component->mUpdateEventId);
             }
             // Shutdown event
-            if ((component->requiredEvents() & Component::EventTypes::ShutdownEvent) > 0)
+            if ((requiredEvents & Component::EventTypes::ShutdownEvent) > 0)
             {
                 mShutdownSignal.UnRegister(component->mShutdownEventId);
             }
@@ -195,7 +198,7 @@ namespace MFA
         bool mIsActive = true;
         bool mIsParentActive = true;    // It should be true by default because not everyone have parent
 
-        int mUpdateListenerId = -1;
+        SignalId mUpdateListenerId = InvalidSignalId;
 
         int mParentActivationStatusChangeListenerId = 0;
 

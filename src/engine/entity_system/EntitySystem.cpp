@@ -44,7 +44,7 @@ namespace MFA::EntitySystem
 
     //-------------------------------------------------------------------------------------------------
 
-    void OnNewFrame(float const deltaTimeInSec)
+    void Update(float const deltaTimeInSec)
     {
         // There is a chance that new task get added while doing this task so using foreach is not an wise option
         for (int i = 0; i < static_cast<int>(state->nextFrameTasks.size()); ++i)  // NOLINT(modernize-loop-convert) 
@@ -130,14 +130,18 @@ namespace MFA::EntitySystem
         MFA_ASSERT(entity->mIsInitialized == true);
         if (entity->NeedUpdateEvent())
         {
-            entity->mUpdateListenerId = state->updateSignal.Register([entity](float const deltaTime) -> void
+            if (entity->mUpdateListenerId == InvalidSignalId)
             {
-                entity->Update(deltaTime);
-            });
+                entity->mUpdateListenerId = state->updateSignal.Register([entity](float const deltaTime) -> void
+                {
+                    entity->Update(deltaTime);
+                });
+            }
         }
         else
         {
             state->updateSignal.UnRegister(entity->mUpdateListenerId);
+            entity->mUpdateListenerId = InvalidSignalId;
         }
     }
 
@@ -149,22 +153,26 @@ namespace MFA::EntitySystem
         {
             if (state->entitiesRefsList[i].ptr->getId() == entityId)
             {
-                Entity * entity = state->entitiesRefsList[i].ptr.get();
-                MFA_ASSERT(entity != nullptr);
-                entity->Shutdown(shouldNotifyParent);
-                if (entity->NeedUpdateEvent())
+                std::unique_ptr<Entity> const deletedEntity = std::move(state->entitiesRefsList[i].ptr);
+                MFA_ASSERT(deletedEntity != nullptr);
+
+                // We should remove item before removing children because index might change
+                state->entitiesRefsList[i] = std::move(state->entitiesRefsList.back());
+                state->entitiesRefsList.pop_back();
+
+                deletedEntity->Shutdown(shouldNotifyParent);
+                
+                if (deletedEntity->NeedUpdateEvent())
                 {
-                    state->updateSignal.UnRegister(entity->mUpdateListenerId);
+                    state->updateSignal.UnRegister(deletedEntity->mUpdateListenerId);
                 }
-                for (auto * childEntity : entity->GetChildEntities())
+
+                for (auto * childEntity : deletedEntity->GetChildEntities())
                 {
                     MFA_ASSERT(childEntity != nullptr);
                     destroyEntity(childEntity->getId(), false);
                 }
 
-
-                state->entitiesRefsList[i] = std::move(state->entitiesRefsList.back());
-                state->entitiesRefsList.pop_back();
                 return;
             }
         }

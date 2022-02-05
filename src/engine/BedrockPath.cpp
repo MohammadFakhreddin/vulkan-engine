@@ -65,7 +65,13 @@ namespace MFA::Path
     bool RelativeToAssetFolder(std::string const & address, std::string & outRelativePath)
     {
         outRelativePath = std::filesystem::relative(address, state->assetsPath).string();
-        return outRelativePath.empty() == false;
+        bool success = true;
+        if (outRelativePath.empty())
+        {
+            outRelativePath = address;
+            success = false;
+        }
+        return success;
     }
 
     //-------------------------------------------------------------------------------------------------

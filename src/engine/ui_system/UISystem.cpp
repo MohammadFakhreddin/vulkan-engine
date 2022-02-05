@@ -221,7 +221,7 @@ namespace MFA::UISystem
         state = new State();
         auto const swapChainImagesCount = RF::GetSwapChainImagesCount();
         state->meshBuffers.resize(swapChainImagesCount);
-        //state->meshBuffersValidationStatus.resize(swapChainImagesCount);
+
         // Setup Dear ImGui context
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();

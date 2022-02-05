@@ -5,7 +5,6 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
-#include "engine/scene_manager/Scene.hpp"
 #include "engine/BedrockPath.hpp"
 #include "tools/Importer.hpp"
 #include "engine/asset_system/AssetParticleMesh.hpp"
@@ -13,6 +12,8 @@
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "engine/job_system/JobSystem.hpp"
 #include "engine/asset_system/AssetShader.hpp"
+#include "engine/resource_manager/ResourceManager.hpp"
+#include "engine/scene_manager/SceneManager.hpp"
 
 #define CAST_ESSENCE(essence) static_cast<ParticleEssence *>(essence)
 
@@ -23,9 +24,8 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    ParticlePipeline::ParticlePipeline(Scene * attachedScene)
+    ParticlePipeline::ParticlePipeline()
         : BasePipeline(1000) // ! per essence                // TODO How many sets do we need ?
-        , mAttachedScene(attachedScene)
     {}
 
     //-------------------------------------------------------------------------------------------------
@@ -34,15 +34,15 @@ namespace MFA
     {
         if (mIsInitialized)
         {
-            Shutdown();
+            shutdown();
         }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void ParticlePipeline::Init(std::shared_ptr<RT::GpuTexture> const & errorTexture)
+    void ParticlePipeline::init()
     {
-        BasePipeline::Init();
+        BasePipeline::init();
 
         mSamplerGroup = RF::CreateSampler(RT::CreateSamplerParams {
             .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
@@ -51,7 +51,7 @@ namespace MFA
         });
         MFA_ASSERT(mSamplerGroup != nullptr);
         
-        mErrorTexture = errorTexture;
+        mErrorTexture = RC::AcquireGpuTexture("Error");
         MFA_ASSERT(mErrorTexture != nullptr);
 
         createPerFrameDescriptorSetLayout();
@@ -64,24 +64,24 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ParticlePipeline::Shutdown()
+    void ParticlePipeline::shutdown()
     {
-        BasePipeline::Shutdown();
+        BasePipeline::shutdown();
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void ParticlePipeline::PreRender(
+    void ParticlePipeline::render(
         RT::CommandRecordState & recordState,
         float const deltaTimeInSec
     )
     {
-        if (mEssenceAndVariantsMap.empty())
+        if (mAllEssencesList.empty())
         {
             return;
         }
 
-        BasePipeline::PreRender(recordState, deltaTimeInSec);
+        BasePipeline::render(recordState, deltaTimeInSec);
 
         for (auto & essenceAndVariants : mEssenceAndVariantsMap)
         {
@@ -92,21 +92,6 @@ namespace MFA
             });
         }
         JS::WaitForThreadsToFinish();
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void ParticlePipeline::Render(
-        RT::CommandRecordState & recordState,
-        float const deltaTime
-    )
-    {
-        if (mAllEssencesList.empty())
-        {
-            return;
-        }
-
-        BasePipeline::Render(recordState, deltaTime);
 
         RF::BindPipeline(recordState, *mPipeline);
 
@@ -118,13 +103,13 @@ namespace MFA
 
         for (auto * essence : mAllEssencesList)
         {
-            CAST_ESSENCE(essence)->draw(recordState, deltaTime);
+            CAST_ESSENCE(essence)->draw(recordState, deltaTimeInSec);
         }
     }
 
     //-------------------------------------------------------------------------------------------------
     // TODO: We have duplicate code in these 2 function
-    std::shared_ptr<EssenceBase> ParticlePipeline::CreateEssenceWithModel(
+    std::shared_ptr<EssenceBase> ParticlePipeline::createEssenceWithModel(
         std::shared_ptr<AssetSystem::Model> const & cpuModel,
         std::string const & name
     )
@@ -221,7 +206,7 @@ namespace MFA
             mPerFrameDescriptorSetLayout->descriptorSetLayout
         );
 
-        auto const & cameraBuffers = mAttachedScene->GetCameraBuffers();
+        auto const & cameraBuffers = SceneManager::GetCameraBuffers();
 
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {

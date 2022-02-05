@@ -66,9 +66,9 @@ namespace MFA
         [[nodiscard]]
         glm::vec3 const & GetScale() const;
 
-        Signal<>::ListenerId RegisterChangeListener(std::function<void()> const & listener);
+        SignalId RegisterChangeListener(std::function<void()> const & listener);
 
-        bool UnRegisterChangeListener(Signal<>::ListenerId listenerId);
+        bool UnRegisterChangeListener(SignalId listenerId);
 
         void onUI() override;
 
@@ -94,7 +94,7 @@ namespace MFA
 
         std::weak_ptr<TransformComponent> mParentTransform {};
 
-        Signal<>::ListenerId mParentTransformChangeListenerId {};
+        SignalId mParentTransformChangeListenerId {};
     };
 
 }

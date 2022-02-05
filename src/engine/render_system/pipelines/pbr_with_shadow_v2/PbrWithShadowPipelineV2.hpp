@@ -81,23 +81,23 @@ namespace MFA
             alignas(4) int placeholder1 = 0;
         };
 
-        explicit PBRWithShadowPipelineV2(Scene * attachedScene);
+        explicit PBRWithShadowPipelineV2();
         ~PBRWithShadowPipelineV2() override;
         
-        PIPELINE_PROPS(PBRWithShadowPipelineV2);
-
-        void Init(
-            std::shared_ptr<RT::SamplerGroup> samplerGroup,
-            std::shared_ptr<RT::GpuTexture> errorTexture
+        PIPELINE_PROPS(
+            PBRWithShadowPipelineV2,
+            EventTypes::PreRenderEvent | EventTypes::RenderEvent
         );
 
-        void Shutdown() override;
+        void init();
 
-        void PreRender(RT::CommandRecordState & recordState, float deltaTime) override;
+        void shutdown() override;
 
-        void Render(RT::CommandRecordState & recordState, float deltaTime) override;
+        void preRender(RT::CommandRecordState & recordState, float deltaTime) override;
 
-        void OnResize() override;
+        void render(RT::CommandRecordState & recordState, float deltaTime) override;
+
+        void onResize() override;
 
         void CreateEssenceWithoutModel(
             std::shared_ptr<RT::GpuModel> const & gpuModel,
@@ -202,8 +202,6 @@ namespace MFA
         std::vector<VkDescriptorSetLayout> mDescriptorSetLayouts{};
 
         RT::DescriptorSetGroup mPerFrameDescriptorSetGroup{};
-
-        Scene * mAttachedScene = nullptr;
 
     };
 

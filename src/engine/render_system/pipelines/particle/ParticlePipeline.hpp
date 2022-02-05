@@ -16,22 +16,20 @@ namespace MFA
     {
     public:
 
-        explicit ParticlePipeline(Scene * attachedScene);
+        explicit ParticlePipeline();
         ~ParticlePipeline() override;
 
-        PIPELINE_PROPS(ParticlePipeline)
+        PIPELINE_PROPS(ParticlePipeline, EventTypes::RenderEvent)
 
-        void Init(std::shared_ptr<RT::GpuTexture> const & errorTexture);
+        void init() override;
 
-        void OnResize() override {}
+        void onResize() override {}
 
-        void Shutdown() override;
+        void shutdown() override;
+        
+        void render(RT::CommandRecordState & recordState, float deltaTime) override;
 
-        void PreRender(RT::CommandRecordState & recordState, float deltaTimeInSec) override;
-
-        void Render(RT::CommandRecordState & recordState, float deltaTime) override;
-
-        std::shared_ptr<EssenceBase> CreateEssenceWithModel(
+        std::shared_ptr<EssenceBase> createEssenceWithModel(
             std::shared_ptr<AssetSystem::Model> const & cpuModel,
             std::string const & name
         );
@@ -61,8 +59,7 @@ namespace MFA
         std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerEssenceDescriptorSetLayout {};
 
         RT::DescriptorSetGroup mPerFrameDescriptorSetGroup {};
-        Scene * mAttachedScene = nullptr;
-
+        
         std::shared_ptr<RT::SamplerGroup> mSamplerGroup {};
         std::shared_ptr<RT::GpuTexture> mErrorTexture {};
 

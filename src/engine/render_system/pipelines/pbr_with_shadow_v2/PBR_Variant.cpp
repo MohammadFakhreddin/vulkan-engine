@@ -531,6 +531,7 @@ namespace MFA
         }
         if (isChanged && node.meshNode->hasSubMesh() && node.meshNode->skin > -1)
         {
+            // TODO Knowing that threre is no scale we might be able to compute this cheaper
             node.cachedGlobalInverseTransform = glm::inverse(node.cachedGlobalTransform);
         }
 

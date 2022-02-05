@@ -7,7 +7,6 @@
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "tools/Importer.hpp"
 #include "engine/BedrockMatrix.hpp"
-#include "engine/entity_system/components/PointLightComponent.hpp"
 #include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/render_passes/depth_pre_pass/DepthPrePass.hpp"
@@ -16,9 +15,11 @@
 #include "engine/render_system/render_passes/point_light_shadow_render_pass/PointLightShadowRenderPass.hpp"
 #include "engine/render_system/render_resources/directional_light_shadow_resources/DirectionalLightShadowResources.hpp"
 #include "engine/render_system/render_resources/point_light_shadow_resources/PointLightShadowResources.hpp"
-#include "engine/scene_manager/Scene.hpp"
 #include "engine/job_system/JobSystem.hpp"
 #include "engine/asset_system/AssetShader.hpp"
+#include "engine/entity_system/components/PointLightComponent.hpp"
+#include "engine/scene_manager/SceneManager.hpp"
+#include "engine/resource_manager/ResourceManager.hpp"
 
 #define CAST_VARIANT(variant)  static_cast<PBR_Variant *>(variant.get())
 
@@ -37,9 +38,11 @@ and now I need to pass it to a function that won't modify it, but doesn't take t
 namespace MFA
 {
 
+    // Steps for multi-threading. Begin render pass -> submit subcommands -> execute into primary end renderPpass
+
     //-------------------------------------------------------------------------------------------------
 
-    PBRWithShadowPipelineV2::PBRWithShadowPipelineV2(Scene * attachedScene)
+    PBRWithShadowPipelineV2::PBRWithShadowPipelineV2()
         : BasePipeline(10000)
         , mPointLightShadowRenderPass(std::make_unique<PointLightShadowRenderPass>())
         , mPointLightShadowResources(std::make_unique<PointLightShadowResources>())
@@ -47,7 +50,6 @@ namespace MFA
         , mDirectionalLightShadowResources(std::make_unique<DirectionalLightShadowResources>())
         , mDepthPrePass(std::make_unique<DepthPrePass>())
         , mOcclusionRenderPass(std::make_unique<OcclusionRenderPass>())
-        , mAttachedScene(attachedScene)
     {
     }
 
@@ -57,16 +59,13 @@ namespace MFA
     {
         if (mIsInitialized)
         {
-            Shutdown();
+            shutdown();
         }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::Init(
-        std::shared_ptr<RT::SamplerGroup> samplerGroup,
-        std::shared_ptr<RT::GpuTexture> errorTexture
-    )
+    void PBRWithShadowPipelineV2::init()
     {
         if (mIsInitialized == true)
         {
@@ -74,13 +73,14 @@ namespace MFA
             return;
         }
         
-        BasePipeline::Init();
+        BasePipeline::init();
 
-        MFA_ASSERT(samplerGroup != nullptr);
-        mSamplerGroup = std::move(samplerGroup);
-        MFA_ASSERT(errorTexture != nullptr);
-        mErrorTexture = std::move(errorTexture);
+        mSamplerGroup = RF::CreateSampler(RT::CreateSamplerParams{});
+        MFA_ASSERT(mSamplerGroup != nullptr);
 
+        mErrorTexture = RC::AcquireGpuTexture("Error");
+        MFA_ASSERT(mErrorTexture != nullptr);
+        
         createUniformBuffers();
 
         mPointLightShadowRenderPass->Init();
@@ -115,7 +115,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::Shutdown()
+    void PBRWithShadowPipelineV2::shutdown()
     {
         if (mIsInitialized == false)
         {
@@ -138,19 +138,19 @@ namespace MFA
         mDirectionalLightShadowResources->Shutdown();
         mDirectionalLightShadowRenderPass->Shutdown();
      
-        BasePipeline::Shutdown();
+        BasePipeline::shutdown();
 
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::PreRender(RT::CommandRecordState & recordState, float const deltaTime)
+    void PBRWithShadowPipelineV2::preRender(RT::CommandRecordState & recordState, float const deltaTime)
     {
         // TODO I should render bounding volume for objects and geometry for occluders.
         // Some objects might need more than 1 occluder.
         retrieveOcclusionQueryResult(recordState);
 
-        BasePipeline::PreRender(recordState, deltaTime);
+        BasePipeline::preRender(recordState, deltaTime);
 
         updateVariants(deltaTime, recordState);
 
@@ -167,13 +167,13 @@ namespace MFA
             mPointLightShadowRenderPass->PrepareRenderTargetForSampling(
                 recordState,
                 mPointLightShadowResources.get(),
-                mAttachedScene->getPointLightCount() > 0,
+                SceneManager::GetPointLightCount() > 0,
                 barrier
             );
             mDirectionalLightShadowRenderPass->PrepareRenderTargetForSampling(
                 recordState,
                 mDirectionalLightShadowResources.get(),
-                mAttachedScene->GetDirectionalLightCount() > 0,
+                SceneManager::GetDirectionalLightCount() > 0,
                 barrier
             );
             RF::PipelineBarrier(
@@ -208,14 +208,14 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::Render(RT::CommandRecordState & recordState, float deltaTime)
+    void PBRWithShadowPipelineV2::render(RT::CommandRecordState & recordState, float deltaTime)
     {
         performDisplayPass(recordState);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::OnResize()
+    void PBRWithShadowPipelineV2::onResize()
     {
         mDepthPrePass->OnResize();
         mOcclusionRenderPass->OnResize();
@@ -266,9 +266,9 @@ namespace MFA
             *mPerFrameDescriptorSetLayout
         );
 
-        auto const & cameraBufferCollection = mAttachedScene->GetCameraBuffers();
-        auto const & directionalLightBuffers = mAttachedScene->GetDirectionalLightBuffers();
-        auto const & pointLightBuffers = mAttachedScene->GetPointLightsBuffers();
+        auto const & cameraBufferCollection = SceneManager::GetCameraBuffers();
+        auto const & directionalLightBuffers = SceneManager::GetDirectionalLightBuffers();
+        auto const & pointLightBuffers = SceneManager::GetPointLightsBuffers();
         
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
@@ -574,7 +574,7 @@ namespace MFA
     
     void PBRWithShadowPipelineV2::performDirectionalLightShadowPass(RT::CommandRecordState & recordState) const
     {
-        if (mAttachedScene->GetDirectionalLightCount() <= 0)
+        if (SceneManager::GetDirectionalLightCount() <= 0)
         {
             return;
         }
@@ -648,7 +648,7 @@ namespace MFA
 
     void PBRWithShadowPipelineV2::performPointLightShadowPass(RT::CommandRecordState & recordState) const
     {
-        auto const pointLightCount = mAttachedScene->getPointLightCount();
+        auto const pointLightCount = SceneManager::GetPointLightCount();
         if (pointLightCount <= 0)
         {
             return;
@@ -672,9 +672,9 @@ namespace MFA
     
     void PBRWithShadowPipelineV2::renderForPointLightShadowPass(RT::CommandRecordState const & recordState, AS::AlphaMode const alphaMode) const
     {
-        auto const pointLightCount = mAttachedScene->getPointLightCount();
+        auto const pointLightCount = SceneManager::GetPointLightCount();
         MFA_ASSERT(pointLightCount > 0);
-        auto const & pointLights = mAttachedScene->getActivePointLights();
+        auto const & pointLights = SceneManager::GetActivePointLights();
         MFA_ASSERT(pointLights.size() == pointLightCount);
 
         PointLightShadowPassPushConstants pushConstants {};
@@ -700,6 +700,10 @@ namespace MFA
 
                 for (auto & variant : variantsList)
                 {
+                    if (variant->IsActive() == false)
+                    {
+                        continue;
+                    }
                     auto const * bvComponent = variant->GetBoundingVolume();
                     if (bvComponent == nullptr)
                     {

@@ -42,16 +42,13 @@ void MFA::RendererComponent::serialize(nlohmann::json & jsonObject) const
 
 void MFA::RendererComponent::deserialize(nlohmann::json const & jsonObject)
 {
-    mPipeline = SceneManager::GetActiveScene()->GetPipelineByName(jsonObject["pipeline"]);
+    mPipeline = SceneManager::GetPipeline(jsonObject["pipeline"]);
     MFA_ASSERT(mPipeline != nullptr);
 
     std::string const address = jsonObject["address"];
 
     std::string relativePath {};
-    if (Path::RelativeToAssetFolder(address, relativePath) == false)
-    {
-        relativePath = address;
-    }
+    Path::RelativeToAssetFolder(address, relativePath);
 
     if (mPipeline->EssenceExists(relativePath) == false)
     {

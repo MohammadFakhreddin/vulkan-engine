@@ -270,10 +270,10 @@ namespace MFA::RenderFrontend
         MFA_LOG_INFO("Acquired graphics and presentation queues");
         state->graphicCommandPool = RB::CreateCommandPool(state->logicalDevice.device, state->graphicQueueFamily);
 
-        state->graphicCommandBuffer = RF::CreateGraphicCommandBuffers(RF::GetMaxFramesPerFlight());
+        state->graphicCommandBuffer = CreateGraphicCommandBuffers(GetMaxFramesPerFlight());
 
-        state->syncObjects = RF::createSyncObjects(
-            RF::GetMaxFramesPerFlight(),
+        state->syncObjects = createSyncObjects(
+            GetMaxFramesPerFlight(),
             state->swapChainImageCount
         );
 
@@ -300,6 +300,7 @@ namespace MFA::RenderFrontend
 
         if (state->screenWidth > 0 && state->screenHeight > 0)
         {
+            // We need display render pass to resize before everything else
             state->displayRenderPass.OnResize();
             state->resizeEventSignal.Emit();
         }
@@ -1555,9 +1556,9 @@ namespace MFA::RenderFrontend
 
     RT::CommandRecordState StartGraphicCommandBufferRecording()
     {
-        MFA_ASSERT(RF::GetMaxFramesPerFlight() > state->currentFrame);
+        MFA_ASSERT(GetMaxFramesPerFlight() > state->currentFrame);
         RT::CommandRecordState drawPass{ .renderPass = nullptr };
-        if (RF::IsWindowVisible() == false || RF::IsWindowResized() == true)
+        if (IsWindowVisible() == false || IsWindowResized() == true)
         {
             drawPass.isValid = false;
             return drawPass;
@@ -1566,15 +1567,15 @@ namespace MFA::RenderFrontend
         drawPass.frameIndex = state->currentFrame;
         drawPass.isValid = true;
         ++state->currentFrame;
-        if (state->currentFrame >= RF::GetMaxFramesPerFlight())
+        if (state->currentFrame >= GetMaxFramesPerFlight())
         {
             state->currentFrame = 0;
         }
 
-        RF::WaitForFence(GetInFlightFence(drawPass));
+        WaitForFence(GetInFlightFence(drawPass));
 
         // We ignore failed acquire of image because a resize will be triggered at end of pass
-        RF::AcquireNextImage(
+        AcquireNextImage(
             GetImageAvailabilitySemaphore(drawPass),
             state->displayRenderPass.GetSwapChainImages(),
             drawPass.imageIndex
@@ -1585,7 +1586,7 @@ namespace MFA::RenderFrontend
         // Each pipeline has its own set of shader, But we can reuse a pipeline for multiple shaders.
         // For each model we need to record command buffer with our desired pipeline (For example light and objects have different fragment shader)
         // Prepare data for recording command buffers
-        RF::BeginCommandBuffer(GetGraphicCommandBuffer(drawPass));
+        BeginCommandBuffer(GetGraphicCommandBuffer(drawPass));
 
         return drawPass;
     }
@@ -1597,10 +1598,10 @@ namespace MFA::RenderFrontend
         MFA_ASSERT(drawPass.isValid);
         drawPass.isValid = false;
 
-        RF::EndCommandBuffer(GetGraphicCommandBuffer(drawPass));
+        EndCommandBuffer(GetGraphicCommandBuffer(drawPass));
 
         // Wait for image to be available and draw
-        RF::SubmitQueue(
+        SubmitQueue(
             GetGraphicCommandBuffer(drawPass),
             GetImageAvailabilitySemaphore(drawPass),
             GetRenderFinishIndicatorSemaphore(drawPass),
@@ -1608,7 +1609,7 @@ namespace MFA::RenderFrontend
         );
 
         // Present drawn image
-        RF::PresentQueue(
+        PresentQueue(
             drawPass.imageIndex,
             GetRenderFinishIndicatorSemaphore(drawPass),
             state->displayRenderPass.GetSwapChainImages().swapChain

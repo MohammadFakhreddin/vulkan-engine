@@ -16,6 +16,7 @@
 #include "engine/entity_system/components/DirectionalLightComponent.hpp"
 #include "engine/BedrockMatrix.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Variant.hpp"
+#include "engine/scene_manager/SceneManager.hpp"
 #include "tools/PrefabFileStorage.hpp"
 
 using namespace MFA;
@@ -33,24 +34,10 @@ Demo3rdPersonScene::Demo3rdPersonScene()
 Demo3rdPersonScene::~Demo3rdPersonScene() = default;
 
 //-------------------------------------------------------------------------------------------------
-// TODO Make pipelines global that start at beginning of application or not ?
+
 void Demo3rdPersonScene::Init()
 {
     Scene::Init();
-
-    mSampler = RF::CreateSampler(RT::CreateSamplerParams{});
-
-    {// Error texture
-        // TODO RC must support importing texture and mesh as well
-        auto const cpuTexture = Importer::CreateErrorTexture();
-        mErrorTexture = RF::CreateTexture(*cpuTexture);
-    }
-
-    mDebugRenderPipeline.Init();
-    mPbrPipeline.Init(mSampler, mErrorTexture);
-    RegisterPipeline(&mDebugRenderPipeline);
-    RegisterPipeline(&mPbrPipeline);
-
     
     PrefabFileStorage::Deserialize(PrefabFileStorage::DeserializeParams {
         .fileAddress = Path::ForReadWrite("prefabs/soldier.json"),
@@ -125,37 +112,14 @@ void Demo3rdPersonScene::Init()
     }
 
     mUIRecordId = UI::Register([this]()->void { onUI(); });
+
+    mDebugRenderPipeline = SceneManager::GetPipeline<DebugRendererPipeline>();
+    MFA_ASSERT(mDebugRenderPipeline != nullptr);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::OnPreRender(float const deltaTimeInSec, RT::CommandRecordState & recordState)
-{
-    Scene::OnPreRender(deltaTimeInSec, recordState);
-
-    mPbrPipeline.PreRender(recordState, deltaTimeInSec);
-    if (mEnableDebugPipeline)
-    {
-        mDebugRenderPipeline.PreRender(recordState, deltaTimeInSec);
-    }
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void Demo3rdPersonScene::OnRender(float const deltaTimeInSec, RT::CommandRecordState & recordState)
-{
-    Scene::OnRender(deltaTimeInSec, recordState);
-
-    mPbrPipeline.Render(recordState, deltaTimeInSec);
-    if (mEnableDebugPipeline)
-    {
-        mDebugRenderPipeline.Render(recordState, deltaTimeInSec);
-    }
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void Demo3rdPersonScene::OnPostRender(float const deltaTimeInSec)
+void Demo3rdPersonScene::Update(float const deltaTimeInSec)
 {
     if (auto const playerTransform = mPlayerTransform.lock())
     {// Soldier
@@ -324,10 +288,21 @@ bool Demo3rdPersonScene::isDisplayPassDepthImageInitialLayoutUndefined()
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::onUI()
+bool Demo3rdPersonScene::RequiresUpdate()
+{
+    return true;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void Demo3rdPersonScene::onUI() const
 {
     UI::BeginWindow("3rd person scene");
-    UI::Checkbox("Debug pipeline", &mEnableDebugPipeline);
+
+    bool enableDebugPipeline = mDebugRenderPipeline->isActive();
+    UI::Checkbox("Debug pipeline", &enableDebugPipeline);
+    mDebugRenderPipeline->changeActivationStatus(enableDebugPipeline);
+
     UI::EndWindow();
 }
 

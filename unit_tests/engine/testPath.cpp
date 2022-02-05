@@ -15,8 +15,9 @@ TEST_CASE("Path TestCase1", "[Path][0]") {
 
     std::string const absolutePath = "C:\\projects\\vulkan-engine\\assets\\models\\mira\\scene.gltf";
 
-    std::string relativePath = "";
-    Path::RelativeToAssetFolder(absolutePath.c_str(), relativePath);
+    std::string relativePath {};
+    bool success = Path::RelativeToAssetFolder(absolutePath, relativePath);
+    REQUIRE(success == true);
     REQUIRE(relativePath == "models\\mira\\scene.gltf");
 
     Path::Shutdown();

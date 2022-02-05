@@ -8,8 +8,8 @@
 void MFA::PointLightShadowResources::Init(VkRenderPass renderPass)
 {
     static constexpr auto shadowExtend = VkExtent2D{
-        .width = Scene::POINT_LIGHT_SHADOW_WIDTH,
-        .height = Scene::POINT_LIGHT_SHADOW_HEIGHT
+        .width = RT::POINT_LIGHT_SHADOW_WIDTH,
+        .height = RT::POINT_LIGHT_SHADOW_HEIGHT
     };
     createShadowCubeMap(shadowExtend);
     createFrameBuffer(shadowExtend, renderPass);
@@ -21,11 +21,6 @@ void MFA::PointLightShadowResources::Shutdown()
 {
     RF::DestroyFrameBuffers(static_cast<uint32_t>(mFrameBuffers.size()), mFrameBuffers.data());
     mFrameBuffers.clear();
-    //for (auto & shadowCubeMap : mShadowCubeMapList)
-    //{
-    //    RF::DestroyDepthImage(shadowCubeMap);
-    //}
-    //mShadowCubeMapList.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -67,7 +62,7 @@ void MFA::PointLightShadowResources::createShadowCubeMap(VkExtent2D const & shad
         shadowCubeMap = RF::CreateDepthImage(
             shadowExtent,
             RT::CreateDepthImageOptions{
-                .layerCount = 6 * Scene::MAX_POINT_LIGHT_COUNT,
+                .layerCount = 6 * RT::MAX_POINT_LIGHT_COUNT,
                 .usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 .viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY,
                 .imageCreateFlags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
@@ -96,7 +91,7 @@ void MFA::PointLightShadowResources::createFrameBuffer(VkExtent2D const & shadow
             attachments.data(),
             static_cast<uint32_t>(attachments.size()),
             shadowExtent,
-            6 * Scene::MAX_POINT_LIGHT_COUNT
+            6 * RT::MAX_POINT_LIGHT_COUNT
         );
     }
 }

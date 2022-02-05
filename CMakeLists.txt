@@ -92,6 +92,7 @@ list(
     "src/engine/BedrockPlatforms.cpp"
     "src/engine/BedrockPath.hpp"
     "src/engine/BedrockPath.cpp"
+    "src/engine/BedrockSignalTypes.hpp"
     "src/engine/BedrockSignal.hpp"
 )
 

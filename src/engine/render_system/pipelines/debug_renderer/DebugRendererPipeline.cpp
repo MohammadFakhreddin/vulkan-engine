@@ -12,7 +12,6 @@
 #include "engine/render_system/pipelines/VariantBase.hpp"
 #include "engine/render_system/pipelines/debug_renderer/DebugEssence.hpp"
 #include "engine/render_system/pipelines/debug_renderer/DebugVariant.hpp"
-#include "engine/scene_manager/Scene.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/job_system/JobSystem.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
@@ -54,7 +53,7 @@
 
 namespace MFA
 {
-    
+
     using namespace AssetSystem::Debug;
 
     DebugRendererPipeline::DebugRendererPipeline()
@@ -67,43 +66,43 @@ namespace MFA
     {
         if (mIsInitialized)
         {
-            Shutdown();
+            shutdown();
         }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void DebugRendererPipeline::Init()
+    void DebugRendererPipeline::init()
     {
-        BasePipeline::Init();
+        BasePipeline::init();
 
         createDescriptorSetLayout();
         createPipeline();
         createDescriptorSets();
 
-        std::vector<std::string> const modelNames {"Sphere", "Cube"};
+        std::vector<std::string> const modelNames{ "Sphere", "Cube" };
         for (auto const & modelName : modelNames)
         {
             auto const cpuModel = RC::AcquireCpuModel(modelName);
             MFA_ASSERT(cpuModel != nullptr);
             auto const gpuModel = RC::AcquireGpuModel(modelName);
             MFA_ASSERT(gpuModel != nullptr);
-            CreateEssenceWithoutModel(gpuModel, cpuModel->mesh->getIndexCount());
+            createEssenceWithoutModel(gpuModel, cpuModel->mesh->getIndexCount());
         }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void DebugRendererPipeline::Shutdown()
+    void DebugRendererPipeline::shutdown()
     {
-        BasePipeline::Shutdown();
+        BasePipeline::shutdown();
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void DebugRendererPipeline::PreRender(RT::CommandRecordState & recordState, float const deltaTimeInSec)
+    void DebugRendererPipeline::preRender(RT::CommandRecordState & recordState, float const deltaTimeInSec)
     {
-        BasePipeline::PreRender(recordState, deltaTimeInSec);
+        BasePipeline::preRender(recordState, deltaTimeInSec);
 
         // Temporary: Will be replaced with debug variant soon
         // Multi-thread update of variant animation
@@ -123,7 +122,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DebugRendererPipeline::Render(RT::CommandRecordState & drawPass, float deltaTime)
+    void DebugRendererPipeline::render(RT::CommandRecordState & drawPass, float deltaTime)
     {
         RF::BindPipeline(drawPass, *mpipeline);
 
@@ -142,7 +141,7 @@ namespace MFA
 
             essence->bindVertexBuffer(drawPass);
             essence->bindIndexBuffer(drawPass);
-            
+
             for (auto & variant : variantsList)
             {
                 if (variant->IsActive())
@@ -167,13 +166,17 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    bool DebugRendererPipeline::CreateEssenceWithoutModel(
+    bool DebugRendererPipeline::createEssenceWithoutModel(
         std::shared_ptr<RT::GpuModel> const & gpuModel,
         uint32_t indicesCount
     )
     {
         return addEssence(std::make_shared<DebugEssence>(gpuModel, indicesCount));
     }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void DebugRendererPipeline::freeUnusedEssences() {}
 
     //-------------------------------------------------------------------------------------------------
 
@@ -222,10 +225,10 @@ namespace MFA
         // Vertex shader
         RF_CREATE_SHADER("shaders/debug_renderer/DebugRenderer.vert.spv", Vertex)
 
-        // Fragment shader
-        RF_CREATE_SHADER("shaders/debug_renderer/DebugRenderer.frag.spv", Fragment)
+            // Fragment shader
+            RF_CREATE_SHADER("shaders/debug_renderer/DebugRenderer.frag.spv", Fragment)
 
-        std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuFragmentShader.get() };
+            std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuFragmentShader.get() };
 
         VkVertexInputBindingDescription const bindingDescription{
             .binding = 0,
@@ -235,13 +238,13 @@ namespace MFA
 
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
         // Position
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
             .format = VK_FORMAT_R32G32B32_SFLOAT,
             .offset = offsetof(Vertex, position),
         });
-        
+
         RT::CreateGraphicPipelineOptions pipelineOptions{};
         pipelineOptions.useStaticViewportAndScissor = false;
         pipelineOptions.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
@@ -284,12 +287,8 @@ namespace MFA
             *mDescriptorSetLayout
         );
 
-        // Idea: Maybe we can have active camera buffer inside scene manager
-        auto const activeScene = SceneManager::GetActiveScene();
-        MFA_ASSERT(activeScene != nullptr);
+        auto const & cameraBufferCollection = SceneManager::GetCameraBuffers();
 
-        auto const & cameraBufferCollection = activeScene->GetCameraBuffers();
-        
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
 

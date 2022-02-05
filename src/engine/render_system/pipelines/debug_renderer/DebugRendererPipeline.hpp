@@ -18,22 +18,24 @@ public:
     explicit DebugRendererPipeline();
     ~DebugRendererPipeline() override;
 
-    PIPELINE_PROPS(DebugRendererPipeline)
+    PIPELINE_PROPS(DebugRendererPipeline, EventTypes::PreRenderEvent | EventTypes::RenderEvent)
 
-    void Init() override;
+    void init() override;
 
-    void Shutdown() override;
+    void shutdown() override;
 
-    void PreRender(RT::CommandRecordState & recordState, float deltaTimeInSec) override;
+    void preRender(RT::CommandRecordState & recordState, float deltaTimeInSec) override;
 
-    void Render(RT::CommandRecordState & drawPass, float deltaTime) override;
+    void render(RT::CommandRecordState & drawPass, float deltaTime) override;
     
-    void OnResize() override {}
+    void onResize() override {}
 
-    bool CreateEssenceWithoutModel(
+    bool createEssenceWithoutModel(
         std::shared_ptr<RT::GpuModel> const & gpuModel,
         uint32_t indicesCount
     );
+
+    void freeUnusedEssences() override;
 
 protected:
 

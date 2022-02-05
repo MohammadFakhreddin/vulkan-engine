@@ -2774,6 +2774,21 @@ namespace MFA::RenderBackend
 
     //-------------------------------------------------------------------------------------------------
 
+    void ExecuteCommandBuffer(
+        VkCommandBuffer primaryCommandBuffer,
+        uint32_t const subCommandBuffersCount,
+        const VkCommandBuffer * subCommandBuffers
+    )
+    {
+        vkCmdExecuteCommands(
+            primaryCommandBuffer,
+            subCommandBuffersCount,
+            subCommandBuffers
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void PipelineBarrier(
         VkCommandBuffer commandBuffer,
         VkPipelineStageFlags sourceStageMask,

@@ -19,6 +19,9 @@
 #include "engine/resource_manager/ResourceManager.hpp"
 #include "tools/PrefabFileStorage.hpp"
 #include "engine/BedrockPath.hpp"
+#include "engine/scene_manager/SceneManager.hpp"
+#include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
+#include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
 
 using namespace MFA;
 
@@ -40,20 +43,6 @@ void PrefabEditorScene::Init()
 
     prepareDependencyLists();
     prepareCreateComponentInstructionMap();
-
-    {// Error texture
-        auto const cpuTexture = Importer::CreateErrorTexture();
-        mErrorTexture = RF::CreateTexture(*cpuTexture);
-    }
-
-    // Sampler
-    mSampler = RF::CreateSampler(RT::CreateSamplerParams{});
-
-    // Pbr pipeline
-    mPbrPipeline.Init(mSampler, mErrorTexture);
-
-    // Debug renderer pipeline
-    mDebugRenderPipeline.Init();
 
     mUIRecordId = UI::Register([this]()->void { onUI(); });
 
@@ -89,46 +78,25 @@ void PrefabEditorScene::Init()
 
     mPrefab.AssignPreBuiltEntity(mPrefabRootEntity);
 
-    RegisterPipeline(&mDebugRenderPipeline);
-    RegisterPipeline(&mPbrPipeline);
+    mAllPipelines = SceneManager::GetAllPipelines();
+
+    mPBR_Pipeline = SceneManager::GetPipeline<PBRWithShadowPipelineV2>();
+    MFA_ASSERT(mPBR_Pipeline != nullptr);
+
+    mDebugRenderPipeline = SceneManager::GetPipeline<DebugRendererPipeline>();
+    MFA_ASSERT(mDebugRenderPipeline != nullptr);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void PrefabEditorScene::OnPreRender(
-    float const deltaTimeInSec,
-    RT::CommandRecordState & recordState
-)
+void PrefabEditorScene::Update(float const deltaTimeInSec)
 {
-    Scene::OnPreRender(deltaTimeInSec, recordState);
-
-    mDebugRenderPipeline.PreRender(recordState, deltaTimeInSec);
-    mPbrPipeline.PreRender(recordState, deltaTimeInSec);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void PrefabEditorScene::OnRender(
-    float const deltaTimeInSec,
-    RT::CommandRecordState & recordState
-)
-{
-    Scene::OnRender(deltaTimeInSec, recordState);
-
-    mDebugRenderPipeline.Render(recordState, deltaTimeInSec);
-    mPbrPipeline.Render(recordState, deltaTimeInSec);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void PrefabEditorScene::OnPostRender(float const deltaTimeInSec)
-{
-    if (shouldFreeEssencesWithNoVariant)
-    {
-        shouldFreeEssencesWithNoVariant = false;
-        mPbrPipeline.freeUnusedEssences();
-        mDebugRenderPipeline.freeUnusedEssences();
-    }
+    //if (shouldFreeEssencesWithNoVariant)
+    //{
+    //    shouldFreeEssencesWithNoVariant = false;
+    //    mPbrPipeline.freeUnusedEssences();
+    //    mDebugRenderPipeline.freeUnusedEssences();
+    //}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -137,14 +105,6 @@ void PrefabEditorScene::Shutdown()
 {
     Scene::Shutdown();
     UI::UnRegister(mUIRecordId);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void PrefabEditorScene::OnResize()
-{
-    mPbrPipeline.OnResize();
-    mDebugRenderPipeline.OnResize();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -260,9 +220,9 @@ bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress)
         .essenceName = mInputTextEssenceName
     });
 
-    if (mPbrPipeline.EssenceExists(gpuModel->nameOrAddress) == false)
+    if (mPBR_Pipeline->EssenceExists(gpuModel->nameOrAddress) == false)
     {
-        mPbrPipeline.CreateEssence(gpuModel, cpuModel->mesh);
+        mPBR_Pipeline->CreateEssence(gpuModel, cpuModel->mesh);
     }
 
     mInputTextEssenceName = "";
@@ -276,7 +236,7 @@ void PrefabEditorScene::destroyAsset(int const assetIndex)
 {
     auto const & asset = mLoadedAssets[assetIndex];
     auto const gpuModel = RC::AcquireGpuModel(asset.fileAddress);
-    mPbrPipeline.DestroyEssence(*gpuModel);
+    mPBR_Pipeline->DestroyEssence(*gpuModel);
     mLoadedAssets.erase(mLoadedAssets.begin() + assetIndex);
 }
 
@@ -297,7 +257,7 @@ void PrefabEditorScene::entityUI(Entity * entity)
         case 2: // MeshRendererComponent
         {
             std::vector<std::string> pipelineNames{};
-            for (auto const * pipeline : GetPipelines())
+            for (auto const * pipeline : mAllPipelines)
             {
                 pipelineNames.emplace_back(pipeline->GetName());
             }
@@ -507,19 +467,20 @@ void PrefabEditorScene::prepareCreateComponentInstructionMap()
         {
             return nullptr;
         }
-        if (mSelectedPipeline < 0 || mSelectedPipeline >= static_cast<int>(GetPipelines().size()))
+
+        if (mSelectedPipeline < 0 || mSelectedPipeline >= static_cast<int>(mAllPipelines.size()))
         {
             return nullptr;
         }
         return entity->AddComponent<MeshRendererComponent>(
-            *GetPipelines()[mSelectedPipeline],
+            *mAllPipelines[mSelectedPipeline],
             mLoadedAssets[mSelectedEssenceIndex].fileAddress
         ).lock();
     });
 
     INSERT_INTO_CREATE_COMPONENT_MAP(BoundingVolumeRendererComponent, [this](Entity * entity)
     {
-        return  entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline).lock();
+        return entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline).lock();
     });
 
     INSERT_INTO_CREATE_COMPONENT_MAP(SphereBoundingVolumeComponent, [](Entity * entity)
@@ -648,7 +609,7 @@ void PrefabEditorScene::loadPrefab()
 
         bindEditorSignalToEntity(mPrefabRootEntity);
 
-        shouldFreeEssencesWithNoVariant = true;
+        SceneManager::TriggerCleanup();
     }
 }
 

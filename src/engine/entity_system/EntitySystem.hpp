@@ -11,7 +11,7 @@ namespace MFA::EntitySystem {
 
     void Init();
 
-    void OnNewFrame(float deltaTimeInSec);
+    void Update(float deltaTimeInSec);
 
     void OnUI();
     

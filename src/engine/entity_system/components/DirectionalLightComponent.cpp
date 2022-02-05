@@ -38,9 +38,7 @@ void MFA::DirectionalLightComponent::init()
     });
 
     // Registering directional light to active scene
-    auto const activeScene = SceneManager::GetActiveScene();
-    MFA_ASSERT(activeScene != nullptr);
-    activeScene->RegisterDirectionalLight(selfPtr());
+    SceneManager::RegisterDirectionalLight(selfPtr());
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -101,8 +99,8 @@ void MFA::DirectionalLightComponent::deserialize(nlohmann::json const & jsonObje
 
 void MFA::DirectionalLightComponent::computeShadowProjection()
 {
-    int32_t const width = Scene::DIRECTIONAL_LIGHT_PROJECTION_WIDTH;
-    int32_t const height = Scene::DIRECTIONAL_LIGHT_PROJECTION_HEIGHT;
+    int32_t const width = RT::DIRECTIONAL_LIGHT_PROJECTION_WIDTH;
+    int32_t const height = RT::DIRECTIONAL_LIGHT_PROJECTION_HEIGHT;
     
     float const halfWidth = static_cast<float>(width) / 2.0f;
     float const halfHeight = static_cast<float>(height) / 2.0f;

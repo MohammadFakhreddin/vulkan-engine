@@ -60,10 +60,7 @@ namespace MFA
     // TODO Support for priority between components
     void Entity::Update(float const deltaTimeInSec) const
     {
-        if (mIsActive == false)
-        {
-            return;
-        }
+        MFA_ASSERT(mIsActive == true);
         mUpdateSignal.Emit(deltaTimeInSec);
     }
 
@@ -387,16 +384,19 @@ namespace MFA
 
     void Entity::linkComponent(Component * component)
     {
+        MFA_ASSERT(component != nullptr);
         // Linked entity
         component->mEntity = this;
         // Init event
         if ((component->requiredEvents() & Component::EventTypes::InitEvent) > 0)
         {
+            MFA_ASSERT(component->mInitEventId == InvalidSignalId);
             component->mInitEventId = mInitSignal.Register([component]()->void { component->init(); });
         }
         // Update event
         if ((component->requiredEvents() & Component::EventTypes::UpdateEvent) > 0)
         {
+            MFA_ASSERT(component->mUpdateEventId == InvalidSignalId);
             component->mUpdateEventId = mUpdateSignal.Register([component](float const deltaTimeInSec)->void
             {
                 component->Update(deltaTimeInSec);
@@ -405,6 +405,7 @@ namespace MFA
         // Shutdown event
         if ((component->requiredEvents() & Component::EventTypes::ShutdownEvent) > 0)
         {
+            MFA_ASSERT(component->mShutdownEventId == InvalidSignalId);
             component->mShutdownEventId = mShutdownSignal.Register([component]()->void
             {
                 component->shutdown();

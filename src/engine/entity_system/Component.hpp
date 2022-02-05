@@ -140,11 +140,11 @@ private:
 
     bool mIsActive = true;
 
-    int mInitEventId = 0;
+    SignalId mInitEventId = InvalidSignalId;
 
-    int mUpdateEventId = 0;
+    SignalId mUpdateEventId = InvalidSignalId;
 
-    int mShutdownEventId = 0;
+    SignalId mShutdownEventId = InvalidSignalId;
 
 };
 
