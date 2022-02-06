@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include "engine/BedrockAssert.hpp"
@@ -69,6 +70,7 @@ namespace MFA
             }
         }
 
+        // TODO: We should emit signals multi-threaded when possible
         //template<typename ... PassedArgs>
         //void EmitMultiThread(PassedArgs && ... args) const
         //{
@@ -87,7 +89,7 @@ namespace MFA
         //            nextThreadNumber = 0;
         //        }
         //    }
-
+                // TODO Wait for all assigned tasks to be complete
         //    JS::WaitForThreadsToFinish();
 
         //}

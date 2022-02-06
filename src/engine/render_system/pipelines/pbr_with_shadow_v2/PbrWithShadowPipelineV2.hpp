@@ -89,7 +89,7 @@ namespace MFA
             EventTypes::PreRenderEvent | EventTypes::RenderEvent
         );
 
-        void init();
+        void init() override;
 
         void shutdown() override;
 

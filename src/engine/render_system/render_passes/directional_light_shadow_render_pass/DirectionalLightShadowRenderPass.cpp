@@ -2,7 +2,6 @@
 
 #include "engine/BedrockAssert.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/scene_manager/Scene.hpp"
 #include "engine/render_system/render_resources/directional_light_shadow_resources/DirectionalLightShadowResources.hpp"
 
 //-------------------------------------------------------------------------------------------------

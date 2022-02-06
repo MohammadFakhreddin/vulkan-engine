@@ -30,7 +30,7 @@ namespace MFA
 
     void MeshRendererComponent::init()
     {
-        Component::init();
+        RendererComponent::init();
 
         auto * entity = GetEntity();
         MFA_ASSERT(entity != nullptr);
@@ -43,6 +43,13 @@ namespace MFA
             entity->GetComponent<TransformComponent>(),
             entity->GetComponent<BoundingVolumeComponent>()
         );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void MeshRendererComponent::shutdown()
+    {
+        RendererComponent::shutdown();
     }
 
     //-------------------------------------------------------------------------------------------------

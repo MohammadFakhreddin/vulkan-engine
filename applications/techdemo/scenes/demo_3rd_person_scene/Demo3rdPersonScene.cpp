@@ -281,13 +281,6 @@ void Demo3rdPersonScene::Shutdown()
 
 //-------------------------------------------------------------------------------------------------
 
-bool Demo3rdPersonScene::isDisplayPassDepthImageInitialLayoutUndefined()
-{
-    return false;
-}
-
-//-------------------------------------------------------------------------------------------------
-
 bool Demo3rdPersonScene::RequiresUpdate()
 {
     return true;

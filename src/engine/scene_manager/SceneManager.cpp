@@ -123,6 +123,8 @@ namespace MFA::SceneManager
         MFA_ASSERT(state->nextActiveSceneIndex >= 0);
         MFA_ASSERT(state->nextActiveSceneIndex < static_cast<int>(state->registeredScenes.size()));
 
+        // We need to keep old scene pointer for a chance for reusing assets
+        std::shared_ptr<Scene> oldScene = state->activeScene;
         if (state->activeScene != nullptr)
         {
             state->activeScene->Shutdown();
@@ -130,10 +132,6 @@ namespace MFA::SceneManager
             {
                 state->postRenderSignal.UnRegister(state->activeSceneListenerId);
             }
-            // TODO: We should help resource manager to keep files that are needed but also there is a risk to face out of memory
-            // Question: How can we prevent reloading data ?
-            state->activeScene = nullptr;
-            TriggerCleanup();
         }
 
         state->activeSceneIndex = state->nextActiveSceneIndex;
@@ -163,10 +161,10 @@ namespace MFA::SceneManager
 
         state->nextActiveSceneIndex = -1;
 
-        state->displayRenderPass->UseDepthImageLayoutAsUndefined(state->activeScene->isDisplayPassDepthImageInitialLayoutUndefined());
+        //state->displayRenderPass->UseDepthImageLayoutAsUndefined(state->activeScene->isDisplayPassDepthImageInitialLayoutUndefined());
 
-        // TODO We should reuse particles instead of re-creating them!
-
+        oldScene = nullptr;
+        TriggerCleanup();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -362,7 +360,17 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
-    void OnNewFrame(float const deltaTimeInSec)
+    void Update(float const deltaTimeInSec)
+    {
+        EntitySystem::Update(deltaTimeInSec);
+
+        state->postRenderSignal.Emit(deltaTimeInSec);
+        UI::PostRender(deltaTimeInSec);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Render(float const deltaTimeInSec)
     {
         if (deltaTimeInSec > 0.0f)
         {
@@ -400,11 +408,11 @@ namespace MFA::SceneManager
         // End of graphic record
 
         // Note: Order is important
-        EntitySystem::Update(deltaTimeInSec);
+        //EntitySystem::Update(deltaTimeInSec);
 
-        // Post render
-        state->postRenderSignal.Emit(deltaTimeInSec);
-        UI::PostRender(deltaTimeInSec);
+        //// Post render
+        //state->postRenderSignal.Emit(deltaTimeInSec);
+        //UI::PostRender(deltaTimeInSec);
 
     }
 

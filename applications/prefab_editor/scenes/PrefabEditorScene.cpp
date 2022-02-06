@@ -91,12 +91,6 @@ void PrefabEditorScene::Init()
 
 void PrefabEditorScene::Update(float const deltaTimeInSec)
 {
-    //if (shouldFreeEssencesWithNoVariant)
-    //{
-    //    shouldFreeEssencesWithNoVariant = false;
-    //    mPbrPipeline.freeUnusedEssences();
-    //    mDebugRenderPipeline.freeUnusedEssences();
-    //}
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -105,13 +99,6 @@ void PrefabEditorScene::Shutdown()
 {
     Scene::Shutdown();
     UI::UnRegister(mUIRecordId);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-bool PrefabEditorScene::isDisplayPassDepthImageInitialLayoutUndefined()
-{
-    return false;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -480,7 +467,7 @@ void PrefabEditorScene::prepareCreateComponentInstructionMap()
 
     INSERT_INTO_CREATE_COMPONENT_MAP(BoundingVolumeRendererComponent, [this](Entity * entity)
     {
-        return entity->AddComponent<BoundingVolumeRendererComponent>(mDebugRenderPipeline).lock();
+        return entity->AddComponent<BoundingVolumeRendererComponent>(*mDebugRenderPipeline).lock();
     });
 
     INSERT_INTO_CREATE_COMPONENT_MAP(SphereBoundingVolumeComponent, [](Entity * entity)

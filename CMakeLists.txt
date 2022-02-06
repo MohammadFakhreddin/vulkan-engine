@@ -61,11 +61,14 @@ add_definitions(-DGLM_FORCE_DEPTH_ZERO_TO_ONE)
 # Note: Linux On MacOS 10.14 with clang++ compiler, I get executable with SIMD right away.
 # On Ubuntu 16.04 with g++ compiler, I will have to use the compiler flag -mavx2 to generate a SIMD executable. 
 # There are other compiler options for other SIMD instructions here. Without the compiler flag, I still get a serial executable.
-# add_definitions(-DGLM_FORCE_DEFAULT_ALIGNED_GENTYPES)         // TODO Enable SIMD for glm
+# add_definitions(-DGLM_FORCE_DEFAULT_ALIGNED_GENTYPES)         # TODO Enable SIMD for glm
 # add_definitions(-DGLM_FORCE_INTRINSICS)
 if (LINUX)
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
 endif ()
+
+# TODO Use this link to integrate lua into project
+# https://gist.github.com/baiyanhuang/4054106
 
 #-----------------------------------------------------------------------
 # Bedrock

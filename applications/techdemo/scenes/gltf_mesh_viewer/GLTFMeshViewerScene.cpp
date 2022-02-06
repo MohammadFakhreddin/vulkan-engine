@@ -265,13 +265,6 @@ void GLTFMeshViewerScene::Shutdown() {
 
 //-------------------------------------------------------------------------------------------------
 
-bool GLTFMeshViewerScene::isDisplayPassDepthImageInitialLayoutUndefined()
-{
-    return false;
-}
-
-//-------------------------------------------------------------------------------------------------
-
 bool GLTFMeshViewerScene::RequiresUpdate()
 {
     return true;

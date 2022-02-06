@@ -135,6 +135,13 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    ThreadPool::ThreadNumber ThreadPool::ThreadObject::GetThreadNumber() const
+    {
+        return mThreadNumber;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void ThreadPool::ThreadObject::mainLoop()
     {
         std::mutex mMutex{};

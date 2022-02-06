@@ -30,8 +30,6 @@ namespace MFA::EntitySystem
     {
         std::vector<EntityRef> entitiesRefsList{};  // TODO Shouldn't we use map or something faster ?
         Signal<float> updateSignal{};
-
-        std::vector<Task> nextFrameTasks {};
     };
     State * state = nullptr;
 
@@ -46,15 +44,6 @@ namespace MFA::EntitySystem
 
     void Update(float const deltaTimeInSec)
     {
-        // There is a chance that new task get added while doing this task so using foreach is not an wise option
-        for (int i = 0; i < static_cast<int>(state->nextFrameTasks.size()); ++i)  // NOLINT(modernize-loop-convert) 
-        {
-            auto & task = state->nextFrameTasks[i];
-            MFA_ASSERT(task != nullptr);
-            task();
-        }
-        state->nextFrameTasks.clear();
-
         state->updateSignal.Emit(deltaTimeInSec);
     }
 
@@ -187,10 +176,7 @@ namespace MFA::EntitySystem
         MFA_ASSERT(entity != nullptr);
 
         auto const entityId = entity->getId();
-        state->nextFrameTasks.emplace_back([entityId]()->void
-        {
-            destroyEntity(entityId, true);
-        });
+        destroyEntity(entityId, true);
     }
 
     //-------------------------------------------------------------------------------------------------

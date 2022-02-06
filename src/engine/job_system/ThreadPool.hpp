@@ -12,10 +12,16 @@ namespace MFA {
 
 class ThreadPool
 {
-    using ThreadNumber = uint32_t;
-    using Task = std::function<void()>;
 public:
 
+    using ThreadNumber = uint32_t;
+    using Task = std::function<void()>;
+
+    // struct Ticket
+    // {
+    //     std::atomic<bool> isComplete = false; // TODO Record commands multi-thread for each pipeline
+    // };
+    
     explicit ThreadPool();
     // We can have a threadPool with custom number of threads
 
@@ -65,10 +71,7 @@ public:
         void Notify();
 
         [[nodiscard]]
-        ThreadNumber GetThreadNumber() const
-        {
-            return mThreadNumber;
-        }
+        ThreadNumber GetThreadNumber() const;
 
     private:
 

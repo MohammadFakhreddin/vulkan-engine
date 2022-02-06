@@ -26,9 +26,7 @@ public:
     void Update(float deltaTimeInSec) override;
 
     void Shutdown() override;
-
-    bool isDisplayPassDepthImageInitialLayoutUndefined() override;
-
+    
     bool RequiresUpdate() override;
 
 private:

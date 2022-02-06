@@ -22,7 +22,7 @@ namespace MFA
         VkRenderPass GetVkRenderPass() override;
 
         [[nodiscard]]
-        VkImage GetSwapChainImage(RT::CommandRecordState const & drawPass);
+        VkImage GetSwapChainImage(RT::CommandRecordState const & drawPass) const;
 
         [[nodiscard]]
         RT::SwapChainGroup const & GetSwapChainImages() const;
@@ -37,7 +37,9 @@ namespace MFA
         void OnResize() override;
 
         // TODO Find a better way
-        void UseDepthImageLayoutAsUndefined(bool setDepthImageLayoutAsUndefined);
+        //void UseDepthImageLayoutAsUndefined(bool setDepthImageLayoutAsUndefined);
+
+        void notifyDepthImageLayoutIsSet();
 
     protected:
 
@@ -57,6 +59,8 @@ namespace MFA
         void createDepthImages(VkExtent2D const & extent2D);
 
         void createPresentToDrawBarrier();
+
+        void clearDepthBufferIfNeeded(RT::CommandRecordState const & recordState);
         
         void usePresentToDrawBarrier(RT::CommandRecordState const & recordState);
 
@@ -67,9 +71,9 @@ namespace MFA
         std::vector<std::shared_ptr<RT::ColorImageGroup>> mMSAAImageGroupList{};
         std::vector<std::shared_ptr<RT::DepthImageGroup>> mDepthImageGroupList{};
 
-        bool mIsDepthImageInitialLayoutUndefined = true;
+        VkImageMemoryBarrier mPresentToDrawBarrier {};
 
-        VkImageMemoryBarrier mPresentToDrawBarrier  {};
+        bool mIsDepthImageUndefined = true;
     };
 
 }

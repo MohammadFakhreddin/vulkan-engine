@@ -113,13 +113,6 @@ void ParticleFireScene::Shutdown()
 
 //-------------------------------------------------------------------------------------------------
 
-bool ParticleFireScene::isDisplayPassDepthImageInitialLayoutUndefined()
-{
-    return true;
-}
-
-//-------------------------------------------------------------------------------------------------
-
 bool ParticleFireScene::RequiresUpdate()
 {
     return true;

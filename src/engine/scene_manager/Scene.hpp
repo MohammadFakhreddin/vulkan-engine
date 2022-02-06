@@ -39,7 +39,7 @@ namespace MFA
         Entity * GetRootEntity() const;
 
         // TODO: We should detect initial layout dynamically
-        virtual bool isDisplayPassDepthImageInitialLayoutUndefined() = 0;
+        //virtual bool isDisplayPassDepthImageInitialLayoutUndefined() = 0;
 
     private:
 

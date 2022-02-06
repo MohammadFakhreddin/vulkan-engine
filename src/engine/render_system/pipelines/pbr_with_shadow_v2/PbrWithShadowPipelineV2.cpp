@@ -162,6 +162,7 @@ namespace MFA
 
         performPointLightShadowPass(recordState);
 
+        // TODO: Why do we need these barriers ?
         {// Sampling barriers
             std::vector<VkImageMemoryBarrier> barrier {};
             mPointLightShadowRenderPass->PrepareRenderTargetForSampling(
@@ -184,7 +185,7 @@ namespace MFA
                 barrier.data()
             );
         }
-
+        RF::GetDisplayRenderPass()->notifyDepthImageLayoutIsSet();
     }
 
     //-------------------------------------------------------------------------------------------------

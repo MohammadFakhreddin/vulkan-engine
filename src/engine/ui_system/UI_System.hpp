@@ -10,7 +10,7 @@ namespace MFA::UI_System
     // TODO Support for custom font
     void Init();
 
-    void Render(
+    bool Render(
         float deltaTimeInSec,
         RT::CommandRecordState & drawPass
     );

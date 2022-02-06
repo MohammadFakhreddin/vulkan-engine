@@ -24,11 +24,7 @@ namespace MFA
 
         void init() override;
 
-        [[nodiscard]]
-        PBR_Variant const * getDrawableVariant() const;
-
-        [[nodiscard]]
-        PBR_Variant * getDrawableVariant();
+        void shutdown() override;
 
         void onUI() override;
 

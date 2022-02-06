@@ -1,6 +1,7 @@
 #include "Prefab.hpp"
 
 #include "engine/entity_system/Entity.hpp"
+#include "engine/entity_system/EntitySystem.hpp"
 
 namespace MFA
 {
@@ -15,7 +16,10 @@ namespace MFA
     
     //-------------------------------------------------------------------------------------------------
 
-    Prefab::~Prefab() = default;
+    Prefab::~Prefab()
+    {
+        EntitySystem::DestroyEntity(mEntity);
+    }
     
     //-------------------------------------------------------------------------------------------------
 

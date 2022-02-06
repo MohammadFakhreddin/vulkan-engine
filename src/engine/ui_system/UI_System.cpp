@@ -155,6 +155,7 @@ namespace MFA::UI_System
         MSDL::SDL_Cursor * mouseCursors[ImGuiMouseCursor_COUNT]{};
         RF::SDLEventWatchId eventWatchId = -1;
 #endif
+        SignalId resizeSignalId = InvalidSignalId;
     };
 
     static State * state = nullptr;
@@ -211,6 +212,30 @@ namespace MFA::UI_System
         return density;
     }
 #endif
+
+    //-------------------------------------------------------------------------------------------------
+
+    static void onResize()
+    {
+        ImGuiIO & io = ImGui::GetIO();
+        MFA_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! It is generally built by the renderer backend. Missing call to renderer _NewFrame() function? e.g. ImGui_ImplOpenGL3_NewFrame().");
+
+        // Setup display size (every frame to accommodate for window resizing)
+        int32_t window_width, window_height;
+        int32_t drawable_width, drawable_height;
+        RF::GetDrawableSize(window_width, window_height);
+
+#if defined(__DESKTOP__)
+        if (RF::GetWindowFlags() & MSDL::SDL_WINDOW_MINIMIZED)
+        {
+            window_width = window_height = 0;
+        }
+#endif
+
+        RF::GetDrawableSize(drawable_width, drawable_height);
+        io.DisplaySize = ImVec2(static_cast<float>(window_width), static_cast<float>(window_height));
+        io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
+    }
 
     //-------------------------------------------------------------------------------------------------
 
@@ -455,6 +480,8 @@ namespace MFA::UI_System
         state->eventWatchId = RF::AddEventWatch(EventWatch);
 #endif
 
+        onResize();
+        state->resizeSignalId = RF::AddResizeEventListener([]()->void {onResize();});
     }
 
     static void UpdateMousePositionAndButtons()
@@ -520,7 +547,7 @@ namespace MFA::UI_System
     }
 #endif
 
-    void Render(
+    bool Render(
         float const deltaTimeInSec,
         RT::CommandRecordState & drawPass
     )
@@ -528,28 +555,6 @@ namespace MFA::UI_System
         ImGuiIO & io = ImGui::GetIO();
         MFA_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! It is generally built by the renderer backend. Missing call to renderer _NewFrame() function? e.g. ImGui_ImplOpenGL3_NewFrame().");
 
-        // Setup display size (every frame to accommodate for window resizing)
-        int32_t window_width, window_height;
-        int32_t drawable_width, drawable_height;
-        RF::GetDrawableSize(window_width, window_height);
-
-#if defined(__DESKTOP__)
-        if (RF::GetWindowFlags() & MSDL::SDL_WINDOW_MINIMIZED)
-        {
-            window_width = window_height = 0;
-        }
-#endif
-
-        RF::GetDrawableSize(drawable_width, drawable_height);
-        io.DisplaySize = ImVec2(static_cast<float>(window_width), static_cast<float>(window_height));
-        if (window_width > 0 && window_height > 0)
-        {
-            //io.DisplayFramebufferScale = ImVec2(
-            //    static_cast<float>(drawable_width) / static_cast<float>(window_width), 
-            //    static_cast<float>(drawable_height) / static_cast<float>(window_height)
-            //);
-            io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
-        }
         io.DeltaTime = deltaTimeInSec;
         UpdateMousePositionAndButtons();
 #if defined(__DESKTOP__)
@@ -566,11 +571,8 @@ namespace MFA::UI_System
         );
 
         auto const * drawData = ImGui::GetDrawData();
-        if (drawData == nullptr)
-        {
-            return;
-        }
-
+        MFA_ASSERT(drawData != nullptr);
+        
         // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
         float const frameBufferWidth = drawData->DisplaySize.x * drawData->FramebufferScale.x;
         float const frameBufferHeight = drawData->DisplaySize.y * drawData->FramebufferScale.y;
@@ -714,6 +716,9 @@ namespace MFA::UI_System
                 }
             }
         }
+
+        return true;
+
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -938,6 +943,7 @@ namespace MFA::UI_System
 
     void Shutdown()
     {
+        RF::RemoveResizeEventListener(state->resizeSignalId);
         RF::DestroyDescriptorPool(state->descriptorPool);
 #ifdef __DESKTOP__
         RF::RemoveEventWatch(state->eventWatchId);
