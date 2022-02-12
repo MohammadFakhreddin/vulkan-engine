@@ -16,19 +16,19 @@ namespace MFA
 {
 
     using namespace EntitySystem;
-
+    
     //-------------------------------------------------------------------------------------------------
-
+    
     Entity::Entity(
-        EntityId const id,
+        EntityId id,
         std::string name,
         Entity * parent,
-        CreateEntityParams const & params
+        bool serializable
     )
         : mId(id)
         , mName(std::move(name))
         , mParent(parent)
-        , mSerializable(params.serializable)
+        , mSerializable(serializable)
     {}
 
     //-------------------------------------------------------------------------------------------------

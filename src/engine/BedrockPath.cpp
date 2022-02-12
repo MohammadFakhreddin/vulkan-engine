@@ -3,6 +3,7 @@
 #include "BedrockAssert.hpp"
 
 #include <filesystem>
+#include <regex>
 
 namespace MFA::Path
 {
@@ -64,12 +65,19 @@ namespace MFA::Path
 
     bool RelativeToAssetFolder(std::string const & address, std::string & outRelativePath)
     {
-        outRelativePath = std::filesystem::relative(address, state->assetsPath).string();
-        bool success = true;
-        if (outRelativePath.empty())
+        bool success = false;
+        static const std::regex addressRegex(".*address/.*");
+        if (std::regex_match(address.c_str(), addressRegex))
         {
+            outRelativePath = std::filesystem::relative(address, state->assetsPath).string();
+            success = true;
+            if (outRelativePath.empty())
+            {
+                success = false;
+            }
+        }
+        if (success == false){
             outRelativePath = address;
-            success = false;
         }
         return success;
     }

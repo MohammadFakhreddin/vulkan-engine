@@ -87,7 +87,7 @@ Find .sln files inside build64 and then run the project
 ```
 mkdir build64
 cd build64
-cmake .. -DCMAKE_BUILD_TYPE=Debug (Release)
+cmake .. -DCMAKE_BUILD_TYPE=Debug (Release) Or you can use npm run cmake-mac
 make
 ./MFaEngine
 ```

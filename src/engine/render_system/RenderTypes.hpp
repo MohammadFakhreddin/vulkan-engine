@@ -10,6 +10,9 @@
 #include <vulkan/vulkan.h>
 #endif
 
+#include <string>
+#include <vector>
+
 namespace MFA
 {
 

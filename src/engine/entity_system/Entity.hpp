@@ -28,18 +28,14 @@ namespace MFA
     public:
         friend void EntitySystem::InitEntity(Entity * entity, bool triggerSignals);
         friend void EntitySystem::UpdateEntity(Entity * entity);
-        friend static void EntitySystem::destroyEntity(EntityId const entityId, bool const shouldNotifyParent);
+        friend void EntitySystem::destroyEntity(EntityId const entityId, bool const shouldNotifyParent);
         friend Component;
 
-        struct CreateEntityParams
-        {
-            bool serializable = true;
-        };
         explicit Entity(
             EntityId id,
             std::string name,
-            Entity * parent = nullptr,
-            CreateEntityParams const & params = {}
+            Entity * parent,
+            bool serializable
         );
 
         ~Entity();

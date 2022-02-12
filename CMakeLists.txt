@@ -498,22 +498,25 @@ list(
     "${CMAKE_SOURCE_DIR}/libs/include"
 )
 
-
-set(link_to_target_sources)
-set(link_to_target_directories)
-function(link_to_target executable_name)
-    message(STATUS "Linking dependancies to ${executable_name} ")
-    add_executable(${executable_name} ${link_to_target_sources})
-    add_dependencies(${executable_name} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
-    target_link_libraries(${executable_name} ${COMPILED_LIBS} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
-    target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
-endfunction()
-
 if (WINDOWS)
 
 #-----------------------------------------------------------------------
 # Windows Executable
 #-----------------------------------------------------------------------
+
+set(link_to_target_sources)
+
+    set(link_to_target_directories)
+    set(link_to_target_sources)
+    function(link_to_target executable_name)
+        message(STATUS "Linking dependancies to ${executable_name} ")
+        add_executable(${executable_name} ${link_to_target_sources})
+        add_dependencies(${executable_name} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
+        target_link_libraries(${executable_name} ${COMPILED_LIBS} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
+        target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
+    endfunction()
+
+    message(STATUS "Building for windows")
 
     set(WIN_SOURCES)
     set(WIN_INCLUDE_DIRECTORIES)
@@ -651,58 +654,70 @@ elseif(MACOSX)
 #-----------------------------------------------------------------------
 # MACOSX Executable
 #-----------------------------------------------------------------------
-    # TODO Use link to target function
+    
+    set(link_to_target_directories)
+    set(link_to_target_sources)
+    function(link_to_target executable_name)
+        message(STATUS "Linking dependancies to ${executable_name} ")
+        add_executable(${executable_name} ${link_to_target_sources})
+        add_dependencies(${executable_name} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
+        target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.2.141.dylib")
+        target_link_libraries(${executable_name}
+            "-framework CoreGraphics"
+            "-framework Foundation"
+        )
+        target_link_libraries(${executable_name} SDL2 "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
+        target_link_directories(${executable_name} PUBLIC "${CMAKE_SOURCE_DIR}/libs/mac/sdl/")
+        target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
+        set_target_properties(${executable_name} PROPERTIES
+            MACOSX_BUNDLE TRUE
+            MACOSX_FRAMEWORK_IDENTIFIER "co.radx.${executable_name}"
+        )
+
+        # Copying assets to correct place
+        add_custom_command(
+            TARGET ${executable_name} POST_BUILD        # Adds a post-build event to MyTest
+            COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Debug/${executable_name}.app/Contents/Resources/data/"
+            COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Debug/${executable_name}.app/Contents/Resources/data/"
+        )
+
+        add_custom_command(
+            TARGET ${executable_name} POST_BUILD        # Adds a post-build event to MyTest
+            COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Release/${executable_name}.app/Contents/Resources/data/"
+            COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Release/${executable_name}.app/Contents/Resources/data/"
+        )
+
+    endfunction()
+
     message(STATUS "Building for macos")
 
     set(MAC_SOURCE)
-    
+    set(MAC_INCLUDE_DIRECTORIES)
+
     list(
         APPEND MAC_SOURCE
         "mac/main.mm"
-        "src/Application.hpp"
-        "src/Application.cpp"
+        # "src/Application.hpp"
+        # "src/Application.cpp"
     )
 
-    add_executable(${TECHDEMO} ${MAC_SOURCE})
-
-    add_dependencies(${TECHDEMO} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
-
-    target_link_directories(${TECHDEMO} PUBLIC "${CMAKE_SOURCE_DIR}/libs/mac/sdl/")
-
-    target_link_libraries(${TECHDEMO} SDL2 "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
-
-    target_link_libraries(${TECHDEMO}
-        "-framework CoreGraphics"
-        "-framework Foundation"
-    )
-    
-    target_link_libraries(${TECHDEMO} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.2.141.dylib")
-     
-    target_include_directories(
-        ${TECHDEMO} PUBLIC 
+    list(APPEND MAC_INCLUDE_DIRECTORIES 
         "mac"
-        "src" 
-        "${CMAKE_SOURCE_DIR}/libs/include"
     )
 
-    set_target_properties(${TECHDEMO} PROPERTIES
-        MACOSX_BUNDLE TRUE
-        MACOSX_FRAMEWORK_IDENTIFIER co.radx.MFaEngine
+    unset(link_to_target_directories)
+    list(APPEND link_to_target_directories 
+        ${MAC_INCLUDE_DIRECTORIES}
+        "applications/techdemo"
+        "${CMAKE_SOURCE_DIR}/libs/mac/sdl/"
     )
-
-    # Copying assets to correct place
-    add_custom_command(
-        TARGET ${TECHDEMO} POST_BUILD        # Adds a post-build event to MyTest
-        COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Debug/MFaEngine.app/Contents/Resources/data/"
-        COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Debug/MFaEngine.app/Contents/Resources/data/"
+    unset(link_to_target_sources)
+    list(APPEND link_to_target_sources 
+        ${MAC_SOURCE} 
+        ${TECHDEMO_SOURCES}
     )
-
-    add_custom_command(
-        TARGET ${TECHDEMO} POST_BUILD        # Adds a post-build event to MyTest
-        COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Release/MFaEngine.app/Contents/Resources/data/"
-        COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Release/MFaEngine.app/Contents/Resources/data/"
-    )
-
+    link_to_target(${TECHDEMO})
+    target_compile_definitions(${TECHDEMO} PRIVATE TECHDEMO)
 
 elseif(IPHONE)
 
