@@ -20,12 +20,21 @@
 
 #import <Foundation/Foundation.h>
 
+#ifdef TECHDEMO
+#include "TechDemoApplication.hpp"
+using TargetApplication = TechDemoApplication;
+#endif
+#ifdef PREFAB_EDITOR
+#include "PrefabEditorApplication.hpp"
+using TargetApplication = PrefabEditorApplication;
+#endif
+
 std::string MFA::Path::GetAssetPath() {
     return [NSBundle.mainBundle.resourcePath stringByAppendingString: @"/data/"].UTF8String;
 }
 
 int main(int argc, char* argv[]){
-    Application app;
+    TargetApplication app {};
     app.run();
     return 0;
 }

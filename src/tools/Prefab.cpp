@@ -31,8 +31,8 @@ namespace MFA
         {
             // Note: std::format it not supported on all platforms yet
             char nameBuffer [100] {};
-            sprintf(nameBuffer, "%s Clone(%d)", mEntity->GetName().c_str(), cloneCount++);
-            name = std::string(nameBuffer);
+            auto const nameSize = sprintf(nameBuffer, "%s Clone(%d)", mEntity->GetName().c_str(), cloneCount++);
+            name = std::string(nameBuffer, nameSize);
         }
 //        options.name.empty()
 //            ? std::format("%s Clone(%d)", mEntity->GetName().c_str(), cloneCount++)
