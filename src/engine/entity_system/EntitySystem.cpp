@@ -91,9 +91,7 @@ namespace MFA::EntitySystem
                 nextEntityId++,
                 name,
                 parent,
-                Entity::CreateEntityParams {
-                    .serializable = params.serializable
-                }
+                params.serializable
             )
         });
         return state->entitiesRefsList.back().ptr.get();

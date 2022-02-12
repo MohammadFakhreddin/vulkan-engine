@@ -9,6 +9,8 @@
 #include "engine/asset_system/AssetModel.hpp"
 #include "tools/ShapeGenerator.hpp"
 
+#include <unordered_map>
+
 namespace MFA
 {
 

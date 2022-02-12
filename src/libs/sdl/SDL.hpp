@@ -1,3 +1,5 @@
+#include <cmath>
+
 namespace MFA::MSDL {
     // TODO Separate these classes
     #include <SDL2/SDL_keycode.h>

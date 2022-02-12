@@ -6,8 +6,10 @@
 #include "../src/libs/stb_image/stb_image_resize.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../src/libs/stb_image/stb_image_write.h"
+#include "libs/nlohmann/json.hpp"
 #define TINYGLTF_NO_INCLUDE_STB_IMAGE
 #define TINYGLTF_NO_INCLUDE_STB_IMAGE_WRITE
+#define TINYGLTF_NO_INCLUDE_JSON
 #define TINYGLTF_NO_EXTERNAL_IMAGE  // For disabling reading images when decoding json files
 #define TINYGLTF_IMPLEMENTATION
 #include "../src/libs/tiny_gltf_loader/tiny_gltf_loader.h"
