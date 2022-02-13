@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/BedrockAssert.hpp"
+#include "engine/job_system/ScopeLock.hpp"
 
 #include <queue>
 
@@ -12,8 +13,8 @@ public:
 
     bool TryToPush(T newData) {
         bool expectedValue = false;
-        bool const newValue = true;
-        if (mIsLocked.compare_exchange_strong(expectedValue, newValue) == false) {
+        bool const desiredValue = true;
+        if (mIsLocked.compare_exchange_strong(expectedValue, desiredValue) == false) {
             return false;
         }
 
@@ -26,9 +27,8 @@ public:
     // Returns front item
     bool TryToPop(T & outData) {
         bool expectedValue = false;
-        bool const newValue = true;
-        
-        if (mIsLocked.compare_exchange_strong(expectedValue, newValue) == false) {
+        bool const desiredValue = true;
+        if (mIsLocked.compare_exchange_strong(expectedValue, desiredValue) == false) {
             return false;
         }
 
@@ -45,7 +45,15 @@ public:
 
     [[nodiscard]]
     bool IsEmpty() {
+        ScopeLock scopeLock {mIsLocked};
         return mData.empty();
+    }
+
+    [[nodiscard]]
+    size_t ItemCount()
+    {
+        ScopeLock scopeLock {mIsLocked};
+        return mData.size();
     }
 
 private:

@@ -262,7 +262,10 @@ list(
     "src/engine/job_system/ThreadSafeQueue.hpp"
     "src/engine/job_system/JobSystem.hpp"
     "src/engine/job_system/JobSystem.cpp"
-    # AssetSystem
+    "src/engine/job_system/JobSystemTypes.hpp"
+    "src/engine/job_system/ScopeLock.hpp"
+    "src/engine/job_system/ScopeLock.cpp"
+    # AssetSystem # TODO: Separate asset system into a new library
     "src/engine/asset_system/AssetTypes.hpp"
     "src/engine/asset_system/AssetBase.hpp"
     "src/engine/asset_system/AssetBase.cpp"
