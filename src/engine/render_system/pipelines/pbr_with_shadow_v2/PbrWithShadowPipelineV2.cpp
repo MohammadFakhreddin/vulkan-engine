@@ -162,29 +162,8 @@ namespace MFA
 
         performPointLightShadowPass(recordState);
 
-        // TODO: Why do we need these barriers ?
-        {// Sampling barriers
-            std::vector<VkImageMemoryBarrier> barrier {};
-            mPointLightShadowRenderPass->PrepareRenderTargetForSampling(
-                recordState,
-                mPointLightShadowResources.get(),
-                SceneManager::GetPointLightCount() > 0,
-                barrier
-            );
-            mDirectionalLightShadowRenderPass->PrepareRenderTargetForSampling(
-                recordState,
-                mDirectionalLightShadowResources.get(),
-                SceneManager::GetDirectionalLightCount() > 0,
-                barrier
-            );
-            RF::PipelineBarrier(
-                RF::GetGraphicCommandBuffer(recordState),
-                VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                static_cast<uint32_t>(barrier.size()),
-                barrier.data()
-            );
-        }
+        prepareShadowMapsForSampling(recordState);
+
         RF::GetDisplayRenderPass()->notifyDepthImageLayoutIsSet();
     }
 
@@ -667,6 +646,32 @@ namespace MFA
         renderForPointLightShadowPass(recordState, AS::AlphaMode::Mask);
         renderForPointLightShadowPass(recordState, AS::AlphaMode::Blend);
         mPointLightShadowRenderPass->EndRenderPass(recordState);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+    
+    void PBRWithShadowPipelineV2::prepareShadowMapsForSampling(RT::CommandRecordState const & recordState) const
+    {
+        std::vector<VkImageMemoryBarrier> barrier {};
+        mPointLightShadowRenderPass->PrepareRenderTargetForSampling(
+            recordState,
+            mPointLightShadowResources.get(),
+            SceneManager::GetPointLightCount() > 0,
+            barrier
+        );
+        mDirectionalLightShadowRenderPass->PrepareRenderTargetForSampling(
+            recordState,
+            mDirectionalLightShadowResources.get(),
+            SceneManager::GetDirectionalLightCount() > 0,
+            barrier
+        );
+        RF::PipelineBarrier(
+            RF::GetGraphicCommandBuffer(recordState),
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            static_cast<uint32_t>(barrier.size()),
+            barrier.data()
+        );
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -157,6 +157,8 @@ namespace MFA
 
         void performPointLightShadowPass(RT::CommandRecordState & recordState) const;
 
+        void prepareShadowMapsForSampling(RT::CommandRecordState const & recordState) const;
+
         void renderForPointLightShadowPass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode) const;
 
         void performOcclusionQueryPass(RT::CommandRecordState & recordState);
