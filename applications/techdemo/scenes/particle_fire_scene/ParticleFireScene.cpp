@@ -64,7 +64,7 @@ void ParticleFireScene::Init()
 
     createCamera();
 
-    mResizeSignalId = RF::AddResizeEventListener([this]()->void {onResize();});
+    // mResizeSignalId = RF::AddResizeEventListener([this]()->void {onResize();});
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -73,33 +73,33 @@ void ParticleFireScene::Update(float const deltaTimeInSec)
 {
     Scene::Update(deltaTimeInSec);
 
-    // TODO Try to use job system
-    for (int i = 0; i < mFireVerticesCount; ++i)
-    {
-        auto & vertex = mFireVertices[i];
-        // UpVector is reverse
-        glm::vec3 const deltaPosition = -deltaTimeInSec * vertex.speed * Math::UpVector3;
-        vertex.localPosition += deltaPosition;
-        vertex.localPosition += Math::Random(-FireHorizontalMovement[0], FireHorizontalMovement[0])
-            * deltaTimeInSec * Math::RightVector3;
-        vertex.localPosition += Math::Random(-FireHorizontalMovement[1], FireHorizontalMovement[1])
-            * deltaTimeInSec * Math::ForwardVector3;
+    // // TODO Try to use job system
+    // for (int i = 0; i < mFireVerticesCount; ++i)
+    // {
+    //     auto & vertex = mFireVertices[i];
+    //     // UpVector is reverse
+    //     glm::vec3 const deltaPosition = -deltaTimeInSec * vertex.speed * Math::UpVector3;
+    //     vertex.localPosition += deltaPosition;
+    //     vertex.localPosition += Math::Random(-FireHorizontalMovement[0], FireHorizontalMovement[0])
+    //         * deltaTimeInSec * Math::RightVector3;
+    //     vertex.localPosition += Math::Random(-FireHorizontalMovement[1], FireHorizontalMovement[1])
+    //         * deltaTimeInSec * Math::ForwardVector3;
         
-        vertex.remainingLifeInSec -= deltaTimeInSec;
-        if (vertex.remainingLifeInSec <= 0)
-        {
-            vertex.localPosition = vertex.initialLocalPosition;
+    //     vertex.remainingLifeInSec -= deltaTimeInSec;
+    //     if (vertex.remainingLifeInSec <= 0)
+    //     {
+    //         vertex.localPosition = vertex.initialLocalPosition;
 
-            vertex.speed = Math::Random(ParticleMinSpeed, ParticleMaxSpeed);
-            vertex.remainingLifeInSec = Math::Random(ParticleMinLife, ParticleMaxLife);;
-            vertex.totalLifeInSec = vertex.remainingLifeInSec;
-        }
+    //         vertex.speed = Math::Random(ParticleMinSpeed, ParticleMaxSpeed);
+    //         vertex.remainingLifeInSec = Math::Random(ParticleMinLife, ParticleMaxLife);;
+    //         vertex.totalLifeInSec = vertex.remainingLifeInSec;
+    //     }
 
-        auto const lifePercentage = vertex.remainingLifeInSec / vertex.totalLifeInSec;
+    //     auto const lifePercentage = vertex.remainingLifeInSec / vertex.totalLifeInSec;
         
-        vertex.alpha = FireAlpha;
+    //     vertex.alpha = FireAlpha;
 
-        vertex.pointSize = mFirePointSize * lifePercentage;
+    //     vertex.pointSize = mFirePointSize * lifePercentage;
     }
 }
 
@@ -108,7 +108,7 @@ void ParticleFireScene::Update(float const deltaTimeInSec)
 void ParticleFireScene::Shutdown()
 {
     Scene::Shutdown();
-    RF::RemoveResizeEventListener(mResizeSignalId);
+    // RF::RemoveResizeEventListener(mResizeSignalId);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -129,73 +129,74 @@ void ParticleFireScene::onResize()
 
 void ParticleFireScene::createFireEssence()
 {
-    auto const fireModel = std::make_shared<AS::Model>(
-        createFireMesh(),
-        createFireTexture()
-    );
+    // auto const fireModel = std::make_shared<AS::Model>(
+    //     createFireMesh(),
+    //     createFireTexture()
+    // );
 
-    mParticlePipeline->createEssenceWithModel(fireModel, "Fire");
+    // mParticlePipeline->createEssenceWithModel(fireModel, "Fire");
+    mParticlePipeline->CreateEssence(std::make_shared<ParticleFireScene>("Fire", ));
 }
 
 //-------------------------------------------------------------------------------------------------
 
-std::shared_ptr<MFA::AssetSystem::Particle::Mesh> ParticleFireScene::createFireMesh()
-{
-    auto fireMesh = std::make_shared<AS::Particle::Mesh>(100);
-    auto const verticesCount = ParticleCount;
-    auto const indicesCount = ParticleCount;
-    auto const vertexBuffer = Memory::Alloc(verticesCount * sizeof(AS::Particle::Vertex));
-    auto const indexBuffer = Memory::Alloc(indicesCount * sizeof(AS::Index));
-    fireMesh->initForWrite(
-        verticesCount,
-        indicesCount,
-        vertexBuffer,
-        indexBuffer
-    );
+// std::shared_ptr<MFA::AssetSystem::Particle::Mesh> ParticleFireScene::createFireMesh()
+// {
+//     auto fireMesh = std::make_shared<AS::Particle::Mesh>(100);
+//     auto const verticesCount = ParticleCount;
+//     auto const indicesCount = ParticleCount;
+//     auto const vertexBuffer = Memory::Alloc(verticesCount * sizeof(AS::Particle::Vertex));
+//     auto const indexBuffer = Memory::Alloc(indicesCount * sizeof(AS::Index));
+//     fireMesh->initForWrite(
+//         verticesCount,
+//         indicesCount,
+//         vertexBuffer,
+//         indexBuffer
+//     );
 
-    auto * vertexItems = vertexBuffer->memory.as<AS::Particle::Vertex>();
-    auto * indexItems = indexBuffer->memory.as<AS::Index>();
+//     auto * vertexItems = vertexBuffer->memory.as<AS::Particle::Vertex>();
+//     auto * indexItems = indexBuffer->memory.as<AS::Index>();
 
-    for (int i = 0; i < verticesCount; ++i)
-    {
-        auto & vertex = vertexItems[i];
+//     for (int i = 0; i < verticesCount; ++i)
+//     {
+//         auto & vertex = vertexItems[i];
 
-        auto const yaw = Math::Random(-Math::PiFloat, Math::PiFloat);
-        auto const distanceFromCenter = Math::Random(0.0f, FireRadius) * Math::Random(0.5f, 1.0f);
+//         auto const yaw = Math::Random(-Math::PiFloat, Math::PiFloat);
+//         auto const distanceFromCenter = Math::Random(0.0f, FireRadius) * Math::Random(0.5f, 1.0f);
         
-        auto transform = glm::identity<glm::mat4>();
-        Matrix::RotateWithRadians(transform, glm::vec3{0.0f, yaw, 0.0f});
+//         auto transform = glm::identity<glm::mat4>();
+//         Matrix::RotateWithRadians(transform, glm::vec3{0.0f, yaw, 0.0f});
 
-        glm::vec3 const position = transform * glm::vec4 {distanceFromCenter, 0.0f, 0.0f, 1.0f};
+//         glm::vec3 const position = transform * glm::vec4 {distanceFromCenter, 0.0f, 0.0f, 1.0f};
 
-        vertex.localPosition = position;
-        vertex.initialLocalPosition = vertex.localPosition;
+//         vertex.localPosition = position;
+//         vertex.initialLocalPosition = vertex.localPosition;
 
-        vertex.textureIndex = 0;
+//         vertex.textureIndex = 0;
 
-        vertex.color[0] = 1.0f;
-        vertex.color[1] = 0.0f;
-        vertex.color[2] = 0.0f;
+//         vertex.color[0] = 1.0f;
+//         vertex.color[1] = 0.0f;
+//         vertex.color[2] = 0.0f;
 
-        vertex.speed = Math::Random(ParticleMinSpeed, ParticleMaxSpeed);
-        vertex.remainingLifeInSec = Math::Random(ParticleMinLife, ParticleMaxLife);
-        vertex.totalLifeInSec = vertex.remainingLifeInSec;
+//         vertex.speed = Math::Random(ParticleMinSpeed, ParticleMaxSpeed);
+//         vertex.remainingLifeInSec = Math::Random(ParticleMinLife, ParticleMaxLife);
+//         vertex.totalLifeInSec = vertex.remainingLifeInSec;
 
-        auto const lifePercentage = vertex.remainingLifeInSec / vertex.totalLifeInSec;
+//         auto const lifePercentage = vertex.remainingLifeInSec / vertex.totalLifeInSec;
         
-        vertex.alpha = FireAlpha;
+//         vertex.alpha = FireAlpha;
 
-        vertex.pointSize = mFirePointSize * lifePercentage;
+//         vertex.pointSize = mFirePointSize * lifePercentage;
 
-        indexItems[i] = i;
-    } 
+//         indexItems[i] = i;
+//     } 
 
-    mFireVerticesCount = verticesCount;
-    mFireVertices = vertexItems;
-    MFA_ASSERT(mFireVertices != nullptr);
+//     mFireVerticesCount = verticesCount;
+//     mFireVertices = vertexItems;
+//     MFA_ASSERT(mFireVertices != nullptr);
 
-    return fireMesh;
-}
+//     return fireMesh;
+// }
 
 //-------------------------------------------------------------------------------------------------
 
@@ -271,10 +272,10 @@ void ParticleFireScene::createCamera()
 
 //-------------------------------------------------------------------------------------------------
 
-void ParticleFireScene::computeFirePointSize()
-{
-    auto const surfaceCapabilities = RF::GetSurfaceCapabilities();
-    mFirePointSize = FireInitialPointSize * (static_cast<float>(surfaceCapabilities.currentExtent.width) / FireTargetExtend[0]);
-}
+// void ParticleFireScene::computeFirePointSize()
+// {
+//     auto const surfaceCapabilities = RF::GetSurfaceCapabilities();
+//     mFirePointSize = FireInitialPointSize * (static_cast<float>(surfaceCapabilities.currentExtent.width) / FireTargetExtend[0]);
+// }
 
 //-------------------------------------------------------------------------------------------------

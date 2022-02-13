@@ -4,12 +4,14 @@
 #include "engine/asset_system/AssetParticleMesh.hpp"
 #include "engine/asset_system/AssetModel.hpp"
 
+#include <string>
+
 namespace MFA
 {
 
     class VariantBase;
 
-    class ParticleEssence final : public EssenceBase
+    class ParticleEssence : public EssenceBase
     {
     public:
 
@@ -31,7 +33,7 @@ namespace MFA
         ParticleEssence (ParticleEssence && rhs) noexcept = delete;
         ParticleEssence & operator = (ParticleEssence const &) noexcept = delete;
 
-        void update(
+        virtual void update(
             RT::CommandRecordState const & recordState,
             float deltaTimeInSec,
             VariantsList const & variants
@@ -53,6 +55,14 @@ namespace MFA
         void updateVertexBuffer(RT::CommandRecordState const & recordState) const;
 
         void bindInstanceBuffer(RT::CommandRecordState const & recordState) const;
+
+        void checkIfUpdateIsRequired(VariantsList const & variants);
+
+    protected:
+
+        bool mShouldUpdate = false; // We only have to update if variants are visible
+
+    private:
 
         std::shared_ptr<AS::Particle::Mesh> mMesh {};
 

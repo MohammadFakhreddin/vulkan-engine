@@ -62,9 +62,13 @@ namespace MFA
         VariantsList const & variants
     )
     {
-        updateInstanceData(variants);
-        updateVertexBuffer(recordState);
-        updateInstanceBuffer(recordState);
+        checkIfUpdateIsRequired(variants);
+        if (mShouldUpdate)
+        {
+            updateInstanceData(variants);
+            updateVertexBuffer(recordState);
+            updateInstanceBuffer(recordState);
+        }
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -146,6 +150,20 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-
-
+    
+    void ParticleEssence::checkIfUpdateIsRequired(VariantsList const & variants)
+    {
+        mShouldUpdate = false;
+        for (auto const & variant : variants)
+        {
+            if (variant->IsVisible())
+            {
+                mShouldUpdate = true;
+                return;
+            }
+        }
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+    
 }

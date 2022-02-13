@@ -56,14 +56,14 @@ private:
 
     void computeFirePointSize();
     
-    int mFireVerticesCount = 0;
-    MFA::AssetSystem::Particle::Vertex * mFireVertices = nullptr;
+    // int mFireVerticesCount = 0;
+    // MFA::AssetSystem::Particle::Vertex * mFireVertices = nullptr;
 
-    float mFirePointSize = 0.0f;
+    // float mFirePointSize = 0.0f;
 
     MFA::ParticlePipeline * mParticlePipeline = nullptr;
     MFA::DebugRendererPipeline * mDebugRendererPipeline = nullptr;
 
-    int mResizeSignalId = MFA::InvalidSignalId;
+    // int mResizeSignalId = MFA::InvalidSignalId;
 
 };
