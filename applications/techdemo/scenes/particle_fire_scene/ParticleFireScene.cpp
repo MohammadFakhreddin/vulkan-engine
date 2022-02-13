@@ -202,7 +202,7 @@ std::shared_ptr<MFA::AssetSystem::Particle::Mesh> ParticleFireScene::createFireM
 std::vector<std::shared_ptr<AS::Texture>> ParticleFireScene::createFireTexture()
 {
     std::vector<std::shared_ptr<AS::Texture>> textures {};
-    textures.emplace_back(RC::AcquireCpuTexture("images\\fire\\particle_fire.ktx"));
+    textures.emplace_back(RC::AcquireCpuTexture("images/fire/particle_fire.ktx"));
     MFA_ASSERT(textures.back() != nullptr);
     return textures;
 }
