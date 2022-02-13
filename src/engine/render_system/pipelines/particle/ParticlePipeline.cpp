@@ -359,7 +359,7 @@ namespace MFA
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 1,
-            .format =VK_FORMAT_R32G32B32A32_SFLOAT,
+            .format =VK_FORMAT_R32G32B32_SFLOAT,
             .offset = offsetof(PerInstanceData, instancePosition)
         });
         

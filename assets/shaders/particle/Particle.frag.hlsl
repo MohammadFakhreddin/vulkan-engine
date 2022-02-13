@@ -19,10 +19,6 @@ Texture2D baseColorTexture[MAX_POSSIBLE_TEXTURE] : register(t0, space1);
 
 PSOut main(PSIn input) {
     PSOut output;
-    
-    // float4 color = input.textureIndex >= 0 
-        // ? baseColorTexture[input.textureIndex].Sample(baseColorSampler, input.uv).rgba
-        // : float4(input.color, 1.0f);
 
     float4 color;
     if (input.textureIndex >= 0) {
@@ -34,18 +30,11 @@ PSOut main(PSIn input) {
         color = float4(input.color, 1.0f);
     }
 
-    if (color.r <= 0.1f) {
-        discard;
-    }
-
-    // float distance = length(input.position.xy - input.centerPosition.xy);
-    // if (distance > input.pointRadius) {
-    //     discard;
-    // }
+    float distanceAlpha = (length(input.position.xy - input.centerPosition.xy) / input.pointRadius);
 
     float4 finalColor = float4(
         color.rgb, 
-        color.a * input.alpha * (length(input.position.xy - input.centerPosition.xy) / input.pointRadius)
+        color.a * input.alpha * distanceAlpha
     );
 
     if (finalColor.a <= 0.0f) {
