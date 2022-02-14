@@ -181,6 +181,9 @@ add_library("Renderer"
     "src/engine/render_system/pipelines/particle/ParticleEssence.cpp"
     "src/engine/render_system/pipelines/particle/ParticleVariant.hpp"
     "src/engine/render_system/pipelines/particle/ParticleVariant.cpp"
+
+    "src/engine/render_system/pipelines/particle/FireEssence.hpp"
+    "src/engine/render_system/pipelines/particle/FireEssence.cpp"
 )
 
 target_include_directories(

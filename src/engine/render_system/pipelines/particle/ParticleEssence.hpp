@@ -9,16 +9,19 @@ namespace MFA
 
     class VariantBase;
 
-    class ParticleEssence final : public EssenceBase
+    class ParticleEssence : public EssenceBase
     {
     public:
 
         using VariantsList = std::vector<std::shared_ptr<VariantBase>>;
 
-        explicit ParticleEssence(
-            std::shared_ptr<AS::Model> const & cpuModel,
-            std::string const & name
-        );
+        struct Params
+        {
+            std::shared_ptr<RT::GpuModel> gpuModel;
+            std::shared_ptr<AS::Particle::Mesh> mesh;
+        };
+        explicit ParticleEssence(Params const & params);
+
         explicit ParticleEssence(
             std::shared_ptr<RT::GpuModel> gpuModel,
             std::shared_ptr<AS::Particle::Mesh> mesh
@@ -31,7 +34,7 @@ namespace MFA
         ParticleEssence (ParticleEssence && rhs) noexcept = delete;
         ParticleEssence & operator = (ParticleEssence const &) noexcept = delete;
 
-        void update(
+        virtual void update(
             RT::CommandRecordState const & recordState,
             float deltaTimeInSec,
             VariantsList const & variants
@@ -54,7 +57,15 @@ namespace MFA
 
         void bindInstanceBuffer(RT::CommandRecordState const & recordState) const;
 
+        void checkIfUpdateIsRequired(VariantsList const & variants);
+
+    protected:
+
+        bool mShouldUpdate = false; // We only have to update if variants are visible
+
         std::shared_ptr<AS::Particle::Mesh> mMesh {};
+
+    private:
 
         std::shared_ptr<SmartBlob> mInstanceDataMemory {};
         AS::Particle::PerInstanceData * mInstancesData = nullptr;

@@ -81,24 +81,21 @@ namespace MFA
             float deltaTime
         );
 
-        [[nodiscard]]
-        bool EssenceExists(std::string const & nameOrAddress) const;
+        bool addEssence(std::shared_ptr<EssenceBase> const & essence);
 
-        bool CreateEssence(
-            std::shared_ptr<RT::GpuModel> const & gpuModel,
-            std::shared_ptr<AssetSystem::MeshBase> const & cpuMesh
-        );
+        [[nodiscard]]
+        bool essenceExists(std::string const & nameOrAddress) const;
 
         // Editor only function
-        void DestroyEssence(std::string const & nameOrAddress);
+        void destroyEssence(std::string const & nameOrAddress);
 
-        void DestroyEssence(RT::GpuModel const & gpuModel);
+        void destroyEssence(RT::GpuModel const & gpuModel);
 
-        virtual std::weak_ptr<VariantBase> CreateVariant(RT::GpuModel const & gpuModel);
+        virtual std::weak_ptr<VariantBase> createVariant(RT::GpuModel const & gpuModel);
 
-        virtual std::weak_ptr<VariantBase> CreateVariant(std::string const & nameOrAddress);
+        virtual std::weak_ptr<VariantBase> createVariant(std::string const & nameOrAddress);
 
-        void RemoveVariant(VariantBase & variant);
+        void removeVariant(VariantBase & variant);
 
         virtual void onResize() = 0;
 
@@ -115,18 +112,14 @@ namespace MFA
 
         [[nodiscard]]
         bool isActive() const;
-
+    
     protected:
 
-        virtual std::shared_ptr<EssenceBase> internalCreateEssence(
-            std::shared_ptr<RT::GpuModel> const & gpuModel,
-            std::shared_ptr<AssetSystem::MeshBase> const & cpuMesh
-        ) = 0;
+        virtual void internalAddEssence(EssenceBase * essence) = 0;
 
         virtual std::shared_ptr<VariantBase> internalCreateVariant(EssenceBase * essence) = 0;
 
-        bool addEssence(std::shared_ptr<EssenceBase> const & essence);
-
+        
         struct EssenceAndVariants
         {
             std::shared_ptr<EssenceBase> essence;

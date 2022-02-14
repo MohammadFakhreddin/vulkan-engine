@@ -99,17 +99,9 @@ namespace MFA
 
         void onResize() override;
 
-        void CreateEssenceWithoutModel(
-            std::shared_ptr<RT::GpuModel> const & gpuModel,
-            std::shared_ptr<AssetSystem::PBR::MeshData> const & meshData
-        ) const;
-
     protected:
 
-        std::shared_ptr<EssenceBase> internalCreateEssence(
-            std::shared_ptr<RT::GpuModel> const & gpuModel,
-            std::shared_ptr<AssetSystem::MeshBase> const & cpuMesh
-        ) override;
+        void internalAddEssence(EssenceBase * essence) override;
 
         std::shared_ptr<VariantBase> internalCreateVariant(EssenceBase * essence) override;
         

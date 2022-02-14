@@ -207,7 +207,7 @@ bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress)
         .essenceName = mInputTextEssenceName
     });
 
-    if (mPBR_Pipeline->EssenceExists(gpuModel->nameOrAddress) == false)
+    if (mPBR_Pipeline->essenceExists(gpuModel->nameOrAddress) == false)
     {
         mPBR_Pipeline->CreateEssence(gpuModel, cpuModel->mesh);
     }
@@ -223,7 +223,7 @@ void PrefabEditorScene::destroyAsset(int const assetIndex)
 {
     auto const & asset = mLoadedAssets[assetIndex];
     auto const gpuModel = RC::AcquireGpuModel(asset.fileAddress);
-    mPBR_Pipeline->DestroyEssence(*gpuModel);
+    mPBR_Pipeline->destroyEssence(*gpuModel);
     mLoadedAssets.erase(mLoadedAssets.begin() + assetIndex);
 }
 

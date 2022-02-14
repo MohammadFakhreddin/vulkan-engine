@@ -87,7 +87,8 @@ namespace MFA
             MFA_ASSERT(cpuModel != nullptr);
             auto const gpuModel = RC::AcquireGpuModel(modelName);
             MFA_ASSERT(gpuModel != nullptr);
-            createEssenceWithoutModel(gpuModel, cpuModel->mesh->getIndexCount());
+            auto const addResult = addEssence(std::make_shared<DebugEssence>(gpuModel, cpuModel->mesh->getIndexCount()));
+            MFA_ASSERT(addResult == true);
         }
     }
 
@@ -171,26 +172,13 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    bool DebugRendererPipeline::createEssenceWithoutModel(
-        std::shared_ptr<RT::GpuModel> const & gpuModel,
-        uint32_t indicesCount
-    )
-    {
-        return addEssence(std::make_shared<DebugEssence>(gpuModel, indicesCount));
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
     void DebugRendererPipeline::freeUnusedEssences() {}
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<EssenceBase> DebugRendererPipeline::internalCreateEssence(
-        std::shared_ptr<RT::GpuModel> const & gpuModel,
-        std::shared_ptr<AS::MeshBase> const & cpuMesh
-    )
+    void DebugRendererPipeline::internalAddEssence(EssenceBase * essence)
     {
-        return std::make_shared<DebugEssence>(gpuModel, cpuMesh->getIndexCount());
+        MFA_ASSERT(dynamic_cast<DebugEssence *>(essence) != nullptr);
     }
 
     //-------------------------------------------------------------------------------------------------

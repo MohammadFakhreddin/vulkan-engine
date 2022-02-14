@@ -24,7 +24,7 @@ namespace MFA
     BoundingVolumeRendererComponent::BoundingVolumeRendererComponent(DebugRendererPipeline & pipeline)
         : RendererComponent(
             pipeline,
-            pipeline.CreateVariant(*RC::AcquireGpuModel("Cube", false)))
+            pipeline.createVariant(*RC::AcquireGpuModel("Cube", false)))
     {}
 
     //-------------------------------------------------------------------------------------------------
@@ -42,8 +42,12 @@ namespace MFA
         auto * entity = GetEntity();
 
         static int RendererEntityId = 0;
+
+        char nameBuffer[100] {};
+        auto const nameLength = sprintf(nameBuffer, "BoundingVolumeMeshRenderer%d", RendererEntityId);
+
         auto * childEntity = EntitySystem::CreateEntity(
-            std::string("BoundingVolumeMeshRenderer" + std::to_string(RendererEntityId++)).c_str(),
+            std::string(nameBuffer, nameLength),
             SceneManager::GetActiveScene()->GetRootEntity(),
             EntitySystem::CreateEntityParams {
                 .serializable = false

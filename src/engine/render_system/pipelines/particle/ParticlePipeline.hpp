@@ -29,17 +29,9 @@ namespace MFA
         
         void render(RT::CommandRecordState & recordState, float deltaTime) override;
 
-        std::shared_ptr<EssenceBase> createEssenceWithModel(
-            std::shared_ptr<AssetSystem::Model> const & cpuModel,
-            std::string const & name
-        );
-
     protected:
 
-        std::shared_ptr<EssenceBase> internalCreateEssence(
-            std::shared_ptr<RT::GpuModel> const & gpuModel,
-            std::shared_ptr<AssetSystem::MeshBase> const & cpuMesh
-        ) override;
+        void internalAddEssence(EssenceBase * essence) override;
 
         std::shared_ptr<VariantBase> internalCreateVariant(EssenceBase * essence) override;
 
