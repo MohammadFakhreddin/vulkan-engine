@@ -16,6 +16,7 @@
 #include "engine/entity_system/components/PointLightComponent.hpp"
 #include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
+#include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Essence.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 
@@ -279,8 +280,18 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
 
     auto * pbrPipeline = SceneManager::GetPipeline<PBRWithShadowPipelineV2>();
     MFA_ASSERT(pbrPipeline != nullptr);
-    if(pbrPipeline->EssenceExists(renderRequiredData.address) == false){
-        pbrPipeline->CreateEssence(renderRequiredData.gpuModel, cpuModel->mesh);
+    if(pbrPipeline->essenceExists(renderRequiredData.address) == false){
+        MFA_ASSERT(dynamic_cast<AS::PBR::Mesh *>(cpuModel->mesh.get()) != nullptr);
+        auto const * mesh = static_cast<AS::PBR::Mesh *>(cpuModel->mesh.get());
+        auto meshData = mesh->getMeshData();
+        MFA_ASSERT(meshData != nullptr);
+        auto const addResult = pbrPipeline->addEssence(
+            std::make_shared<PBR_Essence>(
+                renderRequiredData.gpuModel,
+                meshData
+            )
+        );
+        MFA_ASSERT(addResult == true);
     }
     
     auto * entity = EntitySystem::CreateEntity(renderRequiredData.displayName, GetRootEntity());

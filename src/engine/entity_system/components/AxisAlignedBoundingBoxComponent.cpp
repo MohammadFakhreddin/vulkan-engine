@@ -186,19 +186,8 @@ namespace MFA
     {
         MFA_ASSERT(camera != nullptr);
 
-        const float newIi = std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, mRightVector)) +
-            std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, mUpVector)) +
-            std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, mForwardVector));
-
-        const float newIj = std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, mRightVector)) +
-            std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, mUpVector)) +
-            std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, mForwardVector));
-
-        const float newIk = std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, mRightVector)) +
-            std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, mUpVector)) +
-            std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, mForwardVector));
-
-        return camera->IsPointInsideFrustum(mWorldPosition, glm::vec3(newIi, newIj, newIk));
+        // TODO Use this extent for displaying the frustum instead of raw size
+        return camera->IsPointInsideFrustum(mWorldPosition, mAABB_Extent);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -219,19 +208,36 @@ namespace MFA
         forwardDirection = transform * forwardDirection;
         forwardDirection = glm::normalize(forwardDirection);
         forwardDirection *= mExtend.z;
-        mForwardVector = forwardDirection;
+        glm::vec3 forwardVector = forwardDirection;
 
         auto rightDirection = Math::RightVector4;
         rightDirection = transform * rightDirection;
         rightDirection = glm::normalize(rightDirection);
         rightDirection *= mExtend.x;
-        mRightVector = rightDirection;
+        glm::vec3 rightVector = rightDirection;
 
         auto upDirection = Math::UpVector4;
         upDirection = transform * upDirection;
         upDirection = glm::normalize(upDirection);
         upDirection *= mExtend.y;
-        mUpVector = upDirection;
+        glm::vec3 upVector = upDirection;
+
+        
+        const float newIi = std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, rightVector)) +
+            std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, upVector)) +
+            std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, forwardVector));
+
+        const float newIj = std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, rightVector)) +
+            std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, upVector)) +
+            std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, forwardVector));
+
+        const float newIk = std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, rightVector)) +
+            std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, upVector)) +
+            std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, forwardVector));
+
+        mAABB_Extent.x = newIi;
+        mAABB_Extent.y = newIj;
+        mAABB_Extent.z = newIk;
     }
 
     //-------------------------------------------------------------------------------------------------

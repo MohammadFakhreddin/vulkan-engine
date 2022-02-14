@@ -14,7 +14,7 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     MeshRendererComponent::MeshRendererComponent(BasePipeline & pipeline, std::string const & nameOrAddress)
-        : RendererComponent(pipeline, pipeline.CreateVariant(nameOrAddress))
+        : RendererComponent(pipeline, pipeline.createVariant(nameOrAddress))
     {
         MFA_ASSERT(mPipeline != nullptr);
         MFA_ASSERT(mVariant.expired() == false);

@@ -16,18 +16,12 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    ParticleEssence::ParticleEssence(
-        std::shared_ptr<AS::Model> const & cpuModel,
-        std::string const & name
-    )
-        : ParticleEssence(
-            RF::CreateGpuModel(cpuModel.get(), name.c_str()),
-            static_pointer_cast<Mesh>(cpuModel->mesh))
+    ParticleEssence::ParticleEssence(Params const & params)
+        : ParticleEssence(params.gpuModel, params.mesh)
     {}
-    
+
     //-------------------------------------------------------------------------------------------------
-    // TODO: I do not like this constructor. I have to find a better interface for basePipeline.
-    // TODO: Maybe having switch cases for each pipeline instead
+
     ParticleEssence::ParticleEssence(
         std::shared_ptr<RT::GpuModel> gpuModel,
         std::shared_ptr<Mesh> mesh
@@ -110,10 +104,18 @@ namespace MFA
             static_cast<uint32_t>(variants.size()),
             mMesh->maxInstanceCount
         );
+
+        uint32_t visibleVariantCount = 0;
         for (uint32_t i = 0; i < mNextDrawInstanceCount; ++i)
         {
-            CAST_VARIANT(variants[i])->getWorldPosition(mInstancesData[i].instancePosition);
+            auto const & variant = CAST_VARIANT(variants[i]);
+            if (variant->IsVisible())
+            {
+                variant->getWorldPosition(mInstancesData[visibleVariantCount].instancePosition);
+                ++visibleVariantCount;
+            }
         }
+        mNextDrawInstanceCount = visibleVariantCount;
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -106,37 +106,12 @@ namespace MFA
             CAST_ESSENCE(essence)->draw(recordState, deltaTimeInSec);
         }
     }
-
-    //-------------------------------------------------------------------------------------------------
-    // TODO: We have duplicate code in these 2 function
-    std::shared_ptr<EssenceBase> ParticlePipeline::createEssenceWithModel(
-        std::shared_ptr<AssetSystem::Model> const & cpuModel,
-        std::string const & name
-    )
-    {
-        MFA_ASSERT(cpuModel != nullptr);
-        auto essence = std::make_shared<ParticleEssence>(cpuModel, name);
-        createPerEssenceDescriptorSets(essence.get());
-        bool const success = addEssence(essence);
-        return success ? essence : nullptr;
-    }
-
+    
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<EssenceBase> ParticlePipeline::internalCreateEssence(
-      std::shared_ptr<RT::GpuModel> const & gpuModel,
-      std::shared_ptr<AssetSystem::MeshBase> const & cpuMesh
-    )
+    void ParticlePipeline::internalAddEssence(EssenceBase * essence)
     {
-        MFA_ASSERT(gpuModel != nullptr);
-        MFA_ASSERT(cpuMesh != nullptr);
-        auto const particleMesh = static_pointer_cast<Mesh>(cpuMesh);
-        auto const essence = std::make_shared<ParticleEssence>(
-            gpuModel,
-            particleMesh
-        );
-        createPerEssenceDescriptorSets(essence.get());
-        return essence;
+        createPerEssenceDescriptorSets(CAST_ESSENCE(essence));
     }
 
     //-------------------------------------------------------------------------------------------------

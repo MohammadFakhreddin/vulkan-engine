@@ -35,10 +35,15 @@ namespace MFA
             std::string const & name,
             std::shared_ptr<RT::GpuTexture> const & fireTexture,
             // TODO Smoke texture
-            Options options
+            Options const & options
         );
 
         ~FireEssence() override;
+
+        FireEssence & operator= (FireEssence && rhs) noexcept = delete;
+        FireEssence (FireEssence const &) noexcept = delete;
+        FireEssence (FireEssence && rhs) noexcept = delete;
+        FireEssence & operator = (FireEssence const &) noexcept = delete;
         
         void update(
             RT::CommandRecordState const & recordState,
@@ -48,10 +53,14 @@ namespace MFA
         
     private:
         
-        void computeFirePointSize();
+        void computePointSize();
 
-        std::shared_ptr<AS::Model> createModel(std::shared_ptr<RT::GpuTexture> const & fireTexture);
-        std::shared_ptr<AS::Particle::Mesh> createMesh();
+        Params prepareConstructorParams(
+            std::shared_ptr<RT::GpuTexture> const & fireTexture,
+            std::string const & name,
+            Options const & options
+        );
+        std::shared_ptr<AS::Particle::Mesh> createMesh(Options const & options);
         
         Options mOptions {};
     

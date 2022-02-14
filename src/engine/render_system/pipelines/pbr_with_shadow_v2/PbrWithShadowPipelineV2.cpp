@@ -21,7 +21,8 @@
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
 
-#define CAST_VARIANT(variant)  static_cast<PBR_Variant *>(variant.get())
+#define CAST_ESSENCE(essence)   static_cast<PBR_Essence *>(essence)
+#define CAST_VARIANT(variant)   static_cast<PBR_Variant *>(variant.get())
 
 /*
 There are four C++ style casts:
@@ -224,26 +225,10 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::CreateEssenceWithoutModel(
-        std::shared_ptr<RT::GpuModel> const & gpuModel,
-        std::shared_ptr<AssetSystem::PBR::MeshData> const & meshData
-    ) const
+    void PBRWithShadowPipelineV2::internalAddEssence(EssenceBase * essence)
     {
-        auto const essence = std::make_shared<PBR_Essence>(gpuModel, meshData);
-        createEssenceDescriptorSets(*essence);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    std::shared_ptr<EssenceBase> PBRWithShadowPipelineV2::internalCreateEssence(
-        std::shared_ptr<RT::GpuModel> const & gpuModel,
-        std::shared_ptr<AS::MeshBase> const & cpuMesh
-    )
-    {
-        auto const meshData = static_cast<AS::PBR::Mesh *>(cpuMesh.get())->getMeshData();
-        auto essence = std::make_shared<PBR_Essence>(gpuModel, meshData);
-        createEssenceDescriptorSets(*essence);
-        return essence;
+        MFA_ASSERT(dynamic_cast<PBR_Essence *>(essence) != nullptr);
+        createEssenceDescriptorSets(*CAST_ESSENCE(essence));
     }
 
     //-------------------------------------------------------------------------------------------------

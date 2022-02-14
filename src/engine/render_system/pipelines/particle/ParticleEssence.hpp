@@ -4,8 +4,6 @@
 #include "engine/asset_system/AssetParticleMesh.hpp"
 #include "engine/asset_system/AssetModel.hpp"
 
-#include <string>
-
 namespace MFA
 {
 
@@ -17,10 +15,13 @@ namespace MFA
 
         using VariantsList = std::vector<std::shared_ptr<VariantBase>>;
 
-        explicit ParticleEssence(
-            std::shared_ptr<AS::Model> const & cpuModel,
-            std::string const & name
-        );
+        struct Params
+        {
+            std::shared_ptr<RT::GpuModel> gpuModel;
+            std::shared_ptr<AS::Particle::Mesh> mesh;
+        };
+        explicit ParticleEssence(Params const & params);
+
         explicit ParticleEssence(
             std::shared_ptr<RT::GpuModel> gpuModel,
             std::shared_ptr<AS::Particle::Mesh> mesh
@@ -62,9 +63,9 @@ namespace MFA
 
         bool mShouldUpdate = false; // We only have to update if variants are visible
 
-    private:
-
         std::shared_ptr<AS::Particle::Mesh> mMesh {};
+
+    private:
 
         std::shared_ptr<SmartBlob> mInstanceDataMemory {};
         AS::Particle::PerInstanceData * mInstancesData = nullptr;

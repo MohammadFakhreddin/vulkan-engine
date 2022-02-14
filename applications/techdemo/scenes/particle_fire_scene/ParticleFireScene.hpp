@@ -12,7 +12,7 @@ namespace MFA
 }
 
 namespace MFA
-{
+{ 
     namespace AssetSystem
     {
         namespace Particle
@@ -45,7 +45,7 @@ public:
     
 private:
 
-    void onResize();
+    //void onResize();
 
     void createFireEssence();
     std::shared_ptr<MFA::AssetSystem::Particle::Mesh> createFireMesh();
@@ -54,7 +54,7 @@ private:
 
     void createCamera();
 
-    void computeFirePointSize();
+    //void computeFirePointSize();
     
     // int mFireVerticesCount = 0;
     // MFA::AssetSystem::Particle::Vertex * mFireVertices = nullptr;

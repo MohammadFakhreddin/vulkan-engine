@@ -7,7 +7,6 @@
 #include "engine/render_system/RenderFrontend.hpp"
 #include "tools/Importer.hpp"
 #include "engine/asset_system/AssetModel.hpp"
-#include "engine/asset_system/AssetParticleMesh.hpp"
 #include "engine/camera/ObserverCameraComponent.hpp"
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/EntitySystem.hpp"
@@ -20,19 +19,11 @@
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/render_system/pipelines/particle/ParticlePipeline.hpp"
 #include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
+#include "engine/render_system/pipelines/particle/FireEssence.hpp"
 
 using namespace MFA;
 
-static constexpr float ParticleMinLife = 1.0f;
-static constexpr float ParticleMaxLife = 1.5f;
-static constexpr float ParticleMinSpeed = 1.0f;
-static constexpr float ParticleMaxSpeed = 2.0f;
 static constexpr float FireRadius = 0.7f;
-static constexpr float FireHorizontalMovement[2] {1.0f, 1.0f};
-static constexpr float FireInitialPointSize = 500.0f;
-static constexpr float FireTargetExtend[2] {1920.0f, 1080.0f}; 
-static constexpr int ParticleCount = 1024;
-static constexpr float FireAlpha = 0.001f;
 
 //-------------------------------------------------------------------------------------------------
 
@@ -56,15 +47,11 @@ void ParticleFireScene::Init()
     mDebugRendererPipeline = SceneManager::GetPipeline<DebugRendererPipeline>();
     MFA_ASSERT(mDebugRendererPipeline != nullptr);
 
-    computeFirePointSize();
-
     createFireEssence();
 
     createFireInstance(glm::vec3 {0.0f, 0.0f, 0.0f});
 
     createCamera();
-
-    // mResizeSignalId = RF::AddResizeEventListener([this]()->void {onResize();});
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -72,35 +59,6 @@ void ParticleFireScene::Init()
 void ParticleFireScene::Update(float const deltaTimeInSec)
 {
     Scene::Update(deltaTimeInSec);
-
-    // // TODO Try to use job system
-    // for (int i = 0; i < mFireVerticesCount; ++i)
-    // {
-    //     auto & vertex = mFireVertices[i];
-    //     // UpVector is reverse
-    //     glm::vec3 const deltaPosition = -deltaTimeInSec * vertex.speed * Math::UpVector3;
-    //     vertex.localPosition += deltaPosition;
-    //     vertex.localPosition += Math::Random(-FireHorizontalMovement[0], FireHorizontalMovement[0])
-    //         * deltaTimeInSec * Math::RightVector3;
-    //     vertex.localPosition += Math::Random(-FireHorizontalMovement[1], FireHorizontalMovement[1])
-    //         * deltaTimeInSec * Math::ForwardVector3;
-        
-    //     vertex.remainingLifeInSec -= deltaTimeInSec;
-    //     if (vertex.remainingLifeInSec <= 0)
-    //     {
-    //         vertex.localPosition = vertex.initialLocalPosition;
-
-    //         vertex.speed = Math::Random(ParticleMinSpeed, ParticleMaxSpeed);
-    //         vertex.remainingLifeInSec = Math::Random(ParticleMinLife, ParticleMaxLife);;
-    //         vertex.totalLifeInSec = vertex.remainingLifeInSec;
-    //     }
-
-    //     auto const lifePercentage = vertex.remainingLifeInSec / vertex.totalLifeInSec;
-        
-    //     vertex.alpha = FireAlpha;
-
-    //     vertex.pointSize = mFirePointSize * lifePercentage;
-    }
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -108,7 +66,6 @@ void ParticleFireScene::Update(float const deltaTimeInSec)
 void ParticleFireScene::Shutdown()
 {
     Scene::Shutdown();
-    // RF::RemoveResizeEventListener(mResizeSignalId);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -120,83 +77,19 @@ bool ParticleFireScene::RequiresUpdate()
 
 //-------------------------------------------------------------------------------------------------
 
-void ParticleFireScene::onResize()
-{
-    computeFirePointSize();
-}
-
-//-------------------------------------------------------------------------------------------------
-
 void ParticleFireScene::createFireEssence()
 {
-    // auto const fireModel = std::make_shared<AS::Model>(
-    //     createFireMesh(),
-    //     createFireTexture()
-    // );
-
-    // mParticlePipeline->createEssenceWithModel(fireModel, "Fire");
-    mParticlePipeline->CreateEssence(std::make_shared<ParticleFireScene>("Fire", ));
+    mParticlePipeline->addEssence(
+        std::make_shared<FireEssence>(
+            "Fire",
+            RC::AcquireGpuTexture("images/fire/particle_fire.ktx"),
+            FireEssence::Options {
+                .fireRadius = FireRadius,
+                .particleCount = 2048
+            }
+        )
+    );
 }
-
-//-------------------------------------------------------------------------------------------------
-
-// std::shared_ptr<MFA::AssetSystem::Particle::Mesh> ParticleFireScene::createFireMesh()
-// {
-//     auto fireMesh = std::make_shared<AS::Particle::Mesh>(100);
-//     auto const verticesCount = ParticleCount;
-//     auto const indicesCount = ParticleCount;
-//     auto const vertexBuffer = Memory::Alloc(verticesCount * sizeof(AS::Particle::Vertex));
-//     auto const indexBuffer = Memory::Alloc(indicesCount * sizeof(AS::Index));
-//     fireMesh->initForWrite(
-//         verticesCount,
-//         indicesCount,
-//         vertexBuffer,
-//         indexBuffer
-//     );
-
-//     auto * vertexItems = vertexBuffer->memory.as<AS::Particle::Vertex>();
-//     auto * indexItems = indexBuffer->memory.as<AS::Index>();
-
-//     for (int i = 0; i < verticesCount; ++i)
-//     {
-//         auto & vertex = vertexItems[i];
-
-//         auto const yaw = Math::Random(-Math::PiFloat, Math::PiFloat);
-//         auto const distanceFromCenter = Math::Random(0.0f, FireRadius) * Math::Random(0.5f, 1.0f);
-        
-//         auto transform = glm::identity<glm::mat4>();
-//         Matrix::RotateWithRadians(transform, glm::vec3{0.0f, yaw, 0.0f});
-
-//         glm::vec3 const position = transform * glm::vec4 {distanceFromCenter, 0.0f, 0.0f, 1.0f};
-
-//         vertex.localPosition = position;
-//         vertex.initialLocalPosition = vertex.localPosition;
-
-//         vertex.textureIndex = 0;
-
-//         vertex.color[0] = 1.0f;
-//         vertex.color[1] = 0.0f;
-//         vertex.color[2] = 0.0f;
-
-//         vertex.speed = Math::Random(ParticleMinSpeed, ParticleMaxSpeed);
-//         vertex.remainingLifeInSec = Math::Random(ParticleMinLife, ParticleMaxLife);
-//         vertex.totalLifeInSec = vertex.remainingLifeInSec;
-
-//         auto const lifePercentage = vertex.remainingLifeInSec / vertex.totalLifeInSec;
-        
-//         vertex.alpha = FireAlpha;
-
-//         vertex.pointSize = mFirePointSize * lifePercentage;
-
-//         indexItems[i] = i;
-//     } 
-
-//     mFireVerticesCount = verticesCount;
-//     mFireVertices = vertexItems;
-//     MFA_ASSERT(mFireVertices != nullptr);
-
-//     return fireMesh;
-// }
 
 //-------------------------------------------------------------------------------------------------
 
@@ -231,7 +124,7 @@ void ParticleFireScene::createFireInstance(glm::vec3 const & position)
 
     auto const boundingVolumeRenderer = entity->AddComponent<BoundingVolumeRendererComponent>(*mDebugRendererPipeline).lock();
     MFA_ASSERT(boundingVolumeRenderer != nullptr);
-    boundingVolumeRenderer->SetActive(false);
+    boundingVolumeRenderer->SetActive(true);
 
     EntitySystem::InitEntity(entity);
 }
@@ -251,31 +144,7 @@ void ParticleFireScene::createCamera()
     MFA_ASSERT(observerCamera != nullptr);
     SetActiveCamera(observerCamera);
 
-    /* entity->AddComponent<DirectionalLightComponent>();
-
-     auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
-     MFA_ASSERT(colorComponent != nullptr);
-     float const lightScale = 5.0f;
-     float lightColor[3]{
-         1.0f * lightScale,
-         1.0f * lightScale,
-         1.0f * lightScale
-     };
-     colorComponent->SetColor(lightColor);
-
-     auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
-     MFA_ASSERT(transformComponent != nullptr);
-     transformComponent->UpdateRotation(glm::vec3(90.0f, 0.0f, 0.0f));*/
-
     EntitySystem::InitEntity(entity);
 }
-
-//-------------------------------------------------------------------------------------------------
-
-// void ParticleFireScene::computeFirePointSize()
-// {
-//     auto const surfaceCapabilities = RF::GetSurfaceCapabilities();
-//     mFirePointSize = FireInitialPointSize * (static_cast<float>(surfaceCapabilities.currentExtent.width) / FireTargetExtend[0]);
-// }
 
 //-------------------------------------------------------------------------------------------------
