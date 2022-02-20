@@ -18,6 +18,7 @@ namespace MFA
             EventTypes::InitEvent | EventTypes::ShutdownEvent
         )
 
+        // Should only be used by json serializer
         explicit MeshRendererComponent() = default;
         explicit MeshRendererComponent(BasePipeline & pipeline, std::string const & nameOrAddress);
         explicit MeshRendererComponent(BasePipeline & pipeline, RT::GpuModel const & gpuModel);
@@ -27,6 +28,10 @@ namespace MFA
         void shutdown() override;
 
         void onUI() override;
+
+        void serialize(nlohmann::json & jsonObject) const override;
+
+        void deserialize(nlohmann::json const & jsonObject) override;
 
         void clone(Entity * entity) const override;
 

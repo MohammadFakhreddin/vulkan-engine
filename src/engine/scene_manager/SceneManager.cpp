@@ -398,21 +398,17 @@ namespace MFA::SceneManager
 
         state->displayRenderPass->BeginRenderPass(recordState); // Draw pass being invalid means that RF cannot render anything
 
+        // TODO : We need priority and order for rendering pipelines. For example particle pipeline must be the last one to render
         state->renderSignal.Emit(recordState, deltaTimeInSec);
+
         // TODO: UI System should contain a pipeline and register it instead
         UI::Render(deltaTimeInSec, recordState);
 
         state->displayRenderPass->EndRenderPass(recordState);
 
         RF::EndGraphicCommandBufferRecording(recordState);
+
         // End of graphic record
-
-        // Note: Order is important
-        //EntitySystem::Update(deltaTimeInSec);
-
-        //// Post render
-        //state->postRenderSignal.Emit(deltaTimeInSec);
-        //UI::PostRender(deltaTimeInSec);
 
     }
 

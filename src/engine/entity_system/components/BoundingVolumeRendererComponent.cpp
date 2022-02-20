@@ -9,7 +9,6 @@
 #include "engine/render_system/pipelines/VariantBase.hpp"
 #include "engine/ui_system/UI_System.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
-#include "engine/scene_manager/Scene.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 
 namespace MFA
@@ -17,7 +16,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    BoundingVolumeRendererComponent::BoundingVolumeRendererComponent() = default;
+    BoundingVolumeRendererComponent::BoundingVolumeRendererComponent()
+        : BoundingVolumeRendererComponent(*SceneManager::GetPipeline<DebugRendererPipeline>())
+    {}
  
     //-------------------------------------------------------------------------------------------------
 
@@ -44,18 +45,18 @@ namespace MFA
         static int RendererEntityId = 0;
 
         char nameBuffer[100] {};
-        auto const nameLength = sprintf(nameBuffer, "BoundingVolumeMeshRenderer%d", RendererEntityId);
+        auto const nameLength = sprintf(nameBuffer, "BoundingVolumeMeshRenderer%d", RendererEntityId++);
 
         auto * childEntity = EntitySystem::CreateEntity(
             std::string(nameBuffer, nameLength),
-            SceneManager::GetActiveScene()->GetRootEntity(),
+            nullptr,
             EntitySystem::CreateEntityParams {
                 .serializable = false
             }
         );
 
-        mRendererTransformComponent = childEntity->AddComponent<TransformComponent>();
-        MFA_ASSERT(mRendererTransformComponent.expired() == false);
+        mRendererTransform = childEntity->AddComponent<TransformComponent>();
+        MFA_ASSERT(mRendererTransform.expired() == false);
 
         EntitySystem::InitEntity(childEntity);
 
@@ -64,7 +65,7 @@ namespace MFA
         variant->Init(
             entity,
             selfPtr(),
-            mRendererTransformComponent,
+            mRendererTransform,
             mBoundingVolumeComponent
         );
     }
@@ -81,7 +82,7 @@ namespace MFA
             return;
         }
 
-        auto const rendererTransformComponent = mRendererTransformComponent.lock();
+        auto const rendererTransformComponent = mRendererTransform.lock();
         if (rendererTransformComponent == nullptr)
         {
             return;
@@ -103,7 +104,7 @@ namespace MFA
     {
         RendererComponent::shutdown();
 
-        if (auto const ptr = mRendererTransformComponent.lock())
+        if (auto const ptr = mRendererTransform.lock())
         {
             EntitySystem::DestroyEntity(ptr->GetEntity());
         }
@@ -119,6 +120,14 @@ namespace MFA
             UI::TreePop();
         }
     }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void BoundingVolumeRendererComponent::serialize(nlohmann::json & jsonObject) const {}
+
+    //-------------------------------------------------------------------------------------------------
+
+    void BoundingVolumeRendererComponent::deserialize(nlohmann::json const & jsonObject) {}
 
     //-------------------------------------------------------------------------------------------------
 
