@@ -78,15 +78,15 @@ bool ParticleFireScene::RequiresUpdate()
 
 void ParticleFireScene::createFireEssence() const
 {
-    if (mParticlePipeline->essenceExists("Fire") == false)
+    if (mParticlePipeline->essenceExists("ParticleSceneFire") == false)
     {
         mParticlePipeline->addEssence(
             std::make_shared<FireEssence>(
-                "Fire",
+                "ParticleSceneFire",
                 RC::AcquireGpuTexture("images/fire/particle_fire.ktx"),
                 FireEssence::Options {
                     .fireRadius = FireRadius,
-                    .particleCount = 512
+                    .particleCount = 1024
                 }
             )
         );
@@ -106,7 +106,7 @@ void ParticleFireScene::createFireInstance(glm::vec3 const & position) const
     
     entity->AddComponent<MeshRendererComponent>(
         *mParticlePipeline,
-        "Fire"
+        "ParticleSceneFire"
     );
     entity->AddComponent<AxisAlignedBoundingBoxComponent>(
         glm::vec3{ 0.0f, -0.8f, 0.0f },

@@ -127,10 +127,10 @@ void Demo3rdPersonScene::Init()
         auto * particlePipeline = SceneManager::GetPipeline<ParticlePipeline>();
         MFA_ASSERT(particlePipeline != nullptr);
 
-        if (particlePipeline->essenceExists("Fire") == false){// Fire essence
+        if (particlePipeline->essenceExists("SponzaFire") == false){// Fire essence
             particlePipeline->addEssence(
                 std::make_shared<FireEssence>(
-                    "Fire",
+                    "SponzaFire",
                     RC::AcquireGpuTexture("images/fire/particle_fire.ktx"),
                     FireEssence::Options {
                         .particleMinLife = 0.2f,
@@ -157,7 +157,7 @@ void Demo3rdPersonScene::Init()
                 
                 entity->AddComponent<MeshRendererComponent>(
                     *particlePipeline,
-                    "Fire"
+                    "SponzaFire"
                 );
                 entity->AddComponent<AxisAlignedBoundingBoxComponent>(
                     glm::vec3{ 0.0f, -0.3f, 0.0f },
@@ -343,6 +343,8 @@ void Demo3rdPersonScene::Shutdown()
     Scene::Shutdown();
 
     UI::UnRegister(mUIRecordId);
+
+    mDebugRenderPipeline->changeActivationStatus(true);
     
 }
 
