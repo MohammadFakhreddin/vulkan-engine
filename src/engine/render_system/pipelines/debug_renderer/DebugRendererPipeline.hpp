@@ -17,7 +17,11 @@ public:
     explicit DebugRendererPipeline();
     ~DebugRendererPipeline() override;
 
-    PIPELINE_PROPS(DebugRendererPipeline, EventTypes::PreRenderEvent | EventTypes::RenderEvent)
+    PIPELINE_PROPS(
+        DebugRendererPipeline,
+        EventTypes::PreRenderEvent | EventTypes::RenderEvent,
+        RenderOrder::DontCare
+    )
 
     void init() override;
 

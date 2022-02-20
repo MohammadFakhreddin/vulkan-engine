@@ -29,8 +29,6 @@ namespace MFA
     class BoundingVolumeRendererComponent;
 }
 
-static constexpr float FireRadius = 0.7f;
-
 using namespace MFA;
 
 //-------------------------------------------------------------------------------------------------
@@ -124,52 +122,61 @@ void Demo3rdPersonScene::Init()
         EntitySystem::InitEntity(entity);
     }
 
-    //{// Fire
-    //    auto * particlePipeline = SceneManager::GetPipeline<ParticlePipeline>();
-    //    MFA_ASSERT(particlePipeline != nullptr);
+    {// Fire
 
-    //    if (particlePipeline->essenceExists("Fire") == false){// Fire essence
-    //        particlePipeline->addEssence(
-    //            std::make_shared<FireEssence>(
-    //                "Fire",
-    //                RC::AcquireGpuTexture("images/fire/particle_fire.ktx"),
-    //                FireEssence::Options {
-    //                    .fireRadius = FireRadius,
-    //                    .particleCount = 512
-    //                }
-    //            )
-    //        );
-    //    }
+        auto * particlePipeline = SceneManager::GetPipeline<ParticlePipeline>();
+        MFA_ASSERT(particlePipeline != nullptr);
 
-    //    {// Fire instances
-    //        auto const createFireInstance = [this, particlePipeline](glm::vec3 const & position)->void
-    //        {
-    //            auto * entity = EntitySystem::CreateEntity("FireInstance", GetRootEntity());
-    //            MFA_ASSERT(entity != nullptr);
+        if (particlePipeline->essenceExists("Fire") == false){// Fire essence
+            particlePipeline->addEssence(
+                std::make_shared<FireEssence>(
+                    "Fire",
+                    RC::AcquireGpuTexture("images/fire/particle_fire.ktx"),
+                    FireEssence::Options {
+                        .particleMinLife = 0.2f,
+                        .particleMaxLife = 1.0f,
+                        .particleMinSpeed = 0.5f,
+                        .particleMaxSpeed = 1.0f,
+                        .fireRadius = 0.1f,
+                        .fireInitialPointSize = 300.0f,
+                        .particleCount = 256,
+                    }
+                )
+            );
+        }
 
-    //            auto const transform = entity->AddComponent<TransformComponent>().lock();
-    //            MFA_ASSERT(transform != nullptr);
-    //            transform->UpdatePosition(position);
-    //            
-    //            entity->AddComponent<MeshRendererComponent>(
-    //                *particlePipeline,
-    //                "Fire"
-    //            );
-    //            entity->AddComponent<AxisAlignedBoundingBoxComponent>(
-    //                glm::vec3{ 0.0f, -0.8f, 0.0f },
-    //                glm::vec3{ FireRadius, 1.0f, FireRadius }
-    //            );
-    //            entity->AddComponent<ColorComponent>(glm::vec3{ 1.0f, 0.0f, 0.0f });
+        {// Fire instances
+            auto const createFireInstance = [this, particlePipeline](glm::vec3 const & position)->void
+            {
+                auto * entity = EntitySystem::CreateEntity("FireInstance", GetRootEntity());
+                MFA_ASSERT(entity != nullptr);
 
-    //            auto const boundingVolumeRenderer = entity->AddComponent<BoundingVolumeRendererComponent>().lock();
-    //            MFA_ASSERT(boundingVolumeRenderer != nullptr);
-    //            boundingVolumeRenderer->SetActive(true);
+                auto const transform = entity->AddComponent<TransformComponent>().lock();
+                MFA_ASSERT(transform != nullptr);
+                transform->UpdatePosition(position);
+                
+                entity->AddComponent<MeshRendererComponent>(
+                    *particlePipeline,
+                    "Fire"
+                );
+                entity->AddComponent<AxisAlignedBoundingBoxComponent>(
+                    glm::vec3{ 0.0f, -0.3f, 0.0f },
+                    glm::vec3{ 0.2f, 0.4f, 0.2f }
+                );
+                entity->AddComponent<ColorComponent>(glm::vec3{ 1.0f, 0.0f, 0.0f });
 
-    //            EntitySystem::InitEntity(entity);
-    //        };
-    //        createFireInstance(glm::vec3 {0.0f, 0.0f, 0.0f});
-    //    }
-    //}
+                auto const boundingVolumeRenderer = entity->AddComponent<BoundingVolumeRendererComponent>().lock();
+                MFA_ASSERT(boundingVolumeRenderer != nullptr);
+                boundingVolumeRenderer->SetActive(true);
+
+                EntitySystem::InitEntity(entity);
+            };
+            createFireInstance(glm::vec3 {-1.05f, 1.0f, -1.05f});
+            createFireInstance(glm::vec3 {+1.85f, 1.0f, -1.05f});
+            createFireInstance(glm::vec3 {-1.05f, 1.0f, -9.9f});
+            createFireInstance(glm::vec3 {+1.85f, 1.0f, -9.9f});
+        }
+    }
 
     mUIRecordId = UI::Register([this]()->void { onUI(); });
 

@@ -19,7 +19,11 @@ namespace MFA
         explicit ParticlePipeline();
         ~ParticlePipeline() override;
 
-        PIPELINE_PROPS(ParticlePipeline, EventTypes::RenderEvent)
+        PIPELINE_PROPS(
+            ParticlePipeline,
+            EventTypes::RenderEvent,
+            RenderOrder::AfterEverything
+        )
 
         void init() override;
 

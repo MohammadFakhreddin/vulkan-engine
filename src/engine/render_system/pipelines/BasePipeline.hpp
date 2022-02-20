@@ -7,7 +7,8 @@
 #include <unordered_map>
 #include <vector>
 
-#define PIPELINE_PROPS(className, eventTypes)                           \
+#define PIPELINE_PROPS(className, eventTypes, renderOrder_)             \
+                                                                        \
 static constexpr char const * Name = #className;                        \
 char const * GetName() const override {                                 \
     return Name;                                                        \
@@ -23,7 +24,11 @@ EventType requiredEvents() const override                               \
 {                                                                       \
     return eventTypes;                                                  \
 }                                                                       \
- 
+                                                                        \
+[[nodiscard]]                                                           \
+RenderOrder renderOrder() const {                                       \
+    return renderOrder_;                                                \
+}                                                                       \
 
 namespace MFA
 {
@@ -54,6 +59,13 @@ namespace MFA
             static constexpr EventType PreRenderEvent = 0b1;
             static constexpr EventType RenderEvent = 0b10;
             // Resize is not included here because every pipeline requires the resize to be called
+        };
+
+        enum class RenderOrder : uint8_t
+        {
+            BeforeEverything = 0,
+            DontCare = 1,
+            AfterEverything = 2
         };
 
         explicit BasePipeline(uint32_t maxSets);
@@ -112,6 +124,9 @@ namespace MFA
 
         [[nodiscard]]
         bool isActive() const;
+
+        [[nodiscard]]
+        virtual RenderOrder renderOrder() const = 0;
     
     protected:
 
