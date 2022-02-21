@@ -22,6 +22,7 @@
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
 #include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
+#include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Essence.hpp"
 
 using namespace MFA;
 
@@ -207,9 +208,11 @@ bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress)
         .essenceName = mInputTextEssenceName
     });
 
-    if (mPBR_Pipeline->EssenceExists(gpuModel->nameOrAddress) == false)
+    if (mPBR_Pipeline->essenceExists(gpuModel->nameOrAddress) == false)
     {
-        mPBR_Pipeline->CreateEssence(gpuModel, cpuModel->mesh);
+        auto * mesh = cpuModel->mesh.get();
+        MFA_ASSERT(mesh != nullptr && dynamic_cast<AS::PBR::Mesh *>(mesh) != nullptr);
+        mPBR_Pipeline->addEssence(std::make_shared<PBR_Essence>(gpuModel, static_cast<AS::PBR::Mesh *>(mesh)->getMeshData()));
     }
 
     mInputTextEssenceName = "";
@@ -223,7 +226,7 @@ void PrefabEditorScene::destroyAsset(int const assetIndex)
 {
     auto const & asset = mLoadedAssets[assetIndex];
     auto const gpuModel = RC::AcquireGpuModel(asset.fileAddress);
-    mPBR_Pipeline->DestroyEssence(*gpuModel);
+    mPBR_Pipeline->destroyEssence(*gpuModel);
     mLoadedAssets.erase(mLoadedAssets.begin() + assetIndex);
 }
 

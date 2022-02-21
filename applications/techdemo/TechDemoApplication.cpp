@@ -9,6 +9,7 @@
 #include "engine/render_system/pipelines/particle/ParticlePipeline.hpp"
 #include "scenes/particle_fire_scene/ParticleFireScene.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
+#include "engine/BedrockPlatforms.hpp"
 
 using namespace MFA;
 
@@ -41,7 +42,9 @@ void TechDemoApplication::internalInit()
     UI::Register([]()->void {OnUI();});
 
     SceneManager::RegisterPipeline<DebugRendererPipeline>();
+#ifndef __PLATFORM_MAC__ // Currently we don't have replacement for geometry shader. Going to use compute shader as replacement
     SceneManager::RegisterPipeline<PBRWithShadowPipelineV2>();
+#endif
     SceneManager::RegisterPipeline<ParticlePipeline>();
 }
 

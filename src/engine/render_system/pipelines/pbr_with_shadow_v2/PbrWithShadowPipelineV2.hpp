@@ -86,7 +86,8 @@ namespace MFA
         
         PIPELINE_PROPS(
             PBRWithShadowPipelineV2,
-            EventTypes::PreRenderEvent | EventTypes::RenderEvent
+            EventTypes::PreRenderEvent | EventTypes::RenderEvent,
+            RenderOrder::BeforeEverything
         );
 
         void init() override;
@@ -99,17 +100,9 @@ namespace MFA
 
         void onResize() override;
 
-        void CreateEssenceWithoutModel(
-            std::shared_ptr<RT::GpuModel> const & gpuModel,
-            std::shared_ptr<AssetSystem::PBR::MeshData> const & meshData
-        ) const;
-
     protected:
 
-        std::shared_ptr<EssenceBase> internalCreateEssence(
-            std::shared_ptr<RT::GpuModel> const & gpuModel,
-            std::shared_ptr<AssetSystem::MeshBase> const & cpuMesh
-        ) override;
+        void internalAddEssence(EssenceBase * essence) override;
 
         std::shared_ptr<VariantBase> internalCreateVariant(EssenceBase * essence) override;
         
@@ -156,6 +149,8 @@ namespace MFA
         void renderForDirectionalLightShadowPass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode) const;
 
         void performPointLightShadowPass(RT::CommandRecordState & recordState) const;
+
+        void prepareShadowMapsForSampling(RT::CommandRecordState const & recordState) const;
 
         void renderForPointLightShadowPass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode) const;
 

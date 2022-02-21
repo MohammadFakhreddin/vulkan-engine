@@ -96,9 +96,9 @@ namespace MFA
             CAST_ESSENCE(essence)->draw(recordState, deltaTimeInSec);
         }
     }
-
-    //-------------------------------------------------------------------------------------------------
     
+    //-------------------------------------------------------------------------------------------------
+
     void ParticlePipeline::postRender(float const deltaTimeInSec)
     {
         if (mAllEssencesList.empty())
@@ -120,35 +120,10 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-    // TODO: We have duplicate code in these 2 function
-    std::shared_ptr<EssenceBase> ParticlePipeline::createEssenceWithModel(
-        std::shared_ptr<AssetSystem::Model> const & cpuModel,
-        std::string const & name
-    )
+ 
+    void ParticlePipeline::internalAddEssence(EssenceBase * essence)
     {
-        MFA_ASSERT(cpuModel != nullptr);
-        auto essence = std::make_shared<ParticleEssence>(cpuModel, name);
-        createPerEssenceDescriptorSets(essence.get());
-        bool const success = addEssence(essence);
-        return success ? essence : nullptr;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    std::shared_ptr<EssenceBase> ParticlePipeline::internalCreateEssence(
-      std::shared_ptr<RT::GpuModel> const & gpuModel,
-      std::shared_ptr<AssetSystem::MeshBase> const & cpuMesh
-    )
-    {
-        MFA_ASSERT(gpuModel != nullptr);
-        MFA_ASSERT(cpuMesh != nullptr);
-        auto const particleMesh = static_pointer_cast<Mesh>(cpuMesh);
-        auto const essence = std::make_shared<ParticleEssence>(
-            gpuModel,
-            particleMesh
-        );
-        createPerEssenceDescriptorSets(essence.get());
-        return essence;
+        createPerEssenceDescriptorSets(CAST_ESSENCE(essence));
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -371,7 +346,7 @@ namespace MFA
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 1,
-            .format =VK_FORMAT_R32G32B32A32_SFLOAT,
+            .format =VK_FORMAT_R32G32B32_SFLOAT,
             .offset = offsetof(PerInstanceData, instancePosition)
         });
         
@@ -390,6 +365,8 @@ namespace MFA
 
         pipelineOptions.depthStencil.depthWriteEnable = VK_FALSE;
 
+        pipelineOptions.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+        
         std::vector<VkDescriptorSetLayout> const descriptorSetLayouts {
             mPerFrameDescriptorSetLayout->descriptorSetLayout,
             mPerEssenceDescriptorSetLayout->descriptorSetLayout,

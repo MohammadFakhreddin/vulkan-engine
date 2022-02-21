@@ -92,7 +92,9 @@ namespace MFA::SceneManager
         std::unordered_map<std::string, std::unique_ptr<BasePipeline>> pipelines{};
 
         PreRenderSignal preRenderSignal{};
-        RenderSignal renderSignal{};
+        RenderSignal renderSignal1 {};
+        RenderSignal renderSignal2 {};
+        RenderSignal renderSignal3 {};
         PostRenderSignal postRenderSignal{};
 
         std::vector<std::weak_ptr<PointLightComponent>> pointLightComponents{};
@@ -267,6 +269,32 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
+    static RenderSignal * getRenderSignal(BasePipeline * pipeline)
+    {
+        MFA_ASSERT(pipeline != nullptr);
+
+        RenderSignal * signal = nullptr;
+        switch (pipeline->renderOrder())
+        {
+            case BasePipeline::RenderOrder::BeforeEverything:
+                signal = &state->renderSignal1;
+            break;
+            case BasePipeline::RenderOrder::DontCare:
+                signal = &state->renderSignal2;
+            break;
+            case BasePipeline::RenderOrder::AfterEverything:
+                signal = &state->renderSignal3;
+            break;
+            default:
+                MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+        }
+        MFA_ASSERT(signal != nullptr);
+
+        return signal;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void UpdatePipeline(BasePipeline * pipeline)
     {
         MFA_ASSERT(pipeline != nullptr);
@@ -301,14 +329,18 @@ namespace MFA::SceneManager
         {
             if (pipeline->mRenderListenerId == InvalidSignalId)
             {
-                pipeline->mRenderListenerId = state->renderSignal.Register(
+                RenderSignal * signal = getRenderSignal(pipeline);
+
+                pipeline->mRenderListenerId = signal->Register(
                 [pipeline](RT::CommandRecordState & commandRecord, float const deltaTime)->void{
                     pipeline->render(commandRecord, deltaTime);           
                 });
             }
         } else if (pipeline->mRenderListenerId != InvalidSignalId)
         {
-            state->renderSignal.UnRegister(pipeline->mRenderListenerId);
+            RenderSignal * signal = getRenderSignal(pipeline);
+
+            signal->UnRegister(pipeline->mRenderListenerId);
             pipeline->mRenderListenerId = InvalidSignalId;
         }
 
@@ -418,21 +450,18 @@ namespace MFA::SceneManager
 
         state->displayRenderPass->BeginRenderPass(recordState); // Draw pass being invalid means that RF cannot render anything
 
-        state->renderSignal.Emit(recordState, deltaTimeInSec);
+        state->renderSignal1.Emit(recordState, deltaTimeInSec);
+        state->renderSignal2.Emit(recordState, deltaTimeInSec);
+        state->renderSignal3.Emit(recordState, deltaTimeInSec);
+
         // TODO: UI System should contain a pipeline and register it instead
         UI::Render(deltaTimeInSec, recordState);
 
         state->displayRenderPass->EndRenderPass(recordState);
 
         RF::EndGraphicCommandBufferRecording(recordState);
+
         // End of graphic record
-
-        // Note: Order is important
-        //EntitySystem::Update(deltaTimeInSec);
-
-        //// Post render
-        //state->postRenderSignal.Emit(deltaTimeInSec);
-        //UI::PostRender(deltaTimeInSec);
 
     }
 

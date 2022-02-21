@@ -86,10 +86,14 @@ namespace MFA::EntitySystem
         static EntityId nextEntityId = 0;
         // Checking if we have not reached maximum possible entity limit
         MFA_ASSERT(nextEntityId < std::numeric_limits<EntityId>::max());
+
+        char nameBuffer[100] {};
+        auto const nameLength = sprintf(nameBuffer, "%s %d", name.c_str(), static_cast<int>(nextEntityId));
+
         state->entitiesRefsList.emplace_back(EntityRef{
             .ptr = std::make_unique<Entity>(
                 nextEntityId++,
-                name,
+                std::string(nameBuffer, nameLength),
                 parent,
                 params.serializable
             )

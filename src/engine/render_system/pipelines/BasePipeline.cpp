@@ -6,7 +6,6 @@
 #include "engine/BedrockPath.hpp"
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/asset_system/AssetBaseMesh.hpp"
 
 namespace MFA
 {
@@ -48,7 +47,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    bool BasePipeline::EssenceExists(std::string const & nameOrAddress) const
+    bool BasePipeline::essenceExists(std::string const & nameOrAddress) const
     {
         std::string relativePath;
         Path::RelativeToAssetFolder(nameOrAddress, relativePath);
@@ -57,20 +56,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    bool BasePipeline::CreateEssence(
-        std::shared_ptr<RT::GpuModel> const & gpuModel,
-        std::shared_ptr<AS::MeshBase> const & cpuMesh
-    )
-    {
-        return addEssence(internalCreateEssence(
-            gpuModel,
-            cpuMesh
-        ));
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void BasePipeline::DestroyEssence(std::string const & nameOrAddress)
+    void BasePipeline::destroyEssence(std::string const & nameOrAddress)
     {
         MFA_ASSERT(mIsInitialized == true);
         auto const findResult = mEssenceAndVariantsMap.find(nameOrAddress);
@@ -82,7 +68,7 @@ namespace MFA
         // Removing essence variants
         for (auto & variant : findResult->second.variants)
         {
-            RemoveVariant(*variant);
+            removeVariant(*variant);
         }
 
         // Removing essence from essenceList
@@ -103,21 +89,21 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::DestroyEssence(RT::GpuModel const & gpuModel)
+    void BasePipeline::destroyEssence(RT::GpuModel const & gpuModel)
     {
-        DestroyEssence(gpuModel.nameOrAddress);
+        destroyEssence(gpuModel.nameOrAddress);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    std::weak_ptr<VariantBase> BasePipeline::CreateVariant(RT::GpuModel const & gpuModel)
+    std::weak_ptr<VariantBase> BasePipeline::createVariant(RT::GpuModel const & gpuModel)
     {
-        return CreateVariant(gpuModel.nameOrAddress);
+        return createVariant(gpuModel.nameOrAddress);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    std::weak_ptr<VariantBase> BasePipeline::CreateVariant(std::string const & nameOrAddress)
+    std::weak_ptr<VariantBase> BasePipeline::createVariant(std::string const & nameOrAddress)
     {
         MFA_ASSERT(mIsInitialized == true);
         auto const findResult = mEssenceAndVariantsMap.find(nameOrAddress);
@@ -144,7 +130,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::RemoveVariant(VariantBase & variant)
+    void BasePipeline::removeVariant(VariantBase & variant)
     {
         MFA_ASSERT(mIsInitialized == true);
         // Removing from all variants list
@@ -205,7 +191,7 @@ namespace MFA
         }
         for (auto const & nameOrAddress : unusedEssenceNames)
         {
-            DestroyEssence(nameOrAddress);
+            destroyEssence(nameOrAddress);
         }
     }
 
@@ -267,6 +253,7 @@ namespace MFA
         {
             mEssenceAndVariantsMap[address] = EssenceAndVariants(essence);
             mAllEssencesList.emplace_back(essence.get());
+            internalAddEssence(essence.get());
             success = true;
         }
         return success;

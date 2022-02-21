@@ -12,10 +12,6 @@ namespace MFA {
     
         void shutdown() override;
 
-        void serialize(nlohmann::json & jsonObject) const override;
-
-        void deserialize(nlohmann::json const & jsonObject) override;
-
         [[nodiscard]]
         VariantBase const * getVariant() const;
 

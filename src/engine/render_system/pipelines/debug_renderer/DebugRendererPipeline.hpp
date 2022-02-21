@@ -2,7 +2,6 @@
 
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
-#include "engine/asset_system/AssetTypes.hpp"
 
 namespace MFA {
     
@@ -18,7 +17,11 @@ public:
     explicit DebugRendererPipeline();
     ~DebugRendererPipeline() override;
 
-    PIPELINE_PROPS(DebugRendererPipeline, EventTypes::RenderEvent)
+    PIPELINE_PROPS(
+        DebugRendererPipeline,
+        EventTypes::RenderEvent,
+        RenderOrder::DontCare
+    )
 
     void init() override;
 
@@ -28,19 +31,11 @@ public:
     
     void onResize() override;
 
-    bool createEssenceWithoutModel(
-        std::shared_ptr<RT::GpuModel> const & gpuModel,
-        uint32_t indicesCount
-    );
-
     void freeUnusedEssences() override;
 
 protected:
 
-    std::shared_ptr<EssenceBase> internalCreateEssence(
-        std::shared_ptr<RT::GpuModel> const & gpuModel,
-        std::shared_ptr<AS::MeshBase> const & cpuMesh
-    ) override;
+    void internalAddEssence(EssenceBase * essence) override;
 
     std::shared_ptr<VariantBase> internalCreateVariant(EssenceBase * essence) override;
 

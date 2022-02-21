@@ -1,7 +1,13 @@
 cmake_minimum_required (VERSION 3.10)
 
-set(CMAKE_OSX_DEPLOYMENT_TARGET 13)
-set(CMAKE_IOS_DEPLOYMENT_TARGET 13)
+# set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version")
+# set(CMAKE_IOS_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum IOS deployment version")
+
+# set(CMAKE_XCODE_ATTRIBUTE_MACOSX_DEPLOYMENT_TARGET "11.0")
+# set(CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "11.0")
+# For macos and iphone
+set(DEPLOYMENT_TARGET "11.0")           # For toolchain target
+set(MACOSX_DEPLOYMENT_TARGET "11.0")    # For toolchain target
 
 set(PROJECT_NAME "MFaEngine")
 
@@ -181,6 +187,9 @@ add_library("Renderer"
     "src/engine/render_system/pipelines/particle/ParticleEssence.cpp"
     "src/engine/render_system/pipelines/particle/ParticleVariant.hpp"
     "src/engine/render_system/pipelines/particle/ParticleVariant.cpp"
+
+    "src/engine/render_system/pipelines/particle/FireEssence.hpp"
+    "src/engine/render_system/pipelines/particle/FireEssence.cpp"
 )
 
 target_include_directories(

@@ -20,9 +20,9 @@ namespace MFA
         [[nodiscard]]
         VkRenderPass GetVkRenderPass() override;
 
-        void BeginRenderPass(RT::CommandRecordState & recordState);
+        void BeginRenderPass(RT::CommandRecordState & recordState) override;
 
-        void EndRenderPass(RT::CommandRecordState & recordState);
+        void EndRenderPass(RT::CommandRecordState & recordState) override;
 
         void OnResize() override;
 

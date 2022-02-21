@@ -21,7 +21,8 @@
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
 
-#define CAST_VARIANT(variant)  static_cast<PBR_Variant *>(variant.get())
+#define CAST_ESSENCE(essence)   static_cast<PBR_Essence *>(essence)
+#define CAST_VARIANT(variant)   static_cast<PBR_Variant *>(variant.get())
 
 /*
 There are four C++ style casts:
@@ -162,29 +163,8 @@ namespace MFA
 
         performPointLightShadowPass(recordState);
 
-        // TODO: Why do we need these barriers ?
-        {// Sampling barriers
-            std::vector<VkImageMemoryBarrier> barrier {};
-            mPointLightShadowRenderPass->PrepareRenderTargetForSampling(
-                recordState,
-                mPointLightShadowResources.get(),
-                SceneManager::GetPointLightCount() > 0,
-                barrier
-            );
-            mDirectionalLightShadowRenderPass->PrepareRenderTargetForSampling(
-                recordState,
-                mDirectionalLightShadowResources.get(),
-                SceneManager::GetDirectionalLightCount() > 0,
-                barrier
-            );
-            RF::PipelineBarrier(
-                RF::GetGraphicCommandBuffer(recordState),
-                VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                static_cast<uint32_t>(barrier.size()),
-                barrier.data()
-            );
-        }
+        prepareShadowMapsForSampling(recordState);
+
         RF::GetDisplayRenderPass()->notifyDepthImageLayoutIsSet();
     }
 
@@ -220,26 +200,10 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::CreateEssenceWithoutModel(
-        std::shared_ptr<RT::GpuModel> const & gpuModel,
-        std::shared_ptr<AssetSystem::PBR::MeshData> const & meshData
-    ) const
+    void PBRWithShadowPipelineV2::internalAddEssence(EssenceBase * essence)
     {
-        auto const essence = std::make_shared<PBR_Essence>(gpuModel, meshData);
-        createEssenceDescriptorSets(*essence);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    std::shared_ptr<EssenceBase> PBRWithShadowPipelineV2::internalCreateEssence(
-        std::shared_ptr<RT::GpuModel> const & gpuModel,
-        std::shared_ptr<AS::MeshBase> const & cpuMesh
-    )
-    {
-        auto const meshData = static_cast<AS::PBR::Mesh *>(cpuMesh.get())->getMeshData();
-        auto essence = std::make_shared<PBR_Essence>(gpuModel, meshData);
-        createEssenceDescriptorSets(*essence);
-        return essence;
+        MFA_ASSERT(dynamic_cast<PBR_Essence *>(essence) != nullptr);
+        createEssenceDescriptorSets(*CAST_ESSENCE(essence));
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -662,6 +626,32 @@ namespace MFA
         renderForPointLightShadowPass(recordState, AS::AlphaMode::Mask);
         renderForPointLightShadowPass(recordState, AS::AlphaMode::Blend);
         mPointLightShadowRenderPass->EndRenderPass(recordState);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+    
+    void PBRWithShadowPipelineV2::prepareShadowMapsForSampling(RT::CommandRecordState const & recordState) const
+    {
+        std::vector<VkImageMemoryBarrier> barrier {};
+        mPointLightShadowRenderPass->PrepareRenderTargetForSampling(
+            recordState,
+            mPointLightShadowResources.get(),
+            SceneManager::GetPointLightCount() > 0,
+            barrier
+        );
+        mDirectionalLightShadowRenderPass->PrepareRenderTargetForSampling(
+            recordState,
+            mDirectionalLightShadowResources.get(),
+            SceneManager::GetDirectionalLightCount() > 0,
+            barrier
+        );
+        RF::PipelineBarrier(
+            RF::GetGraphicCommandBuffer(recordState),
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            static_cast<uint32_t>(barrier.size()),
+            barrier.data()
+        );
     }
 
     //-------------------------------------------------------------------------------------------------
