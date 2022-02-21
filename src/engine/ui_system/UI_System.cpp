@@ -774,9 +774,12 @@ namespace MFA::UI_System
 
     //-------------------------------------------------------------------------------------------------
 
-    void Text(char const * label)
+    void Text(char const * label, ...)
     {
-        ImGui::Text("%s", label);
+        va_list args;
+        va_start(args, label);
+        ImGui::TextV(label, args);
+        va_end(args);
     }
 
     //-------------------------------------------------------------------------------------------------

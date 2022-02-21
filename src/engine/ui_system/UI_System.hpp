@@ -27,7 +27,7 @@ namespace MFA::UI_System
 
     void SetNextItemWidth(float nextItemWidth);
 
-    void Text(char const * label);
+    void Text(char const * label, ...);
 
     void InputFloat(char const * label, float * value);
 

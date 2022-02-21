@@ -70,6 +70,7 @@ namespace MFA
         if (UI::TreeNode("MeshRenderer"))
         {
             RendererComponent::onUI();
+            UI::Text("Pipeline: %s", mPipeline->GetName());
             if (auto const variant = mVariant.lock())
             {
                 variant->OnUI();
