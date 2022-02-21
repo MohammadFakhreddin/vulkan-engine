@@ -18,13 +18,11 @@ public:
     explicit DebugRendererPipeline();
     ~DebugRendererPipeline() override;
 
-    PIPELINE_PROPS(DebugRendererPipeline, EventTypes::PreRenderEvent | EventTypes::RenderEvent)
+    PIPELINE_PROPS(DebugRendererPipeline, EventTypes::RenderEvent)
 
     void init() override;
 
     void shutdown() override;
-
-    void preRender(RT::CommandRecordState & recordState, float deltaTimeInSec) override;
 
     void render(RT::CommandRecordState & drawPass, float deltaTime) override;
     

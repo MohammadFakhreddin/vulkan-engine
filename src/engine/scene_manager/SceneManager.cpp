@@ -160,9 +160,7 @@ namespace MFA::SceneManager
         }
 
         state->nextActiveSceneIndex = -1;
-
-        //state->displayRenderPass->UseDepthImageLayoutAsUndefined(state->activeScene->isDisplayPassDepthImageInitialLayoutUndefined());
-
+        
         oldScene = nullptr;
         TriggerCleanup();
     }
@@ -274,6 +272,7 @@ namespace MFA::SceneManager
         MFA_ASSERT(pipeline != nullptr);
         auto const requiredEvents = pipeline->requiredEvents();
 
+        // Pre-render listener
         if (
             pipeline->mIsActive &&
             (requiredEvents & BasePipeline::EventTypes::PreRenderEvent) > 0 &&
@@ -293,6 +292,7 @@ namespace MFA::SceneManager
             pipeline->mPreRenderListenerId = InvalidSignalId;
         }
 
+        // Render listener
         if (
             pipeline->mIsActive &&
             (requiredEvents & BasePipeline::EventTypes::RenderEvent) > 0 &&
@@ -310,6 +310,26 @@ namespace MFA::SceneManager
         {
             state->renderSignal.UnRegister(pipeline->mRenderListenerId);
             pipeline->mRenderListenerId = InvalidSignalId;
+        }
+
+        // Post render
+        if (
+            pipeline->mIsActive &&
+            (requiredEvents & BasePipeline::EventTypes::PostRenderEvent) > 0 &&
+            pipeline->mAllVariantsList.empty() == false
+        )
+        {
+            if (pipeline->mPostRenderListenerId == InvalidSignalId)
+            {
+                pipeline->mPostRenderListenerId = state->postRenderSignal.Register(
+                [pipeline](float const deltaTime)->void{
+                    pipeline->postRender(deltaTime);           
+                });
+            }
+        } else if (pipeline->mPostRenderListenerId != InvalidSignalId)
+        {
+            state->postRenderSignal.UnRegister(pipeline->mPostRenderListenerId);
+            pipeline->mPostRenderListenerId = InvalidSignalId;
         }
     }
 

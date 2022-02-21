@@ -193,17 +193,13 @@ namespace MFA
     void PBRWithShadowPipelineV2::updateVariants(float deltaTimeInSec, RT::CommandRecordState const & recordState) const
     {
         // Multi-thread update of variant animation
-        auto const availableThreadCount = JS::GetNumberOfAvailableThreads();
-        for (uint32_t threadNumber = 0; threadNumber < availableThreadCount; ++threadNumber)
+        JS::AssignTaskPerThread([this, &recordState, deltaTimeInSec](uint32_t const threadNumber, uint32_t const threadCount)->void
         {
-            JS::AssignTaskManually(threadNumber, [this, &recordState, deltaTimeInSec, threadNumber, availableThreadCount]()->void
+            for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mAllVariantsList.size()); i += threadCount)
             {
-                for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mAllVariantsList.size()); i += availableThreadCount)
-                {
-                    mAllVariantsList[i]->Update(deltaTimeInSec, recordState);
-                }
-            });
-        }
+                mAllVariantsList[i]->Update(deltaTimeInSec, recordState);
+            }
+        });
         JS::WaitForThreadsToFinish();
     }
 
@@ -350,7 +346,6 @@ namespace MFA
 
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
-
             auto const & descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
             MFA_VK_VALID_ASSERT(descriptorSet);
 

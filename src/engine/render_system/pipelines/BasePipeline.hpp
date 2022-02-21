@@ -2,6 +2,7 @@
 
 #include "engine/render_system/RenderTypesFWD.hpp"
 #include "DescriptorSetSchema.hpp"
+#include "engine/BedrockSignalTypes.hpp"
 
 #include <memory>
 #include <unordered_map>
@@ -23,7 +24,6 @@ EventType requiredEvents() const override                               \
 {                                                                       \
     return eventTypes;                                                  \
 }                                                                       \
- 
 
 namespace MFA
 {
@@ -53,6 +53,7 @@ namespace MFA
             static constexpr EventType EmptyEvent = 0b0;
             static constexpr EventType PreRenderEvent = 0b1;
             static constexpr EventType RenderEvent = 0b10;
+            static constexpr EventType PostRenderEvent = 0b100;
             // Resize is not included here because every pipeline requires the resize to be called
         };
 
@@ -80,6 +81,8 @@ namespace MFA
             RT::CommandRecordState & recordState,
             float deltaTime
         );
+
+        virtual void postRender(float deltaTime);
 
         [[nodiscard]]
         bool EssenceExists(std::string const & nameOrAddress) const;
@@ -136,15 +139,18 @@ namespace MFA
             explicit EssenceAndVariants(std::shared_ptr<EssenceBase> essence);
         };
         std::unordered_map<std::string, EssenceAndVariants> mEssenceAndVariantsMap;
+
         std::vector<VariantBase *> mAllVariantsList{};
         std::vector<EssenceBase *> mAllEssencesList{};
+
         VkDescriptorPool mDescriptorPool{};
         uint32_t mMaxSets;
 
         bool mIsInitialized = false;
 
-        int mPreRenderListenerId = -1;
-        int mRenderListenerId = -1;
+        SignalId mPreRenderListenerId = -1;
+        SignalId mRenderListenerId = -1;
+        SignalId mPostRenderListenerId = -1;
 
         bool mIsActive = true;
     

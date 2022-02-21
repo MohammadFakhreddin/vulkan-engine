@@ -14,50 +14,61 @@ public:
     bool TryToPush(T newData) {
         bool expectedValue = false;
         bool const desiredValue = true;
-        if (mIsLocked.compare_exchange_strong(expectedValue, desiredValue) == false) {
+        if (mLock.compare_exchange_strong(expectedValue, desiredValue) == false) {
             return false;
         }
 
-        MFA_ASSERT(mIsLocked == true);
+        MFA_ASSERT(mLock == true);
         mData.push(newData);
-        mIsLocked = false;
+        mLock = false;
         return true;
+    }
+
+    void Push(T newData)
+    {
+        while (TryToPush(newData) == false);
     }
 
     // Returns front item
     bool TryToPop(T & outData) {
         bool expectedValue = false;
         bool const desiredValue = true;
-        if (mIsLocked.compare_exchange_strong(expectedValue, desiredValue) == false) {
+        if (mLock.compare_exchange_strong(expectedValue, desiredValue) == false) {
             return false;
         }
 
-        MFA_ASSERT(mIsLocked == true);
+        MFA_ASSERT(mLock == true);
         bool success = false;
         if (mData.empty() == false) {
             outData = mData.front();
             mData.pop();
             success = true;
         }
-        mIsLocked = false;
+
+        mLock = false;
         return success;
+    }
+
+    void Pop(T & outData)
+    {
+        while (TryToPop(outData) == false);
     }
 
     [[nodiscard]]
     bool IsEmpty() {
-        ScopeLock scopeLock {mIsLocked};
+        SCOPE_LOCK(mLock)
         return mData.empty();
     }
 
     [[nodiscard]]
     size_t ItemCount()
     {
-        ScopeLock scopeLock {mIsLocked};
+        SCOPE_LOCK(mLock)
         return mData.size();
     }
 
 private:
-    std::atomic<bool> mIsLocked = false;
+    std::atomic<bool> mLock = false;
     std::queue<T> mData {};
 };
 

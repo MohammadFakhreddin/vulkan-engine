@@ -68,8 +68,8 @@ namespace MFA::JobSystem
 
         for (auto & task : tasks)
         {
+            MFA_ASSERT(task != nullptr);
             state->threadPool.AssignTask([tracker, task](ThreadNumber const threadNumber, ThreadNumber const threadCount)->void{
-
                 MFA_ASSERT(task != nullptr);
                 task(threadNumber, threadCount);
                 MFA_ASSERT(tracker != nullptr);
@@ -77,34 +77,31 @@ namespace MFA::JobSystem
             });
         }
     }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void AssignTask(Task const & task, OnFinishCallback const & onTaskFinished)
+    {
+        MFA_ASSERT(task != nullptr);
+
+        AssignTask(std::vector<Task>{task}, onTaskFinished);
+    }
 
     //-------------------------------------------------------------------------------------------------
 
-    //void AssignTaskToAllThreads(Task const & task)
-    //{
-        //state->threadPool.AssignTaskToAllThreads(task);
-    //}
+    void AssignTaskPerThread(Task const & task, OnFinishCallback const & onTaskFinished)
+    {
+        MFA_ASSERT(task != nullptr);
 
-    //-------------------------------------------------------------------------------------------------
+        int const threadCount = state->threadPool.GetNumberOfAvailableThreads();
+        std::vector<Task> tasks(threadCount);
+        for (int i = 0; i < threadCount; ++i)
+        {
+            tasks[i] = task;
+        }
 
-    //void AssignTaskManually(uint32_t const threadNumber, Task const & task)
-    //{
-        //state->threadPool.AssignTask(threadNumber, task);
-    //}
-
-    //-------------------------------------------------------------------------------------------------
-
-    //void AutoAssignTask(Task const & task)
-    //{
-    //    // TODO Track thread status to assign to the thread that is under the least pressure.
-    //    static uint32_t nextThreadNumber = 0;
-    //    JS::AssignTaskManually(nextThreadNumber, task);
-    //    ++nextThreadNumber;
-    //    if (nextThreadNumber >= state->threadPool.GetNumberOfAvailableThreads())
-    //    {
-    //        nextThreadNumber = 0;
-    //    }
-    //}
+        AssignTask(tasks, onTaskFinished);
+    }
 
     //-------------------------------------------------------------------------------------------------
 

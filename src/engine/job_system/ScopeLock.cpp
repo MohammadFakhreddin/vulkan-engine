@@ -7,14 +7,21 @@ namespace MFA {
     ScopeLock::ScopeLock(std::atomic<bool> & lock)
         : mLock(lock)
     {
-        bool expectedValue = false;
-        bool const desiredValue = true;
-        while (mLock.compare_exchange_strong(expectedValue, desiredValue) == false);
+        while (true)
+        {
+            bool expectedValue = false;
+            bool const desiredValue = true;
+            if (mLock.compare_exchange_strong(expectedValue, desiredValue) == true)
+            {
+                break;
+            }
+        }
+        MFA_ASSERT(mLock == true);
     }
 
     ScopeLock::~ScopeLock()
     {
-        MFA_ASSERT(mLock == false);
+        MFA_ASSERT(mLock == true);
         mLock = false;
     }
 }

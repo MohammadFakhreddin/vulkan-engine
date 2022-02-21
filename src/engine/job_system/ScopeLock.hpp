@@ -1,5 +1,8 @@
 #pragma once
 
+#include "engine/BedrockAssert.hpp"
+#include "engine/BedrockCommon.hpp"
+
 #include <atomic>
 
 namespace MFA {
@@ -18,3 +21,5 @@ namespace MFA {
         std::atomic<bool> & mLock;
     };
 }
+
+#define SCOPE_LOCK(lock)        ScopeLock MFA_UNIQUE_NAME(__scopeLock) {lock};

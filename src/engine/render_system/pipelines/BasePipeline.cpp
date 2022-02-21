@@ -43,6 +43,11 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    void BasePipeline::postRender(float deltaTime)
+    {}
+
+    //-------------------------------------------------------------------------------------------------
+
     bool BasePipeline::EssenceExists(std::string const & nameOrAddress) const
     {
         std::string relativePath;

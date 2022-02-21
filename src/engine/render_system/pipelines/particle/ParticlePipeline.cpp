@@ -83,16 +83,6 @@ namespace MFA
 
         BasePipeline::render(recordState, deltaTimeInSec);
 
-        for (auto & essenceAndVariants : mEssenceAndVariantsMap)
-        {
-            JS::AutoAssignTask([&recordState, deltaTimeInSec, &essenceAndVariants]()->void{
-                auto * essence = essenceAndVariants.second.essence.get();
-                auto const & variants = essenceAndVariants.second.variants;
-                CAST_ESSENCE(essence)->update(recordState, deltaTimeInSec, variants);
-            });
-        }
-        JS::WaitForThreadsToFinish();
-
         RF::BindPipeline(recordState, *mPipeline);
 
         RF::BindDescriptorSet(
@@ -105,6 +95,28 @@ namespace MFA
         {
             CAST_ESSENCE(essence)->draw(recordState, deltaTimeInSec);
         }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+    
+    void ParticlePipeline::postRender(float const deltaTimeInSec)
+    {
+        if (mAllEssencesList.empty())
+        {
+            return;
+        }
+
+        BasePipeline::postRender(deltaTimeInSec);
+
+        for (auto & essenceAndVariants : mEssenceAndVariantsMap)
+        {
+            JS::AssignTask([deltaTimeInSec, &essenceAndVariants](uint32_t threadNumber, uint32_t threadCount)->void{
+                auto * essence = essenceAndVariants.second.essence.get();
+                auto const & variants = essenceAndVariants.second.variants;
+                CAST_ESSENCE(essence)->update(deltaTimeInSec, variants);
+            });
+        }
+        JS::WaitForThreadsToFinish();
     }
 
     //-------------------------------------------------------------------------------------------------

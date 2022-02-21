@@ -32,7 +32,6 @@ namespace MFA
         ParticleEssence & operator = (ParticleEssence const &) noexcept = delete;
 
         void update(
-            RT::CommandRecordState const & recordState,
             float deltaTimeInSec,
             VariantsList const & variants
         );

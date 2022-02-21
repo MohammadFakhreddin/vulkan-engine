@@ -46,14 +46,14 @@ namespace MFA
         Entity & operator = (Entity && rhs) noexcept = delete;
 
         [[nodiscard]]
-        bool NeedUpdateEvent() const noexcept
+        bool NeedUpdateEvent() noexcept
         {
             return mUpdateSignal.IsEmpty() == false && IsActive();
         }
 
         void Init(bool triggerInitSignal = true);
 
-        void Update(float deltaTimeInSec) const;
+        void Update(float deltaTimeInSec);
 
         void Shutdown(bool shouldNotifyParent = true);
 

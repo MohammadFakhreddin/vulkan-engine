@@ -21,7 +21,7 @@ namespace MFA
         std::string const & name
     )
         : ParticleEssence(
-            RF::CreateGpuModel(cpuModel.get(), name.c_str()),
+            RF::CreateGpuModel(cpuModel.get(), name),
             static_pointer_cast<Mesh>(cpuModel->mesh))
     {}
     
@@ -57,14 +57,11 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     void ParticleEssence::update(
-        RT::CommandRecordState const & recordState,
         float deltaTimeInSec,
         VariantsList const & variants
     )
     {
         updateInstanceData(variants);
-        updateVertexBuffer(recordState);
-        updateInstanceBuffer(recordState);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -74,6 +71,9 @@ namespace MFA
         float deltaTime
     ) const
     {
+        updateVertexBuffer(recordState);
+        updateInstanceBuffer(recordState);
+
         bindVertexBuffer(recordState);
         bindInstanceBuffer(recordState);
         bindIndexBuffer(recordState);

@@ -19,7 +19,7 @@ namespace MFA
         explicit ParticlePipeline();
         ~ParticlePipeline() override;
 
-        PIPELINE_PROPS(ParticlePipeline, EventTypes::RenderEvent)
+        PIPELINE_PROPS(ParticlePipeline, EventTypes::RenderEvent | EventTypes::PostRenderEvent)
 
         void init() override;
 
@@ -28,6 +28,8 @@ namespace MFA
         void shutdown() override;
         
         void render(RT::CommandRecordState & recordState, float deltaTime) override;
+
+        void postRender(float deltaTimeInSec) override;
 
         std::shared_ptr<EssenceBase> createEssenceWithModel(
             std::shared_ptr<AssetSystem::Model> const & cpuModel,

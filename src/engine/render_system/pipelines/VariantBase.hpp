@@ -31,7 +31,7 @@ namespace MFA
             std::weak_ptr<BoundingVolumeComponent> const & boundingVolumeComponent
         );
 
-        virtual void Update(float deltaTimeInSec, RT::CommandRecordState const & drawPass) {};
+        virtual void Update(float deltaTimeInSec, RT::CommandRecordState const & drawPass) {}
 
         void Shutdown();
 

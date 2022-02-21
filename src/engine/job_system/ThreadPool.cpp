@@ -152,8 +152,8 @@ namespace MFA::JobSystem
 
     void ThreadPool::ThreadObject::mainLoop()
     {
-        std::mutex mMutex{};
-        std::unique_lock<std::mutex> mLock{ mMutex };
+        std::mutex mutex{};
+        std::unique_lock<std::mutex> mLock{ mutex };
         while (mParent.mIsAlive)
         {
             mCondition.wait(mLock, [this]()->bool
@@ -203,19 +203,23 @@ namespace MFA::JobSystem
     {
         assert(std::this_thread::get_id() == mMainThreadId);
         //When number of threads is 2 it means that platform only uses main thread
-       /* while (mainThreadAwakeCondition() == false)
-        {
-            for (auto const & threadObject : mThreadObjects)
-            {
-                threadObject->Notify();
-            }
-            std::this_thread::sleep_for(std::chrono::nanoseconds(50));
-        }*/
+        //while (mainThreadAwakeCondition() == false)
+        //{
+        //    for (auto const & threadObject : mThreadObjects)
+        //    {
+        //        threadObject->Notify();
+        //    }
+        //    std::this_thread::sleep_for(std::chrono::nanoseconds(50));
+        //}
 
         if (mainThreadAwakeCondition() == false)
         {
             mCondition.wait(mLock, [this]()->bool
                 {
+                    for (auto const & threadObject : mThreadObjects)
+                    {
+                        threadObject->Notify();
+                    }
                     return mainThreadAwakeCondition();
                 }
             );

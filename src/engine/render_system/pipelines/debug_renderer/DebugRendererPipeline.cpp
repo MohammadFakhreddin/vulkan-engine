@@ -100,28 +100,6 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DebugRendererPipeline::preRender(RT::CommandRecordState & recordState, float const deltaTimeInSec)
-    {
-        BasePipeline::preRender(recordState, deltaTimeInSec);
-
-        // Temporary: Will be replaced with debug variant soon
-        // Multi-thread update of variant animation
-        auto const availableThreadCount = JS::GetNumberOfAvailableThreads();
-        for (uint32_t threadNumber = 0; threadNumber < availableThreadCount; ++threadNumber)
-        {
-            JS::AssignTaskManually(threadNumber, [this, &recordState, deltaTimeInSec, threadNumber, availableThreadCount]()->void
-            {
-                for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mAllVariantsList.size()); i += availableThreadCount)
-                {
-                    mAllVariantsList[i]->Update(deltaTimeInSec, recordState);
-                }
-            });
-        }
-        JS::WaitForThreadsToFinish();
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
     void DebugRendererPipeline::render(RT::CommandRecordState & drawPass, float deltaTime)
     {
         RF::BindPipeline(drawPass, *mpipeline);

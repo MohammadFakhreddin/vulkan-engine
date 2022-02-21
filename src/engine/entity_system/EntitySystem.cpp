@@ -44,7 +44,7 @@ namespace MFA::EntitySystem
 
     void Update(float const deltaTimeInSec)
     {
-        state->updateSignal.Emit(deltaTimeInSec);
+        state->updateSignal.EmitMultiThread(deltaTimeInSec);
     }
 
     //-------------------------------------------------------------------------------------------------

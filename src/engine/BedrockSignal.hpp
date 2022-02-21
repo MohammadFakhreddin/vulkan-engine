@@ -39,12 +39,15 @@ namespace MFA
 
         SignalId Register(const Listener & listener)
         {
+            SCOPE_LOCK(mLock)
+
             MFA_ASSERT(listener != nullptr);
-            ScopeLock scopeLock {mLock};
+
             mSlots.emplace_back(Slot{ mNextId, listener });
             ++mNextId;
             MFA_ASSERT(mNextId != InvalidSignalId);
             auto const id = mSlots.back().id;
+            
             return id;
         }
 
@@ -52,7 +55,7 @@ namespace MFA
         {
             if (listenerId != InvalidSignalId)
             {
-                ScopeLock scopeLock {mLock};
+                SCOPE_LOCK(mLock)
 
                 for (int i = static_cast<int>(mSlots.size() - 1); i >= 0; --i)
                 {
@@ -69,7 +72,8 @@ namespace MFA
 
         void Emit(ArgsT ... args)
         {
-            ScopeLock scopeLock {mLock};
+            SCOPE_LOCK(mLock)
+
             for (int i = static_cast<int>(mSlots.size()) - 1; i >= 0; --i)
             {
                 const auto & slot = mSlots[i];
@@ -80,27 +84,23 @@ namespace MFA
         void EmitMultiThread(ArgsT ... args)
         {
             MFA_ASSERT(JS::IsMainThread()); // We should only call this function on mainThread
-            ScopeLock scopeLock {mLock};
+            SCOPE_LOCK(mLock)
 
-            std::vector<JS::Task> tasks (mSlots.size());
-            for (int i = 0; i < static_cast<int>(mSlots.size()); ++i)
-            {
-                Slot slot = mSlots[i];
-                JS::Task task = [slot, args](JS::ThreadNumber threadNumber, JS::ThreadNumber threadCount)->void{
-                    slot.listener(std::forward<ArgsT>(args)...);
-                };
-                tasks.emplace_back(task);
-            }
-            JobSystem::AssignTask(tasks);
+            JS::AssignTaskPerThread([... args = std::forward<ArgsT>(args), this](uint32_t const threadNumber, uint32_t const threadCount)->void{
+                for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mSlots.size()); i += threadCount)
+                {
+                    MFA_ASSERT(mSlots[i].listener != nullptr);
+                    mSlots[i].listener(args...);
+                }
+            });
 
             JS::WaitForThreadsToFinish();
-
         }
 
-
         [[nodiscard]]
-        bool IsEmpty() const
+        bool IsEmpty()
         {
+            SCOPE_LOCK(mLock)
             return mSlots.empty();
         }
 
