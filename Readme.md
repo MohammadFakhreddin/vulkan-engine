@@ -74,16 +74,17 @@ More document/tutorial will be added soon!
 
 ## How to build
 ### Windows
+- You can use following command to create the project
 ```
-Create directory build64
-cmake . -BBuild64 -DCMAKE_GENERATOR=x64
-Or 86 if you prefer (ASan does not work on x64 currently)
-cmake .. -G "Visual Studio 16 2019" -A Win32
+mkdir build64 || cmake -A x64 -S . -Bbuild64
 ```
-Find .sln files inside build64 and then run the project
+- Or if you have node installed you can run ```npm run cmake-windows```
+- Also you can use cmake tools that does everything for you (Available as extension for VS-Code)
+- Find .sln files inside build64 and then run the project
 <br/>
 
 ### Macos
+- Using make
 ```
 mkdir build64
 cd build64
@@ -92,7 +93,7 @@ make
 ./MFaEngine
 ```
 
-Or using xcode if you prefer.  Create a build folder then execute following command :
+- If you prefer Xcode, create a build folder then execute following command from inside that folder:
 ```
 cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=./ios.toolchain.cmake -DPLATFORM=MAC
 ```
