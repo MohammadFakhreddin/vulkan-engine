@@ -25,6 +25,6 @@
 
         "cmake-mac": "cd build64 && cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=./ios.toolchain.cmake -DPLATFORM=MAC && cd ..",
         "cmake-ios": "cd buildIOS && cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=./ios.toolchain.cmake -DPLATFORM=OS64COMBINED && cd ..",
-        "cmake-windows": "cd build64 && cmake .. || cd .."
+        "cmake-windows": "cd build64 && cmake .. -BBuild64 -DCMAKE_GENERATOR=x64 || cd .."
     }
 }
