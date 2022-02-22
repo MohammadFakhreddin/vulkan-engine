@@ -15,9 +15,19 @@
 #include "engine/entity_system/components/TransformComponent.hpp"
 #include "engine/entity_system/components/DirectionalLightComponent.hpp"
 #include "engine/BedrockMatrix.hpp"
+#include "engine/entity_system/components/AxisAlignedBoundingBoxComponent.hpp"
+#include "engine/entity_system/components/BoundingVolumeRendererComponent.hpp"
+#include "engine/render_system/pipelines/particle/ParticlePipeline.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Variant.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 #include "tools/PrefabFileStorage.hpp"
+#include "engine/render_system/pipelines/particle/FireEssence.hpp"
+#include "engine/resource_manager/ResourceManager.hpp"
+
+namespace MFA
+{
+    class BoundingVolumeRendererComponent;
+}
 
 using namespace MFA;
 
@@ -25,8 +35,6 @@ using namespace MFA;
 
 Demo3rdPersonScene::Demo3rdPersonScene()
     : Scene()
-    , mSoldierPrefab(EntitySystem::CreateEntity("SolderPrefab", nullptr))
-    , mSponzaPrefab(EntitySystem::CreateEntity("SponzaPrefab", nullptr))
 {}
 
 //-------------------------------------------------------------------------------------------------
@@ -38,19 +46,22 @@ Demo3rdPersonScene::~Demo3rdPersonScene() = default;
 void Demo3rdPersonScene::Init()
 {
     Scene::Init();
+
+    Prefab soldierPrefab {EntitySystem::CreateEntity("SolderPrefab", nullptr)};
+    Prefab sponzaPrefab {EntitySystem::CreateEntity("SponzaPrefab", nullptr)};
     
     PrefabFileStorage::Deserialize(PrefabFileStorage::DeserializeParams {
         .fileAddress = Path::ForReadWrite("prefabs/soldier.json"),
-        .prefab = &mSoldierPrefab
+        .prefab = &soldierPrefab
     });
 
     PrefabFileStorage::Deserialize(PrefabFileStorage::DeserializeParams {
         .fileAddress = Path::ForReadWrite("prefabs/sponza3.json"),
-        .prefab = &mSponzaPrefab
+        .prefab = &sponzaPrefab
     });
 
     {// Playable soldier
-        auto * entity = mSoldierPrefab.Clone(GetRootEntity(), Prefab::CloneEntityOptions {.name = "Playable soldier"});
+        auto * entity = soldierPrefab.Clone(GetRootEntity(), Prefab::CloneEntityOptions {.name = "Playable soldier"});
         {// Transform
             float position[3]{ 0.0f, 2.0f, -5.0f };
             float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
@@ -77,7 +88,7 @@ void Demo3rdPersonScene::Init()
     }
 
     {// Map
-        auto * entity = mSponzaPrefab.Clone(GetRootEntity(), Prefab::CloneEntityOptions {.name = "Sponza"});
+        auto * entity = sponzaPrefab.Clone(GetRootEntity(), Prefab::CloneEntityOptions {.name = "Sponza"});
         if (auto const ptr = entity->GetComponent<TransformComponent>().lock())
         {
             float position[3]{ 0.4f, 2.0f, -6.0f };
@@ -109,6 +120,62 @@ void Demo3rdPersonScene::Init()
 
         entity->SetActive(true);
         EntitySystem::InitEntity(entity);
+    }
+
+    {// Fire
+
+        auto * particlePipeline = SceneManager::GetPipeline<ParticlePipeline>();
+        MFA_ASSERT(particlePipeline != nullptr);
+
+        if (particlePipeline->essenceExists("SponzaFire") == false){// Fire essence
+            particlePipeline->addEssence(
+                std::make_shared<FireEssence>(
+                    "SponzaFire",
+                    RC::AcquireGpuTexture("images/fire/particle_fire.ktx"),
+                    FireEssence::Options {
+                        .particleMinLife = 0.2f,
+                        .particleMaxLife = 1.0f,
+                        .particleMinSpeed = 0.5f,
+                        .particleMaxSpeed = 1.0f,
+                        .fireRadius = 0.1f,
+                        .fireInitialPointSize = 300.0f,
+                        .particleCount = 256,
+                    }
+                )
+            );
+        }
+
+        {// Fire instances
+            auto const createFireInstance = [this, particlePipeline](glm::vec3 const & position)->void
+            {
+                auto * entity = EntitySystem::CreateEntity("FireInstance", GetRootEntity());
+                MFA_ASSERT(entity != nullptr);
+
+                auto const transform = entity->AddComponent<TransformComponent>().lock();
+                MFA_ASSERT(transform != nullptr);
+                transform->UpdatePosition(position);
+                
+                entity->AddComponent<MeshRendererComponent>(
+                    *particlePipeline,
+                    "SponzaFire"
+                );
+                entity->AddComponent<AxisAlignedBoundingBoxComponent>(
+                    glm::vec3{ 0.0f, -0.3f, 0.0f },
+                    glm::vec3{ 0.2f, 0.4f, 0.2f }
+                );
+                entity->AddComponent<ColorComponent>(glm::vec3{ 1.0f, 0.0f, 0.0f });
+
+                auto const boundingVolumeRenderer = entity->AddComponent<BoundingVolumeRendererComponent>().lock();
+                MFA_ASSERT(boundingVolumeRenderer != nullptr);
+                boundingVolumeRenderer->SetActive(true);
+
+                EntitySystem::InitEntity(entity);
+            };
+            createFireInstance(glm::vec3 {-1.05f, 1.0f, -1.05f});
+            createFireInstance(glm::vec3 {+1.85f, 1.0f, -1.05f});
+            createFireInstance(glm::vec3 {-1.05f, 1.0f, -9.9f});
+            createFireInstance(glm::vec3 {+1.85f, 1.0f, -9.9f});
+        }
     }
 
     mUIRecordId = UI::Register([this]()->void { onUI(); });
@@ -276,6 +343,8 @@ void Demo3rdPersonScene::Shutdown()
     Scene::Shutdown();
 
     UI::UnRegister(mUIRecordId);
+
+    mDebugRenderPipeline->changeActivationStatus(true);
     
 }
 

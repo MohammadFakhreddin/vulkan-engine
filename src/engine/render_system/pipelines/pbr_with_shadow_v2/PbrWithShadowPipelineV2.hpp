@@ -86,7 +86,8 @@ namespace MFA
         
         PIPELINE_PROPS(
             PBRWithShadowPipelineV2,
-            EventTypes::PreRenderEvent | EventTypes::RenderEvent
+            EventTypes::PreRenderEvent | EventTypes::RenderEvent,
+            RenderOrder::BeforeEverything
         );
 
         void init() override;

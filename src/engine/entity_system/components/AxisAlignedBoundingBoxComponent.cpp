@@ -156,7 +156,7 @@ namespace MFA
 
     glm::vec3 const & AxisAlignedBoundingBoxComponent::GetExtend() const
     {
-        return mExtend;
+        return mAABB_Extent;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -185,8 +185,6 @@ namespace MFA
     bool AxisAlignedBoundingBoxComponent::IsInsideCameraFrustum(CameraComponent const * camera)
     {
         MFA_ASSERT(camera != nullptr);
-
-        // TODO Use this extent for displaying the frustum instead of raw size
         return camera->IsPointInsideFrustum(mWorldPosition, mAABB_Extent);
     }
 

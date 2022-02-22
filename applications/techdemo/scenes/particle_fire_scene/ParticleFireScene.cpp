@@ -6,7 +6,6 @@
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "tools/Importer.hpp"
-#include "engine/asset_system/AssetModel.hpp"
 #include "engine/camera/ObserverCameraComponent.hpp"
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/EntitySystem.hpp"
@@ -77,33 +76,26 @@ bool ParticleFireScene::RequiresUpdate()
 
 //-------------------------------------------------------------------------------------------------
 
-void ParticleFireScene::createFireEssence()
+void ParticleFireScene::createFireEssence() const
 {
-    mParticlePipeline->addEssence(
-        std::make_shared<FireEssence>(
-            "Fire",
-            RC::AcquireGpuTexture("images/fire/particle_fire.ktx"),
-            FireEssence::Options {
-                .fireRadius = FireRadius,
-                .particleCount = 2048
-            }
-        )
-    );
+    if (mParticlePipeline->essenceExists("ParticleSceneFire") == false)
+    {
+        mParticlePipeline->addEssence(
+            std::make_shared<FireEssence>(
+                "ParticleSceneFire",
+                RC::AcquireGpuTexture("images/fire/particle_fire.ktx"),
+                FireEssence::Options {
+                    .fireRadius = FireRadius,
+                    .particleCount = 1024
+                }
+            )
+        );
+    }
 }
 
 //-------------------------------------------------------------------------------------------------
 
-std::vector<std::shared_ptr<AS::Texture>> ParticleFireScene::createFireTexture()
-{
-    std::vector<std::shared_ptr<AS::Texture>> textures {};
-    textures.emplace_back(RC::AcquireCpuTexture("images/fire/particle_fire.ktx"));
-    MFA_ASSERT(textures.back() != nullptr);
-    return textures;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void ParticleFireScene::createFireInstance(glm::vec3 const & position)
+void ParticleFireScene::createFireInstance(glm::vec3 const & position) const
 {
     auto * entity = EntitySystem::CreateEntity("FireInstance", GetRootEntity());
     MFA_ASSERT(entity != nullptr);
@@ -114,7 +106,7 @@ void ParticleFireScene::createFireInstance(glm::vec3 const & position)
     
     entity->AddComponent<MeshRendererComponent>(
         *mParticlePipeline,
-        "Fire"
+        "ParticleSceneFire"
     );
     entity->AddComponent<AxisAlignedBoundingBoxComponent>(
         glm::vec3{ 0.0f, -0.8f, 0.0f },

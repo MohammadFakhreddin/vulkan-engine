@@ -6,7 +6,6 @@
 #include "engine/BedrockPath.hpp"
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/asset_system/AssetBaseMesh.hpp"
 
 namespace MFA
 {

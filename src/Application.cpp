@@ -90,6 +90,8 @@ void Application::Shutdown() {
     mIsInitialized = false;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void Application::run() {
     //static constexpr uint32_t TargetFpsDeltaTimeInMs = 1000 / 500;
 #ifdef __DESKTOP__
@@ -156,6 +158,8 @@ void Application::run() {
 
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void Application::RenderFrame(float const deltaTimeInSec) {
     internalRenderFrame(deltaTimeInSec);
     IM::OnNewFrame(deltaTimeInSec);
@@ -163,6 +167,8 @@ void Application::RenderFrame(float const deltaTimeInSec) {
     SceneManager::Update(deltaTimeInSec);
     RF::OnNewFrame(deltaTimeInSec);
 }
+
+//-------------------------------------------------------------------------------------------------
 
 #ifdef __ANDROID__
 void Application::setAndroidApp(android_app * androidApp) {
@@ -173,8 +179,12 @@ void Application::setAndroidApp(android_app * androidApp) {
 }
 #endif
 
+//-------------------------------------------------------------------------------------------------
+
 #ifdef __IOS__
 void Application::SetView(void * view) {
     mView = view;
 }
 #endif
+
+//-------------------------------------------------------------------------------------------------

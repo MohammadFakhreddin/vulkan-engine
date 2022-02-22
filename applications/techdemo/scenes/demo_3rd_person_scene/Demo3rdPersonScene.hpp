@@ -54,9 +54,6 @@ private:
     
     int mUIRecordId = 0;
 
-    MFA::Prefab mSoldierPrefab;
-    MFA::Prefab mSponzaPrefab;
-    
     MFA::DebugRendererPipeline * mDebugRenderPipeline = nullptr;
 
 };

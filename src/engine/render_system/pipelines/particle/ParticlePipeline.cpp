@@ -353,6 +353,8 @@ namespace MFA
 
         pipelineOptions.depthStencil.depthWriteEnable = VK_FALSE;
 
+        pipelineOptions.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+        
         std::vector<VkDescriptorSetLayout> const descriptorSetLayouts {
             mPerFrameDescriptorSetLayout->descriptorSetLayout,
             mPerEssenceDescriptorSetLayout->descriptorSetLayout,

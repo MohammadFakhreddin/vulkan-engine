@@ -32,12 +32,16 @@ namespace MFA
 
         void onUI() override;
 
+        void serialize(nlohmann::json & jsonObject) const override;
+
+        void deserialize(nlohmann::json const & jsonObject) override;
+
         void clone(Entity * entity) const override;
 
     private:
 
         std::weak_ptr<BoundingVolumeComponent> mBoundingVolumeComponent {};
-        std::weak_ptr<TransformComponent> mRendererTransformComponent {};
+        std::weak_ptr<TransformComponent> mRendererTransform {};
     
     };
 
