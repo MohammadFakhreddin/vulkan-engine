@@ -104,7 +104,7 @@ void Demo3rdPersonScene::Init()
 
         auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
         MFA_ASSERT(colorComponent != nullptr);
-        float const lightScale = 5.0f;
+        float const lightScale = 0.5f;
         float lightColor[3] {
             (252.0f/256.0f) * lightScale,
             (212.0f/256.0f) * lightScale,
@@ -123,11 +123,10 @@ void Demo3rdPersonScene::Init()
     }
 
     {// Fire
-
         auto * particlePipeline = SceneManager::GetPipeline<ParticlePipeline>();
         MFA_ASSERT(particlePipeline != nullptr);
 
-        if (particlePipeline->essenceExists("SponzaFire") == false){// Fire essence
+        if (particlePipeline->hasEssence("SponzaFire") == false){// Fire essence
             particlePipeline->addEssence(
                 std::make_shared<FireEssence>(
                     "SponzaFire",

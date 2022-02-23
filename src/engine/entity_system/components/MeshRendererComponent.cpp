@@ -105,7 +105,7 @@ namespace MFA
         std::string relativePath{};
         Path::RelativeToAssetFolder(address, relativePath);
 
-        if (mPipeline->essenceExists(relativePath) == false)
+        if (mPipeline->hasEssence(relativePath) == false)
         {
             bool addResult = false;
 

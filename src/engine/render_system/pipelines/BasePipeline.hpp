@@ -96,7 +96,7 @@ namespace MFA
         bool addEssence(std::shared_ptr<EssenceBase> const & essence);
 
         [[nodiscard]]
-        bool essenceExists(std::string const & nameOrAddress) const;
+        bool hasEssence(std::string const & nameOrAddress) const;
 
         // Editor only function
         void destroyEssence(std::string const & nameOrAddress);

@@ -78,7 +78,7 @@ bool ParticleFireScene::RequiresUpdate()
 
 void ParticleFireScene::createFireEssence() const
 {
-    if (mParticlePipeline->essenceExists("ParticleSceneFire") == false)
+    if (mParticlePipeline->hasEssence("ParticleSceneFire") == false)
     {
         mParticlePipeline->addEssence(
             std::make_shared<FireEssence>(

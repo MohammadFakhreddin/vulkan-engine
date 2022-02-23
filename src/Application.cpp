@@ -50,8 +50,8 @@ void Application::Init() {
         MFA_ASSERT(mIsInitialized == false);
 
         params.resizable = true;
-        params.screenWidth = static_cast<RF::ScreenWidth>(static_cast<float>(screenWidth) * 0.9f);
-        params.screenHeight = static_cast<RF::ScreenHeight>(static_cast<float>(screenHeight) * 0.9f);
+        params.screenWidth = static_cast<RF::ScreenWidth>(static_cast<float>(screenWidth) * 1.0f);
+        params.screenHeight = static_cast<RF::ScreenHeight>(static_cast<float>(screenHeight) * 1.0f);
     #else
         #error Os not supported
     #endif

@@ -23,6 +23,9 @@
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
 #include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Essence.hpp"
+#include "engine/asset_system/AssetDebugMesh.hpp"
+#include "engine/render_system/pipelines/debug_renderer/DebugEssence.hpp"
+#include "engine/asset_system/AssetParticleMesh.hpp"
 
 using namespace MFA;
 
@@ -84,15 +87,17 @@ void PrefabEditorScene::Init()
     mPBR_Pipeline = SceneManager::GetPipeline<PBRWithShadowPipelineV2>();
     MFA_ASSERT(mPBR_Pipeline != nullptr);
 
-    mDebugRenderPipeline = SceneManager::GetPipeline<DebugRendererPipeline>();
-    MFA_ASSERT(mDebugRenderPipeline != nullptr);
+    mDebugPipeline = SceneManager::GetPipeline<DebugRendererPipeline>();
+    MFA_ASSERT(mDebugPipeline != nullptr);
+
+    loadSelectedAsset("Sphere");
+    loadSelectedAsset("Cube");
 }
 
 //-------------------------------------------------------------------------------------------------
 
 void PrefabEditorScene::Update(float const deltaTimeInSec)
-{
-}
+{}
 
 //-------------------------------------------------------------------------------------------------
 
@@ -155,7 +160,7 @@ void PrefabEditorScene::essencesWindow()
                 MFA_LOG_WARN("All assets and prefabs must be placed in asset folder for portability\n");
                 return;
             }
-            if (loadSelectedAsset(fileAddress) == false)
+            if (loadSelectedAsset(fileAddress, mInputTextEssenceName) == false)
             {
                 MFA_LOG_WARN("Loading asset failed");
             }
@@ -184,10 +189,55 @@ void PrefabEditorScene::saveAndLoadWindow()
 
 //-------------------------------------------------------------------------------------------------
 
-bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress)
+void PrefabEditorScene::addEssenceToPipeline(
+    std::shared_ptr<RT::GpuModel> const & gpuModel,
+    std::shared_ptr<AS::Model> const & cpuModel
+)
+{
+    MFA_ASSERT(gpuModel != nullptr);
+    MFA_ASSERT(cpuModel != nullptr);
+
+    auto * mesh = cpuModel->mesh.get();
+    MFA_ASSERT(mesh != nullptr);
+
+    {// PBR
+        auto * pbrMesh = dynamic_cast<AS::PBR::Mesh *>(mesh);
+        if (pbrMesh != nullptr)
+        {
+            if (mPBR_Pipeline->hasEssence(gpuModel->nameOrAddress) == false)
+            {
+                mPBR_Pipeline->addEssence(std::make_shared<PBR_Essence>(gpuModel, pbrMesh->getMeshData()));
+            }
+            return;
+        }
+    }
+    {// Debug
+        auto * debugMesh = dynamic_cast<AS::Debug::Mesh *>(mesh);
+        if (debugMesh != nullptr)
+        {
+            if (mDebugPipeline->hasEssence(gpuModel->nameOrAddress) == false)
+            {
+                mDebugPipeline->addEssence(std::make_shared<DebugEssence>(gpuModel, debugMesh->getIndexCount()));
+            }
+            return;
+        }
+    }
+    {// Particle
+        // TODO
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+
+bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress, std::string displayName)
 {
     MFA_LOG_INFO("Trying to load file with address %s", fileAddress.c_str());
     MFA_ASSERT(fileAddress.empty() == false);
+
+    if (displayName.empty())
+    {
+        displayName = fileAddress;
+    }
 
     auto const cpuModel = RC::AcquireCpuModel(fileAddress);
     if (cpuModel == nullptr)
@@ -205,15 +255,24 @@ bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress)
 
     mLoadedAssets.emplace_back(Asset{
         .fileAddress = fileAddress,
-        .essenceName = mInputTextEssenceName
+        .essenceName = displayName
     });
 
-    if (mPBR_Pipeline->essenceExists(gpuModel->nameOrAddress) == false)
+    /*if (mPBR_Pipeline->essenceExists(gpuModel->nameOrAddress) == false)
     {
         auto * mesh = cpuModel->mesh.get();
-        MFA_ASSERT(mesh != nullptr && dynamic_cast<AS::PBR::Mesh *>(mesh) != nullptr);
-        mPBR_Pipeline->addEssence(std::make_shared<PBR_Essence>(gpuModel, static_cast<AS::PBR::Mesh *>(mesh)->getMeshData()));
-    }
+
+        MFA_ASSERT(mesh != nullptr);
+
+        auto * pbrMesh = dynamic_cast<AS::PBR::Mesh *>(mesh);
+        if (pbrMesh != nullptr)
+        {
+            mPBR_Pipeline->addEssence(std::make_shared<PBR_Essence>(gpuModel, pbrMesh->getMeshData()));
+        } else {
+
+        }
+    }*/
+    addEssenceToPipeline(gpuModel, cpuModel);
 
     mInputTextEssenceName = "";
 
@@ -360,7 +419,8 @@ void PrefabEditorScene::componentUI(Component * component, Entity * entity)
         }
 
         auto const findResult = mComponentsDependents.find(component->getFamily());
-        MFA_ASSERT(findResult != mComponentsDependents.end());
+        // Invalid assert because component may not have any dependant
+        //MFA_ASSERT(findResult != mComponentsDependents.end());
         for (auto const familyId : findResult->second)
         {
             auto dependentComponent = entity->GetComponent(familyId).lock();
@@ -440,7 +500,7 @@ void PrefabEditorScene::prepareDependencyLists()
 
 #define INSERT_INTO_CREATE_COMPONENT_MAP(component, createFunction)             \
 mCreateComponentInstructionMap[component::Name] = CreateComponentInstruction {  \
-    .familyType = component::Family,                                        \
+    .familyType = component::Family,                                            \
     .function = (createFunction),                                               \
 }                                                                               \
 
@@ -455,22 +515,33 @@ void PrefabEditorScene::prepareCreateComponentInstructionMap()
     {
         if (mSelectedEssenceIndex < 0 || mSelectedEssenceIndex >= static_cast<int>(mLoadedAssets.size()))
         {
+            MFA_LOG_WARN("Cannot create mesh renderer component because no essence selected!");
             return nullptr;
         }
 
         if (mSelectedPipeline < 0 || mSelectedPipeline >= static_cast<int>(mAllPipelines.size()))
         {
+            MFA_LOG_WARN("Cannot create mesh renderer component because no pipeline selected!");
             return nullptr;
         }
-        return entity->AddComponent<MeshRendererComponent>(
-            *mAllPipelines[mSelectedPipeline],
-            mLoadedAssets[mSelectedEssenceIndex].fileAddress
-        ).lock();
+
+        auto * pipeline = mAllPipelines[mSelectedPipeline];
+        MFA_ASSERT(pipeline != nullptr);
+        auto essenceName = mLoadedAssets[mSelectedEssenceIndex].fileAddress;
+        MFA_ASSERT(essenceName.empty() == false);
+
+        if (pipeline->hasEssence(essenceName) == false)
+        {
+            MFA_LOG_WARN("Pipeline %s does not support essence with name %s", pipeline->GetName(), essenceName.c_str());
+            return nullptr;
+        }
+
+        return entity->AddComponent<MeshRendererComponent>(*pipeline, essenceName).lock();
     });
 
     INSERT_INTO_CREATE_COMPONENT_MAP(BoundingVolumeRendererComponent, [this](Entity * entity)
     {
-        return entity->AddComponent<BoundingVolumeRendererComponent>(*mDebugRenderPipeline).lock();
+        return entity->AddComponent<BoundingVolumeRendererComponent>(*mDebugPipeline).lock();
     });
 
     INSERT_INTO_CREATE_COMPONENT_MAP(SphereBoundingVolumeComponent, [](Entity * entity)
@@ -506,7 +577,7 @@ Entity * PrefabEditorScene::createPrefabEntity(char const * name, Entity * paren
 {
     auto * entity = EntitySystem::CreateEntity(name, parent);
     MFA_ASSERT(entity != nullptr);
-    
+
     if (createTransform)
     {
         entity->AddComponent<TransformComponent>();
