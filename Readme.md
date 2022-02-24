@@ -8,7 +8,11 @@
 More document/tutorial will be added soon!
 
 ## Particle system
-<img src="examples/fire.gif"  height=500>
+<img src="examples/particle-sponza.gif"  height=400>
+
+<br>
+
+<img src="examples/fire.gif"  height=400>
 
 <br>
 
