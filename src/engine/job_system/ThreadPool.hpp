@@ -30,6 +30,8 @@ namespace MFA::JobSystem
 
         void AssignTask(Task const & task) const;
 
+        void AssignTaskPerThread(Task const & task) const;
+
         [[nodiscard]]
         ThreadNumber GetNumberOfAvailableThreads() const;
 

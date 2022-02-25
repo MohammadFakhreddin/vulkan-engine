@@ -89,18 +89,10 @@ namespace MFA::JobSystem
 
     //-------------------------------------------------------------------------------------------------
 
-    void AssignTaskPerThread(Task const & task, OnFinishCallback const & onTaskFinished)
+    void AssignTaskPerThread(Task const & task)
     {
         MFA_ASSERT(task != nullptr);
-
-        int const threadCount = state->threadPool.GetNumberOfAvailableThreads();
-        std::vector<Task> tasks(threadCount);
-        for (int i = 0; i < threadCount; ++i)
-        {
-            tasks[i] = task;
-        }
-
-        AssignTask(tasks, onTaskFinished);
+        state->threadPool.AssignTaskPerThread(task);
     }
 
     //-------------------------------------------------------------------------------------------------

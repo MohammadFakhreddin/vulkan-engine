@@ -82,14 +82,16 @@ namespace MFA
 
         void SetActiveAnimation(char const * animationName, AnimationParams const & params = AnimationParams{});
 
-        void Update(float deltaTimeInSec, RT::CommandRecordState const & drawPass) override;
+        void PreRender(float deltaTimeInSec, RT::CommandRecordState const & recordState) override;
 
         using BindDescriptorSetFunction = std::function<void(AS::PBR::Primitive const & primitive, Node const & node)>;
-        void Draw(
+        void Render(
             RT::CommandRecordState const & drawPass,
             BindDescriptorSetFunction const & bindFunction,
             AS::AlphaMode alphaMode
         );
+
+        void PostRender(float deltaTimeInSec) override;
         
         [[nodiscard]]
         RT::UniformBufferGroup const * GetSkinJointsBuffer() const noexcept;

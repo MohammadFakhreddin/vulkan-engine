@@ -75,6 +75,26 @@ namespace MFA::JobSystem
 
     //-------------------------------------------------------------------------------------------------
 
+    void ThreadPool::AssignTaskPerThread(Task const & task) const
+    {
+        assert(std::this_thread::get_id() == mMainThreadId);
+        assert(task != nullptr);
+
+        if (mIsAlive == true)
+        {
+            for (auto & thread : mThreadObjects)
+            {
+                thread->Assign(task);
+            }
+        }
+        else
+        {
+            task(0, 1);
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     ThreadPool::ThreadObject::ThreadObject(ThreadNumber const threadNumber, ThreadPool & parent)
         :
         mParent(parent),

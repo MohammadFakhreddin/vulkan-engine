@@ -119,7 +119,40 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
     // TODO We should separate it into update buffer and update state phase
-    void PBR_Variant::Update(float const deltaTimeInSec, RT::CommandRecordState const & drawPass)
+    void PBR_Variant::PreRender(float const deltaTimeInSec, RT::CommandRecordState const & recordState)
+    {
+        if (IsActive() == false)
+        {
+            return;
+        }
+
+        if (mBufferDirtyCounter > 0)
+        {
+            RF::UpdateBuffer(
+               *mSkinsJointsBuffer->buffers[recordState.frameIndex],
+               mCachedSkinsJointsBlob->memory
+            );
+            mBufferDirtyCounter -= 1;
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBR_Variant::Render(
+        RT::CommandRecordState const & drawPass,
+        BindDescriptorSetFunction const & bindFunction,
+        AS::AlphaMode const alphaMode
+    )
+    {
+        for (auto & node : mNodes)
+        {
+            drawNode(drawPass, node, bindFunction, alphaMode);
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBR_Variant::PostRender(float const deltaTimeInSec)
     {
         if (IsActive() == false)
         {
@@ -143,28 +176,6 @@ namespace MFA
             mBufferDirtyCounter = 2;
 
             mIsSkinJointsChanged = false;
-        }
-        if (mBufferDirtyCounter > 0)
-        {
-            RF::UpdateBuffer(
-               *mSkinsJointsBuffer->buffers[drawPass.frameIndex],
-               mCachedSkinsJointsBlob->memory
-            );
-            mBufferDirtyCounter -= 1;
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void PBR_Variant::Draw(
-        RT::CommandRecordState const & drawPass,
-        BindDescriptorSetFunction const & bindFunction,
-        AS::AlphaMode const alphaMode
-    )
-    {
-        for (auto & node : mNodes)
-        {
-            drawNode(drawPass, node, bindFunction, alphaMode);
         }
     }
 

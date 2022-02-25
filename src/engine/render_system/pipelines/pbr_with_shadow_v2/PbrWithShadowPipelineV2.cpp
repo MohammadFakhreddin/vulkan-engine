@@ -145,6 +145,36 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    void PBRWithShadowPipelineV2::preRenderVariants(float deltaTimeInSec, RT::CommandRecordState const & recordState) const
+    {
+        // Multi-thread update of variant animation
+        JS::AssignTaskPerThread([this, &recordState, deltaTimeInSec](uint32_t const threadNumber, uint32_t const threadCount)->void
+        {
+            for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mAllVariantsList.size()); i += threadCount)
+            {
+                mAllVariantsList[i]->PreRender(deltaTimeInSec, recordState);
+            }
+        });
+        JS::WaitForThreadsToFinish();
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::postRenderVariants(float deltaTimeInSec) const
+    {
+        // Multi-thread update of variant animation
+        JS::AssignTaskPerThread([this, deltaTimeInSec](uint32_t const threadNumber, uint32_t const threadCount)->void
+        {
+            for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mAllVariantsList.size()); i += threadCount)
+            {
+                mAllVariantsList[i]->PostRender(deltaTimeInSec);
+            }
+        });
+        JS::WaitForThreadsToFinish();
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void PBRWithShadowPipelineV2::preRender(RT::CommandRecordState & recordState, float const deltaTime)
     {
         // TODO I should render bounding volume for objects and geometry for occluders.
@@ -153,7 +183,7 @@ namespace MFA
 
         BasePipeline::preRender(recordState, deltaTime);
 
-        updateVariants(deltaTime, recordState);
+        preRenderVariants(deltaTime, recordState);
 
         performDepthPrePass(recordState);
 
@@ -170,24 +200,18 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::updateVariants(float deltaTimeInSec, RT::CommandRecordState const & recordState) const
+    void PBRWithShadowPipelineV2::render(RT::CommandRecordState & recordState, float const deltaTimeInSec)
     {
-        // Multi-thread update of variant animation
-        JS::AssignTaskPerThread([this, &recordState, deltaTimeInSec](uint32_t const threadNumber, uint32_t const threadCount)->void
-        {
-            for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mAllVariantsList.size()); i += threadCount)
-            {
-                mAllVariantsList[i]->Update(deltaTimeInSec, recordState);
-            }
-        });
-        JS::WaitForThreadsToFinish();
+        BasePipeline::render(recordState, deltaTimeInSec);
+        performDisplayPass(recordState);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::render(RT::CommandRecordState & recordState, float deltaTime)
+    void PBRWithShadowPipelineV2::postRender(float const deltaTimeInSec)
     {
-        performDisplayPass(recordState);
+        BasePipeline::postRender(deltaTimeInSec);
+        postRenderVariants(deltaTimeInSec);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -502,7 +526,7 @@ namespace MFA
                         variant->GetDescriptorSetGroup()
                     );
 
-                    CAST_VARIANT(variant)->Draw(
+                    CAST_VARIANT(variant)->Render(
                         recordState,
                         [&recordState, &pushConstants](
                             AS::PBR::Primitive const & primitive,
@@ -585,7 +609,7 @@ namespace MFA
                         variant->GetDescriptorSetGroup()
                     );
 
-                    CAST_VARIANT(variant)->Draw(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
+                    CAST_VARIANT(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
                     {
                         // Vertex push constants
                         pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
@@ -706,7 +730,7 @@ namespace MFA
                         variant->GetDescriptorSetGroup()
                     );
 
-                    CAST_VARIANT(variant)->Draw(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
+                    CAST_VARIANT(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
                     {
                         // Vertex push constants
                         pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
@@ -783,7 +807,7 @@ namespace MFA
                     RF::BeginQuery(recordState, occlusionQueryData.Pool, static_cast<uint32_t>(occlusionQueryData.Variants.size()));
 
                     // TODO Draw a placeholder cube instead of complex geometry
-                    CAST_VARIANT(variant)->Draw(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
+                    CAST_VARIANT(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
                         {
                             // Vertex push constants
                             Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
@@ -853,7 +877,7 @@ namespace MFA
                         variant->GetDescriptorSetGroup()
                     );
                     // TODO We can render all instances at once and have a large push constant for all of them
-                    CAST_VARIANT(variant)->Draw(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
+                    CAST_VARIANT(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
                         {
                             // Push constants
                             pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
