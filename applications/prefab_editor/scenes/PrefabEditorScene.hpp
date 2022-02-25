@@ -7,6 +7,11 @@
 
 namespace MFA
 {
+    namespace AssetSystem
+    {
+        struct Model;
+    }
+
     class PBRWithShadowPipelineV2;
     class DebugRendererPipeline;
 }
@@ -40,7 +45,12 @@ private:
 
     void saveAndLoadWindow();
 
-    bool loadSelectedAsset(std::string const & fileAddress);
+    void addEssenceToPipeline(
+        std::shared_ptr<MFA::RenderTypes::GpuModel> const & gpuModel,
+        std::shared_ptr<MFA::AssetSystem::Model> const & cpuModel
+    );
+
+    bool loadSelectedAsset(std::string const & fileAddress, std::string displayName = "");
 
     void destroyAsset(int assetIndex);
 
@@ -99,6 +109,6 @@ private:
     std::vector<MFA::BasePipeline *> mAllPipelines {};
 
     MFA::PBRWithShadowPipelineV2 * mPBR_Pipeline = nullptr;
-    MFA::DebugRendererPipeline * mDebugRenderPipeline = nullptr;
+    MFA::DebugRendererPipeline * mDebugPipeline = nullptr;
 
 };

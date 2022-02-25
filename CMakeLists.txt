@@ -581,7 +581,7 @@ set(link_to_target_sources)
         "applications/techdemo"
     )
     link_to_target(${TECHDEMO})
-
+    # TODO: Move add_custum_command to link_to_target function as well 
     add_custom_command(
         TARGET ${TECHDEMO} POST_BUILD                   # Adds a post-build event to MyTest
         COMMAND ${CMAKE_COMMAND} -E copy_if_different   # which executes "cmake - E copy_if_different..."
@@ -680,6 +680,7 @@ elseif(MACOSX)
         )
         target_link_libraries(${executable_name} SDL2 "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
         target_link_directories(${executable_name} PUBLIC "${CMAKE_SOURCE_DIR}/libs/mac/sdl/")
+        target_include_directories(${executable_name} PUBLIC "${CMAKE_SOURCE_DIR}/libs/mac/sdl/")
         target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
         set_target_properties(${executable_name} PROPERTIES
             MACOSX_BUNDLE TRUE
@@ -717,11 +718,11 @@ elseif(MACOSX)
         "mac"
     )
 
+    # Techdemo
     unset(link_to_target_directories)
     list(APPEND link_to_target_directories 
         ${MAC_INCLUDE_DIRECTORIES}
         "applications/techdemo"
-        "${CMAKE_SOURCE_DIR}/libs/mac/sdl/"
     )
     unset(link_to_target_sources)
     list(APPEND link_to_target_sources 
@@ -731,15 +732,28 @@ elseif(MACOSX)
     link_to_target(${TECHDEMO})
     target_compile_definitions(${TECHDEMO} PRIVATE TECHDEMO)
 
+    # Editor
+    unset(link_to_target_directories)
+    list(APPEND link_to_target_directories 
+        ${MAC_INCLUDE_DIRECTORIES}
+        "applications/prefab_editor"
+    )
+    unset(link_to_target_sources)
+    list(APPEND link_to_target_sources 
+        ${MAC_SOURCE} 
+        ${PREFAB_EDITOR_SOURCES}
+    )
+    link_to_target(${PREFAB_EDITOR})
+    target_compile_definitions(${PREFAB_EDITOR} PRIVATE TECHDEMO)
+
 elseif(IPHONE)
 
-    # TODO Use link to target function
 #-----------------------------------------------------------------------
 # IPHONE Executable
 #-----------------------------------------------------------------------
     message(STATUS "Building for iphone")
 
-#https://stackoverflow.com/questions/822404/how-to-set-up-cmake-to-build-an-app-for-the-iphone
+    #https://stackoverflow.com/questions/822404/how-to-set-up-cmake-to-build-an-app-for-the-iphone
     set(IPHONE_SOURCE)
         
     list(

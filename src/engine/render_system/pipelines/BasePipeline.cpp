@@ -47,7 +47,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    bool BasePipeline::essenceExists(std::string const & nameOrAddress) const
+    bool BasePipeline::hasEssence(std::string const & nameOrAddress) const
     {
         std::string relativePath;
         Path::RelativeToAssetFolder(nameOrAddress, relativePath);

@@ -280,7 +280,7 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
 
     auto * pbrPipeline = SceneManager::GetPipeline<PBRWithShadowPipelineV2>();
     MFA_ASSERT(pbrPipeline != nullptr);
-    if(pbrPipeline->essenceExists(renderRequiredData.address) == false){
+    if(pbrPipeline->hasEssence(renderRequiredData.address) == false){
         MFA_ASSERT(dynamic_cast<AS::PBR::Mesh *>(cpuModel->mesh.get()) != nullptr);
         auto const * mesh = static_cast<AS::PBR::Mesh *>(cpuModel->mesh.get());
         auto meshData = mesh->getMeshData();
