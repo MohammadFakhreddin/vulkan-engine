@@ -203,7 +203,10 @@ namespace MFA
     {
         MFA_ASSERT(name != nullptr);
         MFA_ASSERT(strlen(name) > 0);
+
         auto * entity = EntitySystem::CreateEntity(name, parent);
+        entity->mIsActive = mIsActive;
+
         for (auto & component : mComponents)
         {
             if (component != nullptr)
@@ -226,6 +229,7 @@ namespace MFA
     void Entity::Serialize(nlohmann::json & jsonObject)
     {
         MFA_ASSERT(mSerializable == true);
+        jsonObject["isActive"] = mIsActive;
         jsonObject["name"] = mName.c_str();
         for (auto const & component : mComponents)
         {
@@ -259,12 +263,14 @@ namespace MFA
 
     void Entity::Deserialize(nlohmann::json const & jsonObject, bool const initialize)
     {
-        mName = jsonObject["name"];
+        mName = jsonObject.value("name", "undefined");
+        mIsActive = jsonObject.value("isActive", true);
         auto const & rawComponents = jsonObject.value<std::vector<nlohmann::json>>("components", {});
         for (auto const & rawComponent : rawComponents)
         {
-            std::string const name = rawComponent["name"];
-            int const familyType = rawComponent["familyType"];
+            std::string const name = rawComponent.value("name", "undefined");
+            // TODO: Remove family type if it is not going to be used
+            int const familyType = rawComponent.value("familyType", static_cast<int>(Component::FamilyType::Invalid));
 
             auto rawComponentData = rawComponent["data"];
 

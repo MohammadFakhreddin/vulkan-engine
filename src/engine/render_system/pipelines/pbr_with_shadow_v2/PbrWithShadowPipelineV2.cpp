@@ -36,6 +36,31 @@ They are messages to the compiler that data that has been declared one way needs
 "I said this was an int*, but let me access it as if it were a char* pointing to sizeof(int) chars" or "I said this data was read-only,
 and now I need to pass it to a function that won't modify it, but doesn't take the parameter as a const reference."
 */
+
+
+/*
+ * https://community.arm.com/arm-community-blogs/b/graphics-gaming-and-vr-blog/posts/vulkan-mobile-best-practices-and-management
+ * Multi-threaded command recording has the potential to improve CPU time significantly, but it also opens up several pitfalls.
+ * In the worst case scenario, this can lead to worse performance than single threaded. 
+ *
+ * Our general recommendation is to use a profiler and figure out the bottleneck for your application,
+ * while keeping a close eye on common pain points regarding threading in general.
+ * The issues that we have encountered most often are the following: 
+ *
+ * Thread spawning causing a significant overhead. This could happen if you use std::async directly to spawn your threads,
+ * as STL implementations usually do not pool threads in that case. We recommend using a thread pool library instead, or to implement thread pooling yourself.
+ *
+ * Synchronization overhead might be significant. If you are using mutexes to guard all your map accesses,
+ * the code might end up running in a serialized fashion with the extra overhead for lock acquisition/release.
+ * Alternative approaches could be using a read/write mutex like shared_mutex, or go lock-free by ensuring that the map is read-only while executing multi-threaded code.
+ *
+ * In the lock-free approach, each thread can keep a list of entries to add to the map.
+ * These per-thread lists of entries are then inserted into the map after all the threads have returned. 
+ * Having few meshes per thread.
+ * Multi-threaded command recording has some performance overhead both on the CPU side (cost of threading) and on the GPU side (executing secondary command buffers).
+ * Therefore, using the full parallelism available is not always a good choice. As a rule of thumb,
+ * only go parallel if you measure that draw call recording is taking a significant portion of your frame time. 
+ */
 namespace MFA
 {
 
@@ -502,7 +527,7 @@ namespace MFA
     void PBRWithShadowPipelineV2::renderForDepthPrePass(RT::CommandRecordState const & recordState, AS::AlphaMode const alphaMode) const
     {
         DepthPrePassPushConstants pushConstants{};
-
+        // TODO: Submit in multiple threads
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
             auto & essence = essenceAndVariantList.second.essence;

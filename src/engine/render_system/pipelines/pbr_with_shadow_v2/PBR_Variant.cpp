@@ -118,7 +118,7 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-    // TODO We should separate it into update buffer and update state phase
+
     void PBR_Variant::PreRender(float const deltaTimeInSec, RT::CommandRecordState const & recordState)
     {
         if (IsActive() == false)

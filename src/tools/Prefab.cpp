@@ -34,9 +34,6 @@ namespace MFA
             auto const nameSize = sprintf(nameBuffer, "%s Clone(%d)", mEntity->GetName().c_str(), cloneCount++);
             name = std::string(nameBuffer, nameSize);
         }
-//        options.name.empty()
-//            ? std::format("%s Clone(%d)", mEntity->GetName().c_str(), cloneCount++)
-//            : options.name;
 
         auto * entity = mEntity->Clone(name.c_str(), parent);
         EntitySystem::InitEntity(entity, true);

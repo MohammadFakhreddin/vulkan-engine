@@ -49,7 +49,6 @@ namespace MFA::JobSystem
 
     void ThreadPool::AssignTask(Task const & task) const
     {
-        assert(std::this_thread::get_id() == mMainThreadId);
         assert(task != nullptr);
 
         if (mIsAlive == true)
@@ -77,7 +76,6 @@ namespace MFA::JobSystem
 
     void ThreadPool::AssignTaskPerThread(Task const & task) const
     {
-        assert(std::this_thread::get_id() == mMainThreadId);
         assert(task != nullptr);
 
         if (mIsAlive == true)
@@ -222,18 +220,13 @@ namespace MFA::JobSystem
     void ThreadPool::WaitForThreadsToFinish()
     {
         assert(std::this_thread::get_id() == mMainThreadId);
-        //When number of threads is 2 it means that platform only uses main thread
-        //while (mainThreadAwakeCondition() == false)
-        //{
-        //    for (auto const & threadObject : mThreadObjects)
-        //    {
-        //        threadObject->Notify();
-        //    }
-        //    std::this_thread::sleep_for(std::chrono::nanoseconds(50));
-        //}
 
         if (mainThreadAwakeCondition() == false)
         {
+            for (auto const & threadObject : mThreadObjects)
+            {
+                threadObject->Notify();
+            }
             mCondition.wait(mLock, [this]()->bool
                 {
                     for (auto const & threadObject : mThreadObjects)
