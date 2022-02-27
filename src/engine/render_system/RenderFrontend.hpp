@@ -364,8 +364,6 @@ namespace MFA::RenderFrontend
         uint32_t & outImageIndex
     );
 
-    std::vector<VkCommandBuffer> CreateGraphicCommandBuffers(uint32_t maxFramesPerFlight);
-
     void BeginCommandBuffer(
         VkCommandBuffer commandBuffer,
         VkCommandBufferBeginInfo const & beginInfo = {
@@ -375,11 +373,6 @@ namespace MFA::RenderFrontend
     );
 
     void EndCommandBuffer(VkCommandBuffer commandBuffer);
-
-    void DestroyGraphicCommandBuffer(
-        VkCommandBuffer * commandBuffers,
-        uint32_t commandBuffersCount
-    );
 
     uint32_t GetPresentQueueFamily();
 
@@ -464,7 +457,7 @@ namespace MFA::RenderFrontend
 
     void EndGraphicCommandBufferRecording(RT::CommandRecordState & drawPass);
 
-    VkFence GetInFlightFence(RT::CommandRecordState const & drawPass);
+    VkFence GetGraphicInFlightFence(RT::CommandRecordState const & drawPass);
 
     [[nodiscard]]
     VkSemaphore GetRenderFinishIndicatorSemaphore(RT::CommandRecordState const & drawPass);

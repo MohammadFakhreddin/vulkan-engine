@@ -49,13 +49,24 @@ namespace MFA::RenderFrontend
         VkPhysicalDeviceFeatures physicalDeviceFeatures{};
         VkPhysicalDeviceProperties physicalDeviceProperties{};
         VkSampleCountFlagBits maxSampleCount{};
+
+        // Graphic
         uint32_t graphicQueueFamily = 0;
-        uint32_t presentQueueFamily = 0;
         VkQueue graphicQueue{};
-        VkQueue presentQueue{};
-        RT::LogicalDevice logicalDevice{};
+        std::vector<VkCommandBuffer> graphicCommandBuffer{};
+        RT::SyncObjects graphicSyncObjects{};
         VkCommandPool graphicCommandPool{};
-        //VkDescriptorPool descriptorPool{};
+        // Compute
+        uint32_t computeQueueFamily = 0;
+        VkQueue computeQueue{};
+        std::vector<VkCommandBuffer> computeCommandBuffer{};
+        RT::SyncObjects computeSyncObjects{};
+        VkCommandPool computeCommandPool{};
+        // Presentation
+        uint32_t presentQueueFamily = 0;
+        VkQueue presentQueue{};
+
+        RT::LogicalDevice logicalDevice{};
         // Resize
         bool isWindowResizable = false;
         bool windowResized = false;
@@ -64,8 +75,6 @@ namespace MFA::RenderFrontend
         uint32_t swapChainImageCount = 0;
         DisplayRenderPass displayRenderPass{};
         int nextEventListenerId = 0;
-        std::vector<VkCommandBuffer> graphicCommandBuffer{};
-        RT::SyncObjects syncObjects{};
         uint8_t currentFrame = 0;
         VkFormat depthFormat{};
 #ifdef __DESKTOP__
@@ -247,33 +256,63 @@ namespace MFA::RenderFrontend
             MFA_LOG_ERROR("Swapchain is not supported on this device");
             return false;
         }
+
         {// Trying to find queue family
-            auto const result = RB::FindPresentAndGraphicQueueFamily(state->physicalDevice, state->surface);
-            state->graphicQueueFamily = result.graphic_queue_family;
-            state->presentQueueFamily = result.present_queue_family;
+            auto const result = RB::FindQueueFamilies(state->physicalDevice, state->surface);
+            state->graphicQueueFamily = result.graphicQueueFamily;
+            state->computeQueueFamily = result.computeQueueFamily;
+            state->presentQueueFamily = result.presentQueueFamily;
         }
+
         state->logicalDevice = RB::CreateLogicalDevice(
             state->physicalDevice,
             state->graphicQueueFamily,
             state->presentQueueFamily,
             state->physicalDeviceFeatures
         );
+
         // Get graphics and presentation queues (which may be the same)
         state->graphicQueue = RB::GetQueueByFamilyIndex(
             state->logicalDevice.device,
             state->graphicQueueFamily
         );
+        MFA_VK_VALID_ASSERT(state->graphicQueue);
+
+        state->computeQueue = RB::GetQueueByFamilyIndex(
+            state->logicalDevice.device,
+            state->computeQueueFamily
+        );
+        MFA_VK_VALID_ASSERT(state->computeQueue);
+
         state->presentQueue = RB::GetQueueByFamilyIndex(
             state->logicalDevice.device,
             state->presentQueueFamily
         );
-        MFA_LOG_INFO("Acquired graphics and presentation queues");
+        MFA_VK_VALID_ASSERT(state->presentQueue);
+
+        MFA_LOG_INFO("Acquired graphics, compute and presentation queues");
+
+        auto const maxFramePerFlight = GetMaxFramesPerFlight();
+        // Graphic 
         state->graphicCommandPool = RB::CreateCommandPool(state->logicalDevice.device, state->graphicQueueFamily);
-
-        state->graphicCommandBuffer = CreateGraphicCommandBuffers(GetMaxFramesPerFlight());
-
-        state->syncObjects = createSyncObjects(
-            GetMaxFramesPerFlight(),
+        state->graphicCommandBuffer = RB::CreateCommandBuffers(
+            state->logicalDevice.device,
+            maxFramePerFlight,
+            state->graphicCommandPool
+        );
+        state->graphicSyncObjects = createSyncObjects(
+            maxFramePerFlight,
+            state->swapChainImageCount
+        );
+        // Compute
+        state->computeCommandPool = RB::CreateCommandPool(state->logicalDevice.device, state->computeQueueFamily);
+        state->computeCommandBuffer = RB::CreateCommandBuffers(
+            state->logicalDevice.device,
+            maxFramePerFlight,
+            state->computeCommandPool
+        );
+        state->computeSyncObjects = createSyncObjects(
+            maxFramePerFlight,
             state->swapChainImageCount
         );
 
@@ -322,20 +361,29 @@ namespace MFA::RenderFrontend
 
         state->displayRenderPass.Shutdown();
 
-        DestroySyncObjects(state->syncObjects);
-
-        DestroyGraphicCommandBuffer(
-            state->graphicCommandBuffer.data(),
-            static_cast<uint32_t>(state->graphicCommandBuffer.size())
+        // Graphic
+        DestroySyncObjects(state->graphicSyncObjects);
+        RB::DestroyCommandBuffers(
+            state->logicalDevice.device,
+            state->graphicCommandPool,
+            static_cast<uint32_t>(state->graphicCommandBuffer.size()),
+            state->graphicCommandBuffer.data()
         );
-
-        // DestroyPipeline in application // TODO We should have reference to what user creates + params for re-creation
-        // GraphicPipeline, UniformBuffer, PipelineLayout
-        // Shutdown only procedure
-
         RB::DestroyCommandPool(
             state->logicalDevice.device,
             state->graphicCommandPool
+        );
+        // Compute
+        DestroySyncObjects(state->computeSyncObjects);
+        RB::DestroyCommandBuffers(
+            state->logicalDevice.device,
+            state->computeCommandPool,
+            static_cast<uint32_t>(state->computeCommandBuffer.size()),
+            state->computeCommandBuffer.data()
+        );
+        RB::DestroyCommandPool(
+            state->logicalDevice.device,
+            state->computeCommandPool
         );
 
         RB::DestroyLogicalDevice(state->logicalDevice);
@@ -604,7 +652,7 @@ namespace MFA::RenderFrontend
     {
         MFA_ASSERT(mesh.isValid());
 
-        std::vector<std::shared_ptr<RT::BufferAndMemory>> vertexBuffers {};
+        std::vector<std::shared_ptr<RT::BufferAndMemory>> vertexBuffers{};
         MFA_ASSERT(mesh.requiredVertexBufferCount > 0);
 
         std::shared_ptr<RT::BufferAndMemory> vertexStagingBuffer = nullptr;
@@ -1266,17 +1314,6 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    std::vector<VkCommandBuffer> CreateGraphicCommandBuffers(uint32_t const maxFramesPerFlight)
-    {
-        return RB::CreateCommandBuffers(
-            state->logicalDevice.device,
-            maxFramesPerFlight,
-            state->graphicCommandPool
-        );
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
     void BeginCommandBuffer(
         VkCommandBuffer commandBuffer,
         VkCommandBufferBeginInfo const & beginInfo
@@ -1293,18 +1330,6 @@ namespace MFA::RenderFrontend
     void EndCommandBuffer(VkCommandBuffer commandBuffer)
     {
         RB::EndCommandBuffer(commandBuffer);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void DestroyGraphicCommandBuffer(VkCommandBuffer * commandBuffers, uint32_t const commandBuffersCount)
-    {
-        RB::DestroyCommandBuffers(
-            state->logicalDevice.device,
-            state->graphicCommandPool,
-            commandBuffersCount,
-            commandBuffers
-        );
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -1572,7 +1597,7 @@ namespace MFA::RenderFrontend
             state->currentFrame = 0;
         }
 
-        WaitForFence(GetInFlightFence(drawPass));
+        WaitForFence(GetGraphicInFlightFence(drawPass));
 
         // We ignore failed acquire of image because a resize will be triggered at end of pass
         AcquireNextImage(
@@ -1605,7 +1630,7 @@ namespace MFA::RenderFrontend
             GetGraphicCommandBuffer(drawPass),
             GetImageAvailabilitySemaphore(drawPass),
             GetRenderFinishIndicatorSemaphore(drawPass),
-            GetInFlightFence(drawPass)
+            GetGraphicInFlightFence(drawPass)
         );
 
         // Present drawn image
@@ -1617,24 +1642,24 @@ namespace MFA::RenderFrontend
     }
 
     //-------------------------------------------------------------------------------------------------
-
-    VkFence GetInFlightFence(RT::CommandRecordState const & drawPass)
+    
+    VkFence GetGraphicInFlightFence(RT::CommandRecordState const & drawPass)
     {
-        return state->syncObjects.fencesInFlight[drawPass.frameIndex];
+        return state->graphicSyncObjects.fencesInFlight[drawPass.frameIndex];
     }
 
     //-------------------------------------------------------------------------------------------------
-
+    // TODO: RenderFinishIndicator must belong to presentation queue
     VkSemaphore GetRenderFinishIndicatorSemaphore(RT::CommandRecordState const & drawPass)
     {
-        return state->syncObjects.renderFinishIndicatorSemaphores[drawPass.frameIndex];
+        return state->graphicSyncObjects.renderFinishIndicatorSemaphores[drawPass.frameIndex];
     }
 
     //-------------------------------------------------------------------------------------------------
 
     VkSemaphore GetImageAvailabilitySemaphore(RT::CommandRecordState const & drawPass)
     {
-        return state->syncObjects.imageAvailabilitySemaphores[drawPass.frameIndex];
+        return state->graphicSyncObjects.imageAvailabilitySemaphores[drawPass.frameIndex];
     }
 
     //-------------------------------------------------------------------------------------------------

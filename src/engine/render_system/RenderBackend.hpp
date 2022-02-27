@@ -270,15 +270,22 @@ namespace MFA::RenderBackend
     [[nodiscard]]
     bool CheckSwapChainSupport(VkPhysicalDevice physical_device);
 
-    struct FindPresentAndGraphicQueueFamilyResult
+    struct FindQueueFamilyResult
     {
-        uint32_t present_queue_family;
-        uint32_t graphic_queue_family;
+        bool const isPresentQueueValid = false;
+        uint32_t const presentQueueFamily = -1;
+
+        bool const isGraphicQueueValid = false;
+        uint32_t const graphicQueueFamily = -1;
+
+        bool const isComputeQueueValid = false;
+        uint32_t const computeQueueFamily = -1;
     };
+
     [[nodiscard]]
-    FindPresentAndGraphicQueueFamilyResult FindPresentAndGraphicQueueFamily(
-        VkPhysicalDevice physical_device,
-        VkSurfaceKHR window_surface
+    FindQueueFamilyResult FindQueueFamilies(
+        VkPhysicalDevice physicalDevice,
+        VkSurfaceKHR windowSurface
     );
 
     [[nodiscard]]

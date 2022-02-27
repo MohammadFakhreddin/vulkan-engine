@@ -126,7 +126,7 @@ namespace MFA::JobSystem
         auto const shouldAwake = mTasks.IsEmpty() == false || mParent.mIsAlive == false;
         if (shouldAwake == false)
         {
-            mParent.mCondition.notify_one();
+            mCondition.notify_one();
         }
         return shouldAwake;
     }
@@ -142,7 +142,12 @@ namespace MFA::JobSystem
 
     bool ThreadPool::ThreadObject::IsFree()
     {
-        return mTasks.IsEmpty() && mIsBusy == false;
+        auto const isFree = mTasks.IsEmpty() && mIsBusy == false;
+        if (isFree == false)
+        {
+            mCondition.notify_one();
+        }
+        return isFree;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -203,7 +208,7 @@ namespace MFA::JobSystem
 
     //-------------------------------------------------------------------------------------------------
 
-    bool ThreadPool::mainThreadAwakeCondition()
+    bool ThreadPool::mainThreadAwakeCondition() const
     {
         for (auto const & threadObject : mThreadObjects)
         {
@@ -223,21 +228,15 @@ namespace MFA::JobSystem
 
         if (mainThreadAwakeCondition() == false)
         {
-            for (auto const & threadObject : mThreadObjects)
-            {
-                threadObject->Notify();
-            }
-            mCondition.wait(mLock, [this]()->bool
+            mCondition.wait(mLock, [this]()->bool{
+                for (auto const & threadObject : mThreadObjects)
                 {
-                    for (auto const & threadObject : mThreadObjects)
-                    {
-                        threadObject->Notify();
-                    }
-                    return mainThreadAwakeCondition();
+                    threadObject->Notify();
                 }
-            );
+                return mainThreadAwakeCondition();
+            });
         }
-
+        
         assert(AllThreadsAreIdle() == true);
 
         while (!exceptions.IsEmpty())

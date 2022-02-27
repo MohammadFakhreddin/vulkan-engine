@@ -39,7 +39,6 @@ namespace MFA::JobSystem
 
         class ThreadObject
         {
-
         public:
 
             explicit ThreadObject(ThreadNumber threadNumber, ThreadPool & parent);
@@ -66,12 +65,12 @@ namespace MFA::JobSystem
             [[nodiscard]]
             ThreadNumber GetThreadNumber() const;
 
+            bool awakeCondition();
+
         private:
 
             void mainLoop();
-
-            bool awakeCondition();
-
+            
             ThreadPool & mParent;
 
             ThreadNumber mThreadNumber;
@@ -82,7 +81,7 @@ namespace MFA::JobSystem
 
             std::unique_ptr<std::thread> mThread;
 
-            bool mIsBusy = false;
+            std::atomic<bool> mIsBusy = false;
 
         };
 
@@ -90,7 +89,7 @@ namespace MFA::JobSystem
 
     private:
 
-        bool mainThreadAwakeCondition();
+        bool mainThreadAwakeCondition() const;
 
         std::vector<std::unique_ptr<ThreadObject>> mThreadObjects;
 

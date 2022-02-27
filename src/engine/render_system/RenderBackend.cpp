@@ -1263,70 +1263,85 @@ namespace MFA::RenderBackend
 
     //-------------------------------------------------------------------------------------------------
 
-    FindPresentAndGraphicQueueFamilyResult FindPresentAndGraphicQueueFamily(
-        VkPhysicalDevice physical_device,
-        VkSurfaceKHR window_surface
+    FindQueueFamilyResult FindQueueFamilies(
+        VkPhysicalDevice physicalDevice,
+        VkSurfaceKHR windowSurface
     )
     {
-        FindPresentAndGraphicQueueFamilyResult ret{};
 
-        uint32_t queue_family_count = 0;
-        vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, nullptr);
-        if (queue_family_count == 0)
+        bool isPresentQueueSet = false;
+        uint32_t presentQueueFamily = -1;
+
+        bool isGraphicQueueSet = false;
+        uint32_t graphicQueueFamily = -1;
+
+        bool isComputeQueueSet = false;
+        uint32_t computeQueueFamily = -1;
+
+        uint32_t queueFamilyCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
+        if (queueFamilyCount == 0)
         {
             MFA_CRASH("physical device has no queue families!");
         }
         // Find queue family with graphics support
         // Note: is a transfer queue necessary to copy vertices to the gpu or can a graphics queue handle that?
-        std::vector<VkQueueFamilyProperties> queueFamilies(queue_family_count);
+        std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
         vkGetPhysicalDeviceQueueFamilyProperties(
-            physical_device,
-            &queue_family_count,
+            physicalDevice,
+            &queueFamilyCount,
             queueFamilies.data()
         );
 
-        MFA_LOG_INFO("physical device has %d queue families.", queue_family_count);
+        MFA_LOG_INFO("physical device has %d queue families.", queueFamilyCount);
 
-        bool found_graphic_queue_family = false;
-        bool found_present_queue_family = false;
-        for (uint32_t i = 0; i < queue_family_count; i++)
+        for (uint32_t queueIndex = 0; queueIndex < queueFamilyCount; queueIndex++)
         {
-            VkBool32 present_is_supported = false;
-            vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, window_surface, &present_is_supported);
-            if (queueFamilies[i].queueCount > 0 && queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            if (isPresentQueueSet == false)
             {
-                ret.graphic_queue_family = i;
-                found_graphic_queue_family = true;
-                if (present_is_supported)
-                {
-                    ret.present_queue_family = i;
-                    found_present_queue_family = true;
-                    break;
+                VkBool32 presentIsSupported = false;
+                vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, queueIndex, windowSurface, &presentIsSupported);
+                if (presentIsSupported) {
+                    presentQueueFamily = queueIndex;
+                    isPresentQueueSet = true;
                 }
             }
-            if (!found_present_queue_family && present_is_supported)
+
+            auto & queueFamily = queueFamilies[queueIndex];
+            if (queueFamily.queueCount > 0)
             {
-                ret.present_queue_family = i;
-                found_present_queue_family = true;
+                if (isGraphicQueueSet == false && (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT))
+                {
+                    graphicQueueFamily = queueIndex;
+                    isGraphicQueueSet = true;
+                }
+                if (isComputeQueueSet == false && (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT))
+                {
+                    computeQueueFamily = queueIndex;
+                    isComputeQueueSet = true;
+                }
+            }
+
+            if (isPresentQueueSet && isGraphicQueueSet && isComputeQueueSet)
+            {
+                break;
             }
         }
-        if (found_graphic_queue_family)
-        {
-            MFA_LOG_INFO("Queue family # %d supports graphics", ret.graphic_queue_family);
-            if (found_present_queue_family)
-            {
-                MFA_LOG_INFO("Queue family # %d supports presentation", ret.present_queue_family);
-            }
-            else
-            {
-                MFA_CRASH("Could not find a valid queue family with present support");
-            }
-        }
-        else
-        {
-            MFA_CRASH("Could not find a valid queue family with graphics support");
-        }
-        return ret;
+
+        MFA_REQUIRE(isPresentQueueSet);
+        MFA_REQUIRE(isGraphicQueueSet);
+        MFA_REQUIRE(isComputeQueueSet);
+
+        return FindQueueFamilyResult {
+            .isPresentQueueValid = isPresentQueueSet,
+            .presentQueueFamily = presentQueueFamily,
+
+            .isGraphicQueueValid = isGraphicQueueSet,
+            .graphicQueueFamily = graphicQueueFamily,
+
+            .isComputeQueueValid = isComputeQueueSet,
+            .computeQueueFamily = computeQueueFamily
+        };
     }
 
     //-------------------------------------------------------------------------------------------------
