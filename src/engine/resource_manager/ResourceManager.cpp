@@ -9,6 +9,8 @@
 #include "engine/asset_system/AssetModel.hpp"
 #include "tools/ShapeGenerator.hpp"
 
+#include <unordered_map>
+
 namespace MFA
 {
 
@@ -68,11 +70,8 @@ namespace MFA
         std::shared_ptr<RT::GpuModel> gpuModel = nullptr;
 
         std::string relativePath{};
-        if (Path::RelativeToAssetFolder(nameOrFileAddress, relativePath) == false)
-        {
-            relativePath = nameOrFileAddress;
-        }
-
+        Path::RelativeToAssetFolder(nameOrFileAddress, relativePath);
+        
         auto const findResult = state->availableGpuModels.find(relativePath);
         if (findResult != state->availableGpuModels.end())
         {
@@ -101,11 +100,8 @@ namespace MFA
         std::shared_ptr<AS::Model> cpuModel = nullptr;
 
         std::string relativePath{};
-        if (Path::RelativeToAssetFolder(nameOrFileAddress, relativePath) == false)
-        {
-            relativePath = nameOrFileAddress;
-        }
-
+        Path::RelativeToAssetFolder(nameOrFileAddress, relativePath);
+        
         auto const findResult = state->availableCpuModels.find(relativePath);
         if (findResult != state->availableCpuModels.end())
         {
@@ -160,10 +156,7 @@ namespace MFA
         std::shared_ptr<RT::GpuTexture> gpuTexture = nullptr;
 
         std::string relativePath{};
-        if (Path::RelativeToAssetFolder(nameOrFileAddress, relativePath) == false)
-        {
-            relativePath = nameOrFileAddress;
-        }
+        Path::RelativeToAssetFolder(nameOrFileAddress, relativePath);
 
         auto const findResult = state->availableGpuTextures.find(relativePath);
         if (findResult != state->availableGpuTextures.end())
@@ -196,10 +189,7 @@ namespace MFA
         std::shared_ptr<AS::Texture> texture = nullptr;
 
         std::string relativePath{};
-        if (Path::RelativeToAssetFolder(nameOrFileAddress, relativePath) == false)
-        {
-            relativePath = nameOrFileAddress;
-        }
+        Path::RelativeToAssetFolder(nameOrFileAddress, relativePath);
 
         auto const findResult = state->availableCpuTextures.find(relativePath);
         if (findResult != state->availableCpuTextures.end())

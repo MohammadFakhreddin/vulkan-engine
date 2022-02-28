@@ -218,7 +218,7 @@ namespace MFA
             .baseMipLevel = 0,
             .levelCount = 1,
             .baseArrayLayer = 0,
-            .layerCount = 6 * Scene::MAX_POINT_LIGHT_COUNT,
+            .layerCount = 6 * RT::MAX_POINT_LIGHT_COUNT,
         };
 
         VkImageMemoryBarrier const pipelineBarrier{
@@ -280,8 +280,8 @@ namespace MFA
 
         // Shadow map generation
         auto const shadowExtend = VkExtent2D{
-            .width = Scene::POINT_LIGHT_SHADOW_WIDTH,
-            .height = Scene::POINT_LIGHT_SHADOW_HEIGHT
+            .width = RT::POINT_LIGHT_SHADOW_WIDTH,
+            .height = RT::POINT_LIGHT_SHADOW_HEIGHT
         };
 
         auto * commandBuffer = RF::GetGraphicCommandBuffer(recordState);

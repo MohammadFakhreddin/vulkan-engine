@@ -3,9 +3,9 @@
 #include "EssenceBase.hpp"
 #include "VariantBase.hpp"
 #include "engine/BedrockAssert.hpp"
+#include "engine/BedrockPath.hpp"
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/asset_system/AssetBaseMesh.hpp"
 
 namespace MFA
 {
@@ -32,37 +32,31 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::PreRender(RT::CommandRecordState & recordState, float deltaTime)
+    void BasePipeline::preRender(RT::CommandRecordState & recordState, float deltaTime)
     {}
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::Render(RT::CommandRecordState & recordState, float deltaTime)
+    void BasePipeline::render(RT::CommandRecordState & recordState, float deltaTime)
     {}
 
     //-------------------------------------------------------------------------------------------------
 
-    bool BasePipeline::EssenceExists(std::string const & nameOrAddress) const
+    void BasePipeline::postRender(float deltaTime)
+    {}
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool BasePipeline::hasEssence(std::string const & nameOrAddress) const
     {
-        return mEssenceAndVariantsMap.contains(nameOrAddress);
+        std::string relativePath;
+        Path::RelativeToAssetFolder(nameOrAddress, relativePath);
+        return mEssenceAndVariantsMap.contains(relativePath);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    bool BasePipeline::CreateEssence(
-        std::shared_ptr<RT::GpuModel> const & gpuModel,
-        std::shared_ptr<AS::MeshBase> const & cpuMesh
-    )
-    {
-        return addEssence(internalCreateEssence(
-            gpuModel,
-            cpuMesh
-        ));
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void BasePipeline::DestroyEssence(std::string const & nameOrAddress)
+    void BasePipeline::destroyEssence(std::string const & nameOrAddress)
     {
         MFA_ASSERT(mIsInitialized == true);
         auto const findResult = mEssenceAndVariantsMap.find(nameOrAddress);
@@ -74,7 +68,7 @@ namespace MFA
         // Removing essence variants
         for (auto & variant : findResult->second.variants)
         {
-            RemoveVariant(*variant);
+            removeVariant(*variant);
         }
 
         // Removing essence from essenceList
@@ -95,21 +89,21 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::DestroyEssence(RT::GpuModel const & gpuModel)
+    void BasePipeline::destroyEssence(RT::GpuModel const & gpuModel)
     {
-        DestroyEssence(gpuModel.nameOrAddress);
+        destroyEssence(gpuModel.nameOrAddress);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    std::weak_ptr<VariantBase> BasePipeline::CreateVariant(RT::GpuModel const & gpuModel)
+    std::weak_ptr<VariantBase> BasePipeline::createVariant(RT::GpuModel const & gpuModel)
     {
-        return CreateVariant(gpuModel.nameOrAddress);
+        return createVariant(gpuModel.nameOrAddress);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    std::weak_ptr<VariantBase> BasePipeline::CreateVariant(std::string const & nameOrAddress)
+    std::weak_ptr<VariantBase> BasePipeline::createVariant(std::string const & nameOrAddress)
     {
         MFA_ASSERT(mIsInitialized == true);
         auto const findResult = mEssenceAndVariantsMap.find(nameOrAddress);
@@ -127,12 +121,16 @@ namespace MFA
         MFA_ASSERT(newVariant != nullptr);
 
         mAllVariantsList.emplace_back(newVariant.get());
+        if (mAllVariantsList.size() == 1)
+        {
+            SceneManager::UpdatePipeline(this);
+        }
         return newVariant;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::RemoveVariant(VariantBase & variant)
+    void BasePipeline::removeVariant(VariantBase & variant)
     {
         MFA_ASSERT(mIsInitialized == true);
         // Removing from all variants list
@@ -154,6 +152,11 @@ namespace MFA
             }
         }
         MFA_ASSERT(foundInAllVariantsList == true);
+
+        if (mAllVariantsList.empty())
+        {
+            SceneManager::UpdatePipeline(this);
+        }
         
         // Removing from essence and variants' list
         auto const findResult = mEssenceAndVariantsMap.find(variant.GetEssence()->getNameOrAddress());
@@ -188,13 +191,13 @@ namespace MFA
         }
         for (auto const & nameOrAddress : unusedEssenceNames)
         {
-            DestroyEssence(nameOrAddress);
+            destroyEssence(nameOrAddress);
         }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::Init()
+    void BasePipeline::init()
     {
         MFA_ASSERT(mIsInitialized == false);
         mIsInitialized = true;
@@ -203,7 +206,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::Shutdown()
+    void BasePipeline::shutdown()
     {
         MFA_ASSERT(mIsInitialized == true);
         mIsInitialized = false;
@@ -221,6 +224,25 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    void BasePipeline::changeActivationStatus(bool const enabled)
+    {
+        if (mIsActive == enabled)
+        {
+            return;
+        }
+        mIsActive = enabled;
+        SceneManager::UpdatePipeline(this);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool BasePipeline::isActive() const
+    {
+        return mIsActive;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     bool BasePipeline::addEssence(std::shared_ptr<EssenceBase> const & essence)
     {
         MFA_ASSERT(mIsInitialized == true);
@@ -231,6 +253,7 @@ namespace MFA
         {
             mEssenceAndVariantsMap[address] = EssenceAndVariants(essence);
             mAllEssencesList.emplace_back(essence.get());
+            internalAddEssence(essence.get());
             success = true;
         }
         return success;

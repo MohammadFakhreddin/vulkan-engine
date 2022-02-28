@@ -37,8 +37,8 @@ I did 2 things to optimize animations:
 
 Although former optimization improved performance alot. I was not able to render 1000 model soldier with my desired fps count. I have plan to do following optimizations as well:
 - SIMD
-- Using compute shader for animations
-You can read general idea in wicked engine blob using this link:
+- Using compute shader for animations.
+You can read general idea in wicked engine blog using this link:
 <a href="https://wickedengine.net/2017/09/09/skinning-in-compute-shader/">
 https://wickedengine.net/2017/09/09/skinning-in-compute-shader/
 </a>

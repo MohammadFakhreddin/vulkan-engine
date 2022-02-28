@@ -17,7 +17,7 @@ namespace MFA::EntitySystem
 {
     void InitEntity(Entity * entity, bool triggerSignals);
     void UpdateEntity(Entity * entity);
-    void destroyEntity(EntityId const entityId, bool const shouldNotifyParent);
+    static void destroyEntity(EntityId const entityId, bool const shouldNotifyParent);
 }
 
 namespace MFA
@@ -31,15 +31,11 @@ namespace MFA
         friend void EntitySystem::destroyEntity(EntityId const entityId, bool const shouldNotifyParent);
         friend Component;
 
-        struct CreateEntityParams
-        {
-            bool serializable = true;
-        };
         explicit Entity(
             EntityId id,
             std::string name,
-            Entity * parent = nullptr,
-            CreateEntityParams const & params = {}
+            Entity * parent,
+            bool serializable
         );
 
         ~Entity();
@@ -50,14 +46,14 @@ namespace MFA
         Entity & operator = (Entity && rhs) noexcept = delete;
 
         [[nodiscard]]
-        bool NeedUpdateEvent() const noexcept
+        bool NeedUpdateEvent() noexcept
         {
             return mUpdateSignal.IsEmpty() == false && IsActive();
         }
 
         void Init(bool triggerInitSignal = true);
 
-        void Update(float deltaTimeInSec) const;
+        void Update(float deltaTimeInSec);
 
         void Shutdown(bool shouldNotifyParent = true);
 
@@ -87,18 +83,21 @@ namespace MFA
         {
             MFA_ASSERT(component != nullptr);
             MFA_ASSERT(component->mEntity == this);
+
+            auto const requiredEvents = component->requiredEvents();
+
             // Init event
-            if ((component->requiredEvents() & Component::EventTypes::InitEvent) > 0)
+            if ((requiredEvents & Component::EventTypes::InitEvent) > 0)
             {
                 mInitSignal.UnRegister(component->mInitEventId);
             }
             // Update event
-            if ((component->requiredEvents() & Component::EventTypes::UpdateEvent) > 0)
+            if ((requiredEvents & Component::EventTypes::UpdateEvent) > 0)
             {
                 mUpdateSignal.UnRegister(component->mUpdateEventId);
             }
             // Shutdown event
-            if ((component->requiredEvents() & Component::EventTypes::ShutdownEvent) > 0)
+            if ((requiredEvents & Component::EventTypes::ShutdownEvent) > 0)
             {
                 mShutdownSignal.UnRegister(component->mShutdownEventId);
             }
@@ -195,7 +194,7 @@ namespace MFA
         bool mIsActive = true;
         bool mIsParentActive = true;    // It should be true by default because not everyone have parent
 
-        int mUpdateListenerId = -1;
+        SignalId mUpdateListenerId = InvalidSignalId;
 
         int mParentActivationStatusChangeListenerId = 0;
 

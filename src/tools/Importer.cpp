@@ -709,7 +709,7 @@ namespace MFA::Importer
         {
             for (auto const & texture : gltfModel.textures)
             {
-                JS::AutoAssignTask([&texture, &gltfModel, &directoryPath, &resultTextureQueue]()->void
+                JS::AssignTask([&texture, &gltfModel, &directoryPath, &resultTextureQueue](uint32_t threadNum, uint32_t threadCount)->void
                 {
                     AS::SamplerConfig sampler{};
                     sampler.isValid = false;

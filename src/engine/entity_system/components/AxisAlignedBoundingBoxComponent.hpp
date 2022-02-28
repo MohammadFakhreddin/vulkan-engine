@@ -67,9 +67,7 @@ namespace MFA
 
         glm::vec4 mWorldPosition {};
 
-        glm::vec3 mForwardVector {};
-        glm::vec3 mUpVector {};
-        glm::vec3 mRightVector {};
+        glm::vec3 mAABB_Extent {};
         
         std::weak_ptr<TransformComponent> mTransformComponent {};
 

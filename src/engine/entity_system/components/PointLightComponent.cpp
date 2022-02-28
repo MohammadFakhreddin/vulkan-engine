@@ -4,7 +4,7 @@
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/entity_system/components/MeshRendererComponent.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/ui_system/UI_System.hpp"
 #include "engine/entity_system/Entity.hpp"
 #include "engine/render_system/pipelines/VariantBase.hpp"
 
@@ -55,7 +55,7 @@ void MFA::PointLightComponent::init()
     // Registering point light to active scene
     auto const activeScene = SceneManager::GetActiveScene();
     MFA_ASSERT(activeScene != nullptr);
-    activeScene->RegisterPointLight(selfPtr());
+    SceneManager::RegisterPointLight(selfPtr());
     
     computeProjection();
     computeViewProjectionMatrices();
@@ -255,7 +255,7 @@ void MFA::PointLightComponent::deserialize(nlohmann::json const & jsonObject)
 void MFA::PointLightComponent::computeProjection()
 {
     static constexpr float FOV = 90.0f;          // We are cube so FOV must be exact 90 degree
-    static_assert(Scene::POINT_LIGHT_SHADOW_WIDTH == Scene::POINT_LIGHT_SHADOW_HEIGHT);
+    static_assert(RT::POINT_LIGHT_SHADOW_WIDTH == RT::POINT_LIGHT_SHADOW_HEIGHT);
     static constexpr float ratio = 1;
         
     Matrix::PreparePerspectiveProjectionMatrix(

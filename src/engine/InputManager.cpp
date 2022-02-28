@@ -1,7 +1,7 @@
 #include "InputManager.hpp"
 
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/ui_system//UISystem.hpp"
+#include "engine/ui_system//UI_System.hpp"
 
 #ifdef __DESKTOP__
 #include "libs/sdl/SDL.hpp"
@@ -14,7 +14,7 @@
 namespace MFA::InputManager {
 
 namespace RF = RenderFrontend;
-namespace UI = UISystem;
+namespace UI = UI_System;
 
 #ifdef __ANDROID__
 inline static constexpr float TouchEndDelayInSec = 10.0f / 1000.0f;

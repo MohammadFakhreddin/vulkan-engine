@@ -8,8 +8,8 @@
 void MFA::DirectionalLightShadowResources::Init(VkRenderPass renderPass)
 {
     static constexpr auto shadowExtend = VkExtent2D{
-        .width = Scene::DIRECTIONAL_LIGHT_SHADOW_TEXTURE_WIDTH,
-        .height = Scene::DIRECTIONAL_LIGHT_SHADOW_TEXTURE_HEIGHT
+        .width = RT::DIRECTIONAL_LIGHT_SHADOW_TEXTURE_WIDTH,
+        .height = RT::DIRECTIONAL_LIGHT_SHADOW_TEXTURE_HEIGHT
     };
     createShadowMap(shadowExtend);
     createFrameBuffer(shadowExtend, renderPass);
@@ -67,7 +67,7 @@ void MFA::DirectionalLightShadowResources::createShadowMap(VkExtent2D const & sh
         shadowMap = RF::CreateDepthImage(
             shadowExtent,
             RT::CreateDepthImageOptions{
-                .layerCount = Scene::MAX_DIRECTIONAL_LIGHT_COUNT,
+                .layerCount = RT::MAX_DIRECTIONAL_LIGHT_COUNT,
                 .usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 .viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY,
                 .imageType = VK_IMAGE_TYPE_2D
@@ -91,7 +91,7 @@ void MFA::DirectionalLightShadowResources::createFrameBuffer(VkExtent2D const & 
             attachments.data(),
             static_cast<uint32_t>(attachments.size()),
             shadowExtent,
-            Scene::MAX_DIRECTIONAL_LIGHT_COUNT
+            RT::MAX_DIRECTIONAL_LIGHT_COUNT
         );
     }
 }

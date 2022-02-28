@@ -8,7 +8,7 @@
 #include "components/PointLightComponent.hpp"
 #include "components/SphereBoundingVolumeComponent.hpp"
 #include "components/TransformComponent.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/ui_system/UI_System.hpp"
 
 #include "libs/nlohmann/json.hpp"
 
@@ -16,19 +16,19 @@ namespace MFA
 {
 
     using namespace EntitySystem;
-
+    
     //-------------------------------------------------------------------------------------------------
-
+    
     Entity::Entity(
-        EntityId const id,
+        EntityId id,
         std::string name,
         Entity * parent,
-        CreateEntityParams const & params
+        bool serializable
     )
         : mId(id)
         , mName(std::move(name))
         , mParent(parent)
-        , mSerializable(params.serializable)
+        , mSerializable(serializable)
     {}
 
     //-------------------------------------------------------------------------------------------------
@@ -58,12 +58,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
     // TODO Support for priority between components
-    void Entity::Update(float const deltaTimeInSec) const
+    void Entity::Update(float const deltaTimeInSec)
     {
-        if (mIsActive == false)
-        {
-            return;
-        }
+        MFA_ASSERT(mIsActive == true);
         mUpdateSignal.Emit(deltaTimeInSec);
     }
 
@@ -206,7 +203,10 @@ namespace MFA
     {
         MFA_ASSERT(name != nullptr);
         MFA_ASSERT(strlen(name) > 0);
+
         auto * entity = EntitySystem::CreateEntity(name, parent);
+        entity->mIsActive = mIsActive;
+
         for (auto & component : mComponents)
         {
             if (component != nullptr)
@@ -229,6 +229,7 @@ namespace MFA
     void Entity::Serialize(nlohmann::json & jsonObject)
     {
         MFA_ASSERT(mSerializable == true);
+        jsonObject["isActive"] = mIsActive;
         jsonObject["name"] = mName.c_str();
         for (auto const & component : mComponents)
         {
@@ -262,12 +263,14 @@ namespace MFA
 
     void Entity::Deserialize(nlohmann::json const & jsonObject, bool const initialize)
     {
-        mName = jsonObject["name"];
+        mName = jsonObject.value("name", "undefined");
+        mIsActive = jsonObject.value("isActive", true);
         auto const & rawComponents = jsonObject.value<std::vector<nlohmann::json>>("components", {});
         for (auto const & rawComponent : rawComponents)
         {
-            std::string const name = rawComponent["name"];
-            int const familyType = rawComponent["familyType"];
+            std::string const name = rawComponent.value("name", "undefined");
+            // TODO: Remove family type if it is not going to be used
+            int const familyType = rawComponent.value("familyType", static_cast<int>(Component::FamilyType::Invalid));
 
             auto rawComponentData = rawComponent["data"];
 
@@ -387,16 +390,19 @@ namespace MFA
 
     void Entity::linkComponent(Component * component)
     {
+        MFA_ASSERT(component != nullptr);
         // Linked entity
         component->mEntity = this;
         // Init event
         if ((component->requiredEvents() & Component::EventTypes::InitEvent) > 0)
         {
+            MFA_ASSERT(component->mInitEventId == InvalidSignalId);
             component->mInitEventId = mInitSignal.Register([component]()->void { component->init(); });
         }
         // Update event
         if ((component->requiredEvents() & Component::EventTypes::UpdateEvent) > 0)
         {
+            MFA_ASSERT(component->mUpdateEventId == InvalidSignalId);
             component->mUpdateEventId = mUpdateSignal.Register([component](float const deltaTimeInSec)->void
             {
                 component->Update(deltaTimeInSec);
@@ -405,6 +411,7 @@ namespace MFA
         // Shutdown event
         if ((component->requiredEvents() & Component::EventTypes::ShutdownEvent) > 0)
         {
+            MFA_ASSERT(component->mShutdownEventId == InvalidSignalId);
             component->mShutdownEventId = mShutdownSignal.Register([component]()->void
             {
                 component->shutdown();

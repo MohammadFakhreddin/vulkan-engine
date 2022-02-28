@@ -1263,70 +1263,85 @@ namespace MFA::RenderBackend
 
     //-------------------------------------------------------------------------------------------------
 
-    FindPresentAndGraphicQueueFamilyResult FindPresentAndGraphicQueueFamily(
-        VkPhysicalDevice physical_device,
-        VkSurfaceKHR window_surface
+    FindQueueFamilyResult FindQueueFamilies(
+        VkPhysicalDevice physicalDevice,
+        VkSurfaceKHR windowSurface
     )
     {
-        FindPresentAndGraphicQueueFamilyResult ret{};
 
-        uint32_t queue_family_count = 0;
-        vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_count, nullptr);
-        if (queue_family_count == 0)
+        bool isPresentQueueSet = false;
+        uint32_t presentQueueFamily = -1;
+
+        bool isGraphicQueueSet = false;
+        uint32_t graphicQueueFamily = -1;
+
+        bool isComputeQueueSet = false;
+        uint32_t computeQueueFamily = -1;
+
+        uint32_t queueFamilyCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
+        if (queueFamilyCount == 0)
         {
             MFA_CRASH("physical device has no queue families!");
         }
         // Find queue family with graphics support
         // Note: is a transfer queue necessary to copy vertices to the gpu or can a graphics queue handle that?
-        std::vector<VkQueueFamilyProperties> queueFamilies(queue_family_count);
+        std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
         vkGetPhysicalDeviceQueueFamilyProperties(
-            physical_device,
-            &queue_family_count,
+            physicalDevice,
+            &queueFamilyCount,
             queueFamilies.data()
         );
 
-        MFA_LOG_INFO("physical device has %d queue families.", queue_family_count);
+        MFA_LOG_INFO("physical device has %d queue families.", queueFamilyCount);
 
-        bool found_graphic_queue_family = false;
-        bool found_present_queue_family = false;
-        for (uint32_t i = 0; i < queue_family_count; i++)
+        for (uint32_t queueIndex = 0; queueIndex < queueFamilyCount; queueIndex++)
         {
-            VkBool32 present_is_supported = false;
-            vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, window_surface, &present_is_supported);
-            if (queueFamilies[i].queueCount > 0 && queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            if (isPresentQueueSet == false)
             {
-                ret.graphic_queue_family = i;
-                found_graphic_queue_family = true;
-                if (present_is_supported)
-                {
-                    ret.present_queue_family = i;
-                    found_present_queue_family = true;
-                    break;
+                VkBool32 presentIsSupported = false;
+                vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, queueIndex, windowSurface, &presentIsSupported);
+                if (presentIsSupported) {
+                    presentQueueFamily = queueIndex;
+                    isPresentQueueSet = true;
                 }
             }
-            if (!found_present_queue_family && present_is_supported)
+
+            auto & queueFamily = queueFamilies[queueIndex];
+            if (queueFamily.queueCount > 0)
             {
-                ret.present_queue_family = i;
-                found_present_queue_family = true;
+                if (isGraphicQueueSet == false && (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT))
+                {
+                    graphicQueueFamily = queueIndex;
+                    isGraphicQueueSet = true;
+                }
+                if (isComputeQueueSet == false && (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT))
+                {
+                    computeQueueFamily = queueIndex;
+                    isComputeQueueSet = true;
+                }
+            }
+
+            if (isPresentQueueSet && isGraphicQueueSet && isComputeQueueSet)
+            {
+                break;
             }
         }
-        if (found_graphic_queue_family)
-        {
-            MFA_LOG_INFO("Queue family # %d supports graphics", ret.graphic_queue_family);
-            if (found_present_queue_family)
-            {
-                MFA_LOG_INFO("Queue family # %d supports presentation", ret.present_queue_family);
-            }
-            else
-            {
-                MFA_CRASH("Could not find a valid queue family with present support");
-            }
-        }
-        else
-        {
-            MFA_CRASH("Could not find a valid queue family with graphics support");
-        }
-        return ret;
+
+        MFA_REQUIRE(isPresentQueueSet);
+        MFA_REQUIRE(isGraphicQueueSet);
+        MFA_REQUIRE(isComputeQueueSet);
+
+        return FindQueueFamilyResult {
+            .isPresentQueueValid = isPresentQueueSet,
+            .presentQueueFamily = presentQueueFamily,
+
+            .isGraphicQueueValid = isGraphicQueueSet,
+            .graphicQueueFamily = graphicQueueFamily,
+
+            .isComputeQueueValid = isComputeQueueSet,
+            .computeQueueFamily = computeQueueFamily
+        };
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -2450,65 +2465,68 @@ namespace MFA::RenderBackend
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::SyncObjects CreateSyncObjects(
-        VkDevice device,
-        uint8_t const maxFramesInFlight,
-        uint32_t const swapChainImagesCount
-    )
+    std::vector<VkSemaphore> CreateSemaphores(VkDevice device, uint32_t count)
     {
-        RT::SyncObjects syncObjects{};
-        syncObjects.imageAvailabilitySemaphores.resize(maxFramesInFlight);
-        syncObjects.renderFinishIndicatorSemaphores.resize(maxFramesInFlight);
-        syncObjects.fencesInFlight.resize(maxFramesInFlight);
-    #ifdef __ANDROID__
-        syncObjects.images_in_flight.resize(swapChainImagesCount, 0);
-    #else
-        syncObjects.imagesInFlight.resize(swapChainImagesCount, nullptr);
-    #endif
+        VkSemaphoreCreateInfo const semaphoreInfo{
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
+        };
 
-        VkSemaphoreCreateInfo semaphoreInfo{};
-        semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+        std::vector<VkSemaphore> semaphores (count);
 
-        VkFenceCreateInfo fenceInfo{};
-        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-        for (uint8_t i = 0; i < maxFramesInFlight; i++)
+        for (auto & semaphore : semaphores)
         {
             VK_Check(vkCreateSemaphore(
                 device,
                 &semaphoreInfo,
                 nullptr,
-                &syncObjects.imageAvailabilitySemaphores[i]
-            ));
-            VK_Check(vkCreateSemaphore(
-                device,
-                &semaphoreInfo,
-                nullptr,
-                &syncObjects.renderFinishIndicatorSemaphores[i]
-            ));
-            VK_Check(vkCreateFence(
-                device,
-                &fenceInfo,
-                nullptr,
-                &syncObjects.fencesInFlight[i]
+                &semaphore
             ));
         }
-        return syncObjects;
+
+        return semaphores;
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void DestroySemaphored(VkDevice device, std::vector<VkSemaphore> const & semaphores)
+    {
+        for (auto & semaphore : semaphores)
+        {
+            vkDestroySemaphore(device, semaphore, nullptr);
+        }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void DestroySyncObjects(VkDevice device, RT::SyncObjects const & syncObjects)
+    std::vector<VkFence> CreateFence(VkDevice device, uint32_t count)
     {
-        MFA_ASSERT(device != nullptr);
-        MFA_ASSERT(syncObjects.fencesInFlight.size() == syncObjects.imageAvailabilitySemaphores.size());
-        MFA_ASSERT(syncObjects.fencesInFlight.size() == syncObjects.renderFinishIndicatorSemaphores.size());
-        for (uint8_t i = 0; i < syncObjects.fencesInFlight.size(); i++)
+        VkFenceCreateInfo const fenceInfo{
+            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+            .flags = VK_FENCE_CREATE_SIGNALED_BIT
+        };
+
+        std::vector<VkFence> fences (count);
+
+        for (auto & fence : fences)
         {
-            vkDestroySemaphore(device, syncObjects.renderFinishIndicatorSemaphores[i], nullptr);
-            vkDestroySemaphore(device, syncObjects.imageAvailabilitySemaphores[i], nullptr);
-            vkDestroyFence(device, syncObjects.fencesInFlight[i], nullptr);
+            VK_Check(vkCreateFence(
+                device,
+                &fenceInfo,
+                nullptr,
+                &fence
+            ));
+        }
+
+        return fences;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void DestroyFence(VkDevice device, std::vector<VkFence> const & fences)
+    {
+        for (auto & fence : fences)
+        {
+            vkDestroyFence(device, fence, nullptr);
         }
     }
 
@@ -2770,6 +2788,21 @@ namespace MFA::RenderBackend
     )
     {
         VK_Check(vkBeginCommandBuffer(commandBuffer, &beginInfo));
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ExecuteCommandBuffer(
+        VkCommandBuffer primaryCommandBuffer,
+        uint32_t const subCommandBuffersCount,
+        const VkCommandBuffer * subCommandBuffers
+    )
+    {
+        vkCmdExecuteCommands(
+            primaryCommandBuffer,
+            subCommandBuffersCount,
+            subCommandBuffers
+        );
     }
 
     //-------------------------------------------------------------------------------------------------

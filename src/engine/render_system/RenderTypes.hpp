@@ -10,6 +10,9 @@
 #include <vulkan/vulkan.h>
 #endif
 
+#include <string>
+#include <vector>
+
 namespace MFA
 {
 
@@ -324,15 +327,6 @@ namespace MFA
         {
             VkDevice device{};
             VkPhysicalDeviceMemoryProperties physicalMemoryProperties{};
-        };
-
-        // CreateSyncObjects (Fence, Semaphore, ...)
-        struct SyncObjects
-        {
-            std::vector<VkSemaphore> imageAvailabilitySemaphores;
-            std::vector<VkSemaphore> renderFinishIndicatorSemaphores;
-            std::vector<VkFence> fencesInFlight;
-            std::vector<VkFence> imagesInFlight;
         };
 
         struct CreateGraphicPipelineOptions

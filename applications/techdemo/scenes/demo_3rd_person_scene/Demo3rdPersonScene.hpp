@@ -6,7 +6,6 @@
 #include "engine/camera/ThirdPersonCameraComponent.hpp"
 #include "engine/entity_system/components/MeshRendererComponent.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
-#include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
 #include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
 #include "tools/Prefab.hpp"
 
@@ -24,19 +23,15 @@ public:
 
     void Init() override;
 
-    void OnPreRender(float deltaTimeInSec, MFA::RT::CommandRecordState & recordState) override;
-
-    void OnRender(float deltaTimeInSec, MFA::RT::CommandRecordState & recordState) override;
-
-    void OnPostRender(float deltaTimeInSec) override;
+    void Update(float deltaTimeInSec) override;
 
     void Shutdown() override;
-
-    bool isDisplayPassDepthImageInitialLayoutUndefined() override;
+    
+    bool RequiresUpdate() override;
 
 private:
 
-    void onUI();
+    void onUI() const;
 
     static constexpr float Z_NEAR = 0.1f;
     static constexpr float Z_FAR = 3000.0f;
@@ -48,8 +43,6 @@ private:
 #error Os is not handled
 #endif
 
-    std::shared_ptr<MFA::RT::GpuTexture> mErrorTexture {};
-
     //std::shared_ptr<MFA::RT::GpuModel> mSoldierGpuModel {};
     
     std::weak_ptr<MFA::TransformComponent> mPlayerTransform {};
@@ -58,17 +51,9 @@ private:
     std::shared_ptr<MFA::RT::GpuModel> mMapModel {};
 
     std::weak_ptr<MFA::ThirdPersonCameraComponent> mThirdPersonCamera {};
-
-    std::shared_ptr<MFA::RT::SamplerGroup> mSampler {};
-
-    MFA::PBRWithShadowPipelineV2 mPbrPipeline {this};
-    MFA::DebugRendererPipeline mDebugRenderPipeline {};
-
+    
     int mUIRecordId = 0;
 
-    MFA::Prefab mSoldierPrefab;
-    MFA::Prefab mSponzaPrefab;
-
-    bool mEnableDebugPipeline = false;
+    MFA::DebugRendererPipeline * mDebugRenderPipeline = nullptr;
 
 };

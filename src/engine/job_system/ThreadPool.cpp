@@ -1,6 +1,6 @@
 #include "ThreadPool.hpp"
 
-namespace MFA
+namespace MFA::JobSystem
 {
 
     //-------------------------------------------------------------------------------------------------
@@ -47,33 +47,47 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ThreadPool::AssignTaskToAllThreads(Task const & task)
+    void ThreadPool::AssignTask(Task const & task) const
     {
-        assert(std::this_thread::get_id() == mMainThreadId);
-        for (ThreadNumber threadIndex = 0; threadIndex < mNumberOfThreads; threadIndex++)
+        assert(task != nullptr);
+
+        if (mIsAlive == true)
         {
-            AssignTask(threadIndex, task);
+            ThreadObject * freeThread = nullptr;
+            size_t freeThreadTaskCount = 0;
+            for (auto & thread : mThreadObjects)
+            {
+                if (freeThread == nullptr || freeThreadTaskCount > thread->InQueueTasksCount())
+                {
+                    freeThread = thread.get();
+                    freeThreadTaskCount = thread->InQueueTasksCount();
+                }
+            }
+            MFA_ASSERT(freeThread != nullptr);
+            freeThread->Assign(task);
+        }
+        else
+        {
+            task(0, 1);
         }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void ThreadPool::AssignTask(
-        ThreadNumber const threadNumber,
-        Task const & task
-    )
+    void ThreadPool::AssignTaskPerThread(Task const & task) const
     {
-        assert(std::this_thread::get_id() == mMainThreadId);
-        assert(threadNumber >= 0 && threadNumber < mNumberOfThreads);
         assert(task != nullptr);
 
-        if (mNumberOfThreads > 1)
+        if (mIsAlive == true)
         {
-            mThreadObjects[threadNumber]->Assign(task);
+            for (auto & thread : mThreadObjects)
+            {
+                thread->Assign(task);
+            }
         }
         else
         {
-            task();
+            task(0, 1);
         }
     }
 
@@ -100,7 +114,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    ThreadPool::ThreadNumber ThreadPool::GetNumberOfAvailableThreads() const
+    ThreadNumber ThreadPool::GetNumberOfAvailableThreads() const
     {
         return mNumberOfThreads;
     }
@@ -123,7 +137,19 @@ namespace MFA
 
     bool ThreadPool::ThreadObject::IsFree()
     {
-        return mTasks.IsEmpty() && mIsBusy == false;
+        auto const isFree = mTasks.IsEmpty() && mIsBusy == false;
+        if (isFree == false)
+        {
+            mCondition.notify_one();
+        }
+        return isFree;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    size_t ThreadPool::ThreadObject::InQueueTasksCount()
+    {
+        return mTasks.ItemCount();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -135,10 +161,17 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    ThreadNumber ThreadPool::ThreadObject::GetThreadNumber() const
+    {
+        return mThreadNumber;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void ThreadPool::ThreadObject::mainLoop()
     {
-        std::mutex mMutex{};
-        std::unique_lock<std::mutex> mLock{ mMutex };
+        std::mutex mutex{};
+        std::unique_lock<std::mutex> mLock{ mutex };
         while (mParent.mIsAlive)
         {
             mCondition.wait(mLock, [this]()->bool
@@ -155,7 +188,7 @@ namespace MFA
                 {
                     if (currentTask != nullptr)
                     {
-                        currentTask();
+                        currentTask(mThreadNumber, mParent.mNumberOfThreads);
                     }
                 }
                 catch (std::exception const & exception)
@@ -169,16 +202,18 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    bool ThreadPool::mainThreadAwakeCondition()
+    bool ThreadPool::mainThreadAwakeCondition() const
     {
-        for (auto & threadObject : mThreadObjects)
+        bool shouldAwake = true;
+        for (auto const & threadObject : mThreadObjects)
         {
             if (threadObject->IsFree() == false)
             {
-                return false;
+                threadObject->Notify();
+                shouldAwake = false;
             }
         }
-        return true;
+        return shouldAwake;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -186,6 +221,7 @@ namespace MFA
     void ThreadPool::WaitForThreadsToFinish()
     {
         assert(std::this_thread::get_id() == mMainThreadId);
+
         //When number of threads is 2 it means that platform only uses main thread
         while (mainThreadAwakeCondition() == false)
         {
@@ -193,8 +229,9 @@ namespace MFA
             {
                 threadObject->Notify();
             }
-            std::this_thread::sleep_for(std::chrono::nanoseconds(50));
+            std::this_thread::yield();
         }
+        
         assert(AllThreadsAreIdle() == true);
 
         while (!exceptions.IsEmpty())

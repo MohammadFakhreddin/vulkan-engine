@@ -81,41 +81,38 @@ namespace MFA
             alignas(4) int placeholder1 = 0;
         };
 
-        explicit PBRWithShadowPipelineV2(Scene * attachedScene);
+        explicit PBRWithShadowPipelineV2();
         ~PBRWithShadowPipelineV2() override;
         
-        PIPELINE_PROPS(PBRWithShadowPipelineV2);
-
-        void Init(
-            std::shared_ptr<RT::SamplerGroup> samplerGroup,
-            std::shared_ptr<RT::GpuTexture> errorTexture
+        PIPELINE_PROPS(
+            PBRWithShadowPipelineV2,
+            EventTypes::PreRenderEvent | EventTypes::RenderEvent | EventTypes::PostRenderEvent,
+            RenderOrder::BeforeEverything
         );
 
-        void Shutdown() override;
+        void init() override;
 
-        void PreRender(RT::CommandRecordState & recordState, float deltaTime) override;
+        void shutdown() override;
 
-        void Render(RT::CommandRecordState & recordState, float deltaTime) override;
+        void preRender(RT::CommandRecordState & recordState, float deltaTime) override;
 
-        void OnResize() override;
+        void render(RT::CommandRecordState & recordState, float deltaTimeInSec) override;
 
-        void CreateEssenceWithoutModel(
-            std::shared_ptr<RT::GpuModel> const & gpuModel,
-            std::shared_ptr<AssetSystem::PBR::MeshData> const & meshData
-        ) const;
+        void postRender(float deltaTimeInSec) override;
+
+        void onResize() override;
 
     protected:
 
-        std::shared_ptr<EssenceBase> internalCreateEssence(
-            std::shared_ptr<RT::GpuModel> const & gpuModel,
-            std::shared_ptr<AssetSystem::MeshBase> const & cpuMesh
-        ) override;
+        void internalAddEssence(EssenceBase * essence) override;
 
         std::shared_ptr<VariantBase> internalCreateVariant(EssenceBase * essence) override;
         
     private:
 
-        void updateVariants(float deltaTimeInSec, RT::CommandRecordState const & recordState) const;
+        void preRenderVariants(float deltaTimeInSec, RT::CommandRecordState const & recordState) const;
+
+        void postRenderVariants(float deltaTimeInSec) const;
 
         void createPerFrameDescriptorSets();
 
@@ -156,6 +153,8 @@ namespace MFA
         void renderForDirectionalLightShadowPass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode) const;
 
         void performPointLightShadowPass(RT::CommandRecordState & recordState) const;
+
+        void prepareShadowMapsForSampling(RT::CommandRecordState const & recordState) const;
 
         void renderForPointLightShadowPass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode) const;
 
@@ -202,8 +201,6 @@ namespace MFA
         std::vector<VkDescriptorSetLayout> mDescriptorSetLayouts{};
 
         RT::DescriptorSetGroup mPerFrameDescriptorSetGroup{};
-
-        Scene * mAttachedScene = nullptr;
 
     };
 

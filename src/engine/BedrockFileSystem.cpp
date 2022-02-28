@@ -28,7 +28,7 @@ explicit FileHandle(std::string const & path, Usage const usage) {
     }();
     #ifndef __PLATFORM_WIN__
     int errorCode = 0;
-    mFile = fopen(path, mode);
+    mFile = fopen(path.c_str(), mode);
     if (mFile == nullptr) {
         errorCode = 1;
     }
@@ -44,7 +44,7 @@ explicit FileHandle(std::string const & path, Usage const usage) {
     if (mFile == nullptr && Usage::Append == usage) {
         #ifndef __PLATFORM_WIN__
         errorCode = 0;
-        auto mFile = fopen(path, mode);
+        auto mFile = fopen(path.c_str(), mode);
         if (mFile != nullptr) {
             errorCode = 1;
         }

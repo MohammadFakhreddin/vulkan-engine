@@ -12,9 +12,13 @@
 #include "engine/entity_system/components/MeshRendererComponent.hpp"
 #include "engine/entity_system/components/SphereBoundingVolumeComponent.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/ui_system/UI_System.hpp"
 #include "engine/entity_system/components/PointLightComponent.hpp"
+#include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
+#include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
+#include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Essence.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
+#include "engine/scene_manager/SceneManager.hpp"
 
 using namespace MFA;
 
@@ -28,10 +32,7 @@ GLTFMeshViewerScene::GLTFMeshViewerScene()
 
 void GLTFMeshViewerScene::Init() {
     Scene::Init();
-    {// Error texture
-        auto cpu_texture = Importer::CreateErrorTexture();
-        mErrorTexture = RF::CreateTexture(*cpu_texture);
-    }
+
     {// Models
         //{
         //    ModelRenderRequiredData params {};
@@ -125,11 +126,6 @@ void GLTFMeshViewerScene::Init() {
         }
     }
 
-    // TODO We should use gltf sampler info here
-    mSamplerGroup = RF::CreateSampler(MFA::RT::CreateSamplerParams {});
-    
-    mDebugRenderPipeline.Init();
-
     {// Camera
         auto * entity = EntitySystem::CreateEntity("Camera", GetRootEntity());
 
@@ -145,9 +141,7 @@ void GLTFMeshViewerScene::Init() {
 
         SetActiveCamera(mCamera);
     }
-    
-    mPbrPipeline.Init(mSamplerGroup, mErrorTexture);
-
+   
     {// Point light
         auto * entity = EntitySystem::CreateEntity("PointLight", GetRootEntity());
 
@@ -166,7 +160,10 @@ void GLTFMeshViewerScene::Init() {
 
         mPointLightTransform = transformComponent;
 
-        entity->AddComponent<MeshRendererComponent>(mDebugRenderPipeline, "Sphere");
+        entity->AddComponent<MeshRendererComponent>(
+            *SceneManager::GetPipeline<DebugRendererPipeline>(),
+            "Sphere"
+        );
 
         entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
 
@@ -174,13 +171,13 @@ void GLTFMeshViewerScene::Init() {
     }
 
     mUIRegisterId = UI::Register([this]()->void {OnUI();});
-
-    RegisterPipeline(&mPbrPipeline);
-    RegisterPipeline(&mDebugRenderPipeline);
 }
 
-void GLTFMeshViewerScene::OnPreRender(float const deltaTimeInSec, RT::CommandRecordState & recordState) {
-    Scene::OnPreRender(deltaTimeInSec, recordState);
+//-------------------------------------------------------------------------------------------------
+
+void GLTFMeshViewerScene::Update(float const deltaTimeInSec)
+{
+    Scene::Update(deltaTimeInSec);
 
     auto & selectedModel = mModelsRenderData[mSelectedModelIndex];
 
@@ -232,30 +229,6 @@ void GLTFMeshViewerScene::OnPreRender(float const deltaTimeInSec, RT::CommandRec
             ptr->ForceRotation(selectedModel.initialParams.camera.eulerAngles);
         }
     }
-
-    mPbrPipeline.PreRender(recordState, deltaTimeInSec);
-    mDebugRenderPipeline.PreRender(recordState, deltaTimeInSec);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void GLTFMeshViewerScene::OnRender(float const deltaTimeInSec, RT::CommandRecordState & recordState) {
-    Scene::OnRender(deltaTimeInSec, recordState);
-
-    MFA_ASSERT(mSelectedModelIndex >= 0 && mSelectedModelIndex < static_cast<int32_t>(mModelsRenderData.size()));
-
-    // TODO Pipeline should be able to share buffers such as projection buffer to enable us to update them once -> Solution: Store camera buffers inside camera
-    mPbrPipeline.Render(recordState, deltaTimeInSec);
-    if (mIsLightVisible) {
-        mDebugRenderPipeline.Render(recordState, deltaTimeInSec);
-    }
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void GLTFMeshViewerScene::OnPostRender(float const deltaTimeInSec)
-{
-    Scene::OnPostRender(deltaTimeInSec);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -293,19 +266,34 @@ void GLTFMeshViewerScene::Shutdown() {
 
 //-------------------------------------------------------------------------------------------------
 
-bool GLTFMeshViewerScene::isDisplayPassDepthImageInitialLayoutUndefined()
+bool GLTFMeshViewerScene::RequiresUpdate()
 {
-    return false;
+    return true;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredData) {
+void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredData) const
+{
     auto const cpuModel = RC::AcquireCpuModel(renderRequiredData.address);
     renderRequiredData.gpuModel = RC::AcquireGpuModel(renderRequiredData.address);
-    MFA_ASSERT(mPbrPipeline.EssenceExists(renderRequiredData.address) == false);
-    mPbrPipeline.CreateEssence(renderRequiredData.gpuModel, cpuModel->mesh);
 
+    auto * pbrPipeline = SceneManager::GetPipeline<PBRWithShadowPipelineV2>();
+    MFA_ASSERT(pbrPipeline != nullptr);
+    if(pbrPipeline->hasEssence(renderRequiredData.address) == false){
+        MFA_ASSERT(dynamic_cast<AS::PBR::Mesh *>(cpuModel->mesh.get()) != nullptr);
+        auto const * mesh = static_cast<AS::PBR::Mesh *>(cpuModel->mesh.get());
+        auto meshData = mesh->getMeshData();
+        MFA_ASSERT(meshData != nullptr);
+        auto const addResult = pbrPipeline->addEssence(
+            std::make_shared<PBR_Essence>(
+                renderRequiredData.gpuModel,
+                meshData
+            )
+        );
+        MFA_ASSERT(addResult == true);
+    }
+    
     auto * entity = EntitySystem::CreateEntity(renderRequiredData.displayName, GetRootEntity());
     MFA_ASSERT(entity != nullptr);
     renderRequiredData.entity = entity;
@@ -314,7 +302,7 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
     MFA_ASSERT(renderRequiredData.transformComponent.expired() == false);
 
     renderRequiredData.meshRendererComponent = entity->AddComponent<MeshRendererComponent>(
-        mPbrPipeline,
+        *pbrPipeline,
         renderRequiredData.gpuModel->nameOrAddress
     );
     MFA_ASSERT(renderRequiredData.meshRendererComponent.expired() == false);
@@ -325,7 +313,7 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
     );
     
     EntitySystem::InitEntity(entity);
-        
+
     renderRequiredData.isLoaded = true;
 }
 

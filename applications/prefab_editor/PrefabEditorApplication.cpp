@@ -2,6 +2,9 @@
 
 #include "engine/scene_manager/SceneManager.hpp"
 #include "scenes/PrefabEditorScene.hpp"
+#include "engine/render_system/pipelines/particle/ParticlePipeline.hpp"
+#include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
+#include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
 
 using namespace MFA;
 
@@ -27,6 +30,10 @@ void PrefabEditorApplication::internalInit()
     });
 
     SceneManager::SetActiveScene("PrefabEditorScene");
+
+    SceneManager::RegisterPipeline<DebugRendererPipeline>();
+    SceneManager::RegisterPipeline<PBRWithShadowPipelineV2>();
+    SceneManager::RegisterPipeline<ParticlePipeline>();
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -15,6 +15,7 @@ namespace MFA::Path
 
     void ForReadWrite(std::string const & address, std::string & outPath);
 
+    // Returns true if relative path was extracted
     bool RelativeToAssetFolder(std::string const & address, std::string & outRelativePath);
 
 #if defined(__IOS__) || defined(__PLATFORM_MAC__)

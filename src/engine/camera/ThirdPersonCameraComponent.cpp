@@ -1,7 +1,7 @@
 #include "ThirdPersonCameraComponent.hpp"
 
 #include "engine/InputManager.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/ui_system/UI_System.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockMath.hpp"

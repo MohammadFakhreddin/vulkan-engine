@@ -7,7 +7,6 @@
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "tools/Importer.hpp"
 #include "engine/BedrockMatrix.hpp"
-#include "engine/entity_system/components/PointLightComponent.hpp"
 #include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/render_passes/depth_pre_pass/DepthPrePass.hpp"
@@ -16,11 +15,14 @@
 #include "engine/render_system/render_passes/point_light_shadow_render_pass/PointLightShadowRenderPass.hpp"
 #include "engine/render_system/render_resources/directional_light_shadow_resources/DirectionalLightShadowResources.hpp"
 #include "engine/render_system/render_resources/point_light_shadow_resources/PointLightShadowResources.hpp"
-#include "engine/scene_manager/Scene.hpp"
 #include "engine/job_system/JobSystem.hpp"
 #include "engine/asset_system/AssetShader.hpp"
+#include "engine/entity_system/components/PointLightComponent.hpp"
+#include "engine/scene_manager/SceneManager.hpp"
+#include "engine/resource_manager/ResourceManager.hpp"
 
-#define CAST_VARIANT(variant)  static_cast<PBR_Variant *>(variant.get())
+#define CAST_ESSENCE(essence)   static_cast<PBR_Essence *>(essence)
+#define CAST_VARIANT(variant)   static_cast<PBR_Variant *>(variant.get())
 
 /*
 There are four C++ style casts:
@@ -34,12 +36,39 @@ They are messages to the compiler that data that has been declared one way needs
 "I said this was an int*, but let me access it as if it were a char* pointing to sizeof(int) chars" or "I said this data was read-only,
 and now I need to pass it to a function that won't modify it, but doesn't take the parameter as a const reference."
 */
+
+
+/*
+ * https://community.arm.com/arm-community-blogs/b/graphics-gaming-and-vr-blog/posts/vulkan-mobile-best-practices-and-management
+ * Multi-threaded command recording has the potential to improve CPU time significantly, but it also opens up several pitfalls.
+ * In the worst case scenario, this can lead to worse performance than single threaded. 
+ *
+ * Our general recommendation is to use a profiler and figure out the bottleneck for your application,
+ * while keeping a close eye on common pain points regarding threading in general.
+ * The issues that we have encountered most often are the following: 
+ *
+ * Thread spawning causing a significant overhead. This could happen if you use std::async directly to spawn your threads,
+ * as STL implementations usually do not pool threads in that case. We recommend using a thread pool library instead, or to implement thread pooling yourself.
+ *
+ * Synchronization overhead might be significant. If you are using mutexes to guard all your map accesses,
+ * the code might end up running in a serialized fashion with the extra overhead for lock acquisition/release.
+ * Alternative approaches could be using a read/write mutex like shared_mutex, or go lock-free by ensuring that the map is read-only while executing multi-threaded code.
+ *
+ * In the lock-free approach, each thread can keep a list of entries to add to the map.
+ * These per-thread lists of entries are then inserted into the map after all the threads have returned. 
+ * Having few meshes per thread.
+ * Multi-threaded command recording has some performance overhead both on the CPU side (cost of threading) and on the GPU side (executing secondary command buffers).
+ * Therefore, using the full parallelism available is not always a good choice. As a rule of thumb,
+ * only go parallel if you measure that draw call recording is taking a significant portion of your frame time. 
+ */
 namespace MFA
 {
 
+    // Steps for multi-threading. Begin render pass -> submit subcommands -> execute into primary end renderPpass
+
     //-------------------------------------------------------------------------------------------------
 
-    PBRWithShadowPipelineV2::PBRWithShadowPipelineV2(Scene * attachedScene)
+    PBRWithShadowPipelineV2::PBRWithShadowPipelineV2()
         : BasePipeline(10000)
         , mPointLightShadowRenderPass(std::make_unique<PointLightShadowRenderPass>())
         , mPointLightShadowResources(std::make_unique<PointLightShadowResources>())
@@ -47,7 +76,6 @@ namespace MFA
         , mDirectionalLightShadowResources(std::make_unique<DirectionalLightShadowResources>())
         , mDepthPrePass(std::make_unique<DepthPrePass>())
         , mOcclusionRenderPass(std::make_unique<OcclusionRenderPass>())
-        , mAttachedScene(attachedScene)
     {
     }
 
@@ -57,16 +85,13 @@ namespace MFA
     {
         if (mIsInitialized)
         {
-            Shutdown();
+            shutdown();
         }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::Init(
-        std::shared_ptr<RT::SamplerGroup> samplerGroup,
-        std::shared_ptr<RT::GpuTexture> errorTexture
-    )
+    void PBRWithShadowPipelineV2::init()
     {
         if (mIsInitialized == true)
         {
@@ -74,13 +99,14 @@ namespace MFA
             return;
         }
         
-        BasePipeline::Init();
+        BasePipeline::init();
 
-        MFA_ASSERT(samplerGroup != nullptr);
-        mSamplerGroup = std::move(samplerGroup);
-        MFA_ASSERT(errorTexture != nullptr);
-        mErrorTexture = std::move(errorTexture);
+        mSamplerGroup = RF::CreateSampler(RT::CreateSamplerParams{});
+        MFA_ASSERT(mSamplerGroup != nullptr);
 
+        mErrorTexture = RC::AcquireGpuTexture("Error");
+        MFA_ASSERT(mErrorTexture != nullptr);
+        
         createUniformBuffers();
 
         mPointLightShadowRenderPass->Init();
@@ -115,7 +141,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::Shutdown()
+    void PBRWithShadowPipelineV2::shutdown()
     {
         if (mIsInitialized == false)
         {
@@ -138,21 +164,51 @@ namespace MFA
         mDirectionalLightShadowResources->Shutdown();
         mDirectionalLightShadowRenderPass->Shutdown();
      
-        BasePipeline::Shutdown();
+        BasePipeline::shutdown();
 
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::PreRender(RT::CommandRecordState & recordState, float const deltaTime)
+    void PBRWithShadowPipelineV2::preRenderVariants(float deltaTimeInSec, RT::CommandRecordState const & recordState) const
+    {
+        // Multi-thread update of variant animation
+        JS::AssignTaskPerThread([this, &recordState, deltaTimeInSec](uint32_t const threadNumber, uint32_t const threadCount)->void
+        {
+            for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mAllVariantsList.size()); i += threadCount)
+            {
+                mAllVariantsList[i]->PreRender(deltaTimeInSec, recordState);
+            }
+        });
+        JS::WaitForThreadsToFinish();
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::postRenderVariants(float deltaTimeInSec) const
+    {
+        // Multi-thread update of variant animation
+        JS::AssignTaskPerThread([this, deltaTimeInSec](uint32_t const threadNumber, uint32_t const threadCount)->void
+        {
+            for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mAllVariantsList.size()); i += threadCount)
+            {
+                mAllVariantsList[i]->PostRender(deltaTimeInSec);
+            }
+        });
+        JS::WaitForThreadsToFinish();
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::preRender(RT::CommandRecordState & recordState, float const deltaTime)
     {
         // TODO I should render bounding volume for objects and geometry for occluders.
         // Some objects might need more than 1 occluder.
         retrieveOcclusionQueryResult(recordState);
 
-        BasePipeline::PreRender(recordState, deltaTime);
+        BasePipeline::preRender(recordState, deltaTime);
 
-        updateVariants(deltaTime, recordState);
+        preRenderVariants(deltaTime, recordState);
 
         performDepthPrePass(recordState);
 
@@ -162,60 +218,30 @@ namespace MFA
 
         performPointLightShadowPass(recordState);
 
-        {// Sampling barriers
-            std::vector<VkImageMemoryBarrier> barrier {};
-            mPointLightShadowRenderPass->PrepareRenderTargetForSampling(
-                recordState,
-                mPointLightShadowResources.get(),
-                mAttachedScene->getPointLightCount() > 0,
-                barrier
-            );
-            mDirectionalLightShadowRenderPass->PrepareRenderTargetForSampling(
-                recordState,
-                mDirectionalLightShadowResources.get(),
-                mAttachedScene->GetDirectionalLightCount() > 0,
-                barrier
-            );
-            RF::PipelineBarrier(
-                RF::GetGraphicCommandBuffer(recordState),
-                VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                static_cast<uint32_t>(barrier.size()),
-                barrier.data()
-            );
-        }
+        prepareShadowMapsForSampling(recordState);
 
+        RF::GetDisplayRenderPass()->notifyDepthImageLayoutIsSet();
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::updateVariants(float deltaTimeInSec, RT::CommandRecordState const & recordState) const
+    void PBRWithShadowPipelineV2::render(RT::CommandRecordState & recordState, float const deltaTimeInSec)
     {
-        // Multi-thread update of variant animation
-        auto const availableThreadCount = JS::GetNumberOfAvailableThreads();
-        for (uint32_t threadNumber = 0; threadNumber < availableThreadCount; ++threadNumber)
-        {
-            JS::AssignTaskManually(threadNumber, [this, &recordState, deltaTimeInSec, threadNumber, availableThreadCount]()->void
-            {
-                for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mAllVariantsList.size()); i += availableThreadCount)
-                {
-                    mAllVariantsList[i]->Update(deltaTimeInSec, recordState);
-                }
-            });
-        }
-        JS::WaitForThreadsToFinish();
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void PBRWithShadowPipelineV2::Render(RT::CommandRecordState & recordState, float deltaTime)
-    {
+        BasePipeline::render(recordState, deltaTimeInSec);
         performDisplayPass(recordState);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::OnResize()
+    void PBRWithShadowPipelineV2::postRender(float const deltaTimeInSec)
+    {
+        BasePipeline::postRender(deltaTimeInSec);
+        postRenderVariants(deltaTimeInSec);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::onResize()
     {
         mDepthPrePass->OnResize();
         mOcclusionRenderPass->OnResize();
@@ -223,26 +249,10 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::CreateEssenceWithoutModel(
-        std::shared_ptr<RT::GpuModel> const & gpuModel,
-        std::shared_ptr<AssetSystem::PBR::MeshData> const & meshData
-    ) const
+    void PBRWithShadowPipelineV2::internalAddEssence(EssenceBase * essence)
     {
-        auto const essence = std::make_shared<PBR_Essence>(gpuModel, meshData);
-        createEssenceDescriptorSets(*essence);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    std::shared_ptr<EssenceBase> PBRWithShadowPipelineV2::internalCreateEssence(
-        std::shared_ptr<RT::GpuModel> const & gpuModel,
-        std::shared_ptr<AS::MeshBase> const & cpuMesh
-    )
-    {
-        auto const meshData = static_cast<AS::PBR::Mesh *>(cpuMesh.get())->getMeshData();
-        auto essence = std::make_shared<PBR_Essence>(gpuModel, meshData);
-        createEssenceDescriptorSets(*essence);
-        return essence;
+        MFA_ASSERT(dynamic_cast<PBR_Essence *>(essence) != nullptr);
+        createEssenceDescriptorSets(*CAST_ESSENCE(essence));
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -266,9 +276,9 @@ namespace MFA
             *mPerFrameDescriptorSetLayout
         );
 
-        auto const & cameraBufferCollection = mAttachedScene->GetCameraBuffers();
-        auto const & directionalLightBuffers = mAttachedScene->GetDirectionalLightBuffers();
-        auto const & pointLightBuffers = mAttachedScene->GetPointLightsBuffers();
+        auto const & cameraBufferCollection = SceneManager::GetCameraBuffers();
+        auto const & directionalLightBuffers = SceneManager::GetDirectionalLightBuffers();
+        auto const & pointLightBuffers = SceneManager::GetPointLightsBuffers();
         
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
@@ -349,7 +359,6 @@ namespace MFA
 
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
-
             auto const & descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
             MFA_VK_VALID_ASSERT(descriptorSet);
 
@@ -518,7 +527,7 @@ namespace MFA
     void PBRWithShadowPipelineV2::renderForDepthPrePass(RT::CommandRecordState const & recordState, AS::AlphaMode const alphaMode) const
     {
         DepthPrePassPushConstants pushConstants{};
-
+        // TODO: Submit in multiple threads
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
             auto & essence = essenceAndVariantList.second.essence;
@@ -542,7 +551,7 @@ namespace MFA
                         variant->GetDescriptorSetGroup()
                     );
 
-                    CAST_VARIANT(variant)->Draw(
+                    CAST_VARIANT(variant)->Render(
                         recordState,
                         [&recordState, &pushConstants](
                             AS::PBR::Primitive const & primitive,
@@ -574,7 +583,7 @@ namespace MFA
     
     void PBRWithShadowPipelineV2::performDirectionalLightShadowPass(RT::CommandRecordState & recordState) const
     {
-        if (mAttachedScene->GetDirectionalLightCount() <= 0)
+        if (SceneManager::GetDirectionalLightCount() <= 0)
         {
             return;
         }
@@ -625,7 +634,7 @@ namespace MFA
                         variant->GetDescriptorSetGroup()
                     );
 
-                    CAST_VARIANT(variant)->Draw(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
+                    CAST_VARIANT(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
                     {
                         // Vertex push constants
                         pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
@@ -648,7 +657,7 @@ namespace MFA
 
     void PBRWithShadowPipelineV2::performPointLightShadowPass(RT::CommandRecordState & recordState) const
     {
-        auto const pointLightCount = mAttachedScene->getPointLightCount();
+        auto const pointLightCount = SceneManager::GetPointLightCount();
         if (pointLightCount <= 0)
         {
             return;
@@ -670,11 +679,37 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
     
+    void PBRWithShadowPipelineV2::prepareShadowMapsForSampling(RT::CommandRecordState const & recordState) const
+    {
+        std::vector<VkImageMemoryBarrier> barrier {};
+        mPointLightShadowRenderPass->PrepareRenderTargetForSampling(
+            recordState,
+            mPointLightShadowResources.get(),
+            SceneManager::GetPointLightCount() > 0,
+            barrier
+        );
+        mDirectionalLightShadowRenderPass->PrepareRenderTargetForSampling(
+            recordState,
+            mDirectionalLightShadowResources.get(),
+            SceneManager::GetDirectionalLightCount() > 0,
+            barrier
+        );
+        RF::PipelineBarrier(
+            RF::GetGraphicCommandBuffer(recordState),
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            static_cast<uint32_t>(barrier.size()),
+            barrier.data()
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+    
     void PBRWithShadowPipelineV2::renderForPointLightShadowPass(RT::CommandRecordState const & recordState, AS::AlphaMode const alphaMode) const
     {
-        auto const pointLightCount = mAttachedScene->getPointLightCount();
+        auto const pointLightCount = SceneManager::GetPointLightCount();
         MFA_ASSERT(pointLightCount > 0);
-        auto const & pointLights = mAttachedScene->getActivePointLights();
+        auto const & pointLights = SceneManager::GetActivePointLights();
         MFA_ASSERT(pointLights.size() == pointLightCount);
 
         PointLightShadowPassPushConstants pushConstants {};
@@ -700,6 +735,10 @@ namespace MFA
 
                 for (auto & variant : variantsList)
                 {
+                    if (variant->IsActive() == false)
+                    {
+                        continue;
+                    }
                     auto const * bvComponent = variant->GetBoundingVolume();
                     if (bvComponent == nullptr)
                     {
@@ -716,7 +755,7 @@ namespace MFA
                         variant->GetDescriptorSetGroup()
                     );
 
-                    CAST_VARIANT(variant)->Draw(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
+                    CAST_VARIANT(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
                     {
                         // Vertex push constants
                         pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
@@ -793,7 +832,7 @@ namespace MFA
                     RF::BeginQuery(recordState, occlusionQueryData.Pool, static_cast<uint32_t>(occlusionQueryData.Variants.size()));
 
                     // TODO Draw a placeholder cube instead of complex geometry
-                    CAST_VARIANT(variant)->Draw(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
+                    CAST_VARIANT(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
                         {
                             // Vertex push constants
                             Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
@@ -863,7 +902,7 @@ namespace MFA
                         variant->GetDescriptorSetGroup()
                     );
                     // TODO We can render all instances at once and have a large push constant for all of them
-                    CAST_VARIANT(variant)->Draw(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
+                    CAST_VARIANT(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
                         {
                             // Push constants
                             pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;

@@ -5,7 +5,6 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
-#include "engine/scene_manager/Scene.hpp"
 #include "engine/BedrockPath.hpp"
 #include "tools/Importer.hpp"
 #include "engine/asset_system/AssetParticleMesh.hpp"
@@ -13,6 +12,8 @@
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "engine/job_system/JobSystem.hpp"
 #include "engine/asset_system/AssetShader.hpp"
+#include "engine/resource_manager/ResourceManager.hpp"
+#include "engine/scene_manager/SceneManager.hpp"
 
 #define CAST_ESSENCE(essence) static_cast<ParticleEssence *>(essence)
 
@@ -23,9 +24,8 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    ParticlePipeline::ParticlePipeline(Scene * attachedScene)
+    ParticlePipeline::ParticlePipeline()
         : BasePipeline(1000) // ! per essence                // TODO How many sets do we need ?
-        , mAttachedScene(attachedScene)
     {}
 
     //-------------------------------------------------------------------------------------------------
@@ -34,15 +34,15 @@ namespace MFA
     {
         if (mIsInitialized)
         {
-            Shutdown();
+            shutdown();
         }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void ParticlePipeline::Init(std::shared_ptr<RT::GpuTexture> const & errorTexture)
+    void ParticlePipeline::init()
     {
-        BasePipeline::Init();
+        BasePipeline::init();
 
         mSamplerGroup = RF::CreateSampler(RT::CreateSamplerParams {
             .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
@@ -51,7 +51,7 @@ namespace MFA
         });
         MFA_ASSERT(mSamplerGroup != nullptr);
         
-        mErrorTexture = errorTexture;
+        mErrorTexture = RC::AcquireGpuTexture("Error");
         MFA_ASSERT(mErrorTexture != nullptr);
 
         createPerFrameDescriptorSetLayout();
@@ -64,41 +64,16 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ParticlePipeline::Shutdown()
+    void ParticlePipeline::shutdown()
     {
-        BasePipeline::Shutdown();
+        BasePipeline::shutdown();
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void ParticlePipeline::PreRender(
+    void ParticlePipeline::render(
         RT::CommandRecordState & recordState,
         float const deltaTimeInSec
-    )
-    {
-        if (mEssenceAndVariantsMap.empty())
-        {
-            return;
-        }
-
-        BasePipeline::PreRender(recordState, deltaTimeInSec);
-
-        for (auto & essenceAndVariants : mEssenceAndVariantsMap)
-        {
-            JS::AutoAssignTask([&recordState, deltaTimeInSec, &essenceAndVariants]()->void{
-                auto * essence = essenceAndVariants.second.essence.get();
-                auto const & variants = essenceAndVariants.second.variants;
-                CAST_ESSENCE(essence)->update(recordState, deltaTimeInSec, variants);
-            });
-        }
-        JS::WaitForThreadsToFinish();
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void ParticlePipeline::Render(
-        RT::CommandRecordState & recordState,
-        float const deltaTime
     )
     {
         if (mAllEssencesList.empty())
@@ -106,7 +81,7 @@ namespace MFA
             return;
         }
 
-        BasePipeline::Render(recordState, deltaTime);
+        BasePipeline::render(recordState, deltaTimeInSec);
 
         RF::BindPipeline(recordState, *mPipeline);
 
@@ -118,40 +93,37 @@ namespace MFA
 
         for (auto * essence : mAllEssencesList)
         {
-            CAST_ESSENCE(essence)->draw(recordState, deltaTime);
+            CAST_ESSENCE(essence)->draw(recordState, deltaTimeInSec);
         }
     }
-
+    
     //-------------------------------------------------------------------------------------------------
-    // TODO: We have duplicate code in these 2 function
-    std::shared_ptr<EssenceBase> ParticlePipeline::CreateEssenceWithModel(
-        std::shared_ptr<AssetSystem::Model> const & cpuModel,
-        std::string const & name
-    )
+
+    void ParticlePipeline::postRender(float const deltaTimeInSec)
     {
-        MFA_ASSERT(cpuModel != nullptr);
-        auto essence = std::make_shared<ParticleEssence>(cpuModel, name);
-        createPerEssenceDescriptorSets(essence.get());
-        bool const success = addEssence(essence);
-        return success ? essence : nullptr;
+        if (mAllEssencesList.empty())
+        {
+            return;
+        }
+
+        BasePipeline::postRender(deltaTimeInSec);
+
+        for (auto & essenceAndVariants : mEssenceAndVariantsMap)
+        {
+            JS::AssignTask([deltaTimeInSec, &essenceAndVariants](uint32_t threadNumber, uint32_t threadCount)->void{
+                auto * essence = essenceAndVariants.second.essence.get();
+                auto const & variants = essenceAndVariants.second.variants;
+                CAST_ESSENCE(essence)->update(deltaTimeInSec, variants);
+            });
+        }
+        JS::WaitForThreadsToFinish();
     }
 
     //-------------------------------------------------------------------------------------------------
-
-    std::shared_ptr<EssenceBase> ParticlePipeline::internalCreateEssence(
-      std::shared_ptr<RT::GpuModel> const & gpuModel,
-      std::shared_ptr<AssetSystem::MeshBase> const & cpuMesh
-    )
+ 
+    void ParticlePipeline::internalAddEssence(EssenceBase * essence)
     {
-        MFA_ASSERT(gpuModel != nullptr);
-        MFA_ASSERT(cpuMesh != nullptr);
-        auto const particleMesh = static_pointer_cast<Mesh>(cpuMesh);
-        auto const essence = std::make_shared<ParticleEssence>(
-            gpuModel,
-            particleMesh
-        );
-        createPerEssenceDescriptorSets(essence.get());
-        return essence;
+        createPerEssenceDescriptorSets(CAST_ESSENCE(essence));
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -221,7 +193,7 @@ namespace MFA
             mPerFrameDescriptorSetLayout->descriptorSetLayout
         );
 
-        auto const & cameraBuffers = mAttachedScene->GetCameraBuffers();
+        auto const & cameraBuffers = SceneManager::GetCameraBuffers();
 
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
@@ -374,7 +346,7 @@ namespace MFA
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 1,
-            .format =VK_FORMAT_R32G32B32A32_SFLOAT,
+            .format =VK_FORMAT_R32G32B32_SFLOAT,
             .offset = offsetof(PerInstanceData, instancePosition)
         });
         
@@ -393,6 +365,8 @@ namespace MFA
 
         pipelineOptions.depthStencil.depthWriteEnable = VK_FALSE;
 
+        pipelineOptions.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+        
         std::vector<VkDescriptorSetLayout> const descriptorSetLayouts {
             mPerFrameDescriptorSetLayout->descriptorSetLayout,
             mPerEssenceDescriptorSetLayout->descriptorSetLayout,

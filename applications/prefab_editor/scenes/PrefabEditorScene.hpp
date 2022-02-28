@@ -2,10 +2,19 @@
 
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/Component.hpp"
-#include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
-#include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
 #include "engine/scene_manager/Scene.hpp"
 #include "tools/Prefab.hpp"
+
+namespace MFA
+{
+    namespace AssetSystem
+    {
+        struct Model;
+    }
+
+    class PBRWithShadowPipelineV2;
+    class DebugRendererPipeline;
+}
 
 class PrefabEditorScene final : public MFA::Scene
 {
@@ -22,17 +31,11 @@ public:
 
     void Init() override;
 
-    void OnPreRender(float deltaTimeInSec, MFA::RT::CommandRecordState & recordState) override;
-
-    void OnRender(float deltaTimeInSec, MFA::RT::CommandRecordState & recordState) override;
-
-    void OnPostRender(float deltaTimeInSec) override;
+    void Update(float deltaTimeInSec) override;
 
     void Shutdown() override;
-
-    void OnResize() override;
-
-    bool isDisplayPassDepthImageInitialLayoutUndefined() override;
+    
+    //bool isDisplayPassDepthImageInitialLayoutUndefined() override;
 
 private:
 
@@ -42,7 +45,12 @@ private:
 
     void saveAndLoadWindow();
 
-    bool loadSelectedAsset(std::string const & fileAddress);
+    void addEssenceToPipeline(
+        std::shared_ptr<MFA::RenderTypes::GpuModel> const & gpuModel,
+        std::shared_ptr<MFA::AssetSystem::Model> const & cpuModel
+    );
+
+    bool loadSelectedAsset(std::string const & fileAddress, std::string displayName = "");
 
     void destroyAsset(int assetIndex);
 
@@ -66,15 +74,8 @@ private:
     static constexpr float Z_FAR = 3000.0f;
     static constexpr float FOV = 80;
     
-    std::shared_ptr<MFA::RT::GpuTexture> mErrorTexture{};
-
     std::string mPrefabName {};
     MFA::Entity * mPrefabRootEntity = nullptr;
-
-    std::shared_ptr<MFA::RT::SamplerGroup> mSampler{};
-
-    MFA::PBRWithShadowPipelineV2 mPbrPipeline{ this };
-    MFA::DebugRendererPipeline mDebugRenderPipeline{};
 
     int mUIRecordId = 0;
 
@@ -105,6 +106,9 @@ private:
 
     MFA::Prefab mPrefab;
 
-    bool shouldFreeEssencesWithNoVariant = false;
+    std::vector<MFA::BasePipeline *> mAllPipelines {};
+
+    MFA::PBRWithShadowPipelineV2 * mPBR_Pipeline = nullptr;
+    MFA::DebugRendererPipeline * mDebugPipeline = nullptr;
 
 };

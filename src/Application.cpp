@@ -5,7 +5,7 @@
 #include "engine/InputManager.hpp"
 #include "engine/entity_system/EntitySystem.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/ui_system/UI_System.hpp"
 #include "engine/job_system/JobSystem.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
@@ -50,8 +50,8 @@ void Application::Init() {
         MFA_ASSERT(mIsInitialized == false);
 
         params.resizable = true;
-        params.screenWidth = 1920;
-        params.screenHeight = 1080;
+        params.screenWidth = static_cast<RF::ScreenWidth>(static_cast<float>(screenWidth) * 0.9f);
+        params.screenHeight = static_cast<RF::ScreenHeight>(static_cast<float>(screenHeight) * 0.9f);
     #else
         #error Os not supported
     #endif
@@ -90,39 +90,42 @@ void Application::Shutdown() {
     mIsInitialized = false;
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void Application::run() {
     //static constexpr uint32_t TargetFpsDeltaTimeInMs = 1000 / 500;
 #ifdef __DESKTOP__
     Init();
-    {// Main loop
-        //Event handler
-        MSDL::SDL_Event e;
-        //While application is running
-        uint32_t deltaTimeInMs = 0;
+    SceneManager::Update(0.01f);
+    // Main loop
+    //Event handler
+    MSDL::SDL_Event e;
+    //While application is running
+    uint32_t deltaTimeInMs = 0;
 
-        uint32_t startTime = MSDL::SDL_GetTicks();
-        while (true)
+    uint32_t startTime = MSDL::SDL_GetTicks();
+    while (true)
+    {
+        //Handle events
+        if (MSDL::SDL_PollEvent(&e) != 0)
         {
-            //Handle events
-            if (MSDL::SDL_PollEvent(&e) != 0)
+            //User requests quit
+            if (e.type == MSDL::SDL_QUIT)
             {
-                //User requests quit
-                if (e.type == MSDL::SDL_QUIT)
-                {
-                    break;
-                }
+                break;
             }
-            RenderFrame(std::max(static_cast<float>(deltaTimeInMs), 1.0f) / 1000.0f);
-            deltaTimeInMs = MSDL::SDL_GetTicks() - startTime;
-            startTime = MSDL::SDL_GetTicks();
-            /*if(TargetFpsDeltaTimeInMs > deltaTimeInMs){
-                MSDL::SDL_Delay( TargetFpsDeltaTimeInMs - deltaTimeInMs);
-            }
-            deltaTimeInMs = MSDL::SDL_GetTicks() - start_time;*/
         }
+        RenderFrame(std::max(static_cast<float>(deltaTimeInMs), 1.0f) / 1000.0f);
+        deltaTimeInMs = MSDL::SDL_GetTicks() - startTime;
+        startTime = MSDL::SDL_GetTicks();
+        /*if(TargetFpsDeltaTimeInMs > deltaTimeInMs){
+            MSDL::SDL_Delay( TargetFpsDeltaTimeInMs - deltaTimeInMs);
+        }
+        deltaTimeInMs = MSDL::SDL_GetTicks() - start_time;*/
     }
     Shutdown();
 #elif defined(__ANDROID__)
+    SceneManager::Update(0.01f);
     // Used to poll the events in the main loop
     int events;
     android_poll_source* source;
@@ -155,12 +158,17 @@ void Application::run() {
 
 }
 
+//-------------------------------------------------------------------------------------------------
+
 void Application::RenderFrame(float const deltaTimeInSec) {
     internalRenderFrame(deltaTimeInSec);
     IM::OnNewFrame(deltaTimeInSec);
-    SceneManager::OnNewFrame(deltaTimeInSec);
+    SceneManager::Render(deltaTimeInSec);
+    SceneManager::Update(deltaTimeInSec);
     RF::OnNewFrame(deltaTimeInSec);
 }
+
+//-------------------------------------------------------------------------------------------------
 
 #ifdef __ANDROID__
 void Application::setAndroidApp(android_app * androidApp) {
@@ -171,8 +179,12 @@ void Application::setAndroidApp(android_app * androidApp) {
 }
 #endif
 
+//-------------------------------------------------------------------------------------------------
+
 #ifdef __IOS__
 void Application::SetView(void * view) {
     mView = view;
 }
 #endif
+
+//-------------------------------------------------------------------------------------------------

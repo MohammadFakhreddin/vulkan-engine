@@ -364,8 +364,6 @@ namespace MFA::RenderFrontend
         uint32_t & outImageIndex
     );
 
-    std::vector<VkCommandBuffer> CreateGraphicCommandBuffers(uint32_t maxFramesPerFlight);
-
     void BeginCommandBuffer(
         VkCommandBuffer commandBuffer,
         VkCommandBufferBeginInfo const & beginInfo = {
@@ -375,11 +373,6 @@ namespace MFA::RenderFrontend
     );
 
     void EndCommandBuffer(VkCommandBuffer commandBuffer);
-
-    void DestroyGraphicCommandBuffer(
-        VkCommandBuffer * commandBuffers,
-        uint32_t commandBuffersCount
-    );
 
     uint32_t GetPresentQueueFamily();
 
@@ -400,28 +393,26 @@ namespace MFA::RenderFrontend
         VkBufferMemoryBarrier const & memoryBarrier
     );
 
+    void ResetFence(VkFence fence);
+
     void SubmitQueue(
         VkCommandBuffer commandBuffer,
-        VkSemaphore imageAvailabilitySemaphore,
-        VkSemaphore renderFinishIndicatorSemaphore,
-        VkFence inFlightFence
+        uint32_t waitSemaphoresCount,
+        VkSemaphore * waitSemaphores,
+        VkPipelineStageFlags * waitStageFlags,
+        uint32_t signalSemaphoresCount,
+        VkSemaphore * signalSemaphores,
+        VkFence fence
     );
 
     void PresentQueue(
         uint32_t imageIndex,
-        VkSemaphore renderFinishIndicatorSemaphore,
+        VkSemaphore waitSemaphore,
         VkSwapchainKHR swapChain
     );
 
     DisplayRenderPass * GetDisplayRenderPass();
-
-    RT::SyncObjects createSyncObjects(
-        uint32_t maxFramesInFlight,
-        uint32_t swapChainImagesCount
-    );
-
-    void DestroySyncObjects(RT::SyncObjects const & syncObjects);
-
+    
     VkSampleCountFlagBits GetMaxSamplesCount();
 
     // Not recommended
@@ -462,15 +453,15 @@ namespace MFA::RenderFrontend
     [[nodiscard]]
     RT::CommandRecordState StartGraphicCommandBufferRecording();
 
-    void EndGraphicCommandBufferRecording(RT::CommandRecordState & drawPass);
+    void EndGraphicCommandBufferRecording(RT::CommandRecordState & recordState);
 
-    VkFence GetInFlightFence(RT::CommandRecordState const & drawPass);
-
-    [[nodiscard]]
-    VkSemaphore GetRenderFinishIndicatorSemaphore(RT::CommandRecordState const & drawPass);
+    VkFence GetFence(RT::CommandRecordState const & recordState);
 
     [[nodiscard]]
-    VkSemaphore GetImageAvailabilitySemaphore(RT::CommandRecordState const & drawPass);
+    VkSemaphore GetGraphicSemaphore(RT::CommandRecordState const & drawPass);
+
+    [[nodiscard]]
+    VkSemaphore GetPresentationSemaphore(RT::CommandRecordState const & drawPass);
 
     [[nodiscard]]
     VkDescriptorPool CreateDescriptorPool(uint32_t maxSets);

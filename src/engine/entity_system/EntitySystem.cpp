@@ -1,7 +1,7 @@
 #include "EntitySystem.hpp"
 
 #include "Entity.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/ui_system/UI_System.hpp"
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
@@ -30,8 +30,6 @@ namespace MFA::EntitySystem
     {
         std::vector<EntityRef> entitiesRefsList{};  // TODO Shouldn't we use map or something faster ?
         Signal<float> updateSignal{};
-
-        std::vector<Task> nextFrameTasks {};
     };
     State * state = nullptr;
 
@@ -44,18 +42,9 @@ namespace MFA::EntitySystem
 
     //-------------------------------------------------------------------------------------------------
 
-    void OnNewFrame(float const deltaTimeInSec)
+    void Update(float const deltaTimeInSec)
     {
-        // There is a chance that new task get added while doing this task so using foreach is not an wise option
-        for (int i = 0; i < static_cast<int>(state->nextFrameTasks.size()); ++i)  // NOLINT(modernize-loop-convert) 
-        {
-            auto & task = state->nextFrameTasks[i];
-            MFA_ASSERT(task != nullptr);
-            task();
-        }
-        state->nextFrameTasks.clear();
-
-        state->updateSignal.Emit(deltaTimeInSec);
+        state->updateSignal.EmitMultiThread(deltaTimeInSec);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -97,14 +86,16 @@ namespace MFA::EntitySystem
         static EntityId nextEntityId = 0;
         // Checking if we have not reached maximum possible entity limit
         MFA_ASSERT(nextEntityId < std::numeric_limits<EntityId>::max());
+
+        char nameBuffer[100] {};
+        auto const nameLength = sprintf(nameBuffer, "%s %d", name.c_str(), static_cast<int>(nextEntityId));
+
         state->entitiesRefsList.emplace_back(EntityRef{
             .ptr = std::make_unique<Entity>(
                 nextEntityId++,
-                name,
+                std::string(nameBuffer, nameLength),
                 parent,
-                Entity::CreateEntityParams {
-                    .serializable = params.serializable
-                }
+                params.serializable
             )
         });
         return state->entitiesRefsList.back().ptr.get();
@@ -130,14 +121,18 @@ namespace MFA::EntitySystem
         MFA_ASSERT(entity->mIsInitialized == true);
         if (entity->NeedUpdateEvent())
         {
-            entity->mUpdateListenerId = state->updateSignal.Register([entity](float const deltaTime) -> void
+            if (entity->mUpdateListenerId == InvalidSignalId)
             {
-                entity->Update(deltaTime);
-            });
+                entity->mUpdateListenerId = state->updateSignal.Register([entity](float const deltaTime) -> void
+                {
+                    entity->Update(deltaTime);
+                });
+            }
         }
         else
         {
             state->updateSignal.UnRegister(entity->mUpdateListenerId);
+            entity->mUpdateListenerId = InvalidSignalId;
         }
     }
 
@@ -149,22 +144,26 @@ namespace MFA::EntitySystem
         {
             if (state->entitiesRefsList[i].ptr->getId() == entityId)
             {
-                Entity * entity = state->entitiesRefsList[i].ptr.get();
-                MFA_ASSERT(entity != nullptr);
-                entity->Shutdown(shouldNotifyParent);
-                if (entity->NeedUpdateEvent())
+                std::unique_ptr<Entity> const deletedEntity = std::move(state->entitiesRefsList[i].ptr);
+                MFA_ASSERT(deletedEntity != nullptr);
+
+                // We should remove item before removing children because index might change
+                state->entitiesRefsList[i] = std::move(state->entitiesRefsList.back());
+                state->entitiesRefsList.pop_back();
+
+                deletedEntity->Shutdown(shouldNotifyParent);
+                
+                if (deletedEntity->NeedUpdateEvent())
                 {
-                    state->updateSignal.UnRegister(entity->mUpdateListenerId);
+                    state->updateSignal.UnRegister(deletedEntity->mUpdateListenerId);
                 }
-                for (auto * childEntity : entity->GetChildEntities())
+
+                for (auto * childEntity : deletedEntity->GetChildEntities())
                 {
                     MFA_ASSERT(childEntity != nullptr);
                     destroyEntity(childEntity->getId(), false);
                 }
 
-
-                state->entitiesRefsList[i] = std::move(state->entitiesRefsList.back());
-                state->entitiesRefsList.pop_back();
                 return;
             }
         }
@@ -179,10 +178,7 @@ namespace MFA::EntitySystem
         MFA_ASSERT(entity != nullptr);
 
         auto const entityId = entity->getId();
-        state->nextFrameTasks.emplace_back([entityId]()->void
-        {
-            destroyEntity(entityId, true);
-        });
+        destroyEntity(entityId, true);
     }
 
     //-------------------------------------------------------------------------------------------------

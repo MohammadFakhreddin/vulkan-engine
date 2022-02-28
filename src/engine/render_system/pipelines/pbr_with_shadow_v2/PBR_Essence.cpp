@@ -14,10 +14,10 @@ using namespace MFA::AS::PBR;
 // We need other overrides for easier use as well
 MFA::PBR_Essence::PBR_Essence(
     std::shared_ptr<RT::GpuModel> const & gpuModel,
-    std::shared_ptr<MeshData> const & meshData
+    std::shared_ptr<MeshData> meshData
 )
     : EssenceBase(gpuModel)
-    , mMeshData(meshData)
+    , mMeshData(std::move(meshData))
 {
     MFA_ASSERT(mGpuModel != nullptr);
     

@@ -2,7 +2,6 @@
 
 #include "engine/BedrockAssert.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/scene_manager/Scene.hpp"
 #include "engine/render_system/render_resources/directional_light_shadow_resources/DirectionalLightShadowResources.hpp"
 
 //-------------------------------------------------------------------------------------------------
@@ -37,7 +36,7 @@ void MFA::DirectionalLightShadowRenderPass::PrepareRenderTargetForSampling(
         .baseMipLevel = 0,
         .levelCount = 1,
         .baseArrayLayer = 0,
-        .layerCount = Scene::MAX_DIRECTIONAL_LIGHT_COUNT,
+        .layerCount = RT::MAX_DIRECTIONAL_LIGHT_COUNT,
     };
 
     VkImageMemoryBarrier const pipelineBarrier{
@@ -66,8 +65,8 @@ void MFA::DirectionalLightShadowRenderPass::BeginRenderPass(
 
     // Shadow map generation
     auto const shadowExtend = VkExtent2D{
-        .width = Scene::DIRECTIONAL_LIGHT_SHADOW_TEXTURE_WIDTH,
-        .height = Scene::DIRECTIONAL_LIGHT_SHADOW_TEXTURE_HEIGHT
+        .width = RT::DIRECTIONAL_LIGHT_SHADOW_TEXTURE_WIDTH,
+        .height = RT::DIRECTIONAL_LIGHT_SHADOW_TEXTURE_HEIGHT
     };
 
     auto * commandBuffer = RF::GetGraphicCommandBuffer(recordState);

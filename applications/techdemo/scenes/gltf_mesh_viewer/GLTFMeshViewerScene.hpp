@@ -4,11 +4,10 @@
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/camera/ObserverCameraComponent.hpp"
 #include "engine/entity_system/components/MeshRendererComponent.hpp"
-#include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
-#include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
 
 namespace MFA
 {
+    class DebugRendererPipeline;
     class ColorComponent;
 }
 
@@ -27,17 +26,13 @@ public:
 
     void Init() override;
 
-    void OnPreRender(float deltaTimeInSec, MFA::RT::CommandRecordState & recordState) override;
-
-    void OnRender(float deltaTimeInSec, MFA::RT::CommandRecordState & recordState) override;
-
-    void OnPostRender(float deltaTimeInSec) override;
+    void Update(float deltaTimeInSec) override;
 
     void OnUI();
 
     void Shutdown() override;
-
-    bool isDisplayPassDepthImageInitialLayoutUndefined() override;
+    
+    bool RequiresUpdate() override;
 
 private:
 
@@ -86,7 +81,7 @@ private:
         } initialParams{};
     };
 
-    void createModel(ModelRenderRequiredData & renderRequiredData);
+    void createModel(ModelRenderRequiredData & renderRequiredData) const;
 
     static constexpr float Z_NEAR = 0.1f;
     static constexpr float Z_FAR = 3000.0f;
@@ -108,23 +103,16 @@ private:
     int32_t mSelectedModelIndex = 0;
     int32_t mPreviousModelSelectedIndex = -1;
 
-    std::shared_ptr<MFA::RT::SamplerGroup> mSamplerGroup{};
-
-    MFA::PBRWithShadowPipelineV2 mPbrPipeline{ this };
-    MFA::DebugRendererPipeline mDebugRenderPipeline{};
-
-    std::shared_ptr<MFA::RT::GpuTexture> mErrorTexture{};
-
     float mModelTranslateMin[3]{ -100.0f, -100.0f, -100.0f };
     float mModelTranslateMax[3]{ 100.0f, 100.0f, 100.0f };
 
     float mLightTranslateMin[3]{ -200.0f, -200.0f, -200.0f };
     float mLightTranslateMax[3]{ 200.0f, 200.0f, 200.0f };
 
-    bool mIsLightVisible = true;
-
     std::weak_ptr<MFA::TransformComponent> mPointLightTransform{};
     std::weak_ptr<MFA::ColorComponent> mPointLightColor{};
+
+    MFA::DebugRendererPipeline * mDebugRenderPipeline = nullptr;
 
 #ifdef __DESKTOP__
     static constexpr float FOV = 80;

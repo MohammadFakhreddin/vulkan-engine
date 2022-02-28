@@ -6,8 +6,6 @@
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "tools/Importer.hpp"
-#include "engine/asset_system/AssetModel.hpp"
-#include "engine/asset_system/AssetParticleMesh.hpp"
 #include "engine/camera/ObserverCameraComponent.hpp"
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/EntitySystem.hpp"
@@ -17,19 +15,14 @@
 #include "engine/entity_system/components/MeshRendererComponent.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
+#include "engine/scene_manager/SceneManager.hpp"
+#include "engine/render_system/pipelines/particle/ParticlePipeline.hpp"
+#include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
+#include "engine/render_system/pipelines/particle/FireEssence.hpp"
 
 using namespace MFA;
 
-static constexpr float ParticleMinLife = 1.0f;
-static constexpr float ParticleMaxLife = 1.5f;
-static constexpr float ParticleMinSpeed = 1.0f;
-static constexpr float ParticleMaxSpeed = 2.0f;
 static constexpr float FireRadius = 0.7f;
-static constexpr float FireHorizontalMovement[2] {1.0f, 1.0f};
-static constexpr float FireInitialPointSize = 500.0f;
-static constexpr float FireTargetExtend[2] {1920.0f, 1080.0f}; 
-static constexpr int ParticleCount = 1024;
-static constexpr float FireAlpha = 0.001f;
 
 //-------------------------------------------------------------------------------------------------
 
@@ -47,79 +40,24 @@ void ParticleFireScene::Init()
 {
     Scene::Init();
 
-    // Error texture
-    mErrorTexture = RC::AcquireGpuTexture("Error");
-    MFA_ASSERT(mErrorTexture != nullptr);
+    mParticlePipeline = SceneManager::GetPipeline<ParticlePipeline>();
+    MFA_ASSERT(mParticlePipeline != nullptr);
 
-    mParticlePipeline.Init(mErrorTexture);
-    mDebugPipeline.Init();
-    RegisterPipeline(&mParticlePipeline);
-    RegisterPipeline(&mDebugPipeline);
-
-    computeFirePointSize();
+    mDebugRendererPipeline = SceneManager::GetPipeline<DebugRendererPipeline>();
+    MFA_ASSERT(mDebugRendererPipeline != nullptr);
 
     createFireEssence();
 
     createFireInstance(glm::vec3 {0.0f, 0.0f, 0.0f});
 
     createCamera();
-
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void ParticleFireScene::OnPreRender(float const deltaTimeInSec, MFA::RT::CommandRecordState & recordState)
+void ParticleFireScene::Update(float const deltaTimeInSec)
 {
-    Scene::OnPreRender(deltaTimeInSec, recordState);
-
-    mParticlePipeline.PreRender(recordState, deltaTimeInSec);
-    mDebugPipeline.PreRender(recordState, deltaTimeInSec);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void ParticleFireScene::OnRender(float const deltaTimeInSec, MFA::RT::CommandRecordState & recordState)
-{
-    Scene::OnRender(deltaTimeInSec, recordState);
-
-    mParticlePipeline.Render(recordState, deltaTimeInSec);
-    mDebugPipeline.Render(recordState, deltaTimeInSec);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void ParticleFireScene::OnPostRender(float const deltaTimeInSec)
-{
-    Scene::OnPostRender(deltaTimeInSec);
-
-    // TODO Try to use job system
-    for (int i = 0; i < mFireVerticesCount; ++i)
-    {
-        auto & vertex = mFireVertices[i];
-        // UpVector is reverse
-        glm::vec3 const deltaPosition = -deltaTimeInSec * vertex.speed * Math::UpVector3;
-        vertex.localPosition += deltaPosition;
-        vertex.localPosition += Math::Random(-FireHorizontalMovement[0], FireHorizontalMovement[0])
-            * deltaTimeInSec * Math::RightVector3;
-        vertex.localPosition += Math::Random(-FireHorizontalMovement[1], FireHorizontalMovement[1])
-            * deltaTimeInSec * Math::ForwardVector3;
-        
-        vertex.remainingLifeInSec -= deltaTimeInSec;
-        if (vertex.remainingLifeInSec <= 0)
-        {
-            vertex.localPosition = vertex.initialLocalPosition;
-
-            vertex.speed = Math::Random(ParticleMinSpeed, ParticleMaxSpeed);
-            vertex.remainingLifeInSec = Math::Random(ParticleMinLife, ParticleMaxLife);;
-            vertex.totalLifeInSec = vertex.remainingLifeInSec;
-        }
-
-        auto const lifePercentage = vertex.remainingLifeInSec / vertex.totalLifeInSec;
-        
-        vertex.alpha = FireAlpha;
-
-        vertex.pointSize = firePointSize * lifePercentage;
-    }
+    Scene::Update(deltaTimeInSec);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -127,111 +65,37 @@ void ParticleFireScene::OnPostRender(float const deltaTimeInSec)
 void ParticleFireScene::Shutdown()
 {
     Scene::Shutdown();
-
-    mParticlePipeline.Shutdown();
-    mDebugPipeline.Shutdown();
 }
 
 //-------------------------------------------------------------------------------------------------
 
-bool ParticleFireScene::isDisplayPassDepthImageInitialLayoutUndefined()
+bool ParticleFireScene::RequiresUpdate()
 {
     return true;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void ParticleFireScene::OnResize()
+void ParticleFireScene::createFireEssence() const
 {
-    Scene::OnResize();
-    computeFirePointSize();
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void ParticleFireScene::createFireEssence()
-{
-    auto const fireModel = std::make_shared<AS::Model>(
-        createFireMesh(),
-        createFireTexture()
-    );
-
-    mParticlePipeline.CreateEssenceWithModel(fireModel, "Fire");
-}
-
-//-------------------------------------------------------------------------------------------------
-
-std::shared_ptr<MFA::AssetSystem::Particle::Mesh> ParticleFireScene::createFireMesh()
-{
-    auto fireMesh = std::make_shared<AS::Particle::Mesh>(100);
-    auto const verticesCount = ParticleCount;
-    auto const indicesCount = ParticleCount;
-    auto const vertexBuffer = Memory::Alloc(verticesCount * sizeof(AS::Particle::Vertex));
-    auto const indexBuffer = Memory::Alloc(indicesCount * sizeof(AS::Index));
-    fireMesh->initForWrite(
-        verticesCount,
-        indicesCount,
-        vertexBuffer,
-        indexBuffer
-    );
-
-    auto * vertexItems = vertexBuffer->memory.as<AS::Particle::Vertex>();
-    auto * indexItems = indexBuffer->memory.as<AS::Index>();
-
-    for (int i = 0; i < verticesCount; ++i)
+    if (mParticlePipeline->hasEssence("ParticleSceneFire") == false)
     {
-        auto & vertex = vertexItems[i];
-
-        auto const yaw = Math::Random(-Math::PiFloat, Math::PiFloat);
-        auto const distanceFromCenter = Math::Random(0.0f, FireRadius) * Math::Random(0.5f, 1.0f);
-        
-        auto transform = glm::identity<glm::mat4>();
-        Matrix::RotateWithRadians(transform, glm::vec3{0.0f, yaw, 0.0f});
-
-        glm::vec3 const position = transform * glm::vec4 {distanceFromCenter, 0.0f, 0.0f, 1.0f};
-
-        vertex.localPosition = position;
-        vertex.initialLocalPosition = vertex.localPosition;
-
-        vertex.textureIndex = 0;
-
-        vertex.color[0] = 1.0f;
-        vertex.color[1] = 0.0f;
-        vertex.color[2] = 0.0f;
-
-        vertex.speed = Math::Random(ParticleMinSpeed, ParticleMaxSpeed);
-        vertex.remainingLifeInSec = Math::Random(ParticleMinLife, ParticleMaxLife);
-        vertex.totalLifeInSec = vertex.remainingLifeInSec;
-
-        auto const lifePercentage = vertex.remainingLifeInSec / vertex.totalLifeInSec;
-        
-        vertex.alpha = FireAlpha;
-
-        vertex.pointSize = firePointSize * lifePercentage;
-
-        indexItems[i] = i;
-    } 
-
-    mFireVerticesCount = verticesCount;
-    mFireVertices = vertexItems;
-    MFA_ASSERT(mFireVertices != nullptr);
-
-    return fireMesh;
+        mParticlePipeline->addEssence(
+            std::make_shared<FireEssence>(
+                "ParticleSceneFire",
+                RC::AcquireGpuTexture("images/fire/particle_fire.ktx"),
+                FireEssence::Options {
+                    .fireRadius = FireRadius,
+                    .particleCount = 1024
+                }
+            )
+        );
+    }
 }
 
 //-------------------------------------------------------------------------------------------------
 
-std::vector<std::shared_ptr<AS::Texture>> ParticleFireScene::createFireTexture()
-{
-    std::vector<std::shared_ptr<AS::Texture>> textures {};
-    textures.emplace_back(RC::AcquireCpuTexture("images\\fire\\particle_fire.ktx"));
-    MFA_ASSERT(textures.back() != nullptr);
-    return textures;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void ParticleFireScene::createFireInstance(glm::vec3 const & position)
+void ParticleFireScene::createFireInstance(glm::vec3 const & position) const
 {
     auto * entity = EntitySystem::CreateEntity("FireInstance", GetRootEntity());
     MFA_ASSERT(entity != nullptr);
@@ -240,16 +104,19 @@ void ParticleFireScene::createFireInstance(glm::vec3 const & position)
     MFA_ASSERT(transform != nullptr);
     transform->UpdatePosition(position);
     
-    entity->AddComponent<MeshRendererComponent>(mParticlePipeline, "Fire");
+    entity->AddComponent<MeshRendererComponent>(
+        *mParticlePipeline,
+        "ParticleSceneFire"
+    );
     entity->AddComponent<AxisAlignedBoundingBoxComponent>(
         glm::vec3{ 0.0f, -0.8f, 0.0f },
         glm::vec3{ FireRadius, 1.0f, FireRadius }
     );
     entity->AddComponent<ColorComponent>(glm::vec3{ 1.0f, 0.0f, 0.0f });
 
-    auto const boundingVolumeRenderer = entity->AddComponent<BoundingVolumeRendererComponent>(mDebugPipeline).lock();
+    auto const boundingVolumeRenderer = entity->AddComponent<BoundingVolumeRendererComponent>(*mDebugRendererPipeline).lock();
     MFA_ASSERT(boundingVolumeRenderer != nullptr);
-    boundingVolumeRenderer->SetActive(false);
+    boundingVolumeRenderer->SetActive(true);
 
     EntitySystem::InitEntity(entity);
 }
@@ -269,31 +136,7 @@ void ParticleFireScene::createCamera()
     MFA_ASSERT(observerCamera != nullptr);
     SetActiveCamera(observerCamera);
 
-    /* entity->AddComponent<DirectionalLightComponent>();
-
-     auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
-     MFA_ASSERT(colorComponent != nullptr);
-     float const lightScale = 5.0f;
-     float lightColor[3]{
-         1.0f * lightScale,
-         1.0f * lightScale,
-         1.0f * lightScale
-     };
-     colorComponent->SetColor(lightColor);
-
-     auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
-     MFA_ASSERT(transformComponent != nullptr);
-     transformComponent->UpdateRotation(glm::vec3(90.0f, 0.0f, 0.0f));*/
-
     EntitySystem::InitEntity(entity);
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void ParticleFireScene::computeFirePointSize()
-{
-    auto const surfaceCapabilities = RF::GetSurfaceCapabilities();
-    firePointSize = FireInitialPointSize * (static_cast<float>(surfaceCapabilities.currentExtent.width) / FireTargetExtend[0]);
 }
 
 //-------------------------------------------------------------------------------------------------

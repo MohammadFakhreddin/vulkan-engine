@@ -1,7 +1,13 @@
 cmake_minimum_required (VERSION 3.10)
 
-set(CMAKE_OSX_DEPLOYMENT_TARGET 13)
-set(CMAKE_IOS_DEPLOYMENT_TARGET 13)
+# set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version")
+# set(CMAKE_IOS_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum IOS deployment version")
+
+# set(CMAKE_XCODE_ATTRIBUTE_MACOSX_DEPLOYMENT_TARGET "11.0")
+# set(CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "11.0")
+# For macos and iphone
+set(DEPLOYMENT_TARGET "11.0")           # For toolchain target
+set(MACOSX_DEPLOYMENT_TARGET "11.0")    # For toolchain target
 
 set(PROJECT_NAME "MFaEngine")
 
@@ -61,11 +67,14 @@ add_definitions(-DGLM_FORCE_DEPTH_ZERO_TO_ONE)
 # Note: Linux On MacOS 10.14 with clang++ compiler, I get executable with SIMD right away.
 # On Ubuntu 16.04 with g++ compiler, I will have to use the compiler flag -mavx2 to generate a SIMD executable. 
 # There are other compiler options for other SIMD instructions here. Without the compiler flag, I still get a serial executable.
-# add_definitions(-DGLM_FORCE_DEFAULT_ALIGNED_GENTYPES)         // TODO Enable SIMD for glm
+# add_definitions(-DGLM_FORCE_DEFAULT_ALIGNED_GENTYPES)         # TODO Enable SIMD for glm
 # add_definitions(-DGLM_FORCE_INTRINSICS)
 if (LINUX)
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
 endif ()
+
+# TODO Use this link to integrate lua into project
+# https://gist.github.com/baiyanhuang/4054106
 
 #-----------------------------------------------------------------------
 # Bedrock
@@ -92,6 +101,7 @@ list(
     "src/engine/BedrockPlatforms.cpp"
     "src/engine/BedrockPath.hpp"
     "src/engine/BedrockPath.cpp"
+    "src/engine/BedrockSignalTypes.hpp"
     "src/engine/BedrockSignal.hpp"
 )
 
@@ -177,6 +187,9 @@ add_library("Renderer"
     "src/engine/render_system/pipelines/particle/ParticleEssence.cpp"
     "src/engine/render_system/pipelines/particle/ParticleVariant.hpp"
     "src/engine/render_system/pipelines/particle/ParticleVariant.cpp"
+
+    "src/engine/render_system/pipelines/particle/FireEssence.hpp"
+    "src/engine/render_system/pipelines/particle/FireEssence.cpp"
 )
 
 target_include_directories(
@@ -258,7 +271,10 @@ list(
     "src/engine/job_system/ThreadSafeQueue.hpp"
     "src/engine/job_system/JobSystem.hpp"
     "src/engine/job_system/JobSystem.cpp"
-    # AssetSystem
+    "src/engine/job_system/JobSystemTypes.hpp"
+    "src/engine/job_system/ScopeLock.hpp"
+    "src/engine/job_system/ScopeLock.cpp"
+    # AssetSystem # TODO: Separate asset system into a new library
     "src/engine/asset_system/AssetTypes.hpp"
     "src/engine/asset_system/AssetBase.hpp"
     "src/engine/asset_system/AssetBase.cpp"
@@ -277,8 +293,10 @@ list(
     "src/engine/asset_system/AssetModel.hpp"
     "src/engine/asset_system/AssetModel.cpp"
     # UI System
-    "src/engine/ui_system/UISystem.hpp"
-    "src/engine/ui_system/UISystem.cpp"
+    "src/engine/ui_system/UI_System.hpp"
+    "src/engine/ui_system/UI_System.cpp"
+    "src/engine/ui_system/UI_Pipeline.hpp"
+    "src/engine/ui_system/UI_Pipeline.cpp"
 
     # Camera
     "src/engine/camera/CameraComponent.hpp"
@@ -492,22 +510,25 @@ list(
     "${CMAKE_SOURCE_DIR}/libs/include"
 )
 
-
-set(link_to_target_sources)
-set(link_to_target_directories)
-function(link_to_target executable_name)
-    message(STATUS "Linking dependancies to ${executable_name} ")
-    add_executable(${executable_name} ${link_to_target_sources})
-    add_dependencies(${executable_name} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
-    target_link_libraries(${executable_name} ${COMPILED_LIBS} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
-    target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
-endfunction()
-
 if (WINDOWS)
 
 #-----------------------------------------------------------------------
 # Windows Executable
 #-----------------------------------------------------------------------
+
+set(link_to_target_sources)
+
+    set(link_to_target_directories)
+    set(link_to_target_sources)
+    function(link_to_target executable_name)
+        message(STATUS "Linking dependancies to ${executable_name} ")
+        add_executable(${executable_name} ${link_to_target_sources})
+        add_dependencies(${executable_name} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
+        target_link_libraries(${executable_name} ${COMPILED_LIBS} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
+        target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
+    endfunction()
+
+    message(STATUS "Building for windows")
 
     set(WIN_SOURCES)
     set(WIN_INCLUDE_DIRECTORIES)
@@ -560,7 +581,7 @@ if (WINDOWS)
         "applications/techdemo"
     )
     link_to_target(${TECHDEMO})
-
+    # TODO: Move add_custum_command to link_to_target function as well 
     add_custom_command(
         TARGET ${TECHDEMO} POST_BUILD                   # Adds a post-build event to MyTest
         COMMAND ${CMAKE_COMMAND} -E copy_if_different   # which executes "cmake - E copy_if_different..."
@@ -645,68 +666,94 @@ elseif(MACOSX)
 #-----------------------------------------------------------------------
 # MACOSX Executable
 #-----------------------------------------------------------------------
-    # TODO Use link to target function
+    
+    set(link_to_target_directories)
+    set(link_to_target_sources)
+    function(link_to_target executable_name)
+        message(STATUS "Linking dependancies to ${executable_name} ")
+        add_executable(${executable_name} ${link_to_target_sources})
+        add_dependencies(${executable_name} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
+        target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.2.141.dylib")
+        target_link_libraries(${executable_name}
+            "-framework CoreGraphics"
+            "-framework Foundation"
+        )
+        target_link_libraries(${executable_name} SDL2 "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
+        target_link_directories(${executable_name} PUBLIC "${CMAKE_SOURCE_DIR}/libs/mac/sdl/")
+        target_include_directories(${executable_name} PUBLIC "${CMAKE_SOURCE_DIR}/libs/mac/sdl/")
+        target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
+        set_target_properties(${executable_name} PROPERTIES
+            MACOSX_BUNDLE TRUE
+            MACOSX_FRAMEWORK_IDENTIFIER "co.radx.${executable_name}"
+        )
+
+        # Copying assets to correct place
+        add_custom_command(
+            TARGET ${executable_name} POST_BUILD        # Adds a post-build event to MyTest
+            COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Debug/${executable_name}.app/Contents/Resources/data/"
+            COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Debug/${executable_name}.app/Contents/Resources/data/"
+        )
+
+        add_custom_command(
+            TARGET ${executable_name} POST_BUILD        # Adds a post-build event to MyTest
+            COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Release/${executable_name}.app/Contents/Resources/data/"
+            COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Release/${executable_name}.app/Contents/Resources/data/"
+        )
+
+    endfunction()
+
     message(STATUS "Building for macos")
 
     set(MAC_SOURCE)
-    
+    set(MAC_INCLUDE_DIRECTORIES)
+
     list(
         APPEND MAC_SOURCE
         "mac/main.mm"
-        "src/Application.hpp"
-        "src/Application.cpp"
+        # "src/Application.hpp"
+        # "src/Application.cpp"
     )
 
-    add_executable(${TECHDEMO} ${MAC_SOURCE})
-
-    add_dependencies(${TECHDEMO} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
-
-    target_link_directories(${TECHDEMO} PUBLIC "${CMAKE_SOURCE_DIR}/libs/mac/sdl/")
-
-    target_link_libraries(${TECHDEMO} SDL2 "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
-
-    target_link_libraries(${TECHDEMO}
-        "-framework CoreGraphics"
-        "-framework Foundation"
-    )
-    
-    target_link_libraries(${TECHDEMO} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.2.141.dylib")
-     
-    target_include_directories(
-        ${TECHDEMO} PUBLIC 
+    list(APPEND MAC_INCLUDE_DIRECTORIES 
         "mac"
-        "src" 
-        "${CMAKE_SOURCE_DIR}/libs/include"
     )
 
-    set_target_properties(${TECHDEMO} PROPERTIES
-        MACOSX_BUNDLE TRUE
-        MACOSX_FRAMEWORK_IDENTIFIER co.radx.MFaEngine
+    # Techdemo
+    unset(link_to_target_directories)
+    list(APPEND link_to_target_directories 
+        ${MAC_INCLUDE_DIRECTORIES}
+        "applications/techdemo"
     )
-
-    # Copying assets to correct place
-    add_custom_command(
-        TARGET ${TECHDEMO} POST_BUILD        # Adds a post-build event to MyTest
-        COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Debug/MFaEngine.app/Contents/Resources/data/"
-        COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Debug/MFaEngine.app/Contents/Resources/data/"
+    unset(link_to_target_sources)
+    list(APPEND link_to_target_sources 
+        ${MAC_SOURCE} 
+        ${TECHDEMO_SOURCES}
     )
+    link_to_target(${TECHDEMO})
+    target_compile_definitions(${TECHDEMO} PRIVATE TECHDEMO)
 
-    add_custom_command(
-        TARGET ${TECHDEMO} POST_BUILD        # Adds a post-build event to MyTest
-        COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Release/MFaEngine.app/Contents/Resources/data/"
-        COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Release/MFaEngine.app/Contents/Resources/data/"
+    # Editor
+    unset(link_to_target_directories)
+    list(APPEND link_to_target_directories 
+        ${MAC_INCLUDE_DIRECTORIES}
+        "applications/prefab_editor"
     )
-
+    unset(link_to_target_sources)
+    list(APPEND link_to_target_sources 
+        ${MAC_SOURCE} 
+        ${PREFAB_EDITOR_SOURCES}
+    )
+    link_to_target(${PREFAB_EDITOR})
+    target_compile_definitions(${PREFAB_EDITOR} PRIVATE TECHDEMO)
 
 elseif(IPHONE)
 
-    # TODO Use link to target function
 #-----------------------------------------------------------------------
 # IPHONE Executable
 #-----------------------------------------------------------------------
     message(STATUS "Building for iphone")
 
-#https://stackoverflow.com/questions/822404/how-to-set-up-cmake-to-build-an-app-for-the-iphone
+    #https://stackoverflow.com/questions/822404/how-to-set-up-cmake-to-build-an-app-for-the-iphone
     set(IPHONE_SOURCE)
         
     list(

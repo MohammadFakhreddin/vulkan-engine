@@ -2,7 +2,6 @@
 
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
-#include "engine/asset_system/AssetTypes.hpp"
 
 namespace MFA {
     
@@ -18,29 +17,25 @@ public:
     explicit DebugRendererPipeline();
     ~DebugRendererPipeline() override;
 
-    PIPELINE_PROPS(DebugRendererPipeline)
+    PIPELINE_PROPS(
+        DebugRendererPipeline,
+        EventTypes::RenderEvent,
+        RenderOrder::DontCare
+    )
 
-    void Init() override;
+    void init() override;
 
-    void Shutdown() override;
+    void shutdown() override;
 
-    void PreRender(RT::CommandRecordState & recordState, float deltaTimeInSec) override;
-
-    void Render(RT::CommandRecordState & drawPass, float deltaTime) override;
+    void render(RT::CommandRecordState & drawPass, float deltaTime) override;
     
-    void OnResize() override {}
+    void onResize() override;
 
-    bool CreateEssenceWithoutModel(
-        std::shared_ptr<RT::GpuModel> const & gpuModel,
-        uint32_t indicesCount
-    );
+    void freeUnusedEssences() override;
 
 protected:
 
-    std::shared_ptr<EssenceBase> internalCreateEssence(
-        std::shared_ptr<RT::GpuModel> const & gpuModel,
-        std::shared_ptr<AS::MeshBase> const & cpuMesh
-    ) override;
+    void internalAddEssence(EssenceBase * essence) override;
 
     std::shared_ptr<VariantBase> internalCreateVariant(EssenceBase * essence) override;
 

@@ -3,7 +3,7 @@
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/BedrockMemory.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/ui_system/UI_System.hpp"
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockMatrix.hpp"
 #include "engine/entity_system/Entity.hpp"
@@ -118,8 +118,41 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-    // TODO We should separate it into update buffer and update state phase
-    void PBR_Variant::Update(float const deltaTimeInSec, RT::CommandRecordState const & drawPass)
+
+    void PBR_Variant::PreRender(float const deltaTimeInSec, RT::CommandRecordState const & recordState)
+    {
+        if (IsActive() == false)
+        {
+            return;
+        }
+
+        if (mBufferDirtyCounter > 0)
+        {
+            RF::UpdateBuffer(
+               *mSkinsJointsBuffer->buffers[recordState.frameIndex],
+               mCachedSkinsJointsBlob->memory
+            );
+            mBufferDirtyCounter -= 1;
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBR_Variant::Render(
+        RT::CommandRecordState const & drawPass,
+        BindDescriptorSetFunction const & bindFunction,
+        AS::AlphaMode const alphaMode
+    )
+    {
+        for (auto & node : mNodes)
+        {
+            drawNode(drawPass, node, bindFunction, alphaMode);
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBR_Variant::PostRender(float const deltaTimeInSec)
     {
         if (IsActive() == false)
         {
@@ -143,28 +176,6 @@ namespace MFA
             mBufferDirtyCounter = 2;
 
             mIsSkinJointsChanged = false;
-        }
-        if (mBufferDirtyCounter > 0)
-        {
-            RF::UpdateBuffer(
-               *mSkinsJointsBuffer->buffers[drawPass.frameIndex],
-               mCachedSkinsJointsBlob->memory
-            );
-            mBufferDirtyCounter -= 1;
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void PBR_Variant::Draw(
-        RT::CommandRecordState const & drawPass,
-        BindDescriptorSetFunction const & bindFunction,
-        AS::AlphaMode const alphaMode
-    )
-    {
-        for (auto & node : mNodes)
-        {
-            drawNode(drawPass, node, bindFunction, alphaMode);
         }
     }
 
@@ -198,6 +209,8 @@ namespace MFA
         mPreviousAnimationTimeInSec = mActiveAnimationTimeInSec;
         mActiveAnimationTimeInSec = params.startTimeOffsetInSec + mMeshData->animations[mActiveAnimationIndex].startTime;
         mActiveAnimationParams = params;
+
+        memset(mAnimationInputIndex, 0, sizeof(mAnimationInputIndex));
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -232,10 +245,10 @@ namespace MFA
 
                     // Just caching the input index to reduce required loop count
                     auto & inputIndex = mAnimationInputIndex[channel.samplerIndex];
-                    if (inputIndex >= sampler.inputAndOutput.size() - 1)
+                    /*if (inputIndex >= sampler.inputAndOutput.size() - 1)
                     {
                         inputIndex = 0;
-                    }
+                    }*/
 
                     for (size_t k = 0; k < sampler.inputAndOutput.size() - 1; k++)
                     {
@@ -384,6 +397,7 @@ namespace MFA
 
     void PBR_Variant::computeNodesGlobalTransform()
     {
+        // TODO: For root nodes we should apply root motion to transform instead if possible (But which one is the root transform ?)
         for (auto const & rootNodeIndex : mMeshData->rootNodes)
         {
             auto & node = mNodes[rootNodeIndex];
@@ -531,6 +545,7 @@ namespace MFA
         }
         if (isChanged && node.meshNode->hasSubMesh() && node.meshNode->skin > -1)
         {
+            // TODO Knowing that threre is no scale we might be able to compute this cheaper
             node.cachedGlobalInverseTransform = glm::inverse(node.cachedGlobalTransform);
         }
 

@@ -270,15 +270,22 @@ namespace MFA::RenderBackend
     [[nodiscard]]
     bool CheckSwapChainSupport(VkPhysicalDevice physical_device);
 
-    struct FindPresentAndGraphicQueueFamilyResult
+    struct FindQueueFamilyResult
     {
-        uint32_t present_queue_family;
-        uint32_t graphic_queue_family;
+        bool const isPresentQueueValid = false;
+        uint32_t const presentQueueFamily = -1;
+
+        bool const isGraphicQueueValid = false;
+        uint32_t const graphicQueueFamily = -1;
+
+        bool const isComputeQueueValid = false;
+        uint32_t const computeQueueFamily = -1;
     };
+
     [[nodiscard]]
-    FindPresentAndGraphicQueueFamilyResult FindPresentAndGraphicQueueFamily(
-        VkPhysicalDevice physical_device,
-        VkSurfaceKHR window_surface
+    FindQueueFamilyResult FindQueueFamilies(
+        VkPhysicalDevice physicalDevice,
+        VkSurfaceKHR windowSurface
     );
 
     [[nodiscard]]
@@ -501,12 +508,33 @@ namespace MFA::RenderBackend
         VkCommandBuffer * commandBuffers
     );
 
+    //-----------------------------------------Semaphore-------------------------------------------------
+
     [[nodiscard]]
-    RT::SyncObjects CreateSyncObjects(
+    std::vector<VkSemaphore> CreateSemaphores(
         VkDevice device,
-        uint8_t maxFramesInFlight,
-        uint32_t swapChainImagesCount
+        uint32_t count
     );
+
+    void DestroySemaphored(
+        VkDevice device,
+        std::vector<VkSemaphore> const & semaphores
+    );
+
+    //------------------------------------------Fence-------------------------------------------------
+
+    [[nodiscard]]
+    std::vector<VkFence> CreateFence(
+        VkDevice device,
+        uint32_t count
+    );
+
+    void DestroyFence(
+        VkDevice device,
+        std::vector<VkFence> const & fences
+    );
+
+    //-------------------------------------------------------------------------------------------------
 
     void DestroySyncObjects(VkDevice device, RT::SyncObjects const & syncObjects);
 
@@ -584,6 +612,12 @@ namespace MFA::RenderBackend
     void BeginCommandBuffer(
         VkCommandBuffer commandBuffer,
         VkCommandBufferBeginInfo const & beginInfo
+    );
+
+    void ExecuteCommandBuffer(
+        VkCommandBuffer primaryCommandBuffer,
+        uint32_t subCommandBuffersCount,
+        const VkCommandBuffer * subCommandBuffers
     );
 
     void PipelineBarrier(

@@ -3,6 +3,8 @@
 #include "AssetBase.hpp"
 #include "AssetTypes.hpp"
 
+#include <string>
+
 namespace MFA
 {
     struct SmartBlob;

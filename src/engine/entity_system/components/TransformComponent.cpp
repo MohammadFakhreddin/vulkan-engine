@@ -3,7 +3,7 @@
 #include "engine/BedrockCommon.hpp"
 #include "engine/BedrockMatrix.hpp"
 #include "engine/entity_system/Entity.hpp"
-#include "engine/ui_system/UISystem.hpp"
+#include "engine/ui_system/UI_System.hpp"
 #include "tools/JsonUtils.hpp"
 
 namespace MFA
@@ -237,14 +237,14 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    Signal<>::ListenerId TransformComponent::RegisterChangeListener(std::function<void()> const & listener)
+    SignalId TransformComponent::RegisterChangeListener(std::function<void()> const & listener)
     {
         return mTransformChangeSignal.Register(listener);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    bool TransformComponent::UnRegisterChangeListener(Signal<>::ListenerId const listenerId)
+    bool TransformComponent::UnRegisterChangeListener(SignalId const listenerId)
     {
         return mTransformChangeSignal.UnRegister(listenerId);
     }
