@@ -393,11 +393,16 @@ namespace MFA::RenderFrontend
         VkBufferMemoryBarrier const & memoryBarrier
     );
 
+    void ResetFence(VkFence fence);
+
     void SubmitQueue(
         VkCommandBuffer commandBuffer,
-        VkSemaphore waitSemaphore,
-        VkSemaphore signalSemaphore,
-        VkFence inFlightFence
+        uint32_t waitSemaphoresCount,
+        VkSemaphore * waitSemaphores,
+        VkPipelineStageFlags * waitStageFlags,
+        uint32_t signalSemaphoresCount,
+        VkSemaphore * signalSemaphores,
+        VkFence fence
     );
 
     void PresentQueue(
@@ -448,7 +453,7 @@ namespace MFA::RenderFrontend
     [[nodiscard]]
     RT::CommandRecordState StartGraphicCommandBufferRecording();
 
-    void EndGraphicCommandBufferRecording(RT::CommandRecordState & drawPass);
+    void EndGraphicCommandBufferRecording(RT::CommandRecordState & recordState);
 
     VkFence GetFence(RT::CommandRecordState const & recordState);
 

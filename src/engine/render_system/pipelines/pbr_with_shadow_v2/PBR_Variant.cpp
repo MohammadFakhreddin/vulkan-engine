@@ -209,6 +209,8 @@ namespace MFA
         mPreviousAnimationTimeInSec = mActiveAnimationTimeInSec;
         mActiveAnimationTimeInSec = params.startTimeOffsetInSec + mMeshData->animations[mActiveAnimationIndex].startTime;
         mActiveAnimationParams = params;
+
+        memset(mAnimationInputIndex, 0, sizeof(mAnimationInputIndex));
     }
 
     //-------------------------------------------------------------------------------------------------

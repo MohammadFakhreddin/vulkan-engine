@@ -1411,38 +1411,45 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
+    void ResetFence(VkFence fence)
+    {
+        RB::ResetFences(
+            state->logicalDevice.device,
+            1,
+            &fence
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void SubmitQueue(
         VkCommandBuffer commandBuffer,
-        VkSemaphore waitSemaphore,
-        VkSemaphore signalSemaphore,
-        VkFence inFlightFence
+        uint32_t waitSemaphoresCount,
+        const VkSemaphore * waitSemaphores,
+        const VkPipelineStageFlags * waitStageFlags,
+        uint32_t signalSemaphoresCount,
+        const VkSemaphore * signalSemaphores,
+        VkFence fence
     )
     {
         VkSubmitInfo submitInfo = {};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-        VkPipelineStageFlags const waitStages[]{ VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-        submitInfo.waitSemaphoreCount = 1;
-        submitInfo.pWaitSemaphores = &waitSemaphore;
-        submitInfo.pWaitDstStageMask = waitStages;
+        submitInfo.waitSemaphoreCount = waitSemaphoresCount;
+        submitInfo.pWaitSemaphores = waitSemaphores;
+        submitInfo.pWaitDstStageMask = waitStageFlags;
 
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &commandBuffer;
 
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = &signalSemaphore;
-
-        RB::ResetFences(
-            state->logicalDevice.device,
-            1,
-            &inFlightFence
-        );
+        submitInfo.signalSemaphoreCount = signalSemaphoresCount;
+        submitInfo.pSignalSemaphores = signalSemaphores;
 
         RB::SubmitQueues(
             state->graphicQueue,
             1,
             &submitInfo,
-            inFlightFence
+            fence
         );
     }
 
@@ -1594,29 +1601,32 @@ namespace MFA::RenderFrontend
 
     RT::CommandRecordState StartGraphicCommandBufferRecording()
     {
+        // TODO: Separate this function into multiple ones
         MFA_ASSERT(GetMaxFramesPerFlight() > state->currentFrame);
-        RT::CommandRecordState drawPass{ .renderPass = nullptr };
+        RT::CommandRecordState recordState{ .renderPass = nullptr };
         if (IsWindowVisible() == false || IsWindowResized() == true)
         {
-            drawPass.isValid = false;
-            return drawPass;
+            recordState.isValid = false;
+            return recordState;
         }
 
-        drawPass.frameIndex = state->currentFrame;
-        drawPass.isValid = true;
+        recordState.frameIndex = state->currentFrame;
+        recordState.isValid = true;
         ++state->currentFrame;
         if (state->currentFrame >= GetMaxFramesPerFlight())
         {
             state->currentFrame = 0;
         }
 
-        WaitForFence(GetFence(drawPass));
+        auto * fence = GetFence(recordState);
+        WaitForFence(fence);
+        ResetFence(fence);
 
         // We ignore failed acquire of image because a resize will be triggered at end of pass
         AcquireNextImage(
-            GetPresentationSemaphore(drawPass),
+            GetPresentationSemaphore(recordState),
             state->displayRenderPass.GetSwapChainImages(),
-            drawPass.imageIndex
+            recordState.imageIndex
         );
 
         // Recording command buffer data at each render frame
@@ -1624,32 +1634,40 @@ namespace MFA::RenderFrontend
         // Each pipeline has its own set of shader, But we can reuse a pipeline for multiple shaders.
         // For each model we need to record command buffer with our desired pipeline (For example light and objects have different fragment shader)
         // Prepare data for recording command buffers
-        BeginCommandBuffer(GetGraphicCommandBuffer(drawPass));
+        BeginCommandBuffer(GetGraphicCommandBuffer(recordState));
 
-        return drawPass;
+        return recordState;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void EndGraphicCommandBufferRecording(RT::CommandRecordState & drawPass)
+    void EndGraphicCommandBufferRecording(RT::CommandRecordState & recordState)
     {
-        MFA_ASSERT(drawPass.isValid);
-        drawPass.isValid = false;
+        // TODO: Separate this function into multiple ones
+        MFA_ASSERT(recordState.isValid);
+        recordState.isValid = false;
 
-        EndCommandBuffer(GetGraphicCommandBuffer(drawPass));
+        EndCommandBuffer(GetGraphicCommandBuffer(recordState));
+
+        std::vector<VkSemaphore> const waitSemaphores {GetPresentationSemaphore(recordState)};
+        std::vector<VkPipelineStageFlags> const waitStages { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+        std::vector<VkSemaphore> const signalSemaphores {GetGraphicSemaphore(recordState)};
 
         // Wait for image to be available and draw
         SubmitQueue(
-            GetGraphicCommandBuffer(drawPass),
-            GetPresentationSemaphore(drawPass),
-            GetGraphicSemaphore(drawPass),
-            GetFence(drawPass)
+            GetGraphicCommandBuffer(recordState),
+            static_cast<uint32_t>(waitSemaphores.size()),
+            waitSemaphores.data(),
+            waitStages.data(),
+            static_cast<uint32_t>(signalSemaphores.size()),
+            signalSemaphores.data(),
+            GetFence(recordState)
         );
 
         // Present drawn image
         PresentQueue(
-            drawPass.imageIndex,
-            GetGraphicSemaphore(drawPass),
+            recordState.imageIndex,
+            GetGraphicSemaphore(recordState),
             state->displayRenderPass.GetSwapChainImages().swapChain
         );
     }
