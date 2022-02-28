@@ -508,12 +508,33 @@ namespace MFA::RenderBackend
         VkCommandBuffer * commandBuffers
     );
 
+    //-----------------------------------------Semaphore-------------------------------------------------
+
     [[nodiscard]]
-    RT::SyncObjects CreateSyncObjects(
+    std::vector<VkSemaphore> CreateSemaphores(
         VkDevice device,
-        uint8_t maxFramesInFlight,
-        uint32_t swapChainImagesCount
+        uint32_t count
     );
+
+    void DestroySemaphored(
+        VkDevice device,
+        std::vector<VkSemaphore> const & semaphores
+    );
+
+    //------------------------------------------Fence-------------------------------------------------
+
+    [[nodiscard]]
+    std::vector<VkFence> CreateFence(
+        VkDevice device,
+        uint32_t count
+    );
+
+    void DestroyFence(
+        VkDevice device,
+        std::vector<VkFence> const & fences
+    );
+
+    //-------------------------------------------------------------------------------------------------
 
     void DestroySyncObjects(VkDevice device, RT::SyncObjects const & syncObjects);
 

@@ -101,10 +101,6 @@ namespace MFA::JobSystem
 
         std::thread::id mMainThreadId{};
 
-        std::mutex mMutex{};
-        std::unique_lock<std::mutex> mLock{ mMutex };
-        std::condition_variable mCondition;
-
     };
 
 }

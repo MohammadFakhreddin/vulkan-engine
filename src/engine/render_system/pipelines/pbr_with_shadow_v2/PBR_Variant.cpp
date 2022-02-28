@@ -243,10 +243,10 @@ namespace MFA
 
                     // Just caching the input index to reduce required loop count
                     auto & inputIndex = mAnimationInputIndex[channel.samplerIndex];
-                    if (inputIndex >= sampler.inputAndOutput.size() - 1)
+                    /*if (inputIndex >= sampler.inputAndOutput.size() - 1)
                     {
                         inputIndex = 0;
-                    }
+                    }*/
 
                     for (size_t k = 0; k < sampler.inputAndOutput.size() - 1; k++)
                     {
@@ -395,6 +395,7 @@ namespace MFA
 
     void PBR_Variant::computeNodesGlobalTransform()
     {
+        // TODO: For root nodes we should apply root motion to transform instead if possible (But which one is the root transform ?)
         for (auto const & rootNodeIndex : mMeshData->rootNodes)
         {
             auto & node = mNodes[rootNodeIndex];

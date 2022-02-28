@@ -2465,65 +2465,68 @@ namespace MFA::RenderBackend
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::SyncObjects CreateSyncObjects(
-        VkDevice device,
-        uint8_t const maxFramesInFlight,
-        uint32_t const swapChainImagesCount
-    )
+    std::vector<VkSemaphore> CreateSemaphores(VkDevice device, uint32_t count)
     {
-        RT::SyncObjects syncObjects{};
-        syncObjects.imageAvailabilitySemaphores.resize(maxFramesInFlight);
-        syncObjects.renderFinishIndicatorSemaphores.resize(maxFramesInFlight);
-        syncObjects.fencesInFlight.resize(maxFramesInFlight);
-    #ifdef __ANDROID__
-        syncObjects.images_in_flight.resize(swapChainImagesCount, 0);
-    #else
-        syncObjects.imagesInFlight.resize(swapChainImagesCount, nullptr);
-    #endif
+        VkSemaphoreCreateInfo const semaphoreInfo{
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
+        };
 
-        VkSemaphoreCreateInfo semaphoreInfo{};
-        semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+        std::vector<VkSemaphore> semaphores (count);
 
-        VkFenceCreateInfo fenceInfo{};
-        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-        for (uint8_t i = 0; i < maxFramesInFlight; i++)
+        for (auto & semaphore : semaphores)
         {
             VK_Check(vkCreateSemaphore(
                 device,
                 &semaphoreInfo,
                 nullptr,
-                &syncObjects.imageAvailabilitySemaphores[i]
-            ));
-            VK_Check(vkCreateSemaphore(
-                device,
-                &semaphoreInfo,
-                nullptr,
-                &syncObjects.renderFinishIndicatorSemaphores[i]
-            ));
-            VK_Check(vkCreateFence(
-                device,
-                &fenceInfo,
-                nullptr,
-                &syncObjects.fencesInFlight[i]
+                &semaphore
             ));
         }
-        return syncObjects;
+
+        return semaphores;
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void DestroySemaphored(VkDevice device, std::vector<VkSemaphore> const & semaphores)
+    {
+        for (auto & semaphore : semaphores)
+        {
+            vkDestroySemaphore(device, semaphore, nullptr);
+        }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void DestroySyncObjects(VkDevice device, RT::SyncObjects const & syncObjects)
+    std::vector<VkFence> CreateFence(VkDevice device, uint32_t count)
     {
-        MFA_ASSERT(device != nullptr);
-        MFA_ASSERT(syncObjects.fencesInFlight.size() == syncObjects.imageAvailabilitySemaphores.size());
-        MFA_ASSERT(syncObjects.fencesInFlight.size() == syncObjects.renderFinishIndicatorSemaphores.size());
-        for (uint8_t i = 0; i < syncObjects.fencesInFlight.size(); i++)
+        VkFenceCreateInfo const fenceInfo{
+            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+            .flags = VK_FENCE_CREATE_SIGNALED_BIT
+        };
+
+        std::vector<VkFence> fences (count);
+
+        for (auto & fence : fences)
         {
-            vkDestroySemaphore(device, syncObjects.renderFinishIndicatorSemaphores[i], nullptr);
-            vkDestroySemaphore(device, syncObjects.imageAvailabilitySemaphores[i], nullptr);
-            vkDestroyFence(device, syncObjects.fencesInFlight[i], nullptr);
+            VK_Check(vkCreateFence(
+                device,
+                &fenceInfo,
+                nullptr,
+                &fence
+            ));
+        }
+
+        return fences;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void DestroyFence(VkDevice device, std::vector<VkFence> const & fences)
+    {
+        for (auto & fence : fences)
+        {
+            vkDestroyFence(device, fence, nullptr);
         }
     }
 

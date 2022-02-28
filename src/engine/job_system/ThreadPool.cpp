@@ -123,12 +123,7 @@ namespace MFA::JobSystem
 
     bool ThreadPool::ThreadObject::awakeCondition()
     {
-        auto const shouldAwake = mTasks.IsEmpty() == false || mParent.mIsAlive == false;
-        if (shouldAwake == false)
-        {
-            mCondition.notify_one();
-        }
-        return shouldAwake;
+        return mTasks.IsEmpty() == false || mParent.mIsAlive == false;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -202,7 +197,6 @@ namespace MFA::JobSystem
                 }
             }
             mIsBusy = false;
-            mParent.mCondition.notify_one();
         }
     }
 
@@ -210,14 +204,16 @@ namespace MFA::JobSystem
 
     bool ThreadPool::mainThreadAwakeCondition() const
     {
+        bool shouldAwake = true;
         for (auto const & threadObject : mThreadObjects)
         {
             if (threadObject->IsFree() == false)
             {
-                return false;
+                threadObject->Notify();
+                shouldAwake = false;
             }
         }
-        return true;
+        return shouldAwake;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -226,15 +222,14 @@ namespace MFA::JobSystem
     {
         assert(std::this_thread::get_id() == mMainThreadId);
 
-        if (mainThreadAwakeCondition() == false)
+        //When number of threads is 2 it means that platform only uses main thread
+        while (mainThreadAwakeCondition() == false)
         {
-            mCondition.wait(mLock, [this]()->bool{
-                for (auto const & threadObject : mThreadObjects)
-                {
-                    threadObject->Notify();
-                }
-                return mainThreadAwakeCondition();
-            });
+            for (auto const & threadObject : mThreadObjects)
+            {
+                threadObject->Notify();
+            }
+            std::this_thread::yield();
         }
         
         assert(AllThreadsAreIdle() == true);

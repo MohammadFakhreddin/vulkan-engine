@@ -395,26 +395,19 @@ namespace MFA::RenderFrontend
 
     void SubmitQueue(
         VkCommandBuffer commandBuffer,
-        VkSemaphore imageAvailabilitySemaphore,
-        VkSemaphore renderFinishIndicatorSemaphore,
+        VkSemaphore waitSemaphore,
+        VkSemaphore signalSemaphore,
         VkFence inFlightFence
     );
 
     void PresentQueue(
         uint32_t imageIndex,
-        VkSemaphore renderFinishIndicatorSemaphore,
+        VkSemaphore waitSemaphore,
         VkSwapchainKHR swapChain
     );
 
     DisplayRenderPass * GetDisplayRenderPass();
-
-    RT::SyncObjects createSyncObjects(
-        uint32_t maxFramesInFlight,
-        uint32_t swapChainImagesCount
-    );
-
-    void DestroySyncObjects(RT::SyncObjects const & syncObjects);
-
+    
     VkSampleCountFlagBits GetMaxSamplesCount();
 
     // Not recommended
@@ -457,13 +450,13 @@ namespace MFA::RenderFrontend
 
     void EndGraphicCommandBufferRecording(RT::CommandRecordState & drawPass);
 
-    VkFence GetGraphicInFlightFence(RT::CommandRecordState const & drawPass);
+    VkFence GetFence(RT::CommandRecordState const & recordState);
 
     [[nodiscard]]
-    VkSemaphore GetRenderFinishIndicatorSemaphore(RT::CommandRecordState const & drawPass);
+    VkSemaphore GetGraphicSemaphore(RT::CommandRecordState const & drawPass);
 
     [[nodiscard]]
-    VkSemaphore GetImageAvailabilitySemaphore(RT::CommandRecordState const & drawPass);
+    VkSemaphore GetPresentationSemaphore(RT::CommandRecordState const & drawPass);
 
     [[nodiscard]]
     VkDescriptorPool CreateDescriptorPool(uint32_t maxSets);

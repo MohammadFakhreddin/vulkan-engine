@@ -329,15 +329,6 @@ namespace MFA
             VkPhysicalDeviceMemoryProperties physicalMemoryProperties{};
         };
 
-        // CreateSyncObjects (Fence, Semaphore, ...)
-        struct SyncObjects
-        {
-            std::vector<VkSemaphore> imageAvailabilitySemaphores;
-            std::vector<VkSemaphore> renderFinishIndicatorSemaphores;
-            std::vector<VkFence> fencesInFlight;
-            std::vector<VkFence> imagesInFlight;
-        };
-
         struct CreateGraphicPipelineOptions
         {
             VkFrontFace frontFace = VK_FRONT_FACE_CLOCKWISE;
