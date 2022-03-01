@@ -17,10 +17,24 @@ project ("MFaEngine" CXX C)
 
 set_property (GLOBAL PROPERTY USE_FOLDERS ON)
 
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+
+OPTION(DEBUG_MODE "Enables debug mode" OFF) # Enabled by default
+if (DEBUG_MODE)
+    add_definitions(-D_DEBUG)
+    set(CMAKE_BUILD_TYPE Debug)
+    message(STATUS "Running cmake for debug build")
+else()
+    add_definitions(-DNDEBUG)
+    set(CMAKE_BUILD_TYPE Release)
+    message(STATUS "Running cmake for release build")
+endif()
+
 if (ANDROID)
-set (CMAKE_CXX_STANDARD 17)
+    set (CMAKE_CXX_STANDARD 17)
 else ()
-set (CMAKE_CXX_STANDARD 20)
+    set (CMAKE_CXX_STANDARD 20)
 endif ()
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -634,32 +648,92 @@ set(link_to_target_sources)
     target_compile_definitions(${UNIT_TEST_NAME} PRIVATE UNIT_TEST)
 
 elseif(LINUX)
-    # TODO Use link to target function
+
+#-----------------------------------------------------------------------
+# LINUX Executable
+#-----------------------------------------------------------------------
+
+# TODO Use link to target function
     message(STATUS "Building for linux")
 
+
+    set(link_to_target_directories)
+    set(link_to_target_sources)
+    function(link_to_target executable_name)
+        message(STATUS "Linking dependancies to ${executable_name} ")
+        add_executable(${executable_name} ${link_to_target_sources})
+        target_include_directories(${executable_name} PUBLIC "${CMAKE_SOURCE_DIR}/libs/linux/sdl/")
+        target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
+        add_dependencies(
+            ${executable_name} 
+            "Tools" 
+            "Bedrock" 
+            "Renderer" 
+            "EntitySystem" 
+            "Engine" 
+            "Libs"
+        )
+        target_link_libraries(
+            ${executable_name} 
+            SDL2 
+            "Tools" 
+            "Bedrock" 
+            "Renderer" 
+            "EntitySystem" 
+            "Engine" 
+            "Libs"
+        )
+        target_link_directories(${executable_name} PUBLIC "${CMAKE_SOURCE_DIR}/libs/linux/sdl/")
+        
+    endfunction()
+
+    set(CMAKE_THREAD_LIBS_INIT "-lpthread")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+    set(CMAKE_HAVE_THREADS_LIBRARY 1)
+    set(CMAKE_USE_WIN32_THREADS_INIT 0)
+    set(CMAKE_USE_PTHREADS_INIT 1)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+
     set(LINUX_SOURCE)
+    set(LINUX_INCLUDE_DIRECTORIES)
     
     list(
         APPEND LINUX_SOURCE
         "linux/main.cpp"
-        "src/Application.hpp"
-        "src/Application.cpp"
     )
 
-    add_executable(${TECHDEMO} ${LINUX_SOURCE})
-
-    add_dependencies(${TECHDEMO} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
-
-    target_link_directories(${TECHDEMO} PUBLIC "${CMAKE_SOURCE_DIR}/libs/linux/sdl/")
-
-    target_link_libraries(${TECHDEMO} SDL2 "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
-
-    target_include_directories(
-        ${TECHDEMO} PUBLIC 
+    list(
+        APPEND LINUX_INCLUDE_DIRECTORIES
         "linux"
-        "src" 
-        "${CMAKE_SOURCE_DIR}/libs/include"
     )
+
+    # Techdemo
+    unset(link_to_target_directories)
+    list(APPEND link_to_target_directories 
+        ${LINUX_INCLUDE_DIRECTORIES}
+        "applications/techdemo"
+    )
+    unset(link_to_target_sources)
+    list(APPEND link_to_target_sources 
+        ${LINUX_SOURCE} 
+        ${TECHDEMO_SOURCES}
+    )
+    link_to_target(${TECHDEMO})
+    target_compile_definitions(${TECHDEMO} PRIVATE TECHDEMO)
+
+    # Editor
+    unset(link_to_target_directories)
+    list(APPEND link_to_target_directories 
+        ${LINUX_INCLUDE_DIRECTORIES}
+        "applications/prefab_editor"
+    )
+    unset(link_to_target_sources)
+    list(APPEND link_to_target_sources 
+        ${LINUX_SOURCE} 
+        ${PREFAB_EDITOR_SOURCES}
+    )
+    link_to_target(${PREFAB_EDITOR})
+    target_compile_definitions(${PREFAB_EDITOR} PRIVATE TECHDEMO)
 
 elseif(MACOSX)
 
@@ -710,8 +784,6 @@ elseif(MACOSX)
     list(
         APPEND MAC_SOURCE
         "mac/main.mm"
-        # "src/Application.hpp"
-        # "src/Application.cpp"
     )
 
     list(APPEND MAC_INCLUDE_DIRECTORIES 

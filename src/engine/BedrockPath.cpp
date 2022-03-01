@@ -25,7 +25,7 @@ namespace MFA::Path
 
 #if defined(__PLATFORM_MAC__)
         stringSize = sprintf(addressBuffer, "%s/assets/", GetAssetPath().c_str());
-#elif defined(__PLATFORM_WIN__)
+#elif defined(__PLATFORM_WIN__) || defined(__PLATFORM_LINUX__)
         stringSize = sprintf(addressBuffer, "../assets/");
 #elif defined(__ANDROID__)
         stringSize = sprintf(addressBuffer, "");

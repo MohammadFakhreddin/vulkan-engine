@@ -87,6 +87,9 @@ mkdir build64 || cmake -A x64 -S . -Bbuild64
 - Find .sln files inside build64 and then run the project
 <br/>
 
+### Note: 
+Currently most of recent examples won't run on mac because of no geometry shader support. I'm trying to use compute shader for animation, particle and replace all geometry shader usages with compute shader
+
 ### Macos
 - Using make
 ```
@@ -105,7 +108,25 @@ cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=./ios.toolchain.cmake -DPLATFORM=MAC
 <br/>
 
 ### Linux
-Not supported yet!
+
+Not complete yet!
+
+```
+mkdir build
+cd build
+cmake ..
+
+```
+
+For debug build
+```
+cmake -DDEBUG_MODE=ON ..
+```
+
+For release build
+```
+No extra flag needed
+```
 <br/>
 
 ### Android (Experimental)

@@ -196,10 +196,10 @@ namespace MFA
         // Vertex shader
         RF_CREATE_SHADER("shaders/debug_renderer/DebugRenderer.vert.spv", Vertex)
 
-            // Fragment shader
-            RF_CREATE_SHADER("shaders/debug_renderer/DebugRenderer.frag.spv", Fragment)
+        // Fragment shader
+        RF_CREATE_SHADER("shaders/debug_renderer/DebugRenderer.frag.spv", Fragment)
 
-            std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuFragmentShader.get() };
+        std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuFragmentShader.get() };
 
         VkVertexInputBindingDescription const bindingDescription{
             .binding = 0,

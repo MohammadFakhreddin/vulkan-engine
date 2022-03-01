@@ -1,5 +1,8 @@
 #pragma once
 
+#include "engine/BedrockCommon.hpp"
+
+#include <cstdint>
 #include <functional>
 
 namespace MFA
