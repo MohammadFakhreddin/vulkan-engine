@@ -57,10 +57,13 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-    // TODO Support for priority between components
+
     void Entity::Update(float const deltaTimeInSec)
     {
-        MFA_ASSERT(mIsActive == true);
+        if (mIsActive == false)
+        {
+            return;
+        }
         mUpdateSignal.Emit(deltaTimeInSec);
     }
 

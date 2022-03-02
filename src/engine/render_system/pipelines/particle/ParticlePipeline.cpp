@@ -116,7 +116,11 @@ namespace MFA
                 CAST_ESSENCE(essence)->update(deltaTimeInSec, variants);
             });
         }
-        JS::WaitForThreadsToFinish();
+
+        if (JS::IsMainThread())
+        {
+            JS::WaitForThreadsToFinish();
+        }
     }
 
     //-------------------------------------------------------------------------------------------------
