@@ -195,7 +195,11 @@ namespace MFA
                 mAllVariantsList[i]->PostRender(deltaTimeInSec);
             }
         });
-        JS::WaitForThreadsToFinish();
+
+        if (JS::IsMainThread())
+        {
+            JS::WaitForThreadsToFinish();
+        }
     }
 
     //-------------------------------------------------------------------------------------------------

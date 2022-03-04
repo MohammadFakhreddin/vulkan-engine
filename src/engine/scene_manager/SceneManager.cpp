@@ -114,6 +114,8 @@ namespace MFA::SceneManager
 
         // TODO Spot light
 
+        std::vector<NextFrameTask> nextFrameTasks {};
+
     };
     static State * state = nullptr;
 
@@ -190,6 +192,14 @@ namespace MFA::SceneManager
             state->nextActiveSceneIndex = state->activeSceneIndex;
             startNextActiveScene();
         }
+
+        state->postRenderSignal.Register([](float const deltaTime)->void{
+            UI::PostRender(deltaTime);
+        });
+        state->postRenderSignal.Register([](float const deltaTime)->void{
+            EntitySystem::Update(deltaTime);
+        });
+        
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -291,6 +301,14 @@ namespace MFA::SceneManager
         MFA_ASSERT(signal != nullptr);
 
         return signal;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void AssignMainThreadTask(NextFrameTask const & task)
+    {
+        MFA_ASSERT(task != nullptr);
+        state->nextFrameTasks.emplace_back(task);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -414,10 +432,14 @@ namespace MFA::SceneManager
 
     void Update(float const deltaTimeInSec)
     {
-        EntitySystem::Update(deltaTimeInSec);
+        for (int i = 0; i < static_cast<int>(state->nextFrameTasks.size()); ++i)
+        {
+            MFA_ASSERT(state->nextFrameTasks[i] != nullptr);
+            state->nextFrameTasks[i]();
+        }
+        state->nextFrameTasks.clear();
 
-        state->postRenderSignal.Emit(deltaTimeInSec);
-        UI::PostRender(deltaTimeInSec);
+        state->postRenderSignal.EmitMultiThread(deltaTimeInSec);
     }
 
     //-------------------------------------------------------------------------------------------------

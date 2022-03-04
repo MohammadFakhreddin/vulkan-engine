@@ -57,9 +57,9 @@ void Application::Init() {
     #endif
         RF::Init(params);
     }
+    JS::Init();
     UI::Init();
     IM::Init();
-    JS::Init();
     EntitySystem::Init();
     
     SceneManager::Init();
@@ -80,9 +80,9 @@ void Application::Shutdown() {
 
     SceneManager::Shutdown();
     EntitySystem::Shutdown();
-    JS::Shutdown();
     IM::Shutdown();
     UI::Shutdown();
+    JS::Shutdown();
     RF::Shutdown();
     RC::Shutdown();
     Path::Shutdown();

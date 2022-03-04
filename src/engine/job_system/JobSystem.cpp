@@ -121,6 +121,7 @@ namespace MFA::JobSystem
 
     bool IsMainThread()
     {
+        MFA_ASSERT(state != nullptr);
         return state->threadPool.IsMainThread();
     }
 
