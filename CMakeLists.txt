@@ -73,22 +73,30 @@ if (NOT WINDOWS)
     endif()
 endif()
 
-include_directories(libs/include/glm)
-
 # Vulkan uses 0 to 1 depth instead of -1 to 1 in opengl
 add_definitions(-DGLM_FORCE_DEPTH_ZERO_TO_ONE)
 
 # Note: Linux On MacOS 10.14 with clang++ compiler, I get executable with SIMD right away.
 # On Ubuntu 16.04 with g++ compiler, I will have to use the compiler flag -mavx2 to generate a SIMD executable. 
 # There are other compiler options for other SIMD instructions here. Without the compiler flag, I still get a serial executable.
-# add_definitions(-DGLM_FORCE_DEFAULT_ALIGNED_GENTYPES)         # TODO Enable SIMD for glm
-# add_definitions(-DGLM_FORCE_INTRINSICS)
+
+add_definitions(-DGLM_FORCE_SILENT_WARNINGS)
 if (LINUX)
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
 endif ()
 
+set(glm_DIR "libs/include/glm/cmake/glm")
+find_package(glm REQUIRED)
+
 # TODO Use this link to integrate lua into project
 # https://gist.github.com/baiyanhuang/4054106
+
+list(
+    APPEND COMMON_INCLUDE_DIRECTORIES
+    "src" 
+    "${CMAKE_SOURCE_DIR}/libs/include"
+    "${GLM_INCLUDE_DIRS}"
+)
 
 #-----------------------------------------------------------------------
 # Bedrock
@@ -125,8 +133,7 @@ add_library("Bedrock"
 
 target_include_directories(
     "Bedrock" PUBLIC 
-    "src" 
-    "${CMAKE_SOURCE_DIR}/libs/include"
+    ${COMMON_INCLUDE_DIRECTORIES}
 )
 
 #-----------------------------------------------------------------------
@@ -206,8 +213,7 @@ add_library("Renderer" ${RENDERER_SOURCES})
 
 target_include_directories(
     "Renderer" PUBLIC 
-    "src" 
-    "${CMAKE_SOURCE_DIR}/libs/include"
+    ${COMMON_INCLUDE_DIRECTORIES}
 )
 
 #-----------------------------------------------------------------------
@@ -264,8 +270,7 @@ add_library("EntitySystem"
 
 target_include_directories(
     "EntitySystem" PUBLIC 
-    "src" 
-    "${CMAKE_SOURCE_DIR}/libs/include"
+    ${COMMON_INCLUDE_DIRECTORIES}
 )
 
 #-----------------------------------------------------------------------
@@ -299,8 +304,7 @@ add_library("AssetSystem" ${ASSET_SYSTEM_SOURCES})
 
 target_include_directories(
     "AssetSystem" PUBLIC 
-    "src" 
-    "${CMAKE_SOURCE_DIR}/libs/include"
+    ${COMMON_INCLUDE_DIRECTORIES}
 )
 
 #-----------------------------------------------------------------------
@@ -361,8 +365,7 @@ add_library("Engine"
 
 target_include_directories(
     "Engine" PUBLIC 
-    "src" 
-    "${CMAKE_SOURCE_DIR}/libs/include"
+    ${COMMON_INCLUDE_DIRECTORIES}
 )
 
 #-----------------------------------------------------------------------
@@ -397,8 +400,7 @@ add_library("Tools"
 
 target_include_directories(
     "Tools" PUBLIC 
-    "src" 
-    "${CMAKE_SOURCE_DIR}/libs/include"
+    ${COMMON_INCLUDE_DIRECTORIES}
 )
 
 #-----------------------------------------------------------------------
@@ -508,8 +510,7 @@ add_library("Libs"
 
 target_include_directories(
     "Libs" PUBLIC 
-    "src" 
-    "${CMAKE_SOURCE_DIR}/libs/include"
+    ${COMMON_INCLUDE_DIRECTORIES}
 )
 
 #-----------------------------------------------------------------------
@@ -534,11 +535,6 @@ set(PREFAB_EDITOR "PrefabEditor")
 # OS specific
 #-----------------------------------------------------------------------
 
-list(
-    APPEND COMMON_INCLUDE_DIRECTORIES
-    "src" 
-    "${CMAKE_SOURCE_DIR}/libs/include"
-)
 
 if (WINDOWS)
 
@@ -881,6 +877,7 @@ elseif(IPHONE)
         "ios"
         "src" 
         "${CMAKE_SOURCE_DIR}/libs/include"
+        "${GLM_INCLUDE_DIRS}"
     )
 
     if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -956,6 +953,7 @@ elseif(ANDROID)
         ${TECHDEMO} PUBLIC 
         "src" 
         "${CMAKE_SOURCE_DIR}/libs/include"
+        "${GLM_INCLUDE_DIRS}"
     )
 
     # Asan libs are "somewhere" in the toolchain's root, we try to find the

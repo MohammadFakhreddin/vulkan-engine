@@ -1,13 +1,11 @@
 #include "BedrockPlatforms.hpp"
 
-#include <X11/Xlib.h>
-
 #if defined(__PLATFORM_WIN__)
   #include <windows.h>
 #elif defined(__PLATFORM_MAC__)
   #include <CoreGraphics/CGDisplayConfiguration.h>
 #elif defined(__PLATFORM_LINUX__)
-  // TODO
+  #include <X11/Xlib.h>
 #endif
 
 namespace MFA::Platforms {

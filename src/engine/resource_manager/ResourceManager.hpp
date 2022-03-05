@@ -3,6 +3,7 @@
 #include "engine/render_system/RenderTypesFWD.hpp"
 
 #include <memory>
+#include <string>
 
 namespace MFA::AssetSystem
 {

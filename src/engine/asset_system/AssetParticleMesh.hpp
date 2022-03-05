@@ -2,7 +2,7 @@
 
 #include "AssetBaseMesh.hpp"
 
-#include <vec3.hpp>
+#include <glm/vec3.hpp>
 
 namespace MFA::AssetSystem::Particle
 {
