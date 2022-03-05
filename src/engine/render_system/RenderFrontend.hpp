@@ -396,19 +396,15 @@ namespace MFA::RenderFrontend
     void ResetFence(VkFence fence);
 
     void SubmitQueue(
-        VkCommandBuffer commandBuffer,
-        uint32_t waitSemaphoresCount,
-        VkSemaphore * waitSemaphores,
-        VkPipelineStageFlags * waitStageFlags,
-        uint32_t signalSemaphoresCount,
-        VkSemaphore * signalSemaphores,
-        VkFence fence
+        RT::CommandRecordState const & recordState,
+        uint32_t submitCount,
+        const VkSubmitInfo * submitInfos
     );
 
     void PresentQueue(
-        uint32_t imageIndex,
-        VkSemaphore waitSemaphore,
-        VkSwapchainKHR swapChain
+        RT::CommandRecordState const & recordState,
+        uint32_t waitSemaphoresCount,
+        const VkSemaphore * waitSemaphores
     );
 
     DisplayRenderPass * GetDisplayRenderPass();
@@ -448,20 +444,25 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    VkCommandBuffer GetGraphicCommandBuffer(RT::CommandRecordState const & drawPass);
+    [[nodiscard]]
+    VkCommandBuffer GetGraphicCommandBuffer(RT::CommandRecordState const & recordState);
 
     [[nodiscard]]
-    RT::CommandRecordState StartGraphicCommandBufferRecording();
+    VkCommandBuffer GetComputeCommandBuffer(RT::CommandRecordState const & recordState);
 
-    void EndGraphicCommandBufferRecording(RT::CommandRecordState & recordState);
+    [[nodiscard]]
+    RT::CommandRecordState AcquireRecordState();
 
     VkFence GetFence(RT::CommandRecordState const & recordState);
 
     [[nodiscard]]
-    VkSemaphore GetGraphicSemaphore(RT::CommandRecordState const & drawPass);
+    VkSemaphore GetGraphicSemaphore(RT::CommandRecordState const & recordState);
 
     [[nodiscard]]
-    VkSemaphore GetPresentationSemaphore(RT::CommandRecordState const & drawPass);
+    VkSemaphore GetComputeSemaphore(RT::CommandRecordState const & recordState);
+
+    [[nodiscard]]
+    VkSemaphore GetPresentSemaphore(RT::CommandRecordState const & recordState);
 
     [[nodiscard]]
     VkDescriptorPool CreateDescriptorPool(uint32_t maxSets);

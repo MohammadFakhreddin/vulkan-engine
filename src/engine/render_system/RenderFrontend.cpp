@@ -1424,53 +1424,36 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     void SubmitQueue(
-        VkCommandBuffer commandBuffer,
-        uint32_t waitSemaphoresCount,
-        const VkSemaphore * waitSemaphores,
-        const VkPipelineStageFlags * waitStageFlags,
-        uint32_t signalSemaphoresCount,
-        const VkSemaphore * signalSemaphores,
-        VkFence fence
+        RT::CommandRecordState const & recordState,
+        uint32_t const submitCount,
+        const VkSubmitInfo * submitInfos
     )
     {
-        VkSubmitInfo submitInfo = {};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-        submitInfo.waitSemaphoreCount = waitSemaphoresCount;
-        submitInfo.pWaitSemaphores = waitSemaphores;
-        submitInfo.pWaitDstStageMask = waitStageFlags;
-
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBuffer;
-
-        submitInfo.signalSemaphoreCount = signalSemaphoresCount;
-        submitInfo.pSignalSemaphores = signalSemaphores;
-
         RB::SubmitQueues(
             state->graphicQueue,
-            1,
-            &submitInfo,
-            fence
+            submitCount,
+            submitInfos,
+            GetFence(recordState)
         );
     }
 
     //-------------------------------------------------------------------------------------------------
 
     void PresentQueue(
-        uint32_t const imageIndex,
-        VkSemaphore waitSemaphore,
-        VkSwapchainKHR swapChain
+        RT::CommandRecordState const & recordState,
+        uint32_t waitSemaphoresCount,
+        const VkSemaphore * waitSemaphores
     )
     {
         // Present drawn image
         // Note: semaphore here is not strictly necessary, because commands are processed in submission order within a single queue
         VkPresentInfoKHR presentInfo = {};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-        presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = &waitSemaphore;
+        presentInfo.waitSemaphoreCount = waitSemaphoresCount;
+        presentInfo.pWaitSemaphores = waitSemaphores;
         presentInfo.swapchainCount = 1;
-        presentInfo.pSwapchains = &swapChain;
-        presentInfo.pImageIndices = &imageIndex;
+        presentInfo.pSwapchains = &state->displayRenderPass.GetSwapChainImages().swapChain;
+        presentInfo.pImageIndices = &recordState.imageIndex;
 
         // TODO Move to renderBackend
         auto const res = vkQueuePresentKHR(state->presentQueue, &presentInfo);
@@ -1490,14 +1473,6 @@ namespace MFA::RenderFrontend
     {
         return &state->displayRenderPass;
     }
-
-    //-------------------------------------------------------------------------------------------------
-
-    /*void DestroySyncObjects(RT::SyncObjects const & syncObjects)
-    {
-        DeviceWaitIdle();
-        RB::DestroySyncObjects(state->logicalDevice.device, syncObjects);
-    }*/
 
     //-------------------------------------------------------------------------------------------------
 
@@ -1578,9 +1553,9 @@ namespace MFA::RenderFrontend
 
     void ResetQueryPool(
         RT::CommandRecordState const & recordState,
-        VkQueryPool queryPool,
-        uint32_t queryCount,
-        uint32_t firstQueryIndex
+        const VkQueryPool queryPool,
+        uint32_t const queryCount,
+        uint32_t const firstQueryIndex
     )
     {
         RB::ResetQueryPool(
@@ -1593,14 +1568,21 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    VkCommandBuffer GetGraphicCommandBuffer(RT::CommandRecordState const & drawPass)
+    VkCommandBuffer GetGraphicCommandBuffer(RT::CommandRecordState const & recordState)
     {
-        return state->graphicCommandBuffer[drawPass.frameIndex];
+        return state->graphicCommandBuffer[recordState.frameIndex];
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    VkCommandBuffer GetComputeCommandBuffer(RT::CommandRecordState const & recordState)
+    {
+        return state->computeCommandBuffer[recordState.frameIndex];
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::CommandRecordState StartGraphicCommandBufferRecording()
+    RT::CommandRecordState AcquireRecordState()
     {
         // TODO: Separate this function into multiple ones
         MFA_ASSERT(GetMaxFramesPerFlight() > state->currentFrame);
@@ -1625,7 +1607,7 @@ namespace MFA::RenderFrontend
 
         // We ignore failed acquire of image because a resize will be triggered at end of pass
         AcquireNextImage(
-            GetPresentationSemaphore(recordState),
+            GetPresentSemaphore(recordState),
             state->displayRenderPass.GetSwapChainImages(),
             recordState.imageIndex
         );
@@ -1635,42 +1617,8 @@ namespace MFA::RenderFrontend
         // Each pipeline has its own set of shader, But we can reuse a pipeline for multiple shaders.
         // For each model we need to record command buffer with our desired pipeline (For example light and objects have different fragment shader)
         // Prepare data for recording command buffers
-        BeginCommandBuffer(GetGraphicCommandBuffer(recordState));
 
         return recordState;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void EndGraphicCommandBufferRecording(RT::CommandRecordState & recordState)
-    {
-        // TODO: Separate this function into multiple ones
-        MFA_ASSERT(recordState.isValid);
-        recordState.isValid = false;
-
-        EndCommandBuffer(GetGraphicCommandBuffer(recordState));
-
-        std::vector<VkSemaphore> const waitSemaphores {GetPresentationSemaphore(recordState)};
-        std::vector<VkPipelineStageFlags> const waitStages { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-        std::vector<VkSemaphore> const signalSemaphores {GetGraphicSemaphore(recordState)};
-
-        // Wait for image to be available and draw
-        SubmitQueue(
-            GetGraphicCommandBuffer(recordState),
-            static_cast<uint32_t>(waitSemaphores.size()),
-            waitSemaphores.data(),
-            waitStages.data(),
-            static_cast<uint32_t>(signalSemaphores.size()),
-            signalSemaphores.data(),
-            GetFence(recordState)
-        );
-
-        // Present drawn image
-        PresentQueue(
-            recordState.imageIndex,
-            GetGraphicSemaphore(recordState),
-            state->displayRenderPass.GetSwapChainImages().swapChain
-        );
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -1682,16 +1630,23 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
     // TODO: RenderFinishIndicator must belong to presentation queue
-    VkSemaphore GetGraphicSemaphore(RT::CommandRecordState const & drawPass)
+    VkSemaphore GetGraphicSemaphore(RT::CommandRecordState const & recordState)
     {
-        return state->graphicSemaphores[drawPass.frameIndex];
+        return state->graphicSemaphores[recordState.frameIndex];
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    VkSemaphore GetPresentationSemaphore(RT::CommandRecordState const & drawPass)
+    VkSemaphore GetComputeSemaphore(RT::CommandRecordState const & recordState)
     {
-        return state->presentSemaphores[drawPass.frameIndex];
+        return state->computeSemaphores[recordState.frameIndex];
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    VkSemaphore GetPresentSemaphore(RT::CommandRecordState const & recordState)
+    {
+        return state->presentSemaphores[recordState.frameIndex];
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -2866,7 +2866,7 @@ namespace MFA::RenderBackend
     void SubmitQueues(
         VkQueue queue,
         uint32_t submitCount,
-        VkSubmitInfo * submitInfos,
+        const VkSubmitInfo * submitInfos,
         VkFence fence
     )
     {

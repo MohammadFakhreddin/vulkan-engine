@@ -444,11 +444,118 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
-    void Render(float const deltaTimeInSec)
+    static void submitQueuesAndPresent(RT::CommandRecordState const & recordState)
     {
-        if (deltaTimeInSec > 0.0f)
+        const auto graphicSemaphore = RF::GetGraphicSemaphore(recordState);
+        const auto computeSemaphore = RF::GetComputeSemaphore(recordState);
+        const auto presentSemaphore = RF::GetPresentSemaphore(recordState);
+
+        std::vector<VkSubmitInfo> submitInfos {};
+
+        //// Submit compute queue
+        std::vector<VkSemaphore> computeSignalSemaphores {computeSemaphore};
+
+        auto computeCommandBuffer = RF::GetComputeCommandBuffer(recordState);
+
+        submitInfos.emplace_back(VkSubmitInfo {
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            .waitSemaphoreCount = 0,
+            .pWaitSemaphores = nullptr,
+            .pWaitDstStageMask = nullptr,
+            .commandBufferCount = 1,
+            .pCommandBuffers = &computeCommandBuffer,
+            .signalSemaphoreCount = static_cast<uint32_t>(computeSignalSemaphores.size()),
+            .pSignalSemaphores = computeSignalSemaphores.data(),
+        });
+
+        // Submit graphic queue
+        std::vector<VkSemaphore> gfxWaitSemaphores {presentSemaphore, computeSemaphore};
+        std::vector<VkPipelineStageFlags> gfxWaitStagesFlags {
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
+        };
+        std::vector<VkSemaphore> gfxSignalSemaphores {graphicSemaphore};
+
+        auto graphicCommandBuffer = RF::GetGraphicCommandBuffer(recordState);
+
+        submitInfos.emplace_back(VkSubmitInfo {
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            .waitSemaphoreCount = static_cast<uint32_t>(gfxWaitSemaphores.size()),
+            .pWaitSemaphores = gfxWaitSemaphores.data(),
+            .pWaitDstStageMask = gfxWaitStagesFlags.data(),
+            .commandBufferCount = 1,
+            .pCommandBuffers = &graphicCommandBuffer,
+            .signalSemaphoreCount = static_cast<uint32_t>(gfxSignalSemaphores.size()),
+            .pSignalSemaphores = gfxSignalSemaphores.data(),
+        });
+        
+        RF::SubmitQueue(
+            recordState,
+            static_cast<uint32_t>(submitInfos.size()),
+            submitInfos.data()
+        );
+
+        RF::PresentQueue(
+            recordState,
+            1,
+            &graphicSemaphore
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    static void recordPresentCommandBuffer(
+        RT::CommandRecordState & recordState,
+        float const deltaTime
+    )
+    {
+        const auto commandBuffer = RF::GetComputeCommandBuffer(recordState);
+
+        RF::BeginCommandBuffer(commandBuffer);
+        
+        RF::EndCommandBuffer(commandBuffer);
+        
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    static void recordGraphicCommandBuffer(
+        RT::CommandRecordState & recordState,
+        float const deltaTime
+    )
+    {
+        const auto commandBuffer = RF::GetGraphicCommandBuffer(recordState);
+
+        RF::BeginCommandBuffer(commandBuffer);
+
+        // Pre render
+        updateCameraBuffer(recordState);
+        updateDirectionalLightsBuffer(recordState);
+        updatePointLightsBuffer(recordState);
+
+        state->preRenderSignal.Emit(recordState, deltaTime);
+
+        state->displayRenderPass->BeginRenderPass(recordState); // Draw pass being invalid means that RF cannot render anything
+
+        state->renderSignal1.Emit(recordState, deltaTime);
+        state->renderSignal2.Emit(recordState, deltaTime);
+        state->renderSignal3.Emit(recordState, deltaTime);
+
+        // TODO: UI System should contain a pipeline and register it instead
+        UI::Render(deltaTime, recordState);
+
+        state->displayRenderPass->EndRenderPass(recordState);
+
+        RF::EndCommandBuffer(commandBuffer);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Render(float const deltaTime)
+    {
+        if (deltaTime > 0.0f)
         {
-            state->currentFps = state->currentFps * 0.9f + (1.0f / deltaTimeInSec) * 0.1f;
+            state->currentFps = state->currentFps * 0.9f + (1.0f / deltaTime) * 0.1f;
         }
 
         if (state->nextActiveSceneIndex != -1)
@@ -457,34 +564,18 @@ namespace MFA::SceneManager
         }
 
         // Start of graphic record
-        auto recordState = RF::StartGraphicCommandBufferRecording();
+        auto recordState = RF::AcquireRecordState();
         if (recordState.isValid == false)
         {
             return;
         }
 
-        // Pre render
-        updateCameraBuffer(recordState);
-        updateDirectionalLightsBuffer(recordState);
-        updatePointLightsBuffer(recordState);
+        recordPresentCommandBuffer(recordState, deltaTime);
 
-        state->preRenderSignal.Emit(recordState, deltaTimeInSec);
+        recordGraphicCommandBuffer(recordState, deltaTime);
 
-        state->displayRenderPass->BeginRenderPass(recordState); // Draw pass being invalid means that RF cannot render anything
-
-        state->renderSignal1.Emit(recordState, deltaTimeInSec);
-        state->renderSignal2.Emit(recordState, deltaTimeInSec);
-        state->renderSignal3.Emit(recordState, deltaTimeInSec);
-
-        // TODO: UI System should contain a pipeline and register it instead
-        UI::Render(deltaTimeInSec, recordState);
-
-        state->displayRenderPass->EndRenderPass(recordState);
-
-        RF::EndGraphicCommandBufferRecording(recordState);
-
-        // End of graphic record
-
+        submitQueuesAndPresent(recordState);
+        
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -17,9 +17,6 @@ project ("MFaEngine" CXX C)
 
 set_property (GLOBAL PROPERTY USE_FOLDERS ON)
 
-set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-
 # OPTION(DEBUG_MODE "Enables debug mode" OFF) # Enabled by default
 # if (DEBUG_MODE)
 #     add_definitions(-D_DEBUG)
@@ -59,6 +56,8 @@ if(WINDOWS)
     add_definitions (/WX)           # Warnings as errors
     add_definitions (-D_CRT_SECURE_NO_WARNINGS)
 else()
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2 -OI")
     # TODO
     # add_definitions(-Werror)
 endif()

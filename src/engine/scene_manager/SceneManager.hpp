@@ -66,7 +66,7 @@ namespace MFA::SceneManager
     void SetActiveScene(int nextSceneIndex);
     void SetActiveScene(char const * name);
     void Update(float deltaTimeInSec);
-    void Render(float deltaTimeInSec);
+    void Render(float deltaTime);
     void OnResize();
 
     void OnUI();            // Can be called optionally for general info about the scenes
