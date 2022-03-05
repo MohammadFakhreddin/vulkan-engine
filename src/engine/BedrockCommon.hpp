@@ -26,6 +26,10 @@
 #include <stddef.h>
 #endif
 
+#ifdef __PLATFORM_LINUX__
+#include <stdint.h>
+#endif
+
 // Do not use this, Use MFA_DEFFER instead
 template <typename F>
 struct Deferrer
