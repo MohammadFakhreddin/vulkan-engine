@@ -3,7 +3,7 @@
 #include "engine/entity_system/Component.hpp"
 #include "engine/BedrockSignal.hpp"
 
-#include <mat4x4.hpp>
+#include <glm/mat4x4.hpp>
 
 namespace MFA
 {

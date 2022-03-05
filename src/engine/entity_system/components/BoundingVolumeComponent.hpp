@@ -2,8 +2,8 @@
 
 #include "engine/entity_system/Component.hpp"
 
-#include <vec3.hpp>
-#include <vec4.hpp>
+#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 
 namespace MFA {
     class CameraComponent;
