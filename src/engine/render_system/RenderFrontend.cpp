@@ -186,6 +186,7 @@ namespace MFA::RenderFrontend
             params.screenWidth,
             params.screenHeight
         );
+        MFA_ASSERT(state->window != nullptr);
         state->isWindowResizable = params.resizable;
 
         if (params.resizable)

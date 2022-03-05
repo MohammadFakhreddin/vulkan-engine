@@ -58,6 +58,7 @@ namespace MFA::RenderBackend
 
     //-------------------------------------------------------------------------------------------------
 
+    // TODO: Ask for full-screen
     MSDL::SDL_Window * CreateWindow(ScreenWidth const screenWidth, ScreenHeight const screenHeight)
     {
         MSDL::SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
@@ -250,6 +251,7 @@ namespace MFA::RenderBackend
         std::vector<char const *> instanceExtensions{};
 
 #ifdef __DESKTOP__
+        MFA_ASSERT(window != nullptr);
         {// Filling sdl extensions
             unsigned int sdl_extenstion_count = 0;
             SDL_Check(MSDL::SDL_Vulkan_GetInstanceExtensions(window, &sdl_extenstion_count, nullptr));

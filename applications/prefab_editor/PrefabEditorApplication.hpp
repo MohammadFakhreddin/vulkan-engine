@@ -2,6 +2,8 @@
 
 #include "Application.hpp"
 
+#include <memory>
+
 class PrefabEditorScene;
 
 class PrefabEditorApplication final : public Application
