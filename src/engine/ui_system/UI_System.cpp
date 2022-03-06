@@ -11,6 +11,7 @@
 #include "engine/BedrockSignal.hpp"
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "engine/asset_system/AssetTypes.hpp"
+#include "engine/scene_manager/SceneManager.hpp"
 
 #include "libs/imgui/imgui.h"
 #include "libs/imgui/imgui_stdlib.h"
@@ -925,7 +926,9 @@ namespace MFA::UI_System
         if (ImGui::Button(label))
         {
             MFA_ASSERT(onPress != nullptr);
-            onPress();
+            SceneManager::AssignMainThreadTask([onPress]()->void{
+                onPress();
+            });
         }
     }
 

@@ -80,9 +80,9 @@ add_definitions(-DGLM_FORCE_DEPTH_ZERO_TO_ONE)
 # There are other compiler options for other SIMD instructions here. Without the compiler flag, I still get a serial executable.
 
 if (LINUX)
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse")
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
 elseif(WINDOWS)
-    ADD_DEFINITIONS(/arch:SSE2)
+    ADD_DEFINITIONS(/arch:AVX2)
 endif ()
 
 set(glm_DIR "libs/include/glm/cmake/glm")
@@ -524,7 +524,7 @@ list(
     "unit_tests/catch.hpp"
     "unit_tests/rlutil.h"
     "unit_tests/testMain.cpp"
-    "unit_tests/engine/testBedrockMatrix.cpp"
+    "unit_tests/engine/testSIMD.cpp"
     "unit_tests/engine/testPath.cpp"
 )
 
@@ -645,7 +645,6 @@ set(link_to_target_sources)
     list(APPEND link_to_target_sources ${UNIT_TEST_SOURCE})
     unset(link_to_target_directories)
     list(APPEND link_to_target_directories 
-        ${WIN_INCLUDE_DIRECTORIES}
         "unit_tests"
     )
     link_to_target(${UNIT_TEST_NAME})
