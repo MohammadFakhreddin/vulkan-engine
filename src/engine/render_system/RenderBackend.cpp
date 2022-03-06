@@ -56,6 +56,14 @@ namespace MFA::RenderBackend
         }
     }
 
+    static void SDL_CheckForError()
+    {
+        std::string error = MSDL::SDL_GetError();
+        if (error.empty() == false) {
+            MFA_LOG_ERROR("SDL Error: %s", error.c_str());
+        }
+    }
+
     //-------------------------------------------------------------------------------------------------
 
     // TODO: Ask for full-screen
@@ -70,6 +78,7 @@ namespace MFA::RenderBackend
             screenWidth, screenHeight,
             MSDL::SDL_WINDOW_SHOWN /*| SDL_WINDOW_FULLSCREEN */ | MSDL::SDL_WINDOW_VULKAN
         );
+        SDL_CheckForError();
         return window;
     }
 
@@ -79,6 +88,7 @@ namespace MFA::RenderBackend
     {
         MFA_ASSERT(window != nullptr);
         MSDL::SDL_DestroyWindow(window);
+        SDL_CheckForError();
     }
 #endif
 
