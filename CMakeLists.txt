@@ -79,7 +79,7 @@ add_definitions(-DGLM_FORCE_DEPTH_ZERO_TO_ONE)
 # On Ubuntu 16.04 with g++ compiler, I will have to use the compiler flag -mavx2 to generate a SIMD executable. 
 # There are other compiler options for other SIMD instructions here. Without the compiler flag, I still get a serial executable.
 
-if (LINUX)
+if (UNIX)
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
 elseif(WINDOWS)
     ADD_DEFINITIONS(/arch:AVX2)
@@ -793,6 +793,7 @@ elseif(MACOSX)
     list(
         APPEND MAC_SOURCE
         "mac/main.mm"
+        "mac/BedrockPath.mm"
     )
 
     list(APPEND MAC_INCLUDE_DIRECTORIES 
@@ -826,6 +827,16 @@ elseif(MACOSX)
     )
     link_to_target(${PREFAB_EDITOR})
     target_compile_definitions(${PREFAB_EDITOR} PRIVATE TECHDEMO)
+
+    # Unit-tests
+    unset(link_to_target_sources)
+    list(APPEND link_to_target_sources ${UNIT_TEST_SOURCE} "mac/BedrockPath.mm")
+    unset(link_to_target_directories)
+    list(APPEND link_to_target_directories 
+        "unit_tests"
+    )
+    link_to_target(${UNIT_TEST_NAME})
+    target_compile_definitions(${UNIT_TEST_NAME} PRIVATE UNIT_TEST)
 
 elseif(IPHONE)
 

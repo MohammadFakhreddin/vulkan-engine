@@ -65,21 +65,17 @@ namespace MFA::Path
 
     bool RelativeToAssetFolder(std::string const & address, std::string & outRelativePath)
     {
-        bool success = false;
-        static const std::regex addressRegex(".*assets/.*");
-        if (std::regex_match(address.c_str(), addressRegex))
+        static const std::regex matchRegex(".*assets/.*");
+        static const std::regex replaceRegex(".*assets/");
+
+        if (std::regex_match(address.c_str(), matchRegex))
         {
-            outRelativePath = std::filesystem::relative(address, state->assetsPath).string();
-            success = true;
-            if (outRelativePath.empty())
-            {
-                success = false;
-            }
+            outRelativePath = std::regex_replace(address, replaceRegex, "");
+            return true;
         }
-        if (success == false){
-            outRelativePath = address;
-        }
-        return success;
+        
+        outRelativePath = address;
+        return false;
     }
 
     //-------------------------------------------------------------------------------------------------

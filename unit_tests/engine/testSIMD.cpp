@@ -20,7 +20,7 @@ TEST_CASE("SIMD TestCase1", "[SIMD][0]") {
     // Add the two vectors, interpreting the bits as 4 double-precision
     // floats.
     __m256d c = _mm256_add_pd(a, b);
-
+    
     double const * values = reinterpret_cast<double *>(&c);
 
     printf("%f %f %f %f\n", values[3], values[2], values[1], values[0]);

@@ -18,7 +18,7 @@ TEST_CASE("Path TestCase1", "[Path][0]") {
     std::string relativePath {};
     bool const success = Path::RelativeToAssetFolder(absolutePath, relativePath);
     REQUIRE(success == true);
-    REQUIRE((relativePath == "models/mira/scene.gltf" || relativePath == "models\\mira\\scene.gltf"));
+    REQUIRE(relativePath == "models/mira/scene.gltf");
 
     Path::Shutdown();
 }
