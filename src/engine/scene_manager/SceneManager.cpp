@@ -201,9 +201,6 @@ namespace MFA::SceneManager
         state->updateSignal.Register([](float const deltaTime)->void{
             EntitySystem::Update(deltaTime);
         });
-        state->renderSignal3.Register([](RT::CommandRecordState & recordState, float const deltaTime)->void{
-           UI::Render(deltaTime, recordState); 
-        });
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -546,6 +543,8 @@ namespace MFA::SceneManager
         state->renderSignal1.Emit(recordState, deltaTime);
         state->renderSignal2.Emit(recordState, deltaTime);
         state->renderSignal3.Emit(recordState, deltaTime);
+
+        UI::Render(deltaTime, recordState);
 
         state->displayRenderPass->EndRenderPass(recordState);
 

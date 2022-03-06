@@ -339,6 +339,7 @@ namespace MFA::UI_System
             pipelineOptions.dynamicStateCreateInfo = &dynamicStateCreateInfo;
             pipelineOptions.depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
             pipelineOptions.depthStencil.depthTestEnable = false;
+            pipelineOptions.depthStencil.depthWriteEnable = false;
             pipelineOptions.depthStencil.depthBoundsTestEnable = false;
             pipelineOptions.depthStencil.stencilTestEnable = false;
             pipelineOptions.colorBlendAttachments.blendEnable = VK_TRUE;
