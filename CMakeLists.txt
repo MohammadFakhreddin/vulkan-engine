@@ -79,9 +79,10 @@ add_definitions(-DGLM_FORCE_DEPTH_ZERO_TO_ONE)
 # On Ubuntu 16.04 with g++ compiler, I will have to use the compiler flag -mavx2 to generate a SIMD executable. 
 # There are other compiler options for other SIMD instructions here. Without the compiler flag, I still get a serial executable.
 
-add_definitions(-DGLM_FORCE_SILENT_WARNINGS)
 if (LINUX)
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse")
+elseif(WINDOWS)
+    ADD_DEFINITIONS(/arch:SSE2)
 endif ()
 
 set(glm_DIR "libs/include/glm/cmake/glm")

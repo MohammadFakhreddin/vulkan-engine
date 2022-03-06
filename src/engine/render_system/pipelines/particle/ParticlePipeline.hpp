@@ -21,7 +21,7 @@ namespace MFA
 
         PIPELINE_PROPS(
             ParticlePipeline,
-            EventTypes::RenderEvent | EventTypes::PostRenderEvent,
+            EventTypes::RenderEvent | EventTypes::UpdateEvent,
             RenderOrder::AfterEverything
         )
 
@@ -33,7 +33,7 @@ namespace MFA
         
         void render(RT::CommandRecordState & recordState, float deltaTime) override;
 
-        void postRender(float deltaTimeInSec) override;
+        void update(float deltaTimeInSec) override;
 
         std::shared_ptr<EssenceBase> createEssenceWithModel(
             std::shared_ptr<AssetSystem::Model> const & cpuModel,

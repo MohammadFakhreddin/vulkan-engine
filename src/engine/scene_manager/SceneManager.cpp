@@ -72,7 +72,8 @@ namespace MFA::SceneManager
 
     using PreRenderSignal = Signal<RT::CommandRecordState &, float>;
     using RenderSignal = Signal<RT::CommandRecordState &, float>;
-    using PostRenderSignal = Signal<float>;
+    using UpdateSignal = Signal<float>;
+    using ComputeSignal = Signal<RT::CommandRecordState &, float>;
 
     struct State
     {
@@ -95,7 +96,8 @@ namespace MFA::SceneManager
         RenderSignal renderSignal1 {};
         RenderSignal renderSignal2 {};
         RenderSignal renderSignal3 {};
-        PostRenderSignal postRenderSignal{};
+        UpdateSignal updateSignal{};
+        ComputeSignal computeSignal{};
 
         std::vector<std::weak_ptr<PointLightComponent>> pointLightComponents{};
         std::vector<std::weak_ptr<DirectionalLightComponent>> directionalLightComponents{};
@@ -134,7 +136,7 @@ namespace MFA::SceneManager
             state->activeScene->Shutdown();
             if (state->activeScene->RequiresUpdate())
             {
-                state->postRenderSignal.UnRegister(state->activeSceneListenerId);
+                state->updateSignal.UnRegister(state->activeSceneListenerId);
             }
         }
 
@@ -156,7 +158,7 @@ namespace MFA::SceneManager
         state->activeScene->Init();
         if (state->activeScene->RequiresUpdate())
         {
-            state->activeSceneListenerId = state->postRenderSignal.Register(
+            state->activeSceneListenerId = state->updateSignal.Register(
             [](float const deltaTime)->void
             {
                 state->activeScene->Update(deltaTime);
@@ -193,13 +195,15 @@ namespace MFA::SceneManager
             startNextActiveScene();
         }
 
-        state->postRenderSignal.Register([](float const deltaTime)->void{
+        state->updateSignal.Register([](float const deltaTime)->void{
             UI::PostRender(deltaTime);
         });
-        state->postRenderSignal.Register([](float const deltaTime)->void{
+        state->updateSignal.Register([](float const deltaTime)->void{
             EntitySystem::Update(deltaTime);
         });
-        
+        state->renderSignal3.Register([](RT::CommandRecordState & recordState, float const deltaTime)->void{
+           UI::Render(deltaTime, recordState); 
+        });
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -313,74 +317,69 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
+    #define UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(signal, event, listenerId, delegateFunc)         \
+    if (                                                                                            \
+        pipeline->mIsActive &&                                                                      \
+        (requiredEvents & BasePipeline::EventTypes::event) > 0 &&                                   \
+        pipeline->mAllVariantsList.empty() == false                                                 \
+    )                                                                                               \
+    {                                                                                               \
+        if (pipeline->listenerId == InvalidSignalId)                                                \
+        {                                                                                           \
+            pipeline->listenerId = (signal).Register(delegateFunc);                                 \
+        }                                                                                           \
+    } else if (pipeline->listenerId != InvalidSignalId)                                             \
+    {                                                                                               \
+        (signal).UnRegister(pipeline->listenerId);                                                  \
+        pipeline->listenerId = InvalidSignalId;                                                     \
+    }                                                                                               \
+
     void UpdatePipeline(BasePipeline * pipeline)
     {
         MFA_ASSERT(pipeline != nullptr);
         auto const requiredEvents = pipeline->requiredEvents();
 
         // Pre-render listener
-        if (
-            pipeline->mIsActive &&
-            (requiredEvents & BasePipeline::EventTypes::PreRenderEvent) > 0 &&
-            pipeline->mAllVariantsList.empty() == false
-        )
-        {
-            if (pipeline->mPreRenderListenerId == InvalidSignalId)
-            {
-                pipeline->mPreRenderListenerId = state->preRenderSignal.Register(
-                [pipeline](RT::CommandRecordState & commandRecord, float const deltaTime)->void{
-                    pipeline->preRender(commandRecord, deltaTime);           
-                });
+        UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(
+            state->preRenderSignal,
+            PreRenderEvent,
+            mPreRenderListenerId,
+            [pipeline](RT::CommandRecordState & commandRecord, float const deltaTime)->void{
+                pipeline->preRender(commandRecord, deltaTime);           
             }
-        } else if (pipeline->mPreRenderListenerId != InvalidSignalId)
-        {
-            state->preRenderSignal.UnRegister(pipeline->mPreRenderListenerId);
-            pipeline->mPreRenderListenerId = InvalidSignalId;
-        }
+        )
 
         // Render listener
-        if (
-            pipeline->mIsActive &&
-            (requiredEvents & BasePipeline::EventTypes::RenderEvent) > 0 &&
-            pipeline->mAllVariantsList.empty() == false
-        )
-        {
-            if (pipeline->mRenderListenerId == InvalidSignalId)
-            {
-                RenderSignal * signal = getRenderSignal(pipeline);
-
-                pipeline->mRenderListenerId = signal->Register(
-                [pipeline](RT::CommandRecordState & commandRecord, float const deltaTime)->void{
-                    pipeline->render(commandRecord, deltaTime);           
-                });
+        auto * renderSignal = getRenderSignal(pipeline);
+        MFA_ASSERT(renderSignal != nullptr);
+        UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(
+            *renderSignal,
+            RenderEvent,
+            mRenderListenerId,
+            [pipeline](RT::CommandRecordState & commandRecord, float const deltaTime)->void{
+                pipeline->render(commandRecord, deltaTime);           
             }
-        } else if (pipeline->mRenderListenerId != InvalidSignalId)
-        {
-            RenderSignal * signal = getRenderSignal(pipeline);
-
-            signal->UnRegister(pipeline->mRenderListenerId);
-            pipeline->mRenderListenerId = InvalidSignalId;
-        }
+        )
 
         // Post render
-        if (
-            pipeline->mIsActive &&
-            (requiredEvents & BasePipeline::EventTypes::PostRenderEvent) > 0 &&
-            pipeline->mAllVariantsList.empty() == false
-        )
-        {
-            if (pipeline->mPostRenderListenerId == InvalidSignalId)
-            {
-                pipeline->mPostRenderListenerId = state->postRenderSignal.Register(
-                [pipeline](float const deltaTime)->void{
-                    pipeline->postRender(deltaTime);           
-                });
+        UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(
+            state->updateSignal,
+            UpdateEvent,
+            mUpdateListenerId,
+            [pipeline](float const deltaTime)->void{
+                pipeline->update(deltaTime);           
             }
-        } else if (pipeline->mPostRenderListenerId != InvalidSignalId)
-        {
-            state->postRenderSignal.UnRegister(pipeline->mPostRenderListenerId);
-            pipeline->mPostRenderListenerId = InvalidSignalId;
-        }
+        )
+
+        // Compute
+        UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(
+            state->computeSignal,
+            ComputeEvent,
+            mComputeListenerId,
+            [pipeline](RT::CommandRecordState & commandRecord, float const deltaTime)->void{
+                pipeline->compute(commandRecord, deltaTime);           
+            }
+        )
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -430,8 +429,13 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
-    void Update(float const deltaTimeInSec)
+    void Update(float const deltaTime)
     {
+        if (deltaTime > 0.0f)
+        {
+            state->currentFps = state->currentFps * 0.9f + (1.0f / deltaTime) * 0.1f;
+        }
+
         for (int i = 0; i < static_cast<int>(state->nextFrameTasks.size()); ++i)
         {
             MFA_ASSERT(state->nextFrameTasks[i] != nullptr);
@@ -439,7 +443,7 @@ namespace MFA::SceneManager
         }
         state->nextFrameTasks.clear();
 
-        state->postRenderSignal.EmitMultiThread(deltaTimeInSec);
+        state->updateSignal.EmitMultiThread(deltaTime);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -504,7 +508,7 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
-    static void recordPresentCommandBuffer(
+    static void recordComputeCommandBuffer(
         RT::CommandRecordState & recordState,
         float const deltaTime
     )
@@ -512,7 +516,9 @@ namespace MFA::SceneManager
         const auto commandBuffer = RF::GetComputeCommandBuffer(recordState);
 
         RF::BeginCommandBuffer(commandBuffer);
-        
+
+        state->computeSignal.Emit(recordState, deltaTime);
+
         RF::EndCommandBuffer(commandBuffer);
         
     }
@@ -532,7 +538,7 @@ namespace MFA::SceneManager
         updateCameraBuffer(recordState);
         updateDirectionalLightsBuffer(recordState);
         updatePointLightsBuffer(recordState);
-
+        // TODO: We can emit multi-thread and then merge commands using VK_ExecuteCommands
         state->preRenderSignal.Emit(recordState, deltaTime);
 
         state->displayRenderPass->BeginRenderPass(recordState); // Draw pass being invalid means that RF cannot render anything
@@ -540,9 +546,6 @@ namespace MFA::SceneManager
         state->renderSignal1.Emit(recordState, deltaTime);
         state->renderSignal2.Emit(recordState, deltaTime);
         state->renderSignal3.Emit(recordState, deltaTime);
-
-        // TODO: UI System should contain a pipeline and register it instead
-        UI::Render(deltaTime, recordState);
 
         state->displayRenderPass->EndRenderPass(recordState);
 
@@ -553,10 +556,6 @@ namespace MFA::SceneManager
 
     void Render(float const deltaTime)
     {
-        if (deltaTime > 0.0f)
-        {
-            state->currentFps = state->currentFps * 0.9f + (1.0f / deltaTime) * 0.1f;
-        }
 
         if (state->nextActiveSceneIndex != -1)
         {
@@ -570,7 +569,7 @@ namespace MFA::SceneManager
             return;
         }
 
-        recordPresentCommandBuffer(recordState, deltaTime);
+        recordComputeCommandBuffer(recordState, deltaTime);
 
         recordGraphicCommandBuffer(recordState, deltaTime);
 

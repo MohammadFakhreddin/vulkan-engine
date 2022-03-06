@@ -86,7 +86,7 @@ namespace MFA
         
         PIPELINE_PROPS(
             PBRWithShadowPipelineV2,
-            EventTypes::PreRenderEvent | EventTypes::RenderEvent | EventTypes::PostRenderEvent,
+            EventTypes::PreRenderEvent | EventTypes::RenderEvent | EventTypes::UpdateEvent,
             RenderOrder::BeforeEverything
         );
 
@@ -98,7 +98,7 @@ namespace MFA
 
         void render(RT::CommandRecordState & recordState, float deltaTimeInSec) override;
 
-        void postRender(float deltaTimeInSec) override;
+        void update(float deltaTimeInSec) override;
 
         void onResize() override;
 

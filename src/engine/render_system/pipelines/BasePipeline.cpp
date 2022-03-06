@@ -42,7 +42,12 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::postRender(float deltaTime)
+    void BasePipeline::update(float deltaTime)
+    {}
+
+    //-------------------------------------------------------------------------------------------------
+
+    void BasePipeline::compute(RT::CommandRecordState & recordState, float deltaTime)
     {}
 
     //-------------------------------------------------------------------------------------------------

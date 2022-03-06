@@ -237,9 +237,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::postRender(float const deltaTimeInSec)
+    void PBRWithShadowPipelineV2::update(float const deltaTimeInSec)
     {
-        BasePipeline::postRender(deltaTimeInSec);
+        BasePipeline::update(deltaTimeInSec);
         postRenderVariants(deltaTimeInSec);
     }
 

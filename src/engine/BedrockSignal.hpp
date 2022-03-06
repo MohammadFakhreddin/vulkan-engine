@@ -75,11 +75,10 @@ namespace MFA
             std::vector<Listener> listeners {};
             {
                 SCOPE_LOCK(mLock)
-                for (int i = static_cast<int>(mSlots.size()) - 1; i >= 0; --i)
+                for (auto & slot : mSlots)
                 {
-                    const auto & slot = mSlots[i];
-                    MFA_ASSERT(mSlots[i].listener != nullptr);
-                    listeners.emplace_back(mSlots[i].listener);
+                    MFA_ASSERT(slot.listener != nullptr);
+                    listeners.emplace_back(slot.listener);
                 }
             }
 
@@ -94,11 +93,10 @@ namespace MFA
             std::vector<Listener> listeners {};
             {
                 SCOPE_LOCK(mLock)
-                for (int i = static_cast<int>(mSlots.size()) - 1; i >= 0; --i)
+                for (auto & slot : mSlots)
                 {
-                    const auto & slot = mSlots[i];
-                    MFA_ASSERT(mSlots[i].listener != nullptr);
-                    listeners.emplace_back(mSlots[i].listener);
+                    MFA_ASSERT(slot.listener != nullptr);
+                    listeners.emplace_back(slot.listener);
                 }
             }
 

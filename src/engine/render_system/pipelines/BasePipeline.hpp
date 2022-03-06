@@ -59,7 +59,8 @@ namespace MFA
             static constexpr EventType EmptyEvent = 0b0;
             static constexpr EventType PreRenderEvent = 0b1;
             static constexpr EventType RenderEvent = 0b10;
-            static constexpr EventType PostRenderEvent = 0b100;
+            static constexpr EventType UpdateEvent = 0b100;
+            static constexpr EventType ComputeEvent = 0b1000;
             // Resize is not included here because every pipeline requires the resize to be called
         };
 
@@ -95,7 +96,12 @@ namespace MFA
             float deltaTime
         );
 
-        virtual void postRender(float deltaTime);
+        virtual void update(float deltaTime);
+
+        virtual void compute(
+            RT::CommandRecordState & recordState,
+            float deltaTime
+        );
 
         bool addEssence(std::shared_ptr<EssenceBase> const & essence);
 
@@ -159,7 +165,8 @@ namespace MFA
 
         SignalId mPreRenderListenerId = -1;
         SignalId mRenderListenerId = -1;
-        SignalId mPostRenderListenerId = -1;
+        SignalId mUpdateListenerId = -1;
+        SignalId mComputeListenerId = -1;
 
         bool mIsActive = true;
     

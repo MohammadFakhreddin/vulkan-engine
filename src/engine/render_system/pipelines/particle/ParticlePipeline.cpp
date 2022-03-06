@@ -99,14 +99,14 @@ namespace MFA
     
     //-------------------------------------------------------------------------------------------------
 
-    void ParticlePipeline::postRender(float const deltaTimeInSec)
+    void ParticlePipeline::update(float const deltaTimeInSec)
     {
         if (mAllEssencesList.empty())
         {
             return;
         }
 
-        BasePipeline::postRender(deltaTimeInSec);
+        BasePipeline::update(deltaTimeInSec);
 
         for (auto & essenceAndVariants : mEssenceAndVariantsMap)
         {
