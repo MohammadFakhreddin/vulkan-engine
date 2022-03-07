@@ -770,18 +770,37 @@ elseif(MACOSX)
             MACOSX_FRAMEWORK_IDENTIFIER "co.radx.${executable_name}"
         )
 
-        # Copying assets to correct place
-        add_custom_command(
-            TARGET ${executable_name} POST_BUILD        # Adds a post-build event to MyTest
-            COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Debug/${executable_name}.app/Contents/Resources/data/"
-            COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Debug/${executable_name}.app/Contents/Resources/data/"
-        )
+        # TODO: Clean this part
+        if(CMAKE_GENERATOR STREQUAL Xcode)
+            # Copying assets to correct place
+            add_custom_command(
+                TARGET ${executable_name} POST_BUILD        # Adds a post-build event to MyTest
+                COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Debug/${executable_name}.app/Contents/Resources/data/"
+                COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Debug/${executable_name}.app/Contents/Resources/data/"
+            )
 
-        add_custom_command(
-            TARGET ${executable_name} POST_BUILD        # Adds a post-build event to MyTest
-            COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Release/${executable_name}.app/Contents/Resources/data/"
-            COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Release/${executable_name}.app/Contents/Resources/data/"
-        )
+            add_custom_command(
+                TARGET ${executable_name} POST_BUILD        # Adds a post-build event to MyTest
+                COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Release/${executable_name}.app/Contents/Resources/data/"
+                COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Release/${executable_name}.app/Contents/Resources/data/"
+            )
+        else()
+            add_custom_command(
+                TARGET ${executable_name} POST_BUILD        # Adds a post-build event to MyTest
+                COMMAND mkdir -p "${CMAKE_BINARY_DIR}/${executable_name}.app/Contents/Resources/data/"
+                COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/${executable_name}.app/Contents/Resources/data/"
+            )
+
+            add_custom_command(
+                TARGET ${executable_name} POST_BUILD        # Adds a post-build event to MyTest
+                COMMAND mkdir -p "${CMAKE_BINARY_DIR}/${executable_name}.app/Contents/Resources/data/"
+                COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/${executable_name}.app/Contents/Resources/data/"
+            )
+        endif()
+
+        if(CMAKE_GENERATOR STREQUAL Xcode)
+            target_compile_definitions(${executable_name} PRIVATE XCODE)
+        endif()
 
     endfunction()
 

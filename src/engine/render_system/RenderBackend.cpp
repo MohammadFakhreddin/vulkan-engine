@@ -1783,7 +1783,8 @@ namespace MFA::RenderBackend
     {
         MFA_ASSERT(device != nullptr);
         std::shared_ptr<RT::GpuShader> gpuShader = nullptr;
-        if (cpuShader->isValid())
+        MFA_ASSERT(cpuShader != nullptr);
+        if (MFA_VERIFY(cpuShader->isValid()))
         {
             auto const & shaderCode = cpuShader->compiledShaderCode->memory;
 

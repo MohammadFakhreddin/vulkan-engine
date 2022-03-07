@@ -4,6 +4,8 @@
 
 #include "catch.hpp"
 
+#include <glm/glm.hpp>
+
 #include <immintrin.h>
 
 //======================================================================
@@ -28,5 +30,16 @@ TEST_CASE("SIMD TestCase1", "[SIMD][0]") {
     CHECK(values[2] == 4.0);
     CHECK(values[1] == 6.0);
     CHECK(values[0] == 8.0);
+}
+
+TEST_CASE("SIMD TestCase2 DotProduct", "[SIMD][1]")
+{
+    glm::vec4 vec1 {1.0f, 2.0f, 5.0f, 1.0f};
+    glm::vec4 vec2 {5.0f, 3.0f, 4.0f, 1.0f};
+    __m256 const a = _mm256_set_ps(vec1[0], vec1[1], vec1[2], vec1[3], 0.0f, 0.0f, 0.0f, 0.0f);
+    __m256 const b = _mm256_set_ps(vec2[0], vec2[1], vec2[2], vec2[3], 0.0f, 0.0f, 0.0f, 0.0f);
+    auto const dotProd = _mm256_dp_ps(a, b, 0b11111000);
+    auto const * dotProdElems = reinterpret_cast<float const *>(&dotProd);
+    CHECK(dotProdElems[7] == glm::dot(vec1, vec2));
 }
 
