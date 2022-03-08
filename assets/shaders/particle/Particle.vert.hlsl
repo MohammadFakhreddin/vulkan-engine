@@ -4,10 +4,18 @@ struct VSIn {
     // Per vertex data
     float3 localPosition : SV_POSITION;
     int textureIndex;
-    // float2 uv : TEXCOORD0;
     float3 color : COLOR0;
     float alpha : COLOR1;
     float pointSize;
+
+    // State variables
+    float remainingLifeInSec = 0.0f;
+    float totalLifeInSec = 0.0f;
+    float placeholder0;
+    
+    float3 initialLocalPosition{};
+    float speed = 0.0f;
+
     // Per instance data
     float3 instancePosition: SV_POSITION;
 };
@@ -23,7 +31,7 @@ struct VSOut {
     [[vk::builtin("PointSize")]] float PSize : PSIZE;
 };
 
-CAMERA_BUFFER_CUSTOM_BINDING(cameraBuffer, b0, space0)
+ConstantBuffer <CameraData> cameraBuffer: register(b0, space);
 
 
 VSOut main(VSIn input) {

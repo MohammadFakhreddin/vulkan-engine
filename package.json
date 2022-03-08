@@ -16,6 +16,7 @@
         
         "particle-vert": "glslc -g -fshader-stage=vert assets/shaders/particle/Particle.vert.hlsl -o assets/shaders/particle/Particle.vert.spv",
         "particle-frag": "glslc -g -fshader-stage=frag assets/shaders/particle/Particle.frag.hlsl -o assets/shaders/particle/Particle.frag.spv",
+        "particle-comp": "glslc -g -fshader-stage=comp assets/shaders/particle/Particle.comp.hlsl -o assets/shaders/particle/Particle.comp.spv",
 
         "depth-pre-pass-vert": "glslc -g -fshader-stage=vert assets/shaders/depth_pre_pass/DepthPrePass.vert.hlsl  -o assets/shaders/depth_pre_pass/DepthPrePass.vert.spv",
         "depth-pre-pass-frag": "glslc -g -fshader-stage=frag assets/shaders/depth_pre_pass/DepthPrePass.frag.hlsl  -o assets/shaders/depth_pre_pass/DepthPrePass.frag.spv",
