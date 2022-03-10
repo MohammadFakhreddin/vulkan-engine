@@ -166,7 +166,7 @@ MFA::RenderTypes::PipelineGroup::PipelineGroup(
 
 MFA::RenderTypes::PipelineGroup::~PipelineGroup()
 {
-    RF::DestroyPipelineGroup(*this);
+    RF::DestroyPipeline(*this);
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -28,6 +28,7 @@ namespace MFA::AssetSystem
         Vertex,
         Geometry,
         Fragment,
+        Compute
     };
 
     enum class TextureFormat : uint8_t

@@ -489,11 +489,7 @@ namespace MFA::RenderBackend
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers = &commandBuffer;
-    #ifdef __ANDROID__
-        VK_Check(vkQueueSubmit(graphicQueue, 1, &submit_info, 0));
-    #else
-        VK_Check(vkQueueSubmit(graphicQueue, 1, &submit_info, nullptr));
-    #endif
+        VK_Check(vkQueueSubmit(graphicQueue, 1, &submit_info, VK_NULL));
         VK_Check(vkQueueWaitIdle(graphicQueue));
 
         vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
@@ -1816,7 +1812,30 @@ namespace MFA::RenderBackend
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<RT::PipelineGroup> CreatePipelineGroup(
+    VkPipelineLayout CreatePipelineLayout(
+        VkDevice device,
+        uint32_t setLayoutCount,
+        const VkDescriptorSetLayout * pSetLayouts,
+        uint32_t pushConstantRangeCount,
+        const VkPushConstantRange * pPushConstantRanges
+    )
+    {
+        VkPipelineLayoutCreateInfo createInfo = {};
+        createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        createInfo.setLayoutCount = setLayoutCount;
+        createInfo.pSetLayouts = pSetLayouts; // Array of descriptor set layout, Order matter when more than 1
+        createInfo.pushConstantRangeCount = pushConstantRangeCount;
+        createInfo.pPushConstantRanges = pPushConstantRanges;
+
+        VkPipelineLayout pipelineLayout{};
+        VK_Check(vkCreatePipelineLayout(device, &createInfo, nullptr, &pipelineLayout));
+
+        return pipelineLayout;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<RT::PipelineGroup> CreateGraphicPipeline(
         VkDevice device,
         uint8_t shaderStagesCount,
         RT::GpuShader const ** shaderStages,
@@ -1826,14 +1845,13 @@ namespace MFA::RenderBackend
         VkVertexInputAttributeDescription * attributeDescriptionData,
         VkExtent2D swapChainExtent,
         VkRenderPass renderPass,
-        uint32_t descriptorSetLayoutCount,
-        VkDescriptorSetLayout const * descriptorSetLayouts,
+        VkPipelineLayout pipelineLayout,
         RT::CreateGraphicPipelineOptions const & options
     )
     {
         MFA_ASSERT(shaderStages);
         MFA_ASSERT(renderPass);
-        MFA_ASSERT(descriptorSetLayouts);
+        MFA_ASSERT(pipelineLayout);
         // Set up shader stage info
         std::vector<VkPipelineShaderStageCreateInfo> shaderStagesCreateInfos(shaderStagesCount);
         for (uint8_t i = 0; i < shaderStagesCount; i++)
@@ -1923,18 +1941,6 @@ namespace MFA::RenderBackend
         color_blend_create_info.blendConstants[2] = 0.0f;
         color_blend_create_info.blendConstants[3] = 0.0f;
 
-        MFA_LOG_INFO("Created descriptor layout");
-
-        VkPipelineLayoutCreateInfo layout_create_info = {};
-        layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        layout_create_info.setLayoutCount = descriptorSetLayoutCount;
-        layout_create_info.pSetLayouts = descriptorSetLayouts; // Array of descriptor set layout, Order matter when more than 1
-        layout_create_info.pushConstantRangeCount = options.pushConstantsRangeCount;
-        layout_create_info.pPushConstantRanges = options.pushConstantRanges;
-
-        VkPipelineLayout pipelineLayout{};
-        VK_Check(vkCreatePipelineLayout(device, &layout_create_info, nullptr, &pipelineLayout));
-
         VkPipelineDynamicStateCreateInfo * dynamicStateCreateInfoRef = nullptr;
         VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo{};
         std::vector<VkDynamicState> dynamicStates{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
@@ -1974,29 +1980,54 @@ namespace MFA::RenderBackend
         pipelineCreateInfo.pDynamicState = dynamicStateCreateInfoRef;
 
         VkPipeline pipeline{};
-    #ifdef __ANDROID__
         VK_Check(vkCreateGraphicsPipelines(
             device,
-            0,
+            VK_NULL,
             1,
             &pipelineCreateInfo,
             nullptr,
             &pipeline
         ));
-    #else
-        VK_Check(vkCreateGraphicsPipelines(
+
+        auto pipelineGroup = std::make_shared<RT::PipelineGroup>(
+            pipelineLayout,
+            pipeline
+        );
+        MFA_ASSERT(pipelineGroup->isValid());
+
+        return pipelineGroup;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<RT::PipelineGroup> CreateComputePipeline(
+        VkDevice device,
+        RT::GpuShader const & shaderStage,
+        VkPipelineLayout pipelineLayout
+    )
+    {
+        VkPipelineShaderStageCreateInfo const shaderStageCreateInfo {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+            .stage = shaderStage.stageFlags,
+            .module = shaderStage.shaderModule,
+        };
+
+        VkComputePipelineCreateInfo const pipelineCreateInfo {
+            .stage = shaderStageCreateInfo,
+            .layout = pipelineLayout
+        };
+
+        VkPipeline pipeline{};
+        VK_Check(vkCreateComputePipelines(
             device,
-            nullptr,
+            VK_NULL,
             1,
             &pipelineCreateInfo,
-            nullptr,
+            VK_NULL,
             &pipeline
         ));
-    #endif
 
-        MFA_LOG_INFO("Created graphics pipeline");
-
-        auto const pipelineGroup = std::make_shared<RT::PipelineGroup>(
+        auto pipelineGroup = std::make_shared<RT::PipelineGroup>(
             pipelineLayout,
             pipeline
         );
@@ -2096,6 +2127,8 @@ namespace MFA::RenderBackend
             return VK_SHADER_STAGE_FRAGMENT_BIT;
         case AssetSystem::Shader::Stage::Geometry:
             return VK_SHADER_STAGE_GEOMETRY_BIT;
+        case AS::Shader::Stage::Compute:
+            return VK_SHADER_STAGE_COMPUTE_BIT;
         case AssetSystem::Shader::Stage::Invalid:
         default:
             MFA_CRASH("Unhandled shader stage");
@@ -2577,26 +2610,16 @@ namespace MFA::RenderBackend
     {
         MFA_ASSERT(device != nullptr);
         MFA_VK_VALID_ASSERT(imageAvailabilitySemaphore);
-    #ifdef __ANDROID__
+
         return vkAcquireNextImageKHR(
             device,
             swapChainGroup.swapChain,
             UINT64_MAX,
             imageAvailabilitySemaphore,
-            0,
+            VK_NULL,
             &outImageIndex
         );
-    #else
-        return vkAcquireNextImageKHR(
-                device,
-                swapChainGroup.swapChain,
-                UINT64_MAX,
-                imageAvailabilitySemaphore,
-                nullptr,
-                &outImageIndex
-        );
-    #endif
-
+    
     }
 
     //-------------------------------------------------------------------------------------------------

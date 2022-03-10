@@ -59,7 +59,8 @@ namespace MFA
 
         createPerFrameDescriptorSets();
 
-        createPipeline();
+        createGraphicPipeline();
+        createComputePipeline();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -83,7 +84,7 @@ namespace MFA
 
         BasePipeline::render(recordState, deltaTimeInSec);
 
-        RF::BindPipeline(recordState, *mPipeline);
+        RF::BindPipeline(recordState, *mGraphicPipeline);
 
         RF::BindDescriptorSet(
             recordState,
@@ -161,6 +162,8 @@ namespace MFA
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         });
 
+        // TODO: Update layout with compute data
+
         mPerFrameDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
             bindings.data()
@@ -180,6 +183,8 @@ namespace MFA
             .descriptorCount = MAXIMUM_TEXTURE_PER_ESSENCE,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         });
+
+        // TODO: Update layout with compute data
 
         mPerEssenceDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
@@ -277,11 +282,22 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ParticlePipeline::createPipeline()
+    void ParticlePipeline::createComputePipeline()
     {
-        RF_CREATE_SHADER("shaders/particle/Particle.vert.spv", Vertex);
-        RF_CREATE_SHADER("shaders/particle/Particle.frag.spv", Fragment);
+        //RF_CREATE_SHADER("shaders/particles/Particle.comp.spv", Compute)
 
+        //std::vector<RT::GpuShader const *> shaders {gpuComputeShader.get()};
+
+        // TODO:
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ParticlePipeline::createGraphicPipeline()
+    {
+        RF_CREATE_SHADER("shaders/particle/Particle.vert.spv", Vertex)
+        RF_CREATE_SHADER("shaders/particle/Particle.frag.spv", Fragment)
+        
         std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuFragmentShader.get() };
 
         std::vector<VkVertexInputBindingDescription> vertexInputBindingDescriptions {};
@@ -313,15 +329,7 @@ namespace MFA
             .format = VK_FORMAT_R32_SINT,
             .offset = offsetof(Vertex, textureIndex)
         });
-
-        //// UV
-        //inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
-        //    .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-        //    .binding = 0,
-        //    .format = VK_FORMAT_R32G32_SFLOAT,
-        //    .offset = offsetof(Vertex, uv)
-        //});
-
+        
         // Color
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
@@ -376,12 +384,17 @@ namespace MFA
             mPerEssenceDescriptorSetLayout->descriptorSetLayout,
         };
 
-        mPipeline = RF::CreatePipeline(
+        const auto pipelineLayout = RF::CreatePipelineLayout(
+            static_cast<uint32_t>(descriptorSetLayouts.size()),
+            descriptorSetLayouts.data()
+        );
+        MFA_ASSERT(pipelineLayout != nullptr);
+
+        mGraphicPipeline = RF::CreateGraphicPipeline(
             RF::GetDisplayRenderPass()->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),
-            static_cast<uint32_t>(descriptorSetLayouts.size()),
-            descriptorSetLayouts.data(),
+            pipelineLayout,
             static_cast<uint32_t>(vertexInputBindingDescriptions.size()),
             vertexInputBindingDescriptions.data(),
             static_cast<uint8_t>(inputAttributeDescriptions.size()),

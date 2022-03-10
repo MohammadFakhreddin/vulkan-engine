@@ -62,13 +62,22 @@ namespace MFA::RenderFrontend
 
     void DestroyDescriptorSetLayout(VkDescriptorSetLayout descriptorSetLayout);
 
+    //---------------------------------------------Pipelines--------------------------------------------
+
     [[nodiscard]]
-    std::shared_ptr<RT::PipelineGroup> CreatePipeline(
+    VkPipelineLayout CreatePipelineLayout(
+        uint32_t setLayoutCount,
+        const VkDescriptorSetLayout * pSetLayouts,
+        uint32_t pushConstantRangeCount = 0,
+        const VkPushConstantRange * pPushConstantRanges = nullptr
+    );
+
+    [[nodiscard]]
+    std::shared_ptr<RT::PipelineGroup> CreateGraphicPipeline(
         VkRenderPass vkRenderPass,
         uint8_t gpuShadersCount,
         RT::GpuShader const ** gpuShaders,
-        uint32_t descriptorLayoutsCount,
-        VkDescriptorSetLayout const * descriptorSetLayouts,
+        VkPipelineLayout pipelineLayout,
         uint32_t vertexBindingDescriptionCount,
         VkVertexInputBindingDescription const * vertexBindingDescriptionData,
         uint32_t inputAttributeDescriptionCount,
@@ -76,7 +85,13 @@ namespace MFA::RenderFrontend
         RT::CreateGraphicPipelineOptions const & options
     );
 
-    void DestroyPipelineGroup(RT::PipelineGroup & recordState);
+    [[nodiscard]]
+    std::shared_ptr<RT::PipelineGroup> CreateComputePipeline(
+        RT::GpuShader const & shaderStage,
+        VkPipelineLayout pipelineLayout
+    );
+
+    void DestroyPipeline(RT::PipelineGroup & recordState);
 
     //-------------------------------------------DescriptorSetGroup--------------------------------------------
 

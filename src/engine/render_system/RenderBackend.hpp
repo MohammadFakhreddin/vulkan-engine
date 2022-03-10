@@ -370,9 +370,16 @@ namespace MFA::RenderBackend
 
     void DestroyShader(VkDevice device, RT::GpuShader const & gpuShader);
 
-    // Note Shaders can be removed after creating graphic pipeline
+    VkPipelineLayout CreatePipelineLayout(
+        VkDevice device,
+        uint32_t setLayoutCount,
+        const VkDescriptorSetLayout * pSetLayouts,
+        uint32_t pushConstantRangeCount,
+        const VkPushConstantRange * pPushConstantRanges
+    );
+
     [[nodiscard]]
-    std::shared_ptr<RT::PipelineGroup> CreatePipelineGroup(
+    std::shared_ptr<RT::PipelineGroup> CreateGraphicPipeline(
         VkDevice device,
         uint8_t shaderStagesCount,
         RT::GpuShader const ** shaderStages,
@@ -382,9 +389,15 @@ namespace MFA::RenderBackend
         VkVertexInputAttributeDescription * attributeDescriptionData,
         VkExtent2D swapChainExtent,
         VkRenderPass renderPass,
-        uint32_t descriptorSetLayoutCount,
-        VkDescriptorSetLayout const * descriptorSetLayouts,
+        VkPipelineLayout pipelineLayout,
         RT::CreateGraphicPipelineOptions const & options
+    );
+
+    [[nodiscard]]
+    std::shared_ptr<RT::PipelineGroup> CreateComputePipeline(
+        VkDevice device,
+        RT::GpuShader const & shaderStage,
+        VkPipelineLayout pipelineLayout
     );
 
     void AssignViewportAndScissorToCommandBuffer(

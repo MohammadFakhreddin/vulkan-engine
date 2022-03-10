@@ -470,13 +470,30 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
+    VkPipelineLayout CreatePipelineLayout(
+        uint32_t const setLayoutCount,
+        const VkDescriptorSetLayout * pSetLayouts,
+        uint32_t const pushConstantRangeCount,
+        const VkPushConstantRange * pPushConstantRanges
+    )
+    {
+        return RB::CreatePipelineLayout(
+            state->logicalDevice.device,
+            setLayoutCount,
+            pSetLayouts,
+            pushConstantRangeCount,
+            pPushConstantRanges
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     [[nodiscard]]
-    std::shared_ptr<RT::PipelineGroup> CreatePipeline(
+    std::shared_ptr<RT::PipelineGroup> CreateGraphicPipeline(
         VkRenderPass vkRenderPass,
         uint8_t gpuShadersCount,
         RT::GpuShader const ** gpuShaders,
-        uint32_t const descriptorLayoutsCount,
-        VkDescriptorSetLayout const * descriptorSetLayouts,
+        VkPipelineLayout pipelineLayout,
         uint32_t const vertexBindingDescriptionCount,
         VkVertexInputBindingDescription const * vertexBindingDescriptionData,
         uint32_t const inputAttributeDescriptionCount,
@@ -490,7 +507,7 @@ namespace MFA::RenderFrontend
             .height = static_cast<uint32_t>(state->screenHeight),
         };
 
-        return RB::CreatePipelineGroup(
+        return RB::CreateGraphicPipeline(
             state->logicalDevice.device,
             gpuShadersCount,
             gpuShaders,
@@ -500,15 +517,28 @@ namespace MFA::RenderFrontend
             inputAttributeDescriptionData,
             extent2D,
             vkRenderPass,
-            descriptorLayoutsCount,
-            descriptorSetLayouts,
+            pipelineLayout,
             options
         );
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void DestroyPipelineGroup(RT::PipelineGroup & recordState)
+    std::shared_ptr<RT::PipelineGroup> CreateComputePipeline(
+        RT::GpuShader const & shaderStage,
+        VkPipelineLayout pipelineLayout
+    )
+    {
+        return RB::CreateComputePipeline(
+            state->logicalDevice.device,
+            shaderStage,
+            pipelineLayout
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void DestroyPipeline(RT::PipelineGroup & recordState)
     {
         RB::DestroyPipelineGroup(
             state->logicalDevice.device,
@@ -1650,7 +1680,7 @@ namespace MFA::RenderFrontend
     }
 
     //-------------------------------------------------------------------------------------------------
-
+    // TODO: Create render type for descritor pool
     VkDescriptorPool CreateDescriptorPool(uint32_t const maxSets)
     {
         return RB::CreateDescriptorPool(

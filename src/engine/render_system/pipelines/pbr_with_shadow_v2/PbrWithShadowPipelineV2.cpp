@@ -122,17 +122,17 @@ namespace MFA
         createPerEssenceDescriptorSetLayout();
         createPerVariantDescriptorSetLayout();
 
-        mDescriptorSetLayouts = std::vector<VkDescriptorSetLayout>{
+        auto const descriptorSetLayouts = std::vector<VkDescriptorSetLayout>{
             mPerFrameDescriptorSetLayout->descriptorSetLayout,
             mPerEssenceDescriptorSetLayout->descriptorSetLayout,
             mPerVariantDescriptorSetLayout->descriptorSetLayout
         };
 
-        createDisplayPassPipeline();
-        createPointLightShadowPassPipeline();
-        createDirectionalLightShadowPassPipeline();
-        createDepthPassPipeline();
-        createOcclusionQueryPipeline();
+        createDisplayPassPipeline(descriptorSetLayouts);
+        createPointLightShadowPassPipeline(descriptorSetLayouts);
+        createDirectionalLightShadowPassPipeline(descriptorSetLayouts);
+        createDepthPassPipeline(descriptorSetLayouts);
+        createOcclusionQueryPipeline(descriptorSetLayouts);
 
         createPerFrameDescriptorSets();
 
@@ -1045,7 +1045,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createDisplayPassPipeline()
+    void PBRWithShadowPipelineV2::createDisplayPassPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts)
     {
         // Vertex shader
         RF_CREATE_SHADER("shaders/pbr_with_shadow_v2/PbrWithShadow.vert.spv", Vertex)
@@ -1154,27 +1154,31 @@ namespace MFA
             inputAttributeDescriptions.emplace_back(attributeDescription);
         }
         
-        std::vector<VkPushConstantRange> mPushConstantRanges{};
-        mPushConstantRanges.emplace_back(VkPushConstantRange{
+        std::vector<VkPushConstantRange> pushConstantRanges{};
+        pushConstantRanges.emplace_back(VkPushConstantRange{
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
             .offset = 0,
             .size = sizeof(DisplayPassPushConstants),
         });
 
+        const auto pipelineLayout = RF::CreatePipelineLayout(
+            static_cast<uint32_t>(descriptorSetLayouts.size()),
+            descriptorSetLayouts.data(),
+            static_cast<uint32_t>(pushConstantRanges.size()),
+            pushConstantRanges.data()
+        );
+        
         RT::CreateGraphicPipelineOptions options{};
         options.rasterizationSamples = RF::GetMaxSamplesCount();
-        options.pushConstantRanges = mPushConstantRanges.data();
-        options.pushConstantsRangeCount = static_cast<uint8_t>(mPushConstantRanges.size());
         options.cullMode = VK_CULL_MODE_BACK_BIT;
         options.depthStencil.depthWriteEnable = VK_FALSE;
         options.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;          // It must be less or equal because transparent and transluent objects are discarded in depth prepass and occlusion pass
 
-        mDisplayPassPipeline = RF::CreatePipeline(
+        mDisplayPassPipeline = RF::CreateGraphicPipeline(
             RF::GetDisplayRenderPass()->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),
-            static_cast<uint32_t>(mDescriptorSetLayouts.size()),
-            mDescriptorSetLayouts.data(),
+            pipelineLayout,
             1,
             &vertexInputBindingDescription,
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
@@ -1185,7 +1189,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createDirectionalLightShadowPassPipeline()
+    void PBRWithShadowPipelineV2::createDirectionalLightShadowPassPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts)
     {
         // Vertex shader
         RF_CREATE_SHADER("shaders/directional_light_shadow/DirectionalLightShadow.vert.spv", Vertex)
@@ -1242,18 +1246,21 @@ namespace MFA
         };
         pushConstantRanges.emplace_back(pushConstantRange);
 
+        const auto pipelineLayout = RF::CreatePipelineLayout(
+            static_cast<uint32_t>(descriptorSetLayouts.size()),
+            descriptorSetLayouts.data(),
+            static_cast<uint32_t>(pushConstantRanges.size()),
+            pushConstantRanges.data()
+        );
+        
         RT::CreateGraphicPipelineOptions graphicPipelineOptions{};
         graphicPipelineOptions.cullMode = VK_CULL_MODE_FRONT_BIT;                // TODO Find a good fit!
-        graphicPipelineOptions.pushConstantRanges = pushConstantRanges.data();
-        // TODO Probably we need to make pushConstantsRangeCount uint32_t
-        graphicPipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
 
-        mDirectionalLightShadowPipeline = RF::CreatePipeline(
+        mDirectionalLightShadowPipeline = RF::CreateGraphicPipeline(
             mDirectionalLightShadowRenderPass->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),
-            static_cast<uint32_t>(mDescriptorSetLayouts.size()),
-            mDescriptorSetLayouts.data(),
+            pipelineLayout,
             1,
             &vertexInputBindingDescription,
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
@@ -1264,7 +1271,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createPointLightShadowPassPipeline()
+    void PBRWithShadowPipelineV2::createPointLightShadowPassPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts)
     {
         // Vertex shader
         RF_CREATE_SHADER("shaders/point_light_shadow/PointLightShadow.vert.spv", Vertex)
@@ -1326,18 +1333,21 @@ namespace MFA
         };
         pushConstantRanges.emplace_back(pushConstantRange);
 
+        const auto pipelineLayout = RF::CreatePipelineLayout(
+            static_cast<uint32_t>(descriptorSetLayouts.size()),
+            descriptorSetLayouts.data(),
+            static_cast<uint32_t>(pushConstantRanges.size()),
+            pushConstantRanges.data()
+        );
+
         RT::CreateGraphicPipelineOptions graphicPipelineOptions{};
         graphicPipelineOptions.cullMode = VK_CULL_MODE_BACK_BIT;
-        graphicPipelineOptions.pushConstantRanges = pushConstantRanges.data();
-        // TODO Probably we need to make pushConstantsRangeCount uint32_t
-        graphicPipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
 
-        mPointLightShadowPipeline = RF::CreatePipeline(
+        mPointLightShadowPipeline = RF::CreateGraphicPipeline(
             mPointLightShadowRenderPass->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),
-            static_cast<uint32_t>(mDescriptorSetLayouts.size()),
-            mDescriptorSetLayouts.data(),
+            pipelineLayout,
             1,
             &vertexInputBindingDescription,
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
@@ -1348,7 +1358,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createDepthPassPipeline()
+    void PBRWithShadowPipelineV2::createDepthPassPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts)
     {
         // Vertex shader
         RF_CREATE_SHADER("shaders/depth_pre_pass/DepthPrePass.vert.spv", Vertex)
@@ -1403,6 +1413,7 @@ namespace MFA
             .offset = offsetof(AS::PBR::Vertex, jointWeights),
         });
 
+        // Pipeline layout
         std::vector<VkPushConstantRange> pushConstantRanges{};
         // Push constants  
         VkPushConstantRange pushConstantRange{
@@ -1412,22 +1423,25 @@ namespace MFA
         };
         pushConstantRanges.emplace_back(pushConstantRange);
 
+        const auto pipelineLayout = RF::CreatePipelineLayout(
+            static_cast<uint32_t>(descriptorSetLayouts.size()),
+            descriptorSetLayouts.data(),
+            static_cast<uint32_t>(pushConstantRanges.size()),
+            pushConstantRanges.data()
+        );
+
         RT::CreateGraphicPipelineOptions graphicPipelineOptions{};
         graphicPipelineOptions.cullMode = VK_CULL_MODE_BACK_BIT;
         graphicPipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
-        graphicPipelineOptions.pushConstantRanges = pushConstantRanges.data();
-        // TODO Probably we need to make pushConstantsRangeCount uint32_t
-        graphicPipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
         graphicPipelineOptions.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
 
         graphicPipelineOptions.colorBlendAttachments.blendEnable = VK_FALSE;
 
-        mDepthPassPipeline = RF::CreatePipeline(
+        mDepthPassPipeline = RF::CreateGraphicPipeline(
             mDepthPrePass->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),
-            static_cast<uint32_t>(mDescriptorSetLayouts.size()),
-            mDescriptorSetLayouts.data(),
+            pipelineLayout,
             1,
             &vertexInputBindingDescription,
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
@@ -1465,7 +1479,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createOcclusionQueryPipeline()
+    void PBRWithShadowPipelineV2::createOcclusionQueryPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts)
     {
         RF_CREATE_SHADER("shaders/occlusion_query/Occlusion.vert.spv", Vertex)
         RF_CREATE_SHADER("shaders/occlusion_query/Occlusion.frag.spv", Fragment)
@@ -1519,8 +1533,8 @@ namespace MFA
             .offset = offsetof(AS::PBR::Vertex, jointWeights),
         });
 
+        // Pipeline layout
         std::vector<VkPushConstantRange> pushConstantRanges{};
-        // Model data  
         VkPushConstantRange pushConstantRange{
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
             .offset = 0,
@@ -1528,21 +1542,24 @@ namespace MFA
         };
         pushConstantRanges.emplace_back(pushConstantRange);
 
+        const auto pipelineLayout = RF::CreatePipelineLayout(
+            static_cast<uint32_t>(descriptorSetLayouts.size()),
+            descriptorSetLayouts.data(),
+            static_cast<uint32_t>(pushConstantRanges.size()),
+            pushConstantRanges.data()
+        );
+
         RT::CreateGraphicPipelineOptions graphicPipelineOptions{};
         graphicPipelineOptions.cullMode = VK_CULL_MODE_BACK_BIT;
         graphicPipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
-        graphicPipelineOptions.pushConstantRanges = pushConstantRanges.data();
-        // TODO Probably we need to make pushConstantsRangeCount uint32_t
-        graphicPipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
         graphicPipelineOptions.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
         graphicPipelineOptions.depthStencil.depthWriteEnable = VK_FALSE;
 
-        mOcclusionQueryPipeline = RF::CreatePipeline(
+        mOcclusionQueryPipeline = RF::CreateGraphicPipeline(
             mOcclusionRenderPass->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),
-            static_cast<uint32_t>(mDescriptorSetLayouts.size()),
-            mDescriptorSetLayouts.data(),
+            pipelineLayout,
             1,
             &vertexInputBindingDescription,
             static_cast<uint8_t>(inputAttributeDescriptions.size()),

@@ -26,6 +26,12 @@ namespace MFA
     namespace RenderTypes
     {
 
+#ifndef __ANDROID__
+    #define VK_NULL nullptr
+#else
+    #define VK_NULL 0
+#endif
+
         struct BufferAndMemory
         {
             const VkBuffer buffer;
@@ -336,8 +342,6 @@ namespace MFA
             VkPipelineDynamicStateCreateInfo * dynamicStateCreateInfo = nullptr;
             VkPipelineDepthStencilStateCreateInfo depthStencil{};
             VkPipelineColorBlendAttachmentState colorBlendAttachments{};
-            uint8_t pushConstantsRangeCount = 0;
-            VkPushConstantRange * pushConstantRanges = nullptr;
             bool useStaticViewportAndScissor = false;           // Use of dynamic viewport and scissor is recommended
             VkPrimitiveTopology primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
             VkSampleCountFlagBits rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;

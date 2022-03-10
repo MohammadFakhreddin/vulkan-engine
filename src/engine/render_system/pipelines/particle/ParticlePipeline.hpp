@@ -54,8 +54,10 @@ namespace MFA
         void createPerFrameDescriptorSets();
         void createPerEssenceDescriptorSets(ParticleEssence * essence) const;
 
-        void createPipeline();
+        void createComputePipeline();
 
+        void createGraphicPipeline();
+        
         static constexpr int MAXIMUM_TEXTURE_PER_ESSENCE = 10;
         
         std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerFrameDescriptorSetLayout {};
@@ -66,7 +68,8 @@ namespace MFA
         std::shared_ptr<RT::SamplerGroup> mSamplerGroup {};
         std::shared_ptr<RT::GpuTexture> mErrorTexture {};
 
-        std::shared_ptr<RT::PipelineGroup> mPipeline {};
+        std::shared_ptr<RT::PipelineGroup> mComputePipeline {};
+        std::shared_ptr<RT::PipelineGroup> mGraphicPipeline {};
     };
 
 }

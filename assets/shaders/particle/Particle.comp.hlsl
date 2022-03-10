@@ -65,7 +65,7 @@ void main(uint3 GlobalInvocationID : SV_DispatchThreadID)
         particle.localPosition = particle.initialLocalPosition;
 
         particle.speed = rand(particle.localPosition, params.minSpeed, params.maxSpeed);
-        particle.remainingLifeInSec =rand(particle.localPosition, params.minLife, params.maxLife);
+        particle.remainingLifeInSec = rand(particle.localPosition, params.minLife, params.maxLife);
         particle.totalLifeInSec = particle.remainingLifeInSec;
     }
 

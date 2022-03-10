@@ -223,23 +223,27 @@ namespace MFA
         pipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();            // TODO Find a way to set sample count to 1. We only need MSAA for pbr-pipeline
         pipelineOptions.cullMode = VK_CULL_MODE_NONE;
         pipelineOptions.colorBlendAttachments.blendEnable = VK_FALSE;
-        std::vector<VkPushConstantRange> pushConstantRanges{
+
+        // pipeline layout
+        std::vector<VkPushConstantRange> const pushConstantRanges{
             VkPushConstantRange {
                 .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT,
                 .offset = 0,
                 .size = sizeof(PushConstants),
             }
         };
-        // TODO Make this variable uint32_t instead. There is no reason for saving memory here
-        pipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
-        pipelineOptions.pushConstantRanges = pushConstantRanges.data();
-
-        mpipeline = RF::CreatePipeline(
+        const auto pipelineLayout = RF::CreatePipelineLayout(
+            1,
+            &mDescriptorSetLayout->descriptorSetLayout,
+            static_cast<uint32_t>(pushConstantRanges.size()),
+            pushConstantRanges.data()
+        );
+        
+        mpipeline = RF::CreateGraphicPipeline(
             RF::GetDisplayRenderPass()->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),
-            1,
-            &mDescriptorSetLayout->descriptorSetLayout,
+            pipelineLayout,
             1,
             &bindingDescription,
             static_cast<uint8_t>(inputAttributeDescriptions.size()),

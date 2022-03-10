@@ -126,19 +126,19 @@ namespace MFA
 
         void createPerVariantDescriptorSetLayout();
         
-        void createDisplayPassPipeline();
+        void createDisplayPassPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts);
 
-        void createDirectionalLightShadowPassPipeline();
+        void createDirectionalLightShadowPassPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts);
 
-        void createPointLightShadowPassPipeline();
+        void createPointLightShadowPassPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts);
 
-        void createDepthPassPipeline();
+        void createDepthPassPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts);
 
         void createOcclusionQueryPool();
 
         void destroyOcclusionQueryPool();
 
-        void createOcclusionQueryPipeline();
+        void createOcclusionQueryPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts);
         
         void createUniformBuffers();
 
@@ -197,8 +197,6 @@ namespace MFA
         std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerFrameDescriptorSetLayout{};
         std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerEssenceDescriptorSetLayout{};
         std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerVariantDescriptorSetLayout{};
-
-        std::vector<VkDescriptorSetLayout> mDescriptorSetLayouts{};
 
         RT::DescriptorSetGroup mPerFrameDescriptorSetGroup{};
 
