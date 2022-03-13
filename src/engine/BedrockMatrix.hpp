@@ -102,4 +102,13 @@ namespace MFA::Matrix
         float farPlane
     );
 
+    [[nodiscard]]
+    glm::vec4 Add(glm::vec4 const & vec1, glm::vec4 const & vec2);
+
+    [[nodiscard]]
+    float Dot(glm::vec4 const & vec1, glm::vec4 const & vec2);
+
+    [[nodiscard]]
+    glm::vec4 Lerp(glm::vec4 const & vec1, glm::vec4 const & vec2, float fraction);
+
 }
