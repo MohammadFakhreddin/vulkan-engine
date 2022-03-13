@@ -418,10 +418,16 @@ namespace MFA::Matrix
 
     glm::vec4 Lerp(glm::vec4 const & vec1, glm::vec4 const & vec2, float fraction)
     {
-        __m256 const a = convertToM256(vec1 * (1.0f - fraction));
-        __m256 const b = convertToM256(vec2 * fraction);
-        __m256 c = _mm256_add_ps(a, b);
-        return convertToVec4(c);
+        __m256 aVar = convertToM256(vec1);
+        __m256 const aFrac = _mm256_set1_ps(1.0f - fraction);
+        aVar = _mm256_mul_ps(aVar, aFrac);
+    
+        __m256 bVar = convertToM256(vec2);
+        __m256 const bFrac = _mm256_set1_ps(fraction);
+        bVar = _mm256_mul_ps(bVar, bFrac);
+        
+        __m256 cVar = _mm256_add_ps(aVar, bVar);
+        return convertToVec4(cVar);
     }
 
     //-------------------------------------------------------------------------------------------------
