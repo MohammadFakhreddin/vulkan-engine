@@ -16,32 +16,132 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    ParticleEssence::ParticleEssence(Params const & params)
-        : ParticleEssence(params.gpuModel, params.mesh)
-    {}
+    static std::shared_ptr<RT::BufferGroup> createVertexBuffer(
+        VkCommandBuffer commandBuffer,
+        CBlob const & vertexBlob,
+        std::shared_ptr<RT::BufferGroup> & outStageBuffer
+    )
+    {
+        auto bufferGroup = RF::CreateBufferGroup(
+            vertexBlob.len,
+            1,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        );
+
+        outStageBuffer = RF::CreateStageBuffer(vertexBlob.len, 1);
+
+        RF::UpdateLocalBuffer(
+            commandBuffer,
+            *bufferGroup->buffers[0],
+            *outStageBuffer->buffers[0],
+            vertexBlob
+        );
+
+        return bufferGroup;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    static std::shared_ptr<RT::BufferAndMemory> createIndexBuffer(
+        VkCommandBuffer commandBuffer,
+        CBlob const & indexBlob,
+        std::shared_ptr<RT::BufferGroup> & outStageBuffer
+    )
+    {
+        outStageBuffer = RF::CreateStageBuffer(indexBlob.len, 1);
+
+        return RF::CreateIndexBuffer(
+            commandBuffer,
+            *outStageBuffer->buffers[0],
+            indexBlob
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    static std::shared_ptr<RT::BufferGroup> createInstanceBuffer(size_t const size)
+    {
+        return RF::CreateUniformBuffer(
+            size,
+            1,
+            RF::MemoryFlags::hostVisible
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    static std::shared_ptr<RT::BufferGroup> createParamsBuffer(
+        VkCommandBuffer commandBuffer,
+        Params const & params,
+        std::shared_ptr<RT::BufferGroup> & outStageBuffer
+    )
+    {
+        outStageBuffer = RF::CreateStageBuffer(sizeof(params), 1);
+
+        auto paramsBuffer = RF::CreateUniformBuffer(
+            sizeof(params),
+            1,
+            RF::MemoryFlags::local
+        );
+
+        RF::UpdateLocalBuffer(
+            commandBuffer,
+            *paramsBuffer->buffers[0],
+            *outStageBuffer->buffers[0],
+            CBlobAliasOf(params)
+        );
+
+        return paramsBuffer;
+    }
 
     //-------------------------------------------------------------------------------------------------
 
     ParticleEssence::ParticleEssence(
-        std::shared_ptr<RT::GpuModel> gpuModel,
-        std::shared_ptr<Mesh> mesh
+        std::string nameId,
+        uint32_t maxInstanceCount,
+        std::vector<std::shared_ptr<RT::GpuTexture>> textures
     )
-        : EssenceBase(std::move(gpuModel))
-        , mMesh(std::move(mesh))
-        , mInstanceDataMemory(Memory::Alloc(mMesh->maxInstanceCount * sizeof(PerInstanceData)))
-        , mInstancesData(mInstanceDataMemory->memory.as<PerInstanceData>())
+        : EssenceBase(std::move(nameId))
+        , mMaxInstanceCount(maxInstanceCount)
+        , mTextures(std::move(textures))
+    {}
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ParticleEssence::init(
+        uint32_t const indexCount,
+        Params const & params,
+        CBlob const & vertexData,
+        CBlob const & indexData
+    )
     {
-        // TODO Research about which one is better. Having stage buffer or making the vertex/instance buffer host visible
-        mInstancesBuffers.resize(RF::GetMaxFramesPerFlight());
-        for (auto & instancesBuffer : mInstancesBuffers)
-        {
-            RF::CreateVertexBuffer(
-                mInstanceDataMemory->memory,
-                instancesBuffer,
-                mInstanceStageBuffer
-            );
+
+        mIndexCount = indexCount;
+
+        {// Local buffers
+            auto const commandBuffer = RF::BeginSingleTimeGraphicCommand();
+
+            std::shared_ptr<RT::BufferGroup> vertexStageBuffer = nullptr;
+            mVertexBuffer = createVertexBuffer(commandBuffer, vertexData, vertexStageBuffer);
+
+            std::shared_ptr<RT::BufferGroup> indexStageBuffer = nullptr;
+            mIndexBuffer = createIndexBuffer(commandBuffer, indexData, indexStageBuffer);
+
+            std::shared_ptr<RT::BufferGroup> paramsStageBuffer = nullptr;
+            mParamsBuffer = createParamsBuffer(commandBuffer, params, paramsStageBuffer);
+
+            RF::EndAndSubmitGraphicSingleTimeCommand(commandBuffer);
         }
-        MFA_ASSERT(mInstanceStageBuffer != nullptr);
+
+        {// Host visible buffer
+            auto const instanceSize = mMaxInstanceCount * sizeof(PerInstanceData);
+            mInstanceDataMemory = Memory::Alloc(instanceSize);
+            mInstanceBuffer = createInstanceBuffer(instanceSize);
+        }
+
+        mIsInitialized = true;
+        
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -50,10 +150,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ParticleEssence::update(
-        float deltaTimeInSec,
-        VariantsList const & variants
-    )
+    void ParticleEssence::update(VariantsList const & variants)
     {
         checkIfUpdateIsRequired(variants);
         if (mShouldUpdate)
@@ -64,27 +161,40 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ParticleEssence::draw(
-        RT::CommandRecordState const & recordState,
-        float deltaTime
-    ) const
+    void ParticleEssence::render(RT::CommandRecordState const & recordState) const
     {
         if (mShouldUpdate)
         {
-            updateVertexBuffer(recordState);
             updateInstanceBuffer(recordState);
         }
+
+        // TODO: We need barrier here for vertex buffer
 
         bindVertexBuffer(recordState);
         bindInstanceBuffer(recordState);
         bindIndexBuffer(recordState);
-        bindDescriptorSetGroup(recordState);
+        bindGraphicDescriptorSet(recordState);
         // Draw
         RF::DrawIndexed(
             recordState,
-            mMesh->getIndexCount(),
+            mIndexCount,
             mNextDrawInstanceCount
         );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ParticleEssence::updateParamsBuffer(Params const & params) const
+    {
+        auto const stageBuffer = RF::CreateStageBuffer(sizeof(params), 1);
+        auto const commandBuffer = RF::BeginSingleTimeGraphicCommand();
+        RF::UpdateLocalBuffer(
+            commandBuffer,
+            *mParamsBuffer->buffers[0],
+            *stageBuffer->buffers[0],
+            CBlobAliasOf(params)
+        );
+        RF::EndAndSubmitGraphicSingleTimeCommand(commandBuffer);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -93,7 +203,7 @@ namespace MFA
     {
         RF::BindVertexBuffer(
             recordState,
-            *mGpuModel->meshBuffers->verticesBuffer[recordState.frameIndex],
+            *mVertexBuffer->buffers[0],
             VERTEX_BUFFER_BIND_ID
         );
     }
@@ -102,11 +212,13 @@ namespace MFA
 
     void ParticleEssence::updateInstanceData(VariantsList const & variants)
     {
-        MFA_ASSERT(variants.size() <= mMesh->maxInstanceCount);
+        MFA_ASSERT(variants.size() <= mMaxInstanceCount);
         mNextDrawInstanceCount = std::min<uint32_t>(
             static_cast<uint32_t>(variants.size()),
-            mMesh->maxInstanceCount
+            mMaxInstanceCount
         );
+
+        auto const * instanceData = mInstanceDataMemory->memory.as<PerInstanceData *>();
 
         uint32_t visibleVariantCount = 0;
         for (uint32_t i = 0; i < mNextDrawInstanceCount; ++i)
@@ -114,7 +226,7 @@ namespace MFA
             auto const & variant = CAST_VARIANT(variants[i]);
             if (variant->IsVisible())
             {
-                variant->getWorldPosition(mInstancesData[visibleVariantCount].instancePosition);
+                variant->getWorldPosition(instanceData[visibleVariantCount]->instancePosition);
                 ++visibleVariantCount;
             }
         }
@@ -125,21 +237,9 @@ namespace MFA
 
     void ParticleEssence::updateInstanceBuffer(RT::CommandRecordState const & recordState) const
     {
-        RF::UpdateVertexBuffer(
-            mInstanceDataMemory->memory,
-            *mInstancesBuffers[recordState.frameIndex],
-            *mInstanceStageBuffer
-        );
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void ParticleEssence::updateVertexBuffer(RT::CommandRecordState const & recordState) const
-    {
-        RF::UpdateVertexBuffer(
-            mMesh->getVertexBuffer()->memory,
-            *mGpuModel->meshBuffers->verticesBuffer[recordState.frameIndex],
-            *mGpuModel->meshBuffers->vertexStagingBuffer
+        RF::UpdateHostVisibleBuffer(
+            *mInstancesBuffer->buffers[recordState.frameIndex],
+            mInstanceDataMemory->memory
         );
     }
 
@@ -149,8 +249,40 @@ namespace MFA
     {
         RF::BindVertexBuffer(
             recordState,
-            *mInstancesBuffers[recordState.frameIndex],
+            *mInstanceBuffer->buffers[recordState.frameIndex],
             INSTANCE_BUFFER_BIND_ID
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+    
+    void ParticleEssence::bindIndexBuffer(RT::CommandRecordState const & recordState) const
+    {
+        RF::BindIndexBuffer(
+            recordState,
+            *mIndexBuffer
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ParticleEssence::bindGraphicDescriptorSet(RT::CommandRecordState const & recordState) const
+    {
+        RF::AutoBindDescriptorSet(
+            recordState,
+            RF::UpdateFrequency::PerEssence,
+            mGraphicDescriptorSet
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ParticleEssence::bindComputeDescriptorSet(RT::CommandRecordState const & recordState) const
+    {
+        RF::BindDescriptorSet(
+            recordState,
+            RF::UpdateFrequency::PerEssence,
+            mGraphicDescriptorSet.descriptorSets[0]
         );
     }
 

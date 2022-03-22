@@ -59,12 +59,12 @@ namespace MFA
 
             auto * variant = rendererComponent->getVariant();
             MFA_ASSERT(variant != nullptr);
-            auto * essence = variant->GetEssence();
+            auto * essence = variant->getEssence();
             MFA_ASSERT(essence != nullptr);
-            auto * gpuModel = essence->getGpuModel();
-            MFA_ASSERT(gpuModel != nullptr);
-
-            auto const model = RC::AcquireCpuModel(gpuModel->nameOrAddress.c_str());
+            auto const gpuModelNameId = essence->getNameId();
+            MFA_ASSERT(gpuModelNameId.empty() == false);
+            
+            auto const model = RC::AcquireCpuModel(gpuModelNameId);
             MFA_ASSERT(model != nullptr);
 
             auto const mesh = model->mesh;

@@ -204,7 +204,7 @@ void PrefabEditorScene::addEssenceToPipeline(
         auto * pbrMesh = dynamic_cast<AS::PBR::Mesh *>(mesh);
         if (pbrMesh != nullptr)
         {
-            if (mPBR_Pipeline->hasEssence(gpuModel->nameOrAddress) == false)
+            if (mPBR_Pipeline->hasEssence(gpuModel->nameId) == false)
             {
                 mPBR_Pipeline->addEssence(std::make_shared<PBR_Essence>(gpuModel, pbrMesh->getMeshData()));
             }
@@ -215,7 +215,7 @@ void PrefabEditorScene::addEssenceToPipeline(
         auto * debugMesh = dynamic_cast<AS::Debug::Mesh *>(mesh);
         if (debugMesh != nullptr)
         {
-            if (mDebugPipeline->hasEssence(gpuModel->nameOrAddress) == false)
+            if (mDebugPipeline->hasEssence(gpuModel->nameId) == false)
             {
                 mDebugPipeline->addEssence(std::make_shared<DebugEssence>(gpuModel, debugMesh->getIndexCount()));
             }

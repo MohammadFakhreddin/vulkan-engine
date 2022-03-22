@@ -1,5 +1,6 @@
 #pragma once
 
+#include "RenderTypes.hpp"
 #include "RenderTypesFWD.hpp"
 #include "engine/BedrockCommon.hpp"
 #include "engine/asset_system/AssetTypes.hpp"
@@ -118,12 +119,12 @@ namespace MFA::RenderBackend
     );
 
     [[nodiscard]]
-    VkCommandBuffer BeginSingleTimeCommand(VkDevice device, VkCommandPool const & command_pool);
+    VkCommandBuffer BeginSingleTimeCommand(VkDevice device, VkCommandPool const & commandPool);
 
     void EndAndSubmitSingleTimeCommand(
         VkDevice device,
         VkCommandPool const & commandPool,
-        VkQueue const & graphicQueue,
+        VkQueue const & queue,
         VkCommandBuffer const & commandBuffer
     );
 
@@ -163,20 +164,6 @@ namespace MFA::RenderBackend
         VkDevice device,
         VkDeviceMemory bufferMemory,
         CBlob dataBlob
-    );
-
-    void CopyBuffer(
-        VkDevice device,
-        VkCommandPool commandPool,
-        VkQueue graphicQueue,
-        VkBuffer sourceBuffer,
-        VkBuffer destinationBuffer,
-        VkDeviceSize size
-    );
-
-    void DestroyBuffer(
-        VkDevice device,
-        const RT::BufferAndMemory & bufferGroup
     );
 
     // TODO Too many parameters. Create struct instead
@@ -408,6 +395,64 @@ namespace MFA::RenderBackend
     void DestroyPipelineGroup(VkDevice device, RT::PipelineGroup & pipelineGroup);
 
     [[nodiscard]]
+    VkShaderStageFlagBits ConvertAssetShaderStageToGpu(AssetSystem::ShaderStage stage);
+
+    //-----------------------------------------Buffer-------------------------------------------------
+
+    //std::shared_ptr<RT::BufferAndMemory> CreateVertexBuffer(
+    //    VkDevice device,
+    //    VkPhysicalDevice physicalDevice,
+    //    VkCommandBuffer commandBuffer,
+    //    CBlob const & verticesBlob,
+    //    RT::BufferAndMemory  const & stageBuffer
+    //);
+
+    //std::shared_ptr<RT::BufferAndMemory> CreateIndexBuffer(
+    //    VkDevice device,
+    //    VkPhysicalDevice physicalDevice,
+    //    VkCommandBuffer commandBuffer,
+    //    CBlob const & indicesBlob,
+    //    RT::BufferAndMemory  const & stageBuffer
+    //);
+
+    //std::shared_ptr<RT::BufferAndMemory> CreateStageBuffer(
+    //    VkDevice device,
+    //    VkPhysicalDevice physicalDevice,
+    //    VkDeviceSize bufferSize
+    //);
+
+    //[[nodiscard]]
+    //std::vector<std::shared_ptr<RT::BufferAndMemory>> CreateMultipleBufferAndMemory(
+    //    VkDevice device,
+    //    VkPhysicalDevice physicalDevice,
+    //    uint32_t buffersCount,
+    //    VkDeviceSize buffersSize,
+    //    VkBufferUsageFlagBits memoryUsageFlags,
+    //    VkMemoryPropertyFlags memoryPropertyFlags
+    //);
+
+    void UpdateLocalBuffer(
+        VkDevice device,
+        VkCommandBuffer commandBuffer,
+        CBlob const & data,
+        RT::BufferAndMemory const & buffer,
+        RT::BufferAndMemory const & stagingBuffer
+    );
+
+    void UpdateHostVisibleBuffer(
+        VkDevice device,
+        RT::BufferAndMemory const & bufferGroup,
+        CBlob const & data
+    );
+
+    void DestroyBuffer(
+        VkDevice device,
+        const RT::BufferAndMemory & bufferGroup
+    );
+
+    //-----------------------------------------Descriptors-------------------------------------------------
+
+    [[nodiscard]]
     std::shared_ptr<RT::DescriptorSetLayoutGroup> CreateDescriptorSetLayout(
         VkDevice device,
         uint8_t bindings_count,
@@ -417,60 +462,6 @@ namespace MFA::RenderBackend
     void DestroyDescriptorSetLayout(
         VkDevice device,
         VkDescriptorSetLayout descriptor_set_layout
-    );
-
-    [[nodiscard]]
-    VkShaderStageFlagBits ConvertAssetShaderStageToGpu(AssetSystem::ShaderStage stage);
-
-    void CreateVertexBuffer(
-        VkDevice device,
-        VkPhysicalDevice physicalDevice,
-        VkCommandPool commandPool,
-        VkQueue graphicQueue,
-        CBlob const & verticesBlob,
-        std::shared_ptr<RT::BufferAndMemory> & outVertexBuffer,
-        std::shared_ptr<RT::BufferAndMemory> & inOutStagingBuffer
-    );
-
-    void UpdateVertexBuffer(
-        VkDevice device,
-        VkCommandPool commandPool,
-        VkQueue graphicQueue,
-        CBlob const & verticesBlob,
-        RT::BufferAndMemory const & vertexBuffer,
-        RT::BufferAndMemory const & stagingBuffer
-    );
-
-    void CreateIndexBuffer(
-        VkDevice device,
-        VkPhysicalDevice physicalDevice,
-        VkCommandPool commandPool,
-        VkQueue graphicQueue,
-        CBlob const & indicesBlob,
-        std::shared_ptr<RT::BufferAndMemory> & outIndexBuffer,
-        std::shared_ptr<RT::BufferAndMemory> & inOutStagingIndexBuffer
-    );
-
-    void CreateUniformBuffer(
-        VkDevice device,
-        VkPhysicalDevice physicalDevice,
-        uint32_t buffersCount,
-        VkDeviceSize buffersSize,
-        std::shared_ptr<RT::BufferAndMemory> * outBuffers
-    );
-
-    void UpdateBuffer(
-        VkDevice device,
-        RT::BufferAndMemory const & bufferGroup,
-        CBlob data
-    );
-
-    void CreateStorageBuffer(
-        VkDevice device,
-        VkPhysicalDevice physicalDevice,
-        uint32_t buffersCount,
-        VkDeviceSize buffersSize,
-        std::shared_ptr<RT::BufferAndMemory> * outStorageBuffer
     );
 
     [[nodiscard]]
@@ -502,6 +493,8 @@ namespace MFA::RenderBackend
         uint8_t schemasCount,
         VkWriteDescriptorSet * schemas
     );
+
+    //-----------------------------------------CommandBuffer-------------------------------------------------
 
     /***
      *  CreateCommandBuffer (For pipeline I guess)

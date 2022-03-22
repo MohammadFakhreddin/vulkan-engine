@@ -15,7 +15,7 @@ struct PSOut {
 #define MAX_POSSIBLE_TEXTURE 5
 
 sampler baseColorSampler : register(s1, space0);
-Texture2D baseColorTexture[MAX_POSSIBLE_TEXTURE] : register(t2, space1);
+Texture2D baseColorTexture[MAX_POSSIBLE_TEXTURE] : register(t0, space1);
 
 PSOut main(PSIn input) {
     PSOut output;

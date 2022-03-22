@@ -38,7 +38,7 @@ namespace MFA
         void Shutdown();
 
         [[nodiscard]]
-        EssenceBase const * GetEssence() const noexcept;
+        EssenceBase const * getEssence() const noexcept;
 
         [[nodiscard]]
         RT::VariantId GetId() const noexcept;

@@ -52,13 +52,17 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    static std::shared_ptr<RT::GpuModel> createGpuModel(AS::Model * cpuModel, std::string const & name)
+    static std::shared_ptr<RT::GpuModel> createGpuModel(AS::Model const & cpuModel, std::string const & name)
     {
         MFA_ASSERT(name.empty() == false);
-        MFA_ASSERT(cpuModel != nullptr);
-        MFA_ASSERT(cpuModel->mesh->isValid());
+        MFA_ASSERT(cpuModel.mesh->isValid());
 
-        auto gpuModel = RF::CreateGpuModel(cpuModel, name);
+        auto const commandBuffer = RF::BeginSingleTimeGraphicCommand();
+
+        auto gpuModel = RF::CreateGpuModel(commandBuffer, cpuModel, name);
+
+        RF::EndAndSubmitGraphicSingleTimeCommand(commandBuffer);
+
         state->availableGpuModels[name] = gpuModel;
         return gpuModel;
     }
@@ -90,7 +94,7 @@ namespace MFA
             return nullptr;
         }
 
-        return createGpuModel(cpuModel.get(), relativePath);
+        return createGpuModel(*cpuModel, relativePath);
     }
 
     //-------------------------------------------------------------------------------------------------

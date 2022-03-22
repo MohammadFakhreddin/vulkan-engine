@@ -96,14 +96,14 @@ namespace MFA
 
     void BasePipeline::destroyEssence(RT::GpuModel const & gpuModel)
     {
-        destroyEssence(gpuModel.nameOrAddress);
+        destroyEssence(gpuModel.nameId);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     std::weak_ptr<VariantBase> BasePipeline::createVariant(RT::GpuModel const & gpuModel)
     {
-        return createVariant(gpuModel.nameOrAddress);
+        return createVariant(gpuModel.nameId);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -164,7 +164,7 @@ namespace MFA
         }
         
         // Removing from essence and variants' list
-        auto const findResult = mEssenceAndVariantsMap.find(variant.GetEssence()->getNameOrAddress());
+        auto const findResult = mEssenceAndVariantsMap.find(variant.getEssence()->getNameId());
         MFA_ASSERT(findResult != mEssenceAndVariantsMap.end());
         auto & variants = findResult->second.variants;
         for (int i = static_cast<int>(variants.size()) - 1; i >= 0; --i)
@@ -191,7 +191,7 @@ namespace MFA
         {
             if (essenceAndVariants.second.variants.empty())
             {
-                unusedEssenceNames.emplace_back(essenceAndVariants.second.essence->getGpuModel()->nameOrAddress);
+                unusedEssenceNames.emplace_back(essenceAndVariants.second.essence->getNameId());
             }
         }
         for (auto const & nameOrAddress : unusedEssenceNames)
@@ -251,7 +251,7 @@ namespace MFA
     bool BasePipeline::addEssence(std::shared_ptr<EssenceBase> const & essence)
     {
         MFA_ASSERT(mIsInitialized == true);
-        auto const & address = essence->getGpuModel()->nameOrAddress;
+        auto const & address = essence->getNameId();
 
         bool success = false;
         if(MFA_VERIFY(mEssenceAndVariantsMap.contains(address) == false))

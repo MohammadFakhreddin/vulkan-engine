@@ -7,15 +7,7 @@ namespace MFA::AssetSystem
 {
     //-------------------------------------------------------------------------------------------------
 
-    MeshBase::MeshBase(
-        uint32_t const vertexBufferCount_,
-        bool const keepVertexStagingBuffer_,
-        bool const keepIndexStagingBuffer_
-    )
-        : requiredVertexBufferCount(vertexBufferCount_)
-        , keepVertexStagingBuffer(keepVertexStagingBuffer_)
-        , keepIndexStagingBuffer(keepIndexStagingBuffer_)
-    {}
+    MeshBase::MeshBase() = default;
 
     //-------------------------------------------------------------------------------------------------
 
@@ -54,7 +46,7 @@ namespace MFA::AssetSystem
 
     //-------------------------------------------------------------------------------------------------
 
-    SmartBlob const * MeshBase::getVertexBuffer() const
+    SmartBlob const * MeshBase::getVertexData() const
     {
         return mVertexBuffer.get();
     }

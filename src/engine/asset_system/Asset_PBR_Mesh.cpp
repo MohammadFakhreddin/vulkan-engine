@@ -36,9 +36,7 @@ namespace MFA::AssetSystem::PBR
 
     //-------------------------------------------------------------------------------------------------
 
-    Mesh::Mesh()
-        : MeshBase(1)
-    {}
+    Mesh::Mesh() = default;
 
     Mesh::~Mesh() = default;
 

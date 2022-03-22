@@ -168,7 +168,7 @@ namespace MFA
 
         std::shared_ptr<RT::SamplerGroup> mSamplerGroup = nullptr; // TODO Each gltf subMesh has its own settings
         std::shared_ptr<RT::GpuTexture> mErrorTexture = nullptr;
-        std::shared_ptr<RT::UniformBufferGroup> mErrorBuffer{};
+        std::shared_ptr<RT::BufferGroup> mErrorBuffer{};
 
         std::shared_ptr<RT::PipelineGroup> mDisplayPassPipeline{};
         

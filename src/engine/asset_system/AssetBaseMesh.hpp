@@ -16,11 +16,7 @@ namespace MFA::AssetSystem
 
     public:
 
-        explicit MeshBase(
-            uint32_t vertexBufferCount_ = 1,
-            bool keepVertexStagingBuffer_ = false,
-            bool keepIndexStagingBuffer_ = false
-        );
+        explicit MeshBase();
         ~MeshBase() override;
 
         MeshBase(MeshBase const &) noexcept = delete;
@@ -41,7 +37,7 @@ namespace MFA::AssetSystem
         uint32_t getVertexCount() const;
 
         [[nodiscard]]
-        SmartBlob const * getVertexBuffer() const;
+        SmartBlob const * getVertexData() const;
 
         [[nodiscard]]
         uint32_t getIndexCount() const;
@@ -51,12 +47,7 @@ namespace MFA::AssetSystem
 
         [[nodiscard]]
         virtual bool isValid() const;
-
-        // Vertex buffer count required for gpu model
-        uint32_t const requiredVertexBufferCount;
-        bool keepVertexStagingBuffer = false;
-        bool keepIndexStagingBuffer = false;
-
+        
     protected:
 
         uint32_t mVertexCount{};

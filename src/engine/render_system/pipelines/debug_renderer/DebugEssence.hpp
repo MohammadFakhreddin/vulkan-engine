@@ -8,7 +8,7 @@ namespace MFA
     {
     public:
 
-        explicit DebugEssence(std::shared_ptr<RT::GpuModel> const & gpuModel, uint32_t indexCount);
+        explicit DebugEssence(std::shared_ptr<RT::GpuModel> gpuModel, uint32_t indexCount);
         ~DebugEssence() override;
         
         DebugEssence & operator= (DebugEssence && rhs) noexcept = delete;
@@ -19,11 +19,22 @@ namespace MFA
         [[nodiscard]]
         uint32_t getIndicesCount() const;
 
-        void bindVertexBuffer(RT::CommandRecordState const & recordState) const override;
+        void setGraphicDescriptorSet(RT::DescriptorSetGroup const & descriptorSet);
+
+        void bindForGraphicPipeline(RT::CommandRecordState const & recordState) const;
 
     private:
 
+        void bindGraphicDescriptorSet(RT::CommandRecordState const & recordState) const;
+
+        void bindVertexBuffer(RT::CommandRecordState const & recordState) const;
+
+        void bindIndexBuffer(RT::CommandRecordState const & recordState) const;
+
+        std::shared_ptr<RT::GpuModel> mGpuModel;
         uint32_t const mIndicesCount;
+
+        RT::DescriptorSetGroup mGraphicDescriptorSet {};
 
     };
 }

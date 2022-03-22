@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/render_system/pipelines/BasePipeline.hpp"
+#include "engine/render_system/pipelines/BasePipeline.hpp"
 
 namespace MFA
 {
@@ -21,7 +22,7 @@ namespace MFA
 
         PIPELINE_PROPS(
             ParticlePipeline,
-            EventTypes::RenderEvent | EventTypes::UpdateEvent,
+            EventTypes::RenderEvent | EventTypes::UpdateEvent | EventTypes::ComputeEvent,
             RenderOrder::AfterEverything
         )
 
@@ -34,6 +35,8 @@ namespace MFA
         void render(RT::CommandRecordState & recordState, float deltaTime) override;
 
         void update(float deltaTimeInSec) override;
+
+        void compute(RT::CommandRecordState & recordState, float deltaTime) override;
 
         std::shared_ptr<EssenceBase> createEssenceWithModel(
             std::shared_ptr<AssetSystem::Model> const & cpuModel,

@@ -80,6 +80,7 @@ namespace MFA::RenderFrontend
         int nextEventListenerId = 0;
         uint8_t currentFrame = 0;
         VkFormat depthFormat{};
+
 #ifdef __DESKTOP__
         // CreateWindow
         MSDL::SDL_Window * window = nullptr;
@@ -581,67 +582,174 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<RT::UniformBufferGroup> CreateUniformBuffer(
-        size_t const bufferSize,
-        uint32_t const count
-    )
+    static VkMemoryPropertyFlags convertBufferUsageToMemoryFlags(MemoryFlags const & usage)
     {
-        std::vector<std::shared_ptr<RT::BufferAndMemory>> buffers(count);
-        RB::CreateUniformBuffer(
-            state->logicalDevice.device,
-            state->physicalDevice,
-            count,
-            bufferSize,
-            buffers.data()
-        );
-        auto uniformBufferGroup = std::make_shared<RT::UniformBufferGroup>(
-           std::move(buffers),
-            bufferSize
-        );
-        return uniformBufferGroup;
+        VkMemoryPropertyFlags propertyFlags;
+        switch (usage)
+        {
+            case MemoryFlags::hostVisible:
+                propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+                break;
+            case MemoryFlags::local:
+                propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+                break;
+            default:
+                MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+        }
+        return propertyFlags;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void UpdateUniformBuffer(
-        RT::CommandRecordState const & recordState,
-        RT::UniformBufferGroup const & bufferCollection,
-        CBlob const data
+    std::shared_ptr<RT::BufferGroup> CreateUniformBuffer(
+        size_t const bufferSize,
+        uint32_t const count,
+        MemoryFlags const & usage
     )
     {
-        UpdateBuffer(*bufferCollection.buffers[recordState.frameIndex], data);
+        return CreateUniformBuffer(bufferSize, count, convertBufferUsageToMemoryFlags(usage));
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<RT::StorageBufferCollection> CreateStorageBuffer(
+    std::shared_ptr<RT::BufferGroup> CreateStorageBuffer(
         size_t const bufferSize,
-        uint32_t const count
+        uint32_t const count,
+        MemoryFlags const & usage
+    )
+    {
+        return CreateStorageBuffer(bufferSize, count, convertBufferUsageToMemoryFlags(usage));
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    //static std::shared_ptr<RT::BufferAndMemory> createBuffer(
+    //    VkDeviceSize const bufferSize,
+    //    VkBufferUsageFlagBits bufferUsageFlagBits,
+    //    VkMemoryPropertyFlags memoryPropertyFlags
+    //)
+    //{
+    //    return RB::CreateBuffer(
+    //        state->logicalDevice.device,
+    //        state->physicalDevice,
+    //        bufferSize,
+    //        bufferUsageFlagBits,
+    //        memoryPropertyFlags
+    //    );
+    //}
+
+    //-------------------------------------------------------------------------------------------------
+
+    //static std::vector<std::shared_ptr<RT::BufferAndMemory>> createBuffer(
+    //    VkDeviceSize const bufferSize,
+    //    uint32_t const count,
+    //    VkBufferUsageFlagBits bufferUsageFlagBits,
+    //    VkMemoryPropertyFlags memoryPropertyFlags
+    //)
+    //{
+    //    std::vector<std::shared_ptr<RT::BufferAndMemory>> buffers(count);
+    //    for (auto & buffer : buffers)
+    //    {
+    //        buffer = createBuffer(
+    //            bufferSize,
+    //            bufferUsageFlagBits,//VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    //            memoryPropertyFlags            
+    //        );
+    //    }
+    //    return buffers;
+
+    //    //return RB::CreateMultipleBufferAndMemory(
+    //    //    state->logicalDevice.device,
+    //    //    state->physicalDevice,
+    //    //    count,
+    //    //    bufferSize,
+    //    //    bufferUsageFlagBits,
+    //    //    memoryPropertyFlags
+    //    //);
+    //}
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<RT::BufferGroup> CreateBufferGroup(
+        VkDeviceSize const bufferSize,
+        uint32_t const count,
+        VkBufferUsageFlags bufferUsageFlagBits,
+        VkMemoryPropertyFlags memoryPropertyFlags
     )
     {
         std::vector<std::shared_ptr<RT::BufferAndMemory>> buffers(count);
+        for (auto & buffer : buffers)
+        {
+            buffer = RB::CreateBuffer(
+                state->logicalDevice.device,
+                state->physicalDevice,
+                bufferSize,
+                bufferUsageFlagBits,
+                memoryPropertyFlags            
+            );
+        }
 
-        RB::CreateStorageBuffer(
-            state->logicalDevice.device,
-            state->physicalDevice,
-            count,
-            bufferSize,
-            buffers.data()
-        );
-
-        auto uniformBufferGroup = std::make_shared<RT::StorageBufferCollection>(
+        auto bufferGroup = std::make_shared<RT::BufferGroup>(
             std::move(buffers),
             bufferSize
         );
 
-        return uniformBufferGroup;
+        return bufferGroup;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void UpdateBuffer(RT::BufferAndMemory const & buffer, CBlob data)
+    std::shared_ptr<RT::BufferGroup> CreateUniformBuffer(
+        size_t const bufferSize,
+        uint32_t const count,
+        VkMemoryPropertyFlags memoryPropertyFlags
+    )
     {
-        RB::UpdateBuffer(
+        return CreateBufferGroup(
+            bufferSize,
+            count,
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            memoryPropertyFlags
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<RT::BufferGroup> CreateStorageBuffer(
+        size_t const bufferSize,
+        uint32_t const count,
+        VkMemoryPropertyFlags memoryPropertyFlags
+    )
+    {
+        return CreateBufferGroup(
+            bufferSize,
+            count,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            memoryPropertyFlags
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    [[nodiscard]]
+    std::shared_ptr<RT::BufferGroup> CreateStageBuffer(VkDeviceSize const bufferSize, uint32_t const count)
+    {
+        return CreateBufferGroup(
+            bufferSize,
+            count,
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void UpdateHostVisibleBuffer(
+        RT::BufferAndMemory const & buffer,
+        CBlob const & data
+    )
+    {
+        RB::UpdateHostVisibleBuffer(
             state->logicalDevice.device,
             buffer,
             data
@@ -650,94 +758,119 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    void CreateVertexBuffer(
-        CBlob const & verticesBlob,
-        std::shared_ptr<RT::BufferAndMemory> & outVertexBuffer,
-        std::shared_ptr<RT::BufferAndMemory> & inOutStagingVertexBuffer
+    void UpdateLocalBuffer(
+        RT::CommandRecordState const & recordState,
+        RT::BufferAndMemory const & buffer,
+        RT::BufferAndMemory const & stageBuffer,
+        CBlob const & data
     )
     {
-        RB::CreateVertexBuffer(
+        MFA_ASSERT(recordState.isValid);
+        MFA_ASSERT(recordState.commandBuffer != nullptr);
+        UpdateLocalBuffer(recordState.commandBuffer, buffer, stageBuffer, data);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void UpdateLocalBuffer(
+        VkCommandBuffer commandBuffer,
+        RT::BufferAndMemory const & buffer,
+        RT::BufferAndMemory const & stageBuffer,
+        CBlob const & data
+    )
+    {
+        RB::UpdateLocalBuffer(
+            state->logicalDevice.device,
+            commandBuffer,
+            data,
+            buffer,
+            stageBuffer
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<RT::BufferAndMemory> CreateVertexBuffer(
+        VkCommandBuffer commandBuffer,
+        RT::BufferAndMemory const & stageBuffer,
+        CBlob const & verticesBlob
+    )
+    {
+
+        VkDeviceSize const bufferSize = verticesBlob.len;
+        
+        auto vertexBuffer = RB::CreateBuffer(
             state->logicalDevice.device,
             state->physicalDevice,
-            state->graphicCommandPool,
-            state->graphicQueue,
-            verticesBlob,
-            outVertexBuffer,
-            inOutStagingVertexBuffer
+            bufferSize,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
+        
+        UpdateLocalBuffer(
+            commandBuffer,
+            *vertexBuffer,
+            stageBuffer,
+            verticesBlob
+        );
+        
+        return vertexBuffer;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void UpdateVertexBuffer(
-        CBlob const & verticesBlob,
-        RT::BufferAndMemory const & vertexBuffer,
-        RT::BufferAndMemory const & stagingBuffer
+    std::shared_ptr<RT::BufferAndMemory> CreateIndexBuffer(
+        VkCommandBuffer commandBuffer,
+        RT::BufferAndMemory const & stageBuffer,
+        CBlob const & indicesBlob
     )
     {
-        RB::UpdateVertexBuffer(
-            state->logicalDevice.device,
-            state->graphicCommandPool,
-            state->graphicQueue,
-            verticesBlob,
-            vertexBuffer,
-            stagingBuffer
-        );
-    }
+        auto const bufferSize = indicesBlob.len;
 
-    //-------------------------------------------------------------------------------------------------
-
-    void CreateIndexBuffer(
-        CBlob const & indicesBlob,
-        std::shared_ptr<RT::BufferAndMemory> & outIndexBuffer,
-        std::shared_ptr<RT::BufferAndMemory> & inOutStagingIndexBuffer
-    )
-    {
-        RB::CreateIndexBuffer(
+        auto indexBuffer = RB::CreateBuffer(
             state->logicalDevice.device,
             state->physicalDevice,
-            state->graphicCommandPool,
-            state->graphicQueue,
-            indicesBlob,
-            outIndexBuffer,
-            inOutStagingIndexBuffer
+            bufferSize,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
+
+        UpdateLocalBuffer(
+            commandBuffer,
+            *indexBuffer,
+            stageBuffer,
+            indicesBlob
+        );
+
+        return indexBuffer;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<RT::MeshBuffers> CreateMeshBuffers(AS::MeshBase const & mesh)
+    std::shared_ptr<RT::MeshBuffer> CreateMeshBuffers(
+        VkCommandBuffer commandBuffer,
+        AS::MeshBase const & mesh,
+        RT::BufferAndMemory const & vertexStageBuffer,
+        RT::BufferAndMemory const & indexStageBuffer
+    )
     {
         MFA_ASSERT(mesh.isValid());
 
-        std::vector<std::shared_ptr<RT::BufferAndMemory>> vertexBuffers{};
-        MFA_ASSERT(mesh.requiredVertexBufferCount > 0);
-
-        std::shared_ptr<RT::BufferAndMemory> vertexStagingBuffer = nullptr;
-        for (uint32_t i = 0; i < mesh.requiredVertexBufferCount; ++i)
-        {
-            vertexBuffers.emplace_back(std::shared_ptr<RT::BufferAndMemory> {});
-            CreateVertexBuffer(
-                mesh.getVertexBuffer()->memory,
-                vertexBuffers.back(),
-                vertexStagingBuffer
-            );
-        }
-
-        std::shared_ptr<RT::BufferAndMemory> indexBuffer = nullptr;
-        std::shared_ptr<RT::BufferAndMemory> indexStagingBuffer = nullptr;
-
-        CreateIndexBuffer(
-            mesh.getIndexBuffer()->memory,
-            indexBuffer,
-            indexStagingBuffer
+        auto vertexBuffer = CreateVertexBuffer(
+            commandBuffer,
+            vertexStageBuffer,
+            mesh.getVertexData()->memory
+        );
+        
+        auto indexBuffer = CreateIndexBuffer(
+            commandBuffer,
+            indexStageBuffer,
+            mesh.getIndexBuffer()->memory
         );
 
-        return std::make_shared<RT::MeshBuffers>(
-            vertexBuffers,
-            indexBuffer,
-            mesh.keepVertexStagingBuffer ? vertexStagingBuffer : nullptr,
-            mesh.keepIndexStagingBuffer ? indexStagingBuffer : nullptr
+        return std::make_shared<RT::MeshBuffer>(
+            vertexBuffer,
+            indexBuffer
         );
     }
 
@@ -797,20 +930,28 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     std::shared_ptr<RT::GpuModel> CreateGpuModel(
-        AS::Model const * modelAsset,
-        std::string const & address
+        VkCommandBuffer commandBuffer,
+        AS::Model const & modelAsset,
+        std::string const & nameId,
+        RT::BufferAndMemory const & vertexStageBuffer,
+        RT::BufferAndMemory const & indexStageBuffer
     )
     {
-        MFA_ASSERT(modelAsset->mesh->isValid());
-        auto meshBuffers = CreateMeshBuffers(*modelAsset->mesh);
+        MFA_ASSERT(modelAsset.mesh->isValid());
+        auto meshBuffers = CreateMeshBuffers(
+            commandBuffer,
+            *modelAsset.mesh,
+            vertexStageBuffer,
+            indexStageBuffer
+        );
         std::vector<std::shared_ptr<RT::GpuTexture>> textures{};
-        for (auto & textureAsset : modelAsset->textures)
+        for (auto & textureAsset : modelAsset.textures)
         {
             MFA_ASSERT(textureAsset->isValid());
             textures.emplace_back(CreateTexture(*textureAsset));
         }
         return std::make_shared<RT::GpuModel>(
-            address,
+            nameId,
             std::move(meshBuffers),
             std::move(textures)
         );
@@ -889,22 +1030,74 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    void BindDescriptorSet(
-        RT::CommandRecordState const & drawPass,
-        DescriptorSetType frequency,
-        RT::DescriptorSetGroup descriptorSetGroup
+    void AutoBindDescriptorSet(
+        RT::CommandRecordState const & recordState,
+        UpdateFrequency frequency,
+        RT::DescriptorSetGroup const & descriptorGroup
     )
     {
-        MFA_ASSERT(drawPass.isValid);
-        MFA_ASSERT(drawPass.pipeline);
-        // We should bind specific descriptor set with different texture for each mesh
+        MFA_ASSERT(recordState.isValid);
+
+        BindDescriptorSet(
+            recordState,
+            frequency,
+            descriptorGroup.descriptorSets[recordState.frameIndex]
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void BindDescriptorSet(
+        RT::CommandRecordState const & recordState,
+        UpdateFrequency frequency,
+        VkDescriptorSet descriptorSet
+    )
+    {
+        MFA_ASSERT(recordState.isValid);
+        MFA_ASSERT(recordState.commandBuffer != nullptr);
+        MFA_ASSERT(recordState.pipeline != nullptr);
+
+        VkPipelineBindPoint bindPoint;
+        switch (recordState.commandBufferType)
+        {
+            case RT::CommandBufferType::Compute:
+                bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
+                break;
+            case RT::CommandBufferType::Graphic:
+                bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+                break;
+            default:
+                MFA_ASSERT(false);
+                break;
+        }
+        
+        BindDescriptorSet(
+            recordState.commandBuffer,
+            bindPoint,
+            recordState.pipeline->pipelineLayout,
+            frequency,
+            descriptorSet
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+    // TODO: Maybe we can bind multiple descriptor sets at same time
+    void BindDescriptorSet(
+        VkCommandBuffer commandBuffer,
+        VkPipelineBindPoint bindPoint,
+        VkPipelineLayout pipelineLayout,
+        UpdateFrequency frequency,
+        VkDescriptorSet descriptorSet
+    )
+    {
+        // TODO: Move to render backend. TODO: Ask for BindPoint
         vkCmdBindDescriptorSets(
-            GetGraphicCommandBuffer(drawPass),
-            VK_PIPELINE_BIND_POINT_GRAPHICS,
-            drawPass.pipeline->pipelineLayout,
+            commandBuffer,
+            bindPoint,
+            pipelineLayout,
             static_cast<uint32_t>(frequency),
             1,
-            &descriptorSetGroup.descriptorSets[drawPass.frameIndex],
+            &descriptorSet,
             0,
             nullptr
         );
@@ -1039,6 +1232,24 @@ namespace MFA::RenderFrontend
     {
         RB::DestroyShader(state->logicalDevice.device, gpuShader);
     }
+
+    //-------------------------------------------------------------------------------------------------
+
+    //std::shared_ptr<RT::BufferAndMemory> CreateVertexBuffer(RT::CommandRecordState const & recordState, CBlob const & verticesBlob)
+    //{
+    //    MFA_ASSERT(recordState.isValid);
+    //    MFA_ASSERT(recordState.commandBuffer != nullptr);
+    //    return CreateVertexBuffer(recordState.commandBuffer, verticesBlob);
+    //}
+
+    ////-------------------------------------------------------------------------------------------------
+
+    //std::shared_ptr<RT::BufferAndMemory> CreateIndexBuffer(RT::CommandRecordState const & recordState, CBlob const & indicesBlob)
+    //{
+    //    MFA_ASSERT(recordState.isValid);
+    //    MFA_ASSERT(recordState.commandBuffer != nullptr);
+    //    return CreateIndexBuffer(recordState.commandBuffer, indicesBlob);
+    //}
 
     //-------------------------------------------------------------------------------------------------
 
@@ -1372,8 +1583,34 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
+    void BeginGraphicCommandBuffer(RT::CommandRecordState & recordState, VkCommandBufferBeginInfo const & beginInfo)
+    {
+        RF::BeginCommandBuffer(
+            recordState,
+            RF::GetGraphicCommandBuffer(recordState),
+            RT::CommandBufferType::Graphic,
+            beginInfo
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void BeginComputeCommandBuffer(RT::CommandRecordState & recordState, VkCommandBufferBeginInfo const & beginInfo)
+    {
+        RF::BeginCommandBuffer(
+            recordState,
+            RF::GetComputeCommandBuffer(recordState),
+            RT::CommandBufferType::Compute,
+            beginInfo
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void BeginCommandBuffer(
+        RT::CommandRecordState & recordState,
         VkCommandBuffer commandBuffer,
+        RT::CommandBufferType commandBufferType,
         VkCommandBufferBeginInfo const & beginInfo
     )
     {
@@ -1381,13 +1618,72 @@ namespace MFA::RenderFrontend
             commandBuffer,
             beginInfo
         );
+
+        MFA_ASSERT(recordState.isValid);
+        MFA_VK_INVALID_ASSERT(recordState.commandBuffer);
+        MFA_ASSERT(commandBufferType != RT::CommandBufferType::Invalid);
+        MFA_ASSERT(recordState.commandBufferType == RT::CommandBufferType::Invalid);
+
+        recordState.commandBufferType = commandBufferType;
+        recordState.commandBuffer = commandBuffer;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void EndCommandBuffer(VkCommandBuffer commandBuffer)
+    void EndCommandBuffer(RT::CommandRecordState & recordState)
     {
-        RB::EndCommandBuffer(commandBuffer);
+        MFA_ASSERT(recordState.isValid);
+        MFA_VK_VALID_ASSERT(recordState.commandBuffer);
+        MFA_ASSERT(recordState.commandBufferType != RT::CommandBufferType::Invalid);
+
+        RB::EndCommandBuffer(recordState.commandBuffer);
+
+        recordState.commandBuffer = nullptr;
+        recordState.commandBufferType = RT::CommandBufferType::Invalid;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    VkCommandBuffer BeginSingleTimeGraphicCommand()
+    {
+        return RB::BeginSingleTimeCommand(
+            state->logicalDevice.device,
+            state->graphicCommandPool
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void EndAndSubmitGraphicSingleTimeCommand(VkCommandBuffer const & commandBuffer)
+    {
+        RB::EndAndSubmitSingleTimeCommand(
+            state->logicalDevice.device,
+            state->graphicCommandPool,
+            state->graphicQueue,
+            commandBuffer
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    VkCommandBuffer BeginSingleTimeComputeCommand()
+    {
+        return RB::BeginSingleTimeCommand(
+            state->logicalDevice.device,
+            state->computeCommandPool
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void EndAndSubmitComputeSingleTimeCommand(VkCommandBuffer const & commandBuffer)
+    {
+        RB::EndAndSubmitSingleTimeCommand(
+            state->logicalDevice.device,
+            state->computeCommandPool,
+            state->computeQueue,
+            commandBuffer
+        );
     }
 
     //-------------------------------------------------------------------------------------------------

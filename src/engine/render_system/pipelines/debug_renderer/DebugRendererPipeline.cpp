@@ -13,7 +13,6 @@
 #include "engine/render_system/pipelines/debug_renderer/DebugEssence.hpp"
 #include "engine/render_system/pipelines/debug_renderer/DebugVariant.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
-#include "engine/job_system/JobSystem.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
 #include "engine/asset_system/AssetDebugMesh.hpp"
 #include "engine/asset_system/AssetModel.hpp"
@@ -49,7 +48,8 @@
 //	vks::initializers::vertexInputAttributeDescription(INSTANCE_BUFFER_BIND_ID, 7, VK_FORMAT_R32_SINT, sizeof(float) * 7),			// Location 7: Texture array layer index
 //};
 
-#define CAST_VARIANT(variant)  static_cast<DebugVariant *>(variant.get())
+#define CAST_VARIANT(variant)   static_cast<DebugVariant *>(variant.get())
+#define CAST_ESSENCE(essence)   static_cast<DebugEssence *>(essence.get())
 
 namespace MFA
 {
@@ -101,13 +101,13 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DebugRendererPipeline::render(RT::CommandRecordState & drawPass, float deltaTime)
+    void DebugRendererPipeline::render(RT::CommandRecordState & recordState, float deltaTime)
     {
-        RF::BindPipeline(drawPass, *mpipeline);
+        RF::BindPipeline(recordState, *mpipeline);
 
-        RF::BindDescriptorSet(
-            drawPass,
-            RenderFrontend::DescriptorSetType::PerFrame,
+        RF::AutoBindDescriptorSet(
+            recordState,
+            RenderFrontend::UpdateFrequency::PerFrame,
             mDescriptorSetGroup
         );
 
@@ -115,12 +115,11 @@ namespace MFA
 
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto & essence = essenceAndVariantList.second.essence;
+            auto const * essence = CAST_ESSENCE(essenceAndVariantList.second.essence);
             auto & variantsList = essenceAndVariantList.second.variants;
 
-            essence->bindVertexBuffer(drawPass);
-            essence->bindIndexBuffer(drawPass);
-
+            essence->bindForGraphicPipeline(recordState);
+            
             for (auto & variant : variantsList)
             {
                 if (variant->IsActive())
@@ -131,13 +130,13 @@ namespace MFA
                     debugVariant->getTransform(pushConstants.model);
 
                     RF::PushConstants(
-                        drawPass,
+                        recordState,
                         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                         0,
                         CBlobAliasOf(pushConstants)
                     );
 
-                    CAST_VARIANT(variant)->Draw(drawPass);
+                    CAST_VARIANT(variant)->Draw(recordState);
                 }
             }
         }

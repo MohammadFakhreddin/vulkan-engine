@@ -64,38 +64,29 @@ namespace MFA
         
         };
 
-        struct MeshBuffers
+        struct MeshBuffer
         {
-            std::vector<std::shared_ptr<BufferAndMemory>> const verticesBuffer;
-            std::shared_ptr<BufferAndMemory> const indicesBuffer;
+            std::shared_ptr<BufferAndMemory> const vertexBuffer;
+            std::shared_ptr<BufferAndMemory> const indexBuffer;
 
-            // Vertex and index stage buffer are most of the times null.
-            std::shared_ptr<BufferAndMemory> const vertexStagingBuffer;
-            std::shared_ptr<BufferAndMemory> const indexStagingBuffer;
-
-            explicit MeshBuffers(
-                std::vector<std::shared_ptr<BufferAndMemory>> verticesBuffer_,
-                std::shared_ptr<BufferAndMemory> indicesBuffer_,
-                std::shared_ptr<BufferAndMemory> vertexStagingBuffer_,
-                std::shared_ptr<BufferAndMemory> indexStagingBuffer_
-            );
-            explicit MeshBuffers(
+            explicit MeshBuffer(
                 std::shared_ptr<BufferAndMemory> verticesBuffer_,
                 std::shared_ptr<BufferAndMemory> indicesBuffer_
             );
-            ~MeshBuffers();
 
-            MeshBuffers(MeshBuffers const &) noexcept = delete;
-            MeshBuffers(MeshBuffers &&) noexcept = delete;
-            MeshBuffers & operator= (MeshBuffers const & rhs) noexcept = delete;
-            MeshBuffers & operator= (MeshBuffers && rhs) noexcept = delete;
+            ~MeshBuffer();
+
+            MeshBuffer(MeshBuffer const &) noexcept = delete;
+            MeshBuffer(MeshBuffer &&) noexcept = delete;
+            MeshBuffer & operator= (MeshBuffer const & rhs) noexcept = delete;
+            MeshBuffer & operator= (MeshBuffer && rhs) noexcept = delete;
         
         };
 
         struct ImageGroup
         {
-            VkImage const image;
-            VkDeviceMemory const memory;
+            const VkImage image;
+            const VkDeviceMemory memory;
 
             explicit ImageGroup(
                 VkImage image_,
@@ -144,13 +135,13 @@ namespace MFA
 
         struct GpuModel
         {
-            std::string const nameOrAddress;
-            std::shared_ptr<MeshBuffers> const meshBuffers;
+            std::string const nameId;
+            std::shared_ptr<MeshBuffer> const meshBuffers;
             std::vector<std::shared_ptr<GpuTexture>> const textures;
             
             explicit GpuModel(
                 std::string address_,
-                std::shared_ptr<MeshBuffers> meshBuffers_,
+                std::shared_ptr<MeshBuffer> meshBuffers_,
                 std::vector<std::shared_ptr<GpuTexture>> textures_
             );
             ~GpuModel();
@@ -202,48 +193,50 @@ namespace MFA
             bool isValid() const noexcept;
         };
 
+        enum class CommandBufferType
+        {
+            Invalid,
+            Graphic,
+            Compute
+        };
+
         struct CommandRecordState
         {
             uint32_t imageIndex = 0;
             uint32_t frameIndex = 0;
             bool isValid = false;
+            CommandBufferType commandBufferType = CommandBufferType::Invalid;
+            VkCommandBuffer commandBuffer = nullptr;
             PipelineGroup * pipeline = nullptr;
             RenderPass * renderPass = nullptr;
         };
 
-        struct UniformBufferGroup
+        struct BufferGroup
         {
-            explicit UniformBufferGroup(
+            explicit BufferGroup(
                 std::vector<std::shared_ptr<BufferAndMemory>> buffers_,
                 size_t bufferSize_
             );
-            ~UniformBufferGroup();
+            ~BufferGroup();
 
-            UniformBufferGroup(UniformBufferGroup const &) noexcept = delete;
-            UniformBufferGroup(UniformBufferGroup &&) noexcept = delete;
-            UniformBufferGroup & operator= (UniformBufferGroup const & rhs) noexcept = delete;
-            UniformBufferGroup & operator= (UniformBufferGroup && rhs) noexcept = delete;
+            BufferGroup(BufferGroup const &) noexcept = delete;
+            BufferGroup(BufferGroup &&) noexcept = delete;
+            BufferGroup & operator= (BufferGroup const & rhs) noexcept = delete;
+            BufferGroup & operator= (BufferGroup && rhs) noexcept = delete;
 
             std::vector<std::shared_ptr<BufferAndMemory>> const buffers;
             size_t const bufferSize;
         };
 
-        struct StorageBufferCollection
+        /*struct UniformBufferGroup : public BufferGroup
         {
-            explicit StorageBufferCollection(
-                std::vector<std::shared_ptr<BufferAndMemory>> buffers_,
-                size_t bufferSize_
-            );
-            ~StorageBufferCollection();
-
-            StorageBufferCollection(StorageBufferCollection const &) noexcept = delete;
-            StorageBufferCollection(StorageBufferCollection &&) noexcept = delete;
-            StorageBufferCollection & operator= (StorageBufferCollection const & rhs) noexcept = delete;
-            StorageBufferCollection & operator= (StorageBufferCollection && rhs) noexcept = delete;
-
-            std::vector<std::shared_ptr<BufferAndMemory>> const buffers;
-            size_t const bufferSize;
+            using BufferGroup::BufferGroup;
         };
+
+        struct StorageBufferGroup : public BufferGroup
+        {
+            using BufferGroup::BufferGroup;
+        };*/
 
         struct SwapChainGroup
         {

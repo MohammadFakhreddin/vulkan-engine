@@ -15,7 +15,7 @@
 #include "engine/resource_manager/ResourceManager.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 
-#define CAST_ESSENCE(essence) static_cast<ParticleEssence *>(essence)
+#define CAST_ESSENCE_PURE(essence) static_cast<ParticleEssence *>(essence)
 
 namespace MFA
 {
@@ -86,15 +86,15 @@ namespace MFA
 
         RF::BindPipeline(recordState, *mGraphicPipeline);
 
-        RF::BindDescriptorSet(
+        RF::AutoBindDescriptorSet(
             recordState,
-            RF::DescriptorSetType::PerFrame,
+            RF::UpdateFrequency::PerFrame,
             mPerFrameDescriptorSetGroup
         );
 
         for (auto * essence : mAllEssencesList)
         {
-            CAST_ESSENCE(essence)->draw(recordState, deltaTimeInSec);
+            CAST_ESSENCE_PURE(essence)->draw(recordState, deltaTimeInSec);
         }
     }
     
@@ -114,7 +114,7 @@ namespace MFA
             JS::AssignTask([deltaTimeInSec, &essenceAndVariants](uint32_t threadNumber, uint32_t threadCount)->void{
                 auto * essence = essenceAndVariants.second.essence.get();
                 auto const & variants = essenceAndVariants.second.variants;
-                CAST_ESSENCE(essence)->update(deltaTimeInSec, variants);
+                CAST_ESSENCE_PURE(essence)->update(deltaTimeInSec, variants);
             });
         }
 
@@ -126,9 +126,16 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
  
+    void ParticlePipeline::compute(RT::CommandRecordState & recordState, float deltaTime)
+    {
+        BasePipeline::compute(recordState, deltaTime);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+ 
     void ParticlePipeline::internalAddEssence(EssenceBase * essence)
     {
-        createPerEssenceDescriptorSets(CAST_ESSENCE(essence));
+        createPerEssenceDescriptorSets(CAST_ESSENCE_PURE(essence));
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -284,11 +291,13 @@ namespace MFA
 
     void ParticlePipeline::createComputePipeline()
     {
-        //RF_CREATE_SHADER("shaders/particles/Particle.comp.spv", Compute)
+        //RF_CREATE_SHADER("shaders/particle/Particle.comp.spv", Compute)
 
         //std::vector<RT::GpuShader const *> shaders {gpuComputeShader.get()};
 
-        // TODO:
+        // TODO: Descriptor set layout
+        // TODO: Storage buffer
+        // TODO: Barrier to convert storage buffer into vertex buffer
     }
 
     //-------------------------------------------------------------------------------------------------

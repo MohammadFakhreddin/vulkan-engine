@@ -89,7 +89,7 @@ void MFA::VariantBase::Shutdown()
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::EssenceBase const * MFA::VariantBase::GetEssence() const noexcept
+MFA::EssenceBase const * MFA::VariantBase::getEssence() const noexcept
 {
     return mEssence;
 }

@@ -494,6 +494,8 @@ list(
     #nlohmann
     "src/libs/nlohmann/json_fwd.hpp"
     "src/libs/nlohmann/json.hpp"
+    #vma
+    "src/libs/vma/vk_mem_alloc.h"
 )
 
 if (NOT ANDROID)

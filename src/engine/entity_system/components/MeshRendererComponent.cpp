@@ -33,12 +33,6 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    MeshRendererComponent::MeshRendererComponent(BasePipeline & pipeline, RT::GpuModel const & gpuModel)
-        : MeshRendererComponent(pipeline, gpuModel.nameOrAddress)
-    {}
-
-    //-------------------------------------------------------------------------------------------------
-
     void MeshRendererComponent::init()
     {
         RendererComponent::init();
@@ -85,11 +79,9 @@ namespace MFA
     {
         auto const variant = mVariant.lock();
         MFA_ASSERT(variant != nullptr);
-        auto const * essence = variant->GetEssence();
+        auto const * essence = variant->getEssence();
         MFA_ASSERT(essence != nullptr);
-        auto const * gpuModel = essence->getGpuModel();
-        MFA_ASSERT(gpuModel != nullptr);
-        jsonObject["address"] = gpuModel->nameOrAddress;
+        jsonObject["address"] = essence->getNameId();
         jsonObject["pipeline"] = mPipeline->GetName();
     }
 
@@ -145,9 +137,9 @@ namespace MFA
         MFA_ASSERT(entity != nullptr);
         auto const variant = mVariant.lock();
         MFA_ASSERT(variant != nullptr);
-        auto const * essence = variant->GetEssence();
+        auto const * essence = variant->getEssence();
         MFA_ASSERT(essence != nullptr);
-        auto const * gpuModel = essence->getGpuModel();
+        auto const * gpuModel = essence->getNameId();
         MFA_ASSERT(gpuModel != nullptr);
         entity->AddComponent<MeshRendererComponent>(*mPipeline, *gpuModel);
     }

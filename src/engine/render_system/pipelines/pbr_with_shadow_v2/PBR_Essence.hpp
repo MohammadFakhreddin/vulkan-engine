@@ -34,7 +34,7 @@ public:
     };
 
     explicit PBR_Essence(
-        std::shared_ptr<RT::GpuModel> const & gpuModel,
+        std::shared_ptr<RT::GpuModel> gpuModel,
         std::shared_ptr<AS::PBR::MeshData> meshData
     );
     ~PBR_Essence() override;
@@ -44,8 +44,9 @@ public:
     PBR_Essence (PBR_Essence && rhs) noexcept = delete;
     PBR_Essence & operator = (PBR_Essence const &) noexcept = delete;
 
-    [[nodiscard]] RT::UniformBufferGroup const & getPrimitivesBuffer() const noexcept;
-
+    [[nodiscard]]
+    RT::BufferGroup const * getPrimitivesBuffer() const noexcept;
+    
     [[nodiscard]]
     uint32_t getPrimitiveCount() const noexcept;
 
@@ -53,19 +54,32 @@ public:
     int getAnimationIndex(char const * name) const noexcept;
 
     [[nodiscard]]
+    RT::GpuModel const * getGpuModel() const;
+
+    [[nodiscard]]
     AS::PBR::MeshData const * getMeshData() const;
 
-    void bindVertexBuffer(RT::CommandRecordState const & recordState) const override;
+    void setGraphicDescriptorSet(RT::DescriptorSetGroup const & descriptorSet);
+
+    void bindForGraphicPipeline(RT::CommandRecordState const & recordState) const;
 
 private:
 
-    std::shared_ptr<RT::UniformBufferGroup> mPrimitivesBuffer = nullptr;
+    void bindVertexBuffer(RT::CommandRecordState const & recordState) const;
+    void bindIndexBuffer(RT::CommandRecordState const & recordState) const;
+    void bindGraphicDescriptorSet(RT::CommandRecordState const & recordState) const;
+
+    RT::DescriptorSetGroup mGraphicDescriptorSet {};
+
+    std::shared_ptr<RT::BufferGroup> mPrimitivesBuffer = nullptr;
+
     uint32_t mPrimitiveCount = 0;
 
     std::unordered_map<std::string, int> mAnimationNameLookupTable {};
 
+    std::shared_ptr<RT::GpuModel> mGpuModel {};
     std::shared_ptr<AS::PBR::MeshData> mMeshData {};
-
+    
 };
 
 }

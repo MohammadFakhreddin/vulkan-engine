@@ -37,41 +37,23 @@ MFA::RT::SamplerGroup::~SamplerGroup()
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RT::MeshBuffers::MeshBuffers(
-    std::vector<std::shared_ptr<BufferAndMemory>> verticesBuffer_,
-    std::shared_ptr<BufferAndMemory> indicesBuffer_,
-    std::shared_ptr<BufferAndMemory> vertexStagingBuffer_,
-    std::shared_ptr<BufferAndMemory> indexStagingBuffer_
-)
-    : verticesBuffer(std::move(verticesBuffer_))
-    , indicesBuffer(std::move(indicesBuffer_))
-    , vertexStagingBuffer(std::move(vertexStagingBuffer_))
-    , indexStagingBuffer(std::move(indexStagingBuffer_))
-{}
-
-//-------------------------------------------------------------------------------------------------
-
-MFA::RenderTypes::MeshBuffers::MeshBuffers(
+MFA::RT::MeshBuffer::MeshBuffer(
     std::shared_ptr<BufferAndMemory> verticesBuffer_,
     std::shared_ptr<BufferAndMemory> indicesBuffer_
 )
-    : MeshBuffers(
-        std::vector{ std::move(verticesBuffer_) },
-        std::move(indicesBuffer_),
-        nullptr,
-        nullptr
-    )
+    : vertexBuffer(std::move(verticesBuffer_))
+    , indexBuffer(std::move(indicesBuffer_))
 {}
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RT::MeshBuffers::~MeshBuffers() = default;
+MFA::RT::MeshBuffer::~MeshBuffer() = default;
 
 //-------------------------------------------------------------------------------------------------
 
 MFA::RT::ImageGroup::ImageGroup(
-    const VkImage image_,
-    const VkDeviceMemory memory_
+    VkImage image_,
+    VkDeviceMemory memory_
 )
     : image(image_)
     , memory(memory_)
@@ -117,10 +99,10 @@ MFA::RT::GpuTexture::~GpuTexture() = default;
 
 MFA::RT::GpuModel::GpuModel(
     std::string address_,
-    std::shared_ptr<MeshBuffers> meshBuffers_,
+    std::shared_ptr<MeshBuffer> meshBuffers_,
     std::vector<std::shared_ptr<GpuTexture>> textures_
 )
-    : nameOrAddress(std::move(address_))
+    : nameId(std::move(address_))
     , meshBuffers(std::move(meshBuffers_))
     , textures(std::move(textures_))
 {}
@@ -179,7 +161,7 @@ bool MFA::RT::PipelineGroup::isValid() const noexcept
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RT::UniformBufferGroup::UniformBufferGroup(
+MFA::RT::BufferGroup::BufferGroup(
     std::vector<std::shared_ptr<BufferAndMemory>> buffers_,
     size_t const bufferSize_
 )
@@ -189,21 +171,7 @@ MFA::RT::UniformBufferGroup::UniformBufferGroup(
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RT::UniformBufferGroup::~UniformBufferGroup() = default;
-
-//-------------------------------------------------------------------------------------------------
-
-MFA::RT::StorageBufferCollection::StorageBufferCollection(
-    std::vector<std::shared_ptr<BufferAndMemory>> buffers_,
-    size_t const bufferSize_
-)
-    : buffers(std::move(buffers_))
-    , bufferSize(bufferSize_)
-{}
-
-//-------------------------------------------------------------------------------------------------
-
-MFA::RT::StorageBufferCollection::~StorageBufferCollection() = default;
+MFA::RT::BufferGroup::~BufferGroup() = default;
 
 //-------------------------------------------------------------------------------------------------
 

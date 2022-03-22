@@ -13,10 +13,11 @@ using namespace MFA::AS::PBR;
 
 // We need other overrides for easier use as well
 MFA::PBR_Essence::PBR_Essence(
-    std::shared_ptr<RT::GpuModel> const & gpuModel,
-    std::shared_ptr<MeshData> meshData
+    std::shared_ptr<RT::GpuModel> gpuModel,
+    std::shared_ptr<AS::PBR::MeshData> meshData
 )
-    : EssenceBase(gpuModel)
+    : EssenceBase(gpuModel->nameId)
+    , mGpuModel(std::move(gpuModel))
     , mMeshData(std::move(meshData))
 {
     MFA_ASSERT(mGpuModel != nullptr);
@@ -28,8 +29,14 @@ MFA::PBR_Essence::PBR_Essence(
         }
         if (mPrimitiveCount > 0) {
             size_t const bufferSize = sizeof(PrimitiveInfo) * mPrimitiveCount;
-            mPrimitivesBuffer = RF::CreateUniformBuffer(bufferSize, 1);
 
+            mPrimitivesBuffer = RF::CreateUniformBuffer(
+                bufferSize,
+                1,
+                RF::MemoryFlags::local
+            );
+            auto const stageBuffer = RF::CreateStageBuffer(bufferSize, 1);
+            
             auto const primitiveData = Memory::Alloc(bufferSize);
             
             auto * primitivesArray = primitiveData->memory.as<PrimitiveInfo>();
@@ -55,11 +62,16 @@ MFA::PBR_Essence::PBR_Essence(
                     primitiveInfo.alphaCutoff = primitive.alphaCutoff;
                 }
             }
-            /*
-             *  TODO: Because we update primitive buffer once we should DEVICE_LOCAL buffer instead of HOST_VISIBLE
-             *  to improve efficiency for gpu read and save HOST_VISIBLE buffer
-            */
-            RF::UpdateBuffer(*mPrimitivesBuffer->buffers[0], primitiveData->memory);
+
+            auto const commandBuffer = RF::BeginSingleTimeGraphicCommand();
+            RF::UpdateLocalBuffer(
+                commandBuffer,
+                *mPrimitivesBuffer->buffers[0],
+                *stageBuffer->buffers[0],
+                primitiveData->memory
+            );
+            RF::EndAndSubmitGraphicSingleTimeCommand(commandBuffer);
+
         }
     }
     {// Animations
@@ -78,8 +90,8 @@ MFA::PBR_Essence::~PBR_Essence() = default;
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RT::UniformBufferGroup const & MFA::PBR_Essence::getPrimitivesBuffer() const noexcept {
-    return *mPrimitivesBuffer;
+MFA::RT::BufferGroup const * MFA::PBR_Essence::getPrimitivesBuffer() const noexcept {
+    return mPrimitivesBuffer.get();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -101,6 +113,13 @@ int MFA::PBR_Essence::getAnimationIndex(char const * name) const noexcept {
 
 //-------------------------------------------------------------------------------------------------
 
+MFA::RenderTypes::GpuModel const * MFA::PBR_Essence::getGpuModel() const
+{
+    return mGpuModel.get();
+}
+
+//-------------------------------------------------------------------------------------------------
+
 MeshData const * MFA::PBR_Essence::getMeshData() const
 {
     return mMeshData.get();
@@ -108,9 +127,44 @@ MeshData const * MFA::PBR_Essence::getMeshData() const
 
 //-------------------------------------------------------------------------------------------------
 
+void MFA::PBR_Essence::setGraphicDescriptorSet(RT::DescriptorSetGroup const & descriptorSet)
+{
+    MFA_ASSERT(descriptorSet.IsValid());
+    mGraphicDescriptorSet = descriptorSet;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::PBR_Essence::bindForGraphicPipeline(RT::CommandRecordState const & recordState) const
+{
+    bindGraphicDescriptorSet(recordState);
+    bindVertexBuffer(recordState);
+    bindIndexBuffer(recordState);
+}
+
+//-------------------------------------------------------------------------------------------------
+
 void MFA::PBR_Essence::bindVertexBuffer(RT::CommandRecordState const & recordState) const
 {
-    RF::BindVertexBuffer(recordState, *mGpuModel->meshBuffers->verticesBuffer[0]);
+    RF::BindVertexBuffer(recordState, *mGpuModel->meshBuffers->vertexBuffer);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::PBR_Essence::bindIndexBuffer(RT::CommandRecordState const & recordState) const
+{
+    RF::BindIndexBuffer(recordState, *mGpuModel->meshBuffers->indexBuffer);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::PBR_Essence::bindGraphicDescriptorSet(RT::CommandRecordState const & recordState) const
+{
+    RF::AutoBindDescriptorSet(
+        recordState,
+        RF::UpdateFrequency::PerFrame,
+        mGraphicDescriptorSet
+    );
 }
 
 //-------------------------------------------------------------------------------------------------

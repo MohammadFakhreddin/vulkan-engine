@@ -9,12 +9,12 @@ struct VSIn {
     float pointSize;
 
     // State variables
-    float remainingLifeInSec = 0.0f;
-    float totalLifeInSec = 0.0f;
+    float remainingLifeInSec;
+    float totalLifeInSec;
     float placeholder0;
     
-    float3 initialLocalPosition{};
-    float speed = 0.0f;
+    float3 initialLocalPosition;
+    float speed;
 
     // Per instance data
     float3 instancePosition: SV_POSITION;
@@ -31,8 +31,7 @@ struct VSOut {
     [[vk::builtin("PointSize")]] float PSize : PSIZE;
 };
 
-ConstantBuffer <CameraData> cameraBuffer: register(b0, space);
-
+ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
 
 VSOut main(VSIn input) {
     VSOut output;

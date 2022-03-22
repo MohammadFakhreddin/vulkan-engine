@@ -76,18 +76,19 @@ namespace MFA
         // Creating cachedSkinJoints array
         {
             uint32_t totalJointsCount = 0;
-            for (uint32_t i = 0; i < static_cast<uint32_t>(mMeshData->skins.size()); ++i)
+            for (auto const & skin : mMeshData->skins)
             {
-                auto & skin = mMeshData->skins[i];
                 auto const jointsCount = static_cast<uint32_t>(skin.joints.size());
                 totalJointsCount += jointsCount;
             }
             if (totalJointsCount > 0)
             {
+                // TODO: We need a memory pool for staging buffer to reuse it
                 mCachedSkinsJointsBlob = Memory::Alloc(sizeof(JointTransformData) * totalJointsCount);
                 mSkinsJointsBuffer = RF::CreateUniformBuffer(
                     mCachedSkinsJointsBlob->memory.len,
-                    RF::GetMaxFramesPerFlight()
+                    RF::GetMaxFramesPerFlight(),
+                    RF::MemoryFlags::hostVisible
                 );
             }
         }
@@ -112,7 +113,7 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     [[nodiscard]]
-    RT::UniformBufferGroup const * PBR_Variant::GetSkinJointsBuffer() const noexcept
+    RT::BufferGroup const * PBR_Variant::GetSkinJointsBuffer() const noexcept
     {
         return mSkinsJointsBuffer.get();
     }
@@ -128,9 +129,9 @@ namespace MFA
 
         if (mBufferDirtyCounter > 0)
         {
-            RF::UpdateBuffer(
-               *mSkinsJointsBuffer->buffers[recordState.frameIndex],
-               mCachedSkinsJointsBlob->memory
+            RF::UpdateHostVisibleBuffer(
+                *mSkinsJointsBuffer->buffers[recordState.frameIndex],
+                mCachedSkinsJointsBlob->memory
             );
             mBufferDirtyCounter -= 1;
         }

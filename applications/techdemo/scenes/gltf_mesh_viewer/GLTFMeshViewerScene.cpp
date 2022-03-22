@@ -305,7 +305,7 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
 
         renderRequiredData.meshRendererComponent = entity->AddComponent<MeshRendererComponent>(
             *pbrPipeline,
-            renderRequiredData.gpuModel->nameOrAddress
+            renderRequiredData.gpuModel->nameId
         );
         MFA_ASSERT(renderRequiredData.meshRendererComponent.expired() == false);
 

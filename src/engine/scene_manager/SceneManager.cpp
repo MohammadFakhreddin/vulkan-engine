@@ -19,9 +19,15 @@ namespace MFA::SceneManager
     static void prepareCameraBuffer();
     static void prepareDirectionalLightsBuffer();
     static void preparePointLightsBuffer();
+
     static void updateCameraBuffer(RT::CommandRecordState const & recordState);
     static void updateDirectionalLightsBuffer(RT::CommandRecordState const & recordState);
     static void updatePointLightsBuffer(RT::CommandRecordState const & recordState);
+
+    // TODO: Time buffer. We need to update time every frame
+    struct TimeBufferData {
+        float deltaTime;
+    };
 
     struct PointLight
     {
@@ -103,16 +109,16 @@ namespace MFA::SceneManager
         std::vector<std::weak_ptr<DirectionalLightComponent>> directionalLightComponents{};
 
         // Buffers 
-        std::shared_ptr<RT::UniformBufferGroup> cameraBuffer{};
+        std::shared_ptr<RT::BufferGroup> cameraBuffer{};
 
         // Point light
         PointLightsBufferData pointLightData{};
         std::vector<PointLightComponent *> activePointLights{};
-        std::shared_ptr<RT::UniformBufferGroup> pointLightsBuffers{};
+        std::shared_ptr<RT::BufferGroup> pointLightsBuffers{};
 
         // Directional light
         DirectionalLightData directionalLightData{};
-        std::shared_ptr<RT::UniformBufferGroup> directionalLightBuffers{};
+        std::shared_ptr<RT::BufferGroup> directionalLightBuffers{};
 
         // TODO Spot light
 
@@ -185,9 +191,12 @@ namespace MFA::SceneManager
             state->activeSceneIndex = 0;
         }
 
+        // Creating and update buffers
+        //auto const commandBuffer = RF::BeginSingleTimeGraphicCommand();
         prepareCameraBuffer();
-        prepareDirectionalLightsBuffer();
-        preparePointLightsBuffer();
+        prepareDirectionalLightsBuffer(/*commandBuffer*/);
+        preparePointLightsBuffer(/*commandBuffer*/);
+        //RF::EndAndSubmitGraphicSingleTimeCommand(commandBuffer);
 
         if (state->activeSceneIndex >= 0)
         {
@@ -510,13 +519,11 @@ namespace MFA::SceneManager
         float const deltaTime
     )
     {
-        const auto commandBuffer = RF::GetComputeCommandBuffer(recordState);
-
-        RF::BeginCommandBuffer(commandBuffer);
+        RF::BeginComputeCommandBuffer(recordState);
 
         state->computeSignal.Emit(recordState, deltaTime);
 
-        RF::EndCommandBuffer(commandBuffer);
+        RF::EndCommandBuffer(recordState);
         
     }
 
@@ -527,9 +534,7 @@ namespace MFA::SceneManager
         float const deltaTime
     )
     {
-        const auto commandBuffer = RF::GetGraphicCommandBuffer(recordState);
-
-        RF::BeginCommandBuffer(commandBuffer);
+        RF::BeginGraphicCommandBuffer(recordState);
 
         // Pre render
         updateCameraBuffer(recordState);
@@ -548,7 +553,7 @@ namespace MFA::SceneManager
 
         state->displayRenderPass->EndRenderPass(recordState);
 
-        RF::EndCommandBuffer(commandBuffer);
+        RF::EndCommandBuffer(recordState);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -630,7 +635,7 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::UniformBufferGroup const & GetCameraBuffers()
+    RT::BufferGroup const & GetCameraBuffers()
     {
         return *state->cameraBuffer;
     }
@@ -651,14 +656,14 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::UniformBufferGroup const & GetPointLightsBuffers()
+    RT::BufferGroup const & GetPointLightsBuffers()
     {
         return *state->pointLightsBuffers;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::UniformBufferGroup const & GetDirectionalLightBuffers()
+    RT::BufferGroup const & GetDirectionalLightBuffers()
     {
         return *state->directionalLightBuffers;
     }
@@ -690,15 +695,15 @@ namespace MFA::SceneManager
     {
         state->cameraBuffer = RF::CreateUniformBuffer(
             sizeof(CameraComponent::CameraBufferData),
-            RF::GetMaxFramesPerFlight()
+            RF::GetMaxFramesPerFlight(),
+            RF::MemoryFlags::hostVisible
         );
 
         CameraComponent::CameraBufferData const cameraBufferData{};
-
-        for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
+        for (auto const & buffer : state->cameraBuffer->buffers)
         {
-            RF::UpdateBuffer(
-                *state->cameraBuffer->buffers[frameIndex],
+            RF::UpdateHostVisibleBuffer(
+                *buffer,
                 CBlobAliasOf(cameraBufferData)
             );
         }
@@ -710,14 +715,16 @@ namespace MFA::SceneManager
     {
         state->pointLightsBuffers = RF::CreateUniformBuffer(
             sizeof(PointLightsBufferData),
-            RF::GetMaxFramesPerFlight()
+            RF::GetMaxFramesPerFlight(),
+            RF::MemoryFlags::hostVisible
         );
 
-        for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
+        auto const dataBlob = CBlobAliasOf(state->pointLightData);
+        for (auto const & buffer : state->pointLightsBuffers->buffers)
         {
-            RF::UpdateBuffer(
-                *state->pointLightsBuffers->buffers[frameIndex],
-                CBlobAliasOf(state->pointLightData)
+            RF::UpdateHostVisibleBuffer(
+                *buffer,
+                CBlobAliasOf(dataBlob)
             );
         }
     }
@@ -728,14 +735,16 @@ namespace MFA::SceneManager
     {
         state->directionalLightBuffers = RF::CreateUniformBuffer(
             sizeof(DirectionalLightData),
-            RF::GetMaxFramesPerFlight()
+            RF::GetMaxFramesPerFlight(),
+            RF::MemoryFlags::hostVisible
         );
 
-        for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
+        auto const dataBlob = CBlobAliasOf(state->directionalLightData);
+        for (auto const & buffer : state->directionalLightBuffers->buffers)
         {
-            RF::UpdateBuffer(
-                *state->directionalLightBuffers->buffers[frameIndex],
-                CBlobAliasOf(state->directionalLightData)
+            RF::UpdateHostVisibleBuffer(
+                *buffer,
+                CBlobAliasOf(dataBlob)
             );
         }
     }
@@ -751,7 +760,7 @@ namespace MFA::SceneManager
             {
                 if (cameraPtr->IsCameraDataDirty())
                 {
-                    RF::UpdateBuffer(
+                    RF::UpdateHostVisibleBuffer(
                         *state->cameraBuffer->buffers[recordState.frameIndex],
                         CBlobAliasOf(cameraPtr->GetCameraData())
                     );
@@ -799,9 +808,8 @@ namespace MFA::SceneManager
             }
         }
 
-        RF::UpdateUniformBuffer(
-            recordState,
-            *state->pointLightsBuffers,
+        RF::UpdateHostVisibleBuffer(
+            *state->pointLightsBuffers->buffers[recordState.frameIndex],
             CBlobAliasOf(state->pointLightData)
         );
     }
@@ -837,9 +845,8 @@ namespace MFA::SceneManager
             }
         }
 
-        RF::UpdateUniformBuffer(
-            recordState,
-            *state->directionalLightBuffers,
+        RF::UpdateHostVisibleBuffer(
+            *state->directionalLightBuffers->buffers[recordState.frameIndex],
             CBlobAliasOf(state->directionalLightData)
         );
     }

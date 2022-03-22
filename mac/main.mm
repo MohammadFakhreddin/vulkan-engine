@@ -15,6 +15,9 @@
 #include "../src/libs/tiny_gltf_loader/tiny_gltf_loader.h"
 #define TINYKTX_IMPLEMENTATION 
 #include "../src/libs/tiny_ktx/tinyktx.h"
+#define VMA_IMPLEMENTATION
+#include "../src/libs/vma/vk_mem_alloc.h"
+
 #include "../src/Application.hpp"
 
 #ifdef TECHDEMO

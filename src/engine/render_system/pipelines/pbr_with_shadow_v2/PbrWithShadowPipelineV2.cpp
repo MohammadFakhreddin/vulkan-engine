@@ -21,8 +21,9 @@
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
 
-#define CAST_ESSENCE(essence)   static_cast<PBR_Essence *>(essence)
-#define CAST_VARIANT(variant)   static_cast<PBR_Variant *>(variant.get())
+#define CAST_ESSENCE_PURE(essence)      static_cast<PBR_Essence *>(essence)
+#define CAST_ESSENCE_SHARED(essence)    CAST_ESSENCE_PURE(essence.get())
+#define CAST_VARIANT_PURE(variant)      static_cast<PBR_Variant *>(variant.get())
 
 /*
 There are four C++ style casts:
@@ -256,7 +257,7 @@ namespace MFA
     void PBRWithShadowPipelineV2::internalAddEssence(EssenceBase * essence)
     {
         MFA_ASSERT(dynamic_cast<PBR_Essence *>(essence) != nullptr);
-        createEssenceDescriptorSets(*CAST_ESSENCE(essence));
+        createEssenceDescriptorSets(*CAST_ESSENCE_PURE(essence));
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -353,13 +354,15 @@ namespace MFA
     {
         auto const & textures = essence.getGpuModel()->textures;
 
-        auto const & descriptorSetGroup = essence.createDescriptorSetGroup(
+        auto const descriptorSetGroup = RF::CreateDescriptorSets(
             mDescriptorPool,
             RF::GetMaxFramesPerFlight(),
             *mPerEssenceDescriptorSetLayout
         );
 
-        auto & primitiveBuffer = essence.getPrimitivesBuffer();
+        essence.setGraphicDescriptorSet(descriptorSetGroup);
+        
+        auto const * primitiveBuffer = essence.getPrimitivesBuffer();
 
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
@@ -374,9 +377,9 @@ namespace MFA
 
             // Primitives
             VkDescriptorBufferInfo primitiveBufferInfo{
-                .buffer = primitiveBuffer.buffers[0]->buffer,
+                .buffer = primitiveBuffer->buffers[0]->buffer,
                 .offset = 0,
-                .range = primitiveBuffer.bufferSize,
+                .range = primitiveBuffer->bufferSize,
             };
             descriptorSetSchema.AddUniformBuffer(&primitiveBufferInfo);
 
@@ -515,9 +518,9 @@ namespace MFA
     void PBRWithShadowPipelineV2::performDepthPrePass(RT::CommandRecordState & recordState) const
     {
         RF::BindPipeline(recordState, *mDepthPassPipeline);
-        RF::BindDescriptorSet(
+        RF::AutoBindDescriptorSet(
             recordState,
-            RenderFrontend::DescriptorSetType::PerFrame,
+            RenderFrontend::UpdateFrequency::PerFrame,
             mPerFrameDescriptorSetGroup
         );
 
@@ -534,7 +537,7 @@ namespace MFA
         // TODO: Submit in multiple threads
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto & essence = essenceAndVariantList.second.essence;
+            auto const * essence = CAST_ESSENCE_SHARED(essenceAndVariantList.second.essence);
             auto & variantsList = essenceAndVariantList.second.variants;
 
             if (variantsList.empty())
@@ -542,20 +545,20 @@ namespace MFA
                 continue;
             }
 
-            essence->bindAllRenderRequiredData(recordState);
+            essence->bindForGraphicPipeline(recordState);
 
             for (auto & variant : variantsList)
             {
                 if (variant->IsVisible())
                 {
 
-                    RF::BindDescriptorSet(
+                    RF::AutoBindDescriptorSet(
                         recordState,
-                        RenderFrontend::DescriptorSetType::PerVariant,
+                        RenderFrontend::UpdateFrequency::PerVariant,
                         variant->GetDescriptorSetGroup()
                     );
 
-                    CAST_VARIANT(variant)->Render(
+                    CAST_VARIANT_PURE(variant)->Render(
                         recordState,
                         [&recordState, &pushConstants](
                             AS::PBR::Primitive const & primitive,
@@ -593,9 +596,9 @@ namespace MFA
         }
 
         RF::BindPipeline(recordState, *mDirectionalLightShadowPipeline);
-        RF::BindDescriptorSet(
+        RF::AutoBindDescriptorSet(
             recordState,
-            RenderFrontend::DescriptorSetType::PerFrame,
+            RenderFrontend::UpdateFrequency::PerFrame,
             mPerFrameDescriptorSetGroup
         );
 
@@ -617,7 +620,7 @@ namespace MFA
 
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto & essence = essenceAndVariantList.second.essence;
+            auto const * essence = CAST_ESSENCE_SHARED(essenceAndVariantList.second.essence);
             auto & variantsList = essenceAndVariantList.second.variants;
 
             if (variantsList.empty())
@@ -625,20 +628,20 @@ namespace MFA
                 continue;
             }
 
-            essence->bindAllRenderRequiredData(recordState);
+            essence->bindForGraphicPipeline(recordState);
 
             for (auto & variant : variantsList)
             {
                 // TODO We need a wider frustum for shadows
                 if (variant->IsActive())
                 {
-                    RF::BindDescriptorSet(
+                    RF::AutoBindDescriptorSet(
                         recordState,
-                        RenderFrontend::DescriptorSetType::PerVariant,
+                        RenderFrontend::UpdateFrequency::PerVariant,
                         variant->GetDescriptorSetGroup()
                     );
 
-                    CAST_VARIANT(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
+                    CAST_VARIANT_PURE(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
                     {
                         // Vertex push constants
                         pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
@@ -668,9 +671,9 @@ namespace MFA
         }
 
         RF::BindPipeline(recordState, *mPointLightShadowPipeline);
-        RF::BindDescriptorSet(
+        RF::AutoBindDescriptorSet(
             recordState,
-            RenderFrontend::DescriptorSetType::PerFrame,
+            RenderFrontend::UpdateFrequency::PerFrame,
             mPerFrameDescriptorSetGroup
         );
 
@@ -727,7 +730,7 @@ namespace MFA
 
             for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
             {
-                auto & essence = essenceAndVariantList.second.essence;
+                auto const * essence = CAST_ESSENCE_SHARED(essenceAndVariantList.second.essence);
                 auto & variantsList = essenceAndVariantList.second.variants;
 
                 if (variantsList.empty())
@@ -735,7 +738,7 @@ namespace MFA
                     continue;
                 }
 
-                essence->bindAllRenderRequiredData(recordState);
+                essence->bindForGraphicPipeline(recordState);
 
                 for (auto & variant : variantsList)
                 {
@@ -753,13 +756,13 @@ namespace MFA
                     {
                         continue;
                     }
-                    RF::BindDescriptorSet(
+                    RF::AutoBindDescriptorSet(
                         recordState,
-                        RenderFrontend::DescriptorSetType::PerVariant,
+                        RenderFrontend::UpdateFrequency::PerVariant,
                         variant->GetDescriptorSetGroup()
                     );
 
-                    CAST_VARIANT(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
+                    CAST_VARIANT_PURE(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
                     {
                         // Vertex push constants
                         pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
@@ -789,9 +792,9 @@ namespace MFA
         );
 
         RF::BindPipeline(recordState, *mOcclusionQueryPipeline);
-        RF::BindDescriptorSet(
+        RF::AutoBindDescriptorSet(
             recordState,
-            RenderFrontend::DescriptorSetType::PerFrame,
+            RenderFrontend::UpdateFrequency::PerFrame,
             mPerFrameDescriptorSetGroup
         );
 
@@ -812,7 +815,7 @@ namespace MFA
 
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto & essence = essenceAndVariantList.second.essence;
+            auto * essence = CAST_ESSENCE_SHARED(essenceAndVariantList.second.essence);
             auto & variantsList = essenceAndVariantList.second.variants;
 
             if (variantsList.empty())
@@ -820,23 +823,23 @@ namespace MFA
                 continue;
             }
 
-            essence->bindAllRenderRequiredData(recordState);
+            essence->bindForGraphicPipeline(recordState);
 
             for (auto & variant : variantsList)
             {
                 if (variant->IsActive() && variant->IsInFrustum())
                 {
 
-                    RF::BindDescriptorSet(
+                    RF::AutoBindDescriptorSet(
                         recordState,
-                        RenderFrontend::DescriptorSetType::PerVariant,
+                        RenderFrontend::UpdateFrequency::PerVariant,
                         variant->GetDescriptorSetGroup()
                     );
 
                     RF::BeginQuery(recordState, occlusionQueryData.Pool, static_cast<uint32_t>(occlusionQueryData.Variants.size()));
 
                     // TODO Draw a placeholder cube instead of complex geometry
-                    CAST_VARIANT(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
+                    CAST_VARIANT_PURE(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
                         {
                             // Vertex push constants
                             Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
@@ -867,9 +870,9 @@ namespace MFA
     void PBRWithShadowPipelineV2::performDisplayPass(RT::CommandRecordState & recordState)
     {
         RF::BindPipeline(recordState, *mDisplayPassPipeline);
-        RF::BindDescriptorSet(
+        RF::AutoBindDescriptorSet(
             recordState,
-            RenderFrontend::DescriptorSetType::PerFrame,
+            RenderFrontend::UpdateFrequency::PerFrame,
             mPerFrameDescriptorSetGroup
         );
         renderForDisplayPass(recordState, AS::AlphaMode::Opaque);
@@ -885,7 +888,7 @@ namespace MFA
 
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto & essence = essenceAndVariantList.second.essence;
+            auto * essence = CAST_ESSENCE_SHARED(essenceAndVariantList.second.essence);
             auto & variantsList = essenceAndVariantList.second.variants;
 
             if (variantsList.empty())
@@ -893,20 +896,20 @@ namespace MFA
                 continue;
             }
 
-            essence->bindAllRenderRequiredData(recordState);
+            essence->bindForGraphicPipeline(recordState);
 
             for (auto & variant : variantsList)
             {
                 if (variant->IsVisible())
                 {
 
-                    RF::BindDescriptorSet(
+                    RF::AutoBindDescriptorSet(
                         recordState,
-                        RenderFrontend::DescriptorSetType::PerVariant,
+                        RenderFrontend::UpdateFrequency::PerVariant,
                         variant->GetDescriptorSetGroup()
                     );
                     // TODO We can render all instances at once and have a large push constant for all of them
-                    CAST_VARIANT(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
+                    CAST_VARIANT_PURE(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
                         {
                             // Push constants
                             pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
@@ -1572,7 +1575,11 @@ namespace MFA
 
     void PBRWithShadowPipelineV2::createUniformBuffers()
     {
-        mErrorBuffer = RF::CreateUniformBuffer(sizeof(PBR_Variant::JointTransformData), 1);
+        mErrorBuffer = RF::CreateUniformBuffer(
+            sizeof(PBR_Variant::JointTransformData),
+            1,
+            RF::MemoryFlags::local
+        );
     }
 
     //-------------------------------------------------------------------------------------------------

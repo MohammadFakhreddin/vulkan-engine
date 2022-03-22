@@ -1,8 +1,9 @@
 #include "../Random.hlsl"
+#include "../TimeBuffer.hlsl"
 
 struct Params {
-    int count;
-    float3 direction;
+    int vertexCount;
+    float3 moveDirection;
     
     float minLife;
     float maxLife;
@@ -15,9 +16,8 @@ struct Params {
     float alpha;    
     float3 noiseMax;
 
-    float deltaTime;
     float pointSize;
-    float2 placeholder;
+    float3 placeholder;
 };
 
 struct Particle
@@ -25,8 +25,10 @@ struct Particle
     // Per vertex data
     float3 localPosition : SV_POSITION;
     int textureIndex;
+
     float3 color : COLOR0;
     float alpha : COLOR1;
+    
     float pointSize;
     // State variables
     float remainingLifeInSec;
@@ -40,13 +42,15 @@ struct Particle
 ConstantBuffer<Params> params : register(b0, space1);
 RWStructuredBuffer<Particle> particles : register(u1, space1);
 
+ConstantBuffer<Time> time : register(b1, space0);
+
 [numthreads(256, 1, 1)]
 void main(uint3 GlobalInvocationID : SV_DispatchThreadID)
 {
     // Current SSBO index
     uint index = GlobalInvocationID.x;
-	// Don't try to write beyond particle count
-    if (index >= params.count)
+	// Don't try to write beyond vertexCount
+    if (index >= params.vertexCount)
     {
 		return;
     }
@@ -55,11 +59,11 @@ void main(uint3 GlobalInvocationID : SV_DispatchThreadID)
 
     // TODO: Instead of reading from rand  we should use a noise texture
     
-    float3 deltaPosition = params.deltaTime * particle.speed * params.direction;
+    float3 deltaPosition = time.deltaTime * particle.speed * params.moveDirection;
     particle.localPosition += deltaPosition;
-    particle.localPosition += rand(particle.localPosition, params.noiseMin, params.noiseMax) * params.deltaTime;
+    particle.localPosition += rand(particle.localPosition, params.noiseMin, params.noiseMax) * time.deltaTime;
     
-    particle.remainingLifeInSec -= params.deltaTime;
+    particle.remainingLifeInSec -= time.deltaTime;
     if (particle.remainingLifeInSec <= 0)
     {
         particle.localPosition = particle.initialLocalPosition;

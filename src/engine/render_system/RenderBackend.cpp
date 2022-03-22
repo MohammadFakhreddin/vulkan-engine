@@ -452,14 +452,14 @@ namespace MFA::RenderBackend
 
     //-------------------------------------------------------------------------------------------------
 
-    VkCommandBuffer BeginSingleTimeCommand(VkDevice device, VkCommandPool const & command_pool)
+    VkCommandBuffer BeginSingleTimeCommand(VkDevice device, VkCommandPool const & commandPool)
     {
         MFA_ASSERT(device != nullptr);
 
         VkCommandBufferAllocateInfo allocate_info{};
         allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocate_info.commandPool = command_pool;
+        allocate_info.commandPool = commandPool;
         allocate_info.commandBufferCount = 1;
 
         VkCommandBuffer commandBuffer;
@@ -479,7 +479,7 @@ namespace MFA::RenderBackend
     void EndAndSubmitSingleTimeCommand(
         VkDevice device,
         VkCommandPool const & commandPool,
-        VkQueue const & graphicQueue,
+        VkQueue const & queue,
         VkCommandBuffer const & commandBuffer
     )
     {
@@ -489,8 +489,8 @@ namespace MFA::RenderBackend
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers = &commandBuffer;
-        VK_Check(vkQueueSubmit(graphicQueue, 1, &submit_info, VK_NULL));
-        VK_Check(vkQueueWaitIdle(graphicQueue));
+        VK_Check(vkQueueSubmit(queue, 1, &submit_info, VK_NULL));
+        VK_Check(vkQueueWaitIdle(queue));
 
         vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
     }
@@ -673,32 +673,6 @@ namespace MFA::RenderBackend
         MFA_ASSERT(tempBufferData != nullptr);
         ::memcpy(tempBufferData, dataBlob.ptr, dataBlob.len);
         vkUnmapMemory(device, bufferMemory);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyBuffer(
-        VkDevice device,
-        VkCommandPool commandPool,
-        VkQueue graphicQueue,
-        VkBuffer sourceBuffer,
-        VkBuffer destinationBuffer,
-        VkDeviceSize const size
-    )
-    {
-        auto * commandBuffer = BeginSingleTimeCommand(device, commandPool);
-
-        VkBufferCopy copyRegion{};
-        copyRegion.size = size;
-        vkCmdCopyBuffer(
-            commandBuffer,
-            sourceBuffer,
-            destinationBuffer,
-            1,
-            &copyRegion
-        );
-
-        EndAndSubmitSingleTimeCommand(device, commandPool, graphicQueue, commandBuffer);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -2137,155 +2111,54 @@ namespace MFA::RenderBackend
 
     //-------------------------------------------------------------------------------------------------
 
-    void CreateVertexBuffer(
-        VkDevice device,
-        VkPhysicalDevice physicalDevice,
-        VkCommandPool commandPool,
-        VkQueue graphicQueue,
-        CBlob const & verticesBlob,
-        std::shared_ptr<RT::BufferAndMemory> & outVertexBuffer,
-        std::shared_ptr<RT::BufferAndMemory> & inOutStagingBuffer
+    static void copyBuffer(
+        VkCommandBuffer commandBuffer,
+        VkBuffer sourceBuffer,
+        VkBuffer destinationBuffer,
+        VkDeviceSize const size
     )
     {
-        VkDeviceSize const bufferSize = verticesBlob.len;
+        VkBufferCopy const copyRegion{
+            .size = size
+        };
 
-        if (inOutStagingBuffer == nullptr)
-        {
-            inOutStagingBuffer = CreateBuffer(
-                device,
-                physicalDevice,
-                bufferSize,
-                VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-            );
-        }
-
-        MapDataToBuffer(device, inOutStagingBuffer->memory, verticesBlob);
-
-        outVertexBuffer = CreateBuffer(
-            device,
-            physicalDevice,
-            bufferSize,
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-        );
-
-        CopyBuffer(
-            device,
-            commandPool,
-            graphicQueue,
-            inOutStagingBuffer->buffer,
-            outVertexBuffer->buffer,
-            bufferSize
+        vkCmdCopyBuffer(
+            commandBuffer,
+            sourceBuffer,
+            destinationBuffer,
+            1,
+            &copyRegion
         );
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void UpdateVertexBuffer(
+    void UpdateLocalBuffer(
         VkDevice device,
-        VkCommandPool commandPool,
-        VkQueue graphicQueue,
-        CBlob const & verticesBlob,
-        RT::BufferAndMemory const & vertexBuffer,
+        VkCommandBuffer commandBuffer,
+        CBlob const & data,
+        RT::BufferAndMemory const & buffer,
         RT::BufferAndMemory const & stagingBuffer
     )
     {
-        VkDeviceSize const bufferSize = verticesBlob.len;
+        VkDeviceSize const bufferSize = data.len;
 
-        MapDataToBuffer(device, stagingBuffer.memory, verticesBlob);
+        MapDataToBuffer(device, stagingBuffer.memory, data);
 
-        CopyBuffer(
-            device,
-            commandPool,
-            graphicQueue,
+        copyBuffer(
+            commandBuffer,
             stagingBuffer.buffer,
-            vertexBuffer.buffer,
+            buffer.buffer,
             bufferSize
         );
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void CreateIndexBuffer(
-        VkDevice device,
-        VkPhysicalDevice physicalDevice,
-        VkCommandPool commandPool,
-        VkQueue graphicQueue,
-        CBlob const & indicesBlob,
-        std::shared_ptr<RT::BufferAndMemory> & outIndexBuffer,
-        std::shared_ptr<RT::BufferAndMemory> & inOutStagingIndexBuffer
-    )
-    {
-        auto const bufferSize = indicesBlob.len;
-
-        if (inOutStagingIndexBuffer == nullptr)
-        {
-            inOutStagingIndexBuffer = CreateBuffer(
-                device,
-                physicalDevice,
-                bufferSize,
-                VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-            );
-        }
-
-        MapDataToBuffer(device, inOutStagingIndexBuffer->memory, indicesBlob);
-
-        outIndexBuffer = CreateBuffer(
-            device,
-            physicalDevice,
-            bufferSize,
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-        );
-
-        CopyBuffer(
-            device,
-            commandPool,
-            graphicQueue,
-            inOutStagingIndexBuffer->buffer,
-            outIndexBuffer->buffer,
-            bufferSize
-        );
-    }
-
-    //-------------------------------------------------------------------------------------------------
-    /* About HOST_VISIBLE_BIT
-     * It might be useful for things that are only updated by the CPU once per frame,
-     * but used by the GPU many times per frame. If something, that is updated by the CPU,
-     * is only used once by the GPU, you might as well let the GPU fetch it from system memory.
-     * The alternate would be to have a CPU buffer and a GPU buffer and used a transfer command to move data from one to the other.
-     */
-
-    void CreateUniformBuffer(
-        VkDevice device,
-        VkPhysicalDevice physicalDevice,
-        uint32_t const buffersCount,
-        VkDeviceSize const buffersSize,
-        std::shared_ptr<RT::BufferAndMemory> *outBuffers
-    )
-    {
-        for (uint32_t index = 0; index < buffersCount; index++)
-        {
-            outBuffers[index] = CreateBuffer(
-                device,
-                physicalDevice,
-                buffersSize,
-                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                // TODO: I believe that we should no use host visible bit for everything,
-                // Based on frequency we should decide where to have HOST_VISIBLE_Buffer or staging buffer
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT             
-            );
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void UpdateBuffer(
+    void UpdateHostVisibleBuffer(
         VkDevice device,
         RT::BufferAndMemory const & bufferGroup,
-        CBlob const data
+        CBlob const & data
     )
     {
         MapDataToBuffer(device, bufferGroup.memory, data);
@@ -2293,29 +2166,7 @@ namespace MFA::RenderBackend
 
     //-------------------------------------------------------------------------------------------------
 
-    void CreateStorageBuffer(
-        VkDevice device,
-        VkPhysicalDevice physicalDevice,
-        uint32_t const buffersCount,
-        VkDeviceSize const buffersSize,
-        std::shared_ptr<RT::BufferAndMemory> *outStorageBuffer
-    )
-    {
-        MFA_ASSERT(outStorageBuffer != nullptr);
-        for (uint32_t index = 0; index < buffersCount; index++)
-        {
-            outStorageBuffer[index] = CreateBuffer(
-                device,
-                physicalDevice,
-                buffersSize,
-                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-            );
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
+    // TODO: We need to ask for pool sizes instead
     VkDescriptorPool CreateDescriptorPool(
         VkDevice device,
         uint32_t const maxSets

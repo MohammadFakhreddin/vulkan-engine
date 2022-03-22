@@ -7,8 +7,9 @@ namespace MFA
 {
     //-------------------------------------------------------------------------------------------------
 
-    DebugEssence::DebugEssence(std::shared_ptr<RT::GpuModel> const & gpuModel, uint32_t indexCount)
-        : EssenceBase(gpuModel)
+    DebugEssence::DebugEssence(std::shared_ptr<RT::GpuModel> gpuModel, uint32_t const indexCount)
+        : EssenceBase(gpuModel->nameId)
+        , mGpuModel(std::move(gpuModel))
         , mIndicesCount(indexCount)
     {
         MFA_ASSERT(indexCount > 0);
@@ -27,9 +28,44 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    void DebugEssence::setGraphicDescriptorSet(RT::DescriptorSetGroup const & descriptorSet)
+    {
+        MFA_ASSERT(descriptorSet.IsValid());
+        mGraphicDescriptorSet = descriptorSet;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void DebugEssence::bindForGraphicPipeline(RT::CommandRecordState const & recordState) const
+    {
+        bindGraphicDescriptorSet(recordState);
+        bindVertexBuffer(recordState);
+        bindIndexBuffer(recordState);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void DebugEssence::bindGraphicDescriptorSet(RT::CommandRecordState const & recordState) const
+    {
+        RF::AutoBindDescriptorSet(
+            recordState,
+            RF::UpdateFrequency::PerEssence,
+            mGraphicDescriptorSet
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void DebugEssence::bindVertexBuffer(RT::CommandRecordState const & recordState) const
     {
-        RF::BindVertexBuffer(recordState, *mGpuModel->meshBuffers->verticesBuffer[0]);
+        RF::BindVertexBuffer(recordState, *mGpuModel->meshBuffers->vertexBuffer);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void DebugEssence::bindIndexBuffer(RT::CommandRecordState const & recordState) const
+    {
+        RF::BindIndexBuffer(recordState, *mGpuModel->meshBuffers->indexBuffer);
     }
 
     //-------------------------------------------------------------------------------------------------

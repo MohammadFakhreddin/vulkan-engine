@@ -25,6 +25,9 @@ namespace MFA::AssetSystem
     class Shader;
 }
 
+
+// Idea: Maybe we can return unique ptr so it can converted to shared_ptr when necessary
+
 namespace MFA::RenderFrontend
 {
 
@@ -63,7 +66,7 @@ namespace MFA::RenderFrontend
     void DestroyDescriptorSetLayout(VkDescriptorSetLayout descriptorSetLayout);
 
     //---------------------------------------------Pipelines--------------------------------------------
-
+    
     [[nodiscard]]
     VkPipelineLayout CreatePipelineLayout(
         uint32_t setLayoutCount,
@@ -111,26 +114,13 @@ namespace MFA::RenderFrontend
 
     //-----------------------------------------------------------------------------------------------------------
 
-    void CreateVertexBuffer(
-        CBlob const & verticesBlob,
-        std::shared_ptr<RT::BufferAndMemory> & outVertexBuffer,
-        std::shared_ptr<RT::BufferAndMemory> & inOutStagingVertexBuffer
-    );
-
-    void UpdateVertexBuffer(
-        CBlob const & verticesBlob,
-        RT::BufferAndMemory const & vertexBuffer,
-        RT::BufferAndMemory const & stagingBuffer
-    );
-
-    void CreateIndexBuffer(
-        CBlob const & indicesBlob,
-        std::shared_ptr<RT::BufferAndMemory> & outIndexBuffer,
-        std::shared_ptr<RT::BufferAndMemory> & inOutStagingIndexBuffer
-    );
-
     [[nodiscard]]
-    std::shared_ptr<RT::MeshBuffers> CreateMeshBuffers(AS::MeshBase const & mesh);
+    std::shared_ptr<RT::MeshBuffer> CreateMeshBuffers(
+        VkCommandBuffer commandBuffer,
+        AS::MeshBase const & mesh,
+        RT::BufferAndMemory const & vertexStageBuffer,
+        RT::BufferAndMemory const & indexStageBuffer
+    );
 
     [[nodiscard]]
     std::shared_ptr<RT::GpuTexture> CreateTexture(AS::Texture const & texture);
@@ -146,16 +136,17 @@ namespace MFA::RenderFrontend
 
     [[nodiscard]]
     std::shared_ptr<RT::GpuModel> CreateGpuModel(
-        AS::Model const * modelAsset,
-        std::string const & address
+        VkCommandBuffer commandBuffer,
+        AS::Model const & modelAsset,
+        std::string const & nameId,
+        RT::BufferAndMemory const & vertexStageBuffer,
+        RT::BufferAndMemory const & indexStageBuffer
     );
 
     void DeviceWaitIdle();
 
     [[nodiscard]]
     VkFormat GetDepthFormat();
-
-    void DestroyBuffer(RT::BufferAndMemory const & bufferGroup);
 
     //---------------------------------------------Shader------------------------------------------------
 
@@ -164,24 +155,87 @@ namespace MFA::RenderFrontend
 
     void DestroyShader(RT::GpuShader const & gpuShader);
 
-    //-------------------------------------------UniformBuffer--------------------------------------------
-    // TODO We should ask for frequency so we can decide which memory type we should use + TODO: Add never/rare to frequency as well
-    std::shared_ptr<RT::UniformBufferGroup> CreateUniformBuffer(size_t bufferSize, uint32_t count);
+    //-------------------------------------------Buffers--------------------------------------------------
 
-    void UpdateUniformBuffer(
-        RT::CommandRecordState const & recordState,
-        RT::UniformBufferGroup const & bufferCollection,
-        CBlob data
+    enum class MemoryFlags
+    {
+        hostVisible,
+        local
+    };
+
+    std::shared_ptr<RT::BufferAndMemory> CreateVertexBuffer(
+        VkCommandBuffer commandBuffer,
+        RT::BufferAndMemory const & stageBuffer,
+        CBlob const & verticesBlob
     );
 
-    //-------------------------------------------StorageBuffer--------------------------------------------
+    std::shared_ptr<RT::BufferAndMemory> CreateIndexBuffer(
+        VkCommandBuffer commandBuffer,
+        RT::BufferAndMemory const & stageBuffer,
+        CBlob const & indicesBlob
+    );
 
-    std::shared_ptr<RT::StorageBufferCollection> CreateStorageBuffer(size_t bufferSize, uint32_t count);
+    [[nodiscard]]
+    std::shared_ptr<RT::BufferGroup> CreateUniformBuffer(
+        size_t bufferSize,
+        uint32_t count,
+        MemoryFlags const & usage
+    );
 
-    void UpdateBuffer(
+    [[nodiscard]]
+    std::shared_ptr<RT::BufferGroup> CreateStorageBuffer(
+        size_t bufferSize,
+        uint32_t count,
+        MemoryFlags const & usage
+    );
+
+    std::shared_ptr<RT::BufferGroup> CreateStageBuffer(
+        VkDeviceSize bufferSize,
+        uint32_t count
+    );
+
+    [[nodiscard]]
+    std::shared_ptr<RT::BufferGroup> CreateUniformBuffer(
+        size_t bufferSize,
+        uint32_t count,
+        VkMemoryPropertyFlags memoryPropertyFlags
+    );
+
+    [[nodiscard]]
+    std::shared_ptr<RT::BufferGroup> CreateStorageBuffer(
+        size_t bufferSize,
+        uint32_t count,
+        VkMemoryPropertyFlags memoryPropertyFlags
+    );
+
+    [[nodiscard]]
+    std::shared_ptr<RT::BufferGroup> CreateBufferGroup(
+        VkDeviceSize bufferSize,
+        uint32_t count,
+        VkBufferUsageFlags bufferUsageFlagBits,
+        VkMemoryPropertyFlags memoryPropertyFlags
+    );
+
+    void UpdateHostVisibleBuffer(
         RT::BufferAndMemory const & buffer,
-        CBlob data
+        CBlob const & data
     );
+
+    void UpdateLocalBuffer(
+        RT::CommandRecordState const & recordState,
+        RT::BufferAndMemory const & buffer,
+        RT::BufferAndMemory const & stageBuffer,
+        CBlob const & data
+    );
+
+    void UpdateLocalBuffer(
+        VkCommandBuffer commandBuffer,
+        RT::BufferAndMemory const & buffer,
+        RT::BufferAndMemory const & stageBuffer,
+        CBlob const & data
+    );
+
+    void DestroyBuffer(RT::BufferAndMemory const & bufferGroup);
     
     //-------------------------------------------------------------------------------------------------
 
@@ -203,17 +257,31 @@ namespace MFA::RenderFrontend
     );
 
 
-    enum class DescriptorSetType : uint32_t
+    enum class UpdateFrequency : uint32_t
     {
         PerFrame = 0,
         PerEssence = 1,
         PerVariant = 2
     };
 
+    void AutoBindDescriptorSet(
+        RT::CommandRecordState const & recordState,
+        UpdateFrequency frequency,
+        RT::DescriptorSetGroup const & descriptorGroup
+    );
+
     void BindDescriptorSet(
-        RT::CommandRecordState const & drawPass,
-        DescriptorSetType frequency,
-        RT::DescriptorSetGroup descriptorSetGroup
+        RT::CommandRecordState const & recordState,
+        UpdateFrequency frequency,
+        VkDescriptorSet descriptorSet
+    );
+
+    void BindDescriptorSet(
+        VkCommandBuffer commandBuffer,
+        VkPipelineBindPoint bindPoint,
+        VkPipelineLayout pipelineLayout,
+        UpdateFrequency frequency,
+        VkDescriptorSet descriptorSet
     );
 
     //: loop through each mesh instance in the mesh instances list to render
@@ -379,15 +447,48 @@ namespace MFA::RenderFrontend
         uint32_t & outImageIndex
     );
 
-    void BeginCommandBuffer(
-        VkCommandBuffer commandBuffer,
+    //-----------------------------------------CommandBuffer-------------------------------------------------
+
+    void BeginGraphicCommandBuffer(
+        RT::CommandRecordState & recordState,
         VkCommandBufferBeginInfo const & beginInfo = {
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
             .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT
         }
     );
 
-    void EndCommandBuffer(VkCommandBuffer commandBuffer);
+    void BeginComputeCommandBuffer(
+        RT::CommandRecordState & recordState,
+        VkCommandBufferBeginInfo const & beginInfo = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT
+        }
+    );
+
+    void BeginCommandBuffer(
+        RT::CommandRecordState & recordState,
+        VkCommandBuffer commandBuffer,
+        RT::CommandBufferType commandBufferType,
+        VkCommandBufferBeginInfo const & beginInfo = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT
+        }
+    );
+
+    void EndCommandBuffer(RT::CommandRecordState & recordState);
+
+    [[nodiscard]]
+    VkCommandBuffer BeginSingleTimeGraphicCommand();
+
+    void EndAndSubmitGraphicSingleTimeCommand(VkCommandBuffer const & commandBuffer);
+
+    [[nodiscard]]
+    VkCommandBuffer BeginSingleTimeComputeCommand();
+
+    void EndAndSubmitComputeSingleTimeCommand(VkCommandBuffer const & commandBuffer);
+
+
+    //--------------------------------------------------------------------------------------------------------
 
     uint32_t GetPresentQueueFamily();
 
@@ -468,6 +569,7 @@ namespace MFA::RenderFrontend
     [[nodiscard]]
     RT::CommandRecordState AcquireRecordState();
 
+    [[nodiscard]]
     VkFence GetFence(RT::CommandRecordState const & recordState);
 
     [[nodiscard]]

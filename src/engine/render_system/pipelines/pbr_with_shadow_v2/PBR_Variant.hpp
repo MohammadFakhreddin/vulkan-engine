@@ -94,7 +94,7 @@ namespace MFA
         void PostRender(float deltaTimeInSec) override;
         
         [[nodiscard]]
-        RT::UniformBufferGroup const * GetSkinJointsBuffer() const noexcept;
+        RT::BufferGroup const * GetSkinJointsBuffer() const noexcept;
 
         void OnUI() override;
 
@@ -140,7 +140,7 @@ namespace MFA
         PBR_Essence const * mPBR_Essence = nullptr;
         AS::PBR::MeshData const * mMeshData = nullptr;
 
-        std::shared_ptr<RT::UniformBufferGroup> mSkinsJointsBuffer{};
+        std::shared_ptr<RT::BufferGroup> mSkinsJointsBuffer{};
 
         int mActiveAnimationIndex = 0;
         int mPreviousAnimationIndex = -1;

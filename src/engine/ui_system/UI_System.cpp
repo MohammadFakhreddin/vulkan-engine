@@ -144,7 +144,6 @@ namespace MFA::UI_System
         RT::DescriptorSetGroup descriptorSetGroup{};
         std::shared_ptr<RT::PipelineGroup> pipeline{};
         std::shared_ptr<RT::GpuTexture> fontTexture{};
-        std::vector<std::shared_ptr<RT::MeshBuffers>> meshBuffers{};
         bool hasFocus = false;
         Signal<> UIRecordSignal{};
 #if defined(__ANDROID__) || defined(__IOS__)
@@ -272,9 +271,9 @@ namespace MFA::UI_System
         // Create Descriptor Set:
         state->descriptorSetGroup = RF::CreateDescriptorSets(
             state->descriptorPool,
-            RF::GetMaxFramesPerFlight(),
+            1,
             *state->descriptorSetLayout
-        ); // Original number was 1 , Now it creates as many as swap_chain_image_count
+        );
 
 
         auto const pipelineLayout = RF::CreatePipelineLayout(
@@ -489,9 +488,7 @@ namespace MFA::UI_System
     void Init()
     {
         state = new State();
-        auto const swapChainImagesCount = RF::GetSwapChainImagesCount();
-        state->meshBuffers.resize(swapChainImagesCount);
-
+        
         // Setup Dear ImGui context
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
@@ -594,7 +591,7 @@ namespace MFA::UI_System
 
     bool Render(
         float const deltaTimeInSec,
-        RT::CommandRecordState & drawPass
+        RT::CommandRecordState & recordState
     )
     {
         ImGuiIO & io = ImGui::GetIO();
@@ -608,11 +605,12 @@ namespace MFA::UI_System
 
         // Setup desired Vulkan state
         // Bind pipeline and descriptor sets:
-        RF::BindPipeline(drawPass, *state->pipeline);
+        RF::BindPipeline(recordState, *state->pipeline);
+
         RF::BindDescriptorSet(
-            drawPass,
-            RenderFrontend::DescriptorSetType::PerFrame,
-            state->descriptorSetGroup
+            recordState,
+            RenderFrontend::UpdateFrequency::PerFrame,
+            state->descriptorSetGroup.descriptorSets[0]
         );
 
         auto const * drawData = ImGui::GetDrawData();
@@ -644,39 +642,25 @@ namespace MFA::UI_System
                     }
                 }
 
-                auto & meshBuffer = state->meshBuffers[drawPass.frameIndex];
-                // TODO Prevent buffer to create mesh buffer every frame, Maybe we can update buffer instead when they have same size
-                std::shared_ptr<RT::BufferAndMemory> vertexBuffer = nullptr;
-                std::shared_ptr<RT::BufferAndMemory> vertexStageBuffer = nullptr;
-                std::shared_ptr<RT::BufferAndMemory> indexBuffer = nullptr;
-                std::shared_ptr<RT::BufferAndMemory> indexStageBuffer = nullptr;
-
-                RF::CreateVertexBuffer(
-                    vertexData->memory,
-                    vertexBuffer,
-                    vertexStageBuffer
+                auto const vertexBuffer = RF::CreateVertexBuffer(
+                    recordState,
+                    vertexData->memory
                 );
 
-                RF::CreateIndexBuffer(
-                    indexData->memory,
-                    indexBuffer,
-                    indexStageBuffer
-                );
-
-                meshBuffer = std::make_shared<RT::MeshBuffers>(
-                    vertexBuffer,
-                    indexBuffer
+                auto const indexBuffer = RF::CreateIndexBuffer(
+                    recordState,
+                    indexData->memory
                 );
                 
                 RF::BindIndexBuffer(
-                    drawPass,
-                    *meshBuffer->indicesBuffer,
+                    recordState,
+                    *indexBuffer,
                     0,
                     sizeof(ImDrawIdx) == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32
                 );
                 RF::BindVertexBuffer(
-                    drawPass,
-                    *meshBuffer->verticesBuffer[0]
+                    recordState,
+                    *vertexBuffer
                 );
 
                 // Setup viewport:
@@ -689,7 +673,7 @@ namespace MFA::UI_System
                     .minDepth = 0.0f,
                     .maxDepth = 1.0f,
                 };
-                RF::SetViewport(drawPass, viewport);
+                RF::SetViewport(recordState, viewport);
                 
                 // Setup scale and translation:
                 // Our visible imgui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
@@ -700,7 +684,7 @@ namespace MFA::UI_System
                     constants.translate[0] = -1.0f - drawData->DisplayPos.x * constants.scale[0];
                     constants.translate[1] = -1.0f - drawData->DisplayPos.y * constants.scale[1];
                     RF::PushConstants(
-                        drawPass,
+                        recordState,
                         AS::ShaderStage::Vertex,
                         0,
                         CBlobAliasOf(constants)
@@ -743,12 +727,12 @@ namespace MFA::UI_System
                                 scissor.offset.y = static_cast<int32_t>(clip_rect.y);
                                 scissor.extent.width = static_cast<uint32_t>(clip_rect.z - clip_rect.x);
                                 scissor.extent.height = static_cast<uint32_t>(clip_rect.w - clip_rect.y);
-                                RF::SetScissor(drawPass, scissor);
+                                RF::SetScissor(recordState, scissor);
                             }
 
                             // Draw
                             RF::DrawIndexed(
-                                drawPass,
+                                recordState,
                                 pcmd->ElemCount,
                                 1,
                                 pcmd->IdxOffset + global_idx_offset,

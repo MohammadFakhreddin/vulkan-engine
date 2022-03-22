@@ -27,7 +27,7 @@ public:
 
     void shutdown() override;
 
-    void render(RT::CommandRecordState & drawPass, float deltaTime) override;
+    void render(RT::CommandRecordState & recordState, float deltaTime) override;
     
     void onResize() override;
 
