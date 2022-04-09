@@ -42,7 +42,7 @@ struct Particle
 ConstantBuffer<Params> params : register(b0, space1);
 RWStructuredBuffer<Particle> particles : register(u1, space1);
 
-ConstantBuffer<Time> time : register(b1, space0);
+ConstantBuffer<Time> time : register(b2, space0);
 
 [numthreads(256, 1, 1)]
 void main(uint3 GlobalInvocationID : SV_DispatchThreadID)

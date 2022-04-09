@@ -9,10 +9,12 @@
 
 MFA::RT::BufferAndMemory::BufferAndMemory(
     VkBuffer buffer_,
-    VkDeviceMemory memory_
+    VkDeviceMemory memory_,
+    VkDeviceSize size_
 )
     : buffer(buffer_)
     , memory(memory_)
+    , size(size_)
 {}
 
 //-------------------------------------------------------------------------------------------------

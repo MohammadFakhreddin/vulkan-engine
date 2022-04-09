@@ -4,6 +4,7 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockMemory.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
+#include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
 
 #define CAST_VARIANT(variant) static_pointer_cast<ParticleVariant>(variant)
 
@@ -99,10 +100,12 @@ namespace MFA
 
     ParticleEssence::ParticleEssence(
         std::string nameId,
+        uint32_t particleCount,
         uint32_t maxInstanceCount,
         std::vector<std::shared_ptr<RT::GpuTexture>> textures
     )
         : EssenceBase(std::move(nameId))
+        , mParticleCount(particleCount)
         , mMaxInstanceCount(maxInstanceCount)
         , mTextures(std::move(textures))
     {}
@@ -161,6 +164,19 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    void ParticleEssence::compute(RT::CommandRecordState const & recordState) const
+    {
+        bindComputeDescriptorSet(recordState);
+        RF::Dispatch(
+            recordState,
+            mParticleCount,
+            0,
+            0
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void ParticleEssence::render(RT::CommandRecordState const & recordState) const
     {
         if (mShouldUpdate)
@@ -174,6 +190,7 @@ namespace MFA
         bindInstanceBuffer(recordState);
         bindIndexBuffer(recordState);
         bindGraphicDescriptorSet(recordState);
+
         // Draw
         RF::DrawIndexed(
             recordState,
@@ -195,6 +212,95 @@ namespace MFA
             CBlobAliasOf(params)
         );
         RF::EndAndSubmitGraphicSingleTimeCommand(commandBuffer);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ParticleEssence::createGraphicDescriptorSet(
+        VkDescriptorPool descriptorPool,
+        VkDescriptorSetLayout descriptorSetLayout,
+        RT::GpuTexture const & errorTexture,
+        uint32_t const maxTextureCount
+    )
+    {
+        mGraphicDescriptorSet = RF::CreateDescriptorSets(
+            descriptorPool,
+            RF::GetMaxFramesPerFlight(),
+            descriptorSetLayout
+        );
+
+        for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
+        {
+            auto const & descriptorSet = mGraphicDescriptorSet.descriptorSets[frameIndex];
+            MFA_VK_VALID_ASSERT(descriptorSet);
+
+            DescriptorSetSchema descriptorSetSchema{ descriptorSet };
+
+            // -----------Textures------------
+            MFA_ASSERT(mTextures.size() < maxTextureCount);
+            std::vector<VkDescriptorImageInfo> imageInfos{};
+            for (auto const & texture : mTextures)
+            {
+                imageInfos.emplace_back(VkDescriptorImageInfo{
+                    .sampler = nullptr,
+                    .imageView = texture->imageView->imageView,
+                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                });
+            }
+            for (auto i = static_cast<uint32_t>(mTextures.size()); i < maxTextureCount; ++i)
+            {
+                imageInfos.emplace_back(VkDescriptorImageInfo{
+                    .sampler = nullptr,
+                    .imageView = errorTexture.imageView->imageView,
+                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                });
+            }
+            MFA_ASSERT(imageInfos.size() == maxTextureCount);
+            descriptorSetSchema.AddImage(
+                imageInfos.data(),
+                static_cast<uint32_t>(imageInfos.size())
+            );
+            // --------------------------------
+            descriptorSetSchema.UpdateDescriptorSets();
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ParticleEssence::createComputeDescriptorSet(VkDescriptorPool descriptorPool, VkDescriptorSetLayout descriptorSetLayout)
+    {
+        mComputeDescriptorSet = RF::CreateDescriptorSets(
+            descriptorPool,
+            RF::GetMaxFramesPerFlight(),
+            descriptorSetLayout
+        );
+
+        for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
+        {
+            auto const & descriptorSet = mComputeDescriptorSet.descriptorSets[frameIndex];
+            MFA_VK_VALID_ASSERT(descriptorSet);
+
+            DescriptorSetSchema descriptorSetSchema{ descriptorSet };
+
+            // -----------Params-------------
+            VkDescriptorBufferInfo paramsBufferInfo {
+                .buffer = mParamsBuffer->buffers[frameIndex]->buffer,
+                .offset = 0,
+                .range = mParamsBuffer->bufferSize
+            };
+            descriptorSetSchema.AddUniformBuffer(&paramsBufferInfo);
+
+            // -----------Particles-------------
+            VkDescriptorBufferInfo particleBufferInfo {
+                .buffer = mVertexBuffer->buffers[frameIndex]->buffer,
+                .offset = 0,
+                .range = mVertexBuffer->bufferSize
+            };
+            descriptorSetSchema.AddStorageBuffer(&particleBufferInfo);
+
+            // --------------------------------
+            descriptorSetSchema.UpdateDescriptorSets();
+        }
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -282,7 +388,7 @@ namespace MFA
         RF::BindDescriptorSet(
             recordState,
             RF::UpdateFrequency::PerEssence,
-            mGraphicDescriptorSet.descriptorSets[0]
+            mComputeDescriptorSet.descriptorSets[0]
         );
     }
 

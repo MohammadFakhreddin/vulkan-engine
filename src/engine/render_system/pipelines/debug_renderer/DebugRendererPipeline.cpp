@@ -261,7 +261,7 @@ namespace MFA
             *mDescriptorSetLayout
         );
 
-        auto const & cameraBufferCollection = SceneManager::GetCameraBuffers();
+        auto const * cameraBufferGroup = SceneManager::GetCameraBuffers();
 
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
@@ -277,9 +277,9 @@ namespace MFA
 
             // ViewProjectionTransform
             VkDescriptorBufferInfo bufferInfo{
-                .buffer = cameraBufferCollection.buffers[frameIndex]->buffer,
+                .buffer = cameraBufferGroup->buffers[frameIndex]->buffer,
                 .offset = 0,
-                .range = cameraBufferCollection.bufferSize,
+                .range = cameraBufferGroup->bufferSize,
             };
             descriptorSetSchema.AddUniformBuffer(&bufferInfo);
 

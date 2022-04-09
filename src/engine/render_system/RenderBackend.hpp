@@ -688,6 +688,13 @@ namespace MFA::RenderBackend
         uint32_t firstQueryIndex = 0
     );
 
+    void Dispatch(
+        VkCommandBuffer commandBuffer,
+        uint32_t groupCountX,
+        uint32_t groupCountY,
+        uint32_t groupCountZ
+    );
+
 }
 
 namespace MFA

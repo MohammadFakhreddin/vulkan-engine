@@ -32,16 +32,11 @@ namespace MFA
 
         void shutdown() override;
         
-        void render(RT::CommandRecordState & recordState, float deltaTime) override;
+        void render(RT::CommandRecordState & recordState, float deltaTimeInSec) override;
 
         void update(float deltaTimeInSec) override;
 
-        void compute(RT::CommandRecordState & recordState, float deltaTime) override;
-
-        std::shared_ptr<EssenceBase> createEssenceWithModel(
-            std::shared_ptr<AssetSystem::Model> const & cpuModel,
-            std::string const & name
-        );
+        void compute(RT::CommandRecordState & recordState, float deltaTimeInSec) override;
 
     protected:
 
@@ -52,11 +47,12 @@ namespace MFA
     private:
 
         void createPerFrameDescriptorSetLayout();
-        void createPerEssenceDescriptorSetLayout();
+
+        void createPerEssenceGraphicDescriptorSetLayout();
+        void createPerEssenceComputeDescriptorSetLayout();
 
         void createPerFrameDescriptorSets();
-        void createPerEssenceDescriptorSets(ParticleEssence * essence) const;
-
+        
         void createComputePipeline();
 
         void createGraphicPipeline();
@@ -64,7 +60,8 @@ namespace MFA
         static constexpr int MAXIMUM_TEXTURE_PER_ESSENCE = 10;
         
         std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerFrameDescriptorSetLayout {};
-        std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerEssenceDescriptorSetLayout {};
+        std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerEssenceGraphicDescriptorSetLayout {};
+        std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerEssenceComputeDescriptorSetLayout {};
 
         RT::DescriptorSetGroup mPerFrameDescriptorSetGroup {};
         

@@ -55,7 +55,8 @@ namespace MFA
         MFA_ASSERT(mErrorTexture != nullptr);
 
         createPerFrameDescriptorSetLayout();
-        createPerEssenceDescriptorSetLayout();
+        createPerEssenceGraphicDescriptorSetLayout();
+        createPerEssenceComputeDescriptorSetLayout();
 
         createPerFrameDescriptorSets();
 
@@ -94,7 +95,7 @@ namespace MFA
 
         for (auto * essence : mAllEssencesList)
         {
-            CAST_ESSENCE_PURE(essence)->draw(recordState, deltaTimeInSec);
+            CAST_ESSENCE_PURE(essence)->render(recordState);
         }
     }
     
@@ -114,7 +115,7 @@ namespace MFA
             JS::AssignTask([deltaTimeInSec, &essenceAndVariants](uint32_t threadNumber, uint32_t threadCount)->void{
                 auto * essence = essenceAndVariants.second.essence.get();
                 auto const & variants = essenceAndVariants.second.variants;
-                CAST_ESSENCE_PURE(essence)->update(deltaTimeInSec, variants);
+                CAST_ESSENCE_PURE(essence)->update(variants);
             });
         }
 
@@ -126,16 +127,50 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
  
-    void ParticlePipeline::compute(RT::CommandRecordState & recordState, float deltaTime)
+    void ParticlePipeline::compute(RT::CommandRecordState & recordState, float const deltaTimeInSec)
     {
-        BasePipeline::compute(recordState, deltaTime);
+
+        if (mAllEssencesList.empty())
+        {
+            return;
+        }
+
+        BasePipeline::compute(recordState, deltaTimeInSec);
+
+        RF::BindPipeline(recordState, *mComputePipeline);
+
+        RF::AutoBindDescriptorSet(
+            recordState,
+            RF::UpdateFrequency::PerFrame,
+            mPerFrameDescriptorSetGroup
+        );
+
+        for (auto * essence : mAllEssencesList)
+        {
+            CAST_ESSENCE_PURE(essence)->compute(recordState);
+        }
+
     }
 
     //-------------------------------------------------------------------------------------------------
  
     void ParticlePipeline::internalAddEssence(EssenceBase * essence)
     {
-        createPerEssenceDescriptorSets(CAST_ESSENCE_PURE(essence));
+        MFA_ASSERT(essence != nullptr);
+
+        auto * particleEssence = CAST_ESSENCE_PURE(essence);
+
+        particleEssence->createGraphicDescriptorSet(
+            mDescriptorPool,
+            mPerEssenceGraphicDescriptorSetLayout->descriptorSetLayout,
+            *mErrorTexture,
+            MAXIMUM_TEXTURE_PER_ESSENCE
+        );
+
+        particleEssence->createComputeDescriptorSet(
+            mDescriptorPool,
+            mPerEssenceComputeDescriptorSetLayout->descriptorSetLayout
+        );
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -169,8 +204,14 @@ namespace MFA
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         });
 
-        // TODO: Update layout with compute data
-
+        // Time buffer
+        bindings.emplace_back(VkDescriptorSetLayoutBinding {
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT
+        });
+        
         mPerFrameDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
             bindings.data()
@@ -179,7 +220,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ParticlePipeline::createPerEssenceDescriptorSetLayout()
+    void ParticlePipeline::createPerEssenceGraphicDescriptorSetLayout()
     {
         std::vector<VkDescriptorSetLayoutBinding> bindings{};
 
@@ -191,9 +232,35 @@ namespace MFA
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         });
 
-        // TODO: Update layout with compute data
+        mPerEssenceGraphicDescriptorSetLayout = RF::CreateDescriptorSetLayout(
+            static_cast<uint8_t>(bindings.size()),
+            bindings.data()
+        );
+    }
 
-        mPerEssenceDescriptorSetLayout = RF::CreateDescriptorSetLayout(
+    //-------------------------------------------------------------------------------------------------
+
+    void ParticlePipeline::createPerEssenceComputeDescriptorSetLayout()
+    {
+        std::vector<VkDescriptorSetLayoutBinding> bindings{};
+
+        // Params
+        bindings.emplace_back(VkDescriptorSetLayoutBinding{
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT
+        });
+
+        // Particles
+        bindings.emplace_back(VkDescriptorSetLayoutBinding {
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT
+        });
+
+        mPerEssenceComputeDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
             bindings.data()
         );
@@ -209,7 +276,9 @@ namespace MFA
             mPerFrameDescriptorSetLayout->descriptorSetLayout
         );
 
-        auto const & cameraBuffers = SceneManager::GetCameraBuffers();
+        auto const * cameraBuffers = SceneManager::GetCameraBuffers();
+
+        auto const * timeBuffers = SceneManager::GetTimeBuffers();
 
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
@@ -218,12 +287,13 @@ namespace MFA
 
             DescriptorSetSchema descriptorSetSchema{ descriptorSet };
 
-            VkDescriptorBufferInfo descriptorBufferInfo{
-                .buffer = cameraBuffers.buffers[frameIndex]->buffer,
+            // Camera buffer
+            VkDescriptorBufferInfo cameraBufferInfo{
+                .buffer = cameraBuffers->buffers[frameIndex]->buffer,
                 .offset = 0,
-                .range = cameraBuffers.bufferSize
+                .range = cameraBuffers->bufferSize
             };
-            descriptorSetSchema.AddUniformBuffer(&descriptorBufferInfo);
+            descriptorSetSchema.AddUniformBuffer(&cameraBufferInfo);
 
             // Sampler
             VkDescriptorImageInfo texturesSamplerInfo{
@@ -233,6 +303,14 @@ namespace MFA
             };
             descriptorSetSchema.AddSampler(&texturesSamplerInfo);
 
+            // TimeBuffer
+            VkDescriptorBufferInfo timeBufferInfo{
+                .buffer = timeBuffers->buffers[frameIndex]->buffer,
+                .offset = 0,
+                .range = timeBuffers->bufferSize
+            };
+            descriptorSetSchema.AddUniformBuffer(&timeBufferInfo);
+
             descriptorSetSchema.UpdateDescriptorSets();
         }
 
@@ -240,64 +318,76 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ParticlePipeline::createPerEssenceDescriptorSets(ParticleEssence * essence) const
-    {
-        MFA_ASSERT(essence != nullptr);
-        auto const & textures = essence->getGpuModel()->textures;
+    //void ParticlePipeline::createPerEssenceDescriptorSets(ParticleEssence * essence) const
+    //{
+    //    MFA_ASSERT(essence != nullptr);
+    //    auto const & textures = essence->getGpuModel()->textures;
 
-        auto const & descriptorSetGroup = essence->createDescriptorSetGroup(
-            mDescriptorPool,
-            RF::GetMaxFramesPerFlight(),
-            *mPerEssenceDescriptorSetLayout
-        );
+    //    auto const & descriptorSetGroup = essence->createDescriptorSetGroup(
+    //        mDescriptorPool,
+    //        RF::GetMaxFramesPerFlight(),
+    //        *mPerEssenceDescriptorSetLayout
+    //    );
 
-        for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
-        {
-            auto const & descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
-            MFA_VK_VALID_ASSERT(descriptorSet);
+    //    for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
+    //    {
+    //        auto const & descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
+    //        MFA_VK_VALID_ASSERT(descriptorSet);
 
-            DescriptorSetSchema descriptorSetSchema{ descriptorSet };
+    //        DescriptorSetSchema descriptorSetSchema{ descriptorSet };
 
-            // Textures
-            MFA_ASSERT(textures.size() < MAXIMUM_TEXTURE_PER_ESSENCE);
-            std::vector<VkDescriptorImageInfo> imageInfos{};
-            for (auto const & texture : textures)
-            {
-                imageInfos.emplace_back(VkDescriptorImageInfo{
-                    .sampler = nullptr,
-                    .imageView = texture->imageView->imageView,
-                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                });
-            }
-            for (auto i = static_cast<uint32_t>(textures.size()); i < MAXIMUM_TEXTURE_PER_ESSENCE; ++i)
-            {
-                imageInfos.emplace_back(VkDescriptorImageInfo{
-                    .sampler = nullptr,
-                    .imageView = mErrorTexture->imageView->imageView,
-                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                });
-            }
-            MFA_ASSERT(imageInfos.size() == MAXIMUM_TEXTURE_PER_ESSENCE);
-            descriptorSetSchema.AddImage(
-                imageInfos.data(),
-                static_cast<uint32_t>(imageInfos.size())
-            );
+    //        // Textures
+    //        MFA_ASSERT(textures.size() < MAXIMUM_TEXTURE_PER_ESSENCE);
+    //        std::vector<VkDescriptorImageInfo> imageInfos{};
+    //        for (auto const & texture : textures)
+    //        {
+    //            imageInfos.emplace_back(VkDescriptorImageInfo{
+    //                .sampler = nullptr,
+    //                .imageView = texture->imageView->imageView,
+    //                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+    //            });
+    //        }
+    //        for (auto i = static_cast<uint32_t>(textures.size()); i < MAXIMUM_TEXTURE_PER_ESSENCE; ++i)
+    //        {
+    //            imageInfos.emplace_back(VkDescriptorImageInfo{
+    //                .sampler = nullptr,
+    //                .imageView = mErrorTexture->imageView->imageView,
+    //                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+    //            });
+    //        }
+    //        MFA_ASSERT(imageInfos.size() == MAXIMUM_TEXTURE_PER_ESSENCE);
+    //        descriptorSetSchema.AddImage(
+    //            imageInfos.data(),
+    //            static_cast<uint32_t>(imageInfos.size())
+    //        );
 
-            descriptorSetSchema.UpdateDescriptorSets();
-        }
-    }
+    //        descriptorSetSchema.UpdateDescriptorSets();
+    //    }
+    //}
 
     //-------------------------------------------------------------------------------------------------
 
     void ParticlePipeline::createComputePipeline()
     {
-        //RF_CREATE_SHADER("shaders/particle/Particle.comp.spv", Compute)
+        RF_CREATE_SHADER("shaders/particle/Particle.comp.spv", Compute)
 
-        //std::vector<RT::GpuShader const *> shaders {gpuComputeShader.get()};
+        std::vector<RT::GpuShader const *> shaders {gpuComputeShader.get()};
+        
+        std::vector<VkDescriptorSetLayout> const descriptorSetLayouts {
+            mPerFrameDescriptorSetLayout->descriptorSetLayout,
+            mPerEssenceGraphicDescriptorSetLayout->descriptorSetLayout,
+        };
 
-        // TODO: Descriptor set layout
-        // TODO: Storage buffer
-        // TODO: Barrier to convert storage buffer into vertex buffer
+        auto const pipelineLayout = RF::CreatePipelineLayout(
+            static_cast<uint32_t>(descriptorSetLayouts.size()),
+            descriptorSetLayouts.data(),
+            0,
+            nullptr
+        );
+        MFA_ASSERT(pipelineLayout != nullptr);
+
+        mComputePipeline = RF::CreateComputePipeline(*gpuComputeShader, pipelineLayout);
+        MFA_ASSERT(mComputePipeline != nullptr);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -390,7 +480,7 @@ namespace MFA
         
         std::vector<VkDescriptorSetLayout> const descriptorSetLayouts {
             mPerFrameDescriptorSetLayout->descriptorSetLayout,
-            mPerEssenceDescriptorSetLayout->descriptorSetLayout,
+            mPerEssenceGraphicDescriptorSetLayout->descriptorSetLayout,
         };
 
         const auto pipelineLayout = RF::CreatePipelineLayout(

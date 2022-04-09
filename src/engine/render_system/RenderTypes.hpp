@@ -36,10 +36,12 @@ namespace MFA
         {
             const VkBuffer buffer;
             const VkDeviceMemory memory;
+            VkDeviceSize const size;
 
             explicit BufferAndMemory(
                 VkBuffer buffer_,
-                VkDeviceMemory memory_
+                VkDeviceMemory memory_,
+                VkDeviceSize size_
             );
             ~BufferAndMemory();
 

@@ -281,9 +281,9 @@ namespace MFA
             *mPerFrameDescriptorSetLayout
         );
 
-        auto const & cameraBufferCollection = SceneManager::GetCameraBuffers();
-        auto const & directionalLightBuffers = SceneManager::GetDirectionalLightBuffers();
-        auto const & pointLightBuffers = SceneManager::GetPointLightsBuffers();
+        auto const * cameraBufferCollection = SceneManager::GetCameraBuffers();
+        auto const * directionalLightBuffers = SceneManager::GetDirectionalLightBuffers();
+        auto const * pointLightBuffers = SceneManager::GetPointLightsBuffers();
         
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
@@ -295,25 +295,25 @@ namespace MFA
             // Important note: Keep reference of all descriptor buffer infos until updateDescriptorSets is called
             // DisplayViewProjection
             VkDescriptorBufferInfo viewProjectionBufferInfo{
-                .buffer = cameraBufferCollection.buffers[frameIndex]->buffer,
+                .buffer = cameraBufferCollection->buffers[frameIndex]->buffer,
                 .offset = 0,
-                .range = cameraBufferCollection.bufferSize,
+                .range = cameraBufferCollection->bufferSize,
             };
             descriptorSetSchema.AddUniformBuffer(&viewProjectionBufferInfo);
 
             // DirectionalLightBuffer
             VkDescriptorBufferInfo directionalLightBufferInfo {
-                .buffer = directionalLightBuffers.buffers[frameIndex]->buffer,
+                .buffer = directionalLightBuffers->buffers[frameIndex]->buffer,
                 .offset = 0,
-                .range = directionalLightBuffers.bufferSize,
+                .range = directionalLightBuffers->bufferSize,
             };
             descriptorSetSchema.AddUniformBuffer(&directionalLightBufferInfo);
 
             // PointLightBuffer
             VkDescriptorBufferInfo pointLightBufferInfo {
-                .buffer = pointLightBuffers.buffers[frameIndex]->buffer,
+                .buffer = pointLightBuffers->buffers[frameIndex]->buffer,
                 .offset = 0,
-                .range = pointLightBuffers.bufferSize,
+                .range = pointLightBuffers->bufferSize,
             };
             descriptorSetSchema.AddUniformBuffer(&pointLightBufferInfo);
 

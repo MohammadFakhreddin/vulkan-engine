@@ -146,6 +146,8 @@ namespace MFA::UI_System
         std::shared_ptr<RT::GpuTexture> fontTexture{};
         bool hasFocus = false;
         Signal<> UIRecordSignal{};
+        std::vector<std::shared_ptr<RT::BufferAndMemory>> vertexBuffers{};
+        std::vector<std::shared_ptr<RT::BufferAndMemory>> indexBuffers{};
 #if defined(__ANDROID__) || defined(__IOS__)
         IM::MousePosition previousMousePositionX = 0.0f;
         IM::MousePosition previousMousePositionY = 0.0f;
@@ -521,7 +523,11 @@ namespace MFA::UI_System
 #endif
 
         onResize();
+
         state->resizeSignalId = RF::AddResizeEventListener([]()->void {onResize();});
+
+        state->vertexBuffers.resize(RF::GetMaxFramesPerFlight());
+        state->indexBuffers.resize(RF::GetMaxFramesPerFlight());
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -625,33 +631,48 @@ namespace MFA::UI_System
             {
                 // TODO We can create vertices for ui system in post render
                 // Create or resize the vertex/index buffers
-                size_t const vertex_size = drawData->TotalVtxCount * sizeof(ImDrawVert);
-                size_t const index_size = drawData->TotalIdxCount * sizeof(ImDrawIdx);
-                auto const vertexData = Memory::Alloc(vertex_size);
-                auto const indexData = Memory::Alloc(index_size);
+                size_t const vertexSize = drawData->TotalVtxCount * sizeof(ImDrawVert);
+                size_t const indexSize = drawData->TotalIdxCount * sizeof(ImDrawIdx);
+                auto const vertexData = Memory::Alloc(vertexSize);
+                auto const indexData = Memory::Alloc(indexSize);
                 {
-                    auto * vertex_ptr = reinterpret_cast<ImDrawVert *>(vertexData->memory.ptr);
-                    auto * index_ptr = reinterpret_cast<ImDrawIdx *>(indexData->memory.ptr);
+                    auto * vertexPtr = reinterpret_cast<ImDrawVert *>(vertexData->memory.ptr);
+                    auto * indexPtr = reinterpret_cast<ImDrawIdx *>(indexData->memory.ptr);
                     for (int n = 0; n < drawData->CmdListsCount; n++)
                     {
-                        const ImDrawList * cmd_list = drawData->CmdLists[n];
-                        ::memcpy(vertex_ptr, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
-                        ::memcpy(index_ptr, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
-                        vertex_ptr += cmd_list->VtxBuffer.Size;
-                        index_ptr += cmd_list->IdxBuffer.Size;
+                        const ImDrawList * cmd = drawData->CmdLists[n];
+                        ::memcpy(vertexPtr, cmd->VtxBuffer.Data, cmd->VtxBuffer.Size * sizeof(ImDrawVert));
+                        ::memcpy(indexPtr, cmd->IdxBuffer.Data, cmd->IdxBuffer.Size * sizeof(ImDrawIdx));
+                        vertexPtr += cmd->VtxBuffer.Size;
+                        indexPtr += cmd->IdxBuffer.Size;
                     }
                 }
 
-                auto const vertexBuffer = RF::CreateVertexBuffer(
-                    recordState,
-                    vertexData->memory
-                );
+                auto & vertexBuffer = state->vertexBuffers[recordState.frameIndex];
+                auto & indexBuffer = state->indexBuffers[recordState.frameIndex];
 
-                auto const indexBuffer = RF::CreateIndexBuffer(
-                    recordState,
-                    indexData->memory
-                );
-                
+                if (vertexBuffer == nullptr || vertexBuffer->size < vertexSize)
+                {
+                    vertexBuffer = RF::CreateBuffer(
+                        vertexSize,
+                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+                    );
+                }
+
+                RF::UpdateHostVisibleBuffer(*vertexBuffer, vertexData->memory);
+
+                if (indexBuffer == nullptr || indexBuffer->size < indexSize)
+                {
+                    indexBuffer = RF::CreateBuffer(
+                        indexSize,
+                        VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+                    );
+                }
+
+                RF::UpdateHostVisibleBuffer(*indexBuffer, indexData->memory);
+
                 RF::BindIndexBuffer(
                     recordState,
                     *indexBuffer,

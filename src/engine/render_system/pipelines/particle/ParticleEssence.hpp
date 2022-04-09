@@ -25,6 +25,7 @@ namespace MFA
         void update(VariantsList const & variants);
 
         // Pre compute barrier
+        void compute(RT::CommandRecordState const & recordState) const;
 
         // Pre-render barrier
 
@@ -32,12 +33,20 @@ namespace MFA
 
         void updateParamsBuffer(AssetSystem::Particle::Params const & params) const;
 
-        void bindComputeDescriptorSet(RT::CommandRecordState const & recordState) const;
+        void createGraphicDescriptorSet(
+            VkDescriptorPool descriptorPool,
+            VkDescriptorSetLayout descriptorSetLayout,
+            RT::GpuTexture const & errorTexture,
+            uint32_t maxTextureCount
+        );
+
+        void createComputeDescriptorSet(VkDescriptorPool descriptorPool, VkDescriptorSetLayout descriptorSetLayout);
 
     protected:
 
         explicit ParticleEssence(
             std::string nameId,
+            uint32_t particleCount,
             uint32_t maxInstanceCount,
             std::vector<std::shared_ptr<RT::GpuTexture>> textures
         );
@@ -63,6 +72,8 @@ namespace MFA
 
         void bindGraphicDescriptorSet(RT::CommandRecordState const & recordState) const;
 
+        void bindComputeDescriptorSet(RT::CommandRecordState const & recordState) const;
+
         void checkIfUpdateIsRequired(VariantsList const & variants);
 
     protected:
@@ -75,6 +86,7 @@ namespace MFA
 
         std::shared_ptr<RT::BufferGroup> mParamsBuffer = nullptr;
 
+        uint32_t const mParticleCount;
         uint32_t const mMaxInstanceCount;
         uint32_t mIndexCount = 0;
 

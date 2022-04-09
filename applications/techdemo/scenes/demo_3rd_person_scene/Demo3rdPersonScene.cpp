@@ -130,15 +130,18 @@ void Demo3rdPersonScene::Init()
             particlePipeline->addEssence(
                 std::make_shared<FireEssence>(
                     "SponzaFire",
-                    RC::AcquireGpuTexture("images/fire/particle_fire.ktx"),
-                    FireEssence::Options {
-                        .particleMinLife = 0.2f,
-                        .particleMaxLife = 1.0f,
-                        .particleMinSpeed = 0.5f,
-                        .particleMaxSpeed = 1.0f,
-                        .fireRadius = 0.1f,
-                        .fireInitialPointSize = 300.0f,
-                        .particleCount = 256,
+                    100,   // TODO: Find a better number
+                    std::vector {RC::AcquireGpuTexture("images/fire/particle_fire.ktx")},
+                    FireEssence::FireParams {
+                        .initialPointSize = 300.0f
+                    },
+                    AS::Particle::Params {
+                        .count = 256,
+                        .minLife = 0.2f,
+                        .maxLife = 1.0f,
+                        .minSpeed = 0.5f,
+                        .maxSpeed = 1.0f,
+                        .radius = 0.1f,
                     }
                 )
             );

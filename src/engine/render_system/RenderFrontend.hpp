@@ -163,6 +163,20 @@ namespace MFA::RenderFrontend
         local
     };
 
+    std::shared_ptr<RT::BufferAndMemory> CreateBuffer(
+        VkDeviceSize size,
+        VkBufferUsageFlags usage,
+        VkMemoryPropertyFlags properties
+    );
+
+    [[nodiscard]]
+    std::shared_ptr<RT::BufferGroup> CreateBufferGroup(
+        VkDeviceSize bufferSize,
+        uint32_t count,
+        VkBufferUsageFlags bufferUsageFlagBits,
+        VkMemoryPropertyFlags memoryPropertyFlags
+    );
+
     std::shared_ptr<RT::BufferAndMemory> CreateVertexBuffer(
         VkCommandBuffer commandBuffer,
         RT::BufferAndMemory const & stageBuffer,
@@ -205,14 +219,6 @@ namespace MFA::RenderFrontend
     std::shared_ptr<RT::BufferGroup> CreateStorageBuffer(
         size_t bufferSize,
         uint32_t count,
-        VkMemoryPropertyFlags memoryPropertyFlags
-    );
-
-    [[nodiscard]]
-    std::shared_ptr<RT::BufferGroup> CreateBufferGroup(
-        VkDeviceSize bufferSize,
-        uint32_t count,
-        VkBufferUsageFlags bufferUsageFlagBits,
         VkMemoryPropertyFlags memoryPropertyFlags
     );
 
@@ -585,6 +591,13 @@ namespace MFA::RenderFrontend
     VkDescriptorPool CreateDescriptorPool(uint32_t maxSets);
 
     void DestroyDescriptorPool(VkDescriptorPool descriptorPool);
+
+    void Dispatch(
+        RT::CommandRecordState const & recordState,
+        uint32_t groupCountX,
+        uint32_t groupCountY,
+        uint32_t groupCountZ
+    );
 
 }
 

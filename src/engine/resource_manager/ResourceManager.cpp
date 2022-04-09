@@ -23,6 +23,9 @@ namespace MFA
 
         std::unordered_map<std::string, std::weak_ptr<RT::GpuTexture>> availableGpuTextures {};
         std::unordered_map<std::string, std::weak_ptr<AS::Texture>> availableCpuTextures {};
+
+        std::shared_ptr<RT::BufferGroup> vertexStageBuffer {};
+        std::shared_ptr<RT::BufferGroup> indexStageBuffer {};
     };
     State * state = nullptr;
 
@@ -57,9 +60,27 @@ namespace MFA
         MFA_ASSERT(name.empty() == false);
         MFA_ASSERT(cpuModel.mesh->isValid());
 
+        auto const vertexSize = cpuModel.mesh->getVertexData()->memory.len;
+        auto const indexSize = cpuModel.mesh->getIndexBuffer()->memory.len;
+
+        if (state->vertexStageBuffer == nullptr || state->vertexStageBuffer->bufferSize < vertexSize)
+        {
+            state->vertexStageBuffer = RF::CreateStageBuffer(vertexSize, 1);
+        }
+        if (state->indexStageBuffer == nullptr || state->indexStageBuffer->bufferSize < indexSize)
+        {
+            state->indexStageBuffer = RF::CreateStageBuffer(indexSize, 1);
+        }
+
         auto const commandBuffer = RF::BeginSingleTimeGraphicCommand();
 
-        auto gpuModel = RF::CreateGpuModel(commandBuffer, cpuModel, name);
+        auto gpuModel = RF::CreateGpuModel(
+            commandBuffer,
+            cpuModel,
+            name,
+            *state->vertexStageBuffer->buffers[0],
+            *state->indexStageBuffer->buffers[0]
+        );
 
         RF::EndAndSubmitGraphicSingleTimeCommand(commandBuffer);
 

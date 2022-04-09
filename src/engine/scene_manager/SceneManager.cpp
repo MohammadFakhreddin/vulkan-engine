@@ -17,15 +17,18 @@ namespace MFA::SceneManager
 {
 
     static void prepareCameraBuffer();
+    static void prepareTimeBuffer();
     static void prepareDirectionalLightsBuffer();
     static void preparePointLightsBuffer();
 
     static void updateCameraBuffer(RT::CommandRecordState const & recordState);
+    static void updateTimeBuffer(RT::CommandRecordState const & recordState, float deltaTimeInSec);
     static void updateDirectionalLightsBuffer(RT::CommandRecordState const & recordState);
     static void updatePointLightsBuffer(RT::CommandRecordState const & recordState);
 
     // TODO: Time buffer. We need to update time every frame
-    struct TimeBufferData {
+    struct TimeBufferData
+    {
         float deltaTime;
     };
 
@@ -99,9 +102,9 @@ namespace MFA::SceneManager
         std::unordered_map<std::string, std::unique_ptr<BasePipeline>> pipelines{};
 
         PreRenderSignal preRenderSignal{};
-        RenderSignal renderSignal1 {};
-        RenderSignal renderSignal2 {};
-        RenderSignal renderSignal3 {};
+        RenderSignal renderSignal1{};
+        RenderSignal renderSignal2{};
+        RenderSignal renderSignal3{};
         UpdateSignal updateSignal{};
         ComputeSignal computeSignal{};
 
@@ -110,6 +113,7 @@ namespace MFA::SceneManager
 
         // Buffers 
         std::shared_ptr<RT::BufferGroup> cameraBuffer{};
+        std::shared_ptr<RT::BufferGroup> timeBuffer{};
 
         // Point light
         PointLightsBufferData pointLightData{};
@@ -122,7 +126,7 @@ namespace MFA::SceneManager
 
         // TODO Spot light
 
-        std::vector<NextFrameTask> nextFrameTasks {};
+        std::vector<NextFrameTask> nextFrameTasks{};
 
     };
     static State * state = nullptr;
@@ -172,7 +176,7 @@ namespace MFA::SceneManager
         }
 
         state->nextActiveSceneIndex = -1;
-        
+
         oldScene = nullptr;
         TriggerCleanup();
     }
@@ -194,6 +198,7 @@ namespace MFA::SceneManager
         // Creating and update buffers
         //auto const commandBuffer = RF::BeginSingleTimeGraphicCommand();
         prepareCameraBuffer();
+        prepareTimeBuffer();
         prepareDirectionalLightsBuffer(/*commandBuffer*/);
         preparePointLightsBuffer(/*commandBuffer*/);
         //RF::EndAndSubmitGraphicSingleTimeCommand(commandBuffer);
@@ -204,11 +209,13 @@ namespace MFA::SceneManager
             startNextActiveScene();
         }
 
-        state->updateSignal.Register([](float const deltaTime)->void{
-            UI::PostRender(deltaTime);
+        state->updateSignal.Register([](float const deltaTime)->void
+{
+    UI::PostRender(deltaTime);
         });
-        state->updateSignal.Register([](float const deltaTime)->void{
-            EntitySystem::Update(deltaTime);
+        state->updateSignal.Register([](float const deltaTime)->void
+{
+    EntitySystem::Update(deltaTime);
         });
     }
 
@@ -296,17 +303,17 @@ namespace MFA::SceneManager
         RenderSignal * signal = nullptr;
         switch (pipeline->renderOrder())
         {
-            case BasePipeline::RenderOrder::BeforeEverything:
-                signal = &state->renderSignal1;
+        case BasePipeline::RenderOrder::BeforeEverything:
+            signal = &state->renderSignal1;
             break;
-            case BasePipeline::RenderOrder::DontCare:
-                signal = &state->renderSignal2;
+        case BasePipeline::RenderOrder::DontCare:
+            signal = &state->renderSignal2;
             break;
-            case BasePipeline::RenderOrder::AfterEverything:
-                signal = &state->renderSignal3;
+        case BasePipeline::RenderOrder::AfterEverything:
+            signal = &state->renderSignal3;
             break;
-            default:
-                MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+        default:
+            MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
         }
         MFA_ASSERT(signal != nullptr);
 
@@ -323,7 +330,7 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
-    #define UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(signal, event, listenerId, delegateFunc)         \
+#define UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(signal, event, listenerId, delegateFunc)         \
     if (                                                                                            \
         pipeline->mIsActive &&                                                                      \
         (requiredEvents & BasePipeline::EventTypes::event) > 0 &&                                   \
@@ -350,49 +357,53 @@ namespace MFA::SceneManager
             state->preRenderSignal,
             PreRenderEvent,
             mPreRenderListenerId,
-            [pipeline](RT::CommandRecordState & commandRecord, float const deltaTime)->void{
-                pipeline->preRender(commandRecord, deltaTime);           
+            [pipeline](RT::CommandRecordState & commandRecord, float const deltaTime)->void
+{
+    pipeline->preRender(commandRecord, deltaTime);
             }
         )
 
-        // Render listener
-        auto * renderSignal = getRenderSignal(pipeline);
-        MFA_ASSERT(renderSignal != nullptr);
-        UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(
-            *renderSignal,
-            RenderEvent,
-            mRenderListenerId,
-            [pipeline](RT::CommandRecordState & commandRecord, float const deltaTime)->void{
-                pipeline->render(commandRecord, deltaTime);           
-            }
-        )
+            // Render listener
+                auto * renderSignal = getRenderSignal(pipeline);
+            MFA_ASSERT(renderSignal != nullptr);
+            UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(
+                *renderSignal,
+                RenderEvent,
+                mRenderListenerId,
+                [pipeline](RT::CommandRecordState & commandRecord, float const deltaTime)->void
+    {
+            pipeline->render(commandRecord, deltaTime);
+                }
+            )
 
-        // Post render
-        UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(
-            state->updateSignal,
-            UpdateEvent,
-            mUpdateListenerId,
-            [pipeline](float const deltaTime)->void{
-                pipeline->update(deltaTime);           
-            }
-        )
+                // Post render
+                    UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(
+                        state->updateSignal,
+                        UpdateEvent,
+                        mUpdateListenerId,
+                        [pipeline](float const deltaTime)->void
+            {
+                            pipeline->update(deltaTime);
+                        }
+                    )
 
-        // Compute
-        UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(
-            state->computeSignal,
-            ComputeEvent,
-            mComputeListenerId,
-            [pipeline](RT::CommandRecordState & commandRecord, float const deltaTime)->void{
-                pipeline->compute(commandRecord, deltaTime);           
-            }
-        )
+                    // Compute
+                            UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(
+                                state->computeSignal,
+                                ComputeEvent,
+                                mComputeListenerId,
+                                [pipeline](RT::CommandRecordState & commandRecord, float const deltaTime)->void
+                    {
+                                            pipeline->compute(commandRecord, deltaTime);
+                                }
+                            )
     }
 
     //-------------------------------------------------------------------------------------------------
 
     std::vector<BasePipeline *> GetAllPipelines()
     {
-        std::vector<BasePipeline *> pipelines {};
+        std::vector<BasePipeline *> pipelines{};
         for (auto const & pair : state->pipelines)
         {
             pipelines.emplace_back(pair.second.get());
@@ -460,14 +471,14 @@ namespace MFA::SceneManager
         const auto computeSemaphore = RF::GetComputeSemaphore(recordState);
         const auto presentSemaphore = RF::GetPresentSemaphore(recordState);
 
-        std::vector<VkSubmitInfo> submitInfos {};
+        std::vector<VkSubmitInfo> submitInfos{};
 
         //// Submit compute queue
-        std::vector<VkSemaphore> computeSignalSemaphores {computeSemaphore};
+        std::vector<VkSemaphore> computeSignalSemaphores{ computeSemaphore };
 
         auto computeCommandBuffer = RF::GetComputeCommandBuffer(recordState);
 
-        submitInfos.emplace_back(VkSubmitInfo {
+        submitInfos.emplace_back(VkSubmitInfo{
             .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
             .waitSemaphoreCount = 0,
             .pWaitSemaphores = nullptr,
@@ -479,16 +490,16 @@ namespace MFA::SceneManager
         });
 
         // Submit graphic queue
-        std::vector<VkSemaphore> gfxWaitSemaphores {presentSemaphore, computeSemaphore};
-        std::vector<VkPipelineStageFlags> gfxWaitStagesFlags {
+        std::vector<VkSemaphore> gfxWaitSemaphores{ presentSemaphore, computeSemaphore };
+        std::vector<VkPipelineStageFlags> gfxWaitStagesFlags{
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
         };
-        std::vector<VkSemaphore> gfxSignalSemaphores {graphicSemaphore};
+        std::vector<VkSemaphore> gfxSignalSemaphores{ graphicSemaphore };
 
         auto graphicCommandBuffer = RF::GetGraphicCommandBuffer(recordState);
 
-        submitInfos.emplace_back(VkSubmitInfo {
+        submitInfos.emplace_back(VkSubmitInfo{
             .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
             .waitSemaphoreCount = static_cast<uint32_t>(gfxWaitSemaphores.size()),
             .pWaitSemaphores = gfxWaitSemaphores.data(),
@@ -498,7 +509,7 @@ namespace MFA::SceneManager
             .signalSemaphoreCount = static_cast<uint32_t>(gfxSignalSemaphores.size()),
             .pSignalSemaphores = gfxSignalSemaphores.data(),
         });
-        
+
         RF::SubmitQueue(
             recordState,
             static_cast<uint32_t>(submitInfos.size()),
@@ -524,7 +535,7 @@ namespace MFA::SceneManager
         state->computeSignal.Emit(recordState, deltaTime);
 
         RF::EndCommandBuffer(recordState);
-        
+
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -538,6 +549,7 @@ namespace MFA::SceneManager
 
         // Pre render
         updateCameraBuffer(recordState);
+        updateTimeBuffer(recordState, deltaTime);
         updateDirectionalLightsBuffer(recordState);
         updatePointLightsBuffer(recordState);
         // TODO: We can emit multi-thread and then merge commands using VK_ExecuteCommands
@@ -578,7 +590,7 @@ namespace MFA::SceneManager
         recordGraphicCommandBuffer(recordState, deltaTime);
 
         submitQueuesAndPresent(recordState);
-        
+
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -635,9 +647,16 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::BufferGroup const & GetCameraBuffers()
+    RT::BufferGroup const * GetCameraBuffers()
     {
-        return *state->cameraBuffer;
+        return state->cameraBuffer.get();
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    RT::BufferGroup const * GetTimeBuffers()
+    {
+        return state->timeBuffer.get();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -656,16 +675,16 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::BufferGroup const & GetPointLightsBuffers()
+    RT::BufferGroup const * GetPointLightsBuffers()
     {
-        return *state->pointLightsBuffers;
+        return state->pointLightsBuffers.get();
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::BufferGroup const & GetDirectionalLightBuffers()
+    RT::BufferGroup const * GetDirectionalLightBuffers()
     {
-        return *state->directionalLightBuffers;
+        return state->directionalLightBuffers.get();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -687,6 +706,17 @@ namespace MFA::SceneManager
     std::vector<PointLightComponent *> const & GetActivePointLights()
     {
         return state->activePointLights;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void prepareTimeBuffer()
+    {
+        state->timeBuffer = RF::CreateUniformBuffer(
+            sizeof(TimeBufferData),
+            RF::GetMaxFramesPerFlight(),
+            RF::MemoryFlags::hostVisible
+        );
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -771,6 +801,19 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
+    void updateTimeBuffer(RT::CommandRecordState const & recordState, float deltaTime)
+    {
+        TimeBufferData const data{
+            .deltaTime = deltaTime
+        };
+        RF::UpdateHostVisibleBuffer(
+            *state->timeBuffer->buffers[recordState.frameIndex],
+            CBlobAliasOf(data)
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     static void updatePointLightsBuffer(RT::CommandRecordState const & recordState)
     {
         // Maybe we can search for another active camera 
@@ -840,7 +883,7 @@ namespace MFA::SceneManager
                 ptr->GetDirection(item.direction);
                 ptr->GetColor(item.color);
                 ptr->GetShadowViewProjectionMatrix(item.viewProjectionMatrix);
-                
+
                 ++state->directionalLightData.count;
             }
         }

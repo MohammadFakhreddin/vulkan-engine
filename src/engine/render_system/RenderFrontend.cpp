@@ -623,53 +623,6 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    //static std::shared_ptr<RT::BufferAndMemory> createBuffer(
-    //    VkDeviceSize const bufferSize,
-    //    VkBufferUsageFlagBits bufferUsageFlagBits,
-    //    VkMemoryPropertyFlags memoryPropertyFlags
-    //)
-    //{
-    //    return RB::CreateBuffer(
-    //        state->logicalDevice.device,
-    //        state->physicalDevice,
-    //        bufferSize,
-    //        bufferUsageFlagBits,
-    //        memoryPropertyFlags
-    //    );
-    //}
-
-    //-------------------------------------------------------------------------------------------------
-
-    //static std::vector<std::shared_ptr<RT::BufferAndMemory>> createBuffer(
-    //    VkDeviceSize const bufferSize,
-    //    uint32_t const count,
-    //    VkBufferUsageFlagBits bufferUsageFlagBits,
-    //    VkMemoryPropertyFlags memoryPropertyFlags
-    //)
-    //{
-    //    std::vector<std::shared_ptr<RT::BufferAndMemory>> buffers(count);
-    //    for (auto & buffer : buffers)
-    //    {
-    //        buffer = createBuffer(
-    //            bufferSize,
-    //            bufferUsageFlagBits,//VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-    //            memoryPropertyFlags            
-    //        );
-    //    }
-    //    return buffers;
-
-    //    //return RB::CreateMultipleBufferAndMemory(
-    //    //    state->logicalDevice.device,
-    //    //    state->physicalDevice,
-    //    //    count,
-    //    //    bufferSize,
-    //    //    bufferUsageFlagBits,
-    //    //    memoryPropertyFlags
-    //    //);
-    //}
-
-    //-------------------------------------------------------------------------------------------------
-
     std::shared_ptr<RT::BufferGroup> CreateBufferGroup(
         VkDeviceSize const bufferSize,
         uint32_t const count,
@@ -680,9 +633,7 @@ namespace MFA::RenderFrontend
         std::vector<std::shared_ptr<RT::BufferAndMemory>> buffers(count);
         for (auto & buffer : buffers)
         {
-            buffer = RB::CreateBuffer(
-                state->logicalDevice.device,
-                state->physicalDevice,
+            buffer = CreateBuffer(
                 bufferSize,
                 bufferUsageFlagBits,
                 memoryPropertyFlags            
@@ -975,7 +926,7 @@ namespace MFA::RenderFrontend
 
     void DestroyBuffer(RT::BufferAndMemory const & bufferGroup)
     {
-        DeviceWaitIdle();
+        //DeviceWaitIdle(); // We should instead destroy it when it is not bind anymore
         RB::DestroyBuffer(state->logicalDevice.device, bufferGroup);
     }
 
@@ -1235,22 +1186,21 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    //std::shared_ptr<RT::BufferAndMemory> CreateVertexBuffer(RT::CommandRecordState const & recordState, CBlob const & verticesBlob)
-    //{
-    //    MFA_ASSERT(recordState.isValid);
-    //    MFA_ASSERT(recordState.commandBuffer != nullptr);
-    //    return CreateVertexBuffer(recordState.commandBuffer, verticesBlob);
-    //}
-
-    ////-------------------------------------------------------------------------------------------------
-
-    //std::shared_ptr<RT::BufferAndMemory> CreateIndexBuffer(RT::CommandRecordState const & recordState, CBlob const & indicesBlob)
-    //{
-    //    MFA_ASSERT(recordState.isValid);
-    //    MFA_ASSERT(recordState.commandBuffer != nullptr);
-    //    return CreateIndexBuffer(recordState.commandBuffer, indicesBlob);
-    //}
-
+    std::shared_ptr<RT::BufferAndMemory> CreateBuffer(
+        VkDeviceSize size,
+        VkBufferUsageFlags usage,
+        VkMemoryPropertyFlags properties
+    )
+    {
+        return RB::CreateBuffer(
+            state->logicalDevice.device,
+            state->physicalDevice,
+            size,
+            usage,
+            properties
+        );
+    }
+    
     //-------------------------------------------------------------------------------------------------
 
     void SetScissor(RT::CommandRecordState const & drawPass, VkRect2D const & scissor)
@@ -1993,6 +1943,23 @@ namespace MFA::RenderFrontend
             state->logicalDevice.device,
             descriptorPool
         );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Dispatch(
+        RT::CommandRecordState const & recordState,
+        uint32_t const groupCountX,
+        uint32_t const groupCountY,
+        uint32_t const groupCountZ
+    )
+    {
+        RB::Dispatch(
+            recordState.commandBuffer,
+            groupCountX,
+            groupCountY,
+            groupCountZ
+        );        
     }
 
     //-------------------------------------------------------------------------------------------------

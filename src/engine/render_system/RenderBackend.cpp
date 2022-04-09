@@ -655,7 +655,7 @@ namespace MFA::RenderBackend
         VK_Check(vkAllocateMemory(device, &memoryAllocationInfo, nullptr, &memory));
         VK_Check(vkBindBufferMemory(device, buffer, memory, 0));
 
-        return std::make_shared<RT::BufferAndMemory>(buffer, memory);
+        return std::make_shared<RT::BufferAndMemory>(buffer, memory, size);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -2888,6 +2888,23 @@ namespace MFA::RenderBackend
     )
     {
         vkCmdResetQueryPool(commandBuffer, queryPool, firstQueryIndex, queryCount);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Dispatch(
+        VkCommandBuffer commandBuffer,
+        uint32_t const groupCountX,
+        uint32_t const groupCountY,
+        uint32_t const groupCountZ
+    )
+    {
+        vkCmdDispatch(
+            commandBuffer,
+            groupCountX,
+            groupCountY,
+            groupCountZ
+        );
     }
 
     //-------------------------------------------------------------------------------------------------

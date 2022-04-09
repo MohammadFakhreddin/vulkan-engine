@@ -16,13 +16,16 @@ DescriptorSetSchema::DescriptorSetSchema(VkDescriptorSet descriptorSet)
 
 //-------------------------------------------------------------------------------------------------
 
-void DescriptorSetSchema::AddUniformBuffer(VkDescriptorBufferInfo const * bufferInfo, uint32_t const offset) {
+void DescriptorSetSchema::AddUniformBuffer(
+    VkDescriptorBufferInfo const * bufferInfo,
+    uint32_t const dstBindingOffset
+) {
     MFA_ASSERT(isActive);
 
     VkWriteDescriptorSet writeDescriptorSet {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
         .dstSet = mDescriptorSet,
-        .dstBinding = static_cast<uint32_t>(mWriteInfo.size()) + offset,
+        .dstBinding = static_cast<uint32_t>(mWriteInfo.size()) + dstBindingOffset,
         .dstArrayElement = 0,
         .descriptorCount = 1,
         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -34,13 +37,16 @@ void DescriptorSetSchema::AddUniformBuffer(VkDescriptorBufferInfo const * buffer
 
 //-------------------------------------------------------------------------------------------------
 
-void DescriptorSetSchema::AddCombinedImageSampler(VkDescriptorImageInfo const * imageInfo, uint32_t const offset) {
+void DescriptorSetSchema::AddCombinedImageSampler(
+    VkDescriptorImageInfo const * imageInfo,
+    uint32_t const dstBindingOffset
+) {
     MFA_ASSERT(isActive);
 
     VkWriteDescriptorSet writeDescriptorSet {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
         .dstSet = mDescriptorSet,
-        .dstBinding = static_cast<uint32_t>(mWriteInfo.size()) + offset,
+        .dstBinding = static_cast<uint32_t>(mWriteInfo.size()) + dstBindingOffset,
         .dstArrayElement = 0,
         .descriptorCount = 1,
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -55,14 +61,14 @@ void DescriptorSetSchema::AddCombinedImageSampler(VkDescriptorImageInfo const * 
 void DescriptorSetSchema::AddCombinedImageSampler(
     VkDescriptorImageInfo * imageInfoList, 
     uint32_t const imageInfoCount, 
-    uint32_t const offset
+    uint32_t const dstBindingOffset
 ) {
     MFA_ASSERT(isActive);
 
     VkWriteDescriptorSet writeDescriptorSet {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
         .dstSet = mDescriptorSet,
-        .dstBinding = static_cast<uint32_t>(mWriteInfo.size()) + offset,
+        .dstBinding = static_cast<uint32_t>(mWriteInfo.size()) + dstBindingOffset,
         .dstArrayElement = 0,
         .descriptorCount = imageInfoCount,
         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -74,11 +80,14 @@ void DescriptorSetSchema::AddCombinedImageSampler(
 
 //-------------------------------------------------------------------------------------------------
 
-void DescriptorSetSchema::AddSampler(VkDescriptorImageInfo const * samplerInfo, uint32_t const offset) {
+void DescriptorSetSchema::AddSampler(
+    VkDescriptorImageInfo const * samplerInfo,
+    uint32_t const dstBindingOffset
+) {
     VkWriteDescriptorSet writeDescriptorSet {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
         .dstSet = mDescriptorSet,
-        .dstBinding = static_cast<uint32_t>(mWriteInfo.size()) + offset,
+        .dstBinding = static_cast<uint32_t>(mWriteInfo.size()) + dstBindingOffset,
         .dstArrayElement = 0,
         .descriptorCount = 1,
         .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
@@ -110,16 +119,19 @@ void DescriptorSetSchema::AddImage(
 
 //-------------------------------------------------------------------------------------------------
 
-void DescriptorSetSchema::AddStorageBuffer(VkDescriptorBufferInfo const & bufferInfo, uint32_t offset)
+void DescriptorSetSchema::AddStorageBuffer(
+    VkDescriptorBufferInfo const * bufferInfo,
+    uint32_t const dstBindingOffset
+)
 {
     VkWriteDescriptorSet writeDescriptorSet {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
         .dstSet = mDescriptorSet,
-        .dstBinding = static_cast<uint32_t>(mWriteInfo.size()) + offset,
+        .dstBinding = static_cast<uint32_t>(mWriteInfo.size()) + dstBindingOffset,
         .dstArrayElement = 0,
         .descriptorCount = 1,
         .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-        .pBufferInfo = &bufferInfo
+        .pBufferInfo = bufferInfo
     };
 
     mWriteInfo.emplace_back(writeDescriptorSet);

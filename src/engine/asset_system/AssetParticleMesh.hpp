@@ -53,24 +53,6 @@ namespace MFA::AssetSystem::Particle
         glm::vec3 placeholder {};
     };
 
-    //class Mesh final : public MeshBase
-    //{
-    //public:
-    //    /*
-    //     *  @maxInstanceCount_ Maximum instance we are going to create from this model (Important for essence)
-    //     */
-    //    explicit Mesh(uint32_t maxInstanceCount_);
-    //    ~Mesh() override;
-
-    //    Mesh(Mesh const &) noexcept = delete;
-    //    Mesh(Mesh &&) noexcept = delete;
-    //    Mesh & operator= (Mesh const & rhs) noexcept = delete;
-    //    Mesh & operator= (Mesh && rhs) noexcept = delete;
-
-    //    uint32_t const maxInstanceCount;
-
-    //};
-
 }
 
 namespace MFA

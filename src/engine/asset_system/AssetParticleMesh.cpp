@@ -8,16 +8,16 @@ namespace MFA::AssetSystem::Particle
 {
     //-------------------------------------------------------------------------------------------------
 
-    Mesh::Mesh(uint32_t const maxInstanceCount_)
+    /*Mesh::Mesh(uint32_t const maxInstanceCount_)
         : MeshBase()
         , maxInstanceCount(maxInstanceCount_)
     {
         MFA_ASSERT(maxInstanceCount > 0);
-    }
+    }*/
 
     //-------------------------------------------------------------------------------------------------
 
-    Mesh::~Mesh() = default;
+    //Mesh::~Mesh() = default;
 
     //-------------------------------------------------------------------------------------------------
 }

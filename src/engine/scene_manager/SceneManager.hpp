@@ -74,11 +74,12 @@ namespace MFA::SceneManager
     [[nodiscard]]
     Scene * GetActiveScene();
 
-    RT::BufferGroup const & GetCameraBuffers();
+    RT::BufferGroup const * GetCameraBuffers();
+    RT::BufferGroup const * GetTimeBuffers();
     void RegisterPointLight(std::weak_ptr<PointLightComponent> const & pointLight);
     void RegisterDirectionalLight(std::weak_ptr<DirectionalLightComponent> const & directionalLight);
-    RT::BufferGroup const & GetPointLightsBuffers();
-    RT::BufferGroup const & GetDirectionalLightBuffers();
+    RT::BufferGroup const * GetPointLightsBuffers();
+    RT::BufferGroup const * GetDirectionalLightBuffers();
     uint32_t GetPointLightCount();
     uint32_t GetDirectionalLightCount();
     std::vector<PointLightComponent *> const & GetActivePointLights();
