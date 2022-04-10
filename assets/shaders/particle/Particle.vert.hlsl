@@ -8,14 +8,6 @@ struct VSIn {
     float alpha : COLOR1;
     float pointSize;
 
-    // State variables
-    float remainingLifeInSec;
-    float totalLifeInSec;
-    float placeholder0;
-    
-    float3 initialLocalPosition;
-    float speed;
-
     // Per instance data
     float3 instancePosition: SV_POSITION;
 };

@@ -85,10 +85,9 @@ namespace MFA
             {
                 // TODO: We need a memory pool for staging buffer to reuse it
                 mCachedSkinsJointsBlob = Memory::Alloc(sizeof(JointTransformData) * totalJointsCount);
-                mSkinsJointsBuffer = RF::CreateUniformBuffer(
+                mSkinsJointsBuffer = RF::CreateHostVisibleUniformBuffer(
                     mCachedSkinsJointsBlob->memory.len,
-                    RF::GetMaxFramesPerFlight(),
-                    RF::MemoryFlags::hostVisible
+                    RF::GetMaxFramesPerFlight()
                 );
             }
         }

@@ -157,12 +157,6 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------Buffers--------------------------------------------------
 
-    enum class MemoryFlags
-    {
-        hostVisible,
-        local
-    };
-
     std::shared_ptr<RT::BufferAndMemory> CreateBuffer(
         VkDeviceSize size,
         VkBufferUsageFlags usage,
@@ -189,38 +183,22 @@ namespace MFA::RenderFrontend
         CBlob const & indicesBlob
     );
 
-    [[nodiscard]]
-    std::shared_ptr<RT::BufferGroup> CreateUniformBuffer(
-        size_t bufferSize,
-        uint32_t count,
-        MemoryFlags const & usage
-    );
-
-    [[nodiscard]]
-    std::shared_ptr<RT::BufferGroup> CreateStorageBuffer(
-        size_t bufferSize,
-        uint32_t count,
-        MemoryFlags const & usage
-    );
-
     std::shared_ptr<RT::BufferGroup> CreateStageBuffer(
         VkDeviceSize bufferSize,
         uint32_t count
     );
 
     [[nodiscard]]
-    std::shared_ptr<RT::BufferGroup> CreateUniformBuffer(
-        size_t bufferSize,
-        uint32_t count,
-        VkMemoryPropertyFlags memoryPropertyFlags
-    );
+    std::shared_ptr<RT::BufferGroup> CreateLocalUniformBuffer(size_t bufferSize, uint32_t count);
 
     [[nodiscard]]
-    std::shared_ptr<RT::BufferGroup> CreateStorageBuffer(
-        size_t bufferSize,
-        uint32_t count,
-        VkMemoryPropertyFlags memoryPropertyFlags
-    );
+    std::shared_ptr<RT::BufferGroup> CreateHostVisibleUniformBuffer(size_t bufferSize, uint32_t count);
+
+    [[nodiscard]]
+    std::shared_ptr<RT::BufferGroup> CreateLocalStorageBuffer(size_t bufferSize, uint32_t count);
+
+    [[nodiscard]]
+    std::shared_ptr<RT::BufferGroup> CreateHostVisibleStorageBuffer(size_t bufferSize, uint32_t count);
 
     void UpdateHostVisibleBuffer(
         RT::BufferAndMemory const & buffer,
@@ -246,7 +224,7 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     void BindPipeline(
-        RT::CommandRecordState & drawPass,
+        RT::CommandRecordState & recordState,
         RT::PipelineGroup & pipeline
     );
 

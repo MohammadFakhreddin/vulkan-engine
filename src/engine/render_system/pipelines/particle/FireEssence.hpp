@@ -40,15 +40,10 @@ namespace MFA
 
         void computePointSize();
 
-        void updateParamsIfChanged(AS::Particle::Params const & newParams);
-    
         float mInitialPointSize = 0.0f;
 
         SignalId mResizeSignal = -1;
 
         FireParams mFireParams {};
-
-        AS::Particle::Params mParams {};
-
     };
 };

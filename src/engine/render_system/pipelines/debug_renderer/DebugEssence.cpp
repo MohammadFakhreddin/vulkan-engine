@@ -28,30 +28,10 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DebugEssence::setGraphicDescriptorSet(RT::DescriptorSetGroup const & descriptorSet)
-    {
-        MFA_ASSERT(descriptorSet.IsValid());
-        mGraphicDescriptorSet = descriptorSet;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
     void DebugEssence::bindForGraphicPipeline(RT::CommandRecordState const & recordState) const
     {
-        bindGraphicDescriptorSet(recordState);
         bindVertexBuffer(recordState);
         bindIndexBuffer(recordState);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void DebugEssence::bindGraphicDescriptorSet(RT::CommandRecordState const & recordState) const
-    {
-        RF::AutoBindDescriptorSet(
-            recordState,
-            RF::UpdateFrequency::PerEssence,
-            mGraphicDescriptorSet
-        );
     }
 
     //-------------------------------------------------------------------------------------------------

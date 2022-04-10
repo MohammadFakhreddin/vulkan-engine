@@ -19,13 +19,9 @@ namespace MFA
         [[nodiscard]]
         uint32_t getIndicesCount() const;
 
-        void setGraphicDescriptorSet(RT::DescriptorSetGroup const & descriptorSet);
-
         void bindForGraphicPipeline(RT::CommandRecordState const & recordState) const;
 
     private:
-
-        void bindGraphicDescriptorSet(RT::CommandRecordState const & recordState) const;
 
         void bindVertexBuffer(RT::CommandRecordState const & recordState) const;
 
@@ -33,8 +29,6 @@ namespace MFA
 
         std::shared_ptr<RT::GpuModel> mGpuModel;
         uint32_t const mIndicesCount;
-
-        RT::DescriptorSetGroup mGraphicDescriptorSet {};
 
     };
 }

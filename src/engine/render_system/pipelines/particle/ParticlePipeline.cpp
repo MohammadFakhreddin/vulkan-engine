@@ -159,7 +159,7 @@ namespace MFA
         MFA_ASSERT(essence != nullptr);
 
         auto * particleEssence = CAST_ESSENCE_PURE(essence);
-
+        
         particleEssence->createGraphicDescriptorSet(
             mDescriptorPool,
             mPerEssenceGraphicDescriptorSetLayout->descriptorSetLayout,
@@ -318,55 +318,6 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    //void ParticlePipeline::createPerEssenceDescriptorSets(ParticleEssence * essence) const
-    //{
-    //    MFA_ASSERT(essence != nullptr);
-    //    auto const & textures = essence->getGpuModel()->textures;
-
-    //    auto const & descriptorSetGroup = essence->createDescriptorSetGroup(
-    //        mDescriptorPool,
-    //        RF::GetMaxFramesPerFlight(),
-    //        *mPerEssenceDescriptorSetLayout
-    //    );
-
-    //    for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
-    //    {
-    //        auto const & descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
-    //        MFA_VK_VALID_ASSERT(descriptorSet);
-
-    //        DescriptorSetSchema descriptorSetSchema{ descriptorSet };
-
-    //        // Textures
-    //        MFA_ASSERT(textures.size() < MAXIMUM_TEXTURE_PER_ESSENCE);
-    //        std::vector<VkDescriptorImageInfo> imageInfos{};
-    //        for (auto const & texture : textures)
-    //        {
-    //            imageInfos.emplace_back(VkDescriptorImageInfo{
-    //                .sampler = nullptr,
-    //                .imageView = texture->imageView->imageView,
-    //                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-    //            });
-    //        }
-    //        for (auto i = static_cast<uint32_t>(textures.size()); i < MAXIMUM_TEXTURE_PER_ESSENCE; ++i)
-    //        {
-    //            imageInfos.emplace_back(VkDescriptorImageInfo{
-    //                .sampler = nullptr,
-    //                .imageView = mErrorTexture->imageView->imageView,
-    //                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-    //            });
-    //        }
-    //        MFA_ASSERT(imageInfos.size() == MAXIMUM_TEXTURE_PER_ESSENCE);
-    //        descriptorSetSchema.AddImage(
-    //            imageInfos.data(),
-    //            static_cast<uint32_t>(imageInfos.size())
-    //        );
-
-    //        descriptorSetSchema.UpdateDescriptorSets();
-    //    }
-    //}
-
-    //-------------------------------------------------------------------------------------------------
-
     void ParticlePipeline::createComputePipeline()
     {
         RF_CREATE_SHADER("shaders/particle/Particle.comp.spv", Compute)
@@ -375,7 +326,7 @@ namespace MFA
         
         std::vector<VkDescriptorSetLayout> const descriptorSetLayouts {
             mPerFrameDescriptorSetLayout->descriptorSetLayout,
-            mPerEssenceGraphicDescriptorSetLayout->descriptorSetLayout,
+            mPerEssenceComputeDescriptorSetLayout->descriptorSetLayout,
         };
 
         auto const pipelineLayout = RF::CreatePipelineLayout(

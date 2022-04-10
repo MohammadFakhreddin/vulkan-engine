@@ -31,7 +31,7 @@ namespace MFA
 
         void render(RT::CommandRecordState const & recordState) const;
 
-        void updateParamsBuffer(AssetSystem::Particle::Params const & params) const;
+        void updateParamsBuffer() const;
 
         void createGraphicDescriptorSet(
             VkDescriptorPool descriptorPool,
@@ -46,14 +46,13 @@ namespace MFA
 
         explicit ParticleEssence(
             std::string nameId,
-            uint32_t particleCount,
+            AS::Particle::Params params,
             uint32_t maxInstanceCount,
             std::vector<std::shared_ptr<RT::GpuTexture>> textures
         );
 
         void init(
             uint32_t indexCount,
-            AssetSystem::Particle::Params const & params,
             CBlob const & vertexData,
             CBlob const & indexData
         );
@@ -76,6 +75,25 @@ namespace MFA
 
         void checkIfUpdateIsRequired(VariantsList const & variants);
 
+        void createVertexBuffer(
+            VkCommandBuffer commandBuffer,
+            CBlob const & vertexBlob,
+            std::shared_ptr<RT::BufferGroup> & outStageBuffer
+        );
+
+        void createIndexBuffer(
+            VkCommandBuffer commandBuffer,
+            CBlob const & indexBlob,
+            std::shared_ptr<RT::BufferGroup> & outStageBuffer
+        );
+
+        void createInstanceBuffer();
+
+        void createParamsBuffer(
+            VkCommandBuffer commandBuffer,
+            std::shared_ptr<RT::BufferGroup> & outStageBuffer
+        );
+
     protected:
 
         bool mShouldUpdate = false; // We only have to update if variants are visible
@@ -84,9 +102,10 @@ namespace MFA
         std::shared_ptr<RT::BufferAndMemory> mIndexBuffer = nullptr;                                    // Only 1
         std::shared_ptr<RT::BufferGroup> mInstanceBuffer = nullptr; // VertexBuffer                     // Per frame
 
+        AS::Particle::Params mParams {};
+
         std::shared_ptr<RT::BufferGroup> mParamsBuffer = nullptr;
 
-        uint32_t const mParticleCount;
         uint32_t const mMaxInstanceCount;
         uint32_t mIndexCount = 0;
 
@@ -97,10 +116,8 @@ namespace MFA
 
     private:
 
-        std::shared_ptr<SmartBlob> mInstanceDataMemory {};
+        std::shared_ptr<SmartBlob> mInstanceData {};
         
-        std::shared_ptr<RT::BufferGroup> mInstancesBuffer {};
-
         uint32_t mNextDrawInstanceCount = 0;
 
         bool mIsInitialized = false;

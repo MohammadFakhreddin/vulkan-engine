@@ -257,7 +257,11 @@ namespace MFA
     void PBRWithShadowPipelineV2::internalAddEssence(EssenceBase * essence)
     {
         MFA_ASSERT(dynamic_cast<PBR_Essence *>(essence) != nullptr);
-        createEssenceDescriptorSets(*CAST_ESSENCE_PURE(essence));
+        CAST_ESSENCE_PURE(essence)->createGraphicDescriptorSet(
+            mDescriptorPool,
+            mPerEssenceDescriptorSetLayout->descriptorSetLayout,
+            *mErrorTexture
+        );
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -350,72 +354,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createEssenceDescriptorSets(PBR_Essence & essence) const
-    {
-        auto const & textures = essence.getGpuModel()->textures;
-
-        auto const descriptorSetGroup = RF::CreateDescriptorSets(
-            mDescriptorPool,
-            RF::GetMaxFramesPerFlight(),
-            *mPerEssenceDescriptorSetLayout
-        );
-
-        essence.setGraphicDescriptorSet(descriptorSetGroup);
-        
-        auto const * primitiveBuffer = essence.getPrimitivesBuffer();
-
-        for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
-        {
-            auto const & descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
-            MFA_VK_VALID_ASSERT(descriptorSet);
-
-            DescriptorSetSchema descriptorSetSchema{ descriptorSet };
-
-            /////////////////////////////////////////////////////////////////
-            // Fragment shader
-            /////////////////////////////////////////////////////////////////
-
-            // Primitives
-            VkDescriptorBufferInfo primitiveBufferInfo{
-                .buffer = primitiveBuffer->buffers[0]->buffer,
-                .offset = 0,
-                .range = primitiveBuffer->bufferSize,
-            };
-            descriptorSetSchema.AddUniformBuffer(&primitiveBufferInfo);
-
-            // TODO Each one need their own sampler
-            // Textures
-            MFA_ASSERT(textures.size() <= 64);
-            // We need to keep imageInfos alive
-            std::vector<VkDescriptorImageInfo> imageInfos{};
-            for (auto const & texture : textures)
-            {
-                imageInfos.emplace_back(VkDescriptorImageInfo{
-                    .sampler = nullptr,
-                    .imageView = texture->imageView->imageView,
-                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                });
-            }
-            for (auto i = static_cast<uint32_t>(textures.size()); i < 64; ++i)
-            {
-                imageInfos.emplace_back(VkDescriptorImageInfo{
-                    .sampler = nullptr,
-                    .imageView = mErrorTexture->imageView->imageView,
-                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                });
-            }
-            MFA_ASSERT(imageInfos.size() == 64);
-            descriptorSetSchema.AddImage(
-                imageInfos.data(),
-                static_cast<uint32_t>(imageInfos.size())
-            );
-
-            descriptorSetSchema.UpdateDescriptorSets();
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
+    
     void PBRWithShadowPipelineV2::createVariantDescriptorSets(PBR_Variant & variant) const
     {
         auto const descriptorSetGroup = variant.CreateDescriptorSetGroup(
@@ -1365,9 +1304,8 @@ namespace MFA
     {
         // Vertex shader
         RF_CREATE_SHADER("shaders/depth_pre_pass/DepthPrePass.vert.spv", Vertex)
-        RF_CREATE_SHADER("shaders/depth_pre_pass/DepthPrePass.frag.spv", Fragment)
-
-        std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuFragmentShader.get() };
+        
+        std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get() };
 
         VkVertexInputBindingDescription vertexInputBindingDescription{};
         vertexInputBindingDescription.binding = 0;
@@ -1575,11 +1513,7 @@ namespace MFA
 
     void PBRWithShadowPipelineV2::createUniformBuffers()
     {
-        mErrorBuffer = RF::CreateUniformBuffer(
-            sizeof(PBR_Variant::JointTransformData),
-            1,
-            RF::MemoryFlags::local
-        );
+        mErrorBuffer = RF::CreateLocalUniformBuffer(sizeof(PBR_Variant::JointTransformData), 1);
     }
 
     //-------------------------------------------------------------------------------------------------

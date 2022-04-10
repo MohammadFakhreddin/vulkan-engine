@@ -582,47 +582,6 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    static VkMemoryPropertyFlags convertBufferUsageToMemoryFlags(MemoryFlags const & usage)
-    {
-        VkMemoryPropertyFlags propertyFlags;
-        switch (usage)
-        {
-            case MemoryFlags::hostVisible:
-                propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-                break;
-            case MemoryFlags::local:
-                propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-                break;
-            default:
-                MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
-        }
-        return propertyFlags;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    std::shared_ptr<RT::BufferGroup> CreateUniformBuffer(
-        size_t const bufferSize,
-        uint32_t const count,
-        MemoryFlags const & usage
-    )
-    {
-        return CreateUniformBuffer(bufferSize, count, convertBufferUsageToMemoryFlags(usage));
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    std::shared_ptr<RT::BufferGroup> CreateStorageBuffer(
-        size_t const bufferSize,
-        uint32_t const count,
-        MemoryFlags const & usage
-    )
-    {
-        return CreateStorageBuffer(bufferSize, count, convertBufferUsageToMemoryFlags(usage));
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
     std::shared_ptr<RT::BufferGroup> CreateBufferGroup(
         VkDeviceSize const bufferSize,
         uint32_t const count,
@@ -650,39 +609,54 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<RT::BufferGroup> CreateUniformBuffer(
-        size_t const bufferSize,
-        uint32_t const count,
-        VkMemoryPropertyFlags memoryPropertyFlags
-    )
+    std::shared_ptr<RT::BufferGroup> CreateLocalUniformBuffer(size_t const bufferSize, uint32_t const count)
+    {
+        return CreateBufferGroup(
+            bufferSize,
+            count,
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<RT::BufferGroup> CreateHostVisibleUniformBuffer(size_t const bufferSize, uint32_t const count)
     {
         return CreateBufferGroup(
             bufferSize,
             count,
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            memoryPropertyFlags
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
         );
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<RT::BufferGroup> CreateStorageBuffer(
-        size_t const bufferSize,
-        uint32_t const count,
-        VkMemoryPropertyFlags memoryPropertyFlags
-    )
+    std::shared_ptr<RT::BufferGroup> CreateLocalStorageBuffer(size_t const bufferSize, uint32_t const count)
+    {
+        return CreateBufferGroup(
+            bufferSize,
+            count,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<RT::BufferGroup> CreateHostVisibleStorageBuffer(VkDeviceSize const bufferSize, uint32_t const count)
     {
         return CreateBufferGroup(
             bufferSize,
             count,
             VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-            memoryPropertyFlags
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
         );
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    [[nodiscard]]
     std::shared_ptr<RT::BufferGroup> CreateStageBuffer(VkDeviceSize const bufferSize, uint32_t const count)
     {
         return CreateBufferGroup(
@@ -933,16 +907,31 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     void BindPipeline(
-        RT::CommandRecordState & drawPass,
+        RT::CommandRecordState & recordState,
         RT::PipelineGroup & pipeline
     )
     {
-        MFA_ASSERT(drawPass.isValid);
-        drawPass.pipeline = &pipeline;
+        MFA_ASSERT(recordState.isValid);
+        recordState.pipeline = &pipeline;
+
+        VkPipelineBindPoint bindPoint {};
+
+        switch (recordState.commandBufferType)
+        {
+            case RenderTypes::CommandBufferType::Compute:
+                bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
+                break;
+            case RenderTypes::CommandBufferType::Graphic:
+                bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+                break;
+            default:
+                MFA_ASSERT(false);
+        }
+
         // We can bind command buffer to multiple pipeline
         vkCmdBindPipeline(
-            GetGraphicCommandBuffer(drawPass),
-            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            recordState.commandBuffer,
+            bindPoint,
             pipeline.pipeline
         );
     }

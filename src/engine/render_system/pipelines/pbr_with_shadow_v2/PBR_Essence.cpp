@@ -7,6 +7,8 @@
 
 #include <utility>
 
+#include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
+
 //-------------------------------------------------------------------------------------------------
 
 using namespace MFA::AS::PBR;
@@ -30,11 +32,7 @@ MFA::PBR_Essence::PBR_Essence(
         if (mPrimitiveCount > 0) {
             size_t const bufferSize = sizeof(PrimitiveInfo) * mPrimitiveCount;
 
-            mPrimitivesBuffer = RF::CreateUniformBuffer(
-                bufferSize,
-                1,
-                RF::MemoryFlags::local
-            );
+            mPrimitivesBuffer = RF::CreateLocalUniformBuffer(bufferSize, 1);
             auto const stageBuffer = RF::CreateStageBuffer(bufferSize, 1);
             
             auto const primitiveData = Memory::Alloc(bufferSize);
@@ -127,10 +125,68 @@ MeshData const * MFA::PBR_Essence::getMeshData() const
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::PBR_Essence::setGraphicDescriptorSet(RT::DescriptorSetGroup const & descriptorSet)
+void MFA::PBR_Essence::createGraphicDescriptorSet(
+    VkDescriptorPool descriptorPool,
+    VkDescriptorSetLayout descriptorSetLayout,
+    RT::GpuTexture const & errorTexture
+)
 {
-    MFA_ASSERT(descriptorSet.IsValid());
-    mGraphicDescriptorSet = descriptorSet;
+    auto const & textures = mGpuModel->textures;
+
+    mGraphicDescriptorSet = RF::CreateDescriptorSets(
+        descriptorPool,
+        RF::GetMaxFramesPerFlight(),
+        descriptorSetLayout
+    );
+    
+    for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
+    {
+        auto const & descriptorSet = mGraphicDescriptorSet.descriptorSets[frameIndex];
+        MFA_VK_VALID_ASSERT(descriptorSet);
+
+        DescriptorSetSchema descriptorSetSchema{ descriptorSet };
+
+        /////////////////////////////////////////////////////////////////
+        // Fragment shader
+        /////////////////////////////////////////////////////////////////
+
+        // Primitives
+        VkDescriptorBufferInfo primitiveBufferInfo{
+            .buffer = mPrimitivesBuffer->buffers[0]->buffer,
+            .offset = 0,
+            .range = mPrimitivesBuffer->bufferSize,
+        };
+        descriptorSetSchema.AddUniformBuffer(&primitiveBufferInfo);
+
+        // TODO Each one need their own sampler
+        // Textures
+        MFA_ASSERT(textures.size() <= 64);
+        // We need to keep imageInfos alive
+        std::vector<VkDescriptorImageInfo> imageInfos{};
+        for (auto const & texture : textures)
+        {
+            imageInfos.emplace_back(VkDescriptorImageInfo{
+                .sampler = nullptr,
+                .imageView = texture->imageView->imageView,
+                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+            });
+        }
+        for (auto i = static_cast<uint32_t>(textures.size()); i < 64; ++i)
+        {
+            imageInfos.emplace_back(VkDescriptorImageInfo{
+                .sampler = nullptr,
+                .imageView = errorTexture.imageView->imageView,
+                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+            });
+        }
+        MFA_ASSERT(imageInfos.size() == 64);
+        descriptorSetSchema.AddImage(
+            imageInfos.data(),
+            static_cast<uint32_t>(imageInfos.size())
+        );
+
+        descriptorSetSchema.UpdateDescriptorSets();
+    }
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -162,7 +218,7 @@ void MFA::PBR_Essence::bindGraphicDescriptorSet(RT::CommandRecordState const & r
 {
     RF::AutoBindDescriptorSet(
         recordState,
-        RF::UpdateFrequency::PerFrame,
+        RF::UpdateFrequency::PerEssence,
         mGraphicDescriptorSet
     );
 }

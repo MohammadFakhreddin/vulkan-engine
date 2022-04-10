@@ -43,6 +43,7 @@ namespace MFA
         [[nodiscard]]
         RT::VariantId GetId() const noexcept;
 
+        // TODO: Remove this function.
         RT::DescriptorSetGroup const & CreateDescriptorSetGroup(
             VkDescriptorPool descriptorPool,
             uint32_t descriptorSetCount,

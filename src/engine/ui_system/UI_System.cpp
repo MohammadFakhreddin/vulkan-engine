@@ -656,7 +656,7 @@ namespace MFA::UI_System
                     vertexBuffer = RF::CreateBuffer(
                         vertexSize,
                         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
                     );
                 }
 
@@ -667,7 +667,7 @@ namespace MFA::UI_System
                     indexBuffer = RF::CreateBuffer(
                         indexSize,
                         VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
                     );
                 }
 

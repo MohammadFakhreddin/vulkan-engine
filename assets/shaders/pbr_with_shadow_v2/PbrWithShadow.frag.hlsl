@@ -20,7 +20,7 @@ struct PSIn {
     float3 worldBiTangent : TEXCOORD4;
 
     float2 emissiveTexCoord: TEXCOORD5;
-    float2 occlusionTexCoord: TEXCOORD5;
+    float2 occlusionTexCoord: TEXCOORD6;
 
     float4 directionLightPosition[3];
 };

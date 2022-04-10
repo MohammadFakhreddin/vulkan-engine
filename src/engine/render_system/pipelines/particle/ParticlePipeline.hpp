@@ -1,7 +1,6 @@
 #pragma once
 
 #include "engine/render_system/pipelines/BasePipeline.hpp"
-#include "engine/render_system/pipelines/BasePipeline.hpp"
 
 namespace MFA
 {

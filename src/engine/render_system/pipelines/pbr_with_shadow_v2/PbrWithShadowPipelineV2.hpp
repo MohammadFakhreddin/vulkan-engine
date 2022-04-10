@@ -116,8 +116,6 @@ namespace MFA
 
         void createPerFrameDescriptorSets();
 
-        void createEssenceDescriptorSets(PBR_Essence & essence) const;
-
         void createVariantDescriptorSets(PBR_Variant & variant) const;
 
         void createPerFrameDescriptorSetLayout();

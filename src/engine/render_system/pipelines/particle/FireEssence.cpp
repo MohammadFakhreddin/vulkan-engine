@@ -21,15 +21,15 @@ namespace MFA
         FireParams fireParams,
         AS::Particle::Params params
     )
-        : ParticleEssence(name, params.count, maxInstanceCount, std::move(fireTextures))
+        : ParticleEssence(name, std::move(params), maxInstanceCount, std::move(fireTextures))
         , mFireParams(std::move(fireParams))
-        , mParams(std::move(params))
     {
-        computePointSize();
         mResizeSignal = RF::AddResizeEventListener([this]()->void
         {
             computePointSize();
+            updateParamsBuffer();
         });
+        init();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -88,6 +88,12 @@ namespace MFA
 
             indices[i] = i;
         }
+
+        ParticleEssence::init(
+            mIndexCount,
+            vertexBuffer->memory,
+            indexBuffer->memory
+        );
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -95,25 +101,7 @@ namespace MFA
     void FireEssence::computePointSize()
     {
         auto const surfaceCapabilities = RF::GetSurfaceCapabilities();
-
-        AS::Particle::Params newParams {};
-        memcpy(&newParams, &mParams, sizeof(mParams));
-        
-        newParams.pointSize = mFireParams.initialPointSize * (static_cast<float>(surfaceCapabilities.currentExtent.width) / mFireParams.targetExtend[0]);
-        
-        updateParamsIfChanged(mParams);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void FireEssence::updateParamsIfChanged(AS::Particle::Params const & newParams)
-    {
-        if (memcmp(&newParams, &mParams, sizeof(mParams)) == 0)
-        {
-            return;
-        }
-        memcpy(&mParams, &newParams, sizeof(mParams));
-        updateParamsBuffer(mParams);
+        mParams.pointSize = mFireParams.initialPointSize * (static_cast<float>(surfaceCapabilities.currentExtent.width) / mFireParams.targetExtend[0]);
     }
 
     //-------------------------------------------------------------------------------------------------

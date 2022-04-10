@@ -1984,9 +1984,11 @@ namespace MFA::RenderBackend
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
             .stage = shaderStage.stageFlags,
             .module = shaderStage.shaderModule,
+            .pName = shaderStage.entryPointName.c_str()
         };
 
         VkComputePipelineCreateInfo const pipelineCreateInfo {
+            .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
             .stage = shaderStageCreateInfo,
             .layout = pipelineLayout
         };

@@ -59,7 +59,11 @@ public:
     [[nodiscard]]
     AS::PBR::MeshData const * getMeshData() const;
 
-    void setGraphicDescriptorSet(RT::DescriptorSetGroup const & descriptorSet);
+    void createGraphicDescriptorSet(
+        VkDescriptorPool descriptorPool,
+        VkDescriptorSetLayout descriptorSetLayout,
+        RT::GpuTexture const & errorTexture
+    );
 
     void bindForGraphicPipeline(RT::CommandRecordState const & recordState) const;
 

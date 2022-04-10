@@ -330,7 +330,7 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
-#define UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(signal, event, listenerId, delegateFunc)         \
+#define UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(signal, event, listenerId, delegateFunc)             \
     if (                                                                                            \
         pipeline->mIsActive &&                                                                      \
         (requiredEvents & BasePipeline::EventTypes::event) > 0 &&                                   \
@@ -358,45 +358,45 @@ namespace MFA::SceneManager
             PreRenderEvent,
             mPreRenderListenerId,
             [pipeline](RT::CommandRecordState & commandRecord, float const deltaTime)->void
-{
-    pipeline->preRender(commandRecord, deltaTime);
+            {
+                pipeline->preRender(commandRecord, deltaTime);
             }
         )
 
-            // Render listener
-                auto * renderSignal = getRenderSignal(pipeline);
-            MFA_ASSERT(renderSignal != nullptr);
-            UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(
-                *renderSignal,
-                RenderEvent,
-                mRenderListenerId,
-                [pipeline](RT::CommandRecordState & commandRecord, float const deltaTime)->void
-    {
-            pipeline->render(commandRecord, deltaTime);
-                }
-            )
-
-                // Post render
-                    UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(
-                        state->updateSignal,
-                        UpdateEvent,
-                        mUpdateListenerId,
-                        [pipeline](float const deltaTime)->void
+        // Render listener
+        auto * renderSignal = getRenderSignal(pipeline);
+        MFA_ASSERT(renderSignal != nullptr);
+        UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(
+            *renderSignal,
+            RenderEvent,
+            mRenderListenerId,
+            [pipeline](RT::CommandRecordState & commandRecord, float const deltaTime)->void
             {
-                            pipeline->update(deltaTime);
-                        }
-                    )
+                pipeline->render(commandRecord, deltaTime);
+            }
+        )
 
-                    // Compute
-                            UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(
-                                state->computeSignal,
-                                ComputeEvent,
-                                mComputeListenerId,
-                                [pipeline](RT::CommandRecordState & commandRecord, float const deltaTime)->void
-                    {
-                                            pipeline->compute(commandRecord, deltaTime);
-                                }
-                            )
+        // Post render
+        UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(
+            state->updateSignal,
+            UpdateEvent,
+            mUpdateListenerId,
+            [pipeline](float const deltaTime)->void
+            {
+                pipeline->update(deltaTime);
+            }
+        )
+
+        // Compute
+        UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(
+            state->computeSignal,
+            ComputeEvent,
+            mComputeListenerId,
+            [pipeline](RT::CommandRecordState & commandRecord, float const deltaTime)->void
+            {
+                pipeline->compute(commandRecord, deltaTime);
+            }
+        )
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -712,10 +712,9 @@ namespace MFA::SceneManager
 
     void prepareTimeBuffer()
     {
-        state->timeBuffer = RF::CreateUniformBuffer(
+        state->timeBuffer = RF::CreateHostVisibleUniformBuffer(
             sizeof(TimeBufferData),
-            RF::GetMaxFramesPerFlight(),
-            RF::MemoryFlags::hostVisible
+            RF::GetMaxFramesPerFlight()
         );
     }
 
@@ -723,10 +722,9 @@ namespace MFA::SceneManager
 
     void prepareCameraBuffer()
     {
-        state->cameraBuffer = RF::CreateUniformBuffer(
+        state->cameraBuffer = RF::CreateHostVisibleUniformBuffer(
             sizeof(CameraComponent::CameraBufferData),
-            RF::GetMaxFramesPerFlight(),
-            RF::MemoryFlags::hostVisible
+            RF::GetMaxFramesPerFlight()
         );
 
         CameraComponent::CameraBufferData const cameraBufferData{};
@@ -743,10 +741,9 @@ namespace MFA::SceneManager
 
     void preparePointLightsBuffer()
     {
-        state->pointLightsBuffers = RF::CreateUniformBuffer(
+        state->pointLightsBuffers = RF::CreateHostVisibleUniformBuffer(
             sizeof(PointLightsBufferData),
-            RF::GetMaxFramesPerFlight(),
-            RF::MemoryFlags::hostVisible
+            RF::GetMaxFramesPerFlight()
         );
 
         auto const dataBlob = CBlobAliasOf(state->pointLightData);
@@ -763,10 +760,9 @@ namespace MFA::SceneManager
 
     void prepareDirectionalLightsBuffer()
     {
-        state->directionalLightBuffers = RF::CreateUniformBuffer(
+        state->directionalLightBuffers = RF::CreateHostVisibleUniformBuffer(
             sizeof(DirectionalLightData),
-            RF::GetMaxFramesPerFlight(),
-            RF::MemoryFlags::hostVisible
+            RF::GetMaxFramesPerFlight()
         );
 
         auto const dataBlob = CBlobAliasOf(state->directionalLightData);
