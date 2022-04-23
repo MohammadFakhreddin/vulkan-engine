@@ -83,8 +83,8 @@ void Application::Shutdown() {
     IM::Shutdown();
     UI::Shutdown();
     JS::Shutdown();
-    RF::Shutdown();
     RC::Shutdown();
+    RF::Shutdown();
     Path::Shutdown();
 
     mIsInitialized = false;

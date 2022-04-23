@@ -106,29 +106,24 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ParticleEssence::init(
-        uint32_t const indexCount,
-        CBlob const & vertexData,
-        CBlob const & indexData
-    )
+    void ParticleEssence::init(CBlob const & vertexData, CBlob const & indexData)
     {
 
-        mIndexCount = indexCount;
+        //--------------Local buffers-----------
+        auto const commandBuffer = RF::BeginSingleTimeGraphicCommand();
 
-        {// Local buffers
-            auto const commandBuffer = RF::BeginSingleTimeGraphicCommand();
+        std::shared_ptr<RT::BufferGroup> vertexStageBuffer = nullptr;
+        createVertexBuffer(commandBuffer, vertexData, vertexStageBuffer);
 
-            std::shared_ptr<RT::BufferGroup> vertexStageBuffer = nullptr;
-            createVertexBuffer(commandBuffer, vertexData, vertexStageBuffer);
+        std::shared_ptr<RT::BufferGroup> indexStageBuffer = nullptr;
+        createIndexBuffer(commandBuffer, indexData, indexStageBuffer);
 
-            std::shared_ptr<RT::BufferGroup> indexStageBuffer = nullptr;
-            createIndexBuffer(commandBuffer, indexData, indexStageBuffer);
+        std::shared_ptr<RT::BufferGroup> paramsStageBuffer = nullptr;
+        createParamsBuffer(commandBuffer, paramsStageBuffer);
 
-            std::shared_ptr<RT::BufferGroup> paramsStageBuffer = nullptr;
-            createParamsBuffer(commandBuffer, paramsStageBuffer);
+        RF::EndAndSubmitGraphicSingleTimeCommand(commandBuffer);
+        //---------------------------------------
 
-            RF::EndAndSubmitGraphicSingleTimeCommand(commandBuffer);
-        }
 
         createInstanceBuffer();
         
@@ -153,15 +148,55 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    void ParticleEssence::preComputeBarrier(std::vector<VkBufferMemoryBarrier> & outBarrier) const
+    {
+        VkBufferMemoryBarrier barrier =
+		{
+			VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+			nullptr,
+			0,
+			VK_ACCESS_SHADER_WRITE_BIT,
+			RF::GetGraphicQueueFamily(),
+			RF::GetComputeQueueFamily(),
+			mVertexBuffer->buffers[0]->buffer,
+			0,
+			mVertexBuffer->buffers[0]->size
+		};
+
+        outBarrier.emplace_back(barrier);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void ParticleEssence::compute(RT::CommandRecordState const & recordState) const
     {
         bindComputeDescriptorSet(recordState);
+        auto const dispatchCount = static_cast<uint32_t>(std::ceil(static_cast<float>(mParams.count) / 256.0f));
         RF::Dispatch(
             recordState,
-            (mParams.count + 1) / 256,
-            0,
-            0
+            dispatchCount,
+            1,
+            1
         );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ParticleEssence::preRenderBarrier(std::vector<VkBufferMemoryBarrier> & outBarrier) const
+    {
+        VkBufferMemoryBarrier barrier =
+		{
+			VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+			nullptr,
+			VK_ACCESS_SHADER_WRITE_BIT,
+			0,
+			RF::GetComputeQueueFamily(),
+			RF::GetGraphicQueueFamily(),
+			mVertexBuffer->buffers[0]->buffer,
+			0,
+			mVertexBuffer->buffers[0]->size
+		};
+        outBarrier.emplace_back(barrier);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -173,8 +208,6 @@ namespace MFA
             updateInstanceBuffer(recordState);
         }
 
-        // TODO: We need barrier here for vertex buffer
-
         bindVertexBuffer(recordState);
         bindInstanceBuffer(recordState);
         bindIndexBuffer(recordState);
@@ -183,7 +216,7 @@ namespace MFA
         // Draw
         RF::DrawIndexed(
             recordState,
-            mIndexCount,
+            mParams.count,
             mNextDrawInstanceCount
         );
     }
@@ -260,36 +293,33 @@ namespace MFA
     {
         mComputeDescriptorSet = RF::CreateDescriptorSets(
             descriptorPool,
-            RF::GetMaxFramesPerFlight(),
+            1,
             descriptorSetLayout
         );
 
-        for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
-        {
-            auto const & descriptorSet = mComputeDescriptorSet.descriptorSets[frameIndex];
-            MFA_VK_VALID_ASSERT(descriptorSet);
+        auto const & descriptorSet = mComputeDescriptorSet.descriptorSets[0];
+        MFA_VK_VALID_ASSERT(descriptorSet);
 
-            DescriptorSetSchema descriptorSetSchema{ descriptorSet };
+        DescriptorSetSchema descriptorSetSchema{ descriptorSet };
 
-            // -----------Params-------------
-            VkDescriptorBufferInfo paramsBufferInfo {
-                .buffer = mParamsBuffer->buffers[0]->buffer,
-                .offset = 0,
-                .range = mParamsBuffer->bufferSize
-            };
-            descriptorSetSchema.AddUniformBuffer(&paramsBufferInfo);
+        // -----------Params-------------
+        VkDescriptorBufferInfo const paramsBufferInfo {
+            .buffer = mParamsBuffer->buffers[0]->buffer,
+            .offset = 0,
+            .range = mParamsBuffer->bufferSize
+        };
+        descriptorSetSchema.AddUniformBuffer(&paramsBufferInfo);
 
-            // -----------Particles-------------
-            VkDescriptorBufferInfo particleBufferInfo {
-                .buffer = mVertexBuffer->buffers[0]->buffer,
-                .offset = 0,
-                .range = mVertexBuffer->bufferSize
-            };
-            descriptorSetSchema.AddStorageBuffer(&particleBufferInfo);
+        // -----------Particles-------------
+        VkDescriptorBufferInfo const particleBufferInfo {
+            .buffer = mVertexBuffer->buffers[0]->buffer,
+            .offset = 0,
+            .range = mVertexBuffer->bufferSize
+        };
+        descriptorSetSchema.AddStorageBuffer(&particleBufferInfo);
 
-            // --------------------------------
-            descriptorSetSchema.UpdateDescriptorSets();
-        }
+        // --------------------------------
+        descriptorSetSchema.UpdateDescriptorSets();
     }
 
     //-------------------------------------------------------------------------------------------------

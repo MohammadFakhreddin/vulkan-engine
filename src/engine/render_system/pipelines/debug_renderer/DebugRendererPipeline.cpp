@@ -103,7 +103,7 @@ namespace MFA
 
     void DebugRendererPipeline::render(RT::CommandRecordState & recordState, float deltaTime)
     {
-        RF::BindPipeline(recordState, *mpipeline);
+        RF::BindPipeline(recordState, *mPipeline);
 
         RF::AutoBindDescriptorSet(
             recordState,
@@ -237,8 +237,7 @@ namespace MFA
             static_cast<uint32_t>(pushConstantRanges.size()),
             pushConstantRanges.data()
         );
-        
-        mpipeline = RF::CreateGraphicPipeline(
+        mPipeline = RF::CreateGraphicPipeline(
             RF::GetDisplayRenderPass()->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),

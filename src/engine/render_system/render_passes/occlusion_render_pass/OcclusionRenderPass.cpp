@@ -58,14 +58,14 @@ void MFA::OcclusionRenderPass::BeginRenderPass(RT::CommandRecordState & recordSt
 
     RenderPass::BeginRenderPass(recordState);
 
-    RF::AssignViewportAndScissorToCommandBuffer(RF::GetGraphicCommandBuffer(recordState), extent);
+    RF::AssignViewportAndScissorToCommandBuffer(recordState.commandBuffer, extent);
 
     std::vector<VkClearValue> clearValues{};
     clearValues.resize(1);
     clearValues[0].depthStencil = { .depth = 1.0f, .stencil = 0 };
 
     RF::BeginRenderPass(
-        RF::GetGraphicCommandBuffer(recordState),
+        recordState.commandBuffer,
         mRenderPass,
         getFrameBuffer(recordState),
         extent,
@@ -79,7 +79,7 @@ void MFA::OcclusionRenderPass::BeginRenderPass(RT::CommandRecordState & recordSt
 void MFA::OcclusionRenderPass::EndRenderPass(RT::CommandRecordState & recordState)
 {
     RenderPass::EndRenderPass(recordState);
-    RF::EndRenderPass(RF::GetGraphicCommandBuffer(recordState));
+    RF::EndRenderPass(recordState.commandBuffer);
 }
 
 //-------------------------------------------------------------------------------------------------

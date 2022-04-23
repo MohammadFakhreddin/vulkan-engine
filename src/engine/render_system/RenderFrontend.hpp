@@ -283,21 +283,21 @@ namespace MFA::RenderFrontend
     //: end loop
 
     void BindVertexBuffer(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         RT::BufferAndMemory const & vertexBuffer,
         uint32_t firstBinding = 0,
         VkDeviceSize offset = 0
     );
 
     void BindIndexBuffer(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         RT::BufferAndMemory const & indexBuffer,
         VkDeviceSize offset = 0,
         VkIndexType indexType = VK_INDEX_TYPE_UINT32
     );
 
     void DrawIndexed(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         uint32_t indicesCount,
         uint32_t instanceCount = 1,
         uint32_t firstIndex = 0,
@@ -318,19 +318,19 @@ namespace MFA::RenderFrontend
 
     void OnNewFrame(float deltaTimeInSec);
 
-    void SetScissor(RT::CommandRecordState const & drawPass, VkRect2D const & scissor);
+    void SetScissor(RT::CommandRecordState const & recordState, VkRect2D const & scissor);
 
-    void SetViewport(RT::CommandRecordState const & drawPass, VkViewport const & viewport);
+    void SetViewport(RT::CommandRecordState const & recordState, VkViewport const & viewport);
 
     void PushConstants(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         AS::ShaderStage shaderStage,
         uint32_t offset,
         CBlob data
     );
 
     void PushConstants(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         VkShaderStageFlags shaderStage,
         uint32_t offset,
         CBlob data
@@ -478,8 +478,14 @@ namespace MFA::RenderFrontend
 
     uint32_t GetGraphicQueueFamily();
 
+    uint32_t GetComputeQueueFamily();
+
+    VkCommandBuffer GetComputeCommandBuffer(RT::CommandRecordState const & recordState);
+
+    VkCommandBuffer GetGraphicCommandBuffer(RT::CommandRecordState const & recordState);
+    
     void PipelineBarrier(
-        VkCommandBuffer commandBuffer,
+        RT::CommandRecordState const & recordState,
         VkPipelineStageFlags sourceStageMask,
         VkPipelineStageFlags destinationStateMask,
         uint32_t barrierCount,
@@ -487,10 +493,11 @@ namespace MFA::RenderFrontend
     );
 
     void PipelineBarrier(
-        VkCommandBuffer commandBuffer,
+        RT::CommandRecordState const & recordState,
         VkPipelineStageFlags sourceStageMask,
         VkPipelineStageFlags destinationStateMask,
-        VkBufferMemoryBarrier const & memoryBarrier
+        uint32_t barrierCount,
+        VkBufferMemoryBarrier const * bufferMemoryBarrier
     );
 
     void ResetFence(VkFence fence);
@@ -524,9 +531,9 @@ namespace MFA::RenderFrontend
 
     void DestroyQueryPool(VkQueryPool queryPool);
 
-    void BeginQuery(RT::CommandRecordState const & drawPass, VkQueryPool queryPool, uint32_t queryId);
+    void BeginQuery(RT::CommandRecordState const & recordState, VkQueryPool queryPool, uint32_t queryId);
 
-    void EndQuery(RT::CommandRecordState const & drawPass, VkQueryPool queryPool, uint32_t queryId);
+    void EndQuery(RT::CommandRecordState const & recordState, VkQueryPool queryPool, uint32_t queryId);
 
     void GetQueryPoolResult(
         VkQueryPool queryPool,
@@ -543,12 +550,6 @@ namespace MFA::RenderFrontend
     );
 
     //-------------------------------------------------------------------------------------------------
-
-    [[nodiscard]]
-    VkCommandBuffer GetGraphicCommandBuffer(RT::CommandRecordState const & recordState);
-
-    [[nodiscard]]
-    VkCommandBuffer GetComputeCommandBuffer(RT::CommandRecordState const & recordState);
 
     [[nodiscard]]
     RT::CommandRecordState AcquireRecordState();

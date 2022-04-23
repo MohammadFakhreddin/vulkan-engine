@@ -54,7 +54,7 @@ private:
 private:
 
     std::shared_ptr<RT::DescriptorSetLayoutGroup> mDescriptorSetLayout {};
-    std::shared_ptr<RT::PipelineGroup> mpipeline {};
+    std::shared_ptr<RT::PipelineGroup> mPipeline {};
 
     RT::DescriptorSetGroup mDescriptorSetGroup {};
     

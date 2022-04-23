@@ -24,10 +24,11 @@ namespace MFA
 
         void update(VariantsList const & variants);
 
-        // Pre compute barrier
+        void preComputeBarrier(std::vector<VkBufferMemoryBarrier> & outBarrier) const;
+
         void compute(RT::CommandRecordState const & recordState) const;
 
-        // Pre-render barrier
+        void preRenderBarrier(std::vector<VkBufferMemoryBarrier> & outBarrier) const;
 
         void render(RT::CommandRecordState const & recordState) const;
 
@@ -40,7 +41,10 @@ namespace MFA
             uint32_t maxTextureCount
         );
 
-        void createComputeDescriptorSet(VkDescriptorPool descriptorPool, VkDescriptorSetLayout descriptorSetLayout);
+        void createComputeDescriptorSet(
+            VkDescriptorPool descriptorPool,
+            VkDescriptorSetLayout descriptorSetLayout
+        );
 
     protected:
 
@@ -52,7 +56,6 @@ namespace MFA
         );
 
         void init(
-            uint32_t indexCount,
             CBlob const & vertexData,
             CBlob const & indexData
         );
@@ -107,8 +110,7 @@ namespace MFA
         std::shared_ptr<RT::BufferGroup> mParamsBuffer = nullptr;
 
         uint32_t const mMaxInstanceCount;
-        uint32_t mIndexCount = 0;
-
+        
         std::vector<std::shared_ptr<RT::GpuTexture>> const mTextures;
 
         RT::DescriptorSetGroup mGraphicDescriptorSet {};

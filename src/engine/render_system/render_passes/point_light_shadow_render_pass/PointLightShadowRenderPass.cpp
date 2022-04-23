@@ -283,18 +283,15 @@ namespace MFA
             .width = RT::POINT_LIGHT_SHADOW_WIDTH,
             .height = RT::POINT_LIGHT_SHADOW_HEIGHT
         };
-
-        auto * commandBuffer = RF::GetGraphicCommandBuffer(recordState);
-        MFA_ASSERT(commandBuffer != nullptr);
-
-        RF::AssignViewportAndScissorToCommandBuffer(commandBuffer, shadowExtend);
+        
+        RF::AssignViewportAndScissorToCommandBuffer(recordState.commandBuffer, shadowExtend);
 
         std::vector<VkClearValue> clearValues{};
         clearValues.resize(1);
         clearValues[0].depthStencil = { .depth = 1.0f, .stencil = 0 };
 
         RF::BeginRenderPass(
-            commandBuffer,
+            recordState.commandBuffer,
             mVkRenderPass,
             renderTarget.GetFrameBuffer(recordState),
             shadowExtend,
@@ -309,7 +306,7 @@ namespace MFA
     {
         RenderPass::EndRenderPass(recordState);
 
-        RF::EndRenderPass(RF::GetGraphicCommandBuffer(recordState));
+        RF::EndRenderPass(recordState.commandBuffer);
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -245,10 +245,10 @@ namespace MFA
 
                     // Just caching the input index to reduce required loop count
                     auto & inputIndex = mAnimationInputIndex[channel.samplerIndex];
-                    /*if (inputIndex >= sampler.inputAndOutput.size() - 1)
+                    if (inputIndex >= sampler.inputAndOutput.size() - 1)
                     {
                         inputIndex = 0;
-                    }*/
+                    }
 
                     for (size_t k = 0; k < sampler.inputAndOutput.size() - 1; k++)
                     {

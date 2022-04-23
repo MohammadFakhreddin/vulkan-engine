@@ -36,7 +36,7 @@ namespace MFA::AssetSystem::Particle
 
     struct Params {
         int count = 512;
-        glm::vec3 moveDirection = Math::UpVector3;
+        glm::vec3 moveDirection = -Math::UpVector3;
         
         float minLife = 1.0f;
         float maxLife = 1.5f;

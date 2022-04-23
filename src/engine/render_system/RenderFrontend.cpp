@@ -1046,15 +1046,15 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     void BindVertexBuffer(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         RT::BufferAndMemory const & vertexBuffer,
         uint32_t const firstBinding,
         VkDeviceSize const offset
     )
     {
-        MFA_ASSERT(drawPass.isValid);
+        MFA_ASSERT(recordState.isValid);
         RB::BindVertexBuffer(
-            GetGraphicCommandBuffer(drawPass),
+            recordState.commandBuffer,
             vertexBuffer,
             firstBinding,
             offset
@@ -1064,15 +1064,15 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     void BindIndexBuffer(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         RT::BufferAndMemory const & indexBuffer,
         VkDeviceSize const offset,
         VkIndexType const indexType
     )
     {
-        MFA_ASSERT(drawPass.isValid);
+        MFA_ASSERT(recordState.isValid);
         RB::BindIndexBuffer(
-            GetGraphicCommandBuffer(drawPass),
+            recordState.commandBuffer,
             indexBuffer,
             offset,
             indexType
@@ -1082,7 +1082,7 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     void DrawIndexed(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         uint32_t const indicesCount,
         uint32_t const instanceCount,
         uint32_t const firstIndex,
@@ -1090,9 +1090,9 @@ namespace MFA::RenderFrontend
         uint32_t const firstInstance
     )
     {
-        MFA_ASSERT(drawPass.isValid);
+        MFA_ASSERT(recordState.isValid);
         RB::DrawIndexed(
-            GetGraphicCommandBuffer(drawPass),
+            recordState.commandBuffer,
             indicesCount,
             instanceCount,
             firstIndex,
@@ -1192,36 +1192,36 @@ namespace MFA::RenderFrontend
     
     //-------------------------------------------------------------------------------------------------
 
-    void SetScissor(RT::CommandRecordState const & drawPass, VkRect2D const & scissor)
+    void SetScissor(RT::CommandRecordState const & recordState, VkRect2D const & scissor)
     {
-        MFA_ASSERT(drawPass.isValid);
-        MFA_ASSERT(drawPass.renderPass != nullptr);
-        RB::SetScissor(GetGraphicCommandBuffer(drawPass), scissor);
+        MFA_ASSERT(recordState.isValid);
+        MFA_ASSERT(recordState.renderPass != nullptr);
+        RB::SetScissor(recordState.commandBuffer, scissor);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void SetViewport(RT::CommandRecordState const & drawPass, VkViewport const & viewport)
+    void SetViewport(RT::CommandRecordState const & recordState, VkViewport const & viewport)
     {
-        MFA_ASSERT(drawPass.isValid);
-        MFA_ASSERT(drawPass.renderPass != nullptr);
-        RB::SetViewport(GetGraphicCommandBuffer(drawPass), viewport);
+        MFA_ASSERT(recordState.isValid);
+        MFA_ASSERT(recordState.renderPass != nullptr);
+        RB::SetViewport(recordState.commandBuffer, viewport);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     void PushConstants(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         AssetSystem::ShaderStage const shaderStage,
         uint32_t const offset,
         CBlob const data
     )
     {
-        MFA_ASSERT(drawPass.isValid);
-        MFA_ASSERT(drawPass.renderPass != nullptr);
+        MFA_ASSERT(recordState.isValid);
+        MFA_ASSERT(recordState.renderPass != nullptr);
         RB::PushConstants(
-            GetGraphicCommandBuffer(drawPass),
-            drawPass.pipeline->pipelineLayout,
+            recordState.commandBuffer,
+            recordState.pipeline->pipelineLayout,
             shaderStage,
             offset,
             data
@@ -1231,17 +1231,17 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     void PushConstants(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         VkShaderStageFlags const shaderStage,
         uint32_t const offset,
         CBlob const data
     )
     {
-        MFA_ASSERT(drawPass.isValid);
-        MFA_ASSERT(drawPass.renderPass != nullptr);
+        MFA_ASSERT(recordState.isValid);
+        MFA_ASSERT(recordState.renderPass != nullptr);
         RB::PushConstants(
-            GetGraphicCommandBuffer(drawPass),
-            drawPass.pipeline->pipelineLayout,
+            recordState.commandBuffer,
+            recordState.pipeline->pipelineLayout,
             shaderStage,
             offset,
             data
@@ -1526,7 +1526,7 @@ namespace MFA::RenderFrontend
     {
         RF::BeginCommandBuffer(
             recordState,
-            RF::GetGraphicCommandBuffer(recordState),
+            state->graphicCommandBuffer[recordState.frameIndex],
             RT::CommandBufferType::Graphic,
             beginInfo
         );
@@ -1538,7 +1538,7 @@ namespace MFA::RenderFrontend
     {
         RF::BeginCommandBuffer(
             recordState,
-            RF::GetComputeCommandBuffer(recordState),
+            state->computeCommandBuffer[recordState.frameIndex],
             RT::CommandBufferType::Compute,
             beginInfo
         );
@@ -1641,8 +1641,29 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
+    uint32_t GetComputeQueueFamily()
+    {
+        return state->graphicQueueFamily;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    VkCommandBuffer GetComputeCommandBuffer(RT::CommandRecordState const & recordState)
+    {
+        return state->computeCommandBuffer[recordState.frameIndex];
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    VkCommandBuffer GetGraphicCommandBuffer(RT::CommandRecordState const & recordState)
+    {
+        return state->graphicCommandBuffer[recordState.frameIndex];
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void PipelineBarrier(
-        VkCommandBuffer commandBuffer,
+        RT::CommandRecordState const & recordState,
         VkPipelineStageFlags sourceStageMask,
         VkPipelineStageFlags destinationStateMask,
         uint32_t barrierCount,
@@ -1650,7 +1671,7 @@ namespace MFA::RenderFrontend
     )
     {
         RB::PipelineBarrier(
-            commandBuffer,
+            recordState.commandBuffer,
             sourceStageMask,
             destinationStateMask,
             barrierCount,
@@ -1661,16 +1682,18 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     void PipelineBarrier(
-        VkCommandBuffer commandBuffer,
+        RT::CommandRecordState const & recordState,
         VkPipelineStageFlags sourceStageMask,
         VkPipelineStageFlags destinationStateMask,
-        VkBufferMemoryBarrier const & bufferMemoryBarrier
+        uint32_t barrierCount,
+        VkBufferMemoryBarrier const * bufferMemoryBarrier
     )
     {
         RB::PipelineBarrier(
-            commandBuffer,
+            recordState.commandBuffer,
             sourceStageMask,
             destinationStateMask,
+            barrierCount,
             bufferMemoryBarrier
         );
     }
@@ -1777,23 +1800,23 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     void BeginQuery(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         VkQueryPool queryPool,
         uint32_t const queryId
     )
     {
-        RB::BeginQuery(GetGraphicCommandBuffer(drawPass), queryPool, queryId);
+        RB::BeginQuery(recordState.commandBuffer, queryPool, queryId);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     void EndQuery(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         VkQueryPool queryPool,
         uint32_t queryId
     )
     {
-        RB::EndQuery(GetGraphicCommandBuffer(drawPass), queryPool, queryId);
+        RB::EndQuery(recordState.commandBuffer, queryPool, queryId);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -1824,25 +1847,11 @@ namespace MFA::RenderFrontend
     )
     {
         RB::ResetQueryPool(
-            GetGraphicCommandBuffer(recordState),
+            recordState.commandBuffer,
             queryPool,
             queryCount,
             firstQueryIndex
         );
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    VkCommandBuffer GetGraphicCommandBuffer(RT::CommandRecordState const & recordState)
-    {
-        return state->graphicCommandBuffer[recordState.frameIndex];
-    }
-    
-    //-------------------------------------------------------------------------------------------------
-
-    VkCommandBuffer GetComputeCommandBuffer(RT::CommandRecordState const & recordState)
-    {
-        return state->computeCommandBuffer[recordState.frameIndex];
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -12,17 +12,17 @@
 
     float3 rand(float3 seed, float3 minimum, float3 maximum)
     {
-        return rand(seed) * (maximum - minimum) + minimum;
+        return (rand(seed) * (maximum - minimum)) + minimum;
     }
 
     float2 rand(float3 seed, float2 minimum, float2 maximum)
     {
-        return rand(seed) * (maximum - minimum) + minimum;
+        return (rand(seed) * (maximum - minimum)) + minimum;
     }
 
     float rand(float3 seed, float minimum, float maximum)
     {
-        return rand(seed) * (maximum - minimum) + minimum;
+        return (rand(seed) * (maximum - minimum)) + minimum;
     }
 
 #endif

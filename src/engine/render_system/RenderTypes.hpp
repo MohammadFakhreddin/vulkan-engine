@@ -207,7 +207,8 @@ namespace MFA
             uint32_t imageIndex = 0;
             uint32_t frameIndex = 0;
             bool isValid = false;
-            CommandBufferType commandBufferType = CommandBufferType::Invalid;
+
+            CommandBufferType commandBufferType = CommandBufferType::Invalid;   // We could have used queue family index as well
             VkCommandBuffer commandBuffer = nullptr;
             PipelineGroup * pipeline = nullptr;
             RenderPass * renderPass = nullptr;

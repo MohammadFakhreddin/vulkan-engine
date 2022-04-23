@@ -2,7 +2,7 @@
 #include "../TimeBuffer.hlsl"
 
 struct Params {
-    int vertexCount;
+    int count;
     float3 moveDirection;
     
     float minLife;
@@ -49,34 +49,34 @@ void main(uint3 GlobalInvocationID : SV_DispatchThreadID)
 {
     // Current SSBO index
     uint index = GlobalInvocationID.x;
-	// Don't try to write beyond vertexCount
-    if (index >= params.vertexCount)
+	// Don't try to write beyond particle count
+    if (index >= params.count)
     {
 		return;
     }
 
-    Particle particle = particles[index];
+    // Particle particle = particles[index];
 
     // TODO: Instead of reading from rand  we should use a noise texture
     
-    float3 deltaPosition = time.deltaTime * particle.speed * params.moveDirection;
-    particle.localPosition += deltaPosition;
-    particle.localPosition += rand(particle.localPosition, params.noiseMin, params.noiseMax) * time.deltaTime;
+    float3 deltaPosition = time.deltaTime * particles[index].speed * params.moveDirection;
+    particles[index].localPosition += deltaPosition;
+    particles[index].localPosition += rand(particles[index].localPosition, params.noiseMin, params.noiseMax) * time.deltaTime;
     
-    particle.remainingLifeInSec -= time.deltaTime;
-    if (particle.remainingLifeInSec <= 0)
+    particles[index].remainingLifeInSec -= time.deltaTime;
+    if (particles[index].remainingLifeInSec <= 0)
     {
-        particle.localPosition = particle.initialLocalPosition;
+        particles[index].localPosition = particles[index].initialLocalPosition;
 
-        particle.speed = rand(particle.localPosition, params.minSpeed, params.maxSpeed);
-        particle.remainingLifeInSec = rand(particle.localPosition, params.minLife, params.maxLife);
-        particle.totalLifeInSec = particle.remainingLifeInSec;
+        particles[index].speed = rand(particles[index].localPosition, params.minSpeed, params.maxSpeed);
+        particles[index].remainingLifeInSec = rand(particles[index].localPosition, params.minLife, params.maxLife);
+        particles[index].totalLifeInSec = particles[index].remainingLifeInSec;
     }
 
-    float lifePercentage = particle.remainingLifeInSec / particle.totalLifeInSec;
+    float lifePercentage = particles[index].remainingLifeInSec / particles[index].totalLifeInSec;
 
-    particle.alpha = params.alpha;
+    particles[index].alpha = params.alpha;
 
-    particle.pointSize = params.pointSize * lifePercentage;
+    particles[index].pointSize = params.pointSize * lifePercentage;
 }
 

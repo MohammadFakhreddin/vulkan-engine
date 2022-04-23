@@ -90,7 +90,6 @@ namespace MFA
         }
 
         ParticleEssence::init(
-            mIndexCount,
             vertexBuffer->memory,
             indexBuffer->memory
         );

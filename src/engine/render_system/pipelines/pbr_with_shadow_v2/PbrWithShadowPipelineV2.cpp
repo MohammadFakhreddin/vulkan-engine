@@ -641,7 +641,7 @@ namespace MFA
             barrier
         );
         RF::PipelineBarrier(
-            RF::GetGraphicCommandBuffer(recordState),
+            recordState,
             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
             static_cast<uint32_t>(barrier.size()),

@@ -22,7 +22,7 @@ namespace MFA::SceneManager
     static void preparePointLightsBuffer();
 
     static void updateCameraBuffer(RT::CommandRecordState const & recordState);
-    static void updateTimeBuffer(RT::CommandRecordState const & recordState, float deltaTimeInSec);
+    static void updateTimeBuffer(RT::CommandRecordState const & recordState, float const deltaTimeInSec);
     static void updateDirectionalLightsBuffer(RT::CommandRecordState const & recordState);
     static void updatePointLightsBuffer(RT::CommandRecordState const & recordState);
 
@@ -196,13 +196,11 @@ namespace MFA::SceneManager
         }
 
         // Creating and update buffers
-        //auto const commandBuffer = RF::BeginSingleTimeGraphicCommand();
         prepareCameraBuffer();
         prepareTimeBuffer();
-        prepareDirectionalLightsBuffer(/*commandBuffer*/);
-        preparePointLightsBuffer(/*commandBuffer*/);
-        //RF::EndAndSubmitGraphicSingleTimeCommand(commandBuffer);
-
+        prepareDirectionalLightsBuffer();
+        preparePointLightsBuffer();
+        
         if (state->activeSceneIndex >= 0)
         {
             state->nextActiveSceneIndex = state->activeSceneIndex;
@@ -210,12 +208,12 @@ namespace MFA::SceneManager
         }
 
         state->updateSignal.Register([](float const deltaTime)->void
-{
-    UI::PostRender(deltaTime);
+        {
+            UI::PostRender(deltaTime);
         });
         state->updateSignal.Register([](float const deltaTime)->void
-{
-    EntitySystem::Update(deltaTime);
+        {
+            EntitySystem::Update(deltaTime);
         });
     }
 
@@ -330,7 +328,7 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
-#define UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(signal, event, listenerId, delegateFunc)             \
+    #define UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(signal, event, listenerId, delegateFunc)         \
     if (                                                                                            \
         pipeline->mIsActive &&                                                                      \
         (requiredEvents & BasePipeline::EventTypes::event) > 0 &&                                   \
@@ -473,9 +471,9 @@ namespace MFA::SceneManager
 
         std::vector<VkSubmitInfo> submitInfos{};
 
-        //// Submit compute queue
+        // Submit compute queue
         std::vector<VkSemaphore> computeSignalSemaphores{ computeSemaphore };
-
+        
         auto computeCommandBuffer = RF::GetComputeCommandBuffer(recordState);
 
         submitInfos.emplace_back(VkSubmitInfo{
@@ -493,7 +491,7 @@ namespace MFA::SceneManager
         std::vector<VkSemaphore> gfxWaitSemaphores{ presentSemaphore, computeSemaphore };
         std::vector<VkPipelineStageFlags> gfxWaitStagesFlags{
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
+            VK_PIPELINE_STAGE_VERTEX_INPUT_BIT
         };
         std::vector<VkSemaphore> gfxSignalSemaphores{ graphicSemaphore };
 
@@ -797,7 +795,7 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
-    void updateTimeBuffer(RT::CommandRecordState const & recordState, float deltaTime)
+    void updateTimeBuffer(RT::CommandRecordState const & recordState, float const deltaTime)
     {
         TimeBufferData const data{
             .deltaTime = deltaTime

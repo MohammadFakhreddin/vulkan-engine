@@ -638,7 +638,8 @@ namespace MFA::RenderBackend
         VkCommandBuffer commandBuffer,
         VkPipelineStageFlags sourceStageMask,
         VkPipelineStageFlags destinationStateMask,
-        VkBufferMemoryBarrier const & bufferMemoryBarrier
+        uint32_t barrierCount,
+        VkBufferMemoryBarrier const * bufferMemoryBarrier
     );
 
     void EndCommandBuffer(VkCommandBuffer commandBuffer);

@@ -137,6 +137,24 @@ namespace MFA
 
         BasePipeline::compute(recordState, deltaTimeInSec);
 
+        if (RF::GetComputeQueueFamily() != RF::GetGraphicQueueFamily())
+		{
+            std::vector<VkBufferMemoryBarrier> barriers {};
+
+            for (auto * essence : mAllEssencesList)
+            {
+                CAST_ESSENCE_PURE(essence)->preRenderBarrier(barriers);
+            }
+
+            RF::PipelineBarrier(
+            	recordState,
+				VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+			    static_cast<uint32_t>(barriers.size()),
+                barriers.data()
+            );
+		}
+
         RF::BindPipeline(recordState, *mComputePipeline);
 
         RF::AutoBindDescriptorSet(
@@ -149,6 +167,24 @@ namespace MFA
         {
             CAST_ESSENCE_PURE(essence)->compute(recordState);
         }
+
+        if (RF::GetComputeQueueFamily() != RF::GetGraphicQueueFamily())
+		{
+            std::vector<VkBufferMemoryBarrier> barriers {};
+
+            for (auto * essence : mAllEssencesList)
+            {
+                CAST_ESSENCE_PURE(essence)->preRenderBarrier(barriers);
+            }
+
+            RF::PipelineBarrier(
+                recordState,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+                static_cast<uint32_t>(barriers.size()),
+                barriers.data()
+            );
+		}
 
     }
 
