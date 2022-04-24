@@ -23,6 +23,7 @@
 #include "tools/PrefabFileStorage.hpp"
 #include "engine/render_system/pipelines/particle/FireEssence.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
+#include "tools/Prefab.hpp"
 
 namespace MFA
 {
@@ -184,6 +185,7 @@ void Demo3rdPersonScene::Init()
 
     mDebugRenderPipeline = SceneManager::GetPipeline<DebugRendererPipeline>();
     MFA_ASSERT(mDebugRenderPipeline != nullptr);
+    mDebugRenderPipeline->changeActivationStatus(false);
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -7,7 +7,6 @@
 #include "engine/entity_system/components/MeshRendererComponent.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
 #include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
-#include "tools/Prefab.hpp"
 
 class Demo3rdPersonScene final : public MFA::Scene {
 public:

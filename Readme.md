@@ -8,7 +8,9 @@
 More document/tutorial will be added soon!
 
 ## Particle system
+
 <img src="examples/particle-sponza.gif"  height=400>
+Particles are simulated using compute shader
 
 <br>
 
