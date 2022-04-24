@@ -13,9 +13,9 @@ namespace MFA
 
         VkRenderPass GetVkRenderPass() override;
 
-        void BeginRenderPass(RT::CommandRecordState & recordState) override;
+        void BeginRenderPass(RT::CommandRecordState & recordState);
 
-        void EndRenderPass(RT::CommandRecordState & recordState) override;
+        void EndRenderPass(RT::CommandRecordState & recordState);
 
         void OnResize() override;
 

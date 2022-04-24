@@ -103,7 +103,7 @@ namespace MFA
             if (listeners.empty() == false)
             {
                 JS::AssignTaskPerThread(
-                    [... args = std::forward<ArgsT>(args), listeners, this]
+                    [... args = std::forward<ArgsT>(args), listeners]
                     (uint32_t const threadNumber, uint32_t const threadCount)->void
                     {
                         for (uint32_t i = threadNumber; i < static_cast<uint32_t>(listeners.size()); i += threadCount)
@@ -114,7 +114,6 @@ namespace MFA
                     }
                 );
 
-                // TODO: Create a config for it
                 if (JS::IsMainThread())
                 {
                     JS::WaitForThreadsToFinish();

@@ -3,6 +3,8 @@
 #include <glm/vec4.hpp>
 #include <glm/vec3.hpp>
 
+#include <cstdlib>
+
 namespace MFA::Math
 {
 

@@ -133,7 +133,7 @@ void Demo3rdPersonScene::Init()
                     "SponzaFire",
                     100,   // TODO: Find a better number
                     std::vector {RC::AcquireGpuTexture("images/fire/particle_fire.ktx")},
-                    FireEssence::FireParams {
+                    MFA::FireParams {
                         .initialPointSize = 300.0f
                     },
                     AS::Particle::Params {

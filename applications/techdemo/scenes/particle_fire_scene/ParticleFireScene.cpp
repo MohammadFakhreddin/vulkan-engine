@@ -84,7 +84,7 @@ void ParticleFireScene::createFireEssence() const
                 "ParticleSceneFire",
                 100,
                 std::vector {RC::AcquireGpuTexture("images/fire/particle_fire.ktx")},
-                FireEssence::FireParams {},
+                MFA::FireParams {},
                 AS::Particle::Params {
                     .count = 1024,
                     .radius = FireRadius

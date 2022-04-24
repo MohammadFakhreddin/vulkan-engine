@@ -112,7 +112,7 @@ namespace MFA
 
         for (auto & essenceAndVariants : mEssenceAndVariantsMap)
         {
-            JS::AssignTask([deltaTimeInSec, &essenceAndVariants](uint32_t threadNumber, uint32_t threadCount)->void{
+            JS::AssignTask([&essenceAndVariants](uint32_t threadNumber, uint32_t threadCount)->void{
                 auto * essence = essenceAndVariants.second.essence.get();
                 auto const & variants = essenceAndVariants.second.variants;
                 CAST_ESSENCE_PURE(essence)->update(variants);

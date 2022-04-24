@@ -27,7 +27,8 @@ EventType requiredEvents() const override                               \
 }                                                                       \
                                                                         \
 [[nodiscard]]                                                           \
-RenderOrder renderOrder() const {                                       \
+RenderOrder renderOrder() const override                                \
+{                                                                       \
     return renderOrder_;                                                \
 }                                                                       \
 

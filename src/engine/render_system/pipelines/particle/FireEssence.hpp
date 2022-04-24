@@ -8,23 +8,23 @@
 
 namespace MFA
 {
+    struct FireParams
+    {
+        float initialPointSize = 500.0f;
+        float targetExtend [2] {1920.0f, 1080.0f};
+    };
+        
     class FireEssence final : public ParticleEssence
     {
     public:
-
-        struct FireParams
-        {
-            float initialPointSize = 500.0f;
-            float targetExtend [2] {1920.0f, 1080.0f};
-        };
         
         explicit FireEssence(
             std::string const & name,
             uint32_t maxInstanceCount,
             std::vector<std::shared_ptr<RT::GpuTexture>> fireTextures,
             // TODO Smoke texture
-            FireParams fireParams = {},
-            AS::Particle::Params params = {}
+            FireParams fireParams = FireParams {},
+            AS::Particle::Params params = AS::Particle::Params {}
         );
 
         ~FireEssence() override;

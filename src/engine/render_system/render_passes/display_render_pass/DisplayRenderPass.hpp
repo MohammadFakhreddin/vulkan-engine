@@ -30,14 +30,11 @@ namespace MFA
         [[nodiscard]]
         std::vector<std::shared_ptr<RT::DepthImageGroup>> const & GetDepthImages() const;
 
-        void BeginRenderPass(RT::CommandRecordState & recordState) override;
+        void BeginRenderPass(RT::CommandRecordState & recordState);
 
-        void EndRenderPass(RT::CommandRecordState & recordState) override;
+        void EndRenderPass(RT::CommandRecordState & recordState);
 
         void OnResize() override;
-
-        // TODO Find a better way
-        //void UseDepthImageLayoutAsUndefined(bool setDepthImageLayoutAsUndefined);
 
         void notifyDepthImageLayoutIsSet();
 

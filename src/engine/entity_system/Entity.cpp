@@ -272,8 +272,9 @@ namespace MFA
         for (auto const & rawComponent : rawComponents)
         {
             std::string const name = rawComponent.value("name", "undefined");
+
             // TODO: Remove family type if it is not going to be used
-            int const familyType = rawComponent.value("familyType", static_cast<int>(Component::FamilyType::Invalid));
+//            int const familyType = rawComponent.value("familyType", static_cast<int>(Component::FamilyType::Invalid));
 
             auto rawComponentData = rawComponent["data"];
 
