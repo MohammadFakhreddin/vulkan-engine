@@ -35,8 +35,6 @@ public:
 
     void Shutdown() override;
     
-    //bool isDisplayPassDepthImageInitialLayoutUndefined() override;
-
 private:
 
     void onUI();

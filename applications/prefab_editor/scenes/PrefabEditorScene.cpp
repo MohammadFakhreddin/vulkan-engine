@@ -25,7 +25,6 @@
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Essence.hpp"
 #include "engine/asset_system/AssetDebugMesh.hpp"
 #include "engine/render_system/pipelines/debug_renderer/DebugEssence.hpp"
-#include "engine/asset_system/AssetParticleMesh.hpp"
 
 using namespace MFA;
 
@@ -154,7 +153,7 @@ void PrefabEditorScene::essencesWindow()
                 MFA_LOG_WARN("No valid file address picked!");
                 return;
             }
-            bool const success = Path::RelativeToAssetFolder(fileAddress.c_str(), fileAddress);
+            bool const success = Path::RelativeToAssetFolder(fileAddress, fileAddress);
             if (success == false)
             {
                 MFA_LOG_WARN("All assets and prefabs must be placed in asset folder for portability\n");

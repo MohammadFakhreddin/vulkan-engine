@@ -41,7 +41,14 @@ namespace MFA::RenderBackend
     {
         if (result != VK_SUCCESS)
         {
-            MFA_CRASH(("Vulkan command failed with code:" + std::to_string(result)));
+            char buffer[100] {};
+            auto const length = sprintf(
+                buffer,
+                "Vulkan command failed with code: %i",
+                static_cast<int>(result)
+            );
+            auto const message = std::string(buffer, length); 
+            MFA_CRASH("%s", message.c_str());
         }
     }
 
