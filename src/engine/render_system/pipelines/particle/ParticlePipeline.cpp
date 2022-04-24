@@ -143,7 +143,7 @@ namespace MFA
 
             for (auto * essence : mAllEssencesList)
             {
-                CAST_ESSENCE_PURE(essence)->preRenderBarrier(barriers);
+                CAST_ESSENCE_PURE(essence)->preComputeBarrier(barriers);
             }
 
             RF::PipelineBarrier(

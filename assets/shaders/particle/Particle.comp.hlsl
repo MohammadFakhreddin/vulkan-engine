@@ -23,13 +23,14 @@ struct Params {
 struct Particle
 {
     // Per vertex data
-    float3 localPosition : SV_POSITION;
+    float3 localPosition;
     int textureIndex;
 
-    float3 color : COLOR0;
-    float alpha : COLOR1;
+    float3 color;
+    float alpha;
     
     float pointSize;
+
     // State variables
     float remainingLifeInSec;
     float totalLifeInSec;
@@ -54,8 +55,6 @@ void main(uint3 GlobalInvocationID : SV_DispatchThreadID)
     {
 		return;
     }
-
-    // Particle particle = particles[index];
 
     // TODO: Instead of reading from rand  we should use a noise texture
     

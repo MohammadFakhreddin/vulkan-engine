@@ -13,8 +13,10 @@ namespace MFA::AssetSystem::Particle
         // Per vertex data
         float localPosition[3] {};
         int textureIndex = -1;
+
         float color[3] {};
         float alpha  = 1.0f;
+
         float pointSize = 1.0f;
 
         // State variables
@@ -24,9 +26,6 @@ namespace MFA::AssetSystem::Particle
         
         float initialLocalPosition[3] {};
         float speed = 0.0f;
-
-        // Per instance data
-        float instancePosition[3] {};
     };
 
     struct PerInstanceData
