@@ -32,53 +32,46 @@ namespace MFA
 
         struct OcclusionPassPushConstants
         {
-            alignas(64) float modelTransform[16] {};
-            alignas(64) float inverseNodeTransform[16] {};
-            alignas(4) int skinIndex = 0;
-            alignas(4) uint32_t primitiveIndex = 0;      // Unique id
-            alignas(4) int placeholder1 = 0;
-            alignas(4) int placeholder2 = 0;
-
-        };
-        
-        struct DirectionalLightShadowPassPushConstants
-        {   
-            alignas(64) float model[16] {};
-            alignas(64) float inverseNodeTransform[16] {};
-            alignas(4) int skinIndex = 0;
-            alignas(4) int placeholder0 = 0;
-            alignas(4) int placeholder1 = 0;
-            alignas(4) int placeholder2 = 0;
+            uint32_t primitiveIndex = 0;      // Unique id
+            int placeholder0 = 0;
+            int placeholder1 = 0;
+            int placeholder2 = 0;
         };
 
         struct PointLightShadowPassPushConstants
         {
-            alignas(64) float modelTransform[16] {};
-            alignas(64) float inverseNodeTransform[16] {};
-            alignas(4) int skinIndex = 0;
-            alignas(4) int lightIndex = 0;
-            alignas(4) int placeholder1 = 0;
-            alignas(4) int placeholder2 = 0;
+            int lightIndex = 0;
+            int placeholder0 = 0;
+            int placeholder1 = 0;
+            int placeholder2 = 0;
         };
 
         struct DepthPrePassPushConstants
         {
-            alignas(64) float modelTransform[16] {};
-            alignas(64) float inverseNodeTransform[16] {};
-            alignas(4) int skinIndex = 0;
-            alignas(4) uint32_t primitiveIndex = 0;      // Unique id
-            alignas(4) int placeholder0 = 0;
-            alignas(4) int placeholder1 = 0;
+            uint32_t primitiveIndex = 0;      // Unique id
+            int placeholder0 = 0;
+            int placeholder1 = 0;
+            int placeholder2 = 0;
         };
 
         struct DisplayPassPushConstants
         {
-            alignas(64) float modelTransform[16] {};
-            alignas(64) float inverseNodeTransform[16] {};
-            alignas(4) int skinIndex = 0;
-            alignas(4) uint32_t primitiveIndex = 0;      // Unique id
-            alignas(4) int placeholder0 = 0;
-            alignas(4) int placeholder1 = 0;
+            uint32_t primitiveIndex = 0;      // Unique id
+            int placeholder0 = 0;
+            int placeholder1 = 0;
+            int placeholder2 = 0;
+        };
+
+        struct SkinningPushConstants
+        {
+            float model[16] {};
+
+            float inverseNodeTransform[16] {};
+
+            int skinIndex;
+            int vertexCount;
+            int placeholder0;
+            int placeholder1;
         };
 
         explicit PBRWithShadowPipelineV2();
@@ -86,13 +79,18 @@ namespace MFA
         
         PIPELINE_PROPS(
             PBRWithShadowPipelineV2,
-            EventTypes::PreRenderEvent | EventTypes::RenderEvent | EventTypes::UpdateEvent,
+            EventTypes::PreRenderEvent |
+            EventTypes::RenderEvent |
+            EventTypes::UpdateEvent |
+            EventTypes::ComputeEvent,
             RenderOrder::BeforeEverything
         );
 
         void init() override;
 
         void shutdown() override;
+
+        void compute(RT::CommandRecordState & recordState, float deltaTime) override;
 
         void preRender(RT::CommandRecordState & recordState, float deltaTime) override;
 
@@ -110,19 +108,21 @@ namespace MFA
         
     private:
 
-        void preRenderVariants(float deltaTimeInSec, RT::CommandRecordState const & recordState) const;
+        void updateVariantsBuffers(RT::CommandRecordState const & recordState) const;
+
+        void performSkinning(RT::CommandRecordState & recordState) const;
+
+        void preComputeBarrier(RT::CommandRecordState const & recordState);
+
+        void postComputeBarrier(RT::CommandRecordState const & recordState);
 
         void postRenderVariants(float deltaTimeInSec) const;
 
-        void createPerFrameDescriptorSets();
+        void createGfxPerFrameDescriptorSets();
 
-        void createVariantDescriptorSets(PBR_Variant & variant) const;
+        void createGfxPerFrameDescriptorSetLayout();
 
-        void createPerFrameDescriptorSetLayout();
-
-        void createPerEssenceDescriptorSetLayout();
-
-        void createPerVariantDescriptorSetLayout();
+        void createGfxPerEssenceDescriptorSetLayout();
         
         void createDisplayPassPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts);
 
@@ -139,6 +139,12 @@ namespace MFA
         void createOcclusionQueryPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts);
         
         void createUniformBuffers();
+
+        void createSkinningPerEssenceDescriptorSetLayout();
+
+        void createSkinningPerVariantDescriptorSetLayout();
+
+        void createSkinningPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts);
 
         void retrieveOcclusionQueryResult(RT::CommandRecordState const & recordState);
 
@@ -168,19 +174,26 @@ namespace MFA
         std::shared_ptr<RT::GpuTexture> mErrorTexture = nullptr;
         std::shared_ptr<RT::BufferGroup> mErrorBuffer{};
 
+        // =========== Graphic =========== //
+
+        // Display pass
         std::shared_ptr<RT::PipelineGroup> mDisplayPassPipeline{};
-        
+
+        // PointLight shadow pass
         std::shared_ptr<RT::PipelineGroup> mPointLightShadowPipeline {};
         std::unique_ptr<PointLightShadowRenderPass> mPointLightShadowRenderPass;
         std::unique_ptr<PointLightShadowResources> mPointLightShadowResources {};
 
+        // Directional light shadow pass
         std::shared_ptr<RT::PipelineGroup> mDirectionalLightShadowPipeline {};
         std::unique_ptr<DirectionalLightShadowRenderPass> mDirectionalLightShadowRenderPass;
         std::unique_ptr<DirectionalLightShadowResources> mDirectionalLightShadowResources;
 
+        // Depth pass pipeline
         std::shared_ptr<RT::PipelineGroup> mDepthPassPipeline{};
         std::unique_ptr<DepthPrePass> mDepthPrePass;
 
+        // Occlusion pass pipeline
         std::shared_ptr<RT::PipelineGroup> mOcclusionQueryPipeline{};
         std::unique_ptr<OcclusionRenderPass> mOcclusionRenderPass;
 
@@ -192,12 +205,17 @@ namespace MFA
         };
         std::vector<OcclusionQueryData> mOcclusionQueryDataList{}; // We need one per frame
 
-        std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerFrameDescriptorSetLayout{};
-        std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerEssenceDescriptorSetLayout{};
-        std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerVariantDescriptorSetLayout{};
+        std::shared_ptr<RT::DescriptorSetLayoutGroup> mGfxPerFrameDescriptorSetLayout{};
+        std::shared_ptr<RT::DescriptorSetLayoutGroup> mGfxPerEssenceDescriptorSetLayout{};
+        
+        RT::DescriptorSetGroup mGfxPerFrameDescriptorSetGroup{};
 
-        RT::DescriptorSetGroup mPerFrameDescriptorSetGroup{};
+        // =========== Compute =========== //
 
+        std::shared_ptr<RT::PipelineGroup> mSkinningPipeline{};
+
+        std::shared_ptr<RT::DescriptorSetLayoutGroup> mSkinningPerEssenceDescriptorSetLayout{};
+        std::shared_ptr<RT::DescriptorSetLayoutGroup> mSkinningPerVariantDescriptorSetLayout{};
     };
 
 };

@@ -23,7 +23,8 @@
 
 #define CAST_ESSENCE_PURE(essence)      static_cast<PBR_Essence *>(essence)
 #define CAST_ESSENCE_SHARED(essence)    CAST_ESSENCE_PURE(essence.get())
-#define CAST_VARIANT_PURE(variant)      static_cast<PBR_Variant *>(variant.get())
+#define CAST_VARIANT_PURE(variant)      static_cast<PBR_Variant *>(variant)
+#define CAST_VARIANT_SHARED(variant)    static_cast<PBR_Variant *>(variant.get())
 
 /*
 There are four C++ style casts:
@@ -65,7 +66,9 @@ and now I need to pass it to a function that won't modify it, but doesn't take t
 namespace MFA
 {
 
-    // Steps for multi-threading. Begin render pass -> submit subcommands -> execute into primary end renderPpass
+    // Steps for multi-threading. Begin render pass -> submit subcommands -> execute into primary end renderPass
+    // TODO: Submit in multiple threads
+
 
     //-------------------------------------------------------------------------------------------------
 
@@ -110,34 +113,44 @@ namespace MFA
         
         createUniformBuffers();
 
-        mPointLightShadowRenderPass->Init();
-        mPointLightShadowResources->Init(mPointLightShadowRenderPass->GetVkRenderPass());
+        {// Graphic
+            mPointLightShadowRenderPass->Init();
+            mPointLightShadowResources->Init(mPointLightShadowRenderPass->GetVkRenderPass());
 
-        mDirectionalLightShadowRenderPass->Init();
-        mDirectionalLightShadowResources->Init(mDirectionalLightShadowRenderPass->GetVkRenderPass());
-        
-        mDepthPrePass->Init();
-        mOcclusionRenderPass->Init();
+            mDirectionalLightShadowRenderPass->Init();
+            mDirectionalLightShadowResources->Init(mDirectionalLightShadowRenderPass->GetVkRenderPass());
+            
+            mDepthPrePass->Init();
+            mOcclusionRenderPass->Init();
 
-        createPerFrameDescriptorSetLayout();
-        createPerEssenceDescriptorSetLayout();
-        createPerVariantDescriptorSetLayout();
+            createGfxPerFrameDescriptorSetLayout();
+            createGfxPerEssenceDescriptorSetLayout();
+            
+            auto const descriptorSetLayouts = std::vector<VkDescriptorSetLayout>{
+                mGfxPerFrameDescriptorSetLayout->descriptorSetLayout,
+                mGfxPerEssenceDescriptorSetLayout->descriptorSetLayout,
+            };
 
-        auto const descriptorSetLayouts = std::vector<VkDescriptorSetLayout>{
-            mPerFrameDescriptorSetLayout->descriptorSetLayout,
-            mPerEssenceDescriptorSetLayout->descriptorSetLayout,
-            mPerVariantDescriptorSetLayout->descriptorSetLayout
-        };
+            createDisplayPassPipeline(descriptorSetLayouts);
+            createPointLightShadowPassPipeline(descriptorSetLayouts);
+            createDirectionalLightShadowPassPipeline(descriptorSetLayouts);
+            createDepthPassPipeline(descriptorSetLayouts);
+            createOcclusionQueryPipeline(descriptorSetLayouts);
 
-        createDisplayPassPipeline(descriptorSetLayouts);
-        createPointLightShadowPassPipeline(descriptorSetLayouts);
-        createDirectionalLightShadowPassPipeline(descriptorSetLayouts);
-        createDepthPassPipeline(descriptorSetLayouts);
-        createOcclusionQueryPipeline(descriptorSetLayouts);
+            createGfxPerFrameDescriptorSets();
 
-        createPerFrameDescriptorSets();
+            createOcclusionQueryPool();
+        }
 
-        createOcclusionQueryPool();
+        {// Compute
+            createSkinningPerEssenceDescriptorSetLayout();
+            createSkinningPerVariantDescriptorSetLayout();
+            auto const descriptorSetLayouts = std::vector<VkDescriptorSetLayout>{
+                mSkinningPerEssenceDescriptorSetLayout->descriptorSetLayout,
+                mSkinningPerVariantDescriptorSetLayout->descriptorSetLayout
+            };
+            createSkinningPipeline(descriptorSetLayouts);
+        }
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -168,20 +181,131 @@ namespace MFA
         BasePipeline::shutdown();
 
     }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::compute(RT::CommandRecordState & recordState, float const deltaTime)
+    {
+        BasePipeline::compute(recordState, deltaTime);
+
+        updateVariantsBuffers(recordState);
+
+        preComputeBarrier(recordState);
+
+        performSkinning(recordState);
+
+        postComputeBarrier(recordState);
+    }
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::preRenderVariants(float deltaTimeInSec, RT::CommandRecordState const & recordState) const
+    void PBRWithShadowPipelineV2::updateVariantsBuffers(RT::CommandRecordState const & recordState) const
     {
         // Multi-thread update of variant animation
-        JS::AssignTaskPerThread([this, &recordState, deltaTimeInSec](uint32_t const threadNumber, uint32_t const threadCount)->void
+        JS::AssignTaskPerThread([this, &recordState](uint32_t const threadNumber, uint32_t const threadCount)->void
         {
             for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mAllVariantsList.size()); i += threadCount)
             {
-                mAllVariantsList[i]->PreRender(deltaTimeInSec, recordState);
+                CAST_VARIANT_PURE(mAllVariantsList[i])->updateBuffers(recordState);
             }
         });
         JS::WaitForThreadsToFinish();
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::performSkinning(RT::CommandRecordState & recordState) const
+    {
+        RF::BindPipeline(recordState, *mSkinningPipeline);
+
+        SkinningPushConstants pushConstants{};
+        
+        for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
+        {
+            auto const * essence = CAST_ESSENCE_SHARED(essenceAndVariantList.second.essence);
+            auto & variantsList = essenceAndVariantList.second.variants;
+
+            if (variantsList.empty())
+            {
+                continue;
+            }
+
+            essence->bindForComputePipeline(recordState);
+
+            for (auto & variant : variantsList)
+            {
+                if (variant->IsVisible())
+                {
+                    // Dispatches and bindings are done here
+                    variant->performSkinning(recordState,
+                        [&recordState, &pushConstants](
+                            AS::PBR::Primitive const & primitive,
+                            PBR_Variant::Node const & node
+                        )-> void
+                        {
+                            // Vertex push constants
+                            Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
+                            Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.model);
+                            pushConstants.vertexCount = primitive.vertexCount;
+                            pushConstants.skinIndex = primitive.hasSkin ? node.skin->skinStartingIndex : -1;
+                            
+                            RF::PushConstants(
+                                recordState,
+                                VK_SHADER_STAGE_COMPUTE_BIT,
+                                0,
+                                CBlobAliasOf(pushConstants)
+                            );
+                        }
+                    );
+                }
+            }
+        }
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::preComputeBarrier(RT::CommandRecordState const & recordState)
+    {
+        if (RF::GetComputeQueueFamily() != RF::GetGraphicQueueFamily())
+		{
+            std::vector<VkBufferMemoryBarrier> barriers {};
+
+            for (auto * variant : mAllVariantsList)
+            {
+                CAST_VARIANT_PURE(variant)->preComputeBarrier(barriers);
+            }
+
+            RF::PipelineBarrier(
+            	recordState,
+				VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+			    static_cast<uint32_t>(barriers.size()),
+                barriers.data()
+            );
+		}
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::postComputeBarrier(RT::CommandRecordState const & recordState)
+    {
+        if (RF::GetComputeQueueFamily() != RF::GetGraphicQueueFamily())
+		{
+            std::vector<VkBufferMemoryBarrier> barriers {};
+
+            for (auto * variant : mAllVariantsList)
+            {
+                CAST_VARIANT_PURE(variant)->preRenderBarrier(barriers);
+            }
+
+            RF::PipelineBarrier(
+                recordState,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+                static_cast<uint32_t>(barriers.size()),
+                barriers.data()
+            );
+		}
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -193,7 +317,7 @@ namespace MFA
         {
             for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mAllVariantsList.size()); i += threadCount)
             {
-                mAllVariantsList[i]->PostRender(deltaTimeInSec);
+                CAST_VARIANT_PURE(mAllVariantsList[i])->postRender(deltaTimeInSec);
             }
         });
 
@@ -212,8 +336,6 @@ namespace MFA
         retrieveOcclusionQueryResult(recordState);
 
         BasePipeline::preRender(recordState, deltaTime);
-
-        preRenderVariants(deltaTime, recordState);
 
         performDepthPrePass(recordState);
 
@@ -257,10 +379,15 @@ namespace MFA
     void PBRWithShadowPipelineV2::internalAddEssence(EssenceBase * essence)
     {
         MFA_ASSERT(dynamic_cast<PBR_Essence *>(essence) != nullptr);
-        CAST_ESSENCE_PURE(essence)->createGraphicDescriptorSet(
+        auto * pbrEssence = CAST_ESSENCE_PURE(essence);
+        pbrEssence->createGraphicDescriptorSet(
             mDescriptorPool,
-            mPerEssenceDescriptorSetLayout->descriptorSetLayout,
+            mGfxPerEssenceDescriptorSetLayout->descriptorSetLayout,
             *mErrorTexture
+        );
+        pbrEssence->createComputeDescriptorSet(
+            mDescriptorPool,
+            mSkinningPerEssenceDescriptorSetLayout->descriptorSetLayout
         );
     }
 
@@ -271,18 +398,22 @@ namespace MFA
         auto * drawableEssence = dynamic_cast<PBR_Essence *>(essence);
         MFA_ASSERT(drawableEssence != nullptr);
         auto variant = std::make_shared<PBR_Variant>(drawableEssence);
-        createVariantDescriptorSets(*variant);
+        variant->createComputeDescriptorSet(
+            mDescriptorPool,
+            mSkinningPerVariantDescriptorSetLayout->descriptorSetLayout,
+            *mErrorBuffer
+        );
         return variant;
     }
     
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createPerFrameDescriptorSets()
+    void PBRWithShadowPipelineV2::createGfxPerFrameDescriptorSets()
     {
-        mPerFrameDescriptorSetGroup = RF::CreateDescriptorSets(
+        mGfxPerFrameDescriptorSetGroup = RF::CreateDescriptorSets(
             mDescriptorPool,
             RF::GetMaxFramesPerFlight(),
-            *mPerFrameDescriptorSetLayout
+            *mGfxPerFrameDescriptorSetLayout
         );
 
         auto const * cameraBufferCollection = SceneManager::GetCameraBuffers();
@@ -292,7 +423,7 @@ namespace MFA
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
 
-            auto const descriptorSet = mPerFrameDescriptorSetGroup.descriptorSets[frameIndex];
+            auto const descriptorSet = mGfxPerFrameDescriptorSetGroup.descriptorSets[frameIndex];
             MFA_VK_VALID_ASSERT(descriptorSet);
 
             DescriptorSetSchema descriptorSetSchema{ descriptorSet };
@@ -350,50 +481,6 @@ namespace MFA
             
             descriptorSetSchema.UpdateDescriptorSets();
         }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    
-    void PBRWithShadowPipelineV2::createVariantDescriptorSets(PBR_Variant & variant) const
-    {
-        auto const descriptorSetGroup = variant.CreateDescriptorSetGroup(
-            mDescriptorPool,
-            RF::GetMaxFramesPerFlight(),
-            *mPerVariantDescriptorSetLayout
-        );
-        auto const * storedSkinJointsBuffer = variant.GetSkinJointsBuffer();
-
-        for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
-        {
-
-            auto const descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
-            MFA_VK_VALID_ASSERT(descriptorSet);
-
-            DescriptorSetSchema descriptorSetSchema{ descriptorSet };
-
-            /////////////////////////////////////////////////////////////////
-            // Vertex shader
-            /////////////////////////////////////////////////////////////////
-
-            // SkinJoints
-            VkBuffer skinJointsBuffer = mErrorBuffer->buffers[0]->buffer;
-            size_t skinJointsBufferSize = mErrorBuffer->bufferSize;
-            if (storedSkinJointsBuffer != nullptr && storedSkinJointsBuffer->bufferSize > 0)
-            {
-                skinJointsBuffer = storedSkinJointsBuffer->buffers[frameIndex]->buffer;
-                skinJointsBufferSize = storedSkinJointsBuffer->bufferSize;
-            }
-            VkDescriptorBufferInfo skinTransformBufferInfo{
-                .buffer = skinJointsBuffer,
-                .offset = 0,
-                .range = skinJointsBufferSize,
-            };
-            descriptorSetSchema.AddUniformBuffer(&skinTransformBufferInfo);
-
-            descriptorSetSchema.UpdateDescriptorSets();
-        }
-
     }
     
     //-------------------------------------------------------------------------------------------------
@@ -460,7 +547,7 @@ namespace MFA
         RF::AutoBindDescriptorSet(
             recordState,
             RenderFrontend::UpdateFrequency::PerFrame,
-            mPerFrameDescriptorSetGroup
+            mGfxPerFrameDescriptorSetGroup
         );
 
         mDepthPrePass->BeginRenderPass(recordState);
@@ -490,14 +577,7 @@ namespace MFA
             {
                 if (variant->IsVisible())
                 {
-
-                    RF::AutoBindDescriptorSet(
-                        recordState,
-                        RenderFrontend::UpdateFrequency::PerVariant,
-                        variant->GetDescriptorSetGroup()
-                    );
-
-                    CAST_VARIANT_PURE(variant)->Render(
+                    CAST_VARIANT_SHARED(variant)->render(
                         recordState,
                         [&recordState, &pushConstants](
                             AS::PBR::Primitive const & primitive,
@@ -505,14 +585,11 @@ namespace MFA
                         )-> void
                         {
                             // Vertex push constants
-                            pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
                             pushConstants.primitiveIndex = primitive.uniqueId;
-                            Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
-                            Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
-
+                            
                             RF::PushConstants(
                                 recordState,
-                                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                                VK_SHADER_STAGE_FRAGMENT_BIT,
                                 0,
                                 CBlobAliasOf(pushConstants)
                             );
@@ -538,7 +615,7 @@ namespace MFA
         RF::AutoBindDescriptorSet(
             recordState,
             RenderFrontend::UpdateFrequency::PerFrame,
-            mPerFrameDescriptorSetGroup
+            mGfxPerFrameDescriptorSetGroup
         );
 
         mDirectionalLightShadowRenderPass->BeginRenderPass(recordState, *mDirectionalLightShadowResources);
@@ -555,8 +632,6 @@ namespace MFA
         AS::AlphaMode const alphaMode
     ) const
     {
-        DirectionalLightShadowPassPushConstants pushConstants {};
-
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
             auto const * essence = CAST_ESSENCE_SHARED(essenceAndVariantList.second.essence);
@@ -574,26 +649,7 @@ namespace MFA
                 // TODO We need a wider frustum for shadows
                 if (variant->IsActive())
                 {
-                    RF::AutoBindDescriptorSet(
-                        recordState,
-                        RenderFrontend::UpdateFrequency::PerVariant,
-                        variant->GetDescriptorSetGroup()
-                    );
-
-                    CAST_VARIANT_PURE(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
-                    {
-                        // Vertex push constants
-                        pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
-                        Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.model);
-                        Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
-
-                        RF::PushConstants(
-                            recordState,
-                            VK_SHADER_STAGE_VERTEX_BIT,
-                            0,
-                            CBlobAliasOf(pushConstants)
-                        );
-                    }, alphaMode);
+                    CAST_VARIANT_SHARED(variant)->render(recordState, nullptr, alphaMode);
                 }
             }
         }
@@ -613,7 +669,7 @@ namespace MFA
         RF::AutoBindDescriptorSet(
             recordState,
             RenderFrontend::UpdateFrequency::PerFrame,
-            mPerFrameDescriptorSetGroup
+            mGfxPerFrameDescriptorSetGroup
         );
 
         mPointLightShadowRenderPass->BeginRenderPass(recordState, *mPointLightShadowResources);
@@ -651,7 +707,10 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
     
-    void PBRWithShadowPipelineV2::renderForPointLightShadowPass(RT::CommandRecordState const & recordState, AS::AlphaMode const alphaMode) const
+    void PBRWithShadowPipelineV2::renderForPointLightShadowPass(
+        RT::CommandRecordState const & recordState,
+        AS::AlphaMode const alphaMode
+    ) const
     {
         auto const pointLightCount = SceneManager::GetPointLightCount();
         MFA_ASSERT(pointLightCount > 0);
@@ -663,6 +722,13 @@ namespace MFA
         for (uint32_t lightIndex = 0; lightIndex < pointLightCount; ++lightIndex)
         {
             pushConstants.lightIndex = static_cast<int>(lightIndex);
+
+            RF::PushConstants(
+                recordState,
+                VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                0,
+                CBlobAliasOf(pushConstants)
+            );
 
             auto * pointLight = pointLights[lightIndex];
             MFA_ASSERT(pointLight != nullptr);
@@ -685,36 +751,20 @@ namespace MFA
                     {
                         continue;
                     }
-                    auto const * bvComponent = variant->GetBoundingVolume();
+
+                    auto const bvComponent = variant->GetBoundingVolume();
                     if (bvComponent == nullptr)
                     {
                         continue;
                     }
+
                     // We only render variants that are within pointLight's visible range
-                    if (pointLight->IsBoundingVolumeInRange(bvComponent) == false)
+                    if (pointLight->IsBoundingVolumeInRange(bvComponent.get()) == false)
                     {
                         continue;
                     }
-                    RF::AutoBindDescriptorSet(
-                        recordState,
-                        RenderFrontend::UpdateFrequency::PerVariant,
-                        variant->GetDescriptorSetGroup()
-                    );
 
-                    CAST_VARIANT_PURE(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
-                    {
-                        // Vertex push constants
-                        pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
-                        Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
-                        Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
-
-                        RF::PushConstants(
-                            recordState,
-                            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-                            0,
-                            CBlobAliasOf(pushConstants)
-                        );
-                    }, alphaMode);
+                    CAST_VARIANT_SHARED(variant)->render(recordState, nullptr, alphaMode);
                 }
             }
         }
@@ -734,7 +784,7 @@ namespace MFA
         RF::AutoBindDescriptorSet(
             recordState,
             RenderFrontend::UpdateFrequency::PerFrame,
-            mPerFrameDescriptorSetGroup
+            mGfxPerFrameDescriptorSetGroup
         );
 
         mOcclusionRenderPass->BeginRenderPass(recordState);
@@ -754,7 +804,7 @@ namespace MFA
 
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto * essence = CAST_ESSENCE_SHARED(essenceAndVariantList.second.essence);
+            auto const * essence = CAST_ESSENCE_SHARED(essenceAndVariantList.second.essence);
             auto & variantsList = essenceAndVariantList.second.variants;
 
             if (variantsList.empty())
@@ -769,33 +819,37 @@ namespace MFA
                 if (variant->IsActive() && variant->IsInFrustum())
                 {
 
-                    RF::AutoBindDescriptorSet(
+                    RF::BeginQuery(
                         recordState,
-                        RenderFrontend::UpdateFrequency::PerVariant,
-                        variant->GetDescriptorSetGroup()
+                        occlusionQueryData.Pool,
+                        static_cast<uint32_t>(occlusionQueryData.Variants.size())
                     );
 
-                    RF::BeginQuery(recordState, occlusionQueryData.Pool, static_cast<uint32_t>(occlusionQueryData.Variants.size()));
-
                     // TODO Draw a placeholder cube instead of complex geometry
-                    CAST_VARIANT_PURE(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
+                    CAST_VARIANT_SHARED(variant)->render(
+                        recordState,
+                        [&recordState, &pushConstants](
+                            AS::PBR::Primitive const & primitive,
+                            PBR_Variant::Node const & node
+                        )-> void
                         {
                             // Vertex push constants
-                            Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
-                            Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
-                            pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
                             pushConstants.primitiveIndex = primitive.uniqueId;
 
                             RF::PushConstants(
                                 recordState,
-                                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                                VK_SHADER_STAGE_FRAGMENT_BIT,
                                 0,
                                 CBlobAliasOf(pushConstants)
                             );
                         }
                     , alphaMode);
 
-                    RF::EndQuery(recordState, occlusionQueryData.Pool, static_cast<uint32_t>(occlusionQueryData.Variants.size()));
+                    RF::EndQuery(
+                        recordState,
+                        occlusionQueryData.Pool,
+                        static_cast<uint32_t>(occlusionQueryData.Variants.size())
+                    );
 
                     // What if the variant is destroyed in next frame?
                     occlusionQueryData.Variants.emplace_back(variant);
@@ -812,7 +866,7 @@ namespace MFA
         RF::AutoBindDescriptorSet(
             recordState,
             RenderFrontend::UpdateFrequency::PerFrame,
-            mPerFrameDescriptorSetGroup
+            mGfxPerFrameDescriptorSetGroup
         );
         renderForDisplayPass(recordState, AS::AlphaMode::Opaque);
         renderForDisplayPass(recordState, AS::AlphaMode::Mask);
@@ -827,7 +881,7 @@ namespace MFA
 
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto * essence = CAST_ESSENCE_SHARED(essenceAndVariantList.second.essence);
+            auto const * essence = CAST_ESSENCE_SHARED(essenceAndVariantList.second.essence);
             auto & variantsList = essenceAndVariantList.second.variants;
 
             if (variantsList.empty())
@@ -841,23 +895,19 @@ namespace MFA
             {
                 if (variant->IsVisible())
                 {
-
-                    RF::AutoBindDescriptorSet(
-                        recordState,
-                        RenderFrontend::UpdateFrequency::PerVariant,
-                        variant->GetDescriptorSetGroup()
-                    );
                     // TODO We can render all instances at once and have a large push constant for all of them
-                    CAST_VARIANT_PURE(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
+                    CAST_VARIANT_SHARED(variant)->render(
+                        recordState,
+                        [&recordState, &pushConstants](
+                            AS::PBR::Primitive const & primitive,
+                            PBR_Variant::Node const & node
+                        )-> void
                         {
                             // Push constants
-                            pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
                             pushConstants.primitiveIndex = primitive.uniqueId;
-                            Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
-                            Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
                             RF::PushConstants(
                                 recordState,
-                                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                                VK_SHADER_STAGE_FRAGMENT_BIT,
                                 0,
                                 CBlobAliasOf(pushConstants)
                             );
@@ -870,7 +920,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createPerFrameDescriptorSetLayout()
+    void PBRWithShadowPipelineV2::createGfxPerFrameDescriptorSetLayout()
     {
         std::vector<VkDescriptorSetLayoutBinding> bindings{};
 
@@ -923,7 +973,7 @@ namespace MFA
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         });
 
-        mPerFrameDescriptorSetLayout = RF::CreateDescriptorSetLayout(
+        mGfxPerFrameDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
             bindings.data()
         );
@@ -931,7 +981,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createPerEssenceDescriptorSetLayout()
+    void PBRWithShadowPipelineV2::createGfxPerEssenceDescriptorSetLayout()
     {
         std::vector<VkDescriptorSetLayoutBinding> bindings{};
 
@@ -955,31 +1005,7 @@ namespace MFA
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         });
         
-        mPerEssenceDescriptorSetLayout = RF::CreateDescriptorSetLayout(
-            static_cast<uint8_t>(bindings.size()),
-            bindings.data()
-        );
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void PBRWithShadowPipelineV2::createPerVariantDescriptorSetLayout()
-    {
-        std::vector<VkDescriptorSetLayoutBinding> bindings{};
-
-        /////////////////////////////////////////////////////////////////
-        // Vertex shader
-        /////////////////////////////////////////////////////////////////
-
-        // SkinJoints
-        bindings.emplace_back(VkDescriptorSetLayoutBinding {
-            .binding = static_cast<uint32_t>(bindings.size()),
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1,
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-        });
-        
-        mPerVariantDescriptorSetLayout = RF::CreateDescriptorSetLayout(
+        mGfxPerEssenceDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
             bindings.data()
         );
@@ -1098,7 +1124,7 @@ namespace MFA
         
         std::vector<VkPushConstantRange> pushConstantRanges{};
         pushConstantRanges.emplace_back(VkPushConstantRange{
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
             .offset = 0,
             .size = sizeof(DisplayPassPushConstants),
         });
@@ -1180,19 +1206,11 @@ namespace MFA
             inputAttributeDescriptions.emplace_back(attributeDescription);
         }
 
-        std::vector<VkPushConstantRange> pushConstantRanges{};
-        VkPushConstantRange pushConstantRange{
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-            .offset = 0,
-            .size = sizeof(DirectionalLightShadowPassPushConstants),
-        };
-        pushConstantRanges.emplace_back(pushConstantRange);
-
         const auto pipelineLayout = RF::CreatePipelineLayout(
             static_cast<uint32_t>(descriptorSetLayouts.size()),
             descriptorSetLayouts.data(),
-            static_cast<uint32_t>(pushConstantRanges.size()),
-            pushConstantRanges.data()
+            0,
+            nullptr
         );
         
         RT::CreateGraphicPipelineOptions graphicPipelineOptions{};
@@ -1269,7 +1287,7 @@ namespace MFA
 
         std::vector<VkPushConstantRange> pushConstantRanges{};
         VkPushConstantRange pushConstantRange{
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+            .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
             .offset = 0,
             .size = sizeof(PointLightShadowPassPushConstants),
         };
@@ -1358,7 +1376,7 @@ namespace MFA
         std::vector<VkPushConstantRange> pushConstantRanges{};
         // Push constants  
         VkPushConstantRange pushConstantRange{
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
             .offset = 0,
             .size = sizeof(DepthPrePassPushConstants),
         };
@@ -1404,6 +1422,87 @@ namespace MFA
                 .queryCount = 10000,
             });
         }
+    }
+
+        //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::createSkinningPerEssenceDescriptorSetLayout()
+    {
+        std::vector<VkDescriptorSetLayoutBinding> bindings{};
+
+        /////////////////////////////////////////////////////////////////
+        // Compute shader
+        /////////////////////////////////////////////////////////////////
+
+        // RawVertices
+        bindings.emplace_back(VkDescriptorSetLayoutBinding {
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+        });
+        
+        mSkinningPerEssenceDescriptorSetLayout = RF::CreateDescriptorSetLayout(
+            static_cast<uint8_t>(bindings.size()),
+            bindings.data()
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::createSkinningPerVariantDescriptorSetLayout()
+    {
+        std::vector<VkDescriptorSetLayoutBinding> bindings{};
+
+        /////////////////////////////////////////////////////////////////
+        // Compute shader
+        /////////////////////////////////////////////////////////////////
+
+        // Vertices
+        bindings.emplace_back(VkDescriptorSetLayoutBinding {
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+        });
+
+        // SkinJoints
+        bindings.emplace_back(VkDescriptorSetLayoutBinding {
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+        });
+        
+        mSkinningPerVariantDescriptorSetLayout = RF::CreateDescriptorSetLayout(
+            static_cast<uint8_t>(bindings.size()),
+            bindings.data()
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::createSkinningPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts)
+    {
+        RF_CREATE_SHADER("shaders/skinning/Skinning.comp.spv", Compute)
+
+        // Push constants  
+        std::vector<VkPushConstantRange> pushConstantRanges{};
+        VkPushConstantRange pushConstantRange{
+            .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+            .offset = 0,
+            .size = sizeof(SkinningPushConstants),
+        };
+        pushConstantRanges.emplace_back(pushConstantRange);
+
+        auto const pipelineLayout = RF::CreatePipelineLayout(
+            static_cast<uint32_t>(descriptorSetLayouts.size()),
+            descriptorSetLayouts.data(),
+            static_cast<uint32_t>(pushConstantRanges.size()),
+            pushConstantRanges.data()
+        );
+
+        mSkinningPipeline = RF::CreateComputePipeline(*gpuComputeShader, pipelineLayout);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -1477,7 +1576,7 @@ namespace MFA
         // Pipeline layout
         std::vector<VkPushConstantRange> pushConstantRanges{};
         VkPushConstantRange pushConstantRange{
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
             .offset = 0,
             .size = sizeof(OcclusionPassPushConstants),
         };

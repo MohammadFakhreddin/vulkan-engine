@@ -23,8 +23,8 @@ namespace MFA
             uint32_t maxInstanceCount,
             std::vector<std::shared_ptr<RT::GpuTexture>> fireTextures,
             // TODO Smoke texture
-            FireParams fireParams = FireParams {},
-            AS::Particle::Params params = AS::Particle::Params {}
+            FireParams const & fireParams = FireParams {},
+            AS::Particle::Params const & params = AS::Particle::Params {}
         );
 
         ~FireEssence() override;

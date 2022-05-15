@@ -17,7 +17,7 @@ namespace MFA::ResourceManager
     void Shutdown();
 
     // Note: No need to use Path
-    std::shared_ptr<RT::GpuModel> AcquireGpuModel(std::string const & nameOrFileAddress, bool loadFileIfNotExists = true);
+    //std::shared_ptr<RT::GpuModel> AcquireGpuModel(std::string const & nameOrFileAddress, bool loadFileIfNotExists = true);
     std::shared_ptr<AssetSystem::Model> AcquireCpuModel(std::string const & nameOrFileAddress, bool loadFileIfNotExists = true);
 
     // TODO Support for acquiring mesh

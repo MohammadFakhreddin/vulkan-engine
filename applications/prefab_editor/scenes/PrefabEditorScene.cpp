@@ -283,8 +283,7 @@ bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress, std::
 void PrefabEditorScene::destroyAsset(int const assetIndex)
 {
     auto const & asset = mLoadedAssets[assetIndex];
-    auto const gpuModel = RC::AcquireGpuModel(asset.fileAddress);
-    mPBR_Pipeline->destroyEssence(*gpuModel);
+    mPBR_Pipeline->destroyEssence(asset.fileAddress);
     mLoadedAssets.erase(mLoadedAssets.begin() + assetIndex);
 }
 

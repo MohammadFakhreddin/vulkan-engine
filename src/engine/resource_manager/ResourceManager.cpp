@@ -18,14 +18,15 @@ namespace MFA
 
     struct State
     {
-        std::unordered_map<std::string, std::weak_ptr<RT::GpuModel>> availableGpuModels{};
+        //std::unordered_map<std::string, std::weak_ptr<RT::GpuModel>> availableGpuModels{};
         std::unordered_map<std::string, std::weak_ptr<AS::Model>> availableCpuModels{};
 
         std::unordered_map<std::string, std::weak_ptr<RT::GpuTexture>> availableGpuTextures {};
         std::unordered_map<std::string, std::weak_ptr<AS::Texture>> availableCpuTextures {};
 
-        std::shared_ptr<RT::BufferGroup> vertexStageBuffer {};
-        std::shared_ptr<RT::BufferGroup> indexStageBuffer {};
+        //std::shared_ptr<RT::BufferGroup> vertexStageBuffer {};
+        //std::shared_ptr<RT::BufferGroup> indexStageBuffer {};
+        //std::shared_ptr<RT::BufferGroup> stageBuffer {};
     };
     State * state = nullptr;
 
@@ -39,14 +40,14 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     #define CLEAR_MAP(map)                              \
-    for (auto & pair : state->availableGpuModels)       \
+    for (auto & pair : map)                             \
     {                                                   \
         pair.second.reset();                            \
     }                                                   \
 
     void ResourceManager::Shutdown()
     {
-        CLEAR_MAP(state->availableGpuModels)
+        //CLEAR_MAP(state->availableGpuModels)
         CLEAR_MAP(state->availableCpuModels)
         CLEAR_MAP(state->availableGpuTextures)
         CLEAR_MAP(state->availableCpuTextures)
@@ -55,7 +56,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    static std::shared_ptr<RT::GpuModel> createGpuModel(AS::Model const & cpuModel, std::string const & name)
+    /*static std::shared_ptr<RT::GpuModel> createGpuModel(AS::Model const & cpuModel, std::string const & name)
     {
         MFA_ASSERT(name.empty() == false);
         MFA_ASSERT(cpuModel.mesh->isValid());
@@ -78,7 +79,7 @@ namespace MFA
             commandBuffer,
             cpuModel,
             name,
-            *state->vertexStageBuffer->buffers[0],
+        *state->vertexStageBuffer->buffers[0],
             *state->indexStageBuffer->buffers[0]
         );
 
@@ -86,41 +87,44 @@ namespace MFA
 
         state->availableGpuModels[name] = gpuModel;
         return gpuModel;
-    }
+    }*/
 
     //-------------------------------------------------------------------------------------------------
     // TODO Use job system to make this process multi-threaded
-    std::shared_ptr<RT::GpuModel> ResourceManager::AcquireGpuModel(std::string const & nameOrFileAddress, bool const loadFileIfNotExists)
-    {
-        std::shared_ptr<RT::GpuModel> gpuModel = nullptr;
+    //std::shared_ptr<RT::GpuModel> ResourceManager::AcquireGpuModel(std::string const & nameOrFileAddress, bool const loadFileIfNotExists)
+    //{
+    //    std::shared_ptr<RT::GpuModel> gpuModel = nullptr;
 
-        std::string relativePath{};
-        Path::RelativeToAssetFolder(nameOrFileAddress, relativePath);
-        
-        auto const findResult = state->availableGpuModels.find(relativePath);
-        if (findResult != state->availableGpuModels.end())
-        {
-            gpuModel = findResult->second.lock();
-        }
+    //    std::string relativePath{};
+    //    Path::RelativeToAssetFolder(nameOrFileAddress, relativePath);
+    //    
+    //    auto const findResult = state->availableGpuModels.find(relativePath);
+    //    if (findResult != state->availableGpuModels.end())
+    //    {
+    //        gpuModel = findResult->second.lock();
+    //    }
 
-        // It means that file is already loaded and still exists
-        if (gpuModel != nullptr )
-        {
-            return gpuModel;
-        }
+    //    // It means that file is already loaded and still exists
+    //    if (gpuModel != nullptr )
+    //    {
+    //        return gpuModel;
+    //    }
 
-        auto const cpuModel = AcquireCpuModel(relativePath, loadFileIfNotExists);
-        if (cpuModel == nullptr)
-        {
-            return nullptr;
-        }
+    //    auto const cpuModel = AcquireCpuModel(relativePath, loadFileIfNotExists);
+    //    if (cpuModel == nullptr)
+    //    {
+    //        return nullptr;
+    //    }
 
-        return createGpuModel(*cpuModel, relativePath);
-    }
+    //    return createGpuModel(*cpuModel, relativePath);
+    //}
 
     //-------------------------------------------------------------------------------------------------
     // TODO Use job system to make this process multi-threaded
-    std::shared_ptr<AS::Model> ResourceManager::AcquireCpuModel(std::string const & nameOrFileAddress, bool const loadFileIfNotExists)
+    std::shared_ptr<AS::Model> ResourceManager::AcquireCpuModel(
+        std::string const & nameOrFileAddress,
+        bool const loadFileIfNotExists
+    )
     {
         std::shared_ptr<AS::Model> cpuModel = nullptr;
 
@@ -138,6 +142,7 @@ namespace MFA
             return cpuModel;
         }
 
+        // TODO: Find a cleaner and more scalable way
         auto const extension = FS::ExtractExtensionFromPath(relativePath);
         if (extension == ".gltf" || extension == ".glb")
         {
@@ -246,26 +251,6 @@ namespace MFA
 
         return texture;
     }
-
-    //-------------------------------------------------------------------------------------------------
-
-    //bool ResourceManager::Assign(std::shared_ptr<AssetSystem::Model> const & cpuModel, std::string const & name)
-    //{
-    //    MFA_ASSERT(cpuModel != nullptr);
-
-    //    auto const findResult = state->availableCpuModels.find(name);
-    //    if (
-    //        findResult != state->availableCpuModels.end() &&
-    //        findResult->second.expired() == false
-    //    )
-    //    {
-    //        MFA_ASSERT(false);
-    //        return false;
-    //    }
-
-    //    state->availableCpuModels[name] = cpuModel;
-    //    return true;
-    //}
 
     //-------------------------------------------------------------------------------------------------
 

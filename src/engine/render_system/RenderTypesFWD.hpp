@@ -27,7 +27,7 @@ namespace MFA
 
         struct SamplerGroup;
 
-        struct MeshBuffer;
+        //struct MeshBuffer;
 
         struct ImageGroup;
 
@@ -35,7 +35,7 @@ namespace MFA
 
         struct GpuTexture;
 
-        struct GpuModel;
+        //struct GpuModel;
 
         struct GpuShader;
 

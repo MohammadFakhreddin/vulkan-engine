@@ -52,19 +52,19 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    bool BasePipeline::hasEssence(std::string const & nameOrAddress) const
+    bool BasePipeline::hasEssence(std::string const & nameId) const
     {
         std::string relativePath;
-        Path::RelativeToAssetFolder(nameOrAddress, relativePath);
+        Path::RelativeToAssetFolder(nameId, relativePath);
         return mEssenceAndVariantsMap.contains(relativePath);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::destroyEssence(std::string const & nameOrAddress)
+    void BasePipeline::destroyEssence(std::string const & nameId)
     {
         MFA_ASSERT(mIsInitialized == true);
-        auto const findResult = mEssenceAndVariantsMap.find(nameOrAddress);
+        auto const findResult = mEssenceAndVariantsMap.find(nameId);
         if (MFA_VERIFY(findResult != mEssenceAndVariantsMap.end()) == false)
         {
             return;
@@ -94,28 +94,14 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::destroyEssence(RT::GpuModel const & gpuModel)
-    {
-        destroyEssence(gpuModel.nameId);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    std::weak_ptr<VariantBase> BasePipeline::createVariant(RT::GpuModel const & gpuModel)
-    {
-        return createVariant(gpuModel.nameId);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    std::weak_ptr<VariantBase> BasePipeline::createVariant(std::string const & nameOrAddress)
+    std::weak_ptr<VariantBase> BasePipeline::createVariant(std::string const & nameId)
     {
         MFA_ASSERT(mIsInitialized == true);
-        auto const findResult = mEssenceAndVariantsMap.find(nameOrAddress);
+        auto const findResult = mEssenceAndVariantsMap.find(nameId);
         if(findResult == mEssenceAndVariantsMap.end())
         {
             // Note: Is it correct to acquire the missing essence from resource manager ?
-            MFA_LOG_ERROR("Cannot create variant. Essence with name %s does not exists", nameOrAddress.c_str());
+            MFA_LOG_ERROR("Cannot create variant. Essence with name %s does not exists", nameId.c_str());
             return {};
         }
 

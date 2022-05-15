@@ -33,6 +33,20 @@ namespace MFA
     {
     public:
 
+        struct SkinnedVertex
+        {
+            float worldPosition[4];
+        
+            float worldNormal[3];
+            float placeholder1;
+
+            float worldTangent[3];
+            float placeholder2;
+
+            float worldBiTangent[3];
+            float placeholder3;
+        };
+
         struct JointTransformData
         {
             glm::mat4 model;
@@ -75,6 +89,12 @@ namespace MFA
         PBR_Variant & operator= (PBR_Variant const & rhs) noexcept = delete;
         PBR_Variant & operator= (PBR_Variant && rhs) noexcept = delete;
 
+        void createComputeDescriptorSet(
+            VkDescriptorPool descriptorPool,
+            VkDescriptorSetLayout descriptorSetLayout,
+            RT::BufferGroup const & errorBuffer
+        );
+
         [[nodiscard]]
         int GetActiveAnimationIndex() const noexcept;
 
@@ -82,19 +102,16 @@ namespace MFA
 
         void SetActiveAnimation(char const * animationName, AnimationParams const & params = AnimationParams{});
 
-        void PreRender(float deltaTimeInSec, RT::CommandRecordState const & recordState) override;
+        void updateBuffers(RT::CommandRecordState const & recordState);
 
         using BindDescriptorSetFunction = std::function<void(AS::PBR::Primitive const & primitive, Node const & node)>;
-        void Render(
-            RT::CommandRecordState const & drawPass,
+        void render(
+            RT::CommandRecordState const & recordState,
             BindDescriptorSetFunction const & bindFunction,
             AS::AlphaMode alphaMode
         );
 
-        void PostRender(float deltaTimeInSec) override;
-        
-        [[nodiscard]]
-        RT::BufferGroup const * GetSkinJointsBuffer() const noexcept;
+        void postRender(float deltaTimeInSec);
 
         void OnUI() override;
 
@@ -135,12 +152,16 @@ namespace MFA
             bool isParentTransformChanged
         );
 
+        void prepareSkinJointsBuffer();
+
+        void prepareSkinnedVerticesBuffer(uint32_t vertexCount);
+
+        void bindSkinnedVerticesBuffer(RT::CommandRecordState const & recordState) const;
+
     private:
 
         PBR_Essence const * mPBR_Essence = nullptr;
         AS::PBR::MeshData const * mMeshData = nullptr;
-
-        std::shared_ptr<RT::BufferGroup> mSkinsJointsBuffer{};
 
         int mActiveAnimationIndex = 0;
         int mPreviousAnimationIndex = -1;
@@ -166,6 +187,12 @@ namespace MFA
         int mBufferDirtyCounter = 0;
 
         size_t mAnimationInputIndex[300]{};
+
+        RT::DescriptorSetGroup mComputeDescriptorSet {};
+
+        std::shared_ptr<RT::BufferGroup> mSkinsJointsBuffer{};
+
+        std::shared_ptr<RT::BufferGroup> mSkinnedVerticesBuffer {};
 
     };
 

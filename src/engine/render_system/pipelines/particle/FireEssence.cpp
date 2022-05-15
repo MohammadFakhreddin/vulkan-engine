@@ -18,16 +18,16 @@ namespace MFA
         std::string const & name,
         uint32_t const maxInstanceCount,
         std::vector<std::shared_ptr<RT::GpuTexture>> fireTextures,
-        FireParams fireParams,
-        AS::Particle::Params params
+        FireParams const & fireParams,
+        AS::Particle::Params const & params
     )
-        : ParticleEssence(name, std::move(params), maxInstanceCount, std::move(fireTextures))
-        , mFireParams(std::move(fireParams))
+        : ParticleEssence(name, params, maxInstanceCount, std::move(fireTextures))
+        , mFireParams(fireParams)
     {
         mResizeSignal = RF::AddResizeEventListener([this]()->void
         {
             computePointSize();
-            updateParamsBuffer();
+            notifyParamsBufferUpdated();
         });
         init();
     }

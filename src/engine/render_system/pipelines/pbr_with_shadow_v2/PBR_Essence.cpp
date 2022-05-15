@@ -3,11 +3,11 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/asset_system/Asset_PBR_Mesh.hpp"
-#include "engine/BedrockMemory.hpp"
+#include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
 
 #include <utility>
 
-#include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
+#include "engine/BedrockMemory.hpp"
 
 //-------------------------------------------------------------------------------------------------
 
@@ -15,33 +15,69 @@ using namespace MFA::AS::PBR;
 
 // We need other overrides for easier use as well
 MFA::PBR_Essence::PBR_Essence(
-    std::shared_ptr<RT::GpuModel> gpuModel,
-    std::shared_ptr<AS::PBR::MeshData> meshData
+    std::string const & nameId,
+    Mesh const & mesh,
+    std::vector<std::shared_ptr<RT::GpuTexture>> textures
 )
-    : EssenceBase(gpuModel->nameId)
-    , mGpuModel(std::move(gpuModel))
-    , mMeshData(std::move(meshData))
+    : EssenceBase(nameId)
+    , mMeshData(mesh.getMeshData())
+    , mTextures(std::move(textures))
+    , mVertexCount(mesh.getVertexCount())
+    , mIndexCount(mesh.getIndexCount())
 {
-    MFA_ASSERT(mGpuModel != nullptr);
+    MFA_ASSERT(mMeshData != nullptr);
     
-    {// PrimitiveCount
-        mPrimitiveCount = 0;
-        for (auto const & subMesh : mMeshData->subMeshes) {
-            mPrimitiveCount += static_cast<uint32_t>(subMesh.primitives.size());
-        }
-        if (mPrimitiveCount > 0) {
-            size_t const bufferSize = sizeof(PrimitiveInfo) * mPrimitiveCount;
+    prepareAnimationLookupTable();
 
-            mPrimitivesBuffer = RF::CreateLocalUniformBuffer(bufferSize, 1);
-            auto const stageBuffer = RF::CreateStageBuffer(bufferSize, 1);
-            
-            auto const primitiveData = Memory::Alloc(bufferSize);
-            
-            auto * primitivesArray = primitiveData->memory.as<PrimitiveInfo>();
+    {// Creating buffers
+        std::shared_ptr<RT::BufferGroup> indicesStageBuffer = nullptr;
+        std::shared_ptr<RT::BufferGroup> primitivesStageBuffer = nullptr;
+        std::shared_ptr<RT::BufferGroup> unSkinnedVerticesStageBuffer = nullptr;
+        std::shared_ptr<RT::BufferGroup> verticesUVsStageBuffer = nullptr;
+        
+        auto const commandBuffer = RF::BeginSingleTimeComputeCommand();
+        prepareIndicesBuffer(commandBuffer, mesh, indicesStageBuffer);
+        preparePrimitiveBuffer(commandBuffer, primitivesStageBuffer);
+        prepareUnSkinnedVerticesBuffer(commandBuffer, mesh, unSkinnedVerticesStageBuffer);
+        prepareVerticesUVsBuffer(commandBuffer, mesh, verticesUVsStageBuffer);
+        RF::EndAndSubmitGraphicSingleTimeCommand(commandBuffer);
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::PBR_Essence::~PBR_Essence() = default;
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::PBR_Essence::preparePrimitiveBuffer(
+    VkCommandBuffer commandBuffer,
+    std::shared_ptr<RT::BufferGroup> & outStageBuffer
+)
+{
+    size_t primitiveCount = 0;
+    for (auto const & subMesh : mMeshData->subMeshes) {
+        primitiveCount += subMesh.primitives.size();
+    }
+    if (primitiveCount > 0) {
+        size_t const bufferSize = sizeof(PrimitiveInfo) * primitiveCount;
+
+        mPrimitivesBuffer = RF::CreateLocalUniformBuffer(bufferSize, 1);
+
+        outStageBuffer = RF::CreateStageBuffer(bufferSize, 1);
+
+        {// Updating stage buffer
+            auto const mappedMemory = RF::MapHostVisibleMemory(
+                outStageBuffer->buffers[0]->memory,
+                0,
+                bufferSize
+            );
+            auto * primitiveData = mappedMemory->getPtr<PrimitiveInfo>();
+
             for (auto const & subMesh : mMeshData->subMeshes) {
                 for (auto const & primitive : subMesh.primitives) {
                     // Copy primitive into primitive info
-                    PrimitiveInfo & primitiveInfo = primitivesArray[primitive.uniqueId];
+                    PrimitiveInfo & primitiveInfo = primitiveData[primitive.uniqueId];
                     primitiveInfo.baseColorTextureIndex = primitive.hasBaseColorTexture ? primitive.baseColorTextureIndex : -1;
                     primitiveInfo.metallicFactor = primitive.metallicFactor;
                     primitiveInfo.roughnessFactor = primitive.roughnessFactor;
@@ -60,43 +96,137 @@ MFA::PBR_Essence::PBR_Essence(
                     primitiveInfo.alphaCutoff = primitive.alphaCutoff;
                 }
             }
-
-            auto const commandBuffer = RF::BeginSingleTimeGraphicCommand();
-            RF::UpdateLocalBuffer(
-                commandBuffer,
-                *mPrimitivesBuffer->buffers[0],
-                *stageBuffer->buffers[0],
-                primitiveData->memory
-            );
-            RF::EndAndSubmitGraphicSingleTimeCommand(commandBuffer);
-
         }
-    }
-    {// Animations
-        int animationIndex = 0;
-        for (auto const & animation : mMeshData->animations) {
-            MFA_ASSERT(mAnimationNameLookupTable.find(animation.name) == mAnimationNameLookupTable.end());
-            mAnimationNameLookupTable[animation.name] = animationIndex;
-            ++animationIndex;
-        }
+        
+        RF::UpdateLocalBuffer(
+            commandBuffer,
+            *mPrimitivesBuffer->buffers[0],
+            *outStageBuffer->buffers[0]
+        );
     }
 }
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::PBR_Essence::~PBR_Essence() = default;
-
-//-------------------------------------------------------------------------------------------------
-
-MFA::RT::BufferGroup const * MFA::PBR_Essence::getPrimitivesBuffer() const noexcept {
-    return mPrimitivesBuffer.get();
-}
-
-//-------------------------------------------------------------------------------------------------
-
-uint32_t MFA::PBR_Essence::getPrimitiveCount() const noexcept
+void MFA::PBR_Essence::prepareAnimationLookupTable()
 {
-    return mPrimitiveCount;
+    int animationIndex = 0;
+    for (auto const & animation : mMeshData->animations) {
+        MFA_ASSERT(mAnimationNameLookupTable.find(animation.name) == mAnimationNameLookupTable.end());
+        mAnimationNameLookupTable[animation.name] = animationIndex;
+        ++animationIndex;
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::PBR_Essence::prepareUnSkinnedVerticesBuffer(
+    VkCommandBuffer commandBuffer,
+    Mesh const & mesh,
+    std::shared_ptr<RT::BufferGroup> & outStageBuffer
+)
+{
+    auto const bufferSize = sizeof(UnSkinnedVertex) * mVertexCount;
+    mUnSkinnedVerticesBuffer = RF::CreateLocalStorageBuffer(bufferSize, 1);
+    outStageBuffer = RF::CreateStageBuffer(bufferSize, 1);
+
+    {// Updating stage buffer
+        auto const mappedData = RF::MapHostVisibleMemory(
+            outStageBuffer->buffers[0]->memory,
+            0,
+            bufferSize
+        );
+        MFA_ASSERT(mappedData != nullptr);
+
+        auto * rawVertices = mappedData->getPtr<UnSkinnedVertex>();
+        auto const * assetVertices = mesh.getVertexData()->memory.as<AS::PBR::Vertex>();
+        for (uint32_t i = 0; i < mVertexCount; ++i)
+        {
+            auto const & assetVertex = assetVertices[i];
+            auto & rawVertex = rawVertices[i];
+
+            Copy<3>(rawVertex.localPosition, assetVertex.position);
+            rawVertex.localPosition[3] = 1.0f;
+
+            Copy<4>(rawVertex.tangent, assetVertex.tangentValue);
+            Copy<3>(rawVertex.normal, assetVertex.normalValue);
+            rawVertex.hasSkin = assetVertex.hasSkin;
+            Copy<4>(rawVertex.jointIndices, assetVertex.jointIndices);
+            Copy<4>(rawVertex.jointWeights, assetVertex.jointWeights);
+        }
+    }
+
+    RF::UpdateLocalBuffer(
+        commandBuffer,
+        *mUnSkinnedVerticesBuffer->buffers[0],
+        *outStageBuffer->buffers[0]
+    );
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::PBR_Essence::prepareVerticesUVsBuffer(
+    VkCommandBuffer commandBuffer,
+    AS::PBR::Mesh const & mesh,
+    std::shared_ptr<RT::BufferGroup> & outStageBuffer
+)
+{
+    auto const bufferSize = sizeof(VertexUVs) * mVertexCount;
+    mVerticesUVsBuffer = RF::CreateVertexBuffer(bufferSize);
+    outStageBuffer = RF::CreateStageBuffer(bufferSize, 1);
+
+    {// Updating stage buffer
+        auto const mappedData = RF::MapHostVisibleMemory(
+            outStageBuffer->buffers[0]->memory,
+            0,
+            bufferSize
+        );
+        MFA_ASSERT(mappedData != nullptr);
+
+        auto * verticesUVs = mappedData->getPtr<VertexUVs>();
+        auto const * assetVertices = mesh.getVertexData()->memory.as<AS::PBR::Vertex>();
+        for (uint32_t i = 0; i < mVertexCount; ++i)
+        {
+            auto const & assetVertex = assetVertices[i];
+            auto & vertexUV = verticesUVs[i];
+
+            Copy<2>(vertexUV.baseColorTexCoord, assetVertex.baseColorUV);
+            Copy<2>(vertexUV.metallicRoughnessTexCoord, assetVertex.metallicUV);
+            Copy<2>(vertexUV.normalTexCoord, assetVertex.normalMapUV);
+            Copy<2>(vertexUV.emissiveTexCoord, assetVertex.emissionUV);
+            Copy<2>(vertexUV.occlusionTexCoord, assetVertex.occlusionUV);
+        }
+    }
+
+    RF::UpdateLocalBuffer(
+        commandBuffer,
+        *mVerticesUVsBuffer->buffers[0],
+        *outStageBuffer->buffers[0]
+    );
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::PBR_Essence::prepareIndicesBuffer(
+    VkCommandBuffer commandBuffer,
+    AS::PBR::Mesh const & mesh,
+    std::shared_ptr<RT::BufferGroup> & outStageBuffer
+)
+{
+    auto const bufferSize = sizeof(AS::Index) * mIndexCount;
+    mIndicesBuffer = RF::CreateIndexBuffer(bufferSize);
+    outStageBuffer = RF::CreateStageBuffer(bufferSize, 1);
+
+    RF::UpdateHostVisibleBuffer(
+        *outStageBuffer->buffers[0],
+        mesh.getIndexData()->memory
+    );
+
+    RF::UpdateLocalBuffer(
+        commandBuffer,
+        *mIndicesBuffer->buffers[0],
+        *outStageBuffer->buffers[0]
+    );
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -107,13 +237,6 @@ int MFA::PBR_Essence::getAnimationIndex(char const * name) const noexcept {
         return findResult->second;
     }
     return -1;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-MFA::RenderTypes::GpuModel const * MFA::PBR_Essence::getGpuModel() const
-{
-    return mGpuModel.get();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -131,8 +254,6 @@ void MFA::PBR_Essence::createGraphicDescriptorSet(
     RT::GpuTexture const & errorTexture
 )
 {
-    auto const & textures = mGpuModel->textures;
-
     mGraphicDescriptorSet = RF::CreateDescriptorSets(
         descriptorPool,
         RF::GetMaxFramesPerFlight(),
@@ -160,10 +281,10 @@ void MFA::PBR_Essence::createGraphicDescriptorSet(
 
         // TODO Each one need their own sampler
         // Textures
-        MFA_ASSERT(textures.size() <= 64);
+        MFA_ASSERT(mTextures.size() <= 64);
         // We need to keep imageInfos alive
         std::vector<VkDescriptorImageInfo> imageInfos{};
-        for (auto const & texture : textures)
+        for (auto const & texture : mTextures)
         {
             imageInfos.emplace_back(VkDescriptorImageInfo{
                 .sampler = nullptr,
@@ -171,7 +292,7 @@ void MFA::PBR_Essence::createGraphicDescriptorSet(
                 .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             });
         }
-        for (auto i = static_cast<uint32_t>(textures.size()); i < 64; ++i)
+        for (auto i = static_cast<uint32_t>(mTextures.size()); i < 64; ++i)
         {
             imageInfos.emplace_back(VkDescriptorImageInfo{
                 .sampler = nullptr,
@@ -191,25 +312,79 @@ void MFA::PBR_Essence::createGraphicDescriptorSet(
 
 //-------------------------------------------------------------------------------------------------
 
+void MFA::PBR_Essence::createComputeDescriptorSet(
+    VkDescriptorPool descriptorPool,
+    VkDescriptorSetLayout descriptorSetLayout
+)
+{
+    mComputeDescriptorSet = RF::CreateDescriptorSets(
+        descriptorPool,
+        1,
+        descriptorSetLayout
+    );
+    
+    auto const & descriptorSet = mComputeDescriptorSet.descriptorSets[0];
+    MFA_VK_VALID_ASSERT(descriptorSet);
+
+    DescriptorSetSchema descriptorSetSchema{ descriptorSet };
+
+    /////////////////////////////////////////////////////////////////
+    // Compute shader
+    /////////////////////////////////////////////////////////////////
+
+    // UnSkinnedVertices
+    VkDescriptorBufferInfo const unSkinnedVerticesBufferInfo{
+        .buffer = mUnSkinnedVerticesBuffer->buffers[0]->buffer,
+        .offset = 0,
+        .range = mUnSkinnedVerticesBuffer->bufferSize,
+    };
+    descriptorSetSchema.AddUniformBuffer(&unSkinnedVerticesBufferInfo);
+
+    descriptorSetSchema.UpdateDescriptorSets();
+}
+
+//-------------------------------------------------------------------------------------------------
+
 void MFA::PBR_Essence::bindForGraphicPipeline(RT::CommandRecordState const & recordState) const
 {
     bindGraphicDescriptorSet(recordState);
-    bindVertexBuffer(recordState);
+    bindVertexUVsBuffer(recordState);
     bindIndexBuffer(recordState);
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::PBR_Essence::bindVertexBuffer(RT::CommandRecordState const & recordState) const
+void MFA::PBR_Essence::bindForComputePipeline(RT::CommandRecordState const & recordState) const
 {
-    RF::BindVertexBuffer(recordState, *mGpuModel->meshBuffers->vertexBuffer);
+    bindComputeDescriptorSet(recordState);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+uint32_t MFA::PBR_Essence::getVertexCount() const
+{
+    return mVertexCount;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+uint32_t MFA::PBR_Essence::getIndexCount() const
+{
+    return mIndexCount;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::PBR_Essence::bindVertexUVsBuffer(RT::CommandRecordState const & recordState) const
+{
+    RF::BindVertexBuffer(recordState, *mVerticesUVsBuffer->buffers[0]);
 }
 
 //-------------------------------------------------------------------------------------------------
 
 void MFA::PBR_Essence::bindIndexBuffer(RT::CommandRecordState const & recordState) const
 {
-    RF::BindIndexBuffer(recordState, *mGpuModel->meshBuffers->indexBuffer);
+    RF::BindIndexBuffer(recordState, *mIndicesBuffer->buffers[0]);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -220,6 +395,17 @@ void MFA::PBR_Essence::bindGraphicDescriptorSet(RT::CommandRecordState const & r
         recordState,
         RF::UpdateFrequency::PerEssence,
         mGraphicDescriptorSet
+    );
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::PBR_Essence::bindComputeDescriptorSet(RT::CommandRecordState const & recordState) const
+{
+    RF::BindDescriptorSet(
+        recordState,
+        RF::UpdateFrequency::PerEssence,
+        mComputeDescriptorSet.descriptorSets[0]
     );
 }
 

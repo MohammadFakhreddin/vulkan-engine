@@ -160,10 +160,23 @@ namespace MFA::RenderBackend
         VkMemoryPropertyFlags properties
     );
 
-    void MapDataToBuffer(
+    void MapHostVisibleMemory(
+        VkDevice device,
+        VkDeviceMemory bufferMemory,
+        size_t offset,
+        size_t size,
+        void ** outBufferData
+    );
+
+    void CopyDataToHostVisibleBuffer(
         VkDevice device,
         VkDeviceMemory bufferMemory,
         CBlob dataBlob
+    );
+
+    void UnMapHostVisibleMemory(
+        VkDevice device,
+        VkDeviceMemory bufferMemory
     );
 
     // TODO Too many parameters. Create struct instead
@@ -432,9 +445,7 @@ namespace MFA::RenderBackend
     //);
 
     void UpdateLocalBuffer(
-        VkDevice device,
         VkCommandBuffer commandBuffer,
-        CBlob const & data,
         RT::BufferAndMemory const & buffer,
         RT::BufferAndMemory const & stagingBuffer
     );

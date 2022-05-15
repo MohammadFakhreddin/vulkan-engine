@@ -65,8 +65,8 @@ namespace MFA::AssetSystem::PBR
     {
         MeshBase::finalizeData();
 
-        MFA_ASSERT(mNextIndexOffset == mIndexBuffer->memory.len);
-        MFA_ASSERT(mNextVertexOffset == mVertexBuffer->memory.len);
+        MFA_ASSERT(mNextIndexOffset == mIndexData->memory.len);
+        MFA_ASSERT(mNextVertexOffset == mVertexData->memory.len);
 
         MFA_ASSERT(mData->nodes.empty() == false);
         MFA_ASSERT(mData->rootNodes.empty() == true);
@@ -179,10 +179,10 @@ namespace MFA::AssetSystem::PBR
         primitive.indicesStartingIndex = mNextStartingIndex;
         uint32_t const verticesSize = sizeof(Vertex) * vertexCount;
         uint32_t const indicesSize = sizeof(Index) * indicesCount;
-        MFA_ASSERT(mNextVertexOffset + verticesSize <= mVertexBuffer->memory.len);
-        MFA_ASSERT(mNextIndexOffset + indicesSize <= mIndexBuffer->memory.len);
-        ::memcpy(mVertexBuffer->memory.ptr + mNextVertexOffset, vertices, verticesSize);
-        ::memcpy(mIndexBuffer->memory.ptr + mNextIndexOffset, indices, indicesSize);
+        MFA_ASSERT(mNextVertexOffset + verticesSize <= mVertexData->memory.len);
+        MFA_ASSERT(mNextIndexOffset + indicesSize <= mIndexData->memory.len);
+        ::memcpy(mVertexData->memory.ptr + mNextVertexOffset, vertices, verticesSize);
+        ::memcpy(mIndexData->memory.ptr + mNextIndexOffset, indices, indicesSize);
 
         MFA_ASSERT(subMeshIndex < mData->subMeshes.size());
         auto & subMesh = mData->subMeshes[subMeshIndex];

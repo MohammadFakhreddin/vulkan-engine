@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/render_system/pipelines/EssenceBase.hpp"
+#include "engine/asset_system/AssetDebugMesh.hpp"
 
 namespace MFA
 {
@@ -8,7 +9,12 @@ namespace MFA
     {
     public:
 
-        explicit DebugEssence(std::shared_ptr<RT::GpuModel> gpuModel, uint32_t indexCount);
+        using Mesh = AS::Debug::Mesh;
+
+        explicit DebugEssence(
+            std::string const & nameId,
+            Mesh const & mesh
+        );
         ~DebugEssence() override;
         
         DebugEssence & operator= (DebugEssence && rhs) noexcept = delete;
@@ -23,11 +29,26 @@ namespace MFA
 
     private:
 
+        void prepareVertexBuffer(
+            VkCommandBuffer commandBuffer,
+            Mesh const & mesh,
+            std::shared_ptr<RT::BufferGroup> & outStageBuffer
+        );
+
+        void prepareIndexBuffer(
+            VkCommandBuffer commandBuffer,
+            Mesh const & mesh,
+            std::shared_ptr<RT::BufferGroup> & outStageBuffer
+        );
+
         void bindVertexBuffer(RT::CommandRecordState const & recordState) const;
 
         void bindIndexBuffer(RT::CommandRecordState const & recordState) const;
 
-        std::shared_ptr<RT::GpuModel> mGpuModel;
+        std::shared_ptr<RT::BufferGroup> mVerticesBuffer {};
+
+        std::shared_ptr<RT::BufferGroup> mIndicesBuffer {};
+
         uint32_t const mIndicesCount;
 
     };

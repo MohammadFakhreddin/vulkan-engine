@@ -9,10 +9,10 @@ struct PSIn {
 
 struct PushConsts
 {
-    float4x4 model;
-    float4x4 inverseNodeTransform;
-	int skinIndex;
     uint primitiveIndex;
+    int placeholder0;
+    int placeholder1;
+    int placeholder2;
 };
 
 [[vk::push_constant]]

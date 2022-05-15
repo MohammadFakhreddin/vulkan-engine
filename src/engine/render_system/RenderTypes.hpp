@@ -66,24 +66,24 @@ namespace MFA
         
         };
 
-        struct MeshBuffer
-        {
-            std::shared_ptr<BufferAndMemory> const vertexBuffer;
-            std::shared_ptr<BufferAndMemory> const indexBuffer;
+        //struct MeshBuffer
+        //{
+        //    std::shared_ptr<BufferAndMemory> const vertexBuffer;
+        //    std::shared_ptr<BufferAndMemory> const indexBuffer;
 
-            explicit MeshBuffer(
-                std::shared_ptr<BufferAndMemory> verticesBuffer_,
-                std::shared_ptr<BufferAndMemory> indicesBuffer_
-            );
+        //    explicit MeshBuffer(
+        //        std::shared_ptr<BufferAndMemory> verticesBuffer_,
+        //        std::shared_ptr<BufferAndMemory> indicesBuffer_
+        //    );
 
-            ~MeshBuffer();
+        //    ~MeshBuffer();
 
-            MeshBuffer(MeshBuffer const &) noexcept = delete;
-            MeshBuffer(MeshBuffer &&) noexcept = delete;
-            MeshBuffer & operator= (MeshBuffer const & rhs) noexcept = delete;
-            MeshBuffer & operator= (MeshBuffer && rhs) noexcept = delete;
-        
-        };
+        //    MeshBuffer(MeshBuffer const &) noexcept = delete;
+        //    MeshBuffer(MeshBuffer &&) noexcept = delete;
+        //    MeshBuffer & operator= (MeshBuffer const & rhs) noexcept = delete;
+        //    MeshBuffer & operator= (MeshBuffer && rhs) noexcept = delete;
+        //
+        //};
 
         struct ImageGroup
         {
@@ -135,7 +135,7 @@ namespace MFA
             std::shared_ptr<ImageViewGroup> const imageView{};
         };
 
-        struct GpuModel
+   /*     struct GpuModel
         {
             std::string const nameId;
             std::shared_ptr<MeshBuffer> const meshBuffers;
@@ -152,7 +152,7 @@ namespace MFA
             GpuModel(GpuModel &&) noexcept = delete;
             GpuModel & operator= (GpuModel const & rhs) noexcept = delete;
             GpuModel & operator= (GpuModel && rhs) noexcept = delete;
-        };
+        };*/
 
         struct GpuShader
         {
@@ -392,6 +392,41 @@ namespace MFA
             VkImageCreateFlags imageCreateFlags = 0;
             VkSampleCountFlagBits samplesCount = VK_SAMPLE_COUNT_1_BIT;
             VkImageType imageType = VK_IMAGE_TYPE_2D;
+        };
+
+        struct MappedMemory
+        {
+            explicit MappedMemory(VkDeviceMemory memory_);
+            ~MappedMemory();
+
+            MappedMemory(MappedMemory const &) noexcept = delete;
+            MappedMemory(MappedMemory &&) noexcept = delete;
+            MappedMemory & operator= (MappedMemory const & rhs) noexcept = delete;
+            MappedMemory & operator= (MappedMemory && rhs) noexcept = delete;
+
+            [[nodiscard]]
+            void ** getMappingPtr()
+            {
+                return &ptr;
+            }
+
+            template<typename T>
+            T * getPtr()
+            {
+                return static_cast<T *>(ptr);
+            }
+
+            [[nodiscard]]
+            bool isValid() const noexcept
+            {
+                return ptr != nullptr;
+            }
+
+        private:
+
+            void * ptr = nullptr;
+            VkDeviceMemory memory {};
+
         };
 
     };
