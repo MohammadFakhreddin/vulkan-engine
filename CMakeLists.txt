@@ -125,6 +125,7 @@ list(
     "src/engine/BedrockPath.cpp"
     "src/engine/BedrockSignalTypes.hpp"
     "src/engine/BedrockSignal.hpp"
+    "src/engine/BedrockTime.hpp"
 )
 
 add_library("Bedrock"

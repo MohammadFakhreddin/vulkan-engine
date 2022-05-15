@@ -6,6 +6,7 @@
 
 #include "engine/BedrockMatrix.hpp"
 #include "engine/BedrockLog.hpp"
+#include "engine/BedrockTime.hpp"
 
 #include <glm/glm.hpp>
 
@@ -28,19 +29,35 @@ TEST_CASE("SIMD TestCase1", "[SIMD][0]") {
 
 TEST_CASE("SIMD TestCase2 DotProduct", "[SIMD][1]")
 {
+    uint64_t count = 10000000;
+    std::vector<float> glmResults (count);
+    std::vector<float> simdResults (count);
+    
     vec4 vec1 {1.0f, 2.0f, 5.0f, 1.0f};
     vec4 vec2 {5.0f, 3.0f, 4.0f, 1.0f};
-    CHECK(Matrix::Dot(vec1, vec2) == dot(vec1, vec2));
-}
+    
+    {// GLM
+        auto startTime = MFA::Time::Now();
 
-template <
-    class result_t   = std::chrono::milliseconds,
-    class clock_t    = std::chrono::steady_clock,
-    class duration_t = std::chrono::milliseconds
->
-auto since(std::chrono::time_point<clock_t, duration_t> const& start)
-{
-    return std::chrono::duration_cast<result_t>(clock_t::now() - start);
+        for (uint64_t i = 0; i < count; i++)
+        {
+            glmResults[i] = glm::dot(vec1, vec2);
+        }
+            
+        MFA_LOG_INFO("DotProduct glm Elapsed(ms)=%lld", MFA::Time::Since(startTime).count());
+    }
+    {// SIMD (SIMD has worse result. Why ?)
+        auto startTime = MFA::Time::Now();
+
+        for (uint64_t i = 0; i < count; i++)
+        {
+            simdResults[i] = Matrix::Dot(vec1, vec2);
+        }
+        
+        MFA_LOG_INFO("DotProduct SIMD Elapsed(ms)=%lld", MFA::Time::Since(startTime).count());
+    }
+    
+    CHECK(Matrix::Dot(vec1, vec2) == dot(vec1, vec2));
 }
 
 TEST_CASE("SIMD TestCase3 Lerp", "[SIMD][2]")
@@ -55,7 +72,7 @@ TEST_CASE("SIMD TestCase3 Lerp", "[SIMD][2]")
     std::vector<glm::vec4> simdResults (stepCount);
 
     {// GLM
-        auto startTime = std::chrono::steady_clock::now();
+        auto startTime = MFA::Time::Now();
         
         uint64_t currStep = 0;
         for (float fraction = 0.0f; fraction <= 1.0f; fraction += stepValue)
@@ -64,11 +81,11 @@ TEST_CASE("SIMD TestCase3 Lerp", "[SIMD][2]")
             ++currStep;
         }
 
-        MFA_LOG_INFO("GLM Elapsed(ms)=%d", since(startTime).count());
+        MFA_LOG_INFO("Lerp GLM Elapsed(ms)=%lld", MFA::Time::Since(startTime).count());
     }
 
     {// SIMD
-        auto startTime = std::chrono::steady_clock::now();
+        auto startTime = MFA::Time::Now();
         
         int currStep = 0;
         for (float fraction = 0.0f; fraction <= 1.0f; fraction += stepValue)
@@ -77,7 +94,7 @@ TEST_CASE("SIMD TestCase3 Lerp", "[SIMD][2]")
             ++currStep;
         }
 
-        MFA_LOG_INFO("SIMD Elapsed(ms)=%d", since(startTime).count());
+        MFA_LOG_INFO("Lerp SIMD Elapsed(ms)=%lld", MFA::Time::Since(startTime).count());
     }
 
     {// Correctness check
