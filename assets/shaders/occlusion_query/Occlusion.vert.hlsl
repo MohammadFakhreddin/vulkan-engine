@@ -2,8 +2,8 @@
 #include "../SkinJointsBuffer.hlsl"
 
 struct VSIn {    
-    float2 baseColorTexCoord : TEXCOORD0;
     float4 worldPosition;
+    float2 baseColorTexCoord : TEXCOORD0;
 };
 
 struct VSOut {

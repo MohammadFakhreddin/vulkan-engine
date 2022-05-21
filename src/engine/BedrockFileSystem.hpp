@@ -40,12 +40,6 @@ namespace MFA::FileSystem
     [[nodiscard]]
     FILE * GetCHandle(FileHandle * file);
 
-    [[nodiscard]]
-    std::string ExtractDirectoryFromPath(std::string const & path);
-
-    [[nodiscard]]
-    std::string ExtractExtensionFromPath(std::string const & path);
-
     enum class Origin
     {
         Start,

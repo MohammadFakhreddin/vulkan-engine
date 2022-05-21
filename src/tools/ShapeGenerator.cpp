@@ -155,11 +155,10 @@ namespace MFA::ShapeGenerator
 
             mesh->finalizeData();
 
-            std::vector<std::shared_ptr<AS::Texture>> textures{};
-
             return std::make_shared<AS::Model>(
                 mesh,
-                textures
+                std::vector<std::string>{},
+                std::vector<AS::SamplerConfig>{}
             );
         }
 
@@ -249,7 +248,8 @@ namespace MFA::ShapeGenerator
 
             return std::make_shared<AS::Model>(
                 mesh,
-                std::vector<std::shared_ptr<AS::Texture>>{}
+                std::vector<std::string>{},
+                std::vector<AS::SamplerConfig> {}
             );
         }
 
@@ -279,7 +279,7 @@ namespace MFA::ShapeGenerator
 
             auto const verticesCount = static_cast<uint16_t>(positions.size());
             auto const indicesCount = static_cast<uint16_t>(meshIndices.size());
-            
+
             auto const verticesBuffer = Memory::Alloc(sizeof(Vertex) * verticesCount);
             auto const indicesBuffer = Memory::Alloc(sizeof(AS::Index) * indicesCount);
 
@@ -329,7 +329,8 @@ namespace MFA::ShapeGenerator
 
             return std::make_shared<AS::Model>(
                 mesh,
-                std::vector<std::shared_ptr<AS::Texture>>{}
+                std::vector<std::string>{},
+                std::vector<AS::SamplerConfig>{}
             );
 
         }

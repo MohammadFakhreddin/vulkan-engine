@@ -45,9 +45,9 @@ namespace MFA
 
         void bindIndexBuffer(RT::CommandRecordState const & recordState) const;
 
-        std::shared_ptr<RT::BufferGroup> mVerticesBuffer {};
+        std::shared_ptr<RT::BufferAndMemory> mVerticesBuffer {};
 
-        std::shared_ptr<RT::BufferGroup> mIndicesBuffer {};
+        std::shared_ptr<RT::BufferAndMemory> mIndicesBuffer {};
 
         uint32_t const mIndicesCount;
 

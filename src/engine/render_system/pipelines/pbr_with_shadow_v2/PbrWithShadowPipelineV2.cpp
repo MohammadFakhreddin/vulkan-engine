@@ -214,7 +214,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::performSkinning(RT::CommandRecordState & recordState) const
+    void PBRWithShadowPipelineV2::performSkinning(RT::CommandRecordState & recordState)
     {
         RF::BindPipeline(recordState, *mSkinningPipeline);
 
@@ -237,7 +237,7 @@ namespace MFA
                 if (variant->IsVisible())
                 {
                     // Dispatches and bindings are done here
-                    variant->performSkinning(recordState,
+                    CAST_VARIANT_SHARED(variant)->compute(recordState,
                         [&recordState, &pushConstants](
                             AS::PBR::Primitive const & primitive,
                             PBR_Variant::Node const & node
@@ -248,7 +248,8 @@ namespace MFA
                             Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.model);
                             pushConstants.vertexCount = primitive.vertexCount;
                             pushConstants.skinIndex = primitive.hasSkin ? node.skin->skinStartingIndex : -1;
-                            
+                            pushConstants.vertexStartingIndex = primitive.indicesStartingIndex;
+
                             RF::PushConstants(
                                 recordState,
                                 VK_SHADER_STAGE_COMPUTE_BIT,
@@ -1023,104 +1024,93 @@ namespace MFA
 
         std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuFragmentShader.get() };
 
-        VkVertexInputBindingDescription vertexInputBindingDescription{};
-        vertexInputBindingDescription.binding = 0;
-        vertexInputBindingDescription.stride = sizeof(AS::PBR::Vertex);
-        vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        std::vector<VkVertexInputBindingDescription> bindingDescriptions {};
 
+        bindingDescriptions.emplace_back(VkVertexInputBindingDescription {
+            .binding = static_cast<uint32_t>(bindingDescriptions.size()),
+            .stride = sizeof(PBR_Variant::SkinnedVertex),
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+        });
+
+        bindingDescriptions.emplace_back(VkVertexInputBindingDescription {
+            .binding = static_cast<uint32_t>(bindingDescriptions.size()),
+            .stride = sizeof(PBR_Essence::VertexUVs),
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+        });
+        
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
         
-        // Position
+        // WordPosition
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+            .offset = offsetof(PBR_Variant::SkinnedVertex, worldPosition)
+        });
+
+        // WorldNormal
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
             .format = VK_FORMAT_R32G32B32_SFLOAT,
-            .offset = offsetof(AS::PBR::Vertex, position)
+            .offset = offsetof(PBR_Variant::SkinnedVertex, worldNormal),
         });
 
+        // WorldTangent
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32G32B32_SFLOAT,
+            .offset = offsetof(PBR_Variant::SkinnedVertex, worldTangent),
+        });
+
+        // WorldBiTangent
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32G32B32_SFLOAT,
+            .offset = offsetof(PBR_Variant::SkinnedVertex, worldBiTangent),
+        });
+        
         // BaseColorUV
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
+            .binding = 1,
             .format = VK_FORMAT_R32G32_SFLOAT,
-            .offset = offsetof(AS::PBR::Vertex, baseColorUV)
+            .offset = offsetof(PBR_Essence::VertexUVs, baseColorTexCoord)
         });
 
-        {// Metallic/RoughnessUV
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, metallicUV); // Metallic and roughness have same uv for gltf files  
+        // Metallic/RoughnessUV
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 1,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = offsetof(PBR_Essence::VertexUVs, metallicRoughnessTexCoord), // Metallic and roughness have same uv for gltf files  
+        });
+        
+        // NormalMapUV
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 1,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = offsetof(PBR_Essence::VertexUVs, normalTexCoord),
+        });
+    
+        // EmissionUV
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 1,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = offsetof(PBR_Essence::VertexUVs, emissiveTexCoord),
+        });
 
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// NormalMapUV
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, normalMapUV);
-
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// Tangent
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, tangentValue);
-
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// Normal
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, normalValue);
-
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// EmissionUV
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, emissionUV);
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
         // OcclusionUV
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
+            .binding = 1,
             .format = VK_FORMAT_R32G32_SFLOAT,
-            .offset = offsetof(AS::PBR::Vertex, occlusionUV), // Metallic and roughness have same uv for gltf files  
+            .offset = offsetof(PBR_Essence::VertexUVs, occlusionTexCoord), // Metallic and roughness have same uv for gltf files  
         });
-        {// HasSkin
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32_SINT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, hasSkin); // TODO We should use a primitiveInfo instead
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// JointIndices
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32B32A32_SINT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, jointIndices);
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// JointWeights
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, jointWeights);
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
         
         std::vector<VkPushConstantRange> pushConstantRanges{};
         pushConstantRanges.emplace_back(VkPushConstantRange{
@@ -1147,8 +1137,8 @@ namespace MFA
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),
             pipelineLayout,
-            1,
-            &vertexInputBindingDescription,
+            static_cast<uint32_t>(bindingDescriptions.size()),
+            bindingDescriptions.data(),
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
             inputAttributeDescriptions.data(),
             options
@@ -1165,46 +1155,21 @@ namespace MFA
         
         std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuGeometryShader.get() };
 
-        VkVertexInputBindingDescription vertexInputBindingDescription{};
-        vertexInputBindingDescription.binding = 0;
-        vertexInputBindingDescription.stride = sizeof(AS::PBR::Vertex);
-        vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        VkVertexInputBindingDescription const vertexInputBindingDescription{
+            .binding = 0,
+            .stride = sizeof(PBR_Variant::SkinnedVertex),
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+        };
 
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
 
-        {// Position
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, position);
-
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// HasSkin
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32_SINT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, hasSkin);
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// JointIndices
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32B32A32_SINT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, jointIndices);
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// JointWeights
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, jointWeights);
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
+        // WorldPosition
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+            .offset = offsetof(PBR_Variant::SkinnedVertex, worldPosition),
+        });
 
         const auto pipelineLayout = RF::CreatePipelineLayout(
             static_cast<uint32_t>(descriptorSetLayouts.size()),
@@ -1244,46 +1209,21 @@ namespace MFA
             gpuFragmentShader.get()
         };
 
-        VkVertexInputBindingDescription vertexInputBindingDescription{};
-        vertexInputBindingDescription.binding = 0;
-        vertexInputBindingDescription.stride = sizeof(AS::PBR::Vertex);
-        vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        VkVertexInputBindingDescription const vertexInputBindingDescription{
+            .binding = 0,
+            .stride = sizeof(PBR_Variant::SkinnedVertex),
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+        };
 
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
 
-        {// Position
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, position);
-
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// HasSkin
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32_SINT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, hasSkin); // TODO We should use a primitiveInfo instead
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// JointIndices
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32B32A32_SINT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, jointIndices);
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// JointWeights
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, jointWeights);
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
+        // WorldPosition
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+            .offset = offsetof(PBR_Variant::SkinnedVertex, worldPosition),
+        });
 
         std::vector<VkPushConstantRange> pushConstantRanges{};
         VkPushConstantRange pushConstantRange{
@@ -1325,51 +1265,36 @@ namespace MFA
         
         std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get() };
 
-        VkVertexInputBindingDescription vertexInputBindingDescription{};
-        vertexInputBindingDescription.binding = 0;
-        vertexInputBindingDescription.stride = sizeof(AS::PBR::Vertex);
-        vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        std::vector<VkVertexInputBindingDescription> bindingDescriptions {};
+
+        bindingDescriptions.emplace_back(VkVertexInputBindingDescription {
+            .binding = static_cast<uint32_t>(bindingDescriptions.size()),
+            .stride = sizeof(PBR_Variant::SkinnedVertex),
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+        });
+
+        bindingDescriptions.emplace_back(VkVertexInputBindingDescription {
+            .binding = static_cast<uint32_t>(bindingDescriptions.size()),
+            .stride = sizeof(PBR_Essence::VertexUVs),
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+        });
 
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
 
-        // Position
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
-            .format = VK_FORMAT_R32G32B32_SFLOAT,
-            .offset = offsetof(AS::PBR::Vertex, position),
-        });
-
-        // BaseColorUV
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
-            .format = VK_FORMAT_R32G32_SFLOAT,
-            .offset = offsetof(AS::PBR::Vertex, baseColorUV),
-        });
-
-        // HasSkin
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
-            .format = VK_FORMAT_R32_SINT,
-            .offset = offsetof(AS::PBR::Vertex, hasSkin), // TODO We should use a primitiveInfo instead
-        });
-
-        // JointIndices
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
-            .format = VK_FORMAT_R32G32B32A32_SINT,
-            .offset = offsetof(AS::PBR::Vertex, jointIndices),
-        });
-
-        // JointWeights
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
+        // WorldPosition
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
             .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-            .offset = offsetof(AS::PBR::Vertex, jointWeights),
+            .offset = offsetof(PBR_Variant::SkinnedVertex, worldPosition),
+        });
+
+        // BaseColorUV
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 1,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = offsetof(PBR_Essence::VertexUVs, baseColorTexCoord)
         });
 
         // Pipeline layout
@@ -1401,8 +1326,8 @@ namespace MFA
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),
             pipelineLayout,
-            1,
-            &vertexInputBindingDescription,
+            static_cast<uint32_t>(bindingDescriptions.size()),
+            bindingDescriptions.data(),
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
             inputAttributeDescriptions.data(),
             graphicPipelineOptions
@@ -1458,14 +1383,6 @@ namespace MFA
         // Compute shader
         /////////////////////////////////////////////////////////////////
 
-        // Vertices
-        bindings.emplace_back(VkDescriptorSetLayoutBinding {
-            .binding = static_cast<uint32_t>(bindings.size()),
-            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            .descriptorCount = 1,
-            .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
-        });
-
         // SkinJoints
         bindings.emplace_back(VkDescriptorSetLayoutBinding {
             .binding = static_cast<uint32_t>(bindings.size()),
@@ -1473,7 +1390,15 @@ namespace MFA
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
         });
-        
+
+        // SkinnedVertices
+        bindings.emplace_back(VkDescriptorSetLayoutBinding {
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+        });
+
         mSkinningPerVariantDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
             bindings.data()
@@ -1526,51 +1451,36 @@ namespace MFA
 
         std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuFragmentShader.get() };
 
-        VkVertexInputBindingDescription vertexInputBindingDescription{};
-        vertexInputBindingDescription.binding = 0;
-        vertexInputBindingDescription.stride = sizeof(AS::PBR::Vertex);
-        vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        std::vector<VkVertexInputBindingDescription> bindingDescriptions {};
+
+        bindingDescriptions.emplace_back(VkVertexInputBindingDescription {
+            .binding = static_cast<uint32_t>(bindingDescriptions.size()),
+            .stride = sizeof(PBR_Variant::SkinnedVertex),
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+        });
+
+        bindingDescriptions.emplace_back(VkVertexInputBindingDescription {
+            .binding = static_cast<uint32_t>(bindingDescriptions.size()),
+            .stride = sizeof(PBR_Essence::VertexUVs),
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+        });
 
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
 
-        // Position
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
-            .format = VK_FORMAT_R32G32B32_SFLOAT,
-            .offset = offsetof(AS::PBR::Vertex, position),
-        });
-
-        // BaseColorUV
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
-            .format = VK_FORMAT_R32G32_SFLOAT,
-            .offset = offsetof(AS::PBR::Vertex, baseColorUV),
-        });
-
-        // HasSkin
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
-            .format = VK_FORMAT_R32_SINT,
-            .offset = offsetof(AS::PBR::Vertex, hasSkin), // TODO We should use a primitiveInfo instead
-        });
-
-        // JointIndices
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
-            .format = VK_FORMAT_R32G32B32A32_SINT,
-            .offset = offsetof(AS::PBR::Vertex, jointIndices),
-        });
-
-        // JointWeights
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
+        // WorldPosition
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
             .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-            .offset = offsetof(AS::PBR::Vertex, jointWeights),
+            .offset = offsetof(PBR_Variant::SkinnedVertex, worldPosition),
+        });
+
+        // BaseColorUV
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 1,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = offsetof(PBR_Essence::VertexUVs, baseColorTexCoord)
         });
 
         // Pipeline layout
@@ -1600,8 +1510,8 @@ namespace MFA
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),
             pipelineLayout,
-            1,
-            &vertexInputBindingDescription,
+            static_cast<uint32_t>(bindingDescriptions.size()),
+            bindingDescriptions.data(),
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
             inputAttributeDescriptions.data(),
             graphicPipelineOptions

@@ -52,8 +52,14 @@ namespace MFA
     )
     {
         auto const vertexData = mesh.getVertexData()->memory;
+
         outStageBuffer = RF::CreateStageBuffer(vertexData.len, 1);
-        mVerticesBuffer = RF::CreateVertexBuffer(commandBuffer, *outStageBuffer->buffers[0], vertexData);
+
+        mVerticesBuffer = RF::CreateVertexBuffer(
+            commandBuffer,
+            *outStageBuffer->buffers[0],
+            vertexData
+        );
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -73,14 +79,14 @@ namespace MFA
 
     void DebugEssence::bindVertexBuffer(RT::CommandRecordState const & recordState) const
     {
-        RF::BindVertexBuffer(recordState, *mVerticesBuffer->buffers[0]);
+        RF::BindVertexBuffer(recordState, *mVerticesBuffer);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     void DebugEssence::bindIndexBuffer(RT::CommandRecordState const & recordState) const
     {
-        RF::BindIndexBuffer(recordState, *mIndicesBuffer->buffers[0]);
+        RF::BindIndexBuffer(recordState, *mIndicesBuffer);
     }
 
     //-------------------------------------------------------------------------------------------------

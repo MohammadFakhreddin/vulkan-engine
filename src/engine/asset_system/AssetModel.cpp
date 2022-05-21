@@ -6,10 +6,12 @@ namespace MFA::AssetSystem
 
     Model::Model(
         std::shared_ptr<MeshBase> mesh_,
-        std::vector<std::shared_ptr<Texture>> textures_
+        std::vector<std::string> textureIds_,
+        std::vector<SamplerConfig> samplerConfigs_
     )
         : mesh(std::move(mesh_))
-        , textures(std::move(textures_))
+        , textureIds(std::move(textureIds_))
+        , samplerConfigs(std::move(samplerConfigs_))
     {}
 
     //-------------------------------------------------------------------------------------------------

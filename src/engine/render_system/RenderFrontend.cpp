@@ -1254,8 +1254,8 @@ namespace MFA::RenderFrontend
         CBlob const data
     )
     {
+        // Compute dispatches do not have render pass
         MFA_ASSERT(recordState.isValid);
-        MFA_ASSERT(recordState.renderPass != nullptr);
         RB::PushConstants(
             recordState.commandBuffer,
             recordState.pipeline->pipelineLayout,

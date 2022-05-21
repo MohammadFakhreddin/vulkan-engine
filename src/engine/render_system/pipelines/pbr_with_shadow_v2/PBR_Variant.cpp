@@ -103,6 +103,21 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    void PBR_Variant::compute(
+        RT::CommandRecordState const & recordState,
+        BindDescriptorSetFunction const & bindFunction
+    ) const
+    {
+        bindComputeDescriptorSet(recordState);
+
+        for (auto & node : mNodes)
+        {
+            computeNode(recordState, node, bindFunction);
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void PBR_Variant::render(
         RT::CommandRecordState const & recordState,
         BindDescriptorSetFunction const & bindFunction,
@@ -142,6 +157,51 @@ namespace MFA
             mBufferDirtyCounter = 2;
 
             mIsSkinJointsChanged = false;
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBR_Variant::preComputeBarrier(std::vector<VkBufferMemoryBarrier> & outBarriers) const
+    {
+        for (auto & bufferAndMemory : mSkinnedVerticesBuffer->buffers)
+        {
+            VkBufferMemoryBarrier barrier =
+		    {
+			    VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+			    nullptr,
+			    0,
+			    VK_ACCESS_SHADER_WRITE_BIT,
+			    RF::GetGraphicQueueFamily(),
+			    RF::GetComputeQueueFamily(),
+			    bufferAndMemory->buffer,
+			    0,
+			    bufferAndMemory->size
+		    };
+
+            outBarriers.emplace_back(barrier);
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBR_Variant::preRenderBarrier(std::vector<VkBufferMemoryBarrier> & outBarriers) const
+    {
+        for (auto & bufferAndMemory : mSkinnedVerticesBuffer->buffers)
+        {
+            VkBufferMemoryBarrier barrier =
+		    {
+			    VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+			    nullptr,
+			    VK_ACCESS_SHADER_WRITE_BIT,
+			    0,
+			    RF::GetComputeQueueFamily(),
+			    RF::GetGraphicQueueFamily(),
+			    bufferAndMemory->buffer,
+			    0,
+			    bufferAndMemory->size
+		    };
+            outBarriers.emplace_back(barrier);
         }
     }
 
@@ -406,7 +466,7 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     void PBR_Variant::drawNode(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         Node const & node,
         BindDescriptorSetFunction const & bindFunction,
         AS::AlphaMode alphaMode
@@ -418,7 +478,7 @@ namespace MFA
         {
             MFA_ASSERT(static_cast<int>(mMeshData->subMeshes.size()) > node.meshNode->subMeshIndex);
             drawSubMesh(
-                drawPass,
+                recordState,
                 mMeshData->subMeshes[node.meshNode->subMeshIndex],
                 node,
                 bindFunction,
@@ -430,29 +490,72 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     void PBR_Variant::drawSubMesh(
-        RT::CommandRecordState const & drawPass,
-        AS::PBR::SubMesh const & subMesh,
+        RT::CommandRecordState const & recordState,
+        SubMesh const & subMesh,
         Node const & node,
         BindDescriptorSetFunction const & bindFunction,
         AS::AlphaMode const alphaMode
     )
     {
         auto const & primitives = subMesh.findPrimitives(alphaMode);
-        if (primitives.empty() == false)
+        for (auto const * primitive : primitives)
         {
-            for (auto const * primitive : primitives)
+            if (bindFunction != nullptr)
             {
-                if (bindFunction != nullptr)
-                {
-                    bindFunction(*primitive, node);
-                }
-                RF::DrawIndexed(
-                    drawPass,
-                    primitive->indicesCount,
-                    1,
-                    primitive->indicesStartingIndex
-                );
+                bindFunction(*primitive, node);
             }
+            RF::DrawIndexed(
+                recordState,
+                primitive->indicesCount,
+                1,
+                primitive->indicesStartingIndex
+            );
+        }
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void PBR_Variant::computeNode(
+        RT::CommandRecordState const & recordState,
+        Node const & node,
+        BindDescriptorSetFunction const & bindFunction
+    ) const
+    {
+        // TODO We can reduce nodes count for better performance when importing
+        // Question: Why can't we just render sub-meshes ?
+        if (node.meshNode->hasSubMesh())
+        {
+            MFA_ASSERT(static_cast<int>(mMeshData->subMeshes.size()) > node.meshNode->subMeshIndex);
+            computeSubMesh(
+                recordState,
+                mMeshData->subMeshes[node.meshNode->subMeshIndex],
+                node,
+                bindFunction
+            );
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBR_Variant::computeSubMesh(
+        RT::CommandRecordState const & recordState,
+        SubMesh const & subMesh,
+        Node const & node,
+        BindDescriptorSetFunction const & bindFunction
+    ) const
+    {
+        for (auto const & primitive : subMesh.primitives)
+        {
+            if (bindFunction != nullptr)
+            {
+                bindFunction(primitive, node);
+            }
+            RF::Dispatch(
+                recordState,
+                static_cast<uint32_t>(std::ceil(static_cast<float>(primitive.vertexCount) / 256.0f)),
+                1,
+                1
+            );
         }
     }
 
@@ -582,7 +685,19 @@ namespace MFA
     {
         RF::BindVertexBuffer(
             recordState,
-            *mSkinnedVerticesBuffer->buffers[recordState.frameIndex]
+            *mSkinnedVerticesBuffer->buffers[recordState.frameIndex],
+            0
+        );
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void PBR_Variant::bindComputeDescriptorSet(RT::CommandRecordState const & recordState) const
+    {
+        RF::BindDescriptorSet(
+            recordState,
+            RenderFrontend::UpdateFrequency::PerEssence,
+            mComputeDescriptorSet.descriptorSets[recordState.frameIndex]
         );
     }
 

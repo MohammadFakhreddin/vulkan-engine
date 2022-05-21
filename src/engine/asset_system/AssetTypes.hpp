@@ -67,17 +67,17 @@ namespace MFA::AssetSystem
 
     struct SamplerConfig
     {
-        bool isValid = false;
+        bool const isValid = false;
         enum class SampleMode
         {
             Linear,
             Nearest
         };
-        SampleMode sampleMode = SampleMode::Linear;
-        uint32_t magFilter = 0;
-        uint32_t minFilter = 0;
-        uint32_t wrapS = 0;
-        uint32_t wrapT = 0;
+        SampleMode const sampleMode = SampleMode::Linear;
+        int const magFilter = 0;
+        int const minFilter = 0;
+        int const wrapS = 0;
+        int const wrapT = 0;
     };
 
 }

@@ -69,9 +69,9 @@ namespace MFA
             float inverseNodeTransform[16] {};
 
             int skinIndex;
-            int vertexCount;
+            uint32_t vertexCount;
+            uint32_t vertexStartingIndex;
             int placeholder0;
-            int placeholder1;
         };
 
         explicit PBRWithShadowPipelineV2();
@@ -110,7 +110,7 @@ namespace MFA
 
         void updateVariantsBuffers(RT::CommandRecordState const & recordState) const;
 
-        void performSkinning(RT::CommandRecordState & recordState) const;
+        void performSkinning(RT::CommandRecordState & recordState);
 
         void preComputeBarrier(RT::CommandRecordState const & recordState);
 

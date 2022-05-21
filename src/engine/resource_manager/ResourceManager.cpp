@@ -11,7 +11,7 @@
 
 #include <unordered_map>
 
-namespace MFA
+namespace MFA::ResourceManager
 {
 
     //-------------------------------------------------------------------------------------------------
@@ -122,14 +122,13 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
     // TODO Use job system to make this process multi-threaded
     std::shared_ptr<AS::Model> ResourceManager::AcquireCpuModel(
-        std::string const & nameOrFileAddress,
+        std::string const & modelId,
         bool const loadFileIfNotExists
     )
     {
         std::shared_ptr<AS::Model> cpuModel = nullptr;
 
-        std::string relativePath{};
-        Path::RelativeToAssetFolder(nameOrFileAddress, relativePath);
+        std::string const relativePath = Path::RelativeToAssetFolder(modelId);
         
         auto const findResult = state->availableCpuModels.find(relativePath);
         if (findResult != state->availableCpuModels.end())
@@ -143,7 +142,7 @@ namespace MFA
         }
 
         // TODO: Find a cleaner and more scalable way
-        auto const extension = FS::ExtractExtensionFromPath(relativePath);
+        auto const extension = Path::ExtractExtensionFromPath(relativePath);
         if (extension == ".gltf" || extension == ".glb")
         {
             cpuModel = Importer::ImportGLTF(Path::ForReadWrite(relativePath));
@@ -165,6 +164,20 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    std::vector<std::shared_ptr<RT::GpuTexture>> AcquireGpuTextures(std::vector<std::string> const & textureIds)
+    {
+        std::vector<std::shared_ptr<RT::GpuTexture>> gpuTextures {};
+
+        for (auto const & textureId : textureIds)
+        {
+            gpuTextures.emplace_back(AcquireGpuTexture(textureId));
+        }
+
+        return gpuTextures;
+}
+
+    //-------------------------------------------------------------------------------------------------
+
     static std::shared_ptr<RT::GpuTexture> createGpuTexture(AS::Texture * texture, std::string const & name)
     {
         MFA_ASSERT(name.empty() == false);
@@ -177,16 +190,16 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-
+    // TODO: Idea: Acquire Gltf mesh separately with list of textures. Then acquire textures when needed.
+    // // User should not use importer directly. Everything should be through resource manager
     std::shared_ptr<RT::GpuTexture> ResourceManager::AcquireGpuTexture(
-        std::string const & nameOrFileAddress,
+        std::string const & textureId,
         bool const loadFileIfNotExists
     )
     {
         std::shared_ptr<RT::GpuTexture> gpuTexture = nullptr;
 
-        std::string relativePath{};
-        Path::RelativeToAssetFolder(nameOrFileAddress, relativePath);
+        std::string const relativePath = Path::RelativeToAssetFolder(textureId);
 
         auto const findResult = state->availableGpuTextures.find(relativePath);
         if (findResult != state->availableGpuTextures.end())
@@ -206,20 +219,19 @@ namespace MFA
             return nullptr;
         }
 
-        return createGpuTexture(cpuTexture.get(), nameOrFileAddress);
+        return createGpuTexture(cpuTexture.get(), textureId);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     std::shared_ptr<AssetSystem::Texture> ResourceManager::AcquireCpuTexture(
-        std::string const & nameOrFileAddress,
+        std::string const & textureId,
         bool const loadFileIfNotExists
     )
     {
         std::shared_ptr<AS::Texture> texture = nullptr;
 
-        std::string relativePath{};
-        Path::RelativeToAssetFolder(nameOrFileAddress, relativePath);
+        std::string const relativePath = Path::RelativeToAssetFolder(textureId);
 
         auto const findResult = state->availableCpuTextures.find(relativePath);
         if (findResult != state->availableCpuTextures.end())
@@ -232,14 +244,14 @@ namespace MFA
             return texture;
         }
 
-        auto const extension = FS::ExtractExtensionFromPath(relativePath);
+        auto const extension = Path::ExtractExtensionFromPath(relativePath);
         if (extension == ".ktx")
         {
             texture = Importer::ImportKTXImage(Path::ForReadWrite(relativePath));
-        } else if (extension == ".png" || extension == ".jpg")
+        } else if (extension == ".png" || extension == ".jpg" || extension == ".jpeg")
         {
             texture = Importer::ImportUncompressedImage(Path::ForReadWrite(relativePath));
-        } else if (nameOrFileAddress == "Error")
+        } else if (textureId == "Error")
         {
             texture = Importer::CreateErrorTexture();
         } else

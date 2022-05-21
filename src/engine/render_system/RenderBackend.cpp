@@ -675,9 +675,9 @@ namespace MFA::RenderBackend
         void ** outBufferData
     )
     {
-        MFA_ASSERT(outBufferData == nullptr);
+        MFA_ASSERT(*outBufferData == nullptr);
         VK_Check(vkMapMemory(device, bufferMemory, offset, size, 0, outBufferData));
-        MFA_ASSERT(outBufferData != nullptr);
+        MFA_ASSERT(*outBufferData != nullptr);
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 #include "../TimeBuffer.hlsl"
 
-struct RawVertex {
+struct UnSkinnedVertex {
     float4 localPosition;
 
     float4 tangent;
@@ -36,14 +36,14 @@ struct PushConsts
     float4x4 model;
     float4x4 inverseNodeTransform;
     int skinIndex;
-    int vertexCount;
-    int placeholder0;
+    uint vertexCount;
+    uint vertexStartingIndex;
     int placeholder1;
 };
 
-StructuredBuffer <RawVertex> rawVertices : register(b0, space1);
-ConstantBuffer <SkinJoints> skinJoints: register(b0, space2);
-RWStructuredBuffer<SkinnedVertex> skinnedVertices : register(u1, space2);
+StructuredBuffer <UnSkinnedVertex> unSkinnedVertices : register(b0, space0);
+ConstantBuffer <SkinJoints> skinJoints: register(b0, space1);
+RWStructuredBuffer<SkinnedVertex> skinnedVertices : register(u1, space1);
 
 [[vk::push_constant]]
 cbuffer {
@@ -52,7 +52,7 @@ cbuffer {
 
 #define IdentityMat float4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
 
-#define rawVertex rawVertices[index]
+#define unSkinnedVertex unSkinnedVertices[index]
 #define skinnedVertex skinnedVertices[index]
 
 [numthreads(256, 1, 1)]
@@ -64,48 +64,50 @@ void main(uint3 GlobalInvocationID : SV_DispatchThreadID)
         return;
     }
 
+    index = index + pushConsts.vertexStartingIndex;
+
     float4x4 skinMat;
-    if (rawVertex.hasSkin == 1) {
+    if (unSkinnedVertex.hasSkin == 1) {
         int skinIndex = pushConsts.skinIndex;
         float4x4 inverseNodeTransform = pushConsts.inverseNodeTransform;
         skinMat = 0;
-        if (rawVertex.jointWeights.x > 0) {
+        if (unSkinnedVertex.jointWeights.x > 0) {
             
             skinMat += mul(
                 mul(
                     inverseNodeTransform, 
-                    skinJoints.joints[skinIndex + rawVertex.jointIndices.x]
+                    skinJoints.joints[skinIndex + unSkinnedVertex.jointIndices.x]
                 ), 
-                rawVertex.jointWeights.x
+                unSkinnedVertex.jointWeights.x
             );
 
-            if (rawVertex.jointWeights.y > 0) {
+            if (unSkinnedVertex.jointWeights.y > 0) {
             
                 skinMat += mul(
                     mul(
                         inverseNodeTransform, 
-                        skinJoints.joints[skinIndex + rawVertex.jointIndices.y]
+                        skinJoints.joints[skinIndex + unSkinnedVertex.jointIndices.y]
                     ), 
-                    rawVertex.jointWeights.y
+                    unSkinnedVertex.jointWeights.y
                 );
             
-                if (rawVertex.jointWeights.z > 0) {
+                if (unSkinnedVertex.jointWeights.z > 0) {
             
                     skinMat += mul(
                         mul(
                             inverseNodeTransform, 
-                            skinJoints.joints[skinIndex + rawVertex.jointIndices.z]
+                            skinJoints.joints[skinIndex + unSkinnedVertex.jointIndices.z]
                         ), 
-                        rawVertex.jointWeights.z
+                        unSkinnedVertex.jointWeights.z
                     );
             
-                    if (rawVertex.jointWeights.w > 0) {
+                    if (unSkinnedVertex.jointWeights.w > 0) {
                         skinMat += mul(
                             mul(
                                 inverseNodeTransform, 
-                                skinJoints.joints[skinIndex + rawVertex.jointIndices.w]
+                                skinJoints.joints[skinIndex + unSkinnedVertex.jointIndices.w]
                             ), 
-                            rawVertex.jointWeights.w
+                            unSkinnedVertex.jointWeights.w
                         );
                     }
             
@@ -119,15 +121,15 @@ void main(uint3 GlobalInvocationID : SV_DispatchThreadID)
     float4x4 skinModelMat = mul(pushConsts.model, skinMat);
     
     // Position
-    skinnedVertex.worldPosition = mul(skinModelMat, rawVertex.localPosition);
+    skinnedVertex.worldPosition = mul(skinModelMat, unSkinnedVertex.localPosition);
 
     // Normals
-	float4 tempTangent = rawVertex.tangent;
+	float4 tempTangent = unSkinnedVertex.tangent;
     tempTangent = mul(skinModelMat, tempTangent);
     
     skinnedVertex.worldTangent = normalize(tempTangent.xyz);
 
-	float4 tempNormal = float4(rawVertex.normal, 0.0);  // W is zero beacuas normal is a vector
+	float4 tempNormal = float4(unSkinnedVertex.normal, 0.0);  // W is zero beacuas normal is a vector
     tempNormal = mul(skinModelMat, tempNormal);
     
     skinnedVertex.worldNormal = normalize(tempNormal.xyz);

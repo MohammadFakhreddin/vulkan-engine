@@ -58,7 +58,6 @@ void GLTFMeshViewerScene::Init() {
         }
         {
             ModelRenderRequiredData params {};
-            params.gpuModel = nullptr;
             params.displayName = "War-craft soldier";
             Path::ForReadWrite("models/warcraft_3_alliance_footmanfanmade/scene.gltf", params.address);
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {0.0f, -5.926f, -180.0f});
@@ -277,20 +276,22 @@ bool GLTFMeshViewerScene::RequiresUpdate()
 void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredData) const
 {
     SceneManager::AssignMainThreadTask([this, &renderRequiredData]()->void{
+
         auto const cpuModel = RC::AcquireCpuModel(renderRequiredData.address);
-        renderRequiredData.gpuModel = RC::AcquireGpuModel(renderRequiredData.address);
+        //renderRequiredData.gpuModel = RC::AcquireGpuModel(renderRequiredData.address);
 
         auto * pbrPipeline = SceneManager::GetPipeline<PBRWithShadowPipelineV2>();
         MFA_ASSERT(pbrPipeline != nullptr);
         if(pbrPipeline->hasEssence(renderRequiredData.address) == false){
             MFA_ASSERT(dynamic_cast<AS::PBR::Mesh *>(cpuModel->mesh.get()) != nullptr);
             auto const * mesh = static_cast<AS::PBR::Mesh *>(cpuModel->mesh.get());
-            auto meshData = mesh->getMeshData();
-            MFA_ASSERT(meshData != nullptr);
+            //auto meshData = mesh->getMeshData();
+            //MFA_ASSERT(meshData != nullptr);
             auto const addResult = pbrPipeline->addEssence(
                 std::make_shared<PBR_Essence>(
-                    renderRequiredData.gpuModel,
-                    meshData
+                    renderRequiredData.address,
+                    *mesh,
+                    RC::AcquireGpuTextures(cpuModel->textureIds)
                 )
             );
             MFA_ASSERT(addResult == true);
@@ -305,7 +306,7 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
 
         renderRequiredData.meshRendererComponent = entity->AddComponent<MeshRendererComponent>(
             *pbrPipeline,
-            renderRequiredData.gpuModel->nameId
+            renderRequiredData.address
         );
         MFA_ASSERT(renderRequiredData.meshRendererComponent.expired() == false);
 

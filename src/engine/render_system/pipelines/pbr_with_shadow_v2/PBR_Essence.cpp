@@ -35,7 +35,7 @@ MFA::PBR_Essence::PBR_Essence(
         std::shared_ptr<RT::BufferGroup> unSkinnedVerticesStageBuffer = nullptr;
         std::shared_ptr<RT::BufferGroup> verticesUVsStageBuffer = nullptr;
         
-        auto const commandBuffer = RF::BeginSingleTimeComputeCommand();
+        auto const commandBuffer = RF::BeginSingleTimeGraphicCommand();
         prepareIndicesBuffer(commandBuffer, mesh, indicesStageBuffer);
         preparePrimitiveBuffer(commandBuffer, primitivesStageBuffer);
         prepareUnSkinnedVerticesBuffer(commandBuffer, mesh, unSkinnedVerticesStageBuffer);
@@ -200,7 +200,7 @@ void MFA::PBR_Essence::prepareVerticesUVsBuffer(
 
     RF::UpdateLocalBuffer(
         commandBuffer,
-        *mVerticesUVsBuffer->buffers[0],
+        *mVerticesUVsBuffer,
         *outStageBuffer->buffers[0]
     );
 }
@@ -224,7 +224,7 @@ void MFA::PBR_Essence::prepareIndicesBuffer(
 
     RF::UpdateLocalBuffer(
         commandBuffer,
-        *mIndicesBuffer->buffers[0],
+        *mIndicesBuffer,
         *outStageBuffer->buffers[0]
     );
 }
@@ -338,7 +338,7 @@ void MFA::PBR_Essence::createComputeDescriptorSet(
         .offset = 0,
         .range = mUnSkinnedVerticesBuffer->bufferSize,
     };
-    descriptorSetSchema.AddUniformBuffer(&unSkinnedVerticesBufferInfo);
+    descriptorSetSchema.AddStorageBuffer(&unSkinnedVerticesBufferInfo);
 
     descriptorSetSchema.UpdateDescriptorSets();
 }
@@ -377,14 +377,14 @@ uint32_t MFA::PBR_Essence::getIndexCount() const
 
 void MFA::PBR_Essence::bindVertexUVsBuffer(RT::CommandRecordState const & recordState) const
 {
-    RF::BindVertexBuffer(recordState, *mVerticesUVsBuffer->buffers[0]);
+    RF::BindVertexBuffer(recordState, *mVerticesUVsBuffer, 1);
 }
 
 //-------------------------------------------------------------------------------------------------
 
 void MFA::PBR_Essence::bindIndexBuffer(RT::CommandRecordState const & recordState) const
 {
-    RF::BindIndexBuffer(recordState, *mIndicesBuffer->buffers[0]);
+    RF::BindIndexBuffer(recordState, *mIndicesBuffer);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -404,7 +404,7 @@ void MFA::PBR_Essence::bindComputeDescriptorSet(RT::CommandRecordState const & r
 {
     RF::BindDescriptorSet(
         recordState,
-        RF::UpdateFrequency::PerEssence,
+        RF::UpdateFrequency::PerFrame,
         mComputeDescriptorSet.descriptorSets[0]
     );
 }

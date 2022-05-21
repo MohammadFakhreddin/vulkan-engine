@@ -6,10 +6,10 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockMath.hpp"
 #include "engine/BedrockMatrix.hpp"
-#include "engine/job_system/ThreadSafeQueue.hpp"
 #include "engine/job_system/JobSystem.hpp"
 #include "engine/asset_system/Asset_PBR_Mesh.hpp"
 #include "engine/BedrockCommon.hpp"
+#include "engine/BedrockPath.hpp"
 #include "engine/asset_system/AssetTypes.hpp"
 #include "engine/asset_system/AssetTexture.hpp"
 #include "engine/asset_system/AssetBaseMesh.hpp"
@@ -19,6 +19,7 @@
 #include "libs/tiny_obj_loader/tiny_obj_loader.h"
 #include "libs/tiny_gltf_loader/tiny_gltf_loader.h"
 
+#include <utility>
 
 namespace MFA::Importer
 {
@@ -49,6 +50,7 @@ namespace MFA::Importer
             auto const depth = 1; // TODO We need to support depth
             auto const slices = 1;
             texture = ImportInMemoryTexture(
+                path,
                 pixels->memory,
                 image_width,
                 image_height,
@@ -75,6 +77,7 @@ namespace MFA::Importer
         pixel[3] = 1;
 
         return ImportInMemoryTexture(
+            "Error",
             data->memory,
             1,
             1,
@@ -88,6 +91,7 @@ namespace MFA::Importer
     //-------------------------------------------------------------------------------------------------
 
     std::shared_ptr<AS::Texture> ImportInMemoryTexture(
+        std::string const & nameOrAddress,
         CBlob const originalImagePixels,
         int32_t const width,
         int32_t const height,
@@ -117,13 +121,14 @@ namespace MFA::Importer
             mipCount
         );
 
-        std::shared_ptr<AS::Texture> texture = std::make_shared<AS::Texture>();
+        std::string nameId = Path::RelativeToAssetFolder(nameOrAddress);
+
+        std::shared_ptr<AS::Texture> texture = std::make_shared<AS::Texture>(nameId);
 
         texture->initForWrite(
             format,
             slices,
             depth,
-            options.sampler,
             Memory::Alloc(bufferSize)
         );
 
@@ -170,11 +175,13 @@ namespace MFA::Importer
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<AS::Texture> ImportKTXImage(std::string const & path, ImportTextureOptions const & options)
+    std::shared_ptr<AS::Texture> ImportKTXImage(std::string const & path)
     {
         using namespace Utils::KTXTexture;
 
-        std::shared_ptr<AS::Texture> result = std::make_shared<AS::Texture>();
+        std::string nameId = Path::RelativeToAssetFolder(path);
+
+        std::shared_ptr<AS::Texture> result = std::make_shared<AS::Texture>(nameId);
 
         LoadResult loadResult = LoadResult::Invalid;
         auto * imageInfo = Load(loadResult, path);
@@ -190,7 +197,6 @@ namespace MFA::Importer
                 imageInfo->format,
                 imageInfo->sliceCount,
                 imageInfo->depth,
-                options.sampler,
                 Memory::Alloc(imageInfo->totalImageSize)
             );
 
@@ -243,7 +249,7 @@ namespace MFA::Importer
 
         if (MFA_VERIFY(path.empty() == false))
         {
-            auto const extension = FS::ExtractExtensionFromPath(path);
+            auto const extension = Path::ExtractExtensionFromPath(path);
 
             if (extension == ".png" || extension == ".jpg" || extension == ".jpeg")
             {
@@ -251,7 +257,7 @@ namespace MFA::Importer
             }
             else if (extension == ".ktx")
             {
-                texture = ImportKTXImage(path, options);
+                texture = ImportKTXImage(path);
             }
         }
 
@@ -684,85 +690,106 @@ namespace MFA::Importer
 
     struct TextureRef
     {
-        std::string gltf_name;
-        uint8_t index;
+        std::string const gltfName {};
+        uint8_t const index = 0;
+        std::string const relativePath {};
     };
 
     static void GLTF_extractTextures(
         std::string const & path,
         tinygltf::Model const & gltfModel,
         std::vector<TextureRef> & outTextureRefs,
-        std::vector<std::shared_ptr<AS::Texture>> & outTextures
+        std::vector<AS::SamplerConfig> & outSamplers
+        //std::vector<std::shared_ptr<AS::Texture>> & outTextures
     )
     {
-        std::string const directoryPath = FS::ExtractDirectoryFromPath(path);
+        std::string directoryPath = Path::ExtractDirectoryFromPath(path);
 
-        struct QueueItem
+        directoryPath = Path::RelativeToAssetFolder(directoryPath);
+
+        /*struct QueueItem
         {
             std::string gltfName{};
             std::shared_ptr<AS::Texture> texture{};
-        };
-        ThreadSafeQueue<QueueItem> resultTextureQueue{};
+        };*/
+        //ThreadSafeQueue<QueueItem> resultTextureQueue{};
 
         // Extracting textures
         if (false == gltfModel.textures.empty())
         {
             for (auto const & texture : gltfModel.textures)
             {
-                JS::AssignTask([&texture, &gltfModel, &directoryPath, &resultTextureQueue](uint32_t threadNum, uint32_t threadCount)->void
-                {
-                    AS::SamplerConfig sampler{};
-                    sampler.isValid = false;
-                    if (texture.sampler >= 0)
-                    {// Sampler
-                        auto const & gltfSampler = gltfModel.samplers[texture.sampler];
-                        sampler.magFilter = gltfSampler.magFilter;
-                        sampler.minFilter = gltfSampler.minFilter;
-                        sampler.wrapS = gltfSampler.wrapS;
-                        sampler.wrapT = gltfSampler.wrapT;
-                        //sampler.sample_mode = gltf_sampler. // TODO
-                        sampler.isValid = true;
-                    }
-                    std::shared_ptr<AS::Texture> assetSystemTexture{};
-                    auto const & image = gltfModel.images[texture.source];
-                    {// Texture
-                        ImportTextureOptions textureOptions{};
-                        textureOptions.tryToGenerateMipmaps = false;
-                        textureOptions.sampler = &sampler;
-                        std::string const image_path = directoryPath + "/" + image.uri;
-                        assetSystemTexture = ImportImage(
-                            image_path,
-                            // TODO tryToGenerateMipmaps takes too long (We should create .asset files)
-                            textureOptions
-                        );
-                    }
-                    MFA_ASSERT(assetSystemTexture->isValid());
+                /*JS::AssignTask([&texture, &gltfModel, &directoryPath, &resultTextureQueue](uint32_t threadNum, uint32_t threadCount)->void
+                {*/
+                //AS::SamplerConfig sampler{};
+                //sampler.isValid = false;
+                if (texture.sampler >= 0)
+                {// Sampler
+                    auto const & gltfSampler = gltfModel.samplers[texture.sampler];
+                    //sampler.sample_mode = gltf_sampler. // TODO
+                    //sampler.isValid = true;
+                    outSamplers.emplace_back(AS::SamplerConfig {
+                        .isValid = true,
+                        .magFilter = gltfSampler.magFilter,
+                        .minFilter = gltfSampler.minFilter,
+                        .wrapS = gltfSampler.wrapS,
+                        .wrapT = gltfSampler.wrapT
 
-                    QueueItem const item{
-                        .gltfName = image.uri,
-                        .texture = assetSystemTexture,
-                    };
-                    while (resultTextureQueue.TryToPush(item) == false);
-                });
+                    });
+                } else
+                {
+                    outSamplers.emplace_back(AS::SamplerConfig {
+                        .isValid = false
+                    });
+                }
+                //outSamplers.emplace_back(sampler);
+
+                //std::shared_ptr<AS::Texture> assetSystemTexture{};
+                auto const & image = gltfModel.images[texture.source];
+                //{// Texture
+                    //ImportTextureOptions textureOptions{};
+                    //textureOptions.tryToGenerateMipmaps = false;
+                std::string const imagePath = directoryPath + "/" + image.uri;
+                    //assetSystemTexture = ImportImage(
+                    //    image_path,
+                    //    // TODO tryToGenerateMipmaps takes too long (We should create .asset files)
+                    //    textureOptions
+                    //);
+                //}
+                //MFA_ASSERT(assetSystemTexture->isValid());
+
+                TextureRef textureRef {
+                    .gltfName = image.uri,
+                    .index = static_cast<uint8_t>(outTextureRefs.size()),
+                    .relativePath = imagePath
+                };
+                outTextureRefs.emplace_back(textureRef);
+
+                /*QueueItem const item{
+                    .gltfName = image.uri,
+                    .texture = assetSystemTexture,
+                };*/
+                //while (resultTextureQueue.TryToPush(item) == false);
+                //});
             }
 
             JS::WaitForThreadsToFinish();
 
         }
 
-        while (resultTextureQueue.IsEmpty() == false)
+        /*while (resultTextureQueue.IsEmpty() == false)
         {
             QueueItem item;
             if (resultTextureQueue.TryToPop(item))
-            {
-                TextureRef textureRef{
-                    .gltf_name = item.gltfName,
-                    .index = static_cast<uint8_t>(outTextures.size()),
-                };
-                outTextureRefs.emplace_back(textureRef);
-                outTextures.emplace_back(item.texture);
-            }
-        }
+            {*/
+        /*TextureRef textureRef{
+            .gltf_name = item.gltfName,
+            .index = static_cast<uint8_t>(outTextures.size()),
+        };*/
+        //outTextureRefs.emplace_back(textureRef);
+                //outTextures.emplace_back(item.texture);
+            //}
+        //}
 
     }
 
@@ -778,7 +805,7 @@ namespace MFA::Importer
         {
             for (auto const & textureRef : textureRefs)
             {
-                if (textureRef.gltf_name == textureName)
+                if (textureRef.gltfName == textureName)
                 {
                     return textureRef.index;
                 }
@@ -1806,7 +1833,7 @@ namespace MFA::Importer
             std::string warning;
             TG::Model gltfModel{};
 
-            auto const extension = FS::ExtractExtensionFromPath(path);
+            auto const extension = Path::ExtractExtensionFromPath(path);
 
             bool success = false;
 
@@ -1844,21 +1871,18 @@ namespace MFA::Importer
             if (success)
             {
                 std::shared_ptr<AS::PBR::Mesh> mesh{};
-                std::vector<std::shared_ptr<AS::Texture>> textures{};
-                /*result = std::make_shared<AS::Model>(
-                    std::make_shared<Mesh>(),
-                    std::vector<std::shared_ptr<AS::Texture>>{}
-                );*/
+                std::vector<TextureRef> textureRefs{};
+                std::vector<AS::SamplerConfig> samplerConfigs {};
+
                 // TODO Camera
                 if (false == gltfModel.meshes.empty())
                 {
-                    std::vector<TextureRef> textureRefs{};
                     // Textures
                     GLTF_extractTextures(
                         path,
                         gltfModel,
                         textureRefs,
-                        textures
+                        samplerConfigs
                     );
                     //{// Reading samplers values from materials
                         //auto const & sampler = model.samplers[base_color_gltf_texture.sampler];
@@ -1878,7 +1902,14 @@ namespace MFA::Importer
                 // Animation
                 GLTF_extractAnimations(gltfModel, mesh.get());
                 mesh->finalizeData();
-                result = std::make_shared<AS::Model>(mesh, textures);
+
+                std::vector<std::string> textureIds (textureRefs.size());
+                for (size_t i = 0; i < textureIds.size(); ++i)
+                {
+                    textureIds[i] = textureRefs[i].relativePath;
+                }
+
+                result = std::make_shared<AS::Model>(mesh, textureIds, samplerConfigs);
             }
         }
         return result;

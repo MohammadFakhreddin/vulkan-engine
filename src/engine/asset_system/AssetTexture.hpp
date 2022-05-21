@@ -10,7 +10,6 @@
 
 namespace MFA::AssetSystem
 {
-
     class Texture final : public Base
     {
     public:
@@ -71,7 +70,7 @@ namespace MFA::AssetSystem
 
     public:
 
-        explicit Texture();
+        explicit Texture(std::string nameId);
         ~Texture() override;
 
         Texture(Texture const &) noexcept = delete;
@@ -120,7 +119,6 @@ namespace MFA::AssetSystem
             Format format,
             uint16_t slices,
             uint16_t depth,
-            SamplerConfig const * sampler,
             std::shared_ptr<SmartBlob> buffer
         );
 
@@ -159,22 +157,34 @@ namespace MFA::AssetSystem
             return mDepth;
         }
 
-        void SetSampler(SamplerConfig * sampler);
-
         [[nodiscard]]
-        SamplerConfig const & GetSampler() const noexcept;
+        std::string const & GetNameId() const noexcept
+        {
+            return mNameId;
+        }
 
     private:
+
+        std::string mNameId {};
+
         Format mFormat = Format::INVALID;
+
         uint16_t mSlices = 0;
+
         uint8_t mMipCount = 0;
+
         uint16_t mDepth = 0;
-        SamplerConfig mSampler{};
+
         std::vector<MipmapInfo> mMipmapInfos{};
+
         std::shared_ptr<SmartBlob> mBuffer{};
+
         uint64_t mCurrentOffset = 0;
+
         int mPreviousMipWidth = -1;
+
         int mPreviousMipHeight = -1;
+
     };
 
 }

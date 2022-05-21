@@ -145,11 +145,11 @@ private:
 
     std::vector<std::shared_ptr<RT::GpuTexture>> mTextures {};
 
-    std::shared_ptr<RT::BufferGroup> mVerticesUVsBuffer {};
+    std::shared_ptr<RT::BufferAndMemory> mVerticesUVsBuffer {};
 
     std::shared_ptr<RT::BufferGroup> mUnSkinnedVerticesBuffer {};
 
-    std::shared_ptr<RT::BufferGroup> mIndicesBuffer {};
+    std::shared_ptr<RT::BufferAndMemory> mIndicesBuffer {};
 
     uint32_t const mVertexCount;
 

@@ -81,6 +81,8 @@ namespace MFA
             Skin * skin = nullptr;
         };
 
+        using BindDescriptorSetFunction = std::function<void(AS::PBR::Primitive const & primitive, Node const & node)>;
+
         explicit PBR_Variant(PBR_Essence const * essence);
         ~PBR_Variant() override;
 
@@ -104,7 +106,11 @@ namespace MFA
 
         void updateBuffers(RT::CommandRecordState const & recordState);
 
-        using BindDescriptorSetFunction = std::function<void(AS::PBR::Primitive const & primitive, Node const & node)>;
+        void compute(
+            RT::CommandRecordState const & recordState,
+            BindDescriptorSetFunction const & bindFunction
+        ) const;
+
         void render(
             RT::CommandRecordState const & recordState,
             BindDescriptorSetFunction const & bindFunction,
@@ -112,6 +118,10 @@ namespace MFA
         );
 
         void postRender(float deltaTimeInSec);
+
+        void preComputeBarrier(std::vector<VkBufferMemoryBarrier> & outBarriers) const;
+
+        void preRenderBarrier(std::vector<VkBufferMemoryBarrier> & outBarriers) const;
 
         void OnUI() override;
 
@@ -129,19 +139,32 @@ namespace MFA
         void updateSkinJoints(uint32_t skinIndex, AS::PBR::Skin const & skin);
 
         void drawNode(
-            RT::CommandRecordState const & drawPass,
+            RT::CommandRecordState const & recordState,
             Node const & node,
             BindDescriptorSetFunction const & bindFunction,
             AS::AlphaMode alphaMode
         );
 
         void drawSubMesh(
-            RT::CommandRecordState const & drawPass,
+            RT::CommandRecordState const & recordState,
             AS::PBR::SubMesh const & subMesh,
             Node const & node,
             BindDescriptorSetFunction const & bindFunction,
             AS::AlphaMode alphaMode
         );
+
+        void computeNode(
+            RT::CommandRecordState const & recordState,
+            Node const & node,
+            BindDescriptorSetFunction const & bindFunction
+        ) const;
+
+        void computeSubMesh(
+            RT::CommandRecordState const & recordState,
+            AS::PBR::SubMesh const & subMesh,
+            Node const & node,
+            BindDescriptorSetFunction const & bindFunction
+        ) const;
 
         [[nodiscard]]
         glm::mat4 computeNodeLocalTransform(Node const & node) const;
@@ -157,6 +180,8 @@ namespace MFA
         void prepareSkinnedVerticesBuffer(uint32_t vertexCount);
 
         void bindSkinnedVerticesBuffer(RT::CommandRecordState const & recordState) const;
+
+        void bindComputeDescriptorSet(RT::CommandRecordState const & recordState) const;
 
     private:
 

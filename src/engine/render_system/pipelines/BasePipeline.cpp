@@ -54,9 +54,7 @@ namespace MFA
 
     bool BasePipeline::hasEssence(std::string const & nameId) const
     {
-        std::string relativePath;
-        Path::RelativeToAssetFolder(nameId, relativePath);
-        return mEssenceAndVariantsMap.contains(relativePath);
+        return mEssenceAndVariantsMap.contains(Path::RelativeToAssetFolder(nameId));
     }
 
     //-------------------------------------------------------------------------------------------------
