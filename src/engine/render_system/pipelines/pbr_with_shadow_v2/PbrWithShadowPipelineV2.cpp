@@ -265,10 +265,10 @@ namespace MFA
     
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::preComputeBarrier(RT::CommandRecordState const & recordState)
+    void PBRWithShadowPipelineV2::preComputeBarrier(RT::CommandRecordState const & recordState) const
     {
         if (RF::GetComputeQueueFamily() != RF::GetGraphicQueueFamily())
-		{
+        {
             std::vector<VkBufferMemoryBarrier> barriers {};
 
             for (auto * variant : mAllVariantsList)
@@ -277,13 +277,13 @@ namespace MFA
             }
 
             RF::PipelineBarrier(
-            	recordState,
-				VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-			    static_cast<uint32_t>(barriers.size()),
+                recordState,
+                VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                static_cast<uint32_t>(barriers.size()),
                 barriers.data()
             );
-		}
+        }
     }
     
     //-------------------------------------------------------------------------------------------------
@@ -291,7 +291,7 @@ namespace MFA
     void PBRWithShadowPipelineV2::postComputeBarrier(RT::CommandRecordState const & recordState)
     {
         if (RF::GetComputeQueueFamily() != RF::GetGraphicQueueFamily())
-		{
+        {
             std::vector<VkBufferMemoryBarrier> barriers {};
 
             for (auto * variant : mAllVariantsList)
@@ -306,7 +306,7 @@ namespace MFA
                 static_cast<uint32_t>(barriers.size()),
                 barriers.data()
             );
-		}
+        }
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -819,7 +819,6 @@ namespace MFA
             {
                 if (variant->IsActive() && variant->IsInFrustum())
                 {
-
                     RF::BeginQuery(
                         recordState,
                         occlusionQueryData.Pool,

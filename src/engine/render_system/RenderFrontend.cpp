@@ -250,7 +250,7 @@ namespace MFA::RenderFrontend
         state->surfaceCapabilities = computeSurfaceCapabilities();
 
         state->swapChainImageCount = RB::ComputeSwapChainImagesCount(state->surfaceCapabilities);
-        state->maxFramesPerFlight = state->swapChainImageCount;
+        state->maxFramesPerFlight = std::min(3u, state->swapChainImageCount);
 
         state->screenWidth = static_cast<ScreenWidth>(state->surfaceCapabilities.currentExtent.width);
         state->screenHeight = static_cast<ScreenHeight>(state->surfaceCapabilities.currentExtent.height);

@@ -167,17 +167,17 @@ namespace MFA
         for (auto & bufferAndMemory : mSkinnedVerticesBuffer->buffers)
         {
             VkBufferMemoryBarrier barrier =
-		    {
-			    VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-			    nullptr,
-			    0,
-			    VK_ACCESS_SHADER_WRITE_BIT,
-			    RF::GetGraphicQueueFamily(),
-			    RF::GetComputeQueueFamily(),
-			    bufferAndMemory->buffer,
-			    0,
-			    bufferAndMemory->size
-		    };
+            {
+                VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+                nullptr,
+                0,
+                VK_ACCESS_SHADER_WRITE_BIT,
+                RF::GetGraphicQueueFamily(),
+                RF::GetComputeQueueFamily(),
+                bufferAndMemory->buffer,
+                0,
+                bufferAndMemory->size
+            };
 
             outBarriers.emplace_back(barrier);
         }
@@ -190,17 +190,17 @@ namespace MFA
         for (auto & bufferAndMemory : mSkinnedVerticesBuffer->buffers)
         {
             VkBufferMemoryBarrier barrier =
-		    {
-			    VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-			    nullptr,
-			    VK_ACCESS_SHADER_WRITE_BIT,
-			    0,
-			    RF::GetComputeQueueFamily(),
-			    RF::GetGraphicQueueFamily(),
-			    bufferAndMemory->buffer,
-			    0,
-			    bufferAndMemory->size
-		    };
+            {
+                VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+                nullptr,
+                VK_ACCESS_SHADER_WRITE_BIT,
+                0,
+                RF::GetComputeQueueFamily(),
+                RF::GetGraphicQueueFamily(),
+                bufferAndMemory->buffer,
+                0,
+                bufferAndMemory->size
+            };
             outBarriers.emplace_back(barrier);
         }
     }

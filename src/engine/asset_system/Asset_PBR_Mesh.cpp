@@ -53,7 +53,9 @@ namespace MFA::AssetSystem::PBR
 
         mData = std::make_shared<MeshData>();
 
-        mNextStartingIndex = 0;
+        mIndicesStartingIndex = 0;
+        mVerticesStartingIndex = 0;
+
         mNextVertexOffset = 0;
         mNextIndexOffset = 0;
     }

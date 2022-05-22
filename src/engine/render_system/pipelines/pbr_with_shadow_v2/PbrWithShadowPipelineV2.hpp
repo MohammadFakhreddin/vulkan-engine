@@ -112,7 +112,7 @@ namespace MFA
 
         void performSkinning(RT::CommandRecordState & recordState);
 
-        void preComputeBarrier(RT::CommandRecordState const & recordState);
+        void preComputeBarrier(RT::CommandRecordState const & recordState) const;
 
         void postComputeBarrier(RT::CommandRecordState const & recordState);
 
