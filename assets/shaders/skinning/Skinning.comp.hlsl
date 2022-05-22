@@ -129,7 +129,7 @@ void main(uint3 GlobalInvocationID : SV_DispatchThreadID)
     
     skinnedVertex.worldTangent = normalize(tempTangent.xyz);
 
-	float4 tempNormal = float4(unSkinnedVertex.normal, 0.0);  // W is zero beacuas normal is a vector
+	float4 tempNormal = float4(unSkinnedVertex.normal, 0.0);  // W is zero because normal is a vector
     tempNormal = mul(skinModelMat, tempNormal);
     
     skinnedVertex.worldNormal = normalize(tempNormal.xyz);

@@ -248,7 +248,7 @@ namespace MFA
                             Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.model);
                             pushConstants.vertexCount = primitive.vertexCount;
                             pushConstants.skinIndex = primitive.hasSkin ? node.skin->skinStartingIndex : -1;
-                            pushConstants.vertexStartingIndex = primitive.indicesStartingIndex;
+                            pushConstants.vertexStartingIndex = primitive.verticesStartingIndex;
 
                             RF::PushConstants(
                                 recordState,

@@ -176,7 +176,8 @@ namespace MFA::AssetSystem::PBR
         primitive.indicesCount = indicesCount;
         primitive.indicesOffset = mNextIndexOffset;
         primitive.verticesOffset = mNextVertexOffset;
-        primitive.indicesStartingIndex = mNextStartingIndex;
+        primitive.indicesStartingIndex = mIndicesStartingIndex;
+        primitive.verticesStartingIndex = mVerticesStartingIndex;
         uint32_t const verticesSize = sizeof(Vertex) * vertexCount;
         uint32_t const indicesSize = sizeof(Index) * indicesCount;
         MFA_ASSERT(mNextVertexOffset + verticesSize <= mVertexData->memory.len);
@@ -222,7 +223,8 @@ namespace MFA::AssetSystem::PBR
 
         mNextVertexOffset += verticesSize;
         mNextIndexOffset += indicesSize;
-        mNextStartingIndex += indicesCount;
+        mIndicesStartingIndex += indicesCount;
+        mVerticesStartingIndex += vertexCount;
     }
 
     //-------------------------------------------------------------------------------------------------
