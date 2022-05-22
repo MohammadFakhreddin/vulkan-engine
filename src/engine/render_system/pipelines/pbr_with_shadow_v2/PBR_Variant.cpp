@@ -367,7 +367,7 @@ namespace MFA
                 {
                     if (sampler.interpolation != Animation::Interpolation::Linear)
                     {
-                        MFA_LOG_ERROR("This sample only supports linear interpolations");
+                        MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
                         continue;
                     }
 
