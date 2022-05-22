@@ -53,7 +53,15 @@ Particles are simulated using compute shader
 
 ## Experimental android port
 
-<img src="examples/android-port.jpg" height=400>
+<img src="examples/android-port.jpg" height=300>
+
+<br>
+
+## Experimental ios port
+
+<img src="examples/ios-port.jpg" height=300>
+
+<br>
 
 ## .obj file:
 <img src="examples/viking_house.gif">
