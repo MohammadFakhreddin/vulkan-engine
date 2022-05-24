@@ -5,6 +5,8 @@
 #include <memory>
 #include <string>
 
+#include "engine/asset_system/AssetModel.hpp"
+
 namespace MFA::AssetSystem
 {
     class Texture;
@@ -17,15 +19,26 @@ namespace MFA::ResourceManager
     void Shutdown();
 
     // Note: No need to use Path
-    std::shared_ptr<RT::GpuModel> AcquireGpuModel(std::string const & nameOrFileAddress, bool loadFileIfNotExists = true);
-    std::shared_ptr<AssetSystem::Model> AcquireCpuModel(std::string const & nameOrFileAddress, bool loadFileIfNotExists = true);
+    [[nodiscard]]
+    std::shared_ptr<AssetSystem::Model> AcquireCpuModel(
+        std::string const & modelId,
+        bool loadFileIfNotExists = true
+    );
 
-    // TODO Support for acquiring mesh
-    std::shared_ptr<RT::GpuTexture> AcquireGpuTexture(std::string const & nameOrFileAddress, bool loadFileIfNotExists = true);
-    std::shared_ptr<AssetSystem::Texture> AcquireCpuTexture(std::string const & nameOrFileAddress, bool loadFileIfNotExists = true);
+    [[nodiscard]]
+    std::vector<std::shared_ptr<RT::GpuTexture>> AcquireGpuTextures(std::vector<std::string> const & textureIds);
 
-    // For shapes like sphere,cube, etc
-    //bool Assign(std::shared_ptr<AssetSystem::Model> const & cpuModel, std::string const & name);
+    [[nodiscard]]
+    std::shared_ptr<RT::GpuTexture> AcquireGpuTexture(
+        std::string const & textureId,
+        bool loadFileIfNotExists = true
+    );
+
+    [[nodiscard]]
+    std::shared_ptr<AssetSystem::Texture> AcquireCpuTexture(
+        std::string const & textureId,
+        bool loadFileIfNotExists = true
+    );
 
 }
 

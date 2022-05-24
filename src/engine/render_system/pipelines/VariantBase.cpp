@@ -103,32 +103,6 @@ MFA::RenderTypes::VariantId MFA::VariantBase::GetId() const noexcept
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RenderTypes::DescriptorSetGroup const & MFA::VariantBase::CreateDescriptorSetGroup(
-    VkDescriptorPool descriptorPool,
-    uint32_t descriptorSetCount,
-    RT::DescriptorSetLayoutGroup const & descriptorSetLayout
-)
-{
-    MFA_ASSERT(mDescriptorSetGroup.IsValid() == false);
-    mDescriptorSetGroup = RF::CreateDescriptorSets(
-        descriptorPool,
-        descriptorSetCount,
-        descriptorSetLayout
-    );
-    MFA_ASSERT(mDescriptorSetGroup.IsValid() == true);
-    return mDescriptorSetGroup;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-MFA::RenderTypes::DescriptorSetGroup const & MFA::VariantBase::GetDescriptorSetGroup() const
-{
-    MFA_ASSERT(mDescriptorSetGroup.IsValid() == true);
-    return mDescriptorSetGroup;
-}
-
-//-------------------------------------------------------------------------------------------------
-
 bool MFA::VariantBase::IsActive() const noexcept
 {
     if (auto const ptr = mRendererComponent.lock())
@@ -180,9 +154,9 @@ void MFA::VariantBase::SetIsOccluded(bool const isOccluded)
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::BoundingVolumeComponent * MFA::VariantBase::GetBoundingVolume() const
+std::shared_ptr<MFA::BoundingVolumeComponent> MFA::VariantBase::GetBoundingVolume() const
 {
-    return mBoundingVolumeComponent.lock().get();
+    return mBoundingVolumeComponent.lock();
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -16,10 +16,7 @@ namespace MFA::ShapeGenerator
             using namespace AS::Debug;
 
             std::vector<glm::vec3> positions{};
-            //std::vector<glm::vec2> uvs{};
-            //std::vector<glm::vec3> normals{};
-            //std::vector<glm::vec4> tangents{};
-
+            
             std::vector<AS::Index> meshIndices{};
 
             static constexpr unsigned int X_SEGMENTS = 64;
@@ -37,25 +34,11 @@ namespace MFA::ShapeGenerator
                     //https://computergraphics.stackexchange.com/questions/5498/compute-sphere-tangent-for-normal-mapping?newreg=93cd3b167a714b24ba01001a16545482
 
                     positions.emplace_back(xPos, yPos, zPos);
-                    //uvs.emplace_back(xSegment, ySegment);
-                    //normals.emplace_back(xPos, yPos, zPos);
-
-                    // As solution to compute tangent I decided to rotate normal by 90 degree (In any direction :)))
-                    auto rotationMatrix = glm::identity<glm::mat4>();
-                    float angle[3]{ 0.0f, 0.0f, 90.0f };
-                    Matrix::RotateWithEulerAngle(rotationMatrix, angle);
-
-                    glm::vec4 tangentMatrix{ xPos, yPos, zPos, 0.0f };
-
-                    //tangents.emplace_back(rotationMatrix * tangentMatrix);
                 }
             }
 
             MFA_ASSERT(positions.empty() == false);
-            //MFA_ASSERT(uvs.empty() == false);
-            //MFA_ASSERT(normals.empty() == false);
-            //MFA_ASSERT(tangents.empty() == false);
-
+            
             bool oddRow = false;
             for (unsigned int y = 0; y < Y_SEGMENTS; ++y)
             {
@@ -107,59 +90,14 @@ namespace MFA::ShapeGenerator
 
                 // Positions
                 Matrix::CopyGlmToCells(positions[index], vertex.position);
-
-                //// UVs We assign uvs for all materials in case a texture get assigned to shape
-                //// Base color
-                //Matrix::CopyGlmToCells(uvs[index], vertex.baseColorUV);
-
-                //// Metallic
-                //Matrix::CopyGlmToCells(uvs[index], vertex.metallicUV);
-
-                //// Roughness
-                //Matrix::CopyGlmToCells(uvs[index], vertex.roughnessUV);
-
-                //// Emission
-                //Matrix::CopyGlmToCells(uvs[index], vertex.emissionUV);
-
-                //// Normals
-                //Matrix::CopyGlmToCells(uvs[index], vertex.normalMapUV);
-
-                //// Normal buffer
-                //Matrix::CopyGlmToCells(normals[index], vertex.normalValue);
-
-                //// Tangent buffer
-                //Matrix::CopyGlmToCells(tangents[index], vertex.tangentValue);
-
             }
-
-            //auto const subMeshIndex = mesh->insertSubMesh();
-
-            //Primitive primitive{};
-            //primitive.hasNormalBuffer = true;
-
-            //mesh->insertPrimitive(
-            //    subMeshIndex,
-            //    primitive,
-            //    verticesCount,
-            //    meshVertices.data(),
-            //    indicesCount,
-            //    meshIndices.data()
-            //);
-
-            //Node node{
-            //    .subMeshIndex = 0,
-            //    .scale = {1, 1, 1}
-            //};
-
-            //mesh->insertNode(node);
 
             mesh->finalizeData();
 
-            std::vector<std::shared_ptr<AS::Texture>> textures{};
-
             return std::make_shared<AS::Model>(
                 mesh,
-                textures
+                std::vector<std::string>{},
+                std::vector<AS::SamplerConfig>{}
             );
         }
 
@@ -168,8 +106,7 @@ namespace MFA::ShapeGenerator
             using namespace AS::Debug;
 
             std::vector<glm::vec3> positions{};
-            //std::vector<glm::vec2> uvs{};
-
+            
             std::vector<AS::Index> meshIndices{};
 
             positions.emplace_back(0.0f, 0.0f, 0.0f);
@@ -182,11 +119,6 @@ namespace MFA::ShapeGenerator
                 position[0] = position[0] - 0.5f;
                 position[1] = position[1] - 0.5f;
             }
-
-            //uvs.emplace_back(0.0f, 0.0f);
-            //uvs.emplace_back(1.0f, 0.0f);
-            //uvs.emplace_back(0.0f, 1.0f);
-            //uvs.emplace_back(1.0f, 1.0f);
 
             meshIndices.emplace_back(0);
             meshIndices.emplace_back(1);
@@ -223,33 +155,14 @@ namespace MFA::ShapeGenerator
                 auto & vertex = meshVertices[index];
                 // Positions
                 Matrix::CopyGlmToCells(positions[index], vertex.position);
-                // UVs We assign uvs for all materials in case a texture get assigned to shape
-                // Base color
-                //Matrix::CopyGlmToCells(uvs[index], vertex.baseColorUV);
             }
-
-            //auto const subMeshIndex = mesh->insertSubMesh();
-
-            //Primitive primitive{};
-            //primitive.hasBaseColorTexture = true;
-            //mesh->insertPrimitive(
-            //subMeshIndex,
-            //primitive,
-            //verticesCount,
-            //meshVertices.data(),
-            //indicesCount,
-            //meshIndices.data()
-            //);
-
-            //Node node{};
-            //Matrix::CopyGlmToCells(glm::identity<glm::mat4>(), node.transform);
-            //mesh->insertNode(node);
 
             mesh->finalizeData();
 
             return std::make_shared<AS::Model>(
                 mesh,
-                std::vector<std::shared_ptr<AS::Texture>>{}
+                std::vector<std::string>{},
+                std::vector<AS::SamplerConfig> {}
             );
         }
 
@@ -279,7 +192,7 @@ namespace MFA::ShapeGenerator
 
             auto const verticesCount = static_cast<uint16_t>(positions.size());
             auto const indicesCount = static_cast<uint16_t>(meshIndices.size());
-            
+
             auto const verticesBuffer = Memory::Alloc(sizeof(Vertex) * verticesCount);
             auto const indicesBuffer = Memory::Alloc(sizeof(AS::Index) * indicesCount);
 
@@ -329,7 +242,8 @@ namespace MFA::ShapeGenerator
 
             return std::make_shared<AS::Model>(
                 mesh,
-                std::vector<std::shared_ptr<AS::Texture>>{}
+                std::vector<std::string>{},
+                std::vector<AS::SamplerConfig>{}
             );
 
         }

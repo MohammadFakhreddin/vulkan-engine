@@ -41,7 +41,7 @@ private:
     struct ModelRenderRequiredData
     {
         bool isLoaded = false;
-        std::shared_ptr<MFA::RT::GpuModel> gpuModel{};
+        //std::shared_ptr<MFA::RT::GpuModel> gpuModel{};
         std::string displayName{};
         std::string address{};
         MFA::Entity * entity = nullptr;

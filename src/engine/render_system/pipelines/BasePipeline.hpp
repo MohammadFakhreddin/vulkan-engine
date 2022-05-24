@@ -107,16 +107,14 @@ namespace MFA
         bool addEssence(std::shared_ptr<EssenceBase> const & essence);
 
         [[nodiscard]]
-        bool hasEssence(std::string const & nameOrAddress) const;
+        bool hasEssence(std::string const & nameId) const;
 
         // Editor only function
-        void destroyEssence(std::string const & nameOrAddress);
+        void destroyEssence(std::string const & nameId);
+        
+        //virtual std::weak_ptr<VariantBase> createVariant(RT::GpuModel const & gpuModel);
 
-        void destroyEssence(RT::GpuModel const & gpuModel);
-
-        virtual std::weak_ptr<VariantBase> createVariant(RT::GpuModel const & gpuModel);
-
-        virtual std::weak_ptr<VariantBase> createVariant(std::string const & nameOrAddress);
+        virtual std::weak_ptr<VariantBase> createVariant(std::string const & nameId);
 
         void removeVariant(VariantBase & variant);
 

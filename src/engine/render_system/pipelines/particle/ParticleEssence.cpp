@@ -32,11 +32,15 @@ namespace MFA
 
         outStageBuffer = RF::CreateStageBuffer(vertexBlob.len, 1);
 
+        RF::UpdateHostVisibleBuffer(
+            *outStageBuffer->buffers[0],
+            vertexBlob
+        );
+
         RF::UpdateLocalBuffer(
             commandBuffer,
             *mVertexBuffer->buffers[0],
-            *outStageBuffer->buffers[0],
-            vertexBlob
+            *outStageBuffer->buffers[0]
         );
     }
 
@@ -82,11 +86,15 @@ namespace MFA
 
         mParamsBuffer = RF::CreateLocalUniformBuffer(sizeof(mParams), 1);
 
+        RF::UpdateHostVisibleBuffer(
+            *outStageBuffer->buffers[0],
+            CBlobAliasOf(mParams)
+        );
+
         RF::UpdateLocalBuffer(
             commandBuffer,
             *mParamsBuffer->buffers[0],
-            *outStageBuffer->buffers[0],
-            CBlobAliasOf(mParams)
+            *outStageBuffer->buffers[0]
         );
     }
 
@@ -94,12 +102,12 @@ namespace MFA
 
     ParticleEssence::ParticleEssence(
         std::string nameId,
-        Params params,
+        Params const & params,
         uint32_t const maxInstanceCount,
         std::vector<std::shared_ptr<RT::GpuTexture>> textures
     )
         : EssenceBase(std::move(nameId))
-        , mParams(std::move(params))
+        , mParams(params)
         , mMaxInstanceCount(maxInstanceCount)
         , mTextures(std::move(textures))
     {}
@@ -123,7 +131,6 @@ namespace MFA
 
         RF::EndAndSubmitGraphicSingleTimeCommand(commandBuffer);
         //---------------------------------------
-
 
         createInstanceBuffer();
         
@@ -168,8 +175,14 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ParticleEssence::compute(RT::CommandRecordState const & recordState) const
+    void ParticleEssence::compute(RT::CommandRecordState const & recordState)
     {
+        if (mIsParamsBufferDirty)
+        {
+            updateParamsBuffer(recordState);
+            mIsParamsBufferDirty = false;
+        }
+
         bindComputeDescriptorSet(recordState);
         auto const dispatchCount = static_cast<uint32_t>(std::ceil(static_cast<float>(mParams.count) / 256.0f));
         RF::Dispatch(
@@ -223,17 +236,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ParticleEssence::updateParamsBuffer() const
+    void ParticleEssence::notifyParamsBufferUpdated()
     {
-        auto const stageBuffer = RF::CreateStageBuffer(sizeof(mParams), 1);
-        auto const commandBuffer = RF::BeginSingleTimeGraphicCommand();
-        RF::UpdateLocalBuffer(
-            commandBuffer,
-            *mParamsBuffer->buffers[0],
-            *stageBuffer->buffers[0],
-            CBlobAliasOf(mParams)
-        );
-        RF::EndAndSubmitGraphicSingleTimeCommand(commandBuffer);
+        mIsParamsBufferDirty = true;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -425,7 +430,20 @@ namespace MFA
             }
         }
     }
+
+    //-------------------------------------------------------------------------------------------------
     
+    void ParticleEssence::updateParamsBuffer(RT::CommandRecordState const & recordState) const
+    {
+        auto const stageBuffer = RF::CreateStageBuffer(sizeof(mParams), 1);
+        RF::UpdateHostVisibleBuffer(*stageBuffer->buffers[0], CBlobAliasOf(mParams));
+        RF::UpdateLocalBuffer(
+            recordState.commandBuffer,
+            *mParamsBuffer->buffers[0],
+            *stageBuffer->buffers[0]
+        );
+    }
+
     //-------------------------------------------------------------------------------------------------
     
 }

@@ -667,7 +667,28 @@ namespace MFA::RenderBackend
 
     //-------------------------------------------------------------------------------------------------
 
-    void MapDataToBuffer(
+    void MapHostVisibleMemory(
+        VkDevice device,
+        VkDeviceMemory bufferMemory,
+        size_t const offset,
+        size_t const size,
+        void ** outBufferData
+    )
+    {
+        MFA_ASSERT(*outBufferData == nullptr);
+        VK_Check(vkMapMemory(device, bufferMemory, offset, size, 0, outBufferData));
+        MFA_ASSERT(*outBufferData != nullptr);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void UnMapHostVisibleMemory(VkDevice device, VkDeviceMemory bufferMemory) {
+        vkUnmapMemory(device, bufferMemory);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void CopyDataToHostVisibleBuffer(
         VkDevice device,
         VkDeviceMemory bufferMemory,
         CBlob const dataBlob
@@ -676,10 +697,15 @@ namespace MFA::RenderBackend
         MFA_ASSERT(dataBlob.ptr != nullptr);
         MFA_ASSERT(dataBlob.len > 0);
         void * tempBufferData = nullptr;
-        VK_Check(vkMapMemory(device, bufferMemory, 0, dataBlob.len, 0, &tempBufferData));
-        MFA_ASSERT(tempBufferData != nullptr);
+        MapHostVisibleMemory(
+            device,
+            bufferMemory,
+            0,
+            dataBlob.len,
+            &tempBufferData
+        );
         ::memcpy(tempBufferData, dataBlob.ptr, dataBlob.len);
-        vkUnmapMemory(device, bufferMemory);
+        UnMapHostVisibleMemory(device, bufferMemory);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -789,16 +815,16 @@ namespace MFA::RenderBackend
             auto const buffer = cpuTexture.GetBuffer();
             MFA_ASSERT(buffer.ptr != nullptr && buffer.len > 0);
             // Create upload buffer
-            auto const uploadBufferGroup = CreateBuffer(
+            auto const uploadBufferGroup = CreateBuffer(    // TODO: We can cache this buffer
                 device,
                 physicalDevice,
                 buffer.len,
                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
-            //MFA_DEFER{ DestroyBuffer(device, uploadBufferGroup); };
+
             // Map texture data to buffer
-            MapDataToBuffer(device, uploadBufferGroup->memory, buffer);
+            CopyDataToHostVisibleBuffer(device, uploadBufferGroup->memory, buffer);
 
             auto const vulkan_format = ConvertCpuTextureFormatToGpu(format);
 
@@ -2143,22 +2169,17 @@ namespace MFA::RenderBackend
     //-------------------------------------------------------------------------------------------------
 
     void UpdateLocalBuffer(
-        VkDevice device,
         VkCommandBuffer commandBuffer,
-        CBlob const & data,
         RT::BufferAndMemory const & buffer,
         RT::BufferAndMemory const & stagingBuffer
     )
     {
-        VkDeviceSize const bufferSize = data.len;
-
-        MapDataToBuffer(device, stagingBuffer.memory, data);
-
+        MFA_ASSERT(buffer.size == stagingBuffer.size);
         copyBuffer(
             commandBuffer,
             stagingBuffer.buffer,
             buffer.buffer,
-            bufferSize
+            buffer.size
         );
     }
 
@@ -2170,7 +2191,7 @@ namespace MFA::RenderBackend
         CBlob const & data
     )
     {
-        MapDataToBuffer(device, bufferGroup.memory, data);
+        CopyDataToHostVisibleBuffer(device, bufferGroup.memory, data);
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -26,13 +26,13 @@ namespace MFA
 
         void preComputeBarrier(std::vector<VkBufferMemoryBarrier> & outBarrier) const;
 
-        void compute(RT::CommandRecordState const & recordState) const;
+        void compute(RT::CommandRecordState const & recordState);
 
         void preRenderBarrier(std::vector<VkBufferMemoryBarrier> & outBarrier) const;
 
         void render(RT::CommandRecordState const & recordState) const;
 
-        void updateParamsBuffer() const;
+        void notifyParamsBufferUpdated();
 
         void createGraphicDescriptorSet(
             VkDescriptorPool descriptorPool,
@@ -50,7 +50,7 @@ namespace MFA
 
         explicit ParticleEssence(
             std::string nameId,
-            AS::Particle::Params params,
+            AS::Particle::Params const & params,
             uint32_t maxInstanceCount,
             std::vector<std::shared_ptr<RT::GpuTexture>> textures
         );
@@ -77,6 +77,8 @@ namespace MFA
         void bindComputeDescriptorSet(RT::CommandRecordState const & recordState) const;
 
         void checkIfUpdateIsRequired(VariantsList const & variants);
+
+        void updateParamsBuffer(RT::CommandRecordState const & recordState) const;
 
         void createVertexBuffer(
             VkCommandBuffer commandBuffer,
@@ -123,6 +125,8 @@ namespace MFA
         uint32_t mNextDrawInstanceCount = 0;
 
         bool mIsInitialized = false;
+
+        bool mIsParamsBufferDirty = false;
 
     };
 }

@@ -16,10 +16,8 @@ POINT_LIGHT(pointLightsBuffer)
 
 struct PushConsts
 {   
-    float4x4 model;
-    float4x4 inverseNodeTransform;
-    int skinIndex;
     int lightIndex;
+    int placeholder0;
     int placeholder1;
     int placeholder2;
 };
@@ -29,7 +27,7 @@ cbuffer {
     PushConsts pushConsts;
 };
 
-#define MAX_VERTEX_COUNT 18//90 // 3 * CubeFaces * MaxPointLight
+#define MAX_VERTEX_COUNT 18//90 // 3 * CubeFaces
 
 [maxvertexcount(MAX_VERTEX_COUNT)]                           // Number of generated vertices
 void main(triangle GSInput input[3], /*uint InvocationID : SV_GSInstanceID,*/ inout TriangleStream<GSOutput> outStream)

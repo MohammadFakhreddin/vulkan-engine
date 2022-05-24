@@ -114,13 +114,13 @@ namespace MFA::RenderFrontend
 
     //-----------------------------------------------------------------------------------------------------------
 
-    [[nodiscard]]
+    /*[[nodiscard]]
     std::shared_ptr<RT::MeshBuffer> CreateMeshBuffers(
         VkCommandBuffer commandBuffer,
         AS::MeshBase const & mesh,
         RT::BufferAndMemory const & vertexStageBuffer,
         RT::BufferAndMemory const & indexStageBuffer
-    );
+    );*/
 
     [[nodiscard]]
     std::shared_ptr<RT::GpuTexture> CreateTexture(AS::Texture const & texture);
@@ -134,14 +134,14 @@ namespace MFA::RenderFrontend
 
     void DestroySampler(RT::SamplerGroup const & samplerGroup);
 
-    [[nodiscard]]
-    std::shared_ptr<RT::GpuModel> CreateGpuModel(
-        VkCommandBuffer commandBuffer,
-        AS::Model const & modelAsset,
-        std::string const & nameId,
-        RT::BufferAndMemory const & vertexStageBuffer,
-        RT::BufferAndMemory const & indexStageBuffer
-    );
+    //[[nodiscard]]
+    //std::shared_ptr<RT::GpuModel> CreateGpuModel(
+    //    VkCommandBuffer commandBuffer,
+    //    AS::Model const & modelAsset,
+    //    std::string const & nameId,
+    //    RT::BufferAndMemory const & vertexStageBuffer,
+    //    RT::BufferAndMemory const & indexStageBuffer
+    //);
 
     void DeviceWaitIdle();
 
@@ -163,6 +163,14 @@ namespace MFA::RenderFrontend
         VkMemoryPropertyFlags properties
     );
 
+    std::shared_ptr<RT::MappedMemory> MapHostVisibleMemory(
+        VkDeviceMemory bufferMemory,
+        size_t offset,
+        size_t size
+    );
+
+    void UnMapHostVisibleMemory(VkDeviceMemory bufferMemory);
+
     [[nodiscard]]
     std::shared_ptr<RT::BufferGroup> CreateBufferGroup(
         VkDeviceSize bufferSize,
@@ -177,11 +185,15 @@ namespace MFA::RenderFrontend
         CBlob const & verticesBlob
     );
 
+    std::shared_ptr<RT::BufferAndMemory> CreateVertexBuffer(VkDeviceSize bufferSize);
+
     std::shared_ptr<RT::BufferAndMemory> CreateIndexBuffer(
         VkCommandBuffer commandBuffer,
         RT::BufferAndMemory const & stageBuffer,
         CBlob const & indicesBlob
     );
+
+    std::shared_ptr<RT::BufferAndMemory> CreateIndexBuffer(VkDeviceSize bufferSize);
 
     std::shared_ptr<RT::BufferGroup> CreateStageBuffer(
         VkDeviceSize bufferSize,
@@ -206,17 +218,9 @@ namespace MFA::RenderFrontend
     );
 
     void UpdateLocalBuffer(
-        RT::CommandRecordState const & recordState,
-        RT::BufferAndMemory const & buffer,
-        RT::BufferAndMemory const & stageBuffer,
-        CBlob const & data
-    );
-
-    void UpdateLocalBuffer(
         VkCommandBuffer commandBuffer,
         RT::BufferAndMemory const & buffer,
-        RT::BufferAndMemory const & stageBuffer,
-        CBlob const & data
+        RT::BufferAndMemory const & stageBuffer
     );
 
     void DestroyBuffer(RT::BufferAndMemory const & bufferGroup);

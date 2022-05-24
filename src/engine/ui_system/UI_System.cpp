@@ -396,7 +396,8 @@ namespace MFA::UI_System
         importTextureOptions.tryToGenerateMipmaps = false;
         importTextureOptions.preferSrgb = false;
 
-        auto textureAsset = Importer::ImportInMemoryTexture(
+        auto const textureAsset = Importer::ImportInMemoryTexture(
+            "FontTextures",
             CBlob{ pixels, image_size },
             width,
             height,

@@ -31,10 +31,6 @@ namespace MFA
             std::weak_ptr<BoundingVolumeComponent> const & boundingVolumeComponent
         );
 
-        virtual void PreRender(float deltaTimeInSec, RT::CommandRecordState const & drawPass) {}
-
-        virtual void PostRender(float deltaTimeInSec) {}
-
         void Shutdown();
 
         [[nodiscard]]
@@ -42,16 +38,6 @@ namespace MFA
 
         [[nodiscard]]
         RT::VariantId GetId() const noexcept;
-
-        // TODO: Remove this function.
-        RT::DescriptorSetGroup const & CreateDescriptorSetGroup(
-            VkDescriptorPool descriptorPool,
-            uint32_t descriptorSetCount,
-            RT::DescriptorSetLayoutGroup const & descriptorSetLayout
-        );
-
-        [[nodiscard]]
-        RT::DescriptorSetGroup const & GetDescriptorSetGroup() const;
 
         [[nodiscard]]
         bool IsActive() const noexcept;
@@ -71,7 +57,7 @@ namespace MFA
         void SetIsOccluded(bool isOccluded);
 
         [[nodiscard]]
-        BoundingVolumeComponent * GetBoundingVolume() const;
+        std::shared_ptr<BoundingVolumeComponent> GetBoundingVolume() const;
 
         virtual void OnUI() {}
 
@@ -90,8 +76,7 @@ namespace MFA
         std::weak_ptr<BoundingVolumeComponent> mBoundingVolumeComponent{};
         std::weak_ptr<TransformComponent> mTransformComponent{};
         int mTransformListenerId = 0;
-        RT::DescriptorSetGroup mDescriptorSetGroup{};
-
+        
         bool mIsModelTransformChanged = true;
         bool mIsOccluded = false;
 

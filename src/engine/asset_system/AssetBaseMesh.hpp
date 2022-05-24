@@ -43,7 +43,7 @@ namespace MFA::AssetSystem
         uint32_t getIndexCount() const;
 
         [[nodiscard]]
-        SmartBlob const * getIndexBuffer() const;
+        SmartBlob const * getIndexData() const;
 
         [[nodiscard]]
         virtual bool isValid() const;
@@ -51,10 +51,10 @@ namespace MFA::AssetSystem
     protected:
 
         uint32_t mVertexCount{};
-        std::shared_ptr<SmartBlob> mVertexBuffer{}; // TODO: We should separate vertexBuffer and index buffer because most of the time we need them only to create gpu buffers
+        std::shared_ptr<SmartBlob> mVertexData{}; // TODO: We should separate vertexBuffer and index buffer because most of the time we need them only to create gpu buffers
 
         uint32_t mIndexCount{};
-        std::shared_ptr<SmartBlob> mIndexBuffer{};
+        std::shared_ptr<SmartBlob> mIndexData{};
 
     };
     

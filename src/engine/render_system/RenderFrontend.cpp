@@ -250,7 +250,7 @@ namespace MFA::RenderFrontend
         state->surfaceCapabilities = computeSurfaceCapabilities();
 
         state->swapChainImageCount = RB::ComputeSwapChainImagesCount(state->surfaceCapabilities);
-        state->maxFramesPerFlight = state->swapChainImageCount;
+        state->maxFramesPerFlight = std::min(3u, state->swapChainImageCount);
 
         state->screenWidth = static_cast<ScreenWidth>(state->surfaceCapabilities.currentExtent.width);
         state->screenHeight = static_cast<ScreenHeight>(state->surfaceCapabilities.currentExtent.height);
@@ -684,30 +684,13 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     void UpdateLocalBuffer(
-        RT::CommandRecordState const & recordState,
-        RT::BufferAndMemory const & buffer,
-        RT::BufferAndMemory const & stageBuffer,
-        CBlob const & data
-    )
-    {
-        MFA_ASSERT(recordState.isValid);
-        MFA_ASSERT(recordState.commandBuffer != nullptr);
-        UpdateLocalBuffer(recordState.commandBuffer, buffer, stageBuffer, data);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void UpdateLocalBuffer(
         VkCommandBuffer commandBuffer,
         RT::BufferAndMemory const & buffer,
-        RT::BufferAndMemory const & stageBuffer,
-        CBlob const & data
+        RT::BufferAndMemory const & stageBuffer
     )
     {
         RB::UpdateLocalBuffer(
-            state->logicalDevice.device,
             commandBuffer,
-            data,
             buffer,
             stageBuffer
         );
@@ -724,22 +707,26 @@ namespace MFA::RenderFrontend
 
         VkDeviceSize const bufferSize = verticesBlob.len;
         
-        auto vertexBuffer = RB::CreateBuffer(
+        auto vertexBuffer = CreateVertexBuffer(bufferSize);
+
+        UpdateHostVisibleBuffer(stageBuffer, verticesBlob);
+
+        UpdateLocalBuffer(commandBuffer, *vertexBuffer, stageBuffer);
+        
+        return vertexBuffer;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<RT::BufferAndMemory> CreateVertexBuffer(VkDeviceSize const bufferSize)
+    {
+        return RB::CreateBuffer(
             state->logicalDevice.device,
             state->physicalDevice,
             bufferSize,
             VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
-        
-        UpdateLocalBuffer(
-            commandBuffer,
-            *vertexBuffer,
-            stageBuffer,
-            verticesBlob
-        );
-        
-        return vertexBuffer;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -752,52 +739,56 @@ namespace MFA::RenderFrontend
     {
         auto const bufferSize = indicesBlob.len;
 
-        auto indexBuffer = RB::CreateBuffer(
-            state->logicalDevice.device,
-            state->physicalDevice,
-            bufferSize,
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-        );
+        auto indexBuffer = CreateIndexBuffer(bufferSize);
 
-        UpdateLocalBuffer(
-            commandBuffer,
-            *indexBuffer,
-            stageBuffer,
-            indicesBlob
-        );
+        UpdateHostVisibleBuffer(stageBuffer, indicesBlob);
+
+        UpdateLocalBuffer(commandBuffer, *indexBuffer, stageBuffer);
 
         return indexBuffer;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<RT::MeshBuffer> CreateMeshBuffers(
-        VkCommandBuffer commandBuffer,
-        AS::MeshBase const & mesh,
-        RT::BufferAndMemory const & vertexStageBuffer,
-        RT::BufferAndMemory const & indexStageBuffer
-    )
+    std::shared_ptr<RT::BufferAndMemory> CreateIndexBuffer(VkDeviceSize const bufferSize)
     {
-        MFA_ASSERT(mesh.isValid());
-
-        auto vertexBuffer = CreateVertexBuffer(
-            commandBuffer,
-            vertexStageBuffer,
-            mesh.getVertexData()->memory
-        );
-        
-        auto indexBuffer = CreateIndexBuffer(
-            commandBuffer,
-            indexStageBuffer,
-            mesh.getIndexBuffer()->memory
-        );
-
-        return std::make_shared<RT::MeshBuffer>(
-            vertexBuffer,
-            indexBuffer
+        return RB::CreateBuffer(
+            state->logicalDevice.device,
+            state->physicalDevice,
+            bufferSize,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
     }
+
+    //-------------------------------------------------------------------------------------------------
+
+    //std::shared_ptr<RT::MeshBuffer> CreateMeshBuffers(
+    //    VkCommandBuffer commandBuffer,
+    //    AS::MeshBase const & mesh,
+    //    RT::BufferAndMemory const & vertexStageBuffer,
+    //    RT::BufferAndMemory const & indexStageBuffer
+    //)
+    //{
+    //    MFA_ASSERT(mesh.isValid());
+
+    //    auto vertexBuffer = CreateVertexBuffer(
+    //        commandBuffer,
+    //        vertexStageBuffer,
+    //        mesh.getVertexData()->memory
+    //    );
+    //    
+    //    auto indexBuffer = CreateIndexBuffer(
+    //        commandBuffer,
+    //        indexStageBuffer,
+    //        mesh.getIndexBuffer()->memory
+    //    );
+
+    //    return std::make_shared<RT::MeshBuffer>(
+    //        vertexBuffer,
+    //        indexBuffer
+    //    );
+    //}
 
     //-------------------------------------------------------------------------------------------------
 
@@ -854,33 +845,33 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<RT::GpuModel> CreateGpuModel(
-        VkCommandBuffer commandBuffer,
-        AS::Model const & modelAsset,
-        std::string const & nameId,
-        RT::BufferAndMemory const & vertexStageBuffer,
-        RT::BufferAndMemory const & indexStageBuffer
-    )
-    {
-        MFA_ASSERT(modelAsset.mesh->isValid());
-        auto meshBuffers = CreateMeshBuffers(
-            commandBuffer,
-            *modelAsset.mesh,
-            vertexStageBuffer,
-            indexStageBuffer
-        );
-        std::vector<std::shared_ptr<RT::GpuTexture>> textures{};
-        for (auto & textureAsset : modelAsset.textures)
-        {
-            MFA_ASSERT(textureAsset->isValid());
-            textures.emplace_back(CreateTexture(*textureAsset));
-        }
-        return std::make_shared<RT::GpuModel>(
-            nameId,
-            std::move(meshBuffers),
-            std::move(textures)
-        );
-    }
+    //std::shared_ptr<RT::GpuModel> CreateGpuModel(
+    //    VkCommandBuffer commandBuffer,
+    //    AS::Model const & modelAsset,
+    //    std::string const & nameId,
+    //    RT::BufferAndMemory const & vertexStageBuffer,
+    //    RT::BufferAndMemory const & indexStageBuffer
+    //)
+    //{
+    //    MFA_ASSERT(modelAsset.mesh->isValid());
+    //    auto meshBuffers = CreateMeshBuffers(
+    //        commandBuffer,
+    //        *modelAsset.mesh,
+    //        vertexStageBuffer,
+    //        indexStageBuffer
+    //    );
+    //    std::vector<std::shared_ptr<RT::GpuTexture>> textures{};
+    //    for (auto & textureAsset : modelAsset.textures)
+    //    {
+    //        MFA_ASSERT(textureAsset->isValid());
+    //        textures.emplace_back(CreateTexture(*textureAsset));
+    //    }
+    //    return std::make_shared<RT::GpuModel>(
+    //        nameId,
+    //        std::move(meshBuffers),
+    //        std::move(textures)
+    //    );
+    //}
 
     //-------------------------------------------------------------------------------------------------
 
@@ -1189,7 +1180,33 @@ namespace MFA::RenderFrontend
             properties
         );
     }
-    
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<RT::MappedMemory> MapHostVisibleMemory(
+        VkDeviceMemory bufferMemory,
+        size_t const offset,
+        size_t const size
+    )
+    {
+        std::shared_ptr<RT::MappedMemory> mappedMemory = std::make_shared<RT::MappedMemory>(bufferMemory);
+        RB::MapHostVisibleMemory(
+            state->logicalDevice.device,
+            bufferMemory,
+            offset,
+            size,
+            mappedMemory->getMappingPtr()
+        );
+        return mappedMemory;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void UnMapHostVisibleMemory(VkDeviceMemory bufferMemory)
+    {
+        RB::UnMapHostVisibleMemory(state->logicalDevice.device, bufferMemory);
+    }
+
     //-------------------------------------------------------------------------------------------------
 
     void SetScissor(RT::CommandRecordState const & recordState, VkRect2D const & scissor)
@@ -1237,8 +1254,8 @@ namespace MFA::RenderFrontend
         CBlob const data
     )
     {
+        // Compute dispatches do not have render pass
         MFA_ASSERT(recordState.isValid);
-        MFA_ASSERT(recordState.renderPass != nullptr);
         RB::PushConstants(
             recordState.commandBuffer,
             recordState.pipeline->pipelineLayout,

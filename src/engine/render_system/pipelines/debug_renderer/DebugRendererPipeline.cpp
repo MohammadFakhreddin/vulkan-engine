@@ -85,9 +85,9 @@ namespace MFA
         {
             auto const cpuModel = RC::AcquireCpuModel(modelName);
             MFA_ASSERT(cpuModel != nullptr);
-            auto const gpuModel = RC::AcquireGpuModel(modelName);
-            MFA_ASSERT(gpuModel != nullptr);
-            auto const addResult = addEssence(std::make_shared<DebugEssence>(gpuModel, cpuModel->mesh->getIndexCount()));
+            auto * debugMesh = dynamic_cast<Mesh *>(cpuModel->mesh.get());
+            MFA_ASSERT(debugMesh != nullptr);
+            auto const addResult = addEssence(std::make_shared<DebugEssence>(modelName, *debugMesh));
             MFA_ASSERT(addResult == true);
         }
     }

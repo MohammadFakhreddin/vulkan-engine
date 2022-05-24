@@ -8,7 +8,6 @@
 #include "engine/entity_system/EntitySystem.hpp"
 #include "engine/render_system/pipelines/VariantBase.hpp"
 #include "engine/ui_system/UI_System.hpp"
-#include "engine/resource_manager/ResourceManager.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 
 namespace MFA
@@ -25,7 +24,7 @@ namespace MFA
     BoundingVolumeRendererComponent::BoundingVolumeRendererComponent(DebugRendererPipeline & pipeline)
         : RendererComponent(
             pipeline,
-            pipeline.createVariant(*RC::AcquireGpuModel("Cube", false)))
+            pipeline.createVariant("Cube"))
     {}
 
     //-------------------------------------------------------------------------------------------------

@@ -6,16 +6,19 @@
 #include <memory>
 #include <vector>
 
-namespace MFA::AssetSystem 
+namespace MFA::AssetSystem
 {
     struct Model
     {
+
         std::shared_ptr<MeshBase> const mesh{};
-        std::vector<std::shared_ptr<Texture>> const textures{};
+        std::vector<std::string> const textureIds{};       // Texture local address
+        std::vector<SamplerConfig> const samplerConfigs{};
 
         explicit Model(
             std::shared_ptr<MeshBase> mesh_,
-            std::vector<std::shared_ptr<Texture>> textures_
+            std::vector<std::string> textureIds_,
+            std::vector<SamplerConfig> samplerConfigs_
         );
         ~Model();
 

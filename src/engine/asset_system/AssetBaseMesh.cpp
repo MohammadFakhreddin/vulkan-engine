@@ -26,10 +26,10 @@ namespace MFA::AssetSystem
         mIndexCount = indexCount;
         MFA_ASSERT(vertexBuffer->memory.ptr != nullptr);
         MFA_ASSERT(vertexBuffer->memory.len > 0);
-        mVertexBuffer = vertexBuffer;
+        mVertexData = vertexBuffer;
         MFA_ASSERT(indexBuffer->memory.ptr != nullptr);
         MFA_ASSERT(indexBuffer->memory.len > 0);
-        mIndexBuffer = indexBuffer;
+        mIndexData = indexBuffer;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -48,7 +48,7 @@ namespace MFA::AssetSystem
 
     SmartBlob const * MeshBase::getVertexData() const
     {
-        return mVertexBuffer.get();
+        return mVertexData.get();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -60,9 +60,9 @@ namespace MFA::AssetSystem
 
     //-------------------------------------------------------------------------------------------------
 
-    SmartBlob const * MeshBase::getIndexBuffer() const
+    SmartBlob const * MeshBase::getIndexData() const
     {
-        return mIndexBuffer.get();
+        return mIndexData.get();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -70,11 +70,11 @@ namespace MFA::AssetSystem
     bool MeshBase::isValid() const
     {
         return mVertexCount > 0 &&
-            mVertexBuffer->memory.ptr != nullptr &&
-            mVertexBuffer->memory.len > 0 &&
+            mVertexData->memory.ptr != nullptr &&
+            mVertexData->memory.len > 0 &&
             mIndexCount > 0 &&
-            mIndexBuffer->memory.ptr != nullptr &&
-            mIndexBuffer->memory.len > 0;
+            mIndexData->memory.ptr != nullptr &&
+            mIndexData->memory.len > 0;
     }
 
     //-------------------------------------------------------------------------------------------------

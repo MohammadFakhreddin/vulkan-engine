@@ -9,6 +9,7 @@
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
 #include "PBR_Essence.hpp"
+#include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
 
 #include <glm/gtx/quaternion.hpp>
 
@@ -73,36 +74,8 @@ namespace MFA
             }
         }
 
-        // Creating cachedSkinJoints array
-        {
-            uint32_t totalJointsCount = 0;
-            for (auto const & skin : mMeshData->skins)
-            {
-                auto const jointsCount = static_cast<uint32_t>(skin.joints.size());
-                totalJointsCount += jointsCount;
-            }
-            if (totalJointsCount > 0)
-            {
-                // TODO: We need a memory pool for staging buffer to reuse it
-                mCachedSkinsJointsBlob = Memory::Alloc(sizeof(JointTransformData) * totalJointsCount);
-                mSkinsJointsBuffer = RF::CreateHostVisibleUniformBuffer(
-                    mCachedSkinsJointsBlob->memory.len,
-                    RF::GetMaxFramesPerFlight()
-                );
-            }
-        }
-        {
-            mCachedSkinsJoints.resize(mMeshData->skins.size());
-            uint32_t startingJointIndex = 0;
-            for (uint32_t i = 0; i < mMeshData->skins.size(); ++i)
-            {
-                auto & skin = mMeshData->skins[i];
-                auto const jointsCount = static_cast<uint32_t>(skin.joints.size());
-                mCachedSkinsJoints[i] = reinterpret_cast<JointTransformData *>(mCachedSkinsJointsBlob->memory.ptr + startingJointIndex * sizeof(JointTransformData));
-                mSkins[i].skinStartingIndex = static_cast<int>(startingJointIndex);
-                startingJointIndex += jointsCount;
-            }
-        }
+        prepareSkinJointsBuffer();
+        prepareSkinnedVerticesBuffer(essence->getVertexCount());
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -111,15 +84,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    [[nodiscard]]
-    RT::BufferGroup const * PBR_Variant::GetSkinJointsBuffer() const noexcept
-    {
-        return mSkinsJointsBuffer.get();
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void PBR_Variant::PreRender(float const deltaTimeInSec, RT::CommandRecordState const & recordState)
+    void PBR_Variant::updateBuffers(RT::CommandRecordState const & recordState)
     {
         if (IsActive() == false)
         {
@@ -138,21 +103,37 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBR_Variant::Render(
-        RT::CommandRecordState const & drawPass,
-        BindDescriptorSetFunction const & bindFunction,
-        AS::AlphaMode const alphaMode
-    )
+    void PBR_Variant::compute(
+        RT::CommandRecordState const & recordState,
+        BindDescriptorSetFunction const & bindFunction
+    ) const
     {
+        bindComputeDescriptorSet(recordState);
+
         for (auto & node : mNodes)
         {
-            drawNode(drawPass, node, bindFunction, alphaMode);
+            computeNode(recordState, node, bindFunction);
         }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBR_Variant::PostRender(float const deltaTimeInSec)
+    void PBR_Variant::render(
+        RT::CommandRecordState const & recordState,
+        BindDescriptorSetFunction const & bindFunction,
+        AS::AlphaMode const alphaMode
+    )
+    {
+        bindSkinnedVerticesBuffer(recordState);
+        for (auto & node : mNodes)
+        {
+            drawNode(recordState, node, bindFunction, alphaMode);
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBR_Variant::postRender(float const deltaTimeInSec)
     {
         if (IsActive() == false)
         {
@@ -176,6 +157,51 @@ namespace MFA
             mBufferDirtyCounter = 2;
 
             mIsSkinJointsChanged = false;
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBR_Variant::preComputeBarrier(std::vector<VkBufferMemoryBarrier> & outBarriers) const
+    {
+        for (auto & bufferAndMemory : mSkinnedVerticesBuffer->buffers)
+        {
+            VkBufferMemoryBarrier barrier =
+            {
+                VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+                nullptr,
+                0,
+                VK_ACCESS_SHADER_WRITE_BIT,
+                RF::GetGraphicQueueFamily(),
+                RF::GetComputeQueueFamily(),
+                bufferAndMemory->buffer,
+                0,
+                bufferAndMemory->size
+            };
+
+            outBarriers.emplace_back(barrier);
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBR_Variant::preRenderBarrier(std::vector<VkBufferMemoryBarrier> & outBarriers) const
+    {
+        for (auto & bufferAndMemory : mSkinnedVerticesBuffer->buffers)
+        {
+            VkBufferMemoryBarrier barrier =
+            {
+                VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+                nullptr,
+                VK_ACCESS_SHADER_WRITE_BIT,
+                0,
+                RF::GetComputeQueueFamily(),
+                RF::GetGraphicQueueFamily(),
+                bufferAndMemory->buffer,
+                0,
+                bufferAndMemory->size
+            };
+            outBarriers.emplace_back(barrier);
         }
     }
 
@@ -226,6 +252,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    // Idea: Maybe we can pre-compute the frame values instead
     void PBR_Variant::updateAnimation(float const deltaTimeInSec, bool isVisible)
     {
         if (mMeshData->animations.empty())
@@ -439,7 +466,7 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     void PBR_Variant::drawNode(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         Node const & node,
         BindDescriptorSetFunction const & bindFunction,
         AS::AlphaMode alphaMode
@@ -451,7 +478,7 @@ namespace MFA
         {
             MFA_ASSERT(static_cast<int>(mMeshData->subMeshes.size()) > node.meshNode->subMeshIndex);
             drawSubMesh(
-                drawPass,
+                recordState,
                 mMeshData->subMeshes[node.meshNode->subMeshIndex],
                 node,
                 bindFunction,
@@ -463,26 +490,72 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     void PBR_Variant::drawSubMesh(
-        RT::CommandRecordState const & drawPass,
-        AS::PBR::SubMesh const & subMesh,
+        RT::CommandRecordState const & recordState,
+        SubMesh const & subMesh,
         Node const & node,
         BindDescriptorSetFunction const & bindFunction,
         AS::AlphaMode const alphaMode
     )
     {
         auto const & primitives = subMesh.findPrimitives(alphaMode);
-        if (primitives.empty() == false)
+        for (auto const * primitive : primitives)
         {
-            for (auto const * primitive : primitives)
+            if (bindFunction != nullptr)
             {
                 bindFunction(*primitive, node);
-                RF::DrawIndexed(
-                    drawPass,
-                    primitive->indicesCount,
-                    1,
-                    primitive->indicesStartingIndex
-                );
             }
+            RF::DrawIndexed(
+                recordState,
+                primitive->indicesCount,
+                1,
+                primitive->indicesStartingIndex
+            );
+        }
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void PBR_Variant::computeNode(
+        RT::CommandRecordState const & recordState,
+        Node const & node,
+        BindDescriptorSetFunction const & bindFunction
+    ) const
+    {
+        // TODO We can reduce nodes count for better performance when importing
+        // Question: Why can't we just render sub-meshes ?
+        if (node.meshNode->hasSubMesh())
+        {
+            MFA_ASSERT(static_cast<int>(mMeshData->subMeshes.size()) > node.meshNode->subMeshIndex);
+            computeSubMesh(
+                recordState,
+                mMeshData->subMeshes[node.meshNode->subMeshIndex],
+                node,
+                bindFunction
+            );
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBR_Variant::computeSubMesh(
+        RT::CommandRecordState const & recordState,
+        SubMesh const & subMesh,
+        Node const & node,
+        BindDescriptorSetFunction const & bindFunction
+    ) const
+    {
+        for (auto const & primitive : subMesh.primitives)
+        {
+            if (bindFunction != nullptr)
+            {
+                bindFunction(primitive, node);
+            }
+            RF::Dispatch(
+                recordState,
+                static_cast<uint32_t>(std::ceil(static_cast<float>(primitive.vertexCount) / 256.0f)),
+                1,
+                1
+            );
         }
     }
 
@@ -555,6 +628,128 @@ namespace MFA
         {
             auto & childNode = mNodes[childIndex];
             computeNodeGlobalTransform(childNode, &node, isChanged);
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBR_Variant::prepareSkinJointsBuffer()
+    {
+        // Creating cachedSkinJoints array
+        {
+            uint32_t totalJointsCount = 0;
+            for (auto const & skin : mMeshData->skins)
+            {
+                auto const jointsCount = static_cast<uint32_t>(skin.joints.size());
+                totalJointsCount += jointsCount;
+            }
+            if (totalJointsCount > 0)
+            {
+                mCachedSkinsJointsBlob = Memory::Alloc(sizeof(JointTransformData) * totalJointsCount);
+                mSkinsJointsBuffer = RF::CreateHostVisibleUniformBuffer(
+                    mCachedSkinsJointsBlob->memory.len,
+                    RF::GetMaxFramesPerFlight()
+                );
+            }
+        }
+        {
+            mCachedSkinsJoints.resize(mMeshData->skins.size());
+            uint32_t startingJointIndex = 0;
+            for (uint32_t i = 0; i < mMeshData->skins.size(); ++i)
+            {
+                auto & skin = mMeshData->skins[i];
+                auto const jointsCount = static_cast<uint32_t>(skin.joints.size());
+                mCachedSkinsJoints[i] = reinterpret_cast<JointTransformData *>(mCachedSkinsJointsBlob->memory.ptr + startingJointIndex * sizeof(JointTransformData));
+                mSkins[i].skinStartingIndex = static_cast<int>(startingJointIndex);
+                startingJointIndex += jointsCount;
+            }
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBR_Variant::prepareSkinnedVerticesBuffer(uint32_t const vertexCount)
+    {
+        auto const bufferSize = sizeof(SkinnedVertex) * vertexCount;
+        mSkinnedVerticesBuffer = RF::CreateBufferGroup(
+            bufferSize,
+            RF::GetMaxFramesPerFlight(),
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBR_Variant::bindSkinnedVerticesBuffer(RT::CommandRecordState const & recordState) const
+    {
+        RF::BindVertexBuffer(
+            recordState,
+            *mSkinnedVerticesBuffer->buffers[recordState.frameIndex],
+            0
+        );
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void PBR_Variant::bindComputeDescriptorSet(RT::CommandRecordState const & recordState) const
+    {
+        RF::BindDescriptorSet(
+            recordState,
+            RenderFrontend::UpdateFrequency::PerEssence,
+            mComputeDescriptorSet.descriptorSets[recordState.frameIndex]
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBR_Variant::createComputeDescriptorSet(
+        VkDescriptorPool descriptorPool,
+        VkDescriptorSetLayout descriptorSetLayout,
+        RT::BufferGroup const & errorBuffer 
+    )
+    {
+        mComputeDescriptorSet = RF::CreateDescriptorSets(
+            descriptorPool,
+            RF::GetMaxFramesPerFlight(),
+            descriptorSetLayout
+        );
+        
+        for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
+        {
+            auto const descriptorSet = mComputeDescriptorSet.descriptorSets[frameIndex];
+            MFA_VK_VALID_ASSERT(descriptorSet);
+
+            DescriptorSetSchema descriptorSetSchema{ descriptorSet };
+
+            /////////////////////////////////////////////////////////////////
+            // Vertex shader
+            /////////////////////////////////////////////////////////////////
+
+            // SkinJoints
+            VkBuffer skinJointsBuffer = errorBuffer.buffers[0]->buffer;
+            size_t skinJointsBufferSize = errorBuffer.bufferSize;
+            if (mSkinsJointsBuffer != nullptr && mSkinsJointsBuffer->bufferSize > 0)
+            {
+                skinJointsBuffer = mSkinsJointsBuffer->buffers[frameIndex]->buffer;
+                skinJointsBufferSize = mSkinsJointsBuffer->bufferSize;
+            }
+            VkDescriptorBufferInfo skinTransformBufferInfo{
+                .buffer = skinJointsBuffer,
+                .offset = 0,
+                .range = skinJointsBufferSize,
+            };
+            descriptorSetSchema.AddUniformBuffer(&skinTransformBufferInfo);
+
+            // SkinnedVertices
+            VkDescriptorBufferInfo skinnedVerticesBufferInfo {
+                .buffer = mSkinnedVerticesBuffer->buffers[frameIndex]->buffer,
+                .offset = 0,
+                .range = mSkinnedVerticesBuffer->bufferSize
+            };
+            descriptorSetSchema.AddStorageBuffer(&skinnedVerticesBufferInfo);
+
+            descriptorSetSchema.UpdateDescriptorSets();
         }
     }
 

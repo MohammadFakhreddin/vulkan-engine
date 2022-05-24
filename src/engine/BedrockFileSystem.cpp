@@ -199,16 +199,6 @@ FILE * GetCHandle(FileHandle * file) {
     return ret;
 }
 
-std::string ExtractDirectoryFromPath(std::string const & path)  {
-    MFA_ASSERT(path.empty() == false);
-    return std::filesystem::path(path).parent_path().string();
-}
-
-std::string ExtractExtensionFromPath(std::string const & path) {
-    MFA_ASSERT(path.empty() == false);
-    return std::filesystem::path(path).extension().string();
-}
-
 bool Seek(FileHandle * file, const int offset, const Origin origin) {
     MFA_ASSERT(file != nullptr);
     return file->seek(offset, origin);

@@ -46,9 +46,7 @@ private:
     
     std::weak_ptr<MFA::TransformComponent> mPlayerTransform {};
     std::weak_ptr<MFA::MeshRendererComponent> mPlayerMeshRenderer {};
-
-    std::shared_ptr<MFA::RT::GpuModel> mMapModel {};
-
+    
     std::weak_ptr<MFA::ThirdPersonCameraComponent> mThirdPersonCamera {};
     
     int mUIRecordId = 0;
