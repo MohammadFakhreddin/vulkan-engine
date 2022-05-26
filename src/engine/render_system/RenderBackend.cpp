@@ -329,7 +329,7 @@ namespace MFA::RenderBackend
             .ppEnabledLayerNames = nullptr,
 #endif
             .enabledExtensionCount = static_cast<uint32_t>(instanceExtensions.size()),
-                .ppEnabledExtensionNames = instanceExtensions.data()
+            .ppEnabledExtensionNames = instanceExtensions.data()
         };
         VkInstance instance = nullptr;
         VK_Check(vkCreateInstance(&instanceInfo, nullptr, &instance));
@@ -1061,6 +1061,7 @@ namespace MFA::RenderBackend
         enabledExtensionNames.emplace_back("VK_KHR_portability_subset");
     #endif
         enabledExtensionNames.emplace_back(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME);
+        enabledExtensionNames.emplace_back(VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME);
         deviceCreateInfo.ppEnabledExtensionNames = enabledExtensionNames.data();
         deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensionNames.size());
         // Necessary for shader (for some reason)
@@ -2578,26 +2579,6 @@ namespace MFA::RenderBackend
     {
         MFA_ASSERT(commandBuffer != nullptr);
         vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void PushConstants(
-        VkCommandBuffer command_buffer,
-        VkPipelineLayout pipeline_layout,
-        AssetSystem::ShaderStage const shader_stage,
-        uint32_t const offset,
-        CBlob const data
-    )
-    {
-        vkCmdPushConstants(
-            command_buffer,
-            pipeline_layout,
-            ConvertAssetShaderStageToGpu(shader_stage),
-            offset,
-            static_cast<uint32_t>(data.len),
-            data.ptr
-        );
     }
 
     //-------------------------------------------------------------------------------------------------

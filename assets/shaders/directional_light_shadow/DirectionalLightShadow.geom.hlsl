@@ -9,7 +9,7 @@ struct GSOutput
 {
     float4 position: SV_POSITION;
     int lightIndex;
-	int Layer : SV_RenderTargetArrayIndex;
+	int layer : SV_RenderTargetArrayIndex;
 };
 
 DIRECTIONAL_LIGHT(directionalLightBuffer)
@@ -26,7 +26,7 @@ void main(triangle GSInput input[3], /*uint InvocationID : SV_GSInstanceID,*/ in
             GSOutput output = (GSOutput)0;
             output.position = mul(directionalLightBuffer.items[lightIndex].viewProjectionMatrix, input[i].worldPosition);
             output.lightIndex = lightIndex;
-            output.Layer = lightIndex;      // Specifies which layer of cube array we render on.
+            output.layer = lightIndex;      // Specifies which layer of cube array we render on.
             outStream.Append(output);       // Emit vertex
         }
         outStream.RestartStrip();           // End primitive

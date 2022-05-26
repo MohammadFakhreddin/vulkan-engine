@@ -1234,12 +1234,9 @@ namespace MFA::RenderFrontend
         CBlob const data
     )
     {
-        MFA_ASSERT(recordState.isValid);
-        MFA_ASSERT(recordState.renderPass != nullptr);
-        RB::PushConstants(
-            recordState.commandBuffer,
-            recordState.pipeline->pipelineLayout,
-            shaderStage,
+        PushConstants(
+            recordState,
+            RB::ConvertAssetShaderStageToGpu(shaderStage),
             offset,
             data
         );

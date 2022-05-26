@@ -8,6 +8,8 @@
 
 namespace MFA
 {
+    class PointLightComponent;
+
     namespace AssetSystem
     {
         namespace PBR
@@ -39,6 +41,14 @@ namespace MFA
         };
 
         struct PointLightShadowPassPushConstants
+        {
+            int lightIndex = 0;
+            int faceIndex = 0;
+            int placeholder1 = 0;
+            int placeholder2 = 0;
+        };
+
+        struct DirectionalLightPushConstants
         {
             int lightIndex = 0;
             int placeholder0 = 0;
@@ -160,13 +170,18 @@ namespace MFA
 
         void prepareShadowMapsForSampling(RT::CommandRecordState const & recordState) const;
 
-        void renderForPointLightShadowPass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode) const;
+        void renderForPointLightShadowPass(
+            RT::CommandRecordState const & recordState,
+            AS::AlphaMode alphaMode,
+            PointLightShadowPassPushConstants & pushConstants,
+            PointLightComponent const * pointLight
+        ) const;
 
         void performOcclusionQueryPass(RT::CommandRecordState & recordState);
 
         void renderForOcclusionQueryPass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode);
 
-        void performDisplayPass(RT::CommandRecordState & recordState);
+        void performDisplayPass(RT::CommandRecordState & recordState) const;
 
         void renderForDisplayPass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode) const;
 

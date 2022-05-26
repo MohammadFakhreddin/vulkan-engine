@@ -596,14 +596,6 @@ namespace MFA::RenderBackend
     void PushConstants(
         VkCommandBuffer command_buffer,
         VkPipelineLayout pipeline_layout,
-        AssetSystem::ShaderStage shader_stage,
-        uint32_t offset,
-        CBlob data
-    );
-
-    void PushConstants(
-        VkCommandBuffer command_buffer,
-        VkPipelineLayout pipeline_layout,
         VkShaderStageFlags shader_stage,
         uint32_t offset,
         CBlob data

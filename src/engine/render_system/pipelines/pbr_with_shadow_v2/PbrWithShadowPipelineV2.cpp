@@ -607,7 +607,8 @@ namespace MFA
     
     void PBRWithShadowPipelineV2::performDirectionalLightShadowPass(RT::CommandRecordState & recordState) const
     {
-        if (SceneManager::GetDirectionalLightCount() <= 0)
+        auto const lightCount = SceneManager::GetDirectionalLightCount();
+        if (lightCount <= 0)
         {
             return;
         }
@@ -620,18 +621,31 @@ namespace MFA
         );
 
         mDirectionalLightShadowRenderPass->BeginRenderPass(recordState, *mDirectionalLightShadowResources);
-        renderForDirectionalLightShadowPass(recordState, AS::AlphaMode::Opaque);
-        renderForDirectionalLightShadowPass(recordState, AS::AlphaMode::Mask);
-        renderForDirectionalLightShadowPass(recordState, AS::AlphaMode::Blend);
+
+        DirectionalLightPushConstants pushConstants {};
+
+        for (int lightIndex = 0; lightIndex < static_cast<int>(lightCount); ++lightIndex)
+        {
+            pushConstants.lightIndex = lightIndex;
+
+            RF::PushConstants(
+                recordState,
+                AssetSystem::ShaderStage::Vertex,
+                0,
+                CBlobAliasOf(pushConstants)
+            );
+
+            renderForDirectionalLightShadowPass(recordState, AS::AlphaMode::Opaque);
+            renderForDirectionalLightShadowPass(recordState, AS::AlphaMode::Mask);
+            renderForDirectionalLightShadowPass(recordState, AS::AlphaMode::Blend);
+        }
+
         mDirectionalLightShadowRenderPass->EndRenderPass(recordState);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::renderForDirectionalLightShadowPass(
-        RT::CommandRecordState const & recordState,
-        AS::AlphaMode const alphaMode
-    ) const
+    void PBRWithShadowPipelineV2::renderForDirectionalLightShadowPass(RT::CommandRecordState const & recordState, AS::AlphaMode const alphaMode) const
     {
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
@@ -674,9 +688,20 @@ namespace MFA
         );
 
         mPointLightShadowRenderPass->BeginRenderPass(recordState, *mPointLightShadowResources);
-        renderForPointLightShadowPass(recordState, AS::AlphaMode::Opaque);
-        renderForPointLightShadowPass(recordState, AS::AlphaMode::Mask);
-        renderForPointLightShadowPass(recordState, AS::AlphaMode::Blend);
+
+        PointLightShadowPassPushConstants pushConstants {};
+
+        auto const & pointLights = SceneManager::GetActivePointLights();
+        MFA_ASSERT(pointLights.size() == pointLightCount);
+
+        for (int lightIndex = 0; lightIndex < static_cast<int>(pointLightCount); ++lightIndex)
+        {
+            pushConstants.lightIndex = lightIndex;
+            renderForPointLightShadowPass(recordState, AS::AlphaMode::Opaque, pushConstants, pointLights[lightIndex]);
+            renderForPointLightShadowPass(recordState, AS::AlphaMode::Mask, pushConstants, pointLights[lightIndex]);
+            renderForPointLightShadowPass(recordState, AS::AlphaMode::Blend, pushConstants, pointLights[lightIndex]);
+        }
+
         mPointLightShadowRenderPass->EndRenderPass(recordState);
     }
 
@@ -710,60 +735,55 @@ namespace MFA
     
     void PBRWithShadowPipelineV2::renderForPointLightShadowPass(
         RT::CommandRecordState const & recordState,
-        AS::AlphaMode const alphaMode
+        AS::AlphaMode alphaMode,
+        PointLightShadowPassPushConstants & pushConstants,
+        PointLightComponent const * pointLight
     ) const
     {
-        auto const pointLightCount = SceneManager::GetPointLightCount();
-        MFA_ASSERT(pointLightCount > 0);
-        auto const & pointLights = SceneManager::GetActivePointLights();
-        MFA_ASSERT(pointLights.size() == pointLightCount);
+        
+        MFA_ASSERT(pointLight != nullptr);
 
-        PointLightShadowPassPushConstants pushConstants {};
-
-        for (uint32_t lightIndex = 0; lightIndex < pointLightCount; ++lightIndex)
+        for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            pushConstants.lightIndex = static_cast<int>(lightIndex);
+            auto const * essence = CAST_ESSENCE_SHARED(essenceAndVariantList.second.essence);
+            auto & variantsList = essenceAndVariantList.second.variants;
 
-            RF::PushConstants(
-                recordState,
-                VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-                0,
-                CBlobAliasOf(pushConstants)
-            );
-
-            auto * pointLight = pointLights[lightIndex];
-            MFA_ASSERT(pointLight != nullptr);
-
-            for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
+            if (variantsList.empty())
             {
-                auto const * essence = CAST_ESSENCE_SHARED(essenceAndVariantList.second.essence);
-                auto & variantsList = essenceAndVariantList.second.variants;
+                continue;
+            }
 
-                if (variantsList.empty())
+            essence->bindForGraphicPipeline(recordState);
+
+            for (auto & variant : variantsList)
+            {
+                if (variant->IsActive() == false)
                 {
                     continue;
                 }
 
-                essence->bindForGraphicPipeline(recordState);
-
-                for (auto & variant : variantsList)
+                auto const bvComponent = variant->GetBoundingVolume();
+                if (bvComponent == nullptr)
                 {
-                    if (variant->IsActive() == false)
-                    {
-                        continue;
-                    }
+                    continue;
+                }
 
-                    auto const bvComponent = variant->GetBoundingVolume();
-                    if (bvComponent == nullptr)
-                    {
-                        continue;
-                    }
+                // We only render variants that are within pointLight's visible range
+                if (pointLight->IsBoundingVolumeInRange(bvComponent.get()) == false)
+                {
+                    continue;
+                }
 
-                    // We only render variants that are within pointLight's visible range
-                    if (pointLight->IsBoundingVolumeInRange(bvComponent.get()) == false)
-                    {
-                        continue;
-                    }
+                for (int faceIndex = 0; faceIndex < 6; ++faceIndex)
+                {
+                    pushConstants.faceIndex = faceIndex;
+
+                    RF::PushConstants(
+                        recordState,
+                        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                        0,
+                        CBlobAliasOf(pushConstants)
+                    );
 
                     CAST_VARIANT_SHARED(variant)->render(recordState, nullptr, alphaMode);
                 }
@@ -860,7 +880,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::performDisplayPass(RT::CommandRecordState & recordState)
+    void PBRWithShadowPipelineV2::performDisplayPass(RT::CommandRecordState & recordState) const
     {
         RF::BindPipeline(recordState, *mDisplayPassPipeline);
         RF::AutoBindDescriptorSet(
@@ -1149,10 +1169,9 @@ namespace MFA
     void PBRWithShadowPipelineV2::createDirectionalLightShadowPassPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts)
     {
         // Vertex shader
-        RF_CREATE_SHADER("shaders/directional_light_shadow/DirectionalLightShadow.vert.spv", Vertex)
-        RF_CREATE_SHADER("shaders/directional_light_shadow/DirectionalLightShadow.geom.spv", Geometry)
+        RF_CREATE_SHADER("shaders/directional_light_shadow_v2/DirectionalLightShadowV2.vert.spv", Vertex)
         
-        std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuGeometryShader.get() };
+        std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get()};
 
         VkVertexInputBindingDescription const vertexInputBindingDescription{
             .binding = 0,
@@ -1170,11 +1189,18 @@ namespace MFA
             .offset = offsetof(PBR_Variant::SkinnedVertex, worldPosition),
         });
 
+        std::vector<VkPushConstantRange> pushConstantRanges{};
+        pushConstantRanges.emplace_back(VkPushConstantRange{
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+            .offset = 0,
+            .size = sizeof(DirectionalLightPushConstants),
+        });
+
         const auto pipelineLayout = RF::CreatePipelineLayout(
             static_cast<uint32_t>(descriptorSetLayouts.size()),
             descriptorSetLayouts.data(),
-            0,
-            nullptr
+            static_cast<uint32_t>(pushConstantRanges.size()),
+            pushConstantRanges.data()
         );
         
         RT::CreateGraphicPipelineOptions graphicPipelineOptions{};
@@ -1198,13 +1224,11 @@ namespace MFA
     void PBRWithShadowPipelineV2::createPointLightShadowPassPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts)
     {
         // Vertex shader
-        RF_CREATE_SHADER("shaders/point_light_shadow/PointLightShadow.vert.spv", Vertex)
-        RF_CREATE_SHADER("shaders/point_light_shadow/PointLightShadow.geom.spv", Geometry)
-        RF_CREATE_SHADER("shaders/point_light_shadow/PointLightShadow.frag.spv", Fragment)
+        RF_CREATE_SHADER("shaders/point_light_shadow_v2/PointLightShadowV2.vert.spv", Vertex)
+        RF_CREATE_SHADER("shaders/point_light_shadow_v2/PointLightShadowV2.frag.spv", Fragment)
 
         std::vector<RT::GpuShader const *> shaders {
             gpuVertexShader.get(),
-            gpuGeometryShader.get(),
             gpuFragmentShader.get()
         };
 
@@ -1226,7 +1250,7 @@ namespace MFA
 
         std::vector<VkPushConstantRange> pushConstantRanges{};
         VkPushConstantRange pushConstantRange{
-            .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
             .offset = 0,
             .size = sizeof(PointLightShadowPassPushConstants),
         };

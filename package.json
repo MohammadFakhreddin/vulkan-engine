@@ -11,9 +11,14 @@
         "point-light-shadow-vert": "glslc -g -fshader-stage=vert assets/shaders/point_light_shadow/PointLightShadow.vert.hlsl  -o assets/shaders/point_light_shadow/PointLightShadow.vert.spv",
         "point-light-shadow-frag": "glslc -g -fshader-stage=frag assets/shaders/point_light_shadow/PointLightShadow.frag.hlsl  -o assets/shaders/point_light_shadow/PointLightShadow.frag.spv",
         "point-light-shadow-geom": "glslc -g -fshader-stage=geom assets/shaders/point_light_shadow/PointLightShadow.geom.hlsl  -o assets/shaders/point_light_shadow/PointLightShadow.geom.spv",
-        
+    
+        "point-light-shadow-vert-v2": "glslc -g -fshader-stage=vert assets/shaders/point_light_shadow_v2/PointLightShadowV2.vert.hlsl  -o assets/shaders/point_light_shadow_v2/PointLightShadowV2.vert.spv",
+        "point-light-shadow-frag-v2": "glslc -g -fshader-stage=frag assets/shaders/point_light_shadow_v2/PointLightShadowV2.frag.hlsl  -o assets/shaders/point_light_shadow_v2/PointLightShadowV2.frag.spv",
+
         "directional-light-shadow-vert": "glslc -g -fshader-stage=vert assets/shaders/directional_light_shadow/DirectionalLightShadow.vert.hlsl  -o assets/shaders/directional_light_shadow/DirectionalLightShadow.vert.spv",
         "directional-light-shadow-geom": "glslc -g -fshader-stage=geom assets/shaders/directional_light_shadow/DirectionalLightShadow.geom.hlsl  -o assets/shaders/directional_light_shadow/DirectionalLightShadow.geom.spv",
+        
+        "directional-light-shadow-vert-v2": "glslc -g -fshader-stage=vert assets/shaders/directional_light_shadow_v2/DirectionalLightShadowV2.vert.hlsl  -o assets/shaders/directional_light_shadow_v2/DirectionalLightShadowV2.vert.spv",
         
         "particle-vert": "glslc -g -fshader-stage=vert assets/shaders/particle/Particle.vert.hlsl -o assets/shaders/particle/Particle.vert.spv",
         "particle-frag": "glslc -g -fshader-stage=frag assets/shaders/particle/Particle.frag.hlsl -o assets/shaders/particle/Particle.frag.spv",

@@ -24,6 +24,7 @@ struct PointLightsBufferData
     PointLight items [MAX_POINT_LIGHT_COUNT];                                           
 };                                                                                      
     
+// TODO: Macro is not a good idea here
 #define POINT_LIGHT(bufferName)                                                         \
 ConstantBuffer <PointLightsBufferData> bufferName: register(b2, space0);                \
 
