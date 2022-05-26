@@ -278,15 +278,12 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
     SceneManager::AssignMainThreadTask([this, &renderRequiredData]()->void{
 
         auto const cpuModel = RC::AcquireCpuModel(renderRequiredData.address);
-        //renderRequiredData.gpuModel = RC::AcquireGpuModel(renderRequiredData.address);
-
+        
         auto * pbrPipeline = SceneManager::GetPipeline<PBRWithShadowPipelineV2>();
         MFA_ASSERT(pbrPipeline != nullptr);
         if(pbrPipeline->hasEssence(renderRequiredData.address) == false){
             MFA_ASSERT(dynamic_cast<AS::PBR::Mesh *>(cpuModel->mesh.get()) != nullptr);
             auto const * mesh = static_cast<AS::PBR::Mesh *>(cpuModel->mesh.get());
-            //auto meshData = mesh->getMeshData();
-            //MFA_ASSERT(meshData != nullptr);
             auto const addResult = pbrPipeline->addEssence(
                 std::make_shared<PBR_Essence>(
                     renderRequiredData.address,

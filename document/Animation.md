@@ -35,9 +35,13 @@ I did 2 things to optimize animations:
 - Caching nodes and joint transforms improves performance significantly. Just compute animations only if parent node or attached transform is changed. 
 - Using jobs per instance. (Assigning jobs to threads)
 
+(Update)
+- I finished writing skinning for compute shader though I use alot of memory
+
 Although former optimization improved performance alot. I was not able to render 1000 model soldier with my desired fps count. I have plan to do following optimizations as well:
-- SIMD
-- Using compute shader for animations.
+- Reducing memory used for compute shader
+- Updating joints and animations in compute shader as well
+
 You can read general idea in wicked engine blog using this link:
 <a href="https://wickedengine.net/2017/09/09/skinning-in-compute-shader/">
 https://wickedengine.net/2017/09/09/skinning-in-compute-shader/

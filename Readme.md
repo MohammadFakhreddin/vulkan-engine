@@ -1,8 +1,5 @@
 # MFA engine :))
 
-## Animation explanation
-<a href="./document/Animation.md">Read more about my animation implementation here</a>
-
 <br/>
 
 More document/tutorial will be added soon!
@@ -10,11 +7,16 @@ More document/tutorial will be added soon!
 ## Particle system
 
 <img src="examples/particle-sponza.gif"  height=400>
-Particles are simulated using compute shader
 
 <br>
 
 <img src="examples/fire.gif"  height=400>
+
+<br>
+
+<a href="./document/ParticleSystem.md">
+Read more about my particle implementation here
+</a>
 
 <br>
 
@@ -32,6 +34,11 @@ Particles are simulated using compute shader
 <img src="examples/warcraft-animation.gif">
 
 <img src="examples/mandalorian-animation.gif">
+
+<br>
+
+<a href="./document/Animation.md">
+Read more about my animation implementation here</a>
 
 <br>
 
