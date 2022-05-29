@@ -1021,7 +1021,7 @@ namespace MFA
         bindings.emplace_back(VkDescriptorSetLayoutBinding {
             .binding = static_cast<uint32_t>(bindings.size()),
             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            .descriptorCount = 64,
+            .descriptorCount = PBR_Essence::MAX_TEXTURE_COUNT,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         });
         

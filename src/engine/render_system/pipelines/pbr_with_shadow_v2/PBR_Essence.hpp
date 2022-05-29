@@ -11,6 +11,8 @@ namespace MFA {
 class PBR_Essence final : public EssenceBase {
 public:
 
+    static constexpr int MAX_TEXTURE_COUNT = 64;
+
     struct PrimitiveInfo {
         alignas(16) float baseColorFactor[4];
 

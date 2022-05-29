@@ -1,4 +1,5 @@
 #include "../PrimitiveInfoBuffer.hlsl"
+#include "../MaxTextureCount.hlsl"
 
 struct PSIn {
     float4 position : SV_POSITION;   
@@ -20,7 +21,7 @@ cbuffer {
 
 sampler textureSampler : register(s3, space0);
 
-Texture2D textures[64] : register(t1, space1);
+Texture2D textures[MAX_TEXTURE_COUNT] : register(t1, space1);
 
 ConstantBuffer <PrimitiveInfoBuffer> primitiveInfoBuffer : register (b0, space1);
 

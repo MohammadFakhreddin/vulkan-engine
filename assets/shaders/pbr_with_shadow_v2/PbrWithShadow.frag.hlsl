@@ -4,6 +4,7 @@
 #include "../CameraBuffer.hlsl"
 #include "../PrimitiveInfoBuffer.hlsl"
 #include "../DirectionalLightBuffer.hlsl"
+#include "../MaxTextureCount.hlsl"
 
 struct PSIn {
     float4 position : SV_POSITION;
@@ -35,13 +36,14 @@ ConstantBuffer <PointLightsBufferData> pointLightsBuffer: register(b2, space0);
 
 sampler textureSampler : register(s3, space0);
 
-ConstantBuffer <PrimitiveInfoBuffer> primitiveInfoBuffer : register (b0, space1);
-
-Texture2D textures[64] : register(t1, space1);
-
 Texture2DArray DIR_shadowMap : register(t4, space0);
 
 TextureCubeArray PL_shadowMap : register(t5, space0);
+
+ConstantBuffer <PrimitiveInfoBuffer> primitiveInfoBuffer : register (b0, space1);
+
+Texture2D textures[MAX_TEXTURE_COUNT] : register(t1, space1);  // TODO: Maybe I should decrease the textures size
+
 
 struct PushConsts
 {

@@ -281,7 +281,7 @@ void MFA::PBR_Essence::createGraphicDescriptorSet(
 
         // TODO Each one need their own sampler
         // Textures
-        MFA_ASSERT(mTextures.size() <= 64);
+        MFA_ASSERT(mTextures.size() <= MAX_TEXTURE_COUNT);
         // We need to keep imageInfos alive
         std::vector<VkDescriptorImageInfo> imageInfos{};
         for (auto const & texture : mTextures)
@@ -292,7 +292,7 @@ void MFA::PBR_Essence::createGraphicDescriptorSet(
                 .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             });
         }
-        for (auto i = static_cast<uint32_t>(mTextures.size()); i < 64; ++i)
+        for (auto i = static_cast<uint32_t>(mTextures.size()); i < MAX_TEXTURE_COUNT; ++i)
         {
             imageInfos.emplace_back(VkDescriptorImageInfo{
                 .sampler = nullptr,
@@ -300,7 +300,7 @@ void MFA::PBR_Essence::createGraphicDescriptorSet(
                 .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             });
         }
-        MFA_ASSERT(imageInfos.size() == 64);
+        MFA_ASSERT(imageInfos.size() == MAX_TEXTURE_COUNT);
         descriptorSetSchema.AddImage(
             imageInfos.data(),
             static_cast<uint32_t>(imageInfos.size())
