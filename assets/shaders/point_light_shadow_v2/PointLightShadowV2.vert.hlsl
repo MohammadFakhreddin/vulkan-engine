@@ -12,10 +12,8 @@ struct VSOut {
     int layer : SV_RenderTargetArrayIndex;
 };
 
-// CAMERA_BUFFER(cameraBuffer)
 ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
 
-// POINT_LIGHT(pointLightsBuffer)
 ConstantBuffer <PointLightsBufferData> pointLightsBuffer: register(b2, space0);
 
 struct PushConsts

@@ -2,10 +2,8 @@
 #include "../ComputePointLightShadow.hlsl"
 #include "../PointLightBuffer.hlsl"
 #include "../CameraBuffer.hlsl"
-#include "../TextureSampler.hlsl"
 #include "../PrimitiveInfoBuffer.hlsl"
 #include "../DirectionalLightBuffer.hlsl"
-#include "../TexturesBuffer.hlsl"
 
 struct PSIn {
     float4 position : SV_POSITION;
@@ -29,22 +27,16 @@ struct PSOut {
     float4 color:SV_Target0;
 };
 
-//CAMERA_BUFFER(cameraBuffer)
 ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
 
-// DIRECTIONAL_LIGHT(directionalLightBuffer)
 ConstantBuffer <DirectionalLightBufferData> directionalLightBuffer: register(b1, space0);
 
-// POINT_LIGHT(pointLightsBuffer)
 ConstantBuffer <PointLightsBufferData> pointLightsBuffer: register(b2, space0); 
 
-// TEXTURE_SAMPLER(textureSampler)
 sampler textureSampler : register(s3, space0);
 
-// PRIMITIVE_INFO(primitiveInfoBuffer)
 ConstantBuffer <PrimitiveInfoBuffer> primitiveInfoBuffer : register (b0, space1);
 
-// TEXTURES_BUFFER(textures)
 Texture2D textures[64] : register(t1, space1);
 
 Texture2DArray DIR_shadowMap : register(t4, space0);

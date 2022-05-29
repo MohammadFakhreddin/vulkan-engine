@@ -1,6 +1,4 @@
-#include "../TexturesBuffer.hlsl"
 #include "../PrimitiveInfoBuffer.hlsl"
-#include "../TextureSampler.hlsl"
 
 struct PSIn {
     float4 position : SV_POSITION;   
@@ -20,11 +18,11 @@ cbuffer {
     PushConsts pushConsts;
 };
 
-TEXTURE_SAMPLER(textureSampler)
+sampler textureSampler : register(s3, space0);
 
-TEXTURES_BUFFER(textures)
+Texture2D textures[64] : register(t1, space1);
 
-PRIMITIVE_INFO(primitiveInfoBuffer)
+ConstantBuffer <PrimitiveInfoBuffer> primitiveInfoBuffer : register (b0, space1);
 
 void main(PSIn input) {
     PrimitiveInfo primitiveInfo = primitiveInfoBuffer.primitiveInfo[pushConsts.primitiveIndex];

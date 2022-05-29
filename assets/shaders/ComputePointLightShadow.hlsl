@@ -2,8 +2,6 @@
 #define COMPUTE_POINT_LIGHT_HLSL
 
 #include "./CameraBuffer.hlsl"
-#include "./PointLightShadowMap.hlsl"
-#include "./TextureSampler.hlsl"
 
 const float PL_ShadowBias = 0.05;
 

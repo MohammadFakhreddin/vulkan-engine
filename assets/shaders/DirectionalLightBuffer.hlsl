@@ -19,7 +19,4 @@ struct DirectionalLightBufferData
     DirectionalLight items [MAX_DIRECTIONAL_LIGHT_COUNT];                                   
 };                                                                                          
 
-// #define DIRECTIONAL_LIGHT(bufferName)                                           \
-// ConstantBuffer <DirectionalLightBufferData> bufferName: register(b1, space0);   \
-
 #endif

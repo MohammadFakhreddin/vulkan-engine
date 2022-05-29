@@ -11,7 +11,7 @@ struct VSOut {
     float2 baseColorTexCoord : TEXCOORD0;
 };
 
-CAMERA_BUFFER(cameraBuffer)
+ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
 
 VSOut main(VSIn input) {
     VSOut output;

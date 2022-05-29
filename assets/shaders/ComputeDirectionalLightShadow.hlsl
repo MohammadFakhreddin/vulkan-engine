@@ -1,19 +1,10 @@
 #ifndef COMPUTE_DIRECTIONAL_LIGHT_HLSL
 #define COMPUTE_DIRECTIONAL_LIGHT_HLSL
 
-#include "./TextureSampler.hlsl"
-#include "./DirectionalLightShadowMap.hlsl"
-
 const float DIR_ShadowBias = 0.00005;
 
 #define DIR_SHADOW_TEXTURE_SIZE (1024.0f * 10.0f)
 #define DIR_SHADOW_PER_SAMPLE 0.0204f //1.0f / 49.0f;
-
-// TEXTURE_SAMPLER(DIR_shadowSampler)
-// sampler DIR_shadowSampler : register(s3, space0);
-
-// DIRECTIONAL_LIGHT_SHADOW_MAP(DIR_shadowMap)
-// Texture2DArray DIR_shadowMap : register(t4, space0);
 
 float computeDirectionalLightShadow(
     Texture2DArray shadowMap,
