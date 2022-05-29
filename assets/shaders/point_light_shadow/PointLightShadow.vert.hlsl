@@ -9,7 +9,8 @@ struct VSOut {
     float4 worldPosition : POSITION0;
 };
 
-CAMERA_BUFFER(cameraBuffer)
+// CAMERA_BUFFER(cameraBuffer)
+ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
 
 VSOut main(VSIn input) {
     VSOut output;

@@ -37,8 +37,11 @@ struct VSOut {
     float4 directionLightPosition[3];
 };
 
-CAMERA_BUFFER(cameraBuffer)
-DIRECTIONAL_LIGHT(directionalLightBuffer)
+// CAMERA_BUFFER(cameraBuffer)
+ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
+
+// DIRECTIONAL_LIGHT(directionalLightBuffer)
+ConstantBuffer <DirectionalLightBufferData> directionalLightBuffer: register(b1, space0);
 
 VSOut main(VSIn input) {
     VSOut output;

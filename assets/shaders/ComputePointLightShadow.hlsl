@@ -32,14 +32,20 @@ const float3 PL_SampleOffsetDirections[20] = {
     float3(0,  1,  -1)
 };
 
-CAMERA_BUFFER(PL_cameraBuffer)
+// CAMERA_BUFFER(PL_cameraBuffer)
+// ConstantBuffer <CameraData> PL_cameraBuffer: register(b0, space0);
 
-POINT_LIGHT_SHADOW_MAP(PL_shadowMap)
+// POINT_LIGHT_SHADOW_MAP(PL_shadowMap)
+// TextureCubeArray PL_shadowMap : register(t5, space0);
 
-TEXTURE_SAMPLER(PL_textureSampler)
+// TEXTURE_SAMPLER(PL_textureSampler)
+// sampler PL_textureSampler : register(s3, space0);
 
 // Normalized light vector will cause incorrect sampling!
-float pointLightShadowCalculation(
+float computePointLightShadow(
+    float projectionFarToNearDistance,
+    TextureCubeArray shadowMap,
+    sampler shadowSampler,
     float3 lightVector,
     float lightDistance,
     float viewDistance,
@@ -70,12 +76,12 @@ float pointLightShadowCalculation(
     
     float shadow = 0.0f;
     float currentDepth = lightDistance;
-    float diskRadius = (1.0f + (viewDistance / PL_cameraBuffer.projectFarToNearDistance)) / 75.0f;  
+    float diskRadius = (1.0f + (viewDistance / projectionFarToNearDistance)) / 75.0f;  
     for(int i = 0; i < PL_ShadowSamplesCount; ++i)
     {
         float3 uv = lightToFrag + PL_SampleOffsetDirections[i] * diskRadius;
-        float closestDepth = PL_shadowMap.Sample(PL_textureSampler, float4(uv.x, uv.y, uv.z, lightIndex)).r;
-        closestDepth *= PL_cameraBuffer.projectFarToNearDistance;
+        float closestDepth = shadowMap.Sample(shadowSampler, float4(uv.x, uv.y, uv.z, lightIndex)).r;
+        closestDepth *= projectionFarToNearDistance;
         if(currentDepth - PL_ShadowBias > closestDepth) {      // Maybe we could have stored the square of closest depth instead
             shadow += PL_ShadowPerSample;
         }

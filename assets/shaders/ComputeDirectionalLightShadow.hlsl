@@ -9,11 +9,18 @@ const float DIR_ShadowBias = 0.00005;
 #define DIR_SHADOW_TEXTURE_SIZE (1024.0f * 10.0f)
 #define DIR_SHADOW_PER_SAMPLE 0.0204f //1.0f / 49.0f;
 
-TEXTURE_SAMPLER(DIR_shadowSampler)
+// TEXTURE_SAMPLER(DIR_shadowSampler)
+// sampler DIR_shadowSampler : register(s3, space0);
 
-DIRECTIONAL_LIGHT_SHADOW_MAP(DIR_shadowMap)
+// DIRECTIONAL_LIGHT_SHADOW_MAP(DIR_shadowMap)
+// Texture2DArray DIR_shadowMap : register(t4, space0);
 
-float directionalLightShadowCalculation(float4 directionLightPosition, int lightIndex)
+float computeDirectionalLightShadow(
+    Texture2DArray shadowMap,
+    sampler shadowSampler,
+    float4 directionLightPosition, 
+    int lightIndex
+)
 {
     // TODO Use this formula for shadow bias
     //float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);  
@@ -53,7 +60,7 @@ float directionalLightShadowCalculation(float4 directionLightPosition, int light
         {
             float2 uv = projCoords.xy + float2(x, y) * texelSize;
             // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-            float closestDepth = DIR_shadowMap.Sample(DIR_shadowSampler, float3(uv.x, uv.y, lightIndex)).r; 
+            float closestDepth = shadowMap.Sample(shadowSampler, float3(uv.x, uv.y, lightIndex)).r; 
             if(currentDepth - DIR_ShadowBias > closestDepth) {      // Maybe we could have stored the square of closest depth instead
                 shadow += DIR_SHADOW_PER_SAMPLE;
             }

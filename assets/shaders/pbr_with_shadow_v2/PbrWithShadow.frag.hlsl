@@ -29,17 +29,27 @@ struct PSOut {
     float4 color:SV_Target0;
 };
 
-CAMERA_BUFFER(cameraBuffer)
+//CAMERA_BUFFER(cameraBuffer)
+ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
 
-TEXTURE_SAMPLER(textureSampler)
+// DIRECTIONAL_LIGHT(directionalLightBuffer)
+ConstantBuffer <DirectionalLightBufferData> directionalLightBuffer: register(b1, space0);
 
-PRIMITIVE_INFO(primitiveInfoBuffer)
+// POINT_LIGHT(pointLightsBuffer)
+ConstantBuffer <PointLightsBufferData> pointLightsBuffer: register(b2, space0); 
 
-DIRECTIONAL_LIGHT(directionalLightBuffer)
+// TEXTURE_SAMPLER(textureSampler)
+sampler textureSampler : register(s3, space0);
 
-POINT_LIGHT(pointLightsBuffer)
+// PRIMITIVE_INFO(primitiveInfoBuffer)
+ConstantBuffer <PrimitiveInfoBuffer> primitiveInfoBuffer : register (b0, space1);
 
-TEXTURES_BUFFER(textures)
+// TEXTURES_BUFFER(textures)
+Texture2D textures[64] : register(t1, space1);
+
+Texture2DArray DIR_shadowMap : register(t4, space0);
+
+TextureCubeArray PL_shadowMap : register(t5, space0);
 
 struct PushConsts
 {
@@ -225,7 +235,9 @@ PSOut main(PSIn input) {
         DirectionalLight directionalLight = directionalLightBuffer.items[lightIndex];
         float3 lightVector = directionalLight.direction;
         
-        float shadow = directionalLightShadowCalculation(
+        float shadow = computeDirectionalLightShadow(
+            DIR_shadowMap,
+            textureSampler,
             input.directionLightPosition[lightIndex], 
             lightIndex
         );
@@ -266,7 +278,10 @@ PSOut main(PSIn input) {
                 lightDistanceVector.y / lightVectorLength, 
                 lightDistanceVector.z / lightVectorLength
             );
-            float shadow = pointLightShadowCalculation(
+            float shadow = computePointLightShadow(
+                cameraBuffer.projectFarToNearDistance,
+                PL_shadowMap,
+                textureSampler,
                 lightDistanceVector, 
                 lightVectorLength, 
                 viewVectorLength, 

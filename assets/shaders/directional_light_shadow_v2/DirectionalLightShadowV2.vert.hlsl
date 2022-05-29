@@ -11,7 +11,8 @@ struct VSOut {
     int layer : SV_RenderTargetArrayIndex;
 };
 
-DIRECTIONAL_LIGHT(directionalLightBuffer)
+// DIRECTIONAL_LIGHT(directionalLightBuffer)
+ConstantBuffer <DirectionalLightBufferData> directionalLightBuffer: register(b1, space0);
 
 struct PushConsts
 {   

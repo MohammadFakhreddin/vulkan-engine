@@ -25,7 +25,7 @@ struct PointLightsBufferData
 };                                                                                      
     
 // TODO: Macro is not a good idea here
-#define POINT_LIGHT(bufferName)                                                         \
-ConstantBuffer <PointLightsBufferData> bufferName: register(b2, space0);                \
+// #define POINT_LIGHT(bufferName)                                                         \
+// ConstantBuffer <PointLightsBufferData> bufferName: register(b2, space0);                \
 
 #endif
