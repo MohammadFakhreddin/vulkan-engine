@@ -20,6 +20,8 @@
 #include "engine/entity_system/components/PointLightComponent.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
+#include "engine/asset_system/AssetDebugMesh.hpp"
+#include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
 
 #define CAST_ESSENCE_PURE(essence)      static_cast<PBR_Essence *>(essence)
 #define CAST_ESSENCE_SHARED(essence)    CAST_ESSENCE_PURE(essence.get())
@@ -110,7 +112,11 @@ namespace MFA
 
         mErrorTexture = RC::AcquireGpuTexture("Error");
         MFA_ASSERT(mErrorTexture != nullptr);
-        
+
+        auto * debugPipeline = SceneManager::GetPipeline<DebugRendererPipeline>();
+        MFA_ASSERT(debugPipeline != nullptr);
+        mOcclusionEssence = debugPipeline->GetEssence("CubeFill");
+
         createUniformBuffers();
 
         {// Graphic
@@ -809,70 +815,73 @@ namespace MFA
         );
 
         mOcclusionRenderPass->BeginRenderPass(recordState);
-        renderForOcclusionQueryPass(recordState, AS::AlphaMode::Opaque);
-        renderForOcclusionQueryPass(recordState, AS::AlphaMode::Mask);
-        renderForOcclusionQueryPass(recordState, AS::AlphaMode::Blend); 
+        renderForOcclusionQueryPass(recordState);
         mOcclusionRenderPass->EndRenderPass(recordState);
     }
 
     //-------------------------------------------------------------------------------------------------
     
-    void PBRWithShadowPipelineV2::renderForOcclusionQueryPass(RT::CommandRecordState const & recordState, AS::AlphaMode const alphaMode)
+    void PBRWithShadowPipelineV2::renderForOcclusionQueryPass(RT::CommandRecordState const & recordState)
     {
         auto & occlusionQueryData = mOcclusionQueryDataList[recordState.frameIndex];
+
+        auto const occlusionEssence = mOcclusionEssence.lock();
+        MFA_ASSERT(occlusionEssence != nullptr);
+
+        occlusionEssence->bindForGraphicPipeline(recordState);
 
         OcclusionPassPushConstants pushConstants{};
 
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto const * essence = CAST_ESSENCE_SHARED(essenceAndVariantList.second.essence);
             auto & variantsList = essenceAndVariantList.second.variants;
 
             if (variantsList.empty())
             {
                 continue;
             }
-
-            essence->bindForGraphicPipeline(recordState);
-
+            
             for (auto & variant : variantsList)
             {
                 if (variant->IsActive() && variant->IsInFrustum())
                 {
-                    RF::BeginQuery(
-                        recordState,
-                        occlusionQueryData.Pool,
-                        static_cast<uint32_t>(occlusionQueryData.Variants.size())
-                    );
+                    auto bvComp = variant->GetBoundingVolume();
 
-                    // TODO Draw a placeholder cube instead of complex geometry
-                    CAST_VARIANT_SHARED(variant)->render(
-                        recordState,
-                        [&recordState, &pushConstants](
-                            AS::PBR::Primitive const & primitive,
-                            PBR_Variant::Node const & node
-                        )-> void
+                    if (bvComp != nullptr && bvComp->OcclusionEnabled())
+                    {
+                        if (auto const transformC = bvComp->GetVolumeTransform().lock())
                         {
-                            // Vertex push constants
-                            pushConstants.primitiveIndex = primitive.uniqueId;
+                            RF::BeginQuery(
+                                recordState,
+                                occlusionQueryData.Pool,
+                                static_cast<uint32_t>(occlusionQueryData.Variants.size())
+                            );
+
+                            Matrix::CopyGlmToCells(
+                                transformC->GetTransform(),
+                                pushConstants.model
+                            );
 
                             RF::PushConstants(
                                 recordState,
-                                VK_SHADER_STAGE_FRAGMENT_BIT,
+                                AS::ShaderStage::Vertex,
                                 0,
                                 CBlobAliasOf(pushConstants)
                             );
+
+                            RF::DrawIndexed(recordState, occlusionEssence->getIndicesCount());
+
+                            RF::EndQuery(
+                                recordState,
+                                occlusionQueryData.Pool,
+                                static_cast<uint32_t>(occlusionQueryData.Variants.size())
+                            );
+
+                            // What if the variant is destroyed in next frame?
+                            occlusionQueryData.Variants.emplace_back(variant);
                         }
-                    , alphaMode);
+                    }
 
-                    RF::EndQuery(
-                        recordState,
-                        occlusionQueryData.Pool,
-                        static_cast<uint32_t>(occlusionQueryData.Variants.size())
-                    );
-
-                    // What if the variant is destroyed in next frame?
-                    occlusionQueryData.Variants.emplace_back(variant);
                 }
             }
         }
@@ -1470,46 +1479,31 @@ namespace MFA
     void PBRWithShadowPipelineV2::createOcclusionQueryPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts)
     {
         RF_CREATE_SHADER("shaders/occlusion_query/Occlusion.vert.spv", Vertex)
-        RF_CREATE_SHADER("shaders/occlusion_query/Occlusion.frag.spv", Fragment)
-
-        std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuFragmentShader.get() };
+        
+        std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get() };
 
         std::vector<VkVertexInputBindingDescription> bindingDescriptions {};
 
         bindingDescriptions.emplace_back(VkVertexInputBindingDescription {
             .binding = static_cast<uint32_t>(bindingDescriptions.size()),
-            .stride = sizeof(PBR_Variant::SkinnedVertex),
-            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-        });
-
-        bindingDescriptions.emplace_back(VkVertexInputBindingDescription {
-            .binding = static_cast<uint32_t>(bindingDescriptions.size()),
-            .stride = sizeof(PBR_Essence::VertexUVs),
+            .stride = sizeof(AS::Debug::Vertex),
             .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
         });
 
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
 
-        // WorldPosition
+        // Position
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
-            .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-            .offset = offsetof(PBR_Variant::SkinnedVertex, worldPosition),
-        });
-
-        // BaseColorUV
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 1,
-            .format = VK_FORMAT_R32G32_SFLOAT,
-            .offset = offsetof(PBR_Essence::VertexUVs, baseColorTexCoord)
+            .format = VK_FORMAT_R32G32B32_SFLOAT,
+            .offset = offsetof(AS::Debug::Vertex, position),
         });
 
         // Pipeline layout
         std::vector<VkPushConstantRange> pushConstantRanges{};
         VkPushConstantRange pushConstantRange{
-            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
             .offset = 0,
             .size = sizeof(OcclusionPassPushConstants),
         };
@@ -1523,7 +1517,7 @@ namespace MFA
         );
 
         RT::CreateGraphicPipelineOptions graphicPipelineOptions{};
-        graphicPipelineOptions.cullMode = VK_CULL_MODE_BACK_BIT;
+        graphicPipelineOptions.cullMode = VK_CULL_MODE_NONE;
         graphicPipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
         graphicPipelineOptions.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
         graphicPipelineOptions.depthStencil.depthWriteEnable = VK_FALSE;

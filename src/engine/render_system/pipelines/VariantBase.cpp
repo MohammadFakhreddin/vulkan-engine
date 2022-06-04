@@ -63,9 +63,9 @@ void MFA::VariantBase::Init(
         }
     );
 
-    MFA_ASSERT(boundingVolumeComponent.expired() == false);
+    // Optional: Can be null
     mBoundingVolumeComponent = boundingVolumeComponent;
-
+    
     internalInit();
 }
 
@@ -135,14 +135,21 @@ MFA::Entity * MFA::VariantBase::GetEntity() const
 
 bool MFA::VariantBase::IsVisible() const
 {
-    return IsActive() && mIsOccluded == false && IsInFrustum();
+    return IsActive() && IsOccluded() == false && IsInFrustum();
 }
 
 //-------------------------------------------------------------------------------------------------
 
 bool MFA::VariantBase::IsOccluded() const
 {
-    return mIsOccluded;
+    if (auto const ptr = mBoundingVolumeComponent.lock())
+    {
+        if (ptr->OcclusionEnabled())
+        {
+            return mIsOccluded;
+        }
+    }
+    return false;
 }
 
 //-------------------------------------------------------------------------------------------------

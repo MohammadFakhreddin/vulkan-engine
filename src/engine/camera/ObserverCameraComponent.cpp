@@ -27,9 +27,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ObserverCameraComponent::init()
+    void ObserverCameraComponent::Init()
     {
-        CameraComponent::init();
+        CameraComponent::Init();
 
         IM::WarpMouseAtEdges(false);
     }

@@ -6,6 +6,7 @@
 #include <glm/vec4.hpp>
 
 namespace MFA {
+    class TransformComponent;
     class CameraComponent;
 
     class BoundingVolumeComponent : public Component
@@ -15,15 +16,19 @@ namespace MFA {
         MFA_COMPONENT_PROPS(
             BoundingVolumeComponent,
             FamilyType::BoundingVolume,
-            EventTypes::UpdateEvent | EventTypes::InitEvent
+            EventTypes::UpdateEvent | EventTypes::InitEvent | EventTypes::ShutdownEvent
         )
 
-        explicit BoundingVolumeComponent();
+        explicit BoundingVolumeComponent(bool occlusionCullingEnabled);
         ~BoundingVolumeComponent() override;
 
-        void init() override;
+        void Init() override;
 
         void Update(float deltaTimeInSec) override;
+
+        void Shutdown() override;
+
+        void onUI() override;
 
         [[nodiscard]]
         bool IsInFrustum() const;
@@ -40,7 +45,15 @@ namespace MFA {
         [[nodiscard]]
         virtual glm::vec4 const & GetWorldPosition() const = 0;
 
-        
+        std::weak_ptr<TransformComponent> GetVolumeTransform();
+
+        [[nodiscard]]
+        bool OcclusionEnabled() const;
+
+        void serialize(nlohmann::json & jsonObject) const override;
+
+        void deserialize(nlohmann::json const & jsonObject) override;
+
     protected:
 
         virtual bool IsInsideCameraFrustum(CameraComponent const * camera);
@@ -48,6 +61,10 @@ namespace MFA {
     private:
 
         bool mIsInFrustum = false;
+
+        bool mOcclusionEnabled = false;
+
+        std::weak_ptr<TransformComponent> mBvTransform {};
 
     };
 

@@ -177,6 +177,11 @@ namespace MFA
 
     void ParticleEssence::compute(RT::CommandRecordState const & recordState)
     {
+        if (mShouldUpdate == false)
+        {
+            return;
+        }
+
         if (mIsParamsBufferDirty)
         {
             updateParamsBuffer(recordState);
@@ -216,11 +221,13 @@ namespace MFA
 
     void ParticleEssence::render(RT::CommandRecordState const & recordState) const
     {
-        if (mShouldUpdate)
+        if (mShouldUpdate == false)
         {
-            updateInstanceBuffer(recordState);
+            return;
         }
 
+        updateInstanceBuffer(recordState);
+        
         bindVertexBuffer(recordState);
         bindInstanceBuffer(recordState);
         bindIndexBuffer(recordState);
@@ -423,6 +430,7 @@ namespace MFA
         mShouldUpdate = false;
         for (auto const & variant : variants)
         {
+            // TODO: We need an occlusion test for particles as well
             if (variant->IsVisible())
             {
                 mShouldUpdate = true;
@@ -433,14 +441,17 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
     
-    void ParticleEssence::updateParamsBuffer(RT::CommandRecordState const & recordState) const
+    void ParticleEssence::updateParamsBuffer(RT::CommandRecordState const & recordState)
     {
-        auto const stageBuffer = RF::CreateStageBuffer(sizeof(mParams), 1);
-        RF::UpdateHostVisibleBuffer(*stageBuffer->buffers[0], CBlobAliasOf(mParams));
+        if (mParamsStageBuffer == nullptr)
+        {
+            mParamsStageBuffer = RF::CreateStageBuffer(sizeof(mParams), 1);
+        }
+        RF::UpdateHostVisibleBuffer(*mParamsStageBuffer->buffers[0], CBlobAliasOf(mParams));
         RF::UpdateLocalBuffer(
             recordState.commandBuffer,
             *mParamsBuffer->buffers[0],
-            *stageBuffer->buffers[0]
+            *mParamsStageBuffer->buffers[0]
         );
     }
 

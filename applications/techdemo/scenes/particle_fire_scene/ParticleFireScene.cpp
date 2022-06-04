@@ -111,7 +111,8 @@ void ParticleFireScene::createFireInstance(glm::vec3 const & position) const
     );
     entity->AddComponent<AxisAlignedBoundingBoxComponent>(
         glm::vec3{ 0.0f, -0.8f, 0.0f },
-        glm::vec3{ FireRadius, 1.0f, FireRadius }
+        glm::vec3{ FireRadius, 1.0f, FireRadius },
+        true
     );
     entity->AddComponent<ColorComponent>(glm::vec3{ 1.0f, 0.0f, 0.0f });
 

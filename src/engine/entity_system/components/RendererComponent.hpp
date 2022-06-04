@@ -10,7 +10,7 @@ namespace MFA {
     class RendererComponent : public Component {
     public:
     
-        void shutdown() override;
+        void Shutdown() override;
 
         [[nodiscard]]
         VariantBase const * getVariant() const;

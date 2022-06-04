@@ -20,16 +20,18 @@ namespace MFA
         
         explicit AxisAlignedBoundingBoxComponent(
             glm::vec3 const & center,
-            glm::vec3 const & extend
+            glm::vec3 const & extend,
+            bool occlusionCullingEnabled
         );
 
+        // Only used for auto deserialization
         explicit AxisAlignedBoundingBoxComponent();
 
         ~AxisAlignedBoundingBoxComponent() override;
         
-        void init() override;
+        void Init() override;
 
-        void shutdown() override;
+        void Shutdown() override;
 
         void onUI() override;
 

@@ -13,15 +13,15 @@ public:
     MFA_COMPONENT_PROPS(
         SphereBoundingVolumeComponent,
         FamilyType::BoundingVolume,
-        EventTypes::UpdateEvent | EventTypes::InitEvent
+        EventTypes::UpdateEvent | EventTypes::InitEvent | EventTypes::ShutdownEvent
     )
 
     explicit SphereBoundingVolumeComponent();
     ~SphereBoundingVolumeComponent() override;
 
-    explicit SphereBoundingVolumeComponent(float radius);
+    explicit SphereBoundingVolumeComponent(float radius, bool occlusionEnabled);
     
-    void init() override;
+    void Init() override;
 
     [[nodiscard]]
     glm::vec3 const & GetExtend() const override;
@@ -48,8 +48,7 @@ protected:
 private:
 
     float mRadius = 0.0f;
-    std::weak_ptr<TransformComponent> mTransformComponent {};
-
+    
 };
 
 }

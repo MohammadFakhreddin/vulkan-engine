@@ -80,7 +80,7 @@ namespace MFA
         createPipeline();
         createDescriptorSets();
 
-        std::vector<std::string> const modelNames{ "Sphere", "Cube" };
+        std::vector<std::string> const modelNames{ "Sphere", "CubeStrip", "CubeFill" };
         for (auto const & modelName : modelNames)
         {
             auto const cpuModel = RC::AcquireCpuModel(modelName);
@@ -150,6 +150,13 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     void DebugRendererPipeline::freeUnusedEssences() {}
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::weak_ptr<DebugEssence> DebugRendererPipeline::GetEssence(std::string const & nameId)
+    {
+        return std::static_pointer_cast<DebugEssence>(BasePipeline::GetEssence(nameId));
+    }
 
     //-------------------------------------------------------------------------------------------------
 

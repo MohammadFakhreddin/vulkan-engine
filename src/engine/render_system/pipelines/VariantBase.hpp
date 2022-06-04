@@ -9,7 +9,7 @@ namespace MFA
     class TransformComponent;
     class BoundingVolumeComponent;
     class EssenceBase;
-
+    
     class VariantBase
     {
     public:
@@ -28,7 +28,7 @@ namespace MFA
             Entity * entity,
             std::weak_ptr<RendererComponent> const & rendererComponent,
             std::weak_ptr<TransformComponent> const & transformComponent,
-            std::weak_ptr<BoundingVolumeComponent> const & boundingVolumeComponent
+            std::weak_ptr<BoundingVolumeComponent> const & boundingVolumeComponent = {}
         );
 
         void Shutdown();
@@ -75,10 +75,12 @@ namespace MFA
         std::weak_ptr<RendererComponent> mRendererComponent{};
         std::weak_ptr<BoundingVolumeComponent> mBoundingVolumeComponent{};
         std::weak_ptr<TransformComponent> mTransformComponent{};
+        
         int mTransformListenerId = 0;
         
         bool mIsModelTransformChanged = true;
-        bool mIsOccluded = false;
 
+        bool mIsOccluded = false;
+     
     };
 }

@@ -34,9 +34,9 @@ namespace MFA {
 
         ~PointLightComponent() override;
 
-        void init() override;
+        void Init() override;
 
-        void shutdown() override;
+        void Shutdown() override;
 
         [[nodiscard]]
         glm::vec3 GetLightColor() const;

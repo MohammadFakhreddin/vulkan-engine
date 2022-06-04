@@ -22,9 +22,9 @@ namespace MFA
         explicit MeshRendererComponent() = default;
         explicit MeshRendererComponent(BasePipeline & pipeline, std::string const & nameOrAddress);
 
-        void init() override;
+        void Init() override;
 
-        void shutdown() override;
+        void Shutdown() override;
 
         void onUI() override;
 

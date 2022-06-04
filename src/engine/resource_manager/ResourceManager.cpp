@@ -1,7 +1,6 @@
 #include "ResourceManager.hpp"
 
 #include "engine/render_system/RenderTypes.hpp"
-#include "engine/BedrockFileSystem.hpp"
 #include "engine/BedrockAssert.hpp"
 #include "tools/Importer.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
@@ -18,15 +17,11 @@ namespace MFA::ResourceManager
 
     struct State
     {
-        //std::unordered_map<std::string, std::weak_ptr<RT::GpuModel>> availableGpuModels{};
         std::unordered_map<std::string, std::weak_ptr<AS::Model>> availableCpuModels{};
 
         std::unordered_map<std::string, std::weak_ptr<RT::GpuTexture>> availableGpuTextures {};
         std::unordered_map<std::string, std::weak_ptr<AS::Texture>> availableCpuTextures {};
 
-        //std::shared_ptr<RT::BufferGroup> vertexStageBuffer {};
-        //std::shared_ptr<RT::BufferGroup> indexStageBuffer {};
-        //std::shared_ptr<RT::BufferGroup> stageBuffer {};
     };
     State * state = nullptr;
 
@@ -121,7 +116,7 @@ namespace MFA::ResourceManager
 
     //-------------------------------------------------------------------------------------------------
     // TODO Use job system to make this process multi-threaded
-    std::shared_ptr<AS::Model> ResourceManager::AcquireCpuModel(
+    std::shared_ptr<AS::Model> AcquireCpuModel(
         std::string const & modelId,
         bool const loadFileIfNotExists
     )
@@ -146,10 +141,13 @@ namespace MFA::ResourceManager
         if (extension == ".gltf" || extension == ".glb")
         {
             cpuModel = Importer::ImportGLTF(Path::ForReadWrite(relativePath));
-        } else if (strcmp("Cube", relativePath.c_str()) == 0)
+        } else if ("CubeStrip" == relativePath)
         {
-            cpuModel = ShapeGenerator::Debug::Cube();
-        } else if (strcmp("Sphere", relativePath.c_str()) == 0)
+            cpuModel = ShapeGenerator::Debug::CubeStrip();
+        } else if ("CubeFill" == relativePath)
+        {
+            cpuModel = ShapeGenerator::Debug::CubeFill();
+        } else if ("Sphere" == relativePath)
         {
             cpuModel = ShapeGenerator::Debug::Sphere();
         } else

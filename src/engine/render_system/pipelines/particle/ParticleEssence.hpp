@@ -78,7 +78,7 @@ namespace MFA
 
         void checkIfUpdateIsRequired(VariantsList const & variants);
 
-        void updateParamsBuffer(RT::CommandRecordState const & recordState) const;
+        void updateParamsBuffer(RT::CommandRecordState const & recordState);
 
         void createVertexBuffer(
             VkCommandBuffer commandBuffer,
@@ -110,6 +110,7 @@ namespace MFA
         AS::Particle::Params mParams {};
 
         std::shared_ptr<RT::BufferGroup> mParamsBuffer = nullptr;
+        std::shared_ptr<RT::BufferGroup> mParamsStageBuffer = nullptr;
 
         uint32_t const mMaxInstanceCount;
         

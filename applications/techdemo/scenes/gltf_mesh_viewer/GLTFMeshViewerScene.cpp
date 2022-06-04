@@ -164,7 +164,7 @@ void GLTFMeshViewerScene::Init() {
             "Sphere"
         );
 
-        entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
+        entity->AddComponent<SphereBoundingVolumeComponent>(0.1f, true);
 
         EntitySystem::InitEntity(entity);
     }
@@ -309,7 +309,8 @@ void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredDa
 
         entity->AddComponent<AxisAlignedBoundingBoxComponent>(
             glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(100.0f, 100.0f, 100.0f)
+            glm::vec3(100.0f, 100.0f, 100.0f),
+            true
         );
         
         EntitySystem::InitEntity(entity);

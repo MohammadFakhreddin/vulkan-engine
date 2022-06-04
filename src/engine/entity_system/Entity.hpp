@@ -51,7 +51,9 @@ namespace MFA
             return mUpdateSignal.IsEmpty() == false && IsActive();
         }
 
-        void Init(bool triggerInitSignal = true);
+        void Init(bool triggerSignal = true);
+
+        void LateInit(bool triggerInitSignal = true);
 
         void Update(float deltaTimeInSec);
 
@@ -90,6 +92,11 @@ namespace MFA
             if ((requiredEvents & Component::EventTypes::InitEvent) > 0)
             {
                 mInitSignal.UnRegister(component->mInitEventId);
+            }
+            // Late init event
+            if ((requiredEvents & Component::EventTypes::LateInitEvent) > 0)
+            {
+                mLateInitSignal.UnRegister(component->mLateInitEventId);
             }
             // Update event
             if ((requiredEvents & Component::EventTypes::UpdateEvent) > 0)
@@ -186,6 +193,7 @@ namespace MFA
         std::shared_ptr<Component> mComponents[static_cast<int>(Component::FamilyType::Count)]{};
 
         Signal<> mInitSignal{};
+        Signal<> mLateInitSignal{};
         Signal<float> mUpdateSignal{};
         Signal<> mShutdownSignal{};
         Signal<bool> mActivationStatusChangeSignal{};

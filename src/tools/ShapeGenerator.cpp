@@ -166,11 +166,11 @@ namespace MFA::ShapeGenerator
             );
         }
 
-        std::shared_ptr<AS::Model> Cube()
+        std::shared_ptr<AS::Model> CubeStrip()
         {
             using namespace AS::Debug;
 
-            std::vector<glm::vec3> const positions{
+            std::vector<glm::vec3> const vertices{
                 // front
                 glm::vec3(-1.0, -1.0,  1.0),
                 glm::vec3(1.0, -1.0,  1.0),
@@ -183,15 +183,15 @@ namespace MFA::ShapeGenerator
                 glm::vec3(-1.0,  1.0, -1.0)
             };
 
-            std::vector<AS::Index> const meshIndices{
+            std::vector<AS::Index> const indices{
                 0, 1, 2, 3,
                 0, 4, 5, 6,
                 7, 4, 7, 3,
                 2, 6, 5, 1
             };
 
-            auto const verticesCount = static_cast<uint16_t>(positions.size());
-            auto const indicesCount = static_cast<uint16_t>(meshIndices.size());
+            auto const verticesCount = static_cast<uint16_t>(vertices.size());
+            auto const indicesCount = static_cast<uint16_t>(indices.size());
 
             auto const verticesBuffer = Memory::Alloc(sizeof(Vertex) * verticesCount);
             auto const indicesBuffer = Memory::Alloc(sizeof(AS::Index) * indicesCount);
@@ -209,7 +209,7 @@ namespace MFA::ShapeGenerator
 
             ::memcpy(
                 indicesBuffer->memory.ptr,
-                meshIndices.data(),
+                indices.data(),
                 indicesBuffer->memory.len
             );
 
@@ -217,26 +217,8 @@ namespace MFA::ShapeGenerator
             {
                 auto & vertex = meshVertices[index];
                 // Positions
-                Matrix::CopyGlmToCells(positions[index], vertex.position);
+                Matrix::CopyGlmToCells(vertices[index], vertex.position);
             }
-
-            //auto const subMeshIndex = mesh->insertSubMesh();
-
-            //Primitive primitive{};
-            //primitive.hasBaseColorTexture = true;
-            //mesh->insertPrimitive(
-            //    subMeshIndex,
-            //    primitive,
-            //    verticesCount,
-            //    meshVertices.data(),
-            //    indicesCount,
-            //    meshIndices.data()
-            //);
-
-            //Node node{};
-            //node.subMeshIndex = 0;
-            //Matrix::CopyGlmToCells(glm::identity<glm::mat4>(), node.transform);
-            //mesh->insertNode(node);
 
             mesh->finalizeData();
 
@@ -247,5 +229,87 @@ namespace MFA::ShapeGenerator
             );
 
         }
+
+        std::shared_ptr<AS::Model> CubeFill()
+        {
+            using namespace AS::Debug;
+
+            std::vector<AS::Index> const indices {
+                //Top
+                2, 6, 7,
+                2, 3, 7,
+
+                //Bottom
+                0, 4, 5,
+                0, 1, 5,
+
+                //Left
+                0, 2, 6,
+                0, 4, 6,
+
+                //Right
+                1, 3, 7,
+                1, 5, 7,
+
+                //Front
+                0, 2, 3,
+                0, 1, 3,
+
+                //Back
+                4, 6, 7,
+                4, 5, 7
+            };
+
+            std::vector<glm::vec3> const vertices {
+                glm::vec3(-1, -1,  0.5), //0
+                glm::vec3( 1, -1,  0.5), //1
+                glm::vec3(-1,  1,  0.5), //2
+                glm::vec3( 1,  1,  0.5), //3
+                glm::vec3(-1, -1, -0.5), //4
+                glm::vec3( 1, -1, -0.5), //5
+                glm::vec3(-1,  1, -0.5), //6
+                glm::vec3( 1,  1, -0.5)  //7
+            };
+
+            auto const verticesCount = static_cast<uint16_t>(vertices.size());
+            auto const indicesCount = static_cast<uint16_t>(indices.size());
+
+            auto const verticesBuffer = Memory::Alloc(sizeof(Vertex) * verticesCount);
+            auto const indicesBuffer = Memory::Alloc(sizeof(AS::Index) * indicesCount);
+
+            auto const mesh = std::make_shared<Mesh>();
+            MFA_ASSERT(mesh != nullptr);
+            mesh->initForWrite(
+                verticesCount,
+                indicesCount,
+                verticesBuffer,
+                indicesBuffer
+            );
+
+            auto * meshVertices = verticesBuffer->memory.as<Vertex>();
+
+            ::memcpy(
+                indicesBuffer->memory.ptr,
+                indices.data(),
+                indicesBuffer->memory.len
+            );
+
+            for (uint32_t index = 0; index < verticesCount; ++index)
+            {
+                auto & vertex = meshVertices[index];
+                // Positions
+                Matrix::CopyGlmToCells(vertices[index], vertex.position);
+            }
+
+            mesh->finalizeData();
+
+            return std::make_shared<AS::Model>(
+                mesh,
+                std::vector<std::string>{},
+                std::vector<AS::SamplerConfig>{}
+            );
+
+        }
+
     }
 }

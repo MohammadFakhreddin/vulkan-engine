@@ -4,8 +4,10 @@
 #include "engine/render_system/pipelines/BasePipeline.hpp"
 
 namespace MFA {
-    
-class DebugRendererPipeline final : public BasePipeline {
+
+    class DebugEssence;
+    class DebugRendererPipeline final : public BasePipeline {
+
 public:
 
     struct PushConstants {
@@ -32,6 +34,8 @@ public:
     void onResize() override;
 
     void freeUnusedEssences() override;
+
+    std::weak_ptr<DebugEssence> GetEssence(std::string const & nameId);
 
 protected:
 

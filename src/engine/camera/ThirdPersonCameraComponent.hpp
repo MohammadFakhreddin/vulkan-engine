@@ -38,11 +38,11 @@ public:
         float eulerAngles[3]
     );
 
-    void init() override;
+    void Init() override;
 
     void Update(float deltaTimeInSec) override;
 
-    void shutdown() override;
+    void Shutdown() override;
 
     void onUI() override;
 

@@ -25,9 +25,9 @@ namespace MFA
             glm::vec3 const & scale_
         );
 
-        void init() override;
+        void Init() override;
 
-        void shutdown() override;
+        void Shutdown() override;
 
         void UpdateTransform(float position[3], float rotation[3], float scale[3]);
 

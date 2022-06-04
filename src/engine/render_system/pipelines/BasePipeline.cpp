@@ -250,4 +250,16 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    std::shared_ptr<EssenceBase> BasePipeline::GetEssence(std::string const & nameId)
+    {
+        auto const findResult = mEssenceAndVariantsMap.find(nameId);
+        if(findResult == mEssenceAndVariantsMap.end())
+        {
+            return nullptr;
+        }
+        return findResult->second.essence;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
 }

@@ -90,7 +90,7 @@ void PrefabEditorScene::Init()
     MFA_ASSERT(mDebugPipeline != nullptr);
 
     loadSelectedAsset("Sphere");
-    loadSelectedAsset("Cube");
+    loadSelectedAsset("CubeStrip");
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -375,7 +375,7 @@ void PrefabEditorScene::entityUI(Entity * entity)
             {
                 return;
             }
-            newComponent->init();
+            newComponent->Init();
             EntitySystem::UpdateEntity(entity);
 
             newComponent->EditorSignal.Register(this, &PrefabEditorScene::componentUI);

@@ -40,7 +40,7 @@ MFA::PointLightComponent::~PointLightComponent() = default;
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::PointLightComponent::init()
+void MFA::PointLightComponent::Init()
 {
     // Finding component references
     mColorComponent = GetEntity()->GetComponent<ColorComponent>();
@@ -64,9 +64,9 @@ void MFA::PointLightComponent::init()
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::PointLightComponent::shutdown()
+void MFA::PointLightComponent::Shutdown()
 {
-    Component::shutdown();
+    Component::Shutdown();
 
     if (auto const ptr = mTransformComponent.lock())
     {
@@ -242,10 +242,17 @@ void MFA::PointLightComponent::serialize(nlohmann::json & jsonObject) const
 
 void MFA::PointLightComponent::deserialize(nlohmann::json const & jsonObject)
 {
-    mRadius = jsonObject["Radius"];
-    mMaxDistance = jsonObject["MaxDistance"];
-    mProjectionNearDistance = jsonObject["ProjectionNearDistance"];
-    mProjectionFarDistance = jsonObject["ProjectionFarDistance"];
+    MFA_ASSERT(jsonObject.contains("Radius"));
+    mRadius = jsonObject.value("Radius", 0.0f);
+
+    MFA_ASSERT(jsonObject.contains("MaxDistance"));
+    mMaxDistance = jsonObject.value("MaxDistance", 0.0f);
+
+    MFA_ASSERT(jsonObject.contains("ProjectionNearDistance"));
+    mProjectionNearDistance = jsonObject.value("ProjectionNearDistance", 0.0f);
+    
+    MFA_ASSERT(jsonObject.contains("ProjectionFarDistance"));
+    mProjectionFarDistance = jsonObject.value("ProjectionFarDistance", 0.0f);
 
     mMaxSquareDistance = mMaxDistance * mMaxDistance;
 }

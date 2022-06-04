@@ -8,7 +8,8 @@
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::SphereBoundingVolumeComponent::SphereBoundingVolumeComponent() = default;
+MFA::SphereBoundingVolumeComponent::SphereBoundingVolumeComponent()
+    : BoundingVolumeComponent(false) {}
 
 //-------------------------------------------------------------------------------------------------
 
@@ -16,21 +17,21 @@ MFA::SphereBoundingVolumeComponent::~SphereBoundingVolumeComponent() = default;
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::SphereBoundingVolumeComponent::SphereBoundingVolumeComponent(float const radius)
-    : mRadius(radius)
+MFA::SphereBoundingVolumeComponent::SphereBoundingVolumeComponent(
+    float const radius,
+    bool const occlusionEnabled
+)
+    : BoundingVolumeComponent(occlusionEnabled)
+    , mRadius(radius)
 {
     MFA_ASSERT(radius > 0.0f);       
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::SphereBoundingVolumeComponent::init()
+void MFA::SphereBoundingVolumeComponent::Init()
 {
-    BoundingVolumeComponent::init();
-
-    mTransformComponent = GetEntity()->GetComponent<TransformComponent>();
-    MFA_ASSERT(mTransformComponent.expired() == false);
-
+    BoundingVolumeComponent::Init();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -66,7 +67,7 @@ glm::vec4 const & MFA::SphereBoundingVolumeComponent::GetWorldPosition() const
 void MFA::SphereBoundingVolumeComponent::clone(Entity * entity) const
 {
     MFA_ASSERT(entity != nullptr);
-    entity->AddComponent<SphereBoundingVolumeComponent>(mRadius);
+    entity->AddComponent<SphereBoundingVolumeComponent>(mRadius, OcclusionEnabled());
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -80,7 +81,8 @@ void MFA::SphereBoundingVolumeComponent::serialize(nlohmann::json & jsonObject) 
 
 void MFA::SphereBoundingVolumeComponent::deserialize(nlohmann::json const & jsonObject)
 {
-    mRadius = jsonObject["radius"];
+    MFA_ASSERT(jsonObject.contains("radius"));
+    mRadius = jsonObject.value("radius", 0.0f);
 }
 
 //-------------------------------------------------------------------------------------------------

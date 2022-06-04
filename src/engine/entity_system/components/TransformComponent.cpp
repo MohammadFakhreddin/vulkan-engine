@@ -30,9 +30,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::init()
+    void TransformComponent::Init()
     {
-        Component::init();
+        Component::Init();
 
         auto * parentEntity = GetEntity()->GetParent();
         if (parentEntity != nullptr)
@@ -52,9 +52,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::shutdown()
+    void TransformComponent::Shutdown()
     {
-        Component::shutdown();
+        Component::Shutdown();
         if (auto const parentTransformPtr = mParentTransform.lock())
         {
             parentTransformPtr->UnRegisterChangeListener(mParentTransformChangeListenerId);

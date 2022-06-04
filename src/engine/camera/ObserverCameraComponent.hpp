@@ -34,7 +34,7 @@ namespace MFA
 
         ~ObserverCameraComponent() override = default;
         
-        void init() override;
+        void Init() override;
 
         void Update(float deltaTimeInSec) override;
 

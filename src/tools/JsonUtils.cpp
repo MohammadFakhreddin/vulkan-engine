@@ -1,5 +1,7 @@
 #include "JsonUtils.hpp"
 
+#include "engine/BedrockAssert.hpp"
+
 #include "libs/nlohmann/json.hpp"
 
 namespace MFA::JsonUtils 
@@ -20,10 +22,17 @@ namespace MFA::JsonUtils
 
     void DeserializeVec3(nlohmann::json const & jsonObject, char const * key, glm::vec3 & outVec3)
     {
-        auto & rawVec3 = jsonObject[key];
-        outVec3.x = rawVec3["x"];
-        outVec3.y = rawVec3["y"];
-        outVec3.z = rawVec3["z"];
+        auto const findResult = jsonObject.find(key);
+        if (findResult == jsonObject.end())
+        {
+            MFA_ASSERT(false);
+            return;
+        }
+
+        auto & rawVec3 = findResult.value();
+        outVec3.x = rawVec3.value("x", -1.0f);
+        outVec3.y = rawVec3.value("y", -1.0f);
+        outVec3.z = rawVec3.value("z", -1.0f);
     }
 
     //-------------------------------------------------------------------------------------------------

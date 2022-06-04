@@ -3,6 +3,7 @@
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
 #include "engine/asset_system/AssetTypes.hpp"
+#include "engine/render_system/pipelines/debug_renderer/DebugEssence.hpp"
 
 // Optimize this file using https://simoncoenen.com/blog/programming/graphics/DoomEternalStudy
 
@@ -34,10 +35,7 @@ namespace MFA
 
         struct OcclusionPassPushConstants
         {
-            uint32_t primitiveIndex = 0;      // Unique id
-            int placeholder0 = 0;
-            int placeholder1 = 0;
-            int placeholder2 = 0;
+            float model [16] {};
         };
 
         struct PointLightShadowPassPushConstants
@@ -179,7 +177,7 @@ namespace MFA
 
         void performOcclusionQueryPass(RT::CommandRecordState & recordState);
 
-        void renderForOcclusionQueryPass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode);
+        void renderForOcclusionQueryPass(RT::CommandRecordState const & recordState);
 
         void performDisplayPass(RT::CommandRecordState & recordState) const;
 
@@ -208,7 +206,8 @@ namespace MFA
         std::shared_ptr<RT::PipelineGroup> mDepthPassPipeline{};
         std::unique_ptr<DepthPrePass> mDepthPrePass;
 
-        // Occlusion pass pipeline
+        // =========== Occlusion =========== //
+
         std::shared_ptr<RT::PipelineGroup> mOcclusionQueryPipeline{};
         std::unique_ptr<OcclusionRenderPass> mOcclusionRenderPass;
 
@@ -224,6 +223,8 @@ namespace MFA
         std::shared_ptr<RT::DescriptorSetLayoutGroup> mGfxPerEssenceDescriptorSetLayout{};
         
         RT::DescriptorSetGroup mGfxPerFrameDescriptorSetGroup{};
+
+        std::weak_ptr<DebugEssence> mOcclusionEssence {};
 
         // =========== Compute =========== //
 

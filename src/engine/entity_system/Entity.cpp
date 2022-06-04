@@ -37,7 +37,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void Entity::Init(bool const triggerInitSignal)
+    void Entity::Init(bool const triggerSignal)
     {
         if (mIsInitialized)
         {
@@ -50,9 +50,19 @@ namespace MFA
             mParent->notifyANewChildAdded(this);
         }
 
-        if (triggerInitSignal == true)
+        if (triggerSignal == true)
         {
             mInitSignal.Emit();
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Entity::LateInit(bool const triggerSignal)
+    {
+        if (triggerSignal)
+        {
+            mLateInitSignal.Emit();
         }
     }
 
@@ -401,7 +411,17 @@ namespace MFA
         if ((component->requiredEvents() & Component::EventTypes::InitEvent) > 0)
         {
             MFA_ASSERT(component->mInitEventId == InvalidSignalId);
-            component->mInitEventId = mInitSignal.Register([component]()->void { component->init(); });
+            component->mInitEventId = mInitSignal.Register([component]()->void{
+                component->Init();
+            });
+        }
+        // Late Init event
+        if ((component->requiredEvents() & Component::EventTypes::LateInitEvent) > 0)
+        {
+            MFA_ASSERT(component->mLateInitEventId == InvalidSignalId);
+            component->mLateInitEventId = mLateInitSignal.Register([component]()->void{
+                component->LateInit();
+            });
         }
         // Update event
         if ((component->requiredEvents() & Component::EventTypes::UpdateEvent) > 0)
@@ -418,7 +438,7 @@ namespace MFA
             MFA_ASSERT(component->mShutdownEventId == InvalidSignalId);
             component->mShutdownEventId = mShutdownSignal.Register([component]()->void
             {
-                component->shutdown();
+                component->Shutdown();
             });
         }
     }

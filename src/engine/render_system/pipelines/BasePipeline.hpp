@@ -143,6 +143,7 @@ namespace MFA
 
         virtual std::shared_ptr<VariantBase> internalCreateVariant(EssenceBase * essence) = 0;
 
+        std::shared_ptr<EssenceBase> GetEssence(std::string const & nameId);
         
         struct EssenceAndVariants
         {

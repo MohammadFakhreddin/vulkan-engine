@@ -33,9 +33,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void MeshRendererComponent::init()
+    void MeshRendererComponent::Init()
     {
-        RendererComponent::init();
+        RendererComponent::Init();
 
         auto * entity = GetEntity();
         MFA_ASSERT(entity != nullptr);
@@ -52,9 +52,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void MeshRendererComponent::shutdown()
+    void MeshRendererComponent::Shutdown()
     {
-        RendererComponent::shutdown();
+        RendererComponent::Shutdown();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -89,11 +89,13 @@ namespace MFA
 
     void MeshRendererComponent::deserialize(nlohmann::json const & jsonObject)
     {
-        std::string const pipelineName = jsonObject["pipeline"];
+        MFA_ASSERT(jsonObject.contains("pipeline"));
+        std::string const pipelineName = jsonObject.value("pipeline", "");
         mPipeline = SceneManager::GetPipeline(pipelineName);
         MFA_ASSERT(mPipeline != nullptr);
 
-        std::string const address = jsonObject["address"];
+        MFA_ASSERT(jsonObject.contains("address"));
+        std::string const address = jsonObject.value("address", "");
 
         std::string nameId = Path::RelativeToAssetFolder(address);
 

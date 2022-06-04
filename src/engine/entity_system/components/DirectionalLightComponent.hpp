@@ -22,9 +22,9 @@ namespace MFA
         explicit DirectionalLightComponent();
         ~DirectionalLightComponent() override;
 
-        void init() override;
+        void Init() override;
 
-        void shutdown() override;
+        void Shutdown() override;
         
         void GetShadowViewProjectionMatrix(float outViewProjectionMatrix[16]) const;
 
