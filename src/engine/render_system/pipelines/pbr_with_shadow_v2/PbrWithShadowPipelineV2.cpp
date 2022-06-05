@@ -1521,6 +1521,7 @@ namespace MFA
         graphicPipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
         graphicPipelineOptions.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
         graphicPipelineOptions.depthStencil.depthWriteEnable = VK_FALSE;
+        graphicPipelineOptions.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
         mOcclusionQueryPipeline = RF::CreateGraphicPipeline(
             mOcclusionRenderPass->GetVkRenderPass(),

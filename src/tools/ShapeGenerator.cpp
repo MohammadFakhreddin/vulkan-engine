@@ -26,8 +26,8 @@ namespace MFA::ShapeGenerator
             {
                 for (unsigned int x = 0; x <= X_SEGMENTS; ++x)
                 {
-                    float xSegment = static_cast<float>(x) / static_cast<float>(X_SEGMENTS);
-                    float ySegment = static_cast<float>(y) / static_cast<float>(Y_SEGMENTS);
+                    float const xSegment = static_cast<float>(x) / static_cast<float>(X_SEGMENTS);
+                    float const ySegment = static_cast<float>(y) / static_cast<float>(Y_SEGMENTS);
                     float xPos = std::cos(xSegment * 2.0f * Math::PiFloat) * std::sin(ySegment * Math::PiFloat);
                     float yPos = std::cos(ySegment * Math::PiFloat);
                     float zPos = std::sin(xSegment * 2.0f * Math::PiFloat) * std::sin(ySegment * Math::PiFloat);
@@ -172,15 +172,15 @@ namespace MFA::ShapeGenerator
 
             std::vector<glm::vec3> const vertices{
                 // front
-                glm::vec3(-1.0, -1.0,  1.0),
-                glm::vec3(1.0, -1.0,  1.0),
-                glm::vec3(1.0,  1.0,  1.0),
-                glm::vec3(-1.0,  1.0,  1.0),
+                glm::vec3(-0.5f, -0.5f, 0.5f),
+                glm::vec3(0.5f, -0.5f, 0.5f),
+                glm::vec3(0.5f, 0.5f, 0.5f),
+                glm::vec3(-0.5f, 0.5f, 0.5f),
                 // back
-                glm::vec3(-1.0, -1.0, -1.0),
-                glm::vec3(1.0, -1.0, -1.0),
-                glm::vec3(1.0,  1.0, -1.0),
-                glm::vec3(-1.0,  1.0, -1.0)
+                glm::vec3(-0.5f, -0.5f, -0.5f),
+                glm::vec3(0.5f, -0.5f, -0.5f),
+                glm::vec3(0.5f, 0.5f, -0.5f),
+                glm::vec3(-0.5f, 0.5f, -0.5f)
             };
 
             std::vector<AS::Index> const indices{
@@ -261,14 +261,14 @@ namespace MFA::ShapeGenerator
             };
 
             std::vector<glm::vec3> const vertices {
-                glm::vec3(-1, -1,  0.5), //0
-                glm::vec3( 1, -1,  0.5), //1
-                glm::vec3(-1,  1,  0.5), //2
-                glm::vec3( 1,  1,  0.5), //3
-                glm::vec3(-1, -1, -0.5), //4
-                glm::vec3( 1, -1, -0.5), //5
-                glm::vec3(-1,  1, -0.5), //6
-                glm::vec3( 1,  1, -0.5)  //7
+                glm::vec3(-0.5f,  -0.5f, 0.5), //0
+                glm::vec3( 0.5f,  -0.5f, 0.5), //1
+                glm::vec3(-0.5f,  0.5f,  0.5), //2
+                glm::vec3( 0.5f,  0.5f,  0.5), //3
+                glm::vec3(-0.5f,  -0.5f, -0.5), //4
+                glm::vec3( 0.5f,  -0.5f, -0.5), //5
+                glm::vec3(-0.5f,  0.5f,  -0.5), //6
+                glm::vec3( 0.5f,  0.5f,  -0.5)  //7
             };
 
             auto const verticesCount = static_cast<uint16_t>(vertices.size());
