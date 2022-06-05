@@ -84,7 +84,7 @@ namespace MFA
         RenderPass::BeginRenderPass(recordState);
 
         usePresentToDrawBarrier(recordState);
-        
+
         auto surfaceCapabilities = RF::GetSurfaceCapabilities();
         auto const swapChainExtend = VkExtent2D{
             .width = surfaceCapabilities.currentExtent.width,
@@ -114,10 +114,13 @@ namespace MFA
     void DisplayRenderPass::EndRenderPass(RT::CommandRecordState & recordState)
     {
         RenderPass::EndRenderPass(recordState);
+
+#ifdef __DESKTOP__
         if (RF::IsWindowVisible() == false)
         {
             return;
         }
+#endif
 
         RF::EndRenderPass(recordState.commandBuffer);
 
@@ -204,7 +207,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    // Static approach for initial layout of depth buffers 
+    // Static approach for initial layout of depth buffers
     /*void DisplayRenderPass::UseDepthImageLayoutAsUndefined(bool const setDepthImageLayoutAsUndefined)
     {
         if (mIsDepthImageInitialLayoutUndefined == setDepthImageLayoutAsUndefined)
@@ -452,7 +455,7 @@ namespace MFA
             barriers.data()
         );
     }
-    
+
     //-------------------------------------------------------------------------------------------------
 
     void DisplayRenderPass::clearDepthBufferIfNeeded(RT::CommandRecordState const & recordState)
@@ -460,7 +463,7 @@ namespace MFA
         if (mIsDepthImageUndefined)
         {
             auto const & depthImage = mDepthImageGroupList[recordState.imageIndex];
-            
+
             VkImageSubresourceRange const subResourceRange{
                 .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
                 .baseMipLevel = 0,

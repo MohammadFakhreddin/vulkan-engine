@@ -39,7 +39,7 @@ namespace MFA::Utils::UncompressedTexture
             MFA_ASSERT(outImageData.stbi_components > 0);
             outImageData.stbi_pixels = std::make_shared<SmartBlob>(Blob{
                 readData,
-                static_cast<int64_t>(outImageData.width) *
+                static_cast<size_t>(outImageData.width) *
                     outImageData.height *
                     outImageData.stbi_components *
                     sizeof(uint8_t)
@@ -267,7 +267,7 @@ namespace MFA::Utils::DDSTexture
                         auto const has_alpha = dds_header->dds_pixel_format.dw_flags & 0x1;            // Texture contains alpha data; dwRGBAlphaBitMask contains valid data.
                         //auto const has_alpha_legacy = dds_header->dds_pixel_format.dw_flags & 0x2;              // Used in some older DDS files for alpha channel only uncompressed data (dwRGBBitCount contains the alpha channel bitcount; dwABitMask contains valid data)
                         auto const has_four_cc = dds_header->dds_pixel_format.dw_flags & 0x4;          // Texture contains compressed RGB data; dwFourCC contains valid data.
-                        auto const has_rgb = dds_header->dds_pixel_format.dw_flags & 0x40;                      // Texture contains uncompressed RGB data; dwRGBBitCount and the RGB masks (dwRBitMask, dwGBitMask, dwBBitMask) contain valid data.           
+                        auto const has_rgb = dds_header->dds_pixel_format.dw_flags & 0x40;                      // Texture contains uncompressed RGB data; dwRGBBitCount and the RGB masks (dwRBitMask, dwGBitMask, dwBBitMask) contain valid data.
                         //auto const has_yuv_legacy = dds_header->dds_pixel_format.dw_flags & 0x200;              // Used in some older DDS files for YUV uncompressed data (dwRGBBitCount contains the YUV bit count; dwRBitMask contains the Y mask, dwGBitMask contains the U mask, dwBBitMask contains the V mask)
                         //auto const has_luminance_legacy = dds_header->dds_pixel_format.dw_flags & 0x20000;      // Used in some older DDS files for single channel color uncompressed data (dwRGBBitCount contains the luminance channel bit count; dwRBitMask contains the channel mask). Can be combined with DDPF_ALPHAPIXELS for a two channel DDS file.
                         if (has_four_cc || has_rgb)

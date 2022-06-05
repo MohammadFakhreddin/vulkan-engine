@@ -263,7 +263,7 @@ void MFA::PBR_Essence::createGraphicDescriptorSet(
     for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
     {
         auto const & descriptorSet = mGraphicDescriptorSet.descriptorSets[frameIndex];
-        MFA_VK_VALID_ASSERT(descriptorSet);
+        MFA_ASSERT(descriptorSet != VK_NULL_HANDLE);
 
         DescriptorSetSchema descriptorSetSchema{ descriptorSet };
 
@@ -324,7 +324,7 @@ void MFA::PBR_Essence::createComputeDescriptorSet(
     );
     
     auto const & descriptorSet = mComputeDescriptorSet.descriptorSets[0];
-    MFA_VK_VALID_ASSERT(descriptorSet);
+    MFA_ASSERT(descriptorSet != VK_NULL_HANDLE);
 
     DescriptorSetSchema descriptorSetSchema{ descriptorSet };
 

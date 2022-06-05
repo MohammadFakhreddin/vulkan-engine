@@ -718,7 +718,7 @@ namespace MFA
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
             auto const descriptorSet = mComputeDescriptorSet.descriptorSets[frameIndex];
-            MFA_VK_VALID_ASSERT(descriptorSet);
+            MFA_ASSERT(descriptorSet != VK_NULL_HANDLE);
 
             DescriptorSetSchema descriptorSetSchema{ descriptorSet };
 

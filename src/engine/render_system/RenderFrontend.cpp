@@ -218,7 +218,7 @@ namespace MFA::RenderFrontend
 #else
 #error "Os is not supported"
 #endif
-        MFA_VK_VALID_ASSERT(state->vk_instance);
+        MFA_ASSERT(state->vk_instance != VK_NULL_HANDLE);
 
 #if defined(MFA_DEBUG)  // TODO Fix support for android
         state->vkDebugReportCallbackExt = RB::CreateDebugCallback(
@@ -281,19 +281,19 @@ namespace MFA::RenderFrontend
             state->logicalDevice.device,
             state->graphicQueueFamily
         );
-        MFA_VK_VALID_ASSERT(state->graphicQueue);
+        MFA_ASSERT(state->graphicQueue != VK_NULL_HANDLE);
 
         state->computeQueue = RB::GetQueueByFamilyIndex(
             state->logicalDevice.device,
             state->computeQueueFamily
         );
-        MFA_VK_VALID_ASSERT(state->computeQueue);
+        MFA_ASSERT(state->computeQueue != VK_NULL_HANDLE);
 
         state->presentQueue = RB::GetQueueByFamilyIndex(
             state->logicalDevice.device,
             state->presentQueueFamily
         );
-        MFA_VK_VALID_ASSERT(state->presentQueue);
+        MFA_ASSERT(state->presentQueue != VK_NULL_HANDLE);
 
         MFA_LOG_INFO("Acquired graphics, compute and presentation queues");
 
@@ -457,7 +457,7 @@ namespace MFA::RenderFrontend
             bindingsCount,
             bindings
         );
-        MFA_VK_VALID_ASSERT(descriptorSetLayout);
+        MFA_ASSERT(descriptorSetLayout != VK_NULL_HANDLE);
         return descriptorSetLayout;
     }
 
@@ -571,7 +571,7 @@ namespace MFA::RenderFrontend
         VkDescriptorSetLayout descriptorSetLayout
     )
     {
-        MFA_VK_VALID_ASSERT(descriptorSetLayout);
+        MFA_ASSERT(descriptorSetLayout != VK_NULL_HANDLE);
         return RB::CreateDescriptorSet(
             state->logicalDevice.device,
             descriptorPool,
@@ -1573,7 +1573,7 @@ namespace MFA::RenderFrontend
         );
 
         MFA_ASSERT(recordState.isValid);
-        MFA_VK_INVALID_ASSERT(recordState.commandBuffer);
+        MFA_ASSERT(recordState.commandBuffer == VK_NULL_HANDLE);
         MFA_ASSERT(commandBufferType != RT::CommandBufferType::Invalid);
         MFA_ASSERT(recordState.commandBufferType == RT::CommandBufferType::Invalid);
 
@@ -1586,7 +1586,7 @@ namespace MFA::RenderFrontend
     void EndCommandBuffer(RT::CommandRecordState & recordState)
     {
         MFA_ASSERT(recordState.isValid);
-        MFA_VK_VALID_ASSERT(recordState.commandBuffer);
+        MFA_ASSERT(recordState.commandBuffer != VK_NULL_HANDLE);
         MFA_ASSERT(recordState.commandBufferType != RT::CommandBufferType::Invalid);
 
         RB::EndCommandBuffer(recordState.commandBuffer);

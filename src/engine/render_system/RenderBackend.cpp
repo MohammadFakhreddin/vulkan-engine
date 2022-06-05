@@ -157,7 +157,7 @@ namespace MFA::RenderBackend
     void DestroyWindowSurface(VkInstance instance, VkSurfaceKHR surface)
     {
         MFA_ASSERT(instance != nullptr);
-        MFA_VK_VALID_ASSERT(surface);
+        MFA_ASSERT(surface != VK_NULL_HANDLE);
         vkDestroySurfaceKHR(instance, surface, nullptr);
     }
 
@@ -496,7 +496,7 @@ namespace MFA::RenderBackend
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers = &commandBuffer;
-        VK_Check(vkQueueSubmit(queue, 1, &submit_info, VK_NULL));
+        VK_Check(vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE));
         VK_Check(vkQueueWaitIdle(queue));
 
         vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
@@ -564,8 +564,8 @@ namespace MFA::RenderBackend
     {
         MFA_ASSERT(device != nullptr);
         MFA_ASSERT(graphicQueue != nullptr);
-        MFA_VK_VALID_ASSERT(commandPool);
-        MFA_VK_VALID_ASSERT(image);
+        MFA_ASSERT(commandPool != VK_NULL_HANDLE);
+        MFA_ASSERT(image != VK_NULL_HANDLE);
 
         auto const commandBuffer = BeginSingleTimeCommand(device, commandPool);
 
@@ -645,7 +645,7 @@ namespace MFA::RenderBackend
 
         VkBuffer buffer{};
         VK_Check(vkCreateBuffer(device, &buffer_info, nullptr, &buffer));
-        MFA_VK_VALID_ASSERT(buffer);
+        MFA_ASSERT(buffer != VK_NULL_HANDLE);
         VkMemoryRequirements memory_requirements{};
         vkGetBufferMemoryRequirements(device, buffer, &memory_requirements);
 
@@ -716,8 +716,8 @@ namespace MFA::RenderBackend
     )
     {
         MFA_ASSERT(device != nullptr);
-        MFA_VK_VALID_ASSERT(bufferGroup.memory);
-        MFA_VK_VALID_ASSERT(bufferGroup.buffer);
+        MFA_ASSERT(bufferGroup.memory != VK_NULL_HANDLE);
+        MFA_ASSERT(bufferGroup.buffer != VK_NULL_HANDLE);
         vkFreeMemory(device, bufferGroup.memory, nullptr);
         vkDestroyBuffer(device, bufferGroup.buffer, nullptr);
     }
@@ -803,7 +803,7 @@ namespace MFA::RenderBackend
         MFA_ASSERT(device != nullptr);
         MFA_ASSERT(physicalDevice != nullptr);
         MFA_ASSERT(graphicQueue != nullptr);
-        MFA_VK_VALID_ASSERT(commandPool);
+        MFA_ASSERT(commandPool != VK_NULL_HANDLE);
         MFA_ASSERT(cpuTexture.isValid());
 
         if (cpuTexture.isValid())
@@ -961,9 +961,9 @@ namespace MFA::RenderBackend
     )
     {
         MFA_ASSERT(device != nullptr);
-        MFA_VK_VALID_ASSERT(commandPool);
-        MFA_VK_VALID_ASSERT(buffer);
-        MFA_VK_VALID_ASSERT(image);
+        MFA_ASSERT(commandPool != VK_NULL_HANDLE);
+        MFA_ASSERT(buffer != VK_NULL_HANDLE);
+        MFA_ASSERT(image != VK_NULL_HANDLE);
         MFA_ASSERT(cpuTexture.isValid());
         MFA_ASSERT(
             cpuTexture.GetMipmap(cpuTexture.GetMipCount() - 1).offset +
@@ -1160,7 +1160,7 @@ namespace MFA::RenderBackend
     void DestroySampler(VkDevice device, RT::SamplerGroup const & sampler)
     {
         MFA_ASSERT(device != nullptr);
-        MFA_VK_VALID_ASSERT(sampler.sampler);
+        MFA_ASSERT(sampler.sampler != VK_NULL_HANDLE);
         vkDestroySampler(device, sampler.sampler, nullptr);
     }
 
@@ -1392,8 +1392,8 @@ namespace MFA::RenderBackend
         VkSurfaceKHR windowSurface
     )
     {
-        MFA_VK_VALID_ASSERT(physicalDevice);
-        MFA_VK_VALID_ASSERT(windowSurface);
+        MFA_ASSERT(physicalDevice != VK_NULL_HANDLE);
+        MFA_ASSERT(windowSurface != VK_NULL_HANDLE);
         VkSurfaceCapabilitiesKHR surfaceCapabilities;
         VK_Check(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, windowSurface, &surfaceCapabilities));
         return surfaceCapabilities;
@@ -1547,7 +1547,7 @@ namespace MFA::RenderBackend
         std::vector<std::shared_ptr<RT::ImageViewGroup>> swapChainImageViews(actualImageCount);
         for (uint32_t imageIndex = 0; imageIndex < actualImageCount; imageIndex++)
         {
-            MFA_VK_VALID_ASSERT(swapChainImages[imageIndex]);
+            MFA_ASSERT(swapChainImages[imageIndex] != VK_NULL_HANDLE);
             swapChainImageViews[imageIndex] = CreateImageView(
                 device,
                 swapChainImages[imageIndex],
@@ -1557,7 +1557,7 @@ namespace MFA::RenderBackend
                 1,
                 VK_IMAGE_VIEW_TYPE_2D
             );
-            MFA_VK_VALID_ASSERT(swapChainImageViews[imageIndex]);
+            MFA_ASSERT(swapChainImageViews[imageIndex] != VK_NULL_HANDLE);
         }
 
         MFA_LOG_INFO("Acquired swap chain images");
@@ -1708,7 +1708,7 @@ namespace MFA::RenderBackend
     void DestroyRenderPass(VkDevice device, VkRenderPass renderPass)
     {
         MFA_ASSERT(device != nullptr);
-        MFA_VK_VALID_ASSERT(renderPass);
+        MFA_ASSERT(renderPass != VK_NULL_HANDLE);
         vkDestroyRenderPass(device, renderPass, nullptr);
     }
 
@@ -1741,7 +1741,7 @@ namespace MFA::RenderBackend
     )
     {
         MFA_ASSERT(device != nullptr);
-        MFA_VK_VALID_ASSERT(renderPass);
+        MFA_ASSERT(renderPass != VK_NULL_HANDLE);
         MFA_ASSERT(attachments != nullptr);
         MFA_ASSERT(attachmentsCount > 0);
 
@@ -1982,7 +1982,7 @@ namespace MFA::RenderBackend
         pipelineCreateInfo.layout = pipelineLayout;
         pipelineCreateInfo.renderPass = renderPass;
         pipelineCreateInfo.subpass = 0;
-        MFA_VK_MAKE_NULL(pipelineCreateInfo.basePipelineHandle);
+        pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
         pipelineCreateInfo.basePipelineIndex = -1;
         pipelineCreateInfo.pDepthStencilState = &options.depthStencil;
         pipelineCreateInfo.pDynamicState = dynamicStateCreateInfoRef;
@@ -1990,7 +1990,7 @@ namespace MFA::RenderBackend
         VkPipeline pipeline{};
         VK_Check(vkCreateGraphicsPipelines(
             device,
-            VK_NULL,
+            VK_NULL_HANDLE,
             1,
             &pipelineCreateInfo,
             nullptr,
@@ -2030,10 +2030,10 @@ namespace MFA::RenderBackend
         VkPipeline pipeline{};
         VK_Check(vkCreateComputePipelines(
             device,
-            VK_NULL,
+            VK_NULL_HANDLE,
             1,
             &pipelineCreateInfo,
-            VK_NULL,
+            VK_NULL_HANDLE,
             &pipeline
         ));
 
@@ -2261,7 +2261,7 @@ namespace MFA::RenderBackend
     )
     {
         MFA_ASSERT(device != nullptr);
-        MFA_VK_VALID_ASSERT(pool);
+        MFA_ASSERT(pool != VK_NULL_HANDLE);
         vkDestroyDescriptorPool(device, pool, nullptr);
     }
 
@@ -2277,8 +2277,8 @@ namespace MFA::RenderBackend
     )
     {
         MFA_ASSERT(device != nullptr);
-        MFA_VK_VALID_ASSERT(descriptorPool);
-        MFA_VK_VALID_ASSERT(descriptorSetLayout);
+        MFA_ASSERT(descriptorPool != VK_NULL_HANDLE);
+        MFA_ASSERT(descriptorSetLayout != VK_NULL_HANDLE);
 
         std::vector<VkDescriptorSetLayout> layouts(descriptorSetCount, descriptorSetLayout);
         // There needs to be one descriptor set per binding point in the shader
@@ -2380,7 +2380,7 @@ namespace MFA::RenderBackend
     )
     {
         MFA_ASSERT(device != nullptr);
-        MFA_VK_VALID_ASSERT(commandPool);
+        MFA_ASSERT(commandPool != VK_NULL_HANDLE);
         MFA_ASSERT(commandBuffersCount > 0);
         MFA_ASSERT(commandBuffers != nullptr);
         vkFreeCommandBuffers(
@@ -2471,7 +2471,7 @@ namespace MFA::RenderBackend
     void WaitForFence(VkDevice device, VkFence inFlightFence)
     {
         MFA_ASSERT(device != nullptr);
-        MFA_VK_VALID_ASSERT(inFlightFence);
+        MFA_ASSERT(inFlightFence != VK_NULL_HANDLE);
         VK_Check(vkWaitForFences(
             device,
             1,
@@ -2491,14 +2491,14 @@ namespace MFA::RenderBackend
     )
     {
         MFA_ASSERT(device != nullptr);
-        MFA_VK_VALID_ASSERT(imageAvailabilitySemaphore);
+        MFA_ASSERT(imageAvailabilitySemaphore != VK_NULL_HANDLE);
 
         return vkAcquireNextImageKHR(
             device,
             swapChainGroup.swapChain,
             UINT64_MAX,
             imageAvailabilitySemaphore,
-            VK_NULL,
+            VK_NULL_HANDLE,
             &outImageIndex
         );
     
@@ -2781,7 +2781,7 @@ namespace MFA::RenderBackend
 
     VkSampleCountFlagBits ComputeMaxUsableSampleCount(VkPhysicalDevice physicalDevice)
     {
-        MFA_VK_VALID_ASSERT(physicalDevice);
+        MFA_ASSERT(physicalDevice != VK_NULL_HANDLE);
 
         VkPhysicalDeviceProperties physicalDeviceProperties;
         vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);

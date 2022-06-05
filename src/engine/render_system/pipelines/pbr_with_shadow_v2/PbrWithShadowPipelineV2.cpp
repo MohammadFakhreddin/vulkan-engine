@@ -431,7 +431,7 @@ namespace MFA
         {
 
             auto const descriptorSet = mGfxPerFrameDescriptorSetGroup.descriptorSets[frameIndex];
-            MFA_VK_VALID_ASSERT(descriptorSet);
+            MFA_ASSERT(descriptorSet != VK_NULL_HANDLE);
 
             DescriptorSetSchema descriptorSetSchema{ descriptorSet };
             // Important note: Keep reference of all descriptor buffer infos until updateDescriptorSets is called

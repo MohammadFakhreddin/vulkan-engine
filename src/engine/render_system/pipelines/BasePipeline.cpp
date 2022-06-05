@@ -146,7 +146,7 @@ namespace MFA
         {
             SceneManager::UpdatePipeline(this);
         }
-        
+
         // Removing from essence and variants' list
         auto const findResult = mEssenceAndVariantsMap.find(variant.getEssence()->getNameId());
         MFA_ASSERT(findResult != mEssenceAndVariantsMap.end());
@@ -161,7 +161,7 @@ namespace MFA
                 return;
             }
         }
-        
+
         MFA_ASSERT(false);
     }
 
