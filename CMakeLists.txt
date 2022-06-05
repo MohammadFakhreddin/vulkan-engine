@@ -979,8 +979,8 @@ elseif(ANDROID)
     endfunction()
 
     target_link_libraries(${TECHDEMO} app-glue log android)
-    target_compile_options(${TECHDEMO} PUBLIC -fsanitize=address -fno-omit-frame-pointer)
-    set_target_properties(${TECHDEMO} PROPERTIES LINK_FLAGS -fsanitize=address)
+    # target_compile_options(${TECHDEMO} PUBLIC -fsanitize=address -fno-omit-frame-pointer)
+    # set_target_properties(${TECHDEMO} PROPERTIES LINK_FLAGS -fsanitize=address)
 
     target_include_directories(
         ${TECHDEMO} PUBLIC
@@ -993,14 +993,14 @@ elseif(ANDROID)
     # right one for the current architecture and copy it to the libs output dir
     # (so that it will be packed in the apk):
 
-    get_architecture(${ANDROID_ABI} ARCH)
-    file(GLOB_RECURSE ASAN_SRC ${ANDROID_TOOLCHAIN_ROOT}/*.asan*${ARCH}*-android.so)
-    set(ASAN_DEST ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+    # get_architecture(${ANDROID_ABI} ARCH)
+    # file(GLOB_RECURSE ASAN_SRC ${ANDROID_TOOLCHAIN_ROOT}/*.asan*${ARCH}*-android.so)
+    # set(ASAN_DEST ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
-    add_custom_command(
-            TARGET ${TECHDEMO} PRE_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ASAN_SRC} ${ASAN_DEST}
-    )
+    # add_custom_command(
+    #         TARGET ${TECHDEMO} PRE_BUILD
+    #         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ASAN_SRC} ${ASAN_DEST}
+    # )
 
 endif()
 
