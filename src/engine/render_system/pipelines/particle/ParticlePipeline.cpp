@@ -50,7 +50,7 @@ namespace MFA
             .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER
         });
         MFA_ASSERT(mSamplerGroup != nullptr);
-        
+
         mErrorTexture = RC::AcquireGpuTexture("Error");
         MFA_ASSERT(mErrorTexture != nullptr);
 
@@ -98,7 +98,7 @@ namespace MFA
             CAST_ESSENCE_PURE(essence)->render(recordState);
         }
     }
-    
+
     //-------------------------------------------------------------------------------------------------
 
     void ParticlePipeline::update(float const deltaTimeInSec)
@@ -126,7 +126,7 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
- 
+
     void ParticlePipeline::compute(RT::CommandRecordState & recordState, float const deltaTimeInSec)
     {
 
@@ -189,13 +189,13 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
- 
+
     void ParticlePipeline::internalAddEssence(EssenceBase * essence)
     {
         MFA_ASSERT(essence != nullptr);
 
         auto * particleEssence = CAST_ESSENCE_PURE(essence);
-        
+
         particleEssence->createGraphicDescriptorSet(
             mDescriptorPool,
             mPerEssenceGraphicDescriptorSetLayout->descriptorSetLayout,
@@ -247,7 +247,7 @@ namespace MFA
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT
         });
-        
+
         mPerFrameDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
             bindings.data()
@@ -334,7 +334,7 @@ namespace MFA
             // Sampler
             VkDescriptorImageInfo texturesSamplerInfo{
                 .sampler = mSamplerGroup->sampler,
-                .imageView = nullptr,
+                .imageView = VK_NULL_HANDLE,
                 .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             };
             descriptorSetSchema.AddSampler(&texturesSamplerInfo);
@@ -359,7 +359,7 @@ namespace MFA
         RF_CREATE_SHADER("shaders/particle/Particle.comp.spv", Compute)
 
         std::vector<RT::GpuShader const *> shaders {gpuComputeShader.get()};
-        
+
         std::vector<VkDescriptorSetLayout> const descriptorSetLayouts {
             mPerFrameDescriptorSetLayout->descriptorSetLayout,
             mPerEssenceComputeDescriptorSetLayout->descriptorSetLayout,
@@ -371,7 +371,7 @@ namespace MFA
             0,
             nullptr
         );
-        MFA_ASSERT(pipelineLayout != nullptr);
+        MFA_ASSERT(pipelineLayout != VK_NULL_HANDLE);
 
         mComputePipeline = RF::CreateComputePipeline(*gpuComputeShader, pipelineLayout);
         MFA_ASSERT(mComputePipeline != nullptr);
@@ -383,7 +383,7 @@ namespace MFA
     {
         RF_CREATE_SHADER("shaders/particle/Particle.vert.spv", Vertex)
         RF_CREATE_SHADER("shaders/particle/Particle.frag.spv", Fragment)
-        
+
         std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuFragmentShader.get() };
 
         std::vector<VkVertexInputBindingDescription> vertexInputBindingDescriptions {};
@@ -397,7 +397,7 @@ namespace MFA
             .stride = sizeof(PerInstanceData),
             .inputRate = VK_VERTEX_INPUT_RATE_INSTANCE
         });
-        
+
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
 
         // Position
@@ -415,7 +415,7 @@ namespace MFA
             .format = VK_FORMAT_R32_SINT,
             .offset = offsetof(Vertex, textureIndex)
         });
-        
+
         // Color
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
@@ -447,7 +447,7 @@ namespace MFA
             .format =VK_FORMAT_R32G32B32_SFLOAT,
             .offset = offsetof(PerInstanceData, instancePosition)
         });
-        
+
         RT::CreateGraphicPipelineOptions pipelineOptions{};
         pipelineOptions.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
         pipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
@@ -464,7 +464,7 @@ namespace MFA
         pipelineOptions.depthStencil.depthWriteEnable = VK_FALSE;
 
         pipelineOptions.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-        
+
         std::vector<VkDescriptorSetLayout> const descriptorSetLayouts {
             mPerFrameDescriptorSetLayout->descriptorSetLayout,
             mPerEssenceGraphicDescriptorSetLayout->descriptorSetLayout,
@@ -474,7 +474,7 @@ namespace MFA
             static_cast<uint32_t>(descriptorSetLayouts.size()),
             descriptorSetLayouts.data()
         );
-        MFA_ASSERT(pipelineLayout != nullptr);
+        MFA_ASSERT(pipelineLayout != VK_NULL_HANDLE);
 
         mGraphicPipeline = RF::CreateGraphicPipeline(
             RF::GetDisplayRenderPass()->GetVkRenderPass(),

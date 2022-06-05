@@ -22,6 +22,8 @@ namespace MFA::ResourceManager
         std::unordered_map<std::string, std::weak_ptr<RT::GpuTexture>> availableGpuTextures {};
         std::unordered_map<std::string, std::weak_ptr<AS::Texture>> availableCpuTextures {};
 
+        // std::list<ActiveTasksAndCallbacks>
+        // If a task is running we add its callback so it can be called too
     };
     State * state = nullptr;
 

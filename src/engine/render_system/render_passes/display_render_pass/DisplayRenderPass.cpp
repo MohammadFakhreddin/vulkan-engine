@@ -115,12 +115,10 @@ namespace MFA
     {
         RenderPass::EndRenderPass(recordState);
 
-#ifdef __DESKTOP__
         if (RF::IsWindowVisible() == false)
         {
             return;
         }
-#endif
 
         RF::EndRenderPass(recordState.commandBuffer);
 

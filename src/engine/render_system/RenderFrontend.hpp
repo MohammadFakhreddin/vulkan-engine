@@ -421,9 +421,7 @@ namespace MFA::RenderFrontend
         VkFramebuffer * frameBuffers
     );
 
-#ifdef __DESKTOP__
     bool IsWindowVisible();
-#endif
 
     bool IsWindowResized();
 

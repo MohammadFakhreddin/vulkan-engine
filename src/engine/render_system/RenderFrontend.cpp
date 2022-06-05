@@ -80,13 +80,13 @@ namespace MFA::RenderFrontend
         int nextEventListenerId = 0;
         uint8_t currentFrame = 0;
         VkFormat depthFormat{};
+        bool isWindowVisible = true;                        // Currently only minimize can cause this to be false
 
 #ifdef __DESKTOP__
         // CreateWindow
         MSDL::SDL_Window * window = nullptr;
         // Event watches
         std::vector<SDLEventWatchGroup> sdlEventListeners{};
-        bool isWindowVisible = true;                        // Currently only minimize can cause this to be false
 #elif defined(__ANDROID__)
         ANativeWindow * window = nullptr;
 #elif defined(__IOS__)
@@ -298,7 +298,7 @@ namespace MFA::RenderFrontend
         MFA_LOG_INFO("Acquired graphics, compute and presentation queues");
 
         auto const maxFramePerFlight = GetMaxFramesPerFlight();
-        // Graphic 
+        // Graphic
         state->graphicCommandPool = RB::CreateCommandPool(state->logicalDevice.device, state->graphicQueueFamily);
         state->graphicCommandBuffer = RB::CreateCommandBuffers(
             state->logicalDevice.device,
@@ -595,7 +595,7 @@ namespace MFA::RenderFrontend
             buffer = CreateBuffer(
                 bufferSize,
                 bufferUsageFlagBits,
-                memoryPropertyFlags            
+                memoryPropertyFlags
             );
         }
 
@@ -706,13 +706,13 @@ namespace MFA::RenderFrontend
     {
 
         VkDeviceSize const bufferSize = verticesBlob.len;
-        
+
         auto vertexBuffer = CreateVertexBuffer(bufferSize);
 
         UpdateHostVisibleBuffer(stageBuffer, verticesBlob);
 
         UpdateLocalBuffer(commandBuffer, *vertexBuffer, stageBuffer);
-        
+
         return vertexBuffer;
     }
 
@@ -777,7 +777,7 @@ namespace MFA::RenderFrontend
     //        vertexStageBuffer,
     //        mesh.getVertexData()->memory
     //    );
-    //    
+    //
     //    auto indexBuffer = CreateIndexBuffer(
     //        commandBuffer,
     //        indexStageBuffer,
@@ -1001,7 +1001,7 @@ namespace MFA::RenderFrontend
                 MFA_ASSERT(false);
                 break;
         }
-        
+
         BindDescriptorSet(
             recordState.commandBuffer,
             bindPoint,
@@ -1139,6 +1139,7 @@ namespace MFA::RenderFrontend
             state->isWindowVisible = isWindowVisible;
         }
 #endif
+
         if (state->windowResized)
         {
             OnResize();
@@ -1494,12 +1495,10 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-#ifdef __DESKTOP__
     bool IsWindowVisible()
     {
         return state->isWindowVisible;
     }
-#endif
 
     //-------------------------------------------------------------------------------------------------
 
@@ -1889,7 +1888,7 @@ namespace MFA::RenderFrontend
             state->currentFrame = 0;
         }
 
-        auto * fence = GetFence(recordState);
+        auto fence = GetFence(recordState);
         WaitForFence(fence);
         ResetFence(fence);
 
@@ -1910,7 +1909,7 @@ namespace MFA::RenderFrontend
     }
 
     //-------------------------------------------------------------------------------------------------
-    
+
     VkFence GetFence(RT::CommandRecordState const & recordState)
     {
         return state->fences[recordState.frameIndex];
@@ -1971,7 +1970,7 @@ namespace MFA::RenderFrontend
             groupCountX,
             groupCountY,
             groupCountZ
-        );        
+        );
     }
 
     //-------------------------------------------------------------------------------------------------

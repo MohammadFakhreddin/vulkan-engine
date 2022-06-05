@@ -180,7 +180,7 @@ void Application::setAndroidApp(android_app * androidApp) {
     mAndroidApp = androidApp;
     MFA::FileSystem::SetAndroidApp(androidApp);
     MFA::InputManager::SetAndroidApp(androidApp);
-    MFA::UISystem::SetAndroidApp(androidApp);
+    MFA::UI_System::SetAndroidApp(androidApp);
 }
 #endif
 

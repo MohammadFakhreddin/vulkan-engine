@@ -45,11 +45,11 @@ and now I need to pass it to a function that won't modify it, but doesn't take t
 /*
  * https://community.arm.com/arm-community-blogs/b/graphics-gaming-and-vr-blog/posts/vulkan-mobile-best-practices-and-management
  * Multi-threaded command recording has the potential to improve CPU time significantly, but it also opens up several pitfalls.
- * In the worst case scenario, this can lead to worse performance than single threaded. 
+ * In the worst case scenario, this can lead to worse performance than single threaded.
  *
  * Our general recommendation is to use a profiler and figure out the bottleneck for your application,
  * while keeping a close eye on common pain points regarding threading in general.
- * The issues that we have encountered most often are the following: 
+ * The issues that we have encountered most often are the following:
  *
  * Thread spawning causing a significant overhead. This could happen if you use std::async directly to spawn your threads,
  * as STL implementations usually do not pool threads in that case. We recommend using a thread pool library instead, or to implement thread pooling yourself.
@@ -59,11 +59,11 @@ and now I need to pass it to a function that won't modify it, but doesn't take t
  * Alternative approaches could be using a read/write mutex like shared_mutex, or go lock-free by ensuring that the map is read-only while executing multi-threaded code.
  *
  * In the lock-free approach, each thread can keep a list of entries to add to the map.
- * These per-thread lists of entries are then inserted into the map after all the threads have returned. 
+ * These per-thread lists of entries are then inserted into the map after all the threads have returned.
  * Having few meshes per thread.
  * Multi-threaded command recording has some performance overhead both on the CPU side (cost of threading) and on the GPU side (executing secondary command buffers).
  * Therefore, using the full parallelism available is not always a good choice. As a rule of thumb,
- * only go parallel if you measure that draw call recording is taking a significant portion of your frame time. 
+ * only go parallel if you measure that draw call recording is taking a significant portion of your frame time.
  */
 namespace MFA
 {
@@ -104,7 +104,7 @@ namespace MFA
             MFA_ASSERT(false);
             return;
         }
-        
+
         BasePipeline::init();
 
         mSamplerGroup = RF::CreateSampler(RT::CreateSamplerParams{});
@@ -125,13 +125,13 @@ namespace MFA
 
             mDirectionalLightShadowRenderPass->Init();
             mDirectionalLightShadowResources->Init(mDirectionalLightShadowRenderPass->GetVkRenderPass());
-            
+
             mDepthPrePass->Init();
             mOcclusionRenderPass->Init();
 
             createGfxPerFrameDescriptorSetLayout();
             createGfxPerEssenceDescriptorSetLayout();
-            
+
             auto const descriptorSetLayouts = std::vector<VkDescriptorSetLayout>{
                 mGfxPerFrameDescriptorSetLayout->descriptorSetLayout,
                 mGfxPerEssenceDescriptorSetLayout->descriptorSetLayout,
@@ -168,7 +168,7 @@ namespace MFA
             MFA_ASSERT(false);
             return;
         }
-        
+
         destroyOcclusionQueryPool();
 
         mSamplerGroup = nullptr;
@@ -183,11 +183,11 @@ namespace MFA
 
         mDirectionalLightShadowResources->Shutdown();
         mDirectionalLightShadowRenderPass->Shutdown();
-     
+
         BasePipeline::shutdown();
 
     }
-    
+
     //-------------------------------------------------------------------------------------------------
 
     void PBRWithShadowPipelineV2::compute(RT::CommandRecordState & recordState, float const deltaTime)
@@ -225,7 +225,7 @@ namespace MFA
         RF::BindPipeline(recordState, *mSkinningPipeline);
 
         SkinningPushConstants pushConstants{};
-        
+
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
             auto const * essence = CAST_ESSENCE_SHARED(essenceAndVariantList.second.essence);
@@ -268,7 +268,7 @@ namespace MFA
             }
         }
     }
-    
+
     //-------------------------------------------------------------------------------------------------
 
     void PBRWithShadowPipelineV2::preComputeBarrier(RT::CommandRecordState const & recordState) const
@@ -291,7 +291,7 @@ namespace MFA
             );
         }
     }
-    
+
     //-------------------------------------------------------------------------------------------------
 
     void PBRWithShadowPipelineV2::postComputeBarrier(RT::CommandRecordState const & recordState)
@@ -412,7 +412,7 @@ namespace MFA
         );
         return variant;
     }
-    
+
     //-------------------------------------------------------------------------------------------------
 
     void PBRWithShadowPipelineV2::createGfxPerFrameDescriptorSets()
@@ -426,7 +426,7 @@ namespace MFA
         auto const * cameraBufferCollection = SceneManager::GetCameraBuffers();
         auto const * directionalLightBuffers = SceneManager::GetDirectionalLightBuffers();
         auto const * pointLightBuffers = SceneManager::GetPointLightsBuffers();
-        
+
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
 
@@ -462,14 +462,14 @@ namespace MFA
             // Sampler
             VkDescriptorImageInfo texturesSamplerInfo{
                 .sampler = mSamplerGroup->sampler,
-                .imageView = nullptr,
+                .imageView = VK_NULL_HANDLE,
                 .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             };
             descriptorSetSchema.AddSampler(&texturesSamplerInfo);
 
             // DirectionalLightShadowMap
             auto directionalLightShadowMap = VkDescriptorImageInfo {
-                .sampler = nullptr,
+                .sampler = VK_NULL_HANDLE,
                 .imageView = mDirectionalLightShadowResources->GetShadowMap(frameIndex).imageView->imageView,
                 .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             };
@@ -477,7 +477,7 @@ namespace MFA
 
             // PointLightShadowMap
             auto pointLightShadowCubeMapArray = VkDescriptorImageInfo {
-                .sampler = nullptr,
+                .sampler = VK_NULL_HANDLE,
                 .imageView = mPointLightShadowResources->GetShadowCubeMap(frameIndex).imageView->imageView,
                 .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             };
@@ -485,11 +485,11 @@ namespace MFA
                 &pointLightShadowCubeMapArray,
                 1
             );
-            
+
             descriptorSetSchema.UpdateDescriptorSets();
         }
     }
-    
+
     //-------------------------------------------------------------------------------------------------
 
     void PBRWithShadowPipelineV2::retrieveOcclusionQueryResult(RT::CommandRecordState const & recordState)
@@ -593,7 +593,7 @@ namespace MFA
                         {
                             // Vertex push constants
                             pushConstants.primitiveIndex = primitive.uniqueId;
-                            
+
                             RF::PushConstants(
                                 recordState,
                                 VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -610,7 +610,7 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-    
+
     void PBRWithShadowPipelineV2::performDirectionalLightShadowPass(RT::CommandRecordState & recordState) const
     {
         auto const lightCount = SceneManager::GetDirectionalLightCount();
@@ -712,7 +712,7 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-    
+
     void PBRWithShadowPipelineV2::prepareShadowMapsForSampling(RT::CommandRecordState const & recordState) const
     {
         std::vector<VkImageMemoryBarrier> barrier {};
@@ -738,7 +738,7 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-    
+
     void PBRWithShadowPipelineV2::renderForPointLightShadowPass(
         RT::CommandRecordState const & recordState,
         AS::AlphaMode alphaMode,
@@ -746,7 +746,7 @@ namespace MFA
         PointLightComponent const * pointLight
     ) const
     {
-        
+
         MFA_ASSERT(pointLight != nullptr);
 
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
@@ -820,7 +820,7 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-    
+
     void PBRWithShadowPipelineV2::renderForOcclusionQueryPass(RT::CommandRecordState const & recordState)
     {
         auto & occlusionQueryData = mOcclusionQueryDataList[recordState.frameIndex];
@@ -840,7 +840,7 @@ namespace MFA
             {
                 continue;
             }
-            
+
             for (auto & variant : variantsList)
             {
                 if (variant->IsActive() && variant->IsInFrustum())
@@ -903,7 +903,7 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-    
+
     void PBRWithShadowPipelineV2::renderForDisplayPass(RT::CommandRecordState const & recordState, AS::AlphaMode alphaMode) const
     {
         DisplayPassPushConstants pushConstants{};
@@ -993,7 +993,7 @@ namespace MFA
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
         });
-        
+
         // PointLightShadowMap
         bindings.emplace_back(VkDescriptorSetLayoutBinding {
             .binding = static_cast<uint32_t>(bindings.size()),
@@ -1033,7 +1033,7 @@ namespace MFA
             .descriptorCount = PBR_Essence::MAX_TEXTURE_COUNT,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         });
-        
+
         mGfxPerEssenceDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
             bindings.data()
@@ -1065,9 +1065,9 @@ namespace MFA
             .stride = sizeof(PBR_Essence::VertexUVs),
             .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
         });
-        
+
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
-        
+
         // WordPosition
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
@@ -1099,7 +1099,7 @@ namespace MFA
             .format = VK_FORMAT_R32G32B32_SFLOAT,
             .offset = offsetof(PBR_Variant::SkinnedVertex, worldBiTangent),
         });
-        
+
         // BaseColorUV
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
@@ -1113,9 +1113,9 @@ namespace MFA
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 1,
             .format = VK_FORMAT_R32G32_SFLOAT,
-            .offset = offsetof(PBR_Essence::VertexUVs, metallicRoughnessTexCoord), // Metallic and roughness have same uv for gltf files  
+            .offset = offsetof(PBR_Essence::VertexUVs, metallicRoughnessTexCoord), // Metallic and roughness have same uv for gltf files
         });
-        
+
         // NormalMapUV
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
@@ -1123,7 +1123,7 @@ namespace MFA
             .format = VK_FORMAT_R32G32_SFLOAT,
             .offset = offsetof(PBR_Essence::VertexUVs, normalTexCoord),
         });
-    
+
         // EmissionUV
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
@@ -1137,9 +1137,9 @@ namespace MFA
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 1,
             .format = VK_FORMAT_R32G32_SFLOAT,
-            .offset = offsetof(PBR_Essence::VertexUVs, occlusionTexCoord), // Metallic and roughness have same uv for gltf files  
+            .offset = offsetof(PBR_Essence::VertexUVs, occlusionTexCoord), // Metallic and roughness have same uv for gltf files
         });
-        
+
         std::vector<VkPushConstantRange> pushConstantRanges{};
         pushConstantRanges.emplace_back(VkPushConstantRange{
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -1153,7 +1153,7 @@ namespace MFA
             static_cast<uint32_t>(pushConstantRanges.size()),
             pushConstantRanges.data()
         );
-        
+
         RT::CreateGraphicPipelineOptions options{};
         options.rasterizationSamples = RF::GetMaxSamplesCount();
         options.cullMode = VK_CULL_MODE_BACK_BIT;
@@ -1179,7 +1179,7 @@ namespace MFA
     {
         // Vertex shader
         RF_CREATE_SHADER("shaders/directional_light_shadow_v2/DirectionalLightShadowV2.vert.spv", Vertex)
-        
+
         std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get()};
 
         VkVertexInputBindingDescription const vertexInputBindingDescription{
@@ -1211,7 +1211,7 @@ namespace MFA
             static_cast<uint32_t>(pushConstantRanges.size()),
             pushConstantRanges.data()
         );
-        
+
         RT::CreateGraphicPipelineOptions graphicPipelineOptions{};
         graphicPipelineOptions.cullMode = VK_CULL_MODE_FRONT_BIT;                // TODO Find a good fit!
 
@@ -1294,7 +1294,7 @@ namespace MFA
     {
         // Vertex shader
         RF_CREATE_SHADER("shaders/depth_pre_pass/DepthPrePass.vert.spv", Vertex)
-        
+
         std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get() };
 
         std::vector<VkVertexInputBindingDescription> bindingDescriptions {};
@@ -1331,7 +1331,7 @@ namespace MFA
 
         // Pipeline layout
         std::vector<VkPushConstantRange> pushConstantRanges{};
-        // Push constants  
+        // Push constants
         VkPushConstantRange pushConstantRange{
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
             .offset = 0,
@@ -1398,7 +1398,7 @@ namespace MFA
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
         });
-        
+
         mSkinningPerEssenceDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
             bindings.data()
@@ -1443,7 +1443,7 @@ namespace MFA
     {
         RF_CREATE_SHADER("shaders/skinning/Skinning.comp.spv", Compute)
 
-        // Push constants  
+        // Push constants
         std::vector<VkPushConstantRange> pushConstantRanges{};
         VkPushConstantRange pushConstantRange{
             .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
@@ -1479,7 +1479,7 @@ namespace MFA
     void PBRWithShadowPipelineV2::createOcclusionQueryPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts)
     {
         RF_CREATE_SHADER("shaders/occlusion_query/Occlusion.vert.spv", Vertex)
-        
+
         std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get() };
 
         std::vector<VkVertexInputBindingDescription> bindingDescriptions {};
