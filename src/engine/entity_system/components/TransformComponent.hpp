@@ -3,7 +3,7 @@
 #include "engine/entity_system/Component.hpp"
 #include "engine/BedrockSignal.hpp"
 
-#include <mat4x4.hpp>
+#include <glm/mat4x4.hpp>
 
 namespace MFA
 {
@@ -25,9 +25,9 @@ namespace MFA
             glm::vec3 const & scale_
         );
 
-        void init() override;
+        void Init() override;
 
-        void shutdown() override;
+        void Shutdown() override;
 
         void UpdateTransform(float position[3], float rotation[3], float scale[3]);
 

@@ -69,7 +69,7 @@ void MFA::DirectionalLightShadowRenderPass::BeginRenderPass(
         .height = RT::DIRECTIONAL_LIGHT_SHADOW_TEXTURE_HEIGHT
     };
 
-    auto * commandBuffer = RF::GetGraphicCommandBuffer(recordState);
+    auto * commandBuffer = recordState.commandBuffer;
     MFA_ASSERT(commandBuffer != nullptr);
 
     RF::AssignViewportAndScissorToCommandBuffer(commandBuffer, shadowExtend);
@@ -94,7 +94,7 @@ void MFA::DirectionalLightShadowRenderPass::EndRenderPass(RT::CommandRecordState
 {
     RenderPass::EndRenderPass(recordState);
 
-    RF::EndRenderPass(RF::GetGraphicCommandBuffer(recordState));
+    RF::EndRenderPass(recordState.commandBuffer);
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -17,6 +17,9 @@
 #define TINYKTX_IMPLEMENTATION 
 #include "../src/libs/tiny_ktx/tinyktx.h"
 
+#define VMA_IMPLEMENTATION
+#include "../src/libs/vma/vk_mem_alloc.h"
+
 #ifdef TECHDEMO
 #include "TechDemoApplication.hpp"
 using TargetApplication = TechDemoApplication;

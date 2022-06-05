@@ -5,7 +5,7 @@
 #elif defined(__PLATFORM_MAC__)
   #include <CoreGraphics/CGDisplayConfiguration.h>
 #elif defined(__PLATFORM_LINUX__)
-  // TODO
+  #include <X11/Xlib.h>
 #endif
 
 namespace MFA::Platforms {
@@ -26,7 +26,11 @@ ScreenInfo ComputeScreenSize() {
         ret.screenHeight = static_cast<ScreenSize>(realScreenHeight);
         ret.valid = true;
     #elif defined(__PLATFORM_LINUX__)
-    // TODO
+        Display* display = XOpenDisplay(NULL);
+        Screen*  screen = DefaultScreenOfDisplay(display);
+        ret.screenWidth = (int)screen->width;
+        ret.screenHeight = (int)screen->height;
+        ret.valid = true;
     #endif
     return ret;
 }

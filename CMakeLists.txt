@@ -17,10 +17,21 @@ project ("MFaEngine" CXX C)
 
 set_property (GLOBAL PROPERTY USE_FOLDERS ON)
 
+# OPTION(DEBUG_MODE "Enables debug mode" OFF) # Enabled by default
+# if (DEBUG_MODE)
+#     add_definitions(-D_DEBUG)
+#     set(CMAKE_BUILD_TYPE Debug)
+#     message(STATUS "Running cmake for debug build")
+# else()
+#     add_definitions(-DNDEBUG)
+#     set(CMAKE_BUILD_TYPE Release)
+#     message(STATUS "Running cmake for release build")
+# endif()
+
 if (ANDROID)
-set (CMAKE_CXX_STANDARD 17)
+    set (CMAKE_CXX_STANDARD 17)
 else ()
-set (CMAKE_CXX_STANDARD 20)
+    set (CMAKE_CXX_STANDARD 20)
 endif ()
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -45,6 +56,8 @@ if(WINDOWS)
     add_definitions (/WX)           # Warnings as errors
     add_definitions (-D_CRT_SECURE_NO_WARNINGS)
 else()
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2 -OI")
     # TODO
     # add_definitions(-Werror)
 endif()
@@ -59,22 +72,31 @@ if (NOT WINDOWS)
     endif()
 endif()
 
-include_directories(libs/include/glm)
-
 # Vulkan uses 0 to 1 depth instead of -1 to 1 in opengl
 add_definitions(-DGLM_FORCE_DEPTH_ZERO_TO_ONE)
 
 # Note: Linux On MacOS 10.14 with clang++ compiler, I get executable with SIMD right away.
 # On Ubuntu 16.04 with g++ compiler, I will have to use the compiler flag -mavx2 to generate a SIMD executable. 
 # There are other compiler options for other SIMD instructions here. Without the compiler flag, I still get a serial executable.
-# add_definitions(-DGLM_FORCE_DEFAULT_ALIGNED_GENTYPES)         # TODO Enable SIMD for glm
-# add_definitions(-DGLM_FORCE_INTRINSICS)
-if (LINUX)
+
+if (UNIX)
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
+elseif(WINDOWS)
+    ADD_DEFINITIONS(/arch:AVX2)
 endif ()
+
+set(glm_DIR "libs/include/glm/cmake/glm")
+find_package(glm REQUIRED)
 
 # TODO Use this link to integrate lua into project
 # https://gist.github.com/baiyanhuang/4054106
+
+list(
+    APPEND COMMON_INCLUDE_DIRECTORIES
+    "src" 
+    "${CMAKE_SOURCE_DIR}/libs/include"
+    "${GLM_INCLUDE_DIRS}"
+)
 
 #-----------------------------------------------------------------------
 # Bedrock
@@ -103,6 +125,7 @@ list(
     "src/engine/BedrockPath.cpp"
     "src/engine/BedrockSignalTypes.hpp"
     "src/engine/BedrockSignal.hpp"
+    "src/engine/BedrockString.hpp"
 )
 
 add_library("Bedrock"
@@ -111,8 +134,7 @@ add_library("Bedrock"
 
 target_include_directories(
     "Bedrock" PUBLIC 
-    "src" 
-    "${CMAKE_SOURCE_DIR}/libs/include"
+    ${COMMON_INCLUDE_DIRECTORIES}
 )
 
 #-----------------------------------------------------------------------
@@ -123,10 +145,6 @@ set(RENDERER_SOURCES)
 
 list(
     APPEND RENDERER_SOURCES
-)
-
-add_library("Renderer"
-    ${RENDERER_SOURCES}
 
     # RenderSystem
     "src/engine/render_system/RenderTypes.hpp"
@@ -192,10 +210,11 @@ add_library("Renderer"
     "src/engine/render_system/pipelines/particle/FireEssence.cpp"
 )
 
+add_library("Renderer" ${RENDERER_SOURCES})
+
 target_include_directories(
     "Renderer" PUBLIC 
-    "src" 
-    "${CMAKE_SOURCE_DIR}/libs/include"
+    ${COMMON_INCLUDE_DIRECTORIES}
 )
 
 #-----------------------------------------------------------------------
@@ -206,11 +225,6 @@ set(ENTITY_SYSTEM_SOURCES)
 
 list(
     APPEND ENTITY_SYSTEM_SOURCES
-)
-
-add_library("EntitySystem"
-    ${ENTITY_SYSTEM_SOURCES}
-
     # Entity system
     "src/engine/entity_system/EntitySystemTypes.hpp"
     "src/engine/entity_system/EntitySystem.hpp"
@@ -250,10 +264,48 @@ add_library("EntitySystem"
     "src/engine/entity_system/components/DirectionalLightComponent.cpp"
 )
 
+
+add_library("EntitySystem"
+    ${ENTITY_SYSTEM_SOURCES}
+)
+
 target_include_directories(
     "EntitySystem" PUBLIC 
-    "src" 
-    "${CMAKE_SOURCE_DIR}/libs/include"
+    ${COMMON_INCLUDE_DIRECTORIES}
+)
+
+#-----------------------------------------------------------------------
+# AssetSystem
+#-----------------------------------------------------------------------
+
+set(ASSET_SYSTEM_SOURCES)
+
+list(
+    APPEND ASSET_SYSTEM_SOURCES
+    "src/engine/asset_system/AssetTypes.hpp"
+    "src/engine/asset_system/AssetBase.hpp"
+    "src/engine/asset_system/AssetBase.cpp"
+    "src/engine/asset_system/AssetBaseMesh.hpp"
+    "src/engine/asset_system/AssetBaseMesh.cpp"
+    "src/engine/asset_system/Asset_PBR_Mesh.hpp"
+    "src/engine/asset_system/Asset_PBR_Mesh.cpp"
+    "src/engine/asset_system/AssetDebugMesh.hpp"
+    "src/engine/asset_system/AssetDebugMesh.cpp"
+    "src/engine/asset_system/AssetParticleMesh.hpp"
+    "src/engine/asset_system/AssetParticleMesh.cpp"
+    "src/engine/asset_system/AssetShader.hpp"
+    "src/engine/asset_system/AssetShader.cpp"
+    "src/engine/asset_system/AssetTexture.hpp"
+    "src/engine/asset_system/AssetTexture.cpp"
+    "src/engine/asset_system/AssetModel.hpp"
+    "src/engine/asset_system/AssetModel.cpp"
+)
+
+add_library("AssetSystem" ${ASSET_SYSTEM_SOURCES})
+
+target_include_directories(
+    "AssetSystem" PUBLIC 
+    ${COMMON_INCLUDE_DIRECTORIES}
 )
 
 #-----------------------------------------------------------------------
@@ -274,24 +326,7 @@ list(
     "src/engine/job_system/JobSystemTypes.hpp"
     "src/engine/job_system/ScopeLock.hpp"
     "src/engine/job_system/ScopeLock.cpp"
-    # AssetSystem # TODO: Separate asset system into a new library
-    "src/engine/asset_system/AssetTypes.hpp"
-    "src/engine/asset_system/AssetBase.hpp"
-    "src/engine/asset_system/AssetBase.cpp"
-    "src/engine/asset_system/AssetBaseMesh.hpp"
-    "src/engine/asset_system/AssetBaseMesh.cpp"
-    "src/engine/asset_system/Asset_PBR_Mesh.hpp"
-    "src/engine/asset_system/Asset_PBR_Mesh.cpp"
-    "src/engine/asset_system/AssetDebugMesh.hpp"
-    "src/engine/asset_system/AssetDebugMesh.cpp"
-    "src/engine/asset_system/AssetParticleMesh.hpp"
-    "src/engine/asset_system/AssetParticleMesh.cpp"
-    "src/engine/asset_system/AssetShader.hpp"
-    "src/engine/asset_system/AssetShader.cpp"
-    "src/engine/asset_system/AssetTexture.hpp"
-    "src/engine/asset_system/AssetTexture.cpp"
-    "src/engine/asset_system/AssetModel.hpp"
-    "src/engine/asset_system/AssetModel.cpp"
+
     # UI System
     "src/engine/ui_system/UI_System.hpp"
     "src/engine/ui_system/UI_System.cpp"
@@ -331,8 +366,7 @@ add_library("Engine"
 
 target_include_directories(
     "Engine" PUBLIC 
-    "src" 
-    "${CMAKE_SOURCE_DIR}/libs/include"
+    ${COMMON_INCLUDE_DIRECTORIES}
 )
 
 #-----------------------------------------------------------------------
@@ -367,8 +401,7 @@ add_library("Tools"
 
 target_include_directories(
     "Tools" PUBLIC 
-    "src" 
-    "${CMAKE_SOURCE_DIR}/libs/include"
+    ${COMMON_INCLUDE_DIRECTORIES}
 )
 
 #-----------------------------------------------------------------------
@@ -462,6 +495,8 @@ list(
     #nlohmann
     "src/libs/nlohmann/json_fwd.hpp"
     "src/libs/nlohmann/json.hpp"
+    #vma
+    "src/libs/vma/vk_mem_alloc.h"
 )
 
 if (NOT ANDROID)
@@ -478,8 +513,7 @@ add_library("Libs"
 
 target_include_directories(
     "Libs" PUBLIC 
-    "src" 
-    "${CMAKE_SOURCE_DIR}/libs/include"
+    ${COMMON_INCLUDE_DIRECTORIES}
 )
 
 #-----------------------------------------------------------------------
@@ -493,7 +527,7 @@ list(
     "unit_tests/catch.hpp"
     "unit_tests/rlutil.h"
     "unit_tests/testMain.cpp"
-    "unit_tests/engine/testBedrockMatrix.cpp"
+    "unit_tests/engine/testSIMD.cpp"
     "unit_tests/engine/testPath.cpp"
 )
 
@@ -504,11 +538,6 @@ set(PREFAB_EDITOR "PrefabEditor")
 # OS specific
 #-----------------------------------------------------------------------
 
-list(
-    APPEND COMMON_INCLUDE_DIRECTORIES
-    "src" 
-    "${CMAKE_SOURCE_DIR}/libs/include"
-)
 
 if (WINDOWS)
 
@@ -523,8 +552,8 @@ set(link_to_target_sources)
     function(link_to_target executable_name)
         message(STATUS "Linking dependancies to ${executable_name} ")
         add_executable(${executable_name} ${link_to_target_sources})
-        add_dependencies(${executable_name} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
-        target_link_libraries(${executable_name} ${COMPILED_LIBS} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
+        add_dependencies(${executable_name} "Tools" "Bedrock" "Renderer" "AssetSystem" "EntitySystem" "Engine" "Libs")
+        target_link_libraries(${executable_name} ${COMPILED_LIBS} "Tools" "Bedrock" "Renderer" "AssetSystem" "EntitySystem" "Engine" "Libs")
         target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
     endfunction()
 
@@ -565,7 +594,7 @@ set(link_to_target_sources)
     file(
         GLOB DLLS 
         "${CMAKE_SOURCE_DIR}/libs/win/SDL2.dll" 
-        "${CMAKE_SOURCE_DIR}/libs/win/clang_rt.asan_dynamic-x86_64.dll"
+        # "${CMAKE_SOURCE_DIR}/libs/win/clang_rt.asan_dynamic-x86_64.dll"
     )
 
     # Techdemo executable
@@ -619,7 +648,6 @@ set(link_to_target_sources)
     list(APPEND link_to_target_sources ${UNIT_TEST_SOURCE})
     unset(link_to_target_directories)
     list(APPEND link_to_target_directories 
-        ${WIN_INCLUDE_DIRECTORIES}
         "unit_tests"
     )
     link_to_target(${UNIT_TEST_NAME})
@@ -634,32 +662,90 @@ set(link_to_target_sources)
     target_compile_definitions(${UNIT_TEST_NAME} PRIVATE UNIT_TEST)
 
 elseif(LINUX)
-    # TODO Use link to target function
+
+#-----------------------------------------------------------------------
+# LINUX Executable
+#-----------------------------------------------------------------------
+
+# TODO Use link to target function
     message(STATUS "Building for linux")
 
+    set(link_to_target_directories)
+    set(link_to_target_sources)
+    function(link_to_target executable_name)
+        message(STATUS "Linking dependancies to ${executable_name} ")
+        add_executable(${executable_name} ${link_to_target_sources})
+        add_dependencies(${executable_name}  "Renderer" "EntitySystem" "Engine" "Tools" "AssetSystem" "Bedrock" "Libs")
+        target_link_libraries(${executable_name} "Renderer" "EntitySystem" "Engine" "Tools" "AssetSystem" "Bedrock" "Libs")
+        target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/linux/sdl/libSDL2.a")
+        target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/linux/sdl/libSDL2main.a")
+        target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/linux/libvulkan.so.1.3.204")
+        target_include_directories(
+            ${executable_name} PUBLIC
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
+            $<INSTALL_INTERFACE:include>
+        ) 
+        target_link_libraries(${executable_name} ${CMAKE_DL_LIBS})
+        # target_link_directories(${executable_name} PUBLIC "${CMAKE_SOURCE_DIR}/libs/linux/sdl/")
+        # target_include_directories(${executable_name} PUBLIC "${CMAKE_SOURCE_DIR}/libs/linux/sdl/")
+        target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})    
+    
+        target_link_libraries(${executable_name} X11)
+
+    endfunction()
+
+    message(STATUS "Building for linux")
+
+    find_package(X11 REQUIRED)
+    include_directories(${X11_INCLUDE_DIRS})    
+
+    set(CMAKE_THREAD_LIBS_INIT "-lpthread")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+    set(CMAKE_HAVE_THREADS_LIBRARY 1)
+    set(CMAKE_USE_WIN32_THREADS_INIT 0)
+    set(CMAKE_USE_PTHREADS_INIT 1)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+
     set(LINUX_SOURCE)
+    set(LINUX_INCLUDE_DIRECTORIES)
     
     list(
         APPEND LINUX_SOURCE
         "linux/main.cpp"
-        "src/Application.hpp"
-        "src/Application.cpp"
     )
 
-    add_executable(${TECHDEMO} ${LINUX_SOURCE})
-
-    add_dependencies(${TECHDEMO} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
-
-    target_link_directories(${TECHDEMO} PUBLIC "${CMAKE_SOURCE_DIR}/libs/linux/sdl/")
-
-    target_link_libraries(${TECHDEMO} SDL2 "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
-
-    target_include_directories(
-        ${TECHDEMO} PUBLIC 
+    list(
+        APPEND LINUX_INCLUDE_DIRECTORIES
         "linux"
-        "src" 
-        "${CMAKE_SOURCE_DIR}/libs/include"
     )
+
+    # Techdemo
+    unset(link_to_target_directories)
+    list(APPEND link_to_target_directories 
+        ${LINUX_INCLUDE_DIRECTORIES}
+        "applications/techdemo"
+    )
+    unset(link_to_target_sources)
+    list(APPEND link_to_target_sources 
+        ${LINUX_SOURCE} 
+        ${TECHDEMO_SOURCES}
+    )
+    link_to_target(${TECHDEMO})
+    target_compile_definitions(${TECHDEMO} PRIVATE TECHDEMO)
+
+    # Editor
+    unset(link_to_target_directories)
+    list(APPEND link_to_target_directories 
+        ${LINUX_INCLUDE_DIRECTORIES}
+        "applications/prefab_editor"
+    )
+    unset(link_to_target_sources)
+    list(APPEND link_to_target_sources 
+        ${LINUX_SOURCE} 
+        ${PREFAB_EDITOR_SOURCES}
+    )
+    link_to_target(${PREFAB_EDITOR})
+    target_compile_definitions(${PREFAB_EDITOR} PRIVATE PREFAB_EDITOR)
 
 elseif(MACOSX)
 
@@ -672,13 +758,13 @@ elseif(MACOSX)
     function(link_to_target executable_name)
         message(STATUS "Linking dependancies to ${executable_name} ")
         add_executable(${executable_name} ${link_to_target_sources})
-        add_dependencies(${executable_name} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
+        add_dependencies(${executable_name} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "AssetSystem" "Libs")
         target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.2.141.dylib")
         target_link_libraries(${executable_name}
             "-framework CoreGraphics"
             "-framework Foundation"
         )
-        target_link_libraries(${executable_name} SDL2 "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
+        target_link_libraries(${executable_name} SDL2 "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "AssetSystem" "Libs")
         target_link_directories(${executable_name} PUBLIC "${CMAKE_SOURCE_DIR}/libs/mac/sdl/")
         target_include_directories(${executable_name} PUBLIC "${CMAKE_SOURCE_DIR}/libs/mac/sdl/")
         target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
@@ -687,18 +773,37 @@ elseif(MACOSX)
             MACOSX_FRAMEWORK_IDENTIFIER "co.radx.${executable_name}"
         )
 
-        # Copying assets to correct place
-        add_custom_command(
-            TARGET ${executable_name} POST_BUILD        # Adds a post-build event to MyTest
-            COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Debug/${executable_name}.app/Contents/Resources/data/"
-            COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Debug/${executable_name}.app/Contents/Resources/data/"
-        )
+        # TODO: Clean this part
+        if(CMAKE_GENERATOR STREQUAL Xcode)
+            # Copying assets to correct place
+            add_custom_command(
+                TARGET ${executable_name} POST_BUILD        # Adds a post-build event to MyTest
+                COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Debug/${executable_name}.app/Contents/Resources/data/"
+                COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Debug/${executable_name}.app/Contents/Resources/data/"
+            )
 
-        add_custom_command(
-            TARGET ${executable_name} POST_BUILD        # Adds a post-build event to MyTest
-            COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Release/${executable_name}.app/Contents/Resources/data/"
-            COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Release/${executable_name}.app/Contents/Resources/data/"
-        )
+            add_custom_command(
+                TARGET ${executable_name} POST_BUILD        # Adds a post-build event to MyTest
+                COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Release/${executable_name}.app/Contents/Resources/data/"
+                COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Release/${executable_name}.app/Contents/Resources/data/"
+            )
+        else()
+            add_custom_command(
+                TARGET ${executable_name} POST_BUILD        # Adds a post-build event to MyTest
+                COMMAND mkdir -p "${CMAKE_BINARY_DIR}/${executable_name}.app/Contents/Resources/data/"
+                COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/${executable_name}.app/Contents/Resources/data/"
+            )
+
+            add_custom_command(
+                TARGET ${executable_name} POST_BUILD        # Adds a post-build event to MyTest
+                COMMAND mkdir -p "${CMAKE_BINARY_DIR}/${executable_name}.app/Contents/Resources/data/"
+                COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/${executable_name}.app/Contents/Resources/data/"
+            )
+        endif()
+
+        if(CMAKE_GENERATOR STREQUAL Xcode)
+            target_compile_definitions(${executable_name} PRIVATE XCODE)
+        endif()
 
     endfunction()
 
@@ -710,8 +815,7 @@ elseif(MACOSX)
     list(
         APPEND MAC_SOURCE
         "mac/main.mm"
-        # "src/Application.hpp"
-        # "src/Application.cpp"
+        "mac/BedrockPath.mm"
     )
 
     list(APPEND MAC_INCLUDE_DIRECTORIES 
@@ -746,6 +850,16 @@ elseif(MACOSX)
     link_to_target(${PREFAB_EDITOR})
     target_compile_definitions(${PREFAB_EDITOR} PRIVATE TECHDEMO)
 
+    # Unit-tests
+    unset(link_to_target_sources)
+    list(APPEND link_to_target_sources ${UNIT_TEST_SOURCE} "mac/BedrockPath.mm")
+    unset(link_to_target_directories)
+    list(APPEND link_to_target_directories 
+        "unit_tests"
+    )
+    link_to_target(${UNIT_TEST_NAME})
+    target_compile_definitions(${UNIT_TEST_NAME} PRIVATE UNIT_TEST)
+
 elseif(IPHONE)
 
 #-----------------------------------------------------------------------
@@ -774,9 +888,9 @@ elseif(IPHONE)
     
     add_executable(${TECHDEMO} MACOSX_BUNDLE ${IPHONE_SOURCE})
 
-    add_dependencies(${TECHDEMO} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
+    add_dependencies(${TECHDEMO} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "AssetSystem" "Libs")
 
-    target_link_libraries(${TECHDEMO} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "Libs")
+    target_link_libraries(${TECHDEMO} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "AssetSystem" "Libs")
 
     # TODO I think we should use .dylib instead
     target_link_libraries(${TECHDEMO}
@@ -795,6 +909,7 @@ elseif(IPHONE)
         "ios"
         "src" 
         "${CMAKE_SOURCE_DIR}/libs/include"
+        "${GLM_INCLUDE_DIRS}"
     )
 
     if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -837,6 +952,10 @@ elseif(ANDROID)
         ${LIBS_SOURCES}
         ${TOOLS_SOURCES}
         ${SCENES_SOURCES}
+        ${ASSET_SYSTEM_SOURCES}
+        ${ENTITY_SYSTEM_SOURCES}
+        ${RENDERER_SOURCES}
+        ${BEDROCK_SOURCES}
     )
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
@@ -866,6 +985,7 @@ elseif(ANDROID)
         ${TECHDEMO} PUBLIC 
         "src" 
         "${CMAKE_SOURCE_DIR}/libs/include"
+        "${GLM_INCLUDE_DIRS}"
     )
 
     # Asan libs are "somewhere" in the toolchain's root, we try to find the

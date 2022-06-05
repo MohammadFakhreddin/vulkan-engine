@@ -9,10 +9,4 @@ struct CameraData {
     float2 placeholder;
 };                                                                  
 
-#define CAMERA_BUFFER(bufferName)                                   \
-ConstantBuffer <CameraData> bufferName: register(b0, space0);       \
-
-#define CAMERA_BUFFER_CUSTOM_BINDING(bufferName, binding, space)    \
-ConstantBuffer <CameraData> bufferName: register(binding, space);   \
-
 #endif

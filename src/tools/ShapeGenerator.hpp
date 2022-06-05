@@ -14,7 +14,10 @@ namespace MFA::ShapeGenerator {
 
         std::shared_ptr<AS::Model> Sheet();
 
-        std::shared_ptr<AS::Model> Cube();
+        std::shared_ptr<AS::Model> CubeStrip();
+
+        std::shared_ptr<AS::Model> CubeFill();
+
     }
 
 }

@@ -72,29 +72,53 @@ namespace MFA
 
         void Emit(ArgsT ... args)
         {
-            SCOPE_LOCK(mLock)
-
-            for (int i = static_cast<int>(mSlots.size()) - 1; i >= 0; --i)
+            std::vector<Listener> listeners {};
             {
-                const auto & slot = mSlots[i];
-                slot.listener(std::forward<ArgsT>(args)...);
+                SCOPE_LOCK(mLock)
+                for (auto & slot : mSlots)
+                {
+                    MFA_ASSERT(slot.listener != nullptr);
+                    listeners.emplace_back(slot.listener);
+                }
+            }
+
+            for (auto & listener : listeners)
+            {
+                listener(std::forward<ArgsT>(args)...);
             }
         }
 
         void EmitMultiThread(ArgsT ... args)
         {
-            MFA_ASSERT(JS::IsMainThread()); // We should only call this function on mainThread
-            SCOPE_LOCK(mLock)
-
-            JS::AssignTaskPerThread([... args = std::forward<ArgsT>(args), this](uint32_t const threadNumber, uint32_t const threadCount)->void{
-                for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mSlots.size()); i += threadCount)
+            std::vector<Listener> listeners {};
+            {
+                SCOPE_LOCK(mLock)
+                for (auto & slot : mSlots)
                 {
-                    MFA_ASSERT(mSlots[i].listener != nullptr);
-                    mSlots[i].listener(args...);
+                    MFA_ASSERT(slot.listener != nullptr);
+                    listeners.emplace_back(slot.listener);
                 }
-            });
+            }
 
-            JS::WaitForThreadsToFinish();
+            if (listeners.empty() == false)
+            {
+                JS::AssignTaskPerThread(
+                    [... args = std::forward<ArgsT>(args), listeners]
+                    (uint32_t const threadNumber, uint32_t const threadCount)->void
+                    {
+                        for (uint32_t i = threadNumber; i < static_cast<uint32_t>(listeners.size()); i += threadCount)
+                        {
+                            MFA_ASSERT(listeners[i] != nullptr);
+                            listeners[i](args...);
+                        }
+                    }
+                );
+
+                if (JS::IsMainThread())
+                {
+                    JS::WaitForThreadsToFinish();
+                }
+            }
         }
 
         [[nodiscard]]

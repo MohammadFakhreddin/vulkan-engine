@@ -31,11 +31,11 @@ public:
     
     ~CameraComponent() override = default;
 
-    void init() override;
+    void Init() override;
 
     void Update(float deltaTimeInSec) override;
 
-    void shutdown() override;
+    void Shutdown() override;
 
     void ForcePosition(float position[3]);
 

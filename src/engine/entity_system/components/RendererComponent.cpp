@@ -7,9 +7,9 @@
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::RendererComponent::shutdown()
+void MFA::RendererComponent::Shutdown()
 {
-    Component::shutdown();
+    Component::Shutdown();
     if (auto const variant = mVariant.lock())
     {
         mPipeline->removeVariant(*variant);

@@ -1,29 +1,21 @@
 #include "BedrockMemory.hpp"
 
-#include "BedrockCommon.hpp"
-
 #include <cstdlib>
 
 namespace MFA::Memory {
 
-std::shared_ptr<SmartBlob> Alloc (size_t const size) {
-    return std::make_shared<SmartBlob>(Blob {
-        static_cast<uint8_t *>(::malloc(size)),
-        size
-    });
-}
-
-static void Free (Blob const & mem) {
-    if (mem.ptr != nullptr) {
-        ::free(mem.ptr);
+    std::shared_ptr<SmartBlob> Alloc (size_t const size) {
+        return std::make_shared<SmartBlob>(Blob {
+            static_cast<uint8_t *>(::malloc(size)),
+            size
+        });
     }
-}
-//
-//void PtrFree (void * ptr) {
-//    if (ptr != nullptr) {
-//        ::free(ptr);
-//    }
-//}
+
+    static void Free (Blob const & mem) {
+        if (mem.ptr != nullptr) {
+            ::free(mem.ptr);
+        }
+    }
 
 }
 

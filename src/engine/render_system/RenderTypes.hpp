@@ -12,7 +12,7 @@
 
 #include <string>
 #include <vector>
-
+#include <memory>
 namespace MFA
 {
 
@@ -26,14 +26,22 @@ namespace MFA
     namespace RenderTypes
     {
 
+#ifndef __ANDROID__
+    #define VK_NULL nullptr
+#else
+    #define VK_NULL 0
+#endif
+
         struct BufferAndMemory
         {
             const VkBuffer buffer;
             const VkDeviceMemory memory;
+            VkDeviceSize const size;
 
             explicit BufferAndMemory(
                 VkBuffer buffer_,
-                VkDeviceMemory memory_
+                VkDeviceMemory memory_,
+                VkDeviceSize size_
             );
             ~BufferAndMemory();
 
@@ -58,38 +66,29 @@ namespace MFA
         
         };
 
-        struct MeshBuffers
-        {
-            std::vector<std::shared_ptr<BufferAndMemory>> const verticesBuffer;
-            std::shared_ptr<BufferAndMemory> const indicesBuffer;
+        //struct MeshBuffer
+        //{
+        //    std::shared_ptr<BufferAndMemory> const vertexBuffer;
+        //    std::shared_ptr<BufferAndMemory> const indexBuffer;
 
-            // Vertex and index stage buffer are most of the times null.
-            std::shared_ptr<BufferAndMemory> const vertexStagingBuffer;
-            std::shared_ptr<BufferAndMemory> const indexStagingBuffer;
+        //    explicit MeshBuffer(
+        //        std::shared_ptr<BufferAndMemory> verticesBuffer_,
+        //        std::shared_ptr<BufferAndMemory> indicesBuffer_
+        //    );
 
-            explicit MeshBuffers(
-                std::vector<std::shared_ptr<BufferAndMemory>> verticesBuffer_,
-                std::shared_ptr<BufferAndMemory> indicesBuffer_,
-                std::shared_ptr<BufferAndMemory> vertexStagingBuffer_,
-                std::shared_ptr<BufferAndMemory> indexStagingBuffer_
-            );
-            explicit MeshBuffers(
-                std::shared_ptr<BufferAndMemory> verticesBuffer_,
-                std::shared_ptr<BufferAndMemory> indicesBuffer_
-            );
-            ~MeshBuffers();
+        //    ~MeshBuffer();
 
-            MeshBuffers(MeshBuffers const &) noexcept = delete;
-            MeshBuffers(MeshBuffers &&) noexcept = delete;
-            MeshBuffers & operator= (MeshBuffers const & rhs) noexcept = delete;
-            MeshBuffers & operator= (MeshBuffers && rhs) noexcept = delete;
-        
-        };
+        //    MeshBuffer(MeshBuffer const &) noexcept = delete;
+        //    MeshBuffer(MeshBuffer &&) noexcept = delete;
+        //    MeshBuffer & operator= (MeshBuffer const & rhs) noexcept = delete;
+        //    MeshBuffer & operator= (MeshBuffer && rhs) noexcept = delete;
+        //
+        //};
 
         struct ImageGroup
         {
-            VkImage const image;
-            VkDeviceMemory const memory;
+            const VkImage image;
+            const VkDeviceMemory memory;
 
             explicit ImageGroup(
                 VkImage image_,
@@ -136,15 +135,15 @@ namespace MFA
             std::shared_ptr<ImageViewGroup> const imageView{};
         };
 
-        struct GpuModel
+   /*     struct GpuModel
         {
-            std::string const nameOrAddress;
-            std::shared_ptr<MeshBuffers> const meshBuffers;
+            std::string const nameId;
+            std::shared_ptr<MeshBuffer> const meshBuffers;
             std::vector<std::shared_ptr<GpuTexture>> const textures;
             
             explicit GpuModel(
                 std::string address_,
-                std::shared_ptr<MeshBuffers> meshBuffers_,
+                std::shared_ptr<MeshBuffer> meshBuffers_,
                 std::vector<std::shared_ptr<GpuTexture>> textures_
             );
             ~GpuModel();
@@ -153,7 +152,7 @@ namespace MFA
             GpuModel(GpuModel &&) noexcept = delete;
             GpuModel & operator= (GpuModel const & rhs) noexcept = delete;
             GpuModel & operator= (GpuModel && rhs) noexcept = delete;
-        };
+        };*/
 
         struct GpuShader
         {
@@ -196,48 +195,51 @@ namespace MFA
             bool isValid() const noexcept;
         };
 
+        enum class CommandBufferType
+        {
+            Invalid,
+            Graphic,
+            Compute
+        };
+
         struct CommandRecordState
         {
             uint32_t imageIndex = 0;
             uint32_t frameIndex = 0;
             bool isValid = false;
+
+            CommandBufferType commandBufferType = CommandBufferType::Invalid;   // We could have used queue family index as well
+            VkCommandBuffer commandBuffer = nullptr;
             PipelineGroup * pipeline = nullptr;
             RenderPass * renderPass = nullptr;
         };
 
-        struct UniformBufferGroup
+        struct BufferGroup
         {
-            explicit UniformBufferGroup(
+            explicit BufferGroup(
                 std::vector<std::shared_ptr<BufferAndMemory>> buffers_,
                 size_t bufferSize_
             );
-            ~UniformBufferGroup();
+            ~BufferGroup();
 
-            UniformBufferGroup(UniformBufferGroup const &) noexcept = delete;
-            UniformBufferGroup(UniformBufferGroup &&) noexcept = delete;
-            UniformBufferGroup & operator= (UniformBufferGroup const & rhs) noexcept = delete;
-            UniformBufferGroup & operator= (UniformBufferGroup && rhs) noexcept = delete;
+            BufferGroup(BufferGroup const &) noexcept = delete;
+            BufferGroup(BufferGroup &&) noexcept = delete;
+            BufferGroup & operator= (BufferGroup const & rhs) noexcept = delete;
+            BufferGroup & operator= (BufferGroup && rhs) noexcept = delete;
 
             std::vector<std::shared_ptr<BufferAndMemory>> const buffers;
             size_t const bufferSize;
         };
 
-        struct StorageBufferCollection
+        /*struct UniformBufferGroup : public BufferGroup
         {
-            explicit StorageBufferCollection(
-                std::vector<std::shared_ptr<BufferAndMemory>> buffers_,
-                size_t bufferSize_
-            );
-            ~StorageBufferCollection();
-
-            StorageBufferCollection(StorageBufferCollection const &) noexcept = delete;
-            StorageBufferCollection(StorageBufferCollection &&) noexcept = delete;
-            StorageBufferCollection & operator= (StorageBufferCollection const & rhs) noexcept = delete;
-            StorageBufferCollection & operator= (StorageBufferCollection && rhs) noexcept = delete;
-
-            std::vector<std::shared_ptr<BufferAndMemory>> const buffers;
-            size_t const bufferSize;
+            using BufferGroup::BufferGroup;
         };
+
+        struct StorageBufferGroup : public BufferGroup
+        {
+            using BufferGroup::BufferGroup;
+        };*/
 
         struct SwapChainGroup
         {
@@ -336,8 +338,6 @@ namespace MFA
             VkPipelineDynamicStateCreateInfo * dynamicStateCreateInfo = nullptr;
             VkPipelineDepthStencilStateCreateInfo depthStencil{};
             VkPipelineColorBlendAttachmentState colorBlendAttachments{};
-            uint8_t pushConstantsRangeCount = 0;
-            VkPushConstantRange * pushConstantRanges = nullptr;
             bool useStaticViewportAndScissor = false;           // Use of dynamic viewport and scissor is recommended
             VkPrimitiveTopology primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
             VkSampleCountFlagBits rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
@@ -392,6 +392,41 @@ namespace MFA
             VkImageCreateFlags imageCreateFlags = 0;
             VkSampleCountFlagBits samplesCount = VK_SAMPLE_COUNT_1_BIT;
             VkImageType imageType = VK_IMAGE_TYPE_2D;
+        };
+
+        struct MappedMemory
+        {
+            explicit MappedMemory(VkDeviceMemory memory_);
+            ~MappedMemory();
+
+            MappedMemory(MappedMemory const &) noexcept = delete;
+            MappedMemory(MappedMemory &&) noexcept = delete;
+            MappedMemory & operator= (MappedMemory const & rhs) noexcept = delete;
+            MappedMemory & operator= (MappedMemory && rhs) noexcept = delete;
+
+            [[nodiscard]]
+            void ** getMappingPtr()
+            {
+                return &ptr;
+            }
+
+            template<typename T>
+            T * getPtr()
+            {
+                return static_cast<T *>(ptr);
+            }
+
+            [[nodiscard]]
+            bool isValid() const noexcept
+            {
+                return ptr != nullptr;
+            }
+
+        private:
+
+            void * ptr = nullptr;
+            VkDeviceMemory memory {};
+
         };
 
     };

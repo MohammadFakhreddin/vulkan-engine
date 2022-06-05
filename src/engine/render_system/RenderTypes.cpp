@@ -9,10 +9,12 @@
 
 MFA::RT::BufferAndMemory::BufferAndMemory(
     VkBuffer buffer_,
-    VkDeviceMemory memory_
+    VkDeviceMemory memory_,
+    VkDeviceSize size_
 )
     : buffer(buffer_)
     , memory(memory_)
+    , size(size_)
 {}
 
 //-------------------------------------------------------------------------------------------------
@@ -37,41 +39,23 @@ MFA::RT::SamplerGroup::~SamplerGroup()
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RT::MeshBuffers::MeshBuffers(
-    std::vector<std::shared_ptr<BufferAndMemory>> verticesBuffer_,
-    std::shared_ptr<BufferAndMemory> indicesBuffer_,
-    std::shared_ptr<BufferAndMemory> vertexStagingBuffer_,
-    std::shared_ptr<BufferAndMemory> indexStagingBuffer_
-)
-    : verticesBuffer(std::move(verticesBuffer_))
-    , indicesBuffer(std::move(indicesBuffer_))
-    , vertexStagingBuffer(std::move(vertexStagingBuffer_))
-    , indexStagingBuffer(std::move(indexStagingBuffer_))
-{}
-
-//-------------------------------------------------------------------------------------------------
-
-MFA::RenderTypes::MeshBuffers::MeshBuffers(
-    std::shared_ptr<BufferAndMemory> verticesBuffer_,
-    std::shared_ptr<BufferAndMemory> indicesBuffer_
-)
-    : MeshBuffers(
-        std::vector{ std::move(verticesBuffer_) },
-        std::move(indicesBuffer_),
-        nullptr,
-        nullptr
-    )
-{}
-
-//-------------------------------------------------------------------------------------------------
-
-MFA::RT::MeshBuffers::~MeshBuffers() = default;
+//MFA::RT::MeshBuffer::MeshBuffer(
+//    std::shared_ptr<BufferAndMemory> verticesBuffer_,
+//    std::shared_ptr<BufferAndMemory> indicesBuffer_
+//)
+//    : vertexBuffer(std::move(verticesBuffer_))
+//    , indexBuffer(std::move(indicesBuffer_))
+//{}
+//
+////-------------------------------------------------------------------------------------------------
+//
+//MFA::RT::MeshBuffer::~MeshBuffer() = default;
 
 //-------------------------------------------------------------------------------------------------
 
 MFA::RT::ImageGroup::ImageGroup(
-    const VkImage image_,
-    const VkDeviceMemory memory_
+    VkImage image_,
+    VkDeviceMemory memory_
 )
     : image(image_)
     , memory(memory_)
@@ -115,19 +99,19 @@ MFA::RT::GpuTexture::~GpuTexture() = default;
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RT::GpuModel::GpuModel(
-    std::string address_,
-    std::shared_ptr<MeshBuffers> meshBuffers_,
-    std::vector<std::shared_ptr<GpuTexture>> textures_
-)
-    : nameOrAddress(std::move(address_))
-    , meshBuffers(std::move(meshBuffers_))
-    , textures(std::move(textures_))
-{}
-
-//-------------------------------------------------------------------------------------------------
-
-MFA::RT::GpuModel::~GpuModel() = default;
+//MFA::RT::GpuModel::GpuModel(
+//    std::string address_,
+//    std::shared_ptr<MeshBuffer> meshBuffers_,
+//    std::vector<std::shared_ptr<GpuTexture>> textures_
+//)
+//    : nameId(std::move(address_))
+//    , meshBuffers(std::move(meshBuffers_))
+//    , textures(std::move(textures_))
+//{}
+//
+////-------------------------------------------------------------------------------------------------
+//
+//MFA::RT::GpuModel::~GpuModel() = default;
 
 //-------------------------------------------------------------------------------------------------
 
@@ -166,7 +150,7 @@ MFA::RenderTypes::PipelineGroup::PipelineGroup(
 
 MFA::RenderTypes::PipelineGroup::~PipelineGroup()
 {
-    RF::DestroyPipelineGroup(*this);
+    RF::DestroyPipeline(*this);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -179,7 +163,7 @@ bool MFA::RT::PipelineGroup::isValid() const noexcept
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RT::UniformBufferGroup::UniformBufferGroup(
+MFA::RT::BufferGroup::BufferGroup(
     std::vector<std::shared_ptr<BufferAndMemory>> buffers_,
     size_t const bufferSize_
 )
@@ -189,21 +173,7 @@ MFA::RT::UniformBufferGroup::UniformBufferGroup(
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::RT::UniformBufferGroup::~UniformBufferGroup() = default;
-
-//-------------------------------------------------------------------------------------------------
-
-MFA::RT::StorageBufferCollection::StorageBufferCollection(
-    std::vector<std::shared_ptr<BufferAndMemory>> buffers_,
-    size_t const bufferSize_
-)
-    : buffers(std::move(buffers_))
-    , bufferSize(bufferSize_)
-{}
-
-//-------------------------------------------------------------------------------------------------
-
-MFA::RT::StorageBufferCollection::~StorageBufferCollection() = default;
+MFA::RT::BufferGroup::~BufferGroup() = default;
 
 //-------------------------------------------------------------------------------------------------
 
@@ -247,7 +217,7 @@ MFA::RT::DepthImageGroup::~DepthImageGroup() = default;
 MFA::RT::ColorImageGroup::ColorImageGroup(
     std::shared_ptr<ImageGroup> imageGroup_,
     std::shared_ptr<ImageViewGroup> imageView_,
-    VkFormat imageFormat_
+    VkFormat const imageFormat_
 )
     : imageGroup(std::move(imageGroup_))
     , imageView(std::move(imageView_))
@@ -271,6 +241,20 @@ MFA::RenderTypes::DescriptorSetLayoutGroup::DescriptorSetLayoutGroup(VkDescripto
 MFA::RenderTypes::DescriptorSetLayoutGroup::~DescriptorSetLayoutGroup()
 {
     RF::DestroyDescriptorSetLayout(descriptorSetLayout);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RenderTypes::MappedMemory::MappedMemory(VkDeviceMemory memory_)
+    : memory(memory_)
+{
+}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RenderTypes::MappedMemory::~MappedMemory()
+{
+    RF::UnMapHostVisibleMemory(memory);
 }
 
 //-------------------------------------------------------------------------------------------------

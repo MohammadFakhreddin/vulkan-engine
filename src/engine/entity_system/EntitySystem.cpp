@@ -107,6 +107,7 @@ namespace MFA::EntitySystem
     {
         MFA_ASSERT(entity != nullptr);
         entity->Init(triggerSignals);
+        entity->LateInit(triggerSignals);
         if (triggerSignals)
         {
             UpdateEntity(entity);

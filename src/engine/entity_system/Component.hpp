@@ -57,8 +57,9 @@ public:
     struct EventTypes {
         static constexpr EventType EmptyEvent = 0b0;
         static constexpr EventType InitEvent = 0b1;
-        static constexpr EventType UpdateEvent = 0b10;
-        static constexpr EventType ShutdownEvent = 0b100;
+        static constexpr EventType LateInitEvent = 0b10;
+        static constexpr EventType UpdateEvent = 0b100;
+        static constexpr EventType ShutdownEvent = 0b1000;
     };
 
     virtual ~Component();
@@ -82,7 +83,7 @@ public:
 
         MeshRenderer,
         BoundingVolumeRenderer,
-        
+
         BoundingVolume,
         //SphereBoundingVolumeComponent,
         //AxisAlignedBoundingBoxes,
@@ -96,6 +97,8 @@ public:
         PointLight,
         DirectionalLight,
 
+        OcclusionCulling,
+
         Count
     };
 
@@ -103,11 +106,13 @@ public:
 
     virtual int getFamily() = 0;
 
-    virtual void init();
+    virtual void Init();
+
+    virtual void LateInit();
 
     virtual void Update(float deltaTimeInSec);
     
-    virtual void shutdown();
+    virtual void Shutdown();
 
     void SetActive(bool isActive);
 
@@ -141,6 +146,8 @@ private:
     bool mIsActive = true;
 
     SignalId mInitEventId = InvalidSignalId;
+
+    SignalId mLateInitEventId = InvalidSignalId;
 
     SignalId mUpdateEventId = InvalidSignalId;
 

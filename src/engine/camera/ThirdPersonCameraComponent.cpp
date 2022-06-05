@@ -41,9 +41,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ThirdPersonCameraComponent::init()
+    void ThirdPersonCameraComponent::Init()
     {
-        CameraComponent::init();
+        CameraComponent::Init();
 
         mTransformComponent = GetEntity()->GetComponent<TransformComponent>();
         MFA_ASSERT(mTransformComponent.expired() == false);
@@ -105,9 +105,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ThirdPersonCameraComponent::shutdown()
+    void ThirdPersonCameraComponent::Shutdown()
     {
-        CameraComponent::shutdown();
+        CameraComponent::Shutdown();
         if (auto const ptr = mTransformComponent.lock())
         {
             ptr->UnRegisterChangeListener(mTransformChangeListenerId);

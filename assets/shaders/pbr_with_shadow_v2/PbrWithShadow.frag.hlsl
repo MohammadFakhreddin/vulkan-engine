@@ -2,10 +2,9 @@
 #include "../ComputePointLightShadow.hlsl"
 #include "../PointLightBuffer.hlsl"
 #include "../CameraBuffer.hlsl"
-#include "../TextureSampler.hlsl"
 #include "../PrimitiveInfoBuffer.hlsl"
 #include "../DirectionalLightBuffer.hlsl"
-#include "../TexturesBuffer.hlsl"
+#include "../MaxTextureCount.hlsl"
 
 struct PSIn {
     float4 position : SV_POSITION;
@@ -20,7 +19,7 @@ struct PSIn {
     float3 worldBiTangent : TEXCOORD4;
 
     float2 emissiveTexCoord: TEXCOORD5;
-    float2 occlusionTexCoord: TEXCOORD5;
+    float2 occlusionTexCoord: TEXCOORD6;
 
     float4 directionLightPosition[3];
 };
@@ -29,24 +28,29 @@ struct PSOut {
     float4 color:SV_Target0;
 };
 
-CAMERA_BUFFER(cameraBuffer)
+ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
 
-TEXTURE_SAMPLER(textureSampler)
+ConstantBuffer <DirectionalLightBufferData> directionalLightBuffer: register(b1, space0);
 
-PRIMITIVE_INFO(primitiveInfoBuffer)
+ConstantBuffer <PointLightsBufferData> pointLightsBuffer: register(b2, space0); 
 
-DIRECTIONAL_LIGHT(directionalLightBuffer)
+sampler textureSampler : register(s3, space0);
 
-POINT_LIGHT(pointLightsBuffer)
+Texture2DArray DIR_shadowMap : register(t4, space0);
 
-TEXTURES_BUFFER(textures)
+TextureCubeArray PL_shadowMap : register(t5, space0);
+
+ConstantBuffer <PrimitiveInfoBuffer> primitiveInfoBuffer : register (b0, space1);
+
+Texture2D textures[MAX_TEXTURE_COUNT] : register(t1, space1);  // TODO: Maybe I should decrease the textures size
+
 
 struct PushConsts
 {
-    float4x4 model;
-    float4x4 inverseNodeTransform;
-	int skinIndex;
     uint primitiveIndex;
+    int placeholder0;
+    int placeholder1;
+    int placeholder2;
 };
 
 [[vk::push_constant]]
@@ -225,7 +229,9 @@ PSOut main(PSIn input) {
         DirectionalLight directionalLight = directionalLightBuffer.items[lightIndex];
         float3 lightVector = directionalLight.direction;
         
-        float shadow = directionalLightShadowCalculation(
+        float shadow = computeDirectionalLightShadow(
+            DIR_shadowMap,
+            textureSampler,
             input.directionLightPosition[lightIndex], 
             lightIndex
         );
@@ -266,7 +272,10 @@ PSOut main(PSIn input) {
                 lightDistanceVector.y / lightVectorLength, 
                 lightDistanceVector.z / lightVectorLength
             );
-            float shadow = pointLightShadowCalculation(
+            float shadow = computePointLightShadow(
+                cameraBuffer.projectFarToNearDistance,
+                PL_shadowMap,
+                textureSampler,
                 lightDistanceVector, 
                 lightVectorLength, 
                 viewVectorLength, 

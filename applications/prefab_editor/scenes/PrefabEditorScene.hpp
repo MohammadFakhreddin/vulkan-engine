@@ -35,8 +35,6 @@ public:
 
     void Shutdown() override;
     
-    //bool isDisplayPassDepthImageInitialLayoutUndefined() override;
-
 private:
 
     void onUI();
@@ -46,7 +44,7 @@ private:
     void saveAndLoadWindow();
 
     void addEssenceToPipeline(
-        std::shared_ptr<MFA::RenderTypes::GpuModel> const & gpuModel,
+        std::string const & nameId,
         std::shared_ptr<MFA::AssetSystem::Model> const & cpuModel
     );
 

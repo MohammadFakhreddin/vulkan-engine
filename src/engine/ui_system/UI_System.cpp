@@ -11,6 +11,7 @@
 #include "engine/BedrockSignal.hpp"
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "engine/asset_system/AssetTypes.hpp"
+#include "engine/scene_manager/SceneManager.hpp"
 
 #include "libs/imgui/imgui.h"
 #include "libs/imgui/imgui_stdlib.h"
@@ -143,10 +144,10 @@ namespace MFA::UI_System
         RT::DescriptorSetGroup descriptorSetGroup{};
         std::shared_ptr<RT::PipelineGroup> pipeline{};
         std::shared_ptr<RT::GpuTexture> fontTexture{};
-        std::vector<std::shared_ptr<RT::MeshBuffers>> meshBuffers{};
-        //std::vector<bool> meshBuffersValidationStatus{};
         bool hasFocus = false;
         Signal<> UIRecordSignal{};
+        std::vector<std::shared_ptr<RT::BufferAndMemory>> vertexBuffers{};
+        std::vector<std::shared_ptr<RT::BufferAndMemory>> indexBuffers{};
 #if defined(__ANDROID__) || defined(__IOS__)
         IM::MousePosition previousMousePositionX = 0.0f;
         IM::MousePosition previousMousePositionY = 0.0f;
@@ -239,220 +240,228 @@ namespace MFA::UI_System
 
     //-------------------------------------------------------------------------------------------------
 
-    void Init()
+    static void createDescriptorSetLayout()
     {
-        state = new State();
-        auto const swapChainImagesCount = RF::GetSwapChainImagesCount();
-        state->meshBuffers.resize(swapChainImagesCount);
+        std::vector<VkDescriptorSetLayoutBinding> binding{
+            VkDescriptorSetLayoutBinding{
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .descriptorCount = 1,
+                .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+                .pImmutableSamplers = &state->fontSampler->sampler,
+            }
+        };
 
-        // Setup Dear ImGui context
-        IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
+        state->descriptorSetLayout = RF::CreateDescriptorSetLayout(
+            static_cast<uint8_t>(binding.size()),
+            binding.data()
+        );
+    }
 
-        // FontSampler
-        state->fontSampler = RF::CreateSampler(RT::CreateSamplerParams {
-            .minLod = -1000,
-            .maxLod = 1000,
-            .maxAnisotropy = 1.0f,
+    //-------------------------------------------------------------------------------------------------
+
+    static void createPipeline()
+    {
+        // Constants: we are using 'vec2 offset' and 'vec2 scale' instead of a full 3d projection matrix
+        std::vector<VkPushConstantRange> pushConstantRanges{};
+
+        pushConstantRanges.emplace_back(VkPushConstantRange {
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+            .offset = 0,
+            .size = 4 * sizeof(float)
         });
-        
-        {// Descriptor set layout
-            std::vector<VkDescriptorSetLayoutBinding> binding{
-                VkDescriptorSetLayoutBinding{
-                    .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    .descriptorCount = 1,
-                    .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-                    .pImmutableSamplers = &state->fontSampler->sampler,
-                }
-            };
-            state->descriptorSetLayout = RF::CreateDescriptorSetLayout(
-                static_cast<uint8_t>(binding.size()),
-                binding.data()
-            );
-        }
-
-        state->descriptorPool = RF::CreateDescriptorPool(RF::GetMaxFramesPerFlight());
 
         // Create Descriptor Set:
         state->descriptorSetGroup = RF::CreateDescriptorSets(
             state->descriptorPool,
-            RF::GetMaxFramesPerFlight(),
+            1,
             *state->descriptorSetLayout
-        ); // Original number was 1 , Now it creates as many as swap_chain_image_count
+        );
+
+
+        auto const pipelineLayout = RF::CreatePipelineLayout(
+            1,
+            &state->descriptorSetLayout->descriptorSetLayout,
+            static_cast<uint32_t>(pushConstantRanges.size()),
+            pushConstantRanges.data()
+        );
 
         // Vertex shader
-        auto vertexShader = RF::CreateShader(Importer::ImportShaderFromSPV(
+        auto const vertexShader = RF::CreateShader(Importer::ImportShaderFromSPV(
             CBlobAliasOf(vertex_shader_spv),
             AS::ShaderStage::Vertex,
             "main"
         ));
-        // TODO Implement them in shutdown as well
         
         // Fragment shader
-        auto fragmentShader = RF::CreateShader(Importer::ImportShaderFromSPV(
+        auto const fragmentShader = RF::CreateShader(Importer::ImportShaderFromSPV(
             CBlobAliasOf(fragment_shader_spv),
             AS::ShaderStage::Fragment,
             "main"
         ));
-        
-        {
-            // Constants: we are using 'vec2 offset' and 'vec2 scale' instead of a full 3d projection matrix
-            std::vector<VkPushConstantRange> pushConstantRanges{};
 
-            VkPushConstantRange pushConstantRange{};
-            pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-            pushConstantRange.offset = 0;
-            pushConstantRange.size = 4 * sizeof(float);
-            pushConstantRanges.emplace_back(pushConstantRange);
+        std::vector<RT::GpuShader const *> shaderStages {
+            vertexShader.get(),
+            fragmentShader.get()
+        };
 
-            std::vector<RT::GpuShader const *> shaderStages {
-                vertexShader.get(),
-                fragmentShader.get()
-            };
+        VkVertexInputBindingDescription vertex_binding_description{};
+        vertex_binding_description.stride = sizeof(ImDrawVert);
+        vertex_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-            VkVertexInputBindingDescription vertex_binding_description{};
-            vertex_binding_description.stride = sizeof(ImDrawVert);
-            vertex_binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        std::vector<VkVertexInputAttributeDescription> inputAttributeDescription(3);
+        inputAttributeDescription[0].location = 0;
+        inputAttributeDescription[0].binding = vertex_binding_description.binding;
+        inputAttributeDescription[0].format = VK_FORMAT_R32G32_SFLOAT;
+        inputAttributeDescription[0].offset = offsetof(ImDrawVert, pos);
+        inputAttributeDescription[1].location = 1;
+        inputAttributeDescription[1].binding = vertex_binding_description.binding;
+        inputAttributeDescription[1].format = VK_FORMAT_R32G32_SFLOAT;
+        inputAttributeDescription[1].offset = offsetof(ImDrawVert, uv);
+        inputAttributeDescription[2].location = 2;
+        inputAttributeDescription[2].binding = vertex_binding_description.binding;
+        inputAttributeDescription[2].format = VK_FORMAT_R8G8B8A8_UNORM;
+        inputAttributeDescription[2].offset = offsetof(ImDrawVert, col);
 
-            std::vector<VkVertexInputAttributeDescription> inputAttributeDescription(3);
-            inputAttributeDescription[0].location = 0;
-            inputAttributeDescription[0].binding = vertex_binding_description.binding;
-            inputAttributeDescription[0].format = VK_FORMAT_R32G32_SFLOAT;
-            inputAttributeDescription[0].offset = offsetof(ImDrawVert, pos);
-            inputAttributeDescription[1].location = 1;
-            inputAttributeDescription[1].binding = vertex_binding_description.binding;
-            inputAttributeDescription[1].format = VK_FORMAT_R32G32_SFLOAT;
-            inputAttributeDescription[1].offset = offsetof(ImDrawVert, uv);
-            inputAttributeDescription[2].location = 2;
-            inputAttributeDescription[2].binding = vertex_binding_description.binding;
-            inputAttributeDescription[2].format = VK_FORMAT_R8G8B8A8_UNORM;
-            inputAttributeDescription[2].offset = offsetof(ImDrawVert, col);
+        std::vector<VkDynamicState> const dynamicStates{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+        VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo{};
+        dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+        dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
 
-            std::vector<VkDynamicState> dynamicStates{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-            VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo{};
-            dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-            dynamicStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
-            dynamicStateCreateInfo.pDynamicStates = dynamicStates.data();
+        RT::CreateGraphicPipelineOptions pipelineOptions{};
+        pipelineOptions.frontFace = VK_FRONT_FACE_CLOCKWISE;
+        pipelineOptions.dynamicStateCreateInfo = &dynamicStateCreateInfo;
+        pipelineOptions.depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        pipelineOptions.depthStencil.depthTestEnable = false;
+        pipelineOptions.depthStencil.depthWriteEnable = false;
+        pipelineOptions.depthStencil.depthBoundsTestEnable = false;
+        pipelineOptions.depthStencil.stencilTestEnable = false;
+        pipelineOptions.colorBlendAttachments.blendEnable = VK_TRUE;
+        pipelineOptions.colorBlendAttachments.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        pipelineOptions.colorBlendAttachments.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        pipelineOptions.colorBlendAttachments.colorBlendOp = VK_BLEND_OP_ADD;
+        pipelineOptions.colorBlendAttachments.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        pipelineOptions.colorBlendAttachments.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        pipelineOptions.colorBlendAttachments.alphaBlendOp = VK_BLEND_OP_ADD;
+        pipelineOptions.colorBlendAttachments.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        pipelineOptions.useStaticViewportAndScissor = false;
+        pipelineOptions.cullMode = VK_CULL_MODE_NONE;
+        // TODO I wish we could render ui without MaxSamplesCount
+        pipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
 
-            RT::CreateGraphicPipelineOptions pipelineOptions{};
-            pipelineOptions.frontFace = VK_FRONT_FACE_CLOCKWISE;
-            pipelineOptions.dynamicStateCreateInfo = &dynamicStateCreateInfo;
-            pipelineOptions.depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-            pipelineOptions.depthStencil.depthTestEnable = false;
-            pipelineOptions.depthStencil.depthBoundsTestEnable = false;
-            pipelineOptions.depthStencil.stencilTestEnable = false;
-            pipelineOptions.colorBlendAttachments.blendEnable = VK_TRUE;
-            pipelineOptions.colorBlendAttachments.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-            pipelineOptions.colorBlendAttachments.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-            pipelineOptions.colorBlendAttachments.colorBlendOp = VK_BLEND_OP_ADD;
-            pipelineOptions.colorBlendAttachments.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-            pipelineOptions.colorBlendAttachments.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-            pipelineOptions.colorBlendAttachments.alphaBlendOp = VK_BLEND_OP_ADD;
-            pipelineOptions.colorBlendAttachments.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-            pipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
-            pipelineOptions.pushConstantRanges = pushConstantRanges.data();
-            pipelineOptions.useStaticViewportAndScissor = false;
-            pipelineOptions.cullMode = VK_CULL_MODE_NONE;
-            // TODO I wish we could render ui without MaxSamplesCount
-            pipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
+        state->pipeline = RF::CreateGraphicPipeline(
+            RF::GetDisplayRenderPass()->GetVkRenderPass(),
+            static_cast<uint8_t>(shaderStages.size()),
+            shaderStages.data(),
+            pipelineLayout,
+            1, 
+            &vertex_binding_description,
+            static_cast<uint8_t>(inputAttributeDescription.size()),
+            inputAttributeDescription.data(),
+            pipelineOptions
+        );
+    }
 
-            state->pipeline = RF::CreatePipeline(
-                RF::GetDisplayRenderPass()->GetVkRenderPass(),
-                static_cast<uint8_t>(shaderStages.size()),
-                shaderStages.data(),
-                1,
-                &state->descriptorSetLayout->descriptorSetLayout,
-                1, 
-                &vertex_binding_description,
-                static_cast<uint8_t>(inputAttributeDescription.size()),
-                inputAttributeDescription.data(),
-                pipelineOptions
-            );
-        }
+    //-------------------------------------------------------------------------------------------------
 
-        {// Creating fonts textures
-            // Load Fonts
-            // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
-            // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
-            // - If the file cannot be loaded, the function will return NULL. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
-            // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
-            // - Read 'docs/FONTS.md' for more instructions and details.
-            // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-            //io.Fonts->AddFontDefault();
-            //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
-            //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
-            //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
-            //io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 10.0f);
-            //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
-            //IM_ASSERT(font != NULL);
+    static void createFontTexture()
+    {
+        // Load Fonts
+        // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
+        // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
+        // - If the file cannot be loaded, the function will return NULL. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
+        // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
+        // - Read 'docs/FONTS.md' for more instructions and details.
+        // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
+        //io.Fonts->AddFontDefault();
+        //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
+        //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
+        //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
+        //io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 10.0f);
+        //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
+        ImGuiIO & io = ImGui::GetIO();
 
-            ImGuiIO & io = ImGui::GetIO();
+        uint8_t * pixels = nullptr;
+        int32_t width, height;
+        io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+        MFA_ASSERT(pixels != nullptr);
+        MFA_ASSERT(width > 0);
+        MFA_ASSERT(height > 0);
+        size_t const components_count = 4;
+        size_t const depth = 1;
+        size_t const slices = 1;
+        size_t const image_size = width * height * components_count * sizeof(uint8_t);
 
-            // Setup Dear ImGui style
-            ImGui::StyleColorsDark();
+        Importer::ImportTextureOptions importTextureOptions{};
+        importTextureOptions.tryToGenerateMipmaps = false;
+        importTextureOptions.preferSrgb = false;
 
-            uint8_t * pixels = nullptr;
-            int32_t width, height;
-            io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-            MFA_ASSERT(pixels != nullptr);
-            MFA_ASSERT(width > 0);
-            MFA_ASSERT(height > 0);
-            size_t const components_count = 4;
-            size_t const depth = 1;
-            size_t const slices = 1;
-            size_t const image_size = width * height * components_count * sizeof(uint8_t);
+        auto const textureAsset = Importer::ImportInMemoryTexture(
+            "FontTextures",
+            CBlob{ pixels, image_size },
+            width,
+            height,
+            AssetSystem::TextureFormat::UNCOMPRESSED_UNORM_R8G8B8A8_LINEAR,
+            components_count,
+            depth,
+            slices,
+            importTextureOptions
+        );
+        // TODO Support from in memory import of images inside importer
+        state->fontTexture = RF::CreateTexture(*textureAsset);
+    }
 
-            Importer::ImportTextureOptions importTextureOptions{};
-            importTextureOptions.tryToGenerateMipmaps = false;
-            importTextureOptions.preferSrgb = false;
-
-            auto textureAsset = Importer::ImportInMemoryTexture(
-                CBlob{ pixels, image_size },
-                width,
-                height,
-                AssetSystem::TextureFormat::UNCOMPRESSED_UNORM_R8G8B8A8_LINEAR,
-                components_count,
-                depth,
-                slices,
-                importTextureOptions
-            );
-            // TODO Support from in memory import of images inside importer
-            state->fontTexture = RF::CreateTexture(*textureAsset);
+    //-------------------------------------------------------------------------------------------------
 
 #ifdef __DESKTOP__
-            // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array.
-            io.KeyMap[ImGuiKey_Tab] = MSDL::SDL_SCANCODE_TAB;
-            io.KeyMap[ImGuiKey_LeftArrow] = MSDL::SDL_SCANCODE_LEFT;
-            io.KeyMap[ImGuiKey_RightArrow] = MSDL::SDL_SCANCODE_RIGHT;
-            io.KeyMap[ImGuiKey_UpArrow] = MSDL::SDL_SCANCODE_UP;
-            io.KeyMap[ImGuiKey_DownArrow] = MSDL::SDL_SCANCODE_DOWN;
-            io.KeyMap[ImGuiKey_PageUp] = MSDL::SDL_SCANCODE_PAGEUP;
-            io.KeyMap[ImGuiKey_PageDown] = MSDL::SDL_SCANCODE_PAGEDOWN;
-            io.KeyMap[ImGuiKey_Home] = MSDL::SDL_SCANCODE_HOME;
-            io.KeyMap[ImGuiKey_End] = MSDL::SDL_SCANCODE_END;
-            io.KeyMap[ImGuiKey_Insert] = MSDL::SDL_SCANCODE_INSERT;
-            io.KeyMap[ImGuiKey_Delete] = MSDL::SDL_SCANCODE_DELETE;
-            io.KeyMap[ImGuiKey_Backspace] = MSDL::SDL_SCANCODE_BACKSPACE;
-            io.KeyMap[ImGuiKey_Space] = MSDL::SDL_SCANCODE_SPACE;
-            io.KeyMap[ImGuiKey_Enter] = MSDL::SDL_SCANCODE_RETURN;
-            io.KeyMap[ImGuiKey_Escape] = MSDL::SDL_SCANCODE_ESCAPE;
-            io.KeyMap[ImGuiKey_KeyPadEnter] = MSDL::SDL_SCANCODE_KP_ENTER;
-            io.KeyMap[ImGuiKey_A] = MSDL::SDL_SCANCODE_A;
-            io.KeyMap[ImGuiKey_C] = MSDL::SDL_SCANCODE_C;
-            io.KeyMap[ImGuiKey_V] = MSDL::SDL_SCANCODE_V;
-            io.KeyMap[ImGuiKey_X] = MSDL::SDL_SCANCODE_X;
-            io.KeyMap[ImGuiKey_Y] = MSDL::SDL_SCANCODE_Y;
-            io.KeyMap[ImGuiKey_Z] = MSDL::SDL_SCANCODE_Z;
+    void prepareKeyMapForDesktop()
+    {
+        ImGuiIO & io = ImGui::GetIO();
+        // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array.
+        io.KeyMap[ImGuiKey_Tab] = MSDL::SDL_SCANCODE_TAB;
+        io.KeyMap[ImGuiKey_LeftArrow] = MSDL::SDL_SCANCODE_LEFT;
+        io.KeyMap[ImGuiKey_RightArrow] = MSDL::SDL_SCANCODE_RIGHT;
+        io.KeyMap[ImGuiKey_UpArrow] = MSDL::SDL_SCANCODE_UP;
+        io.KeyMap[ImGuiKey_DownArrow] = MSDL::SDL_SCANCODE_DOWN;
+        io.KeyMap[ImGuiKey_PageUp] = MSDL::SDL_SCANCODE_PAGEUP;
+        io.KeyMap[ImGuiKey_PageDown] = MSDL::SDL_SCANCODE_PAGEDOWN;
+        io.KeyMap[ImGuiKey_Home] = MSDL::SDL_SCANCODE_HOME;
+        io.KeyMap[ImGuiKey_End] = MSDL::SDL_SCANCODE_END;
+        io.KeyMap[ImGuiKey_Insert] = MSDL::SDL_SCANCODE_INSERT;
+        io.KeyMap[ImGuiKey_Delete] = MSDL::SDL_SCANCODE_DELETE;
+        io.KeyMap[ImGuiKey_Backspace] = MSDL::SDL_SCANCODE_BACKSPACE;
+        io.KeyMap[ImGuiKey_Space] = MSDL::SDL_SCANCODE_SPACE;
+        io.KeyMap[ImGuiKey_Enter] = MSDL::SDL_SCANCODE_RETURN;
+        io.KeyMap[ImGuiKey_Escape] = MSDL::SDL_SCANCODE_ESCAPE;
+        io.KeyMap[ImGuiKey_KeyPadEnter] = MSDL::SDL_SCANCODE_KP_ENTER;
+        io.KeyMap[ImGuiKey_A] = MSDL::SDL_SCANCODE_A;
+        io.KeyMap[ImGuiKey_C] = MSDL::SDL_SCANCODE_C;
+        io.KeyMap[ImGuiKey_V] = MSDL::SDL_SCANCODE_V;
+        io.KeyMap[ImGuiKey_X] = MSDL::SDL_SCANCODE_X;
+        io.KeyMap[ImGuiKey_Y] = MSDL::SDL_SCANCODE_Y;
+        io.KeyMap[ImGuiKey_Z] = MSDL::SDL_SCANCODE_Z;
+    }
 #endif
 
+    //-------------------------------------------------------------------------------------------------
+
+    static void adjustGlobalFontScale()
+    {
+        ImGuiIO & io = ImGui::GetIO();
 #if defined(__ANDROID__)
-            // Scaling fonts    // TODO Find a better way
-            io.FontGlobalScale = 3.5f;
+        // Scaling fonts    // TODO Find a better way
+        io.FontGlobalScale = 3.5f;
 #elif defined(__IOS__)
-            io.FontGlobalScale = 3.0f;
+        io.FontGlobalScale = 3.0f;
+#else
+        io.FontGlobalScale = 1.0f;
 #endif
-        }
+    }
 
+    //-------------------------------------------------------------------------------------------------
+
+    static void updateDescriptorSets()
+    {
         // Update the Descriptor Set:
         for (auto & descriptorSet : state->descriptorSetGroup.descriptorSets)
         {
@@ -475,14 +484,54 @@ namespace MFA::UI_System
                 &writeDescriptorSet
             );
         }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Init()
+    {
+        state = new State();
+        
+        // Setup Dear ImGui context
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+
+        // FontSampler
+        state->fontSampler = RF::CreateSampler(RT::CreateSamplerParams {
+            .minLod = -1000,
+            .maxLod = 1000,
+            .maxAnisotropy = 1.0f,
+        });
+
+        state->descriptorPool = RF::CreateDescriptorPool(RF::GetMaxFramesPerFlight());
+
+        createDescriptorSetLayout();
+
+        createPipeline();
+
+        createFontTexture();
+
+#ifdef __DESKTOP__
+        prepareKeyMapForDesktop();
+#endif
+
+        adjustGlobalFontScale();
+
+        updateDescriptorSets();
 
 #ifdef __DESKTOP__
         state->eventWatchId = RF::AddEventWatch(EventWatch);
 #endif
 
         onResize();
+
         state->resizeSignalId = RF::AddResizeEventListener([]()->void {onResize();});
+
+        state->vertexBuffers.resize(RF::GetMaxFramesPerFlight());
+        state->indexBuffers.resize(RF::GetMaxFramesPerFlight());
     }
+
+    //-------------------------------------------------------------------------------------------------
 
     static void UpdateMousePositionAndButtons()
     {
@@ -549,7 +598,7 @@ namespace MFA::UI_System
 
     bool Render(
         float const deltaTimeInSec,
-        RT::CommandRecordState & drawPass
+        RT::CommandRecordState & recordState
     )
     {
         ImGuiIO & io = ImGui::GetIO();
@@ -563,11 +612,12 @@ namespace MFA::UI_System
 
         // Setup desired Vulkan state
         // Bind pipeline and descriptor sets:
-        RF::BindPipeline(drawPass, *state->pipeline);
+        RF::BindPipeline(recordState, *state->pipeline);
+
         RF::BindDescriptorSet(
-            drawPass,
-            RenderFrontend::DescriptorSetType::PerFrame,
-            state->descriptorSetGroup
+            recordState,
+            RenderFrontend::UpdateFrequency::PerFrame,
+            state->descriptorSetGroup.descriptorSets[0]
         );
 
         auto const * drawData = ImGui::GetDrawData();
@@ -582,56 +632,57 @@ namespace MFA::UI_System
             {
                 // TODO We can create vertices for ui system in post render
                 // Create or resize the vertex/index buffers
-                size_t const vertex_size = drawData->TotalVtxCount * sizeof(ImDrawVert);
-                size_t const index_size = drawData->TotalIdxCount * sizeof(ImDrawIdx);
-                auto const vertexData = Memory::Alloc(vertex_size);
-                auto const indexData = Memory::Alloc(index_size);
+                size_t const vertexSize = drawData->TotalVtxCount * sizeof(ImDrawVert);
+                size_t const indexSize = drawData->TotalIdxCount * sizeof(ImDrawIdx);
+                auto const vertexData = Memory::Alloc(vertexSize);
+                auto const indexData = Memory::Alloc(indexSize);
                 {
-                    auto * vertex_ptr = reinterpret_cast<ImDrawVert *>(vertexData->memory.ptr);
-                    auto * index_ptr = reinterpret_cast<ImDrawIdx *>(indexData->memory.ptr);
+                    auto * vertexPtr = reinterpret_cast<ImDrawVert *>(vertexData->memory.ptr);
+                    auto * indexPtr = reinterpret_cast<ImDrawIdx *>(indexData->memory.ptr);
                     for (int n = 0; n < drawData->CmdListsCount; n++)
                     {
-                        const ImDrawList * cmd_list = drawData->CmdLists[n];
-                        ::memcpy(vertex_ptr, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
-                        ::memcpy(index_ptr, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
-                        vertex_ptr += cmd_list->VtxBuffer.Size;
-                        index_ptr += cmd_list->IdxBuffer.Size;
+                        const ImDrawList * cmd = drawData->CmdLists[n];
+                        ::memcpy(vertexPtr, cmd->VtxBuffer.Data, cmd->VtxBuffer.Size * sizeof(ImDrawVert));
+                        ::memcpy(indexPtr, cmd->IdxBuffer.Data, cmd->IdxBuffer.Size * sizeof(ImDrawIdx));
+                        vertexPtr += cmd->VtxBuffer.Size;
+                        indexPtr += cmd->IdxBuffer.Size;
                     }
                 }
 
-                auto & meshBuffer = state->meshBuffers[drawPass.frameIndex];
-                // TODO Prevent buffer to create mesh buffer every frame, Maybe we can update buffer instead when they have same size
-                std::shared_ptr<RT::BufferAndMemory> vertexBuffer = nullptr;
-                std::shared_ptr<RT::BufferAndMemory> vertexStageBuffer = nullptr;
-                std::shared_ptr<RT::BufferAndMemory> indexBuffer = nullptr;
-                std::shared_ptr<RT::BufferAndMemory> indexStageBuffer = nullptr;
+                auto & vertexBuffer = state->vertexBuffers[recordState.frameIndex];
+                auto & indexBuffer = state->indexBuffers[recordState.frameIndex];
 
-                RF::CreateVertexBuffer(
-                    vertexData->memory,
-                    vertexBuffer,
-                    vertexStageBuffer
-                );
+                if (vertexBuffer == nullptr || vertexBuffer->size < vertexSize)
+                {
+                    vertexBuffer = RF::CreateBuffer(
+                        vertexSize,
+                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+                    );
+                }
 
-                RF::CreateIndexBuffer(
-                    indexData->memory,
-                    indexBuffer,
-                    indexStageBuffer
-                );
+                RF::UpdateHostVisibleBuffer(*vertexBuffer, vertexData->memory);
 
-                meshBuffer = std::make_shared<RT::MeshBuffers>(
-                    vertexBuffer,
-                    indexBuffer
-                );
-                
+                if (indexBuffer == nullptr || indexBuffer->size < indexSize)
+                {
+                    indexBuffer = RF::CreateBuffer(
+                        indexSize,
+                        VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+                    );
+                }
+
+                RF::UpdateHostVisibleBuffer(*indexBuffer, indexData->memory);
+
                 RF::BindIndexBuffer(
-                    drawPass,
-                    *meshBuffer->indicesBuffer,
+                    recordState,
+                    *indexBuffer,
                     0,
                     sizeof(ImDrawIdx) == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32
                 );
                 RF::BindVertexBuffer(
-                    drawPass,
-                    *meshBuffer->verticesBuffer[0]
+                    recordState,
+                    *vertexBuffer
                 );
 
                 // Setup viewport:
@@ -644,7 +695,7 @@ namespace MFA::UI_System
                     .minDepth = 0.0f,
                     .maxDepth = 1.0f,
                 };
-                RF::SetViewport(drawPass, viewport);
+                RF::SetViewport(recordState, viewport);
                 
                 // Setup scale and translation:
                 // Our visible imgui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
@@ -655,7 +706,7 @@ namespace MFA::UI_System
                     constants.translate[0] = -1.0f - drawData->DisplayPos.x * constants.scale[0];
                     constants.translate[1] = -1.0f - drawData->DisplayPos.y * constants.scale[1];
                     RF::PushConstants(
-                        drawPass,
+                        recordState,
                         AS::ShaderStage::Vertex,
                         0,
                         CBlobAliasOf(constants)
@@ -698,12 +749,12 @@ namespace MFA::UI_System
                                 scissor.offset.y = static_cast<int32_t>(clip_rect.y);
                                 scissor.extent.width = static_cast<uint32_t>(clip_rect.z - clip_rect.x);
                                 scissor.extent.height = static_cast<uint32_t>(clip_rect.w - clip_rect.y);
-                                RF::SetScissor(drawPass, scissor);
+                                RF::SetScissor(recordState, scissor);
                             }
 
                             // Draw
                             RF::DrawIndexed(
-                                drawPass,
+                                recordState,
                                 pcmd->ElemCount,
                                 1,
                                 pcmd->IdxOffset + global_idx_offset,
@@ -924,7 +975,9 @@ namespace MFA::UI_System
         if (ImGui::Button(label))
         {
             MFA_ASSERT(onPress != nullptr);
-            onPress();
+            SceneManager::AssignMainThreadTask([onPress]()->void{
+                onPress();
+            });
         }
     }
 

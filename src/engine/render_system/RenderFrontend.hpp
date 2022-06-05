@@ -25,6 +25,9 @@ namespace MFA::AssetSystem
     class Shader;
 }
 
+
+// Idea: Maybe we can return unique ptr so it can converted to shared_ptr when necessary
+
 namespace MFA::RenderFrontend
 {
 
@@ -62,13 +65,22 @@ namespace MFA::RenderFrontend
 
     void DestroyDescriptorSetLayout(VkDescriptorSetLayout descriptorSetLayout);
 
+    //---------------------------------------------Pipelines--------------------------------------------
+    
     [[nodiscard]]
-    std::shared_ptr<RT::PipelineGroup> CreatePipeline(
+    VkPipelineLayout CreatePipelineLayout(
+        uint32_t setLayoutCount,
+        const VkDescriptorSetLayout * pSetLayouts,
+        uint32_t pushConstantRangeCount = 0,
+        const VkPushConstantRange * pPushConstantRanges = nullptr
+    );
+
+    [[nodiscard]]
+    std::shared_ptr<RT::PipelineGroup> CreateGraphicPipeline(
         VkRenderPass vkRenderPass,
         uint8_t gpuShadersCount,
         RT::GpuShader const ** gpuShaders,
-        uint32_t descriptorLayoutsCount,
-        VkDescriptorSetLayout const * descriptorSetLayouts,
+        VkPipelineLayout pipelineLayout,
         uint32_t vertexBindingDescriptionCount,
         VkVertexInputBindingDescription const * vertexBindingDescriptionData,
         uint32_t inputAttributeDescriptionCount,
@@ -76,7 +88,13 @@ namespace MFA::RenderFrontend
         RT::CreateGraphicPipelineOptions const & options
     );
 
-    void DestroyPipelineGroup(RT::PipelineGroup & recordState);
+    [[nodiscard]]
+    std::shared_ptr<RT::PipelineGroup> CreateComputePipeline(
+        RT::GpuShader const & shaderStage,
+        VkPipelineLayout pipelineLayout
+    );
+
+    void DestroyPipeline(RT::PipelineGroup & recordState);
 
     //-------------------------------------------DescriptorSetGroup--------------------------------------------
 
@@ -96,26 +114,13 @@ namespace MFA::RenderFrontend
 
     //-----------------------------------------------------------------------------------------------------------
 
-    void CreateVertexBuffer(
-        CBlob const & verticesBlob,
-        std::shared_ptr<RT::BufferAndMemory> & outVertexBuffer,
-        std::shared_ptr<RT::BufferAndMemory> & inOutStagingVertexBuffer
-    );
-
-    void UpdateVertexBuffer(
-        CBlob const & verticesBlob,
-        RT::BufferAndMemory const & vertexBuffer,
-        RT::BufferAndMemory const & stagingBuffer
-    );
-
-    void CreateIndexBuffer(
-        CBlob const & indicesBlob,
-        std::shared_ptr<RT::BufferAndMemory> & outIndexBuffer,
-        std::shared_ptr<RT::BufferAndMemory> & inOutStagingIndexBuffer
-    );
-
-    [[nodiscard]]
-    std::shared_ptr<RT::MeshBuffers> CreateMeshBuffers(AS::MeshBase const & mesh);
+    /*[[nodiscard]]
+    std::shared_ptr<RT::MeshBuffer> CreateMeshBuffers(
+        VkCommandBuffer commandBuffer,
+        AS::MeshBase const & mesh,
+        RT::BufferAndMemory const & vertexStageBuffer,
+        RT::BufferAndMemory const & indexStageBuffer
+    );*/
 
     [[nodiscard]]
     std::shared_ptr<RT::GpuTexture> CreateTexture(AS::Texture const & texture);
@@ -129,18 +134,19 @@ namespace MFA::RenderFrontend
 
     void DestroySampler(RT::SamplerGroup const & samplerGroup);
 
-    [[nodiscard]]
-    std::shared_ptr<RT::GpuModel> CreateGpuModel(
-        AS::Model const * modelAsset,
-        std::string const & address
-    );
+    //[[nodiscard]]
+    //std::shared_ptr<RT::GpuModel> CreateGpuModel(
+    //    VkCommandBuffer commandBuffer,
+    //    AS::Model const & modelAsset,
+    //    std::string const & nameId,
+    //    RT::BufferAndMemory const & vertexStageBuffer,
+    //    RT::BufferAndMemory const & indexStageBuffer
+    //);
 
     void DeviceWaitIdle();
 
     [[nodiscard]]
     VkFormat GetDepthFormat();
-
-    void DestroyBuffer(RT::BufferAndMemory const & bufferGroup);
 
     //---------------------------------------------Shader------------------------------------------------
 
@@ -149,29 +155,80 @@ namespace MFA::RenderFrontend
 
     void DestroyShader(RT::GpuShader const & gpuShader);
 
-    //-------------------------------------------UniformBuffer--------------------------------------------
-    // TODO We should ask for frequency so we can decide which memory type we should use + TODO: Add never/rare to frequency as well
-    std::shared_ptr<RT::UniformBufferGroup> CreateUniformBuffer(size_t bufferSize, uint32_t count);
+    //-------------------------------------------Buffers--------------------------------------------------
 
-    void UpdateUniformBuffer(
-        RT::CommandRecordState const & recordState,
-        RT::UniformBufferGroup const & bufferCollection,
-        CBlob data
+    std::shared_ptr<RT::BufferAndMemory> CreateBuffer(
+        VkDeviceSize size,
+        VkBufferUsageFlags usage,
+        VkMemoryPropertyFlags properties
     );
 
-    //-------------------------------------------StorageBuffer--------------------------------------------
+    std::shared_ptr<RT::MappedMemory> MapHostVisibleMemory(
+        VkDeviceMemory bufferMemory,
+        size_t offset,
+        size_t size
+    );
 
-    std::shared_ptr<RT::StorageBufferCollection> CreateStorageBuffer(size_t bufferSize, uint32_t count);
+    void UnMapHostVisibleMemory(VkDeviceMemory bufferMemory);
 
-    void UpdateBuffer(
+    [[nodiscard]]
+    std::shared_ptr<RT::BufferGroup> CreateBufferGroup(
+        VkDeviceSize bufferSize,
+        uint32_t count,
+        VkBufferUsageFlags bufferUsageFlagBits,
+        VkMemoryPropertyFlags memoryPropertyFlags
+    );
+
+    std::shared_ptr<RT::BufferAndMemory> CreateVertexBuffer(
+        VkCommandBuffer commandBuffer,
+        RT::BufferAndMemory const & stageBuffer,
+        CBlob const & verticesBlob
+    );
+
+    std::shared_ptr<RT::BufferAndMemory> CreateVertexBuffer(VkDeviceSize bufferSize);
+
+    std::shared_ptr<RT::BufferAndMemory> CreateIndexBuffer(
+        VkCommandBuffer commandBuffer,
+        RT::BufferAndMemory const & stageBuffer,
+        CBlob const & indicesBlob
+    );
+
+    std::shared_ptr<RT::BufferAndMemory> CreateIndexBuffer(VkDeviceSize bufferSize);
+
+    std::shared_ptr<RT::BufferGroup> CreateStageBuffer(
+        VkDeviceSize bufferSize,
+        uint32_t count
+    );
+
+    [[nodiscard]]
+    std::shared_ptr<RT::BufferGroup> CreateLocalUniformBuffer(size_t bufferSize, uint32_t count);
+
+    [[nodiscard]]
+    std::shared_ptr<RT::BufferGroup> CreateHostVisibleUniformBuffer(size_t bufferSize, uint32_t count);
+
+    [[nodiscard]]
+    std::shared_ptr<RT::BufferGroup> CreateLocalStorageBuffer(size_t bufferSize, uint32_t count);
+
+    [[nodiscard]]
+    std::shared_ptr<RT::BufferGroup> CreateHostVisibleStorageBuffer(size_t bufferSize, uint32_t count);
+
+    void UpdateHostVisibleBuffer(
         RT::BufferAndMemory const & buffer,
-        CBlob data
+        CBlob const & data
     );
+
+    void UpdateLocalBuffer(
+        VkCommandBuffer commandBuffer,
+        RT::BufferAndMemory const & buffer,
+        RT::BufferAndMemory const & stageBuffer
+    );
+
+    void DestroyBuffer(RT::BufferAndMemory const & bufferGroup);
     
     //-------------------------------------------------------------------------------------------------
 
     void BindPipeline(
-        RT::CommandRecordState & drawPass,
+        RT::CommandRecordState & recordState,
         RT::PipelineGroup & pipeline
     );
 
@@ -188,17 +245,31 @@ namespace MFA::RenderFrontend
     );
 
 
-    enum class DescriptorSetType : uint32_t
+    enum class UpdateFrequency : uint32_t
     {
         PerFrame = 0,
         PerEssence = 1,
         PerVariant = 2
     };
 
+    void AutoBindDescriptorSet(
+        RT::CommandRecordState const & recordState,
+        UpdateFrequency frequency,
+        RT::DescriptorSetGroup const & descriptorGroup
+    );
+
     void BindDescriptorSet(
-        RT::CommandRecordState const & drawPass,
-        DescriptorSetType frequency,
-        RT::DescriptorSetGroup descriptorSetGroup
+        RT::CommandRecordState const & recordState,
+        UpdateFrequency frequency,
+        VkDescriptorSet descriptorSet
+    );
+
+    void BindDescriptorSet(
+        VkCommandBuffer commandBuffer,
+        VkPipelineBindPoint bindPoint,
+        VkPipelineLayout pipelineLayout,
+        UpdateFrequency frequency,
+        VkDescriptorSet descriptorSet
     );
 
     //: loop through each mesh instance in the mesh instances list to render
@@ -216,21 +287,21 @@ namespace MFA::RenderFrontend
     //: end loop
 
     void BindVertexBuffer(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         RT::BufferAndMemory const & vertexBuffer,
         uint32_t firstBinding = 0,
         VkDeviceSize offset = 0
     );
 
     void BindIndexBuffer(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         RT::BufferAndMemory const & indexBuffer,
         VkDeviceSize offset = 0,
         VkIndexType indexType = VK_INDEX_TYPE_UINT32
     );
 
     void DrawIndexed(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         uint32_t indicesCount,
         uint32_t instanceCount = 1,
         uint32_t firstIndex = 0,
@@ -251,19 +322,19 @@ namespace MFA::RenderFrontend
 
     void OnNewFrame(float deltaTimeInSec);
 
-    void SetScissor(RT::CommandRecordState const & drawPass, VkRect2D const & scissor);
+    void SetScissor(RT::CommandRecordState const & recordState, VkRect2D const & scissor);
 
-    void SetViewport(RT::CommandRecordState const & drawPass, VkViewport const & viewport);
+    void SetViewport(RT::CommandRecordState const & recordState, VkViewport const & viewport);
 
     void PushConstants(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         AS::ShaderStage shaderStage,
         uint32_t offset,
         CBlob data
     );
 
     void PushConstants(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         VkShaderStageFlags shaderStage,
         uint32_t offset,
         CBlob data
@@ -364,22 +435,61 @@ namespace MFA::RenderFrontend
         uint32_t & outImageIndex
     );
 
-    void BeginCommandBuffer(
-        VkCommandBuffer commandBuffer,
+    //-----------------------------------------CommandBuffer-------------------------------------------------
+
+    void BeginGraphicCommandBuffer(
+        RT::CommandRecordState & recordState,
         VkCommandBufferBeginInfo const & beginInfo = {
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
             .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT
         }
     );
 
-    void EndCommandBuffer(VkCommandBuffer commandBuffer);
+    void BeginComputeCommandBuffer(
+        RT::CommandRecordState & recordState,
+        VkCommandBufferBeginInfo const & beginInfo = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT
+        }
+    );
+
+    void BeginCommandBuffer(
+        RT::CommandRecordState & recordState,
+        VkCommandBuffer commandBuffer,
+        RT::CommandBufferType commandBufferType,
+        VkCommandBufferBeginInfo const & beginInfo = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT
+        }
+    );
+
+    void EndCommandBuffer(RT::CommandRecordState & recordState);
+
+    [[nodiscard]]
+    VkCommandBuffer BeginSingleTimeGraphicCommand();
+
+    void EndAndSubmitGraphicSingleTimeCommand(VkCommandBuffer const & commandBuffer);
+
+    [[nodiscard]]
+    VkCommandBuffer BeginSingleTimeComputeCommand();
+
+    void EndAndSubmitComputeSingleTimeCommand(VkCommandBuffer const & commandBuffer);
+
+
+    //--------------------------------------------------------------------------------------------------------
 
     uint32_t GetPresentQueueFamily();
 
     uint32_t GetGraphicQueueFamily();
 
+    uint32_t GetComputeQueueFamily();
+
+    VkCommandBuffer GetComputeCommandBuffer(RT::CommandRecordState const & recordState);
+
+    VkCommandBuffer GetGraphicCommandBuffer(RT::CommandRecordState const & recordState);
+    
     void PipelineBarrier(
-        VkCommandBuffer commandBuffer,
+        RT::CommandRecordState const & recordState,
         VkPipelineStageFlags sourceStageMask,
         VkPipelineStageFlags destinationStateMask,
         uint32_t barrierCount,
@@ -387,28 +497,25 @@ namespace MFA::RenderFrontend
     );
 
     void PipelineBarrier(
-        VkCommandBuffer commandBuffer,
+        RT::CommandRecordState const & recordState,
         VkPipelineStageFlags sourceStageMask,
         VkPipelineStageFlags destinationStateMask,
-        VkBufferMemoryBarrier const & memoryBarrier
+        uint32_t barrierCount,
+        VkBufferMemoryBarrier const * bufferMemoryBarrier
     );
 
     void ResetFence(VkFence fence);
 
     void SubmitQueue(
-        VkCommandBuffer commandBuffer,
-        uint32_t waitSemaphoresCount,
-        VkSemaphore * waitSemaphores,
-        VkPipelineStageFlags * waitStageFlags,
-        uint32_t signalSemaphoresCount,
-        VkSemaphore * signalSemaphores,
-        VkFence fence
+        RT::CommandRecordState const & recordState,
+        uint32_t submitCount,
+        const VkSubmitInfo * submitInfos
     );
 
     void PresentQueue(
-        uint32_t imageIndex,
-        VkSemaphore waitSemaphore,
-        VkSwapchainKHR swapChain
+        RT::CommandRecordState const & recordState,
+        uint32_t waitSemaphoresCount,
+        const VkSemaphore * waitSemaphores
     );
 
     DisplayRenderPass * GetDisplayRenderPass();
@@ -428,9 +535,9 @@ namespace MFA::RenderFrontend
 
     void DestroyQueryPool(VkQueryPool queryPool);
 
-    void BeginQuery(RT::CommandRecordState const & drawPass, VkQueryPool queryPool, uint32_t queryId);
+    void BeginQuery(RT::CommandRecordState const & recordState, VkQueryPool queryPool, uint32_t queryId);
 
-    void EndQuery(RT::CommandRecordState const & drawPass, VkQueryPool queryPool, uint32_t queryId);
+    void EndQuery(RT::CommandRecordState const & recordState, VkQueryPool queryPool, uint32_t queryId);
 
     void GetQueryPoolResult(
         VkQueryPool queryPool,
@@ -448,25 +555,32 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    VkCommandBuffer GetGraphicCommandBuffer(RT::CommandRecordState const & drawPass);
+    [[nodiscard]]
+    RT::CommandRecordState AcquireRecordState();
 
     [[nodiscard]]
-    RT::CommandRecordState StartGraphicCommandBufferRecording();
-
-    void EndGraphicCommandBufferRecording(RT::CommandRecordState & recordState);
-
     VkFence GetFence(RT::CommandRecordState const & recordState);
 
     [[nodiscard]]
-    VkSemaphore GetGraphicSemaphore(RT::CommandRecordState const & drawPass);
+    VkSemaphore GetGraphicSemaphore(RT::CommandRecordState const & recordState);
 
     [[nodiscard]]
-    VkSemaphore GetPresentationSemaphore(RT::CommandRecordState const & drawPass);
+    VkSemaphore GetComputeSemaphore(RT::CommandRecordState const & recordState);
+
+    [[nodiscard]]
+    VkSemaphore GetPresentSemaphore(RT::CommandRecordState const & recordState);
 
     [[nodiscard]]
     VkDescriptorPool CreateDescriptorPool(uint32_t maxSets);
 
     void DestroyDescriptorPool(VkDescriptorPool descriptorPool);
+
+    void Dispatch(
+        RT::CommandRecordState const & recordState,
+        uint32_t groupCountX,
+        uint32_t groupCountY,
+        uint32_t groupCountZ
+    );
 
 }
 

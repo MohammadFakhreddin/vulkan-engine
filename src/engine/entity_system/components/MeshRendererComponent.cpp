@@ -33,15 +33,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    MeshRendererComponent::MeshRendererComponent(BasePipeline & pipeline, RT::GpuModel const & gpuModel)
-        : MeshRendererComponent(pipeline, gpuModel.nameOrAddress)
-    {}
-
-    //-------------------------------------------------------------------------------------------------
-
-    void MeshRendererComponent::init()
+    void MeshRendererComponent::Init()
     {
-        RendererComponent::init();
+        RendererComponent::Init();
 
         auto * entity = GetEntity();
         MFA_ASSERT(entity != nullptr);
@@ -58,9 +52,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void MeshRendererComponent::shutdown()
+    void MeshRendererComponent::Shutdown()
     {
-        RendererComponent::shutdown();
+        RendererComponent::Shutdown();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -85,11 +79,9 @@ namespace MFA
     {
         auto const variant = mVariant.lock();
         MFA_ASSERT(variant != nullptr);
-        auto const * essence = variant->GetEssence();
+        auto const * essence = variant->getEssence();
         MFA_ASSERT(essence != nullptr);
-        auto const * gpuModel = essence->getGpuModel();
-        MFA_ASSERT(gpuModel != nullptr);
-        jsonObject["address"] = gpuModel->nameOrAddress;
+        jsonObject["address"] = essence->getNameId();
         jsonObject["pipeline"] = mPipeline->GetName();
     }
 
@@ -97,28 +89,33 @@ namespace MFA
 
     void MeshRendererComponent::deserialize(nlohmann::json const & jsonObject)
     {
-        std::string const pipelineName = jsonObject["pipeline"];
+        MFA_ASSERT(jsonObject.contains("pipeline"));
+        std::string const pipelineName = jsonObject.value("pipeline", "");
         mPipeline = SceneManager::GetPipeline(pipelineName);
         MFA_ASSERT(mPipeline != nullptr);
 
-        std::string const address = jsonObject["address"];
+        MFA_ASSERT(jsonObject.contains("address"));
+        std::string const address = jsonObject.value("address", "");
 
-        std::string relativePath{};
-        Path::RelativeToAssetFolder(address, relativePath);
+        std::string nameId = Path::RelativeToAssetFolder(address);
 
-        if (mPipeline->hasEssence(relativePath) == false)
+        if (mPipeline->hasEssence(nameId) == false)
         {
             bool addResult = false;
 
-            auto const cpuModel = RC::AcquireCpuModel(relativePath);
+            auto const cpuModel = RC::AcquireCpuModel(nameId);
             MFA_ASSERT(cpuModel != nullptr);
-            auto const gpuModel = RC::AcquireGpuModel(relativePath);
-            MFA_ASSERT(gpuModel != nullptr);
+            //auto const gpuModel = RC::AcquireGpuModel(relativePath);
+            //MFA_ASSERT(gpuModel != nullptr);
 
             if (pipelineName == PBRWithShadowPipelineV2::Name)
             {
-                auto const pbrMeshData = static_cast<AS::PBR::Mesh *>(cpuModel->mesh.get())->getMeshData();
-                addResult = mPipeline->addEssence(std::make_shared<PBR_Essence>(gpuModel, pbrMeshData));
+                auto const * pbrMesh = static_cast<AS::PBR::Mesh *>(cpuModel->mesh.get());
+                addResult = mPipeline->addEssence(std::make_shared<PBR_Essence>(
+                    nameId,
+                    *pbrMesh,
+                    RC::AcquireGpuTextures(cpuModel->textureIds)
+                ));
             }
             else if (pipelineName == ParticlePipeline::Name)
             {
@@ -126,7 +123,11 @@ namespace MFA
             }
             else if (pipelineName == DebugRendererPipeline::Name)
             {
-                addResult = mPipeline->addEssence(std::make_shared<DebugEssence>(gpuModel, cpuModel->mesh->getIndexCount()));
+                auto const * debugMesh = static_cast<AS::Debug::Mesh *>(cpuModel->mesh.get());
+                addResult = mPipeline->addEssence(std::make_shared<DebugEssence>(
+                    nameId,
+                    *debugMesh
+                ));
             }
             else
             {
@@ -134,7 +135,7 @@ namespace MFA
             }
             MFA_ASSERT(addResult == true);
         }
-        mVariant = mPipeline->createVariant(relativePath);
+        mVariant = mPipeline->createVariant(nameId);
         MFA_ASSERT(mVariant.expired() == false);
     }
 
@@ -145,11 +146,11 @@ namespace MFA
         MFA_ASSERT(entity != nullptr);
         auto const variant = mVariant.lock();
         MFA_ASSERT(variant != nullptr);
-        auto const * essence = variant->GetEssence();
+        auto const * essence = variant->getEssence();
         MFA_ASSERT(essence != nullptr);
-        auto const * gpuModel = essence->getGpuModel();
-        MFA_ASSERT(gpuModel != nullptr);
-        entity->AddComponent<MeshRendererComponent>(*mPipeline, *gpuModel);
+        auto const & nameId = essence->getNameId();
+        MFA_ASSERT(nameId.empty() == false);
+        entity->AddComponent<MeshRendererComponent>(*mPipeline, nameId);
     }
 
     //-------------------------------------------------------------------------------------------------

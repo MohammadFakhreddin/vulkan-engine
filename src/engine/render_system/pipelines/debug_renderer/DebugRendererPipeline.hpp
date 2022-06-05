@@ -4,8 +4,10 @@
 #include "engine/render_system/pipelines/BasePipeline.hpp"
 
 namespace MFA {
-    
-class DebugRendererPipeline final : public BasePipeline {
+
+    class DebugEssence;
+    class DebugRendererPipeline final : public BasePipeline {
+
 public:
 
     struct PushConstants {
@@ -27,11 +29,13 @@ public:
 
     void shutdown() override;
 
-    void render(RT::CommandRecordState & drawPass, float deltaTime) override;
+    void render(RT::CommandRecordState & recordState, float deltaTime) override;
     
     void onResize() override;
 
     void freeUnusedEssences() override;
+
+    std::weak_ptr<DebugEssence> GetEssence(std::string const & nameId);
 
 protected:
 
@@ -54,7 +58,7 @@ private:
 private:
 
     std::shared_ptr<RT::DescriptorSetLayoutGroup> mDescriptorSetLayout {};
-    std::shared_ptr<RT::PipelineGroup> mpipeline {};
+    std::shared_ptr<RT::PipelineGroup> mPipeline {};
 
     RT::DescriptorSetGroup mDescriptorSetGroup {};
     

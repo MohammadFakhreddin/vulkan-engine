@@ -1,21 +1,28 @@
 {
     "scripts": {
-        
+        "skinning-comp": "glslc -g -fshader-stage=comp assets/shaders/skinning/Skinning.comp.hlsl -o assets/shaders/skinning/Skinning.comp.spv",
+
         "occlusion-vert": "glslc -g -fshader-stage=vert assets/shaders/occlusion_query/Occlusion.vert.hlsl  -o assets/shaders/occlusion_query/Occlusion.vert.spv",
         "occlusion-frag": "glslc -g -fshader-stage=frag assets/shaders/occlusion_query/Occlusion.frag.hlsl  -o assets/shaders/occlusion_query/Occlusion.frag.spv",
-        
+
         "pbr-with-shadow-vert-v2": "glslc -g -fshader-stage=vert assets/shaders/pbr_with_shadow_v2/PbrWithShadow.vert.hlsl  -o assets/shaders/pbr_with_shadow_v2/PbrWithShadow.vert.spv",
         "pbr-with-shadow-frag-v2": "glslc -g -fshader-stage=frag assets/shaders/pbr_with_shadow_v2/PbrWithShadow.frag.hlsl  -o assets/shaders/pbr_with_shadow_v2/PbrWithShadow.frag.spv",
         
         "point-light-shadow-vert": "glslc -g -fshader-stage=vert assets/shaders/point_light_shadow/PointLightShadow.vert.hlsl  -o assets/shaders/point_light_shadow/PointLightShadow.vert.spv",
         "point-light-shadow-frag": "glslc -g -fshader-stage=frag assets/shaders/point_light_shadow/PointLightShadow.frag.hlsl  -o assets/shaders/point_light_shadow/PointLightShadow.frag.spv",
         "point-light-shadow-geom": "glslc -g -fshader-stage=geom assets/shaders/point_light_shadow/PointLightShadow.geom.hlsl  -o assets/shaders/point_light_shadow/PointLightShadow.geom.spv",
-        
+    
+        "point-light-shadow-vert-v2": "glslc -g -fshader-stage=vert assets/shaders/point_light_shadow_v2/PointLightShadowV2.vert.hlsl  -o assets/shaders/point_light_shadow_v2/PointLightShadowV2.vert.spv",
+        "point-light-shadow-frag-v2": "glslc -g -fshader-stage=frag assets/shaders/point_light_shadow_v2/PointLightShadowV2.frag.hlsl  -o assets/shaders/point_light_shadow_v2/PointLightShadowV2.frag.spv",
+
         "directional-light-shadow-vert": "glslc -g -fshader-stage=vert assets/shaders/directional_light_shadow/DirectionalLightShadow.vert.hlsl  -o assets/shaders/directional_light_shadow/DirectionalLightShadow.vert.spv",
         "directional-light-shadow-geom": "glslc -g -fshader-stage=geom assets/shaders/directional_light_shadow/DirectionalLightShadow.geom.hlsl  -o assets/shaders/directional_light_shadow/DirectionalLightShadow.geom.spv",
         
+        "directional-light-shadow-vert-v2": "glslc -g -fshader-stage=vert assets/shaders/directional_light_shadow_v2/DirectionalLightShadowV2.vert.hlsl  -o assets/shaders/directional_light_shadow_v2/DirectionalLightShadowV2.vert.spv",
+        
         "particle-vert": "glslc -g -fshader-stage=vert assets/shaders/particle/Particle.vert.hlsl -o assets/shaders/particle/Particle.vert.spv",
         "particle-frag": "glslc -g -fshader-stage=frag assets/shaders/particle/Particle.frag.hlsl -o assets/shaders/particle/Particle.frag.spv",
+        "particle-comp": "glslc -g -fshader-stage=comp assets/shaders/particle/Particle.comp.hlsl -o assets/shaders/particle/Particle.comp.spv",
 
         "depth-pre-pass-vert": "glslc -g -fshader-stage=vert assets/shaders/depth_pre_pass/DepthPrePass.vert.hlsl  -o assets/shaders/depth_pre_pass/DepthPrePass.vert.spv",
         "depth-pre-pass-frag": "glslc -g -fshader-stage=frag assets/shaders/depth_pre_pass/DepthPrePass.frag.hlsl  -o assets/shaders/depth_pre_pass/DepthPrePass.frag.spv",

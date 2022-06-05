@@ -80,6 +80,7 @@ namespace MFA::RenderFrontend
         int nextEventListenerId = 0;
         uint8_t currentFrame = 0;
         VkFormat depthFormat{};
+
 #ifdef __DESKTOP__
         // CreateWindow
         MSDL::SDL_Window * window = nullptr;
@@ -186,6 +187,7 @@ namespace MFA::RenderFrontend
             params.screenWidth,
             params.screenHeight
         );
+        MFA_ASSERT(state->window != nullptr);
         state->isWindowResizable = params.resizable;
 
         if (params.resizable)
@@ -248,7 +250,7 @@ namespace MFA::RenderFrontend
         state->surfaceCapabilities = computeSurfaceCapabilities();
 
         state->swapChainImageCount = RB::ComputeSwapChainImagesCount(state->surfaceCapabilities);
-        state->maxFramesPerFlight = state->swapChainImageCount;
+        state->maxFramesPerFlight = std::min(3u, state->swapChainImageCount);
 
         state->screenWidth = static_cast<ScreenWidth>(state->surfaceCapabilities.currentExtent.width);
         state->screenHeight = static_cast<ScreenHeight>(state->surfaceCapabilities.currentExtent.height);
@@ -469,13 +471,30 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
+    VkPipelineLayout CreatePipelineLayout(
+        uint32_t const setLayoutCount,
+        const VkDescriptorSetLayout * pSetLayouts,
+        uint32_t const pushConstantRangeCount,
+        const VkPushConstantRange * pPushConstantRanges
+    )
+    {
+        return RB::CreatePipelineLayout(
+            state->logicalDevice.device,
+            setLayoutCount,
+            pSetLayouts,
+            pushConstantRangeCount,
+            pPushConstantRanges
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     [[nodiscard]]
-    std::shared_ptr<RT::PipelineGroup> CreatePipeline(
+    std::shared_ptr<RT::PipelineGroup> CreateGraphicPipeline(
         VkRenderPass vkRenderPass,
         uint8_t gpuShadersCount,
         RT::GpuShader const ** gpuShaders,
-        uint32_t const descriptorLayoutsCount,
-        VkDescriptorSetLayout const * descriptorSetLayouts,
+        VkPipelineLayout pipelineLayout,
         uint32_t const vertexBindingDescriptionCount,
         VkVertexInputBindingDescription const * vertexBindingDescriptionData,
         uint32_t const inputAttributeDescriptionCount,
@@ -489,7 +508,7 @@ namespace MFA::RenderFrontend
             .height = static_cast<uint32_t>(state->screenHeight),
         };
 
-        return RB::CreatePipelineGroup(
+        return RB::CreateGraphicPipeline(
             state->logicalDevice.device,
             gpuShadersCount,
             gpuShaders,
@@ -499,15 +518,28 @@ namespace MFA::RenderFrontend
             inputAttributeDescriptionData,
             extent2D,
             vkRenderPass,
-            descriptorLayoutsCount,
-            descriptorSetLayouts,
+            pipelineLayout,
             options
         );
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void DestroyPipelineGroup(RT::PipelineGroup & recordState)
+    std::shared_ptr<RT::PipelineGroup> CreateComputePipeline(
+        RT::GpuShader const & shaderStage,
+        VkPipelineLayout pipelineLayout
+    )
+    {
+        return RB::CreateComputePipeline(
+            state->logicalDevice.device,
+            shaderStage,
+            pipelineLayout
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void DestroyPipeline(RT::PipelineGroup & recordState)
     {
         RB::DestroyPipelineGroup(
             state->logicalDevice.device,
@@ -550,67 +582,99 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<RT::UniformBufferGroup> CreateUniformBuffer(
-        size_t const bufferSize,
-        uint32_t const count
+    std::shared_ptr<RT::BufferGroup> CreateBufferGroup(
+        VkDeviceSize const bufferSize,
+        uint32_t const count,
+        VkBufferUsageFlags bufferUsageFlagBits,
+        VkMemoryPropertyFlags memoryPropertyFlags
     )
     {
         std::vector<std::shared_ptr<RT::BufferAndMemory>> buffers(count);
-        RB::CreateUniformBuffer(
-            state->logicalDevice.device,
-            state->physicalDevice,
-            count,
-            bufferSize,
-            buffers.data()
-        );
-        auto uniformBufferGroup = std::make_shared<RT::UniformBufferGroup>(
-           std::move(buffers),
-            bufferSize
-        );
-        return uniformBufferGroup;
-    }
+        for (auto & buffer : buffers)
+        {
+            buffer = CreateBuffer(
+                bufferSize,
+                bufferUsageFlagBits,
+                memoryPropertyFlags            
+            );
+        }
 
-    //-------------------------------------------------------------------------------------------------
-
-    void UpdateUniformBuffer(
-        RT::CommandRecordState const & recordState,
-        RT::UniformBufferGroup const & bufferCollection,
-        CBlob const data
-    )
-    {
-        UpdateBuffer(*bufferCollection.buffers[recordState.frameIndex], data);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    std::shared_ptr<RT::StorageBufferCollection> CreateStorageBuffer(
-        size_t const bufferSize,
-        uint32_t const count
-    )
-    {
-        std::vector<std::shared_ptr<RT::BufferAndMemory>> buffers(count);
-
-        RB::CreateStorageBuffer(
-            state->logicalDevice.device,
-            state->physicalDevice,
-            count,
-            bufferSize,
-            buffers.data()
-        );
-
-        auto uniformBufferGroup = std::make_shared<RT::StorageBufferCollection>(
+        auto bufferGroup = std::make_shared<RT::BufferGroup>(
             std::move(buffers),
             bufferSize
         );
 
-        return uniformBufferGroup;
+        return bufferGroup;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void UpdateBuffer(RT::BufferAndMemory const & buffer, CBlob data)
+    std::shared_ptr<RT::BufferGroup> CreateLocalUniformBuffer(size_t const bufferSize, uint32_t const count)
     {
-        RB::UpdateBuffer(
+        return CreateBufferGroup(
+            bufferSize,
+            count,
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<RT::BufferGroup> CreateHostVisibleUniformBuffer(size_t const bufferSize, uint32_t const count)
+    {
+        return CreateBufferGroup(
+            bufferSize,
+            count,
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<RT::BufferGroup> CreateLocalStorageBuffer(size_t const bufferSize, uint32_t const count)
+    {
+        return CreateBufferGroup(
+            bufferSize,
+            count,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<RT::BufferGroup> CreateHostVisibleStorageBuffer(VkDeviceSize const bufferSize, uint32_t const count)
+    {
+        return CreateBufferGroup(
+            bufferSize,
+            count,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<RT::BufferGroup> CreateStageBuffer(VkDeviceSize const bufferSize, uint32_t const count)
+    {
+        return CreateBufferGroup(
+            bufferSize,
+            count,
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void UpdateHostVisibleBuffer(
+        RT::BufferAndMemory const & buffer,
+        CBlob const & data
+    )
+    {
+        RB::UpdateHostVisibleBuffer(
             state->logicalDevice.device,
             buffer,
             data
@@ -619,96 +683,112 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    void CreateVertexBuffer(
-        CBlob const & verticesBlob,
-        std::shared_ptr<RT::BufferAndMemory> & outVertexBuffer,
-        std::shared_ptr<RT::BufferAndMemory> & inOutStagingVertexBuffer
+    void UpdateLocalBuffer(
+        VkCommandBuffer commandBuffer,
+        RT::BufferAndMemory const & buffer,
+        RT::BufferAndMemory const & stageBuffer
     )
     {
-        RB::CreateVertexBuffer(
+        RB::UpdateLocalBuffer(
+            commandBuffer,
+            buffer,
+            stageBuffer
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<RT::BufferAndMemory> CreateVertexBuffer(
+        VkCommandBuffer commandBuffer,
+        RT::BufferAndMemory const & stageBuffer,
+        CBlob const & verticesBlob
+    )
+    {
+
+        VkDeviceSize const bufferSize = verticesBlob.len;
+        
+        auto vertexBuffer = CreateVertexBuffer(bufferSize);
+
+        UpdateHostVisibleBuffer(stageBuffer, verticesBlob);
+
+        UpdateLocalBuffer(commandBuffer, *vertexBuffer, stageBuffer);
+        
+        return vertexBuffer;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<RT::BufferAndMemory> CreateVertexBuffer(VkDeviceSize const bufferSize)
+    {
+        return RB::CreateBuffer(
             state->logicalDevice.device,
             state->physicalDevice,
-            state->graphicCommandPool,
-            state->graphicQueue,
-            verticesBlob,
-            outVertexBuffer,
-            inOutStagingVertexBuffer
+            bufferSize,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void UpdateVertexBuffer(
-        CBlob const & verticesBlob,
-        RT::BufferAndMemory const & vertexBuffer,
-        RT::BufferAndMemory const & stagingBuffer
+    std::shared_ptr<RT::BufferAndMemory> CreateIndexBuffer(
+        VkCommandBuffer commandBuffer,
+        RT::BufferAndMemory const & stageBuffer,
+        CBlob const & indicesBlob
     )
     {
-        RB::UpdateVertexBuffer(
-            state->logicalDevice.device,
-            state->graphicCommandPool,
-            state->graphicQueue,
-            verticesBlob,
-            vertexBuffer,
-            stagingBuffer
-        );
+        auto const bufferSize = indicesBlob.len;
+
+        auto indexBuffer = CreateIndexBuffer(bufferSize);
+
+        UpdateHostVisibleBuffer(stageBuffer, indicesBlob);
+
+        UpdateLocalBuffer(commandBuffer, *indexBuffer, stageBuffer);
+
+        return indexBuffer;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void CreateIndexBuffer(
-        CBlob const & indicesBlob,
-        std::shared_ptr<RT::BufferAndMemory> & outIndexBuffer,
-        std::shared_ptr<RT::BufferAndMemory> & inOutStagingIndexBuffer
-    )
+    std::shared_ptr<RT::BufferAndMemory> CreateIndexBuffer(VkDeviceSize const bufferSize)
     {
-        RB::CreateIndexBuffer(
+        return RB::CreateBuffer(
             state->logicalDevice.device,
             state->physicalDevice,
-            state->graphicCommandPool,
-            state->graphicQueue,
-            indicesBlob,
-            outIndexBuffer,
-            inOutStagingIndexBuffer
+            bufferSize,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
         );
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<RT::MeshBuffers> CreateMeshBuffers(AS::MeshBase const & mesh)
-    {
-        MFA_ASSERT(mesh.isValid());
+    //std::shared_ptr<RT::MeshBuffer> CreateMeshBuffers(
+    //    VkCommandBuffer commandBuffer,
+    //    AS::MeshBase const & mesh,
+    //    RT::BufferAndMemory const & vertexStageBuffer,
+    //    RT::BufferAndMemory const & indexStageBuffer
+    //)
+    //{
+    //    MFA_ASSERT(mesh.isValid());
 
-        std::vector<std::shared_ptr<RT::BufferAndMemory>> vertexBuffers{};
-        MFA_ASSERT(mesh.requiredVertexBufferCount > 0);
+    //    auto vertexBuffer = CreateVertexBuffer(
+    //        commandBuffer,
+    //        vertexStageBuffer,
+    //        mesh.getVertexData()->memory
+    //    );
+    //    
+    //    auto indexBuffer = CreateIndexBuffer(
+    //        commandBuffer,
+    //        indexStageBuffer,
+    //        mesh.getIndexBuffer()->memory
+    //    );
 
-        std::shared_ptr<RT::BufferAndMemory> vertexStagingBuffer = nullptr;
-        for (uint32_t i = 0; i < mesh.requiredVertexBufferCount; ++i)
-        {
-            vertexBuffers.emplace_back(std::shared_ptr<RT::BufferAndMemory> {});
-            CreateVertexBuffer(
-                mesh.getVertexBuffer()->memory,
-                vertexBuffers.back(),
-                vertexStagingBuffer
-            );
-        }
-
-        std::shared_ptr<RT::BufferAndMemory> indexBuffer = nullptr;
-        std::shared_ptr<RT::BufferAndMemory> indexStagingBuffer = nullptr;
-
-        CreateIndexBuffer(
-            mesh.getIndexBuffer()->memory,
-            indexBuffer,
-            indexStagingBuffer
-        );
-
-        return std::make_shared<RT::MeshBuffers>(
-            vertexBuffers,
-            indexBuffer,
-            mesh.keepVertexStagingBuffer ? vertexStagingBuffer : nullptr,
-            mesh.keepIndexStagingBuffer ? indexStagingBuffer : nullptr
-        );
-    }
+    //    return std::make_shared<RT::MeshBuffer>(
+    //        vertexBuffer,
+    //        indexBuffer
+    //    );
+    //}
 
     //-------------------------------------------------------------------------------------------------
 
@@ -765,25 +845,33 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<RT::GpuModel> CreateGpuModel(
-        AS::Model const * modelAsset,
-        std::string const & address
-    )
-    {
-        MFA_ASSERT(modelAsset->mesh->isValid());
-        auto meshBuffers = CreateMeshBuffers(*modelAsset->mesh);
-        std::vector<std::shared_ptr<RT::GpuTexture>> textures{};
-        for (auto & textureAsset : modelAsset->textures)
-        {
-            MFA_ASSERT(textureAsset->isValid());
-            textures.emplace_back(CreateTexture(*textureAsset));
-        }
-        return std::make_shared<RT::GpuModel>(
-            address,
-            std::move(meshBuffers),
-            std::move(textures)
-        );
-    }
+    //std::shared_ptr<RT::GpuModel> CreateGpuModel(
+    //    VkCommandBuffer commandBuffer,
+    //    AS::Model const & modelAsset,
+    //    std::string const & nameId,
+    //    RT::BufferAndMemory const & vertexStageBuffer,
+    //    RT::BufferAndMemory const & indexStageBuffer
+    //)
+    //{
+    //    MFA_ASSERT(modelAsset.mesh->isValid());
+    //    auto meshBuffers = CreateMeshBuffers(
+    //        commandBuffer,
+    //        *modelAsset.mesh,
+    //        vertexStageBuffer,
+    //        indexStageBuffer
+    //    );
+    //    std::vector<std::shared_ptr<RT::GpuTexture>> textures{};
+    //    for (auto & textureAsset : modelAsset.textures)
+    //    {
+    //        MFA_ASSERT(textureAsset->isValid());
+    //        textures.emplace_back(CreateTexture(*textureAsset));
+    //    }
+    //    return std::make_shared<RT::GpuModel>(
+    //        nameId,
+    //        std::move(meshBuffers),
+    //        std::move(textures)
+    //    );
+    //}
 
     //-------------------------------------------------------------------------------------------------
 
@@ -803,23 +891,38 @@ namespace MFA::RenderFrontend
 
     void DestroyBuffer(RT::BufferAndMemory const & bufferGroup)
     {
-        DeviceWaitIdle();
+        //DeviceWaitIdle(); // We should instead destroy it when it is not bind anymore
         RB::DestroyBuffer(state->logicalDevice.device, bufferGroup);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     void BindPipeline(
-        RT::CommandRecordState & drawPass,
+        RT::CommandRecordState & recordState,
         RT::PipelineGroup & pipeline
     )
     {
-        MFA_ASSERT(drawPass.isValid);
-        drawPass.pipeline = &pipeline;
+        MFA_ASSERT(recordState.isValid);
+        recordState.pipeline = &pipeline;
+
+        VkPipelineBindPoint bindPoint {};
+
+        switch (recordState.commandBufferType)
+        {
+            case RenderTypes::CommandBufferType::Compute:
+                bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
+                break;
+            case RenderTypes::CommandBufferType::Graphic:
+                bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+                break;
+            default:
+                MFA_ASSERT(false);
+        }
+
         // We can bind command buffer to multiple pipeline
         vkCmdBindPipeline(
-            GetGraphicCommandBuffer(drawPass),
-            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            recordState.commandBuffer,
+            bindPoint,
             pipeline.pipeline
         );
     }
@@ -858,22 +961,74 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    void BindDescriptorSet(
-        RT::CommandRecordState const & drawPass,
-        DescriptorSetType frequency,
-        RT::DescriptorSetGroup descriptorSetGroup
+    void AutoBindDescriptorSet(
+        RT::CommandRecordState const & recordState,
+        UpdateFrequency frequency,
+        RT::DescriptorSetGroup const & descriptorGroup
     )
     {
-        MFA_ASSERT(drawPass.isValid);
-        MFA_ASSERT(drawPass.pipeline);
-        // We should bind specific descriptor set with different texture for each mesh
+        MFA_ASSERT(recordState.isValid);
+
+        BindDescriptorSet(
+            recordState,
+            frequency,
+            descriptorGroup.descriptorSets[recordState.frameIndex]
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void BindDescriptorSet(
+        RT::CommandRecordState const & recordState,
+        UpdateFrequency frequency,
+        VkDescriptorSet descriptorSet
+    )
+    {
+        MFA_ASSERT(recordState.isValid);
+        MFA_ASSERT(recordState.commandBuffer != nullptr);
+        MFA_ASSERT(recordState.pipeline != nullptr);
+
+        VkPipelineBindPoint bindPoint;
+        switch (recordState.commandBufferType)
+        {
+            case RT::CommandBufferType::Compute:
+                bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
+                break;
+            case RT::CommandBufferType::Graphic:
+                bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+                break;
+            default:
+                MFA_ASSERT(false);
+                break;
+        }
+        
+        BindDescriptorSet(
+            recordState.commandBuffer,
+            bindPoint,
+            recordState.pipeline->pipelineLayout,
+            frequency,
+            descriptorSet
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+    // TODO: Maybe we can bind multiple descriptor sets at same time
+    void BindDescriptorSet(
+        VkCommandBuffer commandBuffer,
+        VkPipelineBindPoint bindPoint,
+        VkPipelineLayout pipelineLayout,
+        UpdateFrequency frequency,
+        VkDescriptorSet descriptorSet
+    )
+    {
+        // TODO: Move to render backend. TODO: Ask for BindPoint
         vkCmdBindDescriptorSets(
-            GetGraphicCommandBuffer(drawPass),
-            VK_PIPELINE_BIND_POINT_GRAPHICS,
-            drawPass.pipeline->pipelineLayout,
+            commandBuffer,
+            bindPoint,
+            pipelineLayout,
             static_cast<uint32_t>(frequency),
             1,
-            &descriptorSetGroup.descriptorSets[drawPass.frameIndex],
+            &descriptorSet,
             0,
             nullptr
         );
@@ -882,15 +1037,15 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     void BindVertexBuffer(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         RT::BufferAndMemory const & vertexBuffer,
         uint32_t const firstBinding,
         VkDeviceSize const offset
     )
     {
-        MFA_ASSERT(drawPass.isValid);
+        MFA_ASSERT(recordState.isValid);
         RB::BindVertexBuffer(
-            GetGraphicCommandBuffer(drawPass),
+            recordState.commandBuffer,
             vertexBuffer,
             firstBinding,
             offset
@@ -900,15 +1055,15 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     void BindIndexBuffer(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         RT::BufferAndMemory const & indexBuffer,
         VkDeviceSize const offset,
         VkIndexType const indexType
     )
     {
-        MFA_ASSERT(drawPass.isValid);
+        MFA_ASSERT(recordState.isValid);
         RB::BindIndexBuffer(
-            GetGraphicCommandBuffer(drawPass),
+            recordState.commandBuffer,
             indexBuffer,
             offset,
             indexType
@@ -918,7 +1073,7 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     void DrawIndexed(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         uint32_t const indicesCount,
         uint32_t const instanceCount,
         uint32_t const firstIndex,
@@ -926,9 +1081,9 @@ namespace MFA::RenderFrontend
         uint32_t const firstInstance
     )
     {
-        MFA_ASSERT(drawPass.isValid);
+        MFA_ASSERT(recordState.isValid);
         RB::DrawIndexed(
-            GetGraphicCommandBuffer(drawPass),
+            recordState.commandBuffer,
             indicesCount,
             instanceCount,
             firstIndex,
@@ -1011,37 +1166,77 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    void SetScissor(RT::CommandRecordState const & drawPass, VkRect2D const & scissor)
+    std::shared_ptr<RT::BufferAndMemory> CreateBuffer(
+        VkDeviceSize size,
+        VkBufferUsageFlags usage,
+        VkMemoryPropertyFlags properties
+    )
     {
-        MFA_ASSERT(drawPass.isValid);
-        MFA_ASSERT(drawPass.renderPass != nullptr);
-        RB::SetScissor(GetGraphicCommandBuffer(drawPass), scissor);
+        return RB::CreateBuffer(
+            state->logicalDevice.device,
+            state->physicalDevice,
+            size,
+            usage,
+            properties
+        );
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void SetViewport(RT::CommandRecordState const & drawPass, VkViewport const & viewport)
+    std::shared_ptr<RT::MappedMemory> MapHostVisibleMemory(
+        VkDeviceMemory bufferMemory,
+        size_t const offset,
+        size_t const size
+    )
     {
-        MFA_ASSERT(drawPass.isValid);
-        MFA_ASSERT(drawPass.renderPass != nullptr);
-        RB::SetViewport(GetGraphicCommandBuffer(drawPass), viewport);
+        std::shared_ptr<RT::MappedMemory> mappedMemory = std::make_shared<RT::MappedMemory>(bufferMemory);
+        RB::MapHostVisibleMemory(
+            state->logicalDevice.device,
+            bufferMemory,
+            offset,
+            size,
+            mappedMemory->getMappingPtr()
+        );
+        return mappedMemory;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void UnMapHostVisibleMemory(VkDeviceMemory bufferMemory)
+    {
+        RB::UnMapHostVisibleMemory(state->logicalDevice.device, bufferMemory);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void SetScissor(RT::CommandRecordState const & recordState, VkRect2D const & scissor)
+    {
+        MFA_ASSERT(recordState.isValid);
+        MFA_ASSERT(recordState.renderPass != nullptr);
+        RB::SetScissor(recordState.commandBuffer, scissor);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void SetViewport(RT::CommandRecordState const & recordState, VkViewport const & viewport)
+    {
+        MFA_ASSERT(recordState.isValid);
+        MFA_ASSERT(recordState.renderPass != nullptr);
+        RB::SetViewport(recordState.commandBuffer, viewport);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     void PushConstants(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         AssetSystem::ShaderStage const shaderStage,
         uint32_t const offset,
         CBlob const data
     )
     {
-        MFA_ASSERT(drawPass.isValid);
-        MFA_ASSERT(drawPass.renderPass != nullptr);
-        RB::PushConstants(
-            GetGraphicCommandBuffer(drawPass),
-            drawPass.pipeline->pipelineLayout,
-            shaderStage,
+        PushConstants(
+            recordState,
+            RB::ConvertAssetShaderStageToGpu(shaderStage),
             offset,
             data
         );
@@ -1050,17 +1245,17 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     void PushConstants(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         VkShaderStageFlags const shaderStage,
         uint32_t const offset,
         CBlob const data
     )
     {
-        MFA_ASSERT(drawPass.isValid);
-        MFA_ASSERT(drawPass.renderPass != nullptr);
+        // Compute dispatches do not have render pass
+        MFA_ASSERT(recordState.isValid);
         RB::PushConstants(
-            GetGraphicCommandBuffer(drawPass),
-            drawPass.pipeline->pipelineLayout,
+            recordState.commandBuffer,
+            recordState.pipeline->pipelineLayout,
             shaderStage,
             offset,
             data
@@ -1341,8 +1536,34 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
+    void BeginGraphicCommandBuffer(RT::CommandRecordState & recordState, VkCommandBufferBeginInfo const & beginInfo)
+    {
+        RF::BeginCommandBuffer(
+            recordState,
+            state->graphicCommandBuffer[recordState.frameIndex],
+            RT::CommandBufferType::Graphic,
+            beginInfo
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void BeginComputeCommandBuffer(RT::CommandRecordState & recordState, VkCommandBufferBeginInfo const & beginInfo)
+    {
+        RF::BeginCommandBuffer(
+            recordState,
+            state->computeCommandBuffer[recordState.frameIndex],
+            RT::CommandBufferType::Compute,
+            beginInfo
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void BeginCommandBuffer(
+        RT::CommandRecordState & recordState,
         VkCommandBuffer commandBuffer,
+        RT::CommandBufferType commandBufferType,
         VkCommandBufferBeginInfo const & beginInfo
     )
     {
@@ -1350,13 +1571,72 @@ namespace MFA::RenderFrontend
             commandBuffer,
             beginInfo
         );
+
+        MFA_ASSERT(recordState.isValid);
+        MFA_VK_INVALID_ASSERT(recordState.commandBuffer);
+        MFA_ASSERT(commandBufferType != RT::CommandBufferType::Invalid);
+        MFA_ASSERT(recordState.commandBufferType == RT::CommandBufferType::Invalid);
+
+        recordState.commandBufferType = commandBufferType;
+        recordState.commandBuffer = commandBuffer;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void EndCommandBuffer(VkCommandBuffer commandBuffer)
+    void EndCommandBuffer(RT::CommandRecordState & recordState)
     {
-        RB::EndCommandBuffer(commandBuffer);
+        MFA_ASSERT(recordState.isValid);
+        MFA_VK_VALID_ASSERT(recordState.commandBuffer);
+        MFA_ASSERT(recordState.commandBufferType != RT::CommandBufferType::Invalid);
+
+        RB::EndCommandBuffer(recordState.commandBuffer);
+
+        recordState.commandBuffer = nullptr;
+        recordState.commandBufferType = RT::CommandBufferType::Invalid;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    VkCommandBuffer BeginSingleTimeGraphicCommand()
+    {
+        return RB::BeginSingleTimeCommand(
+            state->logicalDevice.device,
+            state->graphicCommandPool
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void EndAndSubmitGraphicSingleTimeCommand(VkCommandBuffer const & commandBuffer)
+    {
+        RB::EndAndSubmitSingleTimeCommand(
+            state->logicalDevice.device,
+            state->graphicCommandPool,
+            state->graphicQueue,
+            commandBuffer
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    VkCommandBuffer BeginSingleTimeComputeCommand()
+    {
+        return RB::BeginSingleTimeCommand(
+            state->logicalDevice.device,
+            state->computeCommandPool
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void EndAndSubmitComputeSingleTimeCommand(VkCommandBuffer const & commandBuffer)
+    {
+        RB::EndAndSubmitSingleTimeCommand(
+            state->logicalDevice.device,
+            state->computeCommandPool,
+            state->computeQueue,
+            commandBuffer
+        );
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -1375,8 +1655,29 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
+    uint32_t GetComputeQueueFamily()
+    {
+        return state->graphicQueueFamily;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    VkCommandBuffer GetComputeCommandBuffer(RT::CommandRecordState const & recordState)
+    {
+        return state->computeCommandBuffer[recordState.frameIndex];
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    VkCommandBuffer GetGraphicCommandBuffer(RT::CommandRecordState const & recordState)
+    {
+        return state->graphicCommandBuffer[recordState.frameIndex];
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void PipelineBarrier(
-        VkCommandBuffer commandBuffer,
+        RT::CommandRecordState const & recordState,
         VkPipelineStageFlags sourceStageMask,
         VkPipelineStageFlags destinationStateMask,
         uint32_t barrierCount,
@@ -1384,7 +1685,7 @@ namespace MFA::RenderFrontend
     )
     {
         RB::PipelineBarrier(
-            commandBuffer,
+            recordState.commandBuffer,
             sourceStageMask,
             destinationStateMask,
             barrierCount,
@@ -1395,16 +1696,18 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     void PipelineBarrier(
-        VkCommandBuffer commandBuffer,
+        RT::CommandRecordState const & recordState,
         VkPipelineStageFlags sourceStageMask,
         VkPipelineStageFlags destinationStateMask,
-        VkBufferMemoryBarrier const & bufferMemoryBarrier
+        uint32_t barrierCount,
+        VkBufferMemoryBarrier const * bufferMemoryBarrier
     )
     {
         RB::PipelineBarrier(
-            commandBuffer,
+            recordState.commandBuffer,
             sourceStageMask,
             destinationStateMask,
+            barrierCount,
             bufferMemoryBarrier
         );
     }
@@ -1423,53 +1726,36 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     void SubmitQueue(
-        VkCommandBuffer commandBuffer,
-        uint32_t waitSemaphoresCount,
-        const VkSemaphore * waitSemaphores,
-        const VkPipelineStageFlags * waitStageFlags,
-        uint32_t signalSemaphoresCount,
-        const VkSemaphore * signalSemaphores,
-        VkFence fence
+        RT::CommandRecordState const & recordState,
+        uint32_t const submitCount,
+        const VkSubmitInfo * submitInfos
     )
     {
-        VkSubmitInfo submitInfo = {};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-        submitInfo.waitSemaphoreCount = waitSemaphoresCount;
-        submitInfo.pWaitSemaphores = waitSemaphores;
-        submitInfo.pWaitDstStageMask = waitStageFlags;
-
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBuffer;
-
-        submitInfo.signalSemaphoreCount = signalSemaphoresCount;
-        submitInfo.pSignalSemaphores = signalSemaphores;
-
         RB::SubmitQueues(
             state->graphicQueue,
-            1,
-            &submitInfo,
-            fence
+            submitCount,
+            submitInfos,
+            GetFence(recordState)
         );
     }
 
     //-------------------------------------------------------------------------------------------------
 
     void PresentQueue(
-        uint32_t const imageIndex,
-        VkSemaphore waitSemaphore,
-        VkSwapchainKHR swapChain
+        RT::CommandRecordState const & recordState,
+        uint32_t waitSemaphoresCount,
+        const VkSemaphore * waitSemaphores
     )
     {
         // Present drawn image
         // Note: semaphore here is not strictly necessary, because commands are processed in submission order within a single queue
         VkPresentInfoKHR presentInfo = {};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-        presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = &waitSemaphore;
+        presentInfo.waitSemaphoreCount = waitSemaphoresCount;
+        presentInfo.pWaitSemaphores = waitSemaphores;
         presentInfo.swapchainCount = 1;
-        presentInfo.pSwapchains = &swapChain;
-        presentInfo.pImageIndices = &imageIndex;
+        presentInfo.pSwapchains = &state->displayRenderPass.GetSwapChainImages().swapChain;
+        presentInfo.pImageIndices = &recordState.imageIndex;
 
         // TODO Move to renderBackend
         auto const res = vkQueuePresentKHR(state->presentQueue, &presentInfo);
@@ -1489,14 +1775,6 @@ namespace MFA::RenderFrontend
     {
         return &state->displayRenderPass;
     }
-
-    //-------------------------------------------------------------------------------------------------
-
-    /*void DestroySyncObjects(RT::SyncObjects const & syncObjects)
-    {
-        DeviceWaitIdle();
-        RB::DestroySyncObjects(state->logicalDevice.device, syncObjects);
-    }*/
 
     //-------------------------------------------------------------------------------------------------
 
@@ -1536,23 +1814,23 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     void BeginQuery(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         VkQueryPool queryPool,
         uint32_t const queryId
     )
     {
-        RB::BeginQuery(GetGraphicCommandBuffer(drawPass), queryPool, queryId);
+        RB::BeginQuery(recordState.commandBuffer, queryPool, queryId);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     void EndQuery(
-        RT::CommandRecordState const & drawPass,
+        RT::CommandRecordState const & recordState,
         VkQueryPool queryPool,
         uint32_t queryId
     )
     {
-        RB::EndQuery(GetGraphicCommandBuffer(drawPass), queryPool, queryId);
+        RB::EndQuery(recordState.commandBuffer, queryPool, queryId);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -1577,13 +1855,13 @@ namespace MFA::RenderFrontend
 
     void ResetQueryPool(
         RT::CommandRecordState const & recordState,
-        VkQueryPool queryPool,
-        uint32_t queryCount,
-        uint32_t firstQueryIndex
+        const VkQueryPool queryPool,
+        uint32_t const queryCount,
+        uint32_t const firstQueryIndex
     )
     {
         RB::ResetQueryPool(
-            GetGraphicCommandBuffer(recordState),
+            recordState.commandBuffer,
             queryPool,
             queryCount,
             firstQueryIndex
@@ -1592,14 +1870,7 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    VkCommandBuffer GetGraphicCommandBuffer(RT::CommandRecordState const & drawPass)
-    {
-        return state->graphicCommandBuffer[drawPass.frameIndex];
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    RT::CommandRecordState StartGraphicCommandBufferRecording()
+    RT::CommandRecordState AcquireRecordState()
     {
         // TODO: Separate this function into multiple ones
         MFA_ASSERT(GetMaxFramesPerFlight() > state->currentFrame);
@@ -1624,7 +1895,7 @@ namespace MFA::RenderFrontend
 
         // We ignore failed acquire of image because a resize will be triggered at end of pass
         AcquireNextImage(
-            GetPresentationSemaphore(recordState),
+            GetPresentSemaphore(recordState),
             state->displayRenderPass.GetSwapChainImages(),
             recordState.imageIndex
         );
@@ -1634,42 +1905,8 @@ namespace MFA::RenderFrontend
         // Each pipeline has its own set of shader, But we can reuse a pipeline for multiple shaders.
         // For each model we need to record command buffer with our desired pipeline (For example light and objects have different fragment shader)
         // Prepare data for recording command buffers
-        BeginCommandBuffer(GetGraphicCommandBuffer(recordState));
 
         return recordState;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void EndGraphicCommandBufferRecording(RT::CommandRecordState & recordState)
-    {
-        // TODO: Separate this function into multiple ones
-        MFA_ASSERT(recordState.isValid);
-        recordState.isValid = false;
-
-        EndCommandBuffer(GetGraphicCommandBuffer(recordState));
-
-        std::vector<VkSemaphore> const waitSemaphores {GetPresentationSemaphore(recordState)};
-        std::vector<VkPipelineStageFlags> const waitStages { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-        std::vector<VkSemaphore> const signalSemaphores {GetGraphicSemaphore(recordState)};
-
-        // Wait for image to be available and draw
-        SubmitQueue(
-            GetGraphicCommandBuffer(recordState),
-            static_cast<uint32_t>(waitSemaphores.size()),
-            waitSemaphores.data(),
-            waitStages.data(),
-            static_cast<uint32_t>(signalSemaphores.size()),
-            signalSemaphores.data(),
-            GetFence(recordState)
-        );
-
-        // Present drawn image
-        PresentQueue(
-            recordState.imageIndex,
-            GetGraphicSemaphore(recordState),
-            state->displayRenderPass.GetSwapChainImages().swapChain
-        );
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -1681,20 +1918,27 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
     // TODO: RenderFinishIndicator must belong to presentation queue
-    VkSemaphore GetGraphicSemaphore(RT::CommandRecordState const & drawPass)
+    VkSemaphore GetGraphicSemaphore(RT::CommandRecordState const & recordState)
     {
-        return state->graphicSemaphores[drawPass.frameIndex];
+        return state->graphicSemaphores[recordState.frameIndex];
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    VkSemaphore GetPresentationSemaphore(RT::CommandRecordState const & drawPass)
+    VkSemaphore GetComputeSemaphore(RT::CommandRecordState const & recordState)
     {
-        return state->presentSemaphores[drawPass.frameIndex];
+        return state->computeSemaphores[recordState.frameIndex];
     }
 
     //-------------------------------------------------------------------------------------------------
 
+    VkSemaphore GetPresentSemaphore(RT::CommandRecordState const & recordState)
+    {
+        return state->presentSemaphores[recordState.frameIndex];
+    }
+
+    //-------------------------------------------------------------------------------------------------
+    // TODO: Create render type for descritor pool
     VkDescriptorPool CreateDescriptorPool(uint32_t const maxSets)
     {
         return RB::CreateDescriptorPool(
@@ -1711,6 +1955,23 @@ namespace MFA::RenderFrontend
             state->logicalDevice.device,
             descriptorPool
         );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Dispatch(
+        RT::CommandRecordState const & recordState,
+        uint32_t const groupCountX,
+        uint32_t const groupCountY,
+        uint32_t const groupCountZ
+    )
+    {
+        RB::Dispatch(
+            recordState.commandBuffer,
+            groupCountX,
+            groupCountY,
+            groupCountZ
+        );        
     }
 
     //-------------------------------------------------------------------------------------------------

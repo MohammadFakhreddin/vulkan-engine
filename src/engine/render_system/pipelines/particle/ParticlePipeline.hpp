@@ -21,7 +21,7 @@ namespace MFA
 
         PIPELINE_PROPS(
             ParticlePipeline,
-            EventTypes::RenderEvent | EventTypes::PostRenderEvent,
+            EventTypes::RenderEvent | EventTypes::UpdateEvent | EventTypes::ComputeEvent,
             RenderOrder::AfterEverything
         )
 
@@ -31,14 +31,11 @@ namespace MFA
 
         void shutdown() override;
         
-        void render(RT::CommandRecordState & recordState, float deltaTime) override;
+        void render(RT::CommandRecordState & recordState, float deltaTimeInSec) override;
 
-        void postRender(float deltaTimeInSec) override;
+        void update(float deltaTimeInSec) override;
 
-        std::shared_ptr<EssenceBase> createEssenceWithModel(
-            std::shared_ptr<AssetSystem::Model> const & cpuModel,
-            std::string const & name
-        );
+        void compute(RT::CommandRecordState & recordState, float deltaTimeInSec) override;
 
     protected:
 
@@ -49,24 +46,29 @@ namespace MFA
     private:
 
         void createPerFrameDescriptorSetLayout();
-        void createPerEssenceDescriptorSetLayout();
+
+        void createPerEssenceGraphicDescriptorSetLayout();
+        void createPerEssenceComputeDescriptorSetLayout();
 
         void createPerFrameDescriptorSets();
-        void createPerEssenceDescriptorSets(ParticleEssence * essence) const;
+        
+        void createComputePipeline();
 
-        void createPipeline();
-
+        void createGraphicPipeline();
+        
         static constexpr int MAXIMUM_TEXTURE_PER_ESSENCE = 10;
         
         std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerFrameDescriptorSetLayout {};
-        std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerEssenceDescriptorSetLayout {};
+        std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerEssenceGraphicDescriptorSetLayout {};
+        std::shared_ptr<RT::DescriptorSetLayoutGroup> mPerEssenceComputeDescriptorSetLayout {};
 
         RT::DescriptorSetGroup mPerFrameDescriptorSetGroup {};
         
         std::shared_ptr<RT::SamplerGroup> mSamplerGroup {};
         std::shared_ptr<RT::GpuTexture> mErrorTexture {};
 
-        std::shared_ptr<RT::PipelineGroup> mPipeline {};
+        std::shared_ptr<RT::PipelineGroup> mComputePipeline {};
+        std::shared_ptr<RT::PipelineGroup> mGraphicPipeline {};
     };
 
 }

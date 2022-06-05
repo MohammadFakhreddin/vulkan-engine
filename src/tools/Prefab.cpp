@@ -1,5 +1,6 @@
 #include "Prefab.hpp"
 
+#include "engine/BedrockString.hpp"
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/EntitySystem.hpp"
 
@@ -29,10 +30,7 @@ namespace MFA
         std::string name = options.name;
         if (name.empty())
         {
-            // Note: std::format it not supported on all platforms yet
-            char nameBuffer [100] {};
-            auto const nameSize = sprintf(nameBuffer, "%s Clone(%d)", mEntity->GetName().c_str(), cloneCount++);
-            name = std::string(nameBuffer, nameSize);
+            MFA_STRING(name, "%s Clone(%d)", mEntity->GetName().c_str(), cloneCount++);
         }
 
         auto * entity = mEntity->Clone(name.c_str(), parent);

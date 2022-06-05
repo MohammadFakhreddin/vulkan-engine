@@ -18,7 +18,7 @@ namespace MFA::SceneManager
 {
 
     using CreateSceneFunction = std::function<std::shared_ptr<Scene>()>;
-
+    using NextFrameTask = std::function<void()>;
     
     void Init();
     void Shutdown();
@@ -51,6 +51,8 @@ namespace MFA::SceneManager
         return dynamic_cast<Pipeline *>(GetPipeline(Pipeline::Name));
     }
 
+    void AssignMainThreadTask(NextFrameTask const & task);
+
     // This method must only be called by pipeline and sceneManager
     void UpdatePipeline(BasePipeline * pipeline);
 
@@ -63,8 +65,8 @@ namespace MFA::SceneManager
 
     void SetActiveScene(int nextSceneIndex);
     void SetActiveScene(char const * name);
-    void Update(float deltaTimeInSec);
-    void Render(float deltaTimeInSec);
+    void Update(float deltaTime);
+    void Render(float deltaTime);
     void OnResize();
 
     void OnUI();            // Can be called optionally for general info about the scenes
@@ -72,11 +74,12 @@ namespace MFA::SceneManager
     [[nodiscard]]
     Scene * GetActiveScene();
 
-    RT::UniformBufferGroup const & GetCameraBuffers();
+    RT::BufferGroup const * GetCameraBuffers();
+    RT::BufferGroup const * GetTimeBuffers();
     void RegisterPointLight(std::weak_ptr<PointLightComponent> const & pointLight);
     void RegisterDirectionalLight(std::weak_ptr<DirectionalLightComponent> const & directionalLight);
-    RT::UniformBufferGroup const & GetPointLightsBuffers();
-    RT::UniformBufferGroup const & GetDirectionalLightBuffers();
+    RT::BufferGroup const * GetPointLightsBuffers();
+    RT::BufferGroup const * GetDirectionalLightBuffers();
     uint32_t GetPointLightCount();
     uint32_t GetDirectionalLightCount();
     std::vector<PointLightComponent *> const & GetActivePointLights();

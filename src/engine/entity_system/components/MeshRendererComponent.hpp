@@ -21,11 +21,10 @@ namespace MFA
         // Should only be used by json serializer
         explicit MeshRendererComponent() = default;
         explicit MeshRendererComponent(BasePipeline & pipeline, std::string const & nameOrAddress);
-        explicit MeshRendererComponent(BasePipeline & pipeline, RT::GpuModel const & gpuModel);
 
-        void init() override;
+        void Init() override;
 
-        void shutdown() override;
+        void Shutdown() override;
 
         void onUI() override;
 

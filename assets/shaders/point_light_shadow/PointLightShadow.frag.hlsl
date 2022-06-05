@@ -10,16 +10,16 @@ struct PSOut {
     float depth : SV_DEPTH;
 };
 
-POINT_LIGHT(pointLightsBuffer)
+// POINT_LIGHT(pointLightsBuffer)
+ConstantBuffer <PointLightsBufferData> pointLightsBuffer: register(b2, space0); 
 
-CAMERA_BUFFER(cameraBuffer)
+// CAMERA_BUFFER(cameraBuffer)
+ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
 
 struct PushConsts
 {   
-    float4x4 model;
-    float4x4 inverseNodeTransform;
-    int skinIndex;
     int lightIndex;
+    int placeholder0;
     int placeholder1;
     int placeholder2;
 };
@@ -30,7 +30,8 @@ cbuffer {
 };
 
 PSOut main(PSIn input) {
-
+    // TODO: Do we really need the fragment stage ? The depth gets auto written anyway
+    // TODO: Check this part
     // get distance between fragment and light source
     float lightDistance = length(input.worldPosition.xyz - pointLightsBuffer.items[pushConsts.lightIndex].position.xyz);
     

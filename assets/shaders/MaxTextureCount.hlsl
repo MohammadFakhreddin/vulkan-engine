@@ -1,0 +1,6 @@
+#ifndef MAX_TEXTURE_COUNT_HLSL
+#define MAX_TEXTURE_COUNT_HLSL
+
+#define MAX_TEXTURE_COUNT 64
+
+#endif

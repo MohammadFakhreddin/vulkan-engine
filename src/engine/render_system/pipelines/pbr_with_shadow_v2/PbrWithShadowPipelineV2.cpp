@@ -20,9 +20,13 @@
 #include "engine/entity_system/components/PointLightComponent.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
+#include "engine/asset_system/AssetDebugMesh.hpp"
+#include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
 
-#define CAST_ESSENCE(essence)   static_cast<PBR_Essence *>(essence)
-#define CAST_VARIANT(variant)   static_cast<PBR_Variant *>(variant.get())
+#define CAST_ESSENCE_PURE(essence)      static_cast<PBR_Essence *>(essence)
+#define CAST_ESSENCE_SHARED(essence)    CAST_ESSENCE_PURE(essence.get())
+#define CAST_VARIANT_PURE(variant)      static_cast<PBR_Variant *>(variant)
+#define CAST_VARIANT_SHARED(variant)    static_cast<PBR_Variant *>(variant.get())
 
 /*
 There are four C++ style casts:
@@ -64,7 +68,9 @@ and now I need to pass it to a function that won't modify it, but doesn't take t
 namespace MFA
 {
 
-    // Steps for multi-threading. Begin render pass -> submit subcommands -> execute into primary end renderPpass
+    // Steps for multi-threading. Begin render pass -> submit subcommands -> execute into primary end renderPass
+    // TODO: Submit in multiple threads
+
 
     //-------------------------------------------------------------------------------------------------
 
@@ -106,37 +112,51 @@ namespace MFA
 
         mErrorTexture = RC::AcquireGpuTexture("Error");
         MFA_ASSERT(mErrorTexture != nullptr);
-        
+
+        auto * debugPipeline = SceneManager::GetPipeline<DebugRendererPipeline>();
+        MFA_ASSERT(debugPipeline != nullptr);
+        mOcclusionEssence = debugPipeline->GetEssence("CubeFill");
+
         createUniformBuffers();
 
-        mPointLightShadowRenderPass->Init();
-        mPointLightShadowResources->Init(mPointLightShadowRenderPass->GetVkRenderPass());
+        {// Graphic
+            mPointLightShadowRenderPass->Init();
+            mPointLightShadowResources->Init(mPointLightShadowRenderPass->GetVkRenderPass());
 
-        mDirectionalLightShadowRenderPass->Init();
-        mDirectionalLightShadowResources->Init(mDirectionalLightShadowRenderPass->GetVkRenderPass());
-        
-        mDepthPrePass->Init();
-        mOcclusionRenderPass->Init();
+            mDirectionalLightShadowRenderPass->Init();
+            mDirectionalLightShadowResources->Init(mDirectionalLightShadowRenderPass->GetVkRenderPass());
+            
+            mDepthPrePass->Init();
+            mOcclusionRenderPass->Init();
 
-        createPerFrameDescriptorSetLayout();
-        createPerEssenceDescriptorSetLayout();
-        createPerVariantDescriptorSetLayout();
+            createGfxPerFrameDescriptorSetLayout();
+            createGfxPerEssenceDescriptorSetLayout();
+            
+            auto const descriptorSetLayouts = std::vector<VkDescriptorSetLayout>{
+                mGfxPerFrameDescriptorSetLayout->descriptorSetLayout,
+                mGfxPerEssenceDescriptorSetLayout->descriptorSetLayout,
+            };
 
-        mDescriptorSetLayouts = std::vector<VkDescriptorSetLayout>{
-            mPerFrameDescriptorSetLayout->descriptorSetLayout,
-            mPerEssenceDescriptorSetLayout->descriptorSetLayout,
-            mPerVariantDescriptorSetLayout->descriptorSetLayout
-        };
+            createDisplayPassPipeline(descriptorSetLayouts);
+            createPointLightShadowPassPipeline(descriptorSetLayouts);
+            createDirectionalLightShadowPassPipeline(descriptorSetLayouts);
+            createDepthPassPipeline(descriptorSetLayouts);
+            createOcclusionQueryPipeline(descriptorSetLayouts);
 
-        createDisplayPassPipeline();
-        createPointLightShadowPassPipeline();
-        createDirectionalLightShadowPassPipeline();
-        createDepthPassPipeline();
-        createOcclusionQueryPipeline();
+            createGfxPerFrameDescriptorSets();
 
-        createPerFrameDescriptorSets();
+            createOcclusionQueryPool();
+        }
 
-        createOcclusionQueryPool();
+        {// Compute
+            createSkinningPerEssenceDescriptorSetLayout();
+            createSkinningPerVariantDescriptorSetLayout();
+            auto const descriptorSetLayouts = std::vector<VkDescriptorSetLayout>{
+                mSkinningPerEssenceDescriptorSetLayout->descriptorSetLayout,
+                mSkinningPerVariantDescriptorSetLayout->descriptorSetLayout
+            };
+            createSkinningPipeline(descriptorSetLayouts);
+        }
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -167,20 +187,132 @@ namespace MFA
         BasePipeline::shutdown();
 
     }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::compute(RT::CommandRecordState & recordState, float const deltaTime)
+    {
+        BasePipeline::compute(recordState, deltaTime);
+
+        updateVariantsBuffers(recordState);
+
+        preComputeBarrier(recordState);
+
+        performSkinning(recordState);
+
+        postComputeBarrier(recordState);
+    }
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::preRenderVariants(float deltaTimeInSec, RT::CommandRecordState const & recordState) const
+    void PBRWithShadowPipelineV2::updateVariantsBuffers(RT::CommandRecordState const & recordState) const
     {
         // Multi-thread update of variant animation
-        JS::AssignTaskPerThread([this, &recordState, deltaTimeInSec](uint32_t const threadNumber, uint32_t const threadCount)->void
+        JS::AssignTaskPerThread([this, &recordState](uint32_t const threadNumber, uint32_t const threadCount)->void
         {
             for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mAllVariantsList.size()); i += threadCount)
             {
-                mAllVariantsList[i]->PreRender(deltaTimeInSec, recordState);
+                CAST_VARIANT_PURE(mAllVariantsList[i])->updateBuffers(recordState);
             }
         });
         JS::WaitForThreadsToFinish();
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::performSkinning(RT::CommandRecordState & recordState)
+    {
+        RF::BindPipeline(recordState, *mSkinningPipeline);
+
+        SkinningPushConstants pushConstants{};
+        
+        for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
+        {
+            auto const * essence = CAST_ESSENCE_SHARED(essenceAndVariantList.second.essence);
+            auto & variantsList = essenceAndVariantList.second.variants;
+
+            if (variantsList.empty())
+            {
+                continue;
+            }
+
+            essence->bindForComputePipeline(recordState);
+
+            for (auto & variant : variantsList)
+            {
+                if (variant->IsVisible())
+                {
+                    // Dispatches and bindings are done here
+                    CAST_VARIANT_SHARED(variant)->compute(recordState,
+                        [&recordState, &pushConstants](
+                            AS::PBR::Primitive const & primitive,
+                            PBR_Variant::Node const & node
+                        )-> void
+                        {
+                            // Vertex push constants
+                            Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
+                            Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.model);
+                            pushConstants.vertexCount = primitive.vertexCount;
+                            pushConstants.skinIndex = primitive.hasSkin ? node.skin->skinStartingIndex : -1;
+                            pushConstants.vertexStartingIndex = primitive.verticesStartingIndex;
+
+                            RF::PushConstants(
+                                recordState,
+                                VK_SHADER_STAGE_COMPUTE_BIT,
+                                0,
+                                CBlobAliasOf(pushConstants)
+                            );
+                        }
+                    );
+                }
+            }
+        }
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::preComputeBarrier(RT::CommandRecordState const & recordState) const
+    {
+        if (RF::GetComputeQueueFamily() != RF::GetGraphicQueueFamily())
+        {
+            std::vector<VkBufferMemoryBarrier> barriers {};
+
+            for (auto * variant : mAllVariantsList)
+            {
+                CAST_VARIANT_PURE(variant)->preComputeBarrier(barriers);
+            }
+
+            RF::PipelineBarrier(
+                recordState,
+                VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                static_cast<uint32_t>(barriers.size()),
+                barriers.data()
+            );
+        }
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::postComputeBarrier(RT::CommandRecordState const & recordState)
+    {
+        if (RF::GetComputeQueueFamily() != RF::GetGraphicQueueFamily())
+        {
+            std::vector<VkBufferMemoryBarrier> barriers {};
+
+            for (auto * variant : mAllVariantsList)
+            {
+                CAST_VARIANT_PURE(variant)->preRenderBarrier(barriers);
+            }
+
+            RF::PipelineBarrier(
+                recordState,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+                static_cast<uint32_t>(barriers.size()),
+                barriers.data()
+            );
+        }
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -192,10 +324,14 @@ namespace MFA
         {
             for (uint32_t i = threadNumber; i < static_cast<uint32_t>(mAllVariantsList.size()); i += threadCount)
             {
-                mAllVariantsList[i]->PostRender(deltaTimeInSec);
+                CAST_VARIANT_PURE(mAllVariantsList[i])->postRender(deltaTimeInSec);
             }
         });
-        JS::WaitForThreadsToFinish();
+
+        if (JS::IsMainThread())
+        {
+            JS::WaitForThreadsToFinish();
+        }
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -207,8 +343,6 @@ namespace MFA
         retrieveOcclusionQueryResult(recordState);
 
         BasePipeline::preRender(recordState, deltaTime);
-
-        preRenderVariants(deltaTime, recordState);
 
         performDepthPrePass(recordState);
 
@@ -233,9 +367,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::postRender(float const deltaTimeInSec)
+    void PBRWithShadowPipelineV2::update(float const deltaTimeInSec)
     {
-        BasePipeline::postRender(deltaTimeInSec);
+        BasePipeline::update(deltaTimeInSec);
         postRenderVariants(deltaTimeInSec);
     }
 
@@ -252,7 +386,16 @@ namespace MFA
     void PBRWithShadowPipelineV2::internalAddEssence(EssenceBase * essence)
     {
         MFA_ASSERT(dynamic_cast<PBR_Essence *>(essence) != nullptr);
-        createEssenceDescriptorSets(*CAST_ESSENCE(essence));
+        auto * pbrEssence = CAST_ESSENCE_PURE(essence);
+        pbrEssence->createGraphicDescriptorSet(
+            mDescriptorPool,
+            mGfxPerEssenceDescriptorSetLayout->descriptorSetLayout,
+            *mErrorTexture
+        );
+        pbrEssence->createComputeDescriptorSet(
+            mDescriptorPool,
+            mSkinningPerEssenceDescriptorSetLayout->descriptorSetLayout
+        );
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -262,53 +405,57 @@ namespace MFA
         auto * drawableEssence = dynamic_cast<PBR_Essence *>(essence);
         MFA_ASSERT(drawableEssence != nullptr);
         auto variant = std::make_shared<PBR_Variant>(drawableEssence);
-        createVariantDescriptorSets(*variant);
+        variant->createComputeDescriptorSet(
+            mDescriptorPool,
+            mSkinningPerVariantDescriptorSetLayout->descriptorSetLayout,
+            *mErrorBuffer
+        );
         return variant;
     }
     
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createPerFrameDescriptorSets()
+    void PBRWithShadowPipelineV2::createGfxPerFrameDescriptorSets()
     {
-        mPerFrameDescriptorSetGroup = RF::CreateDescriptorSets(
+        mGfxPerFrameDescriptorSetGroup = RF::CreateDescriptorSets(
             mDescriptorPool,
             RF::GetMaxFramesPerFlight(),
-            *mPerFrameDescriptorSetLayout
+            *mGfxPerFrameDescriptorSetLayout
         );
 
-        auto const & cameraBufferCollection = SceneManager::GetCameraBuffers();
-        auto const & directionalLightBuffers = SceneManager::GetDirectionalLightBuffers();
-        auto const & pointLightBuffers = SceneManager::GetPointLightsBuffers();
+        auto const * cameraBufferCollection = SceneManager::GetCameraBuffers();
+        auto const * directionalLightBuffers = SceneManager::GetDirectionalLightBuffers();
+        auto const * pointLightBuffers = SceneManager::GetPointLightsBuffers();
         
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
 
-            auto const descriptorSet = mPerFrameDescriptorSetGroup.descriptorSets[frameIndex];
+            auto const descriptorSet = mGfxPerFrameDescriptorSetGroup.descriptorSets[frameIndex];
             MFA_VK_VALID_ASSERT(descriptorSet);
 
             DescriptorSetSchema descriptorSetSchema{ descriptorSet };
             // Important note: Keep reference of all descriptor buffer infos until updateDescriptorSets is called
             // DisplayViewProjection
             VkDescriptorBufferInfo viewProjectionBufferInfo{
-                .buffer = cameraBufferCollection.buffers[frameIndex]->buffer,
+                .buffer = cameraBufferCollection->buffers[frameIndex]->buffer,
                 .offset = 0,
-                .range = cameraBufferCollection.bufferSize,
+                .range = cameraBufferCollection->bufferSize,
             };
             descriptorSetSchema.AddUniformBuffer(&viewProjectionBufferInfo);
 
             // DirectionalLightBuffer
             VkDescriptorBufferInfo directionalLightBufferInfo {
-                .buffer = directionalLightBuffers.buffers[frameIndex]->buffer,
+                .buffer = directionalLightBuffers->buffers[frameIndex]->buffer,
                 .offset = 0,
-                .range = directionalLightBuffers.bufferSize,
+                .range = directionalLightBuffers->bufferSize,
             };
             descriptorSetSchema.AddUniformBuffer(&directionalLightBufferInfo);
 
             // PointLightBuffer
             VkDescriptorBufferInfo pointLightBufferInfo {
-                .buffer = pointLightBuffers.buffers[frameIndex]->buffer,
+                .buffer = pointLightBuffers->buffers[frameIndex]->buffer,
                 .offset = 0,
-                .range = pointLightBuffers.bufferSize,
+                .range = pointLightBuffers->bufferSize,
             };
             descriptorSetSchema.AddUniformBuffer(&pointLightBufferInfo);
 
@@ -341,113 +488,6 @@ namespace MFA
             
             descriptorSetSchema.UpdateDescriptorSets();
         }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void PBRWithShadowPipelineV2::createEssenceDescriptorSets(PBR_Essence & essence) const
-    {
-        auto const & textures = essence.getGpuModel()->textures;
-
-        auto const & descriptorSetGroup = essence.createDescriptorSetGroup(
-            mDescriptorPool,
-            RF::GetMaxFramesPerFlight(),
-            *mPerEssenceDescriptorSetLayout
-        );
-
-        auto & primitiveBuffer = essence.getPrimitivesBuffer();
-
-        for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
-        {
-            auto const & descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
-            MFA_VK_VALID_ASSERT(descriptorSet);
-
-            DescriptorSetSchema descriptorSetSchema{ descriptorSet };
-
-            /////////////////////////////////////////////////////////////////
-            // Fragment shader
-            /////////////////////////////////////////////////////////////////
-
-            // Primitives
-            VkDescriptorBufferInfo primitiveBufferInfo{
-                .buffer = primitiveBuffer.buffers[0]->buffer,
-                .offset = 0,
-                .range = primitiveBuffer.bufferSize,
-            };
-            descriptorSetSchema.AddUniformBuffer(&primitiveBufferInfo);
-
-            // TODO Each one need their own sampler
-            // Textures
-            MFA_ASSERT(textures.size() <= 64);
-            // We need to keep imageInfos alive
-            std::vector<VkDescriptorImageInfo> imageInfos{};
-            for (auto const & texture : textures)
-            {
-                imageInfos.emplace_back(VkDescriptorImageInfo{
-                    .sampler = nullptr,
-                    .imageView = texture->imageView->imageView,
-                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                });
-            }
-            for (auto i = static_cast<uint32_t>(textures.size()); i < 64; ++i)
-            {
-                imageInfos.emplace_back(VkDescriptorImageInfo{
-                    .sampler = nullptr,
-                    .imageView = mErrorTexture->imageView->imageView,
-                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                });
-            }
-            MFA_ASSERT(imageInfos.size() == 64);
-            descriptorSetSchema.AddImage(
-                imageInfos.data(),
-                static_cast<uint32_t>(imageInfos.size())
-            );
-
-            descriptorSetSchema.UpdateDescriptorSets();
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void PBRWithShadowPipelineV2::createVariantDescriptorSets(PBR_Variant & variant) const
-    {
-        auto const descriptorSetGroup = variant.CreateDescriptorSetGroup(
-            mDescriptorPool,
-            RF::GetMaxFramesPerFlight(),
-            *mPerVariantDescriptorSetLayout
-        );
-        auto const * storedSkinJointsBuffer = variant.GetSkinJointsBuffer();
-
-        for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
-        {
-
-            auto const descriptorSet = descriptorSetGroup.descriptorSets[frameIndex];
-            MFA_VK_VALID_ASSERT(descriptorSet);
-
-            DescriptorSetSchema descriptorSetSchema{ descriptorSet };
-
-            /////////////////////////////////////////////////////////////////
-            // Vertex shader
-            /////////////////////////////////////////////////////////////////
-
-            // SkinJoints
-            VkBuffer skinJointsBuffer = mErrorBuffer->buffers[0]->buffer;
-            size_t skinJointsBufferSize = mErrorBuffer->bufferSize;
-            if (storedSkinJointsBuffer != nullptr && storedSkinJointsBuffer->bufferSize > 0)
-            {
-                skinJointsBuffer = storedSkinJointsBuffer->buffers[frameIndex]->buffer;
-                skinJointsBufferSize = storedSkinJointsBuffer->bufferSize;
-            }
-            VkDescriptorBufferInfo skinTransformBufferInfo{
-                .buffer = skinJointsBuffer,
-                .offset = 0,
-                .range = skinJointsBufferSize,
-            };
-            descriptorSetSchema.AddUniformBuffer(&skinTransformBufferInfo);
-
-            descriptorSetSchema.UpdateDescriptorSets();
-        }
-
     }
     
     //-------------------------------------------------------------------------------------------------
@@ -511,10 +551,10 @@ namespace MFA
     void PBRWithShadowPipelineV2::performDepthPrePass(RT::CommandRecordState & recordState) const
     {
         RF::BindPipeline(recordState, *mDepthPassPipeline);
-        RF::BindDescriptorSet(
+        RF::AutoBindDescriptorSet(
             recordState,
-            RenderFrontend::DescriptorSetType::PerFrame,
-            mPerFrameDescriptorSetGroup
+            RenderFrontend::UpdateFrequency::PerFrame,
+            mGfxPerFrameDescriptorSetGroup
         );
 
         mDepthPrePass->BeginRenderPass(recordState);
@@ -530,7 +570,7 @@ namespace MFA
         // TODO: Submit in multiple threads
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto & essence = essenceAndVariantList.second.essence;
+            auto const * essence = CAST_ESSENCE_SHARED(essenceAndVariantList.second.essence);
             auto & variantsList = essenceAndVariantList.second.variants;
 
             if (variantsList.empty())
@@ -538,20 +578,13 @@ namespace MFA
                 continue;
             }
 
-            essence->bindAllRenderRequiredData(recordState);
+            essence->bindForGraphicPipeline(recordState);
 
             for (auto & variant : variantsList)
             {
                 if (variant->IsVisible())
                 {
-
-                    RF::BindDescriptorSet(
-                        recordState,
-                        RenderFrontend::DescriptorSetType::PerVariant,
-                        variant->GetDescriptorSetGroup()
-                    );
-
-                    CAST_VARIANT(variant)->Render(
+                    CAST_VARIANT_SHARED(variant)->render(
                         recordState,
                         [&recordState, &pushConstants](
                             AS::PBR::Primitive const & primitive,
@@ -559,14 +592,11 @@ namespace MFA
                         )-> void
                         {
                             // Vertex push constants
-                            pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
                             pushConstants.primitiveIndex = primitive.uniqueId;
-                            Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
-                            Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
-
+                            
                             RF::PushConstants(
                                 recordState,
-                                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                                VK_SHADER_STAGE_FRAGMENT_BIT,
                                 0,
                                 CBlobAliasOf(pushConstants)
                             );
@@ -583,37 +613,49 @@ namespace MFA
     
     void PBRWithShadowPipelineV2::performDirectionalLightShadowPass(RT::CommandRecordState & recordState) const
     {
-        if (SceneManager::GetDirectionalLightCount() <= 0)
+        auto const lightCount = SceneManager::GetDirectionalLightCount();
+        if (lightCount <= 0)
         {
             return;
         }
 
         RF::BindPipeline(recordState, *mDirectionalLightShadowPipeline);
-        RF::BindDescriptorSet(
+        RF::AutoBindDescriptorSet(
             recordState,
-            RenderFrontend::DescriptorSetType::PerFrame,
-            mPerFrameDescriptorSetGroup
+            RenderFrontend::UpdateFrequency::PerFrame,
+            mGfxPerFrameDescriptorSetGroup
         );
 
         mDirectionalLightShadowRenderPass->BeginRenderPass(recordState, *mDirectionalLightShadowResources);
-        renderForDirectionalLightShadowPass(recordState, AS::AlphaMode::Opaque);
-        renderForDirectionalLightShadowPass(recordState, AS::AlphaMode::Mask);
-        renderForDirectionalLightShadowPass(recordState, AS::AlphaMode::Blend);
+
+        DirectionalLightPushConstants pushConstants {};
+
+        for (int lightIndex = 0; lightIndex < static_cast<int>(lightCount); ++lightIndex)
+        {
+            pushConstants.lightIndex = lightIndex;
+
+            RF::PushConstants(
+                recordState,
+                AssetSystem::ShaderStage::Vertex,
+                0,
+                CBlobAliasOf(pushConstants)
+            );
+
+            renderForDirectionalLightShadowPass(recordState, AS::AlphaMode::Opaque);
+            renderForDirectionalLightShadowPass(recordState, AS::AlphaMode::Mask);
+            renderForDirectionalLightShadowPass(recordState, AS::AlphaMode::Blend);
+        }
+
         mDirectionalLightShadowRenderPass->EndRenderPass(recordState);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::renderForDirectionalLightShadowPass(
-        RT::CommandRecordState const & recordState,
-        AS::AlphaMode const alphaMode
-    ) const
+    void PBRWithShadowPipelineV2::renderForDirectionalLightShadowPass(RT::CommandRecordState const & recordState, AS::AlphaMode const alphaMode) const
     {
-        DirectionalLightShadowPassPushConstants pushConstants {};
-
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto & essence = essenceAndVariantList.second.essence;
+            auto const * essence = CAST_ESSENCE_SHARED(essenceAndVariantList.second.essence);
             auto & variantsList = essenceAndVariantList.second.variants;
 
             if (variantsList.empty())
@@ -621,33 +663,14 @@ namespace MFA
                 continue;
             }
 
-            essence->bindAllRenderRequiredData(recordState);
+            essence->bindForGraphicPipeline(recordState);
 
             for (auto & variant : variantsList)
             {
                 // TODO We need a wider frustum for shadows
                 if (variant->IsActive())
                 {
-                    RF::BindDescriptorSet(
-                        recordState,
-                        RenderFrontend::DescriptorSetType::PerVariant,
-                        variant->GetDescriptorSetGroup()
-                    );
-
-                    CAST_VARIANT(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
-                    {
-                        // Vertex push constants
-                        pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
-                        Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.model);
-                        Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
-
-                        RF::PushConstants(
-                            recordState,
-                            VK_SHADER_STAGE_VERTEX_BIT,
-                            0,
-                            CBlobAliasOf(pushConstants)
-                        );
-                    }, alphaMode);
+                    CAST_VARIANT_SHARED(variant)->render(recordState, nullptr, alphaMode);
                 }
             }
         }
@@ -664,16 +687,27 @@ namespace MFA
         }
 
         RF::BindPipeline(recordState, *mPointLightShadowPipeline);
-        RF::BindDescriptorSet(
+        RF::AutoBindDescriptorSet(
             recordState,
-            RenderFrontend::DescriptorSetType::PerFrame,
-            mPerFrameDescriptorSetGroup
+            RenderFrontend::UpdateFrequency::PerFrame,
+            mGfxPerFrameDescriptorSetGroup
         );
 
         mPointLightShadowRenderPass->BeginRenderPass(recordState, *mPointLightShadowResources);
-        renderForPointLightShadowPass(recordState, AS::AlphaMode::Opaque);
-        renderForPointLightShadowPass(recordState, AS::AlphaMode::Mask);
-        renderForPointLightShadowPass(recordState, AS::AlphaMode::Blend);
+
+        PointLightShadowPassPushConstants pushConstants {};
+
+        auto const & pointLights = SceneManager::GetActivePointLights();
+        MFA_ASSERT(pointLights.size() == pointLightCount);
+
+        for (int lightIndex = 0; lightIndex < static_cast<int>(pointLightCount); ++lightIndex)
+        {
+            pushConstants.lightIndex = lightIndex;
+            renderForPointLightShadowPass(recordState, AS::AlphaMode::Opaque, pushConstants, pointLights[lightIndex]);
+            renderForPointLightShadowPass(recordState, AS::AlphaMode::Mask, pushConstants, pointLights[lightIndex]);
+            renderForPointLightShadowPass(recordState, AS::AlphaMode::Blend, pushConstants, pointLights[lightIndex]);
+        }
+
         mPointLightShadowRenderPass->EndRenderPass(recordState);
     }
 
@@ -695,7 +729,7 @@ namespace MFA
             barrier
         );
         RF::PipelineBarrier(
-            RF::GetGraphicCommandBuffer(recordState),
+            recordState,
             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
             static_cast<uint32_t>(barrier.size()),
@@ -705,70 +739,59 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
     
-    void PBRWithShadowPipelineV2::renderForPointLightShadowPass(RT::CommandRecordState const & recordState, AS::AlphaMode const alphaMode) const
+    void PBRWithShadowPipelineV2::renderForPointLightShadowPass(
+        RT::CommandRecordState const & recordState,
+        AS::AlphaMode alphaMode,
+        PointLightShadowPassPushConstants & pushConstants,
+        PointLightComponent const * pointLight
+    ) const
     {
-        auto const pointLightCount = SceneManager::GetPointLightCount();
-        MFA_ASSERT(pointLightCount > 0);
-        auto const & pointLights = SceneManager::GetActivePointLights();
-        MFA_ASSERT(pointLights.size() == pointLightCount);
+        
+        MFA_ASSERT(pointLight != nullptr);
 
-        PointLightShadowPassPushConstants pushConstants {};
-
-        for (uint32_t lightIndex = 0; lightIndex < pointLightCount; ++lightIndex)
+        for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            pushConstants.lightIndex = static_cast<int>(lightIndex);
+            auto const * essence = CAST_ESSENCE_SHARED(essenceAndVariantList.second.essence);
+            auto & variantsList = essenceAndVariantList.second.variants;
 
-            auto * pointLight = pointLights[lightIndex];
-            MFA_ASSERT(pointLight != nullptr);
-
-            for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
+            if (variantsList.empty())
             {
-                auto & essence = essenceAndVariantList.second.essence;
-                auto & variantsList = essenceAndVariantList.second.variants;
+                continue;
+            }
 
-                if (variantsList.empty())
+            essence->bindForGraphicPipeline(recordState);
+
+            for (auto & variant : variantsList)
+            {
+                if (variant->IsActive() == false)
                 {
                     continue;
                 }
 
-                essence->bindAllRenderRequiredData(recordState);
-
-                for (auto & variant : variantsList)
+                auto const bvComponent = variant->GetBoundingVolume();
+                if (bvComponent == nullptr)
                 {
-                    if (variant->IsActive() == false)
-                    {
-                        continue;
-                    }
-                    auto const * bvComponent = variant->GetBoundingVolume();
-                    if (bvComponent == nullptr)
-                    {
-                        continue;
-                    }
-                    // We only render variants that are within pointLight's visible range
-                    if (pointLight->IsBoundingVolumeInRange(bvComponent) == false)
-                    {
-                        continue;
-                    }
-                    RF::BindDescriptorSet(
+                    continue;
+                }
+
+                // We only render variants that are within pointLight's visible range
+                if (pointLight->IsBoundingVolumeInRange(bvComponent.get()) == false)
+                {
+                    continue;
+                }
+
+                for (int faceIndex = 0; faceIndex < 6; ++faceIndex)
+                {
+                    pushConstants.faceIndex = faceIndex;
+
+                    RF::PushConstants(
                         recordState,
-                        RenderFrontend::DescriptorSetType::PerVariant,
-                        variant->GetDescriptorSetGroup()
+                        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                        0,
+                        CBlobAliasOf(pushConstants)
                     );
 
-                    CAST_VARIANT(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
-                    {
-                        // Vertex push constants
-                        pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
-                        Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
-                        Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
-
-                        RF::PushConstants(
-                            recordState,
-                            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-                            0,
-                            CBlobAliasOf(pushConstants)
-                        );
-                    }, alphaMode);
+                    CAST_VARIANT_SHARED(variant)->render(recordState, nullptr, alphaMode);
                 }
             }
         }
@@ -785,74 +808,80 @@ namespace MFA
         );
 
         RF::BindPipeline(recordState, *mOcclusionQueryPipeline);
-        RF::BindDescriptorSet(
+        RF::AutoBindDescriptorSet(
             recordState,
-            RenderFrontend::DescriptorSetType::PerFrame,
-            mPerFrameDescriptorSetGroup
+            RenderFrontend::UpdateFrequency::PerFrame,
+            mGfxPerFrameDescriptorSetGroup
         );
 
         mOcclusionRenderPass->BeginRenderPass(recordState);
-        renderForOcclusionQueryPass(recordState, AS::AlphaMode::Opaque);
-        renderForOcclusionQueryPass(recordState, AS::AlphaMode::Mask);
-        renderForOcclusionQueryPass(recordState, AS::AlphaMode::Blend); 
+        renderForOcclusionQueryPass(recordState);
         mOcclusionRenderPass->EndRenderPass(recordState);
     }
 
     //-------------------------------------------------------------------------------------------------
     
-    void PBRWithShadowPipelineV2::renderForOcclusionQueryPass(RT::CommandRecordState const & recordState, AS::AlphaMode const alphaMode)
+    void PBRWithShadowPipelineV2::renderForOcclusionQueryPass(RT::CommandRecordState const & recordState)
     {
         auto & occlusionQueryData = mOcclusionQueryDataList[recordState.frameIndex];
+
+        auto const occlusionEssence = mOcclusionEssence.lock();
+        MFA_ASSERT(occlusionEssence != nullptr);
+
+        occlusionEssence->bindForGraphicPipeline(recordState);
 
         OcclusionPassPushConstants pushConstants{};
 
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto & essence = essenceAndVariantList.second.essence;
             auto & variantsList = essenceAndVariantList.second.variants;
 
             if (variantsList.empty())
             {
                 continue;
             }
-
-            essence->bindAllRenderRequiredData(recordState);
-
+            
             for (auto & variant : variantsList)
             {
                 if (variant->IsActive() && variant->IsInFrustum())
                 {
+                    auto bvComp = variant->GetBoundingVolume();
 
-                    RF::BindDescriptorSet(
-                        recordState,
-                        RenderFrontend::DescriptorSetType::PerVariant,
-                        variant->GetDescriptorSetGroup()
-                    );
-
-                    RF::BeginQuery(recordState, occlusionQueryData.Pool, static_cast<uint32_t>(occlusionQueryData.Variants.size()));
-
-                    // TODO Draw a placeholder cube instead of complex geometry
-                    CAST_VARIANT(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
+                    if (bvComp != nullptr && bvComp->OcclusionEnabled())
+                    {
+                        if (auto const transformC = bvComp->GetVolumeTransform().lock())
                         {
-                            // Vertex push constants
-                            Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
-                            Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
-                            pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
-                            pushConstants.primitiveIndex = primitive.uniqueId;
+                            RF::BeginQuery(
+                                recordState,
+                                occlusionQueryData.Pool,
+                                static_cast<uint32_t>(occlusionQueryData.Variants.size())
+                            );
+
+                            Matrix::CopyGlmToCells(
+                                transformC->GetTransform(),
+                                pushConstants.model
+                            );
 
                             RF::PushConstants(
                                 recordState,
-                                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                                AS::ShaderStage::Vertex,
                                 0,
                                 CBlobAliasOf(pushConstants)
                             );
+
+                            RF::DrawIndexed(recordState, occlusionEssence->getIndicesCount());
+
+                            RF::EndQuery(
+                                recordState,
+                                occlusionQueryData.Pool,
+                                static_cast<uint32_t>(occlusionQueryData.Variants.size())
+                            );
+
+                            // What if the variant is destroyed in next frame?
+                            occlusionQueryData.Variants.emplace_back(variant);
                         }
-                    , alphaMode);
+                    }
 
-                    RF::EndQuery(recordState, occlusionQueryData.Pool, static_cast<uint32_t>(occlusionQueryData.Variants.size()));
-
-                    // What if the variant is destroyed in next frame?
-                    occlusionQueryData.Variants.emplace_back(variant);
                 }
             }
         }
@@ -860,13 +889,13 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::performDisplayPass(RT::CommandRecordState & recordState)
+    void PBRWithShadowPipelineV2::performDisplayPass(RT::CommandRecordState & recordState) const
     {
         RF::BindPipeline(recordState, *mDisplayPassPipeline);
-        RF::BindDescriptorSet(
+        RF::AutoBindDescriptorSet(
             recordState,
-            RenderFrontend::DescriptorSetType::PerFrame,
-            mPerFrameDescriptorSetGroup
+            RenderFrontend::UpdateFrequency::PerFrame,
+            mGfxPerFrameDescriptorSetGroup
         );
         renderForDisplayPass(recordState, AS::AlphaMode::Opaque);
         renderForDisplayPass(recordState, AS::AlphaMode::Mask);
@@ -881,7 +910,7 @@ namespace MFA
 
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto & essence = essenceAndVariantList.second.essence;
+            auto const * essence = CAST_ESSENCE_SHARED(essenceAndVariantList.second.essence);
             auto & variantsList = essenceAndVariantList.second.variants;
 
             if (variantsList.empty())
@@ -889,29 +918,25 @@ namespace MFA
                 continue;
             }
 
-            essence->bindAllRenderRequiredData(recordState);
+            essence->bindForGraphicPipeline(recordState);
 
             for (auto & variant : variantsList)
             {
                 if (variant->IsVisible())
                 {
-
-                    RF::BindDescriptorSet(
-                        recordState,
-                        RenderFrontend::DescriptorSetType::PerVariant,
-                        variant->GetDescriptorSetGroup()
-                    );
                     // TODO We can render all instances at once and have a large push constant for all of them
-                    CAST_VARIANT(variant)->Render(recordState, [&recordState, &pushConstants](AS::PBR::Primitive const & primitive, PBR_Variant::Node const & node)-> void
+                    CAST_VARIANT_SHARED(variant)->render(
+                        recordState,
+                        [&recordState, &pushConstants](
+                            AS::PBR::Primitive const & primitive,
+                            PBR_Variant::Node const & node
+                        )-> void
                         {
                             // Push constants
-                            pushConstants.skinIndex = node.skin != nullptr ? node.skin->skinStartingIndex : -1;
                             pushConstants.primitiveIndex = primitive.uniqueId;
-                            Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.modelTransform);
-                            Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
                             RF::PushConstants(
                                 recordState,
-                                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                                VK_SHADER_STAGE_FRAGMENT_BIT,
                                 0,
                                 CBlobAliasOf(pushConstants)
                             );
@@ -924,7 +949,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createPerFrameDescriptorSetLayout()
+    void PBRWithShadowPipelineV2::createGfxPerFrameDescriptorSetLayout()
     {
         std::vector<VkDescriptorSetLayoutBinding> bindings{};
 
@@ -977,7 +1002,7 @@ namespace MFA
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         });
 
-        mPerFrameDescriptorSetLayout = RF::CreateDescriptorSetLayout(
+        mGfxPerFrameDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
             bindings.data()
         );
@@ -985,7 +1010,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createPerEssenceDescriptorSetLayout()
+    void PBRWithShadowPipelineV2::createGfxPerEssenceDescriptorSetLayout()
     {
         std::vector<VkDescriptorSetLayoutBinding> bindings{};
 
@@ -1005,11 +1030,11 @@ namespace MFA
         bindings.emplace_back(VkDescriptorSetLayoutBinding {
             .binding = static_cast<uint32_t>(bindings.size()),
             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            .descriptorCount = 64,
+            .descriptorCount = PBR_Essence::MAX_TEXTURE_COUNT,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         });
         
-        mPerEssenceDescriptorSetLayout = RF::CreateDescriptorSetLayout(
+        mGfxPerEssenceDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
             bindings.data()
         );
@@ -1017,31 +1042,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createPerVariantDescriptorSetLayout()
-    {
-        std::vector<VkDescriptorSetLayoutBinding> bindings{};
-
-        /////////////////////////////////////////////////////////////////
-        // Vertex shader
-        /////////////////////////////////////////////////////////////////
-
-        // SkinJoints
-        bindings.emplace_back(VkDescriptorSetLayoutBinding {
-            .binding = static_cast<uint32_t>(bindings.size()),
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1,
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-        });
-        
-        mPerVariantDescriptorSetLayout = RF::CreateDescriptorSetLayout(
-            static_cast<uint8_t>(bindings.size()),
-            bindings.data()
-        );
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void PBRWithShadowPipelineV2::createDisplayPassPipeline()
+    void PBRWithShadowPipelineV2::createDisplayPassPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts)
     {
         // Vertex shader
         RF_CREATE_SHADER("shaders/pbr_with_shadow_v2/PbrWithShadow.vert.spv", Vertex)
@@ -1051,128 +1052,121 @@ namespace MFA
 
         std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuFragmentShader.get() };
 
-        VkVertexInputBindingDescription vertexInputBindingDescription{};
-        vertexInputBindingDescription.binding = 0;
-        vertexInputBindingDescription.stride = sizeof(AS::PBR::Vertex);
-        vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        std::vector<VkVertexInputBindingDescription> bindingDescriptions {};
 
+        bindingDescriptions.emplace_back(VkVertexInputBindingDescription {
+            .binding = static_cast<uint32_t>(bindingDescriptions.size()),
+            .stride = sizeof(PBR_Variant::SkinnedVertex),
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+        });
+
+        bindingDescriptions.emplace_back(VkVertexInputBindingDescription {
+            .binding = static_cast<uint32_t>(bindingDescriptions.size()),
+            .stride = sizeof(PBR_Essence::VertexUVs),
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+        });
+        
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
         
-        // Position
+        // WordPosition
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+            .offset = offsetof(PBR_Variant::SkinnedVertex, worldPosition)
+        });
+
+        // WorldNormal
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
             .format = VK_FORMAT_R32G32B32_SFLOAT,
-            .offset = offsetof(AS::PBR::Vertex, position)
+            .offset = offsetof(PBR_Variant::SkinnedVertex, worldNormal),
         });
 
+        // WorldTangent
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32G32B32_SFLOAT,
+            .offset = offsetof(PBR_Variant::SkinnedVertex, worldTangent),
+        });
+
+        // WorldBiTangent
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32G32B32_SFLOAT,
+            .offset = offsetof(PBR_Variant::SkinnedVertex, worldBiTangent),
+        });
+        
         // BaseColorUV
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
+            .binding = 1,
             .format = VK_FORMAT_R32G32_SFLOAT,
-            .offset = offsetof(AS::PBR::Vertex, baseColorUV)
+            .offset = offsetof(PBR_Essence::VertexUVs, baseColorTexCoord)
         });
 
-        {// Metallic/RoughnessUV
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, metallicUV); // Metallic and roughness have same uv for gltf files  
+        // Metallic/RoughnessUV
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 1,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = offsetof(PBR_Essence::VertexUVs, metallicRoughnessTexCoord), // Metallic and roughness have same uv for gltf files  
+        });
+        
+        // NormalMapUV
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 1,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = offsetof(PBR_Essence::VertexUVs, normalTexCoord),
+        });
+    
+        // EmissionUV
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 1,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = offsetof(PBR_Essence::VertexUVs, emissiveTexCoord),
+        });
 
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// NormalMapUV
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, normalMapUV);
-
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// Tangent
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, tangentValue);
-
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// Normal
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, normalValue);
-
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// EmissionUV
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, emissionUV);
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
         // OcclusionUV
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
+            .binding = 1,
             .format = VK_FORMAT_R32G32_SFLOAT,
-            .offset = offsetof(AS::PBR::Vertex, occlusionUV), // Metallic and roughness have same uv for gltf files  
+            .offset = offsetof(PBR_Essence::VertexUVs, occlusionTexCoord), // Metallic and roughness have same uv for gltf files  
         });
-        {// HasSkin
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32_SINT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, hasSkin); // TODO We should use a primitiveInfo instead
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// JointIndices
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32B32A32_SINT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, jointIndices);
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// JointWeights
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, jointWeights);
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
         
-        std::vector<VkPushConstantRange> mPushConstantRanges{};
-        mPushConstantRanges.emplace_back(VkPushConstantRange{
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        std::vector<VkPushConstantRange> pushConstantRanges{};
+        pushConstantRanges.emplace_back(VkPushConstantRange{
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
             .offset = 0,
             .size = sizeof(DisplayPassPushConstants),
         });
 
+        const auto pipelineLayout = RF::CreatePipelineLayout(
+            static_cast<uint32_t>(descriptorSetLayouts.size()),
+            descriptorSetLayouts.data(),
+            static_cast<uint32_t>(pushConstantRanges.size()),
+            pushConstantRanges.data()
+        );
+        
         RT::CreateGraphicPipelineOptions options{};
         options.rasterizationSamples = RF::GetMaxSamplesCount();
-        options.pushConstantRanges = mPushConstantRanges.data();
-        options.pushConstantsRangeCount = static_cast<uint8_t>(mPushConstantRanges.size());
         options.cullMode = VK_CULL_MODE_BACK_BIT;
         options.depthStencil.depthWriteEnable = VK_FALSE;
         options.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;          // It must be less or equal because transparent and transluent objects are discarded in depth prepass and occlusion pass
 
-        mDisplayPassPipeline = RF::CreatePipeline(
+        mDisplayPassPipeline = RF::CreateGraphicPipeline(
             RF::GetDisplayRenderPass()->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),
-            static_cast<uint32_t>(mDescriptorSetLayouts.size()),
-            mDescriptorSetLayouts.data(),
-            1,
-            &vertexInputBindingDescription,
+            pipelineLayout,
+            static_cast<uint32_t>(bindingDescriptions.size()),
+            bindingDescriptions.data(),
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
             inputAttributeDescriptions.data(),
             options
@@ -1181,75 +1175,51 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createDirectionalLightShadowPassPipeline()
+    void PBRWithShadowPipelineV2::createDirectionalLightShadowPassPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts)
     {
         // Vertex shader
-        RF_CREATE_SHADER("shaders/directional_light_shadow/DirectionalLightShadow.vert.spv", Vertex)
-        RF_CREATE_SHADER("shaders/directional_light_shadow/DirectionalLightShadow.geom.spv", Geometry)
+        RF_CREATE_SHADER("shaders/directional_light_shadow_v2/DirectionalLightShadowV2.vert.spv", Vertex)
         
-        std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuGeometryShader.get() };
+        std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get()};
 
-        VkVertexInputBindingDescription vertexInputBindingDescription{};
-        vertexInputBindingDescription.binding = 0;
-        vertexInputBindingDescription.stride = sizeof(AS::PBR::Vertex);
-        vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        VkVertexInputBindingDescription const vertexInputBindingDescription{
+            .binding = 0,
+            .stride = sizeof(PBR_Variant::SkinnedVertex),
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+        };
 
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
 
-        {// Position
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, position);
-
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// HasSkin
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32_SINT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, hasSkin);
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// JointIndices
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32B32A32_SINT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, jointIndices);
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// JointWeights
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, jointWeights);
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
+        // WorldPosition
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+            .offset = offsetof(PBR_Variant::SkinnedVertex, worldPosition),
+        });
 
         std::vector<VkPushConstantRange> pushConstantRanges{};
-        VkPushConstantRange pushConstantRange{
+        pushConstantRanges.emplace_back(VkPushConstantRange{
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
             .offset = 0,
-            .size = sizeof(DirectionalLightShadowPassPushConstants),
-        };
-        pushConstantRanges.emplace_back(pushConstantRange);
+            .size = sizeof(DirectionalLightPushConstants),
+        });
 
+        const auto pipelineLayout = RF::CreatePipelineLayout(
+            static_cast<uint32_t>(descriptorSetLayouts.size()),
+            descriptorSetLayouts.data(),
+            static_cast<uint32_t>(pushConstantRanges.size()),
+            pushConstantRanges.data()
+        );
+        
         RT::CreateGraphicPipelineOptions graphicPipelineOptions{};
         graphicPipelineOptions.cullMode = VK_CULL_MODE_FRONT_BIT;                // TODO Find a good fit!
-        graphicPipelineOptions.pushConstantRanges = pushConstantRanges.data();
-        // TODO Probably we need to make pushConstantsRangeCount uint32_t
-        graphicPipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
 
-        mDirectionalLightShadowPipeline = RF::CreatePipeline(
+        mDirectionalLightShadowPipeline = RF::CreateGraphicPipeline(
             mDirectionalLightShadowRenderPass->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),
-            static_cast<uint32_t>(mDescriptorSetLayouts.size()),
-            mDescriptorSetLayouts.data(),
+            pipelineLayout,
             1,
             &vertexInputBindingDescription,
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
@@ -1260,80 +1230,56 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createPointLightShadowPassPipeline()
+    void PBRWithShadowPipelineV2::createPointLightShadowPassPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts)
     {
         // Vertex shader
-        RF_CREATE_SHADER("shaders/point_light_shadow/PointLightShadow.vert.spv", Vertex)
-        RF_CREATE_SHADER("shaders/point_light_shadow/PointLightShadow.geom.spv", Geometry)
-        RF_CREATE_SHADER("shaders/point_light_shadow/PointLightShadow.frag.spv", Fragment)
+        RF_CREATE_SHADER("shaders/point_light_shadow_v2/PointLightShadowV2.vert.spv", Vertex)
+        RF_CREATE_SHADER("shaders/point_light_shadow_v2/PointLightShadowV2.frag.spv", Fragment)
 
         std::vector<RT::GpuShader const *> shaders {
             gpuVertexShader.get(),
-            gpuGeometryShader.get(),
             gpuFragmentShader.get()
         };
 
-        VkVertexInputBindingDescription vertexInputBindingDescription{};
-        vertexInputBindingDescription.binding = 0;
-        vertexInputBindingDescription.stride = sizeof(AS::PBR::Vertex);
-        vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        VkVertexInputBindingDescription const vertexInputBindingDescription{
+            .binding = 0,
+            .stride = sizeof(PBR_Variant::SkinnedVertex),
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+        };
 
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
 
-        {// Position
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, position);
-
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// HasSkin
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32_SINT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, hasSkin); // TODO We should use a primitiveInfo instead
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// JointIndices
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32B32A32_SINT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, jointIndices);
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
-        {// JointWeights
-            VkVertexInputAttributeDescription attributeDescription{};
-            attributeDescription.location = static_cast<uint32_t>(inputAttributeDescriptions.size());
-            attributeDescription.binding = 0;
-            attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-            attributeDescription.offset = offsetof(AS::PBR::Vertex, jointWeights);
-            inputAttributeDescriptions.emplace_back(attributeDescription);
-        }
+        // WorldPosition
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+            .offset = offsetof(PBR_Variant::SkinnedVertex, worldPosition),
+        });
 
         std::vector<VkPushConstantRange> pushConstantRanges{};
         VkPushConstantRange pushConstantRange{
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
             .offset = 0,
             .size = sizeof(PointLightShadowPassPushConstants),
         };
         pushConstantRanges.emplace_back(pushConstantRange);
 
+        const auto pipelineLayout = RF::CreatePipelineLayout(
+            static_cast<uint32_t>(descriptorSetLayouts.size()),
+            descriptorSetLayouts.data(),
+            static_cast<uint32_t>(pushConstantRanges.size()),
+            pushConstantRanges.data()
+        );
+
         RT::CreateGraphicPipelineOptions graphicPipelineOptions{};
         graphicPipelineOptions.cullMode = VK_CULL_MODE_BACK_BIT;
-        graphicPipelineOptions.pushConstantRanges = pushConstantRanges.data();
-        // TODO Probably we need to make pushConstantsRangeCount uint32_t
-        graphicPipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
 
-        mPointLightShadowPipeline = RF::CreatePipeline(
+        mPointLightShadowPipeline = RF::CreateGraphicPipeline(
             mPointLightShadowRenderPass->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),
-            static_cast<uint32_t>(mDescriptorSetLayouts.size()),
-            mDescriptorSetLayouts.data(),
+            pipelineLayout,
             1,
             &vertexInputBindingDescription,
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
@@ -1344,88 +1290,76 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createDepthPassPipeline()
+    void PBRWithShadowPipelineV2::createDepthPassPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts)
     {
         // Vertex shader
         RF_CREATE_SHADER("shaders/depth_pre_pass/DepthPrePass.vert.spv", Vertex)
-        RF_CREATE_SHADER("shaders/depth_pre_pass/DepthPrePass.frag.spv", Fragment)
+        
+        std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get() };
 
-        std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuFragmentShader.get() };
+        std::vector<VkVertexInputBindingDescription> bindingDescriptions {};
 
-        VkVertexInputBindingDescription vertexInputBindingDescription{};
-        vertexInputBindingDescription.binding = 0;
-        vertexInputBindingDescription.stride = sizeof(AS::PBR::Vertex);
-        vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        bindingDescriptions.emplace_back(VkVertexInputBindingDescription {
+            .binding = static_cast<uint32_t>(bindingDescriptions.size()),
+            .stride = sizeof(PBR_Variant::SkinnedVertex),
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+        });
+
+        bindingDescriptions.emplace_back(VkVertexInputBindingDescription {
+            .binding = static_cast<uint32_t>(bindingDescriptions.size()),
+            .stride = sizeof(PBR_Essence::VertexUVs),
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+        });
 
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
 
-        // Position
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
-            .format = VK_FORMAT_R32G32B32_SFLOAT,
-            .offset = offsetof(AS::PBR::Vertex, position),
-        });
-
-        // BaseColorUV
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
-            .format = VK_FORMAT_R32G32_SFLOAT,
-            .offset = offsetof(AS::PBR::Vertex, baseColorUV),
-        });
-
-        // HasSkin
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
-            .format = VK_FORMAT_R32_SINT,
-            .offset = offsetof(AS::PBR::Vertex, hasSkin), // TODO We should use a primitiveInfo instead
-        });
-
-        // JointIndices
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
-            .format = VK_FORMAT_R32G32B32A32_SINT,
-            .offset = offsetof(AS::PBR::Vertex, jointIndices),
-        });
-
-        // JointWeights
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
+        // WorldPosition
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
             .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-            .offset = offsetof(AS::PBR::Vertex, jointWeights),
+            .offset = offsetof(PBR_Variant::SkinnedVertex, worldPosition),
         });
 
+        // BaseColorUV
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 1,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = offsetof(PBR_Essence::VertexUVs, baseColorTexCoord)
+        });
+
+        // Pipeline layout
         std::vector<VkPushConstantRange> pushConstantRanges{};
         // Push constants  
         VkPushConstantRange pushConstantRange{
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
             .offset = 0,
             .size = sizeof(DepthPrePassPushConstants),
         };
         pushConstantRanges.emplace_back(pushConstantRange);
 
+        const auto pipelineLayout = RF::CreatePipelineLayout(
+            static_cast<uint32_t>(descriptorSetLayouts.size()),
+            descriptorSetLayouts.data(),
+            static_cast<uint32_t>(pushConstantRanges.size()),
+            pushConstantRanges.data()
+        );
+
         RT::CreateGraphicPipelineOptions graphicPipelineOptions{};
         graphicPipelineOptions.cullMode = VK_CULL_MODE_BACK_BIT;
         graphicPipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
-        graphicPipelineOptions.pushConstantRanges = pushConstantRanges.data();
-        // TODO Probably we need to make pushConstantsRangeCount uint32_t
-        graphicPipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
         graphicPipelineOptions.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
 
         graphicPipelineOptions.colorBlendAttachments.blendEnable = VK_FALSE;
 
-        mDepthPassPipeline = RF::CreatePipeline(
+        mDepthPassPipeline = RF::CreateGraphicPipeline(
             mDepthPrePass->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),
-            static_cast<uint32_t>(mDescriptorSetLayouts.size()),
-            mDescriptorSetLayouts.data(),
-            1,
-            &vertexInputBindingDescription,
+            pipelineLayout,
+            static_cast<uint32_t>(bindingDescriptions.size()),
+            bindingDescriptions.data(),
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
             inputAttributeDescriptions.data(),
             graphicPipelineOptions
@@ -1447,6 +1381,87 @@ namespace MFA
         }
     }
 
+        //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::createSkinningPerEssenceDescriptorSetLayout()
+    {
+        std::vector<VkDescriptorSetLayoutBinding> bindings{};
+
+        /////////////////////////////////////////////////////////////////
+        // Compute shader
+        /////////////////////////////////////////////////////////////////
+
+        // RawVertices
+        bindings.emplace_back(VkDescriptorSetLayoutBinding {
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+        });
+        
+        mSkinningPerEssenceDescriptorSetLayout = RF::CreateDescriptorSetLayout(
+            static_cast<uint8_t>(bindings.size()),
+            bindings.data()
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::createSkinningPerVariantDescriptorSetLayout()
+    {
+        std::vector<VkDescriptorSetLayoutBinding> bindings{};
+
+        /////////////////////////////////////////////////////////////////
+        // Compute shader
+        /////////////////////////////////////////////////////////////////
+
+        // SkinJoints
+        bindings.emplace_back(VkDescriptorSetLayoutBinding {
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+        });
+
+        // SkinnedVertices
+        bindings.emplace_back(VkDescriptorSetLayoutBinding {
+            .binding = static_cast<uint32_t>(bindings.size()),
+            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+        });
+
+        mSkinningPerVariantDescriptorSetLayout = RF::CreateDescriptorSetLayout(
+            static_cast<uint8_t>(bindings.size()),
+            bindings.data()
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBRWithShadowPipelineV2::createSkinningPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts)
+    {
+        RF_CREATE_SHADER("shaders/skinning/Skinning.comp.spv", Compute)
+
+        // Push constants  
+        std::vector<VkPushConstantRange> pushConstantRanges{};
+        VkPushConstantRange pushConstantRange{
+            .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+            .offset = 0,
+            .size = sizeof(SkinningPushConstants),
+        };
+        pushConstantRanges.emplace_back(pushConstantRange);
+
+        auto const pipelineLayout = RF::CreatePipelineLayout(
+            static_cast<uint32_t>(descriptorSetLayouts.size()),
+            descriptorSetLayouts.data(),
+            static_cast<uint32_t>(pushConstantRanges.size()),
+            pushConstantRanges.data()
+        );
+
+        mSkinningPipeline = RF::CreateComputePipeline(*gpuComputeShader, pipelineLayout);
+    }
+
     //-------------------------------------------------------------------------------------------------
 
     void PBRWithShadowPipelineV2::destroyOcclusionQueryPool()
@@ -1461,86 +1476,60 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBRWithShadowPipelineV2::createOcclusionQueryPipeline()
+    void PBRWithShadowPipelineV2::createOcclusionQueryPipeline(std::vector<VkDescriptorSetLayout> const & descriptorSetLayouts)
     {
         RF_CREATE_SHADER("shaders/occlusion_query/Occlusion.vert.spv", Vertex)
-        RF_CREATE_SHADER("shaders/occlusion_query/Occlusion.frag.spv", Fragment)
+        
+        std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get() };
 
-        std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuFragmentShader.get() };
+        std::vector<VkVertexInputBindingDescription> bindingDescriptions {};
 
-        VkVertexInputBindingDescription vertexInputBindingDescription{};
-        vertexInputBindingDescription.binding = 0;
-        vertexInputBindingDescription.stride = sizeof(AS::PBR::Vertex);
-        vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        bindingDescriptions.emplace_back(VkVertexInputBindingDescription {
+            .binding = static_cast<uint32_t>(bindingDescriptions.size()),
+            .stride = sizeof(AS::Debug::Vertex),
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+        });
 
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
 
         // Position
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
             .binding = 0,
             .format = VK_FORMAT_R32G32B32_SFLOAT,
-            .offset = offsetof(AS::PBR::Vertex, position),
+            .offset = offsetof(AS::Debug::Vertex, position),
         });
 
-        // BaseColorUV
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
-            .format = VK_FORMAT_R32G32_SFLOAT,
-            .offset = offsetof(AS::PBR::Vertex, baseColorUV),
-        });
-
-        // HasSkin
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
-            .format = VK_FORMAT_R32_SINT,
-            .offset = offsetof(AS::PBR::Vertex, hasSkin), // TODO We should use a primitiveInfo instead
-        });
-
-        // JointIndices
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
-            .format = VK_FORMAT_R32G32B32A32_SINT,
-            .offset = offsetof(AS::PBR::Vertex, jointIndices),
-        });
-
-        // JointWeights
-        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
-            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-            .binding = 0,
-            .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-            .offset = offsetof(AS::PBR::Vertex, jointWeights),
-        });
-
+        // Pipeline layout
         std::vector<VkPushConstantRange> pushConstantRanges{};
-        // Model data  
         VkPushConstantRange pushConstantRange{
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
             .offset = 0,
             .size = sizeof(OcclusionPassPushConstants),
         };
         pushConstantRanges.emplace_back(pushConstantRange);
 
+        const auto pipelineLayout = RF::CreatePipelineLayout(
+            static_cast<uint32_t>(descriptorSetLayouts.size()),
+            descriptorSetLayouts.data(),
+            static_cast<uint32_t>(pushConstantRanges.size()),
+            pushConstantRanges.data()
+        );
+
         RT::CreateGraphicPipelineOptions graphicPipelineOptions{};
-        graphicPipelineOptions.cullMode = VK_CULL_MODE_BACK_BIT;
+        graphicPipelineOptions.cullMode = VK_CULL_MODE_NONE;
         graphicPipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
-        graphicPipelineOptions.pushConstantRanges = pushConstantRanges.data();
-        // TODO Probably we need to make pushConstantsRangeCount uint32_t
-        graphicPipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
         graphicPipelineOptions.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
         graphicPipelineOptions.depthStencil.depthWriteEnable = VK_FALSE;
+        graphicPipelineOptions.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
-        mOcclusionQueryPipeline = RF::CreatePipeline(
+        mOcclusionQueryPipeline = RF::CreateGraphicPipeline(
             mOcclusionRenderPass->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),
-            static_cast<uint32_t>(mDescriptorSetLayouts.size()),
-            mDescriptorSetLayouts.data(),
-            1,
-            &vertexInputBindingDescription,
+            pipelineLayout,
+            static_cast<uint32_t>(bindingDescriptions.size()),
+            bindingDescriptions.data(),
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
             inputAttributeDescriptions.data(),
             graphicPipelineOptions
@@ -1551,7 +1540,7 @@ namespace MFA
 
     void PBRWithShadowPipelineV2::createUniformBuffers()
     {
-        mErrorBuffer = RF::CreateUniformBuffer(sizeof(PBR_Variant::JointTransformData), 1);
+        mErrorBuffer = RF::CreateLocalUniformBuffer(sizeof(PBR_Variant::JointTransformData), 1);
     }
 
     //-------------------------------------------------------------------------------------------------

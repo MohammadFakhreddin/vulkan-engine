@@ -2,7 +2,7 @@
 
 #include "engine/entity_system/Component.hpp"
 
-#include <mat4x4.hpp>
+#include <glm/mat4x4.hpp>
 
 namespace MFA
 {
@@ -22,9 +22,9 @@ namespace MFA
         explicit DirectionalLightComponent();
         ~DirectionalLightComponent() override;
 
-        void init() override;
+        void Init() override;
 
-        void shutdown() override;
+        void Shutdown() override;
         
         void GetShadowViewProjectionMatrix(float outViewProjectionMatrix[16]) const;
 

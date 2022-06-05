@@ -63,9 +63,9 @@ void MFA::VariantBase::Init(
         }
     );
 
-    MFA_ASSERT(boundingVolumeComponent.expired() == false);
+    // Optional: Can be null
     mBoundingVolumeComponent = boundingVolumeComponent;
-
+    
     internalInit();
 }
 
@@ -89,7 +89,7 @@ void MFA::VariantBase::Shutdown()
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::EssenceBase const * MFA::VariantBase::GetEssence() const noexcept
+MFA::EssenceBase const * MFA::VariantBase::getEssence() const noexcept
 {
     return mEssence;
 }
@@ -99,32 +99,6 @@ MFA::EssenceBase const * MFA::VariantBase::GetEssence() const noexcept
 MFA::RenderTypes::VariantId MFA::VariantBase::GetId() const noexcept
 {
     return mId;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-MFA::RenderTypes::DescriptorSetGroup const & MFA::VariantBase::CreateDescriptorSetGroup(
-    VkDescriptorPool descriptorPool,
-    uint32_t descriptorSetCount,
-    RT::DescriptorSetLayoutGroup const & descriptorSetLayout
-)
-{
-    MFA_ASSERT(mDescriptorSetGroup.IsValid() == false);
-    mDescriptorSetGroup = RF::CreateDescriptorSets(
-        descriptorPool,
-        descriptorSetCount,
-        descriptorSetLayout
-    );
-    MFA_ASSERT(mDescriptorSetGroup.IsValid() == true);
-    return mDescriptorSetGroup;
-}
-
-//-------------------------------------------------------------------------------------------------
-
-MFA::RenderTypes::DescriptorSetGroup const & MFA::VariantBase::GetDescriptorSetGroup() const
-{
-    MFA_ASSERT(mDescriptorSetGroup.IsValid() == true);
-    return mDescriptorSetGroup;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -161,14 +135,21 @@ MFA::Entity * MFA::VariantBase::GetEntity() const
 
 bool MFA::VariantBase::IsVisible() const
 {
-    return IsActive() && mIsOccluded == false && IsInFrustum();
+    return IsActive() && IsOccluded() == false && IsInFrustum();
 }
 
 //-------------------------------------------------------------------------------------------------
 
 bool MFA::VariantBase::IsOccluded() const
 {
-    return mIsOccluded;
+    if (auto const ptr = mBoundingVolumeComponent.lock())
+    {
+        if (ptr->OcclusionEnabled())
+        {
+            return mIsOccluded;
+        }
+    }
+    return false;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -180,9 +161,9 @@ void MFA::VariantBase::SetIsOccluded(bool const isOccluded)
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::BoundingVolumeComponent * MFA::VariantBase::GetBoundingVolume() const
+std::shared_ptr<MFA::BoundingVolumeComponent> MFA::VariantBase::GetBoundingVolume() const
 {
-    return mBoundingVolumeComponent.lock().get();
+    return mBoundingVolumeComponent.lock();
 }
 
 //-------------------------------------------------------------------------------------------------

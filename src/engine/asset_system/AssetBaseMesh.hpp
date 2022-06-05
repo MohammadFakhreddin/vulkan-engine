@@ -16,11 +16,7 @@ namespace MFA::AssetSystem
 
     public:
 
-        explicit MeshBase(
-            uint32_t vertexBufferCount_ = 1,
-            bool keepVertexStagingBuffer_ = false,
-            bool keepIndexStagingBuffer_ = false
-        );
+        explicit MeshBase();
         ~MeshBase() override;
 
         MeshBase(MeshBase const &) noexcept = delete;
@@ -41,29 +37,24 @@ namespace MFA::AssetSystem
         uint32_t getVertexCount() const;
 
         [[nodiscard]]
-        SmartBlob const * getVertexBuffer() const;
+        SmartBlob const * getVertexData() const;
 
         [[nodiscard]]
         uint32_t getIndexCount() const;
 
         [[nodiscard]]
-        SmartBlob const * getIndexBuffer() const;
+        SmartBlob const * getIndexData() const;
 
         [[nodiscard]]
         virtual bool isValid() const;
-
-        // Vertex buffer count required for gpu model
-        uint32_t const requiredVertexBufferCount;
-        bool keepVertexStagingBuffer = false;
-        bool keepIndexStagingBuffer = false;
-
+        
     protected:
 
         uint32_t mVertexCount{};
-        std::shared_ptr<SmartBlob> mVertexBuffer{}; // TODO: We should separate vertexBuffer and index buffer because most of the time we need them only to create gpu buffers
+        std::shared_ptr<SmartBlob> mVertexData{}; // TODO: We should separate vertexBuffer and index buffer because most of the time we need them only to create gpu buffers
 
         uint32_t mIndexCount{};
-        std::shared_ptr<SmartBlob> mIndexBuffer{};
+        std::shared_ptr<SmartBlob> mIndexData{};
 
     };
     

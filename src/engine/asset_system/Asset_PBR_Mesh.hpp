@@ -36,6 +36,7 @@ namespace MFA::AssetSystem::PBR
         uint32_t indicesCount = 0;
         uint64_t verticesOffset = 0;                // From start of buffer
         uint64_t indicesOffset = 0;
+        uint32_t verticesStartingIndex = 0;
         uint32_t indicesStartingIndex = 0;          // From start of buffer
 
         // TODO Separate material
@@ -262,7 +263,8 @@ namespace MFA::AssetSystem::PBR
 
         uint64_t mNextVertexOffset{};
         uint64_t mNextIndexOffset{};
-        uint32_t mNextStartingIndex{};
+        uint32_t mIndicesStartingIndex{};
+        uint32_t mVerticesStartingIndex{};
 
     };
 }

@@ -41,7 +41,14 @@ namespace MFA::RenderBackend
     {
         if (result != VK_SUCCESS)
         {
-            MFA_CRASH(("Vulkan command failed with code:" + std::to_string(result)));
+            char buffer[100] {};
+            auto const length = sprintf(
+                buffer,
+                "Vulkan command failed with code: %i",
+                static_cast<int>(result)
+            );
+            auto const message = std::string(buffer, length); 
+            MFA_CRASH("%s", message.c_str());
         }
     }
 
@@ -56,8 +63,17 @@ namespace MFA::RenderBackend
         }
     }
 
+    static void SDL_CheckForError()
+    {
+        std::string error = MSDL::SDL_GetError();
+        if (error.empty() == false) {
+            MFA_LOG_ERROR("SDL Error: %s", error.c_str());
+        }
+    }
+
     //-------------------------------------------------------------------------------------------------
 
+    // TODO: Ask for full-screen
     MSDL::SDL_Window * CreateWindow(ScreenWidth const screenWidth, ScreenHeight const screenHeight)
     {
         MSDL::SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
@@ -69,6 +85,7 @@ namespace MFA::RenderBackend
             screenWidth, screenHeight,
             MSDL::SDL_WINDOW_SHOWN /*| SDL_WINDOW_FULLSCREEN */ | MSDL::SDL_WINDOW_VULKAN
         );
+        SDL_CheckForError();
         return window;
     }
 
@@ -78,6 +95,7 @@ namespace MFA::RenderBackend
     {
         MFA_ASSERT(window != nullptr);
         MSDL::SDL_DestroyWindow(window);
+        SDL_CheckForError();
     }
 #endif
 
@@ -250,6 +268,7 @@ namespace MFA::RenderBackend
         std::vector<char const *> instanceExtensions{};
 
 #ifdef __DESKTOP__
+        MFA_ASSERT(window != nullptr);
         {// Filling sdl extensions
             unsigned int sdl_extenstion_count = 0;
             SDL_Check(MSDL::SDL_Vulkan_GetInstanceExtensions(window, &sdl_extenstion_count, nullptr));
@@ -310,7 +329,7 @@ namespace MFA::RenderBackend
             .ppEnabledLayerNames = nullptr,
 #endif
             .enabledExtensionCount = static_cast<uint32_t>(instanceExtensions.size()),
-                .ppEnabledExtensionNames = instanceExtensions.data()
+            .ppEnabledExtensionNames = instanceExtensions.data()
         };
         VkInstance instance = nullptr;
         VK_Check(vkCreateInstance(&instanceInfo, nullptr, &instance));
@@ -440,14 +459,14 @@ namespace MFA::RenderBackend
 
     //-------------------------------------------------------------------------------------------------
 
-    VkCommandBuffer BeginSingleTimeCommand(VkDevice device, VkCommandPool const & command_pool)
+    VkCommandBuffer BeginSingleTimeCommand(VkDevice device, VkCommandPool const & commandPool)
     {
         MFA_ASSERT(device != nullptr);
 
         VkCommandBufferAllocateInfo allocate_info{};
         allocate_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocate_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocate_info.commandPool = command_pool;
+        allocate_info.commandPool = commandPool;
         allocate_info.commandBufferCount = 1;
 
         VkCommandBuffer commandBuffer;
@@ -467,7 +486,7 @@ namespace MFA::RenderBackend
     void EndAndSubmitSingleTimeCommand(
         VkDevice device,
         VkCommandPool const & commandPool,
-        VkQueue const & graphicQueue,
+        VkQueue const & queue,
         VkCommandBuffer const & commandBuffer
     )
     {
@@ -477,12 +496,8 @@ namespace MFA::RenderBackend
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers = &commandBuffer;
-    #ifdef __ANDROID__
-        VK_Check(vkQueueSubmit(graphicQueue, 1, &submit_info, 0));
-    #else
-        VK_Check(vkQueueSubmit(graphicQueue, 1, &submit_info, nullptr));
-    #endif
-        VK_Check(vkQueueWaitIdle(graphicQueue));
+        VK_Check(vkQueueSubmit(queue, 1, &submit_info, VK_NULL));
+        VK_Check(vkQueueWaitIdle(queue));
 
         vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
     }
@@ -647,12 +662,33 @@ namespace MFA::RenderBackend
         VK_Check(vkAllocateMemory(device, &memoryAllocationInfo, nullptr, &memory));
         VK_Check(vkBindBufferMemory(device, buffer, memory, 0));
 
-        return std::make_shared<RT::BufferAndMemory>(buffer, memory);
+        return std::make_shared<RT::BufferAndMemory>(buffer, memory, size);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void MapDataToBuffer(
+    void MapHostVisibleMemory(
+        VkDevice device,
+        VkDeviceMemory bufferMemory,
+        size_t const offset,
+        size_t const size,
+        void ** outBufferData
+    )
+    {
+        MFA_ASSERT(*outBufferData == nullptr);
+        VK_Check(vkMapMemory(device, bufferMemory, offset, size, 0, outBufferData));
+        MFA_ASSERT(*outBufferData != nullptr);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void UnMapHostVisibleMemory(VkDevice device, VkDeviceMemory bufferMemory) {
+        vkUnmapMemory(device, bufferMemory);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void CopyDataToHostVisibleBuffer(
         VkDevice device,
         VkDeviceMemory bufferMemory,
         CBlob const dataBlob
@@ -661,36 +697,15 @@ namespace MFA::RenderBackend
         MFA_ASSERT(dataBlob.ptr != nullptr);
         MFA_ASSERT(dataBlob.len > 0);
         void * tempBufferData = nullptr;
-        VK_Check(vkMapMemory(device, bufferMemory, 0, dataBlob.len, 0, &tempBufferData));
-        MFA_ASSERT(tempBufferData != nullptr);
-        ::memcpy(tempBufferData, dataBlob.ptr, dataBlob.len);
-        vkUnmapMemory(device, bufferMemory);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyBuffer(
-        VkDevice device,
-        VkCommandPool commandPool,
-        VkQueue graphicQueue,
-        VkBuffer sourceBuffer,
-        VkBuffer destinationBuffer,
-        VkDeviceSize const size
-    )
-    {
-        auto * commandBuffer = BeginSingleTimeCommand(device, commandPool);
-
-        VkBufferCopy copyRegion{};
-        copyRegion.size = size;
-        vkCmdCopyBuffer(
-            commandBuffer,
-            sourceBuffer,
-            destinationBuffer,
-            1,
-            &copyRegion
+        MapHostVisibleMemory(
+            device,
+            bufferMemory,
+            0,
+            dataBlob.len,
+            &tempBufferData
         );
-
-        EndAndSubmitSingleTimeCommand(device, commandPool, graphicQueue, commandBuffer);
+        ::memcpy(tempBufferData, dataBlob.ptr, dataBlob.len);
+        UnMapHostVisibleMemory(device, bufferMemory);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -800,16 +815,16 @@ namespace MFA::RenderBackend
             auto const buffer = cpuTexture.GetBuffer();
             MFA_ASSERT(buffer.ptr != nullptr && buffer.len > 0);
             // Create upload buffer
-            auto const uploadBufferGroup = CreateBuffer(
+            auto const uploadBufferGroup = CreateBuffer(    // TODO: We can cache this buffer
                 device,
                 physicalDevice,
                 buffer.len,
                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
             );
-            //MFA_DEFER{ DestroyBuffer(device, uploadBufferGroup); };
+
             // Map texture data to buffer
-            MapDataToBuffer(device, uploadBufferGroup->memory, buffer);
+            CopyDataToHostVisibleBuffer(device, uploadBufferGroup->memory, buffer);
 
             auto const vulkan_format = ConvertCpuTextureFormatToGpu(format);
 
@@ -1046,6 +1061,7 @@ namespace MFA::RenderBackend
         enabledExtensionNames.emplace_back("VK_KHR_portability_subset");
     #endif
         enabledExtensionNames.emplace_back(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME);
+        enabledExtensionNames.emplace_back(VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME);
         deviceCreateInfo.ppEnabledExtensionNames = enabledExtensionNames.data();
         deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensionNames.size());
         // Necessary for shader (for some reason)
@@ -1771,7 +1787,8 @@ namespace MFA::RenderBackend
     {
         MFA_ASSERT(device != nullptr);
         std::shared_ptr<RT::GpuShader> gpuShader = nullptr;
-        if (cpuShader->isValid())
+        MFA_ASSERT(cpuShader != nullptr);
+        if (MFA_VERIFY(cpuShader->isValid()))
         {
             auto const & shaderCode = cpuShader->compiledShaderCode->memory;
 
@@ -1803,7 +1820,30 @@ namespace MFA::RenderBackend
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<RT::PipelineGroup> CreatePipelineGroup(
+    VkPipelineLayout CreatePipelineLayout(
+        VkDevice device,
+        uint32_t setLayoutCount,
+        const VkDescriptorSetLayout * pSetLayouts,
+        uint32_t pushConstantRangeCount,
+        const VkPushConstantRange * pPushConstantRanges
+    )
+    {
+        VkPipelineLayoutCreateInfo createInfo = {};
+        createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        createInfo.setLayoutCount = setLayoutCount;
+        createInfo.pSetLayouts = pSetLayouts; // Array of descriptor set layout, Order matter when more than 1
+        createInfo.pushConstantRangeCount = pushConstantRangeCount;
+        createInfo.pPushConstantRanges = pPushConstantRanges;
+
+        VkPipelineLayout pipelineLayout{};
+        VK_Check(vkCreatePipelineLayout(device, &createInfo, nullptr, &pipelineLayout));
+
+        return pipelineLayout;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<RT::PipelineGroup> CreateGraphicPipeline(
         VkDevice device,
         uint8_t shaderStagesCount,
         RT::GpuShader const ** shaderStages,
@@ -1813,14 +1853,13 @@ namespace MFA::RenderBackend
         VkVertexInputAttributeDescription * attributeDescriptionData,
         VkExtent2D swapChainExtent,
         VkRenderPass renderPass,
-        uint32_t descriptorSetLayoutCount,
-        VkDescriptorSetLayout const * descriptorSetLayouts,
+        VkPipelineLayout pipelineLayout,
         RT::CreateGraphicPipelineOptions const & options
     )
     {
         MFA_ASSERT(shaderStages);
         MFA_ASSERT(renderPass);
-        MFA_ASSERT(descriptorSetLayouts);
+        MFA_ASSERT(pipelineLayout);
         // Set up shader stage info
         std::vector<VkPipelineShaderStageCreateInfo> shaderStagesCreateInfos(shaderStagesCount);
         for (uint8_t i = 0; i < shaderStagesCount; i++)
@@ -1910,18 +1949,6 @@ namespace MFA::RenderBackend
         color_blend_create_info.blendConstants[2] = 0.0f;
         color_blend_create_info.blendConstants[3] = 0.0f;
 
-        MFA_LOG_INFO("Created descriptor layout");
-
-        VkPipelineLayoutCreateInfo layout_create_info = {};
-        layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        layout_create_info.setLayoutCount = descriptorSetLayoutCount;
-        layout_create_info.pSetLayouts = descriptorSetLayouts; // Array of descriptor set layout, Order matter when more than 1
-        layout_create_info.pushConstantRangeCount = options.pushConstantsRangeCount;
-        layout_create_info.pPushConstantRanges = options.pushConstantRanges;
-
-        VkPipelineLayout pipelineLayout{};
-        VK_Check(vkCreatePipelineLayout(device, &layout_create_info, nullptr, &pipelineLayout));
-
         VkPipelineDynamicStateCreateInfo * dynamicStateCreateInfoRef = nullptr;
         VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo{};
         std::vector<VkDynamicState> dynamicStates{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
@@ -1961,29 +1988,56 @@ namespace MFA::RenderBackend
         pipelineCreateInfo.pDynamicState = dynamicStateCreateInfoRef;
 
         VkPipeline pipeline{};
-    #ifdef __ANDROID__
         VK_Check(vkCreateGraphicsPipelines(
             device,
-            0,
+            VK_NULL,
             1,
             &pipelineCreateInfo,
             nullptr,
             &pipeline
         ));
-    #else
-        VK_Check(vkCreateGraphicsPipelines(
+
+        auto pipelineGroup = std::make_shared<RT::PipelineGroup>(
+            pipelineLayout,
+            pipeline
+        );
+        MFA_ASSERT(pipelineGroup->isValid());
+
+        return pipelineGroup;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<RT::PipelineGroup> CreateComputePipeline(
+        VkDevice device,
+        RT::GpuShader const & shaderStage,
+        VkPipelineLayout pipelineLayout
+    )
+    {
+        VkPipelineShaderStageCreateInfo const shaderStageCreateInfo {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+            .stage = shaderStage.stageFlags,
+            .module = shaderStage.shaderModule,
+            .pName = shaderStage.entryPointName.c_str()
+        };
+
+        VkComputePipelineCreateInfo const pipelineCreateInfo {
+            .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+            .stage = shaderStageCreateInfo,
+            .layout = pipelineLayout
+        };
+
+        VkPipeline pipeline{};
+        VK_Check(vkCreateComputePipelines(
             device,
-            nullptr,
+            VK_NULL,
             1,
             &pipelineCreateInfo,
-            nullptr,
+            VK_NULL,
             &pipeline
         ));
-    #endif
 
-        MFA_LOG_INFO("Created graphics pipeline");
-
-        auto const pipelineGroup = std::make_shared<RT::PipelineGroup>(
+        auto pipelineGroup = std::make_shared<RT::PipelineGroup>(
             pipelineLayout,
             pipeline
         );
@@ -2083,6 +2137,8 @@ namespace MFA::RenderBackend
             return VK_SHADER_STAGE_FRAGMENT_BIT;
         case AssetSystem::Shader::Stage::Geometry:
             return VK_SHADER_STAGE_GEOMETRY_BIT;
+        case AS::Shader::Stage::Compute:
+            return VK_SHADER_STAGE_COMPUTE_BIT;
         case AssetSystem::Shader::Stage::Invalid:
         default:
             MFA_CRASH("Unhandled shader stage");
@@ -2091,185 +2147,57 @@ namespace MFA::RenderBackend
 
     //-------------------------------------------------------------------------------------------------
 
-    void CreateVertexBuffer(
-        VkDevice device,
-        VkPhysicalDevice physicalDevice,
-        VkCommandPool commandPool,
-        VkQueue graphicQueue,
-        CBlob const & verticesBlob,
-        std::shared_ptr<RT::BufferAndMemory> & outVertexBuffer,
-        std::shared_ptr<RT::BufferAndMemory> & inOutStagingBuffer
+    static void copyBuffer(
+        VkCommandBuffer commandBuffer,
+        VkBuffer sourceBuffer,
+        VkBuffer destinationBuffer,
+        VkDeviceSize const size
     )
     {
-        VkDeviceSize const bufferSize = verticesBlob.len;
+        VkBufferCopy const copyRegion{
+            .size = size
+        };
 
-        if (inOutStagingBuffer == nullptr)
-        {
-            inOutStagingBuffer = CreateBuffer(
-                device,
-                physicalDevice,
-                bufferSize,
-                VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-            );
-        }
-
-        MapDataToBuffer(device, inOutStagingBuffer->memory, verticesBlob);
-
-        outVertexBuffer = CreateBuffer(
-            device,
-            physicalDevice,
-            bufferSize,
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-        );
-
-        CopyBuffer(
-            device,
-            commandPool,
-            graphicQueue,
-            inOutStagingBuffer->buffer,
-            outVertexBuffer->buffer,
-            bufferSize
+        vkCmdCopyBuffer(
+            commandBuffer,
+            sourceBuffer,
+            destinationBuffer,
+            1,
+            &copyRegion
         );
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void UpdateVertexBuffer(
-        VkDevice device,
-        VkCommandPool commandPool,
-        VkQueue graphicQueue,
-        CBlob const & verticesBlob,
-        RT::BufferAndMemory const & vertexBuffer,
+    void UpdateLocalBuffer(
+        VkCommandBuffer commandBuffer,
+        RT::BufferAndMemory const & buffer,
         RT::BufferAndMemory const & stagingBuffer
     )
     {
-        VkDeviceSize const bufferSize = verticesBlob.len;
-
-        MapDataToBuffer(device, stagingBuffer.memory, verticesBlob);
-
-        CopyBuffer(
-            device,
-            commandPool,
-            graphicQueue,
+        MFA_ASSERT(buffer.size == stagingBuffer.size);
+        copyBuffer(
+            commandBuffer,
             stagingBuffer.buffer,
-            vertexBuffer.buffer,
-            bufferSize
+            buffer.buffer,
+            buffer.size
         );
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void CreateIndexBuffer(
-        VkDevice device,
-        VkPhysicalDevice physicalDevice,
-        VkCommandPool commandPool,
-        VkQueue graphicQueue,
-        CBlob const & indicesBlob,
-        std::shared_ptr<RT::BufferAndMemory> & outIndexBuffer,
-        std::shared_ptr<RT::BufferAndMemory> & inOutStagingIndexBuffer
-    )
-    {
-        auto const bufferSize = indicesBlob.len;
-
-        if (inOutStagingIndexBuffer == nullptr)
-        {
-            inOutStagingIndexBuffer = CreateBuffer(
-                device,
-                physicalDevice,
-                bufferSize,
-                VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-            );
-        }
-
-        MapDataToBuffer(device, inOutStagingIndexBuffer->memory, indicesBlob);
-
-        outIndexBuffer = CreateBuffer(
-            device,
-            physicalDevice,
-            bufferSize,
-            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-        );
-
-        CopyBuffer(
-            device,
-            commandPool,
-            graphicQueue,
-            inOutStagingIndexBuffer->buffer,
-            outIndexBuffer->buffer,
-            bufferSize
-        );
-    }
-
-    //-------------------------------------------------------------------------------------------------
-    /* About HOST_VISIBLE_BIT
-     * It might be useful for things that are only updated by the CPU once per frame,
-     * but used by the GPU many times per frame. If something, that is updated by the CPU,
-     * is only used once by the GPU, you might as well let the GPU fetch it from system memory.
-     * The alternate would be to have a CPU buffer and a GPU buffer and used a transfer command to move data from one to the other.
-     */
-
-    void CreateUniformBuffer(
-        VkDevice device,
-        VkPhysicalDevice physicalDevice,
-        uint32_t const buffersCount,
-        VkDeviceSize const buffersSize,
-        std::shared_ptr<RT::BufferAndMemory> *outBuffers
-    )
-    {
-        for (uint32_t index = 0; index < buffersCount; index++)
-        {
-            outBuffers[index] = CreateBuffer(
-                device,
-                physicalDevice,
-                buffersSize,
-                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                // TODO: I believe that we should no use host visible bit for everything,
-                // Based on frequency we should decide where to have HOST_VISIBLE_Buffer or staging buffer
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT             
-            );
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void UpdateBuffer(
+    void UpdateHostVisibleBuffer(
         VkDevice device,
         RT::BufferAndMemory const & bufferGroup,
-        CBlob const data
+        CBlob const & data
     )
     {
-        MapDataToBuffer(device, bufferGroup.memory, data);
+        CopyDataToHostVisibleBuffer(device, bufferGroup.memory, data);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void CreateStorageBuffer(
-        VkDevice device,
-        VkPhysicalDevice physicalDevice,
-        uint32_t const buffersCount,
-        VkDeviceSize const buffersSize,
-        std::shared_ptr<RT::BufferAndMemory> *outStorageBuffer
-    )
-    {
-        MFA_ASSERT(outStorageBuffer != nullptr);
-        for (uint32_t index = 0; index < buffersCount; index++)
-        {
-            outStorageBuffer[index] = CreateBuffer(
-                device,
-                physicalDevice,
-                buffersSize,
-                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-            );
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
+    // TODO: We need to ask for pool sizes instead
     VkDescriptorPool CreateDescriptorPool(
         VkDevice device,
         uint32_t const maxSets
@@ -2564,26 +2492,16 @@ namespace MFA::RenderBackend
     {
         MFA_ASSERT(device != nullptr);
         MFA_VK_VALID_ASSERT(imageAvailabilitySemaphore);
-    #ifdef __ANDROID__
+
         return vkAcquireNextImageKHR(
             device,
             swapChainGroup.swapChain,
             UINT64_MAX,
             imageAvailabilitySemaphore,
-            0,
+            VK_NULL,
             &outImageIndex
         );
-    #else
-        return vkAcquireNextImageKHR(
-                device,
-                swapChainGroup.swapChain,
-                UINT64_MAX,
-                imageAvailabilitySemaphore,
-                nullptr,
-                &outImageIndex
-        );
-    #endif
-
+    
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -2661,26 +2579,6 @@ namespace MFA::RenderBackend
     {
         MFA_ASSERT(commandBuffer != nullptr);
         vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void PushConstants(
-        VkCommandBuffer command_buffer,
-        VkPipelineLayout pipeline_layout,
-        AssetSystem::ShaderStage const shader_stage,
-        uint32_t const offset,
-        CBlob const data
-    )
-    {
-        vkCmdPushConstants(
-            command_buffer,
-            pipeline_layout,
-            ConvertAssetShaderStageToGpu(shader_stage),
-            offset,
-            static_cast<uint32_t>(data.len),
-            data.ptr
-        );
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -2832,7 +2730,8 @@ namespace MFA::RenderBackend
         VkCommandBuffer commandBuffer,
         VkPipelineStageFlags sourceStageMask,
         VkPipelineStageFlags destinationStateMask,
-        VkBufferMemoryBarrier const & bufferMemoryBarrier
+        uint32_t const barrierCount,
+        VkBufferMemoryBarrier const * bufferMemoryBarrier
     )
     {
         vkCmdPipelineBarrier(
@@ -2842,8 +2741,8 @@ namespace MFA::RenderBackend
             0,
             0,
             nullptr,
-            1,
-            &bufferMemoryBarrier,
+            barrierCount,
+            bufferMemoryBarrier,
             0,
             nullptr
         );
@@ -2864,7 +2763,7 @@ namespace MFA::RenderBackend
     void SubmitQueues(
         VkQueue queue,
         uint32_t submitCount,
-        VkSubmitInfo * submitInfos,
+        const VkSubmitInfo * submitInfos,
         VkFence fence
     )
     {
@@ -3001,6 +2900,23 @@ namespace MFA::RenderBackend
     )
     {
         vkCmdResetQueryPool(commandBuffer, queryPool, firstQueryIndex, queryCount);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Dispatch(
+        VkCommandBuffer commandBuffer,
+        uint32_t const groupCountX,
+        uint32_t const groupCountY,
+        uint32_t const groupCountZ
+    )
+    {
+        vkCmdDispatch(
+            commandBuffer,
+            groupCountX,
+            groupCountY,
+            groupCountZ
+        );
     }
 
     //-------------------------------------------------------------------------------------------------

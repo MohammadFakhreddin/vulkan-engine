@@ -12,7 +12,7 @@ namespace MFA::UI_System
 
     bool Render(
         float deltaTimeInSec,
-        RT::CommandRecordState & drawPass
+        RT::CommandRecordState & recordState
     );
 
     void PostRender(float deltaTimeInSec);

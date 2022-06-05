@@ -53,14 +53,14 @@ void MFA::DepthPrePass::BeginRenderPass(RT::CommandRecordState & recordState)
         .height = surfaceCapabilities.currentExtent.height
     };
 
-    RF::AssignViewportAndScissorToCommandBuffer(RF::GetGraphicCommandBuffer(recordState), swapChainExtend);
+    RF::AssignViewportAndScissorToCommandBuffer(recordState.commandBuffer, swapChainExtend);
 
     std::vector<VkClearValue> clearValues{};
     clearValues.resize(1);
     clearValues[0].depthStencil = { .depth = 1.0f, .stencil = 0 };
 
     RF::BeginRenderPass(
-        RF::GetGraphicCommandBuffer(recordState),
+        recordState.commandBuffer,
         mRenderPass,
         getFrameBuffer(recordState),
         swapChainExtend,
@@ -75,7 +75,7 @@ void MFA::DepthPrePass::BeginRenderPass(RT::CommandRecordState & recordState)
 void MFA::DepthPrePass::EndRenderPass(RT::CommandRecordState & recordState)
 {
     RenderPass::EndRenderPass(recordState);
-    RF::EndRenderPass(RF::GetGraphicCommandBuffer(recordState));
+    RF::EndRenderPass(recordState.commandBuffer);
 }
 
 //-------------------------------------------------------------------------------------------------

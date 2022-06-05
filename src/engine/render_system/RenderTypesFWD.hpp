@@ -1,5 +1,8 @@
 #pragma once
 
+#include "engine/BedrockCommon.hpp"
+
+#include <cstdint>
 #include <functional>
 
 namespace MFA
@@ -24,7 +27,7 @@ namespace MFA
 
         struct SamplerGroup;
 
-        struct MeshBuffers;
+        //struct MeshBuffer;
 
         struct ImageGroup;
 
@@ -32,17 +35,13 @@ namespace MFA
 
         struct GpuTexture;
 
-        struct GpuModel;
+        //struct GpuModel;
 
         struct GpuShader;
 
         struct PipelineGroup;
 
         struct CommandRecordState;
-
-        struct UniformBufferGroup;
-
-        struct StorageBufferCollection;
 
         struct SwapChainGroup;
 
@@ -68,10 +67,12 @@ namespace MFA
         using ResizeEventListener = std::function<void()>;
 
         using VariantId = uint32_t;
-        
-        struct UniformBufferGroup;
 
         struct DescriptorSetLayoutGroup;
+
+        struct BufferGroup;
+        //struct StorageBufferGroup;
+        //struct UniformBufferGroup;
 
     };
 

@@ -23,6 +23,7 @@
 #include "tools/PrefabFileStorage.hpp"
 #include "engine/render_system/pipelines/particle/FireEssence.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
+#include "tools/Prefab.hpp"
 
 namespace MFA
 {
@@ -78,7 +79,7 @@ void Demo3rdPersonScene::Init()
             float eulerAngle[3]{ -15.0f, 0.0f, 0.0f };
             thirdPersonCamera->SetDistanceAndRotation(3.0f, eulerAngle);
 
-            thirdPersonCamera->init();
+            thirdPersonCamera->Init();
             EntitySystem::UpdateEntity(entity);
 
             mThirdPersonCamera = thirdPersonCamera;
@@ -86,6 +87,17 @@ void Demo3rdPersonScene::Init()
         }
         mPlayerMeshRenderer = entity->GetComponent<MeshRendererComponent>();
     }
+
+    //for (float i = 0; i < 10.0f; i += 1.0f) {// Dummy soldiers
+    //    for (float j = 0; j < 10.0f; j += 1.0f)
+    //    {
+    //        auto * entity = soldierPrefab.Clone(GetRootEntity(), Prefab::CloneEntityOptions {.name = "Soldier"});
+    //        auto const transform = entity->GetComponent<TransformComponent>().lock();
+    //        MFA_ASSERT(transform != nullptr);
+    //        float position[3]{ 0.0f + i, 2.0f, -5.0f + j };
+    //        transform->UpdatePosition(position);
+    //    }
+    //}
 
     {// Map
         auto * entity = sponzaPrefab.Clone(GetRootEntity(), Prefab::CloneEntityOptions {.name = "Sponza"});
@@ -96,6 +108,7 @@ void Demo3rdPersonScene::Init()
             float scale[3]{ 1.0f, 1.0f, 1.0f };
             ptr->UpdateTransform(position, eulerAngle, scale);
         }
+        entity->SetActive(true);
     }
     
     {// Directional light
@@ -130,15 +143,18 @@ void Demo3rdPersonScene::Init()
             particlePipeline->addEssence(
                 std::make_shared<FireEssence>(
                     "SponzaFire",
-                    RC::AcquireGpuTexture("images/fire/particle_fire.ktx"),
-                    FireEssence::Options {
-                        .particleMinLife = 0.2f,
-                        .particleMaxLife = 1.0f,
-                        .particleMinSpeed = 0.5f,
-                        .particleMaxSpeed = 1.0f,
-                        .fireRadius = 0.1f,
-                        .fireInitialPointSize = 300.0f,
-                        .particleCount = 256,
+                    100,   // TODO: Find a better number
+                    std::vector {RC::AcquireGpuTexture("images/fire/particle_fire.ktx")},
+                    MFA::FireParams {
+                        .initialPointSize = 300.0f
+                    },
+                    AS::Particle::Params {
+                        .count = 256,
+                        .minLife = 0.2f,
+                        .maxLife = 1.0f,
+                        .minSpeed = 0.5f,
+                        .maxSpeed = 1.0f,
+                        .radius = 0.1f,
                     }
                 )
             );
@@ -160,7 +176,8 @@ void Demo3rdPersonScene::Init()
                 );
                 entity->AddComponent<AxisAlignedBoundingBoxComponent>(
                     glm::vec3{ 0.0f, -0.3f, 0.0f },
-                    glm::vec3{ 0.2f, 0.4f, 0.2f }
+                    glm::vec3{ 0.4f, 0.8f, 0.4f },
+                    true
                 );
                 entity->AddComponent<ColorComponent>(glm::vec3{ 1.0f, 0.0f, 0.0f });
 
@@ -181,6 +198,7 @@ void Demo3rdPersonScene::Init()
 
     mDebugRenderPipeline = SceneManager::GetPipeline<DebugRendererPipeline>();
     MFA_ASSERT(mDebugRenderPipeline != nullptr);
+    mDebugRenderPipeline->changeActivationStatus(false);
 }
 
 //-------------------------------------------------------------------------------------------------

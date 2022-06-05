@@ -20,9 +20,9 @@ MFA::DirectionalLightComponent::~DirectionalLightComponent() = default;
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DirectionalLightComponent::init()
+void MFA::DirectionalLightComponent::Init()
 {
-    Component::init();
+    Component::Init();
 
     mTransformComponentRef = GetEntity()->GetComponent<TransformComponent>();
     MFA_ASSERT(mTransformComponentRef.expired() == false);
@@ -43,9 +43,9 @@ void MFA::DirectionalLightComponent::init()
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DirectionalLightComponent::shutdown()
+void MFA::DirectionalLightComponent::Shutdown()
 {
-    Component::shutdown();
+    Component::Shutdown();
     if (auto const mTransformComponent = mTransformComponentRef.lock())
     {
         mTransformComponent->UnRegisterChangeListener(mTransformChangeListenerId);

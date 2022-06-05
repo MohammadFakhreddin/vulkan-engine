@@ -1,5 +1,6 @@
 #pragma once
 
+#include "engine/entity_system/Component.hpp"
 #include "engine/entity_system/components/RendererComponent.hpp"
 
 namespace MFA
@@ -17,19 +18,15 @@ namespace MFA
         MFA_COMPONENT_PROPS(
             BoundingVolumeRendererComponent,
             FamilyType::BoundingVolumeRenderer,
-            EventTypes::InitEvent | EventTypes::ShutdownEvent | EventTypes::UpdateEvent
+            EventTypes::LateInitEvent | EventTypes::ShutdownEvent
         )
 
         explicit BoundingVolumeRendererComponent();
         explicit BoundingVolumeRendererComponent(DebugRendererPipeline & pipeline);
         ~BoundingVolumeRendererComponent() override;
 
-        void init() override;
-
-        void Update(float deltaTimeInSec) override;
-
-        void shutdown() override;
-
+        void LateInit() override;
+        
         void onUI() override;
 
         void serialize(nlohmann::json & jsonObject) const override;
@@ -39,10 +36,7 @@ namespace MFA
         void clone(Entity * entity) const override;
 
     private:
-
-        std::weak_ptr<BoundingVolumeComponent> mBoundingVolumeComponent {};
-        std::weak_ptr<TransformComponent> mRendererTransform {};
-    
+        
     };
 
 }

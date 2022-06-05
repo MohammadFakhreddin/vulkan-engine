@@ -13,7 +13,6 @@
 #include "engine/render_system/pipelines/debug_renderer/DebugEssence.hpp"
 #include "engine/render_system/pipelines/debug_renderer/DebugVariant.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
-#include "engine/job_system/JobSystem.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
 #include "engine/asset_system/AssetDebugMesh.hpp"
 #include "engine/asset_system/AssetModel.hpp"
@@ -49,7 +48,8 @@
 //	vks::initializers::vertexInputAttributeDescription(INSTANCE_BUFFER_BIND_ID, 7, VK_FORMAT_R32_SINT, sizeof(float) * 7),			// Location 7: Texture array layer index
 //};
 
-#define CAST_VARIANT(variant)  static_cast<DebugVariant *>(variant.get())
+#define CAST_VARIANT(variant)   static_cast<DebugVariant *>(variant.get())
+#define CAST_ESSENCE(essence)   static_cast<DebugEssence *>(essence.get())
 
 namespace MFA
 {
@@ -80,14 +80,14 @@ namespace MFA
         createPipeline();
         createDescriptorSets();
 
-        std::vector<std::string> const modelNames{ "Sphere", "Cube" };
+        std::vector<std::string> const modelNames{ "Sphere", "CubeStrip", "CubeFill" };
         for (auto const & modelName : modelNames)
         {
             auto const cpuModel = RC::AcquireCpuModel(modelName);
             MFA_ASSERT(cpuModel != nullptr);
-            auto const gpuModel = RC::AcquireGpuModel(modelName);
-            MFA_ASSERT(gpuModel != nullptr);
-            auto const addResult = addEssence(std::make_shared<DebugEssence>(gpuModel, cpuModel->mesh->getIndexCount()));
+            auto * debugMesh = dynamic_cast<Mesh *>(cpuModel->mesh.get());
+            MFA_ASSERT(debugMesh != nullptr);
+            auto const addResult = addEssence(std::make_shared<DebugEssence>(modelName, *debugMesh));
             MFA_ASSERT(addResult == true);
         }
     }
@@ -101,13 +101,13 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DebugRendererPipeline::render(RT::CommandRecordState & drawPass, float deltaTime)
+    void DebugRendererPipeline::render(RT::CommandRecordState & recordState, float deltaTime)
     {
-        RF::BindPipeline(drawPass, *mpipeline);
+        RF::BindPipeline(recordState, *mPipeline);
 
-        RF::BindDescriptorSet(
-            drawPass,
-            RenderFrontend::DescriptorSetType::PerFrame,
+        RF::AutoBindDescriptorSet(
+            recordState,
+            RenderFrontend::UpdateFrequency::PerFrame,
             mDescriptorSetGroup
         );
 
@@ -115,12 +115,11 @@ namespace MFA
 
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
-            auto & essence = essenceAndVariantList.second.essence;
+            auto const * essence = CAST_ESSENCE(essenceAndVariantList.second.essence);
             auto & variantsList = essenceAndVariantList.second.variants;
 
-            essence->bindVertexBuffer(drawPass);
-            essence->bindIndexBuffer(drawPass);
-
+            essence->bindForGraphicPipeline(recordState);
+            
             for (auto & variant : variantsList)
             {
                 if (variant->IsActive())
@@ -131,13 +130,13 @@ namespace MFA
                     debugVariant->getTransform(pushConstants.model);
 
                     RF::PushConstants(
-                        drawPass,
+                        recordState,
                         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                         0,
                         CBlobAliasOf(pushConstants)
                     );
 
-                    CAST_VARIANT(variant)->Draw(drawPass);
+                    CAST_VARIANT(variant)->Draw(recordState);
                 }
             }
         }
@@ -151,6 +150,13 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     void DebugRendererPipeline::freeUnusedEssences() {}
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::weak_ptr<DebugEssence> DebugRendererPipeline::GetEssence(std::string const & nameId)
+    {
+        return std::static_pointer_cast<DebugEssence>(BasePipeline::GetEssence(nameId));
+    }
 
     //-------------------------------------------------------------------------------------------------
 
@@ -196,10 +202,10 @@ namespace MFA
         // Vertex shader
         RF_CREATE_SHADER("shaders/debug_renderer/DebugRenderer.vert.spv", Vertex)
 
-            // Fragment shader
-            RF_CREATE_SHADER("shaders/debug_renderer/DebugRenderer.frag.spv", Fragment)
+        // Fragment shader
+        RF_CREATE_SHADER("shaders/debug_renderer/DebugRenderer.frag.spv", Fragment)
 
-            std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuFragmentShader.get() };
+        std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuFragmentShader.get() };
 
         VkVertexInputBindingDescription const bindingDescription{
             .binding = 0,
@@ -223,23 +229,26 @@ namespace MFA
         pipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();            // TODO Find a way to set sample count to 1. We only need MSAA for pbr-pipeline
         pipelineOptions.cullMode = VK_CULL_MODE_NONE;
         pipelineOptions.colorBlendAttachments.blendEnable = VK_FALSE;
-        std::vector<VkPushConstantRange> pushConstantRanges{
+
+        // pipeline layout
+        std::vector<VkPushConstantRange> const pushConstantRanges{
             VkPushConstantRange {
                 .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT,
                 .offset = 0,
                 .size = sizeof(PushConstants),
             }
         };
-        // TODO Make this variable uint32_t instead. There is no reason for saving memory here
-        pipelineOptions.pushConstantsRangeCount = static_cast<uint8_t>(pushConstantRanges.size());
-        pipelineOptions.pushConstantRanges = pushConstantRanges.data();
-
-        mpipeline = RF::CreatePipeline(
+        const auto pipelineLayout = RF::CreatePipelineLayout(
+            1,
+            &mDescriptorSetLayout->descriptorSetLayout,
+            static_cast<uint32_t>(pushConstantRanges.size()),
+            pushConstantRanges.data()
+        );
+        mPipeline = RF::CreateGraphicPipeline(
             RF::GetDisplayRenderPass()->GetVkRenderPass(),
             static_cast<uint8_t>(shaders.size()),
             shaders.data(),
-            1,
-            &mDescriptorSetLayout->descriptorSetLayout,
+            pipelineLayout,
             1,
             &bindingDescription,
             static_cast<uint8_t>(inputAttributeDescriptions.size()),
@@ -258,7 +267,7 @@ namespace MFA
             *mDescriptorSetLayout
         );
 
-        auto const & cameraBufferCollection = SceneManager::GetCameraBuffers();
+        auto const * cameraBufferGroup = SceneManager::GetCameraBuffers();
 
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
@@ -274,9 +283,9 @@ namespace MFA
 
             // ViewProjectionTransform
             VkDescriptorBufferInfo bufferInfo{
-                .buffer = cameraBufferCollection.buffers[frameIndex]->buffer,
+                .buffer = cameraBufferGroup->buffers[frameIndex]->buffer,
                 .offset = 0,
-                .range = cameraBufferCollection.bufferSize,
+                .range = cameraBufferGroup->bufferSize,
             };
             descriptorSetSchema.AddUniformBuffer(&bufferInfo);
 

@@ -30,9 +30,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::init()
+    void TransformComponent::Init()
     {
-        Component::init();
+        Component::Init();
 
         auto * parentEntity = GetEntity()->GetParent();
         if (parentEntity != nullptr)
@@ -52,15 +52,15 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::shutdown()
+    void TransformComponent::Shutdown()
     {
-        Component::shutdown();
+        Component::Shutdown();
         if (auto const parentTransformPtr = mParentTransform.lock())
         {
             parentTransformPtr->UnRegisterChangeListener(mParentTransformChangeListenerId);
         }
     }
-
+    
     //-------------------------------------------------------------------------------------------------
 
     void TransformComponent::UpdateTransform(float position[3], float rotation[3], float scale[3])
@@ -87,6 +87,8 @@ namespace MFA
         }
     }
 
+    //-------------------------------------------------------------------------------------------------
+
     void TransformComponent::UpdateTransform(
         glm::vec3 const & position,
         glm::vec3 const & rotation,
@@ -94,17 +96,17 @@ namespace MFA
     )
     {
         bool hasChanged = false;
-        if (mLocalPosition != position)
+        if (Matrix::IsEqual(mLocalPosition, position) == false)
         {
             mLocalPosition = position;
             hasChanged = true;
         }
-        if (mRotation != rotation)
+        if (Matrix::IsEqual(mRotation, rotation) == false)
         {
             mRotation = rotation;
             hasChanged = true;
         }
-        if (mScale != scale)
+        if (Matrix::IsEqual(mScale, scale) == false)
         {
             mScale = scale;
             hasChanged = true;

@@ -15,10 +15,10 @@
 #include "../src/libs/tiny_gltf_loader/tiny_gltf_loader.h"
 #define TINYKTX_IMPLEMENTATION 
 #include "../src/libs/tiny_ktx/tinyktx.h"
-#include "../src/Application.hpp"
-#include "engine/BedrockPath.hpp"
+#define VMA_IMPLEMENTATION
+#include "../src/libs/vma/vk_mem_alloc.h"
 
-#import <Foundation/Foundation.h>
+#include "../src/Application.hpp"
 
 #ifdef TECHDEMO
 #include "TechDemoApplication.hpp"
@@ -28,10 +28,6 @@ using TargetApplication = TechDemoApplication;
 #include "PrefabEditorApplication.hpp"
 using TargetApplication = PrefabEditorApplication;
 #endif
-
-std::string MFA::Path::GetAssetPath() {
-    return [NSBundle.mainBundle.resourcePath stringByAppendingString: @"/data/"].UTF8String;
-}
 
 int main(int argc, char* argv[]){
     TargetApplication app {};

@@ -58,7 +58,6 @@ void GLTFMeshViewerScene::Init() {
         }
         {
             ModelRenderRequiredData params {};
-            params.gpuModel = nullptr;
             params.displayName = "War-craft soldier";
             Path::ForReadWrite("models/warcraft_3_alliance_footmanfanmade/scene.gltf", params.address);
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {0.0f, -5.926f, -180.0f});
@@ -165,7 +164,7 @@ void GLTFMeshViewerScene::Init() {
             "Sphere"
         );
 
-        entity->AddComponent<SphereBoundingVolumeComponent>(0.1f);
+        entity->AddComponent<SphereBoundingVolumeComponent>(0.1f, true);
 
         EntitySystem::InitEntity(entity);
     }
@@ -183,6 +182,7 @@ void GLTFMeshViewerScene::Update(float const deltaTimeInSec)
 
     if (selectedModel.isLoaded == false) {
         createModel(selectedModel);
+        return;
     }
 
     if (mPreviousModelSelectedIndex != mSelectedModelIndex) {
@@ -275,46 +275,48 @@ bool GLTFMeshViewerScene::RequiresUpdate()
 
 void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredData) const
 {
-    auto const cpuModel = RC::AcquireCpuModel(renderRequiredData.address);
-    renderRequiredData.gpuModel = RC::AcquireGpuModel(renderRequiredData.address);
+    SceneManager::AssignMainThreadTask([this, &renderRequiredData]()->void{
 
-    auto * pbrPipeline = SceneManager::GetPipeline<PBRWithShadowPipelineV2>();
-    MFA_ASSERT(pbrPipeline != nullptr);
-    if(pbrPipeline->hasEssence(renderRequiredData.address) == false){
-        MFA_ASSERT(dynamic_cast<AS::PBR::Mesh *>(cpuModel->mesh.get()) != nullptr);
-        auto const * mesh = static_cast<AS::PBR::Mesh *>(cpuModel->mesh.get());
-        auto meshData = mesh->getMeshData();
-        MFA_ASSERT(meshData != nullptr);
-        auto const addResult = pbrPipeline->addEssence(
-            std::make_shared<PBR_Essence>(
-                renderRequiredData.gpuModel,
-                meshData
-            )
+        auto const cpuModel = RC::AcquireCpuModel(renderRequiredData.address);
+        
+        auto * pbrPipeline = SceneManager::GetPipeline<PBRWithShadowPipelineV2>();
+        MFA_ASSERT(pbrPipeline != nullptr);
+        if(pbrPipeline->hasEssence(renderRequiredData.address) == false){
+            MFA_ASSERT(dynamic_cast<AS::PBR::Mesh *>(cpuModel->mesh.get()) != nullptr);
+            auto const * mesh = static_cast<AS::PBR::Mesh *>(cpuModel->mesh.get());
+            auto const addResult = pbrPipeline->addEssence(
+                std::make_shared<PBR_Essence>(
+                    renderRequiredData.address,
+                    *mesh,
+                    RC::AcquireGpuTextures(cpuModel->textureIds)
+                )
+            );
+            MFA_ASSERT(addResult == true);
+        }
+        
+        auto * entity = EntitySystem::CreateEntity(renderRequiredData.displayName, GetRootEntity());
+        MFA_ASSERT(entity != nullptr);
+        renderRequiredData.entity = entity;
+
+        renderRequiredData.transformComponent = entity->AddComponent<TransformComponent>();
+        MFA_ASSERT(renderRequiredData.transformComponent.expired() == false);
+
+        renderRequiredData.meshRendererComponent = entity->AddComponent<MeshRendererComponent>(
+            *pbrPipeline,
+            renderRequiredData.address
         );
-        MFA_ASSERT(addResult == true);
-    }
-    
-    auto * entity = EntitySystem::CreateEntity(renderRequiredData.displayName, GetRootEntity());
-    MFA_ASSERT(entity != nullptr);
-    renderRequiredData.entity = entity;
+        MFA_ASSERT(renderRequiredData.meshRendererComponent.expired() == false);
 
-    renderRequiredData.transformComponent = entity->AddComponent<TransformComponent>();
-    MFA_ASSERT(renderRequiredData.transformComponent.expired() == false);
+        entity->AddComponent<AxisAlignedBoundingBoxComponent>(
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::vec3(100.0f, 100.0f, 100.0f),
+            true
+        );
+        
+        EntitySystem::InitEntity(entity);
 
-    renderRequiredData.meshRendererComponent = entity->AddComponent<MeshRendererComponent>(
-        *pbrPipeline,
-        renderRequiredData.gpuModel->nameOrAddress
-    );
-    MFA_ASSERT(renderRequiredData.meshRendererComponent.expired() == false);
-
-    entity->AddComponent<AxisAlignedBoundingBoxComponent>(
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(100.0f, 100.0f, 100.0f)
-    );
-    
-    EntitySystem::InitEntity(entity);
-
-    renderRequiredData.isLoaded = true;
+        renderRequiredData.isLoaded = true;
+    });
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -2,6 +2,7 @@
 
 #include "engine/BedrockAssert.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
+#include "engine/render_system/RenderBackend.hpp"
 
 namespace MFA
 {
@@ -90,7 +91,7 @@ namespace MFA
             .height = surfaceCapabilities.currentExtent.height
         };
 
-        RF::AssignViewportAndScissorToCommandBuffer(RF::GetGraphicCommandBuffer(recordState), swapChainExtend);
+        RF::AssignViewportAndScissorToCommandBuffer(recordState.commandBuffer, swapChainExtend);
 
         std::vector<VkClearValue> clearValues{};
         clearValues.resize(3);
@@ -99,7 +100,7 @@ namespace MFA
         clearValues[2].depthStencil = { .depth = 1.0f, .stencil = 0 };
 
         RF::BeginRenderPass(
-            RF::GetGraphicCommandBuffer(recordState),
+            recordState.commandBuffer,
             mVkDisplayRenderPass,
             getDisplayFrameBuffer(recordState),
             swapChainExtend,
@@ -118,7 +119,7 @@ namespace MFA
             return;
         }
 
-        RF::EndRenderPass(RF::GetGraphicCommandBuffer(recordState));
+        RF::EndRenderPass(recordState.commandBuffer);
 
         auto const presentQueueFamily = RF::GetPresentQueueFamily();
         auto const graphicQueueFamily = RF::GetGraphicQueueFamily();
@@ -147,7 +148,7 @@ namespace MFA
             drawToPresentBarrier.subresourceRange = subResourceRange;
 
             RF::PipelineBarrier(
-                RF::GetGraphicCommandBuffer(recordState),
+                recordState,
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                 VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                 1,
@@ -314,15 +315,11 @@ namespace MFA
         VkAttachmentDescription const depthAttachment{
             .format = RF::GetDepthFormat(),
             .samples = RF::GetMaxSamplesCount(),
-            .loadOp = /*mIsDepthImageInitialLayoutUndefined
-                ? VK_ATTACHMENT_LOAD_OP_CLEAR
-                : */VK_ATTACHMENT_LOAD_OP_LOAD,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
             .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            .initialLayout = /*mIsDepthImageInitialLayoutUndefined
-                ? VK_IMAGE_LAYOUT_UNDEFINED
-                : */VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+            .initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
             .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         };
 
@@ -447,7 +444,7 @@ namespace MFA
         };
 
         std::vector<VkImageMemoryBarrier> const barriers {imageBarrier};
-        RF::PipelineBarrier(
+        RB::PipelineBarrier(
             commandBuffer,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -462,8 +459,6 @@ namespace MFA
     {
         if (mIsDepthImageUndefined)
         {
-            const auto commandBuffer = RF::GetGraphicCommandBuffer(recordState);
-
             auto const & depthImage = mDepthImageGroupList[recordState.imageIndex];
             
             VkImageSubresourceRange const subResourceRange{
@@ -475,7 +470,7 @@ namespace MFA
             };
 
             changeDepthImageLayout(
-                commandBuffer,
+                recordState.commandBuffer,
                 *depthImage,
                 VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_GENERAL,
@@ -486,7 +481,7 @@ namespace MFA
 
             // TODO Move to RF or RB
             vkCmdClearDepthStencilImage(
-                RF::GetGraphicCommandBuffer(recordState),
+                recordState.commandBuffer,
                 depthImage->imageGroup->image,
                 VK_IMAGE_LAYOUT_GENERAL,
                 &depthStencil,
@@ -495,7 +490,7 @@ namespace MFA
             );
 
             changeDepthImageLayout(
-                commandBuffer,
+                recordState.commandBuffer,
                 *depthImage,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
@@ -515,7 +510,7 @@ namespace MFA
         std::vector<VkImageMemoryBarrier> const barriers {mPresentToDrawBarrier};
 
         RF::PipelineBarrier(
-            RF::GetGraphicCommandBuffer(recordState),
+            recordState,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             static_cast<uint32_t>(barriers.size()),

@@ -25,7 +25,7 @@ namespace MFA::Path
 
 #if defined(__PLATFORM_MAC__)
         stringSize = sprintf(addressBuffer, "%s/assets/", GetAssetPath().c_str());
-#elif defined(__PLATFORM_WIN__)
+#elif defined(__PLATFORM_WIN__) || defined(__PLATFORM_LINUX__)
         stringSize = sprintf(addressBuffer, "../assets/");
 #elif defined(__ANDROID__)
         stringSize = sprintf(addressBuffer, "");
@@ -63,23 +63,42 @@ namespace MFA::Path
 
     //-------------------------------------------------------------------------------------------------
 
-    bool RelativeToAssetFolder(std::string const & address, std::string & outRelativePath)
+    bool RelativeToAssetFolder(std::string const & address, std::string & outAddress)
     {
-        bool success = false;
-        static const std::regex addressRegex(".*address/.*");
-        if (std::regex_match(address.c_str(), addressRegex))
+        static const std::regex matchRegex(".*assets/.*");
+        static const std::regex replaceRegex(".*assets/");
+
+        if (std::regex_match(address.c_str(), matchRegex))
         {
-            outRelativePath = std::filesystem::relative(address, state->assetsPath).string();
-            success = true;
-            if (outRelativePath.empty())
-            {
-                success = false;
-            }
+            outAddress = std::regex_replace(address, replaceRegex, "");
+            return true;
         }
-        if (success == false){
-            outRelativePath = address;
-        }
-        return success;
+
+        outAddress = address;
+        return false;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::string RelativeToAssetFolder(std::string const & address)
+    {
+        std::string result {};
+        RelativeToAssetFolder(address, result);
+        return result;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::string ExtractDirectoryFromPath(std::string const & path)  {
+        MFA_ASSERT(path.empty() == false);
+        return std::filesystem::path(path).parent_path().string();
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::string ExtractExtensionFromPath(std::string const & path) {
+        MFA_ASSERT(path.empty() == false);
+        return std::filesystem::path(path).extension().string();
     }
 
     //-------------------------------------------------------------------------------------------------

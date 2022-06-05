@@ -3,7 +3,6 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockMath.hpp"
 #include "engine/BedrockMatrix.hpp"
-#include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "tools/Importer.hpp"
 #include "engine/camera/ObserverCameraComponent.hpp"
@@ -83,10 +82,12 @@ void ParticleFireScene::createFireEssence() const
         mParticlePipeline->addEssence(
             std::make_shared<FireEssence>(
                 "ParticleSceneFire",
-                RC::AcquireGpuTexture("images/fire/particle_fire.ktx"),
-                FireEssence::Options {
-                    .fireRadius = FireRadius,
-                    .particleCount = 1024
+                100,
+                std::vector {RC::AcquireGpuTexture("images/fire/particle_fire.ktx")},
+                MFA::FireParams {},
+                AS::Particle::Params {
+                    .count = 1024,
+                    .radius = FireRadius
                 }
             )
         );
@@ -110,7 +111,8 @@ void ParticleFireScene::createFireInstance(glm::vec3 const & position) const
     );
     entity->AddComponent<AxisAlignedBoundingBoxComponent>(
         glm::vec3{ 0.0f, -0.8f, 0.0f },
-        glm::vec3{ FireRadius, 1.0f, FireRadius }
+        glm::vec3{ FireRadius, 1.0f, FireRadius },
+        true
     );
     entity->AddComponent<ColorComponent>(glm::vec3{ 1.0f, 0.0f, 0.0f });
 

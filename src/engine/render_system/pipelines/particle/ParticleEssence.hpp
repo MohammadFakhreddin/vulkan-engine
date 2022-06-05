@@ -15,18 +15,6 @@ namespace MFA
 
         using VariantsList = std::vector<std::shared_ptr<VariantBase>>;
 
-        struct Params
-        {
-            std::shared_ptr<RT::GpuModel> gpuModel;
-            std::shared_ptr<AS::Particle::Mesh> mesh;
-        };
-        explicit ParticleEssence(Params const & params);
-
-        explicit ParticleEssence(
-            std::shared_ptr<RT::GpuModel> gpuModel,
-            std::shared_ptr<AS::Particle::Mesh> mesh
-        );
-
         ~ParticleEssence() override;
         
         ParticleEssence & operator= (ParticleEssence && rhs) noexcept = delete;
@@ -34,17 +22,43 @@ namespace MFA
         ParticleEssence (ParticleEssence && rhs) noexcept = delete;
         ParticleEssence & operator = (ParticleEssence const &) noexcept = delete;
 
-        virtual void update(
-            float deltaTimeInSec,
-            VariantsList const & variants
-        );
-        
-        void draw(
-            RT::CommandRecordState const & recordState,
-            float deltaTime
-        ) const;
+        void update(VariantsList const & variants);
 
-        void bindVertexBuffer(RT::CommandRecordState const & recordState) const override;
+        void preComputeBarrier(std::vector<VkBufferMemoryBarrier> & outBarrier) const;
+
+        void compute(RT::CommandRecordState const & recordState);
+
+        void preRenderBarrier(std::vector<VkBufferMemoryBarrier> & outBarrier) const;
+
+        void render(RT::CommandRecordState const & recordState) const;
+
+        void notifyParamsBufferUpdated();
+
+        void createGraphicDescriptorSet(
+            VkDescriptorPool descriptorPool,
+            VkDescriptorSetLayout descriptorSetLayout,
+            RT::GpuTexture const & errorTexture,
+            uint32_t maxTextureCount
+        );
+
+        void createComputeDescriptorSet(
+            VkDescriptorPool descriptorPool,
+            VkDescriptorSetLayout descriptorSetLayout
+        );
+
+    protected:
+
+        explicit ParticleEssence(
+            std::string nameId,
+            AS::Particle::Params const & params,
+            uint32_t maxInstanceCount,
+            std::vector<std::shared_ptr<RT::GpuTexture>> textures
+        );
+
+        void init(
+            CBlob const & vertexData,
+            CBlob const & indexData
+        );
 
     private:
 
@@ -52,27 +66,68 @@ namespace MFA
 
         void updateInstanceBuffer(RT::CommandRecordState const & recordState) const;
 
-        void updateVertexBuffer(RT::CommandRecordState const & recordState) const;
+        void bindVertexBuffer(RT::CommandRecordState const & recordState) const;
 
         void bindInstanceBuffer(RT::CommandRecordState const & recordState) const;
 
+        void bindIndexBuffer(RT::CommandRecordState const & recordState) const;
+
+        void bindGraphicDescriptorSet(RT::CommandRecordState const & recordState) const;
+
+        void bindComputeDescriptorSet(RT::CommandRecordState const & recordState) const;
+
         void checkIfUpdateIsRequired(VariantsList const & variants);
+
+        void updateParamsBuffer(RT::CommandRecordState const & recordState);
+
+        void createVertexBuffer(
+            VkCommandBuffer commandBuffer,
+            CBlob const & vertexBlob,
+            std::shared_ptr<RT::BufferGroup> & outStageBuffer
+        );
+
+        void createIndexBuffer(
+            VkCommandBuffer commandBuffer,
+            CBlob const & indexBlob,
+            std::shared_ptr<RT::BufferGroup> & outStageBuffer
+        );
+
+        void createInstanceBuffer();
+
+        void createParamsBuffer(
+            VkCommandBuffer commandBuffer,
+            std::shared_ptr<RT::BufferGroup> & outStageBuffer
+        );
 
     protected:
 
         bool mShouldUpdate = false; // We only have to update if variants are visible
 
-        std::shared_ptr<AS::Particle::Mesh> mMesh {};
+        std::shared_ptr<RT::BufferGroup> mVertexBuffer = nullptr;   // StorageBuffer | VertexBuffer     // Only 1
+        std::shared_ptr<RT::BufferAndMemory> mIndexBuffer = nullptr;                                    // Only 1
+        std::shared_ptr<RT::BufferGroup> mInstanceBuffer = nullptr; // VertexBuffer                     // Per frame
+
+        AS::Particle::Params mParams {};
+
+        std::shared_ptr<RT::BufferGroup> mParamsBuffer = nullptr;
+        std::shared_ptr<RT::BufferGroup> mParamsStageBuffer = nullptr;
+
+        uint32_t const mMaxInstanceCount;
+        
+        std::vector<std::shared_ptr<RT::GpuTexture>> const mTextures;
+
+        RT::DescriptorSetGroup mGraphicDescriptorSet {};
+        RT::DescriptorSetGroup mComputeDescriptorSet {};
 
     private:
 
-        std::shared_ptr<SmartBlob> mInstanceDataMemory {};
-        AS::Particle::PerInstanceData * mInstancesData = nullptr;
-
-        std::vector<std::shared_ptr<RT::BufferAndMemory>> mInstancesBuffers {};
-        std::shared_ptr<RT::BufferAndMemory> mInstanceStageBuffer {};
-
+        std::shared_ptr<SmartBlob> mInstanceData {};
+        
         uint32_t mNextDrawInstanceCount = 0;
+
+        bool mIsInitialized = false;
+
+        bool mIsParamsBufferDirty = false;
 
     };
 }

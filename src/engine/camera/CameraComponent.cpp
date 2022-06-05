@@ -141,9 +141,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void CameraComponent::init()
+    void CameraComponent::Init()
     {
-        Component::init();
+        Component::Init();
         mCameraBufferUpdateCounter = RF::GetMaxFramesPerFlight();
         mResizeEventListenerId = RF::AddResizeEventListener([this]()->void{ onResize(); });
     }
@@ -212,9 +212,9 @@ namespace MFA
     
     //-------------------------------------------------------------------------------------------------
 
-    void CameraComponent::shutdown()
+    void CameraComponent::Shutdown()
     {
-        Component::shutdown();
+        Component::Shutdown();
         RF::RemoveResizeEventListener(mResizeEventListenerId);
     }
 

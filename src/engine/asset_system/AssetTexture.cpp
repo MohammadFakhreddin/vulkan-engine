@@ -7,7 +7,7 @@ namespace MFA::AssetSystem
 {
         //-------------------------------------------------------------------------------------------------
 
-    Texture::Texture() = default;
+    Texture::Texture(std::string nameId) : mNameId(std::move(nameId)) {}
     Texture::~Texture() = default;
 
     //-------------------------------------------------------------------------------------------------
@@ -87,7 +87,6 @@ namespace MFA::AssetSystem
         const Format format,
         const uint16_t slices,
         const uint16_t depth,
-        SamplerConfig const * sampler,
         std::shared_ptr<SmartBlob> buffer
     )
     {
@@ -97,10 +96,7 @@ namespace MFA::AssetSystem
         mSlices = slices;
         MFA_ASSERT(depth > 0);
         mDepth = depth;
-        if (sampler != nullptr && sampler->isValid)
-        {
-            mSampler = *sampler;
-        }
+        MFA_ASSERT(buffer != nullptr);
         mBuffer = std::move(buffer);
     }
 
@@ -205,16 +201,4 @@ namespace MFA::AssetSystem
 
     //-------------------------------------------------------------------------------------------------
 
-    void Texture::SetSampler(SamplerConfig * sampler)
-    {
-        MFA_ASSERT(sampler != nullptr);
-        mSampler = *sampler;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    SamplerConfig const & Texture::GetSampler() const noexcept
-    {
-        return mSampler;
-    }
 }
