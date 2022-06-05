@@ -63,17 +63,28 @@ namespace MFA::Path
 
     //-------------------------------------------------------------------------------------------------
 
-    std::string RelativeToAssetFolder(std::string const & address)
+    bool RelativeToAssetFolder(std::string const & address, std::string & outAddress)
     {
         static const std::regex matchRegex(".*assets/.*");
         static const std::regex replaceRegex(".*assets/");
 
         if (std::regex_match(address.c_str(), matchRegex))
         {
-            return std::regex_replace(address, replaceRegex, "");
+            outAddress = std::regex_replace(address, replaceRegex, "");
+            return true;
         }
-        
-        return address;
+
+        outAddress = address;
+        return false;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::string RelativeToAssetFolder(std::string const & address)
+    {
+        std::string result {};
+        RelativeToAssetFolder(address, result);
+        return result;
     }
 
     //-------------------------------------------------------------------------------------------------
