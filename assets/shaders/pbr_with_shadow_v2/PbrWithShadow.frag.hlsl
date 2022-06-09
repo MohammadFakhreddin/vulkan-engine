@@ -316,9 +316,11 @@ PSOut main(PSIn input) {
     //     color += baseColor.rgb * primitiveInfo.emissiveFactor; // * 0.3
     // }
 
-    color += baseColor.rgb * ambientOcclusion;
+    // color += baseColor.rgb * ambientOcclusion;
 
-    color += Lo;
+    // color += Lo;
+
+    color += baseColor.rgb;// Temporary
     
     // reinhard tone mapping    --> Try to implement more advanced hdr (Passing exposure parameter is also a good option)
 	color = color / (color + float3(1.0f));

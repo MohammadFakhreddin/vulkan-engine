@@ -164,7 +164,7 @@ void GLTFMeshViewerScene::Init() {
             "Sphere"
         );
 
-        entity->AddComponent<SphereBoundingVolumeComponent>(0.1f, true);
+//        entity->AddComponent<SphereBoundingVolumeComponent>(0.1f, true);
 
         EntitySystem::InitEntity(entity);
     }
