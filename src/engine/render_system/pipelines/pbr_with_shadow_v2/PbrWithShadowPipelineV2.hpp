@@ -66,6 +66,8 @@ namespace MFA
         {
             uint32_t primitiveIndex = 0;      // Unique id
             float cameraPosition[3] {};
+            float projectFarToNearDistance = 0.0f;
+            float placeholder[3] {};
         };
 
         struct SkinningPushConstants

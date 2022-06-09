@@ -919,6 +919,7 @@ namespace MFA
         if (activeCamera != nullptr)
         {
             activeCamera->GetPosition(pushConstants.cameraPosition);
+            pushConstants.projectFarToNearDistance = activeCamera->GetProjectionFarToNearDistance();
         }
         
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
@@ -1089,29 +1090,29 @@ namespace MFA
             .offset = offsetof(PBR_Variant::SkinnedVertex, worldPosition)
         });
 
-//        // WorldNormal
-//        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
-//            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-//            .binding = 0,
-//            .format = VK_FORMAT_R32G32B32_SFLOAT,
-//            .offset = offsetof(PBR_Variant::SkinnedVertex, worldNormal),
-//        });
-//
-//        // WorldTangent
-//        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
-//            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-//            .binding = 0,
-//            .format = VK_FORMAT_R32G32B32_SFLOAT,
-//            .offset = offsetof(PBR_Variant::SkinnedVertex, worldTangent),
-//        });
-//
-//        // WorldBiTangent
-//        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
-//            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-//            .binding = 0,
-//            .format = VK_FORMAT_R32G32B32_SFLOAT,
-//            .offset = offsetof(PBR_Variant::SkinnedVertex, worldBiTangent),
-//        });
+        // WorldNormal
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32G32B32_SFLOAT,
+            .offset = offsetof(PBR_Variant::SkinnedVertex, worldNormal),
+        });
+
+        // WorldTangent
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32G32B32_SFLOAT,
+            .offset = offsetof(PBR_Variant::SkinnedVertex, worldTangent),
+        });
+
+        // WorldBiTangent
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 0,
+            .format = VK_FORMAT_R32G32B32_SFLOAT,
+            .offset = offsetof(PBR_Variant::SkinnedVertex, worldBiTangent),
+        });
         
         // BaseColorUV
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
@@ -1122,36 +1123,36 @@ namespace MFA
         });
 
         // Metallic/RoughnessUV
-//        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
-//            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-//            .binding = 1,
-//            .format = VK_FORMAT_R32G32_SFLOAT,
-//            .offset = offsetof(PBR_Essence::VertexUVs, metallicRoughnessTexCoord), // Metallic and roughness have same uv for gltf files
-//        });
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 1,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = offsetof(PBR_Essence::VertexUVs, metallicRoughnessTexCoord), // Metallic and roughness have same uv for gltf files
+        });
         
         // NormalMapUV
-//        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
-//            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-//            .binding = 1,
-//            .format = VK_FORMAT_R32G32_SFLOAT,
-//            .offset = offsetof(PBR_Essence::VertexUVs, normalTexCoord),
-//        });
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 1,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = offsetof(PBR_Essence::VertexUVs, normalTexCoord),
+        });
     
-//        // EmissionUV
-//        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
-//            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-//            .binding = 1,
-//            .format = VK_FORMAT_R32G32_SFLOAT,
-//            .offset = offsetof(PBR_Essence::VertexUVs, emissiveTexCoord),
-//        });
-//
-//        // OcclusionUV
-//        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
-//            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
-//            .binding = 1,
-//            .format = VK_FORMAT_R32G32_SFLOAT,
-//            .offset = offsetof(PBR_Essence::VertexUVs, occlusionTexCoord), // Metallic and roughness have same uv for gltf files
-//        });
+        // EmissionUV
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 1,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = offsetof(PBR_Essence::VertexUVs, emissiveTexCoord),
+        });
+
+        // OcclusionUV
+        inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription {
+            .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
+            .binding = 1,
+            .format = VK_FORMAT_R32G32_SFLOAT,
+            .offset = offsetof(PBR_Essence::VertexUVs, occlusionTexCoord), // Metallic and roughness have same uv for gltf files
+        });
         
         std::vector<VkPushConstantRange> pushConstantRanges{};
         pushConstantRanges.emplace_back(VkPushConstantRange{
