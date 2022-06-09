@@ -11,43 +11,47 @@ namespace MFA::JobSystem
         ThreadPool threadPool {};
     };
     State * state = nullptr;
+    
+    //-------------------------------------------------------------------------------------------------
 
-    class TaskTracker
+    // Callback might be null
+    TaskTracker::TaskTracker(size_t const totalTaskCount, OnFinishCallback finishCallback)
+        : mFinishCallback(std::move(finishCallback))
+        , mRemainingTasksCount(static_cast<int>(totalTaskCount))
     {
-    public:
+        MFA_ASSERT(mRemainingTasksCount > 0);
+    }
+    
+    //-------------------------------------------------------------------------------------------------
 
-        // Callback might be null
-        explicit TaskTracker(size_t const totalTaskCount, OnFinishCallback finishCallback)
-            : mFinishCallback(std::move(finishCallback))
-            , mRemainingTasksCount(static_cast<int>(totalTaskCount))
+    TaskTracker::TaskTracker(size_t const totalTaskCount)
+        : mRemainingTasksCount(static_cast<int>(totalTaskCount))
+    {}
+
+    //-------------------------------------------------------------------------------------------------
+
+    TaskTracker::~TaskTracker() = default;
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void TaskTracker::onComplete()
+    {
+        --mRemainingTasksCount;
+        MFA_ASSERT(mRemainingTasksCount >= 0);
+        if (mRemainingTasksCount == 0 && mFinishCallback != nullptr)
         {
-            MFA_ASSERT(mRemainingTasksCount > 0);
+            mFinishCallback();
         }
+    }
 
-        ~TaskTracker() = default;
+    //-------------------------------------------------------------------------------------------------
 
-        TaskTracker(TaskTracker const &) noexcept = delete;
-        TaskTracker(TaskTracker &&) noexcept = delete;
-        TaskTracker & operator = (TaskTracker const &) noexcept = delete;
-        TaskTracker & operator = (TaskTracker &&) noexcept = delete;
-
-        void onComplete()
-        {
-            --mRemainingTasksCount;
-            MFA_ASSERT(mRemainingTasksCount >= 0);
-            if (mRemainingTasksCount == 0 && mFinishCallback != nullptr)
-            {
-                mFinishCallback();
-            }
-        }
-
-    private:
-
-        OnFinishCallback mFinishCallback;
-        std::atomic<int> mRemainingTasksCount;
-
-    };
-
+    void TaskTracker::setFinishCallback(OnFinishCallback const & finishCallback)
+    {
+        MFA_ASSERT(finishCallback != nullptr);
+        mFinishCallback = finishCallback;
+    }
+    ;
     //-------------------------------------------------------------------------------------------------
 
     void Init()

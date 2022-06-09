@@ -768,7 +768,7 @@ namespace MFA::Importer
                 //});
             }
 
-            JS::WaitForThreadsToFinish();
+            //JS::WaitForThreadsToFinish();
 
         }
 

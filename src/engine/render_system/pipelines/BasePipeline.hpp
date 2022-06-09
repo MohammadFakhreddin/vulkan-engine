@@ -136,15 +136,15 @@ namespace MFA
 
         [[nodiscard]]
         virtual RenderOrder renderOrder() const = 0;
-    
+
+        std::shared_ptr<EssenceBase> GetEssence(std::string const & nameId);
+        
     protected:
 
         virtual void internalAddEssence(EssenceBase * essence) = 0;
 
         virtual std::shared_ptr<VariantBase> internalCreateVariant(EssenceBase * essence) = 0;
 
-        std::shared_ptr<EssenceBase> GetEssence(std::string const & nameId);
-        
         struct EssenceAndVariants
         {
             std::shared_ptr<EssenceBase> essence;

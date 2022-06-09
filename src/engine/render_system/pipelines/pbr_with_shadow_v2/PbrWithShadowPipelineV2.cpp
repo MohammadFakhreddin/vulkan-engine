@@ -105,18 +105,36 @@ namespace MFA
             return;
         }
 
-        BasePipeline::init();
-
         mSamplerGroup = RF::CreateSampler(RT::CreateSamplerParams{});
         MFA_ASSERT(mSamplerGroup != nullptr);
-
-        mErrorTexture = RC::AcquireGpuTexture("Error");
-        MFA_ASSERT(mErrorTexture != nullptr);
-
+        
         auto * debugPipeline = SceneManager::GetPipeline<DebugRendererPipeline>();
         MFA_ASSERT(debugPipeline != nullptr);
-        mOcclusionEssence = debugPipeline->GetEssence("CubeFill");
 
+        auto tracker = std::make_shared<JS::TaskTracker>(2, [this]()->void{});
+
+        RC::AcquireGpuTexture(
+            "Error",
+            [this, tracker](std::shared_ptr<RT::GpuTexture> const & gpuTexture)->void{
+                MFA_ASSERT(gpuTexture != nullptr);
+                mErrorTexture = gpuTexture;
+                tracker->onComplete();
+            }
+        );
+
+        RC::AcquireEssence(
+            "CubeFill",
+            debugPipeline,
+            [this, debugPipeline, tracker](bool const success)->void{
+                MFA_ASSERT(success == true);
+                mOcclusionEssence = debugPipeline->GetEssence("CubeFill");
+                tracker->onComplete();
+            }
+        );
+
+        MFA_ASSERT(JS::IsMainThread());
+        
+        BasePipeline::init();
         createUniformBuffers();
 
         {// Graphic

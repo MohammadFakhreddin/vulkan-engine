@@ -7,6 +7,7 @@
 #include "engine/entity_system/EntitySystem.hpp"
 #include "engine/entity_system/components/DirectionalLightComponent.hpp"
 #include "engine/entity_system/components/PointLightComponent.hpp"
+#include "engine/job_system/ThreadSafeQueue.hpp"
 #include "engine/ui_system/UI_System.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
@@ -126,7 +127,7 @@ namespace MFA::SceneManager
 
         // TODO Spot light
 
-        std::vector<NextFrameTask> nextFrameTasks{};
+        ThreadSafeQueue<NextFrameTask> nextFrameTasks{};
 
     };
     static State * state = nullptr;
@@ -323,7 +324,7 @@ namespace MFA::SceneManager
     void AssignMainThreadTask(NextFrameTask const & task)
     {
         MFA_ASSERT(task != nullptr);
-        state->nextFrameTasks.emplace_back(task);
+        while (state->nextFrameTasks.TryToPush(task) == false);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -446,17 +447,27 @@ namespace MFA::SceneManager
 
     void Update(float const deltaTime)
     {
+        MFA_ASSERT(JS::IsMainThread());
+
         if (deltaTime > 0.0f)
         {
             state->currentFps = state->currentFps * 0.9f + (1.0f / deltaTime) * 0.1f;
         }
 
-        for (int i = 0; i < static_cast<int>(state->nextFrameTasks.size()); ++i)
+        std::function<void()> task = nullptr;
+        while (state->nextFrameTasks.IsEmpty() == false)
         {
-            MFA_ASSERT(state->nextFrameTasks[i] != nullptr);
-            state->nextFrameTasks[i]();
+            if (state->nextFrameTasks.TryToPop(task))
+            {
+                task();
+            }
         }
-        state->nextFrameTasks.clear();
+        //for (int i = 0; i < static_cast<int>(state->nextFrameTasks.size()); ++i)
+        //{
+        //    MFA_ASSERT(state->nextFrameTasks[i] != nullptr);
+        //    state->nextFrameTasks[i]();
+        //}
+        //state->nextFrameTasks.clear();
 
         state->updateSignal.EmitMultiThread(deltaTime);
     }

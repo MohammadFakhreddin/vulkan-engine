@@ -74,21 +74,35 @@ namespace MFA
 
     void DebugRendererPipeline::init()
     {
+        MFA_ASSERT(JS::IsMainThread());
         BasePipeline::init();
-
         createDescriptorSetLayout();
         createPipeline();
         createDescriptorSets();
 
         std::vector<std::string> const modelNames{ "Sphere", "CubeStrip", "CubeFill" };
+
+        std::shared_ptr<JS::TaskTracker> tracker = std::make_shared<JS::TaskTracker>(
+            modelNames.size(),
+            [this]()->void{
+
+            }
+        );
+
         for (auto const & modelName : modelNames)
         {
-            auto const cpuModel = RC::AcquireCpuModel(modelName);
-            MFA_ASSERT(cpuModel != nullptr);
-            auto * debugMesh = dynamic_cast<Mesh *>(cpuModel->mesh.get());
-            MFA_ASSERT(debugMesh != nullptr);
-            auto const addResult = addEssence(std::make_shared<DebugEssence>(modelName, *debugMesh));
-            MFA_ASSERT(addResult == true);
+            RC::AcquireEssence(modelName, this, [modelName, tracker](bool success)->void{
+                MFA_ASSERT(success);
+                tracker->onComplete();
+                /* SceneManager::AssignMainThreadTask([cpuModel, modelName, this, tracker]()->void{
+                    MFA_ASSERT(cpuModel != nullptr);
+                    auto * debugMesh = dynamic_cast<Mesh *>(cpuModel->mesh.get());
+                    MFA_ASSERT(debugMesh != nullptr);
+                    auto const addResult = addEssence(std::make_shared<DebugEssence>(modelName, *debugMesh));
+                    MFA_ASSERT(addResult == true);
+                    tracker->onComplete();
+                });*/
+            });
         }
     }
 

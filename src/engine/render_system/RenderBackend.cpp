@@ -263,7 +263,7 @@ namespace MFA::RenderBackend
             // The version of the engine
             .engineVersion = EngineVersion,
             // The version of Vulkan we're using for this application
-            .apiVersion = VK_API_VERSION_1_1,   // TODO Make api version 1.0 for iphone
+            .apiVersion = VK_API_VERSION_1_1,   // TODO Upgrade vk version
         };
         std::vector<char const *> instanceExtensions{};
 

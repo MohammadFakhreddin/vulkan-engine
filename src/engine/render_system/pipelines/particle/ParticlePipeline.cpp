@@ -1,5 +1,7 @@
 #include "ParticlePipeline.hpp"
 
+#include <utility>
+
 #include "ParticleEssence.hpp"
 #include "ParticleVariant.hpp"
 #include "engine/BedrockAssert.hpp"
@@ -42,8 +44,6 @@ namespace MFA
 
     void ParticlePipeline::init()
     {
-        BasePipeline::init();
-
         mSamplerGroup = RF::CreateSampler(RT::CreateSamplerParams {
             .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
             .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
@@ -51,17 +51,26 @@ namespace MFA
         });
         MFA_ASSERT(mSamplerGroup != nullptr);
 
-        mErrorTexture = RC::AcquireGpuTexture("Error");
-        MFA_ASSERT(mErrorTexture != nullptr);
+        RC::AcquireGpuTexture("Error", [this](std::shared_ptr<RT::GpuTexture> const & gpuTexture)->void{
 
-        createPerFrameDescriptorSetLayout();
-        createPerEssenceGraphicDescriptorSetLayout();
-        createPerEssenceComputeDescriptorSetLayout();
+            mErrorTexture = gpuTexture;
+            MFA_ASSERT(mErrorTexture != nullptr);
 
-        createPerFrameDescriptorSets();
+            SceneManager::AssignMainThreadTask([this]()->void{
+                BasePipeline::init();
 
-        createGraphicPipeline();
-        createComputePipeline();
+                createPerFrameDescriptorSetLayout();
+                createPerEssenceGraphicDescriptorSetLayout();
+                createPerEssenceComputeDescriptorSetLayout();
+
+                createPerFrameDescriptorSets();
+
+                createGraphicPipeline();
+                createComputePipeline();
+            });
+
+        });
+
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -78,6 +87,11 @@ namespace MFA
         float const deltaTimeInSec
     )
     {
+        if (mIsInitialized == false)
+        {
+            return;
+        }
+
         if (mAllEssencesList.empty())
         {
             return;
@@ -103,6 +117,11 @@ namespace MFA
 
     void ParticlePipeline::update(float const deltaTimeInSec)
     {
+        if (mIsInitialized == false)
+        {
+            return;
+        }
+
         if (mAllEssencesList.empty())
         {
             return;
@@ -129,6 +148,10 @@ namespace MFA
 
     void ParticlePipeline::compute(RT::CommandRecordState & recordState, float const deltaTimeInSec)
     {
+        if (mIsInitialized == false)
+        {
+            return;
+        }
 
         if (mAllEssencesList.empty())
         {

@@ -38,7 +38,7 @@ private:
 
     static constexpr float LightScale = 100.0f;
 
-    struct ModelRenderRequiredData
+    struct ModelRenderData
     {
         bool isLoaded = false;
         //std::shared_ptr<MFA::RT::GpuModel> gpuModel{};
@@ -81,7 +81,7 @@ private:
         } initialParams{};
     };
 
-    void createModel(ModelRenderRequiredData & renderRequiredData) const;
+    void createModel(ModelRenderData & renderData) const;
 
     static constexpr float Z_NEAR = 0.1f;
     static constexpr float Z_FAR = 3000.0f;
@@ -99,7 +99,7 @@ private:
         alignas(4) int hasEmissiveTexture;
     };
 
-    std::vector<ModelRenderRequiredData> mModelsRenderData{};
+    std::vector<ModelRenderData> mModelsRenderData{};
     int32_t mSelectedModelIndex = 0;
     int32_t mPreviousModelSelectedIndex = -1;
 

@@ -3,14 +3,12 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "tools/Importer.hpp"
-#include "tools/ShapeGenerator.hpp"
 #include "engine/BedrockPath.hpp"
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/EntitySystem.hpp"
 #include "engine/entity_system/components/AxisAlignedBoundingBoxComponent.hpp"
 #include "engine/entity_system/components/ColorComponent.hpp"
 #include "engine/entity_system/components/MeshRendererComponent.hpp"
-#include "engine/entity_system/components/SphereBoundingVolumeComponent.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
 #include "engine/ui_system/UI_System.hpp"
 #include "engine/entity_system/components/PointLightComponent.hpp"
@@ -46,7 +44,7 @@ void GLTFMeshViewerScene::Init() {
         //    mModelsRenderData.emplace_back(params);
         //}
         {
-            ModelRenderRequiredData params {};
+            ModelRenderData params {};
             params.displayName = "CesiumMan";
             Path::ForReadWrite("models/CesiumMan/glTF/CesiumMan.gltf", params.address);
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {0.0f, 0.0f, -180.0f});
@@ -57,7 +55,7 @@ void GLTFMeshViewerScene::Init() {
             mModelsRenderData.emplace_back(params);
         }
         {
-            ModelRenderRequiredData params {};
+            ModelRenderData params {};
             params.displayName = "War-craft soldier";
             Path::ForReadWrite("models/warcraft_3_alliance_footmanfanmade/scene.gltf", params.address);
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {0.0f, -5.926f, -180.0f});
@@ -66,7 +64,7 @@ void GLTFMeshViewerScene::Init() {
             mModelsRenderData.emplace_back(params);
         }
         {
-            ModelRenderRequiredData params {};
+            ModelRenderData params {};
             params.displayName = "SponzaScene";
             Path::ForReadWrite("models/sponza/sponza.gltf", params.address);
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {180.0f, -90.0f, 0.0f});
@@ -76,7 +74,7 @@ void GLTFMeshViewerScene::Init() {
             mModelsRenderData.emplace_back(params);
         }
         {
-            ModelRenderRequiredData params {};
+            ModelRenderData params {};
             params.displayName = "Mira";
             Path::ForReadWrite("models/mira/scene.gltf", params.address);
             params.initialParams.model.scale = 0.005f;
@@ -89,7 +87,7 @@ void GLTFMeshViewerScene::Init() {
             mModelsRenderData.emplace_back(params);
         }
         {
-            ModelRenderRequiredData params {};
+            ModelRenderData params {};
             params.displayName = "Car";
             Path::ForReadWrite("models/free_zuk_3d_model/scene.gltf", params.address);
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {-19.0f, -32.0f, 177.0f});
@@ -97,7 +95,7 @@ void GLTFMeshViewerScene::Init() {
             mModelsRenderData.emplace_back(params);
         }
         {
-            ModelRenderRequiredData params {};
+            ModelRenderData params {};
             params.displayName = "Cyberpunk lady";
             Path::ForReadWrite("models/female_full-body_cyberpunk_themed_avatar/scene.gltf", params.address);
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {-3.0f, 340.0f, 180.0f});
@@ -105,7 +103,7 @@ void GLTFMeshViewerScene::Init() {
             mModelsRenderData.emplace_back(params);
         }
         {
-            ModelRenderRequiredData params {};
+            ModelRenderData params {};
             params.displayName = "Mandalorian";
             Path::ForReadWrite("models/fortnite_the_mandalorianbaby_yoda/scene.gltf", params.address);
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {180.0f, 180.0f, 0.0f});
@@ -115,7 +113,7 @@ void GLTFMeshViewerScene::Init() {
             mModelsRenderData.emplace_back(params);
         }
         {
-            ModelRenderRequiredData params {};
+            ModelRenderData params {};
             params.displayName = "Flight helmet";
             Path::ForReadWrite("models/FlightHelmet/glTF/FlightHelmet.gltf", params.address);
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {180.0f, 180.0f, 0.0f});
@@ -160,11 +158,12 @@ void GLTFMeshViewerScene::Init() {
         mPointLightTransform = transformComponent;
 
         entity->AddComponent<MeshRendererComponent>(
-            *SceneManager::GetPipeline<DebugRendererPipeline>(),
+            SceneManager::GetPipeline<DebugRendererPipeline>(),
             "Sphere"
         );
 
-        entity->AddComponent<SphereBoundingVolumeComponent>(0.1f, true);
+        // TODO: Complete sphere bounding volume component
+        //entity->AddComponent<SphereBoundingVolumeComponent>(0.1f, true);
 
         EntitySystem::InitEntity(entity);
     }
@@ -273,50 +272,31 @@ bool GLTFMeshViewerScene::RequiresUpdate()
 
 //-------------------------------------------------------------------------------------------------
 
-void GLTFMeshViewerScene::createModel(ModelRenderRequiredData & renderRequiredData) const
+void GLTFMeshViewerScene::createModel(ModelRenderData & data) const
 {
-    SceneManager::AssignMainThreadTask([this, &renderRequiredData]()->void{
+    data.isLoaded = true; // Just to prevent this function to be called multiple times
 
-        auto const cpuModel = RC::AcquireCpuModel(renderRequiredData.address);
-        
-        auto * pbrPipeline = SceneManager::GetPipeline<PBRWithShadowPipelineV2>();
-        MFA_ASSERT(pbrPipeline != nullptr);
-        if(pbrPipeline->hasEssence(renderRequiredData.address) == false){
-            MFA_ASSERT(dynamic_cast<AS::PBR::Mesh *>(cpuModel->mesh.get()) != nullptr);
-            auto const * mesh = static_cast<AS::PBR::Mesh *>(cpuModel->mesh.get());
-            auto const addResult = pbrPipeline->addEssence(
-                std::make_shared<PBR_Essence>(
-                    renderRequiredData.address,
-                    *mesh,
-                    RC::AcquireGpuTextures(cpuModel->textureIds)
-                )
-            );
-            MFA_ASSERT(addResult == true);
-        }
-        
-        auto * entity = EntitySystem::CreateEntity(renderRequiredData.displayName, GetRootEntity());
-        MFA_ASSERT(entity != nullptr);
-        renderRequiredData.entity = entity;
+    auto * entity = EntitySystem::CreateEntity(data.displayName, GetRootEntity());
+    MFA_ASSERT(entity != nullptr);
+    data.entity = entity;
 
-        renderRequiredData.transformComponent = entity->AddComponent<TransformComponent>();
-        MFA_ASSERT(renderRequiredData.transformComponent.expired() == false);
+    data.transformComponent = entity->AddComponent<TransformComponent>();
+    MFA_ASSERT(data.transformComponent.expired() == false);
 
-        renderRequiredData.meshRendererComponent = entity->AddComponent<MeshRendererComponent>(
-            *pbrPipeline,
-            renderRequiredData.address
-        );
-        MFA_ASSERT(renderRequiredData.meshRendererComponent.expired() == false);
+    data.meshRendererComponent = entity->AddComponent<MeshRendererComponent>(
+        SceneManager::GetPipeline<PBRWithShadowPipelineV2>(),
+        data.address
+    );
+    MFA_ASSERT(data.meshRendererComponent.expired() == false);
 
-        entity->AddComponent<AxisAlignedBoundingBoxComponent>(
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(100.0f, 100.0f, 100.0f),
-            true
-        );
-        
-        EntitySystem::InitEntity(entity);
+    entity->AddComponent<AxisAlignedBoundingBoxComponent>(
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(100.0f, 100.0f, 100.0f),
+        true
+    );
+    
+    EntitySystem::InitEntity(entity);
 
-        renderRequiredData.isLoaded = true;
-    });
 }
 
 //-------------------------------------------------------------------------------------------------

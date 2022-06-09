@@ -3,8 +3,6 @@
 #include "engine/render_system/pipelines/BasePipeline.hpp"
 #include "engine/render_system/pipelines/VariantBase.hpp"
 
-#include <utility>
-
 //-------------------------------------------------------------------------------------------------
 
 void MFA::RendererComponent::Shutdown()
@@ -18,27 +16,13 @@ void MFA::RendererComponent::Shutdown()
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::VariantBase const * MFA::RendererComponent::getVariant() const
+std::weak_ptr<MFA::VariantBase> MFA::RendererComponent::getVariant()
 {
-    return mVariant.lock().get();
-}
-
-//-------------------------------------------------------------------------------------------------
-
-MFA::VariantBase * MFA::RendererComponent::getVariant()
-{
-    return mVariant.lock().get();
+    return mVariant;
 }
 
 //-------------------------------------------------------------------------------------------------
 
 MFA::RendererComponent::RendererComponent() = default;
-
-//-------------------------------------------------------------------------------------------------
-
-MFA::RendererComponent::RendererComponent(BasePipeline & pipeline, std::weak_ptr<VariantBase> variant)
-    : mPipeline(&pipeline)
-    , mVariant(std::move(variant))
-{}
 
 //-------------------------------------------------------------------------------------------------

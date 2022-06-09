@@ -47,8 +47,6 @@ void ParticleFireScene::Init()
 
     createFireEssence();
 
-    createFireInstance(glm::vec3 {0.0f, 0.0f, 0.0f});
-
     createCamera();
 }
 
@@ -79,17 +77,26 @@ void ParticleFireScene::createFireEssence() const
 {
     if (mParticlePipeline->hasEssence("ParticleSceneFire") == false)
     {
-        mParticlePipeline->addEssence(
-            std::make_shared<FireEssence>(
-                "ParticleSceneFire",
-                100,
-                std::vector {RC::AcquireGpuTexture("images/fire/particle_fire.ktx")},
-                MFA::FireParams {},
-                AS::Particle::Params {
-                    .count = 1024,
-                    .radius = FireRadius
-                }
-            )
+        RC::AcquireGpuTexture(
+            "images/fire/particle_fire.ktx",
+            [this](std::shared_ptr<RT::GpuTexture> const & texture)->void{
+
+                mParticlePipeline->addEssence(
+                    std::make_shared<FireEssence>(
+                        "ParticleSceneFire",
+                        100,
+                        std::vector {texture},
+                        MFA::FireParams {},
+                        AS::Particle::Params {
+                            .count = 1024,
+                            .radius = FireRadius
+                        }
+                    )
+                );
+
+                createFireInstance(glm::vec3 {0.0f, 0.0f, 0.0f});
+
+            }
         );
     }
 }
@@ -106,7 +113,7 @@ void ParticleFireScene::createFireInstance(glm::vec3 const & position) const
     transform->UpdatePosition(position);
     
     entity->AddComponent<MeshRendererComponent>(
-        *mParticlePipeline,
+        mParticlePipeline,
         "ParticleSceneFire"
     );
     entity->AddComponent<AxisAlignedBoundingBoxComponent>(
@@ -116,7 +123,7 @@ void ParticleFireScene::createFireInstance(glm::vec3 const & position) const
     );
     entity->AddComponent<ColorComponent>(glm::vec3{ 1.0f, 0.0f, 0.0f });
 
-    auto const boundingVolumeRenderer = entity->AddComponent<BoundingVolumeRendererComponent>(*mDebugRendererPipeline).lock();
+    auto const boundingVolumeRenderer = entity->AddComponent<BoundingVolumeRendererComponent>().lock();
     MFA_ASSERT(boundingVolumeRenderer != nullptr);
     boundingVolumeRenderer->SetActive(true);
 

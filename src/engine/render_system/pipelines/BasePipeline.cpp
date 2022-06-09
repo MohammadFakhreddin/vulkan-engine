@@ -33,7 +33,8 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     void BasePipeline::preRender(RT::CommandRecordState & recordState, float deltaTime)
-    {}
+    {
+    }
 
     //-------------------------------------------------------------------------------------------------
 
@@ -94,7 +95,7 @@ namespace MFA
 
     std::weak_ptr<VariantBase> BasePipeline::createVariant(std::string const & nameId)
     {
-        MFA_ASSERT(mIsInitialized == true);
+        //MFA_ASSERT(mIsInitialized == true);
         auto const findResult = mEssenceAndVariantsMap.find(nameId);
         if(findResult == mEssenceAndVariantsMap.end())
         {
@@ -234,7 +235,7 @@ namespace MFA
 
     bool BasePipeline::addEssence(std::shared_ptr<EssenceBase> const & essence)
     {
-        MFA_ASSERT(mIsInitialized == true);
+        //MFA_ASSERT(mIsInitialized == true);
         auto const & address = essence->getNameId();
 
         bool success = false;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/entity_system/Component.hpp"
+#include "engine/entity_system/Component.hpp"
 #include "engine/entity_system/components/RendererComponent.hpp"
 
 namespace MFA
@@ -18,12 +19,13 @@ namespace MFA
         MFA_COMPONENT_PROPS(
             BoundingVolumeRendererComponent,
             FamilyType::BoundingVolumeRenderer,
-            EventTypes::LateInitEvent | EventTypes::ShutdownEvent
+            EventTypes::LateInitEvent | EventTypes::ShutdownEvent | EventTypes::InitEvent
         )
 
-        explicit BoundingVolumeRendererComponent();
-        explicit BoundingVolumeRendererComponent(DebugRendererPipeline & pipeline);
+        explicit BoundingVolumeRendererComponent(std::string const & nameId = "CubeStrip");
         ~BoundingVolumeRendererComponent() override;
+
+        void Init() override;
 
         void LateInit() override;
         
@@ -36,7 +38,12 @@ namespace MFA
         void clone(Entity * entity) const override;
 
     private:
-        
+
+        void createVariant();
+
+        bool mEssenceLoaded = false;
+        bool mLateInitIsCalled = false;
+
     };
 
 }

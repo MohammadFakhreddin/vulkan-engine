@@ -2,6 +2,8 @@
 
 #include "engine/BedrockAssert.hpp"
 
+#include <thread>
+
 namespace MFA {
 
     ScopeLock::ScopeLock(std::atomic<bool> & lock)
@@ -15,6 +17,7 @@ namespace MFA {
             {
                 break;
             }
+            std::this_thread::yield();
         }
         MFA_ASSERT(mLock == true);
     }

@@ -8,11 +8,6 @@
 #include "engine/entity_system/components/TransformComponent.hpp"
 #include "engine/entity_system/components/BoundingVolumeComponent.hpp"
 #include "engine/render_system/pipelines/EssenceBase.hpp"
-#include "engine/render_system/pipelines/debug_renderer/DebugEssence.hpp"
-#include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
-#include "engine/render_system/pipelines/particle/ParticlePipeline.hpp"
-#include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
-#include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Essence.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Variant.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/ui_system/UI_System.hpp"
@@ -24,11 +19,17 @@ namespace MFA
 {
     //-------------------------------------------------------------------------------------------------
 
-    MeshRendererComponent::MeshRendererComponent(BasePipeline & pipeline, std::string const & nameOrAddress)
-        : RendererComponent(pipeline, pipeline.createVariant(nameOrAddress))
+    MeshRendererComponent::MeshRendererComponent() = default;
+
+    //-------------------------------------------------------------------------------------------------
+
+    MeshRendererComponent::MeshRendererComponent(BasePipeline * pipeline, std::string const & nameId)
+        : RendererComponent()
     {
+        mPipeline = pipeline;
+        mNameId = nameId;
         MFA_ASSERT(mPipeline != nullptr);
-        MFA_ASSERT(mVariant.expired() == false);
+        MFA_ASSERT(mNameId.empty() == false);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -37,17 +38,14 @@ namespace MFA
     {
         RendererComponent::Init();
 
-        auto * entity = GetEntity();
-        MFA_ASSERT(entity != nullptr);
+        mInitialized = true;
 
-        auto const variant = mVariant.lock();
-        MFA_ASSERT(variant != nullptr);
-        variant->Init(
-            GetEntity(),
-            selfPtr(),
-            entity->GetComponent<TransformComponent>(),
-            entity->GetComponent<BoundingVolumeComponent>()
-        );
+        RC::AcquireEssence(mNameId, mPipeline, [this](bool success)->void{
+            if (MFA_VERIFY(success))
+            {
+                createVariant();
+            }
+        });
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -89,6 +87,8 @@ namespace MFA
 
     void MeshRendererComponent::deserialize(nlohmann::json const & jsonObject)
     {
+        MFA_ASSERT(mInitialized == false);
+
         MFA_ASSERT(jsonObject.contains("pipeline"));
         std::string const pipelineName = jsonObject.value("pipeline", "");
         mPipeline = SceneManager::GetPipeline(pipelineName);
@@ -97,46 +97,7 @@ namespace MFA
         MFA_ASSERT(jsonObject.contains("address"));
         std::string const address = jsonObject.value("address", "");
 
-        std::string nameId = Path::RelativeToAssetFolder(address);
-
-        if (mPipeline->hasEssence(nameId) == false)
-        {
-            bool addResult = false;
-
-            auto const cpuModel = RC::AcquireCpuModel(nameId);
-            MFA_ASSERT(cpuModel != nullptr);
-            //auto const gpuModel = RC::AcquireGpuModel(relativePath);
-            //MFA_ASSERT(gpuModel != nullptr);
-
-            if (pipelineName == PBRWithShadowPipelineV2::Name)
-            {
-                auto const * pbrMesh = static_cast<AS::PBR::Mesh *>(cpuModel->mesh.get());
-                addResult = mPipeline->addEssence(std::make_shared<PBR_Essence>(
-                    nameId,
-                    *pbrMesh,
-                    RC::AcquireGpuTextures(cpuModel->textureIds)
-                ));
-            }
-            else if (pipelineName == ParticlePipeline::Name)
-            {
-                MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
-            }
-            else if (pipelineName == DebugRendererPipeline::Name)
-            {
-                auto const * debugMesh = static_cast<AS::Debug::Mesh *>(cpuModel->mesh.get());
-                addResult = mPipeline->addEssence(std::make_shared<DebugEssence>(
-                    nameId,
-                    *debugMesh
-                ));
-            }
-            else
-            {
-                MFA_CRASH("Unhandled pipeline type detected");
-            }
-            MFA_ASSERT(addResult == true);
-        }
-        mVariant = mPipeline->createVariant(nameId);
-        MFA_ASSERT(mVariant.expired() == false);
+        mNameId = Path::RelativeToAssetFolder(address);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -144,13 +105,27 @@ namespace MFA
     void MeshRendererComponent::clone(Entity * entity) const
     {
         MFA_ASSERT(entity != nullptr);
+        entity->AddComponent<MeshRendererComponent>(mPipeline, mNameId);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void MeshRendererComponent::createVariant()
+    {
+        mVariant = mPipeline->createVariant(mNameId);
+        MFA_ASSERT(mVariant.expired() == false);
+
+        auto * entity = GetEntity();
+        MFA_ASSERT(entity != nullptr);
+
         auto const variant = mVariant.lock();
         MFA_ASSERT(variant != nullptr);
-        auto const * essence = variant->getEssence();
-        MFA_ASSERT(essence != nullptr);
-        auto const & nameId = essence->getNameId();
-        MFA_ASSERT(nameId.empty() == false);
-        entity->AddComponent<MeshRendererComponent>(*mPipeline, nameId);
+        variant->Init(
+            GetEntity(),
+            selfPtr(),
+            entity->GetComponent<TransformComponent>(),
+            entity->GetComponent<BoundingVolumeComponent>()
+        );
     }
 
     //-------------------------------------------------------------------------------------------------
