@@ -1,4 +1,3 @@
-#include "../CameraBuffer.hlsl"
 #include "../SkinJointsBuffer.hlsl"
 #include "../PointLightBuffer.hlsl"
 
@@ -11,8 +10,6 @@ struct VSOut {
     float4 worldPosition;
     int layer : SV_RenderTargetArrayIndex;
 };
-
-ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
 
 ConstantBuffer <PointLightsBufferData> pointLightsBuffer: register(b2, space0);
 

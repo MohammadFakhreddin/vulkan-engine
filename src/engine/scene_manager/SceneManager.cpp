@@ -890,4 +890,14 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
+    std::weak_ptr<CameraComponent> GetActiveCamera() {
+        if (state->activeScene != nullptr)
+        {
+            return state->activeScene->GetActiveCamera();
+        }
+        return {};
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
 }

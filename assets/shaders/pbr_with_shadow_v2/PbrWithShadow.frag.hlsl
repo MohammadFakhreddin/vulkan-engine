@@ -1,5 +1,5 @@
-#include "../ComputeDirectionalLightShadow.hlsl"
-#include "../ComputePointLightShadow.hlsl"
+// #include "../ComputeDirectionalLightShadow.hlsl"
+// #include "../ComputePointLightShadow.hlsl"
 #include "../PointLightBuffer.hlsl"
 #include "../CameraBuffer.hlsl"
 #include "../PrimitiveInfoBuffer.hlsl"
@@ -8,27 +8,27 @@
 
 struct PSIn {
     float4 position : SV_POSITION;
-    float3 worldPos: POSITION0;
+    // float3 worldPos: POSITION0;
     
     float2 baseColorTexCoord : TEXCOORD0;
-    float2 metallicRoughnessTexCoord : TEXCOORD1;
+    // float2 metallicRoughnessTexCoord : TEXCOORD1;
     
-    float2 normalTexCoord: TEXCOORD2;
-    float3 worldNormal : NORMAL0;
-    float3 worldTangent: TEXCOORD3;
-    float3 worldBiTangent : TEXCOORD4;
+    // float2 normalTexCoord: TEXCOORD2;
+    // float3 worldNormal : NORMAL0;
+    // float3 worldTangent: TEXCOORD3;
+    // float3 worldBiTangent : TEXCOORD4;
 
-    float2 emissiveTexCoord: TEXCOORD5;
-    float2 occlusionTexCoord: TEXCOORD6;
+    // float2 emissiveTexCoord: TEXCOORD1;
+    // float2 occlusionTexCoord: TEXCOORD2;
 
-    float4 directionLightPosition[3];
+    // float4 directionLightPosition[3];
 };
 
 struct PSOut {
     float4 color:SV_Target0;
 };
 
-ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
+// ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
 
 ConstantBuffer <DirectionalLightBufferData> directionalLightBuffer: register(b1, space0);
 
@@ -42,15 +42,13 @@ TextureCubeArray PL_shadowMap : register(t5, space0);
 
 ConstantBuffer <PrimitiveInfoBuffer> primitiveInfoBuffer : register (b0, space1);
 
-Texture2D textures[MAX_TEXTURE_COUNT] : register(t1, space1);  // TODO: Maybe I should decrease the textures size
+Texture2D textures[MAX_TEXTURE_COUNT] : register(t1, space1);  // TODO: Maybe I should decrease the textures count
 
 
 struct PushConsts
 {
     uint primitiveIndex;
-    int placeholder0;
-    int placeholder1;
-    int placeholder2;
+    float3 cameraPosition;
 };
 
 [[vk::push_constant]]
@@ -173,20 +171,20 @@ float3 BRDF(
 }
 
 // TODO Use this to compute normal correctly
-float3 calculateNormal(PSIn input, int normalTextureIndex)
-{
-    float3 pixelNormal;
-    if (normalTextureIndex < 0) {
-        pixelNormal = input.worldNormal;
-    } else {
-        float3 tangentNormal = textures[normalTextureIndex].Sample(textureSampler, input.normalTexCoord).rgb * 2.0 - 1.0;
+// float3 calculateNormal(PSIn input, int normalTextureIndex)
+// {
+//     float3 pixelNormal;
+//     if (normalTextureIndex < 0) {
+//         pixelNormal = input.worldNormal;
+//     } else {
+//         float3 tangentNormal = textures[normalTextureIndex].Sample(textureSampler, input.normalTexCoord).rgb * 2.0 - 1.0;
         
-        float3x3 TBN = transpose(float3x3(input.worldTangent, input.worldBiTangent, input.worldNormal));
-        // float3x3 TBN = float3x3(input.worldTangent, input.worldBiTangent, input.worldNormal));
-        pixelNormal = mul(TBN, tangentNormal).xyz;
-    }
-    return pixelNormal;
-};
+//         float3x3 TBN = transpose(float3x3(input.worldTangent, input.worldBiTangent, input.worldNormal));
+//         // float3x3 TBN = float3x3(input.worldTangent, input.worldBiTangent, input.worldNormal));
+//         pixelNormal = mul(TBN, tangentNormal).xyz;
+//     }
+//     return pixelNormal;
+// };
 
 
 // TODO Strength in ambient occulusion and Scale for normals
@@ -203,122 +201,123 @@ PSOut main(PSIn input) {
         discard;
     }
 	
-    float metallic = 0.0f;
-    float roughness = 0.0f;
-    // TODO: Is usages of occlusion correct ?
-    // TODO Handle occlusionTexture and its strength
-    if (primitiveInfo.metallicRoughnessTextureIndex >= 0) {
-        float4 metallicRoughness = textures[primitiveInfo.metallicRoughnessTextureIndex].Sample(textureSampler, input.metallicRoughnessTexCoord);
-        metallic = metallicRoughness.b;
-        roughness = metallicRoughness.g;
-    } else {
-        metallic = primitiveInfo.metallicFactor;
-        roughness = primitiveInfo.roughnessFactor;
-    }
+    // float metallic = 0.0f;
+    // float roughness = 0.0f;
+    // // TODO: Is usages of occlusion correct ?
+    // // TODO Handle occlusionTexture and its strength
+    // if (primitiveInfo.metallicRoughnessTextureIndex >= 0) {
+    //     float4 metallicRoughness = textures[primitiveInfo.metallicRoughnessTextureIndex].Sample(textureSampler, input.metallicRoughnessTexCoord);
+    //     metallic = metallicRoughness.b;
+    //     roughness = metallicRoughness.g;
+    // } else {
+    //     metallic = primitiveInfo.metallicFactor;
+    //     roughness = primitiveInfo.roughnessFactor;
+    // }
 
-	float3 surfaceNormal = calculateNormal(input, primitiveInfo.normalTextureIndex);
-	float3 normalizedSurfaceNormal = normalize(surfaceNormal.xyz);
-    float3 viewVector = cameraBuffer.cameraPosition - input.worldPos;
-	float3 normalizedViewVector = normalize(viewVector);
-    
+	// float3 surfaceNormal = calculateNormal(input, primitiveInfo.normalTextureIndex);
+	// float3 normalizedSurfaceNormal = normalize(surfaceNormal.xyz);
+    // float3 viewVector = cameraBuffer.cameraPosition - input.worldPos;
+	// float3 normalizedViewVector = normalize(viewVector);
+
     // Specular contribution
 	float3 Lo = float3(0.0, 0.0, 0.0);
-    int lightIndex = 0;
-    for (lightIndex = 0; lightIndex < directionalLightBuffer.count; lightIndex++)
-    {
-        DirectionalLight directionalLight = directionalLightBuffer.items[lightIndex];
-        float3 lightVector = directionalLight.direction;
+    // int lightIndex = 0;
+    // for (lightIndex = 0; lightIndex < directionalLightBuffer.count; lightIndex++)
+    // {
+    //     DirectionalLight directionalLight = directionalLightBuffer.items[lightIndex];
+    //     float3 lightVector = directionalLight.direction;
         
-        float shadow = computeDirectionalLightShadow(
-            DIR_shadowMap,
-            textureSampler,
-            input.directionLightPosition[lightIndex], 
-            lightIndex
-        );
+    //     float shadow = computeDirectionalLightShadow(
+    //         DIR_shadowMap,
+    //         textureSampler,
+    //         input.directionLightPosition[lightIndex], 
+    //         lightIndex
+    //     );
+    //     // float shadow = 0.0f;
+    //     if (shadow < 1.0f)
+    //     {
+    //         Lo += BRDF(
+    //             lightVector, 
+    //             normalizedViewVector, 
+    //             normalizedSurfaceNormal, 
+    //             metallic, 
+    //             roughness, 
+    //             baseColor.rgb, 
+    //             input.worldPos,
+    //             1.0f,
+    //             0.0f,
+    //             0.0f,
+    //             1.0f,
+    //             directionalLight.color
+    //         ) * (1.0f - shadow);
+    //     }
+    // }
+    
+    // float viewVectorLength = length(viewVector);
 
-        if (shadow < 1.0f)
-        {
-            Lo += BRDF(
-                lightVector, 
-                normalizedViewVector, 
-                normalizedSurfaceNormal, 
-                metallic, 
-                roughness, 
-                baseColor.rgb, 
-                input.worldPos,
-                1.0f,
-                0.0f,
-                0.0f,
-                1.0f,
-                directionalLight.color
-            ) * (1.0f - shadow);
-        }
-    }
-
-    float viewVectorLength = length(viewVector);
-
-	for (lightIndex = 0; lightIndex < pointLightsBuffer.count; lightIndex++)        // Point light count
-    {   
-		PointLight pointLight = pointLightsBuffer.items[lightIndex];
-        float3 lightDistanceVector = pointLight.position.xyz - input.worldPos;
-        float lightVectorSquareLength = lightDistanceVector.x * lightDistanceVector.x + 
-            lightDistanceVector.y * lightDistanceVector.y + 
-            lightDistanceVector.z * lightDistanceVector.z;
-        if (lightVectorSquareLength <= pointLight.maxSquareDistance)
-        {
-            float lightVectorLength = sqrt(lightVectorSquareLength);
-            float3 normalizedLightVector = float3(
-                lightDistanceVector.x / lightVectorLength, 
-                lightDistanceVector.y / lightVectorLength, 
-                lightDistanceVector.z / lightVectorLength
-            );
-            float shadow = computePointLightShadow(
-                cameraBuffer.projectFarToNearDistance,
-                PL_shadowMap,
-                textureSampler,
-                lightDistanceVector, 
-                lightVectorLength, 
-                viewVectorLength, 
-                lightIndex
-            );
-            if (shadow < 1.0f) {
-                Lo += BRDF(
-                    normalizedLightVector, 
-                    normalizedViewVector, 
-                    normalizedSurfaceNormal, 
-                    metallic, 
-                    roughness, 
-                    baseColor.rgb, 
-                    input.worldPos,
-                    pointLightsBuffer.constantAttenuation,
-                    pointLight.linearAttenuation,
-                    pointLight.quadraticAttenuation,
-                    lightVectorLength,
-                    pointLight.color
-                ) * (1.0 - shadow);
-            }
-        }
-	};
-
-    if (primitiveInfo.occlusionTextureIndex >= 0) {
-        float occlusionFactor = textures[primitiveInfo.occlusionTextureIndex].Sample(
-            textureSampler, 
-            input.occlusionTexCoord
-        ).r;
-        Lo *= occlusionFactor;
-    }
-    // TODO Apply occlusion texture here!
+	// for (lightIndex = 0; lightIndex < pointLightsBuffer.count; lightIndex++)        // Point light count
+    // {   
+	// 	PointLight pointLight = pointLightsBuffer.items[lightIndex];
+    //     float3 lightDistanceVector = pointLight.position.xyz - input.worldPos;
+    //     float lightVectorSquareLength = lightDistanceVector.x * lightDistanceVector.x + 
+    //         lightDistanceVector.y * lightDistanceVector.y + 
+    //         lightDistanceVector.z * lightDistanceVector.z;
+    //     if (lightVectorSquareLength <= pointLight.maxSquareDistance)
+    //     {
+    //         float lightVectorLength = sqrt(lightVectorSquareLength);
+    //         float3 normalizedLightVector = float3(
+    //             lightDistanceVector.x / lightVectorLength, 
+    //             lightDistanceVector.y / lightVectorLength, 
+    //             lightDistanceVector.z / lightVectorLength
+    //         );
+    //         float shadow = computePointLightShadow(
+    //             cameraBuffer.projectFarToNearDistance,
+    //             PL_shadowMap,
+    //             textureSampler,
+    //             lightDistanceVector, 
+    //             lightVectorLength, 
+    //             viewVectorLength, 
+    //             lightIndex
+    //         );
+    //         if (shadow < 1.0f) {
+    //             Lo += BRDF(
+    //                 normalizedLightVector, 
+    //                 normalizedViewVector, 
+    //                 normalizedSurfaceNormal, 
+    //                 metallic, 
+    //                 roughness, 
+    //                 baseColor.rgb, 
+    //                 input.worldPos,
+    //                 pointLightsBuffer.constantAttenuation,
+    //                 pointLight.linearAttenuation,
+    //                 pointLight.quadraticAttenuation,
+    //                 lightVectorLength,
+    //                 pointLight.color
+    //             ) * (1.0 - shadow);
+    //         }
+    //     }
+	// };
+    
+    // if (primitiveInfo.occlusionTextureIndex >= 0) {
+    //     float occlusionFactor = textures[primitiveInfo.occlusionTextureIndex].Sample(
+    //         textureSampler, 
+    //         input.occlusionTexCoord
+    //     ).r;
+    //     Lo *= occlusionFactor;
+    // }
 
     // Combine with ambient
     float3 color = float3(0.0, 0.0, 0.0);
     
-    if (primitiveInfo.emissiveTextureIndex >= 0) {
-        float3 ao = textures[primitiveInfo.emissiveTextureIndex].Sample(textureSampler, input.emissiveTexCoord);
-        color += float3(baseColor.r * ao.r, baseColor.g * ao.g, baseColor.b * ao.b) * primitiveInfo.emissiveFactor;
-    } else {
-        color += baseColor.rgb * primitiveInfo.emissiveFactor; // * 0.3
-    }
+    // if (primitiveInfo.emissiveTextureIndex >= 0) {
+    //     float3 ao = textures[primitiveInfo.emissiveTextureIndex].Sample(textureSampler, input.emissiveTexCoord);
+    //     color += float3(baseColor.r * ao.r, baseColor.g * ao.g, baseColor.b * ao.b) * primitiveInfo.emissiveFactor;
+    // } else {
+    //     color += baseColor.rgb * primitiveInfo.emissiveFactor; // * 0.3
+    // }
+
     color += baseColor.rgb * ambientOcclusion;
+
     color += Lo;
     
     // reinhard tone mapping    --> Try to implement more advanced hdr (Passing exposure parameter is also a good option)

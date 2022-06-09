@@ -15,6 +15,12 @@ namespace MFA
     class ParticlePipeline final : public BasePipeline
     {
     public:
+    
+        struct PushConstants
+        {
+            float viewportDimension [2] {};
+            float placeholder[2] {};
+        };
 
         explicit ParticlePipeline();
         ~ParticlePipeline() override;

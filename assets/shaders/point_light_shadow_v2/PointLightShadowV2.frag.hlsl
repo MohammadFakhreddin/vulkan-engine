@@ -1,5 +1,5 @@
 #include "../PointLightBuffer.hlsl"
-#include "../CameraBuffer.hlsl"
+// #include "../CameraBuffer.hlsl"
 
 struct PSIn {
     float4 position : SV_POSITION;                  
@@ -12,13 +12,13 @@ struct PSOut {
 
 ConstantBuffer <PointLightsBufferData> pointLightsBuffer: register(b2, space0);  
 
-ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
+// ConstantBuffer <CameraData> cameraParams: register(b0, space0);
 
 struct PushConsts
 {   
     int lightIndex;
     int faceIndex;
-    int placeholder0;
+    float projectFarToNearDistance;
     int placeholder1;
 };
 
@@ -34,7 +34,7 @@ PSOut main(PSIn input) {
     float lightDistance = length(input.worldPosition.xyz - pointLightsBuffer.items[pushConsts.lightIndex].position.xyz);
     
     // map to [0;1] range by dividing by far_plane
-    lightDistance = lightDistance / cameraBuffer.projectFarToNearDistance;
+    lightDistance = lightDistance / pushConsts.projectFarToNearDistance;
     
     // write this as modified depth
     float depth = lightDistance;

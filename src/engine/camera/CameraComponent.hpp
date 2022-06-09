@@ -3,6 +3,7 @@
 #include "engine/entity_system/Component.hpp"
 
 #include <glm/vec3.hpp>
+#include <glm/vec2.hpp>
 #include <glm/mat4x4.hpp>
 
 namespace MFA {
@@ -12,12 +13,14 @@ public:
 
     struct CameraBufferData
     {
+//        float projectFarToNearDistance;
+//        float viewportDimension[2];
+//        float placeholder0;
+//        float cameraPosition[3];
+//        float placeholder1;
         float viewProjection[16];
-        float cameraPosition[3];
-        float projectFarToNearDistance;
-        float viewportDimension[2];
-        float placeholder[2];
     };
+    static_assert(sizeof(CameraBufferData) == 64);
     
     struct Plane
     {
@@ -60,6 +63,12 @@ public:
     void deserialize(nlohmann::json const & jsonObject) override;
 
     void serialize(nlohmann::json & jsonObject) const override;
+    
+    [[nodiscard]]
+    float GetProjectionFarToNearDistance() const;
+    
+    [[nodiscard]]
+    glm::vec2 GetViewportDimension() const;
 
 protected:
 
@@ -100,6 +109,10 @@ protected:
     CameraBufferData mCameraBufferData {};
 
     int mResizeEventListenerId = 0;
+    
+    float mProjectionFarToNearDistance = 0.0f;
+    
+    glm::vec2 mViewportDimension {};
 
 };
 

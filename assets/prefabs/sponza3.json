@@ -98,7 +98,7 @@
                     },
                     {
                         "data": {
-                            "address": "models\\mira\\scene.gltf",
+                            "address": "models/mira/scene.gltf",
                             "pipeline": "PBRWithShadowPipelineV2"
                         },
                         "familyType": 2,
@@ -526,7 +526,7 @@
             },
             {
                 "data": {
-                    "address": "models\\sponza\\sponza.gltf",
+                    "address": "models/sponza/sponza.gltf",
                     "pipeline": "PBRWithShadowPipelineV2"
                 },
                 "familyType": 2,

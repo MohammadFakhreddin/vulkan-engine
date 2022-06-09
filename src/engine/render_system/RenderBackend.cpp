@@ -279,7 +279,8 @@ namespace MFA::RenderBackend
                 instanceExtensions.data()
             ));
 #ifdef __PLATFORM_MAC__
-        instanceExtensions.emplace_back("VK_KHR_get_physical_device_properties2");
+            instanceExtensions.emplace_back("VK_KHR_get_physical_device_properties2");
+            instanceExtensions.emplace_back("VK_KHR_portability_enumeration");
 #endif
         }
 #elif defined(__ANDROID__)
@@ -299,28 +300,32 @@ namespace MFA::RenderBackend
         instanceExtensions.emplace_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
         instanceExtensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
-    //    // TODO We should enumarate layers before using them (Both desktop and android)
-    //    {// Checking for extension support
-    //        uint32_t vk_supported_extension_count = 0;
-    //        VK_Check(vkEnumerateInstanceExtensionProperties(
-    //            nullptr,
-    //            &vk_supported_extension_count,
-    //            nullptr
-    //        ));
-    //        if (vk_supported_extension_count == 0) {
-    //            MFA_CRASH("no extensions supported!");
-    //        }
-    //    }
-    // Filling out instance description:
-    auto instanceInfo = VkInstanceCreateInfo{
-        // sType is mandatory
-        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        // pNext is mandatory
-        .pNext = nullptr,
-        // flags is mandatory
-        .flags = 0,
-        // The application info structure is then passed through the instance
-        .pApplicationInfo = &applicationInfo,
+        //    // TODO We should enumarate layers before using them (Both desktop and android)
+        //    {// Checking for extension support
+        //        uint32_t vk_supported_extension_count = 0;
+        //        VK_Check(vkEnumerateInstanceExtensionProperties(
+        //            nullptr,
+        //            &vk_supported_extension_count,
+        //            nullptr
+        //        ));
+        //        if (vk_supported_extension_count == 0) {
+        //            MFA_CRASH("no extensions supported!");
+        //        }
+        //    }
+        // Filling out instance description:    
+        auto instanceInfo = VkInstanceCreateInfo{
+            // sType is mandatory
+            .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+            // pNext is mandatory
+            .pNext = nullptr,
+#ifdef __PLATFORM_MAC__
+            // flags is mandatory
+            .flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR,
+#else
+            .flags = 0,
+#endif
+            // The application info structure is then passed through the instance
+            .pApplicationInfo = &applicationInfo,
 #if defined(MFA_DEBUG) && !defined(__IOS__)
             .enabledLayerCount = static_cast<uint32_t>(DebugLayers.size()),
             .ppEnabledLayerNames = DebugLayers.data(),
@@ -1066,13 +1071,13 @@ namespace MFA::RenderBackend
         deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensionNames.size());
         // Necessary for shader (for some reason)
         deviceCreateInfo.pEnabledFeatures = &enabledPhysicalDeviceFeatures;
-    #if defined(MFA_DEBUG) && defined(__ANDROID__) == false
-        deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(DebugLayers.size());
-        deviceCreateInfo.ppEnabledLayerNames = DebugLayers.data();
-    #else
+//    #if defined(MFA_DEBUG) && defined(__ANDROID__) == false
+//        deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(DebugLayers.size());
+//        deviceCreateInfo.ppEnabledLayerNames = DebugLayers.data();
+//    #else
         deviceCreateInfo.enabledLayerCount = 0;
         deviceCreateInfo.ppEnabledLayerNames = nullptr;
-    #endif
+//    #endif
 
         VK_Check(vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &logicalDevice.device));
         MFA_ASSERT(logicalDevice.device != nullptr);

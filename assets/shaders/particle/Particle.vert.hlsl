@@ -25,6 +25,18 @@ struct VSOut {
 
 ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
 
+struct PushConsts
+{
+    float2 viewportDimension;
+    int placeholder0;
+    int placeholder1;
+};
+
+[[vk::push_constant]]
+cbuffer {
+    PushConsts pushConsts;
+};
+
 VSOut main(VSIn input) {
     VSOut output;
 
@@ -32,7 +44,7 @@ VSOut main(VSIn input) {
     float4 position = mul(cameraBuffer.viewProjection, float4(input.instancePosition + input.localPosition, 1.0f));
     output.position = position;
     // TODO Read more about screen space
-    output.centerPosition = ((position.xy / position.w) + 1.0) * 0.5 * cameraBuffer.viewportDimension; // Vertex position in screen space
+    output.centerPosition = ((position.xy / position.w) + 1.0) * 0.5 * pushConsts.viewportDimension; // Vertex position in screen space
     output.textureIndex = input.textureIndex;
     // output.uv = input.uv;
     output.color = input.color;

@@ -288,9 +288,10 @@ namespace MFA
     {
         auto const viewProjectionMatrix = mProjectionMatrix * mViewMatrix;
 
-        GetPosition(mCameraBufferData.cameraPosition);
+         
+//        GetPosition(mCameraBufferData.cameraPosition);
         Matrix::CopyGlmToCells(viewProjectionMatrix, mCameraBufferData.viewProjection);
-        mCameraBufferData.projectFarToNearDistance = abs(mFarDistance - mNearDistance);
+        mProjectionFarToNearDistance = abs(mFarDistance - mNearDistance);
 
         mCameraBufferUpdateCounter = RF::GetMaxFramesPerFlight();
     }
@@ -308,8 +309,8 @@ namespace MFA
 
         mAspectRatio = static_cast<float>(width) / static_cast<float>(height);
 
-        mCameraBufferData.viewportDimension[0] = static_cast<float>(width);
-        mCameraBufferData.viewportDimension[1] = static_cast<float>(height);
+        mViewportDimension.x = static_cast<float>(width);
+        mViewportDimension.y = static_cast<float>(height);
 
         Matrix::PreparePerspectiveProjectionMatrix(
             mProjectionMatrix,
@@ -346,4 +347,13 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    float CameraComponent::GetProjectionFarToNearDistance() const {
+        return mProjectionFarToNearDistance;
+    }
+    
+    [[nodiscard]]
+    glm::vec2 CameraComponent::GetViewportDimension() const {
+        return mViewportDimension;
+    }
+    
 }

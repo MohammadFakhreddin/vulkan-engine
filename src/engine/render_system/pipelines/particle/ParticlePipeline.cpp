@@ -14,6 +14,8 @@
 #include "engine/asset_system/AssetShader.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
+#include "engine/camera/CameraComponent.hpp"
+#include "engine/BedrockMatrix.hpp"
 
 #define CAST_ESSENCE_PURE(essence) static_cast<ParticleEssence *>(essence)
 
@@ -92,6 +94,15 @@ namespace MFA
             RF::UpdateFrequency::PerFrame,
             mPerFrameDescriptorSetGroup
         );
+        
+        PushConstants pushConstants {};
+        
+        if (auto activeCamera = SceneManager::GetActiveCamera().lock())
+        {
+            Matrix::CopyGlmToCells(activeCamera->GetViewportDimension(), pushConstants.viewportDimension);
+        }
+        
+        RF::PushConstants(recordState, AS::ShaderStage::Vertex, 0, CBlobAliasOf(pushConstants));
 
         for (auto * essence : mAllEssencesList)
         {
@@ -448,6 +459,14 @@ namespace MFA
             .offset = offsetof(PerInstanceData, instancePosition)
         });
         
+        std::vector<VkPushConstantRange> pushConstantRanges {};
+        VkPushConstantRange pushConstantRange{
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+            .offset = 0,
+            .size = sizeof(PushConstants),
+        };
+        pushConstantRanges.emplace_back(pushConstantRange);
+        
         RT::CreateGraphicPipelineOptions pipelineOptions{};
         pipelineOptions.primitiveTopology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
         pipelineOptions.rasterizationSamples = RF::GetMaxSamplesCount();
@@ -472,7 +491,9 @@ namespace MFA
 
         const auto pipelineLayout = RF::CreatePipelineLayout(
             static_cast<uint32_t>(descriptorSetLayouts.size()),
-            descriptorSetLayouts.data()
+            descriptorSetLayouts.data(),
+            static_cast<uint32_t>(pushConstantRanges.size()),
+            pushConstantRanges.data()
         );
         MFA_ASSERT(pipelineLayout != nullptr);
 
