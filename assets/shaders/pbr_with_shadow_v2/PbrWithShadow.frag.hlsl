@@ -309,7 +309,7 @@ PSOut main(PSIn input) {
     }
 
     // Combine with ambient
-    float3 color = baseColor.rgb;//float3(0.0, 0.0, 0.0);
+    float3 color = float3(0.0, 0.0, 0.0);
     
     if (primitiveInfo.emissiveTextureIndex >= 0) {
         float3 ao = textures[primitiveInfo.emissiveTextureIndex].Sample(textureSampler, input.emissiveTexCoord);

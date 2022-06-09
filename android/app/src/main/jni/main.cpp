@@ -19,21 +19,27 @@
 #include "../src/libs/stb_image/stb_image_resize.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../src/libs/stb_image/stb_image_write.h"
+#include "../src/libs/nlohmann/json.hpp"
 #define TINYGLTF_ANDROID_LOAD_FROM_ASSETS
 #define TINYGLTF_NO_INCLUDE_STB_IMAGE
 #define TINYGLTF_NO_INCLUDE_STB_IMAGE_WRITE
+#define TINYGLTF_NO_INCLUDE_JSON
 #define TINYGLTF_NO_EXTERNAL_IMAGE  // For disabling reading images when decoding json files
 #define TINYGLTF_IMPLEMENTATION
 #include "../src/libs/tiny_gltf_loader/tiny_gltf_loader.h"
 #define TINYKTX_IMPLEMENTATION
 #include "../src/libs/tiny_ktx/tinyktx.h"
-#define VMA_IMPLEMENTATION
-#include "../src/libs/vma/vk_mem_alloc.h"
 
 #include "vulkan_wrapper/vulkan_wrapper.h"
 
+#define VULKAN_H_
+#define VMA_IMPLEMENTATION
+#include "../src/libs/vma/vk_mem_alloc.h"
+
 #include "Application.hpp"
 #include "engine/InputManager.hpp"
+#include "engine/BedrockAssert.hpp"
+#include "engine/render_system/RenderFrontend.hpp"
 
 #include <android/log.h>
 #include <android_native_app_glue.h>

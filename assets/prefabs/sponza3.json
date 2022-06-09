@@ -34,15 +34,16 @@
                     },
                     {
                         "data": {
+                            "OcclusionEnabled": false,
                             "center": {
                                 "x": 0.0,
                                 "y": 0.0,
                                 "z": 0.0
                             },
                             "extend": {
-                                "x": 1.0,
-                                "y": 1.0,
-                                "z": 1.0
+                                "x": 2.0,
+                                "y": 2.0,
+                                "z": 2.0
                             }
                         },
                         "familyType": 4,
@@ -78,7 +79,7 @@
                     {
                         "data": {
                             "position": {
-                                "x": 0.0,
+                                "x": 1.0,
                                 "y": 0.0,
                                 "z": 0.0
                             },
@@ -111,17 +112,17 @@
                     },
                     {
                         "data": {
+                            "OcclusionEnabled": true,
                             "center": {
                                 "x": 50.0,
                                 "y": 230.0,
                                 "z": -20.0
                             },
                             "extend": {
-                                "x": 0.4000000059604645,
-                                "y": 0.800000011920929,
-                                "z": 0.4000000059604645
-                            },
-                            "OcclusionEnabled": true
+                                "x": 0.800000011920929,
+                                "y": 2.0,
+                                "z": 0.800000011920929
+                            }
                         },
                         "familyType": 4,
                         "name": "AxisAlignedBoundingBoxComponent"
@@ -174,15 +175,16 @@
                     },
                     {
                         "data": {
+                            "OcclusionEnabled": false,
                             "center": {
                                 "x": 0.0,
                                 "y": 0.0,
                                 "z": 0.0
                             },
                             "extend": {
-                                "x": 1.0,
-                                "y": 1.0,
-                                "z": 1.0
+                                "x": 2.0,
+                                "y": 2.0,
+                                "z": 2.0
                             }
                         },
                         "familyType": 4,
@@ -246,6 +248,7 @@
                     },
                     {
                         "data": {
+                            "OcclusionEnabled": false,
                             "center": {
                                 "x": 0.0,
                                 "y": 0.0,
@@ -318,6 +321,7 @@
                     },
                     {
                         "data": {
+                            "OcclusionEnabled": false,
                             "center": {
                                 "x": 0.0,
                                 "y": 0.0,
@@ -390,6 +394,7 @@
                     },
                     {
                         "data": {
+                            "OcclusionEnabled": false,
                             "center": {
                                 "x": 0.0,
                                 "y": 0.0,
@@ -462,15 +467,16 @@
                     },
                     {
                         "data": {
+                            "OcclusionEnabled": false,
                             "center": {
                                 "x": 0.0,
                                 "y": 0.0,
                                 "z": 0.0
                             },
                             "extend": {
-                                "x": 1.0,
-                                "y": 1.0,
-                                "z": 1.0
+                                "x": 2.0,
+                                "y": 2.0,
+                                "z": 2.0
                             }
                         },
                         "familyType": 4,
@@ -539,15 +545,16 @@
             },
             {
                 "data": {
+                    "OcclusionEnabled": false,
                     "center": {
                         "x": -1.0,
                         "y": 5.0,
                         "z": 0.0
                     },
                     "extend": {
-                        "x": 15.0,
-                        "y": 6.0,
-                        "z": 10.0
+                        "x": 31.0,
+                        "y": 14.0,
+                        "z": 18.0
                     }
                 },
                 "familyType": 4,

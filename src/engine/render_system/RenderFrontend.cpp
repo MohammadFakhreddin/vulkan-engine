@@ -80,13 +80,13 @@ namespace MFA::RenderFrontend
         int nextEventListenerId = 0;
         uint8_t currentFrame = 0;
         VkFormat depthFormat{};
+        bool isWindowVisible = true;                        // Currently only minimize can cause this to be false
 
 #ifdef __DESKTOP__
         // CreateWindow
         MSDL::SDL_Window * window = nullptr;
         // Event watches
         std::vector<SDLEventWatchGroup> sdlEventListeners{};
-        bool isWindowVisible = true;                        // Currently only minimize can cause this to be false
 #elif defined(__ANDROID__)
         ANativeWindow * window = nullptr;
 #elif defined(__IOS__)
@@ -218,7 +218,7 @@ namespace MFA::RenderFrontend
 #else
 #error "Os is not supported"
 #endif
-        MFA_VK_VALID_ASSERT(state->vk_instance);
+        MFA_ASSERT(state->vk_instance != VK_NULL_HANDLE);
 
 #if defined(MFA_DEBUG)  // TODO Fix support for android
         state->vkDebugReportCallbackExt = RB::CreateDebugCallback(
@@ -281,24 +281,24 @@ namespace MFA::RenderFrontend
             state->logicalDevice.device,
             state->graphicQueueFamily
         );
-        MFA_VK_VALID_ASSERT(state->graphicQueue);
+        MFA_ASSERT(state->graphicQueue != VK_NULL_HANDLE);
 
         state->computeQueue = RB::GetQueueByFamilyIndex(
             state->logicalDevice.device,
             state->computeQueueFamily
         );
-        MFA_VK_VALID_ASSERT(state->computeQueue);
+        MFA_ASSERT(state->computeQueue != VK_NULL_HANDLE);
 
         state->presentQueue = RB::GetQueueByFamilyIndex(
             state->logicalDevice.device,
             state->presentQueueFamily
         );
-        MFA_VK_VALID_ASSERT(state->presentQueue);
+        MFA_ASSERT(state->presentQueue != VK_NULL_HANDLE);
 
         MFA_LOG_INFO("Acquired graphics, compute and presentation queues");
 
         auto const maxFramePerFlight = GetMaxFramesPerFlight();
-        // Graphic 
+        // Graphic
         state->graphicCommandPool = RB::CreateCommandPool(state->logicalDevice.device, state->graphicQueueFamily);
         state->graphicCommandBuffer = RB::CreateCommandBuffers(
             state->logicalDevice.device,
@@ -457,7 +457,7 @@ namespace MFA::RenderFrontend
             bindingsCount,
             bindings
         );
-        MFA_VK_VALID_ASSERT(descriptorSetLayout);
+        MFA_ASSERT(descriptorSetLayout != VK_NULL_HANDLE);
         return descriptorSetLayout;
     }
 
@@ -571,7 +571,7 @@ namespace MFA::RenderFrontend
         VkDescriptorSetLayout descriptorSetLayout
     )
     {
-        MFA_VK_VALID_ASSERT(descriptorSetLayout);
+        MFA_ASSERT(descriptorSetLayout != VK_NULL_HANDLE);
         return RB::CreateDescriptorSet(
             state->logicalDevice.device,
             descriptorPool,
@@ -595,7 +595,7 @@ namespace MFA::RenderFrontend
             buffer = CreateBuffer(
                 bufferSize,
                 bufferUsageFlagBits,
-                memoryPropertyFlags            
+                memoryPropertyFlags
             );
         }
 
@@ -706,13 +706,13 @@ namespace MFA::RenderFrontend
     {
 
         VkDeviceSize const bufferSize = verticesBlob.len;
-        
+
         auto vertexBuffer = CreateVertexBuffer(bufferSize);
 
         UpdateHostVisibleBuffer(stageBuffer, verticesBlob);
 
         UpdateLocalBuffer(commandBuffer, *vertexBuffer, stageBuffer);
-        
+
         return vertexBuffer;
     }
 
@@ -777,7 +777,7 @@ namespace MFA::RenderFrontend
     //        vertexStageBuffer,
     //        mesh.getVertexData()->memory
     //    );
-    //    
+    //
     //    auto indexBuffer = CreateIndexBuffer(
     //        commandBuffer,
     //        indexStageBuffer,
@@ -1001,7 +1001,7 @@ namespace MFA::RenderFrontend
                 MFA_ASSERT(false);
                 break;
         }
-        
+
         BindDescriptorSet(
             recordState.commandBuffer,
             bindPoint,
@@ -1139,6 +1139,7 @@ namespace MFA::RenderFrontend
             state->isWindowVisible = isWindowVisible;
         }
 #endif
+
         if (state->windowResized)
         {
             OnResize();
@@ -1494,12 +1495,10 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-#ifdef __DESKTOP__
     bool IsWindowVisible()
     {
         return state->isWindowVisible;
     }
-#endif
 
     //-------------------------------------------------------------------------------------------------
 
@@ -1573,7 +1572,7 @@ namespace MFA::RenderFrontend
         );
 
         MFA_ASSERT(recordState.isValid);
-        MFA_VK_INVALID_ASSERT(recordState.commandBuffer);
+        MFA_ASSERT(recordState.commandBuffer == VK_NULL_HANDLE);
         MFA_ASSERT(commandBufferType != RT::CommandBufferType::Invalid);
         MFA_ASSERT(recordState.commandBufferType == RT::CommandBufferType::Invalid);
 
@@ -1586,7 +1585,7 @@ namespace MFA::RenderFrontend
     void EndCommandBuffer(RT::CommandRecordState & recordState)
     {
         MFA_ASSERT(recordState.isValid);
-        MFA_VK_VALID_ASSERT(recordState.commandBuffer);
+        MFA_ASSERT(recordState.commandBuffer != VK_NULL_HANDLE);
         MFA_ASSERT(recordState.commandBufferType != RT::CommandBufferType::Invalid);
 
         RB::EndCommandBuffer(recordState.commandBuffer);
@@ -1889,7 +1888,7 @@ namespace MFA::RenderFrontend
             state->currentFrame = 0;
         }
 
-        auto * fence = GetFence(recordState);
+        auto fence = GetFence(recordState);
         WaitForFence(fence);
         ResetFence(fence);
 
@@ -1910,7 +1909,7 @@ namespace MFA::RenderFrontend
     }
 
     //-------------------------------------------------------------------------------------------------
-    
+
     VkFence GetFence(RT::CommandRecordState const & recordState)
     {
         return state->fences[recordState.frameIndex];
@@ -1971,7 +1970,7 @@ namespace MFA::RenderFrontend
             groupCountX,
             groupCountY,
             groupCountZ
-        );        
+        );
     }
 
     //-------------------------------------------------------------------------------------------------

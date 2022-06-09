@@ -4,6 +4,10 @@
 
 #include <glm/vec3.hpp>
 
+#ifdef __ANDROID__
+#include <android_native_app_glue.h>
+#endif
+
 namespace MFA::UI_System
 {
 

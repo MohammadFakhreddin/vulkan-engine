@@ -54,7 +54,7 @@ namespace MFA
 
     bool BasePipeline::hasEssence(std::string const & nameId) const
     {
-        return mEssenceAndVariantsMap.contains(Path::RelativeToAssetFolder(nameId));
+        return mEssenceAndVariantsMap.find(Path::RelativeToAssetFolder(nameId)) != mEssenceAndVariantsMap.end();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -146,7 +146,7 @@ namespace MFA
         {
             SceneManager::UpdatePipeline(this);
         }
-        
+
         // Removing from essence and variants' list
         auto const findResult = mEssenceAndVariantsMap.find(variant.getEssence()->getNameId());
         MFA_ASSERT(findResult != mEssenceAndVariantsMap.end());
@@ -161,7 +161,7 @@ namespace MFA
                 return;
             }
         }
-        
+
         MFA_ASSERT(false);
     }
 
@@ -238,7 +238,7 @@ namespace MFA
         auto const & address = essence->getNameId();
 
         bool success = false;
-        if(MFA_VERIFY(mEssenceAndVariantsMap.contains(address) == false))
+        if(MFA_VERIFY(mEssenceAndVariantsMap.find(address) == mEssenceAndVariantsMap.end()))
         {
             mEssenceAndVariantsMap[address] = EssenceAndVariants(essence);
             mAllEssencesList.emplace_back(essence.get());

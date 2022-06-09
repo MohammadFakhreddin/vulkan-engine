@@ -10,7 +10,7 @@ namespace MFA {
 DescriptorSetSchema::DescriptorSetSchema(VkDescriptorSet descriptorSet)
     : mDescriptorSet(descriptorSet)
 {
-    MFA_VK_VALID_ASSERT(descriptorSet);
+    MFA_ASSERT(descriptorSet != VK_NULL_HANDLE);
     isActive = true;
 }
 

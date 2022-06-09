@@ -6,6 +6,8 @@
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
 
+#include <cmath>
+
 #define CAST_VARIANT(variant) static_pointer_cast<ParticleVariant>(variant)
 
 namespace MFA
@@ -133,9 +135,9 @@ namespace MFA
         //---------------------------------------
 
         createInstanceBuffer();
-        
+
         mIsInitialized = true;
-        
+
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -227,7 +229,7 @@ namespace MFA
         }
 
         updateInstanceBuffer(recordState);
-        
+
         bindVertexBuffer(recordState);
         bindInstanceBuffer(recordState);
         bindIndexBuffer(recordState);
@@ -266,7 +268,7 @@ namespace MFA
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
             auto const & descriptorSet = mGraphicDescriptorSet.descriptorSets[frameIndex];
-            MFA_VK_VALID_ASSERT(descriptorSet);
+            MFA_ASSERT(descriptorSet != VK_NULL_HANDLE);
 
             DescriptorSetSchema descriptorSetSchema{ descriptorSet };
 
@@ -276,7 +278,7 @@ namespace MFA
             for (auto const & texture : mTextures)
             {
                 imageInfos.emplace_back(VkDescriptorImageInfo{
-                    .sampler = nullptr,
+                    .sampler = VK_NULL_HANDLE,
                     .imageView = texture->imageView->imageView,
                     .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
                 });
@@ -284,7 +286,7 @@ namespace MFA
             for (auto i = static_cast<uint32_t>(mTextures.size()); i < maxTextureCount; ++i)
             {
                 imageInfos.emplace_back(VkDescriptorImageInfo{
-                    .sampler = nullptr,
+                    .sampler = VK_NULL_HANDLE,
                     .imageView = errorTexture.imageView->imageView,
                     .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
                 });
@@ -310,7 +312,7 @@ namespace MFA
         );
 
         auto const & descriptorSet = mComputeDescriptorSet.descriptorSets[0];
-        MFA_VK_VALID_ASSERT(descriptorSet);
+        MFA_ASSERT(descriptorSet != VK_NULL_HANDLE);
 
         DescriptorSetSchema descriptorSetSchema{ descriptorSet };
 
@@ -392,7 +394,7 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-    
+
     void ParticleEssence::bindIndexBuffer(RT::CommandRecordState const & recordState) const
     {
         RF::BindIndexBuffer(
@@ -424,7 +426,7 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-    
+
     void ParticleEssence::checkIfUpdateIsRequired(VariantsList const & variants)
     {
         mShouldUpdate = false;
@@ -440,7 +442,7 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-    
+
     void ParticleEssence::updateParamsBuffer(RT::CommandRecordState const & recordState)
     {
         if (mParamsStageBuffer == nullptr)
@@ -456,5 +458,5 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-    
+
 }

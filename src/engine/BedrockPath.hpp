@@ -16,6 +16,9 @@ namespace MFA::Path
     void ForReadWrite(std::string const & address, std::string & outPath);
 
     // Returns true if relative path was extracted
+    bool RelativeToAssetFolder(std::string const & address, std::string & outAddress);
+
+    [[nodiscard]]
     std::string RelativeToAssetFolder(std::string const & address);
 
     [[nodiscard]]

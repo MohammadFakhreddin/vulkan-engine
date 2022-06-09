@@ -111,7 +111,7 @@ namespace MFA::SceneManager
         std::vector<std::weak_ptr<PointLightComponent>> pointLightComponents{};
         std::vector<std::weak_ptr<DirectionalLightComponent>> directionalLightComponents{};
 
-        // Buffers 
+        // Buffers
         std::shared_ptr<RT::BufferGroup> cameraBuffer{};
         std::shared_ptr<RT::BufferGroup> timeBuffer{};
 
@@ -200,7 +200,7 @@ namespace MFA::SceneManager
         prepareTimeBuffer();
         prepareDirectionalLightsBuffer();
         preparePointLightsBuffer();
-        
+
         if (state->activeSceneIndex >= 0)
         {
             state->nextActiveSceneIndex = state->activeSceneIndex;
@@ -265,7 +265,7 @@ namespace MFA::SceneManager
     {
         std::string const name = pipeline->GetName();
         MFA_ASSERT(name.empty() == false);
-        if (MFA_VERIFY(state->pipelines.contains(name) == false))
+        if (MFA_VERIFY(state->pipelines.find(name) == state->pipelines.end()))
         {
             UpdatePipeline(pipeline.get());
             pipeline->init();
@@ -473,7 +473,7 @@ namespace MFA::SceneManager
 
         // Submit compute queue
         std::vector<VkSemaphore> computeSignalSemaphores{ computeSemaphore };
-        
+
         auto computeCommandBuffer = RF::GetComputeCommandBuffer(recordState);
 
         submitInfos.emplace_back(VkSubmitInfo{
@@ -810,7 +810,7 @@ namespace MFA::SceneManager
 
     static void updatePointLightsBuffer(RT::CommandRecordState const & recordState)
     {
-        // Maybe we can search for another active camera 
+        // Maybe we can search for another active camera
         state->pointLightData.count = 0;
         for (int i = static_cast<int>(state->pointLightComponents.size()) - 1; i >= 0; --i)
         {

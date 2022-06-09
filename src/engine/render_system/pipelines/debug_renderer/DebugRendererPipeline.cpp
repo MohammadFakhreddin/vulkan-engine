@@ -188,7 +188,7 @@ namespace MFA
         };
         bindings.emplace_back(layoutBinding);
 
-        MFA_VK_INVALID_ASSERT(mDescriptorSetLayout);
+        MFA_ASSERT(mDescriptorSetLayout == VK_NULL_HANDLE);
         mDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
             bindings.data()
@@ -273,7 +273,7 @@ namespace MFA
         {
 
             auto const & descriptorSet = mDescriptorSetGroup.descriptorSets[frameIndex];
-            MFA_VK_VALID_ASSERT(descriptorSet);
+            MFA_ASSERT(descriptorSet != VK_NULL_HANDLE);
 
             DescriptorSetSchema descriptorSetSchema{ descriptorSet };
 

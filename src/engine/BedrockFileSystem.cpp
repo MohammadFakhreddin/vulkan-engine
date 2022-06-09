@@ -76,7 +76,7 @@ bool close() {
         mFile = nullptr;
         ret = true;
     }
-    return ret;    
+    return ret;
 }
 
 [[nodiscard]]
@@ -219,7 +219,7 @@ AndroidAssetHandle::AndroidAssetHandle(std::string const & path) {
     close();
     mFile = AAssetManager_open(
         mApp->activity->assetManager,
-        path,
+        path.c_str(),
         AASSET_MODE_BUFFER
     );
 }

@@ -56,9 +56,7 @@ namespace MFA::InputManager {
     void UpdateTouchState(bool isMouseDown, bool isTouchValueValid, MousePosition mouseX, MousePosition mouseY);
 #endif
 
-#ifdef __DESKTOP__
     void WarpMouseAtEdges(bool warp);
-#endif
 
 }
 

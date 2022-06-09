@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.10.2)
 
 # set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version")
 # set(CMAKE_IOS_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum IOS deployment version")
@@ -33,6 +33,7 @@ if (ANDROID)
 else ()
     set (CMAKE_CXX_STANDARD 20)
 endif ()
+
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(APPLE)
@@ -64,7 +65,7 @@ endif()
 
 message(STATUS "Build type is ${CMAKE_BUILD_TYPE}")
 
-if (NOT WINDOWS) 
+if (NOT WINDOWS)
     if(${CMAKE_BUILD_TYPE} MATCHES Release)
         add_definitions(-DNDEBUG)
     else()
@@ -76,7 +77,7 @@ endif()
 add_definitions(-DGLM_FORCE_DEPTH_ZERO_TO_ONE)
 
 # Note: Linux On MacOS 10.14 with clang++ compiler, I get executable with SIMD right away.
-# On Ubuntu 16.04 with g++ compiler, I will have to use the compiler flag -mavx2 to generate a SIMD executable. 
+# On Ubuntu 16.04 with g++ compiler, I will have to use the compiler flag -mavx2 to generate a SIMD executable.
 # There are other compiler options for other SIMD instructions here. Without the compiler flag, I still get a serial executable.
 
 if (UNIX)
@@ -93,7 +94,7 @@ find_package(glm REQUIRED)
 
 list(
     APPEND COMMON_INCLUDE_DIRECTORIES
-    "src" 
+    "src"
     "${CMAKE_SOURCE_DIR}/libs/include"
     "${GLM_INCLUDE_DIRS}"
 )
@@ -133,7 +134,7 @@ add_library("Bedrock"
 )
 
 target_include_directories(
-    "Bedrock" PUBLIC 
+    "Bedrock" PUBLIC
     ${COMMON_INCLUDE_DIRECTORIES}
 )
 
@@ -213,7 +214,7 @@ list(
 add_library("Renderer" ${RENDERER_SOURCES})
 
 target_include_directories(
-    "Renderer" PUBLIC 
+    "Renderer" PUBLIC
     ${COMMON_INCLUDE_DIRECTORIES}
 )
 
@@ -247,7 +248,7 @@ list(
     "src/engine/entity_system/components/MeshRendererComponent.cpp"
     "src/engine/entity_system/components/BoundingVolumeRendererComponent.hpp"
     "src/engine/entity_system/components/BoundingVolumeRendererComponent.cpp"
-    
+
     "src/engine/entity_system/components/BoundingVolumeComponent.hpp"
     "src/engine/entity_system/components/BoundingVolumeComponent.cpp"
     "src/engine/entity_system/components/AxisAlignedBoundingBoxComponent.hpp"
@@ -270,7 +271,7 @@ add_library("EntitySystem"
 )
 
 target_include_directories(
-    "EntitySystem" PUBLIC 
+    "EntitySystem" PUBLIC
     ${COMMON_INCLUDE_DIRECTORIES}
 )
 
@@ -304,7 +305,7 @@ list(
 add_library("AssetSystem" ${ASSET_SYSTEM_SOURCES})
 
 target_include_directories(
-    "AssetSystem" PUBLIC 
+    "AssetSystem" PUBLIC
     ${COMMON_INCLUDE_DIRECTORIES}
 )
 
@@ -316,7 +317,7 @@ set(ENGINE_SOURCES)
 
 list(
     APPEND ENGINE_SOURCES
-    
+
     # Job system
     "src/engine/job_system/ThreadPool.hpp"
     "src/engine/job_system/ThreadPool.cpp"
@@ -350,7 +351,7 @@ list(
     "src/engine/scene_manager/SceneManager.cpp"
     "src/engine/scene_manager/Scene.hpp"
     "src/engine/scene_manager/Scene.cpp"
-    
+
     # Application
     "src/Application.hpp"
     "src/Application.cpp"
@@ -365,7 +366,7 @@ add_library("Engine"
 )
 
 target_include_directories(
-    "Engine" PUBLIC 
+    "Engine" PUBLIC
     ${COMMON_INCLUDE_DIRECTORIES}
 )
 
@@ -400,7 +401,7 @@ add_library("Tools"
 )
 
 target_include_directories(
-    "Tools" PUBLIC 
+    "Tools" PUBLIC
     ${COMMON_INCLUDE_DIRECTORIES}
 )
 
@@ -412,25 +413,25 @@ set(TECHDEMO_SOURCES)
 
 list(
     APPEND TECHDEMO_SOURCES
-    
+
     "applications/techdemo/TechDemoApplication.hpp"
     "applications/techdemo/TechDemoApplication.cpp"
 
     "applications/techdemo/scenes/gltf_mesh_viewer/GLTFMeshViewerScene.cpp"
     "applications/techdemo/scenes/gltf_mesh_viewer/GLTFMeshViewerScene.hpp"
-    
+
     "applications/techdemo/scenes/demo_3rd_person_scene/Demo3rdPersonScene.hpp"
     "applications/techdemo/scenes/demo_3rd_person_scene/Demo3rdPersonScene.cpp"
-    
+
     "applications/techdemo/scenes/particle_fire_scene/ParticleFireScene.hpp"
     "applications/techdemo/scenes/particle_fire_scene/ParticleFireScene.cpp"
 
     # "src/scenes/pbr_scene/PBRScene.cpp"
     # "src/scenes/pbr_scene/PBRScene.hpp"
-    
+
     # "src/scenes/textured_sphere/TexturedSphereScene.cpp"
     # "src/scenes/textured_sphere/TexturedSphereScene.hpp"
-    
+
     # "src/scenes/texture_viewer_scene/TextureViewerScene.hpp"
     # "src/scenes/texture_viewer_scene/TextureViewerScene.cpp"
 
@@ -504,7 +505,7 @@ list(
     APPEND LIBS_SOURCES
     #SDL
     "src/libs/sdl/SDL.hpp"
-)    
+)
 endif ()
 
 add_library("Libs"
@@ -512,7 +513,7 @@ add_library("Libs"
 )
 
 target_include_directories(
-    "Libs" PUBLIC 
+    "Libs" PUBLIC
     ${COMMON_INCLUDE_DIRECTORIES}
 )
 
@@ -566,15 +567,15 @@ set(link_to_target_sources)
         "windows/main.cpp"
     )
 
-    list(APPEND WIN_INCLUDE_DIRECTORIES 
+    list(APPEND WIN_INCLUDE_DIRECTORIES
         "windows"
     )
 
     file(GLOB VULKAN "${CMAKE_SOURCE_DIR}/libs/win/vulkan-1.lib")
 
     file(
-        GLOB SDL 
-        "${CMAKE_SOURCE_DIR}/libs/win/SDL2.lib" 
+        GLOB SDL
+        "${CMAKE_SOURCE_DIR}/libs/win/SDL2.lib"
         "${CMAKE_SOURCE_DIR}/libs/win/SDL2main.lib"
     )
 
@@ -585,32 +586,32 @@ set(link_to_target_sources)
     # )
 
     list(
-        APPEND COMPILED_LIBS 
+        APPEND COMPILED_LIBS
         ${VULKAN}
         ${SDL}
         # ${ASAN}
     )
 
     file(
-        GLOB DLLS 
-        "${CMAKE_SOURCE_DIR}/libs/win/SDL2.dll" 
+        GLOB DLLS
+        "${CMAKE_SOURCE_DIR}/libs/win/SDL2.dll"
         # "${CMAKE_SOURCE_DIR}/libs/win/clang_rt.asan_dynamic-x86_64.dll"
     )
 
     # Techdemo executable
-    
+
     unset(link_to_target_sources)
-    list(APPEND link_to_target_sources 
-        ${WIN_SOURCES} 
+    list(APPEND link_to_target_sources
+        ${WIN_SOURCES}
         ${TECHDEMO_SOURCES}
     )
     unset(link_to_target_directories)
-    list(APPEND link_to_target_directories 
+    list(APPEND link_to_target_directories
         ${WIN_INCLUDE_DIRECTORIES}
         "applications/techdemo"
     )
     link_to_target(${TECHDEMO})
-    # TODO: Move add_custum_command to link_to_target function as well 
+    # TODO: Move add_custum_command to link_to_target function as well
     add_custom_command(
         TARGET ${TECHDEMO} POST_BUILD                   # Adds a post-build event to MyTest
         COMMAND ${CMAKE_COMMAND} -E copy_if_different   # which executes "cmake - E copy_if_different..."
@@ -621,11 +622,11 @@ set(link_to_target_sources)
     target_compile_definitions(${TECHDEMO} PRIVATE TECHDEMO)
 
     # Prefab editor executable
-    
+
     unset(link_to_target_sources)
     list(APPEND link_to_target_sources ${WIN_SOURCES} ${PREFAB_EDITOR_SOURCES})
     unset(link_to_target_directories)
-    list(APPEND link_to_target_directories 
+    list(APPEND link_to_target_directories
         ${WIN_INCLUDE_DIRECTORIES}
         "applications/prefab_editor"
     )
@@ -647,7 +648,7 @@ set(link_to_target_sources)
     unset(link_to_target_sources)
     list(APPEND link_to_target_sources ${UNIT_TEST_SOURCE})
     unset(link_to_target_directories)
-    list(APPEND link_to_target_directories 
+    list(APPEND link_to_target_directories
         "unit_tests"
     )
     link_to_target(${UNIT_TEST_NAME})
@@ -684,12 +685,12 @@ elseif(LINUX)
             ${executable_name} PUBLIC
             $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
             $<INSTALL_INTERFACE:include>
-        ) 
+        )
         target_link_libraries(${executable_name} ${CMAKE_DL_LIBS})
         # target_link_directories(${executable_name} PUBLIC "${CMAKE_SOURCE_DIR}/libs/linux/sdl/")
         # target_include_directories(${executable_name} PUBLIC "${CMAKE_SOURCE_DIR}/libs/linux/sdl/")
-        target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})    
-    
+        target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
+
         target_link_libraries(${executable_name} X11)
 
     endfunction()
@@ -697,7 +698,7 @@ elseif(LINUX)
     message(STATUS "Building for linux")
 
     find_package(X11 REQUIRED)
-    include_directories(${X11_INCLUDE_DIRS})    
+    include_directories(${X11_INCLUDE_DIRS})
 
     set(CMAKE_THREAD_LIBS_INIT "-lpthread")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
@@ -708,7 +709,7 @@ elseif(LINUX)
 
     set(LINUX_SOURCE)
     set(LINUX_INCLUDE_DIRECTORIES)
-    
+
     list(
         APPEND LINUX_SOURCE
         "linux/main.cpp"
@@ -721,13 +722,13 @@ elseif(LINUX)
 
     # Techdemo
     unset(link_to_target_directories)
-    list(APPEND link_to_target_directories 
+    list(APPEND link_to_target_directories
         ${LINUX_INCLUDE_DIRECTORIES}
         "applications/techdemo"
     )
     unset(link_to_target_sources)
-    list(APPEND link_to_target_sources 
-        ${LINUX_SOURCE} 
+    list(APPEND link_to_target_sources
+        ${LINUX_SOURCE}
         ${TECHDEMO_SOURCES}
     )
     link_to_target(${TECHDEMO})
@@ -735,13 +736,13 @@ elseif(LINUX)
 
     # Editor
     unset(link_to_target_directories)
-    list(APPEND link_to_target_directories 
+    list(APPEND link_to_target_directories
         ${LINUX_INCLUDE_DIRECTORIES}
         "applications/prefab_editor"
     )
     unset(link_to_target_sources)
-    list(APPEND link_to_target_sources 
-        ${LINUX_SOURCE} 
+    list(APPEND link_to_target_sources
+        ${LINUX_SOURCE}
         ${PREFAB_EDITOR_SOURCES}
     )
     link_to_target(${PREFAB_EDITOR})
@@ -752,7 +753,7 @@ elseif(MACOSX)
 #-----------------------------------------------------------------------
 # MACOSX Executable
 #-----------------------------------------------------------------------
-    
+
     set(link_to_target_directories)
     set(link_to_target_sources)
     function(link_to_target executable_name)
@@ -818,19 +819,19 @@ elseif(MACOSX)
         "mac/BedrockPath.mm"
     )
 
-    list(APPEND MAC_INCLUDE_DIRECTORIES 
+    list(APPEND MAC_INCLUDE_DIRECTORIES
         "mac"
     )
 
     # Techdemo
     unset(link_to_target_directories)
-    list(APPEND link_to_target_directories 
+    list(APPEND link_to_target_directories
         ${MAC_INCLUDE_DIRECTORIES}
         "applications/techdemo"
     )
     unset(link_to_target_sources)
-    list(APPEND link_to_target_sources 
-        ${MAC_SOURCE} 
+    list(APPEND link_to_target_sources
+        ${MAC_SOURCE}
         ${TECHDEMO_SOURCES}
     )
     link_to_target(${TECHDEMO})
@@ -838,13 +839,13 @@ elseif(MACOSX)
 
     # Editor
     unset(link_to_target_directories)
-    list(APPEND link_to_target_directories 
+    list(APPEND link_to_target_directories
         ${MAC_INCLUDE_DIRECTORIES}
         "applications/prefab_editor"
     )
     unset(link_to_target_sources)
-    list(APPEND link_to_target_sources 
-        ${MAC_SOURCE} 
+    list(APPEND link_to_target_sources
+        ${MAC_SOURCE}
         ${PREFAB_EDITOR_SOURCES}
     )
     link_to_target(${PREFAB_EDITOR})
@@ -854,7 +855,7 @@ elseif(MACOSX)
     unset(link_to_target_sources)
     list(APPEND link_to_target_sources ${UNIT_TEST_SOURCE} "mac/BedrockPath.mm")
     unset(link_to_target_directories)
-    list(APPEND link_to_target_directories 
+    list(APPEND link_to_target_directories
         "unit_tests"
     )
     link_to_target(${UNIT_TEST_NAME})
@@ -869,7 +870,7 @@ elseif(IPHONE)
 
     #https://stackoverflow.com/questions/822404/how-to-set-up-cmake-to-build-an-app-for-the-iphone
     set(IPHONE_SOURCE)
-        
+
     list(
         APPEND IPHONE_SOURCE
         "ios/main.mm"
@@ -885,7 +886,7 @@ elseif(IPHONE)
     # set(CMAKE_OSX_ARCHITECTURES $(ARCHS_STANDARD_32_BIT))
 
     set(MACOSX_BUNDLE_GUI_IDENTIFIER "co.radx.\${PRODUCT_NAME:identifier}")
-    
+
     add_executable(${TECHDEMO} MACOSX_BUNDLE ${IPHONE_SOURCE})
 
     add_dependencies(${TECHDEMO} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "AssetSystem" "Libs")
@@ -897,7 +898,7 @@ elseif(IPHONE)
         "-framework CoreGraphics"
         "-framework UIKit"
         "-framework Metal"
-        "-framework QuartzCore"   
+        "-framework QuartzCore"
         "${CMAKE_SOURCE_DIR}/libs/ios-arm64/libMoltenVK.a"
         "${CMAKE_SOURCE_DIR}/libs/ios-arm64_x86_64-simulator/libMoltenVK.a"
     )
@@ -905,9 +906,9 @@ elseif(IPHONE)
     # target_link_libraries(${TECHDEMO} "${CMAKE_SOURCE_DIR}/libs/ios/libMoltenVK.dylib")
 
     target_include_directories(
-        ${TECHDEMO} PUBLIC 
+        ${TECHDEMO} PUBLIC
         "ios"
-        "src" 
+        "src"
         "${CMAKE_SOURCE_DIR}/libs/include"
         "${GLM_INCLUDE_DIRS}"
     )
@@ -923,12 +924,12 @@ elseif(ANDROID)
 #-----------------------------------------------------------------------
 # Android library
 #-----------------------------------------------------------------------
-    message(STATUS "Building for android")    
+    message(STATUS "Building for android")
 
     set(ANDROID_FILES_ADDRESS "android/app/src/main/jni")
 
     set(ANDROID_SOURCES)
-        
+
     list(
         APPEND ANDROID_SOURCES
         "${ANDROID_FILES_ADDRESS}/main.cpp"
@@ -946,9 +947,9 @@ elseif(ANDROID)
     add_library(app-glue STATIC ${APP_GLUE_DIR}/android_native_app_glue.c)
 
     add_library(
-        ${TECHDEMO} SHARED 
-        ${ANDROID_SOURCES} 
-        ${ENGINE_SOURCES} 
+        ${TECHDEMO} SHARED
+        ${ANDROID_SOURCES}
+        ${ENGINE_SOURCES}
         ${LIBS_SOURCES}
         ${TOOLS_SOURCES}
         ${SCENES_SOURCES}
@@ -959,7 +960,7 @@ elseif(ANDROID)
     )
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
-       -std=c++20 -Wall -Wno-unused-variable \
+       -Wc++20-extensions -Wc++20-designator -std=c++20 -Wall -Wno-unused-variable \
        -Wno-delete-non-virtual-dtor -DVK_USE_PLATFORM_ANDROID_KHR")
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -u ANativeActivity_onCreate")
 
@@ -978,12 +979,12 @@ elseif(ANDROID)
     endfunction()
 
     target_link_libraries(${TECHDEMO} app-glue log android)
-    target_compile_options(${TECHDEMO} PUBLIC -fsanitize=address -fno-omit-frame-pointer)
-    set_target_properties(${TECHDEMO} PROPERTIES LINK_FLAGS -fsanitize=address)
+    # target_compile_options(${TECHDEMO} PUBLIC -fsanitize=address -fno-omit-frame-pointer)
+    # set_target_properties(${TECHDEMO} PROPERTIES LINK_FLAGS -fsanitize=address)
 
     target_include_directories(
-        ${TECHDEMO} PUBLIC 
-        "src" 
+        ${TECHDEMO} PUBLIC
+        "src"
         "${CMAKE_SOURCE_DIR}/libs/include"
         "${GLM_INCLUDE_DIRS}"
     )
@@ -992,14 +993,14 @@ elseif(ANDROID)
     # right one for the current architecture and copy it to the libs output dir
     # (so that it will be packed in the apk):
 
-    get_architecture(${ANDROID_ABI} ARCH)
-    file(GLOB_RECURSE ASAN_SRC ${ANDROID_TOOLCHAIN_ROOT}/*.asan*${ARCH}*-android.so)
-    set(ASAN_DEST ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+    # get_architecture(${ANDROID_ABI} ARCH)
+    # file(GLOB_RECURSE ASAN_SRC ${ANDROID_TOOLCHAIN_ROOT}/*.asan*${ARCH}*-android.so)
+    # set(ASAN_DEST ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
-    add_custom_command(
-            TARGET ${TECHDEMO} PRE_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ASAN_SRC} ${ASAN_DEST}
-    )
+    # add_custom_command(
+    #         TARGET ${TECHDEMO} PRE_BUILD
+    #         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ASAN_SRC} ${ASAN_DEST}
+    # )
 
 endif()
 

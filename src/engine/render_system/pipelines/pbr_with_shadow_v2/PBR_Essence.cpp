@@ -26,7 +26,7 @@ MFA::PBR_Essence::PBR_Essence(
     , mIndexCount(mesh.getIndexCount())
 {
     MFA_ASSERT(mMeshData != nullptr);
-    
+
     prepareAnimationLookupTable();
 
     {// Creating buffers
@@ -34,7 +34,7 @@ MFA::PBR_Essence::PBR_Essence(
         std::shared_ptr<RT::BufferGroup> primitivesStageBuffer = nullptr;
         std::shared_ptr<RT::BufferGroup> unSkinnedVerticesStageBuffer = nullptr;
         std::shared_ptr<RT::BufferGroup> verticesUVsStageBuffer = nullptr;
-        
+
         auto const commandBuffer = RF::BeginSingleTimeGraphicCommand();
         prepareIndicesBuffer(commandBuffer, mesh, indicesStageBuffer);
         preparePrimitiveBuffer(commandBuffer, primitivesStageBuffer);
@@ -97,7 +97,7 @@ void MFA::PBR_Essence::preparePrimitiveBuffer(
                 }
             }
         }
-        
+
         RF::UpdateLocalBuffer(
             commandBuffer,
             *mPrimitivesBuffer->buffers[0],
@@ -259,11 +259,11 @@ void MFA::PBR_Essence::createGraphicDescriptorSet(
         RF::GetMaxFramesPerFlight(),
         descriptorSetLayout
     );
-    
+
     for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
     {
         auto const & descriptorSet = mGraphicDescriptorSet.descriptorSets[frameIndex];
-        MFA_VK_VALID_ASSERT(descriptorSet);
+        MFA_ASSERT(descriptorSet != VK_NULL_HANDLE);
 
         DescriptorSetSchema descriptorSetSchema{ descriptorSet };
 
@@ -287,7 +287,7 @@ void MFA::PBR_Essence::createGraphicDescriptorSet(
         for (auto const & texture : mTextures)
         {
             imageInfos.emplace_back(VkDescriptorImageInfo{
-                .sampler = nullptr,
+                .sampler = VK_NULL_HANDLE,
                 .imageView = texture->imageView->imageView,
                 .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             });
@@ -295,7 +295,7 @@ void MFA::PBR_Essence::createGraphicDescriptorSet(
         for (auto i = static_cast<uint32_t>(mTextures.size()); i < MAX_TEXTURE_COUNT; ++i)
         {
             imageInfos.emplace_back(VkDescriptorImageInfo{
-                .sampler = nullptr,
+                .sampler = VK_NULL_HANDLE,
                 .imageView = errorTexture.imageView->imageView,
                 .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             });
@@ -322,9 +322,9 @@ void MFA::PBR_Essence::createComputeDescriptorSet(
         1,
         descriptorSetLayout
     );
-    
+
     auto const & descriptorSet = mComputeDescriptorSet.descriptorSets[0];
-    MFA_VK_VALID_ASSERT(descriptorSet);
+    MFA_ASSERT(descriptorSet != VK_NULL_HANDLE);
 
     DescriptorSetSchema descriptorSetSchema{ descriptorSet };
 

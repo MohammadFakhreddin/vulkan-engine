@@ -2,6 +2,7 @@
 
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/ui_system//UI_System.hpp"
+#include "engine/BedrockAssert.hpp"
 
 #ifdef __DESKTOP__
 #include "libs/sdl/SDL.hpp"
@@ -10,6 +11,8 @@
 #ifdef __ANDROID__
 #include <queue>
 #endif
+
+// TODO: OOP with inheritance was much more cleaner
 
 namespace MFA::InputManager {
 
@@ -32,9 +35,9 @@ struct State {
 #ifdef __ANDROID__
     float lastTimeSinceTouchInSec = 0;
 #endif
-#ifdef __DESKTOP__
-    bool warpMouseAtEdges = false;
-#endif
+
+    bool warpMouseAtEdges = false; // Desktop only
+
     int recordUI_Id;
 
     void reset() {
@@ -113,37 +116,37 @@ static void onUI() {
     state->forwardMove = 0.0f;
     state->rightMove = 0.0f;
     UI::BeginWindow("Input controller");
-    
+
     UI::Button("Forward", []()->void {});
     if (UI::IsItemActive()) {
         state->forwardMove += 1.0f;
     }
     UI::Spacing();
-    
+
     UI::Button("Right", []()->void {});
     if (UI::IsItemActive()) {
         state->rightMove += 1.0f;
     }
     UI::Spacing();
-    
+
     UI::Button("Left", []()->void {});
     if (UI::IsItemActive()) {
         state->rightMove -= 1.0f;
     }
     UI::Spacing();
-    
+
     UI::Button("Backward", []()->void {});
     if (UI::IsItemActive()) {
         state->forwardMove -= 1.0f;
     }
     UI::Spacing();
-    
+
     UI::EndWindow();
 #endif
 }
 
 void Init() {
-    
+
     state = new State {
         .recordUI_Id = UI::Register([]()->void{onUI();})
     };
@@ -169,7 +172,7 @@ void OnNewFrame(float deltaTimeInSec) {
         auto const surfaceCapabilities = RF::GetSurfaceCapabilities();
         auto const screenWidth = surfaceCapabilities.currentExtent.width;
         auto const screenHeight = surfaceCapabilities.currentExtent.height;
-        
+
         bool mousePositionNeedsWarping = false;
         if (state->mouseCurrentX < static_cast<int>(static_cast<float>(screenWidth) * 0.010f)) {
             state->mouseCurrentX = static_cast<int>(static_cast<float>(screenWidth) * 0.010f) + 50;
@@ -280,10 +283,8 @@ void UpdateTouchState(bool isMouseDown, bool isTouchValueValid, MousePosition mo
 }
 #endif
 
-#ifdef __DESKTOP__
 void WarpMouseAtEdges(bool const warp) {
     state->warpMouseAtEdges = warp;
 }
-#endif
 
 }

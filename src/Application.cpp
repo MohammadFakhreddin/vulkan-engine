@@ -11,6 +11,8 @@
 #include "engine/resource_manager/ResourceManager.hpp"
 
 #ifdef __ANDROID__
+#include "engine/BedrockFileSystem.hpp"
+
 #include <android_native_app_glue.h>
 #include <thread>
 #endif
@@ -61,11 +63,11 @@ void Application::Init() {
     UI::Init();
     IM::Init();
     EntitySystem::Init();
-    
+
     SceneManager::Init();
 
     internalInit();
-    
+
     mIsInitialized = true;
 }
 
@@ -125,6 +127,9 @@ void Application::run() {
     }
     Shutdown();
 #elif defined(__ANDROID__)
+
+    static float TargetFpsDeltaTimeInSec = 1.0f / 120.0f;
+
     SceneManager::Update(0.01f);
     // Used to poll the events in the main loop
     int events;
@@ -175,7 +180,7 @@ void Application::setAndroidApp(android_app * androidApp) {
     mAndroidApp = androidApp;
     MFA::FileSystem::SetAndroidApp(androidApp);
     MFA::InputManager::SetAndroidApp(androidApp);
-    MFA::UISystem::SetAndroidApp(androidApp);
+    MFA::UI_System::SetAndroidApp(androidApp);
 }
 #endif
 
