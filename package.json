@@ -2,33 +2,33 @@
     "scripts": {
         "skinning-comp": "glslc -g -fshader-stage=comp assets/shaders/skinning/Skinning.comp.hlsl -o assets/shaders/skinning/Skinning.comp.spv",
 
-        "occlusion-vert": "glslc -g -fshader-stage=vert assets/shaders/occlusion_query/Occlusion.vert.hlsl  -o assets/shaders/occlusion_query/Occlusion.vert.spv -std=450core --target-env=vulkan1.1 --target-spv=spv1.3",
-        "occlusion-frag": "glslc -g -fshader-stage=frag assets/shaders/occlusion_query/Occlusion.frag.hlsl  -o assets/shaders/occlusion_query/Occlusion.frag.spv -std=450core --target-env=vulkan1.1 --target-spv=spv1.3",
+        "occlusion-vert": "glslc -g -fshader-stage=vert assets/shaders/occlusion_query/Occlusion.vert.hlsl  -o assets/shaders/occlusion_query/Occlusion.vert.spv -std=450core",
+        "occlusion-frag": "glslc -g -fshader-stage=frag assets/shaders/occlusion_query/Occlusion.frag.hlsl  -o assets/shaders/occlusion_query/Occlusion.frag.spv -std=450core",
 
-        "pbr-with-shadow-vert-v2": "glslc -g -fshader-stage=vert assets/shaders/pbr_with_shadow_v2/PbrWithShadow.vert.hlsl  -o assets/shaders/pbr_with_shadow_v2/PbrWithShadow.vert.spv -O -std=450core --target-env=vulkan1.1 --target-spv=spv1.3",
-        "pbr-with-shadow-frag-v2": "glslc -g -fshader-stage=frag assets/shaders/pbr_with_shadow_v2/PbrWithShadow.frag.hlsl  -o assets/shaders/pbr_with_shadow_v2/PbrWithShadow.frag.spv -O -std=450core --target-env=vulkan1.1 --target-spv=spv1.3",
+        "pbr-with-shadow-vert-v2": "glslc -g -fshader-stage=vert assets/shaders/pbr_with_shadow_v2/PbrWithShadow.vert.hlsl  -o assets/shaders/pbr_with_shadow_v2/PbrWithShadow.vert.spv -O -std=450core",
+        "pbr-with-shadow-frag-v2": "glslc -g -fshader-stage=frag assets/shaders/pbr_with_shadow_v2/PbrWithShadow.frag.hlsl  -o assets/shaders/pbr_with_shadow_v2/PbrWithShadow.frag.spv -O -std=450core",
         
-        "point-light-shadow-vert": "glslc -g -fshader-stage=vert assets/shaders/point_light_shadow/PointLightShadow.vert.hlsl  -o assets/shaders/point_light_shadow/PointLightShadow.vert.spv -std=450core --target-env=vulkan1.1 --target-spv=spv1.3",
-        "point-light-shadow-frag": "glslc -g -fshader-stage=frag assets/shaders/point_light_shadow/PointLightShadow.frag.hlsl  -o assets/shaders/point_light_shadow/PointLightShadow.frag.spv -std=450core --target-env=vulkan1.1 --target-spv=spv1.3",
-        "point-light-shadow-geom": "glslc -g -fshader-stage=geom assets/shaders/point_light_shadow/PointLightShadow.geom.hlsl  -o assets/shaders/point_light_shadow/PointLightShadow.geom.spv -std=450core --target-env=vulkan1.1 --target-spv=spv1.3",
+        "point-light-shadow-vert": "glslc -g -fshader-stage=vert assets/shaders/point_light_shadow/PointLightShadow.vert.hlsl  -o assets/shaders/point_light_shadow/PointLightShadow.vert.spv -std=450core",
+        "point-light-shadow-frag": "glslc -g -fshader-stage=frag assets/shaders/point_light_shadow/PointLightShadow.frag.hlsl  -o assets/shaders/point_light_shadow/PointLightShadow.frag.spv -std=450core",
+        "point-light-shadow-geom": "glslc -g -fshader-stage=geom assets/shaders/point_light_shadow/PointLightShadow.geom.hlsl  -o assets/shaders/point_light_shadow/PointLightShadow.geom.spv -std=450core",
     
-        "point-light-shadow-vert-v2": "glslc -g -fshader-stage=vert assets/shaders/point_light_shadow_v2/PointLightShadowV2.vert.hlsl  -o assets/shaders/point_light_shadow_v2/PointLightShadowV2.vert.spv -std=450core --target-env=vulkan1.1 --target-spv=spv1.3",
-        "point-light-shadow-frag-v2": "glslc -g -fshader-stage=frag assets/shaders/point_light_shadow_v2/PointLightShadowV2.frag.hlsl  -o assets/shaders/point_light_shadow_v2/PointLightShadowV2.frag.spv -std=450core --target-env=vulkan1.1 --target-spv=spv1.3",
+        "point-light-shadow-vert-v2": "glslc -g -fshader-stage=vert assets/shaders/point_light_shadow_v2/PointLightShadowV2.vert.hlsl  -o assets/shaders/point_light_shadow_v2/PointLightShadowV2.vert.spv -std=450core",
+        "point-light-shadow-frag-v2": "glslc -g -fshader-stage=frag assets/shaders/point_light_shadow_v2/PointLightShadowV2.frag.hlsl  -o assets/shaders/point_light_shadow_v2/PointLightShadowV2.frag.spv -std=450core",
 
-        "directional-light-shadow-vert": "glslc -g -fshader-stage=vert assets/shaders/directional_light_shadow/DirectionalLightShadow.vert.hlsl  -o assets/shaders/directional_light_shadow/DirectionalLightShadow.vert.spv -std=450core --target-env=vulkan1.1 --target-spv=spv1.3",
-        "directional-light-shadow-geom": "glslc -g -fshader-stage=geom assets/shaders/directional_light_shadow/DirectionalLightShadow.geom.hlsl  -o assets/shaders/directional_light_shadow/DirectionalLightShadow.geom.spv -std=450core --target-env=vulkan1.1 --target-spv=spv1.3",
+        "directional-light-shadow-vert": "glslc -g -fshader-stage=vert assets/shaders/directional_light_shadow/DirectionalLightShadow.vert.hlsl  -o assets/shaders/directional_light_shadow/DirectionalLightShadow.vert.spv -std=450core",
+        "directional-light-shadow-geom": "glslc -g -fshader-stage=geom assets/shaders/directional_light_shadow/DirectionalLightShadow.geom.hlsl  -o assets/shaders/directional_light_shadow/DirectionalLightShadow.geom.spv -std=450core",
         
-        "directional-light-shadow-vert-v2": "glslc -g -fshader-stage=vert assets/shaders/directional_light_shadow_v2/DirectionalLightShadowV2.vert.hlsl  -o assets/shaders/directional_light_shadow_v2/DirectionalLightShadowV2.vert.spv -std=450core --target-env=vulkan1.1 --target-spv=spv1.3",
+        "directional-light-shadow-vert-v2": "glslc -g -fshader-stage=vert assets/shaders/directional_light_shadow_v2/DirectionalLightShadowV2.vert.hlsl  -o assets/shaders/directional_light_shadow_v2/DirectionalLightShadowV2.vert.spv -std=450core",
         
-        "particle-vert": "glslc -g -fshader-stage=vert assets/shaders/particle/Particle.vert.hlsl -o assets/shaders/particle/Particle.vert.spv -std=450core --target-env=vulkan1.1 --target-spv=spv1.3",
-        "particle-frag": "glslc -g -fshader-stage=frag assets/shaders/particle/Particle.frag.hlsl -o assets/shaders/particle/Particle.frag.spv -std=450core --target-env=vulkan1.1 --target-spv=spv1.3",
-        "particle-comp": "glslc -g -fshader-stage=comp assets/shaders/particle/Particle.comp.hlsl -o assets/shaders/particle/Particle.comp.spv -std=450core --target-env=vulkan1.1 --target-spv=spv1.3",
+        "particle-vert": "glslc -g -fshader-stage=vert assets/shaders/particle/Particle.vert.hlsl -o assets/shaders/particle/Particle.vert.spv -std=450core",
+        "particle-frag": "glslc -g -fshader-stage=frag assets/shaders/particle/Particle.frag.hlsl -o assets/shaders/particle/Particle.frag.spv -std=450core",
+        "particle-comp": "glslc -g -fshader-stage=comp assets/shaders/particle/Particle.comp.hlsl -o assets/shaders/particle/Particle.comp.spv -std=450core",
 
-        "depth-pre-pass-vert": "glslc -g -fshader-stage=vert assets/shaders/depth_pre_pass/DepthPrePass.vert.hlsl  -o assets/shaders/depth_pre_pass/DepthPrePass.vert.spv -std=450core --target-env=vulkan1.1 --target-spv=spv1.3",
-        "depth-pre-pass-frag": "glslc -g -fshader-stage=frag assets/shaders/depth_pre_pass/DepthPrePass.frag.hlsl  -o assets/shaders/depth_pre_pass/DepthPrePass.frag.spv -std=450core --target-env=vulkan1.1 --target-spv=spv1.3",
+        "depth-pre-pass-vert": "glslc -g -fshader-stage=vert assets/shaders/depth_pre_pass/DepthPrePass.vert.hlsl  -o assets/shaders/depth_pre_pass/DepthPrePass.vert.spv -std=450core",
+        "depth-pre-pass-frag": "glslc -g -fshader-stage=frag assets/shaders/depth_pre_pass/DepthPrePass.frag.hlsl  -o assets/shaders/depth_pre_pass/DepthPrePass.frag.spv -std=450core",
         
-        "debug-renderer-vert": "glslc -g -fshader-stage=vert assets/shaders/debug_renderer/DebugRenderer.vert.hlsl  -o assets/shaders/debug_renderer/DebugRenderer.vert.spv -std=450core --target-env=vulkan1.1 --target-spv=spv1.3",
-        "debug-renderer-frag": "glslc -g -fshader-stage=frag assets/shaders/debug_renderer/DebugRenderer.frag.hlsl  -o assets/shaders/debug_renderer/DebugRenderer.frag.spv -std=450core --target-env=vulkan1.1 --target-spv=spv1.3",
+        "debug-renderer-vert": "glslc -g -fshader-stage=vert assets/shaders/debug_renderer/DebugRenderer.vert.hlsl  -o assets/shaders/debug_renderer/DebugRenderer.vert.spv -std=450core",
+        "debug-renderer-frag": "glslc -g -fshader-stage=frag assets/shaders/debug_renderer/DebugRenderer.frag.hlsl  -o assets/shaders/debug_renderer/DebugRenderer.frag.spv -std=450core",
 
         "compile-shaders": "npm run skinning-comp && npm run occlusion-vert && npm run pbr-with-shadow-vert-v2 && npm run point-light-shadow-vert-v2 && npm run point-light-shadow-frag-v2 && npm run pbr-with-shadow-frag-v2 && npm run directional-light-shadow-vert-v2 && npm run particle-vert && npm run particle-frag && npm run particle-comp && npm run depth-pre-pass-vert && npm run debug-renderer-vert && npm run debug-renderer-frag",
         

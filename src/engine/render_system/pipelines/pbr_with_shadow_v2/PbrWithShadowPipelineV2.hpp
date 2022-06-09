@@ -42,7 +42,7 @@ namespace MFA
         {
             int lightIndex = 0;
             int faceIndex = 0;
-            int projectFarToNearDistance = 0;
+            float projectFarToNearDistance = 0;
             int placeholder2 = 0;
         };
 
