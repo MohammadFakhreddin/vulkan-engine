@@ -55,7 +55,7 @@ void commandListener(android_app* app, int32_t cmd) {
             MFA_CRASH("Vulkan is not supported!");
             return;
         }
-        application.Init();
+//        application.Init();
     }
     break;
     case APP_CMD_TERM_WINDOW:

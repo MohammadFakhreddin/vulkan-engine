@@ -19,10 +19,11 @@ namespace MFA::Path
     void Init()
     {
         state = new State();
-        
-        char addressBuffer[256]{};
+
+        char addressBuffer[256];
         int stringSize = 0;
 
+        // TODO: We can simplify it using bedrockString
 #if defined(__PLATFORM_MAC__)
         stringSize = sprintf(addressBuffer, "%s/assets/", GetAssetPath().c_str());
 #elif defined(__PLATFORM_WIN__) || defined(__PLATFORM_LINUX__)

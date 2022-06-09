@@ -130,6 +130,7 @@ void Application::run() {
 
     static float TargetFpsDeltaTimeInSec = 1.0f / 120.0f;
 
+    Init();
     SceneManager::Update(0.01f);
     // Used to poll the events in the main loop
     int events;

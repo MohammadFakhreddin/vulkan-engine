@@ -19,7 +19,7 @@ namespace MFA::SceneManager
 
     using CreateSceneFunction = std::function<std::shared_ptr<Scene>()>;
     using NextFrameTask = std::function<void()>;
-    
+
     void Init();
     void Shutdown();
 
@@ -76,29 +76,29 @@ namespace MFA::SceneManager
 
     [[nodiscard]]
     RT::BufferGroup const * GetCameraBuffers();
-    
+
     [[nodiscard]]
     RT::BufferGroup const * GetTimeBuffers();
-    
+
     void RegisterPointLight(std::weak_ptr<PointLightComponent> const & pointLight);
-    
+
     void RegisterDirectionalLight(std::weak_ptr<DirectionalLightComponent> const & directionalLight);
-    
+
     [[nodiscard]]
     RT::BufferGroup const * GetPointLightsBuffers();
-    
+
     [[nodiscard]]
     RT::BufferGroup const * GetDirectionalLightBuffers();
-    
+
     [[nodiscard]]
     uint32_t GetPointLightCount();
-    
+
     [[nodiscard]]
     uint32_t GetDirectionalLightCount();
-    
+
     [[nodiscard]]
     std::vector<PointLightComponent *> const & GetActivePointLights();
-    
+
     [[nodiscard]]
     std::weak_ptr<CameraComponent> GetActiveCamera();
 
