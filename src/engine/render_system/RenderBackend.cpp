@@ -31,10 +31,6 @@ namespace MFA::RenderBackend
     constexpr int EngineVersion = 1;
     constexpr char ValidationLayer[100] = "VK_LAYER_KHRONOS_validation";
 
-    std::vector<char const *> DebugLayers = {
-        ValidationLayer
-    };
-
     //-------------------------------------------------------------------------------------------------
 
     static void VK_Check(VkResult const result)
@@ -47,7 +43,7 @@ namespace MFA::RenderBackend
                 "Vulkan command failed with code: %i",
                 static_cast<int>(result)
             );
-            auto const message = std::string(buffer, length); 
+            auto const message = std::string(buffer, length);
             MFA_CRASH("%s", message.c_str());
         }
     }
@@ -312,8 +308,13 @@ namespace MFA::RenderBackend
         //            MFA_CRASH("no extensions supported!");
         //        }
         //    }
-        // Filling out instance description:    
-        auto instanceInfo = VkInstanceCreateInfo{
+
+        std::vector<char const *> const DebugLayers = {
+            ValidationLayer
+        };
+
+        // Filling out instance description:
+        auto const instanceInfo = VkInstanceCreateInfo{
             // sType is mandatory
             .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
             // pNext is mandatory
@@ -326,7 +327,7 @@ namespace MFA::RenderBackend
 #endif
             // The application info structure is then passed through the instance
             .pApplicationInfo = &applicationInfo,
-#if defined(MFA_DEBUG) && !defined(__IOS__)
+#if defined(MFA_DEBUG)// && !defined(__IOS__)
             .enabledLayerCount = static_cast<uint32_t>(DebugLayers.size()),
             .ppEnabledLayerNames = DebugLayers.data(),
 #else
@@ -1061,6 +1062,10 @@ namespace MFA::RenderBackend
             deviceCreateInfo.queueCreateInfoCount = 2;
         }
 
+        std::vector<char const *> const DebugLayers = {
+            ValidationLayer
+        };
+
         std::vector<char const *> enabledExtensionNames{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
     #if defined(__PLATFORM_MAC__)// TODO We should query instead
         enabledExtensionNames.emplace_back("VK_KHR_portability_subset");
@@ -1071,13 +1076,13 @@ namespace MFA::RenderBackend
         deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensionNames.size());
         // Necessary for shader (for some reason)
         deviceCreateInfo.pEnabledFeatures = &enabledPhysicalDeviceFeatures;
-//    #if defined(MFA_DEBUG) && defined(__ANDROID__) == false
-//        deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(DebugLayers.size());
-//        deviceCreateInfo.ppEnabledLayerNames = DebugLayers.data();
-//    #else
+    #if defined(MFA_DEBUG)// && defined(__ANDROID__) == false
+        deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(DebugLayers.size());
+        deviceCreateInfo.ppEnabledLayerNames = DebugLayers.data();
+    #else
         deviceCreateInfo.enabledLayerCount = 0;
         deviceCreateInfo.ppEnabledLayerNames = nullptr;
-//    #endif
+    #endif
 
         VK_Check(vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &logicalDevice.device));
         MFA_ASSERT(logicalDevice.device != nullptr);
@@ -2418,7 +2423,7 @@ namespace MFA::RenderBackend
 
         return semaphores;
     }
-    
+
     //-------------------------------------------------------------------------------------------------
 
     void DestroySemaphored(VkDevice device, std::vector<VkSemaphore> const & semaphores)
@@ -2506,7 +2511,7 @@ namespace MFA::RenderBackend
             VK_NULL_HANDLE,
             &outImageIndex
         );
-    
+
     }
 
     //-------------------------------------------------------------------------------------------------

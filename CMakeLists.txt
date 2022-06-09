@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.10.2)
+cmake_minimum_required (VERSION 3.18.0)
 
 # set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version")
 # set(CMAKE_IOS_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum IOS deployment version")
@@ -28,11 +28,7 @@ set_property (GLOBAL PROPERTY USE_FOLDERS ON)
 #     message(STATUS "Running cmake for release build")
 # endif()
 
-if (ANDROID)
-    set (CMAKE_CXX_STANDARD 17)
-else ()
-    set (CMAKE_CXX_STANDARD 20)
-endif ()
+set (CMAKE_CXX_STANDARD 20)
 
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 

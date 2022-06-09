@@ -5135,27 +5135,11 @@ struct ImGuiResizeGripDef
     int     AngleMin12, AngleMax12;
 };
 
-static const ImGuiResizeGripDef resize_grip_def[4] =
-{
-    { ImVec2(1, 1), ImVec2(-1, -1), 0, 3 }, // Lower-right
-    { ImVec2(0, 1), ImVec2(+1, -1), 3, 6 }, // Lower-left
-    { ImVec2(0, 0), ImVec2(+1, +1), 6, 9 }, // Upper-left (Unused)
-    { ImVec2(1, 0), ImVec2(-1, +1), 9, 12 }, // Upper-right (Unused)
-};
-
 struct ImGuiResizeBorderDef
 {
     ImVec2 InnerDir;
     ImVec2 CornerPosN1, CornerPosN2;
     float  OuterAngle;
-};
-
-static const ImGuiResizeBorderDef resize_border_def[4] =
-{
-    { ImVec2(0, +1), ImVec2(0, 0), ImVec2(1, 0), IM_PI * 1.50f }, // Top
-    { ImVec2(-1, 0), ImVec2(1, 0), ImVec2(1, 1), IM_PI * 0.00f }, // Right
-    { ImVec2(0, -1), ImVec2(1, 1), ImVec2(0, 1), IM_PI * 0.50f }, // Bottom
-    { ImVec2(+1, 0), ImVec2(0, 1), ImVec2(0, 0), IM_PI * 1.00f } // Left
 };
 
 static ImRect GetResizeBorderRect(ImGuiWindow* window, int border_n, float perp_padding, float thickness)
@@ -5185,6 +5169,14 @@ ImGuiID ImGui::GetWindowResizeID(ImGuiWindow* window, int n)
 // Return true when using auto-fit (double click on resize grip)
 static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4], const ImRect& visibility_rect)
 {
+    static const ImGuiResizeGripDef resize_grip_def[4] =
+    {
+        { ImVec2(1, 1), ImVec2(-1, -1), 0, 3 }, // Lower-right
+        { ImVec2(0, 1), ImVec2(+1, -1), 3, 6 }, // Lower-left
+        { ImVec2(0, 0), ImVec2(+1, +1), 6, 9 }, // Upper-left (Unused)
+        { ImVec2(1, 0), ImVec2(-1, +1), 9, 12 }, // Upper-right (Unused)
+    };
+
     ImGuiContext& g = *GImGui;
     ImGuiWindowFlags flags = window->Flags;
 
@@ -5321,6 +5313,14 @@ static inline void ClampWindowRect(ImGuiWindow* window, const ImRect& visibility
 
 static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window)
 {
+    static const ImGuiResizeBorderDef resize_border_def[4] =
+    {
+        { ImVec2(0, +1), ImVec2(0, 0), ImVec2(1, 0), IM_PI * 1.50f }, // Top
+        { ImVec2(-1, 0), ImVec2(1, 0), ImVec2(1, 1), IM_PI * 0.00f }, // Right
+        { ImVec2(0, -1), ImVec2(1, 1), ImVec2(0, 1), IM_PI * 0.50f }, // Bottom
+        { ImVec2(+1, 0), ImVec2(0, 1), ImVec2(0, 0), IM_PI * 1.00f } // Left
+    };
+
     ImGuiContext& g = *GImGui;
     float rounding = window->WindowRounding;
     float border_size = window->WindowBorderSize;
@@ -5347,6 +5347,14 @@ static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window)
 // Draw and handle scrollbars
 void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar_rect, bool title_bar_is_highlight, int resize_grip_count, const ImU32 resize_grip_col[4], float resize_grip_draw_size)
 {
+    static const ImGuiResizeGripDef resize_grip_def[4] =
+    {
+        { ImVec2(1, 1), ImVec2(-1, -1), 0, 3 }, // Lower-right
+        { ImVec2(0, 1), ImVec2(+1, -1), 3, 6 }, // Lower-left
+        { ImVec2(0, 0), ImVec2(+1, +1), 6, 9 }, // Upper-left (Unused)
+        { ImVec2(1, 0), ImVec2(-1, +1), 9, 12 }, // Upper-right (Unused)
+    };
+
     ImGuiContext& g = *GImGui;
     ImGuiStyle& style = g.Style;
     ImGuiWindowFlags flags = window->Flags;
