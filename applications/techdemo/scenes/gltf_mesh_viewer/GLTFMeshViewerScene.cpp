@@ -289,11 +289,12 @@ void GLTFMeshViewerScene::createModel(ModelRenderData & data) const
     );
     MFA_ASSERT(data.meshRendererComponent.expired() == false);
 
-    entity->AddComponent<AxisAlignedBoundingBoxComponent>(
+    // There is no need for a bounding volume
+    /*entity->AddComponent<AxisAlignedBoundingBoxComponent>(
         glm::vec3(0.0f, 0.0f, 0.0f),
         glm::vec3(100.0f, 100.0f, 100.0f),
-        true
-    );
+        false
+    );*/
     
     EntitySystem::InitEntity(entity);
 
