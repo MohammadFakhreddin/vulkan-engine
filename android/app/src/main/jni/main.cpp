@@ -32,7 +32,6 @@
 
 #include "vulkan_wrapper/vulkan_wrapper.h"
 
-#define VULKAN_H_
 #define VMA_IMPLEMENTATION
 #include "../src/libs/vma/vk_mem_alloc.h"
 

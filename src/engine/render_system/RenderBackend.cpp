@@ -243,7 +243,7 @@ namespace MFA::RenderBackend
     VkInstance CreateInstance(char const * applicationName)
     {
 #else
-#error Os not handled
+    #error Os not handled
 #endif
         // Filling out application description:
         auto applicationInfo = VkApplicationInfo{
@@ -297,24 +297,13 @@ namespace MFA::RenderBackend
         instanceExtensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
         //    // TODO We should enumarate layers before using them (Both desktop and android)
-        //    {// Checking for extension support
-        //        uint32_t vk_supported_extension_count = 0;
-        //        VK_Check(vkEnumerateInstanceExtensionProperties(
-        //            nullptr,
-        //            &vk_supported_extension_count,
-        //            nullptr
-        //        ));
-        //        if (vk_supported_extension_count == 0) {
-        //            MFA_CRASH("no extensions supported!");
-        //        }
-        //    }
-
+        
         std::vector<char const *> const DebugLayers = {
             ValidationLayer
         };
 
         // Filling out instance description:
-        auto const instanceInfo = VkInstanceCreateInfo{
+        auto instanceInfo = VkInstanceCreateInfo{
             // sType is mandatory
             .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
             // pNext is mandatory

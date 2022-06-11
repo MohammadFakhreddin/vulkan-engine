@@ -29,7 +29,7 @@ namespace MFA::ResourceManager
 
     //-------------------------------------------------------------------------------------------------
 
-    void ResourceManager::Init()
+    void Init()
     {
         state = new State();
     }
@@ -42,7 +42,7 @@ namespace MFA::ResourceManager
         pair.second.reset();                            \
     }                                                   \
 
-    void ResourceManager::Shutdown()
+    void Shutdown()
     {
         //CLEAR_MAP(state->availableGpuModels)
         CLEAR_MAP(state->availableCpuModels)
@@ -88,7 +88,7 @@ namespace MFA::ResourceManager
 
     //-------------------------------------------------------------------------------------------------
     // TODO Use job system to make this process multi-threaded
-    //std::shared_ptr<RT::GpuModel> ResourceManager::AcquireGpuModel(std::string const & nameOrFileAddress, bool const loadFileIfNotExists)
+    //std::shared_ptr<RT::GpuModel> AcquireGpuModel(std::string const & nameOrFileAddress, bool const loadFileIfNotExists)
     //{
     //    std::shared_ptr<RT::GpuModel> gpuModel = nullptr;
 
@@ -192,7 +192,7 @@ namespace MFA::ResourceManager
     //-------------------------------------------------------------------------------------------------
     // TODO: Idea: Acquire Gltf mesh separately with list of textures. Then acquire textures when needed.
     // // User should not use importer directly. Everything should be through resource manager
-    std::shared_ptr<RT::GpuTexture> ResourceManager::AcquireGpuTexture(
+    std::shared_ptr<RT::GpuTexture> AcquireGpuTexture(
         std::string const & textureId,
         bool const loadFileIfNotExists
     )
@@ -224,7 +224,7 @@ namespace MFA::ResourceManager
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<AssetSystem::Texture> ResourceManager::AcquireCpuTexture(
+    std::shared_ptr<AssetSystem::Texture> AcquireCpuTexture(
         std::string const & textureId,
         bool const loadFileIfNotExists
     )

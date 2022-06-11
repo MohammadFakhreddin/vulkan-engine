@@ -76,11 +76,15 @@ add_definitions(-DGLM_FORCE_DEPTH_ZERO_TO_ONE)
 # On Ubuntu 16.04 with g++ compiler, I will have to use the compiler flag -mavx2 to generate a SIMD executable.
 # There are other compiler options for other SIMD instructions here. Without the compiler flag, I still get a serial executable.
 
-if (UNIX)
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
-elseif(WINDOWS)
-    ADD_DEFINITIONS(/arch:AVX2)
-endif ()
+# if (UNIX)
+#     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
+# elseif(WINDOWS)
+#     ADD_DEFINITIONS(/arch:AVX2)
+# endif ()
+
+if (APPLE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_USE_PLATFORM_MACOS_MVK -DVK_EXAMPLE_XCODE_GENERATED")
+endif()
 
 set(glm_DIR "libs/include/glm/cmake/glm")
 find_package(glm REQUIRED)
@@ -956,8 +960,10 @@ elseif(ANDROID)
     )
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
-       -Wc++20-extensions -Wc++20-designator -std=c++20 -Wall -Wno-unused-variable \
-       -Wno-delete-non-virtual-dtor -DVK_USE_PLATFORM_ANDROID_KHR")
+       -Wall -Wno-unused-variable \
+       -Wno-delete-non-virtual-dtor  \
+       -DVK_USE_PLATFORM_ANDROID_KHR"
+    )
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -u ANativeActivity_onCreate")
 
     function(get_architecture ABI ARCH)

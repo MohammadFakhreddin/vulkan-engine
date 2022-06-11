@@ -20,7 +20,7 @@ namespace MFA::Path
     {
         state = new State();
 
-        char addressBuffer[256];
+        char addressBuffer[256]{};
         int stringSize = 0;
 
         // TODO: We can simplify it using bedrockString
