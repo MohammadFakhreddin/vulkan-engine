@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.10.2)
+cmake_minimum_required (VERSION 3.18.0)
 
 # set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version")
 # set(CMAKE_IOS_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum IOS deployment version")
@@ -28,11 +28,7 @@ set_property (GLOBAL PROPERTY USE_FOLDERS ON)
 #     message(STATUS "Running cmake for release build")
 # endif()
 
-if (ANDROID)
-    set (CMAKE_CXX_STANDARD 17)
-else ()
-    set (CMAKE_CXX_STANDARD 20)
-endif ()
+set (CMAKE_CXX_STANDARD 20)
 
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -80,11 +76,15 @@ add_definitions(-DGLM_FORCE_DEPTH_ZERO_TO_ONE)
 # On Ubuntu 16.04 with g++ compiler, I will have to use the compiler flag -mavx2 to generate a SIMD executable.
 # There are other compiler options for other SIMD instructions here. Without the compiler flag, I still get a serial executable.
 
-if (UNIX)
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
-elseif(WINDOWS)
-    ADD_DEFINITIONS(/arch:AVX2)
-endif ()
+# if (UNIX)
+#     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
+# elseif(WINDOWS)
+#     ADD_DEFINITIONS(/arch:AVX2)
+# endif ()
+
+if (APPLE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_USE_PLATFORM_MACOS_MVK -DVK_EXAMPLE_XCODE_GENERATED")
+endif()
 
 set(glm_DIR "libs/include/glm/cmake/glm")
 find_package(glm REQUIRED)
@@ -760,7 +760,7 @@ elseif(MACOSX)
         message(STATUS "Linking dependancies to ${executable_name} ")
         add_executable(${executable_name} ${link_to_target_sources})
         add_dependencies(${executable_name} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "AssetSystem" "Libs")
-        target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.2.141.dylib")
+        target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.3.211.dylib")
         target_link_libraries(${executable_name}
             "-framework CoreGraphics"
             "-framework Foundation"
@@ -960,8 +960,10 @@ elseif(ANDROID)
     )
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
-       -Wc++20-extensions -Wc++20-designator -std=c++20 -Wall -Wno-unused-variable \
-       -Wno-delete-non-virtual-dtor -DVK_USE_PLATFORM_ANDROID_KHR")
+       -Wall -Wno-unused-variable \
+       -Wno-delete-non-virtual-dtor  \
+       -DVK_USE_PLATFORM_ANDROID_KHR"
+    )
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -u ANativeActivity_onCreate")
 
     function(get_architecture ABI ARCH)

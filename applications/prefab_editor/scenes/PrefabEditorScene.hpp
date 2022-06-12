@@ -43,12 +43,16 @@ private:
 
     void saveAndLoadWindow();
 
-    void addEssenceToPipeline(
+    /*void addEssenceToPipeline(
         std::string const & nameId,
         std::shared_ptr<MFA::AssetSystem::Model> const & cpuModel
-    );
+    );*/
 
-    bool loadSelectedAsset(std::string const & fileAddress, std::string displayName = "");
+    bool loadSelectedAsset(
+        std::string const & fileAddress,
+        MFA::BasePipeline * pipeline,
+        std::string displayName = ""
+    );
 
     void destroyAsset(int assetIndex);
 
@@ -79,8 +83,8 @@ private:
 
     struct Asset
     {
-        std::string fileAddress {};
-        std::string essenceName {};
+        std::string nameId {};
+        std::string displayName {};
     };
     std::vector<Asset> mLoadedAssets {};
 

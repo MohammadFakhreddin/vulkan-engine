@@ -81,7 +81,14 @@ namespace MFA
     {
         entity->AddComponent<BoundingVolumeRendererComponent>(mNameId);
     }
-    
+
+    //-------------------------------------------------------------------------------------------------
+
+    void BoundingVolumeRendererComponent::Shutdown()
+    {
+        RendererComponent::Shutdown();
+    }
+
     //-------------------------------------------------------------------------------------------------
 
     void BoundingVolumeRendererComponent::createVariant()

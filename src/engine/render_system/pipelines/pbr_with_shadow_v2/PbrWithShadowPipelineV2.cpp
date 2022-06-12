@@ -22,6 +22,7 @@
 #include "engine/resource_manager/ResourceManager.hpp"
 #include "engine/asset_system/AssetDebugMesh.hpp"
 #include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
+#include "engine/camera/CameraComponent.hpp"
 
 #define CAST_ESSENCE_PURE(essence)      static_cast<PBR_Essence *>(essence)
 #define CAST_ESSENCE_SHARED(essence)    CAST_ESSENCE_PURE(essence.get())
@@ -714,7 +715,13 @@ namespace MFA
         mPointLightShadowRenderPass->BeginRenderPass(recordState, *mPointLightShadowResources);
 
         PointLightShadowPassPushConstants pushConstants {};
-
+        
+        auto activeCamera = SceneManager::GetActiveCamera().lock();
+        if (activeCamera != nullptr)
+        {
+            pushConstants.projectFarToNearDistance = activeCamera->GetProjectionFarToNearDistance();
+        }
+        
         auto const & pointLights = SceneManager::GetActivePointLights();
         MFA_ASSERT(pointLights.size() == pointLightCount);
 
@@ -926,6 +933,13 @@ namespace MFA
     {
         DisplayPassPushConstants pushConstants{};
 
+        auto activeCamera = SceneManager::GetActiveCamera().lock();
+        if (activeCamera != nullptr)
+        {
+            activeCamera->GetPosition(pushConstants.cameraPosition);
+            pushConstants.projectFarToNearDistance = activeCamera->GetProjectionFarToNearDistance();
+        }
+        
         for (auto const & essenceAndVariantList : mEssenceAndVariantsMap)
         {
             auto const * essence = CAST_ESSENCE_SHARED(essenceAndVariantList.second.essence);

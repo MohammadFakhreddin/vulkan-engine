@@ -42,7 +42,7 @@ namespace MFA
         {
             int lightIndex = 0;
             int faceIndex = 0;
-            int placeholder1 = 0;
+            float projectFarToNearDistance = 0;
             int placeholder2 = 0;
         };
 
@@ -65,9 +65,9 @@ namespace MFA
         struct DisplayPassPushConstants
         {
             uint32_t primitiveIndex = 0;      // Unique id
-            int placeholder0 = 0;
-            int placeholder1 = 0;
-            int placeholder2 = 0;
+            float cameraPosition[3] {};
+            float projectFarToNearDistance = 0.0f;
+            float placeholder[3] {};
         };
 
         struct SkinningPushConstants

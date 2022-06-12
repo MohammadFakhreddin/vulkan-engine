@@ -18,8 +18,8 @@ struct PSIn {
     float3 worldTangent: TEXCOORD3;
     float3 worldBiTangent : TEXCOORD4;
 
-    float2 emissiveTexCoord: TEXCOORD5;
-    float2 occlusionTexCoord: TEXCOORD6;
+    float2 emissiveTexCoord: TEXCOORD1;
+    float2 occlusionTexCoord: TEXCOORD2;
 
     float4 directionLightPosition[3];
 };
@@ -28,7 +28,7 @@ struct PSOut {
     float4 color:SV_Target0;
 };
 
-ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
+// ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
 
 ConstantBuffer <DirectionalLightBufferData> directionalLightBuffer: register(b1, space0);
 
@@ -42,15 +42,15 @@ TextureCubeArray PL_shadowMap : register(t5, space0);
 
 ConstantBuffer <PrimitiveInfoBuffer> primitiveInfoBuffer : register (b0, space1);
 
-Texture2D textures[MAX_TEXTURE_COUNT] : register(t1, space1);  // TODO: Maybe I should decrease the textures size
+Texture2D textures[MAX_TEXTURE_COUNT] : register(t1, space1);  // TODO: Maybe I should decrease the textures count
 
 
 struct PushConsts
 {
-    uint primitiveIndex;
-    int placeholder0;
-    int placeholder1;
-    int placeholder2;
+    uint primitiveIndex : packoffset(c0);
+    float3 cameraPosition : packoffset(c0.y);
+    float projectFarToNearDistance : packoffset(c1);
+    float3 placeholder : packoffset(c1.y);
 };
 
 [[vk::push_constant]]
@@ -218,9 +218,9 @@ PSOut main(PSIn input) {
 
 	float3 surfaceNormal = calculateNormal(input, primitiveInfo.normalTextureIndex);
 	float3 normalizedSurfaceNormal = normalize(surfaceNormal.xyz);
-    float3 viewVector = cameraBuffer.cameraPosition - input.worldPos;
+    float3 viewVector = pushConsts.cameraPosition - input.worldPos;
 	float3 normalizedViewVector = normalize(viewVector);
-    
+
     // Specular contribution
 	float3 Lo = float3(0.0, 0.0, 0.0);
     int lightIndex = 0;
@@ -235,7 +235,7 @@ PSOut main(PSIn input) {
             input.directionLightPosition[lightIndex], 
             lightIndex
         );
-
+        // float shadow = 0.0f;
         if (shadow < 1.0f)
         {
             Lo += BRDF(
@@ -254,7 +254,7 @@ PSOut main(PSIn input) {
             ) * (1.0f - shadow);
         }
     }
-
+    
     float viewVectorLength = length(viewVector);
 
 	for (lightIndex = 0; lightIndex < pointLightsBuffer.count; lightIndex++)        // Point light count
@@ -273,7 +273,7 @@ PSOut main(PSIn input) {
                 lightDistanceVector.z / lightVectorLength
             );
             float shadow = computePointLightShadow(
-                cameraBuffer.projectFarToNearDistance,
+                pushConsts.projectFarToNearDistance,
                 PL_shadowMap,
                 textureSampler,
                 lightDistanceVector, 
@@ -299,7 +299,7 @@ PSOut main(PSIn input) {
             }
         }
 	};
-
+    
     if (primitiveInfo.occlusionTextureIndex >= 0) {
         float occlusionFactor = textures[primitiveInfo.occlusionTextureIndex].Sample(
             textureSampler, 
@@ -307,7 +307,6 @@ PSOut main(PSIn input) {
         ).r;
         Lo *= occlusionFactor;
     }
-    // TODO Apply occlusion texture here!
 
     // Combine with ambient
     float3 color = float3(0.0, 0.0, 0.0);
@@ -318,9 +317,11 @@ PSOut main(PSIn input) {
     } else {
         color += baseColor.rgb * primitiveInfo.emissiveFactor; // * 0.3
     }
+
     color += baseColor.rgb * ambientOcclusion;
+
     color += Lo;
-    
+
     // reinhard tone mapping    --> Try to implement more advanced hdr (Passing exposure parameter is also a good option)
 	color = color / (color + float3(1.0f));
     // Gamma correct

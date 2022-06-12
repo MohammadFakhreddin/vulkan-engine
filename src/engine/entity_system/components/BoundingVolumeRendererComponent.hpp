@@ -1,7 +1,6 @@
 #pragma once
 
 #include "engine/entity_system/Component.hpp"
-#include "engine/entity_system/Component.hpp"
 #include "engine/entity_system/components/RendererComponent.hpp"
 
 namespace MFA
@@ -36,6 +35,8 @@ namespace MFA
         void deserialize(nlohmann::json const & jsonObject) override;
 
         void clone(Entity * entity) const override;
+
+        void Shutdown() override;
 
     private:
 

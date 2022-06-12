@@ -14,8 +14,8 @@ struct VSIn {
     
     float2 normalTexCoord: TEXCOORD2;
     
-    float2 emissiveTexCoord: TEXCOORD4;
-    float2 occlusionTexCoord: TEXCOORD5;
+    float2 emissiveTexCoord: TEXCOORD1;
+    float2 occlusionTexCoord: TEXCOORD2;
 };
 
 struct VSOut {
@@ -31,11 +31,11 @@ struct VSOut {
     float3 worldTangent;//: TEXCOORD3;
     float3 worldBiTangent;// : TEXCOORD4;
 
-    float2 emissiveTexCoord: TEXCOORD5;
-    float2 occlusionTexCoord: TEXCOORD6;
+    float2 emissiveTexCoord: TEXCOORD1;
+    float2 occlusionTexCoord: TEXCOORD2;
 
     float4 directionLightPosition[3];
-};
+};        
 
 ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
 

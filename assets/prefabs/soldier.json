@@ -24,7 +24,7 @@
             },
             {
                 "data": {
-                    "address": "models\\warcraft_3_alliance_footmanfanmade\\scene.gltf",
+                    "address": "models/warcraft_3_alliance_footmanfanmade/scene.gltf",
                     "pipeline": "PBRWithShadowPipelineV2"
                 },
                 "familyType": 2,

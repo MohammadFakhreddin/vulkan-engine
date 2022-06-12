@@ -111,9 +111,8 @@ namespace MFA
 
         // Editor only function
         void destroyEssence(std::string const & nameId);
-        
-        //virtual std::weak_ptr<VariantBase> createVariant(RT::GpuModel const & gpuModel);
-
+ 
+        // TODO: I think we should return sharedPtr to avoid extra locking for initialization.
         virtual std::weak_ptr<VariantBase> createVariant(std::string const & nameId);
 
         void removeVariant(VariantBase & variant);

@@ -207,6 +207,7 @@ namespace MFA::RenderFrontend
 #else
 #error "Os is not supported"
 #endif
+        MFA_ASSERT(state->window != nullptr);
 
 #ifdef __DESKTOP__
         state->vk_instance = RB::CreateInstance(

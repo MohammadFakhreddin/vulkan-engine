@@ -30,9 +30,15 @@
 #define TINYKTX_IMPLEMENTATION
 #include "../src/libs/tiny_ktx/tinyktx.h"
 
+#ifndef VK_USE_PLATFORM_ANDROID_KHR
+#define VK_USE_PLATFORM_ANDROID_KHR
+#endif
+
+#ifndef USE_DEBUG_EXTENTIONS
+#define USE_DEBUG_EXTENTIONS
+#endif
 #include "vulkan_wrapper/vulkan_wrapper.h"
 
-#define VULKAN_H_
 #define VMA_IMPLEMENTATION
 #include "../src/libs/vma/vk_mem_alloc.h"
 
@@ -47,11 +53,12 @@
 Application application {};
 
 // Process the next main command.
-void commandListener(android_app* app, int32_t cmd) {
-  switch (cmd) {
+void commandListener(struct android_app* app, int32_t cmd) {
+    switch (cmd) {
     case APP_CMD_INIT_WINDOW:
     {// The window is being shown, get it ready.
-        if(!InitVulkan()){
+        bool initVulkan = InitVulkan();
+        if(initVulkan == false){
             MFA_CRASH("Vulkan is not supported!");
             return;
         }
@@ -60,7 +67,7 @@ void commandListener(android_app* app, int32_t cmd) {
     break;
     case APP_CMD_TERM_WINDOW:
     {// The window is being hidden or closed, clean it up.
-      application.Shutdown();
+        application.Shutdown();
     }
     break;
     case APP_CMD_CONTENT_RECT_CHANGED:
@@ -68,18 +75,24 @@ void commandListener(android_app* app, int32_t cmd) {
         MFA::RenderFrontend::NotifyDeviceResized();
     }
     break;
+    case APP_CMD_START:
+    {
+        MFA_LOG_INFO("App started");
+    }
+    break;
     default:
-      MFA_LOG_INFO("Event not handled: %d", cmd);
-  }
+        MFA_LOG_INFO("Event not handled: %d", cmd);
+    }
 }
 
-void android_main(struct android_app* app) {
+void android_main(android_app* app) {
 
-  // Set the callback to process system events
-  app->onAppCmd = commandListener;
+    // Set the callback to process system events
+    app->onAppCmd = commandListener;
+    tinygltf::asset_manager = app->activity->assetManager;
 
-  application.setAndroidApp(app);
-  tinygltf::asset_manager = app->activity->assetManager;
-  // Main loop
-  application.run();
+    application.setAndroidApp(app);
+
+    application.run();
+
 }

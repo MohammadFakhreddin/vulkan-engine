@@ -75,8 +75,13 @@ namespace MFA::ResourceManager
     void Shutdown()
     {
         state->cpuModels.clear();
+        for (auto & texture : state->gpuTextures)
+        {
+            MFA_ASSERT(texture.second.data.lock() == nullptr);
+        }
         state->gpuTextures.clear();
         state->cpuTextures.clear();
+        state->essences.clear();
         delete state;
     }
 
@@ -117,7 +122,7 @@ namespace MFA::ResourceManager
 
     //-------------------------------------------------------------------------------------------------
     // TODO Use job system to make this process multi-threaded
-    //std::shared_ptr<RT::GpuModel> ResourceManager::AcquireGpuModel(std::string const & nameOrFileAddress, bool const loadFileIfNotExists)
+    //std::shared_ptr<RT::GpuModel> AcquireGpuModel(std::string const & nameOrFileAddress, bool const loadFileIfNotExists)
     //{
     //    std::shared_ptr<RT::GpuModel> gpuModel = nullptr;
 
@@ -212,21 +217,7 @@ namespace MFA::ResourceManager
 
     //-------------------------------------------------------------------------------------------------
 
-    //std::vector<std::shared_ptr<RT::GpuTexture>> AcquireGpuTextures(std::vector<std::string> const & textureIds)
-    //{
-    //    std::vector<std::shared_ptr<RT::GpuTexture>> gpuTextures {};
-
-    //    for (auto const & textureId : textureIds)
-    //    {
-    //        gpuTextures.emplace_back(AcquireGpuTexture(textureId));
-    //    }
-
-    //    return gpuTextures;
-    //}
-
-    //-------------------------------------------------------------------------------------------------
-
-    // User should not use importer directly. Everything should be through resource manager
+    // // User should not use importer directly. Everything should be through resource manager
     void AcquireGpuTexture(
         std::string const & textureId,
         GpuTextureCallback const & callback,
@@ -238,18 +229,11 @@ namespace MFA::ResourceManager
         
         std::string const relativePath = Path::RelativeToAssetFolder(textureId);
 
-        //auto const findResult = state->gpuTextures.find(relativePath);
-
         auto & gpuTextureData = state->gpuTextures[relativePath];
 
         SCOPE_LOCK(gpuTextureData.lock)
 
         auto const gpuTexture = gpuTextureData.data.lock();
-
-        /*if (findResult != state->gpuTextures.end())
-        {
-            gpuTexture = findResult->second.lock();
-        }*/
 
         // It means that file is already loaded and still exists
         if (gpuTexture != nullptr )
