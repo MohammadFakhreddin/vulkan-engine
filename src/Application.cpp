@@ -69,6 +69,7 @@ void Application::Init() {
     internalInit();
 
     mIsInitialized = true;
+    
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -98,7 +99,6 @@ void Application::run() {
     //static constexpr uint32_t TargetFpsDeltaTimeInMs = 1000 / 500;
 #ifdef __DESKTOP__
     Init();
-    SceneManager::Update(0.01f);
     // Main loop
     //Event handler
     MSDL::SDL_Event e;
@@ -130,8 +130,6 @@ void Application::run() {
 
     static float TargetFpsDeltaTimeInSec = 1.0f / 120.0f;
 
-    Init();
-    SceneManager::Update(0.01f);
     // Used to poll the events in the main loop
     int events;
     android_poll_source* source;
