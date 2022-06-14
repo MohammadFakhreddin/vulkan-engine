@@ -1,7 +1,5 @@
 #include "ParticlePipeline.hpp"
 
-#include <utility>
-
 #include "ParticleEssence.hpp"
 #include "ParticleVariant.hpp"
 #include "engine/BedrockAssert.hpp"
@@ -18,6 +16,8 @@
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/camera/CameraComponent.hpp"
 #include "engine/BedrockMatrix.hpp"
+
+#include <utility>
 
 #define CAST_ESSENCE_PURE(essence) static_cast<ParticleEssence *>(essence)
 
@@ -111,7 +111,7 @@ namespace MFA
         
         PushConstants pushConstants {};
         
-        if (auto activeCamera = SceneManager::GetActiveCamera().lock())
+        if (auto const activeCamera = SceneManager::GetActiveCamera().lock())
         {
             Matrix::CopyGlmToCells(activeCamera->GetViewportDimension(), pushConstants.viewportDimension);
         }
@@ -149,6 +149,7 @@ namespace MFA
             });
         }
 
+        // TODO: Try to remove this or move it somewhere else
         if (JS::IsMainThread())
         {
             JS::WaitForThreadsToFinish();

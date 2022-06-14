@@ -18,7 +18,7 @@ namespace MFA::SceneManager
 {
 
     using CreateSceneFunction = std::function<std::shared_ptr<Scene>()>;
-    using NextFrameTask = std::function<void()>;
+    using MainThreadTask = std::function<void()>;
 
     void Init();
     void Shutdown();
@@ -51,7 +51,7 @@ namespace MFA::SceneManager
         return dynamic_cast<Pipeline *>(GetPipeline(Pipeline::Name));
     }
 
-    void AssignMainThreadTask(NextFrameTask const & task);
+    void AssignMainThreadTask(MainThreadTask const & task);
 
     // This method must only be called by pipeline and sceneManager
     void UpdatePipeline(BasePipeline * pipeline);

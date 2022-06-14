@@ -327,6 +327,8 @@ list(
     "src/engine/job_system/JobSystemTypes.hpp"
     "src/engine/job_system/ScopeLock.hpp"
     "src/engine/job_system/ScopeLock.cpp"
+    "src/engine/job_system/TaskTracker.hpp"
+    "src/engine/job_system/TaskTracker.cpp"
 
     # UI System
     "src/engine/ui_system/UI_System.hpp"

@@ -81,11 +81,11 @@ void Application::Shutdown() {
 
     internalShutdown();
 
+    JS::Shutdown();
     SceneManager::Shutdown();
     EntitySystem::Shutdown();
     IM::Shutdown();
     UI::Shutdown();
-    JS::Shutdown();
     RC::Shutdown();
     RF::Shutdown();
     Path::Shutdown();

@@ -17,6 +17,7 @@
 #include "engine/render_system/pipelines/particle/ParticlePipeline.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
+#include "engine/job_system/TaskTracker.hpp"
 
 #include <unordered_map>
 
@@ -29,7 +30,7 @@ namespace MFA::ResourceManager
     struct Data
     {
         std::weak_ptr<DataType> data {};
-        std::list<CallbackType> callbacks {};
+        std::vector<CallbackType> callbacks {};
         std::atomic<bool> lock = false;
     };
 
@@ -74,14 +75,38 @@ namespace MFA::ResourceManager
 
     void Shutdown()
     {
-        state->cpuModels.clear();
+        // Working fine
+        for (auto & cpuTexture : state->cpuTextures)
+        {
+            MFA_ASSERT(cpuTexture.second.callbacks.empty());
+            MFA_ASSERT(cpuTexture.second.data.lock() == nullptr);
+        }
+        state->cpuTextures.clear();
+
+        // Working fine
+        for (auto & essence : state->essences)
+        {
+            MFA_ASSERT(essence.second.callbacks.empty());
+            MFA_ASSERT(essence.second.data.lock() == nullptr);
+        }
+        state->essences.clear();
+
+        // Has an strong ref that prevents freeing memory
         for (auto & texture : state->gpuTextures)
         {
+            MFA_ASSERT(texture.second.callbacks.empty());
             MFA_ASSERT(texture.second.data.lock() == nullptr);
         }
         state->gpuTextures.clear();
-        state->cpuTextures.clear();
-        state->essences.clear();
+
+        // Has an strong ref that prevents freeing memory
+        for (auto & cpuModel : state->cpuModels)
+        {
+            MFA_ASSERT(cpuModel.second.callbacks.empty());
+            MFA_ASSERT(cpuModel.second.data.lock() == nullptr);
+        }
+        state->cpuModels.clear();
+
         delete state;
     }
 
@@ -155,28 +180,31 @@ namespace MFA::ResourceManager
     void AcquireCpuModel(
         std::string const & modelId,
         CpuModelCallback const & callback,
-        bool const loadFileIfNotExists
+        bool const loadFromFile
     )
     {
-        std::shared_ptr<AS::Model> cpuModel = nullptr;
-
         std::string const relativePath = Path::RelativeToAssetFolder(modelId);
 
         auto & cpuModelData = state->cpuModels[relativePath];
 
-        SCOPE_LOCK(cpuModelData.lock)
-
-        cpuModel = cpuModelData.data.lock();
-
-        if (cpuModel != nullptr || loadFileIfNotExists == false)
+        bool shouldAssignTask;
         {
-            callback(cpuModel);
-            return;
+            SCOPE_LOCK(cpuModelData.lock)
+
+            auto const cpuModel = cpuModelData.data.lock();
+
+            if (cpuModel != nullptr || loadFromFile == false)
+            {
+                callback(cpuModel);
+                return;
+            }
+
+            cpuModelData.callbacks.emplace_back(callback);
+
+            shouldAssignTask = cpuModelData.callbacks.size() == 1;
         }
 
-        cpuModelData.callbacks.emplace_back(callback);
-
-        if (cpuModelData.callbacks.size() == 1)
+        if (shouldAssignTask)
         {
             JS::AssignTask([relativePath, &cpuModelData](JS::ThreadNumber threadNumber, JS::ThreadNumber totalThreadCount)->void {
 
@@ -231,20 +259,25 @@ namespace MFA::ResourceManager
 
         auto & gpuTextureData = state->gpuTextures[relativePath];
 
-        SCOPE_LOCK(gpuTextureData.lock)
-
-        auto const gpuTexture = gpuTextureData.data.lock();
-
-        // It means that file is already loaded and still exists
-        if (gpuTexture != nullptr )
+        bool shouldAssignTask;
         {
-            callback(gpuTexture);
-            return;
+            SCOPE_LOCK(gpuTextureData.lock)
+
+            auto const gpuTexture = gpuTextureData.data.lock();
+
+            // It means that file is already loaded and still exists
+            if (gpuTexture != nullptr)
+            {
+                callback(gpuTexture);
+                return;
+            }
+
+            gpuTextureData.callbacks.emplace_back(callback);
+
+            shouldAssignTask = gpuTextureData.callbacks.size() == 1;
         }
 
-        gpuTextureData.callbacks.emplace_back(callback);
-
-        if (gpuTextureData.callbacks.size() == 1)
+        if (shouldAssignTask)
         {
             AcquireCpuTexture(
                 relativePath,
@@ -283,19 +316,24 @@ namespace MFA::ResourceManager
 
         auto & textureData = state->cpuTextures[relativePath];
 
-        SCOPE_LOCK(textureData.lock)
-
-        auto const texture = textureData.data.lock();
-
-        if (texture != nullptr || loadFromFile == false)
+        bool shouldAssignTask;
         {
-            callback(texture);
-            return;
+            SCOPE_LOCK(textureData.lock)
+
+            auto const existingTexture = textureData.data.lock();
+
+            if (existingTexture != nullptr || loadFromFile == false)
+            {
+                callback(existingTexture);
+                return;
+            }
+
+            textureData.callbacks.emplace_back(callback);
+
+            shouldAssignTask = textureData.callbacks.size() == 1;
         }
 
-        textureData.callbacks.emplace_back(callback);
-
-        if (textureData.callbacks.size() == 1)
+        if (shouldAssignTask)
         {
             JS::AssignTask([relativePath, &textureData](JS::ThreadNumber threadNumber, JS::ThreadNumber totalThreadCount)->void {
 
@@ -374,7 +412,7 @@ namespace MFA::ResourceManager
             nameId,
             *debugMesh
         );
-
+        
         auto const addResult = pipeline->addEssence(essence);
         MFA_ASSERT(addResult == true);
 
@@ -449,28 +487,33 @@ namespace MFA::ResourceManager
 
         auto & essenceData = state->essences[relativePath];
 
-        SCOPE_LOCK(essenceData.lock)
-
-        essence = essenceData.data.lock();
-
-        if (essence != nullptr)
+        bool shouldAssignTask;
         {
-            callback(true);
-            return;
+            SCOPE_LOCK(essenceData.lock)
+
+            essence = essenceData.data.lock();
+
+            if (essence != nullptr)
+            {
+                callback(true);
+                return;
+            }
+
+            essence = pipeline->GetEssence(nameId);
+
+            if (essence != nullptr)
+            {
+                essenceData.data = essence;
+                callback(true);
+                return;
+            }
+
+            essenceData.callbacks.emplace_back(callback);
+
+            shouldAssignTask = essenceData.callbacks.size() == 1;
         }
 
-        essence = pipeline->GetEssence(nameId);
-
-        if (essence != nullptr)
-        {
-            essenceData.data = essence;
-            callback(true);
-            return;
-        }
-
-        essenceData.callbacks.emplace_back(callback);
-
-        if (essenceData.callbacks.size() == 1)
+        if (shouldAssignTask)
         {
             RC::AcquireCpuModel(
                 nameId,
@@ -481,27 +524,27 @@ namespace MFA::ResourceManager
                     
                     if (cpuModel->textureIds.empty() == false)
                     {
-                        class Tracker : public JS::TaskTracker
+                        struct Data
                         {
-                            using TaskTracker::TaskTracker;
-                        public:
                             std::vector<std::shared_ptr<RT::GpuTexture>> gpuTextures {};
                         };
 
-                        std::shared_ptr<Tracker> taskTracker = std::make_shared<Tracker>(cpuModel->textureIds.size());
+                        auto taskTracker = std::make_shared<JS::TaskTracker1<Data>>(
+                            std::make_shared<Data>(),
+                            static_cast<int>(cpuModel->textureIds.size()),
+                            [pipeline, nameId, cpuModel](Data const * userData)->void {
+                                CreateEssence(pipeline, nameId, cpuModel, userData->gpuTextures);
+                            }
+                        );
+                        
+                        taskTracker->userData->gpuTextures.resize (cpuModel->textureIds.size());
 
-                        taskTracker->setFinishCallback([pipeline, nameId, taskTracker, cpuModel]()->void {
-                            CreateEssence(pipeline, nameId, cpuModel, taskTracker->gpuTextures);
-                        });
-
-                        taskTracker->gpuTextures.resize (cpuModel->textureIds.size());
-
-                        for (size_t i = 0; i < taskTracker->gpuTextures.size(); ++i)
+                        for (size_t i = 0; i < taskTracker->userData->gpuTextures.size(); ++i)
                         {
                             RC::AcquireGpuTexture(
                                 cpuModel->textureIds[i],
                                 [taskTracker, i](std::shared_ptr<RT::GpuTexture> const & gpuTexture)->void {
-                                    taskTracker->gpuTextures[i] = gpuTexture;
+                                    taskTracker->userData->gpuTextures[i] = gpuTexture;
                                     taskTracker->onComplete();
                                 }, loadFromFile
                             );

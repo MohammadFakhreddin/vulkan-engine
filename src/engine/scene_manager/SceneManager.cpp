@@ -127,7 +127,7 @@ namespace MFA::SceneManager
 
         // TODO Spot light
 
-        ThreadSafeQueue<NextFrameTask> nextFrameTasks{};
+        ThreadSafeQueue<MainThreadTask> mainThreadTasks{};
 
     };
     static State * state = nullptr;
@@ -184,6 +184,20 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
+    static void PlayQueuedTasks()
+    {
+        std::function<void()> task = nullptr;
+        while (state->mainThreadTasks.IsEmpty() == false)
+        {
+            if (state->mainThreadTasks.TryToPop(task))
+            {
+                task();
+            }
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void Init()
     {
         state = new State();
@@ -216,12 +230,15 @@ namespace MFA::SceneManager
         {
             EntitySystem::Update(deltaTime);
         });
+
     }
 
     //-------------------------------------------------------------------------------------------------
 
     void Shutdown()
     {
+        PlayQueuedTasks();
+    
         RF::RemoveResizeEventListener(state->resizeListenerId);
 
         if (state->activeScene != nullptr)
@@ -321,10 +338,15 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
-    void AssignMainThreadTask(NextFrameTask const & task)
+    void AssignMainThreadTask(MainThreadTask const & task)
     {
         MFA_ASSERT(task != nullptr);
-        while (state->nextFrameTasks.TryToPush(task) == false);
+        if (JS::IsMainThread())
+        {
+            task();
+            return;
+        }
+        while (state->mainThreadTasks.TryToPush(task) == false);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -454,20 +476,7 @@ namespace MFA::SceneManager
             state->currentFps = state->currentFps * 0.9f + (1.0f / deltaTime) * 0.1f;
         }
 
-        std::function<void()> task = nullptr;
-        while (state->nextFrameTasks.IsEmpty() == false)
-        {
-            if (state->nextFrameTasks.TryToPop(task))
-            {
-                task();
-            }
-        }
-        //for (int i = 0; i < static_cast<int>(state->nextFrameTasks.size()); ++i)
-        //{
-        //    MFA_ASSERT(state->nextFrameTasks[i] != nullptr);
-        //    state->nextFrameTasks[i]();
-        //}
-        //state->nextFrameTasks.clear();
+        PlayQueuedTasks();
 
         state->updateSignal.EmitMultiThread(deltaTime);
     }

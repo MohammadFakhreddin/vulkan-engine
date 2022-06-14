@@ -111,25 +111,21 @@ namespace MFA
         
         auto * debugPipeline = SceneManager::GetPipeline<DebugRendererPipeline>();
         MFA_ASSERT(debugPipeline != nullptr);
-
-        auto tracker = std::make_shared<JS::TaskTracker>(2, [this]()->void{});
-
+        
         RC::AcquireGpuTexture(
             "Error",
-            [this, tracker](std::shared_ptr<RT::GpuTexture> const & gpuTexture)->void{
+            [this](std::shared_ptr<RT::GpuTexture> const & gpuTexture)->void{
                 MFA_ASSERT(gpuTexture != nullptr);
                 mErrorTexture = gpuTexture;
-                tracker->onComplete();
             }
         );
 
         RC::AcquireEssence(
             "CubeFill",
             debugPipeline,
-            [this, debugPipeline, tracker](bool const success)->void{
+            [this, debugPipeline](bool const success)->void{
                 MFA_ASSERT(success == true);
                 mOcclusionEssence = debugPipeline->GetEssence("CubeFill");
-                tracker->onComplete();
             }
         );
 

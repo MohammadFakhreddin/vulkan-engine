@@ -197,49 +197,6 @@ void PrefabEditorScene::saveAndLoadWindow()
 
 //-------------------------------------------------------------------------------------------------
 
-//void PrefabEditorScene::addEssenceToPipeline(
-//    std::string const & nameId,
-//    std::shared_ptr<AS::Model> const & cpuModel
-//)
-//{
-//    MFA_ASSERT(cpuModel != nullptr);
-//
-//    auto * mesh = cpuModel->mesh.get();
-//    MFA_ASSERT(mesh != nullptr);
-//
-//    {// PBR
-//        auto * pbrMesh = dynamic_cast<AS::PBR::Mesh *>(mesh);
-//        if (pbrMesh != nullptr)
-//        {
-//            if (mPBR_Pipeline->hasEssence(nameId) == false)
-//            {
-//                mPBR_Pipeline->addEssence(std::make_shared<PBR_Essence>(
-//                    nameId,
-//                    *pbrMesh,
-//                    RC::AcquireGpuTextures(cpuModel->textureIds)
-//                ));
-//            }
-//            return;
-//        }
-//    }
-//    {// Debug
-//        auto * debugMesh = dynamic_cast<AS::Debug::Mesh *>(mesh);
-//        if (debugMesh != nullptr)
-//        {
-//            if (mDebugPipeline->hasEssence(nameId) == false)
-//            {
-//                mDebugPipeline->addEssence(std::make_shared<DebugEssence>(nameId, *debugMesh));
-//            }
-//            return;
-//        }
-//    }
-//    {// Particle
-//        // TODO
-//    }
-//}
-
-//-------------------------------------------------------------------------------------------------
-
 bool PrefabEditorScene::loadSelectedAsset(
     std::string const & fileAddress,
     MFA::BasePipeline * pipeline,

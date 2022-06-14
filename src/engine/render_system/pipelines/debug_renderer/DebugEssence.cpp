@@ -1,6 +1,5 @@
 #include "DebugEssence.hpp"
 
-#include "engine/BedrockAssert.hpp"
 #include "engine/BedrockMemory.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 

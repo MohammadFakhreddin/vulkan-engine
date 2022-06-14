@@ -4,11 +4,10 @@
 
 #include "catch.hpp"
 
+#define ENABLE_SIMD
 #include "engine/BedrockMatrix.hpp"
 
 #include <glm/glm.hpp>
-
-#include <immintrin.h>
 
 using namespace MFA;
 using namespace glm;
