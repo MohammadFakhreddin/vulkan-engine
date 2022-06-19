@@ -143,9 +143,13 @@ bool MFA::PointLightComponent::IsVisible() const
     {
         return false;
     }
-    if (auto const ptr = mAttachedMesh.lock())
+
+    if (auto const meshPtr = mAttachedMesh.lock())
     {
-        return ptr->getVariant()->IsVisible();
+        if (auto const variantPtr = meshPtr->getVariant().lock())
+        {
+            return variantPtr->IsVisible();
+        }
     }
     return true;
 }

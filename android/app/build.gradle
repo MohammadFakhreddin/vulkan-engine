@@ -1,19 +1,20 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 30
-    ndkVersion '23.0.7421159'//'22.1.7171670'
+    compileSdkVersion 32
+    ndkVersion "24.0.8215888"
 
     defaultConfig {
         applicationId "radx.MFaEngine"
-        minSdkVersion 24
-        targetSdkVersion 30
+        minSdkVersion 26        // Official vulkan support is 24
+        targetSdkVersion 32
         versionCode 1
         versionName "0.0.1"
         externalNativeBuild {
             cmake {
                 abiFilters "armeabi-v7a", 'arm64-v8a', 'x86', 'x86_64'
                 arguments '-DANDROID_TOOLCHAIN=clang', '-DANDROID_STL=c++_static', '-DANDROID_PLATFORM=android-24'
+                version '3.18.0+'
             }
         }
     }
@@ -34,25 +35,24 @@ android {
                 }
             }
         }
-        sanitize {
-            initWith debug
-            sourceSets.sanitize.resources.srcDir "wrap"
+        // sanitize {
+        //     initWith debug
+        //     sourceSets.sanitize.resources.srcDir "wrap"
 
-            externalNativeBuild {
-                cmake {
-                    arguments "-DANDROID_STL=c++_shared", "-DSANITIZE=TRUE"
-                }
-            }
+        //     externalNativeBuild {
+        //         cmake {
+        //             arguments "-DANDROID_STL=c++_shared", "-DSANITIZE=TRUE"
+        //         }
+        //     }
 
-        }
+        // }
     }
     sourceSets.main {
         assets.srcDir "../../assets/"
-        jniLibs {
-            srcDir "./src/main/jniLibs"
-        }
-    }
+        jniLibs.srcDirs += "./src/main/jniLibs"
+        jniLibs.srcDirs += ["$ndkDirectory/sources/third_party/vulkan/src/build-android/jniLibs"]
+	}
     externalNativeBuild.cmake.path = '../../CMakeLists.txt'
-    
+
     buildTypes.release.minifyEnabled = false
 }

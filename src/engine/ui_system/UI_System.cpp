@@ -610,6 +610,12 @@ namespace MFA::UI_System
         UpdateMouseCursor();
 #endif
 
+        auto const * drawData = ImGui::GetDrawData();
+        if(drawData == nullptr)
+        {
+            return false;
+        }
+
         // Setup desired Vulkan state
         // Bind pipeline and descriptor sets:
         RF::BindPipeline(recordState, *state->pipeline);
@@ -619,9 +625,6 @@ namespace MFA::UI_System
             RenderFrontend::UpdateFrequency::PerFrame,
             state->descriptorSetGroup.descriptorSets[0]
         );
-
-        auto const * drawData = ImGui::GetDrawData();
-        MFA_ASSERT(drawData != nullptr);
         
         // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
         float const frameBufferWidth = drawData->DisplaySize.x * drawData->FramebufferScale.x;

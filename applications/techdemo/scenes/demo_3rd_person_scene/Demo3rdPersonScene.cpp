@@ -136,62 +136,18 @@ void Demo3rdPersonScene::Init()
     }
 
     {// Fire
-        auto * particlePipeline = SceneManager::GetPipeline<ParticlePipeline>();
-        MFA_ASSERT(particlePipeline != nullptr);
+        RC::AcquireGpuTexture("images/fire/particle_fire.ktx", [this](std::shared_ptr<RT::GpuTexture> const & gpuTexture)->void{
+            auto * particlePipeline = SceneManager::GetPipeline<ParticlePipeline>();
+            MFA_ASSERT(particlePipeline != nullptr);
 
-        if (particlePipeline->hasEssence("SponzaFire") == false){// Fire essence
-            particlePipeline->addEssence(
-                std::make_shared<FireEssence>(
-                    "SponzaFire",
-                    100,   // TODO: Find a better number
-                    std::vector {RC::AcquireGpuTexture("images/fire/particle_fire.ktx")},
-                    MFA::FireParams {
-                        .initialPointSize = 300.0f
-                    },
-                    AS::Particle::Params {
-                        .count = 256,
-                        .minLife = 0.2f,
-                        .maxLife = 1.0f,
-                        .minSpeed = 0.5f,
-                        .maxSpeed = 1.0f,
-                        .radius = 0.1f,
-                    }
-                )
-            );
-        }
+            createFireEssence(gpuTexture);
 
-        {// Fire instances
-            auto const createFireInstance = [this, particlePipeline](glm::vec3 const & position)->void
-            {
-                auto * entity = EntitySystem::CreateEntity("FireInstance", GetRootEntity());
-                MFA_ASSERT(entity != nullptr);
-
-                auto const transform = entity->AddComponent<TransformComponent>().lock();
-                MFA_ASSERT(transform != nullptr);
-                transform->UpdatePosition(position);
-                
-                entity->AddComponent<MeshRendererComponent>(
-                    *particlePipeline,
-                    "SponzaFire"
-                );
-                entity->AddComponent<AxisAlignedBoundingBoxComponent>(
-                    glm::vec3{ 0.0f, -0.3f, 0.0f },
-                    glm::vec3{ 0.2f, 0.4f, 0.2f },
-                    true
-                );
-                entity->AddComponent<ColorComponent>(glm::vec3{ 1.0f, 0.0f, 0.0f });
-
-                auto const boundingVolumeRenderer = entity->AddComponent<BoundingVolumeRendererComponent>().lock();
-                MFA_ASSERT(boundingVolumeRenderer != nullptr);
-                boundingVolumeRenderer->SetActive(true);
-
-                EntitySystem::InitEntity(entity);
-            };
+            // Fire instances
             createFireInstance(glm::vec3 {-1.05f, 1.0f, -1.05f});
             createFireInstance(glm::vec3 {+1.85f, 1.0f, -1.05f});
             createFireInstance(glm::vec3 {-1.05f, 1.0f, -9.9f});
             createFireInstance(glm::vec3 {+1.85f, 1.0f, -9.9f});
-        }
+        });
     }
 
     mUIRecordId = UI::Register([this]()->void { onUI(); });
@@ -331,9 +287,9 @@ void Demo3rdPersonScene::Update(float const deltaTimeInSec)
                 scale
             );
             // TODO What should we do for animations ?
-            if (auto const meshRendererPtr = mPlayerMeshRenderer.lock())
+            if (auto const mrPtr = mPlayerMeshRenderer.lock())
             {
-                if (auto * variant = static_cast<PBR_Variant *>(meshRendererPtr->getVariant()))
+                if (auto variant = static_pointer_cast<PBR_Variant>(mrPtr->getVariant().lock()))
                 {
                     variant->SetActiveAnimation("SwordAndShieldRun", { .transitionDuration = 0.3f });
                 }
@@ -341,9 +297,10 @@ void Demo3rdPersonScene::Update(float const deltaTimeInSec)
         }
         else
         {
-            if (auto const meshRendererPtr = mPlayerMeshRenderer.lock())
+            if (auto const mrPtr = mPlayerMeshRenderer.lock())
             {
-                if (auto * variant = static_cast<PBR_Variant *>(meshRendererPtr->getVariant()))
+                
+                if (auto variant = static_pointer_cast<PBR_Variant>(mrPtr->getVariant().lock()))
                 {
                     //mSoldierVariant->SetActiveAnimation("SwordAndShieldIdle");
                     variant->SetActiveAnimation("Idle", { .transitionDuration = 0.3f });
@@ -383,6 +340,70 @@ void Demo3rdPersonScene::onUI() const
     mDebugRenderPipeline->changeActivationStatus(enableDebugPipeline);
 
     UI::EndWindow();
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void Demo3rdPersonScene::createFireEssence(std::shared_ptr<RT::GpuTexture> const & gpuTexture) const
+{
+    auto * particlePipeline = SceneManager::GetPipeline<ParticlePipeline>();
+    MFA_ASSERT(particlePipeline != nullptr);
+
+    if (particlePipeline->hasEssence("SponzaFire") == true){// Fire essence
+        return;
+    }
+
+    auto const fireEssence = std::make_shared<FireEssence>(
+        "SponzaFire",
+        100,   // TODO: Find a better number
+        std::vector {gpuTexture},
+        MFA::FireParams {
+            .initialPointSize = 300.0f
+        },
+        AS::Particle::Params {
+            .count = 256,
+            .minLife = 0.2f,
+            .maxLife = 1.0f,
+            .minSpeed = 0.5f,
+            .maxSpeed = 1.0f,
+            .radius = 0.1f,
+        }
+    );
+
+    auto const addResult = particlePipeline->addEssence(fireEssence);
+    MFA_ASSERT(addResult);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void Demo3rdPersonScene::createFireInstance(glm::vec3 const & position) const
+{
+    auto * particlePipeline = SceneManager::GetPipeline<ParticlePipeline>();
+    MFA_ASSERT(particlePipeline != nullptr);
+
+    auto * entity = EntitySystem::CreateEntity("FireInstance", GetRootEntity());
+    MFA_ASSERT(entity != nullptr);
+
+    auto const transform = entity->AddComponent<TransformComponent>().lock();
+    MFA_ASSERT(transform != nullptr);
+    transform->UpdatePosition(position);
+    
+    entity->AddComponent<MeshRendererComponent>(
+        particlePipeline,
+        "SponzaFire"
+    );
+    entity->AddComponent<AxisAlignedBoundingBoxComponent>(
+        glm::vec3{ 0.0f, -0.3f, 0.0f },
+        glm::vec3{ 0.4f, 0.8f, 0.4f },
+        true
+    );
+    entity->AddComponent<ColorComponent>(glm::vec3{ 1.0f, 0.0f, 0.0f });
+
+    auto const boundingVolumeRenderer = entity->AddComponent<BoundingVolumeRendererComponent>().lock();
+    MFA_ASSERT(boundingVolumeRenderer != nullptr);
+    boundingVolumeRenderer->SetActive(true);
+
+    EntitySystem::InitEntity(entity);
 }
 
 //-------------------------------------------------------------------------------------------------

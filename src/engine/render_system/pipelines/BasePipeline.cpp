@@ -33,7 +33,8 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     void BasePipeline::preRender(RT::CommandRecordState & recordState, float deltaTime)
-    {}
+    {
+    }
 
     //-------------------------------------------------------------------------------------------------
 
@@ -54,7 +55,7 @@ namespace MFA
 
     bool BasePipeline::hasEssence(std::string const & nameId) const
     {
-        return mEssenceAndVariantsMap.contains(Path::RelativeToAssetFolder(nameId));
+        return mEssenceAndVariantsMap.find(Path::RelativeToAssetFolder(nameId)) != mEssenceAndVariantsMap.end();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -94,7 +95,7 @@ namespace MFA
 
     std::weak_ptr<VariantBase> BasePipeline::createVariant(std::string const & nameId)
     {
-        MFA_ASSERT(mIsInitialized == true);
+        //MFA_ASSERT(mIsInitialized == true);
         auto const findResult = mEssenceAndVariantsMap.find(nameId);
         if(findResult == mEssenceAndVariantsMap.end())
         {
@@ -146,7 +147,7 @@ namespace MFA
         {
             SceneManager::UpdatePipeline(this);
         }
-        
+
         // Removing from essence and variants' list
         auto const findResult = mEssenceAndVariantsMap.find(variant.getEssence()->getNameId());
         MFA_ASSERT(findResult != mEssenceAndVariantsMap.end());
@@ -161,7 +162,7 @@ namespace MFA
                 return;
             }
         }
-        
+
         MFA_ASSERT(false);
     }
 
@@ -234,11 +235,11 @@ namespace MFA
 
     bool BasePipeline::addEssence(std::shared_ptr<EssenceBase> const & essence)
     {
-        MFA_ASSERT(mIsInitialized == true);
+        //MFA_ASSERT(mIsInitialized == true);
         auto const & address = essence->getNameId();
 
         bool success = false;
-        if(MFA_VERIFY(mEssenceAndVariantsMap.contains(address) == false))
+        if(MFA_VERIFY(mEssenceAndVariantsMap.find(address) == mEssenceAndVariantsMap.end()))
         {
             mEssenceAndVariantsMap[address] = EssenceAndVariants(essence);
             mAllEssencesList.emplace_back(essence.get());

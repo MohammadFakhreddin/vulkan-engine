@@ -203,6 +203,7 @@ namespace MFA::RenderBackend
         RT::ImageGroup const & imageGroup
     );
 
+    // TODO: We should ask for commandbuffer instead
     [[nodiscard]]
     std::shared_ptr<RT::GpuTexture> CreateTexture(
         AS::Texture const & cpuTexture,

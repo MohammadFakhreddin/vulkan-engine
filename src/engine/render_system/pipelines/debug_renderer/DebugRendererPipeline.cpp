@@ -74,21 +74,19 @@ namespace MFA
 
     void DebugRendererPipeline::init()
     {
+        MFA_ASSERT(JS::IsMainThread());
         BasePipeline::init();
-
         createDescriptorSetLayout();
         createPipeline();
         createDescriptorSets();
 
         std::vector<std::string> const modelNames{ "Sphere", "CubeStrip", "CubeFill" };
+
         for (auto const & modelName : modelNames)
         {
-            auto const cpuModel = RC::AcquireCpuModel(modelName);
-            MFA_ASSERT(cpuModel != nullptr);
-            auto * debugMesh = dynamic_cast<Mesh *>(cpuModel->mesh.get());
-            MFA_ASSERT(debugMesh != nullptr);
-            auto const addResult = addEssence(std::make_shared<DebugEssence>(modelName, *debugMesh));
-            MFA_ASSERT(addResult == true);
+            RC::AcquireEssence(modelName, this, [modelName](bool success)->void{
+                MFA_ASSERT(success);
+            });
         }
     }
 
@@ -188,7 +186,7 @@ namespace MFA
         };
         bindings.emplace_back(layoutBinding);
 
-        MFA_VK_INVALID_ASSERT(mDescriptorSetLayout);
+        MFA_ASSERT(mDescriptorSetLayout == VK_NULL_HANDLE);
         mDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
             bindings.data()
@@ -273,7 +271,7 @@ namespace MFA
         {
 
             auto const & descriptorSet = mDescriptorSetGroup.descriptorSets[frameIndex];
-            MFA_VK_VALID_ASSERT(descriptorSet);
+            MFA_ASSERT(descriptorSet != VK_NULL_HANDLE);
 
             DescriptorSetSchema descriptorSetSchema{ descriptorSet };
 

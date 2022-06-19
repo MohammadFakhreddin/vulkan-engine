@@ -3,7 +3,6 @@
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include <cstring>
 
 namespace MFA::Matrix 
 {
@@ -102,6 +101,8 @@ namespace MFA::Matrix
         float farPlane
     );
 
+#ifdef ENABLE_SIMD
+
     [[nodiscard]]
     glm::vec4 Add(glm::vec4 const & vec1, glm::vec4 const & vec2);
 
@@ -110,5 +111,7 @@ namespace MFA::Matrix
 
     [[nodiscard]]
     glm::vec4 Lerp(glm::vec4 const & vec1, glm::vec4 const & vec2, float fraction);
+
+#endif
 
 }

@@ -17,6 +17,8 @@
 #include "engine/camera/CameraComponent.hpp"
 #include "engine/BedrockMatrix.hpp"
 
+#include <utility>
+
 #define CAST_ESSENCE_PURE(essence) static_cast<ParticleEssence *>(essence)
 
 namespace MFA
@@ -44,26 +46,33 @@ namespace MFA
 
     void ParticlePipeline::init()
     {
-        BasePipeline::init();
-
         mSamplerGroup = RF::CreateSampler(RT::CreateSamplerParams {
             .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
             .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
             .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER
         });
         MFA_ASSERT(mSamplerGroup != nullptr);
-        
-        mErrorTexture = RC::AcquireGpuTexture("Error");
-        MFA_ASSERT(mErrorTexture != nullptr);
 
-        createPerFrameDescriptorSetLayout();
-        createPerEssenceGraphicDescriptorSetLayout();
-        createPerEssenceComputeDescriptorSetLayout();
+        RC::AcquireGpuTexture("Error", [this](std::shared_ptr<RT::GpuTexture> const & gpuTexture)->void{
 
-        createPerFrameDescriptorSets();
+            mErrorTexture = gpuTexture;
+            MFA_ASSERT(mErrorTexture != nullptr);
 
-        createGraphicPipeline();
-        createComputePipeline();
+            SceneManager::AssignMainThreadTask([this]()->void{
+                BasePipeline::init();
+
+                createPerFrameDescriptorSetLayout();
+                createPerEssenceGraphicDescriptorSetLayout();
+                createPerEssenceComputeDescriptorSetLayout();
+
+                createPerFrameDescriptorSets();
+
+                createGraphicPipeline();
+                createComputePipeline();
+            });
+
+        });
+
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -80,6 +89,11 @@ namespace MFA
         float const deltaTimeInSec
     )
     {
+        if (mIsInitialized == false)
+        {
+            return;
+        }
+
         if (mAllEssencesList.empty())
         {
             return;
@@ -97,7 +111,7 @@ namespace MFA
         
         PushConstants pushConstants {};
         
-        if (auto activeCamera = SceneManager::GetActiveCamera().lock())
+        if (auto const activeCamera = SceneManager::GetActiveCamera().lock())
         {
             Matrix::CopyGlmToCells(activeCamera->GetViewportDimension(), pushConstants.viewportDimension);
         }
@@ -109,11 +123,16 @@ namespace MFA
             CAST_ESSENCE_PURE(essence)->render(recordState);
         }
     }
-    
+
     //-------------------------------------------------------------------------------------------------
 
     void ParticlePipeline::update(float const deltaTimeInSec)
     {
+        if (mIsInitialized == false)
+        {
+            return;
+        }
+
         if (mAllEssencesList.empty())
         {
             return;
@@ -130,6 +149,7 @@ namespace MFA
             });
         }
 
+        // TODO: Try to remove this or move it somewhere else
         if (JS::IsMainThread())
         {
             JS::WaitForThreadsToFinish();
@@ -137,9 +157,13 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
- 
+
     void ParticlePipeline::compute(RT::CommandRecordState & recordState, float const deltaTimeInSec)
     {
+        if (mIsInitialized == false)
+        {
+            return;
+        }
 
         if (mAllEssencesList.empty())
         {
@@ -200,13 +224,13 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
- 
+
     void ParticlePipeline::internalAddEssence(EssenceBase * essence)
     {
         MFA_ASSERT(essence != nullptr);
 
         auto * particleEssence = CAST_ESSENCE_PURE(essence);
-        
+
         particleEssence->createGraphicDescriptorSet(
             mDescriptorPool,
             mPerEssenceGraphicDescriptorSetLayout->descriptorSetLayout,
@@ -258,7 +282,7 @@ namespace MFA
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT
         });
-        
+
         mPerFrameDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
             bindings.data()
@@ -330,7 +354,7 @@ namespace MFA
         for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
         {
             auto const descriptorSet = mPerFrameDescriptorSetGroup.descriptorSets[frameIndex];
-            MFA_VK_VALID_ASSERT(descriptorSet);
+            MFA_ASSERT(descriptorSet != VK_NULL_HANDLE);
 
             DescriptorSetSchema descriptorSetSchema{ descriptorSet };
 
@@ -345,7 +369,7 @@ namespace MFA
             // Sampler
             VkDescriptorImageInfo texturesSamplerInfo{
                 .sampler = mSamplerGroup->sampler,
-                .imageView = nullptr,
+                .imageView = VK_NULL_HANDLE,
                 .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             };
             descriptorSetSchema.AddSampler(&texturesSamplerInfo);
@@ -370,7 +394,7 @@ namespace MFA
         RF_CREATE_SHADER("shaders/particle/Particle.comp.spv", Compute)
 
         std::vector<RT::GpuShader const *> shaders {gpuComputeShader.get()};
-        
+
         std::vector<VkDescriptorSetLayout> const descriptorSetLayouts {
             mPerFrameDescriptorSetLayout->descriptorSetLayout,
             mPerEssenceComputeDescriptorSetLayout->descriptorSetLayout,
@@ -382,7 +406,7 @@ namespace MFA
             0,
             nullptr
         );
-        MFA_ASSERT(pipelineLayout != nullptr);
+        MFA_ASSERT(pipelineLayout != VK_NULL_HANDLE);
 
         mComputePipeline = RF::CreateComputePipeline(*gpuComputeShader, pipelineLayout);
         MFA_ASSERT(mComputePipeline != nullptr);
@@ -394,7 +418,7 @@ namespace MFA
     {
         RF_CREATE_SHADER("shaders/particle/Particle.vert.spv", Vertex)
         RF_CREATE_SHADER("shaders/particle/Particle.frag.spv", Fragment)
-        
+
         std::vector<RT::GpuShader const *> shaders{ gpuVertexShader.get(), gpuFragmentShader.get() };
 
         std::vector<VkVertexInputBindingDescription> vertexInputBindingDescriptions {};
@@ -408,7 +432,7 @@ namespace MFA
             .stride = sizeof(PerInstanceData),
             .inputRate = VK_VERTEX_INPUT_RATE_INSTANCE
         });
-        
+
         std::vector<VkVertexInputAttributeDescription> inputAttributeDescriptions{};
 
         // Position
@@ -426,7 +450,7 @@ namespace MFA
             .format = VK_FORMAT_R32_SINT,
             .offset = offsetof(Vertex, textureIndex)
         });
-        
+
         // Color
         inputAttributeDescriptions.emplace_back(VkVertexInputAttributeDescription{
             .location = static_cast<uint32_t>(inputAttributeDescriptions.size()),
@@ -483,7 +507,7 @@ namespace MFA
         pipelineOptions.depthStencil.depthWriteEnable = VK_FALSE;
 
         pipelineOptions.depthStencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-        
+
         std::vector<VkDescriptorSetLayout> const descriptorSetLayouts {
             mPerFrameDescriptorSetLayout->descriptorSetLayout,
             mPerEssenceGraphicDescriptorSetLayout->descriptorSetLayout,
@@ -495,7 +519,7 @@ namespace MFA
             static_cast<uint32_t>(pushConstantRanges.size()),
             pushConstantRanges.data()
         );
-        MFA_ASSERT(pipelineLayout != nullptr);
+        MFA_ASSERT(pipelineLayout != VK_NULL_HANDLE);
 
         mGraphicPipeline = RF::CreateGraphicPipeline(
             RF::GetDisplayRenderPass()->GetVkRenderPass(),

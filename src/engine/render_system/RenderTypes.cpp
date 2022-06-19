@@ -59,7 +59,7 @@ MFA::RT::ImageGroup::~ImageGroup()
 MFA::RT::ImageViewGroup::ImageViewGroup(VkImageView imageView_)
     : imageView(imageView_)
 {
-    MFA_VK_VALID_ASSERT(imageView);
+    MFA_ASSERT(imageView != VK_NULL_HANDLE);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -94,7 +94,7 @@ MFA::RT::GpuShader::GpuShader(
     , stageFlags(stageFlags)
     , entryPointName(std::move(entryPointName))
 {
-    MFA_ASSERT(shaderModule != nullptr);
+    MFA_ASSERT(shaderModule != VK_NULL_HANDLE);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -127,8 +127,7 @@ MFA::RenderTypes::PipelineGroup::~PipelineGroup()
 
 bool MFA::RT::PipelineGroup::isValid() const noexcept
 {
-    return MFA_VK_VALID(pipelineLayout)
-        && MFA_VK_VALID(pipeline);
+    return pipelineLayout != VK_NULL_HANDLE && pipeline != VK_NULL_HANDLE;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -203,7 +202,7 @@ MFA::RT::ColorImageGroup::~ColorImageGroup() = default;
 MFA::RenderTypes::DescriptorSetLayoutGroup::DescriptorSetLayoutGroup(VkDescriptorSetLayout descriptorSetLayout_)
     : descriptorSetLayout(descriptorSetLayout_)
 {
-    MFA_VK_VALID_ASSERT(descriptorSetLayout);
+    MFA_ASSERT(descriptorSetLayout != VK_NULL_HANDLE);
 }
 
 //-------------------------------------------------------------------------------------------------

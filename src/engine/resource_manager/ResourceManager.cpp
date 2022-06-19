@@ -7,6 +7,17 @@
 #include "engine/BedrockPath.hpp"
 #include "engine/asset_system/AssetModel.hpp"
 #include "tools/ShapeGenerator.hpp"
+#include "engine/job_system/ScopeLock.hpp"
+#include "engine/job_system/JobSystem.hpp"
+#include "engine/render_system/pipelines/EssenceBase.hpp"
+#include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Essence.hpp"
+#include "engine/render_system/pipelines/BasePipeline.hpp"
+#include "engine/render_system/pipelines/debug_renderer/DebugEssence.hpp"
+#include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
+#include "engine/render_system/pipelines/particle/ParticlePipeline.hpp"
+#include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
+#include "engine/scene_manager/SceneManager.hpp"
+#include "engine/job_system/TaskTracker.hpp"
 
 #include <unordered_map>
 
@@ -15,37 +26,87 @@ namespace MFA::ResourceManager
 
     //-------------------------------------------------------------------------------------------------
 
+    template<typename DataType, typename CallbackType>
+    struct Data
+    {
+        std::weak_ptr<DataType> data {};
+        std::vector<CallbackType> callbacks {};
+        std::atomic<bool> lock = false;
+    };
+
+    //-------------------------------------------------------------------------------------------------
+
+    struct CpuModelData : Data<AS::Model, CpuModelCallback> {};
+
+    //-------------------------------------------------------------------------------------------------
+
+    struct CpuTextureData : Data<AS::Texture, CpuTextureCallback> {};
+
+    //-------------------------------------------------------------------------------------------------
+
+    struct GpuTextureData : Data<RT::GpuTexture, GpuTextureCallback> {};
+
+    //-------------------------------------------------------------------------------------------------
+
+    struct EssenceData : Data<EssenceBase, std::function<void(bool)>> {};
+
+    //-------------------------------------------------------------------------------------------------
+
     struct State
     {
-        std::unordered_map<std::string, std::weak_ptr<AS::Model>> availableCpuModels{};
+        std::unordered_map<std::string, CpuModelData> cpuModels{};
 
-        std::unordered_map<std::string, std::weak_ptr<RT::GpuTexture>> availableGpuTextures {};
-        std::unordered_map<std::string, std::weak_ptr<AS::Texture>> availableCpuTextures {};
+        std::unordered_map<std::string, GpuTextureData> gpuTextures {};
+        std::unordered_map<std::string, CpuTextureData> cpuTextures {};
+
+        std::unordered_map<std::string, EssenceData> essences {};
 
     };
     State * state = nullptr;
 
     //-------------------------------------------------------------------------------------------------
 
-    void ResourceManager::Init()
+    void Init()
     {
         state = new State();
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    #define CLEAR_MAP(map)                              \
-    for (auto & pair : map)                             \
-    {                                                   \
-        pair.second.reset();                            \
-    }                                                   \
-
-    void ResourceManager::Shutdown()
+    void Shutdown()
     {
-        //CLEAR_MAP(state->availableGpuModels)
-        CLEAR_MAP(state->availableCpuModels)
-        CLEAR_MAP(state->availableGpuTextures)
-        CLEAR_MAP(state->availableCpuTextures)
+        // Working fine
+        for (auto & cpuTexture : state->cpuTextures)
+        {
+            MFA_ASSERT(cpuTexture.second.callbacks.empty());
+            MFA_ASSERT(cpuTexture.second.data.lock() == nullptr);
+        }
+        state->cpuTextures.clear();
+
+        // Working fine
+        for (auto & essence : state->essences)
+        {
+            MFA_ASSERT(essence.second.callbacks.empty());
+            MFA_ASSERT(essence.second.data.lock() == nullptr);
+        }
+        state->essences.clear();
+
+        // Has an strong ref that prevents freeing memory
+        for (auto & texture : state->gpuTextures)
+        {
+            MFA_ASSERT(texture.second.callbacks.empty());
+            MFA_ASSERT(texture.second.data.lock() == nullptr);
+        }
+        state->gpuTextures.clear();
+
+        // Has an strong ref that prevents freeing memory
+        for (auto & cpuModel : state->cpuModels)
+        {
+            MFA_ASSERT(cpuModel.second.callbacks.empty());
+            MFA_ASSERT(cpuModel.second.data.lock() == nullptr);
+        }
+        state->cpuModels.clear();
+
         delete state;
     }
 
@@ -86,7 +147,7 @@ namespace MFA::ResourceManager
 
     //-------------------------------------------------------------------------------------------------
     // TODO Use job system to make this process multi-threaded
-    //std::shared_ptr<RT::GpuModel> ResourceManager::AcquireGpuModel(std::string const & nameOrFileAddress, bool const loadFileIfNotExists)
+    //std::shared_ptr<RT::GpuModel> AcquireGpuModel(std::string const & nameOrFileAddress, bool const loadFileIfNotExists)
     //{
     //    std::shared_ptr<RT::GpuModel> gpuModel = nullptr;
 
@@ -115,151 +176,387 @@ namespace MFA::ResourceManager
     //}
 
     //-------------------------------------------------------------------------------------------------
-    // TODO Use job system to make this process multi-threaded
-    std::shared_ptr<AS::Model> AcquireCpuModel(
+
+    void AcquireCpuModel(
         std::string const & modelId,
-        bool const loadFileIfNotExists
+        CpuModelCallback const & callback,
+        bool const loadFromFile
     )
     {
-        std::shared_ptr<AS::Model> cpuModel = nullptr;
-
         std::string const relativePath = Path::RelativeToAssetFolder(modelId);
-        
-        auto const findResult = state->availableCpuModels.find(relativePath);
-        if (findResult != state->availableCpuModels.end())
+
+        auto & cpuModelData = state->cpuModels[relativePath];
+
+        bool shouldAssignTask;
         {
-            cpuModel = findResult->second.lock();
+            SCOPE_LOCK(cpuModelData.lock)
+
+            auto const cpuModel = cpuModelData.data.lock();
+
+            if (cpuModel != nullptr || loadFromFile == false)
+            {
+                callback(cpuModel);
+                return;
+            }
+
+            cpuModelData.callbacks.emplace_back(callback);
+
+            shouldAssignTask = cpuModelData.callbacks.size() == 1;
         }
 
-        if (cpuModel != nullptr || loadFileIfNotExists == false)
+        if (shouldAssignTask)
         {
-            return cpuModel;
+            JS::AssignTask([relativePath, &cpuModelData](JS::ThreadNumber threadNumber, JS::ThreadNumber totalThreadCount)->void {
+
+                std::shared_ptr<AS::Model> cpuModel = nullptr;
+
+                auto const extension = Path::ExtractExtensionFromPath(relativePath);
+                if (extension == ".gltf" || extension == ".glb")
+                {
+                    cpuModel = Importer::ImportGLTF(Path::ForReadWrite(relativePath));
+                } else if ("CubeStrip" == relativePath)
+                {
+                    cpuModel = ShapeGenerator::Debug::CubeStrip();
+                } else if ("CubeFill" == relativePath)
+                {
+                    cpuModel = ShapeGenerator::Debug::CubeFill();
+                } else if ("Sphere" == relativePath)
+                {
+                    cpuModel = ShapeGenerator::Debug::Sphere();
+                } else
+                {
+                    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+                }
+
+                SCOPE_LOCK(cpuModelData.lock)
+
+                cpuModelData.data = cpuModel;
+
+                for (auto & callback : cpuModelData.callbacks)
+                {
+                    callback(cpuModel);
+                }
+
+                cpuModelData.callbacks.clear();
+
+            });
         }
-
-        // TODO: Find a cleaner and more scalable way
-        auto const extension = Path::ExtractExtensionFromPath(relativePath);
-        if (extension == ".gltf" || extension == ".glb")
-        {
-            cpuModel = Importer::ImportGLTF(Path::ForReadWrite(relativePath));
-        } else if ("CubeStrip" == relativePath)
-        {
-            cpuModel = ShapeGenerator::Debug::CubeStrip();
-        } else if ("CubeFill" == relativePath)
-        {
-            cpuModel = ShapeGenerator::Debug::CubeFill();
-        } else if ("Sphere" == relativePath)
-        {
-            cpuModel = ShapeGenerator::Debug::Sphere();
-        } else
-        {
-            MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
-        }
-
-        state->availableCpuModels[relativePath] = cpuModel;
-
-        return cpuModel;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    std::vector<std::shared_ptr<RT::GpuTexture>> AcquireGpuTextures(std::vector<std::string> const & textureIds)
-    {
-        std::vector<std::shared_ptr<RT::GpuTexture>> gpuTextures {};
-
-        for (auto const & textureId : textureIds)
-        {
-            gpuTextures.emplace_back(AcquireGpuTexture(textureId));
-        }
-
-        return gpuTextures;
-}
-
-    //-------------------------------------------------------------------------------------------------
-
-    static std::shared_ptr<RT::GpuTexture> createGpuTexture(AS::Texture * texture, std::string const & name)
-    {
-        MFA_ASSERT(name.empty() == false);
-        MFA_ASSERT(texture != nullptr);
-        MFA_ASSERT(texture->isValid());
-
-        auto gpuTexture = RF::CreateTexture(*texture);
-        state->availableGpuTextures[name] = gpuTexture;
-        return gpuTexture;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-    // TODO: Idea: Acquire Gltf mesh separately with list of textures. Then acquire textures when needed.
     // // User should not use importer directly. Everything should be through resource manager
-    std::shared_ptr<RT::GpuTexture> ResourceManager::AcquireGpuTexture(
+    void AcquireGpuTexture(
         std::string const & textureId,
-        bool const loadFileIfNotExists
+        GpuTextureCallback const & callback,
+        bool const loadFromFile
     )
     {
-        std::shared_ptr<RT::GpuTexture> gpuTexture = nullptr;
-
+        MFA_ASSERT(textureId.empty() == false);
+        MFA_ASSERT(callback != nullptr);
+        
         std::string const relativePath = Path::RelativeToAssetFolder(textureId);
 
-        auto const findResult = state->availableGpuTextures.find(relativePath);
-        if (findResult != state->availableGpuTextures.end())
+        auto & gpuTextureData = state->gpuTextures[relativePath];
+
+        bool shouldAssignTask;
         {
-            gpuTexture = findResult->second.lock();
+            SCOPE_LOCK(gpuTextureData.lock)
+
+            auto const gpuTexture = gpuTextureData.data.lock();
+
+            // It means that file is already loaded and still exists
+            if (gpuTexture != nullptr)
+            {
+                callback(gpuTexture);
+                return;
+            }
+
+            gpuTextureData.callbacks.emplace_back(callback);
+
+            shouldAssignTask = gpuTextureData.callbacks.size() == 1;
         }
 
-        // It means that file is already loaded and still exists
-        if (gpuTexture != nullptr )
+        if (shouldAssignTask)
         {
-            return gpuTexture;
-        }
+            AcquireCpuTexture(
+                relativePath,
+                [relativePath, &gpuTextureData]
+                (std::shared_ptr<AS::Texture> const & texture)->void{
+                    SceneManager::AssignMainThreadTask([relativePath, &gpuTextureData, texture]()->void {
+                        MFA_ASSERT(texture != nullptr);
+                        
+                        SCOPE_LOCK(gpuTextureData.lock)
 
-        auto const cpuTexture = AcquireCpuTexture(relativePath, loadFileIfNotExists);
-        if (cpuTexture == nullptr)
-        {
-            return nullptr;
-        }
+                        auto const gpuTexture = RF::CreateTexture(*texture);
+                        gpuTextureData.data = gpuTexture;
 
-        return createGpuTexture(cpuTexture.get(), textureId);
+                        for (auto & callback : gpuTextureData.callbacks)
+                        {
+                            // TODO: What if the object holding this callback is dead ?
+                            callback(gpuTexture);
+                        }
+                        gpuTextureData.callbacks.clear();
+                    });
+                },
+                loadFromFile
+            );
+        }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<AssetSystem::Texture> ResourceManager::AcquireCpuTexture(
+    void AcquireCpuTexture(
         std::string const & textureId,
-        bool const loadFileIfNotExists
+        CpuTextureCallback const & callback,
+        bool const loadFromFile
     )
     {
-        std::shared_ptr<AS::Texture> texture = nullptr;
-
         std::string const relativePath = Path::RelativeToAssetFolder(textureId);
 
-        auto const findResult = state->availableCpuTextures.find(relativePath);
-        if (findResult != state->availableCpuTextures.end())
+        auto & textureData = state->cpuTextures[relativePath];
+
+        bool shouldAssignTask;
         {
-            texture = findResult->second.lock();
+            SCOPE_LOCK(textureData.lock)
+
+            auto const existingTexture = textureData.data.lock();
+
+            if (existingTexture != nullptr || loadFromFile == false)
+            {
+                callback(existingTexture);
+                return;
+            }
+
+            textureData.callbacks.emplace_back(callback);
+
+            shouldAssignTask = textureData.callbacks.size() == 1;
         }
 
-        if (texture != nullptr || loadFileIfNotExists == false)
+        if (shouldAssignTask)
         {
-            return texture;
+            JS::AssignTask([relativePath, &textureData](JS::ThreadNumber threadNumber, JS::ThreadNumber totalThreadCount)->void {
+
+                std::shared_ptr<AssetSystem::Texture> texture = nullptr;
+
+                auto const extension = Path::ExtractExtensionFromPath(relativePath);
+
+                if (extension == ".ktx")
+                {
+                    texture = Importer::ImportKTXImage(Path::ForReadWrite(relativePath));
+                } else if (extension == ".png" || extension == ".jpg" || extension == ".jpeg")
+                {
+                    texture = Importer::ImportUncompressedImage(Path::ForReadWrite(relativePath));
+                } else if (relativePath == "Error")
+                {
+                    texture = Importer::CreateErrorTexture();
+                } else
+                {
+                    MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+                }
+
+                SCOPE_LOCK(textureData.lock)
+
+                textureData.data = texture;
+
+                for (auto & callback : textureData.callbacks)
+                {
+                    callback(texture);
+                }
+
+                textureData.callbacks.clear();
+
+            });
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool createPbrEssence(
+        BasePipeline * pipeline,
+        std::string const & nameId,
+        std::shared_ptr<AS::Model> const & cpuModel,
+        std::vector<std::shared_ptr<RT::GpuTexture>> const & gpuTextures,
+        std::shared_ptr<EssenceBase> & essence
+    )
+    {
+        MFA_ASSERT(JS::IsMainThread());
+
+        auto const * pbrMesh = static_cast<AS::PBR::Mesh *>(cpuModel->mesh.get());
+
+        essence = std::make_shared<PBR_Essence>(
+            nameId,
+            *pbrMesh,
+            gpuTextures
+        );
+
+        auto const addResult = pipeline->addEssence(essence);
+
+        return addResult;
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    bool createDebugEssence(
+        BasePipeline * pipeline,
+        std::string const & nameId,
+        std::shared_ptr<AssetSystem::Model> const & cpuModel,
+        std::shared_ptr<EssenceBase> & essence
+    )
+    {
+        MFA_ASSERT(JS::IsMainThread());
+
+        auto const * debugMesh = static_cast<AS::Debug::Mesh *>(cpuModel->mesh.get());
+
+        essence = std::make_shared<DebugEssence>(
+            nameId,
+            *debugMesh
+        );
+        
+        auto const addResult = pipeline->addEssence(essence);
+        MFA_ASSERT(addResult == true);
+
+        return addResult;
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    static void CreateEssence(
+        BasePipeline * pipeline,
+        std::string const & nameId,
+        std::shared_ptr<AS::Model> const & cpuModel,
+        std::vector<std::shared_ptr<RT::GpuTexture>> const & gpuTextures
+    )
+    {
+        SceneManager::AssignMainThreadTask([pipeline, nameId, cpuModel, gpuTextures]()->void{
+
+            auto const pipelineName = pipeline->GetName();
+
+            std::shared_ptr<EssenceBase> essence = nullptr;
+            bool addResult = false;
+
+            if (pipelineName == PBRWithShadowPipelineV2::Name)
+            {
+                addResult = createPbrEssence(pipeline, nameId, cpuModel, gpuTextures, essence);
+            } else if (pipelineName == ParticlePipeline::Name)
+            {
+                MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+            }
+            else if (pipelineName == DebugRendererPipeline::Name)
+            {
+                addResult = createDebugEssence(pipeline, nameId, cpuModel, essence);
+            }
+            else
+            {
+                MFA_CRASH("Unhandled pipeline type detected");
+            }
+
+            auto & essenceData = state->essences[nameId];
+
+            SCOPE_LOCK(essenceData.lock)
+
+            essenceData.data = essence;
+
+            bool const success = addResult && essence != nullptr;
+
+            for (auto & callback : essenceData.callbacks)
+            {
+                callback(success);
+            }
+
+            essenceData.callbacks.clear();
+        });
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void AcquireEssence(
+        std::string const & nameId,
+        BasePipeline * pipeline,
+        EssenceCallback const & callback,
+        bool loadFromFile
+    )
+    {
+        MFA_ASSERT(nameId.length() > 0);
+        MFA_ASSERT(pipeline != nullptr);
+        MFA_ASSERT(callback != nullptr);
+
+        std::shared_ptr<EssenceBase> essence = nullptr;
+
+        std::string const relativePath = Path::RelativeToAssetFolder(nameId);
+
+        auto & essenceData = state->essences[relativePath];
+
+        bool shouldAssignTask;
+        {
+            SCOPE_LOCK(essenceData.lock)
+
+            essence = essenceData.data.lock();
+
+            if (essence != nullptr)
+            {
+                callback(true);
+                return;
+            }
+
+            essence = pipeline->GetEssence(nameId);
+
+            if (essence != nullptr)
+            {
+                essenceData.data = essence;
+                callback(true);
+                return;
+            }
+
+            essenceData.callbacks.emplace_back(callback);
+
+            shouldAssignTask = essenceData.callbacks.size() == 1;
         }
 
-        auto const extension = Path::ExtractExtensionFromPath(relativePath);
-        if (extension == ".ktx")
+        if (shouldAssignTask)
         {
-            texture = Importer::ImportKTXImage(Path::ForReadWrite(relativePath));
-        } else if (extension == ".png" || extension == ".jpg" || extension == ".jpeg")
-        {
-            texture = Importer::ImportUncompressedImage(Path::ForReadWrite(relativePath));
-        } else if (textureId == "Error")
-        {
-            texture = Importer::CreateErrorTexture();
-        } else
-        {
-            MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+            RC::AcquireCpuModel(
+                nameId,
+                [nameId, pipeline, loadFromFile]
+                (std::shared_ptr<AS::Model> const & cpuModel)->void {
+
+                    MFA_ASSERT(cpuModel != nullptr);
+                    
+                    if (cpuModel->textureIds.empty() == false)
+                    {
+                        struct Data
+                        {
+                            std::vector<std::shared_ptr<RT::GpuTexture>> gpuTextures {};
+                        };
+
+                        auto taskTracker = std::make_shared<JS::TaskTracker1<Data>>(
+                            std::make_shared<Data>(),
+                            static_cast<int>(cpuModel->textureIds.size()),
+                            [pipeline, nameId, cpuModel](Data const * userData)->void {
+                                CreateEssence(pipeline, nameId, cpuModel, userData->gpuTextures);
+                            }
+                        );
+                        
+                        taskTracker->userData->gpuTextures.resize (cpuModel->textureIds.size());
+
+                        for (size_t i = 0; i < taskTracker->userData->gpuTextures.size(); ++i)
+                        {
+                            RC::AcquireGpuTexture(
+                                cpuModel->textureIds[i],
+                                [taskTracker, i](std::shared_ptr<RT::GpuTexture> const & gpuTexture)->void {
+                                    taskTracker->userData->gpuTextures[i] = gpuTexture;
+                                    taskTracker->onComplete();
+                                }, loadFromFile
+                            );
+                        }
+                    }
+                    else
+                    {
+                        CreateEssence(pipeline, nameId, cpuModel, {});
+                    }
+                }, loadFromFile
+            );
         }
-
-        state->availableCpuTextures[relativePath] = texture;
-
-        return texture;
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -13,17 +13,13 @@ namespace MFA {
         void Shutdown() override;
 
         [[nodiscard]]
-        VariantBase const * getVariant() const;
-
-        [[nodiscard]]
-        VariantBase * getVariant();
+        std::weak_ptr<VariantBase> getVariant();
 
     protected:
 
         explicit RendererComponent();
 
-        explicit RendererComponent(BasePipeline & pipeline, std::weak_ptr<VariantBase> variant);
-
+        std::string mNameId {};
         BasePipeline * mPipeline = nullptr;
         std::weak_ptr<VariantBase> mVariant {};
 

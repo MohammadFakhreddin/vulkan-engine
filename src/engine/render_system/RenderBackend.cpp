@@ -15,14 +15,14 @@
 #endif
 
 #ifdef __ANDROID__
-#include "vulkan_wrapper.h"
 #include <android_native_app_glue.h>
-#else
-#include <vulkan/vulkan.h>
 #endif
+
+#include <vulkan/vulkan.h>
 
 #include <vector>
 #include <cstring>
+#include <set>
 
 namespace MFA::RenderBackend
 {
@@ -30,10 +30,6 @@ namespace MFA::RenderBackend
     constexpr char EngineName[256] = "MFA";
     constexpr int EngineVersion = 1;
     constexpr char ValidationLayer[100] = "VK_LAYER_KHRONOS_validation";
-
-    std::vector<char const *> DebugLayers = {
-        ValidationLayer
-    };
 
     //-------------------------------------------------------------------------------------------------
 
@@ -47,7 +43,7 @@ namespace MFA::RenderBackend
                 "Vulkan command failed with code: %i",
                 static_cast<int>(result)
             );
-            auto const message = std::string(buffer, length); 
+            auto const message = std::string(buffer, length);
             MFA_CRASH("%s", message.c_str());
         }
     }
@@ -117,6 +113,8 @@ namespace MFA::RenderBackend
     {
         VkSurfaceKHR surface{};
 
+        MFA_ASSERT(window != nullptr);
+
         VkAndroidSurfaceCreateInfoKHR createInfo{
             .sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR,
             .pNext = nullptr,
@@ -157,7 +155,7 @@ namespace MFA::RenderBackend
     void DestroyWindowSurface(VkInstance instance, VkSurfaceKHR surface)
     {
         MFA_ASSERT(instance != nullptr);
-        MFA_VK_VALID_ASSERT(surface);
+        MFA_ASSERT(surface != VK_NULL_HANDLE);
         vkDestroySurfaceKHR(instance, surface, nullptr);
     }
 
@@ -240,6 +238,36 @@ namespace MFA::RenderBackend
 
     //-------------------------------------------------------------------------------------------------
 
+    static std::set<std::string> QuerySupportedExtension() {
+        uint32_t count;
+        vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr); //get number of extensions
+        std::vector<VkExtensionProperties> extensions(count);
+        vkEnumerateInstanceExtensionProperties(nullptr, &count, extensions.data()); //populate buffer
+        std::set<std::string> results {};
+        for (auto const & extension : extensions) {
+            results.insert(extension.extensionName);
+        }
+        return results;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    static std::vector<char const *> FilterSupportedExtensions(std::vector<char const *> const & extensions) {
+        auto const supportedExtension = QuerySupportedExtension();
+        std::vector<char const *> result {};
+        for (auto const & extension : extensions)
+        {
+            if (supportedExtension.contains(extension)) {
+                result.emplace_back(extension);
+            } else {
+                MFA_LOG_WARN("Extension %s is not supported by this device.", extension);
+            }
+        }
+        return result;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
 #ifdef __DESKTOP__
     VkInstance CreateInstance(char const * applicationName, MSDL::SDL_Window * window)
     {
@@ -247,7 +275,7 @@ namespace MFA::RenderBackend
     VkInstance CreateInstance(char const * applicationName)
     {
 #else
-#error Os not handled
+    #error Os not handled
 #endif
         // Filling out application description:
         auto applicationInfo = VkApplicationInfo{
@@ -263,7 +291,7 @@ namespace MFA::RenderBackend
             // The version of the engine
             .engineVersion = EngineVersion,
             // The version of Vulkan we're using for this application
-            .apiVersion = VK_API_VERSION_1_3,   // TODO Make api version 1.0 for iphone
+            .apiVersion = VK_API_VERSION_1_1
         };
         std::vector<char const *> instanceExtensions{};
 
@@ -287,6 +315,7 @@ namespace MFA::RenderBackend
         // Filling android extensions
         instanceExtensions.emplace_back("VK_KHR_surface");
         instanceExtensions.emplace_back("VK_KHR_android_surface");
+        instanceExtensions.emplace_back("VK_KHR_storage_buffer_storage_class");
 #elif defined(__IOS__)
         // Filling IOS extensions
         instanceExtensions.emplace_back(VK_KHR_SURFACE_EXTENSION_NAME);
@@ -300,20 +329,16 @@ namespace MFA::RenderBackend
         instanceExtensions.emplace_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
         instanceExtensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif
-        //    // TODO We should enumarate layers before using them (Both desktop and android)
-        //    {// Checking for extension support
-        //        uint32_t vk_supported_extension_count = 0;
-        //        VK_Check(vkEnumerateInstanceExtensionProperties(
-        //            nullptr,
-        //            &vk_supported_extension_count,
-        //            nullptr
-        //        ));
-        //        if (vk_supported_extension_count == 0) {
-        //            MFA_CRASH("no extensions supported!");
-        //        }
-        //    }
-        // Filling out instance description:    
-        auto instanceInfo = VkInstanceCreateInfo{
+
+        // Filtering instance extensions
+        auto supportedExtensions = FilterSupportedExtensions(instanceExtensions);
+
+        std::vector<char const *> const DebugLayers = {
+            ValidationLayer
+        };
+
+        // Filling out instance description:
+        auto const instanceInfo = VkInstanceCreateInfo{
             // sType is mandatory
             .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
             // pNext is mandatory
@@ -326,15 +351,15 @@ namespace MFA::RenderBackend
 #endif
             // The application info structure is then passed through the instance
             .pApplicationInfo = &applicationInfo,
-#if defined(MFA_DEBUG) && !defined(__IOS__)
+#if defined(MFA_DEBUG)// && !defined(__IOS__)
             .enabledLayerCount = static_cast<uint32_t>(DebugLayers.size()),
             .ppEnabledLayerNames = DebugLayers.data(),
 #else
             .enabledLayerCount = 0,
             .ppEnabledLayerNames = nullptr,
 #endif
-            .enabledExtensionCount = static_cast<uint32_t>(instanceExtensions.size()),
-            .ppEnabledExtensionNames = instanceExtensions.data()
+            .enabledExtensionCount = static_cast<uint32_t>(supportedExtensions.size()),
+            .ppEnabledExtensionNames = supportedExtensions.data()
         };
         VkInstance instance = nullptr;
         VK_Check(vkCreateInstance(&instanceInfo, nullptr, &instance));
@@ -501,7 +526,7 @@ namespace MFA::RenderBackend
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers = &commandBuffer;
-        VK_Check(vkQueueSubmit(queue, 1, &submit_info, VK_NULL));
+        VK_Check(vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE));
         VK_Check(vkQueueWaitIdle(queue));
 
         vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
@@ -569,8 +594,8 @@ namespace MFA::RenderBackend
     {
         MFA_ASSERT(device != nullptr);
         MFA_ASSERT(graphicQueue != nullptr);
-        MFA_VK_VALID_ASSERT(commandPool);
-        MFA_VK_VALID_ASSERT(image);
+        MFA_ASSERT(commandPool != VK_NULL_HANDLE);
+        MFA_ASSERT(image != VK_NULL_HANDLE);
 
         auto const commandBuffer = BeginSingleTimeCommand(device, commandPool);
 
@@ -650,7 +675,7 @@ namespace MFA::RenderBackend
 
         VkBuffer buffer{};
         VK_Check(vkCreateBuffer(device, &buffer_info, nullptr, &buffer));
-        MFA_VK_VALID_ASSERT(buffer);
+        MFA_ASSERT(buffer != VK_NULL_HANDLE);
         VkMemoryRequirements memory_requirements{};
         vkGetBufferMemoryRequirements(device, buffer, &memory_requirements);
 
@@ -721,8 +746,8 @@ namespace MFA::RenderBackend
     )
     {
         MFA_ASSERT(device != nullptr);
-        MFA_VK_VALID_ASSERT(bufferGroup.memory);
-        MFA_VK_VALID_ASSERT(bufferGroup.buffer);
+        MFA_ASSERT(bufferGroup.memory != VK_NULL_HANDLE);
+        MFA_ASSERT(bufferGroup.buffer != VK_NULL_HANDLE);
         vkFreeMemory(device, bufferGroup.memory, nullptr);
         vkDestroyBuffer(device, bufferGroup.buffer, nullptr);
     }
@@ -808,7 +833,7 @@ namespace MFA::RenderBackend
         MFA_ASSERT(device != nullptr);
         MFA_ASSERT(physicalDevice != nullptr);
         MFA_ASSERT(graphicQueue != nullptr);
-        MFA_VK_VALID_ASSERT(commandPool);
+        MFA_ASSERT(commandPool != VK_NULL_HANDLE);
         MFA_ASSERT(cpuTexture.isValid());
 
         if (cpuTexture.isValid())
@@ -966,9 +991,9 @@ namespace MFA::RenderBackend
     )
     {
         MFA_ASSERT(device != nullptr);
-        MFA_VK_VALID_ASSERT(commandPool);
-        MFA_VK_VALID_ASSERT(buffer);
-        MFA_VK_VALID_ASSERT(image);
+        MFA_ASSERT(commandPool != VK_NULL_HANDLE);
+        MFA_ASSERT(buffer != VK_NULL_HANDLE);
+        MFA_ASSERT(image != VK_NULL_HANDLE);
         MFA_ASSERT(cpuTexture.isValid());
         MFA_ASSERT(
             cpuTexture.GetMipmap(cpuTexture.GetMipCount() - 1).offset +
@@ -1061,9 +1086,15 @@ namespace MFA::RenderBackend
             deviceCreateInfo.queueCreateInfoCount = 2;
         }
 
+        std::vector<char const *> const DebugLayers = {
+            ValidationLayer
+        };
+
         std::vector<char const *> enabledExtensionNames{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
     #if defined(__PLATFORM_MAC__)// TODO We should query instead
         enabledExtensionNames.emplace_back("VK_KHR_portability_subset");
+    #elif defined(__ANDROID__)
+        enabledExtensionNames.emplace_back("VK_KHR_storage_buffer_storage_class");
     #endif
         enabledExtensionNames.emplace_back(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME);
         enabledExtensionNames.emplace_back(VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME);
@@ -1071,13 +1102,13 @@ namespace MFA::RenderBackend
         deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensionNames.size());
         // Necessary for shader (for some reason)
         deviceCreateInfo.pEnabledFeatures = &enabledPhysicalDeviceFeatures;
-//    #if defined(MFA_DEBUG) && defined(__ANDROID__) == false
-//        deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(DebugLayers.size());
-//        deviceCreateInfo.ppEnabledLayerNames = DebugLayers.data();
-//    #else
+    #if defined(MFA_DEBUG)// && defined(__ANDROID__) == false
+        deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(DebugLayers.size());
+        deviceCreateInfo.ppEnabledLayerNames = DebugLayers.data();
+    #else
         deviceCreateInfo.enabledLayerCount = 0;
         deviceCreateInfo.ppEnabledLayerNames = nullptr;
-//    #endif
+    #endif
 
         VK_Check(vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &logicalDevice.device));
         MFA_ASSERT(logicalDevice.device != nullptr);
@@ -1165,7 +1196,7 @@ namespace MFA::RenderBackend
     void DestroySampler(VkDevice device, RT::SamplerGroup const & sampler)
     {
         MFA_ASSERT(device != nullptr);
-        MFA_VK_VALID_ASSERT(sampler.sampler);
+        MFA_ASSERT(sampler.sampler != VK_NULL_HANDLE);
         vkDestroySampler(device, sampler.sampler, nullptr);
     }
 
@@ -1397,8 +1428,8 @@ namespace MFA::RenderBackend
         VkSurfaceKHR windowSurface
     )
     {
-        MFA_VK_VALID_ASSERT(physicalDevice);
-        MFA_VK_VALID_ASSERT(windowSurface);
+        MFA_ASSERT(physicalDevice != VK_NULL_HANDLE);
+        MFA_ASSERT(windowSurface != VK_NULL_HANDLE);
         VkSurfaceCapabilitiesKHR surfaceCapabilities;
         VK_Check(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, windowSurface, &surfaceCapabilities));
         return surfaceCapabilities;
@@ -1552,7 +1583,7 @@ namespace MFA::RenderBackend
         std::vector<std::shared_ptr<RT::ImageViewGroup>> swapChainImageViews(actualImageCount);
         for (uint32_t imageIndex = 0; imageIndex < actualImageCount; imageIndex++)
         {
-            MFA_VK_VALID_ASSERT(swapChainImages[imageIndex]);
+            MFA_ASSERT(swapChainImages[imageIndex] != VK_NULL_HANDLE);
             swapChainImageViews[imageIndex] = CreateImageView(
                 device,
                 swapChainImages[imageIndex],
@@ -1562,7 +1593,7 @@ namespace MFA::RenderBackend
                 1,
                 VK_IMAGE_VIEW_TYPE_2D
             );
-            MFA_VK_VALID_ASSERT(swapChainImageViews[imageIndex]);
+            MFA_ASSERT(swapChainImageViews[imageIndex] != VK_NULL_HANDLE);
         }
 
         MFA_LOG_INFO("Acquired swap chain images");
@@ -1713,7 +1744,7 @@ namespace MFA::RenderBackend
     void DestroyRenderPass(VkDevice device, VkRenderPass renderPass)
     {
         MFA_ASSERT(device != nullptr);
-        MFA_VK_VALID_ASSERT(renderPass);
+        MFA_ASSERT(renderPass != VK_NULL_HANDLE);
         vkDestroyRenderPass(device, renderPass, nullptr);
     }
 
@@ -1746,7 +1777,7 @@ namespace MFA::RenderBackend
     )
     {
         MFA_ASSERT(device != nullptr);
-        MFA_VK_VALID_ASSERT(renderPass);
+        MFA_ASSERT(renderPass != VK_NULL_HANDLE);
         MFA_ASSERT(attachments != nullptr);
         MFA_ASSERT(attachmentsCount > 0);
 
@@ -1987,7 +2018,7 @@ namespace MFA::RenderBackend
         pipelineCreateInfo.layout = pipelineLayout;
         pipelineCreateInfo.renderPass = renderPass;
         pipelineCreateInfo.subpass = 0;
-        MFA_VK_MAKE_NULL(pipelineCreateInfo.basePipelineHandle);
+        pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
         pipelineCreateInfo.basePipelineIndex = -1;
         pipelineCreateInfo.pDepthStencilState = &options.depthStencil;
         pipelineCreateInfo.pDynamicState = dynamicStateCreateInfoRef;
@@ -1995,7 +2026,7 @@ namespace MFA::RenderBackend
         VkPipeline pipeline{};
         VK_Check(vkCreateGraphicsPipelines(
             device,
-            VK_NULL,
+            VK_NULL_HANDLE,
             1,
             &pipelineCreateInfo,
             nullptr,
@@ -2035,10 +2066,10 @@ namespace MFA::RenderBackend
         VkPipeline pipeline{};
         VK_Check(vkCreateComputePipelines(
             device,
-            VK_NULL,
+            VK_NULL_HANDLE,
             1,
             &pipelineCreateInfo,
-            VK_NULL,
+            VK_NULL_HANDLE,
             &pipeline
         ));
 
@@ -2266,7 +2297,7 @@ namespace MFA::RenderBackend
     )
     {
         MFA_ASSERT(device != nullptr);
-        MFA_VK_VALID_ASSERT(pool);
+        MFA_ASSERT(pool != VK_NULL_HANDLE);
         vkDestroyDescriptorPool(device, pool, nullptr);
     }
 
@@ -2282,8 +2313,8 @@ namespace MFA::RenderBackend
     )
     {
         MFA_ASSERT(device != nullptr);
-        MFA_VK_VALID_ASSERT(descriptorPool);
-        MFA_VK_VALID_ASSERT(descriptorSetLayout);
+        MFA_ASSERT(descriptorPool != VK_NULL_HANDLE);
+        MFA_ASSERT(descriptorSetLayout != VK_NULL_HANDLE);
 
         std::vector<VkDescriptorSetLayout> layouts(descriptorSetCount, descriptorSetLayout);
         // There needs to be one descriptor set per binding point in the shader
@@ -2385,7 +2416,7 @@ namespace MFA::RenderBackend
     )
     {
         MFA_ASSERT(device != nullptr);
-        MFA_VK_VALID_ASSERT(commandPool);
+        MFA_ASSERT(commandPool != VK_NULL_HANDLE);
         MFA_ASSERT(commandBuffersCount > 0);
         MFA_ASSERT(commandBuffers != nullptr);
         vkFreeCommandBuffers(
@@ -2418,7 +2449,7 @@ namespace MFA::RenderBackend
 
         return semaphores;
     }
-    
+
     //-------------------------------------------------------------------------------------------------
 
     void DestroySemaphored(VkDevice device, std::vector<VkSemaphore> const & semaphores)
@@ -2476,7 +2507,7 @@ namespace MFA::RenderBackend
     void WaitForFence(VkDevice device, VkFence inFlightFence)
     {
         MFA_ASSERT(device != nullptr);
-        MFA_VK_VALID_ASSERT(inFlightFence);
+        MFA_ASSERT(inFlightFence != VK_NULL_HANDLE);
         VK_Check(vkWaitForFences(
             device,
             1,
@@ -2496,17 +2527,17 @@ namespace MFA::RenderBackend
     )
     {
         MFA_ASSERT(device != nullptr);
-        MFA_VK_VALID_ASSERT(imageAvailabilitySemaphore);
+        MFA_ASSERT(imageAvailabilitySemaphore != VK_NULL_HANDLE);
 
         return vkAcquireNextImageKHR(
             device,
             swapChainGroup.swapChain,
             UINT64_MAX,
             imageAvailabilitySemaphore,
-            VK_NULL,
+            VK_NULL_HANDLE,
             &outImageIndex
         );
-    
+
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -2786,7 +2817,7 @@ namespace MFA::RenderBackend
 
     VkSampleCountFlagBits ComputeMaxUsableSampleCount(VkPhysicalDevice physicalDevice)
     {
-        MFA_VK_VALID_ASSERT(physicalDevice);
+        MFA_ASSERT(physicalDevice != VK_NULL_HANDLE);
 
         VkPhysicalDeviceProperties physicalDeviceProperties;
         vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);

@@ -7,6 +7,12 @@
 
 #include "engine/asset_system/AssetModel.hpp"
 
+namespace MFA
+{
+    class EssenceBase;
+    class BasePipeline;
+}
+
 namespace MFA::AssetSystem
 {
     class Texture;
@@ -18,26 +24,46 @@ namespace MFA::ResourceManager
     void Init();
     void Shutdown();
 
+    using CpuModelCallback = std::function<void(std::shared_ptr<AssetSystem::Model> const & cpuModel)>;
+
     // Note: No need to use Path
-    [[nodiscard]]
-    std::shared_ptr<AssetSystem::Model> AcquireCpuModel(
+    void AcquireCpuModel(
         std::string const & modelId,
-        bool loadFileIfNotExists = true
+        CpuModelCallback const & callback,
+        bool loadFromFile = true
     );
 
-    [[nodiscard]]
-    std::vector<std::shared_ptr<RT::GpuTexture>> AcquireGpuTextures(std::vector<std::string> const & textureIds);
+    using GpuTextureCallback = std::function<void(std::shared_ptr<RT::GpuTexture> const & gpuTexture)>;
 
-    [[nodiscard]]
-    std::shared_ptr<RT::GpuTexture> AcquireGpuTexture(
+    //// Load file if not exists is set to true by default
+    //[[nodiscard]]
+    //std::vector<std::shared_ptr<RT::GpuTexture>> AcquireGpuTextures(
+    //    std::vector<std::string> const & textureIds,
+    //    GpuTextureCallback const & callback
+    //);
+
+    void AcquireGpuTexture(
         std::string const & textureId,
-        bool loadFileIfNotExists = true
+        GpuTextureCallback const & callback,
+        bool loadFromFile = true
     );
 
-    [[nodiscard]]
-    std::shared_ptr<AssetSystem::Texture> AcquireCpuTexture(
+    using CpuTextureCallback = std::function<void(std::shared_ptr<AssetSystem::Texture> const & cpuTexture)>;
+
+    void AcquireCpuTexture(
         std::string const & textureId,
-        bool loadFileIfNotExists = true
+        CpuTextureCallback const & callback,
+        bool loadFromFile = true
+    );
+
+    using EssenceCallback = std::function<void(bool success)>;
+
+    // Callback is called from main thread
+    void AcquireEssence(
+        std::string const & nameId,
+        BasePipeline * pipeline,
+        EssenceCallback const & callback,
+        bool loadFromFile = true
     );
 
 }

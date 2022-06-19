@@ -4,7 +4,6 @@
 #include "engine/BedrockFileSystem.hpp"
 #include "tools/Importer.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "tools/ShapeGenerator.hpp"
 #include "engine/ui_system/UI_System.hpp"
 #include "engine/entity_system/EntitySystem.hpp"
 #include "engine/camera/ObserverCameraComponent.hpp"
@@ -89,8 +88,8 @@ void PrefabEditorScene::Init()
     mDebugPipeline = SceneManager::GetPipeline<DebugRendererPipeline>();
     MFA_ASSERT(mDebugPipeline != nullptr);
 
-    loadSelectedAsset("Sphere");
-    loadSelectedAsset("CubeStrip");
+    loadSelectedAsset("Sphere", mDebugPipeline);
+    loadSelectedAsset("CubeStrip", mDebugPipeline);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -124,9 +123,9 @@ void PrefabEditorScene::essencesWindow()
     {
         for (auto const & asset : mLoadedAssets)
         {
-            if (UI::TreeNode(asset.essenceName.c_str()))
+            if (UI::TreeNode(asset.displayName.c_str()))
             {
-                UI::Text(asset.fileAddress.c_str());
+                UI::Text(asset.nameId.c_str());
                 UI::TreePop();
             }
         }
@@ -147,22 +146,32 @@ void PrefabEditorScene::essencesWindow()
                     .value = "*.glb"
                 }
             };
+
+            // File picker windows (TODO: Multi-platform)
             std::string fileAddress;
             if (WinApi::TryToPickFile(extensions, fileAddress) == false)
             {
                 MFA_LOG_WARN("No valid file address picked!");
                 return;
             }
-            bool const success = Path::RelativeToAssetFolder(fileAddress, fileAddress);
+
+            // Creating relative address
+            std::string relativeAddress;
+            bool const success = Path::RelativeToAssetFolder(
+                relativeAddress,
+                relativeAddress
+            );
             if (success == false)
             {
                 MFA_LOG_WARN("All assets and prefabs must be placed in asset folder for portability\n");
                 return;
             }
-            if (loadSelectedAsset(fileAddress, mInputTextEssenceName) == false)
+
+            if (loadSelectedAsset(relativeAddress, mPBR_Pipeline, mInputTextEssenceName) == false)
             {
                 MFA_LOG_WARN("Loading asset failed");
             }
+
         });
         UI::TreePop();
     }
@@ -188,47 +197,11 @@ void PrefabEditorScene::saveAndLoadWindow()
 
 //-------------------------------------------------------------------------------------------------
 
-void PrefabEditorScene::addEssenceToPipeline(
-    std::shared_ptr<RT::GpuModel> const & gpuModel,
-    std::shared_ptr<AS::Model> const & cpuModel
+bool PrefabEditorScene::loadSelectedAsset(
+    std::string const & fileAddress,
+    MFA::BasePipeline * pipeline,
+    std::string displayName
 )
-{
-    MFA_ASSERT(gpuModel != nullptr);
-    MFA_ASSERT(cpuModel != nullptr);
-
-    auto * mesh = cpuModel->mesh.get();
-    MFA_ASSERT(mesh != nullptr);
-
-    {// PBR
-        auto * pbrMesh = dynamic_cast<AS::PBR::Mesh *>(mesh);
-        if (pbrMesh != nullptr)
-        {
-            if (mPBR_Pipeline->hasEssence(gpuModel->nameId) == false)
-            {
-                mPBR_Pipeline->addEssence(std::make_shared<PBR_Essence>(gpuModel, pbrMesh->getMeshData()));
-            }
-            return;
-        }
-    }
-    {// Debug
-        auto * debugMesh = dynamic_cast<AS::Debug::Mesh *>(mesh);
-        if (debugMesh != nullptr)
-        {
-            if (mDebugPipeline->hasEssence(gpuModel->nameId) == false)
-            {
-                mDebugPipeline->addEssence(std::make_shared<DebugEssence>(gpuModel, debugMesh->getIndexCount()));
-            }
-            return;
-        }
-    }
-    {// Particle
-        // TODO
-    }
-}
-
-//-------------------------------------------------------------------------------------------------
-
-bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress, std::string displayName)
 {
     MFA_LOG_INFO("Trying to load file with address %s", fileAddress.c_str());
     MFA_ASSERT(fileAddress.empty() == false);
@@ -238,24 +211,35 @@ bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress, std::
         displayName = fileAddress;
     }
 
-    auto const cpuModel = RC::AcquireCpuModel(fileAddress);
-    if (cpuModel == nullptr)
-    {
-        MFA_LOG_WARN("Failed to load selected asset from file");
-        return false;
-    }
+    RC::AcquireEssence(fileAddress, pipeline, [this, fileAddress, displayName](bool const success)->void{
+        if (success == false)
+        {
+            MFA_LOG_WARN("Failed to load %s", fileAddress.c_str());
+            return;
+        }
 
-    auto const gpuModel = ResourceManager::AcquireGpuModel(fileAddress);
-    if (gpuModel == nullptr)
-    {
-        MFA_LOG_WARN("Failed to create gpu model");
-        return false;
-    }
+        for (auto & asset : mLoadedAssets)
+        {
+            if (asset.nameId == fileAddress)
+            {
+                return;
+            }
+        }
 
-    mLoadedAssets.emplace_back(Asset{
-        .fileAddress = fileAddress,
-        .essenceName = displayName
+        MFA_LOG_WARN("Loading file is complete.");
+
+        mLoadedAssets.emplace_back(Asset{
+            .nameId = fileAddress,
+            .displayName = displayName
+        });
     });
+    //auto const cpuModel = RC::AcquireCpuModel(fileAddress);
+    //if (cpuModel == nullptr)
+    //{
+    //    MFA_LOG_WARN("Failed to load selected asset from file");
+    //    return false;
+    //}
+
 
     /*if (mPBR_Pipeline->essenceExists(gpuModel->nameOrAddress) == false)
     {
@@ -271,7 +255,7 @@ bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress, std::
 
         }
     }*/
-    addEssenceToPipeline(gpuModel, cpuModel);
+    //addEssenceToPipeline(fileAddress, cpuModel);
 
     mInputTextEssenceName = "";
 
@@ -283,7 +267,7 @@ bool PrefabEditorScene::loadSelectedAsset(std::string const & fileAddress, std::
 void PrefabEditorScene::destroyAsset(int const assetIndex)
 {
     auto const & asset = mLoadedAssets[assetIndex];
-    mPBR_Pipeline->destroyEssence(asset.fileAddress);
+    mPBR_Pipeline->destroyEssence(asset.nameId);
     mLoadedAssets.erase(mLoadedAssets.begin() + assetIndex);
 }
 
@@ -294,11 +278,13 @@ void PrefabEditorScene::entityUI(Entity * entity)
     MFA_ASSERT(entity != nullptr);
     if (UI::TreeNode("New component"))
     {
+
         UI::Combo(
             "Component name",
             &mSelectedComponentIndex,
             mAvailableComponents
         );
+
         switch (mSelectedComponentIndex)
         {
         case 2: // MeshRendererComponent
@@ -317,13 +303,15 @@ void PrefabEditorScene::entityUI(Entity * entity)
             std::vector<std::string> essenceNames{};
             for (auto & asset : mLoadedAssets)
             {
-                essenceNames.emplace_back(asset.essenceName);
+                essenceNames.emplace_back(asset.displayName);
             }
+
             UI::Combo(
                 "Essence",
                 &mSelectedEssenceIndex,
                 essenceNames
             );
+
         }
         break;
         default:
@@ -525,7 +513,7 @@ void PrefabEditorScene::prepareCreateComponentInstructionMap()
 
         auto * pipeline = mAllPipelines[mSelectedPipeline];
         MFA_ASSERT(pipeline != nullptr);
-        auto essenceName = mLoadedAssets[mSelectedEssenceIndex].fileAddress;
+        auto essenceName = mLoadedAssets[mSelectedEssenceIndex].nameId;
         MFA_ASSERT(essenceName.empty() == false);
 
         if (pipeline->hasEssence(essenceName) == false)
@@ -534,24 +522,25 @@ void PrefabEditorScene::prepareCreateComponentInstructionMap()
             return nullptr;
         }
 
-        return entity->AddComponent<MeshRendererComponent>(*pipeline, essenceName).lock();
+        return entity->AddComponent<MeshRendererComponent>(pipeline, essenceName).lock();
     });
 
     INSERT_INTO_CREATE_COMPONENT_MAP(BoundingVolumeRendererComponent, [this](Entity * entity)
     {
-        return entity->AddComponent<BoundingVolumeRendererComponent>(*mDebugPipeline).lock();
+        return entity->AddComponent<BoundingVolumeRendererComponent>().lock();
     });
 
     INSERT_INTO_CREATE_COMPONENT_MAP(SphereBoundingVolumeComponent, [](Entity * entity)
     {
-        return entity->AddComponent<SphereBoundingVolumeComponent>(1.0f).lock();
+        return entity->AddComponent<SphereBoundingVolumeComponent>(1.0f, true).lock();
     });
 
     INSERT_INTO_CREATE_COMPONENT_MAP(AxisAlignedBoundingBoxComponent, [](Entity * entity)
     {
         return entity->AddComponent<AxisAlignedBoundingBoxComponent>(
             glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(1.0f, 1.0f, 1.0f)
+            glm::vec3(1.0f, 1.0f, 1.0f),
+            false
         ).lock();
     });
 
@@ -622,7 +611,7 @@ void PrefabEditorScene::savePrefab()
     auto const success = WinApi::SaveAs(extensions, filePath);
     if (success)
     {
-        auto const extension = FileSystem::ExtractExtensionFromPath(filePath.c_str());
+        auto const extension = Path::ExtractExtensionFromPath(filePath);
         if (extension.empty())
         {
             filePath += ".json";

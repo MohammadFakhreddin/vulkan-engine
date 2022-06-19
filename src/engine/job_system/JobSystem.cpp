@@ -1,5 +1,6 @@
 #include "JobSystem.hpp"
 
+#include "TaskTracker.hpp"
 #include "ThreadPool.hpp"
 #include "engine/BedrockAssert.hpp"
 
@@ -11,43 +12,7 @@ namespace MFA::JobSystem
         ThreadPool threadPool {};
     };
     State * state = nullptr;
-
-    class TaskTracker
-    {
-    public:
-
-        // Callback might be null
-        explicit TaskTracker(size_t const totalTaskCount, OnFinishCallback finishCallback)
-            : mFinishCallback(std::move(finishCallback))
-            , mRemainingTasksCount(static_cast<int>(totalTaskCount))
-        {
-            MFA_ASSERT(mRemainingTasksCount > 0);
-        }
-
-        ~TaskTracker() = default;
-
-        TaskTracker(TaskTracker const &) noexcept = delete;
-        TaskTracker(TaskTracker &&) noexcept = delete;
-        TaskTracker & operator = (TaskTracker const &) noexcept = delete;
-        TaskTracker & operator = (TaskTracker &&) noexcept = delete;
-
-        void onComplete()
-        {
-            --mRemainingTasksCount;
-            MFA_ASSERT(mRemainingTasksCount >= 0);
-            if (mRemainingTasksCount == 0 && mFinishCallback != nullptr)
-            {
-                mFinishCallback();
-            }
-        }
-
-    private:
-
-        OnFinishCallback mFinishCallback;
-        std::atomic<int> mRemainingTasksCount;
-
-    };
-
+    
     //-------------------------------------------------------------------------------------------------
 
     void Init()
@@ -62,9 +27,9 @@ namespace MFA::JobSystem
     {
         MFA_ASSERT(tasks.empty() == false);
 
-        auto const tasksCount = tasks.size();
+        auto const tasksCount = static_cast<int>(tasks.size());
         
-        std::shared_ptr<TaskTracker> tracker = std::make_shared<TaskTracker>(tasksCount, onTaskFinished);
+        auto tracker = std::make_shared<TaskTracker2>(tasksCount, onTaskFinished);
 
         for (auto & task : tasks)
         {
@@ -114,6 +79,7 @@ namespace MFA::JobSystem
     void Shutdown()
     {
         MFA_ASSERT(state != nullptr);
+        WaitForThreadsToFinish();
         delete state;
     }
 

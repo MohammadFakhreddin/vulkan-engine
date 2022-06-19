@@ -26,12 +26,6 @@ namespace MFA
     namespace RenderTypes
     {
 
-#ifndef __ANDROID__
-    #define VK_NULL nullptr
-#else
-    #define VK_NULL 0
-#endif
-
         struct BufferAndMemory
         {
             const VkBuffer buffer;

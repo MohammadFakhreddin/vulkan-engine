@@ -32,6 +32,10 @@ private:
 
     void onUI() const;
 
+    void createFireEssence(std::shared_ptr<MFA::RenderTypes::GpuTexture> const & gpuTexture) const;
+
+    void createFireInstance(glm::vec3 const & position) const;
+
     static constexpr float Z_NEAR = 0.1f;
     static constexpr float Z_FAR = 3000.0f;
 #ifdef __DESKTOP__

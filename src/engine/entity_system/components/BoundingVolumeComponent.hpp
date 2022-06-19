@@ -60,6 +60,10 @@ namespace MFA {
 
     private:
 
+        void updateFrustumVisibility();
+
+        void updateVolumeTransform() const;
+
         bool mIsInFrustum = false;
 
         bool mOcclusionEnabled = false;

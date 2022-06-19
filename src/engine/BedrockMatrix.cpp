@@ -3,7 +3,9 @@
 #include "BedrockAssert.hpp"
 #include "BedrockMath.hpp"
 
+#ifdef ENABLE_SIMD
 #include <immintrin.h>
+#endif
 
 namespace MFA::Matrix
 {
@@ -265,7 +267,7 @@ namespace MFA::Matrix
             )
         );
     }
-    
+
     //-------------------------------------------------------------------------------------------------
 
     void Scale(glm::mat4 & transform, glm::vec3 const & scale)
@@ -377,8 +379,10 @@ namespace MFA::Matrix
         outMatrix[3][2] = nearPlane / (nearPlane - farPlane);
         outMatrix[3][3] = 1.0f;
     }
-    
+
     //-------------------------------------------------------------------------------------------------
+
+#ifdef ENABLE_SIMD
 
     static __m256 convertToM256(glm::vec4 const & vec)
     {
@@ -395,7 +399,7 @@ namespace MFA::Matrix
 
     //-------------------------------------------------------------------------------------------------
 
-    glm::vec4 Add(glm::vec4 const & vec1, glm::vec4 const & vec2) 
+    glm::vec4 Add(glm::vec4 const & vec1, glm::vec4 const & vec2)
     {
         __m256 a = convertToM256(vec1);
         __m256 b = convertToM256(vec2);
@@ -405,7 +409,7 @@ namespace MFA::Matrix
 
     //-------------------------------------------------------------------------------------------------
 
-    float Dot(glm::vec4 const & vec1, glm::vec4 const & vec2) 
+    float Dot(glm::vec4 const & vec1, glm::vec4 const & vec2)
     {
         __m256 const a = convertToM256(vec1);
         __m256 const b = convertToM256(vec2);
@@ -421,14 +425,16 @@ namespace MFA::Matrix
         __m256 aVar = convertToM256(vec1);
         __m256 const aFrac = _mm256_set1_ps(1.0f - fraction);
         aVar = _mm256_mul_ps(aVar, aFrac);
-    
+
         __m256 bVar = convertToM256(vec2);
         __m256 const bFrac = _mm256_set1_ps(fraction);
         bVar = _mm256_mul_ps(bVar, bFrac);
-        
+
         __m256 cVar = _mm256_add_ps(aVar, bVar);
         return convertToVec4(cVar);
     }
+
+#endif
 
     //-------------------------------------------------------------------------------------------------
 

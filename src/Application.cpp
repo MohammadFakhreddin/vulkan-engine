@@ -11,6 +11,8 @@
 #include "engine/resource_manager/ResourceManager.hpp"
 
 #ifdef __ANDROID__
+#include "engine/BedrockFileSystem.hpp"
+
 #include <android_native_app_glue.h>
 #include <thread>
 #endif
@@ -61,12 +63,13 @@ void Application::Init() {
     UI::Init();
     IM::Init();
     EntitySystem::Init();
-    
+
     SceneManager::Init();
 
     internalInit();
-    
+
     mIsInitialized = true;
+    
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -78,11 +81,11 @@ void Application::Shutdown() {
 
     internalShutdown();
 
+    JS::Shutdown();
     SceneManager::Shutdown();
     EntitySystem::Shutdown();
     IM::Shutdown();
     UI::Shutdown();
-    JS::Shutdown();
     RC::Shutdown();
     RF::Shutdown();
     Path::Shutdown();
@@ -96,7 +99,6 @@ void Application::run() {
     //static constexpr uint32_t TargetFpsDeltaTimeInMs = 1000 / 500;
 #ifdef __DESKTOP__
     Init();
-    SceneManager::Update(0.01f);
     // Main loop
     //Event handler
     MSDL::SDL_Event e;
@@ -125,7 +127,9 @@ void Application::run() {
     }
     Shutdown();
 #elif defined(__ANDROID__)
-    SceneManager::Update(0.01f);
+
+    static float TargetFpsDeltaTimeInSec = 1.0f / 120.0f;
+
     // Used to poll the events in the main loop
     int events;
     android_poll_source* source;
@@ -175,7 +179,7 @@ void Application::setAndroidApp(android_app * androidApp) {
     mAndroidApp = androidApp;
     MFA::FileSystem::SetAndroidApp(androidApp);
     MFA::InputManager::SetAndroidApp(androidApp);
-    MFA::UISystem::SetAndroidApp(androidApp);
+    MFA::UI_System::SetAndroidApp(androidApp);
 }
 #endif
 

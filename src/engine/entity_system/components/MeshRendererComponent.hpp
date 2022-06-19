@@ -6,6 +6,11 @@
 
 namespace MFA
 {
+    namespace AssetSystem
+    {
+        struct Model;
+    }
+
     class PBR_Variant;
 
     class MeshRendererComponent final : public RendererComponent
@@ -19,8 +24,8 @@ namespace MFA
         )
 
         // Should only be used by json serializer
-        explicit MeshRendererComponent() = default;
-        explicit MeshRendererComponent(BasePipeline & pipeline, std::string const & nameOrAddress);
+        explicit MeshRendererComponent();
+        explicit MeshRendererComponent(BasePipeline * pipeline, std::string const & nameId);
 
         void Init() override;
 
@@ -33,6 +38,12 @@ namespace MFA
         void deserialize(nlohmann::json const & jsonObject) override;
 
         void clone(Entity * entity) const override;
+
+    private:
+        
+        void createVariant();
+
+        bool mInitialized = false;
 
     };
 

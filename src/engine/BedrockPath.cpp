@@ -19,10 +19,11 @@ namespace MFA::Path
     void Init()
     {
         state = new State();
-        
+
         char addressBuffer[256]{};
         int stringSize = 0;
 
+        // TODO: We can simplify it using bedrockString
 #if defined(__PLATFORM_MAC__)
         stringSize = sprintf(addressBuffer, "%s/assets/", GetAssetPath().c_str());
 #elif defined(__PLATFORM_WIN__) || defined(__PLATFORM_LINUX__)
@@ -63,17 +64,28 @@ namespace MFA::Path
 
     //-------------------------------------------------------------------------------------------------
 
-    std::string RelativeToAssetFolder(std::string const & address)
+    bool RelativeToAssetFolder(std::string const & address, std::string & outAddress)
     {
         static const std::regex matchRegex(".*assets/.*");
         static const std::regex replaceRegex(".*assets/");
 
         if (std::regex_match(address.c_str(), matchRegex))
         {
-            return std::regex_replace(address, replaceRegex, "");
+            outAddress = std::regex_replace(address, replaceRegex, "");
+            return true;
         }
-        
-        return address;
+
+        outAddress = address;
+        return false;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::string RelativeToAssetFolder(std::string const & address)
+    {
+        std::string result {};
+        RelativeToAssetFolder(address, result);
+        return result;
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -307,16 +307,11 @@ namespace MFA::Importer
                 MFA_ASSERT(fileSize > 0);
 
                 auto const buffer = Memory::Alloc(fileSize);
+                auto const readBytes = FS::Android_ReadAsset(file, buffer->memory);
 
-                auto const readBytes = FS::Android_ReadAsset(file, buffer);
-                if (readBytes != buffer.len)
+                if (readBytes == buffer->memory.len)
                 {
-                    shader.revokeData();
-                    Memory::Free(buffer);
-                }
-                else
-                {
-                    shader.init(entryPoint, stage, buffer);
+                    shader = std::make_shared<AS::Shader>(entryPoint, stage, buffer);
                 }
             }
 #else
@@ -743,7 +738,7 @@ namespace MFA::Importer
                 outTextureRefs.emplace_back(textureRef);
             }
 
-            JS::WaitForThreadsToFinish();
+            //JS::WaitForThreadsToFinish();
 
         }
 
@@ -1842,7 +1837,7 @@ namespace MFA::Importer
                     );
                     //{// Reading samplers values from materials
                         //auto const & sampler = model.samplers[base_color_gltf_texture.sampler];
-                        //model_asset.textures[base_color_texture_index]  
+                        //model_asset.textures[base_color_texture_index]
                     //}
                     // SubMeshes
                     mesh = GLTF_extractSubMeshes(gltfModel, textureRefs);
@@ -1899,15 +1894,11 @@ namespace MFA::Importer
             {
                 auto const fileSize = FS::Android_AssetSize(file);
                 auto const memoryBlob = Memory::Alloc(fileSize);
-                auto const readBytes = FS::Android_ReadAsset(file, memoryBlob);
+                auto const readBytes = FS::Android_ReadAsset(file, memoryBlob->memory);
                 // Means that reading is successful
                 if (readBytes == fileSize)
                 {
                     rawFile.data = memoryBlob;
-                }
-                else
-                {
-                    Memory::Free(memoryBlob);
                 }
             }
 #else

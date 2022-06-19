@@ -56,33 +56,10 @@ void MFA::BoundingVolumeComponent::Update(float const deltaTimeInSec)
     Component::Update(deltaTimeInSec);
 
     // Checking if we are inside frustum or not
-    auto const activeScene = SceneManager::GetActiveScene();
-    if (activeScene == nullptr)
-    {
-        return;
-    }
-    auto const activeCamera = activeScene->GetActiveCamera().lock();
-    if (activeCamera == nullptr)
-    {
-        return;
-    }
-    mIsInFrustum = IsInsideCameraFrustum(activeCamera.get());
+    updateFrustumVisibility();
 
     // Updating BVTransform
-    auto const bvTransform = mBvTransform.lock();
-    if (bvTransform == nullptr)
-    {
-        return;
-    }
-
-    auto const & bvWorldPosition = GetWorldPosition();
-    auto const & bvExtend = GetExtend();
-
-    bvTransform->UpdateTransform(
-        bvWorldPosition,
-        bvTransform->GetRotation(),
-        bvExtend
-    );
+    updateVolumeTransform();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -147,6 +124,43 @@ void MFA::BoundingVolumeComponent::serialize(nlohmann::json & jsonObject) const
 void MFA::BoundingVolumeComponent::deserialize(nlohmann::json const & jsonObject)
 {
     mOcclusionEnabled = jsonObject.value<bool>("OcclusionEnabled", false);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::BoundingVolumeComponent::updateFrustumVisibility()
+{
+    auto const activeScene = SceneManager::GetActiveScene();
+    if (activeScene == nullptr)
+    {
+        return;
+    }
+    auto const activeCamera = activeScene->GetActiveCamera().lock();
+    if (activeCamera == nullptr)
+    {
+        return;
+    }
+    mIsInFrustum = IsInsideCameraFrustum(activeCamera.get());
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::BoundingVolumeComponent::updateVolumeTransform() const
+{
+    auto const bvTransform = mBvTransform.lock();
+    if (bvTransform == nullptr)
+    {
+        return;
+    }
+
+    auto const & bvWorldPosition = GetWorldPosition();
+    auto const & bvExtend = GetExtend();
+
+    bvTransform->UpdateTransform(
+        bvWorldPosition,
+        bvTransform->GetRotation(),
+        bvExtend
+    );
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -7,6 +7,7 @@
 #include "engine/entity_system/EntitySystem.hpp"
 #include "engine/entity_system/components/DirectionalLightComponent.hpp"
 #include "engine/entity_system/components/PointLightComponent.hpp"
+#include "engine/job_system/ThreadSafeQueue.hpp"
 #include "engine/ui_system/UI_System.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
@@ -111,7 +112,7 @@ namespace MFA::SceneManager
         std::vector<std::weak_ptr<PointLightComponent>> pointLightComponents{};
         std::vector<std::weak_ptr<DirectionalLightComponent>> directionalLightComponents{};
 
-        // Buffers 
+        // Buffers
         std::shared_ptr<RT::BufferGroup> cameraBuffer{};
         std::shared_ptr<RT::BufferGroup> timeBuffer{};
 
@@ -126,7 +127,7 @@ namespace MFA::SceneManager
 
         // TODO Spot light
 
-        std::vector<NextFrameTask> nextFrameTasks{};
+        ThreadSafeQueue<MainThreadTask> mainThreadTasks{};
 
     };
     static State * state = nullptr;
@@ -183,6 +184,20 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
+    static void PlayQueuedTasks()
+    {
+        std::function<void()> task = nullptr;
+        while (state->mainThreadTasks.IsEmpty() == false)
+        {
+            if (state->mainThreadTasks.TryToPop(task))
+            {
+                task();
+            }
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void Init()
     {
         state = new State();
@@ -200,7 +215,7 @@ namespace MFA::SceneManager
         prepareTimeBuffer();
         prepareDirectionalLightsBuffer();
         preparePointLightsBuffer();
-        
+
         if (state->activeSceneIndex >= 0)
         {
             state->nextActiveSceneIndex = state->activeSceneIndex;
@@ -215,12 +230,15 @@ namespace MFA::SceneManager
         {
             EntitySystem::Update(deltaTime);
         });
+
     }
 
     //-------------------------------------------------------------------------------------------------
 
     void Shutdown()
     {
+        PlayQueuedTasks();
+    
         RF::RemoveResizeEventListener(state->resizeListenerId);
 
         if (state->activeScene != nullptr)
@@ -265,7 +283,7 @@ namespace MFA::SceneManager
     {
         std::string const name = pipeline->GetName();
         MFA_ASSERT(name.empty() == false);
-        if (MFA_VERIFY(state->pipelines.contains(name) == false))
+        if (MFA_VERIFY(state->pipelines.find(name) == state->pipelines.end()))
         {
             UpdatePipeline(pipeline.get());
             pipeline->init();
@@ -320,10 +338,15 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
-    void AssignMainThreadTask(NextFrameTask const & task)
+    void AssignMainThreadTask(MainThreadTask const & task)
     {
         MFA_ASSERT(task != nullptr);
-        state->nextFrameTasks.emplace_back(task);
+        if (JS::IsMainThread())
+        {
+            task();
+            return;
+        }
+        while (state->mainThreadTasks.TryToPush(task) == false);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -446,17 +469,14 @@ namespace MFA::SceneManager
 
     void Update(float const deltaTime)
     {
+        MFA_ASSERT(JS::IsMainThread());
+
         if (deltaTime > 0.0f)
         {
             state->currentFps = state->currentFps * 0.9f + (1.0f / deltaTime) * 0.1f;
         }
 
-        for (int i = 0; i < static_cast<int>(state->nextFrameTasks.size()); ++i)
-        {
-            MFA_ASSERT(state->nextFrameTasks[i] != nullptr);
-            state->nextFrameTasks[i]();
-        }
-        state->nextFrameTasks.clear();
+        PlayQueuedTasks();
 
         state->updateSignal.EmitMultiThread(deltaTime);
     }
@@ -473,7 +493,7 @@ namespace MFA::SceneManager
 
         // Submit compute queue
         std::vector<VkSemaphore> computeSignalSemaphores{ computeSemaphore };
-        
+
         auto computeCommandBuffer = RF::GetComputeCommandBuffer(recordState);
 
         submitInfos.emplace_back(VkSubmitInfo{
@@ -810,7 +830,7 @@ namespace MFA::SceneManager
 
     static void updatePointLightsBuffer(RT::CommandRecordState const & recordState)
     {
-        // Maybe we can search for another active camera 
+        // Maybe we can search for another active camera
         state->pointLightData.count = 0;
         for (int i = static_cast<int>(state->pointLightComponents.size()) - 1; i >= 0; --i)
         {
@@ -897,7 +917,7 @@ namespace MFA::SceneManager
         }
         return {};
     }
-    
+
     //-------------------------------------------------------------------------------------------------
 
 }
