@@ -66,25 +66,6 @@ namespace MFA
         
         };
 
-        //struct MeshBuffer
-        //{
-        //    std::shared_ptr<BufferAndMemory> const vertexBuffer;
-        //    std::shared_ptr<BufferAndMemory> const indexBuffer;
-
-        //    explicit MeshBuffer(
-        //        std::shared_ptr<BufferAndMemory> verticesBuffer_,
-        //        std::shared_ptr<BufferAndMemory> indicesBuffer_
-        //    );
-
-        //    ~MeshBuffer();
-
-        //    MeshBuffer(MeshBuffer const &) noexcept = delete;
-        //    MeshBuffer(MeshBuffer &&) noexcept = delete;
-        //    MeshBuffer & operator= (MeshBuffer const & rhs) noexcept = delete;
-        //    MeshBuffer & operator= (MeshBuffer && rhs) noexcept = delete;
-        //
-        //};
-
         struct ImageGroup
         {
             const VkImage image;
@@ -134,25 +115,7 @@ namespace MFA
             std::shared_ptr<ImageGroup> const imageGroup{};
             std::shared_ptr<ImageViewGroup> const imageView{};
         };
-
-   /*     struct GpuModel
-        {
-            std::string const nameId;
-            std::shared_ptr<MeshBuffer> const meshBuffers;
-            std::vector<std::shared_ptr<GpuTexture>> const textures;
-            
-            explicit GpuModel(
-                std::string address_,
-                std::shared_ptr<MeshBuffer> meshBuffers_,
-                std::vector<std::shared_ptr<GpuTexture>> textures_
-            );
-            ~GpuModel();
-
-            GpuModel(GpuModel const &) noexcept = delete;
-            GpuModel(GpuModel &&) noexcept = delete;
-            GpuModel & operator= (GpuModel const & rhs) noexcept = delete;
-            GpuModel & operator= (GpuModel && rhs) noexcept = delete;
-        };*/
+    
 
         struct GpuShader
         {

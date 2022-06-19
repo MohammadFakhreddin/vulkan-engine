@@ -223,19 +223,19 @@ namespace MFA::Utils::DDSTexture
         return mipmap_len;
     }
 
-    LoadResult Load(Data & out_image_data, std::string const & path)
+    LoadResult Load(Data & outImageData, std::string const & path)
     {
         LoadResult ret = LoadResult::INVALID;
-        auto * file = FileSystem::OpenFile(path, FileSystem::Usage::Read);
-        if (FileSystem::FileIsUsable(file))
+        auto file = FileSystem::OpenFile(path, FileSystem::Usage::Read);
+        if (MFA_VERIFY(file != nullptr))
         {
-            auto const file_size = FileSystem::FileSize(file);
-            MFA_ASSERT(file_size > 0);
-            out_image_data.asset = Memory::Alloc(file_size);
-            auto const ready_bytes = FileSystem::Read(file, out_image_data.asset->memory);
-            if (ready_bytes == out_image_data.asset->memory.len)
+            auto const fileSize = file->size();
+            MFA_ASSERT(fileSize > 0);
+            outImageData.asset = Memory::Alloc(fileSize);
+            auto const readBytes = file->read(outImageData.asset->memory);
+            if (readBytes == outImageData.asset->memory.len)
             {
-                auto const * dds_header = reinterpret_cast<DDS_Header *>(out_image_data.asset->memory.ptr);
+                auto const * dds_header = reinterpret_cast<DDS_Header *>(outImageData.asset->memory.ptr);
                 if (124 == dds_header->dw_size && 32 == dds_header->dds_pixel_format.dw_size)
                 {
 
@@ -278,11 +278,11 @@ namespace MFA::Utils::DDSTexture
                             if ('D' == format[0] && 'X' == format[1] && '1' == format[2] && '0' == format[3])
                             {
 
-                                auto * dx10_header = reinterpret_cast<DDS_Header_DXT10 *>(out_image_data.asset->memory.ptr + sizeof(DDS_Header));
+                                auto * dx10_header = reinterpret_cast<DDS_Header_DXT10 *>(outImageData.asset->memory.ptr + sizeof(DDS_Header));
                                 // TODO Check for array size as well
                                 // We are downsizing dw_mip_map_count from u32_t to u8_t
-                                out_image_data.mipmap_count = Math::Max<uint8_t>(static_cast<uint8_t>(dds_header->dw_mip_map_count), 1);
-                                out_image_data.dimension = [dx10_header]()-> uint8_t
+                                outImageData.mipmap_count = Math::Max<uint8_t>(static_cast<uint8_t>(dds_header->dw_mip_map_count), 1);
+                                outImageData.dimension = [dx10_header]()-> uint8_t
                                 {
                                     uint8_t dimensions = 0;
                                     switch (dx10_header->resource_dimension)
@@ -302,8 +302,8 @@ namespace MFA::Utils::DDSTexture
                                     };
                                     return dimensions;
                                 }();
-                                MFA_ASSERT((out_image_data.dimension < 3 || out_image_data.depth > 1)); // Only 3d textures can have depth
-                                out_image_data.format = [&dx10_header, has_alpha]() -> TextureFormat
+                                MFA_ASSERT((outImageData.dimension < 3 || outImageData.depth > 1)); // Only 3d textures can have depth
+                                outImageData.format = [&dx10_header, has_alpha]() -> TextureFormat
                                 {
                                     TextureFormat format = TextureFormat::INVALID;
                                     switch (dx10_header->dxgi_format)
@@ -350,29 +350,29 @@ namespace MFA::Utils::DDSTexture
                                     };
                                     return format;
                                 }();
-                                if (TextureFormat::INVALID != out_image_data.format)
+                                if (TextureFormat::INVALID != outImageData.format)
                                 {
-                                    out_image_data.valid = true;
+                                    outImageData.valid = true;
                                     // TODO Recheck this part
-                                    out_image_data.data_offset_in_asset.ptr = out_image_data.asset->memory.ptr + sizeof(DDS_Header) + sizeof(DDS_Header_DXT10);
-                                    out_image_data.data_offset_in_asset.len = out_image_data.asset->memory.len - sizeof(DDS_Header) - sizeof(DDS_Header_DXT10);
+                                    outImageData.data_offset_in_asset.ptr = outImageData.asset->memory.ptr + sizeof(DDS_Header) + sizeof(DDS_Header_DXT10);
+                                    outImageData.data_offset_in_asset.len = outImageData.asset->memory.len - sizeof(DDS_Header) - sizeof(DDS_Header_DXT10);
 
-                                    out_image_data.depth = Math::Max<uint8_t>(static_cast<uint8_t>(dds_header->dw_depth), 1);
-                                    MFA_ASSERT(out_image_data.mipmap_count >= 1);
-                                    out_image_data.mipmaps = Memory::Alloc(sizeof(Mipmap) * out_image_data.mipmap_count);
+                                    outImageData.depth = Math::Max<uint8_t>(static_cast<uint8_t>(dds_header->dw_depth), 1);
+                                    MFA_ASSERT(outImageData.mipmap_count >= 1);
+                                    outImageData.mipmaps = Memory::Alloc(sizeof(Mipmap) * outImageData.mipmap_count);
                                     {// Generating mipmap offset from data
-                                        auto * mipmap_array = out_image_data.mipmaps->memory.as<Mipmap>();
-                                        auto * data_current_ptr = out_image_data.data_offset_in_asset.ptr;
+                                        auto * mipmap_array = outImageData.mipmaps->memory.as<Mipmap>();
+                                        auto * data_current_ptr = outImageData.data_offset_in_asset.ptr;
                                         uintmax_t mipmaps_total_len = 0;
                                         auto current_width = dds_header->dw_width;
                                         auto current_height = dds_header->dw_height;
-                                        for (int i = 0; i < out_image_data.mipmap_count; i++)
+                                        for (int i = 0; i < outImageData.mipmap_count; i++)
                                         {
                                             MFA_ASSERT(current_width >= 1);
                                             MFA_ASSERT(current_height >= 1);
                                             mipmap_array[i].data = Blob{
                                                 data_current_ptr,
-                                                ComputeMipmapLen(current_width, current_height, out_image_data.format)
+                                                ComputeMipmapLen(current_width, current_height, outImageData.format)
                                             };
                                             MFA_ASSERT(mipmap_array[i].data.len > 0);
                                             mipmap_array[i].width = current_width;
@@ -385,7 +385,7 @@ namespace MFA::Utils::DDSTexture
                                             mipmaps_total_len += mipmap_array[i].data.len;
                                         }
                                         // TO Check if data
-                                        MFA_ASSERT(mipmaps_total_len == out_image_data.data_offset_in_asset.len);
+                                        MFA_ASSERT(mipmaps_total_len == outImageData.data_offset_in_asset.len);
                                     }
                                     ret = LoadResult::Success;
                                 }
@@ -450,8 +450,8 @@ namespace MFA::Utils::KTXTexture
     static size_t tinyktxCallbackRead(void * userData, void * data, const size_t size)
     {
 #if defined(__DESKTOP__) || defined(__IOS__)
-        auto * handle = static_cast<FS::FileHandle *>(userData);
-        return FS::Read(handle, MFA::Blob{ data, size });
+        auto * file = static_cast<FS::FileHandle *>(userData);
+        return file->read(MFA::Blob{ data, size });
 #elif defined(__ANDROID__)
         auto * handle = static_cast<FS::AndroidAssetHandle *>(userData);
         return FS::Android_ReadAsset(handle, MFA::Blob{ data, size });
@@ -463,8 +463,8 @@ namespace MFA::Utils::KTXTexture
     static bool tinyktxCallbackSeek(void * userData, const int64_t offset)
     {
 #if defined(__DESKTOP__) || defined(__IOS__)
-        auto * handle = static_cast<FS::FileHandle *>(userData);
-        return FS::Seek(handle, static_cast<int>(offset), FS::Origin::Start);
+        auto * file = static_cast<FS::FileHandle *>(userData);
+        return file->seek(static_cast<int>(offset), FS::Origin::Start);
 #elif defined(__ANDROID__)
         auto * handle = static_cast<FS::AndroidAssetHandle *>(userData);
         return FS::Android_Seek(handle, static_cast<int>(offset), FS::Origin::Start);
@@ -476,9 +476,9 @@ namespace MFA::Utils::KTXTexture
     static int64_t tinyktxCallbackTell(void * userData)
     {
 #if defined(__DESKTOP__) || defined(__IOS__)
-        auto * handle = static_cast<FS::FileHandle *>(userData);
+        auto * file = static_cast<FS::FileHandle *>(userData);
         int64_t location = 0;
-        bool success = FS::Tell(handle, location);
+        bool success = file->tell(location);
         MFA_ASSERT(success);
         return location;
 #elif defined(__ANDROID__)
@@ -500,7 +500,7 @@ namespace MFA::Utils::KTXTexture
         loadResult = LoadResult::Invalid;
 
 #if defined(__DESKTOP__) || defined(__IOS__)
-        auto * fileHandle = FS::OpenFile(path, FS::Usage::Read);
+        auto fileHandle = FS::OpenFile(path, FS::Usage::Read);
 #elif defined(__ANDROID__)
         auto * fileHandle = FS::Android_OpenAsset(path);
 #else
@@ -521,7 +521,7 @@ namespace MFA::Utils::KTXTexture
             &tinyktxCallbackTell
         };
 
-        auto * ctx = TinyKtx_CreateContext(&callbacks, fileHandle);
+        auto * ctx = TinyKtx_CreateContext(&callbacks, fileHandle.get());
 
         auto const readHeaderResult = TinyKtx_ReadHeader(ctx);
         MFA_ASSERT(readHeaderResult);

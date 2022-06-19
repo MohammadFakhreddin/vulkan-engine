@@ -439,7 +439,18 @@ list(
 )
 
 #-----------------------------------------------------------------------
-# Tech-demo sources
+# Ray-tracing sources
+#-----------------------------------------------------------------------
+
+set(RAY_TRACING_SOURCES)
+
+list(APPEND RAY_TRACING_SOURCES
+    "applications/ray_tracing_weekend/RayTracingWeekendApplication.hpp"
+    "applications/ray_tracing_weekend/RayTracingWeekendApplication.cpp"
+)
+
+#-----------------------------------------------------------------------
+# Prefab editor sources
 #-----------------------------------------------------------------------
 
 set(PREFAB_EDITOR_SOURCES)
@@ -835,6 +846,20 @@ elseif(MACOSX)
     )
     link_to_target(${TECHDEMO})
     target_compile_definitions(${TECHDEMO} PRIVATE TECHDEMO)
+
+    # RayTracingInOneWeekedn
+    unset(link_to_target_directories)
+    list(APPEND link_to_target_directories 
+        ${MAC_INCLUDE_DIRECTORIES}
+        "applications/ray_tracing_weekend"
+    )
+    unset(link_to_target_sources)
+    list(APPEND link_to_target_sources 
+        ${MAC_SOURCE} 
+        ${RAY_TRACING_SOURCES}
+    )
+    link_to_target("RayTracingWeekend")
+    target_compile_definitions("RayTracingWeekend" PRIVATE RAY_TRACING_WEEKEND)
 
     # Editor
     unset(link_to_target_directories)
