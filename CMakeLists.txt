@@ -548,8 +548,7 @@ if (WINDOWS)
 # Windows Executable
 #-----------------------------------------------------------------------
 
-set(link_to_target_sources)
-
+    set(link_to_target_sources)
     set(link_to_target_directories)
     set(link_to_target_sources)
     function(link_to_target executable_name)
