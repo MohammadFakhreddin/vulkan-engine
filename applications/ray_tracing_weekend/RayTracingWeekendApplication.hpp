@@ -1,5 +1,10 @@
 #pragma once
+
 #include "engine/BedrockMemory.hpp"
+
+#include <string>
+
+#include <glm/vec3.hpp>
 
 class RayTracingWeekendApplication 
 {
@@ -16,12 +21,15 @@ private:
     void Shutdown();
 
     void WriteToFile() const;
+    
+    void PutPixel(int x, int y, glm::vec3 const & color);
 
     static constexpr char const * OutputFile = "output.jpeg";
-    static constexpr int ImageWidth = 256;
-    static constexpr int ImageHeight = 256;
+    static constexpr float AspectRatio = 16.0f / 9.0f;
+    static constexpr int ImageWidth = 400.0f;
+    static constexpr int ImageHeight = static_cast<int>(ImageWidth / AspectRatio);
     static constexpr int ComponentCount = 3;
-    static constexpr int Quality = 10;
+    static constexpr int Quality = 100;
 
     std::string mFilePath {};
     std::shared_ptr<MFA::SmartBlob> mImageBlob = nullptr;

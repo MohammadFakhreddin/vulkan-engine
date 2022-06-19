@@ -5,10 +5,18 @@
 #include "engine/BedrockFileSystem.hpp"
 #include "engine/BedrockString.hpp"
 #include "engine/BedrockMemory.hpp"
+#include "ray/Ray.hpp"
 
 #include "libs/stb_image/stb_image_write.h"
 
 using namespace MFA;
+
+//-------------------------------------------------------------------------------------------------
+
+static glm::vec3 RayColor(Ray const & ray) {
+    auto const t = 0.5f * (ray.direction.y + 1.0f);
+    return glm::mix(glm::vec3(0.5f, 0.7f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f), t);
+}
 
 //-------------------------------------------------------------------------------------------------
 
@@ -19,23 +27,27 @@ RayTracingWeekendApplication::RayTracingWeekendApplication() = default;
 void RayTracingWeekendApplication::run() {
     Init();
     
-    {
-        for (int j = ImageHeight - 1; j >= 0; --j) {
-            for (int i = 0; i < ImageWidth; ++i) {
-                /*auto r = double(i) / (ImageWidth - 1);
-                auto g = double(j) / (ImageHeight - 1);
-                auto b = 0.25;
+    // TODO: Why!
+    auto viewportHeight = 2.0;
+    auto viewportWidth = AspectRatio * viewportHeight;
+    auto focalLength = 1.0f;
 
-                int ir = static_cast<int>(255.999 * r);
-                int ig = static_cast<int>(255.999 * g);
-                int ib = static_cast<int>(255.999 * b);*/
+    auto origin = glm::vec3(0.0f, 0.0f, 0.0f);
+    auto horizontal = glm::vec3(viewportWidth, 0.0f, 0.0f);
+    auto vertical = glm::vec3(0.0f, viewportHeight, 0.0f);
+    auto lowerLeftCorner = origin - horizontal * 0.5f - vertical * 0.5f - glm::vec3(0.0f, 0.0f, focalLength);
 
-                auto const pixelIndex = (j * ImageWidth + i) * ComponentCount;
+    for (int i = 0; i < ImageWidth; ++i) {
+        for (int j = 0; j < ImageHeight; ++j) {
 
-                mByteArray[pixelIndex] = static_cast<uint8_t>(ImageWidth);
-                mByteArray[pixelIndex + 1] = static_cast<uint8_t>(ImageHeight);
-                mByteArray[pixelIndex + 2] = static_cast<uint8_t>(pixelIndex);
-            }
+            auto u = float(i) / float(ImageWidth - 1.0f);
+            auto v = float(j) / float(ImageHeight - 1.0f);
+
+            Ray const ray (origin, lowerLeftCorner + u * horizontal + v * vertical - origin);
+            auto const color = RayColor(ray);
+
+            PutPixel(i, j, color);
+
         }
     }
     
@@ -73,6 +85,17 @@ void RayTracingWeekendApplication::WriteToFile() const
         Quality
     );
     MFA_ASSERT(result == 1);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void RayTracingWeekendApplication::PutPixel(int x, int y, glm::vec3 const & color)
+{
+    auto const pixelIndex = (y * ImageWidth + x) * ComponentCount;
+
+    mByteArray[pixelIndex] = static_cast<uint8_t>(color.r * 255.99f);
+    mByteArray[pixelIndex + 1] = static_cast<uint8_t>(color.g * 255.99f);
+    mByteArray[pixelIndex + 2] = static_cast<uint8_t>(color.b * 255.99f);
 }
 
 //-------------------------------------------------------------------------------------------------
