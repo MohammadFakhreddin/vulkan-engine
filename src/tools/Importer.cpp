@@ -284,7 +284,7 @@ namespace MFA::Importer
         {
 #if defined(__DESKTOP__) || defined(__IOS__)
             auto file = FS::OpenFile(path, FS::Usage::Read);
-            if (MFA_VERIFY(file != nullptr));
+            if (MFA_VERIFY(file != nullptr))
             {
                 auto const fileSize = file->size();
                 MFA_ASSERT(fileSize > 0);

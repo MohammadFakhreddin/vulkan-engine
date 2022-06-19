@@ -72,6 +72,18 @@ if (NOT WINDOWS)
     endif()
 endif()
 
+#-----------------------------------------------------------------------
+# Applications
+#-----------------------------------------------------------------------
+
+set(TECHDEMO "TechDemo")
+set(PREFAB_EDITOR "PrefabEditor")
+set(RAY_TRACING_WEEKEND "RayTracingWeekend")
+
+#-----------------------------------------------------------------------
+# GLM
+#-----------------------------------------------------------------------
+
 # Vulkan uses 0 to 1 depth instead of -1 to 1 in opengl
 add_definitions(-DGLM_FORCE_DEPTH_ZERO_TO_ONE)
 
@@ -542,9 +554,6 @@ list(
     "unit_tests/engine/testPath.cpp"
 )
 
-set(TECHDEMO "TechDemo")
-set(PREFAB_EDITOR "PrefabEditor")
-
 #-----------------------------------------------------------------------
 # OS specific
 #-----------------------------------------------------------------------
@@ -556,7 +565,7 @@ if (WINDOWS)
 # Windows Executable
 #-----------------------------------------------------------------------
 
-set(link_to_target_sources)
+    set(link_to_target_sources)
 
     set(link_to_target_directories)
     set(link_to_target_sources)
@@ -566,6 +575,12 @@ set(link_to_target_sources)
         add_dependencies(${executable_name} "Tools" "Bedrock" "Renderer" "AssetSystem" "EntitySystem" "Engine" "Libs")
         target_link_libraries(${executable_name} ${COMPILED_LIBS} "Tools" "Bedrock" "Renderer" "AssetSystem" "EntitySystem" "Engine" "Libs")
         target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
+        add_custom_command(
+            TARGET ${executable_name} POST_BUILD                   # Adds a post-build event to MyTest
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different   # which executes "cmake - E copy_if_different..."
+            ${DLLS}                                         # <--this is in-file
+            ${CMAKE_BINARY_DIR}
+        )
     endfunction()
 
     message(STATUS "Building for windows")
@@ -621,14 +636,6 @@ set(link_to_target_sources)
         "applications/techdemo"
     )
     link_to_target(${TECHDEMO})
-    # TODO: Move add_custum_command to link_to_target function as well 
-    add_custom_command(
-        TARGET ${TECHDEMO} POST_BUILD                   # Adds a post-build event to MyTest
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different   # which executes "cmake - E copy_if_different..."
-        ${DLLS}                                         # <--this is in-file
-        ${CMAKE_BINARY_DIR}
-    )
-
     target_compile_definitions(${TECHDEMO} PRIVATE TECHDEMO)
 
     # Prefab editor executable
@@ -641,15 +648,22 @@ set(link_to_target_sources)
         "applications/prefab_editor"
     )
     link_to_target(${PREFAB_EDITOR})
-
-    add_custom_command(
-        TARGET ${PREFAB_EDITOR} POST_BUILD              # Adds a post-build event to MyTest
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different   # which executes "cmake - E copy_if_different..."
-        ${DLLS}      # <--this is in-file
-        ${CMAKE_BINARY_DIR}
-    )
-
     target_compile_definitions(${PREFAB_EDITOR} PRIVATE PREFAB_EDITOR)
+
+    # Ray tracing executable
+    
+    unset(link_to_target_sources)
+    list(APPEND link_to_target_sources 
+        ${WIN_SOURCES} 
+        ${RAY_TRACING_SOURCES}
+    )
+    unset(link_to_target_directories)
+    list(APPEND link_to_target_directories 
+        ${WIN_INCLUDE_DIRECTORIES}
+        "applications/ray_tracing_weekend"
+    )
+    link_to_target(${RAY_TRACING_WEEKEND})
+    target_compile_definitions(${RAY_TRACING_WEEKEND} PRIVATE RAY_TRACING_WEEKEND)
 
 #-----------------------------------------------------------------------
 # Windows unit tests
@@ -858,8 +872,8 @@ elseif(MACOSX)
         ${MAC_SOURCE} 
         ${RAY_TRACING_SOURCES}
     )
-    link_to_target("RayTracingWeekend")
-    target_compile_definitions("RayTracingWeekend" PRIVATE RAY_TRACING_WEEKEND)
+    link_to_target(${RAY_TRACING_WEEKEND})
+    target_compile_definitions(${RAY_TRACING_WEEKEND} PRIVATE RAY_TRACING_WEEKEND)
 
     # Editor
     unset(link_to_target_directories)

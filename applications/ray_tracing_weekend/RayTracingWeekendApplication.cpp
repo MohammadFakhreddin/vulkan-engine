@@ -4,14 +4,15 @@
 #include "engine/BedrockPath.hpp"
 #include "engine/BedrockFileSystem.hpp"
 #include "engine/BedrockString.hpp"
+#include "engine/BedrockMemory.hpp"
+
+#include "libs/stb_image/stb_image_write.h"
 
 using namespace MFA;
 
 //-------------------------------------------------------------------------------------------------
 
-RayTracingWeekendApplication::RayTracingWeekendApplication() {
-
-}
+RayTracingWeekendApplication::RayTracingWeekendApplication() = default;
 
 //-------------------------------------------------------------------------------------------------
 
@@ -19,36 +20,23 @@ void RayTracingWeekendApplication::run() {
     Init();
     
     {
-        auto fileHandle = FS::OpenFile(Path::GetAssetPath() + "output.ppm", FS::Usage::Write);
-        MFA_ASSERT(fileHandle != nullptr);
-            
-        std::string data = "";
-        
-        // Image
-
-        const int imageWidth = 256;
-        const int imageHeight = 256;
-        
-        MFA_APPEND(data, "P3\n %d %d\n255\n", imageWidth, imageHeight)
-
-        for (int j = imageHeight - 1; j >= 0; --j) {
-            for (int i = 0; i < imageWidth; ++i) {
-                auto r = double(i) / (imageWidth - 1);
-                auto g = double(j) / (imageHeight - 1);
+        for (int j = ImageHeight - 1; j >= 0; --j) {
+            for (int i = 0; i < ImageWidth; ++i) {
+                /*auto r = double(i) / (ImageWidth - 1);
+                auto g = double(j) / (ImageHeight - 1);
                 auto b = 0.25;
 
                 int ir = static_cast<int>(255.999 * r);
                 int ig = static_cast<int>(255.999 * g);
-                int ib = static_cast<int>(255.999 * b);
-                
-                MFA_APPEND(data, "%d %d %d\n", ir, ig, ib);
+                int ib = static_cast<int>(255.999 * b);*/
+
+                auto const pixelIndex = (j * ImageWidth + i) * ComponentCount;
+
+                mByteArray[pixelIndex] = static_cast<uint8_t>(ImageWidth);
+                mByteArray[pixelIndex + 1] = static_cast<uint8_t>(ImageHeight);
+                mByteArray[pixelIndex + 2] = static_cast<uint8_t>(pixelIndex);
             }
         }
-        
-        auto size = data.length() * sizeof(char);
-
-        auto writeCount = fileHandle->write(CBlob {data.c_str(), size});
-        MFA_ASSERT(writeCount == size);
     }
     
     Shutdown();
@@ -58,13 +46,33 @@ void RayTracingWeekendApplication::run() {
 
 void RayTracingWeekendApplication::Init() {
     Path::Init();
+    size_t const memorySize = ImageWidth * ImageHeight * sizeof(uint8_t) * ComponentCount;
+    mImageBlob = Memory::Alloc(memorySize);
+    mByteArray = mImageBlob->memory.as<uint8_t>();
 }
 
 //-------------------------------------------------------------------------------------------------
 
 void RayTracingWeekendApplication::Shutdown()
 {
+    WriteToFile();
     Path::Shutdown();
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void RayTracingWeekendApplication::WriteToFile() const
+{
+    auto const filePath = Path::ForReadWrite("output.jpeg");
+    auto const result = stbi_write_jpg(
+        filePath.c_str(),
+        ImageWidth,
+        ImageHeight,
+        ComponentCount,
+        mImageBlob->memory.ptr,
+        Quality
+    );
+    MFA_ASSERT(result == 1);
 }
 
 //-------------------------------------------------------------------------------------------------
