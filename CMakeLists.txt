@@ -464,6 +464,8 @@ list(APPEND RAY_TRACING_SOURCES
     "applications/ray_tracing_weekend/RayTracingWeekendApplication.cpp"
     "applications/ray_tracing_weekend/ray/Ray.hpp"
     "applications/ray_tracing_weekend/ray/Ray.cpp"
+    "applications/ray_tracing_weekend/sphere/Sphere.hpp"
+    "applications/ray_tracing_weekend/sphere/Sphere.cpp"
 )
 
 #-----------------------------------------------------------------------

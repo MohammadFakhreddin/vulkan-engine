@@ -6,6 +6,9 @@
 #include "engine/BedrockString.hpp"
 #include "engine/BedrockMemory.hpp"
 #include "ray/Ray.hpp"
+#include "sphere/Sphere.hpp"
+
+#include "glm/glm.hpp"
 
 #include "libs/stb_image/stb_image_write.h"
 
@@ -37,6 +40,8 @@ void RayTracingWeekendApplication::run() {
     auto vertical = glm::vec3(0.0f, viewportHeight, 0.0f);
     auto lowerLeftCorner = origin - horizontal * 0.5f - vertical * 0.5f - glm::vec3(0.0f, 0.0f, focalLength);
 
+    Sphere sphere {glm::vec3{0.0f, 0.0f, -focalLength}, 0.5f, glm::vec3 {1.0f, 0.0f, 0.0f}};
+
     for (int i = 0; i < ImageWidth; ++i) {
         for (int j = 0; j < ImageHeight; ++j) {
 
@@ -44,7 +49,17 @@ void RayTracingWeekendApplication::run() {
             auto v = float(j) / float(ImageHeight - 1.0f);
 
             Ray const ray (origin, lowerLeftCorner + u * horizontal + v * vertical - origin);
-            auto const color = RayColor(ray);
+
+            glm::vec3 position {};
+            glm::vec3 normal {};
+            glm::vec3 color {};
+
+            if (sphere.HasIntersect(ray, position, normal, color) == false)
+            {
+                color = RayColor(ray);
+            } else {
+                color = 0.5f * (normal + 1.0f); // Moving from -1,1 range to 0 to 1
+            }
 
             PutPixel(i, j, color);
 
