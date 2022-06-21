@@ -1,5 +1,7 @@
 #include "Sphere.hpp"
 
+#include "engine/BedrockAssert.hpp"
+
 #include "glm/glm.hpp"
 
 Sphere::Sphere(glm::vec3 center_, float radius_, glm::vec3 color_)
@@ -9,9 +11,10 @@ Sphere::Sphere(glm::vec3 center_, float radius_, glm::vec3 color_)
     , color(std::move(color_))
 {}
 
-[[nodiscard]]
 bool Sphere::HasIntersect(
     Ray const & ray,
+    float tMin,
+    float tMax,
     glm::vec3 & outPosition,
     glm::vec3 & outNormal,
     glm::vec3 & outColor
@@ -19,18 +22,28 @@ bool Sphere::HasIntersect(
 {
     auto dir = ray.origin - center;
     float a = glm::dot(ray.direction, ray.direction);
-    float b = 2 * glm::dot(ray.direction, dir);
+    float b = glm::dot(ray.direction, dir);
     float c = glm::dot(dir, dir) - sqrRadius;
 
-    auto discriminant = b * b - 4 * a * c;
+    auto discriminant = b * b - a * c;
     if (discriminant < 0) {
         return false;
     }
+
+    auto disSqrt = std::sqrt(discriminant);
     
-    auto t = (-b - std::sqrt(discriminant)) / (2.0f * a);
+    auto t = (-b - disSqrt) / a;
     
+    MFA_ASSERT(tMin <= tMax);
+    if (t < tMin || t > tMax) {
+        t = (-b + disSqrt) / a;
+        if (t < tMin || t > tMax) {
+            return false;
+        }
+    }
+
     outPosition = ray.at(t);
-    outNormal = glm::normalize(outPosition - center);
+    outNormal = (outPosition - center) / radius;
     outColor = color;
     
     return true;

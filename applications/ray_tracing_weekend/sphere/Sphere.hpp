@@ -1,10 +1,11 @@
 #pragma once
 
+#include "geometry/Geometry.hpp"
 #include "ray/Ray.hpp"
 
 #include "glm/vec3.hpp"
 
-class Sphere {
+class Sphere : public Geometry {
 public:
 
     explicit Sphere(glm::vec3 center_, float radius_, glm::vec3 color_);
@@ -12,10 +13,12 @@ public:
     [[nodiscard]]
     bool HasIntersect(
         Ray const & ray,
+        float tMin,
+        float tMax,
         glm::vec3 & outPosition,
         glm::vec3 & outNormal,
         glm::vec3 & outColor
-    );
+    ) override;
 
     glm::vec3 const center;
     

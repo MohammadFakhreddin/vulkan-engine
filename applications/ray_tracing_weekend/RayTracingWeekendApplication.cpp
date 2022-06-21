@@ -14,9 +14,38 @@
 
 using namespace MFA;
 
+static float Infinity = std::numeric_limits<float>::max();
+
 //-------------------------------------------------------------------------------------------------
 
-static glm::vec3 RayColor(Ray const & ray) {
+glm::vec3 RayTracingWeekendApplication::RayColor(Ray const & ray) {
+    glm::vec3 position {};
+    glm::vec3 normal {};
+    glm::vec3 color {};
+    
+    bool hit = false;
+
+    for (auto & geometry : mGeometries)
+    {
+        glm::vec3 hitPosition {};
+        glm::vec3 hitNormal {};
+        glm::vec3 hitColor {};
+
+        if (geometry->HasIntersect(ray, 0.0f, Infinity, hitPosition, hitNormal, hitColor) == true)
+        {
+            if (hit == false || hitPosition.z > position.z) {
+                position = hitPosition;
+                normal = hitNormal;
+                color = hitColor;
+                hit = true;
+            }
+        }
+    }
+
+    if (hit) {
+        return 0.5f * (normal + 1.0f);  // Moving from -1,1 range to 0 to 1
+    }
+    
     auto const t = 0.5f * (ray.direction.y + 1.0f);
     return glm::mix(glm::vec3(0.5f, 0.7f, 1.0f), glm::vec3(1.0f, 1.0f, 1.0f), t);
 }
@@ -40,7 +69,12 @@ void RayTracingWeekendApplication::run() {
     auto vertical = glm::vec3(0.0f, viewportHeight, 0.0f);
     auto lowerLeftCorner = origin - horizontal * 0.5f - vertical * 0.5f - glm::vec3(0.0f, 0.0f, focalLength);
 
-    Sphere sphere {glm::vec3{0.0f, 0.0f, -focalLength}, 0.5f, glm::vec3 {1.0f, 0.0f, 0.0f}};
+    auto sphere = std::make_shared<Sphere>(
+        glm::vec3{0.0f, 0.0f, -focalLength}, 
+        0.5f, 
+        glm::vec3 {1.0f, 0.0f, 0.0f}
+    );
+    mGeometries.emplace_back(sphere);
 
     for (int i = 0; i < ImageWidth; ++i) {
         for (int j = 0; j < ImageHeight; ++j) {
@@ -50,16 +84,7 @@ void RayTracingWeekendApplication::run() {
 
             Ray const ray (origin, lowerLeftCorner + u * horizontal + v * vertical - origin);
 
-            glm::vec3 position {};
-            glm::vec3 normal {};
-            glm::vec3 color {};
-
-            if (sphere.HasIntersect(ray, position, normal, color) == false)
-            {
-                color = RayColor(ray);
-            } else {
-                color = 0.5f * (normal + 1.0f); // Moving from -1,1 range to 0 to 1
-            }
+            auto const color = RayColor(ray);
 
             PutPixel(i, j, color);
 
@@ -73,9 +98,11 @@ void RayTracingWeekendApplication::run() {
 
 void RayTracingWeekendApplication::Init() {
     Path::Init();
+    
     size_t const memorySize = ImageWidth * ImageHeight * sizeof(uint8_t) * ComponentCount;
     mImageBlob = Memory::Alloc(memorySize);
     mByteArray = mImageBlob->memory.as<uint8_t>();
+
 }
 
 //-------------------------------------------------------------------------------------------------
