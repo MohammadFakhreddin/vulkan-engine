@@ -109,6 +109,7 @@ list(
     "src"
     "${CMAKE_SOURCE_DIR}/libs/include"
     "${GLM_INCLUDE_DIRS}"
+    "libs/include/pxshared/include"
 )
 
 #-----------------------------------------------------------------------
@@ -624,6 +625,8 @@ if (WINDOWS)
     file(
         GLOB DLLS
         "${CMAKE_SOURCE_DIR}/libs/win/SDL2.dll"
+        "${CMAKE_SOURCE_DIR}/libs/win/physx.win.x86_64.vc142.mt/PhysXDevice64.dll"
+        "${CMAKE_SOURCE_DIR}/libs/win/physx.win.x86_64.vc142.mt/PhysXGpu_64.dll"
         # "${CMAKE_SOURCE_DIR}/libs/win/clang_rt.asan_dynamic-x86_64.dll"
     )
 
@@ -942,9 +945,7 @@ elseif(IPHONE)
     target_include_directories(
         ${TECHDEMO} PUBLIC
         "ios"
-        "src"
-        "${CMAKE_SOURCE_DIR}/libs/include"
-        "${GLM_INCLUDE_DIRS}"
+        "${COMMON_INCLUDE_DIRECTORIES}"
     )
 
     if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -1020,9 +1021,7 @@ elseif(ANDROID)
 
     target_include_directories(
         ${TECHDEMO} PUBLIC
-        "src"
-        "${CMAKE_SOURCE_DIR}/libs/include"
-        "${GLM_INCLUDE_DIRS}"
+        "${COMMON_INCLUDE_DIRECTORIES}"
     )
 
     # Asan libs are "somewhere" in the toolchain's root, we try to find the
