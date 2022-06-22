@@ -11,7 +11,6 @@
 
 //======================================================================
 
-
 void Warning(std::string warningMessage)
 {
 	rlutil::saveDefaultColor();

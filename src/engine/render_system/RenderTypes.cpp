@@ -39,20 +39,6 @@ MFA::RT::SamplerGroup::~SamplerGroup()
 
 //-------------------------------------------------------------------------------------------------
 
-//MFA::RT::MeshBuffer::MeshBuffer(
-//    std::shared_ptr<BufferAndMemory> verticesBuffer_,
-//    std::shared_ptr<BufferAndMemory> indicesBuffer_
-//)
-//    : vertexBuffer(std::move(verticesBuffer_))
-//    , indexBuffer(std::move(indicesBuffer_))
-//{}
-//
-////-------------------------------------------------------------------------------------------------
-//
-//MFA::RT::MeshBuffer::~MeshBuffer() = default;
-
-//-------------------------------------------------------------------------------------------------
-
 MFA::RT::ImageGroup::ImageGroup(
     VkImage image_,
     VkDeviceMemory memory_
@@ -96,22 +82,6 @@ MFA::RT::GpuTexture::GpuTexture(
 //-------------------------------------------------------------------------------------------------
 
 MFA::RT::GpuTexture::~GpuTexture() = default;
-
-//-------------------------------------------------------------------------------------------------
-
-//MFA::RT::GpuModel::GpuModel(
-//    std::string address_,
-//    std::shared_ptr<MeshBuffer> meshBuffers_,
-//    std::vector<std::shared_ptr<GpuTexture>> textures_
-//)
-//    : nameId(std::move(address_))
-//    , meshBuffers(std::move(meshBuffers_))
-//    , textures(std::move(textures_))
-//{}
-//
-////-------------------------------------------------------------------------------------------------
-//
-//MFA::RT::GpuModel::~GpuModel() = default;
 
 //-------------------------------------------------------------------------------------------------
 

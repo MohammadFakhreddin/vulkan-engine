@@ -181,42 +181,37 @@ namespace MFA::Importer
 
         std::string nameId = Path::RelativeToAssetFolder(path);
 
-        std::shared_ptr<AS::Texture> result = std::make_shared<AS::Texture>(nameId);
+        auto texture = std::make_shared<AS::Texture>(nameId);
 
         LoadResult loadResult = LoadResult::Invalid;
-        auto * imageInfo = Load(loadResult, path);
+        auto imageData = Load(loadResult, path);
 
-        if (MFA_VERIFY(loadResult == LoadResult::Success && imageInfo != nullptr))
+        if (MFA_VERIFY(loadResult == LoadResult::Success && imageData != nullptr))
         {
-
-            MFA_DEFER{
-                Unload(imageInfo);
-            };
-
-            result->initForWrite(
-                imageInfo->format,
-                imageInfo->sliceCount,
-                imageInfo->depth,
-                Memory::Alloc(imageInfo->totalImageSize)
+            texture->initForWrite(
+                imageData->format,
+                imageData->sliceCount,
+                imageData->depth,
+                Memory::Alloc(imageData->totalImageSize)
             );
 
-            auto width = imageInfo->width;
-            auto height = imageInfo->height;
-            auto depth = imageInfo->depth;
+            auto width = imageData->width;
+            auto height = imageData->height;
+            auto depth = imageData->depth;
 
-            for (auto i = 0u; i < imageInfo->mipmapCount; ++i)
+            for (auto i = 0u; i < imageData->mipmapCount; ++i)
             {
                 MFA_ASSERT(width >= 1);
                 MFA_ASSERT(height >= 1);
                 MFA_ASSERT(depth >= 1);
 
-                auto const mipBlob = GetMipBlob(imageInfo, i);
+                auto const mipBlob = GetMipBlob(imageData.get(), i);
                 if (!MFA_VERIFY(mipBlob.ptr != nullptr && mipBlob.len > 0))
                 {
                     return nullptr;
                 }
 
-                result->addMipmap(
+                texture->addMipmap(
                     AS::Texture::Dimensions{
                         .width = static_cast<uint32_t>(width),
                         .height = static_cast<uint32_t>(height),
@@ -230,7 +225,7 @@ namespace MFA::Importer
                 depth = Math::Max<uint16_t>(depth / 2, 1);
             }
         }
-        return result;
+        return texture;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -283,16 +278,15 @@ namespace MFA::Importer
         if (MFA_VERIFY(path.empty() == false))
         {
 #if defined(__DESKTOP__) || defined(__IOS__)
-            auto * file = FS::OpenFile(path, FS::Usage::Read);
-            MFA_DEFER{ FS::CloseFile(file); };
-            if (FS::FileIsUsable(file))
+            auto file = FS::OpenFile(path, FS::Usage::Read);
+            if (MFA_VERIFY(file != nullptr))
             {
-                auto const fileSize = FS::FileSize(file);
+                auto const fileSize = file->size();
                 MFA_ASSERT(fileSize > 0);
 
                 auto const buffer = Memory::Alloc(fileSize);
 
-                auto const readBytes = FS::Read(file, buffer->memory);
+                auto const readBytes = file->read(buffer->memory);
 
                 if (readBytes == buffer->memory.len)
                 {
@@ -356,14 +350,14 @@ namespace MFA::Importer
             {
                 mesh = std::make_shared<Mesh>();;
 
-                auto * file = FS::OpenFile(path, FS::Usage::Read);
-                MFA_DEFER{ FS::CloseFile(file); };
-                if (FS::FileIsUsable(file))
+                auto file = FS::OpenFile(path, FS::Usage::Read);
+                if (MFA_VERIFY(file != nullptr))
                 {
                     bool is_counter_clockwise = false;
                     {//Check if normal vectors are reverse
+                        // TODO: We could allocate from stack instead
                         auto firstLineBlob = Memory::Alloc(200);
-                        FS::Read(file, firstLineBlob->memory);
+                        file->read(firstLineBlob->memory);
                         std::string const firstLine = std::string(firstLineBlob->memory.as<char>());
                         if (firstLine.find("ccw") != std::string::npos)
                         {
@@ -695,28 +689,17 @@ namespace MFA::Importer
         tinygltf::Model const & gltfModel,
         std::vector<TextureRef> & outTextureRefs,
         std::vector<AS::SamplerConfig> & outSamplers
-        //std::vector<std::shared_ptr<AS::Texture>> & outTextures
     )
     {
         std::string directoryPath = Path::ExtractDirectoryFromPath(path);
 
         directoryPath = Path::RelativeToAssetFolder(directoryPath);
 
-        /*struct QueueItem
-        {
-            std::string gltfName{};
-            std::shared_ptr<AS::Texture> texture{};
-        };*/
-        //ThreadSafeQueue<QueueItem> resultTextureQueue{};
-
         // Extracting textures
         if (false == gltfModel.textures.empty())
         {
             for (auto const & texture : gltfModel.textures)
             {
-                /*JS::AssignTask([&texture, &gltfModel, &directoryPath, &resultTextureQueue](uint32_t threadNum, uint32_t threadCount)->void
-                {*/
-                //AS::SamplerConfig sampler{};
                 //sampler.isValid = false;
                 if (texture.sampler >= 0)
                 {// Sampler
@@ -737,54 +720,22 @@ namespace MFA::Importer
                         .isValid = false
                     });
                 }
-                //outSamplers.emplace_back(sampler);
-
-                //std::shared_ptr<AS::Texture> assetSystemTexture{};
+                
                 auto const & image = gltfModel.images[texture.source];
-                //{// Texture
-                    //ImportTextureOptions textureOptions{};
-                    //textureOptions.tryToGenerateMipmaps = false;
+                
                 std::string const imagePath = directoryPath + "/" + image.uri;
-                    //assetSystemTexture = ImportImage(
-                    //    image_path,
-                    //    // TODO tryToGenerateMipmaps takes too long (We should create .asset files)
-                    //    textureOptions
-                    //);
-                //}
-                //MFA_ASSERT(assetSystemTexture->isValid());
-
+                
                 TextureRef textureRef {
                     .gltfName = image.uri,
                     .index = static_cast<uint8_t>(outTextureRefs.size()),
                     .relativePath = imagePath
                 };
                 outTextureRefs.emplace_back(textureRef);
-
-                /*QueueItem const item{
-                    .gltfName = image.uri,
-                    .texture = assetSystemTexture,
-                };*/
-                //while (resultTextureQueue.TryToPush(item) == false);
-                //});
             }
 
             //JS::WaitForThreadsToFinish();
 
         }
-
-        /*while (resultTextureQueue.IsEmpty() == false)
-        {
-            QueueItem item;
-            if (resultTextureQueue.TryToPop(item))
-            {*/
-        /*TextureRef textureRef{
-            .gltf_name = item.gltfName,
-            .index = static_cast<uint8_t>(outTextures.size()),
-        };*/
-        //outTextureRefs.emplace_back(textureRef);
-                //outTextures.emplace_back(item.texture);
-            //}
-        //}
 
     }
 
@@ -1918,14 +1869,13 @@ namespace MFA::Importer
         if (MFA_VERIFY(path.empty() == false))
         {
 #if defined(__DESKTOP__) || defined(__IOS__)
-            auto * file = FS::OpenFile(path, FS::Usage::Read);
-            MFA_DEFER{ FS::CloseFile(file); };
-            if (FS::FileIsUsable(file))
+            auto file = FS::OpenFile(path, FS::Usage::Read);
+            if (MFA_VERIFY(file != nullptr))
             {
-                auto const fileSize = FS::FileSize(file);
+                auto const fileSize = file->size();
                 // TODO Allocate using a memory pool system
                 auto const memoryBlob = Memory::Alloc(fileSize);
-                auto const readBytes = FS::Read(file, memoryBlob->memory);
+                auto const readBytes = file->read(memoryBlob->memory);
                 // Means that reading is successful
                 if (readBytes == fileSize)
                 {

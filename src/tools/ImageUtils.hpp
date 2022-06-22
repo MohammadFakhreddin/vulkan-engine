@@ -4,6 +4,14 @@
 #include "engine/BedrockMemory.hpp"
 #include "engine/asset_system/AssetTexture.hpp"
 
+namespace MFA
+{
+    namespace FileSystem
+    {
+        class FileHandle;
+    }
+}
+
 struct TinyKtx_Context;
 
 namespace MFA::Utils
@@ -319,27 +327,41 @@ namespace MFA::Utils
 
         struct Data
         {
-            int32_t width = 0;
-            int32_t height = 0;
-            uint16_t depth = 0;
-            uint8_t sliceCount = 0;
-            AssetSystem::TextureFormat format = TextureFormat::INVALID;
-            uint8_t mipmapCount = 0;
-            TinyKtx_Context * context = nullptr;
-            uint64_t totalImageSize = 0;
+        public:
+
+            explicit Data(
+                int32_t width,
+                int32_t height,
+                uint16_t depth,
+                uint8_t sliceCount,
+                AS::TextureFormat format,
+                uint8_t mipmapCount,
+                TinyKtx_Context * context,
+                uint64_t totalImageSize,
+                const std::shared_ptr<FileSystem::FileHandle> & fileHandle
+            );
+
+            ~Data();
 
             [[nodiscard]]
-            bool isValid() const noexcept
-            {
-                return width > 0 &&
-                    height > 0 &&
-                    depth > 0 &&
-                    sliceCount > 0 &&
-                    format != TextureFormat::INVALID &&
-                    mipmapCount > 0 &&
-                    context != nullptr &&
-                    totalImageSize > 0;
-            }
+            bool isValid() const noexcept;
+
+            [[nodiscard]]
+            TinyKtx_Context * GetContext() const;
+
+            const int32_t width = 0;
+            const int32_t height = 0;
+            const uint16_t depth = 0;
+            const uint8_t sliceCount = 0;
+            const AS::TextureFormat format = TextureFormat::INVALID;
+            const uint8_t mipmapCount = 0;
+            const uint64_t totalImageSize = 0;
+            const std::shared_ptr<FileSystem::FileHandle> fileHandle = nullptr;
+
+        private:
+
+            TinyKtx_Context * mContext = nullptr;
+            
         };
 
         enum class LoadResult
@@ -349,12 +371,10 @@ namespace MFA::Utils
             FileNotExists
             // Format not supported
         };
-        // TODO Use shared ptr instead
-        Data * Load(LoadResult & loadResult, std::string const & path);
+
+        std::shared_ptr<Data> Load(LoadResult & loadResult, std::string const & path);
 
         CBlob GetMipBlob(Data * imageData, int mipIndex);
-
-        bool Unload(Data * imageData);
 
     } // KTXTexture
 } // MFA::Utils

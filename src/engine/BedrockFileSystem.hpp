@@ -18,28 +18,6 @@ namespace MFA::FileSystem
         Append,
     };
 
-    class FileHandle;
-
-    [[nodiscard]]
-    bool Exists(std::string const & path);
-
-    // TODO Use shared_ptr instead
-    [[nodiscard]]
-    FileHandle * OpenFile(std::string const & path, Usage usage);
-
-    bool CloseFile(FileHandle * file);
-
-    [[nodiscard]]
-    size_t FileSize(FileHandle * file);
-
-    uint64_t Read(FileHandle * file, Blob const & memory);
-
-    [[nodiscard]]
-    bool FileIsUsable(FileHandle * file);
-
-    [[nodiscard]]
-    FILE * GetCHandle(FileHandle * file);
-
     enum class Origin
     {
         Start,
@@ -47,12 +25,59 @@ namespace MFA::FileSystem
         Current
     };
 
-    [[nodiscard]]
-    bool Seek(FileHandle * file, int offset, Origin origin);
+    class FileHandle {
+    public:
+
+        explicit FileHandle(std::string const & path, Usage const usage);
+
+        ~FileHandle();
+
+        FileHandle(FileHandle const &) noexcept = delete;
+        FileHandle(FileHandle &&) noexcept = delete;
+        FileHandle & operator= (FileHandle const & rhs) noexcept = delete;
+        FileHandle & operator= (FileHandle && rhs) noexcept = delete;
+
+        [[nodiscard]]
+        bool isOk() const;
+
+        bool close();
+
+        [[nodiscard]]
+        bool seek(const int offset, const Origin origin) const;
+
+        [[nodiscard]]
+        bool seekToEnd() const;
+
+        bool tell(int64_t & outLocation) const;
+
+        // Return read count from file
+        size_t read (Blob const & memory) const;
+
+        // Returns the write count into file
+        size_t write(CBlob const & memory) const;
+
+        [[nodiscard]]
+        uint64_t size () const;
+
+        [[nodiscard]]
+        FILE * getHandle() const;
+
+    private:
+
+        FILE * mFile = nullptr;
+        
+    };
 
     [[nodiscard]]
-    bool Tell(FileHandle * file, int64_t & outLocation);
+    bool Exists(std::string const & path);
 
+    // TODO Use shared_ptr instead
+    [[nodiscard]]
+    std::shared_ptr<FileHandle> OpenFile(std::string const & path, Usage usage);
+    
+    [[nodiscard]]
+    bool FileIsUsable(FileHandle * file);
+    
 #ifdef __ANDROID__
     class AndroidAssetHandle
     {
