@@ -28,6 +28,10 @@ using TargetApplication = TechDemoApplication;
 #include "PrefabEditorApplication.hpp"
 using TargetApplication = PrefabEditorApplication;
 #endif
+#ifdef RAY_TRACING_WEEKEND
+#include "RayTracingWeekendApplication.hpp"
+using TargetApplication = RayTracingWeekendApplication;
+#endif
 
 int main(int argc, char* argv[]){
     TargetApplication app {};
