@@ -15,6 +15,7 @@ bool Sphere::HasIntersect(
     Ray const & ray,
     float tMin,
     float tMax,
+    float & outT,
     glm::vec3 & outPosition,
     glm::vec3 & outNormal,
     glm::vec3 & outColor
@@ -41,9 +42,17 @@ bool Sphere::HasIntersect(
             return false;
         }
     }
+    
+    outT = t;
 
     outPosition = ray.at(t);
     outNormal = (outPosition - center) / radius;
+    
+    if (glm::dot(outNormal, ray.direction) > 0) {
+        // Ray is inside the object
+        return false;
+    }
+    
     outColor = color;
     
     return true;

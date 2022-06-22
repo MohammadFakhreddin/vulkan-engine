@@ -468,6 +468,8 @@ list(APPEND RAY_TRACING_SOURCES
     "applications/ray_tracing_weekend/sphere/Sphere.cpp"
     "applications/ray_tracing_weekend/geometry/Geometry.hpp"
     "applications/ray_tracing_weekend/geometry/Geometry.cpp"
+    "applications/ray_tracing_weekend/camera/Camera.hpp"
+    "applications/ray_tracing_weekend/camera/Camera.cpp"
 )
 
 #-----------------------------------------------------------------------

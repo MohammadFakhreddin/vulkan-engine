@@ -12,6 +12,7 @@ public:
         Ray const & ray,
         float tMin,
         float tMax,
+        float & outT,
         glm::vec3 & outPosition,
         glm::vec3 & outNormal,
         glm::vec3 & outColor

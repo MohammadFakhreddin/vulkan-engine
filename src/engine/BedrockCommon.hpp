@@ -141,4 +141,11 @@ namespace MFA
         return memcmp(memory1, memory2, Count * sizeof(T)) == 0;
     }
 
+    // TODO: Write a function to set zero
+    template<typename T>
+    constexpr void SetZero(T const * memory, uint32_t length) 
+    {
+        memset(memory, 0, sizeof(T) * length);
+    }
+
 }
