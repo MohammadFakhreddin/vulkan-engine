@@ -4,7 +4,6 @@
 
 #include "catch.hpp"
 
-#define ENABLE_SIMD
 #include "engine/BedrockMatrix.hpp"
 
 #include <glm/glm.hpp>

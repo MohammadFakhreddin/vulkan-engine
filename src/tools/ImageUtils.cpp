@@ -473,6 +473,8 @@ namespace MFA::Utils::KTXTexture
 #endif
     }
 
+    //-------------------------------------------------------------------------------------------------
+
     static int64_t tinyktxCallbackTell(void * userData)
     {
 #if defined(__DESKTOP__) || defined(__IOS__)
@@ -492,10 +494,67 @@ namespace MFA::Utils::KTXTexture
 #endif
     }
 
-    Data * Load(LoadResult & loadResult, std::string const & path)
+    //-------------------------------------------------------------------------------------------------
+
+    Data::Data(
+        int32_t width_,
+        int32_t height_,
+        uint16_t depth_,
+        uint8_t sliceCount_,
+        AS::TextureFormat format_,
+        uint8_t mipmapCount_,
+        TinyKtx_Context * context_,
+        uint64_t totalImageSize_,
+        const std::shared_ptr<FS::FileHandle> & fileHandle_
+    )
+        : width(width_)
+        , height(height_)
+        , depth(depth_)
+        , sliceCount(sliceCount_)
+        , format(format_)
+        , mipmapCount(mipmapCount_)
+        , totalImageSize(totalImageSize_)
+        , fileHandle(fileHandle_)
+        , mContext(context_)
+    {}
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool Data::isValid() const noexcept
+    {
+        return width > 0 &&
+        height > 0 &&
+        depth > 0 &&
+        sliceCount > 0 &&
+        format != TextureFormat::INVALID &&
+        mipmapCount > 0 &&
+        mContext != nullptr &&
+        totalImageSize > 0;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    Data::~Data()
+    {
+        if (mContext != nullptr)
+        {
+            TinyKtx_DestroyContext(mContext);
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    TinyKtx_Context * Data::GetContext() const
+    {
+        return mContext;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<Data> Load(LoadResult & loadResult, std::string const & path)
     {
 
-        Data * data = nullptr;
+        std::shared_ptr<Data> data = nullptr;
 
         loadResult = LoadResult::Invalid;
 
@@ -591,22 +650,25 @@ namespace MFA::Utils::KTXTexture
             int previousImageSize = -1;
             for (auto i = 0u; i < mipmapCount; ++i)
             {
-                int imageSize = TinyKtx_ImageSize(ctx, i);
+                int const imageSize = TinyKtx_ImageSize(ctx, i);
                 MFA_ASSERT(imageSize > 0);
                 totalImageSize += imageSize;
                 MFA_ASSERT(previousImageSize == -1 || imageSize < previousImageSize);
                 previousImageSize = imageSize;
             }
 
-            data = new Data();
-            data->width = width;
-            data->height = height;
-            data->depth = depth;
-            data->context = ctx;
-            data->format = format;
-            data->mipmapCount = mipmapCount;
-            data->sliceCount = sliceCount;
-            data->totalImageSize = totalImageSize;
+            data = std::make_shared<Data>(
+                width,
+                height,
+                depth,
+                sliceCount,
+                format,
+                mipmapCount,
+                ctx,
+                totalImageSize,
+                fileHandle
+            );
+            
 
             MFA_ASSERT(data->isValid());
 
@@ -627,21 +689,13 @@ namespace MFA::Utils::KTXTexture
         MFA_ASSERT(mipIndex >= 0);
         MFA_ASSERT(imageData->mipmapCount > mipIndex);
 
-        auto const imageSize = TinyKtx_ImageSize(imageData->context, mipIndex);
+        auto const imageSize = TinyKtx_ImageSize(imageData->GetContext(), mipIndex);
         MFA_ASSERT(imageSize > 0);
 
-        auto const * imagePtr = TinyKtx_ImageRawData(imageData->context, mipIndex);
+        auto const * imagePtr = TinyKtx_ImageRawData(imageData->GetContext(), mipIndex);
         MFA_ASSERT(imagePtr != nullptr);
 
         return CBlob{ imagePtr, imageSize };
-    }
-
-    bool Unload(Data * imageData)
-    {
-        MFA_ASSERT(imageData != nullptr && imageData->isValid());
-        TinyKtx_DestroyContext(imageData->context);
-        delete imageData;
-        return true;
     }
 
 }

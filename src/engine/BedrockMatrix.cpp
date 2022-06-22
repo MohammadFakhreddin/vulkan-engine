@@ -3,10 +3,6 @@
 #include "BedrockAssert.hpp"
 #include "BedrockMath.hpp"
 
-#ifdef ENABLE_SIMD
-#include <immintrin.h>
-#endif
-
 namespace MFA::Matrix
 {
 
@@ -379,62 +375,6 @@ namespace MFA::Matrix
         outMatrix[3][2] = nearPlane / (nearPlane - farPlane);
         outMatrix[3][3] = 1.0f;
     }
-
-    //-------------------------------------------------------------------------------------------------
-
-#ifdef ENABLE_SIMD
-
-    static __m256 convertToM256(glm::vec4 const & vec)
-    {
-        return _mm256_set_ps(vec[0], vec[1], vec[2], vec[3], 0.0f, 0.0f, 0.0f, 0.0f);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    static glm::vec4 convertToVec4(__m256 const & var)
-    {
-        auto const * values = reinterpret_cast<float const *>(&var);
-        return glm::vec4 {values[7], values[6], values[5], values[4]};
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    glm::vec4 Add(glm::vec4 const & vec1, glm::vec4 const & vec2)
-    {
-        __m256 a = convertToM256(vec1);
-        __m256 b = convertToM256(vec2);
-        __m256 c = _mm256_add_ps(a, b);
-        return convertToVec4(c);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    float Dot(glm::vec4 const & vec1, glm::vec4 const & vec2)
-    {
-        __m256 const a = convertToM256(vec1);
-        __m256 const b = convertToM256(vec2);
-        auto const c = _mm256_dp_ps(a, b, 0b11111000);
-        auto const * values = reinterpret_cast<float const *>(&c);
-        return values[7];
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    glm::vec4 Lerp(glm::vec4 const & vec1, glm::vec4 const & vec2, float fraction)
-    {
-        __m256 aVar = convertToM256(vec1);
-        __m256 const aFrac = _mm256_set1_ps(1.0f - fraction);
-        aVar = _mm256_mul_ps(aVar, aFrac);
-
-        __m256 bVar = convertToM256(vec2);
-        __m256 const bFrac = _mm256_set1_ps(fraction);
-        bVar = _mm256_mul_ps(bVar, bFrac);
-
-        __m256 cVar = _mm256_add_ps(aVar, bVar);
-        return convertToVec4(cVar);
-    }
-
-#endif
 
     //-------------------------------------------------------------------------------------------------
 

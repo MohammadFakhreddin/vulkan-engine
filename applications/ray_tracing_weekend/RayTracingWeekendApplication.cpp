@@ -78,8 +78,8 @@ void RayTracingWeekendApplication::run() {
         for (int j = 0; j < ImageHeight; ++j) {
             glm::vec3 color {};
             for (int s = 0; s < SampleRate; ++s) {
-                auto u = float(i + Math::Random(-1.0f, 1.0f)) / float(ImageWidth - 1.0f);
-                auto v = float(j + Math::Random(-1.0f, 1.0f)) / float(ImageHeight - 1.0f);
+                auto u = (static_cast<float>(i) + Math::Random(-1.0f, 1.0f)) / float(ImageWidth - 1.0f);
+                auto v = (static_cast<float>(j) + Math::Random(-1.0f, 1.0f)) / float(ImageHeight - 1.0f);
                 auto const ray = mCamera.CreateRay(u, v);
                 color += RayColor(ray);
             }
@@ -97,7 +97,7 @@ void RayTracingWeekendApplication::run() {
 void RayTracingWeekendApplication::Init() {
     Path::Init();
     
-    size_t const memorySize = ImageWidth * ImageHeight * sizeof(uint8_t) * ComponentCount;
+    size_t const memorySize = static_cast<size_t>(ImageWidth * ImageHeight) * sizeof(uint8_t) * ComponentCount;
     mImageBlob = Memory::Alloc(memorySize);
     mByteArray = mImageBlob->memory.as<uint8_t>();
     memset(mImageBlob->memory.ptr, 0, mImageBlob->memory.len);
@@ -118,8 +118,8 @@ void RayTracingWeekendApplication::WriteToFile() const
     auto const filePath = Path::ForReadWrite("output.jpeg");
     auto const result = stbi_write_jpg(
         filePath.c_str(),
-        ImageWidth,
-        ImageHeight,
+        static_cast<int>(ImageWidth),
+        static_cast<int>(ImageHeight),
         ComponentCount,
         mImageBlob->memory.ptr,
         Quality
@@ -131,7 +131,7 @@ void RayTracingWeekendApplication::WriteToFile() const
 
 void RayTracingWeekendApplication::PutPixel(int x, int y, glm::vec3 const & color)
 {
-    auto const pixelIndex = ((ImageHeight - y - 1) * ImageWidth + x) * ComponentCount;
+    auto const pixelIndex = ((static_cast<int>(ImageHeight) - y - 1) * static_cast<int>(ImageWidth) + x) * ComponentCount;
 
     mByteArray[pixelIndex] += static_cast<uint8_t>(color.r * 255.99f);
     mByteArray[pixelIndex + 1] += static_cast<uint8_t>(color.g * 255.99f);
