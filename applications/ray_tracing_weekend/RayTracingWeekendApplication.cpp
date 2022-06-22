@@ -76,11 +76,11 @@ void RayTracingWeekendApplication::run() {
     );
     mGeometries.emplace_back(sphere);
 
-    for (int i = 0; i < ImageWidth; ++i) {
-        for (int j = 0; j < ImageHeight; ++j) {
+    for (int i = 0; i < static_cast<int>(ImageWidth); ++i) {
+        for (int j = 0; j < static_cast<int>(ImageHeight); ++j) {
 
-            auto u = float(i) / float(ImageWidth - 1.0f);
-            auto v = float(j) / float(ImageHeight - 1.0f);
+            auto u = static_cast<float>(i) / (ImageWidth - 1.0f);
+            auto v = static_cast<float>(j) / (ImageHeight - 1.0f);
 
             Ray const ray (origin, lowerLeftCorner + u * horizontal + v * vertical - origin);
 
@@ -99,7 +99,7 @@ void RayTracingWeekendApplication::run() {
 void RayTracingWeekendApplication::Init() {
     Path::Init();
     
-    size_t const memorySize = ImageWidth * ImageHeight * sizeof(uint8_t) * ComponentCount;
+    size_t const memorySize = static_cast<size_t>(ImageWidth * ImageHeight) * sizeof(uint8_t) * ComponentCount;
     mImageBlob = Memory::Alloc(memorySize);
     mByteArray = mImageBlob->memory.as<uint8_t>();
 
@@ -120,8 +120,8 @@ void RayTracingWeekendApplication::WriteToFile() const
     auto const filePath = Path::ForReadWrite("output.jpeg");
     auto const result = stbi_write_jpg(
         filePath.c_str(),
-        ImageWidth,
-        ImageHeight,
+        static_cast<int>(ImageWidth),
+        static_cast<int>(ImageHeight),
         ComponentCount,
         mImageBlob->memory.ptr,
         Quality
@@ -133,7 +133,7 @@ void RayTracingWeekendApplication::WriteToFile() const
 
 void RayTracingWeekendApplication::PutPixel(int x, int y, glm::vec3 const & color)
 {
-    auto const pixelIndex = (y * ImageWidth + x) * ComponentCount;
+    auto const pixelIndex = (y * static_cast<int>(ImageWidth) + x) * ComponentCount;
 
     mByteArray[pixelIndex] = static_cast<uint8_t>(color.r * 255.99f);
     mByteArray[pixelIndex + 1] = static_cast<uint8_t>(color.g * 255.99f);

@@ -31,8 +31,8 @@ private:
 
     static constexpr char const * OutputFile = "output.jpeg";
     static constexpr float AspectRatio = 16.0f / 9.0f;
-    static constexpr int ImageWidth = 400.0f;
-    static constexpr int ImageHeight = static_cast<int>(ImageWidth / AspectRatio);
+    static constexpr float ImageWidth = 400.0f;
+    static constexpr float ImageHeight = static_cast<int>(ImageWidth / AspectRatio);
     static constexpr int ComponentCount = 3;
     static constexpr int Quality = 100;
 
