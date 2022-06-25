@@ -1,8 +1,11 @@
 #pragma once
 
+#include "engine/BedrockMath.hpp"
+
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/norm.hpp>
 
 #ifdef ENABLE_SIMD
 #include <immintrin.h>
@@ -10,6 +13,7 @@
 
 namespace MFA::Matrix 
 {
+    // TODO: We can rewrite this class using templates
     glm::mat4 CopyCellsToMat4(float const * cells);
 
     glm::vec3 CopyCellsToVec3(float const * cells);
@@ -104,6 +108,11 @@ namespace MFA::Matrix
         float nearPlane,
         float farPlane
     );
+
+    template<typename T>
+    bool IsNearZero(T const & glmVec) {
+        return glm::length2(glmVec) < Math::Epsilon<float>();
+    }
 
 #ifdef ENABLE_SIMD
 

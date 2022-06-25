@@ -1,7 +1,6 @@
 #include "BedrockMatrix.hpp"
 
 #include "BedrockAssert.hpp"
-#include "BedrockMath.hpp"
 
 namespace MFA::Matrix
 {

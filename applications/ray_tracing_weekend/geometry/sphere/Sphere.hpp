@@ -8,17 +8,18 @@
 class Sphere : public Geometry {
 public:
 
-    explicit Sphere(glm::vec3 center_, float radius_, glm::vec3 color_);
+    explicit Sphere(
+        glm::vec3 center_, 
+        float radius_, 
+        std::shared_ptr<Material> material_
+    );
 
     [[nodiscard]]
     bool HasIntersect(
         Ray const & ray,
         float tMin,
         float tMax,
-        float & outT,
-        glm::vec3 & outPosition,
-        glm::vec3 & outNormal,
-        glm::vec3 & outColor
+        HitRecord & hitRecord
     ) override;
 
     glm::vec3 const center;
@@ -26,6 +27,4 @@ public:
     float const radius;
     float const sqrRadius;
     
-    glm::vec3 const color;
-
 };

@@ -69,6 +69,12 @@ namespace MFA::Math
         static_assert(std::numeric_limits<genType>::is_iec559, "'epsilon' only accepts floating-point inputs");
         return std::numeric_limits<genType>::epsilon();
     }
+    
+    template<typename genType>
+    genType Infinity()
+    {
+        return std::numeric_limits<genType>::infinity();
+    }
 
     template<typename T>
     T Random(T min, T max)
