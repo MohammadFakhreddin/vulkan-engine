@@ -581,9 +581,9 @@ if (WINDOWS)
         target_link_libraries(${executable_name} ${COMPILED_LIBS} "Tools" "Bedrock" "Renderer" "AssetSystem" "EntitySystem" "Engine" "Libs")
         target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
         add_custom_command(
-            TARGET ${executable_name} POST_BUILD                   # Adds a post-build event to MyTest
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different   # which executes "cmake - E copy_if_different..."
-            ${DLLS}                                         # <--this is in-file
+            TARGET ${executable_name} POST_BUILD                # Adds a post-build event to MyTest
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different       # which executes "cmake - E copy_if_different..."
+            ${DLLS}                                             # <--this is in-file
             ${CMAKE_BINARY_DIR}
         )
     endfunction()
@@ -681,15 +681,7 @@ if (WINDOWS)
         "unit_tests"
     )
     link_to_target(${UNIT_TEST_NAME})
-
-    add_custom_command(
-        TARGET ${UNIT_TEST_NAME} POST_BUILD              # Adds a post-build event to MyTest
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different   # which executes "cmake - E copy_if_different..."
-        ${DLLS}      # <--this is in-file
-        ${CMAKE_BINARY_DIR}
-    )
-
-    target_compile_definitions(${UNIT_TEST_NAME} PRIVATE UNIT_TEST)
+    target_compile_definitions(${UNIT_TEST_NAME} PRIVATE UNIT_TEST PUBLIC ENABLE_SIMD)
 
 elseif(LINUX)
 

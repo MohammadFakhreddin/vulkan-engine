@@ -181,42 +181,37 @@ namespace MFA::Importer
 
         std::string nameId = Path::RelativeToAssetFolder(path);
 
-        std::shared_ptr<AS::Texture> result = std::make_shared<AS::Texture>(nameId);
+        auto texture = std::make_shared<AS::Texture>(nameId);
 
         LoadResult loadResult = LoadResult::Invalid;
-        auto * imageInfo = Load(loadResult, path);
+        auto imageData = Load(loadResult, path);
 
-        if (MFA_VERIFY(loadResult == LoadResult::Success && imageInfo != nullptr))
+        if (MFA_VERIFY(loadResult == LoadResult::Success && imageData != nullptr))
         {
-
-            MFA_DEFER{
-                Unload(imageInfo);
-            };
-
-            result->initForWrite(
-                imageInfo->format,
-                imageInfo->sliceCount,
-                imageInfo->depth,
-                Memory::Alloc(imageInfo->totalImageSize)
+            texture->initForWrite(
+                imageData->format,
+                imageData->sliceCount,
+                imageData->depth,
+                Memory::Alloc(imageData->totalImageSize)
             );
 
-            auto width = imageInfo->width;
-            auto height = imageInfo->height;
-            auto depth = imageInfo->depth;
+            auto width = imageData->width;
+            auto height = imageData->height;
+            auto depth = imageData->depth;
 
-            for (auto i = 0u; i < imageInfo->mipmapCount; ++i)
+            for (auto i = 0u; i < imageData->mipmapCount; ++i)
             {
                 MFA_ASSERT(width >= 1);
                 MFA_ASSERT(height >= 1);
                 MFA_ASSERT(depth >= 1);
 
-                auto const mipBlob = GetMipBlob(imageInfo, i);
+                auto const mipBlob = GetMipBlob(imageData.get(), i);
                 if (!MFA_VERIFY(mipBlob.ptr != nullptr && mipBlob.len > 0))
                 {
                     return nullptr;
                 }
 
-                result->addMipmap(
+                texture->addMipmap(
                     AS::Texture::Dimensions{
                         .width = static_cast<uint32_t>(width),
                         .height = static_cast<uint32_t>(height),
@@ -230,7 +225,7 @@ namespace MFA::Importer
                 depth = Math::Max<uint16_t>(depth / 2, 1);
             }
         }
-        return result;
+        return texture;
     }
 
     //-------------------------------------------------------------------------------------------------
