@@ -6,7 +6,7 @@
 const float PL_ShadowBias = 0.05;
 
 const int PL_ShadowSamplesCount = 20;
-const float PL_ShadowPerSample = 1.0f / float(PL_ShadowSamplesCount);
+const float PL_ShadowPerSample = 0.05;//1.0f / float(PL_ShadowSamplesCount);
 const float3 PL_SampleOffsetDirections[20] = {
     float3(1,  1,  1),
     float3(1,  -1,  1),
@@ -29,15 +29,6 @@ const float3 PL_SampleOffsetDirections[20] = {
     float3(0,  -1,  -1),
     float3(0,  1,  -1)
 };
-
-// CAMERA_BUFFER(PL_cameraBuffer)
-// ConstantBuffer <CameraData> PL_cameraBuffer: register(b0, space0);
-
-// POINT_LIGHT_SHADOW_MAP(PL_shadowMap)
-// TextureCubeArray PL_shadowMap : register(t5, space0);
-
-// TEXTURE_SAMPLER(PL_textureSampler)
-// sampler PL_textureSampler : register(s3, space0);
 
 // Normalized light vector will cause incorrect sampling!
 float computePointLightShadow(
