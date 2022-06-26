@@ -11,6 +11,7 @@
 #include "engine/job_system/JobSystem.hpp"
 #include "geometry/HitRecord.hpp"
 #include "material/diffuse/Diffuse.hpp"
+#include "material/metal/Metal.hpp"
 
 #include "glm/glm.hpp"
 
@@ -81,8 +82,9 @@ void RayTracingWeekendApplication::run() {
     MFA_LOG_INFO("Starting to generate image");
     
     auto redDiffMat = std::make_shared<Diffuse>(glm::vec3 {0.7f, 0.0f, 0.0f});
-
     auto blueDiffMat = std::make_shared<Diffuse>(glm::vec3 {0.0f, 0.0f, 0.7f});
+    auto metal1 = std::make_shared<Metal>(glm::vec3 {0.8f, 0.8f, 0.8f}, 0.1f);
+    auto metal2 = std::make_shared<Metal>(glm::vec3 {0.8f, 0.6f, 0.2f}, 0.5f);
 
     mGeometries.emplace_back(std::make_shared<Sphere>(
         glm::vec3{0.0f, 0.0f, -FocalLength},
@@ -94,6 +96,18 @@ void RayTracingWeekendApplication::run() {
         glm::vec3{0.0f, -100.5f, -FocalLength},
         100.0f,
         blueDiffMat
+    ));
+
+    mGeometries.emplace_back(std::make_shared<Sphere>(
+        glm::vec3{-1.0f, 0.0f, -FocalLength},
+        0.5f,
+        metal1
+    ));
+
+    mGeometries.emplace_back(std::make_shared<Sphere>(
+        glm::vec3{1.0f, 0.0f, -FocalLength},
+        0.5f,
+        metal2
     ));
 
     for (int i = 0; i < ImageWidth; ++i) {

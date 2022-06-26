@@ -475,6 +475,8 @@ list(APPEND RAY_TRACING_SOURCES
     "applications/ray_tracing_weekend/material/Material.cpp"
     "applications/ray_tracing_weekend/material/diffuse/Diffuse.hpp"
     "applications/ray_tracing_weekend/material/diffuse/Diffuse.cpp"
+    "applications/ray_tracing_weekend/material/metal/Metal.hpp"
+    "applications/ray_tracing_weekend/material/metal/Metal.cpp"
 )
 
 #-----------------------------------------------------------------------
