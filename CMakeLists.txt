@@ -386,6 +386,57 @@ target_include_directories(
 )
 
 #-----------------------------------------------------------------------
+# JobSystem
+#-----------------------------------------------------------------------
+
+set(JOB_SYSTEM_SOURCES)
+
+list(
+    APPEND JOB_SYSTEM_SOURCES
+    "src/engine/job_system/ThreadPool.hpp"
+    "src/engine/job_system/ThreadPool.cpp"
+    "src/engine/job_system/ThreadSafeQueue.hpp"
+    "src/engine/job_system/JobSystem.hpp"
+    "src/engine/job_system/JobSystem.cpp"
+    "src/engine/job_system/JobSystemTypes.hpp"
+    "src/engine/job_system/ScopeLock.hpp"
+    "src/engine/job_system/ScopeLock.cpp"
+    "src/engine/job_system/TaskTracker.hpp"
+    "src/engine/job_system/TaskTracker.cpp"
+)
+
+add_library("JobSystem"
+    ${JOB_SYSTEM_SOURCES}
+)
+
+target_include_directories(
+    "JobSystem" PUBLIC
+    ${COMMON_INCLUDE_DIRECTORIES}
+)
+
+#-----------------------------------------------------------------------
+# Physics
+#-----------------------------------------------------------------------
+
+set(PHYSICS_SOURCES)
+
+list(
+    APPEND PHYSICS_SOURCES
+    "src/engine/physics/PhysicsTypes.hpp"
+    "src/engine/physics/PhysicsTypes.cpp"
+    "src/engine/physics/Physics.hpp"
+    "src/engine/physics/Physics.cpp"
+)
+
+add_library("Physics"
+    ${PHYSICS_SOURCES}
+)
+
+target_include_directories(
+    "Physics" PUBLIC
+    ${COMMON_INCLUDE_DIRECTORIES}
+)
+#-----------------------------------------------------------------------
 # Tools
 #-----------------------------------------------------------------------
 
@@ -575,17 +626,44 @@ if (WINDOWS)
     set(link_to_target_directories)
     set(link_to_target_sources)
     function(link_to_target executable_name)
+        message(STATUS "===========================================")    
         message(STATUS "Linking dependancies to ${executable_name} ")
+        message(STATUS "===========================================")
+
         add_executable(${executable_name} ${link_to_target_sources})
-        add_dependencies(${executable_name} "Tools" "Bedrock" "Renderer" "AssetSystem" "EntitySystem" "Engine" "Libs")
-        target_link_libraries(${executable_name} ${COMPILED_LIBS} "Tools" "Bedrock" "Renderer" "AssetSystem" "EntitySystem" "Engine" "Libs")
+        
+        add_dependencies(${executable_name} "Tools" "Bedrock" "Renderer" "AssetSystem" "EntitySystem" "Engine" "Libs" "JobSystem" "Physics")
+        
+        target_link_libraries(${executable_name} ${COMPILED_LIBS} "Tools" "Bedrock" "Renderer" "AssetSystem" "EntitySystem" "Engine" "Libs" "JobSystem" "Physics")
+        
         target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
+        
         add_custom_command(
             TARGET ${executable_name} POST_BUILD                # Adds a post-build event to MyTest
             COMMAND ${CMAKE_COMMAND} -E copy_if_different       # which executes "cmake - E copy_if_different..."
-            ${DLLS}                                             # <--this is in-file
-            ${CMAKE_BINARY_DIR}
+            ${DLLS_RELEASE}                                     # <--this is in-file
+            "${CMAKE_BINARY_DIR}/Release"
         )
+
+        add_custom_command(
+            TARGET ${executable_name} POST_BUILD                # Adds a post-build event to MyTest
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different       # which executes "cmake - E copy_if_different..."
+            ${DLLS_DEBUG}                                       # <--this is in-file
+            "${CMAKE_BINARY_DIR}/Debug"
+        )
+
+        foreach (_lib ${PHYSX_LIBS})
+            message(STATUS "Linking debug library at ${PHYSX_LIBS_DEBUG_PATH}/${_lib}")
+            target_link_libraries(${executable_name} debug "${PHYSX_LIBS_DEBUG_PATH}/${_lib}")
+        endforeach()
+
+        foreach (_lib ${PHYSX_LIBS})
+            message(STATUS "Linking release library at ${PHYSX_LIBS_RELEASE_PATH}/${_lib}")
+            target_link_libraries(${executable_name} optimized "${PHYSX_LIBS_RELEASE_PATH}/${_lib}")
+        endforeach()
+
+        message(STATUS "===========================================")
+
     endfunction()
 
     message(STATUS "Building for windows")
@@ -609,6 +687,22 @@ if (WINDOWS)
         "${CMAKE_SOURCE_DIR}/libs/win/SDL2main.lib"
     )
 
+    set (PHYSX_LIBS_DEBUG_PATH "${CMAKE_SOURCE_DIR}/libs/win/physx/debug-libs")
+
+    set (PHYSX_LIBS_RELEASE_PATH "${CMAKE_SOURCE_DIR}/libs/win/physx/release-libs")
+
+    set(PHYSX_LIBS
+        "PhysX_64.lib"
+        "PhysXCommon_64.lib"
+        "PhysXFoundation_64.lib"
+        "PhysXExtensions_static_64.lib"
+        "PhysXCooking_64.lib"
+        "PhysXPvdSDK_static_64.lib"
+        "PhysXTask_static_64.lib"
+        "PhysXVehicle_static_64.lib"
+        "PhysXCharacterKinematic_static_64.lib"
+    )
+
     # file(
     #     GLOB ASAN
     #     "${CMAKE_SOURCE_DIR}/libs/win/clang_rt.asan_dynamic-x86_64.lib"
@@ -622,12 +716,23 @@ if (WINDOWS)
         # ${ASAN}
     )
 
-    file(
-        GLOB DLLS
+    file (GLOB DLLS_COMMON
         "${CMAKE_SOURCE_DIR}/libs/win/SDL2.dll"
-        "${CMAKE_SOURCE_DIR}/libs/win/physx.win.x86_64.vc142.mt/PhysXDevice64.dll"
-        "${CMAKE_SOURCE_DIR}/libs/win/physx.win.x86_64.vc142.mt/PhysXGpu_64.dll"
         # "${CMAKE_SOURCE_DIR}/libs/win/clang_rt.asan_dynamic-x86_64.dll"
+    )
+
+    file(GLOB DLLS_DEBUG
+        ${DLLS_COMMON}
+        "${PHYSX_LIBS_DEBUG_PATH}/PhysX_64.dll"
+        "${PHYSX_LIBS_DEBUG_PATH}/PhysXFoundation_64.dll"
+        "${PHYSX_LIBS_DEBUG_PATH}/PhysXCommon_64.dll"
+    )
+
+    file(GLOB DLLS_RELEASE
+        ${DLLS_COMMON}
+        "${PHYSX_LIBS_RELEASE_PATH}/PhysX_64.dll"
+        "${PHYSX_LIBS_RELEASE_PATH}/PhysXFoundation_64.dll"
+        "${PHYSX_LIBS_RELEASE_PATH}/PhysXCommon_64.dll"
     )
 
     # Techdemo executable
@@ -699,8 +804,8 @@ elseif(LINUX)
     function(link_to_target executable_name)
         message(STATUS "Linking dependancies to ${executable_name} ")
         add_executable(${executable_name} ${link_to_target_sources})
-        add_dependencies(${executable_name}  "Renderer" "EntitySystem" "Engine" "Tools" "AssetSystem" "Bedrock" "Libs")
-        target_link_libraries(${executable_name} "Renderer" "EntitySystem" "Engine" "Tools" "AssetSystem" "Bedrock" "Libs")
+        add_dependencies(${executable_name}  "Renderer" "EntitySystem" "Engine" "Tools" "AssetSystem" "Bedrock" "Libs" "JobSystem" "Physics")
+        target_link_libraries(${executable_name} "Renderer" "EntitySystem" "Engine" "Tools" "AssetSystem" "Bedrock" "Libs" "JobSystem" "Physics")
         target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/linux/sdl/libSDL2.a")
         target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/linux/sdl/libSDL2main.a")
         target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/linux/libvulkan.so.1.3.204")
@@ -782,13 +887,13 @@ elseif(MACOSX)
     function(link_to_target executable_name)
         message(STATUS "Linking dependancies to ${executable_name} ")
         add_executable(${executable_name} ${link_to_target_sources})
-        add_dependencies(${executable_name} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "AssetSystem" "Libs")
+        add_dependencies(${executable_name} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "AssetSystem" "Libs" "JobSystem" "Physics")
         target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.3.211.dylib")
         target_link_libraries(${executable_name}
             "-framework CoreGraphics"
             "-framework Foundation"
         )
-        target_link_libraries(${executable_name} SDL2 "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "AssetSystem" "Libs")
+        target_link_libraries(${executable_name} SDL2 "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "AssetSystem" "Libs" "JobSystem" "Physics")
         target_link_directories(${executable_name} PUBLIC "${CMAKE_SOURCE_DIR}/libs/mac/sdl/")
         target_include_directories(${executable_name} PUBLIC "${CMAKE_SOURCE_DIR}/libs/mac/sdl/")
         target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
@@ -926,9 +1031,9 @@ elseif(IPHONE)
 
     add_executable(${TECHDEMO} MACOSX_BUNDLE ${IPHONE_SOURCE})
 
-    add_dependencies(${TECHDEMO} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "AssetSystem" "Libs")
+    add_dependencies(${TECHDEMO} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "AssetSystem" "Libs" "JobSystem" "Physics")
 
-    target_link_libraries(${TECHDEMO} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "AssetSystem" "Libs")
+    target_link_libraries(${TECHDEMO} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "AssetSystem" "Libs" "JobSystem" "Physics")
 
     # TODO I think we should use .dylib instead
     target_link_libraries(${TECHDEMO}
@@ -985,6 +1090,8 @@ elseif(ANDROID)
         ${TECHDEMO} SHARED
         ${ANDROID_SOURCES}
         ${ENGINE_SOURCES}
+        ${JOB_SYSTEM_SOURCES}
+        ${PHYSICS_SOURCES}
         ${LIBS_SOURCES}
         ${TOOLS_SOURCES}
         ${SCENES_SOURCES}

@@ -16,9 +16,6 @@
 
 namespace MFA::InputManager {
 
-namespace RF = RenderFrontend;
-namespace UI = UI_System;
-
 #ifdef __ANDROID__
 inline static constexpr float TouchEndDelayInSec = 10.0f / 1000.0f;
 #endif

@@ -11,6 +11,7 @@
 #include "libs/stb_image/stb_image_resize.h"
 #include "libs/tiny_ktx/tinyktx.h"
 
+// TODO: Separate this file into multiple ones
 namespace MFA::Utils::UncompressedTexture
 {
 
