@@ -14,14 +14,14 @@ struct PSIn {
     float2 metallicRoughnessTexCoord : TEXCOORD1;
     
     float2 normalTexCoord: TEXCOORD2;
-    float3 worldNormal : NORMAL0;
-    float3 worldTangent: TEXCOORD3;
-    float3 worldBiTangent : TEXCOORD4;
+    float3 worldNormal;// : NORMAL0;
+    float3 worldTangent;//: TEXCOORD3;
+    float3 worldBiTangent;// : TEXCOORD4;
 
-    float2 emissiveTexCoord: TEXCOORD1;
-    float2 occlusionTexCoord: TEXCOORD2;
+    float2 emissiveTexCoord: TEXCOORD3;
+    float2 occlusionTexCoord: TEXCOORD4;
 
-    float4 directionLightPosition[3];
+    float3 directionLightPosition[3];
 };
 
 struct PSOut {
@@ -191,13 +191,16 @@ float3 calculateNormal(PSIn input, int normalTextureIndex)
 
 // TODO Strength in ambient occulusion and Scale for normals
 PSOut main(PSIn input) {
+
+    PSOut output;
+    
     PrimitiveInfo primitiveInfo = primitiveInfoBuffer.primitiveInfo[pushConsts.primitiveIndex];
 
     // TODO Why do we have pow here ?
     float4 baseColor = primitiveInfo.baseColorTextureIndex >= 0
         ? pow(textures[primitiveInfo.baseColorTextureIndex].Sample(textureSampler, input.baseColorTexCoord).rgba, 2.2f) 
         : primitiveInfo.baseColorFactor.rgba;
-
+    
     // Alpha mask
     if (primitiveInfo.alphaMode == 1 && baseColor.a < primitiveInfo.alphaCutoff) {
         discard;
@@ -327,7 +330,6 @@ PSOut main(PSIn input) {
     // Gamma correct
     color = pow(color, float3(1.0f/2.2f)); 
 
-    PSOut output;
     output.color = float4(color, baseColor.a);
 	return output;
 
