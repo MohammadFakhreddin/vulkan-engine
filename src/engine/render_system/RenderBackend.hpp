@@ -33,6 +33,8 @@ namespace MFA::RenderBackend
 
     using ScreenWidth = Platforms::ScreenSize;
     using ScreenHeight = Platforms::ScreenSize;
+    
+    void VK_Check(VkResult const result);
 
     // Vulkan functions
 #ifdef __DESKTOP__

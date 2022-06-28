@@ -18,6 +18,10 @@
 #error Os is not supported
 #endif
 
+#ifdef __PLATFORM_MAC__
+#include "vulkan/vk_mvk_moltenvk.h"
+#endif
+
 #include "libs/imgui/imgui.h"
 
 #include <string>
@@ -209,6 +213,16 @@ namespace MFA::RenderFrontend
 #endif
         MFA_ASSERT(state->window != nullptr);
 
+        {
+#ifdef __PLATFORM_MAC__
+            MVKConfiguration mvkConfig {};
+            size_t mvkConfigSize = sizeof(mvkConfig);
+            RB::VK_Check(vkGetMoltenVKConfigurationMVK(nullptr, &mvkConfig, &mvkConfigSize));
+            mvkConfig.logLevel = MVK_CONFIG_LOG_LEVEL_DEBUG;
+            RB::VK_Check(vkSetMoltenVKConfigurationMVK(nullptr, &mvkConfig, &mvkConfigSize));
+#endif
+        }
+
 #ifdef __DESKTOP__
         state->vk_instance = RB::CreateInstance(
             state->application_name.c_str(),
@@ -334,7 +348,7 @@ namespace MFA::RenderFrontend
         state->depthFormat = RB::FindDepthFormat(state->physicalDevice);
 
         state->displayRenderPass.Init();
-
+        
         return true;
     }
 

@@ -33,7 +33,7 @@ namespace MFA::RenderBackend
 
     //-------------------------------------------------------------------------------------------------
 
-    static void VK_Check(VkResult const result)
+    void VK_Check(VkResult const result)
     {
         if (result != VK_SUCCESS)
         {

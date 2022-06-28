@@ -37,7 +37,7 @@ void TechDemoApplication::internalInit()
         return std::make_shared<ParticleFireScene>();
     });
     
-    SceneManager::SetActiveScene("ThirdPersonDemoScene");
+    SceneManager::SetActiveScene("GLTFMeshViewerScene");
 
     UI::Register([]()->void {OnUI();});
 

@@ -16,10 +16,9 @@ struct UnSkinnedVertex {
 struct SkinnedVertex // Per variant
 {
     float4 worldPosition;
-    
+        
     float3 worldNormal;
-    float placeholder1;
-    
+    float placeholder1;    
     float3 worldTangent;
     float placeholder2;
 

@@ -54,7 +54,7 @@ if(WINDOWS)
     add_definitions (-D_CRT_SECURE_NO_WARNINGS)
 else()
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2 -OI")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
     # TODO
     # add_definitions(-Werror)
 endif()
@@ -889,6 +889,7 @@ elseif(MACOSX)
         add_executable(${executable_name} ${link_to_target_sources})
         add_dependencies(${executable_name} "Tools" "Bedrock" "Renderer" "EntitySystem" "Engine" "AssetSystem" "Libs" "JobSystem" "Physics")
         target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/mac/libvulkan.1.3.211.dylib")
+        target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/mac/libMoltenVK.dylib")
         target_link_libraries(${executable_name}
             "-framework CoreGraphics"
             "-framework Foundation"
