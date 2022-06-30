@@ -426,6 +426,10 @@ list(
     "src/engine/physics/PhysicsTypes.cpp"
     "src/engine/physics/Physics.hpp"
     "src/engine/physics/Physics.cpp"
+    "src/engine/physics/LayerMask.hpp"
+    "src/engine/physics/LayerMask.cpp"
+    "src/engine/physics/LayerMaskDB.hpp"
+    "src/engine/physics/LayerMaskDB.cpp"
 )
 
 add_library("Physics"

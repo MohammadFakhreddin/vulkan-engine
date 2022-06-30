@@ -42,7 +42,21 @@ namespace MFA::Physics
         PxPairFlags& pairFlags, const void* constantBlock, PxU32 constantBlockSize
     )
     {
-	    // all initial and persisting reports for everything, with per-point data
+        // Checking if layers should be ignored
+        auto const layerMaskA = filterData0.word0;
+        auto const layerA = filterData0.word1;
+
+        auto const layerMaskB = filterData1.word0;
+        auto const layerB = filterData1.word1;
+
+        auto const aCollision = layerMaskA & layerB;
+        auto const bCollision = layerMaskB & layerA;
+        if (aCollision == 0 || bCollision == 0)
+        {
+            return PxFilterFlag::eSUPPRESS;
+        }
+
+        // all initial and persisting reports for everything, with per-point data
 	    pairFlags = PxPairFlag::eSOLVE_CONTACT | PxPairFlag::eDETECT_DISCRETE_CONTACT | PxPairFlag::eTRIGGER_DEFAULT;
 	    return PxFilterFlag::eDEFAULT;
     }
@@ -99,7 +113,7 @@ namespace MFA::Physics
             state->foundation->Ref(),
             PxTolerancesScale(),
             true,
-            state->pvd->Ptr()
+            state->pvd != nullptr ? state->pvd->Ptr() : nullptr
         ));
         MFA_ASSERT(state->physics != nullptr);
 

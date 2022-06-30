@@ -1,103 +1,54 @@
-#include "LayerMask.h"
+#include "LayerMask.hpp"
 
-#include "Core/NsoAssert.h"
 
-LayerMaskDB * instance = nullptr;
-
-//=================================================================================================
-
-LayerMaskDB::LayerMaskDB()
+namespace MFA::Physics
 {
-    instance = this;
-    for (uint8_t i = 0; i < LayerCount; ++i)
+
+    //=================================================================================================
+
+    LayerMask::LayerMask() = default;
+
+    //=================================================================================================
+
+    LayerMask::LayerMask(uint32_t const value)
+        : mValue(value)
+    {}
+
+    //=================================================================================================
+
+    bool LayerMask::operator==(LayerMask const & other) const noexcept
     {
-        mLayerInfos[i].mask = 1 << i;
-        mLayerInfos[i].index = i;
+        return IsEqual(other);
     }
-}
+    
+    //=================================================================================================
 
-bool LayerMaskDB::Create(char const * layerName, const uint8_t layerNumber)
-{
-    bool success = false;
-    if (NSO_VERIFY(
-        layerName != nullptr &&
-        strlen(layerName) > 0 &&
-        instance->mNameToLayerIndexMap.find(layerName) == instance->mNameToLayerIndexMap.end() &&
-        layerNumber < 32
-    ))
+    void LayerMask::operator|=(LayerMask const & other) noexcept
     {
-        auto & layerInfo = instance->mLayerInfos[layerNumber];
-        if (NSO_VERIFY(layerInfo.isUsed == false))
-        {
-            layerInfo.isUsed = true;
-            layerInfo.name = layerName;
-            success = true;
-            instance->mNameToLayerIndexMap[layerName] = layerInfo.index;
-        }
-    } 
-    return success;
-}
-
-//=================================================================================================
-
-LayerMask LayerMaskDB::GetMask(std::initializer_list<const char *> maskNames)
-{
-    LayerMask mask {};
-    for (const auto * maskName : maskNames)
-    {
-        mask.mValue |= getMask(maskName);
+        mValue |= other.mValue;
     }
-    return mask;
-}
 
-//=================================================================================================
+    //=================================================================================================
 
-LayerMask LayerMaskDB::GetMask(const char * layerName)
-{
-    LayerMask mask {};
-    const auto findResult = instance->mNameToLayerIndexMap.find(layerName);
-    if (NSO_VERIFY(findResult != instance->mNameToLayerIndexMap.end()))
+    uint32_t LayerMask::GetValue() const noexcept
     {
-        const auto & layerInfo = instance->mLayerInfos[findResult->second];
-        mask.mValue = layerInfo.mask;
-        mask.mLayerIndex = layerInfo.index;
+        return mValue;
     }
-    return mask;
-}
 
-//=================================================================================================
+    //=================================================================================================
 
-int8_t LayerMaskDB::NameToLayer(const char * layerName)
-{
-    int8_t layerIndex = -1;
-    const auto findResult = instance->mNameToLayerIndexMap.find(layerName);
-    if (NSO_VERIFY(findResult != instance->mNameToLayerIndexMap.end()))
+    bool LayerMask::HasCollision(const LayerMask & other) const noexcept
     {
-        layerIndex = findResult->second;
+        return (mValue & other.mValue) > 0;
     }
-    return layerIndex;
-}
 
-//=================================================================================================
+    //=================================================================================================
 
-std::string LayerMaskDB::LayerToName(const uint8_t layerIndex)
-{
-    if (NSO_VERIFY(layerIndex >= 0 && layerIndex < LayerCount))
+    bool LayerMask::IsEqual(const LayerMask & other) const noexcept
     {
-        return instance->mLayerInfos[layerIndex].name;
+        return mValue == other.mValue;
     }
-    return "";
-}
 
-//=================================================================================================
+    //=================================================================================================
 
-uint32_t LayerMaskDB::getMask(char const * layerName)
-{
-    uint32_t maskValue = 0;
-    const auto findResult = instance->mNameToLayerIndexMap.find(layerName);
-    if (NSO_VERIFY(findResult != instance->mNameToLayerIndexMap.end()))
-    {
-        maskValue = instance->mLayerInfos[findResult->second].mask;
-    }
-    return maskValue;
 }
