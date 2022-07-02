@@ -434,6 +434,10 @@ namespace MFA::RenderFrontend
             state->logicalDevice.device,
             state->graphicFences
         );
+        RB::DestroyFence(
+            state->logicalDevice.device,
+            state->computeFences
+        );
 
         RB::DestroyLogicalDevice(state->logicalDevice);
 
