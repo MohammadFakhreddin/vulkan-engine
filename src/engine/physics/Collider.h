@@ -19,7 +19,7 @@ class ICollisionListener
 public:
     virtual void onCollision(const Collision & collision) = 0;
 };
-
+// TODO: Fill collider component from this class
 // Common base class for all collider components.
 class Collider : public IEntityComponent
 {
@@ -34,7 +34,7 @@ public:
     void ProcessEvent(const EntityEvent &event) override final;
 
     /*
-    * 
+    * // We have to use signal class here
     IsTrigger()
     OnCollisionEnter(Collision collision)
     OnCollisionExit(Collision collision)
@@ -108,6 +108,7 @@ protected:
     // TODO use center
     glm::vec3 mCenter {};                               // The center of the sphere in the object's local space.
     
+
 private:
 
     void baseInit();
