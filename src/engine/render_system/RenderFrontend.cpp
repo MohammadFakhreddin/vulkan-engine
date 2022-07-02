@@ -54,7 +54,8 @@ namespace MFA::RenderFrontend
         VkPhysicalDeviceProperties physicalDeviceProperties{};
         VkSampleCountFlagBits maxSampleCount{};
 
-        std::vector<VkFence> fences {};
+        std::vector<VkFence> graphicFences {};
+        std::vector<VkFence> computeFences {};
 
         // Graphic
         uint32_t graphicQueueFamily = 0;
@@ -336,7 +337,11 @@ namespace MFA::RenderFrontend
             maxFramePerFlight
         );
         // Presentation
-        state->fences = RB::CreateFence(
+        state->graphicFences = RB::CreateFence(
+            state->logicalDevice.device,
+            maxFramePerFlight
+        );
+        state->computeFences = RB::CreateFence(
             state->logicalDevice.device,
             maxFramePerFlight
         );
@@ -427,7 +432,7 @@ namespace MFA::RenderFrontend
         );
         RB::DestroyFence(
             state->logicalDevice.device,
-            state->fences
+            state->graphicFences
         );
 
         RB::DestroyLogicalDevice(state->logicalDevice);
@@ -808,7 +813,7 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     std::shared_ptr<RT::GpuTexture> CreateTexture(AS::Texture const & texture)
-    {
+    {   // TODO: We might be able to batch command buffers together
         auto gpuTexture = RB::CreateTexture(
             texture,
             state->logicalDevice.device,
@@ -1655,6 +1660,18 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
+    void DestroyComputeCommand(VkCommandBuffer commandBuffer)
+    {
+        RB::DestroyCommandBuffers(
+            state->logicalDevice.device,
+            state->computeCommandPool,
+            1,
+            &commandBuffer
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     uint32_t GetPresentQueueFamily()
     {
         return state->presentQueueFamily;
@@ -1739,17 +1756,33 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    void SubmitQueue(
-        RT::CommandRecordState const & recordState,
+    void SubmitGraphicQueue(
         uint32_t const submitCount,
-        const VkSubmitInfo * submitInfos
+        const VkSubmitInfo * submitInfos,
+        VkFence fence
     )
     {
         RB::SubmitQueues(
             state->graphicQueue,
             submitCount,
             submitInfos,
-            GetFence(recordState)
+            fence
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void SubmitComputeQueue(
+        uint32_t const submitCount,
+        const VkSubmitInfo * submitInfos,
+        VkFence fence
+    ) 
+    {
+        RB::SubmitQueues(
+            state->graphicQueue,
+            submitCount,
+            submitInfos,
+            fence
         );
     }
 
@@ -1758,19 +1791,19 @@ namespace MFA::RenderFrontend
     void PresentQueue(
         RT::CommandRecordState const & recordState,
         uint32_t waitSemaphoresCount,
-        const VkSemaphore * waitSemaphores
+        const VkSemaphore * waitSemaphores  // TODO: Extra parameters
     )
     {
         // Present drawn image
         // Note: semaphore here is not strictly necessary, because commands are processed in submission order within a single queue
         VkPresentInfoKHR presentInfo = {};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-        presentInfo.waitSemaphoreCount = waitSemaphoresCount;
-        presentInfo.pWaitSemaphores = waitSemaphores;
+//        presentInfo.waitSemaphoreCount = waitSemaphoresCount;
+//        presentInfo.pWaitSemaphores = waitSemaphores;
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = &state->displayRenderPass.GetSwapChainImages().swapChain;
         presentInfo.pImageIndices = &recordState.imageIndex;
-
+        
         // TODO Move to renderBackend
         auto const res = vkQueuePresentKHR(state->presentQueue, &presentInfo);
         if (res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR || state->windowResized == true)
@@ -1795,20 +1828,6 @@ namespace MFA::RenderFrontend
     VkSampleCountFlagBits GetMaxSamplesCount()
     {
         return state->maxSampleCount;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void WaitForGraphicQueue()
-    {
-        RB::WaitForQueue(state->graphicQueue);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void WaitForPresentQueue()
-    {
-        RB::WaitForQueue(state->presentQueue);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -1903,9 +1922,13 @@ namespace MFA::RenderFrontend
             state->currentFrame = 0;
         }
 
-        auto fence = GetFence(recordState);
-        WaitForFence(fence);
-        ResetFence(fence);
+        auto graphicFence = GetGraphicFence(recordState);
+        WaitForFence(graphicFence);
+        ResetFence(graphicFence);
+        
+        auto computeFence = GetComputeFence(recordState);
+        WaitForFence(computeFence);
+        ResetFence(computeFence);
 
         // We ignore failed acquire of image because a resize will be triggered at end of pass
         AcquireNextImage(
@@ -1925,9 +1948,16 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    VkFence GetFence(RT::CommandRecordState const & recordState)
+    VkFence GetGraphicFence(RT::CommandRecordState const & recordState)
     {
-        return state->fences[recordState.frameIndex];
+        return state->graphicFences[recordState.frameIndex];
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+    
+    VkFence GetComputeFence(RT::CommandRecordState const & recordState)
+    {
+        return state->computeFences[recordState.frameIndex];
     }
 
     //-------------------------------------------------------------------------------------------------
