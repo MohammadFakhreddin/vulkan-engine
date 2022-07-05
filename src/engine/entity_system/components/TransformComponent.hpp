@@ -4,6 +4,7 @@
 #include "engine/BedrockSignal.hpp"
 
 #include <glm/mat4x4.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 namespace MFA
 {
@@ -51,50 +52,57 @@ namespace MFA
         void GetLocalPosition(float outPosition[3]) const;
 
         [[nodiscard]]
-        glm::vec4 const & getWorldPosition() const;
+        glm::vec4 const & GetWorldPosition() const;
 
-        void GetRotation(float outRotation[3]) const;
+        void GetLocalRotation(float outRotation[3]) const;
 
-        void GetScale(float outScale[3]) const;
+        void GetLocalScale(float outScale[3]) const;
 
         [[nodiscard]]
         glm::vec3 const & GetLocalPosition() const;
 
         [[nodiscard]]
-        glm::vec3 const & GetRotation() const;
+        glm::vec3 const & GetLocalRotation() const;
 
         [[nodiscard]]
-        glm::vec3 const & GetScale() const;
+        glm::quat const & GetWorldRotation() const;
+
+        [[nodiscard]]
+        glm::vec3 const & GetLocalScale() const;
 
         SignalId RegisterChangeListener(std::function<void()> const & listener);
 
         bool UnRegisterChangeListener(SignalId listenerId);
 
-        void onUI() override;
+        void OnUI() override;
 
-        void clone(Entity * entity) const override;
+        void Clone(Entity * entity) const override;
 
-        void serialize(nlohmann::json & jsonObject) const override;
+        void Serialize(nlohmann::json & jsonObject) const override;
 
-        void deserialize(nlohmann::json const & jsonObject) override;
+        void Deserialize(nlohmann::json const & jsonObject) override;
 
     private:
 
-        void computeTransform();
+        void ComputeTransform();
 
         Signal<> mTransformChangeSignal {};
 
         glm::vec3 mLocalPosition { 0.0f, 0.0f, 0.0f };
-        glm::vec3 mRotation { 0.0f, 0.0f, 0.0f };          // In euler angle // TODO Use Quaternion instead! Soon! ToQuat is heavy
-        glm::vec3 mScale { 1.0f, 1.0f, 1.0f };
+        glm::vec3 mLocalRotationAngle { 0.0f, 0.0f, 0.0f };          // In euler angle // TODO Use Quaternion instead! Soon! ToQuat is heavy
+        glm::quat mLocalRotationQuat {};
+        glm::vec3 mLocalScale { 1.0f, 1.0f, 1.0f };
 
         glm::vec4 mWorldPosition {};
+        glm::quat mWorldRotation {};
 
-        glm::mat4 mTransform;
+        glm::mat4 mTransform {};
 
         std::weak_ptr<TransformComponent> mParentTransform {};
 
         SignalId mParentTransformChangeListenerId {};
     };
+
+    using Transform = TransformComponent;
 
 }

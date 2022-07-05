@@ -64,7 +64,7 @@ glm::vec4 const & MFA::SphereBoundingVolumeComponent::GetWorldPosition() const
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::SphereBoundingVolumeComponent::clone(Entity * entity) const
+void MFA::SphereBoundingVolumeComponent::Clone(Entity * entity) const
 {
     MFA_ASSERT(entity != nullptr);
     entity->AddComponent<SphereBoundingVolumeComponent>(mRadius, OcclusionEnabled());
@@ -72,14 +72,14 @@ void MFA::SphereBoundingVolumeComponent::clone(Entity * entity) const
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::SphereBoundingVolumeComponent::serialize(nlohmann::json & jsonObject) const
+void MFA::SphereBoundingVolumeComponent::Serialize(nlohmann::json & jsonObject) const
 {
     jsonObject["radius"] = mRadius;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::SphereBoundingVolumeComponent::deserialize(nlohmann::json const & jsonObject)
+void MFA::SphereBoundingVolumeComponent::Deserialize(nlohmann::json const & jsonObject)
 {
     MFA_ASSERT(jsonObject.contains("radius"));
     mRadius = jsonObject.value("radius", 0.0f);

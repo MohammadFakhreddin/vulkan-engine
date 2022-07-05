@@ -1,5 +1,6 @@
 #pragma once
 
+#include <foundation/PxVec3.h>
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -58,7 +59,10 @@ namespace MFA::Matrix
 
 
     [[nodiscard]]
-    glm::quat ToQuat(float x, float y, float z);
+    glm::quat ToQuat(float xDeg, float yDeg, float zDeg);
+
+    [[nodiscard]]
+    glm::quat ToQuat(glm::vec3 const & eulerAngles);
 
     [[nodiscard]]
     glm::vec3 ToEulerAngles(glm::quat const & quaternion);
@@ -104,6 +108,25 @@ namespace MFA::Matrix
         float nearPlane,
         float farPlane
     );
+
+    // Physx (TODO: Is this the right place for this class ?)
+    void CopyCellsToPhysx(float const * cells, physx::PxVec3 & outVec3);
+
+    void CopyCellsToPhysx(float const * cells, physx::PxQuat & outQuat);
+
+    void CopyGlmToPhysx(glm::vec3 const & inVec3, physx::PxVec3 & outVec3);
+
+    void CopyGlmToPhysx(glm::quat const & inQuat, physx::PxQuat & outQuat);
+
+    physx::PxVec3 CopyGlmToPhysx(glm::vec3 const & inVec3);
+
+    physx::PxQuat CopyGlmToPhysx(glm::quat const & inQuat);
+
+    physx::PxTransform CopyGlmToPhysx(
+        glm::vec3 const & position,
+        glm::quat const & rotation
+    );
+
 
 #ifdef ENABLE_SIMD
 

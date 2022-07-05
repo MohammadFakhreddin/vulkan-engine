@@ -47,7 +47,7 @@ namespace MFA {
         [[nodiscard]]
         float GetRadius() const;
 
-        void onUI() override;
+        void OnUI() override;
         
         [[nodiscard]]
         bool IsVisible() const;
@@ -68,11 +68,11 @@ namespace MFA {
         [[nodiscard]]
         float GetQuadraticAttenuation() const;
 
-        void clone(Entity * entity) const override;
+        void Clone(Entity * entity) const override;
 
-        void serialize(nlohmann::json & jsonObject) const override;
+        void Serialize(nlohmann::json & jsonObject) const override;
 
-        void deserialize(nlohmann::json const & jsonObject) override;
+        void Deserialize(nlohmann::json const & jsonObject) override;
 
     private:
 
@@ -108,5 +108,7 @@ namespace MFA {
         int mTransformChangeListenerId = 0;
 
     };
+
+    using PointLight = PointLightComponent;
 
 }

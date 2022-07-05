@@ -28,7 +28,7 @@ namespace MFA {
 
         void Shutdown() override;
 
-        void onUI() override;
+        void OnUI() override;
 
         [[nodiscard]]
         bool IsInFrustum() const;
@@ -50,9 +50,9 @@ namespace MFA {
         [[nodiscard]]
         bool OcclusionEnabled() const;
 
-        void serialize(nlohmann::json & jsonObject) const override;
+        void Serialize(nlohmann::json & jsonObject) const override;
 
-        void deserialize(nlohmann::json const & jsonObject) override;
+        void Deserialize(nlohmann::json const & jsonObject) override;
 
     protected:
 
@@ -71,5 +71,7 @@ namespace MFA {
         std::weak_ptr<TransformComponent> mBvTransform {};
 
     };
+
+    using BoundVolume = BoundingVolumeComponent;
 
 }

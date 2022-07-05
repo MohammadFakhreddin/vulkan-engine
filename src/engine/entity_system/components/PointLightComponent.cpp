@@ -91,7 +91,7 @@ glm::vec3 MFA::PointLightComponent::GetPosition() const
 {
     if (auto const ptr = mTransformComponent.lock())
     {
-        return ptr->getWorldPosition();
+        return ptr->GetWorldPosition();
     }
     return {};
 }
@@ -105,11 +105,11 @@ float MFA::PointLightComponent::GetRadius() const
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::PointLightComponent::onUI()
+void MFA::PointLightComponent::OnUI()
 {
     if (UI::TreeNode("PointLight"))
     {
-        Component::onUI();
+        Component::OnUI();
 
         float radius = mRadius;
         UI::InputFloat("Radius", &radius);
@@ -164,7 +164,7 @@ bool MFA::PointLightComponent::IsBoundingVolumeInRange(BoundingVolumeComponent c
         return false;
     }
 
-    auto const & lightWP = transformComponent->getWorldPosition();
+    auto const & lightWP = transformComponent->GetWorldPosition();
 
     auto const & bvWP = bvComponent->GetWorldPosition();
     auto const bvRadius = bvComponent->GetRadius();
@@ -220,7 +220,7 @@ float MFA::PointLightComponent::GetQuadraticAttenuation() const
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::PointLightComponent::clone(Entity * entity) const
+void MFA::PointLightComponent::Clone(Entity * entity) const
 {
     // We do not currently support attached mesh. Maybe we should give up on it
     MFA_ASSERT(mAttachedMesh.expired() == true);
@@ -234,7 +234,7 @@ void MFA::PointLightComponent::clone(Entity * entity) const
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::PointLightComponent::serialize(nlohmann::json & jsonObject) const
+void MFA::PointLightComponent::Serialize(nlohmann::json & jsonObject) const
 {
     jsonObject["Radius"] = mRadius;
     jsonObject["MaxDistance"] = mMaxDistance;
@@ -244,7 +244,7 @@ void MFA::PointLightComponent::serialize(nlohmann::json & jsonObject) const
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::PointLightComponent::deserialize(nlohmann::json const & jsonObject)
+void MFA::PointLightComponent::Deserialize(nlohmann::json const & jsonObject)
 {
     MFA_ASSERT(jsonObject.contains("Radius"));
     mRadius = jsonObject.value("Radius", 0.0f);
@@ -296,7 +296,7 @@ void MFA::PointLightComponent::computeViewProjectionMatrices()
         return;
     }
 
-    glm::vec3 const lightWP = transformComponentPtr->getWorldPosition();
+    glm::vec3 const lightWP = transformComponentPtr->GetWorldPosition();
 
     Matrix::CopyGlmToCells(
         mShadowProjectionMatrix * glm::lookAt(

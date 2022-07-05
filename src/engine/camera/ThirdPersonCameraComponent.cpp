@@ -82,7 +82,7 @@ namespace MFA
         if (mIsTransformDirty)
         {
             if (auto const transformComponentPtr = mTransformComponent.lock()) {
-                auto const variantPosition = transformComponentPtr->getWorldPosition();
+                auto const variantPosition = transformComponentPtr->GetWorldPosition();
 
                 auto rotationMatrix = glm::identity<glm::mat4>();
                 Matrix::RotateWithEulerAngle(rotationMatrix, mEulerAngles);
@@ -116,11 +116,11 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ThirdPersonCameraComponent::onUI()
+    void ThirdPersonCameraComponent::OnUI()
     {
         if(UI::TreeNode("ThirdPersonCamera"))
         {
-            CameraComponent::onUI();
+            CameraComponent::OnUI();
             UI::TreePop();            
         }
     }

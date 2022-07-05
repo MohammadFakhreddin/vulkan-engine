@@ -2,53 +2,56 @@
 
 #include "BoundingVolumeComponent.hpp"
 
-namespace MFA {
-
-class TransformComponent;
-
-class SphereBoundingVolumeComponent final : public BoundingVolumeComponent
+namespace MFA
 {
-public:
 
-    MFA_COMPONENT_PROPS(
-        SphereBoundingVolumeComponent,
-        FamilyType::BoundingVolume,
-        EventTypes::UpdateEvent | EventTypes::InitEvent | EventTypes::ShutdownEvent
-    )
+    class TransformComponent;
 
-    explicit SphereBoundingVolumeComponent();
-    ~SphereBoundingVolumeComponent() override;
+    class SphereBoundingVolumeComponent final : public BoundingVolumeComponent
+    {
+    public:
 
-    explicit SphereBoundingVolumeComponent(float radius, bool occlusionEnabled);
-    
-    void Init() override;
+        MFA_COMPONENT_PROPS(
+            SphereBoundingVolumeComponent,
+            FamilyType::BoundingVolume,
+            EventTypes::UpdateEvent | EventTypes::InitEvent | EventTypes::ShutdownEvent
+        )
 
-    [[nodiscard]]
-    glm::vec3 const & GetExtend() const override;
+            explicit SphereBoundingVolumeComponent();
+        ~SphereBoundingVolumeComponent() override;
 
-    [[nodiscard]]
-    glm::vec3 const & GetLocalPosition() const override;
+        explicit SphereBoundingVolumeComponent(float radius, bool occlusionEnabled);
 
-    [[nodiscard]]
-    float GetRadius() const override;
+        void Init() override;
 
-    [[nodiscard]]
-    glm::vec4 const & GetWorldPosition() const override;
+        [[nodiscard]]
+        glm::vec3 const & GetExtend() const override;
 
-    void clone(Entity * entity) const override;
+        [[nodiscard]]
+        glm::vec3 const & GetLocalPosition() const override;
 
-    void serialize(nlohmann::json & jsonObject) const override;
+        [[nodiscard]]
+        float GetRadius() const override;
 
-    void deserialize(nlohmann::json const & jsonObject) override;
+        [[nodiscard]]
+        glm::vec4 const & GetWorldPosition() const override;
 
-protected:
+        void Clone(Entity * entity) const override;
 
-    bool IsInsideCameraFrustum(CameraComponent const * camera) override;
+        void Serialize(nlohmann::json & jsonObject) const override;
 
-private:
+        void Deserialize(nlohmann::json const & jsonObject) override;
 
-    float mRadius = 0.0f;
-    
-};
+    protected:
+
+        bool IsInsideCameraFrustum(CameraComponent const * camera) override;
+
+    private:
+
+        float mRadius = 0.0f;
+
+    };
+
+    using SphereBoundingVolume = SphereBoundingVolumeComponent;
 
 }

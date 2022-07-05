@@ -30,13 +30,13 @@ public:
     [[nodiscard]]
     glm::vec3 const & GetColor() const;
 
-    void onUI() override;
+    void OnUI() override;
 
-    void clone(Entity * entity) const override;
+    void Clone(Entity * entity) const override;
 
-    void serialize(nlohmann::json & jsonObject) const override;
+    void Serialize(nlohmann::json & jsonObject) const override;
 
-    void deserialize(nlohmann::json const & jsonObject) override;
+    void Deserialize(nlohmann::json const & jsonObject) override;
 
 private:
 

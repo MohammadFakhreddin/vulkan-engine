@@ -173,7 +173,7 @@ namespace MFA
                 {
                     if (component != nullptr)
                     {
-                        component->onUI();
+                        component->OnUI();
                     }
                 }
                 UI::TreePop();
@@ -224,7 +224,7 @@ namespace MFA
         {
             if (component != nullptr)
             {
-                component->clone(entity);
+                component->Clone(entity);
             }
         }
         for (auto & child : mChildEntities)
@@ -253,7 +253,7 @@ namespace MFA
                 componentJson["familyType"] = component->getFamily();
 
                 nlohmann::json componentData{};
-                component->serialize(componentData);
+                component->Serialize(componentData);
                 componentJson["data"] = componentData;
 
                 jsonObject["components"].emplace_back(componentJson);
@@ -321,7 +321,7 @@ namespace MFA
 
             if (MFA_VERIFY(component != nullptr))
             {
-                component->deserialize(rawComponentData);
+                component->Deserialize(rawComponentData);
             }
         }
 

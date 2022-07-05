@@ -24,5 +24,7 @@ namespace MFA {
         std::weak_ptr<VariantBase> mVariant {};
 
     };
+
+    using Renderer = RendererComponent;
     
 }

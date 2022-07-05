@@ -1,5 +1,18 @@
 #pragma once
 
+#include "PhysicsTypes.hpp"
+
+namespace physx
+{
+    class PxMaterial;
+    class PxGeometry;
+    class PxRigidActor;
+    class PxShape;
+    class PxTransform;
+    class PxRigidDynamic;
+    class PxRigidStatic;
+}
+
 namespace MFA::Physics// final : public IPhysicsWorld, public PxSimulationEventCallback
 {
 
@@ -8,6 +21,24 @@ namespace MFA::Physics// final : public IPhysicsWorld, public PxSimulationEventC
     void Update(float deltaTime);
 
     void Shutdown();
+
+    SharedHandle<physx::PxRigidDynamic> CreateDynamicActor(physx::PxTransform const & pxTransform);
+
+    SharedHandle<physx::PxRigidStatic> CreateStaticActor(physx::PxTransform const & pxTransform);
+
+    SharedHandle<physx::PxShape> CreateShape(
+        physx::PxRigidActor & actor,
+        physx::PxGeometry const & geometry,
+        physx::PxMaterial const & material
+    );
+
+    SharedHandle<physx::PxMaterial> CreateMaterial(
+        float staticFriction,
+        float dynamicFriction,
+        float restitution
+    );
+
+    SharedHandle<physx::PxMaterial> GetDefaultMaterial();
 
     //void Init() override;
     //void Step() override;

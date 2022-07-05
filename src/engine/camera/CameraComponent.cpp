@@ -12,9 +12,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void CameraComponent::onUI()
+    void CameraComponent::OnUI()
     {
-        Component::onUI();
+        Component::OnUI();
 
         UI::InputFloat3("EulerAngles", mEulerAngles);
         UI::InputFloat3("Position", mPosition);
@@ -92,21 +92,21 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void CameraComponent::clone(Entity * entity) const
+    void CameraComponent::Clone(Entity * entity) const
     {
         MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");   
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void CameraComponent::deserialize(nlohmann::json const & jsonObject)
+    void CameraComponent::Deserialize(nlohmann::json const & jsonObject)
     {
         MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");   
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void CameraComponent::serialize(nlohmann::json & jsonObject) const
+    void CameraComponent::Serialize(nlohmann::json & jsonObject) const
     {
         MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");   
     }

@@ -61,7 +61,7 @@ void MFA::Component::Update(float deltaTimeInSec) {}
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::Component::onUI()
+void MFA::Component::OnUI()
 {
     bool isActive = mIsActive;
     UI::Checkbox("IsActive", &isActive);

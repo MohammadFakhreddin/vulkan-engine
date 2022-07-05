@@ -99,6 +99,10 @@ public:
 
         OcclusionCulling,
 
+        Collider,
+
+        Rigidbody,
+
         Count
     };
 
@@ -125,13 +129,15 @@ public:
         return mEntity;
     }
 
-    virtual void onUI();
 
-    virtual void clone(Entity * entity) const = 0;
 
-    virtual void serialize(nlohmann::json & jsonObject) const = 0;
+    virtual void OnUI();
 
-    virtual void deserialize(nlohmann::json const & jsonObject) = 0;
+    virtual void Clone(Entity * entity) const = 0;
+
+    virtual void Serialize(nlohmann::json & jsonObject) const = 0;
+
+    virtual void Deserialize(nlohmann::json const & jsonObject) = 0;
 
     Signal<Component *, Entity *> EditorSignal {};
 

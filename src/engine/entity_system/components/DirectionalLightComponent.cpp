@@ -79,7 +79,7 @@ void MFA::DirectionalLightComponent::GetColor(float outColor[3]) const
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DirectionalLightComponent::clone(Entity * entity) const
+void MFA::DirectionalLightComponent::Clone(Entity * entity) const
 {
     MFA_ASSERT(entity != nullptr);
     entity->AddComponent<DirectionalLightComponent>();
@@ -87,12 +87,12 @@ void MFA::DirectionalLightComponent::clone(Entity * entity) const
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DirectionalLightComponent::serialize(nlohmann::json & jsonObject) const
+void MFA::DirectionalLightComponent::Serialize(nlohmann::json & jsonObject) const
 {}
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DirectionalLightComponent::deserialize(nlohmann::json const & jsonObject)
+void MFA::DirectionalLightComponent::Deserialize(nlohmann::json const & jsonObject)
 {}
 
 //-------------------------------------------------------------------------------------------------
@@ -132,7 +132,7 @@ void MFA::DirectionalLightComponent::computeDirectionAndShadowViewProjection()
     }
 
     // Way 1
-    auto const rotation = transformComponent->GetRotation();
+    auto const rotation = transformComponent->GetLocalRotation();
 
     auto directionRotationMatrix = glm::identity<glm::mat4>();
     Matrix::RotateWithEulerAngle(directionRotationMatrix, rotation);

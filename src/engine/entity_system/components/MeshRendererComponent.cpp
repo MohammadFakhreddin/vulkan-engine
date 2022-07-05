@@ -57,11 +57,11 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void MeshRendererComponent::onUI()
+    void MeshRendererComponent::OnUI()
     {
         if (UI::TreeNode("MeshRenderer"))
         {
-            RendererComponent::onUI();
+            RendererComponent::OnUI();
             UI::Text("Pipeline: %s", mPipeline->GetName());
             if (auto const variant = mVariant.lock())
             {
@@ -73,7 +73,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void MeshRendererComponent::serialize(nlohmann::json & jsonObject) const
+    void MeshRendererComponent::Serialize(nlohmann::json & jsonObject) const
     {
         auto const variant = mVariant.lock();
         MFA_ASSERT(variant != nullptr);
@@ -85,7 +85,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void MeshRendererComponent::deserialize(nlohmann::json const & jsonObject)
+    void MeshRendererComponent::Deserialize(nlohmann::json const & jsonObject)
     {
         MFA_ASSERT(mInitialized == false);
 
@@ -102,7 +102,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void MeshRendererComponent::clone(Entity * entity) const
+    void MeshRendererComponent::Clone(Entity * entity) const
     {
         MFA_ASSERT(entity != nullptr);
         entity->AddComponent<MeshRendererComponent>(mPipeline, mNameId);

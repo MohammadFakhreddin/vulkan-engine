@@ -109,11 +109,11 @@ namespace MFA
     
     //-------------------------------------------------------------------------------------------------
 
-    void ObserverCameraComponent::onUI()
+    void ObserverCameraComponent::OnUI()
     {
         if(UI::TreeNode("ObserverCamera"))
         {
-            CameraComponent::onUI();
+            CameraComponent::OnUI();
             UI::TreePop();            
         }
     }

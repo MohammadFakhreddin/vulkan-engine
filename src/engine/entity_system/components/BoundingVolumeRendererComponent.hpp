@@ -28,13 +28,13 @@ namespace MFA
 
         void LateInit() override;
         
-        void onUI() override;
+        void OnUI() override;
 
-        void serialize(nlohmann::json & jsonObject) const override;
+        void Serialize(nlohmann::json & jsonObject) const override;
 
-        void deserialize(nlohmann::json const & jsonObject) override;
+        void Deserialize(nlohmann::json const & jsonObject) override;
 
-        void clone(Entity * entity) const override;
+        void Clone(Entity * entity) const override;
 
         void Shutdown() override;
 
@@ -46,5 +46,7 @@ namespace MFA
         bool mLateInitIsCalled = false;
 
     };
+
+    using BVRenderer = BoundingVolumeRendererComponent;
 
 }

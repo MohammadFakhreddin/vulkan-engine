@@ -68,5 +68,5 @@ namespace MFA::Physics
         MFA_ASSERT(ptr != nullptr);
         return  std::make_shared<Handle<T>>(ptr);
     }
-
+    
 }

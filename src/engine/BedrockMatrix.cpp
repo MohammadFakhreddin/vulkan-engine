@@ -3,6 +3,10 @@
 #include "BedrockAssert.hpp"
 #include "BedrockMath.hpp"
 
+#include <foundation/PxVec3.h>
+#include <foundation/PxQuat.h>
+#include <foundation/PxTransform.h>
+
 namespace MFA::Matrix
 {
 
@@ -191,13 +195,22 @@ namespace MFA::Matrix
 
     //-------------------------------------------------------------------------------------------------
 
-    glm::quat ToQuat(const float x, const float y, const float z)
+    glm::quat ToQuat(const float xDeg, const float yDeg, const float zDeg)
     {
-        return glm::quat(glm::vec3(
-            glm::radians(x),
-            glm::radians(y),
-            glm::radians(z)
-        ));
+        return glm::quat {glm::vec3 {
+            glm::radians(xDeg),
+            glm::radians(yDeg),
+            glm::radians(zDeg)
+        }};
+    }
+    glm::quat ToQuat(glm::vec3 const & eulerAngles)
+    {
+        glm::vec3 const radians = glm::vec3 {
+            glm::radians(eulerAngles.x),
+            glm::radians(eulerAngles.y),
+            glm::radians(eulerAngles.z)
+        };
+        return glm::quat {radians};
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -374,6 +387,66 @@ namespace MFA::Matrix
         outMatrix[3][1] = -(bottomPlane + topPlane) / (bottomPlane - topPlane);
         outMatrix[3][2] = nearPlane / (nearPlane - farPlane);
         outMatrix[3][3] = 1.0f;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void CopyCellsToPhysx(float const * cells, physx::PxVec3 & outVec3)
+    {
+        static_assert(sizeof(physx::PxVec3) == 3 * sizeof(float));
+        memcpy(&outVec3, cells, sizeof(physx::PxVec3));
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void CopyCellsToPhysx(float const * cells, physx::PxQuat & outQuat)
+    {
+        static_assert(sizeof(physx::PxQuat) == 4 * sizeof(float));
+        memcpy(&outQuat, cells, sizeof(physx::PxQuat));
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void CopyGlmToPhysx(glm::vec3 const & inVec3, physx::PxVec3 & outVec3)
+    {
+        static_assert(sizeof(physx::PxVec3) == sizeof(glm::vec3));
+        memcpy(&outVec3, &inVec3, sizeof(physx::PxVec3));
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void CopyGlmToPhysx(glm::quat const & inQuat, physx::PxQuat & outQuat)
+    {
+        static_assert(sizeof(physx::PxVec3) == sizeof(glm::vec3));
+        memcpy(&outQuat, &inQuat, sizeof(physx::PxVec3));
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    physx::PxVec3 CopyGlmToPhysx(glm::vec3 const & inVec3)
+    {
+        physx::PxVec3 outVec3;
+        CopyGlmToPhysx(inVec3, outVec3);
+        return outVec3;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    physx::PxQuat CopyGlmToPhysx(glm::quat const & inQuat)
+    {
+        physx::PxQuat outQuat;
+        CopyGlmToPhysx(inQuat, outQuat);
+        return outQuat;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    physx::PxTransform CopyGlmToPhysx(glm::vec3 const & position, glm::quat const & rotation)
+    {
+        using namespace physx;
+        PxVec3 const pxPosition = CopyGlmToPhysx(position);
+        PxQuat const pxQuat = CopyGlmToPhysx(rotation);
+        return PxTransform {pxPosition, pxQuat};
     }
 
     //-------------------------------------------------------------------------------------------------

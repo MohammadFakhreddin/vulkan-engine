@@ -249,11 +249,16 @@ list(
     "src/engine/entity_system/Component.hpp"
     "src/engine/entity_system/Component.cpp"
 
-    # Components
+    # Components    // TODO: Move this to a separate location
     "src/engine/entity_system/components/TransformComponent.hpp"
     "src/engine/entity_system/components/TransformComponent.cpp"
+    
     "src/engine/entity_system/components/ColliderComponent.hpp"
     "src/engine/entity_system/components/ColliderComponent.cpp"
+    "src/engine/entity_system/components/BoxColliderComponent.hpp"
+    "src/engine/entity_system/components/BoxColliderComponent.cpp"
+    "src/engine/entity_system/components/RigidbodyComponent.hpp"
+    "src/engine/entity_system/components/RigidbodyComponent.cpp"
 
     "src/engine/entity_system/components/RendererComponent.hpp"
     "src/engine/entity_system/components/RendererComponent.cpp"

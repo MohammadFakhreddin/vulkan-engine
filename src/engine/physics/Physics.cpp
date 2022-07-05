@@ -5,6 +5,7 @@
 
 #include "PhysicsTypes.hpp"
 #include "engine/BedrockAssert.hpp"
+#include "engine/BedrockMatrix.hpp"
 
 #include "physx/PxPhysicsAPI.h"
 
@@ -76,6 +77,7 @@ namespace MFA::Physics
         SharedHandle<PxPvdTransport> transport{};
         SharedHandle<PxPvd> pvd{};
         SimulationEventCallback simulationEventCallback {};
+        SharedHandle<PxMaterial> defaultMaterial {};
     };
     State * state = nullptr;
     
@@ -172,6 +174,50 @@ namespace MFA::Physics
 
         MFA_ASSERT(state != nullptr);
         delete state;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    SharedHandle<PxRigidDynamic> CreateDynamicActor(PxTransform const & pxTransform)
+    {
+        return CreateHandle(state->physics->Ptr()->createRigidDynamic(pxTransform));
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    SharedHandle<PxRigidStatic> CreateStaticActor(PxTransform const & pxTransform)
+    {
+        return CreateHandle(state->physics->Ptr()->createRigidStatic(pxTransform));
+    }
+
+    //-------------------------------------------------------------------------------------------------
+    
+    SharedHandle<PxMaterial> CreateMaterial(
+        float const staticFriction,
+        float const dynamicFriction,
+        float const restitution
+    )
+    {
+        return CreateHandle(state->physics->Ptr()->createMaterial(
+            staticFriction,
+            dynamicFriction,
+            restitution
+        ));
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+    
+    SharedHandle<PxShape> CreateShape(
+        PxRigidActor & actor,
+        PxGeometry const & geometry,
+        PxMaterial const & material
+    )
+    {
+        return CreateHandle(PxRigidActorExt::createExclusiveShape(
+            actor,
+            geometry,
+            material
+        ));
     }
 
     //-------------------------------------------------------------------------------------------------

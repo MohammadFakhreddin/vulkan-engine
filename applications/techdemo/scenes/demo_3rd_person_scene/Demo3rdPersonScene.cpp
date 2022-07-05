@@ -171,9 +171,9 @@ void Demo3rdPersonScene::Update(float const deltaTimeInSec)
             float position[3]{};
             playerTransform->GetLocalPosition(position);
             float scale[3]{};
-            playerTransform->GetScale(scale);
+            playerTransform->GetLocalScale(scale);
             float targetEulerAngles[3]{};
-            playerTransform->GetRotation(targetEulerAngles);
+            playerTransform->GetLocalRotation(targetEulerAngles);
 
             float cameraEulerAngles[3];
             MFA_ASSERT(mThirdPersonCamera.expired() == false);
@@ -246,7 +246,7 @@ void Demo3rdPersonScene::Update(float const deltaTimeInSec)
             targetEulerAngles[1] += extraAngleValue;
 
             float currentEulerAngles[3];
-            playerTransform->GetRotation(currentEulerAngles);
+            playerTransform->GetLocalRotation(currentEulerAngles);
 
             auto const targetQuat = Matrix::ToQuat(currentEulerAngles[0], targetEulerAngles[1], currentEulerAngles[2]);
 
