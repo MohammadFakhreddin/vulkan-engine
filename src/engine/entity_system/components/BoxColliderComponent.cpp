@@ -48,20 +48,15 @@ void MFA::BoxColliderComponent::OnUI()
     if (UI::TreeNode("BoxCollider"))
     {
         glm::vec3 size = mHalfSize * 2.0f;
-        glm::vec3 center = mCenter;
-
-        UI::InputFloat3("Size", size);
-        UI::InputFloat3("Center", center);
-
-        if (Matrix::IsEqual(size, mHalfSize * 2.0f) == false)
+        
+        if (UI::InputFloat<3>("Size", size))
         {
             mHalfSize = size * 0.5f;
             CreateShape();
         }
 
-        if (Matrix::IsEqual(center, mCenter) == false)
+        if (UI::InputFloat<3>("Center", mCenter))
         {
-            mCenter = glm::vec4 {center.x, center.y, center.z, 1.0f};
             ComputePxTransform();
         }
 
@@ -88,16 +83,31 @@ physx::PxTransform MFA::BoxColliderComponent::ComputePxTransform()
 
     auto const cubePosition = worldPosition + glm::toMat4(worldRotation) * mCenter;
 
-    return Matrix::CopyGlmToPhysx(cubePosition, worldRotation);
+    physx::PxTransform pxTransform {};
+    Copy(pxTransform.p, worldPosition);
+    Copy(pxTransform.q, worldRotation);
+    return pxTransform;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::BoxColliderComponent::ComputeTransform(physx::PxTransform const & pxTransform, glm::vec3 & outPosition, glm::quat & outRotation)
+{
+    ColliderComponent::ComputeTransform(pxTransform, outPosition, outRotation);
 }
 
 //-------------------------------------------------------------------------------------------------
 
 void MFA::BoxColliderComponent::CreateShape()
 {
+    auto const transform = mTransform.lock();
+    MFA_ASSERT(transform != nullptr);
+
+    auto const scale = transform->GetWorldScale();
+
     mShape = Physics::CreateShape(
         *mActor,
-        physx::PxBoxGeometry {mHalfSize.x, mHalfSize.y, mHalfSize.z},
+        physx::PxBoxGeometry {mHalfSize.x * scale.x, mHalfSize.y * scale.y, mHalfSize.z * scale.z},
         Physics::GetDefaultMaterial()->Ref()
     );
     MFA_ASSERT(mShape != nullptr);

@@ -15,7 +15,8 @@ namespace MFA
         MFA_COMPONENT_PROPS(
             AxisAlignedBoundingBoxComponent,
             FamilyType::BoundingVolume,
-            EventTypes::InitEvent | EventTypes::ShutdownEvent | EventTypes::UpdateEvent
+            EventTypes::EmptyEvent,
+            BoundingVolumeComponent
         )
         
         explicit AxisAlignedBoundingBoxComponent(

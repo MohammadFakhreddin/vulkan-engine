@@ -14,7 +14,8 @@ public:
     MFA_COMPONENT_PROPS(
         ColorComponent,
         FamilyType::Color,
-        EventTypes::EmptyEvent
+        EventTypes::EmptyEvent,
+        Component
     )
 
     explicit ColorComponent() = default;

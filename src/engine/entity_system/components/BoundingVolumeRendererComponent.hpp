@@ -18,7 +18,8 @@ namespace MFA
         MFA_COMPONENT_PROPS(
             BoundingVolumeRendererComponent,
             FamilyType::BoundingVolumeRenderer,
-            EventTypes::LateInitEvent | EventTypes::ShutdownEvent | EventTypes::InitEvent
+            EventTypes::LateInitEvent | EventTypes::ShutdownEvent | EventTypes::InitEvent,
+            RendererComponent
         )
 
         explicit BoundingVolumeRendererComponent(std::string const & nameId = "CubeStrip");

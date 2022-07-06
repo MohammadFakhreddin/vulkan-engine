@@ -36,7 +36,6 @@ namespace MFA
 
         auto const pxTransform = ComputePxTransform();
 
-        // TODO: What if rigid body is inside parent ?
         auto const rigidBody = GetEntity()->GetComponent<Rigidbody>().lock();
         if (rigidBody != nullptr)
         {
@@ -70,15 +69,32 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    Physics::SharedHandle<physx::PxRigidDynamic> ColliderComponent::GetRigidDynamic() const
+    {
+        return mRigidDynamic;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ColliderComponent::OnActivationStatusChanged(bool const isActive)
+    {
+        Component::OnActivationStatusChanged(isActive);
+
+        mActor->setActorFlag(physx::PxActorFlag::eDISABLE_SIMULATION, !isActive);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void ColliderComponent::OnTransformChange()
     {
-        if (mTransformChangeBySelf == true) // In case the rigid body has caused the change
+        // TODO: Look for a better solution
+        auto const oldTransform = mActor->getGlobalPose();
+        auto const newTransform = ComputePxTransform();
+        if (newTransform.p == oldTransform.p && newTransform.q == oldTransform.q)
         {
-            mTransformChangeBySelf = false;
             return;
         }
-
-        mActor->setGlobalPose(ComputePxTransform());
+        mActor->setGlobalPose(newTransform);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -91,7 +107,23 @@ namespace MFA
         auto const & worldPosition = transform->GetWorldPosition();
         auto const & worldRotation = transform->GetWorldRotation();
 
-        return Matrix::CopyGlmToPhysx(worldPosition, worldRotation);
+        physx::PxTransform pxTransform {};
+        Copy(pxTransform.p, worldPosition);
+        Copy(pxTransform.q, worldRotation);
+
+        return pxTransform;
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void ColliderComponent::ComputeTransform(
+        physx::PxTransform const & inTransform,
+        glm::vec3 & outPosition,
+        glm::quat & outRotation
+    )
+    {
+        Copy(outPosition, inTransform.p);
+        Copy(outRotation, inTransform.q);
     }
 
     //-------------------------------------------------------------------------------------------------

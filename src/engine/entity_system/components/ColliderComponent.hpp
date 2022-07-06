@@ -4,6 +4,8 @@
 #include "engine/physics/PhysicsTypes.hpp"
 
 #include <foundation/PxTransform.h>
+#include <glm/vec3.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 // TODO: Use this link
 // https://docs.nvidia.com/gameworks/content/gameworkslibrary/physx/guide/Manual/Geometry.html
@@ -29,7 +31,8 @@ namespace MFA
         MFA_COMPONENT_PROPS(
             ColliderComponent,
             FamilyType::Collider,
-            EventTypes::InitEvent | EventTypes::ShutdownEvent
+            EventTypes::InitEvent | EventTypes::ShutdownEvent | EventTypes::ActivationChangeEvent,
+            Component
         )
 
         explicit ColliderComponent();
@@ -40,11 +43,22 @@ namespace MFA
 
         void Shutdown() override;
 
+        [[nodiscard]]
+        Physics::SharedHandle<physx::PxRigidDynamic> GetRigidDynamic() const;
+
+        void OnActivationStatusChanged(bool isActive) override;
+
     protected:
 
         virtual void OnTransformChange();
 
         virtual physx::PxTransform ComputePxTransform();
+
+        virtual void ComputeTransform(
+            physx::PxTransform const & inTransform,
+            glm::vec3 & outPosition,
+            glm::quat & outRotation
+        );
         
         std::weak_ptr<TransformComponent> mTransform;
 
@@ -58,8 +72,6 @@ namespace MFA
         SignalId mTransformChangeListenerId = -1;
 
         bool mIsDynamic = false;
-
-        bool mTransformChangeBySelf = false;
 
     };
 

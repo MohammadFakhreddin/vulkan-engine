@@ -11,6 +11,13 @@ namespace MFA {
 class CameraComponent : public Component {
 public:
 
+    MFA_COMPONENT_PROPS(
+        CameraComponent,
+        FamilyType::Camera,
+        EventTypes::InitEvent | EventTypes::UpdateEvent | EventTypes::ShutdownEvent,
+        Component
+    )
+
     struct CameraBufferData
     {
 //        float projectFarToNearDistance;

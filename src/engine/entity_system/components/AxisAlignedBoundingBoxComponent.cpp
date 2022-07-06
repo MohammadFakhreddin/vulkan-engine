@@ -107,20 +107,19 @@ namespace MFA
     {
         if (UI::TreeNode("AxisAlignedBoundingBox"))
         {
-            glm::vec3 localPosition = mLocalPosition;
-            glm::vec3 extend = mExtend;
-
             BoundingVolumeComponent::OnUI();
-            UI::InputFloat3("Center", localPosition);
-            UI::InputFloat3("Extend", extend);
-            UI::TreePop();
 
-            if (mLocalPosition != localPosition || mExtend != extend)
+            bool changed = false;
+
+            changed |= UI::InputFloat<3>("Center", mLocalPosition);
+            changed |= UI::InputFloat<3>("Extend", mExtend);
+
+            if (changed)
             {
-                mLocalPosition = localPosition;
-                mExtend = extend;
                 computeWorldPosition();
             }
+
+            UI::TreePop();
         }
     }
 

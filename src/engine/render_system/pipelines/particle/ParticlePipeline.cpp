@@ -113,7 +113,7 @@ namespace MFA
         
         if (auto const activeCamera = SceneManager::GetActiveCamera().lock())
         {
-            Matrix::CopyGlmToCells(activeCamera->GetViewportDimension(), pushConstants.viewportDimension);
+            Copy<2>(pushConstants.viewportDimension, activeCamera->GetViewportDimension());
         }
         
         RF::PushConstants(recordState, AS::ShaderStage::Vertex, 0, CBlobAliasOf(pushConstants));

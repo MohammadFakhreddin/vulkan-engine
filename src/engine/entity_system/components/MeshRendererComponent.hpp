@@ -20,7 +20,8 @@ namespace MFA
         MFA_COMPONENT_PROPS(
             MeshRendererComponent,
             FamilyType::MeshRenderer,
-            EventTypes::InitEvent | EventTypes::ShutdownEvent
+            EventTypes::InitEvent | EventTypes::ShutdownEvent,
+            RendererComponent
         )
 
         // Should only be used by json serializer

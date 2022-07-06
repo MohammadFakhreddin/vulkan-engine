@@ -11,21 +11,21 @@
 
 void MFA::ColorComponent::SetColor(float color[3])
 {
-    Matrix::CopyCellsToGlm(color, mColor);
+    Copy<3>(mColor, color);
 }
 
 //-------------------------------------------------------------------------------------------------
 
 void MFA::ColorComponent::SetColor(glm::vec3 const & color)
 {
-    mColor = color;
+    Copy(mColor, color);
 }
 
 //-------------------------------------------------------------------------------------------------
 
 void MFA::ColorComponent::GetColor(float outColor[3]) const
 {
-    Matrix::CopyGlmToCells(mColor, outColor);
+    Copy<3>(outColor, mColor);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -42,7 +42,7 @@ void MFA::ColorComponent::OnUI()
     if (UI::TreeNode("Color"))
     {
         Component::OnUI();
-        UI::InputFloat3("Color", mColor);
+        UI::InputFloat<3>("Color", mColor);
         UI::TreePop();
     }
 }

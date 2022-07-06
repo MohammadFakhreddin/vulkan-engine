@@ -89,7 +89,8 @@ namespace MFA::ShapeGenerator
                 auto & vertex = meshVertices[index];
 
                 // Positions
-                Matrix::CopyGlmToCells(positions[index], vertex.position);
+                Copy(vertex.position, positions[index]);
+                //Matrix::CopyGlmToCells(positions[index], vertex.position);
             }
 
             mesh->finalizeData();
@@ -154,7 +155,7 @@ namespace MFA::ShapeGenerator
             {
                 auto & vertex = meshVertices[index];
                 // Positions
-                Matrix::CopyGlmToCells(positions[index], vertex.position);
+                Copy<3>(vertex.position, positions[index]);
             }
 
             mesh->finalizeData();
@@ -217,7 +218,7 @@ namespace MFA::ShapeGenerator
             {
                 auto & vertex = meshVertices[index];
                 // Positions
-                Matrix::CopyGlmToCells(vertices[index], vertex.position);
+                Copy<3>(vertex.position, vertices[index]);
             }
 
             mesh->finalizeData();
@@ -298,7 +299,7 @@ namespace MFA::ShapeGenerator
             {
                 auto & vertex = meshVertices[index];
                 // Positions
-                Matrix::CopyGlmToCells(vertices[index], vertex.position);
+                Copy<3>(vertex.position, vertices[index]);
             }
 
             mesh->finalizeData();

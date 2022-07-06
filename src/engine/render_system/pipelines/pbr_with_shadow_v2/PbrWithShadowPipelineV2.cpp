@@ -265,8 +265,10 @@ namespace MFA
                         )-> void
                         {
                             // Vertex push constants
-                            Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
-                            Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.model);
+                            Copy<16>(pushConstants.inverseNodeTransform, node.cachedGlobalInverseTransform);
+                            //Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
+                            Copy<16>(pushConstants.model, node.cachedModelTransform);
+                            //Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.model);
                             pushConstants.vertexCount = primitive.vertexCount;
                             pushConstants.skinIndex = primitive.hasSkin ? node.skin->skinStartingIndex : -1;
                             pushConstants.vertexStartingIndex = primitive.verticesStartingIndex;
@@ -878,10 +880,11 @@ namespace MFA
                                 static_cast<uint32_t>(occlusionQueryData.Variants.size())
                             );
 
-                            Matrix::CopyGlmToCells(
+                           /* Matrix::CopyGlmToCells(
                                 transformC->GetTransform(),
                                 pushConstants.model
-                            );
+                            );*/
+                            Copy(pushConstants.model, transformC->GetTransform());
 
                             RF::PushConstants(
                                 recordState,

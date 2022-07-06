@@ -22,7 +22,8 @@ namespace MFA {
         MFA_COMPONENT_PROPS(
             PointLightComponent,
             FamilyType::PointLight,
-            EventTypes::InitEvent | EventTypes::ShutdownEvent
+            EventTypes::InitEvent | EventTypes::ShutdownEvent,
+            Component
         )
 
         explicit PointLightComponent();

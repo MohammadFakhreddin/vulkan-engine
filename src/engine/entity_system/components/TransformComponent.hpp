@@ -16,7 +16,8 @@ namespace MFA
         MFA_COMPONENT_PROPS(
             TransformComponent,
             FamilyType::Transform,
-            EventTypes::InitEvent | EventTypes::ShutdownEvent
+            EventTypes::InitEvent | EventTypes::ShutdownEvent,
+            Component
         )
         
         explicit TransformComponent();
@@ -30,8 +31,10 @@ namespace MFA
 
         void Shutdown() override;
 
+        // Local
         void UpdateTransform(float position[3], float rotation[3], float scale[3]);
 
+        // Local
         void UpdateTransform(glm::vec3 const & position, glm::vec3 const & rotation, glm::vec3 const & scale);
 
         void UpdatePosition(glm::vec3 const & position);
@@ -54,21 +57,22 @@ namespace MFA
         [[nodiscard]]
         glm::vec4 const & GetWorldPosition() const;
 
-        void GetLocalRotation(float outRotation[3]) const;
-
-        void GetLocalScale(float outScale[3]) const;
-
         [[nodiscard]]
         glm::vec3 const & GetLocalPosition() const;
 
         [[nodiscard]]
-        glm::vec3 const & GetLocalRotation() const;
+        glm::vec3 const & GetLocalRotationEulerAngles() const;
+
+        [[nodiscard]]
+        glm::quat const & GetLocalRotationQuaternion() const;
 
         [[nodiscard]]
         glm::quat const & GetWorldRotation() const;
 
         [[nodiscard]]
         glm::vec3 const & GetLocalScale() const;
+
+        glm::vec3 const & GetWorldScale() const;
 
         SignalId RegisterChangeListener(std::function<void()> const & listener);
 
@@ -95,6 +99,7 @@ namespace MFA
 
         glm::vec4 mWorldPosition {};
         glm::quat mWorldRotation {};
+        glm::vec3 mWorldScale { 1.0f, 1.0f, 1.0f };
 
         glm::mat4 mTransform {};
 

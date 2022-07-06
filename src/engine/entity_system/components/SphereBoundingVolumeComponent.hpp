@@ -14,7 +14,8 @@ namespace MFA
         MFA_COMPONENT_PROPS(
             SphereBoundingVolumeComponent,
             FamilyType::BoundingVolume,
-            EventTypes::UpdateEvent | EventTypes::InitEvent | EventTypes::ShutdownEvent
+            EventTypes::UpdateEvent | EventTypes::InitEvent | EventTypes::ShutdownEvent,
+            BoundingVolumeComponent
         )
 
             explicit SphereBoundingVolumeComponent();

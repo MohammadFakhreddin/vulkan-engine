@@ -14,7 +14,8 @@ public:
     MFA_COMPONENT_PROPS(
         ThirdPersonCameraComponent,
         FamilyType::Camera,
-        EventTypes::InitEvent | EventTypes::UpdateEvent | EventTypes::ShutdownEvent
+        EventTypes::InitEvent | EventTypes::UpdateEvent | EventTypes::ShutdownEvent,
+        CameraComponent
     )
     
     // ThirdPerson camera must act like a child to variant

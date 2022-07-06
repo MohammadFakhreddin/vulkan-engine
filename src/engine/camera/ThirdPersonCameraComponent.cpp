@@ -34,7 +34,8 @@ namespace MFA
         MFA_ASSERT(distance >= 0);
         mDistance = distance;
 
-        Matrix::CopyCellsToGlm(eulerAngles, mEulerAngles);
+        Copy<3>(mEulerAngles, eulerAngles);
+        //Matrix::CopyCellsToGlm(eulerAngles, mEulerAngles);
 
         mIsTransformDirty = true;
     }

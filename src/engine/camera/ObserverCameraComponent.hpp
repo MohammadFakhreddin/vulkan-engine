@@ -15,7 +15,8 @@ namespace MFA
         MFA_COMPONENT_PROPS(
             ObserverCameraComponent,
             FamilyType::Camera,
-            EventTypes::InitEvent | EventTypes::UpdateEvent | EventTypes::ShutdownEvent
+            EventTypes::InitEvent | EventTypes::UpdateEvent | EventTypes::ShutdownEvent,
+            CameraComponent
         )
         
         explicit ObserverCameraComponent(

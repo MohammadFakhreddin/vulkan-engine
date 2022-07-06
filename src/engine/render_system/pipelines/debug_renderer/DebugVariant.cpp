@@ -41,7 +41,8 @@ namespace MFA
     {
         if (auto const ptr = mTransformComponent.lock())
         {
-            Matrix::CopyGlmToCells(ptr->GetTransform(), outTransform);
+            Copy<16>(outTransform, ptr->GetTransform());
+            //Matrix::CopyGlmToCells(ptr->GetTransform(), outTransform);
             return true;
         }
         return false;

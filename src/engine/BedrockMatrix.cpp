@@ -3,195 +3,11 @@
 #include "BedrockAssert.hpp"
 #include "BedrockMath.hpp"
 
-#include <foundation/PxVec3.h>
-#include <foundation/PxQuat.h>
-#include <foundation/PxTransform.h>
+#include "BedrockCommon.hpp"
 
 namespace MFA::Matrix
 {
 
-    //-------------------------------------------------------------------------------------------------
-
-    glm::mat4 CopyCellsToMat4(float const * cells) {
-        MFA_ASSERT(cells != nullptr);
-        glm::mat4 result {};
-        CopyCellsToGlm(cells, result);
-        return result;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    glm::vec3 CopyCellsToVec3(float const * cells) {
-        MFA_ASSERT(cells != nullptr);
-        glm::vec3 result;
-        CopyCellsToGlm(cells, result);
-        return result;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    glm::quat CopyCellsToQuat(float const * cells) {
-        MFA_ASSERT(cells != nullptr);
-        glm::quat result;
-        CopyCellsToGlm(cells, result);
-        return result;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    glm::vec4 CopyCellsToVec4(float const * cells) {
-        MFA_ASSERT(cells != nullptr);
-        glm::vec4 result;
-        CopyCellsToGlm(cells, result);
-        return result;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyCellsToGlm(float const * cells, glm::mat4 & outMatrix)
-    {
-        MFA_ASSERT(cells != nullptr);
-        ::memcpy(&outMatrix, cells, sizeof(float) * 16);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyCellsToGlm(float const * cells, glm::vec3 & outVec3)
-    {
-        MFA_ASSERT(cells != nullptr);
-        ::memcpy(&outVec3, cells, sizeof(float) * 3);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyCellsToGlm(float const * cells, glm::quat & outQuat)
-    {
-        MFA_ASSERT(cells != nullptr);
-        ::memcpy(&outQuat, cells, sizeof(float) * 4);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyCellsToGlm(float const * cells, glm::vec4 & outVec4)
-    {
-        MFA_ASSERT(cells != nullptr);
-        ::memcpy(&outVec4, cells, sizeof(float) * 4);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyGlmToCells(glm::mat4 const & matrix, float * cells)
-    {
-        MFA_ASSERT(cells != nullptr);
-        ::memcpy(cells, &matrix, sizeof(float) * 16);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyGlmToCells(glm::vec2 const & vector, float * cells)
-    {
-        MFA_ASSERT(cells != nullptr);
-        ::memcpy(cells, &vector, 2 * sizeof(float));
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyGlmToCells(glm::vec3 const & vector, float * cells)
-    {
-        MFA_ASSERT(cells != nullptr);
-        ::memcpy(cells, &vector, 3 * sizeof(float));
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyGlmToCells(glm::vec4 const & vector, float * cells)
-    {
-        MFA_ASSERT(cells != nullptr);
-        ::memcpy(cells, &vector, sizeof(float) * 4);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyGlmToCells(glm::quat const & quaternion, float * cells)
-    {
-        MFA_ASSERT(cells != nullptr);
-        ::memcpy(cells, &quaternion, sizeof(float) * 4);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool IsEqual(glm::mat4 const & matrix, float const * cells)
-    {
-        MFA_ASSERT(cells != nullptr);
-        return ::memcmp(&matrix, cells, 16 * sizeof(float)) == 0;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool IsEqual(glm::vec2 const & vector, float const * cells)
-    {
-        MFA_ASSERT(cells != nullptr);
-        return ::memcmp(&vector,cells, 2 * sizeof(float)) == 0;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool IsEqual(glm::vec3 const & vector, float const * cells)
-    {
-        MFA_ASSERT(cells != nullptr);
-        return ::memcmp(&vector,cells, 3 * sizeof(float)) == 0;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool IsEqual(glm::quat const & quat, float const * cells)
-    {
-        MFA_ASSERT(cells != nullptr);
-        return ::memcmp(&quat,cells, 4 * sizeof(float)) == 0;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool IsEqual(glm::vec4 const & vector, float const * cells)
-    {
-        MFA_ASSERT(cells != nullptr);
-        return ::memcmp(&vector,cells, 4 * sizeof(float)) == 0;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool IsEqual(glm::mat4 const & matrixA, glm::mat4 const & matrixB)
-    {
-        return ::memcmp(&matrixA, &matrixB, 16 * sizeof(float)) == 0;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool IsEqual(glm::vec2 const & vectorA, glm::vec2 const & vectorB)
-    {
-        return ::memcmp(&vectorA, &vectorB, 2 * sizeof(float)) == 0;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool IsEqual(glm::vec3 const & vectorA, glm::vec3 const & vectorB)
-    {
-        return ::memcmp(&vectorA, &vectorB, 3 * sizeof(float)) == 0;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool IsEqual(glm::quat const & quatA, glm::quat const & quatB)
-    {
-        return ::memcmp(&quatA, &quatB, 4 * sizeof(float)) == 0;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool IsEqual(glm::vec4 const & vectorA, glm::vec4 const & vectorB)
-    {
-        return ::memcmp(&vectorA, &vectorB, 4 * sizeof(float)) == 0;
-    }
 
     //-------------------------------------------------------------------------------------------------
 
@@ -203,6 +19,9 @@ namespace MFA::Matrix
             glm::radians(zDeg)
         }};
     }
+
+    //-------------------------------------------------------------------------------------------------
+
     glm::quat ToQuat(glm::vec3 const & eulerAngles)
     {
         glm::vec3 const radians = glm::vec3 {
@@ -387,66 +206,6 @@ namespace MFA::Matrix
         outMatrix[3][1] = -(bottomPlane + topPlane) / (bottomPlane - topPlane);
         outMatrix[3][2] = nearPlane / (nearPlane - farPlane);
         outMatrix[3][3] = 1.0f;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyCellsToPhysx(float const * cells, physx::PxVec3 & outVec3)
-    {
-        static_assert(sizeof(physx::PxVec3) == 3 * sizeof(float));
-        memcpy(&outVec3, cells, sizeof(physx::PxVec3));
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyCellsToPhysx(float const * cells, physx::PxQuat & outQuat)
-    {
-        static_assert(sizeof(physx::PxQuat) == 4 * sizeof(float));
-        memcpy(&outQuat, cells, sizeof(physx::PxQuat));
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyGlmToPhysx(glm::vec3 const & inVec3, physx::PxVec3 & outVec3)
-    {
-        static_assert(sizeof(physx::PxVec3) == sizeof(glm::vec3));
-        memcpy(&outVec3, &inVec3, sizeof(physx::PxVec3));
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyGlmToPhysx(glm::quat const & inQuat, physx::PxQuat & outQuat)
-    {
-        static_assert(sizeof(physx::PxVec3) == sizeof(glm::vec3));
-        memcpy(&outQuat, &inQuat, sizeof(physx::PxVec3));
-    }
-    
-    //-------------------------------------------------------------------------------------------------
-
-    physx::PxVec3 CopyGlmToPhysx(glm::vec3 const & inVec3)
-    {
-        physx::PxVec3 outVec3;
-        CopyGlmToPhysx(inVec3, outVec3);
-        return outVec3;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    physx::PxQuat CopyGlmToPhysx(glm::quat const & inQuat)
-    {
-        physx::PxQuat outQuat;
-        CopyGlmToPhysx(inQuat, outQuat);
-        return outQuat;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    physx::PxTransform CopyGlmToPhysx(glm::vec3 const & position, glm::quat const & rotation)
-    {
-        using namespace physx;
-        PxVec3 const pxPosition = CopyGlmToPhysx(position);
-        PxQuat const pxQuat = CopyGlmToPhysx(rotation);
-        return PxTransform {pxPosition, pxQuat};
     }
 
     //-------------------------------------------------------------------------------------------------

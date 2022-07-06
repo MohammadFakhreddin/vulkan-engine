@@ -117,10 +117,11 @@ namespace MFA
     template <typename T, int N>
     constexpr int ArrayCountInt(T(&)[N]) { return N; }
 
-    template<uint32_t Count, typename T>
-    constexpr void Copy(T * dst, T const * src)
+    template<uint32_t Count, typename B, typename A>
+    constexpr void Copy(B * dst, A const * src)
     {
-        memcpy(dst, src, Count * sizeof(T));
+        static_assert(sizeof(B) == sizeof(A));
+        memcpy(dst, src, Count * sizeof(B));
     }
 
     template<uint32_t Count, typename  T>
@@ -129,16 +130,80 @@ namespace MFA
         memcpy(dst, items.begin(), Count * sizeof(T));
     }
 
-    template<typename T>
-    constexpr void Copy(T * dst, T const * src, uint32_t count)
+    template<typename T, typename B>
+    constexpr void Copy(T * dst, B const * src, uint32_t const count)
     {
+        static_assert(sizeof(T) == sizeof(B));
         memcpy(dst, src, count * sizeof(T));
+    }
+
+    template<typename A, typename B>
+    constexpr void Copy(A & dst, B const & src)
+    {
+        if constexpr (sizeof(A) > sizeof(B))
+        {
+            memcpy(&dst, &src, sizeof(B));
+        } else
+        {
+            memcpy(&dst, &src, sizeof(A));
+        }
+    }
+
+    template<uint32_t Count, typename A, typename B>
+    constexpr void Copy(A & dst, B const * src)
+    {
+        static_assert(sizeof(A) >= sizeof(B) * Count);
+        memcpy(&dst, src, sizeof(B) * Count);
+    }
+
+    template<uint32_t Count, typename A, typename B>
+    constexpr void Copy(A * dst, B const & src)
+    {
+        static_assert(sizeof(A) * Count <= sizeof(B));
+        memcpy(dst, &src, sizeof(A) * Count);
+    }
+
+    template<typename A, typename B>
+    constexpr A Copy(B const & src)
+    {
+        A dst {};
+        Copy(dst, src);
+        return dst;
+    }
+
+    template<uint32_t Count, typename A, typename B>
+    constexpr A Copy(B const * src)
+    {
+        A dst {};
+        Copy<Count, A, B>(dst, src);
+        return dst;
     }
 
     template<uint32_t Count, typename T>
     constexpr bool IsEqual(T const * memory1, T const * memory2)
     {
         return memcmp(memory1, memory2, Count * sizeof(T)) == 0;
+    }
+
+    template<uint32_t Count, typename A, typename B>
+    constexpr bool IsEqual(A const & memory1, B const * memory2)
+    {
+        static_assert(sizeof(A) >= sizeof(B) * Count);
+        return memcmp(&memory1, memory2, sizeof(B) * Count) == 0;
+    }
+
+    template<uint32_t Count, typename A, typename B>
+    constexpr bool IsEqual(A const * memory1, B const & memory2)
+    {
+        static_assert(sizeof(A) * Count <= sizeof(B));
+        return memcmp(memory1, &memory2, sizeof(A) * Count) == 0;
+    }
+
+    template<typename A, typename B>
+    constexpr bool IsEqual(A const & memory1, B const & memory2)
+    {
+        static_assert(sizeof(A) == sizeof(B));
+        return memcmp(&memory1, &memory2, sizeof(A)) == 0;
     }
 
 }

@@ -838,7 +838,7 @@ namespace MFA::UI_System
 
     //-------------------------------------------------------------------------------------------------
 
-    void InputFloat(char const * label, float * value)
+    void InputFloat1(char const * label, float * value)
     {
         ImGui::InputFloat(label, value);
     }
@@ -862,18 +862,6 @@ namespace MFA::UI_System
     void InputFloat4(char const * label, float * value)
     {
         ImGui::InputFloat3(label, value);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void InputFloat3(char const * label, glm::vec3 & value)
-    {
-        float tempValue[3] {value.x, value.y, value.z};
-        UI::InputFloat3(label, tempValue);
-        if (Matrix::IsEqual(value, tempValue) == false)
-        {
-            Matrix::CopyCellsToGlm(tempValue, value);
-        }
     }
 
     //-------------------------------------------------------------------------------------------------

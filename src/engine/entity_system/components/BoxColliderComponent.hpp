@@ -16,7 +16,8 @@ namespace MFA
         MFA_COMPONENT_PROPS(
             BoxColliderComponent,
             FamilyType::Collider,
-            EventTypes::InitEvent | EventTypes::ShutdownEvent
+            EventTypes::EmptyEvent,
+            ColliderComponent
         )
 
         explicit BoxColliderComponent(glm::vec3 size, glm::vec3 center);
@@ -34,6 +35,12 @@ namespace MFA
     protected:
         
         physx::PxTransform ComputePxTransform() override;
+
+        void ComputeTransform(
+            physx::PxTransform const & pxTransform,
+            glm::vec3 & outPosition,
+            glm::quat & outRotation
+        ) override;
 
     private:
 

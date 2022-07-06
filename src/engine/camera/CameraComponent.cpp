@@ -16,8 +16,14 @@ namespace MFA
     {
         Component::OnUI();
 
-        UI::InputFloat3("EulerAngles", mEulerAngles);
-        UI::InputFloat3("Position", mPosition);
+        if (UI::InputFloat<3>("EulerAngles", mEulerAngles))
+        {
+            mIsTransformDirty = true;
+        }
+        if (UI::InputFloat<3>("Position", mPosition))
+        {
+            mIsTransformDirty = true;
+        }
 
        /* auto rotationMatrix = glm::identity<glm::mat4>();
         Matrix::Rotate(rotationMatrix, eulerAngles);
@@ -222,9 +228,9 @@ namespace MFA
 
     void CameraComponent::ForcePosition(float position[3])
     {
-        if (Matrix::IsEqual(mPosition, position) == false)
+        if (IsEqual<3>(mPosition, position) == false)
         {
-            Matrix::CopyCellsToGlm(position, mPosition);
+            Copy<3>(mPosition, position);
             mIsTransformDirty = true;
         }
     }
@@ -233,9 +239,9 @@ namespace MFA
 
     void CameraComponent::ForceRotation(float eulerAngles[3])
     {
-        if (Matrix::IsEqual(mPosition, eulerAngles) == false)
+        if (IsEqual<3>(mPosition, eulerAngles) == false)
         {
-            Matrix::CopyCellsToGlm(eulerAngles, mEulerAngles);
+            Copy<3>(mEulerAngles, eulerAngles);
             mIsTransformDirty = true;
         }
     }
@@ -288,9 +294,7 @@ namespace MFA
     {
         auto const viewProjectionMatrix = mProjectionMatrix * mViewMatrix;
 
-         
-//        GetPosition(mCameraBufferData.cameraPosition);
-        Matrix::CopyGlmToCells(viewProjectionMatrix, mCameraBufferData.viewProjection);
+        Copy<16>(mCameraBufferData.viewProjection, viewProjectionMatrix);
         mProjectionFarToNearDistance = abs(mFarDistance - mNearDistance);
 
         mCameraBufferUpdateCounter = RF::GetMaxFramesPerFlight();

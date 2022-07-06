@@ -1,6 +1,5 @@
 #pragma once
 
-#include "engine/render_system/RenderTypesFWD.hpp"
 #include "engine/BedrockSignal.hpp"
 
 #include "libs/nlohmann/json_fwd.hpp"
@@ -10,11 +9,12 @@
 namespace MFA
 {
 
-#define MFA_COMPONENT_PROPS(componentName, family, eventTypes)          \
+#define MFA_COMPONENT_PROPS(componentName, family, eventTypes, parent)  \
 public:                                                                 \
                                                                         \
 static constexpr char const * Name = #componentName;                    \
 static constexpr int Family = static_cast<int>(family);                 \
+static constexpr EventType RequiredEvents = eventTypes;                 \
                                                                         \
 std::weak_ptr<componentName> selfPtr()                                  \
 {                                                                       \
@@ -36,7 +36,7 @@ int getFamily() override                                                \
 [[nodiscard]]                                                           \
 EventType requiredEvents() const override                               \
 {                                                                       \
-    return eventTypes;                                                  \
+    return eventTypes | parent::requiredEvents();                       \
 }                                                                       \
                                                                         \
 componentName (componentName const &) noexcept = delete;                \
@@ -60,6 +60,7 @@ public:
         static constexpr EventType LateInitEvent = 0b10;
         static constexpr EventType UpdateEvent = 0b100;
         static constexpr EventType ShutdownEvent = 0b1000;
+        static constexpr EventType ActivationChangeEvent = 0b10000;
     };
 
     virtual ~Component();
@@ -118,6 +119,8 @@ public:
     
     virtual void Shutdown();
 
+    virtual void OnActivationStatusChanged(bool isActive);
+
     void SetActive(bool isActive);
 
     [[nodiscard]]
@@ -158,6 +161,8 @@ private:
     SignalId mUpdateEventId = InvalidSignalId;
 
     SignalId mShutdownEventId = InvalidSignalId;
+
+    SignalId mActivationChangeEventId = InvalidSignalId;
 
 };
 

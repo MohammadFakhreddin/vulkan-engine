@@ -67,19 +67,19 @@ namespace MFA
     void TransformComponent::UpdateTransform(float position[3], float rotation[3], float scale[3])
     {
         bool hasChanged = false;
-        if (Matrix::IsEqual(mLocalPosition, position) == false)
+        if (IsEqual<3>(mLocalPosition, position) == false)
         {
-            Matrix::CopyCellsToGlm(position, mLocalPosition);
+            Copy<3>(mLocalPosition, position);
             hasChanged = true;
         }
-        if (Matrix::IsEqual(mLocalRotationAngle, rotation) == false)
+        if (IsEqual<3>(mLocalRotationAngle, rotation) == false)
         {
-            Matrix::CopyCellsToGlm(rotation, mLocalRotationAngle);
+            Copy<3>(mLocalRotationAngle, rotation);
             hasChanged = true;
         }
-        if (Matrix::IsEqual(mLocalScale, scale) == false)
+        if (IsEqual<3>(mLocalScale, scale) == false)
         {
-            Matrix::CopyCellsToGlm(scale, mLocalScale);
+            Copy<3>(mLocalScale, scale);
             hasChanged = true;
         }
         if (hasChanged)
@@ -97,19 +97,19 @@ namespace MFA
     )
     {
         bool hasChanged = false;
-        if (Matrix::IsEqual(mLocalPosition, position) == false)
+        if (IsEqual(mLocalPosition, position) == false)
         {
-            mLocalPosition = position;
+            Copy(mLocalPosition, position);
             hasChanged = true;
         }
-        if (Matrix::IsEqual(mLocalRotationAngle, rotation) == false)
+        if (IsEqual(mLocalRotationAngle, rotation) == false)
         {
-            mLocalRotationAngle = rotation;
+            Copy(mLocalRotationAngle, rotation);
             hasChanged = true;
         }
-        if (Matrix::IsEqual(mLocalScale, scale) == false)
+        if (IsEqual(mLocalScale, scale) == false)
         {
-            mLocalScale = scale;
+            Copy(mLocalScale, scale);
             hasChanged = true;
         }
         if (hasChanged)
@@ -122,7 +122,7 @@ namespace MFA
 
     void TransformComponent::UpdatePosition(glm::vec3 const & position)
     {
-        if (Matrix::IsEqual(mLocalPosition, position) == false)
+        if (IsEqual(mLocalPosition, position) == false)
         {
             mLocalPosition = position;
             ComputeTransform();
@@ -133,9 +133,9 @@ namespace MFA
 
     void TransformComponent::UpdatePosition(float position[3])
     {
-        if (Matrix::IsEqual(mLocalPosition, position) == false)
+        if (IsEqual<3>(mLocalPosition, position) == false)
         {
-            Matrix::CopyCellsToGlm(position, mLocalPosition);
+            Copy<3>(mLocalPosition, position);
             ComputeTransform();
         }
     }
@@ -144,9 +144,9 @@ namespace MFA
 
     void TransformComponent::UpdateRotation(glm::vec3 const & rotation)
     {
-        if (Matrix::IsEqual(mLocalRotationAngle, rotation) == false)
+        if (IsEqual(mLocalRotationAngle, rotation) == false)
         {
-            mLocalRotationAngle = rotation;
+            Copy(mLocalRotationAngle, rotation);
             ComputeTransform();
         }
     }
@@ -155,9 +155,9 @@ namespace MFA
 
     void TransformComponent::UpdateRotation(float rotation[3])
     {
-        if (Matrix::IsEqual(mLocalRotationAngle, rotation) == false)
+        if (IsEqual<3>(mLocalRotationAngle, rotation) == false)
         {
-            Matrix::CopyCellsToGlm(rotation, mLocalRotationAngle);
+            Copy<3>(mLocalRotationAngle, rotation);
             ComputeTransform();
         }
     }
@@ -166,18 +166,20 @@ namespace MFA
 
     void TransformComponent::UpdateScale(float scale[3])
     {
-        if (Matrix::IsEqual(mLocalScale, scale) == false)
+        if (IsEqual<3>(mLocalScale, scale) == false)
         {
-            Matrix::CopyCellsToGlm(scale, mLocalScale);
+            Copy<3>(mLocalScale, scale);
             ComputeTransform();
         }
     }
 
+    //-------------------------------------------------------------------------------------------------
+
     void TransformComponent::UpdateScale(glm::vec3 const & scale)
     {
-        if (mLocalScale != scale)
+        if (IsEqual(mLocalScale, scale) == false)
         {
-            mLocalScale = scale;
+            Copy(mLocalScale, scale);
             ComputeTransform();
         }
     }
@@ -188,33 +190,12 @@ namespace MFA
     {
         return mTransform;
     }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void TransformComponent::GetLocalPosition(float outPosition[3]) const
-    {
-        Matrix::CopyGlmToCells(mLocalPosition, outPosition);
-    }
-
+    
     //-------------------------------------------------------------------------------------------------
 
     glm::vec4 const & TransformComponent::GetWorldPosition() const
     {
         return mWorldPosition;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void TransformComponent::GetLocalRotation(float outRotation[3]) const
-    {
-        Matrix::CopyGlmToCells(mLocalRotationAngle, outRotation);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void TransformComponent::GetLocalScale(float outScale[3]) const
-    {
-        Matrix::CopyGlmToCells(mLocalScale, outScale);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -226,9 +207,16 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    glm::vec3 const & TransformComponent::GetLocalRotation() const
+    glm::vec3 const & TransformComponent::GetLocalRotationEulerAngles() const
     {
         return mLocalRotationAngle;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    glm::quat const & TransformComponent::GetLocalRotationQuaternion() const
+    {
+        return mLocalRotationQuat;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -243,6 +231,13 @@ namespace MFA
     glm::vec3 const & TransformComponent::GetLocalScale() const
     {
         return mLocalScale;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    glm::vec3 const & TransformComponent::GetWorldScale() const
+    {
+        return mWorldScale;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -267,15 +262,16 @@ namespace MFA
         {
             Component::OnUI();
 
-            glm::vec3 position = mLocalPosition;
-            glm::vec3 scale = mLocalScale;
-            glm::vec3 rotation = mLocalRotationAngle;
+            bool changed = false;
 
-            UI::InputFloat3("Position", position);
-            UI::InputFloat3("Scale", scale);
-            UI::InputFloat3("Rotation", rotation);
+            changed |= UI::InputFloat<3>("Position", mLocalPosition);
+            changed |= UI::InputFloat<3>("Scale", mLocalScale);
+            changed |= UI::InputFloat<3>("Rotation", mLocalRotationAngle);
 
-            UpdateTransform(position, rotation, scale);
+            if (changed)
+            {
+                ComputeTransform();
+            }
 
             UI::TreePop();
         }
@@ -332,10 +328,12 @@ namespace MFA
 
         auto pMatrix = glm::identity<glm::mat4>();
         auto pWorldRotation = glm::identity<glm::quat>();
+        glm::vec3 pWorldScale {1.0f, 1.0f, 1.0f};
         if (auto const ptr = mParentTransform.lock())
         {
             pMatrix = ptr->GetTransform();
             pWorldRotation = ptr->GetWorldRotation();
+            pWorldScale = ptr->GetWorldScale();
         }
 
         mTransform = pMatrix * translateMatrix * scaleMatrix * rotationMatrix;
@@ -344,6 +342,8 @@ namespace MFA
         mWorldPosition = mTransform * glm::vec4 {0 , 0, 0, 1.0f};
 
         mWorldRotation = pWorldRotation * mLocalRotationQuat;
+
+        mWorldScale = pWorldScale * mLocalScale;
         
         // We notify any class that need to listen to transform component
         mTransformChangeSignal.Emit();

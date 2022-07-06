@@ -74,7 +74,7 @@ namespace MFA
         {
             return;
         }
-        mUpdateSignal.Emit(deltaTimeInSec);
+        mUpdateSignal.EmitMultiThread(deltaTimeInSec);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -147,7 +147,7 @@ namespace MFA
             return;
         }
         mIsActive = isActive;
-        mActivationStatusChangeSignal.Emit(mIsActive);
+        mActivationStatusChangeSignal.EmitMultiThread(mIsActive);
         onActivationStatusChanged();
     }
 
@@ -207,7 +207,11 @@ namespace MFA
             return;
         }
         mIsParentActive = isActive;
-        onActivationStatusChanged();
+        if (isActive == true)   // If we are already in-active we remain inactive
+        {
+            mActivationStatusChangeSignal.Emit(IsActive());
+            onActivationStatusChanged();
+        }
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -285,7 +289,7 @@ namespace MFA
 
             // TODO: Remove family type if it is not going to be used
 //            int const familyType = rawComponent.value("familyType", static_cast<int>(Component::FamilyType::Invalid));
-
+            // TODO: Use factory instead of this
             auto rawComponentData = rawComponent["data"];
 
             std::shared_ptr<Component> component = nullptr;
@@ -399,48 +403,102 @@ namespace MFA
         }
         return -1;
     }
-
+    
     //-------------------------------------------------------------------------------------------------
 
-    void Entity::linkComponent(Component * component)
+    void Entity::LinkComponent(Component * component)
     {
+        #define LINK_TO_EVENT(eventId, eventType, signal, callback)             \
+        if ((requiredEvents & Component::EventTypes::eventType) > 0)            \
+        {                                                                       \
+            MFA_ASSERT(component->eventId == InvalidSignalId);                  \
+            component->eventId = (signal).Register(callback);                   \
+        }                                                                       \
+
         MFA_ASSERT(component != nullptr);
+
+        auto const requiredEvents = component->requiredEvents();
+
         // Linked entity
         component->mEntity = this;
         // Init event
-        if ((component->requiredEvents() & Component::EventTypes::InitEvent) > 0)
-        {
-            MFA_ASSERT(component->mInitEventId == InvalidSignalId);
-            component->mInitEventId = mInitSignal.Register([component]()->void{
+        LINK_TO_EVENT(
+            mInitEventId,
+            InitEvent,
+            mInitSignal,
+            [component]()->void{
                 component->Init();
-            });
-        }
+            }
+        );
         // Late Init event
-        if ((component->requiredEvents() & Component::EventTypes::LateInitEvent) > 0)
-        {
-            MFA_ASSERT(component->mLateInitEventId == InvalidSignalId);
-            component->mLateInitEventId = mLateInitSignal.Register([component]()->void{
+        LINK_TO_EVENT(
+            mLateInitEventId,
+            LateInitEvent,
+            mLateInitSignal,
+            [component]()->void{
                 component->LateInit();
-            });
-        }
+            }
+        )
         // Update event
-        if ((component->requiredEvents() & Component::EventTypes::UpdateEvent) > 0)
-        {
-            MFA_ASSERT(component->mUpdateEventId == InvalidSignalId);
-            component->mUpdateEventId = mUpdateSignal.Register([component](float const deltaTimeInSec)->void
+        LINK_TO_EVENT(
+            mUpdateEventId,
+            UpdateEvent,
+            mUpdateSignal,
+            [component](float const deltaTimeInSec)->void
             {
                 component->Update(deltaTimeInSec);
-            });
-        }
+            }
+        )
         // Shutdown event
-        if ((component->requiredEvents() & Component::EventTypes::ShutdownEvent) > 0)
-        {
-            MFA_ASSERT(component->mShutdownEventId == InvalidSignalId);
-            component->mShutdownEventId = mShutdownSignal.Register([component]()->void
+        LINK_TO_EVENT(
+            mShutdownEventId,
+            ShutdownEvent,
+            mShutdownSignal,
+            [component]()->void
             {
                 component->Shutdown();
-            });
-        }
+            }
+        )
+        // Activation change event
+        LINK_TO_EVENT(
+            mActivationChangeEventId,
+            ActivationChangeEvent,
+            mActivationStatusChangeSignal,
+            [component](bool const isActive)->void
+            {
+                component->OnActivationStatusChanged(isActive);
+            }
+        )
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Entity::UnLinkComponent(Component * component)
+    {
+        MFA_ASSERT(component != nullptr);
+        
+        auto const requiredEvents = component->requiredEvents();
+
+        #define UNLINK_FROM_EVENT(eventType, eventId, signal)               \
+        if ((requiredEvents & Component::EventTypes::eventType) > 0)        \
+        {                                                                   \
+            (signal).UnRegister(component->eventId);                        \
+        }                                                                   \
+
+        // Init event
+        UNLINK_FROM_EVENT(InitEvent, mInitEventId, mInitSignal)
+
+        // Late init event
+        UNLINK_FROM_EVENT(LateInitEvent, mLateInitEventId, mLateInitSignal)
+
+        // Update event
+        UNLINK_FROM_EVENT(UpdateEvent, mUpdateEventId, mUpdateSignal)
+
+        // Shutdown event
+        UNLINK_FROM_EVENT(ShutdownEvent, mShutdownEventId, mShutdownSignal)
+        
+        // Activation change event
+        UNLINK_FROM_EVENT(ActivationChangeEvent, mActivationChangeEventId, mActivationStatusChangeSignal)
     }
 
     //-------------------------------------------------------------------------------------------------

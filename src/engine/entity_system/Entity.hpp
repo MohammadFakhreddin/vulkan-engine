@@ -69,7 +69,7 @@ namespace MFA
             }
             auto sharedPtr = std::make_shared<ComponentClass>(std::forward<ArgsT>(args)...);
             mComponents[ComponentClass::Family] = sharedPtr;
-            linkComponent(sharedPtr.get());
+            LinkComponent(sharedPtr.get());
             return std::weak_ptr<ComponentClass>(sharedPtr);
         }
 
@@ -77,7 +77,7 @@ namespace MFA
         {
             MFA_ASSERT(mComponents[component->getFamily()] == nullptr);
             mComponents[component->getFamily()] = component;
-            linkComponent(component.get());
+            LinkComponent(component.get());
         }
 
         template<typename ComponentClass>
@@ -86,28 +86,7 @@ namespace MFA
             MFA_ASSERT(component != nullptr);
             MFA_ASSERT(component->mEntity == this);
 
-            auto const requiredEvents = component->requiredEvents();
-
-            // Init event
-            if ((requiredEvents & Component::EventTypes::InitEvent) > 0)
-            {
-                mInitSignal.UnRegister(component->mInitEventId);
-            }
-            // Late init event
-            if ((requiredEvents & Component::EventTypes::LateInitEvent) > 0)
-            {
-                mLateInitSignal.UnRegister(component->mLateInitEventId);
-            }
-            // Update event
-            if ((requiredEvents & Component::EventTypes::UpdateEvent) > 0)
-            {
-                mUpdateSignal.UnRegister(component->mUpdateEventId);
-            }
-            // Shutdown event
-            if ((requiredEvents & Component::EventTypes::ShutdownEvent) > 0)
-            {
-                mShutdownSignal.UnRegister(component->mShutdownEventId);
-            }
+            UnLinkComponent(component);
 
             auto & findResult = mComponents[component->getFamily()];
             MFA_ASSERT(findResult != nullptr);
@@ -174,7 +153,9 @@ namespace MFA
 
         int findChild(Entity * entity);
 
-        void linkComponent(Component * component);
+        void LinkComponent(Component * component);
+
+        void UnLinkComponent(Component * component);
 
         void onActivationStatusChanged();
 

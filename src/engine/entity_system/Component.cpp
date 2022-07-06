@@ -25,6 +25,10 @@ void MFA::Component::Shutdown() {}
 
 //-------------------------------------------------------------------------------------------------
 
+void MFA::Component::OnActivationStatusChanged(bool isActive) {}
+
+//-------------------------------------------------------------------------------------------------
+
 void MFA::Component::SetActive(bool const isActive)
 {
     if (mIsActive == isActive)
@@ -45,6 +49,11 @@ void MFA::Component::SetActive(bool const isActive)
         {
             GetEntity()->mUpdateSignal.UnRegister(mUpdateEventId);
         }
+    }
+
+    if ((requiredEvents() & EventTypes::ActivationChangeEvent) > 0)
+    {
+        OnActivationStatusChanged(isActive);
     }
 }
 

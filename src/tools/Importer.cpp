@@ -502,7 +502,7 @@ namespace MFA::Importer
 
                         Node node{};
                         node.subMeshIndex = static_cast<int>(subMeshIndex);
-                        Matrix::CopyGlmToCells(glm::identity<glm::mat4>(), node.transform);
+                        Copy<16>(node.transform, glm::identity<glm::mat4>());
                         mesh->insertNode(node);
                         MFA_ASSERT(mesh->isValid());
 
@@ -1596,7 +1596,8 @@ namespace MFA::Importer
             for (size_t i = 0; i < skin.inverseBindMatrices.size(); ++i)
             {
                 auto & currentMatrix = skin.inverseBindMatrices[i];
-                Matrix::CopyCellsToGlm(&inverseBindMatricesPtr[i * 16], currentMatrix);
+                Copy<16>(currentMatrix, &inverseBindMatricesPtr[i * 16]);
+                //Matrix::CopyCellsToGlm(&inverseBindMatricesPtr[i * 16], currentMatrix);
             }
             MFA_ASSERT(skin.inverseBindMatrices.size() == skin.joints.size());
             skin.skeletonRootNode = gltfSkin.skeleton;

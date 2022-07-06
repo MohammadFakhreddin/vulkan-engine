@@ -57,14 +57,14 @@ void MFA::DirectionalLightComponent::Shutdown()
 void MFA::DirectionalLightComponent::GetShadowViewProjectionMatrix(float outViewProjectionMatrix[16]) const
 {
     MFA_ASSERT(outViewProjectionMatrix != nullptr);
-    Matrix::CopyGlmToCells(mShadowViewProjectionMatrix, outViewProjectionMatrix);
+    Copy<16>(outViewProjectionMatrix, mShadowViewProjectionMatrix);
 }
 
 //-------------------------------------------------------------------------------------------------
 
 void MFA::DirectionalLightComponent::GetDirection(float outDirection[3]) const
 {
-    Matrix::CopyGlmToCells(mDirection, outDirection);
+    Copy<3>(outDirection, mDirection);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -73,7 +73,7 @@ void MFA::DirectionalLightComponent::GetColor(float outColor[3]) const
 {
     if (auto const ptr = mColorComponentRef.lock())
     {
-        Matrix::CopyGlmToCells(ptr->GetColor(), outColor);
+        Copy<3>(outColor, ptr->GetColor());
     }
 }
 
@@ -132,7 +132,7 @@ void MFA::DirectionalLightComponent::computeDirectionAndShadowViewProjection()
     }
 
     // Way 1
-    auto const rotation = transformComponent->GetLocalRotation();
+    auto const rotation = transformComponent->GetLocalRotationEulerAngles();
 
     auto directionRotationMatrix = glm::identity<glm::mat4>();
     Matrix::RotateWithEulerAngle(directionRotationMatrix, rotation);

@@ -17,6 +17,11 @@ namespace MFA::Physics
             MFA_ASSERT(ptr != nullptr);
         }
 
+        Handle (Handle const &) noexcept = delete;             
+        Handle (Handle &&) noexcept = delete; 
+        Handle & operator = (Handle const &) noexcept = delete;
+        Handle & operator = (Handle && rhs) noexcept = delete;
+
         ~Handle()
         {
             if (ptr != nullptr)

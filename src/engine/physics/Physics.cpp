@@ -93,7 +93,7 @@ namespace MFA::Physics
 
     //-------------------------------------------------------------------------------------------------
 
-    void Init() // TODO: We need to accept parameters
+    void Init(InitParams const & params)
     {
         state = new State();
 
@@ -119,10 +119,11 @@ namespace MFA::Physics
         ));
         MFA_ASSERT(state->physics != nullptr);
 
+        // TODO: Do we need this many threads ?
         state->dispatcher = CreateHandle(PxDefaultCpuDispatcherCreate(std::thread::hardware_concurrency()));
         
         PxSceneDesc sceneDesc(state->physics->Ptr()->getTolerancesScale());
-        sceneDesc.gravity = PxVec3(0.0f, -9.81f, 0.0f); // TODO: What if we need different gravity ?
+        sceneDesc.gravity = params.gravity;  // We can also manually control gravity for better control
         sceneDesc.cpuDispatcher = state->dispatcher->Ptr();
         sceneDesc.simulationEventCallback = &state->simulationEventCallback;
         sceneDesc.filterShader = PhysicsWorldFilterShader;
@@ -140,6 +141,8 @@ namespace MFA::Physics
             pvdClient->setScenePvdFlag(PxPvdSceneFlag::eTRANSMIT_SCENEQUERIES, true);
         }
 #endif
+
+        state->defaultMaterial = CreateMaterial(0.5f, 0.5f, 0.5f);
     }
     
     //-------------------------------------------------------------------------------------------------
@@ -159,6 +162,8 @@ namespace MFA::Physics
     // TODO: We need a system to check for memory leaks
     void Shutdown()
     {
+        state->defaultMaterial = nullptr;
+
         state->controllerManager = nullptr;
         state->scene = nullptr;
         state->dispatcher = nullptr;
@@ -205,6 +210,13 @@ namespace MFA::Physics
         ));
     }
     
+    //-------------------------------------------------------------------------------------------------
+    
+    SharedHandle<PxMaterial> GetDefaultMaterial()
+    {
+        return state->defaultMaterial;
+    }
+
     //-------------------------------------------------------------------------------------------------
     
     SharedHandle<PxShape> CreateShape(

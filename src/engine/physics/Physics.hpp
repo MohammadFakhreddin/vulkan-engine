@@ -2,6 +2,8 @@
 
 #include "PhysicsTypes.hpp"
 
+#include <foundation/PxVec3.h>
+
 namespace physx
 {
     class PxMaterial;
@@ -15,8 +17,11 @@ namespace physx
 
 namespace MFA::Physics// final : public IPhysicsWorld, public PxSimulationEventCallback
 {
-
-    void Init();
+    struct InitParams
+    {
+        physx::PxVec3 gravity {};
+    };
+    void Init(InitParams const & params);
 
     void Update(float deltaTime);
 

@@ -158,7 +158,7 @@ void MFA::BoundingVolumeComponent::updateVolumeTransform() const
 
     bvTransform->UpdateTransform(
         bvWorldPosition,
-        bvTransform->GetLocalRotation(),
+        bvTransform->GetLocalRotationEulerAngles(),
         bvExtend
     );
 }

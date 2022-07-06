@@ -168,18 +168,15 @@ void Demo3rdPersonScene::Update(float const deltaTimeInSec)
         auto const inputRightMove = IM::GetRightMove();
         if (inputForwardMove != 0.0f || inputRightMove != 0.0f)
         {
-            float position[3]{};
-            playerTransform->GetLocalPosition(position);
-            float scale[3]{};
-            playerTransform->GetLocalScale(scale);
-            float targetEulerAngles[3]{};
-            playerTransform->GetLocalRotation(targetEulerAngles);
+            auto position = playerTransform->GetLocalPosition();
+            auto scale = playerTransform->GetLocalScale();
+            auto rotationEuler = playerTransform->GetLocalRotationEulerAngles();
 
             float cameraEulerAngles[3];
             MFA_ASSERT(mThirdPersonCamera.expired() == false);
             mThirdPersonCamera.lock()->GetRotation(cameraEulerAngles);
 
-            targetEulerAngles[1] = cameraEulerAngles[1];
+            rotationEuler.y = cameraEulerAngles[1];
             float extraAngleValue;
             if (inputRightMove == 1.0f)
             {
@@ -243,25 +240,20 @@ void Demo3rdPersonScene::Update(float const deltaTimeInSec)
                 MFA_ASSERT(false);
             }
 
-            targetEulerAngles[1] += extraAngleValue;
+            rotationEuler.y += extraAngleValue;
 
-            float currentEulerAngles[3];
-            playerTransform->GetLocalRotation(currentEulerAngles);
+            auto currentQuat = playerTransform->GetLocalRotationQuaternion();
 
-            auto const targetQuat = Matrix::ToQuat(currentEulerAngles[0], targetEulerAngles[1], currentEulerAngles[2]);
-
-            auto const currentQuat = Matrix::ToQuat(currentEulerAngles[0], currentEulerAngles[1], currentEulerAngles[2]);
-
+            auto const targetQuat = Matrix::ToQuat(rotationEuler);
+            
             auto const nextQuat = glm::slerp(currentQuat, targetQuat, 10.0f * deltaTimeInSec);
-            auto nextAnglesVec3 = Matrix::ToEulerAngles(nextQuat);
-
-            float nextAngles[3]{ nextAnglesVec3[0], nextAnglesVec3[1], nextAnglesVec3[2] };
-
-            if (std::fabs(nextAngles[2]) >= 90)
+            auto nextAngles = Matrix::ToEulerAngles(nextQuat);
+            
+            if (std::fabs(nextAngles.z) >= 90)
             {
-                nextAngles[0] += 180.f;
-                nextAngles[1] = 180.f - nextAngles[1];
-                nextAngles[2] += 180.f;
+                nextAngles.x += 180.f;
+                nextAngles.y = 180.f - nextAngles.y;
+                nextAngles.z += 180.f;
             }
 
             auto rotationMatrix = glm::identity<glm::mat4>();

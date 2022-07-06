@@ -69,8 +69,8 @@ namespace MFA
 
                 node.skin = meshNode.skin > -1 ? &mSkins[meshNode.skin] : nullptr;
 
-                Matrix::CopyCellsToGlm(meshNode.transform, node.currentTransform);
-                Matrix::CopyCellsToGlm(meshNode.transform, node.previousTransform);     // This variable is unused
+                Copy<16>(node.currentTransform, meshNode.transform);
+                //Copy<16>(node.previousTransform, meshNode.transform);
             }
         }
 
@@ -260,6 +260,15 @@ namespace MFA
             return;
         }
 
+        glm::vec3 posPrev {};
+        glm::vec3 posNext {};
+
+        glm::quat rotPrev {};
+        glm::quat rotNext {};
+
+        glm::vec3 scalePrev {};
+        glm::vec3 scaleNext {};
+
         {// Active animation
             auto const & activeAnimation = mMeshData->animations[mActiveAnimationIndex];
 
@@ -292,27 +301,23 @@ namespace MFA
 
                             if (channel.path == Animation::Path::Translation)
                             {
-                                node.currentTranslate = glm::mix(Matrix::CopyCellsToVec3(previousOutput), Matrix::CopyCellsToVec3(nextOutput), fraction);
+                                Copy<3>(posPrev, previousOutput);
+                                Copy<3>(posNext, nextOutput);
+                                node.currentTranslate = glm::mix(posPrev, posNext, fraction);
                             }
                             else if (channel.path == Animation::Path::Rotation)
                             {
-                                glm::quat previousRotation;
-                                previousRotation.x = previousOutput[0];
-                                previousRotation.y = previousOutput[1];
-                                previousRotation.z = previousOutput[2];
-                                previousRotation.w = previousOutput[3];
+                                Copy<4>(rotPrev, previousOutput);
+                                Copy<4>(rotNext, nextOutput);
 
-                                glm::quat nextRotation;
-                                nextRotation.x = nextOutput[0];
-                                nextRotation.y = nextOutput[1];
-                                nextRotation.z = nextOutput[2];
-                                nextRotation.w = nextOutput[3];
-
-                                node.currentRotation = glm::slerp(previousRotation, nextRotation, fraction);
+                                node.currentRotation = glm::slerp(rotPrev, rotNext, fraction);
                             }
                             else if (channel.path == Animation::Path::Scale)
                             {
-                                node.currentScale = glm::mix(Matrix::CopyCellsToVec3(previousOutput), Matrix::CopyCellsToVec3(nextOutput), fraction);
+                                Copy<3>(scalePrev, previousOutput);
+                                Copy<3>(scaleNext, nextOutput);
+
+                                node.currentScale = glm::mix(scalePrev, scaleNext, fraction);
                             }
                             else
                             {
@@ -372,9 +377,9 @@ namespace MFA
                     }
 
                     auto const previousInput = sampler.inputAndOutput[i].input;
-                    auto previousOutput = Matrix::CopyCellsToVec4(sampler.inputAndOutput[i].output);
+                    auto & previousOutput = sampler.inputAndOutput[i].output;
                     auto const nextInput = sampler.inputAndOutput[i + 1].input;
-                    auto nextOutput = Matrix::CopyCellsToVec4(sampler.inputAndOutput[i + 1].output);
+                    auto & nextOutput = sampler.inputAndOutput[i + 1].output;
                     // Get the input keyframe values for the current time stamp
                     if (mPreviousAnimationTimeInSec >= previousInput && mPreviousAnimationTimeInSec <= nextInput)
                     {
@@ -382,27 +387,24 @@ namespace MFA
 
                         if (channel.path == Animation::Path::Translation)
                         {
-                            node.previousTranslate = glm::mix(previousOutput, nextOutput, fraction);
+                            Copy<3>(posPrev, previousOutput);
+                            Copy<3>(posNext, nextOutput);
+                            
+                            node.previousTranslate = glm::mix(posPrev, posNext, fraction);
                         }
                         else if (channel.path == Animation::Path::Rotation)
                         {
-                            glm::quat previousRotation{};
-                            previousRotation.x = previousOutput[0];
-                            previousRotation.y = previousOutput[1];
-                            previousRotation.z = previousOutput[2];
-                            previousRotation.w = previousOutput[3];
+                            Copy<4>(rotPrev, previousOutput);
+                            Copy<4>(rotNext, nextOutput);
 
-                            glm::quat nextRotation{};
-                            nextRotation.x = nextOutput[0];
-                            nextRotation.y = nextOutput[1];
-                            nextRotation.z = nextOutput[2];
-                            nextRotation.w = nextOutput[3];
-
-                            node.previousRotation = glm::slerp(previousRotation, nextRotation, fraction);
+                            node.previousRotation = glm::slerp(rotPrev, rotNext, fraction);
                         }
                         else if (channel.path == Animation::Path::Scale)
                         {
-                            node.previousScale = glm::mix(previousOutput, nextOutput, fraction);
+                            Copy<3>(scalePrev, previousOutput);
+                            Copy<3>(scaleNext, nextOutput);
+
+                            node.previousScale = glm::mix(scalePrev, scaleNext, fraction);
                         }
                         else
                         {

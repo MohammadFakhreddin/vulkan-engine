@@ -111,21 +111,14 @@ void MFA::PointLightComponent::OnUI()
     {
         Component::OnUI();
 
-        float radius = mRadius;
-        UI::InputFloat("Radius", &radius);
-        if (radius != mRadius)
+        if (UI::InputFloat<1>("Radius", mRadius))
         {
-            mRadius = radius;
             computeAttenuation();
         }
 
-        float maxDistance = mMaxDistance;
-        UI::InputFloat("MaxDistance", &maxDistance);
-        if (maxDistance != mMaxDistance)
+        if (UI::InputFloat<1>("MaxDistance", mMaxDistance))
         {
-            mMaxDistance = maxDistance;
-            mMaxSquareDistance = maxDistance * maxDistance;
-
+            mMaxSquareDistance = mMaxDistance * mMaxDistance;
             mProjectionFarDistance = mMaxDistance;
 
             computeProjection();
@@ -298,58 +291,58 @@ void MFA::PointLightComponent::computeViewProjectionMatrices()
 
     glm::vec3 const lightWP = transformComponentPtr->GetWorldPosition();
 
-    Matrix::CopyGlmToCells(
+    Copy<16>(
+        mShadowViewProjectionMatrices[0],
         mShadowProjectionMatrix * glm::lookAt(
             lightWP,
             lightWP + glm::vec3(1.0, 0.0, 0.0),
             glm::vec3(0.0, -1.0, 0.0)
-        ),
-        mShadowViewProjectionMatrices[0]
+        )
     );
 
-    Matrix::CopyGlmToCells(
+    Copy<16>(
+        mShadowViewProjectionMatrices[1],
         mShadowProjectionMatrix * glm::lookAt(
             lightWP,
             lightWP + glm::vec3(-1.0, 0.0, 0.0),
             glm::vec3(0.0, -1.0, 0.0)
-        ),
-        mShadowViewProjectionMatrices[1]
+        )
     );
 
-    Matrix::CopyGlmToCells(
+    Copy<16>(
+        mShadowViewProjectionMatrices[2],
         mShadowProjectionMatrix * glm::lookAt(
             lightWP,
             lightWP + glm::vec3(0.0, 1.0, 0.0),
             glm::vec3(0.0, 0.0, 1.0)
-        ),
-        mShadowViewProjectionMatrices[2]
+        )
     );
 
-    Matrix::CopyGlmToCells(
+    Copy<16>(
+        mShadowViewProjectionMatrices[3],
         mShadowProjectionMatrix * glm::lookAt(
             lightWP,
             lightWP + glm::vec3(0.0, -1.0, 0.0),
             glm::vec3(0.0, 0.0, -1.0)
-        ),
-        mShadowViewProjectionMatrices[3]
+        )
     );
 
-    Matrix::CopyGlmToCells(
+    Copy<16>(
+        mShadowViewProjectionMatrices[4],
         mShadowProjectionMatrix * glm::lookAt(
             lightWP,
             lightWP + glm::vec3(0.0, 0.0, 1.0),
             glm::vec3(0.0, -1.0, 0.0)
-        ),
-        mShadowViewProjectionMatrices[4]
+        )
     );
 
-    Matrix::CopyGlmToCells(
+    Copy<16>(
+        mShadowViewProjectionMatrices[5],
         mShadowProjectionMatrix * glm::lookAt(
             lightWP,
             lightWP + glm::vec3(0.0, 0.0, -1.0),
             glm::vec3(0.0, -1.0, 0.0)
-        ),
-        mShadowViewProjectionMatrices[5]
+        )
     );
 }
 
