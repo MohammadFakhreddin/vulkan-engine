@@ -879,12 +879,8 @@ namespace MFA
                                 occlusionQueryData.Pool,
                                 static_cast<uint32_t>(occlusionQueryData.Variants.size())
                             );
-
-                           /* Matrix::CopyGlmToCells(
-                                transformC->GetTransform(),
-                                pushConstants.model
-                            );*/
-                            Copy(pushConstants.model, transformC->GetTransform());
+                            
+                            Copy(pushConstants.model, transformC->GetWorldTransform());
 
                             RF::PushConstants(
                                 recordState,

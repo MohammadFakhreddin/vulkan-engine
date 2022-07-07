@@ -137,12 +137,12 @@ void MFA::DirectionalLightComponent::computeDirectionAndShadowViewProjection()
     auto directionRotationMatrix = glm::identity<glm::mat4>();
     Matrix::RotateWithEulerAngle(directionRotationMatrix, rotation);
 
-    mDirection = directionRotationMatrix * Math::ForwardVector4;
+    mDirection = directionRotationMatrix * Copy<glm::vec4>(Math::ForwardVec3);
     
     auto const shadowViewMatrix = glm::lookAt(
         mDirection,
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(0,1,0)
+        glm::vec3(0.0f, 0.0f, 0.0f),    // TODO: Maybe center should be based on camera focus postion
+        Math::UpVec3
     );
     mShadowViewProjectionMatrix = mShadowProjectionMatrix * shadowViewMatrix;
 

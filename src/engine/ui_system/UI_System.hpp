@@ -110,6 +110,11 @@ namespace MFA::UI_System
         bool * value
     );
 
+    bool Checkbox(
+        char const * label,
+        bool & value
+    );
+
     void Spacing();
 
     void Button(

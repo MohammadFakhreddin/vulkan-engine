@@ -8,7 +8,6 @@
 #include "engine/camera/CameraComponent.hpp"
 #include "engine/ui_system/UI_System.hpp"
 #include "tools/JsonUtils.hpp"
-#include "engine/render_system/pipelines/EssenceBase.hpp"
 
 namespace MFA
 {
@@ -199,41 +198,43 @@ namespace MFA
             return;
         }
 
-        auto const & transform = transformComponent->GetTransform();
+        auto const & transform = transformComponent->GetWorldTransform();
 
         mWorldPosition = transform * glm::vec4(mLocalPosition, 1.f);
 
         // Scaled orientation
-        auto forwardDirection = Math::ForwardVector4;
-        forwardDirection = transform * forwardDirection;
-        forwardDirection = glm::normalize(forwardDirection);
-        forwardDirection *= mExtend.z;
-        glm::vec3 forwardVector = forwardDirection;
-
-        auto rightDirection = Math::RightVector4;
-        rightDirection = transform * rightDirection;
-        rightDirection = glm::normalize(rightDirection);
-        rightDirection *= mExtend.x;
-        glm::vec3 rightVector = rightDirection;
-
-        auto upDirection = Math::UpVector4;
-        upDirection = transform * upDirection;
-        upDirection = glm::normalize(upDirection);
-        upDirection *= mExtend.y;
-        glm::vec3 upVector = upDirection;
-
+        auto forwardVec4 = Copy<glm::vec4, glm::vec3>(Math::ForwardVec3);
+        forwardVec4 = transform * forwardVec4;
+        auto forwardVec3 = Copy<glm::vec3, glm::vec4>(forwardVec4);
+        forwardVec3 = glm::normalize(forwardVec3);
+        forwardVec3 *= mExtend.z;
         
-        const float newIi = std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, rightVector)) +
-            std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, upVector)) +
-            std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, forwardVector));
+        auto rightVec4 = Copy<glm::vec4, glm::vec3>(Math::RightVec4);
+        rightVec4.w = 0.0f;
+        rightVec4 = transform * rightVec4;
+        auto rightVec3 = Copy<glm::vec3, glm::vec4>(rightVec4);
+        rightVec3 = glm::normalize(rightVec3);
+        rightVec3 *= mExtend.x;
+        
+        auto upVec4 = Copy<glm::vec4, glm::vec3>(Math::UpVec4);
+        upVec4.w = 0.0f;
+        upVec4 = transform * upVec4;
+        auto upVec3 = Copy<glm::vec3, glm::vec4>(upVec4);
+        upVec3 = glm::normalize(upVec3);
+        upVec3 *= mExtend.y;
+        
+        
+        const float newIi = std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, rightVec3)) +
+            std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, upVec3)) +
+            std::abs(glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, forwardVec3));
 
-        const float newIj = std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, rightVector)) +
-            std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, upVector)) +
-            std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, forwardVector));
+        const float newIj = std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, rightVec3)) +
+            std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, upVec3)) +
+            std::abs(glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, forwardVec3));
 
-        const float newIk = std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, rightVector)) +
-            std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, upVector)) +
-            std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, forwardVector));
+        const float newIk = std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, rightVec3)) +
+            std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, upVec3)) +
+            std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, forwardVec3));
 
         mAABB_Extent.x = newIi;
         mAABB_Extent.y = newIj;

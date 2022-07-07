@@ -72,7 +72,7 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-
+    // TODO: We can automatically serialize and deserialize using some macro
     void MeshRendererComponent::Serialize(nlohmann::json & jsonObject) const
     {
         auto const variant = mVariant.lock();

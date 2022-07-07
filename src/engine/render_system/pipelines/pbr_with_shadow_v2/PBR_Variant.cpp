@@ -615,7 +615,7 @@ namespace MFA
         {
             if (auto const transformComponentPtr = mTransformComponent.lock())
             {
-                node.cachedModelTransform = transformComponentPtr->GetTransform() * node.cachedGlobalTransform;
+                node.cachedModelTransform = transformComponentPtr->GetWorldTransform() * node.cachedGlobalTransform;
             }
         }
         if (isChanged && node.meshNode->hasSubMesh() && node.meshNode->skin > -1)

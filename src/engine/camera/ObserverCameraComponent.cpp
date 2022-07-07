@@ -81,27 +81,29 @@ namespace MFA
         auto rotationMatrix = glm::identity<glm::mat4>();
         Matrix::RotateWithEulerAngle(rotationMatrix, mEulerAngles);
 
-        auto forwardDirection = Math::ForwardVector4;
+        auto forwardDirection = Math::ForwardVec4;
         forwardDirection = forwardDirection * rotationMatrix;
-        forwardDirection = glm::normalize(forwardDirection);
+        //forwardDirection = glm::normalize(forwardDirection);
 
-        auto rightDirection = Math::RightVector4;
+        auto rightDirection = Math::RightVec4;
         rightDirection = rightDirection * rotationMatrix;
-        rightDirection = glm::normalize(rightDirection);
+        //rightDirection = glm::normalize(rightDirection);
 
         auto const moveDistance = mMoveSpeed * deltaTimeInSec;
 
         if (forwardMove != 0.0f)
         {
-            mPosition[0] = mPosition[0] + forwardDirection[0] * moveDistance * forwardMove;
+            mPosition = mPosition + Copy<glm::vec3>(forwardDirection) * moveDistance * forwardMove;
+           /* mPosition[0] = mPosition[0] + forwardDirection[0] * moveDistance * forwardMove;
             mPosition[1] = mPosition[1] + forwardDirection[1] * moveDistance * forwardMove;
-            mPosition[2] = mPosition[2] + forwardDirection[2] * moveDistance * forwardMove;
+            mPosition[2] = mPosition[2] + forwardDirection[2] * moveDistance * forwardMove;*/
         }
         if (rightMove != 0.0f)
         {
-            mPosition[0] = mPosition[0] + rightDirection[0] * moveDistance * rightMove;
+            mPosition = mPosition + Copy<glm::vec3>(rightDirection) * moveDistance * rightMove;
+            /*mPosition[0] = mPosition[0] + rightDirection[0] * moveDistance * rightMove;
             mPosition[1] = mPosition[1] + rightDirection[1] * moveDistance * rightMove;
-            mPosition[2] = mPosition[2] + rightDirection[2] * moveDistance * rightMove;
+            mPosition[2] = mPosition[2] + rightDirection[2] * moveDistance * rightMove;*/
         }
 
         mIsTransformDirty = true;

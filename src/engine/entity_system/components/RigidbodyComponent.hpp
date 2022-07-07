@@ -5,6 +5,9 @@
 
 namespace MFA
 {
+    class TransformComponent;
+    class ColliderComponent;
+
     class RigidbodyComponent : public Component
     {
     public:
@@ -32,13 +35,17 @@ namespace MFA
 
         void UpdateGravity() const;
         void UpdateKinematic() const;
-        void UpdateMas() const;
+        void UpdateMass() const;
+
+        std::weak_ptr<TransformComponent> mTransform;
+
+        std::weak_ptr<ColliderComponent> mCollider;
 
         Physics::SharedHandle<physx::PxRigidDynamic> mRigidDynamic;
 
         bool mIsKinematic {};
         bool mUseGravity {};
-        bool mMas {};
+        bool mMass {};
 
     };
 

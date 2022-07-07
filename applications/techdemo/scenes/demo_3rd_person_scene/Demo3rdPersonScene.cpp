@@ -68,7 +68,7 @@ void Demo3rdPersonScene::Init()
             float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
             float scale[3]{ 1.0f, 1.0f, 1.0f };
             mPlayerTransform = entity->GetComponent<TransformComponent>();
-            mPlayerTransform.lock()->UpdateTransform(
+            mPlayerTransform.lock()->UpdateLocalTransform(
                 position,
                 eulerAngles,
                 scale
@@ -106,7 +106,7 @@ void Demo3rdPersonScene::Init()
             float position[3]{ 0.4f, 2.0f, -6.0f };
             float eulerAngle[3]{ 180.0f, -90.0f, 0.0f };
             float scale[3]{ 1.0f, 1.0f, 1.0f };
-            ptr->UpdateTransform(position, eulerAngle, scale);
+            ptr->UpdateLocalTransform(position, eulerAngle, scale);
         }
         entity->SetActive(true);
     }
@@ -127,7 +127,7 @@ void Demo3rdPersonScene::Init()
 
         auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
         MFA_ASSERT(transformComponent != nullptr);
-        transformComponent->UpdateRotation(glm::vec3(90.0f, 0.0f, 0.0f));
+        transformComponent->UpdateLocalRotation(glm::vec3(90.0f, 0.0f, 0.0f));
         
         entity->AddComponent<DirectionalLightComponent>();
 
@@ -248,32 +248,30 @@ void Demo3rdPersonScene::Update(float const deltaTimeInSec)
             
             auto const nextQuat = glm::slerp(currentQuat, targetQuat, 10.0f * deltaTimeInSec);
             auto nextAngles = Matrix::ToEulerAngles(nextQuat);
-            
-            if (std::fabs(nextAngles.z) >= 90)
-            {
-                nextAngles.x += 180.f;
-                nextAngles.y = 180.f - nextAngles.y;
-                nextAngles.z += 180.f;
-            }
+
+            // Moved to matrix class
+            //if (std::fabs(nextAngles.z) >= 90)
+            //{
+            //    nextAngles.x += 180.f;
+            //    nextAngles.y = 180.f - nextAngles.y;
+            //    nextAngles.z += 180.f;
+            //}
 
             auto rotationMatrix = glm::identity<glm::mat4>();
             Matrix::RotateWithEulerAngle(rotationMatrix, nextAngles);
 
-            glm::vec4 forwardDirection(
-                Math::ForwardVector4[0],
-                Math::ForwardVector4[1],
-                Math::ForwardVector4[2],
-                Math::ForwardVector4[3]
-            );
-            forwardDirection = forwardDirection * rotationMatrix;
-            forwardDirection = glm::normalize(forwardDirection);
-            forwardDirection *= 1 * deltaTimeInSec * SoldierSpeed;
+            glm::vec4 movementDirection = Math::ForwardVec4;
+            movementDirection = movementDirection * rotationMatrix;
+            //movementDirection = glm::normalize(movementDirection);  // I think we don't need this line
+            movementDirection *= 1 * deltaTimeInSec * SoldierSpeed;
 
-            position[0] += forwardDirection[0];
-            position[1] += forwardDirection[1];
-            position[2] += forwardDirection[2];
+            // for (int i = 0; i < 3; ++i)
+            // {
+            //     position[i] += movementDirection[i];
+            // }
+            position += Copy<glm::vec3>(movementDirection);
 
-            playerTransform->UpdateTransform(
+            playerTransform->UpdateLocalTransform(
                 position,
                 nextAngles,
                 scale
@@ -378,7 +376,7 @@ void Demo3rdPersonScene::createFireInstance(glm::vec3 const & position) const
 
     auto const transform = entity->AddComponent<TransformComponent>().lock();
     MFA_ASSERT(transform != nullptr);
-    transform->UpdatePosition(position);
+    transform->UpdateLocalPosition(position);
     
     entity->AddComponent<MeshRendererComponent>(
         particlePipeline,

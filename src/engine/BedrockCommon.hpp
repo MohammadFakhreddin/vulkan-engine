@@ -202,7 +202,10 @@ namespace MFA
     template<typename A, typename B>
     constexpr bool IsEqual(A const & memory1, B const & memory2)
     {
-        static_assert(sizeof(A) == sizeof(B));
+        if constexpr (sizeof(A) > sizeof(B))
+        {
+            return memcmp(&memory1, &memory2, sizeof(B)) == 0;
+        }
         return memcmp(&memory1, &memory2, sizeof(A)) == 0;
     }
 

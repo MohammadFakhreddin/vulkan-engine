@@ -150,7 +150,7 @@ void GLTFMeshViewerScene::Init() {
         MFA_ASSERT(transformComponent.expired() == false);
         if (auto const ptr = transformComponent.lock())
         {
-            ptr->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
+            ptr->UpdateLocalScale(glm::vec3(0.1f, 0.1f, 0.1f));
         }
 
         entity->AddComponent<PointLightComponent>(0.5f, 1000.0f);
@@ -205,7 +205,7 @@ void GLTFMeshViewerScene::Update(float const deltaTimeInSec)
                 selectedModel.initialParams.model.scale,
                 selectedModel.initialParams.model.scale
             };
-            ptr->UpdateTransform(
+            ptr->UpdateLocalTransform(
                 selectedModel.initialParams.model.translate,
                 selectedModel.initialParams.model.rotationEulerAngle,
                 scale
@@ -214,7 +214,7 @@ void GLTFMeshViewerScene::Update(float const deltaTimeInSec)
 
         if (auto const ptr = mPointLightTransform.lock())
         {
-            ptr->UpdatePosition(selectedModel.initialParams.light.position);
+            ptr->UpdateLocalPosition(selectedModel.initialParams.light.position);
         }
 
         if (auto const ptr = mPointLightColor.lock())

@@ -167,17 +167,17 @@ namespace MFA
         auto rotationMatrix = glm::identity<glm::mat4>();
         Matrix::RotateWithEulerAngle(rotationMatrix, eulerAngles);
         
-        auto forwardDirection = -Math::ForwardVector4;
+        auto forwardDirection = -Math::ForwardVec4;
         forwardDirection = forwardDirection * rotationMatrix;
-        forwardDirection = glm::normalize(forwardDirection);
+        //forwardDirection = glm::normalize(forwardDirection);
 
-        auto rightDirection = Math::RightVector4;
+        auto rightDirection = Math::RightVec4;
         rightDirection = rightDirection * rotationMatrix;
-        rightDirection = glm::normalize(rightDirection);
+        //rightDirection = glm::normalize(rightDirection);
 
-        auto upDirection = -Math::UpVector4;
+        auto upDirection = -Math::UpVec4;
         upDirection = upDirection * rotationMatrix;
-        upDirection = glm::normalize(upDirection);
+        //upDirection = glm::normalize(upDirection);
 
         const float halfVSide = mFarDistance * tanf(mFieldOfView * 0.5f);
         const float halfHSide = halfVSide * mAspectRatio;
@@ -250,18 +250,14 @@ namespace MFA
 
     void CameraComponent::GetPosition(float outPosition[3]) const
     {
-        outPosition[0] = -1 * mPosition[0];
-        outPosition[1] = -1 * mPosition[1];
-        outPosition[2] = -1 * mPosition[2];
+        Copy<3>(outPosition, -mPosition);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     void CameraComponent::GetRotation(float outEulerAngles[3]) const
     {
-        outEulerAngles[0] = mEulerAngles[0];
-        outEulerAngles[1] = mEulerAngles[1];
-        outEulerAngles[2] = mEulerAngles[2];
+        Copy<3>(outEulerAngles, mEulerAngles);
     }
 
     //-------------------------------------------------------------------------------------------------

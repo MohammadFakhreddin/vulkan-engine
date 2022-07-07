@@ -48,17 +48,17 @@ namespace MFA
 
         void OnActivationStatusChanged(bool isActive) override;
 
-    protected:
-
-        virtual void OnTransformChange();
-
-        virtual physx::PxTransform ComputePxTransform();
-
         virtual void ComputeTransform(
             physx::PxTransform const & inTransform,
             glm::vec3 & outPosition,
             glm::quat & outRotation
         );
+
+    protected:
+
+        virtual void OnTransformChange();
+
+        virtual physx::PxTransform ComputePxTransform();
         
         std::weak_ptr<TransformComponent> mTransform;
 

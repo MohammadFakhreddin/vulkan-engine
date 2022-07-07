@@ -37,7 +37,14 @@ namespace MFA::Matrix
     // Returns degree
     glm::vec3 ToEulerAngles(glm::quat const & quaternion)
     {
-        return glm::degrees(glm::eulerAngles(quaternion));
+        auto angles =  glm::degrees(glm::eulerAngles(quaternion));
+        if (std::fabs(angles.z) >= 90)
+        {
+            angles.x += 180.f;
+            angles.y = 180.f - angles.y;
+            angles.z += 180.f;
+        }
+        return angles;
     }
 
     //-------------------------------------------------------------------------------------------------

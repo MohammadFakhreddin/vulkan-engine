@@ -951,6 +951,21 @@ namespace MFA::UI_System
     {
         ImGui::Checkbox(label, value);
     }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    bool Checkbox(char const * label, bool & value)
+    {
+        bool changed = false;
+        bool tempValue = value;
+        Checkbox(label, &tempValue);
+        if (tempValue != value)
+        {
+            value = tempValue;
+            changed = true;
+        }
+        return changed;
+    }
 
     //-------------------------------------------------------------------------------------------------
 

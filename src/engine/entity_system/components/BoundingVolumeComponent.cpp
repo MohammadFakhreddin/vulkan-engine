@@ -156,7 +156,7 @@ void MFA::BoundingVolumeComponent::updateVolumeTransform() const
     auto const & bvWorldPosition = GetWorldPosition();
     auto const & bvExtend = GetExtend();
 
-    bvTransform->UpdateTransform(
+    bvTransform->UpdateLocalTransform(
         bvWorldPosition,
         bvTransform->GetLocalRotationEulerAngles(),
         bvExtend

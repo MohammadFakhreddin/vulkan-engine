@@ -4,7 +4,6 @@
 #include "engine/entity_system/Component.hpp"
 
 #include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
 
 namespace MFA
 {
@@ -32,15 +31,15 @@ namespace MFA
 
         void OnTransformChange() override;
 
-    protected:
-        
-        physx::PxTransform ComputePxTransform() override;
-
         void ComputeTransform(
             physx::PxTransform const & pxTransform,
             glm::vec3 & outPosition,
             glm::quat & outRotation
         ) override;
+
+    protected:
+        
+        physx::PxTransform ComputePxTransform() override;
 
     private:
 
@@ -48,6 +47,8 @@ namespace MFA
 
         glm::vec3 mHalfSize {};
         glm::vec4 mCenter {};
+
+        bool mHasCenter = false;
 
     };
 

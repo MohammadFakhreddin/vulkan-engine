@@ -26,33 +26,42 @@ namespace MFA
             glm::vec3 const & rotation_,          // In euler angle
             glm::vec3 const & scale_
         );
+        explicit TransformComponent(
+            glm::vec3 const & position_,
+            glm::quat const & rotation_,          // In euler angle
+            glm::vec3 const & scale_
+        );
 
         void Init() override;
 
         void Shutdown() override;
 
-        // Local
-        void UpdateTransform(float position[3], float rotation[3], float scale[3]);
+        void UpdateLocalTransform(float position[3], float rotation[3], float scale[3]);
 
-        // Local
-        void UpdateTransform(glm::vec3 const & position, glm::vec3 const & rotation, glm::vec3 const & scale);
+        void UpdateLocalTransform(glm::vec3 const & position, glm::vec3 const & rotation, glm::vec3 const & scale);
 
-        void UpdatePosition(glm::vec3 const & position);
+        void UpdateLocalPosition(glm::vec3 const & position);
 
-        void UpdatePosition(float position[3]);
+        void UpdateLocalPosition(float position[3]);
 
-        void UpdateRotation(glm::vec3 const & rotation);
+        void UpdateLocalRotation(glm::vec3 const & rotation);
 
-        void UpdateRotation(float rotation[3]);
+        void UpdateLocalRotation(float rotation[3]);
 
-        void UpdateScale(float scale[3]);
+        void UpdateLocalScale(float scale[3]);
         
-        void UpdateScale(glm::vec3 const & scale);
+        void UpdateLocalScale(glm::vec3 const & scale);
+
+        void UpdateWorldTransform(
+            glm::vec3 const & position,
+            glm::quat const & rotation
+        );
 
         [[nodiscard]]
-        glm::mat4 const & GetTransform() const noexcept;
+        glm::mat4 const & GetWorldTransform() const noexcept;
 
-        void GetLocalPosition(float outPosition[3]) const;
+        [[nodiscard]]
+        glm::mat4 const & GetInverseWorldTransform() const noexcept;
 
         [[nodiscard]]
         glm::vec4 const & GetWorldPosition() const;
@@ -101,7 +110,8 @@ namespace MFA
         glm::quat mWorldRotation {};
         glm::vec3 mWorldScale { 1.0f, 1.0f, 1.0f };
 
-        glm::mat4 mTransform {};
+        glm::mat4 mWorldTransform {};
+        glm::mat4 mInverseWorldTransform {};
 
         std::weak_ptr<TransformComponent> mParentTransform {};
 
