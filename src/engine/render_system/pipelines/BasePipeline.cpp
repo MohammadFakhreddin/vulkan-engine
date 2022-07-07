@@ -123,6 +123,9 @@ namespace MFA
 
     void BasePipeline::removeVariant(VariantBase & variant)
     {
+        // Waiting for device to be idle before removing the variant
+        RF::DeviceWaitIdle();
+
         MFA_ASSERT(mIsInitialized == true);
         // Removing from all variants list
         bool foundInAllVariantsList = false;

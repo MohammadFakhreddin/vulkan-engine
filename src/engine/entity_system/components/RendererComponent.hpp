@@ -19,6 +19,10 @@ namespace MFA {
 
         explicit RendererComponent();
 
+        void Serialize(nlohmann::json & jsonObject) const override;
+
+        void Deserialize(nlohmann::json const & jsonObject) override;
+
         std::string mNameId {};
         BasePipeline * mPipeline = nullptr;
         std::weak_ptr<VariantBase> mVariant {};

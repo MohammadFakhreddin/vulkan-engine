@@ -72,35 +72,6 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-    // TODO: We can automatically serialize and deserialize using some macro
-    void MeshRendererComponent::Serialize(nlohmann::json & jsonObject) const
-    {
-        auto const variant = mVariant.lock();
-        MFA_ASSERT(variant != nullptr);
-        auto const * essence = variant->getEssence();
-        MFA_ASSERT(essence != nullptr);
-        jsonObject["address"] = essence->getNameId();
-        jsonObject["pipeline"] = mPipeline->GetName();
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void MeshRendererComponent::Deserialize(nlohmann::json const & jsonObject)
-    {
-        MFA_ASSERT(mInitialized == false);
-
-        MFA_ASSERT(jsonObject.contains("pipeline"));
-        std::string const pipelineName = jsonObject.value("pipeline", "");
-        mPipeline = SceneManager::GetPipeline(pipelineName);
-        MFA_ASSERT(mPipeline != nullptr);
-
-        MFA_ASSERT(jsonObject.contains("address"));
-        std::string const address = jsonObject.value("address", "");
-
-        mNameId = Path::RelativeToAssetFolder(address);
-    }
-
-    //-------------------------------------------------------------------------------------------------
 
     void MeshRendererComponent::Clone(Entity * entity) const
     {

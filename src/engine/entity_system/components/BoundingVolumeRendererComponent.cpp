@@ -69,14 +69,6 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BoundingVolumeRendererComponent::Serialize(nlohmann::json & jsonObject) const {}
-
-    //-------------------------------------------------------------------------------------------------
-
-    void BoundingVolumeRendererComponent::Deserialize(nlohmann::json const & jsonObject) {}
-
-    //-------------------------------------------------------------------------------------------------
-
     void BoundingVolumeRendererComponent::Clone(Entity * entity) const
     {
         entity->AddComponent<BoundingVolumeRendererComponent>(mNameId);
