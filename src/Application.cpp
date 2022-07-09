@@ -96,9 +96,12 @@ void Application::Shutdown() {
 //-------------------------------------------------------------------------------------------------
 
 void Application::run() {
-    //static constexpr uint32_t TargetFpsDeltaTimeInMs = 1000 / 500;
+    // static constexpr uint32_t TargetFpsDeltaTimeInMs = 1000 / 90;
 #ifdef __DESKTOP__
     Init();
+
+    MSDL::SDL_GL_SetSwapInterval(0);
+
     // Main loop
     //Event handler
     MSDL::SDL_Event e;
@@ -106,24 +109,27 @@ void Application::run() {
     uint32_t deltaTimeInMs = 0;
 
     uint32_t startTime = MSDL::SDL_GetTicks();
-    while (true)
+    
+    bool shouldQuit = false;
+
+    while (shouldQuit == false)
     {
         //Handle events
-        if (MSDL::SDL_PollEvent(&e) != 0)
+        while (MSDL::SDL_PollEvent(&e) != 0)
         {
             //User requests quit
             if (e.type == MSDL::SDL_QUIT)
             {
-                break;
+                shouldQuit = true;
             }
         }
         RenderFrame(std::max(static_cast<float>(deltaTimeInMs), 1.0f) / 1000.0f);
         deltaTimeInMs = MSDL::SDL_GetTicks() - startTime;
         startTime = MSDL::SDL_GetTicks();
-        /*if(TargetFpsDeltaTimeInMs > deltaTimeInMs){
-            MSDL::SDL_Delay( TargetFpsDeltaTimeInMs - deltaTimeInMs);
-        }
-        deltaTimeInMs = MSDL::SDL_GetTicks() - start_time;*/
+        // if(TargetFpsDeltaTimeInMs > deltaTimeInMs){
+        //     MSDL::SDL_Delay(TargetFpsDeltaTimeInMs - deltaTimeInMs);
+        // }
+        //deltaTimeInMs = MSDL::SDL_GetTicks() - start_time;*/
     }
     Shutdown();
 #elif defined(__ANDROID__)

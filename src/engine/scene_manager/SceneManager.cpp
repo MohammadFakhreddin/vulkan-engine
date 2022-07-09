@@ -547,11 +547,7 @@ namespace MFA::SceneManager
             RF::GetGraphicFence(recordState)
         );
 
-        RF::PresentQueue(
-            recordState,
-            1,
-            &graphicSemaphore
-        );
+        RF::PresentQueue(recordState, 0, nullptr);
     }
 
     //-------------------------------------------------------------------------------------------------

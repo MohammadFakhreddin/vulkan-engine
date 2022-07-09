@@ -6,61 +6,62 @@
 namespace MFA {
 
     class DebugEssence;
+
     class DebugRendererPipeline final : public BasePipeline {
 
-public:
+    public:
 
-    struct PushConstants {
-        float model[16];
-        float baseColorFactor[3];
-    };
-    static_assert(sizeof(PushConstants) == 76);
+        struct PushConstants {
+            float model[16];
+            float baseColorFactor[3];
+        };
+        static_assert(sizeof(PushConstants) == 76);
 
-    explicit DebugRendererPipeline();
-    ~DebugRendererPipeline() override;
+        explicit DebugRendererPipeline();
+        ~DebugRendererPipeline() override;
 
-    PIPELINE_PROPS(
-        DebugRendererPipeline,
-        EventTypes::RenderEvent,
-        RenderOrder::DontCare
-    )
+        PIPELINE_PROPS(
+            DebugRendererPipeline,
+            EventTypes::RenderEvent,
+            RenderOrder::DontCare
+        )
 
-    void init() override;
+        void init() override;
 
-    void shutdown() override;
+        void shutdown() override;
 
-    void render(RT::CommandRecordState & recordState, float deltaTime) override;
-    
-    void onResize() override;
+        void render(RT::CommandRecordState & recordState, float deltaTime) override;
+        
+        void onResize() override;
 
-    void freeUnusedEssences() override;
+        void freeUnusedEssences() override;
 
-    std::weak_ptr<DebugEssence> GetEssence(std::string const & nameId);
+        std::weak_ptr<DebugEssence> GetEssence(std::string const & nameId);
 
-protected:
+    protected:
 
-    void internalAddEssence(EssenceBase * essence) override;
+        void internalAddEssence(EssenceBase * essence) override;
 
-    std::shared_ptr<VariantBase> internalCreateVariant(EssenceBase * essence) override;
+        std::shared_ptr<VariantBase> internalCreateVariant(EssenceBase * essence) override;
 
-private:
+    private:
 
-    struct DrawableStorageData {
-        float color[3] {};
-    };
+        struct DrawableStorageData {
+            float color[3] {};
+        };
 
-    void createDescriptorSetLayout();
+        void createDescriptorSetLayout();
 
-    void createPipeline();
+        void createPipeline();
 
-    void createDescriptorSets();
+        void createDescriptorSets();
 
-private:
+    private:
 
-    std::shared_ptr<RT::DescriptorSetLayoutGroup> mDescriptorSetLayout {};
-    std::shared_ptr<RT::PipelineGroup> mPipeline {};
+        std::shared_ptr<RT::DescriptorSetLayoutGroup> mDescriptorSetLayout {};
+        std::shared_ptr<RT::PipelineGroup> mPipeline {};
 
-    RT::DescriptorSetGroup mDescriptorSetGroup {};
+        RT::DescriptorSetGroup mDescriptorSetGroup {};
     
 };
 

@@ -347,7 +347,7 @@ namespace MFA::RenderFrontend
 
     void GetDrawableSize(int32_t & outWidth, int32_t & outHeight);
 
-#ifdef __DESKTOP__
+#ifdef __DESKTOP__// TODO: Move these functions to somewhere else
     // SDL Functions
 
     void WarpMouseInWindow(int32_t x, int32_t y);

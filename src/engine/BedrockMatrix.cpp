@@ -3,6 +3,8 @@
 #include "BedrockAssert.hpp"
 #include "BedrockMath.hpp"
 
+#include <memory.h>
+
 namespace MFA::Matrix
 {
 
@@ -47,7 +49,7 @@ namespace MFA::Matrix
     void CopyCellsToGlm(float const * cells, glm::mat4 & outMatrix)
     {
         MFA_ASSERT(cells != nullptr);
-        ::memcpy(&outMatrix, cells, sizeof(float) * 16);
+        memcpy(&outMatrix, cells, sizeof(float) * 16);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -55,7 +57,7 @@ namespace MFA::Matrix
     void CopyCellsToGlm(float const * cells, glm::vec3 & outVec3)
     {
         MFA_ASSERT(cells != nullptr);
-        ::memcpy(&outVec3, cells, sizeof(float) * 3);
+        memcpy(&outVec3, cells, sizeof(float) * 3);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -63,7 +65,7 @@ namespace MFA::Matrix
     void CopyCellsToGlm(float const * cells, glm::quat & outQuat)
     {
         MFA_ASSERT(cells != nullptr);
-        ::memcpy(&outQuat, cells, sizeof(float) * 4);
+        memcpy(&outQuat, cells, sizeof(float) * 4);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -71,7 +73,7 @@ namespace MFA::Matrix
     void CopyCellsToGlm(float const * cells, glm::vec4 & outVec4)
     {
         MFA_ASSERT(cells != nullptr);
-        ::memcpy(&outVec4, cells, sizeof(float) * 4);
+        memcpy(&outVec4, cells, sizeof(float) * 4);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -79,7 +81,7 @@ namespace MFA::Matrix
     void CopyGlmToCells(glm::mat4 const & matrix, float * cells)
     {
         MFA_ASSERT(cells != nullptr);
-        ::memcpy(cells, &matrix, sizeof(float) * 16);
+        memcpy(cells, &matrix, sizeof(float) * 16);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -87,7 +89,7 @@ namespace MFA::Matrix
     void CopyGlmToCells(glm::vec2 const & vector, float * cells)
     {
         MFA_ASSERT(cells != nullptr);
-        ::memcpy(cells, &vector, 2 * sizeof(float));
+        memcpy(cells, &vector, 2 * sizeof(float));
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -95,7 +97,7 @@ namespace MFA::Matrix
     void CopyGlmToCells(glm::vec3 const & vector, float * cells)
     {
         MFA_ASSERT(cells != nullptr);
-        ::memcpy(cells, &vector, 3 * sizeof(float));
+        memcpy(cells, &vector, 3 * sizeof(float));
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -103,7 +105,7 @@ namespace MFA::Matrix
     void CopyGlmToCells(glm::vec4 const & vector, float * cells)
     {
         MFA_ASSERT(cells != nullptr);
-        ::memcpy(cells, &vector, sizeof(float) * 4);
+        memcpy(cells, &vector, sizeof(float) * 4);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -111,7 +113,7 @@ namespace MFA::Matrix
     void CopyGlmToCells(glm::quat const & quaternion, float * cells)
     {
         MFA_ASSERT(cells != nullptr);
-        ::memcpy(cells, &quaternion, sizeof(float) * 4);
+        memcpy(cells, &quaternion, sizeof(float) * 4);
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -427,7 +427,7 @@ namespace MFA::ResourceManager
     {
         SceneManager::AssignMainThreadTask([pipeline, nameId, cpuModel, gpuTextures]()->void{
 
-            auto const pipelineName = pipeline->GetName();
+            std::string const pipelineName = pipeline->GetName();
 
             std::shared_ptr<EssenceBase> essence = nullptr;
             bool addResult = false;
