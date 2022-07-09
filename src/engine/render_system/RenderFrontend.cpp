@@ -241,7 +241,7 @@ namespace MFA::RenderFrontend
             state->vk_instance,
             DebugCallback
         );
-        MFA_LOG_INFO("Validation layers are enabled");
+        MFA_LOG_INFO("Debug report callback are enabled");
 #endif
 
         state->surface = RB::CreateWindowSurface(state->window, state->vk_instance);
@@ -433,6 +433,10 @@ namespace MFA::RenderFrontend
         RB::DestroyFence(
             state->logicalDevice.device,
             state->graphicFences
+        );
+        RB::DestroyFence(
+            state->logicalDevice.device,
+            state->computeFences
         );
 
         RB::DestroyLogicalDevice(state->logicalDevice);
@@ -1798,8 +1802,8 @@ namespace MFA::RenderFrontend
         // Note: semaphore here is not strictly necessary, because commands are processed in submission order within a single queue
         VkPresentInfoKHR presentInfo = {};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-//        presentInfo.waitSemaphoreCount = waitSemaphoresCount;
-//        presentInfo.pWaitSemaphores = waitSemaphores;
+        presentInfo.waitSemaphoreCount = waitSemaphoresCount;
+        presentInfo.pWaitSemaphores = waitSemaphores;
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = &state->displayRenderPass.GetSwapChainImages().swapChain;
         presentInfo.pImageIndices = &recordState.imageIndex;

@@ -9,7 +9,7 @@
 #endif
 
 namespace MFA::Platforms {
-
+// TODO: We can use device capabilities instead
 ScreenInfo ComputeScreenSize() {
     ScreenInfo ret {};
     #if defined(__PLATFORM_WIN__)

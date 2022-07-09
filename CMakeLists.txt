@@ -477,9 +477,14 @@ list(APPEND PREFAB_EDITOR_SOURCES
     "applications/prefab_editor/PrefabEditorApplication.cpp"
     "applications/prefab_editor/scenes/PrefabEditorScene.hpp"
     "applications/prefab_editor/scenes/PrefabEditorScene.cpp"
-    "applications/prefab_editor/WindowsApi.hpp"
-    "applications/prefab_editor/WindowsApi.cpp"
 )
+
+if (WINDOWS)
+    list(APPEND PREFAB_EDITOR_SOURCES
+        "applications/prefab_editor/WindowsApi.hpp"
+        "applications/prefab_editor/WindowsApi.cpp"
+    )
+endif ()
 
 #-----------------------------------------------------------------------
 # Libs
@@ -699,19 +704,16 @@ elseif(LINUX)
         add_executable(${executable_name} ${link_to_target_sources})
         add_dependencies(${executable_name}  "Renderer" "EntitySystem" "Engine" "Tools" "AssetSystem" "Bedrock" "Libs")
         target_link_libraries(${executable_name} "Renderer" "EntitySystem" "Engine" "Tools" "AssetSystem" "Bedrock" "Libs")
-        target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/linux/sdl/libSDL2.a")
-        target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/linux/sdl/libSDL2main.a")
-        target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/linux/libvulkan.so.1.3.204")
+        target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/linux/sdl/libSDL2.so")
+        target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/linux/vulkan/libvulkan.so.1.3.216")
+        
         target_include_directories(
             ${executable_name} PUBLIC
             $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
             $<INSTALL_INTERFACE:include>
         )
         target_link_libraries(${executable_name} ${CMAKE_DL_LIBS})
-        # target_link_directories(${executable_name} PUBLIC "${CMAKE_SOURCE_DIR}/libs/linux/sdl/")
-        # target_include_directories(${executable_name} PUBLIC "${CMAKE_SOURCE_DIR}/libs/linux/sdl/")
         target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
-
         target_link_libraries(${executable_name} X11)
 
     endfunction()
@@ -727,7 +729,7 @@ elseif(LINUX)
     set(CMAKE_USE_WIN32_THREADS_INIT 0)
     set(CMAKE_USE_PTHREADS_INIT 1)
     set(THREADS_PREFER_PTHREAD_FLAG ON)
-
+    
     set(LINUX_SOURCE)
     set(LINUX_INCLUDE_DIRECTORIES)
 
@@ -756,18 +758,18 @@ elseif(LINUX)
     target_compile_definitions(${TECHDEMO} PRIVATE TECHDEMO)
 
     # Editor
-    unset(link_to_target_directories)
-    list(APPEND link_to_target_directories
-        ${LINUX_INCLUDE_DIRECTORIES}
-        "applications/prefab_editor"
-    )
-    unset(link_to_target_sources)
-    list(APPEND link_to_target_sources
-        ${LINUX_SOURCE}
-        ${PREFAB_EDITOR_SOURCES}
-    )
-    link_to_target(${PREFAB_EDITOR})
-    target_compile_definitions(${PREFAB_EDITOR} PRIVATE PREFAB_EDITOR)
+    # unset(link_to_target_directories)
+    # list(APPEND link_to_target_directories
+    #     ${LINUX_INCLUDE_DIRECTORIES}
+    #     "applications/prefab_editor"
+    # )
+    # unset(link_to_target_sources)
+    # list(APPEND link_to_target_sources
+    #     ${LINUX_SOURCE}
+    #     ${PREFAB_EDITOR_SOURCES}
+    # )
+    # link_to_target(${PREFAB_EDITOR})
+    # target_compile_definitions(${PREFAB_EDITOR} PRIVATE PREFAB_EDITOR)
 
 elseif(MACOSX)
 

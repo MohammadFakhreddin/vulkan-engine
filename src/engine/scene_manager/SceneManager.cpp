@@ -240,7 +240,7 @@ namespace MFA::SceneManager
         RT::CommandRecordState recordState {.isValid = true};
   
         std::vector<VkSemaphore> semaphores {};
-        for (int i = 0; i < RF::GetMaxFramesPerFlight(); ++i)
+        for (uint32_t i = 0; i < RF::GetMaxFramesPerFlight(); ++i)
         {
             recordState.frameIndex = i;
             auto semaphore = RF::GetComputeSemaphore(recordState);
@@ -547,11 +547,7 @@ namespace MFA::SceneManager
             RF::GetGraphicFence(recordState)
         );
 
-        RF::PresentQueue(
-            recordState,
-            1,
-            &graphicSemaphore
-        );
+        RF::PresentQueue(recordState, 0, nullptr);
     }
 
     //-------------------------------------------------------------------------------------------------
