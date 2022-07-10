@@ -8,11 +8,6 @@
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::SphereBoundingVolumeComponent::SphereBoundingVolumeComponent()
-    : BoundingVolumeComponent(false) {}
-
-//-------------------------------------------------------------------------------------------------
-
 MFA::SphereBoundingVolumeComponent::~SphereBoundingVolumeComponent() = default;
 
 //-------------------------------------------------------------------------------------------------

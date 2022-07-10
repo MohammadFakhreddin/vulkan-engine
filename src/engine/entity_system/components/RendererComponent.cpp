@@ -27,10 +27,6 @@ std::weak_ptr<MFA::VariantBase> MFA::RendererComponent::getVariant()
 }
 
 //-------------------------------------------------------------------------------------------------
-
-MFA::RendererComponent::RendererComponent() = default;
-
-//-------------------------------------------------------------------------------------------------
 // TODO: We can automatically serialize and deserialize using some macro
 void MFA::RendererComponent::Serialize(nlohmann::json & jsonObject) const
 {

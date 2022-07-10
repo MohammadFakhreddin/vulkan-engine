@@ -286,45 +286,14 @@ namespace MFA
         for (auto const & rawComponent : rawComponents)
         {
             std::string const name = rawComponent.value("name", "undefined");
-
-            // TODO: Remove family type if it is not going to be used
-//            int const familyType = rawComponent.value("familyType", static_cast<int>(Component::FamilyType::Invalid));
-            // TODO: Use factory instead of this
+            
             auto rawComponentData = rawComponent["data"];
 
-            std::shared_ptr<Component> component = nullptr;
-
-            if (strcmp(name.c_str(), TransformComponent::Name) == 0)
-            {
-                component = AddComponent<TransformComponent>().lock();
-            }
-            else if (strcmp(name.c_str(), MeshRendererComponent::Name) == 0)
-            {
-                component = AddComponent<MeshRendererComponent>().lock();
-            }
-            else if (strcmp(name.c_str(), BoundingVolumeRendererComponent::Name) == 0)
-            {
-                component = AddComponent<BoundingVolumeRendererComponent>().lock();
-            }
-            else if (strcmp(name.c_str(), SphereBoundingVolumeComponent::Name) == 0)
-            {
-                component = AddComponent<SphereBoundingVolumeComponent>().lock();
-            }
-            else if (strcmp(name.c_str(), AxisAlignedBoundingBoxComponent::Name) == 0)
-            {
-                component = AddComponent<AxisAlignedBoundingBoxComponent>().lock();
-            }
-            else if (strcmp(name.c_str(), ColorComponent::Name) == 0)
-            {
-                component = AddComponent<ColorComponent>().lock();
-            }
-            else if (strcmp(name.c_str(), PointLightComponent::Name) == 0)
-            {
-                component = AddComponent<PointLightComponent>().lock();
-            }
+            std::shared_ptr<Component> component = Component::CreateComponent(name);
 
             if (MFA_VERIFY(component != nullptr))
             {
+                AddComponent(component);
                 component->Deserialize(rawComponentData);
             }
         }

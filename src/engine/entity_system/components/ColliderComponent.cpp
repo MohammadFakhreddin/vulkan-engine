@@ -5,6 +5,7 @@
 #include "engine/entity_system/components/TransformComponent.hpp"
 #include "engine/physics/Physics.hpp"
 #include "engine/BedrockMatrix.hpp"
+#include "engine/ui_system/UI_System.hpp"
 
 #include <physx/PxRigidActor.h>
 #include <physx/PxRigidStatic.h>
@@ -13,9 +14,13 @@
 namespace MFA
 {
 
+    using namespace physx;
+
     //-------------------------------------------------------------------------------------------------
 
-    ColliderComponent::ColliderComponent() = default;
+    ColliderComponent::ColliderComponent(glm::vec3 const & center)
+        : mCenter(center)
+    {}
 
     //-------------------------------------------------------------------------------------------------
 
@@ -28,13 +33,15 @@ namespace MFA
         Component::Init();
 
         mTransform = GetEntity()->GetComponent<Transform>();
-        auto const transform = mTransform.lock();
-        MFA_ASSERT(transform != nullptr);
-        mTransformChangeListenerId = transform->RegisterChangeListener([this]()->void{
+        auto const transformComp = mTransform.lock();
+        MFA_ASSERT(transformComp != nullptr);
+        mTransformChangeListenerId = transformComp->RegisterChangeListener([this]()->void{
             OnTransformChange();
         });
 
-        auto const pxTransform = ComputePxTransform();
+        PxTransform pxTransform {};
+        Copy(pxTransform.p, transformComp->GetWorldPosition());
+        Copy(pxTransform.q, transformComp->GetWorldRotation());
 
         auto const rigidBody = GetEntity()->GetComponent<Rigidbody>().lock();
         if (rigidBody != nullptr)
@@ -54,6 +61,10 @@ namespace MFA
 
         MFA_ASSERT(mActor != nullptr);
         mActor->userData = this;
+
+        mScale = transformComp->GetWorldScale();
+
+        CreateShape();
     }
     
     //-------------------------------------------------------------------------------------------------
@@ -66,10 +77,25 @@ namespace MFA
             transform->UnRegisterChangeListener(mTransformChangeListenerId);
         }
     }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void ColliderComponent::OnUI()
+    {
+        Parent::OnUI();
+        if (UI::TreeNode(getName()))
+        {
+            if (UI::InputFloat<3>("Center", mCenter))
+            {
+                UpdateShapeCenter();
+            }
+            UI::TreePop();
+        }
+    }
 
     //-------------------------------------------------------------------------------------------------
 
-    Physics::SharedHandle<physx::PxRigidDynamic> ColliderComponent::GetRigidDynamic() const
+    Physics::SharedHandle<PxRigidDynamic> ColliderComponent::GetRigidDynamic() const
     {
         return mRigidDynamic;
     }
@@ -80,51 +106,127 @@ namespace MFA
     {
         Component::OnActivationStatusChanged(isActive);
 
-        mActor->setActorFlag(physx::PxActorFlag::eDISABLE_SIMULATION, !isActive);
+        mActor->setActorFlag(PxActorFlag::eDISABLE_SIMULATION, !isActive);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     void ColliderComponent::OnTransformChange()
     {
-        // TODO: Look for a better solution
+        auto const transformComp = mTransform.lock();
+        MFA_ASSERT(transformComp != nullptr);
+
         auto const oldTransform = mActor->getGlobalPose();
-        auto const newTransform = ComputePxTransform();
-        if (newTransform.p == oldTransform.p && newTransform.q == oldTransform.q)
+
+        auto const & wPos = transformComp->GetWorldPosition();
+        auto const & wRot = transformComp->GetWorldRotation();
+
+        if (IsEqual(wPos, oldTransform.p) == false || IsEqual(wRot, oldTransform.q) == false)
         {
-            return;
+            PxTransform newTransform {};
+            Copy(newTransform.p, transformComp->GetWorldPosition());
+            Copy(newTransform.q, transformComp->GetWorldRotation());
+
+            mActor->setGlobalPose(newTransform);
         }
-        mActor->setGlobalPose(newTransform);
+
+        auto const & wScale = transformComp->GetWorldScale();
+        if (IsEqual(wScale, mScale) == false)
+        {
+            mScale = wScale;
+
+            UpdateShapeGeometry();
+        }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    physx::PxTransform ColliderComponent::ComputePxTransform()
+    void ColliderComponent::CreateShape()
     {
-        auto const transform = mTransform.lock();
-        MFA_ASSERT(transform != nullptr);
+        MFA_ASSERT(mShape == nullptr);
 
-        auto const & worldPosition = transform->GetWorldPosition();
-        auto const & worldRotation = transform->GetWorldRotation();
+        // Note geometry can be null at this point
+        auto const geometry = ComputeGeometry();
 
-        physx::PxTransform pxTransform {};
-        Copy(pxTransform.p, worldPosition);
-        Copy(pxTransform.q, worldRotation);
+        mShape = Physics::CreateShape(
+            *mActor,
+            *geometry,
+            Physics::GetDefaultMaterial()->Ref()
+        );
 
-        return pxTransform;
+        mShape->Ptr()->userData = this;
+
+        UpdateShapeCenter();
+
+        mActor->attachShape(mShape->Ref());
     }
-    
+
     //-------------------------------------------------------------------------------------------------
 
-    void ColliderComponent::ComputeTransform(
-        physx::PxTransform const & inTransform,
-        glm::vec3 & outPosition,
-        glm::quat & outRotation
-    )
+    void ColliderComponent::UpdateShapeCenter() const
     {
-        Copy(outPosition, inTransform.p);
-        Copy(outRotation, inTransform.q);
+        PxTransform newTransform {};
+        Copy(newTransform.p, mCenter);
+        mShape->Ptr()->setLocalPose(newTransform);
     }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ColliderComponent::UpdateShapeGeometry()
+    {
+        auto const geometry = ComputeGeometry();
+        if (geometry != nullptr)    // It can be null because of geometry not being ready yet
+        {
+            mShape->Ptr()->setGeometry(*geometry);
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    //PxTransform ColliderComponent::ComputePxTransform() const
+    //{
+    //    auto const transform = mTransform.lock();
+    //    MFA_ASSERT(transform != nullptr);
+
+    //    auto worldPosition = transform->GetWorldPosition();
+    //    auto const & worldRotation = transform->GetWorldRotation();
+
+    //    if (mHasNonZeroCenter)
+    //    {
+    //        worldPosition = worldPosition + glm::toMat4(transform->GetLocalRotationQuaternion()) * mCenter;
+    //    }
+
+    //    PxTransform pxTransform {};
+    //    Copy(pxTransform.p, worldPosition);
+    //    Copy(pxTransform.q, worldRotation);
+
+    //    return pxTransform;
+    //}
+    //
+    ////-------------------------------------------------------------------------------------------------
+
+    //void ColliderComponent::ComputeTransform(
+    //    PxTransform const & inTransform,
+    //    glm::vec3 & outPosition,
+    //    glm::quat & outRotation
+    //) const
+    //{
+    //    Copy(outRotation, inTransform.q);
+    //    
+    //    if (mHasNonZeroCenter == false)
+    //    {
+    //        Copy(outPosition, inTransform.p);
+    //    } else
+    //    {
+    //        auto const transform = mTransform.lock();
+    //        MFA_ASSERT(transform != nullptr);
+    //        
+    //        auto const myWorldPos = Copy<glm::vec3, PxVec3>(inTransform.p);
+    //        auto const myLocalPos = Copy<glm::vec3, glm::vec4>(glm::toMat4(transform->GetLocalRotationQuaternion()) * mCenter);
+
+    //        outPosition = myWorldPos - myLocalPos;
+    //    }
+    //}
 
     //-------------------------------------------------------------------------------------------------
 

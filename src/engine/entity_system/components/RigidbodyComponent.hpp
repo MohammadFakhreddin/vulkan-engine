@@ -31,6 +31,12 @@ namespace MFA
 
         void OnUI() override;
 
+        void Clone(Entity * entity) const override;
+
+        void Deserialize(nlohmann::json const & jsonObject) override;
+
+        void Serialize(nlohmann::json & jsonObject) const override;
+
     private:
 
         void UpdateGravity() const;

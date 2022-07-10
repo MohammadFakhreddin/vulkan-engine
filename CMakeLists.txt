@@ -110,6 +110,7 @@ list(
     "${CMAKE_SOURCE_DIR}/libs/include"
     "${GLM_INCLUDE_DIRS}"
     "libs/include/pxshared/include"
+    "libs/include/physx"
 )
 
 #-----------------------------------------------------------------------
@@ -259,6 +260,12 @@ list(
     "src/engine/entity_system/components/BoxColliderComponent.cpp"
     "src/engine/entity_system/components/RigidbodyComponent.hpp"
     "src/engine/entity_system/components/RigidbodyComponent.cpp"
+    "src/engine/entity_system/components/CapsuleColliderComponent.hpp"
+    "src/engine/entity_system/components/CapsuleColliderComponent.cpp"
+    "src/engine/entity_system/components/BoxColliderComponent.hpp"
+    "src/engine/entity_system/components/BoxColliderComponent.cpp"
+    "src/engine/entity_system/components/MeshColliderComponent.hpp"
+    "src/engine/entity_system/components/MeshColliderComponent.cpp"
 
     "src/engine/entity_system/components/RendererComponent.hpp"
     "src/engine/entity_system/components/RendererComponent.cpp"

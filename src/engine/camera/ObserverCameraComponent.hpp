@@ -41,10 +41,16 @@ namespace MFA
 
         void OnUI() override;
 
+        void Serialize(nlohmann::json & jsonObject) const override;
+
+        void Deserialize(nlohmann::json const & jsonObject) override;
+
+        void Clone(Entity * entity) const override;
+
     private:
 
-        float const mMoveSpeed;
-        float const mRotationSpeed;
+        float mMoveSpeed;
+        float mRotationSpeed;
 
     };
 

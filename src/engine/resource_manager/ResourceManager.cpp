@@ -366,55 +366,6 @@ namespace MFA::ResourceManager
             });
         }
     }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool createPbrEssence(
-        BasePipeline * pipeline,
-        std::string const & nameId,
-        std::shared_ptr<AS::Model> const & cpuModel,
-        std::vector<std::shared_ptr<RT::GpuTexture>> const & gpuTextures,
-        std::shared_ptr<EssenceBase> & essence
-    )
-    {
-        MFA_ASSERT(JS::IsMainThread());
-
-        auto const * pbrMesh = static_cast<AS::PBR::Mesh *>(cpuModel->mesh.get());
-
-        essence = std::make_shared<PBR_Essence>(
-            nameId,
-            *pbrMesh,
-            gpuTextures
-        );
-
-        auto const addResult = pipeline->addEssence(essence);
-
-        return addResult;
-    }
-    
-    //-------------------------------------------------------------------------------------------------
-
-    bool createDebugEssence(
-        BasePipeline * pipeline,
-        std::string const & nameId,
-        std::shared_ptr<AssetSystem::Model> const & cpuModel,
-        std::shared_ptr<EssenceBase> & essence
-    )
-    {
-        MFA_ASSERT(JS::IsMainThread());
-
-        auto const * debugMesh = static_cast<AS::Debug::Mesh *>(cpuModel->mesh.get());
-
-        essence = std::make_shared<DebugEssence>(
-            nameId,
-            *debugMesh
-        );
-        
-        auto const addResult = pipeline->addEssence(essence);
-        MFA_ASSERT(addResult == true);
-
-        return addResult;
-    }
     
     //-------------------------------------------------------------------------------------------------
 
@@ -427,26 +378,7 @@ namespace MFA::ResourceManager
     {
         SceneManager::AssignMainThreadTask([pipeline, nameId, cpuModel, gpuTextures]()->void{
 
-            auto const pipelineName = pipeline->GetName();
-
-            std::shared_ptr<EssenceBase> essence = nullptr;
-            bool addResult = false;
-
-            if (pipelineName == PBRWithShadowPipelineV2::Name)
-            {
-                addResult = createPbrEssence(pipeline, nameId, cpuModel, gpuTextures, essence);
-            } else if (pipelineName == ParticlePipeline::Name)
-            {
-                MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
-            }
-            else if (pipelineName == DebugRendererPipeline::Name)
-            {
-                addResult = createDebugEssence(pipeline, nameId, cpuModel, essence);
-            }
-            else
-            {
-                MFA_CRASH("Unhandled pipeline type detected");
-            }
+            auto const essence = pipeline->CreateEssence(nameId, cpuModel, gpuTextures);
 
             auto & essenceData = state->essences[nameId];
 
@@ -454,7 +386,7 @@ namespace MFA::ResourceManager
 
             essenceData.data = essence;
 
-            bool const success = addResult && essence != nullptr;
+            bool const success = essence != nullptr;
 
             for (auto & callback : essenceData.callbacks)
             {

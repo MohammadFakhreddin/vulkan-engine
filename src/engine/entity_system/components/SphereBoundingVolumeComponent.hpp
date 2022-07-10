@@ -18,7 +18,6 @@ namespace MFA
             BoundingVolumeComponent
         )
 
-            explicit SphereBoundingVolumeComponent();
         ~SphereBoundingVolumeComponent() override;
 
         explicit SphereBoundingVolumeComponent(float radius, bool occlusionEnabled);

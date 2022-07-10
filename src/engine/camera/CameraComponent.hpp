@@ -91,9 +91,9 @@ private:
 
 protected:
 
-    float const mFieldOfView;
-    float const mNearDistance;
-    float const mFarDistance;
+    float mFieldOfView = 0.0f;
+    float mNearDistance = 0.0f;
+    float mFarDistance = 0.0f;
     float mAspectRatio = 0.0f;
 
     glm::mat4 mProjectionMatrix {};

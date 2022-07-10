@@ -225,6 +225,16 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    std::shared_ptr<EssenceBase> ParticlePipeline::CreateEssence(std::string const & nameId,
+        std::shared_ptr<AssetSystem::Model> const & cpuModel,
+        std::vector<std::shared_ptr<RT::GpuTexture>> const & gpuTextures)
+    {
+        MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+        return nullptr;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void ParticlePipeline::internalAddEssence(EssenceBase * essence)
     {
         MFA_ASSERT(essence != nullptr);

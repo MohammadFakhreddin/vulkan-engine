@@ -397,6 +397,29 @@ namespace MFA
         mDepthPrePass->OnResize();
         mOcclusionRenderPass->OnResize();
     }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<EssenceBase> PBRWithShadowPipelineV2::CreateEssence(
+        std::string const & nameId,
+        std::shared_ptr<AssetSystem::Model> const & cpuModel,
+        std::vector<std::shared_ptr<RT::GpuTexture>> const & gpuTextures
+    )
+    {
+        MFA_ASSERT(JS::IsMainThread());
+
+        auto const * pbrMesh = static_cast<AS::PBR::Mesh *>(cpuModel->mesh.get());
+
+        auto essence = std::make_shared<PBR_Essence>(
+            nameId,
+            *pbrMesh,
+            gpuTextures
+        );
+
+        auto const addResult = addEssence(essence);
+
+        return addResult == true ? essence : nullptr;
+    }
 
     //-------------------------------------------------------------------------------------------------
 

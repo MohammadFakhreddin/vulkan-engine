@@ -155,6 +155,29 @@ namespace MFA
     {
         return std::static_pointer_cast<DebugEssence>(BasePipeline::GetEssence(nameId));
     }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<EssenceBase> DebugRendererPipeline::CreateEssence(
+        std::string const & nameId,
+        std::shared_ptr<AssetSystem::Model> const & cpuModel,
+        std::vector<std::shared_ptr<RT::GpuTexture>> const & gpuTextures
+    )
+    {
+        MFA_ASSERT(JS::IsMainThread());
+
+        auto const * debugMesh = static_cast<AS::Debug::Mesh *>(cpuModel->mesh.get());
+
+        auto essence = std::make_shared<DebugEssence>(
+            nameId,
+            *debugMesh
+        );
+        
+        auto const addResult = addEssence(essence);
+        MFA_ASSERT(addResult == true);
+
+        return addResult == true ? essence : nullptr;
+    }
 
     //-------------------------------------------------------------------------------------------------
 

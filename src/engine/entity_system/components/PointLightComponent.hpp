@@ -26,7 +26,6 @@ namespace MFA {
             Component
         )
 
-        explicit PointLightComponent();
         explicit PointLightComponent(
             float radius,
             float maxDistance,

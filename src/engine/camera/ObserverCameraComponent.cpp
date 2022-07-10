@@ -119,6 +119,27 @@ namespace MFA
             UI::TreePop();            
         }
     }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void ObserverCameraComponent::Serialize(nlohmann::json & jsonObject) const
+    {
+        MFA_NOT_IMPLEMENTED_YET("MFA");
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ObserverCameraComponent::Deserialize(nlohmann::json const & jsonObject)
+    {
+        MFA_NOT_IMPLEMENTED_YET("MFA");
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ObserverCameraComponent::Clone(Entity * entity) const
+    {
+        MFA_NOT_IMPLEMENTED_YET("MFA");
+    }
 
     //-------------------------------------------------------------------------------------------------
 

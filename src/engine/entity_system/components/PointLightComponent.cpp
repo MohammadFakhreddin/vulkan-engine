@@ -16,10 +16,6 @@ static constexpr float ProjectionNearDistance = 0.001f;
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::PointLightComponent::PointLightComponent() = default;
-
-//-------------------------------------------------------------------------------------------------
-
 MFA::PointLightComponent::PointLightComponent(
     float const radius,
     float const maxDistance,

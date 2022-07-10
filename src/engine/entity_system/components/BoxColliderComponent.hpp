@@ -8,7 +8,7 @@
 namespace MFA
 {
 
-    class BoxColliderComponent : public ColliderComponent
+    class BoxColliderComponent final : public ColliderComponent
     {
     public:
 
@@ -19,37 +19,30 @@ namespace MFA
             ColliderComponent
         )
 
-        explicit BoxColliderComponent(glm::vec3 size, glm::vec3 center);
+        explicit BoxColliderComponent(
+            glm::vec3 const & size,
+            glm::vec3 const & center = {}
+        );
 
         ~BoxColliderComponent() override;
-
-        void Init() override;
-
-        void Shutdown() override;
 
         void OnUI() override;
 
         void OnTransformChange() override;
 
-        void ComputeTransform(
-            physx::PxTransform const & pxTransform,
-            glm::vec3 & outPosition,
-            glm::quat & outRotation
-        ) override;
+        void Clone(Entity * entity) const override;
 
-    protected:
-        
-        physx::PxTransform ComputePxTransform() override;
+        void Serialize(nlohmann::json & jsonObject) const override;
+
+        void Deserialize(nlohmann::json const & jsonObject) override;
+
+        [[nodiscard]]
+        std::shared_ptr<physx::PxGeometry> ComputeGeometry() override;
 
     private:
 
-        void CreateShape();
-
         glm::vec3 mHalfSize {};
-        glm::vec4 mCenter {};
-
-        bool mHasCenter = false;
-
+    
     };
 
 }

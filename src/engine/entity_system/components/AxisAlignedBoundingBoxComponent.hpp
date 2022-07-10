@@ -24,10 +24,7 @@ namespace MFA
             glm::vec3 const & extend,
             bool occlusionCullingEnabled
         );
-
-        // Only used for auto deserialization
-        explicit AxisAlignedBoundingBoxComponent();
-
+        
         ~AxisAlignedBoundingBoxComponent() override;
         
         void Init() override;

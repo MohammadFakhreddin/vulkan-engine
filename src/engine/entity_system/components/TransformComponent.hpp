@@ -20,12 +20,12 @@ namespace MFA
             Component
         )
         
-        explicit TransformComponent();
         explicit TransformComponent(
             glm::vec3 const & position_,
             glm::vec3 const & rotation_,          // In euler angle
             glm::vec3 const & scale_
         );
+        
         explicit TransformComponent(
             glm::vec3 const & position_,
             glm::quat const & rotation_,          // In euler angle

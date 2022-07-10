@@ -54,16 +54,10 @@ namespace MFA
         {
             auto const pxTransform = mRigidDynamic->Ptr()->getGlobalPose();
 
-            glm::vec3 worldPosition;
-            glm::quat worldRotation;
+            auto const position = Copy<glm::vec3>(pxTransform.p);
+            auto const rotation = Copy<glm::quat>(pxTransform.q);
 
-            collider->ComputeTransform(
-                pxTransform,
-                worldPosition,
-                worldRotation
-            );
-
-            transform->UpdateWorldTransform(worldPosition, worldRotation);
+            transform->UpdateWorldTransform(position, rotation);
             
         }
     }
@@ -88,6 +82,27 @@ namespace MFA
         {
             UpdateMass();
         }
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void RigidbodyComponent::Clone(Entity * entity) const
+    {
+        MFA_NOT_IMPLEMENTED_YET("MFA");
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void RigidbodyComponent::Deserialize(nlohmann::json const & jsonObject)
+    {
+        MFA_NOT_IMPLEMENTED_YET("MFA");
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void RigidbodyComponent::Serialize(nlohmann::json & jsonObject) const
+    {
+        MFA_NOT_IMPLEMENTED_YET("MFA");
     }
 
     //-------------------------------------------------------------------------------------------------

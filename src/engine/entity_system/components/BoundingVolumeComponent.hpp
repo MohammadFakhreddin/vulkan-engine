@@ -13,7 +13,7 @@ namespace MFA {
     {
     public:
 
-        MFA_COMPONENT_PROPS(
+        MFA_ABSTRACT_COMPONENT_PROPS(
             BoundingVolumeComponent,
             FamilyType::BoundingVolume,
             EventTypes::UpdateEvent | EventTypes::InitEvent | EventTypes::ShutdownEvent,

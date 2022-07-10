@@ -10,13 +10,6 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    TransformComponent::TransformComponent()
-        : mWorldTransform(glm::identity<glm::mat4>())
-    {
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
     TransformComponent::TransformComponent(
         glm::vec3 const & position_,
         glm::vec3 const & rotation_,          // In euler angle

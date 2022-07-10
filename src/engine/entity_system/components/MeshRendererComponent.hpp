@@ -24,8 +24,6 @@ namespace MFA
             RendererComponent
         )
 
-        // Should only be used by json serializer
-        explicit MeshRendererComponent();
         explicit MeshRendererComponent(BasePipeline * pipeline, std::string const & nameId);
 
         void Init() override;

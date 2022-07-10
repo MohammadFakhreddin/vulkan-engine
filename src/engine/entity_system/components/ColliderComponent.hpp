@@ -3,9 +3,9 @@
 #include "engine/entity_system/Component.hpp"
 #include "engine/physics/PhysicsTypes.hpp"
 
-#include <foundation/PxTransform.h>
 #include <glm/vec3.hpp>
 #include <glm/gtx/quaternion.hpp>
+#include <physx/geometry/PxGeometry.h>
 
 // TODO: Use this link
 // https://docs.nvidia.com/gameworks/content/gameworkslibrary/physx/guide/Manual/Geometry.html
@@ -21,21 +21,21 @@ namespace physx
 
 namespace MFA
 {
-
+    // TODO: Layer and layerMask
     class TransformComponent;
 
     class ColliderComponent : public Component
     {
     public:
 
-        MFA_COMPONENT_PROPS(
+        MFA_ABSTRACT_COMPONENT_PROPS(
             ColliderComponent,
             FamilyType::Collider,
             EventTypes::InitEvent | EventTypes::ShutdownEvent | EventTypes::ActivationChangeEvent,
             Component
         )
 
-        explicit ColliderComponent();
+        explicit ColliderComponent(glm::vec3 const & center);
 
         ~ColliderComponent() override;
 
@@ -43,23 +43,26 @@ namespace MFA
 
         void Shutdown() override;
 
+        void OnUI() override;
+
         [[nodiscard]]
         Physics::SharedHandle<physx::PxRigidDynamic> GetRigidDynamic() const;
 
         void OnActivationStatusChanged(bool isActive) override;
 
-        virtual void ComputeTransform(
-            physx::PxTransform const & inTransform,
-            glm::vec3 & outPosition,
-            glm::quat & outRotation
-        );
-
     protected:
 
         virtual void OnTransformChange();
 
-        virtual physx::PxTransform ComputePxTransform();
-        
+        void CreateShape();
+
+        void UpdateShapeCenter() const;
+
+        void UpdateShapeGeometry();
+
+        [[nodiscard]]
+        virtual std::shared_ptr<physx::PxGeometry> ComputeGeometry() = 0;
+
         std::weak_ptr<TransformComponent> mTransform;
 
         physx::PxRigidActor * mActor = nullptr;
@@ -72,6 +75,11 @@ namespace MFA
         SignalId mTransformChangeListenerId = -1;
 
         bool mIsDynamic = false;
+
+        glm::vec3 mCenter {};
+
+        // Global world scale
+        glm::vec3 mScale {};
 
     };
 
