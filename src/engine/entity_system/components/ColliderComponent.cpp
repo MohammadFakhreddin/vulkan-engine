@@ -18,8 +18,12 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    ColliderComponent::ColliderComponent(glm::vec3 const & center)
+    ColliderComponent::ColliderComponent(
+        glm::vec3 const & center,
+        Physics::SharedHandle<PxMaterial> material
+    )
         : mCenter(center)
+        , mMaterial(std::move(material))
     {}
 
     //-------------------------------------------------------------------------------------------------
@@ -30,7 +34,12 @@ namespace MFA
 
     void ColliderComponent::Init()
     {
-        Component::Init();
+        Parent::Init();
+
+        if (mMaterial == nullptr)
+        {
+            mMaterial = Physics::GetDefaultMaterial();
+        }
 
         mTransform = GetEntity()->GetComponent<Transform>();
         auto const transformComp = mTransform.lock();

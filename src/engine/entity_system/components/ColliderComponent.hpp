@@ -12,6 +12,7 @@
 
 namespace physx
 {
+    class PxMaterial;
     class PxShape;
     class PxRigidActor;
     class PxActor;
@@ -35,7 +36,10 @@ namespace MFA
             Component
         )
 
-        explicit ColliderComponent(glm::vec3 const & center);
+        explicit ColliderComponent(
+            glm::vec3 const & center,
+            Physics::SharedHandle<physx::PxMaterial> material
+        );
 
         ~ColliderComponent() override;
 
@@ -77,6 +81,8 @@ namespace MFA
         bool mIsDynamic = false;
 
         glm::vec3 mCenter {};
+
+        Physics::SharedHandle<physx::PxMaterial> mMaterial = nullptr;
 
         // Global world scale
         glm::vec3 mScale {};

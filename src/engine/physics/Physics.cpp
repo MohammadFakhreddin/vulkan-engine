@@ -1,13 +1,13 @@
 
 #include "Physics.hpp"
 
-#include <thread>
-
 #include "PhysicsTypes.hpp"
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockMatrix.hpp"
 
 #include "physx/PxPhysicsAPI.h"
+
+#include <thread>
 
 // Based on snippet VehicleTank
 
@@ -37,10 +37,10 @@ namespace MFA::Physics
     //-------------------------------------------------------------------------------------------------
 
     // TODO: Important: Research about PhysxWorldFilterShader
-    PxFilterFlags PhysicsWorldFilterShader(    
-        PxFilterObjectAttributes attributes0, PxFilterData filterData0, 
+    PxFilterFlags PhysicsWorldFilterShader(
+        PxFilterObjectAttributes attributes0, PxFilterData filterData0,
         PxFilterObjectAttributes attributes1, PxFilterData filterData1,
-        PxPairFlags& pairFlags, const void* constantBlock, PxU32 constantBlockSize
+        PxPairFlags & pairFlags, const void * constantBlock, PxU32 constantBlockSize
     )
     {
         // Checking if layers should be ignored
@@ -58,8 +58,8 @@ namespace MFA::Physics
         }
 
         // all initial and persisting reports for everything, with per-point data
-	    pairFlags = PxPairFlag::eSOLVE_CONTACT | PxPairFlag::eDETECT_DISCRETE_CONTACT | PxPairFlag::eTRIGGER_DEFAULT;
-	    return PxFilterFlag::eDEFAULT;
+        pairFlags = PxPairFlag::eSOLVE_CONTACT | PxPairFlag::eDETECT_DISCRETE_CONTACT | PxPairFlag::eTRIGGER_DEFAULT;
+        return PxFilterFlag::eDEFAULT;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -76,11 +76,12 @@ namespace MFA::Physics
         SharedHandle<PxControllerManager> controllerManager{};
         SharedHandle<PxPvdTransport> transport{};
         SharedHandle<PxPvd> pvd{};
-        SimulationEventCallback simulationEventCallback {};
-        SharedHandle<PxMaterial> defaultMaterial {};
+        SimulationEventCallback simulationEventCallback{};
+        SharedHandle<PxMaterial> defaultMaterial{};
+        SharedHandle<PxCooking> cooking{};
     };
     State * state = nullptr;
-    
+
     //-------------------------------------------------------------------------------------------------
 
     static void Step()
@@ -96,6 +97,8 @@ namespace MFA::Physics
     void Init(InitParams const & params)
     {
         state = new State();
+
+        auto const toleranceScale = PxTolerancesScale();
 
         state->foundation = CreateHandle(PxCreateFoundation(
             PX_PHYSICS_VERSION,
@@ -113,7 +116,7 @@ namespace MFA::Physics
         state->physics = CreateHandle(PxCreatePhysics(
             PX_PHYSICS_VERSION,
             state->foundation->Ref(),
-            PxTolerancesScale(),
+            toleranceScale,
             true,
             state->pvd != nullptr ? state->pvd->Ptr() : nullptr
         ));
@@ -121,13 +124,13 @@ namespace MFA::Physics
 
         // TODO: Do we need this many threads ?
         state->dispatcher = CreateHandle(PxDefaultCpuDispatcherCreate(std::thread::hardware_concurrency()));
-        
+
         PxSceneDesc sceneDesc(state->physics->Ptr()->getTolerancesScale());
         sceneDesc.gravity = params.gravity;  // We can also manually control gravity for better control
         sceneDesc.cpuDispatcher = state->dispatcher->Ptr();
         sceneDesc.simulationEventCallback = &state->simulationEventCallback;
         sceneDesc.filterShader = PhysicsWorldFilterShader;
-        
+
         state->scene = CreateHandle(state->physics->Ptr()->createScene(sceneDesc));
 
         state->controllerManager = CreateHandle(PxCreateControllerManager(state->scene->Ref()));
@@ -143,8 +146,14 @@ namespace MFA::Physics
 #endif
 
         state->defaultMaterial = CreateMaterial(0.5f, 0.5f, 0.5f);
+
+        state->cooking = CreateHandle(PxCreateCooking(
+            PX_PHYSICS_VERSION,
+            state->foundation->Ref(),
+            PxCookingParams(toleranceScale))
+        );
     }
-    
+
     //-------------------------------------------------------------------------------------------------
 
     void Update(float const deltaTime)
@@ -156,14 +165,14 @@ namespace MFA::Physics
             state->stepResidualTime += FixedDeltaTime;
         }
     }
-    
+
     //-------------------------------------------------------------------------------------------------
 
     // TODO: We need a system to check for memory leaks
     void Shutdown()
     {
+        state->cooking = nullptr;
         state->defaultMaterial = nullptr;
-
         state->controllerManager = nullptr;
         state->scene = nullptr;
         state->dispatcher = nullptr;
@@ -171,12 +180,9 @@ namespace MFA::Physics
         state->scene = nullptr;
         state->dispatcher = nullptr;
         state->physics = nullptr;
-
         state->pvd = nullptr;
         state->transport = nullptr;
-
         state->foundation = nullptr;
-
         MFA_ASSERT(state != nullptr);
         delete state;
     }
@@ -187,7 +193,7 @@ namespace MFA::Physics
     {
         return CreateHandle(state->physics->Ptr()->createRigidDynamic(pxTransform));
     }
-    
+
     //-------------------------------------------------------------------------------------------------
 
     SharedHandle<PxRigidStatic> CreateStaticActor(PxTransform const & pxTransform)
@@ -196,7 +202,7 @@ namespace MFA::Physics
     }
 
     //-------------------------------------------------------------------------------------------------
-    
+
     SharedHandle<PxMaterial> CreateMaterial(
         float const staticFriction,
         float const dynamicFriction,
@@ -209,16 +215,43 @@ namespace MFA::Physics
             restitution
         ));
     }
-    
+
     //-------------------------------------------------------------------------------------------------
-    
+
     SharedHandle<PxMaterial> GetDefaultMaterial()
     {
         return state->defaultMaterial;
     }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    bool ValidateConvexMesh(PxConvexMeshDesc const & meshDesc)
+    {
+        return state->cooking->Ptr()->validateConvexMesh(meshDesc);
+    }
 
     //-------------------------------------------------------------------------------------------------
-    
+
+    SharedHandle<PxConvexMesh> CreateConvexMesh(PxConvexMeshDesc const & meshDesc)
+    {
+        SharedHandle<PxConvexMesh> convexMesh = nullptr;
+
+        PxDefaultMemoryOutputStream buf;
+        PxConvexMeshCookingResult::Enum result;
+
+        bool const cookResult = state->cooking->Ptr()->cookConvexMesh(meshDesc, buf, &result);
+        MFA_ASSERT(cookResult == true);
+        if (MFA_VERIFY(cookResult == true))
+        {
+            PxDefaultMemoryInputData input(buf.getData(), buf.getSize());
+            convexMesh = CreateHandle(state->physics->Ptr()->createConvexMesh(input));
+        }
+
+        return convexMesh;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     SharedHandle<PxShape> CreateShape(
         PxRigidActor & actor,
         PxGeometry const & geometry,

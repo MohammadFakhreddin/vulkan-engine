@@ -6,6 +6,7 @@
 
 namespace physx
 {
+    class PxConvexMesh;
     class PxMaterial;
     class PxGeometry;
     class PxRigidActor;
@@ -13,6 +14,7 @@ namespace physx
     class PxTransform;
     class PxRigidDynamic;
     class PxRigidStatic;
+    class PxConvexMeshDesc;
 }
 
 namespace MFA::Physics// final : public IPhysicsWorld, public PxSimulationEventCallback
@@ -44,6 +46,10 @@ namespace MFA::Physics// final : public IPhysicsWorld, public PxSimulationEventC
     );
 
     SharedHandle<physx::PxMaterial> GetDefaultMaterial();
+
+    bool ValidateConvexMesh(physx::PxConvexMeshDesc const & meshDesc);
+
+    SharedHandle<physx::PxConvexMesh> CreateConvexMesh(physx::PxConvexMeshDesc const & meshDesc);
 
     //void Init() override;
     //void Step() override;

@@ -12,14 +12,14 @@
 #include "engine/render_system/pipelines/EssenceBase.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Essence.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
-#include "engine/render_system/pipelines/debug_renderer/DebugEssence.hpp"
-#include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
-#include "engine/render_system/pipelines/particle/ParticlePipeline.hpp"
-#include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/job_system/TaskTracker.hpp"
+#include "engine/physics/PhysicsTypes.hpp"
+#include "engine/physics/Physics.hpp"
 
 #include <unordered_map>
+#include <cooking/PxConvexMeshDesc.h>
+#include <geometry/PxConvexMesh.h>
 
 namespace MFA::ResourceManager
 {
@@ -48,7 +48,11 @@ namespace MFA::ResourceManager
 
     //-------------------------------------------------------------------------------------------------
 
-    struct EssenceData : Data<EssenceBase, std::function<void(bool)>> {};
+    struct EssenceData : Data<EssenceBase, EssenceCallback> {};
+
+    //-------------------------------------------------------------------------------------------------
+
+    struct PhysicsMeshData : Data<Physics::Handle<physx::PxConvexMesh>, PhysicsMeshCallback> {};
 
     //-------------------------------------------------------------------------------------------------
 
@@ -60,6 +64,9 @@ namespace MFA::ResourceManager
         std::unordered_map<std::string, CpuTextureData> cpuTextures {};
 
         std::unordered_map<std::string, EssenceData> essences {};
+
+        std::unordered_map<std::string, PhysicsMeshData> physicsMeshes {};
+        std::unordered_map<std::string, PhysicsMeshData> physicsConvexMeshes {};
 
     };
     State * state = nullptr;
@@ -484,6 +491,89 @@ namespace MFA::ResourceManager
                         CreateEssence(pipeline, nameId, cpuModel, {});
                     }
                 }, loadFromFile
+            );
+        }
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void AcquirePhysicsMesh(
+        std::string const & path,
+        bool const isConvex,
+        PhysicsMeshCallback const & callback,
+        bool const loadFromFile
+    )
+    {
+        MFA_ASSERT(path.empty() == false);
+        MFA_ASSERT(callback != nullptr);
+
+        std::string const nameId = Path::RelativeToAssetFolder(path);
+
+        auto & meshMap = isConvex ? state->physicsConvexMeshes : state->physicsMeshes;
+        auto & meshData = meshMap[nameId];
+
+        bool shouldAssignTask;
+        {
+            SCOPE_LOCK(meshData.lock)
+            auto const physicsMesh = meshData.data.lock();
+            if (physicsMesh != nullptr)
+            {
+                callback(physicsMesh);
+                return;
+            }
+            meshData.callbacks.emplace_back(callback);
+            shouldAssignTask = meshData.callbacks.size() == 1;
+        }
+
+        if (shouldAssignTask)
+        {
+            AcquireCpuModel(
+                nameId,
+                [isConvex, &meshData](std::shared_ptr<AS::Model> const & cpuModel)->void{
+
+                    physx::PxConvexMeshDesc convexMeshDesc;
+                    convexMeshDesc.setToDefault();
+
+                    auto const & mesh = cpuModel->mesh;
+
+                    auto const indexCount = mesh->getIndexCount();
+                    auto const * indexBuffer = mesh->getIndexData();
+                    auto const indexStride = indexBuffer->memory.len / indexCount;
+
+                    convexMeshDesc.indices.count = indexCount;
+                    convexMeshDesc.indices.stride = static_cast<physx::PxU32>(indexStride);
+                    convexMeshDesc.indices.data = indexBuffer->memory.ptr;
+
+                    auto const vertexCount = mesh->getVertexCount();
+                    auto const * vertexBuffer = mesh->getVertexData();
+                    auto const vertexStride = vertexBuffer->memory.len / vertexCount;
+
+                    convexMeshDesc.points.count = vertexCount;
+                    convexMeshDesc.points.stride = static_cast<physx::PxU32>(vertexStride);
+                    convexMeshDesc.points.data = vertexBuffer->memory.ptr;
+                    
+
+                    if (isConvex)
+                    {
+                        convexMeshDesc.flags = physx::PxConvexFlag::eCOMPUTE_CONVEX;
+                    }
+
+                    //    https://docs.nvidia.com/gameworks/content/gameworkslibrary/physx/guide/Manual/Startup.html#startup
+                    // mesh should be validated before cooking without the mesh cleaning
+                    MFA_ASSERT(Physics::ValidateConvexMesh(convexMeshDesc));
+
+                    auto const convexMesh = Physics::CreateConvexMesh(convexMeshDesc);
+                    MFA_ASSERT(convexMesh != nullptr);
+
+                    SCOPE_LOCK(meshData.lock)
+                    meshData.data = convexMesh;
+                    for (auto const & callback : meshData.callbacks)
+                    {
+                        callback(convexMesh);
+                    }
+                    meshData.callbacks.clear();
+                },
+                loadFromFile
             );
         }
     }

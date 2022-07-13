@@ -21,7 +21,8 @@ namespace MFA
 
         explicit BoxColliderComponent(
             glm::vec3 const & size,
-            glm::vec3 const & center = {}
+            glm::vec3 const & center,
+            Physics::SharedHandle<physx::PxMaterial> material
         );
 
         ~BoxColliderComponent() override;

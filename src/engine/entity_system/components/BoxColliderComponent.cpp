@@ -15,9 +15,10 @@ namespace MFA
 
     BoxColliderComponent::BoxColliderComponent(
         glm::vec3 const & size,
-        glm::vec3 const & center
+        glm::vec3 const & center,
+        Physics::SharedHandle<PxMaterial> material
     )
-        : ColliderComponent(center)
+        : ColliderComponent(center, std::move(material))
         , mHalfSize(size.x * 0.5f, size.y * 0.5f, size.z * 0.5f)
     {
         MFA_ASSERT(size.x > 0.0f);

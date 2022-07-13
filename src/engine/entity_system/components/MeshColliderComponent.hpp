@@ -19,9 +19,10 @@ namespace MFA
         )
 
         explicit MeshColliderComponent(
-            std::string const & nameId,
+            std::string nameId,
             bool isConvex,
-            glm::vec3 const & center = {}
+            glm::vec3 const & center,
+            Physics::SharedHandle<physx::PxMaterial> material
         );
 
         void Init() override;
@@ -40,7 +41,8 @@ namespace MFA
 
         std::string mNameId {};
         bool mIsConvex = false;
-        std::shared_ptr<physx::PxGeometry> geometry {};
+        std::shared_ptr<physx::PxGeometry> mGeometry {};
+        Physics::SharedHandle<physx::PxConvexMesh> mPhysicsMesh {};
     };
 
 }

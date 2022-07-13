@@ -742,6 +742,7 @@ if (WINDOWS)
         "${PHYSX_LIBS_DEBUG_PATH}/PhysX_64.dll"
         "${PHYSX_LIBS_DEBUG_PATH}/PhysXFoundation_64.dll"
         "${PHYSX_LIBS_DEBUG_PATH}/PhysXCommon_64.dll"
+        "${PHYSX_LIBS_DEBUG_PATH}/PhysXCooking_64.dll"
     )
 
     file(GLOB DLLS_RELEASE
@@ -749,6 +750,7 @@ if (WINDOWS)
         "${PHYSX_LIBS_RELEASE_PATH}/PhysX_64.dll"
         "${PHYSX_LIBS_RELEASE_PATH}/PhysXFoundation_64.dll"
         "${PHYSX_LIBS_RELEASE_PATH}/PhysXCommon_64.dll"
+        "${PHYSX_LIBS_RELEASE_PATH}/PhysXCooking_64.dll"
     )
 
     # Techdemo executable
