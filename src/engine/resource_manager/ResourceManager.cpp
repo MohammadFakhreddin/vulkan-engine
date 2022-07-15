@@ -531,47 +531,43 @@ namespace MFA::ResourceManager
                 nameId,
                 [isConvex, &meshData](std::shared_ptr<AS::Model> const & cpuModel)->void{
 
-                    physx::PxConvexMeshDesc convexMeshDesc;
-                    convexMeshDesc.setToDefault();
-
                     auto const & mesh = cpuModel->mesh;
 
-                    auto const indexCount = mesh->getIndexCount();
-                    auto const * indexBuffer = mesh->getIndexData();
-                    auto const indexStride = indexBuffer->memory.len / indexCount;
+                    mesh->PreparePhysicsPoints([mesh, isConvex, &meshData](std::shared_ptr<SmartBlob> const & pointsBlob)->void{
+                        auto const indexCount = mesh->getIndexCount();
+                        auto const * indexBuffer = mesh->getIndexData();
+                        auto const indexStride = indexBuffer->memory.len / indexCount;
 
-                    convexMeshDesc.indices.count = indexCount;
-                    convexMeshDesc.indices.stride = static_cast<physx::PxU32>(indexStride);
-                    convexMeshDesc.indices.data = indexBuffer->memory.ptr;
+                        physx::PxConvexMeshDesc convexMeshDesc;
+                        convexMeshDesc.setToDefault();
+                        convexMeshDesc.indices.count = indexCount;
+                        convexMeshDesc.indices.stride = static_cast<physx::PxU32>(indexStride);
+                        convexMeshDesc.indices.data = indexBuffer->memory.ptr;
 
-                    auto const vertexCount = mesh->getVertexCount();
-                    auto const * vertexBuffer = mesh->getVertexData();
-                    auto const vertexStride = vertexBuffer->memory.len / vertexCount;
+                        convexMeshDesc.points.count = mesh->getVertexCount();
+                        convexMeshDesc.points.stride = static_cast<physx::PxU32>(sizeof(physx::PxVec3));
+                        convexMeshDesc.points.data = pointsBlob->memory.ptr;
 
-                    convexMeshDesc.points.count = vertexCount;
-                    convexMeshDesc.points.stride = static_cast<physx::PxU32>(vertexStride);
-                    convexMeshDesc.points.data = vertexBuffer->memory.ptr;
-                    
+                        if (isConvex)
+                        {
+                            convexMeshDesc.flags = physx::PxConvexFlag::eCOMPUTE_CONVEX;
+                        }
 
-                    if (isConvex)
-                    {
-                        convexMeshDesc.flags = physx::PxConvexFlag::eCOMPUTE_CONVEX;
-                    }
+                        // https://docs.nvidia.com/gameworks/content/gameworkslibrary/physx/guide/Manual/Startup.html#startup
+                        // mesh should be validated before cooking without the mesh cleaning
+                        MFA_ASSERT(Physics::ValidateConvexMesh(convexMeshDesc));
 
-                    //    https://docs.nvidia.com/gameworks/content/gameworkslibrary/physx/guide/Manual/Startup.html#startup
-                    // mesh should be validated before cooking without the mesh cleaning
-                    MFA_ASSERT(Physics::ValidateConvexMesh(convexMeshDesc));
+                        auto const convexMesh = Physics::CreateConvexMesh(convexMeshDesc);
+                        MFA_ASSERT(convexMesh != nullptr);
 
-                    auto const convexMesh = Physics::CreateConvexMesh(convexMeshDesc);
-                    MFA_ASSERT(convexMesh != nullptr);
-
-                    SCOPE_LOCK(meshData.lock)
-                    meshData.data = convexMesh;
-                    for (auto const & callback : meshData.callbacks)
-                    {
-                        callback(convexMesh);
-                    }
-                    meshData.callbacks.clear();
+                        SCOPE_LOCK(meshData.lock)
+                        meshData.data = convexMesh;
+                        for (auto const & callback : meshData.callbacks)
+                        {
+                            callback(convexMesh);
+                        }
+                        meshData.callbacks.clear();
+                    });
                 },
                 loadFromFile
             );

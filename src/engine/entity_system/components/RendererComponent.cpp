@@ -54,3 +54,10 @@ void MFA::RendererComponent::Deserialize(nlohmann::json const & jsonObject)
 }
 
 //-------------------------------------------------------------------------------------------------
+
+std::string MFA::RendererComponent::GetNameId() const
+{
+    return mNameId;
+}
+
+//-------------------------------------------------------------------------------------------------

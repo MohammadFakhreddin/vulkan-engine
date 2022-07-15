@@ -26,6 +26,8 @@ namespace MFA {
 
         void Deserialize(nlohmann::json const & jsonObject) override;
 
+        std::string GetNameId() const;
+
     protected:
         
         std::string mNameId {};

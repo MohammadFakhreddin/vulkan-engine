@@ -257,6 +257,8 @@ namespace MFA::AssetSystem::PBR
         [[nodiscard]]
         std::shared_ptr<MeshData> const & getMeshData() const;
 
+        void PreparePhysicsPoints(PhysicsPointsCallback const & callback) const override;
+
     private:
 
         std::shared_ptr<MeshData> mData {};

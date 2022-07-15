@@ -1,12 +1,12 @@
 #include "MeshColliderComponent.hpp"
 
 #include "engine/resource_manager/ResourceManager.hpp"
-#include "engine/physics/Physics.hpp"
+#include "TransformComponent.hpp"
 
-#include <cooking/PxConvexMeshDesc.h>
 #include <geometry/PxConvexMeshGeometry.h>
 
-#include "TransformComponent.hpp"
+#include "MeshRendererComponent.hpp"
+#include "engine/entity_system/Entity.hpp"
 
 namespace MFA
 {
@@ -14,7 +14,7 @@ namespace MFA
     using namespace physx;
 
     //-------------------------------------------------------------------------------------------------
-    // TODO: We need to cache mesh colliders
+
     MeshColliderComponent::MeshColliderComponent(
         std::string nameId,
         bool const isConvex,
@@ -25,19 +25,36 @@ namespace MFA
         , mNameId(std::move(nameId))
         , mIsConvex(isConvex)
     {}
+    
+    //-------------------------------------------------------------------------------------------------
+
+    MeshColliderComponent::MeshColliderComponent(
+        bool const isConvex,
+        glm::vec3 const & center,
+        Physics::SharedHandle<physx::PxMaterial> material
+    )
+        : ColliderComponent(center, std::move(material))
+        , mIsConvex(isConvex)
+    {}
 
     //-------------------------------------------------------------------------------------------------
 
     void MeshColliderComponent::Init()
     {
-        ColliderComponent::Init();
+        if (mNameId.empty())
+        {
+            auto const meshRenderer = GetEntity()->GetComponent<MeshRendererComponent>().lock();
+            MFA_ASSERT(meshRenderer != nullptr);
+            mNameId = meshRenderer->GetNameId();
+            MFA_ASSERT(mNameId.empty() == false);
+        }
 
         RC::AcquirePhysicsMesh(
             mNameId,
             mIsConvex,
             [this](Physics::SharedHandle<PxConvexMesh> const & physicsMesh)->void{
                 mPhysicsMesh = physicsMesh;
-                UpdateShapeGeometry();
+                ColliderComponent::Init();
             }
         );
     }
@@ -67,13 +84,11 @@ namespace MFA
 
     std::shared_ptr<PxGeometry> MeshColliderComponent::ComputeGeometry()
     {
-        if (mPhysicsMesh == nullptr)
-        {
-            return nullptr;
-        }
-        
         PxMeshScale meshScale {Copy<PxVec3>(mScale)};
-        return std::make_shared<PxConvexMeshGeometry>(mPhysicsMesh->Ptr(), meshScale);
+        return std::make_shared<PxConvexMeshGeometry>(
+            mPhysicsMesh != nullptr ? mPhysicsMesh->Ptr() : nullptr,
+            meshScale
+        );
     }
 
     //-------------------------------------------------------------------------------------------------

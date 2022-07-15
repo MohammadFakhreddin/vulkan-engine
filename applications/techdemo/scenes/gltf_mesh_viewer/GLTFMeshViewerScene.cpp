@@ -6,8 +6,8 @@
 #include "engine/BedrockPath.hpp"
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/EntitySystem.hpp"
-#include "engine/entity_system/components/AxisAlignedBoundingBoxComponent.hpp"
 #include "engine/entity_system/components/ColorComponent.hpp"
+#include "engine/entity_system/components/MeshColliderComponent.hpp"
 #include "engine/entity_system/components/MeshRendererComponent.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
 #include "engine/ui_system/UI_System.hpp"
@@ -15,7 +15,6 @@
 #include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Essence.hpp"
-#include "engine/resource_manager/ResourceManager.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 
 using namespace MFA;
@@ -56,21 +55,21 @@ void GLTFMeshViewerScene::Init() {
         }
         {
             ModelRenderData params {};
-            params.displayName = "War-craft soldier";
-            Path::ForReadWrite("models/warcraft_3_alliance_footmanfanmade/scene.gltf", params.address);
-            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {0.0f, -5.926f, -180.0f});
-            MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.9f, -2.0f});
-            MFA::Copy<3>(params.initialParams.light.position, {0.0f, -2.0f, 0.0f});
-            mModelsRenderData.emplace_back(params);
-        }
-        {
-            ModelRenderData params {};
             params.displayName = "SponzaScene";
             Path::ForReadWrite("models/sponza/sponza.gltf", params.address);
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {180.0f, -90.0f, 0.0f});
             MFA::Copy<3>(params.initialParams.model.translate, {0.4f, 2.0f, -6.0f});
             MFA::Copy<3>(params.initialParams.light.translateMin, {-50.0f, -50.0f, -50.0f});
             MFA::Copy<3>(params.initialParams.light.translateMax, {50.0f, 50.0f, 50.0f});
+            mModelsRenderData.emplace_back(params);
+        }
+        {
+            ModelRenderData params {};
+            params.displayName = "War-craft soldier";
+            Path::ForReadWrite("models/warcraft_3_alliance_footmanfanmade/scene.gltf", params.address);
+            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {0.0f, -5.926f, -180.0f});
+            MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.9f, -2.0f});
+            MFA::Copy<3>(params.initialParams.light.position, {0.0f, -2.0f, 0.0f});
             mModelsRenderData.emplace_back(params);
         }
         {
@@ -289,6 +288,7 @@ void GLTFMeshViewerScene::createModel(ModelRenderData & data) const
     );
     MFA_ASSERT(data.meshRendererComponent.expired() == false);
 
+    entity->AddComponent<MeshCollider>(true);
     // There is no need for a bounding volume
     /*entity->AddComponent<AxisAlignedBoundingBoxComponent>(
         glm::vec3(0.0f, 0.0f, 0.0f),

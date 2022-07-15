@@ -54,10 +54,17 @@ namespace MFA::JobSystem
 
     //-------------------------------------------------------------------------------------------------
 
-    void AssignTaskPerThread(Task const & task)
+    void AssignTaskPerThread(Task const & task, OnFinishCallback const & onTaskFinished)
     {
         MFA_ASSERT(task != nullptr);
-        state->threadPool.AssignTaskPerThread(task);
+        auto tracker = std::make_shared<TaskTracker2>(GetNumberOfAvailableThreads(), onTaskFinished);
+
+        state->threadPool.AssignTaskPerThread([tracker, task](ThreadNumber const threadNumber, ThreadNumber const threadCount)->void{
+            MFA_ASSERT(task != nullptr);
+            task(threadNumber, threadCount);
+            MFA_ASSERT(tracker != nullptr);
+            tracker->onComplete();
+        });
     }
 
     //-------------------------------------------------------------------------------------------------

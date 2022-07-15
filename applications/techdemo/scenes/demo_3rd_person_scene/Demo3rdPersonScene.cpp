@@ -17,6 +17,7 @@
 #include "engine/BedrockMatrix.hpp"
 #include "engine/entity_system/components/AxisAlignedBoundingBoxComponent.hpp"
 #include "engine/entity_system/components/BoundingVolumeRendererComponent.hpp"
+#include "engine/entity_system/components/MeshColliderComponent.hpp"
 #include "engine/render_system/pipelines/particle/ParticlePipeline.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Variant.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
@@ -86,6 +87,11 @@ void Demo3rdPersonScene::Init()
             SetActiveCamera(mThirdPersonCamera);
         }
         mPlayerMeshRenderer = entity->GetComponent<MeshRendererComponent>();
+        //{// Mesh collider
+        //    auto meshCollider = entity->AddComponent<MeshColliderComponent>(true).lock();
+        //    meshCollider->Init();
+        //    EntitySystem::UpdateEntity(entity);
+        //}
     }
 
     //for (float i = 0; i < 10.0f; i += 1.0f) {// Dummy soldiers
