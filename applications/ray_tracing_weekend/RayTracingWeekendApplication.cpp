@@ -12,6 +12,7 @@
 #include "geometry/HitRecord.hpp"
 #include "material/diffuse/Diffuse.hpp"
 #include "material/metal/Metal.hpp"
+#include "material/dielectric/Dielectric.hpp"
 
 #include "glm/glm.hpp"
 
@@ -85,6 +86,7 @@ void RayTracingWeekendApplication::run() {
     auto blueDiffMat = std::make_shared<Diffuse>(glm::vec3 {0.0f, 0.0f, 0.7f});
     auto metal1 = std::make_shared<Metal>(glm::vec3 {0.8f, 0.8f, 0.8f}, 0.1f);
     auto metal2 = std::make_shared<Metal>(glm::vec3 {0.8f, 0.6f, 0.2f}, 0.5f);
+    auto dielectric1 = std::make_shared<Dielectric>(glm::vec3 {1.0f, 1.0f, 1.0f}, 1.5f);
 
     mGeometries.emplace_back(std::make_shared<Sphere>(
         glm::vec3{0.0f, 0.0f, -FocalLength},
@@ -107,7 +109,7 @@ void RayTracingWeekendApplication::run() {
     mGeometries.emplace_back(std::make_shared<Sphere>(
         glm::vec3{1.0f, 0.0f, -FocalLength},
         0.5f,
-        metal2
+        dielectric1
     ));
 
     for (int i = 0; i < ImageWidth; ++i) {

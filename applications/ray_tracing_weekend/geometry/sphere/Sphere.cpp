@@ -57,10 +57,10 @@ bool Sphere::HasIntersect(
     hitRecord.position = ray.At(t);
     hitRecord.normal = (hitRecord.position - center) / radius;
     hitRecord.material = material;
+    hitRecord.hitFrontFace = glm::dot(ray.GetDirection(), hitRecord.normal) <= 0.0f;
     
-    if (glm::dot(hitRecord.normal, rayDirection) > 0) {
-        // Ray is inside the object
-        return false;
+    if (hitRecord.hitFrontFace == false) {
+        hitRecord.normal = -hitRecord.normal;
     }
     
     return true;
