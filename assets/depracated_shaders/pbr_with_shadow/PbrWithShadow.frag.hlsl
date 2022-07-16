@@ -247,6 +247,8 @@ float shadowCalculation(float3 lightVector, float viewDistance)
 }
 // TODO Strength in ambient occulusion and Scale for normals
 PSOut main(PSIn input) {
+    PSOut output;
+    
     float4 baseColor = smBuff.hasBaseColorTexture == 1
         ? pow(baseColorTexture.Sample(baseColorSampler, input.baseColorTexCoord).rgba, 2.2f)
         : smBuff.baseColorFactor.rgba;

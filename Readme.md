@@ -108,6 +108,8 @@ mkdir build64 || cmake -A x64 -S . -Bbuild64
 Currently most of recent examples won't run on mac because of no geometry shader support. I'm trying to use compute shader for animation, particle and replace all geometry shader usages with compute shader
 
 ### Macos
+
+(Editor is not avialable yet)
 - Using make
 ```
 mkdir build64
@@ -126,8 +128,7 @@ cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=./ios.toolchain.cmake -DPLATFORM=MAC
 
 ### Linux
 
-Not complete yet!
-
+(Editor is not avialable yet)
 ```
 mkdir build
 cd build

@@ -347,7 +347,7 @@ namespace MFA::RenderFrontend
 
     void GetDrawableSize(int32_t & outWidth, int32_t & outHeight);
 
-#ifdef __DESKTOP__
+#ifdef __DESKTOP__// TODO: Move these functions to somewhere else
     // SDL Functions
 
     void WarpMouseInWindow(int32_t x, int32_t y);
@@ -473,6 +473,7 @@ namespace MFA::RenderFrontend
 
     void EndAndSubmitComputeSingleTimeCommand(VkCommandBuffer const & commandBuffer);
 
+    void DestroyComputeCommand(VkCommandBuffer commandBuffer);
 
     //--------------------------------------------------------------------------------------------------------
 
@@ -504,10 +505,16 @@ namespace MFA::RenderFrontend
 
     void ResetFence(VkFence fence);
 
-    void SubmitQueue(
-        RT::CommandRecordState const & recordState,
-        uint32_t submitCount,
-        const VkSubmitInfo * submitInfos
+    void SubmitGraphicQueue(
+        uint32_t const submitCount,
+        const VkSubmitInfo * submitInfos,
+        VkFence fence
+    );
+
+    void SubmitComputeQueue(
+        uint32_t const submitCount,
+        const VkSubmitInfo * submitInfos,
+        VkFence fence
     );
 
     void PresentQueue(
@@ -519,13 +526,7 @@ namespace MFA::RenderFrontend
     DisplayRenderPass * GetDisplayRenderPass();
     
     VkSampleCountFlagBits GetMaxSamplesCount();
-
-    // Not recommended
-    void WaitForGraphicQueue();
-
-    // Not recommended
-    void WaitForPresentQueue();
-
+    
     //------------------------------------------QueryPool----------------------------------------------
 
     [[nodiscard]]
@@ -557,10 +558,13 @@ namespace MFA::RenderFrontend
     RT::CommandRecordState AcquireRecordState();
 
     [[nodiscard]]
-    VkFence GetFence(RT::CommandRecordState const & recordState);
+    VkFence GetGraphicFence(RT::CommandRecordState const & recordState);
 
     [[nodiscard]]
     VkSemaphore GetGraphicSemaphore(RT::CommandRecordState const & recordState);
+    
+    [[nodiscard]]
+    VkFence GetComputeFence(RT::CommandRecordState const & recordState);
 
     [[nodiscard]]
     VkSemaphore GetComputeSemaphore(RT::CommandRecordState const & recordState);

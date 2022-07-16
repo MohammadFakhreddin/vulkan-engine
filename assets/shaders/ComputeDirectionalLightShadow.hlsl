@@ -3,22 +3,24 @@
 
 const float DIR_ShadowBias = 0.00005;
 
-#define DIR_SHADOW_TEXTURE_SIZE (1024.0f * 10.0f)
-#define DIR_SHADOW_PER_SAMPLE 0.0204f //1.0f / 49.0f;
+const float DIR_SHADOW_TEXTURE_SIZE = (1024.0f * 10.0f);
+const float DIR_SHADOW_PER_SAMPLE = 0.0204f; //1.0f / 49.0f;
+const float DIR_TEXEL_SIZE = 1.0 / DIR_SHADOW_TEXTURE_SIZE;
 
 float computeDirectionalLightShadow(
     Texture2DArray shadowMap,
     sampler shadowSampler,
-    float4 directionLightPosition, 
+    float3 dirLightPos, 
     int lightIndex
 )
 {
     // TODO Use this formula for shadow bias
     //float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);  
-
+    
     float shadow = 0.0f;
     // perform perspective divide
-    float3 projCoords = directionLightPosition.xyz; //In ortho w is always 1:directionLightPosition.xyz / directionLightPosition.w;          // I think w is 1 most of the times!
+    float3 projCoords = dirLightPos; //In ortho w is always 1:directionLightPosition.xyz / directionLightPosition.w;          // I think w is 1 most of the times!
+    
     // transform from [-1,1] to [0,1] range Note: We are already in 0 to 1
     projCoords.x = projCoords.x * 0.5 + 0.5;
     projCoords.y = projCoords.y * 0.5 + 0.5;

@@ -14,8 +14,8 @@ struct VSIn {
     
     float2 normalTexCoord: TEXCOORD2;
     
-    float2 emissiveTexCoord: TEXCOORD1;
-    float2 occlusionTexCoord: TEXCOORD2;
+    float2 emissiveTexCoord: TEXCOORD3;
+    float2 occlusionTexCoord: TEXCOORD4;
 };
 
 struct VSOut {
@@ -31,10 +31,10 @@ struct VSOut {
     float3 worldTangent;//: TEXCOORD3;
     float3 worldBiTangent;// : TEXCOORD4;
 
-    float2 emissiveTexCoord: TEXCOORD1;
-    float2 occlusionTexCoord: TEXCOORD2;
+    float2 emissiveTexCoord: TEXCOORD3;
+    float2 occlusionTexCoord: TEXCOORD4;
 
-    float4 directionLightPosition[3];
+    float3 directionLightPosition[3];
 };        
 
 ConstantBuffer <CameraData> cameraBuffer: register(b0, space0);
@@ -50,7 +50,7 @@ VSOut main(VSIn input) {
 
     for (int i = 0; i < directionalLightBuffer.count; ++i)
     {
-        output.directionLightPosition[i] = mul(directionalLightBuffer.items[i].viewProjectionMatrix, input.worldPosition);
+        output.directionLightPosition[i] = mul(directionalLightBuffer.items[i].viewProjectionMatrix, input.worldPosition).xyz;
     }
 
     // BaseColor

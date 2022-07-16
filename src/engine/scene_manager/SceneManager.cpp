@@ -13,6 +13,7 @@
 #include "engine/render_system/pipelines/BasePipeline.hpp"
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "engine/scene_manager/Scene.hpp"
+#include "engine/render_system/RenderBackend.hpp"
 
 namespace MFA::SceneManager
 {
@@ -230,7 +231,37 @@ namespace MFA::SceneManager
         {
             EntitySystem::Update(deltaTime);
         });
+        
 
+        
+        auto commandBuffer = RF::BeginSingleTimeComputeCommand();
+        RB::EndCommandBuffer(commandBuffer);
+      
+        RT::CommandRecordState recordState {.isValid = true};
+  
+        std::vector<VkSemaphore> semaphores {};
+        for (uint32_t i = 0; i < RF::GetMaxFramesPerFlight(); ++i)
+        {
+            recordState.frameIndex = i;
+            auto semaphore = RF::GetComputeSemaphore(recordState);
+            semaphores.emplace_back(semaphore);
+        }
+        
+        VkSubmitInfo submitInfo {
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            .signalSemaphoreCount = static_cast<uint32_t>(semaphores.size()),
+            .pSignalSemaphores = semaphores.data()
+        };
+        
+        RF::SubmitComputeQueue(
+            1,
+            &submitInfo,
+            VK_NULL_HANDLE
+        );
+        RF::DeviceWaitIdle();
+        
+        RF::DestroyComputeCommand(commandBuffer);
+        
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -483,62 +514,81 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
-    static void submitQueuesAndPresent(RT::CommandRecordState const & recordState)
+    static void submitGraphicQueue(RT::CommandRecordState const & recordState) 
     {
         const auto graphicSemaphore = RF::GetGraphicSemaphore(recordState);
         const auto computeSemaphore = RF::GetComputeSemaphore(recordState);
         const auto presentSemaphore = RF::GetPresentSemaphore(recordState);
 
-        std::vector<VkSubmitInfo> submitInfos{};
+         // Submit graphic queue
+        std::vector<VkSemaphore> graphicWaitSemaphores{ presentSemaphore, computeSemaphore };
+        std::vector<VkPipelineStageFlags> graphicWaitDstStageMask{
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_PIPELINE_STAGE_VERTEX_INPUT_BIT
+        };
+        std::vector<VkSemaphore> graphicSignalSemaphores{ graphicSemaphore };
+
+        auto graphicCommandBuffer = RF::GetGraphicCommandBuffer(recordState);
+
+        VkSubmitInfo submitInfo {
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            .waitSemaphoreCount = static_cast<uint32_t>(graphicWaitSemaphores.size()),
+            .pWaitSemaphores = graphicWaitSemaphores.data(),
+            .pWaitDstStageMask = graphicWaitDstStageMask.data(),
+            .commandBufferCount = 1,
+            .pCommandBuffers = &graphicCommandBuffer,
+            .signalSemaphoreCount = static_cast<uint32_t>(graphicSignalSemaphores.size()),
+            .pSignalSemaphores = graphicSignalSemaphores.data(),
+        };
+        
+        RF::SubmitGraphicQueue(
+            1,
+            &submitInfo,
+            RF::GetGraphicFence(recordState)
+        );
+
+        RF::PresentQueue(recordState, 0, nullptr);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    static void submitComputeQueue(RT::CommandRecordState const & recordState) 
+    {
+        const auto graphicSemaphore = RF::GetGraphicSemaphore(recordState);
+        const auto computeSemaphore = RF::GetComputeSemaphore(recordState);
+        const auto presentSemaphore = RF::GetPresentSemaphore(recordState);
 
         // Submit compute queue
+        VkPipelineStageFlags computeWaitStageMask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+    
         std::vector<VkSemaphore> computeSignalSemaphores{ computeSemaphore };
 
         auto computeCommandBuffer = RF::GetComputeCommandBuffer(recordState);
 
-        submitInfos.emplace_back(VkSubmitInfo{
+        VkSubmitInfo submitInfo {
             .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-            .waitSemaphoreCount = 0,
-            .pWaitSemaphores = nullptr,
-            .pWaitDstStageMask = nullptr,
+            .waitSemaphoreCount = 1,
+            .pWaitSemaphores = &graphicSemaphore,
+            .pWaitDstStageMask = &computeWaitStageMask,
             .commandBufferCount = 1,
             .pCommandBuffers = &computeCommandBuffer,
             .signalSemaphoreCount = static_cast<uint32_t>(computeSignalSemaphores.size()),
             .pSignalSemaphores = computeSignalSemaphores.data(),
-        });
-
-        // Submit graphic queue
-        std::vector<VkSemaphore> gfxWaitSemaphores{ presentSemaphore, computeSemaphore };
-        std::vector<VkPipelineStageFlags> gfxWaitStagesFlags{
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            VK_PIPELINE_STAGE_VERTEX_INPUT_BIT
         };
-        std::vector<VkSemaphore> gfxSignalSemaphores{ graphicSemaphore };
 
-        auto graphicCommandBuffer = RF::GetGraphicCommandBuffer(recordState);
-
-        submitInfos.emplace_back(VkSubmitInfo{
-            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-            .waitSemaphoreCount = static_cast<uint32_t>(gfxWaitSemaphores.size()),
-            .pWaitSemaphores = gfxWaitSemaphores.data(),
-            .pWaitDstStageMask = gfxWaitStagesFlags.data(),
-            .commandBufferCount = 1,
-            .pCommandBuffers = &graphicCommandBuffer,
-            .signalSemaphoreCount = static_cast<uint32_t>(gfxSignalSemaphores.size()),
-            .pSignalSemaphores = gfxSignalSemaphores.data(),
-        });
-
-        RF::SubmitQueue(
-            recordState,
-            static_cast<uint32_t>(submitInfos.size()),
-            submitInfos.data()
-        );
-
-        RF::PresentQueue(
-            recordState,
+        RF::SubmitComputeQueue(
             1,
-            &graphicSemaphore
+            &submitInfo,
+            RF::GetComputeFence(recordState)
         );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    static void submitQueuesAndPresent(RT::CommandRecordState const & recordState)
+    {
+        submitGraphicQueue(recordState);
+        submitComputeQueue(recordState);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -606,7 +656,7 @@ namespace MFA::SceneManager
         recordComputeCommandBuffer(recordState, deltaTime);
 
         recordGraphicCommandBuffer(recordState, deltaTime);
-
+    
         submitQueuesAndPresent(recordState);
 
     }

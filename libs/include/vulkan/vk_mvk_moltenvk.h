@@ -298,7 +298,7 @@ typedef struct {
 	 * pipeline state object to be compiled and created by the Metal compiler. An internal error
 	 * within the Metal compiler can stall the thread for up to 30 seconds. Setting this value
 	 * limits that delay to a specified amount of time, allowing shader compilations to fail fast.
-	 *
+	 *v
 	 * The value of this parameter may be changed at any time during application runtime,
 	 * and the changed value will immediately effect subsequent MoltenVK behaviour.
 	 *

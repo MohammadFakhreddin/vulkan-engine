@@ -93,8 +93,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    std::weak_ptr<VariantBase> BasePipeline::createVariant(std::string const & nameId)
+    std::weak_ptr<VariantBase> BasePipeline::createVariant(std::string const & path)
     {
+        auto const nameId = Path::RelativeToAssetFolder(path);
         //MFA_ASSERT(mIsInitialized == true);
         auto const findResult = mEssenceAndVariantsMap.find(nameId);
         if(findResult == mEssenceAndVariantsMap.end())

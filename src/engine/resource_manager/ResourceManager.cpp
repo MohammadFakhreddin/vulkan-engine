@@ -75,36 +75,33 @@ namespace MFA::ResourceManager
 
     void Shutdown()
     {
-        // Working fine
-        for (auto & cpuTexture : state->cpuTextures)
-        {
-            MFA_ASSERT(cpuTexture.second.callbacks.empty());
-            MFA_ASSERT(cpuTexture.second.data.lock() == nullptr);
-        }
+        
+//        for (auto & cpuTexture : state->cpuTextures)
+//        {
+//            MFA_ASSERT(cpuTexture.second.callbacks.empty());
+//            MFA_ASSERT(cpuTexture.second.data.lock() == nullptr);
+//        }
         state->cpuTextures.clear();
 
-        // Working fine
-        for (auto & essence : state->essences)
-        {
-            MFA_ASSERT(essence.second.callbacks.empty());
-            MFA_ASSERT(essence.second.data.lock() == nullptr);
-        }
+//        for (auto & essence : state->essences)
+//        {
+//            MFA_ASSERT(essence.second.callbacks.empty());
+//            MFA_ASSERT(essence.second.data.lock() == nullptr);
+//        }
         state->essences.clear();
 
-        // Has an strong ref that prevents freeing memory
-        for (auto & texture : state->gpuTextures)
-        {
-            MFA_ASSERT(texture.second.callbacks.empty());
-            MFA_ASSERT(texture.second.data.lock() == nullptr);
-        }
+//        for (auto & texture : state->gpuTextures)
+//        {
+//            MFA_ASSERT(texture.second.callbacks.empty());
+//            MFA_ASSERT(texture.second.data.lock() == nullptr);
+//        }
         state->gpuTextures.clear();
 
-        // Has an strong ref that prevents freeing memory
-        for (auto & cpuModel : state->cpuModels)
-        {
-            MFA_ASSERT(cpuModel.second.callbacks.empty());
-            MFA_ASSERT(cpuModel.second.data.lock() == nullptr);
-        }
+//        for (auto & cpuModel : state->cpuModels)
+//        {
+//            MFA_ASSERT(cpuModel.second.callbacks.empty());
+//            MFA_ASSERT(cpuModel.second.data.lock() == nullptr);
+//        }
         state->cpuModels.clear();
 
         delete state;
@@ -430,7 +427,7 @@ namespace MFA::ResourceManager
     {
         SceneManager::AssignMainThreadTask([pipeline, nameId, cpuModel, gpuTextures]()->void{
 
-            auto const pipelineName = pipeline->GetName();
+            std::string const pipelineName = pipeline->GetName();
 
             std::shared_ptr<EssenceBase> essence = nullptr;
             bool addResult = false;
@@ -471,21 +468,21 @@ namespace MFA::ResourceManager
     //-------------------------------------------------------------------------------------------------
 
     void AcquireEssence(
-        std::string const & nameId,
+        std::string const & path,
         BasePipeline * pipeline,
         EssenceCallback const & callback,
         bool loadFromFile
     )
     {
-        MFA_ASSERT(nameId.length() > 0);
+        MFA_ASSERT(path.length() > 0);
         MFA_ASSERT(pipeline != nullptr);
         MFA_ASSERT(callback != nullptr);
 
         std::shared_ptr<EssenceBase> essence = nullptr;
 
-        std::string const relativePath = Path::RelativeToAssetFolder(nameId);
+        auto const nameId = Path::RelativeToAssetFolder(path);
 
-        auto & essenceData = state->essences[relativePath];
+        auto & essenceData = state->essences[nameId];
 
         bool shouldAssignTask;
         {
