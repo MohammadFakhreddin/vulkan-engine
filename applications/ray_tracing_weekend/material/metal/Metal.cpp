@@ -16,15 +16,6 @@ Metal::Metal(glm::vec3 const & color_, float roughness_)
 
 //-------------------------------------------------------------------------------------------------
 
-static glm::vec3 reflect(
-    glm::vec3 const & vector, 
-    glm::vec3 const & normal
-) {
-    return vector - 2 * glm::dot(vector, normal) * normal;
-}
-
-//-------------------------------------------------------------------------------------------------
-
 bool Metal::Scatter(
     Ray const & ray,
     HitRecord const & hitRecord,
@@ -32,7 +23,7 @@ bool Metal::Scatter(
     Ray & outScatteredRay
 ) const 
 {
-    auto direction = reflect(ray.GetDirection(), hitRecord.normal);
+    auto direction = Reflect(ray.GetDirection(), hitRecord.normal);
     if (roughness > Math::Epsilon<float>()) {
         direction += roughness * RandomUnitVector();
     }

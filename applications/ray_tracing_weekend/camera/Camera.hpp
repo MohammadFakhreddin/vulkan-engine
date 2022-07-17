@@ -8,9 +8,8 @@ class Camera {
 public:
 
     explicit Camera(
-        float aspectRatio, 
-        float imageWidth, 
-        float imageHeight,
+        float vFOV, // In angles
+        float aspectRatio,
         float focalLength
     );
 

@@ -48,6 +48,6 @@ private:
 
     std::vector<std::shared_ptr<Geometry>> mGeometries {};
 
-    Camera mCamera {AspectRatio, ImageWidth, ImageHeight, FocalLength};
+    Camera mCamera {90, AspectRatio, FocalLength};
 
 };

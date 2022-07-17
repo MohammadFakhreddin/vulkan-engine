@@ -22,6 +22,17 @@ public:
 
     static glm::vec3 RandomUnitVector();
 
+    static glm::vec3 Reflect(
+        glm::vec3 const & vector, 
+        glm::vec3 const & normal
+    );
+
+    static glm::vec3 Refract(
+        glm::vec3 const & rayDir,
+        glm::vec3 const & surfNormal,
+        float etaiOverEtat
+    );
+
     glm::vec3 const color {};
 
 };
