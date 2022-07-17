@@ -7,17 +7,24 @@
 //-------------------------------------------------------------------------------------------------
 
 Camera::Camera(        
+    glm::vec3 const & lookFrom,
+    glm::vec3 const & lookAt,
+    glm::vec3 const & upDirection,
     float vFOV, // In angles
     float aspectRatio,
     float focalLength
 ) {
     auto viewportHeight = std::tan(glm::radians(vFOV * 0.5f)) * focalLength * 2.0f;
     auto viewportWidth = aspectRatio * viewportHeight;
-    
-    mOrigin = glm::vec3(0.0f, 0.0f, 0.0f);
-    mHorizontal = glm::vec3(viewportWidth, 0.0f, 0.0f);
-    mVertical = glm::vec3(0.0f, viewportHeight, 0.0f);
-    mLowerLeftCorner = mOrigin - mHorizontal * 0.5f - mVertical * 0.5f - glm::vec3(0.0f, 0.0f, focalLength);
+
+    auto myForwardDir = glm::normalize(lookAt - lookFrom);
+    auto myRightDir = glm::normalize(glm::cross(upDirection, myForwardDir));
+    auto myUpDir = glm::normalize(glm::cross(myForwardDir, myRightDir));
+
+    mOrigin = lookFrom;
+    mHorizontal = myRightDir * viewportWidth;
+    mVertical = myUpDir * viewportHeight;
+    mLowerLeftCorner = mOrigin - mHorizontal * 0.5f - mVertical * 0.5f + myForwardDir * focalLength;
 }
 
 //-------------------------------------------------------------------------------------------------

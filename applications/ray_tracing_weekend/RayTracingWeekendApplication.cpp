@@ -82,6 +82,15 @@ void RayTracingWeekendApplication::run() {
     
     MFA_LOG_INFO("Starting to generate image");
     
+    Camera camera {
+        glm::vec3{ 2, 2, 1 }, 
+        glm::vec3{ 0, 0, -1 }, 
+        MFA::Math::UpVector3, 
+        20,
+        AspectRatio, 
+        FocalLength
+    };
+    
     auto redDiffMat = std::make_shared<Diffuse>(glm::vec3 {0.7f, 0.0f, 0.0f});
     auto blueDiffMat = std::make_shared<Diffuse>(glm::vec3 {0.0f, 0.0f, 0.7f});
     auto metal1 = std::make_shared<Metal>(glm::vec3 {0.8f, 0.8f, 0.8f}, 0.1f);
@@ -114,12 +123,12 @@ void RayTracingWeekendApplication::run() {
 
     for (int i = 0; i < ImageWidth; ++i) {
         for (int j = 0; j < ImageHeight; ++j) {
-            JS::AssignTask([this, i, j](int num, int count)->void {
+            JS::AssignTask([this, i, j, &camera](int num, int count)->void {
                 glm::vec3 color {};
                 for (int s = 0; s < SampleRate; ++s) {
                     auto u = (static_cast<float>(i) + Math::Random(-1.0f, 1.0f)) / float(ImageWidth - 1.0f);
                     auto v = (static_cast<float>(j) + Math::Random(-1.0f, 1.0f)) / float(ImageHeight - 1.0f);
-                    auto const ray = mCamera.CreateRay(u, v);
+                    auto const ray = camera.CreateRay(u, v);
                     color += RayColor(ray, MaxDepth);
                 }
                 color *= ColorPerSample;
