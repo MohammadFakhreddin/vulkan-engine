@@ -54,6 +54,12 @@ namespace MFA
 
         void OnActivationStatusChanged(bool isActive) override;
 
+        void Serialize(nlohmann::json & jsonObject) const override;
+
+        void Deserialize(nlohmann::json const & jsonObject) override;
+
+        void Clone(Entity * entity) const override;
+
     protected:
 
         virtual void OnTransformChange();

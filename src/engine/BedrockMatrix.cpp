@@ -13,23 +13,28 @@ namespace MFA::Matrix
 
     glm::quat ToQuat(const float xDeg, const float yDeg, const float zDeg)
     {
-        return glm::quat {glm::vec3 {
+        return glm::angleAxis(glm::radians(xDeg), glm::vec3(1.0f, 0.0f, 0.0f)) *
+            glm::angleAxis(glm::radians(yDeg), glm::vec3(0.0f, 1.0f, 0.0f)) *
+            glm::angleAxis(glm::radians(zDeg), glm::vec3(0.0f, 0.0f, 1.0f)) *
+            glm::identity<glm::quat>();
+        /*return glm::quat {glm::vec3 {
             glm::radians(xDeg),
             glm::radians(yDeg),
             glm::radians(zDeg)
-        }};
+        }};*/
     }
 
     //-------------------------------------------------------------------------------------------------
 
     glm::quat ToQuat(glm::vec3 const & eulerAngles)
     {
-        glm::vec3 const radians = glm::vec3 {
-            glm::radians(eulerAngles.x),
-            glm::radians(eulerAngles.y),
-            glm::radians(eulerAngles.z)
-        };
-        return glm::quat {radians};
+        return ToQuat(eulerAngles.x, eulerAngles.y, eulerAngles.z);
+        //glm::vec3 const radians = glm::vec3 {
+        //    glm::radians(eulerAngles.x),
+        //    glm::radians(eulerAngles.y),
+        //    glm::radians(eulerAngles.z)
+        //};
+        //return glm::quat {radians};
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -6,6 +6,7 @@
 #include "engine/BedrockPath.hpp"
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/EntitySystem.hpp"
+#include "engine/entity_system/components/BoxColliderComponent.hpp"
 #include "engine/entity_system/components/ColorComponent.hpp"
 #include "engine/entity_system/components/MeshColliderComponent.hpp"
 #include "engine/entity_system/components/MeshRendererComponent.hpp"
@@ -288,7 +289,8 @@ void GLTFMeshViewerScene::createModel(ModelRenderData & data) const
     );
     MFA_ASSERT(data.meshRendererComponent.expired() == false);
 
-    entity->AddComponent<MeshCollider>(true);
+    //entity->AddComponent<MeshCollider>(true);
+    entity->AddComponent<BoxCollider>(glm::vec3 {1.0f, 1.0f, 1.0f});
     // There is no need for a bounding volume
     /*entity->AddComponent<AxisAlignedBoundingBoxComponent>(
         glm::vec3(0.0f, 0.0f, 0.0f),

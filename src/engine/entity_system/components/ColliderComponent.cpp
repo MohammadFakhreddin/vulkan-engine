@@ -51,6 +51,7 @@ namespace MFA
         PxTransform pxTransform {};
         Copy(pxTransform.p, transformComp->GetWorldPosition());
         Copy(pxTransform.q, transformComp->GetWorldRotation());
+        //Copy(pxTransform.q, glm::identity<glm::quat>());
 
         auto const rigidBody = GetEntity()->GetComponent<Rigidbody>().lock();
         if (rigidBody != nullptr)
@@ -116,6 +117,27 @@ namespace MFA
         Component::OnActivationStatusChanged(isActive);
 
         mActor->setActorFlag(PxActorFlag::eDISABLE_SIMULATION, !isActive);
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void ColliderComponent::Serialize(nlohmann::json & jsonObject) const
+    {
+        MFA_NOT_IMPLEMENTED_YET("MFA");
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ColliderComponent::Deserialize(nlohmann::json const & jsonObject)
+    {
+        MFA_NOT_IMPLEMENTED_YET("MFA");
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ColliderComponent::Clone(Entity * entity) const
+    {
+        MFA_NOT_IMPLEMENTED_YET("MFA");
     }
 
     //-------------------------------------------------------------------------------------------------
