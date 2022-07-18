@@ -37,7 +37,7 @@ private:
     static constexpr float FocalLength = 1.0f;
     static constexpr int ComponentCount = 3;
     static constexpr int Quality = 100;
-    static constexpr int SampleRate = 100.0f;
+    static constexpr int SampleRate = 100;
     static constexpr float ColorPerSample = 1.0f / static_cast<float>(SampleRate);
     static constexpr int MaxDepth = 50;
     static constexpr float GammaCorrection = 1.0f / 2.2f;

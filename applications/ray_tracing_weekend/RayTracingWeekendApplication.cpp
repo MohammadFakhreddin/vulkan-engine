@@ -3,7 +3,6 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockPath.hpp"
 #include "engine/BedrockFileSystem.hpp"
-#include "engine/BedrockString.hpp"
 #include "engine/BedrockMemory.hpp"
 #include "ray/Ray.hpp"
 #include "geometry/sphere/Sphere.hpp"
@@ -18,8 +17,6 @@
 
 #include "libs/stb_image/stb_image_write.h"
 
-#include <memory.h>
-
 using namespace MFA;
 
 static float Infinity = std::numeric_limits<float>::infinity();
@@ -33,18 +30,18 @@ glm::vec3 RayTracingWeekendApplication::RayColor(Ray const & ray, int maxDepth) 
     
     // bool hit = false;
 
-    if (maxDepth <= 0.0f) {
+    if (maxDepth <= 0) {
         return glm::vec3 {};
     }
     
-    auto tMax = Infinity;
+    auto const tMax = Infinity;
 
     HitRecord hitRecord {};
     hitRecord.t = tMax;
 
     bool hasHit = false;
     
-    for (auto & geometry : mGeometries)
+    for (auto const & geometry : mGeometries)
     {
         if (geometry->HasIntersect(
             ray, 
@@ -59,7 +56,7 @@ glm::vec3 RayTracingWeekendApplication::RayColor(Ray const & ray, int maxDepth) 
     if (hasHit) {
         glm::vec3 attenuation {};
         Ray scatteredRay;
-        bool hasScatteredRay = hitRecord.material->Scatter(ray, hitRecord, attenuation, scatteredRay);
+        bool const hasScatteredRay = hitRecord.material->Scatter(ray, hitRecord, attenuation, scatteredRay);
         if (hasScatteredRay)
         {
             return attenuation * RayColor(scatteredRay, maxDepth - 1);
@@ -150,8 +147,8 @@ void RayTracingWeekendApplication::run() {
         };
     };
 
-    auto ground_material = std::make_shared<Diffuse>(glm::vec3(0.5, 0.5, 0.5));
-    mGeometries.emplace_back(std::make_shared<Sphere>(glm::vec3(0,-1000,0), 1000, ground_material));
+    auto ground_material = std::make_shared<Diffuse>(glm::vec3(0.5f, 0.5f, 0.5f));
+    mGeometries.emplace_back(std::make_shared<Sphere>(glm::vec3(0.0f,-1000.0f,0.0f), 1000.0f, ground_material));
 
     for (int a = -11; a < 11; a++) {
         for (int b = -11; b < 11; b++) {
@@ -181,22 +178,22 @@ void RayTracingWeekendApplication::run() {
         }
     }
 
-    auto material1 = std::make_shared<Dielectric>(glm::vec3 {1.0f, 1.0f, 1.0f}, 1.5);
+    auto material1 = std::make_shared<Dielectric>(glm::vec3 {1.0f, 1.0f, 1.0f}, 1.5f);
     mGeometries.emplace_back(std::make_shared<Sphere>(glm::vec3(0.0f, 1.0f, 0.0f), 1.0f, material1));
 
     auto material2 = std::make_shared<Diffuse>(glm::vec3(0.4f, 0.2f, 0.1f));
     mGeometries.emplace_back(std::make_shared<Sphere>(glm::vec3(-4.0f, 1.0f, 0.0f), 1.0f, material2));
 
-    auto material3 = std::make_shared<Metal>(glm::vec3(0.7, 0.6, 0.5), 0.0);
-    mGeometries.emplace_back(std::make_shared<Sphere>(glm::vec3(4, 1, 0), 1.0, material3));
+    auto material3 = std::make_shared<Metal>(glm::vec3(0.7f, 0.6f, 0.5f), 0.0f);
+    mGeometries.emplace_back(std::make_shared<Sphere>(glm::vec3(4.0f, 1.0f, 0.0f), 1.0f, material3));
 
     for (int i = 0; i < ImageWidth; ++i) {
         for (int j = 0; j < ImageHeight; ++j) {
             JS::AssignTask([this, i, j, &camera](int num, int count)->void {
                 glm::vec3 color {};
                 for (int s = 0; s < SampleRate; ++s) {
-                    auto u = (static_cast<float>(i) + Math::Random(-1.0f, 1.0f)) / float(ImageWidth - 1.0f);
-                    auto v = (static_cast<float>(j) + Math::Random(-1.0f, 1.0f)) / float(ImageHeight - 1.0f);
+                    auto u = (static_cast<float>(i) + Math::Random(-1.0f, 1.0f)) / (ImageWidth - 1.0f);
+                    auto v = (static_cast<float>(j) + Math::Random(-1.0f, 1.0f)) / (ImageHeight - 1.0f);
                     auto const ray = camera.CreateRay(u, v);
                     color += RayColor(ray, MaxDepth);
                 }

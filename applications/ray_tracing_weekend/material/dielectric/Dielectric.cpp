@@ -20,9 +20,9 @@ Dielectric::Dielectric(glm::vec3 const & color_, float refractionIndex_)
 
 static float Reflectance(float cosine, float reflectionIndex) {
     // Use Schlick's approximation for reflectance.
-    auto r0 = (1 - reflectionIndex) / (1 + reflectionIndex);
+    float r0 = (1 - reflectionIndex) / (1.0f + reflectionIndex);
     r0 = r0 * r0;
-    return r0 + (1 - r0) * pow((1 - cosine), 5);
+    return r0 + (1.0f - r0) * std::powf((1.0f - cosine), 5);
 }
 
 //-------------------------------------------------------------------------------------------------
