@@ -4,6 +4,12 @@
 
 More document/tutorial will be added soon!
 
+## Ray tracing in one weekend
+
+<img src="examples/ray-tracing-weekend.jpeg" />
+
+<br>
+
 ## Particle system
 
 <img src="examples/particle-sponza.gif"  height=400>
