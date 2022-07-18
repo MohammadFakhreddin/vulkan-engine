@@ -1,7 +1,7 @@
 #include "Diffuse.hpp"
 
 #include "geometry/HitRecord.hpp"
-#include "engine/bedrockMatrix.hpp"
+#include "engine/BedrockMatrix.hpp"
 
 using namespace MFA;
 

@@ -13,7 +13,8 @@ public:
         glm::vec3 const & upDirection,
         float vFOV, // In angles
         float aspectRatio,
-        float focalLength
+        float aperture,
+        float focusDist
     );
 
     [[nodiscard]]
@@ -25,5 +26,7 @@ private:
     glm::vec3 mHorizontal {};
     glm::vec3 mVertical {};
     glm::vec3 mLowerLeftCorner {};
+
+    float mLensRadius = 0.0f;
 
 };

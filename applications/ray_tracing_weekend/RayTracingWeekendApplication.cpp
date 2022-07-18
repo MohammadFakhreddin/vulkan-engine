@@ -82,44 +82,113 @@ void RayTracingWeekendApplication::run() {
     
     MFA_LOG_INFO("Starting to generate image");
     
+    // glm::vec3 const lookFrom(3,3,2);
+    // glm::vec3 const lookAt(0,0,-1);
+    // auto const focusDistance = glm::length(lookAt - lookFrom);
+    // float const aperture = 2.0f;
+
+    // Camera camera {
+    //     lookFrom, 
+    //     lookAt, 
+    //     MFA::Math::UpVector3, 
+    //     20,
+    //     AspectRatio,
+    //     aperture,
+    //     focusDistance
+    // };
+
+    glm::vec3 const lookFrom(13,2,3);
+    glm::vec3 const lookAt(0,0,0);
+    auto const focusDistance = 10.0f;
+    float const aperture = 0.1f;
+
     Camera camera {
-        glm::vec3{ 2, 2, 1 }, 
-        glm::vec3{ 0, 0, -1 }, 
+        lookFrom, 
+        lookAt, 
         MFA::Math::UpVector3, 
         20,
-        AspectRatio, 
-        FocalLength
+        AspectRatio,
+        aperture,
+        focusDistance
     };
     
-    auto redDiffMat = std::make_shared<Diffuse>(glm::vec3 {0.7f, 0.0f, 0.0f});
-    auto blueDiffMat = std::make_shared<Diffuse>(glm::vec3 {0.0f, 0.0f, 0.7f});
-    auto metal1 = std::make_shared<Metal>(glm::vec3 {0.8f, 0.8f, 0.8f}, 0.1f);
-    auto metal2 = std::make_shared<Metal>(glm::vec3 {0.8f, 0.6f, 0.2f}, 0.5f);
-    auto dielectric1 = std::make_shared<Dielectric>(glm::vec3 {1.0f, 1.0f, 1.0f}, 1.5f);
+    // auto redDiffMat = std::make_shared<Diffuse>(glm::vec3 {0.7f, 0.0f, 0.0f});
+    // auto blueDiffMat = std::make_shared<Diffuse>(glm::vec3 {0.0f, 0.0f, 0.7f});
+    // auto metal1 = std::make_shared<Metal>(glm::vec3 {0.8f, 0.8f, 0.8f}, 0.1f);
+    // auto metal2 = std::make_shared<Metal>(glm::vec3 {0.8f, 0.6f, 0.2f}, 0.5f);
+    // auto dielectric1 = std::make_shared<Dielectric>(glm::vec3 {1.0f, 1.0f, 1.0f}, 1.5f);
 
-    mGeometries.emplace_back(std::make_shared<Sphere>(
-        glm::vec3{0.0f, 0.0f, -FocalLength},
-        0.5f,
-        redDiffMat
-    ));
+    // mGeometries.emplace_back(std::make_shared<Sphere>(
+    //     glm::vec3{0.0f, 0.0f, -FocalLength},
+    //     0.5f,
+    //     redDiffMat
+    // ));
     
-    mGeometries.emplace_back(std::make_shared<Sphere>(
-        glm::vec3{0.0f, -100.5f, -FocalLength},
-        100.0f,
-        blueDiffMat
-    ));
+    // mGeometries.emplace_back(std::make_shared<Sphere>(
+    //     glm::vec3{0.0f, -100.5f, -FocalLength},
+    //     100.0f,
+    //     blueDiffMat
+    // ));
 
-    mGeometries.emplace_back(std::make_shared<Sphere>(
-        glm::vec3{-1.0f, 0.0f, -FocalLength},
-        0.5f,
-        metal1
-    ));
+    // mGeometries.emplace_back(std::make_shared<Sphere>(
+    //     glm::vec3{-1.0f, 0.0f, -FocalLength},
+    //     0.5f,
+    //     metal1
+    // ));
 
-    mGeometries.emplace_back(std::make_shared<Sphere>(
-        glm::vec3{1.0f, 0.0f, -FocalLength},
-        0.5f,
-        dielectric1
-    ));
+    // mGeometries.emplace_back(std::make_shared<Sphere>(
+    //     glm::vec3{1.0f, 0.0f, -FocalLength},
+    //     0.5f,
+    //     dielectric1
+    // ));
+
+    auto const RandomVec3 = [](float min = 0.0f, float max = 1.0f)-> glm::vec3 {
+        return glm::vec3 {
+            Math::Random(min, max),
+            Math::Random(min, max),
+            Math::Random(min, max)
+        };
+    };
+
+    auto ground_material = std::make_shared<Diffuse>(glm::vec3(0.5, 0.5, 0.5));
+    mGeometries.emplace_back(std::make_shared<Sphere>(glm::vec3(0,-1000,0), 1000, ground_material));
+
+    for (int a = -11; a < 11; a++) {
+        for (int b = -11; b < 11; b++) {
+            float choose_mat = Math::Random<float>(0.0f, 1.0f);
+            glm::vec3 center(a + 0.9f * Math::Random<float>(0.0f, 1.0f), 0.2f, b + 0.9f * Math::Random<float>(0.0f, 1.0f));
+
+            if ((center - glm::vec3(4.0f, 0.2f, 0.0f)).length() > 0.9f) {
+                std::shared_ptr<Material> sphere_material = nullptr;
+
+                if (choose_mat < 0.8f) {
+                    // diffuse
+                    auto albedo = RandomVec3() * RandomVec3();
+                    sphere_material = std::make_shared<Diffuse>(albedo);
+                    mGeometries.emplace_back(std::make_shared<Sphere>(center, 0.2f, sphere_material));
+                } else if (choose_mat < 0.95f) {
+                    // metal
+                    auto albedo = RandomVec3(0.5f, 1.0f);
+                    auto fuzz = Math::Random(0.0f, 0.5f);
+                    sphere_material = std::make_shared<Metal>(albedo, fuzz);
+                    mGeometries.emplace_back(std::make_shared<Sphere>(center, 0.2f, sphere_material));
+                } else {
+                    // glass
+                    sphere_material = std::make_shared<Dielectric>(glm::vec3 {1.0f, 1.0f, 1.0f}, 1.5f);
+                    mGeometries.emplace_back(make_shared<Sphere>(center, 0.2f, sphere_material));
+                }
+            }
+        }
+    }
+
+    auto material1 = std::make_shared<Dielectric>(glm::vec3 {1.0f, 1.0f, 1.0f}, 1.5);
+    mGeometries.emplace_back(std::make_shared<Sphere>(glm::vec3(0.0f, 1.0f, 0.0f), 1.0f, material1));
+
+    auto material2 = std::make_shared<Diffuse>(glm::vec3(0.4f, 0.2f, 0.1f));
+    mGeometries.emplace_back(std::make_shared<Sphere>(glm::vec3(-4.0f, 1.0f, 0.0f), 1.0f, material2));
+
+    auto material3 = std::make_shared<Metal>(glm::vec3(0.7, 0.6, 0.5), 0.0);
+    mGeometries.emplace_back(std::make_shared<Sphere>(glm::vec3(4, 1, 0), 1.0, material3));
 
     for (int i = 0; i < ImageWidth; ++i) {
         for (int j = 0; j < ImageHeight; ++j) {
