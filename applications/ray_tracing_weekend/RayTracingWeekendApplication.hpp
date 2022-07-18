@@ -32,7 +32,7 @@ private:
 
     static constexpr char const * OutputFile = "output.jpeg";
     static constexpr float AspectRatio = 16.0f / 9.0f;
-    static constexpr float ImageWidth = 1920.0f;
+    static constexpr float ImageWidth = 400.0f;
     static constexpr float ImageHeight = static_cast<int>(ImageWidth / AspectRatio);
     static constexpr float FocalLength = 1.0f;
     static constexpr int ComponentCount = 3;

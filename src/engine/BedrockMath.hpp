@@ -79,15 +79,16 @@ namespace MFA::Math
     template<typename T>
     T Random(T min, T max)
     {
-//        float const fMin = static_cast<float>(min);
-//        float const fMax = static_cast<float>(max);
-//        // TODO Add seed and other stuff
-//        float value = (static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX))
-//            * (fMax - fMin) + fMin;
-//        return static_cast<T>(value);
-        static std::uniform_real_distribution<T> distribution(min, max);
-        static std::mt19937 generator {};
-        return distribution(generator);
+        float const fMin = static_cast<float>(min);
+        float const fMax = static_cast<float>(max);
+        float value = (static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX))
+           * (fMax - fMin) + fMin;
+        return static_cast<T>(value);
+
+        // For some strange reason this implementation breaks the particle fire
+        //static std::uniform_real_distribution<T> distribution(min, max);
+        //static std::mt19937 generator {};
+        //return distribution(generator);
     }
 
 };

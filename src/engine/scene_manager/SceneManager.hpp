@@ -51,7 +51,7 @@ namespace MFA::SceneManager
         return dynamic_cast<Pipeline *>(GetPipeline(Pipeline::Name));
     }
 
-    void AssignMainThreadTask(MainThreadTask const & task);
+    void AssignMainThreadTask(MainThreadTask const & task, bool executeIfMainThread = true);
 
     // This method must only be called by pipeline and sceneManager
     void UpdatePipeline(BasePipeline * pipeline);

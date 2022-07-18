@@ -369,10 +369,10 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
-    void AssignMainThreadTask(MainThreadTask const & task)
+    void AssignMainThreadTask(MainThreadTask const & task, bool const executeIfMainThread)
     {
         MFA_ASSERT(task != nullptr);
-        if (JS::IsMainThread())
+        if (executeIfMainThread && JS::IsMainThread())
         {
             task();
             return;
