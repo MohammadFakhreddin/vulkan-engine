@@ -10,7 +10,7 @@
 
 namespace physx
 {
-    class PxConvexMesh;
+    class PxTriangleMesh;
 }
 
 namespace MFA
@@ -65,11 +65,11 @@ namespace MFA::ResourceManager
         bool loadFromFile = true
     );
 
-    using PhysicsMeshCallback = std::function<void(Physics::SharedHandle<physx::PxConvexMesh> const & physicsMesh)>;
+    using PhysicsMeshCallback = std::function<void(Physics::SharedHandle<physx::PxTriangleMesh> const & physicsMesh)>;
 
     void AcquirePhysicsMesh(
         std::string const & path,
-        bool isConvex,
+        bool isConvex,                                  // Convex is not yet supported
         PhysicsMeshCallback const & callback,
         bool loadFromFile = true
     );

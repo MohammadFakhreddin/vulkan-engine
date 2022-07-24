@@ -1,11 +1,14 @@
 #pragma once
 
+#include <PxActor.h>
+
 #include "PhysicsTypes.hpp"
 
 #include <foundation/PxVec3.h>
 
 namespace physx
 {
+    class PxTriangleMeshDesc;
     class PxConvexMesh;
     class PxMaterial;
     class PxGeometry;
@@ -14,7 +17,7 @@ namespace physx
     class PxTransform;
     class PxRigidDynamic;
     class PxRigidStatic;
-    class PxConvexMeshDesc;
+    class PxActor;
 }
 
 namespace MFA::Physics// final : public IPhysicsWorld, public PxSimulationEventCallback
@@ -47,9 +50,13 @@ namespace MFA::Physics// final : public IPhysicsWorld, public PxSimulationEventC
 
     SharedHandle<physx::PxMaterial> GetDefaultMaterial();
 
-    bool ValidateConvexMesh(physx::PxConvexMeshDesc const & meshDesc);
+    bool ValidateTriangleMesh(physx::PxTriangleMeshDesc const & meshDesc);
 
-    SharedHandle<physx::PxConvexMesh> CreateConvexMesh(physx::PxConvexMeshDesc const & meshDesc);
+    SharedHandle<physx::PxTriangleMesh> CreateTriangleMesh(physx::PxTriangleMeshDesc const & meshDesc);
+
+    void AddActor(physx::PxActor & actor);
+
+    void RemoveActor(physx::PxActor & actor);
 
     //void Init() override;
     //void Step() override;

@@ -44,15 +44,11 @@ namespace MFA
         mTransform = GetEntity()->GetComponent<Transform>();
         auto const transformComp = mTransform.lock();
         MFA_ASSERT(transformComp != nullptr);
-        mTransformChangeListenerId = transformComp->RegisterChangeListener([this]()->void{
-            OnTransformChange();
-        });
-
+        
         PxTransform pxTransform {};
         Copy(pxTransform.p, transformComp->GetWorldPosition());
         Copy(pxTransform.q, transformComp->GetWorldRotation());
-        //Copy(pxTransform.q, glm::identity<glm::quat>());
-
+        
         auto const rigidBody = GetEntity()->GetComponent<Rigidbody>().lock();
         if (rigidBody != nullptr)
         {
@@ -75,6 +71,12 @@ namespace MFA
         mScale = transformComp->GetWorldScale();
 
         CreateShape();
+
+        mTransformChangeListenerId = transformComp->RegisterChangeListener([this]()->void{
+            OnTransformChange();
+        });
+
+        Physics::AddActor(*mActor);
     }
     
     //-------------------------------------------------------------------------------------------------
@@ -86,15 +88,16 @@ namespace MFA
         {
             transform->UnRegisterChangeListener(mTransformChangeListenerId);
         }
+        Physics::RemoveActor(*mActor);
     }
     
     //-------------------------------------------------------------------------------------------------
 
     void ColliderComponent::OnUI()
     {
-        Parent::OnUI();
-        if (UI::TreeNode(getName()))
+        if (UI::TreeNode(Name))
         {
+            Parent::OnUI();
             if (UI::InputFloat<3>("Center", mCenter))
             {
                 UpdateShapeCenter();
@@ -184,12 +187,11 @@ namespace MFA
             *geometry,
             Physics::GetDefaultMaterial()->Ref()
         );
+        MFA_ASSERT(mShape->Ptr()->isExclusive() == true);
 
         mShape->Ptr()->userData = this;
 
         UpdateShapeCenter();
-
-        mActor->attachShape(mShape->Ref());
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -198,6 +200,7 @@ namespace MFA
     {
         PxTransform newTransform {};
         Copy(newTransform.p, mCenter);
+        Copy(newTransform.q, glm::identity<glm::quat>());
         mShape->Ptr()->setLocalPose(newTransform);
     }
 
@@ -211,53 +214,6 @@ namespace MFA
             mShape->Ptr()->setGeometry(*geometry);
         }
     }
-
-    //-------------------------------------------------------------------------------------------------
-
-    //PxTransform ColliderComponent::ComputePxTransform() const
-    //{
-    //    auto const transform = mTransform.lock();
-    //    MFA_ASSERT(transform != nullptr);
-
-    //    auto worldPosition = transform->GetWorldPosition();
-    //    auto const & worldRotation = transform->GetWorldRotation();
-
-    //    if (mHasNonZeroCenter)
-    //    {
-    //        worldPosition = worldPosition + glm::toMat4(transform->GetLocalRotationQuaternion()) * mCenter;
-    //    }
-
-    //    PxTransform pxTransform {};
-    //    Copy(pxTransform.p, worldPosition);
-    //    Copy(pxTransform.q, worldRotation);
-
-    //    return pxTransform;
-    //}
-    //
-    ////-------------------------------------------------------------------------------------------------
-
-    //void ColliderComponent::ComputeTransform(
-    //    PxTransform const & inTransform,
-    //    glm::vec3 & outPosition,
-    //    glm::quat & outRotation
-    //) const
-    //{
-    //    Copy(outRotation, inTransform.q);
-    //    
-    //    if (mHasNonZeroCenter == false)
-    //    {
-    //        Copy(outPosition, inTransform.p);
-    //    } else
-    //    {
-    //        auto const transform = mTransform.lock();
-    //        MFA_ASSERT(transform != nullptr);
-    //        
-    //        auto const myWorldPos = Copy<glm::vec3, PxVec3>(inTransform.p);
-    //        auto const myLocalPos = Copy<glm::vec3, glm::vec4>(glm::toMat4(transform->GetLocalRotationQuaternion()) * mCenter);
-
-    //        outPosition = myWorldPos - myLocalPos;
-    //    }
-    //}
 
     //-------------------------------------------------------------------------------------------------
 

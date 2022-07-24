@@ -17,9 +17,9 @@
 #include "engine/physics/PhysicsTypes.hpp"
 #include "engine/physics/Physics.hpp"
 
+#include <cooking/PxTriangleMeshDesc.h>
+
 #include <unordered_map>
-#include <cooking/PxConvexMeshDesc.h>
-#include <geometry/PxConvexMesh.h>
 
 namespace MFA::ResourceManager
 {
@@ -52,7 +52,7 @@ namespace MFA::ResourceManager
 
     //-------------------------------------------------------------------------------------------------
 
-    struct PhysicsMeshData : Data<Physics::Handle<physx::PxConvexMesh>, PhysicsMeshCallback> {};
+    struct PhysicsMeshData : Data<Physics::Handle<physx::PxTriangleMesh>, PhysicsMeshCallback> {};
 
     //-------------------------------------------------------------------------------------------------
 
@@ -66,8 +66,7 @@ namespace MFA::ResourceManager
         std::unordered_map<std::string, EssenceData> essences {};
 
         std::unordered_map<std::string, PhysicsMeshData> physicsMeshes {};
-        std::unordered_map<std::string, PhysicsMeshData> physicsConvexMeshes {};
-
+    
     };
     State * state = nullptr;
 
@@ -499,7 +498,7 @@ namespace MFA::ResourceManager
 
     void AcquirePhysicsMesh(
         std::string const & path,
-        bool const isConvex,
+        bool const isConvex,            // Is not used for now
         PhysicsMeshCallback const & callback,
         bool const loadFromFile
     )
@@ -509,7 +508,7 @@ namespace MFA::ResourceManager
 
         std::string const nameId = Path::RelativeToAssetFolder(path);
 
-        auto & meshMap = isConvex ? state->physicsConvexMeshes : state->physicsMeshes;
+        auto & meshMap = state->physicsMeshes;
         auto & meshData = meshMap[nameId];
 
         bool shouldAssignTask;
@@ -529,42 +528,48 @@ namespace MFA::ResourceManager
         {
             AcquireCpuModel(
                 nameId,
-                [isConvex, &meshData](std::shared_ptr<AS::Model> const & cpuModel)->void{
+                [isConvex, &meshData, nameId](std::shared_ptr<AS::Model> const & cpuModel)->void{
 
                     auto const & mesh = cpuModel->mesh;
 
-                    mesh->PreparePhysicsPoints([mesh, isConvex, &meshData](std::shared_ptr<SmartBlob> const & pointsBlob)->void{
-                        auto const indexCount = mesh->getIndexCount();
-                        auto const * indexBuffer = mesh->getIndexData();
-                        auto const indexStride = indexBuffer->memory.len / indexCount;
+                    mesh->PreparePhysicsPoints([mesh, isConvex, &meshData, nameId](std::shared_ptr<SmartBlob> const & pointsBlob)->void{
+                        // TODO: I think we should have multiple meshes instead of one each belonging to a submesh
+                        MFA_ASSERT(mesh->getIndexCount() % 3 == 0);
+                        auto const triangleCount = mesh->getIndexCount() / 3;
+                        auto const * triangleBuffer = mesh->getIndexData();
+                        auto const triangleStride = (triangleBuffer->memory.len / triangleCount);
 
-                        physx::PxConvexMeshDesc convexMeshDesc;
-                        convexMeshDesc.setToDefault();
-                        convexMeshDesc.indices.count = indexCount;
-                        convexMeshDesc.indices.stride = static_cast<physx::PxU32>(indexStride);
-                        convexMeshDesc.indices.data = indexBuffer->memory.ptr;
+                        physx::PxTriangleMeshDesc meshDesc;
+                        meshDesc.setToDefault();
+                        meshDesc.triangles.count = triangleCount;
+                        meshDesc.triangles.stride = static_cast<physx::PxU32>(triangleStride);
+                        meshDesc.triangles.data = triangleBuffer->memory.ptr;
 
-                        convexMeshDesc.points.count = mesh->getVertexCount();
-                        convexMeshDesc.points.stride = static_cast<physx::PxU32>(sizeof(physx::PxVec3));
-                        convexMeshDesc.points.data = pointsBlob->memory.ptr;
+                        meshDesc.points.count = mesh->getVertexCount();
+                        meshDesc.points.stride = static_cast<physx::PxU32>(sizeof(physx::PxVec3));
+                        meshDesc.points.data = pointsBlob->memory.ptr;
 
-                        if (isConvex)
-                        {
-                            convexMeshDesc.flags = physx::PxConvexFlag::eCOMPUTE_CONVEX;
-                        }
+                        //if (isConvex)
+                        //{
+                        //    meshDesc.flags = physx::PxConvexFlag::eCOMPUTE_CONVEX;
+                        //}
 
                         // https://docs.nvidia.com/gameworks/content/gameworkslibrary/physx/guide/Manual/Startup.html#startup
                         // mesh should be validated before cooking without the mesh cleaning
-                        MFA_ASSERT(Physics::ValidateConvexMesh(convexMeshDesc));
-
-                        auto const convexMesh = Physics::CreateConvexMesh(convexMeshDesc);
-                        MFA_ASSERT(convexMesh != nullptr);
+                        //MFA_ASSERT(Physics::ValidateTriangleMesh(meshDesc));
+                        if (Physics::ValidateTriangleMesh(meshDesc))
+                        {
+                            MFA_LOG_WARN("Validation of mesh with name %s failed", nameId.c_str());
+                        }
+                        
+                        auto const triangleMesh = Physics::CreateTriangleMesh(meshDesc);
+                        MFA_ASSERT(triangleMesh != nullptr);
 
                         SCOPE_LOCK(meshData.lock)
-                        meshData.data = convexMesh;
+                        meshData.data = triangleMesh;
                         for (auto const & callback : meshData.callbacks)
                         {
-                            callback(convexMesh);
+                            callback(triangleMesh);
                         }
                         meshData.callbacks.clear();
                     });

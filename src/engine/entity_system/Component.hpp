@@ -10,53 +10,54 @@ namespace MFA
 {
     class Component;
 
-    #define MFA_ABSTRACT_COMPONENT_PROPS(componentName, family, eventTypes, parent) \
-    public:                                                                         \
-                                                                                    \
-    static constexpr char const * Name = #componentName;                            \
-    static constexpr int Family = static_cast<int>(family);                         \
-    static constexpr EventType RequiredEvents = eventTypes;                         \
-                                                                                    \
-    using parent::parent;                                                           \
-                                                                                    \
-    std::weak_ptr<componentName> selfPtr()                                          \
-    {                                                                               \
-        return std::static_pointer_cast<componentName>(shared_from_this());         \
-    }                                                                               \
-                                                                                    \
-    [[nodiscard]]                                                                   \
-    char const * getName() override                                                 \
-    {                                                                               \
-        return Name;                                                                \
-    }                                                                               \
-                                                                                    \
-    [[nodiscard]]                                                                   \
-    int getFamily() override                                                        \
-    {                                                                               \
-        return Family;                                                              \
-    }                                                                               \
-                                                                                    \
-    [[nodiscard]]                                                                   \
-    EventType requiredEvents() const override                                       \
-    {                                                                               \
-        return eventTypes | parent::requiredEvents();                               \
-    }                                                                               \
-                                                                                    \
-    componentName (componentName const &) noexcept = delete;                        \
-    componentName (componentName &&) noexcept = delete;                             \
-    componentName & operator = (componentName const &) noexcept = delete;           \
-    componentName & operator = (componentName && rhs) noexcept = delete;            \
-                                                                                    \
-    using Parent = parent;                                                          \
+    #define MFA_COMPONENT_COMMON_PROPS(componentName, family, eventTypes, parent)           \
+    public:                                                                                 \
+                                                                                            \
+    static constexpr char const * Name = #componentName;                                    \
+    static constexpr int Family = static_cast<int>(family);                                 \
+    static constexpr EventType RequiredEvents = eventTypes;                                 \
+                                                                                            \
+    std::weak_ptr<componentName> selfPtr()                                                  \
+    {                                                                                       \
+        return std::static_pointer_cast<componentName>(shared_from_this());                 \
+    }                                                                                       \
+                                                                                            \
+    [[nodiscard]]                                                                           \
+    char const * getName() override                                                         \
+    {                                                                                       \
+        return Name;                                                                        \
+    }                                                                                       \
+                                                                                            \
+    [[nodiscard]]                                                                           \
+    int getFamily() override                                                                \
+    {                                                                                       \
+        return Family;                                                                      \
+    }                                                                                       \
+                                                                                            \
+    [[nodiscard]]                                                                           \
+    EventType requiredEvents() const override                                               \
+    {                                                                                       \
+        return eventTypes | parent::requiredEvents();                                       \
+    }                                                                                       \
+                                                                                            \
+    componentName (componentName const &) noexcept = delete;                                \
+    componentName (componentName &&) noexcept = delete;                                     \
+    componentName & operator = (componentName const &) noexcept = delete;                   \
+    componentName & operator = (componentName && rhs) noexcept = delete;                    \
+                                                                                            \
+    using Parent = parent;                                                                  \
 
+    #define MFA_ABSTRACT_COMPONENT_PROPS(componentName, family, eventTypes, parent)         \
+    MFA_COMPONENT_COMMON_PROPS(componentName, family, eventTypes, parent)                   \
+    using parent::parent;                                                                   \
 
-    #define MFA_COMPONENT_PROPS(componentName, family, eventTypes, parent)          \
-    MFA_ABSTRACT_COMPONENT_PROPS(componentName, family, eventTypes, parent)         \
-    private:                                                                        \
-                                                                                    \
-        static inline ComponentRegister<componentName> mComponentRegister {};       \
-                                                                                    \
-    public:                                                                         \
+    #define MFA_COMPONENT_PROPS(componentName, family, eventTypes, parent)                  \
+    MFA_ABSTRACT_COMPONENT_PROPS(componentName, family, eventTypes, parent)                 \
+    private:                                                                                \
+                                                                                            \
+        static inline ComponentRegister<componentName> mComponentRegister {};               \
+                                                                                            \
+    public:                                                                                 \
 
     class Entity;
 

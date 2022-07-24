@@ -262,8 +262,6 @@ list(
     "src/engine/entity_system/components/RigidbodyComponent.cpp"
     "src/engine/entity_system/components/CapsuleColliderComponent.hpp"
     "src/engine/entity_system/components/CapsuleColliderComponent.cpp"
-    "src/engine/entity_system/components/BoxColliderComponent.hpp"
-    "src/engine/entity_system/components/BoxColliderComponent.cpp"
     "src/engine/entity_system/components/MeshColliderComponent.hpp"
     "src/engine/entity_system/components/MeshColliderComponent.cpp"
 

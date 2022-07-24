@@ -46,8 +46,8 @@ namespace MFA
             if (mIsActive)
             {
                 mUpdateEventId = GetEntity()->mUpdateSignal.Register([this](float const deltaTimeInSec)->void
-    {
-            Update(deltaTimeInSec);
+                {
+                    Update(deltaTimeInSec);
                 });
             }
             else
@@ -77,11 +77,16 @@ namespace MFA
 
     void Component::OnUI()
     {
-        bool isActive = mIsActive;
-        UI::Checkbox("IsActive", &isActive);
-        SetActive(isActive);
+        if (UI::TreeNode("Component"))
+        {
+            bool isActive = mIsActive;
+            UI::Checkbox("IsActive", &isActive);
+            SetActive(isActive);
 
-        EditorSignal.Emit(this, GetEntity());
+            EditorSignal.Emit(this, GetEntity());
+
+            UI::TreePop();
+        }
     }
 
     //-------------------------------------------------------------------------------------------------

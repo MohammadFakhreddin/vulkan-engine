@@ -48,7 +48,7 @@ namespace MFA
         std::string mNameId {};
         bool mIsConvex = false;
         std::shared_ptr<physx::PxGeometry> mGeometry {};
-        Physics::SharedHandle<physx::PxConvexMesh> mPhysicsMesh {};
+        Physics::SharedHandle<physx::PxTriangleMesh> mPhysicsMesh {};
     };
 
     using MeshCollider = MeshColliderComponent;

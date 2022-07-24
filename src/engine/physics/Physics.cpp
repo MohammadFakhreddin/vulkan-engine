@@ -225,29 +225,29 @@ namespace MFA::Physics
     
     //-------------------------------------------------------------------------------------------------
 
-    bool ValidateConvexMesh(PxConvexMeshDesc const & meshDesc)
+    bool ValidateTriangleMesh(PxTriangleMeshDesc const & meshDesc)
     {
-        return state->cooking->Ptr()->validateConvexMesh(meshDesc);
+        return state->cooking->Ptr()->validateTriangleMesh(meshDesc);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    SharedHandle<PxConvexMesh> CreateConvexMesh(PxConvexMeshDesc const & meshDesc)
+    SharedHandle<PxTriangleMesh> CreateTriangleMesh(PxTriangleMeshDesc const & meshDesc)
     {
-        SharedHandle<PxConvexMesh> convexMesh = nullptr;
+        SharedHandle<PxTriangleMesh> mesh = nullptr;
 
         PxDefaultMemoryOutputStream buf;
-        PxConvexMeshCookingResult::Enum result;
+        PxTriangleMeshCookingResult::Enum result;
 
-        bool const cookResult = state->cooking->Ptr()->cookConvexMesh(meshDesc, buf, &result);
+        bool const cookResult = state->cooking->Ptr()->cookTriangleMesh(meshDesc, buf, &result);
         MFA_ASSERT(cookResult == true);
         if (MFA_VERIFY(cookResult == true))
         {
             PxDefaultMemoryInputData input(buf.getData(), buf.getSize());
-            convexMesh = CreateHandle(state->physics->Ptr()->createConvexMesh(input));
+            mesh = CreateHandle(state->physics->Ptr()->createTriangleMesh(input));
         }
 
-        return convexMesh;
+        return mesh;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -263,6 +263,20 @@ namespace MFA::Physics
             geometry,
             material
         ));
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void AddActor(PxActor & actor)
+    {
+        state->scene->Ptr()->addActor(actor);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void RemoveActor(PxActor & actor)
+    {
+        state->scene->Ptr()->removeActor(actor);
     }
 
     //-------------------------------------------------------------------------------------------------

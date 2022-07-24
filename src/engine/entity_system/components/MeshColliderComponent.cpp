@@ -2,11 +2,11 @@
 
 #include "engine/resource_manager/ResourceManager.hpp"
 #include "TransformComponent.hpp"
-
-#include <geometry/PxConvexMeshGeometry.h>
-
 #include "MeshRendererComponent.hpp"
 #include "engine/entity_system/Entity.hpp"
+
+#include <geometry/PxConvexMeshGeometry.h>
+#include <geometry/PxTriangleMeshGeometry.h>
 
 namespace MFA
 {
@@ -52,7 +52,7 @@ namespace MFA
         RC::AcquirePhysicsMesh(
             mNameId,
             mIsConvex,
-            [this](Physics::SharedHandle<PxConvexMesh> const & physicsMesh)->void{
+            [this](Physics::SharedHandle<PxTriangleMesh> const & physicsMesh)->void{
                 mPhysicsMesh = physicsMesh;
                 ColliderComponent::Init();
             }
@@ -85,7 +85,7 @@ namespace MFA
     std::shared_ptr<PxGeometry> MeshColliderComponent::ComputeGeometry()
     {
         PxMeshScale meshScale {Copy<PxVec3>(mScale)};
-        return std::make_shared<PxConvexMeshGeometry>(
+        return std::make_shared<PxTriangleMeshGeometry>(
             mPhysicsMesh != nullptr ? mPhysicsMesh->Ptr() : nullptr,
             meshScale
         );

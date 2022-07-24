@@ -290,7 +290,7 @@ void GLTFMeshViewerScene::createModel(ModelRenderData & data) const
     MFA_ASSERT(data.meshRendererComponent.expired() == false);
 
     //entity->AddComponent<MeshCollider>(true);
-    entity->AddComponent<BoxCollider>(glm::vec3 {1.0f, 1.0f, 1.0f});
+    //entity->AddComponent<BoxCollider>(glm::vec3 {1.0f, 1.0f, 1.0f});
     // There is no need for a bounding volume
     /*entity->AddComponent<AxisAlignedBoundingBoxComponent>(
         glm::vec3(0.0f, 0.0f, 0.0f),

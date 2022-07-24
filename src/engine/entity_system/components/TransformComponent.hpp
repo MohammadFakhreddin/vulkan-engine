@@ -19,7 +19,7 @@ namespace MFA
             EventTypes::InitEvent | EventTypes::ShutdownEvent,
             Component
         )
-        
+
         explicit TransformComponent(
             glm::vec3 const & position_,
             glm::vec3 const & rotation_,          // In euler angle
@@ -103,7 +103,7 @@ namespace MFA
 
         glm::vec3 mLocalPosition { 0.0f, 0.0f, 0.0f };
         glm::vec3 mLocalRotationAngle { 0.0f, 0.0f, 0.0f };          // In euler angle // TODO Use Quaternion instead! Soon! ToQuat is heavy
-        glm::quat mLocalRotationQuat {};
+        glm::quat mLocalRotationQuat = glm::identity<glm::quat>();
         glm::vec3 mLocalScale { 1.0f, 1.0f, 1.0f };
 
         glm::vec4 mWorldPosition {};

@@ -34,9 +34,9 @@ namespace MFA
 
     void BoxColliderComponent::OnUI()
     {
-        Parent::OnUI();
-        if (UI::TreeNode(getName()))
+        if (UI::TreeNode(Name))
         {
+            Parent::OnUI();
             glm::vec3 size = mHalfSize * 2.0f;
             if (UI::InputFloat<3>("Size", size))
             {
