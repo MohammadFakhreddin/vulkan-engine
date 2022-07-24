@@ -28,7 +28,7 @@ namespace MFA
             RenderOrder::DontCare
         )
 
-            void init() override;
+        void init() override;
 
         void shutdown() override;
 

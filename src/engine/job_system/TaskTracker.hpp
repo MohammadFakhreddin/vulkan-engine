@@ -3,6 +3,8 @@
 #include "engine/BedrockAssert.hpp"
 
 #include <functional>
+#include <atomic>
+#include <memory>
 
 namespace MFA::JobSystem {
     // Do not reference to taskTracker on inside

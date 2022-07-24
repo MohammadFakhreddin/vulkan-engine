@@ -5,6 +5,7 @@
 #include "engine/asset_system/AssetTypes.hpp"
 #include "engine/asset_system/Asset_PBR_Mesh.hpp"
 #include "engine/render_system/pipelines/VariantBase.hpp"
+#include "engine/render_system/RenderTypesFWD.hpp"
 
 #include <glm/gtc/quaternion.hpp>
 #include <glm/vec3.hpp>
@@ -119,9 +120,9 @@ namespace MFA
 
         void postRender(float deltaTimeInSec);
 
-        void preComputeBarrier(std::vector<VkBufferMemoryBarrier> & outBarriers) const;
+        void preComputeBarrier(RT::CommandRecordState const & recordState, std::vector<VkBufferMemoryBarrier> & outBarriers) const;
 
-        void preRenderBarrier(std::vector<VkBufferMemoryBarrier> & outBarriers) const;
+        void preRenderBarrier(RT::CommandRecordState const & recordState, std::vector<VkBufferMemoryBarrier> & outBarriers) const;
 
         void OnUI() override;
 

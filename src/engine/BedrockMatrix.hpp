@@ -1,8 +1,11 @@
 #pragma once
 
+#include "engine/BedrockMath.hpp"
+
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/norm.hpp>
 
 #ifdef ENABLE_SIMD
 #include <immintrin.h>
@@ -10,52 +13,6 @@
 
 namespace MFA::Matrix 
 {
-    //glm::mat4 CopyCellsToMat4(float const * cells);
-
-    //glm::vec3 CopyCellsToVec3(float const * cells);
-
-    //glm::quat CopyCellsToQuat(float const * cells);
-
-    //glm::vec4 CopyCellsToVec4(float const * cells);
-
-    //void CopyCellsToGlm(float const * cells, glm::mat4 & outMatrix);
-
-    //void CopyCellsToGlm(float const * cells, glm::vec3 & outVec3);
-
-    //void CopyCellsToGlm(float const * cells, glm::quat & outQuat);
-
-    //void CopyCellsToGlm(float const * cells, glm::vec4 & outVec4);
-    //
-    //void CopyGlmToCells(glm::mat4 const & matrix, float * cells);
-
-    //void CopyGlmToCells(glm::vec2 const & vector, float * cells);
-    //
-    //void CopyGlmToCells(glm::vec3 const & vector, float * cells);
-    //
-    //void CopyGlmToCells(glm::vec4 const & vector, float * cells);
-
-    //void CopyGlmToCells(glm::quat const & quaternion, float * cells);
-
-    //bool IsEqual(glm::mat4 const & matrix, float const * cells);
-
-    //bool IsEqual(glm::vec2 const & vector, float const * cells);
-
-    //bool IsEqual(glm::vec3 const & vector, float const * cells);
-
-    //bool IsEqual(glm::quat const & quat, float const * cells);
-
-    //bool IsEqual(glm::vec4 const & vector, float const * cells);
-
-    //bool IsEqual(glm::mat4 const & matrixA, glm::mat4 const & matrixB);
-
-    //bool IsEqual(glm::vec2 const & vectorA, glm::vec2 const & vectorB);
-
-    //bool IsEqual(glm::vec3 const & vectorA, glm::vec3 const & vectorB);
-
-    //bool IsEqual(glm::quat const & quatA, glm::quat const & quatB);
-
-    //bool IsEqual(glm::vec4 const & vectorA, glm::vec4 const & vectorB);
-
 
     [[nodiscard]]
     glm::quat ToQuat(float xDeg, float yDeg, float zDeg);
@@ -108,26 +65,10 @@ namespace MFA::Matrix
         float farPlane
     );
 
-    // Physx (TODO: Is this the right place for this class ?)
-    //void CopyCellsToPhysx(float const * cells, physx::PxVec3 & outVec3);
-
-    //void CopyCellsToPhysx(float const * cells, physx::PxQuat & outQuat);
-
-    //void CopyGlmToPhysx(glm::vec3 const & inVec3, physx::PxVec3 & outVec3);
-
-    //void CopyGlmToPhysx(glm::quat const & inQuat, physx::PxQuat & outQuat);
-
-    //physx::PxVec3 CopyGlmToPhysx(glm::vec3 const & inVec3);
-
-    //physx::PxQuat CopyGlmToPhysx(glm::quat const & inQuat);
-
-    //physx::PxTransform CopyGlmToPhysx(
-    //    glm::vec3 const & position,
-    //    glm::quat const & rotation
-    //);
-
-    //void CopyPhysxToGlm(physx::PxVec3 const & inVec3, glm::vec3 & outVec3);
-
+    template<typename T>
+    bool IsNearZero(T const & glmVec) {
+        return glm::length2(glmVec) < Math::Epsilon<float>();
+    }
 
 #ifdef ENABLE_SIMD
 

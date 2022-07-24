@@ -6,6 +6,7 @@
 #include "engine/BedrockPath.hpp"
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
+#include "engine/scene_manager/SceneManager.hpp"
 
 namespace MFA
 {
@@ -123,51 +124,51 @@ namespace MFA
 
     void BasePipeline::removeVariant(VariantBase & variant)
     {
-        // Waiting for device to be idle before removing the variant
-        RF::DeviceWaitIdle();
-
-        MFA_ASSERT(mIsInitialized == true);
-        // Removing from all variants list
-        bool foundInAllVariantsList = false;
-        for (int i = static_cast<int>(mAllVariantsList.size()) - 1; i >= 0; --i)
-        {
-            MFA_ASSERT(mAllVariantsList[i] != nullptr);
-            if (mAllVariantsList[i]->GetId() == variant.GetId())
+        SceneManager::AssignMainThreadTask([this, &variant]()->void {
+            RF::DeviceWaitIdle();
+            MFA_ASSERT(mIsInitialized == true);
+            // Removing from all variants list
+            bool foundInAllVariantsList = false;
+            for (int i = static_cast<int>(mAllVariantsList.size()) - 1; i >= 0; --i)
             {
-                std::iter_swap(
-                    mAllVariantsList.begin() + i,
-                    mAllVariantsList.begin() +
-                        static_cast<int>(mAllVariantsList.size()) - 1
-                );
-                mAllVariantsList.pop_back();
+                MFA_ASSERT(mAllVariantsList[i] != nullptr);
+                if (mAllVariantsList[i]->GetId() == variant.GetId())
+                {
+                    std::iter_swap(
+                        mAllVariantsList.begin() + i,
+                        mAllVariantsList.begin() +
+                            static_cast<int>(mAllVariantsList.size()) - 1
+                    );
+                    mAllVariantsList.pop_back();
 
-                foundInAllVariantsList = true;
-                break;
+                    foundInAllVariantsList = true;
+                    break;
+                }
             }
-        }
-        MFA_ASSERT(foundInAllVariantsList == true);
+            MFA_ASSERT(foundInAllVariantsList == true);
 
-        if (mAllVariantsList.empty())
-        {
-            SceneManager::UpdatePipeline(this);
-        }
-
-        // Removing from essence and variants' list
-        auto const findResult = mEssenceAndVariantsMap.find(variant.getEssence()->getNameId());
-        MFA_ASSERT(findResult != mEssenceAndVariantsMap.end());
-        auto & variants = findResult->second.variants;
-        for (int i = static_cast<int>(variants.size()) - 1; i >= 0; --i)
-        {
-            if (variants[i]->GetId() == variant.GetId())
+            if (mAllVariantsList.empty())
             {
-                variant.Shutdown();
-                variants[i] = variants.back();
-                variants.pop_back();
-                return;
+                SceneManager::UpdatePipeline(this);
             }
-        }
 
-        MFA_ASSERT(false);
+            // Removing from essence and variants' list
+            auto const findResult = mEssenceAndVariantsMap.find(variant.getEssence()->getNameId());
+            MFA_ASSERT(findResult != mEssenceAndVariantsMap.end());
+            auto & variants = findResult->second.variants;
+            for (int i = static_cast<int>(variants.size()) - 1; i >= 0; --i)
+            {
+                if (variants[i]->GetId() == variant.GetId())
+                {
+                    variant.Shutdown();
+                    variants[i] = variants.back();
+                    variants.pop_back();
+                    return;
+                }
+            }
+
+            MFA_ASSERT(false);
+        }, false);
     }
 
     //-------------------------------------------------------------------------------------------------

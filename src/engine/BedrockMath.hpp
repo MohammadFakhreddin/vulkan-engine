@@ -4,6 +4,7 @@
 #include <glm/vec3.hpp>
 
 #include <cstdlib>
+#include <random>
 
 namespace MFA::Math
 {
@@ -68,16 +69,26 @@ namespace MFA::Math
         static_assert(std::numeric_limits<genType>::is_iec559, "'epsilon' only accepts floating-point inputs");
         return std::numeric_limits<genType>::epsilon();
     }
+    
+    template<typename genType>
+    genType Infinity()
+    {
+        return std::numeric_limits<genType>::infinity();
+    }
 
     template<typename T>
     T Random(T min, T max)
     {
         float const fMin = static_cast<float>(min);
         float const fMax = static_cast<float>(max);
-        // TODO Add seed an other stuff
         float value = (static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX))
-            * (fMax - fMin) + fMin;
+           * (fMax - fMin) + fMin;
         return static_cast<T>(value);
+
+        // For some strange reason this implementation breaks the particle fire
+        //static std::uniform_real_distribution<T> distribution(min, max);
+        //static std::mt19937 generator {};
+        //return distribution(generator);
     }
 
 };

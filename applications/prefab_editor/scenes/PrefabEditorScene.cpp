@@ -492,6 +492,7 @@ mCreateComponentInstructionMap[component::Name] = CreateComponentInstruction {  
 
 void PrefabEditorScene::prepareCreateComponentInstructionMap()
 {
+    // TODO: Make all components to be added automatically
     INSERT_INTO_CREATE_COMPONENT_MAP(TransformComponent, [](Entity * entity)
     {
         return entity->AddComponent<TransformComponent>().lock();

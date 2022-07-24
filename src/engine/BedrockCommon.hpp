@@ -209,4 +209,10 @@ namespace MFA
         return memcmp(&memory1, &memory2, sizeof(A)) == 0;
     }
 
+    template<typename T>
+    constexpr void SetZero(T const * memory, uint32_t length) 
+    {
+        memset(memory, 0, sizeof(T) * length);
+    }
+
 }

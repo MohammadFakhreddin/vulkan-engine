@@ -118,11 +118,11 @@ void Demo3rdPersonScene::Init()
             ptr->UpdateLocalTransform(position, eulerAngle, scale);
         }
 
-        {// Mesh collider
-            auto meshCollider = entity->AddComponent<MeshColliderComponent>(true).lock();
-            meshCollider->Init();
-            EntitySystem::UpdateEntity(entity);
-        }
+        //{// Mesh collider
+        //    auto meshCollider = entity->AddComponent<MeshColliderComponent>(true).lock();
+        //    meshCollider->Init();
+        //    EntitySystem::UpdateEntity(entity);
+        //}
 
         entity->SetActive(true);
     }

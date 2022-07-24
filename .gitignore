@@ -116,3 +116,5 @@ android/local.properties
 
 !ios.toolchain.cmake
 .VSCodeCounter/*
+
+*.xcodeproj

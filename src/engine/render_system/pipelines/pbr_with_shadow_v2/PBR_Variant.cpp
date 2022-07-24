@@ -10,6 +10,7 @@
 #include "engine/entity_system/components/TransformComponent.hpp"
 #include "PBR_Essence.hpp"
 #include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
+#include "engine/render_system/RenderTypes.hpp"
 
 #include <glm/gtx/quaternion.hpp>
 
@@ -162,47 +163,45 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBR_Variant::preComputeBarrier(std::vector<VkBufferMemoryBarrier> & outBarriers) const
+    void PBR_Variant::preComputeBarrier(RT::CommandRecordState const & recordState, std::vector<VkBufferMemoryBarrier> & outBarriers) const
     {
-        for (auto & bufferAndMemory : mSkinnedVerticesBuffer->buffers)
+        auto & bufferAndMemory = mSkinnedVerticesBuffer->buffers[recordState.frameIndex];
+        
+        VkBufferMemoryBarrier barrier =
         {
-            VkBufferMemoryBarrier barrier =
-            {
-                VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-                nullptr,
-                0,
-                VK_ACCESS_SHADER_WRITE_BIT,
-                RF::GetGraphicQueueFamily(),
-                RF::GetComputeQueueFamily(),
-                bufferAndMemory->buffer,
-                0,
-                bufferAndMemory->size
-            };
+            VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+            nullptr,
+            0,
+            VK_ACCESS_SHADER_WRITE_BIT,
+            RF::GetGraphicQueueFamily(),
+            RF::GetComputeQueueFamily(),
+            bufferAndMemory->buffer,
+            0,
+            bufferAndMemory->size
+        };
 
-            outBarriers.emplace_back(barrier);
-        }
+        outBarriers.emplace_back(barrier);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBR_Variant::preRenderBarrier(std::vector<VkBufferMemoryBarrier> & outBarriers) const
+    void PBR_Variant::preRenderBarrier(RT::CommandRecordState const & recordState, std::vector<VkBufferMemoryBarrier> & outBarriers) const
     {
-        for (auto & bufferAndMemory : mSkinnedVerticesBuffer->buffers)
+        auto & bufferAndMemory = mSkinnedVerticesBuffer->buffers[recordState.frameIndex];
+        
+        VkBufferMemoryBarrier barrier =
         {
-            VkBufferMemoryBarrier barrier =
-            {
-                VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-                nullptr,
-                VK_ACCESS_SHADER_WRITE_BIT,
-                0,
-                RF::GetComputeQueueFamily(),
-                RF::GetGraphicQueueFamily(),
-                bufferAndMemory->buffer,
-                0,
-                bufferAndMemory->size
-            };
-            outBarriers.emplace_back(barrier);
-        }
+            VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+            nullptr,
+            VK_ACCESS_SHADER_READ_BIT,
+            0,
+            RF::GetComputeQueueFamily(),
+            RF::GetGraphicQueueFamily(),
+            bufferAndMemory->buffer,
+            0,
+            bufferAndMemory->size
+        };
+        outBarriers.emplace_back(barrier);
     }
 
     //-------------------------------------------------------------------------------------------------

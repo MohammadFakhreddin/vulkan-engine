@@ -214,8 +214,6 @@ namespace MFA
         preComputeBarrier(recordState);
 
         performSkinning(recordState);
-
-        postComputeBarrier(recordState);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -296,7 +294,7 @@ namespace MFA
 
             for (auto * variant : mAllVariantsList)
             {
-                CAST_VARIANT_PURE(variant)->preComputeBarrier(barriers);
+                CAST_VARIANT_PURE(variant)->preComputeBarrier(recordState, barriers);
             }
 
             RF::PipelineBarrier(
@@ -319,7 +317,7 @@ namespace MFA
 
             for (auto * variant : mAllVariantsList)
             {
-                CAST_VARIANT_PURE(variant)->preRenderBarrier(barriers);
+                CAST_VARIANT_PURE(variant)->preRenderBarrier(recordState, barriers);
             }
 
             RF::PipelineBarrier(
@@ -360,6 +358,8 @@ namespace MFA
         retrieveOcclusionQueryResult(recordState);
 
         BasePipeline::preRender(recordState, deltaTime);
+
+        postComputeBarrier(recordState);
 
         performDepthPrePass(recordState);
 

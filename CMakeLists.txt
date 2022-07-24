@@ -530,6 +530,21 @@ list(APPEND RAY_TRACING_SOURCES
     "applications/ray_tracing_weekend/RayTracingWeekendApplication.cpp"
     "applications/ray_tracing_weekend/ray/Ray.hpp"
     "applications/ray_tracing_weekend/ray/Ray.cpp"
+    "applications/ray_tracing_weekend/geometry/HitRecord.hpp"
+    "applications/ray_tracing_weekend/geometry/sphere/Sphere.hpp"
+    "applications/ray_tracing_weekend/geometry/sphere/Sphere.cpp"
+    "applications/ray_tracing_weekend/geometry/Geometry.hpp"
+    "applications/ray_tracing_weekend/geometry/Geometry.cpp"
+    "applications/ray_tracing_weekend/camera/Camera.hpp"
+    "applications/ray_tracing_weekend/camera/Camera.cpp"
+    "applications/ray_tracing_weekend/material/Material.hpp"
+    "applications/ray_tracing_weekend/material/Material.cpp"
+    "applications/ray_tracing_weekend/material/diffuse/Diffuse.hpp"
+    "applications/ray_tracing_weekend/material/diffuse/Diffuse.cpp"
+    "applications/ray_tracing_weekend/material/metal/Metal.hpp"
+    "applications/ray_tracing_weekend/material/metal/Metal.cpp"
+    "applications/ray_tracing_weekend/material/dielectric/Dielectric.hpp"
+    "applications/ray_tracing_weekend/material/dielectric/Dielectric.cpp"
 )
 
 #-----------------------------------------------------------------------
@@ -543,9 +558,14 @@ list(APPEND PREFAB_EDITOR_SOURCES
     "applications/prefab_editor/PrefabEditorApplication.cpp"
     "applications/prefab_editor/scenes/PrefabEditorScene.hpp"
     "applications/prefab_editor/scenes/PrefabEditorScene.cpp"
-    "applications/prefab_editor/WindowsApi.hpp"
-    "applications/prefab_editor/WindowsApi.cpp"
 )
+
+if (WINDOWS)
+    list(APPEND PREFAB_EDITOR_SOURCES
+        "applications/prefab_editor/WindowsApi.hpp"
+        "applications/prefab_editor/WindowsApi.cpp"
+    )
+endif ()
 
 #-----------------------------------------------------------------------
 # Libs
@@ -732,6 +752,7 @@ if (WINDOWS)
 
     file (GLOB DLLS_COMMON
         "${CMAKE_SOURCE_DIR}/libs/win/SDL2.dll"
+        "${CMAKE_SOURCE_DIR}/libs/win/vulkan-1.dll"
         # "${CMAKE_SOURCE_DIR}/libs/win/clang_rt.asan_dynamic-x86_64.dll"
     )
 
@@ -820,21 +841,18 @@ elseif(LINUX)
     function(link_to_target executable_name)
         message(STATUS "Linking dependancies to ${executable_name} ")
         add_executable(${executable_name} ${link_to_target_sources})
-        add_dependencies(${executable_name}  "Renderer" "EntitySystem" "Engine" "Tools" "AssetSystem" "Bedrock" "Libs" "JobSystem" "Physics")
-        target_link_libraries(${executable_name} "Renderer" "EntitySystem" "Engine" "Tools" "AssetSystem" "Bedrock" "Libs" "JobSystem" "Physics")
-        target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/linux/sdl/libSDL2.a")
-        target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/linux/sdl/libSDL2main.a")
-        target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/linux/libvulkan.so.1.3.204")
+        add_dependencies(${executable_name}  "Renderer" "EntitySystem" "Engine" "Tools" "AssetSystem" "Bedrock" "Libs")
+        target_link_libraries(${executable_name} "Renderer" "EntitySystem" "Engine" "Tools" "AssetSystem" "Bedrock" "Libs")
+        target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/linux/sdl/libSDL2.so")
+        target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/linux/vulkan/libvulkan.so.1.3.216")
+        
         target_include_directories(
             ${executable_name} PUBLIC
             $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
             $<INSTALL_INTERFACE:include>
         )
         target_link_libraries(${executable_name} ${CMAKE_DL_LIBS})
-        # target_link_directories(${executable_name} PUBLIC "${CMAKE_SOURCE_DIR}/libs/linux/sdl/")
-        # target_include_directories(${executable_name} PUBLIC "${CMAKE_SOURCE_DIR}/libs/linux/sdl/")
         target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
-
         target_link_libraries(${executable_name} X11)
 
     endfunction()
@@ -850,7 +868,7 @@ elseif(LINUX)
     set(CMAKE_USE_WIN32_THREADS_INIT 0)
     set(CMAKE_USE_PTHREADS_INIT 1)
     set(THREADS_PREFER_PTHREAD_FLAG ON)
-
+    
     set(LINUX_SOURCE)
     set(LINUX_INCLUDE_DIRECTORIES)
 
@@ -879,18 +897,18 @@ elseif(LINUX)
     target_compile_definitions(${TECHDEMO} PRIVATE TECHDEMO)
 
     # Editor
-    unset(link_to_target_directories)
-    list(APPEND link_to_target_directories
-        ${LINUX_INCLUDE_DIRECTORIES}
-        "applications/prefab_editor"
-    )
-    unset(link_to_target_sources)
-    list(APPEND link_to_target_sources
-        ${LINUX_SOURCE}
-        ${PREFAB_EDITOR_SOURCES}
-    )
-    link_to_target(${PREFAB_EDITOR})
-    target_compile_definitions(${PREFAB_EDITOR} PRIVATE PREFAB_EDITOR)
+    # unset(link_to_target_directories)
+    # list(APPEND link_to_target_directories
+    #     ${LINUX_INCLUDE_DIRECTORIES}
+    #     "applications/prefab_editor"
+    # )
+    # unset(link_to_target_sources)
+    # list(APPEND link_to_target_sources
+    #     ${LINUX_SOURCE}
+    #     ${PREFAB_EDITOR_SOURCES}
+    # )
+    # link_to_target(${PREFAB_EDITOR})
+    # target_compile_definitions(${PREFAB_EDITOR} PRIVATE PREFAB_EDITOR)
 
 elseif(MACOSX)
 

@@ -1,8 +1,6 @@
 #include "BedrockMatrix.hpp"
 
 #include "BedrockAssert.hpp"
-#include "BedrockMath.hpp"
-
 #include "BedrockCommon.hpp"
 
 namespace MFA::Matrix
@@ -25,12 +23,6 @@ namespace MFA::Matrix
     glm::quat ToQuat(glm::vec3 const & eulerAngles)
     {
         return ToQuat(eulerAngles.x, eulerAngles.y, eulerAngles.z);
-        //glm::vec3 const radians = glm::vec3 {
-        //    glm::radians(eulerAngles.x),
-        //    glm::radians(eulerAngles.y),
-        //    glm::radians(eulerAngles.z)
-        //};
-        //return glm::quat {radians};
     }
 
     //-------------------------------------------------------------------------------------------------
