@@ -13,7 +13,6 @@ public:
 
     MFA_COMPONENT_PROPS(
         ThirdPersonCameraComponent,
-        FamilyType::Camera,
         EventTypes::InitEvent | EventTypes::UpdateEvent | EventTypes::ShutdownEvent,
         CameraComponent
     )

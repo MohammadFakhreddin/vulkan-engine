@@ -49,7 +49,7 @@ namespace MFA
         Copy(pxTransform.p, transformComp->GetWorldPosition());
         Copy(pxTransform.q, transformComp->GetWorldRotation());
         
-        auto const rigidBody = GetEntity()->GetComponent<Rigidbody>().lock();
+        auto const rigidBody = GetEntity()->GetComponent<Rigidbody>();
         if (rigidBody != nullptr)
         {
 

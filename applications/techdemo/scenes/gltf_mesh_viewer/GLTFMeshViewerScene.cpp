@@ -153,16 +153,13 @@ void GLTFMeshViewerScene::Init() {
         auto * entity = EntitySystem::CreateEntity("PointLight", GetRootEntity());
 
         auto const colorComponent = entity->AddComponent<ColorComponent>();
-        MFA_ASSERT(colorComponent.expired() == false);
+        MFA_ASSERT(colorComponent != nullptr);
         mPointLightColor = colorComponent;
 
         auto const transformComponent = entity->AddComponent<TransformComponent>();
-        MFA_ASSERT(transformComponent.expired() == false);
-        if (auto const ptr = transformComponent.lock())
-        {
-            ptr->UpdateLocalScale(glm::vec3(0.1f, 0.1f, 0.1f));
-        }
-
+        MFA_ASSERT(transformComponent != nullptr);
+        transformComponent->UpdateLocalScale(glm::vec3(0.1f, 0.1f, 0.1f));
+        
         entity->AddComponent<PointLightComponent>(0.5f, 1000.0f);
 
         mPointLightTransform = transformComponent;

@@ -13,7 +13,6 @@ namespace MFA
 
         MFA_COMPONENT_PROPS(
             MeshColliderComponent,
-            FamilyType::Collider,
             EventTypes::InitEvent | EventTypes::ShutdownEvent,
             ColliderComponent
         )

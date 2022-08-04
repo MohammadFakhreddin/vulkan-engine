@@ -31,7 +31,6 @@ namespace MFA
 
         MFA_ABSTRACT_COMPONENT_PROPS(
             ColliderComponent,
-            FamilyType::Collider,
             EventTypes::InitEvent | EventTypes::ShutdownEvent | EventTypes::ActivationChangeEvent,
             Component
         )

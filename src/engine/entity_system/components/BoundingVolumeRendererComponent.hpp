@@ -17,7 +17,6 @@ namespace MFA
 
         MFA_COMPONENT_PROPS(
             BoundingVolumeRendererComponent,
-            FamilyType::BoundingVolumeRenderer,
             EventTypes::LateInitEvent | EventTypes::ShutdownEvent | EventTypes::InitEvent,
             RendererComponent
         )

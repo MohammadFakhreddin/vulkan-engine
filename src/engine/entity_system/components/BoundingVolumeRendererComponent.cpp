@@ -85,7 +85,7 @@ namespace MFA
 
     void BoundingVolumeRendererComponent::createVariant()
     {
-        auto const bvComponent = GetEntity()->GetComponent<BoundingVolumeComponent>().lock();
+        auto const bvComponent = GetEntity()->GetComponent<BoundingVolumeComponent>();
         MFA_ASSERT(bvComponent != nullptr);
 
         auto const bvTransform = bvComponent->GetVolumeTransform();

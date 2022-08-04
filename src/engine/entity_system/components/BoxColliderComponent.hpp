@@ -14,7 +14,6 @@ namespace MFA
 
         MFA_COMPONENT_PROPS(
             BoxColliderComponent,
-            FamilyType::Collider,
             EventTypes::EmptyEvent,
             ColliderComponent
         )

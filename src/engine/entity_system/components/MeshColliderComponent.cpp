@@ -43,7 +43,7 @@ namespace MFA
     {
         if (mNameId.empty())
         {
-            auto const meshRenderer = GetEntity()->GetComponent<MeshRendererComponent>().lock();
+            auto const meshRenderer = GetEntity()->GetComponent<MeshRendererComponent>();
             MFA_ASSERT(meshRenderer != nullptr);
             mNameId = meshRenderer->GetNameId();
             MFA_ASSERT(mNameId.empty() == false);
