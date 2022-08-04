@@ -271,23 +271,46 @@ namespace MFA::AssetSystem::PBR
 
     void Mesh::PreparePhysicsPoints(PhysicsPointsCallback const & callback) const
     {
-        auto const * vertexArray = mVertexData->memory.as<Vertex>();  // TODO: I need to do something about data layouts? Maybe reunify them ?
-        auto const pointsBuffer = Memory::Alloc(mVertexCount * sizeof(physx::PxVec3));
-        auto * pointsArray = pointsBuffer->memory.as<physx::PxVec3>();
+        std::vector<Physics::TriangleMeshDesc> triangleMeshes {};
 
-        static_assert(sizeof(AS::PBR::Vertex::position) == sizeof(physx::PxVec3));
-        JobSystem::AssignTaskPerThread(
-            [this, pointsBuffer, pointsArray, vertexArray]
-            (JS::ThreadNumber const threadNumber, JS::ThreadNumber const totalThreadCount)->void
+        // TODO: Multi-thread
+        for (auto const & subMesh : mData->subMeshes)
+        {
+            for (auto const & primitive : subMesh.primitives)
             {
-                for (uint32_t i = threadNumber; i < mVertexCount; i+= totalThreadCount)
+                triangleMeshes.emplace_back();
+                auto & triangleMesh = triangleMeshes.back();
+                MFA_ASSERT(primitive.indicesCount % 3 == 0);
+
+                triangleMesh.trianglesCount = primitive.indicesCount / 3;
+                triangleMesh.trianglesStride = 3 * sizeof(Index);
+                triangleMesh.triangleBuffer = Memory::Alloc(primitive.indicesCount * sizeof(Index));
+
+                triangleMesh.pointsStride = sizeof(physx::PxVec3);
+                triangleMesh.pointsCount = primitive.vertexCount;
+                triangleMesh.pointsBuffer = Memory::Alloc(primitive.vertexCount * sizeof(physx::PxVec3));
+
+                auto * pointsArray = triangleMesh.pointsBuffer->memory.as<physx::PxVec3>();
+                
+                auto * trianglesArray = triangleMesh.triangleBuffer->memory.as<Index>();
+
+                auto const * vertexArray = reinterpret_cast<Vertex *>(mVertexData->memory.ptr + primitive.verticesOffset);
+                auto const * indicesArray = reinterpret_cast<Index *>(mIndexData->memory.ptr + primitive.indicesOffset);
+
+                for (uint32_t i = 0; i < primitive.vertexCount; ++i)
                 {
-                    Copy<3>(pointsArray[i], vertexArray[i].position);
+                    static_assert(sizeof(vertexArray[i].position) == sizeof(pointsArray[i]));
+                    Copy(pointsArray[i], vertexArray[i].position);
                 }
-            }, [this, pointsBuffer, callback]()->void{
-                callback(pointsBuffer);
+
+                for (uint32_t i = 0; i < primitive.indicesCount; ++i)
+                {
+                    trianglesArray[i] = indicesArray[i] - primitive.verticesStartingIndex;
+                }
             }
-        );
+        }
+
+        callback(triangleMeshes);
     }
 
     //-------------------------------------------------------------------------------------------------

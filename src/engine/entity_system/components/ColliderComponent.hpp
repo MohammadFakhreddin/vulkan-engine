@@ -71,7 +71,15 @@ namespace MFA
         void UpdateShapeGeometry();
 
         [[nodiscard]]
-        virtual std::shared_ptr<physx::PxGeometry> ComputeGeometry() = 0;
+        virtual std::vector<std::shared_ptr<physx::PxGeometry>> ComputeGeometry() = 0;
+
+    private:
+
+        void CreateShape(std::vector<std::shared_ptr<physx::PxGeometry>> const & geometries);
+
+        void RemoveShapes();
+
+    protected:
 
         std::weak_ptr<TransformComponent> mTransform;
 
@@ -80,7 +88,7 @@ namespace MFA
         Physics::SharedHandle<physx::PxRigidDynamic> mRigidDynamic = nullptr;
         Physics::SharedHandle<physx::PxRigidStatic> mRigidStatic = nullptr;
 
-        Physics::SharedHandle<physx::PxShape> mShape = nullptr;
+        std::vector<physx::PxShape *> mShapes {};
         
         SignalId mTransformChangeListenerId = -1;
 

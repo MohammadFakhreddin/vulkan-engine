@@ -36,7 +36,8 @@ namespace MFA::Physics// final : public IPhysicsWorld, public PxSimulationEventC
 
     SharedHandle<physx::PxRigidStatic> CreateStaticActor(physx::PxTransform const & pxTransform);
 
-    SharedHandle<physx::PxShape> CreateShape(
+    // Actor releases the exclusive shapes
+    physx::PxShape * CreateShape(
         physx::PxRigidActor & actor,
         physx::PxGeometry const & geometry,
         physx::PxMaterial const & material

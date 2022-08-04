@@ -38,7 +38,7 @@ namespace MFA
         void Deserialize(nlohmann::json const & jsonObject) override;
 
         [[nodiscard]]
-        std::shared_ptr<physx::PxGeometry> ComputeGeometry() override;
+        std::vector<std::shared_ptr<physx::PxGeometry>> ComputeGeometry() override;
 
     private:
 

@@ -45,6 +45,24 @@ void GLTFMeshViewerScene::Init() {
         //}
         {
             ModelRenderData params {};
+            params.displayName = "SponzaScene";
+            Path::ForReadWrite("models/sponza/sponza.gltf", params.address);
+            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {180.0f, -90.0f, 0.0f});
+            MFA::Copy<3>(params.initialParams.model.translate, {0.4f, 2.0f, -6.0f});
+            MFA::Copy<3>(params.initialParams.light.translateMin, {-50.0f, -50.0f, -50.0f});
+            MFA::Copy<3>(params.initialParams.light.translateMax, {50.0f, 50.0f, 50.0f});
+            mModelsRenderData.emplace_back(params);
+        }
+        {
+            ModelRenderData params {};
+            params.displayName = "Car";
+            Path::ForReadWrite("models/free_zuk_3d_model/scene.gltf", params.address);
+            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {-19.0f, -32.0f, 177.0f});
+            MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.0f, -2.0f});
+            mModelsRenderData.emplace_back(params);
+        }
+        {
+            ModelRenderData params {};
             params.displayName = "CesiumMan";
             Path::ForReadWrite("models/CesiumMan/glTF/CesiumMan.gltf", params.address);
             MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {0.0f, 0.0f, -180.0f});
@@ -52,16 +70,6 @@ void GLTFMeshViewerScene::Init() {
             MFA::Copy<3>(params.initialParams.light.position, {0.0f, -2.0f, -2.0f});
             MFA::Copy<3>(params.initialParams.camera.position, {0.104f, 1.286f, 4.952f});
             MFA::Copy<3>(params.initialParams.camera.eulerAngles, {-12.0f, 3.0f, 0.0f});
-            mModelsRenderData.emplace_back(params);
-        }
-        {
-            ModelRenderData params {};
-            params.displayName = "SponzaScene";
-            Path::ForReadWrite("models/sponza/sponza.gltf", params.address);
-            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {180.0f, -90.0f, 0.0f});
-            MFA::Copy<3>(params.initialParams.model.translate, {0.4f, 2.0f, -6.0f});
-            MFA::Copy<3>(params.initialParams.light.translateMin, {-50.0f, -50.0f, -50.0f});
-            MFA::Copy<3>(params.initialParams.light.translateMax, {50.0f, 50.0f, 50.0f});
             mModelsRenderData.emplace_back(params);
         }
         {
@@ -94,14 +102,6 @@ void GLTFMeshViewerScene::Init() {
             MFA::Copy<3>(params.initialParams.model.translate, {0.4f, 2.0f, -6.0f});
             MFA::Copy<3>(params.initialParams.light.translateMin, {-50.0f, -50.0f, -50.0f});
             MFA::Copy<3>(params.initialParams.light.translateMax, {50.0f, 50.0f, 50.0f});
-            mModelsRenderData.emplace_back(params);
-        }
-        {
-            ModelRenderData params {};
-            params.displayName = "Car";
-            Path::ForReadWrite("models/free_zuk_3d_model/scene.gltf", params.address);
-            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {-19.0f, -32.0f, 177.0f});
-            MFA::Copy<3>(params.initialParams.model.translate, {0.0f, 0.0f, -2.0f});
             mModelsRenderData.emplace_back(params);
         }
         {
@@ -299,7 +299,7 @@ void GLTFMeshViewerScene::createModel(ModelRenderData & data) const
     );
     MFA_ASSERT(data.meshRendererComponent.expired() == false);
 
-    //entity->AddComponent<MeshCollider>(true);
+    entity->AddComponent<MeshCollider>(false);
     //entity->AddComponent<BoxCollider>(glm::vec3 {1.0f, 1.0f, 1.0f});
     // There is no need for a bounding volume
     /*entity->AddComponent<AxisAlignedBoundingBoxComponent>(

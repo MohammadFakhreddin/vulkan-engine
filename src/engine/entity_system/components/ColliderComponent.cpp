@@ -84,10 +84,14 @@ namespace MFA
     void ColliderComponent::Shutdown()
     {
         Component::Shutdown();
+
         if (auto const transform = mTransform.lock())
         {
             transform->UnRegisterChangeListener(mTransformChangeListenerId);
         }
+
+        RemoveShapes();
+
         Physics::RemoveActor(*mActor);
     }
     
@@ -177,21 +181,12 @@ namespace MFA
 
     void ColliderComponent::CreateShape()
     {
-        MFA_ASSERT(mShape == nullptr);
+        MFA_ASSERT(mShapes.empty());
 
         // Note geometry can be null at this point
-        auto const geometry = ComputeGeometry();
+        auto const geometries = ComputeGeometry();
 
-        mShape = Physics::CreateShape(
-            *mActor,
-            *geometry,
-            Physics::GetDefaultMaterial()->Ref()
-        );
-        MFA_ASSERT(mShape->Ptr()->isExclusive() == true);
-
-        mShape->Ptr()->userData = this;
-
-        UpdateShapeCenter();
+        CreateShape(geometries);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -201,18 +196,67 @@ namespace MFA
         PxTransform newTransform {};
         Copy(newTransform.p, mCenter);
         Copy(newTransform.q, glm::identity<glm::quat>());
-        mShape->Ptr()->setLocalPose(newTransform);
+
+        for (auto & shape : mShapes)
+        {
+            shape->setLocalPose(newTransform);
+        }
     }
 
     //-------------------------------------------------------------------------------------------------
 
     void ColliderComponent::UpdateShapeGeometry()
     {
-        auto const geometry = ComputeGeometry();
-        if (geometry != nullptr)    // It can be null because of geometry not being ready yet
+        auto const geometries = ComputeGeometry();
+        if (geometries.empty())
         {
-            mShape->Ptr()->setGeometry(*geometry);
+            return;
         }
+
+        if (mShapes.size() == geometries.size())
+        {
+            for (size_t i = 0; i < geometries.size(); ++i)
+            {
+                mShapes[i]->setGeometry(*geometries[i]);
+            }
+        } else
+        {
+            RemoveShapes();
+            CreateShape(geometries);
+        }
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void ColliderComponent::CreateShape(std::vector<std::shared_ptr<physx::PxGeometry>> const & geometries)
+    {
+        for (auto const & geometry : geometries)
+        {
+            mShapes.emplace_back();
+            auto & shape = mShapes.back();
+            shape = Physics::CreateShape(
+                *mActor,
+                *geometry,
+                Physics::GetDefaultMaterial()->Ref()
+            );
+            MFA_ASSERT(shape != nullptr);
+            MFA_ASSERT(shape->isExclusive() == true);
+
+            shape->userData = this;
+        }
+
+        UpdateShapeCenter();
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ColliderComponent::RemoveShapes()
+    {
+        for (auto const & shape : mShapes)
+        {
+            mActor->detachShape(*shape);
+        }
+        mShapes.clear();
     }
 
     //-------------------------------------------------------------------------------------------------
