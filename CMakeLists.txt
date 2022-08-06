@@ -673,16 +673,16 @@ if (WINDOWS)
         target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
         
         add_custom_command(
-            TARGET ${executable_name} POST_BUILD                # Adds a post-build event to MyTest
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different       # which executes "cmake - E copy_if_different..."
-            ${DLLS_RELEASE}                                     # <--this is in-file
+            TARGET ${executable_name} POST_BUILD                
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different       
+            ${DLLS_RELEASE}                                     
             "${CMAKE_BINARY_DIR}/Release"
         )
 
         add_custom_command(
-            TARGET ${executable_name} POST_BUILD                # Adds a post-build event to MyTest
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different       # which executes "cmake - E copy_if_different..."
-            ${DLLS_DEBUG}                                       # <--this is in-file
+            TARGET ${executable_name} POST_BUILD                
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different       
+            ${DLLS_DEBUG}                                       
             "${CMAKE_BINARY_DIR}/Debug"
         )
 
@@ -701,6 +701,9 @@ if (WINDOWS)
     endfunction()
 
     message(STATUS "Building for windows")
+    
+    execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/Release")
+    execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/Debug")
 
     set(WIN_SOURCES)
     set(WIN_INCLUDE_DIRECTORIES)
@@ -941,25 +944,25 @@ elseif(MACOSX)
         if(CMAKE_GENERATOR STREQUAL Xcode)
             # Copying assets to correct place
             add_custom_command(
-                TARGET ${executable_name} POST_BUILD        # Adds a post-build event to MyTest
+                TARGET ${executable_name} POST_BUILD        
                 COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Debug/${executable_name}.app/Contents/Resources/data/"
                 COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Debug/${executable_name}.app/Contents/Resources/data/"
             )
 
             add_custom_command(
-                TARGET ${executable_name} POST_BUILD        # Adds a post-build event to MyTest
+                TARGET ${executable_name} POST_BUILD        
                 COMMAND mkdir -p "${CMAKE_BINARY_DIR}/Release/${executable_name}.app/Contents/Resources/data/"
                 COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/Release/${executable_name}.app/Contents/Resources/data/"
             )
         else()
             add_custom_command(
-                TARGET ${executable_name} POST_BUILD        # Adds a post-build event to MyTest
+                TARGET ${executable_name} POST_BUILD        
                 COMMAND mkdir -p "${CMAKE_BINARY_DIR}/${executable_name}.app/Contents/Resources/data/"
                 COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/${executable_name}.app/Contents/Resources/data/"
             )
 
             add_custom_command(
-                TARGET ${executable_name} POST_BUILD        # Adds a post-build event to MyTest
+                TARGET ${executable_name} POST_BUILD        
                 COMMAND mkdir -p "${CMAKE_BINARY_DIR}/${executable_name}.app/Contents/Resources/data/"
                 COMMAND cp -r "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/${executable_name}.app/Contents/Resources/data/"
             )
