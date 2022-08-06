@@ -239,23 +239,81 @@ namespace MFA::RenderBackend
 
     //-------------------------------------------------------------------------------------------------
 
-    static std::set<std::string> QuerySupportedExtension() {
-        uint32_t count;
-        vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr); //get number of extensions
-        std::vector<VkExtensionProperties> extensions(count);
-        vkEnumerateInstanceExtensionProperties(nullptr, &count, extensions.data()); //populate buffer
-        std::set<std::string> results {};
-        for (auto const & extension : extensions) {
-            results.insert(extension.extensionName);
+    static std::set<std::string> QuerySupportedDeviceExtensions(VkPhysicalDevice const & physicalDevice)
+    {
+        static std::set<std::string> supportedExtensions{};
+        static bool extensionsAreSet = false;
+
+        if (extensionsAreSet == false)
+        {
+            uint32_t count;
+            vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &count, nullptr); //get number of extensions
+
+            std::vector<VkExtensionProperties> extensions(count);
+            vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &count, extensions.data()); //populate buffer
+
+            for (auto const & extension : extensions)
+            {
+                supportedExtensions.insert(extension.extensionName);
+            }
+            extensionsAreSet = true;
         }
-        return results;
+
+        return supportedExtensions;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    static std::vector<char const *> FilterSupportedExtensions(std::vector<char const *> const & extensions) 
+    static std::vector<char const *> FilterSupportedDeviceExtensions(
+        VkPhysicalDevice const & physicalDevice,
+        std::vector<char const *> const & extensions
+    )
     {
-        auto const supportedExtension = QuerySupportedExtension();
+        auto const supportedExtension = QuerySupportedDeviceExtensions(physicalDevice);
+        std::vector<char const *> result{};
+        for (auto const & extension : extensions)
+        {
+            if (supportedExtension.contains(extension))
+            {
+                result.emplace_back(extension);
+            }
+            else
+            {
+                MFA_LOG_WARN("Extension %s is not supported by this device.", extension);
+            }
+        }
+        return result;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    static std::set<std::string> QuerySupportedInstaceExtension() {
+        static std::set<std::string> supportedExtensions{};
+        static bool extensionsAreSet = false;
+
+        if (extensionsAreSet == false)
+        {
+            uint32_t count;
+            vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr); //get number of extensions
+
+            std::vector<VkExtensionProperties> extensions(count);
+            vkEnumerateInstanceExtensionProperties(nullptr, &count, extensions.data()); //populate buffer
+
+            for (auto const & extension : extensions)
+            {
+                supportedExtensions.insert(extension.extensionName);
+            }
+            extensionsAreSet = true;
+        }
+
+        return supportedExtensions;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    static std::vector<char const *> FilterSupportedInstanceExtensions(std::vector<char const *> const & extensions) 
+    {
+        auto const supportedExtension = QuerySupportedInstaceExtension();
         std::vector<char const *> result {};
         for (auto const & extension : extensions)
         {
@@ -271,18 +329,23 @@ namespace MFA::RenderBackend
     //-------------------------------------------------------------------------------------------------
 
     static std::set<std::string> QuerySupportedLayers() {
-        uint32_t count;
-        vkEnumerateInstanceLayerProperties(&count, nullptr); //get number of extensions
-        
-        std::vector<VkLayerProperties> layers(count);
-        vkEnumerateInstanceLayerProperties(&count, layers.data()); //populate buffer
-        
-        std::set<std::string> results {};
-        for (auto const & layer : layers) {
-            results.insert(layer.layerName);
+        static std::set<std::string> supportedLayers{};
+        static bool layersAreSet = false;
+
+        if (layersAreSet == false)
+        {
+            uint32_t count;
+            vkEnumerateInstanceLayerProperties(&count, nullptr); //get number of extensions
+            
+            std::vector<VkLayerProperties> layers(count);
+            vkEnumerateInstanceLayerProperties(&count, layers.data()); //populate buffer
+            
+            for (auto const & layer : layers) {
+                supportedLayers.insert(layer.layerName);
+            }
+            layersAreSet = true;
         }
-        
-        return results;
+        return supportedLayers;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -370,7 +433,7 @@ namespace MFA::RenderBackend
 #endif
 
         // Filtering instance extensions
-        auto supportedExtensions = FilterSupportedExtensions(instanceExtensions);
+        auto supportedExtensions = FilterSupportedInstanceExtensions(instanceExtensions);
 
         std::vector<char const *> enabledLayer {};
 #if defined(MFA_DEBUG)
@@ -1135,8 +1198,11 @@ namespace MFA::RenderBackend
     #endif
         enabledExtensionNames.emplace_back(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME);
         enabledExtensionNames.emplace_back(VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME);
-        deviceCreateInfo.ppEnabledExtensionNames = enabledExtensionNames.data();
-        deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensionNames.size());
+        
+        auto filteredExtensionNames = FilterSupportedDeviceExtensions(physicalDevice, enabledExtensionNames);
+        
+        deviceCreateInfo.ppEnabledExtensionNames = filteredExtensionNames.data();
+        deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(filteredExtensionNames.size());
         // Necessary for shader (for some reason)
         deviceCreateInfo.pEnabledFeatures = &enabledPhysicalDeviceFeatures;
     #if defined(MFA_DEBUG)// && defined(__ANDROID__) == false

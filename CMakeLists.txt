@@ -645,6 +645,7 @@ if (WINDOWS)
     file(
         GLOB DLLS
         "${CMAKE_SOURCE_DIR}/libs/win/SDL2.dll"
+        "${CMAKE_SOURCE_DIR}/libs/win/vulkan-1.dll"
         # "${CMAKE_SOURCE_DIR}/libs/win/clang_rt.asan_dynamic-x86_64.dll"
     )
 
