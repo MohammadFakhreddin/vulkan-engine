@@ -40,17 +40,17 @@
             },
             {
                 "data": {
+                    "OcclusionEnabled": true,
                     "center": {
                         "x": 0.0,
-                        "y": 0.5,
+                        "y": 0.75,
                         "z": 0.0
                     },
                     "extend": {
-                        "x": 1.4,
-                        "y": 2.0,
-                        "z": 1.4
-                    },
-                    "OcclusionEnabled": true
+                        "x": 1.399999976158142,
+                        "y": 1.7000000476837158,
+                        "z": 1.399999976158142
+                    }
                 },
                 "familyType": 4,
                 "name": "AxisAlignedBoundingBoxComponent"
@@ -67,6 +67,7 @@
                 "name": "ColorComponent"
             }
         ],
+        "isActive": true,
         "name": "PrefabRoot"
     }
 }

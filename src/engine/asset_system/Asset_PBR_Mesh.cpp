@@ -2,6 +2,9 @@
 
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockMemory.hpp"
+#include "engine/job_system/JobSystem.hpp"
+
+#include <foundation/PxVec3.h>
 
 namespace MFA::AssetSystem::PBR
 {
@@ -262,6 +265,29 @@ namespace MFA::AssetSystem::PBR
     std::shared_ptr<MeshData> const & Mesh::getMeshData() const
     {
         return mData;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Mesh::PreparePhysicsPoints(PhysicsPointsCallback const & callback) const
+    {
+        auto const * vertexArray = mVertexData->memory.as<Vertex>();  // TODO: I need to do something about data layouts? Maybe reunify them ?
+        auto const pointsBuffer = Memory::Alloc(mVertexCount * sizeof(physx::PxVec3));
+        auto * pointsArray = pointsBuffer->memory.as<physx::PxVec3>();
+
+        static_assert(sizeof(AS::PBR::Vertex::position) == sizeof(physx::PxVec3));
+        JobSystem::AssignTaskPerThread(
+            [this, pointsBuffer, pointsArray, vertexArray]
+            (JS::ThreadNumber const threadNumber, JS::ThreadNumber const totalThreadCount)->void
+            {
+                for (uint32_t i = threadNumber; i < mVertexCount; i+= totalThreadCount)
+                {
+                    Copy<3>(pointsArray[i], vertexArray[i].position);
+                }
+            }, [this, pointsBuffer, callback]()->void{
+                callback(pointsBuffer);
+            }
+        );
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -1,204 +1,28 @@
 #include "BedrockMatrix.hpp"
 
 #include "BedrockAssert.hpp"
-
-#include <memory.h>
+#include "BedrockCommon.hpp"
 
 namespace MFA::Matrix
 {
 
-    //-------------------------------------------------------------------------------------------------
-
-    glm::mat4 CopyCellsToMat4(float const * cells) {
-        MFA_ASSERT(cells != nullptr);
-        glm::mat4 result {};
-        CopyCellsToGlm(cells, result);
-        return result;
-    }
 
     //-------------------------------------------------------------------------------------------------
 
-    glm::vec3 CopyCellsToVec3(float const * cells) {
-        MFA_ASSERT(cells != nullptr);
-        glm::vec3 result;
-        CopyCellsToGlm(cells, result);
-        return result;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    glm::quat CopyCellsToQuat(float const * cells) {
-        MFA_ASSERT(cells != nullptr);
-        glm::quat result;
-        CopyCellsToGlm(cells, result);
-        return result;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    glm::vec4 CopyCellsToVec4(float const * cells) {
-        MFA_ASSERT(cells != nullptr);
-        glm::vec4 result;
-        CopyCellsToGlm(cells, result);
-        return result;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyCellsToGlm(float const * cells, glm::mat4 & outMatrix)
+    glm::quat ToQuat(const float xDeg, const float yDeg, const float zDeg)
     {
-        MFA_ASSERT(cells != nullptr);
-        memcpy(&outMatrix, cells, sizeof(float) * 16);
+        return glm::quat {glm::vec3 {
+            glm::radians(xDeg),
+            glm::radians(yDeg),
+            glm::radians(zDeg)
+        }};
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void CopyCellsToGlm(float const * cells, glm::vec3 & outVec3)
+    glm::quat ToQuat(glm::vec3 const & eulerAngles)
     {
-        MFA_ASSERT(cells != nullptr);
-        memcpy(&outVec3, cells, sizeof(float) * 3);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyCellsToGlm(float const * cells, glm::quat & outQuat)
-    {
-        MFA_ASSERT(cells != nullptr);
-        memcpy(&outQuat, cells, sizeof(float) * 4);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyCellsToGlm(float const * cells, glm::vec4 & outVec4)
-    {
-        MFA_ASSERT(cells != nullptr);
-        memcpy(&outVec4, cells, sizeof(float) * 4);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyGlmToCells(glm::mat4 const & matrix, float * cells)
-    {
-        MFA_ASSERT(cells != nullptr);
-        memcpy(cells, &matrix, sizeof(float) * 16);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyGlmToCells(glm::vec2 const & vector, float * cells)
-    {
-        MFA_ASSERT(cells != nullptr);
-        memcpy(cells, &vector, 2 * sizeof(float));
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyGlmToCells(glm::vec3 const & vector, float * cells)
-    {
-        MFA_ASSERT(cells != nullptr);
-        memcpy(cells, &vector, 3 * sizeof(float));
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyGlmToCells(glm::vec4 const & vector, float * cells)
-    {
-        MFA_ASSERT(cells != nullptr);
-        memcpy(cells, &vector, sizeof(float) * 4);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CopyGlmToCells(glm::quat const & quaternion, float * cells)
-    {
-        MFA_ASSERT(cells != nullptr);
-        memcpy(cells, &quaternion, sizeof(float) * 4);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool IsEqual(glm::mat4 const & matrix, float const * cells)
-    {
-        MFA_ASSERT(cells != nullptr);
-        return ::memcmp(&matrix, cells, 16 * sizeof(float)) == 0;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool IsEqual(glm::vec2 const & vector, float const * cells)
-    {
-        MFA_ASSERT(cells != nullptr);
-        return ::memcmp(&vector,cells, 2 * sizeof(float)) == 0;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool IsEqual(glm::vec3 const & vector, float const * cells)
-    {
-        MFA_ASSERT(cells != nullptr);
-        return ::memcmp(&vector,cells, 3 * sizeof(float)) == 0;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool IsEqual(glm::quat const & quat, float const * cells)
-    {
-        MFA_ASSERT(cells != nullptr);
-        return ::memcmp(&quat,cells, 4 * sizeof(float)) == 0;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool IsEqual(glm::vec4 const & vector, float const * cells)
-    {
-        MFA_ASSERT(cells != nullptr);
-        return ::memcmp(&vector,cells, 4 * sizeof(float)) == 0;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool IsEqual(glm::mat4 const & matrixA, glm::mat4 const & matrixB)
-    {
-        return ::memcmp(&matrixA, &matrixB, 16 * sizeof(float)) == 0;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool IsEqual(glm::vec2 const & vectorA, glm::vec2 const & vectorB)
-    {
-        return ::memcmp(&vectorA, &vectorB, 2 * sizeof(float)) == 0;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool IsEqual(glm::vec3 const & vectorA, glm::vec3 const & vectorB)
-    {
-        return ::memcmp(&vectorA, &vectorB, 3 * sizeof(float)) == 0;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool IsEqual(glm::quat const & quatA, glm::quat const & quatB)
-    {
-        return ::memcmp(&quatA, &quatB, 4 * sizeof(float)) == 0;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool IsEqual(glm::vec4 const & vectorA, glm::vec4 const & vectorB)
-    {
-        return ::memcmp(&vectorA, &vectorB, 4 * sizeof(float)) == 0;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    glm::quat ToQuat(const float x, const float y, const float z)
-    {
-        return glm::quat(glm::vec3(
-            glm::radians(x),
-            glm::radians(y),
-            glm::radians(z)
-        ));
+        return ToQuat(eulerAngles.x, eulerAngles.y, eulerAngles.z);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -206,7 +30,14 @@ namespace MFA::Matrix
     // Returns degree
     glm::vec3 ToEulerAngles(glm::quat const & quaternion)
     {
-        return glm::degrees(glm::eulerAngles(quaternion));
+        auto angles =  glm::degrees(glm::eulerAngles(quaternion));
+        if (std::fabs(angles.z) >= 90)
+        {
+            angles.x += 180.f;
+            angles.y = 180.f - angles.y;
+            angles.z += 180.f;
+        }
+        return angles;
     }
 
     //-------------------------------------------------------------------------------------------------

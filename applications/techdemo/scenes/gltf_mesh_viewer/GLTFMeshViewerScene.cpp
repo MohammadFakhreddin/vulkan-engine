@@ -6,8 +6,9 @@
 #include "engine/BedrockPath.hpp"
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/EntitySystem.hpp"
-#include "engine/entity_system/components/AxisAlignedBoundingBoxComponent.hpp"
+#include "engine/entity_system/components/BoxColliderComponent.hpp"
 #include "engine/entity_system/components/ColorComponent.hpp"
+#include "engine/entity_system/components/MeshColliderComponent.hpp"
 #include "engine/entity_system/components/MeshRendererComponent.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
 #include "engine/ui_system/UI_System.hpp"
@@ -15,7 +16,6 @@
 #include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Essence.hpp"
-#include "engine/resource_manager/ResourceManager.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 
 using namespace MFA;
@@ -52,6 +52,16 @@ void GLTFMeshViewerScene::Init() {
             MFA::Copy<3>(params.initialParams.light.position, {0.0f, -2.0f, -2.0f});
             MFA::Copy<3>(params.initialParams.camera.position, {0.104f, 1.286f, 4.952f});
             MFA::Copy<3>(params.initialParams.camera.eulerAngles, {-12.0f, 3.0f, 0.0f});
+            mModelsRenderData.emplace_back(params);
+        }
+        {
+            ModelRenderData params {};
+            params.displayName = "SponzaScene";
+            Path::ForReadWrite("models/sponza/sponza.gltf", params.address);
+            MFA::Copy<3>(params.initialParams.model.rotationEulerAngle, {180.0f, -90.0f, 0.0f});
+            MFA::Copy<3>(params.initialParams.model.translate, {0.4f, 2.0f, -6.0f});
+            MFA::Copy<3>(params.initialParams.light.translateMin, {-50.0f, -50.0f, -50.0f});
+            MFA::Copy<3>(params.initialParams.light.translateMax, {50.0f, 50.0f, 50.0f});
             mModelsRenderData.emplace_back(params);
         }
         {
@@ -150,7 +160,7 @@ void GLTFMeshViewerScene::Init() {
         MFA_ASSERT(transformComponent.expired() == false);
         if (auto const ptr = transformComponent.lock())
         {
-            ptr->UpdateScale(glm::vec3(0.1f, 0.1f, 0.1f));
+            ptr->UpdateLocalScale(glm::vec3(0.1f, 0.1f, 0.1f));
         }
 
         entity->AddComponent<PointLightComponent>(0.5f, 1000.0f);
@@ -205,7 +215,7 @@ void GLTFMeshViewerScene::Update(float const deltaTimeInSec)
                 selectedModel.initialParams.model.scale,
                 selectedModel.initialParams.model.scale
             };
-            ptr->UpdateTransform(
+            ptr->UpdateLocalTransform(
                 selectedModel.initialParams.model.translate,
                 selectedModel.initialParams.model.rotationEulerAngle,
                 scale
@@ -214,7 +224,7 @@ void GLTFMeshViewerScene::Update(float const deltaTimeInSec)
 
         if (auto const ptr = mPointLightTransform.lock())
         {
-            ptr->UpdatePosition(selectedModel.initialParams.light.position);
+            ptr->UpdateLocalPosition(selectedModel.initialParams.light.position);
         }
 
         if (auto const ptr = mPointLightColor.lock())
@@ -289,6 +299,8 @@ void GLTFMeshViewerScene::createModel(ModelRenderData & data) const
     );
     MFA_ASSERT(data.meshRendererComponent.expired() == false);
 
+    //entity->AddComponent<MeshCollider>(true);
+    //entity->AddComponent<BoxCollider>(glm::vec3 {1.0f, 1.0f, 1.0f});
     // There is no need for a bounding volume
     /*entity->AddComponent<AxisAlignedBoundingBoxComponent>(
         glm::vec3(0.0f, 0.0f, 0.0f),

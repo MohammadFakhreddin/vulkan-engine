@@ -903,8 +903,10 @@ namespace MFA::SceneManager
                 auto & item = state->pointLightData.items[state->pointLightData.count];
 
                 //Future optimization: if (item.id != ptr->GetUniqueId() || ptr->IsDataDirty() == true){
-                Matrix::CopyGlmToCells(ptr->GetLightColor(), item.color);
-                Matrix::CopyGlmToCells(ptr->GetPosition(), item.position);
+                //Matrix::CopyGlmToCells(ptr->GetLightColor(), item.color);
+                Copy(item.color, ptr->GetLightColor());
+                //Matrix::CopyGlmToCells(ptr->GetPosition(), item.position);
+                Copy(item.position, ptr->GetPosition());
                 ptr->GetShadowViewProjectionMatrices(item.viewProjectionMatrices);
                 item.maxSquareDistance = ptr->GetMaxSquareDistance();
                 item.linearAttenuation = ptr->GetLinearAttenuation();

@@ -45,6 +45,7 @@ namespace MFA
 
     namespace AssetSystem
     {
+        struct Model;
         class MeshBase;
     }
 
@@ -104,6 +105,12 @@ namespace MFA
             float deltaTime
         );
 
+        virtual std::shared_ptr<EssenceBase> CreateEssence(
+            std::string const & nameId,
+            std::shared_ptr<AssetSystem::Model> const & cpuModel,
+            std::vector<std::shared_ptr<RT::GpuTexture>> const & gpuTextures
+        ) = 0;
+
         bool addEssence(std::shared_ptr<EssenceBase> const & essence);
 
         [[nodiscard]]
@@ -113,7 +120,7 @@ namespace MFA
         void destroyEssence(std::string const & nameId);
  
         // TODO: I think we should return sharedPtr to avoid extra locking for initialization.
-        virtual std::weak_ptr<VariantBase> createVariant(std::string const & nameId);
+        virtual std::weak_ptr<VariantBase> createVariant(std::string const & path);
 
         void removeVariant(VariantBase & variant);
 

@@ -13,10 +13,11 @@ namespace MFA {
     {
     public:
 
-        MFA_COMPONENT_PROPS(
+        MFA_ABSTRACT_COMPONENT_PROPS(
             BoundingVolumeComponent,
             FamilyType::BoundingVolume,
-            EventTypes::UpdateEvent | EventTypes::InitEvent | EventTypes::ShutdownEvent
+            EventTypes::UpdateEvent | EventTypes::InitEvent | EventTypes::ShutdownEvent,
+            Component
         )
 
         explicit BoundingVolumeComponent(bool occlusionCullingEnabled);
@@ -28,7 +29,7 @@ namespace MFA {
 
         void Shutdown() override;
 
-        void onUI() override;
+        void OnUI() override;
 
         [[nodiscard]]
         bool IsInFrustum() const;
@@ -50,9 +51,9 @@ namespace MFA {
         [[nodiscard]]
         bool OcclusionEnabled() const;
 
-        void serialize(nlohmann::json & jsonObject) const override;
+        void Serialize(nlohmann::json & jsonObject) const override;
 
-        void deserialize(nlohmann::json const & jsonObject) override;
+        void Deserialize(nlohmann::json const & jsonObject) override;
 
     protected:
 
@@ -71,5 +72,7 @@ namespace MFA {
         std::weak_ptr<TransformComponent> mBvTransform {};
 
     };
+
+    using BoundVolume = BoundingVolumeComponent;
 
 }

@@ -6,6 +6,12 @@
 #include <string>
 
 #include "engine/asset_system/AssetModel.hpp"
+#include "engine/physics/PhysicsTypes.hpp"
+
+namespace physx
+{
+    class PxTriangleMesh;
+}
 
 namespace MFA
 {
@@ -26,7 +32,7 @@ namespace MFA::ResourceManager
 
     using CpuModelCallback = std::function<void(std::shared_ptr<AssetSystem::Model> const & cpuModel)>;
 
-    // Note: No need to use Path
+    // Note: No need to use Path, This function does load textures data.
     void AcquireCpuModel(
         std::string const & modelId,
         CpuModelCallback const & callback,
@@ -34,13 +40,6 @@ namespace MFA::ResourceManager
     );
 
     using GpuTextureCallback = std::function<void(std::shared_ptr<RT::GpuTexture> const & gpuTexture)>;
-
-    //// Load file if not exists is set to true by default
-    //[[nodiscard]]
-    //std::vector<std::shared_ptr<RT::GpuTexture>> AcquireGpuTextures(
-    //    std::vector<std::string> const & textureIds,
-    //    GpuTextureCallback const & callback
-    //);
 
     void AcquireGpuTexture(
         std::string const & textureId,
@@ -63,6 +62,15 @@ namespace MFA::ResourceManager
         std::string const & nameId,
         BasePipeline * pipeline,
         EssenceCallback const & callback,
+        bool loadFromFile = true
+    );
+
+    using PhysicsMeshCallback = std::function<void(Physics::SharedHandle<physx::PxTriangleMesh> const & physicsMesh)>;
+
+    void AcquirePhysicsMesh(
+        std::string const & path,
+        bool isConvex,                                  // Convex is not yet supported
+        PhysicsMeshCallback const & callback,
         bool loadFromFile = true
     );
 

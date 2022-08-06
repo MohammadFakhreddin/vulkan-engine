@@ -58,26 +58,18 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BoundingVolumeRendererComponent::onUI()
+    void BoundingVolumeRendererComponent::OnUI()
     {
         if (UI::TreeNode("BoundingVolumeRenderer"))
         {
-            RendererComponent::onUI();
+            RendererComponent::OnUI();
             UI::TreePop();
         }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void BoundingVolumeRendererComponent::serialize(nlohmann::json & jsonObject) const {}
-
-    //-------------------------------------------------------------------------------------------------
-
-    void BoundingVolumeRendererComponent::deserialize(nlohmann::json const & jsonObject) {}
-
-    //-------------------------------------------------------------------------------------------------
-
-    void BoundingVolumeRendererComponent::clone(Entity * entity) const
+    void BoundingVolumeRendererComponent::Clone(Entity * entity) const
     {
         entity->AddComponent<BoundingVolumeRendererComponent>(mNameId);
     }

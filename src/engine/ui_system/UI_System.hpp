@@ -33,7 +33,7 @@ namespace MFA::UI_System
 
     void Text(char const * label, ...);
 
-    void InputFloat(char const * label, float * value);
+    void InputFloat1(char const * label, float * value);
 
     void InputFloat2(char const * label, float * value);
 
@@ -41,7 +41,42 @@ namespace MFA::UI_System
 
     void InputFloat4(char const * label, float * value);
 
-    void InputFloat3(char const * label, glm::vec3 & value);
+    // Returns true if changed
+    template<uint32_t Count, typename T>
+    bool InputFloat(char const * label, T & value)
+    {
+        static_assert(sizeof(float) * Count <= sizeof(T));
+        bool changed = false;
+
+        float tempValue[Count];
+        Copy<Count>(tempValue, value);
+
+        //float tempValue[3] {value.x, value.y, value.z};
+        if constexpr (Count == 1)
+        {
+            InputFloat1(label, tempValue);
+        }
+        else if constexpr (Count == 2)
+        {
+            InputFloat2(label, tempValue);
+        }
+        else if constexpr (Count == 3)
+        {
+            InputFloat3(label, tempValue);
+        }
+        else if constexpr (Count == 4)
+        {
+            InputFloat4(label, tempValue);
+        }
+
+        if (IsEqual<Count>(value, tempValue) == false)
+        {
+            changed = true;
+            Copy<Count>(value, tempValue);
+        }
+
+        return changed;
+    }
 
     bool Combo(
         char const * label,
@@ -73,6 +108,11 @@ namespace MFA::UI_System
     void Checkbox(
         char const * label,
         bool * value
+    );
+
+    bool Checkbox(
+        char const * label,
+        bool & value
     );
 
     void Spacing();

@@ -25,7 +25,7 @@ namespace MFA
     {
         if (auto const ptr = mTransformComponent.lock())
         {
-            auto const & worldPosition = ptr->getWorldPosition();
+            auto const & worldPosition = ptr->GetWorldPosition();
             ::memcpy(outWorldPosition, &worldPosition, sizeof(float) * 3);
             return true;
         }

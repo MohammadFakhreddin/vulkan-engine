@@ -34,7 +34,8 @@ namespace MFA
         MFA_ASSERT(distance >= 0);
         mDistance = distance;
 
-        Matrix::CopyCellsToGlm(eulerAngles, mEulerAngles);
+        Copy<3>(mEulerAngles, eulerAngles);
+        //Matrix::CopyCellsToGlm(eulerAngles, mEulerAngles);
 
         mIsTransformDirty = true;
     }
@@ -82,21 +83,23 @@ namespace MFA
         if (mIsTransformDirty)
         {
             if (auto const transformComponentPtr = mTransformComponent.lock()) {
-                auto const variantPosition = transformComponentPtr->getWorldPosition();
+                auto const variantPosition = transformComponentPtr->GetWorldPosition();
 
                 auto rotationMatrix = glm::identity<glm::mat4>();
                 Matrix::RotateWithEulerAngle(rotationMatrix, mEulerAngles);
 
-                glm::vec4 forwardDirection = Math::ForwardVector4;
+                glm::vec4 forwardVec4 = Math::ForwardVec4;
 
-                forwardDirection = forwardDirection * rotationMatrix;
-                forwardDirection = glm::normalize(forwardDirection);
+                forwardVec4 = forwardVec4 * rotationMatrix;
+                //forwardDirection = glm::normalize(forwardDirection);
+                glm::vec3 forwardVec3 = forwardVec4;
+                forwardVec3 *= mDistance;
 
-                forwardDirection *= mDistance;
-
-                mPosition[0] = -variantPosition[0] - forwardDirection[0];
-                mPosition[1] = -variantPosition[1] - forwardDirection[1] + 1.0f;
-                mPosition[2] = -variantPosition[2] - forwardDirection[2];
+                // The extra vector is used to increase camera height
+                mPosition = - Copy<glm::vec3>(variantPosition) - forwardVec3 + glm::vec3 {0.0f, 1.0f, 0.0f};
+                //mPosition[0] = -variantPosition[0] - forwardVec3[0];
+                //mPosition[1] = -variantPosition[1] - forwardVec3[1] + 1.0f;    
+                //mPosition[2] = -variantPosition[2] - forwardVec3[2];
             }
         }
 
@@ -116,11 +119,11 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ThirdPersonCameraComponent::onUI()
+    void ThirdPersonCameraComponent::OnUI()
     {
         if(UI::TreeNode("ThirdPersonCamera"))
         {
-            CameraComponent::onUI();
+            CameraComponent::OnUI();
             UI::TreePop();            
         }
     }

@@ -15,7 +15,8 @@ namespace MFA
         MFA_COMPONENT_PROPS(
             ObserverCameraComponent,
             FamilyType::Camera,
-            EventTypes::InitEvent | EventTypes::UpdateEvent | EventTypes::ShutdownEvent
+            EventTypes::InitEvent | EventTypes::UpdateEvent | EventTypes::ShutdownEvent,
+            CameraComponent
         )
         
         explicit ObserverCameraComponent(
@@ -38,12 +39,18 @@ namespace MFA
 
         void Update(float deltaTimeInSec) override;
 
-        void onUI() override;
+        void OnUI() override;
+
+        void Serialize(nlohmann::json & jsonObject) const override;
+
+        void Deserialize(nlohmann::json const & jsonObject) override;
+
+        void Clone(Entity * entity) const override;
 
     private:
 
-        float const mMoveSpeed;
-        float const mRotationSpeed;
+        float mMoveSpeed;
+        float mRotationSpeed;
 
     };
 

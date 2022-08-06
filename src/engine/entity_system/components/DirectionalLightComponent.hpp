@@ -16,7 +16,8 @@ namespace MFA
         MFA_COMPONENT_PROPS(
             DirectionalLightComponent,
             FamilyType::DirectionalLight,
-            EventTypes::InitEvent | EventTypes::ShutdownEvent
+            EventTypes::InitEvent | EventTypes::ShutdownEvent,
+            Component
         )
 
         explicit DirectionalLightComponent();
@@ -32,11 +33,11 @@ namespace MFA
 
         void GetColor(float outColor[3]) const;
 
-        void clone(Entity * entity) const override;
+        void Clone(Entity * entity) const override;
 
-        void serialize(nlohmann::json & jsonObject) const override;
+        void Serialize(nlohmann::json & jsonObject) const override;
 
-        void deserialize(nlohmann::json const & jsonObject) override;
+        void Deserialize(nlohmann::json const & jsonObject) override;
    
     private:
 
@@ -58,5 +59,7 @@ namespace MFA
 
         int mTransformChangeListenerId = 0;
     };
+
+    using DirectionalLight = DirectionalLightComponent;
 
 }

@@ -70,7 +70,7 @@ void PrefabEditorScene::Init()
 
         auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
         MFA_ASSERT(transformComponent != nullptr);
-        transformComponent->UpdateRotation(glm::vec3(90.0f, 0.0f, 0.0f));
+        transformComponent->UpdateLocalRotation(glm::vec3(90.0f, 0.0f, 0.0f));
 
         entity->EditorSignal.Register(this, &PrefabEditorScene::entityUI);
         EntitySystem::InitEntity(entity);
@@ -492,6 +492,7 @@ mCreateComponentInstructionMap[component::Name] = CreateComponentInstruction {  
 
 void PrefabEditorScene::prepareCreateComponentInstructionMap()
 {
+    // TODO: Make all components to be added automatically
     INSERT_INTO_CREATE_COMPONENT_MAP(TransformComponent, [](Entity * entity)
     {
         return entity->AddComponent<TransformComponent>().lock();

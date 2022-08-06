@@ -108,6 +108,12 @@ namespace MFA
 
         void onResize() override;
 
+        std::shared_ptr<EssenceBase> CreateEssence(
+            std::string const & nameId,
+            std::shared_ptr<AssetSystem::Model> const & cpuModel,
+            std::vector<std::shared_ptr<RT::GpuTexture>> const & gpuTextures
+        ) override;
+
     protected:
 
         void internalAddEssence(EssenceBase * essence) override;

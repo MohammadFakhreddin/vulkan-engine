@@ -125,6 +125,7 @@ namespace MFA
     void BasePipeline::removeVariant(VariantBase & variant)
     {
         SceneManager::AssignMainThreadTask([this, &variant]()->void {
+            RF::DeviceWaitIdle();
             MFA_ASSERT(mIsInitialized == true);
             // Removing from all variants list
             bool foundInAllVariantsList = false;

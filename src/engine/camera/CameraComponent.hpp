@@ -11,6 +11,13 @@ namespace MFA {
 class CameraComponent : public Component {
 public:
 
+    MFA_COMPONENT_PROPS(
+        CameraComponent,
+        FamilyType::Camera,
+        EventTypes::InitEvent | EventTypes::UpdateEvent | EventTypes::ShutdownEvent,
+        Component
+    )
+
     struct CameraBufferData
     {
 //        float projectFarToNearDistance;
@@ -48,7 +55,7 @@ public:
 
     void GetRotation(float outEulerAngles[3]) const;
 
-    void onUI() override;
+    void OnUI() override;
 
     [[nodiscard]]
     bool IsPointInsideFrustum(glm::vec3 const & point, glm::vec3 const & extend) const;
@@ -58,11 +65,11 @@ public:
 
     bool IsCameraDataDirty();
 
-    void clone(Entity * entity) const override;
+    void Clone(Entity * entity) const override;
 
-    void deserialize(nlohmann::json const & jsonObject) override;
+    void Deserialize(nlohmann::json const & jsonObject) override;
 
-    void serialize(nlohmann::json & jsonObject) const override;
+    void Serialize(nlohmann::json & jsonObject) const override;
     
     [[nodiscard]]
     float GetProjectionFarToNearDistance() const;
@@ -84,9 +91,9 @@ private:
 
 protected:
 
-    float const mFieldOfView;
-    float const mNearDistance;
-    float const mFarDistance;
+    float mFieldOfView = 0.0f;
+    float mNearDistance = 0.0f;
+    float mFarDistance = 0.0f;
     float mAspectRatio = 0.0f;
 
     glm::mat4 mProjectionMatrix {};

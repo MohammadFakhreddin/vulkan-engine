@@ -14,7 +14,8 @@ public:
     MFA_COMPONENT_PROPS(
         ThirdPersonCameraComponent,
         FamilyType::Camera,
-        EventTypes::InitEvent | EventTypes::UpdateEvent | EventTypes::ShutdownEvent
+        EventTypes::InitEvent | EventTypes::UpdateEvent | EventTypes::ShutdownEvent,
+        CameraComponent
     )
     
     // ThirdPerson camera must act like a child to variant
@@ -44,7 +45,7 @@ public:
 
     void Shutdown() override;
 
-    void onUI() override;
+    void OnUI() override;
 
 private:
 

@@ -12,12 +12,12 @@
 #include "engine/render_system/pipelines/EssenceBase.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Essence.hpp"
 #include "engine/render_system/pipelines/BasePipeline.hpp"
-#include "engine/render_system/pipelines/debug_renderer/DebugEssence.hpp"
-#include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
-#include "engine/render_system/pipelines/particle/ParticlePipeline.hpp"
-#include "engine/render_system/pipelines/pbr_with_shadow_v2/PbrWithShadowPipelineV2.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/job_system/TaskTracker.hpp"
+#include "engine/physics/PhysicsTypes.hpp"
+#include "engine/physics/Physics.hpp"
+
+#include <cooking/PxTriangleMeshDesc.h>
 
 #include <unordered_map>
 
@@ -48,7 +48,11 @@ namespace MFA::ResourceManager
 
     //-------------------------------------------------------------------------------------------------
 
-    struct EssenceData : Data<EssenceBase, std::function<void(bool)>> {};
+    struct EssenceData : Data<EssenceBase, EssenceCallback> {};
+
+    //-------------------------------------------------------------------------------------------------
+
+    struct PhysicsMeshData : Data<Physics::Handle<physx::PxTriangleMesh>, PhysicsMeshCallback> {};
 
     //-------------------------------------------------------------------------------------------------
 
@@ -61,6 +65,8 @@ namespace MFA::ResourceManager
 
         std::unordered_map<std::string, EssenceData> essences {};
 
+        std::unordered_map<std::string, PhysicsMeshData> physicsMeshes {};
+    
     };
     State * state = nullptr;
 
@@ -366,55 +372,6 @@ namespace MFA::ResourceManager
             });
         }
     }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool createPbrEssence(
-        BasePipeline * pipeline,
-        std::string const & nameId,
-        std::shared_ptr<AS::Model> const & cpuModel,
-        std::vector<std::shared_ptr<RT::GpuTexture>> const & gpuTextures,
-        std::shared_ptr<EssenceBase> & essence
-    )
-    {
-        MFA_ASSERT(JS::IsMainThread());
-
-        auto const * pbrMesh = static_cast<AS::PBR::Mesh *>(cpuModel->mesh.get());
-
-        essence = std::make_shared<PBR_Essence>(
-            nameId,
-            *pbrMesh,
-            gpuTextures
-        );
-
-        auto const addResult = pipeline->addEssence(essence);
-
-        return addResult;
-    }
-    
-    //-------------------------------------------------------------------------------------------------
-
-    bool createDebugEssence(
-        BasePipeline * pipeline,
-        std::string const & nameId,
-        std::shared_ptr<AssetSystem::Model> const & cpuModel,
-        std::shared_ptr<EssenceBase> & essence
-    )
-    {
-        MFA_ASSERT(JS::IsMainThread());
-
-        auto const * debugMesh = static_cast<AS::Debug::Mesh *>(cpuModel->mesh.get());
-
-        essence = std::make_shared<DebugEssence>(
-            nameId,
-            *debugMesh
-        );
-        
-        auto const addResult = pipeline->addEssence(essence);
-        MFA_ASSERT(addResult == true);
-
-        return addResult;
-    }
     
     //-------------------------------------------------------------------------------------------------
 
@@ -427,26 +384,7 @@ namespace MFA::ResourceManager
     {
         SceneManager::AssignMainThreadTask([pipeline, nameId, cpuModel, gpuTextures]()->void{
 
-            std::string const pipelineName = pipeline->GetName();
-
-            std::shared_ptr<EssenceBase> essence = nullptr;
-            bool addResult = false;
-
-            if (pipelineName == PBRWithShadowPipelineV2::Name)
-            {
-                addResult = createPbrEssence(pipeline, nameId, cpuModel, gpuTextures, essence);
-            } else if (pipelineName == ParticlePipeline::Name)
-            {
-                MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
-            }
-            else if (pipelineName == DebugRendererPipeline::Name)
-            {
-                addResult = createDebugEssence(pipeline, nameId, cpuModel, essence);
-            }
-            else
-            {
-                MFA_CRASH("Unhandled pipeline type detected");
-            }
+            auto const essence = pipeline->CreateEssence(nameId, cpuModel, gpuTextures);
 
             auto & essenceData = state->essences[nameId];
 
@@ -454,7 +392,7 @@ namespace MFA::ResourceManager
 
             essenceData.data = essence;
 
-            bool const success = addResult && essence != nullptr;
+            bool const success = essence != nullptr;
 
             for (auto & callback : essenceData.callbacks)
             {
@@ -552,6 +490,91 @@ namespace MFA::ResourceManager
                         CreateEssence(pipeline, nameId, cpuModel, {});
                     }
                 }, loadFromFile
+            );
+        }
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    void AcquirePhysicsMesh(
+        std::string const & path,
+        bool const isConvex,            // Is not used for now
+        PhysicsMeshCallback const & callback,
+        bool const loadFromFile
+    )
+    {
+        MFA_ASSERT(path.empty() == false);
+        MFA_ASSERT(callback != nullptr);
+
+        std::string const nameId = Path::RelativeToAssetFolder(path);
+
+        auto & meshMap = state->physicsMeshes;
+        auto & meshData = meshMap[nameId];
+
+        bool shouldAssignTask;
+        {
+            SCOPE_LOCK(meshData.lock)
+            auto const physicsMesh = meshData.data.lock();
+            if (physicsMesh != nullptr)
+            {
+                callback(physicsMesh);
+                return;
+            }
+            meshData.callbacks.emplace_back(callback);
+            shouldAssignTask = meshData.callbacks.size() == 1;
+        }
+
+        if (shouldAssignTask)
+        {
+            AcquireCpuModel(
+                nameId,
+                [isConvex, &meshData, nameId](std::shared_ptr<AS::Model> const & cpuModel)->void{
+
+                    auto const & mesh = cpuModel->mesh;
+
+                    mesh->PreparePhysicsPoints([mesh, isConvex, &meshData, nameId](std::shared_ptr<SmartBlob> const & pointsBlob)->void{
+                        // TODO: I think we should have multiple meshes instead of one each belonging to a submesh
+                        MFA_ASSERT(mesh->getIndexCount() % 3 == 0);
+                        auto const triangleCount = mesh->getIndexCount() / 3;
+                        auto const * triangleBuffer = mesh->getIndexData();
+                        auto const triangleStride = (triangleBuffer->memory.len / triangleCount);
+
+                        physx::PxTriangleMeshDesc meshDesc;
+                        meshDesc.setToDefault();
+                        meshDesc.triangles.count = triangleCount;
+                        meshDesc.triangles.stride = static_cast<physx::PxU32>(triangleStride);
+                        meshDesc.triangles.data = triangleBuffer->memory.ptr;
+
+                        meshDesc.points.count = mesh->getVertexCount();
+                        meshDesc.points.stride = static_cast<physx::PxU32>(sizeof(physx::PxVec3));
+                        meshDesc.points.data = pointsBlob->memory.ptr;
+
+                        //if (isConvex)
+                        //{
+                        //    meshDesc.flags = physx::PxConvexFlag::eCOMPUTE_CONVEX;
+                        //}
+
+                        // https://docs.nvidia.com/gameworks/content/gameworkslibrary/physx/guide/Manual/Startup.html#startup
+                        // mesh should be validated before cooking without the mesh cleaning
+                        //MFA_ASSERT(Physics::ValidateTriangleMesh(meshDesc));
+                        if (Physics::ValidateTriangleMesh(meshDesc))
+                        {
+                            MFA_LOG_WARN("Validation of mesh with name %s failed", nameId.c_str());
+                        }
+                        
+                        auto const triangleMesh = Physics::CreateTriangleMesh(meshDesc);
+                        MFA_ASSERT(triangleMesh != nullptr);
+
+                        SCOPE_LOCK(meshData.lock)
+                        meshData.data = triangleMesh;
+                        for (auto const & callback : meshData.callbacks)
+                        {
+                            callback(triangleMesh);
+                        }
+                        meshData.callbacks.clear();
+                    });
+                },
+                loadFromFile
             );
         }
     }

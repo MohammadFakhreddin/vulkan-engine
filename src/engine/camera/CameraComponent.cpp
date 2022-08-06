@@ -12,12 +12,18 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void CameraComponent::onUI()
+    void CameraComponent::OnUI()
     {
-        Component::onUI();
+        Component::OnUI();
 
-        UI::InputFloat3("EulerAngles", mEulerAngles);
-        UI::InputFloat3("Position", mPosition);
+        if (UI::InputFloat<3>("EulerAngles", mEulerAngles))
+        {
+            mIsTransformDirty = true;
+        }
+        if (UI::InputFloat<3>("Position", mPosition))
+        {
+            mIsTransformDirty = true;
+        }
 
        /* auto rotationMatrix = glm::identity<glm::mat4>();
         Matrix::Rotate(rotationMatrix, eulerAngles);
@@ -92,21 +98,21 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void CameraComponent::clone(Entity * entity) const
+    void CameraComponent::Clone(Entity * entity) const
     {
         MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");   
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void CameraComponent::deserialize(nlohmann::json const & jsonObject)
+    void CameraComponent::Deserialize(nlohmann::json const & jsonObject)
     {
         MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");   
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void CameraComponent::serialize(nlohmann::json & jsonObject) const
+    void CameraComponent::Serialize(nlohmann::json & jsonObject) const
     {
         MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");   
     }
@@ -161,17 +167,17 @@ namespace MFA
         auto rotationMatrix = glm::identity<glm::mat4>();
         Matrix::RotateWithEulerAngle(rotationMatrix, eulerAngles);
         
-        auto forwardDirection = -Math::ForwardVector4;
+        auto forwardDirection = -Math::ForwardVec4;
         forwardDirection = forwardDirection * rotationMatrix;
-        forwardDirection = glm::normalize(forwardDirection);
+        //forwardDirection = glm::normalize(forwardDirection);
 
-        auto rightDirection = Math::RightVector4;
+        auto rightDirection = Math::RightVec4;
         rightDirection = rightDirection * rotationMatrix;
-        rightDirection = glm::normalize(rightDirection);
+        //rightDirection = glm::normalize(rightDirection);
 
-        auto upDirection = -Math::UpVector4;
+        auto upDirection = -Math::UpVec4;
         upDirection = upDirection * rotationMatrix;
-        upDirection = glm::normalize(upDirection);
+        //upDirection = glm::normalize(upDirection);
 
         const float halfVSide = mFarDistance * tanf(mFieldOfView * 0.5f);
         const float halfHSide = halfVSide * mAspectRatio;
@@ -222,9 +228,9 @@ namespace MFA
 
     void CameraComponent::ForcePosition(float position[3])
     {
-        if (Matrix::IsEqual(mPosition, position) == false)
+        if (IsEqual<3>(mPosition, position) == false)
         {
-            Matrix::CopyCellsToGlm(position, mPosition);
+            Copy<3>(mPosition, position);
             mIsTransformDirty = true;
         }
     }
@@ -233,9 +239,9 @@ namespace MFA
 
     void CameraComponent::ForceRotation(float eulerAngles[3])
     {
-        if (Matrix::IsEqual(mPosition, eulerAngles) == false)
+        if (IsEqual<3>(mPosition, eulerAngles) == false)
         {
-            Matrix::CopyCellsToGlm(eulerAngles, mEulerAngles);
+            Copy<3>(mEulerAngles, eulerAngles);
             mIsTransformDirty = true;
         }
     }
@@ -244,18 +250,14 @@ namespace MFA
 
     void CameraComponent::GetPosition(float outPosition[3]) const
     {
-        outPosition[0] = -1 * mPosition[0];
-        outPosition[1] = -1 * mPosition[1];
-        outPosition[2] = -1 * mPosition[2];
+        Copy<3>(outPosition, -mPosition);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     void CameraComponent::GetRotation(float outEulerAngles[3]) const
     {
-        outEulerAngles[0] = mEulerAngles[0];
-        outEulerAngles[1] = mEulerAngles[1];
-        outEulerAngles[2] = mEulerAngles[2];
+        Copy<3>(outEulerAngles, mEulerAngles);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -288,9 +290,7 @@ namespace MFA
     {
         auto const viewProjectionMatrix = mProjectionMatrix * mViewMatrix;
 
-         
-//        GetPosition(mCameraBufferData.cameraPosition);
-        Matrix::CopyGlmToCells(viewProjectionMatrix, mCameraBufferData.viewProjection);
+        Copy<16>(mCameraBufferData.viewProjection, viewProjectionMatrix);
         mProjectionFarToNearDistance = abs(mFarDistance - mNearDistance);
 
         mCameraBufferUpdateCounter = RF::GetMaxFramesPerFlight();

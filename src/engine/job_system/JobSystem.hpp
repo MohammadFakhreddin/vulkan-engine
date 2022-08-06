@@ -11,7 +11,7 @@ namespace MFA::JobSystem
 
     void AssignTask(Task const & task, OnFinishCallback const & onTaskFinished = nullptr);
 
-    void AssignTaskPerThread(Task const & task);
+    void AssignTaskPerThread(Task const & task, OnFinishCallback const & onTaskFinished = nullptr);
     
     [[nodiscard]]
     uint32_t GetNumberOfAvailableThreads();

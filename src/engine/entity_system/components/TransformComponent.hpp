@@ -4,6 +4,7 @@
 #include "engine/BedrockSignal.hpp"
 
 #include <glm/mat4x4.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 namespace MFA
 {
@@ -15,13 +16,19 @@ namespace MFA
         MFA_COMPONENT_PROPS(
             TransformComponent,
             FamilyType::Transform,
-            EventTypes::InitEvent | EventTypes::ShutdownEvent
+            EventTypes::InitEvent | EventTypes::ShutdownEvent,
+            Component
         )
-        
-        explicit TransformComponent();
+
         explicit TransformComponent(
             glm::vec3 const & position_,
             glm::vec3 const & rotation_,          // In euler angle
+            glm::vec3 const & scale_
+        );
+        
+        explicit TransformComponent(
+            glm::vec3 const & position_,
+            glm::quat const & rotation_,          // In euler angle
             glm::vec3 const & scale_
         );
 
@@ -29,72 +36,88 @@ namespace MFA
 
         void Shutdown() override;
 
-        void UpdateTransform(float position[3], float rotation[3], float scale[3]);
+        void UpdateLocalTransform(float position[3], float rotation[3], float scale[3]);
 
-        void UpdateTransform(glm::vec3 const & position, glm::vec3 const & rotation, glm::vec3 const & scale);
+        void UpdateLocalTransform(glm::vec3 const & position, glm::vec3 const & rotation, glm::vec3 const & scale);
 
-        void UpdatePosition(glm::vec3 const & position);
+        void UpdateLocalPosition(glm::vec3 const & position);
 
-        void UpdatePosition(float position[3]);
+        void UpdateLocalPosition(float position[3]);
 
-        void UpdateRotation(glm::vec3 const & rotation);
+        void UpdateLocalRotation(glm::vec3 const & rotation);
 
-        void UpdateRotation(float rotation[3]);
+        void UpdateLocalRotation(float rotation[3]);
 
-        void UpdateScale(float scale[3]);
+        void UpdateLocalScale(float scale[3]);
         
-        void UpdateScale(glm::vec3 const & scale);
+        void UpdateLocalScale(glm::vec3 const & scale);
+
+        void UpdateWorldTransform(
+            glm::vec3 const & position,
+            glm::quat const & rotation
+        );
 
         [[nodiscard]]
-        glm::mat4 const & GetTransform() const noexcept;
-
-        void GetLocalPosition(float outPosition[3]) const;
+        glm::mat4 const & GetWorldTransform() const noexcept;
 
         [[nodiscard]]
-        glm::vec4 const & getWorldPosition() const;
+        glm::mat4 const & GetInverseWorldTransform() const noexcept;
 
-        void GetRotation(float outRotation[3]) const;
-
-        void GetScale(float outScale[3]) const;
+        [[nodiscard]]
+        glm::vec4 const & GetWorldPosition() const;
 
         [[nodiscard]]
         glm::vec3 const & GetLocalPosition() const;
 
         [[nodiscard]]
-        glm::vec3 const & GetRotation() const;
+        glm::vec3 const & GetLocalRotationEulerAngles() const;
 
         [[nodiscard]]
-        glm::vec3 const & GetScale() const;
+        glm::quat const & GetLocalRotationQuaternion() const;
+
+        [[nodiscard]]
+        glm::quat const & GetWorldRotation() const;
+
+        [[nodiscard]]
+        glm::vec3 const & GetLocalScale() const;
+
+        glm::vec3 const & GetWorldScale() const;
 
         SignalId RegisterChangeListener(std::function<void()> const & listener);
 
         bool UnRegisterChangeListener(SignalId listenerId);
 
-        void onUI() override;
+        void OnUI() override;
 
-        void clone(Entity * entity) const override;
+        void Clone(Entity * entity) const override;
 
-        void serialize(nlohmann::json & jsonObject) const override;
+        void Serialize(nlohmann::json & jsonObject) const override;
 
-        void deserialize(nlohmann::json const & jsonObject) override;
+        void Deserialize(nlohmann::json const & jsonObject) override;
 
     private:
 
-        void computeTransform();
+        void ComputeTransform();
 
         Signal<> mTransformChangeSignal {};
 
         glm::vec3 mLocalPosition { 0.0f, 0.0f, 0.0f };
-        glm::vec3 mRotation { 0.0f, 0.0f, 0.0f };          // In euler angle // TODO Use Quaternion instead! Soon! ToQuat is heavy
-        glm::vec3 mScale { 1.0f, 1.0f, 1.0f };
+        glm::vec3 mLocalRotationAngle { 0.0f, 0.0f, 0.0f };          // In euler angle // TODO Use Quaternion instead! Soon! ToQuat is heavy
+        glm::quat mLocalRotationQuat = glm::identity<glm::quat>();
+        glm::vec3 mLocalScale { 1.0f, 1.0f, 1.0f };
 
         glm::vec4 mWorldPosition {};
+        glm::quat mWorldRotation {};
+        glm::vec3 mWorldScale { 1.0f, 1.0f, 1.0f };
 
-        glm::mat4 mTransform;
+        glm::mat4 mWorldTransform {};
+        glm::mat4 mInverseWorldTransform {};
 
         std::weak_ptr<TransformComponent> mParentTransform {};
 
         SignalId mParentTransformChangeListenerId {};
     };
+
+    using Transform = TransformComponent;
 
 }

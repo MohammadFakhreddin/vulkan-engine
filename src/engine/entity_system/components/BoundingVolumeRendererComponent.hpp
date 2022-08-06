@@ -18,7 +18,8 @@ namespace MFA
         MFA_COMPONENT_PROPS(
             BoundingVolumeRendererComponent,
             FamilyType::BoundingVolumeRenderer,
-            EventTypes::LateInitEvent | EventTypes::ShutdownEvent | EventTypes::InitEvent
+            EventTypes::LateInitEvent | EventTypes::ShutdownEvent | EventTypes::InitEvent,
+            RendererComponent
         )
 
         explicit BoundingVolumeRendererComponent(std::string const & nameId = "CubeStrip");
@@ -28,13 +29,9 @@ namespace MFA
 
         void LateInit() override;
         
-        void onUI() override;
+        void OnUI() override;
 
-        void serialize(nlohmann::json & jsonObject) const override;
-
-        void deserialize(nlohmann::json const & jsonObject) override;
-
-        void clone(Entity * entity) const override;
+        void Clone(Entity * entity) const override;
 
         void Shutdown() override;
 
@@ -46,5 +43,7 @@ namespace MFA
         bool mLateInitIsCalled = false;
 
     };
+
+    using BVRenderer = BoundingVolumeRendererComponent;
 
 }

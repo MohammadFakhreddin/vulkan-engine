@@ -57,14 +57,14 @@ void MFA::DirectionalLightComponent::Shutdown()
 void MFA::DirectionalLightComponent::GetShadowViewProjectionMatrix(float outViewProjectionMatrix[16]) const
 {
     MFA_ASSERT(outViewProjectionMatrix != nullptr);
-    Matrix::CopyGlmToCells(mShadowViewProjectionMatrix, outViewProjectionMatrix);
+    Copy<16>(outViewProjectionMatrix, mShadowViewProjectionMatrix);
 }
 
 //-------------------------------------------------------------------------------------------------
 
 void MFA::DirectionalLightComponent::GetDirection(float outDirection[3]) const
 {
-    Matrix::CopyGlmToCells(mDirection, outDirection);
+    Copy<3>(outDirection, mDirection);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -73,13 +73,13 @@ void MFA::DirectionalLightComponent::GetColor(float outColor[3]) const
 {
     if (auto const ptr = mColorComponentRef.lock())
     {
-        Matrix::CopyGlmToCells(ptr->GetColor(), outColor);
+        Copy<3>(outColor, ptr->GetColor());
     }
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DirectionalLightComponent::clone(Entity * entity) const
+void MFA::DirectionalLightComponent::Clone(Entity * entity) const
 {
     MFA_ASSERT(entity != nullptr);
     entity->AddComponent<DirectionalLightComponent>();
@@ -87,12 +87,12 @@ void MFA::DirectionalLightComponent::clone(Entity * entity) const
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DirectionalLightComponent::serialize(nlohmann::json & jsonObject) const
+void MFA::DirectionalLightComponent::Serialize(nlohmann::json & jsonObject) const
 {}
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DirectionalLightComponent::deserialize(nlohmann::json const & jsonObject)
+void MFA::DirectionalLightComponent::Deserialize(nlohmann::json const & jsonObject)
 {}
 
 //-------------------------------------------------------------------------------------------------
@@ -132,17 +132,17 @@ void MFA::DirectionalLightComponent::computeDirectionAndShadowViewProjection()
     }
 
     // Way 1
-    auto const rotation = transformComponent->GetRotation();
+    auto const rotation = transformComponent->GetLocalRotationEulerAngles();
 
     auto directionRotationMatrix = glm::identity<glm::mat4>();
     Matrix::RotateWithEulerAngle(directionRotationMatrix, rotation);
 
-    mDirection = directionRotationMatrix * Math::ForwardVector4;
+    mDirection = directionRotationMatrix * Copy<glm::vec4>(Math::ForwardVec3);
     
     auto const shadowViewMatrix = glm::lookAt(
         mDirection,
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(0,1,0)
+        glm::vec3(0.0f, 0.0f, 0.0f),    // TODO: Maybe center should be based on camera focus postion
+        Math::UpVec3
     );
     mShadowViewProjectionMatrix = mShadowProjectionMatrix * shadowViewMatrix;
 

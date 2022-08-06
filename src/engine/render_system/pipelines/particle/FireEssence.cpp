@@ -67,9 +67,11 @@ namespace MFA
 
             glm::vec3 const position = transform * glm::vec4{ distanceFromCenter, 0.0f, 0.0f, 1.0f };
 
-            Matrix::CopyGlmToCells(position, vertex.localPosition);
-            Matrix::CopyGlmToCells(position, vertex.initialLocalPosition);
-            
+            //Matrix::CopyGlmToCells(position, vertex.localPosition);
+            Copy(vertex.localPosition, position);
+            //Matrix::CopyGlmToCells(position, vertex.initialLocalPosition);
+            Copy(vertex.initialLocalPosition, position);
+
             vertex.textureIndex = 0;
 
             vertex.color[0] = 1.0f;

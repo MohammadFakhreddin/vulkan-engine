@@ -1186,9 +1186,10 @@ namespace MFA::RenderBackend
             deviceCreateInfo.queueCreateInfoCount = 2;
         }
 
-        std::vector<char const *> const DebugLayers = {
-            ValidationLayer
-        };
+        std::vector<char const *> DebugLayers {};
+    #ifdef MFA_DEBUG
+        DebugLayers.emplace_back(ValidationLayer);
+    #endif
 
         std::vector<char const *> enabledExtensionNames{ VK_KHR_SWAPCHAIN_EXTENSION_NAME };
     #if defined(__PLATFORM_MAC__)// TODO We should query instead
@@ -1205,13 +1206,9 @@ namespace MFA::RenderBackend
         deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(filteredExtensionNames.size());
         // Necessary for shader (for some reason)
         deviceCreateInfo.pEnabledFeatures = &enabledPhysicalDeviceFeatures;
-    #if defined(MFA_DEBUG)// && defined(__ANDROID__) == false
         deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(DebugLayers.size());
         deviceCreateInfo.ppEnabledLayerNames = DebugLayers.data();
-    #else
-        deviceCreateInfo.enabledLayerCount = 0;
-        deviceCreateInfo.ppEnabledLayerNames = nullptr;
-    #endif
+   
 
         VK_Check(vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &logicalDevice.device));
         MFA_ASSERT(logicalDevice.device != nullptr);

@@ -113,7 +113,7 @@ namespace MFA
         
         if (auto const activeCamera = SceneManager::GetActiveCamera().lock())
         {
-            Matrix::CopyGlmToCells(activeCamera->GetViewportDimension(), pushConstants.viewportDimension);
+            Copy<2>(pushConstants.viewportDimension, activeCamera->GetViewportDimension());
         }
         
         RF::PushConstants(recordState, AS::ShaderStage::Vertex, 0, CBlobAliasOf(pushConstants));
@@ -221,6 +221,16 @@ namespace MFA
             );
 		}
 
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<EssenceBase> ParticlePipeline::CreateEssence(std::string const & nameId,
+        std::shared_ptr<AssetSystem::Model> const & cpuModel,
+        std::vector<std::shared_ptr<RT::GpuTexture>> const & gpuTextures)
+    {
+        MFA_NOT_IMPLEMENTED_YET("Mohammad Fakhreddin");
+        return nullptr;
     }
 
     //-------------------------------------------------------------------------------------------------

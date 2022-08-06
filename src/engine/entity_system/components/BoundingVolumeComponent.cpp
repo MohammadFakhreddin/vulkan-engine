@@ -76,9 +76,9 @@ void MFA::BoundingVolumeComponent::Shutdown()
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::BoundingVolumeComponent::onUI()
+void MFA::BoundingVolumeComponent::OnUI()
 {
-    Component::onUI();
+    Component::OnUI();
     UI::Checkbox("Occlusion culling enabled", &mOcclusionEnabled);
     UI::Text("Is inside frustum: %s", mIsInFrustum ? "true" : "false");
 }
@@ -114,14 +114,14 @@ bool MFA::BoundingVolumeComponent::OcclusionEnabled() const
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::BoundingVolumeComponent::serialize(nlohmann::json & jsonObject) const
+void MFA::BoundingVolumeComponent::Serialize(nlohmann::json & jsonObject) const
 {
     jsonObject["OcclusionEnabled"] = mOcclusionEnabled;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::BoundingVolumeComponent::deserialize(nlohmann::json const & jsonObject)
+void MFA::BoundingVolumeComponent::Deserialize(nlohmann::json const & jsonObject)
 {
     mOcclusionEnabled = jsonObject.value<bool>("OcclusionEnabled", false);
 }
@@ -156,9 +156,9 @@ void MFA::BoundingVolumeComponent::updateVolumeTransform() const
     auto const & bvWorldPosition = GetWorldPosition();
     auto const & bvExtend = GetExtend();
 
-    bvTransform->UpdateTransform(
+    bvTransform->UpdateLocalTransform(
         bvWorldPosition,
-        bvTransform->GetRotation(),
+        bvTransform->GetLocalRotationEulerAngles(),
         bvExtend
     );
 }

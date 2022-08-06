@@ -263,8 +263,10 @@ namespace MFA
                         )-> void
                         {
                             // Vertex push constants
-                            Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
-                            Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.model);
+                            Copy<16>(pushConstants.inverseNodeTransform, node.cachedGlobalInverseTransform);
+                            //Matrix::CopyGlmToCells(node.cachedGlobalInverseTransform, pushConstants.inverseNodeTransform);
+                            Copy<16>(pushConstants.model, node.cachedModelTransform);
+                            //Matrix::CopyGlmToCells(node.cachedModelTransform, pushConstants.model);
                             pushConstants.vertexCount = primitive.vertexCount;
                             pushConstants.skinIndex = primitive.hasSkin ? node.skin->skinStartingIndex : -1;
                             pushConstants.vertexStartingIndex = primitive.verticesStartingIndex;
@@ -394,6 +396,29 @@ namespace MFA
     {
         mDepthPrePass->OnResize();
         mOcclusionRenderPass->OnResize();
+    }
+    
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<EssenceBase> PBRWithShadowPipelineV2::CreateEssence(
+        std::string const & nameId,
+        std::shared_ptr<AssetSystem::Model> const & cpuModel,
+        std::vector<std::shared_ptr<RT::GpuTexture>> const & gpuTextures
+    )
+    {
+        MFA_ASSERT(JS::IsMainThread());
+
+        auto const * pbrMesh = static_cast<AS::PBR::Mesh *>(cpuModel->mesh.get());
+
+        auto essence = std::make_shared<PBR_Essence>(
+            nameId,
+            *pbrMesh,
+            gpuTextures
+        );
+
+        auto const addResult = addEssence(essence);
+
+        return addResult == true ? essence : nullptr;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -877,11 +902,8 @@ namespace MFA
                                 occlusionQueryData.Pool,
                                 static_cast<uint32_t>(occlusionQueryData.Variants.size())
                             );
-
-                            Matrix::CopyGlmToCells(
-                                transformC->GetTransform(),
-                                pushConstants.model
-                            );
+                            
+                            Copy(pushConstants.model, transformC->GetWorldTransform());
 
                             RF::PushConstants(
                                 recordState,

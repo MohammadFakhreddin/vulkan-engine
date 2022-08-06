@@ -78,4 +78,11 @@ namespace MFA::AssetSystem
     }
 
     //-------------------------------------------------------------------------------------------------
+
+    void MeshBase::PreparePhysicsPoints(PhysicsPointsCallback const & callback) const
+    {
+        MFA_NOT_IMPLEMENTED_YET("MFA");
+    }
+
+    //-------------------------------------------------------------------------------------------------
 }

@@ -9,6 +9,7 @@
 #include "engine/job_system/JobSystem.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
+#include "engine/physics/Physics.hpp"
 
 #ifdef __ANDROID__
 #include "engine/BedrockFileSystem.hpp"
@@ -62,6 +63,9 @@ void Application::Init() {
     JS::Init();
     UI::Init();
     IM::Init();
+    Physics::Init(Physics::InitParams {
+        .gravity {0.0f, -9.8f, 0.0f}
+    });
     EntitySystem::Init();
 
     SceneManager::Init();
@@ -84,6 +88,7 @@ void Application::Shutdown() {
     JS::Shutdown();
     SceneManager::Shutdown();
     EntitySystem::Shutdown();
+    Physics::Shutdown();
     IM::Shutdown();
     UI::Shutdown();
     RC::Shutdown();
@@ -176,6 +181,7 @@ void Application::RenderFrame(float const deltaTimeInSec) {
     SceneManager::Render(deltaTimeInSec);
     SceneManager::Update(deltaTimeInSec);
     RF::OnNewFrame(deltaTimeInSec);
+    Physics::Update(deltaTimeInSec);
 }
 
 //-------------------------------------------------------------------------------------------------

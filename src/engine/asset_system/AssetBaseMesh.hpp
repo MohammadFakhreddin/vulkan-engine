@@ -1,8 +1,10 @@
 #pragma once
 
 #include "AssetBase.hpp"
+#include "engine/BedrockMemory.hpp"
 
 #include <cstdint>
+#include <functional>
 
 namespace MFA
 {
@@ -47,6 +49,10 @@ namespace MFA::AssetSystem
 
         [[nodiscard]]
         virtual bool isValid() const;
+
+        // Maybe we could have something more dynamic later
+        using PhysicsPointsCallback = std::function<void(std::shared_ptr<SmartBlob> pointsBuffer)>;
+        virtual void PreparePhysicsPoints(PhysicsPointsCallback const & callback) const;
         
     protected:
 

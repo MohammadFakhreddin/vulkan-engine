@@ -24,6 +24,7 @@ namespace MFA
 
         bool operator== (VariantBase const & rhs) const noexcept;
 
+        // TODO: I don't like this init function
         void Init(
             Entity * entity,
             std::weak_ptr<RendererComponent> const & rendererComponent,

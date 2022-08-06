@@ -70,7 +70,7 @@ namespace MFA
             glm::quat previousRotation{};     // x, y, z, w
             glm::vec3 previousScale{};
             glm::vec3 previousTranslate{};
-            glm::mat4 previousTransform{};
+            //glm::mat4 previousTransform{};
 
             bool isCachedDataValid = false;
             bool isCachedGlobalTransformChanged = false;

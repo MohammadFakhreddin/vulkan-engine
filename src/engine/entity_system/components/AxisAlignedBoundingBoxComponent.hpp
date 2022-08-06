@@ -15,7 +15,8 @@ namespace MFA
         MFA_COMPONENT_PROPS(
             AxisAlignedBoundingBoxComponent,
             FamilyType::BoundingVolume,
-            EventTypes::InitEvent | EventTypes::ShutdownEvent | EventTypes::UpdateEvent
+            EventTypes::EmptyEvent,
+            BoundingVolumeComponent
         )
         
         explicit AxisAlignedBoundingBoxComponent(
@@ -23,23 +24,20 @@ namespace MFA
             glm::vec3 const & extend,
             bool occlusionCullingEnabled
         );
-
-        // Only used for auto deserialization
-        explicit AxisAlignedBoundingBoxComponent();
-
+        
         ~AxisAlignedBoundingBoxComponent() override;
         
         void Init() override;
 
         void Shutdown() override;
 
-        void onUI() override;
+        void OnUI() override;
 
-        void clone(Entity * entity) const override;
+        void Clone(Entity * entity) const override;
 
-        void deserialize(nlohmann::json const & jsonObject) override;
+        void Deserialize(nlohmann::json const & jsonObject) override;
 
-        void serialize(nlohmann::json & jsonObject) const override;
+        void Serialize(nlohmann::json & jsonObject) const override;
 
         [[nodiscard]]
         glm::vec3 const & GetExtend() const override;

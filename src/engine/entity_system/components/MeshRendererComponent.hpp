@@ -20,24 +20,19 @@ namespace MFA
         MFA_COMPONENT_PROPS(
             MeshRendererComponent,
             FamilyType::MeshRenderer,
-            EventTypes::InitEvent | EventTypes::ShutdownEvent
+            EventTypes::InitEvent | EventTypes::ShutdownEvent,
+            RendererComponent
         )
 
-        // Should only be used by json serializer
-        explicit MeshRendererComponent();
         explicit MeshRendererComponent(BasePipeline * pipeline, std::string const & nameId);
 
         void Init() override;
 
         void Shutdown() override;
 
-        void onUI() override;
-
-        void serialize(nlohmann::json & jsonObject) const override;
-
-        void deserialize(nlohmann::json const & jsonObject) override;
-
-        void clone(Entity * entity) const override;
+        void OnUI() override;
+        
+        void Clone(Entity * entity) const override;
 
     private:
         
@@ -46,5 +41,7 @@ namespace MFA
         bool mInitialized = false;
 
     };
+
+    using MeshRenderer = MeshRendererComponent;
 
 }
