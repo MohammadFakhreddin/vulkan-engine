@@ -52,13 +52,13 @@ void PrefabEditorScene::Init()
         auto * entity = EntitySystem::CreateEntity("CameraEntity", GetRootEntity());
         MFA_ASSERT(entity != nullptr);
 
-        auto const observerCamera = entity->AddComponent<ObserverCameraComponent>(FOV, Z_NEAR, Z_FAR).lock();
+        auto const observerCamera = entity->AddComponent<ObserverCameraComponent>(FOV, Z_NEAR, Z_FAR);
         MFA_ASSERT(observerCamera != nullptr);
         SetActiveCamera(observerCamera);
 
         entity->AddComponent<DirectionalLightComponent>();
 
-        auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
+        auto const colorComponent = entity->AddComponent<ColorComponent>();
         MFA_ASSERT(colorComponent != nullptr);
         float const lightScale = 5.0f;
         float lightColor[3]{
@@ -68,7 +68,7 @@ void PrefabEditorScene::Init()
         };
         colorComponent->SetColor(lightColor);
 
-        auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
+        auto const transformComponent = entity->AddComponent<TransformComponent>();
         MFA_ASSERT(transformComponent != nullptr);
         transformComponent->UpdateLocalRotation(glm::vec3(90.0f, 0.0f, 0.0f));
 
@@ -329,13 +329,13 @@ void PrefabEditorScene::entityUI(Entity * entity)
 
             auto const newComponentName = mAvailableComponents[mSelectedComponentIndex];
 
-            auto const checkForDependencies = [this, entity, &newComponentName](int const familyType)->bool
+            auto const checkForDependencies = [this, entity, &newComponentName](std::string const componentName)->bool
             {
-                auto const findResult = mComponentDependencies.find(familyType);
+                auto const findResult = mComponentDependencies.find(componentName);
                 MFA_ASSERT(findResult != mComponentDependencies.end());
-                for (auto const familyId : findResult->second)
+                for (auto const & dependencyName : findResult->second)
                 {
-                    auto dependencyComponent = entity->GetComponent(familyId).lock();
+                    auto dependencyComponent = entity->GetComponent(dependencyName);
                     if (dependencyComponent == nullptr)
                     {
                         MFA_LOG_WARN(
@@ -353,7 +353,7 @@ void PrefabEditorScene::entityUI(Entity * entity)
             auto const findCreateInstructionResult = mCreateComponentInstructionMap.find(newComponentName);
             if (findCreateInstructionResult != mCreateComponentInstructionMap.end())
             {
-                if (checkForDependencies(findCreateInstructionResult->second.familyType))
+                if (checkForDependencies(findCreateInstructionResult->first))
                 {
                     newComponent = findCreateInstructionResult->second.function(entity);
                 }
@@ -398,24 +398,24 @@ void PrefabEditorScene::componentUI(Component * component, Entity * entity)
     MFA_ASSERT(entity != nullptr);
     UI::Button("Remove component", [this, entity, component]()
     {
-        if (TransformComponent::Name == component->getName())
+        if (TransformComponent::Name == component->GetName())
         {
             MFA_LOG_WARN("Transform components cannot be removed");
             return;
         }
 
-        auto const findResult = mComponentsDependents.find(component->getFamily());
+        auto const findResult = mComponentsDependents.find(component->GetName());
         // Invalid assert because component may not have any dependant
         //MFA_ASSERT(findResult != mComponentsDependents.end());
-        for (auto const familyId : findResult->second)
+        for (auto const dependencyName : findResult->second)
         {
-            auto dependentComponent = entity->GetComponent(familyId).lock();
+            auto dependentComponent = entity->GetComponent(dependencyName);
             if (dependentComponent != nullptr)
             {
                 MFA_LOG_WARN(
                     "Cannot delete component with name %s because a dependant component with name %s exists"
-                    , component->getName()
-                    , dependentComponent->getName()
+                    , component->GetName()
+                    , dependentComponent->GetName()
                 );
                 return;
             }
@@ -440,24 +440,24 @@ void PrefabEditorScene::prepareDependencyLists()
     mAvailableComponents.emplace_back(PointLightComponent::Name);
 
     // CreateComponentsRequirements
-    mComponentDependencies[TransformComponent::Family] = {};
-    mComponentDependencies[MeshRendererComponent::Family] = {
-        TransformComponent::Family,
-        BoundingVolumeComponent::Family
+    mComponentDependencies[TransformComponent::Name] = {};
+    mComponentDependencies[MeshRendererComponent::Name] = {
+        TransformComponent::Name,
+        BoundingVolumeComponent::Name
     };
-    mComponentDependencies[BoundingVolumeRendererComponent::Family] = {
-        ColorComponent::Family,
-        BoundingVolumeComponent::Family
+    mComponentDependencies[BoundingVolumeRendererComponent::Name] = {
+        ColorComponent::Name,
+        BoundingVolumeComponent::Name
     };
-    mComponentDependencies[BoundingVolumeComponent::Family] = {};
-    mComponentDependencies[ColorComponent::Family] = {};
-    mComponentDependencies[PointLightComponent::Family] = {
-        TransformComponent::Family,
-        ColorComponent::Family
+    mComponentDependencies[BoundingVolumeComponent::Name] = {};
+    mComponentDependencies[ColorComponent::Name] = {};
+    mComponentDependencies[PointLightComponent::Name] = {
+        TransformComponent::Name,
+        ColorComponent::Name
     };
 
     // DeleteComponentsRequirements
-    auto const exists = [](std::vector<int> const & list, int const target)->bool
+    auto const exists = [](std::vector<std::string> const & list, std::string const & target)->bool
     {
         for (auto const item : list)
         {
@@ -484,18 +484,18 @@ void PrefabEditorScene::prepareDependencyLists()
 
 //-------------------------------------------------------------------------------------------------
 
-#define INSERT_INTO_CREATE_COMPONENT_MAP(component, createFunction)             \
-mCreateComponentInstructionMap[component::Name] = CreateComponentInstruction {  \
-    .familyType = component::Family,                                            \
-    .function = (createFunction),                                               \
-}                                                                               \
+// TODO: Remove this , We should be able to create any component that we want
+#define INSERT_INTO_CREATE_COMPONENT_MAP(component, createFunction)                 \
+mCreateComponentInstructionMap[component::Name] = ComponentCreationInstruction {    \
+    .function = (createFunction),                                                   \
+}                                                                                   \
 
 void PrefabEditorScene::prepareCreateComponentInstructionMap()
 {
     // TODO: Make all components to be added automatically
     INSERT_INTO_CREATE_COMPONENT_MAP(TransformComponent, [](Entity * entity)
     {
-        return entity->AddComponent<TransformComponent>().lock();
+        return entity->AddComponent<TransformComponent>();
     });
 
     INSERT_INTO_CREATE_COMPONENT_MAP(MeshRendererComponent, [this](Entity * entity)->std::shared_ptr<MeshRendererComponent>
@@ -523,17 +523,17 @@ void PrefabEditorScene::prepareCreateComponentInstructionMap()
             return nullptr;
         }
 
-        return entity->AddComponent<MeshRendererComponent>(pipeline, essenceName).lock();
+        return entity->AddComponent<MeshRendererComponent>(pipeline, essenceName);
     });
 
     INSERT_INTO_CREATE_COMPONENT_MAP(BoundingVolumeRendererComponent, [this](Entity * entity)
     {
-        return entity->AddComponent<BoundingVolumeRendererComponent>().lock();
+        return entity->AddComponent<BoundingVolumeRendererComponent>();
     });
 
     INSERT_INTO_CREATE_COMPONENT_MAP(SphereBoundingVolumeComponent, [](Entity * entity)
     {
-        return entity->AddComponent<SphereBoundingVolumeComponent>(1.0f, true).lock();
+        return entity->AddComponent<SphereBoundingVolumeComponent>(1.0f, true);
     });
 
     INSERT_INTO_CREATE_COMPONENT_MAP(AxisAlignedBoundingBoxComponent, [](Entity * entity)
@@ -542,12 +542,12 @@ void PrefabEditorScene::prepareCreateComponentInstructionMap()
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3(1.0f, 1.0f, 1.0f),
             false
-        ).lock();
+        );
     });
 
     INSERT_INTO_CREATE_COMPONENT_MAP(ColorComponent, [](Entity * entity)
     {
-        return entity->AddComponent<ColorComponent>(glm::vec3(1.0f, 0.0f, 0.0f)).lock();
+        return entity->AddComponent<ColorComponent>(glm::vec3(1.0f, 0.0f, 0.0f));
     });
 
     INSERT_INTO_CREATE_COMPONENT_MAP(PointLightComponent, [](Entity * entity)
@@ -555,7 +555,7 @@ void PrefabEditorScene::prepareCreateComponentInstructionMap()
         return entity->AddComponent<PointLightComponent>(
             1.0f,
             100.0f
-        ).lock();
+        );
     });
 }
 

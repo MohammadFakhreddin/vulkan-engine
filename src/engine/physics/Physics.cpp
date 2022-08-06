@@ -147,11 +147,14 @@ namespace MFA::Physics
 
         state->defaultMaterial = CreateMaterial(0.5f, 0.5f, 0.5f);
 
+        auto cookingParams = PxCookingParams(toleranceScale);
+        //cookingParams.meshPreprocessParams |= PxMeshPreprocessingFlag::eDISABLE_CLEAN_MESH;
+
         state->cooking = CreateHandle(PxCreateCooking(
             PX_PHYSICS_VERSION,
             state->foundation->Ref(),
-            PxCookingParams(toleranceScale))
-        );
+            cookingParams
+        ));
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -241,7 +244,8 @@ namespace MFA::Physics
 
         bool const cookResult = state->cooking->Ptr()->cookTriangleMesh(meshDesc, buf, &result);
         MFA_ASSERT(cookResult == true);
-        if (MFA_VERIFY(cookResult == true))
+        //if (MFA_VERIFY(cookResult == true))
+        if (cookResult)
         {
             PxDefaultMemoryInputData input(buf.getData(), buf.getSize());
             mesh = CreateHandle(state->physics->Ptr()->createTriangleMesh(input));
@@ -252,17 +256,17 @@ namespace MFA::Physics
 
     //-------------------------------------------------------------------------------------------------
 
-    SharedHandle<PxShape> CreateShape(
+    PxShape * CreateShape(
         PxRigidActor & actor,
         PxGeometry const & geometry,
         PxMaterial const & material
     )
     {
-        return CreateHandle(PxRigidActorExt::createExclusiveShape(
+        return PxRigidActorExt::createExclusiveShape(
             actor,
             geometry,
             material
-        ));
+        );
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -14,7 +14,6 @@ namespace MFA
 
         MFA_COMPONENT_PROPS(
             BoxColliderComponent,
-            FamilyType::Collider,
             EventTypes::EmptyEvent,
             ColliderComponent
         )
@@ -38,7 +37,7 @@ namespace MFA
         void Deserialize(nlohmann::json const & jsonObject) override;
 
         [[nodiscard]]
-        std::shared_ptr<physx::PxGeometry> ComputeGeometry() override;
+        std::vector<std::shared_ptr<physx::PxGeometry>> ComputeGeometry() override;
 
     private:
 

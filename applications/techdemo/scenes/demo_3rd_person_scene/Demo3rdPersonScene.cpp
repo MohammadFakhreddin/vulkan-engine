@@ -76,7 +76,7 @@ void Demo3rdPersonScene::Init()
             );
         }
         {// Camera
-            auto const thirdPersonCamera = entity->AddComponent<ThirdPersonCameraComponent>(FOV, Z_NEAR, Z_FAR).lock();
+            auto const thirdPersonCamera = entity->AddComponent<ThirdPersonCameraComponent>(FOV, Z_NEAR, Z_FAR);
             float eulerAngle[3]{ -15.0f, 0.0f, 0.0f };
             thirdPersonCamera->SetDistanceAndRotation(3.0f, eulerAngle);
 
@@ -110,7 +110,7 @@ void Demo3rdPersonScene::Init()
 
     {// Map
         auto * entity = sponzaPrefab.Clone(GetRootEntity(), Prefab::CloneEntityOptions {.name = "Sponza"});
-        if (auto const ptr = entity->GetComponent<TransformComponent>().lock())
+        if (auto const ptr = entity->GetComponent<TransformComponent>())
         {
             float position[3]{ 0.4f, 2.0f, -6.0f };
             float eulerAngle[3]{ 180.0f, -90.0f, 0.0f };
@@ -131,7 +131,7 @@ void Demo3rdPersonScene::Init()
         auto * entity = EntitySystem::CreateEntity("Directional light", GetRootEntity());
         MFA_ASSERT(entity != nullptr);
 
-        auto const colorComponent = entity->AddComponent<ColorComponent>().lock();
+        auto const colorComponent = entity->AddComponent<ColorComponent>();
         MFA_ASSERT(colorComponent != nullptr);
         float const lightScale = 0.5f;
         float lightColor[3] {
@@ -141,7 +141,7 @@ void Demo3rdPersonScene::Init()
         };
         colorComponent->SetColor(lightColor);
 
-        auto const transformComponent = entity->AddComponent<TransformComponent>().lock();
+        auto const transformComponent = entity->AddComponent<TransformComponent>();
         MFA_ASSERT(transformComponent != nullptr);
         transformComponent->UpdateLocalRotation(glm::vec3(90.0f, 0.0f, 0.0f));
         
@@ -390,7 +390,7 @@ void Demo3rdPersonScene::createFireInstance(glm::vec3 const & position) const
     auto * entity = EntitySystem::CreateEntity("FireInstance", GetRootEntity());
     MFA_ASSERT(entity != nullptr);
 
-    auto const transform = entity->AddComponent<TransformComponent>().lock();
+    auto const transform = entity->AddComponent<TransformComponent>();
     MFA_ASSERT(transform != nullptr);
     transform->UpdateLocalPosition(position);
     
@@ -405,7 +405,7 @@ void Demo3rdPersonScene::createFireInstance(glm::vec3 const & position) const
     );
     entity->AddComponent<ColorComponent>(glm::vec3{ 1.0f, 0.0f, 0.0f });
 
-    auto const boundingVolumeRenderer = entity->AddComponent<BoundingVolumeRendererComponent>().lock();
+    auto const boundingVolumeRenderer = entity->AddComponent<BoundingVolumeRendererComponent>();
     MFA_ASSERT(boundingVolumeRenderer != nullptr);
     boundingVolumeRenderer->SetActive(true);
 

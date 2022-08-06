@@ -20,6 +20,7 @@
 #include <cooking/PxTriangleMeshDesc.h>
 
 #include <unordered_map>
+#include <cooking/PxCooking.h>
 
 namespace MFA::ResourceManager
 {
@@ -52,7 +53,7 @@ namespace MFA::ResourceManager
 
     //-------------------------------------------------------------------------------------------------
 
-    struct PhysicsMeshData : Data<Physics::Handle<physx::PxTriangleMesh>, PhysicsMeshCallback> {};
+    struct PhysicsMeshData : Data<Physics::TriangleMeshGroup, PhysicsMeshCallback> {};
 
     //-------------------------------------------------------------------------------------------------
 
@@ -532,44 +533,49 @@ namespace MFA::ResourceManager
 
                     auto const & mesh = cpuModel->mesh;
 
-                    mesh->PreparePhysicsPoints([mesh, isConvex, &meshData, nameId](std::shared_ptr<SmartBlob> const & pointsBlob)->void{
-                        // TODO: I think we should have multiple meshes instead of one each belonging to a submesh
-                        MFA_ASSERT(mesh->getIndexCount() % 3 == 0);
-                        auto const triangleCount = mesh->getIndexCount() / 3;
-                        auto const * triangleBuffer = mesh->getIndexData();
-                        auto const triangleStride = (triangleBuffer->memory.len / triangleCount);
+                    mesh->PreparePhysicsPoints([mesh, isConvex, &meshData, nameId](std::vector<Physics::TriangleMeshDesc> const & meshDescList)->void{
 
-                        physx::PxTriangleMeshDesc meshDesc;
-                        meshDesc.setToDefault();
-                        meshDesc.triangles.count = triangleCount;
-                        meshDesc.triangles.stride = static_cast<physx::PxU32>(triangleStride);
-                        meshDesc.triangles.data = triangleBuffer->memory.ptr;
+                        auto const meshGroup = std::make_shared<Physics::TriangleMeshGroup>();
 
-                        meshDesc.points.count = mesh->getVertexCount();
-                        meshDesc.points.stride = static_cast<physx::PxU32>(sizeof(physx::PxVec3));
-                        meshDesc.points.data = pointsBlob->memory.ptr;
-
-                        //if (isConvex)
-                        //{
-                        //    meshDesc.flags = physx::PxConvexFlag::eCOMPUTE_CONVEX;
-                        //}
-
-                        // https://docs.nvidia.com/gameworks/content/gameworkslibrary/physx/guide/Manual/Startup.html#startup
-                        // mesh should be validated before cooking without the mesh cleaning
-                        //MFA_ASSERT(Physics::ValidateTriangleMesh(meshDesc));
-                        if (Physics::ValidateTriangleMesh(meshDesc))
+                        for (auto const & meshDesc : meshDescList)
                         {
-                            MFA_LOG_WARN("Validation of mesh with name %s failed", nameId.c_str());
+                            physx::PxTriangleMeshDesc pxMeshDesc;
+                            pxMeshDesc.setToDefault();
+                            pxMeshDesc.triangles.count = meshDesc.trianglesCount;
+                            pxMeshDesc.triangles.stride = meshDesc.trianglesStride;
+                            pxMeshDesc.triangles.data = meshDesc.triangleBuffer->memory.ptr;
+
+                            pxMeshDesc.points.count = meshDesc.pointsCount;
+                            pxMeshDesc.points.stride = meshDesc.pointsStride;
+                            pxMeshDesc.points.data = meshDesc.pointsBuffer->memory.ptr;
+                        //if (isConvex)
+                            //{
+                            //    meshDesc.flags = physx::PxConvexFlag::eCOMPUTE_CONVEX;
+                            //}
+
+                            // https://docs.nvidia.com/gameworks/content/gameworkslibrary/physx/guide/Manual/Startup.html#startup
+                            // mesh should be validated before cooking without the mesh cleaning
+                            //MFA_ASSERT(Physics::ValidateTriangleMesh(meshDesc));
+                            if (Physics::ValidateTriangleMesh(pxMeshDesc))
+                            {
+                                MFA_LOG_WARN("Validation of mesh with name %s failed", nameId.c_str());
+                            }
+                            
+                            auto const triangleMesh = Physics::CreateTriangleMesh(pxMeshDesc);
+                            if (triangleMesh != nullptr)
+                            {
+                                meshGroup->triangleMeshes.emplace_back(triangleMesh);
+                            } else
+                            {
+                                MFA_LOG_WARN("Failed to create triangle mesh for one of the descriptions");
+                            }
                         }
-                        
-                        auto const triangleMesh = Physics::CreateTriangleMesh(meshDesc);
-                        MFA_ASSERT(triangleMesh != nullptr);
 
                         SCOPE_LOCK(meshData.lock)
-                        meshData.data = triangleMesh;
+                        meshData.data = meshGroup;
                         for (auto const & callback : meshData.callbacks)
                         {
-                            callback(triangleMesh);
+                            callback(meshGroup);
                         }
                         meshData.callbacks.clear();
                     });

@@ -2,7 +2,14 @@
 
 #include "engine/BedrockAssert.hpp"
 
+#include "engine/BedrockMemory.hpp"
+
 #include <memory>
+
+namespace physx
+{
+    class PxTriangleMesh;
+}
 
 namespace MFA::Physics
 {
@@ -73,5 +80,21 @@ namespace MFA::Physics
         MFA_ASSERT(ptr != nullptr);
         return  std::make_shared<Handle<T>>(ptr);
     }
+
+    struct TriangleMeshDesc
+    {
+        std::shared_ptr<SmartBlob> pointsBuffer;
+        uint32_t pointsCount;
+        uint32_t pointsStride;
+
+        std::shared_ptr<SmartBlob> triangleBuffer;  // 3 Indices together creates a triangle stride
+        uint32_t trianglesCount;
+        uint32_t trianglesStride;
+    };
+
+    struct TriangleMeshGroup
+    {
+        std::vector<SharedHandle<physx::PxTriangleMesh>> triangleMeshes {};
+    };
     
 }

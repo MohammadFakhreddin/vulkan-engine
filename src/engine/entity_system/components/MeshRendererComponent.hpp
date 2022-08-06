@@ -19,7 +19,6 @@ namespace MFA
 
         MFA_COMPONENT_PROPS(
             MeshRendererComponent,
-            FamilyType::MeshRenderer,
             EventTypes::InitEvent | EventTypes::ShutdownEvent,
             RendererComponent
         )

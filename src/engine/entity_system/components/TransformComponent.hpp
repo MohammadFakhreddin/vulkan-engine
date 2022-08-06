@@ -15,7 +15,6 @@ namespace MFA
 
         MFA_COMPONENT_PROPS(
             TransformComponent,
-            FamilyType::Transform,
             EventTypes::InitEvent | EventTypes::ShutdownEvent,
             Component
         )

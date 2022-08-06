@@ -108,7 +108,7 @@ void ParticleFireScene::createFireInstance(glm::vec3 const & position) const
     auto * entity = EntitySystem::CreateEntity("FireInstance", GetRootEntity());
     MFA_ASSERT(entity != nullptr);
 
-    auto const transform = entity->AddComponent<TransformComponent>().lock();
+    auto const transform = entity->AddComponent<TransformComponent>();
     MFA_ASSERT(transform != nullptr);
     transform->UpdateLocalPosition(position);
     
@@ -123,7 +123,7 @@ void ParticleFireScene::createFireInstance(glm::vec3 const & position) const
     );
     entity->AddComponent<ColorComponent>(glm::vec3{ 1.0f, 0.0f, 0.0f });
 
-    auto const boundingVolumeRenderer = entity->AddComponent<BoundingVolumeRendererComponent>().lock();
+    auto const boundingVolumeRenderer = entity->AddComponent<BoundingVolumeRendererComponent>();
     MFA_ASSERT(boundingVolumeRenderer != nullptr);
     boundingVolumeRenderer->SetActive(true);
 
@@ -141,7 +141,7 @@ void ParticleFireScene::createCamera()
     auto * entity = EntitySystem::CreateEntity("CameraEntity", GetRootEntity());
     MFA_ASSERT(entity != nullptr);
 
-    auto const observerCamera = entity->AddComponent<ObserverCameraComponent>(FOV, Z_NEAR, Z_FAR).lock();
+    auto const observerCamera = entity->AddComponent<ObserverCameraComponent>(FOV, Z_NEAR, Z_FAR);
     MFA_ASSERT(observerCamera != nullptr);
     SetActiveCamera(observerCamera);
 

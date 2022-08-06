@@ -89,15 +89,15 @@ private:
     std::vector<Asset> mLoadedAssets {};
 
     std::vector<std::string> mAvailableComponents {"Invalid"};
-    std::unordered_map<int, std::vector<int>> mComponentDependencies {};
-    std::unordered_map<int, std::vector<int>> mComponentsDependents {};
+    // TODO: Each component should hold these information
+    std::unordered_map<std::string, std::vector<std::string>> mComponentDependencies {};
+    std::unordered_map<std::string, std::vector<std::string>> mComponentsDependents {};
 
-    struct CreateComponentInstruction
+    struct ComponentCreationInstruction
     {
-        int familyType = -1;
         std::function<std::shared_ptr<MFA::Component>(MFA::Entity * entity)> function {};
     };
-    std::unordered_map<std::string, CreateComponentInstruction> mCreateComponentInstructionMap {};
+    std::unordered_map<std::string, ComponentCreationInstruction> mCreateComponentInstructionMap {};
 
     // Input variables
     std::string mInputTextEssenceName {};

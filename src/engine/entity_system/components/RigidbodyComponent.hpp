@@ -14,7 +14,6 @@ namespace MFA
 
         MFA_COMPONENT_PROPS(
             RigidbodyComponent,
-            FamilyType::Rigidbody,
             EventTypes::LateInitEvent | EventTypes::UpdateEvent,
             Component
         )

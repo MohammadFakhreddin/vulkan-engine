@@ -11,7 +11,7 @@
 #include <utility>
 #include <vector>
 
-// TODO This class will need optimization in future
+// This class will need optimization in future
 
 namespace MFA::EntitySystem
 {
@@ -53,60 +53,66 @@ namespace MFA
 
         void Init(bool triggerSignal = true);
 
-        void LateInit(bool triggerInitSignal = true);
+        void LateInit(bool triggerSignal = true);
 
         void Update(float deltaTimeInSec);
 
         void Shutdown(bool shouldNotifyParent = true);
 
         template<typename ComponentClass, typename ... ArgsT>
-        std::weak_ptr<ComponentClass> AddComponent(ArgsT && ... args)
+        std::shared_ptr<ComponentClass> AddComponent(ArgsT && ... args)
         {
-            if (mComponents[ComponentClass::Family] != nullptr)
+            auto existingComponent = GetComponent<ComponentClass>();
+            if (existingComponent != nullptr)
             {
-                MFA_LOG_WARN("Component with type %d alreay exists", ComponentClass::Family);
-                return GetComponent<ComponentClass>();
+                MFA_LOG_WARN("Component with name %s alreay exists", ComponentClass::Name);
+                return existingComponent;
             }
-            auto sharedPtr = std::make_shared<ComponentClass>(std::forward<ArgsT>(args)...);
-            mComponents[ComponentClass::Family] = sharedPtr;
-            LinkComponent(sharedPtr.get());
-            return std::weak_ptr<ComponentClass>(sharedPtr);
+            auto newComponent = std::make_shared<ComponentClass>(std::forward<ArgsT>(args)...);
+            mComponents.emplace_back(newComponent);
+            LinkComponent(newComponent.get());
+            return newComponent;
         }
 
-        void AddComponent(std::shared_ptr<Component> const & component)
-        {
-            MFA_ASSERT(mComponents[component->getFamily()] == nullptr);
-            mComponents[component->getFamily()] = component;
-            LinkComponent(component.get());
-        }
+        bool AddComponent(std::shared_ptr<Component> const & component);
+
+        bool RemoveComponent(std::string const & componentName);
+
+        bool RemoveComponent(Component * component);
 
         template<typename ComponentClass>
-        void RemoveComponent(ComponentClass * component)
+        bool RemoveComponent()
         {
-            MFA_ASSERT(component != nullptr);
-            MFA_ASSERT(component->mEntity == this);
-
-            UnLinkComponent(component);
-
-            auto & findResult = mComponents[component->getFamily()];
-            MFA_ASSERT(findResult != nullptr);
-            findResult = nullptr;
+            for (int i = static_cast<int>(mComponents.size()) - 1; i >= 0; --i)
+            {
+                auto castResult = std::dynamic_pointer_cast<ComponentClass>(mComponents[i]);
+                if (castResult != nullptr)
+                {
+                    UnLinkComponent(mComponents[i].get());
+                    mComponents.erase(mComponents.begin() + i);
+                    return true;
+                } 
+            }
+            return false;
         }
 
         template<typename ComponentClass>
         [[nodiscard]]
-        std::weak_ptr<ComponentClass> GetComponent()
+        std::shared_ptr<ComponentClass> GetComponent()
         {
-            auto & component = mComponents[ComponentClass::Family];
-            if (component != nullptr)
+            for (auto & component : mComponents)
             {
-                return std::static_pointer_cast<ComponentClass>(component);
+                auto castResult = std::dynamic_pointer_cast<ComponentClass>(component);
+                if (castResult != nullptr)
+                {
+                    return castResult;
+                }   
             }
-            return std::weak_ptr<ComponentClass>();
+            return {};
         }
-
+        
         [[nodiscard]]
-        std::weak_ptr<Component> GetComponent(int const familyType) const;
+        std::shared_ptr<Component> GetComponent(std::string const & componentName) const;
 
         [[nodiscard]]
         EntityId getId() const noexcept;
@@ -147,11 +153,11 @@ namespace MFA
 
     private:
 
-        void notifyANewChildAdded(Entity * entity);
+        void NotifyANewChildAdded(Entity * entity);
 
-        void notifyAChildRemoved(Entity * entity);
+        void NotifyAChildRemoved(Entity * entity);
 
-        int findChild(Entity * entity);
+        int FindDirectChild(Entity * entity);
 
         void LinkComponent(Component * component);
 
@@ -159,7 +165,7 @@ namespace MFA
 
         void onActivationStatusChanged();
 
-    
+
     public:
 
         Signal<Entity *> EditorSignal{};
@@ -171,7 +177,7 @@ namespace MFA
         Entity * mParent = nullptr;
         bool mSerializable = true;
 
-        std::shared_ptr<Component> mComponents[static_cast<int>(Component::FamilyType::Count)]{};
+        std::vector<std::shared_ptr<Component>> mComponents{};
 
         Signal<> mInitSignal{};
         Signal<> mLateInitSignal{};
@@ -190,7 +196,7 @@ namespace MFA
         std::vector<Entity *> mChildEntities{};
 
         bool mIsInitialized = false;
-    
+
     };
 
 }

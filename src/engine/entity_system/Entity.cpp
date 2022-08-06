@@ -1,13 +1,6 @@
 #include "Entity.hpp"
 
 #include "EntitySystem.hpp"
-#include "components/AxisAlignedBoundingBoxComponent.hpp"
-#include "components/BoundingVolumeRendererComponent.hpp"
-#include "components/ColorComponent.hpp"
-#include "components/MeshRendererComponent.hpp"
-#include "components/PointLightComponent.hpp"
-#include "components/SphereBoundingVolumeComponent.hpp"
-#include "components/TransformComponent.hpp"
 #include "engine/ui_system/UI_System.hpp"
 
 #include "libs/nlohmann/json.hpp"
@@ -20,10 +13,10 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
     
     Entity::Entity(
-        EntityId id,
+        EntityId const id,
         std::string name,
         Entity * parent,
-        bool serializable
+        bool const serializable
     )
         : mId(id)
         , mName(std::move(name))
@@ -47,7 +40,7 @@ namespace MFA
 
         if (mParent != nullptr)
         {
-            mParent->notifyANewChildAdded(this);
+            mParent->NotifyANewChildAdded(this);
         }
 
         if (triggerSignal == true)
@@ -91,15 +84,80 @@ namespace MFA
 
         if (shouldNotifyParent && mParent != nullptr)
         {
-            mParent->notifyAChildRemoved(this);
+            mParent->NotifyAChildRemoved(this);
         }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    std::weak_ptr<Component> Entity::GetComponent(int const familyType) const
+    bool Entity::AddComponent(std::shared_ptr<Component> const & component)
     {
-        return mComponents[familyType];
+        MFA_ASSERT(component != nullptr);
+
+        if (GetComponent(component->GetName()) != nullptr)
+        {
+            MFA_ASSERT(false);
+            return false;
+        }
+
+        mComponents.emplace_back(component);
+        LinkComponent(component.get());
+
+        return true;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool Entity::RemoveComponent(std::string const & componentName)
+    {
+        for (int i = static_cast<int>(mComponents.size()) - 1; i >= 0; --i)
+        {
+            if (mComponents[i]->HaveSameNameOrParent(componentName))
+            {
+                UnLinkComponent(mComponents[i].get());
+                mComponents.erase(mComponents.begin() + i);
+                return true;
+            }   
+        }
+        return false;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool Entity::RemoveComponent(Component * component)
+    {
+        MFA_ASSERT(component != nullptr);
+        MFA_ASSERT(component->mEntity == this);
+
+        UnLinkComponent(component);
+
+        bool removed = false;
+        for (int i = static_cast<int>(mComponents.size()) - 1; i >= 0; --i)
+        {
+            if (mComponents[i].get() == component)
+            {
+                MFA_ASSERT(mComponents[i]->GetName() == component->GetName());
+                mComponents.erase(mComponents.begin() + i);
+                removed = true;
+                break;
+            }
+        }
+
+        return removed;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    std::shared_ptr<Component> Entity::GetComponent(std::string const & componentName) const
+    {
+        for (auto & component : mComponents)
+        {
+            if (component->HaveSameNameOrParent(componentName))
+            {
+                return component;
+            }   
+        }
+        return {};
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -253,8 +311,7 @@ namespace MFA
             if (component != nullptr)
             {
                 nlohmann::json componentJson{};
-                componentJson["name"] = component->getName();
-                componentJson["familyType"] = component->getFamily();
+                componentJson["name"] = component->GetName();
 
                 nlohmann::json componentData{};
                 component->Serialize(componentData);
@@ -333,10 +390,10 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void Entity::notifyANewChildAdded(Entity * entity)
+    void Entity::NotifyANewChildAdded(Entity * entity)
     {
         MFA_ASSERT(entity != nullptr);
-        MFA_ASSERT(findChild(entity) < 0);
+        MFA_ASSERT(FindDirectChild(entity) < 0);
         entity->mIsParentActive = IsActive();
         entity->mParentActivationStatusChangeListenerId = mActivationStatusChangeSignal.Register([entity](bool const isActive)->void
         {
@@ -347,10 +404,10 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void Entity::notifyAChildRemoved(Entity * entity)
+    void Entity::NotifyAChildRemoved(Entity * entity)
     {
         mActivationStatusChangeSignal.UnRegister(entity->mParentActivationStatusChangeListenerId);
-        auto const childIndex = findChild(entity);
+        auto const childIndex = FindDirectChild(entity);
         if (MFA_VERIFY(childIndex >= 0))
         {
             mChildEntities[childIndex] = mChildEntities.back();
@@ -360,7 +417,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    int Entity::findChild(Entity * entity)
+    int Entity::FindDirectChild(Entity * entity)
     {
         MFA_ASSERT(entity != nullptr);
         for (int i = 0; i < static_cast<int>(mChildEntities.size()); ++i)

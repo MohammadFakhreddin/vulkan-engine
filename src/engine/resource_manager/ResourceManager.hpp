@@ -65,7 +65,7 @@ namespace MFA::ResourceManager
         bool loadFromFile = true
     );
 
-    using PhysicsMeshCallback = std::function<void(Physics::SharedHandle<physx::PxTriangleMesh> const & physicsMesh)>;
+    using PhysicsMeshCallback = std::function<void(std::shared_ptr<Physics::TriangleMeshGroup> const & meshGroup)>;
 
     void AcquirePhysicsMesh(
         std::string const & path,

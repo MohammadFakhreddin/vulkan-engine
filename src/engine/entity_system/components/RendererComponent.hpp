@@ -12,7 +12,6 @@ namespace MFA {
 
         MFA_ABSTRACT_COMPONENT_PROPS(
             RendererComponent,
-            FamilyType::Invalid,
             EventTypes::ShutdownEvent,
             Component
         )

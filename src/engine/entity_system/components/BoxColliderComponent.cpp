@@ -80,10 +80,13 @@ namespace MFA
     
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<PxGeometry> BoxColliderComponent::ComputeGeometry()
+    std::vector<std::shared_ptr<PxGeometry>> BoxColliderComponent::ComputeGeometry()
     {
-        auto const halfSize = mHalfSize * mScale; 
-        return std::make_shared<PxBoxGeometry>(Copy<PxVec3>(halfSize));
+        auto const halfSize = mHalfSize * mScale;
+        std::vector<std::shared_ptr<PxGeometry>> geometries {
+            std::make_shared<PxBoxGeometry>(Copy<PxVec3>(halfSize))
+        };
+        return geometries;
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -6,6 +6,8 @@
 #include <cstdint>
 #include <functional>
 
+#include "engine/physics/PhysicsTypes.hpp"
+
 namespace MFA
 {
     struct SmartBlob;
@@ -50,8 +52,7 @@ namespace MFA::AssetSystem
         [[nodiscard]]
         virtual bool isValid() const;
 
-        // Maybe we could have something more dynamic later
-        using PhysicsPointsCallback = std::function<void(std::shared_ptr<SmartBlob> pointsBuffer)>;
+        using PhysicsPointsCallback = std::function<void(std::vector<Physics::TriangleMeshDesc> triangleMesh)>;
         virtual void PreparePhysicsPoints(PhysicsPointsCallback const & callback) const;
         
     protected:

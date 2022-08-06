@@ -8,13 +8,15 @@
 
 namespace MFA
 {
+
     class Component;
 
-    #define MFA_COMPONENT_COMMON_PROPS(componentName, family, eventTypes, parent)           \
+    #define MFA_COMPONENT_COMMON_PROPS(componentName, eventTypes, parent)                   \
     public:                                                                                 \
                                                                                             \
+    using Parent = parent;                                                                  \
+                                                                                            \
     static constexpr char const * Name = #componentName;                                    \
-    static constexpr int Family = static_cast<int>(family);                                 \
     static constexpr EventType RequiredEvents = eventTypes;                                 \
                                                                                             \
     std::weak_ptr<componentName> selfPtr()                                                  \
@@ -23,15 +25,33 @@ namespace MFA
     }                                                                                       \
                                                                                             \
     [[nodiscard]]                                                                           \
-    char const * getName() override                                                         \
+    char const * GetName() override                                                         \
     {                                                                                       \
         return Name;                                                                        \
     }                                                                                       \
                                                                                             \
-    [[nodiscard]]                                                                           \
-    int getFamily() override                                                                \
+    void GetParents(std::vector<std::string> & parents) override                            \
     {                                                                                       \
-        return Family;                                                                      \
+        parents.emplace_back(Name);                                                         \
+        Parent::GetParents(parents);                                                        \
+    }                                                                                       \
+                                                                                            \
+    bool HaveSameNameOrParent(std::string const & name) override                            \
+    {                                                                                       \
+        static QueryInformation queryInfo {};                                               \
+        if (queryInfo.isValid == false)                                                     \
+        {                                                                                   \
+            GetParents(queryInfo.parents);                                                  \
+            queryInfo.isValid = true;                                                       \
+        }                                                                                   \
+        for (auto & item : queryInfo.parents)                                               \
+        {                                                                                   \
+            if (item == name)                                                               \
+            {                                                                               \
+                return true;                                                                \
+            }                                                                               \
+        }                                                                                   \
+        return false;                                                                       \
     }                                                                                       \
                                                                                             \
     [[nodiscard]]                                                                           \
@@ -45,14 +65,13 @@ namespace MFA
     componentName & operator = (componentName const &) noexcept = delete;                   \
     componentName & operator = (componentName && rhs) noexcept = delete;                    \
                                                                                             \
-    using Parent = parent;                                                                  \
 
-    #define MFA_ABSTRACT_COMPONENT_PROPS(componentName, family, eventTypes, parent)         \
-    MFA_COMPONENT_COMMON_PROPS(componentName, family, eventTypes, parent)                   \
+    #define MFA_ABSTRACT_COMPONENT_PROPS(componentName, eventTypes, parent)                 \
+    MFA_COMPONENT_COMMON_PROPS(componentName, eventTypes, parent)                           \
     using parent::parent;                                                                   \
 
-    #define MFA_COMPONENT_PROPS(componentName, family, eventTypes, parent)                  \
-    MFA_ABSTRACT_COMPONENT_PROPS(componentName, family, eventTypes, parent)                 \
+    #define MFA_COMPONENT_PROPS(componentName, eventTypes, parent)                          \
+    MFA_ABSTRACT_COMPONENT_PROPS(componentName, eventTypes, parent)                         \
     private:                                                                                \
                                                                                             \
         static inline ComponentRegister<componentName> mComponentRegister {};               \
@@ -64,6 +83,13 @@ namespace MFA
     class Component : public std::enable_shared_from_this<Component>
     {
     public:
+
+        struct QueryInformation
+        {
+            // Including component name and all of its parents names
+            std::vector<std::string> parents {};
+            bool isValid = false;
+        };
 
         friend Entity;
 
@@ -94,40 +120,44 @@ namespace MFA
             return EventTypes::EmptyEvent;
         }
 
-        enum class FamilyType : uint8_t
-        {
-            Invalid,
+        //enum class FamilyType : uint8_t
+        //{
+        //    Invalid,
 
-            Transform,
+        //    Transform,
 
-            MeshRenderer,
-            BoundingVolumeRenderer,
+        //    MeshRenderer,
+        //    BoundingVolumeRenderer,
 
-            BoundingVolume,
-            //SphereBoundingVolumeComponent,
-            //AxisAlignedBoundingBoxes,
+        //    BoundingVolume,
+        //    //SphereBoundingVolumeComponent,
+        //    //AxisAlignedBoundingBoxes,
 
-            Color,
+        //    Color,
 
-            Camera,
-            //ObserverCameraComponent,
-            //ThirdPersonCamera,
+        //    Camera,
+        //    //ObserverCameraComponent,
+        //    //ThirdPersonCamera,
 
-            PointLight,
-            DirectionalLight,
+        //    PointLight,
+        //    DirectionalLight,
 
-            OcclusionCulling,
+        //    OcclusionCulling,
 
-            Collider,
+        //    Collider,
 
-            Rigidbody,
+        //    Rigidbody,
 
-            Count
-        };
+        //    Count
+        //};
 
-        virtual char const * getName() = 0;
+        virtual char const * GetName() = 0;
+        
+        virtual bool HaveSameNameOrParent(std::string const & name) = 0; 
 
-        virtual int getFamily() = 0;
+        virtual void GetParents(std::vector<std::string> & parents);
+
+        //virtual int getFamily() = 0;
 
         virtual void Init();
 

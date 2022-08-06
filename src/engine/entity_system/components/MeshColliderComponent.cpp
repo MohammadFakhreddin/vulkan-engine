@@ -43,7 +43,7 @@ namespace MFA
     {
         if (mNameId.empty())
         {
-            auto const meshRenderer = GetEntity()->GetComponent<MeshRendererComponent>().lock();
+            auto const meshRenderer = GetEntity()->GetComponent<MeshRendererComponent>();
             MFA_ASSERT(meshRenderer != nullptr);
             mNameId = meshRenderer->GetNameId();
             MFA_ASSERT(mNameId.empty() == false);
@@ -52,8 +52,8 @@ namespace MFA
         RC::AcquirePhysicsMesh(
             mNameId,
             mIsConvex,
-            [this](Physics::SharedHandle<PxTriangleMesh> const & physicsMesh)->void{
-                mPhysicsMesh = physicsMesh;
+            [this](std::shared_ptr<Physics::TriangleMeshGroup> const & meshGroup)->void{
+                mPhysicsMesh = meshGroup;
                 ColliderComponent::Init();
             }
         );
@@ -82,13 +82,21 @@ namespace MFA
     
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<PxGeometry> MeshColliderComponent::ComputeGeometry()
+    std::vector<std::shared_ptr<PxGeometry>> MeshColliderComponent::ComputeGeometry()
     {
-        PxMeshScale meshScale {Copy<PxVec3>(mScale)};
-        return std::make_shared<PxTriangleMeshGeometry>(
-            mPhysicsMesh != nullptr ? mPhysicsMesh->Ptr() : nullptr,
-            meshScale
-        );
+        std::vector<std::shared_ptr<PxGeometry>> geometries {};
+        if (mPhysicsMesh != nullptr)
+        {
+            PxMeshScale meshScale {Copy<PxVec3>(mScale)};
+            for(auto & triangleMesh : mPhysicsMesh->triangleMeshes)
+            {
+                geometries.emplace_back(std::make_shared<PxTriangleMeshGeometry>(
+                    triangleMesh != nullptr ? triangleMesh->Ptr() : nullptr,
+                    meshScale
+                ));
+            }
+        }
+        return geometries;
     }
 
     //-------------------------------------------------------------------------------------------------
