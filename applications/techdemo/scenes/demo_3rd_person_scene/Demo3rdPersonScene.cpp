@@ -17,7 +17,9 @@
 #include "engine/BedrockMatrix.hpp"
 #include "engine/entity_system/components/AxisAlignedBoundingBoxComponent.hpp"
 #include "engine/entity_system/components/BoundingVolumeRendererComponent.hpp"
+#include "engine/entity_system/components/CapsuleColliderComponent.hpp"
 #include "engine/entity_system/components/MeshColliderComponent.hpp"
+#include "engine/entity_system/components/RigidbodyComponent.hpp"
 #include "engine/render_system/pipelines/particle/ParticlePipeline.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Variant.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
@@ -87,14 +89,17 @@ void Demo3rdPersonScene::Init()
             SetActiveCamera(mThirdPersonCamera);
         }
         mPlayerMeshRenderer = entity->GetComponent<MeshRendererComponent>();
-        //{// Mesh collider
-        //    auto meshCollider = entity->AddComponent<MeshColliderComponent>(true).lock();
-        //    meshCollider->Init();
-        //    EntitySystem::UpdateEntity(entity);
-        //}
-        //auto const boxCollider = entity->AddComponent<BoxColliderComponent>(glm::vec3 {100.0f, 100.0f, 100.0f}).lock();
-        //boxCollider->Init();
-        //EntitySystem::UpdateEntity(entity);
+        // TODO: We need to be able to draw colliders on editor as well
+        {// Capsule collider
+            auto const capsuleCollider = entity->AddComponent<CapsuleCollider>(5.0f, 1.0f);
+            capsuleCollider->Init();
+            EntitySystem::UpdateEntity(entity);
+        }
+        {// Rigidbody
+            auto const rigidbody = entity->AddComponent<Rigidbody>(false, true, 1.0f);
+            rigidbody->Init();
+            EntitySystem::UpdateEntity(entity);
+        }
     }
 
     //for (float i = 0; i < 10.0f; i += 1.0f) {// Dummy soldiers
@@ -118,11 +123,11 @@ void Demo3rdPersonScene::Init()
             ptr->UpdateLocalTransform(position, eulerAngle, scale);
         }
 
-        //{// Mesh collider
-        //    auto meshCollider = entity->AddComponent<MeshColliderComponent>(true).lock();
-        //    meshCollider->Init();
-        //    EntitySystem::UpdateEntity(entity);
-        //}
+        {// Mesh collider
+            auto meshCollider = entity->AddComponent<MeshColliderComponent>(true);
+            meshCollider->Init();
+            EntitySystem::UpdateEntity(entity);
+        }
 
         entity->SetActive(true);
     }

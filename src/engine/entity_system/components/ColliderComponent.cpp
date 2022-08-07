@@ -193,12 +193,11 @@ namespace MFA
 
     void ColliderComponent::UpdateShapeCenter() const
     {
-        PxTransform newTransform {};
-        Copy(newTransform.p, mCenter);
-        Copy(newTransform.q, glm::identity<glm::quat>());
-
         for (auto & shape : mShapes)
         {
+            // Updating the center without modifying rotation
+            auto newTransform = shape->getLocalPose();
+            Copy(newTransform.p, mCenter);
             shape->setLocalPose(newTransform);
         }
     }
