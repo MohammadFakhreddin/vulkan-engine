@@ -3,6 +3,8 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockMemory.hpp"
 #include "engine/job_system/JobSystem.hpp"
+#include "engine/job_system/ScopeLock.hpp"
+#include "engine/job_system/TaskTracker.hpp"
 
 #include <foundation/PxVec3.h>
 #include <glm/ext/matrix_transform.hpp>
@@ -17,17 +19,81 @@ namespace MFA::AssetSystem::PBR
     {
         switch (alphaMode)
         {
-            case AlphaMode::Blend:
-                return blendPrimitives;
-            case AlphaMode::Mask:
-                return maskPrimitives;
-            case AlphaMode::Opaque:
-                return opaquePrimitives;
-            default:
-                break;
+        case AlphaMode::Blend:
+            return blendPrimitives;
+        case AlphaMode::Mask:
+            return maskPrimitives;
+        case AlphaMode::Opaque:
+            return opaquePrimitives;
+        default:
+            break;
         }
         MFA_LOG_ERROR("Alpha mode is not supported %d", static_cast<int>(alphaMode));
         return {};
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    Node::Node() = default;
+
+    //-------------------------------------------------------------------------------------------------
+
+    #define NODE_COPY(other)                                                          \
+    subMeshIndex = (other).subMeshIndex;                                              \
+    children = (other).children;                                                      \
+    Copy<16>(transform, (other).transform);                                           \
+    Copy<4>(rotation, (other).rotation);                                              \
+    Copy<3>(scale, (other).scale);                                                    \
+    Copy<3>(translate, (other).translate);                                            \
+    parent = (other).parent;                                                          \
+    skin = (other).skin;                                                              \
+    mIsCachedGlobalTransformValid = (other).mIsCachedGlobalTransformValid;            \
+    Copy(mCachedGlobalTransform, (other).mCachedGlobalTransform);                     \
+    mIsCachedLocalTransformValid = (other).mIsCachedLocalTransformValid;              \
+    Copy(mCachedLocalTransform, (other).mCachedLocalTransform);                       \
+
+    //-------------------------------------------------------------------------------------------------
+
+    Node::Node(Node&& other) noexcept
+    {
+        NODE_COPY(other)
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    Node::Node(Node const& other) noexcept
+    {
+        NODE_COPY(other)
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    Node& Node::operator=(Node&& other) noexcept
+    {
+        NODE_COPY(other)
+        return *this;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    Node& Node::operator=(Node const& other) noexcept
+    {
+        NODE_COPY(other)
+        return *this;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool Node::hasSubMesh() const noexcept
+    {
+        return subMeshIndex >= 0;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool Node::HasParent() const noexcept
+    {
+        return parent >= 0;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -139,16 +205,16 @@ namespace MFA::AssetSystem::PBR
             {
                 switch (primitive.alphaMode)
                 {
-                    case AlphaMode::Opaque:
-                        subMesh.opaquePrimitives.emplace_back(&primitive);
+                case AlphaMode::Opaque:
+                    subMesh.opaquePrimitives.emplace_back(&primitive);
                     break;
-                    case AlphaMode::Blend:
-                        subMesh.blendPrimitives.emplace_back(&primitive);
+                case AlphaMode::Blend:
+                    subMesh.blendPrimitives.emplace_back(&primitive);
                     break;
-                    case AlphaMode::Mask:
-                        subMesh.maskPrimitives.emplace_back(&primitive);
+                case AlphaMode::Mask:
+                    subMesh.maskPrimitives.emplace_back(&primitive);
                     break;
-                    default:
+                default:
                     MFA_LOG_ERROR("Unhandled primitive alpha mode detected %d", static_cast<int>(primitive.alphaMode));
                     break;
                 }
@@ -236,16 +302,18 @@ namespace MFA::AssetSystem::PBR
 
     //-------------------------------------------------------------------------------------------------
 
-    void Mesh::insertNode(Node const & node)
+    Node & Mesh::InsertNode() const
     {
-        mData->nodes.emplace_back(node);
+        mData->nodes.emplace_back();
+        return mData->nodes.back();
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void Mesh::insertSkin(Skin const & skin)
+    Skin & Mesh::InsertSkin() const
     {
-        mData->skins.emplace_back(skin);
+        mData->skins.emplace_back();
+        return mData->skins.back();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -271,29 +339,46 @@ namespace MFA::AssetSystem::PBR
 
     //-------------------------------------------------------------------------------------------------
 
-    glm::mat4 Mesh::ComputeNodeLocalTransform(Node const & node) const
+    glm::mat4 Mesh::ComputeNodeLocalTransform(Node & node) const
     {
-        glm::mat4 matrix { 1 };
-        matrix = glm::translate(matrix, Copy<glm::vec3>(node.translate));
-        matrix = matrix * glm::toMat4(Copy<glm::quat>(node.rotation));
-        matrix = glm::scale(matrix, Copy<glm::vec3>(node.scale));
-        matrix = matrix * Copy<glm::mat4>(node.transform);
+        glm::mat4 matrix{ 1 };
+        if (node.mIsCachedLocalTransformValid == false)
+        {
+            matrix = glm::translate(matrix, Copy<glm::vec3>(node.translate));
+            matrix = matrix * glm::toMat4(Copy<glm::quat>(node.rotation));
+            matrix = glm::scale(matrix, Copy<glm::vec3>(node.scale));
+            matrix = matrix * Copy<glm::mat4>(node.transform);
+            node.mCachedLocalTransform = matrix;
+            node.mIsCachedLocalTransformValid = true;
+        }
+        else
+        {
+            matrix = node.mCachedLocalTransform;
+        }
         return matrix;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    glm::mat4 Mesh::ComputeNodeGlobalTransform(Node const & node) const
+    glm::mat4 Mesh::ComputeNodeGlobalTransform(Node & node) const
     {
-        auto matrix = ComputeNodeLocalTransform(node);
-
-        auto * parentNode = &node;
-        while (parentNode->HasParent())
+        glm::mat4 matrix{ 1 };
+        SCOPE_LOCK(node.mLock)
+        if (node.mIsCachedGlobalTransformValid == false)
         {
-            parentNode = &mData->nodes[node.parent];
-            matrix = ComputeNodeLocalTransform(*parentNode) * matrix;
+            matrix = ComputeNodeLocalTransform(node);
+            if (node.HasParent())
+            {
+                auto & parentNode = mData->nodes[node.parent];
+                matrix = ComputeNodeGlobalTransform(parentNode) * matrix;
+            }
+            node.mIsCachedGlobalTransformValid = true;
+            node.mCachedGlobalTransform = matrix;
         }
-
+        else
+        {
+            matrix = node.mCachedGlobalTransform;
+        }
         return matrix;
     }
 
@@ -301,58 +386,101 @@ namespace MFA::AssetSystem::PBR
 
     void Mesh::PreparePhysicsPoints(PhysicsPointsCallback const & callback) const
     {
-        std::vector<Physics::TriangleMeshDesc> triangleMeshes {};
-
-        // TODO: Important, Apply the matrix for each of them
-        // TODO: Multi-thread
-
-        for (auto const & node : mData->nodes)
+        std::vector<JS::Task> tasks{};
+        for (auto & node : mData->nodes)
         {
             if (node.hasSubMesh())
             {
-                auto matrix = ComputeNodeGlobalTransform(node);
+                tasks.emplace_back([this, &node](uint32_t tn, uint32_t tc)->void
+                {
+                    ComputeNodeGlobalTransform(node);
+                });
+            }
+        }
+
+        JS::AssignTask(tasks, [this, callback]()->void
+        {
+            ComputeTriangleMeshes(callback);
+        });
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Mesh::ComputeTriangleMeshes(PhysicsPointsCallback const & callback) const
+    {
+        struct Data
+        {
+            std::vector<Physics::TriangleMeshDesc> triangleMeshes{};
+        };
+
+        auto data = std::make_shared<Data>();
+
+        std::vector<JS::Task> tasks{};
+
+        for (auto & node : mData->nodes)
+        {
+            if (node.hasSubMesh())
+            {
+                auto const matrix = ComputeNodeGlobalTransform(node);
                 auto const & subMesh = mData->subMeshes[node.subMeshIndex];
                 for (auto const & primitive : subMesh.primitives)
                 {
-                    triangleMeshes.emplace_back();
-                    auto & triangleMesh = triangleMeshes.back();
-                    MFA_ASSERT(primitive.indicesCount % 3 == 0);
-
-                    triangleMesh.trianglesCount = primitive.indicesCount / 3;
-                    triangleMesh.trianglesStride = 3 * sizeof(Index);
-                    triangleMesh.triangleBuffer = Memory::Alloc(primitive.indicesCount * sizeof(Index));
-
-                    triangleMesh.pointsStride = sizeof(physx::PxVec3);
-                    triangleMesh.pointsCount = primitive.vertexCount;
-                    triangleMesh.pointsBuffer = Memory::Alloc(primitive.vertexCount * sizeof(physx::PxVec3));
-
-                    auto * pointsArray = triangleMesh.pointsBuffer->memory.as<physx::PxVec3>();
-
-                    auto * trianglesArray = triangleMesh.triangleBuffer->memory.as<Index>();
-
-                    auto const * vertexArray = reinterpret_cast<Vertex *>(mVertexData->memory.ptr + primitive.verticesOffset);
-                    auto const * indicesArray = reinterpret_cast<Index *>(mIndexData->memory.ptr + primitive.indicesOffset);
-
-                    for (uint32_t i = 0; i < primitive.vertexCount; ++i)
+                    auto triangleMeshIndex = data->triangleMeshes.size();
+                    data->triangleMeshes.emplace_back();
+                    
+                    tasks.emplace_back([this, &primitive, data, triangleMeshIndex, matrix](uint32_t tn, uint32_t tc)->void
                     {
-                        auto const & vertex = vertexArray[i];
-                        static_assert(sizeof(vertex.position) == sizeof(pointsArray[i]));
-
-                        glm::vec4 vertex4 { vertex.position[0], vertex.position[1], vertex.position[2], 1.0f };
-                        vertex4 = matrix * vertex4;
-
-                        Copy(pointsArray[i], vertex4);
-                    }
-
-                    for (uint32_t i = 0; i < primitive.indicesCount; ++i)
-                    {
-                        trianglesArray[i] = indicesArray[i] - primitive.verticesStartingIndex;
-                    }
+                        ComputeTriangleMesh(data->triangleMeshes[triangleMeshIndex], matrix, primitive);
+                    });
                 }
             }
         }
 
-        callback(triangleMeshes);
+        JS::AssignTask(tasks, [data, callback]()-> void
+        {
+            callback(data->triangleMeshes);
+        });
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void Mesh::ComputeTriangleMesh(
+        Physics::TriangleMeshDesc & triangleMesh,
+        glm::mat4 const & matrix,
+        Primitive const & primitive
+    ) const
+    {
+        MFA_ASSERT(primitive.indicesCount % 3 == 0);
+
+        triangleMesh.trianglesCount = primitive.indicesCount / 3;
+        triangleMesh.trianglesStride = 3 * sizeof(Index);
+        triangleMesh.triangleBuffer = Memory::Alloc(primitive.indicesCount * sizeof(Index));
+
+        triangleMesh.pointsStride = sizeof(physx::PxVec3);
+        triangleMesh.pointsCount = primitive.vertexCount;
+        triangleMesh.pointsBuffer = Memory::Alloc(primitive.vertexCount * sizeof(physx::PxVec3));
+
+        auto * pointsArray = triangleMesh.pointsBuffer->memory.as<physx::PxVec3>();
+        auto * trianglesArray = triangleMesh.triangleBuffer->memory.as<Index>();
+
+        auto const * vertexArray = reinterpret_cast<Vertex *>(mVertexData->memory.ptr + primitive.verticesOffset);
+        auto const * indicesArray = reinterpret_cast<Index *>(mIndexData->memory.ptr + primitive.indicesOffset);
+
+        for (uint32_t i = 0; i < primitive.vertexCount; ++i)
+        {
+            auto const & vertex = vertexArray[i];
+            static_assert(sizeof(vertex.position) == sizeof(pointsArray[i]));
+
+            glm::vec4 vertex4{ vertex.position[0], vertex.position[1], vertex.position[2], 1.0f };
+            vertex4 = matrix * vertex4;
+
+            Copy(pointsArray[i], vertex4);
+        }
+
+        for (uint32_t i = 0; i < primitive.indicesCount; ++i)
+        {
+            trianglesArray[i] = indicesArray[i] - primitive.verticesStartingIndex;
+        }
     }
 
     //-------------------------------------------------------------------------------------------------

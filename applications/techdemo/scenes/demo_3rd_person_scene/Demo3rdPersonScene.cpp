@@ -90,21 +90,16 @@ void Demo3rdPersonScene::Init()
         }
         mPlayerMeshRenderer = entity->GetComponent<MeshRendererComponent>();
         // TODO: We need to be able to draw colliders on editor as well
-        //{// Capsule collider
-        //    auto const capsuleCollider = entity->AddComponent<CapsuleCollider>(2.0f, 1.0f);
-        //    capsuleCollider->Init();
-        //    EntitySystem::UpdateEntity(entity);
-        //}
-        {// Mesh collider
-            auto const meshCollider = entity->AddComponent<MeshCollider>();
-            meshCollider->Init();
+        {// Capsule collider
+            auto const capsuleCollider = entity->AddComponent<CapsuleCollider>(0.5f, 0.2f);
+            capsuleCollider->Init();
             EntitySystem::UpdateEntity(entity);
         }
-        //{// Rigidbody
-        //    auto const rigidbody = entity->AddComponent<Rigidbody>(false, true, 1.0f);
-        //    rigidbody->Init();
-        //    EntitySystem::UpdateEntity(entity);
-        //}
+        {// Rigidbody
+            auto const rigidbody = entity->AddComponent<Rigidbody>(false, true, 1.0f);
+            rigidbody->Init();
+            EntitySystem::UpdateEntity(entity);
+        }
     }
 
     //for (float i = 0; i < 10.0f; i += 1.0f) {// Dummy soldiers
@@ -169,10 +164,10 @@ void Demo3rdPersonScene::Init()
             createFireEssence(gpuTexture);
             // TODO: Use getComponentInchildren
             // Fire instances
-            createFireInstance(glm::vec3 {-1.05f, 1.0f, -2.1f}, sponzaEntity);
-            createFireInstance(glm::vec3{ +1.85f, 1.0f, -2.1f }, sponzaEntity);
-            createFireInstance(glm::vec3{ -1.05f, 1.0f, -10.950f }, sponzaEntity);
-            createFireInstance(glm::vec3{ +1.85f, 1.0f, -10.950f }, sponzaEntity);
+            createFireInstance(glm::vec3 {3.9f, 1.0f, 1.45f}, sponzaEntity);
+            createFireInstance(glm::vec3{ -4.95f, 1.0f, -1.45f }, sponzaEntity);
+            createFireInstance(glm::vec3{ -4.95f, 1.0f, 1.45f }, sponzaEntity);
+            createFireInstance(glm::vec3{ 3.9f, 1.0f, -1.45f }, sponzaEntity);
         });
     }
 

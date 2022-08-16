@@ -65,7 +65,9 @@ namespace MFA::JobSystem {
         )
             : mFinishCallback(std::move(finishCallback))
             , mRemainingTasksCount(totalTaskCount)
-        {}
+        {
+            MFA_ASSERT(totalTaskCount > 0);
+        }
 
         ~TaskTracker2() = default;
 

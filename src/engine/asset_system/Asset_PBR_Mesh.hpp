@@ -7,6 +7,7 @@
 
 #include <string>
 #include <vector>
+#include <glm/ext/matrix_transform.hpp>
 
 namespace MFA::AssetSystem::PBR
 {
@@ -110,6 +111,18 @@ namespace MFA::AssetSystem::PBR
 
     struct Node
     {
+        friend class Mesh;
+
+        explicit Node();
+
+        explicit Node(Node && other) noexcept;
+
+        explicit Node(Node const & other) noexcept;
+
+        Node & operator=(Node && other) noexcept;
+
+        Node & operator=(Node const & other) noexcept;
+        
         int subMeshIndex = -1;
         std::vector<int> children{};
         float transform[16]{
@@ -125,16 +138,21 @@ namespace MFA::AssetSystem::PBR
         int skin = -1;
 
         [[nodiscard]]
-        bool hasSubMesh() const noexcept
-        {
-            return subMeshIndex >= 0;
-        }
+        bool hasSubMesh() const noexcept;
 
         [[nodiscard]]
-        bool HasParent() const noexcept
-        {
-            return parent >= 0;
-        }
+        bool HasParent() const noexcept;
+
+    private:
+
+        std::atomic<bool> mLock = false;
+
+        bool mIsCachedGlobalTransformValid = false;
+        glm::mat4 mCachedGlobalTransform = glm::identity<glm::mat4>();
+
+        bool mIsCachedLocalTransformValid = false;
+        glm::mat4 mCachedLocalTransform = glm::identity<glm::mat4>();
+
     };
 
     struct Skin
@@ -251,9 +269,11 @@ namespace MFA::AssetSystem::PBR
             Index * indices
         );
 
-        void insertNode(Node const & node);
+        [[nodiscard]]
+        Node & InsertNode() const;
 
-        void insertSkin(Skin const & skin);
+        [[nodiscard]]
+        Skin & InsertSkin() const;
 
         void insertAnimation(Animation const & animation) const;
 
@@ -267,11 +287,17 @@ namespace MFA::AssetSystem::PBR
 
     private:
 
-        [[nodiscard]]
-        glm::mat4 ComputeNodeLocalTransform(Node const & node) const;
+        glm::mat4 ComputeNodeLocalTransform(Node & node) const;
 
-        [[nodiscard]]
-        glm::mat4 ComputeNodeGlobalTransform(Node const & node) const;
+        glm::mat4 ComputeNodeGlobalTransform(Node & node) const;
+
+        void ComputeTriangleMesh(
+            Physics::TriangleMeshDesc & triangleMesh,
+            glm::mat4 const & matrix,
+            Primitive const & primitive
+        ) const;
+
+        void ComputeTriangleMeshes(PhysicsPointsCallback const & callback) const;
 
         std::shared_ptr<MeshData> mData {};
 

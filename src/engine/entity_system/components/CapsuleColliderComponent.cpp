@@ -16,16 +16,20 @@ namespace MFA
         float const halfHeight,
         float const radius,
         CapsuleDirection const direction,
-        glm::vec3 const & center,
         Physics::SharedHandle<PxMaterial> material
     )
-        : ColliderComponent(center, RotateToDirection(direction), std::move(material))
+        : ColliderComponent(
+            {},
+            {},
+            std::move(material))
         , mHalfHeight(halfHeight)
         , mRadius(radius)
         , mCapsuleDirection(direction)
     {
+        ComputeCenter();
+        RotateToDirection();
         MFA_ASSERT(halfHeight > 0.0f);
-        MFA_ASSERT(radius >= 0.0f);
+        MFA_ASSERT(radius > 0.0f);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -92,18 +96,18 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    glm::quat CapsuleColliderComponent::RotateToDirection(CapsuleDirection const direction)
+    void CapsuleColliderComponent::RotateToDirection()
     {
         glm::vec3 axis;
-        if (direction == CapsuleDirection::X)
+        if (mCapsuleDirection == CapsuleDirection::X)
         {
             axis = Math::UpVec3;
         }
-        else if (direction == CapsuleDirection::Y)
+        else if (mCapsuleDirection == CapsuleDirection::Y)
         {
             axis = Math::ForwardVec3;
         }
-        else if (direction == CapsuleDirection::Z)
+        else if (mCapsuleDirection == CapsuleDirection::Z)
         {
             axis = Math::RightVec3;
         }
@@ -111,7 +115,7 @@ namespace MFA
         {
             MFA_ASSERT(false);
         }
-        return glm::angleAxis(Math::PiFloat * 0.5f, axis);
+        mRotation = glm::angleAxis(Math::PiFloat * 0.5f, axis);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -126,6 +130,8 @@ namespace MFA
         if (needShapeUpdate)
         {
             UpdateShapeGeometry();
+            ComputeCenter();
+            UpdateShapeRelativeTransform();
         }
     }
 
@@ -138,9 +144,26 @@ namespace MFA
         if (UI::Combo("Capsule direction", &selectedItem, items))
         {
             mCapsuleDirection = static_cast<CapsuleDirection>(selectedItem);
-            mRotation = RotateToDirection(mCapsuleDirection);
+            RotateToDirection();
             UpdateShapeRelativeTransform();
         }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void CapsuleColliderComponent::ComputeCenter()
+    {
+        float height = 0.0f;
+        if (mCapsuleDirection == CapsuleDirection::Y)
+        {
+            height = mHalfHeight + mRadius;
+        }
+        else
+        {
+            height = mRadius;
+        }
+
+        mCenter = Math::UpVec3 * height;
     }
 
     //-------------------------------------------------------------------------------------------------

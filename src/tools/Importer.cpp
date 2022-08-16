@@ -6,7 +6,6 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockMath.hpp"
 #include "engine/BedrockMatrix.hpp"
-#include "engine/job_system/JobSystem.hpp"
 #include "engine/asset_system/Asset_PBR_Mesh.hpp"
 #include "engine/BedrockCommon.hpp"
 #include "engine/BedrockPath.hpp"
@@ -500,10 +499,9 @@ namespace MFA::Importer
                             );
                         }
 
-                        Node node{};
+                        Node & node = mesh->InsertNode();
                         node.subMeshIndex = static_cast<int>(subMeshIndex);
                         Copy<16>(node.transform, glm::identity<glm::mat4>());
-                        mesh->insertNode(node);
                         MFA_ASSERT(mesh->isValid());
 
                     }
@@ -1523,7 +1521,7 @@ namespace MFA::Importer
             MFA_ASSERT(mesh != nullptr);
             for (auto const & gltfNode : gltfModel.nodes)
             {
-                Node node{};
+                Node & node = mesh->InsertNode();
                 node.subMeshIndex = gltfNode.mesh;
                 node.children = gltfNode.children;
                 node.skin = gltfNode.skin;
@@ -1557,7 +1555,6 @@ namespace MFA::Importer
                         node.transform[i] = static_cast<float>(gltfNode.matrix[i]);
                     }
                 }
-                mesh->insertNode(node);
             }
         }
     }
@@ -1575,7 +1572,7 @@ namespace MFA::Importer
 
         for (auto const & gltfSkin : gltfModel.skins)
         {
-            Skin skin{};
+            Skin & skin = mesh->InsertSkin();
 
             // Joints
             skin.joints.insert(skin.joints.end(), gltfSkin.joints.begin(), gltfSkin.joints.end());
@@ -1601,8 +1598,6 @@ namespace MFA::Importer
             }
             MFA_ASSERT(skin.inverseBindMatrices.size() == skin.joints.size());
             skin.skeletonRootNode = gltfSkin.skeleton;
-
-            mesh->insertSkin(skin);
         }
     }
 

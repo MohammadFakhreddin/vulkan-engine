@@ -30,7 +30,6 @@ namespace MFA
             float halfHeight,
             float radius,
             CapsuleDirection direction = defaultDirection,
-            glm::vec3 const & center = {},
             Physics::SharedHandle<physx::PxMaterial> material = {}
         );
 
@@ -48,12 +47,13 @@ namespace MFA
 
     private:
 
-        [[nodiscard]]
-        static glm::quat RotateToDirection(CapsuleDirection direction);
+        void RotateToDirection();
 
         void UI_ShapeUpdate();
 
         void UI_CapsuleDirection();
+
+        void ComputeCenter();
 
     protected:
 
