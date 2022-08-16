@@ -108,7 +108,7 @@ protected:
 
     // TODO We could have used transform component instead
     glm::vec3 mPosition {};
-    glm::vec3 mEulerAngles {};
+    glm::vec3 mEulerAngles {};  // TODO: Camera should use rotation instead
 
     uint32_t mCameraBufferUpdateCounter = 0;
 

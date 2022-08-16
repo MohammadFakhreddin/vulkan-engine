@@ -110,7 +110,9 @@ namespace MFA
             }
             return {};
         }
-        
+
+        // TODO: We need GetComponentsInChildren
+
         [[nodiscard]]
         std::shared_ptr<Component> GetComponent(std::string const & componentName) const;
 
@@ -163,7 +165,7 @@ namespace MFA
 
         void UnLinkComponent(Component * component);
 
-        void onActivationStatusChanged();
+        void UpdateEntity();
 
 
     public:

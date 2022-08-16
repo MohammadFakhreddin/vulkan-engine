@@ -11,11 +11,11 @@ namespace MFA::Matrix
 
     glm::quat ToQuat(const float xDeg, const float yDeg, const float zDeg)
     {
-        return glm::quat {glm::vec3 {
+        return glm::quat{ glm::vec3 {
             glm::radians(xDeg),
             glm::radians(yDeg),
             glm::radians(zDeg)
-        }};
+        } };
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -30,7 +30,7 @@ namespace MFA::Matrix
     // Returns degree
     glm::vec3 ToEulerAngles(glm::quat const & quaternion)
     {
-        auto angles =  glm::degrees(glm::eulerAngles(quaternion));
+        auto angles = glm::degrees(glm::eulerAngles(quaternion));
         if (std::fabs(angles.z) >= 90)
         {
             angles.x += 180.f;
@@ -187,7 +187,7 @@ namespace MFA::Matrix
         float const farPlane
     )
     {
-        outMatrix[0][0] =  2.0f / (rightPlane - leftPlane);
+        outMatrix[0][0] = 2.0f / (rightPlane - leftPlane);
         MFA_ASSERT(outMatrix[0][1] == 0.0f);
         MFA_ASSERT(outMatrix[0][2] == 0.0f);
         MFA_ASSERT(outMatrix[0][3] == 0.0f);

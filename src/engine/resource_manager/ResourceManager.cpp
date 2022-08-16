@@ -548,7 +548,8 @@ namespace MFA::ResourceManager
                             pxMeshDesc.points.count = meshDesc.pointsCount;
                             pxMeshDesc.points.stride = meshDesc.pointsStride;
                             pxMeshDesc.points.data = meshDesc.pointsBuffer->memory.ptr;
-                        //if (isConvex)
+
+                            //if (isConvex)
                             //{
                             //    meshDesc.flags = physx::PxConvexFlag::eCOMPUTE_CONVEX;
                             //}
@@ -562,6 +563,7 @@ namespace MFA::ResourceManager
                             }
                             
                             auto const triangleMesh = Physics::CreateTriangleMesh(pxMeshDesc);
+
                             if (triangleMesh != nullptr)
                             {
                                 meshGroup->triangleMeshes.emplace_back(triangleMesh);

@@ -228,7 +228,7 @@ namespace MFA::JobSystem
             for (auto const & threadObject : mThreadObjects)
             {
                 threadObject->Notify();
-            }
+            }   // TODO: We should assign task to main thread as well and have minus 1 thread count
             std::this_thread::yield();
         }
         

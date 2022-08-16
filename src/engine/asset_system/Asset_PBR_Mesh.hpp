@@ -129,6 +129,12 @@ namespace MFA::AssetSystem::PBR
         {
             return subMeshIndex >= 0;
         }
+
+        [[nodiscard]]
+        bool HasParent() const noexcept
+        {
+            return parent >= 0;
+        }
     };
 
     struct Skin
@@ -249,7 +255,7 @@ namespace MFA::AssetSystem::PBR
 
         void insertSkin(Skin const & skin);
 
-        void insertAnimation(Animation const & animation);
+        void insertAnimation(Animation const & animation) const;
 
         [[nodiscard]]
         bool isValid() const override;
@@ -260,6 +266,12 @@ namespace MFA::AssetSystem::PBR
         void PreparePhysicsPoints(PhysicsPointsCallback const & callback) const override;
 
     private:
+
+        [[nodiscard]]
+        glm::mat4 ComputeNodeLocalTransform(Node const & node) const;
+
+        [[nodiscard]]
+        glm::mat4 ComputeNodeGlobalTransform(Node const & node) const;
 
         std::shared_ptr<MeshData> mData {};
 

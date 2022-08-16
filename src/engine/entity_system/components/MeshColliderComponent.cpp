@@ -14,14 +14,14 @@ namespace MFA
     using namespace physx;
 
     //-------------------------------------------------------------------------------------------------
-
+    // TODO: We have to rotate the mesh collider
     MeshColliderComponent::MeshColliderComponent(
         std::string nameId,
         bool const isConvex,
         glm::vec3 const & center,
         Physics::SharedHandle<PxMaterial> material
     )
-        : ColliderComponent(center, std::move(material))
+        : ColliderComponent(center, glm::identity<glm::quat>(), std::move(material))
         , mNameId(std::move(nameId))
         , mIsConvex(isConvex)
     {}
@@ -33,7 +33,7 @@ namespace MFA
         glm::vec3 const & center,
         Physics::SharedHandle<physx::PxMaterial> material
     )
-        : ColliderComponent(center, std::move(material))
+        : ColliderComponent(center, glm::identity<glm::quat>(), std::move(material))
         , mIsConvex(isConvex)
     {}
 

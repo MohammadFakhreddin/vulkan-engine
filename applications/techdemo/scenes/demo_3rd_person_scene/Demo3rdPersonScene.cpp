@@ -90,16 +90,21 @@ void Demo3rdPersonScene::Init()
         }
         mPlayerMeshRenderer = entity->GetComponent<MeshRendererComponent>();
         // TODO: We need to be able to draw colliders on editor as well
-        {// Capsule collider
-            auto const capsuleCollider = entity->AddComponent<CapsuleCollider>(5.0f, 1.0f);
-            capsuleCollider->Init();
+        //{// Capsule collider
+        //    auto const capsuleCollider = entity->AddComponent<CapsuleCollider>(2.0f, 1.0f);
+        //    capsuleCollider->Init();
+        //    EntitySystem::UpdateEntity(entity);
+        //}
+        {// Mesh collider
+            auto const meshCollider = entity->AddComponent<MeshCollider>();
+            meshCollider->Init();
             EntitySystem::UpdateEntity(entity);
         }
-        {// Rigidbody
-            auto const rigidbody = entity->AddComponent<Rigidbody>(false, true, 1.0f);
-            rigidbody->Init();
-            EntitySystem::UpdateEntity(entity);
-        }
+        //{// Rigidbody
+        //    auto const rigidbody = entity->AddComponent<Rigidbody>(false, true, 1.0f);
+        //    rigidbody->Init();
+        //    EntitySystem::UpdateEntity(entity);
+        //}
     }
 
     //for (float i = 0; i < 10.0f; i += 1.0f) {// Dummy soldiers
@@ -113,23 +118,23 @@ void Demo3rdPersonScene::Init()
     //    }
     //}
 
+    Entity * sponzaEntity = nullptr;
     {// Map
-        auto * entity = sponzaPrefab.Clone(GetRootEntity(), Prefab::CloneEntityOptions {.name = "Sponza"});
-        if (auto const ptr = entity->GetComponent<TransformComponent>())
+        sponzaEntity = sponzaPrefab.Clone(GetRootEntity(), Prefab::CloneEntityOptions{ .name = "Sponza" });
+        if (auto const ptr = sponzaEntity->GetComponent<TransformComponent>())
         {
             float position[3]{ 0.4f, 2.0f, -6.0f };
             float eulerAngle[3]{ 180.0f, -90.0f, 0.0f };
             float scale[3]{ 1.0f, 1.0f, 1.0f };
             ptr->UpdateLocalTransform(position, eulerAngle, scale);
         }
-
         {// Mesh collider
-            auto meshCollider = entity->AddComponent<MeshColliderComponent>(true);
+            auto const meshCollider = sponzaEntity->AddComponent<MeshColliderComponent>(true);
             meshCollider->Init();
-            EntitySystem::UpdateEntity(entity);
+            EntitySystem::UpdateEntity(sponzaEntity);
         }
 
-        entity->SetActive(true);
+        sponzaEntity->SetActive(true);
     }
     
     {// Directional light
@@ -157,17 +162,17 @@ void Demo3rdPersonScene::Init()
     }
 
     {// Fire
-        RC::AcquireGpuTexture("images/fire/particle_fire.ktx", [this](std::shared_ptr<RT::GpuTexture> const & gpuTexture)->void{
+        RC::AcquireGpuTexture("images/fire/particle_fire.ktx", [this, sponzaEntity](std::shared_ptr<RT::GpuTexture> const & gpuTexture)->void{
             auto * particlePipeline = SceneManager::GetPipeline<ParticlePipeline>();
             MFA_ASSERT(particlePipeline != nullptr);
 
             createFireEssence(gpuTexture);
-
+            // TODO: Use getComponentInchildren
             // Fire instances
-            createFireInstance(glm::vec3 {-1.05f, 1.0f, -1.05f});
-            createFireInstance(glm::vec3 {+1.85f, 1.0f, -1.05f});
-            createFireInstance(glm::vec3 {-1.05f, 1.0f, -9.9f});
-            createFireInstance(glm::vec3 {+1.85f, 1.0f, -9.9f});
+            createFireInstance(glm::vec3 {-1.05f, 1.0f, -2.1f}, sponzaEntity);
+            createFireInstance(glm::vec3{ +1.85f, 1.0f, -2.1f }, sponzaEntity);
+            createFireInstance(glm::vec3{ -1.05f, 1.0f, -10.950f }, sponzaEntity);
+            createFireInstance(glm::vec3{ +1.85f, 1.0f, -10.950f }, sponzaEntity);
         });
     }
 
@@ -191,13 +196,13 @@ void Demo3rdPersonScene::Update(float const deltaTimeInSec)
         {
             auto position = playerTransform->GetLocalPosition();
             auto scale = playerTransform->GetLocalScale();
-            auto rotationEuler = playerTransform->GetLocalRotationEulerAngles();
+            auto rotationEuler = playerTransform->GetLocalRotation().GetEulerAngles();
 
             float cameraEulerAngles[3];
             MFA_ASSERT(mThirdPersonCamera.expired() == false);
             mThirdPersonCamera.lock()->GetRotation(cameraEulerAngles);
 
-            rotationEuler.y = cameraEulerAngles[1];
+            rotationEuler.y = -cameraEulerAngles[1];
             float extraAngleValue;
             if (inputRightMove == 1.0f)
             {
@@ -261,40 +266,38 @@ void Demo3rdPersonScene::Update(float const deltaTimeInSec)
                 MFA_ASSERT(false);
             }
 
-            rotationEuler.y += extraAngleValue;
+            rotationEuler.y -= extraAngleValue;
 
-            auto currentQuat = playerTransform->GetLocalRotationQuaternion();
+            auto currentQuat = playerTransform->GetLocalRotation().GetQuaternion();
 
             auto const targetQuat = Matrix::ToQuat(rotationEuler);
+
+            auto const t = Math::Clamp(10.0f * deltaTimeInSec, 0.0f, 1.0f);
+            auto const nextQuat = glm::slerp(currentQuat, targetQuat, t);
+            Rotation rotation{ nextQuat };
+            //auto nextAngles = Matrix::ToEulerAngles(nextQuat);
+
             
-            auto const nextQuat = glm::slerp(currentQuat, targetQuat, 10.0f * deltaTimeInSec);
-            auto nextAngles = Matrix::ToEulerAngles(nextQuat);
-
-            // Moved to matrix class
-            //if (std::fabs(nextAngles.z) >= 90)
-            //{
-            //    nextAngles.x += 180.f;
-            //    nextAngles.y = 180.f - nextAngles.y;
-            //    nextAngles.z += 180.f;
-            //}
-
-            auto rotationMatrix = glm::identity<glm::mat4>();
-            Matrix::RotateWithEulerAngle(rotationMatrix, nextAngles);
+            //auto rotationMatrix = glm::identity<glm::mat4>();
+            //Matrix::RotateWithEulerAngle(rotationMatrix, nextAngles);
 
             glm::vec4 movementDirection = Math::ForwardVec4;
-            movementDirection = movementDirection * rotationMatrix;
+            movementDirection = rotation.GetMatrix() * movementDirection;
+            //movementDirection = movementDirection * rotation.GetMatrix();
+
+            //movementDirection = movementDirection * rotationMatrix;
             //movementDirection = glm::normalize(movementDirection);  // I think we don't need this line
-            movementDirection *= 1 * deltaTimeInSec * SoldierSpeed;
+            //movementDirection *= deltaTimeInSec * SoldierSpeed;
 
             // for (int i = 0; i < 3; ++i)
             // {
             //     position[i] += movementDirection[i];
             // }
-            position += Copy<glm::vec3>(movementDirection);
+            position += Copy<glm::vec3>(movementDirection) * deltaTimeInSec * SoldierSpeed;
 
             playerTransform->UpdateLocalTransform(
                 position,
-                nextAngles,
+                rotation,
                 scale
             );
             // TODO What should we do for animations ?
@@ -387,12 +390,12 @@ void Demo3rdPersonScene::createFireEssence(std::shared_ptr<RT::GpuTexture> const
 
 //-------------------------------------------------------------------------------------------------
 
-void Demo3rdPersonScene::createFireInstance(glm::vec3 const & position) const
+void Demo3rdPersonScene::createFireInstance(glm::vec3 const & position, Entity * parent) const
 {
     auto * particlePipeline = SceneManager::GetPipeline<ParticlePipeline>();
     MFA_ASSERT(particlePipeline != nullptr);
 
-    auto * entity = EntitySystem::CreateEntity("FireInstance", GetRootEntity());
+    auto * entity = EntitySystem::CreateEntity("FireInstance", parent);
     MFA_ASSERT(entity != nullptr);
 
     auto const transform = entity->AddComponent<TransformComponent>();

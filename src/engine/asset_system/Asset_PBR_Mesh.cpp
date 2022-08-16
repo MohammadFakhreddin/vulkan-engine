@@ -5,6 +5,8 @@
 #include "engine/job_system/JobSystem.hpp"
 
 #include <foundation/PxVec3.h>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 namespace MFA::AssetSystem::PBR
 {
@@ -104,7 +106,7 @@ namespace MFA::AssetSystem::PBR
             if (subMesh.hasPositionMinMax)
             {
                 mData->hasPositionMinMax = true;
-
+                // TODO: This logic is incorrect, For computing min and max correctly we should first do the skinning!
                 // Position min
                 if (subMesh.positionMin[0] < mData->positionMin[0])
                 {
@@ -248,7 +250,7 @@ namespace MFA::AssetSystem::PBR
 
     //-------------------------------------------------------------------------------------------------
 
-    void Mesh::insertAnimation(Animation const & animation)
+    void Mesh::insertAnimation(Animation const & animation) const
     {
         mData->animations.emplace_back(animation);
     }
@@ -269,43 +271,83 @@ namespace MFA::AssetSystem::PBR
 
     //-------------------------------------------------------------------------------------------------
 
+    glm::mat4 Mesh::ComputeNodeLocalTransform(Node const & node) const
+    {
+        glm::mat4 matrix { 1 };
+        matrix = glm::translate(matrix, Copy<glm::vec3>(node.translate));
+        matrix = matrix * glm::toMat4(Copy<glm::quat>(node.rotation));
+        matrix = glm::scale(matrix, Copy<glm::vec3>(node.scale));
+        matrix = matrix * Copy<glm::mat4>(node.transform);
+        return matrix;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    glm::mat4 Mesh::ComputeNodeGlobalTransform(Node const & node) const
+    {
+        auto matrix = ComputeNodeLocalTransform(node);
+
+        auto * parentNode = &node;
+        while (parentNode->HasParent())
+        {
+            parentNode = &mData->nodes[node.parent];
+            matrix = ComputeNodeLocalTransform(*parentNode) * matrix;
+        }
+
+        return matrix;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void Mesh::PreparePhysicsPoints(PhysicsPointsCallback const & callback) const
     {
         std::vector<Physics::TriangleMeshDesc> triangleMeshes {};
 
+        // TODO: Important, Apply the matrix for each of them
         // TODO: Multi-thread
-        for (auto const & subMesh : mData->subMeshes)
+
+        for (auto const & node : mData->nodes)
         {
-            for (auto const & primitive : subMesh.primitives)
+            if (node.hasSubMesh())
             {
-                triangleMeshes.emplace_back();
-                auto & triangleMesh = triangleMeshes.back();
-                MFA_ASSERT(primitive.indicesCount % 3 == 0);
-
-                triangleMesh.trianglesCount = primitive.indicesCount / 3;
-                triangleMesh.trianglesStride = 3 * sizeof(Index);
-                triangleMesh.triangleBuffer = Memory::Alloc(primitive.indicesCount * sizeof(Index));
-
-                triangleMesh.pointsStride = sizeof(physx::PxVec3);
-                triangleMesh.pointsCount = primitive.vertexCount;
-                triangleMesh.pointsBuffer = Memory::Alloc(primitive.vertexCount * sizeof(physx::PxVec3));
-
-                auto * pointsArray = triangleMesh.pointsBuffer->memory.as<physx::PxVec3>();
-                
-                auto * trianglesArray = triangleMesh.triangleBuffer->memory.as<Index>();
-
-                auto const * vertexArray = reinterpret_cast<Vertex *>(mVertexData->memory.ptr + primitive.verticesOffset);
-                auto const * indicesArray = reinterpret_cast<Index *>(mIndexData->memory.ptr + primitive.indicesOffset);
-
-                for (uint32_t i = 0; i < primitive.vertexCount; ++i)
+                auto matrix = ComputeNodeGlobalTransform(node);
+                auto const & subMesh = mData->subMeshes[node.subMeshIndex];
+                for (auto const & primitive : subMesh.primitives)
                 {
-                    static_assert(sizeof(vertexArray[i].position) == sizeof(pointsArray[i]));
-                    Copy(pointsArray[i], vertexArray[i].position);
-                }
+                    triangleMeshes.emplace_back();
+                    auto & triangleMesh = triangleMeshes.back();
+                    MFA_ASSERT(primitive.indicesCount % 3 == 0);
 
-                for (uint32_t i = 0; i < primitive.indicesCount; ++i)
-                {
-                    trianglesArray[i] = indicesArray[i] - primitive.verticesStartingIndex;
+                    triangleMesh.trianglesCount = primitive.indicesCount / 3;
+                    triangleMesh.trianglesStride = 3 * sizeof(Index);
+                    triangleMesh.triangleBuffer = Memory::Alloc(primitive.indicesCount * sizeof(Index));
+
+                    triangleMesh.pointsStride = sizeof(physx::PxVec3);
+                    triangleMesh.pointsCount = primitive.vertexCount;
+                    triangleMesh.pointsBuffer = Memory::Alloc(primitive.vertexCount * sizeof(physx::PxVec3));
+
+                    auto * pointsArray = triangleMesh.pointsBuffer->memory.as<physx::PxVec3>();
+
+                    auto * trianglesArray = triangleMesh.triangleBuffer->memory.as<Index>();
+
+                    auto const * vertexArray = reinterpret_cast<Vertex *>(mVertexData->memory.ptr + primitive.verticesOffset);
+                    auto const * indicesArray = reinterpret_cast<Index *>(mIndexData->memory.ptr + primitive.indicesOffset);
+
+                    for (uint32_t i = 0; i < primitive.vertexCount; ++i)
+                    {
+                        auto const & vertex = vertexArray[i];
+                        static_assert(sizeof(vertex.position) == sizeof(pointsArray[i]));
+
+                        glm::vec4 vertex4 { vertex.position[0], vertex.position[1], vertex.position[2], 1.0f };
+                        vertex4 = matrix * vertex4;
+
+                        Copy(pointsArray[i], vertex4);
+                    }
+
+                    for (uint32_t i = 0; i < primitive.indicesCount; ++i)
+                    {
+                        trianglesArray[i] = indicesArray[i] - primitive.verticesStartingIndex;
+                    }
                 }
             }
         }

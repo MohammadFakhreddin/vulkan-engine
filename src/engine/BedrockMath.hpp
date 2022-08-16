@@ -15,13 +15,13 @@ namespace MFA::Math
     static constexpr float PiFloat = PiTemplate<float>;
     static constexpr double PiDouble = PiTemplate<double>;
 
-    inline static const glm::vec4 ForwardVec4{ 0.0f, 0.0f, 1.0f, 1.0f };
-    inline static const glm::vec4 RightVec4{ 1.0f, 0.0f, 0.0f, 1.0f };
-    inline static const glm::vec4 UpVec4{ 0.0f, 1.0f, 0.0f, 1.0f };
+    inline static constexpr glm::vec4 ForwardVec4{ 0.0f, 0.0f, 1.0f, 1.0f };
+    inline static constexpr glm::vec4 RightVec4{ 1.0f, 0.0f, 0.0f, 1.0f };
+    inline static constexpr glm::vec4 UpVec4{ 0.0f, 1.0f, 0.0f, 1.0f };
 
-    inline static const glm::vec3 ForwardVec3{ 0.0f, 0.0f, 1.0f };
-    inline static const glm::vec3 RightVec3{ 1.0f, 0.0f, 0.0f };
-    inline static const glm::vec3 UpVec3{ 0.0f, 1.0f, 0.0f };
+    inline static constexpr glm::vec3 ForwardVec3{ 0.0f, 0.0f, 1.0f };
+    inline static constexpr glm::vec3 RightVec3{ 1.0f, 0.0f, 0.0f };
+    inline static constexpr glm::vec3 UpVec3{ 0.0f, 1.0f, 0.0f };
 
     template<typename A, typename B, typename C>
     A Clamp(const A & value, B min_value, C max_value)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ColliderComponent.hpp"
+#include "engine/BedrockMatrix.hpp"
 #include "engine/entity_system/Component.hpp"
 
 namespace MFA
@@ -9,6 +10,15 @@ namespace MFA
     class CapsuleColliderComponent final : public ColliderComponent
     {
     public:
+
+        enum class CapsuleDirection
+        {
+            X,
+            Y,
+            Z
+        };
+
+        static constexpr CapsuleDirection defaultDirection = CapsuleDirection::Y;
 
         MFA_COMPONENT_PROPS(
             CapsuleColliderComponent,
@@ -19,6 +29,7 @@ namespace MFA
         explicit CapsuleColliderComponent(
             float halfHeight,
             float radius,
+            CapsuleDirection direction = defaultDirection,
             glm::vec3 const & center = {},
             Physics::SharedHandle<physx::PxMaterial> material = {}
         );
@@ -35,6 +46,15 @@ namespace MFA
 
         void Deserialize(nlohmann::json const & jsonObject) override;
 
+    private:
+
+        [[nodiscard]]
+        static glm::quat RotateToDirection(CapsuleDirection direction);
+
+        void UI_ShapeUpdate();
+
+        void UI_CapsuleDirection();
+
     protected:
 
         [[nodiscard]]
@@ -42,6 +62,8 @@ namespace MFA
 
         float mHalfHeight = 0.0f;
         float mRadius = 0.0f;
+
+        CapsuleDirection mCapsuleDirection = defaultDirection;
 
     };
 

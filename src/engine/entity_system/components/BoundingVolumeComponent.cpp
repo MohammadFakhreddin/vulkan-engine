@@ -153,12 +153,12 @@ void MFA::BoundingVolumeComponent::updateVolumeTransform() const
         return;
     }
 
-    auto const & bvWorldPosition = GetWorldPosition();
+    auto const & bvWorldPosition = GetWorldPosition();  // Question: Why do we use the world position ?
     auto const & bvExtend = GetExtend();
 
     bvTransform->UpdateLocalTransform(
         bvWorldPosition,
-        bvTransform->GetLocalRotationEulerAngles(),
+        bvTransform->GetLocalRotation(),    // Question: Why do we use the local rotation ?
         bvExtend
     );
 }

@@ -7,6 +7,8 @@
 #include <glm/gtx/quaternion.hpp>
 #include <physx/geometry/PxGeometry.h>
 
+#include "engine/BedrockRotation.hpp"
+
 // TODO: Use this link
 // https://docs.nvidia.com/gameworks/content/gameworkslibrary/physx/guide/Manual/Geometry.html
 
@@ -37,6 +39,7 @@ namespace MFA
 
         explicit ColliderComponent(
             glm::vec3 const & center,
+            glm::quat const & rotation,
             Physics::SharedHandle<physx::PxMaterial> material
         );
 
@@ -65,7 +68,7 @@ namespace MFA
 
         void CreateShape();
 
-        void UpdateShapeCenter() const;
+        void UpdateShapeRelativeTransform() const;
 
         void UpdateShapeGeometry();
 
@@ -87,18 +90,22 @@ namespace MFA
         Physics::SharedHandle<physx::PxRigidDynamic> mRigidDynamic = nullptr;
         Physics::SharedHandle<physx::PxRigidStatic> mRigidStatic = nullptr;
 
-        std::vector<physx::PxShape *> mShapes {};
-        
+        std::vector<physx::PxShape *> mShapes{};
+
         SignalId mTransformChangeListenerId = -1;
 
         bool mIsDynamic = false;
 
-        glm::vec3 mCenter {};
+        // Local relative position
+        glm::vec3 mCenter{};
 
-        Physics::SharedHandle<physx::PxMaterial> mMaterial = nullptr;
+        // Local relative rotation
+        Rotation mRotation{};
 
         // Global world scale
-        glm::vec3 mScale {};
+        glm::vec3 mScale{};
+
+        Physics::SharedHandle<physx::PxMaterial> mMaterial = nullptr;
 
     };
 

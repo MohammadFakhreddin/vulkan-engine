@@ -141,6 +141,8 @@ list(
     "src/engine/BedrockSignalTypes.hpp"
     "src/engine/BedrockSignal.hpp"
     "src/engine/BedrockString.hpp"
+    "src/engine/BedrockRotation.hpp"
+    "src/engine/BedrockRotation.cpp"
 )
 
 add_library("Bedrock"

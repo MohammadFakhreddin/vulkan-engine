@@ -1,3 +1,4 @@
+// TODO: Create a common place for all of these includes
 #define STB_IMAGE_IMPLEMENTATION
 #include "../src/libs/stb_image/stb_image.h"
 #define TINYOBJLOADER_IMPLEMENTATION

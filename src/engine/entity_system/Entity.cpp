@@ -206,7 +206,7 @@ namespace MFA
         }
         mIsActive = isActive;
         mActivationStatusChangeSignal.EmitMultiThread(mIsActive);
-        onActivationStatusChanged();
+        UpdateEntity();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -265,11 +265,8 @@ namespace MFA
             return;
         }
         mIsParentActive = isActive;
-        if (isActive == true)   // If we are already in-active we remain inactive
-        {
-            mActivationStatusChangeSignal.Emit(IsActive());
-            onActivationStatusChanged();
-        }
+        mActivationStatusChangeSignal.Emit(IsActive());
+        UpdateEntity();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -529,7 +526,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void Entity::onActivationStatusChanged()
+    void Entity::UpdateEntity()
     {
         if (mIsInitialized == false)
         {

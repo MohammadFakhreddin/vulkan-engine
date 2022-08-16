@@ -239,7 +239,7 @@ namespace MFA
 
     void CameraComponent::ForceRotation(float eulerAngles[3])
     {
-        if (IsEqual<3>(mPosition, eulerAngles) == false)
+        if (IsEqual<3>(mEulerAngles, eulerAngles) == false)
         {
             Copy<3>(mEulerAngles, eulerAngles);
             mIsTransformDirty = true;

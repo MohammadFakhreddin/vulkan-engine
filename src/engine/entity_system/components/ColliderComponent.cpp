@@ -20,9 +20,11 @@ namespace MFA
 
     ColliderComponent::ColliderComponent(
         glm::vec3 const & center,
+        glm::quat const & rotation,
         Physics::SharedHandle<PxMaterial> material
     )
         : mCenter(center)
+        , mRotation(rotation)
         , mMaterial(std::move(material))
     {}
 
@@ -64,6 +66,7 @@ namespace MFA
             mRigidStatic = Physics::CreateStaticActor(pxTransform);
             mActor = mRigidStatic->Ptr();
         }
+        MFA_ASSERT(mActor != nullptr);
 
         MFA_ASSERT(mActor != nullptr);
         mActor->userData = this;
@@ -92,7 +95,10 @@ namespace MFA
 
         RemoveShapes();
 
-        Physics::RemoveActor(*mActor);
+        if (mActor != nullptr)
+        {
+            Physics::RemoveActor(*mActor);
+        }
     }
     
     //-------------------------------------------------------------------------------------------------
@@ -102,10 +108,16 @@ namespace MFA
         if (UI::TreeNode(Name))
         {
             Parent::OnUI();
-            if (UI::InputFloat<3>("Center", mCenter))
+
+            bool relativeTransformChanged = UI::InputFloat<3>("Center", mCenter);
+            auto eulerAngles = mRotation.GetEulerAngles();
+            relativeTransformChanged |= UI::InputFloat<3>("Euler angles", eulerAngles);
+
+            if (relativeTransformChanged)
             {
-                UpdateShapeCenter();
+                UpdateShapeRelativeTransform();
             }
+
             UI::TreePop();
         }
     }
@@ -124,6 +136,7 @@ namespace MFA
         Component::OnActivationStatusChanged(isActive);
 
         mActor->setActorFlag(PxActorFlag::eDISABLE_SIMULATION, !isActive);
+        mActor->setActorFlag(PxActorFlag::eVISUALIZATION, isActive);
     }
     
     //-------------------------------------------------------------------------------------------------
@@ -191,13 +204,14 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ColliderComponent::UpdateShapeCenter() const
+    void ColliderComponent::UpdateShapeRelativeTransform() const
     {
         for (auto & shape : mShapes)
         {
             // Updating the center without modifying rotation
             auto newTransform = shape->getLocalPose();
             Copy(newTransform.p, mCenter);
+            Copy(newTransform.q, mRotation.GetQuaternion());
             shape->setLocalPose(newTransform);
         }
     }
@@ -244,7 +258,7 @@ namespace MFA
             shape->userData = this;
         }
 
-        UpdateShapeCenter();
+        UpdateShapeRelativeTransform();
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -123,7 +123,12 @@ namespace MFA::Physics
         MFA_ASSERT(state->physics != nullptr);
 
         // TODO: Do we need this many threads ?
-        state->dispatcher = CreateHandle(PxDefaultCpuDispatcherCreate(std::thread::hardware_concurrency()));
+        state->dispatcher = CreateHandle(PxDefaultCpuDispatcherCreate(
+            std::max<PxU32>(
+                1,
+                static_cast<PxU32>(static_cast<float>(std::thread::hardware_concurrency()) * 0.5f)
+            )
+        ));
 
         PxSceneDesc sceneDesc(state->physics->Ptr()->getTolerancesScale());
         sceneDesc.gravity = params.gravity;  // We can also manually control gravity for better control
@@ -136,8 +141,7 @@ namespace MFA::Physics
         state->controllerManager = CreateHandle(PxCreateControllerManager(state->scene->Ref()));
 
 #ifdef MFA_DEBUG
-        PxPvdSceneClient * pvdClient = state->scene->Ptr()->getScenePvdClient();
-        if (pvdClient)
+        if (PxPvdSceneClient * pvdClient = state->scene->Ptr()->getScenePvdClient())
         {
             pvdClient->setScenePvdFlag(PxPvdSceneFlag::eTRANSMIT_CONSTRAINTS, true);
             pvdClient->setScenePvdFlag(PxPvdSceneFlag::eTRANSMIT_CONTACTS, true);
@@ -148,7 +152,31 @@ namespace MFA::Physics
         state->defaultMaterial = CreateMaterial(0.5f, 0.5f, 0.5f);
 
         auto cookingParams = PxCookingParams(toleranceScale);
+        //cookingParams.meshPreprocessParams |= PxMeshPreprocessingFlag::eWELD_VERTICES;
         //cookingParams.meshPreprocessParams |= PxMeshPreprocessingFlag::eDISABLE_CLEAN_MESH;
+            // Create BVH33 midphase
+        cookingParams.midphaseDesc = PxMeshMidPhase::eBVH33;
+
+        // setup common cooking params
+        //setupCommonCookingParams(cookingParams, skipMeshCleanup, skipEdgeData);
+
+        // The COOKING_PERFORMANCE flag for BVH33 midphase enables a fast cooking path at the expense of somewhat lower quality BVH construction.	
+        //if (cookingPerformance)
+            //params.midphaseDesc.mBVH33Desc.meshCookingHint = PxMeshCookingHint::eCOOKING_PERFORMANCE;
+        //else
+        cookingParams.midphaseDesc.mBVH33Desc.meshCookingHint = PxMeshCookingHint::eSIM_PERFORMANCE;
+
+        // If meshSizePerfTradeoff is set to true, smaller mesh cooked mesh is produced. The mesh size/performance trade-off
+        // is controlled by setting the meshSizePerformanceTradeOff from 0.0f (smaller mesh) to 1.0f (larger mesh).
+        //if (meshSizePerfTradeoff)
+        //{
+        cookingParams.midphaseDesc.mBVH33Desc.meshSizePerformanceTradeOff = 0.0f;
+        //}
+        //else
+        //{
+        //    // using the default value
+        //    params.midphaseDesc.mBVH33Desc.meshSizePerformanceTradeOff = 0.55f;
+        //}
 
         state->cooking = CreateHandle(PxCreateCooking(
             PX_PHYSICS_VERSION,
@@ -249,6 +277,9 @@ namespace MFA::Physics
         {
             PxDefaultMemoryInputData input(buf.getData(), buf.getSize());
             mesh = CreateHandle(state->physics->Ptr()->createTriangleMesh(input));
+        } else
+        {
+            MFA_LOG_WARN("Cooking failed!");
         }
 
         return mesh;

@@ -10,7 +10,6 @@
 #include "engine/entity_system/components/TransformComponent.hpp"
 #include "PBR_Essence.hpp"
 #include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
-#include "engine/render_system/RenderTypes.hpp"
 
 #include <glm/gtx/quaternion.hpp>
 

@@ -18,7 +18,7 @@ namespace MFA
         glm::vec3 const & center,
         Physics::SharedHandle<PxMaterial> material
     )
-        : ColliderComponent(center, std::move(material))
+        : ColliderComponent(center, glm::identity<glm::quat>(), std::move(material))
         , mHalfSize(size.x * 0.5f, size.y * 0.5f, size.z * 0.5f)
     {
         MFA_ASSERT(size.x > 0.0f);

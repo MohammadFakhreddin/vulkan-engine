@@ -11,30 +11,39 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     TransformComponent::TransformComponent(
-        glm::vec3 const & position_,
-        glm::vec3 const & rotation_,          // In euler angle
-        glm::vec3 const & scale_
+        glm::vec3 const & localPosition_,
+        glm::vec3 const & localEulerAngles_,          // Degrees
+        glm::vec3 const & localScale_
     )
-        : mLocalPosition(position_)
-        , mLocalRotationAngle(rotation_)
-        , mLocalScale(scale_)
-    {
-        mLocalRotationQuat = Matrix::ToQuat(rotation_.x, rotation_.y, rotation_.z);
-    }
+        : mLocalPosition(localPosition_)
+        , mLocalRotation(localEulerAngles_)
+        , mLocalScale(localScale_)
+    {}
 
     
     //-------------------------------------------------------------------------------------------------
 
     TransformComponent::TransformComponent(
-        glm::vec3 const & position_,
-        glm::quat const & rotation_,
-        glm::vec3 const & scale_
+        glm::vec3 const & localPosition_,
+        glm::quat const & localQuaternion_,
+        glm::vec3 const & localScale_
     )
-        : mLocalPosition(position_)
-        , mLocalRotationQuat(rotation_)
+        : mLocalPosition(localPosition_)
+        , mLocalRotation(localQuaternion_)
+        , mLocalScale(localScale_)
+    {}
+
+    //-------------------------------------------------------------------------------------------------
+
+    TransformComponent::TransformComponent(
+        glm::vec3 const& localPosition_,
+        Rotation const& localRotation_,
+        glm::vec3 const& scale_
+    )
+        : mLocalPosition(localPosition_)
+        , mLocalRotation(localRotation_)
         , mLocalScale(scale_)
     {
-        mLocalRotationAngle = Matrix::ToEulerAngles(mLocalRotationQuat);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -72,7 +81,7 @@ namespace MFA
     
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::UpdateLocalTransform(float position[3], float rotation[3], float scale[3])
+    void TransformComponent::UpdateLocalTransform(float position[3], float eulerAngles[3], float scale[3])
     {
         bool hasChanged = false;
         if (IsEqual<3>(mLocalPosition, position) == false)
@@ -80,10 +89,9 @@ namespace MFA
             Copy<3>(mLocalPosition, position);
             hasChanged = true;
         }
-        if (IsEqual<3>(mLocalRotationAngle, rotation) == false)
+        if (mLocalRotation != eulerAngles)
         {
-            Copy<3>(mLocalRotationAngle, rotation);
-            mLocalRotationQuat = Matrix::ToQuat(mLocalRotationAngle);
+            mLocalRotation = eulerAngles;
             hasChanged = true;
         }
         if (IsEqual<3>(mLocalScale, scale) == false)
@@ -101,7 +109,7 @@ namespace MFA
 
     void TransformComponent::UpdateLocalTransform(
         glm::vec3 const & position,
-        glm::vec3 const & rotation,
+        glm::vec3 const & eulerAngles,
         glm::vec3 const & scale
     )
     {
@@ -111,10 +119,39 @@ namespace MFA
             Copy(mLocalPosition, position);
             hasChanged = true;
         }
-        if (IsEqual(mLocalRotationAngle, rotation) == false)
+        if (mLocalRotation != eulerAngles)
         {
-            Copy(mLocalRotationAngle, rotation);
-            mLocalRotationQuat = Matrix::ToQuat(mLocalRotationAngle);
+            mLocalRotation = eulerAngles;
+            hasChanged = true;
+        }
+        if (IsEqual(mLocalScale, scale) == false)
+        {
+            Copy(mLocalScale, scale);
+            hasChanged = true;
+        }
+        if (hasChanged)
+        {
+            ComputeTransform();
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void TransformComponent::UpdateLocalTransform(
+        glm::vec3 const& position,
+        Rotation const& rotation,
+        glm::vec3 const& scale
+    )
+    {
+        bool hasChanged = false;
+        if (IsEqual(mLocalPosition, position) == false)
+        {
+            Copy(mLocalPosition, position);
+            hasChanged = true;
+        }
+        if (mLocalRotation != rotation)
+        {
+            mLocalRotation = rotation;
             hasChanged = true;
         }
         if (IsEqual(mLocalScale, scale) == false)
@@ -154,10 +191,9 @@ namespace MFA
 
     void TransformComponent::UpdateLocalRotation(glm::vec3 const & rotation)
     {
-        if (IsEqual(mLocalRotationAngle, rotation) == false)
+        if (mLocalRotation != rotation)
         {
-            Copy(mLocalRotationAngle, rotation);
-            mLocalRotationQuat = Matrix::ToQuat(mLocalRotationAngle);
+            mLocalRotation = rotation;
             ComputeTransform();
         }
     }
@@ -166,10 +202,9 @@ namespace MFA
 
     void TransformComponent::UpdateLocalRotation(float rotation[3])
     {
-        if (IsEqual<3>(mLocalRotationAngle, rotation) == false)
+        if (mLocalRotation != rotation)
         {
-            Copy<3>(mLocalRotationAngle, rotation);
-            mLocalRotationQuat = Matrix::ToQuat(mLocalRotationAngle);
+            mLocalRotation = rotation;
             ComputeTransform();
         }
     }
@@ -204,22 +239,21 @@ namespace MFA
         if (IsEqual(mWorldPosition, position) == false)
         {
             positionChanged = true;
+            Copy(mWorldPosition, position);
         }
 
         bool rotationChanged = false;
-        if (IsEqual(mWorldRotation, rotation) == false)
+        if (mWorldRotation != rotation)
         {
             rotationChanged = true;
+            mWorldRotation = rotation;
         }
 
         if (positionChanged == false && rotationChanged == false)
         {
             return;
         }
-        // TODO: Re-check this part
-        Copy(mWorldPosition, position);
-        Copy(mWorldRotation, rotation);
-
+        
         auto translateMatrix = glm::identity<glm::mat4>();
         Matrix::Translate(translateMatrix, mWorldPosition);
 
@@ -228,7 +262,7 @@ namespace MFA
         Matrix::Scale(scaleMatrix, mWorldScale);
 
         // Rotation
-        auto const rotationMatrix = glm::toMat4(mWorldRotation);
+        auto const & rotationMatrix = mWorldRotation.GetMatrix();
 
         mWorldTransform = translateMatrix * scaleMatrix * rotationMatrix;
         mInverseWorldTransform = glm::inverse(mWorldTransform);
@@ -244,8 +278,7 @@ namespace MFA
 
             if (rotationChanged)
             {
-                mLocalRotationQuat = glm::inverse(parentTransform->GetWorldRotation()) * mWorldRotation;
-                mLocalRotationAngle = Matrix::ToEulerAngles(mLocalRotationQuat);
+                mLocalRotation = glm::inverse(parentTransform->GetWorldRotation().GetQuaternion()) * mWorldRotation.GetQuaternion();
             }
 
         }
@@ -253,13 +286,12 @@ namespace MFA
         {
             if (positionChanged)
             {
-                mLocalPosition = position;
+                mLocalPosition = mWorldPosition;
             }
 
             if (rotationChanged)
             {
-                mLocalRotationQuat = rotation;
-                mLocalRotationAngle = Matrix::ToEulerAngles(mLocalRotationQuat);
+                mLocalRotation = mWorldRotation;
             }
 
             ComputeTransform();
@@ -299,21 +331,14 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    glm::vec3 const & TransformComponent::GetLocalRotationEulerAngles() const
+    Rotation const & TransformComponent::GetLocalRotation() const
     {
-        return mLocalRotationAngle;
+        return mLocalRotation;
     }
-
+    
     //-------------------------------------------------------------------------------------------------
 
-    glm::quat const & TransformComponent::GetLocalRotationQuaternion() const
-    {
-        return mLocalRotationQuat;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    glm::quat const & TransformComponent::GetWorldRotation() const
+    Rotation const & TransformComponent::GetWorldRotation() const
     {
         return mWorldRotation;
     }
@@ -358,12 +383,14 @@ namespace MFA
 
             changed |= UI::InputFloat<3>("Position", mLocalPosition);
             changed |= UI::InputFloat<3>("Scale", mLocalScale);
-            if (UI::InputFloat<3>("Rotation", mLocalRotationAngle))
+
+            auto eulerAngles = mLocalRotation.GetEulerAngles();
+            if (UI::InputFloat<3>("Rotation (Euler angles)", eulerAngles))
             {
-                mLocalRotationQuat = Matrix::ToQuat(mLocalRotationAngle);
+                mLocalRotation = eulerAngles;
                 changed = true;
             }
-
+            
             if (changed)
             {
                 ComputeTransform();
@@ -379,7 +406,7 @@ namespace MFA
     {
         entity->AddComponent<TransformComponent>(
             mLocalPosition,
-            mLocalRotationAngle,
+            mLocalRotation,
             mLocalScale
         );
     }
@@ -389,7 +416,7 @@ namespace MFA
     void TransformComponent::Serialize(nlohmann::json & jsonObject) const
     {
         JsonUtils::SerializeVec3(jsonObject, "position", mLocalPosition);
-        JsonUtils::SerializeVec3(jsonObject, "rotation", mLocalRotationAngle);
+        JsonUtils::SerializeVec3(jsonObject, "rotation", mLocalRotation.GetEulerAngles());
         JsonUtils::SerializeVec3(jsonObject, "scale", mLocalScale);
     }
 
@@ -398,9 +425,12 @@ namespace MFA
     void TransformComponent::Deserialize(nlohmann::json const & jsonObject)
     {
         JsonUtils::DeserializeVec3(jsonObject, "position", mLocalPosition);
-        JsonUtils::DeserializeVec3(jsonObject, "rotation", mLocalRotationAngle);
+
+        glm::vec3 eulerAngles{};
+        JsonUtils::DeserializeVec3(jsonObject, "rotation", eulerAngles);
+        mLocalRotation = eulerAngles;
+
         JsonUtils::DeserializeVec3(jsonObject, "scale", mLocalScale);
-        mLocalRotationQuat = Matrix::ToQuat(mLocalRotationAngle);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -418,11 +448,10 @@ namespace MFA
         Matrix::Scale(scaleMatrix, mLocalScale);
 
         // Rotation
-        auto rotationMatrix = glm::identity<glm::mat4>();
-        Matrix::RotateWithEulerAngle(rotationMatrix, mLocalRotationAngle);
+        auto const & rotationMatrix = mLocalRotation.GetMatrix();
 
         auto pMatrix = glm::identity<glm::mat4>();
-        auto pWorldRotation = glm::identity<glm::quat>();
+        Rotation pWorldRotation {};
         glm::vec3 pWorldScale {1.0f, 1.0f, 1.0f};
         if (auto const ptr = mParentTransform.lock())
         {
@@ -435,10 +464,9 @@ namespace MFA
 
         mInverseWorldTransform = glm::inverse(mWorldTransform);
 
-        // TODO: Check this part
         mWorldPosition = mWorldTransform * glm::vec4 { 0, 0, 0, 1.0f };
 
-        mWorldRotation = pWorldRotation * mLocalRotationQuat;
+        mWorldRotation = pWorldRotation.GetQuaternion() * mLocalRotation.GetQuaternion();
 
         mWorldScale = pWorldScale * mLocalScale;
         

@@ -66,21 +66,26 @@ namespace MFA
 
     void RigidbodyComponent::OnUI()
     {
-        Component::OnUI();
-
-        if (UI::Checkbox("Use gravity", mUseGravity))
+        if (UI::TreeNode("Rigid-body"))
         {
-            UpdateGravity();
-        }
+            Component::OnUI();
 
-        if (UI::Checkbox("Is kinematic", mIsKinematic))
-        {
-            UpdateKinematic();
-        }
+            if (UI::Checkbox("Use gravity", mUseGravity))
+            {
+                UpdateGravity();
+            }
 
-        if (UI::Checkbox("Mass", mMass))
-        {
-            UpdateMass();
+            if (UI::Checkbox("Is kinematic", mIsKinematic))
+            {
+                UpdateKinematic();
+            }
+
+            if (UI::InputFloat<1>("Mass", mMass))
+            {
+                UpdateMass();
+            }
+
+            UI::TreePop();
         }
     }
     

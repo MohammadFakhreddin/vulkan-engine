@@ -50,7 +50,7 @@ namespace MFA
 
         bool mIsKinematic {};
         bool mUseGravity {};
-        bool mMass {};
+        float mMass {};
 
     };
 

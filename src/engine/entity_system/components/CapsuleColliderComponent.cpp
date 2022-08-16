@@ -1,8 +1,9 @@
 #include "CapsuleColliderComponent.hpp"
 
-#include <geometry/PxCapsuleGeometry.h>
-
 #include "engine/ui_system/UI_System.hpp"
+#include "engine/BedrockMatrix.hpp"
+
+#include <geometry/PxCapsuleGeometry.h>
 
 namespace MFA
 {
@@ -14,12 +15,14 @@ namespace MFA
     CapsuleColliderComponent::CapsuleColliderComponent(
         float const halfHeight,
         float const radius,
+        CapsuleDirection const direction,
         glm::vec3 const & center,
-        Physics::SharedHandle<physx::PxMaterial> material
+        Physics::SharedHandle<PxMaterial> material
     )
-        : ColliderComponent(center, std::move(material))
+        : ColliderComponent(center, RotateToDirection(direction), std::move(material))
         , mHalfHeight(halfHeight)
         , mRadius(radius)
+        , mCapsuleDirection(direction)
     {
         MFA_ASSERT(halfHeight > 0.0f);
         MFA_ASSERT(radius >= 0.0f);
@@ -37,16 +40,10 @@ namespace MFA
         {
             Parent::OnUI();
 
-            bool needShapeUpdate = false;
+            UI_ShapeUpdate();
 
-            needShapeUpdate |= UI::InputFloat<1>("Half height", mHalfHeight);
-            needShapeUpdate |= UI::InputFloat<1>("Radius", mRadius);
+            UI_CapsuleDirection();
             
-            if (needShapeUpdate)
-            {
-                UpdateShapeGeometry();
-            }
-
             UI::TreePop();
         }
     }
@@ -88,11 +85,64 @@ namespace MFA
     std::vector<std::shared_ptr<PxGeometry>> CapsuleColliderComponent::ComputeGeometry()
     {
 
-        PxCapsuleGeometry geometry {mRadius, mHalfHeight};
+        PxCapsuleGeometry geometry {mRadius * mScale.x * mScale.z, mHalfHeight * mScale.y};
         std::vector<std::shared_ptr<PxGeometry>> geometries {std::make_shared<PxCapsuleGeometry>(geometry)};
-        // TODO: We need direction to set local pos quaternion
         return geometries;
     }
 
     //-------------------------------------------------------------------------------------------------
+
+    glm::quat CapsuleColliderComponent::RotateToDirection(CapsuleDirection const direction)
+    {
+        glm::vec3 axis;
+        if (direction == CapsuleDirection::X)
+        {
+            axis = Math::UpVec3;
+        }
+        else if (direction == CapsuleDirection::Y)
+        {
+            axis = Math::ForwardVec3;
+        }
+        else if (direction == CapsuleDirection::Z)
+        {
+            axis = Math::RightVec3;
+        }
+        else
+        {
+            MFA_ASSERT(false);
+        }
+        return glm::angleAxis(Math::PiFloat * 0.5f, axis);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void CapsuleColliderComponent::UI_ShapeUpdate()
+    {
+        bool needShapeUpdate = false;
+
+        needShapeUpdate |= UI::InputFloat<1>("Half height", mHalfHeight);
+        needShapeUpdate |= UI::InputFloat<1>("Radius", mRadius);
+
+        if (needShapeUpdate)
+        {
+            UpdateShapeGeometry();
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void CapsuleColliderComponent::UI_CapsuleDirection()
+    {
+        std::vector<std::string> items{ "X", "Y", "Z" };
+        int selectedItem = static_cast<int>(mCapsuleDirection);
+        if (UI::Combo("Capsule direction", &selectedItem, items))
+        {
+            mCapsuleDirection = static_cast<CapsuleDirection>(selectedItem);
+            mRotation = RotateToDirection(mCapsuleDirection);
+            UpdateShapeRelativeTransform();
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
 }
