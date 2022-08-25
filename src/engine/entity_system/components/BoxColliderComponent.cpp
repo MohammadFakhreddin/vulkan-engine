@@ -38,7 +38,7 @@ namespace MFA
         {
             Parent::OnUI();
             glm::vec3 size = mHalfSize * 2.0f;
-            if (UI::InputFloat<3>("Size", size))
+            if (UI::InputFloat("Size", size))
             {
                 mHalfSize = size * 0.5f;
                 UpdateShapeGeometry();

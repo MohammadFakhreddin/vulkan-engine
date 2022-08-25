@@ -951,10 +951,11 @@ namespace MFA
     {
         DisplayPassPushConstants pushConstants{};
 
-        auto activeCamera = SceneManager::GetActiveCamera().lock();
+        auto const activeCamera = SceneManager::GetActiveCamera().lock();
         if (activeCamera != nullptr)
         {
-            activeCamera->GetPosition(pushConstants.cameraPosition);
+            // TODO: Investigate about this negetive value
+            Copy(pushConstants.cameraPosition, activeCamera->GetTransform()->GetWorldPosition());
             pushConstants.projectFarToNearDistance = activeCamera->GetProjectionFarToNearDistance();
         }
         

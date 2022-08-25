@@ -36,6 +36,11 @@ namespace MFA
 
         void Serialize(nlohmann::json & jsonObject) const override;
 
+        void SetLinearVelocity(glm::vec3 const & velocity) const;
+
+        [[nodiscard]]
+        glm::vec3 GetLinearVelocity() const;
+
     private:
 
         void UpdateGravity() const;

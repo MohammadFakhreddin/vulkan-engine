@@ -51,7 +51,7 @@ namespace MFA
 
         void UpdateLocalPosition(float position[3]);
 
-        void UpdateLocalRotation(glm::vec3 const & rotation);
+        void UpdateLocalRotation(glm::vec3 const & eulerAngle);
 
         void UpdateLocalRotation(float rotation[3]);
 
@@ -100,6 +100,14 @@ namespace MFA
 
         void Deserialize(nlohmann::json const & jsonObject) override;
 
+        [[nodiscard]]
+        glm::vec3 Forward() const;
+
+        [[nodiscard]]
+        glm::vec3 Right() const;
+
+        [[nodiscard]]
+        glm::vec3 Up() const;
 
     private:
 

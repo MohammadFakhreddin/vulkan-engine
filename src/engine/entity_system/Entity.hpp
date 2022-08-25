@@ -191,7 +191,7 @@ namespace MFA
         bool mIsActive = true;
         bool mIsParentActive = true;    // It should be true by default because not everyone have parent
 
-        SignalId mUpdateListenerId = InvalidSignalId;
+        SignalId mUpdateListenerId = SignalIdInvalid;
 
         int mParentActivationStatusChangeListenerId = 0;
 

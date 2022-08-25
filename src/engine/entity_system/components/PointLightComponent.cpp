@@ -107,12 +107,12 @@ void MFA::PointLightComponent::OnUI()
     {
         Component::OnUI();
 
-        if (UI::InputFloat<1>("Radius", mRadius))
+        if (UI::InputFloat("Radius", mRadius))
         {
             computeAttenuation();
         }
 
-        if (UI::InputFloat<1>("MaxDistance", mMaxDistance))
+        if (UI::InputFloat("MaxDistance", mMaxDistance))
         {
             mMaxSquareDistance = mMaxDistance * mMaxDistance;
             mProjectionFarDistance = mMaxDistance;

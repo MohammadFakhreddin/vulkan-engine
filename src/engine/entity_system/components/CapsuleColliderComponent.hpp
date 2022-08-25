@@ -55,14 +55,19 @@ namespace MFA
 
         void ComputeCenter();
 
+        void OnCapsuleGeometryChanged();
+
+        void OnCapsuleDirectionChanged();
+
     protected:
 
         [[nodiscard]]
         std::vector<std::shared_ptr<physx::PxGeometry>> ComputeGeometry() override;
 
-        float mHalfHeight = 0.0f;
-        float mRadius = 0.0f;
+        MFA_ATOMIC_VARIABLE2(HalfHeight, float, 0.0f, OnCapsuleGeometryChanged)
 
+        MFA_ATOMIC_VARIABLE2(Radius, float, 0.0f, OnCapsuleDirectionChanged)
+        
         CapsuleDirection mCapsuleDirection = defaultDirection;
 
     };

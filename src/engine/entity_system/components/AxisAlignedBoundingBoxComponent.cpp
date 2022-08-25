@@ -103,8 +103,8 @@ namespace MFA
 
             bool changed = false;
 
-            changed |= UI::InputFloat<3>("Center", mLocalPosition);
-            changed |= UI::InputFloat<3>("Extend", mExtend);
+            changed |= UI::InputFloat("Center", mLocalPosition);
+            changed |= UI::InputFloat("Extend", mExtend);
 
             if (changed)
             {
@@ -202,15 +202,13 @@ namespace MFA
         forwardVec3 = glm::normalize(forwardVec3);
         forwardVec3 *= mExtend.z;
         
-        auto rightVec4 = Copy<glm::vec4, glm::vec3>(Math::RightVec4);
-        rightVec4.w = 0.0f;
+        auto rightVec4 = Copy<glm::vec4, glm::vec3>(Math::RightVec4W0);
         rightVec4 = transform * rightVec4;
         auto rightVec3 = Copy<glm::vec3, glm::vec4>(rightVec4);
         rightVec3 = glm::normalize(rightVec3);
         rightVec3 *= mExtend.x;
         
-        auto upVec4 = Copy<glm::vec4, glm::vec3>(Math::UpVec4);
-        upVec4.w = 0.0f;
+        auto upVec4 = Copy<glm::vec4, glm::vec3>(Math::UpVec4W0);
         upVec4 = transform * upVec4;
         auto upVec3 = Copy<glm::vec3, glm::vec4>(upVec4);
         upVec3 = glm::normalize(upVec3);

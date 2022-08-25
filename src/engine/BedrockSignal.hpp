@@ -45,7 +45,7 @@ namespace MFA
 
             mSlots.emplace_back(Slot{ mNextId, listener });
             ++mNextId;
-            MFA_ASSERT(mNextId != InvalidSignalId);
+            MFA_ASSERT(mNextId != SignalIdInvalid);
             auto const id = mSlots.back().id;
             
             return id;
@@ -53,7 +53,7 @@ namespace MFA
 
         bool UnRegister(SignalId listenerId)
         {
-            if (listenerId != InvalidSignalId)
+            if (listenerId != SignalIdInvalid)
             {
                 SCOPE_LOCK(mLock)
 

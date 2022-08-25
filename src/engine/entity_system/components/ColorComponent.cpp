@@ -42,7 +42,7 @@ void MFA::ColorComponent::OnUI()
     if (UI::TreeNode("Color"))
     {
         Component::OnUI();
-        UI::InputFloat<3>("Color", mColor);
+        UI::InputFloat("Color", mColor);
         UI::TreePop();
     }
 }

@@ -5,8 +5,8 @@
 #include "engine/BedrockPlatforms.hpp"
 #include "engine/camera/ThirdPersonCameraComponent.hpp"
 #include "engine/entity_system/components/MeshRendererComponent.hpp"
-#include "engine/entity_system/components/TransformComponent.hpp"
 #include "engine/render_system/pipelines/debug_renderer/DebugRendererPipeline.hpp"
+#include "engine/entity_system/components/RigidbodyComponent.hpp"
 
 class Demo3rdPersonScene final : public MFA::Scene {
 public:
@@ -47,8 +47,9 @@ private:
 #endif
 
     //std::shared_ptr<MFA::RT::GpuModel> mSoldierGpuModel {};
-    
-    std::weak_ptr<MFA::TransformComponent> mPlayerTransform {};
+
+    std::weak_ptr<MFA::TransformComponent> mPlayerTransform{};
+    std::weak_ptr<MFA::RigidbodyComponent> mPlayerRigidbody {};
     std::weak_ptr<MFA::MeshRendererComponent> mPlayerMeshRenderer {};
     
     std::weak_ptr<MFA::ThirdPersonCameraComponent> mThirdPersonCamera {};

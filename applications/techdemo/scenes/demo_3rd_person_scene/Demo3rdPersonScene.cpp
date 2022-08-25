@@ -51,55 +51,65 @@ void Demo3rdPersonScene::Init()
 {
     Scene::Init();
 
-    Prefab soldierPrefab {EntitySystem::CreateEntity("SolderPrefab", nullptr)};
-    Prefab sponzaPrefab {EntitySystem::CreateEntity("SponzaPrefab", nullptr)};
-    
-    PrefabFileStorage::Deserialize(PrefabFileStorage::DeserializeParams {
+    Prefab soldierPrefab{ EntitySystem::CreateEntity("SolderPrefab", nullptr) };
+    Prefab sponzaPrefab{ EntitySystem::CreateEntity("SponzaPrefab", nullptr) };
+
+    PrefabFileStorage::Deserialize(PrefabFileStorage::DeserializeParams{
         .fileAddress = Path::ForReadWrite("prefabs/soldier.json"),
         .prefab = &soldierPrefab
     });
 
-    PrefabFileStorage::Deserialize(PrefabFileStorage::DeserializeParams {
+    PrefabFileStorage::Deserialize(PrefabFileStorage::DeserializeParams{
         .fileAddress = Path::ForReadWrite("prefabs/sponza3.json"),
         .prefab = &sponzaPrefab
     });
 
+    std::shared_ptr<TransformComponent> playerTransform = nullptr;
     {// Playable soldier
-        auto * entity = soldierPrefab.Clone(GetRootEntity(), Prefab::CloneEntityOptions {.name = "Playable soldier"});
+        auto * entity = soldierPrefab.Clone(GetRootEntity(), Prefab::CloneEntityOptions{ .name = "Playable soldier" });
         {// Transform
             float position[3]{ 0.0f, 2.0f, -5.0f };
             float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
             float scale[3]{ 1.0f, 1.0f, 1.0f };
-            mPlayerTransform = entity->GetComponent<TransformComponent>();
-            mPlayerTransform.lock()->UpdateLocalTransform(
+            playerTransform = entity->GetComponent<TransformComponent>();
+            playerTransform->UpdateLocalTransform(
                 position,
                 eulerAngles,
                 scale
             );
-        }
-        {// Camera
-            auto const thirdPersonCamera = entity->AddComponent<ThirdPersonCameraComponent>(FOV, Z_NEAR, Z_FAR);
-            float eulerAngle[3]{ -15.0f, 0.0f, 0.0f };
-            thirdPersonCamera->SetDistanceAndRotation(3.0f, eulerAngle);
-
-            thirdPersonCamera->Init();
-            EntitySystem::UpdateEntity(entity);
-
-            mThirdPersonCamera = thirdPersonCamera;
-            SetActiveCamera(mThirdPersonCamera);
+            mPlayerTransform = playerTransform;
         }
         mPlayerMeshRenderer = entity->GetComponent<MeshRendererComponent>();
         // TODO: We need to be able to draw colliders on editor as well
-        {// Capsule collider
-            auto const capsuleCollider = entity->AddComponent<CapsuleCollider>(0.5f, 0.2f);
-            capsuleCollider->Init();
-            EntitySystem::UpdateEntity(entity);
-        }
-        {// Rigidbody
-            auto const rigidbody = entity->AddComponent<Rigidbody>(false, true, 1.0f);
-            rigidbody->Init();
-            EntitySystem::UpdateEntity(entity);
-        }
+        // Capsule collider
+        auto const capsuleCollider = entity->AddComponent<CapsuleCollider>(0.5f, 0.2f);
+        // Rigidbody
+        auto const rigidbody = entity->AddComponent<Rigidbody>(false, true, 1.0f);
+        capsuleCollider->Init();
+        rigidbody->LateInit();
+        EntitySystem::UpdateEntity(entity);
+        mPlayerRigidbody = rigidbody;
+    }
+    {// Camera
+        auto const entity = EntitySystem::CreateEntity("Camera", GetRootEntity());
+
+        auto const transform = entity->AddComponent<TransformComponent>();
+
+        transform->UpdateLocalRotation(glm::vec3{ -15.0f, 0.0f, 0.0f });
+
+        auto const camera = entity->AddComponent<ThirdPersonCameraComponent>(
+            playerTransform,
+            FOV,
+            Z_NEAR,
+            Z_FAR
+        );
+
+        camera->SetDistance(3.0f);
+
+        EntitySystem::InitEntity(entity);
+
+        mThirdPersonCamera = camera;
+        SetActiveCamera(mThirdPersonCamera);
     }
 
     //for (float i = 0; i < 10.0f; i += 1.0f) {// Dummy soldiers
@@ -131,7 +141,7 @@ void Demo3rdPersonScene::Init()
 
         sponzaEntity->SetActive(true);
     }
-    
+
     {// Directional light
         auto * entity = EntitySystem::CreateEntity("Directional light", GetRootEntity());
         MFA_ASSERT(entity != nullptr);
@@ -139,17 +149,17 @@ void Demo3rdPersonScene::Init()
         auto const colorComponent = entity->AddComponent<ColorComponent>();
         MFA_ASSERT(colorComponent != nullptr);
         float const lightScale = 0.5f;
-        float lightColor[3] {
-            (252.0f/256.0f) * lightScale,
-            (212.0f/256.0f) * lightScale,
-            (64.0f/256.0f) * lightScale
+        float lightColor[3]{
+            (252.0f / 256.0f) * lightScale,
+            (212.0f / 256.0f) * lightScale,
+            (64.0f / 256.0f) * lightScale
         };
         colorComponent->SetColor(lightColor);
 
         auto const transformComponent = entity->AddComponent<TransformComponent>();
         MFA_ASSERT(transformComponent != nullptr);
         transformComponent->UpdateLocalRotation(glm::vec3(90.0f, 0.0f, 0.0f));
-        
+
         entity->AddComponent<DirectionalLightComponent>();
 
         entity->SetActive(true);
@@ -157,17 +167,18 @@ void Demo3rdPersonScene::Init()
     }
 
     {// Fire
-        RC::AcquireGpuTexture("images/fire/particle_fire.ktx", [this, sponzaEntity](std::shared_ptr<RT::GpuTexture> const & gpuTexture)->void{
-            auto * particlePipeline = SceneManager::GetPipeline<ParticlePipeline>();
-            MFA_ASSERT(particlePipeline != nullptr);
+        RC::AcquireGpuTexture("images/fire/particle_fire.ktx", [this, sponzaEntity](std::shared_ptr<RT::GpuTexture> const & gpuTexture)->void
+{
+    auto * particlePipeline = SceneManager::GetPipeline<ParticlePipeline>();
+    MFA_ASSERT(particlePipeline != nullptr);
 
-            createFireEssence(gpuTexture);
-            // TODO: Use getComponentInchildren
-            // Fire instances
-            createFireInstance(glm::vec3 {3.9f, 1.0f, 1.45f}, sponzaEntity);
-            createFireInstance(glm::vec3{ -4.95f, 1.0f, -1.45f }, sponzaEntity);
-            createFireInstance(glm::vec3{ -4.95f, 1.0f, 1.45f }, sponzaEntity);
-            createFireInstance(glm::vec3{ 3.9f, 1.0f, -1.45f }, sponzaEntity);
+    createFireEssence(gpuTexture);
+    // TODO: Use getComponentInchildren
+    // Fire instances
+    createFireInstance(glm::vec3{ 3.9f, 1.0f, 1.45f }, sponzaEntity);
+    createFireInstance(glm::vec3{ -4.95f, 1.0f, -1.45f }, sponzaEntity);
+    createFireInstance(glm::vec3{ -4.95f, 1.0f, 1.45f }, sponzaEntity);
+    createFireInstance(glm::vec3{ 3.9f, 1.0f, -1.45f }, sponzaEntity);
         });
     }
 
@@ -182,140 +193,57 @@ void Demo3rdPersonScene::Init()
 
 void Demo3rdPersonScene::Update(float const deltaTimeInSec)
 {
-    if (auto const playerTransform = mPlayerTransform.lock())
-    {// Soldier
-        static constexpr float SoldierSpeed = 4.0f;
-        auto const inputForwardMove = IM::GetForwardMove();
-        auto const inputRightMove = IM::GetRightMove();
-        if (inputForwardMove != 0.0f || inputRightMove != 0.0f)
-        {
-            auto position = playerTransform->GetLocalPosition();
-            auto scale = playerTransform->GetLocalScale();
-            auto rotationEuler = playerTransform->GetLocalRotation().GetEulerAngles();
+    auto playerTransform = mPlayerTransform.lock();
+    if (playerTransform == nullptr)
+    {
+        return;
+    }
+    auto playerRigidbody = mPlayerRigidbody.lock();
+    if (playerRigidbody == nullptr)
+    {
+        return;
+    }
 
-            float cameraEulerAngles[3];
-            MFA_ASSERT(mThirdPersonCamera.expired() == false);
-            mThirdPersonCamera.lock()->GetRotation(cameraEulerAngles);
+    auto camera = mThirdPersonCamera.lock();
+    if (camera == nullptr)
+    {
+        return;
+    }
 
-            rotationEuler.y = -cameraEulerAngles[1];
-            float extraAngleValue;
-            if (inputRightMove == 1.0f)
-            {
-                if (inputForwardMove == 1.0f)
-                {
-                    extraAngleValue = +45.0f;
-                }
-                else if (inputForwardMove == 0.0f)
-                {
-                    extraAngleValue = +90.0f;
-                }
-                else if (inputForwardMove == -1.0f)
-                {
-                    extraAngleValue = +135.0f;
-                }
-                else
-                {
-                    MFA_ASSERT(false);
-                }
-            }
-            else if (inputRightMove == 0.0f)
-            {
-                if (inputForwardMove == 1.0f)
-                {
-                    extraAngleValue = 0.0f;
-                }
-                else if (inputForwardMove == 0.0f)
-                {
-                    extraAngleValue = 0.0f;
-                }
-                else if (inputForwardMove == -1.0f)
-                {
-                    extraAngleValue = +180.0f;
-                }
-                else
-                {
-                    MFA_ASSERT(false);
-                }
-            }
-            else if (inputRightMove == -1.0f)
-            {
-                if (inputForwardMove == 1.0f)
-                {
-                    extraAngleValue = -45.0f;
-                }
-                else if (inputForwardMove == 0.0f)
-                {
-                    extraAngleValue = -90.0f;
-                }
-                else if (inputForwardMove == -1.0f)
-                {
-                    extraAngleValue = -135.0f;
-                }
-                else
-                {
-                    MFA_ASSERT(false);
-                }
-            }
-            else
-            {
-                MFA_ASSERT(false);
-            }
+    auto playerMeshRenderer = mPlayerMeshRenderer.lock();
+    if (playerMeshRenderer == nullptr)
+    {
+        return;
+    }
 
-            rotationEuler.y -= extraAngleValue;
+    auto playerVariant = static_pointer_cast<PBR_Variant>(playerMeshRenderer->getVariant().lock());
+    if (playerVariant == nullptr)
+    {
+        return;
+    }
 
-            auto currentQuat = playerTransform->GetLocalRotation().GetQuaternion();
+    static constexpr float SoldierSpeed = 4.0f;
+    auto const inputForwardMove = IM::GetForwardMove();
+    auto const inputRightMove = IM::GetRightMove();
 
-            auto const targetQuat = Matrix::ToQuat(rotationEuler);
+    auto const forward = playerTransform->Forward();
+    auto const right = playerTransform->Right();
 
-            auto const t = Math::Clamp(10.0f * deltaTimeInSec, 0.0f, 1.0f);
-            auto const nextQuat = glm::slerp(currentQuat, targetQuat, t);
-            Rotation rotation{ nextQuat };
-            //auto nextAngles = Matrix::ToEulerAngles(nextQuat);
+    glm::vec3 velocity{};
+    velocity += forward * inputForwardMove * SoldierSpeed;
+    velocity += right * inputRightMove * SoldierSpeed;
 
-            
-            //auto rotationMatrix = glm::identity<glm::mat4>();
-            //Matrix::RotateWithEulerAngle(rotationMatrix, nextAngles);
+    playerRigidbody->SetLinearVelocity(velocity);
 
-            glm::vec4 movementDirection = Math::ForwardVec4;
-            movementDirection = rotation.GetMatrix() * movementDirection;
-            //movementDirection = movementDirection * rotation.GetMatrix();
-
-            //movementDirection = movementDirection * rotationMatrix;
-            //movementDirection = glm::normalize(movementDirection);  // I think we don't need this line
-            //movementDirection *= deltaTimeInSec * SoldierSpeed;
-
-            // for (int i = 0; i < 3; ++i)
-            // {
-            //     position[i] += movementDirection[i];
-            // }
-            position += Copy<glm::vec3>(movementDirection) * deltaTimeInSec * SoldierSpeed;
-
-            playerTransform->UpdateLocalTransform(
-                position,
-                rotation,
-                scale
-            );
-            // TODO What should we do for animations ?
-            if (auto const mrPtr = mPlayerMeshRenderer.lock())
-            {
-                if (auto variant = static_pointer_cast<PBR_Variant>(mrPtr->getVariant().lock()))
-                {
-                    variant->SetActiveAnimation("SwordAndShieldRun", { .transitionDuration = 0.3f });
-                }
-            }
-        }
-        else
-        {
-            if (auto const mrPtr = mPlayerMeshRenderer.lock())
-            {
-                
-                if (auto variant = static_pointer_cast<PBR_Variant>(mrPtr->getVariant().lock()))
-                {
-                    //mSoldierVariant->SetActiveAnimation("SwordAndShieldIdle");
-                    variant->SetActiveAnimation("Idle", { .transitionDuration = 0.3f });
-                }
-            }
-        }
+    bool const isIdle = Matrix::IsNearZero(playerRigidbody->GetLinearVelocity());
+    if (isIdle == false)
+    {
+        playerVariant->SetActiveAnimation("SwordAndShieldRun", { .transitionDuration = 0.3f });
+    }
+    else
+    {
+        //mSoldierVariant->SetActiveAnimation("SwordAndShieldIdle");
+        playerVariant->SetActiveAnimation("Idle", { .transitionDuration = 0.3f });
     }
 }
 
@@ -328,7 +256,7 @@ void Demo3rdPersonScene::Shutdown()
     UI::UnRegister(mUIRecordId);
 
     mDebugRenderPipeline->changeActivationStatus(true);
-    
+
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -358,18 +286,19 @@ void Demo3rdPersonScene::createFireEssence(std::shared_ptr<RT::GpuTexture> const
     auto * particlePipeline = SceneManager::GetPipeline<ParticlePipeline>();
     MFA_ASSERT(particlePipeline != nullptr);
 
-    if (particlePipeline->hasEssence("SponzaFire") == true){// Fire essence
+    if (particlePipeline->hasEssence("SponzaFire") == true)
+    {// Fire essence
         return;
     }
 
     auto const fireEssence = std::make_shared<FireEssence>(
         "SponzaFire",
         100,   // TODO: Find a better number
-        std::vector {gpuTexture},
-        MFA::FireParams {
+        std::vector{ gpuTexture },
+        MFA::FireParams{
             .initialPointSize = 300.0f
         },
-        AS::Particle::Params {
+        AS::Particle::Params{
             .count = 256,
             .minLife = 0.2f,
             .maxLife = 1.0f,
@@ -396,7 +325,7 @@ void Demo3rdPersonScene::createFireInstance(glm::vec3 const & position, Entity *
     auto const transform = entity->AddComponent<TransformComponent>();
     MFA_ASSERT(transform != nullptr);
     transform->UpdateLocalPosition(position);
-    
+
     entity->AddComponent<MeshRendererComponent>(
         particlePipeline,
         "SponzaFire"

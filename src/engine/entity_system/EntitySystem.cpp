@@ -122,7 +122,7 @@ namespace MFA::EntitySystem
         MFA_ASSERT(entity->mIsInitialized == true);
         if (entity->NeedUpdateEvent())
         {
-            if (entity->mUpdateListenerId == InvalidSignalId)
+            if (entity->mUpdateListenerId == SignalIdInvalid)
             {
                 entity->mUpdateListenerId = state->updateSignal.Register([entity](float const deltaTime) -> void
                 {
@@ -133,7 +133,7 @@ namespace MFA::EntitySystem
         else
         {
             state->updateSignal.UnRegister(entity->mUpdateListenerId);
-            entity->mUpdateListenerId = InvalidSignalId;
+            entity->mUpdateListenerId = SignalIdInvalid;
         }
     }
 

@@ -9,6 +9,9 @@
 
 namespace MFA
 {
+
+    using namespace physx;
+
     //-------------------------------------------------------------------------------------------------
 
     RigidbodyComponent::RigidbodyComponent(
@@ -58,7 +61,6 @@ namespace MFA
             auto const rotation = Copy<glm::quat>(pxTransform.q);
 
             transform->UpdateWorldTransform(position, rotation);
-            
         }
     }
 
@@ -80,7 +82,7 @@ namespace MFA
                 UpdateKinematic();
             }
 
-            if (UI::InputFloat<1>("Mass", mMass))
+            if (UI::InputFloat("Mass", mMass))
             {
                 UpdateMass();
             }
@@ -88,7 +90,7 @@ namespace MFA
             UI::TreePop();
         }
     }
-    
+
     //-------------------------------------------------------------------------------------------------
 
     void RigidbodyComponent::Clone(Entity * entity) const
@@ -112,11 +114,27 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    void RigidbodyComponent::SetLinearVelocity(glm::vec3 const & velocity) const
+    {
+        MFA_ASSERT(mRigidDynamic != nullptr);
+        mRigidDynamic->Ptr()->setLinearVelocity(Copy<PxVec3>(velocity));
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    glm::vec3 RigidbodyComponent::GetLinearVelocity() const
+    {
+        auto const velocity = mRigidDynamic->Ptr()->getLinearVelocity();
+        return Copy<glm::vec3>(velocity);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void RigidbodyComponent::UpdateGravity() const
     {
         mRigidDynamic->Ptr()->setActorFlag(physx::PxActorFlag::eDISABLE_GRAVITY, mUseGravity);
     }
-    
+
     //-------------------------------------------------------------------------------------------------
 
     void RigidbodyComponent::UpdateKinematic() const

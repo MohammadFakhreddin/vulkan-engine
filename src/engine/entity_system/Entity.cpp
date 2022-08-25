@@ -434,7 +434,7 @@ namespace MFA
         #define LINK_TO_EVENT(eventId, eventType, signal, callback)             \
         if ((requiredEvents & Component::EventTypes::eventType) > 0)            \
         {                                                                       \
-            MFA_ASSERT(component->eventId == InvalidSignalId);                  \
+            MFA_ASSERT(component->eventId == SignalIdInvalid);                  \
             component->eventId = (signal).Register(callback);                   \
         }                                                                       \
 

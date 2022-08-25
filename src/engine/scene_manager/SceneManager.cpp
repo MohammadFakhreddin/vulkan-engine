@@ -92,7 +92,7 @@ namespace MFA::SceneManager
         int32_t activeSceneIndex = -1;
         int32_t nextActiveSceneIndex = -1;
         std::shared_ptr<Scene> activeScene{};
-        SignalId activeSceneListenerId = InvalidSignalId;
+        SignalId activeSceneListenerId = SignalIdInvalid;
 
         DisplayRenderPass * displayRenderPass{};
 
@@ -389,14 +389,14 @@ namespace MFA::SceneManager
         pipeline->mAllVariantsList.empty() == false                                                 \
     )                                                                                               \
     {                                                                                               \
-        if (pipeline->listenerId == InvalidSignalId)                                                \
+        if (pipeline->listenerId == SignalIdInvalid)                                                \
         {                                                                                           \
             pipeline->listenerId = (signal).Register(delegateFunc);                                 \
         }                                                                                           \
-    } else if (pipeline->listenerId != InvalidSignalId)                                             \
+    } else if (pipeline->listenerId != SignalIdInvalid)                                             \
     {                                                                                               \
         (signal).UnRegister(pipeline->listenerId);                                                  \
-        pipeline->listenerId = InvalidSignalId;                                                     \
+        pipeline->listenerId = SignalIdInvalid;                                                     \
     }                                                                                               \
 
     void UpdatePipeline(BasePipeline * pipeline)
@@ -905,7 +905,7 @@ namespace MFA::SceneManager
                 //Future optimization: if (item.id != ptr->GetUniqueId() || ptr->IsDataDirty() == true){
                 //Matrix::CopyGlmToCells(ptr->GetLightColor(), item.color);
                 Copy(item.color, ptr->GetLightColor());
-                //Matrix::CopyGlmToCells(ptr->GetPosition(), item.position);
+                //Matrix::CopyGlmToCells(ptr->GetWorldPosition(), item.position);
                 Copy(item.position, ptr->GetPosition());
                 ptr->GetShadowViewProjectionMatrices(item.viewProjectionMatrices);
                 item.maxSquareDistance = ptr->GetMaxSquareDistance();

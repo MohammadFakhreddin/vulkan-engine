@@ -15,29 +15,23 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     ThirdPersonCameraComponent::ThirdPersonCameraComponent(
+        std::shared_ptr<TransformComponent> const & followTarget,
         float const fieldOfView,
         float const nearDistance,
         float const farDistance,
-        float const rotationSpeed
+        float const rotationSpeed,
+        float const distance,
+        bool const wrapMouseAtEdges,
+        glm::vec3 const extraOffset
     )
         : CameraComponent(fieldOfView, nearDistance, farDistance)
+        , mFollowTarget(followTarget)
+        , mDistance(distance)
         , mRotationSpeed(rotationSpeed)
-    {}
-
-    //-------------------------------------------------------------------------------------------------
-
-    void ThirdPersonCameraComponent::SetDistanceAndRotation(
-        float const distance,
-        float eulerAngles[3]
-    )
+        , mWrapMouseAtEdges(wrapMouseAtEdges)
+        , mExtraOffset(extraOffset)
     {
-        MFA_ASSERT(distance >= 0);
-        mDistance = distance;
-
-        Copy<3>(mEulerAngles, eulerAngles);
-        //Matrix::CopyCellsToGlm(eulerAngles, mEulerAngles);
-
-        mIsTransformDirty = true;
+        MFA_ASSERT(followTarget != nullptr);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -46,64 +40,51 @@ namespace MFA
     {
         CameraComponent::Init();
 
-        mTransformComponent = GetEntity()->GetComponent<TransformComponent>();
-        MFA_ASSERT(mTransformComponent.expired() == false);
-
-        // TODO: Should camera use transform component for its stored values ?
-        mTransformChangeListenerId = mTransformComponent.lock()->RegisterChangeListener([this]()->void
+        if (auto const followTarget = mFollowTarget.lock())
         {
-            mIsTransformDirty = true;
-        });
+            mFollowTargetListenerId = followTarget->RegisterChangeListener([this]()->void
+            {
+                OnFollowTargetMove();
+            });
+        }
 
-        IM::WarpMouseAtEdges(true);
+        OnWrapMouseAtEdgesChange();
+        OnFollowTargetMove();
     }
 
     //-------------------------------------------------------------------------------------------------
 
     void ThirdPersonCameraComponent::Update(float const deltaTimeInSec)
     {
+        CameraComponent::Update(deltaTimeInSec);
+
+        auto const transform = mTransformComponent.lock();
+        if (transform == nullptr)
+        {
+            return;
+        }
+
         // Checking if rotation is changed
         auto const mouseDeltaX = IM::GetMouseDeltaX();
         auto const mouseDeltaY = IM::GetMouseDeltaY();
 
-        if (mouseDeltaX != 0.0f || mouseDeltaY != 0.0f)
+        if (mouseDeltaX == 0.0f && mouseDeltaY == 0.0f)
         {
-
-            auto const rotationDistance = mRotationSpeed * deltaTimeInSec;
-            mEulerAngles[1] = mEulerAngles[1] + mouseDeltaX * rotationDistance;    // Reverse for view mat
-            mEulerAngles[0] = Math::Clamp(
-                mEulerAngles[0] - mouseDeltaY * rotationDistance,
-                -45.0f,
-                18.0f
-            );    // Reverse for view mat
-
-            mIsTransformDirty = true;
+            return;
         }
 
-        if (mIsTransformDirty)
-        {
-            if (auto const transformComponentPtr = mTransformComponent.lock()) {
-                auto const variantPosition = transformComponentPtr->GetWorldPosition();
+        auto eulerAngles = transform->GetLocalRotation().GetEulerAngles();
+        auto const rotationDistance = mRotationSpeed * deltaTimeInSec;
+        // TODO: I could have multiplied some extra quaternion as well
+        eulerAngles.y = eulerAngles.y + rotationDistance * mouseDeltaX;    // Reverse for view mat
+        eulerAngles.x = Math::Clamp(
+            eulerAngles.x - rotationDistance * mouseDeltaY,
+            -45.0f,
+            18.0f
+        );    // Reverse for view mat
 
-                auto rotationMatrix = glm::identity<glm::mat4>();
-                Matrix::RotateWithEulerAngle(rotationMatrix, mEulerAngles);
-
-                glm::vec4 forwardVec4 = Math::ForwardVec4;
-
-                forwardVec4 = forwardVec4 * rotationMatrix;
-                //forwardDirection = glm::normalize(forwardDirection);
-                glm::vec3 forwardVec3 = forwardVec4;
-                forwardVec3 *= mDistance;
-
-                // The extra vector is used to increase camera height
-                mPosition = - Copy<glm::vec3>(variantPosition) - forwardVec3 + glm::vec3 {0.0f, 1.0f, 0.0f};
-                //mPosition[0] = -variantPosition[0] - forwardVec3[0];
-                //mPosition[1] = -variantPosition[1] - forwardVec3[1] + 1.0f;    
-                //mPosition[2] = -variantPosition[2] - forwardVec3[2];
-            }
-        }
-
-        CameraComponent::Update(deltaTimeInSec);
+        transform->UpdateLocalRotation(eulerAngles);
+        OnFollowTargetMove();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -111,9 +92,9 @@ namespace MFA
     void ThirdPersonCameraComponent::Shutdown()
     {
         CameraComponent::Shutdown();
-        if (auto const ptr = mTransformComponent.lock())
+        if (auto const ptr = mFollowTarget.lock())
         {
-            ptr->UnRegisterChangeListener(mTransformChangeListenerId);
+            ptr->UnRegisterChangeListener(mFollowTargetListenerId);
         }
     }
 
@@ -121,11 +102,97 @@ namespace MFA
 
     void ThirdPersonCameraComponent::OnUI()
     {
+        // TODO: Try to generate ui automatically
         if(UI::TreeNode("ThirdPersonCamera"))
         {
             CameraComponent::OnUI();
-            UI::TreePop();            
+
+            UI::InputFloat("Rotation speed:", mRotationSpeed);
+
+            bool positionNeedChanged = false;
+
+            positionNeedChanged |= UI::InputFloat("Distance", mDistance);
+
+            positionNeedChanged |= UI::InputFloat("Extra offset", mExtraOffset);
+
+            if (positionNeedChanged)
+            {
+                OnFollowTargetMove();
+            }
+
+            if (UI::Checkbox("Wrap mouse at edges", mWrapMouseAtEdges))
+            {
+                OnWrapMouseAtEdgesChange();
+            }
+
+            UI::TreePop();
         }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ThirdPersonCameraComponent::WrapMouseAtEdges(bool const wrap)
+    {
+        mWrapMouseAtEdges = wrap;
+        IM::WarpMouseAtEdges(mWrapMouseAtEdges);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool ThirdPersonCameraComponent::WrapMouseAtEdges() const
+    {
+        return mWrapMouseAtEdges;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ThirdPersonCameraComponent::SetFollowTarget(std::shared_ptr<TransformComponent> const& followTarget)
+    {
+        if (auto const oldFollowTarget = mFollowTarget.lock())
+        {
+            oldFollowTarget->UnRegisterChangeListener(mFollowTargetListenerId);
+        }
+        mFollowTarget = followTarget;
+        if (auto const newFollowTarget = mFollowTarget.lock())
+        {
+            mFollowTargetListenerId = newFollowTarget->RegisterChangeListener([this]()->void
+            {
+                OnFollowTargetMove();
+            });
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ThirdPersonCameraComponent::OnFollowTargetMove() const
+    {
+        auto const followTarget = mFollowTarget.lock();
+        if (followTarget == nullptr)
+        {
+            return;
+        }
+        auto const myTransform = mTransformComponent.lock();
+        if (myTransform == nullptr)
+        {
+            return;
+        }
+
+        glm::vec3 const followPosition = followTarget->GetWorldPosition();
+
+        auto const vector = mForward * mDistance;
+
+        // The extra vector is used to increase camera height
+        auto const position = followPosition - vector + mExtraOffset;
+
+        myTransform->UpdateLocalPosition(position);
+    }
+
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ThirdPersonCameraComponent::OnWrapMouseAtEdgesChange() const
+    {
+        IM::WarpMouseAtEdges(mWrapMouseAtEdges);
     }
 
     //-------------------------------------------------------------------------------------------------

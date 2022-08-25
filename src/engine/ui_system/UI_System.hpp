@@ -42,10 +42,12 @@ namespace MFA::UI_System
     void InputFloat4(char const * label, float * value);
 
     // Returns true if changed
-    template<uint32_t Count, typename T>
+    template<typename T>
     bool InputFloat(char const * label, T & value)
     {
-        static_assert(sizeof(float) * Count <= sizeof(T));
+        auto constexpr Count = sizeof(T) / sizeof(float);
+
+        //static_assert(sizeof(float) * Count <= sizeof(T));
         bool changed = false;
 
         float tempValue[Count];

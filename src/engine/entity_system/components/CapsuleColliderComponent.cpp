@@ -124,14 +124,12 @@ namespace MFA
     {
         bool needShapeUpdate = false;
 
-        needShapeUpdate |= UI::InputFloat<1>("Half height", mHalfHeight);
-        needShapeUpdate |= UI::InputFloat<1>("Radius", mRadius);
+        needShapeUpdate |= UI::InputFloat("Half height", mHalfHeight);
+        needShapeUpdate |= UI::InputFloat("Radius", mRadius);
 
         if (needShapeUpdate)
         {
-            UpdateShapeGeometry();
-            ComputeCenter();
-            UpdateShapeRelativeTransform();
+            OnCapsuleGeometryChanged();
         }
     }
 
@@ -144,8 +142,7 @@ namespace MFA
         if (UI::Combo("Capsule direction", &selectedItem, items))
         {
             mCapsuleDirection = static_cast<CapsuleDirection>(selectedItem);
-            RotateToDirection();
-            UpdateShapeRelativeTransform();
+            OnCapsuleDirectionChanged();
         }
     }
 
@@ -164,6 +161,24 @@ namespace MFA
         }
 
         mCenter = Math::UpVec3 * height;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void CapsuleColliderComponent::OnCapsuleGeometryChanged()
+    {
+        UpdateShapeGeometry();
+        ComputeCenter();
+        UpdateShapeRelativeTransform();
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void CapsuleColliderComponent::OnCapsuleDirectionChanged()
+    {
+        RotateToDirection();
+        ComputeCenter();
+        UpdateShapeRelativeTransform();
     }
 
     //-------------------------------------------------------------------------------------------------

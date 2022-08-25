@@ -109,9 +109,9 @@ namespace MFA
         {
             Parent::OnUI();
 
-            bool relativeTransformChanged = UI::InputFloat<3>("Center", mCenter);
+            bool relativeTransformChanged = UI::InputFloat("Center", mCenter);
             auto eulerAngles = mRotation.GetEulerAngles();
-            relativeTransformChanged |= UI::InputFloat<3>("Euler angles", eulerAngles);
+            relativeTransformChanged |= UI::InputFloat("Euler angles", eulerAngles);
 
             if (relativeTransformChanged)
             {

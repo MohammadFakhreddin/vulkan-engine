@@ -189,11 +189,11 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::UpdateLocalRotation(glm::vec3 const & rotation)
+    void TransformComponent::UpdateLocalRotation(glm::vec3 const & eulerAngle)
     {
-        if (mLocalRotation != rotation)
+        if (mLocalRotation != eulerAngle)
         {
-            mLocalRotation = rotation;
+            mLocalRotation = eulerAngle;
             ComputeTransform();
         }
     }
@@ -381,11 +381,11 @@ namespace MFA
 
             bool changed = false;
 
-            changed |= UI::InputFloat<3>("Position", mLocalPosition);
-            changed |= UI::InputFloat<3>("Scale", mLocalScale);
+            changed |= UI::InputFloat("Position", mLocalPosition);
+            changed |= UI::InputFloat("Scale", mLocalScale);
 
             auto eulerAngles = mLocalRotation.GetEulerAngles();
-            if (UI::InputFloat<3>("Rotation (Euler angles)", eulerAngles))
+            if (UI::InputFloat("Rotation (Euler angles)", eulerAngles))
             {
                 mLocalRotation = eulerAngles;
                 changed = true;
@@ -431,6 +431,27 @@ namespace MFA
         mLocalRotation = eulerAngles;
 
         JsonUtils::DeserializeVec3(jsonObject, "scale", mLocalScale);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    glm::vec3 TransformComponent::Forward() const
+    {
+        return mWorldRotation.GetMatrix() * Math::ForwardVec4W0;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    glm::vec3 TransformComponent::Right() const
+    {
+        return mWorldRotation.GetMatrix() * Math::RightVec4W0;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    glm::vec3 TransformComponent::Up() const
+    {
+        return mWorldRotation.GetMatrix() * Math::UpVec4W0;
     }
 
     //-------------------------------------------------------------------------------------------------

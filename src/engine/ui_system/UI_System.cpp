@@ -156,7 +156,7 @@ namespace MFA::UI_System
         MSDL::SDL_Cursor * mouseCursors[ImGuiMouseCursor_COUNT]{};
         RF::SDLEventWatchId eventWatchId = -1;
 #endif
-        SignalId resizeSignalId = InvalidSignalId;
+        SignalId resizeSignalId = SignalIdInvalid;
     };
 
     static State * state = nullptr;

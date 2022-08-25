@@ -3,9 +3,11 @@
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockMath.hpp"
 #include "engine/BedrockMatrix.hpp"
+#include "engine/entity_system/Entity.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/ui_system/UI_System.hpp"
+#include "engine/entity_system/components/TransformComponent.hpp"
 
 namespace MFA
 {
@@ -16,14 +18,14 @@ namespace MFA
     {
         Component::OnUI();
 
-        if (UI::InputFloat<3>("EulerAngles", mEulerAngles))
-        {
-            mIsTransformDirty = true;
-        }
-        if (UI::InputFloat<3>("Position", mPosition))
-        {
-            mIsTransformDirty = true;
-        }
+        //if (UI::InputFloat<3>("EulerAngles", mEulerAngles))
+        //{
+        //    mIsTransformDirty = true;
+        //}
+        //if (UI::InputFloat<3>("Position", mPosition))
+        //{
+        //    mIsTransformDirty = true;
+        //}
 
        /* auto rotationMatrix = glm::identity<glm::mat4>();
         Matrix::Rotate(rotationMatrix, eulerAngles);
@@ -150,138 +152,130 @@ namespace MFA
     void CameraComponent::Init()
     {
         Component::Init();
+
         mCameraBufferUpdateCounter = RF::GetMaxFramesPerFlight();
         mResizeEventListenerId = RF::AddResizeEventListener([this]()->void{ onResize(); });
+
+        auto const transformComponent = GetEntity()->GetComponent<TransformComponent>();
+        MFA_ASSERT(transformComponent != nullptr);
+        mTransformComponent = transformComponent;
+        OnTransformChange();
+        mTransformChangeListener = transformComponent->RegisterChangeListener([this]()->void { OnTransformChange(); });
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void CameraComponent::Update(float const deltaTimeInSec)
+    void CameraComponent::OnTransformChange()
     {
-        Component::Update(deltaTimeInSec);
-
+        UpdateDirectionVectors();
         updateViewTransformMatrix();
-
-        glm::vec3 eulerAngles = mEulerAngles;
-
-        auto rotationMatrix = glm::identity<glm::mat4>();
-        Matrix::RotateWithEulerAngle(rotationMatrix, eulerAngles);
-        
-        auto forwardDirection = -Math::ForwardVec4;
-        forwardDirection = forwardDirection * rotationMatrix;
-        //forwardDirection = glm::normalize(forwardDirection);
-
-        auto rightDirection = Math::RightVec4;
-        rightDirection = rightDirection * rotationMatrix;
-        //rightDirection = glm::normalize(rightDirection);
-
-        auto upDirection = -Math::UpVec4;
-        upDirection = upDirection * rotationMatrix;
-        //upDirection = glm::normalize(upDirection);
-
-        const float halfVSide = mFarDistance * tanf(mFieldOfView * 0.5f);
-        const float halfHSide = halfVSide * mAspectRatio;
-        const glm::vec3 frontFarDistanceVector = mFarDistance * forwardDirection;
-
-        glm::vec3 position = -mPosition;
-
-        mNearPlane.position = position + static_cast<glm::vec3>(mNearDistance * forwardDirection);
-        mNearPlane.direction = forwardDirection;
-
-        mFarPlane.position = position + frontFarDistanceVector;
-        mFarPlane.direction = -forwardDirection;
-
-        mRightPlane.position = position;
-        mRightPlane.direction = glm::normalize(glm::cross(
-            static_cast<glm::vec3>(upDirection),
-            frontFarDistanceVector + static_cast<glm::vec3>(rightDirection * halfHSide)
-        ));
-
-        mLeftPlane.position = position;
-        mLeftPlane.direction = glm::normalize(glm::cross(
-            frontFarDistanceVector - static_cast<glm::vec3>(rightDirection * halfHSide),
-            static_cast<glm::vec3>(upDirection)
-        ));
-
-        mTopPlane.position = position;
-        mTopPlane.direction = glm::normalize(glm::cross(
-            static_cast<glm::vec3>(rightDirection),
-            frontFarDistanceVector - static_cast<glm::vec3>(upDirection * halfVSide)
-        ));
-
-        mBottomPlane.position = position;
-        mBottomPlane.direction = glm::normalize(glm::cross(
-            frontFarDistanceVector + static_cast<glm::vec3>(upDirection * halfVSide),
-            static_cast<glm::vec3>(rightDirection)
-        ));
+        UpdatePlanes();
     }
-    
+
+    //-------------------------------------------------------------------------------------------------
+
+    void CameraComponent::UpdateDirectionVectors()
+    {
+        auto const transformComponent = mTransformComponent.lock();
+        if (transformComponent == nullptr)
+        {
+            return;
+        }
+
+        auto const & rotationMat = transformComponent->GetWorldRotation().GetMatrix();
+        // Question: Why camera bounds are reversed ?
+        auto forwardDirection = -Math::ForwardVec4W0;
+        forwardDirection = forwardDirection * rotationMat;
+
+        auto rightDirection = Math::RightVec4W0;
+        rightDirection = rightDirection * rotationMat;
+
+        auto upDirection = -Math::UpVec4W0;
+        upDirection = upDirection * rotationMat;
+
+        mForward = forwardDirection;
+        mRight = rightDirection;
+        mUp = upDirection;
+    }
+
     //-------------------------------------------------------------------------------------------------
 
     void CameraComponent::Shutdown()
     {
         Component::Shutdown();
         RF::RemoveResizeEventListener(mResizeEventListenerId);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CameraComponent::ForcePosition(float position[3])
-    {
-        if (IsEqual<3>(mPosition, position) == false)
+        if (auto const transformComponent = mTransformComponent.lock())
         {
-            Copy<3>(mPosition, position);
-            mIsTransformDirty = true;
+            transformComponent->UnRegisterChangeListener(mTransformChangeListener);
         }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CameraComponent::ForceRotation(float eulerAngles[3])
-    {
-        if (IsEqual<3>(mEulerAngles, eulerAngles) == false)
-        {
-            Copy<3>(mEulerAngles, eulerAngles);
-            mIsTransformDirty = true;
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CameraComponent::GetPosition(float outPosition[3]) const
-    {
-        Copy<3>(outPosition, -mPosition);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CameraComponent::GetRotation(float outEulerAngles[3]) const
-    {
-        Copy<3>(outEulerAngles, mEulerAngles);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     void CameraComponent::updateViewTransformMatrix()
     {
-
-        if (mIsTransformDirty == false)
+        auto const transformComponent = mTransformComponent.lock();
+        if (transformComponent == nullptr)
         {
             return;
         }
-        
-        auto rotationMatrix = glm::identity<glm::mat4>();
-        Matrix::RotateWithEulerAngle(rotationMatrix, mEulerAngles);
+        auto const & rotationMat = transformComponent->GetWorldRotation().GetMatrix();
+
+        auto const & position = -transformComponent->GetWorldPosition();
 
         auto translateMatrix = glm::identity<glm::mat4>();
-        Matrix::Translate(translateMatrix, mPosition);
+        Matrix::Translate(translateMatrix, position);
 
-        mViewMatrix = rotationMatrix * translateMatrix;
+        mViewMatrix = rotationMat * translateMatrix;
 
         updateCameraBufferData();
-    
-        mIsTransformDirty = false;
+    }
 
+    //-------------------------------------------------------------------------------------------------
+
+    void CameraComponent::UpdatePlanes()
+    {
+        auto * transform = GetTransform();
+        if (transform == nullptr)
+        {
+            return;
+        }
+
+        const float halfVSide = mFarDistance * tanf(mFieldOfView * 0.5f);
+        const float halfHSide = halfVSide * mAspectRatio;
+        const glm::vec3 frontFarDistanceVector = mFarDistance * mForward;
+
+        glm::vec3 const position = transform->GetWorldPosition();
+
+        mNearPlane.position = position + (mNearDistance * mForward);
+        mNearPlane.direction = mForward;
+
+        mFarPlane.position = position + frontFarDistanceVector;
+        mFarPlane.direction = -mForward;
+
+        mRightPlane.position = position;
+        mRightPlane.direction = glm::normalize(glm::cross(
+            mUp,
+            frontFarDistanceVector + (mRight * halfHSide)
+        ));
+
+        mLeftPlane.position = position;
+        mLeftPlane.direction = glm::normalize(glm::cross(
+            frontFarDistanceVector - (mRight * halfHSide),
+            mUp
+        ));
+
+        mTopPlane.position = position;
+        mTopPlane.direction = glm::normalize(glm::cross(
+            mRight,
+            frontFarDistanceVector - (mUp * halfVSide)
+        ));
+
+        mBottomPlane.position = position;
+        mBottomPlane.direction = glm::normalize(glm::cross(
+            frontFarDistanceVector + (mUp * halfVSide),
+            mRight
+        ));
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -350,10 +344,27 @@ namespace MFA
     float CameraComponent::GetProjectionFarToNearDistance() const {
         return mProjectionFarToNearDistance;
     }
-    
+
+    //-------------------------------------------------------------------------------------------------
+
     [[nodiscard]]
     glm::vec2 CameraComponent::GetViewportDimension() const {
         return mViewportDimension;
     }
-    
+
+    //-------------------------------------------------------------------------------------------------
+
+    TransformComponent * CameraComponent::GetTransform() const
+    {
+        auto const transformComponent = mTransformComponent.lock();
+        if (transformComponent == nullptr)
+        {
+            MFA_ASSERT(false);
+            return {};
+        }
+        return transformComponent.get();
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
 }

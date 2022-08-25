@@ -4,6 +4,7 @@
 #include "engine/BedrockMatrix.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/InputManager.hpp"
+#include "engine/entity_system/components/TransformComponent.hpp"
 #include "engine/ui_system/UI_System.hpp"
 
 #include "glm/gtx/quaternion.hpp"
@@ -20,7 +21,7 @@ namespace MFA
         float const moveSpeed,
         float const rotationSpeed
     )
-        : CameraComponent(fieldOfView, nearDistance, farDistance)
+        : Parent(fieldOfView, nearDistance, farDistance)
         , mMoveSpeed(moveSpeed)
         , mRotationSpeed(rotationSpeed)
     {}
@@ -29,19 +30,26 @@ namespace MFA
 
     void ObserverCameraComponent::Init()
     {
-        CameraComponent::Init();
+        Parent::Init();
 
         IM::WarpMouseAtEdges(false);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void ObserverCameraComponent::Update(float deltaTimeInSec)
+    void ObserverCameraComponent::Update(float const deltaTimeInSec)
     {
+        Parent::Update(deltaTimeInSec);
 
-        CameraComponent::Update(deltaTimeInSec);
+        auto const transform = mTransformComponent.lock();
+        if (transform == nullptr)
+        {
+            return;
+        }
 
-        bool mRotationIsChanged = false;
+        auto eulerAngles = transform->GetLocalRotation().GetEulerAngles();
+        auto position = transform->GetLocalPosition();
+
         if (InputManager::IsLeftMouseDown() == true && UI_System::HasFocus() == false)
         {
 
@@ -50,63 +58,35 @@ namespace MFA
 
             if (mouseDeltaX != 0.0f || mouseDeltaY != 0.0f)
             {
-
+                eulerAngles = transform->GetLocalRotation().GetEulerAngles();
                 auto const rotationDistance = mRotationSpeed * deltaTimeInSec;
-                mEulerAngles[1] = mEulerAngles[1] + mouseDeltaX * rotationDistance;    // Reverse for view mat
-                mEulerAngles[0] = Math::Clamp(
-                    mEulerAngles[0] - mouseDeltaY * rotationDistance,
+                eulerAngles.y = eulerAngles.y + rotationDistance * mouseDeltaX;    // Reverse for view mat
+                eulerAngles.x = Math::Clamp(
+                    eulerAngles.x - rotationDistance * mouseDeltaY,
                     -90.0f,
                     90.0f
                 );    // Reverse for view mat
-
-                mRotationIsChanged = true;
-
             }
         }
 
         auto const forwardMove = IM::GetForwardMove();
-        auto const rightMove = -1.0f * IM::GetRightMove();
+        auto const rightMove = IM::GetRightMove();
 
-        bool mPositionIsChanged = false;
         if (forwardMove != 0.0f || rightMove != 0.0f)
         {
-            mPositionIsChanged = true;
+            auto const moveDistance = mMoveSpeed * deltaTimeInSec;
+
+            if (forwardMove != 0.0f)
+            {
+                position = position + mForward * moveDistance * forwardMove;
+            }
+            if (rightMove != 0.0f)
+            {
+                position = position + mRight * moveDistance * rightMove;
+            }
         }
 
-        if (mPositionIsChanged == false && mRotationIsChanged == false)
-        {
-            return;
-        }
-
-        auto rotationMatrix = glm::identity<glm::mat4>();
-        Matrix::RotateWithEulerAngle(rotationMatrix, mEulerAngles);
-
-        auto forwardDirection = Math::ForwardVec4;
-        forwardDirection = forwardDirection * rotationMatrix;
-        //forwardDirection = glm::normalize(forwardDirection);
-
-        auto rightDirection = Math::RightVec4;
-        rightDirection = rightDirection * rotationMatrix;
-        //rightDirection = glm::normalize(rightDirection);
-
-        auto const moveDistance = mMoveSpeed * deltaTimeInSec;
-
-        if (forwardMove != 0.0f)
-        {
-            mPosition = mPosition + Copy<glm::vec3>(forwardDirection) * moveDistance * forwardMove;
-           /* mPosition[0] = mPosition[0] + forwardDirection[0] * moveDistance * forwardMove;
-            mPosition[1] = mPosition[1] + forwardDirection[1] * moveDistance * forwardMove;
-            mPosition[2] = mPosition[2] + forwardDirection[2] * moveDistance * forwardMove;*/
-        }
-        if (rightMove != 0.0f)
-        {
-            mPosition = mPosition + Copy<glm::vec3>(rightDirection) * moveDistance * rightMove;
-            /*mPosition[0] = mPosition[0] + rightDirection[0] * moveDistance * rightMove;
-            mPosition[1] = mPosition[1] + rightDirection[1] * moveDistance * rightMove;
-            mPosition[2] = mPosition[2] + rightDirection[2] * moveDistance * rightMove;*/
-        }
-
-        mIsTransformDirty = true;
+        transform->UpdateLocalTransform(position, eulerAngles, transform->GetLocalScale());
     }
     
     //-------------------------------------------------------------------------------------------------

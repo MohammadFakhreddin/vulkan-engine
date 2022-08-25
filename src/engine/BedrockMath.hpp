@@ -15,9 +15,13 @@ namespace MFA::Math
     static constexpr float PiFloat = PiTemplate<float>;
     static constexpr double PiDouble = PiTemplate<double>;
 
-    inline static constexpr glm::vec4 ForwardVec4{ 0.0f, 0.0f, 1.0f, 1.0f };
-    inline static constexpr glm::vec4 RightVec4{ 1.0f, 0.0f, 0.0f, 1.0f };
-    inline static constexpr glm::vec4 UpVec4{ 0.0f, 1.0f, 0.0f, 1.0f };
+    inline static constexpr glm::vec4 ForwardVec4W1{ 0.0f, 0.0f, 1.0f, 1.0f };
+    inline static constexpr glm::vec4 RightVec4W1{ 1.0f, 0.0f, 0.0f, 1.0f };
+    inline static constexpr glm::vec4 UpVec4W1{ 0.0f, 1.0f, 0.0f, 1.0f };
+
+    inline static constexpr glm::vec4 ForwardVec4W0{ 0.0f, 0.0f, 1.0f, 0.0f };
+    inline static constexpr glm::vec4 RightVec4W0{ 1.0f, 0.0f, 0.0f, 0.0f };
+    inline static constexpr glm::vec4 UpVec4W0{ 0.0f, 1.0f, 0.0f, 0.0f };
 
     inline static constexpr glm::vec3 ForwardVec3{ 0.0f, 0.0f, 1.0f };
     inline static constexpr glm::vec3 RightVec3{ 1.0f, 0.0f, 0.0f };

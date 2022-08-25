@@ -11,72 +11,147 @@ namespace MFA
 
     class Component;
 
-    #define MFA_COMPONENT_COMMON_PROPS(componentName, eventTypes, parent)                   \
-    public:                                                                                 \
-                                                                                            \
-    using Parent = parent;                                                                  \
-                                                                                            \
-    static constexpr char const * Name = #componentName;                                    \
-    static constexpr EventType RequiredEvents = eventTypes;                                 \
-                                                                                            \
-    std::weak_ptr<componentName> selfPtr()                                                  \
-    {                                                                                       \
-        return std::static_pointer_cast<componentName>(shared_from_this());                 \
-    }                                                                                       \
-                                                                                            \
-    [[nodiscard]]                                                                           \
-    char const * GetName() override                                                         \
-    {                                                                                       \
-        return Name;                                                                        \
-    }                                                                                       \
-                                                                                            \
-    void GetParents(std::vector<std::string> & parents) override                            \
-    {                                                                                       \
-        parents.emplace_back(Name);                                                         \
-        Parent::GetParents(parents);                                                        \
-    }                                                                                       \
-                                                                                            \
-    bool HaveSameNameOrParent(std::string const & name) override                            \
-    {                                                                                       \
-        static QueryInformation queryInfo {};                                               \
-        if (queryInfo.isValid == false)                                                     \
-        {                                                                                   \
-            GetParents(queryInfo.parents);                                                  \
-            queryInfo.isValid = true;                                                       \
-        }                                                                                   \
-        for (auto & item : queryInfo.parents)                                               \
-        {                                                                                   \
-            if (item == name)                                                               \
-            {                                                                               \
-                return true;                                                                \
-            }                                                                               \
-        }                                                                                   \
-        return false;                                                                       \
-    }                                                                                       \
-                                                                                            \
-    [[nodiscard]]                                                                           \
-    EventType requiredEvents() const override                                               \
-    {                                                                                       \
-        return eventTypes | parent::requiredEvents();                                       \
-    }                                                                                       \
-                                                                                            \
-    componentName (componentName const &) noexcept = delete;                                \
-    componentName (componentName &&) noexcept = delete;                                     \
-    componentName & operator = (componentName const &) noexcept = delete;                   \
-    componentName & operator = (componentName && rhs) noexcept = delete;                    \
-                                                                                            \
+#define MFA_COMPONENT_COMMON_PROPS(componentName, eventTypes, parent)                   \
+public:                                                                                 \
+                                                                                        \
+using Parent = parent;                                                                  \
+                                                                                        \
+static constexpr char const * Name = #componentName;                                    \
+static constexpr EventType RequiredEvents = eventTypes;                                 \
+                                                                                        \
+std::weak_ptr<componentName> selfPtr()                                                  \
+{                                                                                       \
+    return std::static_pointer_cast<componentName>(shared_from_this());                 \
+}                                                                                       \
+                                                                                        \
+[[nodiscard]]                                                                           \
+char const * GetName() override                                                         \
+{                                                                                       \
+    return Name;                                                                        \
+}                                                                                       \
+                                                                                        \
+void GetParents(std::vector<std::string> & parents) override                            \
+{                                                                                       \
+    parents.emplace_back(Name);                                                         \
+    Parent::GetParents(parents);                                                        \
+}                                                                                       \
+                                                                                        \
+bool HaveSameNameOrParent(std::string const & name) override                            \
+{                                                                                       \
+    static QueryInformation queryInfo {};                                               \
+    if (queryInfo.isValid == false)                                                     \
+    {                                                                                   \
+        GetParents(queryInfo.parents);                                                  \
+        queryInfo.isValid = true;                                                       \
+    }                                                                                   \
+    for (auto & item : queryInfo.parents)                                               \
+    {                                                                                   \
+        if (item == name)                                                               \
+        {                                                                               \
+            return true;                                                                \
+        }                                                                               \
+    }                                                                                   \
+    return false;                                                                       \
+}                                                                                       \
+                                                                                        \
+[[nodiscard]]                                                                           \
+EventType requiredEvents() const override                                               \
+{                                                                                       \
+    return eventTypes | parent::requiredEvents();                                       \
+}                                                                                       \
+                                                                                        \
+componentName (componentName const &) noexcept = delete;                                \
+componentName (componentName &&) noexcept = delete;                                     \
+componentName & operator = (componentName const &) noexcept = delete;                   \
+componentName & operator = (componentName && rhs) noexcept = delete;                    \
+                                                                                        \
 
-    #define MFA_ABSTRACT_COMPONENT_PROPS(componentName, eventTypes, parent)                 \
-    MFA_COMPONENT_COMMON_PROPS(componentName, eventTypes, parent)                           \
-    using parent::parent;                                                                   \
+#define MFA_ABSTRACT_COMPONENT_PROPS(componentName, eventTypes, parent)                 \
+MFA_COMPONENT_COMMON_PROPS(componentName, eventTypes, parent)                           \
+using parent::parent;                                                                   \
 
-    #define MFA_COMPONENT_PROPS(componentName, eventTypes, parent)                          \
-    MFA_ABSTRACT_COMPONENT_PROPS(componentName, eventTypes, parent)                         \
-    private:                                                                                \
-                                                                                            \
-        static inline ComponentRegister<componentName> mComponentRegister {};               \
-                                                                                            \
-    public:                                                                                 \
+#define MFA_COMPONENT_PROPS(componentName, eventTypes, parent)                          \
+MFA_ABSTRACT_COMPONENT_PROPS(componentName, eventTypes, parent)                         \
+private:                                                                                \
+                                                                                        \
+    static inline ComponentRegister<componentName> mComponentRegister {};               \
+                                                                                        \
+public:                                                                                 \
+
+
+#define MFA_ATOMIC_VARIABLE1(variable, type, default)           \
+private:                                                        \
+type m##variable = default;                                     \
+public:                                                         \
+void Set##variable(type value)                                  \
+{                                                               \
+    if (m##variable == value)                                   \
+    {                                                           \
+        return;                                                 \
+    }                                                           \
+    m##variable = value;                                        \
+}                                                               \
+[[nodiscard]]                                                   \
+type Get##variable() const                                      \
+{                                                               \
+    return m##variable;                                         \
+}                                                               \
+
+#define MFA_ATOMIC_VARIABLE2(variable, type, default, onChange) \
+private:                                                        \
+type m##variable = default;                                     \
+public:                                                         \
+void Set##variable(type value)                                  \
+{                                                               \
+    if (m##variable == value)                                   \
+    {                                                           \
+        return;                                                 \
+    }                                                           \
+    m##variable = value;                                        \
+    onChange();                                                 \
+}                                                               \
+[[nodiscard]]                                                   \
+type Get##variable() const                                      \
+{                                                               \
+    return m##variable;                                         \
+}                                                               \
+
+#define MFA_VECTOR_VARIABLE1(variable, type, default)           \
+private:                                                        \
+type m##variable = default;                                     \
+public:                                                         \
+void Set##variable(type const & value)                          \
+{                                                               \
+    if (IsEqual(m##variable, value))                            \
+    {                                                           \
+        return;                                                 \
+    }                                                           \
+    Copy(m##variable, value);                                   \
+}                                                               \
+[[nodiscard]]                                                   \
+type const & Get##variable() const                              \
+{                                                               \
+    return m##variable;                                         \
+}                                                               \
+
+#define MFA_VECTOR_VARIABLE2(variable, type, default, onChange) \
+private:                                                        \
+type m##variable = default;                                     \
+public:                                                         \
+void Set##variable(type const & value)                          \
+{                                                               \
+    if (IsEqual(m##variable, value))                            \
+    {                                                           \
+        return;                                                 \
+    }                                                           \
+    Copy(m##variable, value);                                   \
+    onChange();                                                 \
+}                                                               \
+[[nodiscard]]                                                   \
+type const & Get##variable() const                              \
+{                                                               \
+    return m##variable;                                         \
+}                                                               \
 
     class Entity;
 
@@ -87,7 +162,7 @@ namespace MFA
         struct QueryInformation
         {
             // Including component name and all of its parents names
-            std::vector<std::string> parents {};
+            std::vector<std::string> parents{};
             bool isValid = false;
         };
 
@@ -152,8 +227,8 @@ namespace MFA
         //};
 
         virtual char const * GetName() = 0;
-        
-        virtual bool HaveSameNameOrParent(std::string const & name) = 0; 
+
+        virtual bool HaveSameNameOrParent(std::string const & name) = 0;
 
         virtual void GetParents(std::vector<std::string> & parents);
 
@@ -196,15 +271,15 @@ namespace MFA
 
         bool mIsActive = true;
 
-        SignalId mInitEventId = InvalidSignalId;
+        SignalId mInitEventId = SignalIdInvalid;
 
-        SignalId mLateInitEventId = InvalidSignalId;
+        SignalId mLateInitEventId = SignalIdInvalid;
 
-        SignalId mUpdateEventId = InvalidSignalId;
+        SignalId mUpdateEventId = SignalIdInvalid;
 
-        SignalId mShutdownEventId = InvalidSignalId;
+        SignalId mShutdownEventId = SignalIdInvalid;
 
-        SignalId mActivationChangeEventId = InvalidSignalId;
+        SignalId mActivationChangeEventId = SignalIdInvalid;
 
         static void RegisterComponent(
             std::string const & name,
@@ -221,13 +296,14 @@ namespace MFA
         public:
             explicit ComponentRegister()
             {
-                RegisterComponent(T::Name, [](){
-                    return std::make_shared<T>();
+                RegisterComponent(T::Name, []()
+{
+    return std::make_shared<T>();
                 });
             }
         };
     };
-    
+
 
 
 }

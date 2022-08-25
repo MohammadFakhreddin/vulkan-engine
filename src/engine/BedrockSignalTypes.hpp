@@ -3,5 +3,5 @@
 namespace MFA {
 
     using SignalId = int;
-    static constexpr SignalId InvalidSignalId = -1;
+    static constexpr SignalId SignalIdInvalid = -1;
 }

@@ -136,6 +136,8 @@ void GLTFMeshViewerScene::Init() {
     {// Camera
         auto * entity = EntitySystem::CreateEntity("Camera", GetRootEntity());
 
+        entity->AddComponent<TransformComponent>();
+
         mCamera = entity->AddComponent<ObserverCameraComponent>(
             FOV,
             Z_NEAR,
@@ -231,8 +233,12 @@ void GLTFMeshViewerScene::Update(float const deltaTimeInSec)
 
         if (auto const ptr = mCamera.lock())
         {
-            ptr->ForcePosition(selectedModel.initialParams.camera.position);
-            ptr->ForceRotation(selectedModel.initialParams.camera.eulerAngles);
+            auto const cameraTransform = ptr->GetTransform();
+            cameraTransform->UpdateLocalTransform(
+                Copy<glm::vec3>(selectedModel.initialParams.camera.position),
+                Copy<glm::vec3>(selectedModel.initialParams.camera.eulerAngles),
+                cameraTransform->GetLocalScale()
+            );
         }
     }
 }
