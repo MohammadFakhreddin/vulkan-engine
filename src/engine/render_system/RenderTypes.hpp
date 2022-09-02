@@ -386,6 +386,25 @@ namespace MFA
 
         };
 
+        using ScreenWidth = Platforms::ScreenSize;
+        using ScreenHeight = Platforms::ScreenSize;
+
+        struct FrontendInitParams
+        {
+#ifdef __DESKTOP__
+            ScreenWidth screenWidth = 0;
+            ScreenHeight screenHeight = 0;
+            bool resizable = true;
+#elif defined(__ANDROID__)
+            android_app * app = nullptr;
+#elif defined(__IOS__)
+            void * view = nullptr;
+#else
+#error Os is not supported
+#endif
+            char const * applicationName = nullptr;
+        };
+
     };
 
     namespace RT = RenderTypes;

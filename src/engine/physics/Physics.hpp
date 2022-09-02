@@ -1,10 +1,8 @@
 #pragma once
 
-#include <PxActor.h>
-
 #include "PhysicsTypes.hpp"
 
-#include <foundation/PxVec3.h>
+#include <PxActor.h>
 
 namespace physx
 {
@@ -22,10 +20,7 @@ namespace physx
 
 namespace MFA::Physics// final : public IPhysicsWorld, public PxSimulationEventCallback
 {
-    struct InitParams
-    {
-        physx::PxVec3 gravity {};
-    };
+
     void Init(InitParams const & params);
 
     void Update(float deltaTime);

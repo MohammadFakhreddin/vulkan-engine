@@ -81,7 +81,7 @@ namespace MFA
     
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::UpdateLocalTransform(float position[3], float eulerAngles[3], float scale[3])
+    void TransformComponent::SetLocalTransform(float position[3], float eulerAngles[3], float scale[3])
     {
         bool hasChanged = false;
         if (IsEqual<3>(mLocalPosition, position) == false)
@@ -107,7 +107,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::UpdateLocalTransform(
+    void TransformComponent::SetLocalTransform(
         glm::vec3 const & position,
         glm::vec3 const & eulerAngles,
         glm::vec3 const & scale
@@ -137,7 +137,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::UpdateLocalTransform(
+    void TransformComponent::SetLocalTransform(
         glm::vec3 const& position,
         Rotation const& rotation,
         glm::vec3 const& scale
@@ -167,7 +167,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::UpdateLocalPosition(glm::vec3 const & position)
+    void TransformComponent::SetLocalPosition(glm::vec3 const & position)
     {
         if (IsEqual(mLocalPosition, position) == false)
         {
@@ -178,7 +178,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::UpdateLocalPosition(float position[3])
+    void TransformComponent::SetLocalPosition(float position[3])
     {
         if (IsEqual<3>(mLocalPosition, position) == false)
         {
@@ -189,7 +189,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::UpdateLocalRotation(glm::vec3 const & eulerAngle)
+    void TransformComponent::SetLocalRotation(glm::vec3 const & eulerAngle)
     {
         if (mLocalRotation != eulerAngle)
         {
@@ -200,7 +200,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::UpdateLocalRotation(float rotation[3])
+    void TransformComponent::SetLocalRotation(float rotation[3])
     {
         if (mLocalRotation != rotation)
         {
@@ -211,7 +211,18 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::UpdateLocalScale(float scale[3])
+    void TransformComponent::SetLocalRotation(glm::quat const& quaternion)
+    {
+        if (mLocalRotation != quaternion)
+        {
+            mLocalRotation = quaternion;
+            ComputeTransform();
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void TransformComponent::SetLocalScale(float scale[3])
     {
         if (IsEqual<3>(mLocalScale, scale) == false)
         {
@@ -222,7 +233,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::UpdateLocalScale(glm::vec3 const & scale)
+    void TransformComponent::SetLocalScale(glm::vec3 const & scale)
     {
         if (IsEqual(mLocalScale, scale) == false)
         {
@@ -233,7 +244,7 @@ namespace MFA
     
     //-------------------------------------------------------------------------------------------------
 
-    void TransformComponent::UpdateWorldTransform(glm::vec3 const & position, glm::quat const & rotation)
+    void TransformComponent::SetWorldTransform(glm::vec3 const & position, glm::quat const & rotation)
     {
         bool positionChanged = false;
         if (IsEqual(mWorldPosition, position) == false)

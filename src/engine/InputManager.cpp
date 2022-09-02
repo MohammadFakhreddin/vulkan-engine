@@ -29,6 +29,7 @@ struct State {
     float forwardMove = 0.0f;
     float rightMove = 0.0f;
     bool isLeftMouseDown = false;
+    bool isRightMouseDown = false;
 #ifdef __ANDROID__
     float lastTimeSinceTouchInSec = 0;
 #endif
@@ -43,6 +44,7 @@ struct State {
         forwardMove = 0.0f;
         rightMove = 0.0f;
         isLeftMouseDown = false;
+        isRightMouseDown = false;
     }
 };
 
@@ -156,6 +158,7 @@ void OnNewFrame(float deltaTimeInSec) {
     int32_t mousePositionY = 0;
     auto const mouseButtonMask = RF::GetMouseState(&mousePositionX, &mousePositionY);
     state->isLeftMouseDown = mouseButtonMask & SDL_BUTTON(SDL_BUTTON_LEFT);
+    state->isRightMouseDown = mouseButtonMask & SDL_BUTTON(SDL_BUTTON_RIGHT);
     if (state->isMouseLocationValid == true) {
         state->mouseDeltaX = static_cast<float>(mousePositionX - state->mouseCurrentX);
         state->mouseDeltaY = static_cast<float>(mousePositionY - state->mouseCurrentY);
@@ -249,6 +252,11 @@ float GetRightMove() {
 [[nodiscard]]
 bool IsLeftMouseDown() {
     return state->isLeftMouseDown;
+}
+
+bool IsRightMouseDown()
+{
+    return state->isRightMouseDown;
 }
 
 MousePosition GetMouseX() {

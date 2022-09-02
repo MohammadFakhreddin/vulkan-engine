@@ -41,8 +41,8 @@ namespace MFA::RenderFrontend
     {
         uint32_t maxFramesPerFlight = 0;
         // CreateWindow
-        ScreenWidth screenWidth = 0;
-        ScreenHeight screenHeight = 0;
+        RT::ScreenWidth screenWidth = 0;
+        RT::ScreenHeight screenHeight = 0;
         // CreateInstance
         std::string application_name{};
         VkInstance vk_instance = nullptr;
@@ -247,13 +247,12 @@ namespace MFA::RenderFrontend
         state->surface = RB::CreateWindowSurface(state->window, state->vk_instance);
 
         {// FindPhysicalDevice
-            auto const findPhysicalDeviceResult = RB::FindPhysicalDevice(state->vk_instance);   // TODO Check again for retry count number
+            auto const findPhysicalDeviceResult = RB::FindBestPhysicalDevice(state->vk_instance);   // TODO Check again for retry count number
             state->physicalDevice = findPhysicalDeviceResult.physicalDevice;
             // I'm not sure if this is a correct thing to do but currently I'm enabling all gpu features.
             state->physicalDeviceFeatures = findPhysicalDeviceResult.physicalDeviceFeatures;
             state->maxSampleCount = VK_SAMPLE_COUNT_2_BIT;//findPhysicalDeviceResult.maxSampleCount;                    // TODO It should be a setting
             state->physicalDeviceProperties = findPhysicalDeviceResult.physicalDeviceProperties;
-
             std::string message = "Supported physical device features are:";
             message += "\nSample rate shading support: ";
             message += state->physicalDeviceFeatures.sampleRateShading ? "True" : "False";
@@ -268,8 +267,8 @@ namespace MFA::RenderFrontend
         state->swapChainImageCount = RB::ComputeSwapChainImagesCount(state->surfaceCapabilities);
         state->maxFramesPerFlight = std::min(3u, state->swapChainImageCount);
 
-        state->screenWidth = static_cast<ScreenWidth>(state->surfaceCapabilities.currentExtent.width);
-        state->screenHeight = static_cast<ScreenHeight>(state->surfaceCapabilities.currentExtent.height);
+        state->screenWidth = static_cast<RT::ScreenWidth>(state->surfaceCapabilities.currentExtent.width);
+        state->screenHeight = static_cast<RT::ScreenHeight>(state->surfaceCapabilities.currentExtent.height);
         MFA_LOG_INFO("ScreenWidth: %f \nScreenHeight: %f", static_cast<float>(state->screenWidth), static_cast<float>(state->screenHeight));
 
         if (RB::CheckSwapChainSupport(state->physicalDevice) == false)
@@ -365,8 +364,8 @@ namespace MFA::RenderFrontend
 
         state->surfaceCapabilities = computeSurfaceCapabilities();
 
-        state->screenWidth = static_cast<ScreenWidth>(state->surfaceCapabilities.currentExtent.width);
-        state->screenHeight = static_cast<ScreenHeight>(state->surfaceCapabilities.currentExtent.height);
+        state->screenWidth = static_cast<RT::ScreenWidth>(state->surfaceCapabilities.currentExtent.width);
+        state->screenHeight = static_cast<RT::ScreenHeight>(state->surfaceCapabilities.currentExtent.height);
 
         // Screen width and height can be equal to zero as well
         state->windowResized = false;

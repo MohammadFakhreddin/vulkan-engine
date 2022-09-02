@@ -567,20 +567,20 @@ namespace MFA
                 }
             }
 
-#ifdef MFA_DEBUG
-            uint32_t occlusionCount = 0;
-            for (uint32_t i = 0; i < static_cast<uint32_t>(occlusionQueryData.Results.size()); ++i)
-            {
-                if (auto const variant = occlusionQueryData.Variants[i].lock())
-                {
-                    if (variant->IsOccluded())
-                    {
-                        occlusionCount++;
-                    }
-                }
-            }
-            MFA_LOG_INFO("Occluded objects: %d", static_cast<int>(occlusionCount));
-#endif
+//#ifdef MFA_DEBUG
+//            uint32_t occlusionCount = 0;
+//            for (uint32_t i = 0; i < static_cast<uint32_t>(occlusionQueryData.Results.size()); ++i)
+//            {
+//                if (auto const variant = occlusionQueryData.Variants[i].lock())
+//                {
+//                    if (variant->IsOccluded())
+//                    {
+//                        occlusionCount++;
+//                    }
+//                }
+//            }
+//            MFA_LOG_INFO("Occluded objects: %d", static_cast<int>(occlusionCount));
+//#endif
 
             occlusionQueryData.Variants.clear();
         }

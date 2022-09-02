@@ -1,6 +1,9 @@
 #pragma once
 
 #include "engine/BedrockPlatforms.hpp"
+#include "engine/render_system/RenderTypes.hpp"
+#include "engine/render_system/RenderFrontend.hpp"
+#include "engine/physics/PhysicsTypes.hpp"
 
 #ifdef __ANDROID__
 struct android_app;
@@ -33,6 +36,8 @@ protected:
     virtual void internalInit() {};
     virtual void internalShutdown() {};
     virtual void internalRenderFrame(float deltaTimeInSec) {};
+    virtual MFA::RT::FrontendInitParams GetRenderFrontendInitParams();
+    virtual MFA::Physics::InitParams GetPhysicsInitParams();
 
 private:
 

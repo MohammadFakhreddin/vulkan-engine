@@ -60,7 +60,13 @@ namespace MFA
             auto const position = Copy<glm::vec3>(pxTransform.p);
             auto const rotation = Copy<glm::quat>(pxTransform.q);
 
-            transform->UpdateWorldTransform(position, rotation);
+            MFA_LOG_INFO(
+                "Rigidbody\n Position: %f %f %f\n Rotation: %f %f %f %f"
+                , position.x, position.y, position.z
+                , rotation.x, rotation.y, rotation.z, rotation.w
+            );
+
+            transform->SetWorldTransform(position, rotation);
         }
     }
 
@@ -124,9 +130,46 @@ namespace MFA
 
     glm::vec3 RigidbodyComponent::GetLinearVelocity() const
     {
+        MFA_ASSERT(mRigidDynamic != nullptr);
         auto const velocity = mRigidDynamic->Ptr()->getLinearVelocity();
         return Copy<glm::vec3>(velocity);
     }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void RigidbodyComponent::SetAngularVelocity(glm::vec3 const & angularVelocity) const
+    {
+        MFA_ASSERT(mRigidDynamic != nullptr);
+        mRigidDynamic->Ptr()->setAngularVelocity(Copy<PxVec3>(angularVelocity));
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    glm::vec3 RigidbodyComponent::GetAngularVelocity() const
+    {
+        MFA_ASSERT(mRigidDynamic != nullptr);
+        return Copy<glm::vec3>(mRigidDynamic->Ptr()->getAngularVelocity());
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void RigidbodyComponent::AddForce(glm::vec3 const & force) const
+    {
+        MFA_ASSERT(mRigidDynamic != nullptr);
+        mRigidDynamic->Ptr()->addForce(Copy<PxVec3>(force));
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void RigidbodyComponent::AddTorque(glm::vec3 const & torque) const
+    {
+        MFA_ASSERT(mRigidDynamic != nullptr);
+        mRigidDynamic->Ptr()->addTorque(Copy<PxVec3>(torque));
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    // TODO: setForceAndTorque
 
     //-------------------------------------------------------------------------------------------------
 

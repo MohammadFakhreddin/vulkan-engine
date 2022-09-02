@@ -48,6 +48,16 @@ void TechDemoApplication::internalInit()
 
 //-------------------------------------------------------------------------------------------------
 
+MFA::RT::FrontendInitParams TechDemoApplication::GetRenderFrontendInitParams()
+{
+    auto params =  Application::GetRenderFrontendInitParams();
+    params.screenWidth = 800.0f;
+    params.screenHeight = 600.0f;
+    return params;
+}
+
+//-------------------------------------------------------------------------------------------------
+
 void TechDemoApplication::OnUI() {
     SceneManager::OnUI();
     EntitySystem::OnUI();

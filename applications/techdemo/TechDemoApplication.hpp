@@ -13,7 +13,9 @@ public:
 
 protected:
 
-    void internalInit() override;    
+    void internalInit() override;
+
+    MFA::RT::FrontendInitParams GetRenderFrontendInitParams() override;
 
 private:
 

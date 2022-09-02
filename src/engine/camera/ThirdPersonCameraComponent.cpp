@@ -58,6 +58,23 @@ namespace MFA
     {
         CameraComponent::Update(deltaTimeInSec);
 
+        if (mHasFocus == false)
+        {
+            if (InputManager::IsLeftMouseDown() && UI::HasFocus() == false)
+            {
+                mHasFocus = true;
+                OnWrapMouseAtEdgesChange();
+            }
+            return;
+        }
+
+        if (InputManager::IsRightMouseDown())
+        {
+            mHasFocus = false;
+            OnWrapMouseAtEdgesChange();
+            return;
+        }
+
         auto const transform = mTransformComponent.lock();
         if (transform == nullptr)
         {
@@ -83,7 +100,7 @@ namespace MFA
             18.0f
         );    // Reverse for view mat
 
-        transform->UpdateLocalRotation(eulerAngles);
+        transform->SetLocalRotation(eulerAngles);
         OnFollowTargetMove();
     }
 
@@ -131,21 +148,6 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ThirdPersonCameraComponent::WrapMouseAtEdges(bool const wrap)
-    {
-        mWrapMouseAtEdges = wrap;
-        IM::WarpMouseAtEdges(mWrapMouseAtEdges);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    bool ThirdPersonCameraComponent::WrapMouseAtEdges() const
-    {
-        return mWrapMouseAtEdges;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
     void ThirdPersonCameraComponent::SetFollowTarget(std::shared_ptr<TransformComponent> const& followTarget)
     {
         if (auto const oldFollowTarget = mFollowTarget.lock())
@@ -184,7 +186,7 @@ namespace MFA
         // The extra vector is used to increase camera height
         auto const position = followPosition - vector + mExtraOffset;
 
-        myTransform->UpdateLocalPosition(position);
+        myTransform->SetLocalPosition(position);
     }
 
 
@@ -192,7 +194,7 @@ namespace MFA
 
     void ThirdPersonCameraComponent::OnWrapMouseAtEdgesChange() const
     {
-        IM::WarpMouseAtEdges(mWrapMouseAtEdges);
+        IM::WarpMouseAtEdges(mWrapMouseAtEdges && mHasFocus);
     }
 
     //-------------------------------------------------------------------------------------------------

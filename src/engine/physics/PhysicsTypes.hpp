@@ -7,6 +7,7 @@
 #include <glm/vec3.hpp>
 
 #include <memory>
+#include <foundation/PxVec3.h>
 
 namespace physx
 {
@@ -15,6 +16,12 @@ namespace physx
 
 namespace MFA::Physics
 {
+
+    struct InitParams
+    {
+        physx::PxVec3 gravity{};
+    };
+
     template<typename T>
     class Handle {
     public:

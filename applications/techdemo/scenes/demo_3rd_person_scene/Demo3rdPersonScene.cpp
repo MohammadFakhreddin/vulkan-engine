@@ -72,7 +72,7 @@ void Demo3rdPersonScene::Init()
             float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
             float scale[3]{ 1.0f, 1.0f, 1.0f };
             playerTransform = entity->GetComponent<TransformComponent>();
-            playerTransform->UpdateLocalTransform(
+            playerTransform->SetLocalTransform(
                 position,
                 eulerAngles,
                 scale
@@ -95,7 +95,7 @@ void Demo3rdPersonScene::Init()
 
         auto const transform = entity->AddComponent<TransformComponent>();
 
-        transform->UpdateLocalRotation(glm::vec3{ -15.0f, 0.0f, 0.0f });
+        transform->SetLocalRotation(glm::vec3{ -15.0f, 0.0f, 0.0f });
 
         auto const camera = entity->AddComponent<ThirdPersonCameraComponent>(
             playerTransform,
@@ -105,6 +105,7 @@ void Demo3rdPersonScene::Init()
         );
 
         camera->SetDistance(3.0f);
+        camera->SetWrapMouseAtEdges(true);
 
         EntitySystem::InitEntity(entity);
 
@@ -131,7 +132,7 @@ void Demo3rdPersonScene::Init()
             float position[3]{ 0.4f, 2.0f, -6.0f };
             float eulerAngle[3]{ 180.0f, -90.0f, 0.0f };
             float scale[3]{ 1.0f, 1.0f, 1.0f };
-            ptr->UpdateLocalTransform(position, eulerAngle, scale);
+            ptr->SetLocalTransform(position, eulerAngle, scale);
         }
         {// Mesh collider
             auto const meshCollider = sponzaEntity->AddComponent<MeshColliderComponent>(true);
@@ -158,7 +159,7 @@ void Demo3rdPersonScene::Init()
 
         auto const transformComponent = entity->AddComponent<TransformComponent>();
         MFA_ASSERT(transformComponent != nullptr);
-        transformComponent->UpdateLocalRotation(glm::vec3(90.0f, 0.0f, 0.0f));
+        transformComponent->SetLocalRotation(glm::vec3(90.0f, 0.0f, 0.0f));
 
         entity->AddComponent<DirectionalLightComponent>();
 
@@ -168,17 +169,17 @@ void Demo3rdPersonScene::Init()
 
     {// Fire
         RC::AcquireGpuTexture("images/fire/particle_fire.ktx", [this, sponzaEntity](std::shared_ptr<RT::GpuTexture> const & gpuTexture)->void
-{
-    auto * particlePipeline = SceneManager::GetPipeline<ParticlePipeline>();
-    MFA_ASSERT(particlePipeline != nullptr);
+        {
+            auto * particlePipeline = SceneManager::GetPipeline<ParticlePipeline>();
+            MFA_ASSERT(particlePipeline != nullptr);
 
-    createFireEssence(gpuTexture);
-    // TODO: Use getComponentInchildren
-    // Fire instances
-    createFireInstance(glm::vec3{ 3.9f, 1.0f, 1.45f }, sponzaEntity);
-    createFireInstance(glm::vec3{ -4.95f, 1.0f, -1.45f }, sponzaEntity);
-    createFireInstance(glm::vec3{ -4.95f, 1.0f, 1.45f }, sponzaEntity);
-    createFireInstance(glm::vec3{ 3.9f, 1.0f, -1.45f }, sponzaEntity);
+            createFireEssence(gpuTexture);
+            // TODO: Use getComponentInchildren
+            // Fire instances
+            createFireInstance(glm::vec3{ 3.9f, 1.0f, 1.45f }, sponzaEntity);
+            createFireInstance(glm::vec3{ -4.95f, 1.0f, -1.45f }, sponzaEntity);
+            createFireInstance(glm::vec3{ -4.95f, 1.0f, 1.45f }, sponzaEntity);
+            createFireInstance(glm::vec3{ 3.9f, 1.0f, -1.45f }, sponzaEntity);
         });
     }
 
@@ -226,14 +227,29 @@ void Demo3rdPersonScene::Update(float const deltaTimeInSec)
     auto const inputForwardMove = IM::GetForwardMove();
     auto const inputRightMove = IM::GetRightMove();
 
-    auto const forward = playerTransform->Forward();
-    auto const right = playerTransform->Right();
+    auto forward = camera->GetForward();
+    forward.y = 0.0f;
+    forward = glm::normalize(forward);
 
+    auto right = camera->GetRight();
+    right.y = 0.0f;
+    right = glm::normalize(right);
+    
     glm::vec3 velocity{};
     velocity += forward * inputForwardMove * SoldierSpeed;
     velocity += right * inputRightMove * SoldierSpeed;
 
     playerRigidbody->SetLinearVelocity(velocity);
+    //if (Matrix::IsNearZero(velocity) == false)
+    //{
+    //    playerTransform->SetLocalRotation(
+    //        glm::lookAt(
+    //            glm::vec3 {},
+    //            glm::normalize(velocity),
+    //            Math::UpVec3
+    //        )
+    //    );
+    //}
 
     bool const isIdle = Matrix::IsNearZero(playerRigidbody->GetLinearVelocity());
     if (isIdle == false)
@@ -324,7 +340,7 @@ void Demo3rdPersonScene::createFireInstance(glm::vec3 const & position, Entity *
 
     auto const transform = entity->AddComponent<TransformComponent>();
     MFA_ASSERT(transform != nullptr);
-    transform->UpdateLocalPosition(position);
+    transform->SetLocalPosition(position);
 
     entity->AddComponent<MeshRendererComponent>(
         particlePipeline,

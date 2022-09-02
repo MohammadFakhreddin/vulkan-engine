@@ -38,34 +38,11 @@ void Application::Init() {
 
     Path::Init();
     RC::Init();
-    {// Initializing render frontend
-        RF::InitParams params{};
-        params.applicationName = "MfaEngine";
-    #ifdef __ANDROID__
-        params.app = mAndroidApp;
-    #elif defined(__IOS__)
-        params.view = mView;
-    #elif defined(__DESKTOP__)
-        auto const screenInfo = MFA::Platforms::ComputeScreenSize();
-        auto const screenWidth = screenInfo.screenWidth;
-        auto const screenHeight = screenInfo.screenHeight;
-
-        MFA_ASSERT(mIsInitialized == false);
-
-        params.resizable = true;
-        params.screenWidth = static_cast<RF::ScreenWidth>(static_cast<float>(screenWidth) * 0.9f);
-        params.screenHeight = static_cast<RF::ScreenHeight>(static_cast<float>(screenHeight) * 0.9f);
-    #else
-        #error Os not supported
-    #endif
-        RF::Init(params);
-    }
+    RF::Init(GetRenderFrontendInitParams());
     JS::Init();
     UI::Init();
     IM::Init();
-    Physics::Init(Physics::InitParams {
-        .gravity {0.0f, -9.8f, 0.0f}
-    });
+    Physics::Init(GetPhysicsInitParams());
     EntitySystem::Init();
 
     SceneManager::Init();
@@ -182,6 +159,43 @@ void Application::RenderFrame(float const deltaTimeInSec) {
     SceneManager::Update(deltaTimeInSec);
     RF::OnNewFrame(deltaTimeInSec);
     Physics::Update(deltaTimeInSec);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RT::FrontendInitParams Application::GetRenderFrontendInitParams()
+{
+    RF::InitParams params{};
+    params.applicationName = "MfaEngine";
+#ifdef __ANDROID__
+    params.app = mAndroidApp;
+#elif defined(__IOS__)
+    params.view = mView;
+#elif defined(__DESKTOP__)
+    auto const screenInfo = MFA::Platforms::ComputeScreenSize();
+    auto const screenWidth = screenInfo.screenWidth;
+    auto const screenHeight = screenInfo.screenHeight;
+
+    MFA_ASSERT(mIsInitialized == false);
+
+    params.resizable = true;
+    params.screenWidth = static_cast<RT::ScreenWidth>(static_cast<float>(screenWidth) * 0.9f);
+    params.screenHeight = static_cast<RT::ScreenHeight>(static_cast<float>(screenHeight) * 0.9f);
+#else
+#error Os not supported
+#endif
+
+    return params;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::Physics::InitParams Application::GetPhysicsInitParams()
+{
+    Physics::InitParams params {
+        .gravity {0.0f, -9.8f, 0.0f}
+    };
+    return params;
 }
 
 //-------------------------------------------------------------------------------------------------

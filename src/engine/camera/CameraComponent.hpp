@@ -68,6 +68,15 @@ namespace MFA
 
         [[nodiscard]]
         TransformComponent * GetTransform() const;
+
+        [[nodiscard]]
+        glm::vec3 const & GetForward() const;
+
+        [[nodiscard]]
+        glm::vec3 const & GetRight() const;
+
+        [[nodiscard]]
+        glm::vec3 const & GetUp() const;
         
     protected:
 

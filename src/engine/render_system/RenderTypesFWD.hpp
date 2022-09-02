@@ -26,17 +26,13 @@ namespace MFA
         struct BufferAndMemory;
 
         struct SamplerGroup;
-
-        //struct MeshBuffer;
-
+        
         struct ImageGroup;
 
         struct ImageViewGroup;
 
         struct GpuTexture;
-
-        //struct GpuModel;
-
+        
         struct GpuShader;
 
         struct PipelineGroup;
@@ -71,9 +67,7 @@ namespace MFA
         struct DescriptorSetLayoutGroup;
 
         struct BufferGroup;
-        //struct StorageBufferGroup;
-        //struct UniformBufferGroup;
-
+   
     };
 
     namespace RT = RenderTypes;

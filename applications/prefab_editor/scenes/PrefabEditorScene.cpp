@@ -70,7 +70,7 @@ void PrefabEditorScene::Init()
 
         auto const transformComponent = entity->AddComponent<TransformComponent>();
         MFA_ASSERT(transformComponent != nullptr);
-        transformComponent->UpdateLocalRotation(glm::vec3(90.0f, 0.0f, 0.0f));
+        transformComponent->SetLocalRotation(glm::vec3(90.0f, 0.0f, 0.0f));
 
         entity->EditorSignal.Register(this, &PrefabEditorScene::entityUI);
         EntitySystem::InitEntity(entity);

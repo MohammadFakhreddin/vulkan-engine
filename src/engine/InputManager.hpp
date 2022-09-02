@@ -40,6 +40,9 @@ namespace MFA::InputManager {
     bool IsLeftMouseDown();
 
     [[nodiscard]]
+    bool IsRightMouseDown();
+
+    [[nodiscard]]
     MousePosition GetMouseX();
 
     [[nodiscard]]

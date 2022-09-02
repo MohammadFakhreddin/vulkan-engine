@@ -46,11 +46,6 @@ namespace MFA
 
         void OnUI() override;
 
-        void WrapMouseAtEdges(bool const wrap);
-
-        [[nodiscard]]
-        bool WrapMouseAtEdges() const;
-
         void SetFollowTarget(std::shared_ptr<TransformComponent> const & followTarget);
 
     private:
@@ -89,6 +84,8 @@ namespace MFA
         )
 
         SignalId mFollowTargetListenerId = SignalIdInvalid;
+
+        bool mHasFocus = false;
 
     };
 

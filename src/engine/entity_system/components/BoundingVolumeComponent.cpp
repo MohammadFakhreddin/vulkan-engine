@@ -156,7 +156,7 @@ void MFA::BoundingVolumeComponent::updateVolumeTransform() const
     auto const & bvWorldPosition = GetWorldPosition();  // Question: Why do we use the world position ?
     auto const & bvExtend = GetExtend();
 
-    bvTransform->UpdateLocalTransform(
+    bvTransform->SetLocalTransform(
         bvWorldPosition,
         bvTransform->GetLocalRotation(),    // Question: Why do we use the local rotation ?
         bvExtend

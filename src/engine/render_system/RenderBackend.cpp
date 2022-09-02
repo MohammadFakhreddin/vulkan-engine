@@ -1327,9 +1327,9 @@ namespace MFA::RenderBackend
 
     //-------------------------------------------------------------------------------------------------
 
-    static FindPhysicalDeviceResult findPhysicalDevice(VkInstance instance, uint8_t const retryCount)
+    FindPhysicalDeviceResult FindBestPhysicalDevice(VkInstance instance)
     {
-        FindPhysicalDeviceResult ret{};
+        FindPhysicalDeviceResult result {};
 
         uint32_t deviceCount = 0;
         //Getting number of physical devices
@@ -1348,43 +1348,68 @@ namespace MFA::RenderBackend
         );
         //TODO Search about incomplete
         MFA_ASSERT(phyDevResult == VK_SUCCESS || phyDevResult == VK_INCOMPLETE);
-        // TODO We need to choose physical device based on features that we need
-        if (retryCount >= devices.size())
+
+        for (uint32_t i = 0; i < deviceCount; ++i)
         {
-            MFA_CRASH("No suitable physical device exists");
+            auto device = devices[i];
+
+            VkPhysicalDeviceProperties properties{};
+
+            vkGetPhysicalDeviceProperties(device, &properties);
+
+            VkPhysicalDeviceFeatures features{};
+
+            vkGetPhysicalDeviceFeatures(device, &features);
+            
+            MFA_LOG_INFO(
+                "Device number %d\nName: %s\nApi version: %d.%d.%d"
+                , i
+                , properties.deviceName
+                , VK_VERSION_MAJOR(properties.apiVersion)
+                , VK_VERSION_MINOR(properties.apiVersion)
+                , VK_VERSION_PATCH(properties.apiVersion)
+            );
+
+            if (i == 0 || result.physicalDeviceProperties.apiVersion < properties.apiVersion)
+            {
+                result.physicalDevice = device;
+                result.physicalDeviceFeatures = features;
+                result.physicalDeviceProperties = properties;
+            }
         }
-        ret.physicalDevice = devices[retryCount];
-        MFA_ASSERT(ret.physicalDevice != nullptr);
-        ret.physicalDeviceFeatures.samplerAnisotropy = VK_TRUE;
-        ret.physicalDeviceFeatures.shaderClipDistance = VK_TRUE;
-        ret.physicalDeviceFeatures.shaderCullDistance = VK_TRUE;
 
-        VkPhysicalDeviceProperties deviceProperties;
-        vkGetPhysicalDeviceProperties(ret.physicalDevice, &deviceProperties);
-        vkGetPhysicalDeviceFeatures(ret.physicalDevice, &ret.physicalDeviceFeatures);
+        //if (retryCount >= devices.size())
+        //{
+        //    MFA_CRASH("No suitable physical device exists");
+        //}
+        //ret.physicalDevice = devices[retryCount];
+        //MFA_ASSERT(ret.physicalDevice != nullptr);
+        //ret.physicalDeviceFeatures.samplerAnisotropy = VK_TRUE;
+        //ret.physicalDeviceFeatures.shaderClipDistance = VK_TRUE;
+        //ret.physicalDeviceFeatures.shaderCullDistance = VK_TRUE;
 
-        uint32_t supportedVersion[] = {
-            VK_VERSION_MAJOR(deviceProperties.apiVersion),
-            VK_VERSION_MINOR(deviceProperties.apiVersion),
-            VK_VERSION_PATCH(deviceProperties.apiVersion)
-        };
+        //VkPhysicalDeviceProperties deviceProperties;
+        //vkGetPhysicalDeviceProperties(ret.physicalDevice, &deviceProperties);
+        //vkGetPhysicalDeviceFeatures(ret.physicalDevice, &ret.physicalDeviceFeatures);
 
-        MFA_LOG_INFO(
-            "Physical device supports version %d.%d.%d\n",
-            supportedVersion[0], supportedVersion[1], supportedVersion[2]
-        );
+        //uint32_t supportedVersion[] = {
+        //    VK_VERSION_MAJOR(deviceProperties.apiVersion),
+        //    VK_VERSION_MINOR(deviceProperties.apiVersion),
+        //    VK_VERSION_PATCH(deviceProperties.apiVersion)
+        //};
 
-        ret.maxSampleCount = ComputeMaxUsableSampleCount(deviceProperties);
-        ret.physicalDeviceProperties = deviceProperties;
+        //MFA_LOG_INFO(
+        //    "Physical device supports version %d.%d.%d\n",
+        //    supportedVersion[0], supportedVersion[1], supportedVersion[2]
+        //);
 
-        return ret;
-    }
+        result.maxSampleCount = ComputeMaxUsableSampleCount(result.physicalDeviceProperties);
+        //ret.physicalDeviceProperties = deviceProperties;
 
-    //-------------------------------------------------------------------------------------------------
+        MFA_LOG_INFO("Selected device name: %s", result.physicalDeviceProperties.deviceName);
 
-    FindPhysicalDeviceResult FindPhysicalDevice(VkInstance instance)
-    {
-        return findPhysicalDevice(instance, 0);
+        return result;
+
     }
 
     //-------------------------------------------------------------------------------------------------

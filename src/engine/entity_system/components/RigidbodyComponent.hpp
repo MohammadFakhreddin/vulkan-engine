@@ -41,6 +41,15 @@ namespace MFA
         [[nodiscard]]
         glm::vec3 GetLinearVelocity() const;
 
+        void SetAngularVelocity(glm::vec3 const & angularVelocity) const;
+
+        [[nodiscard]]
+        glm::vec3 GetAngularVelocity() const;
+
+        void AddForce(glm::vec3 const & force) const;
+
+        void AddTorque(glm::vec3 const & torque) const;
+
     private:
 
         void UpdateGravity() const;

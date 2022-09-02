@@ -160,7 +160,7 @@ void GLTFMeshViewerScene::Init() {
 
         auto const transformComponent = entity->AddComponent<TransformComponent>();
         MFA_ASSERT(transformComponent != nullptr);
-        transformComponent->UpdateLocalScale(glm::vec3(0.1f, 0.1f, 0.1f));
+        transformComponent->SetLocalScale(glm::vec3(0.1f, 0.1f, 0.1f));
         
         entity->AddComponent<PointLightComponent>(0.5f, 1000.0f);
 
@@ -214,7 +214,7 @@ void GLTFMeshViewerScene::Update(float const deltaTimeInSec)
                 selectedModel.initialParams.model.scale,
                 selectedModel.initialParams.model.scale
             };
-            ptr->UpdateLocalTransform(
+            ptr->SetLocalTransform(
                 selectedModel.initialParams.model.translate,
                 selectedModel.initialParams.model.rotationEulerAngle,
                 scale
@@ -223,7 +223,7 @@ void GLTFMeshViewerScene::Update(float const deltaTimeInSec)
 
         if (auto const ptr = mPointLightTransform.lock())
         {
-            ptr->UpdateLocalPosition(selectedModel.initialParams.light.position);
+            ptr->SetLocalPosition(selectedModel.initialParams.light.position);
         }
 
         if (auto const ptr = mPointLightColor.lock())
@@ -234,7 +234,7 @@ void GLTFMeshViewerScene::Update(float const deltaTimeInSec)
         if (auto const ptr = mCamera.lock())
         {
             auto const cameraTransform = ptr->GetTransform();
-            cameraTransform->UpdateLocalTransform(
+            cameraTransform->SetLocalTransform(
                 Copy<glm::vec3>(selectedModel.initialParams.camera.position),
                 Copy<glm::vec3>(selectedModel.initialParams.camera.eulerAngles),
                 cameraTransform->GetLocalScale()

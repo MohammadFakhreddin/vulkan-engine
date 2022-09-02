@@ -268,7 +268,7 @@ namespace MFA::RenderBackend
         VkPhysicalDeviceProperties physicalDeviceProperties{};
     };
     [[nodiscard]]
-    FindPhysicalDeviceResult FindPhysicalDevice(VkInstance instance);
+    FindPhysicalDeviceResult FindBestPhysicalDevice(VkInstance instance);
 
     [[nodiscard]]
     bool CheckSwapChainSupport(VkPhysicalDevice physical_device);

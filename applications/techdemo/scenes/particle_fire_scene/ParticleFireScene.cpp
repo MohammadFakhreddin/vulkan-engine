@@ -110,7 +110,7 @@ void ParticleFireScene::createFireInstance(glm::vec3 const & position) const
 
     auto const transform = entity->AddComponent<TransformComponent>();
     MFA_ASSERT(transform != nullptr);
-    transform->UpdateLocalPosition(position);
+    transform->SetLocalPosition(position);
     
     entity->AddComponent<MeshRendererComponent>(
         mParticlePipeline,

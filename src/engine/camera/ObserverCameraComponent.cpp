@@ -13,7 +13,7 @@ namespace MFA
 {
 
     //-------------------------------------------------------------------------------------------------
-    // TODO We should read position from transform component
+
     ObserverCameraComponent::ObserverCameraComponent(
         float const fieldOfView,
         float const nearDistance,
@@ -86,7 +86,7 @@ namespace MFA
             }
         }
 
-        transform->UpdateLocalTransform(position, eulerAngles, transform->GetLocalScale());
+        transform->SetLocalTransform(position, eulerAngles, transform->GetLocalScale());
     }
     
     //-------------------------------------------------------------------------------------------------

@@ -41,25 +41,27 @@ namespace MFA
 
         void Shutdown() override;
 
-        void UpdateLocalTransform(float position[3], float eulerAngles[3], float scale[3]);
+        void SetLocalTransform(float position[3], float eulerAngles[3], float scale[3]);
 
-        void UpdateLocalTransform(glm::vec3 const & position, glm::vec3 const & eulerAngles, glm::vec3 const & scale);
+        void SetLocalTransform(glm::vec3 const & position, glm::vec3 const & eulerAngles, glm::vec3 const & scale);
 
-        void UpdateLocalTransform(glm::vec3 const & position, Rotation const & rotation, glm::vec3 const & scale);
+        void SetLocalTransform(glm::vec3 const & position, Rotation const & rotation, glm::vec3 const & scale);
 
-        void UpdateLocalPosition(glm::vec3 const & position);
+        void SetLocalPosition(glm::vec3 const & position);
 
-        void UpdateLocalPosition(float position[3]);
+        void SetLocalPosition(float position[3]);
 
-        void UpdateLocalRotation(glm::vec3 const & eulerAngle);
+        void SetLocalRotation(glm::vec3 const & eulerAngle);
 
-        void UpdateLocalRotation(float rotation[3]);
+        void SetLocalRotation(float rotation[3]);
 
-        void UpdateLocalScale(float scale[3]);
+        void SetLocalRotation(glm::quat const & quaternion);
+
+        void SetLocalScale(float scale[3]);
         
-        void UpdateLocalScale(glm::vec3 const & scale);
+        void SetLocalScale(glm::vec3 const & scale);
 
-        void UpdateWorldTransform(
+        void SetWorldTransform(
             glm::vec3 const & position,
             glm::quat const & rotation
         );
