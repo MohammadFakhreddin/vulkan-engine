@@ -80,7 +80,7 @@ public:                                                                         
 
 
 #define MFA_ATOMIC_VARIABLE1(variable, type, default)           \
-private:                                                        \
+protected:                                                      \
 type m##variable = default;                                     \
 public:                                                         \
 void Set##variable(type value)                                  \
@@ -96,9 +96,10 @@ type Get##variable() const                                      \
 {                                                               \
     return m##variable;                                         \
 }                                                               \
+protected:                                                      \
 
 #define MFA_ATOMIC_VARIABLE2(variable, type, default, onChange) \
-private:                                                        \
+protected:                                                      \
 type m##variable = default;                                     \
 public:                                                         \
 void Set##variable(type value)                                  \
@@ -115,9 +116,10 @@ type Get##variable() const                                      \
 {                                                               \
     return m##variable;                                         \
 }                                                               \
+protected:                                                      \
 
 #define MFA_VECTOR_VARIABLE1(variable, type, default)           \
-private:                                                        \
+protected:                                                      \
 type m##variable = default;                                     \
 public:                                                         \
 void Set##variable(type const & value)                          \
@@ -133,9 +135,10 @@ type const & Get##variable() const                              \
 {                                                               \
     return m##variable;                                         \
 }                                                               \
+protected:                                                      \
 
 #define MFA_VECTOR_VARIABLE2(variable, type, default, onChange) \
-private:                                                        \
+protected:                                                      \
 type m##variable = default;                                     \
 public:                                                         \
 void Set##variable(type const & value)                          \
@@ -152,6 +155,7 @@ type const & Get##variable() const                              \
 {                                                               \
     return m##variable;                                         \
 }                                                               \
+protected:                                                      \
 
     class Entity;
 

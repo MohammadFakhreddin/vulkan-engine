@@ -37,11 +37,7 @@ namespace MFA
             Component
         )
 
-        explicit ColliderComponent(
-            glm::vec3 const & center,
-            glm::quat const & rotation,
-            Physics::SharedHandle<physx::PxMaterial> material
-        );
+        explicit ColliderComponent();
 
         ~ColliderComponent() override;
 
@@ -81,6 +77,8 @@ namespace MFA
 
         void RemoveShapes();
 
+        void OnMaterialChange() const;
+
     protected:
 
         std::weak_ptr<TransformComponent> mTransform;
@@ -96,16 +94,20 @@ namespace MFA
 
         bool mIsDynamic = false;
 
-        // Local relative position
-        glm::vec3 mCenter{};
+        MFA_ATOMIC_VARIABLE2(Center, glm::vec3, {}, UpdateShapeRelativeTransform)
 
-        // Local relative rotation
-        Rotation mRotation{};
+        MFA_ATOMIC_VARIABLE2(Rotation, Rotation, Rotation {}, UpdateShapeRelativeTransform)
 
+        MFA_ATOMIC_VARIABLE1(UpdatePositionFromTransform, bool, true)
+
+        MFA_ATOMIC_VARIABLE1(UpdateRotationFromTransform, bool, true)
+
+        MFA_ATOMIC_VARIABLE2(Material, Physics::SharedHandle<physx::PxMaterial>, nullptr, OnMaterialChange)
+        
         // Global world scale
         glm::vec3 mScale{};
 
-        Physics::SharedHandle<physx::PxMaterial> mMaterial = nullptr;
+        bool mInitialized = false;
 
     };
 

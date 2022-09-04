@@ -22,18 +22,15 @@ namespace MFA
 
         MFA_COMPONENT_PROPS(
             CapsuleColliderComponent,
-            EventTypes::EmptyEvent,
+            EventTypes::InitEvent,
             ColliderComponent
         )
 
-        explicit CapsuleColliderComponent(
-            float halfHeight,
-            float radius,
-            CapsuleDirection direction = defaultDirection,
-            Physics::SharedHandle<physx::PxMaterial> material = {}
-        );
+        explicit CapsuleColliderComponent();
 
         ~CapsuleColliderComponent() override;
+
+        void Init() override;
 
         void OnUI() override;
 
@@ -66,10 +63,10 @@ namespace MFA
 
         MFA_ATOMIC_VARIABLE2(HalfHeight, float, 0.0f, OnCapsuleGeometryChanged)
 
-        MFA_ATOMIC_VARIABLE2(Radius, float, 0.0f, OnCapsuleDirectionChanged)
-        
-        CapsuleDirection mCapsuleDirection = defaultDirection;
+        MFA_ATOMIC_VARIABLE2(Radius, float, 0.0f, OnCapsuleGeometryChanged)
 
+        MFA_ATOMIC_VARIABLE2(CapsuleDirection, CapsuleDirection, defaultDirection, OnCapsuleDirectionChanged)
+        
     };
 
     using CapsuleCollider = CapsuleColliderComponent;

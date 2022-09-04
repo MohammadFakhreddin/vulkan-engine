@@ -17,18 +17,9 @@ namespace MFA
             ColliderComponent
         )
 
-        explicit MeshColliderComponent(
-            std::string nameId,
-            bool isConvex,
-            glm::vec3 const & center = {},
-            Physics::SharedHandle<physx::PxMaterial> material = {}
-        );
+        explicit MeshColliderComponent(bool isConvex);
 
-        explicit MeshColliderComponent(
-            bool isConvex,
-            glm::vec3 const & center = {},
-            Physics::SharedHandle<physx::PxMaterial> material = {}
-        );
+        explicit MeshColliderComponent(std::string nameId, bool isConvex);
 
         void Init() override;
 

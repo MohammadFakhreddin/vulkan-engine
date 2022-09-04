@@ -37,36 +37,35 @@ namespace MFA::Physics
     //-------------------------------------------------------------------------------------------------
 
     // TODO: Important: Research about PhysxWorldFilterShader
-    PxFilterFlags PhysicsWorldFilterShader(
-        PxFilterObjectAttributes attributes0, PxFilterData filterData0,
-        PxFilterObjectAttributes attributes1, PxFilterData filterData1,
-        PxPairFlags & pairFlags, const void * constantBlock, PxU32 constantBlockSize
-    )
-    {
-        // Checking if layers should be ignored
-        auto const layerMaskA = filterData0.word0;
-        auto const layerA = filterData0.word1;
+    //PxFilterFlags PhysicsWorldFilterShader(
+    //    PxFilterObjectAttributes attributes0, PxFilterData filterData0,
+    //    PxFilterObjectAttributes attributes1, PxFilterData filterData1,
+    //    PxPairFlags & pairFlags, const void * constantBlock, PxU32 constantBlockSize
+    //)
+    //{
+    //    // Checking if layers should be ignored
+    //    auto const layerMaskA = filterData0.word0;
+    //    auto const layerA = filterData0.word1;
 
-        auto const layerMaskB = filterData1.word0;
-        auto const layerB = filterData1.word1;
+    //    auto const layerMaskB = filterData1.word0;
+    //    auto const layerB = filterData1.word1;
 
-        auto const aCollision = layerMaskA & layerB;
-        auto const bCollision = layerMaskB & layerA;
-        if (aCollision == 0 || bCollision == 0)
-        {
-            return PxFilterFlag::eSUPPRESS;
-        }
+    //    auto const aCollision = layerMaskA & layerB;
+    //    auto const bCollision = layerMaskB & layerA;
+    //    if (aCollision == 0 || bCollision == 0)
+    //    {
+    //        return PxFilterFlag::eSUPPRESS;
+    //    }
 
-        // all initial and persisting reports for everything, with per-point data
-        pairFlags = PxPairFlag::eSOLVE_CONTACT | PxPairFlag::eDETECT_DISCRETE_CONTACT | PxPairFlag::eTRIGGER_DEFAULT;
-        return PxFilterFlag::eDEFAULT;
-    }
+    //    // all initial and persisting reports for everything, with per-point data
+    //    pairFlags = PxPairFlag::eSOLVE_CONTACT | PxPairFlag::eDETECT_DISCRETE_CONTACT | PxPairFlag::eTRIGGER_DEFAULT;
+    //    return PxFilterFlag::eDEFAULT;
+    //}
 
     //-------------------------------------------------------------------------------------------------
 
     struct State
     {
-        float stepResidualTime = 0.0f;
         PxDefaultAllocator allocator{};
         PxDefaultErrorCallback errorCallback{};
         SharedHandle<PxFoundation> foundation{};
@@ -84,11 +83,11 @@ namespace MFA::Physics
 
     //-------------------------------------------------------------------------------------------------
 
-    static void Step()
+    static void Step(float deltaTime)
     {
         auto * scene = state->scene->Ptr();
         MFA_ASSERT(scene != nullptr);
-        scene->simulate(FixedDeltaTime);
+        scene->simulate(deltaTime);
         scene->fetchResults(true);
     }
 
@@ -124,17 +123,18 @@ namespace MFA::Physics
 
         // TODO: Do we need this many threads ?
         state->dispatcher = CreateHandle(PxDefaultCpuDispatcherCreate(
-            std::max<PxU32>(
+            /*std::max<PxU32>(
                 1,
                 static_cast<PxU32>(static_cast<float>(std::thread::hardware_concurrency()) * 0.5f)
-            )
+            )*/
+            1
         ));
 
         PxSceneDesc sceneDesc(state->physics->Ptr()->getTolerancesScale());
         sceneDesc.gravity = params.gravity;  // We can also manually control gravity for better control
         sceneDesc.cpuDispatcher = state->dispatcher->Ptr();
         sceneDesc.simulationEventCallback = &state->simulationEventCallback;
-        sceneDesc.filterShader = PhysicsWorldFilterShader;
+        sceneDesc.filterShader = physx::PxDefaultSimulationFilterShader;
 
         state->scene = CreateHandle(state->physics->Ptr()->createScene(sceneDesc));
 
@@ -149,7 +149,7 @@ namespace MFA::Physics
         }
 #endif
 
-        state->defaultMaterial = CreateMaterial(0.5f, 0.5f, 0.5f);
+        state->defaultMaterial = CreateMaterial(0.5f, 0.5f, 0.1f);
 
         auto cookingParams = PxCookingParams(toleranceScale);
         //cookingParams.meshPreprocessParams |= PxMeshPreprocessingFlag::eWELD_VERTICES;
@@ -189,12 +189,7 @@ namespace MFA::Physics
 
     void Update(float const deltaTime)
     {
-        state->stepResidualTime -= deltaTime;
-        while (state->stepResidualTime < 0.0f)
-        {
-            Step();
-            state->stepResidualTime += FixedDeltaTime;
-        }
+        Step(deltaTime);
     }
 
     //-------------------------------------------------------------------------------------------------

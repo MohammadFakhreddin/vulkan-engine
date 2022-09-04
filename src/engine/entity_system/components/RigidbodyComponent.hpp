@@ -18,11 +18,7 @@ namespace MFA
             Component
         )
 
-        explicit RigidbodyComponent(
-            bool isKinematic,
-            bool useGravity,
-            bool mass
-        );
+        explicit RigidbodyComponent();
 
         void LateInit() override;
 
@@ -55,6 +51,7 @@ namespace MFA
         void UpdateGravity() const;
         void UpdateKinematic() const;
         void UpdateMass() const;
+        void UpdateKinematicRotation() const;
 
         std::weak_ptr<TransformComponent> mTransform;
 
@@ -62,10 +59,17 @@ namespace MFA
 
         Physics::SharedHandle<physx::PxRigidDynamic> mRigidDynamic;
 
-        bool mIsKinematic {};
-        bool mUseGravity {};
-        float mMass {};
+        MFA_ATOMIC_VARIABLE2(IsKinematic, bool, false, UpdateKinematic)
 
+        MFA_ATOMIC_VARIABLE2(UseGravity, bool, true, UpdateGravity)
+
+        MFA_ATOMIC_VARIABLE2(Mass, float, 1.0f, UpdateMass)
+
+        MFA_ATOMIC_VARIABLE2(KinematicRotation, bool, true, UpdateKinematicRotation)
+
+        MFA_ATOMIC_VARIABLE1(UpdateTransformPosition, bool, true)
+
+        MFA_ATOMIC_VARIABLE1(UpdateTransformRotation, bool, true)
     };
 
     using Rigidbody = RigidbodyComponent;

@@ -13,18 +13,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    BoxColliderComponent::BoxColliderComponent(
-        glm::vec3 const & size,
-        glm::vec3 const & center,
-        Physics::SharedHandle<PxMaterial> material
-    )
-        : ColliderComponent(center, glm::identity<glm::quat>(), std::move(material))
-        , mHalfSize(size.x * 0.5f, size.y * 0.5f, size.z * 0.5f)
-    {
-        MFA_ASSERT(size.x > 0.0f);
-        MFA_ASSERT(size.y > 0.0f);
-        MFA_ASSERT(size.z > 0.0f);
-    }
+    BoxColliderComponent::BoxColliderComponent() = default;
 
     //-------------------------------------------------------------------------------------------------
 
@@ -82,6 +71,10 @@ namespace MFA
 
     std::vector<std::shared_ptr<PxGeometry>> BoxColliderComponent::ComputeGeometry()
     {
+        MFA_ASSERT(mHalfSize.x > 0.0f);
+        MFA_ASSERT(mHalfSize.y > 0.0f);
+        MFA_ASSERT(mHalfSize.z > 0.0f);
+
         auto const halfSize = mHalfSize * mScale;
         std::vector<std::shared_ptr<PxGeometry>> geometries {
             std::make_shared<PxBoxGeometry>(Copy<PxVec3>(halfSize))

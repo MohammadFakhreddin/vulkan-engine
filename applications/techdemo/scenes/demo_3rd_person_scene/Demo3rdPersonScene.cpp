@@ -82,9 +82,12 @@ void Demo3rdPersonScene::Init()
         mPlayerMeshRenderer = entity->GetComponent<MeshRendererComponent>();
         // TODO: We need to be able to draw colliders on editor as well
         // Capsule collider
-        auto const capsuleCollider = entity->AddComponent<CapsuleCollider>(0.5f, 0.2f);
+        auto const capsuleCollider = entity->AddComponent<CapsuleCollider>();
+        capsuleCollider->SetHalfHeight(0.5f);
+        capsuleCollider->SetRadius(0.2f);
         // Rigidbody
-        auto const rigidbody = entity->AddComponent<Rigidbody>(false, true, 1.0f);
+        auto const rigidbody = entity->AddComponent<Rigidbody>();
+        
         capsuleCollider->Init();
         rigidbody->LateInit();
         EntitySystem::UpdateEntity(entity);
@@ -223,7 +226,9 @@ void Demo3rdPersonScene::Update(float const deltaTimeInSec)
         return;
     }
 
-    static constexpr float SoldierSpeed = 4.0f;
+    static constexpr float Speed = 4.0f;
+    static constexpr float RotationRate = 5.0f;
+
     auto const inputForwardMove = IM::GetForwardMove();
     auto const inputRightMove = IM::GetRightMove();
 
@@ -234,23 +239,39 @@ void Demo3rdPersonScene::Update(float const deltaTimeInSec)
     auto right = camera->GetRight();
     right.y = 0.0f;
     right = glm::normalize(right);
+
+    /*MFA_LOG_DEBUG(
+        "Forward: %f, %f, %f\nRight: %f, %f, %f"
+        , forward.x, forward.y, forward.z
+        , right.x, right.y, right.z
+    );*/
     
     glm::vec3 velocity{};
-    velocity += forward * inputForwardMove * SoldierSpeed;
-    velocity += right * inputRightMove * SoldierSpeed;
+    velocity += forward * inputForwardMove * Speed;
+    velocity += right * inputRightMove * Speed;
+
+    auto isVelocityNearZero = Matrix::IsNearZero(velocity);
 
     playerRigidbody->SetLinearVelocity(velocity);
-    //if (Matrix::IsNearZero(velocity) == false)
-    //{
-    //    playerTransform->SetLocalRotation(
-    //        glm::lookAt(
-    //            glm::vec3 {},
-    //            glm::normalize(velocity),
-    //            Math::UpVec3
-    //        )
-    //    );
-    //}
+    
+    glm::vec3 moveDirection{};
+    if (isVelocityNearZero == false)
+    {
+        moveDirection = glm::normalize(velocity);
+    } else
+    {
+        moveDirection = playerTransform->Forward();
+        moveDirection.y = 0.0f;
+        moveDirection = glm::normalize(moveDirection);
+    }
 
+    glm::quat currentRotation = playerTransform->GetLocalRotation().GetQuaternion();
+    glm::quat targetRotation = Matrix::ToRotation(moveDirection) * Matrix::ToQuat(0.0f, 0, -180.0f);
+
+    glm::quat newRotation = Matrix::RotateTowards(currentRotation, targetRotation, deltaTimeInSec * RotationRate);
+
+    playerTransform->SetLocalRotation(newRotation);
+    
     bool const isIdle = Matrix::IsNearZero(playerRigidbody->GetLinearVelocity());
     if (isIdle == false)
     {
@@ -258,7 +279,6 @@ void Demo3rdPersonScene::Update(float const deltaTimeInSec)
     }
     else
     {
-        //mSoldierVariant->SetActiveAnimation("SwordAndShieldIdle");
         playerVariant->SetActiveAnimation("Idle", { .transitionDuration = 0.3f });
     }
 }

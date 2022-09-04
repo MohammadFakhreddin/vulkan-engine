@@ -12,29 +12,23 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    CapsuleColliderComponent::CapsuleColliderComponent(
-        float const halfHeight,
-        float const radius,
-        CapsuleDirection const direction,
-        Physics::SharedHandle<PxMaterial> material
-    )
-        : ColliderComponent(
-            {},
-            {},
-            std::move(material))
-        , mHalfHeight(halfHeight)
-        , mRadius(radius)
-        , mCapsuleDirection(direction)
-    {
-        ComputeCenter();
-        RotateToDirection();
-        MFA_ASSERT(halfHeight > 0.0f);
-        MFA_ASSERT(radius > 0.0f);
-    }
+    CapsuleColliderComponent::CapsuleColliderComponent() = default;
 
     //-------------------------------------------------------------------------------------------------
 
     CapsuleColliderComponent::~CapsuleColliderComponent() = default;
+
+    //-------------------------------------------------------------------------------------------------
+
+    void CapsuleColliderComponent::Init()
+    {
+        ColliderComponent::Init();
+
+        RotateToDirection();
+        UpdateShapeGeometry();
+        ComputeCenter();
+        UpdateShapeRelativeTransform();
+    }
 
     //-------------------------------------------------------------------------------------------------
 
@@ -167,6 +161,10 @@ namespace MFA
 
     void CapsuleColliderComponent::OnCapsuleGeometryChanged()
     {
+        if (mInitialized == false)
+        {
+            return;
+        }
         UpdateShapeGeometry();
         ComputeCenter();
         UpdateShapeRelativeTransform();
@@ -176,6 +174,10 @@ namespace MFA
 
     void CapsuleColliderComponent::OnCapsuleDirectionChanged()
     {
+        if (mInitialized == false)
+        {
+            return;
+        }
         RotateToDirection();
         ComputeCenter();
         UpdateShapeRelativeTransform();

@@ -9,20 +9,21 @@
 
 namespace MFA
 {
+    /*
+     * https://docs.nvidia.com/gameworks/content/gameworkslibrary/physx/guide/Manual/RigidBodyDynamics.html
+     * When provided with a 0 mass or inertia value, PhysX interprets this to mean infinite mass or inertia around that principal axis.
+     * This can be used to create bodies that resist all linear motion or that resist all or some angular motion. Examples of the effects that could be achieved using this approach are:
+     * Bodies that behave as if they were kinematic.
+     * Bodies whose translation behaves kinematically but whose rotation is dynamic.
+     * Bodies whose translation is dynamic but whose rotation is kinematic.
+     * Bodies which can only rotate around a specific axis.
+     */
 
     using namespace physx;
 
     //-------------------------------------------------------------------------------------------------
 
-    RigidbodyComponent::RigidbodyComponent(
-        bool const isKinematic,
-        bool const useGravity,
-        bool const mass
-    )
-        : mIsKinematic(isKinematic)
-        , mUseGravity(useGravity)
-        , mMass(mass)
-    {}
+    RigidbodyComponent::RigidbodyComponent() = default;
 
     //-------------------------------------------------------------------------------------------------
 
@@ -43,6 +44,7 @@ namespace MFA
         UpdateMass();
         UpdateKinematic();
         UpdateGravity();
+        UpdateKinematicRotation();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -57,14 +59,23 @@ namespace MFA
         {
             auto const pxTransform = mRigidDynamic->Ptr()->getGlobalPose();
 
-            auto const position = Copy<glm::vec3>(pxTransform.p);
-            auto const rotation = Copy<glm::quat>(pxTransform.q);
+            glm::vec3 position = transform->GetWorldPosition();
+            if (mUpdateTransformPosition)
+            {
+                position = Copy<glm::vec3>(pxTransform.p);
+            }
 
-            MFA_LOG_INFO(
+            glm::quat rotation = transform->GetWorldRotation().GetQuaternion();
+            if (mUpdateTransformRotation)
+            {
+                rotation = Copy<glm::quat>(pxTransform.q);
+            }
+
+            /*MFA_LOG_DEBUG(
                 "Rigidbody\n Position: %f %f %f\n Rotation: %f %f %f %f"
                 , position.x, position.y, position.z
                 , rotation.x, rotation.y, rotation.z, rotation.w
-            );
+            );*/
 
             transform->SetWorldTransform(position, rotation);
         }
@@ -169,10 +180,6 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    // TODO: setForceAndTorque
-
-    //-------------------------------------------------------------------------------------------------
-
     void RigidbodyComponent::UpdateGravity() const
     {
         mRigidDynamic->Ptr()->setActorFlag(physx::PxActorFlag::eDISABLE_GRAVITY, mUseGravity);
@@ -190,6 +197,13 @@ namespace MFA
     void RigidbodyComponent::UpdateMass() const
     {
         mRigidDynamic->Ptr()->setMass(mMass);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void RigidbodyComponent::UpdateKinematicRotation() const
+    {
+        mRigidDynamic->Ptr()->setMassSpaceInertiaTensor(PxVec3(mKinematicRotation ? 0.0f : 1.0f));
     }
 
     //-------------------------------------------------------------------------------------------------

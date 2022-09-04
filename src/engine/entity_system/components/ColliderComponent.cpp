@@ -18,15 +18,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    ColliderComponent::ColliderComponent(
-        glm::vec3 const & center,
-        glm::quat const & rotation,
-        Physics::SharedHandle<PxMaterial> material
-    )
-        : mCenter(center)
-        , mRotation(rotation)
-        , mMaterial(std::move(material))
-    {}
+    ColliderComponent::ColliderComponent() = default;
 
     //-------------------------------------------------------------------------------------------------
 
@@ -61,7 +53,6 @@ namespace MFA
 
         } else
         {
-
             mIsDynamic = false;
             mRigidStatic = Physics::CreateStaticActor(pxTransform);
             mActor = mRigidStatic->Ptr();
@@ -80,6 +71,8 @@ namespace MFA
         });
 
         Physics::AddActor(*mActor);
+
+        mInitialized = true;
     }
     
     //-------------------------------------------------------------------------------------------------
@@ -172,11 +165,20 @@ namespace MFA
         auto const & wPos = transformComp->GetWorldPosition();
         auto const & wRot = transformComp->GetWorldRotation();
 
-        if (IsEqual(wPos, oldTransform.p) == false || IsEqual(wRot, oldTransform.q) == false)
+        if ((mUpdatePositionFromTransform == true && IsEqual(wPos, oldTransform.p) == false) ||
+            (mUpdateRotationFromTransform == true && IsEqual(wRot, oldTransform.q) == false))
         {
-            PxTransform newTransform {};
-            Copy(newTransform.p, transformComp->GetWorldPosition());
-            Copy(newTransform.q, transformComp->GetWorldRotation());
+            PxTransform newTransform = mActor->getGlobalPose();
+
+            if (mUpdatePositionFromTransform)
+            {
+                Copy(newTransform.p, transformComp->GetWorldPosition());
+            }
+
+            if (mUpdateRotationFromTransform)
+            {
+                Copy(newTransform.q, transformComp->GetWorldRotation());
+            }
 
             mActor->setGlobalPose(newTransform);
         }
@@ -270,6 +272,18 @@ namespace MFA
             mActor->detachShape(*shape);
         }
         mShapes.clear();
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void ColliderComponent::OnMaterialChange() const
+    {
+        std::vector<PxMaterial *> const materials { mMaterial->Ptr() };
+        
+        for (auto * shape : mShapes)
+        {
+            shape->setMaterials(materials.data(), static_cast<PxU16>(materials.size()));
+        }
     }
 
     //-------------------------------------------------------------------------------------------------

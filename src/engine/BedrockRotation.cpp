@@ -51,6 +51,10 @@ namespace MFA
 
     void Rotation::SetEulerAngles(glm::vec3 const & eulerAngles)
     {
+        if (IsEqual(mEulerAngles, eulerAngles))
+        {
+            return;
+        }
         mEulerAngles = eulerAngles;
         mQuaternion = Matrix::ToQuat(eulerAngles);
         mMatrix = glm::toMat4(mQuaternion);
@@ -60,6 +64,10 @@ namespace MFA
 
     void Rotation::SetQuaternion(glm::quat const & quaternion)
     {
+        if (Matrix::IsEqual(mQuaternion, quaternion))
+        {
+            return;
+        }
         mQuaternion = quaternion;
         mEulerAngles = Matrix::ToEulerAngles(quaternion);
         mMatrix = glm::toMat4(mQuaternion);
@@ -76,7 +84,8 @@ namespace MFA
 
     bool Rotation::operator==(glm::quat const & quaternion) const
     {
-        return IsEqual(mQuaternion, quaternion);
+        return Matrix::IsEqual(mQuaternion, quaternion);
+        //return IsEqual(mQuaternion, quaternion);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -90,7 +99,8 @@ namespace MFA
 
     bool Rotation::operator==(Rotation const & rotation) const
     {
-        return IsEqual(mQuaternion, rotation.GetQuaternion());
+        return Matrix::IsEqual(mQuaternion, rotation.GetQuaternion());
+        //return IsEqual(mQuaternion, rotation.GetQuaternion());
     }
 
     //-------------------------------------------------------------------------------------------------

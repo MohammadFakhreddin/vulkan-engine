@@ -102,7 +102,7 @@ void RayTracingWeekendApplication::run() {
     Camera camera {
         lookFrom, 
         lookAt, 
-        MFA::Math::UpVector3, 
+        Math::UpVec3, 
         20,
         AspectRatio,
         aperture,

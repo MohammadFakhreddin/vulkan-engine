@@ -70,6 +70,30 @@ namespace MFA::Matrix
         return glm::length2(glmVec) < Math::Epsilon<float>();
     }
 
+    glm::quat ToRotation(glm::vec3 direction);
+
+    // Returns angle of 2 quaternions in radians
+    [[nodiscard]]
+    float Angle(glm::quat const & a, glm::quat const & b);
+
+    [[nodiscard]]
+    bool IsEqualUsingDot(float const dot);
+
+    [[nodiscard]]
+    bool IsEqual(glm::quat const & a, glm::quat const & b);
+
+    /***
+     *
+     * @param from Quaternion that we start from
+     * @param to Quaternion that we want to reach
+     * @param maxDegreeDelta Max degrees in radian that we can move
+     ***/
+    glm::quat RotateTowards(
+        glm::quat const & from,
+        glm::quat const & to,
+        float maxDegreeDelta
+    );
+
 #ifdef ENABLE_SIMD
 
     static __m256 convertToM256(glm::vec4 const & vec)
