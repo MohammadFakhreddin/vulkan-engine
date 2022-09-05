@@ -66,10 +66,6 @@ namespace MFA
         MFA_ATOMIC_VARIABLE2(Mass, float, 1.0f, UpdateMass)
 
         MFA_ATOMIC_VARIABLE2(KinematicRotation, bool, true, UpdateKinematicRotation)
-
-        MFA_ATOMIC_VARIABLE1(UpdateTransformPosition, bool, true)
-
-        MFA_ATOMIC_VARIABLE1(UpdateTransformRotation, bool, true)
     };
 
     using Rigidbody = RigidbodyComponent;

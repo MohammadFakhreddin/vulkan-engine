@@ -29,7 +29,7 @@ public:
     void SetView(void * view);
 #endif
     void run();
-    void RenderFrame(float deltaTimeInSec);
+    void RenderFrame(float rawDeltaTime);
 
 protected:
 

@@ -152,13 +152,14 @@ void Application::run() {
 
 //-------------------------------------------------------------------------------------------------
 
-void Application::RenderFrame(float const deltaTimeInSec) {
-    internalRenderFrame(deltaTimeInSec);
-    IM::OnNewFrame(deltaTimeInSec);
-    SceneManager::Render(deltaTimeInSec);
-    SceneManager::Update(deltaTimeInSec);
-    RF::OnNewFrame(deltaTimeInSec);
-    Physics::Update(deltaTimeInSec);
+void Application::RenderFrame(float const rawDeltaTime) {
+    float deltaTime = std::clamp(rawDeltaTime, 0.0001f, 0.033f);
+    internalRenderFrame(deltaTime);
+    IM::OnNewFrame(deltaTime);
+    SceneManager::Render(deltaTime);
+    SceneManager::Update(deltaTime);
+    RF::OnNewFrame(deltaTime);
+    Physics::Update(deltaTime);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -192,8 +193,9 @@ MFA::RT::FrontendInitParams Application::GetRenderFrontendInitParams()
 
 MFA::Physics::InitParams Application::GetPhysicsInitParams()
 {
+    glm::vec3 const gravity = glm::vec3{ 0.0f, 9.8f, 0.0f };
     Physics::InitParams params {
-        .gravity {0.0f, -9.8f, 0.0f}
+        .gravity = Copy<physx::PxVec3>(gravity)
     };
     return params;
 }

@@ -33,9 +33,7 @@ namespace MFA
         void Init() override;
 
         void OnUI() override;
-
-        void OnTransformChange() override;
-
+        
         void Clone(Entity * entity) const override;
 
         void Serialize(nlohmann::json & jsonObject) const override;

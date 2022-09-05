@@ -13,6 +13,13 @@ namespace MFA
     {
     public:
 
+        struct ChangeParams
+        {
+            bool worldPositionChanged;
+            bool worldRotationChanged;
+            bool worldScaleChanged;
+        };
+
         MFA_COMPONENT_PROPS(
             TransformComponent,
             EventTypes::InitEvent | EventTypes::ShutdownEvent,
@@ -90,7 +97,7 @@ namespace MFA
         [[nodiscard]]
         glm::vec3 const & GetWorldScale() const;
 
-        SignalId RegisterChangeListener(std::function<void()> const & listener);
+        SignalId RegisterChangeListener(std::function<void(ChangeParams const &)> const & listener);
 
         bool UnRegisterChangeListener(SignalId listenerId);
 
@@ -115,7 +122,7 @@ namespace MFA
 
         void ComputeTransform();
 
-        Signal<> mTransformChangeSignal {};
+        Signal<ChangeParams> mTransformChangeSignal {};
 
         glm::vec3 mLocalPosition { 0.0f, 0.0f, 0.0f };
 

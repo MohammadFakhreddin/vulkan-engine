@@ -160,7 +160,12 @@ namespace MFA
         MFA_ASSERT(transformComponent != nullptr);
         mTransformComponent = transformComponent;
         OnTransformChange();
-        mTransformChangeListener = transformComponent->RegisterChangeListener([this]()->void { OnTransformChange(); });
+        mTransformChangeListener = transformComponent->RegisterChangeListener(
+            [this](Transform::ChangeParams const & params)->void
+            {
+                OnTransformChange();
+            }
+        );
     }
 
     //-------------------------------------------------------------------------------------------------

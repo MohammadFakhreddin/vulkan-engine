@@ -33,7 +33,7 @@ void MFA::DirectionalLightComponent::Init()
     computeShadowProjection();
     computeDirectionAndShadowViewProjection();
     
-    mTransformChangeListenerId = mTransformComponentRef.lock()->RegisterChangeListener([this]()->void {
+    mTransformChangeListenerId = mTransformComponentRef.lock()->RegisterChangeListener([this](Transform::ChangeParams const & params)->void {
         computeDirectionAndShadowViewProjection();
     });
 

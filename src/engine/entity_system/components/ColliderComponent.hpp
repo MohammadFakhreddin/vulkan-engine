@@ -3,11 +3,12 @@
 #include "engine/entity_system/Component.hpp"
 #include "engine/physics/PhysicsTypes.hpp"
 
+#include "TransformComponent.hpp"
+#include "engine/BedrockRotation.hpp"
+
 #include <glm/vec3.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <physx/geometry/PxGeometry.h>
-
-#include "engine/BedrockRotation.hpp"
 
 // TODO: Use this link
 // https://docs.nvidia.com/gameworks/content/gameworkslibrary/physx/guide/Manual/Geometry.html
@@ -25,8 +26,7 @@ namespace physx
 namespace MFA
 {
     // TODO: Layer and layerMask
-    class TransformComponent;
-
+ 
     class ColliderComponent : public Component
     {
     public:
@@ -60,7 +60,7 @@ namespace MFA
 
     protected:
 
-        virtual void OnTransformChange();
+        virtual void OnTransformChange(Transform::ChangeParams const & params);
 
         void CreateShape();
 
@@ -97,10 +97,6 @@ namespace MFA
         MFA_ATOMIC_VARIABLE2(Center, glm::vec3, {}, UpdateShapeRelativeTransform)
 
         MFA_ATOMIC_VARIABLE2(Rotation, Rotation, Rotation {}, UpdateShapeRelativeTransform)
-
-        MFA_ATOMIC_VARIABLE1(UpdatePositionFromTransform, bool, true)
-
-        MFA_ATOMIC_VARIABLE1(UpdateRotationFromTransform, bool, true)
 
         MFA_ATOMIC_VARIABLE2(Material, Physics::SharedHandle<physx::PxMaterial>, nullptr, OnMaterialChange)
         

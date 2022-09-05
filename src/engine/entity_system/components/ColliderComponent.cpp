@@ -66,8 +66,8 @@ namespace MFA
 
         CreateShape();
 
-        mTransformChangeListenerId = transformComp->RegisterChangeListener([this]()->void{
-            OnTransformChange();
+        mTransformChangeListenerId = transformComp->RegisterChangeListener([this](Transform::ChangeParams const & params)->void{
+            OnTransformChange(params);
         });
 
         Physics::AddActor(*mActor);
@@ -155,34 +155,29 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ColliderComponent::OnTransformChange()
+    void ColliderComponent::OnTransformChange(Transform::ChangeParams const & params)
     {
+        if (params.worldPositionChanged == false && params.worldRotationChanged == false)
+        {
+            return;
+        }
+
         auto const transformComp = mTransform.lock();
         MFA_ASSERT(transformComp != nullptr);
 
-        auto const oldTransform = mActor->getGlobalPose();
+        PxTransform newTransform = mActor->getGlobalPose();
 
-        auto const & wPos = transformComp->GetWorldPosition();
-        auto const & wRot = transformComp->GetWorldRotation();
-
-        if ((mUpdatePositionFromTransform == true && IsEqual(wPos, oldTransform.p) == false) ||
-            (mUpdateRotationFromTransform == true && IsEqual(wRot, oldTransform.q) == false))
+        if (params.worldPositionChanged)
         {
-            PxTransform newTransform = mActor->getGlobalPose();
-
-            if (mUpdatePositionFromTransform)
-            {
-                Copy(newTransform.p, transformComp->GetWorldPosition());
-            }
-
-            if (mUpdateRotationFromTransform)
-            {
-                Copy(newTransform.q, transformComp->GetWorldRotation());
-            }
-
-            mActor->setGlobalPose(newTransform);
+            Copy(newTransform.p, transformComp->GetWorldPosition());
+        }
+        if (params.worldRotationChanged)
+        {
+            Copy(newTransform.q, transformComp->GetWorldRotation());
         }
 
+        mActor->setGlobalPose(newTransform);
+        
         auto const & wScale = transformComp->GetWorldScale();
         if (IsEqual(wScale, mScale) == false)
         {

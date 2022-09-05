@@ -42,7 +42,7 @@ namespace MFA
 
         if (auto const followTarget = mFollowTarget.lock())
         {
-            mFollowTargetListenerId = followTarget->RegisterChangeListener([this]()->void
+            mFollowTargetListenerId = followTarget->RegisterChangeListener([this](Transform::ChangeParams const & params)->void
             {
                 OnFollowTargetMove();
             });
@@ -157,7 +157,7 @@ namespace MFA
         mFollowTarget = followTarget;
         if (auto const newFollowTarget = mFollowTarget.lock())
         {
-            mFollowTargetListenerId = newFollowTarget->RegisterChangeListener([this]()->void
+            mFollowTargetListenerId = newFollowTarget->RegisterChangeListener([this](Transform::ChangeParams const & params)->void
             {
                 OnFollowTargetMove();
             });

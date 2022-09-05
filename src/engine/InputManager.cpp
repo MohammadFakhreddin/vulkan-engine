@@ -1,5 +1,6 @@
 #include "InputManager.hpp"
 
+#include "BedrockMath.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/ui_system//UI_System.hpp"
 #include "engine/BedrockAssert.hpp"
@@ -140,6 +141,15 @@ static void onUI() {
     }
     UI::Spacing();
 
+
+    auto const moveLength = std::sqrt(state->forwardMove * state->forwardMove + state->rightMove * state->rightMove);
+    if (moveLength > Math::Epsilon<float>())
+    {
+        state->rightMove /= moveLength;
+        state->forwardMove /= moveLength;
+    }
+
+
     UI::EndWindow();
 #endif
 }
@@ -207,6 +217,14 @@ void OnNewFrame(float deltaTimeInSec) {
     if (keys[MSDL::SDL_SCANCODE_A]) {
         state->rightMove -= 1.0f;
     }
+
+    auto const moveLength = std::sqrt(state->forwardMove * state->forwardMove + state->rightMove * state->rightMove);
+    if (moveLength > Math::Epsilon<float>())
+    {
+        state->rightMove /= moveLength;
+        state->forwardMove /= moveLength;
+    }
+
 #elif defined(__ANDROID__)
     state->isLeftMouseDown = false;
     float const nowInSec = static_cast<float>(clock()) / CLOCKS_PER_SEC;

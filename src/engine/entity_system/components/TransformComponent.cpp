@@ -58,7 +58,7 @@ namespace MFA
             mParentTransform = parentEntity->GetComponent<TransformComponent>();
             if (auto const parentTransformPtr = mParentTransform.lock())
             {
-                mParentTransformChangeListenerId = parentTransformPtr->RegisterChangeListener([this]()-> void
+                mParentTransformChangeListenerId = parentTransformPtr->RegisterChangeListener([this](ChangeParams const & params)-> void
                     {
                         ComputeTransform();
                     }
@@ -308,7 +308,11 @@ namespace MFA
             ComputeTransform();
         }
 
-        mTransformChangeSignal.Emit();
+        mTransformChangeSignal.Emit(ChangeParams {
+            .worldPositionChanged = positionChanged,
+            .worldRotationChanged = rotationChanged,
+            .worldScaleChanged = false
+        });
         
     }
 
@@ -370,7 +374,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    SignalId TransformComponent::RegisterChangeListener(std::function<void()> const & listener)
+    SignalId TransformComponent::RegisterChangeListener(std::function<void(ChangeParams const &)> const & listener)
     {
         return mTransformChangeSignal.Register(listener);
     }
@@ -496,14 +500,21 @@ namespace MFA
 
         mInverseWorldTransform = glm::inverse(mWorldTransform);
 
+        auto previousWorldPosition = mWorldPosition;
         mWorldPosition = mWorldTransform * glm::vec4 { 0, 0, 0, 1.0f };
 
+        auto previousWorldRotation = mWorldRotation;
         mWorldRotation = pWorldRotation.GetQuaternion() * mLocalRotation.GetQuaternion();
 
+        auto previousWorldScale = mWorldScale;
         mWorldScale = pWorldScale * mLocalScale;
         
         // We notify any class that need to listen to transform component
-        mTransformChangeSignal.Emit();
+        mTransformChangeSignal.Emit(ChangeParams {
+            .worldPositionChanged = IsEqual(previousWorldPosition, mWorldPosition) == false,
+            .worldRotationChanged = IsEqual(previousWorldRotation, mWorldRotation) == false,
+            .worldScaleChanged = IsEqual(previousWorldScale, mWorldScale) == false
+        });
 
     }
 

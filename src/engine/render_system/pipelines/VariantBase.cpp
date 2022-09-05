@@ -57,7 +57,7 @@ void MFA::VariantBase::Init(
     MFA_ASSERT(transformComponent.expired() == false);
     mTransformComponent = transformComponent;
 
-    mTransformListenerId = mTransformComponent.lock()->RegisterChangeListener([this]()->void
+    mTransformListenerId = mTransformComponent.lock()->RegisterChangeListener([this](Transform::ChangeParams const & params)->void
         {
             mIsModelTransformChanged = true;
         }

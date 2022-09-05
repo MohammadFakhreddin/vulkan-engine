@@ -59,24 +59,10 @@ namespace MFA
         {
             auto const pxTransform = mRigidDynamic->Ptr()->getGlobalPose();
 
-            glm::vec3 position = transform->GetWorldPosition();
-            if (mUpdateTransformPosition)
-            {
-                position = Copy<glm::vec3>(pxTransform.p);
-            }
-
-            glm::quat rotation = transform->GetWorldRotation().GetQuaternion();
-            if (mUpdateTransformRotation)
-            {
-                rotation = Copy<glm::quat>(pxTransform.q);
-            }
-
-            /*MFA_LOG_DEBUG(
-                "Rigidbody\n Position: %f %f %f\n Rotation: %f %f %f %f"
-                , position.x, position.y, position.z
-                , rotation.x, rotation.y, rotation.z, rotation.w
-            );*/
-
+            auto const position = Copy<glm::vec3>(pxTransform.p);
+            
+            auto const rotation = Copy<glm::quat>(pxTransform.q);
+            
             transform->SetWorldTransform(position, rotation);
         }
     }
@@ -182,7 +168,11 @@ namespace MFA
 
     void RigidbodyComponent::UpdateGravity() const
     {
-        mRigidDynamic->Ptr()->setActorFlag(physx::PxActorFlag::eDISABLE_GRAVITY, mUseGravity);
+        if (mRigidDynamic == nullptr || mRigidDynamic->Ptr() == nullptr)
+        {
+            return;
+        }
+        mRigidDynamic->Ptr()->setActorFlag(physx::PxActorFlag::eDISABLE_GRAVITY, !mUseGravity);
     }
 
     //-------------------------------------------------------------------------------------------------

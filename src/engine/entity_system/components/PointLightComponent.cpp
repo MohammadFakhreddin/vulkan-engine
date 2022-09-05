@@ -44,7 +44,7 @@ void MFA::PointLightComponent::Init()
 
     mTransformComponent = GetEntity()->GetComponent<TransformComponent>();
     MFA_ASSERT(mTransformComponent.expired() == false);
-    mTransformChangeListenerId = mTransformComponent.lock()->RegisterChangeListener([this]()->void {
+    mTransformChangeListenerId = mTransformComponent.lock()->RegisterChangeListener([this](Transform::ChangeParams const & params)->void {
         computeViewProjectionMatrices();    
     });
 

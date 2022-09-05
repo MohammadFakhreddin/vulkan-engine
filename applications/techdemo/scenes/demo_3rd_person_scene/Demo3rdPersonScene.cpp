@@ -68,7 +68,7 @@ void Demo3rdPersonScene::Init()
     {// Playable soldier
         auto * entity = soldierPrefab.Clone(GetRootEntity(), Prefab::CloneEntityOptions{ .name = "Playable soldier" });
         {// Transform
-            float position[3]{ 0.0f, 2.0f, -5.0f };
+            float position[3]{ 0.0f, 1.5f, -5.0f };
             float eulerAngles[3]{ 0.0f, 180.0f, -180.0f };
             float scale[3]{ 1.0f, 1.0f, 1.0f };
             playerTransform = entity->GetComponent<TransformComponent>();
@@ -85,9 +85,11 @@ void Demo3rdPersonScene::Init()
         auto const capsuleCollider = entity->AddComponent<CapsuleCollider>();
         capsuleCollider->SetHalfHeight(0.5f);
         capsuleCollider->SetRadius(0.2f);
+        
         // Rigidbody
         auto const rigidbody = entity->AddComponent<Rigidbody>();
-        
+        rigidbody->SetUseGravity(true);
+
         capsuleCollider->Init();
         rigidbody->LateInit();
         EntitySystem::UpdateEntity(entity);
@@ -227,7 +229,7 @@ void Demo3rdPersonScene::Update(float const deltaTimeInSec)
     }
 
     static constexpr float Speed = 4.0f;
-    static constexpr float RotationRate = 5.0f;
+    static constexpr float RotationRate = 10.0f;
 
     auto const inputForwardMove = IM::GetForwardMove();
     auto const inputRightMove = IM::GetRightMove();
@@ -240,19 +242,14 @@ void Demo3rdPersonScene::Update(float const deltaTimeInSec)
     right.y = 0.0f;
     right = glm::normalize(right);
 
-    /*MFA_LOG_DEBUG(
-        "Forward: %f, %f, %f\nRight: %f, %f, %f"
-        , forward.x, forward.y, forward.z
-        , right.x, right.y, right.z
-    );*/
-    
     glm::vec3 velocity{};
     velocity += forward * inputForwardMove * Speed;
     velocity += right * inputRightMove * Speed;
-
+    
     auto isVelocityNearZero = Matrix::IsNearZero(velocity);
 
-    playerRigidbody->SetLinearVelocity(velocity);
+    auto gravityVelocity = playerRigidbody->GetLinearVelocity().y * Math::UpVec3;
+    playerRigidbody->SetLinearVelocity(velocity + gravityVelocity);
     
     glm::vec3 moveDirection{};
     if (isVelocityNearZero == false)

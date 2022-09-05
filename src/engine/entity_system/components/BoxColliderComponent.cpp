@@ -38,13 +38,6 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BoxColliderComponent::OnTransformChange()
-    {
-        Parent::OnTransformChange();
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
     void BoxColliderComponent::Clone(Entity * entity) const
     {
         Parent::Clone(entity);

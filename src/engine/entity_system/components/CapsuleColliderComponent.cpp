@@ -5,6 +5,8 @@
 
 #include <geometry/PxCapsuleGeometry.h>
 
+#include "TransformComponent.hpp"
+
 namespace MFA
 {
 
@@ -45,14 +47,7 @@ namespace MFA
             UI::TreePop();
         }
     }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void CapsuleColliderComponent::OnTransformChange()
-    {
-        Parent::OnTransformChange();
-    }
-
+    
     //-------------------------------------------------------------------------------------------------
 
     void CapsuleColliderComponent::Clone(Entity * entity) const
