@@ -95,4 +95,20 @@ namespace MFA::Math
         //return distribution(generator);
     }
 
+    [[nodiscard]]
+    inline float ACosSafe(float const value)
+    {
+        if (value <= -1.0f)
+        {
+            return PiFloat;
+        }
+
+        if (value >= 1.0f)
+        {
+            return 0.0f;
+        }
+        
+        return std::acos(value);
+    }
+
 };

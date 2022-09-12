@@ -268,7 +268,7 @@ namespace MFA::Matrix
             cosTheta = -cosTheta;
         }
 
-        auto const halfTheta = std::acos(cosTheta);
+        float const halfTheta = Math::ACosSafe(cosTheta);
         auto const theta = halfTheta * 2.0f;
 
         auto const fraction = std::clamp(maxDegreeDelta / theta, 0.0f, 1.0f);

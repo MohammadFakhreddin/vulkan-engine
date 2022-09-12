@@ -65,57 +65,44 @@ void main(uint3 GlobalInvocationID : SV_DispatchThreadID)
 
     index = index + pushConsts.vertexStartingIndex;
 
-    float4x4 skinMat;
+    float4x4 skinMat = IdentityMat;
     if (unSkinnedVertex.hasSkin == 1) {
         int skinIndex = pushConsts.skinIndex;
         float4x4 inverseNodeTransform = pushConsts.inverseNodeTransform;
-        skinMat = 0;
         if (unSkinnedVertex.jointWeights.x > 0) {
-            
-            skinMat += mul(
-                mul(
-                    inverseNodeTransform, 
-                    skinJoints.joints[skinIndex + unSkinnedVertex.jointIndices.x]
-                ), 
+            float4x4 jointMat = 0; 
+            jointMat += mul(
+                skinJoints.joints[skinIndex + unSkinnedVertex.jointIndices.x],
                 unSkinnedVertex.jointWeights.x
             );
 
             if (unSkinnedVertex.jointWeights.y > 0) {
             
-                skinMat += mul(
-                    mul(
-                        inverseNodeTransform, 
-                        skinJoints.joints[skinIndex + unSkinnedVertex.jointIndices.y]
-                    ), 
+                jointMat += mul(
+                    skinJoints.joints[skinIndex + unSkinnedVertex.jointIndices.y],
                     unSkinnedVertex.jointWeights.y
                 );
             
                 if (unSkinnedVertex.jointWeights.z > 0) {
             
-                    skinMat += mul(
-                        mul(
-                            inverseNodeTransform, 
-                            skinJoints.joints[skinIndex + unSkinnedVertex.jointIndices.z]
-                        ), 
+                    jointMat += mul( 
+                        skinJoints.joints[skinIndex + unSkinnedVertex.jointIndices.z],
                         unSkinnedVertex.jointWeights.z
                     );
             
                     if (unSkinnedVertex.jointWeights.w > 0) {
-                        skinMat += mul(
-                            mul(
-                                inverseNodeTransform, 
-                                skinJoints.joints[skinIndex + unSkinnedVertex.jointIndices.w]
-                            ), 
+                        jointMat += mul(
+                            skinJoints.joints[skinIndex + unSkinnedVertex.jointIndices.w],
                             unSkinnedVertex.jointWeights.w
                         );
                     }
             
                 }
             }
+
+            skinMat = mul(inverseNodeTransform, jointMat);
         }
-    } else {
-        skinMat = IdentityMat;
-    }
+    } 
     
     float4x4 skinModelMat = mul(pushConsts.model, skinMat);
     
