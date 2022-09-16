@@ -51,7 +51,7 @@ namespace MFA
 
     void Rotation::SetEulerAngles(glm::vec3 const & eulerAngles)
     {
-        if (IsEqual(mEulerAngles, eulerAngles))
+        if (MFA::IsEqual(mEulerAngles, eulerAngles))
         {
             return;
         }
@@ -75,37 +75,35 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    bool Rotation::operator==(glm::vec3 const & eulerAngles) const
+    bool Rotation::IsEqual(glm::vec3 const & eulerAngles) const
     {
-        return IsEqual(mEulerAngles, eulerAngles);
+        return MFA::IsEqual(mEulerAngles, eulerAngles);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    bool Rotation::operator==(glm::quat const & quaternion) const
+    bool Rotation::IsEqual(glm::quat const & quaternion) const
     {
         return Matrix::IsEqual(mQuaternion, quaternion);
-        //return IsEqual(mQuaternion, quaternion);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    bool Rotation::operator==(float eulerAngles[3]) const
+    bool Rotation::IsEqual(float eulerAngles[3]) const
     {
-        return IsEqual<3>(mEulerAngles, eulerAngles);
+        return MFA::IsEqual<3>(mEulerAngles, eulerAngles);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    bool Rotation::operator==(Rotation const & rotation) const
+    bool Rotation::IsEqual(Rotation const & rotation) const
     {
         return Matrix::IsEqual(mQuaternion, rotation.GetQuaternion());
-        //return IsEqual(mQuaternion, rotation.GetQuaternion());
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    Rotation & Rotation::operator=(float eulerAngles[3])
+    Rotation & Rotation::Set(float eulerAngles[3])
     {
         Copy<3>(mEulerAngles, eulerAngles);
         mQuaternion = Matrix::ToQuat(mEulerAngles);
@@ -115,7 +113,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    Rotation & Rotation::operator=(glm::vec3 const & eulerAngles)
+    Rotation & Rotation::Set(glm::vec3 const & eulerAngles)
     {
         Copy(mEulerAngles, eulerAngles);
         mQuaternion = Matrix::ToQuat(mEulerAngles);
@@ -125,7 +123,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    Rotation & Rotation::operator=(glm::quat const & quaternion)
+    Rotation & Rotation::Set(glm::quat const & quaternion)
     {
         Copy(mQuaternion, quaternion);
         mEulerAngles = Matrix::ToEulerAngles(quaternion);

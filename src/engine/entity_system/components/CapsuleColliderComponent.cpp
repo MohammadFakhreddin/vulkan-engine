@@ -104,7 +104,7 @@ namespace MFA
         {
             MFA_ASSERT(false);
         }
-        mRotation = glm::angleAxis(Math::PiFloat * 0.5f, axis);
+        mRotation.Set(glm::angleAxis(Math::PiFloat * 0.5f, axis));
     }
 
     //-------------------------------------------------------------------------------------------------

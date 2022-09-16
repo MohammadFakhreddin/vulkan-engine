@@ -96,7 +96,26 @@ namespace MFA
 
         MFA_ATOMIC_VARIABLE2(Center, glm::vec3, {}, UpdateShapeRelativeTransform)
 
-        MFA_ATOMIC_VARIABLE2(Rotation, Rotation, Rotation {}, UpdateShapeRelativeTransform)
+    protected: 
+    
+        Rotation mRotation = Rotation {}; 
+        
+    public: 
+        
+        void SetRotation(Rotation value) { 
+            if (mRotation.IsEqual(value)) { 
+                return; 
+            } 
+            mRotation = value; 
+            UpdateShapeRelativeTransform(); 
+        } 
+        
+        [[nodiscard]] 
+        Rotation GetRotation() const { 
+            return mRotation; 
+        }     
+        
+    protected:
 
         MFA_ATOMIC_VARIABLE2(Material, Physics::SharedHandle<physx::PxMaterial>, nullptr, OnMaterialChange)
         

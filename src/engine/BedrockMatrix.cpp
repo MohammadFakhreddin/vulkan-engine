@@ -287,7 +287,7 @@ namespace MFA::Matrix
         else
         {
             // Essential Mathematics, page 467
-            return (sin((1.0f - fraction) * halfTheta) * from + sin(fraction * halfTheta) * to2) / sin(halfTheta);
+            return (sinf((1.0f - fraction) * halfTheta) * from + sinf(fraction * halfTheta) * to2) / sinf(halfTheta);
         }
     }
     

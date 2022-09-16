@@ -864,7 +864,8 @@ elseif(LINUX)
 
     message(STATUS "Building for linux")
 
-    find_package(X11 REQUIRED)
+    # To install X11 use sudo apt install libx11-dev
+    find_package(X11 REQUIRED)                  # TODO: We don't need libraries like X11 we can use vulkan api to get screen information
     include_directories(${X11_INCLUDE_DIRS})
 
     set(CMAKE_THREAD_LIBS_INIT "-lpthread")

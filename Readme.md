@@ -151,6 +151,12 @@ For release build
 ```
 No extra flag needed
 ```
+
+You might need to install x11 library on your machine
+```
+sudo apt install libx11-dev
+```
+
 <br/>
 
 ### Android (Experimental)
