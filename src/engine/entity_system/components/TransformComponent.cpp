@@ -89,9 +89,9 @@ namespace MFA
             Copy<3>(mLocalPosition, position);
             hasChanged = true;
         }
-        if (mLocalRotation != eulerAngles)
+        if (mLocalRotation.IsEqual(eulerAngles) == false)
         {
-            mLocalRotation = eulerAngles;
+            mLocalRotation.Set(eulerAngles);
             hasChanged = true;
         }
         if (IsEqual<3>(mLocalScale, scale) == false)
@@ -119,9 +119,9 @@ namespace MFA
             Copy(mLocalPosition, position);
             hasChanged = true;
         }
-        if (mLocalRotation != eulerAngles)
+        if (mLocalRotation.IsEqual(eulerAngles) == false)
         {
-            mLocalRotation = eulerAngles;
+            mLocalRotation.Set(eulerAngles);
             hasChanged = true;
         }
         if (IsEqual(mLocalScale, scale) == false)
@@ -149,7 +149,7 @@ namespace MFA
             Copy(mLocalPosition, position);
             hasChanged = true;
         }
-        if (mLocalRotation != rotation)
+        if (mLocalRotation.IsEqual(rotation) == false)
         {
             mLocalRotation = rotation;
             hasChanged = true;
@@ -191,9 +191,9 @@ namespace MFA
 
     void TransformComponent::UpdateLocalRotation(glm::vec3 const & rotation)
     {
-        if (mLocalRotation != rotation)
+        if (mLocalRotation.IsEqual(rotation) == false)
         {
-            mLocalRotation = rotation;
+            mLocalRotation.Set(rotation);
             ComputeTransform();
         }
     }
@@ -202,9 +202,9 @@ namespace MFA
 
     void TransformComponent::UpdateLocalRotation(float rotation[3])
     {
-        if (mLocalRotation != rotation)
+        if (mLocalRotation.IsEqual(rotation) == false)
         {
-            mLocalRotation = rotation;
+            mLocalRotation.Set(rotation);
             ComputeTransform();
         }
     }
@@ -243,10 +243,10 @@ namespace MFA
         }
 
         bool rotationChanged = false;
-        if (mWorldRotation != rotation)
+        if (mWorldRotation.IsEqual(rotation) == false)
         {
             rotationChanged = true;
-            mWorldRotation = rotation;
+            mWorldRotation.Set(rotation);
         }
 
         if (positionChanged == false && rotationChanged == false)
@@ -278,7 +278,7 @@ namespace MFA
 
             if (rotationChanged)
             {
-                mLocalRotation = glm::inverse(parentTransform->GetWorldRotation().GetQuaternion()) * mWorldRotation.GetQuaternion();
+                mLocalRotation.Set(glm::inverse(parentTransform->GetWorldRotation().GetQuaternion()) * mWorldRotation.GetQuaternion());
             }
 
         }
@@ -387,7 +387,7 @@ namespace MFA
             auto eulerAngles = mLocalRotation.GetEulerAngles();
             if (UI::InputFloat<3>("Rotation (Euler angles)", eulerAngles))
             {
-                mLocalRotation = eulerAngles;
+                mLocalRotation.Set(eulerAngles);
                 changed = true;
             }
             
@@ -428,7 +428,7 @@ namespace MFA
 
         glm::vec3 eulerAngles{};
         JsonUtils::DeserializeVec3(jsonObject, "rotation", eulerAngles);
-        mLocalRotation = eulerAngles;
+        mLocalRotation.Set(eulerAngles);
 
         JsonUtils::DeserializeVec3(jsonObject, "scale", mLocalScale);
     }
@@ -466,7 +466,7 @@ namespace MFA
 
         mWorldPosition = mWorldTransform * glm::vec4 { 0, 0, 0, 1.0f };
 
-        mWorldRotation = pWorldRotation.GetQuaternion() * mLocalRotation.GetQuaternion();
+        mWorldRotation.Set(pWorldRotation.GetQuaternion() * mLocalRotation.GetQuaternion());
 
         mWorldScale = pWorldScale * mLocalScale;
         
