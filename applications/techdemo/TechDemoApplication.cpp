@@ -51,8 +51,8 @@ void TechDemoApplication::internalInit()
 MFA::RT::FrontendInitParams TechDemoApplication::GetRenderFrontendInitParams()
 {
     auto params =  Application::GetRenderFrontendInitParams();
-    params.screenWidth = 800.0f;
-    params.screenHeight = 600.0f;
+    params.screenWidth = 1920.0f;
+    params.screenHeight = 1080.0f;
     return params;
 }
 
