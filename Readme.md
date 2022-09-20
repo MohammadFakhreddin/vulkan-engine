@@ -134,6 +134,12 @@ cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=./ios.toolchain.cmake -DPLATFORM=MAC
 
 ### Linux
 
+Use clang
+```
+export CC=/usr/bin/clang
+export CXX=/usr/bin/clang++
+```
+
 (Editor is not avialable yet)
 ```
 mkdir build

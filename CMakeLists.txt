@@ -843,43 +843,50 @@ elseif(LINUX)
 
     add_compile_options(-Wl,--copy-dt-needed-entries -ldl)
 
+    set(PHYSX_LIBS_PATH "${CMAKE_SOURCE_DIR}/libs/linux/physx")
+
+    # Order matters
+    set(PHYSX_LIBS
+        "libPhysXCooking_static_64.a"
+        "libPhysXPvdSDK_static_64.a"
+        "libPhysX_static_64.a"
+        "libPhysXFoundation_static_64.a"
+        "libPhysXCharacterKinematic_static_64.a"
+        "libPhysXCommon_static_64.a"
+        "libPhysXExtensions_static_64.a"
+        "libPhysXVehicle_static_64.a"
+    )
+
     set(link_to_target_directories)
     set(link_to_target_sources)
-    function(link_to_target executable_name)
-        message(STATUS "Linking dependancies to ${executable_name} ")
-        add_executable(${executable_name} ${link_to_target_sources})
-        add_dependencies(${executable_name}  "Tools" "Bedrock" "Renderer" "AssetSystem" "EntitySystem" "Engine" "Libs" "JobSystem" "Physics")
-        target_link_libraries(${executable_name} "Tools" "Bedrock" "Renderer" "AssetSystem" "EntitySystem" "Engine" "Libs" "JobSystem" "Physics")
-        target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/linux/sdl/libSDL2.so")
-        target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/linux/vulkan/libvulkan.so.1.3.216")
+    # function(link_to_target executable_name)
+        # message(STATUS "Linking dependancies to ${executable_name} ")
+        # add_executable(${executable_name} ${link_to_target_sources})
         
-        target_include_directories(
-            ${executable_name} PUBLIC
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
-            $<INSTALL_INTERFACE:include>
-        )
-        target_link_libraries(${executable_name} ${CMAKE_DL_LIBS})
-        target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
-        target_link_libraries(${executable_name} X11)
-        target_link_libraries(${executable_name} ${CMAKE_DL_LIBS})
+        
+        # add_dependencies(${executable_name}  "Renderer" "EntitySystem" "Engine" "JobSystem" "Physics" "AssetSystem" "Tools" "Bedrock" "Libs")
+        # target_link_libraries(${executable_name} "Renderer" "EntitySystem" "Engine" "JobSystem" "Physics" "AssetSystem" "Tools" "Bedrock" "Libs")
+        # target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/linux/sdl/libSDL2.so")
+        # target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/linux/vulkan/libvulkan.so.1.3.216")
+        
         # foreach (_lib ${PHYSX_LIBS})
-        #     message(STATUS "Linking debug library at ${PHYSX_LIBS_DEBUG_PATH}/${_lib}")
-        #     target_link_libraries(${executable_name} debug "${PHYSX_LIBS_DEBUG_PATH}/${_lib}")
+        #     message(STATUS "Linking library at ${PHYSX_LIBS_PATH}/${_lib}")
+        #     target_link_libraries(${executable_name} "${PHYSX_LIBS_PATH}/${_lib}")
         # endforeach()
+    
 
-        # foreach (_lib ${PHYSX_LIBS})
-        #     message(STATUS "Linking release library at ${PHYSX_LIBS_RELEASE_PATH}/${_lib}")
-        #     target_link_libraries(${executable_name} optimized "${PHYSX_LIBS_RELEASE_PATH}/${_lib}")
-        # endforeach()
+        # target_include_directories(
+        #     ${executable_name} PUBLIC
+        #     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
+        #     $<INSTALL_INTERFACE:include>
+        # )
+        # target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
+        # target_link_libraries(${executable_name} X11)
+        # target_link_libraries(${executable_name} ${CMAKE_DL_LIBS})
 
-        foreach (_lib ${PHYSX_LIBS})
-            message(STATUS "Linking debug library at ${PHYSX_LIBS_PATH}/${_lib}")
-            target_link_libraries(${executable_name} optimized "${PHYSX_LIBS_PATH}/${_lib}")
-        endforeach()
+        # message(STATUS "===========================================")
 
-    message(STATUS "===========================================")
-
-    endfunction()
+    # endfunction()
 
     message(STATUS "Building for linux")
 
@@ -896,21 +903,6 @@ elseif(LINUX)
     
     set(LINUX_SOURCE)
     set(LINUX_INCLUDE_DIRECTORIES)
-
-    set(PHYSX_LIBS_PATH "${CMAKE_SOURCE_DIR}/libs/linux/physx")
-
-    set(PHYSX_LIBS
-        "libPhysX_static_64.a"
-        "libPhysXCommon_static_64.a"
-        "libPhysXFoundation_static_64.a"
-        "libPhysXExtensions_static_64.a"
-        "libPhysXCooking_static_64.a"
-        "libPhysXPvdSDK_static_64.a"
-        # "libPhysXTask_static_64.a"
-        "libPhysXVehicle_static_64.a"
-        "libPhysXCharacterKinematic_static_64.a"
-        "libPhysXGpu_64.so"
-    )
 
     list(
         APPEND LINUX_SOURCE
@@ -933,12 +925,41 @@ elseif(LINUX)
         ${LINUX_SOURCE}
         ${TECHDEMO_SOURCES}
     )
-    link_to_target(${TECHDEMO})
+    # link_to_target(${TECHDEMO})
+    
+    message(STATUS "Linking dependancies to ${executable_name} ")
+    add_executable(${TECHDEMO} ${link_to_target_sources})
+    
+    
+    add_dependencies(${TECHDEMO}  "Renderer" "EntitySystem" "Engine" "JobSystem" "Physics" "Tools" "AssetSystem" "Bedrock" "Libs")
+    target_link_libraries(${TECHDEMO} "Renderer" "EntitySystem" "Engine" "JobSystem" "Physics" "Tools" "AssetSystem" "Bedrock" "Libs")
+    target_link_libraries(${TECHDEMO} "${CMAKE_SOURCE_DIR}/libs/linux/sdl/libSDL2.so")
+    target_link_libraries(${TECHDEMO} "${CMAKE_SOURCE_DIR}/libs/linux/vulkan/libvulkan.so.1.3.216")
+    
+    foreach (_lib ${PHYSX_LIBS})
+        message(STATUS "Linking library at ${PHYSX_LIBS_PATH}/${_lib}")
+        target_link_libraries(${TECHDEMO} "${PHYSX_LIBS_PATH}/${_lib}")
+    endforeach()
+
+
+    target_include_directories(
+        ${TECHDEMO} PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    )
+    target_include_directories(${TECHDEMO} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
+    target_link_libraries(${TECHDEMO} X11)
+    target_link_libraries(${TECHDEMO} ${CMAKE_DL_LIBS})
+
     target_compile_definitions(${TECHDEMO} PRIVATE TECHDEMO)
+
+    message(STATUS "===========================================")
+
 
     # Editor
     # unset(link_to_target_directories)
-    # list(APPEND link_to_target_directories
+    # list(APPEND link_to_target_directories    message(STATUS "Linking library at ${PHYSX_LIBS_PATH}/${_lib}")
+        
     #     ${LINUX_INCLUDE_DIRECTORIES}
     #     "applications/prefab_editor"
     # )
