@@ -141,6 +141,8 @@ void ParticleFireScene::createCamera()
     auto * entity = EntitySystem::CreateEntity("CameraEntity", GetRootEntity());
     MFA_ASSERT(entity != nullptr);
 
+    entity->AddComponent<TransformComponent>();
+
     auto const observerCamera = entity->AddComponent<ObserverCameraComponent>(FOV, Z_NEAR, Z_FAR);
     MFA_ASSERT(observerCamera != nullptr);
     SetActiveCamera(observerCamera);
