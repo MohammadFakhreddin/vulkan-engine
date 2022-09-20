@@ -152,6 +152,8 @@ For release build
 No extra flag needed
 ```
 
+https://gameworksdocs.nvidia.com/PhysX/4.1/documentation/platformreadme/linux/readme_linux.html
+
 You might need to install x11 library on your machine
 ```
 sudo apt install libx11-dev

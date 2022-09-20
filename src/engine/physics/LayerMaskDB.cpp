@@ -60,7 +60,7 @@ namespace MFA::Physics::LayerMaskDB
 
     //=================================================================================================
 
-    bool LayerMaskDB::Create(std::string const & layerName, const uint8_t layerNumber)
+    bool Create(std::string const & layerName, uint8_t layerNumber)
     {
         if (layerName.empty())
         {
@@ -98,7 +98,7 @@ namespace MFA::Physics::LayerMaskDB
 
     //=================================================================================================
 
-    LayerMask LayerMaskDB::GetMask(std::string const & layerName)
+    LayerMask GetMask(std::string const & layerName)
     {
         auto * layerInfo = FindLayer(layerName);
 
@@ -112,7 +112,7 @@ namespace MFA::Physics::LayerMaskDB
 
     //=================================================================================================
 
-    uint8_t LayerMaskDB::NameToLayer(std::string const & layerName)
+    uint8_t NameToLayer(std::string const & layerName)
     {
         auto * layerInfo = FindLayer(layerName);
 
@@ -126,7 +126,7 @@ namespace MFA::Physics::LayerMaskDB
 
     //=================================================================================================
 
-    std::string LayerMaskDB::LayerToName(uint8_t const layerIndex)
+    std::string LayerToName(uint8_t const layerIndex)
     {
         if (layerIndex >= 32)
         {

@@ -841,13 +841,15 @@ elseif(LINUX)
 # TODO Use link to target function
     message(STATUS "Building for linux")
 
+    add_compile_options(-Wl,--copy-dt-needed-entries -ldl)
+
     set(link_to_target_directories)
     set(link_to_target_sources)
     function(link_to_target executable_name)
         message(STATUS "Linking dependancies to ${executable_name} ")
         add_executable(${executable_name} ${link_to_target_sources})
-        add_dependencies(${executable_name}  "Renderer" "EntitySystem" "Engine" "Tools" "AssetSystem" "Bedrock" "Libs")
-        target_link_libraries(${executable_name} "Renderer" "EntitySystem" "Engine" "Tools" "AssetSystem" "Bedrock" "Libs")
+        add_dependencies(${executable_name}  "Tools" "Bedrock" "Renderer" "AssetSystem" "EntitySystem" "Engine" "Libs" "JobSystem" "Physics")
+        target_link_libraries(${executable_name} "Tools" "Bedrock" "Renderer" "AssetSystem" "EntitySystem" "Engine" "Libs" "JobSystem" "Physics")
         target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/linux/sdl/libSDL2.so")
         target_link_libraries(${executable_name} "${CMAKE_SOURCE_DIR}/libs/linux/vulkan/libvulkan.so.1.3.216")
         
@@ -859,6 +861,23 @@ elseif(LINUX)
         target_link_libraries(${executable_name} ${CMAKE_DL_LIBS})
         target_include_directories(${executable_name} PUBLIC ${COMMON_INCLUDE_DIRECTORIES} ${link_to_target_directories})
         target_link_libraries(${executable_name} X11)
+        target_link_libraries(${executable_name} ${CMAKE_DL_LIBS})
+        # foreach (_lib ${PHYSX_LIBS})
+        #     message(STATUS "Linking debug library at ${PHYSX_LIBS_DEBUG_PATH}/${_lib}")
+        #     target_link_libraries(${executable_name} debug "${PHYSX_LIBS_DEBUG_PATH}/${_lib}")
+        # endforeach()
+
+        # foreach (_lib ${PHYSX_LIBS})
+        #     message(STATUS "Linking release library at ${PHYSX_LIBS_RELEASE_PATH}/${_lib}")
+        #     target_link_libraries(${executable_name} optimized "${PHYSX_LIBS_RELEASE_PATH}/${_lib}")
+        # endforeach()
+
+        foreach (_lib ${PHYSX_LIBS})
+            message(STATUS "Linking debug library at ${PHYSX_LIBS_PATH}/${_lib}")
+            target_link_libraries(${executable_name} optimized "${PHYSX_LIBS_PATH}/${_lib}")
+        endforeach()
+
+    message(STATUS "===========================================")
 
     endfunction()
 
@@ -877,6 +896,21 @@ elseif(LINUX)
     
     set(LINUX_SOURCE)
     set(LINUX_INCLUDE_DIRECTORIES)
+
+    set(PHYSX_LIBS_PATH "${CMAKE_SOURCE_DIR}/libs/linux/physx")
+
+    set(PHYSX_LIBS
+        "libPhysX_static_64.a"
+        "libPhysXCommon_static_64.a"
+        "libPhysXFoundation_static_64.a"
+        "libPhysXExtensions_static_64.a"
+        "libPhysXCooking_static_64.a"
+        "libPhysXPvdSDK_static_64.a"
+        # "libPhysXTask_static_64.a"
+        "libPhysXVehicle_static_64.a"
+        "libPhysXCharacterKinematic_static_64.a"
+        "libPhysXGpu_64.so"
+    )
 
     list(
         APPEND LINUX_SOURCE
