@@ -25,20 +25,28 @@ namespace MFA
         void SetEulerAngles(glm::vec3 const & eulerAngles);
 
         void SetQuaternion(glm::quat const & quaternion);
+        
+        bool operator==(glm::vec3 const & eulerAngles) const;
 
-        bool IsEqual(glm::vec3 const & eulerAngles) const;
+        bool operator==(glm::quat const & quaternion) const;
 
-        bool IsEqual(glm::quat const & quaternion) const;
+        bool operator==(float eulerAngles[3]) const;
 
-        bool IsEqual(float eulerAngles[3]) const;
+        bool operator==(Rotation const & rotation) const;
 
-        bool IsEqual(Rotation const & rotation) const;
+        bool operator!=(glm::vec3 const & eulerAngles) const;
 
-        Rotation & Set(float eulerAngles[3]);
+        bool operator!=(glm::quat const & quaternion) const;
 
-        Rotation & Set(glm::vec3 const & eulerAngles);
+        bool operator!=(float eulerAngles[3]) const;
 
-        Rotation & Set(glm::quat const & quaternion);
+        bool operator!=(Rotation const & rotation) const;
+
+        Rotation & operator=(float eulerAngles[3]);
+
+        Rotation & operator=(glm::vec3 const & eulerAngles);
+
+        Rotation & operator=(glm::quat const & quaternion);
 
     private:
 

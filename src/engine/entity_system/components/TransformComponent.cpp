@@ -89,9 +89,9 @@ namespace MFA
             Copy<3>(mLocalPosition, position);
             hasChanged = true;
         }
-        if (mLocalRotation.IsEqual(eulerAngles) == false)
+        if (mLocalRotation != eulerAngles)
         {
-            mLocalRotation.Set(eulerAngles);
+            mLocalRotation = eulerAngles;
             hasChanged = true;
         }
         if (IsEqual<3>(mLocalScale, scale) == false)
@@ -119,9 +119,9 @@ namespace MFA
             Copy(mLocalPosition, position);
             hasChanged = true;
         }
-        if (mLocalRotation.IsEqual(eulerAngles) == false)
+        if (mLocalRotation != eulerAngles)
         {
-            mLocalRotation.Set(eulerAngles);
+            mLocalRotation = eulerAngles;
             hasChanged = true;
         }
         if (IsEqual(mLocalScale, scale) == false)
@@ -149,7 +149,7 @@ namespace MFA
             Copy(mLocalPosition, position);
             hasChanged = true;
         }
-        if (mLocalRotation.IsEqual(rotation) == false)
+        if (mLocalRotation != rotation)
         {
             mLocalRotation = rotation;
             hasChanged = true;
@@ -191,9 +191,9 @@ namespace MFA
 
     void TransformComponent::SetLocalRotation(glm::vec3 const & eulerAngle)
     {
-        if (mLocalRotation.IsEqual(eulerAngle) == false)
+        if (mLocalRotation != eulerAngle)
         {
-            mLocalRotation.Set(eulerAngle);
+            mLocalRotation = eulerAngle;
             ComputeTransform();
         }
     }
@@ -202,9 +202,9 @@ namespace MFA
 
     void TransformComponent::SetLocalRotation(float rotation[3])
     {
-        if (mLocalRotation.IsEqual(rotation) == false)
+        if (mLocalRotation != rotation)
         {
-            mLocalRotation.Set(rotation);
+            mLocalRotation = rotation;
             ComputeTransform();
         }
     }
@@ -213,9 +213,9 @@ namespace MFA
 
     void TransformComponent::SetLocalRotation(glm::quat const& quaternion)
     {
-        if (mLocalRotation.IsEqual(quaternion) == false)
+        if (mLocalRotation != quaternion)
         {
-            mLocalRotation.Set(quaternion);
+            mLocalRotation = quaternion;
             ComputeTransform();
         }
     }
@@ -254,10 +254,10 @@ namespace MFA
         }
 
         bool rotationChanged = false;
-        if (mWorldRotation.IsEqual(rotation) == false)
+        if (mWorldRotation != rotation)
         {
             rotationChanged = true;
-            mWorldRotation.Set(rotation);
+            mWorldRotation = rotation;
         }
 
         if (positionChanged == false && rotationChanged == false)
@@ -289,7 +289,7 @@ namespace MFA
 
             if (rotationChanged)
             {
-                mLocalRotation.Set(glm::inverse(parentTransform->GetWorldRotation().GetQuaternion()) * mWorldRotation.GetQuaternion());
+                mLocalRotation = glm::inverse(parentTransform->GetWorldRotation().GetQuaternion()) * mWorldRotation.GetQuaternion();
             }
 
         }
@@ -402,7 +402,7 @@ namespace MFA
             auto eulerAngles = mLocalRotation.GetEulerAngles();
             if (UI::InputFloat("Rotation (Euler angles)", eulerAngles))
             {
-                mLocalRotation.Set(eulerAngles);
+                mLocalRotation = eulerAngles;
                 changed = true;
             }
             
@@ -443,7 +443,7 @@ namespace MFA
 
         glm::vec3 eulerAngles{};
         JsonUtils::DeserializeVec3(jsonObject, "rotation", eulerAngles);
-        mLocalRotation.Set(eulerAngles);
+        mLocalRotation = eulerAngles;
 
         JsonUtils::DeserializeVec3(jsonObject, "scale", mLocalScale);
     }
@@ -504,7 +504,7 @@ namespace MFA
         mWorldPosition = mWorldTransform * glm::vec4 { 0, 0, 0, 1.0f };
 
         auto previousWorldRotation = mWorldRotation;
-        mWorldRotation.Set(pWorldRotation.GetQuaternion() * mLocalRotation.GetQuaternion());
+        mWorldRotation = pWorldRotation.GetQuaternion() * mLocalRotation.GetQuaternion();
 
         auto previousWorldScale = mWorldScale;
         mWorldScale = pWorldScale * mLocalScale;
