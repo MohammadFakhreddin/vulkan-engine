@@ -51,7 +51,7 @@ namespace MFA
 
     void Rotation::SetEulerAngles(glm::vec3 const & eulerAngles)
     {
-        if (IsEqual(mEulerAngles, eulerAngles))
+        if (MFA::IsEqual(mEulerAngles, eulerAngles))
         {
             return;
         }
@@ -74,7 +74,7 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-
+    
     bool Rotation::operator==(glm::vec3 const & eulerAngles) const
     {
         return IsEqual(mEulerAngles, eulerAngles);
@@ -85,14 +85,13 @@ namespace MFA
     bool Rotation::operator==(glm::quat const & quaternion) const
     {
         return Matrix::IsEqual(mQuaternion, quaternion);
-        //return IsEqual(mQuaternion, quaternion);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     bool Rotation::operator==(float eulerAngles[3]) const
     {
-        return IsEqual<3>(mEulerAngles, eulerAngles);
+        return MFA::IsEqual<3>(mEulerAngles, eulerAngles);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -100,16 +99,46 @@ namespace MFA
     bool Rotation::operator==(Rotation const & rotation) const
     {
         return Matrix::IsEqual(mQuaternion, rotation.GetQuaternion());
-        //return IsEqual(mQuaternion, rotation.GetQuaternion());
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool Rotation::operator!=(glm::vec3 const & eulerAngles) const
+    {
+        return !IsEqual(mEulerAngles, eulerAngles);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool Rotation::operator!=(glm::quat const & quaternion) const
+    {
+        return !Matrix::IsEqual(mQuaternion, quaternion);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool Rotation::operator!=(float eulerAngles[3]) const
+    {
+        return !MFA::IsEqual<3>(mEulerAngles, eulerAngles);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool Rotation::operator!=(Rotation const & rotation) const
+    {
+        return !Matrix::IsEqual(mQuaternion, rotation.GetQuaternion());
     }
 
     //-------------------------------------------------------------------------------------------------
 
     Rotation & Rotation::operator=(float eulerAngles[3])
     {
-        Copy<3>(mEulerAngles, eulerAngles);
-        mQuaternion = Matrix::ToQuat(mEulerAngles);
-        mMatrix = glm::toMat4(mQuaternion);
+        if (*this != eulerAngles) 
+        {
+            Copy<3>(mEulerAngles, eulerAngles);
+            mQuaternion = Matrix::ToQuat(mEulerAngles);
+            mMatrix = glm::toMat4(mQuaternion);
+        }
         return *this;
     }
 
@@ -117,9 +146,12 @@ namespace MFA
 
     Rotation & Rotation::operator=(glm::vec3 const & eulerAngles)
     {
-        Copy(mEulerAngles, eulerAngles);
-        mQuaternion = Matrix::ToQuat(mEulerAngles);
-        mMatrix = glm::toMat4(mQuaternion);
+        if (*this != eulerAngles)
+        {
+            Copy(mEulerAngles, eulerAngles);
+            mQuaternion = Matrix::ToQuat(mEulerAngles);
+            mMatrix = glm::toMat4(mQuaternion);
+        }
         return *this;
     }
 
@@ -127,9 +159,12 @@ namespace MFA
 
     Rotation & Rotation::operator=(glm::quat const & quaternion)
     {
-        Copy(mQuaternion, quaternion);
-        mEulerAngles = Matrix::ToEulerAngles(quaternion);
-        mMatrix = glm::toMat4(mQuaternion);
+        if (*this != quaternion)
+        {
+            Copy(mQuaternion, quaternion);
+            mEulerAngles = Matrix::ToEulerAngles(quaternion);
+            mMatrix = glm::toMat4(mQuaternion);
+        }
         return *this;
     }
 

@@ -96,6 +96,8 @@ namespace MFA
 
         MFA_ATOMIC_VARIABLE2(Center, glm::vec3, {}, UpdateShapeRelativeTransform)
 
+    protected: 
+
         MFA_ATOMIC_VARIABLE2(Rotation, Rotation, Rotation {}, UpdateShapeRelativeTransform)
 
         MFA_ATOMIC_VARIABLE2(Material, Physics::SharedHandle<physx::PxMaterial>, nullptr, OnMaterialChange)

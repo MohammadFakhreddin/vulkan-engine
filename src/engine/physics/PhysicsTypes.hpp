@@ -5,9 +5,10 @@
 #include "engine/BedrockMemory.hpp"
 
 #include <glm/vec3.hpp>
+#include <foundation/PxVec3.h>
 
 #include <memory>
-#include <foundation/PxVec3.h>
+#include <vector>
 
 namespace physx
 {

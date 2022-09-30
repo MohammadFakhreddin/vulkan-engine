@@ -4,10 +4,11 @@
 #include "AssetBaseMesh.hpp"
 
 #include <glm/mat4x4.hpp>
+#include <glm/ext/matrix_transform.hpp>
 
 #include <string>
 #include <vector>
-#include <glm/ext/matrix_transform.hpp>
+#include <atomic>
 
 namespace MFA::AssetSystem::PBR
 {

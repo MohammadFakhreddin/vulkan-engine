@@ -1,6 +1,5 @@
 #pragma once
 
-#include <glm/fwd.hpp>
 #include <glm/gtx/quaternion.hpp>
 
 namespace MFA
@@ -26,7 +25,7 @@ namespace MFA
         void SetEulerAngles(glm::vec3 const & eulerAngles);
 
         void SetQuaternion(glm::quat const & quaternion);
-
+        
         bool operator==(glm::vec3 const & eulerAngles) const;
 
         bool operator==(glm::quat const & quaternion) const;
@@ -34,6 +33,14 @@ namespace MFA
         bool operator==(float eulerAngles[3]) const;
 
         bool operator==(Rotation const & rotation) const;
+
+        bool operator!=(glm::vec3 const & eulerAngles) const;
+
+        bool operator!=(glm::quat const & quaternion) const;
+
+        bool operator!=(float eulerAngles[3]) const;
+
+        bool operator!=(Rotation const & rotation) const;
 
         Rotation & operator=(float eulerAngles[3]);
 
