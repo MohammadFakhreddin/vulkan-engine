@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 3.16.0)
 
+#https://alandefreitas.github.io/matplotplusplus/integration/cmake/embed-as-subdirectory/
+
 # set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum OS X deployment version")
 # set(CMAKE_IOS_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum IOS deployment version")
 
