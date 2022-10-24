@@ -510,6 +510,9 @@ list(
     "applications/techdemo/scenes/particle_fire_scene/ParticleFireScene.hpp"
     "applications/techdemo/scenes/particle_fire_scene/ParticleFireScene.cpp"
 
+    "applications/techdemo/scenes/cloth_scene/ClothScene.hpp"
+    "applications/techdemo/scenes/cloth_scene/ClothScene.cpp"
+
     # "src/scenes/pbr_scene/PBRScene.cpp"
     # "src/scenes/pbr_scene/PBRScene.hpp"
 

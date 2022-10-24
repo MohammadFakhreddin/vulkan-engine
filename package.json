@@ -30,7 +30,14 @@
         "debug-renderer-vert": "glslc -g -fshader-stage=vert assets/shaders/debug_renderer/DebugRenderer.vert.hlsl  -o assets/shaders/debug_renderer/DebugRenderer.vert.spv -std=450core",
         "debug-renderer-frag": "glslc -g -fshader-stage=frag assets/shaders/debug_renderer/DebugRenderer.frag.hlsl  -o assets/shaders/debug_renderer/DebugRenderer.frag.spv -std=450core",
 
-        "compile-shaders": "npm run skinning-comp && npm run occlusion-vert && npm run pbr-with-shadow-vert-v2 && npm run point-light-shadow-vert-v2 && npm run point-light-shadow-frag-v2 && npm run pbr-with-shadow-frag-v2 && npm run directional-light-shadow-vert-v2 && npm run particle-vert && npm run particle-frag && npm run particle-comp && npm run depth-pre-pass-vert && npm run debug-renderer-vert && npm run debug-renderer-frag",
+        "cloth-comp": "glslc -g -fshader-stage=comp assets/shaders/cloth/cloth.comp.hlsl -o assets/shaders/cloth/cloth.comp.spv -std=450core",
+        "cloth-vert": "glslc -g -fshader-stage=vert assets/shaders/cloth/cloth.vert.hlsl -o assets/shaders/cloth/cloth.vert.spv -std=450core",
+        "cloth-frag": "glslc -g -fshader-stage=frag assets/shaders/cloth/cloth.frag.hlsl -o assets/shaders/cloth/cloth.frag.spv -std=450core",
+        
+        "compile-shaders0": "npm run skinning-comp && npm run occlusion-vert && npm run pbr-with-shadow-vert-v2 && npm run point-light-shadow-vert-v2 && npm run point-light-shadow-frag-v2",
+        "compile-shaders1": "npm run pbr-with-shadow-frag-v2 && npm run directional-light-shadow-vert-v2 && npm run particle-vert && npm run particle-frag && npm run particle-comp",
+        "compile-shaders2": "npm run depth-pre-pass-vert && npm run debug-renderer-vert && npm run debug-renderer-frag && npm run cloth-comp && npm run cloth-vert && npm run cloth-frag",
+        "compile-shaders": "npm run compile-shaders0 && npm run compile-shaders1 && npm run compile-shaders2",
         
         "cmake-mac": "cd build64 && cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=./ios.toolchain.cmake -DPLATFORM=MAC && cd ..",
         "cmake-ios": "cd buildIOS && cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=./ios.toolchain.cmake -DPLATFORM=OS64COMBINED && cd ..",

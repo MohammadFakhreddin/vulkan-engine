@@ -24,6 +24,7 @@ namespace MFA
         Scene(Scene && rhs) noexcept = delete;
         Scene & operator = (Scene const &) noexcept = delete;
 
+        // Indicates whether the scene requires update or not. This could have been done in entity system
         virtual bool RequiresUpdate() {return false;}
         virtual void Update(float deltaTimeInSec) {}
 

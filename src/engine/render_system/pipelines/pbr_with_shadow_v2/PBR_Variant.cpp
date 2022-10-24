@@ -17,7 +17,8 @@
 
 namespace MFA
 {
-
+    // TODO: We have to separate PBR and animation
+    // TODO: We need an animator component
     using namespace AS::PBR;
     //-------------------------------------------------------------------------------------------------
 

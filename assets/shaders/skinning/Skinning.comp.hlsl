@@ -1,5 +1,3 @@
-#include "../TimeBuffer.hlsl"
-
 struct UnSkinnedVertex {
     float4 localPosition;
 
@@ -48,7 +46,7 @@ RWStructuredBuffer<SkinnedVertex> skinnedVertices : register(u1, space1);
 cbuffer {
     PushConsts pushConsts;
 };
-
+// TODO: We can have a matrix class and put it there
 #define IdentityMat float4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
 
 #define unSkinnedVertex unSkinnedVertices[index]
