@@ -235,9 +235,16 @@ PSOut main(PSIn input) {
     // TODO: Is usages of occlusion correct ?
     // TODO Handle occlusionTexture and its strength
     if (primitiveInfo.metallicRoughnessTextureIndex >= 0) {
-        float4 metallicRoughness = textures[primitiveInfo.metallicRoughnessTextureIndex].Sample(textureSampler, input.metallicRoughnessTexCoord);
-        metallic = metallicRoughness.b;
-        roughness = metallicRoughness.g;
+        // float4 metallicRoughness = textures[primitiveInfo.metallicRoughnessTextureIndex].Sample(textureSampler, input.metallicRoughnessTexCoord);
+        // metallic = metallicRoughness.b;
+        // roughness = metallicRoughness.g;
+        float2 metallicRoughness = MetallicRoughness(
+            textures[primitiveInfo.metallicRoughnessTextureIndex],
+            textureSampler,
+            input.metallicRoughnessTexCoord
+        );
+        metallic = metallicRoughness.x;
+        roughness = metallicRoughness.y;
     } else {
         metallic = primitiveInfo.metallicFactor;
         roughness = primitiveInfo.roughnessFactor;
@@ -256,7 +263,7 @@ PSOut main(PSIn input) {
         DirectionalLight directionalLight = directionalLightBuffer.items[lightIndex];
         float3 lightVector = directionalLight.direction;
         
-        float shadow = computeDirectionalLightShadow(
+        float shadow = DirectionalLightShadow(
             DIR_shadowMap,
             textureSampler,
             input.directionLightPosition[lightIndex], 
@@ -299,7 +306,7 @@ PSOut main(PSIn input) {
                 lightDistanceVector.y / lightVectorLength, 
                 lightDistanceVector.z / lightVectorLength
             );
-            float shadow = computePointLightShadow(
+            float shadow = PointLightShadow(
                 pushConsts.projectFarToNearDistance,
                 PL_shadowMap,
                 textureSampler,
@@ -328,10 +335,15 @@ PSOut main(PSIn input) {
 	};
     
     if (primitiveInfo.occlusionTextureIndex >= 0) {
-        float occlusionFactor = textures[primitiveInfo.occlusionTextureIndex].Sample(
-            textureSampler, 
+        // float occlusionFactor = textures[primitiveInfo.occlusionTextureIndex].Sample(
+        //     textureSampler, 
+        //     input.occlusionTexCoord
+        // ).r;
+        float occlusionFactor = OcclusionColor(
+            textures[primitiveInfo.occlusionTextureIndex],
+            textureSampler,
             input.occlusionTexCoord
-        ).r;
+        );
         Lo *= occlusionFactor;
     }
 

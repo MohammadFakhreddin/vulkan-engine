@@ -30,8 +30,10 @@ const float3 PL_SampleOffsetDirections[20] = {
     float3(0,  1,  -1)
 };
 
+//-------------------------------------------------------------------------
+
 // Normalized light vector will cause incorrect sampling!
-float computePointLightShadow(
+float PointLightShadow(
     float projectionFarToNearDistance,
     TextureCubeArray shadowMap,
     sampler shadowSampler,
@@ -78,5 +80,7 @@ float computePointLightShadow(
 
     return shadow;
 }
+
+//-------------------------------------------------------------------------
 
 #endif

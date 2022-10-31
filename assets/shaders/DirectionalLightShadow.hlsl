@@ -7,7 +7,9 @@ const float DIR_SHADOW_TEXTURE_SIZE = (1024.0f * 10.0f);
 const float DIR_SHADOW_PER_SAMPLE = 0.0204f; //1.0f / 49.0f;
 const float DIR_TEXEL_SIZE = 1.0 / DIR_SHADOW_TEXTURE_SIZE;
 
-float computeDirectionalLightShadow(
+//-------------------------------------------------------------------------
+
+float DirectionalLightShadow(
     Texture2DArray shadowMap,
     sampler shadowSampler,
     float3 dirLightPos, 
@@ -61,5 +63,7 @@ float computeDirectionalLightShadow(
     }
     return shadow;
 }
+
+//-------------------------------------------------------------------------
 
 #endif
