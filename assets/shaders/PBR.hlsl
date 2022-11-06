@@ -3,6 +3,12 @@
 
 #include "./Math.hlsl"
 #include "./Normal.hlsl"
+#include "./DirectionalLightBuffer.hlsl"
+#include "./DirectionalLightShadow.hlsl"
+#include "./PointLightShadow.hlsl"
+#include "./PointLightBuffer.hlsl"
+#include "./DirectionalLightBuffer.hlsl"
+#include "./MaxTextureCount.hlsl"
 
 // Fresnel function ----------------------------------------------------
 float3 F_Schlick(float cosTheta, float metallic, float3 baseColor)
@@ -41,7 +47,6 @@ float3 BRDF(
     float metallic,
     float roughness,
     float3 baseColor,
-    float3 worldPos,
     float constantAttenuation,
     float linearAttenuation,
     float quadraticAttenuation,
@@ -121,106 +126,129 @@ float3 AmbientOcclusion(float3 baseColor, float ambientFactor)
 
 //-------------------------------------------------------------------------
 
+struct EmissionParams
+{
+    float3 emissiveFactor;
+    int textureIndex;
+    sampler textureSampler; 
+    float2 uv;
+};
+
 float3 EmissiveColor(
-    Texture2D textures[],
-    float3 emissiveFactor,
-    int textureIndex,
-    sampler textureSampler, 
-    float2 uv,
-    float3 baseColor 
+    Texture2D textures[MAX_TEXTURE_COUNT],
+    EmissionParams params,
+    float3 baseColor
 )
 {
     float3 ao = (1.0, 1.0, 1.0);
-    if (textureIndex >= 0) {
-        ao = textures[textureIndex].Sample(textureSampler, uv);
+    if (params.textureIndex >= 0) {
+        ao = textures[params.textureIndex].Sample(params.textureSampler, params.uv);
     }
-    return baseColor * ao * emissiveFactor;
+    return baseColor * ao * params.emissiveFactor;
 };
 
 //-------------------------------------------------------------------------
 
+struct OcclusionParams 
+{
+    int textureIndex;
+    sampler textureSampler;
+    float2 uv;
+};
+
 float OcclusionColor(
-    Texture2D textures[],
-    int textureIndex,
-    sampler textureSampler,
-    float2 uv
+    Texture2D textures[MAX_TEXTURE_COUNT],
+    OcclusionParams params
 )
 {
     float occlusionFactor = 1.0f;
-    if (textureIndex >= 0) 
+    if (params.textureIndex >= 0) 
     {
-        occlusionFactor = textures[textureIndex].Sample(textureSampler, uv).r;
+        occlusionFactor = textures[params.textureIndex].Sample(params.textureSampler, params.uv).r;
     }
     return occlusionFactor;
 };
 
 //-------------------------------------------------------------------------
 
+struct MetallicRoughnessParams 
+{
+    float metallicFactor;
+    float roughnessFactor;
+    int textureIndex;
+    sampler textureSampler;
+    float2 uv;
+};
+
 float2 MetallicRoughness(
-    Texture2D textures[],
-    float metallicFactor,
-    float roughnessFactor,
-    int textureIndex,
-    sampler textureSampler,
-    float2 uv
+    Texture2D textures[MAX_TEXTURE_COUNT],
+    MetallicRoughnessParams params
 )
 {
     float metallic;
     float roughness;
-    if (textureIndex >= 0) {
-        float4 metallicRoughness = textures[textureIndex].Sample(textureSampler, uv);
+    if (params.textureIndex >= 0) {
+        float4 metallicRoughness = textures[params.textureIndex].Sample(params.textureSampler, params.uv);
         metallic = metallicRoughness.b;
         roughness = metallicRoughness.g;
     } else {
-        metallic = metallicFactor;
-        roughness = roughnessFactor;
+        metallic = params.metallicFactor;
+        roughness = params.roughnessFactor;
     }
     return float2(metallic, roughness);
 }
 
 //-------------------------------------------------------------------------
 
+struct BaseColorParams {
+    float4 colorFactor;
+    int textureIndex;           // -1 for null
+    sampler textureSampler; 
+    float2 uv;
+};
+
 float4 BaseColor(
-    Texture2D textures[],
-    float4 colorFactor,
-    int textureIndex,          // -1 for null
-    sampler textureSampler, 
-    float2 uv,
+    Texture2D textures[MAX_TEXTURE_COUNT],
+    BaseColorParams params
 )
 {
     // TODO Why do we have pow here ?
-    float4 baseColor = textureIndex >= 0
-        ? pow(textures[textureIndex].Sample(textureSampler, uv).rgba, 2.2f) 
-        : colorFactor.rgba;
+    float4 baseColor = params.textureIndex >= 0
+        ? pow(textures[params.textureIndex].Sample(params.textureSampler, params.uv).rgba, 2.2f) 
+        : params.colorFactor.rgba;
     
     return baseColor;
 }
 
 //-------------------------------------------------------------------------
 
+struct PixelNormalParams {
+    float3 worldNormal;
+    float3 worldTangent;
+    float3 worldBiTangent;
+    int normalTextureIndex;
+    sampler textureSampler;
+    float2 uv;
+};
+
 float3 PixelNormal(
-    Texture2D textures[],
-    float3 worldNormal,
-    float3 worldTangent,
-    float3 worldBiTangent,
-    int normalTextureIndex,
-    sampler textureSampler,
-    float2 uv
+    Texture2D textures[MAX_TEXTURE_COUNT],
+    PixelNormalParams params
 )
 {
     float3 pixelNormal;
-    if (normalTextureIndex < 0) 
+    if (params.normalTextureIndex < 0) 
     {
-        pixelNormal = worldNormal;
+        pixelNormal = params.worldNormal;
     } else 
     {
         pixelNormal = CalculateNormalFromTexture(
-            worldNormal,
-            worldTangent,
-            worldBiTangent,
-            uv,
-            textures[normalTextureIndex],
-            textureSampler
+            params.worldNormal,
+            params.worldTangent,
+            params.worldBiTangent,
+            params.uv,
+            textures[params.normalTextureIndex],
+            params.textureSampler
         );
     }
     return pixelNormal;
@@ -228,79 +256,62 @@ float3 PixelNormal(
 
 //-------------------------------------------------------------------------
 
-float4 ComputeColor(
-    Texture2D textures[],
+float4 PBR_ComputeColor(
+    Texture2D textures[MAX_TEXTURE_COUNT],
     // Alpha
     int alphaMode,
     float alphaCutoff,
     // Base color
-    float4 baseColorFactor,
-    int baseColorTextureIndex,          // -1 for null
-    sampler baseColorSampler, 
-    float2 baseColorUV,
+    BaseColorParams baseColorParams,
     // Normal
-    float3 worldNormal,
-    float3 worldTangent,
-    float3 worldBiTangent,
-    int normalTextureIndex,
-    sampler normalTextureSampler,
-    float2 normalUV,
+    PixelNormalParams pixelNormalParams,
     // Metallic roughness
-    float metallicFactor,
-    float roughtnessFactor,
-    int metallicRoughnessTextureIndex,
-    sampler metallicRoughnessSampler,
-    float metallicRoughnessUV,
+    MetallicRoughnessParams metallicRoughnessParams,
     // Occlusion
-    float occlusionTextureIndex,
-    sampler occlusionTextureSampler,
-    float2 occlusionTextureUV,
+    OcclusionParams occlusionParams,
     // Emission
-    int emissiveTextureIndex,
-    float emissiveFactor,
-    sampler emissiveSampelr,
-    float2 emissiveUV,
+    EmissionParams emissionParams,
+    // Ambient
+    float ambientFactor,
     // Position
     float3 cameraPosition,
-    float3 worldPosition
+    float3 worldPosition,
+    float projectionFarToNearDistance,
+    // Directional light
+    Texture2DArray directionalLightShadowMap,
+    sampler directionalLightSampler,
+    float3 directionalLightPosition[MAX_DIRECTIONAL_LIGHT_COUNT],
+    uint directionalLightCount,
+    DirectionalLight directionalLights [MAX_DIRECTIONAL_LIGHT_COUNT],
+    // Point light
+    TextureCubeArray pointLightShadowMap,
+    sampler pointLightSampler,
+    uint pointLightCount,
+    float pointLightConstantAttenuation,
+    PointLight pointLights [MAX_POINT_LIGHT_COUNT]
 )
 {
     // TODO Why do we have pow here ?
     float4 baseColor = BaseColor(
         textures, 
-        baseColorFactor, 
-        baseColorTextureIndex, 
-        baseColorSampler, 
-        baseColorUV
+        baseColorParams
     );
     
     // Alpha mask
     if (alphaMode == 1 && baseColor.a < alphaCutoff) {
         discard;
     }
-	
-    float metallic = 0.0f;
-    float roughness = 0.0f;
-    
+
     float2 metallicRoughness = MetallicRoughness(
         textures,
-        metallicFactor,
-        roughtnessFactor,
-        metallicRoughnessTextureIndex,
-        metallicRoughnessSampler,
-        metallicRoughnessUV
+        metallicRoughnessParams
     );
-    metallic = metallicRoughness.x;
-    roughness = metallicRoughness.y;
+    float metallic = metallicRoughness.x;
+    float roughness = metallicRoughness.y;
 
 	float3 surfaceNormal = PixelNormal(
         textures, 
-        worldNormal, 
-        worldTangent, 
-        worldBiTangent, 
-        normalTextureIndex, 
-        normalTextureSampler,
-        normalUV
+        pixelNormalParams
     );
 	float3 normalizedSurfaceNormal = normalize(surfaceNormal.xyz);
     float3 viewVector = cameraPosition - worldPosition;
@@ -309,18 +320,17 @@ float4 ComputeColor(
     // Specular contribution
 	float3 Lo = float3(0.0, 0.0, 0.0);
     int lightIndex = 0;
-    for (lightIndex = 0; lightIndex < directionalLightBuffer.count; lightIndex++)
+    for (lightIndex = 0; lightIndex < directionalLightCount; lightIndex++)
     {
-        DirectionalLight directionalLight = directionalLightBuffer.items[lightIndex];
+        DirectionalLight directionalLight = directionalLights[lightIndex];
         float3 lightVector = directionalLight.direction;
         
         float shadow = DirectionalLightShadow(
-            DIR_shadowMap,
-            textureSampler,
-            input.directionLightPosition[lightIndex], 
+            directionalLightShadowMap,
+            directionalLightSampler,
+            directionalLightPosition[lightIndex], 
             lightIndex
         );
-        // float shadow = 0.0f;
         if (shadow < 1.0f)
         {
             Lo += BRDF(
@@ -330,7 +340,6 @@ float4 ComputeColor(
                 metallic, 
                 roughness, 
                 baseColor.rgb, 
-                input.worldPos,
                 1.0f,
                 0.0f,
                 0.0f,
@@ -339,13 +348,13 @@ float4 ComputeColor(
             ) * (1.0f - shadow);
         }
     }
-    
+
     float viewVectorLength = length(viewVector);
 
-	for (lightIndex = 0; lightIndex < pointLightsBuffer.count; lightIndex++)        // Point light count
+	for (lightIndex = 0; lightIndex < pointLightCount; lightIndex++)        // Point light count
     {   
-		PointLight pointLight = pointLightsBuffer.items[lightIndex];
-        float3 lightDistanceVector = pointLight.position.xyz - input.worldPos;
+		PointLight pointLight = pointLights[lightIndex];
+        float3 lightDistanceVector = pointLight.position.xyz - worldPosition;
         float lightVectorSquareLength = lightDistanceVector.x * lightDistanceVector.x + 
             lightDistanceVector.y * lightDistanceVector.y + 
             lightDistanceVector.z * lightDistanceVector.z;
@@ -358,9 +367,9 @@ float4 ComputeColor(
                 lightDistanceVector.z / lightVectorLength
             );
             float shadow = PointLightShadow(
-                pushConsts.projectFarToNearDistance,
-                PL_shadowMap,
-                textureSampler,
+                projectionFarToNearDistance,
+                pointLightShadowMap,
+                pointLightSampler,
                 lightDistanceVector, 
                 lightVectorLength, 
                 viewVectorLength, 
@@ -374,8 +383,7 @@ float4 ComputeColor(
                     metallic, 
                     roughness, 
                     baseColor.rgb, 
-                    input.worldPos,
-                    pointLightsBuffer.constantAttenuation,
+                    pointLightConstantAttenuation,
                     pointLight.linearAttenuation,
                     pointLight.quadraticAttenuation,
                     lightVectorLength,
@@ -387,9 +395,7 @@ float4 ComputeColor(
     
     Lo *= OcclusionColor(
         textures, 
-        occlusionTextureIndex, 
-        occlusionTextureSampler, 
-        occlusionTextureUV
+        occlusionParams
     );
 
     // Combine with ambient
@@ -397,14 +403,11 @@ float4 ComputeColor(
     
     color += EmissiveColor(
         textures, 
-        emissiveFactor,
-        emissiveTextureIndex,
-        emissiveSampelr,
-        emissiveUV,
+        emissionParams,
         baseColor.rgb
     );
 
-    color += AmbientOcclusion(baseColor.rgb, ambientOcclusion);
+    color += AmbientOcclusion(baseColor.rgb, ambientFactor);
 
     color += Lo;
 
