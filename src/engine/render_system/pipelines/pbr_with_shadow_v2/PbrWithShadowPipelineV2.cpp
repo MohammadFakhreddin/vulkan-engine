@@ -232,7 +232,7 @@ namespace MFA
     }
 
     //-------------------------------------------------------------------------------------------------
-
+    // We need animation pipeline
     void PBRWithShadowPipelineV2::performSkinning(RT::CommandRecordState & recordState)
     {
         RF::BindPipeline(recordState, *mSkinningPipeline);
