@@ -22,32 +22,29 @@ namespace MFA
         VkRenderPass GetVkRenderPass() override;
 
         // Appends required data for barrier to execute
-        static void PrepareRenderTargetForSampling(
-            RT::CommandRecordState const & recordState,
-            DirectionalLightShadowResources * renderTarget,
-            bool isUsed,
-            std::vector<VkImageMemoryBarrier> & outPipelineBarriers
-        );
+        void BeginRenderPass(RT::CommandRecordState & recordState) override;
 
-        // Appends required data for barrier to execute
-        void BeginRenderPass(
-            RT::CommandRecordState & recordState,
-            const DirectionalLightShadowResources & renderTarget
-        );
+        void EndRenderPass(RT::CommandRecordState & recordState) override;
 
-        void EndRenderPass(RT::CommandRecordState & recordState);
+        void Init(std::shared_ptr<DirectionalLightShadowResources> resources);
 
-    protected:
+        void Shutdown();
 
-        void internalInit() override;
+        [[nodiscard]]
+        VkFramebuffer GetFrameBuffer(RT::CommandRecordState const & recordState) const;
 
-        void internalShutdown() override;
+        [[nodiscard]]
+        VkFramebuffer GetFrameBuffer(uint32_t frameIndex) const;
+
+        void CreateFrameBuffer(VkExtent2D const & shadowExtent, VkRenderPass renderPass);
 
     private:
 
         void createRenderPass();
 
         VkRenderPass mVkRenderPass{};
+
+        std::vector<std::shared_ptr<RT::FrameBuffer>> mFrameBuffers{};
 
     };
 }

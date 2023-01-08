@@ -214,6 +214,77 @@ namespace MFA::RenderBackend
     //-------------------------------------------------------------------------------------------------
 
     VkSurfaceFormatKHR ChooseSurfaceFormat(
+        VkPhysicalDevice physicalDevice,
+        VkSurfaceKHR windowSurface,
+        VkSurfaceCapabilitiesKHR surfaceCapabilities
+    )
+    {
+        // Find supported surface formats
+        uint32_t formatCount;
+        if (
+            vkGetPhysicalDeviceSurfaceFormatsKHR(
+                physicalDevice,
+                windowSurface,
+                &formatCount,
+                nullptr
+            ) != VK_SUCCESS ||
+            formatCount == 0
+        )
+        {
+            MFA_CRASH("Failed to get number of supported surface formats");
+        }
+
+        std::vector<VkSurfaceFormatKHR> surfaceFormats(formatCount);
+        VK_Check(vkGetPhysicalDeviceSurfaceFormatsKHR(
+            physicalDevice,
+            windowSurface,
+            &formatCount,
+            surfaceFormats.data()
+        ));
+
+        // Find supported present modes
+        uint32_t presentModeCount;
+        if (vkGetPhysicalDeviceSurfacePresentModesKHR(
+            physicalDevice,
+            windowSurface,
+            &presentModeCount,
+            nullptr
+        ) != VK_SUCCESS || presentModeCount == 0)
+        {
+            MFA_CRASH("Failed to get number of supported presentation modes");
+        }
+
+        std::vector<VkPresentModeKHR> present_modes(presentModeCount);
+        VK_Check(vkGetPhysicalDeviceSurfacePresentModesKHR(
+            physicalDevice,
+            windowSurface,
+            &presentModeCount,
+            present_modes.data())
+        );
+
+        // Determine number of images for swap chain
+        auto const imageCount = ComputeSwapChainImagesCount(surfaceCapabilities);
+
+        MFA_LOG_INFO(
+            "Surface extend width: %d, height: %d"
+            , surfaceCapabilities.currentExtent.width
+            , surfaceCapabilities.currentExtent.height
+        );
+
+        MFA_LOG_INFO("Using %d images for swap chain.", imageCount);
+        MFA_ASSERT(surfaceFormats.size() <= 255);
+        // Select a surface format
+        auto const selectedSurfaceFormat = ChooseSurfaceFormat(
+            static_cast<uint8_t>(surfaceFormats.size()),
+            surfaceFormats.data()
+        );
+
+        return selectedSurfaceFormat;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    VkSurfaceFormatKHR ChooseSurfaceFormat(
         uint8_t const availableFormatsCount,
         VkSurfaceFormatKHR const * availableFormats
     )
@@ -1567,32 +1638,10 @@ namespace MFA::RenderBackend
         VkPhysicalDevice physicalDevice,
         VkSurfaceKHR windowSurface,
         VkSurfaceCapabilitiesKHR surfaceCapabilities,
+        VkSurfaceFormatKHR surfaceFormat,
         VkSwapchainKHR oldSwapChain
     )
     {
-        // Find supported surface formats
-        uint32_t formatCount;
-        if (
-            vkGetPhysicalDeviceSurfaceFormatsKHR(
-                physicalDevice,
-                windowSurface,
-                &formatCount,
-                nullptr
-            ) != VK_SUCCESS ||
-            formatCount == 0
-        )
-        {
-            MFA_CRASH("Failed to get number of supported surface formats");
-        }
-
-        std::vector<VkSurfaceFormatKHR> surfaceFormats(formatCount);
-        VK_Check(vkGetPhysicalDeviceSurfaceFormatsKHR(
-            physicalDevice,
-            windowSurface,
-            &formatCount,
-            surfaceFormats.data()
-        ));
-
         // Find supported present modes
         uint32_t presentModeCount;
         if (vkGetPhysicalDeviceSurfacePresentModesKHR(
@@ -1616,22 +1665,8 @@ namespace MFA::RenderBackend
         // Determine number of images for swap chain
         auto const imageCount = ComputeSwapChainImagesCount(surfaceCapabilities);
 
-        MFA_LOG_INFO(
-            "Surface extend width: %d, height: %d"
-            , surfaceCapabilities.currentExtent.width
-            , surfaceCapabilities.currentExtent.height
-        );
-
-        MFA_LOG_INFO("Using %d images for swap chain.", imageCount);
-        MFA_ASSERT(surfaceFormats.size() <= 255);
-        // Select a surface format
-        auto const selectedSurfaceFormat = ChooseSurfaceFormat(
-            static_cast<uint8_t>(surfaceFormats.size()),
-            surfaceFormats.data()
-        );
-
         // Select swap chain size
-        auto const selected_swap_chain_extent = ChooseSwapChainExtent(
+        auto const selectedSwapChainExtent = ChooseSwapChainExtent(
             surfaceCapabilities,
             surfaceCapabilities.currentExtent.width,
             surfaceCapabilities.currentExtent.height
@@ -1657,9 +1692,9 @@ namespace MFA::RenderBackend
         createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
         createInfo.surface = windowSurface;
         createInfo.minImageCount = imageCount;
-        createInfo.imageFormat = selectedSurfaceFormat.format;
-        createInfo.imageColorSpace = selectedSurfaceFormat.colorSpace;
-        createInfo.imageExtent = selected_swap_chain_extent;
+        createInfo.imageFormat = surfaceFormat.format;
+        createInfo.imageColorSpace = surfaceFormat.colorSpace;
+        createInfo.imageExtent = selectedSwapChainExtent;
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -1683,7 +1718,7 @@ namespace MFA::RenderBackend
         MFA_LOG_INFO("Created swap chain");
 
         //swapChainGroup.swapChainFormat = selected_surface_format.format;
-        VkFormat const swapChainFormat = selectedSurfaceFormat.format;
+        VkFormat const swapChainFormat = surfaceFormat.format;
 
         // Store the images used by the swap chain
         // Note: these are the images that swap chain image indices refer to
@@ -1937,6 +1972,13 @@ namespace MFA::RenderBackend
         {
             vkDestroyFramebuffer(device, frameBuffers[index], nullptr);
         }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void DestroyFrameBuffer(VkDevice device, VkFramebuffer frameBuffer)
+    {
+        vkDestroyFramebuffer(device, frameBuffer, nullptr);
     }
 
     //-------------------------------------------------------------------------------------------------

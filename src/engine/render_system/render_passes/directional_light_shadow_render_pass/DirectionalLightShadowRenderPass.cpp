@@ -99,14 +99,14 @@ void MFA::DirectionalLightShadowRenderPass::EndRenderPass(RT::CommandRecordState
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DirectionalLightShadowRenderPass::internalInit()
+void MFA::DirectionalLightShadowRenderPass::Init()
 {
     createRenderPass();
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DirectionalLightShadowRenderPass::internalShutdown()
+void MFA::DirectionalLightShadowRenderPass::Shutdown()
 {
     RF::DestroyRenderPass(mVkRenderPass);
 }

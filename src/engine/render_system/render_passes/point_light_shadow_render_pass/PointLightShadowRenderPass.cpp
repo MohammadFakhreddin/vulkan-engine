@@ -28,7 +28,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PointLightShadowRenderPass::internalInit()
+    void PointLightShadowRenderPass::Init()
     {
         createRenderPass();
 
@@ -60,7 +60,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PointLightShadowRenderPass::internalShutdown()
+    void PointLightShadowRenderPass::Shutdown()
     {
         RF::DestroyRenderPass(mVkRenderPass);
     }

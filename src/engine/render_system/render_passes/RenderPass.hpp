@@ -11,39 +11,29 @@
 
 namespace MFA {
 
-class RenderPass {
+    class RenderPass {
 
-public:
+    public:
 
-    virtual ~RenderPass() = default;
+        virtual ~RenderPass() = default;
 
-    void Init();
+        virtual VkRenderPass GetVkRenderPass() = 0;
 
-    void Shutdown();
+        virtual void BeginRenderPass(RT::CommandRecordState & recordState);
 
-    virtual void OnResize();
+        virtual void EndRenderPass(RT::CommandRecordState & recordState);
 
-    virtual VkRenderPass GetVkRenderPass() = 0;
+    protected:
 
-protected:
+        [[nodiscard]]
+        bool getIsRenderPassActive() const {
+            return mIsRenderPassActive;
+        }
 
-    void BeginRenderPass(RT::CommandRecordState & drawPass);
+    private:
 
-    void EndRenderPass(RT::CommandRecordState & drawPass);
+        bool mIsRenderPassActive = false;
 
-    virtual void internalInit() = 0;
-
-    virtual void internalShutdown() = 0;
-    
-    [[nodiscard]]
-    bool getIsRenderPassActive() const {
-        return mIsRenderPassActive;
-    }
-
-private:
-
-    bool mIsRenderPassActive = false;
-
-};
+    };
 
 }

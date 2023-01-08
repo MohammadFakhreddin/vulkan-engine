@@ -189,11 +189,15 @@ list(
     "src/engine/render_system/render_passes/directional_light_shadow_render_pass/DirectionalLightShadowRenderPass.cpp"
 
     # RenderResources
+    "src/engine/render_system/render_resources/RenderResources.hpp"
+    "src/engine/render_system/render_resources/RenderResources.cpp"
     "src/engine/render_system/render_resources/point_light_shadow_resources/PointLightShadowResources.hpp"
     "src/engine/render_system/render_resources/point_light_shadow_resources/PointLightShadowResources.cpp"
     "src/engine/render_system/render_resources/directional_light_shadow_resources/DirectionalLightShadowResources.hpp"
     "src/engine/render_system/render_resources/directional_light_shadow_resources/DirectionalLightShadowResources.cpp"
-
+    "src/engine/render_system/render_resources/display_render_resources/DisplayRenderResources.hpp"
+    "src/engine/render_system/render_resources/display_render_resources/DisplayRenderResources.cpp"
+    
     # Pipeline
     "src/engine/render_system/pipelines/BasePipeline.hpp"
     "src/engine/render_system/pipelines/BasePipeline.cpp"

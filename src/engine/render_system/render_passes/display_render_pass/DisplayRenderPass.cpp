@@ -24,53 +24,16 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DisplayRenderPass::internalInit()
+    void DisplayRenderPass::Init()
     {
-
-        auto surfaceCapabilities = RF::GetSurfaceCapabilities();
-        auto const swapChainExtent = VkExtent2D{
-            .width = surfaceCapabilities.currentExtent.width,
-            .height = surfaceCapabilities.currentExtent.height
-        };
-
-        mSwapChainImagesCount = RF::GetSwapChainImagesCount();
-
-        mSwapChainImages = RF::CreateSwapChain();
-
-        mMSAAImageGroupList.resize(mSwapChainImagesCount);
-        for (uint32_t i = 0; i < mSwapChainImagesCount; ++i)
-        {
-            mMSAAImageGroupList[i] = RF::CreateColorImage(
-                swapChainExtent,
-                mSwapChainImages->swapChainFormat,
-                RT::CreateColorImageOptions{
-                    .samplesCount = RF::GetMaxSamplesCount()
-                }
-            );
-        }
-
-        createDepthImages(swapChainExtent);
-
         createDisplayRenderPass();
-
-        createDisplayFrameBuffers(swapChainExtent);
-
         createPresentToDrawBarrier();
-
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void DisplayRenderPass::internalShutdown()
+    void DisplayRenderPass::Shutdown()
     {
-        mSwapChainImages.reset();
-        mMSAAImageGroupList.clear();
-        mDepthImageGroupList.clear();
-
-        RF::DestroyFrameBuffers(
-            static_cast<uint32_t>(mDisplayFrameBuffers.size()),
-            mDisplayFrameBuffers.data()
-        );
 
         RF::DestroyRenderPass(mVkDisplayRenderPass);
     }
@@ -160,44 +123,6 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DisplayRenderPass::OnResize()
-    {
-        auto surfaceCapabilities = RF::GetSurfaceCapabilities();
-        auto const swapChainExtend = VkExtent2D{
-            .width = surfaceCapabilities.currentExtent.width,
-            .height = surfaceCapabilities.currentExtent.height
-        };
-
-        // Depth image
-        createDepthImages(swapChainExtend);
-
-        // MSAA image
-        for (uint32_t i = 0; i < mSwapChainImagesCount; ++i)
-        {
-            mMSAAImageGroupList[i] = RF::CreateColorImage(
-                swapChainExtend,
-                mSwapChainImages->swapChainFormat,
-                RT::CreateColorImageOptions{
-                    .samplesCount = RF::GetMaxSamplesCount()
-                }
-            );
-        }
-
-        // Swap-chain
-        auto const oldSwapChainImages = mSwapChainImages;
-        mSwapChainImages = RF::CreateSwapChain(oldSwapChainImages->swapChain);
-
-        // Display frame-buffer
-        RF::DestroyFrameBuffers(
-            static_cast<uint32_t>(mDisplayFrameBuffers.size()),
-            mDisplayFrameBuffers.data()
-        );
-        createDisplayFrameBuffers(swapChainExtend);
-
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
     void DisplayRenderPass::notifyDepthImageLayoutIsSet()
     {
         mIsDepthImageUndefined = false;
@@ -253,36 +178,6 @@ namespace MFA
     std::vector<std::shared_ptr<RT::DepthImageGroup>> const & DisplayRenderPass::GetDepthImages() const
     {
         return mDepthImageGroupList;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    VkFramebuffer DisplayRenderPass::getDisplayFrameBuffer(RT::CommandRecordState const & drawPass) const
-    {
-        return mDisplayFrameBuffers[drawPass.imageIndex];
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void DisplayRenderPass::createDisplayFrameBuffers(VkExtent2D const & extent)
-    {
-        mDisplayFrameBuffers.clear();
-        mDisplayFrameBuffers.resize(mSwapChainImagesCount);
-        for (int i = 0; i < static_cast<int>(mDisplayFrameBuffers.size()); ++i)
-        {
-            std::vector<VkImageView> const attachments{
-                mMSAAImageGroupList[i]->imageView->imageView,
-                mSwapChainImages->swapChainImageViews[i]->imageView,
-                mDepthImageGroupList[i]->imageView->imageView
-            };
-            mDisplayFrameBuffers[i] = RF::CreateFrameBuffer(
-                mVkDisplayRenderPass,
-                attachments.data(),
-                static_cast<uint32_t>(attachments.size()),
-                extent,
-                1
-            );
-        }
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -363,23 +258,6 @@ namespace MFA
             nullptr,
             0
         );
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void DisplayRenderPass::createDepthImages(VkExtent2D const & extent2D)
-    {
-        mDepthImageGroupList.resize(mSwapChainImagesCount);
-        for (auto & depthImage : mDepthImageGroupList)
-        {
-            depthImage = RF::CreateDepthImage(
-                extent2D,
-                RT::CreateDepthImageOptions{
-                    .usageFlags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-                    .samplesCount = RF::GetMaxSamplesCount()
-                }
-            );
-        }
     }
 
     //-------------------------------------------------------------------------------------------------

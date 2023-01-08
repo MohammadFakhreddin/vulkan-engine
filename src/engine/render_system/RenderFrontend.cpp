@@ -78,7 +78,10 @@ namespace MFA::RenderFrontend
         // Resize
         bool isWindowResizable = false;
         bool windowResized = false;
-        Signal<> resizeEventSignal{};
+
+        Signal<> resizeEventSignal1{};
+        Signal<> resizeEventSignal2{};
+
         VkSurfaceCapabilitiesKHR surfaceCapabilities{};
         uint32_t swapChainImageCount = 0;
         DisplayRenderPass displayRenderPass{};
@@ -86,6 +89,8 @@ namespace MFA::RenderFrontend
         uint8_t currentFrame = 0;
         VkFormat depthFormat{};
         bool isWindowVisible = true;                        // Currently only minimize can cause this to be false
+
+        VkSurfaceFormatKHR surfaceFormat {};
 
 #ifdef __DESKTOP__
         // CreateWindow
@@ -351,6 +356,13 @@ namespace MFA::RenderFrontend
 
         state->depthFormat = RB::FindDepthFormat(state->physicalDevice);
 
+        state->surfaceFormat = RB::ChooseSurfaceFormat(
+            state->logicalDevice.device,
+            state->physicalDevice,
+            state->surface,
+            state->surfaceCapabilities
+        );
+
         state->displayRenderPass.Init();
         
         return true;
@@ -373,8 +385,9 @@ namespace MFA::RenderFrontend
         if (state->screenWidth > 0 && state->screenHeight > 0)
         {
             // We need display render pass to resize before everything else
-            state->displayRenderPass.OnResize();
-            state->resizeEventSignal.Emit();
+            //state->displayRenderPass.OnResize();
+            state->resizeEventSignal1.Emit();
+            state->resizeEventSignal2.Emit();
         }
     }
 
@@ -385,7 +398,7 @@ namespace MFA::RenderFrontend
         // Common part with resize
         DeviceWaitIdle();
 
-        MFA_ASSERT(state->resizeEventSignal.IsEmpty());
+        MFA_ASSERT(state->resizeEventSignal2.IsEmpty());
 
 #ifdef __DESKTOP__
         MFA_ASSERT(state->sdlEventListeners.empty());
@@ -458,14 +471,14 @@ namespace MFA::RenderFrontend
     int AddResizeEventListener(RT::ResizeEventListener const & eventListener)
     {
         MFA_ASSERT(eventListener != nullptr);
-        return state->resizeEventSignal.Register(eventListener);
+        return state->resizeEventSignal2.Register(eventListener);
     }
 
     //-------------------------------------------------------------------------------------------------
 
     bool RemoveResizeEventListener(RT::ResizeEventListenerId const listenerId)
     {
-        return state->resizeEventSignal.UnRegister(listenerId);
+        return state->resizeEventSignal2.UnRegister(listenerId);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -1059,6 +1072,13 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
+    VkSurfaceFormatKHR GetSurfaceFormat()
+    {
+        return state->surfaceFormat;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void BindVertexBuffer(
         RT::CommandRecordState const & recordState,
         RT::BufferAndMemory const & vertexBuffer,
@@ -1405,6 +1425,7 @@ namespace MFA::RenderFrontend
             state->physicalDevice,
             state->surface,
             state->surfaceCapabilities,
+            state->surfaceFormat,
             oldSwapChain
         );
     }
@@ -1513,6 +1534,17 @@ namespace MFA::RenderFrontend
             state->logicalDevice.device,
             frameBuffersCount,
             frameBuffers
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void DestroyFrameBuffers(VkFramebuffer frameBuffer)
+    {
+        DeviceWaitIdle();
+        RB::DestroyFrameBuffer(
+            state->logicalDevice.device,
+            frameBuffer
         );
     }
 

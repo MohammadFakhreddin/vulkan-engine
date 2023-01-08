@@ -37,13 +37,11 @@ namespace MFA
             const PointLightShadowResources & renderTarget
         );
 
-        void EndRenderPass(RT::CommandRecordState & recordState);
+        void EndRenderPass(RT::CommandRecordState & recordState) override;
 
-    protected:
+        void Init();
 
-        void internalInit() override;
-
-        void internalShutdown() override;
+        void Shutdown();
 
     private:
 

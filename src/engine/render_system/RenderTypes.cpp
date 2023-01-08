@@ -56,6 +56,20 @@ MFA::RT::ImageGroup::~ImageGroup()
 
 //-------------------------------------------------------------------------------------------------
 
+MFA::RenderTypes::FrameBuffer::FrameBuffer(VkFramebuffer framebuffer_)
+    : framebuffer(framebuffer_)
+{
+}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RenderTypes::FrameBuffer::~FrameBuffer()
+{
+    RF::DestroyFrameBuffer(framebuffer);
+}
+
+//-------------------------------------------------------------------------------------------------
+
 MFA::RT::ImageViewGroup::ImageViewGroup(VkImageView imageView_)
     : imageView(imageView_)
 {

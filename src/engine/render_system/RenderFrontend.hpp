@@ -128,6 +128,8 @@ namespace MFA::RenderFrontend
 
     void DeviceWaitIdle();
 
+    VkSurfaceFormatKHR GetSurfaceFormat();
+
     [[nodiscard]]
     VkFormat GetDepthFormat();
 
@@ -254,7 +256,7 @@ namespace MFA::RenderFrontend
         UpdateFrequency frequency,
         VkDescriptorSet descriptorSet
     );
-
+    
     //: loop through each mesh instance in the mesh instances list to render
     //
     //  - get the mesh from the asset manager
@@ -403,6 +405,8 @@ namespace MFA::RenderFrontend
         uint32_t frameBuffersCount,
         VkFramebuffer * frameBuffers
     );
+
+    void DestroyFrameBuffer(VkFramebuffer frameBuffer);
 
     bool IsWindowVisible();
 

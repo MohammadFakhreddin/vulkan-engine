@@ -18,6 +18,10 @@ namespace MFA
         DisplayRenderPass & operator = (DisplayRenderPass const &) noexcept = delete;
         DisplayRenderPass & operator = (DisplayRenderPass &&) noexcept = delete;
 
+        void Init();
+
+        void Shutdown();
+
         [[nodiscard]]
         VkRenderPass GetVkRenderPass() override;
 
@@ -34,27 +38,18 @@ namespace MFA
 
         void EndRenderPass(RT::CommandRecordState & recordState);
 
-        void OnResize() override;
-
+        
         void notifyDepthImageLayoutIsSet();
-
-    protected:
-
-        void internalInit() override;
-
-        void internalShutdown() override;
-
+        
     private:
 
         [[nodiscard]]
         VkFramebuffer getDisplayFrameBuffer(RT::CommandRecordState const & drawPass) const;
 
-        void createDisplayFrameBuffers(VkExtent2D const & extent);
+        void CreateDisplayFrameBuffers(VkExtent2D const & extent);
 
         void createDisplayRenderPass();
-
-        void createDepthImages(VkExtent2D const & extent2D);
-
+        
         void createPresentToDrawBarrier();
 
         void clearDepthBufferIfNeeded(RT::CommandRecordState const & recordState);
@@ -62,12 +57,7 @@ namespace MFA
         void usePresentToDrawBarrier(RT::CommandRecordState const & recordState);
 
         VkRenderPass mVkDisplayRenderPass{};            // TODO Make this a renderType
-        uint32_t mSwapChainImagesCount = 0;
-        std::shared_ptr<RT::SwapChainGroup> mSwapChainImages{};
-        std::vector<VkFramebuffer> mDisplayFrameBuffers{};
-        std::vector<std::shared_ptr<RT::ColorImageGroup>> mMSAAImageGroupList{};
-        std::vector<std::shared_ptr<RT::DepthImageGroup>> mDepthImageGroupList{};
-
+        
         VkImageMemoryBarrier mPresentToDrawBarrier {};
 
         bool mIsDepthImageUndefined = true;

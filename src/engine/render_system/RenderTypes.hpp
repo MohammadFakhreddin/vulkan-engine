@@ -77,6 +77,14 @@ namespace MFA
             ImageGroup & operator= (ImageGroup && rhs) noexcept = delete;
         };
 
+        struct FrameBuffer
+        {
+            explicit FrameBuffer(VkFramebuffer framebuffer_);
+            ~FrameBuffer();
+
+            const VkFramebuffer framebuffer;
+        };
+
         struct ImageViewGroup
         {
             VkImageView const imageView;

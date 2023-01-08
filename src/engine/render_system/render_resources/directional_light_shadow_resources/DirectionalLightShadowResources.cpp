@@ -1,7 +1,6 @@
 #include "DirectionalLightShadowResources.hpp"
 
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/scene_manager/Scene.hpp"
 
 //-------------------------------------------------------------------------------------------------
 
@@ -11,22 +10,22 @@ void MFA::DirectionalLightShadowResources::Init(VkRenderPass renderPass)
         .width = RT::DIRECTIONAL_LIGHT_SHADOW_TEXTURE_WIDTH,
         .height = RT::DIRECTIONAL_LIGHT_SHADOW_TEXTURE_HEIGHT
     };
-    createShadowMap(shadowExtend);
-    createFrameBuffer(shadowExtend, renderPass);
+    CreateShadowMap(shadowExtend);
+    CreateFrameBuffer(shadowExtend, renderPass);
 }
 
 //-------------------------------------------------------------------------------------------------
 
 void MFA::DirectionalLightShadowResources::Shutdown()
 {
-    RF::DestroyFrameBuffers(static_cast<uint32_t>(mFrameBuffers.size()), mFrameBuffers.data());
+    //RF::DestroyFrameBuffers(static_cast<uint32_t>(mFrameBuffers.size()), mFrameBuffers.data());
     mFrameBuffers.clear();
 
     //for (auto & shadowMap : mShadowMaps)
     //{
         //RF::DestroyDepthImage(shadowMap);
     //}
-    //mShadowMaps.clear();
+    mShadowMaps.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -45,21 +44,38 @@ MFA::RT::DepthImageGroup const & MFA::DirectionalLightShadowResources::GetShadow
 
 //-------------------------------------------------------------------------------------------------
 
-VkFramebuffer MFA::DirectionalLightShadowResources::GetFrameBuffer(RT::CommandRecordState const & drawPass) const
+void MFA::DirectionalLightShadowResources::PrepareForSampling(
+    RT::CommandRecordState const& recordState,
+    bool isUsed,
+    std::vector<VkImageMemoryBarrier>& outPipelineBarriers
+)
 {
-    return GetFrameBuffer(drawPass.frameIndex);
+
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::DirectionalLightShadowResources::OnResize()
+{
+}
+
+//-------------------------------------------------------------------------------------------------
+
+VkFramebuffer MFA::DirectionalLightShadowResources::GetFrameBuffer(RT::CommandRecordState const & recordState) const
+{
+    return GetFrameBuffer(recordState.frameIndex);
 }
 
 //-------------------------------------------------------------------------------------------------
 
 VkFramebuffer MFA::DirectionalLightShadowResources::GetFrameBuffer(uint32_t const frameIndex) const
 {
-    return mFrameBuffers[frameIndex];
+    return mFrameBuffers[frameIndex]->framebuffer;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DirectionalLightShadowResources::createShadowMap(VkExtent2D const & shadowExtent)
+void MFA::DirectionalLightShadowResources::CreateShadowMap(VkExtent2D const & shadowExtent)
 {
     mShadowMaps.resize(RF::GetMaxFramesPerFlight());
     for (auto & shadowMap : mShadowMaps)
@@ -78,7 +94,7 @@ void MFA::DirectionalLightShadowResources::createShadowMap(VkExtent2D const & sh
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DirectionalLightShadowResources::createFrameBuffer(VkExtent2D const & shadowExtent, VkRenderPass renderPass)
+void MFA::DirectionalLightShadowResources::CreateFrameBuffer(VkExtent2D const & shadowExtent, VkRenderPass renderPass)
 {
     mFrameBuffers.clear();
     mFrameBuffers.resize(RF::GetMaxFramesPerFlight());  // Per face index
@@ -86,13 +102,13 @@ void MFA::DirectionalLightShadowResources::createFrameBuffer(VkExtent2D const & 
     {
         std::vector<VkImageView> const attachments {mShadowMaps[i]->imageView->imageView};
 
-        mFrameBuffers[i] = RF::CreateFrameBuffer(
+        mFrameBuffers[i] = std::make_shared<RT::FrameBuffer>(RF::CreateFrameBuffer(
             renderPass,
             attachments.data(),
             static_cast<uint32_t>(attachments.size()),
             shadowExtent,
             RT::MAX_DIRECTIONAL_LIGHT_COUNT
-        );
+        ));
     }
 }
 

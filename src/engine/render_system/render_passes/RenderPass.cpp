@@ -5,26 +5,16 @@
 
 namespace MFA {
 
-void RenderPass::Init() {
-    internalInit();
-}
+    void RenderPass::BeginRenderPass(RT::CommandRecordState & recordState) {
+        MFA_ASSERT(mIsRenderPassActive == false);
+        mIsRenderPassActive = true;
+        recordState.renderPass = this;
+    }
 
-void RenderPass::Shutdown() {
-    internalShutdown();
-}
-
-void RenderPass::BeginRenderPass(RT::CommandRecordState & drawPass) {
-    MFA_ASSERT(mIsRenderPassActive == false);
-    mIsRenderPassActive = true;
-    drawPass.renderPass = this;
-}
-
-void RenderPass::EndRenderPass(RT::CommandRecordState & drawPass) {
-    MFA_ASSERT(mIsRenderPassActive == true);
-    drawPass.renderPass = nullptr;
-    mIsRenderPassActive = false;
-}
-
-void RenderPass::OnResize() {}
+    void RenderPass::EndRenderPass(RT::CommandRecordState & recordState) {
+        MFA_ASSERT(mIsRenderPassActive == true);
+        recordState.renderPass = nullptr;
+        mIsRenderPassActive = false;
+    }
 
 }

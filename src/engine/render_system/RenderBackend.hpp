@@ -71,6 +71,14 @@ namespace MFA::RenderBackend
     VkPresentModeKHR ChoosePresentMode(uint8_t presentModesCount, VkPresentModeKHR const * present_modes);
 
     [[nodiscard]]
+    VkSurfaceFormatKHR ChooseSurfaceFormat(
+        VkDevice device,
+        VkPhysicalDevice physicalDevice,
+        VkSurfaceKHR windowSurface,
+        VkSurfaceCapabilitiesKHR surfaceCapabilities
+    );
+
+    [[nodiscard]]
     VkSurfaceFormatKHR ChooseSurfaceFormat(uint8_t availableFormatsCount, VkSurfaceFormatKHR const * availableFormats);
 
 #ifdef __DESKTOP__
@@ -308,6 +316,7 @@ namespace MFA::RenderBackend
         VkPhysicalDevice physicalDevice,
         VkSurfaceKHR windowSurface,
         VkSurfaceCapabilitiesKHR surfaceCapabilities,
+        VkSurfaceFormatKHR surfaceFormat,
         VkSwapchainKHR oldSwapChain = VkSwapchainKHR{}
     );
 
@@ -365,6 +374,11 @@ namespace MFA::RenderBackend
         VkFramebuffer * frameBuffers
     );
 
+    void DestroyFrameBuffer(
+        VkDevice device,
+        VkFramebuffer frameBuffer
+    );
+
     [[nodiscard]]
     std::shared_ptr<RT::GpuShader> CreateShader(
         VkDevice device,
@@ -412,6 +426,8 @@ namespace MFA::RenderBackend
 
     [[nodiscard]]
     VkShaderStageFlagBits ConvertAssetShaderStageToGpu(AssetSystem::ShaderStage stage);
+
+
 
     //-----------------------------------------Buffer-------------------------------------------------
 
