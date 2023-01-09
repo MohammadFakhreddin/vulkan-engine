@@ -525,7 +525,7 @@ namespace MFA::UI_System
 
         onResize();
 
-        state->resizeSignalId = RF::AddResizeEventListener([]()->void {onResize();});
+        state->resizeSignalId = RF::AddResizeEventListener2([]()->void {onResize();});
 
         state->vertexBuffers.resize(RF::GetMaxFramesPerFlight());
         state->indexBuffers.resize(RF::GetMaxFramesPerFlight());
@@ -1006,7 +1006,7 @@ namespace MFA::UI_System
 
     void Shutdown()
     {
-        RF::RemoveResizeEventListener(state->resizeSignalId);
+        RF::RemoveResizeEventListener2(state->resizeSignalId);
         RF::DestroyDescriptorPool(state->descriptorPool);
 #ifdef __DESKTOP__
         RF::RemoveEventWatch(state->eventWatchId);

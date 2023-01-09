@@ -37,8 +37,11 @@ namespace MFA::RenderFrontend
 
     bool Shutdown();
 
-    int AddResizeEventListener(RT::ResizeEventListener const & eventListener);
-    bool RemoveResizeEventListener(RT::ResizeEventListenerId listenerId);
+    int AddResizeEventListener1(RT::ResizeEventListener const & eventListener);
+    bool RemoveResizeEventListener1(RT::ResizeEventListenerId listenerId);
+
+    int AddResizeEventListener2(RT::ResizeEventListener const & eventListener);
+    bool RemoveResizeEventListener2(RT::ResizeEventListenerId listenerId);
 
     [[nodiscard]]
     std::shared_ptr<RT::DescriptorSetLayoutGroup> CreateDescriptorSetLayout(
@@ -509,8 +512,6 @@ namespace MFA::RenderFrontend
         uint32_t waitSemaphoresCount,
         const VkSemaphore * waitSemaphores
     );
-
-    DisplayRenderPass * GetDisplayRenderPass();
     
     VkSampleCountFlagBits GetMaxSamplesCount();
     
@@ -542,7 +543,7 @@ namespace MFA::RenderFrontend
     //-------------------------------------------------------------------------------------------------
 
     [[nodiscard]]
-    RT::CommandRecordState AcquireRecordState();
+    RT::CommandRecordState AcquireRecordState(RT::SwapChainGroup const & swapChainGroup);
 
     [[nodiscard]]
     VkFence GetGraphicFence(RT::CommandRecordState const & recordState);

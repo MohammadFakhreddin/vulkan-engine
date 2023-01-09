@@ -2,6 +2,7 @@
 
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/render_system/render_passes/RenderPass.hpp"
+#include "engine/render_system/render_resources/display_render_resources/DisplayRenderResources.hpp"
 
 namespace MFA
 {
@@ -10,7 +11,7 @@ namespace MFA
     {
     public:
 
-        explicit DisplayRenderPass();
+        explicit DisplayRenderPass(std::shared_ptr<DisplayRenderResources> resources);
         ~DisplayRenderPass() override;
 
         DisplayRenderPass(DisplayRenderPass const &) noexcept = delete;
@@ -18,49 +19,44 @@ namespace MFA
         DisplayRenderPass & operator = (DisplayRenderPass const &) noexcept = delete;
         DisplayRenderPass & operator = (DisplayRenderPass &&) noexcept = delete;
 
-        void Init();
-
-        void Shutdown();
-
         [[nodiscard]]
         VkRenderPass GetVkRenderPass() override;
-
-        [[nodiscard]]
-        VkImage GetSwapChainImage(RT::CommandRecordState const & drawPass) const;
-
-        [[nodiscard]]
-        RT::SwapChainGroup const & GetSwapChainImages() const;
-
-        [[nodiscard]]
-        std::vector<std::shared_ptr<RT::DepthImageGroup>> const & GetDepthImages() const;
-
+        
         void BeginRenderPass(RT::CommandRecordState & recordState);
 
         void EndRenderPass(RT::CommandRecordState & recordState);
-
         
-        void notifyDepthImageLayoutIsSet();
+        void NotifyDepthImageLayoutIsSet();
         
     private:
 
+
         [[nodiscard]]
-        VkFramebuffer getDisplayFrameBuffer(RT::CommandRecordState const & drawPass) const;
+        VkFramebuffer GetFrameBuffer(RT::CommandRecordState const & recordState) const;
 
-        void CreateDisplayFrameBuffers(VkExtent2D const & extent);
+        [[nodiscard]]
+        VkFramebuffer GetFrameBuffer(uint32_t imageIndex) const;
 
-        void createDisplayRenderPass();
+        void CreateFrameBuffers(VkExtent2D const & extent);
+
+        void CreateRenderPass();
         
-        void createPresentToDrawBarrier();
+        void CreatePresentToDrawBarrier();
 
-        void clearDepthBufferIfNeeded(RT::CommandRecordState const & recordState);
+        void ClearDepthBufferIfNeeded(RT::CommandRecordState const & recordState);
         
-        void usePresentToDrawBarrier(RT::CommandRecordState const & recordState);
+        void UsePresentToDrawBarrier(RT::CommandRecordState const & recordState);
 
         VkRenderPass mVkDisplayRenderPass{};            // TODO Make this a renderType
         
         VkImageMemoryBarrier mPresentToDrawBarrier {};
 
         bool mIsDepthImageUndefined = true;
+
+        std::shared_ptr<DisplayRenderResources> mResources{};
+
+        std::vector<std::shared_ptr<RT::FrameBuffer>> mFrameBuffers{};
+
     };
 
 }

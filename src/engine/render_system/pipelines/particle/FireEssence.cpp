@@ -24,7 +24,7 @@ namespace MFA
         : ParticleEssence(name, params, maxInstanceCount, std::move(fireTextures))
         , mFireParams(fireParams)
     {
-        mResizeSignal = RF::AddResizeEventListener([this]()->void
+        mResizeSignal = RF::AddResizeEventListener2([this]()->void
         {
             computePointSize();
             notifyParamsBufferUpdated();
@@ -36,7 +36,7 @@ namespace MFA
 
     FireEssence::~FireEssence()
     {
-        RF::RemoveResizeEventListener(mResizeSignal);
+        RF::RemoveResizeEventListener2(mResizeSignal);
     }
 
     //-------------------------------------------------------------------------------------------------

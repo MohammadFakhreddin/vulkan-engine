@@ -9,7 +9,8 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DisplayRenderResources::Init(VkRenderPass renderPass)
+    DisplayRenderResources::DisplayRenderResources()
+        : RenderResources()
     {
         auto surfaceCapabilities = RF::GetSurfaceCapabilities();
         auto const swapChainExtent = VkExtent2D{
@@ -33,21 +34,16 @@ namespace MFA
             );
         }
 
-        createDepthImages(swapChainExtent);
-
-        createDisplayRenderPass();
-
-        createDisplayFrameBuffers(swapChainExtent);
+        CreateDepthImages(swapChainExtent);
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void DisplayRenderResources::Shutdown()
+    DisplayRenderResources::~DisplayRenderResources()
     {
         mSwapChainImages.reset();
         mMSAAImageGroupList.clear();
         mDepthImageGroupList.clear();
-        mFrameBuffers.clear();
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -67,20 +63,27 @@ namespace MFA
         }
     }
 
+
     //-------------------------------------------------------------------------------------------------
 
-    VkFramebuffer DisplayRenderResources::GetFrameBuffer(RT::CommandRecordState const & drawPass) const
+    VkImage DisplayRenderResources::GetSwapChainImage(RT::CommandRecordState const & recordState) const
     {
-        return mFrameBuffers[drawPass.imageIndex];
+        return mSwapChainImages->swapChainImages[recordState.imageIndex];
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    VkFramebuffer DisplayRenderResources::GetFrameBuffer(uint32_t const imageIndex) const
+    RT::SwapChainGroup const & DisplayRenderResources::GetSwapChainImages() const
     {
-        return mFrameBuffers[imageIndex];
+        return *mSwapChainImages;
     }
 
+    //-------------------------------------------------------------------------------------------------
+
+    std::vector<std::shared_ptr<RT::DepthImageGroup>> const & DisplayRenderResources::GetDepthImages() const
+    {
+        return mDepthImageGroupList;
+    }
     //-------------------------------------------------------------------------------------------------
 
     void DisplayRenderResources::OnResize()

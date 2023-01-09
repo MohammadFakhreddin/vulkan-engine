@@ -4,7 +4,6 @@
 #include "engine/BedrockAssert.hpp"
 #include "RenderBackend.hpp"
 #include "engine/BedrockLog.hpp"
-#include "render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "engine/BedrockSignal.hpp"
 #include "engine/asset_system/AssetBaseMesh.hpp"
 #include "engine/asset_system/AssetModel.hpp"
@@ -84,7 +83,7 @@ namespace MFA::RenderFrontend
 
         VkSurfaceCapabilitiesKHR surfaceCapabilities{};
         uint32_t swapChainImageCount = 0;
-        DisplayRenderPass displayRenderPass{};
+        //DisplayRenderPass displayRenderPass{};
         int nextEventListenerId = 0;
         uint8_t currentFrame = 0;
         VkFormat depthFormat{};
@@ -363,7 +362,7 @@ namespace MFA::RenderFrontend
             state->surfaceCapabilities
         );
 
-        state->displayRenderPass.Init();
+        //state->displayRenderPass.Init();
         
         return true;
     }
@@ -399,13 +398,14 @@ namespace MFA::RenderFrontend
         DeviceWaitIdle();
 
         MFA_ASSERT(state->resizeEventSignal2.IsEmpty());
+        MFA_ASSERT(state->resizeEventSignal1.IsEmpty());
 
 #ifdef __DESKTOP__
         MFA_ASSERT(state->sdlEventListeners.empty());
         MSDL::SDL_DelEventWatch(SDLEventWatcher, state->window);
 #endif
 
-        state->displayRenderPass.Shutdown();
+        //state->displayRenderPass.Shutdown();
 
         // Graphic
         RB::DestroySemaphored(
@@ -468,7 +468,22 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    int AddResizeEventListener(RT::ResizeEventListener const & eventListener)
+    int AddResizeEventListener1(RT::ResizeEventListener const & eventListener)
+    {
+        MFA_ASSERT(eventListener != nullptr);
+        return state->resizeEventSignal1.Register(eventListener);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    bool RemoveResizeEventListener1(RT::ResizeEventListenerId const listenerId)
+    {
+        return state->resizeEventSignal1.UnRegister(listenerId);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    int AddResizeEventListener2(RT::ResizeEventListener const & eventListener)
     {
         MFA_ASSERT(eventListener != nullptr);
         return state->resizeEventSignal2.Register(eventListener);
@@ -476,7 +491,7 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    bool RemoveResizeEventListener(RT::ResizeEventListenerId const listenerId)
+    bool RemoveResizeEventListener2(RT::ResizeEventListenerId const listenerId)
     {
         return state->resizeEventSignal2.UnRegister(listenerId);
     }
@@ -1836,7 +1851,7 @@ namespace MFA::RenderFrontend
         presentInfo.waitSemaphoreCount = waitSemaphoresCount;
         presentInfo.pWaitSemaphores = waitSemaphores;
         presentInfo.swapchainCount = 1;
-        presentInfo.pSwapchains = &state->displayRenderPass.GetSwapChainImages().swapChain;
+        presentInfo.pSwapchains = &recordState.swapChainGroup->swapChain;
         presentInfo.pImageIndices = &recordState.imageIndex;
         
         // TODO Move to renderBackend
@@ -1850,14 +1865,7 @@ namespace MFA::RenderFrontend
             MFA_CRASH("Failed to submit present command buffer");
         }
     }
-
-    //-------------------------------------------------------------------------------------------------
-
-    DisplayRenderPass * GetDisplayRenderPass()
-    {
-        return &state->displayRenderPass;
-    }
-
+    
     //-------------------------------------------------------------------------------------------------
 
     VkSampleCountFlagBits GetMaxSamplesCount()
@@ -1938,7 +1946,7 @@ namespace MFA::RenderFrontend
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::CommandRecordState AcquireRecordState()
+    RT::CommandRecordState AcquireRecordState(std::shared_ptr<RT::SwapChainGroup> const & swapChainGroup)
     {
         // TODO: Separate this function into multiple ones
         MFA_ASSERT(GetMaxFramesPerFlight() > state->currentFrame);
@@ -1957,20 +1965,22 @@ namespace MFA::RenderFrontend
             state->currentFrame = 0;
         }
 
-        auto graphicFence = GetGraphicFence(recordState);
+        auto const graphicFence = GetGraphicFence(recordState);
         WaitForFence(graphicFence);
         ResetFence(graphicFence);
         
-        auto computeFence = GetComputeFence(recordState);
+        auto const computeFence = GetComputeFence(recordState);
         WaitForFence(computeFence);
         ResetFence(computeFence);
 
         // We ignore failed acquire of image because a resize will be triggered at end of pass
         AcquireNextImage(
             GetPresentSemaphore(recordState),
-            state->displayRenderPass.GetSwapChainImages(),
+            *swapChainGroup,
             recordState.imageIndex
         );
+
+        recordState.swapChainGroup = swapChainGroup;
 
         // Recording command buffer data at each render frame
         // We need 1 renderPass and multiple command buffer recording

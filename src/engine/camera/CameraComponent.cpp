@@ -154,7 +154,7 @@ namespace MFA
         Component::Init();
 
         mCameraBufferUpdateCounter = RF::GetMaxFramesPerFlight();
-        mResizeEventListenerId = RF::AddResizeEventListener([this]()->void{ onResize(); });
+        mResizeEventListenerId = RF::AddResizeEventListener2([this]()->void{ onResize(); });
 
         auto const transformComponent = GetEntity()->GetComponent<TransformComponent>();
         MFA_ASSERT(transformComponent != nullptr);
@@ -208,7 +208,7 @@ namespace MFA
     void CameraComponent::Shutdown()
     {
         Component::Shutdown();
-        RF::RemoveResizeEventListener(mResizeEventListenerId);
+        RF::RemoveResizeEventListener2(mResizeEventListenerId);
         if (auto const transformComponent = mTransformComponent.lock())
         {
             transformComponent->UnRegisterChangeListener(mTransformChangeListener);

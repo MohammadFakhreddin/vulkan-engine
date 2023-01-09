@@ -177,6 +177,7 @@ namespace MFA
             VkCommandBuffer commandBuffer = nullptr;
             PipelineGroup * pipeline = nullptr;
             RenderPass * renderPass = nullptr;
+            std::shared_ptr<RT::SwapChainGroup> swapChainGroup {};
         };
 
         struct BufferGroup

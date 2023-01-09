@@ -24,17 +24,26 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DisplayRenderPass::Init()
+    void DisplayRenderPass::Init(std::shared_ptr<DisplayRenderResources> resources)
     {
-        createDisplayRenderPass();
-        createPresentToDrawBarrier();
+        mResources = std::move(resources);
+
+        auto surfaceCapabilities = RF::GetSurfaceCapabilities();
+        auto const swapChainExtent = VkExtent2D{
+            .width = surfaceCapabilities.currentExtent.width,
+            .height = surfaceCapabilities.currentExtent.height
+        };
+
+        CreateFrameBuffers(swapChainExtent);
+        CreateRenderPass();
+        CreatePresentToDrawBarrier();
     }
 
     //-------------------------------------------------------------------------------------------------
 
     void DisplayRenderPass::Shutdown()
     {
-
+        mFrameBuffers.clear();
         RF::DestroyRenderPass(mVkDisplayRenderPass);
     }
 
@@ -42,11 +51,11 @@ namespace MFA
 
     void DisplayRenderPass::BeginRenderPass(RT::CommandRecordState & recordState)
     {
-        clearDepthBufferIfNeeded(recordState);
+        ClearDepthBufferIfNeeded(recordState);
 
         RenderPass::BeginRenderPass(recordState);
 
-        usePresentToDrawBarrier(recordState);
+        UsePresentToDrawBarrier(recordState);
 
         auto surfaceCapabilities = RF::GetSurfaceCapabilities();
         auto const swapChainExtend = VkExtent2D{
@@ -65,7 +74,7 @@ namespace MFA
         RF::BeginRenderPass(
             recordState.commandBuffer,
             mVkDisplayRenderPass,
-            getDisplayFrameBuffer(recordState),
+            GetFrameBuffer(recordState),
             swapChainExtend,
             static_cast<uint32_t>(clearValues.size()),
             clearValues.data()
@@ -108,7 +117,7 @@ namespace MFA
             drawToPresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
             drawToPresentBarrier.srcQueueFamilyIndex = graphicQueueFamily;
             drawToPresentBarrier.dstQueueFamilyIndex = presentQueueFamily;
-            drawToPresentBarrier.image = GetSwapChainImage(recordState);
+            drawToPresentBarrier.image = mResources->GetSwapChainImage(recordState);
             drawToPresentBarrier.subresourceRange = subResourceRange;
 
             RF::PipelineBarrier(
@@ -123,7 +132,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DisplayRenderPass::notifyDepthImageLayoutIsSet()
+    void DisplayRenderPass::NotifyDepthImageLayoutIsSet()
     {
         mIsDepthImageUndefined = false;
     }
@@ -159,35 +168,30 @@ namespace MFA
         createDisplayFrameBuffers(swapChainExtend);
     }*/
 
+
+
     //-------------------------------------------------------------------------------------------------
 
-    VkImage DisplayRenderPass::GetSwapChainImage(RT::CommandRecordState const & drawPass) const
+    VkFramebuffer DisplayRenderPass::GetFrameBuffer(RT::CommandRecordState const & drawPass) const
     {
-        return mSwapChainImages->swapChainImages[drawPass.imageIndex];
+        return mFrameBuffers[drawPass.imageIndex]->framebuffer;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    RT::SwapChainGroup const & DisplayRenderPass::GetSwapChainImages() const
+    VkFramebuffer DisplayRenderPass::GetFrameBuffer(uint32_t const imageIndex) const
     {
-        return *mSwapChainImages;
+        return mFrameBuffers[imageIndex]->framebuffer;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    std::vector<std::shared_ptr<RT::DepthImageGroup>> const & DisplayRenderPass::GetDepthImages() const
-    {
-        return mDepthImageGroupList;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void DisplayRenderPass::createDisplayRenderPass()
+    void DisplayRenderPass::CreateRenderPass()
     {
 
         // Multi-sampled attachment that we render to
         VkAttachmentDescription const msaaAttachment{
-            .format = mSwapChainImages->swapChainFormat,
+            .format = mResources->GetSurfaceFormat()mSwapChainImages->swapChainFormat,
             .samples = RF::GetMaxSamplesCount(),
             .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -262,7 +266,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DisplayRenderPass::createPresentToDrawBarrier()
+    void DisplayRenderPass::CreatePresentToDrawBarrier()
     {
         // If present queue family and graphics queue family are different, then a barrier is necessary
         // The barrier is also needed initially to transition the image to the present layout
@@ -334,7 +338,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DisplayRenderPass::clearDepthBufferIfNeeded(RT::CommandRecordState const & recordState)
+    void DisplayRenderPass::ClearDepthBufferIfNeeded(RT::CommandRecordState const & recordState)
     {
         if (mIsDepthImageUndefined)
         {
@@ -382,7 +386,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DisplayRenderPass::usePresentToDrawBarrier(RT::CommandRecordState const & recordState)
+    void DisplayRenderPass::UsePresentToDrawBarrier(RT::CommandRecordState const & recordState)
     {
         mPresentToDrawBarrier.image = mSwapChainImages->swapChainImages[recordState.imageIndex];
 

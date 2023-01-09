@@ -205,7 +205,7 @@ namespace MFA::SceneManager
 
         state->displayRenderPass = RF::GetDisplayRenderPass();
 
-        state->resizeListenerId = RF::AddResizeEventListener([]()->void { OnResize(); });
+        state->resizeListenerId = RF::AddResizeEventListener2([]()->void { OnResize(); });
         if (state->activeSceneIndex < 0 && false == state->registeredScenes.empty())
         {
             state->activeSceneIndex = 0;
@@ -270,7 +270,7 @@ namespace MFA::SceneManager
     {
         PlayQueuedTasks();
     
-        RF::RemoveResizeEventListener(state->resizeListenerId);
+        RF::RemoveResizeEventListener2(state->resizeListenerId);
 
         if (state->activeScene != nullptr)
         {
