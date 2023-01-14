@@ -22,7 +22,7 @@ namespace MFA
         MSSAA_RenderResource & operator = (MSSAA_RenderResource &&) noexcept = delete;
 
         [[nodiscard]]
-        RT::ColorImageGroup const & GetImageGroup(int index);
+        RT::ColorImageGroup const & GetImageGroup(int index) const;
 
     protected:
 

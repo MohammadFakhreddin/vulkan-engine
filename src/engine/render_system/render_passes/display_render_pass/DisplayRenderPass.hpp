@@ -56,7 +56,7 @@ namespace MFA
 
         void OnResize() override;
 
-        VkRenderPass mVkDisplayRenderPass{};            // TODO Make this a renderType
+        VkRenderPass mVkRenderPass{};            // TODO Make this a renderType
         
         VkImageMemoryBarrier mPresentToDrawBarrier {};
 
