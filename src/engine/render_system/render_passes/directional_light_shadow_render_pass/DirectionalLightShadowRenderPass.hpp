@@ -5,12 +5,13 @@
 namespace MFA
 {
 
-    class DirectionalLightShadowResources;
+    class DirectionalLightShadowResource;
 
     class DirectionalLightShadowRenderPass final : public RenderPass
     {
     public:
-        DirectionalLightShadowRenderPass();
+
+        explicit DirectionalLightShadowRenderPass(std::shared_ptr<DirectionalLightShadowResource> shadowResource);
 
         ~DirectionalLightShadowRenderPass() override;
 
@@ -25,25 +26,21 @@ namespace MFA
         void BeginRenderPass(RT::CommandRecordState & recordState) override;
 
         void EndRenderPass(RT::CommandRecordState & recordState) override;
-
-        void Init(std::shared_ptr<DirectionalLightShadowResources> resources);
-
-        void Shutdown();
-
+        
         [[nodiscard]]
         VkFramebuffer GetFrameBuffer(RT::CommandRecordState const & recordState) const;
 
         [[nodiscard]]
         VkFramebuffer GetFrameBuffer(uint32_t frameIndex) const;
 
-        void CreateFrameBuffer(VkExtent2D const & shadowExtent, VkRenderPass renderPass);
+        void CreateFrameBuffer();
 
     private:
 
-        void createRenderPass();
+        void CreateRenderPass();
 
-        VkRenderPass mVkRenderPass{};
-
+        std::shared_ptr<DirectionalLightShadowResource> mShadowResource {};
+        std::shared_ptr<RT::RenderPass> mRenderPass{};
         std::vector<std::shared_ptr<RT::FrameBuffer>> mFrameBuffers{};
 
     };

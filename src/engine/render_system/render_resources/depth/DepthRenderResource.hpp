@@ -24,6 +24,9 @@ namespace MFA
         [[nodiscard]]
         RT::DepthImageGroup const & GetDepthImage(int index) const;
 
+        [[nodiscard]]
+        RT::DepthImageGroup const & GetDepthImage(RT::CommandRecordState const & recordState) const;
+
         void CreateDepthImages();
 
     protected:

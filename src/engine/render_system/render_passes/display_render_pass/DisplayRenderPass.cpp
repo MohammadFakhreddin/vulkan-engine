@@ -19,38 +19,25 @@ namespace MFA
         , mDepth(std::move(depth))
         , mMSAA(std::move(msaa))
     {
+        CreatePresentToDrawBarrier();
+        CreateRenderPass();
         CreateFrameBuffers();
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    DisplayRenderPass::~DisplayRenderPass() = default;
+    DisplayRenderPass::~DisplayRenderPass()
+    {
+        // This cleanup is optional. It is not important unless when order matters
+        mFrameBuffers.clear();
+        mRenderPass.reset();
+    }
 
     //-------------------------------------------------------------------------------------------------
 
     VkRenderPass DisplayRenderPass::GetVkRenderPass()
     {
-        return mVkRenderPass;
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void DisplayRenderPass::Init(std::shared_ptr<DisplayRenderResources> resources)
-    {
-        mResources = std::move(resources);
-
-
-
-        CreateRenderPass();
-        CreatePresentToDrawBarrier();
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void DisplayRenderPass::Shutdown()
-    {
-        mFrameBuffers.clear();
-        RF::DestroyRenderPass(mVkRenderPass);
+        return mRenderPass->vkRenderPass;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -79,7 +66,7 @@ namespace MFA
 
         RF::BeginRenderPass(
             recordState.commandBuffer,
-            mVkRenderPass,
+            mRenderPass->vkRenderPass,
             GetFrameBuffer(recordState),
             swapChainExtend,
             static_cast<uint32_t>(clearValues.size()),
@@ -115,16 +102,17 @@ namespace MFA
                 .layerCount = 1,
             };
 
-            VkImageMemoryBarrier drawToPresentBarrier = {};
-            drawToPresentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-            drawToPresentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            drawToPresentBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-            drawToPresentBarrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-            drawToPresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-            drawToPresentBarrier.srcQueueFamilyIndex = graphicQueueFamily;
-            drawToPresentBarrier.dstQueueFamilyIndex = presentQueueFamily;
-            drawToPresentBarrier.image = mResources->GetSwapChainImage(recordState);
-            drawToPresentBarrier.subresourceRange = subResourceRange;
+            VkImageMemoryBarrier const drawToPresentBarrier {
+                .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+                .oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                .srcQueueFamilyIndex = graphicQueueFamily,
+                .dstQueueFamilyIndex = presentQueueFamily,
+                .image = mSwapChain->GetSwapChainImage(recordState),
+                .subresourceRange = subResourceRange
+            };
 
             RF::PipelineBarrier(
                 recordState,
@@ -210,7 +198,7 @@ namespace MFA
                 mDepth->GetDepthImage(i).imageView->imageView
             };
             mFrameBuffers[i] = std::make_shared<RT::FrameBuffer>(RF::CreateFrameBuffer(
-                mVkRenderPass,
+                mRenderPass->vkRenderPass,
                 attachments.data(),
                 static_cast<uint32_t>(attachments.size()),
                 swapChainExtent,
@@ -289,14 +277,14 @@ namespace MFA
 
         std::vector<VkAttachmentDescription> attachments = { msaaAttachment, swapChainAttachment, depthAttachment };
 
-        mVkRenderPass = RF::CreateRenderPass(
+        mRenderPass = std::make_shared<RT::RenderPass>(RF::CreateRenderPass(
             attachments.data(),
             static_cast<uint32_t>(attachments.size()),
             subPassDescription.data(),
             static_cast<uint32_t>(subPassDescription.size()),
             nullptr,
             0
-        );
+        ));
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -377,7 +365,7 @@ namespace MFA
     {
         if (mIsDepthImageUndefined)
         {
-            auto const & depthImage = mDepthImageGroupList[recordState.imageIndex];
+            auto const & depthImage = mDepth->GetDepthImage(recordState);
 
             VkImageSubresourceRange const subResourceRange{
                 .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
@@ -389,7 +377,7 @@ namespace MFA
 
             changeDepthImageLayout(
                 recordState.commandBuffer,
-                *depthImage,
+                depthImage,
                 VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_GENERAL,
                 subResourceRange
@@ -400,7 +388,7 @@ namespace MFA
             // TODO Move to RF or RB
             vkCmdClearDepthStencilImage(
                 recordState.commandBuffer,
-                depthImage->imageGroup->image,
+                depthImage.imageGroup->image,
                 VK_IMAGE_LAYOUT_GENERAL,
                 &depthStencil,
                 1,
@@ -409,7 +397,7 @@ namespace MFA
 
             changeDepthImageLayout(
                 recordState.commandBuffer,
-                *depthImage,
+                depthImage,
                 VK_IMAGE_LAYOUT_GENERAL,
                 VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
                 subResourceRange
@@ -423,7 +411,7 @@ namespace MFA
 
     void DisplayRenderPass::UsePresentToDrawBarrier(RT::CommandRecordState const & recordState)
     {
-        mPresentToDrawBarrier.image = mSwapChainImages->swapChainImages[recordState.imageIndex];
+        mPresentToDrawBarrier.image = mSwapChain->GetSwapChainImage(recordState);
 
         std::vector<VkImageMemoryBarrier> const barriers {mPresentToDrawBarrier};
 
@@ -434,6 +422,12 @@ namespace MFA
             static_cast<uint32_t>(barriers.size()),
             barriers.data()
         );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void DisplayRenderPass::OnResize()
+    {
     }
 
     //-------------------------------------------------------------------------------------------------

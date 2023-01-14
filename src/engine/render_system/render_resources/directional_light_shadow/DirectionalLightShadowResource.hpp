@@ -1,17 +1,20 @@
 #pragma once
 
 #include "engine/render_system/RenderTypes.hpp"
-#include "engine/render_system/render_resources/RenderResources.hpp"
+#include "engine/render_system/render_resources/RenderResource.hpp"
 
 namespace MFA
 {
-    class DirectionalLightShadowResources : RenderResources
+    class DirectionalLightShadowResource : public RenderResource
     {
     public:
 
-        void Init(VkRenderPass renderPass);
+        explicit DirectionalLightShadowResource(
+            uint32_t width = RT::DIRECTIONAL_LIGHT_SHADOW_TEXTURE_WIDTH,
+            uint32_t height = RT::DIRECTIONAL_LIGHT_SHADOW_TEXTURE_HEIGHT
+        );
 
-        void Shutdown();
+        ~DirectionalLightShadowResource();
 
         [[nodiscard]]
         RT::DepthImageGroup const & GetShadowMap(RT::CommandRecordState const & recordState) const;
@@ -32,9 +35,10 @@ namespace MFA
 
         static constexpr uint32_t CubeFaceCount = 6;
 
-        void CreateShadowMap(VkExtent2D const & shadowExtent);
+        void CreateShadowMap();
 
         std::vector<std::shared_ptr<RT::DepthImageGroup>> mShadowMaps{};
+        VkExtent2D mShadowExtend {};
 
     };
 }

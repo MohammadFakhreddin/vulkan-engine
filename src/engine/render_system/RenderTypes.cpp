@@ -160,6 +160,20 @@ MFA::RT::BufferGroup::~BufferGroup() = default;
 
 //-------------------------------------------------------------------------------------------------
 
+MFA::RenderTypes::RenderPass::RenderPass(VkRenderPass renderPass_)
+    : vkRenderPass(renderPass_)
+{
+}
+
+//-------------------------------------------------------------------------------------------------
+
+MFA::RenderTypes::RenderPass::~RenderPass()
+{
+    RF::DestroyRenderPass(vkRenderPass);
+}
+
+//-------------------------------------------------------------------------------------------------
+
 MFA::RT::SwapChainGroup::SwapChainGroup(
     VkSwapchainKHR swapChain_,
     VkFormat swapChainFormat_,

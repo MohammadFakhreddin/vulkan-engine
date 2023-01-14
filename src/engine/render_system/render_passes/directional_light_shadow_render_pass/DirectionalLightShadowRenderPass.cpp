@@ -2,15 +2,22 @@
 
 #include "engine/BedrockAssert.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/render_system/render_resources/directional_light_shadow_resources/DirectionalLightShadowResources.hpp"
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::DirectionalLightShadowRenderPass::DirectionalLightShadowRenderPass() = default;
+MFA::DirectionalLightShadowRenderPass::DirectionalLightShadowRenderPass()
+    : RenderPass()
+{
+    CreateRenderPass();
+    CreateFrameBuffer();
+}
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::DirectionalLightShadowRenderPass::~DirectionalLightShadowRenderPass() = default;
+MFA::DirectionalLightShadowRenderPass::~DirectionalLightShadowRenderPass()
+{
+    mRz   
+}
 
 //-------------------------------------------------------------------------------------------------
 
@@ -21,44 +28,9 @@ VkRenderPass MFA::DirectionalLightShadowRenderPass::GetVkRenderPass()
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DirectionalLightShadowRenderPass::PrepareRenderTargetForSampling(
-    RT::CommandRecordState const & recordState,
-    DirectionalLightShadowResources * renderTarget,
-    bool const isUsed,
-    std::vector<VkImageMemoryBarrier> & outPipelineBarriers
-)
-{
-    MFA_ASSERT(renderTarget != nullptr);
-
-    // Preparing shadow cube map for shader sampling
-    VkImageSubresourceRange const subResourceRange{
-        .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-        .baseMipLevel = 0,
-        .levelCount = 1,
-        .baseArrayLayer = 0,
-        .layerCount = RT::MAX_DIRECTIONAL_LIGHT_COUNT,
-    };
-
-    VkImageMemoryBarrier const pipelineBarrier{
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
-        .oldLayout = isUsed ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED,
-        .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = renderTarget->GetShadowMap(recordState).imageGroup->image,
-        .subresourceRange = subResourceRange
-    };
-
-    outPipelineBarriers.emplace_back(pipelineBarrier);
-}
-
-//-------------------------------------------------------------------------------------------------
-
 void MFA::DirectionalLightShadowRenderPass::BeginRenderPass(
     RT::CommandRecordState & recordState,
-    const DirectionalLightShadowResources & renderTarget
+    const DirectionalLightShadowResource & renderTarget
 )
 {
     RenderPass::BeginRenderPass(recordState);
@@ -99,9 +71,42 @@ void MFA::DirectionalLightShadowRenderPass::EndRenderPass(RT::CommandRecordState
 
 //-------------------------------------------------------------------------------------------------
 
+VkFramebuffer MFA::DirectionalLightShadowRenderPass::GetFrameBuffer(RT::CommandRecordState const& recordState) const
+{
+    return GetFrameBuffer(recordState.frameIndex);
+}
+
+//-------------------------------------------------------------------------------------------------
+
+VkFramebuffer MFA::DirectionalLightShadowRenderPass::GetFrameBuffer(uint32_t const frameIndex) const
+{
+    return mFrameBuffers[frameIndex]->framebuffer;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+void MFA::DirectionalLightShadowRenderPass::CreateFrameBuffer()
+{
+    mFrameBuffers.clear();
+    mFrameBuffers.resize(RF::GetMaxFramesPerFlight());  // Per face index
+    for (uint32_t i = 0; i < static_cast<uint32_t>(mFrameBuffers.size()); ++i)
+    {
+        std::vector<VkImageView> const attachments{ mShadowMaps[i]->imageView->imageView };
+
+        mFrameBuffers[i] = std::make_shared<RT::FrameBuffer>(RF::CreateFrameBuffer(
+            renderPass,
+            attachments.data(),
+            static_cast<uint32_t>(attachments.size()),
+            shadowExtent,
+            RT::MAX_DIRECTIONAL_LIGHT_COUNT
+        ));
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+
 void MFA::DirectionalLightShadowRenderPass::Init()
 {
-    createRenderPass();
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -113,7 +118,7 @@ void MFA::DirectionalLightShadowRenderPass::Shutdown()
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DirectionalLightShadowRenderPass::createRenderPass()
+void MFA::DirectionalLightShadowRenderPass::CreateRenderPass()
 {
     std::vector<VkAttachmentDescription> attachments{};
 

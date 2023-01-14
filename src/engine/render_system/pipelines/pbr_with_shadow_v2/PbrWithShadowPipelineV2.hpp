@@ -21,7 +21,7 @@ namespace MFA
 
     class PBR_Essence;
     class Scene;
-    class DirectionalLightShadowResources;
+    class DirectionalLightShadowResource;
     class DirectionalLightShadowRenderPass;
     class PointLightShadowRenderPass;
     class PointLightShadowResources;
@@ -206,7 +206,7 @@ namespace MFA
         // Directional light shadow pass
         std::shared_ptr<RT::PipelineGroup> mDirectionalLightShadowPipeline {};
         std::unique_ptr<DirectionalLightShadowRenderPass> mDirectionalLightShadowRenderPass;
-        std::unique_ptr<DirectionalLightShadowResources> mDirectionalLightShadowResources;
+        std::unique_ptr<DirectionalLightShadowResource> mDirectionalLightShadowResources;
 
         // Depth pass pipeline
         std::shared_ptr<RT::PipelineGroup> mDepthPassPipeline{};

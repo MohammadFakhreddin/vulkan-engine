@@ -56,7 +56,7 @@ namespace MFA
 
         void OnResize() override;
 
-        VkRenderPass mVkRenderPass{};            // TODO Make this a renderType
+        std::shared_ptr<RT::RenderPass> mRenderPass{};
         
         VkImageMemoryBarrier mPresentToDrawBarrier {};
 

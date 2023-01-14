@@ -28,6 +28,13 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    RT::DepthImageGroup const& DepthRenderResource::GetDepthImage(RT::CommandRecordState const& recordState) const
+    {
+        return GetDepthImage(recordState.imageIndex);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void DepthRenderResource::OnResize()
     {
         mDepthImageGroupList.clear();

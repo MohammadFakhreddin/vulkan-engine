@@ -207,6 +207,14 @@ namespace MFA
             using BufferGroup::BufferGroup;
         };*/
 
+        struct RenderPass
+        {
+            VkRenderPass const vkRenderPass;
+
+            explicit RenderPass(VkRenderPass renderPass_);
+            ~RenderPass();
+        };
+
         struct SwapChainGroup
         {
             explicit SwapChainGroup(

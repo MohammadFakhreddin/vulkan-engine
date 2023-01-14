@@ -80,7 +80,7 @@ namespace MFA
         , mPointLightShadowRenderPass(std::make_unique<PointLightShadowRenderPass>())
         , mPointLightShadowResources(std::make_unique<PointLightShadowResources>())
         , mDirectionalLightShadowRenderPass(std::make_unique<DirectionalLightShadowRenderPass>())
-        , mDirectionalLightShadowResources(std::make_unique<DirectionalLightShadowResources>())
+        , mDirectionalLightShadowResources(std::make_unique<DirectionalLightShadowResource>())
         , mDepthPrePass(std::make_unique<DepthPrePass>())
         , mOcclusionRenderPass(std::make_unique<OcclusionRenderPass>())
     {
