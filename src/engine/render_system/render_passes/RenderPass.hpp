@@ -17,7 +17,7 @@ namespace MFA {
 
         explicit RenderPass();
 
-        virtual ~RenderPass() = default;
+        virtual ~RenderPass();
 
         virtual VkRenderPass GetVkRenderPass() = 0;
 
@@ -28,10 +28,6 @@ namespace MFA {
         virtual void OnResize() = 0;
 
     protected:
-
-        void BaseInit();
-
-        void BaseShutdown();
 
         [[nodiscard]]
         bool getIsRenderPassActive() const {

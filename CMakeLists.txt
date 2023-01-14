@@ -161,7 +161,7 @@ target_include_directories(
 #-----------------------------------------------------------------------
 
 set(RENDERER_SOURCES)
-
+# TODO: Create multiple libraries
 list(
     APPEND RENDERER_SOURCES
 
@@ -189,14 +189,19 @@ list(
     "src/engine/render_system/render_passes/directional_light_shadow_render_pass/DirectionalLightShadowRenderPass.cpp"
 
     # RenderResources
-    "src/engine/render_system/render_resources/RenderResources.hpp"
-    "src/engine/render_system/render_resources/RenderResources.cpp"
-    "src/engine/render_system/render_resources/point_light_shadow_resources/PointLightShadowResources.hpp"
-    "src/engine/render_system/render_resources/point_light_shadow_resources/PointLightShadowResources.cpp"
-    "src/engine/render_system/render_resources/directional_light_shadow_resources/DirectionalLightShadowResources.hpp"
-    "src/engine/render_system/render_resources/directional_light_shadow_resources/DirectionalLightShadowResources.cpp"
-    "src/engine/render_system/render_resources/display_render_resources/DisplayRenderResources.hpp"
-    "src/engine/render_system/render_resources/display_render_resources/DisplayRenderResources.cpp"
+    "src/engine/render_system/render_resources/RenderResource.hpp"
+    "src/engine/render_system/render_resources/RenderResource.cpp"
+    "src/engine/render_system/render_resources/point_light_shadow/PointLightShadowResource.hpp"
+    "src/engine/render_system/render_resources/point_light_shadow/PointLightShadowResource.cpp"
+    "src/engine/render_system/render_resources/directional_light_shadow/DirectionalLightShadowResource.hpp"
+    "src/engine/render_system/render_resources/directional_light_shadow/DirectionalLightShadowResource.cpp"
+    "src/engine/render_system/render_resources/msaa/MSAA_RenderResource.hpp"
+    "src/engine/render_system/render_resources/msaa/MSAA_RenderResource.cpp"
+    "src/engine/render_system/render_resources/depth/DepthRenderResource.hpp"
+    "src/engine/render_system/render_resources/depth/DepthRenderResource.cpp"
+    "src/engine/render_system/render_resources/swapchain/SwapChainRenderResource.hpp"
+    "src/engine/render_system/render_resources/swapchain/SwapChainRenderResource.cpp"
+
     
     # Pipeline
     "src/engine/render_system/pipelines/BasePipeline.hpp"

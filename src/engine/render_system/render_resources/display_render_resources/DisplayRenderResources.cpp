@@ -10,7 +10,7 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     DisplayRenderResources::DisplayRenderResources()
-        : RenderResources()
+        : RenderResource()
     {
         auto surfaceCapabilities = RF::GetSurfaceCapabilities();
         auto const swapChainExtent = VkExtent2D{
@@ -119,29 +119,6 @@ namespace MFA
             mFrameBuffers.data()
         );
         CreateDisplayFrameBuffers(swapChainExtend);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void DisplayRenderResources::CreateDisplayFrameBuffers(VkRenderPass renderPass, VkExtent2D const & extent)
-    {
-        mFrameBuffers.clear();
-        mFrameBuffers.resize(mSwapChainImagesCount);
-        for (int i = 0; i < static_cast<int>(mFrameBuffers.size()); ++i)
-        {
-            std::vector<VkImageView> const attachments{
-                mMSAAImageGroupList[i]->imageView->imageView,
-                mSwapChainImages->swapChainImageViews[i]->imageView,
-                mDepthImageGroupList[i]->imageView->imageView
-            };
-            mFrameBuffers[i] = RF::CreateFrameBuffer(
-                renderPass,
-                attachments.data(),
-                static_cast<uint32_t>(attachments.size()),
-                extent,
-                1
-            );
-        }
     }
 
     //-------------------------------------------------------------------------------------------------

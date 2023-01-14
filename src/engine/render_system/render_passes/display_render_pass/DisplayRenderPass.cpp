@@ -9,7 +9,18 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    DisplayRenderPass::DisplayRenderPass() = default;
+    DisplayRenderPass::DisplayRenderPass(
+        std::shared_ptr<SwapChainRenderResource> swapChain,
+        std::shared_ptr<DepthRenderResource> depth,
+        std::shared_ptr<MSSAA_RenderResource> msaa
+    )
+        : RenderPass()
+        , mSwapChain(std::move(swapChain))
+        , mDepth(std::move(depth))
+        , mMSAA(std::move(msaa))
+    {
+        CreateFrameBuffers();
+    }
 
     //-------------------------------------------------------------------------------------------------
 
@@ -19,7 +30,7 @@ namespace MFA
 
     VkRenderPass DisplayRenderPass::GetVkRenderPass()
     {
-        return mVkDisplayRenderPass;
+        return mVkRenderPass;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -28,13 +39,8 @@ namespace MFA
     {
         mResources = std::move(resources);
 
-        auto surfaceCapabilities = RF::GetSurfaceCapabilities();
-        auto const swapChainExtent = VkExtent2D{
-            .width = surfaceCapabilities.currentExtent.width,
-            .height = surfaceCapabilities.currentExtent.height
-        };
 
-        CreateFrameBuffers(swapChainExtent);
+
         CreateRenderPass();
         CreatePresentToDrawBarrier();
     }
@@ -44,7 +50,7 @@ namespace MFA
     void DisplayRenderPass::Shutdown()
     {
         mFrameBuffers.clear();
-        RF::DestroyRenderPass(mVkDisplayRenderPass);
+        RF::DestroyRenderPass(mVkRenderPass);
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -73,7 +79,7 @@ namespace MFA
 
         RF::BeginRenderPass(
             recordState.commandBuffer,
-            mVkDisplayRenderPass,
+            mVkRenderPass,
             GetFrameBuffer(recordState),
             swapChainExtend,
             static_cast<uint32_t>(clearValues.size()),
@@ -172,9 +178,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    VkFramebuffer DisplayRenderPass::GetFrameBuffer(RT::CommandRecordState const & drawPass) const
+    VkFramebuffer DisplayRenderPass::GetFrameBuffer(RT::CommandRecordState const & recordState) const
     {
-        return mFrameBuffers[drawPass.imageIndex]->framebuffer;
+        return mFrameBuffers[recordState.imageIndex]->framebuffer;
     }
 
     //-------------------------------------------------------------------------------------------------
@@ -186,12 +192,41 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    void DisplayRenderPass::CreateFrameBuffers()
+    {
+        auto surfaceCapabilities = RF::GetSurfaceCapabilities();
+        auto const swapChainExtent = VkExtent2D{
+            .width = surfaceCapabilities.currentExtent.width,
+            .height = surfaceCapabilities.currentExtent.height
+        };
+
+        mFrameBuffers.clear();
+        mFrameBuffers.resize(RF::GetSwapChainImagesCount());
+        for (int i = 0; i < static_cast<int>(mFrameBuffers.size()); ++i)
+        {
+            std::vector<VkImageView> const attachments{
+                mMSAA->GetImageGroup(i).imageView->imageView,
+                mSwapChain->GetSwapChainImages().swapChainImageViews[i]->imageView,
+                mDepth->GetDepthImage(i).imageView->imageView
+            };
+            mFrameBuffers[i] = std::make_shared<RT::FrameBuffer>(RF::CreateFrameBuffer(
+                mVkRenderPass,
+                attachments.data(),
+                static_cast<uint32_t>(attachments.size()),
+                swapChainExtent,
+                1
+            ));
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void DisplayRenderPass::CreateRenderPass()
     {
-
+        auto format = RF::GetSurfaceFormat().format;
         // Multi-sampled attachment that we render to
         VkAttachmentDescription const msaaAttachment{
-            .format = mResources->GetSurfaceFormat()mSwapChainImages->swapChainFormat,
+            .format = format,
             .samples = RF::GetMaxSamplesCount(),
             .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -202,7 +237,7 @@ namespace MFA
         };
 
         VkAttachmentDescription const swapChainAttachment{
-            .format = mSwapChainImages->swapChainFormat,
+            .format = RF::GetSurfaceFormat().format,
             .samples = VK_SAMPLE_COUNT_1_BIT,
             .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -254,7 +289,7 @@ namespace MFA
 
         std::vector<VkAttachmentDescription> attachments = { msaaAttachment, swapChainAttachment, depthAttachment };
 
-        mVkDisplayRenderPass = RF::CreateRenderPass(
+        mVkRenderPass = RF::CreateRenderPass(
             attachments.data(),
             static_cast<uint32_t>(attachments.size()),
             subPassDescription.data(),

@@ -1,11 +1,11 @@
 #pragma once
 
 #include "engine/render_system/RenderTypes.hpp"
-#include "engine/render_system/render_resources/RenderResources.hpp"
+#include "engine/render_system/render_resources/RenderResource.hpp"
 
 namespace MFA
 {
-    class DisplayRenderResources : RenderResources
+    class DisplayRenderResources : RenderResource
     {
     public:
 
