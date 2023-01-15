@@ -2,11 +2,15 @@
 
 #include "engine/BedrockAssert.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
+#include "engine/render_system/render_resources/directional_light_shadow/DirectionalLightShadowResource.hpp"
 
 //-------------------------------------------------------------------------------------------------
 
-MFA::DirectionalLightShadowRenderPass::DirectionalLightShadowRenderPass()
+MFA::DirectionalLightShadowRenderPass::DirectionalLightShadowRenderPass(
+    std::shared_ptr<DirectionalLightShadowResource> shadowResource
+)
     : RenderPass()
+    , mShadowResource(std::move(shadowResource))
 {
     CreateRenderPass();
     CreateFrameBuffer();
@@ -16,22 +20,20 @@ MFA::DirectionalLightShadowRenderPass::DirectionalLightShadowRenderPass()
 
 MFA::DirectionalLightShadowRenderPass::~DirectionalLightShadowRenderPass()
 {
-    mRz   
+    mFrameBuffers.clear();
+    mRenderPass.reset();
 }
 
 //-------------------------------------------------------------------------------------------------
 
 VkRenderPass MFA::DirectionalLightShadowRenderPass::GetVkRenderPass()
 {
-    return mVkRenderPass;
+    return mRenderPass->vkRenderPass;
 }
 
 //-------------------------------------------------------------------------------------------------
 
-void MFA::DirectionalLightShadowRenderPass::BeginRenderPass(
-    RT::CommandRecordState & recordState,
-    const DirectionalLightShadowResource & renderTarget
-)
+void MFA::DirectionalLightShadowRenderPass::BeginRenderPass(RT::CommandRecordState & recordState)
 {
     RenderPass::BeginRenderPass(recordState);
 
@@ -52,8 +54,8 @@ void MFA::DirectionalLightShadowRenderPass::BeginRenderPass(
 
     RF::BeginRenderPass(
         commandBuffer,
-        mVkRenderPass,
-        renderTarget.GetFrameBuffer(recordState),
+        mRenderPass->vkRenderPass,
+        GetFrameBuffer(recordState),
         shadowExtend,
         static_cast<uint32_t>(clearValues.size()),
         clearValues.data()
@@ -91,29 +93,16 @@ void MFA::DirectionalLightShadowRenderPass::CreateFrameBuffer()
     mFrameBuffers.resize(RF::GetMaxFramesPerFlight());  // Per face index
     for (uint32_t i = 0; i < static_cast<uint32_t>(mFrameBuffers.size()); ++i)
     {
-        std::vector<VkImageView> const attachments{ mShadowMaps[i]->imageView->imageView };
+        std::vector<VkImageView> const attachments{ mShadowResource->GetShadowMap(i).imageView->imageView };
 
         mFrameBuffers[i] = std::make_shared<RT::FrameBuffer>(RF::CreateFrameBuffer(
-            renderPass,
+            mRenderPass->vkRenderPass,
             attachments.data(),
             static_cast<uint32_t>(attachments.size()),
-            shadowExtent,
+            mShadowResource->GetShadowExtend(),
             RT::MAX_DIRECTIONAL_LIGHT_COUNT
         ));
     }
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void MFA::DirectionalLightShadowRenderPass::Init()
-{
-}
-
-//-------------------------------------------------------------------------------------------------
-
-void MFA::DirectionalLightShadowRenderPass::Shutdown()
-{
-    RF::DestroyRenderPass(mVkRenderPass);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -147,14 +136,14 @@ void MFA::DirectionalLightShadowRenderPass::CreateRenderPass()
         }
     };
 
-    mVkRenderPass = RF::CreateRenderPass(
+    mRenderPass = std::make_shared<RT::RenderPass>(RF::CreateRenderPass(
         attachments.data(),
         static_cast<uint32_t>(attachments.size()),
         subPasses.data(),
         static_cast<uint32_t>(subPasses.size()),
         nullptr,
         0
-    );
+    ));
 }
 
 //-------------------------------------------------------------------------------------------------

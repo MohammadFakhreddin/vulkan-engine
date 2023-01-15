@@ -5,66 +5,67 @@
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "engine/render_system/RenderBackend.hpp"
-#include "engine/render_system/render_resources/point_light_shadow_resources/PointLightShadowResources.hpp"
-#include "engine/scene_manager/Scene.hpp"
+#include "engine/render_system/render_resources/point_light_shadow/PointLightShadowResource.hpp"
 
 namespace MFA
 {
 
     //-------------------------------------------------------------------------------------------------
 
-    PointLightShadowRenderPass::PointLightShadowRenderPass() = default;
+    PointLightShadowRenderPass::PointLightShadowRenderPass(std::shared_ptr<PointLightShadowResource> pointLightShadowResource)
+        : RenderPass()
+        , mPointLightShadowResource(std::move(pointLightShadowResource))
+    {
+        CreateRenderPass();
+    }
 
     //-------------------------------------------------------------------------------------------------
 
-    PointLightShadowRenderPass::~PointLightShadowRenderPass() = default;
+    PointLightShadowRenderPass::~PointLightShadowRenderPass()
+    {
+        mFrameBuffers.clear();
+        mRenderPass.reset();
+    }
 
     //-------------------------------------------------------------------------------------------------
 
     VkRenderPass PointLightShadowRenderPass::GetVkRenderPass()
     {
-        return mVkRenderPass;
+        return mRenderPass->vkRenderPass;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void PointLightShadowRenderPass::Init()
-    {
-        createRenderPass();
+    //void PointLightShadowRenderPass::Init()
+    //{
+    //    CreateRenderPass();
 
-        // TODO We might need special sampler as well
-        // Create sampler
-        /*
-        VkSamplerCreateInfo sampler = vks::initializers::samplerCreateInfo();
-        sampler.magFilter = VK_FILTER_LINEAR;
-        sampler.minFilter = VK_FILTER_LINEAR;
-        sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        sampler.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        sampler.addressModeV = sampler.addressModeU;
-        sampler.addressModeW = sampler.addressModeU;
-        sampler.mipLodBias = 0.0f;
-        sampler.compareOp = VK_COMPARE_OP_NEVER;
-        sampler.minLod = 0.0f;
-        sampler.maxLod = cubeMap.mipLevels;
-        sampler.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-        sampler.maxAnisotropy = 1.0f;
-        if (vulkanDevice->features.samplerAnisotropy)
-        {
-            sampler.maxAnisotropy = vulkanDevice->properties.limits.maxSamplerAnisotropy;
-            sampler.anisotropyEnable = VK_TRUE;
-        }
-        VK_CHECK_RESULT(vkCreateSampler(device, &sampler, nullptr, &cubeMap.sampler));
-        */
+    //    // TODO We might need special sampler as well
+    //    // Create sampler
+    //    /*
+    //    VkSamplerCreateInfo sampler = vks::initializers::samplerCreateInfo();
+    //    sampler.magFilter = VK_FILTER_LINEAR;
+    //    sampler.minFilter = VK_FILTER_LINEAR;
+    //    sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    //    sampler.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    //    sampler.addressModeV = sampler.addressModeU;
+    //    sampler.addressModeW = sampler.addressModeU;
+    //    sampler.mipLodBias = 0.0f;
+    //    sampler.compareOp = VK_COMPARE_OP_NEVER;
+    //    sampler.minLod = 0.0f;
+    //    sampler.maxLod = cubeMap.mipLevels;
+    //    sampler.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+    //    sampler.maxAnisotropy = 1.0f;
+    //    if (vulkanDevice->features.samplerAnisotropy)
+    //    {
+    //        sampler.maxAnisotropy = vulkanDevice->properties.limits.maxSamplerAnisotropy;
+    //        sampler.anisotropyEnable = VK_TRUE;
+    //    }
+    //    VK_CHECK_RESULT(vkCreateSampler(device, &sampler, nullptr, &cubeMap.sampler));
+    //    */
 
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void PointLightShadowRenderPass::Shutdown()
-    {
-        RF::DestroyRenderPass(mVkRenderPass);
-    }
-
+    //}
+    
     //-------------------------------------------------------------------------------------------------
 
     //void PointLightShadowRenderPass::PrepareRenderTargetForShading(
@@ -205,7 +206,7 @@ namespace MFA
 
     void PointLightShadowRenderPass::PrepareRenderTargetForSampling(
         RT::CommandRecordState const & recordState,
-        PointLightShadowResources * renderTarget,
+        PointLightShadowResource * renderTarget,
         bool const isUsed,
         std::vector<VkImageMemoryBarrier> & outPipelineBarriers
     )
@@ -270,10 +271,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
     // RenderTarget = FrameBuffer + RenderPass! Fix the naming
-    void PointLightShadowRenderPass::BeginRenderPass(
-        RT::CommandRecordState & recordState,
-        PointLightShadowResources const & renderTarget
-    )
+    void PointLightShadowRenderPass::BeginRenderPass(RT::CommandRecordState & recordState)
     {
 
         RenderPass::BeginRenderPass(recordState);
@@ -292,8 +290,8 @@ namespace MFA
 
         RF::BeginRenderPass(
             recordState.commandBuffer,
-            mVkRenderPass,
-            renderTarget.GetFrameBuffer(recordState),
+            mRenderPass->vkRenderPass,
+            GetFrameBuffer(recordState),
             shadowExtend,
             static_cast<uint32_t>(clearValues.size()),
             clearValues.data()
@@ -311,7 +309,21 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PointLightShadowRenderPass::createRenderPass()
+    VkFramebuffer PointLightShadowRenderPass::GetFrameBuffer(RT::CommandRecordState const& recordState) const
+    {
+        return GetFrameBuffer(recordState.frameIndex);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    VkFramebuffer PointLightShadowRenderPass::GetFrameBuffer(uint32_t const frameIndex) const
+    {
+        return mFrameBuffers[frameIndex];
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PointLightShadowRenderPass::CreateRenderPass()
     {
         std::vector<VkAttachmentDescription> attachments{};
 
@@ -340,14 +352,39 @@ namespace MFA
             }
         };
 
-        mVkRenderPass = RF::CreateRenderPass(
+        mRenderPass = std::make_shared<RT::RenderPass>(RF::CreateRenderPass(
             attachments.data(),
             static_cast<uint32_t>(attachments.size()),
             subPasses.data(),
             static_cast<uint32_t>(subPasses.size()),
             nullptr,
             0
-        );
+        ));
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PointLightShadowRenderPass::CreateFrameBuffer()
+    {
+        // Note: This comment is useful though does not match 100% with my code
+        // Create a layered depth attachment for rendering the depth maps from the lights' point of view
+        // Each layer corresponds to one of the lights
+        // The actual output to the separate layers is done in the geometry shader using shader instancing
+        // We will pass the matrices of the lights to the GS that selects the layer by the current invocation
+        mFrameBuffers.clear();
+        mFrameBuffers.resize(RF::GetMaxFramesPerFlight());  // Per face index
+        for (uint32_t i = 0; i < static_cast<uint32_t>(mFrameBuffers.size()); ++i)
+        {
+            std::vector<VkImageView> const attachments{ mPointLightShadowResource->GetShadowCubeMap(i).imageView->imageView, };
+
+            mFrameBuffers[i] = RF::CreateFrameBuffer(
+                mRenderPass->vkRenderPass,
+                attachments.data(),
+                static_cast<uint32_t>(attachments.size()),
+                mPointLightShadowResource->GetShadowExtent(),
+                6 * RT::MAX_POINT_LIGHT_COUNT
+            );
+        }
     }
 
     //-------------------------------------------------------------------------------------------------

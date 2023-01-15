@@ -41,11 +41,18 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
+    VkExtent2D DirectionalLightShadowResource::GetShadowExtend() const
+    {
+        return mShadowExtend;
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
     void DirectionalLightShadowResource::PrepareForSampling(
         RT::CommandRecordState const & recordState,
-        bool isUsed,
+        bool const isUsed,
         std::vector<VkImageMemoryBarrier> & outPipelineBarriers
-    )
+    ) const
     {
         // Preparing shadow cube map for shader sampling
         VkImageSubresourceRange const subResourceRange{
@@ -55,8 +62,6 @@ namespace MFA
             .baseArrayLayer = 0,
             .layerCount = RT::MAX_DIRECTIONAL_LIGHT_COUNT,
         };
-
-        auto shadowMap = this->GetShadowMap(recordState).imageGroup->image;
 
         VkImageMemoryBarrier const pipelineBarrier{
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -77,20 +82,6 @@ namespace MFA
 
     void DirectionalLightShadowResource::OnResize()
     {}
-
-    //-------------------------------------------------------------------------------------------------
-
-    VkFramebuffer DirectionalLightShadowResource::GetFrameBuffer(RT::CommandRecordState const & recordState) const
-    {
-        return GetFrameBuffer(recordState.frameIndex);
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    VkFramebuffer DirectionalLightShadowResource::GetFrameBuffer(uint32_t const frameIndex) const
-    {
-        return mFrameBuffers[frameIndex]->framebuffer;
-    }
 
     //-------------------------------------------------------------------------------------------------
 

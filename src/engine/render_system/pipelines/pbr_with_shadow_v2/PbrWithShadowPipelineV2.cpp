@@ -4,7 +4,6 @@
 #include "PBR_Variant.hpp"
 #include "engine/BedrockAssert.hpp"
 #include "engine/BedrockPath.hpp"
-#include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "tools/Importer.hpp"
 #include "engine/BedrockMatrix.hpp"
 #include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
@@ -13,8 +12,6 @@
 #include "engine/render_system/render_passes/directional_light_shadow_render_pass/DirectionalLightShadowRenderPass.hpp"
 #include "engine/render_system/render_passes/occlusion_render_pass/OcclusionRenderPass.hpp"
 #include "engine/render_system/render_passes/point_light_shadow_render_pass/PointLightShadowRenderPass.hpp"
-#include "engine/render_system/render_resources/directional_light_shadow_resources/DirectionalLightShadowResources.hpp"
-#include "engine/render_system/render_resources/point_light_shadow_resources/PointLightShadowResources.hpp"
 #include "engine/job_system/JobSystem.hpp"
 #include "engine/asset_system/AssetShader.hpp"
 #include "engine/entity_system/components/PointLightComponent.hpp"
@@ -78,7 +75,7 @@ namespace MFA
     PBRWithShadowPipelineV2::PBRWithShadowPipelineV2()
         : BasePipeline(10000)
         , mPointLightShadowRenderPass(std::make_unique<PointLightShadowRenderPass>())
-        , mPointLightShadowResources(std::make_unique<PointLightShadowResources>())
+        , mPointLightShadowResources(std::make_unique<PointLightShadowResource>())
         , mDirectionalLightShadowRenderPass(std::make_unique<DirectionalLightShadowRenderPass>())
         , mDirectionalLightShadowResources(std::make_unique<DirectionalLightShadowResource>())
         , mDepthPrePass(std::make_unique<DepthPrePass>())

@@ -1,18 +1,16 @@
 #pragma once
 
 #include "engine/render_system/render_passes/RenderPass.hpp"
+#include "engine/render_system/render_resources/point_light_shadow/PointLightShadowResource.hpp"
 
 namespace MFA
 {
-
-    class PointLightShadowResources;
-    class DisplayRenderPass;
 
     class PointLightShadowRenderPass final : public RenderPass
     {
     public:
 
-        PointLightShadowRenderPass();
+        explicit PointLightShadowRenderPass(std::shared_ptr<PointLightShadowResource> pointLightShadowResource);
 
         ~PointLightShadowRenderPass() override;
 
@@ -26,28 +24,33 @@ namespace MFA
         // Appends required data for barrier to execute
         static void PrepareRenderTargetForSampling(
             RT::CommandRecordState const & recordState,
-            PointLightShadowResources * renderTarget,
+            PointLightShadowResource * renderTarget,
             bool isUsed,
             std::vector<VkImageMemoryBarrier> & outPipelineBarriers
         );
 
         // Appends required data for barrier to execute
-        void BeginRenderPass(
-            RT::CommandRecordState & recordState,
-            const PointLightShadowResources & renderTarget
-        );
+        void BeginRenderPass(RT::CommandRecordState & recordState);
 
         void EndRenderPass(RT::CommandRecordState & recordState) override;
 
-        void Init();
+        [[nodiscard]]
+        VkFramebuffer GetFrameBuffer(RT::CommandRecordState const & recordState) const;
 
-        void Shutdown();
+        [[nodiscard]]
+        VkFramebuffer GetFrameBuffer(uint32_t frameIndex) const;
 
     private:
 
-        void createRenderPass();
+        void CreateRenderPass();
 
-        VkRenderPass mVkRenderPass{};
+        void CreateFrameBuffer();
+
+        std::shared_ptr<PointLightShadowResource> mPointLightShadowResource {};
+
+        std::shared_ptr<RT::RenderPass> mRenderPass{};
+
+        std::vector<VkFramebuffer> mFrameBuffers{};
 
     };
 

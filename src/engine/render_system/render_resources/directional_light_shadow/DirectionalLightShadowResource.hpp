@@ -22,12 +22,15 @@ namespace MFA
         [[nodiscard]]
         RT::DepthImageGroup const & GetShadowMap(uint32_t frameIndex) const;
 
+        [[nodiscard]]
+        VkExtent2D GetShadowExtend() const;
+
         // Appends required data for barrier to execute
-        static void PrepareForSampling(
+        void PrepareForSampling(
             RT::CommandRecordState const & recordState,
             bool isUsed,
             std::vector<VkImageMemoryBarrier> & outPipelineBarriers
-        );
+        ) const;
 
         void OnResize() override;
 
@@ -38,6 +41,7 @@ namespace MFA
         void CreateShadowMap();
 
         std::vector<std::shared_ptr<RT::DepthImageGroup>> mShadowMaps{};
+
         VkExtent2D mShadowExtend {};
 
     };
