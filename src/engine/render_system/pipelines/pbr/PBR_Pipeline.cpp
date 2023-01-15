@@ -21,14 +21,14 @@ namespace MFA
         MFA_ASSERT(JS::IsMainThread());
         CreatePipeline();
         CreateErrorTexture();
-        BasePipeline::init();
+        BasePipeline::Init();
     }
 
     //-------------------------------------------------------------------------------------------------
 
     PBR_Pipeline::~PBR_Pipeline()
     {
-        BasePipeline::shutdown();
+        BasePipeline::Shutdown();
         mPipeline.reset();
         mRenderPass.reset();
     }
