@@ -66,16 +66,16 @@ namespace MFA
     {
         if (mIsInitialized)
         {
-            shutdown();
+            Shutdown();
         }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void DebugRendererPipeline::init()
+    void DebugRendererPipeline::Init()
     {
         MFA_ASSERT(JS::IsMainThread());
-        BasePipeline::init();
+        BasePipeline::Init();
         createDescriptorSetLayout();
         createPipeline();
         createDescriptorSets();
@@ -92,9 +92,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void DebugRendererPipeline::shutdown()
+    void DebugRendererPipeline::Shutdown()
     {
-        BasePipeline::shutdown();
+        BasePipeline::Shutdown();
     }
 
     //-------------------------------------------------------------------------------------------------

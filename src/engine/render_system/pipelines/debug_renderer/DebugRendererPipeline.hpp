@@ -28,9 +28,9 @@ namespace MFA
             RenderOrder::DontCare
         )
 
-        void init() override;
+        void Init() override;
 
-        void shutdown() override;
+        void Shutdown() override;
 
         void render(RT::CommandRecordState & recordState, float deltaTime) override;
 

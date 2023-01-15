@@ -131,9 +131,9 @@ namespace MFA
 
         virtual void freeUnusedEssences();
 
-        virtual void init();
+        virtual void Init();
 
-        virtual void shutdown();
+        virtual void Shutdown();
 
         void changeActivationStatus(bool enabled);
 

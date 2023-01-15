@@ -192,7 +192,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::init()
+    void BasePipeline::Init()
     {
         MFA_ASSERT(mIsInitialized == false);
         mIsInitialized = true;
@@ -201,7 +201,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::shutdown()
+    void BasePipeline::Shutdown()
     {
         MFA_ASSERT(mIsInitialized == true);
         mIsInitialized = false;

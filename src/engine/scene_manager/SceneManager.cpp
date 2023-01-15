@@ -279,7 +279,7 @@ namespace MFA::SceneManager
 
         for (auto const & entry : state->pipelines)
         {
-            entry.second->shutdown();
+            entry.second->Shutdown();
         }
 
         state->activeSceneIndex = -1;
@@ -317,7 +317,7 @@ namespace MFA::SceneManager
         if (MFA_VERIFY(state->pipelines.find(name) == state->pipelines.end()))
         {
             UpdatePipeline(pipeline.get());
-            pipeline->init();
+            pipeline->Init();
             state->pipelines[name] = std::move(pipeline);
         }
         else

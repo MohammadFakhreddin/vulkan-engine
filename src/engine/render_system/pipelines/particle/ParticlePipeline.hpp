@@ -31,11 +31,11 @@ namespace MFA
             RenderOrder::AfterEverything
         )
 
-        void init() override;
+        void Init() override;
 
         void onResize() override {}
 
-        void shutdown() override;
+        void Shutdown() override;
         
         void render(RT::CommandRecordState & recordState, float deltaTimeInSec) override;
 

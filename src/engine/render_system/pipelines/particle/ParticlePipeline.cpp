@@ -38,13 +38,13 @@ namespace MFA
     {
         if (mIsInitialized)
         {
-            shutdown();
+            Shutdown();
         }
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void ParticlePipeline::init()
+    void ParticlePipeline::Init()
     {
         mSamplerGroup = RF::CreateSampler(RT::CreateSamplerParams {
             .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
@@ -59,7 +59,7 @@ namespace MFA
             MFA_ASSERT(mErrorTexture != nullptr);
 
             SceneManager::AssignMainThreadTask([this]()->void{
-                BasePipeline::init();
+                BasePipeline::Init();
 
                 createPerFrameDescriptorSetLayout();
                 createPerEssenceGraphicDescriptorSetLayout();
@@ -77,9 +77,9 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ParticlePipeline::shutdown()
+    void ParticlePipeline::Shutdown()
     {
-        BasePipeline::shutdown();
+        BasePipeline::Shutdown();
     }
 
     //-------------------------------------------------------------------------------------------------
