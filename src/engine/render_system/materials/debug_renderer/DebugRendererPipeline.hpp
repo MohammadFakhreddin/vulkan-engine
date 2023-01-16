@@ -1,13 +1,13 @@
 #pragma once
 
 #include "engine/render_system/RenderTypes.hpp"
-#include "engine/render_system/pipelines/BasePipeline.hpp"
+#include "engine/render_system/pipelines/BaseMaterial.hpp"
 
 namespace MFA
 {
 
     class DebugEssence;
-    class DebugRendererPipeline final : public BasePipeline
+    class DebugRendererPipeline final : public BaseMaterial
     {
 
     public:
@@ -32,7 +32,7 @@ namespace MFA
 
         void Shutdown() override;
 
-        void render(RT::CommandRecordState & recordState, float deltaTime) override;
+        void Render(RT::CommandRecordState & recordState, float deltaTime) override;
 
         void onResize() override;
 

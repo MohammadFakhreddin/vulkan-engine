@@ -1,41 +1,74 @@
-#include "PBR_Pipeline.hpp"
+#include "PBR_Material.hpp"
 
 #include "PBR_Essence.hpp"
 #include "PBR_Variant.hpp"
 #include "engine/BedrockPath.hpp"
 #include "engine/asset_system/AssetShader.hpp"
+#include "engine/camera/CameraComponent.hpp"
+#include "engine/entity_system/components/TransformComponent.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
 #include "tools/Importer.hpp"
 #include "engine/resource_manager/ResourceManager.hpp"
 #include "engine/job_system/JobSystem.hpp"
+#include "engine/render_system/materials/VariantBase.hpp"
+#include "engine/scene_manager/SceneManager.hpp"
+
+#define ESSENCE_PURE(essence)      static_cast<PBR_Essence *>(essence)
+#define ESSENCE_SHARED(essence)    ESSENCE_PURE(essence.get())
+#define VARIANT_PURE(variant)      static_cast<PBR_Variant *>(variant)
+#define VARIANT_SHARED(variant)    static_cast<PBR_Variant *>(variant.get())
 
 namespace MFA
 {
 
     //-------------------------------------------------------------------------------------------------
 
-    PBR_Pipeline::PBR_Pipeline(std::shared_ptr<DisplayRenderPass> renderPass, const uint32_t maxSets)
-        : BasePipeline(maxSets)
+    PBR_Material::PBR_Material(
+        std::shared_ptr<DisplayRenderPass> renderPass,
+        std::shared_ptr<RT::BufferGroup> cameraBufferGroup,
+        std::shared_ptr<RT::BufferGroup> directionalLightBufferGroup,
+        std::shared_ptr<RT::BufferGroup> pointLightBufferGroup,
+        std::shared_ptr<DirectionalLightShadowResource> directionalLightShadowResource,
+        std::shared_ptr<PointLightShadowResource> pointLightShadowResource,
+        const uint32_t maxSets
+    )
+        : BaseMaterial(maxSets)
         , mRenderPass(std::move(renderPass))
+        , mCameraBufferGroup(std::move(cameraBufferGroup))
+        , mDLightBufferGroup(std::move(directionalLightBufferGroup))
+        , mPLightBufferGroup(std::move(pointLightBufferGroup))
+        , mDLightShadowResource(std::move(directionalLightShadowResource))
+        , mPLightShadowResource(std::move(pointLightShadowResource))
     {
         MFA_ASSERT(JS::IsMainThread());
+
+        CreatePerFrameDescriptorSetLayout();
+        CreatePerEssenceDescriptorSetLayout();
+
         CreatePipeline();
+
+        mSamplerGroup = RF::CreateSampler(RT::CreateSamplerParams{});
+        MFA_ASSERT(mSamplerGroup != nullptr);
+
         CreateErrorTexture();
-        BasePipeline::Init();
+
+        CreatePerFrameDescriptorSets();
+
+        BaseMaterial::Init();
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    PBR_Pipeline::~PBR_Pipeline()
+    PBR_Material::~PBR_Material()
     {
-        BasePipeline::Shutdown();
+        BaseMaterial::Shutdown();
         mPipeline.reset();
         mRenderPass.reset();
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBR_Pipeline::CreatePipeline()
+    void PBR_Material::CreatePipeline()
     {
         // Vertex shader
         RF_CREATE_SHADER("shaders/pbr_with_shadow_v2/PbrWithShadow.vert.spv", Vertex);
@@ -140,12 +173,9 @@ namespace MFA
             .size = sizeof(DisplayPassPushConstants),
         });
 
-        auto perFrameDescriptorLayout = CreatePerFrameDescriptorSetLayout();
-        auto perEssenceDescriptorLayout = CreatePerEssenceDescriptorSetLayout();
-
         auto const descriptorSetLayouts = std::vector<VkDescriptorSetLayout>{
-            perFrameDescriptorLayout->descriptorSetLayout,
-            perEssenceDescriptorLayout->descriptorSetLayout,
+            mPerFrameDescriptorSetLayout->descriptorSetLayout,
+            mPerEssenceDescriptorSetLayout->descriptorSetLayout,
         };
 
         const auto pipelineLayout = RF::CreatePipelineLayout(
@@ -176,7 +206,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBR_Pipeline::CreateErrorTexture()
+    void PBR_Material::CreateErrorTexture()
     {
         RC::AcquireGpuTexture(
             "Error",
@@ -190,7 +220,73 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<RT::DescriptorSetLayoutGroup> PBR_Pipeline::CreatePerFrameDescriptorSetLayout()
+    void PBR_Material::PerformDisplayPass(RT::CommandRecordState const& recordState, AS::AlphaMode const alphaMode)
+    {
+        DisplayPassPushConstants pushConstants{};
+
+        auto const activeCamera = SceneManager::GetActiveCamera().lock();
+        if (activeCamera != nullptr)
+        {
+            // TODO: Investigate about this negative value
+            Copy(pushConstants.cameraPosition, activeCamera->GetTransform()->GetWorldPosition());
+            pushConstants.projectFarToNearDistance = activeCamera->GetProjectionFarToNearDistance();
+        }
+
+        auto bindFunction = [&recordState, &pushConstants](AS::PBR::Primitive const & primitive)-> void
+        {
+            // Push constants
+            pushConstants.primitiveIndex = primitive.uniqueId;
+            RF::PushConstants(
+                recordState,
+                VK_SHADER_STAGE_FRAGMENT_BIT,
+                0,
+                CBlobAliasOf(pushConstants)
+            );
+        };
+
+        for (auto const & item : mEssenceAndVariantsMap)
+        {
+            auto const * essence = ESSENCE_SHARED(item.second.essence);
+            auto & variantsList = item.second.variants;
+
+            if (variantsList.empty())
+            {
+                continue;
+            }
+
+            essence->bindForGraphicPipeline(recordState);
+
+            for (auto & variant : variantsList)
+            {
+                if (variant->IsVisible())
+                {
+                    // TODO We can render all instances at once and have a large push constant for all of them
+                    VARIANT_SHARED(variant)->Render(recordState, bindFunction, alphaMode);
+                }
+            }
+        }
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBR_Material::Render(RT::CommandRecordState& recordState, float const deltaTimeInSec)
+    {
+        BaseMaterial::Render(recordState, deltaTimeInSec);
+
+        RF::BindPipeline(recordState, *mPipeline);
+        RF::AutoBindDescriptorSet(
+            recordState,
+            RenderFrontend::UpdateFrequency::PerFrame,
+            *mPerFrameDescriptorSet
+        );
+        PerformDisplayPass(recordState, AS::AlphaMode::Opaque);
+        PerformDisplayPass(recordState, AS::AlphaMode::Mask);
+        PerformDisplayPass(recordState, AS::AlphaMode::Blend);
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBR_Material::CreatePerFrameDescriptorSetLayout()
     {
         std::vector<VkDescriptorSetLayoutBinding> bindings{};
 
@@ -243,7 +339,7 @@ namespace MFA
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         });
 
-        return RF::CreateDescriptorSetLayout(
+        mPerFrameDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
             bindings.data()
         );
@@ -251,7 +347,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<RT::DescriptorSetLayoutGroup> PBR_Pipeline::CreatePerEssenceDescriptorSetLayout()
+    void PBR_Material::CreatePerEssenceDescriptorSetLayout()
     {
         std::vector<VkDescriptorSetLayoutBinding> bindings{};
 
@@ -275,10 +371,87 @@ namespace MFA
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
         });
 
-        return RF::CreateDescriptorSetLayout(
+        mPerEssenceDescriptorSetLayout = RF::CreateDescriptorSetLayout(
             static_cast<uint8_t>(bindings.size()),
             bindings.data()
         );
+    }
+
+    //-------------------------------------------------------------------------------------------------
+
+    void PBR_Material::CreatePerFrameDescriptorSets()
+    {
+        mPerFrameDescriptorSet = std::make_shared<RT::DescriptorSetGroup>(RF::CreateDescriptorSets(
+            mDescriptorPool,
+            RF::GetMaxFramesPerFlight(),
+            *mPerFrameDescriptorSetLayout
+        ));
+
+        auto const * cameraBufferCollection = SceneManager::GetCameraBuffers();
+        auto const * directionalLightBuffers = SceneManager::GetDirectionalLightBuffers();
+        auto const * pointLightBuffers = SceneManager::GetPointLightsBuffers();
+
+        for (uint32_t frameIndex = 0; frameIndex < RF::GetMaxFramesPerFlight(); ++frameIndex)
+        {
+
+            auto const descriptorSet = mPerFrameDescriptorSet->descriptorSets[frameIndex];
+            MFA_ASSERT(descriptorSet != VK_NULL_HANDLE);
+
+            DescriptorSetSchema descriptorSetSchema{ descriptorSet };
+            // Important note: Keep reference of all descriptor buffer infos until updateDescriptorSets is called
+            // DisplayViewProjection
+            VkDescriptorBufferInfo viewProjectionBufferInfo{
+                .buffer = cameraBufferCollection->buffers[frameIndex]->buffer,
+                .offset = 0,
+                .range = cameraBufferCollection->bufferSize,
+            };
+            descriptorSetSchema.AddUniformBuffer(&viewProjectionBufferInfo);
+
+            // DirectionalLightBuffer
+            VkDescriptorBufferInfo directionalLightBufferInfo{
+                .buffer = directionalLightBuffers->buffers[frameIndex]->buffer,
+                .offset = 0,
+                .range = directionalLightBuffers->bufferSize,
+            };
+            descriptorSetSchema.AddUniformBuffer(&directionalLightBufferInfo);
+
+            // PointLightBuffer
+            VkDescriptorBufferInfo pointLightBufferInfo{
+                .buffer = pointLightBuffers->buffers[frameIndex]->buffer,
+                .offset = 0,
+                .range = pointLightBuffers->bufferSize,
+            };
+            descriptorSetSchema.AddUniformBuffer(&pointLightBufferInfo);
+
+            // Sampler
+            VkDescriptorImageInfo texturesSamplerInfo{
+                .sampler = mSamplerGroup->sampler,
+                .imageView = VK_NULL_HANDLE,
+                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+            };
+            descriptorSetSchema.AddSampler(&texturesSamplerInfo);
+
+            // DirectionalLightShadowMap
+            auto directionalLightShadowMap = VkDescriptorImageInfo{
+                .sampler = VK_NULL_HANDLE,
+                .imageView = mDLightShadowResource->GetShadowMap(frameIndex).imageView->imageView,
+                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+            };
+            descriptorSetSchema.AddImage(&directionalLightShadowMap, 1);
+
+            // PointLightShadowMap
+            auto pointLightShadowCubeMapArray = VkDescriptorImageInfo{
+                .sampler = VK_NULL_HANDLE,
+                .imageView = mPLightShadowResource->GetShadowCubeMap(frameIndex).imageView->imageView,
+                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+            };
+            descriptorSetSchema.AddImage(
+                &pointLightShadowCubeMapArray,
+                1
+            );
+
+            descriptorSetSchema.UpdateDescriptorSets();
+        }
     }
 
     //-------------------------------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/render_system/pipelines/BasePipeline.hpp"
+#include "engine/render_system/pipelines/BaseMaterial.hpp"
 
 #include <functional>
 #include <memory>
@@ -9,7 +9,7 @@ namespace MFA
 {
     class DirectionalLightComponent;
     class PointLightComponent;
-    class BasePipeline;
+    class BaseMaterial;
     class Scene;
     class CameraComponent;
 }
@@ -34,7 +34,7 @@ namespace MFA::SceneManager
         RegisterSceneOptions const & options = {}
     );
 
-    void RegisterPipeline(std::unique_ptr<BasePipeline> && pipeline);
+    void RegisterPipeline(std::unique_ptr<BaseMaterial> && pipeline);
 
     template<typename Pipeline>
     void RegisterPipeline()
@@ -43,7 +43,7 @@ namespace MFA::SceneManager
     }
 
     [[nodiscard]]
-    BasePipeline * GetPipeline(std::string const & name);
+    BaseMaterial * GetPipeline(std::string const & name);
 
     template<typename Pipeline>
     Pipeline * GetPipeline()
@@ -54,10 +54,10 @@ namespace MFA::SceneManager
     void AssignMainThreadTask(MainThreadTask const & task, bool executeIfMainThread = true);
 
     // This method must only be called by pipeline and sceneManager
-    void UpdatePipeline(BasePipeline * pipeline);
+    void UpdatePipeline(BaseMaterial * pipeline);
 
     // Only for editor, Not optimized performance wise.
-    std::vector<BasePipeline *> GetAllPipelines();
+    std::vector<BaseMaterial *> GetAllPipelines();
 
     // It will be called automatically at end of every scene
     // But you can call it to avoid facing out of memory on GPU

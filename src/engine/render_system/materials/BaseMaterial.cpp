@@ -1,4 +1,4 @@
-#include "BasePipeline.hpp"
+#include "BaseMaterial.hpp"
 
 #include "EssenceBase.hpp"
 #include "VariantBase.hpp"
@@ -13,55 +13,55 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    BasePipeline::EssenceAndVariants::EssenceAndVariants() = default;
+    BaseMaterial::EssenceAndVariants::EssenceAndVariants() = default;
 
     //-------------------------------------------------------------------------------------------------
 
-    BasePipeline::EssenceAndVariants::EssenceAndVariants(std::shared_ptr<EssenceBase> essence)
+    BaseMaterial::EssenceAndVariants::EssenceAndVariants(std::shared_ptr<EssenceBase> essence)
         : essence(std::move(essence))
     {}
 
     //-------------------------------------------------------------------------------------------------
 
-    BasePipeline::BasePipeline(uint32_t const maxSets)
+    BaseMaterial::BaseMaterial(uint32_t const maxSets)
         : mMaxSets(maxSets)
     {}
 
     //-------------------------------------------------------------------------------------------------
 
-    BasePipeline::~BasePipeline() = default;
+    BaseMaterial::~BaseMaterial() = default;
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::preRender(RT::CommandRecordState & recordState, float deltaTime)
+    void BaseMaterial::preRender(RT::CommandRecordState & recordState, float deltaTime)
     {
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::render(RT::CommandRecordState & recordState, float deltaTime)
+    void BaseMaterial::Render(RT::CommandRecordState & recordState, float deltaTime)
     {}
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::update(float deltaTime)
+    void BaseMaterial::Update(float deltaTime)
     {}
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::compute(RT::CommandRecordState & recordState, float deltaTime)
+    void BaseMaterial::compute(RT::CommandRecordState & recordState, float deltaTime)
     {}
 
     //-------------------------------------------------------------------------------------------------
 
-    bool BasePipeline::hasEssence(std::string const & nameId) const
+    bool BaseMaterial::hasEssence(std::string const & nameId) const
     {
         return mEssenceAndVariantsMap.find(Path::RelativeToAssetFolder(nameId)) != mEssenceAndVariantsMap.end();
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::destroyEssence(std::string const & nameId)
+    void BaseMaterial::destroyEssence(std::string const & nameId)
     {
         MFA_ASSERT(mIsInitialized == true);
         auto const findResult = mEssenceAndVariantsMap.find(nameId);
@@ -94,7 +94,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    std::weak_ptr<VariantBase> BasePipeline::createVariant(std::string const & path)
+    std::weak_ptr<VariantBase> BaseMaterial::createVariant(std::string const & path)
     {
         auto const nameId = Path::RelativeToAssetFolder(path);
         //MFA_ASSERT(mIsInitialized == true);
@@ -122,7 +122,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::removeVariant(VariantBase & variant)
+    void BaseMaterial::removeVariant(VariantBase & variant)
     {
         SceneManager::AssignMainThreadTask([this, &variant]()->void {
             RF::DeviceWaitIdle();
@@ -173,7 +173,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::freeUnusedEssences()
+    void BaseMaterial::freeUnusedEssences()
     {
         RF::DeviceWaitIdle();
         std::vector<std::string> unusedEssenceNames {};
@@ -192,7 +192,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::Init()
+    void BaseMaterial::Init()
     {
         MFA_ASSERT(mIsInitialized == false);
         mIsInitialized = true;
@@ -201,7 +201,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::Shutdown()
+    void BaseMaterial::Shutdown()
     {
         MFA_ASSERT(mIsInitialized == true);
         mIsInitialized = false;
@@ -219,7 +219,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void BasePipeline::changeActivationStatus(bool const enabled)
+    void BaseMaterial::changeActivationStatus(bool const enabled)
     {
         if (mIsActive == enabled)
         {
@@ -231,14 +231,14 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    bool BasePipeline::isActive() const
+    bool BaseMaterial::isActive() const
     {
         return mIsActive;
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    bool BasePipeline::addEssence(std::shared_ptr<EssenceBase> const & essence)
+    bool BaseMaterial::addEssence(std::shared_ptr<EssenceBase> const & essence)
     {
         //MFA_ASSERT(mIsInitialized == true);
         auto const & address = essence->getNameId();
@@ -256,7 +256,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    std::shared_ptr<EssenceBase> BasePipeline::GetEssence(std::string const & nameId)
+    std::shared_ptr<EssenceBase> BaseMaterial::GetEssence(std::string const & nameId)
     {
         auto const findResult = mEssenceAndVariantsMap.find(nameId);
         if(findResult == mEssenceAndVariantsMap.end())

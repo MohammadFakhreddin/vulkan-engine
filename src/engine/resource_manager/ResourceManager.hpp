@@ -16,7 +16,7 @@ namespace physx
 namespace MFA
 {
     class EssenceBase;
-    class BasePipeline;
+    class BaseMaterial;
 }
 
 namespace MFA::AssetSystem
@@ -60,7 +60,7 @@ namespace MFA::ResourceManager
     // Callback is called from main thread
     void AcquireEssence(
         std::string const & nameId,
-        BasePipeline * pipeline,
+        BaseMaterial * pipeline,
         EssenceCallback const & callback,
         bool loadFromFile = true
     );

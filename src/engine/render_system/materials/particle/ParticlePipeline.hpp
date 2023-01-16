@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/render_system/pipelines/BasePipeline.hpp"
+#include "engine/render_system/pipelines/BaseMaterial.hpp"
 
 namespace MFA
 {
@@ -12,7 +12,7 @@ namespace MFA
     class ParticleEssence;
     class Scene;
 
-    class ParticlePipeline final : public BasePipeline
+    class ParticlePipeline final : public BaseMaterial
     {
     public:
     
@@ -37,9 +37,9 @@ namespace MFA
 
         void Shutdown() override;
         
-        void render(RT::CommandRecordState & recordState, float deltaTimeInSec) override;
+        void Render(RT::CommandRecordState & recordState, float deltaTimeInSec) override;
 
-        void update(float deltaTimeInSec) override;
+        void Update(float deltaTimeInSec) override;
 
         void compute(RT::CommandRecordState & recordState, float deltaTimeInSec) override;
 

@@ -4,7 +4,7 @@
 #include "engine/BedrockMemory.hpp"
 #include "engine/asset_system/AssetTypes.hpp"
 #include "engine/asset_system/Asset_PBR_Mesh.hpp"
-#include "engine/render_system/pipelines/VariantBase.hpp"
+#include "engine/render_system/materials/VariantBase.hpp"
 #include "engine/render_system/RenderTypesFWD.hpp"
 
 #include <glm/gtc/quaternion.hpp>
@@ -82,7 +82,7 @@ namespace MFA
             Skin * skin = nullptr;
         };
 
-        using BindDescriptorSetFunction = std::function<void(AS::PBR::Primitive const & primitive, Node const & node)>;
+        using BindDescriptorSetFunction = std::function<void(AS::PBR::Primitive const & primitive)>;
 
         explicit PBR_Variant(PBR_Essence const * essence);
         ~PBR_Variant() override;
@@ -107,12 +107,7 @@ namespace MFA
 
         void updateBuffers(RT::CommandRecordState const & recordState);
 
-        void compute(
-            RT::CommandRecordState const & recordState,
-            BindDescriptorSetFunction const & bindFunction
-        ) const;
-
-        void render(
+        void Render(
             RT::CommandRecordState const & recordState,
             BindDescriptorSetFunction const & bindFunction,
             AS::AlphaMode alphaMode

@@ -199,7 +199,7 @@ void PrefabEditorScene::saveAndLoadWindow()
 
 bool PrefabEditorScene::loadSelectedAsset(
     std::string const & fileAddress,
-    MFA::BasePipeline * pipeline,
+    MFA::BaseMaterial * pipeline,
     std::string displayName
 )
 {

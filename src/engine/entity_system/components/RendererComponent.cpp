@@ -1,7 +1,7 @@
 #include "RendererComponent.hpp"
 
 #include "engine/BedrockPath.hpp"
-#include "engine/render_system/pipelines/BasePipeline.hpp"
+#include "engine/render_system/pipelines/BaseMaterial.hpp"
 #include "engine/render_system/pipelines/EssenceBase.hpp"
 #include "engine/render_system/pipelines/VariantBase.hpp"
 #include "engine/scene_manager/SceneManager.hpp"

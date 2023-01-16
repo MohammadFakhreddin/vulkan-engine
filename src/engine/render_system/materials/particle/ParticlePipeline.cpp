@@ -29,7 +29,7 @@ namespace MFA
     //-------------------------------------------------------------------------------------------------
 
     ParticlePipeline::ParticlePipeline()
-        : BasePipeline(1000) // ! per essence                // TODO How many sets do we need ?
+        : BaseMaterial(1000) // ! per essence                // TODO How many sets do we need ?
     {}
 
     //-------------------------------------------------------------------------------------------------
@@ -59,7 +59,7 @@ namespace MFA
             MFA_ASSERT(mErrorTexture != nullptr);
 
             SceneManager::AssignMainThreadTask([this]()->void{
-                BasePipeline::Init();
+                BaseMaterial::Init();
 
                 createPerFrameDescriptorSetLayout();
                 createPerEssenceGraphicDescriptorSetLayout();
@@ -79,12 +79,12 @@ namespace MFA
 
     void ParticlePipeline::Shutdown()
     {
-        BasePipeline::Shutdown();
+        BaseMaterial::Shutdown();
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void ParticlePipeline::render(
+    void ParticlePipeline::Render(
         RT::CommandRecordState & recordState,
         float const deltaTimeInSec
     )
@@ -99,7 +99,7 @@ namespace MFA
             return;
         }
 
-        BasePipeline::render(recordState, deltaTimeInSec);
+        BaseMaterial::Render(recordState, deltaTimeInSec);
 
         RF::BindPipeline(recordState, *mGraphicPipeline);
 
@@ -126,7 +126,7 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void ParticlePipeline::update(float const deltaTimeInSec)
+    void ParticlePipeline::Update(float const deltaTimeInSec)
     {
         if (mIsInitialized == false)
         {
@@ -138,7 +138,7 @@ namespace MFA
             return;
         }
 
-        BasePipeline::update(deltaTimeInSec);
+        BaseMaterial::Update(deltaTimeInSec);
 
         for (auto & essenceAndVariants : mEssenceAndVariantsMap)
         {
@@ -170,7 +170,7 @@ namespace MFA
             return;
         }
 
-        BasePipeline::compute(recordState, deltaTimeInSec);
+        BaseMaterial::compute(recordState, deltaTimeInSec);
 
         if (RF::GetComputeQueueFamily() != RF::GetGraphicQueueFamily())
 		{

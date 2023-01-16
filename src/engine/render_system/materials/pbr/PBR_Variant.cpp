@@ -9,7 +9,7 @@
 #include "engine/entity_system/Entity.hpp"
 #include "engine/entity_system/components/TransformComponent.hpp"
 #include "PBR_Essence.hpp"
-#include "engine/render_system/pipelines/DescriptorSetSchema.hpp"
+#include "engine/render_system/materials/DescriptorSetSchema.hpp"
 
 #include <glm/gtx/quaternion.hpp>
 
@@ -104,25 +104,10 @@ namespace MFA
 
     //-------------------------------------------------------------------------------------------------
 
-    void PBR_Variant::compute(
-        RT::CommandRecordState const & recordState,
-        BindDescriptorSetFunction const & bindFunction
-    ) const
-    {
-        bindComputeDescriptorSet(recordState);
-
-        for (auto & node : mNodes)
-        {
-            computeNode(recordState, node, bindFunction);
-        }
-    }
-
-    //-------------------------------------------------------------------------------------------------
-
-    void PBR_Variant::render(
+    void PBR_Variant::Render(
         RT::CommandRecordState const & recordState,
         BindDescriptorSetFunction const & bindFunction,
-        AS::AlphaMode const alphaMode
+        AS::AlphaMode alphaMode
     )
     {
         bindSkinnedVerticesBuffer(recordState);

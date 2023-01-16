@@ -10,11 +10,11 @@
 #include "engine/job_system/ThreadSafeQueue.hpp"
 #include "engine/ui_system/UI_System.hpp"
 #include "engine/render_system/RenderFrontend.hpp"
-#include "engine/render_system/pipelines/BasePipeline.hpp"
+#include "engine/render_system/materials/BaseMaterial.hpp"
 #include "engine/render_system/render_passes/display_render_pass/DisplayRenderPass.hpp"
 #include "engine/scene_manager/Scene.hpp"
 #include "engine/render_system/RenderBackend.hpp"
-
+// TODO: Move all rendering related tasks to RenderGraph
 namespace MFA::SceneManager
 {
 
@@ -101,7 +101,7 @@ namespace MFA::SceneManager
         RT::ResizeEventListenerId resizeListenerId = 0;
         float currentFps = 0.0f;
 
-        std::unordered_map<std::string, std::unique_ptr<BasePipeline>> pipelines{};
+        std::unordered_map<std::string, std::unique_ptr<BaseMaterial>> pipelines{};
 
         PreRenderSignal preRenderSignal{};
         RenderSignal renderSignal1{};
@@ -310,7 +310,7 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
-    void RegisterPipeline(std::unique_ptr<BasePipeline> && pipeline)
+    void RegisterPipeline(std::unique_ptr<BaseMaterial> && pipeline)
     {
         std::string const name = pipeline->GetName();
         MFA_ASSERT(name.empty() == false);
@@ -328,10 +328,10 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
-    BasePipeline * GetPipeline(std::string const & name)
+    BaseMaterial * GetPipeline(std::string const & name)
     {
         MFA_ASSERT(name.empty() == false);
-        BasePipeline * pipeline = nullptr;
+        BaseMaterial * pipeline = nullptr;
 
         auto const findResult = state->pipelines.find(name);
         if (findResult != state->pipelines.end())
@@ -343,20 +343,20 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
-    static RenderSignal * getRenderSignal(BasePipeline * pipeline)
+    static RenderSignal * getRenderSignal(BaseMaterial * pipeline)
     {
         MFA_ASSERT(pipeline != nullptr);
 
         RenderSignal * signal = nullptr;
-        switch (pipeline->renderOrder())
+        switch (pipeline->GetRenderOrder())
         {
-        case BasePipeline::RenderOrder::BeforeEverything:
+        case BaseMaterial::RenderOrder::BeforeEverything:
             signal = &state->renderSignal1;
             break;
-        case BasePipeline::RenderOrder::DontCare:
+        case BaseMaterial::RenderOrder::DontCare:
             signal = &state->renderSignal2;
             break;
-        case BasePipeline::RenderOrder::AfterEverything:
+        case BaseMaterial::RenderOrder::AfterEverything:
             signal = &state->renderSignal3;
             break;
         default:
@@ -399,10 +399,10 @@ namespace MFA::SceneManager
         pipeline->listenerId = SignalIdInvalid;                                                     \
     }                                                                                               \
 
-    void UpdatePipeline(BasePipeline * pipeline)
+    void UpdatePipeline(BaseMaterial * pipeline)
     {
         MFA_ASSERT(pipeline != nullptr);
-        auto const requiredEvents = pipeline->requiredEvents();
+        auto const requiredEvents = pipeline->GetRequiredEvents();
 
         // Pre-render listener
         UPDATE_PIPELINE_SIGNAL_REGISTER_STATUS(
@@ -424,7 +424,7 @@ namespace MFA::SceneManager
             mRenderListenerId,
             [pipeline](RT::CommandRecordState & commandRecord, float const deltaTime)->void
             {
-                pipeline->render(commandRecord, deltaTime);
+                pipeline->Render(commandRecord, deltaTime);
             }
         )
 
@@ -435,7 +435,7 @@ namespace MFA::SceneManager
             mUpdateListenerId,
             [pipeline](float const deltaTime)->void
             {
-                pipeline->update(deltaTime);
+                pipeline->Update(deltaTime);
             }
         )
 
@@ -453,9 +453,9 @@ namespace MFA::SceneManager
 
     //-------------------------------------------------------------------------------------------------
 
-    std::vector<BasePipeline *> GetAllPipelines()
+    std::vector<BaseMaterial *> GetAllPipelines()
     {
-        std::vector<BasePipeline *> pipelines{};
+        std::vector<BaseMaterial *> pipelines{};
         for (auto const & pair : state->pipelines)
         {
             pipelines.emplace_back(pair.second.get());

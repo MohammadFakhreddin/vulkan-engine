@@ -11,7 +11,7 @@
 #include "engine/job_system/JobSystem.hpp"
 #include "engine/render_system/pipelines/EssenceBase.hpp"
 #include "engine/render_system/pipelines/pbr_with_shadow_v2/PBR_Essence.hpp"
-#include "engine/render_system/pipelines/BasePipeline.hpp"
+#include "engine/render_system/pipelines/BaseMaterial.hpp"
 #include "engine/scene_manager/SceneManager.hpp"
 #include "engine/job_system/TaskTracker.hpp"
 #include "engine/physics/PhysicsTypes.hpp"
@@ -377,7 +377,7 @@ namespace MFA::ResourceManager
     //-------------------------------------------------------------------------------------------------
 
     static void CreateEssence(
-        BasePipeline * pipeline,
+        BaseMaterial * pipeline,
         std::string const & nameId,
         std::shared_ptr<AS::Model> const & cpuModel,
         std::vector<std::shared_ptr<RT::GpuTexture>> const & gpuTextures
@@ -408,7 +408,7 @@ namespace MFA::ResourceManager
 
     void AcquireEssence(
         std::string const & path,
-        BasePipeline * pipeline,
+        BaseMaterial * pipeline,
         EssenceCallback const & callback,
         bool loadFromFile
     )

@@ -57,7 +57,7 @@ namespace MFA
     using namespace AssetSystem::Debug;
 
     DebugRendererPipeline::DebugRendererPipeline()
-        : BasePipeline(10)
+        : BaseMaterial(10)
     {}
 
     //-------------------------------------------------------------------------------------------------
@@ -75,7 +75,7 @@ namespace MFA
     void DebugRendererPipeline::Init()
     {
         MFA_ASSERT(JS::IsMainThread());
-        BasePipeline::Init();
+        BaseMaterial::Init();
         createDescriptorSetLayout();
         createPipeline();
         createDescriptorSets();
@@ -94,12 +94,12 @@ namespace MFA
 
     void DebugRendererPipeline::Shutdown()
     {
-        BasePipeline::Shutdown();
+        BaseMaterial::Shutdown();
     }
 
     //-------------------------------------------------------------------------------------------------
 
-    void DebugRendererPipeline::render(RT::CommandRecordState & recordState, float deltaTime)
+    void DebugRendererPipeline::Render(RT::CommandRecordState & recordState, float deltaTime)
     {
         RF::BindPipeline(recordState, *mPipeline);
 
@@ -153,7 +153,7 @@ namespace MFA
 
     std::weak_ptr<DebugEssence> DebugRendererPipeline::GetEssence(std::string const & nameId)
     {
-        return std::static_pointer_cast<DebugEssence>(BasePipeline::GetEssence(nameId));
+        return std::static_pointer_cast<DebugEssence>(BaseMaterial::GetEssence(nameId));
     }
     
     //-------------------------------------------------------------------------------------------------

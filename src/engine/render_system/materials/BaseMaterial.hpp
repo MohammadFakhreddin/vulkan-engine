@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
-#define PIPELINE_PROPS(className, eventTypes, renderOrder_)             \
+#define PIPELINE_PROPS(className, eventTypes, renderOrder)              \
                                                                         \
 static constexpr char const * Name = #className;                        \
 char const * GetName() const override {                                 \
@@ -21,15 +21,15 @@ className & operator = (className const &) noexcept = delete;           \
 className & operator = (className &&) noexcept = delete;                \
                                                                         \
 [[nodiscard]]                                                           \
-EventType requiredEvents() const override                               \
+EventType GetRequiredEvents() const override                            \
 {                                                                       \
     return eventTypes;                                                  \
 }                                                                       \
                                                                         \
 [[nodiscard]]                                                           \
-RenderOrder renderOrder() const override                                \
+RenderOrder GetRenderOrder() const override                             \
 {                                                                       \
-    return renderOrder_;                                                \
+    return renderOrder;                                                 \
 }                                                                       \
 
 namespace MFA
@@ -37,10 +37,10 @@ namespace MFA
 
     class VariantBase;
     class EssenceBase;
-    class BasePipeline;
+    class BaseMaterial;
     namespace SceneManager
     {
-        void UpdatePipeline(BasePipeline * pipeline);
+        void UpdatePipeline(BaseMaterial * pipeline);
     }
 
     namespace AssetSystem
@@ -49,17 +49,17 @@ namespace MFA
         class MeshBase;
     }
 
-    class BasePipeline
+    class BaseMaterial
     {
     public:
 
-        friend void SceneManager::UpdatePipeline(BasePipeline * pipeline);
+        friend void SceneManager::UpdatePipeline(BaseMaterial * pipeline);
 
         using EventType = uint8_t;
 
         struct EventTypes {
             static constexpr EventType EmptyEvent = 0b0;
-            static constexpr EventType PreRenderEvent = 0b1;
+            //static constexpr EventType PreRenderEvent = 0b1;
             static constexpr EventType RenderEvent = 0b10;
             static constexpr EventType UpdateEvent = 0b100;
             static constexpr EventType ComputeEvent = 0b1000;
@@ -73,32 +73,27 @@ namespace MFA
             AfterEverything = 2
         };
 
-        explicit BasePipeline(uint32_t maxSets);
+        explicit BaseMaterial(uint32_t maxSets);
 
-        virtual ~BasePipeline();
+        virtual ~BaseMaterial();
 
-        BasePipeline(BasePipeline const &) noexcept = delete;
-        BasePipeline(BasePipeline &&) noexcept = delete;
-        BasePipeline & operator = (BasePipeline const &) noexcept = delete;
-        BasePipeline & operator = (BasePipeline && rhs) noexcept = delete;
+        BaseMaterial(BaseMaterial const &) noexcept = delete;
+        BaseMaterial(BaseMaterial &&) noexcept = delete;
+        BaseMaterial & operator = (BaseMaterial const &) noexcept = delete;
+        BaseMaterial & operator = (BaseMaterial && rhs) noexcept = delete;
 
         [[nodiscard]]
-        virtual EventType requiredEvents() const
+        virtual EventType GetRequiredEvents() const
         {
             return EventTypes::EmptyEvent;
         }
 
-        virtual void preRender(
+        virtual void Render(
             RT::CommandRecordState & recordState,
             float deltaTime
         );
 
-        virtual void render(
-            RT::CommandRecordState & recordState,
-            float deltaTime
-        );
-
-        virtual void update(float deltaTime);
+        virtual void Update(float deltaTime);
 
         virtual void compute(
             RT::CommandRecordState & recordState,
@@ -141,7 +136,7 @@ namespace MFA
         bool isActive() const;
 
         [[nodiscard]]
-        virtual RenderOrder renderOrder() const = 0;
+        virtual RenderOrder GetRenderOrder() const = 0;
 
         std::shared_ptr<EssenceBase> GetEssence(std::string const & nameId);
         
@@ -169,7 +164,7 @@ namespace MFA
 
         bool mIsInitialized = false;
 
-        SignalId mPreRenderListenerId = -1;
+        //SignalId mPreRenderListenerId = -1;
         SignalId mRenderListenerId = -1;
         SignalId mUpdateListenerId = -1;
         SignalId mComputeListenerId = -1;

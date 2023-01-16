@@ -50,7 +50,7 @@ private:
 
     bool loadSelectedAsset(
         std::string const & fileAddress,
-        MFA::BasePipeline * pipeline,
+        MFA::BaseMaterial * pipeline,
         std::string displayName = ""
     );
 
@@ -108,7 +108,7 @@ private:
 
     MFA::Prefab mPrefab;
 
-    std::vector<MFA::BasePipeline *> mAllPipelines {};
+    std::vector<MFA::BaseMaterial *> mAllPipelines {};
 
     MFA::PBRWithShadowPipelineV2 * mPBR_Pipeline = nullptr;
     MFA::DebugRendererPipeline * mDebugPipeline = nullptr;

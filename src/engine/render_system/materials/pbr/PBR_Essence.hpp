@@ -2,7 +2,7 @@
 
 #include "engine/render_system/RenderTypes.hpp"
 #include "engine/asset_system/Asset_PBR_Mesh.hpp"
-#include "engine/render_system/pipelines/EssenceBase.hpp"
+#include "engine/render_system/materials/EssenceBase.hpp"
 
 #include <unordered_map>
 

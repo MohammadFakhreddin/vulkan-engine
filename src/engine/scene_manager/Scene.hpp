@@ -4,7 +4,7 @@
 
 namespace MFA
 {
-    class BasePipeline;
+    class BaseMaterial;
 
     class CameraComponent;
     class Scene;

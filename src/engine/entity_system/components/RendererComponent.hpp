@@ -5,7 +5,7 @@
 namespace MFA {
 
     class VariantBase;
-    class BasePipeline;
+    class BaseMaterial;
 
     class RendererComponent : public Component {
     public:
@@ -30,7 +30,7 @@ namespace MFA {
     protected:
         
         std::string mNameId {};
-        BasePipeline * mPipeline = nullptr;
+        BaseMaterial * mPipeline = nullptr;
         std::weak_ptr<VariantBase> mVariant {};
 
     };

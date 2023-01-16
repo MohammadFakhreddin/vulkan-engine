@@ -1,7 +1,7 @@
 #pragma once
 
 #include "engine/entity_system/Component.hpp"
-#include "engine/render_system/pipelines/BasePipeline.hpp"
+#include "engine/render_system/pipelines/BaseMaterial.hpp"
 #include "engine/entity_system/components/RendererComponent.hpp"
 
 namespace MFA
@@ -23,7 +23,7 @@ namespace MFA
             RendererComponent
         )
 
-        explicit MeshRendererComponent(BasePipeline * pipeline, std::string const & nameId);
+        explicit MeshRendererComponent(BaseMaterial * pipeline, std::string const & nameId);
 
         void Init() override;
 
