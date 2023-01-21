@@ -12,7 +12,8 @@ namespace MFA
     class PBR_Material : public BaseMaterial
     {
     public:
-
+        // So Plan is that make animator pipeline and component compute SkinMat
+        // Nodes need to be placed in a new class called skinned Mesh renderer
         struct DisplayPassPushConstants
         {
             uint32_t primitiveIndex = 0;      // Unique id
